@@ -12,6 +12,7 @@
 
 #include "SymbolTable.h"
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,15 +27,22 @@ public:
   void main(ArrayRef<const char *> Args);
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
+  llvm::LLVMContext Context;
 
 private:
   std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);
+  llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
   void readConfigs(llvm::opt::InputArgList &Args);
   void createFiles(llvm::opt::InputArgList &Args);
   template <class ELFT> void link(llvm::opt::InputArgList &Args);
 
-  llvm::BumpPtrAllocator Alloc;
+  // True if we are in --whole-archive and --no-whole-archive.
   bool WholeArchive = false;
+
+  // True if we are in --start-lib and --end-lib.
+  bool InLib = false;
+
+  llvm::BumpPtrAllocator Alloc;
   std::vector<std::unique_ptr<InputFile>> Files;
   std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
@@ -59,6 +67,9 @@ enum {
 
 void printHelp(const char *Argv0);
 void printVersion();
+
+void createResponseFile(const llvm::opt::InputArgList &Args);
+void copyInputFile(StringRef Path);
 
 std::string findFromSearchPaths(StringRef Path);
 std::string searchLibrary(StringRef Path);

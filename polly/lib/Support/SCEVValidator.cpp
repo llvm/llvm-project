@@ -5,7 +5,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/Debug.h"
-#include <vector>
 
 using namespace llvm;
 using namespace polly;
@@ -41,7 +40,7 @@ class ValidatorResult {
   SCEVType::TYPE Type;
 
   /// @brief The set of Parameters in the expression.
-  std::vector<const SCEV *> Parameters;
+  ParameterSetTy Parameters;
 
 public:
   /// @brief The copy constructor
@@ -57,7 +56,7 @@ public:
 
   /// @brief Construct a result with a certain type and a single parameter.
   ValidatorResult(SCEVType::TYPE Type, const SCEV *Expr) : Type(Type) {
-    Parameters.push_back(Expr);
+    Parameters.insert(Expr);
   }
 
   /// @brief Get the type of the ValidatorResult.
@@ -79,12 +78,11 @@ public:
   bool isPARAM() { return Type == SCEVType::PARAM; }
 
   /// @brief Get the parameters of this validator result.
-  std::vector<const SCEV *> getParameters() { return Parameters; }
+  const ParameterSetTy &getParameters() { return Parameters; }
 
   /// @brief Add the parameters of Source to this result.
   void addParamsFrom(const ValidatorResult &Source) {
-    Parameters.insert(Parameters.end(), Source.Parameters.begin(),
-                      Source.Parameters.end());
+    Parameters.insert(Source.Parameters.begin(), Source.Parameters.end());
   }
 
   /// @brief Merge a result.
@@ -126,13 +124,12 @@ private:
   const Region *R;
   Loop *Scope;
   ScalarEvolution &SE;
-  const Value *BaseAddress;
   InvariantLoadsSetTy *ILS;
 
 public:
   SCEVValidator(const Region *R, Loop *Scope, ScalarEvolution &SE,
-                const Value *BaseAddress, InvariantLoadsSetTy *ILS)
-      : R(R), Scope(Scope), SE(SE), BaseAddress(BaseAddress), ILS(ILS) {}
+                InvariantLoadsSetTy *ILS)
+      : R(R), Scope(Scope), SE(SE), ILS(ILS) {}
 
   class ValidatorResult visitConstant(const SCEVConstant *Constant) {
     return ValidatorResult(SCEVType::INT);
@@ -159,23 +156,7 @@ public:
   }
 
   class ValidatorResult visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    ValidatorResult Op = visit(Expr->getOperand());
-
-    switch (Op.getType()) {
-    case SCEVType::INT:
-    case SCEVType::PARAM:
-      // We currently do not represent a truncate expression as an affine
-      // expression. If it is constant during Scop execution, we treat it as a
-      // parameter.
-      return ValidatorResult(SCEVType::PARAM, Expr);
-    case SCEVType::IV:
-      DEBUG(dbgs() << "INVALID: ZeroExtend of SCEVType::IV expression");
-      return ValidatorResult(SCEVType::INVALID);
-    case SCEVType::INVALID:
-      return Op;
-    }
-
-    llvm_unreachable("Unknown SCEVType");
+    return visit(Expr->getOperand());
   }
 
   class ValidatorResult visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
@@ -236,20 +217,6 @@ public:
 
     // TODO: Check for NSW and NUW.
     return Return;
-  }
-
-  class ValidatorResult visitUDivExpr(const SCEVUDivExpr *Expr) {
-    ValidatorResult LHS = visit(Expr->getLHS());
-    ValidatorResult RHS = visit(Expr->getRHS());
-
-    // We currently do not represent an unsigned division as an affine
-    // expression. If the division is constant during Scop execution we treat it
-    // as a parameter, otherwise we bail out.
-    if (LHS.isConstant() && RHS.isConstant())
-      return ValidatorResult(SCEVType::PARAM, Expr);
-
-    DEBUG(dbgs() << "INVALID: unsigned division of non-constant expressions");
-    return ValidatorResult(SCEVType::INVALID);
   }
 
   class ValidatorResult visitAddRecExpr(const SCEVAddRecExpr *Expr) {
@@ -355,18 +322,43 @@ public:
     return visitGenericInst(I, S);
   }
 
-  ValidatorResult visitSDivInstruction(Instruction *SDiv, const SCEV *S) {
+  ValidatorResult visitDivision(const SCEV *Dividend, const SCEV *Divisor,
+                                const SCEV *DivExpr,
+                                Instruction *SDiv = nullptr) {
+
+    // First check if we might be able to model the division, thus if the
+    // divisor is constant. If so, check the dividend, otherwise check if
+    // the whole division can be seen as a parameter.
+    if (isa<SCEVConstant>(Divisor))
+      return visit(Dividend);
+
+    // For signed divisions use the SDiv instruction to check for a parameter
+    // division, for unsigned divisions check the operands.
+    if (SDiv)
+      return visitGenericInst(SDiv, DivExpr);
+
+    ValidatorResult LHS = visit(Dividend);
+    ValidatorResult RHS = visit(Divisor);
+    if (LHS.isConstant() && RHS.isConstant())
+      return ValidatorResult(SCEVType::PARAM, DivExpr);
+
+    DEBUG(dbgs() << "INVALID: unsigned division of non-constant expressions");
+    return ValidatorResult(SCEVType::INVALID);
+  }
+
+  ValidatorResult visitUDivExpr(const SCEVUDivExpr *Expr) {
+    auto *Dividend = Expr->getLHS();
+    auto *Divisor = Expr->getRHS();
+    return visitDivision(Dividend, Divisor, Expr);
+  }
+
+  ValidatorResult visitSDivInstruction(Instruction *SDiv, const SCEV *Expr) {
     assert(SDiv->getOpcode() == Instruction::SDiv &&
            "Assumed SDiv instruction!");
 
-    auto *Divisor = SDiv->getOperand(1);
-    auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI)
-      return visitGenericInst(SDiv, S);
-
-    auto *Dividend = SDiv->getOperand(0);
-    auto *DividendSCEV = SE.getSCEV(Dividend);
-    return visit(DividendSCEV);
+    auto *Dividend = SE.getSCEV(SDiv->getOperand(0));
+    auto *Divisor = SE.getSCEV(SDiv->getOperand(1));
+    return visitDivision(Dividend, Divisor, Expr, SDiv);
   }
 
   ValidatorResult visitSRemInstruction(Instruction *SRem, const SCEV *S) {
@@ -386,26 +378,13 @@ public:
   ValidatorResult visitUnknown(const SCEVUnknown *Expr) {
     Value *V = Expr->getValue();
 
-    // TODO: FIXME: IslExprBuilder is not capable of producing valid code
-    //              for arbitrary pointer expressions at the moment. Until
-    //              this is fixed we disallow pointer expressions completely.
-    if (Expr->getType()->isPointerTy()) {
-      DEBUG(dbgs() << "INVALID: UnknownExpr is a pointer type [FIXME]");
-      return ValidatorResult(SCEVType::INVALID);
-    }
-
-    if (!Expr->getType()->isIntegerTy()) {
-      DEBUG(dbgs() << "INVALID: UnknownExpr is not an integer");
+    if (!Expr->getType()->isIntegerTy() && !Expr->getType()->isPointerTy()) {
+      DEBUG(dbgs() << "INVALID: UnknownExpr is not an integer or pointer");
       return ValidatorResult(SCEVType::INVALID);
     }
 
     if (isa<UndefValue>(V)) {
       DEBUG(dbgs() << "INVALID: UnknownExpr references an undef value");
-      return ValidatorResult(SCEVType::INVALID);
-    }
-
-    if (BaseAddress == V) {
-      DEBUG(dbgs() << "INVALID: UnknownExpr references BaseAddress\n");
       return ValidatorResult(SCEVType::INVALID);
     }
 
@@ -427,113 +406,42 @@ public:
 };
 
 /// @brief Check whether a SCEV refers to an SSA name defined inside a region.
-///
-struct SCEVInRegionDependences
-    : public SCEVVisitor<SCEVInRegionDependences, bool> {
-public:
-  /// Returns true when the SCEV has SSA names defined in region R. It @p
-  /// AllowLoops is false, loop dependences are checked as well. AddRec SCEVs
-  /// are only allowed within its loop (current loop determined by @p Scope),
-  /// not outside of it unless AddRec's loop is not even in the region.
-  static bool hasDependences(const SCEV *S, const Region *R, Loop *Scope,
-                             bool AllowLoops) {
-    SCEVInRegionDependences Ignore(R, Scope, AllowLoops);
-    return Ignore.visit(S);
-  }
-
-  SCEVInRegionDependences(const Region *R, Loop *Scope, bool AllowLoops)
-      : R(R), Scope(Scope), AllowLoops(AllowLoops) {}
-
-  bool visit(const SCEV *Expr) {
-    return SCEVVisitor<SCEVInRegionDependences, bool>::visit(Expr);
-  }
-
-  bool visitConstant(const SCEVConstant *Constant) { return false; }
-
-  bool visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    return visit(Expr->getOperand());
-  }
-
-  bool visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    return visit(Expr->getOperand());
-  }
-
-  bool visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-    return visit(Expr->getOperand());
-  }
-
-  bool visitAddExpr(const SCEVAddExpr *Expr) {
-    for (int i = 0, e = Expr->getNumOperands(); i < e; ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitMulExpr(const SCEVMulExpr *Expr) {
-    for (int i = 0, e = Expr->getNumOperands(); i < e; ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitUDivExpr(const SCEVUDivExpr *Expr) {
-    if (visit(Expr->getLHS()))
-      return true;
-
-    if (visit(Expr->getRHS()))
-      return true;
-
-    return false;
-  }
-
-  bool visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-    if (!AllowLoops) {
-      if (!Scope)
-        return true;
-      auto *L = Expr->getLoop();
-      if (R->contains(L) && !L->contains(Scope))
-        return true;
-    }
-
-    for (size_t i = 0; i < Expr->getNumOperands(); ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitSMaxExpr(const SCEVSMaxExpr *Expr) {
-    for (size_t i = 0; i < Expr->getNumOperands(); ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitUMaxExpr(const SCEVUMaxExpr *Expr) {
-    for (size_t i = 0; i < Expr->getNumOperands(); ++i)
-      if (visit(Expr->getOperand(i)))
-        return true;
-
-    return false;
-  }
-
-  bool visitUnknown(const SCEVUnknown *Expr) {
-    Instruction *Inst = dyn_cast<Instruction>(Expr->getValue());
-
-    // Return true when Inst is defined inside the region R.
-    if (Inst && R->contains(Inst))
-      return true;
-
-    return false;
-  }
-
-private:
+class SCEVInRegionDependences {
   const Region *R;
   Loop *Scope;
   bool AllowLoops;
+  bool HasInRegionDeps = false;
+
+public:
+  SCEVInRegionDependences(const Region *R, Loop *Scope, bool AllowLoops)
+      : R(R), Scope(Scope), AllowLoops(AllowLoops) {}
+
+  bool follow(const SCEV *S) {
+    if (auto Unknown = dyn_cast<SCEVUnknown>(S)) {
+      Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
+
+      // Return true when Inst is defined inside the region R.
+      if (Inst && R->contains(Inst)) {
+        HasInRegionDeps = true;
+        return false;
+      }
+    } else if (auto AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+      if (!AllowLoops) {
+        if (!Scope) {
+          HasInRegionDeps = true;
+          return false;
+        }
+        auto *L = AddRec->getLoop();
+        if (R->contains(L) && !L->contains(Scope)) {
+          HasInRegionDeps = true;
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  bool isDone() { return false; }
+  bool hasDependences() { return HasInRegionDeps; }
 };
 
 namespace polly {
@@ -560,37 +468,60 @@ void findLoops(const SCEV *Expr, SetVector<const Loop *> &Loops) {
 
 /// Find all values referenced in SCEVUnknowns.
 class SCEVFindValues {
+  ScalarEvolution &SE;
   SetVector<Value *> &Values;
 
 public:
-  SCEVFindValues(SetVector<Value *> &Values) : Values(Values) {}
+  SCEVFindValues(ScalarEvolution &SE, SetVector<Value *> &Values)
+      : SE(SE), Values(Values) {}
 
   bool follow(const SCEV *S) {
-    if (const SCEVUnknown *Unknown = dyn_cast<SCEVUnknown>(S))
-      Values.insert(Unknown->getValue());
-    return true;
+    const SCEVUnknown *Unknown = dyn_cast<SCEVUnknown>(S);
+    if (!Unknown)
+      return true;
+
+    Values.insert(Unknown->getValue());
+    Instruction *Inst = dyn_cast<Instruction>(Unknown->getValue());
+    if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
+                  Inst->getOpcode() != Instruction::SDiv))
+      return false;
+
+    auto *Dividend = SE.getSCEV(Inst->getOperand(1));
+    if (!isa<SCEVConstant>(Dividend))
+      return false;
+
+    auto *Divisor = SE.getSCEV(Inst->getOperand(0));
+    SCEVFindValues FindValues(SE, Values);
+    SCEVTraversal<SCEVFindValues> ST(FindValues);
+    ST.visitAll(Dividend);
+    ST.visitAll(Divisor);
+
+    return false;
   }
   bool isDone() { return false; }
 };
 
-void findValues(const SCEV *Expr, SetVector<Value *> &Values) {
-  SCEVFindValues FindValues(Values);
+void findValues(const SCEV *Expr, ScalarEvolution &SE,
+                SetVector<Value *> &Values) {
+  SCEVFindValues FindValues(SE, Values);
   SCEVTraversal<SCEVFindValues> ST(FindValues);
   ST.visitAll(Expr);
 }
 
 bool hasScalarDepsInsideRegion(const SCEV *Expr, const Region *R,
                                llvm::Loop *Scope, bool AllowLoops) {
-  return SCEVInRegionDependences::hasDependences(Expr, R, Scope, AllowLoops);
+  SCEVInRegionDependences InRegionDeps(R, Scope, AllowLoops);
+  SCEVTraversal<SCEVInRegionDependences> ST(InRegionDeps);
+  ST.visitAll(Expr);
+  return InRegionDeps.hasDependences();
 }
 
 bool isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
-                  ScalarEvolution &SE, const Value *BaseAddress,
-                  InvariantLoadsSetTy *ILS) {
+                  ScalarEvolution &SE, InvariantLoadsSetTy *ILS) {
   if (isa<SCEVCouldNotCompute>(Expr))
     return false;
 
-  SCEVValidator Validator(R, Scope, SE, BaseAddress, ILS);
+  SCEVValidator Validator(R, Scope, SE, ILS);
   DEBUG({
     dbgs() << "\n";
     dbgs() << "Expr: " << *Expr << "\n";
@@ -610,26 +541,25 @@ bool isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
 }
 
 static bool isAffineParamExpr(Value *V, const Region *R, Loop *Scope,
-                              ScalarEvolution &SE,
-                              std::vector<const SCEV *> &Params) {
+                              ScalarEvolution &SE, ParameterSetTy &Params) {
   auto *E = SE.getSCEV(V);
   if (isa<SCEVCouldNotCompute>(E))
     return false;
 
-  SCEVValidator Validator(R, Scope, SE, nullptr, nullptr);
+  SCEVValidator Validator(R, Scope, SE, nullptr);
   ValidatorResult Result = Validator.visit(E);
   if (!Result.isConstant())
     return false;
 
   auto ResultParams = Result.getParameters();
-  Params.insert(Params.end(), ResultParams.begin(), ResultParams.end());
+  Params.insert(ResultParams.begin(), ResultParams.end());
 
   return true;
 }
 
 bool isAffineParamConstraint(Value *V, const Region *R, llvm::Loop *Scope,
-                             ScalarEvolution &SE,
-                             std::vector<const SCEV *> &Params, bool OrExpr) {
+                             ScalarEvolution &SE, ParameterSetTy &Params,
+                             bool OrExpr) {
   if (auto *ICmp = dyn_cast<ICmpInst>(V)) {
     return isAffineParamConstraint(ICmp->getOperand(0), R, Scope, SE, Params,
                                    true) &&
@@ -651,15 +581,13 @@ bool isAffineParamConstraint(Value *V, const Region *R, llvm::Loop *Scope,
   return isAffineParamExpr(V, R, Scope, SE, Params);
 }
 
-std::vector<const SCEV *> getParamsInAffineExpr(const Region *R, Loop *Scope,
-                                                const SCEV *Expr,
-                                                ScalarEvolution &SE,
-                                                const Value *BaseAddress) {
+ParameterSetTy getParamsInAffineExpr(const Region *R, Loop *Scope,
+                                     const SCEV *Expr, ScalarEvolution &SE) {
   if (isa<SCEVCouldNotCompute>(Expr))
-    return std::vector<const SCEV *>();
+    return ParameterSetTy();
 
   InvariantLoadsSetTy ILS;
-  SCEVValidator Validator(R, Scope, SE, BaseAddress, &ILS);
+  SCEVValidator Validator(R, Scope, SE, &ILS);
   ValidatorResult Result = Validator.visit(Expr);
   assert(Result.isValid() && "Requested parameters for an invalid SCEV!");
 
@@ -686,6 +614,32 @@ extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
       return std::make_pair(StepPair.first, LeftOverAddRec);
     }
     return std::make_pair(ConstPart, S);
+  }
+
+  if (auto *Add = dyn_cast<SCEVAddExpr>(S)) {
+    SmallVector<const SCEV *, 4> LeftOvers;
+    auto Op0Pair = extractConstantFactor(Add->getOperand(0), SE);
+    auto *Factor = Op0Pair.first;
+    if (SE.isKnownNegative(Factor)) {
+      Factor = cast<SCEVConstant>(SE.getNegativeSCEV(Factor));
+      LeftOvers.push_back(SE.getNegativeSCEV(Op0Pair.second));
+    } else {
+      LeftOvers.push_back(Op0Pair.second);
+    }
+
+    for (unsigned u = 1, e = Add->getNumOperands(); u < e; u++) {
+      auto OpUPair = extractConstantFactor(Add->getOperand(u), SE);
+      // TODO: Use something smarter than equality here, e.g., gcd.
+      if (Factor == OpUPair.first)
+        LeftOvers.push_back(OpUPair.second);
+      else if (Factor == SE.getNegativeSCEV(OpUPair.first))
+        LeftOvers.push_back(SE.getNegativeSCEV(OpUPair.second));
+      else
+        return std::make_pair(ConstPart, S);
+    }
+
+    auto *NewAdd = SE.getAddExpr(LeftOvers, Add->getNoWrapFlags());
+    return std::make_pair(Factor, NewAdd);
   }
 
   auto *Mul = dyn_cast<SCEVMulExpr>(S);

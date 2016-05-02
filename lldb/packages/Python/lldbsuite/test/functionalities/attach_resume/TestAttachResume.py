@@ -38,19 +38,20 @@ class AttachResumeTestCase(TestBase):
 
         self.setAsync(True)
         listener = self.dbg.GetListener()
+        process = self.dbg.GetSelectedTarget().GetProcess()
 
         self.runCmd("c")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
         self.runCmd("process interrupt")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateStopped])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateStopped])
 
         # be sure to continue/interrupt/continue (r204504)
         self.runCmd("c")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
         self.runCmd("process interrupt")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateStopped])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateStopped])
 
         # Second interrupt should have no effect.
         self.expect("process interrupt", patterns=["Process is not running"], error=True)
@@ -59,7 +60,7 @@ class AttachResumeTestCase(TestBase):
         self.runCmd("br set -f main.cpp -l %u" % (line_number('main.cpp', '// Set breakpoint here')))
 
         self.runCmd("c")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning, lldb.eStateStopped])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning, lldb.eStateStopped])
         self.expect('br list', 'Breakpoint not hit',
             substrs = ['hit count = 1'])
 
@@ -67,8 +68,8 @@ class AttachResumeTestCase(TestBase):
         self.expect("expr debugger_flag = false", substrs=[" = false"]);
 
         self.runCmd("c")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
         # make sure to detach while in running state (r204759)
         self.runCmd("detach")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateDetached])
+        lldbutil.expect_state_changes(self, listener, process, [lldb.eStateDetached])

@@ -111,6 +111,7 @@ struct Configuration {
   int ManifestID = 1;
   StringRef ManifestDependency;
   bool ManifestUAC = true;
+  std::vector<std::string> ManifestInput;
   StringRef ManifestLevel = "'asInvoker'";
   StringRef ManifestUIAccess = "'false'";
   StringRef ManifestFile;

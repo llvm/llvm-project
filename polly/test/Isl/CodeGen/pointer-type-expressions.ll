@@ -1,11 +1,6 @@
 ; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s -check-prefix=CODEGEN
 
-; TODO: FIXME: IslExprBuilder is not capable of producing valid code
-;              for arbitrary pointer expressions at the moment. Until
-;              this is fixed we disallow pointer expressions completely.
-; XFAIL: *
-
 ; void f(int a[], int N, float *P) {
 ;   int i;
 ;   for (i = 0; i < N; ++i)
@@ -46,7 +41,10 @@ return:
 ; CHECK:     Stmt_store(c0);
 ; CHECK: }
 
-; CODEGEN:   %[[R0:[0-9]*]] = bitcast float* %P to i8*
-; CODEGEN:   %[[R1:[0-9]*]] = bitcast float* %P to i8*
-; CODEGEN-NEXT:   icmp ule i8* %[[R1]], inttoptr (i64 -1 to i8*)
+; CODEGEN-LABEL: polly.cond:
+; CODEGEN-NEXT:   %[[R1:[0-9]*]] = ptrtoint float* %P to i64
+; CODEGEN-NEXT:   %[[R2:[0-9]*]] = icmp sle i64 %[[R1]], -1
+; CODEGEN-LABEL: polly.cond2:
+; CODEGEN-NEXT:   %[[R3:[0-9]*]] = ptrtoint float* %P to i64
+; CODEGEN-NEXT:   %[[R4:[0-9]*]] = icmp sge i64 %[[R3]], 1
 

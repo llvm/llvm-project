@@ -198,6 +198,9 @@ ELFHeader::GetRelocationJumpSlotType() const
     case EM_MIPS:
         slot = R_MIPS_JUMP_SLOT;
         break;
+    case EM_S390:
+        slot = R_390_JMP_SLOT;
+        break;
     }
 
     return slot;

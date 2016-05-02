@@ -1,13 +1,13 @@
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 
 # System modules
 from distutils.version import LooseVersion, StrictVersion
 from functools import wraps
-import itertools
 import os
 import re
 import sys
+import tempfile
 
 # Third-party modules
 import six
@@ -19,7 +19,7 @@ import use_lldb_suite
 import lldb
 from . import configuration
 from . import test_categories
-from .result_formatter import EventBuilder
+from lldbsuite.test_event.event_builder import EventBuilder
 from lldbsuite.support import funcutils
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
@@ -77,7 +77,6 @@ def expectedFailure(expected_fn, bugnumber=None):
             raise Exception("Decorator can only be used to decorate a test method")
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from unittest2 import case
             self = args[0]
             if funcutils.requires_self(expected_fn):
                 xfail_reason = expected_fn(self)
@@ -110,7 +109,6 @@ def skipTestIfFn(expected_fn, bugnumber=None):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            from unittest2 import case
             self = args[0]
             if funcutils.requires_self(expected_fn):
                 reason = expected_fn(self)
@@ -528,6 +526,23 @@ def skipUnlessCompilerRt(func):
         compilerRtPath = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "llvm","projects","compiler-rt")
         return "compiler-rt not found" if not os.path.exists(compilerRtPath) else None
     return skipTestIfFn(is_compiler_rt_missing)(func)
+
+def skipUnlessThreadSanitizer(func):
+    """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
+    def is_compiler_clang_with_thread_sanitizer(self):
+        compiler_path = self.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        if not compiler.startswith("clang"):
+            return "Test requires clang as compiler"
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() != None:
+            return None  # The compiler cannot compile at all, let's *not* skip the test
+        cmd = "echo 'int main() {}' | %s -fsanitize=thread -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() != None:
+            return "Compiler cannot compile with -fsanitize=thread"
+        return None
+    return skipTestIfFn(is_compiler_clang_with_thread_sanitizer)(func)
 
 def skipUnlessClangModules():
     """Decorate the item to skip test unless Clang -gmodules flag is supported."""

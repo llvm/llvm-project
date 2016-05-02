@@ -1464,12 +1464,12 @@ Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, vo
                                                          ::dispatch_get_global_queue (DISPATCH_QUEUE_PRIORITY_DEFAULT,0));
 
     if (log)
-        log->Printf ("Host::StartMonitoringChildProcess (callback=%p, baton=%p, pid=%i, monitor_signals=%i) source = %p\n",
-                     callback,
-                     callback_baton,
-                     (int)pid,
-                     monitor_signals,
-                     source);
+        log->Printf("Host::StartMonitoringChildProcess "
+                    "(callback=%p, baton=%p, pid=%i, monitor_signals=%i) "
+                    "source = %p\n",
+                    reinterpret_cast<void *>(callback), callback_baton,
+                    static_cast<int>(pid), monitor_signals,
+                    reinterpret_cast<void *>(source));
 
     if (source)
     {

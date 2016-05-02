@@ -232,6 +232,7 @@ class ProcessAPITestCase(TestBase):
 
         # The bytearray_to_int utility function expects a little endian bytearray.
         if byteOrder == lldb.eByteOrderBig:
+            content = bytearray(content, 'ascii')
             content.reverse()
 
         new_value = bytearray_to_int(content, byteSize)

@@ -9,9 +9,17 @@
 
 #include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
+#include "lld/Core/Atom.h"
+#include "lld/Core/DefinedAtom.h"
+#include "lld/Core/File.h"
+#include "lld/Core/UndefinedAtom.h"
+#include "lld/ReaderWriter/MachOLinkingContext.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MachO.h"
-
-using llvm::ErrorOr;
+#include "llvm/Support/YAMLTraits.h"
+#include <cstdint>
+#include <memory>
 
 using namespace lld::mach_o::normalized;
 using namespace llvm::MachO;

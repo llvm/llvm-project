@@ -113,11 +113,11 @@ __kmp_acquire_tas_lock_timed_template( kmp_tas_lock_t *lck, kmp_int32 gtid )
         KMP_YIELD_SPIN( spins );
     }
 
+    kmp_backoff_t backoff = __kmp_spin_backoff_params;
     while ( ( lck->lk.poll != KMP_LOCK_FREE(tas) ) ||
       ( ! KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), KMP_LOCK_FREE(tas), KMP_LOCK_BUSY(gtid+1, tas) ) ) ) {
-        //
-        // FIXME - use exponential backoff here
-        //
+
+        __kmp_spin_backoff(&backoff);
         if ( TCR_4( __kmp_nth ) > ( __kmp_avail_proc ? __kmp_avail_proc :
           __kmp_xproc ) ) {
             KMP_YIELD( TRUE );
@@ -3006,6 +3006,46 @@ static void
 __kmp_set_drdpa_lock_flags( kmp_drdpa_lock_t *lck, kmp_lock_flags_t flags )
 {
     lck->lk.flags = flags;
+}
+
+// Time stamp counter
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+# define __kmp_tsc() __kmp_hardware_timestamp()
+// Runtime's default backoff parameters
+kmp_backoff_t __kmp_spin_backoff_params = { 1, 4096, 100 };
+#else
+// Use nanoseconds for other platforms
+extern kmp_uint64 __kmp_now_nsec();
+kmp_backoff_t __kmp_spin_backoff_params = { 1, 256, 100 };
+# define __kmp_tsc() __kmp_now_nsec()
+#endif
+
+// A useful predicate for dealing with timestamps that may wrap.
+// Is a before b?
+// Since the timestamps may wrap, this is asking whether it's
+// shorter to go clockwise from a to b around the clock-face, or anti-clockwise.
+// Times where going clockwise is less distance than going anti-clockwise
+// are in the future, others are in the past.
+// e.g.) a = MAX-1, b = MAX+1 (=0), then a > b (true) does not mean a reached b
+//       whereas signed(a) = -2, signed(b) = 0 captures the actual difference
+static inline bool before(kmp_uint64 a, kmp_uint64 b)
+{
+    return ((kmp_int64)b - (kmp_int64)a) > 0;
+}
+
+// Truncated binary exponential backoff function
+void
+__kmp_spin_backoff(kmp_backoff_t *boff)
+{
+    // We could flatten this loop, but making it a nested loop gives better result.
+    kmp_uint32 i;
+    for (i = boff->step; i > 0; i--) {
+        kmp_uint64 goal = __kmp_tsc() + boff->min_tick;
+        do {
+            KMP_CPU_PAUSE();
+        } while (before(__kmp_tsc(), goal));
+    }
+    boff->step = (boff->step<<1 | 1) & (boff->max_backoff-1);
 }
 
 #if KMP_USE_DYNAMIC_LOCK

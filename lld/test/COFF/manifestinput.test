@@ -1,0 +1,10 @@
+# REQUIRES: winres
+
+# RUN: yaml2obj %p/Inputs/ret42.yaml > %t.obj
+# RUN: lld-link /out:%t.exe /entry:main \
+# RUN:   /manifestuac:"level='requireAdministrator'" \
+# RUN:   /manifestinput:%p/Inputs/manifestinput.test %t.obj
+# RUN: FileCheck %s < %t.exe.manifest
+
+CHECK: <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+CHECK: <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"><dependency><dependentAssembly><assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"></assemblyIdentity></dependentAssembly></dependency><trustInfo><security><requestedPrivileges><requestedExecutionLevel level="requireAdministrator" uiAccess="false"></requestedExecutionLevel></requestedPrivileges></security></trustInfo></assembly>

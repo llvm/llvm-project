@@ -25,6 +25,7 @@
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "Target.h"
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
@@ -38,10 +39,43 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
+// A resolved relocation. The Sec and Offset fields are set if the relocation
+// was resolved to an offset within a section.
+template <class ELFT>
+struct ResolvedReloc {
+  InputSectionBase<ELFT> *Sec;
+  typename ELFT::uint Offset;
+};
+
+template <class ELFT>
+static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
+                                     const typename ELFT::Rel &Rel) {
+  return Target->getImplicitAddend(Sec->getSectionData().begin(),
+                                   Rel.getType(Config->Mips64EL));
+}
+
+template <class ELFT>
+static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
+                                     const typename ELFT::Rela &Rel) {
+  return Rel.r_addend;
+}
+
+template <class ELFT, class RelT>
+static ResolvedReloc<ELFT> resolveReloc(InputSection<ELFT> *Sec, RelT &Rel) {
+  SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
+  auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
+  if (!D || !D->Section)
+    return {nullptr, 0};
+  typename ELFT::uint Offset = D->Value;
+  if (D->isSection())
+    Offset += getAddend(Sec, Rel);
+  return {D->Section->Repl, Offset};
+}
+
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> *Sec,
-                             std::function<void(InputSectionBase<ELFT> *)> Fn) {
+                             std::function<void(ResolvedReloc<ELFT>)> Fn) {
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
   typedef typename ELFT::Shdr Elf_Shdr;
@@ -50,12 +84,10 @@ static void forEachSuccessor(InputSection<ELFT> *Sec,
   for (const Elf_Shdr *RelSec : Sec->RelocSections) {
     if (RelSec->sh_type == SHT_RELA) {
       for (const Elf_Rela &RI : Obj.relas(RelSec))
-        if (InputSectionBase<ELFT> *Succ = Sec->getRelocTarget(RI))
-          Fn(Succ);
+        Fn(resolveReloc(Sec, RI));
     } else {
       for (const Elf_Rel &RI : Obj.rels(RelSec))
-        if (InputSectionBase<ELFT> *Succ = Sec->getRelocTarget(RI))
-          Fn(Succ);
+        Fn(resolveReloc(Sec, RI));
     }
   }
 }
@@ -87,24 +119,32 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
 template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
+  typedef typename ELFT::uint uintX_t;
   SmallVector<InputSection<ELFT> *, 256> Q;
 
-  auto Enqueue = [&](InputSectionBase<ELFT> *Sec) {
-    if (!Sec || Sec->Live)
+  auto Enqueue = [&](ResolvedReloc<ELFT> R) {
+    if (!R.Sec)
       return;
-    Sec->Live = true;
-    if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(Sec))
+    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec)) {
+      std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
+          MS->getRangeAndSize(R.Offset);
+      T.first->second = 0;
+    }
+    if (R.Sec->Live)
+      return;
+    R.Sec->Live = true;
+    if (InputSection<ELFT> *S = dyn_cast<InputSection<ELFT>>(R.Sec))
       Q.push_back(S);
   };
 
-  auto MarkSymbol = [&](SymbolBody *Sym) {
-    if (Sym)
-      if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&Sym->repl()))
-        Enqueue(D->Section);
+  auto MarkSymbol = [&](const SymbolBody *Sym) {
+    if (auto *D = dyn_cast_or_null<DefinedRegular<ELFT>>(Sym))
+      Enqueue({D->Section, D->Value});
   };
 
   // Add GC root symbols.
-  MarkSymbol(Config->EntrySym);
+  if (Config->EntrySym)
+    MarkSymbol(Config->EntrySym->body());
   MarkSymbol(Symtab->find(Config->Init));
   MarkSymbol(Symtab->find(Config->Fini));
   for (StringRef S : Config->Undefined)
@@ -112,21 +152,17 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  if (Config->Shared || Config->ExportDynamic) {
-    for (const std::pair<StringRef, Symbol *> &P : Symtab->getSymbols()) {
-      SymbolBody *B = P.second->Body;
-      if (B->getVisibility() == STV_DEFAULT)
-        MarkSymbol(B);
-    }
-  }
+  for (const Symbol *S : Symtab->getSymbols())
+    if (S->includeInDynsym())
+      MarkSymbol(S->body());
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
   for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles())
     for (InputSectionBase<ELFT> *Sec : F->getSections())
       if (Sec && Sec != &InputSection<ELFT>::Discarded)
-        if (isReserved(Sec) || Script->shouldKeep<ELFT>(Sec))
-          Enqueue(Sec);
+        if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
+          Enqueue({Sec, 0});
 
   // Mark all reachable sections.
   while (!Q.empty())

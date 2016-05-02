@@ -23,6 +23,7 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
 #include "lldb/API/SBSymbolContextList.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointID.h"
@@ -1126,48 +1127,36 @@ SBTarget::BreakpointCreateBySourceRegex (const char *source_regex,
                                          const lldb::SBFileSpec &source_file,
                                          const char *module_name)
 {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
-
-    SBBreakpoint sb_bp;
-    TargetSP target_sp(GetSP());
-    if (target_sp && source_regex && source_regex[0])
-    {
-        Mutex::Locker api_locker (target_sp->GetAPIMutex());
-        RegularExpression regexp(source_regex);
-        FileSpecList source_file_spec_list;
-        const bool hardware = false;
-        const LazyBool move_to_nearest_code = eLazyBoolCalculate;
-        source_file_spec_list.Append (source_file.ref());
+        SBFileSpecList module_spec_list;
 
         if (module_name && module_name[0])
         {
-            FileSpecList module_spec_list;
             module_spec_list.Append (FileSpec (module_name, false));
-
-            *sb_bp = target_sp->CreateSourceRegexBreakpoint (&module_spec_list, &source_file_spec_list, regexp, false, hardware, move_to_nearest_code);
         }
-        else
+        
+        SBFileSpecList source_file_list;
+        if (source_file.IsValid())
         {
-            *sb_bp = target_sp->CreateSourceRegexBreakpoint (NULL, &source_file_spec_list, regexp, false, hardware, move_to_nearest_code);
+            source_file_list.Append(source_file);
         }
-    }
+    
+        return BreakpointCreateBySourceRegex (source_regex, module_spec_list, source_file_list);
 
-    if (log)
-    {
-        char path[PATH_MAX];
-        source_file->GetPath (path, sizeof(path));
-        log->Printf ("SBTarget(%p)::BreakpointCreateByRegex (source_regex=\"%s\", file=\"%s\", module_name=\"%s\") => SBBreakpoint(%p)",
-                     static_cast<void*>(target_sp.get()), source_regex, path,
-                     module_name, static_cast<void*>(sb_bp.get()));
-    }
-
-    return sb_bp;
 }
 
 lldb::SBBreakpoint
 SBTarget::BreakpointCreateBySourceRegex (const char *source_regex,
                                                  const SBFileSpecList &module_list,
                                                  const lldb::SBFileSpecList &source_file_list)
+{
+    return BreakpointCreateBySourceRegex(source_regex, module_list, source_file_list, SBStringList());
+}
+
+lldb::SBBreakpoint
+SBTarget::BreakpointCreateBySourceRegex (const char *source_regex,
+                                                 const SBFileSpecList &module_list,
+                                                 const lldb::SBFileSpecList &source_file_list,
+                                                 const SBStringList &func_names)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
 
@@ -1179,7 +1168,19 @@ SBTarget::BreakpointCreateBySourceRegex (const char *source_regex,
         const bool hardware = false;
         const LazyBool move_to_nearest_code = eLazyBoolCalculate;
         RegularExpression regexp(source_regex);
-        *sb_bp = target_sp->CreateSourceRegexBreakpoint (module_list.get(), source_file_list.get(), regexp, false, hardware, move_to_nearest_code);
+        std::unordered_set<std::string> func_names_set;
+        for (size_t i = 0; i < func_names.GetSize(); i++)
+        {
+            func_names_set.insert(func_names.GetStringAtIndex(i));
+        }
+        
+        *sb_bp = target_sp->CreateSourceRegexBreakpoint (module_list.get(),
+                                                         source_file_list.get(),
+                                                         func_names_set,
+                                                         regexp,
+                                                         false,
+                                                         hardware,
+                                                         move_to_nearest_code);
     }
 
     if (log)
@@ -2418,7 +2419,9 @@ lldb::SBValue
 SBTarget::EvaluateExpression (const char *expr, const SBExpressionOptions &options)
 {
     Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
+#if !defined(LLDB_DISABLE_PYTHON)
     Log * expr_log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+#endif
     SBValue expr_result;
     ExpressionResults exe_results = eExpressionSetupError;
     ValueObjectSP expr_value_sp;

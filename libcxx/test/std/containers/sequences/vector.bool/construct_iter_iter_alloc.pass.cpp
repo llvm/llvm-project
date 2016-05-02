@@ -16,6 +16,7 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
 
@@ -24,7 +25,7 @@ void
 test(Iterator first, Iterator last, const typename C::allocator_type& a)
 {
     C c(first, last, a);
-    assert(c.__invariants());
+    LIBCPP_ASSERT(c.__invariants());
     assert(c.size() == std::distance(first, last));
     for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i, ++first)
         assert(*i == *first);
@@ -42,7 +43,7 @@ int main()
     test<std::vector<bool> >(random_access_iterator<const bool*>(a), random_access_iterator<const bool*>(an), alloc);
     test<std::vector<bool> >(a, an, alloc);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     min_allocator<bool> alloc;
     test<std::vector<bool, min_allocator<bool>> >(input_iterator<const bool*>(a), input_iterator<const bool*>(an), alloc);

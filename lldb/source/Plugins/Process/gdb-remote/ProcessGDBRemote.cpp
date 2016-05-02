@@ -2089,6 +2089,23 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                             handled = true;
                         }
                     }
+                    else if (!signo)
+                    {
+                        addr_t pc = thread_sp->GetRegisterContext()->GetPC();
+                        lldb::BreakpointSiteSP bp_site_sp =
+                            thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+
+                        // If the current pc is a breakpoint site then the StopInfo should be set to Breakpoint
+                        // even though the remote stub did not set it as such. This can happen when
+                        // the thread is involuntarily interrupted (e.g. due to stops on other
+                        // threads) just as it is about to execute the breakpoint instruction.
+                        if (bp_site_sp && bp_site_sp->ValidForThisThread(thread_sp.get()))
+                        {
+                            thread_sp->SetStopInfo(
+                                StopInfo::CreateStopReasonWithBreakpointSiteID(*thread_sp, bp_site_sp->GetID()));
+                            handled = true;
+                        }
+                    }
 
                     if (!handled && signo && did_exec == false)
                     {
@@ -4355,13 +4372,10 @@ struct GdbServerTargetInfo
 };
 
 bool
-ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemoteDynamicRegisterInfo &dyn_reg_info, ABISP abi_sp)
+ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemoteDynamicRegisterInfo &dyn_reg_info, ABISP abi_sp, uint32_t &cur_reg_num, uint32_t &reg_offset)
 {
     if (!feature_node)
         return false;
-
-    uint32_t cur_reg_num = 0;
-    uint32_t reg_offset = 0;
 
     feature_node.ForEachChildElementWithName("reg", [&target_info, &dyn_reg_info, &cur_reg_num, &reg_offset, &abi_sp](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
@@ -4618,12 +4632,16 @@ ProcessGDBRemote::GetGDBServerRegisterInfo (ArchSpec &arch_to_use)
                 return true; // Keep iterating through all children of the target_node
             });
 
+            // Initialize these outside of ParseRegisters, since they should not be reset inside each include feature
+            uint32_t cur_reg_num = 0;
+            uint32_t reg_offset = 0;
+
             // Don't use Process::GetABI, this code gets called from DidAttach, and in that context we haven't
             // set the Target's architecture yet, so the ABI is also potentially incorrect.
             ABISP abi_to_use_sp = ABI::FindPlugin(arch_to_use);
             if (feature_node)
             {
-                ParseRegisters(feature_node, target_info, this->m_register_info, abi_to_use_sp);
+                ParseRegisters(feature_node, target_info, this->m_register_info, abi_to_use_sp, cur_reg_num, reg_offset);
             }
 
             for (const auto &include : target_info.includes)
@@ -4641,7 +4659,7 @@ ProcessGDBRemote::GetGDBServerRegisterInfo (ArchSpec &arch_to_use)
                 XMLNode include_feature_node = include_xml_document.GetRootElement("feature");
                 if (include_feature_node)
                 {
-                    ParseRegisters(include_feature_node, target_info, this->m_register_info, abi_to_use_sp);
+                    ParseRegisters(include_feature_node, target_info, this->m_register_info, abi_to_use_sp, cur_reg_num, reg_offset);
                 }
             }
             this->m_register_info.Finalize(arch_to_use);
@@ -4845,14 +4863,7 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
         if (!modInfo.get_link_map (link_map))
             link_map = LLDB_INVALID_ADDRESS;
 
-        // hack (cleaner way to get file name only?) (win/unix compat?)
-        size_t marker = mod_name.rfind ('/');
-        if (marker == std::string::npos)
-            marker = 0;
-        else
-            marker += 1;
-
-        FileSpec file (mod_name.c_str()+marker, true);
+        FileSpec file (mod_name.c_str(), true);
         lldb::ModuleSP module_sp = LoadModuleAtAddress (file, link_map, mod_base,
                                                         mod_base_is_offset);
 
@@ -4862,7 +4873,31 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
 
     if (new_modules.GetSize() > 0)
     {
+        ModuleList removed_modules;
         Target &target = GetTarget();
+        ModuleList &loaded_modules = m_process->GetTarget().GetImages();
+
+        for (size_t i = 0; i < loaded_modules.GetSize(); ++i)
+        {
+            const lldb::ModuleSP loaded_module = loaded_modules.GetModuleAtIndex(i);
+
+            bool found = false;
+            for (size_t j = 0; j < new_modules.GetSize(); ++j)
+            {
+                if (new_modules.GetModuleAtIndex(j).get() == loaded_module.get())
+                    found = true;
+            }
+
+            if (!found)
+            {
+                lldb_private::ObjectFile * obj = loaded_module->GetObjectFile ();
+                if (obj && obj->GetType () != ObjectFile::Type::eTypeExecutable)
+                    removed_modules.Append (loaded_module);
+            }
+        }
+
+        loaded_modules.Remove (removed_modules);
+        m_process->GetTarget().ModulesDidUnload (removed_modules, false);
 
         new_modules.ForEach ([&target](const lldb::ModuleSP module_sp) -> bool
         {
@@ -4878,13 +4913,11 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
             return false;
         });
 
-        ModuleList &loaded_modules = m_process->GetTarget().GetImages();
         loaded_modules.AppendIfNeeded (new_modules);
         m_process->GetTarget().ModulesDidLoad (new_modules);
     }
 
     return new_modules.GetSize();
-
 }
 
 size_t

@@ -192,6 +192,14 @@ lldb_private::formatters::WCharSummaryProvider (ValueObject& valobj, Stream& str
     if (error.Fail())
         return false;
     
+    // Get a wchar_t basic type from the current type system
+    CompilerType wchar_compiler_type = valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeWChar);
+
+    if (!wchar_compiler_type)
+        return false;
+
+    const uint32_t wchar_size = wchar_compiler_type.GetBitSize(nullptr); // Safe to pass NULL for exe_scope here
+
     StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
     options.SetData(data);
     options.SetStream(&stream);
@@ -200,5 +208,17 @@ lldb_private::formatters::WCharSummaryProvider (ValueObject& valobj, Stream& str
     options.SetSourceSize(1);
     options.SetBinaryZeroIsTerminator(false);
     
-    return StringPrinter::ReadBufferAndDumpToStream<StringPrinter::StringElementType::UTF16>(options);
+    switch (wchar_size)
+    {
+        case 8:
+            return StringPrinter::ReadBufferAndDumpToStream<StringPrinter::StringElementType::UTF8>(options);
+        case 16:
+            return StringPrinter::ReadBufferAndDumpToStream<StringPrinter::StringElementType::UTF16>(options);
+        case 32:
+            return StringPrinter::ReadBufferAndDumpToStream<StringPrinter::StringElementType::UTF32>(options);
+        default:
+            stream.Printf("size for wchar_t is not valid");
+            return true;
+    }
+    return true;
 }

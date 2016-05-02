@@ -23,6 +23,7 @@
 
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 #include "test_iterators.h"
 
 #include "platform_support.h" // locale name macros

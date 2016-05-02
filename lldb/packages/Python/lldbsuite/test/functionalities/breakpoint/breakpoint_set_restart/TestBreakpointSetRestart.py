@@ -5,7 +5,6 @@ Test inferior restart when breakpoint is set on running target.
 import os
 import lldb
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 class BreakpointSetRestart(TestBase):
 
@@ -15,19 +14,26 @@ class BreakpointSetRestart(TestBase):
     def test_breakpoint_set_restart(self):
         self.build()
 
-        cwd = self.get_process_working_directory()
-        exe = os.path.join(cwd, "a.out")
+        cwd = os.getcwd()
+        exe = os.path.join(cwd, 'a.out')
+        
         target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
 
         self.dbg.SetAsync(True)
-        process = target.LaunchSimple(None, None, cwd)
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
 
-        lldbutil.expect_state_changes(self, self.dbg.GetListener(), [lldb.eStateRunning])
+        event = lldb.SBEvent()
+        # Wait for inferior to transition to running state
+        while self.dbg.GetListener().WaitForEvent(2, event):
+            if lldb.SBProcess.GetStateFromEvent(event) == lldb.eStateRunning:
+                break
+        
         bp = target.BreakpointCreateBySourceRegex(self.BREAKPOINT_TEXT,
                                                   lldb.SBFileSpec(os.path.join(cwd, 'main.cpp')))
         self.assertTrue(bp.IsValid() and bp.GetNumLocations() == 1, VALID_BREAKPOINT)
 
-        event = lldb.SBEvent()
         while self.dbg.GetListener().WaitForEvent(2, event):
             if lldb.SBProcess.GetStateFromEvent(event) == lldb.eStateStopped and lldb.SBProcess.GetRestartedFromEvent(event):
                 continue

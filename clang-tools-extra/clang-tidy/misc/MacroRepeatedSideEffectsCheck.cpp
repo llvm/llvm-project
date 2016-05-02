@@ -65,9 +65,9 @@ void MacroRepeatedPPCallbacks::MacroExpands(const Token &MacroNameTok,
     if (hasSideEffects(ResultArgToks) &&
         countArgumentExpansions(MI, Arg) >= 2) {
       Check.diag(ResultArgToks->getLocation(),
-                 "side effects in the %ordinal0 macro argument '%1' are "
+                 "side effects in the %ordinal0 macro argument %1 are "
                  "repeated in macro expansion")
-          << (ArgNo + 1) << Arg->getName();
+          << (ArgNo + 1) << Arg;
       Check.diag(MI->getDefinitionLoc(), "macro %0 defined here",
                  DiagnosticIDs::Note)
           << MacroNameTok.getIdentifierInfo();
@@ -86,6 +86,7 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
   int SkipParenCount = 0;
   // Has a __builtin_constant_p been found?
   bool FoundBuiltin = false;
+  bool PrevTokenIsHash = false;
   // Count when "?" is reached. The "Current" will get this value when the ":"
   // is reached.
   std::stack<unsigned, SmallVector<unsigned, 8>> CountAtQuestion;
@@ -97,6 +98,16 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
     // happens.
     if (FoundBuiltin && T.isOneOf(tok::question, tok::ampamp, tok::pipepipe))
       return Max;
+
+    // Skip stringified tokens.
+    if (T.is(tok::hash)) {
+      PrevTokenIsHash = true;
+      continue;
+    }
+    if (PrevTokenIsHash) {
+      PrevTokenIsHash = false;
+      continue;
+    }
 
     // Handling of ? and :.
     if (T.is(tok::question)) {

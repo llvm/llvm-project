@@ -118,11 +118,20 @@ configuration. Passing the option on the command line will override the default.
   Specify the libc++ headers that are tested. By default the headers in the
   source tree are used.
 
-.. option:: libcxx_library=<path/to/libc++.so>
+.. option:: cxx_library_root=<path/to/lib/>
 
-  Specify the libc++ library that is tested. By default the library in the
-  build directory is used. This option cannot be used when use_system_lib is
-  provided.
+  Specify the directory of the libc++ library to be tested. By default the
+  library folder of the build directory is used. This option cannot be used
+  when use_system_lib is provided.
+
+
+.. option:: cxx_runtime_root=<path/to/lib/>
+
+  Specify the directory of the libc++ library to use at runtime. This directory
+  is not added to the linkers search path. This can be used to compile tests
+  against one version of libc++ and run them using another. The default value
+  for this option is `cxx_library_root`. This option cannot be used
+  when use_system_lib is provided.
 
 .. option:: use_system_lib=<bool>
 

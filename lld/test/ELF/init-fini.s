@@ -35,7 +35,7 @@
 // NOENTRY-NOT: FINI
 // NOENTRY: ]
 
-.global _start,_init,_fini,_foo,_bar,_undef;
+.global _start,_init,_fini,_foo,_bar,_undef
 _start:
 _init = 0x11010
 _fini = 0x11020

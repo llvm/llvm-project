@@ -231,7 +231,7 @@ public:
 
         lldb_private::Scalar cast_scalar;
 
-        if (!AssignToMatchType(cast_scalar, scalar.GetRawBits64(0), value->getType()))
+        if (!AssignToMatchType(cast_scalar, scalar.ULongLong(), value->getType()))
             return false;
 
         size_t value_byte_size = m_target_data.getTypeStoreSize(value->getType());
@@ -373,19 +373,18 @@ public:
         if (!ResolveConstantValue(resolved_value, constant))
             return false;
 
-        lldb_private::StreamString buffer (lldb_private::Stream::eBinary,
-                                           m_execution_unit.GetAddressByteSize(),
-                                           m_execution_unit.GetByteOrder());
-
         size_t constant_size = m_target_data.getTypeStoreSize(constant->getType());
+        lldb_private::DataBufferHeap buf(constant_size, 0);
 
-        const uint64_t *raw_data = resolved_value.getRawData();
+        lldb_private::Error get_data_error;
 
-        buffer.PutRawBytes(raw_data, constant_size, lldb_private::endian::InlHostByteOrder());
+        lldb_private::Scalar resolved_scalar(resolved_value.zextOrTrunc(llvm::NextPowerOf2(constant_size) * 8));
+        if (!resolved_scalar.GetAsMemoryData(buf.GetBytes(), buf.GetByteSize(), m_byte_order, get_data_error))
+            return false;
 
         lldb_private::Error write_error;
 
-        m_execution_unit.WriteMemory(process_address, (const uint8_t*)buffer.GetData(), constant_size, write_error);
+        m_execution_unit.WriteMemory(process_address, buf.GetBytes(), buf.GetByteSize(), write_error);
 
         return write_error.Success();
     }
@@ -819,7 +818,9 @@ IRInterpreter::Interpret (llvm::Module &module,
                         result = L / R;
                         break;
                     case Instruction::UDiv:
-                        result = L.GetRawBits64(0) / R.GetRawBits64(1);
+                        L.MakeUnsigned();
+                        R.MakeUnsigned();
+                        result = L / R;
                         break;
                     case Instruction::SRem:
                         L.MakeSigned();
@@ -827,7 +828,9 @@ IRInterpreter::Interpret (llvm::Module &module,
                         result = L % R;
                         break;
                     case Instruction::URem:
-                        result = L.GetRawBits64(0) % R.GetRawBits64(1);
+                        L.MakeUnsigned();
+                        R.MakeUnsigned();
+                        result = L % R;
                         break;
                     case Instruction::Shl:
                         result = L << R;
@@ -1030,7 +1033,7 @@ IRInterpreter::Interpret (llvm::Module &module,
                         return false;
                     }
 
-                    if (C.GetRawBits64(0))
+                    if (!C.IsZero())
                         frame.Jump(br_inst->getSuccessor(0));
                     else
                         frame.Jump(br_inst->getSuccessor(1));
@@ -1181,16 +1184,24 @@ IRInterpreter::Interpret (llvm::Module &module,
                         result = (L != R);
                         break;
                     case CmpInst::ICMP_UGT:
-                        result = (L.GetRawBits64(0) > R.GetRawBits64(0));
+                        L.MakeUnsigned();
+                        R.MakeUnsigned();
+                        result = (L > R);
                         break;
                     case CmpInst::ICMP_UGE:
-                        result = (L.GetRawBits64(0) >= R.GetRawBits64(0));
+                        L.MakeUnsigned();
+                        R.MakeUnsigned();
+                        result = (L >= R);
                         break;
                     case CmpInst::ICMP_ULT:
-                        result = (L.GetRawBits64(0) < R.GetRawBits64(0));
+                        L.MakeUnsigned();
+                        R.MakeUnsigned();
+                        result = (L < R);
                         break;
                     case CmpInst::ICMP_ULE:
-                        result = (L.GetRawBits64(0) <= R.GetRawBits64(0));
+                        L.MakeUnsigned();
+                        R.MakeUnsigned();
+                        result = (L <= R);
                         break;
                     case CmpInst::ICMP_SGT:
                         L.MakeSigned();

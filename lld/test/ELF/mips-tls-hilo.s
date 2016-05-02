@@ -6,6 +6,9 @@
 # RUN: llvm-objdump -d -t %t.exe | FileCheck -check-prefix=DIS %s
 # RUN: llvm-readobj -r -mips-plt-got %t.exe | FileCheck %s
 
+# RUN: ld.lld %t.o -shared -o %t.so
+# RUN: llvm-readobj -r -mips-plt-got %t.so | FileCheck -check-prefix=SO %s
+
 # REQUIRES: mips
 
 # DIS:      __start:
@@ -24,6 +27,16 @@
 # CHECK:      Relocations [
 # CHECK-NEXT: ]
 # CHECK-NOT:  Primary GOT
+
+# SO:      Relocations [
+# SO-NEXT: ]
+# SO:      Primary GOT {
+# SO:        Local entries [
+# SO-NEXT:   ]
+# SO-NEXT:   Global entries [
+# SO-NEXT:   ]
+# SO-NEXT:   Number of TLS and multi-GOT entries: 0
+# SO-NEXT: }
 
   .text
   .globl  __start

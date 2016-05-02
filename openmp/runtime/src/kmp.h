@@ -2189,6 +2189,7 @@ struct kmp_taskdata {                                 /* aligned during dynamic 
                                                       /* Currently not used except for perhaps IDB */
     kmp_taskdata_t *        td_parent;                /* parent task                             */
     kmp_int32               td_level;                 /* task nesting level                      */
+    kmp_int32               td_untied_count;          /* untied task active parts counter        */
     ident_t *               td_ident;                 /* task identifier                         */
                             // Taskwait data.
     ident_t *               td_taskwait_ident;
@@ -2350,7 +2351,6 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
     kmp_uint64              th_bar_arrive_time;           /* arrival to barrier timestamp */
     kmp_uint64              th_bar_min_time;              /* minimum arrival time at the barrier */
     kmp_uint64              th_frame_time;                /* frame timestamp */
-    kmp_uint64              th_frame_time_serialized;     /* frame timestamp in serialized parallel */
 #endif /* USE_ITT_BUILD */
     kmp_local_t             th_local;
     struct private_common  *th_pri_head;

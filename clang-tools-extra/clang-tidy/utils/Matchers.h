@@ -17,10 +17,27 @@ namespace clang {
 namespace tidy {
 namespace matchers {
 
+AST_MATCHER(BinaryOperator, isRelationalOperator) {
+  return Node.isRelationalOp();
+}
+
+AST_MATCHER(BinaryOperator, isEqualityOperator) {
+  return Node.isEqualityOp();
+}
+
+AST_MATCHER(BinaryOperator, isComparisonOperator) {
+  return Node.isComparisonOp();
+}
+
 AST_MATCHER(QualType, isExpensiveToCopy) {
   llvm::Optional<bool> IsExpensive =
       type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
   return IsExpensive && *IsExpensive;
+}
+
+AST_MATCHER(RecordDecl, isTriviallyDefaultConstructible) {
+  return type_traits::recordIsTriviallyDefaultConstructible(
+      Node, Finder->getASTContext());
 }
 
 } // namespace matchers

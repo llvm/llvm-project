@@ -527,7 +527,7 @@ public:
 
     bool
     ReadRegister(lldb::tid_t tid,
-                 uint32_t reg_num,
+                 uint32_t reg_num,   // Must be the eRegisterKindProcessPlugin register number, to be sent to the remote
                  StringExtractorGDBRemote &response);
 
     bool

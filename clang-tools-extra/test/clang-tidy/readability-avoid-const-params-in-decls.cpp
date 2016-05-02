@@ -10,7 +10,7 @@ void F1(const int i);
 
 void F2(const int *const i);
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'i' is const-qualified
-// CHECK-FIXES: void F2(const int * i);
+// CHECK-FIXES: void F2(const int *i);
 
 void F3(int const i);
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'i' is const-qualified
@@ -26,7 +26,7 @@ void F5(const int);
 
 void F6(const int *const);
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 1 is const-qualified
-// BUG(b/27584482): void F6(const int *);  should be produced
+// CHECK-FIXES: void F6(const int *);
 
 void F7(int, const int);
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: parameter 2 is const-qualified
@@ -43,8 +43,15 @@ void F9(const int long_name);
 
 void F10(const int *const *const long_name);
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 'long_name'
-// CHECK-FIXES: void F10(const int *const * long_name);
+// CHECK-FIXES: void F10(const int *const *long_name);
 
+void F11(const unsigned int /*v*/);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 1
+// CHECK-FIXES: void F11(unsigned int /*v*/);
+
+void F12(const bool b = true);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 'b'
+// CHECK-FIXES: void F12(bool b = true);
 
 struct Foo {
   Foo(const int i);

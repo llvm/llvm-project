@@ -62,8 +62,8 @@ class AsanTestCase(TestBase):
         # test the 'memory history' command
         self.expect("memory history 'pointer'",
             substrs = [
-                'Memory allocated at', 'a.out`f1', 'main.c:%d' % self.line_malloc,
-                'Memory deallocated at', 'a.out`f2', 'main.c:%d' % self.line_free])
+                'Memory allocated by Thread', 'a.out`f1', 'main.c:%d' % self.line_malloc,
+                'Memory deallocated by Thread', 'a.out`f2', 'main.c:%d' % self.line_free])
 
         # do the same using SB API
         process = self.dbg.GetSelectedTarget().process
@@ -97,4 +97,4 @@ class AsanTestCase(TestBase):
         # make sure the 'memory history' command still works even when we're generating a report now
         self.expect("memory history 'another_pointer'",
             substrs = [
-                'Memory allocated at', 'a.out`f1', 'main.c:%d' % self.line_malloc2])
+                'Memory allocated by Thread', 'a.out`f1', 'main.c:%d' % self.line_malloc2])

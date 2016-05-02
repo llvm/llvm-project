@@ -115,7 +115,7 @@ private:
   std::vector<std::future<InputFile *>> ObjectQueue;
 
   std::vector<BitcodeFile *> BitcodeFiles;
-  std::vector<SmallVector<char, 0>> Objs;
+  std::vector<SmallString<0>> Objs;
   llvm::BumpPtrAllocator Alloc;
 };
 

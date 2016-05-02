@@ -1,6 +1,7 @@
 ; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld -m elf_x86_64 %t.o -o %t2 --export-dynamic -save-temps
+; RUN: llvm-as %p/Inputs/internalize-exportdyn.ll -o %t2.o
+; RUN: ld.lld -m elf_x86_64 %t.o %t2.o -o %t2 --export-dynamic -save-temps
 ; RUN: llvm-dis < %t2.lto.bc | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
@@ -10,10 +11,32 @@ define void @_start() {
   ret void
 }
 
-define hidden void @foo() {
+define void @foo() {
   ret void
 }
 
-; Check that _start and foo are not internalized.
+define hidden void @bar() {
+  ret void
+}
+
+define linkonce_odr void @zed() unnamed_addr {
+  ret void
+}
+
+define linkonce_odr void @bah() {
+  ret void
+}
+
+define linkonce_odr void @baz() {
+  ret void
+}
+
+@use_baz = global void ()* @baz
+
+; Check what gets internalized.
 ; CHECK: define void @_start()
-; CHECK: define hidden void @foo()
+; CHECK: define void @foo()
+; CHECK: define internal void @bar()
+; CHECK: define internal void @zed()
+; CHECK: define weak_odr void @bah()
+; CHECK: define weak_odr void @baz()

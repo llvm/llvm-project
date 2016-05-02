@@ -14,6 +14,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -22,7 +23,7 @@ test(S s, typename S::difference_type pos, S expected)
 {
     typename S::const_iterator p = s.begin() + pos;
     typename S::iterator i = s.erase(p);
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
     assert(i - s.begin() == pos);
 }
@@ -44,7 +45,7 @@ int main()
     test(S("abcdefghijklmnopqrst"), 10, S("abcdefghijlmnopqrst"));
     test(S("abcdefghijklmnopqrst"), 19, S("abcdefghijklmnopqrs"));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S("abcde"), 0, S("bcde"));

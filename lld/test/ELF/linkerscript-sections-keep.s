@@ -12,8 +12,8 @@
 # SECGC:      Sections:
 # SECGC-NEXT: Idx Name          Size      Address          Type
 # SECGC-NEXT:   0               00000000 0000000000000000
-# SECGC-NEXT:   1 .text         00000007 0000000000011000 TEXT DATA
-# SECGC-NEXT:   2 .temp         00000004 0000000000012000 DATA
+# SECGC-NEXT:   1 .text         00000007 0000000000000158 TEXT DATA
+# SECGC-NEXT:   2 .temp         00000004 000000000000015f DATA
 
 ## Now apply KEEP command to preserve the section.
 # RUN: echo "SECTIONS { \
@@ -26,9 +26,9 @@
 # SECNOGC:      Sections:
 # SECNOGC-NEXT: Idx Name          Size      Address          Type
 # SECNOGC-NEXT:   0               00000000 0000000000000000
-# SECNOGC-NEXT:   1 .text         00000007 0000000000011000 TEXT DATA
-# SECNOGC-NEXT:   2 .keep         00000004 0000000000012000 DATA
-# SECNOGC-NEXT:   3 .temp         00000004 0000000000012004 DATA
+# SECNOGC-NEXT:   1 .text         00000007 0000000000000158 TEXT DATA
+# SECNOGC-NEXT:   2 .keep         00000004 000000000000015f DATA
+# SECNOGC-NEXT:   3 .temp         00000004 0000000000000163 DATA
 
 ## A section name matches two entries in the SECTIONS directive. The
 ## first one doesn't have KEEP, the second one does. If section that have
@@ -37,37 +37,35 @@
 # RUN:  .keep : { KEEP(*(.keep)) } \
 # RUN:  .nokeep : { *(.keep) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t1 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t1 | \
-# RUN:   FileCheck -check-prefix=KEEP-AT-FIRST %s
-# KEEP-AT-FIRST:      Sections:
-# KEEP-AT-FIRST-NEXT:  Idx Name          Size      Address         Type
-# KEEP-AT-FIRST-NEXT:   0               00000000 0000000000000000
-# KEEP-AT-FIRST-NEXT:   1 .keep         00000004 0000000000010120 DATA
-# KEEP-AT-FIRST-NEXT:   2 .temp         00000004 0000000000010124 DATA
-# KEEP-AT-FIRST-NEXT:   3 .text         00000007 0000000000011000 TEXT DATA
-# KEEP-AT-FIRST-NEXT:   4 .symtab       00000060 0000000000000000
-# KEEP-AT-FIRST-NEXT:   5 .shstrtab     0000002d 0000000000000000
-# KEEP-AT-FIRST-NEXT:   6 .strtab       00000012 0000000000000000
+# RUN: llvm-objdump -section-headers %t1 | FileCheck -check-prefix=MIXED1 %s
+# MIXED1:      Sections:
+# MIXED1-NEXT: Idx Name          Size      Address         Type
+# MIXED1-NEXT:   0               00000000 0000000000000000
+# MIXED1-NEXT:   1 .keep         00000004 0000000000000120 DATA
+# MIXED1-NEXT:   2 .temp         00000004 0000000000000124 DATA
+# MIXED1-NEXT:   3 .text         00000007 0000000000000128 TEXT DATA
+# MIXED1-NEXT:   4 .symtab       00000060 0000000000000000
+# MIXED1-NEXT:   5 .shstrtab     0000002d 0000000000000000
+# MIXED1-NEXT:   6 .strtab       00000012 0000000000000000
 
 ## The same, but now section without KEEP is at first place.
-## It will be collected then.
-## This test checks that lld behavior is equal to gold linker.
-## ld.bfd has different behavior, it prevents the section .keep
-## from collecting in this case either.
+## gold and bfd linkers disagree here. gold collects .keep while
+## bfd keeps it. Our current behavior is compatible with bfd although
+## we can choose either way.
 # RUN: echo "SECTIONS { \
 # RUN:  .nokeep : { *(.keep) } \
 # RUN:  .keep : { KEEP(*(.keep)) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t1 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t1 | \
-# RUN:   FileCheck -check-prefix=KEEP-AT-SECOND %s
-# KEEP-AT-SECOND:      Sections:
-# KEEP-AT-SECOND-NEXT:  Idx Name          Size      Address         Type
-# KEEP-AT-SECOND-NEXT:   0               00000000 0000000000000000
-# KEEP-AT-SECOND-NEXT:   1 .temp         00000004 0000000000010120 DATA
-# KEEP-AT-SECOND-NEXT:   2 .text         00000007 0000000000011000 TEXT DATA
-# KEEP-AT-SECOND-NEXT:   3 .symtab       00000048 0000000000000000
-# KEEP-AT-SECOND-NEXT:   4 .shstrtab     00000027 0000000000000000
-# KEEP-AT-SECOND-NEXT:   5 .strtab       0000000d 0000000000000000
+# RUN: llvm-objdump -section-headers %t1 | FileCheck -check-prefix=MIXED2 %s
+# MIXED2:      Sections:
+# MIXED2-NEXT: Idx Name          Size      Address         Type
+# MIXED2-NEXT:   0               00000000 0000000000000000
+# MIXED2-NEXT:   1 .nokeep       00000004 0000000000000120 DATA
+# MIXED2-NEXT:   2 .temp         00000004 0000000000000124 DATA
+# MIXED2-NEXT:   3 .text         00000007 0000000000000128 TEXT DATA
+# MIXED2-NEXT:   4 .symtab       00000060 0000000000000000
+# MIXED2-NEXT:   5 .shstrtab     0000002f 0000000000000000
+# MIXED2-NEXT:   6 .strtab       00000012 0000000000000000
 
 .global _start
 _start:

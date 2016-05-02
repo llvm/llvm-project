@@ -380,7 +380,7 @@ ExpressionSourceCode::GetText (std::string &text,
         ConstString object_name;
         if (Language::LanguageIsCPlusPlus(frame->GetLanguage()))
         {
-            lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false);
+            lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false, true);
             AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
         }
     }
@@ -460,13 +460,12 @@ ExpressionSourceCode::GetText (std::string &text,
             break;
         case lldb::eLanguageTypeC_plus_plus:
             wrap_stream.Printf("void                                   \n"
-                               "$__lldb_class::%s(void *$__lldb_arg) %s\n"
+                               "$__lldb_class::%s(void *$__lldb_arg)   \n"
                                "{                                      \n"
                                "    %s;                                \n"
                                "%s"
                                "}                                      \n",
                                m_name.c_str(),
-                               (const_object ? "const" : ""),
                                lldb_local_var_decls.GetData(),
                                tagged_body.c_str());
             break;

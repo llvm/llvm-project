@@ -17,6 +17,7 @@
 
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 
 static bool error_escape_thrown(const char *pat) 
 {

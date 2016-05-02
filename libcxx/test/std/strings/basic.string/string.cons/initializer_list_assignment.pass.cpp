@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <string>
 
 // basic_string& operator=(initializer_list<charT> il);
@@ -18,19 +20,15 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
     {
         std::string s;
         s = {'a', 'b', 'c'};
         assert(s == "abc");
     }
-#if __cplusplus >= 201103L
     {
         typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
         S s;
         s = {'a', 'b', 'c'};
         assert(s == "abc");
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 }

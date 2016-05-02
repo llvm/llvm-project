@@ -1064,16 +1064,106 @@ public:
     __emplace_hint_unique_key_args(const_iterator, _Key const&, _Args&&...);
 
     template <class... _Args>
-    pair<iterator, bool> __emplace_unique(_Args&&... __args);
+    pair<iterator, bool> __emplace_unique_impl(_Args&&... __args);
 
     template <class... _Args>
-    iterator __emplace_hint_unique(const_iterator __p, _Args&&... __args);
+    iterator __emplace_hint_unique_impl(const_iterator __p, _Args&&... __args);
 
     template <class... _Args>
     iterator __emplace_multi(_Args&&... __args);
 
     template <class... _Args>
     iterator __emplace_hint_multi(const_iterator __p, _Args&&... __args);
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool> __emplace_unique(_Pp&& __x) {
+        return __emplace_unique_extract_key(_VSTD::forward<_Pp>(__x),
+                                            __can_extract_key<_Pp, key_type>());
+    }
+
+    template <class _First, class _Second>
+    _LIBCPP_INLINE_VISIBILITY
+    typename enable_if<
+        __can_extract_map_key<_First, key_type, __container_value_type>::value,
+        pair<iterator, bool>
+    >::type __emplace_unique(_First&& __f, _Second&& __s) {
+        return __emplace_unique_key_args(__f, _VSTD::forward<_First>(__f),
+                                              _VSTD::forward<_Second>(__s));
+    }
+
+    template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool> __emplace_unique(_Args&&... __args) {
+        return __emplace_unique_impl(_VSTD::forward<_Args>(__args)...);
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool>
+    __emplace_unique_extract_key(_Pp&& __x, __extract_key_fail_tag) {
+      return __emplace_unique_impl(_VSTD::forward<_Pp>(__x));
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool>
+    __emplace_unique_extract_key(_Pp&& __x, __extract_key_self_tag) {
+      return __emplace_unique_key_args(__x, _VSTD::forward<_Pp>(__x));
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    pair<iterator, bool>
+    __emplace_unique_extract_key(_Pp&& __x, __extract_key_first_tag) {
+      return __emplace_unique_key_args(__x.first, _VSTD::forward<_Pp>(__x));
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator __emplace_hint_unique(const_iterator __p, _Pp&& __x) {
+        return __emplace_hint_unique_extract_key(__p, _VSTD::forward<_Pp>(__x),
+                                            __can_extract_key<_Pp, key_type>());
+    }
+
+    template <class _First, class _Second>
+    _LIBCPP_INLINE_VISIBILITY
+    typename enable_if<
+        __can_extract_map_key<_First, key_type, __container_value_type>::value,
+        iterator
+    >::type __emplace_hint_unique(const_iterator __p, _First&& __f, _Second&& __s) {
+        return __emplace_hint_unique_key_args(__p, __f,
+                                              _VSTD::forward<_First>(__f),
+                                              _VSTD::forward<_Second>(__s));
+    }
+
+    template <class... _Args>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator __emplace_hint_unique(const_iterator __p, _Args&&... __args) {
+        return __emplace_hint_unique_impl(__p, _VSTD::forward<_Args>(__args)...);
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator
+    __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_fail_tag) {
+      return __emplace_hint_unique_impl(__p, _VSTD::forward<_Pp>(__x));
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator
+    __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_self_tag) {
+      return __emplace_hint_unique_key_args(__p, __x, _VSTD::forward<_Pp>(__x));
+    }
+
+    template <class _Pp>
+    _LIBCPP_INLINE_VISIBILITY
+    iterator
+    __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_first_tag) {
+      return __emplace_hint_unique_key_args(__p, __x.first, _VSTD::forward<_Pp>(__x));
+    }
+
 #else
     template <class _Key, class _Args>
     _LIBCPP_INLINE_VISIBILITY
@@ -1989,7 +2079,7 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&& ...__args)
 template <class _Tp, class _Compare, class _Allocator>
 template <class... _Args>
 pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
-__tree<_Tp, _Compare, _Allocator>::__emplace_unique(_Args&&... __args)
+__tree<_Tp, _Compare, _Allocator>::__emplace_unique_impl(_Args&&... __args)
 {
     __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
     __node_base_pointer __parent;
@@ -2008,7 +2098,7 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_unique(_Args&&... __args)
 template <class _Tp, class _Compare, class _Allocator>
 template <class... _Args>
 typename __tree<_Tp, _Compare, _Allocator>::iterator
-__tree<_Tp, _Compare, _Allocator>::__emplace_hint_unique(const_iterator __p, _Args&&... __args)
+__tree<_Tp, _Compare, _Allocator>::__emplace_hint_unique_impl(const_iterator __p, _Args&&... __args)
 {
     __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
     __node_base_pointer __parent;

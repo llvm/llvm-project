@@ -19,6 +19,7 @@ class LinuxCoreTestCase(TestBase):
 
     _i386_pid   = 32306
     _x86_64_pid = 32259
+    _s390x_pid  = 1045
 
     @skipIf(bugnumber="llvm.org/pr26947")
     def test_i386(self):
@@ -28,6 +29,12 @@ class LinuxCoreTestCase(TestBase):
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("x86_64", self._x86_64_pid)
+
+    # This seems to hang on non-s390x platforms for some reason.  Disabling for now.
+    @skipIf(archs=no_match(['s390x'])) 
+    def test_s390x(self):
+        """Test that lldb can read the process information from an s390x linux core file."""
+        self.do_test("s390x", self._s390x_pid)
 
     def test_same_pid_running(self):
         """Test that we read the information from the core correctly even if we have a running
@@ -92,3 +99,5 @@ class LinuxCoreTestCase(TestBase):
             self.assertEqual(frame.GetLineEntry().GetLine(),
                     line_number("main.c", "Frame " + backtrace[i]))
             self.assertEqual(frame.FindVariable("F").GetValueAsUnsigned(), ord(backtrace[i][0]))
+
+        self.dbg.DeleteTarget(target)

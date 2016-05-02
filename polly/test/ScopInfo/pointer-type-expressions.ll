@@ -1,10 +1,5 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 
-; TODO: FIXME: IslExprBuilder is not capable of producing valid code
-;              for arbitrary pointer expressions at the moment. Until
-;              this is fixed we disallow pointer expressions completely.
-; XFAIL: *
-
 ; void f(int a[], int N, float *P) {
 ;   int i;
 ;   for (i = 0; i < N; ++i)
@@ -37,17 +32,15 @@ return:
   ret void
 }
 
-; CHECK: Assumed Context:
-; CHECK:   {  :  }
+; CHECK:      Assumed Context:
+; CHECK-NEXT:   {  :  }
+; CHECK-NEXT: Invalid Context:
+; CHECK-NEXT:   {  :  1 = 0 }
 
 ; CHECK:  Stmt_store
 ; CHECK:        Domain :=
-; CHECK:            [P, N] -> { Stmt_store[i0] :
-; CHECK-DAG:              (P <= -1 and i0 >= 0 and i0 <= -1 + N)
-; CHECK-DAG:                or
-; CHECK-DAG:              (P >= 1 and i0 >= 0 and i0 <= -1 + N)
-; CHECK:                   };
+; CHECK:            [P, N] -> { Stmt_store[i0] : 0 <= i0 < N and (P < 0 or P > 0) };
 ; CHECK:        Schedule :=
-; CHECK:            [P, N] -> { Stmt_store[i0] -> [i0] : P <= -1 or P >= 1 };
+; CHECK:            [P, N] -> { Stmt_store[i0] -> [i0] : P < 0 or P > 0 };
 ; CHECK:        MustWriteAccess := [Reduction Type: NONE]
 ; CHECK:            [P, N] -> { Stmt_store[i0] -> MemRef_a[i0] };

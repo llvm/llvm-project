@@ -25,6 +25,7 @@
 #
 # CHECK:      loc:
 # CHECK-NEXT:   20018:       00 00 00 00     nop
+# CHECK-NEXT:   2001c:       00 00 00 00     nop
 # CHECK-NEXT: Disassembly of section .plt:
 # CHECK-NEXT: .plt:
 # CHECK-NEXT:   20020:       3c 1c 00 04     lui     $gp, 4

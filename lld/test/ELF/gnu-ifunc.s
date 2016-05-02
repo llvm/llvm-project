@@ -1,7 +1,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: ld.lld -static %t.o -o %tout
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DISASM
-// RUN: llvm-readobj -r -symbols -sections %tout | FileCheck %s --check-prefix=CHECK
+// RUN: llvm-readobj -r -symbols -sections %tout | FileCheck %s
 // REQUIRES: x86
 
 // CHECK:      Sections [
@@ -45,7 +45,7 @@
 // CHECK-NEXT:    Other [
 // CHECK-NEXT:      STV_HIDDEN
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: Absolute
+// CHECK-NEXT:    Section: .rela.plt
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: __rela_iplt_start
@@ -56,7 +56,7 @@
 // CHECK-NEXT:    Other [
 // CHECK-NEXT:      STV_HIDDEN
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: Absolute
+// CHECK-NEXT:    Section: .rela.plt
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: _start
@@ -97,6 +97,7 @@
 // DISASM-NEXT:    11007: e8 34 00 00 00 callq 52
 // DISASM-NEXT:    1100c: ba 58 01 01 00 movl $65880, %edx
 // DISASM-NEXT:    11011: ba 88 01 01 00 movl $65928, %edx
+// DISASM-NEXT:    11016: ba 89 01 01 00 movl $65929, %edx
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-NEXT: .plt:
 // DISASM-NEXT:    11020: ff 35 e2 0f 00 00 pushq 4066(%rip)
@@ -112,13 +113,11 @@
 .text
 .type foo STT_GNU_IFUNC
 .globl foo
-.type foo, @function
 foo:
  ret
 
 .type bar STT_GNU_IFUNC
 .globl bar
-.type bar, @function
 bar:
  ret
 
@@ -128,3 +127,4 @@ _start:
  call bar
  movl $__rela_iplt_start,%edx
  movl $__rela_iplt_end,%edx
+ movl $__rela_iplt_end + 1,%edx

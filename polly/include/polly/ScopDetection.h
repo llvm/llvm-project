@@ -440,9 +440,7 @@ private:
   /// @param S           The expression to be checked.
   /// @param Scope       The loop nest in which @p S is used.
   /// @param Context     The context of scop detection.
-  /// @param BaseAddress The base address of the expression @p S (if any).
-  bool isAffine(const SCEV *S, Loop *Scope, DetectionContext &Context,
-                Value *BaseAddress = nullptr) const;
+  bool isAffine(const SCEV *S, Loop *Scope, DetectionContext &Context) const;
 
   /// @brief Check if the control flow in a basic block is valid.
   ///

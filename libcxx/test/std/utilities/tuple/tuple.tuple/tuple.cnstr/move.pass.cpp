@@ -29,8 +29,10 @@ struct ConstructsWithTupleLeaf
     ConstructsWithTupleLeaf(ConstructsWithTupleLeaf &&) {}
 
     template <class T>
-    ConstructsWithTupleLeaf(T t)
-    { assert(false); }
+    ConstructsWithTupleLeaf(T t) {
+        static_assert(!std::is_same<T, T>::value,
+                      "Constructor instantiated for type other than int");
+    }
 };
 
 int main()

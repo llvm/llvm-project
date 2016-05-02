@@ -8,30 +8,41 @@
 //===----------------------------------------------------------------------===//
 
 #include "Chunks.h"
+#include "Config.h"
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/LTO/LTOModule.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/COFF.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm-c/lto.h"
+#include <cstring>
+#include <system_error>
+#include <utility>
 
 using namespace llvm::COFF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
+
 using llvm::Triple;
 using llvm::support::ulittle32_t;
-using llvm::sys::fs::file_magic;
-using llvm::sys::fs::identify_magic;
 
 namespace lld {
 namespace coff {
 
 int InputFile::NextIndex = 0;
+llvm::LLVMContext BitcodeFile::Context;
 
 // Returns the last element of a path, which is supposed to be a filename.
 static StringRef getBasename(StringRef Path) {
@@ -93,7 +104,9 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
 void ObjectFile::parse() {
   // Parse a memory buffer as a COFF file.
   auto BinOrErr = createBinary(MB);
-  error(BinOrErr, "Failed to parse object file");
+  if (!BinOrErr)
+    error(errorToErrorCode(BinOrErr.takeError()),
+                           "Failed to parse object file");
   std::unique_ptr<Binary> Bin = std::move(*BinOrErr);
 
   if (auto *Obj = dyn_cast<COFFObjectFile>(Bin.get())) {
@@ -318,9 +331,9 @@ void BitcodeFile::parse() {
   // Usually parse() is thread-safe, but bitcode file is an exception.
   std::lock_guard<std::mutex> Lock(Mu);
 
-  ErrorOr<std::unique_ptr<LTOModule>> ModOrErr =
-      LTOModule::createFromBuffer(llvm::getGlobalContext(), MB.getBufferStart(),
-                                  MB.getBufferSize(), llvm::TargetOptions());
+  Context.enableDebugTypeODRUniquing();
+  ErrorOr<std::unique_ptr<LTOModule>> ModOrErr = LTOModule::createFromBuffer(
+      Context, MB.getBufferStart(), MB.getBufferSize(), llvm::TargetOptions());
   error(ModOrErr, "Could not create lto module");
   M = std::move(*ModOrErr);
 

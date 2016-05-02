@@ -32,6 +32,8 @@
 #include <sys/socket.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
+// user_hwdebug_state definition
+#include <asm/ptrace.h>
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
 

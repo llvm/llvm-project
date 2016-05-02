@@ -63,16 +63,36 @@ Improvements to clang-tidy
 explain them more clearly, and provide more accurate fix-its for the issues
 identified.  The improvements since the 3.8 release include:
 
+- New Boost module containing checks for issues with Boost library.
+
+- New `boost-use-to-string 
+  <http://clang.llvm.org/extra/clang-tidy/checks/boost-use-to-string.html>`_ check
+
+  Finds usages of ``boost::lexical_cast<std::string>`` and changes it to
+  ``std::to_string``.
+
 - New `cert-env33-c
   <http://clang.llvm.org/extra/clang-tidy/checks/cert-env33-c.html>`_ check
 
   Flags calls to ``system()``, ``popen()``, and ``_popen()``, which execute a
   command processor.
 
+- New `cert-err34-c
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-err34-c.html>`_ check
+
+  Flags calls to string-to-number conversion functions that do not verify the
+  validity of the conversion.
+
 - New `cert-flp30-c
   <http://clang.llvm.org/extra/clang-tidy/checks/cert-flp30-c.html>`_ check
 
   Flags ``for`` loops where the induction expression has a floating-point type.
+
+- New `cppcoreguidelines-interfaces-global-init
+  <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-interfaces-global-init.html>`_ check
+
+  Flags initializers of globals that access extern objects, and therefore can
+  lead to order-of-initialization problems.
 
 - New `cppcoreguidelines-pro-type-member-init
   <http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html>`_ check
@@ -86,6 +106,12 @@ identified.  The improvements since the 3.8 release include:
   Detects dangling references in value handlers like
   ``std::experimental::string_view``.
 
+- New `misc-fold-init-type
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-fold-init-type.html>`_ check
+
+  The check flags type mismatches in `folds` like ``std::accumulate`` that might
+  result in loss of precision.
+
 - New `misc-forward-declaration-namespace
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-forward-declaration-namespace.html>`_ check
 
@@ -97,6 +123,37 @@ identified.  The improvements since the 3.8 release include:
   Warns when there is a explicit redundant cast of a calculation result to a
   bigger type.
 
+- New `misc-multiple-statement-macro
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-multiple-statement-macro.html>`_ check
+
+  Detect multiple statement macros that are used in unbraced conditionals.
+
+- New `misc-pointer-and-integral-operation
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-pointer-and-integral-operation.html>`_ check
+
+  Warns about suspicious operations involving pointers and integral types.
+
+- New `misc-redundant-expression
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-redundant-expression.html>`_ check
+
+  Warns about redundant and equivalent expressions.
+
+- New `misc-sizeof-expression
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-sizeof-expression.html>`_ check
+
+  Warns about incorrect uses of ``sizeof`` operator.
+
+- New `misc-string-constructor
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-string-constructor.html>`_ check
+
+  Finds string constructors that are suspicious and probably errors.
+
+- New `misc-string-literal-with-embedded-nul
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-string-literal-with-embedded-nul.html>`_ check
+
+  Warns about suspicious NUL character in string literals which may lead to
+  truncation or invalid character escaping.
+
 - New `misc-suspicious-missing-comma
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-missing-comma.html>`_ check
 
@@ -107,6 +164,16 @@ identified.  The improvements since the 3.8 release include:
 
   Finds most instances of stray semicolons that unexpectedly alter the meaning
   of the code.
+
+- New `misc-suspicious-string-compare
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-string-compare.html>`_ check
+
+  Find suspicious usage of runtime string comparison functions.
+
+- New `misc-unused-using-decls
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-unused-using-decls.html>`_ check
+
+  Finds unused ``using`` declarations.
 
 - New `modernize-deprecated-headers
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-headers.html>`_ check
@@ -142,6 +209,12 @@ identified.  The improvements since the 3.8 release include:
 
   Warns about top-level const parameters in function declarations.
 
+- New `readability-deleted-default
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-deleted-default.html>`_ check
+
+  Warns about defaulted constructors and assignment operators that are actually
+  deleted.
+
 - New `readability-redundant-control-flow
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-control-flow.html>`_ check
 
@@ -153,13 +226,18 @@ identified.  The improvements since the 3.8 release include:
 
   Finds unnecessary string initializations.
 
+- New `readability-static-definition-in-anonymous-namespace
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html>`_ check
+
+  Finds static function and variable definitions in anonymous namespace.
+
 Fixed bugs:
 
 - Crash when running on compile database with relative source files paths.
 
 - Crash when running with the `-fdelayed-template-parsing` flag.
 
-- The ``modernize-use-override`` check: incorrect fix-its placement around
+- The `modernize-use-override` check: incorrect fix-its placement around
   ``__declspec`` and other attributes.
 
 Clang-tidy changes from 3.7 to 3.8
@@ -253,6 +331,23 @@ The 3.8 release didn't include release notes for :program:`clang-tidy`. In the
   * `readability-uniqueptr-delete-release
     <http://llvm.org/releases/3.8.0/tools/clang/tools/extra/docs/clang-tidy/checks/readability-uniqueptr-delete-release.html>`_
 
+- Updated ``cppcoreguidelines-pro-member-type-member-init`` check
+
+  This check now conforms to C++ Core Guidelines rule Type.6: Always Initialize
+  a Member Variable. The check examines every record type where construction
+  might result in an undefined memory state. These record types needing
+  initialization have at least one default-initialized built-in, pointer,
+  array or record type matching these criteria or a default-initialized
+  direct base class of this kind.
+
+  The check has two complementary aspects:
+
+  1. Ensure every constructor for a record type needing initialization
+     value-initializes all members and direct bases via a combination of
+     in-class initializers and the member initializer list.
+  2. Value-initialize every non-member instance of a record type needing
+     initialization that lacks a user-provided default constructor, e.g.
+     a POD.
 
 Improvements to modularize
 --------------------------

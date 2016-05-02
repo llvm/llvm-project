@@ -149,11 +149,6 @@ static cl::opt<bool>
                            cl::Hidden, cl::init(false), cl::ZeroOrMore,
                            cl::cat(PollyCategory));
 
-static cl::opt<bool> AllowUnsigned("polly-allow-unsigned",
-                                   cl::desc("Allow unsigned expressions"),
-                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                   cl::cat(PollyCategory));
-
 static cl::opt<bool, true>
     TrackFailures("polly-detect-track-failures",
                   cl::desc("Track failure strings in detecting scop regions"),
@@ -330,11 +325,10 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
 }
 
 bool ScopDetection::isAffine(const SCEV *S, Loop *Scope,
-                             DetectionContext &Context,
-                             Value *BaseAddress) const {
+                             DetectionContext &Context) const {
 
   InvariantLoadsSetTy AccessILS;
-  if (!isAffineExpr(&Context.CurRegion, Scope, S, *SE, BaseAddress, &AccessILS))
+  if (!isAffineExpr(&Context.CurRegion, Scope, S, *SE, &AccessILS))
     return false;
 
   if (!onlyValidRequiredInvariantLoads(AccessILS, Context))
@@ -386,24 +380,11 @@ bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
   }
 
   ICmpInst *ICmp = cast<ICmpInst>(Condition);
-  // Unsigned comparisons are not allowed. They trigger overflow problems
-  // in the code generation.
-  //
-  // TODO: This is not sufficient and just hides bugs. However it does pretty
-  //       well.
-  if (ICmp->isUnsigned() && !AllowUnsigned)
-    return invalid<ReportUnsignedCond>(Context, /*Assert=*/true, BI, &BB);
 
   // Are both operands of the ICmp affine?
   if (isa<UndefValue>(ICmp->getOperand(0)) ||
       isa<UndefValue>(ICmp->getOperand(1)))
     return invalid<ReportUndefOperand>(Context, /*Assert=*/true, &BB, ICmp);
-
-  // TODO: FIXME: IslExprBuilder is not capable of producing valid code
-  //              for arbitrary pointer expressions at the moment. Until
-  //              this is fixed we disallow pointer expressions completely.
-  if (ICmp->getOperand(0)->getType()->isPointerTy())
-    return false;
 
   Loop *L = LI->getLoopFor(ICmp->getParent());
   const SCEV *LHS = SE->getSCEVAtScope(ICmp->getOperand(0), L);
@@ -578,6 +559,9 @@ bool ScopDetection::isInvariant(const Value &Val, const Region &Reg) const {
   if (I->mayHaveSideEffects())
     return false;
 
+  if (isa<SelectInst>(I))
+    return false;
+
   // When Val is a Phi node, it is likely not invariant. We do not check whether
   // Phi nodes are actually invariant, we assume that Phi nodes are usually not
   // invariant.
@@ -734,7 +718,7 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
   Value *BaseValue = BasePointer->getValue();
   Region &CurRegion = Context.CurRegion;
   for (const SCEV *DelinearizedSize : Sizes) {
-    if (!isAffine(DelinearizedSize, Scope, Context, nullptr)) {
+    if (!isAffine(DelinearizedSize, Scope, Context)) {
       Sizes.clear();
       break;
     }
@@ -762,7 +746,7 @@ bool ScopDetection::hasValidArraySizes(DetectionContext &Context,
       const Instruction *Insn = Pair.first;
       const SCEV *AF = Pair.second;
 
-      if (!isAffine(AF, Scope, Context, BaseValue)) {
+      if (!isAffine(AF, Scope, Context)) {
         invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Insn,
                                        BaseValue);
         if (!KeepGoing)
@@ -796,7 +780,7 @@ bool ScopDetection::computeAccessFunctions(
     auto *Scope = LI->getLoopFor(Insn->getParent());
 
     if (!AF) {
-      if (isAffine(Pair.second, Scope, Context, BaseValue))
+      if (isAffine(Pair.second, Scope, Context))
         Acc->DelinearizedSubscripts.push_back(Pair.second);
       else
         IsNonAffine = true;
@@ -806,7 +790,7 @@ bool ScopDetection::computeAccessFunctions(
       if (Acc->DelinearizedSubscripts.size() == 0)
         IsNonAffine = true;
       for (const SCEV *S : Acc->DelinearizedSubscripts)
-        if (!isAffine(S, Scope, Context, BaseValue))
+        if (!isAffine(S, Scope, Context))
           IsNonAffine = true;
     }
 
@@ -913,7 +897,7 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
       IsVariantInNonAffineLoop = true;
 
   auto *Scope = LI->getLoopFor(Inst->getParent());
-  bool IsAffine = !IsVariantInNonAffineLoop && isAffine(AF, Scope, Context, BV);
+  bool IsAffine = !IsVariantInNonAffineLoop && isAffine(AF, Scope, Context);
   // Do not try to delinearize memory intrinsics and force them to be affine.
   if (isa<MemIntrinsic>(Inst) && !IsAffine) {
     return invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, AF, Inst,
@@ -993,6 +977,9 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
     if (isErrorBlock(*OpInst->getParent(), Context.CurRegion, *LI, *DT))
       return false;
   }
+
+  if (isa<LandingPadInst>(&Inst) || isa<ResumeInst>(&Inst))
+    return false;
 
   // We only check the call instruction but not invoke instruction.
   if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
@@ -1241,7 +1228,8 @@ bool ScopDetection::allBlocksValid(DetectionContext &Context) const {
 
   for (const BasicBlock *BB : CurRegion.blocks()) {
     Loop *L = LI->getLoopFor(BB);
-    if (L && L->getHeader() == BB && (!isValidLoop(L, Context) && !KeepGoing))
+    if (L && L->getHeader() == BB && CurRegion.contains(L) &&
+        (!isValidLoop(L, Context) && !KeepGoing))
       return false;
   }
 

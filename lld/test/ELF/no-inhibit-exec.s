@@ -6,10 +6,10 @@
 
 # CHECK: Disassembly of section .text:
 # CHECK-NEXT: _start
-# CHECK-NEXT: 11000:   e8 00 00 00 00  callq   0
+# CHECK-NEXT: 11000:   e8 fb ef fe ff callq -69637
 
 # next code will not link without noinhibit-exec flag
 # because of undefined symbol _bar
-.globl _start;
+.globl _start
 _start:
   call _bar

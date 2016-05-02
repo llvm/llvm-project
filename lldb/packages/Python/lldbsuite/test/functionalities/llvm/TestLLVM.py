@@ -16,7 +16,7 @@ class TestHomeDirectory(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @no_debug_info_test
     def test_tilde_home_directory(self):
         """Test that we can resolve "~/" in paths correctly. 

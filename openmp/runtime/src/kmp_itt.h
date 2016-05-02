@@ -53,8 +53,8 @@ void __kmp_itt_destroy();
 //     __kmp_itt_xxxed()  function should be called after action.
 
 // --- Parallel region reporting ---
-__kmp_inline void __kmp_itt_region_forking(  int gtid, int team_size, int barriers, int serialized = 0 ); // Master only, before forking threads.
-__kmp_inline void __kmp_itt_region_joined(   int gtid, int serialized = 0 ); // Master only, after joining threads.
+__kmp_inline void __kmp_itt_region_forking(  int gtid, int team_size, int barriers ); // Master only, before forking threads.
+__kmp_inline void __kmp_itt_region_joined(   int gtid ); // Master only, after joining threads.
     // (*) Note: A thread may execute tasks after this point, though.
 
 // --- Frame reporting ---

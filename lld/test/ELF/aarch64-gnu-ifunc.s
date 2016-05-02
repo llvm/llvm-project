@@ -1,7 +1,7 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
 // RUN: ld.lld -static %t.o -o %tout
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DISASM
-// RUN: llvm-readobj -r -symbols -sections %tout | FileCheck %s --check-prefix=CHECK
+// RUN: llvm-readobj -r -symbols -sections %tout | FileCheck %s
 // REQUIRES: aarch64
 
 // CHECK:      Sections [
@@ -54,7 +54,7 @@
 // CHECK-NEXT:    Other [
 // CHECK-NEXT:      STV_HIDDEN
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: Absolute
+// CHECK-NEXT:    Section: .rela.plt
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: __rela_iplt_start
@@ -65,7 +65,7 @@
 // CHECK-NEXT:    Other [
 // CHECK-NEXT:      STV_HIDDEN
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: Absolute
+// CHECK-NEXT:    Section: .rela.plt
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: _start
@@ -130,13 +130,11 @@
 .text
 .type foo STT_GNU_IFUNC
 .globl foo
-.type foo, @function
 foo:
  ret
 
 .type bar STT_GNU_IFUNC
 .globl bar
-.type bar, @function
 bar:
  ret
 

@@ -16,22 +16,6 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
-namespace {
-bool isShrinkableContainer(llvm::StringRef ClassName) {
-  static const char *const Shrinkables[] = {
-    "std::basic_string",
-    "std::deque",
-    "std::vector"
-  };
-  return std::binary_search(std::begin(Shrinkables), std::end(Shrinkables),
-                            ClassName);
-}
-
-AST_MATCHER(NamedDecl, stlShrinkableContainer) {
-  return isShrinkableContainer(Node.getQualifiedNameAsString());
-}
-} // namespace
-
 namespace tidy {
 namespace modernize {
 
@@ -54,7 +38,8 @@ void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
           has(declRefExpr(hasDeclaration(equalsBoundNode("ContainerDecl")))))));
 
   Finder->addMatcher(
-      cxxMemberCallExpr(on(hasType(namedDecl(stlShrinkableContainer()))),
+      cxxMemberCallExpr(on(hasType(namedDecl(
+            hasAnyName("std::basic_string", "std::deque", "std::vector")))),
                         callee(cxxMethodDecl(hasName("swap"))),
                         has(memberExpr(hasDescendant(CopyCtorCall))),
                         hasArgument(0, SwapParam.bind("ContainerToShrink")),

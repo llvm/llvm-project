@@ -24,7 +24,7 @@ void
 test(S s, S str, S expected)
 {
     s.assign(str);
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == expected);
 }
 
@@ -33,7 +33,7 @@ void
 testAlloc(S s, S str, const typename S::allocator_type& a)
 {
     s.assign(str);
-    assert(s.__invariants());
+    LIBCPP_ASSERT(s.__invariants());
     assert(s == str);
     assert(s.get_allocator() == a);
 }

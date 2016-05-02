@@ -56,11 +56,11 @@ class tsc_tick_count {
 #endif
     tsc_tick_count(int64_t value) : my_count(value) {};
     int64_t getValue() const { return my_count; }
-    tsc_tick_count later (tsc_tick_count const other) const { 
-        return my_count > other.my_count ? (*this) : other; 
+    tsc_tick_count later (tsc_tick_count const other) const {
+        return my_count > other.my_count ? (*this) : other;
     }
-    tsc_tick_count earlier(tsc_tick_count const other) const { 
-        return my_count < other.my_count ? (*this) : other; 
+    tsc_tick_count earlier(tsc_tick_count const other) const {
+        return my_count < other.my_count ? (*this) : other;
     }
 #if KMP_HAVE_TICK_TIME
     static double tick_time(); // returns seconds per cycle (period) of clock
@@ -69,13 +69,13 @@ class tsc_tick_count {
     friend tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count t1, const tsc_tick_count t0);
 };
 
-inline tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count t1, const tsc_tick_count t0) 
+inline tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count t1, const tsc_tick_count t0)
 {
     return tsc_tick_count::tsc_interval_t( t1.my_count-t0.my_count );
 }
 
 #if KMP_HAVE_TICK_TIME
-inline double tsc_tick_count::tsc_interval_t::seconds() const 
+inline double tsc_tick_count::tsc_interval_t::seconds() const
 {
     return value*tick_time();
 }
@@ -93,27 +93,4 @@ inline std::string formatTicks(double interval, int width)
     return formatSI(interval, width, 'T');
 }
 
-class timePair
-{
-    tsc_tick_count KMP_ALIGN_CACHE start;
-    tsc_tick_count end;
-
-public:
-    timePair() : start(-std::numeric_limits<int64_t>::max()), end(-std::numeric_limits<int64_t>::max()) {}
-    tsc_tick_count get_start() const { return start; }
-    tsc_tick_count get_end()   const { return end; }
-    tsc_tick_count * get_startp()    { return &start; }
-    tsc_tick_count * get_endp()      { return &end; }
-
-    void markStart() { start = tsc_tick_count::now(); }
-    void markEnd()   { end   = tsc_tick_count::now(); }
-    void set_start(tsc_tick_count s) { start = s; }
-    void set_end  (tsc_tick_count e) { end = e; }
-
-    tsc_tick_count::tsc_interval_t duration() const { return end-start; }
-    std::string format() const;
-
-};
-
-extern tsc_tick_count::tsc_interval_t computeLastInLastOutInterval(timePair * times, int nTimes);
 #endif // KMP_STATS_TIMING_H

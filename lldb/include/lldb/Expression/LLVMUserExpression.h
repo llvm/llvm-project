@@ -49,14 +49,14 @@ public:
     bool
     CanInterpret() override
     {
-      return m_can_interpret;
+        return m_can_interpret;
     }
 
     virtual Materializer *
     GetMaterializer() override
     {
         return m_materializer_ap.get();
-    }
+        }
 
     //------------------------------------------------------------------
     /// Return the string that the parser should parse.  Must be a full

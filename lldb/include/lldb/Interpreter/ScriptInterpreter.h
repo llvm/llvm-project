@@ -380,6 +380,12 @@ public:
     {
         return nullptr;
     }
+
+    virtual ConstString
+    GetSyntheticTypeName (const StructuredData::ObjectSP &implementor)
+    {
+        return ConstString();
+    }
     
     virtual bool
     RunScriptBasedCommand (const char* impl_function,

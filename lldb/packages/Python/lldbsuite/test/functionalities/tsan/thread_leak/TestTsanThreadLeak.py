@@ -17,6 +17,7 @@ class TsanThreadLeakTestCase(TestBase):
     @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
+    @skipUnlessThreadSanitizer
     def test (self):
         self.build ()
         self.tsan_tests ()

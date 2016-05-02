@@ -16,6 +16,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/MD5.h"
+#include "llvm/Support/SHA1.h"
 
 namespace lld {
 namespace elf {
@@ -31,6 +33,8 @@ template <class ELFT> class MergeInputSection;
 template <class ELFT> class MipsReginfoInputSection;
 template <class ELFT> class OutputSection;
 template <class ELFT> class ObjectFile;
+template <class ELFT> class SharedFile;
+template <class ELFT> class SharedSymbol;
 template <class ELFT> class DefinedRegular;
 
 template <class ELFT>
@@ -70,14 +74,14 @@ public:
   // Returns the size of the section in the output file.
   uintX_t getSize() const { return Header.sh_size; }
   void setSize(uintX_t Val) { Header.sh_size = Val; }
-  uintX_t getFlags() { return Header.sh_flags; }
-  uintX_t getFileOff() { return Header.sh_offset; }
-  uintX_t getAlign() {
+  uintX_t getFlags() const { return Header.sh_flags; }
+  uintX_t getFileOff() const { return Header.sh_offset; }
+  uintX_t getAlign() const {
     // The ELF spec states that a value of 0 means the section has no alignment
     // constraits.
     return std::max<uintX_t>(Header.sh_addralign, 1);
   }
-  uint32_t getType() { return Header.sh_type; }
+  uint32_t getType() const { return Header.sh_type; }
   void updateAlign(uintX_t Align) {
     if (Align > Header.sh_addralign)
       Header.sh_addralign = Align;
@@ -87,8 +91,9 @@ public:
   // Typically the first section of each PT_LOAD segment has this flag.
   bool PageAlign = false;
 
-  virtual void assignOffsets() {}
   virtual void finalize() {}
+  virtual void
+  forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) {}
   virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
 
@@ -109,9 +114,10 @@ public:
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
   bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
-  uintX_t getMipsLocalFullAddr(const SymbolBody &B);
-  uintX_t getMipsLocalPageAddr(uintX_t Addr);
+  uintX_t getMipsLocalEntryOffset(uintX_t EntryValue);
+  uintX_t getMipsLocalPageOffset(uintX_t Addr);
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
+  uintX_t getGlobalDynOffset(const SymbolBody &B) const;
   uintX_t getNumEntries() const { return Entries.size(); }
 
   // Returns the symbol which corresponds to the first entry of the global part
@@ -125,6 +131,7 @@ public:
   unsigned getMipsLocalEntriesNum() const;
 
   uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
+  uint32_t getTlsIndexOff() { return TlsIndexOff; }
 
 private:
   std::vector<const SymbolBody *> Entries;
@@ -133,8 +140,6 @@ private:
   // Output sections referenced by MIPS GOT relocations.
   llvm::SmallPtrSet<const OutputSectionBase<ELFT> *, 10> MipsOutSections;
   llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
-
-  uintX_t getMipsLocalEntryAddr(uintX_t EntryValue);
 };
 
 template <class ELFT>
@@ -171,36 +176,17 @@ template <class ELFT> struct DynamicReloc {
   typedef typename ELFT::uint uintX_t;
   uint32_t Type;
 
-  // Where the relocation is.
-  enum OffsetKind {
-    Off_Got,       // The got entry of Sym.
-    Off_GotPlt,    // The got.plt entry of Sym.
-    Off_Bss,       // The bss entry of Sym (copy reloc).
-    Off_Sec,       // The final position of the given input section and offset.
-    Off_LTlsIndex, // The local tls index.
-    Off_GTlsIndex, // The global tls index of Sym.
-    Off_GTlsOffset // The global tls offset of Sym.
-  } OKind;
+  SymbolBody *Sym;
+  const OutputSectionBase<ELFT> *OffsetSec;
+  uintX_t OffsetInSec;
+  bool UseSymVA;
+  uintX_t Addend;
 
-  SymbolBody *Sym = nullptr;
-  InputSectionBase<ELFT> *OffsetSec = nullptr;
-  uintX_t OffsetInSec = 0;
-  bool UseSymVA = false;
-  uintX_t Addend = 0;
-
-  DynamicReloc(uint32_t Type, OffsetKind OKind, SymbolBody *Sym)
-      : Type(Type), OKind(OKind), Sym(Sym) {}
-
-  DynamicReloc(uint32_t Type, OffsetKind OKind, bool UseSymVA, SymbolBody *Sym)
-      : Type(Type), OKind(OKind), Sym(Sym), UseSymVA(UseSymVA) {}
-
-  DynamicReloc(uint32_t Type, InputSectionBase<ELFT> *OffsetSec,
+  DynamicReloc(uint32_t Type, const OutputSectionBase<ELFT> *OffsetSec,
                uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
                uintX_t Addend)
-      : Type(Type), OKind(Off_Sec), Sym(Sym), OffsetSec(OffsetSec),
-        OffsetInSec(OffsetInSec), UseSymVA(UseSymVA), Addend(Addend) {}
-
-  uintX_t getOffset() const;
+      : Type(Type), Sym(Sym), OffsetSec(OffsetSec), OffsetInSec(OffsetInSec),
+        UseSymVA(UseSymVA), Addend(Addend) {}
 };
 
 template <class ELFT>
@@ -231,12 +217,54 @@ private:
   void writeGlobalSymbols(uint8_t *Buf);
 
   const OutputSectionBase<ELFT> *getOutputSection(SymbolBody *Sym);
-  static uint8_t getSymbolBinding(SymbolBody *Body);
 
   SymbolTable<ELFT> &Table;
 
   // A vector of symbols and their string table offsets.
   std::vector<std::pair<SymbolBody *, size_t>> Symbols;
+};
+
+// For more information about .gnu.version and .gnu.version_r see:
+// https://www.akkadia.org/drepper/symbol-versioning
+
+// The .gnu.version section specifies the required version of each symbol in the
+// dynamic symbol table. It contains one Elf_Versym for each dynamic symbol
+// table entry. An Elf_Versym is just a 16-bit integer that refers to a version
+// identifier defined in the .gnu.version_r section.
+template <class ELFT>
+class VersionTableSection final : public OutputSectionBase<ELFT> {
+  typedef typename ELFT::Versym Elf_Versym;
+
+public:
+  VersionTableSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+};
+
+// The .gnu.version_r section defines the version identifiers used by
+// .gnu.version. It contains a linked list of Elf_Verneed data structures. Each
+// Elf_Verneed specifies the version requirements for a single DSO, and contains
+// a reference to a linked list of Elf_Vernaux data structures which define the
+// mapping from version identifiers to version names.
+template <class ELFT>
+class VersionNeedSection final : public OutputSectionBase<ELFT> {
+  typedef typename ELFT::Verneed Elf_Verneed;
+  typedef typename ELFT::Vernaux Elf_Vernaux;
+
+  // A vector of shared files that need Elf_Verneed data structures and the
+  // string table offsets of their sonames.
+  std::vector<std::pair<SharedFile<ELFT> *, size_t>> Needed;
+
+  // The next available version identifier. Identifiers start at 2 because 0 and
+  // 1 are reserved.
+  unsigned NextIndex = 2;
+
+public:
+  VersionNeedSection();
+  void addSymbol(SharedSymbol<ELFT> *SS);
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+  size_t getNeedNum() const { return Needed.size(); }
 };
 
 template <class ELFT>
@@ -272,10 +300,9 @@ public:
   void sortInitFini();
   void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;
-  void assignOffsets() override;
   void finalize() override;
-
-private:
+  void
+  forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) override;
   std::vector<InputSection<ELFT> *> Sections;
 };
 
@@ -321,6 +348,9 @@ public:
   typedef typename ELFT::Rela Elf_Rela;
   EHOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
   void writeTo(uint8_t *Buf) override;
+  void finalize() override;
+  void
+  forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) override;
 
   template <class RelTy>
   void addSectionAux(EHInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
@@ -335,6 +365,7 @@ private:
 
   // Maps CIE content + personality to a index in Cies.
   llvm::DenseMap<std::pair<StringRef, SymbolBody *>, unsigned> CieMap;
+  bool Finalized = false;
 };
 
 template <class ELFT>
@@ -493,6 +524,8 @@ public:
 
   bool Live = false;
 
+  EHOutputSection<ELFT> *Sec = nullptr;
+
 private:
   struct FdeData {
     uint8_t Enc;
@@ -502,21 +535,50 @@ private:
 
   uintX_t getFdePc(uintX_t EhVA, const FdeData &F);
 
-  EHOutputSection<ELFT> *Sec = nullptr;
   std::vector<FdeData> FdeList;
 };
 
-template <class ELFT>
-class BuildIdSection final : public OutputSectionBase<ELFT> {
+template <class ELFT> class BuildIdSection : public OutputSectionBase<ELFT> {
 public:
-  BuildIdSection();
   void writeTo(uint8_t *Buf) override;
-  void update(ArrayRef<uint8_t> Buf);
-  void writeBuildId();
+  virtual void update(ArrayRef<uint8_t> Buf) = 0;
+  virtual void writeBuildId() = 0;
+
+protected:
+  BuildIdSection(size_t HashSize);
+  size_t HashSize;
+  uint8_t *HashBuf = nullptr;
+};
+
+template <class ELFT> class BuildIdFnv1 final : public BuildIdSection<ELFT> {
+public:
+  BuildIdFnv1() : BuildIdSection<ELFT>(8) {}
+  void update(ArrayRef<uint8_t> Buf) override;
+  void writeBuildId() override;
 
 private:
-  uint64_t Hash = 0xcbf29ce484222325; // FNV1 hash basis
-  uint8_t *HashBuf;
+  // 64-bit FNV-1 initial value
+  uint64_t Hash = 0xcbf29ce484222325;
+};
+
+template <class ELFT> class BuildIdMd5 final : public BuildIdSection<ELFT> {
+public:
+  BuildIdMd5() : BuildIdSection<ELFT>(16) {}
+  void update(ArrayRef<uint8_t> Buf) override;
+  void writeBuildId() override;
+
+private:
+  llvm::MD5 Hash;
+};
+
+template <class ELFT> class BuildIdSha1 final : public BuildIdSection<ELFT> {
+public:
+  BuildIdSha1() : BuildIdSection<ELFT>(20) {}
+  void update(ArrayRef<uint8_t> Buf) override;
+  void writeBuildId() override;
+
+private:
+  llvm::SHA1 Hash;
 };
 
 // All output sections that are hadnled by the linker specially are
@@ -545,6 +607,8 @@ template <class ELFT> struct Out {
   static StringTableSection<ELFT> *StrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
+  static VersionTableSection<ELFT> *VerSym;
+  static VersionNeedSection<ELFT> *VerNeed;
   static Elf_Phdr *TlsPhdr;
   static OutputSectionBase<ELFT> *ElfHeader;
   static OutputSectionBase<ELFT> *ProgramHeaders;
@@ -570,6 +634,8 @@ template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
+template <class ELFT> VersionTableSection<ELFT> *Out<ELFT>::VerSym;
+template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;
 template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ElfHeader;
 template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;

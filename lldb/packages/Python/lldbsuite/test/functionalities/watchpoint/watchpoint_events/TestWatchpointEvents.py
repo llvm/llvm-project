@@ -59,7 +59,7 @@ class TestWatchpointEvents (TestBase):
         self.listener.StartListeningForEvents (self.target_bcast, lldb.SBTarget.eBroadcastBitWatchpointChanged)
 
         error = lldb.SBError()
-        local_watch = local_var.Watch(True, True, True, error)
+        local_watch = local_var.Watch(True, False, True, error)
         if not error.Success():
             self.fail ("Failed to make watchpoint for local_var: %s"%(error.GetCString()))
 

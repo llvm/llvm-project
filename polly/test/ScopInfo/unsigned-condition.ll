@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-allow-unsigned < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 
 ; void f(int a[], int N, unsigned P) {
 ;   int i;
@@ -6,6 +6,17 @@
 ;     if (P > 42)
 ;       a[i] = i;
 ; }
+
+; The assumed context is the universe because the "signed-unsigned assumption"
+;   [P, N] -> {  : N > 0 and P >= 0 }
+; is implied by the execution domain. Thus if something is executed this
+; assumption will hold.
+
+; CHECK:      Assumed Context:
+; CHECK-NEXT: [P, N] -> {  :  }
+;
+; CHECK:              Domain :=
+; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] : P >= 42 and 0 <= i0 < N };
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 
@@ -31,17 +42,3 @@ bb.backedge:
 return:
   ret void
 }
-
-
-; CHECK:      Assumed Context:
-; CHECK-NEXT: [P, N] -> {  :  }
-;
-; CHECK:      Statements {
-; CHECK-NEXT:     Stmt_store
-; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] : P >= 42 and 0 <= i0 < N };
-; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] -> [i0] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             [P, N] -> { Stmt_store[i0] -> MemRef_a[i0] };
-; CHECK-NEXT: }

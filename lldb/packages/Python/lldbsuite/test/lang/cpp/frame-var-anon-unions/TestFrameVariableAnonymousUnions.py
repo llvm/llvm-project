@@ -19,7 +19,13 @@ class FrameVariableAnonymousUnionsTestCase(TestBase):
 
         self.runCmd("process launch", RUN_SUCCEEDED)
 
-        self.expect('frame variable -f x i', substrs=['ffffff41'])
+        process = self.dbg.GetSelectedTarget().GetProcess()
+
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect('frame variable -f x i', substrs=['ffffff41'])
+        else:
+            self.expect('frame variable -f x i', substrs=['41ffff00'])
+
         self.expect('frame variable c', substrs=["'A"])
 
         self.expect('frame variable x', matching=False, substrs=['3'])

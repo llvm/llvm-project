@@ -1,17 +1,18 @@
 // RUN: llgoi < %s 2>&1 | FileCheck %s
 
 x := 3
-// CHECK: x untyped int = 3
+x
+// CHECK: 3
 
 x + x
-// CHECK: #0 int = 6
+// CHECK: 6
 
 x * x
-// CHECK: #0 int = 9
+// CHECK: 9
 
 x = 4
 x + x
-// CHECK: #0 int = 8
+// CHECK: 8
 
 x := true
 // CHECK: cannot assign {{.*}} to x (variable of type int)
@@ -19,11 +20,11 @@ x := true
 x, y := func() (int, int) {
 	return 1, 2
 }()
-// CHECK: x int = 1
-// CHECK: y int = 2
+// CHECK: 1
+// CHECK: 2
 
 x, _ = func() (int, int) {
 	return 3, 4
 }()
 x
-// CHECK: #0 int = 3
+// CHECK: 3

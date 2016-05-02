@@ -23,6 +23,8 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StopInfo.h"
@@ -150,7 +152,7 @@ extern "C"
                               unsigned long trace_size);
     int __tsan_get_report_mutex(void *report, unsigned long idx, unsigned long *mutex_id, void **addr,
                                 int *destroyed, void **trace, unsigned long trace_size);
-    int __tsan_get_report_thread(void *report, unsigned long idx, int *tid, unsigned long *pid,
+    int __tsan_get_report_thread(void *report, unsigned long idx, int *tid, unsigned long *os_id,
                                  int *running, const char **name, int *parent_tid,
                                  void **trace, unsigned long trace_size);
     int __tsan_get_report_unique_tid(void *report, unsigned long idx, int *tid);
@@ -209,7 +211,7 @@ struct data {
     struct {
         int idx;
         int tid;
-        unsigned long pid;
+        unsigned long os_id;
         int running;
         const char *name;
         int parent_tid;
@@ -258,7 +260,7 @@ for (int i = 0; i < t.mutex_count; i++) {
 if (t.thread_count > REPORT_ARRAY_SIZE) t.thread_count = REPORT_ARRAY_SIZE;
 for (int i = 0; i < t.thread_count; i++) {
     t.threads[i].idx = i;
-    __tsan_get_report_thread(t.report, i, &t.threads[i].tid, &t.threads[i].pid, &t.threads[i].running, &t.threads[i].name, &t.threads[i].parent_tid, t.threads[i].trace, REPORT_TRACE_SIZE);
+    __tsan_get_report_thread(t.report, i, &t.threads[i].tid, &t.threads[i].os_id, &t.threads[i].running, &t.threads[i].name, &t.threads[i].parent_tid, t.threads[i].trace, REPORT_TRACE_SIZE);
 }
 
 if (t.unique_tid_count > REPORT_ARRAY_SIZE) t.unique_tid_count = REPORT_ARRAY_SIZE;
@@ -310,6 +312,35 @@ RetrieveString(ValueObjectSP return_value_sp, ProcessSP process_sp, std::string 
     return str;
 }
 
+static void
+GetRenumberedThreadIds(ProcessSP process_sp, ValueObjectSP data, std::map<uint64_t, user_id_t> &thread_id_map)
+{
+    ConvertToStructuredArray(data, ".threads", ".thread_count", [process_sp, &thread_id_map] (ValueObjectSP o, StructuredData::Dictionary *dict) {
+        uint64_t thread_id = o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0);
+        uint64_t thread_os_id = o->GetValueForExpressionPath(".os_id")->GetValueAsUnsigned(0);
+        user_id_t lldb_user_id = 0;
+        
+        bool can_update = true;
+        ThreadSP lldb_thread = process_sp->GetThreadList().FindThreadByID(thread_os_id, can_update);
+        if (lldb_thread) {
+            lldb_user_id = lldb_thread->GetIndexID();
+        } else {
+            // This isn't a live thread anymore.  Ask process to assign a new Index ID (or return an old one if we've already seen this thread_os_id).
+            // It will also make sure that no new threads are assigned this Index ID.
+            lldb_user_id = process_sp->AssignIndexIDToThread(thread_os_id);
+        }
+        
+        thread_id_map[thread_id] = lldb_user_id;
+    });
+}
+
+static user_id_t Renumber(uint64_t id, std::map<uint64_t, user_id_t> &thread_id_map) {
+    if (! thread_id_map.count(id))
+        return 0;
+    
+    return thread_id_map[id];
+}
+
 StructuredData::ObjectSP
 ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
 {
@@ -346,6 +377,9 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
         return StructuredData::ObjectSP();
     }
     
+    std::map<uint64_t, user_id_t> thread_id_map;
+    GetRenumberedThreadIds(process_sp, main_value, thread_id_map);
+    
     StructuredData::Dictionary *dict = new StructuredData::Dictionary();
     dict->AddStringItem("instrumentation_class", "ThreadSanitizer");
     dict->AddStringItem("issue_type", RetrieveString(main_value, process_sp, ".description"));
@@ -358,9 +392,9 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
     });
     dict->AddItem("stacks", StructuredData::ObjectSP(stacks));
     
-    StructuredData::Array *mops = ConvertToStructuredArray(main_value, ".mops", ".mop_count", [] (ValueObjectSP o, StructuredData::Dictionary *dict) {
+    StructuredData::Array *mops = ConvertToStructuredArray(main_value, ".mops", ".mop_count", [&thread_id_map] (ValueObjectSP o, StructuredData::Dictionary *dict) {
         dict->AddIntegerItem("index", o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
-        dict->AddIntegerItem("thread_id", o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0));
+        dict->AddIntegerItem("thread_id", Renumber(o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0), thread_id_map));
         dict->AddIntegerItem("size", o->GetValueForExpressionPath(".size")->GetValueAsUnsigned(0));
         dict->AddBooleanItem("is_write", o->GetValueForExpressionPath(".write")->GetValueAsUnsigned(0));
         dict->AddBooleanItem("is_atomic", o->GetValueForExpressionPath(".atomic")->GetValueAsUnsigned(0));
@@ -369,13 +403,13 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
     });
     dict->AddItem("mops", StructuredData::ObjectSP(mops));
     
-    StructuredData::Array *locs = ConvertToStructuredArray(main_value, ".locs", ".loc_count", [process_sp] (ValueObjectSP o, StructuredData::Dictionary *dict) {
+    StructuredData::Array *locs = ConvertToStructuredArray(main_value, ".locs", ".loc_count", [process_sp, &thread_id_map] (ValueObjectSP o, StructuredData::Dictionary *dict) {
         dict->AddIntegerItem("index", o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
         dict->AddStringItem("type", RetrieveString(o, process_sp, ".type"));
         dict->AddIntegerItem("address", o->GetValueForExpressionPath(".addr")->GetValueAsUnsigned(0));
         dict->AddIntegerItem("start", o->GetValueForExpressionPath(".start")->GetValueAsUnsigned(0));
         dict->AddIntegerItem("size", o->GetValueForExpressionPath(".size")->GetValueAsUnsigned(0));
-        dict->AddIntegerItem("thread_id", o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0));
+        dict->AddIntegerItem("thread_id", Renumber(o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0), thread_id_map));
         dict->AddIntegerItem("file_descriptor", o->GetValueForExpressionPath(".fd")->GetValueAsUnsigned(0));
         dict->AddIntegerItem("suppressable", o->GetValueForExpressionPath(".suppressable")->GetValueAsUnsigned(0));
         dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
@@ -391,20 +425,20 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
     });
     dict->AddItem("mutexes", StructuredData::ObjectSP(mutexes));
     
-    StructuredData::Array *threads = ConvertToStructuredArray(main_value, ".threads", ".thread_count", [process_sp] (ValueObjectSP o, StructuredData::Dictionary *dict) {
+    StructuredData::Array *threads = ConvertToStructuredArray(main_value, ".threads", ".thread_count", [process_sp, &thread_id_map] (ValueObjectSP o, StructuredData::Dictionary *dict) {
         dict->AddIntegerItem("index", o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
-        dict->AddIntegerItem("thread_id", o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0));
-        dict->AddIntegerItem("process_id", o->GetValueForExpressionPath(".pid")->GetValueAsUnsigned(0));
+        dict->AddIntegerItem("thread_id", Renumber(o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0), thread_id_map));
+        dict->AddIntegerItem("thread_os_id", o->GetValueForExpressionPath(".os_id")->GetValueAsUnsigned(0));
         dict->AddIntegerItem("running", o->GetValueForExpressionPath(".running")->GetValueAsUnsigned(0));
         dict->AddStringItem("name", RetrieveString(o, process_sp, ".name"));
-        dict->AddIntegerItem("parent_thread_id", o->GetValueForExpressionPath(".parent_tid")->GetValueAsUnsigned(0));
+        dict->AddIntegerItem("parent_thread_id", Renumber(o->GetValueForExpressionPath(".parent_tid")->GetValueAsUnsigned(0), thread_id_map));
         dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
     });
     dict->AddItem("threads", StructuredData::ObjectSP(threads));
     
-    StructuredData::Array *unique_tids = ConvertToStructuredArray(main_value, ".unique_tids", ".unique_tid_count", [] (ValueObjectSP o, StructuredData::Dictionary *dict) {
+    StructuredData::Array *unique_tids = ConvertToStructuredArray(main_value, ".unique_tids", ".unique_tid_count", [&thread_id_map] (ValueObjectSP o, StructuredData::Dictionary *dict) {
         dict->AddIntegerItem("index", o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
-        dict->AddIntegerItem("tid", o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0));
+        dict->AddIntegerItem("tid", Renumber(o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0), thread_id_map));
     });
     dict->AddItem("unique_tids", StructuredData::ObjectSP(unique_tids));
     
@@ -474,6 +508,32 @@ GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr)
     
     std::string sym_name = symbol->GetName().GetCString();
     return sym_name;
+}
+
+static void
+GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr, Declaration &decl)
+{
+    lldb_private::Address so_addr;
+    if (! process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr, so_addr))
+        return;
+    
+    lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
+    if (! symbol)
+        return;
+    
+    ConstString sym_name = symbol->GetName();
+    
+    ModuleSP module = symbol->CalculateSymbolContextModule();
+    if (! module)
+        return;
+    
+    VariableList var_list;
+    module->FindGlobalVariables(sym_name, nullptr, true, 1U, var_list);
+    if (var_list.GetSize() < 1)
+        return;
+    
+    VariableSP var = var_list.GetVariableAtIndex(0);
+    decl = var->GetDeclaration();
 }
 
 addr_t
@@ -550,7 +610,7 @@ ThreadSanitizerRuntime::GetMainRacyAddress(StructuredData::ObjectSP report)
 }
 
 std::string
-ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report)
+ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report, std::string &filename, uint32_t &line)
 {
     std::string result = "";
     
@@ -563,16 +623,23 @@ ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report)
             addr_t addr = loc->GetAsDictionary()->GetValueForKey("address")->GetAsInteger()->GetValue();
             std::string global_name = GetSymbolNameFromAddress(process_sp, addr);
             result = Sprintf("Location is a global '%s'", global_name.c_str());
+
+            Declaration decl;
+            GetSymbolDeclarationFromAddress(process_sp, addr, decl);
+            if (decl.GetFile()) {
+                filename = decl.GetFile().GetPath();
+                line = decl.GetLine();
+            }
         } else if (type == "heap") {
             addr_t addr = loc->GetAsDictionary()->GetValueForKey("start")->GetAsInteger()->GetValue();
             long size = loc->GetAsDictionary()->GetValueForKey("size")->GetAsInteger()->GetValue();
             result = Sprintf("Location is a %ld-byte heap object at 0x%llx", size, addr);
         } else if (type == "stack") {
             int tid = loc->GetAsDictionary()->GetValueForKey("thread_id")->GetAsInteger()->GetValue();
-            result = Sprintf("Location is stack of thread %d", tid);
+            result = Sprintf("Location is stack of Thread %d", tid);
         } else if (type == "tls") {
             int tid = loc->GetAsDictionary()->GetValueForKey("thread_id")->GetAsInteger()->GetValue();
-            result = Sprintf("Location is TLS of thread %d", tid);
+            result = Sprintf("Location is TLS of Thread %d", tid);
         } else if (type == "fd") {
             int fd = loc->GetAsDictionary()->GetValueForKey("file_descriptor")->GetAsInteger()->GetValue();
             result = Sprintf("Location is file descriptor %d", fd);
@@ -602,8 +669,15 @@ ThreadSanitizerRuntime::NotifyBreakpointHit(void *baton, StoppointCallbackContex
         report->GetAsDictionary()->AddStringItem("summary", summary);
         addr_t main_address = instance->GetMainRacyAddress(report);
         report->GetAsDictionary()->AddIntegerItem("memory_address", main_address);
-        std::string location_description = instance->GetLocationDescription(report);
+
+        std::string location_filename = "";
+        uint32_t location_line = 0;
+        std::string location_description = instance->GetLocationDescription(report, location_filename, location_line);
         report->GetAsDictionary()->AddStringItem("location_description", location_description);
+        if (location_filename != "") {
+            report->GetAsDictionary()->AddStringItem("location_filename", location_filename);
+            report->GetAsDictionary()->AddIntegerItem("location_line", location_line);
+        }
     }
     
     ProcessSP process_sp = instance->GetProcessSP();
@@ -692,14 +766,12 @@ GenerateThreadName(std::string path, StructuredData::Object *o) {
         bool is_atomic = o->GetObjectForDotSeparatedPath("is_atomic")->GetBooleanValue();
         addr_t addr = o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
         
-        result = Sprintf("%s%s of size %d at 0x%llx by thread %d", is_atomic ? "atomic " : "", is_write ? "write" : "read", size, addr, thread_id);
+        result = Sprintf("%s%s of size %d at 0x%llx by Thread %d", is_atomic ? "atomic " : "", is_write ? "write" : "read", size, addr, thread_id);
     }
     
     if (path == "threads") {
         int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
-        int parent_thread_id = o->GetObjectForDotSeparatedPath("parent_thread_id")->GetIntegerValue();
-        
-        result = Sprintf("thread %d created by thread %d at", thread_id, parent_thread_id);
+        result = Sprintf("Thread %d created", thread_id);
     }
     
     if (path == "locs") {
@@ -707,16 +779,16 @@ GenerateThreadName(std::string path, StructuredData::Object *o) {
         int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
         int fd = o->GetObjectForDotSeparatedPath("file_descriptor")->GetIntegerValue();
         if (type == "heap") {
-            result = Sprintf("Heap block allocated by thread %d at", thread_id);
+            result = Sprintf("Heap block allocated by Thread %d", thread_id);
         } else if (type == "fd") {
-            result = Sprintf("File descriptor %d created by thread %t at", fd, thread_id);
+            result = Sprintf("File descriptor %d created by Thread %t", fd, thread_id);
         }
     }
     
     if (path == "mutexes") {
         int mutex_id = o->GetObjectForDotSeparatedPath("mutex_id")->GetIntegerValue();
         
-        result = Sprintf("mutex M%d created at", mutex_id);
+        result = Sprintf("Mutex M%d created", mutex_id);
     }
     
     if (path == "stacks") {
@@ -741,7 +813,7 @@ AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP proces
         if (pcs.size() == 0)
             return true;
         
-        StructuredData::ObjectSP thread_id_obj = o->GetObjectForDotSeparatedPath("thread_id");
+        StructuredData::ObjectSP thread_id_obj = o->GetObjectForDotSeparatedPath("thread_os_id");
         tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
         
         uint32_t stop_id = 0;

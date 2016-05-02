@@ -120,7 +120,7 @@ public:
     bool
     ClearBit(uint32_t bit);
 
-    void *
+    const void *
     GetBytes() const;
 
     size_t
@@ -161,6 +161,9 @@ public:
     
     bool
     MakeSigned ();
+
+    bool
+    MakeUnsigned ();
 
     static const char *
     GetValueTypeAsCString (Scalar::Type value_type);
@@ -231,9 +234,6 @@ public:
     Scalar::Type
     GetType() const { return m_type; }
 
-    void
-    SetType(const RegisterInfo*);
-
     //----------------------------------------------------------------------
     // Returns a casted value of the current contained data without
     // modifying the current value. FAIL_VALUE will be returned if the type
@@ -242,22 +242,10 @@ public:
     int
     SInt(int fail_value = 0) const;
 
-    // Return the raw unsigned integer without any casting or conversion
-    unsigned int
-    RawUInt () const;
-
-    // Return the raw unsigned long without any casting or conversion
-    unsigned long
-    RawULong () const;
-
-    // Return the raw unsigned long long without any casting or conversion
-    unsigned long long
-    RawULongLong () const;
-
     unsigned char
     UChar(unsigned char fail_value = 0) const;
 
-    char
+    signed char
     SChar(char fail_value = 0) const;
 
     unsigned short
@@ -302,9 +290,6 @@ public:
     long double
     LongDouble(long double fail_value = 0.0) const;
 
-    uint64_t
-    GetRawBits64 (uint64_t fail_value) const;
-
     Error
     SetValueFromCString (const char *s, lldb::Encoding encoding, size_t byte_size);
     
@@ -338,9 +323,6 @@ public:
         return min <= sval64 && sval64 <= max;
     }
     
-    static llvm::APInt
-    APIntWithTypeAndValue(Scalar::Type type, uint64_t raw_value);
-
 protected:
     typedef char                schar_t;
     typedef unsigned char       uchar_t;

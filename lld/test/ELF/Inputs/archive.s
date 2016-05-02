@@ -1,5 +1,5 @@
-.globl _start;
+.globl _start
 _start:
 
-.globl end;
+.globl end
 end:

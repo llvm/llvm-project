@@ -872,7 +872,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context)
                                  current_id);
     }
 
-    if (!context.m_found.variable)
+    if (!context.m_found.variable && !context.m_found.local_vars_nsp)
         ClangASTSource::FindExternalVisibleDecls(context);
 }
 
@@ -1205,6 +1205,7 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                         context.AddNamedDecl(namespace_decl);
                         clang::DeclContext *clang_decl_ctx = clang::Decl::castToDeclContext(namespace_decl);
                         clang_decl_ctx->setHasExternalVisibleStorage(true);
+                        context.m_found.local_vars_nsp = true;
                     }
                 }
             }
@@ -2234,10 +2235,10 @@ ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
 {
     CompilerType copied_clang_type = GuardedCopyType(ut);
 
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+
     if (!copied_clang_type)
     {
-        Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
-
         if (log)
             log->Printf("ClangExpressionDeclMap::AddThisType - Couldn't import the type");
 
@@ -2254,7 +2255,7 @@ ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
                                                                         &void_ptr_clang_type,
                                                                         1,
                                                                         false,
-                                                                        copied_clang_type.GetTypeQualifiers());
+                                                                        0);
 
         const bool is_virtual = false;
         const bool is_static = false;
@@ -2263,7 +2264,7 @@ ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
         const bool is_attr_used = true;
         const bool is_artificial = false;
 
-        ClangASTContext::GetASTContext(m_ast_context)->
+        CXXMethodDecl *method_decl = ClangASTContext::GetASTContext(m_ast_context)->
             AddMethodToCXXRecordType (copied_clang_type.GetOpaqueQualType(),
                                       "$__lldb_expr",
                                       method_type,
@@ -2274,6 +2275,16 @@ ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
                                       is_explicit,
                                       is_attr_used,
                                       is_artificial);
+        
+        if (log)
+        {
+            ASTDumper method_ast_dumper((clang::Decl*)method_decl);
+            ASTDumper type_ast_dumper(copied_clang_type);
+        
+            log->Printf("  CEDM::AddThisType Added function $__lldb_expr (description %s) for this type %s",
+                        method_ast_dumper.GetCString(),
+                        type_ast_dumper.GetCString());
+        }
     }
 
     if (!copied_clang_type.IsValid())

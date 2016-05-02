@@ -39,6 +39,12 @@ typedef int (*returns_fn_void_int_t(void))(void);
 // CHECK-MESSAGES: :[[@LINE-2]]:44: warning: {{.*}} in typedef
 // CHECK-FIXES: {{^}}typedef int (*returns_fn_void_int_t())();{{$}}
 
+// Should work for type aliases as well as typedef.
+using returns_fn_void_int_t2 = int (*(void))(void);
+// CHECK-MESSAGES: :[[@LINE-1]]:39: warning: {{.*}} in type alias
+// CHECK-MESSAGES: :[[@LINE-2]]:46: warning: {{.*}} in type alias
+// CHECK-FIXES: {{^}}using returns_fn_void_int_t2 = int (*())();{{$}}
+
 int (*returns_fn_void_int(void))(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: {{.*}} in function definition
 // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: {{.*}} in function definition

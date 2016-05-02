@@ -13,6 +13,8 @@ add_lld_library(lldELF
   LinkerScript.cpp
   MarkLive.cpp
   OutputSections.cpp
+  ScriptParser.cpp
+  SymbolListFile.cpp
   SymbolTable.cpp
   Symbols.cpp
   Target.cpp
@@ -23,6 +25,7 @@ add_lld_library(lldELF
   Analysis
   BitReader
   BitWriter
+  Codegen
   Core
   IPO
   Linker
@@ -38,4 +41,4 @@ add_lld_library(lldELF
   ${PTHREAD_LIB}
   )
 
-add_dependencies(lldELF ELFOptionsTableGen)
+add_dependencies(lldELF intrinsics_gen ELFOptionsTableGen)

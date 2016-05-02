@@ -38,8 +38,6 @@ struct _LIBCPP_TYPE_VIS_ONLY binary_function
     typedef _Result result_type;
 };
 
-template <class _Tp> struct _LIBCPP_TYPE_VIS_ONLY hash;
-
 template <class _Tp>
 struct __has_result_type
 {
@@ -306,75 +304,19 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1, _A2, _A3...) const volatile>
 
 #endif // _LIBCPP_HAS_NO_VARIADICS
 
-// __invoke
+#ifndef _LIBCPP_CXX03_LANG
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
-
-// bullets 1 and 2
-
-template <class _Fp, class _A0, class ..._Args,
-            class>
-inline _LIBCPP_INLINE_VISIBILITY
-auto
-__invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-    -> decltype((_VSTD::forward<_A0>(__a0).*__f)(_VSTD::forward<_Args>(__args)...))
-{
-    return (_VSTD::forward<_A0>(__a0).*__f)(_VSTD::forward<_Args>(__args)...);
-}
-
-template <class _Fp, class _A0, class ..._Args,
-            class>
-inline _LIBCPP_INLINE_VISIBILITY
-auto
-__invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
-    -> decltype(((*_VSTD::forward<_A0>(__a0)).*__f)(_VSTD::forward<_Args>(__args)...))
-{
-    return ((*_VSTD::forward<_A0>(__a0)).*__f)(_VSTD::forward<_Args>(__args)...);
-}
-
-// bullets 3 and 4
-
-template <class _Fp, class _A0,
-            class>
-inline _LIBCPP_INLINE_VISIBILITY
-auto
-__invoke(_Fp&& __f, _A0&& __a0)
-    -> decltype(_VSTD::forward<_A0>(__a0).*__f)
-{
-    return _VSTD::forward<_A0>(__a0).*__f;
-}
-
-template <class _Fp, class _A0,
-            class>
-inline _LIBCPP_INLINE_VISIBILITY
-auto
-__invoke(_Fp&& __f, _A0&& __a0)
-    -> decltype((*_VSTD::forward<_A0>(__a0)).*__f)
-{
-    return (*_VSTD::forward<_A0>(__a0)).*__f;
-}
-
-// bullet 5
-
-template <class _Fp, class ..._Args>
-inline _LIBCPP_INLINE_VISIBILITY
-auto
-__invoke(_Fp&& __f, _Args&& ...__args)
-    -> decltype(_VSTD::forward<_Fp>(__f)(_VSTD::forward<_Args>(__args)...))
-{
-    return _VSTD::forward<_Fp>(__f)(_VSTD::forward<_Args>(__args)...);
-}
 template <class _Tp, class ..._Args>
 struct __invoke_return
 {
     typedef decltype(__invoke(_VSTD::declval<_Tp>(), _VSTD::declval<_Args>()...)) type;
 };
 
-#else // _LIBCPP_HAS_NO_VARIADICS
+#else // defined(_LIBCPP_CXX03_LANG)
 
 #include <__functional_base_03>
 
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif  // !defined(_LIBCPP_CXX03_LANG)
 
 
 template <class _Ret>
@@ -577,10 +519,6 @@ public:
 #endif // _LIBCPP_HAS_NO_VARIADICS
 };
 
-template <class _Tp> struct __is_reference_wrapper_impl : public false_type {};
-template <class _Tp> struct __is_reference_wrapper_impl<reference_wrapper<_Tp> > : public true_type {};
-template <class _Tp> struct __is_reference_wrapper
-    : public __is_reference_wrapper_impl<typename remove_cv<_Tp>::type> {};
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY

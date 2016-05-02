@@ -51,6 +51,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   bool IsConstQualified =
       Param->getType().getCanonicalType().isConstQualified();
 
+  // Skip declarations delayed by late template parsing without a body.
+  if (!Function->getBody())
+    return;
+
   // Do not trigger on non-const value parameters when:
   // 1. they are in a constructor definition since they can likely trigger
   //    misc-move-constructor-init which will suggest to move the argument.

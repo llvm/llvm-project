@@ -72,6 +72,8 @@ Args:   -h              (optional) Print help information on this program.\n\
                     be installed. Where non-Darwin systems want to put\n\
                     the .py and .so files so that Python can find them\n\
                     automatically. Python install directory.\n\
+    --lldbLibDir    (optional) The name of the directory containing liblldb.so.\n\
+                    \"lib\" by default.\n\
     --cmakeBuildConfiguration=  (optional) Is the build configuration(Debug, Release, RelWithDebugInfo)\n\
                     used to determine where the bin and lib directories are \n\
                     created for a Windows build.\n\
@@ -80,7 +82,7 @@ Args:   -h              (optional) Print help information on this program.\n\
 \n\
 Usage:\n\
     finishSwigWrapperClasses.py --srcRoot=ADirPath --targetDir=ADirPath\n\
-    --cfgBldDir=ADirPath --prefix=ADirPath -m -d\n\
+    --cfgBldDir=ADirPath --prefix=ADirPath --lldbLibDir=ADirPath -m -d\n\
 \n\
 " #TAG_PROGRAM_HELP_INFO
 
@@ -158,7 +160,7 @@ def validate_arguments(vArgv):
     nResult = 0
     strListArgs = "hdm" # Format "hiox:" = -h -i -o -x <arg>
     listLongArgs = ["srcRoot=", "targetDir=", "cfgBldDir=", "prefix=", "cmakeBuildConfiguration=",
-                    "argsFile"]
+                    "lldbLibDir=", "argsFile"]
     dictArgReq = {  "-h": "o",          # o = optional, m = mandatory
                     "-d": "o",
                     "-m": "o",
@@ -167,6 +169,7 @@ def validate_arguments(vArgv):
                     "--cfgBldDir": "o",
                     "--prefix": "o",
                     "--cmakeBuildConfiguration": "o",
+                    "--lldbLibDir": "o",
                     "--argsFile": "o" }
 
     # Check for mandatory parameters
@@ -337,11 +340,13 @@ def main(vArgv):
             --cmakeBuildConfiguration=  (optional) Is the build configuration(Debug, Release, RelWithDebugInfo)\n\
                             used to determine where the bin and lib directories are \n\
                             created for a Windows build.\n\
+            --lldbLibDir=   The name of the directory containing liblldb.so.
+            (optional)      "lib" by default.
             --argsFile=     The args are read from a file instead of the
                             command line. Other command line args are ignored.
     Usage:
             finishSwigWrapperClasses.py --srcRoot=ADirPath --targetDir=ADirPath
-            --cfgBldDir=ADirPath --prefix=ADirPath -m -d
+            --cfgBldDir=ADirPath --prefix=ADirPath --lldbLibDir=ADirPath -m -d
 
     Results:    0 Success
                 -1 Error - invalid parameters passed.

@@ -1,4 +1,4 @@
-//===- lib/ReaderWriter/MachO/Atoms.h -------------------------------------===//
+//===- lib/ReaderWriter/MachO/Atoms.h ---------------------------*- C++ -*-===//
 //
 //                             The LLVM Linker
 //
@@ -10,10 +10,21 @@
 #ifndef LLD_READER_WRITER_MACHO_ATOMS_H
 #define LLD_READER_WRITER_MACHO_ATOMS_H
 
+#include "lld/Core/Atom.h"
+#include "lld/Core/DefinedAtom.h"
+#include "lld/Core/SharedLibraryAtom.h"
 #include "lld/Core/Simple.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include <cstdint>
+#include <string>
 
 namespace lld {
+
+class File;
+
 namespace mach_o {
+
 class MachODefinedAtom : public SimpleDefinedAtom {
 public:
   MachODefinedAtom(const File &f, const StringRef name, Scope scope,
@@ -164,7 +175,7 @@ private:
   StringRef _dylibInstallName;
 };
 
-} // namespace mach_o
-} // namespace lld
+} // end namespace mach_o
+} // end namespace lld
 
 #endif // LLD_READER_WRITER_MACHO_ATOMS_H

@@ -8,25 +8,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Core/ArchiveLibraryFile.h"
+#include "lld/Core/File.h"
 #include "lld/Core/LLVM.h"
-#include "lld/Core/LinkingContext.h"
-#include "lld/Driver/Driver.h"
-#include "llvm/ADT/Hashing.h"
+#include "lld/Core/Reader.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Archive.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Object/Error.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>
+#include <string>
+#include <system_error>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 using llvm::object::Archive;
-using llvm::object::ObjectFile;
-using llvm::object::SymbolRef;
-using llvm::object::symbol_iterator;
-using llvm::object::object_error;
 
 namespace lld {
 
@@ -213,4 +216,4 @@ void Registry::addSupportArchives(bool logLoading) {
   add(std::unique_ptr<Reader>(new ArchiveReader(logLoading)));
 }
 
-} // end namespace lld
+} // namespace lld

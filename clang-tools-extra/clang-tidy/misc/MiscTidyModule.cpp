@@ -16,6 +16,7 @@
 #include "BoolPointerImplicitConversionCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DefinitionsInHeadersCheck.h"
+#include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundings.h"
@@ -25,14 +26,21 @@
 #include "MisplacedWideningCastCheck.h"
 #include "MoveConstantArgumentCheck.h"
 #include "MoveConstructorInitCheck.h"
+#include "MultipleStatementMacroCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NonCopyableObjects.h"
+#include "PointerAndIntegralOperationCheck.h"
+#include "RedundantExpressionCheck.h"
 #include "SizeofContainerCheck.h"
+#include "SizeofExpressionCheck.h"
 #include "StaticAssertCheck.h"
+#include "StringConstructorCheck.h"
 #include "StringIntegerAssignmentCheck.h"
+#include "StringLiteralWithEmbeddedNulCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
 #include "SuspiciousSemicolonCheck.h"
+#include "SuspiciousStringCompareCheck.h"
 #include "SwappedArgumentsCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
 #include "UndelegatedConstructor.h"
@@ -40,6 +48,7 @@
 #include "UnusedAliasDeclsCheck.h"
 #include "UnusedParametersCheck.h"
 #include "UnusedRAIICheck.h"
+#include "UnusedUsingDeclsCheck.h"
 #include "VirtualNearMissCheck.h"
 
 namespace clang {
@@ -60,6 +69,8 @@ public:
         "misc-dangling-handle");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
         "misc-definitions-in-headers");
+    CheckFactories.registerCheck<FoldInitTypeCheck>(
+        "misc-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(
         "misc-forward-declaration-namespace");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
@@ -78,21 +89,35 @@ public:
         "misc-move-const-arg");
     CheckFactories.registerCheck<MoveConstructorInitCheck>(
         "misc-move-constructor-init");
+    CheckFactories.registerCheck<MultipleStatementMacroCheck>(
+        "misc-multiple-statement-macro");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
     CheckFactories.registerCheck<NoexceptMoveConstructorCheck>(
         "misc-noexcept-move-constructor");
     CheckFactories.registerCheck<NonCopyableObjectsCheck>(
         "misc-non-copyable-objects");
+    CheckFactories.registerCheck<PointerAndIntegralOperationCheck>(
+        "misc-pointer-and-integral-operation");
+    CheckFactories.registerCheck<RedundantExpressionCheck>(
+        "misc-redundant-expression");
     CheckFactories.registerCheck<SizeofContainerCheck>("misc-sizeof-container");
+    CheckFactories.registerCheck<SizeofExpressionCheck>(
+        "misc-sizeof-expression");
     CheckFactories.registerCheck<StaticAssertCheck>(
         "misc-static-assert");
+    CheckFactories.registerCheck<StringConstructorCheck>(
+        "misc-string-constructor");
     CheckFactories.registerCheck<StringIntegerAssignmentCheck>(
         "misc-string-integer-assignment");
+    CheckFactories.registerCheck<StringLiteralWithEmbeddedNulCheck>(
+        "misc-string-literal-with-embedded-nul");
     CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
         "misc-suspicious-missing-comma");
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "misc-suspicious-semicolon");
+    CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
+        "misc-suspicious-string-compare");    
     CheckFactories.registerCheck<SwappedArgumentsCheck>(
         "misc-swapped-arguments");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(
@@ -106,6 +131,8 @@ public:
     CheckFactories.registerCheck<UnusedParametersCheck>(
         "misc-unused-parameters");
     CheckFactories.registerCheck<UnusedRAIICheck>("misc-unused-raii");
+    CheckFactories.registerCheck<UnusedUsingDeclsCheck>(
+        "misc-unused-using-decls");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
         "misc-virtual-near-miss");
   }

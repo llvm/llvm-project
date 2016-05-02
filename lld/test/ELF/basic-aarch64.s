@@ -5,7 +5,7 @@
 # REQUIRES: aarch64
 
 # exits with return code 42 on FreeBSD/AArch64
-.globl _start;
+.globl _start
 _start:
   mov    x0, 42
   mov    x8, 1

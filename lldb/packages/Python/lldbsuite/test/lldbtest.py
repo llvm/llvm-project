@@ -31,8 +31,8 @@ OK
 $ 
 """
 
-from __future__ import print_function
 from __future__ import absolute_import
+from __future__ import print_function
 
 # System modules
 import abc
@@ -42,12 +42,13 @@ import gc
 import glob
 import inspect
 import io
-import os, sys, traceback
 import os.path
 import re
 import signal
 from subprocess import *
+import sys
 import time
+import traceback
 import types
 import lldb
 
@@ -69,8 +70,6 @@ from . import lock
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
-
-from .result_formatter import EventBuilder
 
 # dosep.py starts lots and lots of dotest instances
 # This option helps you find if two (or more) dotest instances are using the same
@@ -1050,23 +1049,13 @@ class Base(unittest2.TestCase):
                         # it silently replaces the destination.  Ultimately this means that atomic renames are not
                         # guaranteed to be possible on Windows, but we need this to work anyway, so just remove the
                         # destination first if it already exists.
-                        os.remove(dst)
+                        remove_file(dst)
 
                     os.rename(src, dst)
         else:
             # success!  (and we don't want log files) delete log files
             for log_file in log_files_for_this_test:
-                try:
-                    os.unlink(log_file)
-                except:
-                    # We've seen consistent unlink failures on Windows, perhaps because the
-                    # just-created log file is being scanned by anti-virus.  Empirically, this
-                    # sleep-and-retry approach allows tests to succeed much more reliably.
-                    # Attempts to figure out exactly what process was still holding a file handle
-                    # have failed because running instrumentation like Process Monitor seems to
-                    # slow things down enough that the problem becomes much less consistent.
-                    time.sleep(0.5)
-                    os.unlink(log_file)
+                remove_file(log_file)
 
     # ====================================================
     # Config. methods supported through a plugin interface
@@ -2003,4 +1992,17 @@ class TestBase(Base):
     @classmethod
     def RemoveTempFile(cls, file):
         if os.path.exists(file):
+            remove_file(file)
+
+# On Windows, the first attempt to delete a recently-touched file can fail
+# because of a race with antimalware scanners.  This function will detect a
+# failure and retry.
+def remove_file(file, num_retries = 1, sleep_duration = 0.5):
+    for i in range(num_retries+1):
+        try:
             os.remove(file)
+            return True
+        except:
+            time.sleep(sleep_duration)
+            continue
+    return False

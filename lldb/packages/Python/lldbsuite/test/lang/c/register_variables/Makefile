@@ -2,7 +2,6 @@ LEVEL = ../../../make
 
 C_SOURCES := test.c
 
-CFLAGS := -g -O1
 
 $(info OS: $(OS))
 HOST_OS = $(shell uname -s)

@@ -15,8 +15,6 @@
 #ifndef PLATFORM_SUPPORT_H
 #define PLATFORM_SUPPORT_H
 
-#include <__config>
-
 // locale names
 #ifdef _WIN32
 // WARNING: Windows does not support UTF-8 codepages.
@@ -54,8 +52,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
-#include <io.h> // _mktemp
+#if defined(_WIN32) || defined(__MINGW32__)
+#include <io.h> // _mktemp_s
 #else
 #include <unistd.h> // close
 #endif
@@ -67,17 +65,20 @@ extern "C" {
 }
 #endif
 
-#ifndef _LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE
+#ifndef __CloudABI__
 inline
-std::string
-get_temp_file_name()
+std::string get_temp_file_name()
 {
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
-    char Path[MAX_PATH+1];
-    char FN[MAX_PATH+1];
+#if defined(__MINGW32__)
+    char Path[MAX_PATH + 1];
+    char FN[MAX_PATH + 1];
     do { } while (0 == GetTempPath(MAX_PATH+1, Path));
     do { } while (0 == GetTempFileName(Path, "libcxx", 0, FN));
     return FN;
+#elif defined(_WIN32)
+    char Name[] = "libcxx.XXXXXX";
+    if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
+    return Name;
 #else
     std::string Name;
     int FD = -1;
@@ -93,6 +94,6 @@ get_temp_file_name()
     return Name;
 #endif
 }
-#endif // _LIBCPP_HAS_NO_GLOBAL_FILESYSTEM_NAMESPACE
+#endif // __CloudABI__
 
 #endif // PLATFORM_SUPPORT_H

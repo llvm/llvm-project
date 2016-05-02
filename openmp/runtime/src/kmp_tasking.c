@@ -284,6 +284,13 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
 
     KA_TRACE(20, ("__kmp_push_task: T#%d trying to push task %p.\n", gtid, taskdata ) );
 
+    if ( taskdata->td_flags.tiedness == TASK_UNTIED ) {
+        // untied task needs to increment counter so that the task structure is not freed prematurely
+        kmp_int32 counter = 1 + KMP_TEST_THEN_INC32(&taskdata->td_untied_count);
+        KA_TRACE(20, ( "__kmp_push_task: T#%d untied_count (%d) incremented for task %p\n",
+                       gtid, counter, taskdata ) );
+    }
+
     // The first check avoids building task_team thread data if serialized
     if ( taskdata->td_flags.task_serial ) {
         KA_TRACE(20, ( "__kmp_push_task: T#%d team serialized; returning TASK_NOT_PUSHED for task %p\n",
@@ -436,8 +443,8 @@ __kmp_task_start( kmp_int32 gtid, kmp_task_t * task, kmp_taskdata_t * current_ta
     // mark starting task as executing and as current task
     thread -> th.th_current_task = taskdata;
 
-    KMP_DEBUG_ASSERT( taskdata -> td_flags.started == 0 );
-    KMP_DEBUG_ASSERT( taskdata -> td_flags.executing == 0 );
+    KMP_DEBUG_ASSERT( taskdata->td_flags.started == 0 || taskdata->td_flags.tiedness == TASK_UNTIED );
+    KMP_DEBUG_ASSERT( taskdata->td_flags.executing == 0 || taskdata->td_flags.tiedness == TASK_UNTIED );
     taskdata -> td_flags.started = 1;
     taskdata -> td_flags.executing = 1;
     KMP_DEBUG_ASSERT( taskdata -> td_flags.complete == 0 );
@@ -497,6 +504,13 @@ __kmpc_omp_task_begin_if0( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * task )
 
     KA_TRACE(10, ("__kmpc_omp_task_begin_if0(enter): T#%d loc=%p task=%p current_task=%p\n",
                   gtid, loc_ref, taskdata, current_task ) );
+
+    if ( taskdata->td_flags.tiedness == TASK_UNTIED ) {
+        // untied task needs to increment counter so that the task structure is not freed prematurely
+        kmp_int32 counter = 1 + KMP_TEST_THEN_INC32(&taskdata->td_untied_count);
+        KA_TRACE(20, ( "__kmpc_omp_task_begin_if0: T#%d untied_count (%d) incremented for task %p\n",
+                       gtid, counter, taskdata ) );
+    }
 
     taskdata -> td_flags.task_serial = 1;  // Execute this task immediately, not deferred.
     __kmp_task_start( gtid, task, current_task );
@@ -645,6 +659,25 @@ __kmp_task_finish( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t *resumed_tas
         __kmp_pop_task_stack( gtid, thread, taskdata );
     }
 #endif /* BUILD_TIED_TASK_STACK */
+
+    if ( taskdata->td_flags.tiedness == TASK_UNTIED ) {
+        // untied task needs to check the counter so that the task structure is not freed prematurely
+        kmp_int32 counter = KMP_TEST_THEN_DEC32(&taskdata->td_untied_count) - 1;
+        KA_TRACE(20, ( "__kmp_task_finish: T#%d untied_count (%d) decremented for task %p\n",
+                       gtid, counter, taskdata ) );
+        if ( counter > 0 ) {
+            // untied task is not done, to be continued possibly by other thread, do not free it now
+            if (resumed_task == NULL) {
+                KMP_DEBUG_ASSERT( taskdata->td_flags.task_serial );
+                resumed_task = taskdata->td_parent;  // In a serialized task, the resumed task is the parent
+            }
+            thread->th.th_current_task = resumed_task; // restore current_task
+            resumed_task->td_flags.executing = 1;  // resume previous task
+            KA_TRACE(10, ("__kmp_task_finish(exit): T#%d partially done task %p, resuming task %p\n",
+                          gtid, taskdata, resumed_task) );
+            return;
+        }
+    }
 
     KMP_DEBUG_ASSERT( taskdata -> td_flags.complete == 0 );
     taskdata -> td_flags.complete = 1;   // mark the task as completed
@@ -980,6 +1013,7 @@ __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_tasking_flags_t *flags,
     taskdata->td_alloc_thread = thread;
     taskdata->td_parent       = parent_task;
     taskdata->td_level        = parent_task->td_level + 1; // increment nesting level
+    taskdata->td_untied_count = 0;
     taskdata->td_ident        = loc_ref;
     taskdata->td_taskwait_ident   = NULL;
     taskdata->td_taskwait_counter = 0;
@@ -1103,6 +1137,7 @@ static void
 __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_task )
 {
     kmp_taskdata_t * taskdata = KMP_TASK_TO_TASKDATA(task);
+    kmp_uint64 cur_time;
 #if OMP_40_ENABLED
     int discard = 0 /* false */;
 #endif
@@ -1124,6 +1159,13 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
 
             return;
          }
+#endif
+
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+    if(__kmp_forkjoin_frames_mode == 3) {
+        // Get the current time stamp to measure task execution time to correct barrier imbalance time
+        cur_time = __itt_get_timestamp();
+    }
 #endif
 
 #if OMP_41_ENABLED
@@ -1219,6 +1261,15 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
 #endif
        __kmp_task_finish( gtid, task, current_task );
 
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+    // Barrier imbalance - correct arrive time after the task finished
+    if(__kmp_forkjoin_frames_mode == 3) {
+        kmp_info_t *this_thr = __kmp_threads [ gtid ];
+        if(this_thr->th.th_bar_arrive_time) {
+            this_thr->th.th_bar_arrive_time += (__itt_get_timestamp() - cur_time);
+        }
+    }
+#endif
     KA_TRACE(30, ("__kmp_invoke_task(exit): T#%d completed task %p, resuming task %p\n",
                   gtid, taskdata, current_task) );
     return;

@@ -536,12 +536,13 @@ bool IslAstInfo::isExecutedInParallel(__isl_keep isl_ast_node *Node) {
   return isOutermostParallel(Node) && !isReductionParallel(Node);
 }
 
-isl_union_map *IslAstInfo::getSchedule(__isl_keep isl_ast_node *Node) {
+__isl_give isl_union_map *
+IslAstInfo::getSchedule(__isl_keep isl_ast_node *Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
   return Payload ? isl_ast_build_get_schedule(Payload->Build) : nullptr;
 }
 
-isl_pw_aff *
+__isl_give isl_pw_aff *
 IslAstInfo::getMinimalDependenceDistance(__isl_keep isl_ast_node *Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
   return Payload ? isl_pw_aff_copy(Payload->MinimalDependenceDistance)

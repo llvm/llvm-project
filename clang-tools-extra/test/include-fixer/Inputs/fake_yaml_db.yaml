@@ -1,0 +1,11 @@
+---
+Name:           foo
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+  - ContextType:     Namespace
+    ContextName:     b
+FilePath:        foo.h
+LineNumber:      1
+Type:            Class
+...

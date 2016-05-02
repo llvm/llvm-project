@@ -93,6 +93,7 @@ class TargetWatchAddressAPITestCase(TestBase):
     @add_test_categories(['pyapi'])
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @skipIf(archs=['mips', 'mipsel', 'mips64', 'mips64el']) # No size constraint on MIPS for watches
+    @skipIf(archs=['s390x']) # Likewise on SystemZ
     def test_watch_address_with_invalid_watch_size(self):
         """Exercise SBTarget.WatchAddress() API but pass an invalid watch_size."""
         self.build()

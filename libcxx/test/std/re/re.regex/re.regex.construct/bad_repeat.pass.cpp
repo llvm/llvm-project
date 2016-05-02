@@ -17,6 +17,7 @@
 
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 
 static bool error_badrepeat_thrown(const char *pat) 
 {

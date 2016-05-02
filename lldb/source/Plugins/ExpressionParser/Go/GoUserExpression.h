@@ -74,8 +74,10 @@ class GoUserExpression : public UserExpression
     {
         return true;
     }
+
     bool
-    FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx, lldb::ExpressionVariableSP &result,
+    FinalizeJITExecution(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+                         lldb::ExpressionVariableSP &result,
                          lldb::addr_t function_stack_bottom = LLDB_INVALID_ADDRESS,
                          lldb::addr_t function_stack_top = LLDB_INVALID_ADDRESS) override
     {

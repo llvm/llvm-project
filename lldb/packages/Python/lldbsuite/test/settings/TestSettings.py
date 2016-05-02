@@ -312,8 +312,11 @@ class SettingsCommandTestCase(TestBase):
         with open('stderr.txt', 'r') as f:
             output = f.read()
 
-        self.expect(output, exe=False,
-            startstr = "This message should go to standard error.")
+        message = "This message should go to standard error."
+        if lldbplatformutil.hasChattyStderr(self):
+            self.expect(output, exe=False, substrs = [message])
+        else:
+            self.expect(output, exe=False, startstr = message)
 
         # The 'stdout.txt' file should now exist.
         self.assertTrue(os.path.isfile("stdout.txt"),

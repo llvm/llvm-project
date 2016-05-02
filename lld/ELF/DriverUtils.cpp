@@ -23,6 +23,7 @@
 #include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
+using namespace llvm::sys;
 
 using namespace lld;
 using namespace lld::elf;
@@ -84,6 +85,105 @@ void elf::printVersion() {
   if (!S.empty())
     outs() << " " << S;
   outs() << "\n";
+}
+
+// Makes a given pathname an absolute path first, and then remove
+// beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
+// assuming that the current directory is "/home/john/bar".
+static std::string relativeToRoot(StringRef Path) {
+  SmallString<128> Abs = Path;
+  if (std::error_code EC = fs::make_absolute(Abs))
+    fatal("make_absolute failed: " + EC.message());
+  path::remove_dots(Abs, /*remove_dot_dot=*/true);
+
+  // This is Windows specific. root_name() returns a drive letter
+  // (e.g. "c:") or a UNC name (//net). We want to keep it as part
+  // of the result.
+  SmallString<128> Res;
+  StringRef Root = path::root_name(Path);
+  if (Root.endswith(":"))
+    Res = Root.drop_back();
+  else if (Root.startswith("//"))
+    Res = Root.substr(2);
+
+  path::append(Res, path::relative_path(Abs));
+  return Res.str();
+}
+
+static std::string getDestPath(StringRef Path) {
+  std::string Relpath = relativeToRoot(Path);
+  SmallString<128> Dest;
+  path::append(Dest, Config->Reproduce, Relpath);
+  return Dest.str();
+}
+
+// Copies file Src to {Config->Reproduce}/Src.
+void elf::copyInputFile(StringRef Src) {
+  std::string Dest = getDestPath(Src);
+  SmallString<128> Dir(Dest);
+  path::remove_filename(Dir);
+  if (std::error_code EC = sys::fs::create_directories(Dir)) {
+    error(EC, Dir + ": can't create directory");
+    return;
+  }
+  if (std::error_code EC = sys::fs::copy_file(Src, Dest))
+    error(EC, "failed to copy file: " + Dest);
+}
+
+// Quote a given string if it contains a space character.
+static std::string quote(StringRef S) {
+  if (S.find(' ') == StringRef::npos)
+    return S;
+  return ("\"" + S + "\"").str();
+}
+
+static std::string rewritePath(StringRef S) {
+  if (fs::exists(S))
+    return getDestPath(S);
+  return S;
+}
+
+// Copies all input files to Config->Reproduce directory and
+// create a response file as "response.txt", so that you can re-run
+// the same command with the same inputs just by executing
+// "ld.lld @response.txt". Used by --reproduce. This feature is
+// supposed to be used by users to report an issue to LLD developers.
+void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
+  // Create the output directory.
+  if (std::error_code EC = sys::fs::create_directories(
+        Config->Reproduce, /*IgnoreExisting=*/false)) {
+    error(EC, Config->Reproduce + ": can't create directory");
+    return;
+  }
+
+  // Open "response.txt".
+  SmallString<128> Path;
+  path::append(Path, Config->Reproduce, "response.txt");
+  std::error_code EC;
+  raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
+  check(EC);
+
+  // Copy the command line to response.txt while rewriting paths.
+  for (auto *Arg : Args) {
+    switch (Arg->getOption().getID()) {
+    case OPT_reproduce:
+      break;
+    case OPT_INPUT:
+      OS << quote(rewritePath(Arg->getValue())) << "\n";
+      break;
+    case OPT_L:
+    case OPT_dynamic_list:
+    case OPT_export_dynamic_symbol:
+    case OPT_rpath:
+    case OPT_script:
+    case OPT_version_script:
+      OS << Arg->getSpelling() << " "
+         << quote(rewritePath(Arg->getValue())) << "\n";
+      break;
+    default:
+      OS << quote(Arg->getAsString(Args)) << "\n";
+    }
+  }
 }
 
 std::string elf::findFromSearchPaths(StringRef Path) {

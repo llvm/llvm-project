@@ -32,6 +32,7 @@ class WatchpointCommandsTestCase(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
     def test_rw_watchpoint(self):
         """Test read_write watchpoint and expect to stop two times."""
         self.build(dictionary=self.d)
@@ -92,6 +93,7 @@ class WatchpointCommandsTestCase(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
     def test_rw_watchpoint_delete(self):
         """Test delete watchpoint and expect not to stop for watchpoint."""
         self.build(dictionary=self.d)
@@ -137,6 +139,7 @@ class WatchpointCommandsTestCase(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
     def test_rw_watchpoint_set_ignore_count(self):
         """Test watchpoint ignore count and expect to not to stop at all."""
         self.build(dictionary=self.d)
@@ -186,6 +189,7 @@ class WatchpointCommandsTestCase(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
     def test_rw_disable_after_first_stop(self):
         """Test read_write watchpoint but disable it after the first stop."""
         self.build(dictionary=self.d)
@@ -245,6 +249,7 @@ class WatchpointCommandsTestCase(TestBase):
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
     def test_rw_disable_then_enable(self):
         """Test read_write watchpoint, disable initially, then enable it."""
         self.build(dictionary=self.d)

@@ -975,7 +975,6 @@ void VectorBlockGenerator::generateScalarVectorLoads(
     Value *VectorVal = Builder.CreateShuffleVector(
         Val, Val, SplatVector, Address->getName() + "_p_splat");
     VectorBlockMap[MA->getBaseAddr()] = VectorVal;
-    VectorVal->dump();
   }
 }
 
@@ -1137,9 +1136,6 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     // First split the block and update dominance information.
     BasicBlock *BBCopy = splitBB(BB);
     BasicBlock *BBCopyIDom = repairDominance(BB, BBCopy);
-
-    // In order to remap PHI nodes we store also basic block mappings.
-    BlockMap[BB] = BBCopy;
 
     // Get the mapping for this block and initialize it with either the scalar
     // loads from the generated entering block (which dominates all blocks of

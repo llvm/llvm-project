@@ -79,5 +79,5 @@
 // RUN: ld.lld -o %t3 %t.o -L%t.dir -Bstatic -call_shared -lls
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=DYNAMIC %s
 
-.globl _start,_bar;
+.globl _start,_bar
 _start:

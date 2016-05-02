@@ -21,6 +21,7 @@
 #include <string>
 #include <regex>
 #include <cassert>
+#include "test_macros.h"
 
 void
 test1()

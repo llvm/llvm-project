@@ -95,6 +95,10 @@ def classyfier1(lines):
             yield  {'AssumedContext'}
             line = i.__next__()
             yield  {'AssumedContext'}
+        elif line == '    Invalid Context:':
+            yield  {'InvalidContext'}
+            line = i.__next__()
+            yield  {'InvalidContext'}
         elif line == '    Boundary Context:':
             yield  {'BoundaryContext'}
             line = i.__next__()
@@ -283,6 +287,7 @@ def main():
                 if not link_polly_into_tools:
                     newtool += ['-load',os.path.join(polly_lib_dir,'LLVMPolly' + shlibext)]
                 newtool.append('-polly-process-unprofitable')
+                newtool.append('-polly-remarks-minimal')
             elif toolarg == '2>&1':
                 optstderr = subprocess.STDOUT
             else:

@@ -73,6 +73,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegularExpression.h"
+#include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
@@ -91,6 +92,7 @@
 #include "lldb/Target/Target.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
+#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 
 #include <stdio.h>
 
@@ -809,8 +811,8 @@ ClangASTContext::GetBuiltinTypeForEncodingAndBitSize (ASTContext *ast, Encoding 
         break;
         
     case eEncodingSint:
-        if (QualTypeMatchesBitSize (bit_size, ast, ast->CharTy))
-            return CompilerType (ast, ast->CharTy);
+        if (QualTypeMatchesBitSize (bit_size, ast, ast->SignedCharTy))
+            return CompilerType (ast, ast->SignedCharTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->ShortTy))
             return CompilerType (ast, ast->ShortTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->IntTy))
@@ -3498,7 +3500,27 @@ ClangASTContext::IsObjCObjectOrInterfaceType (const CompilerType& type)
 }
 
 bool
-ClangASTContext::IsPolymorphicClass (lldb::opaque_compiler_type_t type)
+ClangASTContext::IsClassType(lldb::opaque_compiler_type_t type)
+{
+    if (!type)
+        return false;
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    return (type_class == clang::Type::Record);
+}
+
+bool
+ClangASTContext::IsEnumType(lldb::opaque_compiler_type_t type)
+{
+    if (!type)
+        return false;
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+    return (type_class == clang::Type::Enum);
+}
+
+bool
+ClangASTContext::IsPolymorphicClass(lldb::opaque_compiler_type_t type)
 {
     if (type)
     {
@@ -5320,7 +5342,7 @@ ClangASTContext::GetNumChildren (lldb::opaque_compiler_type_t type, bool omit_em
 CompilerType
 ClangASTContext::GetBuiltinTypeByName (const ConstString &name)
 {
-    return GetBasicType (GetBasicTypeEnumeration (name));
+    return GetBasicType(GetBasicTypeEnumeration(name));
 }
 
 lldb::BasicType
@@ -6190,8 +6212,9 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                         {
                                                             clang::CharUnits base_offset_offset = itanium_vtable_ctx->getVirtualBaseOffsetOffset(cxx_record_decl, base_class_decl);
                                                             const lldb::addr_t base_offset_addr = vtable_ptr + base_offset_offset.getQuantity();
-                                                            const uint32_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, 4, UINT32_MAX, err);
-                                                            if (base_offset != UINT32_MAX)
+                                                            const uint32_t base_offset_size = process->GetAddressByteSize();
+                                                            const uint64_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, base_offset_size, UINT32_MAX, err);
+                                                            if (base_offset < UINT32_MAX)
                                                             {
                                                                 handled = true;
                                                                 bit_offset = base_offset * 8;
@@ -8636,24 +8659,28 @@ ClangASTContext::CompleteTagDeclarationDefinition (const CompilerType& type)
                     clang::ASTContext *ast = lldb_ast->getASTContext();
 
                     /// TODO This really needs to be fixed.
-                    
-                    unsigned NumPositiveBits = 1;
-                    unsigned NumNegativeBits = 0;
-                    
-                    clang::QualType promotion_qual_type;
-                    // If the enum integer type is less than an integer in bit width,
-                    // then we must promote it to an integer size.
-                    if (ast->getTypeSize(enum_decl->getIntegerType()) < ast->getTypeSize(ast->IntTy))
+
+                    QualType integer_type(enum_decl->getIntegerType());
+                    if (!integer_type.isNull())
                     {
-                        if (enum_decl->getIntegerType()->isSignedIntegerType())
-                            promotion_qual_type = ast->IntTy;
+                        unsigned NumPositiveBits = 1;
+                        unsigned NumNegativeBits = 0;
+                        
+                        clang::QualType promotion_qual_type;
+                        // If the enum integer type is less than an integer in bit width,
+                        // then we must promote it to an integer size.
+                        if (ast->getTypeSize(enum_decl->getIntegerType()) < ast->getTypeSize(ast->IntTy))
+                        {
+                            if (enum_decl->getIntegerType()->isSignedIntegerType())
+                                promotion_qual_type = ast->IntTy;
+                            else
+                                promotion_qual_type = ast->UnsignedIntTy;
+                        }
                         else
-                            promotion_qual_type = ast->UnsignedIntTy;
+                            promotion_qual_type = enum_decl->getIntegerType();
+                        
+                        enum_decl->completeDefinition(enum_decl->getIntegerType(), promotion_qual_type, NumPositiveBits, NumNegativeBits);
                     }
-                    else
-                        promotion_qual_type = enum_decl->getIntegerType();
-                    
-                    enum_decl->completeDefinition(enum_decl->getIntegerType(), promotion_qual_type, NumPositiveBits, NumNegativeBits);
                 }
                 return true;
             }
@@ -8761,18 +8788,10 @@ ClangASTContext::ConvertStringToFloatValue (lldb::opaque_compiler_type_t type, c
             const uint64_t byte_size = bit_size / 8;
             if (dst_size >= byte_size)
             {
-                if (bit_size == sizeof(float)*8)
-                {
-                    float float32 = ap_float.convertToFloat();
-                    ::memcpy (dst, &float32, byte_size);
+                Scalar scalar = ap_float.bitcastToAPInt().zextOrTrunc(llvm::NextPowerOf2(byte_size) * 8);
+                lldb_private::Error get_data_error;
+                if (scalar.GetAsMemoryData(dst, byte_size, lldb_private::endian::InlHostByteOrder(), get_data_error))
                     return byte_size;
-                }
-                else if (bit_size >= 64)
-                {
-                    llvm::APInt ap_int(ap_float.bitcastToAPInt());
-                    ::memcpy (dst, ap_int.getRawData(), byte_size);
-                    return byte_size;
-                }
             }
         }
     }
@@ -9590,6 +9609,13 @@ ClangASTContext::GetDWARFParser()
     return m_dwarf_ast_parser_ap.get();
 }
 
+PDBASTParser *
+ClangASTContext::GetPDBParser()
+{
+    if (!m_pdb_ast_parser_ap)
+        m_pdb_ast_parser_ap.reset(new PDBASTParser(*this));
+    return m_pdb_ast_parser_ap.get();
+}
 
 bool
 ClangASTContext::LayoutRecordType(void *baton,

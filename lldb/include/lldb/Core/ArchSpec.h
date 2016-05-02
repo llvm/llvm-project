@@ -151,6 +151,8 @@ public:
         eCore_ppc64_generic,
         eCore_ppc64_ppc970_64,
         
+        eCore_s390x_generic,
+
         eCore_sparc_generic,
         
         eCore_sparc9_generic,

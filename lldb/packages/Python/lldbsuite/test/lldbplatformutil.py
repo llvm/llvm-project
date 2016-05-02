@@ -29,6 +29,8 @@ def check_first_register_readable(test_case):
         test_case.expect("register read x0", substrs = ['x0 = 0x'])
     elif re.match("mips",arch):
         test_case.expect("register read zero", substrs = ['zero = 0x'])
+    elif arch in ['s390x']:
+    	test_case.expect("register read r0", substrs = ['r0 = 0x'])
     else:
         # TODO: Add check for other architectures
         test_case.fail("Unsupported architecture for test case (arch: %s)" % test_case.getArchitecture())
@@ -137,3 +139,10 @@ def createPlatformContext():
         return _PlatformContext('LD_LIBRARY_PATH', 'lib', 'so')
     else:
         return None
+
+def hasChattyStderr(test_case):
+    """Some targets produce garbage on the standard error output. This utility function
+    determines whether the tests can be strict about the expected stderr contents."""
+    if match_android_device(test_case.getArchitecture(), ['aarch64'], [22]):
+        return True # The dynamic linker on the device will complain about unknown DT entries
+    return False

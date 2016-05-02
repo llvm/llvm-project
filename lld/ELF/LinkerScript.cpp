@@ -17,58 +17,278 @@
 #include "Config.h"
 #include "Driver.h"
 #include "InputSection.h"
+#include "OutputSections.h"
+#include "ScriptParser.h"
 #include "SymbolTable.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
+using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
-LinkerScript *elf::Script;
+ScriptConfiguration *elf::ScriptConfig;
+
+static bool matchStr(StringRef S, StringRef T);
+
+// This is an operator-precedence parser to parse and evaluate
+// a linker script expression. For each linker script arithmetic
+// expression (e.g. ". = . + 0x1000"), a new instance of ExprParser
+// is created and ran.
+namespace {
+class ExprParser : public ScriptParserBase {
+public:
+  ExprParser(std::vector<StringRef> &Tokens, uint64_t Dot)
+      : ScriptParserBase(Tokens), Dot(Dot) {}
+
+  uint64_t run();
+
+private:
+  uint64_t parsePrimary();
+  uint64_t parseTernary(uint64_t Cond);
+  uint64_t apply(StringRef Op, uint64_t L, uint64_t R);
+  uint64_t parseExpr1(uint64_t Lhs, int MinPrec);
+  uint64_t parseExpr();
+
+  uint64_t Dot;
+};
+}
+
+static int precedence(StringRef Op) {
+  return StringSwitch<int>(Op)
+      .Case("*", 4)
+      .Case("/", 4)
+      .Case("+", 3)
+      .Case("-", 3)
+      .Case("<", 2)
+      .Case(">", 2)
+      .Case(">=", 2)
+      .Case("<=", 2)
+      .Case("==", 2)
+      .Case("!=", 2)
+      .Case("&", 1)
+      .Default(-1);
+}
+
+static uint64_t evalExpr(std::vector<StringRef> &Tokens, uint64_t Dot) {
+  return ExprParser(Tokens, Dot).run();
+}
+
+uint64_t ExprParser::run() {
+  uint64_t V = parseExpr();
+  if (!atEOF() && !Error)
+    setError("stray token: " + peek());
+  return V;
+}
+
+// This is a part of the operator-precedence parser to evaluate
+// arithmetic expressions in SECTIONS command. This function evaluates an
+// integer literal, a parenthesized expression, the ALIGN function,
+// or the special variable ".".
+uint64_t ExprParser::parsePrimary() {
+  StringRef Tok = next();
+  if (Tok == ".")
+    return Dot;
+  if (Tok == "(") {
+    uint64_t V = parseExpr();
+    expect(")");
+    return V;
+  }
+  if (Tok == "ALIGN") {
+    expect("(");
+    uint64_t V = parseExpr();
+    expect(")");
+    return alignTo(Dot, V);
+  }
+  uint64_t V = 0;
+  if (Tok.getAsInteger(0, V))
+    setError("malformed number: " + Tok);
+  return V;
+}
+
+uint64_t ExprParser::parseTernary(uint64_t Cond) {
+  next();
+  uint64_t V = parseExpr();
+  expect(":");
+  uint64_t W = parseExpr();
+  return Cond ? V : W;
+}
+
+uint64_t ExprParser::apply(StringRef Op, uint64_t L, uint64_t R) {
+  if (Op == "*")
+    return L * R;
+  if (Op == "/") {
+    if (R == 0) {
+      error("division by zero");
+      return 0;
+    }
+    return L / R;
+  }
+  if (Op == "+")
+    return L + R;
+  if (Op == "-")
+    return L - R;
+  if (Op == "<")
+    return L < R;
+  if (Op == ">")
+    return L > R;
+  if (Op == ">=")
+    return L >= R;
+  if (Op == "<=")
+    return L <= R;
+  if (Op == "==")
+    return L == R;
+  if (Op == "!=")
+    return L != R;
+  if (Op == "&")
+    return L & R;
+  llvm_unreachable("invalid operator");
+  return 0;
+}
+
+// This is a part of the operator-precedence parser.
+// This function assumes that the remaining token stream starts
+// with an operator.
+uint64_t ExprParser::parseExpr1(uint64_t Lhs, int MinPrec) {
+  while (!atEOF()) {
+    // Read an operator and an expression.
+    StringRef Op1 = peek();
+    if (Op1 == "?")
+      return parseTernary(Lhs);
+    if (precedence(Op1) < MinPrec)
+      return Lhs;
+    next();
+    uint64_t Rhs = parsePrimary();
+
+    // Evaluate the remaining part of the expression first if the
+    // next operator has greater precedence than the previous one.
+    // For example, if we have read "+" and "3", and if the next
+    // operator is "*", then we'll evaluate 3 * ... part first.
+    while (!atEOF()) {
+      StringRef Op2 = peek();
+      if (precedence(Op2) <= precedence(Op1))
+        break;
+      Rhs = parseExpr1(Rhs, precedence(Op2));
+    }
+
+    Lhs = apply(Op1, Lhs, Rhs);
+  }
+  return Lhs;
+}
+
+// Reads and evaluates an arithmetic expression.
+uint64_t ExprParser::parseExpr() { return parseExpr1(parsePrimary(), 0); }
 
 template <class ELFT>
-SectionRule *LinkerScript::find(InputSectionBase<ELFT> *S) {
-  for (SectionRule &R : Sections)
-    if (R.match(S))
-      return &R;
+StringRef LinkerScript<ELFT>::getOutputSection(InputSectionBase<ELFT> *S) {
+  for (SectionRule &R : Opt.Sections)
+    if (matchStr(R.SectionPattern, S->getSectionName()))
+      return R.Dest;
+  return "";
+}
+
+template <class ELFT>
+bool LinkerScript<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) {
+  return getOutputSection(S) == "/DISCARD/";
+}
+
+template <class ELFT>
+bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
+  for (StringRef Pat : Opt.KeptSections)
+    if (matchStr(Pat, S->getSectionName()))
+      return true;
+  return false;
+}
+
+template <class ELFT>
+static OutputSectionBase<ELFT> *
+findSection(ArrayRef<OutputSectionBase<ELFT> *> V, StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : V)
+    if (Sec->getName() == Name)
+      return Sec;
   return nullptr;
 }
 
 template <class ELFT>
-StringRef LinkerScript::getOutputSection(InputSectionBase<ELFT> *S) {
-  SectionRule *R = find(S);
-  return R ? R->Dest : "";
+void LinkerScript<ELFT>::assignAddresses(
+    ArrayRef<OutputSectionBase<ELFT> *> Sections) {
+  // Orphan sections are sections present in the input files which
+  // are not explicitly placed into the output file by the linker script.
+  // We place orphan sections at end of file.
+  // Other linkers places them using some heuristics as described in
+  // https://sourceware.org/binutils/docs/ld/Orphan-Sections.html#Orphan-Sections.
+  for (OutputSectionBase<ELFT> *Sec : Sections) {
+    StringRef Name = Sec->getName();
+    if (getSectionIndex(Name) == INT_MAX)
+      Opt.Commands.push_back({SectionKind, {}, Name});
+  }
+
+  // Assign addresses as instructed by linker script SECTIONS sub-commands.
+  Dot = Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  uintX_t ThreadBssOffset = 0;
+
+  for (SectionsCommand &Cmd : Opt.Commands) {
+    if (Cmd.Kind == ExprKind) {
+      Dot = evalExpr(Cmd.Expr, Dot);
+      continue;
+    }
+
+    OutputSectionBase<ELFT> *Sec = findSection<ELFT>(Sections, Cmd.SectionName);
+    if (!Sec)
+      continue;
+
+    if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
+      uintX_t TVA = Dot + ThreadBssOffset;
+      TVA = alignTo(TVA, Sec->getAlign());
+      Sec->setVA(TVA);
+      ThreadBssOffset = TVA - Dot + Sec->getSize();
+      continue;
+    }
+
+    if (Sec->getFlags() & SHF_ALLOC) {
+      Dot = alignTo(Dot, Sec->getAlign());
+      Sec->setVA(Dot);
+      Dot += Sec->getSize();
+      continue;
+    }
+  }
 }
 
 template <class ELFT>
-bool LinkerScript::isDiscarded(InputSectionBase<ELFT> *S) {
-  return getOutputSection(S) == "/DISCARD/";
-}
-
-template <class ELFT> bool LinkerScript::shouldKeep(InputSectionBase<ELFT> *S) {
-  SectionRule *R = find(S);
-  return R && R->Keep;
-}
-
-ArrayRef<uint8_t> LinkerScript::getFiller(StringRef Name) {
-  auto I = Filler.find(Name);
-  if (I == Filler.end())
+ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
+  auto I = Opt.Filler.find(Name);
+  if (I == Opt.Filler.end())
     return {};
   return I->second;
 }
 
-// A compartor to sort output sections. Returns -1 or 1 if both
-// A and B are mentioned in linker scripts. Otherwise, returns 0
-// to use the default rule which is implemented in Writer.cpp.
-int LinkerScript::compareSections(StringRef A, StringRef B) {
-  auto E = SectionOrder.end();
-  auto I = std::find(SectionOrder.begin(), E, A);
-  auto J = std::find(SectionOrder.begin(), E, B);
-  if (I == E || J == E)
+// Returns the index of the given section name in linker script
+// SECTIONS commands. Sections are laid out as the same order as they
+// were in the script. If a given name did not appear in the script,
+// it returns INT_MAX, so that it will be laid out at end of file.
+template <class ELFT>
+int LinkerScript<ELFT>::getSectionIndex(StringRef Name) {
+  auto Begin = Opt.Commands.begin();
+  auto End = Opt.Commands.end();
+  auto I = std::find_if(Begin, End, [&](SectionsCommand &N) {
+    return N.Kind == SectionKind && N.SectionName == Name;
+  });
+  return I == End ? INT_MAX : (I - Begin);
+}
+
+// A compartor to sort output sections. Returns -1 or 1 if
+// A or B are mentioned in linker script. Otherwise, returns 0.
+template <class ELFT>
+int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
+  int I = getSectionIndex(A);
+  int J = getSectionIndex(B);
+  if (I == INT_MAX && J == INT_MAX)
     return 0;
   return I < J ? -1 : 1;
 }
@@ -97,29 +317,15 @@ static bool matchStr(StringRef S, StringRef T) {
   }
 }
 
-template <class ELFT> bool SectionRule::match(InputSectionBase<ELFT> *S) {
-  return matchStr(SectionPattern, S->getSectionName());
-}
-
-class elf::ScriptParser {
+class elf::ScriptParser : public ScriptParserBase {
   typedef void (ScriptParser::*Handler)();
 
 public:
-  ScriptParser(BumpPtrAllocator *A, StringRef S, bool B)
-      : Saver(*A), Input(S), Tokens(tokenize(S)), IsUnderSysroot(B) {}
+  ScriptParser(StringRef S, bool B) : ScriptParserBase(S), IsUnderSysroot(B) {}
 
   void run();
 
 private:
-  void setError(const Twine &Msg);
-  static std::vector<StringRef> tokenize(StringRef S);
-  static StringRef skipSpace(StringRef S);
-  bool atEOF();
-  StringRef next();
-  StringRef peek();
-  bool skip(StringRef Tok);
-  void expect(StringRef Expect);
-
   void addFile(StringRef Path);
 
   void readAsNeeded();
@@ -134,19 +340,14 @@ private:
   void readSearchDir();
   void readSections();
 
+  void readLocationCounterValue();
   void readOutputSectionDescription();
-  void readSectionPatterns(StringRef OutSec, bool Keep);
+  void readSectionPatterns(StringRef OutSec);
 
-  size_t getPos();
-  std::vector<uint8_t> parseHex(StringRef S);
-
-  StringSaver Saver;
-  StringRef Input;
-  std::vector<StringRef> Tokens;
   const static StringMap<Handler> Cmd;
-  size_t Pos = 0;
+  ScriptConfiguration &Opt = *ScriptConfig;
+  StringSaver Saver = {ScriptConfig->Alloc};
   bool IsUnderSysroot;
-  bool Error = false;
 };
 
 const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
@@ -170,108 +371,6 @@ void ScriptParser::run() {
     else
       setError("unknown directive: " + Tok);
   }
-}
-
-// We don't want to record cascading errors. Keep only the first one.
-void ScriptParser::setError(const Twine &Msg) {
-  if (Error)
-    return;
-  error("line " + Twine(getPos()) + ": " + Msg);
-  Error = true;
-}
-
-// Split S into linker script tokens.
-std::vector<StringRef> ScriptParser::tokenize(StringRef S) {
-  std::vector<StringRef> Ret;
-  for (;;) {
-    S = skipSpace(S);
-    if (S.empty())
-      return Ret;
-
-    // Quoted token
-    if (S.startswith("\"")) {
-      size_t E = S.find("\"", 1);
-      if (E == StringRef::npos) {
-        error("unclosed quote");
-        return {};
-      }
-      Ret.push_back(S.substr(1, E - 1));
-      S = S.substr(E + 1);
-      continue;
-    }
-
-    // Unquoted token
-    size_t Pos = S.find_first_not_of(
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-        "0123456789_.$/\\~=+[]*?-:");
-    // A character that cannot start a word (which is usually a
-    // punctuation) forms a single character token.
-    if (Pos == 0)
-      Pos = 1;
-    Ret.push_back(S.substr(0, Pos));
-    S = S.substr(Pos);
-  }
-}
-
-// Skip leading whitespace characters or /**/-style comments.
-StringRef ScriptParser::skipSpace(StringRef S) {
-  for (;;) {
-    if (S.startswith("/*")) {
-      size_t E = S.find("*/", 2);
-      if (E == StringRef::npos) {
-        error("unclosed comment in a linker script");
-        return "";
-      }
-      S = S.substr(E + 2);
-      continue;
-    }
-    size_t Size = S.size();
-    S = S.ltrim();
-    if (S.size() == Size)
-      return S;
-  }
-}
-
-// An errneous token is handled as if it were the last token before EOF.
-bool ScriptParser::atEOF() { return Error || Tokens.size() == Pos; }
-
-StringRef ScriptParser::next() {
-  if (Error)
-    return "";
-  if (atEOF()) {
-    setError("unexpected EOF");
-    return "";
-  }
-  return Tokens[Pos++];
-}
-
-StringRef ScriptParser::peek() {
-  StringRef Tok = next();
-  if (Error)
-    return "";
-  --Pos;
-  return Tok;
-}
-
-bool ScriptParser::skip(StringRef Tok) {
-  if (Error)
-    return false;
-  if (atEOF()) {
-    setError("unexpected EOF");
-    return false;
-  }
-  if (Tok != Tokens[Pos])
-    return false;
-  ++Pos;
-  return true;
-}
-
-void ScriptParser::expect(StringRef Expect) {
-  if (Error)
-    return;
-  StringRef Tok = next();
-  if (Tok != Expect)
-    setError(Expect + " expected, but got " + Tok);
 }
 
 void ScriptParser::addFile(StringRef S) {
@@ -403,59 +502,65 @@ void ScriptParser::readSearchDir() {
 }
 
 void ScriptParser::readSections() {
+  Opt.DoLayout = true;
   expect("{");
-  while (!Error && !skip("}"))
-    readOutputSectionDescription();
+  while (!Error && !skip("}")) {
+    StringRef Tok = peek();
+    if (Tok == ".")
+      readLocationCounterValue();
+    else
+      readOutputSectionDescription();
+  }
 }
 
-void ScriptParser::readSectionPatterns(StringRef OutSec, bool Keep) {
+void ScriptParser::readSectionPatterns(StringRef OutSec) {
   expect("(");
   while (!Error && !skip(")"))
-    Script->Sections.emplace_back(OutSec, next(), Keep);
+    Opt.Sections.emplace_back(OutSec, next());
 }
 
-// Returns the current line number.
-size_t ScriptParser::getPos() {
-  if (Pos == 0)
-    return 1;
-  const char *Begin = Input.data();
-  const char *Tok = Tokens[Pos - 1].data();
-  return StringRef(Begin, Tok - Begin).count('\n') + 1;
-}
-
-std::vector<uint8_t> ScriptParser::parseHex(StringRef S) {
-  std::vector<uint8_t> Hex;
-  while (!S.empty()) {
-    StringRef B = S.substr(0, 2);
-    S = S.substr(2);
-    uint8_t H;
-    if (B.getAsInteger(16, H)) {
-      setError("not a hexadecimal value: " + B);
-      return {};
-    }
-    Hex.push_back(H);
+void ScriptParser::readLocationCounterValue() {
+  expect(".");
+  expect("=");
+  Opt.Commands.push_back({ExprKind, {}, ""});
+  SectionsCommand &Cmd = Opt.Commands.back();
+  while (!Error) {
+    StringRef Tok = next();
+    if (Tok == ";")
+      break;
+    Cmd.Expr.push_back(Tok);
   }
-  return Hex;
+  if (Cmd.Expr.empty())
+    error("error in location counter expression");
 }
 
 void ScriptParser::readOutputSectionDescription() {
   StringRef OutSec = next();
-  Script->SectionOrder.push_back(OutSec);
+  Opt.Commands.push_back({SectionKind, {}, OutSec});
   expect(":");
   expect("{");
+
   while (!Error && !skip("}")) {
     StringRef Tok = next();
     if (Tok == "*") {
-      readSectionPatterns(OutSec, false);
+      expect("(");
+      while (!Error && !skip(")"))
+        Opt.Sections.emplace_back(OutSec, next());
     } else if (Tok == "KEEP") {
       expect("(");
-      next(); // Skip *
-      readSectionPatterns(OutSec, true);
+      expect("*");
+      expect("(");
+      while (!Error && !skip(")")) {
+        StringRef Sec = next();
+        Opt.Sections.emplace_back(OutSec, Sec);
+        Opt.KeptSections.push_back(Sec);
+      }
       expect(")");
     } else {
       setError("unknown command " + Tok);
     }
   }
+
   StringRef Tok = peek();
   if (Tok.startswith("=")) {
     if (!Tok.startswith("=0x")) {
@@ -463,7 +568,7 @@ void ScriptParser::readOutputSectionDescription() {
       return;
     }
     Tok = Tok.substr(3);
-    Script->Filler[OutSec] = parseHex(Tok);
+    Opt.Filler[OutSec] = parseHex(Tok);
     next();
   }
 }
@@ -477,23 +582,13 @@ static bool isUnderSysroot(StringRef Path) {
   return false;
 }
 
-// Entry point. The other functions or classes are private to this file.
-void LinkerScript::read(MemoryBufferRef MB) {
+// Entry point.
+void elf::readLinkerScript(MemoryBufferRef MB) {
   StringRef Path = MB.getBufferIdentifier();
-  ScriptParser(&Alloc, MB.getBuffer(), isUnderSysroot(Path)).run();
+  ScriptParser(MB.getBuffer(), isUnderSysroot(Path)).run();
 }
 
-template StringRef LinkerScript::getOutputSection(InputSectionBase<ELF32LE> *);
-template StringRef LinkerScript::getOutputSection(InputSectionBase<ELF32BE> *);
-template StringRef LinkerScript::getOutputSection(InputSectionBase<ELF64LE> *);
-template StringRef LinkerScript::getOutputSection(InputSectionBase<ELF64BE> *);
-
-template bool LinkerScript::isDiscarded(InputSectionBase<ELF32LE> *);
-template bool LinkerScript::isDiscarded(InputSectionBase<ELF32BE> *);
-template bool LinkerScript::isDiscarded(InputSectionBase<ELF64LE> *);
-template bool LinkerScript::isDiscarded(InputSectionBase<ELF64BE> *);
-
-template bool LinkerScript::shouldKeep(InputSectionBase<ELF32LE> *);
-template bool LinkerScript::shouldKeep(InputSectionBase<ELF32BE> *);
-template bool LinkerScript::shouldKeep(InputSectionBase<ELF64LE> *);
-template bool LinkerScript::shouldKeep(InputSectionBase<ELF64BE> *);
+template class elf::LinkerScript<ELF32LE>;
+template class elf::LinkerScript<ELF32BE>;
+template class elf::LinkerScript<ELF64LE>;
+template class elf::LinkerScript<ELF64BE>;

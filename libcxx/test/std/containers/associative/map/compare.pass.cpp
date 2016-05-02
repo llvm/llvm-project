@@ -44,7 +44,7 @@ int main()
         MapT map;
         IterBool result = map.insert(std::make_pair(Key(0), 42));
         assert(result.second);
-        assert(result.first->second = 42);
+        assert(result.first->second == 42);
         IterBool result2 = map.insert(std::make_pair(Key(0), 43));
         assert(!result2.second);
         assert(map[Key(0)] == 42);

@@ -330,7 +330,7 @@ CPlusPlusLanguage::IsCPPMangledName (const char *name)
 bool
 CPlusPlusLanguage::ExtractContextAndIdentifier (const char *name, llvm::StringRef &context, llvm::StringRef &identifier)
 {
-    static RegularExpression g_basename_regex("^(([A-Za-z_][A-Za-z_0-9]*::)*)([A-Za-z_][A-Za-z_0-9]*)$");
+    static RegularExpression g_basename_regex("^(([A-Za-z_][A-Za-z_0-9]*::)*)(~?[A-Za-z_~][A-Za-z_0-9]*)$");
     RegularExpression::Match match(4);
     if (g_basename_regex.Execute (name, &match))
     {

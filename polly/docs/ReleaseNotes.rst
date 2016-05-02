@@ -10,6 +10,27 @@ In Polly 3.9 the following important changes have been incorporated.
   the new features that have recently been committed to our development
   branch.
 
+Polly directly available in clang/opt/bugpoint
+----------------------------------------------
+
+Polly supported since a long time to be directly linked into tools such as
+opt/clang/bugpoint. Since this release, the default for a source checkout that
+contains Polly is to provide Polly directly through these tools, rather than as
+an additional module. This makes using Polly significantly easier.
+
+Instead of
+
+.. code-block:: bash
+    opt -load lib/LLVMPolly.so -O3 -polly file.ll
+    clang -Xclang -load -Xclang lib/LLVMPolly.so -O3 -mllvm -polly file.ll
+
+one can now use
+
+.. code-block:: bash
+    opt -O3 -polly file.ll
+    clang -O3 -mllvm -polly file.c
+
+
 Increased analysis coverage
 ---------------------------
 

@@ -71,7 +71,6 @@
 # DSO:      ]
 # DSO:      DynamicSymbols [
 # DSO:          Name: @
-# DSO:          Name: _gp@
 # DSO:          Name: __start@
 # DSO:          Name: _foo@
 # DSO:      ]
@@ -82,8 +81,8 @@
 # DSO-DAG:    0x70000005 MIPS_FLAGS           NOTPOT
 # DSO-DAG:    0x70000006 MIPS_BASE_ADDRESS    0x0
 # DSO-DAG:    0x7000000A MIPS_LOCAL_GOTNO     2
-# DSO-DAG:    0x70000011 MIPS_SYMTABNO        4
-# DSO-DAG:    0x70000013 MIPS_GOTSYM          0x4
+# DSO-DAG:    0x70000011 MIPS_SYMTABNO        3
+# DSO-DAG:    0x70000013 MIPS_GOTSYM          0x3
 # DSO:      ]
 
   .text

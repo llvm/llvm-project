@@ -75,6 +75,7 @@ enum AssumptionKind {
   ALIASING,
   INBOUNDS,
   WRAPPING,
+  UNSIGNED,
   ERRORBLOCK,
   COMPLEXITY,
   INFINITELOOP,
@@ -493,6 +494,13 @@ private:
   /// @brief Parent ScopStmt of this access.
   ScopStmt *Statement;
 
+  /// @brief The domain under which this access is not modeled precisely.
+  ///
+  /// The invalid domain for an access describes all parameter combinations
+  /// under which the statement looks to be executed but is in fact not because
+  /// some assumption/restriction makes the access invalid.
+  isl_set *InvalidDomain;
+
   // Properties describing the accessed array.
   // TODO: It might be possible to move them to ScopArrayInfo.
   // @{
@@ -650,6 +658,21 @@ private:
   /// @param SAI Info object for the accessed array.
   void buildAccessRelation(const ScopArrayInfo *SAI);
 
+  /// @brief Carry index overflows of dimensions with constant size to the next
+  ///        higher dimension.
+  ///
+  /// For dimensions that have constant size, modulo the index by the size and
+  /// add up the carry (floored division) to the next higher dimension. This is
+  /// how overflow is defined in row-major order.
+  /// It happens e.g. when ScalarEvolution computes the offset to the base
+  /// pointer and would algebraically sum up all lower dimensions' indices of
+  /// constant size.
+  ///
+  /// Example:
+  ///   float (*A)[4];
+  ///   A[1][6] -> A[2][2]
+  void wrapConstantDimensions();
+
 public:
   /// @brief Create a new MemoryAccess.
   ///
@@ -779,8 +802,26 @@ public:
   /// @brief Return the access instruction of this memory access.
   Instruction *getAccessInstruction() const { return AccessInstruction; }
 
+  /// @brief Return the number of access function subscript.
+  unsigned getNumSubscripts() const { return Subscripts.size(); }
+
   /// @brief Return the access function subscript in the dimension @p Dim.
   const SCEV *getSubscript(unsigned Dim) const { return Subscripts[Dim]; }
+
+  /// @brief Compute the isl representation for the SCEV @p E wrt. this access.
+  ///
+  /// Note that this function will also adjust the invalid context accordingly.
+  __isl_give isl_pw_aff *getPwAff(const SCEV *E);
+
+  /// @brief Get the invalid domain for this access.
+  __isl_give isl_set *getInvalidDomain() const {
+    return isl_set_copy(InvalidDomain);
+  }
+
+  /// @brief Get the invalid context for this access.
+  __isl_give isl_set *getInvalidContext() const {
+    return isl_set_params(getInvalidDomain());
+  }
 
   /// Get the stride of this memory access in the specified Schedule. Schedule
   /// is a map from the statement to a schedule where the innermost dimension is
@@ -917,6 +958,13 @@ private:
   /// The Scop containing this ScopStmt
   Scop &Parent;
 
+  /// @brief The domain under which this statement is not modeled precisely.
+  ///
+  /// The invalid domain for a statement describes all parameter combinations
+  /// under which the statement looks to be executed but is in fact not because
+  /// some assumption/restriction makes the statement/scop invalid.
+  isl_set *InvalidDomain;
+
   /// The iteration domain describes the set of iterations for which this
   /// statement is executed.
   ///
@@ -1036,8 +1084,8 @@ private:
   /// or non-optimal run-time checks.
   void deriveAssumptionsFromGEP(GetElementPtrInst *Inst, ScopDetection &SD);
 
-  /// @brief Scan @p Block and derive assumptions about parameter values.
-  void deriveAssumptions(BasicBlock *Block, ScopDetection &SD);
+  /// @brief Derive assumptions about parameter values.
+  void deriveAssumptions(ScopDetection &SD);
 
 public:
   ~ScopStmt();
@@ -1070,6 +1118,19 @@ public:
 
   /// @brief Get an isl string representing this schedule.
   std::string getScheduleStr() const;
+
+  /// @brief Get the invalid domain for this statement.
+  __isl_give isl_set *getInvalidDomain() const {
+    return isl_set_copy(InvalidDomain);
+  }
+
+  /// @brief Get the invalid context for this statement.
+  __isl_give isl_set *getInvalidContext() const {
+    return isl_set_params(getInvalidDomain());
+  }
+
+  /// @brief Set the invalid context for this statement to @p ID.
+  void setInvalidDomain(__isl_take isl_set *ID);
 
   /// @brief Get the BasicBlock represented by this ScopStmt (if any).
   ///
@@ -1205,7 +1266,12 @@ public:
   void restrictDomain(__isl_take isl_set *NewDomain);
 
   /// @brief Compute the isl representation for the SCEV @p E in this stmt.
-  __isl_give isl_pw_aff *getPwAff(const SCEV *E);
+  ///
+  /// @param E           The SCEV that should be translated.
+  /// @param NonNegative Flag to indicate the @p E has to be non-negative.
+  ///
+  /// Note that this function will also adjust the invalid context accordingly.
+  __isl_give isl_pw_aff *getPwAff(const SCEV *E, bool NonNegative = false);
 
   /// @brief Get the loop for a dimension.
   ///
@@ -1294,13 +1360,11 @@ private:
   /// The statements in this Scop.
   StmtSet Stmts;
 
-  /// Parameters of this Scop
-  typedef SmallVector<const SCEV *, 8> ParamVecType;
-  ParamVecType Parameters;
+  /// @brief Parameters of this Scop
+  ParameterSetTy Parameters;
 
-  /// The isl_ids that are used to represent the parameters
-  typedef std::map<const SCEV *, int> ParamIdType;
-  ParamIdType ParameterIds;
+  /// @brief Mapping from parameters to their ids.
+  DenseMap<const SCEV *, isl_id *> ParameterIds;
 
   /// Isl context.
   ///
@@ -1349,6 +1413,37 @@ private:
   /// in the assumed context to be "true" the constraints in the invalid context
   /// need to be "false". Otherwise they behave the same.
   isl_set *InvalidContext;
+
+  /// @brief Helper struct to remember assumptions.
+  struct Assumption {
+
+    /// @brief The kind of the assumption (e.g., WRAPPING).
+    AssumptionKind Kind;
+
+    /// @brief Flag to distinguish assumptions and restrictions.
+    AssumptionSign Sign;
+
+    /// @brief The valid/invalid context if this is an assumption/restriction.
+    isl_set *Set;
+
+    /// @brief The location that caused this assumption.
+    DebugLoc Loc;
+
+    /// @brief An optional block whos domain can simplify the assumption.
+    BasicBlock *BB;
+  };
+
+  /// @brief Collection to hold taken assumptions.
+  ///
+  /// There are two reasons why we want to record assumptions first before we
+  /// add them to the assumed/invalid context:
+  ///   1) If the SCoP is not profitable or otherwise invalid without the
+  ///      assumed/invalid context we do not have to compute it.
+  ///   2) Information about the context are gathered rather late in the SCoP
+  ///      construction (basically after we know all parameters), thus the user
+  ///      might see overly complicated assumptions to be taken while they will
+  ///      only be simplified later on.
+  SmallVector<Assumption, 8> RecordedAssumptions;
 
   /// @brief The schedule of the SCoP
   ///
@@ -1494,14 +1589,19 @@ private:
   void propagateDomainConstraints(Region *R, ScopDetection &SD,
                                   DominatorTree &DT, LoopInfo &LI);
 
-  /// @brief Remove domains of error blocks/regions (and blocks dominated by
-  ///        them).
+  /// @brief Propagate invalid domains of statements through @p R.
   ///
+  /// This method will propagate invalid statement domains through @p R and at
+  /// the same time add error block domains to them. Additionally, the domains
+  /// of error statements and those only reachable via error statements will be
+  /// replaced by an empty set. Later those will be removed completely.
+  ///
+  /// @param R  The currently traversed region.
   /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void removeErrorBlockDomains(ScopDetection &SD, DominatorTree &DT,
-                               LoopInfo &LI);
+  void propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
+                                   DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Compute the domain for each basic block in @p R.
   ///
@@ -1603,11 +1703,11 @@ private:
   /// @brief Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
   void addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs);
 
+  /// @brief Create an id for @p Param and store it in the ParameterIds map.
+  void createParameterId(const SCEV *Param);
+
   /// @brief Build the Context of the Scop.
   void buildContext();
-
-  /// @brief Add the restrictions based on the wrapping of expressions.
-  void addWrappingContext();
 
   /// @brief Add user provided parameter constraints to context (source code).
   void addUserAssumptions(AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI);
@@ -1757,17 +1857,10 @@ public:
   /// @brief Get the count of parameters used in this Scop.
   ///
   /// @return The count of parameters used in this Scop.
-  inline ParamVecType::size_type getNumParams() const {
-    return Parameters.size();
-  }
-
-  /// @brief Get a set containing the parameters used in this Scop
-  ///
-  /// @return The set containing the parameters used in this Scop.
-  inline const ParamVecType &getParams() const { return Parameters; }
+  size_t getNumParams() const { return Parameters.size(); }
 
   /// @brief Take a list of parameters and add the new ones to the scop.
-  void addParams(std::vector<const SCEV *> NewParameters);
+  void addParams(const ParameterSetTy &NewParameters);
 
   int getNumArrays() { return ScopArrayInfoMap.size(); }
 
@@ -1793,19 +1886,6 @@ public:
   /// @return The corresponding isl_id or NULL otherwise.
   isl_id *getIdForParam(const SCEV *Parameter);
 
-  /// @name Parameter Iterators
-  ///
-  /// These iterators iterate over all parameters of this Scop.
-  //@{
-  typedef ParamVecType::iterator param_iterator;
-  typedef ParamVecType::const_iterator const_param_iterator;
-
-  param_iterator param_begin() { return Parameters.begin(); }
-  param_iterator param_end() { return Parameters.end(); }
-  const_param_iterator param_begin() const { return Parameters.begin(); }
-  const_param_iterator param_end() const { return Parameters.end(); }
-  //@}
-
   /// @brief Get the maximum region of this static control part.
   ///
   /// @return The maximum region of this static control part.
@@ -1818,10 +1898,10 @@ public:
   inline unsigned getMaxLoopDepth() const { return MaxLoopDepth; }
 
   /// @brief Return the invariant equivalence class for @p Val if any.
-  const InvariantEquivClassTy *lookupInvariantEquivClass(Value *Val) const;
+  InvariantEquivClassTy *lookupInvariantEquivClass(Value *Val);
 
   /// @brief Return the set of invariant accesses.
-  const InvariantEquivClassesTy &getInvariantAccesses() const {
+  InvariantEquivClassesTy &getInvariantAccesses() {
     return InvariantEquivClasses;
   }
 
@@ -1886,6 +1966,28 @@ public:
   ///             (needed/assumptions) or negative (invalid/restrictions).
   void addAssumption(AssumptionKind Kind, __isl_take isl_set *Set, DebugLoc Loc,
                      AssumptionSign Sign);
+
+  /// @brief Record an assumption for later addition to the assumed context.
+  ///
+  /// This function will add the assumption to the RecordedAssumptions. This
+  /// collection will be added (@see addAssumption) to the assumed context once
+  /// all paramaters are known and the context is fully build.
+  ///
+  /// @param Kind The assumption kind describing the underlying cause.
+  /// @param Set  The relations between parameters that are assumed to hold.
+  /// @param Loc  The location in the source that caused this assumption.
+  /// @param Sign Enum to indicate if the assumptions in @p Set are positive
+  ///             (needed/assumptions) or negative (invalid/restrictions).
+  /// @param BB   The block in which this assumption was taken. If it is
+  ///             set, the domain of that block will be used to simplify the
+  ///             actual assumption in @p Set once it is added. This is useful
+  ///             if the assumption was created prior to the domain.
+  void recordAssumption(AssumptionKind Kind, __isl_take isl_set *Set,
+                        DebugLoc Loc, AssumptionSign Sign,
+                        BasicBlock *BB = nullptr);
+
+  /// @brief Add all recorded assumptions to the assumed context.
+  void addRecordedAssumptions();
 
   /// @brief Mark the scop as invalid.
   ///
@@ -2024,27 +2126,36 @@ public:
   /// @brief Directly return the shared_ptr of the context.
   const std::shared_ptr<isl_ctx> &getSharedIslCtx() const { return IslCtx; }
 
-  /// @brief Compute the isl representation for the SCEV @p
+  /// @brief Compute the isl representation for the SCEV @p E
   ///
+  /// @param E  The SCEV that should be translated.
   /// @param BB An (optional) basic block in which the isl_pw_aff is computed.
   ///           SCEVs known to not reference any loops in the SCoP can be
   ///           passed without a @p BB.
+  /// @param NonNegative Flag to indicate the @p E has to be non-negative.
   ///
   /// Note that this function will always return a valid isl_pw_aff. However, if
   /// the translation of @p E was deemed to complex the SCoP is invalidated and
   /// a dummy value of appropriate dimension is returned. This allows to bail
   /// for complex cases without "error handling code" needed on the users side.
-  __isl_give isl_pw_aff *getPwAff(const SCEV *E, BasicBlock *BB = nullptr);
+  __isl_give PWACtx getPwAff(const SCEV *E, BasicBlock *BB = nullptr,
+                             bool NonNegative = false);
 
-  /// @brief Return the non-loop carried conditions on the domain of @p Stmt.
+  /// @brief Compute the isl representation for the SCEV @p E
+  ///
+  /// This function is like @see Scop::getPwAff() but strips away the invalid
+  /// domain part associated with the piecewise affine function.
+  __isl_give isl_pw_aff *getPwAffOnly(const SCEV *E, BasicBlock *BB = nullptr);
+
+  /// @brief Return the domain of @p Stmt.
   ///
   /// @param Stmt The statement for which the conditions should be returned.
-  __isl_give isl_set *getDomainConditions(ScopStmt *Stmt);
+  __isl_give isl_set *getDomainConditions(const ScopStmt *Stmt) const;
 
-  /// @brief Return the non-loop carried conditions on the domain of @p BB.
+  /// @brief Return the domain of @p BB.
   ///
   /// @param BB The block for which the conditions should be returned.
-  __isl_give isl_set *getDomainConditions(BasicBlock *BB);
+  __isl_give isl_set *getDomainConditions(BasicBlock *BB) const;
 
   /// @brief Get a union set containing the iteration domains of all statements.
   __isl_give isl_union_set *getDomains() const;

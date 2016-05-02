@@ -8,6 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DiagnosticManager.h"
+
+#include "llvm/Support/ErrorHandling.h"
+
 #include "lldb/Core/Log.h"
 #include "lldb/Core/StreamString.h"
 
@@ -45,6 +48,7 @@ StringForSeverity(DiagnosticSeverity severity)
         case lldb_private::eDiagnosticSeverityRemark:
             return "";
     }
+    llvm_unreachable("switch needs another case for DiagnosticSeverity enum");
 }
 
 std::string
