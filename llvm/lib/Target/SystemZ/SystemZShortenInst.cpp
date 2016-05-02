@@ -143,7 +143,7 @@ bool SystemZShortenInst::shortenOn001AddCC(MachineInstr &MI,
 					   unsigned Opcode) {
   if (!LiveRegs.contains(SystemZ::CC) && shortenOn001(MI, Opcode)) {
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
-      .addReg(SystemZ::CC, RegState::ImplicitDefine);
+      .addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
     return true;
   }
   return false;

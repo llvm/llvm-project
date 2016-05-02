@@ -99,6 +99,9 @@ ValueObjectSynthetic::GetQualifiedTypeName()
 ConstString
 ValueObjectSynthetic::GetDisplayTypeName()
 {
+    if (ConstString synth_name = m_synth_filter_ap->GetSyntheticTypeName())
+        return synth_name;
+
     return m_parent->GetDisplayTypeName();
 }
 

@@ -3245,7 +3245,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
     cast<VectorType>(I.getType())->getVectorNumElements() : 0;
 
   if (VectorWidth && !N.getValueType().isVector()) {
-    MVT VT = MVT::getVectorVT(N.getValueType().getSimpleVT(), VectorWidth);
+    LLVMContext &Context = *DAG.getContext();
+    EVT VT = EVT::getVectorVT(Context, N.getValueType(), VectorWidth);
     SmallVector<SDValue, 16> Ops(VectorWidth, N);
     N = DAG.getNode(ISD::BUILD_VECTOR, dl, VT, Ops);
   }

@@ -228,6 +228,8 @@ public:
 
     lldb::ValueObjectSP GetSyntheticValue(const StructuredData::ObjectSP &implementor) override;
 
+    ConstString GetSyntheticTypeName (const StructuredData::ObjectSP &implementor) override;
+    
     bool
     RunScriptBasedCommand(const char* impl_function,
                           const char* args,

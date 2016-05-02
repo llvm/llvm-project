@@ -246,6 +246,15 @@ ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue ()
     return m_interpreter->GetSyntheticValue(m_wrapper_sp);
 }
 
+ConstString
+ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName ()
+{
+    if (!m_wrapper_sp || m_interpreter == NULL)
+        return ConstString();
+    
+    return m_interpreter->GetSyntheticTypeName(m_wrapper_sp);
+}
+
 std::string
 ScriptedSyntheticChildren::GetDescription()
 {

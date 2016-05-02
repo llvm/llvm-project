@@ -737,6 +737,14 @@ static LogicOp interpretAndImmediate(unsigned Opcode) {
   }
 }
 
+static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
+  if (OldMI->registerDefIsDead(SystemZ::CC)) {
+    MachineOperand *CCDef = NewMI->findRegisterDefOperand(SystemZ::CC);
+    if (CCDef != nullptr)
+      CCDef->setIsDead(true);
+  }
+}
+
 // Used to return from convertToThreeAddress after replacing two-address
 // instruction OldMI with three-address instruction NewMI.
 static MachineInstr *finishConvertToThreeAddress(MachineInstr *OldMI,
@@ -750,6 +758,7 @@ static MachineInstr *finishConvertToThreeAddress(MachineInstr *OldMI,
         LV->replaceKillInstruction(Op.getReg(), OldMI, NewMI);
     }
   }
+  transferDeadCC(OldMI, NewMI);
   return NewMI;
 }
 
@@ -842,19 +851,26 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   unsigned Size = MFI->getObjectSize(FrameIndex);
   unsigned Opcode = MI->getOpcode();
 
+// XXX This is an introduction of a CC def and is illegal! Reactivate
+// with a check of liveness of CC reg.
+#if 0
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     if ((Opcode == SystemZ::LA || Opcode == SystemZ::LAY) &&
         isInt<8>(MI->getOperand(2).getImm()) &&
         !MI->getOperand(3).getReg()) {
       // LA(Y) %reg, CONST(%reg) -> AGSI %mem, CONST
-      return BuildMI(*InsertPt->getParent(), InsertPt, MI->getDebugLoc(),
+      MachineInstr *BuiltMI =
+        BuildMI(*InsertPt->getParent(), InsertPt, MI->getDebugLoc(),
                      get(SystemZ::AGSI))
           .addFrameIndex(FrameIndex)
           .addImm(0)
           .addImm(MI->getOperand(2).getImm());
+      BuiltMI->findRegisterDefOperand(SystemZ::CC)->setIsDead(true);
+      return BuiltMI;
     }
     return nullptr;
   }
+#endif
 
   // All other cases require a single operand.
   if (Ops.size() != 1)
@@ -870,11 +886,14 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       isInt<8>(MI->getOperand(2).getImm())) {
     // A(G)HI %reg, CONST -> A(G)SI %mem, CONST
     Opcode = (Opcode == SystemZ::AHI ? SystemZ::ASI : SystemZ::AGSI);
-    return BuildMI(*InsertPt->getParent(), InsertPt, MI->getDebugLoc(),
+    MachineInstr *BuiltMI =
+      BuildMI(*InsertPt->getParent(), InsertPt, MI->getDebugLoc(),
                    get(Opcode))
         .addFrameIndex(FrameIndex)
         .addImm(0)
         .addImm(MI->getOperand(2).getImm());
+    transferDeadCC(MI, BuiltMI);
+    return BuiltMI;
   }
 
   if (Opcode == SystemZ::LGDR || Opcode == SystemZ::LDGR) {
@@ -963,6 +982,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
       MIB.addFrameIndex(FrameIndex).addImm(Offset);
       if (MemDesc.TSFlags & SystemZII::HasIndex)
         MIB.addReg(0);
+      transferDeadCC(MI, MIB);
       return MIB;
     }
   }

@@ -216,7 +216,7 @@ SystemZElimCompare::convertToBRCT(MachineInstr *MI, MachineInstr *Compare,
     .addOperand(MI->getOperand(0))
     .addOperand(MI->getOperand(1))
     .addOperand(Target)
-    .addReg(SystemZ::CC, RegState::ImplicitDefine);
+    .addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
   MI->eraseFromParent();
   return true;
 }
@@ -448,7 +448,7 @@ fuseCompareAndBranch(MachineInstr *Compare,
     // to a non-fused branch because of a long displacement.  Conditional
     // returns don't have that problem.
     MIB.addOperand(Target)
-       .addReg(SystemZ::CC, RegState::ImplicitDefine);
+       .addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
   }
 
   if (Type == SystemZII::CompareAndSibcall)

@@ -288,7 +288,7 @@ define <32 x i8> @permute3_avx2(<32 x i8> %InVec) {
 
 define <16 x i8> @fold_with_undef_elts(<16 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_undef_elts(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> <i8 0, i8 -128, i8 undef, i8 -128, i8 1, i8 -128, i8 undef, i8 -128, i8 2, i8 -128, i8 undef, i8 -128, i8 3, i8 -128, i8 undef, i8 -128>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> %InVec, <16 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <16 x i32> <i32 0, i32 16, i32 undef, i32 16, i32 1, i32 16, i32 undef, i32 16, i32 2, i32 16, i32 undef, i32 16, i32 3, i32 16, i32 undef, i32 16>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> <i8 0, i8 -128, i8 undef, i8 -128, i8 1, i8 -128, i8 undef, i8 -128, i8 2, i8 -128, i8 undef, i8 -128, i8 3, i8 -128, i8 undef, i8 -128>)
@@ -297,7 +297,7 @@ define <16 x i8> @fold_with_undef_elts(<16 x i8> %InVec) {
 
 define <32 x i8> @fold_with_undef_elts_avx2(<32 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_undef_elts_avx2(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> <i8 0, i8 -128, i8 undef, i8 -128, i8 1, i8 -128, i8 undef, i8 -128, i8 2, i8 -128, i8 undef, i8 -128, i8 3, i8 -128, i8 undef, i8 -128, i8 0, i8 -128, i8 undef, i8 -128, i8 1, i8 -128, i8 undef, i8 -128, i8 2, i8 -128, i8 undef, i8 -128, i8 3, i8 -128, i8 undef, i8 -128>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> %InVec, <32 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, <32 x i32> <i32 0, i32 32, i32 undef, i32 32, i32 1, i32 32, i32 undef, i32 32, i32 2, i32 32, i32 undef, i32 32, i32 3, i32 32, i32 undef, i32 32, i32 16, i32 48, i32 undef, i32 48, i32 17, i32 48, i32 undef, i32 48, i32 18, i32 48, i32 undef, i32 48, i32 19, i32 48, i32 undef, i32 48>
 ; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
 ;
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> <i8 0, i8 -128, i8 undef, i8 -128, i8 1, i8 -128, i8 undef, i8 -128, i8 2, i8 -128, i8 undef, i8 -128, i8 3, i8 -128, i8 undef, i8 -128, i8 0, i8 -128, i8 undef, i8 -128, i8 1, i8 -128, i8 undef, i8 -128, i8 2, i8 -128, i8 undef, i8 -128, i8 3, i8 -128, i8 undef, i8 -128>)
@@ -306,8 +306,7 @@ define <32 x i8> @fold_with_undef_elts_avx2(<32 x i8> %InVec) {
 
 define <16 x i8> @fold_with_allundef_elts(<16 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allundef_elts(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> undef)
-; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i8> undef
 ;
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> undef)
   ret <16 x i8> %1
@@ -315,8 +314,7 @@ define <16 x i8> @fold_with_allundef_elts(<16 x i8> %InVec) {
 
 define <32 x i8> @fold_with_allundef_elts_avx2(<32 x i8> %InVec) {
 ; CHECK-LABEL: @fold_with_allundef_elts_avx2(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> undef)
-; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i8> undef
 ;
   %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %InVec, <32 x i8> undef)
   ret <32 x i8> %1

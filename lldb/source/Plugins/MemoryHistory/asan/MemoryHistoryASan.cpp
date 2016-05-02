@@ -24,6 +24,8 @@
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Core/ValueObject.h"
 
+#include <sstream>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -123,7 +125,7 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp, ValueObject
         return;
 
     int count = count_sp->GetValueAsUnsigned(0);
-    tid_t tid = tid_sp->GetValueAsUnsigned(0);
+    tid_t tid = tid_sp->GetValueAsUnsigned(0) + 1;
 
     if (count <= 0)
         return;
@@ -144,8 +146,9 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp, ValueObject
     
     HistoryThread *history_thread = new HistoryThread(*process_sp, tid, pcs, 0, false);
     ThreadSP new_thread_sp(history_thread);
-    // let's use thread name for the type of history thread, since history threads don't have names anyway
-    history_thread->SetThreadName(thread_name);
+    std::ostringstream thread_name_with_number;
+    thread_name_with_number << thread_name << " Thread " << tid;
+    history_thread->SetThreadName(thread_name_with_number.str().c_str());
     // Save this in the Process' ExtendedThreadList so a strong pointer retains the object
     process_sp->GetExtendedThreadList().AddThread (new_thread_sp);
     result.push_back(new_thread_sp);
@@ -198,8 +201,8 @@ MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address)
     if (!return_value_sp)
         return result;
     
-    CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "free", "Memory deallocated at", result);
-    CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "alloc", "Memory allocated at", result);
+    CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "free", "Memory deallocated by", result);
+    CreateHistoryThreadFromValueObject(process_sp, return_value_sp, "alloc", "Memory allocated by", result);
     
     return result;
 }

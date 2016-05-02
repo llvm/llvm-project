@@ -111,6 +111,8 @@ public:
     OPC_RecordMemRef,
     OPC_CaptureGlueInput,
     OPC_MoveChild,
+    OPC_MoveChild0, OPC_MoveChild1, OPC_MoveChild2, OPC_MoveChild3,
+    OPC_MoveChild4, OPC_MoveChild5, OPC_MoveChild6, OPC_MoveChild7,
     OPC_MoveParent,
     OPC_CheckSame,
     OPC_CheckChild0Same, OPC_CheckChild1Same,
