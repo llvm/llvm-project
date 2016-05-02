@@ -877,7 +877,7 @@ Error RuntimeDyldELF::findOPDEntrySection(const ELFObjectFileBase &Obj,
       if (auto TSIOrErr = TargetSymbol->getSection())
         TSI = *TSIOrErr;
       else
-        return errorCodeToError(TSIOrErr.getError());
+        return TSIOrErr.takeError();
       assert(TSI != Obj.section_end() && "TSI should refer to a valid section");
 
       bool IsCode = TSI->isText();
@@ -1210,9 +1210,14 @@ RuntimeDyldELF::processRelocationRef(
   RTDyldSymbolTable::const_iterator gsi = GlobalSymbolTable.end();
   if (Symbol != Obj.symbol_end()) {
     gsi = GlobalSymbolTable.find(TargetName.data());
-    ErrorOr<SymbolRef::Type> SymTypeOrErr = Symbol->getType();
-    if (std::error_code EC = SymTypeOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<SymbolRef::Type> SymTypeOrErr = Symbol->getType();
+    if (!SymTypeOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(SymTypeOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     SymType = *SymTypeOrErr;
   }
   if (gsi != GlobalSymbolTable.end()) {
@@ -1226,7 +1231,15 @@ RuntimeDyldELF::processRelocationRef(
       // TODO: Now ELF SymbolRef::ST_Debug = STT_SECTION, it's not obviously
       // and can be changed by another developers. Maybe best way is add
       // a new symbol type ST_Section to SymbolRef and use it.
-      section_iterator si = *Symbol->getSection();
+      auto SectionOrErr = Symbol->getSection();
+      if (!SectionOrErr) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(SectionOrErr.takeError(), OS, "");
+        OS.flush();
+        report_fatal_error(Buf);
+      }
+      section_iterator si = *SectionOrErr;
       if (si == Obj.section_end())
         llvm_unreachable("Symbol section not found, bad object file format!");
       DEBUG(dbgs() << "\t\tThis is section symbol\n");

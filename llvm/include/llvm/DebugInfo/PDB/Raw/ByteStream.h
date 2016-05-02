@@ -38,6 +38,7 @@ public:
   uint32_t getLength() const override;
 
   ArrayRef<uint8_t> data() const { return Data; }
+  StringRef str() const;
 
 private:
   MutableArrayRef<uint8_t> Data;

@@ -5,15 +5,15 @@
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "wasm64-unknown-unknown"
 
-declare i64 @llvm.wasm.memory.size.i64() nounwind readonly
+declare i64 @llvm.wasm.current.memory.i64() nounwind readonly
 declare void @llvm.wasm.grow.memory.i64(i64) nounwind
 
-; CHECK-LABEL: memory_size:
+; CHECK-LABEL: current_memory:
 ; CHECK-NEXT: .result i64{{$}}
-; CHECK-NEXT: memory_size $push0={{$}}
+; CHECK-NEXT: current_memory $push0={{$}}
 ; CHECK-NEXT: return $pop0{{$}}
-define i64 @memory_size() {
-  %a = call i64 @llvm.wasm.memory.size.i64()
+define i64 @current_memory() {
+  %a = call i64 @llvm.wasm.current.memory.i64()
   ret i64 %a
 }
 

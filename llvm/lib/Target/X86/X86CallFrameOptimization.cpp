@@ -105,7 +105,7 @@ private:
   const TargetInstrInfo *TII;
   const X86FrameLowering *TFL;
   const X86Subtarget *STI;
-  const MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI;
   unsigned SlotSize;
   unsigned Log2SlotSize;
   static char ID;
@@ -125,20 +125,17 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
   if (NoX86CFOpt.getValue())
     return false;
 
-  // We currently only support call sequences where *all* parameters.
-  // are passed on the stack.
-  // No point in running this in 64-bit mode, since some arguments are
-  // passed in-register in all common calling conventions, so the pattern
-  // we're looking for will never match.
-  if (STI->is64Bit())
-    return false;
-
   // We can't encode multiple DW_CFA_GNU_args_size or DW_CFA_def_cfa_offset
   // in the compact unwind encoding that Darwin uses. So, bail if there
   // is a danger of that being generated.
   if (STI->isTargetDarwin() &&
       (!MF.getMMI().getLandingPads().empty() ||
        (MF.getFunction()->needsUnwindTableEntry() && !TFL->hasFP(MF))))
+    return false;
+
+  // It is not valid to change the stack pointer outside the prolog/epilog
+  // on 64-bit Windows.
+  if (STI->isTargetWin64())
     return false;
 
   // You would expect straight-line code between call-frame setup and
@@ -204,7 +201,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
       // We can use pushes. First, account for the fixed costs.
       // We'll need a add after the call.
       Advantage -= 3;
-      // If we have to realign the stack, we'll also need and sub before
+      // If we have to realign the stack, we'll also need a sub before
       if (CC.ExpectedDist % StackAlign)
         Advantage -= 3;
       // Now, for each push, we save ~3 bytes. For small constants, we actually,
@@ -264,7 +261,8 @@ X86CallFrameOptimization::classifyInstruction(
 
   // The instructions we actually care about are movs onto the stack
   int Opcode = MI->getOpcode();
-  if (Opcode == X86::MOV32mi || Opcode == X86::MOV32mr)
+  if (Opcode == X86::MOV32mi   || Opcode == X86::MOV32mr ||
+      Opcode == X86::MOV64mi32 || Opcode == X86::MOV64mr)
     return Convert;
 
   // Not all calling conventions have only stack MOVs between the stack
@@ -457,6 +455,7 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   FrameSetup->getOperand(1).setImm(Context.ExpectedDist);
 
   DebugLoc DL = FrameSetup->getDebugLoc();
+  bool Is64Bit = STI->is64Bit();
   // Now, iterate through the vector in reverse order, and replace the movs
   // with pushes. MOVmi/MOVmr doesn't have any defs, so no need to
   // replace uses.
@@ -469,7 +468,8 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
     default:
       llvm_unreachable("Unexpected Opcode!");
     case X86::MOV32mi:
-      PushOpcode = X86::PUSHi32;
+    case X86::MOV64mi32:
+      PushOpcode = Is64Bit ? X86::PUSH64i32 : X86::PUSHi32;
       // If the operand is a small (8-bit) immediate, we can use a
       // PUSH instruction with a shorter encoding.
       // Note that isImm() may fail even though this is a MOVmi, because
@@ -477,13 +477,26 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       if (PushOp.isImm()) {
         int64_t Val = PushOp.getImm();
         if (isInt<8>(Val))
-          PushOpcode = X86::PUSH32i8;
+          PushOpcode = Is64Bit ? X86::PUSH64i8 : X86::PUSH32i8;
       }
       Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
                  .addOperand(PushOp);
       break;
     case X86::MOV32mr:
+    case X86::MOV64mr:
       unsigned int Reg = PushOp.getReg();
+
+      // If storing a 32-bit vreg on 64-bit targets, extend to a 64-bit vreg
+      // in preparation for the PUSH64. The upper 32 bits can be undef.
+      if (Is64Bit && MOV->getOpcode() == X86::MOV32mr) {
+        unsigned UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
+        Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
+        BuildMI(MBB, Context.Call, DL, TII->get(X86::IMPLICIT_DEF), UndefReg);
+        BuildMI(MBB, Context.Call, DL, TII->get(X86::INSERT_SUBREG), Reg)
+          .addReg(UndefReg)
+          .addOperand(PushOp)
+          .addImm(X86::sub_32bit);
+      }
 
       // If PUSHrmm is not slow on this target, try to fold the source of the
       // push into the instruction.
@@ -493,7 +506,7 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
       // conservative about that.
       MachineInstr *DefMov = nullptr;
       if (!SlowPUSHrmm && (DefMov = canFoldIntoRegPush(FrameSetup, Reg))) {
-        PushOpcode = X86::PUSH32rmm;
+        PushOpcode = Is64Bit ? X86::PUSH64rmm : X86::PUSH32rmm;
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode));
 
         unsigned NumOps = DefMov->getDesc().getNumOperands();
@@ -502,7 +515,7 @@ bool X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
         DefMov->eraseFromParent();
       } else {
-        PushOpcode = X86::PUSH32r;
+        PushOpcode = Is64Bit ? X86::PUSH64r : X86::PUSH32r;
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
                    .addReg(Reg)
                    .getInstr();
@@ -557,7 +570,8 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
 
   // Make sure the def is a MOV from memory.
   // If the def is an another block, give up.
-  if (DefMI->getOpcode() != X86::MOV32rm ||
+  if ((DefMI->getOpcode() != X86::MOV32rm &&
+       DefMI->getOpcode() != X86::MOV64rm) ||
       DefMI->getParent() != FrameSetup->getParent())
     return nullptr;
 

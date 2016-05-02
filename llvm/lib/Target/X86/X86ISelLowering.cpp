@@ -508,7 +508,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSINCOS, VT, Expand);
     }
 
-    // Lower this to FGETSIGNx86 plus an AND.
+    // Lower this to MOVMSK plus an AND.
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
     setOperationAction(ISD::FGETSIGN, MVT::i32, Custom);
 
@@ -14222,10 +14222,17 @@ static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
 
-  // Lower ISD::FGETSIGN to (AND (X86ISD::FGETSIGNx86 ...) 1).
-  SDValue xFGETSIGN = DAG.getNode(X86ISD::FGETSIGNx86, dl, VT, N0,
-                                  DAG.getConstant(1, dl, VT));
-  return DAG.getNode(ISD::AND, dl, VT, xFGETSIGN, DAG.getConstant(1, dl, VT));
+  MVT OpVT = N0.getSimpleValueType();
+  assert((OpVT == MVT::f32 || OpVT == MVT::f64) &&
+         "Unexpected type for FGETSIGN");
+
+  // Lower ISD::FGETSIGN to (AND (X86ISD::MOVMSK ...) 1).
+  MVT VecVT = (OpVT == MVT::f32 ? MVT::v4f32 : MVT::v2f64);
+  SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT, N0);
+  Res = DAG.getNode(X86ISD::MOVMSK, dl, MVT::i32, Res);
+  Res = DAG.getZExtOrTrunc(Res, dl, VT);
+  Res = DAG.getNode(ISD::AND, dl, VT, Res, DAG.getConstant(1, dl, VT));
+  return Res;
 }
 
 // Check whether an OR'd tree is PTEST-able.
@@ -21616,7 +21623,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::SETCC:              return "X86ISD::SETCC";
   case X86ISD::SETCC_CARRY:        return "X86ISD::SETCC_CARRY";
   case X86ISD::FSETCC:             return "X86ISD::FSETCC";
-  case X86ISD::FGETSIGNx86:        return "X86ISD::FGETSIGNx86";
   case X86ISD::CMOV:               return "X86ISD::CMOV";
   case X86ISD::BRCOND:             return "X86ISD::BRCOND";
   case X86ISD::RET_FLAG:           return "X86ISD::RET_FLAG";
@@ -23993,12 +23999,20 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
 
   SDValue Res;
 
-  if (Mask.size() == 1) {
+  unsigned NumMaskElts = Mask.size();
+  if (NumMaskElts == 1) {
     assert(Mask[0] == 0 && "Invalid shuffle index found!");
     DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Input),
                   /*AddTo*/ true);
     return true;
   }
+
+  unsigned RootSizeInBits = RootVT.getSizeInBits();
+  unsigned MaskEltSizeInBits = RootSizeInBits / NumMaskElts;
+
+  // TODO - handle 128/256-bit wide vector shuffles.
+  if (MaskEltSizeInBits > 64)
+    return false;
 
   // Use the float domain if the operand type is a floating point type.
   bool FloatDomain = VT.isFloatingPoint();
@@ -24087,7 +24101,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
     if (Depth == 1 && Root->getOpcode() == Shuffle)
       return false; // Nothing to do!
     MVT ShuffleVT;
-    switch (Mask.size()) {
+    switch (NumMaskElts) {
     case 8:
       ShuffleVT = MVT::v8i16;
       break;
@@ -24127,12 +24141,12 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
         ShuffleVT = MVT::v8f32;
     }
 
-    if (isSequentialOrUndefOrZeroInRange(Mask, /*Pos*/ 0, /*Size*/ Mask.size(),
+    if (isSequentialOrUndefOrZeroInRange(Mask, /*Pos*/ 0, /*Size*/ NumMaskElts,
                                          /*Low*/ 0) &&
-        Mask.size() <= ShuffleVT.getVectorNumElements()) {
+        NumMaskElts <= ShuffleVT.getVectorNumElements()) {
       unsigned BlendMask = 0;
       unsigned ShuffleSize = ShuffleVT.getVectorNumElements();
-      unsigned MaskRatio = ShuffleSize / Mask.size();
+      unsigned MaskRatio = ShuffleSize / NumMaskElts;
 
       if (Depth == 1 && Root.getOpcode() == X86ISD::BLENDI)
         return false;
@@ -24168,7 +24182,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
        (VT.is512BitVector() && Subtarget.hasBWI()))) {
     SmallVector<SDValue, 16> PSHUFBMask;
     int NumBytes = VT.getSizeInBits() / 8;
-    int Ratio = NumBytes / Mask.size();
+    int Ratio = NumBytes / NumMaskElts;
     for (int i = 0; i < NumBytes; ++i) {
       int M = Mask[i / Ratio];
       if (M == SM_SentinelUndef) {

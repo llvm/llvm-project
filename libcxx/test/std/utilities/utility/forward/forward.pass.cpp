@@ -39,6 +39,9 @@ int main()
     A a;
     const A ca = A();
 
+    ((void)a); // Prevent unused warning
+    ((void)ca); // Prevent unused warning
+
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     static_assert(sizeof(test(std::forward<A&>(a))) == 1, "");
     static_assert(sizeof(test(std::forward<A>(a))) == 4, "");

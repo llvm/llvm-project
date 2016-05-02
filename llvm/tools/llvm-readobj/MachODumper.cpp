@@ -617,8 +617,8 @@ void MachODumper::printSymbol(const SymbolRef &Symbol) {
   getSymbol(Obj, Symbol.getRawDataRefImpl(), MOSymbol);
 
   StringRef SectionName = "";
-  ErrorOr<section_iterator> SecIOrErr = Symbol.getSection();
-  error(SecIOrErr.getError());
+  Expected<section_iterator> SecIOrErr = Symbol.getSection();
+  error(errorToErrorCode(SecIOrErr.takeError()));
   section_iterator SecI = *SecIOrErr;
   if (SecI != Obj->section_end())
     error(SecI->getName(SectionName));

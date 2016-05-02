@@ -55,7 +55,15 @@ public:
     }
     StringRef TargetName = *TargetNameOrErr;
 
-    auto Section = *Symbol->getSection();
+    auto SectionOrErr = Symbol->getSection();
+    if (!SectionOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(SectionOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
+    auto Section = *SectionOrErr;
 
     uint64_t RelType = RelI->getType();
     uint64_t Offset = RelI->getOffset();

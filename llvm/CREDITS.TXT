@@ -349,7 +349,7 @@ D: XCore backend
 
 N: Piotr Padlewski
 E: piotr.padlewski@gmail.com
-D: !invariant.group metadata and othe intransics for clang devirtualization
+D: !invariant.group metadata and other intrinsics for devirtualization in clang
 
 N: Devang Patel
 E: dpatel@apple.com

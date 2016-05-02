@@ -198,9 +198,9 @@ Decoder::getSectionContaining(const COFFObjectFile &COFF, uint64_t VA) {
 ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
                                               uint64_t VA, bool FunctionOnly) {
   for (const auto &Symbol : COFF.symbols()) {
-    ErrorOr<SymbolRef::Type> Type = Symbol.getType();
-    if (std::error_code EC = Type.getError())
-      return EC;
+    Expected<SymbolRef::Type> Type = Symbol.getType();
+    if (!Type)
+      return errorToErrorCode(Type.takeError());
     if (FunctionOnly && *Type != SymbolRef::ST_Function)
       continue;
 
@@ -648,9 +648,12 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
 
     SW.printString("ExceptionRecord", formatSymbol(*Name, Address));
 
-    ErrorOr<section_iterator> SIOrErr = XDataRecord->getSection();
-    if (!SIOrErr)
+    Expected<section_iterator> SIOrErr = XDataRecord->getSection();
+    if (!SIOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(SIOrErr.takeError());
       return false;
+    }
     section_iterator SI = *SIOrErr;
 
     return dumpXDataRecord(COFF, *SI, FunctionAddress, Address);

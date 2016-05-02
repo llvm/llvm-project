@@ -178,8 +178,8 @@ static void dumpCXXData(const ObjectFile *Obj) {
     Expected<StringRef> SymNameOrErr = Sym.getName();
     error(errorToErrorCode(SymNameOrErr.takeError()));
     StringRef SymName = *SymNameOrErr;
-    ErrorOr<object::section_iterator> SecIOrErr = Sym.getSection();
-    error(SecIOrErr.getError());
+    Expected<object::section_iterator> SecIOrErr = Sym.getSection();
+    error(errorToErrorCode(SecIOrErr.takeError()));
     object::section_iterator SecI = *SecIOrErr;
     // Skip external symbols.
     if (SecI == Obj->section_end())

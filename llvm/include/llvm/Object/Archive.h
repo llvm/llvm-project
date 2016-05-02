@@ -78,6 +78,7 @@ public:
     ErrorOr<Child> getNext() const;
 
     ErrorOr<StringRef> getName() const;
+    ErrorOr<std::string> getFullName() const;
     StringRef getRawName() const { return getHeader()->getName(); }
     sys::TimeValue getLastModified() const {
       return getHeader()->getLastModified();

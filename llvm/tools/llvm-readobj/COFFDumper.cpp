@@ -52,12 +52,33 @@ using namespace llvm::Win64EH;
 
 namespace {
 
+class CVTypeDumper {
+public:
+  CVTypeDumper(StreamWriter &W) : W(W) {}
+
+  StringRef getTypeName(TypeIndex TI);
+  void printTypeIndex(StringRef FieldName, TypeIndex TI);
+
+  void dump(StringRef Data);
+
+private:
+  void printCodeViewFieldList(StringRef FieldData);
+  void printMemberAttributes(MemberAttributes Attrs);
+
+  StreamWriter &W;
+
+  /// All user defined type records in .debug$T live in here. Type indices
+  /// greater than 0x1000 are user defined. Subtract 0x1000 from the index to
+  /// index into this vector.
+  SmallVector<StringRef, 10> CVUDTNames;
+
+  StringSet<> TypeNames;
+};
+
 class COFFDumper : public ObjDumper {
 public:
-  COFFDumper(const llvm::object::COFFObjectFile *Obj, StreamWriter& Writer)
-    : ObjDumper(Writer)
-    , Obj(Obj) {
-  }
+  COFFDumper(const llvm::object::COFFObjectFile *Obj, StreamWriter &Writer)
+      : ObjDumper(Writer), Obj(Obj), CVTD(Writer) {}
 
   void printFileHeaders() override;
   void printSections() override;
@@ -84,11 +105,13 @@ private:
 
   void printCodeViewSymbolSection(StringRef SectionName, const SectionRef &Section);
   void printCodeViewTypeSection(StringRef SectionName, const SectionRef &Section);
-  void printCodeViewFieldList(StringRef FieldData);
   StringRef getTypeName(TypeIndex Ty);
   StringRef getFileNameForFileOffset(uint32_t FileOffset);
   void printFileNameForOffset(StringRef Label, uint32_t FileOffset);
-  void printTypeIndex(StringRef FieldName, TypeIndex TI);
+  void printTypeIndex(StringRef FieldName, TypeIndex TI) {
+    // Forward to CVTypeDumper for simplicity.
+    CVTD.printTypeIndex(FieldName, TI);
+  }
   void printLocalVariableAddrRange(const LocalVariableAddrRange &Range,
                                    const coff_section *Sec,
                                    StringRef SectionContents);
@@ -101,8 +124,6 @@ private:
   void printCodeViewFileChecksums(StringRef Subsection);
 
   void printCodeViewInlineeLines(StringRef Subsection);
-
-  void printMemberAttributes(MemberAttributes Attrs);
 
   void printRelocatedField(StringRef Label, const coff_section *Sec,
                            StringRef SectionContents, const ulittle32_t *Field,
@@ -136,12 +157,7 @@ private:
   StringRef CVFileChecksumTable;
   StringRef CVStringTable;
 
-  /// All user defined type records in .debug$T live in here. Type indices
-  /// greater than 0x1000 are user defined. Subtract 0x1000 from the index to
-  /// index into this vector.
-  SmallVector<StringRef, 10> CVUDTNames;
-
-  StringSet<> TypeNames;
+  CVTypeDumper CVTD;
 };
 
 } // namespace
@@ -1866,7 +1882,7 @@ StringRef getRemainingBytesAsString(const TypeRecordPrefix *Rec, const char *Sta
   return Leading;
 }
 
-StringRef COFFDumper::getTypeName(TypeIndex TI) {
+StringRef CVTypeDumper::getTypeName(TypeIndex TI) {
   if (TI.isNoType())
     return "<no type>";
 
@@ -1893,7 +1909,7 @@ StringRef COFFDumper::getTypeName(TypeIndex TI) {
   return "<unknown UDT>";
 }
 
-void COFFDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
+void CVTypeDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
   StringRef TypeName;
   if (!TI.isNoType())
     TypeName = getTypeName(TI);
@@ -1982,13 +1998,18 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   W.printNumber("Section", SectionName, Obj->getSectionID(Section));
   StringRef Data;
   error(Section.getContents(Data));
-  W.printBinaryBlock("Data", Data);
+  if (opts::CodeViewSubsectionBytes)
+    W.printBinaryBlock("Data", Data);
 
   unsigned Magic = *reinterpret_cast<const ulittle32_t *>(Data.data());
   W.printHex("Magic", Magic);
 
   Data = Data.drop_front(4);
 
+  CVTD.dump(Data);
+}
+
+void CVTypeDumper::dump(StringRef Data) {
   while (!Data.empty()) {
     const TypeRecordPrefix *Rec;
     error(consumeObject(Data, Rec));
@@ -2369,7 +2390,7 @@ static StringRef skipPadding(StringRef Data) {
   return Data.drop_front(Leaf & 0x0F);
 }
 
-void COFFDumper::printMemberAttributes(MemberAttributes Attrs) {
+void CVTypeDumper::printMemberAttributes(MemberAttributes Attrs) {
   W.printEnum("AccessSpecifier", uint8_t(Attrs.getAccess()),
               makeArrayRef(MemberAccessNames));
   auto MK = Attrs.getMethodKind();
@@ -2382,7 +2403,7 @@ void COFFDumper::printMemberAttributes(MemberAttributes Attrs) {
   }
 }
 
-void COFFDumper::printCodeViewFieldList(StringRef FieldData) {
+void CVTypeDumper::printCodeViewFieldList(StringRef FieldData) {
   while (!FieldData.empty()) {
     const ulittle16_t *LeafPtr;
     error(consumeObject(FieldData, LeafPtr));

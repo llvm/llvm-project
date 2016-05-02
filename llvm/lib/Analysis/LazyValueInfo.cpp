@@ -1485,6 +1485,22 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
   return nullptr;
 }
 
+ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
+					      Instruction *CxtI) {
+  assert(V->getType()->isIntegerTy());
+  unsigned Width = V->getType()->getIntegerBitWidth();
+  const DataLayout &DL = BB->getModule()->getDataLayout();
+  LVILatticeVal Result =
+      getCache(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
+  assert(!Result.isConstant());
+  if (Result.isUndefined())
+    return ConstantRange(Width, /*isFullSet=*/false);
+  if (Result.isConstantRange())
+    return Result.getConstantRange();
+  else
+    return ConstantRange(Width, /*isFullSet=*/true);
+}
+
 /// Determine whether the specified value is known to be a
 /// constant on the specified edge. Return null if not.
 Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,

@@ -112,7 +112,7 @@ int main()
             std::throw_with_nested(Final());
             assert(false);
         }
-        catch (const Final &f)
+        catch (const Final &)
         {
         }
     }

@@ -57,7 +57,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Expand response files. '@<filename>' is replaced by the file's contents.
   SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
   StringSaver Saver(Alloc);
-  llvm::cl::ExpandResponseFiles(Saver, llvm::cl::TokenizeGNUCommandLine, Vec);
+  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Vec);
 
   // Parse options and then do error checking.
   opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
@@ -148,7 +148,7 @@ static std::string rewritePath(StringRef S) {
 // the same command with the same inputs just by executing
 // "ld.lld @response.txt". Used by --reproduce. This feature is
 // supposed to be used by users to report an issue to LLD developers.
-void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
+void elf::createResponseFile(const opt::InputArgList &Args) {
   // Create the output directory.
   if (std::error_code EC =
           fs::create_directories(Config->Reproduce, /*IgnoreExisting=*/false)) {

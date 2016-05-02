@@ -260,6 +260,7 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
     return false;
   case AMDGPUIntrinsic::SI_tid:
   case AMDGPUIntrinsic::SI_fs_interp:
+  case AMDGPUIntrinsic::SI_fs_constant:
     return true;
   }
 }

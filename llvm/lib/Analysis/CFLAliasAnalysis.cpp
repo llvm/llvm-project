@@ -994,7 +994,12 @@ void CFLAAResult::scan(Function *Fn) {
   assert(InsertPair.second &&
          "Trying to scan a function that has already been cached");
 
-  Cache[Fn] = buildSetsFrom(Fn);
+  // Note that we can't do Cache[Fn] = buildSetsFrom(Fn) here: the function call
+  // may get evaluated after operator[], potentially triggering a DenseMap
+  // resize and invalidating the reference returned by operator[]
+  auto FunInfo = buildSetsFrom(Fn);
+  Cache[Fn] = std::move(FunInfo);
+
   Handles.push_front(FunctionHandle(Fn, this));
 }
 

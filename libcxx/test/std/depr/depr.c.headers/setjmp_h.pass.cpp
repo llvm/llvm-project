@@ -19,6 +19,7 @@
 int main()
 {
     jmp_buf jb;
+    ((void)jb); // Prevent unused warning
     static_assert((std::is_same<decltype(longjmp(jb, 0)), void>::value),
                   "std::is_same<decltype(longjmp(jb, 0)), void>::value");
 }

@@ -211,7 +211,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       if (auto SymTypeOrErr = I->getType())
         SymType =  *SymTypeOrErr;
       else
-        return errorCodeToError(SymTypeOrErr.getError());
+        return SymTypeOrErr.takeError();
 
       // Get symbol name.
       StringRef Name;
@@ -252,7 +252,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
         if (auto SIOrErr = I->getSection())
           SI = *SIOrErr;
         else
-          return errorCodeToError(SIOrErr.getError());
+          return SIOrErr.takeError();
 
         if (SI == Obj.section_end())
           continue;

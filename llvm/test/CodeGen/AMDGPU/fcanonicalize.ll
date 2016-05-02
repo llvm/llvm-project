@@ -172,7 +172,7 @@ define void @s_test_canonicalize_var_f64(double addrspace(1)* %out, double %val)
 
 ; GCN-LABEL: {{^}}test_fold_canonicalize_p0_f64:
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @test_fold_canonicalize_p0_f64(double addrspace(1)* %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double 0.0)
@@ -225,7 +225,7 @@ define void @test_fold_canonicalize_literal_f64(double addrspace(1)* %out) #1 {
 ; DENORM-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0xfffff{{$}}
 
 ; NODENORM: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; NODENORM: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; NODENORM: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @test_fold_canonicalize_denormal0_f64(double addrspace(1)* %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 4503599627370495 to double))
@@ -238,7 +238,7 @@ define void @test_fold_canonicalize_denormal0_f64(double addrspace(1)* %out) #1 
 ; DENORM-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x800fffff{{$}}
 
 ; NODENORM: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; NODENORM: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; NODENORM: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @test_fold_canonicalize_denormal1_f64(double addrspace(1)* %out) #1 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9227875636482146303 to double))

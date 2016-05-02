@@ -98,7 +98,7 @@ private:
 ///
 ///   auto E = foo(<...>); // <- foo returns failure with MyErrorInfo.
 ///   auto NewE =
-///     checkErrors(E,
+///     handleErrors(E,
 ///       [](const MyErrorInfo &M) {
 ///         // Deal with the error.
 ///       },

@@ -1,4 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=VI -check-prefix=VI-OPT %s
+; RUN: llc -O0 -march=amdgcn -mcpu=tonga -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefix=VI -check-prefix=VI-NOOPT %s
 
 ; FIXME: The register allocator / scheduler should be able to avoid these hazards.
 
@@ -26,7 +27,10 @@ define void @dpp_wait_states(i32 addrspace(1)* %out, i32 %in) {
 }
 
 ; VI-LABEL: {{^}}dpp_first_in_bb:
-; VI: s_nop 1
+; VI: ; %endif
+; VI-OPT: s_mov_b32
+; VI-OPT: s_mov_b32
+; VI-NOOPT: s_nop 1
 ; VI: v_mov_b32_dpp [[VGPR0:v[0-9]+]], v{{[0-9]+}} quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0
 ; VI: s_nop 1
 ; VI: v_mov_b32_dpp [[VGPR1:v[0-9]+]], [[VGPR0]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0

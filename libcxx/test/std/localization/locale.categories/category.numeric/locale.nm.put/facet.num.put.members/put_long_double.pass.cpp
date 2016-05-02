@@ -24415,7 +24415,6 @@ void test11()
 
 void test12()
 {
-    char str[200];
     output_iterator<char*> iter;
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
@@ -24423,6 +24422,7 @@ void test12()
 // This test is failing on FreeBSD, possibly due to different representations
 // of the floating point numbers.  
     const my_facet f(1);
+    char str[200];
     {
         long double v = 1234567890.125;
         std::ios ios(0);
@@ -26221,7 +26221,6 @@ int main()
     test10();
     test11();
     test12();
-    char str[200];
     output_iterator<char*> iter;
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);

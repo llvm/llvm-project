@@ -55,6 +55,9 @@
 ; Next we break out of the main Function passes inside the CGSCC pipeline with
 ; a barrier pass.
 ; CHECK-O2: A No-Op Barrier Pass
+; Inferring function attribute should be immediately after the CGSCC pipeline.
+; CHECK-O2-NEXT: CallGraph
+; CHECK-O2-NEXT: Deduce function attributes in RPO
 ; CHECK-O2-NOT: Manager
 ; Next is the late function pass pipeline.
 ; CHECK-O2: FunctionPass Manager

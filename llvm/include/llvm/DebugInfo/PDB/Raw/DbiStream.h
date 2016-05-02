@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/Support/Endian.h"
 
@@ -54,6 +55,7 @@ private:
   MappedBlockStream Stream;
 
   std::vector<ModuleInfoEx> ModuleInfos;
+  NameHashTable ECNames;
 
   ByteStream ModInfoSubstream;
   ByteStream SecContrSubstream;

@@ -127,18 +127,6 @@ private:
   /// \brief Insert S_NOP between an instruction writing M0 and S_SENDMSG.
   void handleSendMsg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I);
 
-  /// \param DPP The DPP instruction
-  /// \param SearchI The iterator to start look for hazards.
-  /// \param SearchMBB The basic block we are operating on.
-  /// \param WaitStates Then number of wait states that need to be inserted
-  ///                    When a hazard is detected.
-  void insertDPPWaitStates(MachineBasicBlock::iterator DPP,
-                           MachineBasicBlock::reverse_iterator SearchI,
-                           MachineBasicBlock *SearchMBB,
-                           unsigned WaitStates);
-
-  void insertDPPWaitStates(MachineBasicBlock::iterator DPP);
-
   /// Return true if there are LGKM instrucitons that haven't been waited on
   /// yet.
   bool hasOutstandingLGKM() const;
@@ -326,8 +314,7 @@ void SIInsertWaits::pushInstruction(MachineBasicBlock &MBB,
     // and destination registers don't overlap, e.g. this is illegal:
     //   r0 = load r2
     //   r2 = load r0
-    if ((LastOpcodeType == SMEM && TII->isSMRD(*I)) ||
-        (LastOpcodeType == VMEM && Increment.Named.VM)) {
+    if (LastOpcodeType == VMEM && Increment.Named.VM) {
       // Insert a NOP to break the clause.
       BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_NOP))
           .addImm(0);
@@ -522,45 +509,6 @@ void SIInsertWaits::handleSendMsg(MachineBasicBlock &MBB,
   }
 }
 
-void SIInsertWaits::insertDPPWaitStates(MachineBasicBlock::iterator DPP,
-                                        MachineBasicBlock::reverse_iterator SearchI,
-                                        MachineBasicBlock *SearchMBB,
-                                        unsigned WaitStates) {
-
-  MachineBasicBlock::reverse_iterator E = SearchMBB->rend();
-
-  for (; WaitStates > 0; --WaitStates, ++SearchI) {
-
-    // If we have reached the start of the block, we need to check predecessors.
-    if (SearchI == E) {
-      for (MachineBasicBlock *Pred : SearchMBB->predecessors()) {
-        // We only need to check fall-through blocks.  Branch instructions
-        // give us enough wait states.
-        if (Pred->getFirstTerminator() == Pred->end()) {
-          insertDPPWaitStates(DPP, Pred->rbegin(), Pred, WaitStates);
-          break;
-        }
-      }
-      return;
-    }
-
-    for (MachineOperand &Op : SearchI->operands()) {
-      if (!Op.isReg() || !Op.isDef())
-        continue;
-
-      if (DPP->readsRegister(Op.getReg(), TRI)) {
-        TII->insertWaitStates(*DPP->getParent(), DPP, WaitStates);
-        return;
-      }
-    }
-  }
-}
-
-void SIInsertWaits::insertDPPWaitStates(MachineBasicBlock::iterator DPP) {
-  MachineBasicBlock::reverse_iterator I(DPP);
-  insertDPPWaitStates(DPP, I, DPP->getParent(), 2);
-}
-
 // FIXME: Insert waits listed in Table 4.2 "Required User-Inserted Wait States"
 // around other non-memory instructions.
 bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
@@ -628,10 +576,6 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
                   AMDGPU::VCC)
                   .addReg(AMDGPU::VCC);
         }
-      }
-
-      if (TII->isDPP(*I)) {
-        insertDPPWaitStates(I);
       }
 
       // Record pre-existing, explicitly requested waits

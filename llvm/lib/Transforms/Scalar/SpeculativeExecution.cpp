@@ -93,7 +93,7 @@ static cl::opt<unsigned> SpecExecMaxNotHoisted(
              "exceeds this limit."));
 
 static cl::opt<bool> SpecExecOnlyIfDivergentTarget(
-    "spec-exec-only-if-divergent-target", cl::init(0), cl::Hidden,
+    "spec-exec-only-if-divergent-target", cl::init(false), cl::Hidden,
     cl::desc("Speculative execution is applied only to targets with divergent "
              "branches, even if the pass was configured to apply only to all "
              "targets."));
@@ -122,7 +122,7 @@ class SpeculativeExecution : public FunctionPass {
   bool runOnBasicBlock(BasicBlock &B);
   bool considerHoistingFromTo(BasicBlock &FromBlock, BasicBlock &ToBlock);
 
-  // If true, this pass is a nop unless the target Targetitecture has branch
+  // If true, this pass is a nop unless the target architecture has branch
   // divergence.
   const bool OnlyIfDivergentTarget;
   const TargetTransformInfo *TTI = nullptr;

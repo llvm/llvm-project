@@ -14,7 +14,7 @@ define void @materialize_0_i32(i32 addrspace(1)* %out) {
 
 ; GCN-LABEL: {{^}}materialize_0_i64:
 ; GCN: v_mov_b32_e32 v[[LOK:[0-9]+]], 0{{$}}
-; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], v[[LOK]]{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
 define void @materialize_0_i64(i64 addrspace(1)* %out) {
   store i64 0, i64 addrspace(1)* %out
@@ -31,7 +31,7 @@ define void @materialize_neg1_i32(i32 addrspace(1)* %out) {
 
 ; GCN-LABEL: {{^}}materialize_neg1_i64:
 ; GCN: v_mov_b32_e32 v[[LOK:[0-9]+]], -1{{$}}
-; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], -1{{$}}
+; GCN: v_mov_b32_e32 v[[HIK:[0-9]+]], v[[LOK]]{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LOK]]:[[HIK]]{{\]}}
 define void @materialize_neg1_i64(i64 addrspace(1)* %out) {
   store i64 -1, i64 addrspace(1)* %out

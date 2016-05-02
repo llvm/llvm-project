@@ -904,6 +904,55 @@ SDValue R600TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   return vectorToVerticalVector(DAG, Insert);
 }
 
+SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
+                                               SDValue Op,
+                                               SelectionDAG &DAG) const {
+
+  GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
+  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
+    return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
+
+  const DataLayout &DL = DAG.getDataLayout();
+  const GlobalValue *GV = GSD->getGlobal();
+  MachineFrameInfo *FrameInfo = DAG.getMachineFunction().getFrameInfo();
+  Type *EltType = GV->getValueType();
+  unsigned Size = DL.getTypeAllocSize(EltType);
+  unsigned Alignment = DL.getPrefTypeAlignment(EltType);
+
+  MVT PrivPtrVT = getPointerTy(DL, AMDGPUAS::PRIVATE_ADDRESS);
+  MVT ConstPtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
+
+  int FI = FrameInfo->CreateStackObject(Size, Alignment, false);
+  SDValue InitPtr = DAG.getFrameIndex(FI, PrivPtrVT);
+
+  const GlobalVariable *Var = cast<GlobalVariable>(GV);
+  if (!Var->hasInitializer()) {
+    // This has no use, but bugpoint will hit it.
+    return DAG.getZExtOrTrunc(InitPtr, SDLoc(Op), ConstPtrVT);
+  }
+
+  const Constant *Init = Var->getInitializer();
+  SmallVector<SDNode*, 8> WorkList;
+
+  for (SDNode::use_iterator I = DAG.getEntryNode()->use_begin(),
+                            E = DAG.getEntryNode()->use_end(); I != E; ++I) {
+    if (I->getOpcode() != AMDGPUISD::REGISTER_LOAD && I->getOpcode() != ISD::LOAD)
+      continue;
+    WorkList.push_back(*I);
+  }
+  SDValue Chain = LowerConstantInitializer(Init, GV, InitPtr, DAG.getEntryNode(), DAG);
+  for (SmallVector<SDNode*, 8>::iterator I = WorkList.begin(),
+                                         E = WorkList.end(); I != E; ++I) {
+    SmallVector<SDValue, 8> Ops;
+    Ops.push_back(Chain);
+    for (unsigned i = 1; i < (*I)->getNumOperands(); ++i) {
+      Ops.push_back((*I)->getOperand(i));
+    }
+    DAG.UpdateNodeOperands(*I, Ops);
+  }
+  return DAG.getZExtOrTrunc(InitPtr, SDLoc(Op), ConstPtrVT);
+}
+
 SDValue R600TargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
   // On hw >= R700, COS/SIN input must be between -1. and 1.
   // Thus we lower them to TRIG ( FRACT ( x / 2Pi + 0.5) - 0.5)

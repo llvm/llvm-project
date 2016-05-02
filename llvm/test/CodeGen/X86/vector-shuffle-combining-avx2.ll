@@ -3,6 +3,7 @@
 
 declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>)
 declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>)
+declare <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8>, <32 x i8>)
 
 define <32 x i8> @combine_pshufb_vpermd(<8 x i32> %a) {
 ; CHECK-LABEL: combine_pshufb_vpermd:
@@ -24,4 +25,17 @@ define <32 x i8> @combine_pshufb_vpermps(<8 x float> %a) {
   %tmp1 = bitcast <8 x float> %tmp0 to <32 x i8>
   %tmp2 = shufflevector <32 x i8> %tmp1, <32 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 30>
   ret <32 x i8> %tmp2
+}
+
+define <4 x i64> @combine_permq_pshufb(<4 x i64> %a0) {
+; CHECK-LABEL: combine_permq_pshufb:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23]
+; CHECK-NEXT:    retq
+  %1 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %2 = bitcast <4 x i64> %1 to <32 x i8>
+  %3 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %2, <32 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>)
+  %4 = bitcast <32 x i8> %3 to <4 x i64>
+  ret <4 x i64> %4
 }

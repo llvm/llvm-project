@@ -62,3 +62,6 @@ THIN-PATH-NEXT: /0              0           0     0     644     4         `
 THIN-PATH-NEXT: /20             0           0     0     644     4         `
 THIN-PATH-NEXT: /41             0           0     0     644     4         `
 THIN-PATH-NEXT: /65             0           0     0     644     4         `
+
+RUN: not llvm-ar --format=bsd rcT bad.a 0123456789abcde 0123456789abcdef 2>&1 | FileCheck --check-prefix=BSD-THIN %s
+BSD-THIN: Only the gnu format has a thin mode.

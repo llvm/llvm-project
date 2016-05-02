@@ -5,7 +5,7 @@
 ; Make sure we are handling hazards correctly.
 ; CHECK: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:12
 ; CHECK-NEXT: s_waitcnt vmcnt(0)
-; CHECK-NEXT: v_readlane_b32 s[[HI:[0-9]+]], [[VHI]]
+; CHECK-NEXT: v_readfirstlane_b32 s[[HI:[0-9]+]], [[VHI]]
 ; CHECK-NEXT: s_nop 4
 ; CHECK-NEXT: buffer_store_dword v0, off, s[0:[[HI]]{{\]}}, 0
 ; CHECK: s_endpgm

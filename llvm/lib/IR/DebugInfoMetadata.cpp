@@ -292,7 +292,7 @@ DICompositeType *DICompositeType::buildODRType(
              Flags);
   Metadata *Ops[] = {File,     Scope,        Name,           BaseType,
                      Elements, VTableHolder, TemplateParams, &Identifier};
-  assert(std::end(Ops) - std::begin(Ops) == CT->getNumOperands() &&
+  assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
     if (Ops[I] != CT->getOperand(I))
