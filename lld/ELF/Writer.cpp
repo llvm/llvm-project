@@ -605,7 +605,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       if (Type == R_MIPS_LO16 && Expr == R_PC)
         // R_MIPS_LO16 expression has R_PC type iif the target is _gp_disp
         // symbol. In that case we should use the following formula for
-        // calculation "AHL + GP – P + 4". Let's add 4 right here.
+        // calculation "AHL + GP - P + 4". Let's add 4 right here.
         // For details see p. 4-19 at
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         Addend += 4;

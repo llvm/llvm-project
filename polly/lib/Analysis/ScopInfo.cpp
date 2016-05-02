@@ -66,7 +66,7 @@ STATISTIC(RichScopFound, "Number of Scops containing a loop");
 // The maximal number of basic sets we allow during domain construction to
 // be created. More complex scops will result in very high compile time and
 // are also unlikely to result in good code
-static int const MaxConjunctsInDomain = 20;
+static int const MaxDisjunctionsInDomain = 20;
 
 static cl::opt<bool> PollyRemarksMinimal(
     "polly-remarks-minimal",
@@ -1339,16 +1339,17 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
       isl_set_intersect(ConsequenceCondSet, isl_set_copy(Domain)));
 
   isl_set *AlternativeCondSet = nullptr;
-  bool ToComplex =
-      isl_set_n_basic_set(ConsequenceCondSet) >= MaxConjunctsInDomain;
+  bool TooComplex =
+      isl_set_n_basic_set(ConsequenceCondSet) >= MaxDisjunctionsInDomain;
 
-  if (!ToComplex) {
+  if (!TooComplex) {
     AlternativeCondSet = isl_set_subtract(isl_set_copy(Domain),
                                           isl_set_copy(ConsequenceCondSet));
-    ToComplex = isl_set_n_basic_set(AlternativeCondSet) >= MaxConjunctsInDomain;
+    TooComplex =
+        isl_set_n_basic_set(AlternativeCondSet) >= MaxDisjunctionsInDomain;
   }
 
-  if (ToComplex) {
+  if (TooComplex) {
     S.invalidate(COMPLEXITY, TI ? TI->getDebugLoc() : DebugLoc());
     isl_set_free(AlternativeCondSet);
     AlternativeCondSet = isl_set_empty(isl_set_get_space(ConsequenceCondSet));
@@ -2095,7 +2096,7 @@ static isl_stat buildMinMaxAccess(__isl_take isl_set *Set, void *User) {
 
   Set = isl_set_remove_divs(Set);
 
-  if (isl_set_n_basic_set(Set) >= MaxConjunctsInDomain) {
+  if (isl_set_n_basic_set(Set) >= MaxDisjunctionsInDomain) {
     isl_set_free(Set);
     return isl_stat_error;
   }
@@ -2419,9 +2420,9 @@ void Scop::propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
       unsigned NumConjucts = isl_set_n_basic_set(SuccInvalidDomain);
       SuccStmt->setInvalidDomain(SuccInvalidDomain);
 
-      // Check if the maximal number of domain conjuncts was reached.
+      // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will bail.
-      if (NumConjucts < MaxConjunctsInDomain)
+      if (NumConjucts < MaxDisjunctionsInDomain)
         continue;
 
       isl_set_free(InvalidDomain);
@@ -2597,9 +2598,9 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
         SuccDomain = CondSet;
       }
 
-      // Check if the maximal number of domain conjuncts was reached.
+      // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will clean up and bail.
-      if (isl_set_n_basic_set(SuccDomain) < MaxConjunctsInDomain)
+      if (isl_set_n_basic_set(SuccDomain) < MaxDisjunctionsInDomain)
         continue;
 
       invalidate(COMPLEXITY, DebugLoc());
@@ -3280,7 +3281,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs) {
   isl_set *DomainCtx = isl_set_params(Stmt.getDomain());
   DomainCtx = isl_set_subtract(DomainCtx, StmtInvalidCtx);
 
-  if (isl_set_n_basic_set(DomainCtx) >= MaxConjunctsInDomain) {
+  if (isl_set_n_basic_set(DomainCtx) >= MaxDisjunctionsInDomain) {
     auto *AccInst = InvMAs.front()->getAccessInstruction();
     invalidate(COMPLEXITY, AccInst->getDebugLoc());
     isl_set_free(DomainCtx);
