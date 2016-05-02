@@ -7931,6 +7931,41 @@ _mm512_maskz_cvtps_pd (__mmask8 __U, __m256 __A)
                 _MM_FROUND_CUR_DIRECTION);
 }
 
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_mask_mov_pd (__m512d __W, __mmask8 __U, __m512d __A)
+{
+  return (__m512d) __builtin_ia32_movapd512_mask ((__v8df) __A,
+              (__v8df) __W,
+              (__mmask8) __U);
+}
+
+static __inline__ __m512d __DEFAULT_FN_ATTRS
+_mm512_maskz_mov_pd (__mmask8 __U, __m512d __A)
+{
+  return (__m512d) __builtin_ia32_movapd512_mask ((__v8df) __A,
+              (__v8df)
+              _mm512_setzero_pd (),
+              (__mmask8) __U);
+}
+
+static __inline__ __m512 __DEFAULT_FN_ATTRS
+_mm512_mask_mov_ps (__m512 __W, __mmask16 __U, __m512 __A)
+{
+  return (__m512) __builtin_ia32_movaps512_mask ((__v16sf) __A,
+             (__v16sf) __W,
+             (__mmask16) __U);
+}
+
+static __inline__ __m512 __DEFAULT_FN_ATTRS
+_mm512_maskz_mov_ps (__mmask16 __U, __m512 __A)
+{
+  return (__m512) __builtin_ia32_movaps512_mask ((__v16sf) __A,
+             (__v16sf)
+             _mm512_setzero_ps (),
+             (__mmask16) __U);
+}
+
+
 #undef __DEFAULT_FN_ATTRS
 
 #endif // __AVX512FINTRIN_H

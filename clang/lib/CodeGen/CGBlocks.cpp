@@ -262,6 +262,11 @@ static bool isSafeForCXXConstantCapture(QualType type) {
 static llvm::Constant *tryCaptureAsConstant(CodeGenModule &CGM,
                                             CodeGenFunction *CGF,
                                             const VarDecl *var) {
+  // Don't rematerialize default arguments of function parameters.
+  if (auto *PD = dyn_cast<ParmVarDecl>(var))
+    if (PD->hasDefaultArg())
+      return nullptr;
+
   QualType type = var->getType();
 
   // We can only do this if the variable is const.

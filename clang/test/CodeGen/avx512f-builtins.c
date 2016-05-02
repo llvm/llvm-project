@@ -5505,3 +5505,26 @@ __m512d test_mm512_maskz_cvtps_pd(__mmask8 __U, __m256 __A) {
   // CHECK: @llvm.x86.avx512.mask.cvtps2pd.512
   return _mm512_maskz_cvtps_pd(__U, __A); 
 }
+__m512d test_mm512_mask_mov_pd(__m512d __W, __mmask8 __U, __m512d __A) {
+  // CHECK-LABEL: @test_mm512_mask_mov_pd
+  // CHECK: @llvm.x86.avx512.mask.mova.pd.512
+  return _mm512_mask_mov_pd(__W, __U, __A); 
+}
+
+__m512d test_mm512_maskz_mov_pd(__mmask8 __U, __m512d __A) {
+  // CHECK-LABEL: @test_mm512_maskz_mov_pd
+  // CHECK: @llvm.x86.avx512.mask.mova.pd.512
+  return _mm512_maskz_mov_pd(__U, __A); 
+}
+
+__m512 test_mm512_mask_mov_ps(__m512 __W, __mmask16 __U, __m512 __A) {
+  // CHECK-LABEL: @test_mm512_mask_mov_ps
+  // CHECK: @llvm.x86.avx512.mask.mova.ps.512
+  return _mm512_mask_mov_ps(__W, __U, __A); 
+}
+
+__m512 test_mm512_maskz_mov_ps(__mmask16 __U, __m512 __A) {
+  // CHECK-LABEL: @test_mm512_maskz_mov_ps
+  // CHECK: @llvm.x86.avx512.mask.mova.ps.512
+  return _mm512_maskz_mov_ps(__U, __A); 
+}
