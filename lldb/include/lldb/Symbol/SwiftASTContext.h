@@ -585,6 +585,9 @@ public:
     
     bool
     IsFunctionPointerType (void * type) override;
+
+    bool
+    IsBlockPointerType (void * type, CompilerType *function_pointer_type_ptr) override;
     
     bool
     IsIntegerType (void * type, bool &is_signed) override;

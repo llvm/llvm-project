@@ -5572,6 +5572,12 @@ SwiftASTContext::IsFunctionPointerType (void* type)
 }
 
 bool
+SwiftASTContext::IsBlockPointerType (void * type, CompilerType *function_pointer_type_ptr)
+{
+    return false;
+}
+
+bool
 SwiftASTContext::IsIntegerType (void* type, bool &is_signed)
 {
     return (GetTypeInfo(type, nullptr) & eTypeIsInteger);
