@@ -428,7 +428,9 @@ public:
     virtual bool
     GetReferenceCounts (ValueObject& valobj, size_t &strong, size_t &weak);
 
-
+    lldb::SyntheticChildrenSP
+    GetBridgedSyntheticChildProvider (ValueObject& valobj);
+    
 protected:
     //------------------------------------------------------------------
     // Classes that inherit from SwiftLanguageRuntime can see and modify these
@@ -1652,6 +1654,8 @@ protected:
     typename KeyHasher<swift::ASTContext*, lldb::addr_t, MetadataPromiseSP>::MapType m_promises_map;
     typename KeyHasher<swift::ASTContext*, swift::TypeBase*, MemberVariableOffsetResolverSP>::MapType m_resolvers_map;
 
+    std::unordered_map<const char*, lldb::SyntheticChildrenSP> m_bridged_synthetics_map;
+    
 private:
     DISALLOW_COPY_AND_ASSIGN (SwiftLanguageRuntime);
 };

@@ -472,6 +472,35 @@ SwiftLanguage::GetHardcodedSynthetics ()
             }
             return nullptr;
         });
+        g_formatters.push_back([](lldb_private::ValueObject& valobj,
+                                  lldb::DynamicValueType dyn_type,
+                                  FormatManager& format_manager) -> lldb::SyntheticChildrenSP {
+            struct IsEligible
+            {
+                static bool
+                Check (const CompilerType& type)
+                {
+                    if ((ClangASTContext::IsObjCObjectPointerType(type) || ClangASTContext::IsObjCObjectOrInterfaceType(type)) &&
+                        type.GetTypeName().GetStringRef().startswith("_TtC"))
+                        return true;
+                    
+                    return false;
+                }
+            };
+            
+            if (dyn_type == lldb::eNoDynamicValues)
+                return nullptr;
+            CompilerType type(valobj.GetCompilerType());
+            if (IsEligible::Check(type))
+            {
+                ProcessSP process_sp(valobj.GetProcessSP());
+                if (!process_sp)
+                    return nullptr;
+                SwiftLanguageRuntime *swift_runtime = process_sp->GetSwiftLanguageRuntime();
+                return swift_runtime->GetBridgedSyntheticChildProvider(valobj);
+            }
+            return nullptr;
+        });
     });
     
     return g_formatters;

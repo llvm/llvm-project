@@ -41,6 +41,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/StringPrinter.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
@@ -95,7 +96,8 @@ SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
     m_SwiftNativeNSErrorISA(),
     m_memory_reader_sp(),
     m_promises_map(),
-    m_resolvers_map()
+    m_resolvers_map(),
+    m_bridged_synthetics_map()
 {
     SetupSwiftObject();
     SetupSwiftError();
@@ -4593,6 +4595,236 @@ SwiftLanguageRuntime::GetReferenceCounts (ValueObject& valobj, size_t &strong, s
         return true;
     }
     return false;
+}
+
+class ProjectionSyntheticChildren : public SyntheticChildren
+{
+public:
+    struct FieldProjection
+    {
+        ConstString name;
+        CompilerType type;
+        int32_t byte_offset;
+        
+        FieldProjection (CompilerType parent_type,
+                         ExecutionContext *exe_ctx,
+                         size_t idx)
+        {
+            const bool transparent_pointers = false;
+            const bool omit_empty_base_classes = true;
+            const bool ignore_array_bounds = false;
+            bool child_is_base_class = false;
+            bool child_is_deref_of_parent = false;
+            std::string child_name;
+
+            uint32_t child_byte_size;
+            uint32_t child_bitfield_bit_size;
+            uint32_t child_bitfield_bit_offset;
+            uint64_t language_flags;
+
+            type = parent_type.GetChildCompilerTypeAtIndex(exe_ctx,
+                                                           idx,
+                                                           transparent_pointers,
+                                                           omit_empty_base_classes,
+                                                           ignore_array_bounds,
+                                                           child_name,
+                                                           child_byte_size,
+                                                           byte_offset,
+                                                           child_bitfield_bit_size,
+                                                           child_bitfield_bit_offset,
+                                                           child_is_base_class,
+                                                           child_is_deref_of_parent,
+                                                           nullptr,
+                                                           language_flags);
+            
+            if (child_is_base_class)
+                type.Clear(); // invalidate - base classes are dealt with outside of the projection
+            else
+                name.SetCStringWithLength(child_name.c_str(), child_name.size());
+        }
+        
+        bool
+        IsValid ()
+        {
+            return !name.IsEmpty() && type.IsValid();
+        }
+        
+        explicit operator bool()
+        {
+            return IsValid();
+        }
+    };
+    
+    struct TypeProjection
+    {
+        std::vector<FieldProjection> field_projections;
+        ConstString type_name;
+    };
+    
+    typedef std::unique_ptr<TypeProjection> TypeProjectionUP;
+
+    bool
+    IsScripted ()
+    {
+        return false;
+    }
+    
+    std::string
+    GetDescription ()
+    {
+        return "projection synthetic children";
+    }
+
+    ProjectionSyntheticChildren(const Flags& flags,
+                                TypeProjectionUP &&projection) :
+    SyntheticChildren(flags),
+    m_projection(std::move(projection))
+    {
+    }
+    
+protected:
+    TypeProjectionUP m_projection;
+    
+    class ProjectionFrontEndProvider : public SyntheticChildrenFrontEnd
+    {
+    public:
+        ProjectionFrontEndProvider (ValueObject &backend,
+                                    TypeProjectionUP &projection) :
+        SyntheticChildrenFrontEnd(backend),
+        m_num_bases(0),
+        m_projection(projection.get())
+        {
+            lldbassert(m_projection && "need a valid projection");
+            CompilerType type(backend.GetCompilerType());
+            m_num_bases = type.GetNumDirectBaseClasses();
+        }
+        
+        size_t
+        CalculateNumChildren () override
+        {
+            return m_projection->field_projections.size() + m_num_bases;
+        }
+        
+        lldb::ValueObjectSP
+        GetChildAtIndex (size_t idx) override
+        {
+            if (idx < m_num_bases)
+            {
+                if (ValueObjectSP base_object_sp = m_backend.GetChildAtIndex(idx, true))
+                {
+                    CompilerType base_type(base_object_sp->GetCompilerType());
+                    ConstString base_type_name(base_type.GetTypeName());
+                    if (base_type_name.IsEmpty() ||
+                        !base_type_name.GetStringRef().startswith("_TtC"))
+                        return base_object_sp;
+                    base_object_sp = m_backend.GetSyntheticBase(0, base_type, true);
+                    base_object_sp->SetName(Mangled(base_type_name,true).GetDemangledName(lldb::eLanguageTypeSwift));
+                    return base_object_sp;
+                }
+                else
+                    return nullptr;
+            }
+            idx -= m_num_bases;
+            if (idx < m_projection->field_projections.size())
+            {
+                auto& projection(m_projection->field_projections.at(idx));
+                return m_backend.GetSyntheticChildAtOffset(projection.byte_offset, projection.type, true, projection.name);
+            }
+            return nullptr;
+        }
+        
+        size_t
+        GetIndexOfChildWithName (const ConstString &name) override
+        {
+            for (size_t idx = 0;
+                 idx < m_projection->field_projections.size();
+                 idx++)
+            {
+                if (m_projection->field_projections.at(idx).name == name)
+                    return idx;
+            }
+            return UINT32_MAX;
+        }
+        
+        bool
+        Update () override
+        {
+            return false;
+        }
+        
+        bool
+        MightHaveChildren () override
+        {
+            return true;
+        }
+        
+        ConstString
+        GetSyntheticTypeName ()  override
+        {
+            return m_projection->type_name;
+        }
+        
+    private:
+        size_t m_num_bases;
+        TypeProjectionUP::element_type *m_projection;
+    };
+    
+public:
+    SyntheticChildrenFrontEnd::AutoPointer
+    GetFrontEnd (ValueObject &backend)
+    {
+        return SyntheticChildrenFrontEnd::AutoPointer(new ProjectionFrontEndProvider(backend, m_projection));
+    }
+};
+
+lldb::SyntheticChildrenSP
+SwiftLanguageRuntime::GetBridgedSyntheticChildProvider (ValueObject& valobj)
+{
+    const char *type_name(valobj.GetCompilerType().GetTypeName().AsCString());
+    
+    if (type_name && *type_name)
+    {
+        auto iter = m_bridged_synthetics_map.find(type_name), end = m_bridged_synthetics_map.end();
+        if (iter != end)
+            return iter->second;
+    }
+
+    ProjectionSyntheticChildren::TypeProjectionUP type_projection(new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
+
+    if (SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext())
+    {
+        Error error;
+        CompilerType swift_type = swift_ast_ctx->GetTypeFromMangledTypename(type_name, error);
+
+        if (swift_type.IsValid())
+        {
+            ExecutionContext exe_ctx(GetProcess());
+            bool any_projected = false;
+            for (size_t idx = 0;
+                 idx < swift_type.GetNumChildren(true);
+                 idx++)
+            {
+                // if a projection fails, keep going - we have offsets here, so it should be OK to skip some members
+                if (auto projection = ProjectionSyntheticChildren::FieldProjection(swift_type,
+                                                                                   &exe_ctx,
+                                                                                   idx))
+                {
+                    any_projected = true;
+                    type_projection->field_projections.push_back(projection);
+                }
+            }
+            
+            if (any_projected)
+            {
+                type_projection->type_name = swift_type.GetDisplayTypeName();
+                SyntheticChildrenSP synth_sp = SyntheticChildrenSP(new ProjectionSyntheticChildren(SyntheticChildren::Flags(),
+                                                                                                   std::move(type_projection)));
+                return (m_bridged_synthetics_map[type_name] = synth_sp);
+            }
+        }
+    }
+
+    return nullptr;
 }
 
 lldb::addr_t

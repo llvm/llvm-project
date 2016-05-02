@@ -18,7 +18,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
+#include "lldb/Target/ObjCLanguageRuntime.h"
 
 #include "Plugins/Language/ObjC/NSDictionary.h"
 

@@ -16,7 +16,6 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 
 // FIXME: we should not need this
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
@@ -215,7 +214,8 @@ lldb_private::formatters::swift::StringCore_SummaryProvider (ValueObject& valobj
     read_options.SetNeedsZeroTermination(false);
     read_options.SetIgnoreMaxLength(summary_options.GetCapping() == lldb::eTypeSummaryUncapped);
     read_options.SetBinaryZeroIsTerminator(false);
-    read_options.SetLanguage(lldb::eLanguageTypeSwift);
+    read_options.SetLanguage(summary_options.GetLanguage());
+    if (summary_options.GetLanguage() == lldb::eLanguageTypeObjC) read_options.SetPrefixToken("@");
     
     if (isASCII)
         return StringPrinter::ReadStringAndDumpToStream<StringPrinter::StringElementType::UTF8>(read_options);
