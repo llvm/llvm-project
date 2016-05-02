@@ -247,9 +247,16 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     OS << "OPC_CaptureGlueInput,\n";
     return 1;
 
-  case Matcher::MoveChild:
-    OS << "OPC_MoveChild, " << cast<MoveChildMatcher>(N)->getChildNo() << ",\n";
-    return 2;
+  case Matcher::MoveChild: {
+    const auto *MCM = cast<MoveChildMatcher>(N);
+
+    OS << "OPC_MoveChild";
+    // Handle the specialized forms.
+    if (MCM->getChildNo() >= 8)
+      OS << ", ";
+    OS << MCM->getChildNo() << ",\n";
+    return (MCM->getChildNo() >= 8) ? 2 : 1;
+  }
 
   case Matcher::MoveParent:
     OS << "OPC_MoveParent,\n";

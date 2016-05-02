@@ -9574,6 +9574,7 @@ static StringRef loopDispositionToStr(ScalarEvolution::LoopDisposition LD) {
   case ScalarEvolution::LoopComputable:
     return "Computable";
   }
+  llvm_unreachable("Unknown ScalarEvolution::LoopDisposition kind!");
 }
 
 void ScalarEvolution::print(raw_ostream &OS) const {

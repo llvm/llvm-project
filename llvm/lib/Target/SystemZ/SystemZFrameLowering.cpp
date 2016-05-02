@@ -258,7 +258,8 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
     // Do a second scan adding regs as being defined by instruction
     for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
       unsigned Reg = CSI[I].getReg();
-      if (Reg != LowGPR && Reg != HighGPR)
+      if (Reg != LowGPR && Reg != HighGPR &&
+          SystemZ::GR64BitRegClass.contains(Reg))
         MIB.addReg(Reg, RegState::ImplicitDefine);
     }
   }

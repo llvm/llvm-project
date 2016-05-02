@@ -2971,6 +2971,18 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
       continue;
     }
 
+    case OPC_MoveChild0: case OPC_MoveChild1:
+    case OPC_MoveChild2: case OPC_MoveChild3:
+    case OPC_MoveChild4: case OPC_MoveChild5:
+    case OPC_MoveChild6: case OPC_MoveChild7: {
+      unsigned ChildNo = Opcode-OPC_MoveChild0;
+      if (ChildNo >= N.getNumOperands())
+        break;  // Match fails if out of range child #.
+      N = N.getOperand(ChildNo);
+      NodeStack.push_back(N);
+      continue;
+    }
+
     case OPC_MoveParent:
       // Pop the current node off the NodeStack.
       NodeStack.pop_back();

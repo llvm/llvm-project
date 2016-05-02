@@ -671,7 +671,7 @@ def NAME#64mi8 : RIi8<{ImmOpc8{7}, ImmOpc8{6}, ImmOpc8{5}, ImmOpc8{4},
                        ImmMod, (outs), (ins i64mem :$dst, i64i8imm :$src2),
                        !strconcat(mnemonic, "{q}\t",
                                   "{$src2, $dst|$dst, $src2}"),
-                       [(set EFLAGS, (Op addr:$dst, i64immSExt32:$src2))],
+                       [(set EFLAGS, (Op addr:$dst, i64immSExt8:$src2))],
                        IIC_ALU_MEM>, LOCK;
 
 }

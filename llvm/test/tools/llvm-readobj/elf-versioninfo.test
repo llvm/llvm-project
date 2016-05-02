@@ -59,6 +59,7 @@ CHECK-NEXT:       Rev: 1
 CHECK-NEXT:       Flags: 1
 CHECK-NEXT:       Index: 1
 CHECK-NEXT:       Cnt: 1
+CHECK-NEXT:       Hash: 430712
 CHECK-NEXT:       Name: blah
 CHECK-NEXT:     }
 CHECK-NEXT:     Entry {
@@ -67,6 +68,7 @@ CHECK-NEXT:       Rev: 1
 CHECK-NEXT:       Flags: 0
 CHECK-NEXT:       Index: 2
 CHECK-NEXT:       Cnt: 1
+CHECK-NEXT:       Hash: 175630257
 CHECK-NEXT:       Name: VERSION1
 CHECK-NEXT:     }
 CHECK-NEXT:     Entry {
@@ -75,6 +77,7 @@ CHECK-NEXT:       Rev: 1
 CHECK-NEXT:       Flags: 0
 CHECK-NEXT:       Index: 3
 CHECK-NEXT:       Cnt: 2
+CHECK-NEXT:       Hash: 175630258
 CHECK-NEXT:       Name: VERSION2
 CHECK-NEXT:     }
 CHECK-NEXT:   ]

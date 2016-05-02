@@ -561,6 +561,7 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
     W.printNumber("Flags", VD->vd_flags);
     W.printNumber("Index", VD->vd_ndx);
     W.printNumber("Cnt", VD->vd_cnt);
+    W.printNumber("Hash", VD->vd_hash);
     W.printString("Name",
                   StringRef((const char *)(Obj->base() + StrTab->sh_offset +
                                            VD->getAux()->vda_name)));
