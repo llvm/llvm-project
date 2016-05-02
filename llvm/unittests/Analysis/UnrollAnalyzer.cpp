@@ -32,14 +32,16 @@ struct UnrollAnalyzerTest : public FunctionPass {
     FI++; // First basic block is entry - skip it.
     BasicBlock *Header = &*FI++;
     Loop *L = LI->getLoopFor(Header);
+    BasicBlock *Exiting = L->getExitingBlock();
 
     SimplifiedValuesVector.clear();
-    TripCount = SE->getSmallConstantTripCount(L, Header);
+    TripCount = SE->getSmallConstantTripCount(L, Exiting);
     for (unsigned Iteration = 0; Iteration < TripCount; Iteration++) {
       DenseMap<Value *, Constant *> SimplifiedValues;
       UnrolledInstAnalyzer Analyzer(Iteration, SimplifiedValues, *SE);
-      for (Instruction &I : *Header)
-        Analyzer.visit(I);
+      for (auto *BB : L->getBlocks())
+        for (Instruction &I : *BB)
+          Analyzer.visit(I);
       SimplifiedValuesVector.push_back(SimplifiedValues);
     }
     return false;
