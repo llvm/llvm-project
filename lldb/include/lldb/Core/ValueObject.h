@@ -705,7 +705,10 @@ public:
                               ConstString name_const_str = ConstString());
     
     virtual lldb::ValueObjectSP
-    GetSyntheticBase (uint32_t offset, const CompilerType& type, bool can_create);
+    GetSyntheticBase (uint32_t offset,
+                      const CompilerType& type,
+                      bool can_create,
+                      ConstString name_const_str = ConstString());
 
     virtual lldb::ValueObjectSP
     GetDynamicValue (lldb::DynamicValueType valueType);

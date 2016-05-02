@@ -4717,8 +4717,10 @@ protected:
                     if (base_type_name.IsEmpty() ||
                         !base_type_name.GetStringRef().startswith("_TtC"))
                         return base_object_sp;
-                    base_object_sp = m_backend.GetSyntheticBase(0, base_type, true);
-                    base_object_sp->SetName(Mangled(base_type_name,true).GetDemangledName(lldb::eLanguageTypeSwift));
+                    base_object_sp = m_backend.GetSyntheticBase(0,
+                                                                base_type,
+                                                                true,
+                                                                Mangled(base_type_name,true).GetDemangledName(lldb::eLanguageTypeSwift));
                     return base_object_sp;
                 }
                 else
