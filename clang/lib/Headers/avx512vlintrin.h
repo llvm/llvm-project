@@ -9384,6 +9384,76 @@ __builtin_ia32_pshufd256_mask((__v8si) (__A), (__I),\
               (__mmask8) (__U));\
 })
 
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_mask_mov_pd (__m128d __W, __mmask8 __U, __m128d __A)
+{
+  return (__m128d) __builtin_ia32_movapd128_mask ((__v2df) __A,
+              (__v2df) __W,
+              (__mmask8) __U);
+}
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_maskz_mov_pd (__mmask8 __U, __m128d __A)
+{
+  return (__m128d) __builtin_ia32_movapd128_mask ((__v2df) __A,
+              (__v2df)
+              _mm_setzero_pd (),
+              (__mmask8) __U);
+}
+
+static __inline__ __m256d __DEFAULT_FN_ATTRS
+_mm256_mask_mov_pd (__m256d __W, __mmask8 __U, __m256d __A)
+{
+  return (__m256d) __builtin_ia32_movapd256_mask ((__v4df) __A,
+              (__v4df) __W,
+              (__mmask8) __U);
+}
+
+static __inline__ __m256d __DEFAULT_FN_ATTRS
+_mm256_maskz_mov_pd (__mmask8 __U, __m256d __A)
+{
+  return (__m256d) __builtin_ia32_movapd256_mask ((__v4df) __A,
+              (__v4df)
+              _mm256_setzero_pd (),
+              (__mmask8) __U);
+}
+
+static __inline__ __m128 __DEFAULT_FN_ATTRS
+_mm_mask_mov_ps (__m128 __W, __mmask8 __U, __m128 __A)
+{
+  return (__m128) __builtin_ia32_movaps128_mask ((__v4sf) __A,
+             (__v4sf) __W,
+             (__mmask8) __U);
+}
+
+static __inline__ __m128 __DEFAULT_FN_ATTRS
+_mm_maskz_mov_ps (__mmask8 __U, __m128 __A)
+{
+  return (__m128) __builtin_ia32_movaps128_mask ((__v4sf) __A,
+             (__v4sf)
+             _mm_setzero_ps (),
+             (__mmask8) __U);
+}
+
+static __inline__ __m256 __DEFAULT_FN_ATTRS
+_mm256_mask_mov_ps (__m256 __W, __mmask8 __U, __m256 __A)
+{
+  return (__m256) __builtin_ia32_movaps256_mask ((__v8sf) __A,
+             (__v8sf) __W,
+             (__mmask8) __U);
+}
+
+static __inline__ __m256 __DEFAULT_FN_ATTRS
+_mm256_maskz_mov_ps (__mmask8 __U, __m256 __A)
+{
+  return (__m256) __builtin_ia32_movaps256_mask ((__v8sf) __A,
+             (__v8sf)
+             _mm256_setzero_ps (),
+             (__mmask8) __U);
+}
+
+
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_BOTH
 

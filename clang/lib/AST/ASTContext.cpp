@@ -8418,22 +8418,29 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   return GVA_DiscardableODR;
 }
 
-static GVALinkage adjustGVALinkageForAttributes(GVALinkage L, const Decl *D) {
+static GVALinkage adjustGVALinkageForAttributes(const ASTContext &Context,
+                                                GVALinkage L, const Decl *D) {
   // See http://msdn.microsoft.com/en-us/library/xa0d9ste.aspx
   // dllexport/dllimport on inline functions.
   if (D->hasAttr<DLLImportAttr>()) {
     if (L == GVA_DiscardableODR || L == GVA_StrongODR)
       return GVA_AvailableExternally;
-  } else if (D->hasAttr<DLLExportAttr>() || D->hasAttr<CUDAGlobalAttr>()) {
+  } else if (D->hasAttr<DLLExportAttr>()) {
     if (L == GVA_DiscardableODR)
+      return GVA_StrongODR;
+  } else if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
+             D->hasAttr<CUDAGlobalAttr>()) {
+    // Device-side functions with __global__ attribute must always be
+    // visible externally so they can be launched from host.
+    if (L == GVA_DiscardableODR || L == GVA_Internal)
       return GVA_StrongODR;
   }
   return L;
 }
 
 GVALinkage ASTContext::GetGVALinkageForFunction(const FunctionDecl *FD) const {
-  return adjustGVALinkageForAttributes(basicGVALinkageForFunction(*this, FD),
-                                       FD);
+  return adjustGVALinkageForAttributes(
+      *this, basicGVALinkageForFunction(*this, FD), FD);
 }
 
 static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
@@ -8490,8 +8497,8 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
 }
 
 GVALinkage ASTContext::GetGVALinkageForVariable(const VarDecl *VD) {
-  return adjustGVALinkageForAttributes(basicGVALinkageForVariable(*this, VD),
-                                       VD);
+  return adjustGVALinkageForAttributes(
+      *this, basicGVALinkageForVariable(*this, VD), VD);
 }
 
 bool ASTContext::DeclMustBeEmitted(const Decl *D) {
