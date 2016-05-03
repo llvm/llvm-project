@@ -1,0 +1,13 @@
+
+#include "mathD.h"
+#include "trigredD.h"
+
+INLINEATTR int
+MATH_PRIVATE(trigred)(__private double *r, __private double *rr, double x)
+{
+    if (x < 0x1.0p+21)
+        return MATH_PRIVATE(trigredsmall)(r, rr, x);
+    else
+        return MATH_PRIVATE(trigredlarge)(r, rr, x);
+}
+

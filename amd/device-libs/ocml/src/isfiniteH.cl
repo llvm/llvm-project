@@ -1,0 +1,9 @@
+
+#include "mathH.h"
+
+CONSTATTR INLINEATTR int
+MATH_MANGLE(isfinite)(half x)
+{
+    return BUILTIN_CLASS_F16(x, CLASS_NNOR|CLASS_NSUB|CLASS_NZER|CLASS_PZER|CLASS_PSUB|CLASS_PNOR);
+}
+

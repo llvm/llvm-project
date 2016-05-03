@@ -1,0 +1,51 @@
+
+#define MATH_CLZI(U) ({ \
+    uint _clzi_u = U; \
+    uint _clzi_z = BUILTIN_FIRSTBIT_U32(_clzi_u); \
+    uint _clzi_ret = _clzi_u == 0u ? 32u : _clzi_z; \
+    _clzi_ret; \
+})
+
+#define MATH_MAD(A,B,C) BUILTIN_MAD_F32(A, B, C)
+
+#define MATH_FAST_RCP(X) BUILTIN_RCP_F32(X)
+#define MATH_RCP(X) BUILTIN_DIV_F32(1.0f, X)
+
+#define MATH_FAST_DIV(X, Y) ({ \
+    float _fdiv_x = X; \
+    float _fdiv_y = Y; \
+    float _fdiv_ret = _fdiv_x * BUILTIN_RCP_F32(_fdiv_y); \
+    _fdiv_ret; \
+})
+#define MATH_DIV(X,Y) BUILTIN_DIV_F32(X, Y)
+
+
+#define MATH_FAST_SQRT(X) BUILTIN_SQRT_F32(X)
+#define MATH_SQRT(X) ({ \
+    float _sqrt_x = X; \
+    bool _sqrt_b = _sqrt_x < 0x1.0p-96f; \
+    _sqrt_x *= _sqrt_b ? 0x1.0p+32f : 1.0f; \
+    float _sqrt_s; \
+    if (!DAZ_OPT() & AMD_OPT()) { \
+        _sqrt_s = BUILTIN_SQRT_F32(_sqrt_x); \
+        float _sqrt_sp = as_float(as_int(_sqrt_s) - 1); \
+        float _sqrt_ss = as_float(as_int(_sqrt_s) + 1); \
+        float _sqrt_vp = BUILTIN_FMA_F32(-_sqrt_sp, _sqrt_s, _sqrt_x); \
+        float _sqrt_vs = BUILTIN_FMA_F32(-_sqrt_ss, _sqrt_s, _sqrt_x); \
+        _sqrt_s = _sqrt_vp <= 0.0f ? _sqrt_sp : _sqrt_s; \
+        _sqrt_s = _sqrt_vs >  0.0f ? _sqrt_ss : _sqrt_s; \
+    } else { \
+        float _sqrt_r = BUILTIN_RSQRT_F32(_sqrt_x); \
+        _sqrt_s = _sqrt_x * _sqrt_r; \
+        float _sqrt_h = 0.5f * _sqrt_r; \
+        float _sqrt_e = BUILTIN_FMA_F32(-_sqrt_h, _sqrt_s, 0.5f); \
+        _sqrt_h = BUILTIN_FMA_F32(_sqrt_h, _sqrt_e, _sqrt_h); \
+        _sqrt_s = BUILTIN_FMA_F32(_sqrt_s, _sqrt_e, _sqrt_s); \
+        float _sqrt_d = BUILTIN_FMA_F32(-_sqrt_s, _sqrt_s, _sqrt_x); \
+        _sqrt_s = BUILTIN_FMA_F32(_sqrt_d, _sqrt_h, _sqrt_s); \
+    } \
+    _sqrt_s *= _sqrt_b ? 0x1.0p-16f : 1.0f; \
+    _sqrt_s = (_sqrt_x == 0.0f) | (_sqrt_x == INFINITY) ? _sqrt_x : _sqrt_s; \
+    _sqrt_s; \
+})
+

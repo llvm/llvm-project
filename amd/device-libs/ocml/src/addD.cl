@@ -1,0 +1,21 @@
+
+#include "mathD.h"
+
+#if defined ENABLE_ROUNDED
+#if defined HSAIL_BUILD
+
+#define GEN(NAME,ROUND)\
+CONSTATTR INLINEATTR double \
+MATH_MANGLE(NAME)(double x, double y) \
+{ \
+    return BUILTIN_FULL_BINARY(fadd, false, ROUND, x, y); \
+}
+
+GEN(add_rte, ROUND_TO_NEAREST_EVEN)
+GEN(add_rtp, ROUND_TO_POSINF)
+GEN(add_rtn, ROUND_TO_NEGINF)
+GEN(add_rtz, ROUND_TO_ZERO)
+
+#endif // HSAIL_BUILD
+#endif // ENABLE_ROUNDED
+
