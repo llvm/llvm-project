@@ -669,6 +669,7 @@ extern lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
 
 /**
  * Sets the path to a directory to use as a cache storage for incremental build.
+ * Setting this activates caching.
  *
  * \since LTO_API_VERSION=18
  */
@@ -677,7 +678,7 @@ extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
 
 /**
  * Sets the cache pruning interval (in seconds). A negative value disable the
- * pruning (default).
+ * pruning. An unspecified default value will be applied.
  *
  * \since LTO_API_VERSION=18
  */
@@ -685,10 +686,15 @@ extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
                                                        int interval);
 
 /**
- * Sets the maximum cache size, in term of percentage of the free space on the
- * the disk. Set to 100 to indicate no limit, 50 to indicate that the cache size
- * will not increase over the free space. A value over 100 will be reduced to 
- * 100.
+ * Sets the maximum cache size that can be persistent across build, in terms of
+ * percentage of the available space on the the disk. Set to 100 to indicate
+ * no limit, 50 to indicate that the cache size will not be left over half the
+ * available space. A value over 100 will be reduced to 100. An unspecified 
+ * default value will be applied.
+ *
+ * The formula looks like:
+ *  AvailableSpace = FreeSpace + ExistingCacheSize
+ *  NewCacheSize = AvailableSpace * P/100
  *
  * \since LTO_API_VERSION=18
  */
@@ -696,7 +702,8 @@ extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
     thinlto_code_gen_t cg, unsigned percentage);
 
 /**
- * Sets the expiration (in seconds) for an entry in the cache.
+ * Sets the expiration (in seconds) for an entry in the cache. An unspecified
+ * default value will be applied.
  *
  * \since LTO_API_VERSION=18
  */
