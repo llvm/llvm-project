@@ -176,14 +176,17 @@ static std::error_code getUniqueFile(const llvm::Twine &Model, int &ResultFD,
 static std::string getOutputFileName(llvm::StringRef InputFile,
                                      bool TempFile = false) {
   if (TempFile) {
+    llvm::SmallString<128> TmpFile;
+    llvm::sys::path::system_temp_directory(true, TmpFile);
     llvm::StringRef Basename =
         OutputFileOpt.empty() ? InputFile : llvm::StringRef(OutputFileOpt);
-    llvm::Twine OutputFile = Basename + ".tmp%%%%%%.dwarf";
+    llvm::sys::path::append(TmpFile, llvm::sys::path::filename(Basename));
+
     int FD;
     llvm::SmallString<128> UniqueFile;
-    if (auto EC = getUniqueFile(OutputFile, FD, UniqueFile)) {
+    if (auto EC = getUniqueFile(TmpFile + ".tmp%%%%%.dwarf", FD, UniqueFile)) {
       llvm::errs() << "error: failed to create temporary outfile '"
-                   << OutputFile << "': " << EC.message() << '\n';
+                   << TmpFile << "': " << EC.message() << '\n';
       return "";
     }
     llvm::sys::RemoveFileOnSignal(UniqueFile);
