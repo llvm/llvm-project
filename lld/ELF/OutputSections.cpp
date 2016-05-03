@@ -1636,35 +1636,36 @@ template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
   HashBuf = Buf + 16;
 }
 
-template <class ELFT> void BuildIdFnv1<ELFT>::update(ArrayRef<uint8_t> Buf) {
-  // 64-bit FNV-1 hash
-  const uint64_t Prime = 0x100000001b3;
-  for (uint8_t B : Buf) {
-    Hash *= Prime;
-    Hash ^= B;
-  }
-}
-
-template <class ELFT> void BuildIdFnv1<ELFT>::writeBuildId() {
+template <class ELFT>
+void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
   const endianness E = ELFT::TargetEndianness;
+
+  // 64-bit FNV-1 hash
+  uint64_t Hash = 0xcbf29ce484222325;
+  for (ArrayRef<uint8_t> Buf : Bufs) {
+    for (uint8_t B : Buf) {
+      Hash *= 0x100000001b3;
+      Hash ^= B;
+    }
+  }
   write64<E>(this->HashBuf, Hash);
 }
 
-template <class ELFT> void BuildIdMd5<ELFT>::update(ArrayRef<uint8_t> Buf) {
-  Hash.update(Buf);
-}
-
-template <class ELFT> void BuildIdMd5<ELFT>::writeBuildId() {
+template <class ELFT>
+void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+  llvm::MD5 Hash;
+  for (ArrayRef<uint8_t> Buf : Bufs)
+    Hash.update(Buf);
   MD5::MD5Result Res;
   Hash.final(Res);
   memcpy(this->HashBuf, Res, 16);
 }
 
-template <class ELFT> void BuildIdSha1<ELFT>::update(ArrayRef<uint8_t> Buf) {
-  Hash.update(Buf);
-}
-
-template <class ELFT> void BuildIdSha1<ELFT>::writeBuildId() {
+template <class ELFT>
+void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+  llvm::SHA1 Hash;
+  for (ArrayRef<uint8_t> Buf : Bufs)
+    Hash.update(Buf);
   memcpy(this->HashBuf, Hash.final().data(), 20);
 }
 

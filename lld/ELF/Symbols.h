@@ -108,6 +108,10 @@ public:
   template <class ELFT> typename ELFT::uint getThunkVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
 
+  // Returns the file from which the symbol was created.
+  // For logging purpose only.
+  template <class ELFT> InputFile *getSourceFile();
+
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
 
@@ -259,6 +263,10 @@ public:
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
   }
+
+  // The file this undefined symbol was created from.
+  // For logging purpose only.
+  InputFile *File = nullptr;
 };
 
 template <class ELFT> class SharedSymbol : public Defined {

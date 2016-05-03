@@ -541,8 +541,7 @@ private:
 template <class ELFT> class BuildIdSection : public OutputSectionBase<ELFT> {
 public:
   void writeTo(uint8_t *Buf) override;
-  virtual void update(ArrayRef<uint8_t> Buf) = 0;
-  virtual void writeBuildId() = 0;
+  virtual void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) = 0;
 
 protected:
   BuildIdSection(size_t HashSize);
@@ -553,32 +552,19 @@ protected:
 template <class ELFT> class BuildIdFnv1 final : public BuildIdSection<ELFT> {
 public:
   BuildIdFnv1() : BuildIdSection<ELFT>(8) {}
-  void update(ArrayRef<uint8_t> Buf) override;
-  void writeBuildId() override;
-
-private:
-  // 64-bit FNV-1 initial value
-  uint64_t Hash = 0xcbf29ce484222325;
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
 template <class ELFT> class BuildIdMd5 final : public BuildIdSection<ELFT> {
 public:
   BuildIdMd5() : BuildIdSection<ELFT>(16) {}
-  void update(ArrayRef<uint8_t> Buf) override;
-  void writeBuildId() override;
-
-private:
-  llvm::MD5 Hash;
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
 template <class ELFT> class BuildIdSha1 final : public BuildIdSection<ELFT> {
 public:
   BuildIdSha1() : BuildIdSection<ELFT>(20) {}
-  void update(ArrayRef<uint8_t> Buf) override;
-  void writeBuildId() override;
-
-private:
-  llvm::SHA1 Hash;
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
 // All output sections that are hadnled by the linker specially are

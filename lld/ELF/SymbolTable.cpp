@@ -166,7 +166,6 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
 
 // Returns a file from which symbol B was created.
 // If B does not belong to any file, returns a nullptr.
-// This function is slow, but it's okay as it is used only for error messages.
 template <class ELFT> InputFile *SymbolTable<ELFT>::findFile(SymbolBody *B) {
   // If this symbol has a definition, follow pointers in the symbol to its
   // defining file.
@@ -177,21 +176,8 @@ template <class ELFT> InputFile *SymbolTable<ELFT>::findFile(SymbolBody *B) {
     return SS->File;
   if (auto *BC = dyn_cast<DefinedBitcode>(B))
     return BC->File;
-  // If not, we might be able to find it by searching symbol tables of files.
-  // This code is generally only used for undefined symbols. Note that we can't
-  // rely exclusively on a file search because we may find what was originally
-  // an undefined symbol that was later replaced with a defined symbol, and we
-  // want to return the file that defined the symbol.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : ObjectFiles) {
-    ArrayRef<SymbolBody *> Syms = F->getSymbols();
-    if (std::find(Syms.begin(), Syms.end(), B) != Syms.end())
-      return F.get();
-  }
-  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles) {
-    ArrayRef<Symbol *> Syms = F->getSymbols();
-    if (std::find(Syms.begin(), Syms.end(), B->symbol()) != Syms.end())
-      return F.get();
-  }
+  if (auto *U = dyn_cast<Undefined>(B))
+    return U->File;
   return nullptr;
 }
 
@@ -253,8 +239,8 @@ template <typename ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
                                            InputFile *NewFile) {
   StringRef Sym = Existing->getName();
-  return demangle(Sym) + " in " + getFilename(findFile(Existing)) + " and " +
-         getFilename(NewFile);
+  return demangle(Sym) + " in " + getFilename(Existing->getSourceFile<ELFT>()) +
+         " and " + getFilename(NewFile);
 }
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name) {
@@ -274,6 +260,7 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, uint8_t Binding,
   if (WasInserted) {
     S->Binding = Binding;
     replaceBody<Undefined>(S, Name, StOther, Type);
+    cast<Undefined>(S->body())->File = File;
     return S;
   }
   if (Binding != STB_WEAK &&

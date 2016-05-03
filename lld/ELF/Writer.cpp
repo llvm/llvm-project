@@ -1907,16 +1907,15 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   // other sections are the same.
   uint8_t *Start = Buffer->getBufferStart();
   uint8_t *Last = Start;
+  std::vector<ArrayRef<uint8_t>> Regions;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uint8_t *End = Start + Sec->getFileOff();
     if (!Sec->getName().startswith(".debug_"))
-      S->update({Last, End});
+      Regions.push_back({Last, End});
     Last = End;
   }
-  S->update({Last, Start + FileSize});
-
-  // Fill the hash value field in the .note.gnu.build-id section.
-  S->writeBuildId();
+  Regions.push_back({Last, Start + FileSize});
+  S->writeBuildId(Regions);
 }
 
 template void elf::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);

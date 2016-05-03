@@ -129,6 +129,18 @@ bool SymbolBody::isPreemptible() const {
   return symbol()->Visibility == STV_DEFAULT;
 }
 
+template <class ELFT> InputFile *SymbolBody::getSourceFile() {
+  if (auto *S = dyn_cast<DefinedRegular<ELFT>>(this))
+    return S->Section ? S->Section->getFile() : nullptr;
+  if (auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
+    return S->File;
+  if (auto *S = dyn_cast<DefinedBitcode>(this))
+    return S->File;
+  if (auto *S = dyn_cast<Undefined>(this))
+    return S->File;
+  return nullptr;
+}
+
 template <class ELFT>
 typename ELFT::uint SymbolBody::getVA(typename ELFT::uint Addend) const {
   typename ELFT::uint OutVA = getSymVA<ELFT>(*this, Addend);
@@ -257,6 +269,11 @@ bool Symbol::includeInDynsym() const {
   return (ExportDynamic && VersionScriptGlobal) || body()->isShared() ||
          (body()->isUndefined() && Config->Shared);
 }
+
+template InputFile *SymbolBody::template getSourceFile<ELF32LE>();
+template InputFile *SymbolBody::template getSourceFile<ELF32BE>();
+template InputFile *SymbolBody::template getSourceFile<ELF64LE>();
+template InputFile *SymbolBody::template getSourceFile<ELF64BE>();
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
 template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;
