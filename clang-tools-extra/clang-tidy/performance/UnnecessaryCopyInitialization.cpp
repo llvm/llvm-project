@@ -24,16 +24,16 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
   if (Var.getLocation().isMacroID())
     return;
 
-  Diagnostic << utils::create_fix_it::changeVarDeclToReference(Var, Context);
+  Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified())
-    Diagnostic << utils::create_fix_it::changeVarDeclToConst(Var);
+    Diagnostic << utils::fixit::changeVarDeclToConst(Var);
 }
 
 } // namespace
 
 
 using namespace ::clang::ast_matchers;
-using decl_ref_expr_utils::isOnlyUsedAsConst;
+using utils::decl_ref_expr::isOnlyUsedAsConst;
 
 void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   auto ConstReference = referenceType(pointee(qualType(isConstQualified())));

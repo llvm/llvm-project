@@ -178,13 +178,13 @@ endif()
 if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
                                        LIBCXX_INSTALL_HEADERS))
     if(LIBCXX_INSTALL_LIBRARY)
-      set(deps DEPENDS cxx)
+      set(lib_install_target cxx)
     endif()
     if(LIBCXX_INSTALL_HEADERS)
-      set(deps DEPENDS install-libcxx-headers)
+      set(header_install_target install-libcxx-headers)
     endif()
     add_custom_target(install-libcxx
-                      ${deps} 
+                      DEPENDS ${lib_install_target} ${header_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=libcxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")

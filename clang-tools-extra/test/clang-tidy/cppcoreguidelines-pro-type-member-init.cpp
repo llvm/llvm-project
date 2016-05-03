@@ -85,6 +85,14 @@ struct NegativeInitializedInBody {
   int I;
 };
 
+struct A {};
+template <class> class AA;
+template <class T> class NegativeTemplateConstructor {
+  NegativeTemplateConstructor(const AA<T> &, A) {}
+  bool Bool{false};
+  // CHECK-FIXES: bool Bool{false};
+};
+
 #define UNINITIALIZED_FIELD_IN_MACRO_BODY(FIELD) \
   struct UninitializedField##FIELD {             \
     UninitializedField##FIELD() {}               \

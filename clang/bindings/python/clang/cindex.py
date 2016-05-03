@@ -1750,6 +1750,7 @@ TypeKind.VARIABLEARRAY = TypeKind(115)
 TypeKind.DEPENDENTSIZEDARRAY = TypeKind(116)
 TypeKind.MEMBERPOINTER = TypeKind(117)
 TypeKind.AUTO = TypeKind(118)
+TypeKind.ELABORATED = TypeKind(119)
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
@@ -1947,6 +1948,12 @@ class Type(Structure):
         Retrieve the class type of the member pointer type.
         """
         return conf.lib.clang_Type_getClassType(self)
+
+    def get_named_type(self):
+        """
+        Retrieve the type named by the qualified-id.
+        """
+        return conf.lib.clang_Type_getNamedType(self)
 
     def get_align(self):
         """
@@ -3564,6 +3571,11 @@ functionList = [
   ("clang_Type_getCXXRefQualifier",
    [Type],
    c_uint),
+
+  ("clang_Type_getNamedType",
+   [Type],
+   Type,
+   Type.from_result),
 
   ("clang_Type_visitFields",
    [Type, callbacks['fields_visit'], py_object],

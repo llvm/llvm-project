@@ -11,6 +11,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_MAKE_SMART_PTR_H
 
 #include "../ClangTidy.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 
 namespace clang {
@@ -22,9 +25,8 @@ class MakeSmartPtrCheck : public ClangTidyCheck {
 public:
   MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
                     std::string makeSmartPtrFunctionName);
-  void registerMatchers(ast_matchers::MatchFinder *Finder) override final;
-  void
-  check(const ast_matchers::MatchFinder::MatchResult &Result) override final;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) final;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
 
 protected:
   using SmartPtrTypeMatcher = ast_matchers::internal::BindableMatcher<QualType>;

@@ -20,6 +20,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 
 // IncludeInserter can be used by ClangTidyChecks in the following fashion:
 // class MyCheck : public ClangTidyCheck {
@@ -70,6 +71,7 @@ private:
   friend class IncludeInserterCallback;
 };
 
+} // namespace utils
 } // namespace tidy
 } // namespace clang
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H

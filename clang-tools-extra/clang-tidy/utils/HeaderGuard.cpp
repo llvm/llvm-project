@@ -16,6 +16,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 
 /// \brief canonicalize a path by removing ./ and ../ components.
 // FIXME: Consider moving this to llvm::sys::path.
@@ -299,5 +300,6 @@ std::string HeaderGuardCheck::formatEndIf(StringRef HeaderGuard) {
   return "endif // " + HeaderGuard.str();
 }
 
+} // namespace utils
 } // namespace tidy
 } // namespace clang

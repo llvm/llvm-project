@@ -15,7 +15,8 @@
 
 namespace clang {
 namespace tidy {
-namespace decl_ref_expr_utils {
+namespace utils {
+namespace decl_ref_expr {
 
 /// \brief Returns true if all DeclRefExpr to the variable within Stmt do not
 /// modify it.
@@ -25,7 +26,8 @@ namespace decl_ref_expr_utils {
 bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
                        ASTContext &Context);
 
-} // namespace decl_ref_expr_utils
+} // namespace decl_ref_expr
+} // namespace utils
 } // namespace tidy
 } // namespace clang
 

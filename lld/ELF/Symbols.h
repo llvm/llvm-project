@@ -237,11 +237,12 @@ InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 // The difference from the regular symbol is that DefinedSynthetic symbols
 // don't belong to any input files or sections. Thus, its constructor
 // takes an output section to calculate output VA, etc.
+// If Section is null, this symbol is relative to the image base.
 template <class ELFT> class DefinedSynthetic : public Defined {
 public:
   typedef typename ELFT::uint uintX_t;
   DefinedSynthetic(StringRef N, uintX_t Value,
-                   OutputSectionBase<ELFT> &Section);
+                   OutputSectionBase<ELFT> *Section);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;
@@ -252,7 +253,7 @@ public:
   static const uintX_t SectionEnd = uintX_t(-1);
 
   uintX_t Value;
-  const OutputSectionBase<ELFT> &Section;
+  const OutputSectionBase<ELFT> *Section;
 };
 
 class Undefined : public SymbolBody {

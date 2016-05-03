@@ -404,6 +404,9 @@ namespace  {
     void VisitAtomicType(const AtomicType *T) {
       dumpTypeAsChild(T->getValueType());
     }
+    void VisitPipeType(const PipeType *T) {
+      dumpTypeAsChild(T->getElementType());
+    }
     void VisitAdjustedType(const AdjustedType *T) {
       dumpTypeAsChild(T->getOriginalType());
     }

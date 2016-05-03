@@ -42,7 +42,7 @@ parmVarDeclRefExprOccurences(const ParmVarDecl &MovableParam,
 MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(IncludeSorter::parseIncludeStyle(
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
           Options.get("IncludeStyle", "llvm"))),
       UseCERTSemantics(Context->isCheckEnabled("cert-oop11-cpp")) {}
 
@@ -167,13 +167,14 @@ void MoveConstructorInitCheck::handleMoveConstructor(
 }
 
 void MoveConstructorInitCheck::registerPPCallbacks(CompilerInstance &Compiler) {
-  Inserter.reset(new IncludeInserter(Compiler.getSourceManager(),
-                                     Compiler.getLangOpts(), IncludeStyle));
+  Inserter.reset(new utils::IncludeInserter(
+      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
   Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
 void MoveConstructorInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "IncludeStyle",
+                utils::IncludeSorter::toString(IncludeStyle));
 }
 
 } // namespace misc

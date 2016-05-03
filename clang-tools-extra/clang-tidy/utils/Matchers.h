@@ -31,12 +31,12 @@ AST_MATCHER(BinaryOperator, isComparisonOperator) {
 
 AST_MATCHER(QualType, isExpensiveToCopy) {
   llvm::Optional<bool> IsExpensive =
-      type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
+      utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
   return IsExpensive && *IsExpensive;
 }
 
 AST_MATCHER(RecordDecl, isTriviallyDefaultConstructible) {
-  return type_traits::recordIsTriviallyDefaultConstructible(
+  return utils::type_traits::recordIsTriviallyDefaultConstructible(
       Node, Finder->getASTContext());
 }
 

@@ -15,6 +15,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 namespace type_traits {
 
 // \brief Returns true If \c Type is expensive to copy.
@@ -28,6 +29,7 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
                                            const ASTContext &Context);
 
 } // type_traits
+} // namespace utils
 } // namespace tidy
 } // namespace clang
 

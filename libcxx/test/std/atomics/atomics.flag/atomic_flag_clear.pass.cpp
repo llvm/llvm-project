@@ -22,13 +22,13 @@
 int main()
 {
     {
-        std::atomic_flag f(false);
+        std::atomic_flag f;
         f.test_and_set();
         atomic_flag_clear(&f);
         assert(f.test_and_set() == 0);
     }
     {
-        volatile std::atomic_flag f(false);
+        volatile std::atomic_flag f;
         f.test_and_set();
         atomic_flag_clear(&f);
         assert(f.test_and_set() == 0);
