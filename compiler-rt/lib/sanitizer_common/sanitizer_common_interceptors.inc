@@ -5529,6 +5529,40 @@ INTERCEPTOR(SSIZE_T, recvfrom, int fd, void *buf, SIZE_T len, int flags,
 #define INIT_RECV_RECVFROM
 #endif
 
+#if SANITIZER_INTERCEPT_STAT
+INTERCEPTOR(int, stat, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, stat, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(stat)(path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  return res;
+}
+#define INIT_STAT COMMON_INTERCEPT_FUNCTION(stat)
+#else
+#define INIT_STAT
+#endif
+
+#if SANITIZER_INTERCEPT___XSTAT
+INTERCEPTOR(int, __xstat, int version, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __xstat, version, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(__xstat)(version, path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  return res;
+}
+#define INIT___XSTAT COMMON_INTERCEPT_FUNCTION(__xstat)
+#else
+#define INIT___XSTAT
+#endif
+
+// FIXME: add other *stat interceptor
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -5714,4 +5748,7 @@ static void InitializeCommonInterceptors() {
   INIT_CTERMID;
   INIT_CTERMID_R;
   INIT_RECV_RECVFROM;
+  INIT_STAT;
+  INIT___XSTAT;
+  // FIXME: add other *stat interceptors.
 }

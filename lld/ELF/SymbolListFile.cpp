@@ -17,7 +17,6 @@
 #include "Config.h"
 #include "ScriptParser.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace lld;

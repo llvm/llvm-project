@@ -109,8 +109,9 @@ void MoveConstructorInitCheck::handleParamNotMoved(
   if (parmVarDeclRefExprOccurences(*MovableParam, *ConstructorDecl,
                                    *Result.Context) > 1)
     return;
-  auto DiagOut =
-      diag(InitArg->getLocStart(), "value argument can be moved to avoid copy");
+  auto DiagOut = diag(InitArg->getLocStart(),
+                      "value argument %0 can be moved to avoid copy")
+                 << MovableParam;
   DiagOut << FixItHint::CreateReplacement(
       InitArg->getSourceRange(),
       (Twine("std::move(") + MovableParam->getName() + ")").str());

@@ -113,20 +113,48 @@ static std::string relativeToRoot(StringRef Path) {
 static std::string getDestPath(StringRef Path) {
   std::string Relpath = relativeToRoot(Path);
   SmallString<128> Dest;
-  path::append(Dest, Config->Reproduce, Relpath);
+  path::append(Dest, path::filename(Config->Reproduce), Relpath);
   return Dest.str();
 }
 
-// Copies file Src to {Config->Reproduce}/Src.
-void elf::copyInputFile(StringRef Src) {
-  std::string Dest = getDestPath(Src);
-  StringRef Dir = path::parent_path(Dest);
-  if (std::error_code EC = fs::create_directories(Dir)) {
-    error(EC, Dir + ": can't create directory");
+static void maybePrintCpioMember(StringRef Path, StringRef Data) {
+  if (Config->Reproduce.empty())
     return;
-  }
-  if (std::error_code EC = fs::copy_file(Src, Dest))
-    error(EC, "failed to copy file: " + Dest);
+
+  if (!Driver->IncludedFiles.insert(Path).second)
+    return;
+
+  raw_fd_ostream &OS = *Driver->ReproduceArchive;
+  OS << "070707"; // c_magic
+
+  // The c_dev/c_ino pair should be unique according to the spec, but no one
+  // seems to care.
+  OS << "000000"; // c_dev
+  OS << "000000"; // c_ino
+
+  OS << "100664";                        // c_mode: C_ISREG | rw-rw-r--
+  OS << "000000";                        // c_uid
+  OS << "000000";                        // c_gid
+  OS << "000001";                        // c_nlink
+  OS << "000000";                        // c_rdev
+  OS << "00000000000";                   // c_mtime
+  OS << format("%06o", Path.size() + 1); // c_namesize
+  OS << format("%011o", Data.size());    // c_filesize
+  OS << Path << '\0';                    // c_name
+  OS << Data;                            // c_filedata
+}
+
+// Write file Src with content Data to the archive.
+void elf::maybeCopyInputFile(StringRef Src, StringRef Data) {
+  std::string Dest = getDestPath(Src);
+  maybePrintCpioMember(Dest, Data);
+}
+
+void elf::maybeCloseReproArchive() {
+  if (!Driver->ReproduceArchive)
+    return;
+  maybePrintCpioMember("TRAILER!!!", "");
+  Driver->ReproduceArchive.reset();
 }
 
 // Quote a given string if it contains a space character.
@@ -148,20 +176,8 @@ static std::string rewritePath(StringRef S) {
 // "ld.lld @response.txt". Used by --reproduce. This feature is
 // supposed to be used by users to report an issue to LLD developers.
 void elf::createResponseFile(const opt::InputArgList &Args) {
-  // Create the output directory.
-  if (std::error_code EC =
-          fs::create_directories(Config->Reproduce, /*IgnoreExisting=*/false)) {
-    error(EC, Config->Reproduce + ": can't create directory");
-    return;
-  }
-
-  // Open "response.txt".
-  SmallString<128> Path;
-  path::append(Path, Config->Reproduce, "response.txt");
-  std::error_code EC;
-  raw_fd_ostream OS(Path, EC, fs::OpenFlags::F_None);
-  check(EC);
-
+  SmallString<0> Data;
+  raw_svector_ostream OS(Data);
   // Copy the command line to response.txt while rewriting paths.
   for (auto *Arg : Args) {
     switch (Arg->getOption().getID()) {
@@ -185,6 +201,10 @@ void elf::createResponseFile(const opt::InputArgList &Args) {
       OS << "\n";
     }
   }
+
+  SmallString<128> Dest;
+  path::append(Dest, path::filename(Config->Reproduce), "response.txt");
+  maybePrintCpioMember(Dest, Data);
 }
 
 std::string elf::findFromSearchPaths(StringRef Path) {

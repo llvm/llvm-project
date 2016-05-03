@@ -456,6 +456,10 @@ class Configuration(object):
                                     '-Wl,-rpath,' + self.abi_library_root]
 
     def configure_link_flags_cxx_library(self):
+        libcxx_experimental = self.get_lit_bool('enable_experimental', default=False)
+        if libcxx_experimental:
+            self.config.available_features.add('c++experimental')
+            self.cxx.link_flags += ['-lc++experimental']
         libcxx_shared = self.get_lit_bool('enable_shared', default=True)
         if libcxx_shared:
             self.cxx.link_flags += ['-lc++']

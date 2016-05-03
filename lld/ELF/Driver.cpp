@@ -19,7 +19,6 @@
 #include "Writer.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -109,13 +108,13 @@ void LinkerDriver::addFile(StringRef Path) {
   using namespace sys::fs;
   if (Config->Verbose)
     outs() << Path << "\n";
-  if (!Config->Reproduce.empty())
-    copyInputFile(Path);
 
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
     return;
   MemoryBufferRef MBRef = *Buffer;
+
+  maybeCopyInputFile(Path, MBRef.getBuffer());
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
@@ -253,8 +252,13 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   readConfigs(Args);
   initLLVM(Args);
 
-  if (!Config->Reproduce.empty())
+  if (!Config->Reproduce.empty()) {
+    std::error_code EC;
+    ReproduceArchive = llvm::make_unique<raw_fd_ostream>(
+        Config->Reproduce + ".cpio", EC, fs::F_None);
+    check(EC);
     createResponseFile(Args);
+  }
 
   createFiles(Args);
   checkOptions(Args);
@@ -377,11 +381,13 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->BuildId = BuildIdKind::Fnv1;
   if (auto *Arg = Args.getLastArg(OPT_build_id_eq)) {
     StringRef S = Arg->getValue();
-    if (S == "md5") {
+    if (S == "md5")
       Config->BuildId = BuildIdKind::Md5;
-    } else if (S == "sha1") {
+    else if (S == "sha1")
       Config->BuildId = BuildIdKind::Sha1;
-    } else
+    else if (S == "none")
+      Config->BuildId = BuildIdKind::None;
+    else
       error("unknown --build-id style: " + S);
   }
 
@@ -486,6 +492,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
+
+  maybeCloseReproArchive();
 
   // Write the result to the file.
   if (Config->GcSections)

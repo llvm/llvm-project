@@ -9,6 +9,8 @@
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=SHA1 %s
 # RUN: ld.lld %t -o %t2
 # RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
+# RUN: ld.lld --build-id=md5 --build-id=none %t -o %t2
+# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=NONE %s
 
 .globl _start
 _start:
