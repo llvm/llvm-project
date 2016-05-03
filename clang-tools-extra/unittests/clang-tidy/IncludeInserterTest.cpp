@@ -33,9 +33,10 @@ public:
       : ClangTidyCheck(CheckName, Context) {}
 
   void registerPPCallbacks(CompilerInstance &Compiler) override {
-    Inserter.reset(new IncludeInserter(Compiler.getSourceManager(),
-                                       Compiler.getLangOpts(),
-                                       IncludeSorter::IS_Google));
+    Inserter.reset(new utils::IncludeInserter(
+        Compiler.getSourceManager(),
+        Compiler.getLangOpts(),
+        utils::IncludeSorter::IS_Google));
     Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
   }
 
@@ -58,7 +59,7 @@ public:
   virtual std::vector<StringRef> HeadersToInclude() const = 0;
   virtual bool IsAngledInclude() const = 0;
 
-  std::unique_ptr<IncludeInserter> Inserter;
+  std::unique_ptr<utils::IncludeInserter> Inserter;
 };
 
 class NonSystemHeaderInserterCheck : public IncludeInserterCheckBase {

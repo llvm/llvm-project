@@ -3667,6 +3667,10 @@ RValue CodeGenFunction::EmitRValueForField(LValue LV,
   case TEK_Aggregate:
     return FieldLV.asAggregateRValue();
   case TEK_Scalar:
+    // This routine is used to load fields one-by-one to perform a copy, so
+    // don't load reference fields.
+    if (FD->getType()->isReferenceType())
+      return RValue::get(FieldLV.getPointer());
     return EmitLoadOfLValue(FieldLV, Loc);
   }
   llvm_unreachable("bad evaluation kind");

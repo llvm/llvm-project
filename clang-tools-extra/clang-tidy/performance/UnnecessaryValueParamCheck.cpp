@@ -61,7 +61,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // 2. they are not only used as const.
   if (!IsConstQualified && (llvm::isa<CXXConstructorDecl>(Function) ||
                             !Function->doesThisDeclarationHaveABody() ||
-                            !decl_ref_expr_utils::isOnlyUsedAsConst(
+                            !utils::decl_ref_expr::isOnlyUsedAsConst(
                                 *Param, *Function->getBody(), *Result.Context)))
     return;
   auto Diag =
@@ -79,10 +79,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   for (const auto *FunctionDecl = Function; FunctionDecl != nullptr;
        FunctionDecl = FunctionDecl->getPreviousDecl()) {
     const auto &CurrentParam = *FunctionDecl->getParamDecl(Index);
-    Diag << utils::create_fix_it::changeVarDeclToReference(CurrentParam,
+    Diag << utils::fixit::changeVarDeclToReference(CurrentParam,
                                                            *Result.Context);
     if (!IsConstQualified)
-      Diag << utils::create_fix_it::changeVarDeclToConst(CurrentParam);
+      Diag << utils::fixit::changeVarDeclToConst(CurrentParam);
   }
 }
 

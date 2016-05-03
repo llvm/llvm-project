@@ -13,6 +13,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 namespace type_traits {
 
 namespace {
@@ -106,6 +107,7 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
   return false;
 }
 
-} // type_traits
+} // namespace type_traits
+} // namespace utils
 } // namespace tidy
 } // namespace clang

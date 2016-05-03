@@ -36,9 +36,12 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
     auto &D = cast<DefinedSynthetic<ELFT>>(Body);
+    const OutputSectionBase<ELFT> *Sec = D.Section;
+    if (!Sec)
+      return D.Value;
     if (D.Value == DefinedSynthetic<ELFT>::SectionEnd)
-      return D.Section.getVA() + D.Section.getSize();
-    return D.Section.getVA() + D.Value;
+      return Sec->getVA() + Sec->getSize();
+    return Sec->getVA() + D.Value;
   }
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(Body);
@@ -208,7 +211,7 @@ Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type)
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
-                                         OutputSectionBase<ELFT> &Section)
+                                         OutputSectionBase<ELFT> *Section)
     : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 

@@ -59,16 +59,16 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
     return false;
   }
   llvm::Optional<bool> Expensive =
-      type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
+      utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (!Expensive || !*Expensive)
     return false;
   auto Diagnostic =
       diag(LoopVar.getLocation(),
            "the loop variable's type is not a reference type; this creates a "
            "copy in each iteration; consider making this a reference")
-      << utils::create_fix_it::changeVarDeclToReference(LoopVar, Context);
+      << utils::fixit::changeVarDeclToReference(LoopVar, Context);
   if (!LoopVar.getType().isConstQualified())
-    Diagnostic << utils::create_fix_it::changeVarDeclToConst(LoopVar);
+    Diagnostic << utils::fixit::changeVarDeclToConst(LoopVar);
   return true;
 }
 
@@ -76,16 +76,17 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
     const VarDecl &LoopVar, const CXXForRangeStmt &ForRange,
     ASTContext &Context) {
   llvm::Optional<bool> Expensive =
-      type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
+      utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive)
     return false;
-  if (!decl_ref_expr_utils::isOnlyUsedAsConst(LoopVar, *ForRange.getBody(), Context))
+  if (!utils::decl_ref_expr::isOnlyUsedAsConst(LoopVar, *ForRange.getBody(),
+                                               Context))
     return false;
   diag(LoopVar.getLocation(),
        "loop variable is copied but only used as const reference; consider "
        "making it a const reference")
-      << utils::create_fix_it::changeVarDeclToConst(LoopVar)
-      << utils::create_fix_it::changeVarDeclToReference(LoopVar, Context);
+      << utils::fixit::changeVarDeclToConst(LoopVar)
+      << utils::fixit::changeVarDeclToReference(LoopVar, Context);
   return true;
 }
 

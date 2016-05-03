@@ -12,6 +12,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 
 class IncludeInserterCallback : public PPCallbacks {
 public:
@@ -80,5 +81,6 @@ void IncludeInserter::AddInclude(StringRef file_name, bool IsAngled,
                                           end_location);
 }
 
+} // namespace utils
 } // namespace tidy
 } // namespace clang

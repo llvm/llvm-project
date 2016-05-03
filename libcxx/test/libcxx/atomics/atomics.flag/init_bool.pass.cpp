@@ -20,6 +20,12 @@
 
 int main()
 {
-    std::atomic_flag f(false);
-    assert(f.test_and_set() == 0);
+    {
+        std::atomic_flag f(false);
+        assert(f.test_and_set() == 0);
+    }
+    {
+        std::atomic_flag f(true);
+        assert(f.test_and_set() == 1);
+    }
 }

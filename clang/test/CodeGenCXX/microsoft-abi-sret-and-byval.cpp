@@ -217,6 +217,28 @@ void big_arg(Big s) {}
 // WIN32: define void @"\01?big_arg@@YAXUBig@@@Z"(%struct.Big* byval align 4 %s)
 // WIN64: define void @"\01?big_arg@@YAXUBig@@@Z"(%struct.Big* %s)
 
+// PR27607: We would attempt to load i32 value out of the reference instead of
+// just loading the pointer from the struct during argument expansion.
+struct RefField {
+  RefField(int &x);
+  int &x;
+};
+void takes_ref_field(RefField s) {}
+// LINUX-LABEL: define void @_Z15takes_ref_field8RefField(%struct.RefField* byval align 4 %s)
+// WIN32: define void @"\01?takes_ref_field@@YAXURefField@@@Z"(i32* %s.0)
+// WIN64: define void @"\01?takes_ref_field@@YAXURefField@@@Z"(i64 %s.coerce)
+
+void pass_ref_field() {
+  int x;
+  takes_ref_field(RefField(x));
+}
+// LINUX-LABEL: define void @_Z14pass_ref_fieldv()
+// LINUX: call void @_Z15takes_ref_field8RefField(%struct.RefField* byval align 4 %{{.*}})
+// WIN32-LABEL: define void @"\01?pass_ref_field@@YAXXZ"()
+// WIN32: call void @"\01?takes_ref_field@@YAXURefField@@@Z"(i32* %{{.*}})
+// WIN64-LABEL: define void @"\01?pass_ref_field@@YAXXZ"()
+// WIN64: call void @"\01?takes_ref_field@@YAXURefField@@@Z"(i64 %{{.*}})
+
 class Class {
  public:
   Small thiscall_method_small() { return Small(); }

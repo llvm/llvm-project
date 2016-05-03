@@ -948,7 +948,7 @@ void CodeGenFunction::ExpandTypeFromArgs(
     }
     for (auto FD : RExp->Fields) {
       // FIXME: What are the right qualifiers here?
-      LValue SubLV = EmitLValueForField(LV, FD);
+      LValue SubLV = EmitLValueForFieldInitialization(LV, FD);
       ExpandTypeFromArgs(FD->getType(), SubLV, AI);
     }
   } else if (isa<ComplexExpansion>(Exp.get())) {

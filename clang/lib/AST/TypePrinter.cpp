@@ -895,7 +895,8 @@ void TypePrinter::printAtomicAfter(const AtomicType *T, raw_ostream &OS) { }
 void TypePrinter::printPipeBefore(const PipeType *T, raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  OS << "pipe";
+  OS << "pipe ";
+  print(T->getElementType(), OS, StringRef());
   spaceBeforePlaceHolder(OS);
 }
 

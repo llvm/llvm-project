@@ -12,6 +12,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {  
 
 namespace {
 
@@ -291,5 +292,6 @@ StringRef IncludeSorter::toString(IncludeStyle Style) {
   return Style == IS_LLVM ? "llvm" : "google";
 }
 
+} // namespace utils
 } // namespace tidy
 } // namespace clang

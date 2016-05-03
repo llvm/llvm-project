@@ -164,23 +164,6 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
   memcpy(Sym->Body.buffer, Wrap->Body.buffer, sizeof(Wrap->Body));
 }
 
-// Returns a file from which symbol B was created.
-// If B does not belong to any file, returns a nullptr.
-template <class ELFT> InputFile *SymbolTable<ELFT>::findFile(SymbolBody *B) {
-  // If this symbol has a definition, follow pointers in the symbol to its
-  // defining file.
-  if (auto *R = dyn_cast<DefinedRegular<ELFT>>(B))
-    if (auto *S = R->Section)
-      return S->getFile();
-  if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(B))
-    return SS->File;
-  if (auto *BC = dyn_cast<DefinedBitcode>(B))
-    return BC->File;
-  if (auto *U = dyn_cast<Undefined>(B))
-    return U->File;
-  return nullptr;
-}
-
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   if (VA == STV_DEFAULT)
     return VB;
@@ -388,7 +371,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
 
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
-                                        OutputSectionBase<ELFT> &Section,
+                                        OutputSectionBase<ELFT> *Section,
                                         uintX_t Value) {
   Symbol *S;
   bool WasInserted;

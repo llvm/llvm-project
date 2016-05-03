@@ -15,7 +15,8 @@
 
 namespace clang {
 namespace tidy {
-namespace decl_ref_expr_utils {
+namespace utils {  
+namespace decl_ref_expr {
 
 using namespace ::clang::ast_matchers;
 using llvm::SmallPtrSet;
@@ -93,6 +94,7 @@ bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
   return isSetDifferenceEmpty(AllDeclRefs, ConstReferenceDeclRefs);
 }
 
-} // namespace decl_ref_expr_utils
+} // namespace decl_ref_expr
+} // namespace utils
 } // namespace tidy
 } // namespace clang
