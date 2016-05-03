@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t -- -- -std=c++11 -fno-delayed-template-parsing
 
 struct PositiveFieldBeforeConstructor {
   int F;

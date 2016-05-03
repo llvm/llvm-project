@@ -372,12 +372,15 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
   if (!Seen.insert(C.getChildOffset()).second)
     return MemoryBufferRef();
 
-  if (!Config->Reproduce.empty() && C.getParent()->isThin())
-    copyInputFile(check(C.getFullName()));
+  MemoryBufferRef Ret =
+      check(C.getMemoryBufferRef(),
+            "could not get the buffer for the member defining symbol " +
+                Sym->getName());
 
-  return check(C.getMemoryBufferRef(),
-               "could not get the buffer for the member defining symbol " +
-                   Sym->getName());
+  if (C.getParent()->isThin())
+    maybeCopyInputFile(check(C.getFullName()), Ret.getBuffer());
+
+  return Ret;
 }
 
 template <class ELFT>

@@ -69,26 +69,99 @@ using namespace __esan; // NOLINT
 // a normal exit.
 #define COMMON_INTERCEPTOR_ON_EXIT(ctx) finalizeLibrary()
 
-#define COMMON_INTERCEPTOR_FILE_OPEN(ctx, file, path) {}
-#define COMMON_INTERCEPTOR_FILE_CLOSE(ctx, file) {}
-#define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle) {}
-#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED() {}
-#define COMMON_INTERCEPTOR_ACQUIRE(ctx, u) {}
-#define COMMON_INTERCEPTOR_RELEASE(ctx, u) {}
-#define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) {}
-#define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd) {}
-#define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) {}
-#define COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd) {}
-#define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) {}
-#define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) {}
-#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) {}
+#define COMMON_INTERCEPTOR_FILE_OPEN(ctx, file, path)                          \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(file);                                                              \
+    (void)(path);                                                              \
+  } while (false)
+#define COMMON_INTERCEPTOR_FILE_CLOSE(ctx, file)                               \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(file);                                                              \
+  } while (false)
+#define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle)                    \
+  do {                                                                         \
+    (void)(filename);                                                          \
+    (void)(handle);                                                            \
+  } while (false)
+#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()                                  \
+  do {                                                                         \
+  } while (false)
+#define COMMON_INTERCEPTOR_ACQUIRE(ctx, u)                                     \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(u);                                                                 \
+  } while (false)
+#define COMMON_INTERCEPTOR_RELEASE(ctx, u)                                     \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(u);                                                                 \
+  } while (false)
+#define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path)                              \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(path);                                                              \
+  } while (false)
+#define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd)                                 \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(fd);                                                                \
+  } while (false)
+#define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd)                                 \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(fd);                                                                \
+  } while (false)
+#define COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd)                                  \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(fd);                                                                \
+  } while (false)
+#define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd)                    \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(fd);                                                                \
+    (void)(newfd);                                                             \
+  } while (false)
+#define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name)                          \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(name);                                                              \
+  } while (false)
+#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name)                 \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(thread);                                                            \
+    (void)(name);                                                              \
+  } while (false)
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) REAL(name)
-#define COMMON_INTERCEPTOR_MUTEX_LOCK(ctx, m) {}
-#define COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m) {}
-#define COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m) {}
-#define COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, msg) {}
-#define COMMON_INTERCEPTOR_USER_CALLBACK_START() {}
-#define COMMON_INTERCEPTOR_USER_CALLBACK_END() {}
+#define COMMON_INTERCEPTOR_MUTEX_LOCK(ctx, m)                                  \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(m);                                                                 \
+  } while (false)
+#define COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m)                                \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(m);                                                                 \
+  } while (false)
+#define COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m)                                \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(m);                                                                 \
+  } while (false)
+#define COMMON_INTERCEPTOR_HANDLE_RECVMSG(ctx, msg)                            \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    (void)(msg);                                                               \
+  } while (false)
+#define COMMON_INTERCEPTOR_USER_CALLBACK_START()                               \
+  do {                                                                         \
+  } while (false)
+#define COMMON_INTERCEPTOR_USER_CALLBACK_END()                                 \
+  do {                                                                         \
+  } while (false)
 
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
 
@@ -102,21 +175,49 @@ using namespace __esan; // NOLINT
 #define COMMON_SYSCALL_PRE_READ_RANGE(ptr, size)                               \
   processRangeAccess(GET_CALLER_PC(), (uptr)ptr, size, false)
 
-#define COMMON_SYSCALL_PRE_WRITE_RANGE(ptr, size) {}
+#define COMMON_SYSCALL_PRE_WRITE_RANGE(ptr, size)                              \
+  do {                                                                         \
+    (void)(ptr);                                                               \
+    (void)(size);                                                              \
+  } while (false)
 
-#define COMMON_SYSCALL_POST_READ_RANGE(ptr, size) {}
+#define COMMON_SYSCALL_POST_READ_RANGE(ptr, size)                              \
+  do {                                                                         \
+    (void)(ptr);                                                               \
+    (void)(size);                                                              \
+  } while (false)
 
 // The actual amount written is in post, not pre.
 #define COMMON_SYSCALL_POST_WRITE_RANGE(ptr, size)                             \
   processRangeAccess(GET_CALLER_PC(), (uptr)ptr, size, true)
 
-#define COMMON_SYSCALL_ACQUIRE(addr) {}
-#define COMMON_SYSCALL_RELEASE(addr) { (void)addr; }
-#define COMMON_SYSCALL_FD_CLOSE(fd) {}
-#define COMMON_SYSCALL_FD_ACQUIRE(fd) {}
-#define COMMON_SYSCALL_FD_RELEASE(fd) {}
-#define COMMON_SYSCALL_PRE_FORK() {}
-#define COMMON_SYSCALL_POST_FORK(res) {}
+#define COMMON_SYSCALL_ACQUIRE(addr)                                           \
+  do {                                                                         \
+    (void)(addr);                                                              \
+  } while (false)
+#define COMMON_SYSCALL_RELEASE(addr)                                           \
+  do {                                                                         \
+    (void)(addr);                                                              \
+  } while (false)
+#define COMMON_SYSCALL_FD_CLOSE(fd)                                            \
+  do {                                                                         \
+    (void)(fd);                                                                \
+  } while (false)
+#define COMMON_SYSCALL_FD_ACQUIRE(fd)                                          \
+  do {                                                                         \
+    (void)(fd);                                                                \
+  } while (false)
+#define COMMON_SYSCALL_FD_RELEASE(fd)                                          \
+  do {                                                                         \
+    (void)(fd);                                                                \
+  } while (false)
+#define COMMON_SYSCALL_PRE_FORK()                                              \
+  do {                                                                         \
+  } while (false)
+#define COMMON_SYSCALL_POST_FORK(res)                                          \
+  do {                                                                         \
+    (void)(res);                                                               \
+  } while (false)
 
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
 
@@ -147,23 +248,6 @@ INTERCEPTOR(char *, strncpy, char *dst, char *src, uptr n) {
   COMMON_INTERCEPTOR_READ_RANGE(ctx, src, copied_size);
   return REAL(strncpy)(dst, src, n);
 }
-
-#if SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_ANDROID
-INTERCEPTOR(int, stat, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, stat, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(stat)(path, buf);
-#define ESAN_INTERCEPT_STAT INTERCEPT_FUNCTION(stat)
-#else
-INTERCEPTOR(int, __xstat, int version, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __xstat, version, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(__xstat)(version, path, buf);
-}
-#define ESAN_INTERCEPT_STAT INTERCEPT_FUNCTION(__xstat)
-#endif
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_FREEBSD
 INTERCEPTOR(int, __xstat64, int version, const char *path, void *buf) {
@@ -312,7 +396,6 @@ void initializeInterceptors() {
   INTERCEPT_FUNCTION(strcpy); // NOLINT
   INTERCEPT_FUNCTION(strncpy);
 
-  ESAN_INTERCEPT_STAT;
   ESAN_MAYBE_INTERCEPT_STAT64;
   ESAN_MAYBE_INTERCEPT___XSTAT64;
   ESAN_INTERCEPT_LSTAT;

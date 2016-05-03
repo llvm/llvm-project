@@ -209,7 +209,8 @@ SymbolTable<ELFT>::insert(StringRef Name, uint8_t Type, uint8_t Visibility,
     S->ExportDynamic = true;
   if (IsUsedInRegularObj)
     S->IsUsedInRegularObj = true;
-  if (!WasInserted && ((Type == STT_TLS) != S->body()->isTls()))
+  if (!WasInserted && S->body()->Type != SymbolBody::UnknownType &&
+      ((Type == STT_TLS) != S->body()->isTls()))
     error("TLS attribute mismatch for symbol: " +
           conflictMsg(S->body(), File));
 
@@ -436,7 +437,7 @@ void SymbolTable<ELFT>::addLazyArchive(
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Sym.getName());
   if (WasInserted) {
-    replaceBody<LazyArchive>(S, F, Sym, STT_NOTYPE);
+    replaceBody<LazyArchive>(S, F, Sym, SymbolBody::UnknownType);
     return;
   }
   if (!S->body()->isUndefined())
@@ -464,7 +465,7 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, MemoryBufferRef MBRef) {
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<LazyObject>(S, Name, MBRef, STT_NOTYPE);
+    replaceBody<LazyObject>(S, Name, MBRef, SymbolBody::UnknownType);
     return;
   }
   if (!S->body()->isUndefined())

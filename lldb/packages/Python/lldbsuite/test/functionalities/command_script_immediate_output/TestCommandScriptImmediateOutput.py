@@ -24,17 +24,25 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
     @skipIfRemote # test not remote-ready llvm.org/pr24813
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @expectedFailureAll(oslist=["freebsd","linux"], bugnumber="llvm.org/pr26139")
-    def test_command_script_immediate_output (self):
-        """Test that LLDB correctly allows scripted commands to set an immediate output file."""
-        self.launch(timeout=60)
+    def test_command_script_immediate_output_console (self):
+        """Test that LLDB correctly allows scripted commands to set immediate output to the console."""
+        self.launch(timeout=10)
 
         script = os.path.join(os.getcwd(), 'custom_command.py')
         prompt = "\(lldb\) "
-                                                                      
+
         self.sendline('command script import %s' % script, patterns=[prompt])
         self.sendline('command script add -f custom_command.command_function mycommand', patterns=[prompt])
         self.sendline('mycommand', patterns='this is a test string, just a test string')
         self.sendline('command script delete mycommand', patterns=[prompt])
+        self.quit(gracefully=False)
+
+    @skipIfRemote # test not remote-ready llvm.org/pr24813
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(oslist=["freebsd","linux"], bugnumber="llvm.org/pr26139")
+    def test_command_script_immediate_output_file (self):
+        """Test that LLDB correctly allows scripted commands to set immediate output to a file."""
+        self.launch(timeout=10)
 
         test_files = {os.path.join(os.getcwd(), 'read.txt')        :'r',
                       os.path.join(os.getcwd(), 'write.txt')       :'w',
@@ -49,6 +57,11 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
         for path, mode in test_files.iteritems():
             with open(path, 'w+') as init:
                 init.write(starter_string)
+
+        script = os.path.join(os.getcwd(), 'custom_command.py')
+        prompt = "\(lldb\) "
+
+        self.sendline('command script import %s' % script, patterns=[prompt])
 
         self.sendline('command script add -f custom_command.write_file mywrite', patterns=[prompt])
         for path, mode in test_files.iteritems():

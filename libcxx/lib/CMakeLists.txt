@@ -138,6 +138,17 @@ set_target_properties(cxx
     SOVERSION     "${LIBCXX_ABI_VERSION}"
   )
 
+if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
+  file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
+  add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
+  target_link_libraries(cxx_experimental cxx)
+  set_target_properties(cxx_experimental
+    PROPERTIES
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+      OUTPUT_NAME   "c++experimental"
+  )
+endif()
+
 # Generate a linker script inplace of a libc++.so symlink. Rerun this command
 # after cxx builds.
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
@@ -160,7 +171,10 @@ if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
 endif()
 
 if (LIBCXX_INSTALL_LIBRARY)
-  install(TARGETS cxx
+  if (LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
+    set(experimental_lib cxx_experimental)
+  endif()
+  install(TARGETS cxx ${experimental_lib}
     LIBRARY DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT libcxx
     ARCHIVE DESTINATION lib${LIBCXX_LIBDIR_SUFFIX} COMPONENT libcxx
     )
@@ -180,11 +194,16 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
     if(LIBCXX_INSTALL_LIBRARY)
       set(lib_install_target cxx)
     endif()
+    if (LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
+      set(experimental_lib_install_target cxx_experimental)
+    endif()
     if(LIBCXX_INSTALL_HEADERS)
       set(header_install_target install-libcxx-headers)
     endif()
     add_custom_target(install-libcxx
-                      DEPENDS ${lib_install_target} ${header_install_target}
+                      DEPENDS ${lib_install_target}
+                              ${experimental_lib_install_target}
+                              ${header_install_target}
                       COMMAND "${CMAKE_COMMAND}"
                       -DCMAKE_INSTALL_COMPONENT=libcxx
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")

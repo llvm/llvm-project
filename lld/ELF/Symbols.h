@@ -131,6 +131,13 @@ public:
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value
 
+  // The Type field may also have this value. It means that we have not yet seen
+  // a non-Lazy symbol with this name, so we don't know what its type is. The
+  // Type field is normally set to this value for Lazy symbols unless we saw a
+  // weak undefined symbol first, in which case we need to remember the original
+  // symbol's type in order to check for TLS mismatches.
+  enum { UnknownType = 255 };
+
   bool isSection() const { return Type == llvm::ELF::STT_SECTION; }
   bool isTls() const { return Type == llvm::ELF::STT_TLS; }
   bool isFunc() const { return Type == llvm::ELF::STT_FUNC; }

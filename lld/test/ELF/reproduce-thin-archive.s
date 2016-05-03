@@ -6,6 +6,7 @@
 # RUN: cd %t.dir
 # RUN: llvm-ar --format=gnu rcT foo.a foo.o
 # RUN: ld.lld -m elf_x86_64 foo.a -o bar --reproduce repro
+# RUN: cpio -id < repro.cpio
 # RUN: diff foo.a repro/%:t.dir/foo.a
 # RUN: diff foo.o repro/%:t.dir/foo.o
 

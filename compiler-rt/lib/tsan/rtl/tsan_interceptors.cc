@@ -1350,29 +1350,6 @@ TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
 }
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-TSAN_INTERCEPTOR(int, __xstat, int version, const char *path, void *buf) {
-  SCOPED_TSAN_INTERCEPTOR(__xstat, version, path, buf);
-  READ_STRING(thr, pc, path, 0);
-  return REAL(__xstat)(version, path, buf);
-}
-#define TSAN_MAYBE_INTERCEPT___XSTAT TSAN_INTERCEPT(__xstat)
-#else
-#define TSAN_MAYBE_INTERCEPT___XSTAT
-#endif
-
-TSAN_INTERCEPTOR(int, stat, const char *path, void *buf) {
-#if SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_ANDROID
-  SCOPED_TSAN_INTERCEPTOR(stat, path, buf);
-  READ_STRING(thr, pc, path, 0);
-  return REAL(stat)(path, buf);
-#else
-  SCOPED_TSAN_INTERCEPTOR(__xstat, 0, path, buf);
-  READ_STRING(thr, pc, path, 0);
-  return REAL(__xstat)(0, path, buf);
-#endif
-}
-
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
 TSAN_INTERCEPTOR(int, __xstat64, int version, const char *path, void *buf) {
   SCOPED_TSAN_INTERCEPTOR(__xstat64, version, path, buf);
   READ_STRING(thr, pc, path, 0);
@@ -2617,8 +2594,6 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(pthread_once);
 
-  TSAN_INTERCEPT(stat);
-  TSAN_MAYBE_INTERCEPT___XSTAT;
   TSAN_MAYBE_INTERCEPT_STAT64;
   TSAN_MAYBE_INTERCEPT___XSTAT64;
   TSAN_INTERCEPT(lstat);

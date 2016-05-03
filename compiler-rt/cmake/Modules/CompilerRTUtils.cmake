@@ -114,6 +114,8 @@ macro(test_target_arch arch def)
   check_compile_definition("${def}" "${argstring}" HAS_${arch}_DEF)
   if(NOT HAS_${arch}_DEF)
     set(CAN_TARGET_${arch} FALSE)
+  elseif(TEST_COMPILE_ONLY)
+    try_compile_only(CAN_TARGET_${arch} ${TARGET_${arch}_CFLAGS})
   else()
     set(argstring "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
     try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}

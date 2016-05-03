@@ -197,6 +197,9 @@ COMMON_FLAG(bool, strict_memcmp, true,
 COMMON_FLAG(bool, intercept_intrin, true,
             "If set, uses custom wrappers for memset/memcpy/memmove "
             "intrinsics to find more errors.")
+COMMON_FLAG(bool, intercept_stat, true,
+            "If set, uses custom wrappers for *stat functions "
+            "to find more errors.")
 COMMON_FLAG(bool, decorate_proc_maps, false, "If set, decorate sanitizer "
                                              "mappings in /proc/self/maps with "
                                              "user-readable names")
