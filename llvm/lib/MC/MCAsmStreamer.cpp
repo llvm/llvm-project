@@ -1288,8 +1288,8 @@ void MCAsmStreamer::EmitWinEHHandlerData() {
   // We only do this so the section switch that terminates the handler
   // data block is visible.
   WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo();
-  MCSection *XData =
-      WinEH::UnwindEmitter::getXDataSection(CurFrame->Function, getContext());
+  MCSection *TextSec = &CurFrame->Function->getSection();
+  MCSection *XData = getAssociatedXDataSection(TextSec);
   SwitchSectionNoChange(XData);
 
   OS << "\t.seh_handlerdata";

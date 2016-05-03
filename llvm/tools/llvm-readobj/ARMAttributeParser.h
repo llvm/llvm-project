@@ -10,14 +10,14 @@
 #ifndef LLVM_TOOLS_LLVM_READOBJ_ARMATTRIBUTEPARSER_H
 #define LLVM_TOOLS_LLVM_READOBJ_ARMATTRIBUTEPARSER_H
 
-#include "StreamWriter.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
 class StringRef;
 
 class ARMAttributeParser {
-  StreamWriter &SW;
+  ScopedPrinter &SW;
 
   struct DisplayHandler {
     ARMBuildAttrs::AttrType Attribute;
@@ -115,7 +115,7 @@ class ARMAttributeParser {
                       SmallVectorImpl<uint8_t> &IndexList);
   void ParseSubsection(const uint8_t *Data, uint32_t Length);
 public:
-  ARMAttributeParser(StreamWriter &SW) : SW(SW) {}
+  ARMAttributeParser(ScopedPrinter &SW) : SW(SW) {}
 
   void Parse(ArrayRef<uint8_t> Section);
 };

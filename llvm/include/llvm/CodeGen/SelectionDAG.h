@@ -1388,7 +1388,7 @@ private:
   /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
   /// not, return the insertion token that will make insertion faster.  Performs
   /// additional processing for constant nodes.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, DebugLoc DL,
+  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, SDLoc DL,
                               void *&InsertPos);
 
   /// List of non-single value types.

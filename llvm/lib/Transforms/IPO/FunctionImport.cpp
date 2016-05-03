@@ -156,8 +156,8 @@ selectCallee(const ModuleSummaryIndex &Index,
       CalleeSummaryList,
       [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
         auto *GVSummary = SummaryPtr.get();
-        if (GlobalValue::isWeakAnyLinkage(GVSummary->linkage()))
-          // There is no point in importing weak symbols, we can't inline them
+        if (GlobalValue::isMayBeOverriddenLinkage(GVSummary->linkage()))
+          // There is no point in importing these, we can't inline them
           return false;
         if (auto *AS = dyn_cast<AliasSummary>(GVSummary)) {
           GVSummary = &AS->getAliasee();

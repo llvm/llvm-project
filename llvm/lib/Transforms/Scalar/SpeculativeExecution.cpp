@@ -62,6 +62,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
@@ -138,6 +139,7 @@ INITIALIZE_PASS_END(SpeculativeExecution, "speculative-execution",
 
 void SpeculativeExecution::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addPreserved<GlobalsAAWrapperPass>();
 }
 
 bool SpeculativeExecution::runOnFunction(Function &F) {

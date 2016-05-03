@@ -200,16 +200,19 @@ namespace llvm {
       std::string SectionName;
       StringRef GroupName;
       int SelectionKey;
+      unsigned UniqueID;
       COFFSectionKey(StringRef SectionName, StringRef GroupName,
-                     int SelectionKey)
+                     int SelectionKey, unsigned UniqueID)
           : SectionName(SectionName), GroupName(GroupName),
-            SelectionKey(SelectionKey) {}
+            SelectionKey(SelectionKey), UniqueID(UniqueID) {}
       bool operator<(const COFFSectionKey &Other) const {
         if (SectionName != Other.SectionName)
           return SectionName < Other.SectionName;
         if (GroupName != Other.GroupName)
           return GroupName < Other.GroupName;
-        return SelectionKey < Other.SelectionKey;
+        if (SelectionKey != Other.SelectionKey)
+          return SelectionKey < Other.SelectionKey;
+        return UniqueID < Other.UniqueID;
       }
     };
 
@@ -315,6 +318,13 @@ namespace llvm {
     /// \name Section Management
     /// @{
 
+    enum : unsigned {
+      /// Pass this value as the UniqueID during section creation to get the
+      /// generic section with the given name and characteristics. The usual
+      /// sections such as .text use this ID.
+      GenericSectionID = ~0U
+    };
+
     /// Return the MCSection for the specified mach-o section.  This requires
     /// the operands to be valid.
     MCSectionMachO *getMachOSection(StringRef Segment, StringRef Section,
@@ -382,6 +392,7 @@ namespace llvm {
     MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
                                   SectionKind Kind, StringRef COMDATSymName,
                                   int Selection,
+                                  unsigned UniqueID = GenericSectionID,
                                   const char *BeginSymName = nullptr);
 
     MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
@@ -394,8 +405,9 @@ namespace llvm {
     /// section containing KeySym. For example, to create a debug info section
     /// associated with an inline function, pass the normal debug info section
     /// as Sec and the function symbol as KeySym.
-    MCSectionCOFF *getAssociativeCOFFSection(MCSectionCOFF *Sec,
-                                             const MCSymbol *KeySym);
+    MCSectionCOFF *
+    getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
+                              unsigned UniqueID = GenericSectionID);
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);

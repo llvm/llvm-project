@@ -928,6 +928,8 @@ def FAULTING_LOAD_OP : Instruction {
   let InOperandList = (ins variable_ops);
   let usesCustomInserter = 1;
   let mayLoad = 1;
+  let isTerminator = 1;
+  let isBranch = 1;
 }
 def PATCHABLE_OP : Instruction {
   let OutOperandList = (outs unknown:$dst);

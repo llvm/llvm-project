@@ -539,6 +539,10 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
   case Matcher::MorphNodeTo: {
     const EmitNodeMatcherCommon *EN = cast<EmitNodeMatcherCommon>(N);
     OS << (isa<EmitNodeMatcher>(EN) ? "OPC_EmitNode" : "OPC_MorphNodeTo");
+    bool CompressVTs = EN->getNumVTs() < 3;
+    if (CompressVTs)
+      OS << EN->getNumVTs();
+
     OS << ", TARGET_VAL(" << EN->getOpcodeName() << "), 0";
 
     if (EN->hasChain())   OS << "|OPFL_Chain";
@@ -549,10 +553,13 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
       OS << "|OPFL_Variadic" << EN->getNumFixedArityOperands();
     OS << ",\n";
 
-    OS.PadToColumn(Indent*2+4) << EN->getNumVTs();
-    if (!OmitComments)
-      OS << "/*#VTs*/";
-    OS << ", ";
+    OS.PadToColumn(Indent*2+4);
+    if (!CompressVTs) {
+      OS << EN->getNumVTs();
+      if (!OmitComments)
+        OS << "/*#VTs*/";
+      OS << ", ";
+    }
     for (unsigned i = 0, e = EN->getNumVTs(); i != e; ++i)
       OS << getEnumName(EN->getVT(i)) << ", ";
 
@@ -586,7 +593,7 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     } else
       OS << '\n';
 
-    return 6+EN->getNumVTs()+NumOperandBytes;
+    return 5 + !CompressVTs + EN->getNumVTs() + NumOperandBytes;
   }
   case Matcher::MarkGlueResults: {
     const MarkGlueResultsMatcher *CFR = cast<MarkGlueResultsMatcher>(N);

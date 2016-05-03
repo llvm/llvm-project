@@ -372,6 +372,7 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics,
                                          SectionKind Kind,
                                          StringRef COMDATSymName, int Selection,
+                                         unsigned UniqueID,
                                          const char *BeginSymName) {
   MCSymbol *COMDATSymbol = nullptr;
   if (!COMDATSymName.empty()) {
@@ -379,8 +380,9 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
     COMDATSymName = COMDATSymbol->getName();
   }
 
+
   // Do the lookup, if we have a hit, return it.
-  COFFSectionKey T{Section, COMDATSymName, Selection};
+  COFFSectionKey T{Section, COMDATSymName, Selection, UniqueID};
   auto IterBool = COFFUniquingMap.insert(std::make_pair(T, nullptr));
   auto Iter = IterBool.first;
   if (!IterBool.second)
@@ -402,11 +404,12 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics,
                                          SectionKind Kind,
                                          const char *BeginSymName) {
-  return getCOFFSection(Section, Characteristics, Kind, "", 0, BeginSymName);
+  return getCOFFSection(Section, Characteristics, Kind, "", 0, GenericSectionID,
+                        BeginSymName);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section) {
-  COFFSectionKey T{Section, "", 0};
+  COFFSectionKey T{Section, "", 0, GenericSectionID};
   auto Iter = COFFUniquingMap.find(T);
   if (Iter == COFFUniquingMap.end())
     return nullptr;
@@ -414,18 +417,24 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section) {
 }
 
 MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
-                                                    const MCSymbol *KeySym) {
-  // Return the normal section if we don't have to be associative.
-  if (!KeySym)
+                                                    const MCSymbol *KeySym,
+                                                    unsigned UniqueID) {
+  // Return the normal section if we don't have to be associative or unique.
+  if (!KeySym && UniqueID == GenericSectionID)
     return Sec;
 
-  // Make an associative section with the same name and kind as the normal
-  // section.
-  unsigned Characteristics =
-      Sec->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT;
+  // If we have a key symbol, make an associative section with the same name and
+  // kind as the normal section.
+  unsigned Characteristics = Sec->getCharacteristics();
+  if (KeySym) {
+    Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
+    return getCOFFSection(Sec->getSectionName(), Characteristics,
+                          Sec->getKind(), KeySym->getName(),
+                          COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
+  }
+
   return getCOFFSection(Sec->getSectionName(), Characteristics, Sec->getKind(),
-                        KeySym->getName(),
-                        COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE);
+                        "", 0, UniqueID);
 }
 
 MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {

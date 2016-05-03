@@ -35,6 +35,10 @@ public:
 
   std::error_code readBytes(uint32_t Offset,
                             MutableArrayRef<uint8_t> Buffer) const override;
+
+  std::error_code getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
+                              uint32_t Length) const override;
+
   uint32_t getLength() const override;
 
   ArrayRef<uint8_t> data() const { return Data; }

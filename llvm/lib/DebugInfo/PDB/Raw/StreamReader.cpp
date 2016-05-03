@@ -39,3 +39,11 @@ std::error_code StreamReader::readZeroString(std::string &Dest) {
   } while (C != '\0');
   return std::error_code();
 }
+
+std::error_code StreamReader::getArrayRef(ArrayRef<uint8_t> &Array,
+                                          uint32_t Length) {
+  if (auto EC = Stream.getArrayRef(Offset, Array, Length))
+    return EC;
+  Offset += Length;
+  return std::error_code();
+}

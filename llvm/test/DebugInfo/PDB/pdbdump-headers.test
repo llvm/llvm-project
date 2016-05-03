@@ -62,6 +62,15 @@
 ; EMPTY-NEXT:     Type Server Index: 0
 ; EMPTY-NEXT:     Has EC Info: 0
 ; EMPTY-NEXT:     0 Contributing Source Files:
+; EMPTY-NEXT: TPI Version: 20040203
+; EMPTY-NEXT: Record count: 75
+; EMPTY-NEXT:   Kind: 0x4609  Bytes: [00 00 00 00]
+; EMPTY-NEXT:   Kind: 0x4104  Bytes: [74 00 00 00 00 00 00 00 00 10 00 00]
+; EMPTY-NEXT:   Kind: 0x4611  Bytes: [02 15 03 00 01 00 61 70 61 72 74 6D 65 6E 74 00
+; EMPTY-NEXT:                         02 15 03 00 02 00 73 69 6E 67 6C 65 00 F3 F2 F1
+; EMPTY-NEXT:                         02 15 03 00 03 00 66 72 65 65 00 F1 02 15 03 00
+; EMPTY-NEXT:                         04 00 6E 65 75 74 72 61 6C 00 F2 F1 02 15 03 00
+; EMPTY-NEXT:                         05 00 62 6F 74 68 00 F1]
 
 BIG:      BlockSize: 4096
 BIG-NEXT: Unknown0: 2

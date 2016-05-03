@@ -22,7 +22,6 @@
 #include "llvm-readobj.h"
 #include "Error.h"
 #include "ObjDumper.h"
-#include "StreamWriter.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -35,6 +34,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -293,7 +293,8 @@ static bool isMipsArch(unsigned Arch) {
 }
 
 /// @brief Creates an format-specific object file dumper.
-static std::error_code createDumper(const ObjectFile *Obj, StreamWriter &Writer,
+static std::error_code createDumper(const ObjectFile *Obj,
+                                    ScopedPrinter &Writer,
                                     std::unique_ptr<ObjDumper> &Result) {
   if (!Obj)
     return readobj_error::unsupported_file_format;
@@ -310,7 +311,7 @@ static std::error_code createDumper(const ObjectFile *Obj, StreamWriter &Writer,
 
 /// @brief Dumps the specified object file.
 static void dumpObject(const ObjectFile *Obj) {
-  StreamWriter Writer(outs());
+  ScopedPrinter Writer(outs());
   std::unique_ptr<ObjDumper> Dumper;
   if (std::error_code EC = createDumper(Obj, Writer, Dumper))
     reportError(Obj->getFileName(), EC);

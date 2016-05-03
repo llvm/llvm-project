@@ -112,15 +112,20 @@ public:
   void stepForward(const MachineInstr &MI,
         SmallVectorImpl<std::pair<unsigned, const MachineOperand*>> &Clobbers);
 
-  /// \brief Adds all live-in registers of basic block @p MBB; After prologue/
-  /// epilogue insertion \p AddPristines should be set to true to insert the
+  /// Adds all live-in registers of basic block @p MBB.
+  /// Live in registers are the registers in the blocks live-in list and the
   /// pristine registers.
-  void addLiveIns(const MachineBasicBlock *MBB, bool AddPristines = false);
+  void addLiveIns(const MachineBasicBlock &MBB);
 
-  /// \brief Adds all live-out registers of basic block @p MBB; After prologue/
-  /// epilogue insertion \p AddPristinesAndCSRs should be set to true.
-  void addLiveOuts(const MachineBasicBlock *MBB,
-                   bool AddPristinesAndCSRs = false);
+  /// Adds all live-out registers of basic block @p MBB.
+  /// Live out registers are the union of the live-in registers of the successor
+  /// blocks and pristine registers. Live out registers of the end block are the
+  /// callee saved registers.
+  void addLiveOuts(const MachineBasicBlock &MBB);
+
+  /// Like addLiveOuts() but does not add pristine registers/callee saved
+  /// registers.
+  void addLiveOutsNoPristines(const MachineBasicBlock &MBB);
 
   typedef SparseSet<unsigned>::const_iterator const_iterator;
   const_iterator begin() const { return LiveRegs.begin(); }

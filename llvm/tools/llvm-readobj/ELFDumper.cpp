@@ -12,13 +12,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm-readobj.h"
 #include "ARMAttributeParser.h"
 #include "ARMEHABIPrinter.h"
 #include "Error.h"
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
-#include "StreamWriter.h"
+#include "llvm-readobj.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -26,10 +25,11 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -97,7 +97,7 @@ struct DynRegionInfo {
 template<typename ELFT>
 class ELFDumper : public ObjDumper {
 public:
-  ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer);
+  ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer);
 
   void printFileHeaders() override;
   void printSections() override;
@@ -300,7 +300,7 @@ template <typename ELFT> class GNUStyle : public DumpStyle<ELFT> {
   formatted_raw_ostream OS;
 public:
   TYPEDEF_ELF_TYPES(ELFT)
-  GNUStyle(StreamWriter &W, ELFDumper<ELFT> *Dumper)
+  GNUStyle(ScopedPrinter &W, ELFDumper<ELFT> *Dumper)
       : DumpStyle<ELFT>(Dumper), OS(W.getOStream()) {}
   void printFileHeaders(const ELFO *Obj) override;
   void printGroupSections(const ELFFile<ELFT> *Obj) override;
@@ -353,7 +353,7 @@ private:
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
 public:
   TYPEDEF_ELF_TYPES(ELFT)
-  LLVMStyle(StreamWriter &W, ELFDumper<ELFT> *Dumper)
+  LLVMStyle(ScopedPrinter &W, ELFDumper<ELFT> *Dumper)
       : DumpStyle<ELFT>(Dumper), W(W) {}
 
   void printFileHeaders(const ELFO *Obj) override;
@@ -372,7 +372,7 @@ private:
   void printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel);
   void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
                    StringRef StrTable, bool IsDynamic) override;
-  StreamWriter &W;
+  ScopedPrinter &W;
 };
 
 } // namespace
@@ -381,14 +381,14 @@ namespace llvm {
 
 template <class ELFT>
 static std::error_code createELFDumper(const ELFFile<ELFT> *Obj,
-                                       StreamWriter &Writer,
+                                       ScopedPrinter &Writer,
                                        std::unique_ptr<ObjDumper> &Result) {
   Result.reset(new ELFDumper<ELFT>(Obj, Writer));
   return readobj_error::success;
 }
 
 std::error_code createELFDumper(const object::ObjectFile *Obj,
-                                StreamWriter &Writer,
+                                ScopedPrinter &Writer,
                                 std::unique_ptr<ObjDumper> &Result) {
   // Little-endian 32-bit
   if (const ELF32LEObjectFile *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
@@ -491,12 +491,10 @@ template <class ELFT> void ELFDumper<ELFT>::LoadVersionMap() const {
     LoadVersionNeeds(dot_gnu_version_r_sec);
 }
 
-
 template <typename ELFO, class ELFT>
-static void printVersionSymbolSection(ELFDumper<ELFT> *Dumper,
-                                      const ELFO *Obj,
+static void printVersionSymbolSection(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
                                       const typename ELFO::Elf_Shdr *Sec,
-                                      StreamWriter &W) {
+                                      ScopedPrinter &W) {
   DictScope SS(W, "Version symbols");
   if (!Sec)
     return;
@@ -525,7 +523,7 @@ template <typename ELFO, class ELFT>
 static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
                                           const ELFO *Obj,
                                           const typename ELFO::Elf_Shdr *Sec,
-                                          StreamWriter &W) {
+                                          ScopedPrinter &W) {
   DictScope SD(W, "Version definition");
   if (!Sec)
     return;
@@ -1217,7 +1215,7 @@ static const EnumEntry<unsigned> ElfMips16SymOtherFlags[] = {
 };
 
 template <typename ELFT>
-ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, StreamWriter &Writer)
+ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
     : ObjDumper(Writer), Obj(Obj) {
 
   SmallVector<const Elf_Phdr *, 4> LoadSegments;
@@ -1795,7 +1793,7 @@ public:
   typedef typename ELFO::Elf_Rela Elf_Rela;
 
   MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
-                Elf_Dyn_Range DynTable, StreamWriter &W);
+                Elf_Dyn_Range DynTable, ScopedPrinter &W);
 
   void parseGOT();
   void parsePLT();
@@ -1803,7 +1801,7 @@ public:
 private:
   ELFDumper<ELFT> *Dumper;
   const ELFO *Obj;
-  StreamWriter &W;
+  ScopedPrinter &W;
   llvm::Optional<uint64_t> DtPltGot;
   llvm::Optional<uint64_t> DtLocalGotNum;
   llvm::Optional<uint64_t> DtGotSym;
@@ -1828,7 +1826,7 @@ private:
 
 template <class ELFT>
 MipsGOTParser<ELFT>::MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
-                                   Elf_Dyn_Range DynTable, StreamWriter &W)
+                                   Elf_Dyn_Range DynTable, ScopedPrinter &W)
     : Dumper(Dumper), Obj(Obj), W(W) {
   for (const auto &Entry : DynTable) {
     switch (Entry.getTag()) {

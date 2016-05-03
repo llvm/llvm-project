@@ -23,6 +23,10 @@ public:
 
   virtual std::error_code readBytes(uint32_t Offset,
                                     MutableArrayRef<uint8_t> Buffer) const = 0;
+  virtual std::error_code getArrayRef(uint32_t Offset,
+                                      ArrayRef<uint8_t> &Buffer,
+                                      uint32_t Length) const = 0;
+
   virtual uint32_t getLength() const = 0;
 };
 }

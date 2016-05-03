@@ -95,7 +95,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
   bool analyzeBlockForNullChecks(MachineBasicBlock &MBB,
                                  SmallVectorImpl<NullCheck> &NullCheckList);
   MachineInstr *insertFaultingLoad(MachineInstr *LoadMI, MachineBasicBlock *MBB,
-                                   MCSymbol *HandlerLabel);
+                                   MachineBasicBlock *HandlerMBB);
   void rewriteNullChecks(ArrayRef<NullCheck> NullCheckList);
 
 public:
@@ -349,11 +349,12 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 
 /// Wrap a machine load instruction, LoadMI, into a FAULTING_LOAD_OP machine
 /// instruction.  The FAULTING_LOAD_OP instruction does the same load as LoadMI
-/// (defining the same register), and branches to HandlerLabel if the load
+/// (defining the same register), and branches to HandlerMBB if the load
 /// faults.  The FAULTING_LOAD_OP instruction is inserted at the end of MBB.
-MachineInstr *ImplicitNullChecks::insertFaultingLoad(MachineInstr *LoadMI,
-                                                     MachineBasicBlock *MBB,
-                                                     MCSymbol *HandlerLabel) {
+MachineInstr *
+ImplicitNullChecks::insertFaultingLoad(MachineInstr *LoadMI,
+                                       MachineBasicBlock *MBB,
+                                       MachineBasicBlock *HandlerMBB) {
   const unsigned NoRegister = 0; // Guaranteed to be the NoRegister value for
                                  // all targets.
 
@@ -369,7 +370,7 @@ MachineInstr *ImplicitNullChecks::insertFaultingLoad(MachineInstr *LoadMI,
   }
 
   auto MIB = BuildMI(MBB, DL, TII->get(TargetOpcode::FAULTING_LOAD_OP), DefReg)
-                 .addSym(HandlerLabel)
+                 .addMBB(HandlerMBB)
                  .addImm(LoadMI->getOpcode());
 
   for (auto &MO : LoadMI->uses())
@@ -386,8 +387,6 @@ void ImplicitNullChecks::rewriteNullChecks(
   DebugLoc DL;
 
   for (auto &NC : NullCheckList) {
-    MCSymbol *HandlerLabel = MMI->getContext().createTempSymbol();
-
     // Remove the conditional branch dependent on the null check.
     unsigned BranchesRemoved = TII->RemoveBranch(*NC.CheckBlock);
     (void)BranchesRemoved;
@@ -398,7 +397,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     // touch the successors list for any basic block since we haven't changed
     // control flow, we've just made it implicit.
     MachineInstr *FaultingLoad =
-        insertFaultingLoad(NC.MemOperation, NC.CheckBlock, HandlerLabel);
+        insertFaultingLoad(NC.MemOperation, NC.CheckBlock, NC.NullSucc);
     // Now the value of the MemOperation, if any, is live-in of block
     // of MemOperation.
     unsigned Reg = FaultingLoad->getOperand(0).getReg();
@@ -413,10 +412,6 @@ void ImplicitNullChecks::rewriteNullChecks(
     // Insert an *unconditional* branch to not-null successor.
     TII->InsertBranch(*NC.CheckBlock, NC.NotNullSucc, nullptr, /*Cond=*/None,
                       DL);
-
-    // Emit the HandlerLabel as an EH_LABEL.
-    BuildMI(*NC.NullSucc, NC.NullSucc->begin(), DL,
-            TII->get(TargetOpcode::EH_LABEL)).addSym(HandlerLabel);
 
     NumImplicitNullChecks++;
   }

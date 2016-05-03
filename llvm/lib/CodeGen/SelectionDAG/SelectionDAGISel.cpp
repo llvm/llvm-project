@@ -3305,13 +3305,22 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
       continue;
     }
 
-    case OPC_EmitNode:
-    case OPC_MorphNodeTo: {
+    case OPC_EmitNode:     case OPC_MorphNodeTo:
+    case OPC_EmitNode0:    case OPC_EmitNode1:    case OPC_EmitNode2:
+    case OPC_MorphNodeTo0: case OPC_MorphNodeTo1: case OPC_MorphNodeTo2: {
       uint16_t TargetOpc = MatcherTable[MatcherIndex++];
       TargetOpc |= (unsigned short)MatcherTable[MatcherIndex++] << 8;
       unsigned EmitNodeInfo = MatcherTable[MatcherIndex++];
       // Get the result VT list.
-      unsigned NumVTs = MatcherTable[MatcherIndex++];
+      unsigned NumVTs;
+      // If this is one of the compressed forms, get the number of VTs based
+      // on the Opcode. Otherwise read the next byte from the table.
+      if (Opcode >= OPC_MorphNodeTo0 && Opcode <= OPC_MorphNodeTo2)
+        NumVTs = Opcode - OPC_MorphNodeTo0;
+      else if (Opcode >= OPC_EmitNode0 && Opcode <= OPC_EmitNode2)
+        NumVTs = Opcode - OPC_EmitNode0;
+      else
+        NumVTs = MatcherTable[MatcherIndex++];
       SmallVector<EVT, 4> VTs;
       for (unsigned i = 0; i != NumVTs; ++i) {
         MVT::SimpleValueType VT =
@@ -3373,7 +3382,9 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
 
       // Create the node.
       SDNode *Res = nullptr;
-      if (Opcode != OPC_MorphNodeTo) {
+      bool IsMorphNodeTo = Opcode == OPC_MorphNodeTo ||
+                     (Opcode >= OPC_MorphNodeTo0 && Opcode <= OPC_MorphNodeTo2);
+      if (!IsMorphNodeTo) {
         // If this is a normal EmitNode command, just create the new node and
         // add the results to the RecordedNodes list.
         Res = CurDAG->getMachineNode(TargetOpc, SDLoc(NodeToMatch),
@@ -3453,11 +3464,11 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
       }
 
       DEBUG(dbgs() << "  "
-                   << (Opcode == OPC_MorphNodeTo ? "Morphed" : "Created")
+                   << (IsMorphNodeTo ? "Morphed" : "Created")
                    << " node: "; Res->dump(CurDAG); dbgs() << "\n");
 
       // If this was a MorphNodeTo then we're completely done!
-      if (Opcode == OPC_MorphNodeTo) {
+      if (IsMorphNodeTo) {
         // Update chain and glue uses.
         UpdateChainsAndGlue(NodeToMatch, InputChain, ChainNodesMatched,
                             InputGlue, GlueResultNodesMatched, true);

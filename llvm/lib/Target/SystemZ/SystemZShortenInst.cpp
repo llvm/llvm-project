@@ -181,7 +181,7 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
 
   // Set up the set of live registers at the end of MBB (live out)
   LiveRegs.clear();
-  LiveRegs.addLiveOuts(&MBB);
+  LiveRegs.addLiveOuts(MBB);
 
   // Iterate backwards through the block looking for instructions to change.
   for (auto MBBI = MBB.rbegin(), MBBE = MBB.rend(); MBBI != MBBE; ++MBBI) {

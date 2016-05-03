@@ -135,23 +135,26 @@ static void addLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB) {
 /// Add pristine registers to the given \p LiveRegs. This function removes
 /// actually saved callee save registers when \p InPrologueEpilogue is false.
 static void addPristines(LivePhysRegs &LiveRegs, const MachineFunction &MF,
+                         const MachineFrameInfo &MFI,
                          const TargetRegisterInfo &TRI) {
-  const MachineFrameInfo &MFI = *MF.getFrameInfo();
-  if (!MFI.isCalleeSavedInfoValid())
-    return;
-
   for (const MCPhysReg *CSR = TRI.getCalleeSavedRegs(&MF); CSR && *CSR; ++CSR)
     LiveRegs.addReg(*CSR);
   for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo())
     LiveRegs.removeReg(Info.getReg());
 }
 
-void LivePhysRegs::addLiveOuts(const MachineBasicBlock *MBB,
-                               bool AddPristinesAndCSRs) {
-  if (AddPristinesAndCSRs) {
-    const MachineFunction &MF = *MBB->getParent();
-    addPristines(*this, MF, *TRI);
-    if (MBB->isReturnBlock()) {
+void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
+  // To get the live-outs we simply merge the live-ins of all successors.
+  for (const MachineBasicBlock *Succ : MBB.successors())
+    ::addLiveIns(*this, *Succ);
+}
+
+void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = *MF.getFrameInfo();
+  if (MFI.isCalleeSavedInfoValid()) {
+    addPristines(*this, MF, MFI, *TRI);
+    if (MBB.isReturnBlock()) {
       // The return block has no successors whose live-ins we could merge
       // below. So instead we add the callee saved registers manually.
       for (const MCPhysReg *I = TRI->getCalleeSavedRegs(&MF); *I; ++I)
@@ -159,16 +162,13 @@ void LivePhysRegs::addLiveOuts(const MachineBasicBlock *MBB,
     }
   }
 
-  // To get the live-outs we simply merge the live-ins of all successors.
-  for (const MachineBasicBlock *Succ : MBB->successors())
-    ::addLiveIns(*this, *Succ);
+  addLiveOutsNoPristines(MBB);
 }
 
-void LivePhysRegs::addLiveIns(const MachineBasicBlock *MBB,
-                              bool AddPristines) {
-  if (AddPristines) {
-    const MachineFunction &MF = *MBB->getParent();
-    addPristines(*this, MF, *TRI);
-  }
-  ::addLiveIns(*this, *MBB);
+void LivePhysRegs::addLiveIns(const MachineBasicBlock &MBB) {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = *MF.getFrameInfo();
+  if (MFI.isCalleeSavedInfoValid())
+    addPristines(*this, MF, MFI, *TRI);
+  ::addLiveIns(*this, MBB);
 }

@@ -19,11 +19,11 @@ class COFFImportFile;
 class ObjectFile;
 }
 
-class StreamWriter;
+class ScopedPrinter;
 
 class ObjDumper {
 public:
-  ObjDumper(StreamWriter& Writer);
+  ObjDumper(ScopedPrinter &Writer);
   virtual ~ObjDumper();
 
   virtual void printFileHeaders() = 0;
@@ -71,19 +71,19 @@ public:
   virtual void printStackMap() const = 0;
 
 protected:
-  StreamWriter& W;
+  ScopedPrinter &W;
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,
-                                 StreamWriter &Writer,
+                                 ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result);
 
 std::error_code createELFDumper(const object::ObjectFile *Obj,
-                                StreamWriter &Writer,
+                                ScopedPrinter &Writer,
                                 std::unique_ptr<ObjDumper> &Result);
 
 std::error_code createMachODumper(const object::ObjectFile *Obj,
-                                  StreamWriter &Writer,
+                                  ScopedPrinter &Writer,
                                   std::unique_ptr<ObjDumper> &Result);
 
 void dumpCOFFImportFile(const object::COFFImportFile *File);

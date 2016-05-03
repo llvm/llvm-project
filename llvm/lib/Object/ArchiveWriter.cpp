@@ -308,9 +308,8 @@ llvm::writeArchive(StringRef ArcName,
                    std::vector<NewArchiveIterator> &NewMembers,
                    bool WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin) {
-  assert(!Thin ||
-         Kind == object::Archive::K_GNU &&
-             "Only the gnu format has a thin mode");
+  assert((!Thin || Kind == object::Archive::K_GNU) &&
+         "Only the gnu format has a thin mode");
   SmallString<128> TmpArchive;
   int TmpArchiveFD;
   if (auto EC = sys::fs::createUniqueFile(ArcName + ".temp-archive-%%%%%%%.a",

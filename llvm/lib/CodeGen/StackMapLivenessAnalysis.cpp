@@ -127,7 +127,8 @@ bool StackMapLiveness::calculateLiveness(MachineFunction &MF) {
   for (auto &MBB : MF) {
     DEBUG(dbgs() << "****** BB " << MBB.getName() << " ******\n");
     LiveRegs.init(TRI);
-    LiveRegs.addLiveOuts(&MBB);
+    // FIXME: This should probably be addLiveOuts().
+    LiveRegs.addLiveOutsNoPristines(MBB);
     bool HasStackMap = false;
     // Reverse iterate over all instructions and add the current live register
     // set to an instruction if we encounter a patchpoint instruction.

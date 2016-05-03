@@ -124,26 +124,7 @@ private:
   /// non-equivalent at link time. For example, if a function has weak linkage
   /// then the code defining it may be replaced by different code.
   bool mayBeOverridden() const {
-    switch (getLinkage()) {
-    case WeakAnyLinkage:
-    case LinkOnceAnyLinkage:
-    case CommonLinkage:
-    case ExternalWeakLinkage:
-      return true;
-
-    case AvailableExternallyLinkage:
-    case LinkOnceODRLinkage:
-    case WeakODRLinkage:
-      // The above three cannot be overridden but can be de-refined.
-
-    case ExternalLinkage:
-    case AppendingLinkage:
-    case InternalLinkage:
-    case PrivateLinkage:
-      return false;
-    }
-
-    llvm_unreachable("Fully covered switch above!");
+    return isMayBeOverriddenLinkage(getLinkage());
   }
 
 protected:
@@ -283,6 +264,31 @@ public:
   }
   static bool isCommonLinkage(LinkageTypes Linkage) {
     return Linkage == CommonLinkage;
+  }
+
+  /// Whether the definition of this global may be replaced by something
+  /// non-equivalent at link time. For example, if a function has weak linkage
+  /// then the code defining it may be replaced by different code.
+  static bool isMayBeOverriddenLinkage(LinkageTypes Linkage) {
+    switch (Linkage) {
+    case WeakAnyLinkage:
+    case LinkOnceAnyLinkage:
+    case CommonLinkage:
+    case ExternalWeakLinkage:
+      return true;
+
+    case AvailableExternallyLinkage:
+    case LinkOnceODRLinkage:
+    case WeakODRLinkage:
+    // The above three cannot be overridden but can be de-refined.
+
+    case ExternalLinkage:
+    case AppendingLinkage:
+    case InternalLinkage:
+    case PrivateLinkage:
+      return false;
+    }
+    llvm_unreachable("Fully covered switch above!");
   }
 
   /// Whether the definition of this global may be discarded if it is not used

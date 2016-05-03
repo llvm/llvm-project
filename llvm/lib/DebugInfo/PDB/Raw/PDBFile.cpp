@@ -11,6 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -119,6 +120,10 @@ StringRef PDBFile::getBlockData(uint32_t BlockIndex, uint32_t NumBytes) const {
 std::error_code PDBFile::parseFileHeaders() {
   std::error_code EC;
   MemoryBufferRef BufferRef = *Context->Buffer;
+  // Make sure the file is sufficiently large to hold a super block.
+  // Do this before attempting to read the super block.
+  if (BufferRef.getBufferSize() < sizeof(SuperBlock))
+    return std::make_error_code(std::errc::illegal_byte_sequence);
 
   Context->SB =
       reinterpret_cast<const SuperBlock *>(BufferRef.getBufferStart());
@@ -130,9 +135,7 @@ std::error_code PDBFile::parseFileHeaders() {
     // An invalid block size suggests a corrupt PDB file.
     return std::make_error_code(std::errc::illegal_byte_sequence);
   }
-
-  // Make sure the file is sufficiently large to hold a super block.
-  if (BufferRef.getBufferSize() < sizeof(SuperBlock))
+  if (BufferRef.getBufferSize() % SB->BlockSize != 0)
     return std::make_error_code(std::errc::illegal_byte_sequence);
 
   // Check the magic bytes.
@@ -266,4 +269,12 @@ DbiStream &PDBFile::getPDBDbiStream() {
     Dbi->reload();
   }
   return *Dbi;
+}
+
+TpiStream &PDBFile::getPDBTpiStream() {
+  if (!Tpi) {
+    Tpi.reset(new TpiStream(*this));
+    Tpi->reload();
+  }
+  return *Tpi;
 }

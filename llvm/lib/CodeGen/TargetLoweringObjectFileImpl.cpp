@@ -316,7 +316,7 @@ selectELFSectionForGlobal(MCContext &Ctx, const GlobalValue *GV,
     Name.push_back('.');
     TM.getNameWithPrefix(Name, GV, Mang, true);
   }
-  unsigned UniqueID = ~0;
+  unsigned UniqueID = MCContext::GenericSectionID;
   if (EmitUniqueSection && !UniqueSectionNames) {
     UniqueID = *NextUniqueID;
     (*NextUniqueID)++;
@@ -924,10 +924,8 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
       Selection = 0;
     }
   }
-  return getContext().getCOFFSection(Name,
-                                     Characteristics,
-                                     Kind,
-                                     COMDATSymName,
+
+  return getContext().getCOFFSection(Name, Characteristics, Kind, COMDATSymName,
                                      Selection);
 }
 
@@ -968,16 +966,20 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
     else
       ComdatGV = GV;
 
+    unsigned UniqueID = MCContext::GenericSectionID;
+    if (EmitUniquedSection)
+      UniqueID = NextUniqueID++;
+
     if (!ComdatGV->hasPrivateLinkage()) {
       MCSymbol *Sym = TM.getSymbol(ComdatGV, Mang);
       StringRef COMDATSymName = Sym->getName();
       return getContext().getCOFFSection(Name, Characteristics, Kind,
-                                         COMDATSymName, Selection);
+                                         COMDATSymName, Selection, UniqueID);
     } else {
       SmallString<256> TmpData;
       Mang.getNameWithPrefix(TmpData, GV, /*CannotUsePrivateLabel=*/true);
       return getContext().getCOFFSection(Name, Characteristics, Kind, TmpData,
-                                         Selection);
+                                         Selection, UniqueID);
     }
   }
 
@@ -1031,9 +1033,10 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
   const char *Name = getCOFFSectionNameForUniqueGlobal(Kind);
   unsigned Characteristics = getCOFFSectionFlags(Kind);
   Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
+  unsigned UniqueID = NextUniqueID++;
 
   return getContext().getCOFFSection(Name, Characteristics, Kind, COMDATSymName,
-                                     COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE);
+                                     COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
 }
 
 void TargetLoweringObjectFileCOFF::
@@ -1068,13 +1071,13 @@ emitModuleFlags(MCStreamer &Streamer,
 MCSection *TargetLoweringObjectFileCOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
   return getContext().getAssociativeCOFFSection(
-      cast<MCSectionCOFF>(StaticCtorSection), KeySym);
+      cast<MCSectionCOFF>(StaticCtorSection), KeySym, 0);
 }
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
   return getContext().getAssociativeCOFFSection(
-      cast<MCSectionCOFF>(StaticDtorSection), KeySym);
+      cast<MCSectionCOFF>(StaticDtorSection), KeySym, 0);
 }
 
 void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(

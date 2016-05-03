@@ -28,6 +28,7 @@ entry:
   call void (...) @setfuncptr()
   call void (...) @callfuncptr()
   call void (...) @weakfunc()
+  call void (...) @linkoncefunc2()
   call void (...) @referencelargelinkonce()
   ret i32 0
 }
@@ -93,6 +94,10 @@ declare void @referencelargelinkonce(...)
 ; Won't import weak func
 ; CHECK-DAG: declare void @weakfunc(...)
 declare void @weakfunc(...) #1
+
+; Won't import linkonce func
+; CHECK-DAG: declare void @linkoncefunc2(...)
+declare void @linkoncefunc2(...) #1
 
 ; INSTLIMDEF-DAG: Import funcwithpersonality
 ; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

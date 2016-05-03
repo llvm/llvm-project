@@ -1624,7 +1624,7 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
       MBB.getParent()->getSubtarget().getRegisterInfo();
   LivePhysRegs LPR(TRI);
 
-  LPR.addLiveOuts(&MBB);
+  LPR.addLiveOuts(MBB);
 
   for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
        I != E; ++I) {

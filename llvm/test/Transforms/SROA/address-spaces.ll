@@ -52,7 +52,7 @@ define void @test_address_space_0_1(<2 x i64>* %a, i16 addrspace(1)* %b) {
 
 %struct.struct_test_27.0.13 = type { i32, float, i64, i8, [4 x i32] }
 
-; Function Attrs: nounwind
+; Function Attrs:  nounwind
 define void @copy_struct([5 x i64] %in.coerce) {
 ; CHECK-LABEL: @copy_struct(
 ; CHECK-NOT: memcpy
