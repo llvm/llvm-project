@@ -195,23 +195,10 @@ bool Loop::isSafeToClone() const {
     if (isa<IndirectBrInst>(BB->getTerminator()))
       return false;
 
-    if (const InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
-      if (II->cannotDuplicate())
-        return false;
-      // Return false if any loop blocks contain invokes to EH-pads other than
-      // landingpads;  we don't know how to split those edges yet.
-      auto *FirstNonPHI = II->getUnwindDest()->getFirstNonPHI();
-      if (FirstNonPHI->isEHPad() && !isa<LandingPadInst>(FirstNonPHI))
-        return false;
-    }
-    for (Instruction &I : *BB) {
-      if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
-        if (CI->cannotDuplicate())
+    for (Instruction &I : *BB)
+      if (auto CS = CallSite(&I))
+        if (CS.cannotDuplicate())
           return false;
-      }
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return false;
-    }
   }
   return true;
 }

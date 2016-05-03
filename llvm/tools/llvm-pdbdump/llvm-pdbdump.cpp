@@ -43,6 +43,7 @@
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
@@ -146,6 +147,29 @@ cl::opt<bool> NoClassDefs("no-class-definitions",
 cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::desc("Don't display full enum definitions"),
                          cl::cat(FilterCategory));
+}
+
+static void dumpBytes(raw_ostream &S, ArrayRef<uint8_t> Bytes,
+                      uint32_t BytesPerRow, uint32_t Indent) {
+  S << "[";
+  uint32_t I = 0;
+
+  uint32_t BytesRemaining = Bytes.size();
+  while (BytesRemaining > 0) {
+    uint32_t BytesThisLine = std::min(BytesRemaining, BytesPerRow);
+    for (size_t L = 0; L < BytesThisLine; ++L, ++I) {
+      S << format_hex_no_prefix(Bytes[I], 2, true);
+      if (L + 1 < BytesThisLine)
+        S << ' ';
+    }
+    BytesRemaining -= BytesThisLine;
+    if (BytesRemaining > 0) {
+      S << '\n';
+      S.indent(Indent);
+    }
+  }
+  S << ']';
+  S.flush();
 }
 
 static void dumpStructure(RawSession &RS) {
@@ -292,6 +316,16 @@ static void dumpStructure(RawSession &RS) {
     for (auto File : Modi.SourceFiles) {
       outs().indent(8) << File << '\n';
     }
+  }
+
+  TpiStream &Tpi = File.getPDBTpiStream();
+  outs() << "TPI Version: " << Tpi.getTpiVersion() << '\n';
+  outs() << "Record count: " << Tpi.NumTypeRecords() << '\n';
+  for (auto &Record : Tpi.records()) {
+    outs().indent(2) << "Kind: 0x" << Record.Kind;
+    outs().indent(2) << "Bytes: ";
+    dumpBytes(outs(), Record.Record, 16, 24);
+    outs() << '\n';
   }
 }
 

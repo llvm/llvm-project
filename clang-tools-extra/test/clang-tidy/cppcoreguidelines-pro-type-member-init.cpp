@@ -346,3 +346,14 @@ struct NegativeDeletedConstructor : NegativeAggregateType {
 
   Template<int> F;
 };
+
+// This pathological template fails to compile if actually instantiated. It
+// results in the check seeing a null RecordDecl when examining the base class
+// initializer list.
+template <typename T>
+class PositiveSelfInitialization : NegativeAggregateType
+{
+  PositiveSelfInitialization() : PositiveSelfInitialization() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these bases: NegativeAggregateType
+  // CHECK-FIXES: PositiveSelfInitialization() : NegativeAggregateType(), PositiveSelfInitialization() {}
+};

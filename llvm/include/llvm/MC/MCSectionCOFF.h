@@ -32,6 +32,13 @@ class MCSectionCOFF final : public MCSection {
   /// below.
   mutable unsigned Characteristics;
 
+  /// The unique IDs used with the .pdata and .xdata sections created internally
+  /// by the assembler. This ID is used to ensure that for every .text section,
+  /// there is exactly one .pdata and one .xdata section, which is required by
+  /// the Microsoft incremental linker. This data is mutable because this ID is
+  /// not notionally part of the section.
+  mutable unsigned WinCFISectionID = ~0U;
+
   /// The COMDAT symbol of this section. Only valid if this is a COMDAT section.
   /// Two COMDAT sections are merged if they have the same COMDAT symbol.
   MCSymbol *COMDATSymbol;
@@ -70,6 +77,12 @@ public:
                             const MCExpr *Subsection) const override;
   bool UseCodeAlign() const override;
   bool isVirtualSection() const override;
+
+  unsigned getOrAssignWinCFISectionID(unsigned *NextID) const {
+    if (WinCFISectionID == ~0U)
+      WinCFISectionID = (*NextID)++;
+    return WinCFISectionID;
+  }
 
   static bool classof(const MCSection *S) { return S->getVariant() == SV_COFF; }
 };

@@ -140,6 +140,8 @@ public:
 
 
 class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
+  mutable unsigned NextUniqueID = 0;
+
 public:
   ~TargetLoweringObjectFileCOFF() override {}
 

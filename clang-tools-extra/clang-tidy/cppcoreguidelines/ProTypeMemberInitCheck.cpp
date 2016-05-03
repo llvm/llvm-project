@@ -181,7 +181,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
       const auto *InitDecl =
           Init->isMemberInitializer()
               ? static_cast<const NamedDecl *>(Init->getMember())
-              : Init->getBaseClass()->getAs<RecordType>()->getDecl();
+              : Init->getBaseClass()->getAsCXXRecordDecl();
 
       // Add all fields between current field up until the next intializer.
       for (; Decl != std::end(OrderedDecls) && *Decl != InitDecl; ++Decl) {
@@ -401,7 +401,7 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
   // Remove any bases that were explicitly written in the initializer list.
   for (const CXXCtorInitializer *Init : Ctor->inits()) {
     if (Init->isBaseInitializer() && Init->isWritten())
-      BasesToInit.erase(Init->getBaseClass()->getAs<RecordType>()->getDecl());
+      BasesToInit.erase(Init->getBaseClass()->getAsCXXRecordDecl());
   }
 
   if (BasesToInit.empty())

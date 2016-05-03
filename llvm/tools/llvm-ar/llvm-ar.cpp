@@ -343,12 +343,9 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
 static void doExtract(StringRef Name, const object::Archive::Child &C) {
   // Retain the original mode.
   sys::fs::perms Mode = C.getAccessMode();
-  SmallString<128> Storage = Name;
 
   int FD;
-  failIfError(
-      sys::fs::openFileForWrite(Storage.c_str(), FD, sys::fs::F_None, Mode),
-      Storage.c_str());
+  failIfError(sys::fs::openFileForWrite(Name, FD, sys::fs::F_None, Mode), Name);
 
   {
     raw_fd_ostream file(FD, false);

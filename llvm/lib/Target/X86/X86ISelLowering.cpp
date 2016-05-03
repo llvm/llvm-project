@@ -11542,6 +11542,23 @@ static SDValue lowerV4X128VectorShuffle(SDLoc DL, MVT VT,
   if (!canWidenShuffleElements(Mask, WidenedMask))
     return SDValue();
 
+  SDValue Ops[2] = {DAG.getUNDEF(VT), DAG.getUNDEF(VT)};
+  // Insure elements came from the same Op.
+  int MaxOp1Index = VT.getVectorNumElements()/2 - 1;
+  for (int i = 0, Size = WidenedMask.size(); i < Size; ++i) {
+    if (WidenedMask[i] == SM_SentinelZero)
+      return SDValue();
+    if (WidenedMask[i] == SM_SentinelUndef)
+      continue;
+
+    SDValue Op = WidenedMask[i] > MaxOp1Index ? V2 : V1;
+    unsigned OpIndex = (i < Size/2) ? 0 : 1;
+    if (Ops[OpIndex].isUndef())
+      Ops[OpIndex] = Op;
+    else if (Ops[OpIndex] != Op)
+      return SDValue();
+  }
+
   // Form a 128-bit permutation.
   // Convert the 64-bit shuffle mask selection values into 128-bit selection
   // bits defined by a vshuf64x2 instruction's immediate control byte.
@@ -11549,15 +11566,12 @@ static SDValue lowerV4X128VectorShuffle(SDLoc DL, MVT VT,
   unsigned ControlBitsNum = WidenedMask.size() / 2;
 
   for (int i = 0, Size = WidenedMask.size(); i < Size; ++i) {
-    if (WidenedMask[i] == SM_SentinelZero)
-      return SDValue();
-
     // Use first element in place of undef mask.
     Imm = (WidenedMask[i] == SM_SentinelUndef) ? 0 : WidenedMask[i];
     PermMask |= (Imm % WidenedMask.size()) << (i * ControlBitsNum);
   }
 
-  return DAG.getNode(X86ISD::SHUF128, DL, VT, V1, V2,
+  return DAG.getNode(X86ISD::SHUF128, DL, VT, Ops[0], Ops[1],
                      DAG.getConstant(PermMask, DL, MVT::i8));
 }
 

@@ -23,6 +23,7 @@ namespace pdb {
 struct PDBFileContext;
 class DbiStream;
 class InfoStream;
+class TpiStream;
 
 class PDBFile {
 public:
@@ -59,11 +60,13 @@ public:
 
   InfoStream &getPDBInfoStream();
   DbiStream &getPDBDbiStream();
+  TpiStream &getPDBTpiStream();
 
 private:
   std::unique_ptr<PDBFileContext> Context;
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;
+  std::unique_ptr<TpiStream> Tpi;
 };
 }
 }

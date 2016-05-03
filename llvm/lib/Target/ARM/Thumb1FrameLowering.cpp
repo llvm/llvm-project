@@ -467,7 +467,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   // Look for a temporary register to use.
   // First, compute the liveness information.
   LivePhysRegs UsedRegs(STI.getRegisterInfo());
-  UsedRegs.addLiveOuts(&MBB, /*AddPristines*/ true);
+  UsedRegs.addLiveOuts(MBB);
   // The semantic of pristines changed recently and now,
   // the callee-saved registers that are touched in the function
   // are not part of the pristines set anymore.

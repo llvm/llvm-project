@@ -124,10 +124,9 @@ void WinException::endFunction(const MachineFunction *MF) {
   if (shouldEmitPersonality || shouldEmitLSDA) {
     Asm->OutStreamer->PushSection();
 
-    // Just switch sections to the right xdata section. This use of CurrentFnSym
-    // assumes that we only emit the LSDA when ending the parent function.
-    MCSection *XData = WinEH::UnwindEmitter::getXDataSection(Asm->CurrentFnSym,
-                                                             Asm->OutContext);
+    // Just switch sections to the right xdata section.
+    MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
+        Asm->OutStreamer->getCurrentSectionOnly());
     Asm->OutStreamer->SwitchSection(XData);
 
     // Emit the tables appropriate to the personality function in use. If we

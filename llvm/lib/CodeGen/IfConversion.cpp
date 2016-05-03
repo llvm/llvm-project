@@ -1136,13 +1136,13 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
   // Initialize liveins to the first BB. These are potentiall redefined by
   // predicated instructions.
   Redefs.init(TRI);
-  Redefs.addLiveIns(CvtBBI->BB);
-  Redefs.addLiveIns(NextBBI->BB);
+  Redefs.addLiveIns(*CvtBBI->BB);
+  Redefs.addLiveIns(*NextBBI->BB);
 
   // Compute a set of registers which must not be killed by instructions in
   // BB1: This is everything live-in to BB2.
   DontKill.init(TRI);
-  DontKill.addLiveIns(NextBBI->BB);
+  DontKill.addLiveIns(*NextBBI->BB);
 
   if (CvtBBI->BB->pred_size() > 1) {
     BBI.NonPredSize -= TII->RemoveBranch(*BBI.BB);
@@ -1241,8 +1241,8 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
   // Initialize liveins to the first BB. These are potentially redefined by
   // predicated instructions.
   Redefs.init(TRI);
-  Redefs.addLiveIns(CvtBBI->BB);
-  Redefs.addLiveIns(NextBBI->BB);
+  Redefs.addLiveIns(*CvtBBI->BB);
+  Redefs.addLiveIns(*NextBBI->BB);
 
   DontKill.clear();
 
@@ -1396,7 +1396,7 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   // Initialize liveins to the first BB. These are potentially redefined by
   // predicated instructions.
   Redefs.init(TRI);
-  Redefs.addLiveIns(BBI1->BB);
+  Redefs.addLiveIns(*BBI1->BB);
 
   // Remove the duplicated instructions at the beginnings of both paths.
   // Skip dbg_value instructions

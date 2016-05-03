@@ -1358,6 +1358,19 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
   if (!TII->AnalyzeBranch(F.back(), TBB, FBB, Cond))
     F.back().updateTerminator();
+
+  // Now that all the basic blocks in the chain have the proper layout,
+  // make a final call to AnalyzeBranch with AllowModify set.
+  // Indeed, the target may be able to optimize the branches in a way we
+  // cannot because all branches may not be analyzable.
+  // E.g., the target may be able to remove an unconditional branch to
+  // a fallthrough when it occurs after predicated terminators.
+  for (MachineBasicBlock *ChainBB : FunctionChain) {
+    Cond.clear();
+    TBB = nullptr;
+    FBB = nullptr; // For AnalyzeBranch.
+    (void)TII->AnalyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true);
+  }
 }
 
 void MachineBlockPlacement::alignBlocks(MachineFunction &F) {

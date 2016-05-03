@@ -931,10 +931,10 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerFAULTING_LOAD_OP(const MachineInstr &MI,
                                        X86MCInstLower &MCIL) {
-  // FAULTING_LOAD_OP <def>, <handler label>, <load opcode>, <load operands>
+  // FAULTING_LOAD_OP <def>, <MBB handler>, <load opcode>, <load operands>
 
   unsigned LoadDefRegister = MI.getOperand(0).getReg();
-  MCSymbol *HandlerLabel = MI.getOperand(1).getMCSymbol();
+  MCSymbol *HandlerLabel = MI.getOperand(1).getMBB()->getSymbol();
   unsigned LoadOpcode = MI.getOperand(2).getImm();
   unsigned LoadOperandsBeginIdx = 3;
 

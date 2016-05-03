@@ -426,6 +426,14 @@ public:
     CALLSITE_DELEGATE_SETTER(setDoesNotThrow());
   }
 
+  /// @brief Determine if the call can be duplicated.
+  bool cannotDuplicate() const {
+    CALLSITE_DELEGATE_GETTER(cannotDuplicate());
+  }
+  void setCannotDuplicate() {
+    CALLSITE_DELEGATE_GETTER(setCannotDuplicate());
+  }
+
   /// @brief Determine if the call is convergent.
   bool isConvergent() const {
     CALLSITE_DELEGATE_GETTER(isConvergent());

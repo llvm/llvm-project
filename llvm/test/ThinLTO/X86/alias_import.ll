@@ -50,10 +50,10 @@
 ; PROMOTE-DAG: define linkonce void @linkoncefunc()
 ; PROMOTE-DAG: define weak void @weakfunc()
 
-; On the import side now, verify that aliases to a linkonce_odr are imported, but the weak (never import weak)
+; On the import side now, verify that aliases to a linkonce_odr are imported, but the weak/linkonce (we can't inline them)
 ; IMPORT-DAG:  declare void @linkonceODRfuncWeakAlias
+; IMPORT-DAG: declare void @linkonceODRfuncLinkonceAlias
 ; IMPORT-DAG:  @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-; IMPORT-DAG:  @linkonceODRfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 ; IMPORT-DAG:  @linkonceODRfuncWeakODRAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 ; IMPORT-DAG:  @linkonceODRfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 ; IMPORT-DAG:  define linkonce_odr void @linkonceODRfunc()

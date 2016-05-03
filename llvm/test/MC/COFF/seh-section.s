@@ -1,10 +1,8 @@
 // This test ensures functions in custom sections get unwind info emitted in a
-// distinct .xdata section. Ideally we'd just emit a second .xdata section with
-// the same name and characteristics, but MC uniques sections by name and
-// characteristics, so that is not possible.
+// distinct .xdata section.
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s | llvm-readobj -s -sd | FileCheck %s
 
-// CHECK:      Name: .xdata$foo
+// CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
 // CHECK-NEXT: RawDataSize: 8
@@ -22,7 +20,7 @@
 // CHECK-NEXT:   0000: 01050200 05500402
 // CHECK-NEXT: )
 
-// CHECK:      Name: .xdata$.mytext
+// CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
 // CHECK-NEXT: RawDataSize: 8

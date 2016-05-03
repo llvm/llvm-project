@@ -19,8 +19,10 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWin64EH.h"
+#include "llvm/Support/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
@@ -446,6 +448,7 @@ void MCStreamer::EmitWinCFIStartProc(const MCSymbol *Symbol) {
 
   WinFrameInfos.push_back(new WinEH::FrameInfo(Symbol, StartProc));
   CurrentWinFrameInfo = WinFrameInfos.back();
+  CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
 }
 
 void MCStreamer::EmitWinCFIEndProc() {
@@ -467,6 +470,7 @@ void MCStreamer::EmitWinCFIStartChained() {
   WinFrameInfos.push_back(new WinEH::FrameInfo(CurrentWinFrameInfo->Function,
                                                StartProc, CurrentWinFrameInfo));
   CurrentWinFrameInfo = WinFrameInfos.back();
+  CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
 }
 
 void MCStreamer::EmitWinCFIEndChained() {
@@ -500,6 +504,38 @@ void MCStreamer::EmitWinEHHandlerData() {
   EnsureValidWinFrameInfo();
   if (CurrentWinFrameInfo->ChainedParent)
     report_fatal_error("Chained unwind areas can't have handlers!");
+}
+
+static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
+                                   MCSection *MainCFISec,
+                                   const MCSection *TextSec) {
+  // If this is the main .text section, use the main unwind info section.
+  if (TextSec == Context.getObjectFileInfo()->getTextSection())
+    return MainCFISec;
+
+  const auto *TextSecCOFF = cast<MCSectionCOFF>(TextSec);
+  unsigned UniqueID = TextSecCOFF->getOrAssignWinCFISectionID(NextWinCFIID);
+
+  // If this section is COMDAT, this unwind section should be COMDAT associative
+  // with its group.
+  const MCSymbol *KeySym = nullptr;
+  if (TextSecCOFF->getCharacteristics() & COFF::IMAGE_SCN_LNK_COMDAT)
+    KeySym = TextSecCOFF->getCOMDATSymbol();
+
+  return Context.getAssociativeCOFFSection(cast<MCSectionCOFF>(MainCFISec),
+                                           KeySym, UniqueID);
+}
+
+MCSection *MCStreamer::getAssociatedPDataSection(const MCSection *TextSec) {
+  return getWinCFISection(getContext(), &NextWinCFIID,
+                          getContext().getObjectFileInfo()->getPDataSection(),
+                          TextSec);
+}
+
+MCSection *MCStreamer::getAssociatedXDataSection(const MCSection *TextSec) {
+  return getWinCFISection(getContext(), &NextWinCFIID,
+                          getContext().getObjectFileInfo()->getXDataSection(),
+                          TextSec);
 }
 
 void MCStreamer::EmitSyntaxDirective() {}

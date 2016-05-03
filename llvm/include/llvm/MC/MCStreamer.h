@@ -183,6 +183,12 @@ class MCStreamer {
   /// PushSection.
   SmallVector<std::pair<MCSectionSubPair, MCSectionSubPair>, 4> SectionStack;
 
+  /// The next unique ID to use when creating a WinCFI-related section (.pdata
+  /// or .xdata). This ID ensures that we have a one-to-one mapping from
+  /// code section to unwind info section, which MSVC's incremental linker
+  /// requires.
+  unsigned NextWinCFIID = 0;
+
 protected:
   MCStreamer(MCContext &Ctx);
 
@@ -719,6 +725,14 @@ public:
 
   virtual void EmitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except);
   virtual void EmitWinEHHandlerData();
+
+  /// Get the .pdata section used for the given section. Typically the given
+  /// section is either the main .text section or some other COMDAT .text
+  /// section, but it may be any section containing code.
+  MCSection *getAssociatedPDataSection(const MCSection *TextSec);
+
+  /// Get the .xdata section used for the given section.
+  MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
   virtual void EmitSyntaxDirective();
 

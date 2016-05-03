@@ -39,6 +39,8 @@ public:
     return readBytes(Casted);
   }
 
+  std::error_code getArrayRef(ArrayRef<uint8_t> &Array, uint32_t Length);
+
   void setOffset(uint32_t Off) { Offset = Off; }
   uint32_t getOffset() const { return Offset; }
   uint32_t getLength() const { return Stream.getLength(); }

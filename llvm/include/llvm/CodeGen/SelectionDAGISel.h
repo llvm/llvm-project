@@ -146,7 +146,11 @@ public:
     OPC_EmitCopyToReg,
     OPC_EmitNodeXForm,
     OPC_EmitNode,
+    // Space-optimized forms that implicitly encode number of result VTs.
+    OPC_EmitNode0, OPC_EmitNode1, OPC_EmitNode2,
     OPC_MorphNodeTo,
+    // Space-optimized forms that implicitly encode number of result VTs.
+    OPC_MorphNodeTo0, OPC_MorphNodeTo1, OPC_MorphNodeTo2,
     OPC_MarkGlueResults,
     OPC_CompleteMatch
   };

@@ -245,7 +245,7 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
   // to update this for each instruction.
   LiveRegs.clear();
   // We run after PEI, so we need to AddPristinesAndCSRs.
-  LiveRegs.addLiveOuts(&MBB, /*AddPristinesAndCSRs=*/true);
+  LiveRegs.addLiveOuts(MBB);
 
   for (auto I = MBB.rbegin(); I != MBB.rend(); ++I) {
     MachineInstr *NewMI = nullptr;

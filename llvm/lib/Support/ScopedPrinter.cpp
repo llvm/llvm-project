@@ -1,4 +1,5 @@
-#include "StreamWriter.h"
+#include "llvm/Support/ScopedPrinter.h"
+
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include <cctype>
@@ -7,7 +8,7 @@ using namespace llvm::support;
 
 namespace llvm {
 
-raw_ostream &operator<<(raw_ostream &OS, const HexNumber& Value) {
+raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value) {
   OS << "0x" << to_hexString(Value.Value);
   return OS;
 }
@@ -19,8 +20,8 @@ const std::string to_hexString(uint64_t Value, bool UpperCase) {
   return stream.str();
 }
 
-void StreamWriter::printBinaryImpl(StringRef Label, StringRef Str,
-                                   ArrayRef<uint8_t> Data, bool Block) {
+void ScopedPrinter::printBinaryImpl(StringRef Label, StringRef Str,
+                                    ArrayRef<uint8_t> Data, bool Block) {
   if (Data.size() > 16)
     Block = true;
 

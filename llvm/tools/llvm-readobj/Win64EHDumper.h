@@ -10,7 +10,7 @@
 #ifndef LLVM_TOOLS_LLVM_READOBJ_WIN64EHDUMPER_H
 #define LLVM_TOOLS_LLVM_READOBJ_WIN64EHDUMPER_H
 
-#include "StreamWriter.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Win64EH.h"
 
 namespace llvm {
@@ -22,7 +22,7 @@ struct coff_section;
 
 namespace Win64EH {
 class Dumper {
-  StreamWriter &SW;
+  ScopedPrinter &SW;
   raw_ostream &OS;
 
 public:
@@ -53,7 +53,7 @@ private:
                             uint64_t SectionOffset, const RuntimeFunction &RF);
 
 public:
-  Dumper(StreamWriter &SW) : SW(SW), OS(SW.getOStream()) {}
+  Dumper(ScopedPrinter &SW) : SW(SW), OS(SW.getOStream()) {}
 
   void printData(const Context &Ctx);
 };
