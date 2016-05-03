@@ -78,7 +78,7 @@ struct StoreToLoadForwardingCandidate {
     // able to handle non unit stirde as well as long as the stride is equal to
     // the dependence distance.
     if (isStridedPtr(PSE, LoadPtr, L) != 1 ||
-        isStridedPtr(PSE, LoadPtr, L) != 1)
+        isStridedPtr(PSE, StorePtr, L) != 1)
       return false;
 
     auto &DL = Load->getParent()->getModule()->getDataLayout();
