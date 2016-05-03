@@ -67,7 +67,7 @@ TEST_P(MaybeSparseInstrProfTest, write_and_read_empty_profile) {
 
 TEST_P(MaybeSparseInstrProfTest, write_and_read_one_function) {
   InstrProfRecord Record("foo", 0x1234, {1, 2, 3, 4});
-  Writer.addRecord(std::move(Record));
+  NoError(Writer.addRecord(std::move(Record)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -86,8 +86,8 @@ TEST_P(MaybeSparseInstrProfTest, write_and_read_one_function) {
 TEST_P(MaybeSparseInstrProfTest, get_instr_prof_record) {
   InstrProfRecord Record1("foo", 0x1234, {1, 2});
   InstrProfRecord Record2("foo", 0x1235, {3, 4});
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
+  NoError(Writer.addRecord(std::move(Record1)));
+  NoError(Writer.addRecord(std::move(Record2)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -113,8 +113,8 @@ TEST_P(MaybeSparseInstrProfTest, get_instr_prof_record) {
 TEST_P(MaybeSparseInstrProfTest, get_function_counts) {
   InstrProfRecord Record1("foo", 0x1234, {1, 2});
   InstrProfRecord Record2("foo", 0x1235, {3, 4});
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
+  NoError(Writer.addRecord(std::move(Record1)));
+  NoError(Writer.addRecord(std::move(Record2)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -146,10 +146,10 @@ TEST_F(InstrProfTest, get_profile_summary) {
                            576460752303423488, 288230376151711744,
                            144115188075855872, 72057594037927936});
   InstrProfRecord Record4("func4", 0x1234, {0});
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
-  Writer.addRecord(std::move(Record4));
+  NoError(Writer.addRecord(std::move(Record1)));
+  NoError(Writer.addRecord(std::move(Record2)));
+  NoError(Writer.addRecord(std::move(Record3)));
+  NoError(Writer.addRecord(std::move(Record4)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -196,10 +196,10 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
   InstrProfValueData VD3[] = {{(uint64_t) "callee1", 1}};
   Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
 
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
-  Writer.addRecord(std::move(Record4));
+  NoError(Writer.addRecord(std::move(Record1)));
+  NoError(Writer.addRecord(std::move(Record2)));
+  NoError(Writer.addRecord(std::move(Record3)));
+  NoError(Writer.addRecord(std::move(Record4)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -231,7 +231,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}, {5000, 5},
                               {4000, 4}, {6000, 6}};
   Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 6, nullptr);
-  Writer.addRecord(std::move(Record));
+  NoError(Writer.addRecord(std::move(Record)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
   ErrorOr<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
@@ -341,10 +341,10 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {
   InstrProfValueData VD3[] = {{(uint64_t) "callee1", 1}};
   Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
 
-  Writer.addRecord(std::move(Record1), 10);
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
-  Writer.addRecord(std::move(Record4));
+  NoError(Writer.addRecord(std::move(Record1), 10));
+  NoError(Writer.addRecord(std::move(Record2)));
+  NoError(Writer.addRecord(std::move(Record3)));
+  NoError(Writer.addRecord(std::move(Record4)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -389,10 +389,10 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
   InstrProfValueData VD3[] = {{(uint64_t) "callee1", 1}};
   Record1.addValueData(IPVK_IndirectCallTarget, 3, VD3, 1, nullptr);
 
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
-  Writer.addRecord(std::move(Record4));
+  NoError(Writer.addRecord(std::move(Record1)));
+  NoError(Writer.addRecord(std::move(Record2)));
+  NoError(Writer.addRecord(std::move(Record3)));
+  NoError(Writer.addRecord(std::move(Record4)));
 
   // Set big endian output.
   Writer.setValueProfDataEndianness(support::big);
@@ -478,15 +478,15 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
                                {uint64_t(callee3), 3}};
   Record12.addValueData(IPVK_IndirectCallTarget, 4, VD42, 3, nullptr);
 
-  Writer.addRecord(std::move(Record11));
+  NoError(Writer.addRecord(std::move(Record11)));
   // Merge profile data.
-  Writer.addRecord(std::move(Record12));
+  NoError(Writer.addRecord(std::move(Record12)));
 
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
-  Writer.addRecord(std::move(Record4));
-  Writer.addRecord(std::move(Record5));
-  Writer.addRecord(std::move(Record6));
+  NoError(Writer.addRecord(std::move(Record2)));
+  NoError(Writer.addRecord(std::move(Record3)));
+  NoError(Writer.addRecord(std::move(Record4)));
+  NoError(Writer.addRecord(std::move(Record5)));
+  NoError(Writer.addRecord(std::move(Record6)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -617,9 +617,9 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge_site_trunc) {
   Record12.addValueData(IPVK_IndirectCallTarget, 0, VD1, 255, nullptr);
   Record12.addValueData(IPVK_IndirectCallTarget, 1, nullptr, 0, nullptr);
 
-  Writer.addRecord(std::move(Record11));
+  NoError(Writer.addRecord(std::move(Record11)));
   // Merge profile data.
-  Writer.addRecord(std::move(Record12));
+  NoError(Writer.addRecord(std::move(Record12)));
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
@@ -732,9 +732,9 @@ TEST_P(MaybeSparseInstrProfTest, get_max_function_count) {
   InstrProfRecord Record1("foo", 0x1234, {1ULL << 31, 2});
   InstrProfRecord Record2("bar", 0, {1ULL << 63});
   InstrProfRecord Record3("baz", 0x5678, {0, 0, 0, 0});
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
+  NoError(Writer.addRecord(std::move(Record1)));
+  NoError(Writer.addRecord(std::move(Record2)));
+  NoError(Writer.addRecord(std::move(Record3)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -744,8 +744,8 @@ TEST_P(MaybeSparseInstrProfTest, get_max_function_count) {
 TEST_P(MaybeSparseInstrProfTest, get_weighted_function_counts) {
   InstrProfRecord Record1("foo", 0x1234, {1, 2});
   InstrProfRecord Record2("foo", 0x1235, {3, 4});
-  Writer.addRecord(std::move(Record1), 3);
-  Writer.addRecord(std::move(Record2), 5);
+  NoError(Writer.addRecord(std::move(Record1), 3));
+  NoError(Writer.addRecord(std::move(Record2), 5));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
@@ -875,13 +875,13 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
   for (bool DoCompression : {false, true}) {
     // Compressing:
     std::string FuncNameStrings1;
-    collectPGOFuncNameStrings(
-        FuncNames1, (DoCompression && zlib::isAvailable()), FuncNameStrings1);
+    NoError(collectPGOFuncNameStrings(
+        FuncNames1, (DoCompression && zlib::isAvailable()), FuncNameStrings1));
 
     // Compressing:
     std::string FuncNameStrings2;
-    collectPGOFuncNameStrings(
-        FuncNames2, (DoCompression && zlib::isAvailable()), FuncNameStrings2);
+    NoError(collectPGOFuncNameStrings(
+        FuncNames2, (DoCompression && zlib::isAvailable()), FuncNameStrings2));
 
     for (int Padding = 0; Padding < 3; Padding++) {
       // Join with paddings:
@@ -893,7 +893,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
 
       // Now decompress:
       InstrProfSymtab Symtab;
-      Symtab.create(StringRef(FuncNameStrings));
+      NoError(Symtab.create(StringRef(FuncNameStrings)));
 
       // Now do the checks:
       // First sampling some data points:
@@ -921,9 +921,9 @@ TEST_F(SparseInstrProfTest, preserve_no_records) {
   InstrProfRecord Record2("bar", 0x4321, {0, 0});
   InstrProfRecord Record3("bar", 0x4321, {0, 0, 0});
 
-  Writer.addRecord(std::move(Record1));
-  Writer.addRecord(std::move(Record2));
-  Writer.addRecord(std::move(Record3));
+  NoError(Writer.addRecord(std::move(Record1)));
+  NoError(Writer.addRecord(std::move(Record2)));
+  NoError(Writer.addRecord(std::move(Record3)));
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
