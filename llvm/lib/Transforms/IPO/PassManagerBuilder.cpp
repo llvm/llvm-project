@@ -391,6 +391,19 @@ void PassManagerBuilder::populateModulePassManager(
   // we must insert a no-op module pass to reset the pass manager.
   MPM.add(createBarrierNoopPass());
 
+  if (!DisableUnitAtATime && OptLevel > 1 && !PrepareForLTO &&
+      !PrepareForThinLTO)
+    // Remove avail extern fns and globals definitions if we aren't
+    // compiling an object file for later LTO. For LTO we want to preserve
+    // these so they are eligible for inlining at link-time. Note if they
+    // are unreferenced they will be removed by GlobalDCE later, so
+    // this only impacts referenced available externally globals.
+    // Eventually they will be suppressed during codegen, but eliminating
+    // here enables more opportunity for GlobalDCE as it may make
+    // globals referenced by available external functions dead
+    // and saves running remaining passes on the eliminated functions.
+    MPM.add(createEliminateAvailableExternallyPass());
+
   if (!DisableUnitAtATime)
     MPM.add(createReversePostOrderFunctionAttrsPass());
 
@@ -405,20 +418,9 @@ void PassManagerBuilder::populateModulePassManager(
     return;
   }
 
-  if (!DisableUnitAtATime && OptLevel > 1 && !PrepareForLTO)
-    // Remove avail extern fns and globals definitions if we aren't
-    // compiling an object file for later LTO. For LTO we want to preserve
-    // these so they are eligible for inlining at link-time. Note if they
-    // are unreferenced they will be removed by GlobalDCE later, so
-    // this only impacts referenced available externally globals.
-    // Eventually they will be suppressed during codegen, but eliminating
-    // here enables more opportunity for GlobalDCE as it may make
-    // globals referenced by available external functions dead
-    // and saves running remaining passes on the eliminated functions.
-    MPM.add(createEliminateAvailableExternallyPass());
-
   if (PerformThinLTO)
-    // Remove dead fns and globals.
+    // Remove dead fns and globals. Removing unreferenced functions could lead
+    // to more opportunities for globalopt.
     MPM.add(createGlobalOptimizerPass());
 
   if (EnableNonLTOGlobalsModRef)
