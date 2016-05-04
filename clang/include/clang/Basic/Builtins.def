@@ -67,6 +67,7 @@
 // Builtin::Context class.  Currently we have:
 //  n -> nothrow
 //  r -> noreturn
+//  U -> pure
 //  c -> const
 //  t -> signature is meaningless, use custom typechecking
 //  F -> this is a libc/libm function with a '__builtin_' prefix added.
@@ -773,6 +774,22 @@ LIBBUILTIN(sscanf, "icC*RcC*R.",  "fs:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vscanf, "icC*Ra",      "fS:0:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vfscanf, "iP*RcC*Ra",  "fS:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vsscanf, "icC*RcC*Ra", "fS:1:", "stdio.h", ALL_LANGUAGES)
+// C99 ctype.h
+LIBBUILTIN(isalnum, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isalpha, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isblank, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(iscntrl, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isdigit, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isgraph, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(islower, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isprint, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(ispunct, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isspace, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isupper, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isxdigit, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(tolower, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(toupper, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+
 // C99
 // In some systems setjmp is a macro that expands to _setjmp. We undefine
 // it here to avoid having two identical LIBBUILTIN entries.

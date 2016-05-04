@@ -113,8 +113,6 @@ void test2(Collide *a) {
   
 @end
 
-double *isupper(int);
-
 @interface Sub2 : Super
 - (int)method2;
 @end
