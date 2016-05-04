@@ -9,11 +9,19 @@ RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomple
 RUN:      | FileCheck -check-prefix INCOMPLETE-LOADC %s
 INCOMPLETE-LOADC: truncated or malformed object (load command 0 extends past the end all load commands in the file)
 
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-load-command.1 2>&1 \
+RUN:      | FileCheck -check-prefix INCOMPLETE-LOADC-1 %s
+INCOMPLETE-LOADC-1: truncated or malformed object (load command 1 extends past the end all load commands in the file)
+
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-too-small-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-too-small-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
 SMALL-LOADC-SIZE: truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-too-small-load-command.1 2>&1 \
+RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE-1 %s
+SMALL-LOADC-SIZE-1: truncated or malformed object (load command 1 with size less than 8 bytes)
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-segment-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s

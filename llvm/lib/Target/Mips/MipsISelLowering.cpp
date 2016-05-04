@@ -1746,7 +1746,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
 
   return getAddrGlobal(
       N, SDLoc(N), Ty, DAG,
-      (ABI.IsN32() || ABI.IsN64()) ? MipsII::MO_GOT_DISP : MipsII::MO_GOT16,
+      (ABI.IsN32() || ABI.IsN64()) ? MipsII::MO_GOT_DISP : MipsII::MO_GOT,
       DAG.getEntryNode(), MachinePointerInfo::getGOT(DAG.getMachineFunction()));
 }
 

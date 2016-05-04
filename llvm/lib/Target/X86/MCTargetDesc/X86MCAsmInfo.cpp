@@ -39,7 +39,7 @@ RelaxELFRel("relax-relocations", cl::init(false),
   cl::desc("Emit R_X86_64_GOTPCRELX instead of R_X86_64_GOTPCREL"));
 
 static cl::opt<bool>
-MarkedJTDataRegions("mark-data-regions", cl::init(false),
+MarkedJTDataRegions("mark-data-regions", cl::init(true),
   cl::desc("Mark code section jump table data regions."),
   cl::Hidden);
 

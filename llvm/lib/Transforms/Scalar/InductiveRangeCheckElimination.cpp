@@ -1383,6 +1383,9 @@ IntersectRange(ScalarEvolution &SE,
 }
 
 bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
+  if (skipLoop(L))
+    return false;
+
   if (L->getBlocks().size() >= LoopSizeCutoff) {
     DEBUG(dbgs() << "irce: giving up constraining loop, too large\n";);
     return false;

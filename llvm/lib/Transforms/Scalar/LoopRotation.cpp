@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopRotation.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -20,6 +20,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -32,6 +33,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -562,15 +564,36 @@ static bool iterativelyRotateLoop(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
   return MadeChange;
 }
 
+LoopRotatePass::LoopRotatePass() : MaxHeaderSize(DefaultRotationThreshold) {}
+
+PreservedAnalyses LoopRotatePass::run(Loop &L, AnalysisManager<Loop> &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
+  Function *F = L.getHeader()->getParent();
+
+  auto *LI = FAM.getCachedResult<LoopAnalysis>(*F);
+  const auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
+  auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
+  assert((LI && TTI && AC) && "Analyses for loop rotation not available");
+
+  // Optional analyses.
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
+  auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
+
+  bool Changed = iterativelyRotateLoop(&L, MaxHeaderSize, LI, TTI, AC, DT, SE);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getLoopPassPreservedAnalyses();
+}
+
 namespace {
 
-class LoopRotate : public LoopPass {
+class LoopRotateLegacyPass : public LoopPass {
   unsigned MaxHeaderSize;
 
 public:
   static char ID; // Pass ID, replacement for typeid
-  LoopRotate(int SpecifiedMaxHeaderSize = -1) : LoopPass(ID) {
-    initializeLoopRotatePass(*PassRegistry::getPassRegistry());
+  LoopRotateLegacyPass(int SpecifiedMaxHeaderSize = -1) : LoopPass(ID) {
+    initializeLoopRotateLegacyPassPass(*PassRegistry::getPassRegistry());
     if (SpecifiedMaxHeaderSize == -1)
       MaxHeaderSize = DefaultRotationThreshold;
     else
@@ -602,13 +625,15 @@ public:
 };
 }
 
-char LoopRotate::ID = 0;
-INITIALIZE_PASS_BEGIN(LoopRotate, "loop-rotate", "Rotate Loops", false, false)
+char LoopRotateLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(LoopRotateLegacyPass, "loop-rotate", "Rotate Loops",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(LoopRotate, "loop-rotate", "Rotate Loops", false, false)
+INITIALIZE_PASS_END(LoopRotateLegacyPass, "loop-rotate", "Rotate Loops",
+                    false, false)
 
 Pass *llvm::createLoopRotatePass(int MaxHeaderSize) {
-  return new LoopRotate(MaxHeaderSize);
+  return new LoopRotateLegacyPass(MaxHeaderSize);
 }

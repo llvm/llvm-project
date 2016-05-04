@@ -168,6 +168,10 @@ namespace opts {
   cl::opt<bool> MipsReginfo("mips-reginfo",
                             cl::desc("Display the MIPS .reginfo section"));
 
+  // -mips-options
+  cl::opt<bool> MipsOptions("mips-options",
+                            cl::desc("Display the MIPS .MIPS.options section"));
+
   // -coff-imports
   cl::opt<bool>
   COFFImports("coff-imports", cl::desc("Display the PE/COFF import table"));
@@ -363,6 +367,8 @@ static void dumpObject(const ObjectFile *Obj) {
         Dumper->printMipsABIFlags();
       if (opts::MipsReginfo)
         Dumper->printMipsReginfo();
+      if (opts::MipsOptions)
+        Dumper->printMipsOptions();
     }
     if (opts::SectionGroups)
       Dumper->printGroupSections();

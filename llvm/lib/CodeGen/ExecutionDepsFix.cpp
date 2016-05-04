@@ -726,6 +726,8 @@ void ExeDepsFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
 }
 
 bool ExeDepsFix::runOnMachineFunction(MachineFunction &mf) {
+  if (skipFunction(*mf.getFunction()))
+    return false;
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();

@@ -61,6 +61,9 @@ FunctionPass *llvm::createConstantPropagationPass() {
 }
 
 bool ConstantPropagation::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   // Initialize the worklist to all of the instructions ready to process...
   std::set<Instruction*> WorkList;
   for (Instruction &I: instructions(&F))

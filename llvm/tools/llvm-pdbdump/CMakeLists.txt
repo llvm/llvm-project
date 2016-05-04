@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
-  Support
   DebugInfoPDB
+  Object
+  Support
   )
 
 add_llvm_tool(llvm-pdbdump

@@ -1,11 +1,11 @@
 ; RUN: llc -march=mipsel -relocation-model=pic -enable-mips-tail-calls < %s | \
-; RUN: FileCheck %s -check-prefix=PIC32
+; RUN:     FileCheck %s -check-prefix=PIC32
 ; RUN: llc -march=mipsel -relocation-model=static \
-; RUN: -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=STATIC32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+n64 -enable-mips-tail-calls \
-; RUN: < %s | FileCheck %s -check-prefix=N64
+; RUN:     -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=STATIC32
+; RUN: llc -march=mips64el -mcpu=mips64r2 -enable-mips-tail-calls \
+; RUN:     < %s | FileCheck %s -check-prefix=N64
 ; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=pic \
-; RUN: -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=PIC16
+; RUN:     -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=PIC16
 
 @g0 = common global i32 0, align 4
 @g1 = common global i32 0, align 4

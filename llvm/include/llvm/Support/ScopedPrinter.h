@@ -19,8 +19,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
-using namespace llvm;
-
 namespace llvm {
 
 template <typename T> struct EnumEntry {
@@ -304,33 +302,26 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
   startLine() << Label << ": " << hex(Value) << "\n";
 }
 
-struct DictScope {
-  DictScope(ScopedPrinter &W, StringRef N) : W(W) {
-    W.startLine() << N << " {\n";
+template<char Open, char Close>
+struct DelimitedScope {
+  DelimitedScope(ScopedPrinter &W, StringRef N) : W(W) {
+    W.startLine() << N;
+    if (!N.empty())
+      W.getOStream() << ' ';
+    W.getOStream() << Open << '\n';
     W.indent();
   }
 
-  ~DictScope() {
+  ~DelimitedScope() {
     W.unindent();
-    W.startLine() << "}\n";
+    W.startLine() << Close << '\n';
   }
 
   ScopedPrinter &W;
 };
 
-struct ListScope {
-  ListScope(ScopedPrinter &W, StringRef N) : W(W) {
-    W.startLine() << N << " [\n";
-    W.indent();
-  }
-
-  ~ListScope() {
-    W.unindent();
-    W.startLine() << "]\n";
-  }
-
-  ScopedPrinter &W;
-};
+using DictScope = DelimitedScope<'{', '}'>;
+using ListScope = DelimitedScope<'[', ']'>;
 
 } // namespace llvm
 

@@ -30,7 +30,7 @@ STATISTIC(MCExprEvaluate, "Number of MCExpr evaluations");
 }
 }
 
-void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
+void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   switch (getKind()) {
   case MCExpr::Target:
     return cast<MCTargetExpr>(this)->printImpl(OS, MAI);
@@ -43,7 +43,8 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
     const MCSymbol &Sym = SRE.getSymbol();
     // Parenthesize names that start with $ so that they don't look like
     // absolute names.
-    bool UseParens = Sym.getName().size() && Sym.getName()[0] == '$';
+    bool UseParens =
+        !InParens && Sym.getName().size() && Sym.getName()[0] == '$';
     if (UseParens) {
       OS << '(';
       Sym.print(OS, MAI);
@@ -264,32 +265,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_GOT_TLSLD_HA: return "got@tlsld@ha";
   case VK_PPC_TLSLD: return "tlsld";
   case VK_PPC_LOCAL: return "local";
-  case VK_Mips_GPREL: return "GPREL";
-  case VK_Mips_GOT_CALL: return "GOT_CALL";
-  case VK_Mips_GOT16: return "GOT16";
-  case VK_Mips_GOT: return "GOT";
-  case VK_Mips_ABS_HI: return "ABS_HI";
-  case VK_Mips_ABS_LO: return "ABS_LO";
-  case VK_Mips_TLSGD: return "TLSGD";
-  case VK_Mips_TLSLDM: return "TLSLDM";
-  case VK_Mips_DTPREL_HI: return "DTPREL_HI";
-  case VK_Mips_DTPREL_LO: return "DTPREL_LO";
-  case VK_Mips_GOTTPREL: return "GOTTPREL";
-  case VK_Mips_TPREL_HI: return "TPREL_HI";
-  case VK_Mips_TPREL_LO: return "TPREL_LO";
-  case VK_Mips_GPOFF_HI: return "GPOFF_HI";
-  case VK_Mips_GPOFF_LO: return "GPOFF_LO";
-  case VK_Mips_GOT_DISP: return "GOT_DISP";
-  case VK_Mips_GOT_PAGE: return "GOT_PAGE";
-  case VK_Mips_GOT_OFST: return "GOT_OFST";
-  case VK_Mips_HIGHER:   return "HIGHER";
-  case VK_Mips_HIGHEST:  return "HIGHEST";
-  case VK_Mips_GOT_HI16: return "GOT_HI16";
-  case VK_Mips_GOT_LO16: return "GOT_LO16";
-  case VK_Mips_CALL_HI16: return "CALL_HI16";
-  case VK_Mips_CALL_LO16: return "CALL_LO16";
-  case VK_Mips_PCREL_HI16: return "PCREL_HI16";
-  case VK_Mips_PCREL_LO16: return "PCREL_LO16";
   case VK_COFF_IMGREL32: return "IMGREL";
   case VK_Hexagon_PCREL: return "PCREL";
   case VK_Hexagon_LO16: return "LO16";

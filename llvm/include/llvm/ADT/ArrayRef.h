@@ -173,7 +173,13 @@ namespace llvm {
       return ArrayRef<T>(data()+N, M);
     }
 
-    // \brief Drop the last \p N elements of the array.
+    /// \brief Drop the first \p N elements of the array.
+    ArrayRef<T> drop_front(unsigned N = 1) const {
+      assert(size() >= N && "Dropping more elements than exist");
+      return slice(N, size() - N);
+    }
+
+    /// \brief Drop the last \p N elements of the array.
     ArrayRef<T> drop_back(unsigned N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return slice(0, size() - N);
@@ -285,7 +291,13 @@ namespace llvm {
       return MutableArrayRef<T>(data()+N, M);
     }
 
-    MutableArrayRef<T> drop_back(unsigned N) const {
+    /// \brief Drop the first \p N elements of the array.
+    MutableArrayRef<T> drop_front(unsigned N = 1) const {
+      assert(this->size() >= N && "Dropping more elements than exist");
+      return slice(N, this->size() - N);
+    }
+
+    MutableArrayRef<T> drop_back(unsigned N = 1) const {
       assert(this->size() >= N && "Dropping more elements than exist");
       return slice(0, this->size() - N);
     }

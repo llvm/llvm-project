@@ -154,6 +154,9 @@ SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDTSPtlsld :
 SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
+def SDTSPeh_sjlj_setjmp : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
+def SDTSPeh_sjlj_longjmp: SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
@@ -171,6 +174,13 @@ def SPxtof  : SDNode<"SPISD::XTOF", SDTSPXTOF>;
 def SPselecticc : SDNode<"SPISD::SELECT_ICC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
+
+def SPsjlj_setjmp: SDNode<"SPISD::EH_SJLJ_SETJMP",
+                          SDTSPeh_sjlj_setjmp,
+                          [SDNPHasChain, SDNPSideEffect]>;
+def SPsjlj_longjmp: SDNode<"SPISD::EH_SJLJ_LONGJMP",
+                           SDTSPeh_sjlj_longjmp,
+                           [SDNPHasChain, SDNPSideEffect]>;
 
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
@@ -445,6 +455,27 @@ let usesCustomInserter = 1, Uses = [FCC0] in {
    : Pseudo<(outs QFPRegs:$dst), (ins QFPRegs:$T, QFPRegs:$F, i32imm:$Cond),
             "; SELECT_CC_QFP_FCC PSEUDO!",
             [(set f128:$dst, (SPselectfcc f128:$T, f128:$F, imm:$Cond))]>;
+}
+
+let hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1 in {
+  let Defs = [WIM] in
+  def EH_SJLJ_SETJMP32ri  : Pseudo<(outs IntRegs:$dst), (ins MEMri:$buf),
+                            "#EH_SJLJ_SETJMP32",
+                            [(set i32:$dst, (SPsjlj_setjmp ADDRri:$buf))]>,
+                            Requires<[Is32Bit]>;
+  def EH_SJLJ_SETJMP32rr  : Pseudo<(outs IntRegs:$dst), (ins MEMrr:$buf),
+                            "#EH_SJLJ_SETJMP32",
+                            [(set i32:$dst, (SPsjlj_setjmp ADDRrr:$buf))]>,
+                            Requires<[Is32Bit]>;
+  let isTerminator = 1 in
+  def EH_SJLJ_LONGJMP32ri : Pseudo<(outs), (ins MEMri:$buf),
+                            "#EH_SJLJ_LONGJMP32",
+                            [(SPsjlj_longjmp ADDRri:$buf)]>,
+                            Requires<[Is32Bit]>;
+  def EH_SJLJ_LONGJMP32rr : Pseudo<(outs), (ins MEMrr:$buf),
+                            "#EH_SJLJ_LONGJMP32",
+                            [(SPsjlj_longjmp ADDRrr:$buf)]>,
+                            Requires<[Is32Bit]>;
 }
 
 // Section B.1 - Load Integer Instructions, p. 90

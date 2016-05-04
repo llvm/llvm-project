@@ -9,6 +9,7 @@
 
 #include "InMemoryXrefsDB.h"
 #include "IncludeFixer.h"
+#include "XrefsDBManager.h"
 #include "unittests/Tooling/RewriterTestContext.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
@@ -51,10 +52,12 @@ static std::string runIncludeFixer(
       {"std::string::size_type", {"<string>"}},
       {"a::b::foo", {"dir/otherdir/qux.h"}},
   };
-  auto XrefsDB =
-      llvm::make_unique<include_fixer::InMemoryXrefsDB>(std::move(XrefsMap));
+  auto XrefsDBMgr = llvm::make_unique<include_fixer::XrefsDBManager>();
+  XrefsDBMgr->addXrefsDB(
+      llvm::make_unique<include_fixer::InMemoryXrefsDB>(std::move(XrefsMap)));
+
   std::vector<clang::tooling::Replacement> Replacements;
-  IncludeFixerActionFactory Factory(*XrefsDB, Replacements);
+  IncludeFixerActionFactory Factory(*XrefsDBMgr, Replacements);
   runOnCode(&Factory, Code, "input.cc", ExtraArgs);
   clang::RewriterTestContext Context;
   clang::FileID ID = Context.createInMemoryFile("input.cc", Code);
@@ -79,8 +82,10 @@ TEST(IncludeFixer, Typo) {
       "#include <string>\n#include \"foo.h\"\nstd::string::size_type foo;\n",
       runIncludeFixer("#include \"foo.h\"\nstd::string::size_type foo;\n"));
 
-  // The fixed xrefs db doesn't know how to handle string without std::.
-  EXPECT_EQ("string foo;\n", runIncludeFixer("string foo;\n"));
+  // string without "std::" can also be fixed since fixed db results go through
+  // XrefsDBManager, and XrefsDBManager matches unqualified identifiers too.
+  EXPECT_EQ("#include <string>\nstring foo;\n",
+            runIncludeFixer("string foo;\n"));
 }
 
 TEST(IncludeFixer, IncompleteType) {

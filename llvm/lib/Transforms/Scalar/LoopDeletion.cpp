@@ -44,10 +44,10 @@ namespace {
     }
 
   private:
-    bool isLoopDead(Loop *L, SmallVectorImpl<BasicBlock *> &exitingBlocks,
-                    SmallVectorImpl<BasicBlock *> &exitBlocks,
-                    bool &Changed, BasicBlock *Preheader);
-
+    bool isLoopDead(Loop *L, ScalarEvolution &SE,
+                    SmallVectorImpl<BasicBlock *> &exitingBlocks,
+                    SmallVectorImpl<BasicBlock *> &exitBlocks, bool &Changed,
+                    BasicBlock *Preheader);
   };
 }
 
@@ -65,7 +65,7 @@ Pass *llvm::createLoopDeletionPass() {
 /// isLoopDead - Determined if a loop is dead.  This assumes that we've already
 /// checked for unique exit and exiting blocks, and that the code is in LCSSA
 /// form.
-bool LoopDeletion::isLoopDead(Loop *L,
+bool LoopDeletion::isLoopDead(Loop *L, ScalarEvolution &SE,
                               SmallVectorImpl<BasicBlock *> &exitingBlocks,
                               SmallVectorImpl<BasicBlock *> &exitBlocks,
                               bool &Changed, BasicBlock *Preheader) {
@@ -77,6 +77,8 @@ bool LoopDeletion::isLoopDead(Loop *L,
   // sufficient to guarantee that no loop-variant values are used outside
   // of the loop.
   BasicBlock::iterator BI = exitBlock->begin();
+  bool AllEntriesInvariant = true;
+  bool AllOutgoingValuesSame = true;
   while (PHINode *P = dyn_cast<PHINode>(BI)) {
     Value *incoming = P->getIncomingValueForBlock(exitingBlocks[0]);
 
@@ -84,17 +86,28 @@ bool LoopDeletion::isLoopDead(Loop *L,
     // block.  If there are different incoming values for different exiting
     // blocks, then it is impossible to statically determine which value should
     // be used.
-    for (unsigned i = 1, e = exitingBlocks.size(); i < e; ++i) {
-      if (incoming != P->getIncomingValueForBlock(exitingBlocks[i]))
-        return false;
-    }
+    AllOutgoingValuesSame =
+        all_of(makeArrayRef(exitingBlocks).slice(1), [&](BasicBlock *BB) {
+          return incoming == P->getIncomingValueForBlock(BB);
+        });
+
+    if (!AllOutgoingValuesSame)
+      break;
 
     if (Instruction *I = dyn_cast<Instruction>(incoming))
-      if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator()))
-        return false;
+      if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator())) {
+        AllEntriesInvariant = false;
+        break;
+      }
 
     ++BI;
   }
+
+  if (Changed)
+    SE.forgetLoopDispositions(L);
+
+  if (!AllEntriesInvariant || !AllOutgoingValuesSame)
+    return false;
 
   // Make sure that no instructions in the block have potential side-effects.
   // This includes instructions that could write to memory, and loads that are
@@ -153,14 +166,15 @@ bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &) {
   if (exitBlocks.size() != 1)
     return false;
 
+  ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+
   // Finally, we have to check that the loop really is dead.
   bool Changed = false;
-  if (!isLoopDead(L, exitingBlocks, exitBlocks, Changed, preheader))
+  if (!isLoopDead(L, SE, exitingBlocks, exitBlocks, Changed, preheader))
     return Changed;
 
   // Don't remove loops for which we can't solve the trip count.
   // They could be infinite, in which case we'd be changing program behavior.
-  ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   const SCEV *S = SE.getMaxBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(S))
     return Changed;

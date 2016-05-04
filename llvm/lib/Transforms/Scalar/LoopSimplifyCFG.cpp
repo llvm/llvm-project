@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -24,47 +24,23 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
 
-namespace {
-class LoopSimplifyCFG : public LoopPass {
-public:
-  static char ID; // Pass ID, replacement for typeid
-  LoopSimplifyCFG() : LoopPass(ID) {
-    initializeLoopSimplifyCFGPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<DependenceAnalysis>();
-    getLoopAnalysisUsage(AU);
-  }
-};
-}
-
-char LoopSimplifyCFG::ID = 0;
-INITIALIZE_PASS_BEGIN(LoopSimplifyCFG, "loop-simplifycfg", "Simplify loop CFG",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_END(LoopSimplifyCFG, "loop-simplifycfg", "Simplify loop CFG",
-                    false, false)
-
-Pass *llvm::createLoopSimplifyCFGPass() { return new LoopSimplifyCFG(); }
-
-static bool simplifyLoopCFG(Loop *L, DominatorTree *DT, LoopInfo *LI) {
+static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI) {
   bool Changed = false;
   // Copy blocks into a temporary array to avoid iterator invalidation issues
   // as we remove them.
-  SmallVector<WeakVH, 16> Blocks(L->blocks());
+  SmallVector<WeakVH, 16> Blocks(L.blocks());
 
   for (auto &Block : Blocks) {
     // Attempt to merge blocks in the trivial case. Don't modify blocks which
@@ -74,27 +50,64 @@ static bool simplifyLoopCFG(Loop *L, DominatorTree *DT, LoopInfo *LI) {
       continue;
 
     BasicBlock *Pred = Succ->getSinglePredecessor();
-    if (!Pred || !Pred->getSingleSuccessor() || LI->getLoopFor(Pred) != L)
+    if (!Pred || !Pred->getSingleSuccessor() || LI.getLoopFor(Pred) != &L)
       continue;
 
     // Pred is going to disappear, so we need to update the loop info.
-    if (L->getHeader() == Pred)
-      L->moveToHeader(Succ);
-    LI->removeBlock(Pred);
-    MergeBasicBlockIntoOnlyPred(Succ, DT);
+    if (L.getHeader() == Pred)
+      L.moveToHeader(Succ);
+    LI.removeBlock(Pred);
+    MergeBasicBlockIntoOnlyPred(Succ, &DT);
     Changed = true;
   }
 
   return Changed;
 }
 
-/// runOnLoop - Perform basic CFG simplifications to assist other loop passes.
-/// For now, this only attempts to merge blocks in the trivial case.
-bool LoopSimplifyCFG::runOnLoop(Loop *L, LPPassManager &) {
-  if (skipLoop(L))
-    return false;
+PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, AnalysisManager<Loop> &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
+  Function *F = L.getHeader()->getParent();
 
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  return simplifyLoopCFG(L, DT, LI);
+  auto *LI = FAM.getCachedResult<LoopAnalysis>(*F);
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
+  assert((LI && DT) && "Analyses for LoopSimplifyCFG not available");
+
+  if (!simplifyLoopCFG(L, *DT, *LI))
+    return PreservedAnalyses::all();
+  return getLoopPassPreservedAnalyses();
+}
+
+namespace {
+class LoopSimplifyCFGLegacyPass : public LoopPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  LoopSimplifyCFGLegacyPass() : LoopPass(ID) {
+    initializeLoopSimplifyCFGLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnLoop(Loop *L, LPPassManager &) override {
+    if (skipLoop(L))
+      return false;
+
+    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    return simplifyLoopCFG(*L, DT, LI);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DependenceAnalysis>();
+    getLoopAnalysisUsage(AU);
+  }
+};
+}
+
+char LoopSimplifyCFGLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(LoopSimplifyCFGLegacyPass, "loop-simplifycfg",
+                      "Simplify loop CFG", false, false)
+INITIALIZE_PASS_DEPENDENCY(LoopPass)
+INITIALIZE_PASS_END(LoopSimplifyCFGLegacyPass, "loop-simplifycfg",
+                    "Simplify loop CFG", false, false)
+
+Pass *llvm::createLoopSimplifyCFGPass() {
+  return new LoopSimplifyCFGLegacyPass();
 }

@@ -258,6 +258,10 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     LoopToAliasSetMap[L] = CurAST;
   else
     delete CurAST;
+
+  if (Changed)
+    if (auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>())
+      SEWP->getSE().forgetLoopDispositions(L);
   return Changed;
 }
 

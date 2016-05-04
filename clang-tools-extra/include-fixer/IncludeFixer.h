@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INCLUDEFIXER_H
 #define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INCLUDEFIXER_H
 
-#include "XrefsDB.h"
+#include "XrefsDBManager.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include <memory>
@@ -27,11 +27,12 @@ namespace include_fixer {
 
 class IncludeFixerActionFactory : public clang::tooling::ToolAction {
 public:
-  /// \param Xrefs A source for matching symbols to header files.
+  /// \param XrefsDBMgr A source for matching symbols to header files.
   /// \param Replacements Storage for the output of the fixer.
   /// \param MinimizeIncludePaths whether inserted include paths are optimized.
   IncludeFixerActionFactory(
-      XrefsDB &Xrefs, std::vector<clang::tooling::Replacement> &Replacements,
+      XrefsDBManager &XrefsDBMgr,
+      std::vector<clang::tooling::Replacement> &Replacements,
       bool MinimizeIncludePaths = true);
   ~IncludeFixerActionFactory() override;
 
@@ -43,7 +44,7 @@ public:
 
 private:
   /// The client to use to find cross-references.
-  XrefsDB &Xrefs;
+  XrefsDBManager &XrefsDBMgr;
 
   /// Replacements are written here.
   std::vector<clang::tooling::Replacement> &Replacements;

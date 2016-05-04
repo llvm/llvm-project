@@ -33,6 +33,9 @@ namespace llvm {
       SELECT_XCC,  // Select between two values using the current XCC flags.
       SELECT_FCC,  // Select between two values using the current FCC flags.
 
+      EH_SJLJ_SETJMP,  // builtin setjmp operation
+      EH_SJLJ_LONGJMP, // builtin longjmp operation
+
       Hi, Lo,      // Hi/Lo operations, typically on a global address.
 
       FTOI,        // FP to Int within a FP register.
@@ -54,7 +57,7 @@ namespace llvm {
   class SparcTargetLowering : public TargetLowering {
     const SparcSubtarget *Subtarget;
   public:
-    SparcTargetLowering(TargetMachine &TM, const SparcSubtarget &STI);
+    SparcTargetLowering(const TargetMachine &TM, const SparcSubtarget &STI);
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
     /// computeKnownBitsForTargetNode - Determine which of the bits specified
@@ -161,6 +164,11 @@ namespace llvm {
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 
+    SDValue LowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG,
+                                const SparcTargetLowering &TLI) const ;
+    SDValue LowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG,
+                                 const SparcTargetLowering &TLI) const ;
+
     unsigned getSRetArgSize(SelectionDAG &DAG, SDValue Callee) const;
     SDValue withTargetFlags(SDValue Op, unsigned TF, SelectionDAG &DAG) const;
     SDValue makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
@@ -205,6 +213,10 @@ namespace llvm {
                                        MachineBasicBlock *BB,
                                        unsigned Opcode,
                                        unsigned CondCode = 0) const;
+    MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr *MI,
+                                        MachineBasicBlock *MBB) const;
+    MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr *MI,
+                                         MachineBasicBlock *MBB) const;
   };
 } // end namespace llvm
 

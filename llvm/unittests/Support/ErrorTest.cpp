@@ -544,4 +544,23 @@ TEST(Error, ErrorCodeConversions) {
   }
 }
 
+// Test that error messages work.
+TEST(Error, ErrorMessage) {
+  EXPECT_EQ(toString(Error::success()).compare(""), 0);
+
+  Error E1 = make_error<CustomError>(0);
+  EXPECT_EQ(toString(std::move(E1)).compare("CustomError { 0}"), 0);
+
+  Error E2 = make_error<CustomError>(0);
+  handleAllErrors(std::move(E2), [](const CustomError &CE) {
+    EXPECT_EQ(CE.message().compare("CustomError { 0}"), 0);
+  });
+
+  Error E3 = joinErrors(make_error<CustomError>(0), make_error<CustomError>(1));
+  EXPECT_EQ(toString(std::move(E3))
+                .compare("CustomError { 0}\n"
+                         "CustomError { 1}"),
+            0);
+}
+
 } // end anon namespace

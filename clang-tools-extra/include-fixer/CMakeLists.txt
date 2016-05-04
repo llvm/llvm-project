@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangIncludeFixer
   IncludeFixer.cpp
   InMemoryXrefsDB.cpp
+  XrefsDBManager.cpp
   YamlXrefsDB.cpp
 
   LINK_LIBS

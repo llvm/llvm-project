@@ -50,7 +50,7 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
 }
 
 SparcSubtarget::SparcSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS, TargetMachine &TM,
+                               const std::string &FS, const TargetMachine &TM,
                                bool is64Bit)
     : SparcGenSubtargetInfo(TT, CPU, FS), TargetTriple(TT), Is64Bit(is64Bit),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),

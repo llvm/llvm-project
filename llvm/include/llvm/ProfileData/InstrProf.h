@@ -204,17 +204,20 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
 ///  third field is the uncompressed strings; otherwise it is the
 /// compressed string. When the string compression is off, the
 /// second field will have value zero.
-int collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
-                              bool doCompression, std::string &Result);
+std::error_code
+collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
+                          bool doCompression, std::string &Result);
 /// Produce \c Result string with the same format described above. The input
 /// is vector of PGO function name variables that are referenced.
-int collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
-                              std::string &Result, bool doCompression = true);
+std::error_code
+collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
+                          std::string &Result, bool doCompression = true);
 class InstrProfSymtab;
 /// \c NameStrings is a string composed of one of more sub-strings encoded in
 /// the format described above. The substrings are seperated by 0 or more zero
 /// bytes. This method decodes the string and populates the \c Symtab.
-int readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
+std::error_code readPGOFuncNameStrings(StringRef NameStrings,
+                                       InstrProfSymtab &Symtab);
 
 enum InstrProfValueKind : uint32_t {
 #define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
@@ -272,7 +275,9 @@ enum class instrprof_error {
   hash_mismatch,
   count_mismatch,
   counter_overflow,
-  value_site_count_mismatch
+  value_site_count_mismatch,
+  compress_failed,
+  uncompress_failed
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
@@ -390,9 +395,7 @@ std::error_code InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
 }
 
 std::error_code InstrProfSymtab::create(StringRef NameStrings) {
-  if (readPGOFuncNameStrings(NameStrings, *this))
-    return make_error_code(instrprof_error::malformed);
-  return std::error_code();
+  return readPGOFuncNameStrings(NameStrings, *this);
 }
 
 template <typename NameIterRange>

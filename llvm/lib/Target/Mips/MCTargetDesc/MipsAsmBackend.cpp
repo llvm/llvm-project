@@ -14,6 +14,7 @@
 
 #include "MCTargetDesc/MipsFixupKinds.h"
 #include "MCTargetDesc/MipsAsmBackend.h"
+#include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -23,7 +24,9 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -40,9 +43,6 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   default:
     return 0;
   case FK_Data_2:
-  case FK_GPRel_4:
-  case FK_Data_4:
-  case FK_Data_8:
   case Mips::fixup_Mips_LO16:
   case Mips::fixup_Mips_GPREL16:
   case Mips::fixup_Mips_GPOFF_HI:
@@ -57,6 +57,11 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case Mips::fixup_MICROMIPS_GOT_OFST:
   case Mips::fixup_MICROMIPS_GOT_DISP:
   case Mips::fixup_MIPS_PCLO16:
+    Value &= 0xffff;
+    break;
+  case FK_GPRel_4:
+  case FK_Data_4:
+  case FK_Data_8:
     break;
   case Mips::fixup_Mips_PC16:
     // The displacement is then divided by 4 to give us an 18 bit
@@ -85,7 +90,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value >>= 2;
     break;
   case Mips::fixup_Mips_HI16:
-  case Mips::fixup_Mips_GOT_Local:
+  case Mips::fixup_Mips_GOT:
   case Mips::fixup_Mips_GOT_HI16:
   case Mips::fixup_Mips_CALL_HI16:
   case Mips::fixup_MICROMIPS_HI16:
@@ -295,8 +300,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_LO16",         0,     16,   0 },
     { "fixup_Mips_GPREL16",      0,     16,   0 },
     { "fixup_Mips_LITERAL",      0,     16,   0 },
-    { "fixup_Mips_GOT_Global",   0,     16,   0 },
-    { "fixup_Mips_GOT_Local",    0,     16,   0 },
+    { "fixup_Mips_GOT",          0,     16,   0 },
     { "fixup_Mips_PC16",         0,     16,  MCFixupKindInfo::FKF_IsPCRel },
     { "fixup_Mips_CALL16",       0,     16,   0 },
     { "fixup_Mips_GPREL32",      0,     32,   0 },
@@ -364,8 +368,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_LO16",        16,     16,   0 },
     { "fixup_Mips_GPREL16",     16,     16,   0 },
     { "fixup_Mips_LITERAL",     16,     16,   0 },
-    { "fixup_Mips_GOT_Global",  16,     16,   0 },
-    { "fixup_Mips_GOT_Local",   16,     16,   0 },
+    { "fixup_Mips_GOT",         16,     16,   0 },
     { "fixup_Mips_PC16",        16,     16,  MCFixupKindInfo::FKF_IsPCRel },
     { "fixup_Mips_CALL16",      16,     16,   0 },
     { "fixup_Mips_GPREL32",      0,     32,   0 },
@@ -460,6 +463,8 @@ void MipsAsmBackend::processFixupValue(const MCAssembler &Asm,
   // we are only checking if the fixup can be applied correctly. We have
   // access to MCContext from here which allows us to report a fatal error
   // with *possibly* a source code location.
+  // The caller will also ignore any changes we make to Value
+  // (recordRelocation() overwrites it with it's own calculation).
   (void)adjustFixupValue(Fixup, Value, &Asm.getContext());
 }
 

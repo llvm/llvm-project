@@ -303,8 +303,6 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool parseInternalDirectiveReallowModule();
 
-  MCSymbolRefExpr::VariantKind getVariantKind(StringRef Symbol);
-
   bool eatComma(StringRef ErrorStr);
 
   int matchCPURegisterName(StringRef Symbol);
@@ -1631,9 +1629,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       return Error(IDLoc, "jal doesn't support multiple symbols in PIC mode");
 
     // FIXME: This is checking the expression can be handled by the later stages
-    //        of the assembler. We ought to leave it to those later stages but
-    //        we can't do that until we stop evaluateRelocExpr() rewriting the
-    //        expressions into non-equivalent forms.
+    //        of the assembler. We ought to leave it to those later stages.
     const MCSymbol *JalSym = getSingleMCSymbol(JalExpr);
 
     // FIXME: Add support for label+offset operands (currently causes an error).
@@ -1647,8 +1643,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         //  addiu $25, $25, 0
         //    R_(MICRO)MIPS_LO16   label
         //  jalr  $25
-        const MCExpr *Got16RelocExpr = evaluateRelocExpr(JalExpr, "got");
-        const MCExpr *Lo16RelocExpr = evaluateRelocExpr(JalExpr, "lo");
+        const MCExpr *Got16RelocExpr =
+            MipsMCExpr::create(MipsMCExpr::MEK_GOT, JalExpr, getContext());
+        const MCExpr *Lo16RelocExpr =
+            MipsMCExpr::create(MipsMCExpr::MEK_LO, JalExpr, getContext());
 
         TOut.emitRRX(Mips::LW, Mips::T9, Mips::GP,
                      MCOperand::createExpr(Got16RelocExpr), IDLoc, STI);
@@ -1660,7 +1658,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         //  lw/ld $25, 0($gp)
         //    R_(MICRO)MIPS_GOT_DISP  label
         //  jalr  $25
-        const MCExpr *GotDispRelocExpr = evaluateRelocExpr(JalExpr, "got_disp");
+        const MCExpr *GotDispRelocExpr =
+            MipsMCExpr::create(MipsMCExpr::MEK_GOT_DISP, JalExpr, getContext());
 
         TOut.emitRRX(ABI.ArePtrs64bit() ? Mips::LD : Mips::LW, Mips::T9,
                      Mips::GP, MCOperand::createExpr(GotDispRelocExpr), IDLoc,
@@ -1671,7 +1670,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       //  lw/ld    $25, 0($gp)
       //    R_(MICRO)MIPS_CALL16  label
       //  jalr  $25
-      const MCExpr *Call16RelocExpr = evaluateRelocExpr(JalExpr, "call16");
+      const MCExpr *Call16RelocExpr =
+          MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, JalExpr, getContext());
 
       TOut.emitRRX(ABI.ArePtrs64bit() ? Mips::LD : Mips::LW, Mips::T9, Mips::GP,
                    MCOperand::createExpr(Call16RelocExpr), IDLoc, STI);
@@ -2337,10 +2337,10 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
   warnIfNoMacro(IDLoc);
 
   const MCExpr *Symbol = cast<MCExpr>(SymExpr);
-  const MipsMCExpr *HiExpr = MipsMCExpr::create(
-      MCSymbolRefExpr::VK_Mips_ABS_HI, Symbol, getContext());
-  const MipsMCExpr *LoExpr = MipsMCExpr::create(
-      MCSymbolRefExpr::VK_Mips_ABS_LO, Symbol, getContext());
+  const MipsMCExpr *HiExpr =
+      MipsMCExpr::create(MipsMCExpr::MEK_HI, Symbol, getContext());
+  const MipsMCExpr *LoExpr =
+      MipsMCExpr::create(MipsMCExpr::MEK_LO, Symbol, getContext());
 
   bool UseSrcReg = SrcReg != Mips::NoRegister;
 
@@ -2352,10 +2352,10 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     if (!ATReg)
       return true;
 
-    const MipsMCExpr *HighestExpr = MipsMCExpr::create(
-        MCSymbolRefExpr::VK_Mips_HIGHEST, Symbol, getContext());
-    const MipsMCExpr *HigherExpr = MipsMCExpr::create(
-        MCSymbolRefExpr::VK_Mips_HIGHER, Symbol, getContext());
+    const MipsMCExpr *HighestExpr =
+        MipsMCExpr::create(MipsMCExpr::MEK_HIGHEST, Symbol, getContext());
+    const MipsMCExpr *HigherExpr =
+        MipsMCExpr::create(MipsMCExpr::MEK_HIGHER, Symbol, getContext());
 
     if (UseSrcReg &&
         getContext().getRegisterInfo()->isSuperOrSubRegisterEq(DstReg,
@@ -2575,10 +2575,10 @@ void MipsAsmParser::expandLoadInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 
   const MCExpr *ExprOffset = Inst.getOperand(2).getExpr();
-  MCOperand LoOperand =
-      MCOperand::createExpr(evaluateRelocExpr(ExprOffset, "lo"));
-  MCOperand HiOperand =
-      MCOperand::createExpr(evaluateRelocExpr(ExprOffset, "hi"));
+  MCOperand LoOperand = MCOperand::createExpr(
+      MipsMCExpr::create(MipsMCExpr::MEK_LO, ExprOffset, getContext()));
+  MCOperand HiOperand = MCOperand::createExpr(
+      MipsMCExpr::create(MipsMCExpr::MEK_HI, ExprOffset, getContext()));
 
   // Try to use DstReg as the temporary.
   if (IsGPR && (BaseReg != DstReg)) {
@@ -2616,10 +2616,10 @@ void MipsAsmParser::expandStoreInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 
   const MCExpr *ExprOffset = Inst.getOperand(2).getExpr();
-  MCOperand LoOperand =
-      MCOperand::createExpr(evaluateRelocExpr(ExprOffset, "lo"));
-  MCOperand HiOperand =
-      MCOperand::createExpr(evaluateRelocExpr(ExprOffset, "hi"));
+  MCOperand LoOperand = MCOperand::createExpr(
+      MipsMCExpr::create(MipsMCExpr::MEK_LO, ExprOffset, getContext()));
+  MCOperand HiOperand = MCOperand::createExpr(
+      MipsMCExpr::create(MipsMCExpr::MEK_HI, ExprOffset, getContext()));
   TOut.emitStoreWithSymOffset(Inst.getOpcode(), SrcReg, BaseReg, HiOperand,
                               LoOperand, ATReg, IDLoc, STI);
 }
@@ -4073,64 +4073,41 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
 const MCExpr *MipsAsmParser::evaluateRelocExpr(const MCExpr *Expr,
                                                StringRef RelocStr) {
-  const MCExpr *Res;
-  // Check the type of the expression.
-  if (const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(Expr)) {
-    // It's a constant, evaluate reloc value.
-    int16_t Val;
-    switch (getVariantKind(RelocStr)) {
-    case MCSymbolRefExpr::VK_Mips_ABS_LO:
-      // Get the 1st 16-bits.
-      Val = MCE->getValue() & 0xffff;
-      break;
-    case MCSymbolRefExpr::VK_Mips_ABS_HI:
-    case MCSymbolRefExpr::VK_Mips_GOT:
-      // Get the 2nd 16-bits. Also add 1 if bit 15 is 1, to compensate for low
-      // 16 bits being negative.
-      Val = ((MCE->getValue() + 0x8000) >> 16) & 0xffff;
-      break;
-    case MCSymbolRefExpr::VK_Mips_HIGHER:
-      // Get the 3rd 16-bits.
-      Val = ((MCE->getValue() + 0x80008000LL) >> 32) & 0xffff;
-      break;
-    case MCSymbolRefExpr::VK_Mips_HIGHEST:
-      // Get the 4th 16-bits.
-      Val = ((MCE->getValue() + 0x800080008000LL) >> 48) & 0xffff;
-      break;
-    default:
-      report_fatal_error("unsupported reloc value");
-    }
-    return MCConstantExpr::create(Val, getContext());
-  }
+  if (RelocStr == "hi(%neg(%gp_rel")
+    return MipsMCExpr::createGpOff(MipsMCExpr::MEK_HI, Expr, getContext());
+  else if (RelocStr == "lo(%neg(%gp_rel")
+    return MipsMCExpr::createGpOff(MipsMCExpr::MEK_LO, Expr, getContext());
 
-  if (const MCSymbolRefExpr *MSRE = dyn_cast<MCSymbolRefExpr>(Expr)) {
-    // It's a symbol, create a symbolic expression from the symbol.
-    const MCSymbol *Symbol = &MSRE->getSymbol();
-    MCSymbolRefExpr::VariantKind VK = getVariantKind(RelocStr);
-    Res = MCSymbolRefExpr::create(Symbol, VK, getContext());
-    return Res;
-  }
+  MipsMCExpr::MipsExprKind Kind =
+      StringSwitch<MipsMCExpr::MipsExprKind>(RelocStr)
+          .Case("call16", MipsMCExpr::MEK_GOT_CALL)
+          .Case("call_hi", MipsMCExpr::MEK_CALL_HI16)
+          .Case("call_lo", MipsMCExpr::MEK_CALL_LO16)
+          .Case("dtprel_hi", MipsMCExpr::MEK_DTPREL_HI)
+          .Case("dtprel_lo", MipsMCExpr::MEK_DTPREL_LO)
+          .Case("got", MipsMCExpr::MEK_GOT)
+          .Case("got_disp", MipsMCExpr::MEK_GOT_DISP)
+          .Case("got_hi", MipsMCExpr::MEK_GOT_HI16)
+          .Case("got_lo", MipsMCExpr::MEK_GOT_LO16)
+          .Case("got_ofst", MipsMCExpr::MEK_GOT_OFST)
+          .Case("got_page", MipsMCExpr::MEK_GOT_PAGE)
+          .Case("gottprel", MipsMCExpr::MEK_GOTTPREL)
+          .Case("gp_rel", MipsMCExpr::MEK_GPREL)
+          .Case("hi", MipsMCExpr::MEK_HI)
+          .Case("higher", MipsMCExpr::MEK_HIGHER)
+          .Case("highest", MipsMCExpr::MEK_HIGHEST)
+          .Case("lo", MipsMCExpr::MEK_LO)
+          .Case("neg", MipsMCExpr::MEK_NEG)
+          .Case("pcrel_hi", MipsMCExpr::MEK_PCREL_HI16)
+          .Case("pcrel_lo", MipsMCExpr::MEK_PCREL_LO16)
+          .Case("tlsgd", MipsMCExpr::MEK_TLSGD)
+          .Case("tlsldm", MipsMCExpr::MEK_TLSLDM)
+          .Case("tprel_hi", MipsMCExpr::MEK_TPREL_HI)
+          .Case("tprel_lo", MipsMCExpr::MEK_TPREL_LO)
+          .Default(MipsMCExpr::MEK_None);
 
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr)) {
-    MCSymbolRefExpr::VariantKind VK = getVariantKind(RelocStr);
-
-    // Try to create target expression.
-    if (MipsMCExpr::isSupportedBinaryExpr(VK, BE))
-      return MipsMCExpr::create(VK, Expr, getContext());
-
-    const MCExpr *LExp = evaluateRelocExpr(BE->getLHS(), RelocStr);
-    const MCExpr *RExp = evaluateRelocExpr(BE->getRHS(), RelocStr);
-    Res = MCBinaryExpr::create(BE->getOpcode(), LExp, RExp, getContext());
-    return Res;
-  }
-
-  if (const MCUnaryExpr *UN = dyn_cast<MCUnaryExpr>(Expr)) {
-    const MCExpr *UnExp = evaluateRelocExpr(UN->getSubExpr(), RelocStr);
-    Res = MCUnaryExpr::create(UN->getOpcode(), UnExp, getContext());
-    return Res;
-  }
-  // Just return the original expression.
-  return Expr;
+  assert(Kind != MipsMCExpr::MEK_None);
+  return MipsMCExpr::create(Kind, Expr, getContext());
 }
 
 bool MipsAsmParser::isEvaluated(const MCExpr *Expr) {
@@ -4731,42 +4708,6 @@ MipsAsmParser::parseMovePRegPair(OperandVector &Operands) {
   Operands.push_back(MipsOperand::CreateRegList(Regs, S, E, *this));
 
   return MatchOperand_Success;
-}
-
-MCSymbolRefExpr::VariantKind MipsAsmParser::getVariantKind(StringRef Symbol) {
-
-  MCSymbolRefExpr::VariantKind VK =
-      StringSwitch<MCSymbolRefExpr::VariantKind>(Symbol)
-          .Case("hi", MCSymbolRefExpr::VK_Mips_ABS_HI)
-          .Case("lo", MCSymbolRefExpr::VK_Mips_ABS_LO)
-          .Case("gp_rel", MCSymbolRefExpr::VK_Mips_GPREL)
-          .Case("call16", MCSymbolRefExpr::VK_Mips_GOT_CALL)
-          .Case("got", MCSymbolRefExpr::VK_Mips_GOT)
-          .Case("tlsgd", MCSymbolRefExpr::VK_Mips_TLSGD)
-          .Case("tlsldm", MCSymbolRefExpr::VK_Mips_TLSLDM)
-          .Case("dtprel_hi", MCSymbolRefExpr::VK_Mips_DTPREL_HI)
-          .Case("dtprel_lo", MCSymbolRefExpr::VK_Mips_DTPREL_LO)
-          .Case("gottprel", MCSymbolRefExpr::VK_Mips_GOTTPREL)
-          .Case("tprel_hi", MCSymbolRefExpr::VK_Mips_TPREL_HI)
-          .Case("tprel_lo", MCSymbolRefExpr::VK_Mips_TPREL_LO)
-          .Case("got_disp", MCSymbolRefExpr::VK_Mips_GOT_DISP)
-          .Case("got_page", MCSymbolRefExpr::VK_Mips_GOT_PAGE)
-          .Case("got_ofst", MCSymbolRefExpr::VK_Mips_GOT_OFST)
-          .Case("hi(%neg(%gp_rel", MCSymbolRefExpr::VK_Mips_GPOFF_HI)
-          .Case("lo(%neg(%gp_rel", MCSymbolRefExpr::VK_Mips_GPOFF_LO)
-          .Case("got_hi", MCSymbolRefExpr::VK_Mips_GOT_HI16)
-          .Case("got_lo", MCSymbolRefExpr::VK_Mips_GOT_LO16)
-          .Case("call_hi", MCSymbolRefExpr::VK_Mips_CALL_HI16)
-          .Case("call_lo", MCSymbolRefExpr::VK_Mips_CALL_LO16)
-          .Case("higher", MCSymbolRefExpr::VK_Mips_HIGHER)
-          .Case("highest", MCSymbolRefExpr::VK_Mips_HIGHEST)
-          .Case("pcrel_hi", MCSymbolRefExpr::VK_Mips_PCREL_HI16)
-          .Case("pcrel_lo", MCSymbolRefExpr::VK_Mips_PCREL_LO16)
-          .Default(MCSymbolRefExpr::VK_None);
-
-  assert(VK != MCSymbolRefExpr::VK_None);
-
-  return VK;
 }
 
 /// Sometimes (i.e. load/stores) the operand may be followed immediately by

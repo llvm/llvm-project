@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple=x86_64-apple-macosx -enable-implicit-null-checks < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O3 -mtriple=x86_64-apple-macosx -enable-implicit-null-checks < %s | FileCheck %s
 
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx -enable-implicit-null-checks \
 ; RUN:    | llvm-mc -triple x86_64-apple-macosx -filetype=obj -o - \

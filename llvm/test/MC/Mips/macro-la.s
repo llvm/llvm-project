@@ -272,8 +272,8 @@ la $6, symbol+8($6)   # CHECK: lui $1, %hi(symbol+8)       # encoding: [0x3c,0x0
                       # CHECK: addiu $1, $1, %lo(symbol+8) # encoding: [0x24,0x21,A,A]
                       # CHECK:                             #   fixup A - offset: 0, value: %lo(symbol+8), kind: fixup_Mips_LO16
                       # CHECK: addu $6, $1, $6             # encoding: [0x00,0x26,0x30,0x21]
-la $5, 1f             # CHECK: lui $5, %hi(($tmp0))        # encoding: [0x3c,0x05,A,A]
-                      # CHECK:                             #   fixup A - offset: 0, value: %hi(($tmp0)), kind: fixup_Mips_HI16
-                      # CHECK: addiu $5, $5, %lo(($tmp0))  # encoding: [0x24,0xa5,A,A]
-                      # CHECK:                             #   fixup A - offset: 0, value: %lo(($tmp0)), kind: fixup_Mips_LO16
+la $5, 1f             # CHECK: lui $5, %hi($tmp0)          # encoding: [0x3c,0x05,A,A]
+                      # CHECK:                             #   fixup A - offset: 0, value: %hi($tmp0), kind: fixup_Mips_HI16
+                      # CHECK: addiu $5, $5, %lo($tmp0)    # encoding: [0x24,0xa5,A,A]
+                      # CHECK:                             #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
 1:

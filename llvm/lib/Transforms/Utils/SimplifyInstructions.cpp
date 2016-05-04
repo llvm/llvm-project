@@ -48,6 +48,9 @@ namespace {
 
     /// runOnFunction - Remove instructions that simplify.
     bool runOnFunction(Function &F) override {
+      if (skipFunction(F))
+        return false;
+
       const DominatorTreeWrapperPass *DTWP =
           getAnalysisIfAvailable<DominatorTreeWrapperPass>();
       const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;

@@ -41,47 +41,14 @@ namespace {
     }
 
     bool runOnModule(Module &M) override;
-  private:
-    bool PropagateConstantsIntoArguments(Function &F);
-    bool PropagateConstantReturn(Function &F);
   };
-}
-
-char IPCP::ID = 0;
-INITIALIZE_PASS(IPCP, "ipconstprop",
-                "Interprocedural constant propagation", false, false)
-
-ModulePass *llvm::createIPConstantPropagationPass() { return new IPCP(); }
-
-bool IPCP::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  bool Changed = false;
-  bool LocalChange = true;
-
-  // FIXME: instead of using smart algorithms, we just iterate until we stop
-  // making changes.
-  while (LocalChange) {
-    LocalChange = false;
-    for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-      if (!I->isDeclaration()) {
-        // Delete any klingons.
-        I->removeDeadConstantUsers();
-        if (I->hasLocalLinkage())
-          LocalChange |= PropagateConstantsIntoArguments(*I);
-        Changed |= PropagateConstantReturn(*I);
-      }
-    Changed |= LocalChange;
-  }
-  return Changed;
 }
 
 /// PropagateConstantsIntoArguments - Look at all uses of the specified
 /// function.  If all uses are direct call sites, and all pass a particular
 /// constant in for an argument, propagate that constant in as the argument.
 ///
-bool IPCP::PropagateConstantsIntoArguments(Function &F) {
+static bool PropagateConstantsIntoArguments(Function &F) {
   if (F.arg_empty() || F.use_empty()) return false; // No arguments? Early exit.
 
   // For each argument, keep track of its constant value and whether it is a
@@ -160,7 +127,7 @@ bool IPCP::PropagateConstantsIntoArguments(Function &F) {
 // Additionally if a function always returns one of its arguments directly,
 // callers will be updated to use the value they pass in directly instead of
 // using the return value.
-bool IPCP::PropagateConstantReturn(Function &F) {
+static bool PropagateConstantReturn(Function &F) {
   if (F.getReturnType()->isVoidTy())
     return false; // No return value.
 
@@ -280,4 +247,34 @@ bool IPCP::PropagateConstantReturn(Function &F) {
 
   if (MadeChange) ++NumReturnValProped;
   return MadeChange;
+}
+
+char IPCP::ID = 0;
+INITIALIZE_PASS(IPCP, "ipconstprop",
+                "Interprocedural constant propagation", false, false)
+
+ModulePass *llvm::createIPConstantPropagationPass() { return new IPCP(); }
+
+bool IPCP::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
+  bool Changed = false;
+  bool LocalChange = true;
+
+  // FIXME: instead of using smart algorithms, we just iterate until we stop
+  // making changes.
+  while (LocalChange) {
+    LocalChange = false;
+    for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
+      if (!I->isDeclaration()) {
+        // Delete any klingons.
+        I->removeDeadConstantUsers();
+        if (I->hasLocalLinkage())
+          LocalChange |= PropagateConstantsIntoArguments(*I);
+        Changed |= PropagateConstantReturn(*I);
+      }
+    Changed |= LocalChange;
+  }
+  return Changed;
 }

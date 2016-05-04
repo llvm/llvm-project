@@ -149,27 +149,24 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::cat(FilterCategory));
 }
 
-static void dumpBytes(raw_ostream &S, ArrayRef<uint8_t> Bytes,
-                      uint32_t BytesPerRow, uint32_t Indent) {
+static void dumpBytes(raw_ostream &S, StringRef Bytes, uint32_t BytesPerRow,
+                      uint32_t Indent) {
   S << "[";
-  uint32_t I = 0;
 
-  uint32_t BytesRemaining = Bytes.size();
-  while (BytesRemaining > 0) {
-    uint32_t BytesThisLine = std::min(BytesRemaining, BytesPerRow);
-    for (size_t L = 0; L < BytesThisLine; ++L, ++I) {
-      S << format_hex_no_prefix(Bytes[I], 2, true);
-      if (L + 1 < BytesThisLine)
+  while (!Bytes.empty()) {
+    size_t BytesThisLine = std::min<size_t>(Bytes.size(), BytesPerRow);
+    while (BytesThisLine > 0) {
+      S << format_hex_no_prefix(uint8_t(Bytes.front()), 2, true);
+      Bytes = Bytes.drop_front();
+      if (--BytesThisLine > 0)
         S << ' ';
     }
-    BytesRemaining -= BytesThisLine;
-    if (BytesRemaining > 0) {
+    if (!Bytes.empty()) {
       S << '\n';
       S.indent(Indent);
     }
   }
   S << ']';
-  S.flush();
 }
 
 static void dumpStructure(RawSession &RS) {
@@ -321,10 +318,10 @@ static void dumpStructure(RawSession &RS) {
   TpiStream &Tpi = File.getPDBTpiStream();
   outs() << "TPI Version: " << Tpi.getTpiVersion() << '\n';
   outs() << "Record count: " << Tpi.NumTypeRecords() << '\n';
-  for (auto &Record : Tpi.records()) {
-    outs().indent(2) << "Kind: 0x" << Record.Kind;
+  for (auto &Type : Tpi.types()) {
+    outs().indent(2) << "Kind: 0x" << Type.Leaf;
     outs().indent(2) << "Bytes: ";
-    dumpBytes(outs(), Record.Record, 16, 24);
+    dumpBytes(outs(), Type.LeafData, 16, 24);
     outs() << '\n';
   }
 }

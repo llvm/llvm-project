@@ -10,26 +10,26 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_XREFSDB_H
 #define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_XREFSDB_H
 
+#include "find-all-symbols/SymbolInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
 namespace clang {
 namespace include_fixer {
 
-/// This class provides an interface for finding the header files corresponding
-/// to an indentifier in the source code.
+/// This class provides an interface for finding all `SymbolInfo`s corresponding
+/// to a symbol name from a symbol database.
 class XrefsDB {
 public:
   virtual ~XrefsDB() = default;
 
-  /// Search for header files to be included for an identifier.
-  /// \param Identifier The identifier being searched for. May or may not be
-  ///                   fully qualified.
-  /// \returns A list of inclusion candidates, in a format ready for being
-  ///          pasted after an #include token.
+  /// Search for all `SymbolInfo`s corresponding to an identifier.
+  /// \param Identifier The unqualified identifier being searched for.
+  /// \returns A list of `SymbolInfo` candidates.
   // FIXME: Expose the type name so we can also insert using declarations (or
   // fix the usage)
-  virtual std::vector<std::string> search(llvm::StringRef Identifier) = 0;
+  virtual std::vector<clang::find_all_symbols::SymbolInfo>
+  search(llvm::StringRef Identifier) = 0;
 };
 
 } // namespace include_fixer

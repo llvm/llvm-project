@@ -120,6 +120,7 @@ public:
   void printMipsPLTGOT() override;
   void printMipsABIFlags() override;
   void printMipsReginfo() override;
+  void printMipsOptions() override;
 
   void printStackMap() const override;
 
@@ -1214,6 +1215,25 @@ static const EnumEntry<unsigned> ElfMips16SymOtherFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_MIPS16)
 };
 
+static const char *getElfMipsOptionsOdkType(unsigned Odk) {
+  switch (Odk) {
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_NULL);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_REGINFO);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_EXCEPTIONS);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_PAD);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_HWPATCH);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_FILL);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_TAGS);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_HWAND);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_HWOR);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_GP_GROUP);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_IDENT);
+  LLVM_READOBJ_ENUM_CASE(ELF, ODK_PAGESIZE);
+  default:
+    return "Unknown";
+  }
+}
+
 template <typename ELFT>
 ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
     : ObjDumper(Writer), Obj(Obj) {
@@ -2187,6 +2207,17 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsABIFlags() {
   W.printHex("Flags 2", Flags->flags2);
 }
 
+template <class ELFT>
+static void printMipsReginfoData(ScopedPrinter &W,
+                                 const Elf_Mips_RegInfo<ELFT> &Reginfo) {
+  W.printHex("GP", Reginfo.ri_gp_value);
+  W.printHex("General Mask", Reginfo.ri_gprmask);
+  W.printHex("Co-Proc Mask0", Reginfo.ri_cprmask[0]);
+  W.printHex("Co-Proc Mask1", Reginfo.ri_cprmask[1]);
+  W.printHex("Co-Proc Mask2", Reginfo.ri_cprmask[2]);
+  W.printHex("Co-Proc Mask3", Reginfo.ri_cprmask[3]);
+}
+
 template <class ELFT> void ELFDumper<ELFT>::printMipsReginfo() {
   const Elf_Shdr *Shdr = findSectionByName(*Obj, ".reginfo");
   if (!Shdr) {
@@ -2199,15 +2230,38 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsReginfo() {
     return;
   }
 
-  auto *Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(Sec.data());
-
   DictScope GS(W, "MIPS RegInfo");
-  W.printHex("GP", Reginfo->ri_gp_value);
-  W.printHex("General Mask", Reginfo->ri_gprmask);
-  W.printHex("Co-Proc Mask0", Reginfo->ri_cprmask[0]);
-  W.printHex("Co-Proc Mask1", Reginfo->ri_cprmask[1]);
-  W.printHex("Co-Proc Mask2", Reginfo->ri_cprmask[2]);
-  W.printHex("Co-Proc Mask3", Reginfo->ri_cprmask[3]);
+  auto *Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(Sec.data());
+  printMipsReginfoData(W, *Reginfo);
+}
+
+template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
+  const Elf_Shdr *Shdr = findSectionByName(*Obj, ".MIPS.options");
+  if (!Shdr) {
+    W.startLine() << "There is no .MIPS.options section in the file.\n";
+    return;
+  }
+
+  DictScope GS(W, "MIPS Options");
+
+  ArrayRef<uint8_t> Sec = unwrapOrError(Obj->getSectionContents(Shdr));
+  while (!Sec.empty()) {
+    if (Sec.size() < sizeof(Elf_Mips_Options<ELFT>)) {
+      W.startLine() << "The .MIPS.options section has a wrong size.\n";
+      return;
+    }
+    auto *O = reinterpret_cast<const Elf_Mips_Options<ELFT> *>(Sec.data());
+    DictScope GS(W, getElfMipsOptionsOdkType(O->kind));
+    switch (O->kind) {
+    case ODK_REGINFO:
+      printMipsReginfoData(W, O->getRegInfo());
+      break;
+    default:
+      W.startLine() << "Unsupported MIPS options tag.\n";
+      break;
+    }
+    Sec = Sec.slice(O->size);
+  }
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {

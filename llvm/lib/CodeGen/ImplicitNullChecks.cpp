@@ -398,13 +398,18 @@ void ImplicitNullChecks::rewriteNullChecks(
     // control flow, we've just made it implicit.
     MachineInstr *FaultingLoad =
         insertFaultingLoad(NC.MemOperation, NC.CheckBlock, NC.NullSucc);
-    // Now the value of the MemOperation, if any, is live-in of block
-    // of MemOperation.
-    unsigned Reg = FaultingLoad->getOperand(0).getReg();
-    if (Reg) {
-      MachineBasicBlock *MBB = NC.MemOperation->getParent();
-      if (!MBB->isLiveIn(Reg))
-        MBB->addLiveIn(Reg);
+    // Now the values defined by MemOperation, if any, are live-in of
+    // the block of MemOperation.
+    // The original load operation may define implicit-defs alongside
+    // the loaded value.
+    MachineBasicBlock *MBB = NC.MemOperation->getParent();
+    for (const MachineOperand &MO : FaultingLoad->operands()) {
+      if (!MO.isReg() || !MO.isDef())
+        continue;
+      unsigned Reg = MO.getReg();
+      if (!Reg || MBB->isLiveIn(Reg))
+        continue;
+      MBB->addLiveIn(Reg);
     }
     NC.MemOperation->eraseFromParent();
     NC.CheckOperation->eraseFromParent();

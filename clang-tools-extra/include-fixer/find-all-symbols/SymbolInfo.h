@@ -21,6 +21,7 @@ namespace clang {
 namespace find_all_symbols {
 
 /// \brief Contains all information for a Symbol.
+// FIXME: add static members for creating complete instances.
 struct SymbolInfo {
   enum SymbolKind {
     Function,

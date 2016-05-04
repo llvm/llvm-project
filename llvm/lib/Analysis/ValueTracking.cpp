@@ -1405,8 +1405,7 @@ void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
     return;
   }
   // Handle a constant vector by taking the intersection of the known bits of
-  // each element.  There is no real need to handle ConstantVector here, because
-  // we don't handle undef in any particularly useful way.
+  // each element.
   if (ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(V)) {
     // We know that CDS must be a vector of integers. Take the intersection of
     // each element.
@@ -1414,6 +1413,26 @@ void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
     APInt Elt(KnownZero.getBitWidth(), 0);
     for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
       Elt = CDS->getElementAsInteger(i);
+      KnownZero &= ~Elt;
+      KnownOne &= Elt;
+    }
+    return;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(V)) {
+    // We know that CV must be a vector of integers. Take the intersection of
+    // each element.
+    KnownZero.setAllBits(); KnownOne.setAllBits();
+    APInt Elt(KnownZero.getBitWidth(), 0);
+    for (unsigned i = 0, e = CV->getNumOperands(); i != e; ++i) {
+      Constant *Element = CV->getAggregateElement(i);
+      auto *ElementCI = dyn_cast_or_null<ConstantInt>(Element);
+      if (!ElementCI) {
+        KnownZero.clearAllBits();
+        KnownOne.clearAllBits();
+        return;
+      }
+      Elt = ElementCI->getValue();
       KnownZero &= ~Elt;
       KnownOne &= Elt;
     }

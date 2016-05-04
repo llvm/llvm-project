@@ -713,8 +713,8 @@ void SIScheduleBlockCreator::colorComputeReservedDependencies() {
   // Traverse TopDown, and give different colors to SUs depending
   // on which combination of High Latencies they depend on.
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->TopDownIndex2SU[i]];
+  for (unsigned SUNum : DAG->TopDownIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     std::set<unsigned> SUColors;
 
     // Already given.
@@ -755,8 +755,8 @@ void SIScheduleBlockCreator::colorComputeReservedDependencies() {
 
   // Same as before, but BottomUp.
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     std::set<unsigned> SUColors;
 
     // Already given.
@@ -827,8 +827,8 @@ void SIScheduleBlockCreator::colorEndsAccordingToDependencies() {
   unsigned DAGSize = DAG->SUnits.size();
   std::vector<int> PendingColoring = CurrentColoring;
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     std::set<unsigned> SUColors;
     std::set<unsigned> SUColorsPending;
 
@@ -894,8 +894,8 @@ void SIScheduleBlockCreator::colorForceConsecutiveOrderInGroup() {
 void SIScheduleBlockCreator::colorMergeConstantLoadsNextGroup() {
   unsigned DAGSize = DAG->SUnits.size();
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     std::set<unsigned> SUColors;
 
     if (CurrentColoring[SU->NodeNum] <= (int)DAGSize)
@@ -920,8 +920,8 @@ void SIScheduleBlockCreator::colorMergeConstantLoadsNextGroup() {
 void SIScheduleBlockCreator::colorMergeIfPossibleNextGroup() {
   unsigned DAGSize = DAG->SUnits.size();
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     std::set<unsigned> SUColors;
 
     if (CurrentColoring[SU->NodeNum] <= (int)DAGSize)
@@ -941,8 +941,8 @@ void SIScheduleBlockCreator::colorMergeIfPossibleNextGroup() {
 void SIScheduleBlockCreator::colorMergeIfPossibleNextGroupOnlyForReserved() {
   unsigned DAGSize = DAG->SUnits.size();
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     std::set<unsigned> SUColors;
 
     if (CurrentColoring[SU->NodeNum] <= (int)DAGSize)
@@ -963,8 +963,8 @@ void SIScheduleBlockCreator::colorMergeIfPossibleSmallGroupsToNextGroup() {
   unsigned DAGSize = DAG->SUnits.size();
   std::map<unsigned, unsigned> ColorCount;
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     unsigned color = CurrentColoring[SU->NodeNum];
     std::map<unsigned, unsigned>::iterator Pos = ColorCount.find(color);
       if (Pos != ColorCount.end()) {
@@ -974,8 +974,8 @@ void SIScheduleBlockCreator::colorMergeIfPossibleSmallGroupsToNextGroup() {
       }
   }
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     unsigned color = CurrentColoring[SU->NodeNum];
     std::set<unsigned> SUColors;
 
@@ -1007,8 +1007,8 @@ void SIScheduleBlockCreator::regroupNoUserInstructions() {
   unsigned DAGSize = DAG->SUnits.size();
   int GroupID = NextNonReservedID++;
 
-  for (unsigned i = 0, e = DAGSize; i != e; ++i) {
-    SUnit *SU = &DAG->SUnits[DAG->BottomUpIndex2SU[i]];
+  for (unsigned SUNum : DAG->BottomUpIndex2SU) {
+    SUnit *SU = &DAG->SUnits[SUNum];
     bool hasSuccessor = false;
 
     if (CurrentColoring[SU->NodeNum] <= (int)DAGSize)

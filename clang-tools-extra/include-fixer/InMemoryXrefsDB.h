@@ -21,13 +21,15 @@ namespace include_fixer {
 /// Xref database with fixed content.
 class InMemoryXrefsDB : public XrefsDB {
 public:
-  InMemoryXrefsDB(std::map<std::string, std::vector<std::string>> LookupTable)
-      : LookupTable(std::move(LookupTable)) {}
+  InMemoryXrefsDB(
+      const std::map<std::string, std::vector<std::string>> &LookupTable);
 
-  std::vector<std::string> search(llvm::StringRef Identifier) override;
+  std::vector<clang::find_all_symbols::SymbolInfo>
+  search(llvm::StringRef Identifier) override;
 
 private:
-  std::map<std::string, std::vector<std::string>> LookupTable;
+  std::map<std::string, std::vector<clang::find_all_symbols::SymbolInfo>>
+      LookupTable;
 };
 
 } // namespace include_fixer

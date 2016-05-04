@@ -23,7 +23,8 @@ class YamlXrefsDB : public XrefsDB {
 public:
   YamlXrefsDB(llvm::StringRef FilePath);
 
-  std::vector<std::string> search(llvm::StringRef Identifier) override;
+  std::vector<clang::find_all_symbols::SymbolInfo>
+  search(llvm::StringRef Identifier) override;
 
 private:
   std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
