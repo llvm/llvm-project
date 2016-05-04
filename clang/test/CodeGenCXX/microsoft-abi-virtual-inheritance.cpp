@@ -481,3 +481,21 @@ C::C() : B() {}
 // CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[B_i8]], i32 4
 // CHECK:   call void @llvm.memset.p0i8.i32(i8* %[[FIELD]], i8 0, i32 4, i32 4, i1 false)
 }
+
+namespace pr27621 {
+// Devirtualization through a static_cast used to make us compute the 'this'
+// adjustment for B::g instead of C::g. When we directly call C::g, 'this' is a
+// B*, and the prologue of C::g will adjust it to a C*.
+struct A { virtual void f(); };
+struct B { virtual void g(); };
+struct C final : A, B {
+  virtual void h();
+  void g() override;
+};
+void callit(C *p) {
+  static_cast<B*>(p)->g();
+}
+// CHECK-LABEL: define void @"\01?callit@pr27621@@YAXPAUC@1@@Z"(%"struct.pr27621::C"* %{{.*}})
+// CHECK: %[[B_i8:.*]] = getelementptr i8, i8* %{{.*}}, i32 4
+// CHECK: call x86_thiscallcc void @"\01?g@C@pr27621@@UAEXXZ"(i8* %[[B_i8]])
+}

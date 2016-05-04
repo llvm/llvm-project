@@ -2063,6 +2063,12 @@ _mm512_movepi8_mask (__m512i __A)
   return (__mmask64) __builtin_ia32_cvtb2mask512 ((__v64qi) __A);
 }
 
+static __inline__ __mmask32 __DEFAULT_FN_ATTRS
+_mm512_movepi16_mask (__m512i __A)
+{
+  return (__mmask32) __builtin_ia32_cvtw2mask512 ((__v32hi) __A);
+}
+
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_movm_epi8 (__mmask64 __A)
 {

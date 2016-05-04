@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fmodule-format=obj -debug-info-kind=limited -dwarf-ext-refs \
 // RUN:     -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs \
-// RUN:     %s -mllvm -debug-only=pchcontainer 2>&1 | FileCheck %s
+// RUN:     %s -mllvm -debug-only=pchcontainer -debugger-tuning=lldb 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 @import diamond_left;
@@ -20,3 +20,9 @@
 // Skeleton for top:
 // CHECK: !DICompileUnit({{.*}}splitDebugFilename: {{.*}}diamond_top{{.*}}dwoId:
 
+// RUN: rm -rf %t
+// RUN: %clang_cc1 -fmodules -fmodule-format=obj -debug-info-kind=limited -dwarf-ext-refs \
+// RUN:     -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs \
+// RUN:     %s -mllvm -debug-only=pchcontainer 2>&1 | FileCheck %s --check-prefix=NOIMPORT
+
+// NOIMPORT-NOT: !DIImportedEntity

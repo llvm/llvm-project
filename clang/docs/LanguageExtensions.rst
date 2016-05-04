@@ -1912,12 +1912,13 @@ X86/X86-64 Language Extensions
 
 The X86 backend has these language extensions:
 
-Memory references off the GS segment
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Memory references to specified segments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Annotating a pointer with address space #256 causes it to be code generated
-relative to the X86 GS segment register, and address space #257 causes it to be
-relative to the X86 FS segment.  Note that this is a very very low-level
+relative to the X86 GS segment register, address space #257 causes it to be
+relative to the X86 FS segment, and address space #258 causes it to be
+relative to the X86 SS segment.  Note that this is a very very low-level
 feature that should only be used if you know what you're doing (for example in
 an OS kernel).
 

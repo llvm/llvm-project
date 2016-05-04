@@ -2375,3 +2375,15 @@ __m256i test_mm256_maskz_dbsad_epu8(__mmask16 __U, __m256i __A, __m256i __B) {
   // CHECK: @llvm.x86.avx512.mask.dbpsadbw.256
   return _mm256_maskz_dbsad_epu8(__U, __A, __B, 170); 
 }
+__mmask8 test_mm_movepi16_mask(__m128i __A) {
+  // CHECK-LABEL: @test_mm_movepi16_mask
+  // CHECK: @llvm.x86.avx512.cvtw2mask.128
+  return _mm_movepi16_mask(__A); 
+}
+
+__mmask16 test_mm256_movepi16_mask(__m256i __A) {
+  // CHECK-LABEL: @test_mm256_movepi16_mask
+  // CHECK: @llvm.x86.avx512.cvtw2mask.256
+  return _mm256_movepi16_mask(__A); 
+}
+

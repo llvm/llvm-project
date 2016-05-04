@@ -152,6 +152,7 @@ public:
     CodeGenOpts.ThreadModel = "single";
     CodeGenOpts.DebugTypeExtRefs = true;
     CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
+    CodeGenOpts.setDebuggerTuning(CI.getCodeGenOpts().getDebuggerTuning());
   }
 
   ~PCHContainerGenerator() override = default;
