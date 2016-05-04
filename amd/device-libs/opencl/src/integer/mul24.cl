@@ -15,6 +15,6 @@ mul24(int x, int y)
 BEXPATTR uint
 mul24(uint x, uint y)
 {
-    return (x & 0xffffffU) * (y & 0xffffffU);
+    return ((x << 8) >> 8) * ((y << 8) >> 8);
 }
 

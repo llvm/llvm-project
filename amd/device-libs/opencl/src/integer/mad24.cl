@@ -15,6 +15,6 @@ mad24(int a, int b, int c)
 TEXPATTR uint
 mad24(uint a, uint b, uint c)
 {
-    return (a & 0xffffffU) * (b & 0xffffffU) + c;
+    return ((a << 8) >> 8) * ((b << 8) >> 8) + c;
 }
 

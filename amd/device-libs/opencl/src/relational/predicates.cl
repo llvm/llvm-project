@@ -1,5 +1,5 @@
 
-//#include "ocml.h"
+#include "ocml.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -29,16 +29,12 @@ F(T##N x) \
     return (C(T##_rtype,N)) ( ULIST##N(F) ); \
 }
 
-#if 0
 #define UGENTS(F,T) \
 ATTR int \
 F(T x) \
 { \
     return C(__ocml_,C(F,T##_suff))(x); \
 }
-#else
-#define UGENTS(F,T)
-#endif
 
 #define UGENT(F,T) \
     UGENTN(16,F,T) \

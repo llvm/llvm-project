@@ -2,10 +2,8 @@
 #include "int.h"
 
 #define TEXPATTR __attribute__((always_inline, overloadable, const))
-#if 1
+
 TEXP(char,mad_sat)
-#endif
-#if 0
 TEXP(uchar,mad_sat)
 TEXP(short,mad_sat)
 TEXP(ushort,mad_sat)
@@ -13,9 +11,7 @@ TEXP(int,mad_sat)
 TEXP(uint,mad_sat)
 TEXP(long,mad_sat)
 TEXP(ulong,mad_sat)
-#endif
 
-#if 0
 TEXPATTR char
 mad_sat(char a, char b, char c)
 {
@@ -101,5 +97,4 @@ mad_sat(ulong a, ulong b, ulong c)
 
     return hi > 0UL ? 0xffffffffffffffffUL : lo;
 }
-#endif
 
