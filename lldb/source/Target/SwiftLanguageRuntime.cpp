@@ -4557,6 +4557,73 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer (lldb::addr_t addr,
     return addr & ~mask;
 }
 
+lldb::addr_t
+SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer (lldb::addr_t addr)
+{
+    if (auto objc_runtime = GetObjCRuntime())
+    {
+        // tagged pointers don't perform any masking
+        if (objc_runtime->IsTaggedPointer(addr))
+            return addr;
+    }
+    
+    if (!m_process)
+        return addr;
+    const ArchSpec& arch_spec(m_process->GetTarget().GetArchitecture());
+    ArchSpec::Core core_kind = arch_spec.GetCore();
+    bool is_arm = false;
+    bool is_intel = false;
+    bool is_32 = false;
+    bool is_64 = false;
+    if (core_kind >= ArchSpec::Core::kCore_arm_first &&
+        core_kind <= ArchSpec::Core::kCore_arm_last)
+    {
+        is_arm = true;
+    }
+    else if (core_kind >= ArchSpec::Core::kCore_x86_64_first &&
+             core_kind <= ArchSpec::Core::kCore_x86_64_last)
+    {
+        is_intel = true;
+    }
+    else if (core_kind >= ArchSpec::Core::kCore_x86_32_first &&
+             core_kind <= ArchSpec::Core::kCore_x86_32_last)
+    {
+        is_intel = true;
+    }
+    else
+    {
+        // this is a really random CPU core to be running on - just get out fast
+        return addr;
+    }
+    
+    switch (arch_spec.GetAddressByteSize())
+    {
+        case 4:
+            is_32 = true;
+            break;
+        case 8:
+            is_64 = true;
+            break;
+        default:
+            // this is a really random pointer size to be running on - just get out fast
+            return addr;
+    }
+    
+    lldb::addr_t mask = 0;
+    
+    if (is_arm && is_64)
+        mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
+    else if (is_intel && is_64)
+        mask = SWIFT_ABI_X86_64_OBJC_NUM_RESERVED_LOW_BITS;
+    else
+        mask = SWIFT_ABI_DEFAULT_OBJC_NUM_RESERVED_LOW_BITS;
+
+    mask = (1<<mask) | (1<<(mask+1));
+    
+    return addr & ~mask;
+}
+
+
 ConstString
 SwiftLanguageRuntime::GetErrorBackstopName ()
 {

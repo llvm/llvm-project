@@ -11,9 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftOptional.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
+#include "lldb/Symbol/SwiftASTContext.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,7 +42,7 @@ lldb_private::formatters::swift::SwiftOptionalSummaryProvider::GetDescription ()
 
 // if this ValueObject is an Optional<T> with the Some(T) case selected,
 // retrieve the value of the Some case..
-static ValueObject*
+static PointerOrSP
 ExtractSomeIfAny (ValueObject *optional,
                   lldb::DynamicValueType dynamic_value = lldb::eNoDynamicValues,
                   bool synthetic_value = false)
@@ -57,9 +62,34 @@ ExtractSomeIfAny (ValueObject *optional,
     if (!value || value == g_None)
         return nullptr;
     
-    ValueObjectSP value_sp(non_synth_valobj->GetChildMemberWithName(g_Some, true));
+    PointerOrSP value_sp(non_synth_valobj->GetChildMemberWithName(g_Some, true).get());
     if (!value_sp)
         return nullptr;
+    
+    SwiftASTContext::NonTriviallyManagedReferenceStrategy strategy;
+    if (SwiftASTContext::IsNonTriviallyManagedReferenceType(non_synth_valobj->GetCompilerType(),
+                                                            strategy) &&
+        strategy == SwiftASTContext::NonTriviallyManagedReferenceStrategy::eWeak)
+    {
+        if (auto process_sp = optional->GetProcessSP())
+        {
+            if (auto swift_runtime = process_sp->GetSwiftLanguageRuntime())
+            {
+                lldb::addr_t original_ptr = value_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+                lldb::addr_t tweaked_ptr = swift_runtime->MaybeMaskNonTrivialReferencePointer(original_ptr);
+                if (original_ptr != tweaked_ptr)
+                {
+                    CompilerType value_type(value_sp->GetCompilerType());
+                    DataBufferSP buffer_sp(new DataBufferHeap(&tweaked_ptr, sizeof(tweaked_ptr)));
+                    DataExtractor extractor(buffer_sp, process_sp->GetByteOrder(), process_sp->GetAddressByteSize());
+                    ExecutionContext exe_ctx(process_sp);
+                    value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
+                    if (!value_sp)
+                        return nullptr;
+                }
+            }
+        }
+    }
     
     if (dynamic_value != lldb::eNoDynamicValues)
     {
@@ -71,7 +101,7 @@ ExtractSomeIfAny (ValueObject *optional,
     if (synthetic_value && value_sp->HasSyntheticValue())
         value_sp = value_sp->GetSyntheticValue();
     
-    return value_sp.get();
+    return value_sp;
 }
 
 static bool
@@ -79,43 +109,24 @@ SwiftOptional_SummaryProvider_Impl (ValueObject& valobj,
                                     Stream& stream,
                                     const TypeSummaryOptions& options)
 {
-    static ConstString g_Some("some");
-    static ConstString g_None("none");
-    
-    ValueObjectSP non_synth_valobj = valobj.GetNonSyntheticValue();
-    if (!non_synth_valobj)
-        return false;
-    
-    ConstString value(non_synth_valobj->GetValueAsCString());
-    
-    if (!value)
-        return false;
-    
-    if (value == g_None)
+    PointerOrSP some = ExtractSomeIfAny(&valobj,valobj.GetDynamicValueType(),true);
+    if (!some)
     {
         stream.Printf("nil");
         return true;
     }
-    
-    ValueObjectSP value_sp(non_synth_valobj->GetChildMemberWithName(g_Some, true));
-    if (!value_sp)
-        return false;
-    
-    value_sp = value_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
-    if (!value_sp)
-        return false;
-    
-    const char* value_summary = value_sp->GetSummaryAsCString();
+
+    const char* value_summary = some->GetSummaryAsCString();
     
     if (value_summary)
         stream.Printf("%s",value_summary);
-    else if (lldb_private::DataVisualization::ShouldPrintAsOneLiner(*value_sp.get()))
+    else if (lldb_private::DataVisualization::ShouldPrintAsOneLiner(*some))
     {
         TypeSummaryImpl::Flags oneliner_flags;
         oneliner_flags.SetHideItemNames(false).SetCascades(true).SetDontShowChildren(false).SetDontShowValue(false).SetShowMembersOneLiner(true).SetSkipPointers(false).SetSkipReferences(false);
         StringSummaryFormat oneliner(oneliner_flags, "");
         std::string buffer;
-        oneliner.FormatObject(value_sp.get(), buffer, options);
+        oneliner.FormatObject(some, buffer, options);
         stream.Printf("%s",buffer.c_str());
     }
     
@@ -144,7 +155,7 @@ lldb_private::formatters::swift::SwiftOptionalSummaryProvider::DoesPrintChildren
     if (!target_valobj)
         return false;
     
-    ValueObject *some = ExtractSomeIfAny(target_valobj,target_valobj->GetDynamicValueType(),true);
+    PointerOrSP some = ExtractSomeIfAny(target_valobj,target_valobj->GetDynamicValueType(),true);
     
     if (!some)
         return true;

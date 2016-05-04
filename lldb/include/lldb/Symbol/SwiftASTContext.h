@@ -656,6 +656,18 @@ public:
     
     static TypeAllocationStrategy
     GetAllocationStrategy (const CompilerType& type);
+
+    enum class NonTriviallyManagedReferenceStrategy
+    {
+        eWeak,
+        eUnowned,
+        eUnmanaged
+    };
+
+    static bool
+    IsNonTriviallyManagedReferenceType (const CompilerType& type,
+                                        NonTriviallyManagedReferenceStrategy &strategy,
+                                        CompilerType *underlying_type = nullptr);
     
     bool
     IsObjCObjectPointerType (const CompilerType& type, CompilerType *class_type_ptr);
