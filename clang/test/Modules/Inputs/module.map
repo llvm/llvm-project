@@ -410,3 +410,5 @@ module MethodPoolString1 {
 module MethodPoolString2 {
   header "MethodPoolString2.h"
 }
+
+module Empty {}
