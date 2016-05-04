@@ -162,6 +162,8 @@ private:
 
   // MIPS .reginfo section defined by this file.
   std::unique_ptr<MipsReginfoInputSection<ELFT>> MipsReginfo;
+  // MIPS .MIPS.options section defined by this file.
+  std::unique_ptr<MipsOptionsInputSection<ELFT>> MipsOptions;
 
   llvm::BumpPtrAllocator Alloc;
   llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;

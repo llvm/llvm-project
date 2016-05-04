@@ -28,7 +28,6 @@ public:
   virtual bool isTlsLocalDynamicRel(uint32_t Type) const;
   virtual bool isTlsGlobalDynamicRel(uint32_t Type) const;
   virtual uint32_t getDynRel(uint32_t Type) const { return Type; }
-  virtual uint32_t getTlsGotRel(uint32_t Type) const { return TlsGotRel; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, uint64_t Plt) const {};
   virtual uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const;
@@ -41,11 +40,6 @@ public:
   virtual void writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
                         uint64_t PltEntryAddr, int32_t Index,
                         unsigned RelOff) const {}
-
-  // Returns true if a relocation is just a hint for linker to make for example
-  // some code optimization. Such relocations should not be handled as a regular
-  // ones and lead to dynamic relocation creation etc.
-  virtual bool isHintRel(uint32_t Type) const;
 
   // Returns true if a relocation only uses the low bits of a value such that
   // all those bits are in in the same page. For example, if the relocation

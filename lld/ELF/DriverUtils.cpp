@@ -117,14 +117,8 @@ static std::string getDestPath(StringRef Path) {
   return Dest.str();
 }
 
-static void maybePrintCpioMember(StringRef Path, StringRef Data) {
-  if (Config->Reproduce.empty())
-    return;
-
-  if (!Driver->IncludedFiles.insert(Path).second)
-    return;
-
-  raw_fd_ostream &OS = *Driver->ReproduceArchive;
+static void maybePrintCpioMemberAux(raw_fd_ostream &OS, StringRef Path,
+                                    StringRef Data) {
   OS << "070707"; // c_magic
 
   // The c_dev/c_ino pair should be unique according to the spec, but no one
@@ -144,17 +138,26 @@ static void maybePrintCpioMember(StringRef Path, StringRef Data) {
   OS << Data;                            // c_filedata
 }
 
+static void maybePrintCpioMember(StringRef Path, StringRef Data) {
+  if (Config->Reproduce.empty())
+    return;
+
+  if (!Driver->IncludedFiles.insert(Path).second)
+    return;
+  raw_fd_ostream &OS = *Driver->ReproduceArchive;
+  maybePrintCpioMemberAux(OS, Path, Data);
+
+  // Print the trailer and seek back. This way we have a valid archive if we
+  // crash.
+  uint64_t Pos = OS.tell();
+  maybePrintCpioMemberAux(OS, "TRAILER!!!", "");
+  OS.seek(Pos);
+}
+
 // Write file Src with content Data to the archive.
 void elf::maybeCopyInputFile(StringRef Src, StringRef Data) {
   std::string Dest = getDestPath(Src);
   maybePrintCpioMember(Dest, Data);
-}
-
-void elf::maybeCloseReproArchive() {
-  if (!Driver->ReproduceArchive)
-    return;
-  maybePrintCpioMember("TRAILER!!!", "");
-  Driver->ReproduceArchive.reset();
 }
 
 // Quote a given string if it contains a space character.

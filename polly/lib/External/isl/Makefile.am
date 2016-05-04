@@ -362,12 +362,11 @@ EXTRA_DIST = \
 	isl.py \
 	doc/CodingStyle \
 	doc/SubmittingPatches \
-	doc/chicago.bst \
-	doc/chicago.sty \
 	doc/implementation.tex \
 	doc/isl.bib \
 	doc/mypod2latex \
 	doc/manual.tex \
+	doc/reading.tex \
 	doc/user.pod \
 	imath/gmp_compat.c \
 	imath/gmp_compat.h \

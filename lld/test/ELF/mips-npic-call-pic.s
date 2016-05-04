@@ -11,16 +11,16 @@
 
 # CHECK:     Disassembly of section .text:
 # CHECK-NEXT: __start:
-# CHECK-NEXT:    20000:       0c 00 80 10     jal     131136 <foo1b+0xC>
+# CHECK-NEXT:    20000:       0c 00 80 0e     jal     131128 <foo1b+0x4>
 #                                                            ^-- .pic.foo1a
 # CHECK-NEXT:    20004:       00 00 00 00     nop
-# CHECK-NEXT:    20008:       0c 00 80 1c     jal     131184 <foo2+0x10>
+# CHECK-NEXT:    20008:       0c 00 80 19     jal     131172 <foo2+0x4>
 #                                                            ^-- .pic.foo2
 # CHECK-NEXT:    2000c:       00 00 00 00     nop
-# CHECK-NEXT:    20010:       0c 00 80 14     jal     131152 <foo1b+0x1C>
+# CHECK-NEXT:    20010:       0c 00 80 12     jal     131144 <foo1b+0x14>
 #                                                            ^-- .pic.foo1b
 # CHECK-NEXT:    20014:       00 00 00 00     nop
-# CHECK-NEXT:    20018:       0c 00 80 1c     jal     131184 <foo2+0x10>
+# CHECK-NEXT:    20018:       0c 00 80 19     jal     131172 <foo2+0x4>
 #                                                            ^-- .pic.foo2
 # CHECK-NEXT:    2001c:       00 00 00 00     nop
 # CHECK-NEXT:    20020:       0c 00 80 28     jal     131232 <fnpic+0x10>
@@ -34,29 +34,28 @@
 #
 # CHECK:      foo1b:
 # CHECK-NEXT:    20034:       00 00 00 00     nop
-# CHECK-NEXT:    20038:       00 00 00 00     nop
-# CHECK-NEXT:    2003c:       00 00 00 00     nop
 #
-# CHECK-NEXT:    20040:       3c 19 00 02     lui     $25, 2
-# CHECK-NEXT:    20044:       08 00 80 0c     j       131120 <foo1a>
-# CHECK-NEXT:    20048:       27 39 00 30     addiu   $25, $25, 48
-# CHECK-NEXT:    2004c:       00 00 00 00     nop
-# CHECK-NEXT:    20050:       3c 19 00 02     lui     $25, 2
-# CHECK-NEXT:    20054:       08 00 80 0d     j       131124 <foo1b>
-# CHECK-NEXT:    20058:       27 39 00 34     addiu   $25, $25, 52
+# CHECK-NEXT:    20038:       3c 19 00 02     lui     $25, 2
+# CHECK-NEXT:    2003c:       08 00 80 0c     j       131120 <foo1a>
+# CHECK-NEXT:    20040:       27 39 00 30     addiu   $25, $25, 48
+# CHECK-NEXT:    20044:       00 00 00 00     nop
+# CHECK-NEXT:    20048:       3c 19 00 02     lui     $25, 2
+# CHECK-NEXT:    2004c:       08 00 80 0d     j       131124 <foo1b>
+# CHECK-NEXT:    20050:       27 39 00 34     addiu   $25, $25, 52
+# CHECK-NEXT:    20054:       00 00 00 00     nop
+# CHECK-NEXT:    20058:       00 00 00 00     nop
 # CHECK-NEXT:    2005c:       00 00 00 00     nop
 #
 # CHECK:      foo2:
 # CHECK-NEXT:    20060:       00 00 00 00     nop
-# CHECK-NEXT:    20064:       00 00 00 00     nop
-# CHECK-NEXT:    20068:       00 00 00 00     nop
-# CHECK-NEXT:    2006c:       00 00 00 00     nop
 #
-# CHECK-NEXT:    20070:       3c 19 00 02     lui     $25, 2
-# CHECK-NEXT:    20074:       08 00 80 18     j       131168 <foo2>
-# CHECK-NEXT:    20078:       27 39 00 60     addiu   $25, $25, 96
+# CHECK-NEXT:    20064:       3c 19 00 02     lui     $25, 2
+# CHECK-NEXT:    20068:       08 00 80 18     j       131168 <foo2>
+# CHECK-NEXT:    2006c:       27 39 00 60     addiu   $25, $25, 96
+# CHECK-NEXT:    20070:       00 00 00 00     nop
+# CHECK-NEXT:    20074:       00 00 00 00     nop
+# CHECK-NEXT:    20078:       00 00 00 00     nop
 # CHECK-NEXT:    2007c:       00 00 00 00     nop
-
 #
 # CHECK:      fpic:
 # CHECK-NEXT:    20080:       00 00 00 00     nop
@@ -72,7 +71,6 @@
 # CHECK-NEXT:    200a0:       3c 19 00 02     lui     $25, 2
 # CHECK-NEXT:    200a4:       08 00 80 20     j       131200 <fpic>
 # CHECK-NEXT:    200a8:       27 39 00 80     addiu   $25, $25, 128
-# CHECK-NEXT:    200ac:       00 00 00 00     nop
 
   .text
   .globl __start

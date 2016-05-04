@@ -410,7 +410,7 @@ decl(hasDeclContext(translationUnitDecl()))
 
 Given
   typedef int X;
-   using Y = int;
+  using Y = int;
 typeAliasDecl()
   matches "using Y = int", but not "typedef int X"
 </pre></td></tr>
@@ -421,7 +421,7 @@ typeAliasDecl()
 
 Given
   typedef int X;
-   using Y = int;
+  using Y = int;
 typedefDecl()
   matches "typedef int X", but not "using Y = int"
 </pre></td></tr>
@@ -432,7 +432,7 @@ typedefDecl()
 
 Given
   typedef int X;
-   using Y = int;
+  using Y = int;
 typedefNameDecl()
   matches "typedef int X" and "using Y = int"
 </pre></td></tr>
@@ -2238,6 +2238,13 @@ and reference to that variable declaration within a compound statement.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('equalsNode0')"><a name="equalsNode0Anchor">equalsNode</a></td><td>const Decl* Other</td></tr>
+<tr><td colspan="4" class="doc" id="equalsNode0"><pre>Matches if a node equals another node.
+
+Decl has pointer identity in the AST.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('hasAttr0')"><a name="hasAttr0Anchor">hasAttr</a></td><td>attr::Kind AttrKind</td></tr>
 <tr><td colspan="4" class="doc" id="hasAttr0"><pre>Matches declaration that has a given attribute.
 
@@ -2898,6 +2905,13 @@ and reference to that variable declaration within a compound statement.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('equalsNode1')"><a name="equalsNode1Anchor">equalsNode</a></td><td>const Stmt* Other</td></tr>
+<tr><td colspan="4" class="doc" id="equalsNode1"><pre>Matches if a node equals another node.
+
+Stmt has pointer identity in the AST.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('isExpansionInFileMatching1')"><a name="isExpansionInFileMatching1Anchor">isExpansionInFileMatching</a></td><td>std::string RegExp</td></tr>
 <tr><td colspan="4" class="doc" id="isExpansionInFileMatching1"><pre>Matches AST nodes that were expanded within files whose name is
 partially matching a given regex.
@@ -3069,6 +3083,13 @@ compoundStmt(
     forEachDescendant(declRefExpr(to(decl(equalsBoundNode("d"))))))
 will trigger a match for each combination of variable declaration
 and reference to that variable declaration within a compound statement.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('equalsNode2')"><a name="equalsNode2Anchor">equalsNode</a></td><td>const Type* Other</td></tr>
+<tr><td colspan="4" class="doc" id="equalsNode2"><pre>Matches if a node equals another node.
+
+Type has pointer identity in the AST.
 </pre></td></tr>
 
 
@@ -3283,6 +3304,16 @@ Given:
 expr(nullPointerConstant())
   matches the initializer for v1, v2, v3, cp, and ip. Does not match the
   initializer for i.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;internal::Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt;&gt;</td><td class="name" onclick="toggle('hasAnyName0')"><a name="hasAnyName0Anchor">hasAnyName</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyName0"><pre>Matches NamedDecl nodes that have any of the specified names.
+
+This matcher is only provided as a performance optimization of hasName.
+    hasAnyName(a, b, c)
+ is equivalent to, but faster than
+    anyOf(hasName(a), hasName(b), hasName(c))
 </pre></td></tr>
 
 
@@ -4920,6 +4951,20 @@ with compoundStmt()
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('alignOfExpr0')"><a name="alignOfExpr0Anchor">alignOfExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnaryExprOrTypeTraitExpr.html">UnaryExprOrTypeTraitExpr</a>&gt;  InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="alignOfExpr0"><pre>Same as unaryExprOrTypeTraitExpr, but only matching
 alignof.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('forFunction0')"><a name="forFunction0Anchor">forFunction</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forFunction0"><pre>Matches declaration of the function the statemenet belongs to
+
+Given:
+F&amp; operator=(const F&amp; o) {
+  std::copy_if(o.begin(), o.end(), begin(), [](V v) { return v &gt; 0; });
+  return *this;
+}
+returnStmt(forFunction(hasName("operator=")))
+  matches 'return *this'
+  but does match 'return &gt; 0'
 </pre></td></tr>
 
 

@@ -95,7 +95,7 @@ def strip_doxygen(comment):
 def unify_arguments(args):
   """Gets rid of anything the user doesn't care about in the argument list."""
   args = re.sub(r'internal::', r'', args)
-  args = re.sub(r'const\s+', r'', args)
+  args = re.sub(r'const\s+(.*)&', r'\1 ', args)
   args = re.sub(r'&', r' ', args)
   args = re.sub(r'(^|\s)M\d?(\s)', r'\1Matcher<*>\2', args)
   return args
@@ -231,7 +231,7 @@ def act_on_decl(declaration, comment, allowed_types):
     m = re.match(r"""^\s*AST_MATCHER(_P)?(.?)(?:_OVERLOAD)?\(
                        (?:\s*([^\s,]+)\s*,)?
                           \s*([^\s,]+)\s*
-                       (?:,\s*([^\s,]+)\s*
+                       (?:,\s*([^,]+)\s*
                           ,\s*([^\s,]+)\s*)?
                        (?:,\s*([^\s,]+)\s*
                           ,\s*([^\s,]+)\s*)?
@@ -266,7 +266,7 @@ def act_on_decl(declaration, comment, allowed_types):
 
     # Parse Variadic functions.
     m = re.match(
-        r"""^.*llvm::VariadicFunction\s*<\s*([^,]+),\s*([^,]+),\s*[^>]+>\s*
+        r"""^.*internal::VariadicFunction\s*<\s*([^,]+),\s*([^,]+),\s*[^>]+>\s*
               ([a-zA-Z]*)\s*=\s*{.*};$""",
         declaration, flags=re.X)
     if m:

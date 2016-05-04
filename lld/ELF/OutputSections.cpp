@@ -1691,6 +1691,34 @@ void MipsReginfoOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   GprMask |= S->Reginfo->ri_gprmask;
 }
 
+template <class ELFT>
+MipsOptionsOutputSection<ELFT>::MipsOptionsOutputSection()
+    : OutputSectionBase<ELFT>(".MIPS.options", SHT_MIPS_OPTIONS,
+                              SHF_ALLOC | SHF_MIPS_NOSTRIP) {
+  this->Header.sh_addralign = 8;
+  this->Header.sh_entsize = 1;
+  this->Header.sh_size = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
+}
+
+template <class ELFT>
+void MipsOptionsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  auto *Opt = reinterpret_cast<Elf_Mips_Options *>(Buf);
+  Opt->kind = ODK_REGINFO;
+  Opt->size = this->Header.sh_size;
+  Opt->section = 0;
+  Opt->info = 0;
+  auto *Reg = reinterpret_cast<Elf_Mips_RegInfo *>(Buf + sizeof(*Opt));
+  Reg->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
+  Reg->ri_gprmask = GprMask;
+}
+
+template <class ELFT>
+void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  auto *S = cast<MipsOptionsInputSection<ELFT>>(C);
+  if (S->Reginfo)
+    GprMask |= S->Reginfo->ri_gprmask;
+}
+
 namespace lld {
 namespace elf {
 template class OutputSectionBase<ELF32LE>;
@@ -1757,6 +1785,11 @@ template class MipsReginfoOutputSection<ELF32LE>;
 template class MipsReginfoOutputSection<ELF32BE>;
 template class MipsReginfoOutputSection<ELF64LE>;
 template class MipsReginfoOutputSection<ELF64BE>;
+
+template class MipsOptionsOutputSection<ELF32LE>;
+template class MipsOptionsOutputSection<ELF32BE>;
+template class MipsOptionsOutputSection<ELF64LE>;
+template class MipsOptionsOutputSection<ELF64BE>;
 
 template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;

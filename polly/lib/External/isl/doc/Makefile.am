@@ -18,10 +18,10 @@ export BSTINPUTS := $(srcdir):$(BSTINPUTS)
 
 user.tex: user.pod
 	$(PERL) $(srcdir)/mypod2latex $< $@
-manual.pdf: manual.tex user.tex $(srcdir)/implementation.tex
+manual.pdf: manual.tex user.tex $(srcdir)/implementation.tex reading.tex
 	(cd ..; echo "@GIT_HEAD_VERSION@") > version.tex
 	$(PDFLATEX) $<
-	bibtex manual
+	biber manual
 	$(PDFLATEX) $<
 	$(PDFLATEX) $<
 user.html: user.pod

@@ -342,7 +342,6 @@ private:
 
   void readLocationCounterValue();
   void readOutputSectionDescription();
-  void readSectionPatterns(StringRef OutSec);
 
   const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
@@ -511,12 +510,6 @@ void ScriptParser::readSections() {
     else
       readOutputSectionDescription();
   }
-}
-
-void ScriptParser::readSectionPatterns(StringRef OutSec) {
-  expect("(");
-  while (!Error && !skip(")"))
-    Opt.Sections.emplace_back(OutSec, next());
 }
 
 void ScriptParser::readLocationCounterValue() {

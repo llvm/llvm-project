@@ -501,6 +501,20 @@ private:
   uint32_t GprMask = 0;
 };
 
+template <class ELFT>
+class MipsOptionsOutputSection final : public OutputSectionBase<ELFT> {
+  typedef llvm::object::Elf_Mips_Options<ELFT> Elf_Mips_Options;
+  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+
+public:
+  MipsOptionsOutputSection();
+  void writeTo(uint8_t *Buf) override;
+  void addSection(InputSectionBase<ELFT> *S) override;
+
+private:
+  uint32_t GprMask = 0;
+};
+
 // --eh-frame-hdr option tells linker to construct a header for all the
 // .eh_frame sections. This header is placed to a section named .eh_frame_hdr
 // and also to a PT_GNU_EH_FRAME segment.

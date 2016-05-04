@@ -31,7 +31,6 @@ extern "C" void multiple() { function({ [I new], [I new] }); }
 // CHECK-NEXT: [[CAST:%.*]] = bitcast [{{[0-9]+}} x %0*]* %{{.*}} to i8**
 // CHECK-NEXT: store i8* [[INSTANCE]], i8** [[CAST]],
 // CHECK: call void @objc_release(i8* {{.*}})
-// CHECK-NEXT: icmp eq
 
 void external();
 

@@ -35,6 +35,9 @@ int isl_options_get_schedule_outer_coincidence(isl_ctx *ctx);
 isl_stat isl_options_set_schedule_split_scaled(isl_ctx *ctx, int val);
 int isl_options_get_schedule_split_scaled(isl_ctx *ctx);
 
+isl_stat isl_options_set_schedule_treat_coalescing(isl_ctx *ctx, int val);
+int isl_options_get_schedule_treat_coalescing(isl_ctx *ctx);
+
 isl_stat isl_options_set_schedule_separate_components(isl_ctx *ctx, int val);
 int isl_options_get_schedule_separate_components(isl_ctx *ctx);
 
@@ -75,11 +78,17 @@ __isl_give isl_union_map *isl_schedule_constraints_get_validity(
 	__isl_keep isl_schedule_constraints *sc);
 __isl_give isl_union_map *isl_schedule_constraints_get_coincidence(
 	__isl_keep isl_schedule_constraints *sc);
+__isl_give isl_union_map *isl_schedule_constraints_get_proximity(
+	__isl_keep isl_schedule_constraints *sc);
 __isl_give isl_union_map *isl_schedule_constraints_get_conditional_validity(
 	__isl_keep isl_schedule_constraints *sc);
 __isl_give isl_union_map *
 isl_schedule_constraints_get_conditional_validity_condition(
 	__isl_keep isl_schedule_constraints *sc);
+
+__isl_give isl_schedule_constraints *isl_schedule_constraints_apply(
+	__isl_take isl_schedule_constraints *sc,
+	__isl_take isl_union_map *umap);
 
 void isl_schedule_constraints_dump(__isl_keep isl_schedule_constraints *sc);
 
@@ -142,6 +151,9 @@ __isl_overload
 __isl_give isl_schedule *isl_schedule_pullback_union_pw_multi_aff(
 	__isl_take isl_schedule *schedule,
 	__isl_take isl_union_pw_multi_aff *upma);
+__isl_give isl_schedule *isl_schedule_expand(__isl_take isl_schedule *schedule,
+	__isl_take isl_union_pw_multi_aff *contraction,
+	__isl_take isl_schedule *expansion);
 
 __isl_give isl_band_list *isl_schedule_get_band_forest(
 	__isl_keep isl_schedule *schedule);

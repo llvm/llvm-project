@@ -37,6 +37,9 @@ static void int_test_hash(isl_int val)
 	demotedhash = isl_int_hash(demoted, 0);
 	promotedhash = isl_int_hash(promoted, 0);
 	assert(demotedhash == promotedhash);
+
+	isl_int_clear(demoted);
+	isl_int_clear(promoted);
 }
 
 struct {

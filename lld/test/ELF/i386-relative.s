@@ -9,5 +9,6 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
+        .data
 foo:
         .long foo

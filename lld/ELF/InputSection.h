@@ -31,10 +31,11 @@ enum RelExpr {
   R_GOT,
   R_GOTONLY_PC,
   R_GOTREL,
-  R_GOT_OFF,
   R_GOT_FROM_END,
+  R_GOT_OFF,
   R_GOT_PAGE_PC,
   R_GOT_PC,
+  R_HINT,
   R_MIPS_GOT,
   R_MIPS_GOT_LOCAL,
   R_NEG_TLS,
@@ -88,7 +89,7 @@ protected:
   ObjectFile<ELFT> *File;
 
 public:
-  enum Kind { Regular, EHFrame, Merge, MipsReginfo };
+  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions };
   Kind SectionKind;
 
   InputSectionBase() : Repl(this) {}
@@ -249,7 +250,18 @@ public:
   MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
   static bool classof(const InputSectionBase<ELFT> *S);
 
-  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo;
+  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
+};
+
+template <class ELFT>
+class MipsOptionsInputSection : public InputSectionBase<ELFT> {
+  typedef typename ELFT::Shdr Elf_Shdr;
+
+public:
+  MipsOptionsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
+  static bool classof(const InputSectionBase<ELFT> *S);
+
+  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
 };
 
 } // namespace elf
