@@ -254,9 +254,12 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   if (!Config->Reproduce.empty()) {
     std::error_code EC;
-    ReproduceArchive = llvm::make_unique<raw_fd_ostream>(
-        Config->Reproduce + ".cpio", EC, fs::F_None);
-    check(EC);
+    std::string File = Config->Reproduce + ".cpio";
+    ReproduceArchive = llvm::make_unique<raw_fd_ostream>(File, EC, fs::F_None);
+    if (EC) {
+      error(EC, "--reproduce: failed to open " + File);
+      return;
+    }
     createResponseFile(Args);
   }
 

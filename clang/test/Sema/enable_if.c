@@ -72,8 +72,8 @@ int isdigit(int c) __attribute__((overloadable))  // expected-note{{candidate fu
   __attribute__((unavailable("'c' must have the value of an unsigned char or EOF")));
 
 void test3(int c) {
-  isdigit(c);
-  isdigit(10);
+  isdigit(c); // expected-warning{{ignoring return value of function declared with pure attribute}}
+  isdigit(10); // expected-warning{{ignoring return value of function declared with pure attribute}}
 #ifndef CODEGEN
   isdigit(-10);  // expected-error{{call to unavailable function 'isdigit': 'c' must have the value of an unsigned char or EOF}}
 #endif

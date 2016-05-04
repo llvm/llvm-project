@@ -89,9 +89,14 @@ public:
     return getRecord(ID).Type;
   }
 
-  /// \brief Return true if this function is a target-specific builtin
+  /// \brief Return true if this function is a target-specific builtin.
   bool isTSBuiltin(unsigned ID) const {
     return ID >= Builtin::FirstTSBuiltin;
+  }
+
+  /// \brief Return true if this function has no side effects.
+  bool isPure(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'U') != nullptr;
   }
 
   /// \brief Return true if this function has no side effects and doesn't
@@ -155,7 +160,7 @@ public:
   /// \brief Completely forget that the given ID was ever considered a builtin,
   /// e.g., because the user provided a conflicting signature.
   void forgetBuiltin(unsigned ID, IdentifierTable &Table);
-  
+
   /// \brief If this is a library function that comes from a specific
   /// header, retrieve that header name.
   const char *getHeaderName(unsigned ID) const {
