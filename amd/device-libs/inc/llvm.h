@@ -174,5 +174,5 @@ extern ulong __llvm_amdgcn_s_memrealtime(void) __asm("llvm.amdgcn.s.memrealtime"
 
 extern uint __attribute__((pure)) __llvm_amdgcn_ds_bpermute(uint, uint) __asm("llvm.amdgcn.ds_bpermute");
 
-#pragma OPENCL EXTENSION cl_khr_fp16 : disable
+//#pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // LLVM_H

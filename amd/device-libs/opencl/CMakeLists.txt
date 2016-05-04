@@ -41,7 +41,16 @@
 ################################################################################
 
 file(GLOB sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/misc/*.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/async/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometric/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/integer/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/math/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/misc/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/relational/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/vldst/*.cl
 )
 
-clang_opencl_bc_lib(opencl_amdgpu ${sources})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/integer)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)
+clang_opencl_bc_lib(opencl ${sources})

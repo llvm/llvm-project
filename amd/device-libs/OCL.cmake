@@ -42,6 +42,8 @@
 
 set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 set (LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump")
+
+set (CMAKE_OCL_COMPILER_ENV_VAR OCLC)
 set (CMAKE_OCL_OUTPUT_EXTENTION .bc)
 set (CMAKE_OCL_OUTPUT_EXTENTION_REPLACE 1)
 set (CMAKE_OCL_COMPILER ${CMAKE_C_COMPILER})
@@ -49,12 +51,42 @@ set (CMAKE_OCL_COMPILE_OBJECT "<CMAKE_OCL_COMPILER> -o <OBJECT> <FLAGS> -c <SOUR
 set (CMAKE_OCL_LINK_EXECUTABLE "${LLVM_LINK} <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
 set (CMAKE_OCL_CREATE_STATIC_LIBRARY "${LLVM_LINK} -o <TARGET> <LINK_FLAGS> <OBJECTS>")
 
-macro(clang_opencl_bc_lib name files)
-  add_library(${name}_lib_bc STATIC ${files})
+macro(clang_opencl_bc_lib name)
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
+  set(csources)
+  foreach(file ${ARGN})
+    file(RELATIVE_PATH rfile ${CMAKE_CURRENT_SOURCE_DIR} ${file})
+    get_filename_component(dir ${rfile} DIRECTORY)
+    get_filename_component(fname ${rfile} NAME_WE)
+    get_filename_component(fext ${rfile} EXT)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${dir})
+    if (fext STREQUAL ".cl")
+      set(cfile ${CMAKE_CURRENT_BINARY_DIR}/${dir}/${fname}.c)
+      add_custom_command(
+        OUTPUT ${cfile}
+        COMMAND cp ${file} ${cfile}
+        DEPENDS ${file}
+      )
+      list(APPEND csources ${cfile})
+    endif()
+    if (fext STREQUAL ".ll")
+      list(APPEND csources ${file})
+      set(cfile ${CMAKE_CURRENT_BINARY_DIR}/${dir}/${fname}.o)
+      add_custom_command(
+        OUTPUT ${cfile}
+        COMMAND cp ${file} ${cfile}
+        DEPENDS ${file}
+      )
+      list(APPEND csources ${cfile})
+    endif()
+  endforeach()
+  add_library(${name}_lib_bc STATIC ${csources})
   set_target_properties(${name}_lib_bc PROPERTIES OUTPUT_NAME ${name})
-  set_target_properties(${name}_lib_bc PROPERTIES PREFIX "" SUFFIX ".lib.bc")
-  set_target_properties(${name}_lib_bc PROPERTIES COMPILE_FLAGS "-x cl -target amdgcn--amdhsa -emit-llvm")
+  set_target_properties(${name}_lib_bc PROPERTIES PREFIX "" SUFFIX ".bc")
+  set_target_properties(${name}_lib_bc PROPERTIES COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm")
+  set_target_properties(${name}_lib_bc PROPERTIES LANGUAGE OCL)
   set_target_properties(${name}_lib_bc PROPERTIES LINKER_LANGUAGE OCL)
+  install (TARGETS ${name}_lib_bc DESTINATION lib COMPONENT OpenCL-Lib-lib)
 endmacro(clang_opencl_bc_lib)
 
 macro(clang_opencl_bc_exe name)
@@ -70,8 +102,8 @@ macro(clang_opencl_bc_exe name)
 endmacro(clang_opencl_bc_exe)
 
 macro(clang_opencl_bc_all_exe name)
-  clang_opencl_bc_lib(${name} ${name}.c)
-  clang_opencl_bc_exe(${name} ${name}_lib_bc opencl_amdgpu_lib_bc)
+  clang_opencl_bc_lib(${name} ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cl)
+  clang_opencl_bc_exe(${name} ${name}_lib_bc opencl_lib_bc ocml_lib_bc)
 endmacro(clang_opencl_bc_all_exe)
 
 macro(clang_opencl_code name)
@@ -80,7 +112,7 @@ macro(clang_opencl_code name)
   target_link_libraries(${name}_code $<TARGET_FILE:${name}_exe_bc>)
   set_target_properties(${name}_code PROPERTIES LINKER_LANGUAGE C)
   set_target_properties(${name}_code PROPERTIES OUTPUT_NAME ${name})
-  set_target_properties(${name}_code PROPERTIES LINK_FLAGS "-target amdgcn--amdhsa")
+  set_target_properties(${name}_code PROPERTIES LINK_FLAGS "${CLANG_OCL_LINK_FLAGS}")
   set_target_properties(${name}_code PROPERTIES PREFIX "" SUFFIX ".co")
   add_dependencies(${name}_code ${name}_exe_bc)
   install (TARGETS ${name}_code DESTINATION test COMPONENT OpenCL-Lib-test)
