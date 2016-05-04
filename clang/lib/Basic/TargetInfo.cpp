@@ -275,6 +275,10 @@ void TargetInfo::adjust(const LangOptions &Opts) {
     UseBitFieldTypeAlignment = false;
   if (Opts.ShortWChar)
     WCharType = UnsignedShort;
+  if (Opts.AlignDouble) {
+    DoubleAlign = LongLongAlign = 64;
+    LongDoubleAlign = 64;
+  }
 
   if (Opts.OpenCL) {
     // OpenCL C requires specific widths for types, irrespective of

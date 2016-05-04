@@ -4613,8 +4613,8 @@ bool AArch64ABIInfo::isIllegalVectorType(QualType Ty) const {
     // Check whether VT is legal.
     unsigned NumElements = VT->getNumElements();
     uint64_t Size = getContext().getTypeSize(VT);
-    // NumElements should be power of 2 between 1 and 16.
-    if ((NumElements & (NumElements - 1)) != 0 || NumElements > 16)
+    // NumElements should be power of 2.
+    if (!llvm::isPowerOf2_32(NumElements))
       return true;
     return Size != 64 && (Size != 128 || NumElements == 1);
   }

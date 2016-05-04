@@ -274,7 +274,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
 
   if (MD->isVirtual()) {
     This = CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
-        *this, MD, This, UseVirtualCall);
+        *this, CalleeDecl, This, UseVirtualCall);
   }
 
   return EmitCXXMemberOrOperatorCall(MD, Callee, ReturnValue, This.getPointer(),

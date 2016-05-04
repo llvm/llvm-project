@@ -1530,3 +1530,10 @@ __m512i test_mm512_sad_epu8(__m512i __A, __m512i __B) {
   // CHECK: @llvm.x86.avx512.psad.bw.512
   return _mm512_sad_epu8(__A, __B); 
 }
+
+__mmask32 test_mm512_movepi16_mask(__m512i __A) {
+  // CHECK-LABEL: @test_mm512_movepi16_mask
+  // CHECK: @llvm.x86.avx512.cvtw2mask.512
+  return _mm512_movepi16_mask(__A); 
+}
+

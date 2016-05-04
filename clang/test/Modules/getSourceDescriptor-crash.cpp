@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I %S/Inputs/getSourceDescriptor-crash -S -emit-llvm -debug-info-kind=limited -fimplicit-module-maps %s -o - | FileCheck %s
+// RUN: %clang_cc1 -I %S/Inputs/getSourceDescriptor-crash -S -emit-llvm -debug-info-kind=limited -debugger-tuning=lldb -fimplicit-module-maps %s -o - | FileCheck %s
 
 #include "h1.h"
 #include "h1.h"
