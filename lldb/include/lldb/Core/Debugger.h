@@ -16,6 +16,7 @@
 // C++ Includes
 #include <memory>
 #include <map>
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
