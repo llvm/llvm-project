@@ -206,8 +206,12 @@ FuncUnwinders::GetEHFrameAugmentedUnwindPlan (Target &target, Thread &thread, in
 UnwindPlanSP
 FuncUnwinders::GetAssemblyUnwindPlan (Target &target, Thread &thread, int current_offset)
 {
-    if (m_unwind_plan_assembly_sp.get() || m_tried_unwind_plan_assembly)
+    if (m_unwind_plan_assembly_sp.get() 
+        || m_tried_unwind_plan_assembly 
+        || m_unwind_table.GetAllowAssemblyEmulationUnwindPlans () == false)
+    {
         return m_unwind_plan_assembly_sp;
+    }
 
     Mutex::Locker lock (m_mutex);
     m_tried_unwind_plan_assembly = true;

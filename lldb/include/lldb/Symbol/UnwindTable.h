@@ -40,6 +40,9 @@ public:
     lldb::FuncUnwindersSP
     GetFuncUnwindersContainingAddress (const Address& addr, SymbolContext &sc);
 
+    bool
+    GetAllowAssemblyEmulationUnwindPlans ();
+
 // Normally when we create a new FuncUnwinders object we track it in this UnwindTable so it can
 // be reused later.  But for the target modules show-unwind we want to create brand new 
 // UnwindPlans for the function of interest - so ignore any existing FuncUnwinders for that
