@@ -176,6 +176,9 @@ public:
                  lldb::offset_t *data_offset_ptr,
                  llvm::MachO::mach_header &header);
     
+    bool
+    AllowAssemblyEmulationUnwindPlans () override;
+
     //------------------------------------------------------------------
     // PluginInterface protocol
     //------------------------------------------------------------------
@@ -247,6 +250,7 @@ protected:
     FileRangeArray m_thread_context_offsets;
     bool m_thread_context_offsets_valid;
     lldb_private::FileSpecList m_reexported_dylibs;
+    bool m_allow_assembly_emulation_unwind_plans;
 };
 
 #endif // liblldb_ObjectFileMachO_h_

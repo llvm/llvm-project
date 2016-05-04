@@ -189,3 +189,9 @@ UnwindTable::GetArchitecture (lldb_private::ArchSpec &arch)
 {
     return m_object_file.GetArchitecture (arch);
 }
+
+bool
+UnwindTable::GetAllowAssemblyEmulationUnwindPlans ()
+{
+    return m_object_file.AllowAssemblyEmulationUnwindPlans ();
+}
