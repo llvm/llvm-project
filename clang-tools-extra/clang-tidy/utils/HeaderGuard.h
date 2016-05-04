@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 
 /// Finds and fixes header guards.
 class HeaderGuardCheck : public ClangTidyCheck {
@@ -40,6 +41,7 @@ public:
                                      StringRef OldGuard = StringRef()) = 0;
 };
 
+} // namespace utils
 } // namespace tidy
 } // namespace clang
 

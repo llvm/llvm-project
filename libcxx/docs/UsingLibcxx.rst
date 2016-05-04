@@ -49,7 +49,30 @@ An example of using ``LD_LIBRARY_PATH``:
   $ export LD_LIBRARY_PATH=<libcxx-install-prefix>/lib
   $ ./a.out # Searches for libc++ along LD_LIBRARY_PATH
 
+Using libc++experimental and ``<experimental/...>``
+=====================================================
 
+Libc++ provides implementations of experimental technical specifications
+in a separate library, ``libc++experimental.a``. Users of ``<experimental/...>``
+headers may requiring linking with ``-lc++experimental``.
+
+.. code-block:: bash
+
+  $ clang++ -std=c++14 -stdlib=libc++ test.cpp -lc++experimental
+
+Libc++experimental.a may not always be available, even when libc++ is already
+installed. For information on building libc++experimental from source see
+:ref:`Building Libc++ <build instructions>` and
+:ref:`libc++experimental CMake Options <libc++experimental options>`.
+
+Also see the `Experimental Library Implementation Status <http://libcxx.llvm.org/ts1z_status.html>`__
+page.
+
+.. warning::
+  Experimental libraries are Experimental.
+    * The contents of the ``<experimental/...>`` headers and ``libc++experimental.a``
+      library will not remain compatible between versions.
+    * No guarantees of API or ABI stability are provided.
 
 Using libc++ on Linux
 =====================

@@ -31,9 +31,11 @@ void fieldsRequiringInit(const RecordDecl::field_range &Fields,
                          ASTContext &Context,
                          SmallPtrSetImpl<const FieldDecl *> &FieldsToInit) {
   for (const FieldDecl *F : Fields) {
+    if (F->hasInClassInitializer())
+      continue;
     QualType Type = F->getType();
     if (!F->hasInClassInitializer() &&
-        type_traits::isTriviallyDefaultConstructible(Type, Context))
+        utils::type_traits::isTriviallyDefaultConstructible(Type, Context))
       FieldsToInit.insert(F);
   }
 }
@@ -112,12 +114,12 @@ struct IntializerInsertion {
     SourceLocation Location;
     switch (Placement) {
     case InitializerPlacement::New:
-      Location = lexer_utils::getPreviousNonCommentToken(
+      Location = utils::lexer::getPreviousNonCommentToken(
                      Context, Constructor.getBody()->getLocStart())
                      .getLocation();
       break;
     case InitializerPlacement::Before:
-      Location = lexer_utils::getPreviousNonCommentToken(
+      Location = utils::lexer::getPreviousNonCommentToken(
                      Context, Where->getSourceRange().getBegin())
                      .getLocation();
       break;
@@ -179,7 +181,7 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
       const auto *InitDecl =
           Init->isMemberInitializer()
               ? static_cast<const NamedDecl *>(Init->getMember())
-              : Init->getBaseClass()->getAs<RecordType>()->getDecl();
+              : Init->getBaseClass()->getAsCXXRecordDecl();
 
       // Add all fields between current field up until the next intializer.
       for (; Decl != std::end(OrderedDecls) && *Decl != InitDecl; ++Decl) {
@@ -387,7 +389,8 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
     if (const auto *BaseClassDecl = getCanonicalRecordDecl(Base.getType())) {
       AllBases.emplace_back(BaseClassDecl);
       if (!BaseClassDecl->field_empty() &&
-          type_traits::isTriviallyDefaultConstructible(Base.getType(), Context))
+          utils::type_traits::isTriviallyDefaultConstructible(
+              Base.getType(), Context))
         BasesToInit.insert(BaseClassDecl);
     }
   }
@@ -398,7 +401,7 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
   // Remove any bases that were explicitly written in the initializer list.
   for (const CXXCtorInitializer *Init : Ctor->inits()) {
     if (Init->isBaseInitializer() && Init->isWritten())
-      BasesToInit.erase(Init->getBaseClass()->getAs<RecordType>()->getDecl());
+      BasesToInit.erase(Init->getBaseClass()->getAsCXXRecordDecl());
   }
 
   if (BasesToInit.empty())

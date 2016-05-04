@@ -27,7 +27,7 @@ VERSION {
         #
         ompt_tool;           # OMPT initialization interface
         ompt_control;        # OMPT control interface
-        
+
         #
         # OMPT state placeholders
         #

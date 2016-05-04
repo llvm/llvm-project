@@ -164,23 +164,6 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
   memcpy(Sym->Body.buffer, Wrap->Body.buffer, sizeof(Wrap->Body));
 }
 
-// Returns a file from which symbol B was created.
-// If B does not belong to any file, returns a nullptr.
-template <class ELFT> InputFile *SymbolTable<ELFT>::findFile(SymbolBody *B) {
-  // If this symbol has a definition, follow pointers in the symbol to its
-  // defining file.
-  if (auto *R = dyn_cast<DefinedRegular<ELFT>>(B))
-    if (auto *S = R->Section)
-      return S->getFile();
-  if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(B))
-    return SS->File;
-  if (auto *BC = dyn_cast<DefinedBitcode>(B))
-    return BC->File;
-  if (auto *U = dyn_cast<Undefined>(B))
-    return U->File;
-  return nullptr;
-}
-
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   if (VA == STV_DEFAULT)
     return VB;
@@ -226,7 +209,8 @@ SymbolTable<ELFT>::insert(StringRef Name, uint8_t Type, uint8_t Visibility,
     S->ExportDynamic = true;
   if (IsUsedInRegularObj)
     S->IsUsedInRegularObj = true;
-  if (!WasInserted && ((Type == STT_TLS) != S->body()->isTls()))
+  if (!WasInserted && S->body()->Type != SymbolBody::UnknownType &&
+      ((Type == STT_TLS) != S->body()->isTls()))
     error("TLS attribute mismatch for symbol: " +
           conflictMsg(S->body(), File));
 
@@ -388,7 +372,7 @@ Symbol *SymbolTable<ELFT>::addRegular(StringRef Name, uint8_t Binding,
 
 template <typename ELFT>
 Symbol *SymbolTable<ELFT>::addSynthetic(StringRef N,
-                                        OutputSectionBase<ELFT> &Section,
+                                        OutputSectionBase<ELFT> *Section,
                                         uintX_t Value) {
   Symbol *S;
   bool WasInserted;
@@ -453,7 +437,7 @@ void SymbolTable<ELFT>::addLazyArchive(
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Sym.getName());
   if (WasInserted) {
-    replaceBody<LazyArchive>(S, F, Sym, STT_NOTYPE);
+    replaceBody<LazyArchive>(S, F, Sym, SymbolBody::UnknownType);
     return;
   }
   if (!S->body()->isUndefined())
@@ -481,7 +465,7 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, MemoryBufferRef MBRef) {
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<LazyObject>(S, Name, MBRef, STT_NOTYPE);
+    replaceBody<LazyObject>(S, Name, MBRef, SymbolBody::UnknownType);
     return;
   }
   if (!S->body()->isUndefined())

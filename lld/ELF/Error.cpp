@@ -29,6 +29,7 @@ void warning(const Twine &Msg) { llvm::errs() << Msg << "\n"; }
 void error(const Twine &Msg) {
   *ErrorOS << Msg << "\n";
   HasError = true;
+  maybeCloseReproArchive();
 }
 
 void error(std::error_code EC, const Twine &Prefix) {
@@ -38,6 +39,7 @@ void error(std::error_code EC, const Twine &Prefix) {
 
 void fatal(const Twine &Msg) {
   llvm::errs() << Msg << "\n";
+  maybeCloseReproArchive();
   exit(1);
 }
 

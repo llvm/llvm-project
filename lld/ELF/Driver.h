@@ -14,6 +14,7 @@
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -28,6 +29,10 @@ public:
   void addFile(StringRef Path);
   void addLibrary(StringRef Name);
   llvm::LLVMContext Context;
+
+  // for --reproduce
+  std::unique_ptr<llvm::raw_fd_ostream> ReproduceArchive;
+  llvm::StringSet<> IncludedFiles;
 
 private:
   std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef MB);
@@ -69,7 +74,7 @@ void printHelp(const char *Argv0);
 void printVersion();
 
 void createResponseFile(const llvm::opt::InputArgList &Args);
-void copyInputFile(StringRef Path);
+void maybeCopyInputFile(StringRef Path, StringRef Buffer);
 
 std::string findFromSearchPaths(StringRef Path);
 std::string searchLibrary(StringRef Path);

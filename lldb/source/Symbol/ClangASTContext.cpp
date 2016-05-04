@@ -2618,8 +2618,8 @@ GetCompleteQualType (clang::ASTContext *ast, clang::QualType qual_type, bool all
                             external_ast_source->CompleteType(cxx_record_decl);
                             if (cxx_record_decl->isCompleteDefinition())
                             {
-                                cxx_record_decl->setHasLoadedFieldsFromExternalStorage (true);
                                 cxx_record_decl->field_begin();
+                                cxx_record_decl->setHasLoadedFieldsFromExternalStorage (true);
                             }
                         }
                     }

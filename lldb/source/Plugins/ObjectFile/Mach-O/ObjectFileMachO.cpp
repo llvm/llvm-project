@@ -1130,7 +1130,9 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
     m_mach_sections(),
     m_entry_point_address(),
     m_thread_context_offsets(),
-    m_thread_context_offsets_valid(false)
+    m_thread_context_offsets_valid(false),
+    m_reexported_dylibs (),
+    m_allow_assembly_emulation_unwind_plans (true)
 {
     ::memset (&m_header, 0, sizeof(m_header));
     ::memset (&m_dysymtab, 0, sizeof(m_dysymtab));
@@ -1145,7 +1147,9 @@ ObjectFileMachO::ObjectFileMachO (const lldb::ModuleSP &module_sp,
     m_mach_sections(),
     m_entry_point_address(),
     m_thread_context_offsets(),
-    m_thread_context_offsets_valid(false)
+    m_thread_context_offsets_valid(false),
+    m_reexported_dylibs (),
+    m_allow_assembly_emulation_unwind_plans (true)
 {
     ::memset (&m_header, 0, sizeof(m_header));
     ::memset (&m_dysymtab, 0, sizeof(m_dysymtab));
@@ -2602,6 +2606,18 @@ ObjectFileMachO::ParseSymtab ()
         }
 
         const size_t function_starts_count = function_starts.GetSize();
+
+        if (function_starts_count == 0)
+        {
+            // No LC_FUNCTION_STARTS/eh_frame section in this binary, we're going to assume the binary 
+            // has been stripped.  Don't allow assembly language instruction emulation because we don't
+            // know proper function start boundaries.
+            m_allow_assembly_emulation_unwind_plans = false;
+            Log *unwind_or_symbol_log (lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_UNWIND));
+
+            if (unwind_or_symbol_log)
+                module_sp->LogMessage(unwind_or_symbol_log, "no LC_FUNCTION_STARTS, will not allow assembly profiled unwinds");
+        }
 
         const user_id_t TEXT_eh_frame_sectID =
             eh_frame_section_sp.get() ? eh_frame_section_sp->GetID()
@@ -5622,6 +5638,12 @@ bool
 ObjectFileMachO::GetIsDynamicLinkEditor()
 {
     return m_header.filetype == llvm::MachO::MH_DYLINKER;
+}
+
+bool
+ObjectFileMachO::AllowAssemblyEmulationUnwindPlans ()
+{
+    return m_allow_assembly_emulation_unwind_plans;
 }
 
 //------------------------------------------------------------------

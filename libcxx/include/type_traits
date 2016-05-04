@@ -1423,41 +1423,6 @@ struct __is_convertible
     >
 {};
 
-template <class _T1, class _T2> struct __is_convertible<_T1, _T2, 1, 0> : false_type {};
-
-template <class _T1> struct __is_convertible<_T1, const _T1&, 1, 0> : true_type {};
-template <class _T1> struct __is_convertible<const _T1, const _T1&, 1, 0> : true_type {};
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-template <class _T1> struct __is_convertible<_T1, _T1&&, 1, 0> : true_type {};
-template <class _T1> struct __is_convertible<_T1, const _T1&&, 1, 0> : true_type {};
-template <class _T1> struct __is_convertible<_T1, volatile _T1&&, 1, 0> : true_type {};
-template <class _T1> struct __is_convertible<_T1, const volatile _T1&&, 1, 0> : true_type {};
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _T1, class _T2> struct __is_convertible<_T1, _T2*, 1, 0>
-    : public integral_constant<bool, __is_convertible<typename remove_all_extents<_T1>::type*, _T2*>::value> {};
-
-template <class _T1, class _T2> struct __is_convertible<_T1, _T2* const, 1, 0>
-    : public integral_constant<bool, __is_convertible<typename remove_all_extents<_T1>::type*, _T2*const>::value> {};
-
-template <class _T1, class _T2> struct __is_convertible<_T1, _T2* volatile, 1, 0>
-    : public integral_constant<bool, __is_convertible<typename remove_all_extents<_T1>::type*, _T2*volatile>::value> {};
-
-template <class _T1, class _T2> struct __is_convertible<_T1, _T2* const volatile, 1, 0>
-    : public integral_constant<bool, __is_convertible<typename remove_all_extents<_T1>::type*, _T2*const volatile>::value> {};
-
-template <class _T1, class _T2> struct __is_convertible<_T1, _T2, 2, 0>                : public false_type {};
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-template <class _T1>            struct __is_convertible<_T1, _T1&&, 2, 0>               : public true_type {};
-#endif
-template <class _T1>            struct __is_convertible<_T1, _T1&, 2, 0>               : public true_type {};
-template <class _T1>            struct __is_convertible<_T1, _T1*, 2, 0>               : public true_type {};
-template <class _T1>            struct __is_convertible<_T1, _T1*const, 2, 0>          : public true_type {};
-template <class _T1>            struct __is_convertible<_T1, _T1*volatile, 2, 0>       : public true_type {};
-template <class _T1>            struct __is_convertible<_T1, _T1*const volatile, 2, 0> : public true_type {};
-
-template <class _T1, class _T2> struct __is_convertible<_T1, _T2, 3, 0> : public false_type {};
-
 template <class _T1, class _T2> struct __is_convertible<_T1, _T2, 0, 1> : public false_type {};
 template <class _T1, class _T2> struct __is_convertible<_T1, _T2, 1, 1> : public false_type {};
 template <class _T1, class _T2> struct __is_convertible<_T1, _T2, 2, 1> : public false_type {};

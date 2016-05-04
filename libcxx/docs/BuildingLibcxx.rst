@@ -6,6 +6,8 @@ Building libc++
 .. contents::
   :local:
 
+.. _build instructions:
+
 Getting Started
 ===============
 
@@ -119,6 +121,18 @@ CMake docs or execute ``cmake --help-variable VARIABLE_NAME``.
 libc++ specific options
 -----------------------
 
+.. option:: LIBCXX_INSTALL_LIBRARY:BOOL
+
+  **Default**: ``ON``
+
+  Toggle the installation of the library portion of libc++.
+
+.. option:: LIBCXX_INSTALL_HEADERS:BOOL
+
+  **Default**: ``ON``
+
+  Toggle the installation of the libc++ headers.
+
 .. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
 
   **Default**: ``ON``
@@ -142,6 +156,25 @@ libc++ specific options
 
   Extra suffix to append to the directory where libraries are to be installed.
   This option overrides :option:`LLVM_LIBDIR_SUFFIX`.
+
+
+.. _libc++experimental options:
+
+libc++experimental Specific Options
+------------------------------------
+
+.. option:: LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL
+
+  **Default**: ``ON``
+
+  Build and test libc++experimental.a.
+
+.. option:: LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY:BOOL
+
+  **Default**: ``OFF``
+
+  Install libc++experimental.a alongside libc++.
+
 
 .. _ABI Library Specific Options:
 

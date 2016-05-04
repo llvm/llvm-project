@@ -22,7 +22,7 @@ namespace cppcoreguidelines {
 ProBoundsConstantArrayIndexCheck::ProBoundsConstantArrayIndexCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), GslHeader(Options.get("GslHeader", "")),
-      IncludeStyle(IncludeSorter::parseIncludeStyle(
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
           Options.get("IncludeStyle", "llvm"))) {}
 
 void ProBoundsConstantArrayIndexCheck::storeOptions(
@@ -36,8 +36,8 @@ void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(
   if (!getLangOpts().CPlusPlus)
     return;
 
-  Inserter.reset(new IncludeInserter(Compiler.getSourceManager(),
-                                     Compiler.getLangOpts(), IncludeStyle));
+  Inserter.reset(new utils::IncludeInserter(
+      Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
   Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 

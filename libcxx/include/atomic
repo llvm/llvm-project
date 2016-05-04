@@ -1689,7 +1689,7 @@ typedef struct atomic_flag
 #endif // _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
 
     _LIBCPP_INLINE_VISIBILITY
-    atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {}
+    atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
 
 #ifndef _LIBCPP_HAS_NO_DELETED_FUNCTIONS
     atomic_flag(const atomic_flag&) = delete;

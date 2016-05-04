@@ -18,6 +18,8 @@ namespace elf {
 extern bool HasError;
 extern llvm::raw_ostream *ErrorOS;
 
+void maybeCloseReproArchive();
+
 void log(const Twine &Msg);
 void warning(const Twine &Msg);
 

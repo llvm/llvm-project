@@ -96,7 +96,7 @@ struct TriviallyCopyable {
 
 struct Positive {
   Positive(Movable M) : M_(M) {}
-  // CHECK-MESSAGES: [[@LINE-1]]:28: warning: value argument can be moved to avoid copy [misc-move-constructor-init]
+  // CHECK-MESSAGES: [[@LINE-1]]:28: warning: value argument 'M' can be moved to avoid copy [misc-move-constructor-init]
   // CHECK-FIXES: Positive(Movable M) : M_(std::move(M)) {}
   Movable M_;
 };

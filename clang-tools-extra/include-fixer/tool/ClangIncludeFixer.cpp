@@ -42,9 +42,8 @@ cl::opt<bool>
     MinimizeIncludePaths("minimize-paths",
                          cl::desc("Whether to minimize added include paths"),
                          cl::init(true), cl::cat(IncludeFixerCategory));
-} // namespace
 
-int main(int argc, const char **argv) {
+int includeFixerMain(int argc, const char **argv) {
   tooling::CommonOptionsParser options(argc, argv, IncludeFixerCategory);
   tooling::ClangTool tool(options.getCompilations(),
                           options.getSourcePathList());
@@ -96,4 +95,10 @@ int main(int argc, const char **argv) {
   Rewriter Rewrites(SM, LangOptions());
   tooling::applyAllReplacements(Replacements, Rewrites);
   return Rewrites.overwriteChangedFiles();
+}
+
+} // namespace
+
+int main(int argc, const char **argv) {
+  return includeFixerMain(argc, argv);
 }
