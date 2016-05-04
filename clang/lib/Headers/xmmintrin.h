@@ -1003,7 +1003,7 @@ do { \
 #undef __DEFAULT_FN_ATTRS
 
 /* Ugly hack for backwards-compatibility (compatible with gcc) */
-#if defined(__SSE2__) && !__building_module(_Builtin_intrinsics)
+#if defined(__SSE2__) && !__has_feature(modules)
 #include <emmintrin.h>
 #endif
 
