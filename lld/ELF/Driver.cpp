@@ -493,8 +493,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
 
-  maybeCloseReproArchive();
-
   // Write the result to the file.
   if (Config->GcSections)
     markLive<ELFT>();

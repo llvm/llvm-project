@@ -943,7 +943,7 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
                     // as our name. If it starts with '_', then it is ok, else compare
                     // the string to make sure it isn't the same and we don't end up
                     // with duplicate entries
-                    if (name != mangled_cstr && ((mangled_cstr[0] == '_') || (name && ::strcmp(name, mangled_cstr) != 0)))
+                    if (name && name != mangled_cstr && ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0)))
                     {
                         Mangled mangled (ConstString(mangled_cstr), true);
                         func_fullnames.Insert (mangled.GetMangledName(), DIERef(cu_offset, die.GetOffset()));
@@ -966,7 +966,7 @@ DWARFCompileUnit::IndexPrivate (DWARFCompileUnit* dwarf_cu,
                     // as our name. If it starts with '_', then it is ok, else compare
                     // the string to make sure it isn't the same and we don't end up
                     // with duplicate entries
-                    if (name != mangled_cstr && ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0)))
+                    if (name && name != mangled_cstr && ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0)))
                     {
                         Mangled mangled (ConstString(mangled_cstr), true);
                         func_fullnames.Insert (mangled.GetMangledName(), DIERef(cu_offset, die.GetOffset()));

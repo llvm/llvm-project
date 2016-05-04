@@ -379,7 +379,7 @@ DebuggerThread::HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info, DWORD thr
         {
             WINLOG_IFANY(WINDOWS_LOG_EVENT | WINDOWS_LOG_EXCEPTION | WINDOWS_LOG_PROCESS,
                             "Breakpoint exception is cue to detach from process 0x%x",
-                            m_pid_to_detach);
+                            m_pid_to_detach.load());
             ::DebugActiveProcessStop(m_pid_to_detach);
             m_detached = true;
         }

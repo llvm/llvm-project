@@ -185,6 +185,7 @@ LIB_CLANG_EDIT = @LIB_CLANG_EDIT@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
@@ -264,6 +265,7 @@ pkgconfig_libfile = @pkgconfig_libfile@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -484,10 +486,10 @@ uninstall-am:
 
 @GENERATE_DOC_TRUE@user.tex: user.pod
 @GENERATE_DOC_TRUE@	$(PERL) $(srcdir)/mypod2latex $< $@
-@GENERATE_DOC_TRUE@manual.pdf: manual.tex user.tex $(srcdir)/implementation.tex
+@GENERATE_DOC_TRUE@manual.pdf: manual.tex user.tex $(srcdir)/implementation.tex reading.tex
 @GENERATE_DOC_TRUE@	(cd ..; echo "@GIT_HEAD_VERSION@") > version.tex
 @GENERATE_DOC_TRUE@	$(PDFLATEX) $<
-@GENERATE_DOC_TRUE@	bibtex manual
+@GENERATE_DOC_TRUE@	biber manual
 @GENERATE_DOC_TRUE@	$(PDFLATEX) $<
 @GENERATE_DOC_TRUE@	$(PDFLATEX) $<
 @GENERATE_DOC_TRUE@user.html: user.pod

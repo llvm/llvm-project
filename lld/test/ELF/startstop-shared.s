@@ -3,8 +3,9 @@
 // RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readobj -r -t %t.so | FileCheck  %s
 
+        .data
         .quad __start_foo
-        .section foo,"a"
+        .section foo,"aw"
 // By default the symbol is hidden.
 // CHECK:      R_X86_64_RELATIVE - 0x[[ADDR1:.*]]
 

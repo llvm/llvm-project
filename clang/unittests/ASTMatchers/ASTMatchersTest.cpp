@@ -5572,5 +5572,40 @@ TEST(StatementMatcher, HasReturnValue) {
   EXPECT_FALSE(matches("void F() { return; }", RetVal));
 }
 
+TEST(StatementMatcher, ForFunction) {
+  const auto CppString1 =
+    "struct PosVec {"
+    "  PosVec& operator=(const PosVec&) {"
+    "    auto x = [] { return 1; };"
+    "    return *this;"
+    "  }"
+    "};";
+  const auto CppString2 =
+    "void F() {"
+    "  struct S {"
+    "    void F2() {"
+    "       return;"
+    "    }"
+    "  };"
+    "}";
+  EXPECT_TRUE(
+    matches(
+      CppString1,
+      returnStmt(forFunction(hasName("operator=")),
+                 has(unaryOperator(hasOperatorName("*"))))));
+  EXPECT_TRUE(
+    notMatches(
+      CppString1,
+      returnStmt(forFunction(hasName("operator=")),
+                 has(integerLiteral()))));
+  EXPECT_TRUE(
+    matches(
+      CppString1,
+      returnStmt(forFunction(hasName("operator()")),
+                 has(integerLiteral()))));
+  EXPECT_TRUE(matches(CppString2, returnStmt(forFunction(hasName("F2")))));
+  EXPECT_TRUE(notMatches(CppString2, returnStmt(forFunction(hasName("F")))));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

@@ -2,6 +2,7 @@
  * Copyright 2010-2011 INRIA Saclay
  * Copyright 2013-2014 Ecole Normale Superieure
  * Copyright 2014      INRIA Rocquencourt
+ * Copyright 2016      Sven Verdoolaege
  *
  * Use of this software is governed by the MIT license
  *
@@ -2663,6 +2664,101 @@ isl_bool isl_union_map_is_injective(__isl_keep isl_union_map *umap)
 	isl_union_map_free(umap);
 
 	return in;
+}
+
+/* Is "map" obviously not an identity relation because
+ * it maps elements from one space to another space?
+ * Update *non_identity accordingly.
+ *
+ * In particular, if the domain and range spaces are the same,
+ * then the map is not considered to obviously not be an identity relation.
+ * Otherwise, the map is considered to obviously not be an identity relation
+ * if it is is non-empty.
+ *
+ * If "map" is determined to obviously not be an identity relation,
+ * then the search is aborted.
+ */
+static isl_stat map_plain_is_not_identity(__isl_take isl_map *map, void *user)
+{
+	isl_bool *non_identity = user;
+	isl_bool equal;
+	isl_space *space;
+
+	space = isl_map_get_space(map);
+	equal = isl_space_tuple_is_equal(space, isl_dim_in, space, isl_dim_out);
+	if (equal >= 0 && !equal)
+		*non_identity = isl_bool_not(isl_map_is_empty(map));
+	else
+		*non_identity = isl_bool_not(equal);
+	isl_space_free(space);
+	isl_map_free(map);
+
+	if (*non_identity < 0 || *non_identity)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+/* Is "umap" obviously not an identity relation because
+ * it maps elements from one space to another space?
+ *
+ * As soon as a map has been found that maps elements to a different space,
+ * non_identity is changed and the search is aborted.
+ */
+static isl_bool isl_union_map_plain_is_not_identity(
+	__isl_keep isl_union_map *umap)
+{
+	isl_bool non_identity;
+
+	non_identity = isl_bool_false;
+	if (isl_union_map_foreach_map(umap, &map_plain_is_not_identity,
+					&non_identity) < 0 &&
+	    non_identity == isl_bool_false)
+		return isl_bool_error;
+
+	return non_identity;
+}
+
+/* Does "map" only map elements to themselves?
+ * Update *identity accordingly.
+ *
+ * If "map" is determined not to be an identity relation,
+ * then the search is aborted.
+ */
+static isl_stat map_is_identity(__isl_take isl_map *map, void *user)
+{
+	isl_bool *identity = user;
+
+	*identity = isl_map_is_identity(map);
+	isl_map_free(map);
+
+	if (*identity < 0 || !*identity)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+/* Does "umap" only map elements to themselves?
+ *
+ * First check if there are any maps that map elements to different spaces.
+ * If not, then check that all the maps (between identical spaces)
+ * are identity relations.
+ */
+isl_bool isl_union_map_is_identity(__isl_keep isl_union_map *umap)
+{
+	isl_bool non_identity;
+	isl_bool identity;
+
+	non_identity = isl_union_map_plain_is_not_identity(umap);
+	if (non_identity < 0 || non_identity)
+		return isl_bool_not(non_identity);
+
+	identity = isl_bool_true;
+	if (isl_union_map_foreach_map(umap, &map_is_identity, &identity) < 0 &&
+	    identity == isl_bool_true)
+		return isl_bool_error;
+
+	return identity;
 }
 
 /* Represents a map that has a fixed value (v) for one of its

@@ -780,35 +780,34 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     // Compute the address of the thing we're going to move into the
     // block literal.
     Address src = Address::invalid();
-    if (BlockInfo && CI.isNested()) {
-      // We need to use the capture from the enclosing block.
-      const CGBlockInfo::Capture &enclosingCapture =
-        BlockInfo->getCapture(variable);
 
-      // This is a [[type]]*, except that a byref entry wil just be an i8**.
-      src = Builder.CreateStructGEP(LoadBlockStruct(),
-                                    enclosingCapture.getIndex(),
-                                    enclosingCapture.getOffset(),
-                                    "block.capture.addr");
-    } else if (blockDecl->isConversionFromLambda()) {
+    if (blockDecl->isConversionFromLambda()) {
       // The lambda capture in a lambda's conversion-to-block-pointer is
       // special; we'll simply emit it directly.
       src = Address::invalid();
-    } else {
-      // Just look it up in the locals map, which will give us back a
-      // [[type]]*.  If that doesn't work, do the more elaborate DRE
-      // emission.
-      auto it = LocalDeclMap.find(variable);
-      if (it != LocalDeclMap.end()) {
-        src = it->second;
+    } else if (CI.isByRef()) {
+      if (BlockInfo && CI.isNested()) {
+        // We need to use the capture from the enclosing block.
+        const CGBlockInfo::Capture &enclosingCapture =
+            BlockInfo->getCapture(variable);
+
+        // This is a [[type]]*, except that a byref entry wil just be an i8**.
+        src = Builder.CreateStructGEP(LoadBlockStruct(),
+                                      enclosingCapture.getIndex(),
+                                      enclosingCapture.getOffset(),
+                                      "block.capture.addr");
       } else {
-        DeclRefExpr declRef(
-            const_cast<VarDecl *>(variable),
-            /*RefersToEnclosingVariableOrCapture*/ CI.isNested(), type,
-            VK_LValue, SourceLocation());
-        src = EmitDeclRefLValue(&declRef).getAddress();
+        auto I = LocalDeclMap.find(variable);
+        assert(I != LocalDeclMap.end());
+        src = I->second;
       }
-    }
+    } else {
+      DeclRefExpr declRef(const_cast<VarDecl *>(variable),
+                          /*RefersToEnclosingVariableOrCapture*/ CI.isNested(),
+                          type.getNonReferenceType(), VK_LValue,
+                          SourceLocation());
+      src = EmitDeclRefLValue(&declRef).getAddress();
+    };
 
     // For byrefs, we just write the pointer to the byref struct into
     // the block field.  There's no need to chase the forwarding
@@ -842,8 +841,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
 
     // If it's a reference variable, copy the reference into the block field.
     } else if (type->isReferenceType()) {
-      llvm::Value *ref = Builder.CreateLoad(src, "ref.val");
-      Builder.CreateStore(ref, blockField);
+      Builder.CreateStore(src.getPointer(), blockField);
 
     // If this is an ARC __strong block-pointer variable, don't do a
     // block copy.

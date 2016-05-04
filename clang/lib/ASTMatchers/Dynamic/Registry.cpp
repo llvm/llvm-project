@@ -184,6 +184,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(forEachDescendant);
   REGISTER_MATCHER(forEachSwitchCase);
   REGISTER_MATCHER(forField);
+  REGISTER_MATCHER(forFunction);
   REGISTER_MATCHER(forStmt);
   REGISTER_MATCHER(friendDecl);
   REGISTER_MATCHER(functionDecl);

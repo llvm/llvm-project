@@ -1,3 +1,15 @@
+version: 0.17
+date: Tue May  3 14:26:43 CEST 2016
+changes:
+	- optionally combine SCCs incrementally in scheduler
+	- optionally maximize coincidence in scheduler
+	- optionally avoid loop coalescing in scheduler
+	- fix handling of nested integer divisions
+	- optionally detect min/max expressions during AST generation
+	- minor AST generator improvements
+	- simplify stride constraints
+	- improve support for expansions in schedule trees
+---
 version: 0.16.1
 date: Thu Jan 14 18:08:06 CET 2016
 changes:

@@ -64,9 +64,10 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
   case Merge:
     return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
   case MipsReginfo:
-    // MIPS .reginfo sections are consumed by the linker,
-    // so it should never be copied to output.
-    llvm_unreachable("MIPS .reginfo reached writeTo().");
+  case MipsOptions:
+    // MIPS .reginfo and .MIPS.options sections are consumed by the linker,
+    // so they should never be copied to output.
+    llvm_unreachable("MIPS reginfo/options section reached writeTo().");
   }
   llvm_unreachable("invalid section kind");
 }
@@ -141,6 +142,8 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
          const elf::ObjectFile<ELFT> &File, RelExpr Expr) {
   typedef typename ELFT::uint uintX_t;
   switch (Expr) {
+  case R_HINT:
+    llvm_unreachable("cannot relocate hint relocs");
   case R_TLSLD:
     return Out<ELFT>::Got->getTlsIndexOff() + A -
            Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
@@ -493,14 +496,41 @@ MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(elf::ObjectFile<ELFT> *F,
     : InputSectionBase<ELFT>(F, Hdr, InputSectionBase<ELFT>::MipsReginfo) {
   // Initialize this->Reginfo.
   ArrayRef<uint8_t> D = this->getSectionData();
-  if (D.size() != sizeof(Elf_Mips_RegInfo<ELFT>))
-    fatal("invalid size of .reginfo section");
+  if (D.size() != sizeof(Elf_Mips_RegInfo<ELFT>)) {
+    error("invalid size of .reginfo section");
+    return;
+  }
   Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(D.data());
 }
 
 template <class ELFT>
 bool MipsReginfoInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::MipsReginfo;
+}
+
+template <class ELFT>
+MipsOptionsInputSection<ELFT>::MipsOptionsInputSection(elf::ObjectFile<ELFT> *F,
+                                                       const Elf_Shdr *Hdr)
+    : InputSectionBase<ELFT>(F, Hdr, InputSectionBase<ELFT>::MipsOptions) {
+  // Find ODK_REGINFO option in the section's content.
+  ArrayRef<uint8_t> D = this->getSectionData();
+  while (!D.empty()) {
+    if (D.size() < sizeof(Elf_Mips_Options<ELFT>)) {
+      error("invalid size of .MIPS.options section");
+      break;
+    }
+    auto *O = reinterpret_cast<const Elf_Mips_Options<ELFT> *>(D.data());
+    if (O->kind == ODK_REGINFO) {
+      Reginfo = &O->getRegInfo();
+      break;
+    }
+    D = D.slice(O->size);
+  }
+}
+
+template <class ELFT>
+bool MipsOptionsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
+  return S->SectionKind == InputSectionBase<ELFT>::MipsOptions;
 }
 
 template class elf::InputSectionBase<ELF32LE>;
@@ -532,3 +562,8 @@ template class elf::MipsReginfoInputSection<ELF32LE>;
 template class elf::MipsReginfoInputSection<ELF32BE>;
 template class elf::MipsReginfoInputSection<ELF64LE>;
 template class elf::MipsReginfoInputSection<ELF64BE>;
+
+template class elf::MipsOptionsInputSection<ELF32LE>;
+template class elf::MipsOptionsInputSection<ELF32BE>;
+template class elf::MipsOptionsInputSection<ELF64LE>;
+template class elf::MipsOptionsInputSection<ELF64BE>;

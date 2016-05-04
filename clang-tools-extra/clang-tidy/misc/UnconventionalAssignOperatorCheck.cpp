@@ -1,4 +1,4 @@
-//===--- AssignOperatorSignatureCheck.cpp - clang-tidy ----------*- C++ -*-===//
+//===--- UnconventionalUnconventionalAssignOperatorCheck.cpp - clang-tidy -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AssignOperatorSignatureCheck.h"
+#include "UnconventionalAssignOperatorCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -17,8 +17,7 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-void AssignOperatorSignatureCheck::registerMatchers(
-    ast_matchers::MatchFinder *Finder) {
+void UnconventionalAssignOperatorCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
   if (!getLangOpts().CPlusPlus)
@@ -56,22 +55,32 @@ void AssignOperatorSignatureCheck::registerMatchers(
   Finder->addMatcher(
       cxxMethodDecl(IsSelfAssign, anyOf(isConst(), isVirtual())).bind("cv"),
       this);
+
+  const auto IsBadReturnStatement = returnStmt(unless(has(
+      unaryOperator(hasOperatorName("*"), hasUnaryOperand(cxxThisExpr())))));
+  const auto IsGoodAssign = cxxMethodDecl(IsAssign, HasGoodReturnType);
+
+  Finder->addMatcher(returnStmt(IsBadReturnStatement, forFunction(IsGoodAssign))
+                         .bind("returnStmt"),
+                     this);
 }
 
-void AssignOperatorSignatureCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
-  std::string Name = Method->getParent()->getName();
+void UnconventionalAssignOperatorCheck::check(const MatchFinder::MatchResult &Result) {
+  if (const auto *RetStmt = Result.Nodes.getNodeAs<ReturnStmt>("returnStmt")) {
+    diag(RetStmt->getLocStart(), "operator=() should always return '*this'");
+  } else {
+    static const char *const Messages[][2] = {
+        {"ReturnType", "operator=() should return '%0&'"},
+        {"ArgumentType", "operator=() should take '%0 const&', '%0&&' or '%0'"},
+        {"cv", "operator=() should not be marked '%1'"}};
 
-  static const char *const Messages[][2] = {
-      {"ReturnType", "operator=() should return '%0&'"},
-      {"ArgumentType", "operator=() should take '%0 const&', '%0&&' or '%0'"},
-      {"cv", "operator=() should not be marked '%1'"}};
-
-  for (const auto &Message : Messages) {
-    if (Result.Nodes.getNodeAs<Decl>(Message[0]))
-      diag(Method->getLocStart(), Message[1])
-          << Name << (Method->isConst() ? "const" : "virtual");
+    const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
+    for (const auto &Message : Messages) {
+      if (Result.Nodes.getNodeAs<Decl>(Message[0]))
+        diag(Method->getLocStart(), Message[1])
+            << Method->getParent()->getName()
+            << (Method->isConst() ? "const" : "virtual");
+    }
   }
 }
 

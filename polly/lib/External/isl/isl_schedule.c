@@ -1,6 +1,7 @@
 /*
  * Copyright 2011      INRIA Saclay
  * Copyright 2012-2014 Ecole Normale Superieure
+ * Copyright 2016      Sven Verdoolaege
  *
  * Use of this software is governed by the MIT license
  *
@@ -169,9 +170,6 @@ isl_ctx *isl_schedule_get_ctx(__isl_keep isl_schedule *schedule)
 }
 
 /* Return a pointer to the leaf of "schedule".
- *
- * Even though these leaves are not reference counted, we still
- * indicate that this function does not return a copy.
  */
 __isl_keep isl_schedule_tree *isl_schedule_peek_leaf(
 	__isl_keep isl_schedule *schedule)
@@ -444,6 +442,40 @@ __isl_give isl_schedule *isl_schedule_pullback_union_pw_multi_aff(
 	schedule = isl_schedule_map_schedule_node_bottom_up(schedule,
 						&pullback_upma, upma);
 	isl_union_pw_multi_aff_free(upma);
+	return schedule;
+}
+
+/* Expand the schedule "schedule" by extending all leaves
+ * with an expansion node with as subtree the tree of "expansion".
+ * The expansion of the expansion node is determined by "contraction"
+ * and the domain of "expansion".  That is, the domain of "expansion"
+ * is contracted according to "contraction".
+ *
+ * Call isl_schedule_node_expand after extracting the required
+ * information from "expansion".
+ */
+__isl_give isl_schedule *isl_schedule_expand(__isl_take isl_schedule *schedule,
+	__isl_take isl_union_pw_multi_aff *contraction,
+	__isl_take isl_schedule *expansion)
+{
+	isl_union_set *domain;
+	isl_schedule_node *node;
+	isl_schedule_tree *tree;
+
+	domain = isl_schedule_get_domain(expansion);
+
+	node = isl_schedule_get_root(expansion);
+	node = isl_schedule_node_child(node, 0);
+	tree = isl_schedule_node_get_tree(node);
+	isl_schedule_node_free(node);
+	isl_schedule_free(expansion);
+
+	node = isl_schedule_get_root(schedule);
+	isl_schedule_free(schedule);
+	node = isl_schedule_node_expand(node, contraction, domain, tree);
+	schedule = isl_schedule_node_get_schedule(node);
+	isl_schedule_node_free(node);
+
 	return schedule;
 }
 

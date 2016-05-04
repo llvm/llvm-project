@@ -587,15 +587,14 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     SymbolBody &Body = File.getRelocTargetSym(RI);
     uint32_t Type = RI.getType(Config->Mips64EL);
 
+    RelExpr Expr = Target->getRelExpr(Type, Body);
     // Ignore "hint" relocation because it is for optional code optimization.
-    if (Target->isHintRel(Type))
+    if (Expr == R_HINT)
       continue;
 
     uintX_t Offset = C.getOffset(RI.r_offset);
     if (Offset == (uintX_t)-1)
       continue;
-
-    RelExpr Expr = Target->getRelExpr(Type, Body);
 
     Expr = adjustExpr(Body, IsWrite, Expr, Type);
     if (HasError)
@@ -673,10 +672,9 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     // If a relocation needs GOT, we create a GOT slot for the symbol.
     if (refersToGotEntry(Expr)) {
-      uint32_t T = Body.isTls() ? Target->getTlsGotRel(Type) : Type;
       if (Config->EMachine == EM_MIPS && Expr == R_GOT_OFF)
         Addend -= MipsGPOffset;
-      C.Relocations.push_back({Expr, T, Offset, Addend, &Body});
+      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       if (Body.isInGot())
         continue;
       Out<ELFT>::Got->addEntry(Body);
@@ -1165,6 +1163,9 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
     break;
   case InputSectionBase<ELFT>::MipsReginfo:
     Sec = new MipsReginfoOutputSection<ELFT>();
+    break;
+  case InputSectionBase<ELFT>::MipsOptions:
+    Sec = new MipsOptionsOutputSection<ELFT>();
     break;
   }
   return {Sec, true};
