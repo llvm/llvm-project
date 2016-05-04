@@ -18,7 +18,7 @@ import sys
 import pexpect
 import swift
 import re
-from lldbsuite.test.decorators import no_debug_info_test
+from lldbsuite.test.decorators import no_debug_info_test, skipIfLinux
 from lldbsuite.test.decorators import swiftTest
 
 class REPLTest(PExpectTest):
@@ -27,6 +27,7 @@ class REPLTest(PExpectTest):
     
     @swiftTest
     @no_debug_info_test
+    @skipIfLinux  # https://bugs.swift.org/browse/SR-1300
     def testREPL(self):
         # setup the regexp for the prompt
         self.prompt = re.compile('\\d+>')

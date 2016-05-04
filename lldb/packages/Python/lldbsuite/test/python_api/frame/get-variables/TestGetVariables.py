@@ -38,6 +38,7 @@ class TestGetVariables(TestBase):
                 self.assertTrue(False, "didn't find '%s' in %s" % (name, copy_names))
         self.assertEqual(len(copy_names), 0, "%s: we didn't find variables: %s in value list (%s)" % (description, copy_names, actual_names))
 
+    @skipUnlessDarwin
     def test (self):
         self.build ()
         
@@ -79,7 +80,11 @@ class TestGetVariables(TestBase):
         
         arg_names = ['argc', 'argv']   
         local_names = ['i', 'j', 'k']
+<<<<<<< HEAD
         static_names = ['static_var', 'g_global_var', 'g_static_var']
+=======
+        static_names = ['static_var', 'g_global_var', 'static_var']
+>>>>>>> origin/master
         breakpoint1_locals = ['i']
         breakpoint1_statics = ['static_var']
         num_args = len(arg_names)

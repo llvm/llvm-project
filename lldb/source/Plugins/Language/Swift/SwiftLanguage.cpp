@@ -308,6 +308,10 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEndCreator, "Swift.Optional synthetic children", ConstString("()?"), optional_synth_flags, false);
     
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Range_SummaryProvider, "Swift.Range summary provider", ConstString("Swift.Range<.+>$"), summary_flags, true);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::CountableRange_SummaryProvider, "Swift.CountableRange summary provider", ConstString("Swift.CountableRange<.+>$"), summary_flags, true);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::ClosedRange_SummaryProvider, "Swift.ClosedRange summary provider", ConstString("Swift.ClosedRange<.+>$"), summary_flags, true);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::CountableClosedRange_SummaryProvider, "Swift.CountableClosedRange summary provider", ConstString("Swift.CountableClosedRange<.+>$"), summary_flags, true);
+
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::StridedRangeGenerator_SummaryProvider, "Swift.StridedRangeGenerator summary provider", ConstString("Swift.StridedRangeGenerator<.+>$"), summary_flags, true);
     
     TypeSummaryImpl::Flags nil_summary_flags;
@@ -322,15 +326,6 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     AddStringSummary(swift_category_sp, "nil", ConstString("Swift._Nil"), nil_summary_flags);
     
     AddStringSummary(swift_category_sp, "${var.native}", ConstString("CoreGraphics.CGFloat"), summary_flags);
-    
-    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Metadata_SummaryProvider, "Swift Metadata summary", ConstString("$swift.type"), TypeSummaryImpl::Flags().SetCascades(false)
-                  .SetSkipPointers(true)
-                  .SetSkipReferences(true)
-                  .SetDontShowChildren(true)
-                  .SetDontShowValue(false)
-                  .SetShowMembersOneLiner(false)
-                  .SetHideItemNames(false));
-    
 #endif // LLDB_DISABLE_PYTHON
 }
 
@@ -474,6 +469,35 @@ SwiftLanguage::GetHardcodedSynthetics ()
                 if (valobj_descriptor_sp)
                     return SyntheticChildrenSP(new ObjCRuntimeSyntheticProvider(SyntheticChildren::Flags().SetCascades(true).SetSkipPointers(true).SetSkipReferences(true).SetNonCacheable(true),
                                                                                 valobj_descriptor_sp));
+            }
+            return nullptr;
+        });
+        g_formatters.push_back([](lldb_private::ValueObject& valobj,
+                                  lldb::DynamicValueType dyn_type,
+                                  FormatManager& format_manager) -> lldb::SyntheticChildrenSP {
+            struct IsEligible
+            {
+                static bool
+                Check (const CompilerType& type)
+                {
+                    if ((ClangASTContext::IsObjCObjectPointerType(type) || ClangASTContext::IsObjCObjectOrInterfaceType(type)) &&
+                        type.GetTypeName().GetStringRef().startswith("_TtC"))
+                        return true;
+                    
+                    return false;
+                }
+            };
+            
+            if (dyn_type == lldb::eNoDynamicValues)
+                return nullptr;
+            CompilerType type(valobj.GetCompilerType());
+            if (IsEligible::Check(type))
+            {
+                ProcessSP process_sp(valobj.GetProcessSP());
+                if (!process_sp)
+                    return nullptr;
+                SwiftLanguageRuntime *swift_runtime = process_sp->GetSwiftLanguageRuntime();
+                return swift_runtime->GetBridgedSyntheticChildProvider(valobj);
             }
             return nullptr;
         });

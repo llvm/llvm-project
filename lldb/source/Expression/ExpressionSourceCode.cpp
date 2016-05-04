@@ -283,7 +283,6 @@ ExpressionSourceCode::SaveExpressionTextToTempFile (const char *text, const Eval
 bool
 ExpressionSourceCode::GetText (std::string &text,
                                lldb::LanguageType wrapping_language,
-                               bool const_object,
                                bool swift_instance_method,
                                bool static_method,
                                bool is_swift_class,

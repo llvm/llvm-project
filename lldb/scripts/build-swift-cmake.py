@@ -110,7 +110,7 @@ else:
     if args.release:
         build_script_arguments += ["--release", "--assertions", "--lldb"]
     else:
-        build_script_arguments += ["--debug-swift", "--debug-lldb"]
+        build_script_arguments += ["--debug-swift", "--debug-lldb","--skip-build-benchmarks"]
     build_script_impl_arguments += ["--build-swift-static-stdlib=1"]
 
     if args.lldb_extra_cmake_args and len(args.lldb_extra_cmake_args) > 0:

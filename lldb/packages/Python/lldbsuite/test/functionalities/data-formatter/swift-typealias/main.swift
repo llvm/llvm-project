@@ -9,12 +9,20 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-typealias Foo = Int
+struct HasInt {
+  var value: Int
+  
+  init(_ x: Int) {
+    value = x
+  }
+}
+
+typealias Foo = HasInt
 typealias Bar = Foo
 
 func main() {
-  var f: Foo = 12
-  var b: Bar = 24
+  var f: Foo = HasInt(12)
+  var b: Bar = HasInt(24)
   print("break here")
 }
 

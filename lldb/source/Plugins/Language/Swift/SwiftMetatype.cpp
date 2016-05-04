@@ -24,45 +24,6 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
-static bool
-FormatMetadata (SwiftLanguageRuntime::MetadataSP metadata_sp,
-                SwiftLanguageRuntime *swift_runtime,
-                SwiftASTContext *swift_ast_ctx,
-                Stream& stream,
-                const TypeSummaryOptions& options)
-{
-    if (!metadata_sp)
-        return false;
-    if (SwiftLanguageRuntime::NominalTypeMetadata* nominal_metadata = llvm::dyn_cast<SwiftLanguageRuntime::NominalTypeMetadata>(metadata_sp.get()))
-    {
-        Mangled mangled(ConstString(nominal_metadata->GetMangledName().c_str()));
-        stream.Printf("%s", mangled.GetDemangledName(lldb::eLanguageTypeSwift).AsCString("<unknown type>"));
-        return true;
-    }
-    else if (SwiftLanguageRuntime::MetatypeMetadata *metatype_metadata = llvm::dyn_cast<SwiftLanguageRuntime::MetatypeMetadata>(metadata_sp.get()))
-    {
-        if (metatype_metadata->GetInstanceMetadata())
-        {
-            stream.Printf("metatype for ");
-            return FormatMetadata(metatype_metadata->GetInstanceMetadata(),
-                                  swift_runtime,
-                                  swift_ast_ctx,
-                                  stream,
-                                  options);
-        }
-    }
-    else
-    {
-        Error error;
-        CompilerType realizedtype(swift_runtime->GetTypeForMetadata(metadata_sp, swift_ast_ctx, error));
-        if (error.Fail() || realizedtype.IsValid() == false)
-            return false;
-        stream.Printf("%s", realizedtype.GetDisplayTypeName().AsCString("<unknown type>"));
-        return true;
-    }
-    return false;
-}
-
 bool
 lldb_private::formatters::swift::SwiftMetatype_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
 {
@@ -83,21 +44,11 @@ lldb_private::formatters::swift::SwiftMetatype_SummaryProvider (ValueObject& val
         auto swift_runtime = valobj.GetProcessSP()->GetSwiftLanguageRuntime();
         if (!swift_runtime)
             return false;
-        SwiftLanguageRuntime::MetadataSP metadata_sp = swift_runtime->GetMetadataForLocation(metadata_ptr);
-        Error error;
-        SwiftASTContext *swift_ast_ctx = valobj.GetTargetSP()->GetScratchSwiftASTContext(error);
-        if (swift_ast_ctx)
+        SwiftLanguageRuntime::MetadataPromiseSP metadata_promise_sp = swift_runtime->GetMetadataPromise(metadata_ptr);
+        if (CompilerType resolved_type = metadata_promise_sp->FulfillTypePromise())
         {
-            if (!swift_ast_ctx->HasFatalErrors())
-                return FormatMetadata(metadata_sp, swift_runtime, swift_ast_ctx, stream, options);
-            else
-            {
-                stream.Printf ("Error getting AST context: %s.", swift_ast_ctx->GetFatalErrors().AsCString());
-            }
-        }
-        else
-        {
-            stream.Printf("Unknown error getting AST Context");
+            stream.Printf("%s", resolved_type.GetDisplayTypeName().AsCString());
+            return true;
         }
     }
     return false;

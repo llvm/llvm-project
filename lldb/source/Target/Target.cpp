@@ -215,6 +215,12 @@ lldb::REPLSP
 Target::GetREPL (Error &err, lldb::LanguageType language, const char *repl_options, bool can_create)
 {
     err.Clear();
+ 
+    if (!GetProcessSP())
+    {
+        err.SetErrorStringWithFormat("Can't run the REPL without a live process.");
+        return REPLSP();
+    }
     
     if (language == eLanguageTypeUnknown)
     {
@@ -2204,7 +2210,10 @@ Target::GetClangASTImporter()
 SwiftASTContext *
 Target::GetScratchSwiftASTContext(Error &error, bool create_on_demand, const char *extra_options)
 {
-    return llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
+    SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
+    if (swift_ast_ctx && !swift_ast_ctx->HasFatalErrors())
+        return swift_ast_ctx;
+    return nullptr;
 }
 
 void

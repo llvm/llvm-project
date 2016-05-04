@@ -214,7 +214,7 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                         if (self_type_flags.Test(lldb::eTypeIsClass))
                             m_is_swift_class = true;
                     }
-                    
+
                     swift::Type object_type = swift::Type((swift::TypeBase*)(self_type.GetOpaqueQualType()))->getLValueOrInOutObjectType();
                     
                     if (object_type.getPointer() && (object_type.getPointer() != self_type.GetOpaqueQualType()))
@@ -223,6 +223,15 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                     if (Flags(self_type.GetTypeInfo()).AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration | lldb::eTypeIsGeneric))
                     {
                         // Optional<T> is not something we can extend.
+                        m_needs_object_ptr = false;
+                        self_var_sp.reset();
+                        break;
+                    }
+
+                    if (Flags(self_type.GetTypeInfo()).AllSet(lldb::eTypeIsSwift | lldb::eTypeIsStructUnion | lldb::eTypeIsGeneric) &&
+                        self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsReference | lldb::eTypeHasValue))
+                    {
+                        // We can't extend generic structs when "self" is mutating at the moment.
                         m_needs_object_ptr = false;
                         self_var_sp.reset();
                         break;
@@ -408,7 +417,6 @@ SwiftUserExpression::Parse (DiagnosticManager &diagnostic_manager,
 
     if (!source_code->GetText(m_transformed_text,
                               lang_type,
-                              m_const_object,
                               m_needs_object_ptr,
                               m_in_static_method,
                               m_is_swift_class,

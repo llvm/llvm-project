@@ -16,7 +16,6 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "swift/AST/ASTContext.h"

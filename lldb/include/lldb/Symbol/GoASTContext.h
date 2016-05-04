@@ -176,6 +176,8 @@ class GoASTContext : public TypeSystem
     CompilerType GetFunctionArgumentAtIndex(lldb::opaque_compiler_type_t type, const size_t index) override;
 
     bool IsFunctionPointerType(lldb::opaque_compiler_type_t type) override;
+    
+    bool IsBlockPointerType (lldb::opaque_compiler_type_t type, CompilerType *function_pointer_type_ptr) override;
 
     bool IsIntegerType(lldb::opaque_compiler_type_t type, bool &is_signed) override;
 

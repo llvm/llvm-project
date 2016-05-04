@@ -9,13 +9,22 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-func main() {
-  var a: ClosedRange = 1...100
-  var b: Range = 1..<100
-  var c = 1...100
-  var d = 1..<100
+import Foundation
 
-  print("Set breakpoint here")
+var my_global: Int = 0
+
+func main() {
+  let q = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+  dispatch_async(q) {
+    my_global = 42
+    sleep(100)
+  }
+  dispatch_async(q) {
+    usleep(10000)
+    my_global = 43
+    exit(1)
+  }
+  sleep(100)
 }
 
 main()

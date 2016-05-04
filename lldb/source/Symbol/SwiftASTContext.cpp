@@ -1406,6 +1406,12 @@ SwiftASTContext::GetPluginVersion()
     return 1;
 }
 
+static std::string &GetDefaultResourceDir()
+{
+    static std::string s_resource_dir;
+    return s_resource_dir;
+}
+
 lldb::TypeSystemSP
 SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Target *target, const char *extra_options)
 {
@@ -1612,6 +1618,16 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                 {
                     swift_ast_sp->SetResourceDir(resource_dir.c_str());
                 }
+                else if (!GetDefaultResourceDir().empty())
+                {
+                    // Use the first resource dir we found when setting up a target.
+                    swift_ast_sp->SetResourceDir(GetDefaultResourceDir().c_str());
+                }
+                else
+                {
+                    if (log)
+                        log->Printf("No resource dir available for module's SwiftASTContext.");
+                }
 
                 if (!got_serialized_options)
                 {
@@ -1796,6 +1812,13 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                     {
                         handled_resource_dir = true;
                         swift_ast_sp->SetResourceDir (resource_dir);
+                        if (GetDefaultResourceDir().empty())
+                        {
+                            // Tuck this away as a reasonable default resource dir
+                            // for contexts that don't have one.  The Swift parser
+                            // will assert without one.
+                            GetDefaultResourceDir() = resource_dir;
+                        }
                     }
                 }
 
@@ -4718,15 +4741,15 @@ SwiftASTContext::GetSILModule ()
     return m_sil_module_ap.get();
 }
 
-swift::irgen::IRGenModuleDispatcher &
-SwiftASTContext::GetIRGenModuleDispatcher ()
+swift::irgen::IRGenerator &
+SwiftASTContext::GetIRGenerator (swift::IRGenOptions &opts, swift::SILModule &module)
 {
-    if (m_ir_gen_module_dispatcher_ap.get() == nullptr)
+    if (m_ir_generator_ap.get() == nullptr)
     {
-        m_ir_gen_module_dispatcher_ap.reset(new swift::irgen::IRGenModuleDispatcher());
+        m_ir_generator_ap.reset(new swift::irgen::IRGenerator(opts, module));
     }
     
-    return *m_ir_gen_module_dispatcher_ap.get();
+    return *m_ir_generator_ap.get();
 }
 
 swift::irgen::IRGenModule &
@@ -4761,22 +4784,20 @@ SwiftASTContext::GetIRGenModule ()
             const llvm::DataLayout data_layout = target_machine->createDataLayout();
 
             llvm::Triple llvm_triple(triple);
-            
-            m_ir_gen_module_ap.reset (new swift::irgen::IRGenModule(GetIRGenModuleDispatcher(),
-                                                                    nullptr,
-                                                                    *GetASTContext(),
-                                                                    GetGlobalLLVMContext(),
-                                                                    ir_gen_opts,
-                                                                    ir_gen_opts.ModuleName,
-                                                                    data_layout,
-                                                                    llvm_triple,
-                                                                    target_machine,
-                                                                    GetSILModule (),
-                                                                    ir_gen_opts.getSingleOutputFilename()));
-            llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
-            llvm_module->setDataLayout(data_layout.getStringRepresentation());
-            llvm_module->setTargetTriple(triple);
-
+            swift::SILModule *sil_module = GetSILModule();
+            if (sil_module != nullptr)
+            {
+                swift::irgen::IRGenerator &ir_generator = GetIRGenerator(ir_gen_opts, *sil_module);
+                m_ir_gen_module_ap.reset (new swift::irgen::IRGenModule(ir_generator,
+                                                                        ir_generator.createTargetMachine(),
+                                                                        nullptr,
+                                                                        GetGlobalLLVMContext(),
+                                                                        ir_gen_opts.ModuleName,
+                                                                        ir_gen_opts.getSingleOutputFilename()));
+                llvm::Module *llvm_module = m_ir_gen_module_ap->getModule();
+                llvm_module->setDataLayout(data_layout.getStringRepresentation());
+                llvm_module->setTargetTriple(triple);
+            }
         }
     }
     return *m_ir_gen_module_ap;
@@ -5557,6 +5578,12 @@ bool
 SwiftASTContext::IsFunctionPointerType (void* type)
 {
     return IsFunctionType(type, nullptr); // FIXME: think about this
+}
+
+bool
+SwiftASTContext::IsBlockPointerType (void * type, CompilerType *function_pointer_type_ptr)
+{
+    return false;
 }
 
 bool
@@ -7709,7 +7736,8 @@ GetInstanceVariableOffset_Symbol (ExecutionContext *exe_ctx,
 }
 
 static int64_t
-GetInstanceVariableOffset_Metadata (ExecutionContext *exe_ctx,
+GetInstanceVariableOffset_Metadata (ValueObject *valobj,
+                                    ExecutionContext *exe_ctx,
                                     const CompilerType &type,
                                     ConstString ivar_name,
                                     const CompilerType &ivar_type)
@@ -7724,29 +7752,16 @@ GetInstanceVariableOffset_Metadata (ExecutionContext *exe_ctx,
         SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
         if (runtime)
         {
-            auto metadata_sp = runtime->GetMetadataForType(type);
-            SwiftLanguageRuntime::FieldContainerTypeMetadata *fields_metadata =
-            llvm::dyn_cast_or_null<SwiftLanguageRuntime::FieldContainerTypeMetadata>(metadata_sp.get());
-            if (fields_metadata)
+            if (auto resolver_sp = runtime->GetMemberVariableOffsetResolver(type))
             {
-                if(log)
-                    log->Printf("[GetInstanceVariableOffset_Metadata] fields_metadata = %p - name = %s", fields_metadata, fields_metadata->GetMangledName().c_str());
-
-                for (size_t idx = 0;
-                     idx < fields_metadata->GetNumFields();
-                     idx++)
-                {
-                    auto field = fields_metadata->GetFieldAtIndex(idx);
-                    ConstString field_name = field.GetName();
-                    if (log)
-                        log->Printf("[GetInstanceVariableOffset_Metadata] field_name = %s - field_offset = 0x%" PRIx64, field_name.GetCString(), field.GetOffset());
-
-                    if (field_name && field_name == ivar_name)
-                        return field.GetOffset();
-                }
+                Error error;
+                if (auto result = resolver_sp->ResolveOffset(valobj, ivar_name, &error))
+                    return result.getValue();
+                else if (log)
+                    log->Printf("[GetInstanceVariableOffset_Metadata] resolver failure: %s", error.AsCString());
             }
             else if (log)
-                log->Printf("[GetInstanceVariableOffset_Metadata] no fields_metadata");
+                log->Printf("[GetInstanceVariableOffset_Metadata] no offset resolver");
         }
         else if (log)
             log->Printf("[GetInstanceVariableOffset_Metadata] no runtime");
@@ -7757,7 +7772,8 @@ GetInstanceVariableOffset_Metadata (ExecutionContext *exe_ctx,
 }
 
 static int64_t
-GetInstanceVariableOffset (ExecutionContext *exe_ctx,
+GetInstanceVariableOffset (ValueObject *valobj,
+                           ExecutionContext *exe_ctx,
                            const CompilerType &class_type,
                            const char *ivar_name,
                            const CompilerType &ivar_type)
@@ -7796,7 +7812,7 @@ GetInstanceVariableOffset (ExecutionContext *exe_ctx,
                 {
                     offset = GetInstanceVariableOffset_Symbol(exe_ctx, class_type, ivar_name, ivar_type);
                     if (offset == LLDB_INVALID_IVAR_OFFSET)
-                        offset = GetInstanceVariableOffset_Metadata(exe_ctx, class_type, ConstString(ivar_name), ivar_type);
+                        offset = GetInstanceVariableOffset_Metadata(valobj, exe_ctx, class_type, ConstString(ivar_name), ivar_type);
                 }
             }
         }
@@ -7994,7 +8010,7 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                     if (cached_member_info->member_infos[idx].is_fragile && cached_member_info->member_infos[idx].byte_offset == 0)
                     {
                         CompilerType compiler_type(GetASTContext(), GetSwiftType(type));
-                        const int64_t fragile_ivar_offset = GetInstanceVariableOffset (exe_ctx, compiler_type, child_name.c_str(), cached_member_info->member_infos[idx].clang_type);
+                        const int64_t fragile_ivar_offset = GetInstanceVariableOffset (valobj, exe_ctx, compiler_type, child_name.c_str(), cached_member_info->member_infos[idx].clang_type);
                         if (fragile_ivar_offset != LLDB_INVALID_IVAR_OFFSET)
                             cached_member_info->member_infos[idx].byte_offset = fragile_ivar_offset;
                     }
