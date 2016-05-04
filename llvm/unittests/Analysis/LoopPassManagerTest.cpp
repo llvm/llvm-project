@@ -92,7 +92,7 @@ public:
   TestLoopInvalidatingPass(StringRef LoopName) : Name(LoopName) {}
 
   PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM) {
-    return L.getName() == Name ? PreservedAnalyses::none()
+    return L.getName() == Name ? getLoopPassPreservedAnalyses()
                                : PreservedAnalyses::all();
   }
 

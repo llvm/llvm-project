@@ -1442,6 +1442,9 @@ void MachineBlockPlacement::alignBlocks(MachineFunction &F) {
 }
 
 bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &F) {
+  if (skipFunction(*F.getFunction()))
+    return false;
+
   // Check for single-block functions and skip them.
   if (std::next(F.begin()) == F.end())
     return false;

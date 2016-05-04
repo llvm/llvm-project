@@ -300,7 +300,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
             Worklist.push_back(&UU);
       }
       break;
-    case Instruction::ICmp:
+    case Instruction::ICmp: {
       // Don't count comparisons of a no-alias return value against null as
       // captures. This allows us to ignore comparisons of malloc results
       // with null, for example.
@@ -309,11 +309,19 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
         if (CPN->getType()->getAddressSpace() == 0)
           if (isNoAliasCall(V->stripPointerCasts()))
             break;
+      // Comparison against value stored in global variable. Given the pointer
+      // does not escape, its value cannot be guessed and stored separately in a
+      // global variable.
+      unsigned OtherIndex = (I->getOperand(0) == V) ? 1 : 0;
+      auto *LI = dyn_cast<LoadInst>(I->getOperand(OtherIndex));
+      if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
+        break;
       // Otherwise, be conservative. There are crazy ways to capture pointers
       // using comparisons.
       if (Tracker->captured(U))
         return;
       break;
+    }
     default:
       // Something else - be conservative and say it is captured.
       if (Tracker->captured(U))

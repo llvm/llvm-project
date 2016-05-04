@@ -26,6 +26,14 @@
 ; CHECK-SKIP-ALL-NOT: BISECT: running pass ({{[0-9]+}})
 
 
+; Verify that no passes run at -O0 are skipped
+; RUN: opt -opt-bisect-limit=0 < %s 2>&1 | FileCheck %s --check-prefix=OPTBISECT-O0
+; RUN: opt -opt-bisect-limit=0 < %s | llc -O0 -opt-bisect-limit=0 2>&1 | FileCheck %s --check-prefix=OPTBISECT-O0
+; OPTBISECT-O0-NOT: BISECT: NOT running
+
+; FIXME: There are still some AMDGPU passes being skipped that run at -O0.
+; XFAIL: r600, amdgcn
+
 ; Verify that we can use the opt-bisect-helper.py script (derived from
 ; utils/bisect) to locate the optimization that inlines the call to
 ; f2() in f3().

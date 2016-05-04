@@ -374,8 +374,10 @@ void InstrProfiling::emitNameData() {
     return;
 
   std::string CompressedNameStr;
-  collectPGOFuncNameStrings(ReferencedNames, CompressedNameStr,
-                            DoNameCompression);
+  if (auto EC = collectPGOFuncNameStrings(ReferencedNames, CompressedNameStr,
+                                          DoNameCompression)) {
+    llvm::report_fatal_error(EC.message(), false);
+  }
 
   auto &Ctx = M->getContext();
   auto *NamesVal = llvm::ConstantDataArray::getString(

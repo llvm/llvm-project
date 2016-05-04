@@ -36,6 +36,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
+MODULE_PASS("globaldce", GlobalDCEPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("internalize", InternalizePass())
@@ -133,6 +134,8 @@ LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 #define LOOP_PASS(NAME, CREATE_PASS)
 #endif
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
+LOOP_PASS("rotate", LoopRotatePass())
 LOOP_PASS("no-op-loop", NoOpLoopPass())
 LOOP_PASS("print", PrintLoopPass(dbgs()))
+LOOP_PASS("simplify-cfg", LoopSimplifyCFGPass())
 #undef LOOP_PASS

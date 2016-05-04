@@ -78,20 +78,23 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       C = ConstantExpr::getBitCast(C, SrcIVTy);
     }
 
-    ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(C);
-    if (!CDV)
-      return ConstantExpr::getBitCast(C, DestTy);
-
     // Now that we know that the input value is a vector of integers, just shift
     // and insert them into our result.
     unsigned BitShift = DL.getTypeAllocSizeInBits(SrcEltTy);
     APInt Result(IT->getBitWidth(), 0);
     for (unsigned i = 0; i != NumSrcElts; ++i) {
-      Result <<= BitShift;
+      Constant *Element;
       if (DL.isLittleEndian())
-        Result |= CDV->getElementAsInteger(NumSrcElts-i-1);
+        Element = C->getAggregateElement(NumSrcElts-i-1);
       else
-        Result |= CDV->getElementAsInteger(i);
+        Element = C->getAggregateElement(i);
+
+      auto *ElementCI = dyn_cast_or_null<ConstantInt>(Element);
+      if (!ElementCI)
+        return ConstantExpr::getBitCast(C, DestTy);
+
+      Result <<= BitShift;
+      Result |= ElementCI->getValue().zextOrSelf(IT->getBitWidth());
     }
 
     return ConstantInt::get(IT, Result);

@@ -5,6 +5,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 declare i32 @llvm.experimental.deoptimize.i32(...)
 declare void @llvm.experimental.deoptimize.isVoid(...)
+declare cc42 double @llvm.experimental.deoptimize.f64(...)
 
 define i32 @caller_0(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: @caller_0(
@@ -32,4 +33,14 @@ define void @caller_2(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 entry:
   call void(...) @llvm.experimental.deoptimize.isVoid() [ "deopt"(i32 0, i32 addrspace(1)* %ptr) ]
   ret void
+}
+
+define double @caller_3() gc "statepoint-example" {
+; CHECK-LABELL @caller_3(
+; CHECK: call cc42 token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint
+; CHECK:  unreachable
+
+entry:
+  %val = call cc42 double(...) @llvm.experimental.deoptimize.f64() [ "deopt"() ]
+  ret double %val
 }

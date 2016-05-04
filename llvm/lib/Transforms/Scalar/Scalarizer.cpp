@@ -252,6 +252,8 @@ bool Scalarizer::doInitialization(Module &M) {
 }
 
 bool Scalarizer::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
   assert(Gathered.empty() && Scattered.empty());
   for (BasicBlock &BB : F) {
     for (BasicBlock::iterator II = BB.begin(), IE = BB.end(); II != IE;) {

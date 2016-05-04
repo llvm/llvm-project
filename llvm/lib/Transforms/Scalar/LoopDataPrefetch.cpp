@@ -147,6 +147,9 @@ bool LoopDataPrefetch::isStrideLargeEnough(const SCEVAddRecExpr *AR) {
 }
 
 bool LoopDataPrefetch::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   DL = &F.getParent()->getDataLayout();

@@ -50,11 +50,8 @@ namespace Mips {
     // 16 bit literal fixup resulting in - R_MIPS_LITERAL.
     fixup_Mips_LITERAL,
 
-    // Global symbol fixup resulting in - R_MIPS_GOT16.
-    fixup_Mips_GOT_Global,
-
-    // Local symbol fixup resulting in - R_MIPS_GOT16.
-    fixup_Mips_GOT_Local,
+    // Symbol fixup resulting in - R_MIPS_GOT16.
+    fixup_Mips_GOT,
 
     // PC relative branch fixup resulting in - R_MIPS_PC16.
     fixup_Mips_PC16,

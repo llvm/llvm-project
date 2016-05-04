@@ -10,71 +10,71 @@
 # CHECK-FIXUP: lui $2, %hi(_gp_disp)
 # CHECK-FIXUP:        # encoding: [0xa2'A',0x41'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: _gp_disp@ABS_HI,
+# CHECK-FIXUP:          value: %hi(_gp_disp),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_HI16
 # CHECK-FIXUP: addiu $2, $2, %lo(_gp_disp)
 # CHECK-FIXUP:        # encoding: [0x42'A',0x30'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: _gp_disp@ABS_LO,
+# CHECK-FIXUP:          value: %lo(_gp_disp),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_LO16
 # CHECK-FIXUP: lw $25, %call16(strchr)($gp)
 # CHECK-FIXUP:        # encoding: [0x3c'A',0xff'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: strchr@GOT_CALL,
+# CHECK-FIXUP:          value: %call16(strchr),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_CALL16
 # CHECK-FIXUP: lw $3, %got(loop_1)($2)
 # CHECK-FIXUP:        # encoding: [0x62'A',0xfc'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: loop_1@GOT,
+# CHECK-FIXUP:          value: %got(loop_1),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_GOT16
 # CHECK-FIXUP: lui $2, %dtprel_hi(_gp_disp)
 # CHECK-FIXUP:        # encoding: [0xa2'A',0x41'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: _gp_disp@DTPREL_HI,
+# CHECK-FIXUP:          value: %dtprel_hi(_gp_disp),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_TLS_DTPREL_HI16
 # CHECK-FIXUP: addiu $2, $2, %dtprel_lo(_gp_disp)
 # CHECK-FIXUP:        # encoding: [0x42'A',0x30'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: _gp_disp@DTPREL_LO,
+# CHECK-FIXUP:          value: %dtprel_lo(_gp_disp),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_TLS_DTPREL_LO16
 # CHECK-FIXUP: lw $3, %got(loop_1)($2)
 # CHECK-FIXUP:        # encoding: [0x62'A',0xfc'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: loop_1@GOT,
+# CHECK-FIXUP:          value: %got(loop_1),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_GOT16
 # CHECK-FIXUP: lw $4, %got_disp(loop_2)($3)
 # CHECK-FIXUP:        # encoding: [0x83'A',0xfc'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: loop_2@GOT_DISP,
+# CHECK-FIXUP:          value: %got_disp(loop_2),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_GOT_DISP
 # CHECK-FIXUP: lw $5, %got_page(loop_3)($4)
 # CHECK-FIXUP:        # encoding: [0xa4'A',0xfc'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: loop_3@GOT_PAGE,
+# CHECK-FIXUP:          value: %got_page(loop_3),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_GOT_PAGE
 # CHECK-FIXUP: lw $6, %got_ofst(loop_4)($5)
 # CHECK-FIXUP:        # encoding: [0xc5'A',0xfc'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: loop_4@GOT_OFST,
+# CHECK-FIXUP:          value: %got_ofst(loop_4),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_GOT_OFST
 # CHECK-FIXUP: lui $2, %tprel_hi(_gp_disp)
 # CHECK-FIXUP:        # encoding: [0xa2'A',0x41'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: _gp_disp@TPREL_HI,
+# CHECK-FIXUP:          value: %tprel_hi(_gp_disp),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_TLS_TPREL_HI16
 # CHECK-FIXUP: addiu $2, $2, %tprel_lo(_gp_disp)
 # CHECK-FIXUP:        # encoding: [0x42'A',0x30'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: _gp_disp@TPREL_LO,
+# CHECK-FIXUP:          value: %tprel_lo(_gp_disp),
 # CHECK-FIXUP:          kind: fixup_MICROMIPS_TLS_TPREL_LO16
 # CHECK-FIXUP: addiu $4, $gp, %tlsgd(a)
 # CHECK-FIXUP:        # encoding: [0x9c'A',0x30'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: a@TLSGD, kind: fixup_MICROMIPS_TLS_GD
+# CHECK-FIXUP:          value: %tlsgd(a), kind: fixup_MICROMIPS_TLS_GD
 # CHECK-FIXUP: addiu $4, $gp, %tlsldm(f.i)
 # CHECK-FIXUP:        # encoding: [0x9c'A',0x30'A',0x00,0x00]
 # CHECK-FIXUP:        # fixup A - offset: 0,
-# CHECK-FIXUP:          value: f.i@TLSLDM, kind: fixup_MICROMIPS_TLS_LDM
+# CHECK-FIXUP:          value: %tlsldm(f.i), kind: fixup_MICROMIPS_TLS_LDM
 #------------------------------------------------------------------------------
 # Check that the appropriate relocations were created.
 #------------------------------------------------------------------------------

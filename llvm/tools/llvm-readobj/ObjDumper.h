@@ -52,6 +52,7 @@ public:
   virtual void printMipsPLTGOT() { }
   virtual void printMipsABIFlags() { }
   virtual void printMipsReginfo() { }
+  virtual void printMipsOptions() { }
 
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }

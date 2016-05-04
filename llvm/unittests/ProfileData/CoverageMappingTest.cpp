@@ -267,7 +267,7 @@ TEST_P(MaybeSparseCoverageMappingTest,
 
 TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_more_than_two_files) {
   InstrProfRecord Record("func", 0x1234, {0});
-  ProfileWriter.addRecord(std::move(Record));
+  NoError(ProfileWriter.addRecord(std::move(Record)));
 
   const char *FileNames[] = {"bar", "baz", "foo"};
   static const unsigned N = array_lengthof(FileNames);
@@ -289,9 +289,9 @@ TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_more_than_two_files) {
 
 TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_several_functions) {
   InstrProfRecord RecordFunc1("func1", 0x1234, {10});
-  ProfileWriter.addRecord(std::move(RecordFunc1));
+  NoError(ProfileWriter.addRecord(std::move(RecordFunc1)));
   InstrProfRecord RecordFunc2("func2", 0x2345, {20});
-  ProfileWriter.addRecord(std::move(RecordFunc2));
+  NoError(ProfileWriter.addRecord(std::move(RecordFunc2)));
 
   startFunction("func1", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
@@ -336,7 +336,7 @@ TEST_P(MaybeSparseCoverageMappingTest, expansion_gets_first_counter) {
 
 TEST_P(MaybeSparseCoverageMappingTest, basic_coverage_iteration) {
   InstrProfRecord Record("func", 0x1234, {30, 20, 10, 0});
-  ProfileWriter.addRecord(std::move(Record));
+  NoError(ProfileWriter.addRecord(std::move(Record)));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -385,7 +385,7 @@ TEST_P(MaybeSparseCoverageMappingTest, uncovered_function_with_mapping) {
 
 TEST_P(MaybeSparseCoverageMappingTest, combine_regions) {
   InstrProfRecord Record("func", 0x1234, {10, 20, 30});
-  ProfileWriter.addRecord(std::move(Record));
+  NoError(ProfileWriter.addRecord(std::move(Record)));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -405,7 +405,7 @@ TEST_P(MaybeSparseCoverageMappingTest, combine_regions) {
 TEST_P(MaybeSparseCoverageMappingTest,
        restore_combined_counter_after_nested_region) {
   InstrProfRecord Record("func", 0x1234, {10, 20, 40});
-  ProfileWriter.addRecord(std::move(Record));
+  NoError(ProfileWriter.addRecord(std::move(Record)));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -425,8 +425,8 @@ TEST_P(MaybeSparseCoverageMappingTest,
 TEST_P(MaybeSparseCoverageMappingTest, dont_combine_expansions) {
   InstrProfRecord Record1("func", 0x1234, {10, 20});
   InstrProfRecord Record2("func", 0x1234, {0, 0});
-  ProfileWriter.addRecord(std::move(Record1));
-  ProfileWriter.addRecord(std::move(Record2));
+  NoError(ProfileWriter.addRecord(std::move(Record1)));
+  NoError(ProfileWriter.addRecord(std::move(Record2)));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -446,7 +446,7 @@ TEST_P(MaybeSparseCoverageMappingTest, dont_combine_expansions) {
 
 TEST_P(MaybeSparseCoverageMappingTest, strip_filename_prefix) {
   InstrProfRecord Record("file1:func", 0x1234, {0});
-  ProfileWriter.addRecord(std::move(Record));
+  NoError(ProfileWriter.addRecord(std::move(Record)));
 
   startFunction("file1:func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -461,7 +461,7 @@ TEST_P(MaybeSparseCoverageMappingTest, strip_filename_prefix) {
 
 TEST_P(MaybeSparseCoverageMappingTest, strip_unknown_filename_prefix) {
   InstrProfRecord Record("<unknown>:func", 0x1234, {0});
-  ProfileWriter.addRecord(std::move(Record));
+  NoError(ProfileWriter.addRecord(std::move(Record)));
 
   startFunction("<unknown>:func", 0x1234);
   addCMR(Counter::getCounter(0), "", 1, 1, 9, 9);
@@ -477,8 +477,8 @@ TEST_P(MaybeSparseCoverageMappingTest, strip_unknown_filename_prefix) {
 TEST_P(MaybeSparseCoverageMappingTest, dont_detect_false_instantiations) {
   InstrProfRecord Record1("foo", 0x1234, {10});
   InstrProfRecord Record2("bar", 0x2345, {20});
-  ProfileWriter.addRecord(std::move(Record1));
-  ProfileWriter.addRecord(std::move(Record2));
+  NoError(ProfileWriter.addRecord(std::move(Record1)));
+  NoError(ProfileWriter.addRecord(std::move(Record2)));
 
   startFunction("foo", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
@@ -497,7 +497,7 @@ TEST_P(MaybeSparseCoverageMappingTest, dont_detect_false_instantiations) {
 
 TEST_P(MaybeSparseCoverageMappingTest, load_coverage_for_expanded_file) {
   InstrProfRecord Record("func", 0x1234, {10});
-  ProfileWriter.addRecord(std::move(Record));
+  NoError(ProfileWriter.addRecord(std::move(Record)));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);

@@ -40,9 +40,11 @@ svn.exe export -r %revision% http://llvm.org/svn/llvm-project/cfe/%branch% llvm/
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/clang-tools-extra/%branch% llvm/tools/clang/tools/extra || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/lld/%branch% llvm/tools/lld || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/compiler-rt/%branch% llvm/projects/compiler-rt || exit /b
+svn.exe export -r %revision% http://llvm.org/svn/llvm-project/openmp/%branch% llvm/projects/openmp || exit /b
 
 
-set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DLLVM_USE_CRT_RELEASE=MT -DCLANG_FORMAT_VS_VERSION=%clang_format_vs_version% -DPACKAGE_VERSION=%package_version%
+REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
+set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DLLVM_USE_CRT_RELEASE=MT -DCLANG_FORMAT_VS_VERSION=%clang_format_vs_version% -DPACKAGE_VERSION=%package_version% -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: "
 
 REM TODO: Run all tests, including lld and compiler-rt.
 

@@ -60,8 +60,8 @@ private:
 class Action : public clang::ASTFrontendAction,
                public clang::ExternalSemaSource {
 public:
-  explicit Action(XrefsDB &Xrefs, bool MinimizeIncludePaths)
-      : Xrefs(Xrefs), MinimizeIncludePaths(MinimizeIncludePaths) {}
+  explicit Action(XrefsDBManager &XrefsDBMgr, bool MinimizeIncludePaths)
+      : XrefsDBMgr(XrefsDBMgr), MinimizeIncludePaths(MinimizeIncludePaths) {}
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
@@ -224,7 +224,7 @@ private:
     DEBUG(llvm::dbgs() << "Looking up " << Query << " ... ");
 
     std::string error_text;
-    auto SearchReply = Xrefs.search(Query);
+    auto SearchReply = XrefsDBMgr.search(Query);
     DEBUG(llvm::dbgs() << SearchReply.size() << " replies\n");
     if (SearchReply.empty())
       return clang::TypoCorrection();
@@ -240,7 +240,7 @@ private:
   }
 
   /// The client to use to find cross-references.
-  XrefsDB &Xrefs;
+  XrefsDBManager &XrefsDBMgr;
 
   // Remeber things we looked up to avoid querying things twice.
   llvm::StringSet<> SeenQueries;
@@ -303,9 +303,10 @@ void PreprocessorHooks::InclusionDirective(
 } // namespace
 
 IncludeFixerActionFactory::IncludeFixerActionFactory(
-    XrefsDB &Xrefs, std::vector<clang::tooling::Replacement> &Replacements,
+    XrefsDBManager &XrefsDBMgr,
+    std::vector<clang::tooling::Replacement> &Replacements,
     bool MinimizeIncludePaths)
-    : Xrefs(Xrefs), Replacements(Replacements),
+    : XrefsDBMgr(XrefsDBMgr), Replacements(Replacements),
       MinimizeIncludePaths(MinimizeIncludePaths) {}
 
 IncludeFixerActionFactory::~IncludeFixerActionFactory() = default;
@@ -329,7 +330,7 @@ bool IncludeFixerActionFactory::runInvocation(
 
   // Run the parser, gather missing includes.
   auto ScopedToolAction =
-      llvm::make_unique<Action>(Xrefs, MinimizeIncludePaths);
+      llvm::make_unique<Action>(XrefsDBMgr, MinimizeIncludePaths);
   Compiler.ExecuteAction(*ScopedToolAction);
 
   // Generate replacements.

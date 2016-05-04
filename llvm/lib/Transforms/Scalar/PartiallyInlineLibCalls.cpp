@@ -57,6 +57,9 @@ void PartiallyInlineLibCalls::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool PartiallyInlineLibCalls::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   bool Changed = false;
   Function::iterator CurrBB;
   TargetLibraryInfo *TLI =

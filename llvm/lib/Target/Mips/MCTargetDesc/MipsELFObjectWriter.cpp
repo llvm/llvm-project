@@ -131,8 +131,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MIPS_26;
   case Mips::fixup_Mips_CALL16:
     return ELF::R_MIPS_CALL16;
-  case Mips::fixup_Mips_GOT_Global:
-  case Mips::fixup_Mips_GOT_Local:
+  case Mips::fixup_Mips_GOT:
     return ELF::R_MIPS_GOT16;
   case Mips::fixup_Mips_HI16:
     return ELF::R_MIPS_HI16;
@@ -402,7 +401,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MIPS_GOT16:
   case ELF::R_MIPS16_GOT16:
   case ELF::R_MICROMIPS_GOT16:
-    llvm_unreachable("Should have been handled already");
+    return true;
 
   // These relocations might be paired with another relocation. The pairing is
   // done by the static linker by matching the symbol. Since we only see one

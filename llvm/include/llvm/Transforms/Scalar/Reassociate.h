@@ -62,7 +62,6 @@ class ReassociatePass : public PassInfoMixin<ReassociatePass> {
   bool MadeChange;
 
 public:
-  ReassociatePass() {}
   PreservedAnalyses run(Function &F);
 
 private:

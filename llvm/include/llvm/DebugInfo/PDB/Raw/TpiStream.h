@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAM_H
 
+#include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
@@ -25,12 +26,6 @@ class TpiStream {
   struct HeaderInfo;
 
 public:
-  struct HashedTypeRecord {
-    uint32_t Hash;
-    codeview::TypeLeafKind Kind;
-    ArrayRef<uint8_t> Record;
-  };
-
   TpiStream(PDBFile &File);
   ~TpiStream();
   std::error_code reload();
@@ -41,7 +36,7 @@ public:
   uint32_t TypeIndexEnd() const;
   uint32_t NumTypeRecords() const;
 
-  ArrayRef<HashedTypeRecord> records() const;
+  iterator_range<codeview::TypeIterator> types() const;
 
 private:
   PDBFile &Pdb;
@@ -53,7 +48,6 @@ private:
   ByteStream HashValuesBuffer;
   ByteStream HashAdjBuffer;
 
-  std::vector<HashedTypeRecord> TypeRecords;
   std::unique_ptr<HeaderInfo> Header;
 };
 }

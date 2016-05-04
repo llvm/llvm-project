@@ -1,0 +1,12 @@
+RUN: llvm-readobj -mips-options %p/Inputs/options.obj.elf-mipsel | FileCheck %s
+
+CHECK:      MIPS Options {
+CHECK-NEXT:   ODK_REGINFO {
+CHECK-NEXT:     GP: 0x0
+CHECK-NEXT:     General Mask: 0xF2000017
+CHECK-NEXT:     Co-Proc Mask0: 0x0
+CHECK-NEXT:     Co-Proc Mask1: 0x0
+CHECK-NEXT:     Co-Proc Mask2: 0x0
+CHECK-NEXT:     Co-Proc Mask3: 0x0
+CHECK-NEXT:   }
+CHECK-NEXT: }

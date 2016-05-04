@@ -411,6 +411,9 @@ bool AlignmentFromAssumptions::processAssumption(CallInst *ACall) {
 }
 
 bool AlignmentFromAssumptions::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   bool Changed = false;
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();

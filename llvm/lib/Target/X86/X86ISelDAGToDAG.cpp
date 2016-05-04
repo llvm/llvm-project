@@ -727,6 +727,8 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM){
       case 257:
         AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
         return false;
+      // Address space 258 is not handled here, because it is not used to
+      // address TLS areas.
       }
 
   return true;
@@ -1424,11 +1426,13 @@ bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
     return false;
   X86ISelAddressMode AM;
   unsigned AddrSpace = Mgs->getPointerInfo().getAddrSpace();
-  // AddrSpace 256 -> GS, 257 -> FS.
+  // AddrSpace 256 -> GS, 257 -> FS, 258 -> SS.
   if (AddrSpace == 256)
     AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
   if (AddrSpace == 257)
     AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
+  if (AddrSpace == 258)
+    AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
 
   SDLoc DL(N);
   Base = Mgs->getBasePtr();
@@ -1473,11 +1477,13 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
       Parent->getOpcode() != X86ISD::EH_SJLJ_LONGJMP) { // longjmp
     unsigned AddrSpace =
       cast<MemSDNode>(Parent)->getPointerInfo().getAddrSpace();
-    // AddrSpace 256 -> GS, 257 -> FS.
+    // AddrSpace 256 -> GS, 257 -> FS, 258 -> SS.
     if (AddrSpace == 256)
       AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
     if (AddrSpace == 257)
       AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
+    if (AddrSpace == 258)
+      AM.Segment = CurDAG->getRegister(X86::SS, MVT::i16);
   }
 
   if (matchAddress(N, AM))

@@ -9,6 +9,7 @@
 
 #include "InMemoryXrefsDB.h"
 #include "IncludeFixer.h"
+#include "XrefsDBManager.h"
 #include "YamlXrefsDB.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
@@ -48,8 +49,8 @@ int includeFixerMain(int argc, const char **argv) {
   tooling::ClangTool tool(options.getCompilations(),
                           options.getSourcePathList());
 
-  // Set up the data source.
-  std::unique_ptr<include_fixer::XrefsDB> XrefsDB;
+  // Set up data source.
+  auto XrefsDBMgr = llvm::make_unique<include_fixer::XrefsDBManager>();
   switch (DatabaseFormat) {
   case fixed: {
     // Parse input and fill the database with it.
@@ -67,19 +68,20 @@ int includeFixerMain(int argc, const char **argv) {
         Headers.push_back(Header.trim());
       XrefsMap[Split.first.trim()] = std::move(Headers);
     }
-    XrefsDB =
-        llvm::make_unique<include_fixer::InMemoryXrefsDB>(std::move(XrefsMap));
+    XrefsDBMgr->addXrefsDB(
+        llvm::make_unique<include_fixer::InMemoryXrefsDB>(std::move(XrefsMap)));
     break;
   }
   case yaml: {
-    XrefsDB = llvm::make_unique<include_fixer::YamlXrefsDB>(Input);
+    XrefsDBMgr->addXrefsDB(
+        llvm::make_unique<include_fixer::YamlXrefsDB>(Input));
     break;
   }
   }
 
   // Now run our tool.
   std::vector<tooling::Replacement> Replacements;
-  include_fixer::IncludeFixerActionFactory Factory(*XrefsDB, Replacements,
+  include_fixer::IncludeFixerActionFactory Factory(*XrefsDBMgr, Replacements,
                                                    MinimizeIncludePaths);
 
   tool.run(&Factory); // Always succeeds.

@@ -28,6 +28,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/COFF.h"
@@ -956,26 +957,6 @@ void COFFDumper::printCodeViewDebugInfo() {
     if (SectionName == ".debug$S")
       printCodeViewSymbolSection(SectionName, S);
   }
-}
-
-/// Consumes sizeof(T) bytes from the given byte sequence. Returns an error if
-/// there are not enough bytes remaining. Reinterprets the consumed bytes as a
-/// T object and points 'Res' at them.
-template <typename T>
-static std::error_code consumeObject(StringRef &Data, const T *&Res) {
-  if (Data.size() < sizeof(*Res))
-    return object_error::parse_failed;
-  Res = reinterpret_cast<const T *>(Data.data());
-  Data = Data.drop_front(sizeof(*Res));
-  return std::error_code();
-}
-
-static std::error_code consumeUInt32(StringRef &Data, uint32_t &Res) {
-  const ulittle32_t *IntPtr;
-  if (auto EC = consumeObject(Data, IntPtr))
-    return EC;
-  Res = *IntPtr;
-  return std::error_code();
 }
 
 void COFFDumper::initializeFileAndStringTables(StringRef Data) {
@@ -1964,113 +1945,6 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
   return "UnknownLeaf";
 }
 
-// A const input iterator interface to the CodeView type stream.
-class CodeViewTypeIterator {
-public:
-  struct TypeRecord {
-    std::size_t Length;
-    TypeLeafKind Leaf;
-    StringRef LeafData;
-  };
-
-  explicit CodeViewTypeIterator(const StringRef &SectionData)
-      : Data(SectionData), AtEnd(false) {
-    if (Data.size() >= 4) {
-      Magic = *reinterpret_cast<const ulittle32_t *>(Data.data());
-      Data = Data.drop_front(4);
-    }
-    next(); // Prime the pump
-  }
-
-  CodeViewTypeIterator() : AtEnd(true) {}
-
-  // For iterators to compare equal, they must both point at the same record
-  // in the same data stream, or they must both be at the end of a stream.
-  friend bool operator==(const CodeViewTypeIterator &lhs,
-                         const CodeViewTypeIterator &rhs);
-
-  friend bool operator!=(const CodeViewTypeIterator &lhs,
-                         const CodeViewTypeIterator &rhs);
-
-  unsigned getMagic() const { return Magic; }
-
-  const TypeRecord &operator*() const {
-    assert(!AtEnd);
-    return Current;
-  }
-
-  const TypeRecord *operator->() const {
-    assert(!AtEnd);
-    return &Current;
-  }
-
-  CodeViewTypeIterator operator++() {
-    next();
-    return *this;
-  }
-
-  CodeViewTypeIterator operator++(int) {
-    CodeViewTypeIterator Original = *this;
-    ++*this;
-    return Original;
-  }
-
-private:
-  void next() {
-    assert(!AtEnd && "Attempted to advance more than one past the last rec");
-    if (Data.empty()) {
-      // We've advanced past the last record.
-      AtEnd = true;
-      return;
-    }
-
-    const TypeRecordPrefix *Rec;
-    if (consumeObject(Data, Rec))
-      return;
-    Current.Length = Rec->Len;
-    Current.Leaf = static_cast<TypeLeafKind>(uint16_t(Rec->Leaf));
-    Current.LeafData = Data.substr(0, Current.Length - 2);
-
-    // The next record starts immediately after this one.
-    Data = Data.drop_front(Current.LeafData.size());
-
-    // FIXME: The stream contains LF_PAD bytes that we need to ignore, but those
-    // are typically included in LeafData. We may need to call skipPadding() if
-    // we ever find a record that doesn't count those bytes.
-
-    return;
-  }
-
-  StringRef Data;
-  unsigned Magic = 0;
-  TypeRecord Current;
-  bool AtEnd;
-};
-
-bool operator==(const CodeViewTypeIterator &lhs,
-                const CodeViewTypeIterator &rhs) {
-  return (lhs.Data.begin() == rhs.Data.begin()) || (lhs.AtEnd && rhs.AtEnd);
-}
-
-bool operator!=(const CodeViewTypeIterator &lhs,
-                const CodeViewTypeIterator &rhs) {
-  return !(lhs == rhs);
-}
-
-struct CodeViewTypeStream {
-  CodeViewTypeIterator begin;
-  CodeViewTypeIterator end;
-  unsigned Magic;
-};
-
-CodeViewTypeStream CreateCodeViewTypeIter(const StringRef &Data) {
-  CodeViewTypeStream Stream;
-  Stream.begin = CodeViewTypeIterator(Data);
-  Stream.end   = CodeViewTypeIterator();
-  Stream.Magic = Stream.begin.getMagic();
-
-  return Stream;
-}
 
 void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
                                           const SectionRef &Section) {
@@ -2081,31 +1955,34 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   error(Section.getContents(Data));
   if (opts::CodeViewSubsectionBytes)
     W.printBinaryBlock("Data", Data);
-
   CVTD.dump(Data);
 }
 
 void CVTypeDumper::dump(StringRef Data) {
-  CodeViewTypeStream Stream = CreateCodeViewTypeIter(Data);
-  W.printHex("Magic", Stream.Magic);
+  uint32_t Magic;
+  if (consumeUInt32(Data, Magic))
+    return;
+  if (Magic != COFF::DEBUG_SECTION_MAGIC)
+    return;
 
-  for (auto Iter = Stream.begin; Iter != Stream.end; ++Iter) {
-    StringRef LeafData = Iter->LeafData;
+  W.printHex("Magic", Magic);
+  for (const auto &Record : makeTypeRange(Data)) {
+    StringRef LeafData = Record.LeafData;
 
     // Find the name of this leaf type.
-    StringRef LeafName = getLeafTypeName(Iter->Leaf);
+    StringRef LeafName = getLeafTypeName(Record.Leaf);
     DictScope S(W, LeafName);
     unsigned NextTypeIndex = 0x1000 + CVUDTNames.size();
-    W.printEnum("TypeLeafKind", unsigned(Iter->Leaf),
+    W.printEnum("TypeLeafKind", unsigned(Record.Leaf),
                 makeArrayRef(LeafTypeNames));
     W.printHex("TypeIndex", NextTypeIndex);
 
     // Fill this in inside the switch to get something in CVUDTNames.
     StringRef Name;
 
-    switch (Iter->Leaf) {
+    switch (Record.Leaf) {
     default: {
-      W.printHex("Size", Iter->Length);
+      W.printHex("Size", Record.Length);
       break;
     }
 
@@ -2121,7 +1998,7 @@ void CVTypeDumper::dump(StringRef Data) {
     }
 
     case LF_FIELDLIST: {
-      W.printHex("Size", Iter->Length);
+      W.printHex("Size", Record.Length);
       // FieldList has no fixed prefix that can be described with a struct. All
       // the bytes must be interpreted as more records.
       printCodeViewFieldList(LeafData);

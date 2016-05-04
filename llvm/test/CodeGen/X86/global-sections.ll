@@ -93,11 +93,13 @@ bb7:
 ; DARWIN64: Lfunc_end
 ; DARWIN64-NEXT: .cfi_endproc
 ; DARWIN64-NOT: .section
+; DARWIN64: .data_region jt32
 ; DARWIN64: LJTI{{.*}}:
 ; DARWIN64-NEXT: .long
 ; DARWIN64-NEXT: .long
 ; DARWIN64-NEXT: .long
 ; DARWIN64-NEXT: .long
+; DARWIN64-NEXT: .end_data_region
 ; DARWIN64-NEXT: .section        __TEXT,__gcc_except_tab
 
 ; int G1;

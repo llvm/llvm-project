@@ -108,10 +108,10 @@ public:
    */
 
   struct CachingOptions {
-    std::string Path;
-    int PruningInterval = -1;               // seconds, -1 to disable pruning
-    unsigned int Expiration = 0;            // seconds.
-    unsigned MaxPercentageOfAvailableSpace = 0; // percentage.
+    std::string Path;                    // Path to the cache, empty to disable.
+    int PruningInterval = 1200;          // seconds, -1 to disable pruning.
+    unsigned int Expiration = 7 * 24 * 3600;     // seconds (1w default).
+    unsigned MaxPercentageOfAvailableSpace = 75; // percentage.
   };
 
   /// Provide a path to a directory where to store the cached files for

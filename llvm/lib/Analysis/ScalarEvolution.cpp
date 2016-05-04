@@ -9628,16 +9628,31 @@ void ScalarEvolution::print(raw_ostream &OS) const {
         bool First = true;
         for (auto *Iter = L; Iter; Iter = Iter->getParentLoop()) {
           if (First) {
-            OS << "\t\t" "LoopDispositions: [ ";
+            OS << "\t\t" "LoopDispositions: { ";
             First = false;
           } else {
             OS << ", ";
           }
 
-          OS << loopDispositionToStr(SE.getLoopDisposition(SV, Iter));
+          Iter->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+          OS << ": " << loopDispositionToStr(SE.getLoopDisposition(SV, Iter));
         }
 
-        OS << " ]";
+        for (auto *InnerL : depth_first(L)) {
+          if (InnerL == L)
+            continue;
+          if (First) {
+            OS << "\t\t" "LoopDispositions: { ";
+            First = false;
+          } else {
+            OS << ", ";
+          }
+
+          InnerL->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+          OS << ": " << loopDispositionToStr(SE.getLoopDisposition(SV, InnerL));
+        }
+
+        OS << " }";
       }
 
       OS << "\n";

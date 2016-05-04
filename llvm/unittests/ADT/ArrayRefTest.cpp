@@ -67,6 +67,13 @@ TEST(ArrayRefTest, DropBack) {
   EXPECT_TRUE(AR1.drop_back().equals(AR2));
 }
 
+TEST(ArrayRefTest, DropFront) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_TRUE(AR1.drop_front(2).equals(AR2));
+}
+
 TEST(ArrayRefTest, Equals) {
   static const int A1[] = {1, 2, 3, 4, 5, 6, 7, 8};
   ArrayRef<int> AR1(A1);

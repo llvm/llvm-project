@@ -24057,7 +24057,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
         Shuffle = Lo ? X86ISD::MOVLHPS : X86ISD::MOVHLPS;
         ShuffleVT = MVT::v4f32;
       }
-      if (Depth == 1 && Root->getOpcode() == Shuffle)
+      if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
       Res = DAG.getBitcast(ShuffleVT, Input);
       DCI.AddToWorklist(Res.getNode());
@@ -24075,7 +24075,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
       bool Lo = Mask.equals({0, 0, 2, 2});
       unsigned Shuffle = Lo ? X86ISD::MOVSLDUP : X86ISD::MOVSHDUP;
       MVT ShuffleVT = MVT::v4f32;
-      if (Depth == 1 && Root->getOpcode() == Shuffle)
+      if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
       Res = DAG.getBitcast(ShuffleVT, Input);
       DCI.AddToWorklist(Res.getNode());
@@ -24089,7 +24089,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
       bool Lo = Mask.equals({0, 0, 1, 1});
       unsigned Shuffle = Lo ? X86ISD::UNPCKL : X86ISD::UNPCKH;
       MVT ShuffleVT = MVT::v4f32;
-      if (Depth == 1 && Root->getOpcode() == Shuffle)
+      if (Depth == 1 && Root.getOpcode() == Shuffle)
         return false; // Nothing to do!
       Res = DAG.getBitcast(ShuffleVT, Input);
       DCI.AddToWorklist(Res.getNode());
@@ -24112,7 +24112,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
            {8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15}))) {
     bool Lo = Mask[0] == 0;
     unsigned Shuffle = Lo ? X86ISD::UNPCKL : X86ISD::UNPCKH;
-    if (Depth == 1 && Root->getOpcode() == Shuffle)
+    if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
     MVT ShuffleVT;
     switch (NumMaskElts) {
@@ -24125,6 +24125,22 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
     default:
       llvm_unreachable("Impossible mask size!");
     };
+    Res = DAG.getBitcast(ShuffleVT, Input);
+    DCI.AddToWorklist(Res.getNode());
+    Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res, Res);
+    DCI.AddToWorklist(Res.getNode());
+    DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                  /*AddTo*/ true);
+    return true;
+  }
+
+  // Match a 128-bit integer vector against a VZEXT_MOVL (MOVQ) instruction.
+  if (!FloatDomain && VT.is128BitVector() &&
+      Mask.size() == 2 && Mask[0] == 0 && Mask[1] < 0) {
+    unsigned Shuffle = X86ISD::VZEXT_MOVL;
+    MVT ShuffleVT = MVT::v2i64;
+    if (Depth == 1 && Root.getOpcode() == Shuffle)
+      return false; // Nothing to do!
     Res = DAG.getBitcast(ShuffleVT, Input);
     DCI.AddToWorklist(Res.getNode());
     Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res, Res);

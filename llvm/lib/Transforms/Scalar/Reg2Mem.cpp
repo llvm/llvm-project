@@ -68,7 +68,7 @@ INITIALIZE_PASS_END(RegToMem, "reg2mem", "Demote all values to stack slots",
                 false, false)
 
 bool RegToMem::runOnFunction(Function &F) {
-  if (F.isDeclaration())
+  if (F.isDeclaration() || skipFunction(F))
     return false;
 
   // Insert all new allocas into entry block.

@@ -157,7 +157,6 @@ int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
   // (including itself). If we encounter this situaion, we need to break the
   // clause by inserting a non SMEM instruction.
 
-  const SIInstrInfo *TII = static_cast<const SIInstrInfo*>(ST.getInstrInfo());
   std::set<unsigned> ClauseDefs;
   std::set<unsigned> ClauseUses;
 
@@ -165,7 +164,7 @@ int GCNHazardRecognizer::checkSMEMSoftClauseHazards(MachineInstr *SMEM) {
 
     // When we hit a non-SMEM instruction then we have passed the start of the
     // clause and we can stop.
-    if (!MI || !TII->isSMRD(*MI))
+    if (!MI || !SIInstrInfo::isSMRD(*MI))
       break;
 
     addRegsToSet(MI->defs(), ClauseDefs);

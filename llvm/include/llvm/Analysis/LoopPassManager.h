@@ -48,6 +48,9 @@ extern template class OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>;
 typedef OuterAnalysisManagerProxy<FunctionAnalysisManager, Loop>
     FunctionAnalysisManagerLoopProxy;
 
+/// Returns the minimum set of Analyses that all loop passes must preserve.
+PreservedAnalyses getLoopPassPreservedAnalyses();
+
 /// \brief Adaptor that maps from a function to its loops.
 ///
 /// Designed to allow composition of a LoopPass(Manager) and a
@@ -101,6 +104,8 @@ public:
     // post-order.
     for (auto *L : reverse(Loops)) {
       PreservedAnalyses PassPA = Pass.run(*L, LAM);
+      assert(PassPA.preserved(getLoopPassPreservedAnalyses()) &&
+             "Loop passes must preserve all relevant analyses");
 
       // We know that the loop pass couldn't have invalidated any other loop's
       // analyses (that's the contract of a loop pass), so directly handle the

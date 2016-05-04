@@ -36,36 +36,87 @@ void MipsMCInstLower::Initialize(MCContext *C) {
 MCOperand MipsMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                               MachineOperandType MOTy,
                                               unsigned Offset) const {
-  MCSymbolRefExpr::VariantKind Kind;
+  MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  MipsMCExpr::MipsExprKind TargetKind = MipsMCExpr::MEK_None;
+  bool IsGpOff = false;
   const MCSymbol *Symbol;
 
   switch(MO.getTargetFlags()) {
-  default:                   llvm_unreachable("Invalid target flag!");
-  case MipsII::MO_NO_FLAG:   Kind = MCSymbolRefExpr::VK_None; break;
-  case MipsII::MO_GPREL:     Kind = MCSymbolRefExpr::VK_Mips_GPREL; break;
-  case MipsII::MO_GOT_CALL:  Kind = MCSymbolRefExpr::VK_Mips_GOT_CALL; break;
-  case MipsII::MO_GOT16:     Kind = MCSymbolRefExpr::VK_Mips_GOT16; break;
-  case MipsII::MO_GOT:       Kind = MCSymbolRefExpr::VK_Mips_GOT; break;
-  case MipsII::MO_ABS_HI:    Kind = MCSymbolRefExpr::VK_Mips_ABS_HI; break;
-  case MipsII::MO_ABS_LO:    Kind = MCSymbolRefExpr::VK_Mips_ABS_LO; break;
-  case MipsII::MO_TLSGD:     Kind = MCSymbolRefExpr::VK_Mips_TLSGD; break;
-  case MipsII::MO_TLSLDM:    Kind = MCSymbolRefExpr::VK_Mips_TLSLDM; break;
-  case MipsII::MO_DTPREL_HI: Kind = MCSymbolRefExpr::VK_Mips_DTPREL_HI; break;
-  case MipsII::MO_DTPREL_LO: Kind = MCSymbolRefExpr::VK_Mips_DTPREL_LO; break;
-  case MipsII::MO_GOTTPREL:  Kind = MCSymbolRefExpr::VK_Mips_GOTTPREL; break;
-  case MipsII::MO_TPREL_HI:  Kind = MCSymbolRefExpr::VK_Mips_TPREL_HI; break;
-  case MipsII::MO_TPREL_LO:  Kind = MCSymbolRefExpr::VK_Mips_TPREL_LO; break;
-  case MipsII::MO_GPOFF_HI:  Kind = MCSymbolRefExpr::VK_Mips_GPOFF_HI; break;
-  case MipsII::MO_GPOFF_LO:  Kind = MCSymbolRefExpr::VK_Mips_GPOFF_LO; break;
-  case MipsII::MO_GOT_DISP:  Kind = MCSymbolRefExpr::VK_Mips_GOT_DISP; break;
-  case MipsII::MO_GOT_PAGE:  Kind = MCSymbolRefExpr::VK_Mips_GOT_PAGE; break;
-  case MipsII::MO_GOT_OFST:  Kind = MCSymbolRefExpr::VK_Mips_GOT_OFST; break;
-  case MipsII::MO_HIGHER:    Kind = MCSymbolRefExpr::VK_Mips_HIGHER; break;
-  case MipsII::MO_HIGHEST:   Kind = MCSymbolRefExpr::VK_Mips_HIGHEST; break;
-  case MipsII::MO_GOT_HI16:  Kind = MCSymbolRefExpr::VK_Mips_GOT_HI16; break;
-  case MipsII::MO_GOT_LO16:  Kind = MCSymbolRefExpr::VK_Mips_GOT_LO16; break;
-  case MipsII::MO_CALL_HI16: Kind = MCSymbolRefExpr::VK_Mips_CALL_HI16; break;
-  case MipsII::MO_CALL_LO16: Kind = MCSymbolRefExpr::VK_Mips_CALL_LO16; break;
+  default:
+    llvm_unreachable("Invalid target flag!");
+  case MipsII::MO_NO_FLAG:
+    break;
+  case MipsII::MO_GPREL:
+    TargetKind = MipsMCExpr::MEK_GPREL;
+    break;
+  case MipsII::MO_GOT_CALL:
+    TargetKind = MipsMCExpr::MEK_GOT_CALL;
+    break;
+  case MipsII::MO_GOT:
+    TargetKind = MipsMCExpr::MEK_GOT;
+    break;
+  case MipsII::MO_ABS_HI:
+    TargetKind = MipsMCExpr::MEK_HI;
+    break;
+  case MipsII::MO_ABS_LO:
+    TargetKind = MipsMCExpr::MEK_LO;
+    break;
+  case MipsII::MO_TLSGD:
+    TargetKind = MipsMCExpr::MEK_TLSGD;
+    break;
+  case MipsII::MO_TLSLDM:
+    TargetKind = MipsMCExpr::MEK_TLSLDM;
+    break;
+  case MipsII::MO_DTPREL_HI:
+    TargetKind = MipsMCExpr::MEK_DTPREL_HI;
+    break;
+  case MipsII::MO_DTPREL_LO:
+    TargetKind = MipsMCExpr::MEK_DTPREL_LO;
+    break;
+  case MipsII::MO_GOTTPREL:
+    TargetKind = MipsMCExpr::MEK_GOTTPREL;
+    break;
+  case MipsII::MO_TPREL_HI:
+    TargetKind = MipsMCExpr::MEK_TPREL_HI;
+    break;
+  case MipsII::MO_TPREL_LO:
+    TargetKind = MipsMCExpr::MEK_TPREL_LO;
+    break;
+  case MipsII::MO_GPOFF_HI:
+    TargetKind = MipsMCExpr::MEK_HI;
+    IsGpOff = true;
+    break;
+  case MipsII::MO_GPOFF_LO:
+    TargetKind = MipsMCExpr::MEK_LO;
+    IsGpOff = true;
+    break;
+  case MipsII::MO_GOT_DISP:
+    TargetKind = MipsMCExpr::MEK_GOT_DISP;
+    break;
+  case MipsII::MO_GOT_HI16:
+    TargetKind = MipsMCExpr::MEK_GOT_HI16;
+    break;
+  case MipsII::MO_GOT_LO16:
+    TargetKind = MipsMCExpr::MEK_GOT_LO16;
+    break;
+  case MipsII::MO_GOT_PAGE:
+    TargetKind = MipsMCExpr::MEK_GOT_PAGE;
+    break;
+  case MipsII::MO_GOT_OFST:
+    TargetKind = MipsMCExpr::MEK_GOT_OFST;
+    break;
+  case MipsII::MO_HIGHER:
+    TargetKind = MipsMCExpr::MEK_HIGHER;
+    break;
+  case MipsII::MO_HIGHEST:
+    TargetKind = MipsMCExpr::MEK_HIGHEST;
+    break;
+  case MipsII::MO_CALL_HI16:
+    TargetKind = MipsMCExpr::MEK_CALL_HI16;
+    break;
+  case MipsII::MO_CALL_LO16:
+    TargetKind = MipsMCExpr::MEK_CALL_LO16;
+    break;
   }
 
   switch (MOTy) {
@@ -106,30 +157,23 @@ MCOperand MipsMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
     llvm_unreachable("<unknown operand type>");
   }
 
-  const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Symbol, Kind, *Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Kind, *Ctx);
 
-  if (!Offset)
-    return MCOperand::createExpr(MCSym);
+  if (Offset) {
+    // Assume offset is never negative.
+    assert(Offset > 0);
 
-  // Assume offset is never negative.
-  assert(Offset > 0);
+    Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, *Ctx),
+                                   *Ctx);
+  }
 
-  const MCConstantExpr *OffsetExpr =  MCConstantExpr::create(Offset, *Ctx);
-  const MCBinaryExpr *Add = MCBinaryExpr::createAdd(MCSym, OffsetExpr, *Ctx);
-  return MCOperand::createExpr(Add);
+  if (IsGpOff)
+    Expr = MipsMCExpr::createGpOff(TargetKind, Expr, *Ctx);
+  else if (TargetKind != MipsMCExpr::MEK_None)
+    Expr = MipsMCExpr::create(TargetKind, Expr, *Ctx);
+
+  return MCOperand::createExpr(Expr);
 }
-
-/*
-static void CreateMCInst(MCInst& Inst, unsigned Opc, const MCOperand &Opnd0,
-                         const MCOperand &Opnd1,
-                         const MCOperand &Opnd2 = MCOperand()) {
-  Inst.setOpcode(Opc);
-  Inst.addOperand(Opnd0);
-  Inst.addOperand(Opnd1);
-  if (Opnd2.isValid())
-    Inst.addOperand(Opnd2);
-}
-*/
 
 MCOperand MipsMCInstLower::LowerOperand(const MachineOperand &MO,
                                         unsigned offset) const {
@@ -160,7 +204,7 @@ MCOperand MipsMCInstLower::LowerOperand(const MachineOperand &MO,
 
 MCOperand MipsMCInstLower::createSub(MachineBasicBlock *BB1,
                                      MachineBasicBlock *BB2,
-                                     MCSymbolRefExpr::VariantKind Kind) const {
+                                     MipsMCExpr::MipsExprKind Kind) const {
   const MCSymbolRefExpr *Sym1 = MCSymbolRefExpr::create(BB1->getSymbol(), *Ctx);
   const MCSymbolRefExpr *Sym2 = MCSymbolRefExpr::create(BB2->getSymbol(), *Ctx);
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Sym1, Sym2, *Ctx);
@@ -178,12 +222,12 @@ lowerLongBranchLUi(const MachineInstr *MI, MCInst &OutMI) const {
   // Create %hi($tgt-$baltgt).
   OutMI.addOperand(createSub(MI->getOperand(1).getMBB(),
                              MI->getOperand(2).getMBB(),
-                             MCSymbolRefExpr::VK_Mips_ABS_HI));
+                             MipsMCExpr::MEK_HI));
 }
 
-void MipsMCInstLower::
-lowerLongBranchADDiu(const MachineInstr *MI, MCInst &OutMI, int Opcode,
-                     MCSymbolRefExpr::VariantKind Kind) const {
+void MipsMCInstLower::lowerLongBranchADDiu(
+    const MachineInstr *MI, MCInst &OutMI, int Opcode,
+    MipsMCExpr::MipsExprKind Kind) const {
   OutMI.setOpcode(Opcode);
 
   // Lower two register operands.
@@ -206,17 +250,14 @@ bool MipsMCInstLower::lowerLongBranch(const MachineInstr *MI,
     lowerLongBranchLUi(MI, OutMI);
     return true;
   case Mips::LONG_BRANCH_ADDiu:
-    lowerLongBranchADDiu(MI, OutMI, Mips::ADDiu,
-                         MCSymbolRefExpr::VK_Mips_ABS_LO);
+    lowerLongBranchADDiu(MI, OutMI, Mips::ADDiu, MipsMCExpr::MEK_LO);
     return true;
   case Mips::LONG_BRANCH_DADDiu:
     unsigned TargetFlags = MI->getOperand(2).getTargetFlags();
     if (TargetFlags == MipsII::MO_ABS_HI)
-      lowerLongBranchADDiu(MI, OutMI, Mips::DADDiu,
-                           MCSymbolRefExpr::VK_Mips_ABS_HI);
+      lowerLongBranchADDiu(MI, OutMI, Mips::DADDiu, MipsMCExpr::MEK_HI);
     else if (TargetFlags == MipsII::MO_ABS_LO)
-      lowerLongBranchADDiu(MI, OutMI, Mips::DADDiu,
-                           MCSymbolRefExpr::VK_Mips_ABS_LO);
+      lowerLongBranchADDiu(MI, OutMI, Mips::DADDiu, MipsMCExpr::MEK_LO);
     else
       report_fatal_error("Unexpected flags for LONG_BRANCH_DADDiu");
     return true;

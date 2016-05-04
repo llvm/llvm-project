@@ -144,6 +144,16 @@ public:
            PreservedPassIDs.count(PassID);
   }
 
+  /// \brief Query whether all of the analyses in the set are preserved.
+  bool preserved(PreservedAnalyses Arg) {
+    if (Arg.areAllPreserved())
+      return areAllPreserved();
+    for (void *P : Arg.PreservedPassIDs)
+      if (!preserved(P))
+        return false;
+    return true;
+  }
+
   /// \brief Test whether all passes are preserved.
   ///
   /// This is used primarily to optimize for the case of no changes which will

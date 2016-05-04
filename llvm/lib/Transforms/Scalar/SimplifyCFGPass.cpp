@@ -209,10 +209,7 @@ struct CFGSimplifyPass : public FunctionPass {
     initializeCFGSimplifyPassPass(*PassRegistry::getPassRegistry());
   }
   bool runOnFunction(Function &F) override {
-    if (PredicateFtor && !PredicateFtor(F))
-      return false;
-
-    if (skipFunction(F))
+    if (skipFunction(F) || (PredicateFtor && !PredicateFtor(F)))
       return false;
 
     AssumptionCache *AC =
