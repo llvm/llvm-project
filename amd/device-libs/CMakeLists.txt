@@ -68,7 +68,7 @@ list(APPEND CMAKE_C_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS .cl)
 
 set (CLANG_OCL_FLAGS "-x cl -Xclang -cl-std=CL2.0 -fblocks -target amdgcn--amdhsa -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200 -Dcl_khr_fp64 -Dcl_khr_fp16 -include opencl.h")
-set (CLANG_OCL_LINK_FLAGS "-target amdgcn--amdhsa")
+set (CLANG_OCL_LINK_FLAGS "-target amdgcn--amdhsa -mcpu=fiji")
 
 include(OCL.cmake)
 
@@ -76,4 +76,4 @@ add_subdirectory(utils/prepare-builtins)
 add_subdirectory(llvm)
 add_subdirectory(ocml)
 add_subdirectory(opencl)
-#add_subdirectory(test/opencl)
+add_subdirectory(test/opencl)
