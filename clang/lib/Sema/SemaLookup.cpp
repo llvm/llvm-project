@@ -1482,6 +1482,35 @@ bool Sema::hasVisibleDefaultArgument(const NamedDecl *D,
                                      Modules);
 }
 
+bool Sema::hasVisibleMemberSpecialization(
+    const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules) {
+  assert(isa<CXXRecordDecl>(D->getDeclContext()) &&
+         "not a member specialization");
+  for (auto *Redecl : D->redecls()) {
+    // If the specialization is declared at namespace scope, then it's a member
+    // specialization declaration. If it's lexically inside the class
+    // definition then it was instantiated.
+    //
+    // FIXME: This is a hack. There should be a better way to determine this.
+    // FIXME: What about MS-style explicit specializations declared within a
+    //        class definition?
+    if (Redecl->getLexicalDeclContext()->isFileContext()) {
+      auto *NonConstR = const_cast<NamedDecl*>(cast<NamedDecl>(Redecl));
+
+      if (isVisible(NonConstR))
+        return true;
+
+      if (Modules) {
+        Modules->push_back(getOwningModule(NonConstR));
+        const auto &Merged = Context.getModulesWithMergedDefinition(NonConstR);
+        Modules->insert(Modules->end(), Merged.begin(), Merged.end());
+      }
+    }
+  }
+
+  return false;
+}
+
 /// \brief Determine whether a declaration is visible to name lookup.
 ///
 /// This routine determines whether the declaration D is visible in the current
@@ -1586,16 +1615,34 @@ static NamedDecl *findAcceptableDecl(Sema &SemaRef, NamedDecl *D) {
     if (RD == D)
       continue;
 
-    if (auto ND = dyn_cast<NamedDecl>(RD)) {
-      // FIXME: This is wrong in the case where the previous declaration is not
-      // visible in the same scope as D. This needs to be done much more
-      // carefully.
-      if (LookupResult::isVisible(SemaRef, ND))
-        return ND;
-    }
+    auto ND = cast<NamedDecl>(RD);
+    // FIXME: This is wrong in the case where the previous declaration is not
+    // visible in the same scope as D. This needs to be done much more
+    // carefully.
+    if (LookupResult::isVisible(SemaRef, ND))
+      return ND;
   }
 
   return nullptr;
+}
+
+bool Sema::hasVisibleDeclarationSlow(const NamedDecl *D,
+                                     llvm::SmallVectorImpl<Module *> *Modules) {
+  assert(!isVisible(D) && "not in slow case");
+
+  for (auto *Redecl : D->redecls()) {
+    auto *NonConstR = const_cast<NamedDecl*>(cast<NamedDecl>(Redecl));
+    if (isVisible(NonConstR))
+      return true;
+
+    if (Modules) {
+      Modules->push_back(getOwningModule(NonConstR));
+      const auto &Merged = Context.getModulesWithMergedDefinition(NonConstR);
+      Modules->insert(Modules->end(), Merged.begin(), Merged.end());
+    }
+  }
+
+  return false;
 }
 
 NamedDecl *LookupResult::getAcceptableDeclSlow(NamedDecl *D) const {
@@ -4904,7 +4951,7 @@ static NamedDecl *getDefinitionToImport(NamedDecl *D) {
 }
 
 void Sema::diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
-                                 bool NeedDefinition, bool Recover) {
+                                 MissingImportKind MIK, bool Recover) {
   assert(!isVisible(Decl) && "missing import for non-hidden decl?");
 
   // Suggest importing a module providing the definition of this entity, if
@@ -4913,8 +4960,6 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
   if (!Def)
     Def = Decl;
 
-  // FIXME: Add a Fix-It that imports the corresponding module or includes
-  // the header.
   Module *Owner = getOwningModule(Decl);
   assert(Owner && "definition of hidden declaration is not in a module");
 
@@ -4923,9 +4968,7 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
   auto Merged = Context.getModulesWithMergedDefinition(Decl);
   OwningModules.insert(OwningModules.end(), Merged.begin(), Merged.end());
 
-  diagnoseMissingImport(Loc, Decl, Decl->getLocation(), OwningModules,
-                        NeedDefinition ? MissingImportKind::Definition
-                                       : MissingImportKind::Declaration,
+  diagnoseMissingImport(Loc, Decl, Decl->getLocation(), OwningModules, MIK,
                         Recover);
 }
 
@@ -4970,6 +5013,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
       << (int)MIK << Decl << Modules[0]->getFullModuleName()
       << getIncludeStringForHeader(PP, E);
   } else {
+    // FIXME: Add a FixItHint that imports the corresponding module.
     Diag(UseLoc, diag::err_module_unimported_use)
       << (int)MIK << Decl << Modules[0]->getFullModuleName();
   }
@@ -4984,6 +5028,12 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
     break;
   case MissingImportKind::DefaultArgument:
     DiagID = diag::note_default_argument_declared_here;
+    break;
+  case MissingImportKind::ExplicitSpecialization:
+    DiagID = diag::note_explicit_specialization_declared_here;
+    break;
+  case MissingImportKind::PartialSpecialization:
+    DiagID = diag::note_partial_specialization_declared_here;
     break;
   }
   Diag(DeclLoc, DiagID);
@@ -5020,7 +5070,7 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
     assert(Decl && "import required but no declaration to import");
 
     diagnoseMissingImport(Correction.getCorrectionRange().getBegin(), Decl,
-                          /*NeedDefinition*/ false, ErrorRecovery);
+                          MissingImportKind::Declaration, ErrorRecovery);
     return;
   }
 

@@ -782,6 +782,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CudaGpuBinaryFileNames =
       Args.getAllArgValues(OPT_fcuda_include_gpubinary);
 
+  Opts.Backchain = Args.hasArg(OPT_mbackchain);
+
   return Success;
 }
 

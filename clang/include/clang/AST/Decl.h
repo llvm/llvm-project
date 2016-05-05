@@ -3184,6 +3184,10 @@ public:
     return isCompleteDefinition() || isFixed();
   }
 
+  /// \brief Retrieve the enum definition from which this enumeration could
+  /// be instantiated, if it is an instantiation (rather than a non-template).
+  EnumDecl *getTemplateInstantiationPattern() const;
+
   /// \brief Returns the enumeration (declared within the template)
   /// from which this enumeration type was instantiated, or NULL if
   /// this enumeration was not instantiated from any template.

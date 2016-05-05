@@ -1406,6 +1406,16 @@ public:
   bool isVisible(const NamedDecl *D) {
     return !D->isHidden() || isVisibleSlow(D);
   }
+
+  /// Determine whether any declaration of an entity is visible.
+  bool
+  hasVisibleDeclaration(const NamedDecl *D,
+                        llvm::SmallVectorImpl<Module *> *Modules = nullptr) {
+    return isVisible(D) || hasVisibleDeclarationSlow(D, Modules);
+  }
+  bool hasVisibleDeclarationSlow(const NamedDecl *D,
+                                 llvm::SmallVectorImpl<Module *> *Modules);
+
   bool hasVisibleMergedDefinition(NamedDecl *Def);
 
   /// Determine if \p D has a visible definition. If not, suggest a declaration
@@ -1421,6 +1431,11 @@ public:
   bool
   hasVisibleDefaultArgument(const NamedDecl *D,
                             llvm::SmallVectorImpl<Module *> *Modules = nullptr);
+
+  /// Determine if there is a visible declaration of \p D that is a member
+  /// specialization declaration (as opposed to an instantiated declaration).
+  bool hasVisibleMemberSpecialization(
+      const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
 
   /// Determine if \p A and \p B are equivalent internal linkage declarations
   /// from different modules, and thus an ambiguity error can be downgraded to
@@ -1866,16 +1881,30 @@ public:
   enum class MissingImportKind {
     Declaration,
     Definition,
-    DefaultArgument
+    DefaultArgument,
+    ExplicitSpecialization,
+    PartialSpecialization
   };
 
   /// \brief Diagnose that the specified declaration needs to be visible but
   /// isn't, and suggest a module import that would resolve the problem.
   void diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
-                             bool NeedDefinition, bool Recover = true);
+                             MissingImportKind MIK, bool Recover = true);
   void diagnoseMissingImport(SourceLocation Loc, NamedDecl *Decl,
                              SourceLocation DeclLoc, ArrayRef<Module *> Modules,
                              MissingImportKind MIK, bool Recover);
+
+  /// \brief We've found a use of a templated declaration that would trigger an
+  /// implicit instantiation. Check that any relevant explicit specializations
+  /// and partial specializations are visible, and diagnose if not.
+  /// \return Whether a problem was diagnosed.
+  void checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec);
+
+  /// \brief We've found a use of a template specialization that would select a
+  /// partial specialization. Check that the partial specialization is visible,
+  /// and diagnose if not.
+  void checkPartialSpecializationVisibility(SourceLocation Loc,
+                                            NamedDecl *Spec);
 
   /// \brief Retrieve a suitable printing policy.
   PrintingPolicy getPrintingPolicy() const {

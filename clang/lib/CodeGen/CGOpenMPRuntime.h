@@ -93,6 +93,8 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> FirstprivateVars;
   SmallVector<const Expr *, 4> FirstprivateCopies;
   SmallVector<const Expr *, 4> FirstprivateInits;
+  SmallVector<const Expr *, 4> LastprivateVars;
+  SmallVector<const Expr *, 4> LastprivateCopies;
   SmallVector<std::pair<OpenMPDependClauseKind, const Expr *>, 4> Dependences;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Final;
   llvm::PointerIntPair<llvm::Value *, 1, bool> Schedule;
@@ -453,6 +455,7 @@ private:
     llvm::Value *NewTaskNewTaskTTy = nullptr;
     LValue TDBase;
     RecordDecl *KmpTaskTQTyRD = nullptr;
+    llvm::Value *TaskDupFn = nullptr;
   };
   /// Emit task region for the task directive. The task region is emitted in
   /// several steps:

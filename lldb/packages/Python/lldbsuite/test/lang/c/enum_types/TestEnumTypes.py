@@ -8,6 +8,7 @@ import os, time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 
 class EnumTypesTestCase(TestBase):
 
@@ -19,7 +20,7 @@ class EnumTypesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.c', '// Set break point at this line.')
 
-    @expectedFailAll(oslist=['windows'])  // derefing the null pointer "works" on Windows
+    @expectedFailureAll(oslist=['windows'])  # derefing the null pointer "works" on Windows
     def test(self):
         """Test 'image lookup -t days' and check for correct display and enum value printing."""
         self.build()

@@ -740,12 +740,16 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
   llvm::DenseSet<const VarDecl *> AlreadyEmittedVars;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
     HasAtLeastOneLastprivate = true;
+    if (isOpenMPTaskLoopDirective(D.getDirectiveKind()))
+      break;
     auto IRef = C->varlist_begin();
     auto IDestRef = C->destination_exprs().begin();
     for (auto *IInit : C->private_copies()) {
       // Keep the address of the original variable for future update at the end
       // of the loop.
       auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      // Taskloops do not require additional initialization, it is done in
+      // runtime support library.
       if (AlreadyEmittedVars.insert(OrigVD->getCanonicalDecl()).second) {
         auto *DestVD = cast<VarDecl>(cast<DeclRefExpr>(*IDestRef)->getDecl());
         PrivateScope.addPrivate(DestVD, [this, OrigVD, IRef]() -> Address {
@@ -761,12 +765,11 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
         // for 'firstprivate' clause.
         if (IInit && !SIMDLCVs.count(OrigVD->getCanonicalDecl())) {
           auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
-          bool IsRegistered =
-              PrivateScope.addPrivate(OrigVD, [&]() -> Address {
-                // Emit private VarDecl with copy init.
-                EmitDecl(*VD);
-                return GetAddrOfLocalVar(VD);
-              });
+          bool IsRegistered = PrivateScope.addPrivate(OrigVD, [&]() -> Address {
+            // Emit private VarDecl with copy init.
+            EmitDecl(*VD);
+            return GetAddrOfLocalVar(VD);
+          });
           assert(IsRegistered &&
                  "lastprivate var already registered as private");
           (void)IsRegistered;
@@ -2363,15 +2366,34 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
       ++IElemInitRef;
     }
   }
+  // Get list of lastprivate variables (for taskloops).
+  llvm::DenseMap<const VarDecl *, const DeclRefExpr *> LastprivateDstsOrigs;
+  for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
+    auto IRef = C->varlist_begin();
+    auto ID = C->destination_exprs().begin();
+    for (auto *IInit : C->private_copies()) {
+      auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      if (EmittedAsPrivate.insert(OrigVD->getCanonicalDecl()).second) {
+        Data.LastprivateVars.push_back(*IRef);
+        Data.LastprivateCopies.push_back(IInit);
+      }
+      LastprivateDstsOrigs.insert(
+          {cast<VarDecl>(cast<DeclRefExpr>(*ID)->getDecl()),
+           cast<DeclRefExpr>(*IRef)});
+      ++IRef;
+      ++ID;
+    }
+  }
   // Build list of dependences.
   for (const auto *C : S.getClausesOfKind<OMPDependClause>())
     for (auto *IRef : C->varlists())
       Data.Dependences.push_back(std::make_pair(C->getDependencyKind(), IRef));
-  auto &&CodeGen = [PartId, &S, &Data, CS, &BodyGen](CodeGenFunction &CGF,
-                                                     PrePostActionTy &Action) {
+  auto &&CodeGen = [PartId, &S, &Data, CS, &BodyGen, &LastprivateDstsOrigs](
+      CodeGenFunction &CGF, PrePostActionTy &Action) {
     // Set proper addresses for generated private copies.
     OMPPrivateScope Scope(CGF);
-    if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty()) {
+    if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty() ||
+        !Data.LastprivateVars.empty()) {
       auto *CopyFn = CGF.Builder.CreateLoad(
           CGF.GetAddrOfLocalVar(CS->getCapturedDecl()->getParam(3)));
       auto *PrivatesPtr = CGF.Builder.CreateLoad(
@@ -2395,7 +2417,26 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
         PrivatePtrs.push_back(std::make_pair(VD, PrivatePtr));
         CallArgs.push_back(PrivatePtr.getPointer());
       }
+      for (auto *E : Data.LastprivateVars) {
+        auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+        Address PrivatePtr =
+            CGF.CreateMemTemp(CGF.getContext().getPointerType(E->getType()),
+                              ".lastpriv.ptr.addr");
+        PrivatePtrs.push_back(std::make_pair(VD, PrivatePtr));
+        CallArgs.push_back(PrivatePtr.getPointer());
+      }
       CGF.EmitRuntimeCall(CopyFn, CallArgs);
+      for (auto &&Pair : LastprivateDstsOrigs) {
+        auto *OrigVD = cast<VarDecl>(Pair.second->getDecl());
+        DeclRefExpr DRE(
+            const_cast<VarDecl *>(OrigVD),
+            /*RefersToEnclosingVariableOrCapture=*/CGF.CapturedStmtInfo->lookup(
+                OrigVD) != nullptr,
+            Pair.second->getType(), VK_LValue, Pair.second->getExprLoc());
+        Scope.addPrivate(Pair.first, [&CGF, &DRE]() {
+          return CGF.EmitLValue(&DRE).getAddress();
+        });
+      }
       for (auto &&Pair : PrivatePtrs) {
         Address Replacement(CGF.Builder.CreateLoad(Pair.second),
                             CGF.getContext().getDeclAlign(Pair.first));
@@ -3402,6 +3443,7 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     mapParam(CGF, cast<DeclRefExpr>(S.getIsLastIterVariable()), *LIP,
              LoopScope);
     CGF.EmitOMPPrivateLoopCounters(S, LoopScope);
+    bool HasLastprivateClause = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
     (void)LoopScope.Privatize();
     // Emit the loop iteration variable.
     const Expr *IVExpr = S.getIterationVariable();
@@ -3429,6 +3471,14 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     if (ContBlock) {
       CGF.EmitBranch(ContBlock);
       CGF.EmitBlock(ContBlock, true);
+    }
+    // Emit final copy of the lastprivate variables if IsLastIter != 0.
+    if (HasLastprivateClause) {
+      CGF.EmitOMPLastprivateClauseFinal(
+          S, isOpenMPSimdDirective(S.getDirectiveKind()),
+          CGF.Builder.CreateIsNotNull(CGF.EmitLoadOfScalar(
+              CGF.GetAddrOfLocalVar(*LIP), /*Volatile=*/false,
+              (*LIP)->getType(), S.getLocStart())));
     }
   };
   auto &&TaskGen = [&S, SharedsTy, CapturedStruct,

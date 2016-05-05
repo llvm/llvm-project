@@ -1859,8 +1859,19 @@ static bool DiagnoseUninstantiableTemplate(Sema &S,
                                            TagDecl *PatternDef,
                                            TemplateSpecializationKind TSK,
                                            bool Complain = true) {
-  if (PatternDef && !PatternDef->isBeingDefined())
+  if (PatternDef && !PatternDef->isBeingDefined()) {
+    NamedDecl *SuggestedDef = nullptr;
+    if (!S.hasVisibleDefinition(PatternDef, &SuggestedDef,
+                                /*OnlyNeedComplete*/false)) {
+      // If we're allowed to diagnose this and recover, do so.
+      bool Recover = Complain && !S.isSFINAEContext();
+      if (Complain)
+        S.diagnoseMissingImport(PointOfInstantiation, SuggestedDef,
+                                Sema::MissingImportKind::Definition, Recover);
+      return !Recover;
+    }
     return false;
+  }
 
   if (!Complain || (PatternDef && PatternDef->isInvalidDecl())) {
     // Say nothing
@@ -2591,7 +2602,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       if (Enum->getDefinition())
         continue;
 
-      EnumDecl *Pattern = Enum->getInstantiatedFromMemberEnum();
+      EnumDecl *Pattern = Enum->getTemplateInstantiationPattern();
       assert(Pattern && "Missing instantiated-from-template information");
 
       if (TSK == TSK_ExplicitInstantiationDefinition) {

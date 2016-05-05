@@ -702,8 +702,8 @@ namespace dr460 { // dr460: yes
   namespace X { namespace Q { int n; } }
   namespace Y {
     using X; // expected-error {{requires a qualified name}}
-    using dr460::X; // expected-error {{cannot refer to namespace}}
-    using X::Q; // expected-error {{cannot refer to namespace}}
+    using dr460::X; // expected-error {{cannot refer to a namespace}}
+    using X::Q; // expected-error {{cannot refer to a namespace}}
   }
 }
 

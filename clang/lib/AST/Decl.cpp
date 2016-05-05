@@ -3687,6 +3687,21 @@ void EnumDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
     MSI->setPointOfInstantiation(PointOfInstantiation);
 }
 
+EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
+  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo()) {
+    if (isTemplateInstantiation(MSInfo->getTemplateSpecializationKind())) {
+      EnumDecl *ED = getInstantiatedFromMemberEnum();
+      while (auto *NewED = ED->getInstantiatedFromMemberEnum())
+        ED = NewED;
+      return ED;
+    }
+  }
+
+  assert(!isTemplateInstantiation(getTemplateSpecializationKind()) &&
+         "couldn't find pattern for enum instantiation");
+  return nullptr;
+}
+
 EnumDecl *EnumDecl::getInstantiatedFromMemberEnum() const {
   if (SpecializationInfo)
     return cast<EnumDecl>(SpecializationInfo->getInstantiatedFrom());
