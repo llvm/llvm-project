@@ -137,18 +137,18 @@ INITIALIZE_PASS_END(RewriteStatepointsForGC, "rewrite-statepoints-for-gc",
 namespace {
 struct GCPtrLivenessData {
   /// Values defined in this block.
-  DenseMap<BasicBlock *, DenseSet<Value *>> KillSet;
+  MapVector<BasicBlock *, SetVector<Value *>> KillSet;
   /// Values used in this block (and thus live); does not included values
   /// killed within this block.
-  DenseMap<BasicBlock *, DenseSet<Value *>> LiveSet;
+  MapVector<BasicBlock *, SetVector<Value *>> LiveSet;
 
   /// Values live into this basic block (i.e. used by any
   /// instruction in this basic block or ones reachable from here)
-  DenseMap<BasicBlock *, DenseSet<Value *>> LiveIn;
+  MapVector<BasicBlock *, SetVector<Value *>> LiveIn;
 
   /// Values live out of this basic block (i.e. live into
   /// any successor block)
-  DenseMap<BasicBlock *, DenseSet<Value *>> LiveOut;
+  MapVector<BasicBlock *, SetVector<Value *>> LiveOut;
 };
 
 // The type of the internal cache used inside the findBasePointers family
@@ -161,9 +161,9 @@ struct GCPtrLivenessData {
 // Generally, after the execution of a full findBasePointer call, only the
 // base relation will remain.  Internally, we add a mixture of the two
 // types, then update all the second type to the first type
-typedef DenseMap<Value *, Value *> DefiningValueMapTy;
-typedef DenseSet<Value *> StatepointLiveSetTy;
-typedef DenseMap<AssertingVH<Instruction>, AssertingVH<Value>>
+typedef MapVector<Value *, Value *> DefiningValueMapTy;
+typedef SetVector<Value *> StatepointLiveSetTy;
+typedef MapVector<AssertingVH<Instruction>, AssertingVH<Value>>
   RematerializedValueMapTy;
 
 struct PartiallyConstructedSafepointRecord {
@@ -171,7 +171,7 @@ struct PartiallyConstructedSafepointRecord {
   StatepointLiveSetTy LiveSet;
 
   /// Mapping from live pointers to a base-defining-value
-  DenseMap<Value *, Value *> PointerToBase;
+  MapVector<Value *, Value *> PointerToBase;
 
   /// The *new* gc.statepoint instruction itself.  This produces the token
   /// that normal path gc.relocates and the gc.result are tied to.
@@ -262,19 +262,6 @@ static bool isUnhandledGCPointerType(Type *Ty) {
 }
 #endif
 
-static bool order_by_name(Value *a, Value *b) {
-  if (a->hasName() && b->hasName()) {
-    return -1 == a->getName().compare(b->getName());
-  } else if (a->hasName() && !b->hasName()) {
-    return true;
-  } else if (!a->hasName() && b->hasName()) {
-    return false;
-  } else {
-    // Better than nothing, but not stable
-    return a < b;
-  }
-}
-
 // Return the name of the value suffixed with the provided value, or if the
 // value didn't have a name, the default value specified.
 static std::string suffixed_name_or(Value *V, StringRef Suffix,
@@ -295,14 +282,8 @@ static void analyzeParsePointLiveness(
   findLiveSetAtInst(inst, OriginalLivenessData, LiveSet);
 
   if (PrintLiveSet) {
-    // Note: This output is used by several of the test cases
-    // The order of elements in a set is not stable, put them in a vec and sort
-    // by name
-    SmallVector<Value *, 64> Temp;
-    Temp.insert(Temp.end(), LiveSet.begin(), LiveSet.end());
-    std::sort(Temp.begin(), Temp.end(), order_by_name);
     errs() << "Live Variables:\n";
-    for (Value *V : Temp)
+    for (Value *V : LiveSet)
       dbgs() << " " << V->getName() << " " << *V << "\n";
   }
   if (PrintLiveSetSize) {
@@ -1063,15 +1044,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &cache) {
 // pointer was a base pointer.
 static void
 findBasePointers(const StatepointLiveSetTy &live,
-                 DenseMap<Value *, Value *> &PointerToBase,
+                 MapVector<Value *, Value *> &PointerToBase,
                  DominatorTree *DT, DefiningValueMapTy &DVCache) {
-  // For the naming of values inserted to be deterministic - which makes for
-  // much cleaner and more stable tests - we need to assign an order to the
-  // live values.  DenseSets do not provide a deterministic order across runs.
-  SmallVector<Value *, 64> Temp;
-  Temp.insert(Temp.end(), live.begin(), live.end());
-  std::sort(Temp.begin(), Temp.end(), order_by_name);
-  for (Value *ptr : Temp) {
+  for (Value *ptr : live) {
     Value *base = findBasePointer(ptr, DVCache);
     assert(base && "failed to find base pointer");
     PointerToBase[ptr] = base;
@@ -1095,25 +1070,16 @@ findBasePointers(const StatepointLiveSetTy &live,
 static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
                              const CallSite &CS,
                              PartiallyConstructedSafepointRecord &result) {
-  DenseMap<Value *, Value *> PointerToBase;
+  MapVector<Value *, Value *> PointerToBase;
   findBasePointers(result.LiveSet, PointerToBase, &DT, DVCache);
 
   if (PrintBasePointers) {
-    // Note: Need to print these in a stable order since this is checked in
-    // some tests.
     errs() << "Base Pairs (w/o Relocation):\n";
-    SmallVector<Value *, 64> Temp;
-    Temp.reserve(PointerToBase.size());
-    for (auto Pair : PointerToBase) {
-      Temp.push_back(Pair.first);
-    }
-    std::sort(Temp.begin(), Temp.end(), order_by_name);
-    for (Value *Ptr : Temp) {
-      Value *Base = PointerToBase[Ptr];
+    for (auto &Pair : PointerToBase) {
       errs() << " derived ";
-      Ptr->printAsOperand(errs(), false);
+      Pair.first->printAsOperand(errs(), false);
       errs() << " base ";
-      Base->printAsOperand(errs(), false);
+      Pair.second->printAsOperand(errs(), false);
       errs() << "\n";;
     }
   }
@@ -1519,32 +1485,6 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
   CreateGCRelocates(LiveVariables, LiveStartIdx, BasePtrs, Token, Builder);
 }
 
-static void StabilizeOrder(SmallVectorImpl<Value *> &BaseVec,
-                           SmallVectorImpl<Value *> &LiveVec) {
-  assert(BaseVec.size() == LiveVec.size());
-
-  struct BaseDerivedPair {
-    Value *Base;
-    Value *Derived;
-  };
-
-  SmallVector<BaseDerivedPair, 64> NameOrdering;
-  NameOrdering.reserve(BaseVec.size());
-
-  for (size_t i = 0, e = BaseVec.size(); i < e; i++)
-    NameOrdering.push_back({BaseVec[i], LiveVec[i]});
-
-  std::sort(NameOrdering.begin(), NameOrdering.end(),
-            [](const BaseDerivedPair &L, const BaseDerivedPair &R) {
-              return L.Derived->getName() < R.Derived->getName();
-            });
-
-  for (size_t i = 0; i < BaseVec.size(); i++) {
-    BaseVec[i] = NameOrdering[i].Base;
-    LiveVec[i] = NameOrdering[i].Derived;
-  }
-}
-
 // Replace an existing gc.statepoint with a new one and a set of gc.relocates
 // which make the relocations happening at this safepoint explicit.
 //
@@ -1568,11 +1508,6 @@ makeStatepointExplicit(DominatorTree &DT, const CallSite &CS,
     BaseVec.push_back(Base);
   }
   assert(LiveVec.size() == BaseVec.size());
-
-  // To make the output IR slightly more stable (for use in diffs), ensure a
-  // fixed order of the values in the safepoint (by sorting the value name).
-  // The order is otherwise meaningless.
-  StabilizeOrder(BaseVec, LiveVec);
 
   // Do the actual rewriting and delete the old statepoint
   makeStatepointExplicitImpl(CS, BaseVec, LiveVec, Result, Replacements);
@@ -2069,7 +2004,7 @@ static void rematerializeLiveValues(CallSite CS,
 
   // Remove rematerializaed values from the live set
   for (auto LiveValue: LiveValuesToBeDeleted) {
-    Info.LiveSet.erase(LiveValue);
+    Info.LiveSet.remove(LiveValue);
   }
 }
 
@@ -2191,7 +2126,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   for (auto &Info : Records)
     for (auto &BasePair : Info.PointerToBase)
       if (isa<Constant>(BasePair.second))
-        Info.LiveSet.erase(BasePair.first);
+        Info.LiveSet.remove(BasePair.first);
 
   for (CallInst *CI : Holders)
     CI->eraseFromParent();
@@ -2481,13 +2416,13 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F) {
 /// the live-out set of the basic block
 static void computeLiveInValues(BasicBlock::reverse_iterator rbegin,
                                 BasicBlock::reverse_iterator rend,
-                                DenseSet<Value *> &LiveTmp) {
+                                SetVector<Value *> &LiveTmp) {
 
   for (BasicBlock::reverse_iterator ritr = rbegin; ritr != rend; ritr++) {
     Instruction *I = &*ritr;
 
     // KILL/Def - Remove this definition from LiveIn
-    LiveTmp.erase(I);
+    LiveTmp.remove(I);
 
     // Don't consider *uses* in PHI nodes, we handle their contribution to
     // predecessor blocks when we seed the LiveOut sets
@@ -2515,7 +2450,7 @@ static void computeLiveInValues(BasicBlock::reverse_iterator rbegin,
   }
 }
 
-static void computeLiveOutSeed(BasicBlock *BB, DenseSet<Value *> &LiveTmp) {
+static void computeLiveOutSeed(BasicBlock *BB, SetVector<Value *> &LiveTmp) {
 
   for (BasicBlock *Succ : successors(BB)) {
     const BasicBlock::iterator E(Succ->getFirstNonPHI());
@@ -2531,8 +2466,8 @@ static void computeLiveOutSeed(BasicBlock *BB, DenseSet<Value *> &LiveTmp) {
   }
 }
 
-static DenseSet<Value *> computeKillSet(BasicBlock *BB) {
-  DenseSet<Value *> KillSet;
+static SetVector<Value *> computeKillSet(BasicBlock *BB) {
+  SetVector<Value *> KillSet;
   for (Instruction &I : *BB)
     if (isHandledGCPointerType(I.getType()))
       KillSet.insert(&I);
@@ -2542,7 +2477,7 @@ static DenseSet<Value *> computeKillSet(BasicBlock *BB) {
 #ifndef NDEBUG
 /// Check that the items in 'Live' dominate 'TI'.  This is used as a basic
 /// sanity check for the liveness computation.
-static void checkBasicSSA(DominatorTree &DT, DenseSet<Value *> &Live,
+static void checkBasicSSA(DominatorTree &DT, SetVector<Value *> &Live,
                           TerminatorInst *TI, bool TermOkay = false) {
   for (Value *V : Live) {
     if (auto *I = dyn_cast<Instruction>(V)) {
@@ -2593,11 +2528,11 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
       assert(!Data.LiveSet[&BB].count(Kill) && "live set contains kill");
 #endif
 
-    Data.LiveOut[&BB] = DenseSet<Value *>();
+    Data.LiveOut[&BB] = SetVector<Value *>();
     computeLiveOutSeed(&BB, Data.LiveOut[&BB]);
     Data.LiveIn[&BB] = Data.LiveSet[&BB];
-    set_union(Data.LiveIn[&BB], Data.LiveOut[&BB]);
-    set_subtract(Data.LiveIn[&BB], Data.KillSet[&BB]);
+    Data.LiveIn[&BB].set_union(Data.LiveOut[&BB]);
+    Data.LiveIn[&BB].set_subtract(Data.KillSet[&BB]);
     if (!Data.LiveIn[&BB].empty())
       AddPredsToWorklist(&BB);
   }
@@ -2608,11 +2543,11 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
 
     // Compute our new liveout set, then exit early if it hasn't changed
     // despite the contribution of our successor.
-    DenseSet<Value *> LiveOut = Data.LiveOut[BB];
+    SetVector<Value *> LiveOut = Data.LiveOut[BB];
     const auto OldLiveOutSize = LiveOut.size();
     for (BasicBlock *Succ : successors(BB)) {
       assert(Data.LiveIn.count(Succ));
-      set_union(LiveOut, Data.LiveIn[Succ]);
+      LiveOut.set_union(Data.LiveIn[Succ]);
     }
     // assert OutLiveOut is a subset of LiveOut
     if (OldLiveOutSize == LiveOut.size()) {
@@ -2624,12 +2559,12 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     Data.LiveOut[BB] = LiveOut;
 
     // Apply the effects of this basic block
-    DenseSet<Value *> LiveTmp = LiveOut;
-    set_union(LiveTmp, Data.LiveSet[BB]);
-    set_subtract(LiveTmp, Data.KillSet[BB]);
+    SetVector<Value *> LiveTmp = LiveOut;
+    LiveTmp.set_union(Data.LiveSet[BB]);
+    LiveTmp.set_subtract(Data.KillSet[BB]);
 
     assert(Data.LiveIn.count(BB));
-    const DenseSet<Value *> &OldLiveIn = Data.LiveIn[BB];
+    const SetVector<Value *> &OldLiveIn = Data.LiveIn[BB];
     // assert: OldLiveIn is a subset of LiveTmp
     if (OldLiveIn.size() != LiveTmp.size()) {
       Data.LiveIn[BB] = LiveTmp;
@@ -2653,7 +2588,7 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
 
   // Note: The copy is intentional and required
   assert(Data.LiveOut.count(BB));
-  DenseSet<Value *> LiveOut = Data.LiveOut[BB];
+  SetVector<Value *> LiveOut = Data.LiveOut[BB];
 
   // We want to handle the statepoint itself oddly.  It's
   // call result is not live (normal), nor are it's arguments
@@ -2661,7 +2596,7 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
   // specifically what we need to relocate
   BasicBlock::reverse_iterator rend(Inst->getIterator());
   computeLiveInValues(BB->rbegin(), rend, LiveOut);
-  LiveOut.erase(Inst);
+  LiveOut.remove(Inst);
   Out.insert(LiveOut.begin(), LiveOut.end());
 }
 

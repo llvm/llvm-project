@@ -554,6 +554,10 @@ bool SystemZDAGToDAGISel::selectAddress(SDValue Addr,
       expandDisp(AM, true, SDValue(),
                  cast<ConstantSDNode>(Addr)->getSExtValue()))
     ;
+  // Also see if it's a bare ADJDYNALLOC.
+  else if (Addr.getOpcode() == SystemZISD::ADJDYNALLOC &&
+           expandAdjDynAlloc(AM, true, SDValue()))
+    ;
   else
     // Otherwise try expanding each component.
     while (expandAddress(AM, true) ||

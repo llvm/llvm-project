@@ -1696,11 +1696,13 @@ def SRAV : MMRel, shift_rotate_reg<"srav", GPR32Opnd, II_SRAV, sra>,
 }
 
 // Rotate Instructions
-def ROTR  : MMRel, shift_rotate_imm<"rotr", uimm5, GPR32Opnd, II_ROTR, rotr,
-                                    immZExt5>,
-            SRA_FM<2, 1>, ISA_MIPS32R2;
-def ROTRV : MMRel, shift_rotate_reg<"rotrv", GPR32Opnd, II_ROTRV, rotr>,
-            SRLV_FM<6, 1>, ISA_MIPS32R2;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def ROTR  : MMRel, shift_rotate_imm<"rotr", uimm5, GPR32Opnd, II_ROTR, rotr,
+                                      immZExt5>,
+              SRA_FM<2, 1>, ISA_MIPS32R2;
+  def ROTRV : MMRel, shift_rotate_reg<"rotrv", GPR32Opnd, II_ROTRV, rotr>,
+              SRLV_FM<6, 1>, ISA_MIPS32R2;
+}
 
 /// Load and Store Instructions
 ///  aligned
@@ -2215,7 +2217,9 @@ def : MipsInstAlias<"beqz $rs,$offset",
                     (BEQ GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>;
 def : MipsInstAlias<"beqzl $rs,$offset",
                     (BEQL GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>;
-def : MipsInstAlias<"syscall", (SYSCALL 0), 1>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsInstAlias<"syscall", (SYSCALL 0), 1>;
+}
 
 def : MipsInstAlias<"break", (BREAK 0, 0), 1>;
 def : MipsInstAlias<"break $imm", (BREAK uimm10:$imm, 0), 1>;

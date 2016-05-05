@@ -253,6 +253,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // We need to handle dynamic allocations specially because of the
   // 160-byte area at the bottom of the stack.
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
+  setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, PtrVT, Custom);
 
   // Use custom expanders so that we can force the function to use
   // a frame pointer.
@@ -2835,8 +2836,9 @@ SDValue SystemZTargetLowering::lowerVACOPY(SDValue Op,
 SDValue SystemZTargetLowering::
 lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
-  bool RealignOpt = !DAG.getMachineFunction().getFunction()->
-    hasFnAttribute("no-realign-stack");
+  MachineFunction &MF = DAG.getMachineFunction();
+  bool RealignOpt = !MF.getFunction()-> hasFnAttribute("no-realign-stack");
+  bool StoreBackchain = MF.getFunction()->hasFnAttribute("backchain");
 
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
@@ -2857,6 +2859,12 @@ lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
 
   // Get a reference to the stack pointer.
   SDValue OldSP = DAG.getCopyFromReg(Chain, DL, SPReg, MVT::i64);
+
+  // If we need a backchain, save it now.
+  SDValue Backchain;
+  if (StoreBackchain)
+    Backchain = DAG.getLoad(MVT::i64, DL, Chain, OldSP, MachinePointerInfo(),
+                            false, false, false, 0);
 
   // Add extra space for alignment if needed.
   if (ExtraAlignSpace)
@@ -2885,8 +2893,19 @@ lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
                   DAG.getConstant(~(RequiredAlign - 1), DL, MVT::i64));
   }
 
+  if (StoreBackchain)
+    Chain = DAG.getStore(Chain, DL, Backchain, NewSP, MachinePointerInfo(),
+                         false, false, 0);
+
   SDValue Ops[2] = { Result, Chain };
   return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue SystemZTargetLowering::lowerGET_DYNAMIC_AREA_OFFSET(
+    SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  return DAG.getNode(SystemZISD::ADJDYNALLOC, DL, MVT::i64);
 }
 
 SDValue SystemZTargetLowering::lowerSMUL_LOHI(SDValue Op,
@@ -3336,8 +3355,26 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
-  return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op),
-                          SystemZ::R15D, Op.getOperand(1));
+  bool StoreBackchain = MF.getFunction()->hasFnAttribute("backchain");
+
+  SDValue Chain = Op.getOperand(0);
+  SDValue NewSP = Op.getOperand(1);
+  SDValue Backchain;
+  SDLoc DL(Op);
+
+  if (StoreBackchain) {
+    SDValue OldSP = DAG.getCopyFromReg(Chain, DL, SystemZ::R15D, MVT::i64);
+    Backchain = DAG.getLoad(MVT::i64, DL, Chain, OldSP, MachinePointerInfo(),
+                            false, false, false, 0);
+  }
+
+  Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R15D, NewSP);
+
+  if (StoreBackchain)
+    Chain = DAG.getStore(Chain, DL, Backchain, NewSP, MachinePointerInfo(),
+                         false, false, 0);
+
+  return Chain;
 }
 
 SDValue SystemZTargetLowering::lowerPREFETCH(SDValue Op,
@@ -4458,6 +4495,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerVACOPY(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return lowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::GET_DYNAMIC_AREA_OFFSET:
+    return lowerGET_DYNAMIC_AREA_OFFSET(Op, DAG);
   case ISD::SMUL_LOHI:
     return lowerSMUL_LOHI(Op, DAG);
   case ISD::UMUL_LOHI:

@@ -35,6 +35,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 CompilandDumper::CompilandDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}

@@ -26,6 +26,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -209,9 +210,10 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (ItersAhead > getMaxPrefetchIterationsAhead())
     return MadeChange;
 
+  Function *F = L->getHeader()->getParent();
   DEBUG(dbgs() << "Prefetching " << ItersAhead
                << " iterations ahead (loop size: " << LoopSize << ") in "
-               << L->getHeader()->getParent()->getName() << ": " << *L);
+               << F->getName() << ": " << *L);
 
   SmallVector<std::pair<Instruction *, const SCEVAddRecExpr *>, 16> PrefLoads;
   for (Loop::block_iterator I = L->block_begin(), IE = L->block_end();
@@ -291,6 +293,9 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       ++NumPrefetches;
       DEBUG(dbgs() << "  Access: " << *PtrValue << ", SCEV: " << *LSCEV
                    << "\n");
+      emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F,
+                             MemI->getDebugLoc(), "prefetched memory access");
+
 
       MadeChange = true;
     }

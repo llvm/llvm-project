@@ -717,9 +717,15 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
   def SRAV_MM  : MMRel, shift_rotate_reg<"srav", GPR32Opnd, II_SRAV>,
                  SRLV_FM_MM<0x90, 0>;
   def ROTR_MM  : MMRel, shift_rotate_imm<"rotr", uimm5, GPR32Opnd, II_ROTR>,
-                 SRA_FM_MM<0xc0, 0>;
+                 SRA_FM_MM<0xc0, 0> {
+    list<dag> Pattern = [(set GPR32Opnd:$rd,
+                          (rotr GPR32Opnd:$rt, immZExt5:$shamt))];
+  }
   def ROTRV_MM : MMRel, shift_rotate_reg<"rotrv", GPR32Opnd, II_ROTRV>,
-                 SRLV_FM_MM<0xd0, 0>;
+                 SRLV_FM_MM<0xd0, 0> {
+    list<dag> Pattern = [(set GPR32Opnd:$rd,
+                          (rotr GPR32Opnd:$rt, GPR32Opnd:$rs))];
+  }
 
   /// Load and Store Instructions - aligned
   let DecoderMethod = "DecodeMemMMImm16" in {
@@ -1055,4 +1061,7 @@ def : MipsInstAlias<"sra $rd, $shamt",
                     (SRA_MM GPR32Opnd:$rd, GPR32Opnd:$rd, uimm5:$shamt), 0>;
 def : MipsInstAlias<"srl $rd, $shamt",
                     (SRL_MM GPR32Opnd:$rd, GPR32Opnd:$rd, uimm5:$shamt), 0>;
+def : MipsInstAlias<"rotr $rt, $imm",
+                    (ROTR_MM GPR32Opnd:$rt, GPR32Opnd:$rt, uimm5:$imm), 0>;
+def : MipsInstAlias<"syscall", (SYSCALL_MM 0), 1>;
 }

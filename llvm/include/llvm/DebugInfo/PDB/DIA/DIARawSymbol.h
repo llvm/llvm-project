@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 
 namespace llvm {
+namespace pdb {
 class DIASession;
 class DIARawSymbol : public IPDBRawSymbol {
 public:
@@ -201,6 +202,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaSymbol> Symbol;
 };
+}
 }
 
 #endif

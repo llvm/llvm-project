@@ -1,5 +1,6 @@
 ; Test the static branch probability heuristics for no-return functions.
 ; RUN: opt < %s -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 declare void @abort() noreturn
 

@@ -1,0 +1,75 @@
+
+//===-- CVLeafTypes.def - All CodeView leaf types ---------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// See LEAF_ENUM_e in cvinfo.h. This should match the constants there.
+//
+//===----------------------------------------------------------------------===//
+
+// If the type is known, then we have a record describing it in TypeRecord.h.
+#ifndef TYPE_RECORD
+#define TYPE_RECORD(ClassName, LeafEnum)
+#endif
+
+#ifndef TYPE_RECORD_ALIAS
+#define TYPE_RECORD_ALIAS(ClassName, LeafEnum) TYPE_RECORD(ClassName, LeafEnum)
+#endif
+
+#ifndef MEMBER_RECORD
+#define MEMBER_RECORD(ClassName, LeafEnum) TYPE_RECORD(ClassName, LeafEnum)
+#endif
+
+#ifndef MEMBER_RECORD_ALIAS
+#define MEMBER_RECORD_ALIAS(ClassName, LeafEnum) MEMBER_RECORD(ClassName, LeafEnum)
+#endif
+
+
+TYPE_RECORD(PointerType, LF_POINTER)
+TYPE_RECORD(TypeModifier, LF_MODIFIER)
+TYPE_RECORD(ProcedureType, LF_PROCEDURE)
+TYPE_RECORD(MemberFunctionType, LF_MFUNCTION)
+TYPE_RECORD(ArgList, LF_ARGLIST)
+
+TYPE_RECORD(ArrayType, LF_ARRAY)
+TYPE_RECORD(ClassType, LF_CLASS)
+TYPE_RECORD_ALIAS(ClassType, LF_STRUCTURE)
+TYPE_RECORD_ALIAS(ClassType, LF_INTERFACE)
+TYPE_RECORD(UnionType, LF_UNION)
+TYPE_RECORD(EnumType, LF_ENUM)
+TYPE_RECORD(TypeServer2, LF_TYPESERVER2)
+TYPE_RECORD(VFTableType, LF_VFTABLE)
+TYPE_RECORD(VTableShape, LF_VTSHAPE)
+
+// Member type records. These are generally not length prefixed, and appear
+// inside of a field list record.
+MEMBER_RECORD(BaseClass, LF_BCLASS)
+MEMBER_RECORD_ALIAS(BaseClass, LF_BINTERFACE)
+MEMBER_RECORD(VirtualBaseClass, LF_VBCLASS)
+MEMBER_RECORD_ALIAS(VirtualBaseClass, LF_IVBCLASS)
+MEMBER_RECORD(VirtualFunctionPointer, LF_VFUNCTAB)
+MEMBER_RECORD(StaticDataMember, LF_STMEMBER)
+MEMBER_RECORD(OverloadedMethod, LF_METHOD)
+MEMBER_RECORD(DataMember, LF_MEMBER)
+MEMBER_RECORD(NestedType, LF_NESTTYPE)
+MEMBER_RECORD(OneMethod, LF_ONEMETHOD)
+MEMBER_RECORD(Enumerator, LF_ENUMERATE)
+
+// ID leaf records. Subsequent leaf types may be referenced from .debug$S.
+
+TYPE_RECORD(FuncId, LF_FUNC_ID)
+TYPE_RECORD(MemberFuncId, LF_MFUNC_ID)
+TYPE_RECORD(BuildInfo, LF_BUILDINFO)
+TYPE_RECORD_ALIAS(ArgList, LF_SUBSTR_LIST)
+TYPE_RECORD(StringId, LF_STRING_ID)
+TYPE_RECORD(UDTSrcLine, LF_UDT_SRC_LINE)
+
+#undef TYPE_RECORD
+#undef TYPE_RECORD_ALIAS
+#undef MEMBER_RECORD
+#undef MEMBER_RECORD_ALIAS

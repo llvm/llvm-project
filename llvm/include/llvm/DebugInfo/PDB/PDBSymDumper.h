@@ -15,6 +15,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymDumper {
 public:
@@ -56,6 +57,7 @@ public:
 private:
   bool RequireImpl;
 };
+}
 }
 
 #endif

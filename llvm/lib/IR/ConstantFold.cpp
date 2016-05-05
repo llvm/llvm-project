@@ -1529,6 +1529,10 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
     case Instruction::BitCast:
     case Instruction::ZExt:
     case Instruction::SExt:
+      // We can't evaluate floating point casts or truncations.
+      if (CE1Op0->getType()->isFloatingPointTy())
+        break;
+
       // If the cast is not actually changing bits, and the second operand is a
       // null pointer, do the comparison with the pre-casted value.
       if (V2->isNullValue() &&

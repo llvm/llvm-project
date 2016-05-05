@@ -87,6 +87,10 @@ FINAL_STATS: stat::new_units_added:
 FINAL_STATS: stat::slowest_unit_time_sec:    0
 FINAL_STATS: stat::peak_rss_mb:
 
+RUN: LLVMFuzzer-SimpleTest %S/dict1.txt -runs=33 -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=FINAL_STATS1
+FINAL_STATS1: stat::number_of_executed_units: 33
+FINAL_STATS1: stat::peak_rss_mb:
+
 RUN: LLVMFuzzer-SpamyTest -runs=1                  2>&1 | FileCheck %s --check-prefix=FD_MASK_0
 RUN: LLVMFuzzer-SpamyTest -runs=1 -close_fd_mask=0 2>&1 | FileCheck %s --check-prefix=FD_MASK_0
 RUN: LLVMFuzzer-SpamyTest -runs=1 -close_fd_mask=1 2>&1 | FileCheck %s --check-prefix=FD_MASK_1

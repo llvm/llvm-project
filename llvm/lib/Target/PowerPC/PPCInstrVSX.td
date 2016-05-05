@@ -775,7 +775,9 @@ let Uses = [RM] in {
                        "xxsldwi $XT, $XA, $XB, $SHW", IIC_VecPerm, []>;
   def XXSPLTW : XX2Form_2<60, 164,
                        (outs vsrc:$XT), (ins vsrc:$XB, u2imm:$UIM),
-                       "xxspltw $XT, $XB, $UIM", IIC_VecPerm, []>;
+                       "xxspltw $XT, $XB, $UIM", IIC_VecPerm,
+                       [(set v4i32:$XT,
+                             (PPCxxsplt v4i32:$XB, imm32SExt16:$UIM))]>;
 } // hasSideEffects
 
 // SELECT_CC_* - Used to implement the SELECT_CC DAG operation.  Expanded after

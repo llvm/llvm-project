@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 EnumDumper::EnumDumper(LinePrinter &P) : PDBSymDumper(true), Printer(P) {}
 

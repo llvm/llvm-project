@@ -16,6 +16,7 @@
 namespace llvm {
 class StringRef;
 
+namespace pdb {
 class DIASession : public IPDBSession {
 public:
   explicit DIASession(CComPtr<IDiaSession> DiaSession);
@@ -64,5 +65,5 @@ private:
   CComPtr<IDiaSession> Session;
 };
 }
-
+}
 #endif

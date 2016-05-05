@@ -167,6 +167,22 @@ struct CryptContextTraits : CommonHandleTraits {
   }
 };
 
+struct RegTraits : CommonHandleTraits {
+  typedef HKEY handle_type;
+
+  static handle_type GetInvalid() {
+    return NULL;
+  }
+
+  static void Close(handle_type h) {
+    ::RegCloseKey(h);
+  }
+
+  static bool IsValid(handle_type h) {
+    return h != GetInvalid();
+  }
+};
+
 struct FindHandleTraits : CommonHandleTraits {
   static void Close(handle_type h) {
     ::FindClose(h);
@@ -178,6 +194,7 @@ struct FileHandleTraits : CommonHandleTraits {};
 typedef ScopedHandle<CommonHandleTraits> ScopedCommonHandle;
 typedef ScopedHandle<FileHandleTraits>   ScopedFileHandle;
 typedef ScopedHandle<CryptContextTraits> ScopedCryptContext;
+typedef ScopedHandle<RegTraits>          ScopedRegHandle;
 typedef ScopedHandle<FindHandleTraits>   ScopedFindHandle;
 typedef ScopedHandle<JobHandleTraits>    ScopedJobHandle;
 

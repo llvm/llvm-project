@@ -24,7 +24,7 @@ using namespace llvm;
 
 void llvm::initializeIPO(PassRegistry &Registry) {
   initializeArgPromotionPass(Registry);
-  initializeConstantMergePass(Registry);
+  initializeConstantMergeLegacyPassPass(Registry);
   initializeCrossDSOCFIPass(Registry);
   initializeDAEPass(Registry);
   initializeDAHPass(Registry);
@@ -51,7 +51,7 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeStripDeadDebugInfoPass(Registry);
   initializeStripNonDebugSymbolsPass(Registry);
   initializeBarrierNoopPass(Registry);
-  initializeEliminateAvailableExternallyPass(Registry);
+  initializeEliminateAvailableExternallyLegacyPassPass(Registry);
   initializeSampleProfileLoaderPass(Registry);
   initializeFunctionImportPassPass(Registry);
   initializeWholeProgramDevirtPass(Registry);

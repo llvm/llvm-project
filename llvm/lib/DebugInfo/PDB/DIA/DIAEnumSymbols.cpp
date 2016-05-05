@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIAEnumSymbols::DIAEnumSymbols(const DIASession &PDBSession,
                                CComPtr<IDiaEnumSymbols> DiaEnumerator)

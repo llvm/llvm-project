@@ -116,5 +116,5 @@ uint32_t TpiStream::NumTypeRecords() const {
 }
 
 iterator_range<codeview::TypeIterator> TpiStream::types() const {
-  return codeview::makeTypeRange(RecordsBuffer.str());
+  return codeview::makeTypeRange(RecordsBuffer.data());
 }

@@ -15,8 +15,9 @@
 #include <string>
 
 namespace llvm {
-
 class raw_ostream;
+
+namespace pdb {
 
 /// IPDBSourceFile defines an interface used to represent source files whose
 /// information are stored in the PDB.
@@ -33,6 +34,7 @@ public:
   virtual std::unique_ptr<IPDBEnumChildren<PDBSymbolCompiland>>
   getCompilands() const = 0;
 };
+}
 }
 
 #endif

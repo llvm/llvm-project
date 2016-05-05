@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 define i32 @test1(i32 %i, i32* %a) {
 ; CHECK: Printing analysis {{.*}} for function 'test1'

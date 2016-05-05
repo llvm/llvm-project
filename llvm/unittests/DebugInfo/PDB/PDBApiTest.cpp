@@ -50,6 +50,7 @@
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "gtest/gtest.h"
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace {
 

@@ -600,7 +600,17 @@ public:
        getOperationAction(Op, VT) == Promote);
   }
 
-  /// Return true if the specified operation is ilegal but has a custom lowering
+  /// Return true if the specified operation is legal on this target or can be
+  /// made legal with custom lowering or using promotion. This is used to help
+  /// guide high-level lowering decisions.
+  bool isOperationLegalOrCustomOrPromote(unsigned Op, EVT VT) const {
+    return (VT == MVT::Other || isTypeLegal(VT)) &&
+      (getOperationAction(Op, VT) == Legal ||
+       getOperationAction(Op, VT) == Custom ||
+       getOperationAction(Op, VT) == Promote);
+  }
+
+  /// Return true if the specified operation is illegal but has a custom lowering
   /// on that type. This is used to help guide high-level lowering
   /// decisions.
   bool isOperationCustom(unsigned Op, EVT VT) const {

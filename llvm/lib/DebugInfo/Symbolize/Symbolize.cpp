@@ -367,6 +367,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
 
   std::unique_ptr<DIContext> Context;
   if (auto CoffObject = dyn_cast<COFFObjectFile>(Objects.first)) {
+    using namespace pdb;
     // If this is a COFF object, assume it contains PDB debug information.  If
     // we don't find any we will fall back to the DWARF case.
     std::unique_ptr<IPDBSession> Session;

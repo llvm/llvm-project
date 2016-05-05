@@ -9,4 +9,5 @@
   sdbbp -1            # CHECK: :[[@LINE]]:9: error: expected 20-bit unsigned immediate
   sdbbp 1024          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   syscall -1          # CHECK: :[[@LINE]]:11: error: expected 20-bit unsigned immediate
+  syscall $4          # CHECK: :[[@LINE]]:11: error: expected 20-bit unsigned immediate
   syscall 1024        # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled

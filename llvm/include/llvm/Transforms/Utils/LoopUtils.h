@@ -37,13 +37,12 @@ class TargetLibraryInfo;
 /// \brief Captures loop safety information.
 /// It keep information for loop & its header may throw exception.
 struct LICMSafetyInfo {
-  bool MayThrow;           // The current loop contains an instruction which
-                           // may throw.
-  bool HeaderMayThrow;     // Same as previous, but specific to loop header
+  bool MayThrow;       // The current loop contains an instruction which
+                       // may throw.
+  bool HeaderMayThrow; // Same as previous, but specific to loop header
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
-  LICMSafetyInfo() : MayThrow(false), HeaderMayThrow(false)
-  {}
+  LICMSafetyInfo() : MayThrow(false), HeaderMayThrow(false) {}
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -268,7 +267,7 @@ public:
 public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor()
-    : StartValue(nullptr), IK(IK_NoInduction), StepValue(nullptr) {}
+      : StartValue(nullptr), IK(IK_NoInduction), StepValue(nullptr) {}
 
   /// Get the consecutive direction. Returns:
   ///   0 - unknown or non-consecutive.
@@ -325,8 +324,7 @@ bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
-               ScalarEvolution *SE);
+bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
 
 /// \brief Put a loop nest into LCSSA form.
 ///
@@ -370,8 +368,8 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// insertion point vector, PredIteratorCache, LoopInfo, DominatorTree, Loop,
 /// AliasSet information for all instructions of the loop and loop safety
 /// information as arguments. It returns changed status.
-bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock*> &,
-                                  SmallVectorImpl<Instruction*> &,
+bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock *> &,
+                                  SmallVectorImpl<Instruction *> &,
                                   PredIteratorCache &, LoopInfo *,
                                   DominatorTree *, const TargetLibraryInfo *,
                                   Loop *, AliasSetTracker *, LICMSafetyInfo *);
@@ -394,7 +392,7 @@ Optional<const MDOperand *> findStringMetadataForLoop(Loop *TheLoop,
                                                       StringRef Name);
 
 /// \brief Set input string into loop metadata by keeping other values intact.
-void addStringMetadataToLoop(Loop *TheLoop, const char *MDString, 
+void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                              unsigned V = 0);
 
 /// Helper to consistently add the set of standard passes to a loop pass's \c
@@ -403,7 +401,6 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// All loop passes should call this as part of implementing their \c
 /// getAnalysisUsage.
 void getLoopAnalysisUsage(AnalysisUsage &AU);
-
 }
 
 #endif

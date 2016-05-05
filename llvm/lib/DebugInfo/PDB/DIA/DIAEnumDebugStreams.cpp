@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumDebugStreams.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIAEnumDebugStreams::DIAEnumDebugStreams(
     CComPtr<IDiaEnumDebugStreams> DiaEnumerator)

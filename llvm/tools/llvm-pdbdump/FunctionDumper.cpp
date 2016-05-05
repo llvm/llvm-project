@@ -13,6 +13,7 @@
 #include "llvm-pdbdump.h"
 
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFuncDebugEnd.h"
@@ -28,11 +29,12 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::pdb;
 
 namespace {
 template <class T>
 void dumpClassParentWithScopeOperator(const T &Symbol, LinePrinter &Printer,
-                                      llvm::FunctionDumper &Dumper) {
+                                      FunctionDumper &Dumper) {
   uint32_t ClassParentId = Symbol.getClassParentId();
   auto ClassParent =
       Symbol.getSession().template getConcreteSymbolById<PDBSymbolTypeUDT>(
@@ -58,7 +60,7 @@ void FunctionDumper::start(const PDBSymbolTypeFunctionSig &Symbol,
       Symbol.getSession().getConcreteSymbolById<PDBSymbolTypeUDT>(
           ClassParentId);
 
-  CallingConvention CC = Symbol.getCallingConvention();
+  PDB_CallingConv CC = Symbol.getCallingConvention();
   bool ShouldDumpCallingConvention = true;
   if ((ClassParent && CC == CallingConvention::ThisCall) ||
       (!ClassParent && CC == CallingConvention::NearStdCall)) {

@@ -12,6 +12,7 @@
 #include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIADataStream::DIADataStream(CComPtr<IDiaEnumDebugStreamData> DiaStreamData)
     : StreamData(DiaStreamData) {}

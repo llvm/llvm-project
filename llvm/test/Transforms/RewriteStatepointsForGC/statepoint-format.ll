@@ -6,7 +6,7 @@
 define i64 addrspace(1)* @test_invoke_format(i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1) gc "statepoint-example" personality i32 ()* @personality {
 ; CHECK-LABEL: @test_invoke_format(
 ; CHECK-LABEL: entry:
-; CHECK: invoke token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* @callee, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0, i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1)
+; CHECK: invoke token (i64, i32, i64 addrspace(1)* (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i64p1i64f(i64 2882400000, i32 0, i64 addrspace(1)* (i64 addrspace(1)*)* @callee, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0, i64 addrspace(1)* %obj1, i64 addrspace(1)* %obj)
 entry:
   %ret_val = invoke i64 addrspace(1)* @callee(i64 addrspace(1)* %obj)
                to label %normal_return unwind label %exceptional_return

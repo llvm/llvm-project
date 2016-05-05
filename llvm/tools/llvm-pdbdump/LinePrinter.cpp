@@ -16,6 +16,9 @@
 
 #include <algorithm>
 
+using namespace llvm;
+using namespace llvm::pdb;
+
 namespace {
 bool IsItemExcluded(llvm::StringRef Item,
                     std::list<llvm::Regex> &IncludeFilters,

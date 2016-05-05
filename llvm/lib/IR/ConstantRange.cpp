@@ -127,6 +127,18 @@ ConstantRange ConstantRange::makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
       .inverse();
 }
 
+ConstantRange ConstantRange::makeExactICmpRegion(CmpInst::Predicate Pred,
+                                                 const APInt &C) {
+  // Computes the exact range that is equal to both the constant ranges returned
+  // by makeAllowedICmpRegion and makeSatisfyingICmpRegion. This is always true
+  // when RHS is a singleton such as an APInt and so the assert is valid.
+  // However for non-singleton RHS, for example ult [2,5) makeAllowedICmpRegion
+  // returns [0,4) but makeSatisfyICmpRegion returns [0,2).
+  //
+  assert(makeAllowedICmpRegion(Pred, C) == makeSatisfyingICmpRegion(Pred, C));
+  return makeAllowedICmpRegion(Pred, C);
+}
+
 ConstantRange
 ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                                           const ConstantRange &Other,

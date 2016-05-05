@@ -17,6 +17,7 @@
 #include <cstring>
 
 namespace llvm {
+namespace pdb {
 
 class PDBSymDumper;
 class PDBSymbol;
@@ -355,9 +356,7 @@ enum PDB_VariantType {
 };
 
 struct Variant {
-  Variant()
-    : Type(PDB_VariantType::Empty) {
-  }
+  Variant() : Type(PDB_VariantType::Empty) {}
 
   Variant(const Variant &Other) : Type(PDB_VariantType::Empty) {
     *this = Other;
@@ -429,10 +428,11 @@ struct Variant {
 };
 
 } // end namespace llvm
+}
 
 namespace std {
-template <> struct hash<llvm::PDB_SymType> {
-  typedef llvm::PDB_SymType argument_type;
+template <> struct hash<llvm::pdb::PDB_SymType> {
+  typedef llvm::pdb::PDB_SymType argument_type;
   typedef std::size_t result_type;
 
   result_type operator()(const argument_type &Arg) const {

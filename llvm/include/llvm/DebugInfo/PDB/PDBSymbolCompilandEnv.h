@@ -16,7 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
-
+namespace pdb {
 class PDBSymbolCompilandEnv : public PDBSymbol {
 public:
   PDBSymbolCompilandEnv(const IPDBSession &PDBSession,
@@ -32,5 +32,6 @@ public:
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLCOMPILANDENV_H

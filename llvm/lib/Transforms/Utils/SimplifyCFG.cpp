@@ -1448,10 +1448,14 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
   Value *StorePtr = StoreToHoist->getPointerOperand();
 
   // Look for a store to the same pointer in BrBB.
-  unsigned MaxNumInstToLookAt = 10;
+  unsigned MaxNumInstToLookAt = 9;
   for (BasicBlock::reverse_iterator RI = BrBB->rbegin(),
-       RE = BrBB->rend(); RI != RE && (--MaxNumInstToLookAt); ++RI) {
+       RE = BrBB->rend(); RI != RE && MaxNumInstToLookAt; ++RI) {
     Instruction *CurI = &*RI;
+    // Skip debug info.
+    if (isa<DbgInfoIntrinsic>(CurI))
+      continue;
+    --MaxNumInstToLookAt;
 
     // Could be calling an instruction that effects memory like free().
     if (CurI->mayHaveSideEffects() && !isa<StoreInst>(CurI))

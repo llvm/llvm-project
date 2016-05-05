@@ -25,8 +25,10 @@
 namespace llvm {
 
 class StringRef;
-class IPDBRawSymbol;
 class raw_ostream;
+
+namespace pdb {
+class IPDBRawSymbol;
 
 #define DECLARE_PDB_SYMBOL_CONCRETE_TYPE(TagValue)                             \
   static const PDB_SymType Tag = TagValue;                                     \
@@ -40,7 +42,8 @@ class raw_ostream;
 /// https://msdn.microsoft.com/en-us/library/370hs6k4.aspx
 class PDBSymbol {
 protected:
-  PDBSymbol(const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol);
+  PDBSymbol(const IPDBSession &PDBSession,
+            std::unique_ptr<IPDBRawSymbol> Symbol);
 
 public:
   static std::unique_ptr<PDBSymbol>
@@ -93,5 +96,6 @@ protected:
 };
 
 } // namespace llvm
+}
 
 #endif

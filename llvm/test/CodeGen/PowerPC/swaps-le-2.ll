@@ -87,5 +87,5 @@ entry:
 
 ; CHECK-LABEL: @ifoo
 ; CHECK: lxvd2x
-; CHECK: vspltw {{[0-9]+}}, {{[0-9]+}}, 0
+; CHECK: xxspltw {{[0-9]+}}, {{[0-9]+}}, 0
 ; CHECK: stxvd2x

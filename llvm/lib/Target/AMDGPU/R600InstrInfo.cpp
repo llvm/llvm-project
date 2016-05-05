@@ -308,9 +308,9 @@ R600InstrInfo::getSrcs(MachineInstr *MI) const {
                                                         OpTable[j][0]));
       unsigned Reg = MO.getReg();
       if (Reg == AMDGPU::ALU_CONST) {
-        unsigned Sel = MI->getOperand(getOperandIdx(MI->getOpcode(),
-                                                    OpTable[j][1])).getImm();
-        Result.push_back(std::pair<MachineOperand *, int64_t>(&MO, Sel));
+        MachineOperand &Sel = MI->getOperand(getOperandIdx(MI->getOpcode(),
+                                                    OpTable[j][1]));
+        Result.push_back(std::make_pair(&MO, Sel.getImm()));
         continue;
       }
 
@@ -329,20 +329,20 @@ R600InstrInfo::getSrcs(MachineInstr *MI) const {
     if (SrcIdx < 0)
       break;
     MachineOperand &MO = MI->getOperand(SrcIdx);
-    unsigned Reg = MI->getOperand(SrcIdx).getReg();
+    unsigned Reg = MO.getReg();
     if (Reg == AMDGPU::ALU_CONST) {
-      unsigned Sel = MI->getOperand(
-          getOperandIdx(MI->getOpcode(), OpTable[j][1])).getImm();
-      Result.push_back(std::pair<MachineOperand *, int64_t>(&MO, Sel));
+      MachineOperand &Sel = MI->getOperand(
+          getOperandIdx(MI->getOpcode(), OpTable[j][1]));
+      Result.push_back(std::make_pair(&MO, Sel.getImm()));
       continue;
     }
     if (Reg == AMDGPU::ALU_LITERAL_X) {
-      unsigned Imm = MI->getOperand(
-          getOperandIdx(MI->getOpcode(), AMDGPU::OpName::literal)).getImm();
-      Result.push_back(std::pair<MachineOperand *, int64_t>(&MO, Imm));
+      MachineOperand &Imm = MI->getOperand(
+          getOperandIdx(MI->getOpcode(), AMDGPU::OpName::literal));
+      Result.push_back(std::make_pair(&MO, Imm.getImm()));
       continue;
     }
-    Result.push_back(std::pair<MachineOperand *, int64_t>(&MO, 0));
+    Result.push_back(std::make_pair(&MO, 0));
   }
   return Result;
 }
@@ -358,13 +358,13 @@ R600InstrInfo::ExtractSrcs(MachineInstr *MI,
   unsigned i = 0;
   for (unsigned n = Srcs.size(); i < n; ++i) {
     unsigned Reg = Srcs[i].first->getReg();
-    unsigned Index = RI.getEncodingValue(Reg) & 0xff;
+    int Index = RI.getEncodingValue(Reg) & 0xff;
     if (Reg == AMDGPU::OQAP) {
-      Result.push_back(std::pair<int, unsigned>(Index, 0));
+      Result.push_back(std::make_pair(Index, 0U));
     }
     if (PV.find(Reg) != PV.end()) {
       // 255 is used to tells its a PS/PV reg
-      Result.push_back(std::pair<int, unsigned>(255, 0));
+      Result.push_back(std::make_pair(255, 0U));
       continue;
     }
     if (Index > 127) {
@@ -373,7 +373,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr *MI,
       continue;
     }
     unsigned Chan = RI.getHWRegChan(Reg);
-    Result.push_back(std::pair<int, unsigned>(Index, Chan));
+    Result.push_back(std::make_pair(Index, Chan));
   }
   for (; i < 3; ++i)
     Result.push_back(DummyPair);
@@ -628,8 +628,7 @@ R600InstrInfo::fitsConstReadLimitations(const std::vector<MachineInstr *> &MIs)
 
     ArrayRef<std::pair<MachineOperand *, int64_t>> Srcs = getSrcs(MI);
 
-    for (unsigned j = 0, e = Srcs.size(); j < e; j++) {
-      std::pair<MachineOperand *, unsigned> Src = Srcs[j];
+    for (const auto &Src:Srcs) {
       if (Src.first->getReg() == AMDGPU::ALU_LITERAL_X)
         Literals.insert(Src.second);
       if (Literals.size() > 4)

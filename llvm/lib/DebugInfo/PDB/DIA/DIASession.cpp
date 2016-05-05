@@ -21,6 +21,7 @@
 #include <diacreate.h>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace {
 

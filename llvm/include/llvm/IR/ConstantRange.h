@@ -82,6 +82,16 @@ public:
   static ConstantRange makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
                                                 const ConstantRange &Other);
 
+  /// Produce the exact range such that all values in the returned range satisfy
+  /// the given predicate with any value contained within Other. Formally, this
+  /// returns the exact answer when the superset of 'union over all y in Other
+  /// is exactly same as the subset of intersection over all y in Other.
+  /// { x : icmp op x y is true}'.
+  ///
+  /// Example: Pred = ult and Other = i8 3 returns [0, 3)
+  static ConstantRange makeExactICmpRegion(CmpInst::Predicate Pred,
+                                           const APInt &Other);
+
   /// Return the largest range containing all X such that "X BinOpC Y" is
   /// guaranteed not to wrap (overflow) for all Y in Other.
   ///

@@ -14,6 +14,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 PDBSymbolTypeTypedef::PDBSymbolTypeTypedef(
     const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol)

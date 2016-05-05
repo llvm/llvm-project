@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIALineNumber.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIAEnumLineNumbers::DIAEnumLineNumbers(
     CComPtr<IDiaEnumLineNumbers> DiaEnumerator)

@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 
 namespace llvm {
+namespace pdb {
 class DIASession;
 
 class DIASourceFile : public IPDBSourceFile {
@@ -34,6 +35,7 @@ private:
   const DIASession &Session;
   CComPtr<IDiaSourceFile> SourceFile;
 };
+}
 }
 
 #endif

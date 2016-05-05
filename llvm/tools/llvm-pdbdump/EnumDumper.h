@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 
 namespace llvm {
+namespace pdb {
 
 class LinePrinter;
 
@@ -26,5 +27,5 @@ private:
   LinePrinter &Printer;
 };
 }
-
+}
 #endif

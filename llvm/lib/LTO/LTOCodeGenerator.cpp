@@ -99,7 +99,7 @@ void LTOCodeGenerator::initializeLTOPasses() {
   initializeInternalizeLegacyPassPass(R);
   initializeIPSCCPPass(R);
   initializeGlobalOptLegacyPassPass(R);
-  initializeConstantMergePass(R);
+  initializeConstantMergeLegacyPassPass(R);
   initializeDAHPass(R);
   initializeInstructionCombiningPassPass(R);
   initializeSimpleInlinerPass(R);
@@ -349,28 +349,44 @@ std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make
-// sure we honor this. To force the compiler to not drop it, we turn its linkage
-// to the weak equivalent.
-static void
-preserveDiscardableGVs(Module &TheModule,
-                       function_ref<bool(const GlobalValue &)> mustPreserveGV) {
+// sure we honor this. To force the compiler to not drop it, we add it to the
+// "llvm.compiler.used" global.
+static void preserveDiscardableGVs(
+    Module &TheModule,
+    llvm::function_ref<bool(const GlobalValue &)> mustPreserveGV) {
+  SetVector<Constant *> UsedValuesSet;
+  if (GlobalVariable *LLVMUsed =
+          TheModule.getGlobalVariable("llvm.compiler.used")) {
+    ConstantArray *Inits = cast<ConstantArray>(LLVMUsed->getInitializer());
+    for (auto &V : Inits->operands())
+      UsedValuesSet.insert(cast<Constant>(&V));
+    LLVMUsed->eraseFromParent();
+  }
+  llvm::Type *i8PTy = llvm::Type::getInt8PtrTy(TheModule.getContext());
   auto mayPreserveGlobal = [&](GlobalValue &GV) {
     if (!GV.isDiscardableIfUnused() || GV.isDeclaration())
       return;
     if (!mustPreserveGV(GV))
       return;
-    if (GV.hasAvailableExternallyLinkage() || GV.hasLocalLinkage())
-      report_fatal_error("The linker asked LTO to preserve a symbol with an"
-                         "unexpected linkage");
-    GV.setLinkage(GlobalValue::getWeakLinkage(GV.hasLinkOnceODRLinkage()));
+    assert(!GV.hasAvailableExternallyLinkage() && !GV.hasInternalLinkage());
+    UsedValuesSet.insert(ConstantExpr::getBitCast(&GV, i8PTy));
   };
-
   for (auto &GV : TheModule)
     mayPreserveGlobal(GV);
   for (auto &GV : TheModule.globals())
     mayPreserveGlobal(GV);
   for (auto &GV : TheModule.aliases())
     mayPreserveGlobal(GV);
+
+  if (UsedValuesSet.empty())
+    return;
+
+  llvm::ArrayType *ATy = llvm::ArrayType::get(i8PTy, UsedValuesSet.size());
+  auto *LLVMUsed = new llvm::GlobalVariable(
+      TheModule, ATy, false, llvm::GlobalValue::AppendingLinkage,
+      llvm::ConstantArray::get(ATy, UsedValuesSet.getArrayRef()),
+      "llvm.compiler.used");
+  LLVMUsed->setSection("llvm.metadata");
 }
 
 void LTOCodeGenerator::applyScopeRestrictions() {
@@ -403,7 +419,8 @@ void LTOCodeGenerator::applyScopeRestrictions() {
 
   if (ShouldRestoreGlobalsLinkage) {
     // Record the linkage type of non-local symbols so they can be restored
-    // prior to module splitting.
+    // prior
+    // to module splitting.
     auto RecordLinkage = [&](const GlobalValue &GV) {
       if (!GV.hasAvailableExternallyLinkage() && !GV.hasLocalLinkage() &&
           GV.hasName())

@@ -422,6 +422,8 @@ TEST_P(MaybeSparseCoverageMappingTest,
   EXPECT_EQ(CoverageSegment(9, 9, false), Segments[3]);
 }
 
+// If CodeRegions and ExpansionRegions cover the same area,
+// only counts of CodeRegions should be used.
 TEST_P(MaybeSparseCoverageMappingTest, dont_combine_expansions) {
   InstrProfRecord Record1("func", 0x1234, {10, 20});
   InstrProfRecord Record2("func", 0x1234, {0, 0});
@@ -442,6 +444,29 @@ TEST_P(MaybeSparseCoverageMappingTest, dont_combine_expansions) {
   ASSERT_EQ(CoverageSegment(3, 3, 20, true), Segments[1]);
   ASSERT_EQ(CoverageSegment(4, 4, 10, false), Segments[2]);
   ASSERT_EQ(CoverageSegment(9, 9, false), Segments[3]);
+}
+
+// If an area is covered only by ExpansionRegions, they should be combinated.
+TEST_P(MaybeSparseCoverageMappingTest, combine_expansions) {
+  InstrProfRecord Record("func", 0x1234, {2, 3, 7});
+  NoError(ProfileWriter.addRecord(std::move(Record)));
+
+  startFunction("func", 0x1234);
+  addCMR(Counter::getCounter(1), "include1", 1, 1, 1, 10);
+  addCMR(Counter::getCounter(2), "include2", 1, 1, 1, 10);
+  addCMR(Counter::getCounter(0), "file", 1, 1, 5, 5);
+  addExpansionCMR("file", "include1", 3, 1, 3, 5);
+  addExpansionCMR("file", "include2", 3, 1, 3, 5);
+
+  loadCoverageMapping();
+
+  CoverageData Data = LoadedCoverage->getCoverageForFile("file");
+  std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
+  ASSERT_EQ(4U, Segments.size());
+  EXPECT_EQ(CoverageSegment(1, 1, 2, true), Segments[0]);
+  EXPECT_EQ(CoverageSegment(3, 1, 10, true), Segments[1]);
+  EXPECT_EQ(CoverageSegment(3, 5, 2, false), Segments[2]);
+  EXPECT_EQ(CoverageSegment(5, 5, false), Segments[3]);
 }
 
 TEST_P(MaybeSparseCoverageMappingTest, strip_filename_prefix) {

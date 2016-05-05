@@ -114,6 +114,15 @@ static bool SubWithOverflow(Constant *&Result, Constant *In1,
                         IsSigned);
 }
 
+/// Given an icmp instruction, return true if any use of this comparison is a
+/// branch on sign bit comparison.
+static bool isBranchOnSignBitCheck(ICmpInst &I, bool isSignBit) {
+  for (auto *U : I.users())
+    if (isa<BranchInst>(U))
+      return isSignBit;
+  return false;
+}
+
 /// isSignBitCheck - Given an exploded icmp instruction, return true if the
 /// comparison only checks the sign bit.  If it only checks the sign bit, set
 /// TrueIfSigned if the result of the comparison is true when the input value is
@@ -3284,6 +3293,42 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     // bits, if it is a sign bit comparison, it only demands the sign bit.
     bool UnusedBit;
     isSignBit = isSignBitCheck(I.getPredicate(), CI, UnusedBit);
+
+    // Canonicalize icmp instructions based on dominating conditions.
+    BasicBlock *Parent = I.getParent();
+    BasicBlock *Dom = Parent->getSinglePredecessor();
+    auto *BI = Dom ? dyn_cast<BranchInst>(Dom->getTerminator()) : nullptr;
+    ICmpInst::Predicate Pred;
+    BasicBlock *TrueBB, *FalseBB;
+    ConstantInt *CI2;
+    if (BI && match(BI, m_Br(m_ICmp(Pred, m_Specific(Op0), m_ConstantInt(CI2)),
+                             TrueBB, FalseBB)) &&
+        TrueBB != FalseBB) {
+      ConstantRange CR = ConstantRange::makeAllowedICmpRegion(I.getPredicate(),
+                                                              CI->getValue());
+      ConstantRange DominatingCR =
+          (Parent == TrueBB)
+              ? ConstantRange::makeExactICmpRegion(Pred, CI2->getValue())
+              : ConstantRange::makeExactICmpRegion(
+                    CmpInst::getInversePredicate(Pred), CI2->getValue());
+      ConstantRange Intersection = DominatingCR.intersectWith(CR);
+      ConstantRange Difference = DominatingCR.difference(CR);
+      if (Intersection.isEmptySet())
+        return replaceInstUsesWith(I, Builder->getFalse());
+      if (Difference.isEmptySet())
+        return replaceInstUsesWith(I, Builder->getTrue());
+      // Canonicalizing a sign bit comparison that gets used in a branch,
+      // pessimizes codegen by generating branch on zero instruction instead
+      // of a test and branch. So we avoid canonicalizing in such situations
+      // because test and branch instruction has better branch displacement
+      // than compare and branch instruction.
+      if (!isBranchOnSignBitCheck(I, isSignBit) && !I.isEquality()) {
+        if (auto *AI = Intersection.getSingleElement())
+          return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Builder->getInt(*AI));
+        if (auto *AD = Difference.getSingleElement())
+          return new ICmpInst(ICmpInst::ICMP_NE, Op0, Builder->getInt(*AD));
+      }
+    }
   }
 
   // See if we can fold the comparison based on range information we can get

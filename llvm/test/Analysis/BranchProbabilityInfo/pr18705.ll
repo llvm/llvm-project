@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 ; Since neither of while.body's out-edges is an exit or a back edge,
 ; calcLoopBranchHeuristics should return early without setting the weights.

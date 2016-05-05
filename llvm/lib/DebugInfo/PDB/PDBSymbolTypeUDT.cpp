@@ -14,6 +14,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 PDBSymbolTypeUDT::PDBSymbolTypeUDT(const IPDBSession &PDBSession,
                                    std::unique_ptr<IPDBRawSymbol> Symbol)

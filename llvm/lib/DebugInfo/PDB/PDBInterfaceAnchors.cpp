@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 IPDBSession::~IPDBSession() {}
 

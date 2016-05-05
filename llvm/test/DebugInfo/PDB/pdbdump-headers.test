@@ -1,1006 +1,1241 @@
-; RUN: llvm-pdbdump --dump-headers %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
+; RUN: llvm-pdbdump --dump-headers -dump-tpi-stream -dump-tpi-record-bytes %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/bad-block-size.pdb | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
-; EMPTY:      BlockSize: 4096
-; EMPTY-NEXT: Unknown0: 2
-; EMPTY-NEXT: NumBlocks: 25
-; EMPTY-NEXT: NumDirectoryBytes: 136
-; EMPTY-NEXT: Unknown1: 0
-; EMPTY-NEXT: BlockMapAddr: 24
-; EMPTY-NEXT: NumDirectoryBlocks: 1
-; EMPTY-NEXT: BlockMapOffset: 98304
-; EMPTY-NEXT: DirectoryBlocks: [23]
-; EMPTY-NEXT: NumStreams: 17
-; EMPTY-NEXT: Version: 20000404
-; EMPTY-NEXT: Signature: 54e507e2
-; EMPTY-NEXT: Age: 1
-; EMPTY-NEXT: Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
-
-; EMPTY:      NameStream: 13
-; EMPTY-NEXT: NameStreamSignature: effeeffe
-; EMPTY-NEXT: NameStreamVersion: 1
-; EMPTY-NEXT: Name Count: 4
-; EMPTY-NEXT: Name: d:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)
-; EMPTY-NEXT: Name:
-; EMPTY-NEXT: Name: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT: Name:
-
-; EMPTY:      Dbi Version: 19990903
-; EMPTY-NEXT: Age: 1
-; EMPTY-NEXT: Incremental Linking: 1
-; EMPTY-NEXT: Has CTypes: 0
-; EMPTY-NEXT: Is Stripped: 0
-; EMPTY-NEXT: Machine Type: x86
-; EMPTY-NEXT: Number of Symbols: 8
-; EMPTY-NEXT: Toolchain Version: 12.0
-; EMPTY-NEXT: mspdb120.dll version: 12.0.31101
-
-; EMPTY:      Modules:
-; EMPTY-NEXT: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:     Debug Stream Index: 12
-; EMPTY-NEXT:     Object File: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:     Num Files: 1
-; EMPTY-NEXT:     Source File Name Idx: 0
-; EMPTY-NEXT:     Pdb File Name Idx: 0
-; EMPTY-NEXT:     Line Info Byte Size: 0
-; EMPTY-NEXT:     C13 Line Info Byte Size: 88
-; EMPTY-NEXT:     Symbol Byte Size: 208
-; EMPTY-NEXT:     Type Server Index: 0
-; EMPTY-NEXT:     Has EC Info: 0
-; EMPTY-NEXT:     1 Contributing Source Files:
+; EMPTY:      FileHeaders {
+; EMPTY-NEXT:   BlockSize: 4096
+; EMPTY-NEXT:   Unknown0: 2
+; EMPTY-NEXT:   NumBlocks: 25
+; EMPTY-NEXT:   NumDirectoryBytes: 136
+; EMPTY-NEXT:   Unknown1: 0
+; EMPTY-NEXT:   BlockMapAddr: 24
+; EMPTY-NEXT:   NumDirectoryBlocks: 1
+; EMPTY-NEXT:   BlockMapOffset: 98304
+; EMPTY-NEXT:   DirectoryBlocks: [23]
+; EMPTY-NEXT:   NumStreams: 17
+; EMPTY-NEXT: }
+; EMPTY-NEXT: PDB Stream {
+; EMPTY-NEXT:   Version: 20000404
+; EMPTY-NEXT:   Signature: 0x54E507E2
+; EMPTY-NEXT:   Age: 1
+; EMPTY-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Stream '/names' {
+; EMPTY-NEXT:   Index: 13
+; EMPTY-NEXT:   Signature: 0xEFFEEFFE
+; EMPTY-NEXT:   Version: 1
+; EMPTY-NEXT:   Name Count: 4
+; EMPTY-NEXT:   Names [
+; EMPTY-NEXT:     d:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)
+; EMPTY-NEXT:     d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:   ]
+; EMPTY-NEXT: }
+; EMPTY-NEXT: DBI Stream {
+; EMPTY-NEXT:   Dbi Version: 19990903
+; EMPTY-NEXT:   Age: 1
+; EMPTY-NEXT:   Incremental Linking: Yes
+; EMPTY-NEXT:   Has CTypes: No
+; EMPTY-NEXT:   Is Stripped: No
+; EMPTY-NEXT:   Machine Type: x86
+; EMPTY-NEXT:   Number of Symbols: 8
+; EMPTY-NEXT:   Toolchain Version: 12.0
+; EMPTY-NEXT:   mspdb120.dll version: 12.0.31101
+; EMPTY-NEXT:   Modules [
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:       Debug Stream Index: 12
+; EMPTY-NEXT:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:       Num Files: 1
+; EMPTY-NEXT:       Source File Name Idx: 0
+; EMPTY-NEXT:       Pdb File Name Idx: 0
+; EMPTY-NEXT:       Line Info Byte Size: 0
+; EMPTY-NEXT:       C13 Line Info Byte Size: 88
+; EMPTY-NEXT:       Symbol Byte Size: 208
+; EMPTY-NEXT:       Type Server Index: 0
+; EMPTY-NEXT:       Has EC Info: No
+; EMPTY-NEXT:       1 Contributing Source Files [
 ; EMPTY-NEXT:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT: * Linker *
-; EMPTY-NEXT:     Debug Stream Index: 14
-; EMPTY-NEXT:     Object File:
-; EMPTY-NEXT:     Num Files: 0
-; EMPTY-NEXT:     Source File Name Idx: 0
-; EMPTY-NEXT:     Pdb File Name Idx: 1
-; EMPTY-NEXT:     Line Info Byte Size: 0
-; EMPTY-NEXT:     C13 Line Info Byte Size: 0
-; EMPTY-NEXT:     Symbol Byte Size: 516
-; EMPTY-NEXT:     Type Server Index: 0
-; EMPTY-NEXT:     Has EC Info: 0
-; EMPTY-NEXT:     0 Contributing Source Files:
-; EMPTY-NEXT: TPI Version: 20040203
-; EMPTY-NEXT: Record count: 75
-; EMPTY-NEXT:   Kind: 0x4609  Bytes: [00 00 00 00]
-; EMPTY-NEXT:   Kind: 0x4104  Bytes: [74 00 00 00 00 00 00 00 00 10 00 00]
-; EMPTY-NEXT:   Kind: 0x4611  Bytes: [02 15 03 00 01 00 61 70 61 72 74 6D 65 6E 74 00
-; EMPTY-NEXT:                         02 15 03 00 02 00 73 69 6E 67 6C 65 00 F3 F2 F1
-; EMPTY-NEXT:                         02 15 03 00 03 00 66 72 65 65 00 F1 02 15 03 00
-; EMPTY-NEXT:                         04 00 6E 65 75 74 72 61 6C 00 F2 F1 02 15 03 00
-; EMPTY-NEXT:                         05 00 62 6F 74 68 00 F1]
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:       Debug Stream Index: 14
+; EMPTY-NEXT:       Object File Name:
+; EMPTY-NEXT:       Num Files: 0
+; EMPTY-NEXT:       Source File Name Idx: 0
+; EMPTY-NEXT:       Pdb File Name Idx: 1
+; EMPTY-NEXT:       Line Info Byte Size: 0
+; EMPTY-NEXT:       C13 Line Info Byte Size: 0
+; EMPTY-NEXT:       Symbol Byte Size: 516
+; EMPTY-NEXT:       Type Server Index: 0
+; EMPTY-NEXT:       Has EC Info: No
+; EMPTY-NEXT:       0 Contributing Source Files [
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:   ]
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Type Info Stream {
+; EMPTY-NEXT:   TPI Version: 20040203
+; EMPTY-NEXT:   Record count: 75
+; EMPTY-NEXT:   Records [
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Kind: 0x1201
+; EMPTY-NEXT:     Bytes (
+; EMPTY-NEXT:       0000: 00000000                             |....|
+; EMPTY-NEXT:     )
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Kind: 0x1008
+; EMPTY-NEXT:     Bytes (
+; EMPTY-NEXT:       0000: 74000000 00000000 00100000           |t...........|
+; EMPTY-NEXT:     )
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Kind: 0x1203
+; EMPTY-NEXT:     Bytes (
+; EMPTY-NEXT:       0000: 02150300 01006170 6172746D 656E7400  |......apartment.|
+; EMPTY-NEXT:       0010: 02150300 02007369 6E676C65 00F3F2F1  |......single....|
+; EMPTY-NEXT:       0020: 02150300 03006672 656500F1 02150300  |......free......|
+; EMPTY-NEXT:       0030: 04006E65 75747261 6C00F2F1 02150300  |..neutral.......|
+; EMPTY-NEXT:       0040: 0500626F 746800F1                    |..both..|
+; EMPTY-NEXT:     )
+; EMPTY-NEXT:   }
 
-BIG:      BlockSize: 4096
-BIG-NEXT: Unknown0: 2
-BIG-NEXT: NumBlocks: 99
-BIG-NEXT: NumDirectoryBytes: 616
-BIG-NEXT: Unknown1: 0
-BIG-NEXT: BlockMapAddr: 97
-BIG-NEXT: NumDirectoryBlocks: 1
-BIG-NEXT: BlockMapOffset: 397312
-BIG-NEXT: DirectoryBlocks: [96]
-BIG-NEXT: NumStreams: 64
-BIG-NEXT: Version: 20000404
-BIG-NEXT: Signature: 571ffe67
-BIG-NEXT: Age: 1
-BIG-NEXT: Guid: {880ECC89-DF81-0B4F-839C-58CBD052E937}
+; BIG:      FileHeaders {
+; BIG-NEXT:   BlockSize: 4096
+; BIG-NEXT:   Unknown0: 2
+; BIG-NEXT:   NumBlocks: 99
+; BIG-NEXT:   NumDirectoryBytes: 616
+; BIG-NEXT:   Unknown1: 0
+; BIG-NEXT:   BlockMapAddr: 97
+; BIG-NEXT:   NumDirectoryBlocks: 1
+; BIG-NEXT:   BlockMapOffset: 397312
+; BIG-NEXT:   DirectoryBlocks: [96]
+; BIG-NEXT:   NumStreams: 64
+; BIG-NEXT: }
+; BIG-NEXT: PDB Stream {
+; BIG-NEXT:   Version: 20000404
+; BIG-NEXT:   Signature: 0x571FFE67
+; BIG-NEXT:   Age: 1
+; BIG-NEXT:   Guid: {880ECC89-DF81-0B4F-839C-58CBD052E937}
+; BIG-NEXT: }
+; BIG-NEXT: Stream '/names' {
+; BIG-NEXT:   Index: 13
+; BIG-NEXT:   Signature: 0xEFFEEFFE
+; BIG-NEXT:   Version: 1
+; BIG-NEXT:   Name Count: 92
+; BIG-NEXT:   Names [
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vcruntime_startup.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+; BIG-NEXT:     f:\dd\vctools\langapi\include\isa_availability.h
+; BIG-NEXT:     $T0 $ebp = $T2 $esp = $T1 .raSearchStart = $eip $T1 ^ = $ebp $T0 = $esp $T1 4 + = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 40 - ^ =  $23 $T0 44 - ^ =  $24 $T0 48 - ^ = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =  $24 $T0 20 - ^ = 
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\wingdi.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\predefined c++ types (compiler internal)
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ = 
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $23 $T0 4 - ^ = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ = 
+; BIG-NEXT:     d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_startup.h
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\processthreadsapi.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ =  $24 $T0 12 - ^ = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ =  $24 $T0 28 - ^ = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\eh.h
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 808 - ^ =  $23 $T0 812 - ^ = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\predefined c++ attributes (compiler internal)
+; BIG-NEXT:     d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\predefined c++ attributes (compiler internal)
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\stdio.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\i386\mmintrin.h
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 4 - ^ = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 28 - ^ =  $23 $T0 32 - ^ =  $24 $T0 36 - ^ = 
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\rtcapi.h
+; BIG-NEXT:   ]
+; BIG-NEXT: }
+; BIG-NEXT: DBI Stream {
+; BIG-NEXT:   Dbi Version: 19990903
+; BIG-NEXT:   Age: 1
+; BIG-NEXT:   Incremental Linking: Yes
+; BIG-NEXT:   Has CTypes: No
+; BIG-NEXT:   Is Stripped: No
+; BIG-NEXT:   Machine Type: x86
+; BIG-NEXT:   Number of Symbols: 9
+; BIG-NEXT:   Toolchain Version: 14.0
+; BIG-NEXT:   mspdb140.dll version: 14.0.23918
+; BIG-NEXT:   Modules [
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
+; BIG-NEXT:       Debug Stream Index: 12
+; BIG-NEXT:       Object File Name: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 400
+; BIG-NEXT:       Symbol Byte Size: 872
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj
+; BIG-NEXT:       Debug Stream Index: 14
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 344
+; BIG-NEXT:       Symbol Byte Size: 720
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj
+; BIG-NEXT:       Debug Stream Index: 15
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 19
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 464
+; BIG-NEXT:       Symbol Byte Size: 464
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       19 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj
+; BIG-NEXT:       Debug Stream Index: 16
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 1
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 32
+; BIG-NEXT:       Symbol Byte Size: 444
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj
+; BIG-NEXT:       Debug Stream Index: 17
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 344
+; BIG-NEXT:       Symbol Byte Size: 604
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj
+; BIG-NEXT:       Debug Stream Index: 18
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 344
+; BIG-NEXT:       Symbol Byte Size: 344
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj
+; BIG-NEXT:       Debug Stream Index: 19
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 9
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 224
+; BIG-NEXT:       Symbol Byte Size: 160
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       9 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj
+; BIG-NEXT:       Debug Stream Index: 20
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 1392
+; BIG-NEXT:       Symbol Byte Size: 1144
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj
+; BIG-NEXT:       Debug Stream Index: 21
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 10
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 432
+; BIG-NEXT:       Symbol Byte Size: 552
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       10 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj
+; BIG-NEXT:       Debug Stream Index: 22
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 392
+; BIG-NEXT:       Symbol Byte Size: 328
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj
+; BIG-NEXT:       Debug Stream Index: 23
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 10
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 352
+; BIG-NEXT:       Symbol Byte Size: 424
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       10 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj
+; BIG-NEXT:       Debug Stream Index: 24
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 9
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 224
+; BIG-NEXT:       Symbol Byte Size: 156
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       9 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj
+; BIG-NEXT:       Debug Stream Index: 25
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 11
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 328
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       11 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj
+; BIG-NEXT:       Debug Stream Index: 26
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 10
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 304
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       10 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj
+; BIG-NEXT:       Debug Stream Index: 27
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 276
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj
+; BIG-NEXT:       Debug Stream Index: 28
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 268
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj
+; BIG-NEXT:       Debug Stream Index: 29
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj
+; BIG-NEXT:       Debug Stream Index: 30
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj
+; BIG-NEXT:       Debug Stream Index: 31
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 24
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 760
+; BIG-NEXT:       Symbol Byte Size: 620
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       24 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj
+; BIG-NEXT:       Debug Stream Index: 32
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 80
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj
+; BIG-NEXT:       Debug Stream Index: 33
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 268
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj
+; BIG-NEXT:       Debug Stream Index: 34
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj
+; BIG-NEXT:       Debug Stream Index: 35
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 80
+; BIG-NEXT:       Symbol Byte Size: 292
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj
+; BIG-NEXT:       Debug Stream Index: 36
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 2
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 112
+; BIG-NEXT:       Symbol Byte Size: 312
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       2 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj
+; BIG-NEXT:       Debug Stream Index: 37
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj
+; BIG-NEXT:       Debug Stream Index: 38
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj
+; BIG-NEXT:       Debug Stream Index: 39
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 21
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 624
+; BIG-NEXT:       Symbol Byte Size: 432
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       21 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj
+; BIG-NEXT:       Debug Stream Index: 40
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 26
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 1668
+; BIG-NEXT:       Symbol Byte Size: 2364
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       26 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj
+; BIG-NEXT:       Debug Stream Index: 41
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 488
+; BIG-NEXT:       Symbol Byte Size: 196
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj
+; BIG-NEXT:       Debug Stream Index: 42
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 2500
+; BIG-NEXT:       Symbol Byte Size: 6020
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj
+; BIG-NEXT:       Debug Stream Index: 43
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 368
+; BIG-NEXT:       Symbol Byte Size: 988
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj
+; BIG-NEXT:       Debug Stream Index: 44
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 1240
+; BIG-NEXT:       Symbol Byte Size: 1844
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj
+; BIG-NEXT:       Debug Stream Index: 45
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 552
+; BIG-NEXT:       Symbol Byte Size: 356
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:KERNEL32.dll
+; BIG-NEXT:       Debug Stream Index: 47
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 1616
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: KERNEL32.dll
+; BIG-NEXT:       Debug Stream Index: 46
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 208
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:VCRUNTIME140.dll
+; BIG-NEXT:       Debug Stream Index: 49
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 664
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: VCRUNTIME140.dll
+; BIG-NEXT:       Debug Stream Index: 48
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 148
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-stdio-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 59
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 264
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-stdio-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 58
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 180
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-runtime-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 57
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 3068
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-runtime-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 56
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 188
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-math-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 55
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 140
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-math-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 54
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 180
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-locale-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 53
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 148
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-locale-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 52
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 188
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-heap-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 51
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 136
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-heap-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 50
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 180
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: * Linker *
+; BIG-NEXT:       Debug Stream Index: 60
+; BIG-NEXT:       Object File Name: 
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 55
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 3080
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:   ]
+; BIG-NEXT: }
 
-BIG:      NameStream: 13
-BIG-NEXT: NameStreamSignature: effeeffe
-BIG-NEXT: NameStreamVersion: 1
-BIG-NEXT: Name Count: 92
-BIG-NEXT: Name: f:\dd\vctools\crt\vcruntime\inc\vcruntime_startup.h
-BIG-NEXT: Name: f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
-BIG-NEXT: Name: f:\dd\vctools\langapi\include\isa_availability.h
-BIG-NEXT: Name:
-BIG-NEXT: Name: $T0 $ebp = $T2 $esp = $T1 .raSearchStart = $eip $T1 ^ = $ebp $T0 = $esp $T1 4 + =
-BIG-NEXT: Name:
-BIG-NEXT: Name: f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
-BIG-NEXT: Name: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 40 - ^ =  $23 $T0 44 - ^ =  $24 $T0 48 - ^ =
-BIG-NEXT: Name: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =  $24 $T0 20 - ^ =
-
-BIG:      Dbi Version: 19990903
-BIG-NEXT: Age: 1
-BIG-NEXT: Incremental Linking: 1
-BIG-NEXT: Has CTypes: 0
-BIG-NEXT: Is Stripped: 0
-BIG-NEXT: Machine Type: x86
-BIG-NEXT: Number of Symbols: 9
-BIG-NEXT: Toolchain Version: 14.0
-BIG-NEXT: mspdb140.dll version: 14.0.23918
-
-BIG:      Modules:
-BIG-NEXT: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
-BIG-NEXT:     Debug Stream Index: 12
-BIG-NEXT:     Object File: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 400
-BIG-NEXT:     Symbol Byte Size: 872
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj
-BIG-NEXT:     Debug Stream Index: 14
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 14
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 344
-BIG-NEXT:     Symbol Byte Size: 720
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     14 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj
-BIG-NEXT:     Debug Stream Index: 15
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 19
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 464
-BIG-NEXT:     Symbol Byte Size: 464
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     19 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj
-BIG-NEXT:     Debug Stream Index: 16
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 1
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 32
-BIG-NEXT:     Symbol Byte Size: 444
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj
-BIG-NEXT:     Debug Stream Index: 17
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 14
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 344
-BIG-NEXT:     Symbol Byte Size: 604
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     14 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj
-BIG-NEXT:     Debug Stream Index: 18
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 14
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 344
-BIG-NEXT:     Symbol Byte Size: 344
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     14 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj
-BIG-NEXT:     Debug Stream Index: 19
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 9
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 224
-BIG-NEXT:     Symbol Byte Size: 160
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     9 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj
-BIG-NEXT:     Debug Stream Index: 20
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 14
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 1392
-BIG-NEXT:     Symbol Byte Size: 1144
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     14 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj
-BIG-NEXT:     Debug Stream Index: 21
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 10
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 432
-BIG-NEXT:     Symbol Byte Size: 552
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     10 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj
-BIG-NEXT:     Debug Stream Index: 22
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 14
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 392
-BIG-NEXT:     Symbol Byte Size: 328
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     14 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj
-BIG-NEXT:     Debug Stream Index: 23
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 10
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 352
-BIG-NEXT:     Symbol Byte Size: 424
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     10 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj
-BIG-NEXT:     Debug Stream Index: 24
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 9
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 224
-BIG-NEXT:     Symbol Byte Size: 156
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     9 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj
-BIG-NEXT:     Debug Stream Index: 25
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 11
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 328
-BIG-NEXT:     Symbol Byte Size: 272
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     11 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj
-BIG-NEXT:     Debug Stream Index: 26
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 10
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 304
-BIG-NEXT:     Symbol Byte Size: 272
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     10 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj
-BIG-NEXT:     Debug Stream Index: 27
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 276
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj
-BIG-NEXT:     Debug Stream Index: 28
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 268
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj
-BIG-NEXT:     Debug Stream Index: 29
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 260
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj
-BIG-NEXT:     Debug Stream Index: 30
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 260
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj
-BIG-NEXT:     Debug Stream Index: 31
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 24
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 760
-BIG-NEXT:     Symbol Byte Size: 620
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     24 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj
-BIG-NEXT:     Debug Stream Index: 32
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 80
-BIG-NEXT:     Symbol Byte Size: 272
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj
-BIG-NEXT:     Debug Stream Index: 33
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 268
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj
-BIG-NEXT:     Debug Stream Index: 34
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 260
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj
-BIG-NEXT:     Debug Stream Index: 35
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 80
-BIG-NEXT:     Symbol Byte Size: 292
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj
-BIG-NEXT:     Debug Stream Index: 36
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 2
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 112
-BIG-NEXT:     Symbol Byte Size: 312
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     2 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj
-BIG-NEXT:     Debug Stream Index: 37
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 260
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj
-BIG-NEXT:     Debug Stream Index: 38
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 88
-BIG-NEXT:     Symbol Byte Size: 272
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj
-BIG-NEXT:     Debug Stream Index: 39
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 21
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 624
-BIG-NEXT:     Symbol Byte Size: 432
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     21 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj
-BIG-NEXT:     Debug Stream Index: 40
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 26
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 1668
-BIG-NEXT:     Symbol Byte Size: 2364
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     26 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj
-BIG-NEXT:     Debug Stream Index: 41
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 20
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 488
-BIG-NEXT:     Symbol Byte Size: 196
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     20 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj
-BIG-NEXT:     Debug Stream Index: 42
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 20
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 2500
-BIG-NEXT:     Symbol Byte Size: 6020
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     20 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj
-BIG-NEXT:     Debug Stream Index: 43
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 1
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 368
-BIG-NEXT:     Symbol Byte Size: 988
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     1 Contributing Source Files:
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj
-BIG-NEXT:     Debug Stream Index: 44
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 20
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 1240
-BIG-NEXT:     Symbol Byte Size: 1844
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     20 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj
-BIG-NEXT:     Debug Stream Index: 45
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-BIG-NEXT:     Num Files: 20
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 552
-BIG-NEXT:     Symbol Byte Size: 356
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     20 Contributing Source Files:
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-BIG-NEXT: Import:KERNEL32.dll
-BIG-NEXT:     Debug Stream Index: 47
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 1616
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: KERNEL32.dll
-BIG-NEXT:     Debug Stream Index: 46
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 208
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: Import:VCRUNTIME140.dll
-BIG-NEXT:     Debug Stream Index: 49
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 664
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: VCRUNTIME140.dll
-BIG-NEXT:     Debug Stream Index: 48
-BIG-NEXT:     Object File: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 148
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: Import:api-ms-win-crt-stdio-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 59
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 264
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: api-ms-win-crt-stdio-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 58
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 180
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: Import:api-ms-win-crt-runtime-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 57
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 3068
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: api-ms-win-crt-runtime-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 56
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 188
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: Import:api-ms-win-crt-math-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 55
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 140
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: api-ms-win-crt-math-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 54
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 180
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: Import:api-ms-win-crt-locale-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 53
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 148
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: api-ms-win-crt-locale-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 52
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 188
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: Import:api-ms-win-crt-heap-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 51
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 136
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: api-ms-win-crt-heap-l1-1-0.dll
-BIG-NEXT:     Debug Stream Index: 50
-BIG-NEXT:     Object File: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 0
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 180
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-BIG-NEXT: * Linker *
-BIG-NEXT:     Debug Stream Index: 60
-BIG-NEXT:     Object File:
-BIG-NEXT:     Num Files: 0
-BIG-NEXT:     Source File Name Idx: 0
-BIG-NEXT:     Pdb File Name Idx: 55
-BIG-NEXT:     Line Info Byte Size: 0
-BIG-NEXT:     C13 Line Info Byte Size: 0
-BIG-NEXT:     Symbol Byte Size: 3080
-BIG-NEXT:     Type Server Index: 0
-BIG-NEXT:     Has EC Info: 0
-BIG-NEXT:     0 Contributing Source Files:
-
-BAD-BLOCK-SIZE: The file has an unrecognized format.
+; BAD-BLOCK-SIZE: The file has an unrecognized format.

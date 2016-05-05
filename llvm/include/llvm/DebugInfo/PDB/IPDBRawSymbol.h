@@ -16,8 +16,9 @@
 #include <memory>
 
 namespace llvm {
-
 class raw_ostream;
+
+namespace pdb {
 
 /// IPDBRawSymbol defines an interface used to represent an arbitrary symbol.
 /// It exposes a monolithic interface consisting of accessors for the union of
@@ -206,6 +207,7 @@ public:
   virtual std::string getUnused() const = 0;
 };
 
+} // namespace pdb
 } // namespace llvm
 
 #endif

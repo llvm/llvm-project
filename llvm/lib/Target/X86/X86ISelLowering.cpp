@@ -27307,8 +27307,9 @@ static SDValue combineIntegerAbs(SDNode *N, SelectionDAG &DAG) {
 /// into:
 ///   SETGT(X, -1)
 static SDValue foldXorTruncShiftIntoCmp(SDNode *N, SelectionDAG &DAG) {
-  // This is only worth doing if the output type is i8.
-  if (N->getValueType(0) != MVT::i8)
+  // This is only worth doing if the output type is i8 or i1.
+  EVT ResultType = N->getValueType(0);
+  if (ResultType != MVT::i8 && ResultType != MVT::i1)
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -27343,8 +27344,13 @@ static SDValue foldXorTruncShiftIntoCmp(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue ShiftOp = Shift.getOperand(0);
   EVT ShiftOpTy = ShiftOp.getValueType();
-  SDValue Cond = DAG.getSetCC(DL, MVT::i8, ShiftOp,
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT SetCCResultType = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                               *DAG.getContext(), ResultType);
+  SDValue Cond = DAG.getSetCC(DL, SetCCResultType, ShiftOp,
                               DAG.getConstant(-1, DL, ShiftOpTy), ISD::SETGT);
+  if (SetCCResultType != ResultType)
+    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, ResultType, Cond);
   return Cond;
 }
 

@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace {
 Variant VariantFromVARIANT(const VARIANT &V) {
