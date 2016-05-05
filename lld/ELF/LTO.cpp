@@ -106,13 +106,6 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   SmallPtrSet<GlobalValue *, 8> Used;
   collectUsedGlobalVariables(M, Used, /* CompilerUsed */ false);
 
-  // This function is called if we know that the combined LTO object will
-  // provide a definition of a symbol. It undefines the symbol so that the
-  // definition in the combined LTO object will replace it when parsed.
-  auto Undefine = [](Symbol *S) {
-    replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, 0);
-  };
-
   for (const BasicSymbolRef &Sym : Obj->symbols()) {
     uint32_t Flags = Sym.getFlags();
     GlobalValue *GV = Obj->getSymbolGV(Sym.getRawDataRefImpl());
@@ -123,14 +116,30 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     Symbol *S = Syms[BodyIndex++];
     if (Flags & BasicSymbolRef::SF_Undefined)
       continue;
-    if (!GV) {
-      // Module asm symbol.
-      Undefine(S);
-      continue;
-    }
     auto *B = dyn_cast<DefinedBitcode>(S->body());
     if (!B || B->File != &F)
       continue;
+
+    // We collect the set of symbols we want to internalize here
+    // and change the linkage after the IRMover executed, i.e. after
+    // we imported the symbols and satisfied undefined references
+    // to it. We can't just change linkage here because otherwise
+    // the IRMover will just rename the symbol.
+    if (GV && shouldInternalize(Used, S, GV))
+      InternalizedSyms.insert(GV->getName());
+
+    // At this point we know that either the combined LTO object will provide a
+    // definition of a symbol, or we will internalize it. In either case, we
+    // need to undefine the symbol. In the former case, the real definition
+    // needs to be able to replace the original definition without conflicting.
+    // In the latter case, we need to allow the combined LTO object to provide a
+    // definition with the same name, for example when doing parallel codegen.
+    replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, 0);
+
+    if (!GV)
+      // Module asm symbol.
+      continue;
+
     switch (GV->getLinkage()) {
     default:
       break;
@@ -141,16 +150,6 @@ void BitcodeCompiler::add(BitcodeFile &F) {
       GV->setLinkage(GlobalValue::WeakODRLinkage);
       break;
     }
-
-    // We collect the set of symbols we want to internalize here
-    // and change the linkage after the IRMover executed, i.e. after
-    // we imported the symbols and satisfied undefined references
-    // to it. We can't just change linkage here because otherwise
-    // the IRMover will just rename the symbol.
-    if (shouldInternalize(Used, S, GV))
-      InternalizedSyms.insert(GV->getName());
-    else
-      Undefine(S);
 
     Keep.push_back(GV);
   }

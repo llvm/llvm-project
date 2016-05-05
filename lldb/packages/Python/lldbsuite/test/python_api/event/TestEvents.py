@@ -13,7 +13,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-@skipIfDarwin  # llvm.org/pr25924, sometimes generating SIGSEGV
 @skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
 
@@ -86,6 +85,7 @@ class EventAPITestCase(TestBase):
                         if traceOn:
                             print("timeout occurred waiting for event...")
                     count = count + 1
+                listener.Clear()
                 return
 
         # Let's start the listening thread to retrieve the events.
@@ -102,6 +102,8 @@ class EventAPITestCase(TestBase):
 
         # Wait until the 'MyListeningThread' terminates.
         my_thread.join()
+
+        # Shouldn't we be testing against some kind of expectation here?
 
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux("llvm.org/pr23730") # Flaky, fails ~1/100 cases
@@ -155,10 +157,11 @@ class EventAPITestCase(TestBase):
                         #print("Got a valid event:", event)
                         #print("Event data flavor:", event.GetDataFlavor())
                         #print("Event type:", lldbutil.state_type_to_str(event.GetType()))
+                        listener.Clear()
                         return
                     count = count + 1
                     print("Timeout: listener.WaitForEvent")
-
+                listener.Clear()
                 return
 
         # Use Python API to kill the process.  The listening thread should be
@@ -266,7 +269,7 @@ class EventAPITestCase(TestBase):
                     count = count + 1
                     if count > 6:
                         break
-
+                listener.Clear()
                 return
 
         # Use Python API to continue the process.  The listening thread should be

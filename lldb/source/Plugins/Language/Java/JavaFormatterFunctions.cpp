@@ -14,10 +14,99 @@
 #include "JavaFormatterFunctions.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
+#include "lldb/Symbol/JavaASTContext.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+
+namespace
+{
+
+class JavaArraySyntheticFrontEnd : public SyntheticChildrenFrontEnd
+{
+public:
+    JavaArraySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp) :
+        SyntheticChildrenFrontEnd(*valobj_sp)
+    {
+        if (valobj_sp)
+            Update();
+    }
+
+    size_t
+    CalculateNumChildren() override
+    {
+        ValueObjectSP valobj = GetDereferencedValueObject();
+        if (!valobj)
+            return 0;
+
+        CompilerType type = valobj->GetCompilerType();
+        uint32_t size = JavaASTContext::CalculateArraySize(type, *valobj);
+        if (size == UINT32_MAX)
+            return 0;
+        return size;
+    }
+
+    lldb::ValueObjectSP
+    GetChildAtIndex(size_t idx) override
+    {
+        ValueObjectSP valobj = GetDereferencedValueObject();
+        if (!valobj)
+            return nullptr;
+
+        ProcessSP process_sp = valobj->GetProcessSP();
+        if (!process_sp)
+            return nullptr;
+
+        CompilerType type = valobj->GetCompilerType();
+        CompilerType element_type = type.GetArrayElementType();
+        lldb::addr_t address = valobj->GetAddressOf() + JavaASTContext::CalculateArrayElementOffset(type, idx);
+
+        Error error;
+        size_t byte_size = element_type.GetByteSize(nullptr);
+        DataBufferSP buffer_sp(new DataBufferHeap(byte_size, 0));
+        size_t bytes_read = process_sp->ReadMemory(address, buffer_sp->GetBytes(), byte_size, error);
+        if (error.Fail() || byte_size != bytes_read)
+            return nullptr;
+
+        StreamString name;
+        name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+        DataExtractor data(buffer_sp, process_sp->GetByteOrder(), process_sp->GetAddressByteSize());
+        return CreateValueObjectFromData(name.GetData(), data, valobj->GetExecutionContextRef(),
+                                         element_type);
+    }
+
+    bool
+    Update() override
+    {
+        return false;
+    }
+
+    bool
+    MightHaveChildren() override
+    {
+        return true;
+    }
+
+    size_t
+    GetIndexOfChildWithName(const ConstString &name) override
+    {
+        return ExtractIndexFromString(name.GetCString());
+    }
+
+private:
+    ValueObjectSP
+    GetDereferencedValueObject()
+    {
+        if (!m_backend.IsPointerOrReferenceType())
+            m_backend.GetSP();
+
+        Error error;
+        return m_backend.Dereference(error);
+    }
+};
+
+} // end of anonymous namespace
 
 bool
 lldb_private::formatters::JavaStringSummaryProvider(ValueObject &valobj, Stream &stream, const TypeSummaryOptions &opts)
@@ -68,4 +157,30 @@ lldb_private::formatters::JavaStringSummaryProvider(ValueObject &valobj, Stream 
 
     stream.Printf("Summary Unavailable");
     return true;
+}
+
+bool
+lldb_private::formatters::JavaArraySummaryProvider(ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options)
+{
+    if (valobj.IsPointerOrReferenceType())
+    {
+        Error error;
+        ValueObjectSP deref = valobj.Dereference(error);
+        if (error.Fail())
+            return false;
+        return JavaArraySummaryProvider(*deref, stream, options);
+    }
+
+    CompilerType type = valobj.GetCompilerType();
+    uint32_t size = JavaASTContext::CalculateArraySize(type, valobj);
+    if (size == UINT32_MAX)
+        return false;
+    stream.Printf("[%u]{...}", size);
+    return true;
+}
+
+SyntheticChildrenFrontEnd*
+lldb_private::formatters::JavaArraySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
+{
+    return valobj_sp ? new JavaArraySyntheticFrontEnd(valobj_sp) : nullptr;
 }

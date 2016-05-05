@@ -178,12 +178,9 @@ public:
     IsVTableName(const char *name) override;
 
     bool
-    GetDynamicTypeAndAddress(ValueObject &in_value,
-                             lldb::DynamicValueType use_dynamic,
-                             TypeAndOrName &class_type_or_name,
-                             Address &address,
-                             Value::ValueType &value_type,
-                             Error &error) override;
+    GetDynamicTypeAndAddress(ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+                             TypeAndOrName &class_type_or_name, Address &address,
+                             Value::ValueType &value_type) override;
 
     TypeAndOrName
     FixUpDynamicType(const TypeAndOrName &type_and_or_name, ValueObject &static_value) override;

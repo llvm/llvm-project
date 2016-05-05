@@ -1543,7 +1543,8 @@ __kmp_fork_call(
 #endif
 
             {
-                KMP_TIME_BLOCK(OMP_work);
+                KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+                KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
                 __kmp_invoke_microtask( microtask, gtid, 0, argc, parent_team->t.t_argv
 #if OMPT_SUPPORT
                                         , exit_runtime_p
@@ -1618,7 +1619,8 @@ __kmp_fork_call(
                     gtid, parent_team->t.t_id, parent_team->t.t_pkfn ) );
 
         {
-            KMP_TIME_BLOCK(OMP_work);
+            KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+            KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
             if (! parent_team->t.t_invoke( gtid )) {
                 KMP_ASSERT2( 0, "cannot invoke microtask for MASTER thread" );
             }
@@ -1738,7 +1740,8 @@ __kmp_fork_call(
 #endif
 
                 {
-                    KMP_TIME_BLOCK(OMP_work);
+                    KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+                    KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
                     __kmp_invoke_microtask( microtask, gtid, 0, argc, parent_team->t.t_argv
 #if OMPT_SUPPORT
                         , exit_runtime_p
@@ -1795,7 +1798,8 @@ __kmp_fork_call(
                 team->t.t_level--;
                 // AC: call special invoker for outer "parallel" of the teams construct
                 {
-                    KMP_TIME_BLOCK(OMP_work);
+                    KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+                    KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
                     invoker(gtid);
                 }
             } else {
@@ -1842,7 +1846,8 @@ __kmp_fork_call(
 #endif
 
                 {
-                    KMP_TIME_BLOCK(OMP_work);
+                    KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+                    KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
                     __kmp_invoke_microtask( microtask, gtid, 0, argc, args
 #if OMPT_SUPPORT
                         , exit_runtime_p
@@ -2178,7 +2183,8 @@ __kmp_fork_call(
     }  // END of timer KMP_fork_call block
 
     {
-        KMP_TIME_BLOCK(OMP_work);
+        KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+        KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
         // KMP_TIME_DEVELOPER_BLOCK(USER_master_invoke);
         if (! team->t.t_invoke( gtid )) {
             KMP_ASSERT2( 0, "cannot invoke microtask for MASTER thread" );
@@ -5448,6 +5454,8 @@ __kmp_launch_thread( kmp_info_t *this_thr )
                 KMP_STOP_DEVELOPER_EXPLICIT_TIMER(USER_launch_thread_loop);
                 {
                     KMP_TIME_DEVELOPER_BLOCK(USER_worker_invoke);
+                    KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+                    KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
                     rc = (*pteam)->t.t_invoke( gtid );
                 }
                 KMP_START_DEVELOPER_EXPLICIT_TIMER(USER_launch_thread_loop);
@@ -6783,7 +6791,8 @@ __kmp_invoke_task_func( int gtid )
 #endif
 
     {
-        KMP_TIME_BLOCK(OMP_work);
+        KMP_TIME_PARTITIONED_BLOCK(OMP_parallel);
+        KMP_SET_THREAD_STATE_BLOCK(IMPLICIT_TASK);
         rc = __kmp_invoke_microtask( (microtask_t) TCR_SYNC_PTR(team->t.t_pkfn),
                                      gtid, tid, (int) team->t.t_argc, (void **) team->t.t_argv
 #if OMPT_SUPPORT

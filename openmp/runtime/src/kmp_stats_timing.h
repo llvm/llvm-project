@@ -40,11 +40,16 @@ class tsc_tick_count {
 #endif
         double ticks() const { return double(value); }
         int64_t getValue() const { return value; }
+        tsc_interval_t& operator=(int64_t nvalue) { value = nvalue; return *this; }
 
         friend class tsc_tick_count;
 
-        friend tsc_interval_t operator-(
-        const tsc_tick_count t1, const tsc_tick_count t0);
+        friend tsc_interval_t operator-(const tsc_tick_count& t1,
+                                        const tsc_tick_count& t0);
+        friend tsc_interval_t operator-(const tsc_tick_count::tsc_interval_t& i1,
+                                        const tsc_tick_count::tsc_interval_t& i0);
+        friend tsc_interval_t& operator+=(tsc_tick_count::tsc_interval_t& i1,
+                                         const tsc_tick_count::tsc_interval_t& i0);
     };
 
 #if KMP_HAVE___BUILTIN_READCYCLECOUNTER
@@ -66,12 +71,23 @@ class tsc_tick_count {
     static double tick_time(); // returns seconds per cycle (period) of clock
 #endif
     static tsc_tick_count now() { return tsc_tick_count(); } // returns the rdtsc register value
-    friend tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count t1, const tsc_tick_count t0);
+    friend tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count& t1, const tsc_tick_count& t0);
 };
 
-inline tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count t1, const tsc_tick_count t0)
+inline tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count& t1, const tsc_tick_count& t0)
 {
     return tsc_tick_count::tsc_interval_t( t1.my_count-t0.my_count );
+}
+
+inline tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count::tsc_interval_t& i1, const tsc_tick_count::tsc_interval_t& i0)
+{
+    return tsc_tick_count::tsc_interval_t( i1.value-i0.value );
+}
+
+inline tsc_tick_count::tsc_interval_t& operator+=(tsc_tick_count::tsc_interval_t& i1, const tsc_tick_count::tsc_interval_t& i0)
+{
+    i1.value += i0.value;
+    return i1;
 }
 
 #if KMP_HAVE_TICK_TIME

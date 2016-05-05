@@ -152,12 +152,11 @@ public:
   enum {
     // The piece is dead.
     PieceDead = uintX_t(-1),
-    // The piece is live, and an offset has not yet been assigned. After offsets
+    // The piece is live, but an offset has not yet been assigned. After offsets
     // have been assigned, if the output section uses tail merging, the field
-    // will still have this value and the output section offset is available
-    // from MergeOutputSection<ELFT>::getOffset(). Otherwise, this value has no
-    // special significance, it just means that the offset is 0.
-    PieceLive = uintX_t(0),
+    // will still have this value and the output section offset is computed
+    // lazilly.
+    PieceLive = uintX_t(-2),
   };
 
   std::pair<std::pair<uintX_t, uintX_t> *, uintX_t>

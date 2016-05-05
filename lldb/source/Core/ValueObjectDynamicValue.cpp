@@ -187,41 +187,23 @@ ValueObjectDynamicValue::UpdateValue ()
     LanguageRuntime *runtime = nullptr;
 
     lldb::LanguageType known_type = m_parent->GetObjectRuntimeLanguage();
-    
-    Error dynamic_type_discovery_error;
-    
     if (known_type != lldb::eLanguageTypeUnknown && known_type != lldb::eLanguageTypeC)
     {
         runtime = process->GetLanguageRuntime (known_type);
         if (runtime)
-            found_dynamic_type = runtime->GetDynamicTypeAndAddress (*m_parent,
-                                                                    m_use_dynamic,
-                                                                    class_type_or_name,
-                                                                    dynamic_address,
-                                                                    value_type,
-                                                                    dynamic_type_discovery_error);
+            found_dynamic_type = runtime->GetDynamicTypeAndAddress (*m_parent, m_use_dynamic, class_type_or_name, dynamic_address, value_type);
     }
     else
     {
         runtime = process->GetLanguageRuntime (lldb::eLanguageTypeC_plus_plus);
         if (runtime)
-            found_dynamic_type = runtime->GetDynamicTypeAndAddress (*m_parent,
-                                                                    m_use_dynamic,
-                                                                    class_type_or_name,
-                                                                    dynamic_address,
-                                                                    value_type,
-                                                                    dynamic_type_discovery_error);
+            found_dynamic_type = runtime->GetDynamicTypeAndAddress (*m_parent, m_use_dynamic, class_type_or_name, dynamic_address, value_type);
 
         if (!found_dynamic_type)
         {
             runtime = process->GetLanguageRuntime (lldb::eLanguageTypeObjC);
             if (runtime)
-                found_dynamic_type = runtime->GetDynamicTypeAndAddress (*m_parent,
-                                                                        m_use_dynamic,
-                                                                        class_type_or_name,
-                                                                        dynamic_address,
-                                                                        value_type,
-                                                                        dynamic_type_discovery_error);
+                found_dynamic_type = runtime->GetDynamicTypeAndAddress (*m_parent, m_use_dynamic, class_type_or_name, dynamic_address, value_type);
         }
     }
 
@@ -247,24 +229,16 @@ ValueObjectDynamicValue::UpdateValue ()
         m_type_impl.Clear();
     }
 
-    // If we don't have a dynamic type...
+    // If we don't have a dynamic type, then make ourselves just a echo of our parent.
+    // Or we could return false, and make ourselves an echo of our parent?
     if (!found_dynamic_type)
     {
-        // ...and it's not because of an error, let's make ourselves an echo of our parent
-        if (dynamic_type_discovery_error.Success())
-        {
-            if (m_dynamic_type_info)
-                SetValueDidChange(true);
-            ClearDynamicTypeInformation();
-            m_dynamic_type_info.Clear();
-            m_value = m_parent->GetValue();
-            m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
-        }
-        else
-        {
-            // ...but if it is because of an error, let's report that to the user
-            m_error = dynamic_type_discovery_error;
-        }
+        if (m_dynamic_type_info)
+            SetValueDidChange(true);
+        ClearDynamicTypeInformation();
+        m_dynamic_type_info.Clear();
+        m_value = m_parent->GetValue();
+        m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
         return m_error.Success();
     }
 

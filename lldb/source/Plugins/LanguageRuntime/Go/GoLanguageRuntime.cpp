@@ -140,15 +140,11 @@ GoLanguageRuntime::CouldHaveDynamicValue (ValueObject &in_value)
 }
 
 bool
-GoLanguageRuntime::GetDynamicTypeAndAddress(ValueObject &in_value,
-                                            lldb::DynamicValueType use_dynamic,
-                                            TypeAndOrName &class_type_or_name,
-                                            Address &dynamic_address,
-                                            Value::ValueType &value_type,
-                                            Error &error)
+GoLanguageRuntime::GetDynamicTypeAndAddress(ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+                                            TypeAndOrName &class_type_or_name, Address &dynamic_address,
+                                            Value::ValueType &value_type)
 {
     value_type = Value::eValueTypeScalar;
-    error.Clear();
     class_type_or_name.Clear();
     if (CouldHaveDynamicValue (in_value))
     {
