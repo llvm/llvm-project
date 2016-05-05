@@ -72,6 +72,13 @@ int main(int argc, char **argv) {
       i->setLinkage(GlobalValue::LinkOnceODRLinkage);
   }
 
+  for (Module::alias_iterator i = M->alias_begin(), e = M->alias_end();
+       i != e; ++i) {
+    if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage)
+      i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+  }
+
+
   if (OutputFilename.empty()) {
     errs() << "no output file\n";
     return 1;
