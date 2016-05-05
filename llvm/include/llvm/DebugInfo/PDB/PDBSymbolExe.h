@@ -17,6 +17,8 @@ namespace llvm {
 
 class raw_ostream;
 
+namespace pdb {
+
 class PDBSymbolExe : public PDBSymbol {
 public:
   PDBSymbolExe(const IPDBSession &PDBSession,
@@ -40,5 +42,6 @@ private:
                     int Indent) const;
 };
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLEXE_H

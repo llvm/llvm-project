@@ -17,6 +17,8 @@ namespace llvm {
 
 class raw_ostream;
 
+namespace pdb {
+
 class PDBSymbolCompiland : public PDBSymbol {
 public:
   PDBSymbolCompiland(const IPDBSession &PDBSession,
@@ -33,6 +35,7 @@ public:
 
   std::string getSourceFileName() const;
 };
+}
 }
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLCOMPILAND_H

@@ -39,7 +39,7 @@ declare a function as a kernel function. This metadata is attached to the
 
 .. code-block:: llvm
 
-   !0 = metadata !{<function-ref>, metadata !"kernel", i32 1}
+   !0 = !{<function-ref>, metadata !"kernel", i32 1}
 
 The first parameter is a reference to the kernel function. The following
 example shows a kernel function calling a device function in LLVM IR. The
@@ -54,14 +54,14 @@ function ``@my_kernel`` is callable from host code, but ``@my_fmad`` is not.
     }
 
     define void @my_kernel(float* %ptr) {
-      %val = load float* %ptr
+      %val = load float, float* %ptr
       %ret = call float @my_fmad(float %val, float %val, float %val)
       store float %ret, float* %ptr
       ret void
     }
 
     !nvvm.annotations = !{!1}
-    !1 = metadata !{void (float*)* @my_kernel, metadata !"kernel", i32 1}
+    !1 = !{void (float*)* @my_kernel, !"kernel", i32 1}
 
 When compiled, the PTX kernel functions are callable by host-side code.
 
@@ -446,13 +446,13 @@ The Kernel
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
+    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
+    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
 
     ; Read A, B
-    %valA = load float addrspace(1)* %ptrA, align 4
-    %valB = load float addrspace(1)* %ptrB, align 4
+    %valA = load float, float addrspace(1)* %ptrA, align 4
+    %valB = load float, float addrspace(1)* %ptrB, align 4
 
     ; Compute C = A + B
     %valC = fadd float %valA, %valB
@@ -464,9 +464,9 @@ The Kernel
   }
 
   !nvvm.annotations = !{!0}
-  !0 = metadata !{void (float addrspace(1)*,
-                        float addrspace(1)*,
-                        float addrspace(1)*)* @kernel, metadata !"kernel", i32 1}
+  !0 = !{void (float addrspace(1)*,
+               float addrspace(1)*,
+               float addrspace(1)*)* @kernel, !"kernel", i32 1}
 
 
 We can use the LLVM ``llc`` tool to directly run the NVPTX code generator:
@@ -608,16 +608,16 @@ as a PTX `kernel` function. These metadata nodes take the form:
 
 .. code-block:: text
 
-  metadata !{<function ref>, metadata !"kernel", i32 1}
+  !{<function ref>, metadata !"kernel", i32 1}
 
 For the previous example, we have:
 
 .. code-block:: llvm
 
   !nvvm.annotations = !{!0}
-  !0 = metadata !{void (float addrspace(1)*,
-                        float addrspace(1)*,
-                        float addrspace(1)*)* @kernel, metadata !"kernel", i32 1}
+  !0 = !{void (float addrspace(1)*,
+               float addrspace(1)*,
+               float addrspace(1)*)* @kernel, !"kernel", i32 1}
 
 Here, we have a single metadata declaration in ``nvvm.annotations``. This
 metadata annotates our ``@kernel`` function with the ``kernel`` attribute.
@@ -830,13 +830,13 @@ Libdevice provides an ``__nv_powf`` function that we will use.
     %id = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x() readnone nounwind
 
     ; Compute pointers into A, B, and C
-    %ptrA = getelementptr float addrspace(1)* %A, i32 %id
-    %ptrB = getelementptr float addrspace(1)* %B, i32 %id
-    %ptrC = getelementptr float addrspace(1)* %C, i32 %id
+    %ptrA = getelementptr float, float addrspace(1)* %A, i32 %id
+    %ptrB = getelementptr float, float addrspace(1)* %B, i32 %id
+    %ptrC = getelementptr float, float addrspace(1)* %C, i32 %id
 
     ; Read A, B
-    %valA = load float addrspace(1)* %ptrA, align 4
-    %valB = load float addrspace(1)* %ptrB, align 4
+    %valA = load float, float addrspace(1)* %ptrA, align 4
+    %valB = load float, float addrspace(1)* %ptrB, align 4
 
     ; Compute C = pow(A, B)
     %valC = call float @__nv_powf(float %valA, float %valB)
@@ -848,9 +848,9 @@ Libdevice provides an ``__nv_powf`` function that we will use.
   }
 
   !nvvm.annotations = !{!0}
-  !0 = metadata !{void (float addrspace(1)*,
-                        float addrspace(1)*,
-                        float addrspace(1)*)* @kernel, metadata !"kernel", i32 1}
+  !0 = !{void (float addrspace(1)*,
+               float addrspace(1)*,
+               float addrspace(1)*)* @kernel, !"kernel", i32 1}
 
 
 To compile this kernel, we perform the following steps:

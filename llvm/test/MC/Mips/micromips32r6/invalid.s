@@ -172,3 +172,19 @@
   she $4, 512($5)          # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   she $4, -513($5)         # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   swe $5, -513($4)         # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lwm32 $5, $6, 8($4)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: $16 or $31 expected
+  lwm32 $16, $19, 8($4)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: consecutive register numbers expected
+  lwm32 $16-$25, 8($4)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register operand
+  lwm32 $16, $17, $18, $19, $20, $21, $22, $23, $24, 8($4) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register operand
+  movep $5, $6, $2, $9     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  movep $5, $6, $5, $3     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  movep $5, $21, $2, $3    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  movep $8, $6, $2, $3     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  rotr $2, -1              # CHECK: :[[@LINE]]:12: error: expected 5-bit unsigned immediate
+  rotr $2, 32              # CHECK: :[[@LINE]]:12: error: expected 5-bit unsigned immediate
+  rotr $2, $3, -1          # CHECK: :[[@LINE]]:16: error: expected 5-bit unsigned immediate
+  rotr $2, $3, 32          # CHECK: :[[@LINE]]:16: error: expected 5-bit unsigned immediate
+  rotrv $9, $6, 5          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swm32 $5, $6, 8($4)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: $16 or $31 expected
+  swm32 $16, $19, 8($4)    # CHECK: :[[@LINE]]:{{[0-9]+}}: error: consecutive register numbers expected
+  swm32 $16-$25, 8($4)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register operand

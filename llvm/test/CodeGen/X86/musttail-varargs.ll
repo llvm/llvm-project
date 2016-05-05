@@ -1,8 +1,8 @@
-; RUN: llc < %s -enable-tail-merge=0 -mtriple=x86_64-linux | FileCheck %s --check-prefix=LINUX
-; RUN: llc < %s -enable-tail-merge=0 -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefix=LINUX-X32
-; RUN: llc < %s -enable-tail-merge=0 -mtriple=x86_64-windows | FileCheck %s --check-prefix=WINDOWS
-; RUN: llc < %s -enable-tail-merge=0 -mtriple=i686-windows | FileCheck %s --check-prefix=X86
-; RUN: llc < %s -enable-tail-merge=0 -mtriple=i686-windows -mattr=+sse2 | FileCheck %s --check-prefix=X86
+; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-linux | FileCheck %s --check-prefix=LINUX
+; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefix=LINUX-X32
+; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=x86_64-windows | FileCheck %s --check-prefix=WINDOWS
+; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=i686-windows | FileCheck %s --check-prefix=X86
+; RUN: llc -verify-machineinstrs < %s -enable-tail-merge=0 -mtriple=i686-windows -mattr=+sse2 | FileCheck %s --check-prefix=X86
 
 ; Test that we actually spill and reload all arguments in the variadic argument
 ; pack. Doing a normal call will clobber all argument registers, and we will

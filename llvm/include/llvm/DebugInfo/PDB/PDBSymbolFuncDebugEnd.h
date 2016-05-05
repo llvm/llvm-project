@@ -17,6 +17,8 @@ namespace llvm {
 
 class raw_ostream;
 
+namespace pdb {
+
 class PDBSymbolFuncDebugEnd : public PDBSymbol {
 public:
   PDBSymbolFuncDebugEnd(const IPDBSession &PDBSession,
@@ -44,5 +46,6 @@ public:
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNCDEBUGEND_H

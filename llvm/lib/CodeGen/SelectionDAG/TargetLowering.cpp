@@ -1203,22 +1203,22 @@ unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't need to determine which bit is set.
-static bool ValueHasExactlyOneBitSet(SDValue Val, const SelectionDAG &DAG) {
-  // A left-shift of a constant one will have exactly one bit set, because
+static bool valueHasExactlyOneBitSet(SDValue Val, const SelectionDAG &DAG) {
+  // A left-shift of a constant one will have exactly one bit set because
   // shifting the bit off the end is undefined.
-  if (Val.getOpcode() == ISD::SHL)
-    if (ConstantSDNode *C =
-         dyn_cast<ConstantSDNode>(Val.getNode()->getOperand(0)))
-      if (C->getAPIntValue() == 1)
-        return true;
+  if (Val.getOpcode() == ISD::SHL) {
+    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
+    if (C && C->getAPIntValue() == 1)
+      return true;
+  }
 
-  // Similarly, a right-shift of a constant sign-bit will have exactly
+  // Similarly, a logical right-shift of a constant sign-bit will have exactly
   // one bit set.
-  if (Val.getOpcode() == ISD::SRL)
-    if (ConstantSDNode *C =
-         dyn_cast<ConstantSDNode>(Val.getNode()->getOperand(0)))
-      if (C->getAPIntValue().isSignBit())
-        return true;
+  if (Val.getOpcode() == ISD::SRL) {
+    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
+    if (C && C->getAPIntValue().isSignBit())
+      return true;
+  }
 
   // More could be done here, though the above checks are enough
   // to handle some common cases.
@@ -2094,7 +2094,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     // the expressions are not equivalent when y==0.
     if (N0.getOpcode() == ISD::AND)
       if (N0.getOperand(0) == N1 || N0.getOperand(1) == N1) {
-        if (ValueHasExactlyOneBitSet(N1, DAG)) {
+        if (valueHasExactlyOneBitSet(N1, DAG)) {
           Cond = ISD::getSetCCInverse(Cond, /*isInteger=*/true);
           if (DCI.isBeforeLegalizeOps() ||
               isCondCodeLegal(Cond, N0.getSimpleValueType())) {
@@ -2105,7 +2105,7 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       }
     if (N1.getOpcode() == ISD::AND)
       if (N1.getOperand(0) == N0 || N1.getOperand(1) == N0) {
-        if (ValueHasExactlyOneBitSet(N0, DAG)) {
+        if (valueHasExactlyOneBitSet(N0, DAG)) {
           Cond = ISD::getSetCCInverse(Cond, /*isInteger=*/true);
           if (DCI.isBeforeLegalizeOps() ||
               isCondCodeLegal(Cond, N1.getSimpleValueType())) {

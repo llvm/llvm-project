@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
@@ -42,6 +43,19 @@ public:
   BranchProbabilityInfo() {}
   BranchProbabilityInfo(const Function &F, const LoopInfo &LI) {
     calculate(F, LI);
+  }
+
+  BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
+      : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
+        PostDominatedByUnreachable(std::move(Arg.PostDominatedByUnreachable)),
+        PostDominatedByColdCall(std::move(Arg.PostDominatedByColdCall)) {}
+
+  BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
+    releaseMemory();
+    Probs = std::move(RHS.Probs);
+    PostDominatedByColdCall = std::move(RHS.PostDominatedByColdCall);
+    PostDominatedByUnreachable = std::move(RHS.PostDominatedByUnreachable);
+    return *this;
   }
 
   void releaseMemory();
@@ -103,6 +117,9 @@ public:
   void calculate(const Function &F, const LoopInfo &LI);
 
 private:
+  void operator=(const BranchProbabilityInfo &) = delete;
+  BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
+
   // Since we allow duplicate edges from one basic block to another, we use
   // a pair (PredBlock and an index in the successors) to specify an edge.
   typedef std::pair<const BasicBlock *, unsigned> Edge;
@@ -134,6 +151,30 @@ private:
   bool calcZeroHeuristics(const BasicBlock *BB);
   bool calcFloatingPointHeuristics(const BasicBlock *BB);
   bool calcInvokeHeuristics(const BasicBlock *BB);
+};
+
+/// \brief Analysis pass which computes \c BranchProbabilityInfo.
+class BranchProbabilityAnalysis
+    : public AnalysisInfoMixin<BranchProbabilityAnalysis> {
+  friend AnalysisInfoMixin<BranchProbabilityAnalysis>;
+  static char PassID;
+
+public:
+  /// \brief Provide the result typedef for this analysis pass.
+  typedef BranchProbabilityInfo Result;
+
+  /// \brief Run the analysis pass over a function and produce BPI.
+  BranchProbabilityInfo run(Function &F, AnalysisManager<Function> &AM);
+};
+
+/// \brief Printer pass for the \c BranchProbabilityAnalysis results.
+class BranchProbabilityPrinterPass
+    : public PassInfoMixin<BranchProbabilityPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief Legacy analysis pass which computes \c BranchProbabilityInfo.

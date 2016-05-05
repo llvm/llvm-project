@@ -225,6 +225,31 @@ public:
   bool operator!=(const SetVector &that) const {
     return vector_ != that.vector_;
   }
+  
+  /// \brief Compute This := This u S, return whether 'This' changed.
+  /// TODO: We should be able to use set_union from SetOperations.h, but
+  ///       SetVector interface is inconsistent with DenseSet.
+  template <class STy>
+  bool set_union(const STy &S) {
+    bool Changed = false;
+
+    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
+         ++SI)
+      if (insert(*SI))
+        Changed = true;
+
+    return Changed;
+  }
+
+  /// \brief Compute This := This - B
+  /// TODO: We should be able to use set_subtract from SetOperations.h, but
+  ///       SetVector interface is inconsistent with DenseSet.
+  template <class STy>
+  void set_subtract(const STy &S) {
+    for (typename STy::const_iterator SI = S.begin(), SE = S.end(); SI != SE;
+         ++SI)
+      remove(*SI);
+  }
 
 private:
   /// \brief A wrapper predicate designed for use with std::remove_if.

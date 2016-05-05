@@ -16,6 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolTypeDimension : public PDBSymbol {
 public:
@@ -31,5 +32,6 @@ public:
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEDIMENSION_H

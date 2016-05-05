@@ -689,3 +689,20 @@ void BranchProbabilityInfoWrapperPass::print(raw_ostream &OS,
                                              const Module *) const {
   BPI.print(OS);
 }
+
+char BranchProbabilityAnalysis::PassID;
+BranchProbabilityInfo
+BranchProbabilityAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
+  BranchProbabilityInfo BPI;
+  BPI.calculate(F, AM.getResult<LoopAnalysis>(F));
+  return BPI;
+}
+
+PreservedAnalyses
+BranchProbabilityPrinterPass::run(Function &F, AnalysisManager<Function> &AM) {
+  OS << "Printing analysis results of BPI for function "
+     << "'" << F.getName() << "':"
+     << "\n";
+  AM.getResult<BranchProbabilityAnalysis>(F).print(OS);
+  return PreservedAnalyses::all();
+}

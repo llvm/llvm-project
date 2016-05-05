@@ -415,6 +415,17 @@ def GR32_NOREX_NOSP : RegisterClass<"X86", [i32], 32,
 def GR64_NOREX_NOSP : RegisterClass<"X86", [i64], 64,
                                     (and GR64_NOREX, GR64_NOSP)>;
 
+// Register classes used for X32 address accesses.
+// In X32 mode it is fine to use RIP as we are sure the 32 high bits
+// are not set.
+// We do not need variants for NOSP as RIP is not allowed there.
+// Alignment is 64 because we have RIP.
+// FIXME: We could allow all 64bit registers, but we would need
+// something to check that the 32 high bits are not set.
+def X32_ADDR_ACCESS : RegisterClass<"X86", [i32], 64, (add GR32, RIP)>;
+def X32_NOREX_ADDR_ACCESS : RegisterClass<"X86", [i32], 64,
+                                                      (add GR32_NOREX, RIP)>;
+
 // A class to support the 'A' assembler constraint: EAX then EDX.
 def GR32_AD : RegisterClass<"X86", [i32], 32, (add EAX, EDX)>;
 

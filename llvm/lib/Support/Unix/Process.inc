@@ -169,6 +169,8 @@ void Process::PreventCoreFiles() {
   signal(SIGSEGV, _exit);
   signal(SIGBUS,  _exit);
 #endif
+
+  coreFilesPrevented = true;
 }
 
 Optional<std::string> Process::GetEnv(StringRef Name) {

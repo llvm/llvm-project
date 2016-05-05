@@ -123,6 +123,8 @@ void Process::PreventCoreFiles() {
   SetErrorMode(SEM_FAILCRITICALERRORS |
                SEM_NOGPFAULTERRORBOX |
                SEM_NOOPENFILEERRORBOX);
+
+  coreFilesPrevented = true;
 }
 
 /// Returns the environment variable \arg Name's value as a string encoded in

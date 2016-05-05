@@ -16,11 +16,13 @@
 namespace llvm {
 class StringRef;
 
+namespace pdb {
+
 PDB_ErrorCode loadDataForPDB(PDB_ReaderType Type, StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);
 
 PDB_ErrorCode loadDataForEXE(PDB_ReaderType Type, StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);
 }
-
+}
 #endif

@@ -1095,7 +1095,7 @@ bool HoistSpillHelper::isSpillCandBB(unsigned OrigReg, VNInfo &OrigVNI,
   return false;
 }
 
-/// Remove redundent spills in the same BB. Save those redundent spills in
+/// Remove redundant spills in the same BB. Save those redundant spills in
 /// SpillsToRm, and save the spill to keep and its BB in SpillBBToSpill map.
 ///
 void HoistSpillHelper::rmRedundantSpills(
@@ -1141,7 +1141,7 @@ void HoistSpillHelper::getVisitOrders(
   // original spills.
   SmallPtrSet<MachineDomTreeNode *, 8> WorkSet;
   // Save the BB nodes on the path from the first BB node containing
-  // non-redundent spill to the Root node.
+  // non-redundant spill to the Root node.
   SmallPtrSet<MachineDomTreeNode *, 8> NodesOnPath;
   // All the spills to be hoisted must originate from a single def instruction
   // to the OrigReg. It means the def instruction should dominate all the spills
@@ -1151,8 +1151,8 @@ void HoistSpillHelper::getVisitOrders(
   // For every node on the dominator tree with spill, walk up on the dominator
   // tree towards the Root node until it is reached. If there is other node
   // containing spill in the middle of the path, the previous spill saw will
-  // be redundent and the node containing it will be removed. All the nodes on
-  // the path starting from the first node with non-redundent spill to the Root
+  // be redundant and the node containing it will be removed. All the nodes on
+  // the path starting from the first node with non-redundant spill to the Root
   // node will be added to the WorkSet, which will contain all the possible
   // locations where spills may be hoisted to after the loop below is done.
   for (const auto Spill : Spills) {
@@ -1161,7 +1161,7 @@ void HoistSpillHelper::getVisitOrders(
     MachineInstr *SpillToRm = nullptr;
     while (Node != RootIDomNode) {
       // If Node dominates Block, and it already contains a spill, the spill in
-      // Block will be redundent.
+      // Block will be redundant.
       if (Node != MDT[Block] && SpillBBToSpill[Node]) {
         SpillToRm = SpillBBToSpill[MDT[Block]];
         break;
@@ -1339,22 +1339,22 @@ void HoistSpillHelper::runHoistSpills(
   }
 }
 
-/// For spills with equal values, remove redundent spills and hoist the left
+/// For spills with equal values, remove redundant spills and hoist those left
 /// to less hot spots.
 ///
 /// Spills with equal values will be collected into the same set in
 /// MergeableSpills when spill is inserted. These equal spills are originated
-/// from the same define instruction and are dominated by the instruction.
-/// Before hoisting all the equal spills, redundent spills inside in the same
-/// BB is first marked to be deleted. Then starting from spills left, walk up
-/// on the dominator tree towards the Root node where the define instruction
+/// from the same defining instruction and are dominated by the instruction.
+/// Before hoisting all the equal spills, redundant spills inside in the same
+/// BB are first marked to be deleted. Then starting from the spills left, walk
+/// up on the dominator tree towards the Root node where the define instruction
 /// is located, mark the dominated spills to be deleted along the way and
 /// collect the BB nodes on the path from non-dominated spills to the define
 /// instruction into a WorkSet. The nodes in WorkSet are the candidate places
-/// where we consider to hoist the spills. We iterate the WorkSet in bottom-up
-/// order, and for each node, we will decide whether to hoist spills inside
-/// its subtree to that node. In this way, we can get benefit locally even if
-/// hoisting all the equal spills to one cold place is impossible.
+/// where we are considering to hoist the spills. We iterate the WorkSet in
+/// bottom-up order, and for each node, we will decide whether to hoist spills
+/// inside its subtree to that node. In this way, we can get benefit locally
+/// even if hoisting all the equal spills to one cold place is impossible.
 ///
 void HoistSpillHelper::hoistAllSpills() {
   SmallVector<unsigned, 4> NewVRegs;
@@ -1425,7 +1425,7 @@ void HoistSpillHelper::hoistAllSpills() {
       ++NumSpills;
     }
 
-    // Remove redundent spills or change them to dead instructions.
+    // Remove redundant spills or change them to dead instructions.
     NumSpills -= SpillsToRm.size();
     for (auto const RMEnt : SpillsToRm) {
       RMEnt->setDesc(TII.get(TargetOpcode::KILL));

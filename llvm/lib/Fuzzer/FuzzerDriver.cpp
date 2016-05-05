@@ -238,7 +238,7 @@ int RunOneTest(Fuzzer *F, const char *InputFilePath) {
   Unit U = FileToVector(InputFilePath);
   Unit PreciseSizedU(U);
   assert(PreciseSizedU.size() == PreciseSizedU.capacity());
-  F->ExecuteCallback(PreciseSizedU.data(), PreciseSizedU.size());
+  F->RunOne(PreciseSizedU.data(), PreciseSizedU.size());
   return 0;
 }
 
@@ -355,6 +355,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
       Printf("%s: %zd ms\n", Path.c_str(), (long)MS);
     }
+    F.PrintFinalStats();
     exit(0);
   }
 

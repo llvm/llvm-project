@@ -16,7 +16,7 @@
 #include <memory>
 
 namespace llvm {
-
+namespace pdb {
 class PDBSymbolCompiland;
 class PDBSymbolExe;
 
@@ -75,6 +75,7 @@ public:
 
   virtual std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const = 0;
 };
+}
 }
 
 #endif

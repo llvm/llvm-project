@@ -21,11 +21,18 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
+
+namespace {
+static cl::opt<bool> RoundSectionSizes(
+    "mips-round-section-sizes", cl::init(false),
+    cl::desc("Round section sizes up to the section alignment"), cl::Hidden);
+} // end anonymous namespace
 
 MipsTargetStreamer::MipsTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S), ModuleDirectiveAllowed(true) {
@@ -729,18 +736,23 @@ void MipsTargetELFStreamer::finish() {
   DataSection.setAlignment(std::max(16u, DataSection.getAlignment()));
   BSSSection.setAlignment(std::max(16u, BSSSection.getAlignment()));
 
-  // Make sections sizes a multiple of the alignment.
-  MCStreamer &OS = getStreamer();
-  for (MCSection &S : MCA) {
-    MCSectionELF &Section = static_cast<MCSectionELF &>(S);
+  if (RoundSectionSizes) {
+    // Make sections sizes a multiple of the alignment. This is useful for
+    // verifying the output of IAS against the output of other assemblers but
+    // it's not necessary to produce a correct object and increases section
+    // size.
+    MCStreamer &OS = getStreamer();
+    for (MCSection &S : MCA) {
+      MCSectionELF &Section = static_cast<MCSectionELF &>(S);
 
-    unsigned Alignment = Section.getAlignment();
-    if (Alignment) {
-      OS.SwitchSection(&Section);
-      if (Section.UseCodeAlign())
-        OS.EmitCodeAlignment(Alignment, Alignment);
-      else
-        OS.EmitValueToAlignment(Alignment, 0, 1, Alignment);
+      unsigned Alignment = Section.getAlignment();
+      if (Alignment) {
+        OS.SwitchSection(&Section);
+        if (Section.UseCodeAlign())
+          OS.EmitCodeAlignment(Alignment, Alignment);
+        else
+          OS.EmitValueToAlignment(Alignment, 0, 1, Alignment);
+      }
     }
   }
 

@@ -76,10 +76,10 @@ entry:
 ; CHECK: addrspacecast i32* %ptr1 to i32 addrspace(1)*
   call void @do_safepoint() [ "deopt"() ]
 
-; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 7)
-; CHECK: %base.relocated.casted = bitcast i8 addrspace(1)* %base.relocated to i32 addrspace(1)*
-; CHECK: %ptr2.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 7, i32 8)
+; CHECK: %ptr2.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 8, i32 7)
 ; CHECK: %ptr2.relocated.casted = bitcast i8 addrspace(1)* %ptr2.relocated to i32 addrspace(1)*
+; CHECK: %base.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token, i32 8, i32 8)
+; CHECK: %base.relocated.casted = bitcast i8 addrspace(1)* %base.relocated to i32 addrspace(1)*
   call void @use_obj32(i32 addrspace(1)* %base)
   call void @use_obj32(i32 addrspace(1)* %ptr2)
   ret void

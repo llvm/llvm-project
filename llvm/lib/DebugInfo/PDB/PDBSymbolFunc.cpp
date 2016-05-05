@@ -23,6 +23,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace {
 class FunctionArgEnumerator : public IPDBEnumChildren<PDBSymbolData> {

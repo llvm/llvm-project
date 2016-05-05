@@ -193,6 +193,12 @@ public:
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
+  template <typename... T> void printVersion(StringRef Label, T... Version) {
+    startLine() << Label << ": ";
+    printVersionInternal(Version...);
+    getOStream() << "\n";
+  }
+
   template <typename T> void printList(StringRef Label, const T &List) {
     startLine() << Label << ": [";
     bool Comma = false;
@@ -229,6 +235,8 @@ public:
   void printSymbolOffset(StringRef Label, StringRef Symbol, T Value) {
     startLine() << Label << ": " << Symbol << '+' << hex(Value) << '\n';
   }
+
+  void printString(StringRef Value) { startLine() << Value << "\n"; }
 
   void printString(StringRef Label, StringRef Value) {
     startLine() << Label << ": " << Value << "\n";
@@ -269,10 +277,18 @@ public:
     printBinaryImpl(Label, StringRef(), V, false);
   }
 
+  void printBinaryBlock(StringRef Label, ArrayRef<uint8_t> Value) {
+    printBinaryImpl(Label, StringRef(), Value, true);
+  }
+
   void printBinaryBlock(StringRef Label, StringRef Value) {
     auto V = makeArrayRef(reinterpret_cast<const uint8_t *>(Value.data()),
                           Value.size());
     printBinaryImpl(Label, StringRef(), V, true);
+  }
+
+  template <typename T> void printObject(StringRef Label, const T &Value) {
+    startLine() << Label << ": " << Value << "\n";
   }
 
   raw_ostream &startLine() {
@@ -283,6 +299,16 @@ public:
   raw_ostream &getOStream() { return OS; }
 
 private:
+  template <typename T> void printVersionInternal(T Value) {
+    getOStream() << Value;
+  }
+
+  template <typename S, typename T, typename... TArgs>
+  void printVersionInternal(S Value, T Value2, TArgs... Args) {
+    getOStream() << Value << ".";
+    printVersionInternal(Value2, Args...);
+  }
+
   template <typename T>
   static bool flagName(const EnumEntry<T> &lhs, const EnumEntry<T> &rhs) {
     return lhs.Name < rhs.Name;
@@ -304,6 +330,11 @@ ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
 
 template<char Open, char Close>
 struct DelimitedScope {
+  explicit DelimitedScope(ScopedPrinter &W) : W(W) {
+    W.startLine() << Open << '\n';
+    W.indent();
+  }
+
   DelimitedScope(ScopedPrinter &W, StringRef N) : W(W) {
     W.startLine() << N;
     if (!N.empty())

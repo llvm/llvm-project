@@ -16,6 +16,7 @@
 #include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIASourceFile::DIASourceFile(const DIASession &PDBSession,
                              CComPtr<IDiaSourceFile> DiaSourceFile)

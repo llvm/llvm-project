@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 BuiltinDumper::BuiltinDumper(LinePrinter &P)
     : PDBSymDumper(false), Printer(P) {}

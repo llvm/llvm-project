@@ -28,6 +28,7 @@
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 ClassDefinitionDumper::ClassDefinitionDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}

@@ -31,6 +31,10 @@ def SDT_PPCvperm   : SDTypeProfile<1, 3, [
   SDTCisVT<3, v16i8>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>
 ]>;
 
+def SDT_PPCVecSplat : SDTypeProfile<1, 2, [ SDTCisVec<0>,
+  SDTCisVec<1>, SDTCisInt<2>
+]>;
+
 def SDT_PPCvcmp : SDTypeProfile<1, 3, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisVT<3, i32>
 ]>;
@@ -141,6 +145,7 @@ def PPCaddisDtprelHA : SDNode<"PPCISD::ADDIS_DTPREL_HA", SDTIntBinOp>;
 def PPCaddiDtprelL   : SDNode<"PPCISD::ADDI_DTPREL_L", SDTIntBinOp>;
 
 def PPCvperm    : SDNode<"PPCISD::VPERM", SDT_PPCvperm, []>;
+def PPCxxsplt    : SDNode<"PPCISD::XXSPLT", SDT_PPCVecSplat, []>;
 
 def PPCqvfperm   : SDNode<"PPCISD::QVFPERM", SDT_PPCqvfperm, []>;
 def PPCqvgpci    : SDNode<"PPCISD::QVGPCI", SDT_PPCqvgpci, []>;

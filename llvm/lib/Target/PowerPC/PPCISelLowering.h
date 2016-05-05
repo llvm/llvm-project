@@ -61,6 +61,10 @@ namespace llvm {
       ///
       VPERM,
 
+      /// XXSPLT - The PPC VSX splat instructions
+      ///
+      XXSPLT,
+
       /// The CMPB instruction (takes two operands of i32 or i64).
       CMPB,
 

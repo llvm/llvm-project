@@ -15,6 +15,9 @@
 namespace llvm {
 
 class StringRef;
+
+namespace pdb {
+
 class LinePrinter;
 
 class VariableDumper : public PDBSymDumper {
@@ -37,5 +40,5 @@ private:
   LinePrinter &Printer;
 };
 }
-
+}
 #endif

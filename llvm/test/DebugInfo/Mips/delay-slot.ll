@@ -19,7 +19,7 @@
 ; CHECK: 0x000000000000002c      3      0      1   0             0  is_stmt
 ; CHECK: 0x000000000000003c      4      0      1   0             0  is_stmt
 ; CHECK: 0x0000000000000048      5      0      1   0             0  is_stmt
-; CHECK: 0x0000000000000060      5      0      1   0             0  is_stmt end_sequence
+; CHECK: 0x0000000000000058      5      0      1   0             0  is_stmt end_sequence
 
 
 target datalayout = "E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"

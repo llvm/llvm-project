@@ -12,9 +12,9 @@
 // walk memory instructions using a use/def graph.
 //
 // Memory SSA class builds an SSA form that links together memory access
-// instructions such loads, stores, atomics, and calls. Additionally, it does a
-// trivial form of "heap versioning" Every time the memory state changes in the
-// program, we generate a new heap version. It generates MemoryDef/Uses/Phis
+// instructions such as loads, stores, atomics, and calls. Additionally, it does
+// a trivial form of "heap versioning" Every time the memory state changes in
+// the program, we generate a new heap version. It generates MemoryDef/Uses/Phis
 // that are overlayed on top of the existing instructions.
 //
 // As a trivial example,

@@ -19,6 +19,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::pdb;
 
 PDBContext::PDBContext(const COFFObjectFile &Object,
                        std::unique_ptr<IPDBSession> PDBSession)

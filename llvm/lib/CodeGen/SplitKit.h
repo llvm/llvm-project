@@ -336,7 +336,7 @@ private:
 
   /// Hoist back-copies to the complement interval. It tries to hoist all
   /// the back-copies to one BB if it is beneficial, or else simply remove
-  /// redundent backcopies dominated by others.
+  /// redundant backcopies dominated by others.
   void hoistCopies();
 
   /// transferValues - Transfer values to the new ranges.

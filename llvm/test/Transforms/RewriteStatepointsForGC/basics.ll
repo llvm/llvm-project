@@ -35,8 +35,8 @@ entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %derived.relocated = call coldcc i8 addrspace(1)*
 ; CHECK-NEXT: %obj.relocated = call coldcc i8 addrspace(1)*
+; CHECK-NEXT: %derived.relocated = call coldcc i8 addrspace(1)*
 ; CHECK-NEXT: load i8, i8 addrspace(1)* %derived.relocated
 ; CHECK-NEXT: load i8, i8 addrspace(1)* %obj.relocated
 ; Tests to make sure we visit both the taken and untaken predeccessor 

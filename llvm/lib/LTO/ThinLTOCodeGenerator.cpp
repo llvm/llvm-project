@@ -516,9 +516,6 @@ static std::unique_ptr<MemoryBuffer> ProcessThinLTOModule(
     ThinLTOCodeGenerator::CachingOptions CacheOptions, bool DisableCodeGen,
     StringRef SaveTempsDir, unsigned count) {
 
-  // Save temps: after IPO.
-  saveTempBitcode(TheModule, SaveTempsDir, count, ".1.IPO.bc");
-
   // Prepare for internalization by computing the set of symbols to preserve.
   // We need to compute the list of symbols to preserve during internalization
   // before doing any promotion because after renaming we won't (easily) match
@@ -538,25 +535,25 @@ static std::unique_ptr<MemoryBuffer> ProcessThinLTOModule(
     fixupODR(TheModule, ResolvedODR);
 
     // Save temps: after promotion.
-    saveTempBitcode(TheModule, SaveTempsDir, count, ".2.promoted.bc");
+    saveTempBitcode(TheModule, SaveTempsDir, count, ".1.promoted.bc");
   }
 
   // Internalization
   doInternalizeModule(TheModule, TM, PreservedGV);
 
   // Save internalized bitcode
-  saveTempBitcode(TheModule, SaveTempsDir, count, ".3.internalized.bc");
+  saveTempBitcode(TheModule, SaveTempsDir, count, ".2.internalized.bc");
 
   if (!SingleModule) {
     crossImportIntoModule(TheModule, Index, ModuleMap, ImportList);
 
     // Save temps: after cross-module import.
-    saveTempBitcode(TheModule, SaveTempsDir, count, ".4.imported.bc");
+    saveTempBitcode(TheModule, SaveTempsDir, count, ".3.imported.bc");
   }
 
   optimizeModule(TheModule, TM);
 
-  saveTempBitcode(TheModule, SaveTempsDir, count, ".5.opt.bc");
+  saveTempBitcode(TheModule, SaveTempsDir, count, ".4.opt.bc");
 
   if (DisableCodeGen) {
     // Configured to stop before CodeGen, serialize the bitcode and return.

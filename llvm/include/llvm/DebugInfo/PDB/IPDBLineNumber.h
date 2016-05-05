@@ -13,7 +13,7 @@
 #include "PDBTypes.h"
 
 namespace llvm {
-
+namespace pdb {
 class IPDBLineNumber {
 public:
   virtual ~IPDBLineNumber();
@@ -31,6 +31,7 @@ public:
   virtual uint32_t getCompilandId() const = 0;
   virtual bool isStatement() const = 0;
 };
+}
 }
 
 #endif

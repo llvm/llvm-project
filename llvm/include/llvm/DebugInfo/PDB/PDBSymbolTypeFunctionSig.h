@@ -16,6 +16,7 @@
 namespace llvm {
 
 class raw_ostream;
+namespace pdb {
 
 class PDBSymbolTypeFunctionSig : public PDBSymbol {
 public:
@@ -45,5 +46,6 @@ public:
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEFUNCTIONSIG_H

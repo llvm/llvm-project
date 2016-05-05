@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIALineNumber.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 DIALineNumber::DIALineNumber(CComPtr<IDiaLineNumber> DiaLineNumber)
     : LineNumber(DiaLineNumber) {}

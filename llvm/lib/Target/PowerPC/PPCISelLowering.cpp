@@ -1014,6 +1014,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::VMADDFP:         return "PPCISD::VMADDFP";
   case PPCISD::VNMSUBFP:        return "PPCISD::VNMSUBFP";
   case PPCISD::VPERM:           return "PPCISD::VPERM";
+  case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
   case PPCISD::CMPB:            return "PPCISD::CMPB";
   case PPCISD::Hi:              return "PPCISD::Hi";
   case PPCISD::Lo:              return "PPCISD::Lo";
@@ -7418,6 +7419,16 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(Op);
   EVT VT = Op.getValueType();
   bool isLittleEndian = Subtarget.isLittleEndian();
+
+  if (Subtarget.hasVSX()) {
+    if (V2.isUndef() && PPC::isSplatShuffleMask(SVOp, 4)) {
+      int SplatIdx = PPC::getVSPLTImmediate(SVOp, 4, DAG);
+      SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
+      SDValue Splat = DAG.getNode(PPCISD::XXSPLT, dl, MVT::v4i32, Conv,
+                                  DAG.getConstant(SplatIdx, dl, MVT::i32));
+      return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Splat);
+    }
+  }
 
   if (Subtarget.hasQPX()) {
     if (VT.getVectorNumElements() != 4)

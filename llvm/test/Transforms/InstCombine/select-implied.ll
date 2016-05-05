@@ -71,7 +71,8 @@ end:
 }
 
 ; We know the condition of the select is true based on a dominating condition.
-; Therefore, we can replace %cond with %len.
+; Therefore, we can replace %cond with %len. However, now the inner icmp is
+; always false and can be elided.
 ; CHECK-LABEL: @test4
 ; CHECK-NOT: select
 define void @test4(i32 %len) {
@@ -81,8 +82,9 @@ entry:
   br i1 %cmp, label %bb, label %b1
 bb:
   %cond = select i1 %cmp, i32 %len, i32 8
-; CHECK:  %cmp11 = icmp eq i32 %len, 8
+; CHECK-NOT:  %cmp11 = icmp eq i32 %{{.*}}, 8
   %cmp11 = icmp eq i32 %cond, 8
+; CHECK: br i1 false, label %b0, label %b1
   br i1 %cmp11, label %b0, label %b1
 
 b0:

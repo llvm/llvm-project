@@ -7,9 +7,9 @@ define i64 addrspace(1)* @test(<2 x i64 addrspace(1)*> %vec, i32 %idx) gc "state
 ; CHECK: extractelement
 ; CHECK: statepoint
 ; CHECK: gc.relocate
-; CHECK-DAG: ; (%base_ee, %base_ee)
-; CHECK: gc.relocate
 ; CHECK-DAG: ; (%base_ee, %obj)
+; CHECK: gc.relocate
+; CHECK-DAG: ; (%base_ee, %base_ee)
 ; Note that the second extractelement is actually redundant here.  A correct output would
 ; be to reuse the existing obj as a base since it is actually a base pointer.
 entry:

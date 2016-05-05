@@ -54,3 +54,27 @@ entry:
   %add = shl nuw nsw i32 %conv4.2, 16
   ret i32 %add
 }
+
+define i8 @t5(i32 %a) #0 {
+entry:
+; CHECK-LABEL: t5:
+; CHECK:  testl   %edi, %edi
+; CHECK:  setns   %al
+  %.lobit = lshr i32 %a, 31
+  %trunc = trunc i32 %.lobit to i8
+  %.not = xor i8 %trunc, 1
+  ret i8 %.not
+}
+
+define zeroext i1 @t6(i32 %a) #0 {
+entry:
+; CHECK-LABEL: t6:
+; CHECK:  testl   %edi, %edi
+; CHECK:  setns   %al
+  %.lobit = lshr i32 %a, 31
+  %trunc = trunc i32 %.lobit to i1
+  %.not = xor i1 %trunc, 1
+  ret i1 %.not
+}
+
+attributes #0 = { "target-cpu"="skylake-avx512" }
