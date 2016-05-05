@@ -75,6 +75,11 @@ entry:
   ret void
 }
 
+define linkonce void @linkoncefunc2() #0 {
+entry:
+  ret void
+}
+
 define internal i32 @staticfunc() #0 {
 entry:
   ret i32 1
