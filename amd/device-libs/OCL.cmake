@@ -152,10 +152,10 @@ enable_testing()
 macro(clang_opencl_test name)
   clang_opencl_code(${name})
   if(AMDHSACOD)
-    add_test(
-      NAME ${name}:llvm-objdump
-      COMMAND ${LLVM_OBJDUMP} -disassemble-all $<TARGET_FILE:${name}_code>
-    )
+#    add_test(
+#      NAME ${name}:llvm-objdump
+#      COMMAND ${LLVM_OBJDUMP} -disassemble-all $<TARGET_FILE:${name}_code>
+#    )
     add_test(
       NAME ${name}:amdhsacod
       COMMAND ${AMDHSACOD} -test -code $<TARGET_FILE:${name}_code>
