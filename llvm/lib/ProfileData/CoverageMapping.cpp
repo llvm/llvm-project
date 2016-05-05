@@ -334,13 +334,25 @@ class SegmentBuilder {
 
   /// Sort a nested sequence of regions from a single file.
   static void sortNestedRegions(MutableArrayRef<CountedRegion> Regions) {
-    std::sort(Regions.begin(), Regions.end(),
-              [](const CountedRegion &LHS, const CountedRegion &RHS) {
-                if (LHS.startLoc() == RHS.startLoc())
-                  // When LHS completely contains RHS, we sort LHS first.
-                  return RHS.endLoc() < LHS.endLoc();
-                return LHS.startLoc() < RHS.startLoc();
-              });
+    std::sort(Regions.begin(), Regions.end(), [](const CountedRegion &LHS,
+                                                 const CountedRegion &RHS) {
+      if (LHS.startLoc() != RHS.startLoc())
+        return LHS.startLoc() < RHS.startLoc();
+      if (LHS.endLoc() != RHS.endLoc())
+        // When LHS completely contains RHS, we sort LHS first.
+        return RHS.endLoc() < LHS.endLoc();
+      // If LHS and RHS cover the same area, we need to sort them according
+      // to their kinds so that the most suitable region will become "active"
+      // in combineRegions(). Because we accumulate counter values only from
+      // regions of the same kind as the first region of the area, prefer
+      // CodeRegion to ExpansionRegion and ExpansionRegion to SkippedRegion.
+      static_assert(coverage::CounterMappingRegion::CodeRegion <
+                            coverage::CounterMappingRegion::ExpansionRegion &&
+                        coverage::CounterMappingRegion::ExpansionRegion <
+                            coverage::CounterMappingRegion::SkippedRegion,
+                    "Unexpected order of region kind values");
+      return LHS.Kind < RHS.Kind;
+    });
   }
 
   /// Combine counts of regions which cover the same area.
@@ -360,15 +372,18 @@ class SegmentBuilder {
         continue;
       }
       // Merge duplicate region.
-      if (I->Kind != coverage::CounterMappingRegion::CodeRegion)
-        // Add counts only from CodeRegions.
-        continue;
-      if (Active->Kind == coverage::CounterMappingRegion::SkippedRegion)
-        // We have to overwrite SkippedRegions because of special handling
-        // of them in startSegment().
-        *Active = *I;
-      else
-        // Otherwise, just append the count.
+      // If CodeRegions and ExpansionRegions cover the same area, it's probably
+      // a macro which is fully expanded to another macro. In that case, we need
+      // to accumulate counts only from CodeRegions, or else the area will be
+      // counted twice.
+      // On the other hand, a macro may have a nested macro in its body. If the
+      // outer macro is used several times, the ExpansionRegion for the nested
+      // macro will also be added several times. These ExpansionRegions cover
+      // the same source locations and have to be combined to reach the correct
+      // value for that area.
+      // We add counts of the regions of the same kind as the active region
+      // to handle the both situations.
+      if (I->Kind == Active->Kind)
         Active->ExecutionCount += I->ExecutionCount;
     }
     return Regions.drop_back(std::distance(++Active, End));
