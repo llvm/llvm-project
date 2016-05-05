@@ -1407,7 +1407,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   // when both the preprocessor and parser see the same import declaration.
   if (ImportLoc.isValid() && LastModuleImportLoc == ImportLoc) {
     // Make the named module visible.
-    if (LastModuleImportResult && ModuleName != getLangOpts().CurrentModule)
+    if (LastModuleImportResult && ModuleName != getLangOpts().CurrentModule &&
+        ModuleName != getLangOpts().ImplementationOfModule)
       ModuleManager->makeModuleVisible(LastModuleImportResult, Visibility,
                                        ImportLoc);
     return LastModuleImportResult;
@@ -1421,7 +1422,8 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   if (Known != KnownModules.end()) {
     // Retrieve the cached top-level module.
     Module = Known->second;    
-  } else if (ModuleName == getLangOpts().CurrentModule) {
+  } else if (ModuleName == getLangOpts().CurrentModule ||
+             ModuleName == getLangOpts().ImplementationOfModule) {
     // This is the module we're building. 
     Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
     Known = KnownModules.insert(std::make_pair(Path[0].first, Module)).first;
@@ -1599,6 +1601,10 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     }
   }
 
+  // Don't make the module visible if we are in the implementation.
+  if (ModuleName == getLangOpts().ImplementationOfModule)
+    return ModuleLoadResult(Module, false);
+  
   // Make the named module visible, if it's not already part of the module
   // we are parsing.
   if (ModuleName != getLangOpts().CurrentModule) {

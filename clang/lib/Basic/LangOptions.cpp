@@ -34,6 +34,7 @@ void LangOptions::resetNonModularOptions() {
   SanitizerBlacklistFiles.clear();
 
   CurrentModule.clear();
+  ImplementationOfModule.clear();
 }
 
 bool LangOptions::isNoBuiltinFunc(const char *Name) const {
