@@ -242,7 +242,6 @@ static Module *getTopLevelOrNull(Module *M) {
 }
 
 void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
-                                        bool RequestingModuleIsModuleInterface,
                                         SourceLocation FilenameLoc,
                                         StringRef Filename,
                                         const FileEntry *File) {
@@ -305,7 +304,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
   if (LangOpts.ModulesStrictDeclUse) {
     Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
         << RequestingModule->getFullModuleName() << Filename;
-  } else if (RequestingModule && RequestingModuleIsModuleInterface) {
+  } else if (RequestingModule) {
     diag::kind DiagID = RequestingModule->getTopLevelModule()->IsFramework ?
         diag::warn_non_modular_include_in_framework_module :
         diag::warn_non_modular_include_in_module;

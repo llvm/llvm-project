@@ -612,7 +612,6 @@ const FileEntry *Preprocessor::LookupFile(
     ModuleMap::KnownHeader *SuggestedModule,
     bool SkipCache) {
   Module *RequestingModule = getModuleForLocation(FilenameLoc); 
-  bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
 
   // If the header lookup mechanism may be relative to the current inclusion
   // stack, record the parent #includes.
@@ -687,8 +686,7 @@ const FileEntry *Preprocessor::LookupFile(
   if (FE) {
     if (SuggestedModule && !LangOpts.AsmPreprocessor)
       HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-          RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-          Filename, FE);
+          RequestingModule, FilenameLoc, Filename, FE);
     return FE;
   }
 
@@ -704,8 +702,7 @@ const FileEntry *Preprocessor::LookupFile(
                                                     SuggestedModule))) {
         if (SuggestedModule && !LangOpts.AsmPreprocessor)
           HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-              RequestingModule, RequestingModuleIsModuleInterface, FilenameLoc,
-              Filename, FE);
+              RequestingModule, FilenameLoc, Filename, FE);
         return FE;
       }
     }
@@ -720,8 +717,7 @@ const FileEntry *Preprocessor::LookupFile(
                 RequestingModule, SuggestedModule))) {
           if (SuggestedModule && !LangOpts.AsmPreprocessor)
             HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
-                RequestingModule, RequestingModuleIsModuleInterface,
-                FilenameLoc, Filename, FE);
+                RequestingModule, FilenameLoc, Filename, FE);
           return FE;
         }
       }
