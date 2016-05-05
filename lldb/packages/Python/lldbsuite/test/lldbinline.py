@@ -186,7 +186,7 @@ def ApplyDecoratorsToFunction(func, decorators):
     elif hasattr(decorators, '__call__'):
         tmp = decorators(tmp)
     return tmp
-    
+
 
 def MakeInlineTest(__file, __globals, decorators=None):
     # Adjust the filename if it ends in .pyc.  We want filenames to
@@ -200,13 +200,17 @@ def MakeInlineTest(__file, __globals, decorators=None):
     InlineTest.mydir = TestBase.compute_mydir(__file)
 
     test_name, _ = os.path.splitext(file_basename)
-    # Build the test case 
+    # Build the test case
     test = type(test_name, (InlineTest,), {'using_dsym': None})
     test.name = test_name
 
-    test.test_with_dsym = ApplyDecoratorsToFunction(test._InlineTest__test_with_dsym, decorators)
-    test.test_with_dwarf = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwarf, decorators)
-    test.test_with_dwo = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwo, decorators)
+    target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    if test_categories.is_supported_on_platform("dsym", target_platform):
+        test.test_with_dsym = ApplyDecoratorsToFunction(test._InlineTest__test_with_dsym, decorators)
+    if test_categories.is_supported_on_platform("dwarf", target_platform):
+        test.test_with_dwarf = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwarf, decorators)
+    if test_categories.is_supported_on_platform("dwo", target_platform):
+        test.test_with_dwo = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwo, decorators)
 
     # Add the test case to the globals, and hide InlineTest
     __globals.update({test_name : test})

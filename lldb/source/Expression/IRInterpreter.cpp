@@ -477,6 +477,7 @@ static const char *memory_write_error               = "Interpreter couldn't writ
 static const char *memory_read_error                = "Interpreter couldn't read from memory";
 static const char *infinite_loop_error              = "Interpreter ran for too many cycles";
 //static const char *bad_result_error                 = "Result of expression is in bad memory";
+static const char *too_many_functions_error = "Interpreter doesn't handle modules with multiple function bodies.";
 
 static bool
 CanResolveConstant (llvm::Constant *constant)
@@ -506,7 +507,7 @@ CanResolveConstant (llvm::Constant *constant)
                     Constant *base = dyn_cast<Constant>(*op_cursor);
                     if (!base)
                         return false;
-                    
+
                     return CanResolveConstant(base);
                 }
             }
@@ -535,7 +536,13 @@ IRInterpreter::CanInterpret (llvm::Module &module,
         if (fi->begin() != fi->end())
         {
             if (saw_function_with_body)
+            {
+                if (log)
+                    log->Printf("More than one function in the module has a body");
+                error.SetErrorToGenericError();
+                error.SetErrorString(too_many_functions_error);
                 return false;
+            }
             saw_function_with_body = true;
         }
     }
@@ -664,7 +671,7 @@ IRInterpreter::CanInterpret (llvm::Module &module,
                         return false;
                     }
                 }
-                
+
                 if (Constant *constant = llvm::dyn_cast<Constant>(operand))
                 {
                     if (!CanResolveConstant(constant))
@@ -680,7 +687,8 @@ IRInterpreter::CanInterpret (llvm::Module &module,
 
     }
 
-    return true;}
+    return true;
+}
 
 bool
 IRInterpreter::Interpret (llvm::Module &module,

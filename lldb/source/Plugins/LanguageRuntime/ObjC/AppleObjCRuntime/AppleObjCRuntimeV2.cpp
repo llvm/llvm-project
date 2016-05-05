@@ -80,12 +80,7 @@ extern "C"
     char *strncpy (char * s1, const char * s2, size_t n);
     int printf(const char * format, ...);
 }
-//#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
-#ifdef ENABLE_DEBUG_PRINTF
-#define DEBUG_PRINTF(fmt, ...) printf(fmt, ## __VA_ARGS__)
-#else
-#define DEBUG_PRINTF(fmt, ...)
-#endif
+#define DEBUG_PRINTF(fmt, ...) if (should_log) printf(fmt, ## __VA_ARGS__)
 
 typedef struct _NXMapTable {
     void *prototype;
@@ -111,7 +106,8 @@ struct ClassInfo
 uint32_t
 __lldb_apple_objc_v2_get_dynamic_class_info (void *gdb_objc_realized_classes_ptr,
                                              void *class_infos_ptr,
-                                             uint32_t class_infos_byte_size)
+                                             uint32_t class_infos_byte_size,
+                                             uint32_t should_log)
 {
     DEBUG_PRINTF ("gdb_objc_realized_classes_ptr = %p\n", gdb_objc_realized_classes_ptr);
     DEBUG_PRINTF ("class_infos_ptr = %p\n", class_infos_ptr);
@@ -169,12 +165,7 @@ extern "C"
     int printf(const char * format, ...);
 }
 
-// #define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
-#ifdef ENABLE_DEBUG_PRINTF
-#define DEBUG_PRINTF(fmt, ...) printf(fmt, ## __VA_ARGS__)
-#else
-#define DEBUG_PRINTF(fmt, ...)
-#endif
+#define DEBUG_PRINTF(fmt, ...) if (should_log) printf(fmt, ## __VA_ARGS__)
 
 
 struct objc_classheader_t {
@@ -223,7 +214,8 @@ struct ClassInfo
 uint32_t
 __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                                                   void *class_infos_ptr,
-                                                  uint32_t class_infos_byte_size)
+                                                  uint32_t class_infos_byte_size,
+                                                  uint32_t should_log)
 {
     uint32_t idx = 0;
     DEBUG_PRINTF ("objc_opt_ro_ptr = %p\n", objc_opt_ro_ptr);
@@ -415,7 +407,8 @@ AppleObjCRuntimeV2::GetDynamicTypeAndAddress (ValueObject &in_value,
                                               DynamicValueType use_dynamic, 
                                               TypeAndOrName &class_type_or_name, 
                                               Address &address,
-                                              Value::ValueType &value_type)
+                                              Value::ValueType &value_type,
+                                              Error &error)
 {
     // We should never get here with a null process...
     assert (m_process != NULL);
@@ -430,6 +423,7 @@ AppleObjCRuntimeV2::GetDynamicTypeAndAddress (ValueObject &in_value,
     else
         assert (in_value.GetTargetSP().get() == m_process->CalculateTarget().get());
     
+    error.Clear();
     class_type_or_name.Clear();
     value_type = Value::ValueType::eValueTypeScalar;
 
@@ -1451,6 +1445,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         value.SetValueType (Value::eValueTypeScalar);
         value.SetCompilerType (clang_uint32_t_type);
         arguments.PushValue (value);
+        arguments.PushValue (value);
         
         get_class_info_function = m_get_class_info_code->MakeFunctionCaller(clang_uint32_t_type,
                                                                             arguments,
@@ -1492,12 +1487,14 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         return false;
     
     Mutex::Locker locker(m_get_class_info_args_mutex);
-    
+
     // Fill in our function argument values
     arguments.GetValueAtIndex(0)->GetScalar() = hash_table.GetTableLoadAddress();
     arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;
     arguments.GetValueAtIndex(2)->GetScalar() = class_infos_byte_size;
+    arguments.GetValueAtIndex(3)->GetScalar() = (GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES) == nullptr ? 0 : 1);
 
+    
     bool success = false;
 
     diagnostics.Clear();
@@ -1711,6 +1708,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
         //value.SetContext (Value::eContextTypeClangType, clang_uint32_t_type);
         value.SetCompilerType (clang_uint32_t_type);
         arguments.PushValue (value);
+        arguments.PushValue (value);
         
         get_shared_cache_class_info_function = m_get_shared_cache_class_info_code->MakeFunctionCaller(clang_uint32_t_type,
                                                                                                       arguments,
@@ -1746,6 +1744,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     arguments.GetValueAtIndex(0)->GetScalar() = objc_opt_ptr;
     arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;
     arguments.GetValueAtIndex(2)->GetScalar() = class_infos_byte_size;
+    arguments.GetValueAtIndex(3)->GetScalar() = (GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES) == nullptr ? 0 : 1);
+    
 
     bool success = false;
     bool any_found = false;

@@ -715,7 +715,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton) :
     m_loaded_plugins(),
     m_event_handler_thread(),
     m_io_handler_thread(),
-    m_sync_broadcaster(nullptr, "lldb.debugger.sync")
+    m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
+    m_forward_listener_sp(),
+    m_clear_once()
 {
     char instance_cstr[256];
     snprintf(instance_cstr, sizeof(instance_cstr), "debugger_%d", (int)GetID());
@@ -762,31 +764,44 @@ Debugger::~Debugger ()
 void
 Debugger::Clear()
 {
-    ClearIOHandlers();
-    StopIOHandlerThread();
-    StopEventHandlerThread();
-    m_listener_sp->Clear();
-    int num_targets = m_target_list.GetNumTargets();
-    for (int i = 0; i < num_targets; i++)
-    {
-        TargetSP target_sp (m_target_list.GetTargetAtIndex (i));
-        if (target_sp)
+    //----------------------------------------------------------------------
+    // Make sure we call this function only once. With the C++ global
+    // destructor chain having a list of debuggers and with code that can be
+    // running on other threads, we need to ensure this doesn't happen
+    // multiple times.
+    //
+    // The following functions call Debugger::Clear():
+    //     Debugger::~Debugger();
+    //     static void Debugger::Destroy(lldb::DebuggerSP &debugger_sp);
+    //     static void Debugger::Terminate();
+    //----------------------------------------------------------------------
+    std::call_once(m_clear_once, [this]() {
+        ClearIOHandlers();
+        StopIOHandlerThread();
+        StopEventHandlerThread();
+        m_listener_sp->Clear();
+        int num_targets = m_target_list.GetNumTargets();
+        for (int i = 0; i < num_targets; i++)
         {
-            ProcessSP process_sp (target_sp->GetProcessSP());
-            if (process_sp)
-                process_sp->Finalize();
-            target_sp->Destroy();
+            TargetSP target_sp (m_target_list.GetTargetAtIndex (i));
+            if (target_sp)
+            {
+                ProcessSP process_sp (target_sp->GetProcessSP());
+                if (process_sp)
+                    process_sp->Finalize();
+                target_sp->Destroy();
+            }
         }
-    }
-    m_broadcaster_manager_sp->Clear ();
-    
-    // Close the input file _before_ we close the input read communications class
-    // as it does NOT own the input file, our m_input_file does.
-    m_terminal_state.Clear();
-    if (m_input_file_sp)
-        m_input_file_sp->GetFile().Close ();
-    
-    m_command_interpreter_ap->Clear();
+        m_broadcaster_manager_sp->Clear ();
+        
+        // Close the input file _before_ we close the input read communications class
+        // as it does NOT own the input file, our m_input_file does.
+        m_terminal_state.Clear();
+        if (m_input_file_sp)
+            m_input_file_sp->GetFile().Close ();
+        
+        m_command_interpreter_ap->Clear();
+    });
 }
 
 bool

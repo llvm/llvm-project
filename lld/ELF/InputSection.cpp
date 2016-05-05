@@ -419,7 +419,8 @@ MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
   StringRef Data((const char *)D.data(), D.size());
   std::vector<std::pair<uintX_t, uintX_t>> &Offsets = this->Offsets;
 
-  uintX_t V = Config->GcSections ? -1 : 0;
+  uintX_t V = Config->GcSections ? MergeInputSection<ELFT>::PieceDead
+                                 : MergeInputSection<ELFT>::PieceLive;
   if (Header->sh_flags & SHF_STRINGS) {
     uintX_t Offset = 0;
     while (!Data.empty()) {
@@ -478,15 +479,15 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
   // Compute the Addend and if the Base is cached, return.
   uintX_t Addend = Offset - Start;
   uintX_t &Base = I->second;
-  if (Base != uintX_t(-1))
+  auto *MOS = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
+  if (!MOS->shouldTailMerge())
     return Base + Addend;
 
   // Map the base to the offset in the output section and cache it.
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   StringRef Entry = Data.substr(Start, End - Start);
-  Base =
-      static_cast<MergeOutputSection<ELFT> *>(this->OutSec)->getOffset(Entry);
+  Base = MOS->getOffset(Entry);
   return Base + Addend;
 }
 

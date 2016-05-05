@@ -11,7 +11,7 @@
 
 int main (int argc, char const *argv[])
 {
-    printf("Stop here\n");     //% self.runCmd("expression auto $add = [](int a, int b) { return a + b };")
-                               //% self.expect("expression $add(2,3)", substrs = ['= 5'])
-    return 0; 
+    printf("Stop here\n"); //% self.runCmd("expression auto $add = [](int a, int b) { return a + b; }")
+                           //% self.expect("expression $add(2,3)", substrs = ['= 5'])
+    return 0;
 }

@@ -1271,7 +1271,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   if (this->Header.sh_flags & SHF_STRINGS) {
     for (unsigned I = 0, N = Offsets.size(); I != N; ++I) {
       auto &P = Offsets[I];
-      if (P.second == (uintX_t)-1)
+      if (P.second == MergeInputSection<ELFT>::PieceDead)
         continue;
 
       uintX_t Start = P.first;
@@ -1279,7 +1279,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
       StringRef Entry = Data.substr(Start, End - Start);
       uintX_t OutputOffset = Builder.add(Entry);
       if (shouldTailMerge())
-        OutputOffset = -1;
+        OutputOffset = MergeInputSection<ELFT>::PieceLive;
       P.second = OutputOffset;
     }
     return;

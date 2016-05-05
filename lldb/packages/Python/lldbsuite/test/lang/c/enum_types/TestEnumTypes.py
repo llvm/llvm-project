@@ -19,6 +19,7 @@ class EnumTypesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.c', '// Set break point at this line.')
 
+    @expectedFailAll(oslist=['windows'])  // derefing the null pointer "works" on Windows
     def test(self):
         """Test 'image lookup -t days' and check for correct display and enum value printing."""
         self.build()
@@ -53,24 +54,24 @@ class EnumTypesTestCase(TestBase):
                        'kNumDays',
                        '}'])
 
-        enum_values = [ '-4', 
-                        'Monday', 
-                        'Tuesday', 
-                        'Wednesday', 
+        enum_values = [ '-4',
+                        'Monday',
+                        'Tuesday',
+                        'Wednesday',
                         'Thursday',
                         'Friday',
                         'Saturday',
                         'Sunday',
                         'kNumDays',
                         '5'];
-                                                                                                                             
+
         # Make sure a pointer to an anonymous enum type does crash LLDB and displays correctly using
         # frame variable and expression commands
         self.expect('frame variable f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['ops *', 'f.op'], patterns = ['0x0+$'])
         self.expect('frame variable *f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['ops', '*f.op', '<parent is NULL>'])
         self.expect('expr f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['ops *', '$'], patterns = ['0x0+$'])
         self.expect('expr *f.op', DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ['error:'], error = True)
-        
+
         bkpt = self.target().FindBreakpointByID(bkpt_id)
         for enum_value in enum_values:
             self.expect("frame variable day", 'check for valid enumeration value',

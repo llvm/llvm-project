@@ -2365,28 +2365,29 @@ lldb_private::operator% (const Scalar& lhs, const Scalar& rhs)
         switch (result.m_type)
         {
         default:                    break;
-             case Scalar::e_void:            break;
-             case Scalar::e_sint:
-             case Scalar::e_slong:
-             case Scalar::e_slonglong:
-             case Scalar::e_sint128:
-             case Scalar::e_sint256:
-                 if (b->m_integer != 0)
-                 {
-                     result.m_integer = a->m_integer.srem(b->m_integer);
-                     return result;
-                 }
-             case Scalar::e_uint:
-             case Scalar::e_ulong:
-             case Scalar::e_ulonglong:
-             case Scalar::e_uint128:
-             case Scalar::e_uint256:
-                 if (b->m_integer != 0)
-                 {
-                     result.m_integer = a->m_integer.urem(b->m_integer);
-                     return result;
-                 }
-                 break;
+            case Scalar::e_void:            break;
+            case Scalar::e_sint:
+            case Scalar::e_slong:
+            case Scalar::e_slonglong:
+            case Scalar::e_sint128:
+            case Scalar::e_sint256:
+                if (b->m_integer != 0)
+                {
+                    result.m_integer = a->m_integer.srem(b->m_integer);
+                    return result;
+                }
+                break;
+            case Scalar::e_uint:
+            case Scalar::e_ulong:
+            case Scalar::e_ulonglong:
+            case Scalar::e_uint128:
+            case Scalar::e_uint256:
+                if (b->m_integer != 0)
+                {
+                    result.m_integer = a->m_integer.urem(b->m_integer);
+                    return result;
+                }
+                break;
         }
     }
     result.m_type = Scalar::e_void;

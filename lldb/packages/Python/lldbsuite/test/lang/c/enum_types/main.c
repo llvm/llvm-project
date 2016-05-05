@@ -31,7 +31,7 @@ int main (int argc, char const *argv[])
     };
     enum days day;
     struct foo f;
-	f.op = NULL;
+    f.op = NULL;
     for (day = Monday - 1; day <= kNumDays + 1; day++)
     {
         printf("day as int is %i\n", (int)day); // Set break point at this line.
