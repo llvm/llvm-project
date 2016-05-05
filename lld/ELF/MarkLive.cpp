@@ -143,7 +143,7 @@ template <class ELFT> void elf::markLive() {
     if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec)) {
       std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
           MS->getRangeAndSize(R.Offset);
-      T.first->second = 0;
+      T.first->second = MergeInputSection<ELFT>::PieceLive;
     }
     if (R.Sec->Live)
       return;

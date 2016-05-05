@@ -17,6 +17,7 @@
 #include "Error.h"
 #include "lld/Config/Version.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -173,6 +174,16 @@ static std::string rewritePath(StringRef S) {
   return S;
 }
 
+static std::string stringize(opt::Arg *Arg) {
+  std::string K = Arg->getSpelling();
+  if (Arg->getNumValues() == 0)
+    return K;
+  std::string V = quote(Arg->getValue());
+  if (Arg->getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
+    return K + V;
+  return K + " " + V;
+}
+
 // Copies all input files to Config->Reproduce directory and
 // create a response file as "response.txt", so that you can re-run
 // the same command with the same inputs just by executing
@@ -198,10 +209,7 @@ void elf::createResponseFile(const opt::InputArgList &Args) {
          << quote(rewritePath(Arg->getValue())) << "\n";
       break;
     default:
-      OS << Arg->getSpelling();
-      if (Arg->getNumValues() > 0)
-        OS << " " << quote(Arg->getValue());
-      OS << "\n";
+      OS << stringize(Arg) << "\n";
     }
   }
 

@@ -1,5 +1,8 @@
-// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment' -- 2>&1 | FileCheck %s --check-prefix=CHECK-WARN
-// RUN: not clang-tidy %s -checks='-*,llvm-namespace-comment' -warnings-as-errors='llvm-namespace-comment' -- 2>&1 | FileCheck %s --check-prefix=CHECK-WERR
+// RUN: clang-tidy %s -checks='-*,llvm-namespace-comment,clang-diagnostic*' -- 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-WARN -implicit-check-not='{{warning|error}}:'
+// RUN: not clang-tidy %s -checks='-*,llvm-namespace-comment,clang-diagnostic*' \
+// RUN:   -warnings-as-errors='llvm-namespace-comment' -- 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-WERR -implicit-check-not='{{warning|error}}:'
 
 namespace j {
 }

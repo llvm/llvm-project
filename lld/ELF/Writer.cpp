@@ -440,15 +440,27 @@ static bool needsPlt(RelExpr Expr) {
 }
 
 template <class ELFT>
-static bool isRelRelative(RelExpr E, uint32_t Type, const SymbolBody &Body) {
-  if (E == R_SIZE)
+static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
+                                     const SymbolBody &Body) {
+  // These expressions always compute a constant
+  if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF || E == R_MIPS_GOT ||
+      E == R_MIPS_GOT_LOCAL || E == R_GOT_PAGE_PC || E == R_GOT_PC ||
+      E == R_PLT_PC || E == R_TLSGD_PC || E == R_TLSGD || E == R_PPC_PLT_OPD)
     return true;
 
-  bool AbsVal = (isAbsolute<ELFT>(Body) || Body.isTls()) &&
-                !refersToGotEntry(E) && !needsPlt(E);
+  // These never do, except if the entire file is position dependent or if
+  // only the low bits are used.
+  if (E == R_GOT || E == R_PLT)
+    return Target->usesOnlyLowPageBits(Type) || !Config->Pic;
 
-  bool RelE = E == R_PC || E == R_PLT_PC || E == R_GOT_PC || E == R_GOTREL ||
-              E == R_PAGE_PC;
+  if (Body.isPreemptible())
+    return false;
+
+  if (!Config->Pic)
+    return true;
+
+  bool AbsVal = isAbsolute<ELFT>(Body) || Body.isTls();
+  bool RelE = E == R_PC || E == R_GOTREL || E == R_PAGE_PC;
   if (AbsVal && !RelE)
     return true;
   if (!AbsVal && RelE)
@@ -496,63 +508,61 @@ static RelExpr fromPlt(RelExpr Expr) {
 template <class ELFT>
 RelExpr Writer<ELFT>::adjustExpr(SymbolBody &Body, bool IsWrite, RelExpr Expr,
                                  uint32_t Type) {
-  if (Body.isGnuIFunc())
-    return toPlt(Expr);
   bool Preemptible = Body.isPreemptible();
-  if (needsPlt(Expr)) {
-    if (Preemptible)
-      return Expr;
-    return fromPlt(Expr);
-  }
+  if (Body.isGnuIFunc())
+    Expr = toPlt(Expr);
+  else if (needsPlt(Expr) && !Preemptible)
+    Expr = fromPlt(Expr);
 
-  if (!IsWrite && !refersToGotEntry(Expr) && !needsPlt(Expr) && Preemptible) {
-    // This relocation would require the dynamic linker to write a value
-    // to read only memory. We can hack around it if we are producing an
-    // executable and the refered symbol can be preemepted to refer to the
-    // executable.
-    if (Config->Shared) {
-      StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-      error("relocation " + S + " cannot be used when making a shared "
-                                "object; recompile with -fPIC.");
-      return Expr;
-    }
-    if (Body.getVisibility() != STV_DEFAULT) {
-      error("Cannot preempt symbol");
-      return Expr;
-    }
-    if (Body.isObject()) {
-      // Produce a copy relocation.
-      auto *B = cast<SharedSymbol<ELFT>>(&Body);
-      if (!B->needsCopy())
-        addCopyRelSymbol(B);
-      return Expr;
-    }
-    if (Body.isFunc()) {
-      // This handles a non PIC program call to function in a shared library.In
-      // an ideal world, we could just report an error saying the relocation can
-      // overflow at runtime. In the real world with glibc, crt1.o has a
-      // R_X86_64_PC32 pointing to libc.so.
-      //
-      // The general idea on how to handle such cases is to create a PLT entry
-      // and use that as the function value.
-      //
-      // For the static linking part, we just return a plt expr and everything
-      // else will use the the PLT entry as the address.
-      //
-      // The remaining problem is making sure pointer equality still works. We
-      // need the help of the dynamic linker for that. We let it know that we
-      // have a direct reference to a so symbol by creating an undefined symbol
-      // with a non zero st_value. Seeing that, the dynamic linker resolves the
-      // symbol to the value of the symbol we created. This is true even for got
-      // entries, so pointer equality is maintained. To avoid an infinite loop,
-      // the only entry that points to the real function is a dedicated got
-      // entry used by the plt. That is identified by special relocation types
-      // (R_X86_64_JUMP_SLOT, R_386_JMP_SLOT, etc).
-      Body.NeedsCopyOrPltAddr = true;
-      return toPlt(Expr);
-    }
-    error("Symbol is missing type");
+  if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body))
+    return Expr;
+
+  // This relocation would require the dynamic linker to write a value to read
+  // only memory. We can hack around it if we are producing an executable and
+  // the refered symbol can be preemepted to refer to the executable.
+  if (Config->Shared) {
+    StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
+    error("relocation " + S + " cannot be used when making a shared "
+                              "object; recompile with -fPIC.");
+    return Expr;
   }
+  if (Body.getVisibility() != STV_DEFAULT) {
+    error("Cannot preempt symbol");
+    return Expr;
+  }
+  if (Body.isObject()) {
+    // Produce a copy relocation.
+    auto *B = cast<SharedSymbol<ELFT>>(&Body);
+    if (!B->needsCopy())
+      addCopyRelSymbol(B);
+    return Expr;
+  }
+  if (Body.isFunc()) {
+    // This handles a non PIC program call to function in a shared library. In
+    // an ideal world, we could just report an error saying the relocation can
+    // overflow at runtime. In the real world with glibc, crt1.o has a
+    // R_X86_64_PC32 pointing to libc.so.
+    //
+    // The general idea on how to handle such cases is to create a PLT entry and
+    // use that as the function value.
+    //
+    // For the static linking part, we just return a plt expr and everything
+    // else will use the the PLT entry as the address.
+    //
+    // The remaining problem is making sure pointer equality still works. We
+    // need the help of the dynamic linker for that. We let it know that we have
+    // a direct reference to a so symbol by creating an undefined symbol with a
+    // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+    // the value of the symbol we created. This is true even for got entries, so
+    // pointer equality is maintained. To avoid an infinite loop, the only entry
+    // that points to the real function is a dedicated got entry used by the
+    // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
+    // R_386_JMP_SLOT, etc).
+    Body.NeedsCopyOrPltAddr = true;
+    return toPlt(Expr);
+  }
+  error("Symbol is missing type");
+
   return Expr;
 }
 
@@ -630,7 +640,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    if (Expr == R_GOT && !isRelRelative<ELFT>(Expr, Type, Body) &&
+    if (Expr == R_GOT && !isStaticLinkTimeConstant<ELFT>(Expr, Type, Body) &&
         Config->Shared)
       AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body,
               getAddend<ELFT>(RI)});
@@ -732,7 +742,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // We can however do better than just copying the incoming relocation. We
     // can process some of it and and just ask the dynamic linker to add the
     // load address.
-    if (!Config->Pic || isRelRelative<ELFT>(Expr, Type, Body)) {
+    if (!Config->Pic || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body)) {
       if (Config->EMachine == EM_MIPS && Body.isLocal() &&
           (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
         Addend += File.getMipsGp0();
@@ -1108,9 +1118,16 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
     return false;
 
   if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
+    // Always include absolute symbols.
+    if (!D->Section)
+      return true;
     // Exclude symbols pointing to garbage-collected sections.
-    if (D->Section && !D->Section->Live)
+    if (!D->Section->Live)
       return false;
+    if (auto *S = dyn_cast<MergeInputSection<ELFT>>(D->Section))
+      if (S->getRangeAndSize(D->Value).first->second ==
+          MergeInputSection<ELFT>::PieceDead)
+        return false;
   }
   return true;
 }

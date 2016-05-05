@@ -32,7 +32,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o 'foo bar'
 # RUN: ld.lld --reproduce repro2 'foo bar' -L"foo bar" -Lfile \
 # RUN:   --dynamic-list dyn -rpath file --script file --version-script ver \
-# RUN:   --dynamic-linker "some unusual/path"
+# RUN:   --dynamic-linker "some unusual/path" -soname 'foo bar' -soname='foo bar'
 # RUN: cpio -id < repro2.cpio
 # RUN: FileCheck %s --check-prefix=RSP2 < repro2/response.txt
 # RSP2:      "{{.*}}foo bar"
@@ -43,6 +43,8 @@
 # RSP2-NEXT: --script {{.+}}file
 # RSP2-NEXT: --version-script {{.+}}ver
 # RSP2-NEXT: --dynamic-linker "some unusual/path"
+# RSP2-NEXT: -soname="foo bar"
+# RSP2-NEXT: -soname="foo bar"
 
 .globl _start
 _start:

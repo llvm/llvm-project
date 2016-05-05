@@ -310,8 +310,6 @@ template <class ELFT>
 class MergeOutputSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
-  bool shouldTailMerge() const;
-
 public:
   MergeOutputSection(StringRef Name, uint32_t Type, uintX_t Flags,
                      uintX_t Alignment);
@@ -319,6 +317,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
   void finalize() override;
+  bool shouldTailMerge() const;
 
 private:
   llvm::StringTableBuilder Builder;

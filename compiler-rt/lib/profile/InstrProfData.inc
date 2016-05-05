@@ -104,7 +104,6 @@ INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueDataSize, ValueDataSize)
-INSTR_PROF_RAW_HEADER(uint64_t, ValueDataDelta, (uintptr_t)ValueDataBegin)
 #undef INSTR_PROF_RAW_HEADER
 /* INSTR_PROF_RAW_HEADER  end */
 
@@ -711,7 +710,7 @@ serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 3
+#define INSTR_PROF_RAW_VERSION 4
 /* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 4
 /* Coverage mapping format vresion (start from 0). */
