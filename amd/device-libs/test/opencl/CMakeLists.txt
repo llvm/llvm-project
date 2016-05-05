@@ -40,7 +40,5 @@
 ##
 ################################################################################
 
-#set(CMAKE_OpenCL_LINK_EXECUTABLE ${CMAKE_C_LINK_EXECUTABLE})
-
-#clang_opencl_bc_exe(test_workitem)
+include_directories(${CMAKE_SOURCE_DIR}/test/inc)
 clang_opencl_test(test_workitem)

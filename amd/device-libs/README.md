@@ -18,3 +18,12 @@ The following build steps are performed:
     make install
     make test
 
+## TESTING
+
+Currently all tests are offline:
+ * OpenCL source is compiled to LLVM bitcode
+ * Test bitcode is linked to library bitcode with llvm-link
+ * Clang OpenCL compiler is run on resulting bitcode, producing code object.
+ * Resulting code object is passed to llvm-objdump and amdhsacod -test.
+
+The output of tests (which includes AMDGPU disassembly) can be displayed by running ctest -VV in build directory.
