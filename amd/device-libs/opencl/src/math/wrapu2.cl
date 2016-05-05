@@ -1,6 +1,8 @@
 
 #include "ocml.h"
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 #define _C(X,Y) X##Y
 #define C(X,Y) _C(X,Y)
 

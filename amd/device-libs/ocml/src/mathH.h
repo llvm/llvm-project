@@ -46,3 +46,5 @@
 #define MANTLENGTH_HP16   11
 #define BASEDIGITS_HP16   5
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+

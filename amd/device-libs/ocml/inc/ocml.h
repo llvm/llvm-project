@@ -2,7 +2,6 @@
 #ifndef OCML_H
 #define OCML_H
 
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // This C header declares the functions defined by the OCML library
 // The behavior of some of these functions can be controlled or optimized
@@ -339,6 +338,7 @@ DECL_CONST_OCML_BINARY_F64(sub_rtp)
 DECL_CONST_OCML_BINARY_F64(sub_rtn)
 DECL_CONST_OCML_BINARY_F64(sub_rtz)
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
 DECL_CONST_OCML_UNARY_F16(acos)
 DECL_PURE_OCML_UNARY_F16(acosh)
 DECL_CONST_OCML_UNARY_F16(acospi)
@@ -462,5 +462,6 @@ DECL_CONST_OCML_BINARY_F16(sub_rte)
 DECL_CONST_OCML_BINARY_F16(sub_rtp)
 DECL_CONST_OCML_BINARY_F16(sub_rtn)
 DECL_CONST_OCML_BINARY_F16(sub_rtz)
+#pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
 #endif // OCML_H
