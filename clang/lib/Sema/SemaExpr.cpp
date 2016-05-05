@@ -12859,39 +12859,53 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   //   set of overloaded functions [...].
   //
   // We (incorrectly) mark overload resolution as an unevaluated context, so we
-  // can just check that here. Skip the rest of this function if we've already
-  // marked the function as used.
+  // can just check that here.
   bool OdrUse = MightBeOdrUse && IsPotentiallyEvaluatedContext(*this);
-  if (Func->isUsed(/*CheckUsedAttr=*/false) || !OdrUse) {
-    // C++11 [temp.inst]p3:
-    //   Unless a function template specialization has been explicitly
-    //   instantiated or explicitly specialized, the function template
-    //   specialization is implicitly instantiated when the specialization is
-    //   referenced in a context that requires a function definition to exist.
-    //
-    // We consider constexpr function templates to be referenced in a context
-    // that requires a definition to exist whenever they are referenced.
-    //
-    // FIXME: This instantiates constexpr functions too frequently. If this is
-    // really an unevaluated context (and we're not just in the definition of a
-    // function template or overload resolution or other cases which we
-    // incorrectly consider to be unevaluated contexts), and we're not in a
-    // subexpression which we actually need to evaluate (for instance, a
-    // template argument, array bound or an expression in a braced-init-list),
-    // we are not permitted to instantiate this constexpr function definition.
-    //
-    // FIXME: This also implicitly defines special members too frequently. They
-    // are only supposed to be implicitly defined if they are odr-used, but they
-    // are not odr-used from constant expressions in unevaluated contexts.
-    // However, they cannot be referenced if they are deleted, and they are
-    // deleted whenever the implicit definition of the special member would
-    // fail.
-    if (!Func->isConstexpr() || Func->getBody())
-      return;
-    CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Func);
-    if (!Func->isImplicitlyInstantiable() && (!MD || MD->isUserProvided()))
-      return;
-  }
+
+  // Determine whether we require a function definition to exist, per
+  // C++11 [temp.inst]p3:
+  //   Unless a function template specialization has been explicitly
+  //   instantiated or explicitly specialized, the function template
+  //   specialization is implicitly instantiated when the specialization is
+  //   referenced in a context that requires a function definition to exist.
+  //
+  // We consider constexpr function templates to be referenced in a context
+  // that requires a definition to exist whenever they are referenced.
+  //
+  // FIXME: This instantiates constexpr functions too frequently. If this is
+  // really an unevaluated context (and we're not just in the definition of a
+  // function template or overload resolution or other cases which we
+  // incorrectly consider to be unevaluated contexts), and we're not in a
+  // subexpression which we actually need to evaluate (for instance, a
+  // template argument, array bound or an expression in a braced-init-list),
+  // we are not permitted to instantiate this constexpr function definition.
+  //
+  // FIXME: This also implicitly defines special members too frequently. They
+  // are only supposed to be implicitly defined if they are odr-used, but they
+  // are not odr-used from constant expressions in unevaluated contexts.
+  // However, they cannot be referenced if they are deleted, and they are
+  // deleted whenever the implicit definition of the special member would
+  // fail (with very few exceptions).
+  CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Func);
+  bool NeedDefinition =
+      OdrUse || (Func->isConstexpr() && (Func->isImplicitlyInstantiable() ||
+                                         (MD && !MD->isUserProvided())));
+
+  // C++14 [temp.expl.spec]p6:
+  //   If a template [...] is explicitly specialized then that specialization
+  //   shall be declared before the first use of that specialization that would
+  //   cause an implicit instantiation to take place, in every translation unit
+  //   in which such a use occurs
+  if (NeedDefinition &&
+      (Func->getTemplateSpecializationKind() != TSK_Undeclared ||
+       Func->getMemberSpecializationInfo()))
+    checkSpecializationVisibility(Loc, Func);
+
+  // If we don't need to mark the function as used, and we don't need to
+  // try to provide a definition, there's nothing more to do.
+  if ((Func->isUsed(/*CheckUsedAttr=*/false) || !OdrUse) &&
+      (!NeedDefinition || Func->getBody()))
+    return;
 
   // Note that this declaration has been used.
   if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(Func)) {
@@ -13797,6 +13811,12 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   assert(!isa<VarTemplatePartialSpecializationDecl>(Var) &&
          "Can't instantiate a partial template specialization.");
 
+  // If this might be a member specialization of a static data member, check
+  // the specialization is visible. We already did the checks for variable
+  // template specializations when we created them.
+  if (TSK != TSK_Undeclared && !isa<VarTemplateSpecializationDecl>(Var))
+    SemaRef.checkSpecializationVisibility(Loc, Var);
+
   // Perform implicit instantiation of static data members, static data member
   // templates of class templates, and variable template specializations. Delay
   // instantiations of variable templates, except for those that could be used
@@ -13840,7 +13860,8 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
     }
   }
 
-  if(!MarkODRUsed) return;
+  if (!MarkODRUsed)
+    return;
 
   // Per C++11 [basic.def.odr], a variable is odr-used "unless it satisfies
   // the requirements for appearing in a constant expression (5.19) and, if

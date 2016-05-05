@@ -396,7 +396,9 @@ def note_using_decl_class_member_workaround : Note<
   "use %select{an alias declaration|a typedef declaration|a reference}0 "
   "instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
-  "using declaration cannot refer to namespace">;
+  "using declaration cannot refer to a namespace">;
+def err_using_decl_can_not_refer_to_scoped_enum : Error<
+  "using declaration cannot refer to a scoped enumerator">;
 def err_using_decl_constructor : Error<
   "using declaration cannot refer to a constructor">;
 def warn_cxx98_compat_using_decl_constructor : Warning<
@@ -3738,6 +3740,8 @@ def err_template_spec_unknown_kind : Error<
   "class template">;
 def note_specialized_entity : Note<
   "explicitly specialized declaration is here">;
+def note_explicit_specialization_declared_here : Note<
+  "explicit specialization declared here">;
 def err_template_spec_decl_function_scope : Error<
   "explicit specialization of %0 in function scope">;
 def err_template_spec_decl_class_scope : Error<
@@ -3860,6 +3864,8 @@ def err_partial_spec_ordering_ambiguous : Error<
 def note_partial_spec_match : Note<"partial specialization matches %0">;
 def err_partial_spec_redeclared : Error<
   "class template partial specialization %0 cannot be redeclared">;
+def note_partial_specialization_declared_here : Note<
+  "explicit specialization declared here">;
 def note_prev_partial_spec_here : Note<
   "previous declaration of class template partial specialization %0 is here">;
 def err_partial_spec_fully_specialized : Error<
@@ -8298,14 +8304,17 @@ def err_module_private_local_class : Error<
   "local %select{struct|interface|union|class|enum}0 cannot be declared "
   "__module_private__">;
 def err_module_unimported_use : Error<
-  "%select{declaration|definition|default argument}0 of %1 must be imported "
+  "%select{declaration|definition|default argument|"
+  "explicit specialization|partial specialization}0 of %1 must be imported "
   "from module '%2' before it is required">;
 def err_module_unimported_use_header : Error<
   "missing '#include %3'; "
-  "%select{declaration|definition|default argument}0 of %1 must be imported "
+  "%select{declaration|definition|default argument|"
+  "explicit specialization|partial specialization}0 of %1 must be imported "
   "from module '%2' before it is required">;
 def err_module_unimported_use_multiple : Error<
-  "%select{declaration|definition|default argument}0 of %1 must be imported "
+  "%select{declaration|definition|default argument|"
+  "explicit specialization|partial specialization}0 of %1 must be imported "
   "from one of the following modules before it is required:%2">;
 def ext_module_import_in_extern_c : ExtWarn<
   "import of C++ module '%0' appears within extern \"C\" language linkage "

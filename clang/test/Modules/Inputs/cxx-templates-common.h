@@ -53,4 +53,21 @@ template<typename T> struct WithAnonymousDecls {
   typedef int X;
 };
 
+namespace hidden_specializations {
+  template<typename T> void fn() {}
+
+  template<typename T> struct cls {
+    static void nested_fn() {}
+    struct nested_cls {};
+    static int nested_var;
+    enum class nested_enum {};
+
+    template<typename U> static void nested_fn_t() {}
+    template<typename U> struct nested_cls_t {};
+    template<typename U> static int nested_var_t;
+  };
+
+  template<typename T> int var;
+}
+
 #include "cxx-templates-textual.h"

@@ -1534,6 +1534,10 @@ def fno_zvector : Flag<["-"], "fno-zvector">, Group<f_Group>,
 def mzvector : Flag<["-"], "mzvector">, Alias<fzvector>;
 def mno_zvector : Flag<["-"], "mno-zvector">, Alias<fno_zvector>;
 
+def mbackchain : Flag<["-"], "mbackchain">, Group<m_Group>, Flags<[DriverOption,CC1Option]>,
+  HelpText<"Link stack frames through backchain on System Z">;
+def mno_backchain : Flag<["-"], "mno-backchain">, Group<m_Group>, Flags<[DriverOption,CC1Option]>;
+
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,

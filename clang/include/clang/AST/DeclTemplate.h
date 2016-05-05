@@ -1876,6 +1876,10 @@ public:
         cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
     return First->InstantiatedFromMember.getPointer();
   }
+  ClassTemplatePartialSpecializationDecl *
+  getInstantiatedFromMemberTemplate() const {
+    return getInstantiatedFromMember();
+  }
 
   void setInstantiatedFromMember(
                           ClassTemplatePartialSpecializationDecl *PartialSpec) {
@@ -2511,17 +2515,11 @@ public:
   /// it was instantiated.
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
   getInstantiatedFrom() const {
-    if (getSpecializationKind() != TSK_ImplicitInstantiation &&
-        getSpecializationKind() != TSK_ExplicitInstantiationDefinition &&
-        getSpecializationKind() != TSK_ExplicitInstantiationDeclaration)
+    if (!isTemplateInstantiation(getSpecializationKind()))
       return llvm::PointerUnion<VarTemplateDecl *,
                                 VarTemplatePartialSpecializationDecl *>();
 
-    if (SpecializedPartialSpecialization *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
-      return PartialSpec->PartialSpecialization;
-
-    return SpecializedTemplate.get<VarTemplateDecl *>();
+    return getSpecializedTemplateOrPartial();
   }
 
   /// \brief Retrieve the variable template or variable template partial

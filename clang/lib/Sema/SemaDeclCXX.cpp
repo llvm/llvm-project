@@ -7740,7 +7740,7 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
   // function will silently decide not to build a shadow decl, which
   // will pre-empt further diagnostics.
   //
-  // We don't need to do this in C++0x because we do the check once on
+  // We don't need to do this in C++11 because we do the check once on
   // the qualifier.
   //
   // FIXME: diagnose the following if we care enough:
@@ -8229,12 +8229,22 @@ NamedDecl *Sema::BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
     }
   }
 
-  // C++0x N2914 [namespace.udecl]p6:
+  // C++14 [namespace.udecl]p6:
   // A using-declaration shall not name a namespace.
   if (R.getAsSingle<NamespaceDecl>()) {
     Diag(IdentLoc, diag::err_using_decl_can_not_refer_to_namespace)
       << SS.getRange();
     return BuildInvalid();
+  }
+
+  // C++14 [namespace.udecl]p7:
+  // A using-declaration shall not name a scoped enumerator.
+  if (auto *ED = R.getAsSingle<EnumConstantDecl>()) {
+    if (cast<EnumDecl>(ED->getDeclContext())->isScoped()) {
+      Diag(IdentLoc, diag::err_using_decl_can_not_refer_to_scoped_enum)
+        << SS.getRange();
+      return BuildInvalid();
+    }
   }
 
   UsingDecl *UD = BuildValid();
@@ -8361,8 +8371,10 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
 
     // If we weren't able to compute a valid scope, it must be a
     // dependent class scope.
-    if (!NamedContext || NamedContext->isRecord()) {
-      auto *RD = dyn_cast_or_null<CXXRecordDecl>(NamedContext);
+    if (!NamedContext || NamedContext->getRedeclContext()->isRecord()) {
+      auto *RD = NamedContext
+                     ? cast<CXXRecordDecl>(NamedContext->getRedeclContext())
+                     : nullptr;
       if (RD && RequireCompleteDeclContext(const_cast<CXXScopeSpec&>(SS), RD))
         RD = nullptr;
 
@@ -8446,7 +8458,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc,
     return true;
 
   if (getLangOpts().CPlusPlus11) {
-    // C++0x [namespace.udecl]p3:
+    // C++11 [namespace.udecl]p3:
     //   In a using-declaration used as a member-declaration, the
     //   nested-name-specifier shall name a base class of the class
     //   being defined.

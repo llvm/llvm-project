@@ -1714,6 +1714,8 @@ void CodeGenModule::ConstructAttributeList(
 
     if (CodeGenOpts.StackRealignment)
       FuncAttrs.addAttribute("stackrealign");
+    if (CodeGenOpts.Backchain)
+      FuncAttrs.addAttribute("backchain");
 
     // Add target-cpu and target-features attributes to functions. If
     // we have a decl for the function and it has a target attribute then

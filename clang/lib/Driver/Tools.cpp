@@ -1655,6 +1655,12 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
   }
 }
 
+void Clang::AddSystemZTargetArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  if (Args.hasFlag(options::OPT_mbackchain, options::OPT_mno_backchain, false))
+    CmdArgs.push_back("-mbackchain");
+}
+
 static const char *getSystemZTargetCPU(const ArgList &Args) {
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
     return A->getValue();
@@ -4239,6 +4245,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
     AddSparcTargetArgs(Args, CmdArgs);
+    break;
+
+  case llvm::Triple::systemz:
+    AddSystemZTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::x86:
