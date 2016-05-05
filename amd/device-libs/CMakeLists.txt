@@ -72,6 +72,7 @@ set (CLANG_OCL_LINK_FLAGS "-target amdgcn--amdhsa")
 
 include(OCL.cmake)
 
+add_subdirectory(utils/prepare-builtins)
 add_subdirectory(llvm)
 add_subdirectory(ocml)
 add_subdirectory(opencl)

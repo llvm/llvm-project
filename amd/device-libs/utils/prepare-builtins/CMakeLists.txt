@@ -2,24 +2,24 @@
 ##
 ## The University of Illinois/NCSA
 ## Open Source License (NCSA)
-## 
+##
 ## Copyright (c) 2016, Advanced Micro Devices, Inc. All rights reserved.
-## 
+##
 ## Developed by:
-## 
+##
 ##                 AMD Research and AMD HSA Software Development
-## 
+##
 ##                 Advanced Micro Devices, Inc.
-## 
+##
 ##                 www.amd.com
-## 
+##
 ## Permission is hereby granted, free of charge, to any person obtaining a copy
 ## of this software and associated documentation files (the "Software"), to
 ## deal with the Software without restriction, including without limitation
 ## the rights to use, copy, modify, merge, publish, distribute, sublicense,
 ## and#or sell copies of the Software, and to permit persons to whom the
 ## Software is furnished to do so, subject to the following conditions:
-## 
+##
 ##  - Redistributions of source code must retain the above copyright notice,
 ##    this list of conditions and the following disclaimers.
 ##  - Redistributions in binary form must reproduce the above copyright
@@ -29,7 +29,7 @@
 ##    nor the names of its contributors may be used to endorse or promote
 ##    products derived from this Software without specific prior written
 ##    permission.
-## 
+##
 ## THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ## IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ## FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -40,8 +40,18 @@
 ##
 ################################################################################
 
-file(GLOB sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/*.ll
-)
+cmake_minimum_required(VERSION 2.6)
 
-clang_opencl_bc_builtins_lib(llvm ${sources})
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fno-rtti")
+endif()
+
+project(prepare-builtins)
+
+include_directories(${LLVM_INCLUDE_DIRS})
+
+add_executable(prepare-builtins prepare-builtins.cpp)
+llvm_map_components_to_libnames(llvm_libs support core bitreader bitwriter)
+target_link_libraries(prepare-builtins ${llvm_libs})
+
+install(TARGETS prepare-builtins RUNTIME DESTINATION bin)

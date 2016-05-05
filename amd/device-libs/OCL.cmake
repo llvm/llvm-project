@@ -51,6 +51,7 @@ set (CMAKE_OCL_COMPILE_OBJECT "<CMAKE_OCL_COMPILER> -o <OBJECT> <FLAGS> -c <SOUR
 set (CMAKE_OCL_LINK_EXECUTABLE "${LLVM_LINK} <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
 set (CMAKE_OCL_CREATE_STATIC_LIBRARY "${LLVM_LINK} -o <TARGET> <LINK_FLAGS> <OBJECTS>")
 
+
 macro(clang_opencl_bc_lib name)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   set(csources)
@@ -82,12 +83,28 @@ macro(clang_opencl_bc_lib name)
   endforeach()
   add_library(${name}_lib_bc STATIC ${csources})
   set_target_properties(${name}_lib_bc PROPERTIES OUTPUT_NAME ${name})
-  set_target_properties(${name}_lib_bc PROPERTIES PREFIX "" SUFFIX ".bc")
+  set_target_properties(${name}_lib_bc PROPERTIES PREFIX "" SUFFIX ".lib.bc")
   set_target_properties(${name}_lib_bc PROPERTIES COMPILE_FLAGS "${CLANG_OCL_FLAGS} -emit-llvm")
   set_target_properties(${name}_lib_bc PROPERTIES LANGUAGE OCL)
   set_target_properties(${name}_lib_bc PROPERTIES LINKER_LANGUAGE OCL)
-  install (TARGETS ${name}_lib_bc DESTINATION lib COMPONENT OpenCL-Lib-lib)
 endmacro(clang_opencl_bc_lib)
+
+macro(prepare_builtins name)
+  add_custom_command(
+    OUTPUT ${name}.bc
+    COMMAND $<TARGET_FILE:prepare-builtins> ${name}.lib.bc -o ${name}.bc
+    DEPENDS prepare-builtins ${name}_lib_bc
+  )
+  add_custom_target(${name}_bc ALL
+    DEPENDS ${name}.bc
+  )
+endmacro(prepare_builtins)
+
+macro(clang_opencl_bc_builtins_lib name)
+  clang_opencl_bc_lib(${name} ${ARGN})
+  prepare_builtins(${name})
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.bc DESTINATION lib COMPONENT OpenCL-Lib-lib)
+endmacro(clang_opencl_bc_builtins_lib)
 
 macro(clang_opencl_bc_exe name)
   add_executable(${name}_exe_bc "")
