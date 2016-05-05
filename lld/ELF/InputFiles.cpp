@@ -105,7 +105,9 @@ ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
 }
 
 template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
-  if (MipsReginfo)
+  if (ELFT::Is64Bits && MipsOptions && MipsOptions->Reginfo)
+    return MipsOptions->Reginfo->ri_gp_value;
+  if (!ELFT::Is64Bits && MipsReginfo && MipsReginfo->Reginfo)
     return MipsReginfo->Reginfo->ri_gp_value;
   return 0;
 }
@@ -278,11 +280,17 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   if (Config->StripDebug && Name.startswith(".debug"))
     return &InputSection<ELFT>::Discarded;
 
-  // A MIPS object file has a special section that contains register
-  // usage info, which needs to be handled by the linker specially.
-  if (Config->EMachine == EM_MIPS && Name == ".reginfo") {
-    MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
-    return MipsReginfo.get();
+  // A MIPS object file has a special sections that contain register
+  // usage info, which need to be handled by the linker specially.
+  if (Config->EMachine == EM_MIPS) {
+    if (Name == ".reginfo") {
+      MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
+      return MipsReginfo.get();
+    }
+    if (Name == ".MIPS.options") {
+      MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
+      return MipsOptions.get();
+    }
   }
 
   // We dont need special handling of .eh_frame sections if relocatable

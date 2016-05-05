@@ -1,4 +1,16 @@
-// RUN: %check_clang_tidy %s misc-assign-operator-signature %t
+// RUN: %check_clang_tidy %s misc-unconventional-assign-operator %t -- -- -std=c++11 -isystem %S/Inputs/Headers
+
+namespace std {
+template <typename T>
+struct remove_reference { typedef T type; };
+template <typename T>
+struct remove_reference<T &> { typedef T type; };
+template <typename T>
+struct remove_reference<T &&> { typedef T type; };
+template <typename T>
+typename remove_reference<T>::type &&move(T &&t);
+}
+
 
 struct Good {
   Good& operator=(const Good&);
@@ -13,18 +25,19 @@ struct AlsoGood {
   AlsoGood& operator=(AlsoGood);
 };
 
-struct BadReturn {
-  void operator=(const BadReturn&);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'BadReturn&' [misc-assign-operator-signature]
-  const BadReturn& operator=(BadReturn&&);
+struct BadReturnType {
+  void operator=(const BadReturnType&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'BadReturnType&' [misc-unconventional-assign-operator]
+  const BadReturnType& operator=(BadReturnType&&);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
   void operator=(int);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
 };
-struct BadReturn2 {
-  BadReturn2&& operator=(const BadReturn2&);
+
+struct BadReturnType2 {
+  BadReturnType2&& operator=(const BadReturnType2&);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
-  int operator=(BadReturn2&&);
+  int operator=(BadReturnType2&&);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
 };
 
@@ -55,4 +68,22 @@ class Private {
 struct Virtual {
   virtual Virtual& operator=(const Virtual &);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should not be marked 'virtual'
+};
+
+class BadReturnStatement {
+  int n;
+
+public:
+  BadReturnStatement& operator=(BadReturnStatement&& rhs) {
+    n = std::move(rhs.n);
+    return rhs;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operator=() should always return '*this'
+  }
+
+  // Do not check if return type is different from '&BadReturnStatement'
+  int operator=(int i) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
+    n = i;
+    return n;
+  }
 };

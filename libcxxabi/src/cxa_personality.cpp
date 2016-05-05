@@ -17,6 +17,7 @@
 #include <string.h>
 #include <typeinfo>
 
+#include "__cxxabi_config.h"
 #include "config.h"
 #include "cxa_exception.hpp"
 #include "cxa_handlers.hpp"
@@ -928,7 +929,7 @@ _UA_CLEANUP_PHASE
 */
 
 #if !LIBCXXABI_ARM_EHABI
-_Unwind_Reason_Code
+_LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
 #ifdef __USING_SJLJ_EXCEPTIONS__
 __gxx_personality_sj0
 #else
@@ -1059,7 +1060,7 @@ static void load_results_from_barrier_cache(scan_results& results,
     results.ttypeIndex = (int64_t)(int32_t)unwind_exception->barrier_cache.bitpattern[4];
 }
 
-extern "C" _Unwind_Reason_Code
+extern "C" _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
 __gxx_personality_v0(_Unwind_State state,
                      _Unwind_Exception* unwind_exception,
                      _Unwind_Context* context)

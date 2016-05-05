@@ -321,6 +321,8 @@ __isl_give isl_basic_set *isl_basic_set_project_out(
 		enum isl_dim_type type, unsigned first, unsigned n);
 __isl_give isl_set *isl_set_project_out(__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned first, unsigned n);
+__isl_give isl_map *isl_set_project_onto_map(__isl_take isl_set *set,
+	enum isl_dim_type type, unsigned first, unsigned n);
 __isl_give isl_basic_set *isl_basic_set_remove_divs(
 	__isl_take isl_basic_set *bset);
 __isl_give isl_basic_set *isl_basic_set_eliminate(

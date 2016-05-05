@@ -83,7 +83,6 @@ public:
   uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   void writeGotPltHeader(uint8_t *Buf) const override;
   uint32_t getDynRel(uint32_t Type) const override;
-  uint32_t getTlsGotRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
@@ -104,7 +103,6 @@ public:
   X86_64TargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   uint32_t getDynRel(uint32_t Type) const override;
-  uint32_t getTlsGotRel(uint32_t Type) const override;
   bool isTlsLocalDynamicRel(uint32_t Type) const override;
   bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
@@ -148,7 +146,6 @@ public:
   void writePltZero(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  uint32_t getTlsGotRel(uint32_t Type) const override;
   bool usesOnlyLowPageBits(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -179,7 +176,6 @@ public:
   bool needsThunk(uint32_t Type, const InputFile &File,
                   const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
-  bool isHintRel(uint32_t Type) const override;
   bool usesOnlyLowPageBits(uint32_t Type) const override;
 };
 } // anonymous namespace
@@ -224,7 +220,6 @@ uint64_t TargetInfo::getImplicitAddend(const uint8_t *Buf,
 
 uint64_t TargetInfo::getVAStart() const { return Config->Pic ? 0 : VAStart; }
 
-bool TargetInfo::isHintRel(uint32_t Type) const { return false; }
 bool TargetInfo::usesOnlyLowPageBits(uint32_t Type) const { return false; }
 
 bool TargetInfo::needsThunk(uint32_t Type, const InputFile &File,
@@ -319,12 +314,6 @@ uint32_t X86TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_386_TLS_LE_32)
     return R_386_TLS_TPOFF32;
   return Type;
-}
-
-uint32_t X86TargetInfo::getTlsGotRel(uint32_t Type) const {
-  if (Type == R_386_TLS_IE)
-    return Type;
-  return R_386_GOT32;
 }
 
 bool X86TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
@@ -586,13 +575,6 @@ uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
   return Type;
 }
 
-uint32_t X86_64TargetInfo::getTlsGotRel(uint32_t Type) const {
-  // No other types of TLS relocations requiring GOT should
-  // reach here.
-  assert(Type == R_X86_64_GOTTPOFF);
-  return R_X86_64_PC32;
-}
-
 bool X86_64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
   return Type == R_X86_64_GOTTPOFF;
 }
@@ -729,6 +711,7 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
   case R_X86_64_PC32:
+  case R_X86_64_GOTTPOFF:
   case R_X86_64_PLT32:
   case R_X86_64_TLSGD:
   case R_X86_64_TLSLD:
@@ -993,6 +976,7 @@ bool AArch64TargetInfo::usesOnlyLowPageBits(uint32_t Type) const {
   case R_AARCH64_LDST64_ABS_LO12_NC:
   case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_LD64_GOT_LO12_NC:
+  case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     return true;
   }
 }
@@ -1063,12 +1047,6 @@ void AArch64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
               getAArch64Page(GotEntryAddr) - getAArch64Page(PltEntryAddr));
   relocateOne(Buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, GotEntryAddr);
   relocateOne(Buf + 8, R_AARCH64_ADD_ABS_LO12_NC, GotEntryAddr);
-}
-
-uint32_t AArch64TargetInfo::getTlsGotRel(uint32_t Type) const {
-  assert(Type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 ||
-         Type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC);
-  return Type;
 }
 
 static void updateAArch64Addr(uint8_t *L, uint64_t Imm) {
@@ -1257,7 +1235,10 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   UseLazyBinding = true;
   CopyRel = R_MIPS_COPY;
   PltRel = R_MIPS_JUMP_SLOT;
-  RelativeRel = R_MIPS_REL32;
+  if (ELFT::Is64Bits)
+    RelativeRel = (R_MIPS_64 << 8) | R_MIPS_REL32;
+  else
+    RelativeRel = R_MIPS_REL32;
 }
 
 template <class ELFT>
@@ -1266,6 +1247,8 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   switch (Type) {
   default:
     return R_ABS;
+  case R_MIPS_JALR:
+    return R_HINT;
   case R_MIPS_GPREL16:
   case R_MIPS_GPREL32:
     return R_GOTREL;
@@ -1273,6 +1256,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
     return R_PLT;
   case R_MIPS_HI16:
   case R_MIPS_LO16:
+  case R_MIPS_GOT_OFST:
     // MIPS _gp_disp designates offset between start of function and 'gp'
     // pointer into GOT. __gnu_local_gp is equal to the current value of
     // the 'gp'. Therefore any relocations against them do not require
@@ -1289,19 +1273,23 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   case R_MIPS_PCLO16:
     return R_PC;
   case R_MIPS_GOT16:
-  case R_MIPS_CALL16:
     if (S.isLocal())
       return R_MIPS_GOT_LOCAL;
+  // fallthrough
+  case R_MIPS_CALL16:
+  case R_MIPS_GOT_DISP:
     if (!S.isPreemptible())
       return R_MIPS_GOT;
     return R_GOT_OFF;
+  case R_MIPS_GOT_PAGE:
+    return R_MIPS_GOT_LOCAL;
   }
 }
 
 template <class ELFT>
 uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   if (Type == R_MIPS_32 || Type == R_MIPS_64)
-    return R_MIPS_REL32;
+    return RelativeRel;
   StringRef S = getELFRelocationTypeName(EM_MIPS, Type);
   error("relocation " + S + " cannot be used when making a shared object; "
                             "recompile with -fPIC.");
@@ -1467,15 +1455,21 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_32:
     write32<E>(Loc, Val);
     break;
+  case R_MIPS_64:
+    write64<E>(Loc, Val);
+    break;
   case R_MIPS_26: {
     uint32_t Instr = read32<E>(Loc);
     write32<E>(Loc, (Instr & ~0x3ffffff) | (Val >> 2));
     break;
   }
+  case R_MIPS_GOT_DISP:
+  case R_MIPS_GOT_PAGE:
   case R_MIPS_GOT16:
     checkInt<16>(Val, Type);
   // fallthrough
   case R_MIPS_CALL16:
+  case R_MIPS_GOT_OFST:
     writeMipsLo16<E>(Loc, Val);
     break;
   case R_MIPS_GPREL16: {
@@ -1535,13 +1529,8 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
 }
 
 template <class ELFT>
-bool MipsTargetInfo<ELFT>::isHintRel(uint32_t Type) const {
-  return Type == R_MIPS_JALR;
-}
-
-template <class ELFT>
 bool MipsTargetInfo<ELFT>::usesOnlyLowPageBits(uint32_t Type) const {
-  return Type == R_MIPS_LO16;
+  return Type == R_MIPS_LO16 || Type == R_MIPS_GOT_OFST;
 }
 }
 }

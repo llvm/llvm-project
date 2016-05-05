@@ -2153,6 +2153,47 @@ static int is_bound(struct sh_data *data, struct isl_set *set, int j,
 	       res == isl_lp_unbounded ? 0 : -1;
 }
 
+/* Set the constant term of "ineq" to the maximum of those of the constraints
+ * in the basic sets of "set" following "i" that are parallel to "ineq".
+ * That is, if any of the basic sets of "set" following "i" have a more
+ * relaxed copy of "ineq", then replace "ineq" by the most relaxed copy.
+ * "c_hash" is the hash value of the linear part of "ineq".
+ * "v" has been set up for use by has_ineq.
+ *
+ * Note that the two inequality constraints corresponding to an equality are
+ * represented by the same inequality constraint in data->p[j].table
+ * (but with different hash values).  This means the constraint (or at
+ * least its constant term) may need to be temporarily negated to get
+ * the actually hashed constraint.
+ */
+static void set_max_constant_term(struct sh_data *data, __isl_keep isl_set *set,
+	int i, isl_int *ineq, uint32_t c_hash, struct ineq_cmp_data *v)
+{
+	int j;
+	isl_ctx *ctx;
+	struct isl_hash_table_entry *entry;
+
+	ctx = isl_set_get_ctx(set);
+	for (j = i + 1; j < set->n; ++j) {
+		int neg;
+		isl_int *ineq_j;
+
+		entry = isl_hash_table_find(ctx, data->p[j].table,
+						c_hash, &has_ineq, v, 0);
+		if (!entry)
+			continue;
+
+		ineq_j = entry->data;
+		neg = isl_seq_is_neg(ineq_j + 1, ineq + 1, v->len);
+		if (neg)
+			isl_int_neg(ineq_j[0], ineq_j[0]);
+		if (isl_int_gt(ineq_j[0], ineq[0]))
+			isl_int_set(ineq[0], ineq_j[0]);
+		if (neg)
+			isl_int_neg(ineq_j[0], ineq_j[0]);
+	}
+}
+
 /* Check if inequality "ineq" from basic set "i" is or can be relaxed to
  * become a bound on the whole set.  If so, add the (relaxed) inequality
  * to "hull".  Relaxation is only allowed if "shift" is set.
@@ -2163,12 +2204,16 @@ static int is_bound(struct sh_data *data, struct isl_set *set, int j,
  * of the inequality.  If so, then we have already considered this
  * inequality and we are done.
  * Otherwise, for each basic set other than "i", we check if the inequality
- * is a bound on the basic set.
+ * is a bound on the basic set, but first replace the constant term
+ * by the maximal value of any translate of the inequality in any
+ * of the following basic sets.
  * For previous basic sets, we know that they do not contain a translate
  * of the inequality, so we directly call is_bound.
  * For following basic sets, we first check if a translate of the
- * inequality appears in its description and if so directly update
- * the inequality accordingly.
+ * inequality appears in its description.  If so, the constant term
+ * of the inequality has already been updated with respect to this
+ * translate and the inequality is therefore known to be a bound
+ * of this basic set.
  */
 static struct isl_basic_set *add_bound(struct isl_basic_set *hull,
 	struct sh_data *data, struct isl_set *set, int i, isl_int *ineq,
@@ -2205,6 +2250,7 @@ static struct isl_basic_set *add_bound(struct isl_basic_set *hull,
 		goto error;
 	isl_seq_cpy(hull->ineq[k], ineq, 1 + v.len);
 
+	set_max_constant_term(data, set, i, hull->ineq[k], c_hash, &v);
 	for (j = 0; j < i; ++j) {
 		int bound;
 		bound = is_bound(data, set, j, hull->ineq[k], shift);
@@ -2219,22 +2265,11 @@ static struct isl_basic_set *add_bound(struct isl_basic_set *hull,
 	}
 
 	for (j = i + 1; j < set->n; ++j) {
-		int bound, neg;
-		isl_int *ineq_j;
+		int bound;
 		entry = isl_hash_table_find(hull->ctx, data->p[j].table,
 						c_hash, has_ineq, &v, 0);
-		if (entry) {
-			ineq_j = entry->data;
-			neg = isl_seq_is_neg(ineq_j + 1,
-					     hull->ineq[k] + 1, v.len);
-			if (neg)
-				isl_int_neg(ineq_j[0], ineq_j[0]);
-			if (isl_int_gt(ineq_j[0], hull->ineq[k][0]))
-				isl_int_set(hull->ineq[k][0], ineq_j[0]);
-			if (neg)
-				isl_int_neg(ineq_j[0], ineq_j[0]);
+		if (entry)
 			continue;
-		}
 		bound = is_bound(data, set, j, hull->ineq[k], shift);
 		if (bound < 0)
 			goto error;
@@ -2346,6 +2381,12 @@ static __isl_give isl_basic_map *map_simple_hull_trivial(
 /* Compute a superset of the convex hull of map that is described
  * by only (translates of) the constraints in the constituents of map.
  * Translation is only allowed if "shift" is set.
+ *
+ * Sort the constraints before removing redundant constraints
+ * in order to indicate a preference of which constraints should
+ * be preserved.  In particular, pairs of constraints that are
+ * sorted together are preferred to either both be preserved
+ * or both be removed.
  */
 static __isl_give isl_basic_map *map_simple_hull(__isl_take isl_map *map,
 	int shift)
@@ -2373,6 +2414,7 @@ static __isl_give isl_basic_map *map_simple_hull(__isl_take isl_map *map,
 	hull = isl_basic_map_overlying_set(bset, model);
 
 	hull = isl_basic_map_intersect(hull, affine_hull);
+	hull = isl_basic_map_sort_constraints(hull);
 	hull = isl_basic_map_remove_redundancies(hull);
 
 	if (!hull)

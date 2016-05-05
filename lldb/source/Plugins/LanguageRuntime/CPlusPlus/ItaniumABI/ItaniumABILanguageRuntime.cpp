@@ -53,7 +53,8 @@ ItaniumABILanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
                                                      lldb::DynamicValueType use_dynamic, 
                                                      TypeAndOrName &class_type_or_name, 
                                                      Address &dynamic_address,
-                                                     Value::ValueType &value_type)
+                                                     Value::ValueType &value_type,
+                                                     Error &error)
 {
     // For Itanium, if the type has a vtable pointer in the object, it will be at offset 0
     // in the object.  That will point to the "address point" within the vtable (not the beginning of the
@@ -63,6 +64,7 @@ ItaniumABILanguageRuntime::GetDynamicTypeAndAddress (ValueObject &in_value,
     // start of the value object which holds the dynamic type.
     //
     
+    error.Clear();
     class_type_or_name.Clear();
     value_type = Value::ValueType::eValueTypeScalar;
     

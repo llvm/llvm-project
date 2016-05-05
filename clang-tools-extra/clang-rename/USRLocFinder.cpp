@@ -45,6 +45,18 @@ public:
     return true;
   }
 
+  bool VisitVarDecl(clang::VarDecl *Decl) {
+    clang::QualType Type = Decl->getType();
+    const clang::RecordDecl *RecordDecl = Type->getPointeeCXXRecordDecl();
+    if (RecordDecl) {
+      if (getUSRForDecl(RecordDecl) == USR) {
+        // The declaration refers to a type that is to be renamed.
+        LocationsFound.push_back(Decl->getTypeSpecStartLoc());
+      }
+    }
+    return true;
+  }
+
   // Expression visitors:
 
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {

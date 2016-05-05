@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+using clang::find_all_symbols::SymbolInfo;
+
 namespace clang {
 namespace include_fixer {
 
@@ -29,33 +31,11 @@ YamlXrefsDB::YamlXrefsDB(llvm::StringRef FilePath) {
       Buffer.get()->getBuffer());
 }
 
-std::vector<std::string> YamlXrefsDB::search(llvm::StringRef Identifier) {
-  llvm::SmallVector<llvm::StringRef, 16> Names;
-  std::vector<std::string> Results;
-
-  // The identifier may be fully qualified, so split it and get all the context
-  // names.
-  Identifier.split(Names, "::");
+std::vector<SymbolInfo> YamlXrefsDB::search(llvm::StringRef Identifier) {
+  std::vector<SymbolInfo> Results;
   for (const auto &Symbol : Symbols) {
-    // Match the identifier name without qualifier.
-    if (Symbol.Name == Names.back()) {
-      bool IsMatched = true;
-      auto SymbolContext = Symbol.Contexts.begin();
-      // Match the remaining context names.
-      for (auto IdentiferContext = Names.rbegin() + 1;
-           IdentiferContext != Names.rend() &&
-           SymbolContext != Symbol.Contexts.end();
-           ++IdentiferContext, ++SymbolContext) {
-        if (SymbolContext->second != *IdentiferContext) {
-          IsMatched = false;
-          break;
-        }
-      }
-
-      if (IsMatched) {
-        Results.push_back("\"" + Symbol.FilePath + "\"");
-      }
-    }
+    if (Symbol.Name == Identifier)
+      Results.push_back(Symbol);
   }
   return Results;
 }

@@ -17,7 +17,7 @@
 #include <cassert>
 
 struct S {
-    int i; 
+    int i;
     S() : i(0) {}
     S(int j) : i(j) {}
     S * operator& () { assert(false); return this; }

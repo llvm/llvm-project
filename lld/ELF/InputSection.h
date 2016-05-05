@@ -31,10 +31,11 @@ enum RelExpr {
   R_GOT,
   R_GOTONLY_PC,
   R_GOTREL,
-  R_GOT_OFF,
   R_GOT_FROM_END,
+  R_GOT_OFF,
   R_GOT_PAGE_PC,
   R_GOT_PC,
+  R_HINT,
   R_MIPS_GOT,
   R_MIPS_GOT_LOCAL,
   R_NEG_TLS,
@@ -88,7 +89,7 @@ protected:
   ObjectFile<ELFT> *File;
 
 public:
-  enum Kind { Regular, EHFrame, Merge, MipsReginfo };
+  enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions };
   Kind SectionKind;
 
   InputSectionBase() : Repl(this) {}
@@ -143,8 +144,21 @@ public:
                     typename InputSectionBase<ELFT>::Kind SectionKind);
 
   // For each piece of data, we maintain the offsets in the input section and
-  // in the output section. The latter may be -1 if it is not assigned yet.
+  // in the output section.
   std::vector<std::pair<uintX_t, uintX_t>> Offsets;
+
+  // Merge input sections may use the following special values as the output
+  // section offset:
+  enum {
+    // The piece is dead.
+    PieceDead = uintX_t(-1),
+    // The piece is live, and an offset has not yet been assigned. After offsets
+    // have been assigned, if the output section uses tail merging, the field
+    // will still have this value and the output section offset is available
+    // from MergeOutputSection<ELFT>::getOffset(). Otherwise, this value has no
+    // special significance, it just means that the offset is 0.
+    PieceLive = uintX_t(0),
+  };
 
   std::pair<std::pair<uintX_t, uintX_t> *, uintX_t>
   getRangeAndSize(uintX_t Offset);
@@ -249,7 +263,18 @@ public:
   MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
   static bool classof(const InputSectionBase<ELFT> *S);
 
-  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo;
+  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
+};
+
+template <class ELFT>
+class MipsOptionsInputSection : public InputSectionBase<ELFT> {
+  typedef typename ELFT::Shdr Elf_Shdr;
+
+public:
+  MipsOptionsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
+  static bool classof(const InputSectionBase<ELFT> *S);
+
+  const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
 };
 
 } // namespace elf

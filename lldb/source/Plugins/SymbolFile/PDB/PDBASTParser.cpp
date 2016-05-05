@@ -32,6 +32,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace
 {
@@ -85,7 +86,7 @@ PDBASTParser::~PDBASTParser()
 // DebugInfoASTParser interface
 
 lldb::TypeSP
-PDBASTParser::CreateLLDBTypeFromPDBType(const llvm::PDBSymbol &type)
+PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type)
 {
     // PDB doesn't maintain enough information to robustly rebuild the entire
     // tree, and this is most problematic when it comes to figure out the
@@ -194,7 +195,7 @@ PDBASTParser::CreateLLDBTypeFromPDBType(const llvm::PDBSymbol &type)
 }
 
 bool
-PDBASTParser::AddEnumValue(CompilerType enum_type, const llvm::PDBSymbolData &enum_value) const
+PDBASTParser::AddEnumValue(CompilerType enum_type, const PDBSymbolData &enum_value) const
 {
     Declaration decl;
     Variant v = enum_value.getValue();

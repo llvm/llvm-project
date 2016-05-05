@@ -17,6 +17,7 @@
 #include "Error.h"
 #include "lld/Config/Version.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -117,14 +118,8 @@ static std::string getDestPath(StringRef Path) {
   return Dest.str();
 }
 
-static void maybePrintCpioMember(StringRef Path, StringRef Data) {
-  if (Config->Reproduce.empty())
-    return;
-
-  if (!Driver->IncludedFiles.insert(Path).second)
-    return;
-
-  raw_fd_ostream &OS = *Driver->ReproduceArchive;
+static void maybePrintCpioMemberAux(raw_fd_ostream &OS, StringRef Path,
+                                    StringRef Data) {
   OS << "070707"; // c_magic
 
   // The c_dev/c_ino pair should be unique according to the spec, but no one
@@ -144,17 +139,26 @@ static void maybePrintCpioMember(StringRef Path, StringRef Data) {
   OS << Data;                            // c_filedata
 }
 
+static void maybePrintCpioMember(StringRef Path, StringRef Data) {
+  if (Config->Reproduce.empty())
+    return;
+
+  if (!Driver->IncludedFiles.insert(Path).second)
+    return;
+  raw_fd_ostream &OS = *Driver->ReproduceArchive;
+  maybePrintCpioMemberAux(OS, Path, Data);
+
+  // Print the trailer and seek back. This way we have a valid archive if we
+  // crash.
+  uint64_t Pos = OS.tell();
+  maybePrintCpioMemberAux(OS, "TRAILER!!!", "");
+  OS.seek(Pos);
+}
+
 // Write file Src with content Data to the archive.
 void elf::maybeCopyInputFile(StringRef Src, StringRef Data) {
   std::string Dest = getDestPath(Src);
   maybePrintCpioMember(Dest, Data);
-}
-
-void elf::maybeCloseReproArchive() {
-  if (!Driver->ReproduceArchive)
-    return;
-  maybePrintCpioMember("TRAILER!!!", "");
-  Driver->ReproduceArchive.reset();
 }
 
 // Quote a given string if it contains a space character.
@@ -168,6 +172,16 @@ static std::string rewritePath(StringRef S) {
   if (fs::exists(S))
     return relativeToRoot(S);
   return S;
+}
+
+static std::string stringize(opt::Arg *Arg) {
+  std::string K = Arg->getSpelling();
+  if (Arg->getNumValues() == 0)
+    return K;
+  std::string V = quote(Arg->getValue());
+  if (Arg->getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
+    return K + V;
+  return K + " " + V;
 }
 
 // Copies all input files to Config->Reproduce directory and
@@ -195,10 +209,7 @@ void elf::createResponseFile(const opt::InputArgList &Args) {
          << quote(rewritePath(Arg->getValue())) << "\n";
       break;
     default:
-      OS << Arg->getSpelling();
-      if (Arg->getNumValues() > 0)
-        OS << " " << quote(Arg->getValue());
-      OS << "\n";
+      OS << stringize(Arg) << "\n";
     }
   }
 

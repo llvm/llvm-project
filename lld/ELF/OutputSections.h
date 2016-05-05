@@ -310,8 +310,6 @@ template <class ELFT>
 class MergeOutputSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
-  bool shouldTailMerge() const;
-
 public:
   MergeOutputSection(StringRef Name, uint32_t Type, uintX_t Flags,
                      uintX_t Alignment);
@@ -319,6 +317,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
   void finalize() override;
+  bool shouldTailMerge() const;
 
 private:
   llvm::StringTableBuilder Builder;
@@ -494,6 +493,20 @@ class MipsReginfoOutputSection final : public OutputSectionBase<ELFT> {
 
 public:
   MipsReginfoOutputSection();
+  void writeTo(uint8_t *Buf) override;
+  void addSection(InputSectionBase<ELFT> *S) override;
+
+private:
+  uint32_t GprMask = 0;
+};
+
+template <class ELFT>
+class MipsOptionsOutputSection final : public OutputSectionBase<ELFT> {
+  typedef llvm::object::Elf_Mips_Options<ELFT> Elf_Mips_Options;
+  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+
+public:
+  MipsOptionsOutputSection();
   void writeTo(uint8_t *Buf) override;
   void addSection(InputSectionBase<ELFT> *S) override;
 

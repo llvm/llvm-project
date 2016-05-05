@@ -34,7 +34,7 @@ using namespace lldb_private::platform_android;
 
 namespace {
 
-const uint32_t kReadTimeout = 1000000; // 1 second
+const std::chrono::seconds kReadTimeout(4);
 const char * kOKAY = "OKAY";
 const char * kFAIL = "FAIL";
 const char * kDATA = "DATA";
@@ -490,18 +490,29 @@ AdbClient::ReadSyncHeader (std::string &response_id, uint32_t &data_len)
 Error
 AdbClient::ReadAllBytes (void *buffer, size_t size)
 {
+    using namespace std::chrono;
+
     Error error;
     ConnectionStatus status;
     char *read_buffer = static_cast<char*>(buffer);
 
-    size_t tota_read_bytes = 0;
-    while (tota_read_bytes < size)
+    auto now = steady_clock::now();
+    const auto deadline = now + kReadTimeout;
+    size_t total_read_bytes = 0;
+    while (total_read_bytes < size && now < deadline)
     {
-        auto read_bytes = m_conn.Read (read_buffer + tota_read_bytes, size - tota_read_bytes, kReadTimeout, status, &error);
+        uint32_t timeout_usec = duration_cast<microseconds>(deadline - now).count();
+        auto read_bytes =
+            m_conn.Read(read_buffer + total_read_bytes, size - total_read_bytes, timeout_usec, status, &error);
         if (error.Fail ())
             return error;
-        tota_read_bytes += read_bytes;
+        total_read_bytes += read_bytes;
+        if (status != eConnectionStatusSuccess)
+            break;
+        now = steady_clock::now();
     }
+    if (total_read_bytes < size)
+        error = Error("Unable to read requested number of bytes. Connection status: %d.", status);
     return error;
 }
 

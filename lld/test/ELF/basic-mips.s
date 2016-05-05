@@ -95,7 +95,7 @@ __start:
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Address: 0x20000
 # CHECK-NEXT:     Offset: 0x10000
-# CHECK-NEXT:     Size: 16
+# CHECK-NEXT:     Size: 12
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
 # CHECK-NEXT:     AddressAlignment: 16
@@ -254,8 +254,8 @@ __start:
 # CHECK-NEXT:     Offset: 0x10000
 # CHECK-NEXT:     VirtualAddress: 0x20000
 # CHECK-NEXT:     PhysicalAddress: 0x20000
-# CHECK-NEXT:     FileSize: 16
-# CHECK-NEXT:     MemSize: 16
+# CHECK-NEXT:     FileSize: 12
+# CHECK-NEXT:     MemSize: 12
 # CHECK-NEXT:     Flags [ (0x5)
 # CHECK-NEXT:       PF_R (0x4)
 # CHECK-NEXT:       PF_X (0x1)

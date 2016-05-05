@@ -32,9 +32,6 @@ struct SectionRule {
   SectionRule(StringRef D, StringRef S)
       : Dest(D), SectionPattern(S) {}
 
-  // Returns true if S should be in Dest section.
-  template <class ELFT> bool match(InputSectionBase<ELFT> *S);
-
   StringRef Dest;
 
   StringRef SectionPattern;

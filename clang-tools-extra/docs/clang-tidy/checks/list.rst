@@ -52,7 +52,7 @@ Clang-Tidy Checks
    llvm-twine-local
    misc-argument-comment
    misc-assert-side-effect
-   misc-assign-operator-signature
+   misc-unconventional-assign-operator
    misc-bool-pointer-implicit-conversion
    misc-dangling-handle
    misc-definitions-in-headers

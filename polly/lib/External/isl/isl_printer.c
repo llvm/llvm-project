@@ -698,6 +698,8 @@ __isl_give isl_printer *isl_printer_yaml_start_mapping(
 {
 	enum isl_yaml_state state;
 
+	if (!p)
+		return NULL;
 	p = enter_state(p, p->yaml_style == ISL_YAML_STYLE_BLOCK);
 	if (!p)
 		return NULL;

@@ -254,9 +254,12 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   if (!Config->Reproduce.empty()) {
     std::error_code EC;
-    ReproduceArchive = llvm::make_unique<raw_fd_ostream>(
-        Config->Reproduce + ".cpio", EC, fs::F_None);
-    check(EC);
+    std::string File = Config->Reproduce + ".cpio";
+    ReproduceArchive = llvm::make_unique<raw_fd_ostream>(File, EC, fs::F_None);
+    if (EC) {
+      error(EC, "--reproduce: failed to open " + File);
+      return;
+    }
     createResponseFile(Args);
   }
 
@@ -492,8 +495,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
-
-  maybeCloseReproArchive();
 
   // Write the result to the file.
   if (Config->GcSections)
