@@ -2814,7 +2814,7 @@ const FileEntry *ASTUnit::getPCHFile() {
 }
 
 bool ASTUnit::isModuleFile() {
-  return isMainFileAST() && ASTFileLangOpts.CompilingModule;
+  return isMainFileAST() && !ASTFileLangOpts.CurrentModule.empty();
 }
 
 void ASTUnit::PreambleData::countLines() const {
