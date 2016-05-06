@@ -41,7 +41,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  SDNode *Select(SDNode *N) override;
+  SDNode *SelectImpl(SDNode *N) override;
 
   // Complex Pattern Selectors.
   bool SelectADDRrr(SDValue N, SDValue &R1, SDValue &R2);
@@ -317,7 +317,7 @@ SDNode *SparcDAGToDAGISel::SelectInlineAsm(SDNode *N){
   return New.getNode();
 }
 
-SDNode *SparcDAGToDAGISel::Select(SDNode *N) {
+SDNode *SparcDAGToDAGISel::SelectImpl(SDNode *N) {
   SDLoc dl(N);
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);

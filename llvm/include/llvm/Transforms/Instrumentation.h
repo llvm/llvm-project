@@ -80,7 +80,7 @@ ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
                                    GCOVOptions::getDefault());
 
 // PGO Instrumention
-ModulePass *createPGOInstrumentationGenPass();
+ModulePass *createPGOInstrumentationGenLegacyPass();
 ModulePass *
 createPGOInstrumentationUsePass(StringRef Filename = StringRef(""));
 ModulePass *createPGOIndirectCallPromotionPass(bool InLTO = false);

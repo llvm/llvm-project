@@ -120,37 +120,11 @@ ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder(
     const Module *M,
     std::function<BlockFrequencyInfo *(const Function &F)> Ftor)
     : Index(llvm::make_unique<ModuleSummaryIndex>()), M(M) {
-  // We cannot currently promote or rename anything used in inline assembly,
-  // which are not visible to the compiler. Detect a possible case by looking
-  // for a llvm.used local value, in conjunction with an inline assembly call
-  // in the module. Prevent importing of any modules containing these uses by
-  // suppressing generation of the index. This also prevents importing
-  // into this module, which is also necessary to avoid needing to rename
-  // in case of a name clash between a local in this module and an imported
-  // global.
-  // FIXME: If we find we need a finer-grained approach of preventing promotion
-  // and renaming of just the functions using inline assembly we will need to:
-  // - Add flag in the function summaries to identify those with inline asm.
-  // - Prevent importing of any functions with flag set.
-  // - Prevent importing of any global function with the same name as a
-  //   function in current module that has the flag set.
-  // - For any llvm.used value that is exported and promoted, add a private
-  //   alias to the original name in the current module (even if we don't
-  //   export the function using those values in inline asm, another function
-  //   with a reference could be exported).
-  SmallPtrSet<GlobalValue *, 8> Used;
-  collectUsedGlobalVariables(*M, Used, /*CompilerUsed*/ false);
-  bool LocalIsUsed = false;
-  for (GlobalValue *V : Used) {
-    if ((LocalIsUsed |= V->hasLocalLinkage()))
-      break;
-  }
-  if (LocalIsUsed)
-    for (auto &F : *M)
-      for (auto &I : instructions(F))
-        if (const CallInst *CallI = dyn_cast<CallInst>(&I))
-          if (CallI->isInlineAsm())
-            return;
+  // Check if the module can be promoted, otherwise just disable importing from
+  // it by not emitting any summary.
+  // FIXME: we could still import *into* it most of the time.
+  if (!moduleCanBeRenamedForThinLTO(*M))
+    return;
 
   // Compute summaries for all functions defined in module, and save in the
   // index.
@@ -215,4 +189,42 @@ bool ModuleSummaryIndexWrapperPass::doFinalization(Module &M) {
 void ModuleSummaryIndexWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BlockFrequencyInfoWrapperPass>();
+}
+
+bool llvm::moduleCanBeRenamedForThinLTO(const Module &M) {
+  // We cannot currently promote or rename anything used in inline assembly,
+  // which are not visible to the compiler. Detect a possible case by looking
+  // for a llvm.used local value, in conjunction with an inline assembly call
+  // in the module. Prevent importing of any modules containing these uses by
+  // suppressing generation of the index. This also prevents importing
+  // into this module, which is also necessary to avoid needing to rename
+  // in case of a name clash between a local in this module and an imported
+  // global.
+  // FIXME: If we find we need a finer-grained approach of preventing promotion
+  // and renaming of just the functions using inline assembly we will need to:
+  // - Add flag in the function summaries to identify those with inline asm.
+  // - Prevent importing of any functions with flag set.
+  // - Prevent importing of any global function with the same name as a
+  //   function in current module that has the flag set.
+  // - For any llvm.used value that is exported and promoted, add a private
+  //   alias to the original name in the current module (even if we don't
+  //   export the function using those values in inline asm, another function
+  //   with a reference could be exported).
+  SmallPtrSet<GlobalValue *, 8> Used;
+  collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
+  bool LocalIsUsed =
+      llvm::any_of(Used, [](GlobalValue *V) { return V->hasLocalLinkage(); });
+  if (!LocalIsUsed)
+    return true;
+
+  // Walk all the instructions in the module and find if one is inline ASM
+  auto HasInlineAsm = llvm::any_of(M, [](const Function &F) {
+    return llvm::any_of(instructions(F), [](const Instruction &I) {
+      const CallInst *CallI = dyn_cast<CallInst>(&I);
+      if (!CallI)
+        return false;
+      return CallI->isInlineAsm();
+    });
+  });
+  return !HasInlineAsm;
 }

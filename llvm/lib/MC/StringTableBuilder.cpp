@@ -34,11 +34,11 @@ StringTableBuilder::StringTableBuilder(Kind K, unsigned Alignment)
   }
 }
 
-typedef std::pair<StringRef, size_t> StringPair;
+typedef std::pair<CachedHash<StringRef>, size_t> StringPair;
 
 // Returns the character at Pos from end of a string.
 static int charTailAt(StringPair *P, size_t Pos) {
-  StringRef S = P->first;
+  StringRef S = P->first.Val;
   if (Pos >= S.size())
     return -1;
   return (unsigned char)S[S.size() - Pos - 1];
@@ -86,7 +86,7 @@ void StringTableBuilder::finalizeInOrder() {
 }
 
 void StringTableBuilder::finalizeStringTable(bool Optimize) {
-  typedef std::pair<StringRef, size_t> StringOffsetPair;
+  typedef std::pair<CachedHash<StringRef>, size_t> StringOffsetPair;
   std::vector<StringOffsetPair *> Strings;
   Strings.reserve(StringIndexMap.size());
   for (StringOffsetPair &P : StringIndexMap)
@@ -121,7 +121,7 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
 
   StringRef Previous;
   for (StringOffsetPair *P : Strings) {
-    StringRef S = P->first;
+    StringRef S = P->first.Val;
     if (K == WinCOFF)
       assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
 

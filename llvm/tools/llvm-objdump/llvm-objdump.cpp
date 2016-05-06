@@ -277,7 +277,7 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS, "");
   OS.flush();
-  errs() << ToolName << ": " << Buf;
+  errs() << ToolName << ": '" << File << "': " << Buf;
   exit(1);
 }
 
@@ -1679,7 +1679,7 @@ static void DumpInput(StringRef file) {
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(file);
   if (!BinaryOrErr)
-    report_error(file, errorToErrorCode(BinaryOrErr.takeError()));
+    report_error(file, BinaryOrErr.takeError());
   Binary &Binary = *BinaryOrErr.get().getBinary();
 
   if (Archive *a = dyn_cast<Archive>(&Binary))

@@ -1919,7 +1919,9 @@ unsigned X86TargetLowering::getAddressSpace() const {
 }
 
 Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
-  if (!Subtarget.isTargetLinux())
+  // glibc has a special slot for the stack guard in tcbhead_t, use it instead
+  // of the usual global variable (see sysdeps/{i386,x86_64}/nptl/tls.h)
+  if (!Subtarget.isTargetGlibc())
     return TargetLowering::getIRStackGuard(IRB);
 
   // %fs:0x28, unless we're using a Kernel code model, in which case it's %gs:
@@ -1932,7 +1934,7 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
 }
 
 void X86TargetLowering::insertSSPDeclarations(Module &M) const {
-  if (!Subtarget.isTargetLinux())
+  if (!Subtarget.isTargetGlibc())
     TargetLowering::insertSSPDeclarations(M);
 }
 

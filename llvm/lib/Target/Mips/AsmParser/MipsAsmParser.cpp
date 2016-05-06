@@ -4830,6 +4830,8 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
+// FIXME: Given that these have the same name, these should both be
+// consistent on affecting the Parser.
 bool MipsAsmParser::reportParseError(Twine ErrorMsg) {
   MCAsmParser &Parser = getParser();
   SMLoc Loc = getLexer().getLoc();
@@ -5438,7 +5440,6 @@ bool MipsAsmParser::parseDirectiveCPSetup() {
   OperandMatchResultTy ResTy = parseAnyRegister(TmpReg);
   if (ResTy == MatchOperand_NoMatch) {
     reportParseError("expected register containing function address");
-    Parser.eatToEndOfStatement();
     return false;
   }
 
@@ -5985,13 +5986,22 @@ bool MipsAsmParser::parseFpABIValue(MipsABIFlagsSection::FpABIKind &FpABI,
 }
 
 bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
+  // This returns false if this function recognizes the directive
+  // regardless of whether it is successfully handles or reports an
+  // error. Otherwise it returns true to give the generic parser a
+  // chance at recognizing it.
+
   MCAsmParser &Parser = getParser();
   StringRef IDVal = DirectiveID.getString();
 
-  if (IDVal == ".cpload")
-    return parseDirectiveCpLoad(DirectiveID.getLoc());
-  if (IDVal == ".cprestore")
-    return parseDirectiveCpRestore(DirectiveID.getLoc());
+  if (IDVal == ".cpload") {
+    parseDirectiveCpLoad(DirectiveID.getLoc());
+    return false;
+  }
+  if (IDVal == ".cprestore") {
+    parseDirectiveCpRestore(DirectiveID.getLoc());
+    return false;
+  }
   if (IDVal == ".dword") {
     parseDataDirective(8, DirectiveID.getLoc());
     return false;
@@ -6148,7 +6158,8 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
   }
 
   if (IDVal == ".set") {
-    return parseDirectiveSet();
+    parseDirectiveSet();
+    return false;
   }
 
   if (IDVal == ".mask" || IDVal == ".fmask") {
@@ -6232,8 +6243,10 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
     return false;
   }
 
-  if (IDVal == ".option")
-    return parseDirectiveOption();
+  if (IDVal == ".option") {
+    parseDirectiveOption();
+    return false;
+  }
 
   if (IDVal == ".abicalls") {
     getTargetStreamer().emitDirectiveAbiCalls();
@@ -6246,25 +6259,34 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
     return false;
   }
 
-  if (IDVal == ".cpsetup")
-    return parseDirectiveCPSetup();
-
-  if (IDVal == ".cpreturn")
-    return parseDirectiveCPReturn();
-
-  if (IDVal == ".module")
-    return parseDirectiveModule();
-
-  if (IDVal == ".llvm_internal_mips_reallow_module_directive")
-    return parseInternalDirectiveReallowModule();
-
-  if (IDVal == ".insn")
-    return parseInsnDirective();
-
-  if (IDVal == ".sbss")
-    return parseSSectionDirective(IDVal, ELF::SHT_NOBITS);
-  if (IDVal == ".sdata")
-    return parseSSectionDirective(IDVal, ELF::SHT_PROGBITS);
+  if (IDVal == ".cpsetup") {
+    parseDirectiveCPSetup();
+    return false;
+  }
+  if (IDVal == ".cpreturn") {
+    parseDirectiveCPReturn();
+    return false;
+  }
+  if (IDVal == ".module") {
+    parseDirectiveModule();
+    return false;
+  }
+  if (IDVal == ".llvm_internal_mips_reallow_module_directive") {
+    parseInternalDirectiveReallowModule();
+    return false;
+  }
+  if (IDVal == ".insn") {
+    parseInsnDirective();
+    return false;
+  }
+  if (IDVal == ".sbss") {
+    parseSSectionDirective(IDVal, ELF::SHT_NOBITS);
+    return false;
+  }
+  if (IDVal == ".sdata") {
+    parseSSectionDirective(IDVal, ELF::SHT_PROGBITS);
+    return false;
+  }
 
   return true;
 }

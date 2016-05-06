@@ -190,6 +190,9 @@ namespace CallingConv {
     /// Calling convention used for Mesa compute shaders.
     AMDGPU_CS = 90,
 
+    /// Calling convention for AMDGPU code object kernels.
+    AMDGPU_KERNEL = 91,
+
     /// The highest possible calling convention ID. Must be some 2^k - 1.
     MaxID = 1023
   };

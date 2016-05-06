@@ -110,7 +110,7 @@ namespace {
   #include "MSP430GenDAGISel.inc"
 
   private:
-    SDNode *Select(SDNode *N) override;
+    SDNode *SelectImpl(SDNode *N) override;
     SDNode *SelectIndexedLoad(SDNode *Op);
     SDNode *SelectIndexedBinOp(SDNode *Op, SDValue N1, SDValue N2,
                                unsigned Opc8, unsigned Opc16);
@@ -376,7 +376,7 @@ SDNode *MSP430DAGToDAGISel::SelectIndexedBinOp(SDNode *Op,
 }
 
 
-SDNode *MSP430DAGToDAGISel::Select(SDNode *Node) {
+SDNode *MSP430DAGToDAGISel::SelectImpl(SDNode *Node) {
   SDLoc dl(Node);
 
   // Dump information about the Node being selected

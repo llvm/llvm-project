@@ -598,12 +598,15 @@ You can get the coverage for your corpus like this:
 
 .. code-block:: console
 
-  ASAN_OPTIONS=coverage=1 ./fuzzer CORPUS_DIR -runs=0
+  ASAN_OPTIONS=coverage=1:html_cov_report=1 ./fuzzer CORPUS_DIR -runs=0
 
-This will run all the tests in the CORPUS_DIR but will not generate any new tests
-and dump covered PCs to disk before exiting.
-Then you can subtract the set of covered PCs from the set of all instrumented PCs in the binary,
-see SanitizerCoverage_ for details.
+This will run all tests in the CORPUS_DIR but will not perform any fuzzing.
+At the end of the process it will dump a single html file with coverage information.
+See SanitizerCoverage_ for details.
+
+You may also use other ways to visualize coverage,
+e.g. `llvm-cov <http://llvm.org/docs/CommandGuide/llvm-cov.html>`_, but those will require
+you to rebuild the code with different compiler flags. 
 
 User-supplied mutators
 ----------------------

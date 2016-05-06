@@ -279,15 +279,15 @@ public:
   /// present the table; it is the responsibility of the consumer to inspect
   /// the atomicity/volatility if needed.
   struct LoadValue {
-    Instruction *Inst;
+    Instruction *DefInst;
     unsigned Generation;
     int MatchingId;
     bool IsAtomic;
     LoadValue()
-      : Inst(nullptr), Generation(0), MatchingId(-1), IsAtomic(false) {}
+      : DefInst(nullptr), Generation(0), MatchingId(-1), IsAtomic(false) {}
     LoadValue(Instruction *Inst, unsigned Generation, unsigned MatchingId,
               bool IsAtomic)
-      : Inst(Inst), Generation(Generation), MatchingId(MatchingId),
+      : DefInst(Inst), Generation(Generation), MatchingId(MatchingId),
         IsAtomic(IsAtomic) {}
   };
   typedef RecyclingAllocator<BumpPtrAllocator,
@@ -613,16 +613,16 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       // If we have an available version of this load, and if it is the right
       // generation, replace this instruction.
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
-      if (InVal.Inst != nullptr && InVal.Generation == CurrentGeneration &&
+      if (InVal.DefInst != nullptr && InVal.Generation == CurrentGeneration &&
           InVal.MatchingId == MemInst.getMatchingId() &&
           // We don't yet handle removing loads with ordering of any kind.
           !MemInst.isVolatile() && MemInst.isUnordered() &&
           // We can't replace an atomic load with one which isn't also atomic.
           InVal.IsAtomic >= MemInst.isAtomic()) {
-        Value *Op = getOrCreateResult(InVal.Inst, Inst->getType());
+        Value *Op = getOrCreateResult(InVal.DefInst, Inst->getType());
         if (Op != nullptr) {
           DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << *Inst
-                       << "  to: " << *InVal.Inst << '\n');
+                       << "  to: " << *InVal.DefInst << '\n');
           if (!Inst->use_empty())
             Inst->replaceAllUsesWith(Op);
           Inst->eraseFromParent();
@@ -690,8 +690,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // the store originally was.
     if (MemInst.isValid() && MemInst.isStore()) {
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
-      if (InVal.Inst &&
-          InVal.Inst == getOrCreateResult(Inst, InVal.Inst->getType()) &&
+      if (InVal.DefInst &&
+          InVal.DefInst == getOrCreateResult(Inst, InVal.DefInst->getType()) &&
           InVal.Generation == CurrentGeneration &&
           InVal.MatchingId == MemInst.getMatchingId() &&
           // We don't yet handle removing stores with ordering of any kind.

@@ -61,6 +61,10 @@ Non-comprehensive list of changes in this release
   iterator to the next instruction instead of ``void``. Targets that previously
   did ``MBB.erase(I); return;`` now probably want ``return MBB.erase(I);``.
 
+* ``SelectionDAGISel::Select`` now returns ``void``. Out of tree targets will
+  need to be updated to replace the argument node and remove any dead nodes in
+  cases where they currently return an ``SDNode *`` from this interface.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet

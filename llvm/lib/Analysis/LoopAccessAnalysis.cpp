@@ -1217,7 +1217,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       return Dependence::ForwardButPreventsForwarding;
     }
 
-    DEBUG(dbgs() << "LAA: Dependence is negative: NoDep\n");
+    DEBUG(dbgs() << "LAA: Dependence is negative\n");
     return Dependence::Forward;
   }
 

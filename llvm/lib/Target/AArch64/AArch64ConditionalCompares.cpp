@@ -22,7 +22,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -757,7 +756,6 @@ void initializeAArch64ConditionalComparesPass(PassRegistry &);
 
 INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
@@ -768,7 +766,6 @@ FunctionPass *llvm::createAArch64ConditionalCompares() {
 }
 
 void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
   AU.addRequired<MachineDominatorTree>();
   AU.addPreserved<MachineDominatorTree>();
   AU.addRequired<MachineLoopInfo>();

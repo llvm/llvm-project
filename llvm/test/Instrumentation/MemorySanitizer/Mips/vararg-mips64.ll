@@ -41,3 +41,15 @@ define i32 @bar() {
 ; CHECK: store i64 0, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 8) to i64*), align 8
 ; CHECK: store i64 0, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 16) to i64*), align 8
 ; CHECK: store {{.*}} 24, {{.*}} @__msan_va_arg_overflow_size_tls
+
+; Check multiple fixed arguments.
+declare i32 @foo2(i32 %g1, i32 %g2, ...)
+define i32 @bar2() {
+  %1 = call i32 (i32, i32, ...) @foo2(i32 0, i32 1, i64 2, double 3.000000e+00)
+  ret i32 %1
+}
+
+; CHECK-LABEL: @bar2
+; CHECK: store i64 0, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_va_arg_tls, i32 0, i32 0), align 8
+; CHECK: store i64 0, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 8) to i64*), align 8
+; CHECK: store {{.*}} 16, {{.*}} @__msan_va_arg_overflow_size_tls

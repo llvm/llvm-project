@@ -1,8 +1,8 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=verde -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=verde -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}vector_read:
 ; EG: MOV

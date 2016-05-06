@@ -114,7 +114,7 @@ private:
   /// starting at bit zero.
   virtual bool selectVSplatMaskR(SDValue N, SDValue &Imm) const;
 
-  SDNode *Select(SDNode *N) override;
+  SDNode *SelectImpl(SDNode *N) override;
 
   virtual std::pair<bool, SDNode*> selectNode(SDNode *Node) = 0;
 

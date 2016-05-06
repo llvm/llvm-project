@@ -29,13 +29,15 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/TimeValue.h"
+#include <cassert>
+#include <cstdint>
 #include <ctime>
-#include <iterator>
 #include <stack>
 #include <string>
 #include <system_error>
@@ -263,7 +265,7 @@ struct file_magic {
   };
 
   bool is_object() const {
-    return V == unknown ? false : true;
+    return V != unknown;
   }
 
   file_magic() : V(unknown) {}
@@ -762,7 +764,7 @@ namespace detail {
     intptr_t IterationHandle;
     directory_entry CurrentEntry;
   };
-}
+} // end namespace detail
 
 /// directory_iterator - Iterates through the entries in path. There is no
 /// operator++ because we need an error_code. If it's really needed we can make
@@ -824,7 +826,7 @@ namespace detail {
     uint16_t Level;
     bool HasNoPushRequest;
   };
-}
+} // end namespace detail
 
 /// recursive_directory_iterator - Same as directory_iterator except for it
 /// recurses down into child directories.
@@ -923,4 +925,4 @@ public:
 } // end namespace sys
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_FILESYSTEM_H

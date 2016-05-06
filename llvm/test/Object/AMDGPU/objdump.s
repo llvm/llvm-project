@@ -42,7 +42,7 @@ hello_world2:
         s_endpgm
 
 // CHECK:  file format ELF64-amdgpu-hsacobj
-// CHECK:  Disassembly of section .hsatext:
+// CHECK:  Disassembly of section .text:
 // CHECK:  hello_world:
 // CHECK:  s_mov_b32 m0, 0x10000                                      // 000000000100: BEFC00FF 00010000
 // CHECK:  s_load_dwordx2 s[0:1], s[4:5], 0x8                         // 000000000108: C0060002 00000008

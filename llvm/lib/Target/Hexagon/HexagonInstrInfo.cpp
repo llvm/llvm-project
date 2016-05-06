@@ -70,10 +70,10 @@ static cl::opt<bool> BranchRelaxAsmLarge("branch-relax-asm-large",
 ///
 /// Constants for Hexagon instructions.
 ///
-const int Hexagon_MEMV_OFFSET_MAX_128B = 2047;  // #s7
-const int Hexagon_MEMV_OFFSET_MIN_128B = -2048; // #s7
-const int Hexagon_MEMV_OFFSET_MAX = 1023;  // #s6
-const int Hexagon_MEMV_OFFSET_MIN = -1024; // #s6
+const int Hexagon_MEMV_OFFSET_MAX_128B = 896;   // #s4: -8*128...7*128
+const int Hexagon_MEMV_OFFSET_MIN_128B = -1024; // #s4
+const int Hexagon_MEMV_OFFSET_MAX = 448;  // #s4: -8*64...7*64
+const int Hexagon_MEMV_OFFSET_MIN = -512; // #s4
 const int Hexagon_MEMW_OFFSET_MAX = 4095;
 const int Hexagon_MEMW_OFFSET_MIN = -4096;
 const int Hexagon_MEMD_OFFSET_MAX = 8191;
@@ -92,10 +92,10 @@ const int Hexagon_MEMH_AUTOINC_MAX = 14;
 const int Hexagon_MEMH_AUTOINC_MIN = -16;
 const int Hexagon_MEMB_AUTOINC_MAX = 7;
 const int Hexagon_MEMB_AUTOINC_MIN = -8;
-const int Hexagon_MEMV_AUTOINC_MAX = 192;
-const int Hexagon_MEMV_AUTOINC_MIN = -256;
-const int Hexagon_MEMV_AUTOINC_MAX_128B = 384;
-const int Hexagon_MEMV_AUTOINC_MIN_128B = -512;
+const int Hexagon_MEMV_AUTOINC_MAX = 192;   // #s3
+const int Hexagon_MEMV_AUTOINC_MIN = -256;  // #s3
+const int Hexagon_MEMV_AUTOINC_MAX_128B = 384;  // #s3
+const int Hexagon_MEMV_AUTOINC_MIN_128B = -512; // #s3
 
 // Pin the vtable to this file.
 void HexagonInstrInfo::anchor() {}
@@ -1301,7 +1301,7 @@ bool HexagonInstrInfo::isPredicable(MachineInstr &MI) const {
 
   // Keep a flag for upto 4 operands in the instructions, to indicate if
   // that operand has been constant extended.
-  bool OpCExtended[4];
+  bool OpCExtended[4] = {false};
   if (NumOperands > 4)
     NumOperands = 4;
 

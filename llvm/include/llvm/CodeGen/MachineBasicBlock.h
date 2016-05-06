@@ -674,9 +674,9 @@ public:
 
   // Debugging methods.
   void dump() const;
-  void print(raw_ostream &OS, SlotIndexes* = nullptr) const;
+  void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             SlotIndexes * = nullptr) const;
+             const SlotIndexes* = nullptr) const;
 
   // Printing method used by LoopInfo.
   void printAsOperand(raw_ostream &OS, bool PrintType = true) const;

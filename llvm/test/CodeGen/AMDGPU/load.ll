@@ -1,8 +1,8 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck --check-prefix=SI-NOHSA --check-prefix=FUNC %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck --check-prefix=FUNC --check-prefix=CI-HSA --check-prefix=SI %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI-NOHSA --check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn-amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=CI-HSA -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
 ;===------------------------------------------------------------------------===;
 ; GLOBAL ADDRESS SPACE

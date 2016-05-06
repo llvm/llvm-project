@@ -23,7 +23,7 @@ public:
 
 private:
   SmallString<256> StringTable;
-  DenseMap<StringRef, size_t> StringIndexMap;
+  DenseMap<CachedHash<StringRef>, size_t> StringIndexMap;
   size_t Size = 0;
   Kind K;
   unsigned Alignment;
@@ -57,7 +57,10 @@ public:
   /// after the table is finalized.
   size_t getOffset(StringRef S) const;
 
-  const DenseMap<StringRef, size_t> &getMap() const { return StringIndexMap; }
+  const DenseMap<CachedHash<StringRef>, size_t> &getMap() const {
+    return StringIndexMap;
+  }
+
   size_t getSize() const { return Size; }
   void clear();
 

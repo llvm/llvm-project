@@ -220,10 +220,12 @@ def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>;
 def PseudoIndirectBranch64 : PseudoIndirectBranchBase<GPR64Opnd>;
 
 /// Multiply and Divide Instructions.
-def DMULT  : Mult<"dmult", II_DMULT, GPR64Opnd, [HI0_64, LO0_64]>,
-             MULT_FM<0, 0x1c>, ISA_MIPS3_NOT_32R6_64R6;
-def DMULTu : Mult<"dmultu", II_DMULTU, GPR64Opnd, [HI0_64, LO0_64]>,
-             MULT_FM<0, 0x1d>, ISA_MIPS3_NOT_32R6_64R6;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def DMULT  : Mult<"dmult", II_DMULT, GPR64Opnd, [HI0_64, LO0_64]>,
+               MULT_FM<0, 0x1c>, ISA_MIPS3_NOT_32R6_64R6;
+  def DMULTu : Mult<"dmultu", II_DMULTU, GPR64Opnd, [HI0_64, LO0_64]>,
+               MULT_FM<0, 0x1d>, ISA_MIPS3_NOT_32R6_64R6;
+}
 def PseudoDMULT  : MultDivPseudo<DMULT, ACC128, GPR64Opnd, MipsMult,
                                  II_DMULT>, ISA_MIPS3_NOT_32R6_64R6;
 def PseudoDMULTu : MultDivPseudo<DMULTu, ACC128, GPR64Opnd, MipsMultu,

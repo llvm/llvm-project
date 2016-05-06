@@ -1775,9 +1775,6 @@ public:
     if (CPU == "generic")
       CPU = "(unknown)";
     OS << ".\n"
-#if (ENABLE_TIMESTAMPS == 1)
-       << "  Built " << __DATE__ << " (" << __TIME__ << ").\n"
-#endif
        << "  Default target: " << sys::getDefaultTargetTriple() << '\n'
        << "  Host CPU: " << CPU << '\n';
   }

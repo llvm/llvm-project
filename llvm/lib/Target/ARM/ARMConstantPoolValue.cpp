@@ -74,9 +74,9 @@ bool
 ARMConstantPoolValue::hasSameValue(ARMConstantPoolValue *ACPV) {
   if (ACPV->Kind == Kind &&
       ACPV->PCAdjust == PCAdjust &&
-      ACPV->Modifier == Modifier) {
-    if (ACPV->LabelId == LabelId)
-      return true;
+      ACPV->Modifier == Modifier &&
+      ACPV->LabelId == LabelId &&
+      ACPV->AddCurrentAddress == AddCurrentAddress) {
     // Two PC relative constpool entries containing the same GV address or
     // external symbols. FIXME: What about blockaddress?
     if (Kind == ARMCP::CPValue || Kind == ARMCP::CPExtSymbol)

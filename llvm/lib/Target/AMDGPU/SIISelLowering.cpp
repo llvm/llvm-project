@@ -695,26 +695,26 @@ SDValue SITargetLowering::LowerFormalArguments(
       ++PSInputNum;
     }
 
-    // Second split vertices into their elements
-    if (AMDGPU::isShader(CallConv) &&
-        Arg.VT.isVector()) {
-      ISD::InputArg NewArg = Arg;
-      NewArg.Flags.setSplit();
-      NewArg.VT = Arg.VT.getVectorElementType();
+    if (AMDGPU::isShader(CallConv)) {
+      // Second split vertices into their elements
+      if (Arg.VT.isVector()) {
+        ISD::InputArg NewArg = Arg;
+        NewArg.Flags.setSplit();
+        NewArg.VT = Arg.VT.getVectorElementType();
 
-      // We REALLY want the ORIGINAL number of vertex elements here, e.g. a
-      // three or five element vertex only needs three or five registers,
-      // NOT four or eight.
-      Type *ParamType = FType->getParamType(Arg.getOrigArgIndex());
-      unsigned NumElements = ParamType->getVectorNumElements();
+        // We REALLY want the ORIGINAL number of vertex elements here, e.g. a
+        // three or five element vertex only needs three or five registers,
+        // NOT four or eight.
+        Type *ParamType = FType->getParamType(Arg.getOrigArgIndex());
+        unsigned NumElements = ParamType->getVectorNumElements();
 
-      for (unsigned j = 0; j != NumElements; ++j) {
-        Splits.push_back(NewArg);
-        NewArg.PartOffset += NewArg.VT.getStoreSize();
+        for (unsigned j = 0; j != NumElements; ++j) {
+          Splits.push_back(NewArg);
+          NewArg.PartOffset += NewArg.VT.getStoreSize();
+        }
+      } else {
+        Splits.push_back(Arg);
       }
-
-    } else if (AMDGPU::isShader(CallConv)) {
-      Splits.push_back(Arg);
     }
   }
 
@@ -1356,14 +1356,13 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
     Target = BR->getOperand(1);
   }
 
-  if (Intr->getOpcode() != ISD::INTRINSIC_W_CHAIN) {
+  if (!isCFIntrinsic(Intr)) {
     // This is a uniform branch so we don't need to legalize.
     return BRCOND;
   }
 
   assert(!SetCC ||
         (SetCC->getConstantOperandVal(1) == 1 &&
-         isCFIntrinsic(Intr) &&
          cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get() ==
                                                              ISD::SETNE));
 

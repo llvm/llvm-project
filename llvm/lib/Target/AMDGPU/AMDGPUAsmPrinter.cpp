@@ -104,7 +104,8 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
   AMDGPUTargetStreamer *TS =
       static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
 
-  TS->EmitDirectiveHSACodeObjectVersion(1, 0);
+  TS->EmitDirectiveHSACodeObjectVersion(2, 0);
+
   AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(STI->getFeatureBits());
   TS->EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor, ISA.Stepping,
                                     "AMD", "AMDGPU");
@@ -132,56 +133,13 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   AsmPrinter::EmitFunctionEntryLabel();
 }
 
-static bool isModuleLinkage(const GlobalValue *GV) {
-  switch (GV->getLinkage()) {
-  case GlobalValue::LinkOnceODRLinkage:
-  case GlobalValue::LinkOnceAnyLinkage:
-  case GlobalValue::InternalLinkage:
-  case GlobalValue::CommonLinkage:
-   return true;
-  case GlobalValue::ExternalLinkage:
-   return false;
-  default: llvm_unreachable("unknown linkage type");
-  }
-}
-
 void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
-
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA) {
-    AsmPrinter::EmitGlobalVariable(GV);
-    return;
-  }
-
-  if (GV->isDeclaration() || GV->getLinkage() == GlobalValue::PrivateLinkage) {
-    AsmPrinter::EmitGlobalVariable(GV);
-    return;
-  }
 
   // Group segment variables aren't emitted in HSA.
   if (AMDGPU::isGroupSegment(GV))
     return;
 
-  AMDGPUTargetStreamer *TS =
-      static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
-  if (isModuleLinkage(GV)) {
-    TS->EmitAMDGPUHsaModuleScopeGlobal(GV->getName());
-  } else {
-    TS->EmitAMDGPUHsaProgramScopeGlobal(GV->getName());
-  }
-
-  MCSymbolELF *GVSym = cast<MCSymbolELF>(getSymbol(GV));
-  const DataLayout &DL = getDataLayout();
-
-  // Emit the size
-  uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
-  OutStreamer->emitELFSize(GVSym, MCConstantExpr::create(Size, OutContext));
-  OutStreamer->PushSection();
-  OutStreamer->SwitchSection(
-      getObjFileLowering().SectionForGlobal(GV, *Mang, TM));
-  const Constant *C = GV->getInitializer();
-  OutStreamer->EmitLabel(GVSym);
-  EmitGlobalConstant(DL, C);
-  OutStreamer->PopSection();
+  AsmPrinter::EmitGlobalVariable(GV);
 }
 
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
@@ -717,6 +675,8 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
 
   AMDGPUTargetStreamer *TS =
       static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
+
+  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
   TS->EmitAMDKernelCodeT(header);
 }
 

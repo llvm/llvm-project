@@ -262,12 +262,12 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   assert((!In64BitMode || HasX86_64) &&
          "64-bit code requested on a subtarget that doesn't support it!");
 
-  // Stack alignment is 16 bytes on Darwin, Linux and Solaris (both
+  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD and Solaris (both
   // 32 and 64 bit) and for all 64-bit targets.
   if (StackAlignOverride)
     stackAlignment = StackAlignOverride;
   else if (isTargetDarwin() || isTargetLinux() || isTargetSolaris() ||
-           In64BitMode)
+           isTargetKFreeBSD() || In64BitMode)
     stackAlignment = 16;
 }
 

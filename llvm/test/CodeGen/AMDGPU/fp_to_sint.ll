@@ -1,6 +1,6 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 
 declare float @llvm.fabs.f32(float) #0
 

@@ -1771,13 +1771,11 @@ table that summarizes what features are supported by each target.
 Target Feature Matrix
 ---------------------
 
-Note that this table does not include the C backend or Cpp backends, since they
-do not use the target independent code generator infrastructure.  It also
-doesn't list features that are not supported fully by any target yet.  It
-considers a feature to be supported if at least one subtarget supports it.  A
-feature being supported means that it is useful and works for most cases, it
-does not indicate that there are zero known bugs in the implementation.  Here is
-the key:
+Note that this table does not list features that are not supported fully by any
+target yet.  It considers a feature to be supported if at least one subtarget
+supports it.  A feature being supported means that it is useful and works for
+most cases, it does not indicate that there are zero known bugs in the
+implementation.  Here is the key:
 
 :raw-html:`<table border="1" cellspacing="0">`
 :raw-html:`<tr>`

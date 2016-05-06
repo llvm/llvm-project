@@ -166,3 +166,78 @@ cond.end.i:
 loopexit:
   ret i32 %and.i
 }
+
+; The SCEV expression of %sphi is (zext i8 {%t,+,1}<%loop> to i32)
+; In order to recognize %sphi as an induction PHI and vectorize this loop,
+; we need to convert the SCEV expression into an AddRecExpr.
+; The expression gets converted to {zext i8 %t to i32,+,1}.
+
+; CHECK-LABEL: wrappingindvars1
+; CHECK-LABEL: vector.scevcheck
+; CHECK-LABEL: vector.body
+; CHECK: add <2 x i32> {{%[^ ]*}}, <i32 0, i32 1>
+define void @wrappingindvars1(i8 %t, i32 %len, i32 *%A) {
+ entry:
+  %st = zext i8 %t to i16
+  %ext = zext i8 %t to i32
+  %ecmp = icmp ult i16 %st, 42
+  br i1 %ecmp, label %loop, label %exit
+
+ loop:
+
+  %idx = phi i8 [ %t, %entry ], [ %idx.inc, %loop ]
+  %idx.b = phi i32 [ 0, %entry ], [ %idx.b.inc, %loop ]
+  %sphi = phi i32 [ %ext, %entry ], [%idx.inc.ext, %loop]
+
+  %ptr = getelementptr inbounds i32, i32* %A, i8 %idx
+  store i32 %sphi, i32* %ptr
+
+  %idx.inc = add i8 %idx, 1
+  %idx.inc.ext = zext i8 %idx.inc to i32
+  %idx.b.inc = add nuw nsw i32 %idx.b, 1
+
+  %c = icmp ult i32 %idx.b, %len
+  br i1 %c, label %loop, label %exit
+
+ exit:
+  ret void
+}
+
+; The SCEV expression of %sphi is (4 * (zext i8 {%t,+,1}<%loop> to i32))
+; In order to recognize %sphi as an induction PHI and vectorize this loop,
+; we need to convert the SCEV expression into an AddRecExpr.
+; The expression gets converted to ({4 * (zext %t to i32),+,4}).
+; CHECK-LABEL: wrappingindvars2
+; CHECK-LABEL: vector.scevcheck
+; CHECK-LABEL: vector.body
+; CHECK: add <2 x i32> {{%[^ ]*}}, <i32 0, i32 4>
+define void @wrappingindvars2(i8 %t, i32 %len, i32 *%A) {
+
+entry:
+  %st = zext i8 %t to i16
+  %ext = zext i8 %t to i32
+  %ext.mul = mul i32 %ext, 4
+
+  %ecmp = icmp ult i16 %st, 42
+  br i1 %ecmp, label %loop, label %exit
+
+ loop:
+
+  %idx = phi i8 [ %t, %entry ], [ %idx.inc, %loop ]
+  %sphi = phi i32 [ %ext.mul, %entry ], [%mul, %loop]
+  %idx.b = phi i32 [ 0, %entry ], [ %idx.b.inc, %loop ]
+
+  %ptr = getelementptr inbounds i32, i32* %A, i8 %idx
+  store i32 %sphi, i32* %ptr
+
+  %idx.inc = add i8 %idx, 1
+  %idx.inc.ext = zext i8 %idx.inc to i32
+  %mul = mul i32 %idx.inc.ext, 4
+  %idx.b.inc = add nuw nsw i32 %idx.b, 1
+
+  %c = icmp ult i32 %idx.b, %len
+  br i1 %c, label %loop, label %exit
+
+ exit:
+  ret void
+}

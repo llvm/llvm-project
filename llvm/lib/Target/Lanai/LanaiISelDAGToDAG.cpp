@@ -68,7 +68,7 @@ private:
 #include "LanaiGenDAGISel.inc"
 
   // Instruction Selection not handled by the auto-generated tablgen
-  SDNode *Select(SDNode *N) override;
+  SDNode *SelectImpl(SDNode *N) override;
 
   // Support functions for the opcodes of Instruction Selection
   // not handled by the auto-generated tablgen
@@ -270,7 +270,7 @@ bool LanaiDAGToDAGISel::SelectInlineAsmMemoryOperand(
 
 // Select instructions not customized! Used for
 // expanded, promoted and normal instructions
-SDNode *LanaiDAGToDAGISel::Select(SDNode *Node) {
+SDNode *LanaiDAGToDAGISel::SelectImpl(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
 
   // Dump information about the Node being selected

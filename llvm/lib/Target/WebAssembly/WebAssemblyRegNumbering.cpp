@@ -108,7 +108,8 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   // Allocate locals for used physical registers
-  bool HasFP = MF.getSubtarget().getFrameLowering()->hasFP(MF);
+  bool HasFP =
+      MF.getSubtarget<WebAssemblySubtarget>().getFrameLowering()->hasFP(MF);
   if (FrameInfo.getStackSize() > 0 || FrameInfo.adjustsStack() || HasFP) {
     DEBUG(dbgs() << "PReg SP " << CurReg << "\n");
     MFI.addPReg(WebAssembly::SP32, CurReg++);

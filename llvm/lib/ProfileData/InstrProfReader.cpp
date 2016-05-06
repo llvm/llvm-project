@@ -324,7 +324,6 @@ RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
   auto DataSize = swap(Header.DataSize);
   auto CountersSize = swap(Header.CountersSize);
   NamesSize = swap(Header.NamesSize);
-  auto ValueDataSize = swap(Header.ValueDataSize);
   ValueKindLast = swap(Header.ValueKindLast);
 
   auto DataSizeInBytes = DataSize * sizeof(RawInstrProf::ProfileData<IntPtrT>);
@@ -334,10 +333,9 @@ RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
   ptrdiff_t CountersOffset = DataOffset + DataSizeInBytes;
   ptrdiff_t NamesOffset = CountersOffset + sizeof(uint64_t) * CountersSize;
   ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
-  size_t ProfileSize = ValueDataOffset + ValueDataSize;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
-  if (Start + ProfileSize > DataBuffer->getBufferEnd())
+  if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
     return error(instrprof_error::bad_header);
 
   Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
@@ -346,7 +344,6 @@ RawInstrProfReader<IntPtrT>::readHeader(const RawInstrProf::Header &Header) {
   CountersStart = reinterpret_cast<const uint64_t *>(Start + CountersOffset);
   NamesStart = Start + NamesOffset;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
-  ProfileEnd = Start + ProfileSize;
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = make_unique<InstrProfSymtab>();
   if (auto EC = createSymtab(*NewSymtab.get()))
@@ -411,9 +408,9 @@ RawInstrProfReader<IntPtrT>::readValueProfilingData(InstrProfRecord &Record) {
     return success();
 
   ErrorOr<std::unique_ptr<ValueProfData>> VDataPtrOrErr =
-      ValueProfData::getValueProfData(ValueDataStart,
-                                      (const unsigned char *)ProfileEnd,
-                                      getDataEndianness());
+      ValueProfData::getValueProfData(
+          ValueDataStart, (const unsigned char *)DataBuffer->getBufferEnd(),
+          getDataEndianness());
 
   if (VDataPtrOrErr.getError())
     return VDataPtrOrErr.getError();
@@ -430,7 +427,8 @@ template <class IntPtrT>
 std::error_code
 RawInstrProfReader<IntPtrT>::readNextRecord(InstrProfRecord &Record) {
   if (atEnd())
-    if (std::error_code EC = readNextHeader(ProfileEnd))
+    // At this point, ValueDataStart field points to the next header.
+    if (std::error_code EC = readNextHeader(getNextHeaderPos()))
       return EC;
 
   // Read name ad set it in Record.

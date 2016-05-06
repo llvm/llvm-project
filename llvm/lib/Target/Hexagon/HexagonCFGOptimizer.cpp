@@ -180,6 +180,7 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
           // Ensure that BB2 has one instruction -- an unconditional jump.
           if ((LayoutSucc->size() == 1) &&
               IsUnconditionalJump(LayoutSucc->front().getOpcode())) {
+            assert(JumpAroundTarget && "jump target is needed to process second basic block");
             MachineBasicBlock* UncondTarget =
               LayoutSucc->front().getOperand(0).getMBB();
             // Check if the layout successor of BB2 is BB3.

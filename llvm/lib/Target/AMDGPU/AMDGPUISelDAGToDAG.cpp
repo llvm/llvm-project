@@ -61,7 +61,7 @@ public:
   AMDGPUDAGToDAGISel(TargetMachine &TM);
   virtual ~AMDGPUDAGToDAGISel();
   bool runOnMachineFunction(MachineFunction &MF) override;
-  SDNode *Select(SDNode *N) override;
+  SDNode *SelectImpl(SDNode *N) override;
   const char *getPassName() const override;
   void PreprocessISelDAG() override;
   void PostprocessISelDAG() override;
@@ -329,7 +329,7 @@ static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
   llvm_unreachable("invalid vector size");
 }
 
-SDNode *AMDGPUDAGToDAGISel::Select(SDNode *N) {
+SDNode *AMDGPUDAGToDAGISel::SelectImpl(SDNode *N) {
   unsigned int Opc = N->getOpcode();
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);

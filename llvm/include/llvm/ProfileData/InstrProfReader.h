@@ -170,8 +170,9 @@ private:
   const uint64_t *CountersStart;
   const char *NamesStart;
   uint64_t NamesSize;
+  // After value profile is all read, this pointer points to
+  // the header of next profile data (if exists)
   const uint8_t *ValueDataStart;
-  const char *ProfileEnd;
   uint32_t ValueKindLast;
   uint32_t CurValueDataSize;
 
@@ -223,6 +224,10 @@ private:
   void advanceData() {
     Data++;
     ValueDataStart += CurValueDataSize;
+  }
+  const char *getNextHeaderPos() const {
+      assert(atEnd());
+      return (const char *)ValueDataStart;
   }
 
   const uint64_t *getCounter(IntPtrT CounterPtr) const {

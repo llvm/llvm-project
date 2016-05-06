@@ -1,5 +1,5 @@
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 

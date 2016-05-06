@@ -304,10 +304,10 @@ class CVT_S_L_MMR6_ENC : POOL32F_CVT_DS_FM<"cvt.s.l", 2, 0b1101101>;
 class ADD_MMR6_DESC : ArithLogicR<"add", GPR32Opnd>;
 class ADDIU_MMR6_DESC : ArithLogicI<"addiu", simm16, GPR32Opnd, II_ADDIU, immSExt16, add>;
 class ADDU_MMR6_DESC : ArithLogicR<"addu", GPR32Opnd>;
-class MUL_MMR6_DESC : ArithLogicR<"mul", GPR32Opnd>;
-class MUH_MMR6_DESC : ArithLogicR<"muh", GPR32Opnd>;
-class MULU_MMR6_DESC : ArithLogicR<"mulu", GPR32Opnd>;
-class MUHU_MMR6_DESC : ArithLogicR<"muhu", GPR32Opnd>;
+class MUL_MMR6_DESC : ArithLogicR<"mul", GPR32Opnd, 1, II_MUL, mul>;
+class MUH_MMR6_DESC : ArithLogicR<"muh", GPR32Opnd, 1, II_MUH, mulhs>;
+class MULU_MMR6_DESC : ArithLogicR<"mulu", GPR32Opnd, 1, II_MULU>;
+class MUHU_MMR6_DESC : ArithLogicR<"muhu", GPR32Opnd, 1, II_MUHU, mulhu>;
 
 class BC_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd>
     : BRANCH_DESC_BASE, MMR6Arch<instr_asm> {

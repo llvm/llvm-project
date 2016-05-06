@@ -17,15 +17,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
@@ -38,6 +38,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 using namespace llvm;
@@ -1644,39 +1645,6 @@ bool SCCP::runOnFunction(Function &F) {
   return MadeChanges;
 }
 
-namespace {
-  //===--------------------------------------------------------------------===//
-  //
-  /// IPSCCP Class - This class implements interprocedural Sparse Conditional
-  /// Constant Propagation.
-  ///
-  struct IPSCCP : public ModulePass {
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<TargetLibraryInfoWrapperPass>();
-    }
-    static char ID;
-    IPSCCP() : ModulePass(ID) {
-      initializeIPSCCPPass(*PassRegistry::getPassRegistry());
-    }
-    bool runOnModule(Module &M) override;
-  };
-} // end anonymous namespace
-
-char IPSCCP::ID = 0;
-INITIALIZE_PASS_BEGIN(IPSCCP, "ipsccp",
-                "Interprocedural Sparse Conditional Constant Propagation",
-                false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(IPSCCP, "ipsccp",
-                "Interprocedural Sparse Conditional Constant Propagation",
-                false, false)
-
-// createIPSCCPPass - This is the public interface to this file.
-ModulePass *llvm::createIPSCCPPass() {
-  return new IPSCCP();
-}
-
-
 static bool AddressIsTaken(const GlobalValue *GV) {
   // Delete any dead constantexpr klingons.
   GV->removeDeadConstantUsers();
@@ -1704,13 +1672,8 @@ static bool AddressIsTaken(const GlobalValue *GV) {
   return false;
 }
 
-bool IPSCCP::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  const DataLayout &DL = M.getDataLayout();
-  const TargetLibraryInfo *TLI =
-      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+static bool runIPSCCP(Module &M, const DataLayout &DL,
+                      const TargetLibraryInfo *TLI) {
   SCCPSolver Solver(DL, TLI);
 
   // AddressTakenFunctions - This set keeps track of the address-taken functions
@@ -1955,3 +1918,51 @@ bool IPSCCP::runOnModule(Module &M) {
 
   return MadeChanges;
 }
+
+PreservedAnalyses IPSCCPPass::run(Module &M, AnalysisManager<Module> &AM) {
+  const DataLayout &DL = M.getDataLayout();
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
+  if (!runIPSCCP(M, DL, &TLI))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
+}
+
+namespace {
+//===--------------------------------------------------------------------===//
+//
+/// IPSCCP Class - This class implements interprocedural Sparse Conditional
+/// Constant Propagation.
+///
+struct IPSCCPLegacyPass : public ModulePass {
+  static char ID;
+
+  IPSCCPLegacyPass() : ModulePass(ID) {
+    initializeIPSCCPLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+    const DataLayout &DL = M.getDataLayout();
+    const TargetLibraryInfo *TLI =
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    return runIPSCCP(M, DL, TLI);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+  }
+};
+} // end anonymous namespace
+
+char IPSCCPLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(IPSCCPLegacyPass, "ipsccp",
+                      "Interprocedural Sparse Conditional Constant Propagation",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(IPSCCPLegacyPass, "ipsccp",
+                    "Interprocedural Sparse Conditional Constant Propagation",
+                    false, false)
+
+// createIPSCCPPass - This is the public interface to this file.
+ModulePass *llvm::createIPSCCPPass() { return new IPSCCPLegacyPass(); }

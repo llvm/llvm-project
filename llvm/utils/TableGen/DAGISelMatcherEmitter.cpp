@@ -595,15 +595,6 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
 
     return 5 + !CompressVTs + EN->getNumVTs() + NumOperandBytes;
   }
-  case Matcher::MarkGlueResults: {
-    const MarkGlueResultsMatcher *CFR = cast<MarkGlueResultsMatcher>(N);
-    OS << "OPC_MarkGlueResults, " << CFR->getNumNodes() << ", ";
-    unsigned NumOperandBytes = 0;
-    for (unsigned i = 0, e = CFR->getNumNodes(); i != e; ++i)
-      NumOperandBytes += EmitVBRValue(CFR->getNode(i), OS);
-    OS << '\n';
-    return 2+NumOperandBytes;
-  }
   case Matcher::CompleteMatch: {
     const CompleteMatchMatcher *CM = cast<CompleteMatchMatcher>(N);
     OS << "OPC_CompleteMatch, " << CM->getNumResults() << ", ";
@@ -821,7 +812,6 @@ void MatcherTableEmitter::EmitHistogram(const Matcher *M,
     case Matcher::EmitNode: OS << "OPC_EmitNode"; break;
     case Matcher::MorphNodeTo: OS << "OPC_MorphNodeTo"; break;
     case Matcher::EmitNodeXForm: OS << "OPC_EmitNodeXForm"; break;
-    case Matcher::MarkGlueResults: OS << "OPC_MarkGlueResults"; break;
     case Matcher::CompleteMatch: OS << "OPC_CompleteMatch"; break;
     }
 

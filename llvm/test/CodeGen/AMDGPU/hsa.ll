@@ -9,19 +9,16 @@
 ; directives.
 
 ; ELF: Section {
-; ELF: Name: .hsatext
+; ELF: Name: .text
 ; ELF: Type: SHT_PROGBITS (0x1)
-; ELF: Flags [ (0xC00007)
+; ELF: Flags [ (0x6)
 ; ELF: SHF_ALLOC (0x2)
-; ELF: SHF_AMDGPU_HSA_AGENT (0x800000)
-; ELF: SHF_AMDGPU_HSA_CODE (0x400000)
 ; ELF: SHF_EXECINSTR (0x4)
-; ELF: SHF_WRITE (0x1)
 ; ELF: }
 
 ; ELF: SHT_NOTE
 ; ELF: 0000: 04000000 08000000 01000000 414D4400
-; ELF: 0010: 01000000 00000000 04000000 1B000000
+; ELF: 0010: 02000000 00000000 04000000 1B000000
 ; ELF: 0020: 03000000 414D4400 04000700 07000000
 ; ELF: 0030: 00000000 00000000 414D4400 414D4447
 ; ELF: 0040: 50550000
@@ -32,11 +29,11 @@
 ; ELF: Type: AMDGPU_HSA_KERNEL (0xA)
 ; ELF: }
 
-; HSA: .hsa_code_object_version 1,0
+; HSA: .hsa_code_object_version 2,0
 ; HSA-CI: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 ; HSA-VI: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
 
-; HSA: .hsatext
+; HSA: .text
 
 ; HSA: .amdgpu_hsa_kernel simple
 ; HSA: {{^}}simple:
@@ -56,7 +53,7 @@
 ; HSA: .Lfunc_end0:
 ; HSA: .size   simple, .Lfunc_end0-simple
 
-define void @simple(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @simple(i32 addrspace(1)* %out) {
 entry:
   store i32 0, i32 addrspace(1)* %out
   ret void

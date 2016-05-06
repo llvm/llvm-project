@@ -22,6 +22,12 @@
 ; RUN:    -check-prefix=64R1-R5 -check-prefix=GP64 -check-prefix=GP64-NOT-R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -relocation-model=pic | FileCheck %s -check-prefix=ALL \
 ; RUN:    -check-prefix=64R6
+; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN:    -check-prefix=MM32 -check-prefix=MM32R3
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN:    -check-prefix=MM32 -check-prefix=MM32R6
+; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN:    -check-prefix=64R6
 
 define signext i1 @mul_i1(i1 signext %a, i1 signext %b) {
 entry:
@@ -52,6 +58,10 @@ entry:
   ; 64R6:       mul     $[[T0:[0-9]+]], $4, $5
   ; 64R6:       sll     $[[T0]], $[[T0]], 31
   ; 64R6:       sra     $2, $[[T0]], 31
+
+  ; MM32:       mul     $[[T0:[0-9]+]], $4, $5
+  ; MM32:       sll     $[[T0]], $[[T0]], 31
+  ; MM32:       sra     $2, $[[T0]], 31
 
   %r = mul i1 %a, %b
   ret i1 %r
@@ -90,6 +100,10 @@ entry:
 
   ; 64R6:       mul     $[[T0:[0-9]+]], $4, $5
   ; 64R6:       seb     $2, $[[T0]]
+
+  ; MM32:       mul     $[[T0:[0-9]+]], $4, $5
+  ; MM32:       seb     $2, $[[T0]]
+
   %r = mul i8 %a, %b
   ret i8 %r
 }
@@ -127,6 +141,10 @@ entry:
 
   ; 64R6:       mul     $[[T0:[0-9]+]], $4, $5
   ; 64R6:       seh     $2, $[[T0]]
+
+  ; MM32:       mul     $[[T0:[0-9]+]], $4, $5
+  ; MM32:       seh     $2, $[[T0]]
+
   %r = mul i16 %a, %b
   ret i16 %r
 }
@@ -143,6 +161,9 @@ entry:
 
   ; 64R1-R5:    mul     $2, $4, $5
   ; 64R6:       mul     $2, $4, $5
+
+  ; MM32:       mul     $2, $4, $5
+
   %r = mul i32 %a, %b
   ret i32 %r
 }
@@ -184,6 +205,21 @@ entry:
 
   ; 64R6:       dmul    $2, $4, $5
 
+  ; MM32R3:     multu   $[[T0:[0-9]+]], $7
+  ; MM32R3:     mflo    $[[T1:[0-9]+]]
+  ; MM32R3:     mfhi    $[[T2:[0-9]+]]
+  ; MM32R3:     mul     $[[T3:[0-9]+]], $4, $7
+  ; MM32R3:     mul     $[[T0]], $[[T0]], $6
+  ; MM32R3:     addu16  $[[T2]], $[[T2]], $[[T0]]
+  ; MM32R3:     addu16  $2, $[[T2]], $[[T3]]
+
+  ; MM32R6:     mul     $[[T0:[0-9]+]], $5, $7
+  ; MM32R6:     mul     $[[T1:[0-9]+]], $4, $7
+  ; MM32R6:     mul     $[[T2:[0-9]+]], $5, $6
+  ; MM32R6:     muhu    $[[T3:[0-9]+]], $5, $7
+  ; MM32R6:     addu16  $[[T2]], $[[T3]], $[[T2]]
+  ; MM32R6:     addu16  $2, $[[T2]], $[[T1]]
+
   %r = mul i64 %a, %b
   ret i64 %r
 }
@@ -210,6 +246,8 @@ entry:
   ; 64R6:           dmuhu   $[[T2:[0-9]+]], $5, $7
   ; 64R6:           daddu   $[[T3:[0-9]+]], $[[T2]], $[[T1]]
   ; 64R6:           daddu   $2, $[[T1]], $[[T0]]
+
+  ; MM32:           lw      $25, %call16(__multi3)($2)
 
   %r = mul i128 %a, %b
   ret i128 %r

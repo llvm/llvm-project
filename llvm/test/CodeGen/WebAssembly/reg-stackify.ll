@@ -357,6 +357,18 @@ define void @ignore_dbg_value() {
   unreachable
 }
 
+; Don't stackify an expression that might use the stack into a return, since we
+; might insert a prologue before the return.
+
+; CHECK-LABEL: no_stackify_past_epilogue:
+; CHECK: return ${{[0-9]+}}{{$}}
+declare i32 @use_memory(i32*)
+define i32 @no_stackify_past_epilogue() {
+  %x = alloca i32
+  %call = call i32 @use_memory(i32* %x)
+  ret i32 %call
+}
+
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!1}
 

@@ -251,7 +251,6 @@ include "HexagonCallingConv.td"
 include "HexagonInstrInfo.td"
 include "HexagonIntrinsics.td"
 include "HexagonIntrinsicsDerived.td"
-include "HexagonAlias.td"
 
 def HexagonInstrInfo : InstrInfo;
 

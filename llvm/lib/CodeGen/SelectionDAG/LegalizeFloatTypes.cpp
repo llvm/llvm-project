@@ -2102,9 +2102,14 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_SELECT_CC(SDNode *N) {
 // Construct a SDNode that transforms the SINT or UINT operand to the promoted
 // float type.
 SDValue DAGTypeLegalizer::PromoteFloatRes_XINT_TO_FP(SDNode *N) {
+  SDLoc DL(N);
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, N->getOperand(0));
+  SDValue NV = DAG.getNode(N->getOpcode(), DL, NVT, N->getOperand(0));
+  // Round the value to the desired precision (that of the source type).
+  return DAG.getNode(
+      ISD::FP_EXTEND, DL, NVT,
+      DAG.getNode(ISD::FP_ROUND, DL, VT, NV, DAG.getIntPtrConstant(0, DL)));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {

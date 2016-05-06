@@ -523,6 +523,16 @@ public:
     return getOS() == Triple::Linux;
   }
 
+  /// Tests whether the OS is kFreeBSD.
+  bool isOSKFreeBSD() const {
+    return getOS() == Triple::KFreeBSD;
+  }
+
+  /// Tests whether the OS uses glibc.
+  bool isOSGlibc() const {
+    return getOS() == Triple::Linux || getOS() == Triple::KFreeBSD;
+  }
+
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
     return getObjectFormat() == Triple::ELF;

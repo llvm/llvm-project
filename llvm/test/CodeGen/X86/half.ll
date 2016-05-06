@@ -279,4 +279,38 @@ define half @test_f80trunc_nodagcombine() #0 {
   ret half %2
 }
 
+; CHECK-LABEL: test_sitofp_fadd_i32:
+
+; CHECK-LIBCALL-NEXT: pushq %rbx
+; CHECK-LIBCALL-NEXT: subq $16, %rsp
+; CHECK-LIBCALL-NEXT: movl %edi, %ebx
+; CHECK-LIBCALL-NEXT: movzwl (%rsi), %edi
+; CHECK-LIBCALL-NEXT: callq __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT: movss %xmm0, 12(%rsp)
+; CHECK-LIBCALL-NEXT: cvtsi2ssl %ebx, %xmm0
+; CHECK-LIBCALL-NEXT: callq __gnu_f2h_ieee
+; CHECK-LIBCALL-NEXT: movzwl %ax, %edi
+; CHECK-LIBCALL-NEXT: callq __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT: addss 12(%rsp), %xmm0
+; CHECK-LIBCALL-NEXT: addq $16, %rsp
+; CHECK-LIBCALL-NEXT: popq %rbx
+; CHECK-LIBCALL-NEXT: retq
+
+; CHECK-F16C-NEXT: movswl (%rsi), %eax
+; CHECK-F16C-NEXT: vmovd %eax, %xmm0
+; CHECK-F16C-NEXT: vcvtph2ps %xmm0, %xmm0
+; CHECK-F16C-NEXT: vcvtsi2ssl %edi, %xmm0, %xmm1
+; CHECK-F16C-NEXT: vcvtps2ph $4, %xmm1, %xmm1
+; CHECK-F16C-NEXT: vcvtph2ps %xmm1, %xmm1
+; CHECK-F16C-NEXT: vaddss %xmm1, %xmm0, %xmm0
+; CHECK-F16C-NEXT: retq
+
+define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
+  %tmp0 = load half, half* %b
+  %tmp1 = sitofp i32 %a to half
+  %tmp2 = fadd half %tmp0, %tmp1
+  %tmp3 = fpext half %tmp2 to float
+  ret float %tmp3
+}
+
 attributes #0 = { nounwind }
