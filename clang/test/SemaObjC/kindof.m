@@ -187,6 +187,39 @@ void test_crosscast_conversions(void) {
   NSString_obj = kindof_NSNumber_obj; // expected-warning{{from '__kindof NSNumber *'}}
 }
 
+@interface NSCell : NSObject
+@end
+@interface NSCellSub : NSCell
+@end
+@interface NSCellSub2 : NSCell
+@end
+@interface NSCellSubSub : NSCellSub
+@end
+
+typedef signed char BOOL;
+void test_conditional(BOOL flag) {
+  NSCellSubSub *result;
+  __kindof NSCellSub *kindof_Sub;
+  NSCell *cell;
+  NSCellSub *sub;
+  NSCellSub2 *sub2;
+  NSCellSubSub *subsub;
+
+  // LHS is kindof NSCellSub, RHS is NSCell --> kindof NSCell
+  // LHS is kindof NSCellSub, RHS is NSCellSub --> kindof NSCellSub
+  // LHS is kindof NSCellSub, RHS is NSCellSub2 --> kindof NSCell
+  // LHS is kindof NSCellSub, RHS is NSCellSubSub --> kindof NSCellSub
+  result = flag ? kindof_Sub : cell;
+  result = flag ? kindof_Sub : sub;
+  result = flag ? kindof_Sub : sub2;
+  result = flag ? kindof_Sub : subsub;
+
+  result = flag ? cell : kindof_Sub;
+  result = flag ? sub : kindof_Sub;
+  result = flag ? sub2 : kindof_Sub;
+  result = flag ? subsub : kindof_Sub;
+}
+
 // ---------------------------------------------------------------------------
 // Blocks
 // ---------------------------------------------------------------------------
@@ -277,7 +310,6 @@ void test(__kindof Bar *kBar) {
 }
 
 // Make sure we don't emit warning about no method found.
-typedef signed char BOOL;
 @interface A : NSObject
 @property (readonly, getter=isActive) BOOL active;
 @end
