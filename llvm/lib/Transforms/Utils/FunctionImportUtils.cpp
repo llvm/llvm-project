@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -213,31 +214,13 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 }
 
 void FunctionImportGlobalProcessing::processGlobalsForThinLTO() {
-  // We cannot currently promote or rename anything used in inline assembly,
-  // which are not visible to the compiler. Detect a possible case by looking
-  // for a llvm.used local value, in conjunction with an inline assembly call
-  // in the module. Prevent changing any such values on the exporting side,
-  // since we would already have guarded against an import from this module by
-  // suppressing its index generation. See comments on what is required
-  // in order to implement a finer grained solution in
-  // ModuleSummaryIndexBuilder::ModuleSummaryIndexBuilder().
-  SmallPtrSet<GlobalValue *, 8> Used;
-  collectUsedGlobalVariables(M, Used, /*CompilerUsed*/ false);
-  bool LocalIsUsed = false;
-  for (GlobalValue *V : Used) {
+  if (!moduleCanBeRenamedForThinLTO(M)) {
     // We would have blocked importing from this module by suppressing index
-    // generation.
-    assert((!V->hasLocalLinkage() || !isPerformingImport()) &&
-           "Should have blocked importing from module with local used");
-    if ((LocalIsUsed |= V->hasLocalLinkage()))
-      break;
+    // generation. We still may be able to import into this module though.
+    assert(!isPerformingImport() &&
+           "Should have blocked importing from module with local used in ASM");
+    return;
   }
-  if (LocalIsUsed)
-    for (auto &F : M)
-      for (auto &I : instructions(F))
-        if (const CallInst *CallI = dyn_cast<CallInst>(&I))
-          if (CallI->isInlineAsm())
-            return;
 
   for (GlobalVariable &GV : M.globals())
     processGlobalForThinLTO(GV);
