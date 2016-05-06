@@ -46,8 +46,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
 
   if (ProfileSize < sizeof(__llvm_profile_header) +
                         Header->DataSize * sizeof(__llvm_profile_data) +
-                        Header->NamesSize + Header->CountersSize +
-                        Header->ValueDataSize)
+                        Header->NamesSize + Header->CountersSize)
     return 1;
 
   for (SrcData = SrcDataStart,

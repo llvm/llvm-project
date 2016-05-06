@@ -18,6 +18,7 @@
 
 #include "kmp.h"
 #include "kmp_itt.h"
+#include "kmp_stats.h"
 
 /*!
 @defgroup WAIT_RELEASE Wait/Release operations
@@ -104,6 +105,9 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
     }
     th_gtid = this_thr->th.th_info.ds.ds_gtid;
     KA_TRACE(20, ("__kmp_wait_sleep: T#%d waiting for flag(%p)\n", th_gtid, flag));
+#if KMP_STATS_ENABLED
+    stats_state_e thread_state = KMP_GET_THREAD_STATE();
+#endif
 
 #if OMPT_SUPPORT && OMPT_BLAME
     ompt_state_t ompt_state = this_thr->th.ompt_thread_info.state;
@@ -223,6 +227,15 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
             }
         }
 
+#if KMP_STATS_ENABLED
+        // Check if thread has been signalled to idle state
+        // This indicates that the logical "join-barrier" has finished
+        if (this_thr->th.th_stats->isIdle() && KMP_GET_THREAD_STATE() == FORK_JOIN_BARRIER) {
+            KMP_SET_THREAD_STATE(IDLE);
+            KMP_PUSH_PARTITIONED_TIMER(OMP_idle);
+        }
+#endif
+
         // Don't suspend if KMP_BLOCKTIME is set to "infinite"
         if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
             continue;
@@ -271,6 +284,14 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
             }
             ompt_callbacks.ompt_callback(ompt_event_wait_barrier_end)(pId, tId);
         }
+    }
+#endif
+#if KMP_STATS_ENABLED
+    // If we were put into idle state, pop that off the state stack
+    if (KMP_GET_THREAD_STATE() == IDLE) {
+        KMP_POP_PARTITIONED_TIMER();
+        KMP_SET_THREAD_STATE(thread_state);
+        this_thr->th.th_stats->resetIdleFlag();
     }
 #endif
 
@@ -556,6 +577,15 @@ public:
     flag_type get_ptr_type() { return flag_oncore; }
 };
 
+// Used to wake up threads, volatile void* flag is usually the th_sleep_loc associated
+// with int gtid.
+static inline void __kmp_null_resume_wrapper(int gtid, volatile void *flag) {
+    switch (((kmp_flag_64 *)flag)->get_type()) {
+    case flag32: __kmp_resume_32(gtid, NULL); break;
+    case flag64: __kmp_resume_64(gtid, NULL); break;
+    case flag_oncore: __kmp_resume_oncore(gtid, NULL); break;
+    }
+}
 
 /*!
 @}

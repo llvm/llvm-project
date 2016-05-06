@@ -697,6 +697,9 @@ __kmp_launch_worker( void *thr )
 #if KMP_STATS_ENABLED
     // set __thread local index to point to thread-specific stats
     __kmp_stats_thread_ptr = ((kmp_info_t*)thr)->th.th_stats;
+    KMP_START_EXPLICIT_TIMER(OMP_worker_thread_life);
+    KMP_SET_THREAD_STATE(IDLE);
+    KMP_INIT_PARTITIONED_TIMERS(OMP_idle);
 #endif
 
 #if USE_ITT_BUILD
@@ -972,8 +975,9 @@ __kmp_create_worker( int gtid, kmp_info_t *th, size_t stack_size )
         __kmp_stats_start_time = tsc_tick_count::now();
         __kmp_stats_thread_ptr = th->th.th_stats;
         __kmp_stats_init();
-        KMP_START_EXPLICIT_TIMER(OMP_serial);
-        KMP_START_EXPLICIT_TIMER(OMP_start_end);
+        KMP_START_EXPLICIT_TIMER(OMP_worker_thread_life);
+        KMP_SET_THREAD_STATE(SERIAL_REGION);
+        KMP_INIT_PARTITIONED_TIMERS(OMP_serial);
     }
     __kmp_release_tas_lock(&__kmp_stats_lock, gtid);
 
@@ -1856,6 +1860,7 @@ void __kmp_resume_oncore(int target_gtid, kmp_flag_oncore *flag) {
 void
 __kmp_resume_monitor()
 {
+    KMP_TIME_DEVELOPER_BLOCK(USER_resume);
     int status;
 #ifdef KMP_DEBUG
     int gtid = TCR_4(__kmp_init_gtid) ? __kmp_get_gtid() : -1;

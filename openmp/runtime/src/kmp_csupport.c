@@ -290,7 +290,6 @@ __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...)
   }
   else
   {
-      KMP_STOP_EXPLICIT_TIMER(OMP_serial);
       KMP_COUNT_BLOCK(OMP_PARALLEL);
   }
 #endif
@@ -345,10 +344,6 @@ __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...)
     }
 #endif
   }
-#if (KMP_STATS_ENABLED)  
-  if (!inParallel)
-      KMP_START_EXPLICIT_TIMER(OMP_serial);
-#endif
 }
 
 #if OMP_40_ENABLED
@@ -669,7 +664,6 @@ void
 __kmpc_barrier(ident_t *loc, kmp_int32 global_tid)
 {
     KMP_COUNT_BLOCK(OMP_BARRIER);
-    KMP_TIME_BLOCK(OMP_barrier);
     KC_TRACE( 10, ("__kmpc_barrier: called T#%d\n", global_tid ) );
 
     if (! TCR_4(__kmp_init_parallel))
@@ -713,7 +707,7 @@ __kmpc_master(ident_t *loc, kmp_int32 global_tid)
 
     if( KMP_MASTER_GTID( global_tid )) {
         KMP_COUNT_BLOCK(OMP_MASTER);
-        KMP_START_EXPLICIT_TIMER(OMP_master);
+        KMP_PUSH_PARTITIONED_TIMER(OMP_master);
         status = 1;
     }
 
@@ -763,7 +757,7 @@ __kmpc_end_master(ident_t *loc, kmp_int32 global_tid)
     KC_TRACE( 10, ("__kmpc_end_master: called T#%d\n", global_tid ) );
 
     KMP_DEBUG_ASSERT( KMP_MASTER_GTID( global_tid ));
-    KMP_STOP_EXPLICIT_TIMER(OMP_master);
+    KMP_POP_PARTITIONED_TIMER();
 
 #if OMPT_SUPPORT && OMPT_TRACE
     kmp_info_t  *this_thr        = __kmp_threads[ global_tid ];
@@ -1088,7 +1082,7 @@ __kmpc_critical( ident_t * loc, kmp_int32 global_tid, kmp_critical_name * crit )
     __kmpc_critical_with_hint(loc, global_tid, crit, omp_lock_hint_none);
 #else
     KMP_COUNT_BLOCK(OMP_CRITICAL);
-    KMP_TIME_BLOCK(OMP_critical_wait);        /* Time spent waiting to enter the critical section */
+    KMP_TIME_PARTITIONED_BLOCK(OMP_critical_wait);        /* Time spent waiting to enter the critical section */
     kmp_user_lock_p lck;
 
     KC_TRACE( 10, ("__kmpc_critical: called T#%d\n", global_tid ) );
@@ -1250,6 +1244,7 @@ __kmpc_critical_with_hint( ident_t * loc, kmp_int32 global_tid, kmp_critical_nam
     __kmp_itt_critical_acquired( lck );
 #endif /* USE_ITT_BUILD */
 
+    KMP_PUSH_PARTITIONED_TIMER(OMP_critical);
     KA_TRACE( 15, ("__kmpc_critical: done T#%d\n", global_tid ));
 } // __kmpc_critical_with_hint
 
@@ -1342,7 +1337,7 @@ __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid, kmp_critical_name *crit)
 #endif
 
 #endif // KMP_USE_DYNAMIC_LOCK
-    KMP_STOP_EXPLICIT_TIMER(OMP_critical);
+    KMP_POP_PARTITIONED_TIMER();
     KA_TRACE( 15, ("__kmpc_end_critical: done T#%d\n", global_tid ));
 }
 
@@ -1464,7 +1459,7 @@ __kmpc_single(ident_t *loc, kmp_int32 global_tid)
     if (rc) {
         // We are going to execute the single statement, so we should count it.
         KMP_COUNT_BLOCK(OMP_SINGLE);
-        KMP_START_EXPLICIT_TIMER(OMP_single);
+        KMP_PUSH_PARTITIONED_TIMER(OMP_single);
     }
 
 #if OMPT_SUPPORT && OMPT_TRACE
@@ -1507,7 +1502,7 @@ void
 __kmpc_end_single(ident_t *loc, kmp_int32 global_tid)
 {
     __kmp_exit_single( global_tid );
-    KMP_STOP_EXPLICIT_TIMER(OMP_single);
+    KMP_POP_PARTITIONED_TIMER();
 
 #if OMPT_SUPPORT && OMPT_TRACE
     kmp_info_t *this_thr        = __kmp_threads[ global_tid ];

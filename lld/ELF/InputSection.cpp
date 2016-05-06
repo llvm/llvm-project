@@ -479,14 +479,15 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
   // Compute the Addend and if the Base is cached, return.
   uintX_t Addend = Offset - Start;
   uintX_t &Base = I->second;
-  auto *MOS = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
-  if (!MOS->shouldTailMerge())
+  assert(Base != MergeInputSection<ELFT>::PieceDead);
+  if (Base != MergeInputSection<ELFT>::PieceLive)
     return Base + Addend;
 
   // Map the base to the offset in the output section and cache it.
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   StringRef Entry = Data.substr(Start, End - Start);
+  auto *MOS = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
   Base = MOS->getOffset(Entry);
   return Base + Addend;
 }

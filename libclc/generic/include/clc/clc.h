@@ -52,6 +52,7 @@
 #include <clc/math/exp10.h>
 #include <clc/math/exp2.h>
 #include <clc/math/fabs.h>
+#include <clc/math/fdim.h>
 #include <clc/math/floor.h>
 #include <clc/math/fma.h>
 #include <clc/math/fmax.h>

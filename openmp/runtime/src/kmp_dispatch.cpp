@@ -1424,7 +1424,7 @@ __kmp_dispatch_next(
     // This is potentially slightly misleading, schedule(runtime) will appear here even if the actual runtme schedule
     // is static. (Which points out a disadavantage of schedule(runtime): even when static scheduling is used it costs
     // more than a compile time choice to use static scheduling would.)
-    KMP_TIME_BLOCK(FOR_dynamic_scheduling);
+    KMP_TIME_PARTITIONED_BLOCK(FOR_dynamic_scheduling);
 
     int                                   status;
     dispatch_private_info_template< T > * pr;
