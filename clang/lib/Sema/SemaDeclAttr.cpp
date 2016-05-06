@@ -1930,6 +1930,7 @@ static bool versionsMatch(const VersionTuple &X, const VersionTuple &Y,
 
 AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
                                               IdentifierInfo *Platform,
+                                              bool Implicit,
                                               VersionTuple Introduced,
                                               VersionTuple Deprecated,
                                               VersionTuple Obsoleted,
@@ -1974,14 +1975,14 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
       // If there is an existing availability attribute for this platform that
       // is explicit and the new one is implicit use the explicit one and
       // discard the new implicit attribute.
-      if (OldAA->getRange().isValid() && Range.isInvalid()) {
+      if (!OldAA->isImplicit() && Implicit) {
         return nullptr;
       }
 
       // If there is an existing attribute for this platform that is implicit
       // and the new attribute is explicit then erase the old one and
       // continue processing the attributes.
-      if (Range.isValid() && OldAA->getRange().isInvalid()) {
+      if (!Implicit && OldAA->isImplicit()) {
         Attrs.erase(Attrs.begin() + i);
         --e;
         continue;
@@ -2080,11 +2081,13 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(NamedDecl *D, SourceRange Range,
   if (!checkAvailabilityAttr(*this, Range, Platform, MergedIntroduced,
                              MergedDeprecated, MergedObsoleted) &&
       !OverrideOrImpl) {
-    return ::new (Context) AvailabilityAttr(Range, Context, Platform,
+    auto *Avail =  ::new (Context) AvailabilityAttr(Range, Context, Platform,
                                             Introduced, Deprecated,
                                             Obsoleted, IsUnavailable, Message,
                                             IsStrict, Replacement,
                                             AttrSpellingListIndex);
+    Avail->setImplicit(Implicit);
+    return Avail;
   }
   return nullptr;
 }
@@ -2130,6 +2133,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
   }
 
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND, Attr.getRange(), II,
+                                                      false/*Implicit*/,
                                                       Introduced.Version,
                                                       Deprecated.Version,
                                                       Obsoleted.Version,
@@ -2173,8 +2177,9 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
         auto NewObsoleted = adjustWatchOSVersion(Obsoleted.Version);
 
         AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND,
-                                                            SourceRange(),
+                                                            Attr.getRange(),
                                                             NewII,
+                                                            true/*Implicit*/,
                                                             NewIntroduced,
                                                             NewDeprecated,
                                                             NewObsoleted,
@@ -2197,8 +2202,9 @@ static void handleAvailabilityAttr(Sema &S, Decl *D,
 
     if (NewII) {
         AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND,
-                                                            SourceRange(),
+                                                            Attr.getRange(),
                                                             NewII,
+                                                            true/*Implicit*/,
                                                             Introduced.Version,
                                                             Deprecated.Version,
                                                             Obsoleted.Version,
