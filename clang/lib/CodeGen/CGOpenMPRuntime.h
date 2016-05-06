@@ -1013,6 +1013,13 @@ public:
                                              const OMPExecutableDirective &D,
                                              const Expr *IfCond,
                                              const Expr *Device);
+
+  /// Marks function \a Fn with properly mangled versions of vector functions.
+  /// \param FD Function marked as 'declare simd'.
+  /// \param Fn LLVM function that must be marked with 'declare simd'
+  /// attributes.
+  virtual void emitDeclareSimdFunction(const FunctionDecl *FD,
+                                       llvm::Function *Fn);
 };
 
 } // namespace CodeGen

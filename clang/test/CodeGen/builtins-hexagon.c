@@ -226,6 +226,8 @@ void foo() {
   // CHECK: @llvm.hexagon.A2.tfril
   __builtin_HEXAGON_A2_tfrp(0);
   // CHECK: @llvm.hexagon.A2.tfrp
+  __builtin_HEXAGON_A2_tfrpi(0);
+  // CHECK: @llvm.hexagon.A2.tfrpi
   __builtin_HEXAGON_A2_tfrsi(0);
   // CHECK: @llvm.hexagon.A2.tfrsi
   __builtin_HEXAGON_A2_vabsh(0);

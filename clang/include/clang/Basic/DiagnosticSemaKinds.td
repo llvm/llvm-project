@@ -393,8 +393,8 @@ def note_using_decl_constructor_ellipsis : Note<
 def err_using_decl_can_not_refer_to_class_member : Error<
   "using declaration cannot refer to class member">;
 def note_using_decl_class_member_workaround : Note<
-  "use %select{an alias declaration|a typedef declaration|a reference}0 "
-  "instead">;
+  "use %select{an alias declaration|a typedef declaration|a reference|"
+  "a const variable|a constexpr variable}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
 def err_using_decl_can_not_refer_to_scoped_enum : Error<
