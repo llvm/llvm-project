@@ -739,7 +739,7 @@ StaticSpinMutex ScopedInErrorReport::lock_;
 u32 ScopedInErrorReport::reporting_thread_tid_;
 
 void ReportStackOverflow(const SignalContext &sig) {
-  ScopedInErrorReport in_report;
+  ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
   Decorator d;
   Printf("%s", d.Warning());
   Report(

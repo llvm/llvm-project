@@ -13,7 +13,16 @@
 // CHECK-NEXT:     Section: Undefined (0x0)
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: s1 (8)
+// CHECK-NEXT:     Name: s3
+// CHECK-NEXT:     Value: 0x10125
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local (0x0)
+// CHECK-NEXT:     Type: Object (0x1)
+// CHECK-NEXT:     Other: 0
+// CHECK-NEXT:     Section: .rodata (0x1)
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: s1
 // CHECK-NEXT:     Value: 0x10120
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local (0x0)
@@ -24,7 +33,7 @@
 // CHECK-NEXT:     Section: .rodata (0x1)
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: _start (1)
+// CHECK-NEXT:     Name: _start
 // CHECK-NEXT:     Value: 0x11000
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Global (0x1)
@@ -39,6 +48,7 @@
 .type _start,@function
 _start:
 movl $s1, %eax
+movl $s3, %eax
 
 .hidden s1
 .type s1,@object
@@ -52,3 +62,12 @@ s1:
 .globl s2
 s2:
 .asciz "efgh"
+
+.type s3,@object
+s3:
+.asciz "ijkl"
+
+.type s4,@object
+.globl s4
+s4:
+.asciz "mnop"

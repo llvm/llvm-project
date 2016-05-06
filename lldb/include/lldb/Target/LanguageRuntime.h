@@ -54,8 +54,7 @@ public:
                               lldb::DynamicValueType use_dynamic, 
                               TypeAndOrName &class_type_or_name, 
                               Address &address,
-                              Value::ValueType &value_type,
-                              Error &error) = 0;
+                              Value::ValueType &value_type) = 0;
     
     // This call should return a CompilerType given a generic type name
     // and an ExecutionContextScope in which one can actually fetch

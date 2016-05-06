@@ -113,9 +113,11 @@ bool SymbolBody::isPreemptible() const {
   if (isLocal())
     return false;
 
-  // Shared symbols resolve to the definition in the DSO.
+  // Shared symbols resolve to the definition in the DSO. The exceptions are
+  // symbols with copy relocations (which resolve to .bss) or preempt plt
+  // entries (which resolve to that plt entry).
   if (isShared())
-    return true;
+    return !NeedsCopyOrPltAddr;
 
   // That's all that can be preempted in a non-DSO.
   if (!Config->Shared)

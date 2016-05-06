@@ -63,8 +63,7 @@ public:
                              lldb::DynamicValueType use_dynamic,
                              TypeAndOrName &class_type_or_name,
                              Address &address,
-                             Value::ValueType &value_type,
-                             Error &error) override;
+                             Value::ValueType &value_type) override;
     
     UtilityFunction *
     CreateObjectChecker(const char *) override;

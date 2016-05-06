@@ -105,14 +105,10 @@ GetDynamicTypeId(ExecutionContext *exe_ctx, Target *target, ValueObject &in_valu
 }
 
 bool
-JavaLanguageRuntime::GetDynamicTypeAndAddress(ValueObject &in_value,
-                                              lldb::DynamicValueType use_dynamic,
-                                              TypeAndOrName &class_type_or_name,
-                                              Address &dynamic_address,
-                                              Value::ValueType &value_type,
-                                              Error &error)
+JavaLanguageRuntime::GetDynamicTypeAndAddress(ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+                                              TypeAndOrName &class_type_or_name, Address &dynamic_address,
+                                              Value::ValueType &value_type)
 {
-    error.Clear();
     class_type_or_name.Clear();
 
     // null references don't have a dynamic type

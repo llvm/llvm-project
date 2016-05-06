@@ -232,7 +232,7 @@
 .global _start
 _start:
   .long bar
-  jmp *bar@GOTPCREL(%rip)
+  jmp *bar2@GOTPCREL(%rip)
 
 .section .data,"aw"
 .quad 0

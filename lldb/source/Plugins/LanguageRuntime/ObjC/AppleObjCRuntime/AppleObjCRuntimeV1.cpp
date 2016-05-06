@@ -50,10 +50,8 @@ AppleObjCRuntimeV1::GetDynamicTypeAndAddress (ValueObject &in_value,
                                               lldb::DynamicValueType use_dynamic,
                                               TypeAndOrName &class_type_or_name,
                                               Address &address,
-                                              Value::ValueType &value_type,
-                                              Error &error)
+                                              Value::ValueType &value_type)
 {
-    error.Clear();
     class_type_or_name.Clear();
     value_type = Value::ValueType::eValueTypeScalar;
     if (CouldHaveDynamicValue(in_value))

@@ -439,6 +439,12 @@ static bool needsPlt(RelExpr Expr) {
   return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT;
 }
 
+// True if this expression is of the form Sym - X, where X is a position in the
+// file (PC, or GOT for example).
+static bool isRelExpr(RelExpr Expr) {
+  return Expr == R_PC || Expr == R_GOTREL || Expr == R_PAGE_PC;
+}
+
 template <class ELFT>
 static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
                                      const SymbolBody &Body) {
@@ -460,7 +466,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
     return true;
 
   bool AbsVal = isAbsolute<ELFT>(Body) || Body.isTls();
-  bool RelE = E == R_PC || E == R_GOTREL || E == R_PAGE_PC;
+  bool RelE = isRelExpr(E);
   if (AbsVal && !RelE)
     return true;
   if (!AbsVal && RelE)
@@ -520,7 +526,7 @@ RelExpr Writer<ELFT>::adjustExpr(SymbolBody &Body, bool IsWrite, RelExpr Expr,
   // This relocation would require the dynamic linker to write a value to read
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
-  if (Config->Shared) {
+  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
     error("relocation " + S + " cannot be used when making a shared "
                               "object; recompile with -fPIC.");
@@ -606,13 +612,10 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     if (Offset == (uintX_t)-1)
       continue;
 
+    bool Preemptible = Body.isPreemptible();
     Expr = adjustExpr(Body, IsWrite, Expr, Type);
     if (HasError)
       continue;
-    bool Preemptible = Body.isPreemptible();
-    if (auto *B = dyn_cast<SharedSymbol<ELFT>>(&Body))
-      if (B->needsCopy())
-        Preemptible = false;
 
     // This relocation does not require got entry, but it is relative to got and
     // needs it to be created. Here we request for that.
@@ -711,7 +714,7 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    if (Preemptible) {
+    if (Body.isPreemptible()) {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
       AddDyn({Target->getDynRel(Type), C.OutSec, Offset, false, &Body, Addend});
@@ -832,6 +835,25 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
 }
 
+template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
+  if (!B.isLocal() && !B.symbol()->IsUsedInRegularObj)
+    return false;
+
+  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
+    // Always include absolute symbols.
+    if (!D->Section)
+      return true;
+    // Exclude symbols pointing to garbage-collected sections.
+    if (!D->Section->Live)
+      return false;
+    if (auto *S = dyn_cast<MergeInputSection<ELFT>>(D->Section))
+      if (S->getRangeAndSize(D->Value).first->second ==
+          MergeInputSection<ELFT>::PieceDead)
+        return false;
+  }
+  return true;
+}
+
 // Local symbols are not in the linker's symbol table. This function scans
 // each object file's symbol table to copy local symbols to the output.
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
@@ -845,23 +867,12 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       // No reason to keep local undefined symbol in symtab.
       if (!DR)
         continue;
+      if (!includeInSymtab<ELFT>(*B))
+        continue;
       StringRef SymName(StrTab + B->getNameOffset());
       InputSectionBase<ELFT> *Sec = DR->Section;
       if (!shouldKeepInSymtab<ELFT>(Sec, SymName, *B))
         continue;
-      if (Sec) {
-        if (!Sec->Live)
-          continue;
-
-        // Garbage collection is normally able to remove local symbols if they
-        // point to gced sections. In the case of SHF_MERGE sections, we want it
-        // to also be able to drop them if part of the section is gced.
-        // We could look at the section offset map to keep some of these
-        // symbols, but almost all local symbols are .L* symbols, so it
-        // is probably not worth the complexity.
-        if (Config->GcSections && isa<MergeInputSection<ELFT>>(Sec))
-          continue;
-      }
       ++Out<ELFT>::SymTab->NumLocals;
       if (Config->Relocatable)
         B->DynsymIndex = Out<ELFT>::SymTab->NumLocals;
@@ -1111,25 +1122,6 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
   addOptionalSynthetic(Symtab, S, Out<ELFT>::RelaPlt,
                        DefinedSynthetic<ELFT>::SectionEnd);
-}
-
-template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
-  if (!B.symbol()->IsUsedInRegularObj)
-    return false;
-
-  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
-    // Always include absolute symbols.
-    if (!D->Section)
-      return true;
-    // Exclude symbols pointing to garbage-collected sections.
-    if (!D->Section->Live)
-      return false;
-    if (auto *S = dyn_cast<MergeInputSection<ELFT>>(D->Section))
-      if (S->getRangeAndSize(D->Value).first->second ==
-          MergeInputSection<ELFT>::PieceDead)
-        return false;
-  }
-  return true;
 }
 
 // This class knows how to create an output section for a given
@@ -1402,7 +1394,9 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
         SS->File->IsUsed = true;
 
-    if (Body->isUndefined() && !S->isWeak())
+    // We only report undefined symbols in regular objects. This means that we
+    // will accept an undefined reference in bitcode if it can be optimized out.
+    if (S->IsUsedInRegularObj && Body->isUndefined() && !S->isWeak())
       reportUndefined<ELFT>(Symtab, Body);
 
     if (auto *C = dyn_cast<DefinedCommon>(Body))

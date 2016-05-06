@@ -1084,7 +1084,7 @@ def run_suite():
                 # mark __ignore_singleton__ flag as True so the signleton pattern is
                 # not enforced.
                 test_result.LLDBTestResult.__ignore_singleton__ = True
-                for i in range(count):
+                for i in range(configuration.count):
                
                     result = unittest2.TextTestRunner(stream=sys.stderr,
                                                       verbosity=v,

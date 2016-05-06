@@ -94,7 +94,9 @@ static void forEachSuccessor(InputSection<ELFT> *Sec,
     run(Obj, Sec, RelSec, Fn);
 }
 
-template <class ELFT> static void scanEhFrameSection(EHInputSection<ELFT> &EH) {
+template <class ELFT>
+static void scanEhFrameSection(EHInputSection<ELFT> &EH,
+                               std::function<void(ResolvedReloc<ELFT>)> Fn) {
   if (!EH.RelocSection)
     return;
   ELFFile<ELFT> &EObj = EH.getFile()->getObj();
@@ -103,7 +105,7 @@ template <class ELFT> static void scanEhFrameSection(EHInputSection<ELFT> &EH) {
       return;
     if (R.Sec->getSectionHdr()->sh_flags & SHF_EXECINSTR)
       return;
-    R.Sec->Live = true;
+    Fn({R.Sec, 0});
   });
 }
 
@@ -181,7 +183,7 @@ template <class ELFT> void elf::markLive() {
         // sections that contain personality. We preserve all non-text sections
         // referred by .eh_frame here.
         if (auto *EH = dyn_cast_or_null<EHInputSection<ELFT>>(Sec))
-          scanEhFrameSection<ELFT>(*EH);
+          scanEhFrameSection<ELFT>(*EH, Enqueue);
         if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
           Enqueue({Sec, 0});
       }

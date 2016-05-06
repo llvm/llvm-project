@@ -52,7 +52,6 @@ Clang-Tidy Checks
    llvm-twine-local
    misc-argument-comment
    misc-assert-side-effect
-   misc-unconventional-assign-operator
    misc-bool-pointer-implicit-conversion
    misc-dangling-handle
    misc-definitions-in-headers
@@ -83,6 +82,7 @@ Clang-Tidy Checks
    misc-suspicious-string-compare
    misc-swapped-arguments
    misc-throw-by-value-catch-by-reference
+   misc-unconventional-assign-operator
    misc-undelegated-constructor
    misc-uniqueptr-reset-release
    misc-unused-alias-decls

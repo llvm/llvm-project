@@ -407,8 +407,7 @@ AppleObjCRuntimeV2::GetDynamicTypeAndAddress (ValueObject &in_value,
                                               DynamicValueType use_dynamic, 
                                               TypeAndOrName &class_type_or_name, 
                                               Address &address,
-                                              Value::ValueType &value_type,
-                                              Error &error)
+                                              Value::ValueType &value_type)
 {
     // We should never get here with a null process...
     assert (m_process != NULL);
@@ -423,7 +422,6 @@ AppleObjCRuntimeV2::GetDynamicTypeAndAddress (ValueObject &in_value,
     else
         assert (in_value.GetTargetSP().get() == m_process->CalculateTarget().get());
     
-    error.Clear();
     class_type_or_name.Clear();
     value_type = Value::ValueType::eValueTypeScalar;
 

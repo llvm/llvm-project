@@ -54,7 +54,7 @@ Using libc++experimental and ``<experimental/...>``
 
 Libc++ provides implementations of experimental technical specifications
 in a separate library, ``libc++experimental.a``. Users of ``<experimental/...>``
-headers may requiring linking with ``-lc++experimental``.
+headers may be required to link ``-lc++experimental``.
 
 .. code-block:: bash
 
