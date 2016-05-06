@@ -153,47 +153,40 @@ bool ModuleDependencyCollector::getRealPath(StringRef SrcPath,
 std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src) {
   using namespace llvm::sys;
 
-  // We need an absolute path to append to the root.
+  // We need an absolute src path to append to the root.
   SmallString<256> AbsoluteSrc = Src;
   fs::make_absolute(AbsoluteSrc);
-  // Canonicalize to a native path to avoid mixed separator styles.
+  // Canonicalize src to a native path to avoid mixed separator styles.
   path::native(AbsoluteSrc);
   // Remove redundant leading "./" pieces and consecutive separators.
   AbsoluteSrc = path::remove_leading_dotslash(AbsoluteSrc);
 
-  // Canonicalize path by removing "..", "." components.
+  // Canonicalize the source path by removing "..", "." components.
   SmallString<256> CanonicalPath = AbsoluteSrc;
   path::remove_dots(CanonicalPath, /*remove_dot_dot=*/true);
 
   // If a ".." component is present after a symlink component, remove_dots may
   // lead to the wrong real destination path. Let the source be canonicalized
-  // like that but make sure the destination uses the real path.
-  bool HasDotDotInPath =
-      std::count(path::begin(AbsoluteSrc), path::end(AbsoluteSrc), "..") > 0;
+  // like that but make sure we always use the real path for the destination.
   SmallString<256> RealPath;
-  bool HasRemovedSymlinkComponent = HasDotDotInPath &&
-                             getRealPath(AbsoluteSrc, RealPath) &&
-                             !StringRef(CanonicalPath).equals(RealPath);
-
-  // Build the destination path.
+  if (!getRealPath(AbsoluteSrc, RealPath))
+    RealPath = CanonicalPath;
   SmallString<256> Dest = getDest();
-  path::append(Dest, path::relative_path(HasRemovedSymlinkComponent ? RealPath
-                                                             : CanonicalPath));
+  path::append(Dest, path::relative_path(RealPath));
 
   // Copy the file into place.
   if (std::error_code EC = fs::create_directories(path::parent_path(Dest),
                                                    /*IgnoreExisting=*/true))
     return EC;
-  if (std::error_code EC = fs::copy_file(
-          HasRemovedSymlinkComponent ? RealPath : CanonicalPath, Dest))
+  if (std::error_code EC = fs::copy_file(RealPath, Dest))
     return EC;
 
-  // Use the canonical path under the root for the file mapping. Also create
-  // an additional entry for the real path.
+  // Always map a canonical src path to its real path into the YAML, by doing
+  // this we map different virtual src paths to the same entry in the VFS
+  // overlay, which is a way to emulate symlink inside the VFS; this is also
+  // needed for correctness, not doing that can lead to module redifinition
+  // errors.
   addFileMapping(CanonicalPath, Dest);
-  if (HasRemovedSymlinkComponent)
-    addFileMapping(RealPath, Dest);
-
   return std::error_code();
 }
 

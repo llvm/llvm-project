@@ -43,17 +43,9 @@
 // CHECKYAML: 'case-sensitive':
 // CHECKYAML-NEXT: 'use-external-names': 'false',
 // CHECKYAML-NEXT: 'overlay-relative': 'true',
-// CHECKYAML: 'type': 'directory'
-// CHECKYAML: 'name': "/[[PATH:.*]]/i/usr/include",
-// CHECKYAML-NEXT: 'contents': [
-// CHECKYAML-NEXT:   {
-// CHECKYAML-NEXT:     'type': 'file',
-// CHECKYAML-NEXT:     'name': "module.map",
-// CHECKYAML-NEXT:     'external-contents': "/[[PATH]]/i/usr/include/module.map"
-// CHECKYAML-NEXT:   },
 
 // CHECKYAML: 'type': 'directory'
-// CHECKYAML: 'name': "/[[PATH]]/i/usr",
+// CHECKYAML: 'name': "/[[PATH:.*]]/i/usr",
 // CHECKYAML-NEXT: 'contents': [
 // CHECKYAML-NEXT:   {
 // CHECKYAML-NEXT:     'type': 'file',
