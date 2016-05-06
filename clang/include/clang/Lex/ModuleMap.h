@@ -54,7 +54,7 @@ public:
   /// \brief Called when a header is added during module map parsing.
   ///
   /// \param File The header file itself.
-  virtual void moduleMapAddHeader(const FileEntry &File) {}
+  virtual void moduleMapAddHeader(StringRef Filename) {}
 };
   
 class ModuleMap {
