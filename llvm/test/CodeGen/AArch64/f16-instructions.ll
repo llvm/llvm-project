@@ -446,6 +446,34 @@ define half @test_sitofp_i64(i64 %a) #0 {
   ret half %r
 }
 
+; CHECK-LABEL: test_uitofp_i32_fadd:
+; CHECK-NEXT: ucvtf s1, w0
+; CHECK-NEXT: fcvt h1, s1
+; CHECK-NEXT: fcvt s0, h0
+; CHECK-NEXT: fcvt s1, h1
+; CHECK-NEXT: fadd s0, s0, s1
+; CHECK-NEXT: fcvt h0, s0
+; CHECK-NEXT: ret
+define half @test_uitofp_i32_fadd(i32 %a, half %b) #0 {
+  %c = uitofp i32 %a to half
+  %r = fadd half %b, %c
+  ret half %r
+}
+
+; CHECK-LABEL: test_sitofp_i32_fadd:
+; CHECK-NEXT: scvtf s1, w0
+; CHECK-NEXT: fcvt h1, s1
+; CHECK-NEXT: fcvt s0, h0
+; CHECK-NEXT: fcvt s1, h1
+; CHECK-NEXT: fadd s0, s0, s1
+; CHECK-NEXT: fcvt h0, s0
+; CHECK-NEXT: ret
+define half @test_sitofp_i32_fadd(i32 %a, half %b) #0 {
+  %c = sitofp i32 %a to half
+  %r = fadd half %b, %c
+  ret half %r
+}
+
 ; CHECK-LABEL: test_fptrunc_float:
 ; CHECK-NEXT: fcvt h0, s0
 ; CHECK-NEXT: ret
