@@ -1897,7 +1897,6 @@ public:
   /// \brief We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations
   /// and partial specializations are visible, and diagnose if not.
-  /// \return Whether a problem was diagnosed.
   void checkSpecializationVisibility(SourceLocation Loc, NamedDecl *Spec);
 
   /// \brief We've found a use of a template specialization that would select a

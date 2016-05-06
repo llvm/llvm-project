@@ -710,6 +710,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
         }
     } else if (!FD->hasAttr<AlwaysInlineAttr>())
       Fn->addFnAttr(llvm::Attribute::NoInline);
+    if (CGM.getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
+      CGM.getOpenMPRuntime().emitDeclareSimdFunction(FD, Fn);
   }
 
   // Add no-jump-tables value.

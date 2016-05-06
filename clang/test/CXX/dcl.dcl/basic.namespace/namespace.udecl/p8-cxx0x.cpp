@@ -7,14 +7,41 @@
 struct X {
   int i;
   static int a;
+  enum E { e };
 };
 
 using X::i; // expected-error{{using declaration cannot refer to class member}}
 using X::s; // expected-error{{using declaration cannot refer to class member}}
+using X::e; // expected-error{{using declaration cannot refer to class member}}
+using X::E::e; // expected-error{{using declaration cannot refer to class member}} expected-warning 0-1{{C++11}}
+#if __cplusplus < 201103L
+// expected-note@-3 {{use a const variable}}
+// expected-note@-3 {{use a const variable}}
+// CXX98-NOT: fix-it:"{{.*}}":{[[@LINE-5]]:
+// CXX98-NOT: fix-it:"{{.*}}":{[[@LINE-5]]:
+#else
+// expected-note@-8 {{use a constexpr variable}}
+// expected-note@-8 {{use a constexpr variable}}
+// CXX11: fix-it:"{{.*}}":{[[@LINE-10]]:1-[[@LINE-10]]:6}:"constexpr auto e = "
+// CXX11: fix-it:"{{.*}}":{[[@LINE-10]]:1-[[@LINE-10]]:6}:"constexpr auto e = "
+#endif
 
 void f() {
   using X::i; // expected-error{{using declaration cannot refer to class member}}
   using X::s; // expected-error{{using declaration cannot refer to class member}}
+  using X::e; // expected-error{{using declaration cannot refer to class member}}
+  using X::E::e; // expected-error{{using declaration cannot refer to class member}} expected-warning 0-1{{C++11}}
+#if __cplusplus < 201103L
+  // expected-note@-3 {{use a const variable}}
+  // expected-note@-3 {{use a const variable}}
+  // CXX98-NOT: fix-it:"{{.*}}":{[[@LINE-5]]:
+  // CXX98-NOT: fix-it:"{{.*}}":{[[@LINE-5]]:
+#else
+  // expected-note@-8 {{use a constexpr variable}}
+  // expected-note@-8 {{use a constexpr variable}}
+  // CXX11: fix-it:"{{.*}}":{[[@LINE-10]]:3-[[@LINE-10]]:8}:"constexpr auto e = "
+  // CXX11: fix-it:"{{.*}}":{[[@LINE-10]]:3-[[@LINE-10]]:8}:"constexpr auto e = "
+#endif
 }
 
 template <typename T>

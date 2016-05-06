@@ -6042,3 +6042,228 @@ void CGOpenMPRuntime::emitTargetEnterOrExitDataCall(
     ThenGenRCG(CGF);
   }
 }
+
+namespace {
+  /// Kind of parameter in a function with 'declare simd' directive.
+  enum ParamKindTy { LinearWithVarStride, Linear, Uniform, Vector };
+  /// Attribute set of the parameter.
+  struct ParamAttrTy {
+    ParamKindTy Kind = Vector;
+    llvm::APSInt StrideOrArg;
+    llvm::APSInt Alignment;
+  };
+} // namespace
+
+static unsigned evaluateCDTSize(const FunctionDecl *FD,
+                                ArrayRef<ParamAttrTy> ParamAttrs) {
+  // Every vector variant of a SIMD-enabled function has a vector length (VLEN).
+  // If OpenMP clause "simdlen" is used, the VLEN is the value of the argument
+  // of that clause. The VLEN value must be power of 2.
+  // In other case the notion of the function`s "characteristic data type" (CDT)
+  // is used to compute the vector length.
+  // CDT is defined in the following order:
+  //   a) For non-void function, the CDT is the return type.
+  //   b) If the function has any non-uniform, non-linear parameters, then the
+  //   CDT is the type of the first such parameter.
+  //   c) If the CDT determined by a) or b) above is struct, union, or class
+  //   type which is pass-by-value (except for the type that maps to the
+  //   built-in complex data type), the characteristic data type is int.
+  //   d) If none of the above three cases is applicable, the CDT is int.
+  // The VLEN is then determined based on the CDT and the size of vector
+  // register of that ISA for which current vector version is generated. The
+  // VLEN is computed using the formula below:
+  //   VLEN  = sizeof(vector_register) / sizeof(CDT),
+  // where vector register size specified in section 3.2.1 Registers and the
+  // Stack Frame of original AMD64 ABI document.
+  QualType RetType = FD->getReturnType();
+  if (RetType.isNull())
+    return 0;
+  ASTContext &C = FD->getASTContext();
+  QualType CDT;
+  if (!RetType.isNull() && !RetType->isVoidType())
+    CDT = RetType;
+  else {
+    unsigned Offset = 0;
+    if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+      if (ParamAttrs[Offset].Kind == Vector)
+        CDT = C.getPointerType(C.getRecordType(MD->getParent()));
+      ++Offset;
+    }
+    if (CDT.isNull()) {
+      for (unsigned I = 0, E = FD->getNumParams(); I < E; ++I) {
+        if (ParamAttrs[I + Offset].Kind == Vector) {
+          CDT = FD->getParamDecl(I)->getType();
+          break;
+        }
+      }
+    }
+  }
+  if (CDT.isNull())
+    CDT = C.IntTy;
+  CDT = CDT->getCanonicalTypeUnqualified();
+  if (CDT->isRecordType() || CDT->isUnionType())
+    CDT = C.IntTy;
+  return C.getTypeSize(CDT);
+}
+
+static void
+emitX86DeclareSimdFunction(const FunctionDecl *FD, llvm::Function *Fn,
+                           llvm::APSInt VLENVal,
+                           ArrayRef<ParamAttrTy> ParamAttrs,
+                           OMPDeclareSimdDeclAttr::BranchStateTy State) {
+  struct ISADataTy {
+    char ISA;
+    unsigned VecRegSize;
+  };
+  ISADataTy ISAData[] = {
+      {
+          'b', 128
+      }, // SSE
+      {
+          'c', 256
+      }, // AVX
+      {
+          'd', 256
+      }, // AVX2
+      {
+          'e', 512
+      }, // AVX512
+  };
+  llvm::SmallVector<char, 2> Masked;
+  switch (State) {
+  case OMPDeclareSimdDeclAttr::BS_Undefined:
+    Masked.push_back('N');
+    Masked.push_back('M');
+    break;
+  case OMPDeclareSimdDeclAttr::BS_Notinbranch:
+    Masked.push_back('N');
+    break;
+  case OMPDeclareSimdDeclAttr::BS_Inbranch:
+    Masked.push_back('M');
+    break;
+  }
+  for (auto Mask : Masked) {
+    for (auto &Data : ISAData) {
+      SmallString<256> Buffer;
+      llvm::raw_svector_ostream Out(Buffer);
+      Out << "_ZGV" << Data.ISA << Mask;
+      if (!VLENVal) {
+        Out << llvm::APSInt::getUnsigned(Data.VecRegSize /
+                                         evaluateCDTSize(FD, ParamAttrs));
+      } else
+        Out << VLENVal;
+      for (auto &ParamAttr : ParamAttrs) {
+        switch (ParamAttr.Kind){
+        case LinearWithVarStride:
+          Out << 's' << ParamAttr.StrideOrArg;
+          break;
+        case Linear:
+          Out << 'l';
+          if (!!ParamAttr.StrideOrArg)
+            Out << ParamAttr.StrideOrArg;
+          break;
+        case Uniform:
+          Out << 'u';
+          break;
+        case Vector:
+          Out << 'v';
+          break;
+        }
+        if (!!ParamAttr.Alignment)
+          Out << 'a' << ParamAttr.Alignment;
+      }
+      Out << '_' << Fn->getName();
+      Fn->addFnAttr(Out.str());
+    }
+  }
+}
+
+void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
+                                              llvm::Function *Fn) {
+  ASTContext &C = CGM.getContext();
+  FD = FD->getCanonicalDecl();
+  // Map params to their positions in function decl.
+  llvm::DenseMap<const Decl *, unsigned> ParamPositions;
+  if (isa<CXXMethodDecl>(FD))
+    ParamPositions.insert({FD, 0});
+  unsigned ParamPos = ParamPositions.size();
+  for (auto *P : FD->params()) {
+    ParamPositions.insert({P->getCanonicalDecl(), ParamPos});
+    ++ParamPos;
+  }
+  for (auto *Attr : FD->specific_attrs<OMPDeclareSimdDeclAttr>()) {
+    llvm::SmallVector<ParamAttrTy, 8> ParamAttrs(ParamPositions.size());
+    // Mark uniform parameters.
+    for (auto *E : Attr->uniforms()) {
+      E = E->IgnoreParenImpCasts();
+      unsigned Pos;
+      if (isa<CXXThisExpr>(E))
+        Pos = ParamPositions[FD];
+      else {
+        auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
+                        ->getCanonicalDecl();
+        Pos = ParamPositions[PVD];
+      }
+      ParamAttrs[Pos].Kind = Uniform;
+    }
+    // Get alignment info.
+    auto NI = Attr->alignments_begin();
+    for (auto *E : Attr->aligneds()) {
+      E = E->IgnoreParenImpCasts();
+      unsigned Pos;
+      QualType ParmTy;
+      if (isa<CXXThisExpr>(E)) {
+        Pos = ParamPositions[FD];
+        ParmTy = E->getType();
+      } else {
+        auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
+                        ->getCanonicalDecl();
+        Pos = ParamPositions[PVD];
+        ParmTy = PVD->getType();
+      }
+      ParamAttrs[Pos].Alignment =
+          (*NI) ? (*NI)->EvaluateKnownConstInt(C)
+                : llvm::APSInt::getUnsigned(
+                      C.toCharUnitsFromBits(C.getOpenMPDefaultSimdAlign(ParmTy))
+                          .getQuantity());
+      ++NI;
+    }
+    // Mark linear parameters.
+    auto SI = Attr->steps_begin();
+    auto MI = Attr->modifiers_begin();
+    for (auto *E : Attr->linears()) {
+      E = E->IgnoreParenImpCasts();
+      unsigned Pos;
+      if (isa<CXXThisExpr>(E))
+        Pos = ParamPositions[FD];
+      else {
+        auto *PVD = cast<ParmVarDecl>(cast<DeclRefExpr>(E)->getDecl())
+                        ->getCanonicalDecl();
+        Pos = ParamPositions[PVD];
+      }
+      auto &ParamAttr = ParamAttrs[Pos];
+      ParamAttr.Kind = Linear;
+      if (*SI) {
+        if (!(*SI)->EvaluateAsInt(ParamAttr.StrideOrArg, C,
+                                  Expr::SE_AllowSideEffects)) {
+          if (auto *DRE = cast<DeclRefExpr>((*SI)->IgnoreParenImpCasts())) {
+            if (auto *StridePVD = cast<ParmVarDecl>(DRE->getDecl())) {
+              ParamAttr.Kind = LinearWithVarStride;
+              ParamAttr.StrideOrArg = llvm::APSInt::getUnsigned(
+                  ParamPositions[StridePVD->getCanonicalDecl()]);
+            }
+          }
+        }
+      }
+      ++SI;
+      ++MI;
+    }
+    llvm::APSInt VLENVal;
+    if (const Expr *VLEN = Attr->getSimdlen())
+      VLENVal = VLEN->EvaluateKnownConstInt(C);
+    OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
+    if (CGM.getTriple().getArch() == llvm::Triple::x86 ||
+        CGM.getTriple().getArch() == llvm::Triple::x86_64)
+      emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
+  }
+}

@@ -933,3 +933,17 @@ template struct __declspec(dllimport) ExplicitInstantiationDeclTemplateBase2<int
 USEMEMFUNC(ExplicitInstantiationDeclTemplateBase2<int>, func)
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?func@?$ExplicitInstantiationDeclTemplateBase2@H@@QAEXXZ"
 // G32-DAG: define weak_odr x86_thiscallcc void @_ZN38ExplicitInstantiationDeclTemplateBase2IiE4funcEv
+
+// PR26076
+struct LayerSelectionBound;
+template <typename> struct Selection {};
+typedef Selection<LayerSelectionBound> LayerSelection;
+struct LayerImpl;
+struct __declspec(dllexport) LayerTreeImpl {
+  struct __declspec(dllexport) ElementLayers {
+    LayerImpl *main = nullptr;
+  };
+  LayerSelection foo;
+};
+// M32-DAG: define weak_odr dllexport x86_thiscallcc %"struct.LayerTreeImpl::ElementLayers"* @"\01??0ElementLayers@LayerTreeImpl@@QAE@XZ"
+// M64-DAG: define weak_odr dllexport %"struct.LayerTreeImpl::ElementLayers"* @"\01??0ElementLayers@LayerTreeImpl@@QEAA@XZ"
