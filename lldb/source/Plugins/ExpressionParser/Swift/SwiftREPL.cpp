@@ -50,6 +50,24 @@ SwiftREPL::CreateInstance (Error &err, lldb::LanguageType language, Debugger *de
     
     if (target)
     {
+        // Sanity check the target to make sure a REPL would work here.
+        if (!target->GetProcessSP() ||
+            !target->GetProcessSP()->IsAlive())
+        {
+            err.SetErrorString ("can't launch a Swift REPL without a running process");
+            return lldb::REPLSP();
+        }
+        
+        SymbolContextList sc_list;
+        target->GetImages().FindSymbolsWithNameAndType(ConstString("_swift_release"), eSymbolTypeAny, sc_list);
+        
+        if (!sc_list.GetSize())
+        {
+            err.SetErrorString ("can't launch a Swift REPL in a process that doesn't have the Swift standard library");
+            return lldb::REPLSP();
+        }
+        
+        // Sanity checks succeeded.  Go ahead.
         SwiftREPL *repl = new SwiftREPL(*target);
         REPLSP repl_sp(repl);
         repl->SetCompilerOptions(repl_options);
