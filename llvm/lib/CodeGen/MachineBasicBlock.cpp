@@ -230,7 +230,8 @@ std::string MachineBasicBlock::getFullName() const {
   return Name;
 }
 
-void MachineBasicBlock::print(raw_ostream &OS, SlotIndexes *Indexes) const {
+void MachineBasicBlock::print(raw_ostream &OS, const SlotIndexes *Indexes)
+    const {
   const MachineFunction *MF = getParent();
   if (!MF) {
     OS << "Can't print out MachineBasicBlock because parent MachineFunction"
@@ -244,7 +245,7 @@ void MachineBasicBlock::print(raw_ostream &OS, SlotIndexes *Indexes) const {
 }
 
 void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
-                              SlotIndexes *Indexes) const {
+                              const SlotIndexes *Indexes) const {
   const MachineFunction *MF = getParent();
   if (!MF) {
     OS << "Can't print out MachineBasicBlock because parent MachineFunction"

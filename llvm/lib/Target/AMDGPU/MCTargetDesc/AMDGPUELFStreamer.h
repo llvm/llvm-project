@@ -29,7 +29,6 @@ public:
                   MCCodeEmitter *Emitter)
       : MCELFStreamer(Context, MAB, OS, Emitter) { }
 
-  virtual void InitSections(bool NoExecStac) override;
 };
 
 MCELFStreamer *createAMDGPUELFStreamer(MCContext &Context, MCAsmBackend &MAB,

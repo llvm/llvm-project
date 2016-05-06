@@ -1083,7 +1083,7 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   if (IDVal == ".amd_kernel_code_t")
     return ParseDirectiveAMDKernelCodeT();
 
-  if (IDVal == ".hsatext" || IDVal == ".text")
+  if (IDVal == ".hsatext")
     return ParseSectionDirectiveHSAText();
 
   if (IDVal == ".amdgpu_hsa_kernel")

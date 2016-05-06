@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <climits>
@@ -31,10 +32,16 @@ class BlockFrequencyInfo {
   typedef BlockFrequencyInfoImpl<BasicBlock> ImplType;
   std::unique_ptr<ImplType> BFI;
 
+  void operator=(const BlockFrequencyInfo &) = delete;
+  BlockFrequencyInfo(const BlockFrequencyInfo &) = delete;
+
 public:
   BlockFrequencyInfo();
   BlockFrequencyInfo(const Function &F, const BranchProbabilityInfo &BPI,
                      const LoopInfo &LI);
+  BlockFrequencyInfo(BlockFrequencyInfo &&Arg);
+
+  BlockFrequencyInfo &operator=(BlockFrequencyInfo &&RHS);
 
   const Function *getFunction() const;
   void view() const;
@@ -69,6 +76,30 @@ public:
   uint64_t getEntryFreq() const;
   void releaseMemory();
   void print(raw_ostream &OS) const;
+};
+
+/// \brief Analysis pass which computes \c BlockFrequencyInfo.
+class BlockFrequencyAnalysis
+    : public AnalysisInfoMixin<BlockFrequencyAnalysis> {
+  friend AnalysisInfoMixin<BlockFrequencyAnalysis>;
+  static char PassID;
+
+public:
+  /// \brief Provide the result typedef for this analysis pass.
+  typedef BlockFrequencyInfo Result;
+
+  /// \brief Run the analysis pass over a function and produce BPI.
+  BlockFrequencyInfo run(Function &F, AnalysisManager<Function> &AM);
+};
+
+/// \brief Printer pass for the \c BlockFrequencyInfo results.
+class BlockFrequencyPrinterPass
+    : public PassInfoMixin<BlockFrequencyPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit BlockFrequencyPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// \brief Legacy analysis pass which computes \c BlockFrequencyInfo.

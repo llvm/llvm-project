@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -block-freq | FileCheck %s
+; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 ; A loop with multiple exits isn't irreducible.  It should be handled
 ; correctly.

@@ -72,6 +72,7 @@ bool WebAssemblyFrameLowering::needsSP(const MachineFunction &MF,
 /// false, the stack red zone can be used and only a local SP is needed.
 bool WebAssemblyFrameLowering::needsSPWriteback(
     const MachineFunction &MF, const MachineFrameInfo &MFI) const {
+  assert(needsSP(MF, MFI));
   return MFI.getStackSize() > RedZoneSize || MFI.hasCalls() ||
          MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
 }
@@ -190,6 +191,13 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (InsertPt != MBB.end()) {
     DL = InsertPt->getDebugLoc();
+
+    // If code has been stackified with the return, disconnect it so that we
+    // don't break the tree when we insert code just before the return.
+    if (InsertPt->isReturn() && InsertPt->getNumExplicitOperands() != 0) {
+      WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+      MFI.unstackifyVReg(InsertPt->getOperand(0).getReg());
+    }
   }
 
   // Restore the stack pointer. If we had fixed-size locals, add the offset

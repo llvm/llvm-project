@@ -3121,10 +3121,8 @@ void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
       report_fatal_error("Unexpected anonymous function when writing summary");
 
     auto *Summary = Index->getGlobalValueSummary(F);
-    writePerModuleFunctionSummaryRecord(
-        NameVals, Summary,
-        VE.getValueID(M.getValueSymbolTable().lookup(F.getName())),
-        FSCallsAbbrev, FSCallsProfileAbbrev, F);
+    writePerModuleFunctionSummaryRecord(NameVals, Summary, VE.getValueID(&F),
+                                        FSCallsAbbrev, FSCallsProfileAbbrev, F);
   }
 
   // Capture references from GlobalVariable initializers, which are outside

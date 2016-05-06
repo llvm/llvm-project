@@ -698,16 +698,43 @@ Value *InductionDescriptor::transform(IRBuilder<> &B, Value *Index) const {
   llvm_unreachable("invalid enum");
 }
 
-bool InductionDescriptor::isInductionPHI(PHINode *Phi, ScalarEvolution *SE,
-                                         InductionDescriptor &D) {
+bool InductionDescriptor::isInductionPHI(PHINode *Phi,
+                                         PredicatedScalarEvolution &PSE,
+                                         InductionDescriptor &D,
+                                         bool Assume) {
+  Type *PhiTy = Phi->getType();
+  // We only handle integer and pointer inductions variables.
+  if (!PhiTy->isIntegerTy() && !PhiTy->isPointerTy())
+    return false;
+
+  const SCEV *PhiScev = PSE.getSCEV(Phi);
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(PhiScev);
+
+  // We need this expression to be an AddRecExpr.
+  if (Assume && !AR)
+    AR = PSE.getAsAddRec(Phi);
+
+  if (!AR) {
+    DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
+    return false;
+  }
+
+  return isInductionPHI(Phi, PSE.getSE(), D, AR);
+}
+
+bool InductionDescriptor::isInductionPHI(PHINode *Phi,
+                                         ScalarEvolution *SE,
+                                         InductionDescriptor &D,
+                                         const SCEV *Expr) {
   Type *PhiTy = Phi->getType();
   // We only handle integer and pointer inductions variables.
   if (!PhiTy->isIntegerTy() && !PhiTy->isPointerTy())
     return false;
 
   // Check that the PHI is consecutive.
-  const SCEV *PhiScev = SE->getSCEV(Phi);
+  const SCEV *PhiScev = Expr ? Expr : SE->getSCEV(Phi);
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PhiScev);
+
   if (!AR) {
     DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
     return false;

@@ -61,9 +61,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
-  if (TT.getOS() == Triple::AMDHSA)
-    return make_unique<AMDGPUHSATargetObjectFile>();
-
   return make_unique<AMDGPUTargetObjectFile>();
 }
 

@@ -16,9 +16,6 @@
 /* Define if position independent code is enabled */
 #cmakedefine ENABLE_PIC
 
-/* Define if timestamp information (e.g., __DATE__) is allowed */
-#cmakedefine ENABLE_TIMESTAMPS ${ENABLE_TIMESTAMPS}
-
 /* Define to 1 if you have the `arc4random' function. */
 #cmakedefine HAVE_DECL_ARC4RANDOM ${HAVE_DECL_ARC4RANDOM}
 

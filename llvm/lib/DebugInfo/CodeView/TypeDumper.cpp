@@ -200,7 +200,6 @@ public:
       : CVTD(CVTD), W(W), PrintRecordBytes(PrintRecordBytes) {}
 
   /// CVTypeVisitor overrides.
-  /// FIXME: Bury these in the .cc file to hide implementation details.
 #define TYPE_RECORD(ClassName, LeafEnum)                                       \
   void visit##ClassName(TypeLeafKind LeafType, const ClassName *Record,        \
                         ArrayRef<uint8_t> LeafData);
@@ -362,7 +361,7 @@ void CVTypeDumperImpl::visitUnionType(TypeLeafKind Leaf, const UnionType *Union,
 }
 
 void CVTypeDumperImpl::visitEnumType(TypeLeafKind Leaf, const EnumType *Enum,
-                                 ArrayRef<uint8_t> LeafData) {
+                                     ArrayRef<uint8_t> LeafData) {
   W.printNumber("NumEnumerators", Enum->NumEnumerators);
   W.printFlags("Properties", uint16_t(Enum->Properties),
                makeArrayRef(ClassOptionNames));
@@ -373,7 +372,7 @@ void CVTypeDumperImpl::visitEnumType(TypeLeafKind Leaf, const EnumType *Enum,
 }
 
 void CVTypeDumperImpl::visitArrayType(TypeLeafKind Leaf, const ArrayType *AT,
-                                  ArrayRef<uint8_t> LeafData) {
+                                      ArrayRef<uint8_t> LeafData) {
   printTypeIndex("ElementType", AT->ElementType);
   printTypeIndex("IndexType", AT->IndexType);
   uint64_t SizeOf;
@@ -384,8 +383,9 @@ void CVTypeDumperImpl::visitArrayType(TypeLeafKind Leaf, const ArrayType *AT,
   W.printString("Name", Name);
 }
 
-void CVTypeDumperImpl::visitVFTableType(TypeLeafKind Leaf, const VFTableType *VFT,
-                                    ArrayRef<uint8_t> LeafData) {
+void CVTypeDumperImpl::visitVFTableType(TypeLeafKind Leaf,
+                                        const VFTableType *VFT,
+                                        ArrayRef<uint8_t> LeafData) {
   printTypeIndex("CompleteClass", VFT->CompleteClass);
   printTypeIndex("OverriddenVFTable", VFT->OverriddenVFTable);
   W.printHex("VFPtrOffset", VFT->VFPtrOffset);
@@ -399,8 +399,9 @@ void CVTypeDumperImpl::visitVFTableType(TypeLeafKind Leaf, const VFTableType *VF
   }
 }
 
-void CVTypeDumperImpl::visitMemberFuncId(TypeLeafKind Leaf, const MemberFuncId *Id,
-                                     ArrayRef<uint8_t> LeafData) {
+void CVTypeDumperImpl::visitMemberFuncId(TypeLeafKind Leaf,
+                                         const MemberFuncId *Id,
+                                         ArrayRef<uint8_t> LeafData) {
   printTypeIndex("ClassType", Id->ClassType);
   printTypeIndex("FunctionType", Id->FunctionType);
   Name = getBytesAsCString(LeafData);
@@ -408,8 +409,8 @@ void CVTypeDumperImpl::visitMemberFuncId(TypeLeafKind Leaf, const MemberFuncId *
 }
 
 void CVTypeDumperImpl::visitProcedureType(TypeLeafKind Leaf,
-                                      const ProcedureType *Proc,
-                                      ArrayRef<uint8_t> LeafData) {
+                                          const ProcedureType *Proc,
+                                          ArrayRef<uint8_t> LeafData) {
   printTypeIndex("ReturnType", Proc->ReturnType);
   W.printEnum("CallingConvention", uint8_t(Proc->CallConv),
               makeArrayRef(CallingConventions));
@@ -426,9 +427,9 @@ void CVTypeDumperImpl::visitProcedureType(TypeLeafKind Leaf,
   Name = CVTD.saveName(TypeName);
 }
 
-void CVTypeDumperImpl::visitMemberFunctionType(TypeLeafKind Leaf,
-                                           const MemberFunctionType *MemberFunc,
-                                           ArrayRef<uint8_t> LeafData) {
+void CVTypeDumperImpl::visitMemberFunctionType(
+    TypeLeafKind Leaf, const MemberFunctionType *MemberFunc,
+    ArrayRef<uint8_t> LeafData) {
   printTypeIndex("ReturnType", MemberFunc->ReturnType);
   printTypeIndex("ClassType", MemberFunc->ClassType);
   printTypeIndex("ThisType", MemberFunc->ThisType);
@@ -452,7 +453,7 @@ void CVTypeDumperImpl::visitMemberFunctionType(TypeLeafKind Leaf,
 }
 
 void CVTypeDumperImpl::visitMethodList(TypeLeafKind Leaf,
-                                   ArrayRef<uint8_t> LeafData) {
+                                       ArrayRef<uint8_t> LeafData) {
   while (!LeafData.empty()) {
     const MethodListEntry *Method;
     if (!consumeObject(LeafData, Method))
@@ -470,7 +471,7 @@ void CVTypeDumperImpl::visitMethodList(TypeLeafKind Leaf,
 }
 
 void CVTypeDumperImpl::visitFuncId(TypeLeafKind Leaf, const FuncId *Func,
-                               ArrayRef<uint8_t> LeafData) {
+                                   ArrayRef<uint8_t> LeafData) {
   printTypeIndex("ParentScope", Func->ParentScope);
   printTypeIndex("FunctionType", Func->FunctionType);
   Name = getBytesAsCString(LeafData);
@@ -478,16 +479,17 @@ void CVTypeDumperImpl::visitFuncId(TypeLeafKind Leaf, const FuncId *Func,
 }
 
 void CVTypeDumperImpl::visitTypeServer2(TypeLeafKind Leaf,
-                                    const TypeServer2 *TypeServer,
-                                    ArrayRef<uint8_t> LeafData) {
+                                        const TypeServer2 *TypeServer,
+                                        ArrayRef<uint8_t> LeafData) {
   W.printBinary("Signature", StringRef(TypeServer->Signature, 16));
   W.printNumber("Age", TypeServer->Age);
   Name = getBytesAsCString(LeafData);
   W.printString("Name", Name);
 }
 
-void CVTypeDumperImpl::visitPointerType(TypeLeafKind Leaf, const PointerType *Ptr,
-                                    ArrayRef<uint8_t> LeafData) {
+void CVTypeDumperImpl::visitPointerType(TypeLeafKind Leaf,
+                                        const PointerType *Ptr,
+                                        ArrayRef<uint8_t> LeafData) {
   printTypeIndex("PointeeType", Ptr->PointeeType);
   W.printHex("PointerAttributes", Ptr->Attrs);
   W.printEnum("PtrType", unsigned(Ptr->getPtrKind()),
@@ -538,8 +540,9 @@ void CVTypeDumperImpl::visitPointerType(TypeLeafKind Leaf, const PointerType *Pt
   }
 }
 
-void CVTypeDumperImpl::visitTypeModifier(TypeLeafKind Leaf, const TypeModifier *Mod,
-                                     ArrayRef<uint8_t> LeafData) {
+void CVTypeDumperImpl::visitTypeModifier(TypeLeafKind Leaf,
+                                         const TypeModifier *Mod,
+                                         ArrayRef<uint8_t> LeafData) {
   printTypeIndex("ModifiedType", Mod->ModifiedType);
   W.printFlags("Modifiers", Mod->Modifiers, makeArrayRef(TypeModifierNames));
 
@@ -555,23 +558,25 @@ void CVTypeDumperImpl::visitTypeModifier(TypeLeafKind Leaf, const TypeModifier *
   Name = CVTD.saveName(TypeName);
 }
 
-void CVTypeDumperImpl::visitVTableShape(TypeLeafKind Leaf, const VTableShape *Shape,
-                                    ArrayRef<uint8_t> LeafData) {
+void CVTypeDumperImpl::visitVTableShape(TypeLeafKind Leaf,
+                                        const VTableShape *Shape,
+                                        ArrayRef<uint8_t> LeafData) {
   unsigned VFEntryCount = Shape->VFEntryCount;
   W.printNumber("VFEntryCount", VFEntryCount);
   // We could print out whether the methods are near or far, but in practice
   // today everything is CV_VTS_near32, so it's just noise.
 }
 
-void CVTypeDumperImpl::visitUDTSrcLine(TypeLeafKind Leaf, const UDTSrcLine *Line,
-                                   ArrayRef<uint8_t> LeafData) {
+void CVTypeDumperImpl::visitUDTSrcLine(TypeLeafKind Leaf,
+                                       const UDTSrcLine *Line,
+                                       ArrayRef<uint8_t> LeafData) {
   printTypeIndex("UDT", Line->UDT);
   printTypeIndex("SourceFile", Line->SourceFile);
   W.printNumber("LineNumber", Line->LineNumber);
 }
 
 void CVTypeDumperImpl::visitBuildInfo(TypeLeafKind Leaf, const BuildInfo *Args,
-                                  ArrayRef<uint8_t> LeafData) {
+                                      ArrayRef<uint8_t> LeafData) {
   W.printNumber("NumArgs", Args->NumArgs);
 
   ListScope Arguments(W, "Arguments");
@@ -600,8 +605,9 @@ void CVTypeDumperImpl::visitUnknownMember(TypeLeafKind Leaf) {
   W.printHex("UnknownMember", unsigned(Leaf));
 }
 
-void CVTypeDumperImpl::visitNestedType(TypeLeafKind Leaf, const NestedType *Nested,
-                                   ArrayRef<uint8_t> &FieldData) {
+void CVTypeDumperImpl::visitNestedType(TypeLeafKind Leaf,
+                                       const NestedType *Nested,
+                                       ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "NestedType");
   printTypeIndex("Type", Nested->Type);
   StringRef Name = getBytesAsCString(FieldData);
@@ -609,8 +615,9 @@ void CVTypeDumperImpl::visitNestedType(TypeLeafKind Leaf, const NestedType *Nest
   W.printString("Name", Name);
 }
 
-void CVTypeDumperImpl::visitOneMethod(TypeLeafKind Leaf, const OneMethod *Method,
-                                  ArrayRef<uint8_t> &FieldData) {
+void CVTypeDumperImpl::visitOneMethod(TypeLeafKind Leaf,
+                                      const OneMethod *Method,
+                                      ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "OneMethod");
   printMemberAttributes(Method->Attrs);
   printTypeIndex("Type", Method->Type);
@@ -627,8 +634,8 @@ void CVTypeDumperImpl::visitOneMethod(TypeLeafKind Leaf, const OneMethod *Method
 }
 
 void CVTypeDumperImpl::visitOverloadedMethod(TypeLeafKind Leaf,
-                                         const OverloadedMethod *Method,
-                                         ArrayRef<uint8_t> &FieldData) {
+                                             const OverloadedMethod *Method,
+                                             ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "OverloadedMethod");
   W.printHex("MethodCount", Method->MethodCount);
   W.printHex("MethodListIndex", Method->MethList.getIndex());
@@ -637,8 +644,9 @@ void CVTypeDumperImpl::visitOverloadedMethod(TypeLeafKind Leaf,
   W.printString("Name", Name);
 }
 
-void CVTypeDumperImpl::visitDataMember(TypeLeafKind Leaf, const DataMember *Field,
-                                   ArrayRef<uint8_t> &FieldData) {
+void CVTypeDumperImpl::visitDataMember(TypeLeafKind Leaf,
+                                       const DataMember *Field,
+                                       ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "DataMember");
   printMemberAttributes(Field->Attrs);
   printTypeIndex("Type", Field->Type);
@@ -652,8 +660,8 @@ void CVTypeDumperImpl::visitDataMember(TypeLeafKind Leaf, const DataMember *Fiel
 }
 
 void CVTypeDumperImpl::visitStaticDataMember(TypeLeafKind Leaf,
-                                         const StaticDataMember *Field,
-                                         ArrayRef<uint8_t> &FieldData) {
+                                             const StaticDataMember *Field,
+                                             ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "StaticDataMember");
   printMemberAttributes(Field->Attrs);
   printTypeIndex("Type", Field->Type);
@@ -669,8 +677,9 @@ void CVTypeDumperImpl::visitVirtualFunctionPointer(
   printTypeIndex("Type", VFTable->Type);
 }
 
-void CVTypeDumperImpl::visitEnumerator(TypeLeafKind Leaf, const Enumerator *Enum,
-                                   ArrayRef<uint8_t> &FieldData) {
+void CVTypeDumperImpl::visitEnumerator(TypeLeafKind Leaf,
+                                       const Enumerator *Enum,
+                                       ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "Enumerator");
   printMemberAttributes(Enum->Attrs);
   APSInt EnumValue;
@@ -683,7 +692,7 @@ void CVTypeDumperImpl::visitEnumerator(TypeLeafKind Leaf, const Enumerator *Enum
 }
 
 void CVTypeDumperImpl::visitBaseClass(TypeLeafKind Leaf, const BaseClass *Base,
-                                  ArrayRef<uint8_t> &FieldData) {
+                                      ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "BaseClass");
   printMemberAttributes(Base->Attrs);
   printTypeIndex("BaseType", Base->BaseType);
@@ -694,8 +703,8 @@ void CVTypeDumperImpl::visitBaseClass(TypeLeafKind Leaf, const BaseClass *Base,
 }
 
 void CVTypeDumperImpl::visitVirtualBaseClass(TypeLeafKind Leaf,
-                                         const VirtualBaseClass *Base,
-                                         ArrayRef<uint8_t> &FieldData) {
+                                             const VirtualBaseClass *Base,
+                                             ArrayRef<uint8_t> &FieldData) {
   DictScope S(W, "VirtualBaseClass");
   printMemberAttributes(Base->Attrs);
   printTypeIndex("BaseType", Base->BaseType);

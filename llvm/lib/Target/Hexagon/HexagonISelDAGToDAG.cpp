@@ -70,7 +70,7 @@ public:
   virtual void PreprocessISelDAG() override;
   virtual void EmitFunctionEntryCode() override;
 
-  SDNode *Select(SDNode *N) override;
+  SDNode *SelectImpl(SDNode *N) override;
 
   // Complex Pattern Selectors.
   inline bool SelectAddrGA(SDValue &N, SDValue &R);
@@ -1284,7 +1284,7 @@ SDNode *HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
 }
 
 
-SDNode *HexagonDAGToDAGISel::Select(SDNode *N) {
+SDNode *HexagonDAGToDAGISel::SelectImpl(SDNode *N) {
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
     return nullptr;   // Already selected.

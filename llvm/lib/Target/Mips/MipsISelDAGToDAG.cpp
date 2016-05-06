@@ -182,7 +182,7 @@ bool MipsDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
 
 /// Select instructions not customized! Used for
 /// expanded, promoted and normal instructions
-SDNode* MipsDAGToDAGISel::Select(SDNode *Node) {
+SDNode *MipsDAGToDAGISel::SelectImpl(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
 
   // Dump information about the Node being selected

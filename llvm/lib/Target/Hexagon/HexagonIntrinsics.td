@@ -744,7 +744,22 @@ def  : Pat <(int_hexagon_A2_tfrih I32:$Rs, u16_0ImmPred:$Is),
 //  Transfer Register/immediate.
 def : T_R_pat <A2_tfr, int_hexagon_A2_tfr>;
 def : T_I_pat <A2_tfrsi, int_hexagon_A2_tfrsi>;
-def : T_I_pat <A2_tfrpi, int_hexagon_A2_tfrpi>;
+
+def ImmExt64: SDNodeXForm<imm, [{
+  int64_t V = N->getSExtValue();
+  return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i64);
+}]>;
+
+// A2_tfrpi has an operand of type i64. This is necessary, since it is
+// generated from "(set I64:$Rd, imm)". That pattern would not appear
+// in the DAG, if the immediate was not a 64-bit value.
+// The builtin for A2_tfrpi, on the other hand, takes a 32-bit value,
+// which makes it impossible to simply replace it with the instruction.
+// To connect the builtin with the instruction, the builtin's operand
+// needs to be extended to the right type.
+
+def : Pat<(int_hexagon_A2_tfrpi imm:$Is),
+          (A2_tfrpi (ImmExt64 $Is))>;
 
 // Assembler mapped from Rdd32=Rss32 to Rdd32=combine(Rss.H32,Rss.L32)
 def : Pat<(int_hexagon_A2_tfrp I64:$src),

@@ -33,6 +33,10 @@ const std::vector<uint32_t> ProfileSummary::DefaultCutoffs(
 const char *ProfileSummary::KindStr[2] = {"InstrProf", "SampleProfile"};
 
 void InstrProfSummary::addRecord(const InstrProfRecord &R) {
+  // The first counter is not necessarily an entry count for IR
+  // instrumentation profiles.
+  // Eventually MaxFunctionCount will become obsolete and this can be
+  // removed.
   addEntryCount(R.Counts[0]);
   for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
     addInternalCount(R.Counts[I]);

@@ -3032,7 +3032,8 @@ struct VarArgMIPS64Helper : public VarArgHelper {
   void visitCallSite(CallSite &CS, IRBuilder<> &IRB) override {
     unsigned VAArgOffset = 0;
     const DataLayout &DL = F.getParent()->getDataLayout();
-    for (CallSite::arg_iterator ArgIt = CS.arg_begin() + 1, End = CS.arg_end();
+    for (CallSite::arg_iterator ArgIt = CS.arg_begin() +
+         CS.getFunctionType()->getNumParams(), End = CS.arg_end();
          ArgIt != End; ++ArgIt) {
       llvm::Triple TargetTriple(F.getParent()->getTargetTriple());
       Value *A = *ArgIt;

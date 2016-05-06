@@ -40,7 +40,7 @@ end:
 ; CHECK-LABEL: @test3
 ; CHECK-NOT: select
 ; CHECK: call void @foo(i32 30)
-define void @test3(i32 %a, i32 %b) {
+define void @test3(i32 %a) {
   %cmp1 = icmp ugt i32 %a, 10
   br i1 %cmp1, label %taken, label %end
 
@@ -98,6 +98,24 @@ b1:
 
 ret:
   call void @foo(i32 %1)
+  ret void
+}
+
+; A >u 10 implies A >u 9 is true.
+; CHECK-LABEL: @test5
+; CHECK-NOT: select
+; CHECK: call void @foo(i32 30)
+define void @test5(i32 %a) {
+  %cmp1 = icmp ugt i32 %a, 10
+  br i1 %cmp1, label %taken, label %end
+
+taken:
+  %cmp2 = icmp ugt i32 %a, 9
+  %c = select i1 %cmp2, i32 30, i32 0
+  call void @foo(i32 %c)
+  br label %end
+
+end:
   ret void
 }
 

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
+; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
 ; RUN: llvm-profdata merge %S/Inputs/loop1.proftext -o %t.profdata
 ; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

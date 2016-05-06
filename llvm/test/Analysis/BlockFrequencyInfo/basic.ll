@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -block-freq | FileCheck %s
+; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 define i32 @test1(i32 %i, i32* %a) {
 ; CHECK-LABEL: Printing analysis {{.*}} for function 'test1':

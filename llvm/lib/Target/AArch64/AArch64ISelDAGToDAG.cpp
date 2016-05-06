@@ -57,7 +57,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  SDNode *Select(SDNode *Node) override;
+  SDNode *SelectImpl(SDNode *Node) override;
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
@@ -2329,7 +2329,7 @@ void AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 2));
 }
 
-SDNode *AArch64DAGToDAGISel::Select(SDNode *Node) {
+SDNode *AArch64DAGToDAGISel::SelectImpl(SDNode *Node) {
   // Dump information about the Node being selected
   DEBUG(errs() << "Selecting: ");
   DEBUG(Node->dump(CurDAG));

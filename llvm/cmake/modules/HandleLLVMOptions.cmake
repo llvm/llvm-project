@@ -365,17 +365,15 @@ if( MSVC )
       CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
 
-  if (NOT LLVM_ENABLE_TIMESTAMPS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # clang-cl and cl by default produce non-deterministic binaries because
     # link.exe /incremental requires a timestamp in the .obj file.  clang-cl
-    # has the flag /Brepro to force deterministic binaries, so pass that when
-    # LLVM_ENABLE_TIMESTAMPS is turned off.
+    # has the flag /Brepro to force deterministic binaries. We want to pass that
+    # whenever you're building with clang unless you're passing /incremental.
     # This checks CMAKE_CXX_COMPILER_ID in addition to check_cxx_compiler_flag()
     # because cl.exe does not emit an error on flags it doesn't understand,
     # letting check_cxx_compiler_flag() claim it understands all flags.
     check_cxx_compiler_flag("/Brepro" SUPPORTS_BREPRO)
-    append_if(SUPPORTS_BREPRO "/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-
     if (SUPPORTS_BREPRO)
       # Check if /INCREMENTAL is passed to the linker and complain that it
       # won't work with /Brepro.
@@ -383,14 +381,13 @@ if( MSVC )
       string(TOUPPER "${CMAKE_MODULE_LINKER_FLAGS}" upper_module_flags)
       string(TOUPPER "${CMAKE_SHARED_LINKER_FLAGS}" upper_shared_flags)
 
-      string(FIND "${upper_exe_flags}" "/INCREMENTAL" exe_index)
-      string(FIND "${upper_module_flags}" "/INCREMENTAL" module_index)
-      string(FIND "${upper_shared_flags}" "/INCREMENTAL" shared_index)
+      string(FIND "${upper_exe_flags} ${upper_module_flags} ${upper_shared_flags}"
+        "/INCREMENTAL" linker_flag_idx)
       
-      if (${exe_index} GREATER -1 OR
-          ${module_index} GREATER -1 OR
-          ${shared_index} GREATER -1)
-        message(FATAL_ERROR "LLVM_ENABLE_TIMESTAMPS not compatible with /INCREMENTAL linking")
+      if (${linker_flag_idx} GREATER -1)
+        message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
+      else()
+        append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
       endif()
     endif()
   endif()
@@ -456,9 +453,7 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
     endif()
   endif (LLVM_ENABLE_WARNINGS)
   append_if(LLVM_ENABLE_WERROR "-Werror" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  if (NOT LLVM_ENABLE_TIMESTAMPS)
-    add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
-  endif ()
+  add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
   if (LLVM_ENABLE_CXX1Y)
     check_cxx_compiler_flag("-std=c++1y" CXX_SUPPORTS_CXX1Y)
     append_if(CXX_SUPPORTS_CXX1Y "-std=c++1y" CMAKE_CXX_FLAGS)

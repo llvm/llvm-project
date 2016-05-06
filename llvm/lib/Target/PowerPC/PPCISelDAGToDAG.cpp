@@ -126,7 +126,7 @@ namespace {
 
     // Select - Convert the specified operand from a target-independent to a
     // target-specific node if it hasn't already been changed.
-    SDNode *Select(SDNode *N) override;
+    SDNode *SelectImpl(SDNode *N) override;
 
     SDNode *SelectBitfieldInsert(SDNode *N);
     SDNode *SelectBitPermutation(SDNode *N);
@@ -1209,7 +1209,7 @@ class BitPermutationSelector {
                  "bit group ends at index 63 but there is another?");
           auto IN = BitGroups.begin();
 
-          if (IP->Repl32 && IN->Repl32 && I->V == IP->V && I->V == IN->V && 
+          if (IP->Repl32 && IN->Repl32 && I->V == IP->V && I->V == IN->V &&
               (I->RLAmt % 32) == IP->RLAmt && (I->RLAmt % 32) == IN->RLAmt &&
               IP->EndIdx == 31 && IN->StartIdx == 0 && I != IP &&
               IsAllLow32(*I)) {
@@ -2408,7 +2408,7 @@ SDNode *PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
 
 // Select - Convert the specified operand from a target-independent to a
 // target-specific node if it hasn't already been changed.
-SDNode *PPCDAGToDAGISel::Select(SDNode *N) {
+SDNode *PPCDAGToDAGISel::SelectImpl(SDNode *N) {
   SDLoc dl(N);
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
@@ -4384,4 +4384,3 @@ static void initializePassOnce(PassRegistry &Registry) {
 void llvm::initializePPCDAGToDAGISelPass(PassRegistry &Registry) {
   CALL_ONCE_INITIALIZATION(initializePassOnce);
 }
-

@@ -111,6 +111,7 @@ namespace lltok {
     kw_amdgpu_gs,
     kw_amdgpu_ps,
     kw_amdgpu_cs,
+    kw_amdgpu_kernel,
 
     // Attributes:
     kw_attributes,

@@ -406,7 +406,7 @@ StringRef MachineFunction::getName() const {
   return getFunction()->getName();
 }
 
-void MachineFunction::print(raw_ostream &OS, SlotIndexes *Indexes) const {
+void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
   OS << "# Machine code for function " << getName() << ": ";
   OS << "Properties: <";
   getProperties().print(OS);

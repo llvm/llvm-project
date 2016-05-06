@@ -467,6 +467,8 @@ public:
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
+  bool isTargetKFreeBSD() const { return TargetTriple.isOSKFreeBSD(); }
+  bool isTargetGlibc() const { return TargetTriple.isOSGlibc(); }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetNaCl32() const { return isTargetNaCl() && !is64Bit(); }

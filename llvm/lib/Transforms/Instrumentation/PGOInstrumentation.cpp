@@ -48,6 +48,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/PGOInstrumentation.h"
 #include "CFGMST.h"
 #include "IndirectCallSiteVisitor.h"
 #include "llvm/ADT/STLExtras.h"
@@ -71,6 +72,7 @@
 #include "llvm/Support/JamCRC.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -110,12 +112,13 @@ static cl::opt<unsigned> MaxNumAnnotations(
              "call callsite"));
 
 namespace {
-class PGOInstrumentationGen : public ModulePass {
+class PGOInstrumentationGenLegacyPass : public ModulePass {
 public:
   static char ID;
 
-  PGOInstrumentationGen() : ModulePass(ID) {
-    initializePGOInstrumentationGenPass(*PassRegistry::getPassRegistry());
+  PGOInstrumentationGenLegacyPass() : ModulePass(ID), PGOInstrGen() {
+    initializePGOInstrumentationGenLegacyPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   const char *getPassName() const override {
@@ -123,6 +126,7 @@ public:
   }
 
 private:
+  PGOInstrumentationGen PGOInstrGen;
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -157,16 +161,16 @@ private:
 };
 } // end anonymous namespace
 
-char PGOInstrumentationGen::ID = 0;
-INITIALIZE_PASS_BEGIN(PGOInstrumentationGen, "pgo-instr-gen",
+char PGOInstrumentationGenLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
                       "PGO instrumentation.", false, false)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_END(PGOInstrumentationGen, "pgo-instr-gen",
+INITIALIZE_PASS_END(PGOInstrumentationGenLegacyPass, "pgo-instr-gen",
                     "PGO instrumentation.", false, false)
 
-ModulePass *llvm::createPGOInstrumentationGenPass() {
-  return new PGOInstrumentationGen();
+ModulePass *llvm::createPGOInstrumentationGenLegacyPass() {
+  return new PGOInstrumentationGenLegacyPass();
 }
 
 char PGOInstrumentationUse::ID = 0;
@@ -788,7 +792,7 @@ static bool InstrumentAllFunctions(
   return true;
 }
 
-bool PGOInstrumentationGen::runOnModule(Module &M) {
+bool PGOInstrumentationGenLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
@@ -799,6 +803,24 @@ bool PGOInstrumentationGen::runOnModule(Module &M) {
     return this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
   return InstrumentAllFunctions(M, LookupBPI, LookupBFI);
+}
+
+PreservedAnalyses PGOInstrumentationGen::run(Module &M,
+                                             AnalysisManager<Module> &AM) {
+
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto LookupBPI = [&FAM](Function &F) -> BranchProbabilityInfo & {
+    return FAM.getResult<BranchProbabilityAnalysis>(F);
+  };
+
+  auto LookupBFI = [&FAM](Function &F) -> BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+
+  if (!InstrumentAllFunctions(M, LookupBPI, LookupBFI))
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
 }
 
 static void setPGOCountOnFunc(PGOUseFunc &Func,

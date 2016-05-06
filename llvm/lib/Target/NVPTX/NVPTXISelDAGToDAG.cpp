@@ -105,7 +105,7 @@ bool NVPTXDAGToDAGISel::allowFMA() const {
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
-SDNode *NVPTXDAGToDAGISel::Select(SDNode *N) {
+SDNode *NVPTXDAGToDAGISel::SelectImpl(SDNode *N) {
 
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);

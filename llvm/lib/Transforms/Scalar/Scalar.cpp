@@ -71,7 +71,7 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeRegToMemPass(Registry);
   initializeRewriteStatepointsForGCPass(Registry);
   initializeSCCPPass(Registry);
-  initializeIPSCCPPass(Registry);
+  initializeIPSCCPLegacyPassPass(Registry);
   initializeSROALegacyPassPass(Registry);
   initializeSROA_DTPass(Registry);
   initializeSROA_SSAUpPass(Registry);

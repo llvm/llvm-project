@@ -1173,12 +1173,10 @@ void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
   updateLoopWithIrreducible(*OuterLoop);
 }
 
-namespace {
 // A helper function that converts a branch probability into weight.
 inline uint32_t getWeightFromBranchProb(const BranchProbability Prob) {
   return Prob.getNumerator();
 }
-} // namespace
 
 template <class BT>
 bool

@@ -12,11 +12,6 @@
 
 using namespace llvm;
 
-void AMDGPUELFStreamer::InitSections(bool NoExecStack) {
-  // Start with the .hsatext section by default.
-  SwitchSection(AMDGPU::getHSATextSection(getContext()));
-}
-
 MCELFStreamer *llvm::createAMDGPUELFStreamer(MCContext &Context,
                                            MCAsmBackend &MAB,
                                            raw_pwrite_stream &OS,

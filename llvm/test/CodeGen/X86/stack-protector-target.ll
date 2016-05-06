@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=x86_64-linux < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
 ; RUN: llc -mtriple=i386-linux-android < %s -o - | FileCheck --check-prefix=LINUX-I386 %s
 ; RUN: llc -mtriple=x86_64-linux-android < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
+; RUN: llc -mtriple=i386-kfreebsd < %s -o - | FileCheck --check-prefix=LINUX-I386 %s
+; RUN: llc -mtriple=x86_64-kfreebsd < %s -o - | FileCheck --check-prefix=LINUX-X64 %s
 
 define void @_Z1fv() sspreq {
 entry:

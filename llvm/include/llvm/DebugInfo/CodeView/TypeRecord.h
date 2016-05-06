@@ -299,7 +299,7 @@ struct FuncId {
   // Name: The null-terminated name follows.
 };
 
-// LF_CLASS, LF_STRUCT, LF_INTERFACE
+// LF_CLASS, LF_STRUCTURE, LF_INTERFACE
 struct ClassType {
   ulittle16_t MemberCount; // Number of members in FieldList.
   ulittle16_t Properties;  // ClassOptions bitset
@@ -501,6 +501,7 @@ struct OneMethod {
   bool isIntroducedVirtual() const { return Attrs.isIntroducedVirtual(); }
 };
 
+// LF_METHODLIST
 struct MethodListEntry {
   MemberAttributes Attrs;
   ulittle16_t Padding;
@@ -559,7 +560,7 @@ struct BaseClass {
   // BaseOffset: LF_NUMERIC encoded byte offset of base from derived.
 };
 
-// LF_VBCLASS | LV_IVBCLASS
+// LF_VBCLASS, LF_IVBCLASS
 struct VirtualBaseClass {
   MemberAttributes Attrs; // Access control attributes, etc.
   TypeIndex BaseType;     // Base class type

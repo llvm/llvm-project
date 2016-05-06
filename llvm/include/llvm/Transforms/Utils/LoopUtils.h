@@ -30,8 +30,10 @@ class DominatorTree;
 class Loop;
 class LoopInfo;
 class Pass;
+class PredicatedScalarEvolution;
 class PredIteratorCache;
 class ScalarEvolution;
+class SCEV;
 class TargetLibraryInfo;
 
 /// \brief Captures loop safety information.
@@ -287,8 +289,22 @@ public:
   InductionKind getKind() const { return IK; }
   ConstantInt *getStepValue() const { return StepValue; }
 
+  /// Returns true if \p Phi is an induction. If \p Phi is an induction,
+  /// the induction descriptor \p D will contain the data describing this
+  /// induction. If by some other means the caller has a better SCEV
+  /// expression for \p Phi than the one returned by the ScalarEvolution
+  /// analysis, it can be passed through \p Expr.
   static bool isInductionPHI(PHINode *Phi, ScalarEvolution *SE,
-                             InductionDescriptor &D);
+                             InductionDescriptor &D,
+                             const SCEV *Expr = nullptr);
+
+  /// Returns true if \p Phi is an induction, in the context associated with
+  /// the run-time predicate of PSE. If \p Assume is true, this can add further
+  /// SCEV predicates to \p PSE in order to prove that \p Phi is an induction.
+  /// If \p Phi is an induction, \p D will contain the data describing this
+  /// induction.
+  static bool isInductionPHI(PHINode *Phi, PredicatedScalarEvolution &PSE,
+                             InductionDescriptor &D, bool Assume = false);
 
 private:
   /// Private constructor - used by \c isInductionPHI.

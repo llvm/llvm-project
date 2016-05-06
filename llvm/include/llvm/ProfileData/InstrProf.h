@@ -813,6 +813,8 @@ namespace RawInstrProf {
 // struct has more fields to describe value profile information.
 // Version 3: Compressed name section support. Function PGO name reference
 // from control data struct is changed from raw pointer to Name's MD5 value.
+// Version 4: ValueDataBegin and ValueDataSizes fields are removed from the
+// raw header.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();

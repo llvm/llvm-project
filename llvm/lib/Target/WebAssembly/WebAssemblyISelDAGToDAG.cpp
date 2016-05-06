@@ -54,7 +54,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  SDNode *Select(SDNode *Node) override;
+  SDNode *SelectImpl(SDNode *Node) override;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
@@ -67,7 +67,7 @@ private:
 };
 } // end anonymous namespace
 
-SDNode *WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
+SDNode *WebAssemblyDAGToDAGISel::SelectImpl(SDNode *Node) {
   // Dump information about the Node being selected.
   DEBUG(errs() << "Selecting: ");
   DEBUG(Node->dump(CurDAG));

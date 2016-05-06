@@ -950,23 +950,7 @@ void SelectionDAGISel::DoInstructionSelection() {
       if (Node->use_empty())
         continue;
 
-      SDNode *ResNode = Select(Node);
-
-      // FIXME: This is pretty gross.  'Select' should be changed to not return
-      // anything at all and this code should be nuked with a tactical strike.
-
-      // If node should not be replaced, continue with the next one.
-      if (ResNode == Node || Node->getOpcode() == ISD::DELETED_NODE)
-        continue;
-      // Replace node.
-      if (ResNode) {
-        ReplaceUses(Node, ResNode);
-      }
-
-      // If after the replacement this node is not used any more,
-      // remove this dead node.
-      if (Node->use_empty()) // Don't delete EntryToken, etc.
-        CurDAG->RemoveDeadNode(Node);
+      Select(Node);
     }
 
     CurDAG->setRoot(Dummy.getValue());
@@ -2162,14 +2146,11 @@ GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
   return Val;
 }
 
-/// UpdateChainsAndGlue - When a match is complete, this method updates uses of
-/// interior glue and chain results to use the new glue and chain results.
-void SelectionDAGISel::
-UpdateChainsAndGlue(SDNode *NodeToMatch, SDValue InputChain,
-                    const SmallVectorImpl<SDNode*> &ChainNodesMatched,
-                    SDValue InputGlue,
-                    const SmallVectorImpl<SDNode*> &GlueResultNodesMatched,
-                    bool isMorphNodeTo) {
+/// When a match is complete, this method updates uses of interior chain results
+/// to use the new results.
+void SelectionDAGISel::UpdateChains(
+    SDNode *NodeToMatch, SDValue InputChain,
+    const SmallVectorImpl<SDNode *> &ChainNodesMatched, bool isMorphNodeTo) {
   SmallVector<SDNode*, 4> NowDeadNodes;
 
   // Now that all the normal results are replaced, we replace the chain and
@@ -2201,29 +2182,6 @@ UpdateChainsAndGlue(SDNode *NodeToMatch, SDValue InputChain,
       if (ChainNode->use_empty() &&
           !std::count(NowDeadNodes.begin(), NowDeadNodes.end(), ChainNode))
         NowDeadNodes.push_back(ChainNode);
-    }
-  }
-
-  // If the result produces glue, update any glue results in the matched
-  // pattern with the glue result.
-  if (InputGlue.getNode()) {
-    // Handle any interior nodes explicitly marked.
-    for (unsigned i = 0, e = GlueResultNodesMatched.size(); i != e; ++i) {
-      SDNode *FRN = GlueResultNodesMatched[i];
-
-      // If this node was already deleted, don't look at it.
-      if (FRN->getOpcode() == ISD::DELETED_NODE)
-        continue;
-
-      assert(FRN->getValueType(FRN->getNumValues()-1) == MVT::Glue &&
-             "Doesn't have a glue result");
-      CurDAG->ReplaceAllUsesOfValueWith(SDValue(FRN, FRN->getNumValues()-1),
-                                        InputGlue);
-
-      // If the node became dead and we haven't already seen it, delete it.
-      if (FRN->use_empty() &&
-          !std::count(NowDeadNodes.begin(), NowDeadNodes.end(), FRN))
-        NowDeadNodes.push_back(FRN);
     }
   }
 
@@ -2707,7 +2665,7 @@ struct MatchScope {
   SDValue InputChain, InputGlue;
 
   /// HasChainNodesMatched - True if the ChainNodesMatched list is non-empty.
-  bool HasChainNodesMatched, HasGlueResultNodesMatched;
+  bool HasChainNodesMatched;
 };
 
 /// \\brief A DAG update listener to keep the matching state
@@ -2820,7 +2778,6 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
   // which ones they are.  The result is captured into this list so that we can
   // update the chain results when the pattern is complete.
   SmallVector<SDNode*, 3> ChainNodesMatched;
-  SmallVector<SDNode*, 3> GlueResultNodesMatched;
 
   DEBUG(dbgs() << "ISEL: Starting pattern match on root node: ";
         NodeToMatch->dump(CurDAG);
@@ -2926,7 +2883,6 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
       NewEntry.InputChain = InputChain;
       NewEntry.InputGlue = InputGlue;
       NewEntry.HasChainNodesMatched = !ChainNodesMatched.empty();
-      NewEntry.HasGlueResultNodesMatched = !GlueResultNodesMatched.empty();
       MatchScopes.push_back(NewEntry);
       continue;
     }
@@ -3469,25 +3425,9 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
 
       // If this was a MorphNodeTo then we're completely done!
       if (IsMorphNodeTo) {
-        // Update chain and glue uses.
-        UpdateChainsAndGlue(NodeToMatch, InputChain, ChainNodesMatched,
-                            InputGlue, GlueResultNodesMatched, true);
+        // Update chain uses.
+        UpdateChains(NodeToMatch, InputChain, ChainNodesMatched, true);
         return Res;
-      }
-      continue;
-    }
-
-    case OPC_MarkGlueResults: {
-      unsigned NumNodes = MatcherTable[MatcherIndex++];
-
-      // Read and remember all the glue-result nodes.
-      for (unsigned i = 0; i != NumNodes; ++i) {
-        unsigned RecNo = MatcherTable[MatcherIndex++];
-        if (RecNo & 128)
-          RecNo = GetVBR(RecNo, MatcherTable, MatcherIndex);
-
-        assert(RecNo < RecordedNodes.size() && "Invalid MarkGlueResults");
-        GlueResultNodesMatched.push_back(RecordedNodes[RecNo].first.getNode());
       }
       continue;
     }
@@ -3519,13 +3459,18 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
         CurDAG->ReplaceAllUsesOfValueWith(SDValue(NodeToMatch, i), Res);
       }
 
-      // If the root node defines glue, add it to the glue nodes to update list.
-      if (NodeToMatch->getValueType(NodeToMatch->getNumValues()-1) == MVT::Glue)
-        GlueResultNodesMatched.push_back(NodeToMatch);
+      // Update chain uses.
+      UpdateChains(NodeToMatch, InputChain, ChainNodesMatched, false);
 
-      // Update chain and glue uses.
-      UpdateChainsAndGlue(NodeToMatch, InputChain, ChainNodesMatched,
-                          InputGlue, GlueResultNodesMatched, false);
+      // If the root node defines glue, we need to update it to the glue result.
+      // TODO: This never happens in our tests and I think it can be removed /
+      // replaced with an assert, but if we do it this the way the change is
+      // NFC.
+      if (NodeToMatch->getValueType(NodeToMatch->getNumValues() - 1) ==
+              MVT::Glue &&
+          InputGlue.getNode())
+        CurDAG->ReplaceAllUsesOfValueWith(
+            SDValue(NodeToMatch, NodeToMatch->getNumValues() - 1), InputGlue);
 
       assert(NodeToMatch->use_empty() &&
              "Didn't replace all uses of the node?");
@@ -3565,8 +3510,6 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
       InputGlue = LastScope.InputGlue;
       if (!LastScope.HasChainNodesMatched)
         ChainNodesMatched.clear();
-      if (!LastScope.HasGlueResultNodesMatched)
-        GlueResultNodesMatched.clear();
 
       // Check to see what the offset is at the new MatcherIndex.  If it is zero
       // we have reached the end of this scope, otherwise we have another child

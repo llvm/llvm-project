@@ -1,4 +1,11 @@
-// -*- c++ -*-
+//===- llvm/ExecutionEngine/Orc/RPCChannel.h --------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_EXECUTIONENGINE_ORC_RPCCHANNEL_H
 #define LLVM_EXECUTIONENGINE_ORC_RPCCHANNEL_H
@@ -6,10 +13,15 @@
 #include "OrcError.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-
+#include "llvm/Support/Error.h"
+#include <cstddef>
+#include <cstdint>
 #include <mutex>
-#include <system_error>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -146,7 +158,7 @@ inline Error deserialize(RPCChannel &C, bool &V) {
   if (auto Err = C.readBytes(reinterpret_cast<char *>(&VN), 1))
     return Err;
 
-  V = (VN != 0) ? true : false;
+  V = (VN != 0);
   return Error::success();
 }
 
@@ -234,4 +246,4 @@ template <typename T> Error deserialize(RPCChannel &C, std::vector<T> &V) {
 } // end namespace orc
 } // end namespace llvm
 
-#endif
+#endif // LLVM_EXECUTIONENGINE_ORC_RPCCHANNEL_H

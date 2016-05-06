@@ -212,7 +212,7 @@ void PassManagerBuilder::populateFunctionPassManager(
 // Do PGO instrumentation generation or use pass as the option specified.
 void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
   if (!PGOInstrGen.empty()) {
-    MPM.add(createPGOInstrumentationGenPass());
+    MPM.add(createPGOInstrumentationGenLegacyPass());
     // Add the profile lowering pass.
     InstrProfOptions Options;
     Options.InstrProfileOutput = PGOInstrGen;

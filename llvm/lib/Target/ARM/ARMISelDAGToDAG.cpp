@@ -87,8 +87,7 @@ public:
     return CurDAG->getTargetConstant(Imm, dl, MVT::i32);
   }
 
-  SDNode *Select(SDNode *N) override;
-
+  SDNode *SelectImpl(SDNode *N) override;
 
   bool hasNoVMLxHazardUse(SDNode *N) const;
   bool isShifterOpProfitable(const SDValue &Shift,
@@ -2634,7 +2633,7 @@ SDNode *ARMDAGToDAGISel::SelectConcatVector(SDNode *N) {
   return createDRegPairNode(VT, N->getOperand(0), N->getOperand(1));
 }
 
-SDNode *ARMDAGToDAGISel::Select(SDNode *N) {
+SDNode *ARMDAGToDAGISel::SelectImpl(SDNode *N) {
   SDLoc dl(N);
 
   if (N->isMachineOpcode()) {

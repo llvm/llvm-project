@@ -2998,7 +2998,7 @@ Hexagon_di_di_Intrinsic<"HEXAGON_A2_tfrp">;
 // BUILTIN_INFO(HEXAGON.A2_tfrpi,DI_ftype_SI,1)
 //
 def int_hexagon_A2_tfrpi :
-Hexagon_di_di_Intrinsic<"HEXAGON_A2_tfrpi">;
+Hexagon_di_si_Intrinsic<"HEXAGON_A2_tfrpi">;
 //
 // BUILTIN_INFO(HEXAGON.A2_zxtb,SI_ftype_SI,1)
 //

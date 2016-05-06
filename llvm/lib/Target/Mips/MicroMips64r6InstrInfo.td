@@ -43,6 +43,10 @@ class DADDU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"daddu", 0b101010000>;
 class LDPC_MMR646_ENC : PCREL18_FM_MMR6<0b110>;
 class DSUB_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dsub", 0b110010000>;
 class DSUBU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dsubu", 0b111010000>;
+class DMUL_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmul", 0b000011000>;
+class DMUH_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmuh", 0b001011000>;
+class DMULU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmulu", 0b010011000>;
+class DMUHU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmuhu", 0b011011000>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -146,6 +150,23 @@ class DSUBU_MM64R6_DESC : DSUB_DESC_BASE<"dsubu", GPR64Opnd, II_DSUBU, sub>;
 
 class LDPC_MM64R6_DESC : PCREL_MMR6_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3>;
 
+class MUL_MM64R6_DESC_BASE<string opstr, RegisterOperand GPROpnd,
+                           InstrItinClass Itin = NoItinerary,
+                           SDPatternOperator Op = null_frag> : MipsR6Inst {
+  dag OutOperandList = (outs GPROpnd:$rd);
+  dag InOperandList = (ins GPROpnd:$rs, GPROpnd:$rt);
+  string AsmString = !strconcat(opstr, "\t$rd, $rs, $rt");
+  InstrItinClass Itinerary = Itin;
+  list<dag> Pattern = [(set GPROpnd:$rd, (Op GPROpnd:$rs, GPROpnd:$rt))];
+}
+
+class DMUL_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmul", GPR64Opnd, II_DMUL, mul>;
+class DMUH_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmuh", GPR64Opnd, II_DMUH,
+                                              mulhs>;
+class DMULU_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmulu", GPR64Opnd, II_DMULU>;
+class DMUHU_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmuhu", GPR64Opnd, II_DMUHU,
+                                               mulhu>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -201,6 +222,14 @@ let DecoderNamespace = "MicroMipsR6" in {
   def DSUB_MM64R6 : StdMMR6Rel, DSUB_MM64R6_DESC, DSUB_MM64R6_ENC,
                     ISA_MICROMIPS64R6;
   def DSUBU_MM64R6 : StdMMR6Rel, DSUBU_MM64R6_DESC, DSUBU_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
+  def DMUL_MM64R6 : R6MMR6Rel, DMUL_MM64R6_DESC, DMUL_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DMUH_MM64R6 : R6MMR6Rel, DMUH_MM64R6_DESC, DMUH_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DMULU_MM64R6 : R6MMR6Rel, DMULU_MM64R6_DESC, DMULU_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
+  def DMUHU_MM64R6 : R6MMR6Rel, DMUHU_MM64R6_DESC, DMUHU_MM64R6_ENC,
                      ISA_MICROMIPS64R6;
 }
 
