@@ -12,6 +12,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Log.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -141,25 +142,44 @@ ThreadPlanShouldStopHere::DefaultStepFromHereCallback (ThreadPlan *current_plan,
     // If we are stepping through code at line number 0, then we need to step over this range.  Otherwise
     // we will step out.
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_STEP));
+
     StackFrame *frame = current_plan->GetThread().GetStackFrameAtIndex(0).get();
     if (!frame)
         return return_plan_sp;
-
     SymbolContext sc;
-    sc = frame->GetSymbolContext (eSymbolContextLineEntry);
+    sc = frame->GetSymbolContext (eSymbolContextLineEntry|eSymbolContextSymbol);
+
     if (sc.line_entry.line == 0)
     {
         AddressRange range = sc.line_entry.range;
-        if (log)
-            log->Printf ("ThreadPlanShouldStopHere::DefaultStepFromHereCallback Queueing StepInRange plan to step through line 0 code.");
-        
-        return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepInRange(false,
-                                                                                   range,
-                                                                                   sc,
-                                                                                   NULL,
-                                                                                   eOnlyDuringStepping,
-                                                                                   eLazyBoolCalculate,
-                                                                                   eLazyBoolNo);
+
+	// If the whole function is marked line 0 just step out, that's easier & faster than continuing
+        // to step through it.
+	bool just_step_out = false;
+	if (sc.symbol && sc.symbol->ValueIsAddress())
+        {
+	    Address symbol_end = sc.symbol->GetAddress();
+	    symbol_end.Slide(sc.symbol->GetByteSize() - 1);
+            if (range.ContainsFileAddress(sc.symbol->GetAddress()) && range.ContainsFileAddress(symbol_end))
+	    {
+	        if (log)
+	            log->Printf("Stopped in a function with only line 0 lines, just stepping out.");
+                just_step_out = true;
+	    }
+	}
+        if (!just_step_out)
+        {
+            if (log)
+                log->Printf ("ThreadPlanShouldStopHere::DefaultStepFromHereCallback Queueing StepInRange plan to step through line 0 code.");
+            
+            return_plan_sp = current_plan->GetThread().QueueThreadPlanForStepInRange(false,
+                                                                                     range,
+                                                                                     sc,
+                                                                                     NULL,
+                                                                                     eOnlyDuringStepping,
+                                                                                     eLazyBoolCalculate,
+                                                                                     eLazyBoolNo);
+        }
     }
     
     if (!return_plan_sp)

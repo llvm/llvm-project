@@ -25,8 +25,6 @@ class TestSwiftStepping(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.skipIfDarwin # https://bugs.swift.org/browse/SR-1336
-    @decorators.skipIfLinux # https://bugs.swift.org/browse/SR-1336
     @decorators.swiftTest
     def test_swift_stepping(self):
         """Tests that we can step reliably in swift code."""
