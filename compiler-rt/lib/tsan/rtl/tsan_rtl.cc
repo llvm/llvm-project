@@ -341,6 +341,7 @@ void Initialize(ThreadState *thr) {
   InitializeDynamicAnnotations();
 #ifndef SANITIZER_GO
   InitializeShadowMemory();
+  InitializeAllocatorLate();
 #endif
   // Setup correct file descriptor for error reports.
   __sanitizer_set_report_path(common_flags()->log_path);

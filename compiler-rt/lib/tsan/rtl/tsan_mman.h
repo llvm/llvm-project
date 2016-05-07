@@ -20,6 +20,7 @@ namespace __tsan {
 const uptr kDefaultAlignment = 16;
 
 void InitializeAllocator();
+void InitializeAllocatorLate();
 void ReplaceSystemMalloc();
 void AllocatorProcStart(Processor *proc);
 void AllocatorProcFinish(Processor *proc);

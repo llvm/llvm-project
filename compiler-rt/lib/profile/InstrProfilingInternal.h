@@ -98,22 +98,26 @@ int lprofBufferIOFlush(ProfBufferIO *BufferIO);
 uint32_t lprofBufferWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
                            void **WriterCtx);
 
+typedef struct ValueProfData *(*VPGatherHookType)(
+    const __llvm_profile_data *Data);
 int lprofWriteData(WriterCallback Writer, void *WriterCtx,
-                   struct ValueProfData **ValueDataArray,
-                   const uint64_t ValueDataSize);
+                   VPGatherHookType VPDataGatherer);
 int lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
                        const __llvm_profile_data *DataBegin,
                        const __llvm_profile_data *DataEnd,
                        const uint64_t *CountersBegin,
                        const uint64_t *CountersEnd,
-                       struct ValueProfData **ValueDataBeginArray,
-                       const uint64_t ValueDataSize, const char *NamesBegin,
+                       VPGatherHookType VPDataGatherer, const char *NamesBegin,
                        const char *NamesEnd);
+/* Gather value profile data from \c Data and return it. */
+struct ValueProfData *lprofGatherValueProfData(const __llvm_profile_data *Data);
+
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */
 void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
                              __llvm_profile_data *DstData);
 
+extern VPGatherHookType VPGatherHook;
 extern char *(*GetEnvHook)(const char *);
 extern void (*FreeHook)(void *);
 extern void *(*CallocHook)(size_t, size_t);

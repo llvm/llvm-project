@@ -91,42 +91,29 @@ COMPILER_RT_VISIBILITY int lprofBufferIOFlush(ProfBufferIO *BufferIO) {
   return 0;
 }
 
-COMPILER_RT_VISIBILITY int lprofWriteData(WriterCallback Writer,
-                                          void *WriterCtx,
-                                          ValueProfData **ValueDataArray,
-                                          const uint64_t ValueDataSize) {
-  /* Match logic in __llvm_profile_write_buffer(). */
-  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
-  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
-  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
-  const uint64_t *CountersEnd = __llvm_profile_end_counters();
-  const char *NamesBegin = __llvm_profile_begin_names();
-  const char *NamesEnd = __llvm_profile_end_names();
-  return lprofWriteDataImpl(Writer, WriterCtx, DataBegin, DataEnd,
-                            CountersBegin, CountersEnd, ValueDataArray,
-                            ValueDataSize, NamesBegin, NamesEnd);
-}
-
 #define VP_BUFFER_SIZE 8 * 1024
 static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
-                              ValueProfData **ValueDataBegin,
-                              uint64_t NumVData) {
+                              VPGatherHookType VPDataGatherer,
+                              const __llvm_profile_data *DataBegin,
+                              const __llvm_profile_data *DataEnd) {
   ProfBufferIO *BufferIO;
-  uint32_t I = 0, BufferSz;
+  uint32_t BufferSz;
+  const __llvm_profile_data *DI = 0;
 
-  if (!ValueDataBegin)
+  if (!VPDataGatherer)
     return 0;
 
   BufferSz = VPBufferSize ? VPBufferSize : VP_BUFFER_SIZE;
   BufferIO = lprofCreateBufferIO(Writer, WriterCtx, BufferSz);
 
-  for (I = 0; I < NumVData; I++) {
-    ValueProfData *CurVData = ValueDataBegin[I];
+  for (DI = DataBegin; DI < DataEnd; DI++) {
+    ValueProfData *CurVData = VPDataGatherer(DI);
     if (!CurVData)
       continue;
     if (lprofBufferIOWrite(BufferIO, (const uint8_t *)CurVData,
                            CurVData->TotalSize) != 0)
       return -1;
+    FreeHook(CurVData);
   }
 
   if (lprofBufferIOFlush(BufferIO) != 0)
@@ -136,13 +123,28 @@ static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
   return 0;
 }
 
+COMPILER_RT_VISIBILITY int lprofWriteData(WriterCallback Writer,
+                                          void *WriterCtx,
+                                          VPGatherHookType VPDataGatherer) {
+  /* Match logic in __llvm_profile_write_buffer(). */
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
+  const uint64_t *CountersEnd = __llvm_profile_end_counters();
+  const char *NamesBegin = __llvm_profile_begin_names();
+  const char *NamesEnd = __llvm_profile_end_names();
+  return lprofWriteDataImpl(Writer, WriterCtx, DataBegin, DataEnd,
+                            CountersBegin, CountersEnd, VPDataGatherer,
+                            NamesBegin, NamesEnd);
+}
+
 COMPILER_RT_VISIBILITY int
 lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
                    const __llvm_profile_data *DataBegin,
                    const __llvm_profile_data *DataEnd,
                    const uint64_t *CountersBegin, const uint64_t *CountersEnd,
-                   ValueProfData **ValueDataBegin, const uint64_t ValueDataSize,
-                   const char *NamesBegin, const char *NamesEnd) {
+                   VPGatherHookType VPDataGatherer, const char *NamesBegin,
+                   const char *NamesEnd) {
 
   /* Calculate size of sections. */
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
@@ -159,7 +161,7 @@ lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
   if (!DataSize)
     return 0;
 
-  /* Initialize header struture.  */
+/* Initialize header structure.  */
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "InstrProfData.inc"
 
@@ -172,5 +174,6 @@ lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
   if (Writer(IOVec, sizeof(IOVec) / sizeof(*IOVec), &WriterCtx))
     return -1;
 
-  return writeValueProfData(Writer, WriterCtx, ValueDataBegin, DataSize);
+  return writeValueProfData(Writer, WriterCtx, VPDataGatherer, DataBegin,
+                            DataEnd);
 }

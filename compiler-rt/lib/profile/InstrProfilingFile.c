@@ -39,15 +39,12 @@ lprofCreateBufferIOInternal(void *File, uint32_t BufferSz) {
 
 static int writeFile(FILE *File) {
   const char *BufferSzStr = 0;
-  uint64_t ValueDataSize = 0;
-  struct ValueProfData **ValueDataArray =
-      __llvm_profile_gather_value_data(&ValueDataSize);
   FreeHook = &free;
   CallocHook = &calloc;
   BufferSzStr = getenv("LLVM_VP_BUFFER_SIZE");
   if (BufferSzStr && BufferSzStr[0])
     VPBufferSize = atoi(BufferSzStr);
-  return lprofWriteData(fileWriter, File, ValueDataArray, ValueDataSize);
+  return lprofWriteData(fileWriter, File, lprofGatherValueProfData);
 }
 
 static int writeFileWithName(const char *OutputName) {

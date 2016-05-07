@@ -2507,7 +2507,7 @@ __kmp_acquire_drdpa_lock_timed_template( kmp_drdpa_lock_t *lck, kmp_int32 gtid )
 
     KMP_FSYNC_PREPARE(lck);
     KMP_INIT_YIELD(spins);
-    while (TCR_8(polls[ticket & mask]).poll < ticket) { // volatile load
+    while (TCR_8(polls[ticket & mask].poll) < ticket) { // volatile load
         // If we are oversubscribed,
         // or have waited a bit (and KMP_LIBRARY=turnaround), then yield.
         // CPU Pause is in the macros for yield.

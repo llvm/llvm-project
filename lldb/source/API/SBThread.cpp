@@ -130,7 +130,19 @@ SBThread::GetQueue () const
 bool
 SBThread::IsValid() const
 {
-    return m_opaque_sp->GetThreadSP().get() != NULL;
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
+    Target *target = exe_ctx.GetTargetPtr();
+    Process *process = exe_ctx.GetProcessPtr();
+    if (target && process)
+    {
+        Process::StopLocker stop_locker;
+        if (stop_locker.TryLock(&process->GetRunLock()))
+        return m_opaque_sp->GetThreadSP().get() != NULL;
+    }
+    // Without a valid target & process, this thread can't be valid.
+    return false;
 }
 
 void

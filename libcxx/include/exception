@@ -80,6 +80,10 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <__config>
 #include <cstddef>
 #include <type_traits>
+#if defined(_LIBCPP_NO_EXCEPTIONS)
+#include <cstdio>
+#include <cstdlib>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -250,5 +254,20 @@ rethrow_if_nested(const _Ep&, typename enable_if<
 }
 
 }  // std
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Exception>
+_LIBCPP_INLINE_VISIBILITY
+inline void __libcpp_throw(_Exception const& __e) {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw __e;
+#else
+    _VSTD::fprintf(stderr, "%s\n", __e.what());
+    _VSTD::abort();
+#endif
+}
+
+_LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_EXCEPTION

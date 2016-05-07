@@ -746,9 +746,11 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // can process some of it and and just ask the dynamic linker to add the
     // load address.
     if (!Config->Pic || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body)) {
-      if (Config->EMachine == EM_MIPS && Body.isLocal() &&
-          (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
-        Addend += File.getMipsGp0();
+      if (Config->EMachine == EM_MIPS && Expr == R_GOTREL) {
+        Addend -= MipsGPOffset;
+        if (Body.isLocal())
+          Addend += File.getMipsGp0();
+      }
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       continue;
     }

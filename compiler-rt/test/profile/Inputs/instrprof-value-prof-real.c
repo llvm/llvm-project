@@ -53,7 +53,6 @@ int main() {
   return 0;
 }
 
-// IR: :ir
 // CHECK-LABEL:  main:
 // CHECK:	[ 0, foo_1_1_1_1_1_1_1_1_1, 1000 ]
 // CHECK-NEXT:	[ 0, foo_1_1_1_1_1_1_1_1_2, 999 ]
