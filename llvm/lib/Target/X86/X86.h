@@ -72,6 +72,12 @@ FunctionPass *createX86WinEHStatePass();
 /// must run after prologue/epilogue insertion and before lowering
 /// the MachineInstr to MC.
 FunctionPass *createX86ExpandPseudoPass();
+
+/// Return a Machine IR pass that selectively replaces
+/// certain byte and word instructions by equivalent 32 bit instructions,
+/// in order to eliminate partial register usage, false dependences on
+/// the upper portions of registers, and to save code size.
+FunctionPass *createX86FixupBWInsts();
 } // End llvm namespace
 
 #endif

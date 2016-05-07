@@ -274,6 +274,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86IssueVZeroUpperPass());
 
   if (getOptLevel() != CodeGenOpt::None) {
+    addPass(createX86FixupBWInsts());
     addPass(createX86PadShortFunctions());
     addPass(createX86FixupLEAs());
   }
