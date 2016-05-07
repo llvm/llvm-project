@@ -201,6 +201,12 @@ The most important command line options are:
 ``-timeout``
   Timeout in seconds, default 1200. If an input takes longer than this timeout,
   the process is treated as a failure case.
+``-rss_limit_mb``
+  Memory usage limit in Mb, default 2048. Use 0 to disable the limit.
+  If an input requires more than this amount of RSS memory to execute,
+  the process is treated as a failure case.
+  The limit is checked in a separate thread every second.
+  If running w/o ASAN/MSAN, you may use 'ulimit -v' instead.
 ``-timeout_exitcode``
   Exit code (default 77) to emit when terminating due to timeout, when
   ``-abort_on_timeout`` is not set.
@@ -618,14 +624,18 @@ Startup initialization
 ----------------------
 If the library being tested needs to be initialized, there are several options.
 
-The simplest way is to have a statically initialized global object:
+The simplest way is to have a statically initialized global object inside
+`LLVMFuzzerTestOneInput` (or in global scope if that works for you):
 
 .. code-block:: c++
 
-   static bool Initialized = DoInitialization();
+  extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+    static bool Initialized = DoInitialization();
+    ...
 
 Alternatively, you may define an optional init function and it will receive
-the program arguments that you can read and modify:
+the program arguments that you can read and modify. Do this **only** if you
+realy need to access ``argv``/``argc``.
 
 .. code-block:: c++
 
@@ -653,9 +663,7 @@ pass and if the actual leak is found, it will be reported with the reproducer
 and the process will exit.
 
 If your target has massive leaks and the leak detection is disabled
-you will eventually run out of RAM.
-To protect your machine from OOM death you may use
-e.g. ``ASAN_OPTIONS=hard_rss_limit_mb=2000`` (with AddressSanitizer_).
+you will eventually run out of RAM (see the ``-rss_limit_mb`` flag).
 
 
 Fuzzing components of LLVM
@@ -810,6 +818,8 @@ Trophies
 * Radare2: `[1] <https://github.com/revskills?tab=contributions&from=2016-04-09>`__
 
 * gRPC: `[1] <https://github.com/grpc/grpc/pull/6071/commits/df04c1f7f6aec6e95722ec0b023a6b29b6ea871c>`__ `[2] <https://github.com/grpc/grpc/pull/6071/commits/22a3dfd95468daa0db7245a4e8e6679a52847579>`__ `[3] <https://github.com/grpc/grpc/pull/6071/commits/9cac2a12d9e181d130841092e9d40fa3309d7aa7>`__ `[4] <https://github.com/grpc/grpc/pull/6012/commits/82a91c91d01ce9b999c8821ed13515883468e203>`__ `[5] <https://github.com/grpc/grpc/pull/6202/commits/2e3e0039b30edaf89fb93bfb2c1d0909098519fa>`__ `[6] <https://github.com/grpc/grpc/pull/6106/files>`__
+
+* WOFF2: `[1] <https://github.com/google/woff2/commit/a15a8ab>`__
 
 * LLVM: `Clang <https://llvm.org/bugs/show_bug.cgi?id=23057>`_, `Clang-format <https://llvm.org/bugs/show_bug.cgi?id=23052>`_, `libc++ <https://llvm.org/bugs/show_bug.cgi?id=24411>`_, `llvm-as <https://llvm.org/bugs/show_bug.cgi?id=24639>`_, Disassembler: http://reviews.llvm.org/rL247405, http://reviews.llvm.org/rL247414, http://reviews.llvm.org/rL247416, http://reviews.llvm.org/rL247417, http://reviews.llvm.org/rL247420, http://reviews.llvm.org/rL247422.
 

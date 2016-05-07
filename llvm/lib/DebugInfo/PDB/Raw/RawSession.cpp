@@ -8,11 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
+
+#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -25,33 +28,32 @@ RawSession::RawSession(std::unique_ptr<PDBFile> PdbFile)
 
 RawSession::~RawSession() {}
 
-PDB_ErrorCode RawSession::createFromPdb(StringRef Path,
-                                        std::unique_ptr<IPDBSession> &Session) {
+Error RawSession::createFromPdb(StringRef Path,
+                                std::unique_ptr<IPDBSession> &Session) {
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
       MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
                                    /*RequiresNullTerminator=*/false);
 
-  std::error_code EC;
-  if ((EC = ErrorOrBuffer.getError()))
-    return PDB_ErrorCode::CouldNotCreateImpl;
+  if (ErrorOrBuffer.getError())
+    return make_error<GenericError>(generic_error_code::invalid_path, Path);
 
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
 
   std::unique_ptr<PDBFile> File(new PDBFile(std::move(Buffer)));
-  if ((EC = File->parseFileHeaders()))
-    return PDB_ErrorCode::InvalidFileFormat;
-  if ((EC = File->parseStreamData()))
-    return PDB_ErrorCode::InvalidFileFormat;
+  if (auto EC = File->parseFileHeaders())
+    return EC;
+  if (auto EC = File->parseStreamData())
+    return EC;
 
   Session.reset(new RawSession(std::move(File)));
 
-  return PDB_ErrorCode::Success;
+  return Error::success();
 }
 
-PDB_ErrorCode RawSession::createFromExe(StringRef Path,
-                                        std::unique_ptr<IPDBSession> &Session) {
-  return PDB_ErrorCode::CouldNotCreateImpl;
+Error RawSession::createFromExe(StringRef Path,
+                                std::unique_ptr<IPDBSession> &Session) {
+  return llvm::make_error<RawError>(raw_error_code::feature_unsupported);
 }
 
 uint64_t RawSession::getLoadAddress() const { return 0; }

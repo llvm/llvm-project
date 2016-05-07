@@ -64,13 +64,11 @@ public:
 class GenericBinaryError : public ErrorInfo<GenericBinaryError, BinaryError> {
 public:
   static char ID;
-  GenericBinaryError(std::string FileName, Twine Msg);
-  GenericBinaryError(std::string FileName, Twine Msg, object_error ECOverride);
-  const std::string &getFileName() const { return FileName; }
+  GenericBinaryError(Twine Msg);
+  GenericBinaryError(Twine Msg, object_error ECOverride);
   const std::string &getMessage() const { return Msg; }
   void log(raw_ostream &OS) const override;
 private:
-  std::string FileName;
   std::string Msg;
 };
 

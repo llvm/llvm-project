@@ -60,7 +60,7 @@ define i8 @reassociate_ands_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 ; CHECK-NEXT:    subb  %sil, %dil
 ; CHECK-NEXT:    andb  %cl, %dl
 ; CHECK-NEXT:    andb  %dil, %dl
-; CHECK-NEXT:    movb  %dl, %al
+; CHECK-NEXT:    movl  %edx, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i8 %x0, %x1
   %t1 = and i8 %x2, %t0
@@ -107,7 +107,7 @@ define i8 @reassociate_ors_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 ; CHECK-NEXT:    subb  %sil, %dil
 ; CHECK-NEXT:    orb   %cl, %dl
 ; CHECK-NEXT:    orb   %dil, %dl
-; CHECK-NEXT:    movb  %dl, %al
+; CHECK-NEXT:    movl  %edx, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i8 %x0, %x1
   %t1 = or i8 %x2, %t0
@@ -154,7 +154,7 @@ define i8 @reassociate_xors_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 ; CHECK-NEXT:    subb  %sil, %dil
 ; CHECK-NEXT:    xorb  %cl, %dl
 ; CHECK-NEXT:    xorb  %dil, %dl
-; CHECK-NEXT:    movb  %dl, %al
+; CHECK-NEXT:    movl  %edx, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i8 %x0, %x1
   %t1 = xor i8 %x2, %t0

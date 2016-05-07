@@ -1349,7 +1349,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
   Value *CallTarget = CS.getCalledValue();
   if (Function *F = dyn_cast<Function>(CallTarget)) {
     if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize) {
-      // Calls to llvm.experimental.deoptimize are lowered to calls the the
+      // Calls to llvm.experimental.deoptimize are lowered to calls to the
       // __llvm_deoptimize symbol.  We want to resolve this now, since the
       // verifier does not allow taking the address of an intrinsic function.
 

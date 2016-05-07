@@ -318,19 +318,6 @@ enum class PDB_RegisterId {
 
 enum class PDB_MemberAccess { Private = 1, Protected = 2, Public = 3 };
 
-enum class PDB_ErrorCode {
-  Success,
-  NoDiaSupport,
-  CouldNotCreateImpl,
-  InvalidPath,
-  InvalidFileFormat,
-  InvalidParameter,
-  AlreadyLoaded,
-  UnknownError,
-  NoMemory,
-  DebugInfoMismatch
-};
-
 struct VersionInfo {
   uint32_t Major;
   uint32_t Minor;

@@ -9,7 +9,7 @@
 
 #include "OrcCBindingsStack.h"
 
-#include "llvm/ExecutionEngine/Orc/OrcArchitectureSupport.h"
+#include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include <cstdio>
@@ -29,8 +29,13 @@ OrcCBindingsStack::createCompileCallbackMgr(Triple T) {
   };
 
   case Triple::x86_64: {
-    typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64> CCMgrT;
-    return llvm::make_unique<CCMgrT>(0);
+    if ( T.getOS() == Triple::OSType::Win32 ) {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
+      return llvm::make_unique<CCMgrT>(0);
+    } else {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
+      return llvm::make_unique<CCMgrT>(0);
+    }
   }
   }
 }
@@ -47,9 +52,16 @@ OrcCBindingsStack::createIndirectStubsMgrBuilder(Triple T) {
     };
 
   case Triple::x86_64:
-    return []() {
-      return llvm::make_unique<
-          orc::LocalIndirectStubsManager<orc::OrcX86_64>>();
-    };
+    if (T.getOS() == Triple::OSType::Win32) {
+      return [](){
+        return llvm::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcX86_64_Win32>>();
+      };
+    } else {
+      return [](){
+        return llvm::make_unique<
+          orc::LocalIndirectStubsManager<orc::OrcX86_64_SysV>>();
+      };
+    }
   }
 }

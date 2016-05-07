@@ -8,11 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 
 using namespace llvm;
@@ -77,49 +79,66 @@ DbiStream::DbiStream(PDBFile &File) : Pdb(File), Stream(StreamDBI, File) {
 
 DbiStream::~DbiStream() {}
 
-std::error_code DbiStream::reload() {
+Error DbiStream::reload() {
   StreamReader Reader(Stream);
 
   Header.reset(new HeaderInfo());
 
   if (Stream.getLength() < sizeof(HeaderInfo))
-    return std::make_error_code(std::errc::illegal_byte_sequence);
-  Reader.readObject(Header.get());
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI Stream does not contain a header.");
+  if (auto EC = Reader.readObject(Header.get()))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI Stream does not contain a header.");
 
   if (Header->VersionSignature != -1)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid DBI version signature.");
 
   // Require at least version 7, which should be present in all PDBs
   // produced in the last decade and allows us to avoid having to
   // special case all kinds of complicated arcane formats.
   if (Header->VersionHeader < PdbDbiV70)
-    return std::make_error_code(std::errc::not_supported);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Unsupported DBI version.");
 
-  if (Header->Age != Pdb.getPDBInfoStream().getAge())
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+  auto InfoStream = Pdb.getPDBInfoStream();
+  if (auto EC = InfoStream.takeError())
+    return EC;
+
+  if (Header->Age != InfoStream.get().getAge())
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI Age does not match PDB Age.");
 
   if (Stream.getLength() !=
       sizeof(HeaderInfo) + Header->ModiSubstreamSize +
           Header->SecContrSubstreamSize + Header->SectionMapSize +
           Header->FileInfoSize + Header->TypeServerSize +
           Header->OptionalDbgHdrSize + Header->ECSubstreamSize)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI Length does not equal sum of substreams.");
 
   // Only certain substreams are guaranteed to be aligned.  Validate
   // them here.
   if (Header->ModiSubstreamSize % sizeof(uint32_t) != 0)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI MODI substream not aligned.");
   if (Header->SecContrSubstreamSize % sizeof(uint32_t) != 0)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(
+        raw_error_code::corrupt_file,
+        "DBI section contribution substream not aligned.");
   if (Header->SectionMapSize % sizeof(uint32_t) != 0)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI section map substream not aligned.");
   if (Header->FileInfoSize % sizeof(uint32_t) != 0)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI file info substream not aligned.");
   if (Header->TypeServerSize % sizeof(uint32_t) != 0)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "DBI type server substream not aligned.");
 
-  std::error_code EC;
-  ModInfoSubstream.initialize(Reader, Header->ModiSubstreamSize);
+  if (auto EC = ModInfoSubstream.initialize(Reader, Header->ModiSubstreamSize))
+    return EC;
 
   // Since each ModInfo in the stream is a variable length, we have to iterate
   // them to know how many there actually are.
@@ -129,30 +148,33 @@ std::error_code DbiStream::reload() {
   for (auto Info : Range)
     ModuleInfos.push_back(ModuleInfoEx(Info));
 
-  if ((EC =
-           SecContrSubstream.initialize(Reader, Header->SecContrSubstreamSize)))
+  if (auto EC =
+          SecContrSubstream.initialize(Reader, Header->SecContrSubstreamSize))
     return EC;
-  if ((EC = SecMapSubstream.initialize(Reader, Header->SectionMapSize)))
+  if (auto EC = SecMapSubstream.initialize(Reader, Header->SectionMapSize))
     return EC;
-  if ((EC = FileInfoSubstream.initialize(Reader, Header->FileInfoSize)))
+  if (auto EC = FileInfoSubstream.initialize(Reader, Header->FileInfoSize))
     return EC;
-  if ((EC = TypeServerMapSubstream.initialize(Reader, Header->TypeServerSize)))
+  if (auto EC =
+          TypeServerMapSubstream.initialize(Reader, Header->TypeServerSize))
     return EC;
-  if ((EC = ECSubstream.initialize(Reader, Header->ECSubstreamSize)))
+  if (auto EC = ECSubstream.initialize(Reader, Header->ECSubstreamSize))
     return EC;
-  if ((EC = DbgHeader.initialize(Reader, Header->OptionalDbgHdrSize)))
+  if (auto EC = DbgHeader.initialize(Reader, Header->OptionalDbgHdrSize))
     return EC;
 
-  if ((EC = initializeFileInfo()))
+  if (auto EC = initializeFileInfo())
     return EC;
 
   if (Reader.bytesRemaining() > 0)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Found unexpected bytes in DBI Stream.");
 
   StreamReader ECReader(ECSubstream);
-  ECNames.load(ECReader);
+  if (auto EC = ECNames.load(ECReader))
+    return EC;
 
-  return std::error_code();
+  return Error::success();
 }
 
 PdbRaw_DbiVer DbiStream::getDbiVersion() const {
@@ -193,7 +215,7 @@ PDB_Machine DbiStream::getMachineType() const {
 
 ArrayRef<ModuleInfoEx> DbiStream::modules() const { return ModuleInfos; }
 
-std::error_code DbiStream::initializeFileInfo() {
+Error DbiStream::initializeFileInfo() {
   struct FileInfoSubstreamHeader {
     ulittle16_t NumModules;     // Total # of modules, should match number of
                                 // records in the ModuleInfo substream.
@@ -221,7 +243,8 @@ std::error_code DbiStream::initializeFileInfo() {
   // The number of modules in the stream should be the same as reported by
   // the FileInfoSubstreamHeader.
   if (FI->NumModules != ModuleInfos.size())
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "FileInfo substream count doesn't match DBI.");
 
   // First is an array of `NumModules` module indices.  This is not used for the
   // same reason that `NumSourceFiles` is not used.  It's an array of uint16's,
@@ -267,5 +290,5 @@ std::error_code DbiStream::initializeFileInfo() {
     }
   }
 
-  return std::error_code();
+  return Error::success();
 }

@@ -2190,6 +2190,9 @@ static int add_sub_vars(struct isl_coalesce_info *info,
  * variable in "tab" to the purely affine expression defined by the element.
  * "dim" is the offset in the variables of "tab" where we should
  * start considering the elements in "list".
+ *
+ * This function assumes that a sufficient number of rows and
+ * elements in the constraint array are available in the tableau.
  */
 static int add_sub_equalities(struct isl_tab *tab,
 	__isl_keep isl_aff_list *list, int dim)

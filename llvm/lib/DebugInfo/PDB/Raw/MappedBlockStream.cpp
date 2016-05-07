@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -18,17 +19,16 @@ MappedBlockStream::MappedBlockStream(uint32_t StreamIdx, const PDBFile &File) : 
   BlockList = Pdb.getStreamBlockList(StreamIdx);
 }
 
-std::error_code
-MappedBlockStream::readBytes(uint32_t Offset,
-                             MutableArrayRef<uint8_t> Buffer) const {
+Error MappedBlockStream::readBytes(uint32_t Offset,
+                                   MutableArrayRef<uint8_t> Buffer) const {
   uint32_t BlockNum = Offset / Pdb.getBlockSize();
   uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
 
   // Make sure we aren't trying to read beyond the end of the stream.
   if (Buffer.size() > StreamLength)
-    return std::make_error_code(std::errc::bad_address);
+    return make_error<RawError>(raw_error_code::insufficient_buffer);
   if (Offset > StreamLength - Buffer.size())
-    return std::make_error_code(std::errc::bad_address);
+    return make_error<RawError>(raw_error_code::insufficient_buffer);
 
   uint32_t BytesLeft = Buffer.size();
   uint32_t BytesWritten = 0;
@@ -49,11 +49,10 @@ MappedBlockStream::readBytes(uint32_t Offset,
     OffsetInBlock = 0;
   }
 
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code MappedBlockStream::getArrayRef(uint32_t Offset,
-                                               ArrayRef<uint8_t> &Buffer,
-                                               uint32_t Length) const {
-  return std::make_error_code(std::errc::not_supported);
+Error MappedBlockStream::getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
+                                     uint32_t Length) const {
+  return make_error<RawError>(raw_error_code::feature_unsupported);
 }

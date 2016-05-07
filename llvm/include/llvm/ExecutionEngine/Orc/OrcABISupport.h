@@ -1,4 +1,4 @@
-//===-- OrcArchitectureSupport.h - Architecture support code  ---*- C++ -*-===//
+//===-------------- OrcABISupport.h - ABI support code  ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Architecture specific code for Orc, e.g. callback assembly.
+// ABI specific code for Orc, e.g. callback assembly.
 //
-// Architecture classes should be part of the JIT *target* process, not the host
+// ABI classes should be part of the JIT *target* process, not the host
 // process (except where you're doing hosted JITing and the two are one and the
 // same).
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_ORCARCHITECTURESUPPORT_H
-#define LLVM_EXECUTIONENGINE_ORC_ORCARCHITECTURESUPPORT_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_ORCABISUPPORT_H
+#define LLVM_EXECUTIONENGINE_ORC_ORCABISUPPORT_H
 
 #include "IndirectionUtils.h"
 #include "llvm/Support/Memory.h"
@@ -25,13 +25,13 @@
 namespace llvm {
 namespace orc {
 
-/// Generic ORC Architecture support.
+/// Generic ORC ABI support.
 ///
 /// This class can be substituted as the target architecure support class for
 /// ORC templates that require one (e.g. IndirectStubsManagers). It does not
 /// support lazy JITing however, and any attempt to use that functionality
 /// will result in execution of an llvm_unreachable.
-class OrcGenericArchitecture {
+class OrcGenericABI {
 public:
   static const unsigned PointerSize = sizeof(uintptr_t);
   static const unsigned TrampolineSize = 1;
@@ -138,23 +138,15 @@ public:
                                       unsigned MinStubs, void *InitialPtrVal);
 };
 
-/// @brief X86_64 support.
+/// @brief X86_64 code that's common to all ABIs.
 ///
 /// X86_64 supports lazy JITing.
-class OrcX86_64 {
+class OrcX86_64_Base {
 public:
   static const unsigned PointerSize = 8;
   static const unsigned TrampolineSize = 8;
-  static const unsigned ResolverCodeSize = 0x6C;
 
   typedef GenericIndirectStubsInfo<8> IndirectStubsInfo;
-
-  typedef TargetAddress (*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
-
-  /// @brief Write the resolver code into the given memory. The user is be
-  ///        responsible for allocating the memory and setting permissions.
-  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,
-                                void *CallbackMgr);
 
   /// @brief Write the requsted number of trampolines into the given memory,
   ///        which must be big enough to hold 1 pointer, plus NumTrampolines
@@ -170,6 +162,34 @@ public:
   /// will return a block of 1024 (2-pages worth).
   static Error emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
                                       unsigned MinStubs, void *InitialPtrVal);
+};
+
+/// @brief X86_64 support for SysV ABI (Linux, MacOSX).
+///
+/// X86_64_SysV supports lazy JITing.
+class OrcX86_64_SysV : public OrcX86_64_Base {
+public:
+  static const unsigned ResolverCodeSize = 0x6C;
+  typedef TargetAddress(*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+
+  /// @brief Write the resolver code into the given memory. The user is be
+  ///        responsible for allocating the memory and setting permissions.
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,
+                                void *CallbackMgr);
+};
+
+/// @brief X86_64 support for Win32.
+///
+/// X86_64_Win32 supports lazy JITing.
+class OrcX86_64_Win32 : public OrcX86_64_Base {
+public:
+  static const unsigned ResolverCodeSize = 0x74;
+  typedef TargetAddress(*JITReentryFn)(void *CallbackMgr, void *TrampolineId);
+
+  /// @brief Write the resolver code into the given memory. The user is be
+  ///        responsible for allocating the memory and setting permissions.
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,
+                                void *CallbackMgr);
 };
 
 /// @brief I386 support.
@@ -209,4 +229,4 @@ public:
 } // End namespace orc.
 } // End namespace llvm.
 
-#endif // LLVM_EXECUTIONENGINE_ORC_ORCARCHITECTURESUPPORT_H
+#endif // LLVM_EXECUTIONENGINE_ORC_ORCABISUPPORT_H

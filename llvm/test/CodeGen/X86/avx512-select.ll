@@ -72,7 +72,7 @@ define i8 @select05(i8 %a.0, i8 %m) {
 ; CHECK-LABEL: select05:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movb %dil, %al
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>
@@ -102,7 +102,7 @@ define i8 @select06(i8 %a.0, i8 %m) {
 ; CHECK-LABEL: select06:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    andl %esi, %edi
-; CHECK-NEXT:    movb %dil, %al
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>

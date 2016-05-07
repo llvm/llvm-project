@@ -16,6 +16,8 @@
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
+#include "llvm/Support/Error.h"
+
 namespace llvm {
 namespace pdb {
 class PDBFile;
@@ -28,7 +30,7 @@ class TpiStream {
 public:
   TpiStream(PDBFile &File);
   ~TpiStream();
-  std::error_code reload();
+  Error reload();
 
   PdbRaw_TpiVer getTpiVersion() const;
 

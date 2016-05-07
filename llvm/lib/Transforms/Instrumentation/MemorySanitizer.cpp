@@ -2891,9 +2891,14 @@ struct VarArgAMD64Helper : public VarArgHelper {
          ArgIt != End; ++ArgIt) {
       Value *A = *ArgIt;
       unsigned ArgNo = CS.getArgumentNo(ArgIt);
+      bool IsFixed = ArgNo < CS.getFunctionType()->getNumParams();
       bool IsByVal = CS.paramHasAttr(ArgNo + 1, Attribute::ByVal);
       if (IsByVal) {
         // ByVal arguments always go to the overflow area.
+        // Fixed arguments passed through the overflow area will be stepped
+        // over by va_start, so don't count them towards the offset.
+        if (IsFixed)
+          continue;
         assert(A->getType()->isPointerTy());
         Type *RealTy = A->getType()->getPointerElementType();
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
@@ -2918,10 +2923,16 @@ struct VarArgAMD64Helper : public VarArgHelper {
             FpOffset += 16;
             break;
           case AK_Memory:
+            if (IsFixed)
+              continue;
             uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
             Base = getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset);
             OverflowOffset += alignTo(ArgSize, 8);
         }
+        // Take fixed arguments into account for GpOffset and FpOffset,
+        // but don't actually store shadows for them.
+        if (IsFixed)
+          continue;
         IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
       }
     }

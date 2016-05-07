@@ -20,6 +20,54 @@
 
 #include <string>
 
+// FIXME ODR: Move this to some common place for AsmParser and InstPrinter
+namespace llvm {
+namespace AMDGPU {
+namespace SendMsg {
+
+// This must be in sync with llvm::AMDGPU::SendMsg::Id enum members.
+static
+const char* const IdSymbolic[] = {
+  nullptr,
+  "MSG_INTERRUPT",
+  "MSG_GS",
+  "MSG_GS_DONE",
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  "MSG_SYSMSG"
+};
+
+// These two must be in sync with llvm::AMDGPU::SendMsg::Op enum members.
+static
+const char* const OpSysSymbolic[] = {
+  nullptr,
+  "SYSMSG_OP_ECC_ERR_INTERRUPT",
+  "SYSMSG_OP_REG_RD",
+  "SYSMSG_OP_HOST_TRAP_ACK",
+  "SYSMSG_OP_TTRACE_PC"
+};
+
+static
+const char* const OpGsSymbolic[] = {
+  "GS_OP_NOP",
+  "GS_OP_CUT",
+  "GS_OP_EMIT",
+  "GS_OP_EMIT_CUT"
+};
+
+} // namespace SendMsg
+} // namespace AMDGPU
+} // namespace llvm
+
 using namespace llvm;
 
 void AMDGPUInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
@@ -763,33 +811,42 @@ void AMDGPUInstPrinter::printKCache(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
-  unsigned SImm16 = MI->getOperand(OpNo).getImm();
-  unsigned Msg = SImm16 & 0xF;
-  if (Msg == 2 || Msg == 3) {
-    unsigned Op = (SImm16 >> 4) & 0xF;
-    if (Msg == 3)
-      O << "Gs_done(";
-    else
-      O << "Gs(";
-    if (Op == 0) {
-      O << "nop";
-    } else {
-      unsigned Stream = (SImm16 >> 8) & 0x3;
-      if (Op == 1)
-        O << "cut";
-      else if (Op == 2)
-        O << "emit";
-      else if (Op == 3)
-        O << "emit-cut";
-      O << " stream " << Stream;
+  using namespace llvm::AMDGPU::SendMsg;
+
+  const unsigned SImm16 = MI->getOperand(OpNo).getImm();
+  const unsigned Id = SImm16 & ID_MASK_;
+  do {
+    if (Id == ID_INTERRUPT) {
+      if ((SImm16 & ~ID_MASK_) != 0) // Unused/unknown bits must be 0.
+        break;
+      O << "sendmsg(" << IdSymbolic[Id] << ')';
+      return;
     }
-    O << "), [m0] ";
-  } else if (Msg == 1)
-    O << "interrupt ";
-  else if (Msg == 15)
-    O << "system ";
-  else
-    O << "unknown(" << Msg << ") ";
+    if (Id == ID_GS || Id == ID_GS_DONE) {
+      if ((SImm16 & ~(ID_MASK_|OP_GS_MASK_|STREAM_ID_MASK_)) != 0) // Unused/unknown bits must be 0.
+        break;
+      const unsigned OpGs = (SImm16 & OP_GS_MASK_) >> OP_SHIFT_;
+      const unsigned StreamId = (SImm16 & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
+      if (OpGs == OP_GS_NOP && Id != ID_GS_DONE) // NOP to be used for GS_DONE only.
+        break;
+      if (OpGs == OP_GS_NOP && StreamId != 0) // NOP does not use/define stream id bits.
+        break;
+      O << "sendmsg(" << IdSymbolic[Id] << ", " << OpGsSymbolic[OpGs];
+      if (OpGs != OP_GS_NOP) {  O << ", " << StreamId; }
+      O << ')';
+      return;
+    }
+    if (Id == ID_SYSMSG) {
+      if ((SImm16 & ~(ID_MASK_|OP_SYS_MASK_)) != 0) // Unused/unknown bits must be 0.
+        break;
+      const unsigned OpSys = (SImm16 & OP_SYS_MASK_) >> OP_SHIFT_;
+      if (! (OP_SYS_FIRST_ <= OpSys && OpSys < OP_SYS_LAST_)) // Unused/unknown.
+        break;
+      O << "sendmsg(" << IdSymbolic[Id] << ", " << OpSysSymbolic[OpSys] << ')';
+      return;
+    }
+  } while (0);
+  O << SImm16; // Unknown simm16 code.
 }
 
 void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,

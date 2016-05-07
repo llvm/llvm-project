@@ -7,7 +7,7 @@ define void @jscall_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 entry:
 ; CHECK-LABEL: jscall_patchpoint_codegen:
 ; CHECK:       Ltmp
-; CHECK:       str x{{.+}}, [sp, #-16]!
+; CHECK:       str x{{.+}}, [sp]
 ; CHECK-NEXT:  mov  x0, x{{.+}}
 ; CHECK:       Ltmp
 ; CHECK-NEXT:  movz  x16, #0xffff, lsl #32
@@ -16,7 +16,7 @@ entry:
 ; CHECK-NEXT:  blr x16
 ; FAST-LABEL:  jscall_patchpoint_codegen:
 ; FAST:        Ltmp
-; FAST:        str x{{.+}}, [sp, #-16]!
+; FAST:        str x{{.+}}, [sp]
 ; FAST:        Ltmp
 ; FAST-NEXT:   movz  x16, #0xffff, lsl #32
 ; FAST-NEXT:   movk  x16, #0xdead, lsl #16
@@ -50,7 +50,7 @@ entry:
 ; FAST:        orr [[REG1:x[0-9]+]], xzr, #0x2
 ; FAST-NEXT:   orr [[REG2:w[0-9]+]], wzr, #0x4
 ; FAST-NEXT:   orr [[REG3:x[0-9]+]], xzr, #0x6
-; FAST-NEXT:   str [[REG1]], [sp, #-32]!
+; FAST-NEXT:   str [[REG1]], [sp]
 ; FAST-NEXT:   str [[REG2]], [sp, #16]
 ; FAST-NEXT:   str [[REG3]], [sp, #24]
 ; FAST:        Ltmp
@@ -90,7 +90,7 @@ entry:
 ; FAST-NEXT:   orr [[REG3:x[0-9]+]], xzr, #0x6
 ; FAST-NEXT:   orr [[REG4:w[0-9]+]], wzr, #0x8
 ; FAST-NEXT:   movz [[REG5:x[0-9]+]], #0xa
-; FAST-NEXT:   str [[REG1]], [sp, #-64]!
+; FAST-NEXT:   str [[REG1]], [sp]
 ; FAST-NEXT:   str [[REG2]], [sp, #16]
 ; FAST-NEXT:   str [[REG3]], [sp, #24]
 ; FAST-NEXT:   str [[REG4]], [sp, #36]

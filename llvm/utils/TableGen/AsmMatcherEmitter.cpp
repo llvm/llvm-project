@@ -203,6 +203,10 @@ struct ClassInfo {
   /// Is this operand optional and not always required.
   bool IsOptional;
 
+  /// DefaultMethod - The name of the method that returns the default operand
+  /// for optional operand
+  std::string DefaultMethod;
+
 public:
   /// isRegisterClass() - Check if this is a register class.
   bool isRegisterClass() const {
@@ -768,6 +772,12 @@ public:
   RecordKeeper &getRecords() const {
     return Records;
   }
+
+  bool hasOptionalOperands() const {
+    return std::find_if(Classes.begin(), Classes.end(),
+                        [](const ClassInfo& Class){ return Class.IsOptional; })
+              != Classes.end();
+  }
 };
 
 } // end anonymous namespace
@@ -1119,6 +1129,7 @@ ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
     Entry->ParserMethod = "";
     Entry->DiagnosticType = "";
     Entry->IsOptional = false;
+    Entry->DefaultMethod = "<invalid>";
   }
 
   return Entry;
@@ -1254,6 +1265,7 @@ buildRegisterClasses(SmallPtrSetImpl<Record*> &SingletonRegisters) {
     // FIXME: diagnostic type.
     CI->DiagnosticType = "";
     CI->IsOptional = false;
+    CI->DefaultMethod = ""; // unused
     RegisterSetClasses.insert(std::make_pair(RS, CI));
     ++Index;
   }
@@ -1371,6 +1383,15 @@ void AsmMatcherInfo::buildOperandClasses() {
     Init *IsOptional = Rec->getValueInit("IsOptional");
     if (BitInit *BI = dyn_cast<BitInit>(IsOptional))
       CI->IsOptional = BI->getValue();
+
+    // Get or construct the default method name.
+    Init *DMName = Rec->getValueInit("DefaultMethod");
+    if (StringInit *SI = dyn_cast<StringInit>(DMName)) {
+      CI->DefaultMethod = SI->getValue();
+    } else {
+      assert(isa<UnsetInit>(DMName) && "Unexpected DefaultMethod field!");
+      CI->DefaultMethod = "default" + CI->ClassName + "Operands";
+    }
 
     ++Index;
   }
@@ -1808,7 +1829,8 @@ static unsigned getConverterOperandID(const std::string &Name,
 
 static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                              std::vector<std::unique_ptr<MatchableInfo>> &Infos,
-                             bool HasMnemonicFirst, raw_ostream &OS) {
+                             bool HasMnemonicFirst, bool HasOptionalOperands,
+                             raw_ostream &OS) {
   SmallSetVector<std::string, 16> OperandConversionKinds;
   SmallSetVector<std::string, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t> > ConversionTable;
@@ -1823,24 +1845,40 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   std::string ConvertFnBody;
   raw_string_ostream CvtOS(ConvertFnBody);
   // Start the unified conversion function.
-  CvtOS << "void " << Target.getName() << ClassName << "::\n"
-        << "convertToMCInst(unsigned Kind, MCInst &Inst, "
-        << "unsigned Opcode,\n"
-        << "                const OperandVector"
-        << " &Operands) {\n"
-        << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n"
-        << "  const uint8_t *Converter = ConversionTable[Kind];\n"
-        << "  Inst.setOpcode(Opcode);\n"
-        << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n"
-        << "    switch (*p) {\n"
-        << "    default: llvm_unreachable(\"invalid conversion entry!\");\n"
-        << "    case CVT_Reg:\n"
-        << "      static_cast<" << TargetOperandClass
-        << "&>(*Operands[*(p + 1)]).addRegOperands(Inst, 1);\n"
-        << "      break;\n"
-        << "    case CVT_Tied:\n"
-        << "      Inst.addOperand(Inst.getOperand(*(p + 1)));\n"
-        << "      break;\n";
+  if (HasOptionalOperands) {
+    CvtOS << "void " << Target.getName() << ClassName << "::\n"
+          << "convertToMCInst(unsigned Kind, MCInst &Inst, "
+          << "unsigned Opcode,\n"
+          << "                const OperandVector &Operands,\n"
+          << "                const SmallBitVector &OptionalOperandsMask) {\n";
+  } else {
+    CvtOS << "void " << Target.getName() << ClassName << "::\n"
+          << "convertToMCInst(unsigned Kind, MCInst &Inst, "
+          << "unsigned Opcode,\n"
+          << "                const OperandVector &Operands) {\n";
+  }
+  CvtOS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
+  CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
+  if (HasOptionalOperands) {
+    CvtOS << "  unsigned NumDefaults = 0;\n";
+  }
+  CvtOS << "  unsigned OpIdx;\n";
+  CvtOS << "  Inst.setOpcode(Opcode);\n";
+  CvtOS << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n";
+  if (HasOptionalOperands) {
+    CvtOS << "    OpIdx = *(p + 1) - NumDefaults;\n";
+  } else {
+    CvtOS << "    OpIdx = *(p + 1);\n";
+  }
+  CvtOS << "    switch (*p) {\n";
+  CvtOS << "    default: llvm_unreachable(\"invalid conversion entry!\");\n";
+  CvtOS << "    case CVT_Reg:\n";
+  CvtOS << "      static_cast<" << TargetOperandClass
+        << "&>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
+  CvtOS << "      break;\n";
+  CvtOS << "    case CVT_Tied:\n";
+  CvtOS << "      Inst.addOperand(Inst.getOperand(OpIdx));\n";
+  CvtOS << "      break;\n";
 
   std::string OperandFnBody;
   raw_string_ostream OpOS(OperandFnBody);
@@ -1934,6 +1972,11 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         // the index of its entry in the vector).
         std::string Name = "CVT_" + (Op.Class->isRegisterClass() ? "Reg" :
                                      Op.Class->RenderMethod);
+        if (Op.Class->IsOptional) {
+          // For optional operands we must also care about DefaultMethod
+          assert(HasOptionalOperands);
+          Name += "_" + Op.Class->DefaultMethod;
+        }
         Name = getEnumNameForToken(Name);
 
         bool IsNewConverter = false;
@@ -1949,11 +1992,27 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
         // This is a new operand kind. Add a handler for it to the
         // converter driver.
-        CvtOS << "    case " << Name << ":\n"
-              << "      static_cast<" << TargetOperandClass
-              << "&>(*Operands[*(p + 1)])." << Op.Class->RenderMethod
-              << "(Inst, " << OpInfo.MINumOperands << ");\n"
-              << "      break;\n";
+        CvtOS << "    case " << Name << ":\n";
+        if (Op.Class->IsOptional) {
+          // If optional operand is not present in actual instruction then we
+          // should call its DefaultMethod before RenderMethod
+          assert(HasOptionalOperands);
+          CvtOS << "      if (OptionalOperandsMask[*(p + 1) - 1]) {\n"
+                << "        " << Op.Class->DefaultMethod << "()"
+                << "->" << Op.Class->RenderMethod << "(Inst, "
+                << OpInfo.MINumOperands << ");\n"
+                << "        ++NumDefaults;\n"
+                << "      } else {\n"
+                << "        static_cast<" << TargetOperandClass
+                << "&>(*Operands[OpIdx])." << Op.Class->RenderMethod
+                << "(Inst, " << OpInfo.MINumOperands << ");\n"
+                << "      }\n";
+        } else {
+          CvtOS << "      static_cast<" << TargetOperandClass
+                << "&>(*Operands[OpIdx])." << Op.Class->RenderMethod
+                << "(Inst, " << OpInfo.MINumOperands << ");\n";
+        }
+        CvtOS << "      break;\n";
 
         // Add a handler for the operand number lookup.
         OpOS << "    case " << Name << ":\n"
@@ -2806,6 +2865,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   Info.buildOperandMatchInfo();
 
   bool HasMnemonicFirst = AsmParser->getValueAsBit("HasMnemonicFirst");
+  bool HasOptionalOperands = Info.hasOptionalOperands();
 
   // Write the output.
 
@@ -2815,10 +2875,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  // This should be included into the middle of the declaration of\n";
   OS << "  // your subclasses implementation of MCTargetAsmParser.\n";
   OS << "  uint64_t ComputeAvailableFeatures(const FeatureBitset& FB) const;\n";
-  OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
-     << "unsigned Opcode,\n"
-     << "                       const OperandVector "
-     << "&Operands);\n";
+  if (HasOptionalOperands) {
+    OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
+       << "unsigned Opcode,\n"
+       << "                       const OperandVector &Operands,\n"
+       << "                       const SmallBitVector &OptionalOperandsMask);\n";
+  } else {
+    OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
+       << "unsigned Opcode,\n"
+       << "                       const OperandVector &Operands);\n";
+  }
   OS << "  void convertToMapAndConstraints(unsigned Kind,\n                ";
   OS << "           const OperandVector &Operands) override;\n";
   if (HasMnemonicFirst)
@@ -2885,7 +2951,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Generate the convertToMCInst function to convert operands into an MCInst.
   // Also, generate the convertToMapAndConstraints function for MS-style inline
   // assembly.  The latter doesn't actually generate a MCInst.
-  emitConvertFuncs(Target, ClassName, Info.Matchables, HasMnemonicFirst, OS);
+  emitConvertFuncs(Target, ClassName, Info.Matchables, HasMnemonicFirst,
+                   HasOptionalOperands, OS);
 
   // Emit the enumeration for classes which participate in matching.
   emitMatchClassEnumeration(Target, Info.Classes, OS);
@@ -3067,6 +3134,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  bool HadMatchOtherThanPredicate = false;\n";
   OS << "  unsigned RetCode = Match_InvalidOperand;\n";
   OS << "  uint64_t MissingFeatures = ~0ULL;\n";
+  if (HasOptionalOperands) {
+    OS << "  SmallBitVector OptionalOperandsMask(" << MaxNumOperands << ");\n";
+  }
   OS << "  // Set ErrorInfo to the operand that mismatches if it is\n";
   OS << "  // wrong for all instances of the instruction.\n";
   OS << "  ErrorInfo = ~0ULL;\n";
@@ -3111,6 +3181,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   // Emit check that the subclasses match.
   OS << "    bool OperandsValid = true;\n";
+  if (HasOptionalOperands) {
+    OS << "    OptionalOperandsMask.reset(0, " << MaxNumOperands << ");\n";
+  }
   OS << "    for (unsigned FormalIdx = " << (HasMnemonicFirst ? "0" : "SIndex")
      << ", ActualIdx = " << (HasMnemonicFirst ? "1" : "SIndex")
      << "; FormalIdx != " << MaxNumOperands << "; ++FormalIdx) {\n";
@@ -3120,6 +3193,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "        OperandsValid = (Formal == " <<"InvalidMatchClass) || "
                                  "isSubclass(Formal, OptionalMatchClass);\n";
   OS << "        if (!OperandsValid) ErrorInfo = ActualIdx;\n";
+  if (HasOptionalOperands) {
+    OS << "        OptionalOperandsMask.set(FormalIdx, " << MaxNumOperands
+       << ");\n";
+  }
   OS << "        break;\n";
   OS << "      }\n";
   OS << "      MCParsedAsmOperand &Actual = *Operands[ActualIdx];\n";
@@ -3140,8 +3217,12 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      // If current formal operand wasn't matched and it is optional\n"
      << "      // then try to match next formal operand\n";
   OS << "      if (Diag == Match_InvalidOperand "
-     << "&& isSubclass(Formal, OptionalMatchClass))\n";
+     << "&& isSubclass(Formal, OptionalMatchClass)) {\n";
+  if (HasOptionalOperands) {
+    OS << "        OptionalOperandsMask.set(FormalIdx);\n";
+  }
   OS << "        continue;\n";
+  OS << "      }\n";
   OS << "      // If this operand is broken for all of the instances of this\n";
   OS << "      // mnemonic, keep track of it so we can report loc info.\n";
   OS << "      // If we already had a match that only failed due to a\n";
@@ -3180,7 +3261,12 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    }\n\n";
   OS << "    // We have selected a definite instruction, convert the parsed\n"
      << "    // operands into the appropriate MCInst.\n";
-  OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands);\n";
+  if (HasOptionalOperands) {
+    OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands,\n"
+       << "                    OptionalOperandsMask);\n";
+  } else {
+    OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands);\n";
+  }
   OS << "\n";
 
   // Verify the instruction with the target-specific match predicate function.

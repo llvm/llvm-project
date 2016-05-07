@@ -914,8 +914,7 @@ entry:
 ; the third struct goes to the overflow area byval
 
 ; CHECK-LABEL: @VAArgStruct
-; undef
-; CHECK: store i32 -1, i32* {{.*}}@__msan_va_arg_tls {{.*}}, align 8
+; undef not stored to __msan_va_arg_tls - it's a fixed argument
 ; first struct through general purpose registers
 ; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 8){{.*}}, align 8
 ; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 16){{.*}}, align 8

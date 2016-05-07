@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace pdb {
@@ -22,10 +23,10 @@ public:
   explicit RawSession(std::unique_ptr<PDBFile> PdbFile);
   ~RawSession() override;
 
-  static PDB_ErrorCode createFromPdb(StringRef Path,
-                                     std::unique_ptr<IPDBSession> &Session);
-  static PDB_ErrorCode createFromExe(StringRef Path,
-                                     std::unique_ptr<IPDBSession> &Session);
+  static Error createFromPdb(StringRef Path,
+                             std::unique_ptr<IPDBSession> &Session);
+  static Error createFromExe(StringRef Path,
+                             std::unique_ptr<IPDBSession> &Session);
 
   uint64_t getLoadAddress() const override;
   void setLoadAddress(uint64_t Address) override;

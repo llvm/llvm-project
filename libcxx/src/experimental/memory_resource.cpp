@@ -11,7 +11,7 @@
 
 #ifndef _LIBCPP_HAS_NO_ATOMIC_HEADER
 #include "atomic"
-#else
+#elif !defined(_LIBCPP_HAS_NO_THREADS)
 #include "mutex"
 #endif
 
@@ -100,7 +100,7 @@ __default_memory_resource(bool set = false, memory_resource * new_res = nullptr)
         return _VSTD::atomic_load_explicit(
             &__res, memory_order::memory_order_acquire);
     }
-#else
+#elif !defined(_LIBCPP_HAS_NO_THREADS)
     static memory_resource * res = &res_init.resources.new_delete_res;
     static mutex res_lock;
     if (set) {
@@ -111,6 +111,16 @@ __default_memory_resource(bool set = false, memory_resource * new_res = nullptr)
         return old_res;
     } else {
         lock_guard<mutex> guard(res_lock);
+        return res;
+    }
+#else
+    static memory_resource* res = &res_init.resources.new_delete_res;
+    if (set) {
+        new_res = new_res ? new_res : new_delete_resource();
+        memory_resource * old_res = res;
+        res = new_res;
+        return old_res;
+    } else {
         return res;
     }
 #endif

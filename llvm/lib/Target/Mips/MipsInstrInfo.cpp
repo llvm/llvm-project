@@ -216,7 +216,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::AnalyzeBranch(
   // If there is only one terminator instruction, process it.
   if (!SecondLastOpc) {
     // Unconditional branch.
-    if (LastOpc == UncondBrOpc) {
+    if (LastInst->isUnconditionalBranch()) {
       TBB = LastInst->getOperand(0).getMBB();
       return BT_Uncond;
     }
@@ -235,7 +235,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::AnalyzeBranch(
 
   // If second to last instruction is an unconditional branch,
   // analyze it and remove the last instruction.
-  if (SecondLastOpc == UncondBrOpc) {
+  if (SecondLastInst->isUnconditionalBranch()) {
     // Return if the last instruction cannot be removed.
     if (!AllowModify)
       return BT_None;
@@ -248,7 +248,7 @@ MipsInstrInfo::BranchType MipsInstrInfo::AnalyzeBranch(
 
   // Conditional branch followed by an unconditional branch.
   // The last one must be unconditional.
-  if (LastOpc != UncondBrOpc)
+  if (!LastInst->isUnconditionalBranch())
     return BT_None;
 
   AnalyzeCondBr(SecondLastInst, SecondLastOpc, TBB, Cond);

@@ -41,7 +41,7 @@ public:
     std::string Msg;
     raw_string_ostream OS(Msg);
     log(OS);
-    return Msg;
+    return OS.str();
   }
 
   /// Convert this error to a std::error_code.

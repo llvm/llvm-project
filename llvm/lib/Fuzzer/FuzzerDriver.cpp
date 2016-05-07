@@ -189,7 +189,7 @@ static std::mutex Mu;
 
 static void PulseThread() {
   while (true) {
-    std::this_thread::sleep_for(std::chrono::seconds(600));
+    SleepSeconds(600);
     std::lock_guard<std::mutex> Lock(Mu);
     Printf("pulse...\n");
   }
@@ -232,6 +232,21 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   for (auto &T : V)
     T.join();
   return HasErrors ? 1 : 0;
+}
+
+static void RssThread(Fuzzer *F, size_t RssLimitMb) {
+  while (true) {
+    SleepSeconds(1);
+    size_t Peak = GetPeakRSSMb();
+    if (Peak > RssLimitMb)
+      F->RssLimitCallback();
+  }
+}
+
+static void StartRssThread(Fuzzer *F, size_t RssLimitMb) {
+  if (!RssLimitMb) return;
+  std::thread T(RssThread, F, RssLimitMb);
+  T.detach();
 }
 
 int RunOneTest(Fuzzer *F, const char *InputFilePath) {
@@ -295,6 +310,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   Options.OnlyASCII = Flags.only_ascii;
   Options.OutputCSV = Flags.output_csv;
   Options.DetectLeaks = Flags.detect_leaks;
+  Options.RssLimitMb = Flags.rss_limit_mb;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;
   if (!Inputs->empty())
@@ -330,6 +346,8 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   for (auto &U: Dictionary)
     if (U.size() <= Word::GetMaxSize())
       MD.AddWordToManualDictionary(Word(U.data(), U.size()));
+
+  StartRssThread(&F, Flags.rss_limit_mb);
 
   // Timer
   if (Flags.timeout > 0)

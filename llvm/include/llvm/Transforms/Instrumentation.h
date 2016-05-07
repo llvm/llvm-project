@@ -82,7 +82,7 @@ ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
 // PGO Instrumention
 ModulePass *createPGOInstrumentationGenLegacyPass();
 ModulePass *
-createPGOInstrumentationUsePass(StringRef Filename = StringRef(""));
+createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
 ModulePass *createPGOIndirectCallPromotionPass(bool InLTO = false);
 
 /// Options for the frontend instrumentation based profiling pass.

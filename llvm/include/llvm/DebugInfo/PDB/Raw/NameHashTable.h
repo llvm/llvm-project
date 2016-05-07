@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
+#include "llvm/Support/Error.h"
 
 #include <stdint.h>
 #include <utility>
@@ -24,7 +25,7 @@ class NameHashTable {
 public:
   NameHashTable();
 
-  std::error_code load(StreamReader &Stream);
+  Error load(StreamReader &Stream);
 
   uint32_t getNameCount() const { return NameCount; }
   uint32_t getHashVersion() const { return HashVersion; }

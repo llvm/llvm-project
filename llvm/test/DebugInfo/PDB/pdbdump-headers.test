@@ -1,4 +1,5 @@
-; RUN: llvm-pdbdump --dump-headers -dump-tpi-stream -dump-tpi-record-bytes %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
+; RUN: llvm-pdbdump --dump-headers -dump-tpi-records -dump-tpi-record-bytes \
+; RUN:              %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/bad-block-size.pdb | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
@@ -78,28 +79,71 @@
 ; EMPTY-NEXT:   TPI Version: 20040203
 ; EMPTY-NEXT:   Record count: 75
 ; EMPTY-NEXT:   Records [
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Kind: 0x1201
-; EMPTY-NEXT:     Bytes (
-; EMPTY-NEXT:       0000: 00000000                             |....|
-; EMPTY-NEXT:     )
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Kind: 0x1008
-; EMPTY-NEXT:     Bytes (
-; EMPTY-NEXT:       0000: 74000000 00000000 00100000           |t...........|
-; EMPTY-NEXT:     )
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Kind: 0x1203
-; EMPTY-NEXT:     Bytes (
-; EMPTY-NEXT:       0000: 02150300 01006170 6172746D 656E7400  |......apartment.|
-; EMPTY-NEXT:       0010: 02150300 02007369 6E676C65 00F3F2F1  |......single....|
-; EMPTY-NEXT:       0020: 02150300 03006672 656500F1 02150300  |......free......|
-; EMPTY-NEXT:       0030: 04006E65 75747261 6C00F2F1 02150300  |..neutral.......|
-; EMPTY-NEXT:       0040: 0500626F 746800F1                    |..both..|
-; EMPTY-NEXT:     )
-; EMPTY-NEXT:   }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       ArgList {
+; EMPTY-NEXT:         TypeLeafKind: LF_ARGLIST (0x1201)
+; EMPTY-NEXT:         TypeIndex: 0x1000
+; EMPTY-NEXT:         NumArgs: 0
+; EMPTY-NEXT:         Arguments [
+; EMPTY-NEXT:         ]
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 00000000                             |....|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       ProcedureType {
+; EMPTY-NEXT:         TypeLeafKind: LF_PROCEDURE (0x1008)
+; EMPTY-NEXT:         TypeIndex: 0x1001
+; EMPTY-NEXT:         ReturnType: int (0x74)
+; EMPTY-NEXT:         CallingConvention: NearC (0x0)
+; EMPTY-NEXT:         FunctionOptions [ (0x0)
+; EMPTY-NEXT:         ]
+; EMPTY-NEXT:         NumParameters: 0
+; EMPTY-NEXT:         ArgListType: () (0x1000)
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 74000000 00000000 00100000           |t...........|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       UnknownLeaf {
+; EMPTY-NEXT:         TypeLeafKind: LF_FIELDLIST (0x1203)
+; EMPTY-NEXT:         TypeIndex: 0x1002
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 1
+; EMPTY-NEXT:           Name: apartment
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 2
+; EMPTY-NEXT:           Name: single
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 3
+; EMPTY-NEXT:           Name: free
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 4
+; EMPTY-NEXT:           Name: neutral
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 5
+; EMPTY-NEXT:           Name: both
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 02150300 01006170 6172746D 656E7400  |......apartment.|
+; EMPTY-NEXT:         0010: 02150300 02007369 6E676C65 00F3F2F1  |......single....|
+; EMPTY-NEXT:         0020: 02150300 03006672 656500F1 02150300  |......free......|
+; EMPTY-NEXT:         0030: 04006E65 75747261 6C00F2F1 02150300  |..neutral.......|
+; EMPTY-NEXT:         0040: 0500626F 746800F1                    |..both..|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
 
 ; BIG:      FileHeaders {
 ; BIG-NEXT:   BlockSize: 4096
@@ -1238,4 +1282,4 @@
 ; BIG-NEXT:   ]
 ; BIG-NEXT: }
 
-; BAD-BLOCK-SIZE: The file has an unrecognized format.
+; BAD-BLOCK-SIZE: Native PDB Error: The PDB file is corrupt. Does not contain superblock

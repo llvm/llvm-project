@@ -5,6 +5,7 @@
   define void @test2() { ret void }
   define void @test3() { ret void }
   define void @test4() { ret void }
+  define void @test5() { ret void }
   define void @loop0() { ret void }
   define void @loop1() { ret void }
   define void @loop2() { ret void }
@@ -20,7 +21,7 @@
 # CHECK: S_NOP 0, implicit %3:sub1
 # CHECK: S_NOP 0, implicit undef %3:sub2
 # CHECK: %4 = COPY %3:sub0_sub1
-# CHECK: %5 = COPY %3:sub2_sub3
+# CHECK: %5 = COPY undef %3:sub2_sub3
 # CHECK: S_NOP 0, implicit %4:sub0
 # CHECK: S_NOP 0, implicit %4:sub1
 # CHECK: S_NOP 0, implicit undef %5:sub0
@@ -253,6 +254,25 @@ body: |
 
     %1 = IMPLICIT_DEF
     S_NOP 0, implicit %1
+...
+---
+# Check that unused inputs are marked as undef, even if the vreg itself is
+# used.
+# CHECK-LABEL: name: test5
+# CHECK: S_NOP 0, implicit-def %0
+# CHECK: %1 = REG_SEQUENCE undef %0, {{[0-9]+}}, %0, {{[0-9]+}}
+# CHECK: S_NOP 0, implicit %1:sub1
+name: test5
+isSSA: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_32 }
+  - { id: 1, class: sreg_64 }
+body: |
+  bb.0:
+    S_NOP 0, implicit-def %0
+    %1 = REG_SEQUENCE %0, %subreg.sub0, %0, %subreg.sub1
+    S_NOP 0, implicit %1:sub1
 ...
 ---
 # Check "optimistic" dataflow fixpoint in phi-loops.

@@ -24,6 +24,9 @@ struct MipsABIFlagsSection;
 class MipsTargetStreamer : public MCTargetStreamer {
 public:
   MipsTargetStreamer(MCStreamer &S);
+
+  virtual void setPic(bool Value) {}
+
   virtual void emitDirectiveSetMicroMips();
   virtual void emitDirectiveSetNoMicroMips();
   virtual void emitDirectiveSetMips16();
@@ -259,6 +262,8 @@ public:
   bool isMicroMipsEnabled() const { return MicroMipsEnabled; }
   MCELFStreamer &getStreamer();
   MipsTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
+
+  void setPic(bool Value) override { Pic = Value; }
 
   void emitLabel(MCSymbol *Symbol) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;

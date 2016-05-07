@@ -81,6 +81,8 @@ FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
     "Be careful, this will also close e.g. asan's stderr/stdout.")
 FUZZER_FLAG_INT(detect_leaks, 1, "If 1, and if LeakSanitizer is enabled "
     "try to detect memory leaks during fuzzing (i.e. not only at shut down).")
+FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
+    "reaching this limit of RSS memory usage.")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)
 FUZZER_DEPRECATED_FLAG(save_minimized_corpus)

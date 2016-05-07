@@ -283,6 +283,127 @@ bool AArch64FrameLowering::canUseAsPrologue(
   return findScratchNonCalleeSaveRegister(TmpMBB) != AArch64::NoRegister;
 }
 
+bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
+    MachineFunction &MF, unsigned StackBumpBytes) const {
+  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+
+  if (AFI->getLocalStackSize() == 0)
+    return false;
+
+  // 512 is the maximum immediate for stp/ldp that will be used for
+  // callee-save save/restores
+  if (StackBumpBytes >= 512)
+    return false;
+
+  if (MFI->hasVarSizedObjects())
+    return false;
+
+  if (RegInfo->needsStackRealignment(MF))
+    return false;
+
+  // This isn't strictly necessary, but it simplifies things a bit since the
+  // current RedZone handling code assumes the SP is adjusted by the
+  // callee-save save/restore code.
+  if (canUseRedZone(MF))
+    return false;
+
+  return true;
+}
+
+// Convert callee-save register save/restore instruction to do stack pointer
+// decrement/increment to allocate/deallocate the callee-save stack area by
+// converting store/load to use pre/post increment version.
+static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc DL,
+    const TargetInstrInfo *TII, int CSStackSizeInc) {
+
+  unsigned NewOpc;
+  bool NewIsUnscaled = false;
+  switch (MBBI->getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected callee-save save/restore opcode!");
+  case AArch64::STPXi:
+    NewOpc = AArch64::STPXpre;
+    break;
+  case AArch64::STPDi:
+    NewOpc = AArch64::STPDpre;
+    break;
+  case AArch64::STRXui:
+    NewOpc = AArch64::STRXpre;
+    NewIsUnscaled = true;
+    break;
+  case AArch64::STRDui:
+    NewOpc = AArch64::STRDpre;
+    NewIsUnscaled = true;
+    break;
+  case AArch64::LDPXi:
+    NewOpc = AArch64::LDPXpost;
+    break;
+  case AArch64::LDPDi:
+    NewOpc = AArch64::LDPDpost;
+    break;
+  case AArch64::LDRXui:
+    NewOpc = AArch64::LDRXpost;
+    NewIsUnscaled = true;
+    break;
+  case AArch64::LDRDui:
+    NewOpc = AArch64::LDRDpost;
+    NewIsUnscaled = true;
+    break;
+  }
+
+  MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc));
+  MIB.addReg(AArch64::SP, RegState::Define);
+
+  // Copy all operands other than the immediate offset.
+  unsigned OpndIdx = 0;
+  for (unsigned OpndEnd = MBBI->getNumOperands() - 1; OpndIdx < OpndEnd;
+       ++OpndIdx)
+    MIB.addOperand(MBBI->getOperand(OpndIdx));
+
+  assert(MBBI->getOperand(OpndIdx).getImm() == 0 &&
+         "Unexpected immediate offset in first/last callee-save save/restore "
+         "instruction!");
+  assert(MBBI->getOperand(OpndIdx - 1).getReg() == AArch64::SP &&
+         "Unexpected base register in callee-save save/restore instruction!");
+  // Last operand is immediate offset that needs fixing.
+  assert(CSStackSizeInc % 8 == 0);
+  int64_t CSStackSizeIncImm = CSStackSizeInc;
+  if (!NewIsUnscaled)
+    CSStackSizeIncImm /= 8;
+  MIB.addImm(CSStackSizeIncImm);
+
+  MIB.setMIFlags(MBBI->getFlags());
+  MIB.setMemRefs(MBBI->memoperands_begin(), MBBI->memoperands_end());
+
+  return std::prev(MBB.erase(MBBI));
+}
+
+// Fixup callee-save register save/restore instructions to take into account
+// combined SP bump by adding the local stack size to the stack offsets.
+static void fixupCalleeSaveRestoreStackOffset(MachineInstr *MI,
+                                              unsigned LocalStackSize) {
+  unsigned Opc = MI->getOpcode();
+  (void)Opc;
+  assert((Opc == AArch64::STPXi || Opc == AArch64::STPDi ||
+          Opc == AArch64::STRXui || Opc == AArch64::STRDui ||
+          Opc == AArch64::LDPXi || Opc == AArch64::LDPDi ||
+          Opc == AArch64::LDRXui || Opc == AArch64::LDRDui) &&
+         "Unexpected callee-save save/restore opcode!");
+
+  unsigned OffsetIdx = MI->getNumExplicitOperands() - 1;
+  assert(MI->getOperand(OffsetIdx - 1).getReg() == AArch64::SP &&
+         "Unexpected base register in callee-save save/restore instruction!");
+  // Last operand is immediate offset that needs fixing.
+  MachineOperand &OffsetOpnd = MI->getOperand(OffsetIdx);
+  // All generated opcodes have scaled offsets.
+  assert(LocalStackSize % 8 == 0);
+  OffsetOpnd.setImm(OffsetOpnd.getImm() + LocalStackSize / 8);
+}
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -334,18 +455,36 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     return;
   }
 
-  NumBytes -= AFI->getCalleeSavedStackSize();
-  assert(NumBytes >= 0 && "Negative stack allocation size!?");
+  auto CSStackSize = AFI->getCalleeSavedStackSize();
   // All of the remaining stack allocations are for locals.
-  AFI->setLocalStackSize(NumBytes);
+  AFI->setLocalStackSize(NumBytes - CSStackSize);
 
-  // Move past the saves of the callee-saved registers.
+  bool CombineSPBump = shouldCombineCSRLocalStackBump(MF, NumBytes);
+  if (CombineSPBump) {
+    emitFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP, -NumBytes, TII,
+                    MachineInstr::FrameSetup);
+    NumBytes = 0;
+  } else if (CSStackSize != 0) {
+    MBBI = convertCalleeSaveRestoreToSPPrePostIncDec(MBB, MBBI, DL, TII,
+                                                     -CSStackSize);
+    NumBytes -= CSStackSize;
+  }
+  assert(NumBytes >= 0 && "Negative stack allocation size!?");
+
+  // Move past the saves of the callee-saved registers, fixing up the offsets
+  // and pre-inc if we decided to combine the callee-save and local stack
+  // pointer bump above.
   MachineBasicBlock::iterator End = MBB.end();
-  while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup))
+  while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup)) {
+    if (CombineSPBump)
+      fixupCalleeSaveRestoreStackOffset(MBBI, AFI->getLocalStackSize());
     ++MBBI;
+  }
   if (HasFP) {
     // Only set up FP if we actually need to. Frame pointer is fp = sp - 16.
-    int FPOffset = AFI->getCalleeSavedStackSize() - 16;
+    int FPOffset = CSStackSize - 16;
+    if (CombineSPBump)
+      FPOffset += AFI->getLocalStackSize();
 
     // Issue    sub fp, sp, FPOffset or
     //          mov fp,sp          when FPOffset is zero.
@@ -569,6 +708,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // AArch64TargetLowering::LowerCall figures out ArgumentPopSize and keeps
   // it as the 2nd argument of AArch64ISD::TC_RETURN.
 
+  auto CSStackSize = AFI->getCalleeSavedStackSize();
+  bool CombineSPBump = shouldCombineCSRLocalStackBump(MF, NumBytes);
+
+  if (!CombineSPBump && CSStackSize != 0)
+    convertCalleeSaveRestoreToSPPrePostIncDec(
+        MBB, std::prev(MBB.getFirstTerminator()), DL, TII, CSStackSize);
+
   // Move past the restores of the callee-saved registers.
   MachineBasicBlock::iterator LastPopI = MBB.getFirstTerminator();
   MachineBasicBlock::iterator Begin = MBB.begin();
@@ -577,9 +723,19 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     if (!LastPopI->getFlag(MachineInstr::FrameDestroy)) {
       ++LastPopI;
       break;
-    }
+    } else if (CombineSPBump)
+      fixupCalleeSaveRestoreStackOffset(LastPopI, AFI->getLocalStackSize());
   }
-  NumBytes -= AFI->getCalleeSavedStackSize();
+
+  // If there is a single SP update, insert it before the ret and we're done.
+  if (CombineSPBump) {
+    emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
+                    NumBytes + ArgumentPopSize, TII,
+                    MachineInstr::FrameDestroy);
+    return;
+  }
+
+  NumBytes -= CSStackSize;
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
   if (!hasFP(MF)) {
@@ -589,7 +745,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     if (RedZone && ArgumentPopSize == 0)
       return;
 
-    bool NoCalleeSaveRestore = AFI->getCalleeSavedStackSize() == 0;
+    bool NoCalleeSaveRestore = CSStackSize == 0;
     int StackRestoreBytes = RedZone ? 0 : NumBytes;
     if (NoCalleeSaveRestore)
       StackRestoreBytes += ArgumentPopSize;
@@ -608,8 +764,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // be able to save any instructions.
   if (MFI->hasVarSizedObjects() || AFI->isStackRealigned())
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
-                    -AFI->getCalleeSavedStackSize() + 16, TII,
-                    MachineInstr::FrameDestroy);
+                    -CSStackSize + 16, TII, MachineInstr::FrameDestroy);
   else if (NumBytes)
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP, NumBytes, TII,
                     MachineInstr::FrameDestroy);
@@ -799,14 +954,6 @@ static void computeCalleeSaveRegisterPairs(
     if (RPI.isPaired())
       ++i;
   }
-
-  // Align first offset to even 16-byte boundary to avoid additional SP
-  // adjustment instructions.
-  // Last pair offset is size of whole callee-save region for SP
-  // pre-dec/post-inc.
-  RegPairInfo &LastPair = RegPairs.back();
-  assert(AFI->getCalleeSavedStackSize() % 8 == 0);
-  LastPair.Offset = AFI->getCalleeSavedStackSize() / 8;
 }
 
 bool AArch64FrameLowering::spillCalleeSavedRegisters(
@@ -827,29 +974,20 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     unsigned Reg2 = RPI.Reg2;
     unsigned StrOpc;
 
-    // Issue sequence of non-sp increment and pi sp spills for cs regs. The
-    // first spill is a pre-increment that allocates the stack.
+    // Issue sequence of spills for cs regs.  The first spill may be converted
+    // to a pre-decrement store later by emitPrologue if the callee-save stack
+    // area allocation can't be combined with the local stack area allocation.
     // For example:
-    //    stp     x22, x21, [sp, #-48]!   // addImm(-6)
+    //    stp     x22, x21, [sp, #0]     // addImm(+0)
     //    stp     x20, x19, [sp, #16]    // addImm(+2)
     //    stp     fp, lr, [sp, #32]      // addImm(+4)
     // Rationale: This sequence saves uop updates compared to a sequence of
     // pre-increment spills like stp xi,xj,[sp,#-16]!
     // Note: Similar rationale and sequence for restores in epilog.
-    bool BumpSP = RPII == RegPairs.rbegin();
-    if (RPI.IsGPR) {
-      // For first spill use pre-increment store.
-      if (BumpSP)
-        StrOpc = RPI.isPaired() ? AArch64::STPXpre : AArch64::STRXpre;
-      else
-        StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
-    } else {
-      // For first spill use pre-increment store.
-      if (BumpSP)
-        StrOpc = RPI.isPaired() ? AArch64::STPDpre : AArch64::STRDpre;
-      else
-        StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
-    }
+    if (RPI.IsGPR)
+      StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
+    else
+      StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
     DEBUG(dbgs() << "CSR spill: (" << TRI->getName(Reg1);
           if (RPI.isPaired())
             dbgs() << ", " << TRI->getName(Reg2);
@@ -858,29 +996,19 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
             dbgs() << ", " << RPI.FrameIdx+1;
           dbgs() << ")\n");
 
-    const int Offset = BumpSP ? -RPI.Offset : RPI.Offset;
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
-    if (BumpSP)
-      MIB.addReg(AArch64::SP, RegState::Define);
-
+    MBB.addLiveIn(Reg1);
     if (RPI.isPaired()) {
-      MBB.addLiveIn(Reg1);
       MBB.addLiveIn(Reg2);
-      MIB.addReg(Reg2, getPrologueDeath(MF, Reg2))
-        .addReg(Reg1, getPrologueDeath(MF, Reg1))
-        .addReg(AArch64::SP)
-        .addImm(Offset) // [sp, #offset * 8], where factor * 8 is implicit
-        .setMIFlag(MachineInstr::FrameSetup);
+      MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
           MachineMemOperand::MOStore, 8, 8));
-    } else {
-      MBB.addLiveIn(Reg1);
-      MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
-        .addReg(AArch64::SP)
-        .addImm(BumpSP ? Offset * 8 : Offset) // pre-inc version is unscaled
-        .setMIFlag(MachineInstr::FrameSetup);
     }
+    MIB.addReg(Reg1, getPrologueDeath(MF, Reg1))
+        .addReg(AArch64::SP)
+        .addImm(RPI.Offset) // [sp, #offset*8], where factor*8 is implicit
+        .setMIFlag(MachineInstr::FrameSetup);
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
         MachineMemOperand::MOStore, 8, 8));
@@ -908,26 +1036,19 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
 
-    // Issue sequence of non-sp increment and sp-pi restores for cs regs. Only
-    // the last load is sp-pi post-increment and de-allocates the stack:
+    // Issue sequence of restores for cs regs. The last restore may be converted
+    // to a post-increment load later by emitEpilogue if the callee-save stack
+    // area allocation can't be combined with the local stack area allocation.
     // For example:
     //    ldp     fp, lr, [sp, #32]       // addImm(+4)
     //    ldp     x20, x19, [sp, #16]     // addImm(+2)
-    //    ldp     x22, x21, [sp], #48     // addImm(+6)
+    //    ldp     x22, x21, [sp, #0]      // addImm(+0)
     // Note: see comment in spillCalleeSavedRegisters()
     unsigned LdrOpc;
-    bool BumpSP = RPII == std::prev(RegPairs.end());
-    if (RPI.IsGPR) {
-      if (BumpSP)
-        LdrOpc = RPI.isPaired() ? AArch64::LDPXpost : AArch64::LDRXpost;
-      else
-        LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
-    } else {
-      if (BumpSP)
-        LdrOpc = RPI.isPaired() ? AArch64::LDPDpost : AArch64::LDRDpost;
-      else
-        LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
-    }
+    if (RPI.IsGPR)
+      LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
+    else
+      LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
     DEBUG(dbgs() << "CSR restore: (" << TRI->getName(Reg1);
           if (RPI.isPaired())
             dbgs() << ", " << TRI->getName(Reg2);
@@ -936,27 +1057,17 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
             dbgs() << ", " << RPI.FrameIdx+1;
           dbgs() << ")\n");
 
-    const int Offset = RPI.Offset;
     MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(LdrOpc));
-    if (BumpSP)
-      MIB.addReg(AArch64::SP, RegState::Define);
-
     if (RPI.isPaired()) {
-      MIB.addReg(Reg2, getDefRegState(true))
-        .addReg(Reg1, getDefRegState(true))
-        .addReg(AArch64::SP)
-        .addImm(Offset) // [sp], #offset * 8  or [sp, #offset * 8]
-                        // where the factor * 8 is implicit
-        .setMIFlag(MachineInstr::FrameDestroy);
+      MIB.addReg(Reg2, getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx + 1),
           MachineMemOperand::MOLoad, 8, 8));
-    } else {
-      MIB.addReg(Reg1, getDefRegState(true))
-        .addReg(AArch64::SP)
-        .addImm(BumpSP ? Offset * 8 : Offset) // post-dec version is unscaled
-        .setMIFlag(MachineInstr::FrameDestroy);
     }
+    MIB.addReg(Reg1, getDefRegState(true))
+        .addReg(AArch64::SP)
+        .addImm(RPI.Offset) // [sp, #offset*8] where the factor*8 is implicit
+        .setMIFlag(MachineInstr::FrameDestroy);
     MIB.addMemOperand(MF.getMachineMemOperand(
         MachinePointerInfo::getFixedStack(MF, RPI.FrameIdx),
         MachineMemOperand::MOLoad, 8, 8));

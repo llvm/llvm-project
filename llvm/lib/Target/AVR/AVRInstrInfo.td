@@ -45,7 +45,7 @@ def AVRcallseq_end : SDNode<"ISD::CALLSEQ_END", SDT_AVRCallSeqEnd,
 def AVRcall : SDNode<"AVRISD::CALL", SDT_AVRCall,
                      [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 
-def AVRWrapper : SDNode<"AVRISD::Wrapper", SDT_AVRWrapper>;
+def AVRWrapper : SDNode<"AVRISD::WRAPPER", SDT_AVRWrapper>;
 
 def AVRbrcond : SDNode<"AVRISD::BRCOND", SDT_AVRBrcond,
                        [SDNPHasChain, SDNPInGlue]>;

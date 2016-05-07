@@ -14,12 +14,16 @@
 #include <iomanip>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
 #include <cassert>
+#include <chrono>
 #include <cstring>
 #include <signal.h>
 #include <sstream>
 #include <unistd.h>
 #include <errno.h>
+#include <thread>
 
 namespace fuzzer {
 
@@ -214,8 +218,18 @@ bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
   return true;
 }
 
-int GetPid() { return getpid(); }
+void SleepSeconds(int Seconds) {
+  std::this_thread::sleep_for(std::chrono::seconds(Seconds));
+}
 
+int GetPid() { return getpid(); }
+int SignalToMainThread() {
+#ifdef __linux__
+  return syscall(SYS_tgkill, GetPid(), GetPid(), SIGALRM);
+#else
+  return 0;
+#endif
+}
 
 std::string Base64(const Unit &U) {
   static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

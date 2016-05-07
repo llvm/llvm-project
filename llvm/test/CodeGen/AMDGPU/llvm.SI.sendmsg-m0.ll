@@ -4,7 +4,7 @@
 ; BOTH-LABEL: {{^}}main:
 ; BOTH: s_mov_b32 m0, s0
 ; VI-NEXT: s_nop 0
-; BOTH-NEXT: s_sendmsg Gs_done(nop)
+; BOTH-NEXT: sendmsg(MSG_GS_DONE, GS_OP_NOP)
 ; BOTH-NEXT: s_endpgm
 
 define amdgpu_gs void @main(i32 inreg %a) #0 {

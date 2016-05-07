@@ -7,8 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
+#include <list>
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsFixupKinds.h"
+#include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAssembler.h"
@@ -17,40 +20,189 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+
+#define DEBUG_TYPE "mips-elf-object-writer"
 
 using namespace llvm;
 
 namespace {
-// A helper structure based on ELFRelocationEntry, used for sorting entries in
-// the relocation table.
+/// Holds additional information needed by the relocation ordering algorithm.
 struct MipsRelocationEntry {
-  MipsRelocationEntry(const ELFRelocationEntry &R)
-      : R(R), SortOffset(R.Offset), HasMatchingHi(false) {}
-  const ELFRelocationEntry R;
-  // SortOffset equals R.Offset except for the *HI16 relocations, for which it
-  // will be set based on the R.Offset of the matching *LO16 relocation.
-  int64_t SortOffset;
-  // True when this is a *LO16 relocation chosen as a match for a *HI16
-  // relocation.
-  bool HasMatchingHi;
+  const ELFRelocationEntry R; ///< The relocation.
+  bool Matched;               ///< Is this relocation part of a match.
+
+  MipsRelocationEntry(const ELFRelocationEntry &R) : R(R), Matched(false) {}
+
+  void print(raw_ostream &Out) const {
+    R.print(Out);
+    Out << ", Matched=" << Matched;
+  }
 };
 
-  class MipsELFObjectWriter : public MCELFObjectTargetWriter {
-  public:
-    MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
-                        bool _isN64, bool IsLittleEndian);
-
-    ~MipsELFObjectWriter() override;
-
-    unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                          const MCFixup &Fixup, bool IsPCRel) const override;
-    bool needsRelocateWithSymbol(const MCSymbol &Sym,
-                                 unsigned Type) const override;
-    virtual void sortRelocs(const MCAssembler &Asm,
-                            std::vector<ELFRelocationEntry> &Relocs) override;
-  };
+#ifndef NDEBUG
+raw_ostream &operator<<(raw_ostream &OS, const MipsRelocationEntry &RHS) {
+  RHS.print(OS);
+  return OS;
 }
+#endif
+
+class MipsELFObjectWriter : public MCELFObjectTargetWriter {
+public:
+  MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI, bool _isN64,
+                      bool IsLittleEndian);
+
+  ~MipsELFObjectWriter() override;
+
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCSymbol &Sym,
+                               unsigned Type) const override;
+  virtual void sortRelocs(const MCAssembler &Asm,
+                          std::vector<ELFRelocationEntry> &Relocs) override;
+};
+
+/// Copy elements in the range [First, Last) to d1 when the predicate is true or
+/// d2 when the predicate is false. This is essentially both std::copy_if and
+/// std::remove_copy_if combined into a single pass.
+template <class InputIt, class OutputIt1, class OutputIt2, class UnaryPredicate>
+std::pair<OutputIt1, OutputIt2> copy_if_else(InputIt First, InputIt Last,
+                                             OutputIt1 d1, OutputIt2 d2,
+                                             UnaryPredicate Predicate) {
+  for (InputIt I = First; I != Last; ++I) {
+    if (Predicate(*I)) {
+      *d1 = *I;
+      d1++;
+    } else {
+      *d2 = *I;
+      d2++;
+    }
+  }
+
+  return std::make_pair(d1, d2);
+}
+
+/// The possible results of the Predicate function used by find_best.
+enum FindBestPredicateResult {
+  FindBest_NoMatch = 0,  ///< The current element is not a match.
+  FindBest_Match,        ///< The current element is a match but better ones are
+                         ///  possible.
+  FindBest_PerfectMatch, ///< The current element is an unbeatable match.
+};
+
+/// Find the best match in the range [First, Last).
+///
+/// An element matches when Predicate(X) returns FindBest_Match or
+/// FindBest_PerfectMatch. A value of FindBest_PerfectMatch also terminates
+/// the search. BetterThan(A, B) is a comparator that returns true when A is a
+/// better match than B. The return value is the position of the best match.
+///
+/// This is similar to std::find_if but finds the best of multiple possible
+/// matches.
+template <class InputIt, class UnaryPredicate, class Comparator>
+InputIt find_best(InputIt First, InputIt Last, UnaryPredicate Predicate,
+                  Comparator BetterThan) {
+  InputIt Best = Last;
+
+  for (InputIt I = First; I != Last; ++I) {
+    unsigned Matched = Predicate(*I);
+    if (Matched != FindBest_NoMatch) {
+      DEBUG(dbgs() << std::distance(First, I) << " is a match (";
+            I->print(dbgs()); dbgs() << ")\n");
+      if (Best == Last || BetterThan(*I, *Best)) {
+        DEBUG(dbgs() << ".. and it beats the last one\n");
+        Best = I;
+      }
+    }
+    if (Matched == FindBest_PerfectMatch) {
+      DEBUG(dbgs() << ".. and it is unbeatable\n");
+      break;
+    }
+  }
+
+  return Best;
+}
+
+/// Determine the low relocation that matches the given relocation.
+/// If the relocation does not need a low relocation then the return value
+/// is ELF::R_MIPS_NONE.
+///
+/// The relocations that need a matching low part are
+/// R_(MIPS|MICROMIPS|MIPS16)_HI16 for all symbols and
+/// R_(MIPS|MICROMIPS|MIPS16)_GOT16 for local symbols only.
+static unsigned getMatchingLoType(const ELFRelocationEntry &Reloc) {
+  unsigned Type = Reloc.Type;
+  if (Type == ELF::R_MIPS_HI16)
+    return ELF::R_MIPS_LO16;
+  if (Type == ELF::R_MICROMIPS_HI16)
+    return ELF::R_MICROMIPS_LO16;
+  if (Type == ELF::R_MIPS16_HI16)
+    return ELF::R_MIPS16_LO16;
+
+  if (Reloc.OriginalSymbol->getBinding() != ELF::STB_LOCAL)
+    return ELF::R_MIPS_NONE;
+
+  if (Type == ELF::R_MIPS_GOT16)
+    return ELF::R_MIPS_LO16;
+  if (Type == ELF::R_MICROMIPS_GOT16)
+    return ELF::R_MICROMIPS_LO16;
+  if (Type == ELF::R_MIPS16_GOT16)
+    return ELF::R_MIPS16_LO16;
+
+  return ELF::R_MIPS_NONE;
+}
+
+/// Determine whether a relocation (X) matches the one given in R.
+///
+/// A relocation matches if:
+/// - It's type matches that of a corresponding low part. This is provided in
+///   MatchingType for efficiency.
+/// - It's based on the same symbol.
+/// - It's offset of greater or equal to that of the one given in R.
+///   It should be noted that this rule assumes the programmer does not use
+///   offsets that exceed the alignment of the symbol. The carry-bit will be
+///   incorrect if this is not true.
+///
+/// A matching relocation is unbeatable if:
+/// - It is not already involved in a match.
+/// - It's offset is exactly that of the one given in R.
+static bool isMatchingReloc(const MipsRelocationEntry &X,
+                            const ELFRelocationEntry &R,
+                            unsigned MatchingType) {
+  if (X.R.Type == MatchingType && X.R.OriginalSymbol == R.OriginalSymbol) {
+    if (!X.Matched &&
+        X.R.OriginalAddend == R.OriginalAddend)
+      return FindBest_PerfectMatch;
+    else if (X.R.OriginalAddend >= R.OriginalAddend)
+      return FindBest_Match;
+  }
+  return FindBest_NoMatch;
+}
+
+/// Determine whether Candidate or PreviousBest is the better match.
+/// The return value is true if Candidate is the better match.
+///
+/// A matching relocation is a better match if:
+/// - It has a smaller addend.
+/// - It is not already involved in a match.
+static bool compareMatchingRelocs(const MipsRelocationEntry &Candidate,
+                                  const MipsRelocationEntry &PreviousBest) {
+  if (Candidate.R.OriginalAddend != PreviousBest.R.OriginalAddend)
+    return Candidate.R.OriginalAddend < PreviousBest.R.OriginalAddend;
+  return PreviousBest.Matched && !Candidate.Matched;
+}
+
+#ifndef NDEBUG
+/// Print all the relocations.
+template <class Container>
+static void dumpRelocs(const char *Prefix, const Container &Relocs) {
+  for (const auto &R : Relocs)
+    dbgs() << Prefix << R << "\n";
+}
+#endif
+
+} // end anonymous namespace
 
 MipsELFObjectWriter::MipsELFObjectWriter(bool _is64Bit, uint8_t OSABI,
                                          bool _isN64, bool IsLittleEndian)
@@ -216,177 +368,110 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   llvm_unreachable("invalid fixup kind!");
 }
 
-// Sort entries by SortOffset in descending order.
-// When there are more *HI16 relocs paired with one *LO16 reloc, the 2nd rule
-// sorts them in ascending order of R.Offset.
-static int cmpRelMips(const MipsRelocationEntry *AP,
-                      const MipsRelocationEntry *BP) {
-  const MipsRelocationEntry &A = *AP;
-  const MipsRelocationEntry &B = *BP;
-  if (A.SortOffset != B.SortOffset)
-    return B.SortOffset - A.SortOffset;
-  if (A.R.Offset != B.R.Offset)
-    return A.R.Offset - B.R.Offset;
-  if (B.R.Type != A.R.Type)
-    return B.R.Type - A.R.Type;
-  //llvm_unreachable("ELFRelocs might be unstable!");
-  return 0;
-}
-
-// For the given Reloc.Type, return the matching relocation type, as in the
-// table below.
-static unsigned getMatchingLoType(const MCAssembler &Asm,
-                                  const ELFRelocationEntry &Reloc) {
-  unsigned Type = Reloc.Type;
-  if (Type == ELF::R_MIPS_HI16)
-    return ELF::R_MIPS_LO16;
-  if (Type == ELF::R_MICROMIPS_HI16)
-    return ELF::R_MICROMIPS_LO16;
-  if (Type == ELF::R_MIPS16_HI16)
-    return ELF::R_MIPS16_LO16;
-
-  if (Reloc.Symbol->getBinding() != ELF::STB_LOCAL)
-    return ELF::R_MIPS_NONE;
-
-  if (Type == ELF::R_MIPS_GOT16)
-    return ELF::R_MIPS_LO16;
-  if (Type == ELF::R_MICROMIPS_GOT16)
-    return ELF::R_MICROMIPS_LO16;
-  if (Type == ELF::R_MIPS16_GOT16)
-    return ELF::R_MIPS16_LO16;
-
-  return ELF::R_MIPS_NONE;
-}
-
-// Return true if First needs a matching *LO16, its matching *LO16 type equals
-// Second's type and both relocations are against the same symbol.
-static bool areMatchingHiAndLo(const MCAssembler &Asm,
-                               const ELFRelocationEntry &First,
-                               const ELFRelocationEntry &Second) {
-  return getMatchingLoType(Asm, First) != ELF::R_MIPS_NONE &&
-         getMatchingLoType(Asm, First) == Second.Type &&
-         First.Symbol && First.Symbol == Second.Symbol;
-}
-
-// Return true if MipsRelocs[Index] is a *LO16 preceded by a matching *HI16.
-static bool
-isPrecededByMatchingHi(const MCAssembler &Asm, uint32_t Index,
-                       std::vector<MipsRelocationEntry> &MipsRelocs) {
-  return Index < MipsRelocs.size() - 1 &&
-         areMatchingHiAndLo(Asm, MipsRelocs[Index + 1].R, MipsRelocs[Index].R);
-}
-
-// Return true if MipsRelocs[Index] is a *LO16 not preceded by a matching *HI16
-// and not chosen by a *HI16 as a match.
-static bool isFreeLo(const MCAssembler &Asm, uint32_t Index,
-                     std::vector<MipsRelocationEntry> &MipsRelocs) {
-  return Index < MipsRelocs.size() && !MipsRelocs[Index].HasMatchingHi &&
-         !isPrecededByMatchingHi(Asm, Index, MipsRelocs);
-}
-
-// Lo is chosen as a match for Hi, set their fields accordingly.
-// Mips instructions have fixed length of at least two bytes (two for
-// micromips/mips16, four for mips32/64), so we can set HI's SortOffset to
-// matching LO's Offset minus one to simplify the sorting function.
-static void setMatch(MipsRelocationEntry &Hi, MipsRelocationEntry &Lo) {
-  Lo.HasMatchingHi = true;
-  Hi.SortOffset = Lo.R.Offset - 1;
-}
-
-// We sort relocation table entries by offset, except for one additional rule
-// required by MIPS ABI: every *HI16 relocation must be immediately followed by
-// the corresponding *LO16 relocation. We also support a GNU extension that
-// allows more *HI16s paired with one *LO16.
-//
-// *HI16 relocations and their matching *LO16 are:
-//
-// +---------------------------------------------+-------------------+
-// |               *HI16                         |  matching *LO16   |
-// |---------------------------------------------+-------------------|
-// |  R_MIPS_HI16, local R_MIPS_GOT16            |    R_MIPS_LO16    |
-// |  R_MICROMIPS_HI16, local R_MICROMIPS_GOT16  | R_MICROMIPS_LO16  |
-// |  R_MIPS16_HI16, local R_MIPS16_GOT16        |  R_MIPS16_LO16    |
-// +---------------------------------------------+-------------------+
-//
-// (local R_*_GOT16 meaning R_*_GOT16 against the local symbol.)
-//
-// To handle *HI16 and *LO16 relocations, the linker needs a combined addend
-// ("AHL") calculated from both *HI16 ("AHI") and *LO16 ("ALO") relocations:
-// AHL = (AHI << 16) + (short)ALO;
-//
-// We are reusing gnu as sorting algorithm so we are emitting the relocation
-// table sorted the same way as gnu as would sort it, for easier comparison of
-// the generated .o files.
-//
-// The logic is:
-// search the table (starting from the highest offset and going back to zero)
-// for all *HI16 relocations that don't have a matching *LO16.
-// For every such HI, find a matching LO with highest offset that isn't already
-// matched with another HI. If there are no free LOs, match it with the first
-// found (starting from lowest offset).
-// When there are more HIs matched with one LO, sort them in descending order by
-// offset.
-//
-// In other words, when searching for a matching LO:
-// - don't look for a 'better' match for the HIs that are already followed by a
-//   matching LO;
-// - prefer LOs without a pair;
-// - prefer LOs with higher offset;
-
-static int cmpRel(const ELFRelocationEntry *AP, const ELFRelocationEntry *BP) {
-  const ELFRelocationEntry &A = *AP;
-  const ELFRelocationEntry &B = *BP;
-  if (A.Offset < B.Offset)
-    return 1;
-  if (A.Offset > B.Offset)
-    return -1;
-  assert(B.Type != A.Type && "We don't have a total order");
-  return A.Type - B.Type;
-}
-
+/// Sort relocation table entries by offset except where another order is
+/// required by the MIPS ABI.
+///
+/// MIPS has a few relocations that have an AHL component in the expression used
+/// to evaluate them. This AHL component is an addend with the same number of
+/// bits as a symbol value but not all of our ABI's are able to supply a
+/// sufficiently sized addend in a single relocation.
+///
+/// The O32 ABI for example, uses REL relocations which store the addend in the
+/// section data. All the relocations with AHL components affect 16-bit fields
+/// so the addend for a single relocation is limited to 16-bit. This ABI
+/// resolves the limitation by linking relocations (e.g. R_MIPS_HI16 and
+/// R_MIPS_LO16) and distributing the addend between the linked relocations. The
+/// ABI mandates that such relocations must be next to each other in a
+/// particular order (e.g. R_MIPS_HI16 must be immediately followed by a
+/// matching R_MIPS_LO16) but the rule is less strict in practice.
+///
+/// The de facto standard is lenient in the following ways:
+/// - 'Immediately following' does not refer to the next relocation entry but
+///   the next matching relocation.
+/// - There may be multiple high parts relocations for one low part relocation.
+/// - There may be multiple low part relocations for one high part relocation.
+/// - The AHL addend in each part does not have to be exactly equal as long as
+///   the difference does not affect the carry bit from bit 15 into 16. This is
+///   to allow, for example, the use of %lo(foo) and %lo(foo+4) when loading
+///   both halves of a long long.
+///
+/// See getMatchingLoType() for a description of which high part relocations
+/// match which low part relocations. One particular thing to note is that
+/// R_MIPS_GOT16 and similar only have AHL addends if they refer to local
+/// symbols.
+///
+/// It should also be noted that this function is not affected by whether
+/// the symbol was kept or rewritten into a section-relative equivalent. We
+/// always match using the expressions from the source.
 void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
                                      std::vector<ELFRelocationEntry> &Relocs) {
   if (Relocs.size() < 2)
     return;
 
-  // Sorts entries by Offset in descending order.
-  array_pod_sort(Relocs.begin(), Relocs.end(), cmpRel);
+  // Sort relocations by the address they are applied to.
+  std::sort(Relocs.begin(), Relocs.end(),
+            [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
+              return A.Offset < B.Offset;
+            });
 
-  // Init MipsRelocs from Relocs.
-  std::vector<MipsRelocationEntry> MipsRelocs;
-  for (unsigned I = 0, E = Relocs.size(); I != E; ++I)
-    MipsRelocs.push_back(MipsRelocationEntry(Relocs[I]));
+  std::list<MipsRelocationEntry> Sorted;
+  std::list<ELFRelocationEntry> Remainder;
 
-  // Find a matching LO for all HIs that need it.
-  for (int32_t I = 0, E = MipsRelocs.size(); I != E; ++I) {
-    if (getMatchingLoType(Asm, MipsRelocs[I].R) == ELF::R_MIPS_NONE ||
-        (I > 0 && isPrecededByMatchingHi(Asm, I - 1, MipsRelocs)))
-      continue;
+  DEBUG(dumpRelocs("R: ", Relocs));
 
-    int32_t MatchedLoIndex = -1;
+  // Separate the movable relocations (AHL relocations using the high bits) from
+  // the immobile relocations (everything else). This does not preserve high/low
+  // matches that already existed in the input.
+  copy_if_else(Relocs.begin(), Relocs.end(), std::back_inserter(Remainder),
+               std::back_inserter(Sorted), [](const ELFRelocationEntry &Reloc) {
+                 return getMatchingLoType(Reloc) != ELF::R_MIPS_NONE;
+               });
 
-    // Search the list in the ascending order of Offset.
-    for (int32_t J = MipsRelocs.size() - 1, N = -1; J != N; --J) {
-      // check for a match
-      if (areMatchingHiAndLo(Asm, MipsRelocs[I].R, MipsRelocs[J].R) &&
-          (MatchedLoIndex == -1 || // first match
-           // or we already have a match,
-           // but this one is with higher offset and it's free
-           (MatchedLoIndex > J && isFreeLo(Asm, J, MipsRelocs))))
-        MatchedLoIndex = J;
-    }
+  for (auto &R : Remainder) {
+    DEBUG(dbgs() << "Matching: " << R << "\n");
 
-    if (MatchedLoIndex != -1)
-      // We have a match.
-      setMatch(MipsRelocs[I], MipsRelocs[MatchedLoIndex]);
+    unsigned MatchingType = getMatchingLoType(R);
+    assert(MatchingType != ELF::R_MIPS_NONE &&
+           "Wrong list for reloc that doesn't need a match");
+
+    // Find the best matching relocation for the current high part.
+    // See isMatchingReloc for a description of a matching relocation and
+    // compareMatchingRelocs for a description of what 'best' means.
+    auto InsertionPoint =
+        find_best(Sorted.begin(), Sorted.end(),
+                  [&R, &MatchingType](const MipsRelocationEntry &X) {
+                    return isMatchingReloc(X, R, MatchingType);
+                  },
+                  compareMatchingRelocs);
+
+    // If we matched then insert the high part in front of the match and mark
+    // both relocations as being involved in a match. We only mark the high
+    // part for cosmetic reasons in the debug output.
+    //
+    // If we failed to find a match then the high part is orphaned. This is not
+    // permitted since the relocation cannot be evaluated without knowing the
+    // carry-in. We can sometimes handle this using a matching low part that is
+    // already used in a match but we already cover that case in
+    // isMatchingReloc and compareMatchingRelocs. For the remaining cases we
+    // should insert the high part at the end of the list. This will cause the
+    // linker to fail but the alternative is to cause the linker to bind the
+    // high part to a semi-matching low part and silently calculate the wrong
+    // value. Unfortunately we have no means to warn the user that we did this
+    // so leave it up to the linker to complain about it.
+    if (InsertionPoint != Sorted.end())
+      InsertionPoint->Matched = true;
+    Sorted.insert(InsertionPoint, R)->Matched = true;
   }
 
-  // SortOffsets are calculated, call the sorting function.
-  array_pod_sort(MipsRelocs.begin(), MipsRelocs.end(), cmpRelMips);
+  DEBUG(dumpRelocs("S: ", Sorted));
 
-  // Copy sorted MipsRelocs back to Relocs.
-  for (unsigned I = 0, E = MipsRelocs.size(); I != E; ++I)
-    Relocs[I] = MipsRelocs[I].R;
+  assert(Relocs.size() == Sorted.size() && "Some relocs were not consumed");
+
+  // Overwrite the original vector with the sorted elements. The caller expects
+  // them in reverse order.
+  unsigned CopyTo = 0;
+  for (const auto &R : reverse(Sorted))
+    Relocs[CopyTo++] = R.R;
 }
 
 bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,

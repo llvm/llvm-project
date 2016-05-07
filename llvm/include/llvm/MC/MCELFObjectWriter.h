@@ -11,6 +11,7 @@
 #define LLVM_MC_MCELFOBJECTWRITER_H
 
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ELF.h"
 #include <vector>
@@ -31,10 +32,21 @@ struct ELFRelocationEntry {
   const MCSymbolELF *Symbol; // The symbol to relocate with.
   unsigned Type;   // The type of the relocation.
   uint64_t Addend; // The addend to use.
+  const MCSymbolELF *OriginalSymbol; // The original value of Symbol if we changed it.
+  uint64_t OriginalAddend; // The original value of addend.
 
   ELFRelocationEntry(uint64_t Offset, const MCSymbolELF *Symbol, unsigned Type,
-                     uint64_t Addend)
-      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend) {}
+                     uint64_t Addend, const MCSymbolELF *OriginalSymbol,
+                     uint64_t OriginalAddend)
+      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend),
+        OriginalSymbol(OriginalSymbol), OriginalAddend(OriginalAddend) {}
+
+  void print(raw_ostream &Out) const {
+    Out << "Off=" << Offset << ", Sym=" << Symbol << ", Type=" << Type
+        << ", Addend=" << Addend << ", OriginalSymbol=" << OriginalSymbol
+        << ", OriginalAddend=" << OriginalAddend;
+  }
+  void dump() const { print(errs()); }
 };
 
 class MCELFObjectTargetWriter {

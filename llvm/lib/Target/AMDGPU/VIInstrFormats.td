@@ -182,7 +182,7 @@ class VOP_DPP <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods = 0
   let DPP = 1;
   let Size = 8;
 
-  let AsmMatchConverter = !if(!eq(HasMods,1), "cvtDPP_mod", "cvtDPP_nomod");
+  let AsmMatchConverter = !if(!eq(HasMods,1), "cvtDPP", "");
 }
 
 class VOP_DPPe : Enc64 {

@@ -750,7 +750,7 @@ return: ret void
 }
 
 
-define i32 @pr27132(i32 %i) {
+define i32 @pr27135(i32 %i) {
 entry:
   br i1 undef, label %sw, label %end
 sw:
@@ -770,7 +770,7 @@ end:
   %p = phi i32 [ 1, %sw ], [ 0, %entry ]
   ret i32 %p
 
-; CHECK-LABEL: pr27132:
+; CHECK-LABEL: pr27135:
 ; The switch is lowered with bit tests. Since the case range is contiguous, the
 ; second bit test is redundant and can be skipped. Check that we don't update
 ; the phi node with an incoming value from the MBB of the skipped bit test

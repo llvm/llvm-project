@@ -42,29 +42,28 @@ void ByteStream::initialize(uint32_t Length) {
   Owned = true;
 }
 
-std::error_code ByteStream::initialize(StreamReader &Reader, uint32_t Length) {
+Error ByteStream::initialize(StreamReader &Reader, uint32_t Length) {
   initialize(Length);
-  std::error_code EC = Reader.readBytes(Data);
+  auto EC = Reader.readBytes(Data);
   if (EC)
     reset();
   return EC;
 }
 
-std::error_code ByteStream::readBytes(uint32_t Offset,
-                                      MutableArrayRef<uint8_t> Buffer) const {
+Error ByteStream::readBytes(uint32_t Offset,
+                            MutableArrayRef<uint8_t> Buffer) const {
   if (Data.size() < Buffer.size() + Offset)
-    return std::make_error_code(std::errc::bad_address);
+    return make_error<RawError>(raw_error_code::insufficient_buffer);
   ::memcpy(Buffer.data(), Data.data() + Offset, Buffer.size());
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code ByteStream::getArrayRef(uint32_t Offset,
-                                        ArrayRef<uint8_t> &Buffer,
-                                        uint32_t Length) const {
+Error ByteStream::getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
+                              uint32_t Length) const {
   if (Data.size() < Length + Offset)
-    return std::make_error_code(std::errc::bad_address);
+    return make_error<RawError>(raw_error_code::insufficient_buffer);
   Buffer = Data.slice(Offset, Length);
-  return std::error_code();
+  return Error::success();
 }
 
 uint32_t ByteStream::getLength() const { return Data.size(); }

@@ -147,8 +147,9 @@ class VOP3Common <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods 
 
   let AsmMatchConverter =
     !if(!eq(VOP3Only,1),
-        "cvtVOP3_only",
-        !if(!eq(HasMods,1), "cvtVOP3_2_mod", "cvtVOP3_2_nomod"));
+        "cvtVOP3",
+        !if(!eq(HasMods,1), "cvtVOP3_2_mod", ""));
+
   let isCodeGenOnly = 0;
 
   int Size = 8;
@@ -710,7 +711,6 @@ class FLAT <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
 
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
-  let AsmMatchConverter = "cvtFlat";
   let SchedRW = [WriteVMEM];
 }
 
