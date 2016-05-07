@@ -249,8 +249,21 @@ bool llvm::stripDebugInfo(Function &F) {
     Changed = true;
     F.setSubprogram(nullptr);
   }
+
+  Function *Declare = F.getParent()->getFunction("llvm.dbg.declare");
+  Function *DbgVal = F.getParent()->getFunction("llvm.dbg.value");
   for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
+    for (auto II = BB.begin(), End = BB.end(); II != End;) {
+      Instruction &I = *II++; // We may delete the instruction, increment now.
+      // Remove all of the calls to the debugger intrinsics, and remove them
+      // from the module.
+      CallInst *CI = dyn_cast<CallInst>(&I);
+      if (CI && CI->getCalledFunction() &&
+          (CI->getCalledFunction() == Declare ||
+           CI->getCalledFunction() == DbgVal)) {
+        CI->eraseFromParent();
+        Changed = true;
+      }
       if (I.getDebugLoc()) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
@@ -262,26 +275,6 @@ bool llvm::stripDebugInfo(Function &F) {
 
 bool llvm::StripDebugInfo(Module &M) {
   bool Changed = false;
-
-  // Remove all of the calls to the debugger intrinsics, and remove them from
-  // the module.
-  if (Function *Declare = M.getFunction("llvm.dbg.declare")) {
-    while (!Declare->use_empty()) {
-      CallInst *CI = cast<CallInst>(Declare->user_back());
-      CI->eraseFromParent();
-    }
-    Declare->eraseFromParent();
-    Changed = true;
-  }
-
-  if (Function *DbgVal = M.getFunction("llvm.dbg.value")) {
-    while (!DbgVal->use_empty()) {
-      CallInst *CI = cast<CallInst>(DbgVal->user_back());
-      CI->eraseFromParent();
-    }
-    DbgVal->eraseFromParent();
-    Changed = true;
-  }
 
   for (Module::named_metadata_iterator NMI = M.named_metadata_begin(),
          NME = M.named_metadata_end(); NMI != NME;) {

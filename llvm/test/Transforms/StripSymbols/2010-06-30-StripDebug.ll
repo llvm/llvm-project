@@ -1,6 +1,6 @@
 ; RUN: opt -strip-debug < %s -S | FileCheck %s
 
-; CHECK-NOT: llvm.dbg
+; CHECK-NOT: call void @llvm.dbg.value
 
 @x = common global i32 0                          ; <i32*> [#uses=0]
 
