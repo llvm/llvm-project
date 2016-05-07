@@ -78,21 +78,19 @@ class FixupBWInstPass : public MachineFunctionPass {
     return "X86 Byte/Word Instruction Fixup";
   }
 
-  /// \brief Loop over all of the instructions in the basic block
-  /// replacing applicable byte or word instructions with better
-  /// alternatives.
+  /// Loop over all of the instructions in the basic block replacing applicable
+  /// byte or word instructions with better alternatives.
   void processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
 
-  /// \brief This sets the \p SuperDestReg to the 32 bit super reg
-  /// of the original destination register of the MachineInstr
-  /// passed in. It returns true if that super register is dead
-  /// just prior to \p OrigMI, and false if not.
+  /// This sets the \p SuperDestReg to the 32 bit super reg of the original
+  /// destination register of the MachineInstr passed in. It returns true if
+  /// that super register is dead just prior to \p OrigMI, and false if not.
   bool getSuperRegDestIfDead(MachineInstr *OrigMI,
                              unsigned &SuperDestReg) const;
 
-  /// \brief Change the MachineInstr \p MI into the equivalent extending load
-  /// to 32 bit register if it is safe to do so.  Return the replacement
-  /// instruction if OK, otherwise return nullptr.
+  /// Change the MachineInstr \p MI into the equivalent extending load to 32 bit
+  /// register if it is safe to do so.  Return the replacement instruction if
+  /// OK, otherwise return nullptr.
   MachineInstr *tryReplaceLoad(unsigned New32BitOpcode, MachineInstr *MI) const;
 
 public:
@@ -104,9 +102,9 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  /// \brief Loop over all of the basic blocks,
-  /// replacing byte and word instructions by equivalent 32 bit instructions
-  /// where performance or code size can be improved.
+  /// Loop over all of the basic blocks, replacing byte and word instructions by
+  /// equivalent 32 bit instructions where performance or code size can be
+  /// improved.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
