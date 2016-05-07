@@ -168,6 +168,7 @@ void StatOutput(u64 *stat) {
   name[StatMtxFired]                     = "  FiredSuppressions               ";
   name[StatMtxRacy]                      = "  RacyStacks                      ";
   name[StatMtxFD]                        = "  FD                              ";
+  name[StatMtxGlobalProc]                = "  GlobalProc                      ";
 
   Printf("Statistics:\n");
   for (int i = 0; i < StatCnt; i++)

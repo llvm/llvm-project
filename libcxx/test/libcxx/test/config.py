@@ -293,6 +293,10 @@ class Configuration(object):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
         if not no_default_flags:
             self.configure_default_compile_flags()
+        # This include is always needed so add so add it regardless of
+        # 'no_default_flags'.
+        support_path = os.path.join(self.libcxx_src_root, 'test/support')
+        self.cxx.compile_flags += ['-I' + support_path]
         # Configure extra flags
         compile_flags_str = self.get_lit_conf('compile_flags', '')
         self.cxx.compile_flags += shlex.split(compile_flags_str)
@@ -341,7 +345,6 @@ class Configuration(object):
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test/support')
-        self.cxx.compile_flags += ['-I' + support_path]
         self.cxx.compile_flags += ['-include', os.path.join(support_path, 'nasty_macros.hpp')]
         self.configure_config_site_header()
         libcxx_headers = self.get_lit_conf(

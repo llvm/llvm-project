@@ -596,8 +596,12 @@ extern kmp_real64 __kmp_xchg_real64( volatile kmp_real64 *p, kmp_real64 v );
 
 #define TCR_4(a)            (a)
 #define TCW_4(a,b)          (a) = (b)
+#define TCI_4(a)            (++(a))
+#define TCD_4(a)            (--(a))
 #define TCR_8(a)            (a)
 #define TCW_8(a,b)          (a) = (b)
+#define TCI_8(a)            (++(a))
+#define TCD_8(a)            (--(a))
 #define TCR_SYNC_4(a)       (a)
 #define TCW_SYNC_4(a,b)     (a) = (b)
 #define TCX_SYNC_4(a,b,c)   KMP_COMPARE_AND_STORE_REL32((volatile kmp_int32 *)(volatile void *)&(a), (kmp_int32)(b), (kmp_int32)(c))

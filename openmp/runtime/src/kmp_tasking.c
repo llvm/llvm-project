@@ -2845,7 +2845,7 @@ static void __kmp_first_top_half_finish_proxy( kmp_taskdata_t * taskdata )
        KMP_TEST_THEN_DEC32( (kmp_int32 *)(& taskdata->td_taskgroup->count) );
 
     // Create an imaginary children for this task so the bottom half cannot release the task before we have completed the second top half
-    TCR_4(taskdata->td_incomplete_child_tasks++);
+    TCI_4(taskdata->td_incomplete_child_tasks);
 }
 
 static void __kmp_second_top_half_finish_proxy( kmp_taskdata_t * taskdata )
@@ -2857,7 +2857,7 @@ static void __kmp_second_top_half_finish_proxy( kmp_taskdata_t * taskdata )
     KMP_DEBUG_ASSERT( children >= 0 );
 
     // Remove the imaginary children
-    TCR_4(taskdata->td_incomplete_child_tasks--);
+    TCD_4(taskdata->td_incomplete_child_tasks);
 }
 
 static void __kmp_bottom_half_finish_proxy( kmp_int32 gtid, kmp_task_t * ptask )

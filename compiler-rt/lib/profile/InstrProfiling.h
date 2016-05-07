@@ -94,15 +94,7 @@ int __llvm_profile_check_compatibility(const char *Profile,
 void INSTR_PROF_VALUE_PROF_FUNC(
 #define VALUE_PROF_FUNC_PARAM(ArgType, ArgName, ArgLLVMType) ArgType ArgName
 #include "InstrProfData.inc"
-);
-
-/*!
- * \brief Prepares the value profiling data for output.
- *
- * Returns an array of pointers to value profile data.
- */
-struct ValueProfData;
-struct ValueProfData **__llvm_profile_gather_value_data(uint64_t *Size);
+    );
 
 /*!
  * \brief Write instrumentation data to the current file.
