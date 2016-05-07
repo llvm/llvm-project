@@ -21,6 +21,7 @@
 #define PROF_OOM_RETURN(Msg)                                                   \
   {                                                                            \
     PROF_OOM(Msg)                                                              \
+    free(ValueDataArray);                                                      \
     return NULL;                                                               \
   }
 
@@ -117,22 +118,51 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
   }
 }
 
-COMPILER_RT_VISIBILITY struct ValueProfData *
-lprofGatherValueProfData(const __llvm_profile_data *Data) {
-  ValueProfData *VD = NULL;
-  ValueProfRuntimeRecord R;
-  if (initializeValueProfRuntimeRecord(&R, Data->NumValueSites, Data->Values))
+COMPILER_RT_VISIBILITY ValueProfData **
+__llvm_profile_gather_value_data(uint64_t *ValueDataSize) {
+  size_t S = 0;
+  __llvm_profile_data *I;
+  ValueProfData **ValueDataArray;
+
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+
+  if (!ValueDataSize)
+    return NULL;
+
+  ValueDataArray = (ValueProfData **)calloc(
+      __llvm_profile_get_data_size(DataBegin, DataEnd), sizeof(void *));
+  if (!ValueDataArray)
     PROF_OOM_RETURN("Failed to write value profile data ");
 
-  /* Compute the size of ValueProfData from this runtime record.  */
-  if (getNumValueKindsRT(&R) != 0) {
-    uint32_t VS = getValueProfDataSizeRT(&R);
-    VD = (ValueProfData *)calloc(VS, sizeof(uint8_t));
-    if (!VD)
+  /*
+   * Compute the total Size of the buffer to hold ValueProfData
+   * structures for functions with value profile data.
+   */
+  for (I = (__llvm_profile_data *)DataBegin; I < DataEnd; ++I) {
+    ValueProfRuntimeRecord R;
+    if (initializeValueProfRuntimeRecord(&R, I->NumValueSites, I->Values))
       PROF_OOM_RETURN("Failed to write value profile data ");
-    serializeValueProfDataFromRT(&R, VD);
-  }
-  finalizeValueProfRuntimeRecord(&R);
 
-  return VD;
+    /* Compute the size of ValueProfData from this runtime record.  */
+    if (getNumValueKindsRT(&R) != 0) {
+      ValueProfData *VD = NULL;
+      uint32_t VS = getValueProfDataSizeRT(&R);
+      VD = (ValueProfData *)calloc(VS, sizeof(uint8_t));
+      if (!VD)
+        PROF_OOM_RETURN("Failed to write value profile data ");
+      serializeValueProfDataFromRT(&R, VD);
+      ValueDataArray[I - DataBegin] = VD;
+      S += VS;
+    }
+    finalizeValueProfRuntimeRecord(&R);
+  }
+
+  if (!S) {
+    free(ValueDataArray);
+    ValueDataArray = NULL;
+  }
+
+  *ValueDataSize = S;
+  return ValueDataArray;
 }

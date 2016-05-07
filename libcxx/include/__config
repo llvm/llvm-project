@@ -818,7 +818,8 @@ extern "C" void __sanitizer_annotate_contiguous_container(
     defined(__NetBSD__) || \
     defined(__linux__) || \
     defined(__APPLE__) || \
-    defined(__CloudABI__)
+    defined(__CloudABI__) || \
+    defined(__sun__)
 #  define _LIBCPP_THREAD_API_PTHREAD
 # else
 #  error "No thread API"
