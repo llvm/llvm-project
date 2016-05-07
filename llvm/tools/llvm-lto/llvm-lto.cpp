@@ -98,6 +98,11 @@ static cl::opt<std::string>
                  cl::desc("Provide the index produced by a ThinLink, required "
                           "to perform the promotion and/or importing."));
 
+static cl::opt<std::string> ThinLTOModuleId(
+    "thinlto-module-id",
+    cl::desc("For the module ID for the file to process, useful to "
+             "match what is in the index."));
+
 static cl::opt<bool>
     SaveModuleFile("save-merged-module", cl::init(false),
                    cl::desc("Write merged LTO module to file before CodeGen"));
@@ -312,6 +317,12 @@ static std::unique_ptr<Module> loadModule(StringRef Filename,
     report_fatal_error("Can't load module for file " + Filename);
   }
   maybeVerifyModule(*M);
+
+  if (ThinLTOModuleId.getNumOccurrences()) {
+    if (InputFilenames.size() != 1)
+      report_fatal_error("Can't override the module id for multiple files");
+    M->setModuleIdentifier(ThinLTOModuleId);
+  }
   return M;
 }
 
