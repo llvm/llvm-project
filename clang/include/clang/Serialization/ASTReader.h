@@ -27,6 +27,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Sema/ExternalSemaSource.h"
+#include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/Module.h"
@@ -389,6 +390,11 @@ private:
 
   /// \brief The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
+
+  /// \brief A dummy identifier resolver used to merge TU-scope declarations in
+  /// C, for the cases where we don't have a Sema object to provide a real
+  /// identifier resolver.
+  IdentifierResolver DummyIdResolver;
 
   /// A mapping from extension block names to module file extensions.
   llvm::StringMap<IntrusiveRefCntPtr<ModuleFileExtension>> ModuleFileExtensions;
@@ -2099,6 +2105,11 @@ public:
   /// translation unit in which the precompiled header is being
   /// imported.
   Sema *getSema() { return SemaObj; }
+
+  /// \brief Get the identifier resolver used for name lookup / updates
+  /// in the translation unit scope. We have one of these even if we don't
+  /// have a Sema object.
+  IdentifierResolver &getIdResolver();
 
   /// \brief Retrieve the identifier table associated with the
   /// preprocessor.
