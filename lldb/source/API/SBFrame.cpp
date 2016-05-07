@@ -105,7 +105,20 @@ SBFrame::SetFrameSP (const StackFrameSP &lldb_object_sp)
 bool
 SBFrame::IsValid() const
 {
-    return GetFrameSP().get() != nullptr;
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
+    Target *target = exe_ctx.GetTargetPtr();
+    Process *process = exe_ctx.GetProcessPtr();
+    if (target && process)
+    {
+        Process::StopLocker stop_locker;
+        if (stop_locker.TryLock(&process->GetRunLock()))
+        return GetFrameSP().get() != nullptr;
+    }
+    
+    // Without a target & process we can't have a valid stack frame.
+    return false;
 }
 
 SBSymbolContext

@@ -1249,8 +1249,8 @@ template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
     memcpy(Buf, Data.data(), Data.size());
     return;
   }
-  for (const std::pair<StringRef, size_t> &P : Builder.getMap()) {
-    StringRef Data = P.first;
+  for (const std::pair<CachedHash<StringRef>, size_t> &P : Builder.getMap()) {
+    StringRef Data = P.first.Val;
     memcpy(Buf + P.second, Data.data(), Data.size());
   }
 }

@@ -362,7 +362,6 @@ DNBDataRef::Dump
         // the snprintf call each time through this loop
         switch (type)
         {
-            default:
             case TypeUInt8:   str_offset += snprintf(str + str_offset, sizeof(str) - str_offset, format ? format : " %2.2x", Get8(&offset)); break;
             case TypeChar:
                 {

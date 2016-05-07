@@ -118,7 +118,7 @@ SymbolFilePDB::CalculateAbilities()
         // Lazily load and match the PDB file, but only do this once.
         std::string exePath = m_obj_file->GetFileSpec().GetPath();
         auto error = loadDataForEXE(PDB_ReaderType::DIA, llvm::StringRef(exePath), m_session_up);
-        if (error != PDB_ErrorCode::Success)
+        if (error)
             return 0;
     }
     return CompileUnits | LineTables;

@@ -439,6 +439,12 @@ static bool needsPlt(RelExpr Expr) {
   return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT;
 }
 
+// True if this expression is of the form Sym - X, where X is a position in the
+// file (PC, or GOT for example).
+static bool isRelExpr(RelExpr Expr) {
+  return Expr == R_PC || Expr == R_GOTREL || Expr == R_PAGE_PC;
+}
+
 template <class ELFT>
 static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
                                      const SymbolBody &Body) {
@@ -460,7 +466,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
     return true;
 
   bool AbsVal = isAbsolute<ELFT>(Body) || Body.isTls();
-  bool RelE = E == R_PC || E == R_GOTREL || E == R_PAGE_PC;
+  bool RelE = isRelExpr(E);
   if (AbsVal && !RelE)
     return true;
   if (!AbsVal && RelE)
@@ -520,7 +526,7 @@ RelExpr Writer<ELFT>::adjustExpr(SymbolBody &Body, bool IsWrite, RelExpr Expr,
   // This relocation would require the dynamic linker to write a value to read
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
-  if (Config->Shared) {
+  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
     error("relocation " + S + " cannot be used when making a shared "
                               "object; recompile with -fPIC.");
@@ -740,9 +746,11 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     // can process some of it and and just ask the dynamic linker to add the
     // load address.
     if (!Config->Pic || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body)) {
-      if (Config->EMachine == EM_MIPS && Body.isLocal() &&
-          (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
-        Addend += File.getMipsGp0();
+      if (Config->EMachine == EM_MIPS && Expr == R_GOTREL) {
+        Addend -= MipsGPOffset;
+        if (Body.isLocal())
+          Addend += File.getMipsGp0();
+      }
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       continue;
     }

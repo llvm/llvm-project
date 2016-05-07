@@ -77,11 +77,13 @@ math/copysign.cl
 math/cos.cl
 math/cospi.cl
 math/ep_log.cl
+math/erf.cl
 math/erfc.cl
 math/exp.cl
 math/exp_helper.cl
 math/exp2.cl
 math/exp10.cl
+math/fdim.cl
 math/fmax.cl
 math/fmin.cl
 math/fmod.cl
