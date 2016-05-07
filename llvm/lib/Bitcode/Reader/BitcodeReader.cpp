@@ -525,11 +525,6 @@ public:
   std::error_code parseSummaryIndexInto(std::unique_ptr<DataStreamer> Streamer,
                                         ModuleSummaryIndex *I);
 
-  /// \brief Interface for parsing a summary lazily.
-  std::error_code
-  parseGlobalValueSummary(std::unique_ptr<DataStreamer> Streamer,
-                          ModuleSummaryIndex *I, size_t SummaryOffset);
-
 private:
   std::error_code parseModule();
   std::error_code parseValueSymbolTable(
@@ -6327,49 +6322,6 @@ std::error_code ModuleSummaryIndexBitcodeReader::parseSummaryIndexInto(
     if (Stream.SkipBlock())
       return error("Invalid record");
   }
-}
-
-// Parse the summary information at the given offset in the buffer into
-// the index. Used to support lazy parsing of summaries from the
-// combined index during importing.
-// TODO: This function is not yet complete as it won't have a consumer
-// until ThinLTO function importing is added.
-std::error_code ModuleSummaryIndexBitcodeReader::parseGlobalValueSummary(
-    std::unique_ptr<DataStreamer> Streamer, ModuleSummaryIndex *I,
-    size_t SummaryOffset) {
-  TheIndex = I;
-
-  if (std::error_code EC = initStream(std::move(Streamer)))
-    return EC;
-
-  // Sniff for the signature.
-  if (!hasValidBitcodeHeader(Stream))
-    return error("Invalid bitcode signature");
-
-  Stream.JumpToBit(SummaryOffset);
-
-  BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
-
-  switch (Entry.Kind) {
-  default:
-    return error("Malformed block");
-  case BitstreamEntry::Record:
-    // The expected case.
-    break;
-  }
-
-  // TODO: Read a record. This interface will be completed when ThinLTO
-  // importing is added so that it can be tested.
-  SmallVector<uint64_t, 64> Record;
-  switch (Stream.readRecord(Entry.ID, Record)) {
-  case bitc::FS_COMBINED:
-  case bitc::FS_COMBINED_PROFILE:
-  case bitc::FS_COMBINED_GLOBALVAR_INIT_REFS:
-  default:
-    return error("Invalid record");
-  }
-
-  return std::error_code();
 }
 
 std::error_code ModuleSummaryIndexBitcodeReader::initStream(
