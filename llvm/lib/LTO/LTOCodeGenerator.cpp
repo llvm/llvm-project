@@ -347,7 +347,7 @@ bool LTOCodeGenerator::determineTarget() {
 // If a linkonce global is present in the MustPreserveSymbols, we need to make
 // sure we honor this. To force the compiler to not drop it, we add it to the
 // "llvm.compiler.used" global.
-static void preserveDiscardableGVs(
+void LTOCodeGenerator::preserveDiscardableGVs(
     Module &TheModule,
     llvm::function_ref<bool(const GlobalValue &)> mustPreserveGV) {
   SetVector<Constant *> UsedValuesSet;
@@ -364,7 +364,17 @@ static void preserveDiscardableGVs(
       return;
     if (!mustPreserveGV(GV))
       return;
-    assert(!GV.hasAvailableExternallyLinkage() && !GV.hasInternalLinkage());
+    if (GV.hasAvailableExternallyLinkage()) {
+      emitWarning(
+          (Twine("Linker asked to preserve available_externally global: '") +
+           GV.getName() + "'").str());
+      return;
+    }
+    if (GV.hasInternalLinkage()) {
+      emitWarning((Twine("Linker asked to preserve internal global: '") +
+                   GV.getName() + "'").str());
+      return;
+    }
     UsedValuesSet.insert(ConstantExpr::getBitCast(&GV, i8PTy));
   };
   for (auto &GV : TheModule)
@@ -639,4 +649,11 @@ void LTOCodeGenerator::emitError(const std::string &ErrMsg) {
     (*DiagHandler)(LTO_DS_ERROR, ErrMsg.c_str(), DiagContext);
   else
     Context.diagnose(LTODiagnosticInfo(ErrMsg));
+}
+
+void LTOCodeGenerator::emitWarning(const std::string &ErrMsg) {
+  if (DiagHandler)
+    (*DiagHandler)(LTO_DS_WARNING, ErrMsg.c_str(), DiagContext);
+  else
+    Context.diagnose(LTODiagnosticInfo(ErrMsg, DS_Warning));
 }
