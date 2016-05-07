@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -919,6 +920,29 @@ public:
   StringRef getExternalContentsPrefixDir() const {
     return ExternalContentsPrefixDir;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void dump() const {
+    for (const std::unique_ptr<Entry> &Root : Roots)
+      dumpEntry(Root.get());
+  }
+
+LLVM_DUMP_METHOD void dumpEntry(Entry *E, int NumSpaces = 0) const {
+    StringRef Name = E->getName();
+    for (int i = 0, e = NumSpaces; i < e; ++i)
+      dbgs() << " ";
+    dbgs() << "'" << Name.str().c_str() << "'" << "\n";
+
+    if (E->getKind() == EK_Directory) {
+      auto *DE = dyn_cast<RedirectingDirectoryEntry>(E);
+      assert(DE && "Should be a directory");
+
+      for (std::unique_ptr<Entry> &SubEntry :
+           llvm::make_range(DE->contents_begin(), DE->contents_end()))
+        dumpEntry(SubEntry.get(), NumSpaces+2);
+    }
+  }
+#endif
 
 };
 

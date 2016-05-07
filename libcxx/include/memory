@@ -607,6 +607,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__functional_base>
 #include <iosfwd>
 #include <tuple>
+#include <stdexcept>
 #include <cstring>
 #if defined(_LIBCPP_NO_EXCEPTIONS)
     #include <cassert>
@@ -1728,11 +1729,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
         {
         if (__n > max_size())
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_alloc();
-#else
-            assert(!"allocator<T>::allocate::bad_alloc");
-#endif
+            __libcpp_throw(length_error("allocator<T>::allocate(size_t n)"
+                                      " 'n' exceeds maximum supported size"));
         return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
         }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
@@ -1827,13 +1825,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY pointer allocate(size_type __n, allocator<void>::const_pointer = 0)
     {
         if (__n > max_size())
-#ifndef _LIBCPP_NO_EXCEPTIONS
-            throw bad_alloc();
-#else
-            assert(!"allocator<const T>::allocate::bad_alloc");
-#endif
+            __libcpp_throw(length_error("allocator<const T>::allocate(size_t n)"
+                                      " 'n' exceeds maximum supported size"));
         return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
-        }
+    }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
         {_VSTD::__deallocate((void*)__p);}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT

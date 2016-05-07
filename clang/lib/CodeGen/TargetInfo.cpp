@@ -6826,14 +6826,6 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   if (!FD)
     return;
 
-  if (M.getLangOpts().OpenCL) {
-    if (FD->hasAttr<OpenCLKernelAttr>()) {
-      // Set amdgpu_kernel calling convention for OpenCL kernels.
-      llvm::Function *Fn = cast<llvm::Function>(GV);
-      Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
-    }
-  }
-
   if (const auto Attr = FD->getAttr<AMDGPUNumVGPRAttr>()) {
     llvm::Function *F = cast<llvm::Function>(GV);
     uint32_t NumVGPR = Attr->getNumVGPR();
