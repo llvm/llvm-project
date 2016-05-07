@@ -11,6 +11,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 
 using namespace llvm;
@@ -18,7 +19,7 @@ using namespace llvm::pdb;
 
 InfoStream::InfoStream(PDBFile &File) : Pdb(File), Stream(StreamPDB, File) {}
 
-std::error_code InfoStream::reload() {
+Error InfoStream::reload() {
   StreamReader Reader(Stream);
 
   struct Header {
@@ -29,19 +30,20 @@ std::error_code InfoStream::reload() {
   };
 
   Header H;
-  Reader.readObject(&H);
+  if (auto EC = Reader.readObject(&H))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "PDB Stream does not contain a header.");
 
   if (H.Version < PdbRaw_ImplVer::PdbImplVC70)
-    return std::make_error_code(std::errc::not_supported);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Unsupported PDB stream version.");
 
   Version = H.Version;
   Signature = H.Signature;
   Age = H.Age;
   Guid = H.Guid;
 
-  NamedStreams.load(Reader);
-
-  return std::error_code();
+  return NamedStreams.load(Reader);
 }
 
 uint32_t InfoStream::getNamedStreamIndex(llvm::StringRef Name) const {

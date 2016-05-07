@@ -26,10 +26,11 @@ entry:
 ; as a leaf function.
 ;
 ; CHECK-LABEL: caller_meta_leaf
-; CHECK:       mov x29, sp
-; CHECK-NEXT:  sub sp, sp, #32
+; CHECK:       sub sp, sp, #48
+; CHECK-NEXT:  stp x29, x30, [sp, #32]
+; CHECK-NEXT:  add x29, sp, #32
 ; CHECK:       Ltmp
-; CHECK:       add sp, sp, #32
+; CHECK:       add sp, sp, #48
 ; CHECK:       ret
 
 define void @caller_meta_leaf() {

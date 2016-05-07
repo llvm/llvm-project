@@ -2179,7 +2179,7 @@ void SelectionDAGISel::UpdateChains(
       CurDAG->ReplaceAllUsesOfValueWith(ChainVal, InputChain);
 
       // If the node became dead and we haven't already seen it, delete it.
-      if (ChainNode->use_empty() &&
+      if (ChainNode != NodeToMatch && ChainNode->use_empty() &&
           !std::count(NowDeadNodes.begin(), NowDeadNodes.end(), ChainNode))
         NowDeadNodes.push_back(ChainNode);
     }
@@ -2741,6 +2741,7 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
   case ISD::AssertZext:
     CurDAG->ReplaceAllUsesOfValueWith(SDValue(NodeToMatch, 0),
                                       NodeToMatch->getOperand(0));
+    CurDAG->RemoveDeadNode(NodeToMatch);
     return nullptr;
   case ISD::INLINEASM: return Select_INLINEASM(NodeToMatch);
   case ISD::READ_REGISTER: return Select_READ_REGISTER(NodeToMatch);
@@ -3474,6 +3475,7 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
 
       assert(NodeToMatch->use_empty() &&
              "Didn't replace all uses of the node?");
+      CurDAG->RemoveDeadNode(NodeToMatch);
 
       // FIXME: We just return here, which interacts correctly with SelectRoot
       // above.  We should fix this to not return an SDNode* anymore.

@@ -51,36 +51,38 @@ public:
 #define MEMBER_RECORD_ALIAS(ClassName, LeafEnum)
 #include "TypeRecords.def"
 
-  /// Visits the type records in Data and returns remaining data. Sets the
-  /// error flag on parse failures.
-  void visitTypeStream(ArrayRef<uint8_t> Data) {
-    for (const auto &I : makeTypeRange(Data)) {
-      ArrayRef<uint8_t> LeafData = I.LeafData;
-      ArrayRef<uint8_t> RecordData = LeafData;
-      auto *DerivedThis = static_cast<Derived *>(this);
-      DerivedThis->visitTypeBegin(I.Leaf, RecordData);
-      switch (I.Leaf) {
-      default:
-        DerivedThis->visitUnknownType(I.Leaf);
-        break;
-      case LF_FIELDLIST:
-        DerivedThis->visitFieldList(I.Leaf, LeafData);
-        break;
-      case LF_METHODLIST:
-        DerivedThis->visitMethodList(I.Leaf, LeafData);
-        break;
+  void visitTypeRecord(const TypeIterator::TypeRecord &Record) {
+    ArrayRef<uint8_t> LeafData = Record.LeafData;
+    ArrayRef<uint8_t> RecordData = LeafData;
+    auto *DerivedThis = static_cast<Derived *>(this);
+    DerivedThis->visitTypeBegin(Record.Leaf, RecordData);
+    switch (Record.Leaf) {
+    default:
+      DerivedThis->visitUnknownType(Record.Leaf);
+      break;
+    case LF_FIELDLIST:
+      DerivedThis->visitFieldList(Record.Leaf, LeafData);
+      break;
+    case LF_METHODLIST:
+      DerivedThis->visitMethodList(Record.Leaf, LeafData);
+      break;
 #define TYPE_RECORD(ClassName, LeafEnum)                                       \
   case LeafEnum: {                                                             \
     const ClassName *Rec;                                                      \
     if (!CVTypeVisitor::consumeObject(LeafData, Rec))                          \
       return;                                                                  \
-    DerivedThis->visit##ClassName(I.Leaf, Rec, LeafData);     \
+    DerivedThis->visit##ClassName(Record.Leaf, Rec, LeafData);                 \
     break;                                                                     \
   }
 #include "TypeRecords.def"
       }
-      DerivedThis->visitTypeEnd(I.Leaf, RecordData);
-    }
+      DerivedThis->visitTypeEnd(Record.Leaf, RecordData);
+  }
+
+  /// Visits the type records in Data. Sets the error flag on parse failures.
+  void visitTypeStream(ArrayRef<uint8_t> Data) {
+    for (const auto &I : makeTypeRange(Data))
+      visitTypeRecord(I);
   }
 
   /// Action to take on unknown types. By default, they are ignored.

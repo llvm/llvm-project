@@ -26,6 +26,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/CodeView/TypeDumper.h"
+#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
@@ -105,8 +107,8 @@ cl::opt<bool> DumpStreamSizes("dump-stream-sizes",
 cl::opt<bool> DumpStreamBlocks("dump-stream-blocks",
                                cl::desc("dump PDB stream blocks"),
                                cl::cat(OtherOptions));
-cl::opt<bool> DumpTypeStream("dump-tpi-stream",
-                             cl::desc("dump PDB TPI (Type Info) stream"),
+cl::opt<bool> DumpTpiRecords("dump-tpi-records",
+                             cl::desc("dump CodeView type records"),
                              cl::cat(OtherOptions));
 cl::opt<bool>
     DumpTpiRecordBytes("dump-tpi-record-bytes",
@@ -157,9 +159,10 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::cat(FilterCategory));
 }
 
-static void dumpFileHeaders(ScopedPrinter &P, PDBFile &File) {
+static Error dumpFileHeaders(ScopedPrinter &P, PDBFile &File) {
   if (!opts::DumpHeaders)
-    return;
+    return Error::success();
+
   DictScope D(P, "FileHeaders");
   P.printNumber("BlockSize", File.getBlockSize());
   P.printNumber("Unknown0", File.getUnknown0());
@@ -175,11 +178,12 @@ static void dumpFileHeaders(ScopedPrinter &P, PDBFile &File) {
   // order, make up the directory.
   P.printList("DirectoryBlocks", File.getDirectoryBlockArray());
   P.printNumber("NumStreams", File.getNumStreams());
+  return Error::success();
 }
 
-static void dumpStreamSizes(ScopedPrinter &P, PDBFile &File) {
+static Error dumpStreamSizes(ScopedPrinter &P, PDBFile &File) {
   if (!opts::DumpStreamSizes)
-    return;
+    return Error::success();
 
   ListScope L(P, "StreamSizes");
   uint32_t StreamCount = File.getNumStreams();
@@ -188,11 +192,12 @@ static void dumpStreamSizes(ScopedPrinter &P, PDBFile &File) {
     Name += to_string(StreamIdx);
     P.printNumber(Name, File.getStreamByteSize(StreamIdx));
   }
+  return Error::success();
 }
 
-static void dumpStreamBlocks(ScopedPrinter &P, PDBFile &File) {
+static Error dumpStreamBlocks(ScopedPrinter &P, PDBFile &File) {
   if (!opts::DumpStreamBlocks)
-    return;
+    return Error::success();
 
   ListScope L(P, "StreamBlocks");
   uint32_t StreamCount = File.getNumStreams();
@@ -202,15 +207,16 @@ static void dumpStreamBlocks(ScopedPrinter &P, PDBFile &File) {
     auto StreamBlocks = File.getStreamBlockList(StreamIdx);
     P.printList(Name, StreamBlocks);
   }
+  return Error::success();
 }
 
-static void dumpStreamData(ScopedPrinter &P, PDBFile &File) {
+static Error dumpStreamData(ScopedPrinter &P, PDBFile &File) {
   uint32_t StreamCount = File.getNumStreams();
   StringRef DumpStreamStr = opts::DumpStreamData;
   uint32_t DumpStreamNum;
   if (DumpStreamStr.getAsInteger(/*Radix=*/0U, DumpStreamNum) ||
       DumpStreamNum >= StreamCount)
-    return;
+    return Error::success();
 
   uint32_t StreamBytesRead = 0;
   uint32_t StreamSize = File.getStreamByteSize(DumpStreamNum);
@@ -229,20 +235,31 @@ static void dumpStreamData(ScopedPrinter &P, PDBFile &File) {
     outs() << StreamBlockData;
     StreamBytesRead += StreamBlockData.size();
   }
+  return Error::success();
 }
 
-static void dumpInfoStream(ScopedPrinter &P, PDBFile &File) {
-  InfoStream &IS = File.getPDBInfoStream();
+static Error dumpInfoStream(ScopedPrinter &P, PDBFile &File) {
+  auto InfoS = File.getPDBInfoStream();
+  if (auto EC = InfoS.takeError())
+    return EC;
+
+  InfoStream &IS = InfoS.get();
 
   DictScope D(P, "PDB Stream");
   P.printNumber("Version", IS.getVersion());
   P.printHex("Signature", IS.getSignature());
   P.printNumber("Age", IS.getAge());
   P.printObject("Guid", IS.getGuid());
+  return Error::success();
 }
 
-static void dumpNamedStream(ScopedPrinter &P, PDBFile &File, StringRef Stream) {
-  InfoStream &IS = File.getPDBInfoStream();
+static Error dumpNamedStream(ScopedPrinter &P, PDBFile &File,
+                             StringRef Stream) {
+  auto InfoS = File.getPDBInfoStream();
+  if (auto EC = InfoS.takeError())
+    return EC;
+  InfoStream &IS = InfoS.get();
+
   uint32_t NameStreamIndex = IS.getNamedStreamIndex(Stream);
 
   if (NameStreamIndex != 0) {
@@ -256,7 +273,9 @@ static void dumpNamedStream(ScopedPrinter &P, PDBFile &File, StringRef Stream) {
     StreamReader Reader(NameStream);
 
     NameHashTable NameTable;
-    NameTable.load(Reader);
+    if (auto EC = NameTable.load(Reader))
+      return EC;
+
     P.printHex("Signature", NameTable.getSignature());
     P.printNumber("Version", NameTable.getHashVersion());
     P.printNumber("Name Count", NameTable.getNameCount());
@@ -267,10 +286,14 @@ static void dumpNamedStream(ScopedPrinter &P, PDBFile &File, StringRef Stream) {
         P.printString(Str);
     }
   }
+  return Error::success();
 }
 
-static void dumpDbiStream(ScopedPrinter &P, PDBFile &File) {
-  DbiStream &DS = File.getPDBDbiStream();
+static Error dumpDbiStream(ScopedPrinter &P, PDBFile &File) {
+  auto DbiS = File.getPDBDbiStream();
+  if (auto EC = DbiS.takeError())
+    return EC;
+  DbiStream &DS = DbiS.get();
 
   DictScope D(P, "DBI Stream");
   P.printNumber("Dbi Version", DS.getDbiVersion());
@@ -312,95 +335,88 @@ static void dumpDbiStream(ScopedPrinter &P, PDBFile &File) {
     for (auto File : Modi.SourceFiles)
       P.printString(File);
   }
+  return Error::success();
 }
 
-static void dumpTpiStream(ScopedPrinter &P, PDBFile &File) {
-  if (!opts::DumpTypeStream)
-    return;
+static Error dumpTpiStream(ScopedPrinter &P, PDBFile &File) {
+  if (!opts::DumpTpiRecordBytes && !opts::DumpTpiRecords)
+    return Error::success();
 
   DictScope D(P, "Type Info Stream");
 
-  TpiStream &Tpi = File.getPDBTpiStream();
+  auto TpiS = File.getPDBTpiStream();
+  if (auto EC = TpiS.takeError())
+    return EC;
+  TpiStream &Tpi = TpiS.get();
+
   P.printNumber("TPI Version", Tpi.getTpiVersion());
   P.printNumber("Record count", Tpi.NumTypeRecords());
 
-  if (!opts::DumpTpiRecordBytes)
-    return;
+  if (opts::DumpTpiRecordBytes || opts::DumpTpiRecords) {
+    ListScope L(P, "Records");
+    codeview::CVTypeDumper TD(P, false);
 
-  ListScope L(P, "Records");
-  for (auto &Type : Tpi.types()) {
-    DictScope DD(P, "");
-    P.printHex("Kind", unsigned(Type.Leaf));
-    P.printBinaryBlock("Bytes", Type.LeafData);
+    for (auto &Type : Tpi.types()) {
+      DictScope DD(P, "");
+
+      if (opts::DumpTpiRecords)
+        TD.dump(Type);
+
+      if (opts::DumpTpiRecordBytes)
+        P.printBinaryBlock("Bytes", Type.LeafData);
+    }
   }
+  return Error::success();
 }
 
-static void dumpStructure(RawSession &RS) {
+static Error dumpStructure(RawSession &RS) {
   PDBFile &File = RS.getPDBFile();
   ScopedPrinter P(outs());
 
-  dumpFileHeaders(P, File);
+  if (auto EC = dumpFileHeaders(P, File))
+    return EC;
 
-  dumpStreamSizes(P, File);
+  if (auto EC = dumpStreamSizes(P, File))
+    return EC;
 
-  dumpStreamBlocks(P, File);
+  if (auto EC = dumpStreamBlocks(P, File))
+    return EC;
 
-  dumpStreamData(P, File);
+  if (auto EC = dumpStreamData(P, File))
+    return EC;
 
-  dumpInfoStream(P, File);
+  if (auto EC = dumpInfoStream(P, File))
+    return EC;
 
-  dumpNamedStream(P, File, "/names");
+  if (auto EC = dumpNamedStream(P, File, "/names"))
+    return EC;
 
-  dumpDbiStream(P, File);
+  if (auto EC = dumpDbiStream(P, File))
+    return EC;
 
-  dumpTpiStream(P, File);
-}
-
-static void reportError(StringRef Path, PDB_ErrorCode Error) {
-  switch (Error) {
-  case PDB_ErrorCode::Success:
-    break;
-  case PDB_ErrorCode::NoDiaSupport:
-    outs() << "LLVM was not compiled with support for DIA.  This usually means "
-              "that either LLVM was not compiled with MSVC, or your MSVC "
-              "installation is corrupt.\n";
-    return;
-  case PDB_ErrorCode::CouldNotCreateImpl:
-    outs() << "Failed to connect to DIA at runtime.  Verify that Visual Studio "
-              "is properly installed, or that msdiaXX.dll is in your PATH.\n";
-    return;
-  case PDB_ErrorCode::InvalidPath:
-    outs() << "Unable to load PDB at '" << Path
-           << "'.  Check that the file exists and is readable.\n";
-    return;
-  case PDB_ErrorCode::InvalidFileFormat:
-    outs() << "Unable to load PDB at '" << Path
-           << "'.  The file has an unrecognized format.\n";
-    return;
-  default:
-    outs() << "Unable to load PDB at '" << Path
-           << "'.  An unknown error occured.\n";
-    return;
-  }
+  if (auto EC = dumpTpiStream(P, File))
+    return EC;
+  return Error::success();
 }
 
 static void dumpInput(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   if (opts::DumpHeaders || !opts::DumpStreamData.empty()) {
-    PDB_ErrorCode Error = loadDataForPDB(PDB_ReaderType::Raw, Path, Session);
-    if (Error == PDB_ErrorCode::Success) {
+    auto E = loadDataForPDB(PDB_ReaderType::Raw, Path, Session);
+    if (!E) {
       RawSession *RS = static_cast<RawSession *>(Session.get());
-      dumpStructure(*RS);
+      E = dumpStructure(*RS);
     }
 
-    reportError(Path, Error);
-    outs().flush();
+    if (E)
+      logAllUnhandledErrors(std::move(E), outs(), "");
+
     return;
   }
 
-  PDB_ErrorCode Error = loadDataForPDB(PDB_ReaderType::DIA, Path, Session);
-  if (Error != PDB_ErrorCode::Success) {
-    reportError(Path, Error);
+  Error E = loadDataForPDB(PDB_ReaderType::DIA, Path, Session);
+  if (E) {
+    logAllUnhandledErrors(std::move(E), outs(), "");
     return;
   }
 
@@ -571,6 +587,6 @@ int main(int argc_, const char *argv_[]) {
 #if defined(HAVE_DIA_SDK)
   CoUninitialize();
 #endif
-
+  outs().flush();
   return 0;
 }

@@ -219,7 +219,7 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
     MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (!PGOInstrUse.empty())
-    MPM.add(createPGOInstrumentationUsePass(PGOInstrUse));
+    MPM.add(createPGOInstrumentationUseLegacyPass(PGOInstrUse));
 }
 void PassManagerBuilder::addFunctionSimplificationPasses(
     legacy::PassManagerBase &MPM) {
@@ -242,11 +242,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   MPM.add(createTailCallEliminationPass()); // Eliminate tail calls
   MPM.add(createCFGSimplificationPass());     // Merge & remove BBs
   MPM.add(createReassociatePass());           // Reassociate expressions
-  if (PrepareForThinLTO) {
-    MPM.add(createAggressiveDCEPass());        // Delete dead instructions
-    addInstructionCombiningPass(MPM);          // Combine silly seq's
-    return;
-  }
   // Rotate Loop - disable header duplication at -Oz
   MPM.add(createLoopRotatePass(SizeLevel == 2 ? 0 : -1));
   MPM.add(createLICMPass());                  // Hoist loop invariants
@@ -431,24 +426,19 @@ void PassManagerBuilder::populateModulePassManager(
     return;
   }
 
+  if (PerformThinLTO)
+    // Optimize globals now when performing ThinLTO, this enables more
+    // optimizations later.
+    MPM.add(createGlobalOptimizerPass());
+
   // Scheduling LoopVersioningLICM when inlining is over, because after that
   // we may see more accurate aliasing. Reason to run this late is that too
   // early versioning may prevent further inlining due to increase of code
-  // size. By placing it just after inlining other optimizations which runs 
-  // later might get benefit of no-alias assumption in clone loop. 
+  // size. By placing it just after inlining other optimizations which runs
+  // later might get benefit of no-alias assumption in clone loop.
   if (UseLoopVersioningLICM) {
     MPM.add(createLoopVersioningLICMPass());    // Do LoopVersioningLICM
     MPM.add(createLICMPass());                  // Hoist loop invariants
-  }
-
-  if (PerformThinLTO) {
-    // Remove dead fns and globals. Removing unreferenced functions could lead
-    // to more opportunities for globalopt.
-    MPM.add(createGlobalDCEPass());
-    MPM.add(createGlobalOptimizerPass());
-    // Remove dead fns and globals after globalopt.
-    MPM.add(createGlobalDCEPass());
-    addFunctionSimplificationPasses(MPM);
   }
 
   if (EnableNonLTOGlobalsModRef)

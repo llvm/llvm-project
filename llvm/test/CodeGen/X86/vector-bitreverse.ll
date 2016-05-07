@@ -9,68 +9,68 @@
 define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; SSE-LABEL: test_bitreverse_i8:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movb %dil, %al
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    shlb $7, %al
-; SSE-NEXT:    movb %dil, %cl
+; SSE-NEXT:    movl %edi, %ecx
 ; SSE-NEXT:    shlb $5, %cl
 ; SSE-NEXT:    andb $64, %cl
-; SSE-NEXT:    movb %dil, %dl
+; SSE-NEXT:    movl %edi, %edx
 ; SSE-NEXT:    shlb $3, %dl
 ; SSE-NEXT:    andb $32, %dl
 ; SSE-NEXT:    orb %cl, %dl
-; SSE-NEXT:    movb %dil, %cl
+; SSE-NEXT:    movl %edi, %ecx
 ; SSE-NEXT:    addb %cl, %cl
 ; SSE-NEXT:    andb $16, %cl
 ; SSE-NEXT:    orb %dl, %cl
-; SSE-NEXT:    movb %dil, %dl
+; SSE-NEXT:    movl %edi, %edx
 ; SSE-NEXT:    shrb %dl
 ; SSE-NEXT:    andb $8, %dl
 ; SSE-NEXT:    orb %cl, %dl
-; SSE-NEXT:    movb %dil, %cl
+; SSE-NEXT:    movl %edi, %ecx
 ; SSE-NEXT:    shrb $3, %cl
 ; SSE-NEXT:    andb $4, %cl
 ; SSE-NEXT:    orb %dl, %cl
-; SSE-NEXT:    movb %dil, %dl
+; SSE-NEXT:    movl %edi, %edx
 ; SSE-NEXT:    shrb $5, %dl
 ; SSE-NEXT:    andb $2, %dl
 ; SSE-NEXT:    orb %cl, %dl
 ; SSE-NEXT:    shrb $7, %dil
 ; SSE-NEXT:    orb %dl, %dil
 ; SSE-NEXT:    orb %al, %dil
-; SSE-NEXT:    movb %dil, %al
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_bitreverse_i8:
 ; AVX:       # BB#0:
-; AVX-NEXT:    movb %dil, %al
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    shlb $7, %al
-; AVX-NEXT:    movb %dil, %cl
+; AVX-NEXT:    movl %edi, %ecx
 ; AVX-NEXT:    shlb $5, %cl
 ; AVX-NEXT:    andb $64, %cl
-; AVX-NEXT:    movb %dil, %dl
+; AVX-NEXT:    movl %edi, %edx
 ; AVX-NEXT:    shlb $3, %dl
 ; AVX-NEXT:    andb $32, %dl
 ; AVX-NEXT:    orb %cl, %dl
-; AVX-NEXT:    movb %dil, %cl
+; AVX-NEXT:    movl %edi, %ecx
 ; AVX-NEXT:    addb %cl, %cl
 ; AVX-NEXT:    andb $16, %cl
 ; AVX-NEXT:    orb %dl, %cl
-; AVX-NEXT:    movb %dil, %dl
+; AVX-NEXT:    movl %edi, %edx
 ; AVX-NEXT:    shrb %dl
 ; AVX-NEXT:    andb $8, %dl
 ; AVX-NEXT:    orb %cl, %dl
-; AVX-NEXT:    movb %dil, %cl
+; AVX-NEXT:    movl %edi, %ecx
 ; AVX-NEXT:    shrb $3, %cl
 ; AVX-NEXT:    andb $4, %cl
 ; AVX-NEXT:    orb %dl, %cl
-; AVX-NEXT:    movb %dil, %dl
+; AVX-NEXT:    movl %edi, %edx
 ; AVX-NEXT:    shrb $5, %dl
 ; AVX-NEXT:    andb $2, %dl
 ; AVX-NEXT:    orb %cl, %dl
 ; AVX-NEXT:    shrb $7, %dil
 ; AVX-NEXT:    orb %dl, %dil
 ; AVX-NEXT:    orb %al, %dil
-; AVX-NEXT:    movb %dil, %al
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: test_bitreverse_i8:

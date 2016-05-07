@@ -174,7 +174,7 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
       std::vector<InstrProfValueData> CurrentValues;
       for (uint32_t V = 0; V < NumValueData; V++) {
         CHECK_LINE_END(Line);
-        std::pair<StringRef, StringRef> VD = Line->split(':');
+        std::pair<StringRef, StringRef> VD = Line->rsplit(':');
         uint64_t TakenCount, Value;
         if (VK == IPVK_IndirectCallTarget) {
           Symtab->addFuncName(VD.first);

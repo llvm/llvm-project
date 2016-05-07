@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace pdb {
@@ -24,7 +25,7 @@ class InfoStream {
 public:
   InfoStream(PDBFile &File);
 
-  std::error_code reload();
+  Error reload();
 
   PdbRaw_ImplVer getVersion() const;
   uint32_t getSignature() const;

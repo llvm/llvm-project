@@ -939,10 +939,13 @@ public:
         hasRegMask = true;
       if (!MO.isReg())
         continue;
-      // Aggressively clear all kill flags.
-      // They are reinserted by VirtRegRewriter.
-      if (MO.isUse())
+      if (MO.isUse()) {
+        if (!MO.readsReg())
+          continue;
+        // Aggressively clear all kill flags.
+        // They are reinserted by VirtRegRewriter.
         MO.setIsKill(false);
+      }
 
       unsigned Reg = MO.getReg();
       if (!Reg)

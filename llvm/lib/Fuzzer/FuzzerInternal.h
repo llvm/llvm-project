@@ -109,6 +109,8 @@ bool IsASCII(const Unit &U);
 
 int NumberOfCpuCores();
 int GetPid();
+int SignalToMainThread();
+void SleepSeconds(int Seconds);
 
 // Clears the current PC Map.
 void PcMapResetCurrent();
@@ -283,6 +285,7 @@ public:
     int TimeoutExitCode = 77;
     int ErrorExitCode = 77;
     int MaxTotalTimeSec = 0;
+    int RssLimitMb = 0;
     bool DoCrossOver = true;
     int MutateDepth = 5;
     bool UseCounters = false;
@@ -353,6 +356,7 @@ public:
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
   void SetMaxLen(size_t MaxLen);
+  void RssLimitCallback();
 
 private:
   void AlarmCallback();
@@ -396,6 +400,7 @@ private:
 
   uint8_t *CurrentUnitData = nullptr;
   size_t CurrentUnitSize = 0;
+  bool InOOMState = false;
 
   size_t TotalNumberOfRuns = 0;
   size_t NumberOfNewUnitsAdded = 0;

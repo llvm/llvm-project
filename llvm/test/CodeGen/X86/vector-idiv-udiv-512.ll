@@ -1323,7 +1323,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $1, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %ecx
 ; AVX512BW-NEXT:    shrl $8, %ecx
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %cl, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %cl, %al
@@ -1335,7 +1335,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $0, %xmm1, %esi
 ; AVX512BW-NEXT:    imull $37, %esi, %edi
 ; AVX512BW-NEXT:    shrl $8, %edi
-; AVX512BW-NEXT:    movb %sil, %al
+; AVX512BW-NEXT:    movl %esi, %eax
 ; AVX512BW-NEXT:    subb %dil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %dil, %al
@@ -1348,7 +1348,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $2, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1360,7 +1360,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $3, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1372,7 +1372,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $4, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1384,7 +1384,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $5, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1396,7 +1396,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $6, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1408,7 +1408,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $7, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1420,7 +1420,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $8, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1432,7 +1432,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $9, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1444,7 +1444,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $10, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1456,7 +1456,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $11, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1468,7 +1468,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $12, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1480,7 +1480,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $13, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1492,7 +1492,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $14, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1504,7 +1504,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $15, %xmm1, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1517,7 +1517,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $1, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1528,7 +1528,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $0, %xmm2, %esi
 ; AVX512BW-NEXT:    imull $37, %esi, %edi
 ; AVX512BW-NEXT:    shrl $8, %edi
-; AVX512BW-NEXT:    movb %sil, %al
+; AVX512BW-NEXT:    movl %esi, %eax
 ; AVX512BW-NEXT:    subb %dil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %dil, %al
@@ -1541,7 +1541,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $2, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1553,7 +1553,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $3, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1565,7 +1565,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $4, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1577,7 +1577,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $5, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1589,7 +1589,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $6, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1601,7 +1601,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $7, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1613,7 +1613,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $8, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1625,7 +1625,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $9, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1637,7 +1637,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $10, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1649,7 +1649,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $11, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1661,7 +1661,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $12, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1673,7 +1673,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $13, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1685,7 +1685,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $14, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1697,7 +1697,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $15, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1711,7 +1711,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $1, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1722,7 +1722,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $0, %xmm2, %esi
 ; AVX512BW-NEXT:    imull $37, %esi, %edi
 ; AVX512BW-NEXT:    shrl $8, %edi
-; AVX512BW-NEXT:    movb %sil, %al
+; AVX512BW-NEXT:    movl %esi, %eax
 ; AVX512BW-NEXT:    subb %dil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %dil, %al
@@ -1735,7 +1735,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $2, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1747,7 +1747,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $3, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1759,7 +1759,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $4, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1771,7 +1771,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $5, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1783,7 +1783,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $6, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1795,7 +1795,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $7, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1807,7 +1807,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $8, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1819,7 +1819,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $9, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1831,7 +1831,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $10, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1843,7 +1843,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $11, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1855,7 +1855,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $12, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1867,7 +1867,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $13, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1879,7 +1879,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $14, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1891,7 +1891,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $15, %xmm2, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1903,7 +1903,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $1, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1914,7 +1914,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $0, %xmm0, %esi
 ; AVX512BW-NEXT:    imull $37, %esi, %edi
 ; AVX512BW-NEXT:    shrl $8, %edi
-; AVX512BW-NEXT:    movb %sil, %al
+; AVX512BW-NEXT:    movl %esi, %eax
 ; AVX512BW-NEXT:    subb %dil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %dil, %al
@@ -1927,7 +1927,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $2, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1939,7 +1939,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $3, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1951,7 +1951,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $4, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1963,7 +1963,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $5, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1975,7 +1975,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $6, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1987,7 +1987,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $7, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -1999,7 +1999,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $8, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -2011,7 +2011,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $9, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -2023,7 +2023,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $10, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -2035,7 +2035,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $11, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -2047,7 +2047,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $12, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -2059,7 +2059,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $13, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -2071,7 +2071,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $14, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al
@@ -2083,7 +2083,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpextrb $15, %xmm0, %edx
 ; AVX512BW-NEXT:    imull $37, %edx, %esi
 ; AVX512BW-NEXT:    shrl $8, %esi
-; AVX512BW-NEXT:    movb %dl, %al
+; AVX512BW-NEXT:    movl %edx, %eax
 ; AVX512BW-NEXT:    subb %sil, %al
 ; AVX512BW-NEXT:    shrb %al
 ; AVX512BW-NEXT:    addb %sil, %al

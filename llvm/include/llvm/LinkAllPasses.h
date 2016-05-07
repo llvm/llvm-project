@@ -90,7 +90,7 @@ namespace {
       (void) llvm::createDomViewerPass();
       (void) llvm::createGCOVProfilerPass();
       (void) llvm::createPGOInstrumentationGenLegacyPass();
-      (void) llvm::createPGOInstrumentationUsePass();
+      (void) llvm::createPGOInstrumentationUseLegacyPass();
       (void) llvm::createPGOIndirectCallPromotionPass();
       (void) llvm::createInstrProfilingLegacyPass();
       (void) llvm::createFunctionImportPass();

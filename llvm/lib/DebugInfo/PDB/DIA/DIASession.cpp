@@ -6,35 +6,55 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
+#include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumDebugStreams.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSourceFiles.h"
+#include "llvm/DebugInfo/PDB/DIA/DIAError.h"
 #include "llvm/DebugInfo/PDB/DIA/DIARawSymbol.h"
-#include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASourceFile.h"
+#include "llvm/DebugInfo/PDB/DIA/DIASupport.h"
+#include "llvm/DebugInfo/PDB/GenericError.h"
+#include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/ConvertUTF.h"
-
-#include <diacreate.h>
 
 using namespace llvm;
 using namespace llvm::pdb;
 
 namespace {
 
-PDB_ErrorCode LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
+Error ErrorFromHResult(HRESULT Result) {
+  switch (Result) {
+  case E_PDB_NOT_FOUND:
+    return make_error<GenericError>(generic_error_code::invalid_path);
+  case E_PDB_FORMAT:
+    return make_error<DIAError>(dia_error_code::invalid_file_format);
+  case E_INVALIDARG:
+    return make_error<DIAError>(dia_error_code::invalid_parameter);
+  case E_UNEXPECTED:
+    return make_error<DIAError>(dia_error_code::already_loaded);
+  case E_PDB_INVALID_SIG:
+  case E_PDB_INVALID_AGE:
+    return make_error<DIAError>(dia_error_code::debug_info_mismatch);
+  default:
+    return make_error<DIAError>(dia_error_code::unspecified);
+  }
+}
+
+Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
   if (SUCCEEDED(CoCreateInstance(CLSID_DiaSource, nullptr, CLSCTX_INPROC_SERVER,
                                  IID_IDiaDataSource,
                                  reinterpret_cast<LPVOID *>(&DiaDataSource))))
-    return PDB_ErrorCode::Success;
+    return Error::success();
 
-  // If the CoCreateInstance call above failed, msdia*.dll is not registered.
-  // Try loading the DLL corresponding to the #included DIA SDK.
+// If the CoCreateInstance call above failed, msdia*.dll is not registered.
+// Try loading the DLL corresponding to the #included DIA SDK.
 #if !defined(_MSC_VER)
-  return PDB_ErrorCode::NoDiaSupport;
+  return llvm::make_error<GenericError>(
+      "DIA is only supported when using MSVC.");
 #endif
 
   const wchar_t *msdia_dll = nullptr;
@@ -46,98 +66,65 @@ PDB_ErrorCode LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
 #error "Unknown Visual Studio version."
 #endif
 
-  if (SUCCEEDED(NoRegCoCreate(msdia_dll, CLSID_DiaSource, IID_IDiaDataSource,
-                              reinterpret_cast<LPVOID *>(&DiaDataSource))))
-    return PDB_ErrorCode::Success;
-  else
-    return PDB_ErrorCode::CouldNotCreateImpl;
+  HRESULT HR;
+  if (FAILED(HR = NoRegCoCreate(msdia_dll, CLSID_DiaSource, IID_IDiaDataSource,
+                                reinterpret_cast<LPVOID *>(&DiaDataSource))))
+    return ErrorFromHResult(HR);
+  return Error::success();
 }
 
 }
 
 DIASession::DIASession(CComPtr<IDiaSession> DiaSession) : Session(DiaSession) {}
 
-PDB_ErrorCode DIASession::createFromPdb(StringRef Path,
-                                        std::unique_ptr<IPDBSession> &Session) {
+Error DIASession::createFromPdb(StringRef Path,
+                                std::unique_ptr<IPDBSession> &Session) {
   CComPtr<IDiaDataSource> DiaDataSource;
   CComPtr<IDiaSession> DiaSession;
 
   // We assume that CoInitializeEx has already been called by the executable.
-  PDB_ErrorCode result = LoadDIA(DiaDataSource);
-  if (result != PDB_ErrorCode::Success)
-    return result;
+  if (auto E = LoadDIA(DiaDataSource))
+    return E;
 
   llvm::SmallVector<UTF16, 128> Path16;
   if (!llvm::convertUTF8ToUTF16String(Path, Path16))
-    return PDB_ErrorCode::InvalidPath;
+    return make_error<GenericError>(generic_error_code::invalid_path);
 
   const wchar_t *Path16Str = reinterpret_cast<const wchar_t*>(Path16.data());
-  HRESULT Result;
-  if (FAILED(Result = DiaDataSource->loadDataFromPdb(Path16Str))) {
-    if (Result == E_PDB_NOT_FOUND)
-      return PDB_ErrorCode::InvalidPath;
-    else if (Result == E_PDB_FORMAT)
-      return PDB_ErrorCode::InvalidFileFormat;
-    else if (Result == E_INVALIDARG)
-      return PDB_ErrorCode::InvalidParameter;
-    else if (Result == E_UNEXPECTED)
-      return PDB_ErrorCode::AlreadyLoaded;
-    else
-      return PDB_ErrorCode::UnknownError;
-  }
+  HRESULT HR;
+  if (FAILED(HR = DiaDataSource->loadDataFromPdb(Path16Str)))
+    return ErrorFromHResult(HR);
 
-  if (FAILED(Result = DiaDataSource->openSession(&DiaSession))) {
-    if (Result == E_OUTOFMEMORY)
-      return PDB_ErrorCode::NoMemory;
-    else
-      return PDB_ErrorCode::UnknownError;
-  }
+  if (FAILED(HR = DiaDataSource->openSession(&DiaSession)))
+    return ErrorFromHResult(HR);
 
   Session.reset(new DIASession(DiaSession));
-  return PDB_ErrorCode::Success;
+  return Error::success();
 }
 
-PDB_ErrorCode DIASession::createFromExe(StringRef Path,
-                                        std::unique_ptr<IPDBSession> &Session) {
+Error DIASession::createFromExe(StringRef Path,
+                                std::unique_ptr<IPDBSession> &Session) {
   CComPtr<IDiaDataSource> DiaDataSource;
   CComPtr<IDiaSession> DiaSession;
 
   // We assume that CoInitializeEx has already been called by the executable.
-  PDB_ErrorCode result = LoadDIA(DiaDataSource);
-  if (result != PDB_ErrorCode::Success)
-    return result;
+  if (auto EC = LoadDIA(DiaDataSource))
+    return EC;
 
   llvm::SmallVector<UTF16, 128> Path16;
   if (!llvm::convertUTF8ToUTF16String(Path, Path16))
-    return PDB_ErrorCode::InvalidPath;
+    return make_error<GenericError>(generic_error_code::invalid_path, Path);
 
   const wchar_t *Path16Str = reinterpret_cast<const wchar_t *>(Path16.data());
-  HRESULT Result;
-  if (FAILED(Result =
-                 DiaDataSource->loadDataForExe(Path16Str, nullptr, nullptr))) {
-    if (Result == E_PDB_NOT_FOUND)
-      return PDB_ErrorCode::InvalidPath;
-    else if (Result == E_PDB_FORMAT)
-      return PDB_ErrorCode::InvalidFileFormat;
-    else if (Result == E_PDB_INVALID_SIG || Result == E_PDB_INVALID_AGE)
-      return PDB_ErrorCode::DebugInfoMismatch;
-    else if (Result == E_INVALIDARG)
-      return PDB_ErrorCode::InvalidParameter;
-    else if (Result == E_UNEXPECTED)
-      return PDB_ErrorCode::AlreadyLoaded;
-    else
-      return PDB_ErrorCode::UnknownError;
-  }
+  HRESULT HR;
+  if (FAILED(HR = DiaDataSource->loadDataForExe(Path16Str, nullptr, nullptr)))
+    return ErrorFromHResult(HR);
 
-  if (FAILED(Result = DiaDataSource->openSession(&DiaSession))) {
-    if (Result == E_OUTOFMEMORY)
-      return PDB_ErrorCode::NoMemory;
-    else
-      return PDB_ErrorCode::UnknownError;
-  }
+  if (FAILED(HR = DiaDataSource->openSession(&DiaSession)))
+    return ErrorFromHResult(HR);
 
   Session.reset(new DIASession(DiaSession));
-  return PDB_ErrorCode::Success;
+  return Error::success();
 }
 
 uint64_t DIASession::getLoadAddress() const {

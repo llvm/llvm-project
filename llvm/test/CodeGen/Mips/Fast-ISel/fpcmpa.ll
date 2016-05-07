@@ -1,7 +1,7 @@
 ; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=1 -mcpu=mips32r2 \
-; RUN:     < %s | FileCheck %s
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -march=mipsel -relocation-model=pic -O0 -fast-isel-abort=1 -mcpu=mips32 \
-; RUN:     < %s | FileCheck %s
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
 @f1 = common global float 0.000000e+00, align 4
 @f2 = common global float 0.000000e+00, align 4

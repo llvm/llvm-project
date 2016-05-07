@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeStream.h"
 
 namespace llvm {
 class ScopedPrinter;
@@ -28,6 +29,12 @@ public:
 
   StringRef getTypeName(TypeIndex TI);
   void printTypeIndex(StringRef FieldName, TypeIndex TI);
+
+  /// Dumps one type record.  Returns false if there was a type parsing error,
+  /// and true otherwise.  This should be called in order, since the dumper
+  /// maintains state about previous records which are necessary for cross
+  /// type references.
+  bool dump(const TypeIterator::TypeRecord &Record);
 
   /// Dumps the type records in Data. Returns false if there was a type stream
   /// parse error, and true otherwise.

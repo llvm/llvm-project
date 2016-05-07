@@ -19,5 +19,5 @@
 type = Library
 name = DebugInfoPDB
 parent = DebugInfo
-required_libraries = Object Support
+required_libraries = Object Support DebugInfoCodeView
 

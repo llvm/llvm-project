@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
 #include <memory>
@@ -47,8 +48,8 @@ public:
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray();
 
-  std::error_code parseFileHeaders();
-  std::error_code parseStreamData();
+  Error parseFileHeaders();
+  Error parseStreamData();
 
   static uint64_t bytesToBlocks(uint64_t NumBytes, uint64_t BlockSize) {
     return alignTo(NumBytes, BlockSize) / BlockSize;
@@ -58,9 +59,9 @@ public:
     return BlockNumber * BlockSize;
   }
 
-  InfoStream &getPDBInfoStream();
-  DbiStream &getPDBDbiStream();
-  TpiStream &getPDBTpiStream();
+  Expected<InfoStream &> getPDBInfoStream();
+  Expected<DbiStream &> getPDBDbiStream();
+  Expected<TpiStream &> getPDBTpiStream();
 
 private:
   std::unique_ptr<PDBFileContext> Context;

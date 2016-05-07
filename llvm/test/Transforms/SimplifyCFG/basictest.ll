@@ -25,6 +25,54 @@ define void @test3(i1 %T) {
 ; CHECK-NEXT: ret void
 }
 
+; Folding branch to a common destination.
+; CHECK-LABEL: @test4_fold
+; CHECK: %cmp1 = icmp eq i32 %a, %b
+; CHECK: %cmp2 = icmp ugt i32 %a, 0
+; CHECK: %or.cond = and i1 %cmp1, %cmp2
+; CHECK: br i1 %or.cond, label %else, label %untaken
+; CHECK-NOT: taken:
+; CHECK: ret void
+define void @test4_fold(i32 %a, i32 %b) {
+  %cmp1 = icmp eq i32 %a, %b
+  br i1 %cmp1, label %taken, label %untaken
+
+taken:
+  %cmp2 = icmp ugt i32 %a, 0
+  br i1 %cmp2, label %else, label %untaken
+
+else:
+  call void @foo()
+  ret void
+
+untaken:
+  ret void
+}
+
+; Prefer a simplification based on a dominating condition rather than folding a
+; branch to a common destination.
+; CHECK-LABEL: @test4
+; CHECK-NOT: br
+; CHECK-NOT: br
+; CHECK-NOT: call
+; CHECK: ret void
+define void @test4_no_fold(i32 %a, i32 %b) {
+  %cmp1 = icmp eq i32 %a, %b
+  br i1 %cmp1, label %taken, label %untaken
+
+taken:
+  %cmp2 = icmp ugt i32 %a, %b
+  br i1 %cmp2, label %else, label %untaken
+
+else:
+  call void @foo()
+  ret void
+
+untaken:
+  ret void
+}
+
+declare void @foo()
 
 ; PR5795
 define void @test5(i32 %A) {

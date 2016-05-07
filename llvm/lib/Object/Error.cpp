@@ -55,16 +55,15 @@ std::string _object_error_category::message(int EV) const {
 char BinaryError::ID = 0;
 char GenericBinaryError::ID = 0;
 
-GenericBinaryError::GenericBinaryError(std::string FileName, Twine Msg)
-    : FileName(std::move(FileName)), Msg(Msg.str()) {}
+GenericBinaryError::GenericBinaryError(Twine Msg) : Msg(Msg.str()) {}
 
-GenericBinaryError::GenericBinaryError(std::string FileName, Twine Msg, object_error ECOverride)
-    : FileName(std::move(FileName)), Msg(Msg.str()) {
+GenericBinaryError::GenericBinaryError(Twine Msg, object_error ECOverride)
+    : Msg(Msg.str()) {
   setErrorCode(make_error_code(ECOverride));
 }
 
 void GenericBinaryError::log(raw_ostream &OS) const {
-  OS << "Error in " << FileName << ": " << Msg;
+  OS << Msg;
 }
 
 static ManagedStatic<_object_error_category> error_category;

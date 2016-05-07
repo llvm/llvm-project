@@ -692,11 +692,10 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::ZERO).addImm(1);
     emitInst(Opc).addReg(LeftReg).addReg(RightReg).addReg(
         Mips::FCC0, RegState::ImplicitDefine);
-    MachineInstrBuilder MI = emitInst(CondMovOpc, ResultReg)
-                                 .addReg(RegWithOne)
-                                 .addReg(Mips::FCC0)
-                                 .addReg(RegWithZero, RegState::Implicit);
-    MI->tieOperands(0, 3);
+    emitInst(CondMovOpc, ResultReg)
+        .addReg(RegWithOne)
+        .addReg(Mips::FCC0)
+        .addReg(RegWithZero);
     break;
   }
   }

@@ -81,7 +81,7 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; CHECK-NEXT:    xorl %esi, %eax
 ; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    orl %eax, %edi
-; CHECK-NEXT:    movw %di, %ax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %ma = bitcast i16 %x to <16 x i1>
   %mb = bitcast i16 %y to <16 x i1>

@@ -66,6 +66,10 @@ public:
   bool enableShrinkWrapping(const MachineFunction &MF) const override {
     return true;
   }
+
+private:
+  bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
+                                      unsigned StackBumpBytes) const;
 };
 
 } // End llvm namespace

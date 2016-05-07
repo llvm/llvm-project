@@ -2706,26 +2706,6 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     if (CE->canTrap())
       return false;
 
-  // If BI is reached from the true path of PBI and PBI's condition implies
-  // BI's condition, we know the direction of the BI branch.
-  if ((PBI->getSuccessor(0) == BI->getParent() ||
-       PBI->getSuccessor(1) == BI->getParent()) &&
-      PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
-      BB->getSinglePredecessor()) {
-    bool FalseDest = PBI->getSuccessor(1) == BI->getParent();
-    Optional<bool> Implication = isImpliedCondition(
-        PBI->getCondition(), BI->getCondition(), DL, FalseDest);
-    if (Implication) {
-      // Turn this into a branch on constant.
-      auto *OldCond = BI->getCondition();
-      ConstantInt *CI = *Implication ? ConstantInt::getTrue(BB->getContext())
-                                     : ConstantInt::getFalse(BB->getContext());
-      BI->setCondition(CI);
-      RecursivelyDeleteTriviallyDeadInstructions(OldCond);
-      return true; // Nuke the branch on constant.
-    }
-  }
-
   // If both branches are conditional and both contain stores to the same
   // address, remove the stores from the conditionals and create a conditional
   // merged store at the end.
@@ -2880,9 +2860,29 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     Value *PBIV = PN->getIncomingValue(PBBIdx);
     if (BIV != PBIV) {
       // Insert a select in PBI to pick the right value.
-      Value *NV = cast<SelectInst>
+      SelectInst *NV = cast<SelectInst>
         (Builder.CreateSelect(PBICond, PBIV, BIV, PBIV->getName() + ".mux"));
       PN->setIncomingValue(PBBIdx, NV);
+      // Although the select has the same condition as PBI, the original branch
+      // weights for PBI do not apply to the new select because the select's
+      // 'logical' edges are incoming edges of the phi that is eliminated, not
+      // the outgoing edges of PBI.
+      if (PredHasWeights && SuccHasWeights) {
+        uint64_t PredCommon = PBIOp ? PredFalseWeight : PredTrueWeight;
+        uint64_t PredOther = PBIOp ? PredTrueWeight : PredFalseWeight;
+        uint64_t SuccCommon = BIOp ? SuccFalseWeight : SuccTrueWeight;
+        uint64_t SuccOther = BIOp ? SuccTrueWeight : SuccFalseWeight;
+        // The weight to PredCommonDest should be PredCommon * SuccTotal.
+        // The weight to PredOtherDest should be PredOther * SuccCommon.
+        uint64_t NewWeights[2] = {PredCommon * (SuccCommon + SuccOther),
+                                  PredOther * SuccCommon};
+
+        FitWeights(NewWeights);
+
+        NV->setMetadata(LLVMContext::MD_prof,
+                        MDBuilder(BI->getContext())
+                            .createBranchWeights(NewWeights[0], NewWeights[1]));
+      }
     }
   }
 
@@ -5148,6 +5148,30 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // Try to turn "br (X == 0 | X == 1), T, F" into a switch instruction.
   if (SimplifyBranchOnICmpChain(BI, Builder, DL))
     return true;
+
+  // If this basic block has a single dominating predecessor block and the
+  // dominating block's condition implies BI's condition, we know the direction
+  // of the BI branch.
+  if (BasicBlock *Dom = BB->getSinglePredecessor()) {
+    auto *PBI = dyn_cast_or_null<BranchInst>(Dom->getTerminator());
+    if (PBI && PBI->isConditional() &&
+        PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
+        (PBI->getSuccessor(0) == BB || PBI->getSuccessor(1) == BB)) {
+      bool CondIsFalse = PBI->getSuccessor(1) == BB;
+      Optional<bool> Implication = isImpliedCondition(
+          PBI->getCondition(), BI->getCondition(), DL, CondIsFalse);
+      if (Implication) {
+        // Turn this into a branch on constant.
+        auto *OldCond = BI->getCondition();
+        ConstantInt *CI = *Implication
+                              ? ConstantInt::getTrue(BB->getContext())
+                              : ConstantInt::getFalse(BB->getContext());
+        BI->setCondition(CI);
+        RecursivelyDeleteTriviallyDeadInstructions(OldCond);
+        return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+      }
+    }
+  }
 
   // If this basic block is ONLY a compare and a branch, and if a predecessor
   // branches to us and one of our successors, fold the comparison into the

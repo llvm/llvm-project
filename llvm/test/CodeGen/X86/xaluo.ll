@@ -295,7 +295,7 @@ entry:
 define zeroext i1 @smulo.i8(i8 %v1, i8 %v2, i8* %res) {
 entry:
 ; CHECK-LABEL:   smulo.i8
-; CHECK:         movb %dil, %al
+; CHECK:         movl %edi, %eax
 ; CHECK-NEXT:    imulb %sil
 ; CHECK-NEXT:    seto %cl
   %t = call {i8, i1} @llvm.smul.with.overflow.i8(i8 %v1, i8 %v2)
@@ -345,7 +345,7 @@ entry:
 define zeroext i1 @umulo.i8(i8 %v1, i8 %v2, i8* %res) {
 entry:
 ; CHECK-LABEL:   umulo.i8
-; CHECK:         movb %dil, %al
+; CHECK:         movl %edi, %eax
 ; CHECK-NEXT:    mulb %sil
 ; CHECK-NEXT:    seto %cl
   %t = call {i8, i1} @llvm.umul.with.overflow.i8(i8 %v1, i8 %v2)

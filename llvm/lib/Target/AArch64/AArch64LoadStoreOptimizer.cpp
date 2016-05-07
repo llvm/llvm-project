@@ -51,6 +51,10 @@ static cl::opt<unsigned> LdStLimit("aarch64-load-store-scan-limit",
 static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
                                      cl::Hidden);
 
+static cl::opt<bool> EnableNarrowLdMerge("enable-narrow-ld-merge", cl::Hidden,
+                                         cl::init(true),
+                                         cl::desc("Enable narrow load merge"));
+
 namespace llvm {
 void initializeAArch64LoadStoreOptPass(PassRegistry &);
 }
@@ -614,9 +618,12 @@ static bool isLdOffsetInRangeOfSt(MachineInstr *LoadInst,
          (UnscaledLdOffset + LoadSize <= (UnscaledStOffset + StoreSize));
 }
 
-static bool isPromotableZeroStoreOpcode(MachineInstr *MI) {
-  unsigned Opc = MI->getOpcode();
+static bool isPromotableZeroStoreOpcode(unsigned Opc) {
   return isNarrowStore(Opc) || Opc == AArch64::STRWui || Opc == AArch64::STURWi;
+}
+
+static bool isPromotableZeroStoreOpcode(MachineInstr *MI) {
+  return isPromotableZeroStoreOpcode(MI->getOpcode());
 }
 
 static bool isPromotableZeroStoreInst(MachineInstr *MI) {
@@ -1722,36 +1729,17 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        enableNarrowLdOpt && MBBI != E;) {
     MachineInstr *MI = MBBI;
-    switch (MI->getOpcode()) {
-    default:
-      // Just move on to the next instruction.
-      ++MBBI;
-      break;
-    // Scaled instructions.
-    case AArch64::LDRBBui:
-    case AArch64::LDRHHui:
-    case AArch64::LDRSBWui:
-    case AArch64::LDRSHWui:
-    case AArch64::STRBBui:
-    case AArch64::STRHHui:
-    case AArch64::STRWui:
-    // Unscaled instructions.
-    case AArch64::LDURBBi:
-    case AArch64::LDURHHi:
-    case AArch64::LDURSBWi:
-    case AArch64::LDURSHWi:
-    case AArch64::STURBBi:
-    case AArch64::STURHHi:
-    case AArch64::STURWi: {
+    unsigned Opc = MI->getOpcode();
+    if (isPromotableZeroStoreOpcode(Opc) ||
+        (EnableNarrowLdMerge && isNarrowLoad(Opc))) {
       if (tryToMergeLdStInst(MBBI)) {
         Modified = true;
-        break;
-      }
+      } else
+        ++MBBI;
+    } else
       ++MBBI;
-      break;
-    }
-    }
   }
+
   // 3) Find loads and stores that can be merged into a single load or store
   //    pair instruction.
   //      e.g.,

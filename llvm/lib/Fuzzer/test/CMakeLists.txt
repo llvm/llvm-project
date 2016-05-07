@@ -26,6 +26,7 @@ set(Tests
   LeakTimeoutTest
   NullDerefTest
   NthRunCrashTest
+  OutOfMemoryTest
   RepeatedMemcmp
   SimpleCmpTest
   SimpleDictionaryTest

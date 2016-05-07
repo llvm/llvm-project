@@ -412,22 +412,48 @@ return:
   ret i32 %retval.0
 }
 
-; The 1st select should have branch weights equal to the 1st branch.
-; The 2nd select should have freshly calculated branch weights.
+; The selects should have freshly calculated branch weights.
 
 define i32 @SimplifyCondBranchToCondBranch(i1 %cmpa, i1 %cmpb) {
 ; CHECK-LABEL: @SimplifyCondBranchToCondBranch(
 ; CHECK-NEXT:  block1:
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 %cmpb, %cmpa
-; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 %cmpb, i32 0, i32 2
-; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !12
+; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 %cmpa, %cmpb
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 %cmpa, i32 0, i32 2, !prof !12
+; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !13
 ; CHECK-NEXT:    ret i32 [[OUTVAL]]
 ;
 block1:
-  br i1 %cmpb, label %block3, label %block2, !prof !0
+  br i1 %cmpa, label %block3, label %block2, !prof !13
 
 block2:
-  br i1 %cmpa, label %block3, label %exit, !prof !2
+  br i1 %cmpb, label %block3, label %exit, !prof !14
+
+block3:
+  %cowval = phi i32 [ 2, %block2 ], [ 0, %block1 ]
+  br label %exit
+
+exit:
+  %outval = phi i32 [ %cowval, %block3 ], [ 1, %block2 ]
+  ret i32 %outval
+}
+
+; Swap the operands of the compares to verify that the weights update correctly.
+
+define i32 @SimplifyCondBranchToCondBranchSwap(i1 %cmpa, i1 %cmpb) {
+; CHECK-LABEL: @SimplifyCondBranchToCondBranchSwap(
+; CHECK-NEXT:  block1:
+; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 %cmpa, true
+; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 %cmpb, true
+; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPA_NOT]], [[CMPB_NOT]]
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2, !prof !14
+; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !15
+; CHECK-NEXT:    ret i32 [[OUTVAL]]
+;
+block1:
+  br i1 %cmpa, label %block2, label %block3, !prof !13
+
+block2:
+  br i1 %cmpb, label %exit, label %block3, !prof !14
 
 block3:
   %cowval = phi i32 [ 2, %block2 ], [ 0, %block1 ]
@@ -452,6 +478,8 @@ exit:
 !10 = !{!"branch_weights", i32 672646, i32 21604207}
 !11 = !{!"branch_weights", i32 6960, i32 21597248}
 !12 = !{!"these_are_not_the_branch_weights_you_are_looking_for", i32 3, i32 5}
+!13 = !{!"branch_weights", i32 2, i32 3}
+!14 = !{!"branch_weights", i32 4, i32 7}
 
 ; CHECK: !0 = !{!"branch_weights", i32 5, i32 11}
 ; CHECK: !1 = !{!"branch_weights", i32 1, i32 5}
@@ -467,5 +495,8 @@ exit:
 ;; treat the weight as an unsigned integer.
 ; CHECK: !10 = !{!"branch_weights", i32 112017436, i32 -735157296}
 ; CHECK: !11 = !{!"branch_weights", i32 3, i32 5}
-; CHECK: !12 = !{!"branch_weights", i32 14, i32 10}
+; CHECK: !12 = !{!"branch_weights", i32 22, i32 12}
+; CHECK: !13 = !{!"branch_weights", i32 34, i32 21}
+; CHECK: !14 = !{!"branch_weights", i32 33, i32 14}
+; CHECK: !15 = !{!"branch_weights", i32 47, i32 8}
 

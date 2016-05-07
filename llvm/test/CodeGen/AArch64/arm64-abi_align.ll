@@ -291,7 +291,7 @@ entry:
 ; Space for s2 is allocated at sp
 
 ; FAST-LABEL: caller42
-; FAST: sub sp, sp, #96
+; FAST: sub sp, sp, #112
 ; Space for s1 is allocated at fp-24 = sp+72
 ; Space for s2 is allocated at sp+48
 ; FAST: sub x[[A:[0-9]+]], x29, #24
@@ -317,8 +317,8 @@ declare i32 @f42_stack(i32 %i, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6,
 define i32 @caller42_stack() #3 {
 entry:
 ; CHECK-LABEL: caller42_stack
-; CHECK: mov x29, sp
-; CHECK: sub sp, sp, #96
+; CHECK: sub sp, sp, #112
+; CHECK: add x29, sp, #96
 ; CHECK: stur {{x[0-9]+}}, [x29, #-16]
 ; CHECK: stur {{q[0-9]+}}, [x29, #-32]
 ; CHECK: str {{x[0-9]+}}, [sp, #48]
@@ -399,7 +399,7 @@ entry:
 ; Space for s2 is allocated at sp
 
 ; FAST-LABEL: caller43
-; FAST: mov x29, sp
+; FAST: add x29, sp, #64
 ; Space for s1 is allocated at sp+32
 ; Space for s2 is allocated at sp
 ; FAST: add x1, sp, #32
@@ -429,8 +429,8 @@ declare i32 @f43_stack(i32 %i, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6,
 define i32 @caller43_stack() #3 {
 entry:
 ; CHECK-LABEL: caller43_stack
-; CHECK: mov x29, sp
-; CHECK: sub sp, sp, #96
+; CHECK: sub sp, sp, #112
+; CHECK: add x29, sp, #96
 ; CHECK: stur {{q[0-9]+}}, [x29, #-16]
 ; CHECK: stur {{q[0-9]+}}, [x29, #-32]
 ; CHECK: str {{q[0-9]+}}, [sp, #48]
@@ -446,7 +446,7 @@ entry:
 ; CHECK: str w[[C]], [sp]
 
 ; FAST-LABEL: caller43_stack
-; FAST: sub sp, sp, #96
+; FAST: sub sp, sp, #112
 ; Space for s1 is allocated at fp-32 = sp+64
 ; Space for s2 is allocated at sp+32
 ; FAST: sub x[[A:[0-9]+]], x29, #32
@@ -508,7 +508,7 @@ entry:
 ; "i64 %0" should be in register x7.
 ; "i32 8" should be on stack at [sp].
 ; CHECK: ldr x7, [{{x[0-9]+}}]
-; CHECK: str {{w[0-9]+}}, [sp, #-16]!
+; CHECK: str {{w[0-9]+}}, [sp]
 ; FAST-LABEL: i64_split
 ; FAST: ldr x7, [{{x[0-9]+}}]
 ; FAST: mov x[[R0:[0-9]+]], sp

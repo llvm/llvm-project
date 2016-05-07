@@ -11,15 +11,13 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
-
-typedef uint32_t *PUL;
-typedef uint16_t *PUS;
 
 static inline uint32_t HashStringV1(StringRef Str) {
   uint32_t Result = 0;
@@ -80,7 +78,7 @@ static inline uint32_t HashStringV2(StringRef Str) {
 
 NameHashTable::NameHashTable() : Signature(0), HashVersion(0), NameCount(0) {}
 
-std::error_code NameHashTable::load(StreamReader &Stream) {
+Error NameHashTable::load(StreamReader &Stream) {
   struct Header {
     support::ulittle32_t Signature;
     support::ulittle32_t HashVersion;
@@ -88,27 +86,39 @@ std::error_code NameHashTable::load(StreamReader &Stream) {
   };
 
   Header H;
-  Stream.readObject(&H);
+  if (auto EC = Stream.readObject(&H))
+    return EC;
+
   if (H.Signature != 0xEFFEEFFE)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid hash table signature");
   if (H.HashVersion != 1 && H.HashVersion != 2)
-    return std::make_error_code(std::errc::not_supported);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Unsupported hash version");
 
   Signature = H.Signature;
   HashVersion = H.HashVersion;
-  NamesBuffer.initialize(Stream, H.ByteSize);
+  if (auto EC = NamesBuffer.initialize(Stream, H.ByteSize))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid hash table byte length");
 
   support::ulittle32_t HashCount;
-  Stream.readObject(&HashCount);
+  if (auto EC = Stream.readObject(&HashCount))
+    return EC;
+
   std::vector<support::ulittle32_t> BucketArray(HashCount);
-  Stream.readArray<support::ulittle32_t>(BucketArray);
+  if (auto EC = Stream.readArray<support::ulittle32_t>(BucketArray))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Could not read bucket array");
   IDs.assign(BucketArray.begin(), BucketArray.end());
 
   if (Stream.bytesRemaining() < sizeof(support::ulittle32_t))
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Missing name count");
 
-  Stream.readInteger(NameCount);
-  return std::error_code();
+  if (auto EC = Stream.readInteger(NameCount))
+    return EC;
+  return Error::success();
 }
 
 StringRef NameHashTable::getStringForID(uint32_t ID) const {

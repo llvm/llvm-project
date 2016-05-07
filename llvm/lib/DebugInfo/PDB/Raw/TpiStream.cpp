@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 
 #include "llvm/Support/Endian.h"
@@ -60,46 +61,59 @@ TpiStream::TpiStream(PDBFile &File)
 
 TpiStream::~TpiStream() {}
 
-std::error_code TpiStream::reload() {
+Error TpiStream::reload() {
   StreamReader Reader(Stream);
 
   if (Reader.bytesRemaining() < sizeof(HeaderInfo))
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "TPI Stream does not contain a header.");
 
   Header.reset(new HeaderInfo());
-  Reader.readObject(Header.get());
+  if (Reader.readObject(Header.get()))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "TPI Stream does not contain a header.");
 
   if (Header->Version != PdbTpiV80)
-    return std::make_error_code(std::errc::not_supported);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Unsupported TPI Version.");
 
   if (Header->HeaderSize != sizeof(HeaderInfo))
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Corrupt TPI Header size.");
 
   if (Header->HashKeySize != sizeof(ulittle32_t))
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "TPI Stream expected 4 byte hash key size.");
 
   if (Header->NumHashBuckets < MinHashBuckets ||
       Header->NumHashBuckets > MaxHashBuckets)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "TPI Stream Invalid number of hash buckets.");
 
   HashFunction = HashBufferV8;
 
   // The actual type records themselves come from this stream
-  RecordsBuffer.initialize(Reader, Header->TypeRecordBytes);
+  if (auto EC = RecordsBuffer.initialize(Reader, Header->TypeRecordBytes))
+    return EC;
 
   // Hash indices, hash values, etc come from the hash stream.
   MappedBlockStream HS(Header->HashStreamIndex, Pdb);
   StreamReader HSR(HS);
   HSR.setOffset(Header->HashValueBuffer.Off);
-  HashValuesBuffer.initialize(HSR, Header->HashValueBuffer.Length);
+  if (auto EC =
+          HashValuesBuffer.initialize(HSR, Header->HashValueBuffer.Length))
+    return EC;
 
   HSR.setOffset(Header->HashAdjBuffer.Off);
-  HashAdjBuffer.initialize(HSR, Header->HashAdjBuffer.Length);
+  if (auto EC = HashAdjBuffer.initialize(HSR, Header->HashAdjBuffer.Length))
+    return EC;
 
   HSR.setOffset(Header->IndexOffsetBuffer.Off);
-  TypeIndexOffsetBuffer.initialize(HSR, Header->IndexOffsetBuffer.Length);
+  if (auto EC = TypeIndexOffsetBuffer.initialize(
+          HSR, Header->IndexOffsetBuffer.Length))
+    return EC;
 
-  return std::error_code();
+  return Error::success();
 }
 
 PdbRaw_TpiVer TpiStream::getTpiVersion() const {

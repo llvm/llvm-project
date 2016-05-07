@@ -619,6 +619,13 @@ class AsmOperandClass {
   ///
   /// Optional arguments must be at the end of the operand list.
   bit IsOptional = 0;
+
+  /// The name of the method on the target specific asm parser that returns the
+  /// default operand for this optional operand. This method is only used if
+  /// IsOptional == 1. If not set, this will default to "defaultFooOperands",
+  /// where Foo is the AsmOperandClass name. The method signature should be:
+  ///   std::unique_ptr<MCParsedAsmOperand> defaultFooOperands() const;
+  string DefaultMethod = ?;
 }
 
 def ImmAsmOperand : AsmOperandClass {

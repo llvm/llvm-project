@@ -39,7 +39,7 @@ define i32 @bar(i32 %p, i16 zeroext %x) nounwind {
 ; X64-LABEL: bar:
 ; X64:       # BB#0:
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    movw %di, %ax
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    divw %si
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq

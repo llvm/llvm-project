@@ -300,6 +300,17 @@ TEST(LiveIntervalTest, MoveDownKillFollowing) {
   });
 }
 
+TEST(LiveIntervalTest, MoveUndefUse) {
+  liveIntervalTest(
+"    %0 = IMPLICIT_DEF\n"
+"    NOOP implicit undef %0\n"
+"    NOOP implicit %0\n"
+"    NOOP\n",
+  [](MachineFunction &MF, LiveIntervals &LIS) {
+    testHandleMove(MF, LIS, 1, 3);
+  });
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   initLLVM();

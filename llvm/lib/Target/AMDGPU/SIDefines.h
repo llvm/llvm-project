@@ -95,6 +95,54 @@ namespace SIOutMods {
   };
 }
 
+namespace llvm {
+namespace AMDGPU {
+namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
+
+enum Id { // Message ID, width(3) [3:0].
+  ID_UNKNOWN_ = -1,
+  ID_INTERRUPT = 1,
+  ID_GS,
+  ID_GS_DONE,
+  ID_SYSMSG = 15,
+  ID_GAPS_LAST_, // Indicate that sequence has gaps.
+  ID_GAPS_FIRST_ = ID_INTERRUPT,
+  ID_MASK_ = 0xf
+};
+
+enum Op { // Both GS and SYS operation IDs.
+  OP_UNKNOWN_ = -1,
+  // width(2) [5:4]
+  OP_GS_NOP = 0,
+  OP_GS_CUT,
+  OP_GS_EMIT,
+  OP_GS_EMIT_CUT,
+  OP_GS_LAST_,
+  OP_GS_FIRST_ = OP_GS_NOP,
+  OP_GS_MASK_ = (0x3 << 4),
+  // width(3) [6:4]
+  OP_SYS_ECC_ERR_INTERRUPT = 1,
+  OP_SYS_REG_RD,
+  OP_SYS_HOST_TRAP_ACK,
+  OP_SYS_TTRACE_PC,
+  OP_SYS_LAST_,
+  OP_SYS_FIRST_ = OP_SYS_ECC_ERR_INTERRUPT,
+  OP_SYS_MASK_ = (0x7 << 4),
+  OP_SHIFT_ = 4
+};
+
+enum StreamId { // Stream ID, (2) [9:8].
+  STREAM_ID_DEFAULT = 0,
+  STREAM_ID_LAST_ = 4,
+  STREAM_ID_FIRST_ = STREAM_ID_DEFAULT,
+  STREAM_ID_MASK_ = (0x3 << 8),
+  STREAM_ID_SHIFT_ = 8
+};
+
+} // namespace SendMsg
+} // namespace AMDGPU
+} // namespace llvm
+
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
 #define R_00B02C_SPI_SHADER_PGM_RSRC2_PS                                0x00B02C
 #define   S_00B02C_EXTRA_LDS_SIZE(x)                                  (((x) & 0xFF) << 8)

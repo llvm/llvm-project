@@ -98,8 +98,8 @@ entry:
 ; CHECK-LABEL: novla_nodynamicrealign_call
 ; CHECK: .cfi_startproc
 ;   Check that used callee-saved registers are saved
-; CHECK: stp	x19, x30, [sp, #-16]!
-; CHECK: sub	sp, sp, #16
+; CHECK: sub	sp, sp, #32
+; CHECK: stp	x19, x30, [sp, #16]
 ;   Check correctness of cfi pseudo-instructions
 ; CHECK: .cfi_def_cfa_offset 32
 ; CHECK: .cfi_offset w30, -8
@@ -110,17 +110,18 @@ entry:
 ;   Check correct access to local variable on the stack, through stack pointer
 ; CHECK: ldr	w[[ILOC:[0-9]+]], [sp, #12]
 ;   Check epilogue:
-; CHECK: ldp	x19, x30, [sp], #16
+; CHECK: ldp	x19, x30, [sp, #16]
 ; CHECK: ret
 ; CHECK: .cfi_endproc
 
 ; CHECK-MACHO-LABEL: _novla_nodynamicrealign_call:
 ; CHECK-MACHO: .cfi_startproc
 ;   Check that used callee-saved registers are saved
-; CHECK-MACHO: stp	x20, x19, [sp, #-32]!
+; CHECK-MACHO: sub	sp, sp, #48
+; CHECK-MACHO: stp	x20, x19, [sp, #16]
 ;   Check that the frame pointer is created:
-; CHECK-MACHO: stp	x29, x30, [sp, #16]
-; CHECK-MACHO: add	x29, sp, #16
+; CHECK-MACHO: stp	x29, x30, [sp, #32]
+; CHECK-MACHO: add	x29, sp, #32
 ;   Check correctness of cfi pseudo-instructions
 ; CHECK-MACHO: .cfi_def_cfa w29, 16
 ; CHECK-MACHO: .cfi_offset w30, -8
@@ -133,8 +134,8 @@ entry:
 ;   Check correct access to local variable on the stack, through stack pointer
 ; CHECK-MACHO: ldr	w[[ILOC:[0-9]+]], [sp, #12]
 ;   Check epilogue:
-; CHECK-MACHO: ldp	x29, x30, [sp, #16]
-; CHECK-MACHO: ldp	x20, x19, [sp], #32
+; CHECK-MACHO: ldp	x29, x30, [sp, #32]
+; CHECK-MACHO: ldp	x20, x19, [sp, #16]
 ; CHECK-MACHO: ret
 ; CHECK-MACHO: .cfi_endproc
 

@@ -326,7 +326,8 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
 
   LoadInst *NewLoad = IC.Builder->CreateAlignedLoad(
       IC.Builder->CreateBitCast(Ptr, NewTy->getPointerTo(AS)),
-      LI.getAlignment(), LI.getName() + Suffix);
+      LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
+  NewLoad->setAtomic(LI.getOrdering(), LI.getSynchScope());
   MDBuilder MDB(NewLoad->getContext());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
@@ -398,7 +399,8 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
 
   StoreInst *NewStore = IC.Builder->CreateAlignedStore(
       V, IC.Builder->CreateBitCast(Ptr, V->getType()->getPointerTo(AS)),
-      SI.getAlignment());
+      SI.getAlignment(), SI.isVolatile());
+  NewStore->setAtomic(SI.getOrdering(), SI.getSynchScope());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -456,9 +458,9 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
 /// later. However, it is risky in case some backend or other part of LLVM is
 /// relying on the exact type loaded to select appropriate atomic operations.
 static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
-  // FIXME: We could probably with some care handle both volatile and atomic
-  // loads here but it isn't clear that this is important.
-  if (!LI.isSimple())
+  // FIXME: We could probably with some care handle both volatile and ordered
+  // atomic loads here but it isn't clear that this is important.
+  if (!LI.isUnordered())
     return nullptr;
 
   if (LI.use_empty())
@@ -989,9 +991,9 @@ static Value *likeBitCastFromVector(InstCombiner &IC, Value *V) {
 /// the store instruction as otherwise there is no way to signal whether it was
 /// combined or not: IC.EraseInstFromFunction returns a null pointer.
 static bool combineStoreToValueType(InstCombiner &IC, StoreInst &SI) {
-  // FIXME: We could probably with some care handle both volatile and atomic
-  // stores here but it isn't clear that this is important.
-  if (!SI.isSimple())
+  // FIXME: We could probably with some care handle both volatile and ordered
+  // atomic stores here but it isn't clear that this is important.
+  if (!SI.isUnordered())
     return false;
 
   Value *V = SI.getValueOperand();

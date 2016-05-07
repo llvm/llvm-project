@@ -13,9 +13,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamInterface.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 
 #include <string>
-#include <system_error>
 
 namespace llvm {
 namespace pdb {
@@ -24,22 +24,22 @@ class StreamReader {
 public:
   StreamReader(const StreamInterface &S);
 
-  std::error_code readBytes(MutableArrayRef<uint8_t> Buffer);
-  std::error_code readInteger(uint32_t &Dest);
-  std::error_code readZeroString(std::string &Dest);
+  Error readBytes(MutableArrayRef<uint8_t> Buffer);
+  Error readInteger(uint32_t &Dest);
+  Error readZeroString(std::string &Dest);
 
-  template <typename T> std::error_code readObject(T *Dest) {
+  template <typename T> Error readObject(T *Dest) {
     MutableArrayRef<uint8_t> Buffer(reinterpret_cast<uint8_t *>(Dest),
                                     sizeof(T));
     return readBytes(Buffer);
   }
 
-  template <typename T> std::error_code readArray(MutableArrayRef<T> Array) {
+  template <typename T> Error readArray(MutableArrayRef<T> Array) {
     MutableArrayRef<uint8_t> Casted(reinterpret_cast<uint8_t*>(Array.data()), Array.size() * sizeof(T));
     return readBytes(Casted);
   }
 
-  std::error_code getArrayRef(ArrayRef<uint8_t> &Array, uint32_t Length);
+  Error getArrayRef(ArrayRef<uint8_t> &Array, uint32_t Length);
 
   void setOffset(uint32_t Off) { Offset = Off; }
   uint32_t getOffset() const { return Offset; }

@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <stdint.h>
 #include <utility>
@@ -23,7 +24,7 @@ class NameMap {
 public:
   NameMap();
 
-  std::error_code load(StreamReader &Stream);
+  Error load(StreamReader &Stream);
 
   bool tryGetValue(StringRef Name, uint32_t &Value) const;
 

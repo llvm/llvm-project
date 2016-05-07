@@ -8,42 +8,43 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
 StreamReader::StreamReader(const StreamInterface &S) : Stream(S), Offset(0) {}
 
-std::error_code StreamReader::readBytes(MutableArrayRef<uint8_t> Buffer) {
+Error StreamReader::readBytes(MutableArrayRef<uint8_t> Buffer) {
   if (auto EC = Stream.readBytes(Offset, Buffer))
     return EC;
   Offset += Buffer.size();
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code StreamReader::readInteger(uint32_t &Dest) {
+Error StreamReader::readInteger(uint32_t &Dest) {
   support::ulittle32_t P;
-  if (std::error_code EC = readObject(&P))
+  if (auto EC = readObject(&P))
     return EC;
   Dest = P;
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code StreamReader::readZeroString(std::string &Dest) {
+Error StreamReader::readZeroString(std::string &Dest) {
   Dest.clear();
   char C;
   do {
-    readObject(&C);
+    if (auto EC = readObject(&C))
+      return EC;
     if (C != '\0')
       Dest.push_back(C);
   } while (C != '\0');
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code StreamReader::getArrayRef(ArrayRef<uint8_t> &Array,
-                                          uint32_t Length) {
+Error StreamReader::getArrayRef(ArrayRef<uint8_t> &Array, uint32_t Length) {
   if (auto EC = Stream.getArrayRef(Offset, Array, Length))
     return EC;
   Offset += Length;
-  return std::error_code();
+  return Error::success();
 }

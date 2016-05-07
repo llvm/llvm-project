@@ -14,7 +14,7 @@ entry:
 define void @main() nounwind {
 entry:
 ; CHECK: main
-; CHECK: mov x29, sp
+; CHECK: add x29, sp, #16
 ; CHECK: mov [[REG:x[0-9]+]], sp
 ; CHECK-NEXT: add x0, [[REG]], #8
   %E = alloca %struct.S2Ty, align 4

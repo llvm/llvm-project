@@ -1459,11 +1459,9 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_64:
     write64<E>(Loc, Val);
     break;
-  case R_MIPS_26: {
-    uint32_t Instr = read32<E>(Loc);
-    write32<E>(Loc, (Instr & ~0x3ffffff) | (Val >> 2));
+  case R_MIPS_26:
+    write32<E>(Loc, (read32<E>(Loc) & ~0x3ffffff) | (Val >> 2));
     break;
-  }
   case R_MIPS_GOT_DISP:
   case R_MIPS_GOT_PAGE:
   case R_MIPS_GOT16:

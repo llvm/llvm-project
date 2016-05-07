@@ -134,16 +134,17 @@ private:
   }
 };
 
-class PGOInstrumentationUse : public ModulePass {
+class PGOInstrumentationUseLegacyPass : public ModulePass {
 public:
   static char ID;
 
   // Provide the profile filename as the parameter.
-  PGOInstrumentationUse(std::string Filename = "")
+  PGOInstrumentationUseLegacyPass(std::string Filename = "")
       : ModulePass(ID), ProfileFileName(Filename) {
     if (!PGOTestProfileFile.empty())
       ProfileFileName = PGOTestProfileFile;
-    initializePGOInstrumentationUsePass(*PassRegistry::getPassRegistry());
+    initializePGOInstrumentationUseLegacyPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   const char *getPassName() const override {
@@ -151,6 +152,9 @@ public:
   }
 
 private:
+  bool annotateAllFunctions(
+      Module &M, function_ref<BranchProbabilityInfo &(Function &)> LookupBPI,
+      function_ref<BlockFrequencyInfo &(Function &)> LookupBFI);
   std::string ProfileFileName;
   std::unique_ptr<IndexedInstrProfReader> PGOReader;
   bool runOnModule(Module &M) override;
@@ -173,16 +177,16 @@ ModulePass *llvm::createPGOInstrumentationGenLegacyPass() {
   return new PGOInstrumentationGenLegacyPass();
 }
 
-char PGOInstrumentationUse::ID = 0;
-INITIALIZE_PASS_BEGIN(PGOInstrumentationUse, "pgo-instr-use",
+char PGOInstrumentationUseLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(PGOInstrumentationUseLegacyPass, "pgo-instr-use",
                       "Read PGO instrumentation profile.", false, false)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_END(PGOInstrumentationUse, "pgo-instr-use",
+INITIALIZE_PASS_END(PGOInstrumentationUseLegacyPass, "pgo-instr-use",
                     "Read PGO instrumentation profile.", false, false)
 
-ModulePass *llvm::createPGOInstrumentationUsePass(StringRef Filename) {
-  return new PGOInstrumentationUse(Filename.str());
+ModulePass *llvm::createPGOInstrumentationUseLegacyPass(StringRef Filename) {
+  return new PGOInstrumentationUseLegacyPass(Filename.str());
 }
 
 namespace {
@@ -832,10 +836,9 @@ static void setPGOCountOnFunc(PGOUseFunc &Func,
   }
 }
 
-bool PGOInstrumentationUse::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
+bool PGOInstrumentationUseLegacyPass::annotateAllFunctions(
+    Module &M, function_ref<BranchProbabilityInfo &(Function &)> LookupBPI,
+    function_ref<BlockFrequencyInfo &(Function &)> LookupBFI) {
   DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
   // Read the counter array from file.
@@ -864,11 +867,9 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    BranchProbabilityInfo *BPI =
-        &(getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI());
-    BlockFrequencyInfo *BFI =
-        &(getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI());
-    PGOUseFunc Func(F, &M, BPI, BFI);
+    auto &BPI = LookupBPI(F);
+    auto &BFI = LookupBFI(F);
+    PGOUseFunc Func(F, &M, &BPI, &BFI);
     setPGOCountOnFunc(Func, PGOReader.get());
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
@@ -889,4 +890,18 @@ bool PGOInstrumentationUse::runOnModule(Module &M) {
   }
 
   return true;
+}
+
+bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
+  auto LookupBPI = [this](Function &F) -> BranchProbabilityInfo & {
+    return this->getAnalysis<BranchProbabilityInfoWrapperPass>(F).getBPI();
+  };
+  auto LookupBFI = [this](Function &F) -> BlockFrequencyInfo & {
+    return this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
+  };
+
+  return annotateAllFunctions(M, LookupBPI, LookupBFI);
 }

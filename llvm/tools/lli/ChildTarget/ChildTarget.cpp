@@ -1,4 +1,4 @@
-#include "llvm/ExecutionEngine/Orc/OrcArchitectureSupport.h"
+#include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetServer.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -12,9 +12,9 @@ using namespace llvm::orc;
 using namespace llvm::sys;
 
 #ifdef __x86_64__
-typedef OrcX86_64 HostOrcArch;
+typedef OrcX86_64_SysV HostOrcArch;
 #else
-typedef OrcGenericArchitecture HostOrcArch;
+typedef OrcGenericABI HostOrcArch;
 #endif
 
 ExitOnError ExitOnErr;
