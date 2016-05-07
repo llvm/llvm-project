@@ -60,7 +60,10 @@
 #include "llvm/Target/TargetInstrInfo.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-fixup-bw-insts"
+#define FIXUPBW_DESC "X86 Byte/Word Instruction Fixup"
+#define FIXUPBW_NAME "x86-fixup-bw-insts"
+
+#define DEBUG_TYPE FIXUPBW_NAME
 
 // Option to allow this optimization pass to have fine-grained control.
 // This is turned off by default so as not to affect a large number of
@@ -72,12 +75,6 @@ static cl::opt<bool>
 
 namespace {
 class FixupBWInstPass : public MachineFunctionPass {
-  static char ID;
-
-  const char *getPassName() const override {
-    return "X86 Byte/Word Instruction Fixup";
-  }
-
   /// Loop over all of the instructions in the basic block replacing applicable
   /// byte or word instructions with better alternatives.
   void processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
@@ -94,7 +91,15 @@ class FixupBWInstPass : public MachineFunctionPass {
   MachineInstr *tryReplaceLoad(unsigned New32BitOpcode, MachineInstr *MI) const;
 
 public:
-  FixupBWInstPass() : MachineFunctionPass(ID) {}
+  static char ID;
+
+  const char *getPassName() const override {
+    return FIXUPBW_DESC;
+  }
+
+  FixupBWInstPass() : MachineFunctionPass(ID) {
+    initializeFixupBWInstPassPass(*PassRegistry::getPassRegistry());
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfo>(); // Machine loop info is used to
@@ -124,6 +129,8 @@ private:
 };
 char FixupBWInstPass::ID = 0;
 }
+
+INITIALIZE_PASS(FixupBWInstPass, FIXUPBW_NAME, FIXUPBW_DESC, false, false)
 
 FunctionPass *llvm::createX86FixupBWInsts() { return new FixupBWInstPass(); }
 
