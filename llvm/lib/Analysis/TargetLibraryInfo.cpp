@@ -205,6 +205,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
       TLI.setUnavailable(LibFunc::fmaxf);
       TLI.setUnavailable(LibFunc::fmodf);
       TLI.setUnavailable(LibFunc::logf);
+      TLI.setUnavailable(LibFunc::log10f);
+      TLI.setUnavailable(LibFunc::modff);
       TLI.setUnavailable(LibFunc::powf);
       TLI.setUnavailable(LibFunc::sinf);
       TLI.setUnavailable(LibFunc::sinhf);

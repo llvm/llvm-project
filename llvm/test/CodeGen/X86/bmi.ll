@@ -135,12 +135,11 @@ define i1 @andn_cmp(i32 %x, i32 %y) {
   ret i1 %cmp
 }
 
-; TODO: Recognize a disguised andn in the following 4 tests.
+; Recognize a disguised andn in the following 4 tests.
 define i1 @and_cmp1(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andl %esi, %edi
-; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i32 %x, %y
@@ -151,8 +150,7 @@ define i1 @and_cmp1(i32 %x, i32 %y) {
 define i1 @and_cmp2(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andl %esi, %edi
-; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %and = and i32 %y, %x
@@ -163,8 +161,7 @@ define i1 @and_cmp2(i32 %x, i32 %y) {
 define i1 @and_cmp3(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp3:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andl %esi, %edi
-; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i32 %x, %y
@@ -175,8 +172,7 @@ define i1 @and_cmp3(i32 %x, i32 %y) {
 define i1 @and_cmp4(i32 %x, i32 %y) {
 ; CHECK-LABEL: and_cmp4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andl %esi, %edi
-; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    andnl %esi, %edi, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %and = and i32 %y, %x
@@ -189,12 +185,69 @@ define i1 @and_cmp4(i32 %x, i32 %y) {
 define i1 @and_cmp_const(i32 %x) {
 ; CHECK-LABEL: and_cmp_const:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    andl $43, %edi
-; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    movl $43, %eax
+; CHECK-NEXT:    andnl %eax, %edi, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %and = and i32 %x, 43
   %cmp = icmp eq i32 %and, 43
+  ret i1 %cmp
+}
+
+; But don't use 'andn' if the mask is a power-of-two.
+define i1 @and_cmp_const_power_of_two(i32 %x, i32 %y) {
+; CHECK-LABEL: and_cmp_const_power_of_two:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    btl %esi, %edi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    retq
+;
+  %shl = shl i32 1, %y
+  %and = and i32 %x, %shl
+  %cmp = icmp ne i32 %and, %shl
+  ret i1 %cmp
+}
+
+; Don't transform to 'andn' if there's another use of the 'and'.
+define i32 @and_cmp_not_one_use(i32 %x) {
+; CHECK-LABEL: and_cmp_not_one_use:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl $37, %edi
+; CHECK-NEXT:    cmpl $37, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    retq
+;
+  %and = and i32 %x, 37
+  %cmp = icmp eq i32 %and, 37
+  %ext = zext i1 %cmp to i32
+  %add = add i32 %and, %ext
+  ret i32 %add
+}
+
+; Verify that we're not transforming invalid comparison predicates.
+define i1 @not_an_andn1(i32 %x, i32 %y) {
+; CHECK-LABEL: not_an_andn1:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, %y
+  %cmp = icmp sgt i32 %y, %and
+  ret i1 %cmp
+}
+
+define i1 @not_an_andn2(i32 %x, i32 %y) {
+; CHECK-LABEL: not_an_andn2:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    setbe %al
+; CHECK-NEXT:    retq
+  %and = and i32 %y, %x
+  %cmp = icmp ule i32 %y, %and
   ret i1 %cmp
 }
 

@@ -751,6 +751,8 @@ namespace llvm {
 
     bool isCheapToSpeculateCtlz() const override;
 
+    bool hasAndNotCompare(SDValue Y) const override;
+
     /// Return the value type to use for ISD::SETCC.
     EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                            EVT VT) const override;
