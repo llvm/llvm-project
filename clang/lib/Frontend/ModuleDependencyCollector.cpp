@@ -44,8 +44,7 @@ struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
   ModuleDependencyMMCallbacks(ModuleDependencyCollector &Collector)
       : Collector(Collector) {}
 
-  void moduleMapAddHeader(const FileEntry &File) override {
-    StringRef HeaderPath = File.getName();
+  void moduleMapAddHeader(StringRef HeaderPath) override {
     if (llvm::sys::path::is_absolute(HeaderPath))
       Collector.addFile(HeaderPath);
   }
