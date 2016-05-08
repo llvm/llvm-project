@@ -4,7 +4,7 @@
 define void @bad_cast() {
 ; CHECK-LABEL: bad_cast:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%eax)
 ; CHECK-NEXT:    movl $0, (%eax)
 ; CHECK-NEXT:    vzeroupper

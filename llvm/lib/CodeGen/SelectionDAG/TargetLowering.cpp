@@ -1304,6 +1304,52 @@ bool TargetLowering::isExtendedTrueVal(const ConstantSDNode *N, EVT VT,
   llvm_unreachable("Unexpected enumeration.");
 }
 
+/// If the target supports an 'and-not' or 'and-complement' logic operation,
+/// try to use that to make a comparison operation more efficient.
+static SDValue createAndNotSetCC(EVT VT, SDValue N0, SDValue N1,
+                                 ISD::CondCode Cond, SelectionDAG &DAG,
+                                 SDLoc dl) {
+  // Match these patterns in any of their permutations:
+  // (X & Y) == Y
+  // (X & Y) != Y
+  if (N1.getOpcode() == ISD::AND && N0.getOpcode() != ISD::AND)
+    std::swap(N0, N1);
+
+  if (N0.getOpcode() != ISD::AND || !N0.hasOneUse() ||
+      (Cond != ISD::SETEQ && Cond != ISD::SETNE))
+    return SDValue();
+
+  SDValue X, Y;
+  if (N0.getOperand(0) == N1) {
+    X = N0.getOperand(1);
+    Y = N0.getOperand(0);
+  } else if (N0.getOperand(1) == N1) {
+    X = N0.getOperand(0);
+    Y = N0.getOperand(1);
+  } else {
+    return SDValue();
+  }
+
+  // Bail out if the compare operand that we want to turn into a zero is already
+  // a zero (otherwise, infinite loop).
+  auto *YConst = dyn_cast<ConstantSDNode>(Y);
+  if (YConst && YConst->isNullValue())
+    return SDValue();
+
+  // We don't want to do this transform if the mask is a single bit because
+  // there are more efficient ways to deal with that case (for example, 'bt' on
+  // x86 or 'rlwinm' on PPC).
+  if (!DAG.getTargetLoweringInfo().hasAndNotCompare(Y) ||
+      valueHasExactlyOneBitSet(Y, DAG))
+    return SDValue();
+
+  // Transform this into: ~X & Y == 0.
+  EVT OpVT = X.getValueType();
+  SDValue NotX = DAG.getNOT(SDLoc(X), X, OpVT);
+  SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, NotX, Y);
+  return DAG.getSetCC(dl, VT, NewAnd, DAG.getConstant(0, dl, OpVT), Cond);
+}
+
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
 SDValue
@@ -2165,6 +2211,9 @@ TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     }
     return N0;
   }
+
+  if (SDValue AndNotCC = createAndNotSetCC(VT, N0, N1, Cond, DAG, dl))
+    return AndNotCC;
 
   // Could not fold it.
   return SDValue();

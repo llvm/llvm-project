@@ -1479,6 +1479,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   bool CS1Spilled = false;
   bool LRSpilled = false;
   unsigned NumGPRSpills = 0;
+  unsigned NumFPRSpills = 0;
   SmallVector<unsigned, 4> UnspilledCS1GPRs;
   SmallVector<unsigned, 4> UnspilledCS2GPRs;
   const ARMBaseRegisterInfo *RegInfo = static_cast<const ARMBaseRegisterInfo *>(
@@ -1533,8 +1534,17 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       CanEliminateFrame = false;
     }
 
-    if (!ARM::GPRRegClass.contains(Reg))
+    if (!ARM::GPRRegClass.contains(Reg)) {
+      if (Spilled) {
+        if (ARM::SPRRegClass.contains(Reg))
+          NumFPRSpills++;
+        else if (ARM::DPRRegClass.contains(Reg))
+          NumFPRSpills += 2;
+        else if (ARM::QPRRegClass.contains(Reg))
+          NumFPRSpills += 4;
+      }
       continue;
+    }
 
     if (Spilled) {
       NumGPRSpills++;
@@ -1607,12 +1617,21 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // FIXME: We could add logic to be more precise about negative offsets
   //        and which instructions will need a scratch register for them. Is it
   //        worth the effort and added fragility?
-  bool BigStack = (RS && (MFI->estimateStackSize(MF) +
-                              ((hasFP(MF) && AFI->hasStackFrame()) ? 4 : 0) >=
-                          estimateRSStackSizeLimit(MF, this))) ||
+  unsigned EstimatedStackSize =
+      MFI->estimateStackSize(MF) + 4 * (NumGPRSpills + NumFPRSpills);
+  if (hasFP(MF)) {
+    if (AFI->hasStackFrame())
+      EstimatedStackSize += 4;
+  } else {
+    // If FP is not used, SP will be used to access arguments, so count the
+    // size of arguments into the estimation.
+    EstimatedStackSize += MF.getInfo<ARMFunctionInfo>()->getArgumentStackSize();
+  }
+  EstimatedStackSize += 16; // For possible paddings.
+
+  bool BigStack = EstimatedStackSize >= estimateRSStackSizeLimit(MF, this) ||
                   MFI->hasVarSizedObjects() ||
                   (MFI->adjustsStack() && !canSimplifyCallFramePseudos(MF));
-
   bool ExtraCSSpill = false;
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);
@@ -1706,6 +1725,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       } else if (!AFI->isThumb1OnlyFunction()) {
         // note: Thumb1 functions spill to R12, not the stack.  Reserve a slot
         // closest to SP or frame pointer.
+        assert(RS && "Register scavenging not provided");
         const TargetRegisterClass *RC = &ARM::GPRRegClass;
         RS->addScavengingFrameIndex(MFI->CreateStackObject(RC->getSize(),
                                                            RC->getAlignment(),

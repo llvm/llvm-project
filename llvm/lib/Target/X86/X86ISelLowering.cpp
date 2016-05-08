@@ -308,16 +308,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1   , Expand);
   setOperationAction(ISD::FP_ROUND_INREG   , MVT::f32  , Expand);
 
-  if (Subtarget.is32Bit() && Subtarget.isTargetKnownWindowsMSVC()) {
-    // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
-    // is. We should promote the value to 64-bits to solve this.
-    // This is what the CRT headers do - `fmodf` is an inline header
-    // function casting to f64 and calling `fmod`.
-    setOperationAction(ISD::FREM           , MVT::f32  , Promote);
-  } else {
-    setOperationAction(ISD::FREM           , MVT::f32  , Expand);
-  }
-
+  setOperationAction(ISD::FREM             , MVT::f32  , Expand);
   setOperationAction(ISD::FREM             , MVT::f64  , Expand);
   setOperationAction(ISD::FREM             , MVT::f80  , Expand);
   setOperationAction(ISD::FLT_ROUNDS_      , MVT::i32  , Custom);
@@ -1584,6 +1575,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SDIVREM, MVT::i128, Custom);
     setOperationAction(ISD::UDIVREM, MVT::i128, Custom);
   }
+
+  // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
+  // is. We should promote the value to 64-bits to solve this.
+  // This is what the CRT headers do - `fmodf` is an inline header
+  // function casting to f64 and calling `fmod`.
+  if (Subtarget.is32Bit() && Subtarget.isTargetKnownWindowsMSVC())
+    for (ISD::NodeType Op :
+         {ISD::FCEIL, ISD::FCOS, ISD::FEXP, ISD::FFLOOR, ISD::FREM, ISD::FLOG,
+          ISD::FLOG10, ISD::FPOW, ISD::FSIN})
+      if (isOperationExpand(Op, MVT::f32))
+        setOperationAction(Op, MVT::f32, Promote);
 
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
@@ -4122,6 +4124,18 @@ bool X86TargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasLZCNT();
 }
 
+bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
+  if (!Subtarget.hasBMI())
+    return false;
+
+  // There are only 32-bit and 64-bit forms for 'andn'.
+  EVT VT = Y.getValueType();
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return false;
+
+  return true;
+}
+
 /// Return true if every element in Mask, beginning
 /// from position Pos and ending in Pos+Size is undef.
 static bool isUndefInRange(ArrayRef<int> Mask, unsigned Pos, unsigned Size) {
@@ -4327,10 +4341,7 @@ static SDValue getZeroVector(MVT VT, const X86Subtarget &Subtarget,
   SDValue Vec;
   if (!Subtarget.hasSSE2() && VT.is128BitVector()) {
     Vec = DAG.getConstantFP(+0.0, dl, MVT::v4f32);
-  } else if (!Subtarget.hasInt256() && VT.is256BitVector()) {
-    Vec = DAG.getConstantFP(+0.0, dl, MVT::v8f32);
   } else if (VT.getVectorElementType() == MVT::i1) {
-    // AVX512 can use "vpxord" for 512-bit zeros.
     assert((Subtarget.hasBWI() || VT.getVectorNumElements() <= 16) &&
            "Unexpected vector type");
     assert((Subtarget.hasVLX() || VT.getVectorNumElements() >= 8) &&
@@ -24314,6 +24325,7 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
            OpMask.size() % RootMask.size() == 0) ||
           OpMask.size() == RootMask.size()) &&
          "The smaller number of elements must divide the larger.");
+  int MaskWidth = std::max<int>(OpMask.size(), RootMask.size());
   int RootRatio = std::max<int>(1, OpMask.size() / RootMask.size());
   int OpRatio = std::max<int>(1, RootMask.size() / OpMask.size());
   assert(((RootRatio == 1 && OpRatio == 1) ||
@@ -24321,13 +24333,13 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
          "Must not have a ratio for both incoming and op masks!");
 
   SmallVector<int, 16> Mask;
-  Mask.reserve(std::max(OpMask.size(), RootMask.size()));
+  Mask.reserve(MaskWidth);
 
   // Merge this shuffle operation's mask into our accumulated mask. Note that
   // this shuffle's mask will be the first applied to the input, followed by the
   // root mask to get us all the way to the root value arrangement. The reason
   // for this order is that we are recursing up the operation chain.
-  for (int i = 0, e = std::max(OpMask.size(), RootMask.size()); i < e; ++i) {
+  for (int i = 0; i < MaskWidth; ++i) {
     int RootIdx = i / RootRatio;
     if (RootMask[RootIdx] < 0) {
       // This is a zero or undef lane, we're done.
