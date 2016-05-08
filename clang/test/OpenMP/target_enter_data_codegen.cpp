@@ -218,4 +218,32 @@ void no_target_devices(int arg) {
   {++arg;}
 }
 #endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fomptargets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64
+// RUN: %clang_cc1 -DCK4 -fopenmp -fomptargets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fomptargets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK4 --check-prefix CK4-64
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fomptargets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK4 --check-prefix CK4-32
+// RUN: %clang_cc1 -DCK4 -fopenmp -fomptargets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fomptargets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK4 --check-prefix CK4-32
+
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fomp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-64
+// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fomp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fomp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-64
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fomp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-32
+// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fomp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fomp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-32
+#ifdef CK4
+
+// CK4-LABEL: device_side_scan
+void device_side_scan(int arg) {
+  // CK4: tgt_target_data_begin
+  // CK4: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+  // CK4: ret
+  // TCK4-NOT: tgt_target_data_begin
+  #pragma omp target enter data map(to: arg) if(arg) device(4)
+  {++arg;}
+}
+#endif
 #endif

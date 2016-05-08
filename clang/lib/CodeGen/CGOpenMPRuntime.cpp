@@ -5719,7 +5719,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   }
 
   if (const OMPExecutableDirective *E = dyn_cast<OMPExecutableDirective>(S)) {
-    if (!E->getAssociatedStmt())
+    if (!E->hasAssociatedStmt())
       return;
 
     scanForTargetRegionsFunctions(
