@@ -76,7 +76,7 @@ void test_long_to_ui64(unsigned long long* y) { f_ui64_arg(y); }
 void test_long_to_i64(long* y) { f_i64_arg(y); }
 void test_long_to_ui64(unsigned long* y) { f_ui64_arg(y); }
 #endif
-typedef          float f128ibm __attribute__ ((mode (TF)));     // expected-error{{unsupported machine mode 'TF'}}
+typedef          float f128ibm __attribute__ ((mode (TF)));
 #elif TEST_64BIT_PPC64
 typedef          float f128ibm __attribute__ ((mode (TF)));
 typedef _Complex float c128ibm __attribute__ ((mode (TC)));

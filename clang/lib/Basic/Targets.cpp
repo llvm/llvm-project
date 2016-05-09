@@ -427,6 +427,8 @@ protected:
       Builder.defineMacro("_REENTRANT");
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 public:
   LinuxTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -440,6 +442,11 @@ public:
     case llvm::Triple::ppc64:
     case llvm::Triple::ppc64le:
       this->MCountName = "_mcount";
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+    case llvm::Triple::systemz:
+      this->HasFloat128 = true;
       break;
     }
   }
@@ -1096,6 +1103,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasQPX = true;
     } else if (Feature == "+htm") {
       HasHTM = true;
+    } else if (Feature == "+float128") {
+      HasFloat128 = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -1253,6 +1262,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CRYPTO__");
   if (HasHTM)
     Builder.defineMacro("__HTM__");
+  if (HasFloat128)
+    Builder.defineMacro("__FLOAT128__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -1300,6 +1311,13 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
     if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+direct-move") !=
         FeaturesVec.end()) {
       Diags.Report(diag::err_opt_not_valid_with_opt) << "-mdirect-move"
+                                                     << "-mno-vsx";
+      return false;
+    }
+
+    if (std::find(FeaturesVec.begin(), FeaturesVec.end(), "+float128") !=
+        FeaturesVec.end()) {
+      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfloat128"
                                                      << "-mno-vsx";
       return false;
     }
@@ -1371,6 +1389,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
     .Case("htm", HasHTM)
     .Case("bpermd", HasBPERMD)
     .Case("extdiv", HasExtDiv)
+    .Case("float128", HasFloat128)
     .Default(false);
 }
 
@@ -1380,11 +1399,11 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   // as well. Do the inverse if we're disabling vsx. We'll diagnose any user
   // incompatible options.
   if (Enabled) {
-    if (Name == "vsx") {
-     Features[Name] = true;
-    } else if (Name == "direct-move") {
+    if (Name == "direct-move") {
       Features[Name] = Features["vsx"] = true;
     } else if (Name == "power8-vector") {
+      Features[Name] = Features["vsx"] = true;
+    } else if (Name == "float128") {
       Features[Name] = Features["vsx"] = true;
     } else {
       Features[Name] = true;
@@ -1392,7 +1411,7 @@ void PPCTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   } else {
     if (Name == "vsx") {
       Features[Name] = Features["direct-move"] = Features["power8-vector"] =
-          false;
+          Features["float128"] = false;
     } else {
       Features[Name] = false;
     }

@@ -902,6 +902,7 @@ void UnwrappedLineParser::parseStructuralElement() {
     break;
   }
   do {
+    const FormatToken *Previous = getPreviousToken();
     switch (FormatTok->Tok.getKind()) {
     case tok::at:
       nextToken();
@@ -909,6 +910,12 @@ void UnwrappedLineParser::parseStructuralElement() {
         parseBracedList();
       break;
     case tok::kw_enum:
+      // Ignore if this is part of "template <enum ...".
+      if (Previous && Previous->is(tok::less)) {
+        nextToken();
+        break;
+      }
+
       // parseEnum falls through and does not yet add an unwrapped line as an
       // enum definition can start a structural element.
       if (!parseEnum())

@@ -1,9 +1,9 @@
+// RUN: cat %s > %t.cpp
+// RUN: clang-rename -offset=138 -new-name=Hector %t.cpp -i --
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 class Cla  // CHECK: class Hector
 {
 };
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=6 -new-name=Hector %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 
 int main()
 {

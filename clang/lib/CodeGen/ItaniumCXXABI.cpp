@@ -2530,6 +2530,7 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::Float:
     case BuiltinType::Double:
     case BuiltinType::LongDouble:
+    case BuiltinType::Float128:
     case BuiltinType::Char16:
     case BuiltinType::Char32:
     case BuiltinType::Int128:
@@ -3349,8 +3350,8 @@ void ItaniumCXXABI::EmitFundamentalRTTIDescriptors() {
       getContext().UnsignedLongLongTy, getContext().Int128Ty,
       getContext().UnsignedInt128Ty,   getContext().HalfTy,
       getContext().FloatTy,            getContext().DoubleTy,
-      getContext().LongDoubleTy,       getContext().Char16Ty,
-      getContext().Char32Ty,
+      getContext().LongDoubleTy,       getContext().Float128Ty,
+      getContext().Char16Ty,           getContext().Char32Ty
   };
   for (const QualType &FundamentalType : FundamentalTypes)
     EmitFundamentalRTTIDescriptor(FundamentalType);
