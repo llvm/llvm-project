@@ -7929,7 +7929,7 @@ define <2 x double>@test_int_x86_avx512_mask_fixupimm_pd_128(<2 x double> %x0, <
 ; CHECK: kmovw  %edi, %k1
 ; CHECK: vmovaps  %zmm0, %zmm3
 ; CHECK: vfixupimmpd  $5, %xmm2, %xmm1, %xmm3 {%k1} 
-; CHECK: vpxor  %xmm4, %xmm4, %xmm4
+; CHECK: vpxord  %xmm4, %xmm4, %xmm4
 ; CHECK: vfixupimmpd  $4, %xmm2, %xmm1, %xmm4 {%k1} {z} 
 ; CHECK: vfixupimmpd  $3, %xmm2, %xmm1, %xmm0 
 ; CHECK: vaddpd  %xmm4, %xmm3, %xmm1
@@ -7950,7 +7950,7 @@ define <2 x double>@test_int_x86_avx512_maskz_fixupimm_pd_128(<2 x double> %x0, 
 ; CHECK: kmovw  %edi, %k1
 ; CHECK: vmovaps  %zmm0, %zmm3
 ; CHECK: vfixupimmpd  $5, %xmm2, %xmm1, %xmm3 {%k1} {z}
-; CHECK: vpxor  %xmm2, %xmm2, %xmm2
+; CHECK: vpxord  %xmm2, %xmm2, %xmm2
 ; CHECK: vfixupimmpd  $3, %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK: vaddpd  %xmm0, %xmm3, %xmm0
   %res = call <2 x double> @llvm.x86.avx512.maskz.fixupimm.pd.128(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i32 5, i8 %x4)
@@ -7968,7 +7968,7 @@ define <4 x double>@test_int_x86_avx512_mask_fixupimm_pd_256(<4 x double> %x0, <
 ; CHECK: kmovw  %edi, %k1
 ; CHECK: vmovaps  %zmm0, %zmm3
 ; CHECK: vfixupimmpd  $4, %ymm2, %ymm1, %ymm3 {%k1} 
-; CHECK: vpxor  %ymm4, %ymm4, %ymm4
+; CHECK: vpxord  %ymm4, %ymm4, %ymm4
 ; CHECK: vfixupimmpd  $5, %ymm2, %ymm1, %ymm4 {%k1} {z} 
 ; CHECK: vfixupimmpd  $3, %ymm2, %ymm1, %ymm0 
 ; CHECK: vaddpd  %ymm4, %ymm3, %ymm1
@@ -7989,7 +7989,7 @@ define <4 x double>@test_int_x86_avx512_maskz_fixupimm_pd_256(<4 x double> %x0, 
 ; CHECK: kmovw  %edi, %k1
 ; CHECK: vmovaps  %zmm0, %zmm3
 ; CHECK: vfixupimmpd  $5, %ymm2, %ymm1, %ymm3 {%k1} {z}
-; CHECK: vpxor  %ymm4, %ymm4, %ymm4
+; CHECK: vpxord  %ymm4, %ymm4, %ymm4
 ; CHECK: vmovaps  %zmm0, %zmm5
 ; CHECK: vfixupimmpd  $4, %ymm4, %ymm1, %ymm5 {%k1} {z}
 ; CHECK: vfixupimmpd  $3, %ymm2, %ymm1, %ymm0 
@@ -8013,7 +8013,7 @@ define <4 x float>@test_int_x86_avx512_mask_fixupimm_ps_128(<4 x float> %x0, <4 
 ; CHECK: vfixupimmps  $5, %xmm2, %xmm1, %xmm3 {%k1} 
 ; CHECK: vmovaps  %zmm0, %zmm4
 ; CHECK: vfixupimmps  $5, %xmm2, %xmm1, %xmm4 
-; CHECK: vpxor  %xmm2, %xmm2, %xmm2
+; CHECK: vpxord  %xmm2, %xmm2, %xmm2
 ; CHECK: vfixupimmps  $5, %xmm2, %xmm1, %xmm0 {%k1} 
 ; CHECK: vaddps  %xmm0, %xmm3, %xmm0
 ; CHECK: vaddps  %xmm4, %xmm0, %xmm0
@@ -8035,7 +8035,7 @@ define <4 x float>@test_int_x86_avx512_maskz_fixupimm_ps_128(<4 x float> %x0, <4
 ; CHECK: vfixupimmps  $5, %xmm2, %xmm1, %xmm3 {%k1} {z} 
 ; CHECK: vmovaps  %zmm0, %zmm4
 ; CHECK: vfixupimmps  $5, %xmm2, %xmm1, %xmm4 
-; CHECK: vpxor  %xmm2, %xmm2, %xmm2
+; CHECK: vpxord  %xmm2, %xmm2, %xmm2
 ; CHECK: vfixupimmps  $5, %xmm2, %xmm1, %xmm0 {%k1} {z} 
 ; CHECK: vaddps  %xmm0, %xmm3, %xmm0
 ; CHECK: vaddps  %xmm4, %xmm0, %xmm0
@@ -8057,7 +8057,7 @@ define <8 x float>@test_int_x86_avx512_mask_fixupimm_ps_256(<8 x float> %x0, <8 
 ; CHECK: vfixupimmps  $5, %ymm2, %ymm1, %ymm3 {%k1} 
 ; CHECK: vmovaps  %zmm0, %zmm4
 ; CHECK: vfixupimmps  $5, %ymm2, %ymm1, %ymm4 
-; CHECK: vpxor  %ymm2, %ymm2, %ymm2
+; CHECK: vpxord  %ymm2, %ymm2, %ymm2
 ; CHECK: vfixupimmps  $5, %ymm2, %ymm1, %ymm0 {%k1} 
 ; CHECK: vaddps  %ymm0, %ymm3, %ymm0
 ; CHECK: vaddps  %ymm4, %ymm0, %ymm0
@@ -8079,7 +8079,7 @@ define <8 x float>@test_int_x86_avx512_maskz_fixupimm_ps_256(<8 x float> %x0, <8
 ; CHECK: vfixupimmps  $5, %ymm2, %ymm1, %ymm3 {%k1} {z} 
 ; CHECK: vmovaps  %zmm0, %zmm4
 ; CHECK: vfixupimmps  $5, %ymm2, %ymm1, %ymm4 
-; CHECK: vpxor  %ymm2, %ymm2, %ymm2
+; CHECK: vpxord  %ymm2, %ymm2, %ymm2
 ; CHECK: vfixupimmps  $5, %ymm2, %ymm1, %ymm0 {%k1} {z} 
 ; CHECK: vaddps  %ymm0, %ymm3, %ymm0
 ; CHECK: vaddps  %ymm4, %ymm0, %ymm0

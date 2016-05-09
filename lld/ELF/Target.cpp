@@ -1244,6 +1244,9 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
 template <class ELFT>
 RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
                                          const SymbolBody &S) const {
+  if (ELFT::Is64Bits)
+    // See comment in the calculateMips64RelChain.
+    Type &= 0xff;
   switch (Type) {
   default:
     return R_ABS;
@@ -1443,14 +1446,44 @@ uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
   }
 }
 
+static std::pair<uint32_t, uint64_t> calculateMips64RelChain(uint32_t Type,
+                                                             uint64_t Val) {
+  // MIPS N64 ABI packs multiple relocations into the single relocation
+  // record. In general, all up to three relocations can have arbitrary
+  // types. In fact, Clang and GCC uses only a few combinations. For now,
+  // we support two of them. That is allow to pass at least all LLVM
+  // test suite cases.
+  // <any relocation> / R_MIPS_SUB / R_MIPS_HI16 | R_MIPS_LO16
+  // <any relocation> / R_MIPS_64 / R_MIPS_NONE
+  // The first relocation is a 'real' relocation which is calculated
+  // using the corresponding symbol's value. The second and the third
+  // relocations used to modify result of the first one: extend it to
+  // 64-bit, extract high or low part etc. For details, see part 2.9 Relocation
+  // at the https://dmz-portal.mips.com/mw/images/8/82/007-4658-001.pdf
+  uint32_t Type2 = (Type >> 8) & 0xff;
+  uint32_t Type3 = (Type >> 16) & 0xff;
+  if (Type2 == R_MIPS_NONE && Type3 == R_MIPS_NONE)
+    return std::make_pair(Type, Val);
+  if (Type2 == R_MIPS_64 && Type3 == R_MIPS_NONE)
+    return std::make_pair(Type2, Val);
+  if (Type2 == R_MIPS_SUB && (Type3 == R_MIPS_HI16 || Type3 == R_MIPS_LO16))
+    return std::make_pair(Type3, -Val);
+  error("unsupported relocations combination " + Twine(Type));
+  return std::make_pair(Type & 0xff, Val);
+}
+
 template <class ELFT>
 void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
                                        uint64_t Val) const {
   const endianness E = ELFT::TargetEndianness;
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
-  const uint32_t TPOffset = 0x7000;
-  const uint32_t DTPOffset = 0x8000;
+  if (Type == R_MIPS_TLS_DTPREL_HI16 || Type == R_MIPS_TLS_DTPREL_LO16)
+    Val -= 0x8000;
+  else if (Type == R_MIPS_TLS_TPREL_HI16 || Type == R_MIPS_TLS_TPREL_LO16)
+    Val -= 0x7000;
+  if (ELFT::Is64Bits)
+    std::tie(Type, Val) = calculateMips64RelChain(Type, Val);
   switch (Type) {
   case R_MIPS_32:
   case R_MIPS_GPREL32:
@@ -1472,10 +1505,14 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_GOT_OFST:
   case R_MIPS_LO16:
   case R_MIPS_PCLO16:
+  case R_MIPS_TLS_DTPREL_LO16:
+  case R_MIPS_TLS_TPREL_LO16:
     writeMipsLo16<E>(Loc, Val);
     break;
   case R_MIPS_HI16:
   case R_MIPS_PCHI16:
+  case R_MIPS_TLS_DTPREL_HI16:
+  case R_MIPS_TLS_TPREL_HI16:
     writeMipsHi16<E>(Loc, Val);
     break;
   case R_MIPS_JALR:
@@ -1495,18 +1532,6 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_MIPS_PC32:
     applyMipsPcReloc<E, 32, 0>(Loc, Type, Val);
-    break;
-  case R_MIPS_TLS_DTPREL_HI16:
-    writeMipsHi16<E>(Loc, Val - DTPOffset);
-    break;
-  case R_MIPS_TLS_DTPREL_LO16:
-    writeMipsLo16<E>(Loc, Val - DTPOffset);
-    break;
-  case R_MIPS_TLS_TPREL_HI16:
-    writeMipsHi16<E>(Loc, Val - TPOffset);
-    break;
-  case R_MIPS_TLS_TPREL_LO16:
-    writeMipsLo16<E>(Loc, Val - TPOffset);
     break;
   default:
     fatal("unrecognized reloc " + Twine(Type));

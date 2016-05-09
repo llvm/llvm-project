@@ -220,3 +220,11 @@
   swm32 $5, $6, 8($4)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: $16 or $31 expected
   swm32 $16, $19, 8($4)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: consecutive register numbers expected
   swm32 $16-$25, 8($4)         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid register operand
+  lwp $31, 8($4)               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+                               # FIXME: This ought to point at the $34 but memory is treated as one operand.
+  lwp $16, 8($34)              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  lwp $16, 4096($4)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  lwp $16, 8($16)              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+  swp $31, 8($4)               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swp $16, 8($34)              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  swp $16, 4096($4)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset

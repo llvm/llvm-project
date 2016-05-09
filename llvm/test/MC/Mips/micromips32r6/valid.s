@@ -327,3 +327,5 @@
   sll $3, 7                # CHECK: sll $3, $3, 7          # encoding: [0x00,0x63,0x38,0x00]
   sra $3, 7                # CHECK: sra $3, $3, 7          # encoding: [0x00,0x63,0x38,0x80]
   srl $3, 7                # CHECK: srl $3, $3, 7          # encoding: [0x00,0x63,0x38,0x40]
+  lwp $16, 8($4)           # CHECK: lwp $16, 8($4)         # encoding: [0x22,0x04,0x10,0x08]
+  swp $16, 8($4)           # CHECK: swp $16, 8($4)         # encoding: [0x22,0x04,0x90,0x08]

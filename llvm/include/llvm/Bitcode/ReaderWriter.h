@@ -162,9 +162,10 @@ namespace llvm {
 
     unsigned Offset = support::endian::read32le(&BufPtr[BWH_OffsetField]);
     unsigned Size = support::endian::read32le(&BufPtr[BWH_SizeField]);
+    uint64_t BitcodeOffsetEnd = (uint64_t)Offset + (uint64_t)Size;
 
     // Verify that Offset+Size fits in the file.
-    if (VerifyBufferSize && Offset+Size > unsigned(BufEnd-BufPtr))
+    if (VerifyBufferSize && BitcodeOffsetEnd > uint64_t(BufEnd-BufPtr))
       return true;
     BufPtr += Offset;
     BufEnd = BufPtr+Size;

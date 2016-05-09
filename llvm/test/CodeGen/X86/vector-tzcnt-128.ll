@@ -192,7 +192,7 @@ define <2 x i64> @testv2i64u(<2 x i64> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv2i64u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubq %xmm0, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpandq %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vplzcntq %xmm0, %xmm0
@@ -388,7 +388,7 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv4i32:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubd %xmm0, %xmm1, %xmm2
 ; AVX512CDVL-NEXT:    vpandd %xmm2, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vpsubd {{.*}}(%rip){1to4}, %xmm0, %xmm0
@@ -611,7 +611,7 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv4i32u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpandd %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vplzcntd %xmm0, %xmm0
@@ -794,7 +794,7 @@ define <8 x i16> @testv8i16(<8 x i16> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv8i16:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubw %xmm0, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpandq %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
@@ -992,7 +992,7 @@ define <8 x i16> @testv8i16u(<8 x i16> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv8i16u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubw %xmm0, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpandq %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vpsubw {{.*}}(%rip), %xmm0, %xmm0
@@ -1168,7 +1168,7 @@ define <16 x i8> @testv16i8(<16 x i8> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv16i8:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubb %xmm0, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpandq %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vpsubb {{.*}}(%rip), %xmm0, %xmm0
@@ -1334,7 +1334,7 @@ define <16 x i8> @testv16i8u(<16 x i8> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv16i8u:
 ; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpxord %xmm1, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpsubb %xmm0, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpandq %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vpsubb {{.*}}(%rip), %xmm0, %xmm0
