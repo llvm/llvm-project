@@ -1,8 +1,8 @@
+// RUN: cat %s > %t.cpp
+// RUN: clang-rename -offset=150 -new-name=hector %t.cpp -i --
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 namespace A { int foo;  // CHECK: int hector;
 }
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=18 -new-name=hector %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 int foo;  // CHECK: int foo;
 int bar = foo; // CHECK: bar = foo;
 int baz = A::foo; // CHECK: baz = A::hector;
