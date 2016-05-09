@@ -119,21 +119,27 @@ public:
   void setCacheDir(std::string Path) { CacheOptions.Path = std::move(Path); }
 
   /// Cache policy: interval (seconds) between two prune of the cache. Set to a
-  /// negative value (default) to disable pruning.
+  /// negative value (default) to disable pruning. A value of 0 will be ignored.
   void setCachePruningInterval(int Interval) {
-    CacheOptions.PruningInterval = Interval;
+    fprintf(stderr, "setCachePruningInterval %d\n", Interval);
+    if (Interval)
+      CacheOptions.PruningInterval = Interval;
   }
 
   /// Cache policy: expiration (in seconds) for an entry.
+  /// A value of 0 will be ignored.
   void setCacheEntryExpiration(unsigned Expiration) {
-    CacheOptions.Expiration = Expiration;
+    if (Expiration)
+      CacheOptions.Expiration = Expiration;
   }
 
   /**
    * Sets the maximum cache size that can be persistent across build, in terms
    * of percentage of the available space on the the disk. Set to 100 to
    * indicate no limit, 50 to indicate that the cache size will not be left over
-   * half the available space. A value over 100 will be reduced to 100.
+   * half the available space. A value over 100 will be reduced to 100, and a
+   * value of 0 will be ignored.
+   *
    *
    * The formula looks like:
    *  AvailableSpace = FreeSpace + ExistingCacheSize
@@ -141,7 +147,8 @@ public:
    *
    */
   void setMaxCacheSizeRelativeToAvailableSpace(unsigned Percentage) {
-    CacheOptions.MaxPercentageOfAvailableSpace = Percentage;
+    if (Percentage)
+      CacheOptions.MaxPercentageOfAvailableSpace = Percentage;
   }
 
   /**@}*/

@@ -668,7 +668,8 @@ extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
 
 /**
  * Sets the cache pruning interval (in seconds). A negative value disable the
- * pruning. An unspecified default value will be applied.
+ * pruning. An unspecified default value will be applied, and a value of 0 will
+ * be ignored.
  *
  * \since LTO_API_VERSION=18
  */
@@ -679,8 +680,8 @@ extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
  * Sets the maximum cache size that can be persistent across build, in terms of
  * percentage of the available space on the the disk. Set to 100 to indicate
  * no limit, 50 to indicate that the cache size will not be left over half the
- * available space. A value over 100 will be reduced to 100. An unspecified 
- * default value will be applied.
+ * available space. A value over 100 will be reduced to 100, a value of 0 will
+ * be ignored. An unspecified default value will be applied.
  *
  * The formula looks like:
  *  AvailableSpace = FreeSpace + ExistingCacheSize
@@ -693,7 +694,7 @@ extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
 
 /**
  * Sets the expiration (in seconds) for an entry in the cache. An unspecified
- * default value will be applied.
+ * default value will be applied. A value of 0 will be ignored.
  *
  * \since LTO_API_VERSION=18
  */

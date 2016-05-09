@@ -259,5 +259,7 @@ a:
         dmuh $3, $4, $5          # CHECK dmuh $3, $4, $5          # encoding: [0x58,0xa4,0x18,0x58]
         dmulu $3, $4, $5         # CHECK dmulu $3, $4, $5         # encoding: [0x58,0xa4,0x18,0x98]
         dmuhu $3, $4, $5         # CHECK dmuhu $3, $4, $5         # encoding: [0x58,0xa4,0x18,0xd8]
+        lwp $16, 8($4)           # CHECK: lwp $16, 8($4)          # encoding: [0x22,0x04,0x10,0x08]
+        swp $16, 8($4)           # CHECK: swp $16, 8($4)          # encoding: [0x22,0x04,0x90,0x08]
 
 1:

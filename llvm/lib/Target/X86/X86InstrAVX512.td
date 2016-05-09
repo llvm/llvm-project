@@ -472,20 +472,23 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v16i16 (bitconvert (v32i8 VR256X:$src))),  (v16i16 VR256X:$src)>;
 }
 
-//
-// AVX-512: VPXOR instruction writes zero to its upper part, it's safe build zeros.
-//
-
+// Alias instruction that maps zero vector to pxor / xorp* for AVX-512.
+// This is expanded by ExpandPostRAPseudos to an xorps / vxorps, and then
+// swizzled by ExecutionDepsFix to pxor.
+// We set canFoldAsLoad because this can be converted to a constant-pool
+// load of an all-zeros value if folding it would be beneficial.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
     isPseudo = 1, Predicates = [HasAVX512] in {
 def AVX512_512_SET0 : I<0, Pseudo, (outs VR512:$dst), (ins), "",
-               [(set VR512:$dst, (v16f32 immAllZerosV))]>;
+               [(set VR512:$dst, (v16i32 immAllZerosV))]>;
 }
 
-let Predicates = [HasAVX512] in {
-def : Pat<(v8i64 immAllZerosV), (AVX512_512_SET0)>;
-def : Pat<(v16i32 immAllZerosV), (AVX512_512_SET0)>;
-def : Pat<(v8f64 immAllZerosV), (AVX512_512_SET0)>;
+let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
+    isPseudo = 1, Predicates = [HasVLX] in {
+def AVX512_128_SET0 : I<0, Pseudo, (outs VR128X:$dst), (ins), "",
+               [(set VR128X:$dst, (v4i32 immAllZerosV))]>;
+def AVX512_256_SET0 : I<0, Pseudo, (outs VR256X:$dst), (ins), "",
+               [(set VR256X:$dst, (v8i32 immAllZerosV))]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3211,6 +3214,31 @@ defm VMOVNTDQ : avx512_movnt_vl<0xE7, "vmovntdq", avx512vl_i64_info>, PD;
 defm VMOVNTPD : avx512_movnt_vl<0x2B, "vmovntpd", avx512vl_f64_info>, PD, VEX_W;
 defm VMOVNTPS : avx512_movnt_vl<0x2B, "vmovntps", avx512vl_f32_info>, PS;
 
+let Predicates = [HasAVX512], AddedComplexity = 400 in {
+  def : Pat<(alignednontemporalstore (v16i32 VR512:$src), addr:$dst),
+            (VMOVNTDQZmr addr:$dst, VR512:$src)>;
+  def : Pat<(alignednontemporalstore (v32i16 VR512:$src), addr:$dst),
+            (VMOVNTDQZmr addr:$dst, VR512:$src)>;
+  def : Pat<(alignednontemporalstore (v64i8 VR512:$src), addr:$dst),
+            (VMOVNTDQZmr addr:$dst, VR512:$src)>;
+}
+
+let Predicates = [HasVLX], AddedComplexity = 400 in {
+  def : Pat<(alignednontemporalstore (v8i32 VR256X:$src), addr:$dst),
+            (VMOVNTDQZ256mr addr:$dst, VR256X:$src)>;
+  def : Pat<(alignednontemporalstore (v16i16 VR256X:$src), addr:$dst),
+            (VMOVNTDQZ256mr addr:$dst, VR256X:$src)>;
+  def : Pat<(alignednontemporalstore (v32i8 VR256X:$src), addr:$dst),
+            (VMOVNTDQZ256mr addr:$dst, VR256X:$src)>;
+
+  def : Pat<(alignednontemporalstore (v4i32 VR128X:$src), addr:$dst),
+            (VMOVNTDQZ128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(alignednontemporalstore (v8i16 VR128X:$src), addr:$dst),
+            (VMOVNTDQZ128mr addr:$dst, VR128X:$src)>;
+  def : Pat<(alignednontemporalstore (v16i8 VR128X:$src), addr:$dst),
+            (VMOVNTDQZ128mr addr:$dst, VR128X:$src)>;
+}
+
 //===----------------------------------------------------------------------===//
 // AVX-512 - Integer arithmetic
 //
@@ -5069,15 +5097,15 @@ let Predicates = [HasAVX512] in {
 multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          X86VectorVTInfo _Src, SDNode OpNode> {
   defm rr : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                         (ins _Src.RC:$src1, _Src.RC:$src2), OpcodeStr,
+                         (ins _.RC:$src1, _Src.RC:$src2), OpcodeStr,
                          "$src2, $src1", "$src1, $src2",
-                         (_.VT (OpNode (_Src.VT _Src.RC:$src1),
+                         (_.VT (OpNode (_.VT _.RC:$src1),
                                        (_Src.VT _Src.RC:$src2)))>,
                          EVEX_4V, VEX_LIG, Sched<[WriteCvtF2F]>;
   defm rm : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
                          (ins _Src.RC:$src1, _Src.ScalarMemOp:$src2), OpcodeStr,
                          "$src2, $src1", "$src1, $src2",
-                         (_.VT (OpNode (_Src.VT _Src.RC:$src1),
+                         (_.VT (OpNode (_.VT _.RC:$src1),
                                   (_Src.VT (scalar_to_vector
                                             (_Src.ScalarLdFrag addr:$src2)))))>,
                          EVEX_4V, VEX_LIG, Sched<[WriteCvtF2FLd, ReadAfterLd]>;
@@ -5087,9 +5115,9 @@ multiclass avx512_cvt_fp_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _
 multiclass avx512_cvt_fp_sae_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          X86VectorVTInfo _Src, SDNode OpNodeRnd> {
   defm rrb : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                        (ins _Src.RC:$src1, _Src.RC:$src2), OpcodeStr,
+                        (ins _.RC:$src1, _Src.RC:$src2), OpcodeStr,
                         "{sae}, $src2, $src1", "$src1, $src2, {sae}",
-                        (_.VT (OpNodeRnd (_Src.VT _Src.RC:$src1),
+                        (_.VT (OpNodeRnd (_.VT _.RC:$src1),
                                          (_Src.VT _Src.RC:$src2),
                                          (i32 FROUND_NO_EXC)))>,
                         EVEX_4V, VEX_LIG, EVEX_B;
@@ -5099,9 +5127,9 @@ multiclass avx512_cvt_fp_sae_scalar<bits<8> opc, string OpcodeStr, X86VectorVTIn
 multiclass avx512_cvt_fp_rc_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
                          X86VectorVTInfo _Src, SDNode OpNodeRnd> {
   defm rrb : AVX512_maskable_scalar<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                        (ins _Src.RC:$src1, _Src.RC:$src2, AVX512RC:$rc), OpcodeStr,
+                        (ins _.RC:$src1, _Src.RC:$src2, AVX512RC:$rc), OpcodeStr,
                         "$rc, $src2, $src1", "$src1, $src2, $rc",
-                        (_.VT (OpNodeRnd (_Src.VT _Src.RC:$src1),
+                        (_.VT (OpNodeRnd (_.VT _.RC:$src1),
                                          (_Src.VT _Src.RC:$src2), (i32 imm:$rc)))>,
                         EVEX_4V, VEX_LIG, Sched<[WriteCvtF2FLd, ReadAfterLd]>,
                         EVEX_B, EVEX_RC;

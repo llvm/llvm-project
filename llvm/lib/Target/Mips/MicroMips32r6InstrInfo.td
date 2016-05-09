@@ -75,6 +75,7 @@ class JIC_MMR6_ENC   : JMP_IDX_COMPACT_FM<0b101000>;
 class JRC16_MMR6_ENC: POOL16C_JALRC_FM_MM16R6<0x3>;
 class JRCADDIUSP_MMR6_ENC : POOL16C_JRCADDIUSP_FM_MM16R6<0x13>;
 class LSA_MMR6_ENC : POOL32A_LSA_FM<0b001111>;
+class LWP_MMR6_ENC : POOL32B_LWP_SWP_FM_MMR6<0x1>;
 class LWPC_MMR6_ENC  : PCREL19_FM_MMR6<0b01>;
 class LWM16_MMR6_ENC : POOL16C_LWM_SWM_FM_MM16R6<0x2>;
 class MFC0_MMR6_ENC : POOL32A_MFTC0_FM_MMR6<"mfc0", 0b00011, 0b111100>;
@@ -113,6 +114,7 @@ class SWE_MMR6_ENC : POOL32C_SWE_FM_MMR6<"swe", 0x18, 0xa, 0x7>;
 class SW16_MMR6_ENC : LOAD_STORE_FM_MM16<0x3a>;
 class SWM16_MMR6_ENC : POOL16C_LWM_SWM_FM_MM16R6<0xa>;
 class SWSP_MMR6_ENC : LOAD_STORE_SP_FM_MM16<0x32>;
+class SWP_MMR6_ENC : POOL32B_LWP_SWP_FM_MMR6<0x9>;
 class PREFE_MMR6_ENC : POOL32C_ST_EVA_FM_MMR6<0b011000, 0b010>;
 class CACHEE_MMR6_ENC : POOL32C_ST_EVA_FM_MMR6<0b011000, 0b011>;
 class WRPGPR_MMR6_ENC : POOL32A_WRPGPR_WSBH_FM_MMR6<0x3c5>;
@@ -525,6 +527,32 @@ class PCREL_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
 
 class ADDIUPC_MMR6_DESC : PCREL_MMR6_DESC_BASE<"addiupc", GPR32Opnd, simm19_lsl2>;
 class LWPC_MMR6_DESC: PCREL_MMR6_DESC_BASE<"lwpc", GPR32Opnd, simm19_lsl2>;
+
+class LWP_MMR6_DESC : MMR6Arch<"lwp"> {
+  dag OutOperandList = (outs regpair:$rd);
+  dag InOperandList = (ins mem_simm12:$addr);
+  string AsmString = !strconcat("lwp", "\t$rd, $addr");
+  list<dag> Pattern = [];
+  InstrItinClass Itin = NoItinerary;
+  ComplexPattern Addr = addr;
+  Format f = FrmI;
+  string BaseOpcode = "lwp";
+  string DecoderMethod = "DecodeMemMMImm12";
+  bit mayLoad = 1;
+}
+
+class SWP_MMR6_DESC : MMR6Arch<"swp"> {
+  dag OutOperandList = (outs);
+  dag InOperandList = (ins regpair:$rd, mem_simm12:$addr);
+  string AsmString = !strconcat("swp", "\t$rd, $addr");
+  list<dag> Pattern = [];
+  InstrItinClass Itin = NoItinerary;
+  ComplexPattern Addr = addr;
+  Format f = FrmI;
+  string BaseOpcode = "swp";
+  string DecoderMethod = "DecodeMemMMImm12";
+  bit mayStore = 1;
+}
 
 class SELEQNE_Z_MMR6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd>
     : MMR6Arch<instr_asm> {
@@ -1174,6 +1202,7 @@ def JRC16_MMR6 : R6MMR6Rel, JRC16_MMR6_DESC, JRC16_MMR6_ENC, ISA_MICROMIPS32R6;
 def JRCADDIUSP_MMR6 : R6MMR6Rel, JRCADDIUSP_MMR6_DESC, JRCADDIUSP_MMR6_ENC,
                       ISA_MICROMIPS32R6;
 def LSA_MMR6 : R6MMR6Rel, LSA_MMR6_ENC, LSA_MMR6_DESC, ISA_MICROMIPS32R6;
+def LWP_MMR6 : StdMMR6Rel, LWP_MMR6_ENC, LWP_MMR6_DESC, ISA_MICROMIPS32R6;
 def LWPC_MMR6 : R6MMR6Rel, LWPC_MMR6_ENC, LWPC_MMR6_DESC, ISA_MICROMIPS32R6;
 def LWM16_MMR6 : StdMMR6Rel, LWM16_MMR6_DESC, LWM16_MMR6_ENC, ISA_MICROMIPS32R6;
 def MTC0_MMR6 : StdMMR6Rel, MTC0_MMR6_ENC, MTC0_MMR6_DESC, ISA_MICROMIPS32R6;
@@ -1221,6 +1250,7 @@ def SUBU_MMR6 : StdMMR6Rel, SUBU_MMR6_DESC, SUBU_MMR6_ENC, ISA_MICROMIPS32R6;
 def SW16_MMR6 : StdMMR6Rel, SW16_MMR6_DESC, SW16_MMR6_ENC, ISA_MICROMIPS32R6;
 def SWM16_MMR6 : StdMMR6Rel, SWM16_MMR6_DESC, SWM16_MMR6_ENC, ISA_MICROMIPS32R6;
 def SWSP_MMR6 : StdMMR6Rel, SWSP_MMR6_DESC, SWSP_MMR6_ENC, ISA_MICROMIPS32R6;
+def SWP_MMR6 : StdMMR6Rel, SWP_MMR6_ENC, SWP_MMR6_DESC, ISA_MICROMIPS32R6;
 def PREFE_MMR6 : StdMMR6Rel, PREFE_MMR6_ENC, PREFE_MMR6_DESC, ISA_MICROMIPS32R6;
 def CACHEE_MMR6 : StdMMR6Rel, CACHEE_MMR6_ENC, CACHEE_MMR6_DESC,
                   ISA_MICROMIPS32R6;

@@ -83,3 +83,11 @@
   she $4, 8($33)      # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   she $4, 512($5)     # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
   she $4, -513($5)    # CHECK: :[[@LINE]]:11: error: expected memory with 9-bit signed offset
+  lwp $31, 8($4)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+                      # FIXME: This ought to point at the $34 but memory is treated as one operand.
+  lwp $16, 8($34)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  lwp $16, 4096($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  lwp $16, 8($16)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+  swp $31, 8($4)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
+  swp $16, 8($34)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  swp $16, 4096($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset

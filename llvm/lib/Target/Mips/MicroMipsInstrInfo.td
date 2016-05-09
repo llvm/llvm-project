@@ -128,6 +128,21 @@ def mem_mm_4sp : Operand<i32> {
   let OperandType = "OPERAND_MEMORY";
 }
 
+def MipsMemSimm12AsmOperand : AsmOperandClass {
+  let Name = "MemOffsetSimm12";
+  let SuperClasses = [MipsMemAsmOperand];
+  let RenderMethod = "addMemOperands";
+  let ParserMethod = "parseMemOperand";
+  let PredicateMethod = "isMemWithSimmOffset<12>";
+  let DiagnosticType = "MemSImm12";
+}
+
+def mem_simm12 : mem_generic {
+  let MIOperandInfo = (ops ptr_rc, simm12);
+  let EncoderMethod = "getMemEncoding";
+  let ParserMatchClass = MipsMemSimm12AsmOperand;
+}
+
 def jmptarget_mm : Operand<OtherVT> {
   let EncoderMethod = "getJumpTargetOpValueMM";
 }
@@ -217,6 +232,7 @@ MicroMipsInst16<(outs movep_regpair:$dst_regs), (ins RO:$rs, RO:$rt),
 def RegPairAsmOperand : AsmOperandClass {
   let Name = "RegPair";
   let ParserMethod = "parseRegisterPair";
+  let PredicateMethod = "isRegPair";
 }
 
 def regpair : Operand<i32> {
@@ -229,7 +245,7 @@ def regpair : Operand<i32> {
 
 class StorePairMM<string opstr, InstrItinClass Itin = NoItinerary,
                   ComplexPattern Addr = addr> :
-  InstSE<(outs), (ins regpair:$rt, mem_mm_12:$addr),
+  InstSE<(outs), (ins regpair:$rt, mem_simm12:$addr),
          !strconcat(opstr, "\t$rt, $addr"), [], Itin, FrmI, opstr> {
   let DecoderMethod = "DecodeMemMMImm12";
   let mayStore = 1;
@@ -237,7 +253,7 @@ class StorePairMM<string opstr, InstrItinClass Itin = NoItinerary,
 
 class LoadPairMM<string opstr, InstrItinClass Itin = NoItinerary,
                  ComplexPattern Addr = addr> :
-  InstSE<(outs regpair:$rt), (ins mem_mm_12:$addr),
+  InstSE<(outs regpair:$rt), (ins mem_simm12:$addr),
           !strconcat(opstr, "\t$rt, $addr"), [], Itin, FrmI, opstr> {
   let DecoderMethod = "DecodeMemMMImm12";
   let mayLoad = 1;

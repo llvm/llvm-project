@@ -444,7 +444,7 @@ Value *Mapper::mapValue(const Value *V) {
     Mapped = mapValue(Op);
     if (Mapped != C) break;
   }
-  
+
   // See if the type mapper wants to remap the type as well.
   Type *NewTy = C->getType();
   if (TypeMapper)
@@ -461,11 +461,11 @@ Value *Mapper::mapValue(const Value *V) {
   Ops.reserve(NumOperands);
   for (unsigned j = 0; j != OpNo; ++j)
     Ops.push_back(cast<Constant>(C->getOperand(j)));
-  
+
   // If one of the operands mismatch, push it and the other mapped operands.
   if (OpNo != NumOperands) {
     Ops.push_back(cast<Constant>(Mapped));
-  
+
     // Map the rest of the operands that aren't processed yet.
     for (++OpNo; OpNo != NumOperands; ++OpNo)
       Ops.push_back(cast<Constant>(mapValue(C->getOperand(OpNo))));
