@@ -79,7 +79,8 @@ BinaryHolder::GetMemoryBuffersForFile(StringRef Filename,
   }
 
   CurrentFatBinary = std::move(*ErrOrFat);
-  return getMachOFatMemoryBuffers(Filename, *CurrentMemoryBuffer,
+  CurrentFatBinaryName = Filename;
+  return getMachOFatMemoryBuffers(CurrentFatBinaryName, *CurrentMemoryBuffer,
                                   *CurrentFatBinary);
 }
 
@@ -149,8 +150,9 @@ BinaryHolder::MapArchiveAndGetMemberBuffers(StringRef Filename,
     ArchiveBuffers.push_back(CurrentMemoryBuffer->getMemBufferRef());
   } else {
     CurrentFatBinary = std::move(*ErrOrFat);
+    CurrentFatBinaryName = ArchiveFilename;
     ArchiveBuffers = getMachOFatMemoryBuffers(
-        ArchiveFilename, *CurrentMemoryBuffer, *CurrentFatBinary);
+        CurrentFatBinaryName, *CurrentMemoryBuffer, *CurrentFatBinary);
   }
 
   for (auto MemRef : ArchiveBuffers) {
