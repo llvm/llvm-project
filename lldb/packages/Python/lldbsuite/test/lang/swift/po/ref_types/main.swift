@@ -71,6 +71,8 @@ func main() {
   //% self.expect("po td", substrs=['t36'], matching=False)
   //% self.expect("po tr", substrs=['TheReflectiveDescendant', 'w48', 'q24', 'y12'])
   //% self.expect("po tr", substrs=['t36'], matching=False)
+  //% self.expect("script lldb.frame.FindVariable('tr').GetObjectDescription()", substrs=['t36'], matching=False)
+  //% self.expect("script lldb.frame.FindVariable('tr').GetObjectDescription()", substrs=['TheReflectiveDescendant', 'w48', 'q24', 'y12'])
 }
 
 main()

@@ -268,6 +268,96 @@ GetObjectDescription_ResultVariable (Process *process,
 }
 
 static bool
+GetObjectDescription_ObjectReference (Process *process,
+                                      Stream& str,
+                                      ValueObject &object)
+{
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+    
+    StreamString expr_string;
+    expr_string.Printf("$__lldb__DumpForDebugger(Swift.unsafeBitCast(0x%" PRIx64 ", to: AnyObject.self))", object.GetValueAsUnsigned(0));
+
+    if (log)
+        log->Printf("[GetObjectDescription_ObjectReference] expression: %s", expr_string.GetData());
+
+    ValueObjectSP result_sp;
+    EvaluateExpressionOptions eval_options;
+    eval_options.SetLanguage(lldb::eLanguageTypeSwift);
+    eval_options.SetResultIsInternal(true);
+    eval_options.SetGenerateDebugInfo(true);
+    auto eval_result = process->GetTarget().EvaluateExpression(expr_string.GetData(), process->GetThreadList().GetSelectedThread()->GetSelectedFrame().get(), result_sp, eval_options);
+    
+    if (log)
+    {
+        switch (eval_result)
+        {
+            case eExpressionCompleted:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionCompleted");
+            break;
+            case eExpressionSetupError:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionSetupError");
+            break;
+            case eExpressionParseError:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionParseError");
+            break;
+            case eExpressionDiscarded:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionDiscarded");
+            break;
+            case eExpressionInterrupted:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionInterrupted");
+            break;
+            case eExpressionHitBreakpoint:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionHitBreakpoint");
+            break;
+            case eExpressionTimedOut:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionTimedOut");
+            break;
+            case eExpressionResultUnavailable:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionResultUnavailable");
+            break;
+            case eExpressionStoppedForDebug:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionStoppedForDebug");
+            break;
+        }
+    }
+    
+    // sanitize the result of the expression before moving forward
+    if (!result_sp)
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated no result");
+        return false;
+    }
+    if (result_sp->GetError().Fail())
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated error: %s", result_sp->GetError().AsCString());
+        return false;
+    }
+    if (false == result_sp->GetCompilerType().IsValid())
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated invalid type");
+        return false;
+    }
+    
+    lldb_private::formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
+    dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(nullptr);
+    if (lldb_private::formatters::swift::String_SummaryProvider(*result_sp.get(), str, TypeSummaryOptions().SetLanguage(lldb::eLanguageTypeSwift).SetCapping(eTypeSummaryUncapped), dump_options))
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression completed successfully");
+        return true;
+    }
+    else
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated invalid string data");
+        return false;
+    }
+}
+
+static bool
 GetObjectDescription_ObjectCopy (Process *process,
                                  Stream& str,
                                  ValueObject &object)
@@ -461,6 +551,19 @@ IsSwiftResultVariable (const ConstString &name)
     return false;
 }
 
+static bool
+IsSwiftReferenceType (ValueObject &object)
+{
+    CompilerType object_type(object.GetCompilerType());
+    if (llvm::dyn_cast_or_null<SwiftASTContext>(object_type.GetTypeSystem()))
+    {
+        Flags type_flags(object_type.GetTypeInfo());
+        if (type_flags.AllSet(eTypeIsClass | eTypeHasValue | eTypeInstanceIsPointer))
+            return true;
+    }
+    return false;
+}
+
 bool
 SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
 {
@@ -470,6 +573,7 @@ SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
         str.Printf("error loading helper function: %s", error.AsCString());
         return true;
     }
+    
     if (::IsSwiftResultVariable(object.GetName()))
     {
         // if this thing is a Swift expression result variable, it has two properties:
@@ -483,7 +587,20 @@ SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
             return true;
         }
     }
-    
+    else if (::IsSwiftReferenceType(object))
+    {
+        // if this is a Swift class, it has two properties:
+        // a) we do not need its type name, AnyObject is just as good
+        // b) its value is something we can directly use to refer to it
+        // so, just use the ValueObject's pointer-value and be done with it
+        StreamString probe_stream;
+        if (GetObjectDescription_ObjectReference(m_process, probe_stream, object))
+        {
+            str.Printf("%s", probe_stream.GetData());
+            return true;
+        }
+    }
+
     // in general, don't try to use the name of the ValueObject as it might end up referring to the wrong thing
     return GetObjectDescription_ObjectCopy(m_process, str, object);
 }
@@ -491,7 +608,7 @@ SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
 bool
 SwiftLanguageRuntime::GetObjectDescription (Stream &str, Value &value, ExecutionContextScope *exe_scope)
 {
-    // We need working "expression" before we can do this for Swift
+    // This is only interesting to do with a ValueObject for Swift
     return false;
 }
 
