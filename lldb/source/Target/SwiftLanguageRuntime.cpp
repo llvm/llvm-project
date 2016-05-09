@@ -1144,8 +1144,13 @@ SwiftLanguageRuntime::GetMemoryReader ()
         swift::remote::RemoteAddress
         getSymbolAddress(const std::string &name) override
         {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
             if (name.empty())
                 return swift::remote::RemoteAddress(nullptr);
+            
+            if (log)
+                log->Printf("[MemoryReader] asked to retrieve address of symbol %s", name.c_str());
             
             ConstString name_cs(name.c_str(),name.size());
             SymbolContextList sc_list;
@@ -1156,33 +1161,76 @@ SwiftLanguageRuntime::GetMemoryReader ()
                 {
                     if (sym_ctx.symbol)
                     {
-                        return swift::remote::RemoteAddress(sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget()));
+                        auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget());
+                        if (log)
+                            log->Printf("[MemoryReader] symbol resolved to 0x%" PRIx64, load_addr);
+                        return swift::remote::RemoteAddress(load_addr);
                     }
                 }
             }
-            
+
+            if (log)
+                log->Printf("[MemoryReader] symbol resolution failed");
             return swift::remote::RemoteAddress(nullptr);
         }
         
         bool
         readBytes(swift::remote::RemoteAddress address, uint8_t *dest, uint64_t size) override
         {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+            if (log)
+                log->Printf("[MemoryReader] asked to read %" PRIu64 " bytes at address 0x%" PRIx64,
+                            size,
+                            address.getAddressData());
+             
             if (size > m_max_read_amount)
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read exceeds maximum allowed size");
                 return false;
+            }
 
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
             Error error;
             if (size > target.ReadMemory(addr, true, dest, size, error))
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned fewer bytes than asked for");
                 return false;
+            }
             if (error.Fail())
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned error: %s", error.AsCString());
                 return false;
+            }
+            
+            if (log)
+            {
+                StreamString stream;
+                for (uint64_t i = 0;
+                     i < size;
+                     i++)
+                {
+                    stream.PutHex8(dest[i]);
+                    stream.PutChar(' ');
+                }
+                log->Printf("[MemoryReader] memory read returned data: %s", stream.GetData());
+            }
+            
             return true;
         }
         
         bool
         readString(swift::remote::RemoteAddress address, std::string &dest) override
         {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+            
+            if (log)
+                log->Printf("[MemoryReader] asked to read string data at address 0x%" PRIx64, address.getAddressData());
+
             std::vector<char> storage(m_max_read_amount, 0);
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
@@ -1194,10 +1242,16 @@ SwiftLanguageRuntime::GetMemoryReader ()
             if (error.Success())
             {
                 dest.assign(&storage[0]);
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned data: %s", dest.c_str());
                 return true;
             }
             else
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned error: %s", error.AsCString());
                 return false;
+            }
         }
         
     private:
@@ -1240,6 +1294,11 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
     if (error)
         error->Clear();
     
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+    
+    if (log)
+        log->Printf("[MemberVariableOffsetResolver] asked to resolve offset for ivar %s", ivar_name.AsCString());
+    
     auto iter = m_offsets.find(ivar_name.AsCString()), end = m_offsets.end();
     if (iter != end)
         return iter->second;
@@ -1252,6 +1311,8 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
         case swift::TypeKind::Class:
         case swift::TypeKind::BoundGenericClass:
         {
+            if (log)
+                log->Printf("[MemberVariableOffsetResolver] type is a class - trying to get metadata for valueobject %s", (valobj ? valobj->GetName().AsCString() : "<null>"));
             // retrieve the metadata for class types as this is where we get the maximum benefit
             if (valobj)
             {
@@ -1271,9 +1332,15 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
                 }
                 optmeta = swift::remote::RemoteAddress(meta_ptr);
             }
+            if (log)
+                log->Printf("[MemberVariableOffsetResolver] optmeta = 0x%" PRIx64, optmeta.getAddressData());
         }
             break;
         default:
+        {
+            if (log)
+                log->Printf("[MemberVariableOffsetResolver] type is not a class - no metadata needed");
+        }
             break;
     }
     
@@ -1281,16 +1348,18 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
     swift::remoteAST::Result<uint64_t> result = m_remote_ast->getOffsetOfMember(m_swift_type, optmeta, ivar_name.GetStringRef());
     if (result)
     {
+        if (log)
+            log->Printf("[MemberVariableOffsetResolver] offset discovered = %llu", (uint64_t)result.getValue());
         m_offsets.emplace(ivar_name.AsCString(), result.getValue());
         return result.getValue();
     }
     else
     {
+        const auto& failure = result.getFailure();
         if (error)
-        {
-            const auto& failure = result.getFailure();
             error->SetErrorStringWithFormat("error in resolving type offset: %s", failure.render().c_str());
-        }
+        if (log)
+            log->Printf("[MemberVariableOffsetResolver] failure: %s", failure.render().c_str());
         return llvm::Optional<uint64_t>();
     }
 }
@@ -1313,20 +1382,30 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise (Error *error)
     if (error)
         error->Clear();
     
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+    
+    if (log)
+        log->Printf("[MetadataPromise] asked to fulfill type promise at location 0x%" PRIx64, m_metadata_location);
+    
     if (m_compiler_type.hasValue())
         return m_compiler_type.getValue();
     
     swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
     
     if (result)
-        return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
+    {
+        m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer());
+        if (log)
+            log->Printf("[MetadataPromise] result is type %s", m_compiler_type->GetTypeName().AsCString());
+        return m_compiler_type.getValue();
+    }
     else
     {
+        const auto& failure = result.getFailure();
         if (error)
-        {
-            const auto& failure = result.getFailure();
             error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
-        }
+        if (log)
+            log->Printf("[MetadataPromise] failure: %s", failure.render().c_str());
         return (m_compiler_type = CompilerType()).getValue();
     }
 }
@@ -1337,20 +1416,30 @@ SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise (Error *error)
     if (error)
         error->Clear();
 
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+    
+    if (log)
+        log->Printf("[MetadataPromise] asked to fulfill kind promise at location 0x%" PRIx64, m_metadata_location);
+    
     if (m_metadata_kind.hasValue())
         return m_metadata_kind;
     
     swift::remoteAST::Result<swift::MetadataKind> result = m_remote_ast->getKindForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
     
     if (result)
-        return (m_metadata_kind = result.getValue());
+    {
+        m_metadata_kind = result.getValue();
+        if (log)
+            log->Printf("[MetadataPromise] result is kind %u", result.getValue());
+        return m_metadata_kind;
+    }
     else
     {
+        const auto& failure = result.getFailure();
         if (error)
-        {
-            const auto& failure = result.getFailure();
             error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
-        }
+        if (log)
+            log->Printf("[MetadataPromise] failure: %s", failure.render().c_str());
         return m_metadata_kind;
     }
 }
