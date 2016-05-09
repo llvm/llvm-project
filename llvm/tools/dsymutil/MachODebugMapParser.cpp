@@ -294,7 +294,11 @@ static bool shouldLinkArch(SmallVectorImpl<StringRef> &Archs, StringRef Arch) {
       std::find(Archs.begin(), Archs.end(), "arm") != Archs.end())
     return true;
 
-  return std::find(Archs.begin(), Archs.end(), Arch) != Archs.end();
+  SmallString<16> ArchName = Arch;
+  if (Arch.startswith("thumb"))
+    ArchName = ("arm" + Arch.substr(5)).str();
+
+  return std::find(Archs.begin(), Archs.end(), ArchName) != Archs.end();
 }
 
 bool MachODebugMapParser::dumpStab() {
