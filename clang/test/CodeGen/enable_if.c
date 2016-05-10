@@ -80,3 +80,16 @@ void test4() {
   // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXL_Z9TRUEFACTSEEEi
   p = &qux;
 }
+
+// There was a bug where, when enable_if was present, overload resolution
+// wouldn't pay attention to lower-priority attributes.
+// (N.B. `foo` with pass_object_size should always be preferred)
+// CHECK-LABEL: define void @test5
+void test5() {
+  int foo(char *i) __attribute__((enable_if(1, ""), overloadable));
+  int foo(char *i __attribute__((pass_object_size(0))))
+      __attribute__((enable_if(1, ""), overloadable));
+
+  // CHECK: call i32 @_Z3fooUa9enable_ifIXLi1EEEPcU17pass_object_size0
+  foo((void*)0);
+}

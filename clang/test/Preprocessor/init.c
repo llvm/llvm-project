@@ -5827,6 +5827,34 @@
 // PPCPOWER8:#define _ARCH_PWR7 1
 // PPCPOWER8:#define _ARCH_PWR8 1
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu pwr9 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPWR9 %s
+//
+// PPCPWR9:#define _ARCH_PPC 1
+// PPCPWR9:#define _ARCH_PPC64 1
+// PPCPWR9:#define _ARCH_PPCGR 1
+// PPCPWR9:#define _ARCH_PPCSQ 1
+// PPCPWR9:#define _ARCH_PWR4 1
+// PPCPWR9:#define _ARCH_PWR5 1
+// PPCPWR9:#define _ARCH_PWR5X 1
+// PPCPWR9:#define _ARCH_PWR6 1
+// PPCPWR9:#define _ARCH_PWR6X 1
+// PPCPWR9:#define _ARCH_PWR7 1
+// PPCPWR9:#define _ARCH_PWR9 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu power9 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER9 %s
+//
+// PPCPOWER9:#define _ARCH_PPC 1
+// PPCPOWER9:#define _ARCH_PPC64 1
+// PPCPOWER9:#define _ARCH_PPCGR 1
+// PPCPOWER9:#define _ARCH_PPCSQ 1
+// PPCPOWER9:#define _ARCH_PWR4 1
+// PPCPOWER9:#define _ARCH_PWR5 1
+// PPCPOWER9:#define _ARCH_PWR5X 1
+// PPCPOWER9:#define _ARCH_PWR6 1
+// PPCPOWER9:#define _ARCH_PWR6X 1
+// PPCPOWER9:#define _ARCH_PWR7 1
+// PPCPOWER9:#define _ARCH_PWR9 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +float128 -target-cpu power8 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-FLOAT128 %s
 // PPC-FLOAT128:#define __FLOAT128__ 1
 //

@@ -6582,7 +6582,9 @@ def err_dynamic_var_init : Error<
     "__device__, __constant__, and __shared__ variables.">;
 def err_shared_var_init : Error<
     "initialization is not supported for __shared__ variables.">;
-
+def err_device_static_local_var : Error<
+    "Within a __device__/__global__ function, "
+    "only __shared__ variables may be marked \"static\"">;
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "
   "%select{function|block|method|constructor}2; expected type from format "
@@ -8020,6 +8022,12 @@ def warn_omp_alignment_not_power_of_two : Warning<
   InGroup<OpenMPClauses>;
 def err_omp_enclosed_declare_target : Error<
   "declare target region may not be enclosed within another declare target region">;
+def err_omp_invalid_target_decl : Error<
+  "%0 used in declare target directive is not a variable or a function name">;
+def err_omp_declare_target_multiple : Error<
+  "%0 appears multiple times in clauses on the same declare target directive">;
+def err_omp_declare_target_to_and_link : Error<
+  "%0 must not appear in both clauses 'to' and 'link'">;
 def warn_omp_not_in_target_context : Warning<
   "declaration is not declared in any declare target region">,
   InGroup<OpenMPTarget>;

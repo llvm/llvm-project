@@ -63,6 +63,8 @@ struct NCF {
 
 // static in-class field initializer.  NVCC does not allow it, but
 // clang generates static initializer for this, so we'll accept it.
+// We still can't use it on __shared__ vars as they don't allow *any*
+// initializers.
 struct NCFS {
   int ncfs = 3;
 };
@@ -367,7 +369,20 @@ __device__ void df() {
   T_B_NEC t_b_nec;
   T_F_NEC t_f_nec;
   T_FA_NEC t_fa_nec;
+  static __shared__ EC s_ec;
+  static __shared__ ETC s_etc;
+#if ERROR_CASE
+  static __shared__ NCFS s_ncfs;
+  // expected-error@-1 {{initialization is not supported for __shared__ variables.}}
   static __shared__ UC s_uc;
+  // expected-error@-1 {{initialization is not supported for __shared__ variables.}}
+  static __device__ int ds;
+  // expected-error@-1 {{Within a __device__/__global__ function, only __shared__ variables may be marked "static"}}
+  static __constant__ int dc;
+  // expected-error@-1 {{Within a __device__/__global__ function, only __shared__ variables may be marked "static"}}
+  static int v;
+  // expected-error@-1 {{Within a __device__/__global__ function, only __shared__ variables may be marked "static"}}
+#endif
 }
 
 // CHECK:   call void @_ZN2ECC1Ev(%struct.EC* %ec)
@@ -386,7 +401,8 @@ __device__ void df() {
 // CHECK:   call void @_ZN7T_B_NECC1Ev(%struct.T_B_NEC* %t_b_nec)
 // CHECK:   call void @_ZN7T_F_NECC1Ev(%struct.T_F_NEC* %t_f_nec)
 // CHECK:   call void @_ZN8T_FA_NECC1Ev(%struct.T_FA_NEC* %t_fa_nec)
-// CHECK:   call void @_ZN2UCC1Ev(%struct.UC* addrspacecast (%struct.UC addrspace(3)* @_ZZ2dfvE4s_uc to %struct.UC*))
+// CHECK-NOT: call void @_ZN2ECC1Ev(%struct.EC* addrspacecast (%struct.EC addrspace(3)* @_ZZ2dfvE4s_ec to %struct.EC*))
+// CHECK-NOT: call void @_ZN3ETCC1IJEEEDpT_(%struct.ETC* addrspacecast (%struct.ETC addrspace(3)* @_ZZ2dfvE5s_etc to %struct.ETC*))
 // CHECK: ret void
 
 // We should not emit global init function.
