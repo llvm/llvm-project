@@ -22,8 +22,6 @@
 # CHECK-NEXT:    10028:       8f 88 80 2c     lw      $8, -32724($gp)
 #
 # CHECK: SYMBOL TABLE:
-# CHECK: 0001002c         .text           00000000 $LC0
-# CHECK: 00039000         .data           00000000 $LC1
 # CHECK: 00051008         .data           00000000 .hidden bar
 # CHECK: 00000000         *UND*           00000000 foo
 

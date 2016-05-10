@@ -451,28 +451,21 @@ CommandObjectExpression::IOHandlerInputComplete (IOHandler &io_handler, std::str
         error_sp->Flush();
 }
 
-LineStatus
-CommandObjectExpression::IOHandlerLinesUpdated (IOHandler &io_handler,
-                                                StringList &lines,
-                                                uint32_t line_idx,
-                                                Error &error)
+bool
+CommandObjectExpression::IOHandlerIsInputComplete (IOHandler &io_handler,
+                                                   StringList &lines)
 {
-    if (line_idx == UINT32_MAX)
+    // An empty lines is used to indicate the end of input
+    const size_t num_lines = lines.GetSize();
+    if (num_lines > 0 && lines[num_lines - 1].empty())
     {
-        // Remove the last line from "lines" so it doesn't appear
-        // in our final expression
+        // Remove the last empty line from "lines" so it doesn't appear
+        // in our resulting input and return true to indicate we are done
+        // getting lines
         lines.PopBack();
-        error.Clear();
-        return LineStatus::Done;
+        return true;
     }
-    else if (line_idx + 1 == lines.GetSize())
-    {
-        // The last line was edited, if this line is empty, then we are done
-        // getting our multiple lines.
-        if (lines[line_idx].empty())
-            return LineStatus::Done;
-    }
-    return LineStatus::Success;
+    return false;
 }
 
 void

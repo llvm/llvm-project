@@ -20,9 +20,11 @@ template <typename T>
 void test_max(size_t count)
 {
     std::allocator<T> a;
-    try { a.allocate( count ); }
-    catch ( const std::bad_alloc &) { return ; }
-    assert (false);
+    try {
+        a.allocate(count);
+        assert(false);
+    } catch (const std::exception &) {
+    }
 }
 
 int main()

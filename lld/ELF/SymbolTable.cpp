@@ -45,15 +45,6 @@ template <class ELFT> static bool isCompatible(InputFile *FileP) {
   return false;
 }
 
-// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-static std::string getFilename(InputFile *F) {
-  if (!F)
-    return "(internal)";
-  if (!F->ArchiveName.empty())
-    return (F->ArchiveName + "(" + F->getName() + ")").str();
-  return F->getName();
-}
-
 // Add symbols in File to the symbol table.
 template <class ELFT>
 void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {

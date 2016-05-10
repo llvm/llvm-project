@@ -1,4 +1,4 @@
-//===--------------------------- TODO.cpp ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "experimental/__config"
+// UNSUPPORTED: c++98, c++03
 
-_LIBCPP_BEGIN_NAMESPACE_LFTS
+// <experimental/deque>
 
-_LIBCPP_END_NAMESPACE_LFTS
+#include <experimental/deque>
+
+#ifndef _LIBCPP_VERSION
+#error header must provide _LIBCPP_VERSION
+#endif
+
+int main()
+{
+}

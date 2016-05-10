@@ -78,7 +78,11 @@ public:
   uint32_t TlsOffsetRel;
   unsigned PltEntrySize = 8;
   unsigned PltZeroSize = 0;
+
+  // At least on x86_64 positions 1 and 2 are used by the first plt entry
+  // to support lazy loading.
   unsigned GotPltHeaderEntriesNum = 3;
+
   uint32_t ThunkSize = 0;
   bool UseLazyBinding = false;
 

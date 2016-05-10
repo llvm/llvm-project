@@ -1328,6 +1328,9 @@ static int last_var_col_or_int_par_col(struct isl_tab *tab, int row)
  * If not, we add the equality as two inequalities.
  * In this case, the equality was a pure parameter equality and there
  * is no need to resolve any constraint violations.
+ *
+ * This function assumes that at least two more rows and at least
+ * two more elements in the constraint array are available in the tableau.
  */
 static struct isl_tab *add_lexmin_valid_eq(struct isl_tab *tab, isl_int *eq)
 {
@@ -1385,6 +1388,9 @@ static int is_constant(struct isl_tab *tab, int row)
  * each time checking that they can be satisfied.
  * In the end we try to use one of the two constraints to eliminate
  * a column.
+ *
+ * This function assumes that at least two more rows and at least
+ * two more elements in the constraint array are available in the tableau.
  */
 static int add_lexmin_eq(struct isl_tab *tab, isl_int *eq) WARN_UNUSED;
 static int add_lexmin_eq(struct isl_tab *tab, isl_int *eq)
@@ -1461,6 +1467,9 @@ static int add_lexmin_eq(struct isl_tab *tab, isl_int *eq)
 
 /* Add an inequality to the tableau, resolving violations using
  * restore_lexmin.
+ *
+ * This function assumes that at least one more row and at least
+ * one more element in the constraint array are available in the tableau.
  */
 static struct isl_tab *add_lexmin_ineq(struct isl_tab *tab, isl_int *ineq)
 {
@@ -4990,11 +4999,14 @@ static int is_optimal(__isl_keep isl_vec *sol, int n_op)
 }
 
 /* Add constraints to "tab" that ensure that any solution is significantly
- * better that that represented by "sol".  That is, find the first
+ * better than that represented by "sol".  That is, find the first
  * relevant (within first n_op) non-zero coefficient and force it (along
  * with all previous coefficients) to be zero.
  * If the solution is already optimal (all relevant coefficients are zero),
  * then just mark the table as empty.
+ *
+ * This function assumes that at least 2 * n_op more rows and at least
+ * 2 * n_op more elements in the constraint array are available in the tableau.
  */
 static int force_better_solution(struct isl_tab *tab,
 	__isl_keep isl_vec *sol, int n_op)
@@ -5213,7 +5225,6 @@ struct isl_tab_lexmin {
 	isl_ctx *ctx;
 	struct isl_tab *tab;
 };
-typedef struct isl_tab_lexmin isl_tab_lexmin;
 
 /* Free "tl" and return NULL.
  */
@@ -5272,12 +5283,17 @@ int isl_tab_lexmin_dim(__isl_keep isl_tab_lexmin *tl)
 __isl_give isl_tab_lexmin *isl_tab_lexmin_add_eq(__isl_take isl_tab_lexmin *tl,
 	isl_int *eq)
 {
+	unsigned n_var;
+
 	if (!tl || !eq)
 		return isl_tab_lexmin_free(tl);
 
-	isl_seq_neg(eq, eq, 1 + tl->tab->n_var);
+	if (isl_tab_extend_cons(tl->tab, 2) < 0)
+		return isl_tab_lexmin_free(tl);
+	n_var = tl->tab->n_var;
+	isl_seq_neg(eq, eq, 1 + n_var);
 	tl->tab = add_lexmin_ineq(tl->tab, eq);
-	isl_seq_neg(eq, eq, 1 + tl->tab->n_var);
+	isl_seq_neg(eq, eq, 1 + n_var);
 	tl->tab = add_lexmin_ineq(tl->tab, eq);
 
 	if (!tl->tab)

@@ -56,7 +56,7 @@ add_lit_testsuite(check-libcxx
 if (LIBCXX_GENERATE_COVERAGE)
   include(CodeCoverage)
   set(output_dir "${CMAKE_CURRENT_BINARY_DIR}/coverage")
-  set(capture_dirs "${LIBCXX_LIB_CMAKEFILES_DIR}/cxx.dir/;${CMAKE_CURRENT_BINARY_DIR}")
+  set(capture_dirs "${LIBCXX_LIB_CMAKEFILES_DIR}/cxx.dir/;${LIBCXX_LIB_CMAKEFILES_DIR}/cxx_experimental.dir/;${CMAKE_CURRENT_BINARY_DIR}")
   set(extract_dirs "${LIBCXX_SOURCE_DIR}/include;${LIBCXX_SOURCE_DIR}/src")
   setup_lcov_test_target_coverage("cxx" "${output_dir}" "${capture_dirs}" "${extract_dirs}")
 endif()

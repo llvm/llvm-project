@@ -1,7 +1,7 @@
 .. title:: clang-tidy - misc-unconventional-assign-operator
 
 misc-unconventional-assign-operator
-====================
+===================================
 
 
 Finds declarations of assign operators with the wrong return and/or argument

@@ -1,4 +1,4 @@
-//===--- UnconventionalUnconventionalAssignOperatorCheck.cpp - clang-tidy -----*- C++ -*-===//
+//===--- UnconventionalAssignOperatorCheck.cpp - clang-tidy -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
