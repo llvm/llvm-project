@@ -33,6 +33,7 @@ Clang-Tidy Checks
    google-build-explicit-make-pair
    google-build-namespaces
    google-build-using-namespace
+   google-default-arguments
    google-explicit-constructor
    google-global-names-in-headers
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>

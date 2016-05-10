@@ -73,8 +73,26 @@ int includeFixerMain(int argc, const char **argv) {
     break;
   }
   case yaml: {
-    XrefsDBMgr->addXrefsDB(
-        llvm::make_unique<include_fixer::YamlXrefsDB>(Input));
+    llvm::ErrorOr<std::unique_ptr<include_fixer::YamlXrefsDB>> DB(nullptr);
+    if (!Input.empty()) {
+      DB = include_fixer::YamlXrefsDB::createFromFile(Input);
+    } else {
+      // If we don't have any input file, look in the directory of the first
+      // file and its parents.
+      SmallString<128> AbsolutePath(
+          tooling::getAbsolutePath(options.getSourcePathList().front()));
+      StringRef Directory = llvm::sys::path::parent_path(AbsolutePath);
+      DB = include_fixer::YamlXrefsDB::createFromDirectory(
+          Directory, "find_all_symbols_db.yaml");
+    }
+
+    if (!DB) {
+      llvm::errs() << "Couldn't find YAML db: " << DB.getError().message()
+                   << '\n';
+      return 1;
+    }
+
+    XrefsDBMgr->addXrefsDB(std::move(*DB));
     break;
   }
   }

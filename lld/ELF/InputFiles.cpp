@@ -27,6 +27,15 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
+// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+std::string elf::getFilename(InputFile *F) {
+  if (!F)
+    return "(internal)";
+  if (!F->ArchiveName.empty())
+    return (F->ArchiveName + "(" + F->getName() + ")").str();
+  return F->getName();
+}
+
 template <class ELFT>
 static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   std::error_code EC;

@@ -12,6 +12,7 @@
 
 #include "XrefsDB.h"
 #include "find-all-symbols/SymbolInfo.h"
+#include "llvm/Support/ErrorOr.h"
 #include <map>
 #include <vector>
 
@@ -21,12 +22,20 @@ namespace include_fixer {
 /// Yaml format database.
 class YamlXrefsDB : public XrefsDB {
 public:
-  YamlXrefsDB(llvm::StringRef FilePath);
+  /// Create a new Yaml db from a file.
+  static llvm::ErrorOr<std::unique_ptr<YamlXrefsDB>>
+  createFromFile(llvm::StringRef FilePath);
+  /// Look for a file called \c Name in \c Directory and all parent directories.
+  static llvm::ErrorOr<std::unique_ptr<YamlXrefsDB>>
+  createFromDirectory(llvm::StringRef Directory, llvm::StringRef Name);
 
   std::vector<clang::find_all_symbols::SymbolInfo>
   search(llvm::StringRef Identifier) override;
 
 private:
+  explicit YamlXrefsDB(std::vector<clang::find_all_symbols::SymbolInfo> Symbols)
+      : Symbols(std::move(Symbols)) {}
+
   std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
 };
 

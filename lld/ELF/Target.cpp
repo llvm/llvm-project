@@ -531,6 +531,10 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
 }
 
 void X86_64TargetInfo::writeGotPltHeader(uint8_t *Buf) const {
+  // The first entry holds the value of _DYNAMIC. It is not clear why that is
+  // required, but it is documented in the psabi and the glibc dynamic linker
+  // seems to use it (not that this is relevant for linking ld.so, not any
+  // other program).
   write64le(Buf, Out<ELF64LE>::Dynamic->getVA());
 }
 

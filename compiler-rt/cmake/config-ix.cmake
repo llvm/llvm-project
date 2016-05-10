@@ -142,82 +142,7 @@ if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND
   message(FATAL_ERROR "Please use architecture with 4 or 8 byte pointers.")
 endif()
 
-# Find and run MSVC (not clang-cl) and get its version. This will tell clang-cl
-# what version of MSVC to pretend to be so that the STL works.
-set(MSVC_VERSION_FLAG "")
-if (MSVC)
-  # Find and run MSVC (not clang-cl) and get its version. This will tell
-  # clang-cl what version of MSVC to pretend to be so that the STL works.
-  execute_process(COMMAND "$ENV{VSINSTALLDIR}/VC/bin/cl.exe"
-    OUTPUT_QUIET
-    ERROR_VARIABLE MSVC_COMPAT_VERSION
-    )
-  string(REGEX REPLACE "^.*Compiler Version ([0-9.]+) for .*$" "\\1"
-    MSVC_COMPAT_VERSION "${MSVC_COMPAT_VERSION}")
-  if (MSVC_COMPAT_VERSION MATCHES "^[0-9].+$")
-    set(MSVC_VERSION_FLAG "-fms-compatibility-version=${MSVC_COMPAT_VERSION}")
-    # Add this flag into the host build if this is clang-cl.
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      append("${MSVC_VERSION_FLAG}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    endif()
-  endif()
-endif()
-
-# Generate the COMPILER_RT_SUPPORTED_ARCH list.
-if(ANDROID)
-  # Examine compiler output to determine target architecture.
-  detect_target_arch()
-  set(COMPILER_RT_OS_SUFFIX "-android")
-elseif(NOT APPLE) # Supported archs for Apple platforms are generated later
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "i[2-6]86|x86|amd64")
-    if(NOT MSVC)
-      test_target_arch(x86_64 "" "-m64")
-      # FIXME: We build runtimes for both i686 and i386, as "clang -m32" may
-      # target different variant than "$CMAKE_C_COMPILER -m32". This part should
-      # be gone after we resolve PR14109.
-      test_target_arch(i686 __i686__ "-m32")
-      test_target_arch(i386 __i386__ "-m32")
-    else()
-      if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-        test_target_arch(i386 "" "${MSVC_VERSION_FLAG}")
-      else()
-        test_target_arch(x86_64 "" "${MSVC_VERSION_FLAG}")
-      endif()
-    endif()
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc")
-    TEST_BIG_ENDIAN(HOST_IS_BIG_ENDIAN)
-    if(HOST_IS_BIG_ENDIAN)
-      test_target_arch(powerpc64 "" "-m64")
-    else()
-      test_target_arch(powerpc64le "" "-m64")
-    endif()
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
-    test_target_arch(s390x "" "")
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mipsel|mips64el")
-    # Gcc doesn't accept -m32/-m64 so we do the next best thing and use
-    # -mips32r2/-mips64r2. We don't use -mips1/-mips3 because we want to match
-    # clang's default CPU's. In the 64-bit case, we must also specify the ABI
-    # since the default ABI differs between gcc and clang.
-    # FIXME: Ideally, we would build the N32 library too.
-    test_target_arch(mipsel "" "-mips32r2" "--target=mipsel-linux-gnu")
-    test_target_arch(mips64el "" "-mips64r2" "--target=mips64el-linux-gnu" "-mabi=n64")
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
-    test_target_arch(mips "" "-mips32r2" "--target=mips-linux-gnu")
-    test_target_arch(mips64 "" "-mips64r2" "--target=mips64-linux-gnu" "-mabi=n64")
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
-    test_target_arch(arm "" "-march=armv7-a" "-mfloat-abi=soft")
-    test_target_arch(armhf "" "-march=armv7-a" "-mfloat-abi=hard")
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "aarch32")
-    test_target_arch(aarch32 "" "-march=armv8-a")
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "aarch64")
-    test_target_arch(aarch64 "" "-march=armv8-a")
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "wasm32")
-    test_target_arch(wasm32 "" "--target=wasm32-unknown-unknown")
-  elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "wasm64")
-    test_target_arch(wasm64 "" "--target=wasm64-unknown-unknown")
-  endif()
-  set(COMPILER_RT_OS_SUFFIX "")
-endif()
+test_targets()
 
 # Returns a list of architecture specific target cflags in @out_var list.
 function(get_target_flags_for_arch arch out_var)
@@ -253,8 +178,6 @@ if(APPLE)
   set(X86_64 x86_64 x86_64h)
 endif()
 
-set(ALL_BUILTIN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
-    ${MIPS32} ${MIPS64} ${WASM32} ${WASM64})
 set(ALL_SANITIZER_COMMON_SUPPORTED_ARCH ${X86} ${X86_64} ${PPC64}
     ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} ${S390X})
 set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
@@ -274,21 +197,6 @@ set(ALL_ESAN_SUPPORTED_ARCH ${X86_64})
 if(APPLE)
   include(CompilerRTDarwinUtils)
 
-  # On Darwin if /usr/include doesn't exist, the user probably has Xcode but not
-  # the command line tools. If this is the case, we need to find the OS X
-  # sysroot to pass to clang.
-  if(NOT EXISTS /usr/include)
-    execute_process(COMMAND xcodebuild -version -sdk macosx Path
-       OUTPUT_VARIABLE OSX_SYSROOT
-       ERROR_QUIET
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(OSX_SYSROOT_FLAG "-isysroot${OSX_SYSROOT}")
-  endif()
-
-  option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" Off)
-  option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
-  option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
-
   find_darwin_sdk_dir(DARWIN_osx_SYSROOT macosx)
   find_darwin_sdk_dir(DARWIN_iossim_SYSROOT iphonesimulator)
   find_darwin_sdk_dir(DARWIN_ios_SYSROOT iphoneos)
@@ -302,33 +210,23 @@ if(APPLE)
     set(DARWIN_ios_MIN_VER_FLAG -miphoneos-version-min)
     set(DARWIN_ios_SANITIZER_MIN_VER_FLAG
       ${DARWIN_ios_MIN_VER_FLAG}=7.0)
-    set(DARWIN_ios_BUILTIN_MIN_VER 6.0)
-    set(DARWIN_ios_BUILTIN_MIN_VER_FLAG
-      ${DARWIN_ios_MIN_VER_FLAG}=${DARWIN_ios_BUILTIN_MIN_VER})
   endif()
   if(COMPILER_RT_ENABLE_WATCHOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS watchos)
     set(DARWIN_watchos_MIN_VER_FLAG -mwatchos-version-min)
     set(DARWIN_watchos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_watchos_MIN_VER_FLAG}=2.0)
-    set(DARWIN_watchos_BUILTIN_MIN_VER 2.0)
-    set(DARWIN_watchos_BUILTIN_MIN_VER_FLAG
-      ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_BUILTIN_MIN_VER})
   endif()
   if(COMPILER_RT_ENABLE_TVOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS tvos)
     set(DARWIN_tvos_MIN_VER_FLAG -mtvos-version-min)
     set(DARWIN_tvos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_tvos_MIN_VER_FLAG}=9.0)
-    set(DARWIN_tvos_BUILTIN_MIN_VER 9.0)
-    set(DARWIN_tvos_BUILTIN_MIN_VER_FLAG
-      ${DARWIN_tvos_MIN_VER_FLAG}=${DARWIN_tvos_BUILTIN_MIN_VER})
   endif()
 
   # Note: In order to target x86_64h on OS X the minimum deployment target must
   # be 10.8 or higher.
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
-  set(BUILTIN_SUPPORTED_OS osx)
   set(PROFILE_SUPPORTED_OS osx)
   set(TSAN_SUPPORTED_OS osx)
   if(NOT SANITIZER_MIN_OSX_VERSION)
@@ -366,9 +264,6 @@ if(APPLE)
   set(DARWIN_osx_LINKFLAGS
     ${DARWIN_COMMON_LINKFLAGS}
     -mmacosx-version-min=${SANITIZER_MIN_OSX_VERSION})
-  set(DARWIN_osx_BUILTIN_MIN_VER 10.5)
-  set(DARWIN_osx_BUILTIN_MIN_VER_FLAG
-      -mmacosx-version-min=${DARWIN_osx_BUILTIN_MIN_VER})
 
   if(DARWIN_osx_SYSROOT)
     list(APPEND DARWIN_osx_CFLAGS -isysroot ${DARWIN_osx_SYSROOT})
@@ -389,22 +284,6 @@ if(APPLE)
       set(CAN_TARGET_${arch} 1)
     endforeach()
 
-    # Need to build a 10.4 compatible libclang_rt
-    set(DARWIN_10.4_SYSROOT ${DARWIN_osx_SYSROOT})
-    set(DARWIN_10.4_BUILTIN_MIN_VER 10.4)
-    set(DARWIN_10.4_BUILTIN_MIN_VER_FLAG
-        -mmacosx-version-min=${DARWIN_10.4_BUILTIN_MIN_VER})
-    set(DARWIN_10.4_SKIP_CC_KEXT On)
-    darwin_test_archs(10.4
-      DARWIN_10.4_ARCHS
-      ${toolchain_arches})
-    message(STATUS "OSX 10.4 supported arches: ${DARWIN_10.4_ARCHS}")
-    if(DARWIN_10.4_ARCHS)
-      # don't include the Haswell slice in the 10.4 compatibility library
-      list(REMOVE_ITEM DARWIN_10.4_ARCHS x86_64h)
-      list(APPEND BUILTIN_SUPPORTED_OS 10.4)
-    endif()
-
     foreach(platform ${DARWIN_EMBEDDED_PLATFORMS})
       if(DARWIN_${platform}sim_SYSROOT)
         set(DARWIN_${platform}sim_CFLAGS
@@ -415,10 +294,6 @@ if(APPLE)
           ${DARWIN_COMMON_LINKFLAGS}
           ${DARWIN_${platform}_SANITIZER_MIN_VER_FLAG}
           -isysroot ${DARWIN_${platform}sim_SYSROOT})
-        set(DARWIN_${platform}sim_BUILTIN_MIN_VER
-          ${DARWIN_${platform}_BUILTIN_MIN_VER})
-        set(DARWIN_${platform}sim_BUILTIN_MIN_VER_FLAG
-          ${DARWIN_${platform}_BUILTIN_MIN_VER_FLAG})
 
         set(DARWIN_${platform}sim_SKIP_CC_KEXT On)
         darwin_test_archs(${platform}sim
@@ -427,7 +302,6 @@ if(APPLE)
         message(STATUS "${platform} Simulator supported arches: ${DARWIN_${platform}sim_ARCHS}")
         if(DARWIN_${platform}_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform}sim)
-          list(APPEND BUILTIN_SUPPORTED_OS ${platform}sim)
           list(APPEND PROFILE_SUPPORTED_OS ${platform}sim)
           if(DARWIN_${platform}_SYSROOT_INTERNAL)
             list(APPEND TSAN_SUPPORTED_OS ${platform}sim)
@@ -455,7 +329,6 @@ if(APPLE)
         message(STATUS "${platform} supported arches: ${DARWIN_${platform}_ARCHS}")
         if(DARWIN_${platform}_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform})
-          list(APPEND BUILTIN_SUPPORTED_OS ${platform})
           list(APPEND PROFILE_SUPPORTED_OS ${platform})
         endif()
         foreach(arch ${DARWIN_${platform}_ARCHS})
@@ -469,7 +342,6 @@ if(APPLE)
   # for list_intersect
   include(CompilerRTUtils)
 
-  list_intersect(BUILTIN_SUPPORTED_ARCH ALL_BUILTIN_SUPPORTED_ARCH toolchain_arches)
 
   list_intersect(SANITIZER_COMMON_SUPPORTED_ARCH
     ALL_SANITIZER_COMMON_SUPPORTED_ARCH
@@ -509,8 +381,6 @@ if(APPLE)
     SANITIZER_COMMON_SUPPORTED_ARCH)
 else()
   # Architectures supported by compiler-rt libraries.
-  filter_available_targets(BUILTIN_SUPPORTED_ARCH
-    ${ALL_BUILTIN_SUPPORTED_ARCH})
   filter_available_targets(SANITIZER_COMMON_SUPPORTED_ARCH
     ${ALL_SANITIZER_COMMON_SUPPORTED_ARCH})
   # LSan and UBSan common files should be available on all architectures
