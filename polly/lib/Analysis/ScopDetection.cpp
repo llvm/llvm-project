@@ -1269,6 +1269,26 @@ bool ScopDetection::hasSufficientCompute(DetectionContext &Context,
   return InstCount >= ProfitabilityMinPerLoopInstructions;
 }
 
+bool ScopDetection::hasPossiblyDistributableLoop(
+    DetectionContext &Context) const {
+  for (auto *BB : Context.CurRegion.blocks()) {
+    auto *L = LI->getLoopFor(BB);
+    if (!Context.CurRegion.contains(L))
+      continue;
+    if (Context.BoxedLoopsSet.count(L))
+      continue;
+    unsigned StmtsWithStoresInLoops = 0;
+    for (auto *LBB : L->blocks()) {
+      bool MemStore = false;
+      for (auto &I : *LBB)
+        MemStore |= isa<StoreInst>(&I);
+      StmtsWithStoresInLoops += MemStore;
+    }
+    return (StmtsWithStoresInLoops > 1);
+  }
+  return false;
+}
+
 bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
@@ -1286,6 +1306,10 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   // Scops with at least two loops may allow either loop fusion or tiling and
   // are consequently interesting to look at.
   if (NumAffineLoops >= 2)
+    return true;
+
+  // A loop with multiple non-trivial blocks migt be amendable to distribution.
+  if (NumAffineLoops == 1 && hasPossiblyDistributableLoop(Context))
     return true;
 
   // Scops that contain a loop with a non-trivial amount of computation per

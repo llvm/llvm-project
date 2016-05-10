@@ -35,6 +35,11 @@ macro(remove_flags)
   endforeach()
 endmacro(remove_flags)
 
+macro(check_flag_supported flag)
+    mangle_name("${flag}" flagname)
+    check_cxx_compiler_flag("${flag}" "LIBCXX_SUPPORTS_${flagname}_FLAG")
+endmacro()
+
 # Add a macro definition if condition is true.
 macro(define_if condition def)
   if (${condition})

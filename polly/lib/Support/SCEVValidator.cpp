@@ -540,15 +540,15 @@ bool isAffineExpr(const Region *R, llvm::Loop *Scope, const SCEV *Expr,
   return Result.isValid();
 }
 
-static bool isAffineParamExpr(Value *V, const Region *R, Loop *Scope,
-                              ScalarEvolution &SE, ParameterSetTy &Params) {
+static bool isAffineExpr(Value *V, const Region *R, Loop *Scope,
+                         ScalarEvolution &SE, ParameterSetTy &Params) {
   auto *E = SE.getSCEV(V);
   if (isa<SCEVCouldNotCompute>(E))
     return false;
 
   SCEVValidator Validator(R, Scope, SE, nullptr);
   ValidatorResult Result = Validator.visit(E);
-  if (!Result.isConstant())
+  if (!Result.isValid())
     return false;
 
   auto ResultParams = Result.getParameters();
@@ -557,28 +557,27 @@ static bool isAffineParamExpr(Value *V, const Region *R, Loop *Scope,
   return true;
 }
 
-bool isAffineParamConstraint(Value *V, const Region *R, llvm::Loop *Scope,
-                             ScalarEvolution &SE, ParameterSetTy &Params,
-                             bool OrExpr) {
+bool isAffineConstraint(Value *V, const Region *R, llvm::Loop *Scope,
+                        ScalarEvolution &SE, ParameterSetTy &Params,
+                        bool OrExpr) {
   if (auto *ICmp = dyn_cast<ICmpInst>(V)) {
-    return isAffineParamConstraint(ICmp->getOperand(0), R, Scope, SE, Params,
-                                   true) &&
-           isAffineParamConstraint(ICmp->getOperand(1), R, Scope, SE, Params,
-                                   true);
+    return isAffineConstraint(ICmp->getOperand(0), R, Scope, SE, Params,
+                              true) &&
+           isAffineConstraint(ICmp->getOperand(1), R, Scope, SE, Params, true);
   } else if (auto *BinOp = dyn_cast<BinaryOperator>(V)) {
     auto Opcode = BinOp->getOpcode();
     if (Opcode == Instruction::And || Opcode == Instruction::Or)
-      return isAffineParamConstraint(BinOp->getOperand(0), R, Scope, SE, Params,
-                                     false) &&
-             isAffineParamConstraint(BinOp->getOperand(1), R, Scope, SE, Params,
-                                     false);
+      return isAffineConstraint(BinOp->getOperand(0), R, Scope, SE, Params,
+                                false) &&
+             isAffineConstraint(BinOp->getOperand(1), R, Scope, SE, Params,
+                                false);
     /* Fall through */
   }
 
   if (!OrExpr)
     return false;
 
-  return isAffineParamExpr(V, R, Scope, SE, Params);
+  return isAffineExpr(V, R, Scope, SE, Params);
 }
 
 ParameterSetTy getParamsInAffineExpr(const Region *R, Loop *Scope,

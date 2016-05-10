@@ -112,7 +112,7 @@ bb:
   %indvar.next = add nsw i3 %indvar, 1
   %sub = sub i3 %n, 3
 ; CHECK:  'bb => return' in function 'f6'
-; CHECK: -3
+; CHECK: [n] -> { Stmt_bb[0] : n = 3 };
   %exitcond = icmp eq i3 %indvar, %sub
   br i1 %exitcond, label %return, label %bb
 

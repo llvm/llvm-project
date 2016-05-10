@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DanglingHandleCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -18,20 +19,6 @@ namespace tidy {
 namespace misc {
 
 namespace {
-
-static const char HandleClassesDelimiter[] = ";";
-
-std::vector<std::string> parseClasses(StringRef Option) {
-  SmallVector<StringRef, 4> Classes;
-  Option.split(Classes, HandleClassesDelimiter);
-  std::vector<std::string> Result;
-  for (StringRef &Class : Classes) {
-    Class = Class.trim();
-    if (!Class.empty())
-      Result.push_back(Class);
-  }
-  return Result;
-}
 
 ast_matchers::internal::BindableMatcher<Stmt>
 handleFrom(ast_matchers::internal::Matcher<RecordDecl> IsAHandle,
@@ -97,7 +84,7 @@ makeContainerMatcher(ast_matchers::internal::Matcher<RecordDecl> IsAHandle) {
 DanglingHandleCheck::DanglingHandleCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      HandleClasses(parseClasses(Options.get(
+      HandleClasses(utils::options::parseStringList(Options.get(
           "HandleClasses",
           "std::basic_string_view;std::experimental::basic_string_view"))),
       IsAHandle(cxxRecordDecl(hasAnyName(std::vector<StringRef>(
@@ -106,8 +93,7 @@ DanglingHandleCheck::DanglingHandleCheck(StringRef Name,
 
 void DanglingHandleCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "HandleClasses",
-                llvm::join(HandleClasses.begin(), HandleClasses.end(),
-                           HandleClassesDelimiter));
+                utils::options::serializeStringList(HandleClasses));
 }
 
 void DanglingHandleCheck::registerMatchersForVariables(MatchFinder *Finder) {
