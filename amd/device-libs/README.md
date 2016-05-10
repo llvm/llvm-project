@@ -27,3 +27,6 @@ Currently all tests are offline:
  * Resulting code object is passed to llvm-objdump and amdhsacod -test.
 
 The output of tests (which includes AMDGPU disassembly) can be displayed by running ctest -VV in build directory.
+
+Tests for OpenCL conformance kernels can be enabled by specifying -DOCL_CONFORMANCE_HOME=<path> to CMake, for example,
+  cmake ... -DOCL_CONFORMANCE_HOME=/srv/hsa/drivers/opencl/tests/extra/hsa/ocl/conformance/1.2
