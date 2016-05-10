@@ -4,9 +4,15 @@
 
 int a, b; // expected-warning {{declaration is not declared in any declare target region}}
 __thread int t; // expected-note {{defined as threadprivate or thread local}}
-#pragma omp declare target private(a) // expected-warning {{extra tokens at the end of '#pragma omp declare target' are ignored}}
+
+#pragma omp declare target . // expected-error {{expected '(' after 'declare target'}}
+
+#pragma omp declare target
 void f();
 #pragma omp end declare target shared(a) // expected-warning {{extra tokens at the end of '#pragma omp end declare target' are ignored}}
+
+#pragma omp declare target map(a) // expected-error {{unexpected 'map' clause, only 'to' or 'link' clauses expected}}
+
 void c(); // expected-warning {{declaration is not declared in any declare target region}}
 
 extern int b;
@@ -85,5 +91,11 @@ namespace {
   int x;
 } //  expected-error {{expected '#pragma omp end declare target'}}
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
+
+#pragma omp declare target link(S) // expected-error {{'S' used in declare target directive is not a variable or a function name}}
+
+#pragma omp declare target (x, x) // expected-error {{'x' appears multiple times in clauses on the same declare target directive}}
+#pragma omp declare target to(x) to(x) // expected-error {{'x' appears multiple times in clauses on the same declare target directive}}
+#pragma omp declare target link(x) // expected-error {{'x' must not appear in both clauses 'to' and 'link'}}
 
 #pragma omp declare target // expected-error {{expected '#pragma omp end declare target'}} expected-note {{to match this '#pragma omp declare target'}}

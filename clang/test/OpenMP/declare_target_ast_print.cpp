@@ -79,6 +79,51 @@ int test1() {
 #pragma omp end declare target
 // CHECK: #pragma omp end declare target
 
+int a1;
+void f1() {
+}
+#pragma omp declare target (a1, f1)
+// CHECK: #pragma omp declare target
+// CHECK: int a1;
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target
+// CHECK: void f1()
+// CHECK: #pragma omp end declare target
+
+int b1, b2, b3;
+void f2() {
+}
+#pragma omp declare target to(b1) to(b2), to(b3, f2)
+// CHECK: #pragma omp declare target
+// CHECK: int b1;
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target
+// CHECK: int b2;
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target
+// CHECK: int b3;
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target
+// CHECK: void f2()
+// CHECK: #pragma omp end declare target
+
+int c1, c2, c3;
+void f3() {
+}
+#pragma omp declare target link(c1) link(c2), link(c3, f3)
+// CHECK: #pragma omp declare target link
+// CHECK: int c1;
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target link
+// CHECK: int c2;
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target link
+// CHECK: int c3;
+// CHECK: #pragma omp end declare target
+// CHECK: #pragma omp declare target link
+// CHECK: void f3()
+// CHECK: #pragma omp end declare target
+
 int main (int argc, char **argv) {
   foo();
   foo_c();

@@ -7995,6 +7995,11 @@ public:
   bool ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc);
   /// Called at the end of target region i.e. '#pragme omp end declare target'.
   void ActOnFinishOpenMPDeclareTargetDirective();
+  /// Called on correct id-expression from the '#pragma omp declare target'.
+  void ActOnOpenMPDeclareTargetName(Scope *CurScope, CXXScopeSpec &ScopeSpec,
+                                    const DeclarationNameInfo &Id,
+                                    OMPDeclareTargetDeclAttr::MapTypeTy MT,
+                                    NamedDeclSetType &SameDirectiveDecls);
   /// Check declaration inside target region.
   void checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D);
   /// Return true inside OpenMP target region.

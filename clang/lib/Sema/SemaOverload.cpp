@@ -8503,16 +8503,31 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
   }
 }
 
-// Determines whether Cand1 is "better" in terms of its enable_if attrs than
-// Cand2 for overloading. This function assumes that all of the enable_if attrs
-// on Cand1 and Cand2 have conditions that evaluate to true.
-//
-// Cand1's set of enable_if attributes are said to be "better" than Cand2's iff
-// Cand1's first N enable_if attributes have precisely the same conditions as
-// Cand2's first N enable_if attributes (where N = the number of enable_if
-// attributes on Cand2), and Cand1 has more than N enable_if attributes.
-static bool hasBetterEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
-                                   const FunctionDecl *Cand2) {
+namespace {
+enum class Comparison { Equal, Better, Worse };
+}
+
+/// Compares the enable_if attributes of two FunctionDecls, for the purposes of
+/// overload resolution.
+///
+/// Cand1's set of enable_if attributes are said to be "better" than Cand2's iff
+/// Cand1's first N enable_if attributes have precisely the same conditions as
+/// Cand2's first N enable_if attributes (where N = the number of enable_if
+/// attributes on Cand2), and Cand1 has more than N enable_if attributes.
+///
+/// Note that you can have a pair of candidates such that Cand1's enable_if
+/// attributes are worse than Cand2's, and Cand2's enable_if attributes are
+/// worse than Cand1's.
+static Comparison compareEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
+                                       const FunctionDecl *Cand2) {
+  // Common case: One (or both) decls don't have enable_if attrs.
+  bool Cand1Attr = Cand1->hasAttr<EnableIfAttr>();
+  bool Cand2Attr = Cand2->hasAttr<EnableIfAttr>();
+  if (!Cand1Attr || !Cand2Attr) {
+    if (Cand1Attr == Cand2Attr)
+      return Comparison::Equal;
+    return Cand1Attr ? Comparison::Better : Comparison::Worse;
+  }
 
   // FIXME: The next several lines are just
   // specific_attr_iterator<EnableIfAttr> but going in declaration order,
@@ -8520,10 +8535,10 @@ static bool hasBetterEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
   auto Cand1Attrs = getOrderedEnableIfAttrs(Cand1);
   auto Cand2Attrs = getOrderedEnableIfAttrs(Cand2);
 
-  // Candidate 1 is better if it has strictly more attributes and
-  // the common sequence is identical.
-  if (Cand1Attrs.size() <= Cand2Attrs.size())
-    return false;
+  // It's impossible for Cand1 to be better than (or equal to) Cand2 if Cand1
+  // has fewer enable_if attributes than Cand2.
+  if (Cand1Attrs.size() < Cand2Attrs.size())
+    return Comparison::Worse;
 
   auto Cand1I = Cand1Attrs.begin();
   llvm::FoldingSetNodeID Cand1ID, Cand2ID;
@@ -8535,10 +8550,10 @@ static bool hasBetterEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
     Cand1A->getCond()->Profile(Cand1ID, S.getASTContext(), true);
     Cand2A->getCond()->Profile(Cand2ID, S.getASTContext(), true);
     if (Cand1ID != Cand2ID)
-      return false;
+      return Comparison::Worse;
   }
 
-  return true;
+  return Cand1I == Cand1Attrs.end() ? Comparison::Equal : Comparison::Better;
 }
 
 /// isBetterOverloadCandidate - Determines whether the first overload
@@ -8649,10 +8664,11 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
   }
 
   // Check for enable_if value-based overload resolution.
-  if (Cand1.Function && Cand2.Function &&
-      (Cand1.Function->hasAttr<EnableIfAttr>() ||
-       Cand2.Function->hasAttr<EnableIfAttr>()))
-    return hasBetterEnableIfAttrs(S, Cand1.Function, Cand2.Function);
+  if (Cand1.Function && Cand2.Function) {
+    Comparison Cmp = compareEnableIfAttrs(S, Cand1.Function, Cand2.Function);
+    if (Cmp != Comparison::Equal)
+      return Cmp == Comparison::Better;
+  }
 
   if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
     FunctionDecl *Caller = dyn_cast<FunctionDecl>(S.CurContext);
@@ -10331,7 +10347,7 @@ private:
     // disambiguate for us if there are multiple candidates and no exact match.
     return candidateHasExactlyCorrectType(A) &&
            (!candidateHasExactlyCorrectType(B) ||
-            hasBetterEnableIfAttrs(S, A, B));
+            compareEnableIfAttrs(S, A, B) == Comparison::Better);
   }
 
   /// \return true if we were able to eliminate all but one overload candidate,

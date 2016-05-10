@@ -40,6 +40,21 @@ enum OpenMPDirectiveKindEx {
   OMPD_target_enter,
   OMPD_target_exit
 };
+
+class ThreadprivateListParserHelper final {
+  SmallVector<Expr *, 4> Identifiers;
+  Parser *P;
+
+public:
+  ThreadprivateListParserHelper(Parser *P) : P(P) {}
+  void operator()(CXXScopeSpec &SS, DeclarationNameInfo NameInfo) {
+    ExprResult Res =
+        P->getActions().ActOnOpenMPIdExpression(P->getCurScope(), SS, NameInfo);
+    if (Res.isUsable())
+      Identifiers.push_back(Res.get());
+  }
+  llvm::ArrayRef<Expr *> getIdentifiers() const { return Identifiers; }
+};
 } // namespace
 
 // Map token string to extended OMP token kind that are
@@ -525,13 +540,13 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
   SourceLocation Loc = ConsumeToken();
-  SmallVector<Expr *, 4> Identifiers;
   auto DKind = ParseOpenMPDirectiveKind(*this);
 
   switch (DKind) {
-  case OMPD_threadprivate:
+  case OMPD_threadprivate: {
     ConsumeToken();
-    if (!ParseOpenMPSimpleVarList(OMPD_threadprivate, Identifiers, true)) {
+    ThreadprivateListParserHelper Helper(this);
+    if (!ParseOpenMPSimpleVarList(OMPD_threadprivate, Helper, true)) {
       // The last seen token is annot_pragma_openmp_end - need to check for
       // extra tokens.
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
@@ -541,9 +556,11 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       }
       // Skip the last annot_pragma_openmp_end.
       ConsumeToken();
-      return Actions.ActOnOpenMPThreadprivateDirective(Loc, Identifiers);
+      return Actions.ActOnOpenMPThreadprivateDirective(Loc,
+                                                       Helper.getIdentifiers());
     }
     break;
+  }
   case OMPD_declare_reduction:
     ConsumeToken();
     if (auto Res = ParseOpenMPDeclareReductionDirective(AS)) {
@@ -599,10 +616,40 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_declare_target: {
     SourceLocation DTLoc = ConsumeAnyToken();
     if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-      Diag(Tok, diag::warn_omp_extra_tokens_at_eol)
-          << getOpenMPDirectiveName(OMPD_declare_target);
+      // OpenMP 4.5 syntax with list of entities.
+      llvm::SmallSetVector<const NamedDecl*, 16> SameDirectiveDecls;
+      while (Tok.isNot(tok::annot_pragma_openmp_end)) {
+        OMPDeclareTargetDeclAttr::MapTypeTy MT =
+            OMPDeclareTargetDeclAttr::MT_To;
+        if (Tok.is(tok::identifier)) {
+          IdentifierInfo *II = Tok.getIdentifierInfo();
+          StringRef ClauseName = II->getName();
+          // Parse 'to|link' clauses.
+          if (!OMPDeclareTargetDeclAttr::ConvertStrToMapTypeTy(ClauseName,
+                                                               MT)) {
+            Diag(Tok, diag::err_omp_declare_target_unexpected_clause)
+                << ClauseName;
+            break;
+          }
+          ConsumeToken();
+        }
+        auto Callback = [this, MT, &SameDirectiveDecls](
+            CXXScopeSpec &SS, DeclarationNameInfo NameInfo) {
+          Actions.ActOnOpenMPDeclareTargetName(getCurScope(), SS, NameInfo, MT,
+                                               SameDirectiveDecls);
+        };
+        if (ParseOpenMPSimpleVarList(OMPD_declare_target, Callback, true))
+          break;
+
+        // Consume optional ','.
+        if (Tok.is(tok::comma))
+          ConsumeToken();
+      }
       SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
+      ConsumeAnyToken();
+      return DeclGroupPtrTy();
     }
+
     // Skip the last annot_pragma_openmp_end.
     ConsumeAnyToken();
 
@@ -716,7 +763,6 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     AllowedContsructsKind Allowed) {
   assert(Tok.is(tok::annot_pragma_openmp) && "Not an OpenMP directive!");
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
-  SmallVector<Expr *, 5> Identifiers;
   SmallVector<OMPClause *, 5> Clauses;
   SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>, OMPC_unknown + 1>
   FirstClauses(OMPC_unknown + 1);
@@ -732,13 +778,14 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   bool FlushHasClause = false;
 
   switch (DKind) {
-  case OMPD_threadprivate:
+  case OMPD_threadprivate: {
     if (Allowed != ACK_Any) {
       Diag(Tok, diag::err_omp_immediate_directive)
           << getOpenMPDirectiveName(DKind) << 0;
     }
     ConsumeToken();
-    if (!ParseOpenMPSimpleVarList(OMPD_threadprivate, Identifiers, false)) {
+    ThreadprivateListParserHelper Helper(this);
+    if (!ParseOpenMPSimpleVarList(OMPD_threadprivate, Helper, false)) {
       // The last seen token is annot_pragma_openmp_end - need to check for
       // extra tokens.
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
@@ -746,12 +793,13 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
             << getOpenMPDirectiveName(OMPD_threadprivate);
         SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
       }
-      DeclGroupPtrTy Res =
-          Actions.ActOnOpenMPThreadprivateDirective(Loc, Identifiers);
+      DeclGroupPtrTy Res = Actions.ActOnOpenMPThreadprivateDirective(
+          Loc, Helper.getIdentifiers());
       Directive = Actions.ActOnDeclStmt(Res, Loc, Tok.getLocation());
     }
     SkipUntil(tok::annot_pragma_openmp_end);
     break;
+  }
   case OMPD_declare_reduction:
     ConsumeToken();
     if (auto Res = ParseOpenMPDeclareReductionDirective(/*AS=*/AS_none)) {
@@ -913,16 +961,15 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   return Directive;
 }
 
-/// \brief Parses list of simple variables for '#pragma omp threadprivate'
-/// directive.
-///
-///   simple-variable-list:
-///         '(' id-expression {, id-expression} ')'
-///
-bool Parser::ParseOpenMPSimpleVarList(OpenMPDirectiveKind Kind,
-                                      SmallVectorImpl<Expr *> &VarList,
-                                      bool AllowScopeSpecifier) {
-  VarList.clear();
+// Parses simple list:
+//   simple-variable-list:
+//         '(' id-expression {, id-expression} ')'
+//
+bool Parser::ParseOpenMPSimpleVarList(
+    OpenMPDirectiveKind Kind,
+    const llvm::function_ref<void(CXXScopeSpec &, DeclarationNameInfo)> &
+        Callback,
+    bool AllowScopeSpecifier) {
   // Parse '('.
   BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
   if (T.expectAndConsume(diag::err_expected_lparen_after,
@@ -959,11 +1006,7 @@ bool Parser::ParseOpenMPSimpleVarList(OpenMPDirectiveKind Kind,
           << tok::identifier
           << SourceRange(PrevTok.getLocation(), PrevTokLocation);
     } else {
-      DeclarationNameInfo NameInfo = Actions.GetNameFromUnqualifiedId(Name);
-      ExprResult Res =
-          Actions.ActOnOpenMPIdExpression(getCurScope(), SS, NameInfo);
-      if (Res.isUsable())
-        VarList.push_back(Res.get());
+      Callback(SS, Actions.GetNameFromUnqualifiedId(Name));
     }
     // Consume ','.
     if (Tok.is(tok::comma)) {
@@ -979,7 +1022,7 @@ bool Parser::ParseOpenMPSimpleVarList(OpenMPDirectiveKind Kind,
   // Parse ')'.
   IsCorrect = !T.consumeClose() && IsCorrect;
 
-  return !IsCorrect && VarList.empty();
+  return !IsCorrect;
 }
 
 /// \brief Parsing of OpenMP clauses.

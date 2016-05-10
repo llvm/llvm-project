@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -fcuda-is-device \
-// RUN:   -triple nvptx-nvidia-cuda -emit-llvm -o - %s | FileCheck %s -check-prefix NOFTZ
+// RUN:   -triple nvptx-nvidia-cuda -emit-llvm -o - %s | \
+// RUN:   FileCheck %s -check-prefix CHECK -check-prefix NOFTZ
 // RUN: %clang_cc1 -fcuda-is-device -fcuda-flush-denormals-to-zero \
-// RUN:   -triple nvptx-nvidia-cuda -emit-llvm -o - %s | FileCheck %s -check-prefix FTZ
+// RUN:   -triple nvptx-nvidia-cuda -emit-llvm -o - %s | \
+// RUN:   FileCheck %s -check-prefix CHECK -check-prefix FTZ
 
 #include "Inputs/cuda.h"
 
@@ -10,7 +12,7 @@
 // -fcuda-flush-denormals-to-zero.  Further, check that we reflect the presence
 // or absence of -fcuda-flush-denormals-to-zero in a module flag.
 
-// CHECK: define void @foo() #0
+// CHECK-LABEL: define void @foo() #0
 extern "C" __device__ void foo() {}
 
 // FTZ: attributes #0 = {{.*}} "nvptx-f32ftz"="true"

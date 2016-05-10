@@ -383,10 +383,15 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx) {
   }
 
   NestedNameSpecifier *Prefix = nullptr;
-  Qualifiers PrefixQualifiers;
+  // Local qualifiers are attached to the QualType outside of the
+  // elaborated type.  Retrieve them before descending into the
+  // elaborated type.
+  Qualifiers PrefixQualifiers = QT.getLocalQualifiers();
+  QT = QualType(QT.getTypePtr(), 0);
   ElaboratedTypeKeyword Keyword = ETK_None;
   if (const auto *ETypeInput = dyn_cast<ElaboratedType>(QT.getTypePtr())) {
     QT = ETypeInput->getNamedType();
+    assert(!QT.hasLocalQualifiers());
     Keyword = ETypeInput->getKeyword();
   }
   // Create a nested name specifier if needed (i.e. if the decl context
@@ -394,28 +399,21 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx) {
   Prefix = createNestedNameSpecifierForScopeOf(Ctx, QT.getTypePtr(),
                                                true /*FullyQualified*/);
 
-  // move the qualifiers on the outer type (avoid 'std::const string'!)
-  if (Prefix) {
-    PrefixQualifiers = QT.getLocalQualifiers();
-    QT = QualType(QT.getTypePtr(), 0);
-  }
-
   // In case of template specializations iterate over the arguments and
   // fully qualify them as well.
   if (isa<const TemplateSpecializationType>(QT.getTypePtr()) ||
       isa<const RecordType>(QT.getTypePtr())) {
     // We are asked to fully qualify and we have a Record Type (which
-    // may pont to a template specialization) or Template
+    // may point to a template specialization) or Template
     // Specialization Type. We need to fully qualify their arguments.
 
-    Qualifiers Quals = QT.getLocalQualifiers();
     const Type *TypePtr = getFullyQualifiedTemplateType(Ctx, QT.getTypePtr());
-    QT = Ctx.getQualifiedType(TypePtr, Quals);
+    QT = QualType(TypePtr, 0);
   }
   if (Prefix || Keyword != ETK_None) {
     QT = Ctx.getElaboratedType(Keyword, Prefix, QT);
-    QT = Ctx.getQualifiedType(QT, PrefixQualifiers);
   }
+  QT = Ctx.getQualifiedType(QT, PrefixQualifiers);
   return QT;
 }
 

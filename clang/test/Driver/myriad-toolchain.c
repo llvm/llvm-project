@@ -77,3 +77,7 @@
 
 // RUN: %clang -### -c -g %s -target sparc-myriad 2>&1 | FileCheck -check-prefix=G_SPARC %s
 // G_SPARC: "-debug-info-kind=limited" "-dwarf-version=2"
+
+// RUN: %clang -### -c %s -target sparc-myriad-elf -fuse-init-array 2>&1 \
+// RUN: | FileCheck -check-prefix=USE-INIT-ARRAY %s
+// USE-INIT-ARRAY-NOT: argument unused
