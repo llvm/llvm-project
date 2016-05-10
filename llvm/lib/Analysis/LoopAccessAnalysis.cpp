@@ -1582,8 +1582,12 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
                  << (PtrRtChecking.Need ? "" : " don't")
                  << " need runtime memory checks.\n");
   else {
-    emitAnalysis(LoopAccessReport() <<
-                 "unsafe dependent memory operations in loop");
+    emitAnalysis(
+        LoopAccessReport()
+        << "unsafe dependent memory operations in loop. Use "
+           "#pragma loop distribute(enable) to allow loop distribution "
+           "to attempt to isolate the offending operations into a separate "
+           "loop");
     DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
   }
 }
