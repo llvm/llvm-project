@@ -42,7 +42,7 @@
 
 if(OCL_CONFORMANCE_HOME)
   file(GLOB files
-    ${OCL_CONFORMANCE_HOME}/commonfns/commonfns_0.cl
+#    ${OCL_CONFORMANCE_HOME}/commonfns/commonfns_0.cl
 #    ${OCL_CONFORMANCE_HOME}/commonfns/commonfns_1.cl
 #    ${OCL_CONFORMANCE_HOME}/commonfns/commonfns_10.cl
     ${OCL_CONFORMANCE_HOME}/commonfns/commonfns_100.cl
