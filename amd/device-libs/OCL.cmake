@@ -40,6 +40,7 @@
 ##
 ################################################################################
 
+set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/clang")
 set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 set (LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump")
 
@@ -117,8 +118,8 @@ macro(clang_opencl_bc_builtins_lib name)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.bc DESTINATION lib COMPONENT OpenCL-Lib-lib)
 endmacro(clang_opencl_bc_builtins_lib)
 
-macro(clang_opencl_code name)
-  clang_csources(${name}_code ${CMAKE_CURRENT_SOURCE_DIR}/${name}.cl)
+macro(clang_opencl_code dir name)
+  clang_csources(${name}_code ${dir}/${name}.cl)
   add_executable(${name}_code ${csources})
   set(mlink_flags)
   foreach (lib ${ARGN})
@@ -135,8 +136,9 @@ endmacro(clang_opencl_code)
 
 enable_testing()
 
-macro(clang_opencl_test name)
-  clang_opencl_code(${name} llvm ocml opencl)
+macro(clang_opencl_test dir name)
+  #clang_opencl_code(${dir} ${name} llvm ocml opencl)
+  clang_opencl_code(${dir} ${name} opencl ocml llvm)
   if(AMDHSACOD)
     add_test(
       NAME ${name}:llvm-objdump
@@ -148,3 +150,10 @@ macro(clang_opencl_test name)
     )
   endif()
 endmacro(clang_opencl_test)
+
+macro(clang_opencl_test_file dir fname)
+  get_filename_component(fext ${fname} EXT)
+  get_filename_component(name ${fname} NAME_WE)
+  get_filename_component(fdir ${fname} DIRECTORY)
+  clang_opencl_test(${dir}/${fdir} ${name})
+endmacro()
