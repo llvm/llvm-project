@@ -3131,13 +3131,13 @@ struct VarArgMIPS64Helper : public VarArgHelper {
 
 /// \brief AArch64-specific implementation of VarArgHelper.
 struct VarArgAArch64Helper : public VarArgHelper {
-  static const unsigned kAArch64GrArgSize = 56;
+  static const unsigned kAArch64GrArgSize = 64;
   static const unsigned kAArch64VrArgSize = 128;
 
   static const unsigned AArch64GrBegOffset = 0;
   static const unsigned AArch64GrEndOffset = kAArch64GrArgSize;
   // Make VR space aligned to 16 bytes.
-  static const unsigned AArch64VrBegOffset = AArch64GrEndOffset + 8;
+  static const unsigned AArch64VrBegOffset = AArch64GrEndOffset;
   static const unsigned AArch64VrEndOffset = AArch64VrBegOffset
                                              + kAArch64VrArgSize;
   static const unsigned AArch64VAEndOffset = AArch64VrEndOffset;
@@ -3182,9 +3182,11 @@ struct VarArgAArch64Helper : public VarArgHelper {
     unsigned OverflowOffset = AArch64VAEndOffset;
 
     const DataLayout &DL = F.getParent()->getDataLayout();
-    for (CallSite::arg_iterator ArgIt = CS.arg_begin() + 1, End = CS.arg_end();
+    for (CallSite::arg_iterator ArgIt = CS.arg_begin(), End = CS.arg_end();
          ArgIt != End; ++ArgIt) {
       Value *A = *ArgIt;
+      unsigned ArgNo = CS.getArgumentNo(ArgIt);
+      bool IsFixed = ArgNo < CS.getFunctionType()->getNumParams();
       ArgKind AK = classifyArgument(A);
       if (AK == AK_GeneralPurpose && GrOffset >= AArch64GrEndOffset)
         AK = AK_Memory;
@@ -3201,11 +3203,19 @@ struct VarArgAArch64Helper : public VarArgHelper {
           VrOffset += 16;
           break;
         case AK_Memory:
+          // Don't count fixed arguments in the overflow area - va_start will
+          // skip right over them.
+          if (IsFixed)
+            continue;
           uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
           Base = getShadowPtrForVAArgument(A->getType(), IRB, OverflowOffset);
           OverflowOffset += alignTo(ArgSize, 8);
           break;
       }
+      // Count Gp/Vr fixed arguments to their respective offsets, but don't
+      // bother to actually store a shadow.
+      if (IsFixed)
+        continue;
       IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
     }
     Constant *OverflowSize =

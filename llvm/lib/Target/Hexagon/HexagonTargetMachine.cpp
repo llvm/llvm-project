@@ -18,6 +18,7 @@
 #include "HexagonTargetObjectFile.h"
 #include "HexagonTargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"

@@ -330,6 +330,8 @@ public:
   Instruction *visitShuffleVectorInst(ShuffleVectorInst &SVI);
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
+  Instruction *visitVAStartInst(VAStartInst &I);
+  Instruction *visitVACopyInst(VACopyInst &I);
 
   // visitInstruction - Specify what to return for unhandled instructions...
   Instruction *visitInstruction(Instruction &I) { return nullptr; }

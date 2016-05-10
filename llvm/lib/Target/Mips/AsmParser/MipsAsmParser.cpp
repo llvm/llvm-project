@@ -1092,6 +1092,11 @@ public:
       && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
       && (getMemBase()->getGPR32Reg() == Mips::SP);
   }
+  template <unsigned Bits> bool isMemWithSimmWordAlignedOffsetGP() const {
+    return isMem() && isConstantMemOff() && isInt<Bits>(getConstantMemOff())
+      && (getConstantMemOff() % 4 == 0) && getMemBase()->isRegIdx()
+      && (getMemBase()->getGPR32Reg() == Mips::GP);
+  }
   template <unsigned Bits, unsigned ShiftLeftAmount>
   bool isScaledUImm() const {
     return isConstantImm() &&
@@ -1322,10 +1327,13 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<MipsOperand>
-  CreateRegPair(MipsOperand MOP, SMLoc S, SMLoc E, MipsAsmParser &Parser) {
+  static std::unique_ptr<MipsOperand> CreateRegPair(const MipsOperand &MOP,
+                                                    SMLoc S, SMLoc E,
+                                                    MipsAsmParser &Parser) {
     auto Op = make_unique<MipsOperand>(k_RegPair, Parser);
     Op->RegIdx.Index = MOP.RegIdx.Index;
+    Op->RegIdx.RegInfo = MOP.RegIdx.RegInfo;
+    Op->RegIdx.Kind = MOP.RegIdx.Kind;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -4691,7 +4699,7 @@ MipsAsmParser::parseRegisterPair(OperandVector &Operands) {
     return MatchOperand_ParseFail;
 
   SMLoc E = Parser.getTok().getLoc();
-  MipsOperand &Op = static_cast<MipsOperand &>(*Operands.back());
+  MipsOperand Op = static_cast<MipsOperand &>(*Operands.back());
 
   Operands.pop_back();
   Operands.push_back(MipsOperand::CreateRegPair(Op, S, E, *this));

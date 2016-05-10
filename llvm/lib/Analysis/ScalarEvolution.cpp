@@ -7805,6 +7805,23 @@ bool ScalarEvolution::isKnownPredicateViaSplitting(ICmpInst::Predicate Pred,
          isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS);
 }
 
+bool ScalarEvolution::isImpliedViaGuard(BasicBlock *BB,
+                                        ICmpInst::Predicate Pred,
+                                        const SCEV *LHS, const SCEV *RHS) {
+  // No need to even try if we know the module has no guards.
+  if (!HasGuards)
+    return false;
+
+  return any_of(*BB, [&](Instruction &I) {
+    using namespace llvm::PatternMatch;
+
+    Value *Condition;
+    return match(&I, m_Intrinsic<Intrinsic::experimental_guard>(
+                         m_Value(Condition))) &&
+           isImpliedCond(Pred, LHS, RHS, Condition, false);
+  });
+}
+
 /// isLoopBackedgeGuardedByCond - Test whether the backedge of the loop is
 /// protected by a conditional between LHS and RHS.  This is used to
 /// to eliminate casts.
@@ -7872,12 +7889,18 @@ ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
   if (!DT.isReachableFromEntry(L->getHeader()))
     return false;
 
+  if (isImpliedViaGuard(Latch, Pred, LHS, RHS))
+    return true;
+
   for (DomTreeNode *DTN = DT[Latch], *HeaderDTN = DT[L->getHeader()];
        DTN != HeaderDTN; DTN = DTN->getIDom()) {
 
     assert(DTN && "should reach the loop header before reaching the root!");
 
     BasicBlock *BB = DTN->getBlock();
+    if (isImpliedViaGuard(BB, Pred, LHS, RHS))
+      return true;
+
     BasicBlock *PBB = BB->getSinglePredecessor();
     if (!PBB)
       continue;
@@ -7929,6 +7952,9 @@ ScalarEvolution::isLoopEntryGuardedByCond(const Loop *L,
          Pair(L->getLoopPredecessor(), L->getHeader());
        Pair.first;
        Pair = getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
+
+    if (isImpliedViaGuard(Pair.first, Pred, LHS, RHS))
+      return true;
 
     BranchInst *LoopEntryPredicate =
       dyn_cast<BranchInst>(Pair.first->getTerminator());
@@ -9462,11 +9488,26 @@ ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
       CouldNotCompute(new SCEVCouldNotCompute()),
       WalkingBEDominatingConds(false), ProvingSplitPredicate(false),
       ValuesAtScopes(64), LoopDispositions(64), BlockDispositions(64),
-      FirstUnknown(nullptr) {}
+      FirstUnknown(nullptr) {
+
+  // To use guards for proving predicates, we need to scan every instruction in
+  // relevant basic blocks, and not just terminators.  Doing this is a waste of
+  // time if the IR does not actually contain any calls to
+  // @llvm.experimental.guard, so do a quick check and remember this beforehand.
+  //
+  // This pessimizes the case where a pass that preserves ScalarEvolution wants
+  // to _add_ guards to the module when there weren't any before, and wants
+  // ScalarEvolution to optimize based on those guards.  For now we prefer to be
+  // efficient in lieu of being smart in that rather obscure case.
+
+  auto *GuardDecl = F.getParent()->getFunction(
+      Intrinsic::getName(Intrinsic::experimental_guard));
+  HasGuards = GuardDecl && !GuardDecl->use_empty();
+}
 
 ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
-    : F(Arg.F), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT), LI(Arg.LI),
-      CouldNotCompute(std::move(Arg.CouldNotCompute)),
+    : F(Arg.F), HasGuards(Arg.HasGuards), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT),
+      LI(Arg.LI), CouldNotCompute(std::move(Arg.CouldNotCompute)),
       ValueExprMap(std::move(Arg.ValueExprMap)),
       WalkingBEDominatingConds(false), ProvingSplitPredicate(false),
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),

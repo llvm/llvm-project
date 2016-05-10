@@ -46,6 +46,9 @@ def FeatureHardQuad
 def UsePopc : SubtargetFeature<"popc", "UsePopc", "true",
                                "Use the popc (population count) instruction">;
 
+//==== Features added predmoninantly for LEON subtarget support                               
+include "LeonFeatures.td"
+
 //===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
@@ -111,26 +114,26 @@ def : Processor<"at697f", LEON2Itineraries,
 
 // LEON 3 FT generic
 def : Processor<"leon3", LEON3Itineraries,
-                [FeatureLeon]>;
+                [FeatureLeon, UMACSMACSupport]>;
 
 // LEON 3 FT (UT699)
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"ut699", LEON3Itineraries, 
-                [FeatureLeon]>;
+                [FeatureLeon, UMACSMACSupport]>;
 
 // LEON3 FT (GR712RC) 
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"gr712rc", LEON3Itineraries,
-                [FeatureLeon]>;
+                [FeatureLeon, UMACSMACSupport]>;
 
 // LEON 4 FT generic
 def : Processor<"leon4", LEON4Itineraries,
-                [FeatureLeon]>;
+                [FeatureLeon, UMACSMACSupport]>;
 
 // LEON 4 FT (GR740) 
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"gr740", LEON4Itineraries, 
-                [FeatureLeon]> {}
+                [FeatureLeon, UMACSMACSupport]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

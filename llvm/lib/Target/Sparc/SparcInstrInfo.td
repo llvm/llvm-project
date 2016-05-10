@@ -49,6 +49,10 @@ def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
 
+// HasUMAC_SMAC - This is true when the target processor supports the
+// UMAC and SMAC instructions
+def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
+
 // UseDeprecatedInsts - This predicate is true when the target processor is a
 // V8, or when it is V9 but the V8 deprecated instructions are efficient enough
 // to use when appropriate.  In either of these cases, the instruction selector
@@ -1501,6 +1505,30 @@ let Predicates = [HasV9], Constraints = "$swap = $rd", asi = 0b10000000 in
                  "cas [$rs1], $rs2, $rd",
                  [(set i32:$rd,
                      (atomic_cmp_swap iPTR:$rs1, i32:$rs2, i32:$swap))]>;
+
+// TODO: Add DAG sequence to lower these instructions. Currently, only provided
+// as inline assembler-supported instructions. 
+let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
+  def SMACrr :  F3_1<2, 0b111111,
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   "smac $rs1, $rs2, $rd",
+                   [], IIC_smac_umac>;
+
+  def SMACri :  F3_2<2, 0b111111,
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                   "smac $rs1, $simm13, $rd",
+                   [], IIC_smac_umac>;
+                 
+  def UMACrr :  F3_1<2, 0b111110,
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   "umac $rs1, $rs2, $rd",
+                   [], IIC_smac_umac>;
+                 
+  def UMACri :  F3_2<2, 0b111110,
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                   "umac $rs1, $simm13, $rd",
+                   [], IIC_smac_umac>;
+}
 
 let Defs = [ICC] in {
 defm TADDCC   : F3_12np<"taddcc",   0b100000>;

@@ -35,7 +35,8 @@ FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")
 FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
-  "merged into the 1-st corpus. Only interesting units will be taken.")
+  "merged into the 1-st corpus. Only interesting units will be taken. "
+  "This flag can be used to minimize a corpus.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_indir_calls, 1, "Use indirect caller-callee counters")
 FUZZER_FLAG_INT(use_traces, 0, "Experimental: use instruction traces")

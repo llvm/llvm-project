@@ -497,7 +497,8 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr *MI,
 /// stream.
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineBasicBlock::iterator MI,
                                                  ArrayRef<unsigned> Ops,
-                                                 int FI) const {
+                                                 int FI,
+                                                 LiveIntervals *LIS) const {
   unsigned Flags = 0;
   for (unsigned i = 0, e = Ops.size(); i != e; ++i)
     if (MI->getOperand(Ops[i]).isDef())
@@ -519,7 +520,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineBasicBlock::iterator MI,
       MBB->insert(MI, NewMI);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS);
   }
 
   if (NewMI) {
@@ -778,7 +779,8 @@ void TargetInstrInfo::genAlternativeCodeSequence(
 /// stack slot.
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineBasicBlock::iterator MI,
                                                  ArrayRef<unsigned> Ops,
-                                                 MachineInstr *LoadMI) const {
+                                                 MachineInstr *LoadMI,
+                                                 LiveIntervals *LIS) const {
   assert(LoadMI->canFoldAsLoad() && "LoadMI isn't foldable!");
 #ifndef NDEBUG
   for (unsigned i = 0, e = Ops.size(); i != e; ++i)
@@ -800,7 +802,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineBasicBlock::iterator MI,
       NewMI = MBB.insert(MI, NewMI);
   } else {
     // Ask the target to do the actual folding.
-    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI);
+    NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);
   }
 
   if (!NewMI) return nullptr;

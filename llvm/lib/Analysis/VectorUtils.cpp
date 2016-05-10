@@ -320,6 +320,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   SmallPtrSet<Instruction *, 4> InstructionSet;
   MapVector<Instruction *, uint64_t> MinBWs;
 
+  assert(Blocks.size() > 0 && "Must have at least one block!");
+  const DataLayout &DL = Blocks[0]->getModule()->getDataLayout();
+  
   // Determine the roots. We work bottom-up, from truncs or icmps.
   bool SeenExtFromIllegalType = false;
   for (auto *BB : Blocks)
@@ -363,12 +366,19 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
     // If we encounter a type that is larger than 64 bits, we can't represent
     // it so bail out.
-    if (DB.getDemandedBits(I).getBitWidth() > 64)
+    APInt NeededBits = DB.getDemandedBits(I);
+    unsigned BW = NeededBits.getBitWidth();
+    if (BW > 64)
       return MapVector<Instruction *, uint64_t>();
 
-    uint64_t V = DB.getDemandedBits(I).getZExtValue();
-    DBits[Leader] |= V;
-    DBits[I] = V;
+    auto NSB = ComputeNumSignBits(I, DL);
+
+    // Query demanded bits for the bits required by the instruction. Remove
+    // any bits that are equal to the sign bit, because we can truncate the
+    // instruction without changing their value.
+    NeededBits &= APInt::getLowBitsSet(BW, BW - NSB);
+    DBits[Leader] |= NeededBits.getZExtValue();
+    DBits[I] |= NeededBits.getZExtValue();
 
     // Casts, loads and instructions outside of our range terminate a chain
     // successfully.

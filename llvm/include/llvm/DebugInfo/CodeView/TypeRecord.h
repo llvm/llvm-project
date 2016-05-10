@@ -275,10 +275,6 @@ private:
 // A CodeView type stream is a sequence of TypeRecords. Records larger than
 // 65536 must chain on to a second record. Each TypeRecord is followed by one of
 // the leaf types described below.
-struct TypeRecordPrefix {
-  ulittle16_t Len;  // Type record length, starting from &Leaf.
-  ulittle16_t Leaf; // Type record kind (TypeLeafKind)
-};
 
 // LF_TYPESERVER2
 struct TypeServer2 {

@@ -21,6 +21,9 @@
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
 #include "llvm/CodeGen/LinkAllCodegenComponents.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
@@ -361,12 +364,38 @@ static int compileModule(char **argv, LLVMContext &Context) {
                              "redundant when run-pass is specified.\n";
         return 1;
       }
+      if (!MIR) {
+        errs() << argv[0] << ": run-pass needs a .mir input.\n";
+        return 1;
+      }
       const PassInfo *PI = PR->getPassInfo(RunPass);
       if (!PI) {
         errs() << argv[0] << ": run-pass pass is not registered.\n";
         return 1;
       }
-      StopAfterID = StartBeforeID = PI->getTypeInfo();
+      LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine&>(*Target);
+      TargetPassConfig *TPC = LLVMTM.createPassConfig(PM);
+      PM.add(TPC);
+      LLVMTM.addMachineModuleInfo(PM);
+      LLVMTM.addMachineFunctionAnalysis(PM, MIR.get());
+      TPC->printAndVerify("");
+
+      Pass *P;
+      if (PI->getTargetMachineCtor())
+        P = PI->getTargetMachineCtor()(Target.get());
+      else if (PI->getNormalCtor())
+        P = PI->getNormalCtor()();
+      else {
+        errs() << argv[0] << ": cannot create pass: "
+               << PI->getPassName() << "\n";
+        return 1;
+      }
+      std::string Banner
+        = std::string("After ") + std::string(P->getPassName());
+      PM.add(P);
+      TPC->printAndVerify(Banner);
+
+      PM.add(createPrintMIRPass(errs()));
     } else {
       if (!StartAfter.empty()) {
         const PassInfo *PI = PR->getPassInfo(StartAfter);
@@ -384,14 +413,15 @@ static int compileModule(char **argv, LLVMContext &Context) {
         }
         StopAfterID = PI->getTypeInfo();
       }
-    }
 
-    // Ask the target to add backend passes as necessary.
-    if (Target->addPassesToEmitFile(PM, *OS, FileType, NoVerify, StartBeforeID,
-                                    StartAfterID, StopAfterID, MIR.get())) {
-      errs() << argv[0] << ": target does not support generation of this"
-             << " file type!\n";
-      return 1;
+      // Ask the target to add backend passes as necessary.
+      if (Target->addPassesToEmitFile(PM, *OS, FileType, NoVerify,
+                                      StartBeforeID, StartAfterID, StopAfterID,
+                                      MIR.get())) {
+        errs() << argv[0] << ": target does not support generation of this"
+               << " file type!\n";
+        return 1;
+      }
     }
 
     // Before executing passes, print the final values of the LLVM options.

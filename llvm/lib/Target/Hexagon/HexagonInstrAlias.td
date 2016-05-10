@@ -460,6 +460,38 @@ def : InstAlias<"$Pd=cmp.lt($Rs, $Rt)",
 def : InstAlias<"$Pd=cmp.ltu($Rs, $Rt)",
       (C2_cmpgtu PredRegs:$Pd, IntRegs:$Rt, IntRegs:$Rs), 0>;
 
+// maps if (!Pu) jumpr Rs -> if (!Pu) jumpr:nt Rs
+def : InstAlias<"if (!$Pu) jumpr $Rs",
+      (J2_jumprf PredRegs:$Pu, IntRegs:$Rs)>,
+      Requires<[HasV60T]>;
+
+// maps if (Pu) jumpr Rs -> if (Pu) jumpr:nt Rs
+def : InstAlias<"if ($Pu) jumpr $Rs",
+      (J2_jumprt PredRegs:$Pu, IntRegs:$Rs)>,
+      Requires<[HasV60T]>;
+
+// maps if (!Pu) jump $r15_2 -> if (!Pu) jump:nt $r15_2
+def : InstAlias<"if (!$Pu) jump $r15_2",
+      (J2_jumpf PredRegs:$Pu, brtarget:$r15_2)>,
+      Requires<[HasV60T]>;
+
+// maps if (Pu) jump $r15_2 -> if (Pu) jump:nt $r15_2
+def : InstAlias<"if ($Pu) jump $r15_2",
+     (J2_jumpt PredRegs:$Pu, brtarget:$r15_2)>,
+     Requires<[HasV60T]>;
+
+def : InstAlias<"if ($src) jump $r15_2",
+      (J2_jumpt PredRegs:$src, brtarget:$r15_2), 0>;
+
+def : InstAlias<"if (!$src) jump $r15_2",
+      (J2_jumpf PredRegs:$src, brtarget:$r15_2), 0>;
+
+def : InstAlias<"if ($src1) jumpr $src2",
+      (J2_jumprt PredRegs:$src1, IntRegs:$src2), 0>;
+
+def : InstAlias<"if (!$src1) jumpr $src2",
+      (J2_jumprf PredRegs:$src1, IntRegs:$src2), 0>;
+
 // V6_vassignp: Vector assign mapping.
 let hasNewValue = 1, opNewValue = 0, isAsmParserOnly = 1 in
 def HEXAGON_V6_vassignpair: CVI_VA_DV_Resource <

@@ -486,6 +486,12 @@ namespace ISD {
     /// the same bit size (e.g.  f32 <-> i32).  This can also be used for
     /// int-to-int or fp-to-fp conversions, but that is a noop, deleted by
     /// getNode().
+    ///
+    /// This operator is subtly different from the bitcast instruction from
+    /// LLVM-IR since this node may change the bits in the register. For
+    /// example, this occurs on big-endian NEON and big-endian MSA where the
+    /// layout of the bits in the register depends on the vector type and this
+    /// operator acts as a shuffle operation for some vector type combinations.
     BITCAST,
 
     /// ADDRSPACECAST - This operator converts between pointers of different

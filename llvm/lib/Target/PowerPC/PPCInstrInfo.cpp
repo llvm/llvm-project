@@ -93,6 +93,7 @@ PPCInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
   unsigned Directive =
       DAG->MF.getSubtarget<PPCSubtarget>().getDarwinDirective();
 
+  // FIXME: Leaving this as-is until we have POWER9 scheduling info
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8)
     return new PPCDispatchGroupSBHazardRecognizer(II, DAG);
 
@@ -181,6 +182,7 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     case PPC::DIR_PWR6X:
     case PPC::DIR_PWR7:
     case PPC::DIR_PWR8:
+    // FIXME: Is this needed for POWER9?
       Latency += 2;
       break;
     }
@@ -428,6 +430,8 @@ void PPCInstrInfo::insertNoop(MachineBasicBlock &MBB,
   case PPC::DIR_PWR6: Opcode = PPC::NOP_GT_PWR6; break;
   case PPC::DIR_PWR7: Opcode = PPC::NOP_GT_PWR7; break;
   case PPC::DIR_PWR8: Opcode = PPC::NOP_GT_PWR7; break; /* FIXME: Update when P8 InstrScheduling model is ready */
+  // FIXME: Update when POWER9 scheduling model is ready.
+  case PPC::DIR_PWR9: Opcode = PPC::NOP_GT_PWR7; break;
   }
 
   DebugLoc DL;

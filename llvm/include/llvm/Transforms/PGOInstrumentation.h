@@ -24,8 +24,6 @@ namespace llvm {
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.
 class PGOInstrumentationGen : public PassInfoMixin<PGOInstrumentationGen> {
 public:
-  PGOInstrumentationGen() {}
-
   PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
 };
 

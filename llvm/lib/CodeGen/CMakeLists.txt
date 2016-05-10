@@ -82,7 +82,6 @@ add_llvm_library(LLVMCodeGen
   MIRPrintingPass.cpp
   OptimizePHIs.cpp
   ParallelCG.cpp
-  Passes.cpp
   PeepholeOptimizer.cpp
   PHIElimination.cpp
   PHIEliminationUtils.cpp
@@ -124,6 +123,7 @@ add_llvm_library(LLVMCodeGen
   TargetLoweringBase.cpp
   TargetLoweringObjectFileImpl.cpp
   TargetOptionsImpl.cpp
+  TargetPassConfig.cpp
   TargetRegisterInfo.cpp
   TargetSchedule.cpp
   TwoAddressInstructionPass.cpp

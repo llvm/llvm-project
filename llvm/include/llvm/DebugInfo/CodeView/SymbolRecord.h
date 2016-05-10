@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORD_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/RecordIterator.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Endian.h"
 
@@ -324,6 +325,12 @@ struct ThreadLocalDataSym {
   ulittle16_t Segment;
   // Name: The null-terminated name follows.
 };
+
+typedef RecordIterator<SymbolRecordKind> SymbolIterator;
+
+inline iterator_range<SymbolIterator> makeSymbolRange(ArrayRef<uint8_t> Data) {
+  return make_range(SymbolIterator(Data), SymbolIterator());
+}
 
 } // namespace codeview
 } // namespace llvm

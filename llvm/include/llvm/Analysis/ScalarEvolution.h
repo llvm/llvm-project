@@ -464,6 +464,12 @@ namespace llvm {
     ///
     Function &F;
 
+    /// Does the module have any calls to the llvm.experimental.guard intrinsic
+    /// at all?  If this is false, we avoid doing work that will only help if
+    /// thare are guards present in the IR.
+    ///
+    bool HasGuards;
+
     /// The target library information for the target we are targeting.
     ///
     TargetLibraryInfo &TLI;
@@ -1006,6 +1012,11 @@ namespace llvm {
                                         const SCEV *LHS, const SCEV *RHS,
                                         const SCEV *FoundLHS,
                                         const SCEV *FoundRHS);
+
+    /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
+    /// by a call to \c @llvm.experimental.guard in \p BB.
+    bool isImpliedViaGuard(BasicBlock *BB, ICmpInst::Predicate Pred,
+                           const SCEV *LHS, const SCEV *RHS);
 
     /// Test whether the condition described by Pred, LHS, and RHS is true
     /// whenever the condition described by Pred, FoundLHS, and FoundRHS is

@@ -23,6 +23,9 @@ class CCIfNotSubtarget<string F, CCAction A>
                        "(State.getMachineFunction().getSubtarget()).",
                      F),
           A>;
+class CCIfOrigArgWasNotPPCF128<CCAction A>
+    : CCIf<"!static_cast<PPCCCState *>(&State)->WasOriginalArgPPCF128(ValNo)",
+           A>;
 
 //===----------------------------------------------------------------------===//
 // Return Value Calling Convention
@@ -131,7 +134,14 @@ def CC_PPC32_SVR4_Common : CallingConv<[
 
   // The ABI requires i64 to be passed in two adjacent registers with the first
   // register having an odd register number.
-  CCIfType<[i32], CCIfSplit<CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>,
+  CCIfType<[i32],
+  CCIfSplit<CCIfSubtarget<"useSoftFloat()", 
+            CCIfOrigArgWasNotPPCF128<
+            CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>>>,
+  
+  CCIfType<[i32],
+  CCIfSplit<CCIfNotSubtarget<"useSoftFloat()", 
+                            CCCustom<"CC_PPC32_SVR4_Custom_AlignArgRegs">>>>,
 
   // The 'nest' parameter, if any, is passed in R11.
   CCIfNest<CCAssignToReg<[R11]>>,

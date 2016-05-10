@@ -741,6 +741,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   if (ShuffleMask.empty())
     return false;
 
+  // TODO: Add support for specifying an AVX512 style mask register in the comment.
   if (!DestName) DestName = Src1Name;
   OS << (DestName ? DestName : "mem") << " = ";
 

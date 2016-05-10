@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/Dominators.h"
@@ -653,45 +654,77 @@ Value *RecurrenceDescriptor::createMinMaxOp(IRBuilder<> &Builder,
 }
 
 InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
-                                         ConstantInt *Step)
-  : StartValue(Start), IK(K), StepValue(Step) {
+                                         const SCEV *Step)
+  : StartValue(Start), IK(K), Step(Step) {
   assert(IK != IK_NoInduction && "Not an induction");
+
+  // Start value type should match the induction kind and the value
+  // itself should not be null.
   assert(StartValue && "StartValue is null");
-  assert(StepValue && !StepValue->isZero() && "StepValue is zero");
   assert((IK != IK_PtrInduction || StartValue->getType()->isPointerTy()) &&
          "StartValue is not a pointer for pointer induction");
   assert((IK != IK_IntInduction || StartValue->getType()->isIntegerTy()) &&
          "StartValue is not an integer for integer induction");
-  assert(StepValue->getType()->isIntegerTy() &&
-         "StepValue is not an integer");
+
+  // Check the Step Value. It should be non-zero integer value.
+  assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
+         "Step value is zero");
+
+  assert((IK != IK_PtrInduction || getConstIntStepValue()) &&
+         "Step value should be constant for pointer induction");
+  assert(Step->getType()->isIntegerTy() && "StepValue is not an integer");
 }
 
 int InductionDescriptor::getConsecutiveDirection() const {
-  if (StepValue && (StepValue->isOne() || StepValue->isMinusOne()))
-    return StepValue->getSExtValue();
+  ConstantInt *ConstStep = getConstIntStepValue();
+  if (ConstStep && (ConstStep->isOne() || ConstStep->isMinusOne()))
+    return ConstStep->getSExtValue();
   return 0;
 }
 
-Value *InductionDescriptor::transform(IRBuilder<> &B, Value *Index) const {
+ConstantInt *InductionDescriptor::getConstIntStepValue() const {
+  if (isa<SCEVConstant>(Step))
+    return dyn_cast<ConstantInt>(cast<SCEVConstant>(Step)->getValue());
+  return nullptr;
+}
+
+Value *InductionDescriptor::transform(IRBuilder<> &B, Value *Index,
+                                      ScalarEvolution *SE,
+                                      const DataLayout& DL) const {
+
+  SCEVExpander Exp(*SE, DL, "induction");
   switch (IK) {
-  case IK_IntInduction:
+  case IK_IntInduction: {
     assert(Index->getType() == StartValue->getType() &&
            "Index type does not match StartValue type");
-    if (StepValue->isMinusOne())
+
+    // FIXME: Theoretically, we can call getAddExpr() of ScalarEvolution
+    // and calculate (Start + Index * Step) for all cases, without
+    // special handling for "isOne" and "isMinusOne".
+    // But in the real life the result code getting worse. We mix SCEV
+    // expressions and ADD/SUB operations and receive redundant
+    // intermediate values being calculated in different ways and
+    // Instcombine is unable to reduce them all.
+
+    if (getConstIntStepValue() &&
+        getConstIntStepValue()->isMinusOne())
       return B.CreateSub(StartValue, Index);
-    if (!StepValue->isOne())
-      Index = B.CreateMul(Index, StepValue);
-    return B.CreateAdd(StartValue, Index);
-
-  case IK_PtrInduction:
-    assert(Index->getType() == StepValue->getType() &&
+    if (getConstIntStepValue() &&
+        getConstIntStepValue()->isOne())
+      return B.CreateAdd(StartValue, Index);
+    const SCEV *S = SE->getAddExpr(SE->getSCEV(StartValue),
+                                   SE->getMulExpr(Step, SE->getSCEV(Index)));
+    return Exp.expandCodeFor(S, StartValue->getType(), &*B.GetInsertPoint());
+  }
+  case IK_PtrInduction: {
+    assert(Index->getType() == Step->getType() &&
            "Index type does not match StepValue type");
-    if (StepValue->isMinusOne())
-      Index = B.CreateNeg(Index);
-    else if (!StepValue->isOne())
-      Index = B.CreateMul(Index, StepValue);
+    assert(isa<SCEVConstant>(Step) &&
+           "Expected constant step for pointer induction");
+    const SCEV *S = SE->getMulExpr(SE->getSCEV(Index), Step);
+    Index = Exp.expandCodeFor(S, Index->getType(), &*B.GetInsertPoint());
     return B.CreateGEP(nullptr, StartValue, Index);
-
+  }
   case IK_NoInduction:
     return nullptr;
   }
@@ -746,17 +779,22 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi,
     Phi->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());
   const SCEV *Step = AR->getStepRecurrence(*SE);
   // Calculate the pointer stride and check if it is consecutive.
-  const SCEVConstant *C = dyn_cast<SCEVConstant>(Step);
-  if (!C)
+  // The stride may be a constant or a loop invariant integer value.
+  const SCEVConstant *ConstStep = dyn_cast<SCEVConstant>(Step);
+  if (!ConstStep && !SE->isLoopInvariant(Step, AR->getLoop()))
     return false;
 
-  ConstantInt *CV = C->getValue();
   if (PhiTy->isIntegerTy()) {
-    D = InductionDescriptor(StartValue, IK_IntInduction, CV);
+    D = InductionDescriptor(StartValue, IK_IntInduction, Step);
     return true;
   }
 
   assert(PhiTy->isPointerTy() && "The PHI must be a pointer");
+  // Pointer induction should be a constant.
+  if (!ConstStep)
+    return false;
+
+  ConstantInt *CV = ConstStep->getValue();
   Type *PointerElementType = PhiTy->getPointerElementType();
   // The pointer stride cannot be determined if the pointer element type is not
   // sized.
@@ -771,8 +809,8 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi,
   int64_t CVSize = CV->getSExtValue();
   if (CVSize % Size)
     return false;
-  auto *StepValue = ConstantInt::getSigned(CV->getType(), CVSize / Size);
-
+  auto *StepValue = SE->getConstant(CV->getType(), CVSize / Size,
+                                    true /* signed */);
   D = InductionDescriptor(StartValue, IK_PtrInduction, StepValue);
   return true;
 }

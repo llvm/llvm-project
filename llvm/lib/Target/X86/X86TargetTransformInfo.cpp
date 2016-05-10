@@ -857,13 +857,17 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  static const CostTblEntry SSE2CostTbl[] = {
+    { ISD::SETCC,   MVT::v2i64,   8 },
+    { ISD::SETCC,   MVT::v4i32,   1 },
+    { ISD::SETCC,   MVT::v8i16,   1 },
+    { ISD::SETCC,   MVT::v16i8,   1 },
+  };
+
   static const CostTblEntry SSE42CostTbl[] = {
     { ISD::SETCC,   MVT::v2f64,   1 },
     { ISD::SETCC,   MVT::v4f32,   1 },
     { ISD::SETCC,   MVT::v2i64,   1 },
-    { ISD::SETCC,   MVT::v4i32,   1 },
-    { ISD::SETCC,   MVT::v8i16,   1 },
-    { ISD::SETCC,   MVT::v16i8,   1 },
   };
 
   static const CostTblEntry AVX1CostTbl[] = {
@@ -904,6 +908,10 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
+  if (ST->hasSSE2())
+    if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
       return LT.first * Entry->Cost;
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy);

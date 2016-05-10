@@ -453,6 +453,13 @@ def COP2 : RegisterClass<"Mips", [i32], 32, (sequence "COP2%u", 0, 31)>,
 def COP3 : RegisterClass<"Mips", [i32], 32, (sequence "COP3%u", 0, 31)>,
            Unallocatable;
 
+// Stack pointer and global pointer classes for instructions that are limited
+// to a single register such as lwgp/lwsp in microMIPS.
+def SP32 : RegisterClass<"Mips", [i32], 32, (add SP)>, Unallocatable;
+def SP64 : RegisterClass<"Mips", [i64], 64, (add SP_64)>, Unallocatable;
+def GP32 : RegisterClass<"Mips", [i32], 32, (add GP)>, Unallocatable;
+def GP64 : RegisterClass<"Mips", [i64], 64, (add GP_64)>, Unallocatable;
+
 // Octeon multiplier and product registers
 def OCTEON_MPL : RegisterClass<"Mips", [i64], 64, (add MPL0, MPL1, MPL2)>,
                  Unallocatable;

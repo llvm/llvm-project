@@ -350,7 +350,7 @@ void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
   // replaced to be the maximum of all computed scales plus 1. This would
   // appropriately describe the loop as having a large scale, without skewing
   // the final frequency computation.
-  const Scaled64 InifiniteLoopScale(1, 12);
+  const Scaled64 InfiniteLoopScale(1, 12);
 
   // LoopScale == 1 / ExitMass
   // ExitMass == HeadMass - BackedgeMass
@@ -363,7 +363,7 @@ void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
   // its exit mass will be zero. In this case, use an arbitrary scale for the
   // loop scale.
   Loop.Scale =
-      ExitMass.isEmpty() ? InifiniteLoopScale : ExitMass.toScaled().inverse();
+      ExitMass.isEmpty() ? InfiniteLoopScale : ExitMass.toScaled().inverse();
 
   DEBUG(dbgs() << " - exit-mass = " << ExitMass << " (" << BlockMass::getFull()
                << " - " << TotalBackedgeMass << ")\n"

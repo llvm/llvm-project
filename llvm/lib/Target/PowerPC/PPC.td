@@ -47,6 +47,7 @@ def DirectivePwr6: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR6", "">;
 def DirectivePwr6x: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR6X", "">;
 def DirectivePwr7: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR7", "">;
 def DirectivePwr8: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR8", "">;
+def DirectivePwr9: SubtargetFeature<"", "DarwinDirective", "PPC::DIR_PWR9", "">;
 
 def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
                                         "Enable 64-bit instructions">;
@@ -200,6 +201,8 @@ def ProcessorFeatures {
       !listconcat(Power7FeatureList, Power8SpecificFeatures);
   list<SubtargetFeature> Power9SpecificFeatures =
       [FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0];
+  list<SubtargetFeature> Power9FeatureList =
+      !listconcat(Power8FeatureList, Power9SpecificFeatures);
 }
 
 // Note: Future features to add when support is extended to more
@@ -398,6 +401,8 @@ def : ProcessorModel<"pwr6x", G5Model,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.Power7FeatureList>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.Power8FeatureList>;
+// FIXME: Same as P8 until the POWER9 scheduling info is available
+def : ProcessorModel<"pwr9", P8Model, ProcessorFeatures.Power9FeatureList>;
 def : Processor<"ppc", G3Itineraries, [Directive32, FeatureMFTB]>;
 def : ProcessorModel<"ppc64", G5Model,
                   [Directive64, FeatureAltivec,

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i386-linux-gnu %s -o - | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s
+; RUN: llc -mtriple=i386-linux-gnu %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK32
+; RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sahf %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK64
 
 ; TODO: Reenable verify-machineinstrs once the if (!AXDead) // FIXME in
 ; X86InstrInfo::copyPhysReg() is resolved.
@@ -142,14 +142,21 @@ f:
 ; CHECK:       cmpxchg
 ; CHECK:       seto %al
 ; CHECK-NEXT:  lahf
-; Save result of the first cmpxchg into D.
-; CHECK-NEXT:  mov{{[lq]}} %[[AX:[er]ax]], %[[D:[re]d[xi]]]
+; Save result of the first cmpxchg into a temporary.
+; For 32-bit ISA, EDX, EAX are used by the results.
+; EAX, EBX, ECX, and EDX are used to set the arguments.
+; That leaves us EDI and ESI.
+; CHECK32-NEXT:  movl %[[AX:eax]], %[[TMP:e[ds]i]]
+; For 64-bit ISA, RAX is used for both the result and argument.
+; This leaves us plenty of choices for the temporary. For now,
+; this is rdx, but any register could do.
+; CHECK64-NEXT:  mov{{[lq]}} %[[AX:[er]ax]], %[[TMP:rdx]]
 ; CHECK:       cmpxchg
 ; CHECK-NEXT:  sete %al
 ; Save result of the second cmpxchg onto the stack.
 ; CHECK-NEXT:  push{{[lq]}} %[[AX]]
 ; Restore result of the first cmpxchg from D, put it back in EFLAGS.
-; CHECK-NEXT:  mov{{[lq]}} %[[D]], %[[AX]]
+; CHECK-NEXT:  mov{{[lq]}} %[[TMP]], %[[AX]]
 ; CHECK-NEXT:  addb $127, %al
 ; CHECK-NEXT:  sahf
 ; Restore result of the second cmpxchg from the stack.

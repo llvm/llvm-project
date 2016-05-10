@@ -205,7 +205,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   if (UseMI->readsWritesVirtualRegister(LI->reg, &Ops).second)
     return false;
 
-  MachineInstr *FoldMI = TII.foldMemoryOperand(UseMI, Ops, DefMI);
+  MachineInstr *FoldMI = TII.foldMemoryOperand(UseMI, Ops, DefMI, &LIS);
   if (!FoldMI)
     return false;
   DEBUG(dbgs() << "                folded: " << *FoldMI);

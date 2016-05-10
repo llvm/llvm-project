@@ -51,6 +51,7 @@ enum DiagnosticKind {
   DK_StackSize,
   DK_Linker,
   DK_DebugMetadataVersion,
+  DK_DebugMetadataInvalid,
   DK_SampleProfile,
   DK_OptimizationRemark,
   DK_OptimizationRemarkMissed,
@@ -213,6 +214,29 @@ public:
     return DI->getKind() == DK_DebugMetadataVersion;
   }
 };
+
+/// Diagnostic information for stripping invalid debug metadata.
+class DiagnosticInfoIgnoringInvalidDebugMetadata : public DiagnosticInfo {
+private:
+  /// The module that is concerned by this debug metadata version diagnostic.
+  const Module &M;
+
+public:
+  /// \p The module that is concerned by this debug metadata version diagnostic.
+  DiagnosticInfoIgnoringInvalidDebugMetadata(
+      const Module &M, DiagnosticSeverity Severity = DS_Warning)
+      : DiagnosticInfo(DK_DebugMetadataVersion, Severity), M(M) {}
+
+  const Module &getModule() const { return M; }
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_DebugMetadataInvalid;
+  }
+};
+
 
 /// Diagnostic information for the sample profiler.
 class DiagnosticInfoSampleProfile : public DiagnosticInfo {

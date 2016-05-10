@@ -535,6 +535,9 @@ private:
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
+
+  const char *LowerXConstraint(EVT ConstraintVT) const override;
+
   void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;

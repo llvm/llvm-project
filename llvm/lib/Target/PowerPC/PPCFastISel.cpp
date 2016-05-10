@@ -16,6 +16,7 @@
 #include "PPC.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPCCallingConv.h"
+#include "PPCCCState.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"

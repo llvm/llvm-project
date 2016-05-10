@@ -1043,6 +1043,59 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   return true;
 }
 
+// Returns true iff the 2 intrinsics have the same operands, limiting the
+// comparison to the first NumOperands.
+static bool haveSameOperands(const IntrinsicInst &I, const IntrinsicInst &E,
+                             unsigned NumOperands) {
+  assert(I.getNumArgOperands() >= NumOperands && "Not enough operands");
+  assert(E.getNumArgOperands() >= NumOperands && "Not enough operands");
+  for (unsigned i = 0; i < NumOperands; i++)
+    if (I.getArgOperand(i) != E.getArgOperand(i))
+      return false;
+  return true;
+}
+
+// Remove trivially empty start/end intrinsic ranges, i.e. a start
+// immediately followed by an end (ignoring debuginfo or other
+// start/end intrinsics in between). As this handles only the most trivial
+// cases, tracking the nesting level is not needed:
+//
+//   call @llvm.foo.start(i1 0) ; &I
+//   call @llvm.foo.start(i1 0)
+//   call @llvm.foo.end(i1 0) ; This one will not be skipped: it will be removed
+//   call @llvm.foo.end(i1 0)
+static bool removeTriviallyEmptyRange(IntrinsicInst &I, unsigned StartID,
+                                      unsigned EndID, InstCombiner &IC) {
+  assert(I.getIntrinsicID() == StartID &&
+         "Start intrinsic does not have expected ID");
+  BasicBlock::iterator BI(I), BE(I.getParent()->end());
+  for (++BI; BI != BE; ++BI) {
+    if (auto *E = dyn_cast<IntrinsicInst>(BI)) {
+      if (isa<DbgInfoIntrinsic>(E) || E->getIntrinsicID() == StartID)
+        continue;
+      if (E->getIntrinsicID() == EndID &&
+          haveSameOperands(I, *E, E->getNumArgOperands())) {
+        IC.eraseInstFromFunction(*E);
+        IC.eraseInstFromFunction(I);
+        return true;
+      }
+    }
+    break;
+  }
+
+  return false;
+}
+
+Instruction *InstCombiner::visitVAStartInst(VAStartInst &I) {
+  removeTriviallyEmptyRange(I, Intrinsic::vastart, Intrinsic::vaend, *this);
+  return nullptr;
+}
+
+Instruction *InstCombiner::visitVACopyInst(VACopyInst &I) {
+  removeTriviallyEmptyRange(I, Intrinsic::vacopy, Intrinsic::vaend, *this);
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallSite to do the heavy
 /// lifting.
@@ -2061,29 +2114,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(CI);
     break;
   }
-  case Intrinsic::lifetime_start: {
-    // Remove trivially empty lifetime_start/end ranges, i.e. a start
-    // immediately followed by an end (ignoring debuginfo or other
-    // lifetime markers in between).
-    BasicBlock::iterator BI = II->getIterator(), BE = II->getParent()->end();
-    for (++BI; BI != BE; ++BI) {
-      if (IntrinsicInst *LTE = dyn_cast<IntrinsicInst>(BI)) {
-        if (isa<DbgInfoIntrinsic>(LTE) ||
-            LTE->getIntrinsicID() == Intrinsic::lifetime_start)
-          continue;
-        if (LTE->getIntrinsicID() == Intrinsic::lifetime_end) {
-          if (II->getOperand(0) == LTE->getOperand(0) &&
-              II->getOperand(1) == LTE->getOperand(1)) {
-            eraseInstFromFunction(*LTE);
-            return eraseInstFromFunction(*II);
-          }
-          continue;
-        }
-      }
-      break;
-    }
+  case Intrinsic::lifetime_start:
+    if (removeTriviallyEmptyRange(*II, Intrinsic::lifetime_start,
+                                  Intrinsic::lifetime_end, *this))
+      return nullptr;
     break;
-  }
   case Intrinsic::assume: {
     Value *IIOperand = II->getArgOperand(0);
     // Remove an assume if it is immediately followed by an identical assume.

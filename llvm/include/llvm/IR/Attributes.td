@@ -190,6 +190,7 @@ class CompatRule<string F> {
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeThreadAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
+def : CompatRule<"isEqual<SafeStackAttr>">;
 
 class MergeRule<string F> {
   // The name of the function called to merge the attributes of the caller and

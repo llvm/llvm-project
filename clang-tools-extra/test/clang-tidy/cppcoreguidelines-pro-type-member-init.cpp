@@ -357,3 +357,13 @@ class PositiveSelfInitialization : NegativeAggregateType
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these bases: NegativeAggregateType
   // CHECK-FIXES: PositiveSelfInitialization() : NegativeAggregateType(), PositiveSelfInitialization() {}
 };
+
+class PositiveIndirectMember {
+  struct {
+    int *A;
+    // CHECK-FIXES: int *A{};
+  };
+
+  PositiveIndirectMember() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A
+};

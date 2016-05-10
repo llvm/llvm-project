@@ -662,7 +662,7 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
 /// The \p Assume parameter indicates if we are allowed to make additional
 /// run-time assumptions.
-int isStridedPtr(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
+int getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
                  const ValueToValueMap &StridesMap = ValueToValueMap(),
                  bool Assume = false);
 

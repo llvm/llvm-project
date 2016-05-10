@@ -32,6 +32,7 @@ def IIC_fpu_sqrtd : InstrItinClass;
 def IIC_fpu_abs : InstrItinClass;
 def IIC_fpu_movs : InstrItinClass;
 def IIC_fpu_negs : InstrItinClass;
+def IIC_smac_umac : InstrItinClass;
 def IIC_fpu_stod : InstrItinClass;
 
 def LEONIU : FuncUnit; // integer unit
@@ -79,6 +80,7 @@ def LEON3Itineraries : ProcessorItineraries<
   InstrItinData<IIC_iu_smul, [InstrStage<1, [LEONIU]>], [1, 1]>,
   InstrItinData<IIC_iu_umul, [InstrStage<1, [LEONIU]>], [4, 1]>,
   InstrItinData<IIC_iu_div, [InstrStage<1, [LEONIU]>], [35, 1]>,
+  InstrItinData<IIC_smac_umac, [InstrStage<1, [LEONIU]>], [2, 1]>,
   InstrItinData<IIC_ticc, [InstrStage<1, [LEONIU, LEONFPU]>], [5, 1]>,
   InstrItinData<IIC_ldstub, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
   InstrItinData<IIC_fpu_muls, [InstrStage<1, [LEONFPU]>], [4, 1]>,
@@ -106,6 +108,7 @@ def LEON4Itineraries : ProcessorItineraries<
   InstrItinData<IIC_iu_smul, [InstrStage<1, [LEONIU]>], [1, 1]>,
   InstrItinData<IIC_iu_umul, [InstrStage<1, [LEONIU]>], [4, 1]>,
   InstrItinData<IIC_iu_div, [InstrStage<1, [LEONIU]>], [35, 1]>,
+  InstrItinData<IIC_smac_umac, [InstrStage<1, [LEONIU]>], [2, 1]>,
   InstrItinData<IIC_ticc, [InstrStage<1, [LEONIU, LEONFPU]>], [5, 1]>,
   InstrItinData<IIC_ldstub, [InstrStage<1, [LEONIU, LEONFPU]>], [3, 1]>,
   InstrItinData<IIC_fpu_muls, [InstrStage<1, [LEONFPU]>], [4, 1]>,

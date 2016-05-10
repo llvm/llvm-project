@@ -22,13 +22,16 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyLowerBrUnless.cpp
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
+  WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
   WebAssemblyPEI.cpp
+  WebAssemblyPrepareForLiveIntervals.cpp
   WebAssemblyRegisterInfo.cpp
   WebAssemblyRegColoring.cpp
   WebAssemblyRegNumbering.cpp
   WebAssemblyRegStackify.cpp
+  WebAssemblyReplacePhysRegs.cpp
   WebAssemblySelectionDAGInfo.cpp
   WebAssemblySetP2AlignOperands.cpp
   WebAssemblyStoreResults.cpp

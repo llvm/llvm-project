@@ -576,7 +576,9 @@ computeNewArchiveMembers(ArchiveOperation Operation,
 }
 
 static void
-performWriteOperation(ArchiveOperation Operation, object::Archive *OldArchive,
+performWriteOperation(ArchiveOperation Operation,
+                      object::Archive *OldArchive,
+                      std::unique_ptr<MemoryBuffer> OldArchiveBuf,
                       std::vector<NewArchiveIterator> *NewMembersP) {
   object::Archive::Kind Kind;
   switch (FormatOpt) {
@@ -599,14 +601,16 @@ performWriteOperation(ArchiveOperation Operation, object::Archive *OldArchive,
   }
   if (NewMembersP) {
     std::pair<StringRef, std::error_code> Result = writeArchive(
-        ArchiveName, *NewMembersP, Symtab, Kind, Deterministic, Thin);
+        ArchiveName, *NewMembersP, Symtab, Kind, Deterministic, Thin,
+        std::move(OldArchiveBuf));
     failIfError(Result.second, Result.first);
     return;
   }
   std::vector<NewArchiveIterator> NewMembers =
       computeNewArchiveMembers(Operation, OldArchive);
   auto Result =
-      writeArchive(ArchiveName, NewMembers, Symtab, Kind, Deterministic, Thin);
+      writeArchive(ArchiveName, NewMembers, Symtab, Kind, Deterministic, Thin,
+      std::move(OldArchiveBuf));
   failIfError(Result.second, Result.first);
 }
 
@@ -620,11 +624,12 @@ static void createSymbolTable(object::Archive *OldArchive) {
   if (OldArchive->hasSymbolTable())
     return;
 
-  performWriteOperation(CreateSymTab, OldArchive, nullptr);
+  performWriteOperation(CreateSymTab, OldArchive, nullptr, nullptr);
 }
 
 static void performOperation(ArchiveOperation Operation,
                              object::Archive *OldArchive,
+                             std::unique_ptr<MemoryBuffer> OldArchiveBuf,
                              std::vector<NewArchiveIterator> *NewMembers) {
   switch (Operation) {
   case Print:
@@ -637,7 +642,8 @@ static void performOperation(ArchiveOperation Operation,
   case Move:
   case QuickAppend:
   case ReplaceOrInsert:
-    performWriteOperation(Operation, OldArchive, NewMembers);
+    performWriteOperation(Operation, OldArchive, std::move(OldArchiveBuf),
+                          NewMembers);
     return;
   case CreateSymTab:
     createSymbolTable(OldArchive);
@@ -659,7 +665,7 @@ static int performOperation(ArchiveOperation Operation,
     object::Archive Archive(Buf.get()->getMemBufferRef(), EC);
     failIfError(EC,
                 "error loading '" + ArchiveName + "': " + EC.message() + "!");
-    performOperation(Operation, &Archive, NewMembers);
+    performOperation(Operation, &Archive, std::move(Buf.get()), NewMembers);
     return 0;
   }
 
@@ -674,7 +680,7 @@ static int performOperation(ArchiveOperation Operation,
     }
   }
 
-  performOperation(Operation, nullptr, NewMembers);
+  performOperation(Operation, nullptr, nullptr, NewMembers);
   return 0;
 }
 

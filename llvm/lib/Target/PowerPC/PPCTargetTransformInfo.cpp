@@ -267,8 +267,9 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
 
   // For P7 and P8, floating-point instructions have a 6-cycle latency and
   // there are two execution units, so unroll by 12x for latency hiding.
-  if (Directive == PPC::DIR_PWR7 ||
-      Directive == PPC::DIR_PWR8)
+  // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
+  if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
+      Directive == PPC::DIR_PWR9)
     return 12;
 
   // For most things, modern systems have two execution units (and

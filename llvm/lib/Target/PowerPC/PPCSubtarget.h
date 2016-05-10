@@ -56,6 +56,7 @@ namespace PPC {
     DIR_PWR6X,
     DIR_PWR7,
     DIR_PWR8,
+    DIR_PWR9,
     DIR_64
   };
 }

@@ -15,6 +15,7 @@
 #include "SystemZInstrBuilder.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
@@ -846,31 +847,42 @@ SystemZInstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr *MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex) const {
+    MachineBasicBlock::iterator InsertPt, int FrameIndex,
+    LiveIntervals *LIS) const {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   const MachineFrameInfo *MFI = MF.getFrameInfo();
   unsigned Size = MFI->getObjectSize(FrameIndex);
   unsigned Opcode = MI->getOpcode();
 
-// XXX This is an introduction of a CC def and is illegal! Reactivate
-// with a check of liveness of CC reg.
-#if 0
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
-    if ((Opcode == SystemZ::LA || Opcode == SystemZ::LAY) &&
+    if (LIS != nullptr &&
+        (Opcode == SystemZ::LA || Opcode == SystemZ::LAY) &&
         isInt<8>(MI->getOperand(2).getImm()) &&
         !MI->getOperand(3).getReg()) {
-      // LA(Y) %reg, CONST(%reg) -> AGSI %mem, CONST
-      MachineInstr *BuiltMI =
-        BuildMI(*InsertPt->getParent(), InsertPt, MI->getDebugLoc(),
-                     get(SystemZ::AGSI))
+
+      // Check CC liveness, since new instruction introduces a dead
+      // def of CC.
+      MCRegUnitIterator CCUnit(SystemZ::CC, TRI);
+      LiveRange &CCLiveRange = LIS->getRegUnit(*CCUnit);
+      ++CCUnit;
+      assert (!CCUnit.isValid() && "CC only has one reg unit.");
+      SlotIndex MISlot =
+        LIS->getSlotIndexes()->getInstructionIndex(*MI).getRegSlot();
+      if (!CCLiveRange.liveAt(MISlot)) {
+        // LA(Y) %reg, CONST(%reg) -> AGSI %mem, CONST
+        MachineInstr *BuiltMI =
+          BuildMI(*InsertPt->getParent(), InsertPt, MI->getDebugLoc(),
+                  get(SystemZ::AGSI))
           .addFrameIndex(FrameIndex)
           .addImm(0)
           .addImm(MI->getOperand(2).getImm());
-      BuiltMI->findRegisterDefOperand(SystemZ::CC)->setIsDead(true);
-      return BuiltMI;
+        BuiltMI->findRegisterDefOperand(SystemZ::CC)->setIsDead(true);
+        CCLiveRange.createDeadDef(MISlot, LIS->getVNInfoAllocator());
+        return BuiltMI;
+      }
     }
     return nullptr;
   }
-#endif
 
   // All other cases require a single operand.
   if (Ops.size() != 1)
@@ -992,7 +1004,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr *MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr *LoadMI) const {
+    MachineBasicBlock::iterator InsertPt, MachineInstr *LoadMI,
+    LiveIntervals *LIS) const {
   return nullptr;
 }
 

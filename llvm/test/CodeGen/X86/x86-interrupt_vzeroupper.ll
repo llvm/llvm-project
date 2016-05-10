@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+avx < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Checks that interrupt handler code does not call "vzeroupper" instruction

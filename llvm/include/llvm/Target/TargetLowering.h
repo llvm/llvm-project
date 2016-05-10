@@ -3018,6 +3018,11 @@ public:
   /// Lower TLS global address SDNode for target independent emulated TLS model.
   virtual SDValue LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
                                           SelectionDAG &DAG) const;
+
+private:
+  SDValue simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
+                               ISD::CondCode Cond, DAGCombinerInfo &DCI,
+                               SDLoc DL) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

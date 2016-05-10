@@ -1777,8 +1777,8 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     PHINode *&OrigPhiRef = ExprToIVMap[SE.getSCEV(Phi)];
     if (!OrigPhiRef) {
       OrigPhiRef = Phi;
-      if (Phi->getType()->isIntegerTy() && TTI
-          && TTI->isTruncateFree(Phi->getType(), Phis.back()->getType())) {
+      if (Phi->getType()->isIntegerTy() && TTI &&
+          TTI->isTruncateFree(Phi->getType(), Phis.back()->getType())) {
         // This phi can be freely truncated to the narrowest phi type. Map the
         // truncated expression to it so it will be reused for narrow types.
         const SCEV *TruncExpr =
@@ -1802,11 +1802,11 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       // If this phi has the same width but is more canonical, replace the
       // original with it. As part of the "more canonical" determination,
       // respect a prior decision to use an IV chain.
-      if (OrigPhiRef->getType() == Phi->getType()
-          && !(ChainedPhis.count(Phi)
-               || isExpandedAddRecExprPHI(OrigPhiRef, OrigInc, L))
-          && (ChainedPhis.count(Phi)
-              || isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
+      if (OrigPhiRef->getType() == Phi->getType() &&
+          !(ChainedPhis.count(Phi) ||
+            isExpandedAddRecExprPHI(OrigPhiRef, OrigInc, L)) &&
+          (ChainedPhis.count(Phi) ||
+           isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
         std::swap(OrigPhiRef, Phi);
         std::swap(OrigInc, IsomorphicInc);
       }
@@ -1818,14 +1818,13 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       // cycles that had postinc uses.
       const SCEV *TruncExpr = SE.getTruncateOrNoop(SE.getSCEV(OrigInc),
                                                    IsomorphicInc->getType());
-      if (OrigInc != IsomorphicInc
-          && TruncExpr == SE.getSCEV(IsomorphicInc)
-          && SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc)
-          && ((isa<PHINode>(OrigInc) && isa<PHINode>(IsomorphicInc))
-              || hoistIVInc(OrigInc, IsomorphicInc))) {
-        DEBUG_WITH_TYPE(DebugType, dbgs()
-                        << "INDVARS: Eliminated congruent iv.inc: "
-                        << *IsomorphicInc << '\n');
+      if (OrigInc != IsomorphicInc && TruncExpr == SE.getSCEV(IsomorphicInc) &&
+          SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
+          ((isa<PHINode>(OrigInc) && isa<PHINode>(IsomorphicInc)) ||
+           hoistIVInc(OrigInc, IsomorphicInc))) {
+        DEBUG_WITH_TYPE(DebugType,
+                        dbgs() << "INDVARS: Eliminated congruent iv.inc: "
+                               << *IsomorphicInc << '\n');
         Value *NewInc = OrigInc;
         if (OrigInc->getType() != IsomorphicInc->getType()) {
           Instruction *IP = nullptr;
@@ -1843,8 +1842,8 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
         DeadInsts.emplace_back(IsomorphicInc);
       }
     }
-    DEBUG_WITH_TYPE(DebugType, dbgs()
-                    << "INDVARS: Eliminated congruent iv: " << *Phi << '\n');
+    DEBUG_WITH_TYPE(DebugType, dbgs() << "INDVARS: Eliminated congruent iv: "
+                                      << *Phi << '\n');
     ++NumElim;
     Value *NewIV = OrigPhiRef;
     if (OrigPhiRef->getType() != Phi->getType()) {

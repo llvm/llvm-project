@@ -51,51 +51,6 @@ WebAssemblyRegisterInfo::getReservedRegs(const MachineFunction & /*MF*/) const {
   return Reserved;
 }
 
-static bool isStackifiedVReg(const WebAssemblyFunctionInfo *WFI,
-                             const MachineOperand& Op) {
-  if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
-    return TargetRegisterInfo::isVirtualRegister(Reg) &&
-        WFI->isVRegStackified(Reg);
-  }
-  return false;
-}
-
-static bool canStackifyOperand(const MachineInstr& Inst) {
-  unsigned Op = Inst.getOpcode();
-  return Op != TargetOpcode::PHI &&
-      Op != TargetOpcode::INLINEASM &&
-      Op != TargetOpcode::DBG_VALUE;
-}
-
-// Determine if the FI sequence can be stackified, and if so, where the code can
-// be inserted. If stackification is possible, returns true and ajusts II to
-// point to the insertion point.
-bool findInsertPt(const WebAssemblyFunctionInfo *WFI, MachineBasicBlock &MBB,
-                  unsigned OperandNum, MachineBasicBlock::iterator &II) {
-  if (!canStackifyOperand(*II)) return false;
-
-  MachineBasicBlock::iterator InsertPt(II);
-  int StackCount = 0;
-  // Operands are popped in reverse order, so any operands after FIOperand
-  // impose a constraint
-  for (unsigned i = OperandNum; i < II->getNumOperands(); i++) {
-    if (isStackifiedVReg(WFI, II->getOperand(i))) ++StackCount;
-  }
-  // Walk backwards, tracking stack depth. When it reaches 0 we have reached the
-  // top of the subtree.
-  while (StackCount) {
-    if (InsertPt == MBB.begin()) return false;
-    --InsertPt;
-    for (const auto &def : InsertPt->defs())
-      if (isStackifiedVReg(WFI, def)) --StackCount;
-    for (const auto &use : InsertPt->explicit_uses())
-      if (isStackifiedVReg(WFI, use)) ++StackCount;
-  }
-  II = InsertPt;
-  return true;
-}
-
 void WebAssemblyRegisterInfo::eliminateFrameIndex(
     MachineBasicBlock::iterator II, int SPAdj, unsigned FIOperandNum,
     RegScavenger * /*RS*/) const {
@@ -104,56 +59,67 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
 
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   const MachineFrameInfo &MFI = *MF.getFrameInfo();
   int64_t FrameOffset = MFI.getStackSize() + MFI.getObjectOffset(FrameIndex);
 
+  // If this is the address operand of a load or store, make it relative to SP
+  // and fold the frame offset directly in.
   if (MI.mayLoadOrStore() && FIOperandNum == WebAssembly::MemOpAddressOperandNo) {
-    // If this is the address operand of a load or store, make it relative to SP
-    // and fold the frame offset directly in.
     assert(FrameOffset >= 0 && MI.getOperand(1).getImm() >= 0);
     int64_t Offset = MI.getOperand(1).getImm() + FrameOffset;
 
-    if (static_cast<uint64_t>(Offset) > std::numeric_limits<uint32_t>::max()) {
-      // If this happens the program is invalid, but better to error here than
-      // generate broken code.
-      report_fatal_error("Memory offset field overflow");
+    if (static_cast<uint64_t>(Offset) <= std::numeric_limits<uint32_t>::max()) {
+      MI.getOperand(FIOperandNum - 1).setImm(Offset);
+      MI.getOperand(FIOperandNum)
+          .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
+      return;
     }
-    MI.getOperand(FIOperandNum - 1).setImm(Offset);
-    MI.getOperand(FIOperandNum)
-        .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
-  } else {
-    // Otherwise calculate the address
-    auto &MRI = MF.getRegInfo();
-    const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-
-    unsigned FIRegOperand = WebAssembly::SP32;
-    if (FrameOffset) {
-      // Create i32.add SP, offset and make it the operand. We want to stackify
-      // this sequence, but we need to preserve the LIFO expr stack ordering
-      // (i.e. we can't insert our code in between MI and any operands it
-      // pops before FIOperand).
-      auto *WFI = MF.getInfo<WebAssemblyFunctionInfo>();
-      bool CanStackifyFI = findInsertPt(WFI, MBB, FIOperandNum, II);
-
-      unsigned OffsetOp = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-      BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::CONST_I32),
-              OffsetOp)
-          .addImm(FrameOffset);
-      if (CanStackifyFI) {
-        WFI->stackifyVReg(OffsetOp);
-        FIRegOperand = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-        WFI->stackifyVReg(FIRegOperand);
-      } else {
-        FIRegOperand = OffsetOp;
-      }
-      BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::ADD_I32),
-              FIRegOperand)
-          .addReg(WebAssembly::SP32)
-          .addReg(OffsetOp);
-    }
-    MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*IsDef=*/false);
   }
+
+  // If this is an address being added to a constant, fold the frame offset
+  // into the constant.
+  if (MI.getOpcode() == WebAssembly::ADD_I32) {
+    MachineOperand &OtherMO = MI.getOperand(3 - FIOperandNum);
+    if (OtherMO.isReg()) {
+      unsigned OtherMOReg = OtherMO.getReg();
+      if (TargetRegisterInfo::isVirtualRegister(OtherMOReg)) {
+        MachineInstr *Def = MF.getRegInfo().getUniqueVRegDef(OtherMOReg);
+        // TODO: For now we just opportunistically do this in the case where
+        // the CONST_I32 happens to have exactly one def and one use. We
+        // should generalize this to optimize in more cases.
+        if (Def && Def->getOpcode() == WebAssembly::CONST_I32 &&
+            MRI.hasOneNonDBGUse(Def->getOperand(0).getReg())) {
+          MachineOperand &ImmMO = Def->getOperand(1);
+          ImmMO.setImm(ImmMO.getImm() + uint32_t(FrameOffset));
+          MI.getOperand(FIOperandNum)
+              .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
+          return;
+        }
+      }
+    }
+  }
+
+  // Otherwise create an i32.add SP, offset and make it the operand.
+  const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+
+  unsigned FIRegOperand = WebAssembly::SP32;
+  if (FrameOffset) {
+    // Create i32.add SP, offset and make it the operand.
+    const TargetRegisterClass *PtrRC =
+        MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
+    unsigned OffsetOp = MRI.createVirtualRegister(PtrRC);
+    BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::CONST_I32),
+            OffsetOp)
+        .addImm(FrameOffset);
+    FIRegOperand = MRI.createVirtualRegister(PtrRC);
+    BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::ADD_I32),
+            FIRegOperand)
+        .addReg(WebAssembly::SP32)
+        .addReg(OffsetOp);
+  }
+  MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*IsDef=*/false);
 }
 
 unsigned

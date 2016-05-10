@@ -8,38 +8,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::pdb;
 
-ByteStream::ByteStream() : Owned(false) {}
+ByteStream::ByteStream() {}
 
-ByteStream::ByteStream(MutableArrayRef<uint8_t> Bytes) : Owned(false) {
-  initialize(Bytes);
-}
+ByteStream::ByteStream(MutableArrayRef<uint8_t> Bytes) { initialize(Bytes); }
 
-ByteStream::ByteStream(uint32_t Length) : Owned(false) { initialize(Length); }
+ByteStream::ByteStream(uint32_t Length) { initialize(Length); }
 
 ByteStream::~ByteStream() { reset(); }
 
 void ByteStream::reset() {
-  if (Owned)
-    delete[] Data.data();
-  Owned = false;
+  Ownership.reset();
   Data = MutableArrayRef<uint8_t>();
 }
 
 void ByteStream::initialize(MutableArrayRef<uint8_t> Bytes) {
   reset();
   Data = Bytes;
-  Owned = false;
 }
 
 void ByteStream::initialize(uint32_t Length) {
   reset();
-  Data = MutableArrayRef<uint8_t>(new uint8_t[Length], Length);
-  Owned = true;
+  if (Length > 0)
+    Data = MutableArrayRef<uint8_t>(new uint8_t[Length], Length);
+  Ownership.reset(Data.data());
 }
 
 Error ByteStream::initialize(StreamReader &Reader, uint32_t Length) {

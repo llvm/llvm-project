@@ -299,8 +299,8 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // If Op0 is nonnull, then Node can be implemented using:
   //
   //   (Opcode (Opcode Op0 UpperVal) LowerVal)
-  SDNode *splitLargeImmediate(unsigned Opcode, SDNode *Node, SDValue Op0,
-                              uint64_t UpperVal, uint64_t LowerVal);
+  void splitLargeImmediate(unsigned Opcode, SDNode *Node, SDValue Op0,
+                           uint64_t UpperVal, uint64_t LowerVal);
 
   // Try to use gather instruction Opcode to implement vector insertion N.
   SDNode *tryGather(SDNode *N, unsigned Opcode);
@@ -1033,20 +1033,40 @@ SDNode *SystemZDAGToDAGISel::tryRxSBG(SDNode *N, unsigned Opcode) {
   return convertTo(DL, VT, SDValue(N, 0)).getNode();
 }
 
-SDNode *SystemZDAGToDAGISel::splitLargeImmediate(unsigned Opcode, SDNode *Node,
-                                                 SDValue Op0, uint64_t UpperVal,
-                                                 uint64_t LowerVal) {
+void SystemZDAGToDAGISel::splitLargeImmediate(unsigned Opcode, SDNode *Node,
+                                              SDValue Op0, uint64_t UpperVal,
+                                              uint64_t LowerVal) {
   EVT VT = Node->getValueType(0);
   SDLoc DL(Node);
   SDValue Upper = CurDAG->getConstant(UpperVal, DL, VT);
   if (Op0.getNode())
     Upper = CurDAG->getNode(Opcode, DL, VT, Op0, Upper);
-  // TODO: This is pretty strange. Not sure what it's trying to do...
-  Upper = SDValue(SelectImpl(Upper.getNode()), 0);
+
+  {
+    // When we haven't passed in Op0, Upper will be a constant. In order to
+    // prevent folding back to the large immediate in `Or = getNode(...)` we run
+    // SelectCode first and end up with an opaque machine node. This means that
+    // we need to use a handle to keep track of Upper in case it gets CSE'd by
+    // SelectCode.
+    //
+    // Note that in the case where Op0 is passed in we could just call
+    // SelectCode(Upper) later, along with the SelectCode(Or), and avoid needing
+    // the handle at all, but it's fine to do it here.
+    //
+    // TODO: This is a pretty hacky way to do this. Can we do something that
+    // doesn't require a two paragraph explanation?
+    HandleSDNode Handle(Upper);
+    SelectCode(Upper.getNode());
+    Upper = Handle.getValue();
+  }
 
   SDValue Lower = CurDAG->getConstant(LowerVal, DL, VT);
   SDValue Or = CurDAG->getNode(Opcode, DL, VT, Upper, Lower);
-  return Or.getNode();
+
+  ReplaceUses(Node, Or.getNode());
+  CurDAG->RemoveDeadNode(Node);
+
+  SelectCode(Or.getNode());
 }
 
 SDNode *SystemZDAGToDAGISel::tryGather(SDNode *N, unsigned Opcode) {
@@ -1201,9 +1221,11 @@ SDNode *SystemZDAGToDAGISel::SelectImpl(SDNode *Node) {
     if (!ResNode && Node->getValueType(0) == MVT::i64)
       if (auto *Op1 = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
         uint64_t Val = Op1->getZExtValue();
-        if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val))
-          Node = splitLargeImmediate(Opcode, Node, Node->getOperand(0),
-                                     Val - uint32_t(Val), uint32_t(Val));
+        if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val)) {
+          splitLargeImmediate(Opcode, Node, Node->getOperand(0),
+                              Val - uint32_t(Val), uint32_t(Val));
+          return nullptr;
+        }
       }
     break;
 
@@ -1224,9 +1246,11 @@ SDNode *SystemZDAGToDAGISel::SelectImpl(SDNode *Node) {
     // LLIHF and LGFI, split it into two 32-bit pieces.
     if (Node->getValueType(0) == MVT::i64) {
       uint64_t Val = cast<ConstantSDNode>(Node)->getZExtValue();
-      if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val) && !isInt<32>(Val))
-        Node = splitLargeImmediate(ISD::OR, Node, SDValue(),
-                                   Val - uint32_t(Val), uint32_t(Val));
+      if (!SystemZ::isImmLF(Val) && !SystemZ::isImmHF(Val) && !isInt<32>(Val)) {
+        splitLargeImmediate(ISD::OR, Node, SDValue(), Val - uint32_t(Val),
+                            uint32_t(Val));
+        return nullptr;
+      }
     }
     break;
 

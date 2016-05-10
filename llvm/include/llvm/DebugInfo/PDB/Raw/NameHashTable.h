@@ -10,17 +10,18 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLE_H
 #define LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLE_H
 
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
 #include "llvm/Support/Error.h"
-
-#include <stdint.h>
-#include <utility>
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace pdb {
+
 class StreamReader;
+
 class NameHashTable {
 public:
   NameHashTable();
@@ -43,7 +44,8 @@ private:
   uint32_t HashVersion;
   uint32_t NameCount;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_RAW_NAMEHASHTABLE_H

@@ -143,7 +143,13 @@ void DivergencePropagator::exploreSyncDependency(TerminatorInst *TI) {
   if (!DT.isReachableFromEntry(ThisBB))
     return;
 
-  BasicBlock *IPostDom = PDT.getNode(ThisBB)->getIDom()->getBlock();
+  // If the function has no exit blocks or doesn't reach any exit blocks, the
+  // post dominator may be null.
+  DomTreeNode *ThisNode = PDT.getNode(ThisBB);
+  if (!ThisNode)
+    return;
+
+  BasicBlock *IPostDom = ThisNode->getIDom()->getBlock();
   if (IPostDom == nullptr)
     return;
 

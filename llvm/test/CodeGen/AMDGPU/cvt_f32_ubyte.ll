@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}load_i8_to_f32:
@@ -170,9 +170,9 @@ define void @i8_zext_inreg_hi1_to_f32(float addrspace(1)* noalias %out, i32 addr
   ret void
 }
 
-
 ; We don't get these ones because of the zext, but instcombine removes
 ; them so it shouldn't really matter.
+; SI-LABEL: {{^}}i8_zext_i32_to_f32:
 define void @i8_zext_i32_to_f32(float addrspace(1)* noalias %out, i8 addrspace(1)* noalias %in) nounwind {
   %load = load i8, i8 addrspace(1)* %in, align 1
   %ext = zext i8 %load to i32
@@ -181,10 +181,66 @@ define void @i8_zext_i32_to_f32(float addrspace(1)* noalias %out, i8 addrspace(1
   ret void
 }
 
+; SI-LABEL: {{^}}v4i8_zext_v4i32_to_v4f32:
 define void @v4i8_zext_v4i32_to_v4f32(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %in) nounwind {
   %load = load <4 x i8>, <4 x i8> addrspace(1)* %in, align 1
   %ext = zext <4 x i8> %load to <4 x i32>
   %cvt = uitofp <4 x i32> %ext to <4 x float>
   store <4 x float> %cvt, <4 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
+; SI-LABEL: {{^}}extract_byte0_to_f32:
+; SI: buffer_load_dword [[VAL:v[0-9]+]]
+; SI-NOT: [[VAL]]
+; SI: v_cvt_f32_ubyte0_e32 [[CONV:v[0-9]+]], [[VAL]]
+; SI: buffer_store_dword [[CONV]]
+define void @extract_byte0_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+  %val = load i32, i32 addrspace(1)* %in
+  %and = and i32 %val, 255
+  %cvt = uitofp i32 %and to float
+  store float %cvt, float addrspace(1)* %out
+  ret void
+}
+
+; SI-LABEL: {{^}}extract_byte1_to_f32:
+; SI: buffer_load_dword [[VAL:v[0-9]+]]
+; SI-NOT: [[VAL]]
+; SI: v_cvt_f32_ubyte1_e32 [[CONV:v[0-9]+]], [[VAL]]
+; SI: buffer_store_dword [[CONV]]
+define void @extract_byte1_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+  %val = load i32, i32 addrspace(1)* %in
+  %srl = lshr i32 %val, 8
+  %and = and i32 %srl, 255
+  %cvt = uitofp i32 %and to float
+  store float %cvt, float addrspace(1)* %out
+  ret void
+}
+
+; SI-LABEL: {{^}}extract_byte2_to_f32:
+; SI: buffer_load_dword [[VAL:v[0-9]+]]
+; SI-NOT: [[VAL]]
+; SI: v_cvt_f32_ubyte2_e32 [[CONV:v[0-9]+]], [[VAL]]
+; SI: buffer_store_dword [[CONV]]
+define void @extract_byte2_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+  %val = load i32, i32 addrspace(1)* %in
+  %srl = lshr i32 %val, 16
+  %and = and i32 %srl, 255
+  %cvt = uitofp i32 %and to float
+  store float %cvt, float addrspace(1)* %out
+  ret void
+}
+
+; SI-LABEL: {{^}}extract_byte3_to_f32:
+; SI: buffer_load_dword [[VAL:v[0-9]+]]
+; SI-NOT: [[VAL]]
+; SI: v_cvt_f32_ubyte3_e32 [[CONV:v[0-9]+]], [[VAL]]
+; SI: buffer_store_dword [[CONV]]
+define void @extract_byte3_to_f32(float addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in) nounwind {
+  %val = load i32, i32 addrspace(1)* %in
+  %srl = lshr i32 %val, 24
+  %and = and i32 %srl, 255
+  %cvt = uitofp i32 %and to float
+  store float %cvt, float addrspace(1)* %out
   ret void
 }

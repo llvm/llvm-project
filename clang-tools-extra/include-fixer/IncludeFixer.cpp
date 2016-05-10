@@ -109,21 +109,36 @@ public:
                                     DeclContext *MemberContext,
                                     bool EnteringContext,
                                     const ObjCObjectPointerType *OPT) override {
-    // We don't want to look up inner parts of nested name specifies. Looking up
-    // the header where a namespace is defined in is rarely useful.
-    if (LookupKind == clang::Sema::LookupNestedNameSpecifierName) {
-      DEBUG(llvm::dbgs() << "ignoring " << Typo.getAsString() << "\n");
-      return clang::TypoCorrection();
-    }
-
     /// If we have a scope specification, use that to get more precise results.
     std::string QueryString;
     if (SS && SS->getRange().isValid()) {
       auto Range = CharSourceRange::getTokenRange(SS->getRange().getBegin(),
                                                   Typo.getLoc());
-      QueryString =
+      StringRef Source =
           Lexer::getSourceText(Range, getCompilerInstance().getSourceManager(),
                                getCompilerInstance().getLangOpts());
+
+      // Skip forward until we find a character that's neither identifier nor
+      // colon. This is a bit of a hack around the fact that we will only get a
+      // single callback for a long nested name if a part of the beginning is
+      // unknown. For example:
+      //
+      // llvm::sys::path::parent_path(...)
+      // ^~~~  ^~~
+      //    known
+      //            ^~~~
+      //      unknown, last callback
+      //                  ^~~~~~~~~~~
+      //                  no callback
+      //
+      // With the extension we get the full nested name specifier including
+      // parent_path.
+      // FIXME: Don't rely on source text.
+      const char *End = Source.end();
+      while (isIdentifierBody(*End) || *End == ':')
+        ++End;
+
+      QueryString = std::string(Source.begin(), End);
     } else {
       QueryString = Typo.getAsString();
     }
@@ -178,26 +193,27 @@ public:
   bool Rewrite(clang::SourceManager &SourceManager,
                clang::HeaderSearch &HeaderSearch,
                std::vector<clang::tooling::Replacement> &replacements) {
-    for (const auto &ToTry : Untried) {
-      std::string ToAdd = "#include " +
-                          minimizeInclude(ToTry, SourceManager, HeaderSearch) +
-                          "\n";
-      DEBUG(llvm::dbgs() << "Adding " << ToAdd << "\n");
+    if (Untried.empty())
+      return false;
 
-      if (FirstIncludeOffset == -1U)
-        FirstIncludeOffset = 0;
+    const auto &ToTry = UntriedList.front();
+    std::string ToAdd = "#include " +
+                        minimizeInclude(ToTry, SourceManager, HeaderSearch) +
+                        "\n";
+    DEBUG(llvm::dbgs() << "Adding " << ToAdd << "\n");
 
-      replacements.push_back(clang::tooling::Replacement(
-          SourceManager, FileBegin.getLocWithOffset(FirstIncludeOffset), 0,
-          ToAdd));
+    if (FirstIncludeOffset == -1U)
+      FirstIncludeOffset = 0;
 
-      // We currently abort after the first inserted include. The more
-      // includes we have the less safe this becomes due to error recovery
-      // changing the results.
-      // FIXME: Handle multiple includes at once.
-      return true;
-    }
-    return false;
+    replacements.push_back(clang::tooling::Replacement(
+        SourceManager, FileBegin.getLocWithOffset(FirstIncludeOffset), 0,
+        ToAdd));
+
+    // We currently abort after the first inserted include. The more
+    // includes we have the less safe this becomes due to error recovery
+    // changing the results.
+    // FIXME: Handle multiple includes at once.
+    return true;
   }
 
   /// Gets the location at the very top of the file.
@@ -209,7 +225,8 @@ public:
   /// Add an include to the set of includes to try.
   /// \param include_path The include path to try.
   void TryInclude(const std::string &query, const std::string &include_path) {
-    Untried.insert(include_path);
+    if (Untried.insert(include_path).second)
+      UntriedList.push_back(include_path);
   }
 
 private:
@@ -255,8 +272,11 @@ private:
   /// be used as the insertion point for new include directives.
   unsigned FirstIncludeOffset = -1U;
 
-  /// Includes we have left to try.
+  /// Includes we have left to try. A set to unique them and a list to keep
+  /// track of the order. We prefer includes that were discovered early to avoid
+  /// getting caught in results from error recovery.
   std::set<std::string> Untried;
+  std::vector<std::string> UntriedList;
 
   /// Whether we should use the smallest possible include path.
   bool MinimizeIncludePaths = true;

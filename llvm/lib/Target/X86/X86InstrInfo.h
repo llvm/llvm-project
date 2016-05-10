@@ -370,7 +370,8 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr *MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex) const override;
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr) const override;
 
   /// foldMemoryOperand - Same as the previous version except it allows folding
   /// of any load and store from / to any address, not just from a specific
@@ -378,7 +379,8 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr *MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      MachineInstr *LoadMI) const override;
+                                      MachineInstr *LoadMI,
+                                      LiveIntervals *LIS = nullptr) const override;
 
   /// unfoldMemoryOperand - Separate a single instruction which folded a load or
   /// a store or a load and a store into two or more instruction. If this is

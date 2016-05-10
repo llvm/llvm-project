@@ -14,18 +14,27 @@
 #ifndef LLVM_OBJECT_ELFOBJECTFILE_H
 #define LLVM_OBJECT_ELFOBJECTFILE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFTypes.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
-#include <cctype>
-#include <utility>
+#include <cassert>
+#include <cstdint>
+#include <system_error>
 
 namespace llvm {
 namespace object {
@@ -50,8 +59,8 @@ protected:
   virtual uint64_t getSectionFlags(DataRefImpl Sec) const = 0;
 
   virtual ErrorOr<int64_t> getRelocationAddend(DataRefImpl Rel) const = 0;
-public:
 
+public:
   typedef iterator_range<elf_symbol_iterator> elf_symbol_iterator_range;
   virtual elf_symbol_iterator_range getDynamicSymbolIterators() const = 0;
 
@@ -279,11 +288,9 @@ protected:
     // A symbol is exported if its binding is either GLOBAL or WEAK, and its
     // visibility is either DEFAULT or PROTECTED. All other symbols are not
     // exported.
-    if ((Binding == ELF::STB_GLOBAL || Binding == ELF::STB_WEAK) &&
-        (Visibility == ELF::STV_DEFAULT || Visibility == ELF::STV_PROTECTED))
-      return true;
-
-    return false;
+    return ((Binding == ELF::STB_GLOBAL || Binding == ELF::STB_WEAK) &&
+            (Visibility == ELF::STV_DEFAULT ||
+             Visibility == ELF::STV_PROTECTED));
   }
 
   // This flag is used for classof, to distinguish ELFObjectFile from
@@ -940,7 +947,7 @@ template <class ELFT> bool ELFObjectFile<ELFT>::isRelocatableObject() const {
   return EF.getHeader()->e_type == ELF::ET_REL;
 }
 
-}
-}
+} // end namespace object
+} // end namespace llvm
 
-#endif
+#endif // LLVM_OBJECT_ELFOBJECTFILE_H

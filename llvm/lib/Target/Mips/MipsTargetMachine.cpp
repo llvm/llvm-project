@@ -26,6 +26,7 @@
 #include "MipsTargetObjectFile.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"

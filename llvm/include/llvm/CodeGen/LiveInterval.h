@@ -712,10 +712,6 @@ namespace llvm {
     /// are not considered valid and should only exist temporarily).
     void removeEmptySubRanges();
 
-    /// Construct main live range by merging the SubRanges of @p LI.
-    void constructMainRangeFromSubranges(const SlotIndexes &Indexes,
-                                         VNInfo::Allocator &VNIAllocator);
-
     /// getSize - Returns the sum of sizes of all the LiveRange's.
     ///
     unsigned getSize() const;

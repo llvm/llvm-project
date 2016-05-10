@@ -41,6 +41,7 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
+#include "llvm/DebugInfo/PDB/Raw/ModStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
@@ -79,6 +80,7 @@ cl::list<std::string> InputFilenames(cl::Positional,
 cl::OptionCategory TypeCategory("Symbol Type Options");
 cl::OptionCategory FilterCategory("Filtering Options");
 cl::OptionCategory OtherOptions("Other Options");
+cl::OptionCategory NativeOtions("Native Options");
 
 cl::opt<bool> Compilands("compilands", cl::desc("Display compilands"),
                          cl::cat(TypeCategory));
@@ -100,22 +102,25 @@ cl::opt<uint64_t> LoadAddress(
     cl::cat(OtherOptions));
 
 cl::opt<bool> DumpHeaders("dump-headers", cl::desc("dump PDB headers"),
-                          cl::cat(OtherOptions));
+                          cl::cat(NativeOtions));
 cl::opt<bool> DumpStreamSizes("dump-stream-sizes",
                               cl::desc("dump PDB stream sizes"),
-                              cl::cat(OtherOptions));
+                              cl::cat(NativeOtions));
 cl::opt<bool> DumpStreamBlocks("dump-stream-blocks",
                                cl::desc("dump PDB stream blocks"),
-                               cl::cat(OtherOptions));
+                               cl::cat(NativeOtions));
 cl::opt<bool> DumpTpiRecords("dump-tpi-records",
                              cl::desc("dump CodeView type records"),
-                             cl::cat(OtherOptions));
+                             cl::cat(NativeOtions));
 cl::opt<bool>
     DumpTpiRecordBytes("dump-tpi-record-bytes",
                        cl::desc("dump CodeView type record raw bytes"),
-                       cl::cat(OtherOptions));
+                       cl::cat(NativeOtions));
 cl::opt<std::string> DumpStreamData("dump-stream", cl::desc("dump stream data"),
-                                    cl::cat(OtherOptions));
+                                    cl::cat(NativeOtions));
+cl::opt<bool> DumpModuleSyms("dump-module-syms",
+                             cl::desc("dump module symbols"),
+                             cl::cat(NativeOtions));
 
 cl::list<std::string>
     ExcludeTypes("exclude-types",
@@ -329,11 +334,26 @@ static Error dumpDbiStream(ScopedPrinter &P, PDBFile &File) {
     P.printNumber("Symbol Byte Size", Modi.Info.getSymbolDebugInfoByteSize());
     P.printNumber("Type Server Index", Modi.Info.getTypeServerIndex());
     P.printBoolean("Has EC Info", Modi.Info.hasECInfo());
-    std::string FileListName =
-        to_string(Modi.SourceFiles.size()) + " Contributing Source Files";
-    ListScope LL(P, FileListName);
-    for (auto File : Modi.SourceFiles)
-      P.printString(File);
+    {
+      std::string FileListName =
+          to_string(Modi.SourceFiles.size()) + " Contributing Source Files";
+      ListScope LL(P, FileListName);
+      for (auto File : Modi.SourceFiles)
+        P.printString(File);
+    }
+    if (opts::DumpModuleSyms) {
+      ListScope SS(P, "Symbols");
+      ModStream ModS(File, Modi.Info);
+      if (auto EC = ModS.reload())
+        return EC;
+
+      for (auto &S : ModS.symbols()) {
+        DictScope SD(P);
+        P.printHex("Kind", static_cast<uint32_t>(S.Type));
+        P.printNumber("Length", static_cast<uint32_t>(S.Length));
+        P.printBinaryBlock("Bytes", S.Data);
+      }
+    }
   }
   return Error::success();
 }
@@ -363,7 +383,7 @@ static Error dumpTpiStream(ScopedPrinter &P, PDBFile &File) {
         TD.dump(Type);
 
       if (opts::DumpTpiRecordBytes)
-        P.printBinaryBlock("Bytes", Type.LeafData);
+        P.printBinaryBlock("Bytes", Type.Data);
     }
   }
   return Error::success();

@@ -4559,9 +4559,11 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   if (SI->extractProfMetadata(TrueWeight, FalseWeight)) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);
     uint64_t Sum = TrueWeight + FalseWeight;
-    auto Probability = BranchProbability::getBranchProbability(Max, Sum);
-    if (Probability > TLI->getPredictableBranchThreshold())
-      return true;
+    if (Sum != 0) {
+      auto Probability = BranchProbability::getBranchProbability(Max, Sum);
+      if (Probability > TLI->getPredictableBranchThreshold())
+        return true;
+    }
   }
 
   CmpInst *Cmp = dyn_cast<CmpInst>(SI->getCondition());
