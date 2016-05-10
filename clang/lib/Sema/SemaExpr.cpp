@@ -7732,16 +7732,14 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
       return RHSType;
   }
 
-  // If we're allowing lax vector conversions, only the total (data) size needs
-  // to be the same. If one of the types is scalar, the result is always the
-  // vector type. Don't allow this if the scalar operand is an lvalue.
-  QualType VecType = LHSVecType ? LHSType : RHSType;
-  QualType ScalarType = LHSVecType ? RHSType : LHSType;
-  ExprResult *ScalarExpr = LHSVecType ? &RHS : &LHS;
-  if (isLaxVectorConversion(ScalarType, VecType) &&
-      !ScalarExpr->get()->isLValue()) {
-    *ScalarExpr = ImpCastExprToType(ScalarExpr->get(), VecType, CK_BitCast);
-    return VecType;
+  // If we're allowing lax vector conversions, only the total (data) size
+  // needs to be the same.
+  // FIXME: Should we really be allowing this?
+  // FIXME: We really just pick the LHS type arbitrarily?
+  if (isLaxVectorConversion(RHSType, LHSType)) {
+    QualType resultType = LHSType;
+    RHS = ImpCastExprToType(RHS.get(), resultType, CK_BitCast);
+    return resultType;
   }
 
   // Okay, the expression is invalid.
@@ -9285,7 +9283,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
   
   // Return a signed type for the vector.
-  return GetSignedVectorType(vType);
+  return GetSignedVectorType(LHSType);
 }
 
 QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
