@@ -345,6 +345,16 @@ struct Processor {
   DDPhysicalThread *dd_pt;
 };
 
+#ifndef SANITIZER_GO
+// ScopedGlobalProcessor temporary setups a global processor for the current
+// thread, if it does not have one. Intended for interceptors that can run
+// at the very thread end, when we already destroyed the thread processor.
+struct ScopedGlobalProcessor {
+  ScopedGlobalProcessor();
+  ~ScopedGlobalProcessor();
+};
+#endif
+
 // This struct is stored in TLS.
 struct ThreadState {
   FastState fast_state;

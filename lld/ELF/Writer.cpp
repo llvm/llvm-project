@@ -129,7 +129,8 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   GotSection<ELFT> Got;
   InterpSection<ELFT> Interp;
   PltSection<ELFT> Plt;
-  RelocationSection<ELFT> RelaDyn(Config->Rela ? ".rela.dyn" : ".rel.dyn");
+  RelocationSection<ELFT> RelaDyn(Config->Rela ? ".rela.dyn" : ".rel.dyn",
+                                  Config->ZCombreloc);
   StringTableSection<ELFT> DynStrTab(".dynstr", true);
   StringTableSection<ELFT> ShStrTab(".shstrtab", false);
   SymbolTableSection<ELFT> DynSymTab(*Symtab, DynStrTab);
@@ -165,7 +166,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   if (Target->UseLazyBinding) {
     StringRef S = Config->Rela ? ".rela.plt" : ".rel.plt";
     GotPlt.reset(new GotPltSection<ELFT>);
-    RelaPlt.reset(new RelocationSection<ELFT>(S));
+    RelaPlt.reset(new RelocationSection<ELFT>(S, false /*Sort*/));
   }
   if (!Config->StripAll) {
     StrTab.reset(new StringTableSection<ELFT>(".strtab", false));

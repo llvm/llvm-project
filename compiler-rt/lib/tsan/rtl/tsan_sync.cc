@@ -152,18 +152,21 @@ void MetaMap::ResetRange(Processor *proc, uptr p, uptr sz) {
   const uptr p0 = p;
   const uptr sz0 = sz;
   // Probe start of the range.
-  while (sz > 0) {
+  for (uptr checked = 0; sz > 0; checked += kPageSize) {
     bool has_something = FreeRange(proc, p, kPageSize);
     p += kPageSize;
     sz -= kPageSize;
-    if (!has_something)
+    if (!has_something && checked > (128 << 10))
       break;
   }
   // Probe end of the range.
-  while (sz > 0) {
-    bool has_something = FreeRange(proc, p - kPageSize, kPageSize);
+  for (uptr checked = 0; sz > 0; checked += kPageSize) {
+    bool has_something = FreeRange(proc, p + sz - kPageSize, kPageSize);
     sz -= kPageSize;
-    if (!has_something)
+    // Stacks grow down, so sync object are most likely at the end of the region
+    // (if it is a stack). The very end of the stack is TLS and tsan increases
+    // TLS by at least 256K, so check at least 512K.
+    if (!has_something && checked > (512 << 10))
       break;
   }
   // Finally, page out the whole range (including the parts that we've just

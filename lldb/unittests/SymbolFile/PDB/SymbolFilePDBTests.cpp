@@ -134,28 +134,29 @@ protected:
     }
 
     int
-    GetGlobalConstantInteger(const llvm::IPDBSession &session, llvm::StringRef var) const
+    GetGlobalConstantInteger(const llvm::pdb::IPDBSession &session, llvm::StringRef var) const
     {
         auto global = session.getGlobalScope();
-        auto results = global->findChildren(llvm::PDB_SymType::Data, var, llvm::PDB_NameSearchFlags::NS_Default);
+        auto results =
+            global->findChildren(llvm::pdb::PDB_SymType::Data, var, llvm::pdb::PDB_NameSearchFlags::NS_Default);
         uint32_t count = results->getChildCount();
         if (count == 0)
             return -1;
 
         auto item = results->getChildAtIndex(0);
-        auto symbol = llvm::dyn_cast<llvm::PDBSymbolData>(item.get());
+        auto symbol = llvm::dyn_cast<llvm::pdb::PDBSymbolData>(item.get());
         if (!symbol)
             return -1;
-        llvm::Variant value = symbol->getValue();
+        llvm::pdb::Variant value = symbol->getValue();
         switch (value.Type)
         {
-            case llvm::PDB_VariantType::Int16:
+            case llvm::pdb::PDB_VariantType::Int16:
                 return value.Value.Int16;
-            case llvm::PDB_VariantType::Int32:
+            case llvm::pdb::PDB_VariantType::Int32:
                 return value.Value.Int32;
-            case llvm::PDB_VariantType::UInt16:
+            case llvm::pdb::PDB_VariantType::UInt16:
                 return value.Value.UInt16;
-            case llvm::PDB_VariantType::UInt32:
+            case llvm::pdb::PDB_VariantType::UInt32:
                 return value.Value.UInt32;
             default:
                 return 0;
@@ -396,7 +397,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestSimpleClassTypes))
 
     SymbolVendor *plugin = module->GetSymbolVendor();
     SymbolFilePDB *symfile = static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-    const llvm::IPDBSession &session = symfile->GetPDBSession();
+    const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
@@ -417,7 +418,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNestedClassTypes))
 
     SymbolVendor *plugin = module->GetSymbolVendor();
     SymbolFilePDB *symfile = static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-    const llvm::IPDBSession &session = symfile->GetPDBSession();
+    const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
@@ -427,7 +428,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestNestedClassTypes))
     EXPECT_EQ(ConstString("Class::NestedClass"), udt_type->GetName());
     CompilerType compiler_type = udt_type->GetForwardCompilerType();
     EXPECT_TRUE(ClangASTContext::IsClassType(compiler_type.GetOpaqueQualType()));
-    EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_NestedClass"), udt_type->GetByteSize());
+    EXPECT_EQ(uint64_t(GetGlobalConstantInteger(session, "sizeof_NestedClass")), udt_type->GetByteSize());
 }
 
 TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestClassInNamespace))
@@ -438,7 +439,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestClassInNamespace))
 
     SymbolVendor *plugin = module->GetSymbolVendor();
     SymbolFilePDB *symfile = static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-    const llvm::IPDBSession &session = symfile->GetPDBSession();
+    const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;
@@ -459,7 +460,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestEnumTypes))
 
     SymbolVendor *plugin = module->GetSymbolVendor();
     SymbolFilePDB *symfile = static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-    const llvm::IPDBSession &session = symfile->GetPDBSession();
+    const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     const char *EnumsToCheck[] = {"Enum", "ShortEnum"};
@@ -502,7 +503,7 @@ TEST_F(SymbolFilePDBTests, REQUIRES_DIA_SDK(TestTypedefs))
 
     SymbolVendor *plugin = module->GetSymbolVendor();
     SymbolFilePDB *symfile = static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-    const llvm::IPDBSession &session = symfile->GetPDBSession();
+    const llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
     SymbolContext sc;
     llvm::DenseSet<SymbolFile *> searched_files;
     TypeMap results;

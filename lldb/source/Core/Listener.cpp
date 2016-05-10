@@ -56,9 +56,12 @@ Listener::Listener(const char *name) :
 
 Listener::~Listener()
 {
-    Mutex::Locker locker (m_broadcasters_mutex);
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
 
     Clear();
+
+    if (log)
+        log->Printf("%p Listener::%s('%s')", this, __FUNCTION__, m_name.c_str());
 }
 
 void
@@ -87,9 +90,8 @@ Listener::Clear()
             manager_sp->RemoveListener(this);
     }
 
-    if (log != nullptr)
-        log->Printf ("%p Listener::~Listener('%s')",
-                     static_cast<void*>(this), m_name.c_str());
+    if (log)
+        log->Printf("%p Listener::%s('%s')", this, __FUNCTION__, m_name.c_str());
 }
 
 uint32_t

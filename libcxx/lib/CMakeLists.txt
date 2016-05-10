@@ -142,9 +142,15 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
   add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
   target_link_libraries(cxx_experimental cxx)
+
+  set(experimental_flags "${LIBCXX_COMPILE_FLAGS}")
+  check_flag_supported(-std=c++14)
+  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
+    string(REPLACE "-std=c++11" "-std=c++14" experimental_flags "${LIBCXX_COMPILE_FLAGS}")
+  endif()
   set_target_properties(cxx_experimental
     PROPERTIES
-      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+      COMPILE_FLAGS "${experimental_flags}"
       OUTPUT_NAME   "c++experimental"
   )
 endif()

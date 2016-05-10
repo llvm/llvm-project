@@ -35,7 +35,7 @@
 ; CHECK-NEXT:             [b] -> { Stmt_bb7[i0] -> MemRef_x_1__phi[] };
 ; CHECK-NEXT:     Stmt_bb8
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [b] -> { Stmt_bb8[i0] : i0 >= b and 0 <= i0 <= 1023 and 2i0 <= b };
+; CHECK-NEXT:             [b] -> { Stmt_bb8[0] : b = 0 };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [b] -> { Stmt_bb8[i0] -> [0, 0] };
 ; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]

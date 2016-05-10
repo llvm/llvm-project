@@ -33,7 +33,7 @@ cl::opt<DatabaseFormatTy> DatabaseFormat(
     cl::values(clEnumVal(fixed, "Hard-coded mapping"),
                clEnumVal(yaml, "Yaml database created by find-all-symbols"),
                clEnumValEnd),
-    cl::init(fixed), cl::cat(IncludeFixerCategory));
+    cl::init(yaml), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string> Input("input",
                            cl::desc("String to initialize the database"),

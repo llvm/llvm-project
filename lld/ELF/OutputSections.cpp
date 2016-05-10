@@ -301,9 +301,10 @@ template <class ELFT> void PltSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-RelocationSection<ELFT>::RelocationSection(StringRef Name)
+RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
     : OutputSectionBase<ELFT>(Name, Config->Rela ? SHT_RELA : SHT_REL,
-                              SHF_ALLOC) {
+                              SHF_ALLOC),
+      Sort(Sort) {
   this->Header.sh_entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
   this->Header.sh_addralign = sizeof(uintX_t);
 }
@@ -313,7 +314,13 @@ void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
   Relocs.push_back(Reloc);
 }
 
+template <class ELFT, class RelTy>
+static bool compRelocations(const RelTy &A, const RelTy &B) {
+  return A.getSymbol(Config->Mips64EL) < B.getSymbol(Config->Mips64EL);
+}
+
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
+  uint8_t *BufBegin = Buf;
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rela *>(Buf);
     Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
@@ -324,6 +331,16 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     P->r_offset = Rel.OffsetInSec + Rel.OffsetSec->getVA();
     uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
     P->setSymbolAndType(SymIdx, Rel.Type, Config->Mips64EL);
+  }
+
+  if (Sort) {
+    if (Config->Rela)
+      std::stable_sort((Elf_Rela *)BufBegin,
+                       (Elf_Rela *)BufBegin + Relocs.size(),
+                       compRelocations<ELFT, Elf_Rela>);
+    else
+      std::stable_sort((Elf_Rel *)BufBegin, (Elf_Rel *)BufBegin + Relocs.size(),
+                       compRelocations<ELFT, Elf_Rel>);
   }
 }
 

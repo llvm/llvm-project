@@ -740,6 +740,7 @@ TSAN_INTERCEPTOR(int, munmap, void *addr, long_t sz) {
   if (sz != 0) {
     // If sz == 0, munmap will return EINVAL and don't unmap any memory.
     DontNeedShadowFor((uptr)addr, sz);
+    ScopedGlobalProcessor sgp;
     ctx->metamap.ResetRange(thr->proc(), (uptr)addr, (uptr)sz);
   }
   int res = REAL(munmap)(addr, sz);

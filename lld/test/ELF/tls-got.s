@@ -24,8 +24,8 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (4) .rela.dyn {
-// CHECK-NEXT:     [[ADDR]] R_X86_64_TPOFF64 tls1 0x0
 // CHECK-NEXT:     0x120B8 R_X86_64_TPOFF64 tls0 0x0
+// CHECK-NEXT:     [[ADDR]] R_X86_64_TPOFF64 tls1 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

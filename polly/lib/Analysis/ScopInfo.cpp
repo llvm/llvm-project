@@ -892,10 +892,9 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
 }
 
 void MemoryAccess::realignParams() {
-  isl_space *ParamSpace = Statement->getParent()->getParamSpace();
-  InvalidDomain =
-      isl_set_align_params(InvalidDomain, isl_space_copy(ParamSpace));
-  AccessRelation = isl_map_align_params(AccessRelation, ParamSpace);
+  auto *Ctx = Statement->getParent()->getContext();
+  InvalidDomain = isl_set_gist_params(InvalidDomain, isl_set_copy(Ctx));
+  AccessRelation = isl_map_gist_params(AccessRelation, Ctx);
 }
 
 const std::string MemoryAccess::getReductionOperatorStr() const {
@@ -1115,8 +1114,9 @@ void ScopStmt::realignParams() {
   for (MemoryAccess *MA : *this)
     MA->realignParams();
 
-  InvalidDomain = isl_set_align_params(InvalidDomain, Parent.getParamSpace());
-  Domain = isl_set_align_params(Domain, Parent.getParamSpace());
+  auto *Ctx = Parent.getContext();
+  InvalidDomain = isl_set_gist_params(InvalidDomain, isl_set_copy(Ctx));
+  Domain = isl_set_gist_params(Domain, Ctx);
 }
 
 /// @brief Add @p BSet to the set @p User if @p BSet is bounded.
@@ -1238,7 +1238,7 @@ static __isl_give isl_set *buildConditionSet(ICmpInst::Predicate Pred,
 /// This will fill @p ConditionSets with the conditions under which control
 /// will be moved from @p SI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p SI has successors.
-static void
+static bool
 buildConditionSets(ScopStmt &Stmt, SwitchInst *SI, Loop *L,
                    __isl_keep isl_set *Domain,
                    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
@@ -1273,6 +1273,8 @@ buildConditionSets(ScopStmt &Stmt, SwitchInst *SI, Loop *L,
       Domain, isl_set_subtract(isl_set_copy(Domain), ConditionSetUnion));
 
   isl_pw_aff_free(LHS);
+
+  return true;
 }
 
 /// @brief Build the conditions sets for the branch condition @p Condition in
@@ -1283,7 +1285,7 @@ buildConditionSets(ScopStmt &Stmt, SwitchInst *SI, Loop *L,
 /// have as many elements as @p TI has successors. If @p TI is nullptr the
 /// context under which @p Condition is true/false will be returned as the
 /// new elements of @p ConditionSets.
-static void
+static bool
 buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
                    Loop *L, __isl_keep isl_set *Domain,
                    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
@@ -1299,10 +1301,15 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
     auto Opcode = BinOp->getOpcode();
     assert(Opcode == Instruction::And || Opcode == Instruction::Or);
 
-    buildConditionSets(Stmt, BinOp->getOperand(0), TI, L, Domain,
-                       ConditionSets);
-    buildConditionSets(Stmt, BinOp->getOperand(1), TI, L, Domain,
-                       ConditionSets);
+    bool Valid = buildConditionSets(Stmt, BinOp->getOperand(0), TI, L, Domain,
+                                    ConditionSets) &&
+                 buildConditionSets(Stmt, BinOp->getOperand(1), TI, L, Domain,
+                                    ConditionSets);
+    if (!Valid) {
+      while (!ConditionSets.empty())
+        isl_set_free(ConditionSets.pop_back_val());
+      return false;
+    }
 
     isl_set_free(ConditionSets.pop_back_val());
     isl_set *ConsCondPart0 = ConditionSets.pop_back_val();
@@ -1352,13 +1359,14 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
   if (TooComplex) {
     S.invalidate(COMPLEXITY, TI ? TI->getDebugLoc() : DebugLoc());
     isl_set_free(AlternativeCondSet);
-    AlternativeCondSet = isl_set_empty(isl_set_get_space(ConsequenceCondSet));
     isl_set_free(ConsequenceCondSet);
-    ConsequenceCondSet = isl_set_empty(isl_set_get_space(AlternativeCondSet));
+    return false;
   }
 
   ConditionSets.push_back(ConsequenceCondSet);
   ConditionSets.push_back(isl_set_coalesce(AlternativeCondSet));
+
+  return true;
 }
 
 /// @brief Build the conditions sets for the terminator @p TI in the @p Domain.
@@ -1366,7 +1374,7 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
 /// This will fill @p ConditionSets with the conditions under which control
 /// will be moved from @p TI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p TI has successors.
-static void
+static bool
 buildConditionSets(ScopStmt &Stmt, TerminatorInst *TI, Loop *L,
                    __isl_keep isl_set *Domain,
                    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
@@ -1378,7 +1386,7 @@ buildConditionSets(ScopStmt &Stmt, TerminatorInst *TI, Loop *L,
 
   if (TI->getNumSuccessors() == 1) {
     ConditionSets.push_back(isl_set_copy(Domain));
-    return;
+    return true;
   }
 
   Value *Condition = getConditionFromTerminator(TI);
@@ -1657,19 +1665,13 @@ BasicBlock *ScopStmt::getEntryBlock() const {
   return getRegion()->getEntry();
 }
 
-RegionNode *ScopStmt::getRegionNode() const {
-  if (isRegionStmt())
-    return getRegion()->getNode();
-  return getParent()->getRegion().getBBNode(getBasicBlock());
-}
-
 unsigned ScopStmt::getNumParams() const { return Parent.getNumParams(); }
 
 unsigned ScopStmt::getNumIterators() const { return NestLoops.size(); }
 
 const char *ScopStmt::getBaseName() const { return BaseName.c_str(); }
 
-const Loop *ScopStmt::getLoopForDimension(unsigned Dimension) const {
+Loop *ScopStmt::getLoopForDimension(unsigned Dimension) const {
   return NestLoops[Dimension];
 }
 
@@ -1882,13 +1884,15 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
     auto *CI = dyn_cast_or_null<CallInst>(Assumption);
     if (!CI || CI->getNumArgOperands() != 1)
       continue;
-    if (!DT.dominates(CI->getParent(), R->getEntry()))
+
+    bool InR = R->contains(CI);
+    if (!InR && !DT.dominates(CI->getParent(), R->getEntry()))
       continue;
 
     auto *L = LI.getLoopFor(CI->getParent());
     auto *Val = CI->getArgOperand(0);
     ParameterSetTy DetectedParams;
-    if (!isAffineParamConstraint(Val, R, L, *SE, DetectedParams)) {
+    if (!isAffineConstraint(Val, R, L, *SE, DetectedParams)) {
       emitOptimizationRemarkAnalysis(F.getContext(), DEBUG_TYPE, F,
                                      CI->getDebugLoc(),
                                      "Non-affine user assumption ignored.");
@@ -1906,11 +1910,23 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
     }
 
     SmallVector<isl_set *, 2> ConditionSets;
-    buildConditionSets(*Stmts.begin(), Val, nullptr, L, Context, ConditionSets);
-    assert(ConditionSets.size() == 2);
-    isl_set_free(ConditionSets[1]);
+    auto *TI = InR ? CI->getParent()->getTerminator() : nullptr;
+    auto &Stmt = InR ? *getStmtFor(CI->getParent()) : *Stmts.begin();
+    auto *Dom = InR ? getDomainConditions(&Stmt) : isl_set_copy(Context);
+    bool Valid = buildConditionSets(Stmt, Val, TI, L, Dom, ConditionSets);
+    isl_set_free(Dom);
 
-    auto *AssumptionCtx = ConditionSets[0];
+    if (!Valid)
+      continue;
+
+    isl_set *AssumptionCtx = nullptr;
+    if (InR) {
+      AssumptionCtx = isl_set_complement(isl_set_params(ConditionSets[1]));
+      isl_set_free(ConditionSets[0]);
+    } else {
+      AssumptionCtx = isl_set_complement(ConditionSets[1]);
+      AssumptionCtx = isl_set_intersect(AssumptionCtx, ConditionSets[0]);
+    }
 
     // Project out newly introduced parameters as they are not otherwise useful.
     if (!NewParams.empty()) {
@@ -2029,6 +2045,9 @@ void Scop::realignParams() {
 
   // Align the parameters of all data structures to the model.
   Context = isl_set_align_params(Context, Space);
+
+  // As all parameters are known add bounds to them.
+  addParameterBounds();
 
   for (ScopStmt &Stmt : *this)
     Stmt.realignParams();
@@ -2271,12 +2290,13 @@ bool Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
   DomainMap[EntryBB] = S;
 
   if (IsOnlyNonAffineRegion)
-    return true;
+    return !containsErrorBlock(R->getNode(), *R, LI, DT);
 
   if (!buildDomainsWithBranchConstraints(R, SD, DT, LI))
     return false;
 
-  propagateDomainConstraints(R, SD, DT, LI);
+  if (!propagateDomainConstraints(R, SD, DT, LI))
+    return false;
 
   // Error blocks and blocks dominated by them have been assumed to never be
   // executed. Representing them in the Scop does not add any value. In fact,
@@ -2290,7 +2310,8 @@ bool Scop::buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
   // with an empty set. Additionally, we will record for each block under which
   // parameter combination it would be reached via an error block in its
   // InvalidDomain. This information is needed during load hoisting.
-  propagateInvalidStmtDomains(R, SD, DT, LI);
+  if (!propagateInvalidStmtDomains(R, SD, DT, LI))
+    return false;
 
   return true;
 }
@@ -2354,7 +2375,7 @@ static __isl_give isl_set *adjustDomainDimensions(Scop &S,
   return Dom;
 }
 
-void Scop::propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
+bool Scop::propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
                                        DominatorTree &DT, LoopInfo &LI) {
   auto &BoxedLoops = *SD.getBoxedLoops(&getRegion());
 
@@ -2386,8 +2407,10 @@ void Scop::propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
     } else {
       isl_set_free(InvalidDomain);
       InvalidDomain = Domain;
-      auto *EmptyDom = isl_set_empty(isl_set_get_space(InvalidDomain));
-      Domain = EmptyDom;
+      isl_set *DomPar = isl_set_params(isl_set_copy(Domain));
+      recordAssumption(ERRORBLOCK, DomPar, BB->getTerminator()->getDebugLoc(),
+                       AS_RESTRICTION);
+      Domain = nullptr;
     }
 
     if (isl_set_is_empty(InvalidDomain)) {
@@ -2427,11 +2450,13 @@ void Scop::propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
 
       isl_set_free(InvalidDomain);
       invalidate(COMPLEXITY, TI->getDebugLoc());
-      return;
+      return false;
     }
 
     Stmt->setInvalidDomain(InvalidDomain);
   }
+
+  return true;
 }
 
 void Scop::propagateDomainConstraintsToRegionExit(
@@ -2550,8 +2575,9 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
     SmallVector<isl_set *, 8> ConditionSets;
     if (RN->isSubRegion())
       ConditionSets.push_back(isl_set_copy(Domain));
-    else
-      buildConditionSets(*getStmtFor(BB), TI, BBLoop, Domain, ConditionSets);
+    else if (!buildConditionSets(*getStmtFor(BB), TI, BBLoop, Domain,
+                                 ConditionSets))
+      return false;
 
     // Now iterate over the successors and set their initial domain based on
     // their condition set. We skip back edges here and have to be careful when
@@ -2673,7 +2699,7 @@ __isl_give isl_set *Scop::getPredecessorDomainConstraints(BasicBlock *BB,
   return PredDom;
 }
 
-void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
+bool Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
                                       DominatorTree &DT, LoopInfo &LI) {
   // Iterate over the region R and propagate the domain constrains from the
   // predecessors to the current node. In contrast to the
@@ -2692,7 +2718,8 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
     if (RN->isSubRegion()) {
       Region *SubRegion = RN->getNodeAs<Region>();
       if (!SD.isNonAffineSubRegion(SubRegion, &getRegion())) {
-        propagateDomainConstraints(SubRegion, SD, DT, LI);
+        if (!propagateDomainConstraints(SubRegion, SD, DT, LI))
+          return false;
         continue;
       }
     }
@@ -2708,16 +2735,11 @@ void Scop::propagateDomainConstraints(Region *R, ScopDetection &SD,
 
     Loop *BBLoop = getRegionNodeLoop(RN, LI);
     if (BBLoop && BBLoop->getHeader() == BB && getRegion().contains(BBLoop))
-      addLoopBoundsToHeaderDomain(BBLoop, LI);
-
-    // Add assumptions for error blocks.
-    if (containsErrorBlock(RN, getRegion(), LI, DT)) {
-      IsOptimized = true;
-      isl_set *DomPar = isl_set_params(isl_set_copy(Domain));
-      recordAssumption(ERRORBLOCK, DomPar, BB->getTerminator()->getDebugLoc(),
-                       AS_RESTRICTION);
-    }
+      if (!addLoopBoundsToHeaderDomain(BBLoop, LI))
+        return false;
   }
+
+  return true;
 }
 
 /// @brief Create a map from SetSpace -> SetSpace where the dimensions @p Dim
@@ -2740,7 +2762,7 @@ createNextIterationMap(__isl_take isl_space *SetSpace, unsigned Dim) {
   return NextIterationMap;
 }
 
-void Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
+bool Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
   int LoopDepth = getRelativeLoopDepth(L);
   assert(LoopDepth >= 0 && "Loop in region should have at least depth one");
 
@@ -2773,8 +2795,9 @@ void Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
     else {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
-      buildConditionSets(*getStmtFor(LatchBB), TI, L, LatchBBDom,
-                         ConditionSets);
+      if (!buildConditionSets(*getStmtFor(LatchBB), TI, L, LatchBBDom,
+                              ConditionSets))
+        return false;
 
       // Free the non back edge condition set as we do not need it.
       isl_set_free(ConditionSets[1 - idx]);
@@ -2812,12 +2835,13 @@ void Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
   // <nsw> tag.
   if (Affinator.hasNSWAddRecForLoop(L)) {
     isl_set_free(Parts.first);
-    return;
+    return true;
   }
 
   isl_set *UnboundedCtx = isl_set_params(Parts.first);
   recordAssumption(INFINITELOOP, UnboundedCtx,
                    HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION);
+  return true;
 }
 
 void Scop::buildAliasChecks(AliasAnalysis &AA) {
@@ -3084,9 +3108,9 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
 
   addUserAssumptions(AC, DT, LI);
 
-  // Remove empty and ignored statements.
+  // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.
-  simplifySCoP(true, DT, LI);
+  simplifySCoP(false, DT, LI);
   if (Stmts.empty())
     return;
 
@@ -3094,14 +3118,17 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
   for (ScopStmt &Stmt : Stmts)
     Stmt.init(SD);
 
-  buildSchedule(SD, LI);
-
-  if (!hasFeasibleRuntimeContext())
+  // Check early for profitability. Afterwards it cannot change anymore,
+  // only the runtime context could become infeasible.
+  if (!isProfitable()) {
+    invalidate(PROFITABLE, DebugLoc());
     return;
+  }
+
+  buildSchedule(SD, LI);
 
   updateAccessDimensionality();
   realignParams();
-  addParameterBounds();
   addUserContext();
 
   // After the context was fully constructed, thus all our knowledge about
@@ -3114,7 +3141,14 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
 
   hoistInvariantLoads(SD);
   verifyInvariantLoads(SD);
-  simplifySCoP(false, DT, LI);
+  simplifySCoP(true, DT, LI);
+
+  // Check late for a feasible runtime context because profitability did not
+  // change.
+  if (!hasFeasibleRuntimeContext()) {
+    invalidate(PROFITABLE, DebugLoc());
+    return;
+  }
 }
 
 Scop::~Scop() {
@@ -3178,20 +3212,16 @@ void Scop::updateAccessDimensionality() {
       Access->updateDimensionality();
 }
 
-void Scop::simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT,
-                        LoopInfo &LI) {
+void Scop::simplifySCoP(bool AfterHoisting, DominatorTree &DT, LoopInfo &LI) {
   for (auto StmtIt = Stmts.begin(), StmtEnd = Stmts.end(); StmtIt != StmtEnd;) {
     ScopStmt &Stmt = *StmtIt;
-    RegionNode *RN = Stmt.getRegionNode();
 
-    bool RemoveStmt = StmtIt->isEmpty();
+    bool RemoveStmt = Stmt.isEmpty();
     if (!RemoveStmt)
-      RemoveStmt = isl_set_is_empty(DomainMap[Stmt.getEntryBlock()]);
-    if (!RemoveStmt)
-      RemoveStmt = (RemoveIgnoredStmts && isIgnored(RN, DT, LI));
+      RemoveStmt = !DomainMap[Stmt.getEntryBlock()];
 
     // Remove read only statements only after invariant loop hoisting.
-    if (!RemoveStmt && !RemoveIgnoredStmts) {
+    if (!RemoveStmt && AfterHoisting) {
       bool OnlyRead = true;
       for (MemoryAccess *MA : Stmt) {
         if (MA->isRead())
@@ -3204,19 +3234,19 @@ void Scop::simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT,
       RemoveStmt = OnlyRead;
     }
 
-    if (RemoveStmt) {
-      // Remove the statement because it is unnecessary.
-      if (Stmt.isRegionStmt())
-        for (BasicBlock *BB : Stmt.getRegion()->blocks())
-          StmtMap.erase(BB);
-      else
-        StmtMap.erase(Stmt.getBasicBlock());
-
-      StmtIt = Stmts.erase(StmtIt);
+    if (!RemoveStmt) {
+      StmtIt++;
       continue;
     }
 
-    StmtIt++;
+    // Remove the statement because it is unnecessary.
+    if (Stmt.isRegionStmt())
+      for (BasicBlock *BB : Stmt.getRegion()->blocks())
+        StmtMap.erase(BB);
+    else
+      StmtMap.erase(Stmt.getBasicBlock());
+
+    StmtIt = Stmts.erase(StmtIt);
   }
 }
 
@@ -3552,6 +3582,37 @@ __isl_give isl_set *Scop::getAssumedContext() const {
   return isl_set_copy(AssumedContext);
 }
 
+bool Scop::isProfitable() const {
+  if (PollyProcessUnprofitable)
+    return true;
+
+  if (!hasFeasibleRuntimeContext())
+    return false;
+
+  if (isEmpty())
+    return false;
+
+  unsigned OptimizableStmtsOrLoops = 0;
+  for (auto &Stmt : *this) {
+    if (Stmt.getNumIterators() == 0)
+      continue;
+
+    bool ContainsArrayAccs = false;
+    bool ContainsScalarAccs = false;
+    for (auto *MA : Stmt) {
+      if (MA->isRead())
+        continue;
+      ContainsArrayAccs |= MA->isArrayKind();
+      ContainsScalarAccs |= MA->isScalarKind();
+    }
+
+    if (ContainsArrayAccs && !ContainsScalarAccs)
+      OptimizableStmtsOrLoops += Stmt.getNumIterators();
+  }
+
+  return OptimizableStmtsOrLoops > 1;
+}
+
 bool Scop::hasFeasibleRuntimeContext() const {
   auto *PositiveContext = getAssumedContext();
   auto *NegativeContext = getInvalidContext();
@@ -3585,6 +3646,8 @@ static std::string toString(AssumptionKind Kind) {
     return "Signed-unsigned";
   case COMPLEXITY:
     return "Low complexity";
+  case PROFITABLE:
+    return "Profitable";
   case ERRORBLOCK:
     return "No-error";
   case INFINITELOOP:
@@ -3655,6 +3718,13 @@ void Scop::addRecordedAssumptions() {
       continue;
     }
 
+    // If the domain was deleted the assumptions are void.
+    isl_set *Dom = getDomainConditions(AS.BB);
+    if (!Dom) {
+      isl_set_free(AS.Set);
+      continue;
+    }
+
     // If a basic block was given use its domain to simplify the assumption.
     // In case of restrictions we know they only have to hold on the domain,
     // thus we can intersect them with the domain of the block. However, for
@@ -3665,7 +3735,6 @@ void Scop::addRecordedAssumptions() {
     // To avoid the complement we will register A - B as a restricton not an
     // assumption.
     isl_set *S = AS.Set;
-    isl_set *Dom = getDomainConditions(AS.BB);
     if (AS.Sign == AS_RESTRICTION)
       S = isl_set_params(isl_set_intersect(S, Dom));
     else /* (AS.Sign == AS_ASSUMPTION) */
@@ -3797,6 +3866,11 @@ __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
   // handling cdoe to all users of this function.
   auto PWAC = Affinator.getPwAff(E, BB);
   if (PWAC.first) {
+    // TODO: We could use a heuristic and either use:
+    //         SCEVAffinator::takeNonNegativeAssumption
+    //       or
+    //         SCEVAffinator::interpretAsUnsigned
+    //       to deal with unsigned or "NonNegative" SCEVs.
     if (NonNegative)
       Affinator.takeNonNegativeAssumption(PWAC);
     return PWAC;
@@ -3914,29 +3988,6 @@ bool Scop::restrictDomains(__isl_take isl_union_set *Domain) {
 }
 
 ScalarEvolution *Scop::getSE() const { return SE; }
-
-bool Scop::isIgnored(RegionNode *RN, DominatorTree &DT, LoopInfo &LI) {
-  BasicBlock *BB = getRegionNodeBasicBlock(RN);
-  ScopStmt *Stmt = getStmtFor(RN);
-
-  // If there is no stmt, then it already has been removed.
-  if (!Stmt)
-    return true;
-
-  // Check if there are accesses contained.
-  if (Stmt->isEmpty())
-    return true;
-
-  // Check for reachability via non-error blocks.
-  if (!DomainMap.count(BB))
-    return true;
-
-  // Check if error blocks are contained.
-  if (containsErrorBlock(RN, getRegion(), LI, DT))
-    return true;
-
-  return false;
-}
 
 struct MapToDimensionDataTy {
   int N;
@@ -4866,7 +4917,7 @@ bool ScopInfo::runOnRegion(Region *R, RGPassManager &RGM) {
 
   DEBUG(scop->print(dbgs()));
 
-  if (scop->isEmpty() || !scop->hasFeasibleRuntimeContext()) {
+  if (!scop->hasFeasibleRuntimeContext()) {
     Msg = "SCoP ends here but was dismissed.";
     scop.reset();
   } else {

@@ -9,11 +9,9 @@
 
 #include "IncludeFixer.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/ParseAST.h"
-#include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Debug.h"
@@ -215,9 +213,6 @@ public:
     // FIXME: Handle multiple includes at once.
     return true;
   }
-
-  /// Gets the location at the very top of the file.
-  clang::SourceLocation file_begin() const { return FileBegin; }
 
   /// Sets the location at the very top of the file.
   void setFileBegin(clang::SourceLocation Location) { FileBegin = Location; }
