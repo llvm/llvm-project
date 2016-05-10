@@ -2462,6 +2462,20 @@ TEST(MemorySanitizer, VAArgManyTest) {
   vaargsfn_many(1, 2, *x, 3, 4, 5, 6, 7, 8, 9, *y);
 }
 
+static void vaargsfn_manyfix(int g1, int g2, int g3, int g4, int g5, int g6, int g7, int g8, int g9, ...) {
+  va_list vl;
+  va_start(vl, g9);
+  EXPECT_NOT_POISONED(va_arg(vl, int));
+  EXPECT_POISONED(va_arg(vl, int));
+  va_end(vl);
+}
+
+TEST(MemorySanitizer, VAArgManyFixTest) {
+  int* x = GetPoisoned<int>();
+  int* y = GetPoisoned<int>();
+  vaargsfn_manyfix(1, *x, 3, 4, 5, 6, 7, 8, 9, 10, *y);
+}
+
 static void vaargsfn_pass2(va_list vl) {
   EXPECT_NOT_POISONED(va_arg(vl, int));
   EXPECT_NOT_POISONED(va_arg(vl, int));

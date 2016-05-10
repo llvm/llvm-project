@@ -63,6 +63,9 @@ private:
   const Kind FileKind;
 };
 
+// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+std::string getFilename(InputFile *F);
+
 template <typename ELFT> class ELFFileBase : public InputFile {
 public:
   typedef typename ELFT::Shdr Elf_Shdr;

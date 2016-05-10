@@ -15,6 +15,7 @@
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/RedundantSmartptrGetCheck.h"
 #include "AvoidCStyleCastsCheck.h"
+#include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
 #include "GlobalNamesInHeadersCheck.h"
@@ -42,6 +43,8 @@ public:
         "google-build-namespaces");
     CheckFactories.registerCheck<build::UsingNamespaceDirectiveCheck>(
         "google-build-using-namespace");
+    CheckFactories.registerCheck<DefaultArgumentsCheck>(
+        "google-default-arguments");
     CheckFactories.registerCheck<ExplicitConstructorCheck>(
         "google-explicit-constructor");
     CheckFactories.registerCheck<runtime::IntegerTypesCheck>(

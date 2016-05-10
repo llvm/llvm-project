@@ -20,6 +20,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeMap.h"
 
+#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
@@ -119,7 +120,10 @@ SymbolFilePDB::CalculateAbilities()
         std::string exePath = m_obj_file->GetFileSpec().GetPath();
         auto error = loadDataForEXE(PDB_ReaderType::DIA, llvm::StringRef(exePath), m_session_up);
         if (error)
+        {
+            handleAllErrors(std::move(error), [](const GenericError &GE) {});
             return 0;
+        }
     }
     return CompileUnits | LineTables;
 }

@@ -144,7 +144,7 @@ class NamespaceLookupTestCase(TestBase):
         # finds the global ::func().
         self.expect("expr -- func()", startstr = "(int) $0 = 2")
 
-    @expectedFailureAll(oslist=["windows", "linux"], bugnumber="llvm.org/pr25819")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr25819")
     def test_scope_lookup_before_using_with_run_command(self):
         """Test scope lookup before using in lldb."""
         self.build()

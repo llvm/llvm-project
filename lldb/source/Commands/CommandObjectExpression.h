@@ -82,12 +82,11 @@ protected:
     void
     IOHandlerInputComplete(IOHandler &io_handler,
 			   std::string &line) override;
-
-    virtual LineStatus
-    IOHandlerLinesUpdated (IOHandler &io_handler,
-                           StringList &lines,
-                           uint32_t line_idx,
-                           Error &error);
+    
+    bool
+    IOHandlerIsInputComplete (IOHandler &io_handler,
+                              StringList &lines) override;
+    
     bool
     DoExecute(const char *command,
 	      CommandReturnObject &result) override;

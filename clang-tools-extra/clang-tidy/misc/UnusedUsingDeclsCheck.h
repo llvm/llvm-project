@@ -30,6 +30,8 @@ public:
   void onEndOfTranslationUnit() override;
 
 private:
+  void removeFromFoundDecls(const Decl *D);
+
   llvm::DenseMap<const Decl*, const UsingDecl*> FoundDecls;
   llvm::DenseMap<const Decl*, CharSourceRange> FoundRanges;
 };
