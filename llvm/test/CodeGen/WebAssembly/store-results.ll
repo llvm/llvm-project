@@ -61,7 +61,8 @@ for.cond.cleanup4.i:
 }
 
 ; CHECK-LABEL: fi_ret:
-; CHECK: i32.store $discard=,
+; CHECK: i32.store $push0=,
+; CHECK: return $pop0{{$}}
 define hidden i8* @fi_ret(i8** %addr) {
 entry:
   %buf = alloca [27 x i8], align 16

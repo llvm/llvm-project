@@ -13,13 +13,13 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-
-#include <stdint.h>
-#include <utility>
+#include <cstdint>
 
 namespace llvm {
 namespace pdb {
+
 class StreamReader;
+
 class NameMap {
 public:
   NameMap();
@@ -31,7 +31,8 @@ public:
 private:
   StringMap<uint32_t> Mapping;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_RAW_PDBNAMEMAP_H

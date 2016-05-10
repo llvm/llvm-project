@@ -121,6 +121,14 @@ define i1 @udiv_icmp1(i64 %X) nounwind {
   ret i1 %B
 }
 
+; CHECK-LABEL: @udiv_icmp2(
+; CHECK: icmp eq i64 %X, 0
+define i1 @udiv_icmp2(i64 %X) nounwind {
+  %A = udiv exact i64 %X, 5   ; X/5 == 0 --> x == 0
+  %B = icmp eq i64 %A, 0
+  ret i1 %B
+}
+
 ; CHECK-LABEL: @sdiv_icmp1(
 ; CHECK: icmp eq i64 %X, 0
 define i1 @sdiv_icmp1(i64 %X) nounwind {

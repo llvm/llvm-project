@@ -3212,17 +3212,19 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
       continue;
 
     for (auto *CmpU : U->users()) {
-      const BranchInst *BI = dyn_cast<BranchInst>(CmpU);
-      if (!BI)
-        continue;
+      if (const BranchInst *BI = dyn_cast<BranchInst>(CmpU)) {
+        assert(BI->isConditional() && "uses a comparison!");
 
-      assert(BI->isConditional() && "uses a comparison!");
-
-      BasicBlock *NonNullSuccessor =
-          BI->getSuccessor(Pred == ICmpInst::ICMP_EQ ? 1 : 0);
-      BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
-      if (Edge.isSingleEdge() && DT->dominates(Edge, CtxI->getParent()))
+        BasicBlock *NonNullSuccessor =
+            BI->getSuccessor(Pred == ICmpInst::ICMP_EQ ? 1 : 0);
+        BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
+        if (Edge.isSingleEdge() && DT->dominates(Edge, CtxI->getParent()))
+          return true;
+      } else if (Pred == ICmpInst::ICMP_NE &&
+                 match(CmpU, m_Intrinsic<Intrinsic::experimental_guard>()) &&
+                 DT->dominates(cast<Instruction>(CmpU), CtxI)) {
         return true;
+      }
     }
   }
 

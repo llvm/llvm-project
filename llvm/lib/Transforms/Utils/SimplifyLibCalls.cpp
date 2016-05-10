@@ -1598,8 +1598,8 @@ Value *LibCallSimplifier::optimizePrintFString(CallInst *CI, IRBuilder<> &B) {
   if (!CI->use_empty())
     return nullptr;
 
-  // printf("x") -> putchar('x'), even for '%'.
-  if (FormatStr.size() == 1)
+  // printf("x") -> putchar('x'), even for "%" and "%%".
+  if (FormatStr.size() == 1 || FormatStr == "%%")
     return emitPutChar(B.getInt32(FormatStr[0]), B, TLI);
 
   // printf("%s", "a") --> putchar('a')

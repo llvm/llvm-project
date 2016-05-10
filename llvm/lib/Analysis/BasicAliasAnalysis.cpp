@@ -649,9 +649,9 @@ ModRefInfo BasicAAResult::getArgModRefInfo(ImmutableCallSite CS,
   return AAResultBase::getArgModRefInfo(CS, ArgIdx);
 }
 
-static bool isAssumeIntrinsic(ImmutableCallSite CS) {
+static bool isIntrinsicCall(ImmutableCallSite CS, Intrinsic::ID IID) {
   const IntrinsicInst *II = dyn_cast<IntrinsicInst>(CS.getInstruction());
-  return II && II->getIntrinsicID() == Intrinsic::assume;
+  return II && II->getIntrinsicID() == IID;
 }
 
 #ifndef NDEBUG
@@ -769,8 +769,18 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS,
   // While the assume intrinsic is marked as arbitrarily writing so that
   // proper control dependencies will be maintained, it never aliases any
   // particular memory location.
-  if (isAssumeIntrinsic(CS))
+  if (isIntrinsicCall(CS, Intrinsic::assume))
     return MRI_NoModRef;
+
+  // Like assumes, guard intrinsics are also marked as arbitrarily writing so
+  // that proper control dependencies are maintained but they never mods any
+  // particular memory location.
+  //
+  // *Unlike* assumes, guard intrinsics are modeled as reading memory since the
+  // heap state at the point the guard is issued needs to be consistent in case
+  // the guard invokes the "deopt" continuation.
+  if (isIntrinsicCall(CS, Intrinsic::experimental_guard))
+    return MRI_Ref;
 
   // The AAResultBase base class has some smarts, lets use them.
   return AAResultBase::getModRefInfo(CS, Loc);
@@ -781,8 +791,26 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS1,
   // While the assume intrinsic is marked as arbitrarily writing so that
   // proper control dependencies will be maintained, it never aliases any
   // particular memory location.
-  if (isAssumeIntrinsic(CS1) || isAssumeIntrinsic(CS2))
+  if (isIntrinsicCall(CS1, Intrinsic::assume) ||
+      isIntrinsicCall(CS2, Intrinsic::assume))
     return MRI_NoModRef;
+
+  // Like assumes, guard intrinsics are also marked as arbitrarily writing so
+  // that proper control dependencies are maintained but they never mod any
+  // particular memory location.
+  //
+  // *Unlike* assumes, guard intrinsics are modeled as reading memory since the
+  // heap state at the point the guard is issued needs to be consistent in case
+  // the guard invokes the "deopt" continuation.
+
+  // NB! This function is *not* commutative, so we specical case two
+  // possibilities for guard intrinsics.
+
+  if (isIntrinsicCall(CS1, Intrinsic::experimental_guard))
+    return getModRefBehavior(CS2) & MRI_Mod ? MRI_Ref : MRI_NoModRef;
+
+  if (isIntrinsicCall(CS2, Intrinsic::experimental_guard))
+    return getModRefBehavior(CS1) & MRI_Mod ? MRI_Mod : MRI_NoModRef;
 
   // The AAResultBase base class has some smarts, lets use them.
   return AAResultBase::getModRefInfo(CS1, CS2);

@@ -761,8 +761,8 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
   MachineInstrSpan MIS(MI);
 
   MachineInstr *FoldMI =
-                LoadMI ? TII.foldMemoryOperand(MI, FoldOps, LoadMI)
-                       : TII.foldMemoryOperand(MI, FoldOps, StackSlot);
+                LoadMI ? TII.foldMemoryOperand(MI, FoldOps, LoadMI, &LIS)
+                       : TII.foldMemoryOperand(MI, FoldOps, StackSlot, &LIS);
   if (!FoldMI)
     return false;
 

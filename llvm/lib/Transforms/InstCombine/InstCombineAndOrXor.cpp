@@ -664,7 +664,7 @@ static unsigned foldLogOpOfMaskedICmpsHelper(Value*& A,
   if (!ICmpInst::isEquality(RHSCC))
     return 0;
 
-  // Look for ANDs in on the right side of the RHS icmp.
+  // Look for ANDs on the right side of the RHS icmp.
   if (!ok && R2->getType()->isIntegerTy()) {
     if (!match(R2, m_And(m_Value(R11), m_Value(R12)))) {
       R11 = R2;

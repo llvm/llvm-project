@@ -18,7 +18,7 @@
 #ifndef LLVM_SUPPORT_ATOMICORDERING_H
 #define LLVM_SUPPORT_ATOMICORDERING_H
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace llvm {
 
@@ -148,6 +148,6 @@ static inline AtomicOrderingCABI toCABI(AtomicOrdering ao) {
   return lookup[(size_t)ao];
 }
 
-} // End namespace llvm
+} // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_ATOMICORDERING_H

@@ -11,12 +11,12 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
 
 #include "llvm/ADT/StringRef.h"
-
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 
 namespace llvm {
 namespace pdb {
+
 class ModInfo {
 private:
   struct FileLayout;
@@ -64,7 +64,8 @@ public:
 private:
   const uint8_t *Bytes;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_RAW_MODINFO_H

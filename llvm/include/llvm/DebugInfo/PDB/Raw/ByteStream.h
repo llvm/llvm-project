@@ -11,16 +11,17 @@
 #define LLVM_DEBUGINFO_PDB_RAW_BYTESTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamInterface.h"
-
-#include <stdint.h>
-
-#include <system_error>
-#include <vector>
+#include "llvm/Support/Error.h"
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 namespace pdb {
+
 class StreamReader;
+
 class ByteStream : public StreamInterface {
 public:
   ByteStream();
@@ -46,9 +47,10 @@ public:
 
 private:
   MutableArrayRef<uint8_t> Data;
-  bool Owned;
+  std::unique_ptr<uint8_t[]> Ownership;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_RAW_BYTESTREAM_H

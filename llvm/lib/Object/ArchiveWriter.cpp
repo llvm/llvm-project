@@ -307,7 +307,8 @@ std::pair<StringRef, std::error_code>
 llvm::writeArchive(StringRef ArcName,
                    std::vector<NewArchiveIterator> &NewMembers,
                    bool WriteSymtab, object::Archive::Kind Kind,
-                   bool Deterministic, bool Thin) {
+                   bool Deterministic, bool Thin,
+                   std::unique_ptr<MemoryBuffer> OldArchiveBuf) {
   assert((!Thin || Kind == object::Archive::K_GNU) &&
          "Only the gnu format has a thin mode");
   SmallString<128> TmpArchive;
@@ -443,6 +444,19 @@ llvm::writeArchive(StringRef ArcName,
 
   Output.keep();
   Out.close();
+
+  // At this point, we no longer need whatever backing memory
+  // was used to generate the NewMembers. On Windows, this buffer
+  // could be a mapped view of the file we want to replace (if
+  // we're updating an existing archive, say). In that case, the
+  // rename would still succeed, but it would leave behind a
+  // temporary file (actually the original file renamed) because
+  // a file cannot be deleted while there's a handle open on it,
+  // only renamed. So by freeing this buffer, this ensures that
+  // the last open handle on the destination file, if any, is
+  // closed before we attempt to rename.
+  OldArchiveBuf.reset();
+
   sys::fs::rename(TmpArchive, ArcName);
   return std::make_pair("", std::error_code());
 }

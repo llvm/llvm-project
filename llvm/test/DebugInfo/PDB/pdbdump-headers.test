@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump --dump-headers -dump-tpi-records -dump-tpi-record-bytes \
+; RUN: llvm-pdbdump --dump-headers -dump-tpi-records -dump-tpi-record-bytes -dump-module-syms \
 ; RUN:              %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/bad-block-size.pdb | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
@@ -57,6 +57,58 @@
 ; EMPTY-NEXT:       1 Contributing Source Files [
 ; EMPTY-NEXT:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
 ; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       Symbols [
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1101
+; EMPTY-NEXT:           Length: 54
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
+; EMPTY-NEXT:             0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
+; EMPTY-NEXT:             0020: 44425C49 6E707574 735C656D 7074792E  |DB\Inputs\empty.|
+; EMPTY-NEXT:             0030: 6F626A00                             |obj.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x113C
+; EMPTY-NEXT:           Length: 58
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 01200000 07001200 00007D79 00001200  |. ........}y....|
+; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
+; EMPTY-NEXT:             0020: 28522920 4F707469 6D697A69 6E672043  |(R) Optimizing C|
+; EMPTY-NEXT:             0030: 6F6D7069 6C657200                    |ompiler.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1110
+; EMPTY-NEXT:           Length: 42
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 C4000000 00000000 0A000000  |................|
+; EMPTY-NEXT:             0010: 03000000 08000000 01100000 10000000  |................|
+; EMPTY-NEXT:             0020: 0100016D 61696E00                    |...main.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1012
+; EMPTY-NEXT:           Length: 30
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 00000000 00000000 00000000  |................|
+; EMPTY-NEXT:             0010: 00000000 00000082 12000000           |............|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x6
+; EMPTY-NEXT:           Length: 2
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x114C
+; EMPTY-NEXT:           Length: 6
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 0E100000                             |....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       ]
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:     {
 ; EMPTY-NEXT:       Name: * Linker *
@@ -71,6 +123,120 @@
 ; EMPTY-NEXT:       Type Server Index: 0
 ; EMPTY-NEXT:       Has EC Info: No
 ; EMPTY-NEXT:       0 Contributing Source Files [
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       Symbols [
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1101
+; EMPTY-NEXT:           Length: 18
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 2A204C69 6E6B6572 202A0000  |....* Linker *..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x113C
+; EMPTY-NEXT:           Length: 46
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 07000000 03000000 00000000 00000C00  |................|
+; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
+; EMPTY-NEXT:             0020: 28522920 4C494E4B 00000000           |(R) LINK....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x113D
+; EMPTY-NEXT:           Length: 170
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00637764 00643A5C 7372635C 6C6C766D  |.cwd.d:\src\llvm|
+; EMPTY-NEXT:             0010: 5C746573 745C4465 62756749 6E666F5C  |\test\DebugInfo\|
+; EMPTY-NEXT:             0020: 5044425C 496E7075 74730065 78650043  |PDB\Inputs.exe.C|
+; EMPTY-NEXT:             0030: 3A5C5072 6F677261 6D204669 6C657320  |:\Program Files |
+; EMPTY-NEXT:             0040: 28783836 295C4D69 63726F73 6F667420  |(x86)\Microsoft |
+; EMPTY-NEXT:             0050: 56697375 616C2053 74756469 6F203132  |Visual Studio 12|
+; EMPTY-NEXT:             0060: 2E305C56 435C4249 4E5C6C69 6E6B2E65  |.0\VC\BIN\link.e|
+; EMPTY-NEXT:             0070: 78650070 64620064 3A5C7372 635C6C6C  |xe.pdb.d:\src\ll|
+; EMPTY-NEXT:             0080: 766D5C74 6573745C 44656275 67496E66  |vm\test\DebugInf|
+; EMPTY-NEXT:             0090: 6F5C5044 425C496E 70757473 5C656D70  |o\PDB\Inputs\emp|
+; EMPTY-NEXT:             00A0: 74792E70 64620000                    |ty.pdb..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x112C
+; EMPTY-NEXT:           Length: 18
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000500 05000000 10000000 01000100  |................|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1136
+; EMPTY-NEXT:           Length: 26
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 01000C00 00100000 1A100000 20000060  |............ ..`|
+; EMPTY-NEXT:             0010: 2E746578 74000000                    |.text...|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1137
+; EMPTY-NEXT:           Length: 26
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 1A100000 20000060 00000000 01002E74  |.... ..`.......t|
+; EMPTY-NEXT:             0010: 65787424 6D6E0000                    |ext$mn..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1136
+; EMPTY-NEXT:           Length: 26
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 02000C00 00300000 B2020000 40000040  |.....0......@..@|
+; EMPTY-NEXT:             0010: 2E726461 74610000                    |.rdata..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1137
+; EMPTY-NEXT:           Length: 26
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 43010000 40000040 00000000 02002E72  |C...@..@.......r|
+; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1137
+; EMPTY-NEXT:           Length: 26
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 40000040 43010000 02002E65  |....@..@C......e|
+; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1137
+; EMPTY-NEXT:           Length: 30
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 6E010000 40000040 44010000 02002E72  |n...@..@D......r|
+; EMPTY-NEXT:             0010: 64617461 24646562 75670000           |data$debug..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1136
+; EMPTY-NEXT:           Length: 26
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 03000C00 00400000 04000000 400000C0  |.....@......@...|
+; EMPTY-NEXT:             0010: 2E646174 61000000                    |.data...|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1137
+; EMPTY-NEXT:           Length: 22
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 04000000 800000C0 00000000 03002E62  |...............b|
+; EMPTY-NEXT:             0010: 73730000                             |ss..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Kind: 0x1136
+; EMPTY-NEXT:           Length: 26
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 04000C00 00500000 08000000 40000042  |.....P......@..B|
+; EMPTY-NEXT:             0010: 2E72656C 6F630000                    |.reloc..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
 ; EMPTY-NEXT:       ]
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:   ]

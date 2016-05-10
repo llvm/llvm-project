@@ -1109,6 +1109,7 @@ static std::string getShuffleComment(const MachineOperand &DstOp,
     return X86ATTInstPrinter::getRegisterName(RegNum);
   };
 
+  // TODO: Add support for specifying an AVX512 style mask register in the comment.
   StringRef DstName = DstOp.isReg() ? GetRegisterName(DstOp.getReg()) : "mem";
   StringRef Src1Name =
       SrcOp1.isReg() ? GetRegisterName(SrcOp1.getReg()) : "mem";

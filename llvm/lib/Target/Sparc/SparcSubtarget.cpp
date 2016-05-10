@@ -29,10 +29,12 @@ void SparcSubtarget::anchor() { }
 SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
   IsV9 = false;
+  IsLeon = false;
   V8DeprecatedInsts = false;
   IsVIS = false;
   HasHardQuad = false;
   UsePopc = false;
+  HasUmacSmac = false;
 
   // Determine default and user specified characteristics
   std::string CPUName = CPU;

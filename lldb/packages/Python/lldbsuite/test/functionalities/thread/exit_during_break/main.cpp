@@ -19,27 +19,15 @@
 
 volatile int g_test = 0;
 
-// Note that although hogging the CPU while waiting for a variable to change
-// would be terrible in production code, it's great for testing since it
-// avoids a lot of messy context switching to get multiple threads synchronized.
-#define do_nothing()  
-
-#define pseudo_barrier_wait(bar) \
-    --bar;                       \
-    while (bar > 0)              \
-        do_nothing();
-
-#define pseudo_barrier_init(bar, count) (bar = count)
-
 // A barrier to synchronize all the threads except the one that will exit.
-std::atomic_int g_barrier1;
+pseudo_barrier_t g_barrier1;
 
 // A barrier to synchronize all the threads including the one that will exit.
-std::atomic_int g_barrier2;
+pseudo_barrier_t g_barrier2;
 
 // A barrier to keep the first group of threads from exiting until after the
 // breakpoint has been passed.
-std::atomic_int g_barrier3;
+pseudo_barrier_t g_barrier3;
 
 void *
 break_thread_func ()

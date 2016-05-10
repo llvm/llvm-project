@@ -2818,8 +2818,22 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::CVT_F32_UBYTE2:
   case AMDGPUISD::CVT_F32_UBYTE3: {
     unsigned Offset = N->getOpcode() - AMDGPUISD::CVT_F32_UBYTE0;
-
     SDValue Src = N->getOperand(0);
+
+    if (Src.getOpcode() == ISD::SRL) {
+      // cvt_f32_ubyte0 (srl x, 16) -> cvt_f32_ubyte2 x
+      // cvt_f32_ubyte1 (srl x, 16) -> cvt_f32_ubyte3 x
+      // cvt_f32_ubyte0 (srl x, 8) -> cvt_f32_ubyte1 x
+
+      if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Src.getOperand(1))) {
+        unsigned SrcOffset = C->getZExtValue() + 8 * Offset;
+        if (SrcOffset < 32 && SrcOffset % 8 == 0) {
+          return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0 + SrcOffset / 8, DL,
+                             MVT::f32, Src.getOperand(0));
+        }
+      }
+    }
+
     APInt Demanded = APInt::getBitsSet(32, 8 * Offset, 8 * Offset + 8);
 
     APInt KnownZero, KnownOne;

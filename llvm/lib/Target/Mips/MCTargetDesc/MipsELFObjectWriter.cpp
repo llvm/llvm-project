@@ -167,9 +167,9 @@ static unsigned getMatchingLoType(const ELFRelocationEntry &Reloc) {
 /// A matching relocation is unbeatable if:
 /// - It is not already involved in a match.
 /// - It's offset is exactly that of the one given in R.
-static bool isMatchingReloc(const MipsRelocationEntry &X,
-                            const ELFRelocationEntry &R,
-                            unsigned MatchingType) {
+static FindBestPredicateResult isMatchingReloc(const MipsRelocationEntry &X,
+                                               const ELFRelocationEntry &R,
+                                               unsigned MatchingType) {
   if (X.R.Type == MatchingType && X.R.OriginalSymbol == R.OriginalSymbol) {
     if (!X.Matched &&
         X.R.OriginalAddend == R.OriginalAddend)
@@ -476,30 +476,27 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
 
 bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
                                                   unsigned Type) const {
-  // FIXME: This is extremely conservative. This really needs to use a
-  // whitelist with a clear explanation for why each realocation needs to
-  // point to the symbol, not to the section.
   switch (Type) {
   default:
     return true;
 
+  // On REL ABI's (e.g. O32), these relocations form pairs. The pairing is done
+  // by the static linker by matching the symbol and offset.
+  // We only see one relocation at a time but it's still safe to relocate with
+  // the section so long as both relocations make the same decision.
+  //
+  // Some older linkers may require the symbol for particular cases. Such cases
+  // are not supported yet but can be added as required.
   case ELF::R_MIPS_GOT16:
   case ELF::R_MIPS16_GOT16:
   case ELF::R_MICROMIPS_GOT16:
-    return true;
-
-  // These relocations might be paired with another relocation. The pairing is
-  // done by the static linker by matching the symbol. Since we only see one
-  // relocation at a time, we have to force them to relocate with a symbol to
-  // avoid ending up with a pair where one points to a section and another
-  // points to a symbol.
   case ELF::R_MIPS_HI16:
   case ELF::R_MIPS16_HI16:
   case ELF::R_MICROMIPS_HI16:
   case ELF::R_MIPS_LO16:
   case ELF::R_MIPS16_LO16:
   case ELF::R_MICROMIPS_LO16:
-    return true;
+    return false;
 
   case ELF::R_MIPS_16:
   case ELF::R_MIPS_32:
@@ -509,6 +506,8 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MIPS_26:
   case ELF::R_MIPS_64:
   case ELF::R_MIPS_GPREL16:
+  case ELF::R_MIPS_GPREL32:
+  case ELF::R_MIPS_PC16:
     return false;
   }
 }

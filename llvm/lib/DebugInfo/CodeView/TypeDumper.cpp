@@ -755,7 +755,7 @@ void CVTypeDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
     W.printHex(FieldName, TI.getIndex());
 }
 
-bool CVTypeDumper::dump(const TypeIterator::TypeRecord &Record) {
+bool CVTypeDumper::dump(const TypeIterator::Record &Record) {
   CVTypeDumperImpl Dumper(*this, W, PrintRecordBytes);
   Dumper.visitTypeRecord(Record);
   return !Dumper.hadError();

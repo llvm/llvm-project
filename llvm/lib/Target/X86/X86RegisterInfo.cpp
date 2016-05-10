@@ -166,7 +166,15 @@ X86RegisterInfo::getPointerRegClass(const MachineFunction &MF,
     // we can still use 64-bit register as long as we know the high bits
     // are zeros.
     // Reflect that in the returned register class.
-    return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
+    if (Is64Bit) {
+      // When the target also allows 64-bit frame pointer and we do have a
+      // frame, this is fine to use it for the address accesses as well.
+      const X86FrameLowering *TFI = getFrameLowering(MF);
+      return TFI->hasFP(MF) && TFI->Uses64BitFramePtr
+                 ? &X86::LOW32_ADDR_ACCESS_RBPRegClass
+                 : &X86::LOW32_ADDR_ACCESSRegClass;
+    }
+    return &X86::GR32RegClass;
   case 1: // Normal GPRs except the stack pointer (for encoding reasons).
     if (Subtarget.isTarget64BitLP64())
       return &X86::GR64_NOSPRegClass;
@@ -286,10 +294,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_SaveList;
   case CallingConv::X86_INTR:
     if (Is64Bit) {
+      if (HasAVX512)
+        return CSR_64_AllRegs_AVX512_SaveList;
       if (HasAVX)
         return CSR_64_AllRegs_AVX_SaveList;
-      else
-        return CSR_64_AllRegs_SaveList;
+      return CSR_64_AllRegs_SaveList;
     } else {
       if (HasSSE)
         return CSR_32_AllRegs_SSE_SaveList;
@@ -376,6 +385,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_64_RegMask;
   case CallingConv::X86_INTR:
     if (Is64Bit) {
+      if (HasAVX512)
+        return CSR_64_AllRegs_AVX512_RegMask;
       if (HasAVX)
         return CSR_64_AllRegs_AVX_RegMask;
       else

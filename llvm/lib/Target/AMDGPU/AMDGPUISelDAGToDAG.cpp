@@ -1530,8 +1530,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods0Clamp0OMod(SDValue In, SDValue &Src,
 }
 
 void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
-  bool Modified = false;
-
   MachineFrameInfo *MFI = CurDAG->getMachineFunction().getFrameInfo();
 
   // Handle the perverse case where a frame index is being stored. We don't
@@ -1582,7 +1580,6 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
         }
 
         CurDAG->UpdateNodeOperands(M, makeArrayRef(NewOps, OpN));
-        Modified = true;
       }
     }
   }

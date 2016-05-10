@@ -3,7 +3,6 @@
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -69,12 +68,9 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   if (!F)
     return nullptr;
 
-  MachineModuleInfo *MMI = new MachineModuleInfo(
-      *TM.getMCAsmInfo(), *TM.getMCRegisterInfo(), nullptr);
-  PM.add(MMI);
-
-  MachineFunctionAnalysis *MFA = new MachineFunctionAnalysis(TM, MIR.get());
-  PM.add(MFA);
+  const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine&>(TM);
+  LLVMTM.addMachineModuleInfo(PM);
+  LLVMTM.addMachineFunctionAnalysis(PM, MIR.get());
 
   return M;
 }

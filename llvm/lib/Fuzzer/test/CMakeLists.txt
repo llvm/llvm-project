@@ -57,6 +57,10 @@ set(TracePCTests
   FullCoverageSetTest
   )
 
+set(UbsanTests
+  SignedIntOverflowTest
+  )
+
 set(TestBinaries)
 
 foreach(Test ${Tests})
@@ -116,6 +120,12 @@ add_subdirectory(uninstrumented)
 
 foreach(Test ${UninstrumentedTests})
   set(TestBinaries ${TestBinaries} LLVMFuzzer-${Test}-Uninstrumented)
+endforeach()
+
+add_subdirectory(ubsan)
+
+foreach(Test ${UbsanTests})
+  set(TestBinaries ${TestBinaries} LLVMFuzzer-${Test}-Ubsan)
 endforeach()
 
 add_subdirectory(trace-bb)

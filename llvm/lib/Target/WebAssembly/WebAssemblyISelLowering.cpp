@@ -135,6 +135,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
+
+  // Disable 128-bit shift libcalls. Currently the signature of the functions
+  // i128(i128, i32) aka void(i32, i64, i64, i32) doesn't match the signature
+  // of the call emitted by the default lowering, void(i32, i64, i64).
+  setLibcallName(RTLIB::SRL_I128, nullptr);
+  setLibcallName(RTLIB::SRA_I128, nullptr);
+  setLibcallName(RTLIB::SHL_I128, nullptr);
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(

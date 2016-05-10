@@ -21,7 +21,6 @@
 namespace llvm {
   class MachineFunction;
   class Module;
-  class StringRef;
 
   namespace FloatABI {
     enum ABIType {

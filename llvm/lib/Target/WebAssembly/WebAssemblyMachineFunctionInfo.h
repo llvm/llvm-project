@@ -39,18 +39,13 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   ///   - defined and used in LIFO order with other stack registers
   BitVector VRegStackified;
 
-  // One entry for each possible target reg. we expect it to be small.
-  std::vector<unsigned> PhysRegs;
-
   // A virtual register holding the pointer to the vararg buffer for vararg
   // functions. It is created and set in TLI::LowerFormalArguments and read by
   // TLI::LowerVASTART
   unsigned VarargVreg = -1U;
 
  public:
-  explicit WebAssemblyFunctionInfo(MachineFunction &MF) : MF(MF) {
-    PhysRegs.resize(WebAssembly::NUM_TARGET_REGS, -1U);
-  }
+  explicit WebAssemblyFunctionInfo(MachineFunction &MF) : MF(MF) {}
   ~WebAssemblyFunctionInfo() override;
 
   void addParam(MVT VT) { Params.push_back(VT); }
@@ -69,11 +64,6 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
       VRegStackified.resize(TargetRegisterInfo::virtReg2Index(VReg) + 1);
     VRegStackified.set(TargetRegisterInfo::virtReg2Index(VReg));
   }
-  void unstackifyVReg(unsigned VReg) {
-    if (TargetRegisterInfo::virtReg2Index(VReg) >= VRegStackified.size())
-      return;
-    VRegStackified.reset(TargetRegisterInfo::virtReg2Index(VReg));
-  }
   bool isVRegStackified(unsigned VReg) const {
     if (TargetRegisterInfo::virtReg2Index(VReg) >= VRegStackified.size())
       return false;
@@ -87,11 +77,8 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
     WARegs[TargetRegisterInfo::virtReg2Index(VReg)] = WAReg;
   }
   unsigned getWAReg(unsigned Reg) const {
-    if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-      assert(TargetRegisterInfo::virtReg2Index(Reg) < WARegs.size());
-      return WARegs[TargetRegisterInfo::virtReg2Index(Reg)];
-    }
-    return PhysRegs[Reg];
+    assert(TargetRegisterInfo::virtReg2Index(Reg) < WARegs.size());
+    return WARegs[TargetRegisterInfo::virtReg2Index(Reg)];
   }
   // If new virtual registers are created after initWARegs has been called,
   // this function can be used to add WebAssembly register mappings for them.
@@ -99,13 +86,6 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
     assert(VReg = WARegs.size());
     WARegs.push_back(WAReg);
   }
-
-  void addPReg(unsigned PReg, unsigned WAReg) {
-    assert(PReg < WebAssembly::NUM_TARGET_REGS);
-    assert(WAReg < -1U);
-    PhysRegs[PReg] = WAReg;
-  }
-  const std::vector<unsigned> &getPhysRegs() const { return PhysRegs; }
 };
 
 } // end namespace llvm

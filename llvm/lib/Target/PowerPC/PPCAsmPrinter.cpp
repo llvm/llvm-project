@@ -1306,8 +1306,10 @@ void PPCDarwinAsmPrinter::EmitStartOfAsmFile(Module &M) {
     "power6",
     "power6x",
     "power7",
+    // FIXME: why is power8 missing here?
     "ppc64",
-    "ppc64le"
+    "ppc64le",
+    "power9"
   };
 
   // Get the numerically largest directive.

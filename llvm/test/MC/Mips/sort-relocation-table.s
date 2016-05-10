@@ -206,8 +206,8 @@
 	addiu $2, $2, %lo(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_1 {
-# CHECK-NEXT:    0x0 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x4 R_MIPS_LO16 local1
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 2: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
@@ -216,8 +216,8 @@
 	lui $2, %got(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_2 {
-# CHECK-NEXT:    0x4 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 3: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
@@ -229,10 +229,10 @@
 	lui $2, %got(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_3 {
-# CHECK-NEXT:    0xC R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
-# CHECK-NEXT:    0x4 R_MIPS_GOT16 local2
-# CHECK-NEXT:    0x8 R_MIPS_LO16 local2
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 3b: Same as 3 but a different starting order.
@@ -243,10 +243,10 @@
 	lui $2, %got(local2)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_3b {
-# CHECK-NEXT:    0x4 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
-# CHECK-NEXT:    0xC R_MIPS_GOT16 local2
-# CHECK-NEXT:    0x8 R_MIPS_LO16 local2
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 4: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
@@ -259,10 +259,10 @@
 	lui $2, %got(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_4 {
-# CHECK-NEXT:    0xC R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
-# CHECK-NEXT:    0x8 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x4 R_MIPS_LO16 local1
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 5: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
@@ -276,10 +276,10 @@
 	addiu $2, $2, %lo(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_5 {
-# CHECK-NEXT:    0x8 R_MIPS_LO16 local1
-# CHECK-NEXT:    0x0 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x4 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0xC R_MIPS_LO16 local1
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0xC R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 6: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
@@ -293,10 +293,10 @@
 	addiu $2, $2, %lo(local1+1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_6 {
-# CHECK-NEXT:    0x8 R_MIPS_LO16 local1
-# CHECK-NEXT:    0x0 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x4 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0xC R_MIPS_LO16 local1
+# CHECK-NEXT:    0x8 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0xC R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 7: R_MIPS_GOT16 must be followed by a matching R_MIPS_LO16.
@@ -310,10 +310,10 @@
 	lui $2, %got(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_7 {
-# CHECK-NEXT:    0xC R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
-# CHECK-NEXT:    0x8 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x4 R_MIPS_LO16 local1
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 8: R_MIPS_LO16's may be orphaned.
@@ -321,7 +321,7 @@
 	lw $2, %lo(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_8 {
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 8b: Another example of 8. The R_MIPS_LO16 at 0x4 is orphaned.
@@ -331,9 +331,9 @@
 	lui $2, %got(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_8b {
-# CHECK-NEXT:    0x8 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
-# CHECK-NEXT:    0x4 R_MIPS_LO16 local1
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 9: R_MIPS_GOT16's don't need a matching R_MIPS_LO16 to immediately
@@ -347,9 +347,9 @@
 	lui $2, %got(local1)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_9 {
-# CHECK-NEXT:    0x4 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x8 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x0 R_MIPS_LO16 local1
+# CHECK-NEXT:    0x4 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x0 R_MIPS_LO16 .text
 # CHECK-NEXT:  }
 
 # GOTLO 10: R_MIPS_GOT16's must have a matching R_MIPS_LO16 somewhere though.
@@ -370,11 +370,11 @@
 	lw $2, %lo(local3)
 
 # CHECK-LABEL: Section ({{[0-9]+}}) .rel.mips_gotlo_10 {
-# CHECK-NEXT:    0x0 R_MIPS_GOT16 local1
-# CHECK-NEXT:    0x4 R_MIPS_LO16 local1
-# CHECK-NEXT:    0xC R_MIPS_GOT16 local3
-# CHECK-NEXT:    0x10 R_MIPS_LO16 local3
-# CHECK-NEXT:    0x8 R_MIPS_GOT16 local2
+# CHECK-NEXT:    0x0 R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x4 R_MIPS_LO16 .text
+# CHECK-NEXT:    0xC R_MIPS_GOT16 .text
+# CHECK-NEXT:    0x10 R_MIPS_LO16 .text
+# CHECK-NEXT:    0x8 R_MIPS_GOT16 .text
 # CHECK-NEXT:  }
 
 # Finally, do test 2 for R_MIPS_GOT16 on external symbols to prove they are

@@ -47,9 +47,15 @@ def MicroMipsMemGPRMM16AsmOperand : AsmOperandClass {
   let PredicateMethod = "isMemWithGRPMM16Base";
 }
 
+// Define the classes of pointers used by microMIPS.
+// The numbers must match those in MipsRegisterInfo::MipsPtrClass.
+def ptr_gpr16mm_rc : PointerLikeRegClass<1>;
+def ptr_sp_rc : PointerLikeRegClass<2>;
+def ptr_gp_rc : PointerLikeRegClass<3>;
+
 class mem_mm_4_generic : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm4);
+  let MIOperandInfo = (ops ptr_gpr16mm_rc, simm4);
   let OperandType = "OPERAND_MEMORY";
   let ParserMatchClass = MicroMipsMemGPRMM16AsmOperand;
 }
@@ -73,18 +79,26 @@ def MicroMipsMemSPAsmOperand : AsmOperandClass {
   let PredicateMethod = "isMemWithUimmWordAlignedOffsetSP<7>";
 }
 
+def MicroMipsMemGPAsmOperand : AsmOperandClass {
+  let Name = "MicroMipsMemGP";
+  let RenderMethod = "addMemOperands";
+  let ParserMethod = "parseMemOperand";
+  let PredicateMethod = "isMemWithSimmWordAlignedOffsetGP<9>";
+}
+
 def mem_mm_sp_imm5_lsl2 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc:$base, simm5:$offset);
+  let MIOperandInfo = (ops ptr_sp_rc:$base, simm5:$offset);
   let OperandType = "OPERAND_MEMORY";
   let ParserMatchClass = MicroMipsMemSPAsmOperand;
   let EncoderMethod = "getMemEncodingMMSPImm5Lsl2";
 }
 
-def mem_mm_gp_imm7_lsl2 : Operand<i32> {
+def mem_mm_gp_simm7_lsl2 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops GPRMM16:$base, simm7_lsl2:$offset);
+  let MIOperandInfo = (ops ptr_gp_rc:$base, simm7_lsl2:$offset);
   let OperandType = "OPERAND_MEMORY";
+  let ParserMatchClass = MicroMipsMemGPAsmOperand;
   let EncoderMethod = "getMemEncodingMMGPImm7Lsl2";
 }
 
@@ -122,7 +136,7 @@ def MipsMemUimm4AsmOperand : AsmOperandClass {
 
 def mem_mm_4sp : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, uimm8);
+  let MIOperandInfo = (ops ptr_sp_rc, uimm8);
   let EncoderMethod = "getMemEncodingMMImm4sp";
   let ParserMatchClass = MipsMemUimm4AsmOperand;
   let OperandType = "OPERAND_MEMORY";
@@ -618,7 +632,7 @@ def SH16_MM : StoreMM16<"sh16", GPRMM16OpndZero, GPRMM16Opnd, truncstorei16,
                         LOAD_STORE_FM_MM16<0x2a>;
 def SW16_MM : StoreMM16<"sw16", GPRMM16OpndZero, GPRMM16Opnd, store, II_SW,
                         mem_mm_4_lsl2>, LOAD_STORE_FM_MM16<0x3a>;
-def LWGP_MM : LoadGPMM16<"lw", GPRMM16Opnd, II_LW, mem_mm_gp_imm7_lsl2>,
+def LWGP_MM : LoadGPMM16<"lw", GPRMM16Opnd, II_LW, mem_mm_gp_simm7_lsl2>,
                          LOAD_GP_FM_MM16<0x19>;
 def LWSP_MM : LoadSPMM16<"lw", GPR32Opnd, II_LW, mem_mm_sp_imm5_lsl2>,
               LOAD_STORE_SP_FM_MM16<0x12>;

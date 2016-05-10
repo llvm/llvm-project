@@ -12,20 +12,10 @@
 
 #include <thread>
 
-// Note that although hogging the CPU while waiting for a variable to change
-// would be terrible in production code, it's great for testing since it
-// avoids a lot of messy context switching to get multiple threads synchronized.
 #define do_nothing()
 
-#define pseudo_barrier_wait(bar) \
-    --bar;                       \
-    while (bar > 0)              \
-        do_nothing();
-
-#define pseudo_barrier_init(bar, count) (bar = count)
-
 // A barrier to synchronize thread start.
-volatile int g_barrier;
+pseudo_barrier_t g_barrier;
 
 volatile int g_thread_exited = 0;
 

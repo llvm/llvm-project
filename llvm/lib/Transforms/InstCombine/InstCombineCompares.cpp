@@ -2105,6 +2105,8 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
       if (Instruction *R = FoldICmpDivCst(ICI, cast<BinaryOperator>(LHSI),
                                           DivRHS))
         return R;
+    // FIXME: Handle (icmp ugt (udiv i32 CI2, A), CI) and
+    // (icmp ult (udiv i32 CI2, A), CI).
     break;
 
   case Instruction::Sub: {
@@ -3583,12 +3585,22 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   // See if we are doing a comparison between a constant and an instruction that
   // can be folded into the comparison.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
+    Value *A = nullptr, *B = nullptr;
     // Since the RHS is a ConstantInt (CI), if the left hand side is an
     // instruction, see if that instruction also has constants so that the
     // instruction can be folded into the icmp
     if (Instruction *LHSI = dyn_cast<Instruction>(Op0))
       if (Instruction *Res = visitICmpInstWithInstAndIntCst(I, LHSI, CI))
         return Res;
+
+    // (icmp eq/ne (udiv A, B), 0) -> (icmp ugt/ule i32 B, A)
+    if (I.isEquality() && CI->isZero() &&
+        match(Op0, m_UDiv(m_Value(A), m_Value(B)))) {
+      ICmpInst::Predicate Pred = I.getPredicate() == ICmpInst::ICMP_EQ
+                                     ? ICmpInst::ICMP_UGT
+                                     : ICmpInst::ICMP_ULE;
+      return new ICmpInst(Pred, B, A);
+    }
   }
 
   // Handle icmp with constant (but not simple integer constant) RHS

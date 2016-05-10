@@ -10,6 +10,7 @@
 #include "SystemZTargetMachine.h"
 #include "SystemZTargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"

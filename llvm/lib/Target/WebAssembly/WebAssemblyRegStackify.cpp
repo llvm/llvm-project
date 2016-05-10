@@ -110,6 +110,10 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
       continue;
 
     if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+      // Ignore ARGUMENTS; it's just used to keep the ARGUMENT_* instructions
+      // from moving down, and we've already checked for that.
+      if (Reg == WebAssembly::ARGUMENTS)
+        continue;
       // If the physical register is never modified, ignore it.
       if (!MRI.isPhysRegModified(Reg))
         continue;
@@ -118,7 +122,7 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
     }
 
     // Ask LiveIntervals whether moving this virtual register use or def to
-    // Insert will change value numbers are seen.
+    // Insert will change which value numbers are seen.
     const LiveInterval &LI = LIS.getInterval(Reg);
     VNInfo *DefVNI =
         MO.isDef() ? LI.getVNInfoAt(LIS.getInstructionIndex(*Def).getRegSlot())
@@ -141,11 +145,23 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
 static bool OneUseDominatesOtherUses(unsigned Reg, const MachineOperand &OneUse,
                                      const MachineBasicBlock &MBB,
                                      const MachineRegisterInfo &MRI,
-                                     const MachineDominatorTree &MDT) {
+                                     const MachineDominatorTree &MDT,
+                                     LiveIntervals &LIS) {
+  const LiveInterval &LI = LIS.getInterval(Reg);
+
+  const MachineInstr *OneUseInst = OneUse.getParent();
+  VNInfo *OneUseVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(*OneUseInst));
+
   for (const MachineOperand &Use : MRI.use_operands(Reg)) {
     if (&Use == &OneUse)
       continue;
+
     const MachineInstr *UseInst = Use.getParent();
+    VNInfo *UseVNI = LI.getVNInfoBefore(LIS.getInstructionIndex(*UseInst));
+
+    if (UseVNI != OneUseVNI)
+      continue;
+
     const MachineInstr *OneUseInst = OneUse.getParent();
     if (UseInst->getOpcode() == TargetOpcode::PHI) {
       // Test that the PHI use, which happens on the CFG edge rather than
@@ -183,13 +199,33 @@ static unsigned GetTeeLocalOpcode(const TargetRegisterClass *RC) {
 
 /// A single-use def in the same block with no intervening memory or register
 /// dependencies; move the def down and nest it with the current instruction.
-static MachineInstr *MoveForSingleUse(unsigned Reg, MachineInstr *Def,
+static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand& Op,
+                                      MachineInstr *Def,
                                       MachineBasicBlock &MBB,
                                       MachineInstr *Insert, LiveIntervals &LIS,
-                                      WebAssemblyFunctionInfo &MFI) {
+                                      WebAssemblyFunctionInfo &MFI,
+                                      MachineRegisterInfo &MRI) {
   MBB.splice(Insert, &MBB, Def);
   LIS.handleMove(*Def);
-  MFI.stackifyVReg(Reg);
+
+  if (MRI.hasOneDef(Reg)) {
+    MFI.stackifyVReg(Reg);
+  } else {
+    unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
+    Def->getOperand(0).setReg(NewReg);
+    Op.setReg(NewReg);
+
+    // Tell LiveIntervals about the new register.
+    LIS.createAndComputeVirtRegInterval(NewReg);
+
+    // Tell LiveIntervals about the changes to the old register.
+    LiveInterval &LI = LIS.getInterval(Reg);
+    LIS.removeVRegDefAt(LI, LIS.getInstructionIndex(*Def).getRegSlot());
+    LIS.shrinkToUses(&LI);
+
+    MFI.stackifyVReg(NewReg);
+  }
+
   ImposeStackOrdering(Def);
   return Def;
 }
@@ -211,18 +247,23 @@ RematerializeCheapDef(unsigned Reg, MachineOperand &Op, MachineInstr *Def,
   MFI.stackifyVReg(NewReg);
   ImposeStackOrdering(Clone);
 
+  // Shrink the interval.
+  bool IsDead = MRI.use_empty(Reg);
+  if (!IsDead) {
+    LiveInterval &LI = LIS.getInterval(Reg);
+    LIS.shrinkToUses(&LI);
+    IsDead = !LI.liveAt(LIS.getInstructionIndex(*Def).getDeadSlot());
+  }
+
   // If that was the last use of the original, delete the original.
-  // Otherwise shrink the LiveInterval.
-  if (MRI.use_empty(Reg)) {
+  if (IsDead) {
     SlotIndex Idx = LIS.getInstructionIndex(*Def).getRegSlot();
     LIS.removePhysRegDefAt(WebAssembly::ARGUMENTS, Idx);
-    LIS.removeVRegDefAt(LIS.getInterval(Reg), Idx);
     LIS.removeInterval(Reg);
     LIS.RemoveMachineInstrFromMaps(*Def);
     Def->eraseFromParent();
-  } else {
-    LIS.shrinkToUses(&LIS.getInterval(Reg));
   }
+
   return Clone;
 }
 
@@ -488,13 +529,13 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         bool CanMove = SameBlock && IsSafeToMove(Def, Insert, AA, LIS, MRI) &&
                        !TreeWalker.IsOnStack(Reg);
         if (CanMove && MRI.hasOneUse(Reg)) {
-          Insert = MoveForSingleUse(Reg, Def, MBB, Insert, LIS, MFI);
+          Insert = MoveForSingleUse(Reg, Op, Def, MBB, Insert, LIS, MFI, MRI);
         } else if (Def->isAsCheapAsAMove() &&
                    TII->isTriviallyReMaterializable(Def, &AA)) {
           Insert = RematerializeCheapDef(Reg, Op, Def, MBB, Insert, LIS, MFI,
                                          MRI, TII, TRI);
         } else if (CanMove &&
-                   OneUseDominatesOtherUses(Reg, Op, MBB, MRI, MDT)) {
+                   OneUseDominatesOtherUses(Reg, Op, MBB, MRI, MDT, LIS)) {
           Insert = MoveAndTeeForMultiUse(Reg, Op, Def, MBB, Insert, LIS, MFI,
                                          MRI, TII);
         } else {
@@ -536,14 +577,12 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<unsigned, 0> Stack;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      if (MI.isDebugValue())
+        continue;
       for (MachineOperand &MO : reverse(MI.explicit_operands())) {
         if (!MO.isReg())
           continue;
         unsigned Reg = MO.getReg();
-
-        // Don't stackify physregs like SP or FP.
-        if (!TargetRegisterInfo::isVirtualRegister(Reg))
-          continue;
 
         if (MFI.isVRegStackified(Reg)) {
           if (MO.isDef())

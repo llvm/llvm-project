@@ -34,6 +34,7 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   virtual void anchor();
   bool IsV9;
   bool IsLeon;
+  bool HasUmacSmac;
   bool V8DeprecatedInsts;
   bool IsVIS, IsVIS2, IsVIS3;
   bool Is64Bit;
@@ -66,6 +67,7 @@ public:
 
   bool isV9() const { return IsV9; }
   bool isLeon() const { return IsLeon; }
+  bool hasUmacSmac() const { return HasUmacSmac; }
   bool isVIS() const { return IsVIS; }
   bool isVIS2() const { return IsVIS2; }
   bool isVIS3() const { return IsVIS3; }

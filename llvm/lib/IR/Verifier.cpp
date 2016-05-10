@@ -59,6 +59,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
@@ -4417,18 +4418,22 @@ bool llvm::verifyFunction(const Function &f, raw_ostream *OS) {
   return !V.verify(F);
 }
 
-bool llvm::verifyModule(const Module &M, raw_ostream *OS) {
+bool llvm::verifyModule(const Module &M, raw_ostream *OS,
+                        bool *BrokenDebugInfo) {
   // Don't use a raw_null_ostream.  Printing IR is expensive.
-  Verifier V(OS, /*ShouldTreatBrokenDebugInfoAsError=*/true);
+  Verifier V(OS, /*ShouldTreatBrokenDebugInfoAsError=*/!BrokenDebugInfo);
 
   bool Broken = false;
   for (const Function &F : M)
     if (!F.isDeclaration() && !F.isMaterializable())
       Broken |= !V.verify(F);
 
+  Broken |= !V.verify(M);
+  if (BrokenDebugInfo)
+    *BrokenDebugInfo = V.hasBrokenDebugInfo();
   // Note that this function's return value is inverted from what you would
   // expect of a function called "verify".
-  return !V.verify(M) || Broken;
+  return Broken;
 }
 
 namespace {
@@ -4478,15 +4483,38 @@ FunctionPass *llvm::createVerifierPass(bool FatalErrors) {
   return new VerifierLegacyPass(FatalErrors);
 }
 
-PreservedAnalyses VerifierPass::run(Module &M) {
-  if (verifyModule(M, &dbgs()) && FatalErrors)
-    report_fatal_error("Broken module found, compilation aborted!");
+char VerifierAnalysis::PassID;
+VerifierAnalysis::Result VerifierAnalysis::run(Module &M) {
+  Result Res;
+  Res.IRBroken = llvm::verifyModule(M, &dbgs(), &Res.DebugInfoBroken);
+  return Res;
+}
 
+VerifierAnalysis::Result VerifierAnalysis::run(Function &F) {
+  return { llvm::verifyFunction(F, &dbgs()), false };
+}
+
+PreservedAnalyses VerifierPass::run(Module &M, ModuleAnalysisManager &AM) {
+  auto Res = AM.getResult<VerifierAnalysis>(M);
+  if (FatalErrors) {
+    if (Res.IRBroken)
+      report_fatal_error("Broken module found, compilation aborted!");
+    assert(!Res.DebugInfoBroken && "Module contains invalid debug info");
+  }
+
+  // Strip broken debug info.
+  if (Res.DebugInfoBroken) {
+    DiagnosticInfoIgnoringInvalidDebugMetadata DiagInvalid(M);
+    M.getContext().diagnose(DiagInvalid);
+    if (!StripDebugInfo(M))
+      report_fatal_error("Failed to strip malformed debug info");
+  }
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses VerifierPass::run(Function &F) {
-  if (verifyFunction(F, &dbgs()) && FatalErrors)
+PreservedAnalyses VerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto res = AM.getResult<VerifierAnalysis>(F);
+  if (res.IRBroken && FatalErrors)
     report_fatal_error("Broken function found, compilation aborted!");
 
   return PreservedAnalyses::all();

@@ -143,7 +143,8 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr *MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex) const override;
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr) const override;
 
   bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,

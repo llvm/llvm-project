@@ -202,11 +202,13 @@ public:
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr *MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex) const override;
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr) const override;
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr *MI,
                                       ArrayRef<unsigned> Ops,
                                       MachineBasicBlock::iterator InsertPt,
-                                      MachineInstr *LoadMI) const override;
+                                      MachineInstr *LoadMI,
+                                      LiveIntervals *LIS = nullptr) const override;
   bool expandPostRAPseudo(MachineBasicBlock::iterator MBBI) const override;
   bool ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
     override;

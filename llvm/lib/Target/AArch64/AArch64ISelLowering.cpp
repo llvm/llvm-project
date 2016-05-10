@@ -4687,6 +4687,27 @@ SDValue AArch64TargetLowering::getRsqrtEstimate(SDValue Operand,
 // is prefixed by the %w modifier. Floating-point and SIMD register operands
 // will be output with the v prefix unless prefixed by the %b, %h, %s, %d or
 // %q modifier.
+const char *AArch64TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
+  // At this point, we have to lower this constraint to something else, so we
+  // lower it to an "r" or "w". However, by doing this we will force the result
+  // to be in register, while the X constraint is much more permissive.
+  //
+  // Although we are correct (we are free to emit anything, without
+  // constraints), we might break use cases that would expect us to be more
+  // efficient and emit something else.
+  if (!Subtarget->hasFPARMv8())
+    return "r";
+
+  if (ConstraintVT.isFloatingPoint())
+    return "w";
+
+  if (ConstraintVT.isVector() &&
+     (ConstraintVT.getSizeInBits() == 64 ||
+      ConstraintVT.getSizeInBits() == 128))
+    return "w";
+
+  return "r";
+}
 
 /// getConstraintType - Given a constraint letter, return the type of
 /// constraint it is for this target.

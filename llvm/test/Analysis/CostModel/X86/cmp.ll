@@ -87,18 +87,18 @@ define i32 @cmp(i32 %arg) {
   ;AVX:   cost of 1 {{.*}} icmp
   %H = icmp eq <4 x i32> undef, undef
 
-  ;SSE2:  cost of 1 {{.*}} icmp
-  ;SSE3:  cost of 1 {{.*}} icmp
-  ;SSSE3: cost of 1 {{.*}} icmp
-  ;SSE41: cost of 1 {{.*}} icmp
+  ;SSE2:  cost of 8 {{.*}} icmp
+  ;SSE3:  cost of 8 {{.*}} icmp
+  ;SSSE3: cost of 8 {{.*}} icmp
+  ;SSE41: cost of 8 {{.*}} icmp
   ;SSE42: cost of 1 {{.*}} icmp
   ;AVX:   cost of 1 {{.*}} icmp
   %I = icmp eq <2 x i64> undef, undef
 
-  ;SSE2:  cost of 2 {{.*}} icmp
-  ;SSE3:  cost of 2 {{.*}} icmp
-  ;SSSE3: cost of 2 {{.*}} icmp
-  ;SSE41: cost of 2 {{.*}} icmp
+  ;SSE2:  cost of 16 {{.*}} icmp
+  ;SSE3:  cost of 16 {{.*}} icmp
+  ;SSSE3: cost of 16 {{.*}} icmp
+  ;SSE41: cost of 16 {{.*}} icmp
   ;SSE42: cost of 2 {{.*}} icmp
   ;AVX1:  cost of 4 {{.*}} icmp
   ;AVX2:  cost of 1 {{.*}} icmp

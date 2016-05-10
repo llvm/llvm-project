@@ -144,5 +144,32 @@ TEST(VerifierTest, CrossModuleMetadataRef) {
   EXPECT_TRUE(StringRef(ErrorOS.str())
                   .startswith("Referencing global in another module!"));
 }
+
+#ifndef _MSC_VER
+// FIXME: This test causes an ICE in MSVC 2013.
+TEST(VerifierTest, StripInvalidDebugInfo) {
+  LLVMContext C;
+  Module M("M", C);
+  DIBuilder DIB(M);
+  DIB.createCompileUnit(dwarf::DW_LANG_C89, "broken.c", "/",
+                        "unittest", false, "", 0);
+  DIB.finalize();
+  EXPECT_FALSE(verifyModule(M));
+
+  // Now break it.
+  auto *File = DIB.createFile("not-a-CU.f", ".");
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
+  NMD->addOperand(File);
+  EXPECT_TRUE(verifyModule(M));
+
+  ModulePassManager MPM(true);
+  MPM.addPass(VerifierPass(false));
+  ModuleAnalysisManager MAM(true);
+  MAM.registerPass([&] { return VerifierAnalysis(); });
+  MPM.run(M, MAM);
+  EXPECT_FALSE(verifyModule(M));
+}
+#endif
+
 } // end anonymous namespace
 } // end namespace llvm

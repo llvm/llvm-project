@@ -421,11 +421,19 @@ def GR64_NOREX_NOSP : RegisterClass<"X86", [i64], 64,
 // In such cases, it is fine to use RIP as we are sure the 32 high
 // bits are not set. We do not need variants for NOSP as RIP is not
 // allowed there.
-// Alignment is 64 because we have RIP.
+// RIP is not spilled anywhere for now, so stick to 32-bit alignment
+// to save on memory space.
 // FIXME: We could allow all 64bit registers, but we would need
 // something to check that the 32 high bits are not set,
 // which we do not have right now.
-def LOW32_ADDR_ACCESS : RegisterClass<"X86", [i32], 64, (add GR32, RIP)>;
+def LOW32_ADDR_ACCESS : RegisterClass<"X86", [i32], 32, (add GR32, RIP)>;
+
+// When RBP is used as a base pointer in a 32-bit addresses environement,
+// this is also safe to use the full register to access addresses.
+// Since RBP will never be spilled, stick to a 32 alignment to save
+// on memory consumption.
+def LOW32_ADDR_ACCESS_RBP : RegisterClass<"X86", [i32], 32,
+                                          (add LOW32_ADDR_ACCESS, RBP)>;
 
 // A class to support the 'A' assembler constraint: EAX then EDX.
 def GR32_AD : RegisterClass<"X86", [i32], 32, (add EAX, EDX)>;

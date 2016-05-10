@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 
 namespace llvm {
 
@@ -799,13 +800,15 @@ public:
   /// The new instruction is inserted before MI, and the client is responsible
   /// for removing the old instruction.
   MachineInstr *foldMemoryOperand(MachineBasicBlock::iterator MI,
-                                  ArrayRef<unsigned> Ops, int FrameIndex) const;
+                                  ArrayRef<unsigned> Ops, int FrameIndex,
+                                  LiveIntervals *LIS = nullptr) const;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
   MachineInstr *foldMemoryOperand(MachineBasicBlock::iterator MI,
                                   ArrayRef<unsigned> Ops,
-                                  MachineInstr *LoadMI) const;
+                                  MachineInstr *LoadMI,
+                                  LiveIntervals *LIS = nullptr) const;
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are
@@ -884,7 +887,8 @@ protected:
   /// at InsertPt.
   virtual MachineInstr *foldMemoryOperandImpl(
       MachineFunction &MF, MachineInstr *MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, int FrameIndex) const {
+      MachineBasicBlock::iterator InsertPt, int FrameIndex,
+      LiveIntervals *LIS = nullptr) const {
     return nullptr;
   }
 
@@ -895,7 +899,8 @@ protected:
   /// at InsertPt.
   virtual MachineInstr *foldMemoryOperandImpl(
       MachineFunction &MF, MachineInstr *MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr *LoadMI) const {
+      MachineBasicBlock::iterator InsertPt, MachineInstr *LoadMI,
+      LiveIntervals *LIS = nullptr) const {
     return nullptr;
   }
 

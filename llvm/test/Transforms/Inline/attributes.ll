@@ -17,6 +17,10 @@ define i32 @sanitize_memory_callee(i32 %i) sanitize_memory {
   ret i32 %i
 }
 
+define i32 @safestack_callee(i32 %i) safestack {
+  ret i32 %i
+}
+
 define i32 @alwaysinline_callee(i32 %i) alwaysinline {
   ret i32 %i
 }
@@ -30,6 +34,10 @@ define i32 @alwaysinline_sanitize_thread_callee(i32 %i) alwaysinline sanitize_th
 }
 
 define i32 @alwaysinline_sanitize_memory_callee(i32 %i) alwaysinline sanitize_memory {
+  ret i32 %i
+}
+
+define i32 @alwaysinline_safestack_callee(i32 %i) alwaysinline safestack {
   ret i32 %i
 }
 
@@ -107,6 +115,17 @@ define i32 @test_sanitize_thread(i32 %arg) sanitize_thread {
   %x4 = call i32 @alwaysinline_sanitize_thread_callee(i32 %x3)
   ret i32 %x4
 ; CHECK-LABEL: @test_sanitize_thread(
+; CHECK-NEXT: @noattr_callee
+; CHECK-NEXT: ret i32
+}
+
+define i32 @test_safestack(i32 %arg) safestack {
+  %x1 = call i32 @noattr_callee(i32 %arg)
+  %x2 = call i32 @safestack_callee(i32 %x1)
+  %x3 = call i32 @alwaysinline_callee(i32 %x2)
+  %x4 = call i32 @alwaysinline_safestack_callee(i32 %x3)
+  ret i32 %x4
+; CHECK-LABEL: @test_safestack(
 ; CHECK-NEXT: @noattr_callee
 ; CHECK-NEXT: ret i32
 }

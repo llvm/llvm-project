@@ -11,9 +11,9 @@
 #define LLVM_DEBUGINFO_CODEVIEW_CVTYPEVISITOR_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/RecordIterator.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeStream.h"
 
 namespace llvm {
 namespace codeview {
@@ -51,32 +51,32 @@ public:
 #define MEMBER_RECORD_ALIAS(ClassName, LeafEnum)
 #include "TypeRecords.def"
 
-  void visitTypeRecord(const TypeIterator::TypeRecord &Record) {
-    ArrayRef<uint8_t> LeafData = Record.LeafData;
+  void visitTypeRecord(const TypeIterator::Record &Record) {
+    ArrayRef<uint8_t> LeafData = Record.Data;
     ArrayRef<uint8_t> RecordData = LeafData;
     auto *DerivedThis = static_cast<Derived *>(this);
-    DerivedThis->visitTypeBegin(Record.Leaf, RecordData);
-    switch (Record.Leaf) {
+    DerivedThis->visitTypeBegin(Record.Type, RecordData);
+    switch (Record.Type) {
     default:
-      DerivedThis->visitUnknownType(Record.Leaf);
+      DerivedThis->visitUnknownType(Record.Type);
       break;
     case LF_FIELDLIST:
-      DerivedThis->visitFieldList(Record.Leaf, LeafData);
+      DerivedThis->visitFieldList(Record.Type, LeafData);
       break;
     case LF_METHODLIST:
-      DerivedThis->visitMethodList(Record.Leaf, LeafData);
+      DerivedThis->visitMethodList(Record.Type, LeafData);
       break;
 #define TYPE_RECORD(ClassName, LeafEnum)                                       \
   case LeafEnum: {                                                             \
     const ClassName *Rec;                                                      \
     if (!CVTypeVisitor::consumeObject(LeafData, Rec))                          \
       return;                                                                  \
-    DerivedThis->visit##ClassName(Record.Leaf, Rec, LeafData);                 \
+    DerivedThis->visit##ClassName(Record.Type, Rec, LeafData);                 \
     break;                                                                     \
   }
 #include "TypeRecords.def"
       }
-      DerivedThis->visitTypeEnd(Record.Leaf, RecordData);
+      DerivedThis->visitTypeEnd(Record.Type, RecordData);
   }
 
   /// Visits the type records in Data. Sets the error flag on parse failures.

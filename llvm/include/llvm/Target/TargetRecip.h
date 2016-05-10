@@ -18,8 +18,8 @@
 #define LLVM_TARGET_TARGETRECIP_H
 
 #include "llvm/ADT/StringRef.h"
+#include <cstdint>
 #include <map>
-#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -69,6 +69,6 @@ private:
   void parseIndividualParams(const std::vector<std::string> &Args);
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TARGET_TARGETRECIP_H

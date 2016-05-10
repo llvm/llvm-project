@@ -455,7 +455,6 @@ static void fixupPHINodeForNormalDest(Instruction *Inst, BasicBlock *BB,
 }
 
 // Add a bitcast instruction to the direct-call return value if needed.
-// Add a bitcast instruction to the direct-call return value if needed.
 static Instruction *insertCallRetCast(const Instruction *Inst,
                                       Instruction *DirectCallInst,
                                       Function *DirectCallee) {

@@ -111,7 +111,6 @@ INITIALIZE_PASS_BEGIN(PEI, "prologepilog",
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(PEI, "prologepilog",
                     "Prologue/Epilogue Insertion & Frame Finalization",
                     false, false)
@@ -125,7 +124,6 @@ void PEI::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfo>();
   AU.addPreserved<MachineDominatorTree>();
   AU.addRequired<StackProtector>();
-  AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

@@ -16,6 +16,7 @@
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCAsmInfo.h"

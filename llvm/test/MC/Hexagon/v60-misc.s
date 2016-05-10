@@ -1,5 +1,19 @@
 # RUN: llvm-mc -arch=hexagon -mcpu=hexagonv60 -mattr=+hvx -filetype=obj %s | llvm-objdump -arch=hexagon -mcpu=hexagonv60 -mattr=+hvx -d - | FileCheck %s
 
+.L0:
+
+# CHECK: 5c00c000 { if (p0) jump:nt
+if (p0) jump .L0
+
+# CHECK: 5cffe1fe { if (!p1) jump:nt
+if (!p1) jump .L0
+
+# CHECK: 5340c200 { if (p2) jumpr:nt
+if (p2) jumpr r0
+
+# CHECK: 5361c300 { if (!p3) jumpr:nt
+if (!p3) jumpr r1
+
 # CHECK: 1c2eceee { v14 = vxor(v14,{{ *}}v14) }
 v14 = #0
 

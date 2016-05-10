@@ -11,12 +11,12 @@
 #define LLVM_DEBUGINFO_PDB_RAW_STREAMINTERFACE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
-
-#include <stdint.h>
+#include "llvm/Support/Error.h"
+#include <cstdint>
 
 namespace llvm {
 namespace pdb {
+
 class StreamInterface {
 public:
   virtual ~StreamInterface() {}
@@ -28,7 +28,8 @@ public:
 
   virtual uint32_t getLength() const = 0;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_RAW_STREAMINTERFACE_H

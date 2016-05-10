@@ -189,6 +189,11 @@ public:
   /// enabled.
   void calculate(LiveInterval &LI, bool TrackSubRegs);
 
+  /// For live interval \p LI with correct SubRanges construct matching
+  /// information for the main live range. Expects the main live range to not
+  /// have any segments or value numbers.
+  void constructMainRangeFromSubranges(LiveInterval &LI);
+
   //===--------------------------------------------------------------------===//
   // Low-level interface.
   //===--------------------------------------------------------------------===//
