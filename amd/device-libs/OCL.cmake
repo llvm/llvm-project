@@ -40,7 +40,6 @@
 ##
 ################################################################################
 
-set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/clang")
 set (LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
 set (LLVM_OBJDUMP "${LLVM_TOOLS_BINARY_DIR}/llvm-objdump")
 
