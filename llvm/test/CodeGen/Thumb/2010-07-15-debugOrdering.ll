@@ -8,10 +8,10 @@
 @llvm.used = appending global [1 x i8*] [i8* bitcast (void (%0*, i32, i32)* @_Z19getClosestDiagonal3ii to i8*)], section "llvm.metadata" ; <[1 x i8*]*> [#uses=0]
 
 define void @_Z19getClosestDiagonal3ii(%0* noalias sret, i32, i32) nounwind {
-; CHECK: blx ___muldf3
-; CHECK: blx ___muldf3
+; CHECK: bl ___muldf3
+; CHECK: bl ___muldf3
 ; CHECK: beq LBB0
-; CHECK: blx ___muldf3
+; CHECK: bl ___muldf3
 ; <label>:3
   switch i32 %1, label %4 [
     i32 0, label %5
