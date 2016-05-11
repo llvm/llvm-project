@@ -4,7 +4,7 @@
 
 define void @t1() {
 ; V6-LABEL: t1:
-; V6: blx {{_*}}sync_synchronize
+; V6: bl {{_*}}sync_synchronize
 
 ; V6M-LABEL: t1:
 ; V6M: dmb sy

@@ -8,18 +8,20 @@
 ; intermediate register class copies.
 
 ; FIXME: The same register is initialized to 0 for every spill.
+; FIXME: The unused arguments are removed
 
 ; GCN-LABEL: {{^}}main:
 
-; GCN-DAG: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GCN-DAG: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
-; GCN-DAG: s_mov_b32 s14, -1
-; SI-DAG: s_mov_b32 s15, 0x98f000
-; VI-DAG: s_mov_b32 s15, 0x980000
+; GCN-DAG: s_mov_b32 s6, s12
+; GCN-DAG: s_mov_b32 s16, SCRATCH_RSRC_DWORD0
+; GCN-DAG: s_mov_b32 s17, SCRATCH_RSRC_DWORD1
+; GCN-DAG: s_mov_b32 s18, -1
+; SI-DAG: s_mov_b32 s19, 0x88f000
+; VI-DAG: s_mov_b32 s19, 0x880000
 
-; s12 is offset user SGPR
-; GCN: buffer_store_dword {{v[0-9]+}}, off, s[12:15], s11 offset:{{[0-9]+}} ; 16-byte Folded Spill
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s[12:15], s11 offset:{{[0-9]+}} ; 16-byte Folded Reload
+; s6 is offset system SGPR
+; GCN: buffer_store_dword {{v[0-9]+}}, off, s[16:19], s6 offset:{{[0-9]+}} ; 16-byte Folded Spill
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s[16:19], s6 offset:{{[0-9]+}} ; 16-byte Folded Reload
 
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 1024

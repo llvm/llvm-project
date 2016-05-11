@@ -348,8 +348,10 @@ quality patches.  If you would like commit access, please send an email to
 #. A "password hash" of the password you want to use, e.g. "``2ACR96qjUqsyM``".
    Note that you don't ever tell us what your password is; you just give it to
    us in an encrypted form.  To get this, run "``htpasswd``" (a utility that
-   comes with apache) in crypt mode (often enabled with "``-d``"), or find a web
-   page that will do it for you.
+   comes with apache) in *crypt* mode (often enabled with "``-d``"), or find a web
+   page that will do it for you.  Note that our system does not work with MD5
+   hashes.  These are significantly longer than a crypt hash - e.g.
+   "``$apr1$vea6bBV2$Z8IFx.AfeD8LhqlZFqJer0``".
 
 Once you've been granted commit access, you should be able to check out an LLVM
 tree with an SVN URL of "https://username@llvm.org/..." instead of the normal

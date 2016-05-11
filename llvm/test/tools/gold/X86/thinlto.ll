@@ -21,7 +21,8 @@
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
 ; RUN:    -shared %t.o %t2.o -o %t3
-; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
+; RUN: llvm-bcanalyzer -dump %t.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND1
+; RUN: llvm-bcanalyzer -dump %t2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
 ; RUN: not test -e %t3
 
 ; Ensure gold generates an index as well as a binary by default in ThinLTO mode.
@@ -52,6 +53,39 @@
 
 ; NM: T f
 ; NM2: T {{f|g}}
+
+; The backend index for this module contains summaries from itself and
+; Inputs/thinlto.ll, as it imports from the latter.
+; BACKEND1: <MODULE_STRTAB_BLOCK
+; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}/test/tools/gold/X86/Output/thinlto.ll.tmp{{.*}}.o'
+; BACKEND1-NEXT: <ENTRY {{.*}} record string = '{{.*}}/test/tools/gold/X86/Output/thinlto.ll.tmp{{.*}}.o'
+; BACKEND1-NEXT: </MODULE_STRTAB_BLOCK
+; BACKEND1-NEXT: <GLOBALVAL_SUMMARY_BLOCK
+; BACKEND1-NEXT: <VERSION
+; BACKEND1-NEXT: <COMBINED
+; BACKEND1-NEXT: <COMBINED
+; BACKEND1-NEXT: </GLOBALVAL_SUMMARY_BLOCK
+; BACKEND1-NEXT: <VALUE_SYMTAB
+; Check that the format is: op0=valueid, op1=offset, op2=funcguid,
+; where funcguid is the lower 64 bits of the function name MD5.
+; BACKEND1-NEXT: <COMBINED_ENTRY abbrevid={{[0-9]+}} op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
+; BACKEND1-NEXT: <COMBINED_ENTRY abbrevid={{[0-9]+}} op0={{1|2}} op1={{-3706093650706652785|-5300342847281564238}}
+; BACKEND1-NEXT: </VALUE_SYMTAB
+
+; The backend index for Input/thinlto.ll contains summaries from itself only,
+; as it does not import anything.
+; BACKEND2: <MODULE_STRTAB_BLOCK
+; BACKEND2-NEXT: <ENTRY {{.*}} record string = '{{.*}}/test/tools/gold/X86/Output/thinlto.ll.tmp2.o'
+; BACKEND2-NEXT: </MODULE_STRTAB_BLOCK
+; BACKEND2-NEXT: <GLOBALVAL_SUMMARY_BLOCK
+; BACKEND2-NEXT: <VERSION
+; BACKEND2-NEXT: <COMBINED
+; BACKEND2-NEXT: </GLOBALVAL_SUMMARY_BLOCK
+; BACKEND2-NEXT: <VALUE_SYMTAB
+; Check that the format is: op0=valueid, op1=offset, op2=funcguid,
+; where funcguid is the lower 64 bits of the function name MD5.
+; BACKEND2-NEXT: <COMBINED_ENTRY abbrevid={{[0-9]+}} op0=1 op1=-5300342847281564238
+; BACKEND2-NEXT: </VALUE_SYMTAB
 
 ; COMBINED: <MODULE_STRTAB_BLOCK
 ; COMBINED-NEXT: <ENTRY {{.*}} record string = '{{.*}}/test/tools/gold/X86/Output/thinlto.ll.tmp{{.*}}.o'

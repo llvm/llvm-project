@@ -15,39 +15,43 @@
 #include "FuzzerInternal.h"
 
 namespace fuzzer {
-static const size_t kMapSizeInBits        = 65371; // Prime.
-static const size_t kMapSizeInBitsAligned = 65536;  // 2^16
-static const size_t kBitsInWord =(sizeof(uintptr_t) * 8);
-static const size_t kMapSizeInWords = kMapSizeInBitsAligned / kBitsInWord;
-static uintptr_t CurrentMap[kMapSizeInWords] __attribute__((aligned(512)));
-static uintptr_t CombinedMap[kMapSizeInWords] __attribute__((aligned(512)));
-static size_t CombinedMapSize;
+
+void PcCoverageMap::Reset() { memset(Map, 0, sizeof(Map)); }
+
+void PcCoverageMap::Update(uintptr_t Addr) {
+  uintptr_t Idx = Addr % kMapSizeInBits;
+  uintptr_t WordIdx = Idx / kBitsInWord;
+  uintptr_t BitIdx = Idx % kBitsInWord;
+  Map[WordIdx] |= 1UL << BitIdx;
+}
+
+size_t PcCoverageMap::MergeFrom(const PcCoverageMap &Other) {
+  uintptr_t Res = 0;
+  for (size_t i = 0; i < kMapSizeInWords; i++)
+    Res += __builtin_popcountl(Map[i] |= Other.Map[i]);
+  return Res;
+}
+
+static PcCoverageMap CurrentMap;
 static thread_local uintptr_t Prev;
 
 void PcMapResetCurrent() {
   if (Prev) {
     Prev = 0;
-    memset(CurrentMap, 0, sizeof(CurrentMap));
+    CurrentMap.Reset();
   }
 }
 
-void PcMapMergeCurrentToCombined() {
-  if (!Prev) return;
-  uintptr_t Res = 0;
-  for (size_t i = 0; i < kMapSizeInWords; i++)
-    Res += __builtin_popcountl(CombinedMap[i] |= CurrentMap[i]);
-  CombinedMapSize = Res;
+size_t PcMapMergeInto(PcCoverageMap *Map) {
+  if (!Prev)
+    return 0;
+  return Map->MergeFrom(CurrentMap);
 }
-
-size_t PcMapCombinedSize() { return CombinedMapSize; }
 
 static void HandlePC(uint32_t PC) {
   // We take 12 bits of PC and mix it with the previous PCs.
   uintptr_t Next = (Prev << 5) ^ (PC & 4095);
-  uintptr_t Idx = Next % kMapSizeInBits;
-  uintptr_t WordIdx = Idx / kBitsInWord;
-  uintptr_t BitIdx  = Idx % kBitsInWord;
-  CurrentMap[WordIdx] |= 1UL << BitIdx;
+  CurrentMap.Update(Next);
   Prev = Next;
 }
 

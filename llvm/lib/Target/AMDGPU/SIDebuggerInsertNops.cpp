@@ -1,4 +1,4 @@
-//===--- SIInsertNopsPass.cpp - Use predicates for control flow -----------===//
+//===--- SIDebuggerInsertNops.cpp - Inserts nops for debugger usage -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Insert two nop instructions for each high level source statement.
+/// \brief Inserts two nop instructions for each high level source statement for
+/// debugger usage.
 ///
 /// Tools, such as debugger, need to pause execution based on user input (i.e.
 /// breakpoint). In order to do this, two nop instructions are inserted for each
@@ -27,16 +28,16 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 using namespace llvm;
 
-#define DEBUG_TYPE "si-insert-nops"
-#define PASS_NAME "SI Insert Nops"
+#define DEBUG_TYPE "si-debugger-insert-nops"
+#define PASS_NAME "SI Debugger Insert Nops"
 
 namespace {
 
-class SIInsertNops : public MachineFunctionPass {
+class SIDebuggerInsertNops : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIInsertNops() : MachineFunctionPass(ID) { }
+  SIDebuggerInsertNops() : MachineFunctionPass(ID) { }
   const char *getPassName() const override { return PASS_NAME; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -44,17 +45,18 @@ public:
 
 } // anonymous namespace
 
-INITIALIZE_PASS(SIInsertNops, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(SIDebuggerInsertNops, DEBUG_TYPE, PASS_NAME, false, false)
 
-char SIInsertNops::ID = 0;
-char &llvm::SIInsertNopsID = SIInsertNops::ID;
+char SIDebuggerInsertNops::ID = 0;
+char &llvm::SIDebuggerInsertNopsID = SIDebuggerInsertNops::ID;
 
-FunctionPass *llvm::createSIInsertNopsPass() {
-  return new SIInsertNops();
+FunctionPass *llvm::createSIDebuggerInsertNopsPass() {
+  return new SIDebuggerInsertNops();
 }
 
-bool SIInsertNops::runOnMachineFunction(MachineFunction &MF) {
-  // Skip this pass if debugger-insert-nops feature is not enabled.
+bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
+  // Skip this pass if "amdgpu-debugger-insert-nops" attribute was not
+  // specified.
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   if (!ST.debuggerInsertNops())
     return false;

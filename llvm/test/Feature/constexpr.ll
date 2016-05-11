@@ -10,8 +10,8 @@
 ;; Test constant cast expressions
 ;;-------------------------------
 
-global i64 u0x00001     ; hexadecimal unsigned integer constants
-global i64  s0x0012312   ; hexadecimal signed integer constants
+@0 = global i64 u0x00001     ; hexadecimal unsigned integer constants
+@1 = global i64  s0x0012312   ; hexadecimal signed integer constants
 
 @t2 = global i32* @t1                             ;; Forward reference without cast
 @t3 = global i32* bitcast (i32* @t1 to i32*)       ;; Forward reference with cast
@@ -22,9 +22,9 @@ global i64  s0x0012312   ; hexadecimal signed integer constants
 @t7 = global float* inttoptr (i32 12345678 to float*) ;; Cast ordinary value to ptr
 @t9 = global i32 bitcast (float bitcast (i32 8 to float) to i32) ;; Nested cast expression
 
-global i32* bitcast (float* @4 to i32*)   ;; Forward numeric reference
-global float* @4                       ;; Duplicate forward numeric reference
-global float 0.0
+@2 = global i32* bitcast (float* @4 to i32*)   ;; Forward numeric reference
+@3 = global float* @4                     ;; Duplicate forward numeric reference
+@4 = global float 0.0
 
 
 ;;---------------------------------------------------

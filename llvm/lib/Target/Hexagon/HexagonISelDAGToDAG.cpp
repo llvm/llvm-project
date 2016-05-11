@@ -570,7 +570,13 @@ SDNode *HexagonDAGToDAGISel::StoreInstrForLoadIntrinsic(MachineSDNode *LoadN,
   else
     TS = CurDAG->getTruncStore(SDValue(LoadN,2), dl, SDValue(LoadN,0), Loc, PI,
                                MVT::getIntegerVT(Size*8), false, false, Size);
-  SDNode *StoreN = SelectStore(TS.getNode());
+
+  SDNode *StoreN;
+  {
+    HandleSDNode Handle(TS);
+    SelectStore(TS.getNode());
+    StoreN = Handle.getValue().getNode();
+  }
 
   // Load's results are { Loaded value, Updated pointer, Chain }
   ReplaceUses(SDValue(IntN, 0), SDValue(LoadN, 1));
@@ -720,7 +726,8 @@ SDNode *HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, SDLoc dl) {
 
     ReplaceUses(ST, Result);
     ReplaceUses(SDValue(ST,1), SDValue(Result,1));
-    return Result;
+    CurDAG->RemoveDeadNode(ST);
+    return nullptr;
   }
 
   // Note: Order of operands matches the def of instruction:
@@ -767,7 +774,8 @@ SDNode *HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, SDLoc dl) {
 
   ReplaceUses(SDValue(ST,0), SDValue(Result_2,0));
   ReplaceUses(SDValue(ST,1), SDValue(Result_1,0));
-  return Result_2;
+  CurDAG->RemoveDeadNode(ST);
+  return nullptr;
 }
 
 SDNode *HexagonDAGToDAGISel::SelectStore(SDNode *N) {

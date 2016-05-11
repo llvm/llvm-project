@@ -464,6 +464,30 @@ exit:
   ret i32 %outval
 }
 
+define i32 @SimplifyCondBranchToCondBranchSwapMissingWeight(i1 %cmpa, i1 %cmpb) {
+; CHECK-LABEL: @SimplifyCondBranchToCondBranchSwapMissingWeight(
+; CHECK-NEXT:  block1:
+; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 %cmpa, true 
+; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 %cmpb, true
+; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPA_NOT]], [[CMPB_NOT]]
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2
+; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !16
+; CHECK-NEXT:    ret i32 [[OUTVAL]]
+;
+block1:
+  br i1 %cmpa, label %block2, label %block3, !prof !13
+
+block2:
+  br i1 %cmpb, label %exit, label %block3
+
+block3:
+  %cowval = phi i32 [ 2, %block2 ], [ 0, %block1 ]
+  br label %exit
+
+exit:
+  %outval = phi i32 [ %cowval, %block3 ], [ 1, %block2 ]
+  ret i32 %outval
+}
 
 !0 = !{!"branch_weights", i32 3, i32 5}
 !1 = !{!"branch_weights", i32 1, i32 1}
@@ -499,4 +523,4 @@ exit:
 ; CHECK: !13 = !{!"branch_weights", i32 34, i32 21}
 ; CHECK: !14 = !{!"branch_weights", i32 33, i32 14}
 ; CHECK: !15 = !{!"branch_weights", i32 47, i32 8}
-
+; CHECK: !16 = !{!"branch_weights", i32 8, i32 2}

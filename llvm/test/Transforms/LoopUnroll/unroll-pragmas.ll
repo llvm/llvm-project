@@ -108,6 +108,29 @@ for.end:                                          ; preds = %for.body
 !3 = !{!3, !4}
 !4 = !{!"llvm.loop.unroll.full"}
 
+; #pragma clang loop unroll(full)
+; Loop should be fully unrolled, even for optsize.
+;
+; CHECK-LABEL: @loop64_with_full_optsize(
+; CHECK-NOT: br i1
+define void @loop64_with_full_optsize(i32* nocapture %a) optsize {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, i32* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 64
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !3
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
 ; #pragma clang loop unroll_count(4)
 ; Loop should be unrolled 4 times.
 ;

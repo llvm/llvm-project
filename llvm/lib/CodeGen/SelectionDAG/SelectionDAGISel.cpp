@@ -2085,7 +2085,7 @@ bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
   return !findNonImmUse(Root, N.getNode(), U, Root, Visited, IgnoreChains);
 }
 
-SDNode *SelectionDAGISel::Select_INLINEASM(SDNode *N) {
+void SelectionDAGISel::Select_INLINEASM(SDNode *N) {
   SDLoc DL(N);
 
   std::vector<SDValue> Ops(N->op_begin(), N->op_end());
@@ -2094,11 +2094,11 @@ SDNode *SelectionDAGISel::Select_INLINEASM(SDNode *N) {
   const EVT VTs[] = {MVT::Other, MVT::Glue};
   SDValue New = CurDAG->getNode(ISD::INLINEASM, DL, VTs, Ops);
   New->setNodeId(-1);
-  return New.getNode();
+  ReplaceUses(N, New.getNode());
+  CurDAG->RemoveDeadNode(N);
 }
 
-SDNode
-*SelectionDAGISel::Select_READ_REGISTER(SDNode *Op) {
+void SelectionDAGISel::Select_READ_REGISTER(SDNode *Op) {
   SDLoc dl(Op);
   MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op->getOperand(1));
   const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
@@ -2108,11 +2108,11 @@ SDNode
   SDValue New = CurDAG->getCopyFromReg(
                         Op->getOperand(0), dl, Reg, Op->getValueType(0));
   New->setNodeId(-1);
-  return New.getNode();
+  ReplaceUses(Op, New.getNode());
+  CurDAG->RemoveDeadNode(Op);
 }
 
-SDNode
-*SelectionDAGISel::Select_WRITE_REGISTER(SDNode *Op) {
+void SelectionDAGISel::Select_WRITE_REGISTER(SDNode *Op) {
   SDLoc dl(Op);
   MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op->getOperand(1));
   const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
@@ -2122,11 +2122,17 @@ SDNode
   SDValue New = CurDAG->getCopyToReg(
                         Op->getOperand(0), dl, Reg, Op->getOperand(2));
   New->setNodeId(-1);
-  return New.getNode();
+  ReplaceUses(Op, New.getNode());
+  CurDAG->RemoveDeadNode(Op);
 }
 
-SDNode *SelectionDAGISel::Select_UNDEF(SDNode *N) {
-  return CurDAG->SelectNodeTo(N, TargetOpcode::IMPLICIT_DEF,N->getValueType(0));
+void SelectionDAGISel::Select_UNDEF(SDNode *N) {
+  SDNode *New =
+      CurDAG->SelectNodeTo(N, TargetOpcode::IMPLICIT_DEF, N->getValueType(0));
+  if (New != N) {
+    ReplaceUses(N, New);
+    CurDAG->RemoveDeadNode(N);
+  }
 }
 
 /// GetVBR - decode a vbr encoding whose top bit is set.
@@ -2706,9 +2712,9 @@ public:
 };
 } // end anonymous namespace
 
-SDNode *SelectionDAGISel::
-SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
-                 unsigned TableSize) {
+void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
+                                        const unsigned char *MatcherTable,
+                                        unsigned TableSize) {
   // FIXME: Should these even be selected?  Handle these cases in the caller?
   switch (NodeToMatch->getOpcode()) {
   default:
@@ -2736,17 +2742,25 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
   case ISD::LIFETIME_START:
   case ISD::LIFETIME_END:
     NodeToMatch->setNodeId(-1); // Mark selected.
-    return nullptr;
+    return;
   case ISD::AssertSext:
   case ISD::AssertZext:
     CurDAG->ReplaceAllUsesOfValueWith(SDValue(NodeToMatch, 0),
                                       NodeToMatch->getOperand(0));
     CurDAG->RemoveDeadNode(NodeToMatch);
-    return nullptr;
-  case ISD::INLINEASM: return Select_INLINEASM(NodeToMatch);
-  case ISD::READ_REGISTER: return Select_READ_REGISTER(NodeToMatch);
-  case ISD::WRITE_REGISTER: return Select_WRITE_REGISTER(NodeToMatch);
-  case ISD::UNDEF:     return Select_UNDEF(NodeToMatch);
+    return;
+  case ISD::INLINEASM:
+    Select_INLINEASM(NodeToMatch);
+    return;
+  case ISD::READ_REGISTER:
+    Select_READ_REGISTER(NodeToMatch);
+    return;
+  case ISD::WRITE_REGISTER:
+    Select_WRITE_REGISTER(NodeToMatch);
+    return;
+  case ISD::UNDEF:
+    Select_UNDEF(NodeToMatch);
+    return;
   }
 
   assert(!NodeToMatch->isMachineOpcode() && "Node already selected!");
@@ -3360,7 +3374,7 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
         // NodeToMatch was eliminated by CSE when the target changed the DAG.
         // We will visit the equivalent node later.
         DEBUG(dbgs() << "Node was eliminated by CSE\n");
-        return nullptr;
+        return;
       }
 
       // If the node had chain/glue results, update our notion of the current
@@ -3428,7 +3442,11 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
       if (IsMorphNodeTo) {
         // Update chain uses.
         UpdateChains(NodeToMatch, InputChain, ChainNodesMatched, true);
-        return Res;
+        if (Res != NodeToMatch) {
+          ReplaceUses(NodeToMatch, Res);
+          CurDAG->RemoveDeadNode(NodeToMatch);
+        }
+        return;
       }
       continue;
     }
@@ -3477,9 +3495,7 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
              "Didn't replace all uses of the node?");
       CurDAG->RemoveDeadNode(NodeToMatch);
 
-      // FIXME: We just return here, which interacts correctly with SelectRoot
-      // above.  We should fix this to not return an SDNode* anymore.
-      return nullptr;
+      return;
     }
     }
 
@@ -3491,7 +3507,7 @@ SelectCodeCommon(SDNode *NodeToMatch, const unsigned char *MatcherTable,
     while (1) {
       if (MatchScopes.empty()) {
         CannotYetSelect(NodeToMatch);
-        return nullptr;
+        return;
       }
 
       // Restore the interpreter state back to the point where the scope was

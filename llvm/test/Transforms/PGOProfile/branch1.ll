@@ -1,11 +1,16 @@
 ; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-COMDAT
 ; RUN: opt < %s -mtriple=x86_64-apple-darwin -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-DARWIN-LINKONCE
 
+; New PM
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-COMDAT
 ; RUN: opt < %s -mtriple=x86_64-apple-darwin -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN --check-prefix=GEN-DARWIN-LINKONCE
 
 ; RUN: llvm-profdata merge %S/Inputs/branch1.proftext -o %t.profdata
 ; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+
+; New PM
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 ; GEN-DARWIN-LINKONCE: target triple = "x86_64-apple-darwin"

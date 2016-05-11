@@ -111,9 +111,9 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.Threshold = 150;
   UP.PercentDynamicCostSavedThreshold = 20;
   UP.DynamicCostSavingsDiscount = 2000;
-  UP.OptSizeThreshold = 50;
+  UP.OptSizeThreshold = 0;
   UP.PartialThreshold = UP.Threshold;
-  UP.PartialOptSizeThreshold = UP.OptSizeThreshold;
+  UP.PartialOptSizeThreshold = 0;
   UP.Count = 0;
   UP.MaxCount = UINT_MAX;
   UP.FullUnrollMaxCount = UINT_MAX;

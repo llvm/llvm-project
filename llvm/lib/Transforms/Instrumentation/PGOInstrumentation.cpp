@@ -151,13 +151,9 @@ public:
   }
 
 private:
-  bool annotateAllFunctions(
-      Module &M, function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
-      function_ref<BlockFrequencyInfo *(Function &)> LookupBFI);
   std::string ProfileFileName;
-  std::unique_ptr<IndexedInstrProfReader> PGOReader;
-  bool runOnModule(Module &M) override;
 
+  bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
   }
@@ -775,7 +771,7 @@ static void createIRLevelProfileFlagVariable(Module &M) {
   IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.isOSBinFormatMachO())
-    IRLevelVersionVariable->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    IRLevelVersionVariable->setLinkage(GlobalValue::WeakAnyLinkage);
   else
     IRLevelVersionVariable->setComdat(M.getOrInsertComdat(
         StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
@@ -835,8 +831,9 @@ static void setPGOCountOnFunc(PGOUseFunc &Func,
   }
 }
 
-bool PGOInstrumentationUseLegacyPass::annotateAllFunctions(
-    Module &M, function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
+static bool annotateAllFunctions(
+    Module &M, StringRef ProfileFileName,
+    function_ref<BranchProbabilityInfo *(Function &)> LookupBPI,
     function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
   DEBUG(dbgs() << "Read in profile counters: ");
   auto &Ctx = M.getContext();
@@ -848,10 +845,11 @@ bool PGOInstrumentationUseLegacyPass::annotateAllFunctions(
     return false;
   }
 
-  PGOReader = std::move(ReaderOrErr.get());
+  std::unique_ptr<IndexedInstrProfReader> PGOReader =
+      std::move(ReaderOrErr.get());
   if (!PGOReader) {
     Ctx.diagnose(DiagnosticInfoPGOProfile(ProfileFileName.data(),
-                                          "Cannot get PGOReader"));
+                                          StringRef("Cannot get PGOReader")));
     return false;
   }
   // TODO: might need to change the warning once the clang option is finalized.
@@ -891,6 +889,30 @@ bool PGOInstrumentationUseLegacyPass::annotateAllFunctions(
   return true;
 }
 
+PGOInstrumentationUse::PGOInstrumentationUse(std::string Filename)
+    : ProfileFileName(Filename) {
+  if (!PGOTestProfileFile.empty())
+    ProfileFileName = PGOTestProfileFile;
+}
+
+PreservedAnalyses PGOInstrumentationUse::run(Module &M,
+                                             AnalysisManager<Module> &AM) {
+
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto LookupBPI = [&FAM](Function &F) {
+    return &FAM.getResult<BranchProbabilityAnalysis>(F);
+  };
+
+  auto LookupBFI = [&FAM](Function &F) {
+    return &FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+
+  if (!annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI))
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
+}
+
 bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
@@ -902,5 +924,5 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
     return &this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
   };
 
-  return annotateAllFunctions(M, LookupBPI, LookupBFI);
+  return annotateAllFunctions(M, ProfileFileName, LookupBPI, LookupBFI);
 }

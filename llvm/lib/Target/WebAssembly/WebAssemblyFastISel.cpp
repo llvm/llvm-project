@@ -41,13 +41,78 @@ using namespace llvm;
 namespace {
 
 class WebAssemblyFastISel final : public FastISel {
+  // All possible address modes.
+  class Address {
+  public:
+    typedef enum { RegBase, FrameIndexBase } BaseKind;
+
+  private:
+    BaseKind Kind;
+    union {
+      unsigned Reg;
+      int FI;
+    } Base;
+
+    int64_t Offset;
+
+    const GlobalValue *GV;
+
+  public:
+    // Innocuous defaults for our address.
+    Address() : Kind(RegBase), Offset(0), GV(0) { Base.Reg = 0; }
+    void setKind(BaseKind K) { Kind = K; }
+    BaseKind getKind() const { return Kind; }
+    bool isRegBase() const { return Kind == RegBase; }
+    bool isFIBase() const { return Kind == FrameIndexBase; }
+    void setReg(unsigned Reg) {
+      assert(isRegBase() && "Invalid base register access!");
+      Base.Reg = Reg;
+    }
+    unsigned getReg() const {
+      assert(isRegBase() && "Invalid base register access!");
+      return Base.Reg;
+    }
+    void setFI(unsigned FI) {
+      assert(isFIBase() && "Invalid base frame index access!");
+      Base.FI = FI;
+    }
+    unsigned getFI() const {
+      assert(isFIBase() && "Invalid base frame index access!");
+      return Base.FI;
+    }
+
+    void setOffset(int64_t Offset_) { Offset = Offset_; }
+    int64_t getOffset() const { return Offset; }
+    void setGlobalValue(const GlobalValue *G) { GV = G; }
+    const GlobalValue *getGlobalValue() const { return GV; }
+  };
+
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
   const WebAssemblySubtarget *Subtarget;
   LLVMContext *Context;
 
-  // Call handling routines.
 private:
+  // Utility helper routines
+  bool computeAddress(const Value *Obj, Address &Addr);
+  void materializeLoadStoreOperands(Address &Addr);
+  void addLoadStoreOperands(const Address &Addr, const MachineInstrBuilder &MIB,
+                            MachineMemOperand *MMO);
+  unsigned maskI1Value(unsigned Reg, const TargetRegisterClass *RC, const Value *V);
+  unsigned getRegForI1Value(const Value *V);
+
+  // Backend specific FastISel code.
+  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
+  unsigned fastMaterializeConstant(const Constant *C) override;
+
+  // Selection routines.
+  bool selectBitCast(const Instruction *I);
+  bool selectLoad(const Instruction *I);
+  bool selectStore(const Instruction *I);
+  bool selectBr(const Instruction *I);
+  bool selectRet(const Instruction *I);
+  bool selectUnreachable(const Instruction *I);
+
 public:
   // Backend specific FastISel code.
   WebAssemblyFastISel(FunctionLoweringInfo &FuncInfo,
@@ -64,11 +129,484 @@ public:
 
 } // end anonymous namespace
 
-bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
-  switch (I->getOpcode()) {
+bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
+
+  const User *U = nullptr;
+  unsigned Opcode = Instruction::UserOp1;
+  if (const Instruction *I = dyn_cast<Instruction>(Obj)) {
+    // Don't walk into other basic blocks unless the object is an alloca from
+    // another block, otherwise it may not have a virtual register assigned.
+    if (FuncInfo.StaticAllocaMap.count(static_cast<const AllocaInst *>(Obj)) ||
+        FuncInfo.MBBMap[I->getParent()] == FuncInfo.MBB) {
+      Opcode = I->getOpcode();
+      U = I;
+    }
+  } else if (const ConstantExpr *C = dyn_cast<ConstantExpr>(Obj)) {
+    Opcode = C->getOpcode();
+    U = C;
+  }
+
+  if (auto *Ty = dyn_cast<PointerType>(Obj->getType()))
+    if (Ty->getAddressSpace() > 255)
+      // Fast instruction selection doesn't support the special
+      // address spaces.
+      return false;
+
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(Obj)) {
+    if (Addr.getGlobalValue())
+      return false;
+    Addr.setGlobalValue(GV);
+    return true;
+  }
+
+  switch (Opcode) {
   default:
     break;
-    // TODO: add fast-isel selection cases here...
+  case Instruction::BitCast: {
+    // Look through bitcasts.
+    return computeAddress(U->getOperand(0), Addr);
+  }
+  case Instruction::IntToPtr: {
+    // Look past no-op inttoptrs.
+    if (TLI.getValueType(DL, U->getOperand(0)->getType()) ==
+        TLI.getPointerTy(DL))
+      return computeAddress(U->getOperand(0), Addr);
+    break;
+  }
+  case Instruction::PtrToInt: {
+    // Look past no-op ptrtoints.
+    if (TLI.getValueType(DL, U->getType()) == TLI.getPointerTy(DL))
+      return computeAddress(U->getOperand(0), Addr);
+    break;
+  }
+  case Instruction::GetElementPtr: {
+    Address SavedAddr = Addr;
+    uint64_t TmpOffset = Addr.getOffset();
+    // Iterate through the GEP folding the constants into offsets where
+    // we can.
+   for (gep_type_iterator GTI = gep_type_begin(U), E = gep_type_end(U);
+         GTI != E; ++GTI) {
+      const Value *Op = GTI.getOperand();
+      if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+        const StructLayout *SL = DL.getStructLayout(STy);
+        unsigned Idx = cast<ConstantInt>(Op)->getZExtValue();
+        TmpOffset += SL->getElementOffset(Idx);
+      } else {
+        uint64_t S = DL.getTypeAllocSize(GTI.getIndexedType());
+        for (;;) {
+          if (const ConstantInt *CI = dyn_cast<ConstantInt>(Op)) {
+            // Constant-offset addressing.
+            TmpOffset += CI->getSExtValue() * S;
+            break;
+          }
+          if (canFoldAddIntoGEP(U, Op)) {
+            // A compatible add with a constant operand. Fold the constant.
+            ConstantInt *CI =
+                cast<ConstantInt>(cast<AddOperator>(Op)->getOperand(1));
+            TmpOffset += CI->getSExtValue() * S;
+            // Iterate on the other operand.
+            Op = cast<AddOperator>(Op)->getOperand(0);
+            continue;
+          }
+          // Unsupported
+          goto unsupported_gep;
+        }
+      }
+    }
+    // Try to grab the base operand now.
+    Addr.setOffset(TmpOffset);
+    if (computeAddress(U->getOperand(0), Addr))
+      return true;
+    // We failed, restore everything and try the other options.
+    Addr = SavedAddr;
+  unsupported_gep:
+    break;
+  }
+  case Instruction::Alloca: {
+    const AllocaInst *AI = cast<AllocaInst>(Obj);
+    DenseMap<const AllocaInst *, int>::iterator SI =
+        FuncInfo.StaticAllocaMap.find(AI);
+    if (SI != FuncInfo.StaticAllocaMap.end()) {
+      Addr.setKind(Address::FrameIndexBase);
+      Addr.setFI(SI->second);
+      return true;
+    }
+    break;
+  }
+  case Instruction::Add: {
+    // Adds of constants are common and easy enough.
+    const Value *LHS = U->getOperand(0);
+    const Value *RHS = U->getOperand(1);
+
+    if (isa<ConstantInt>(LHS))
+      std::swap(LHS, RHS);
+
+    if (const ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
+      Addr.setOffset(Addr.getOffset() + CI->getSExtValue());
+      return computeAddress(LHS, Addr);
+    }
+
+    Address Backup = Addr;
+    if (computeAddress(LHS, Addr) && computeAddress(RHS, Addr))
+      return true;
+    Addr = Backup;
+
+    break;
+  }
+  case Instruction::Sub: {
+    // Subs of constants are common and easy enough.
+    const Value *LHS = U->getOperand(0);
+    const Value *RHS = U->getOperand(1);
+
+    if (const ConstantInt *CI = dyn_cast<ConstantInt>(RHS)) {
+      Addr.setOffset(Addr.getOffset() - CI->getSExtValue());
+      return computeAddress(LHS, Addr);
+    }
+    break;
+  }
+  }
+  Addr.setReg(getRegForValue(Obj));
+  return Addr.getReg() != 0;
+}
+
+void WebAssemblyFastISel::materializeLoadStoreOperands(Address &Addr) {
+  if (Addr.isRegBase()) {
+    unsigned Reg = Addr.getReg();
+    if (Reg == 0) {
+      Reg = createResultReg(Subtarget->hasAddr64() ?
+                            &WebAssembly::I64RegClass :
+                            &WebAssembly::I32RegClass);
+      unsigned Opc = Subtarget->hasAddr64() ?
+                     WebAssembly::CONST_I64 :
+                     WebAssembly::CONST_I32;
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), Reg)
+         .addImm(0);
+      Addr.setReg(Reg);
+    }
+  }
+}
+
+void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
+                                               const MachineInstrBuilder &MIB,
+                                               MachineMemOperand *MMO) {
+  if (const GlobalValue *GV = Addr.getGlobalValue())
+    MIB.addGlobalAddress(GV, Addr.getOffset());
+  else
+    MIB.addImm(Addr.getOffset());
+
+  if (Addr.isRegBase())
+    MIB.addReg(Addr.getReg());
+  else
+    MIB.addFrameIndex(Addr.getFI());
+
+  // Set the alignment operand (this is rewritten in SetP2AlignOperands).
+  // TODO: Disable SetP2AlignOperands for FastISel and just do it here.
+  MIB.addImm(0);
+
+  MIB.addMemOperand(MMO);
+}
+
+unsigned WebAssemblyFastISel::maskI1Value(unsigned Reg,
+                                          const TargetRegisterClass *RC,
+                                          const Value *V) {
+  // If the value is naturally an i1, we don't need to mask it.
+  // TODO: Recursively examine selects, phis, and, or, xor, constants.
+  if (isa<CmpInst>(V))
+    return Reg;
+
+  unsigned MaskReg = createResultReg(RC);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+          TII.get(WebAssembly::CONST_I32), MaskReg)
+     .addImm(1);
+
+  unsigned NewReg = createResultReg(RC);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+          TII.get(WebAssembly::AND_I32), NewReg)
+    .addReg(Reg)
+    .addReg(MaskReg);
+
+  return NewReg;
+}
+
+unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V) {
+  return maskI1Value(getRegForValue(V), &WebAssembly::I32RegClass, V);
+}
+
+unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+  DenseMap<const AllocaInst *, int>::iterator SI =
+      FuncInfo.StaticAllocaMap.find(AI);
+
+  if (SI != FuncInfo.StaticAllocaMap.end()) {
+    unsigned ResultReg = createResultReg(Subtarget->hasAddr64() ?
+                                         &WebAssembly::I64RegClass :
+                                         &WebAssembly::I32RegClass);
+    unsigned Opc = Subtarget->hasAddr64() ?
+                   WebAssembly::COPY_LOCAL_I64 :
+                   WebAssembly::COPY_LOCAL_I32;
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), ResultReg)
+        .addFrameIndex(SI->second);
+    return ResultReg;
+  }
+
+  return 0;
+}
+
+unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
+    unsigned Reg = createResultReg(Subtarget->hasAddr64() ?
+                                   &WebAssembly::I64RegClass :
+                                   &WebAssembly::I32RegClass);
+    unsigned Opc = Subtarget->hasAddr64() ?
+                   WebAssembly::CONST_I64 :
+                   WebAssembly::CONST_I32;
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), Reg)
+       .addGlobalAddress(GV);
+    return Reg;
+  }
+
+  // Let target-independent code handle it.
+  return 0;
+}
+
+bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
+  // Target-independent code can handle this, except it doesn't set the dead
+  // flag on the ARGUMENTS clobber, so we have to do that manually in order
+  // to satisfy code that expects this of isBitcast() instructions.
+  EVT VT = TLI.getValueType(DL, I->getOperand(0)->getType());
+  EVT RetVT = TLI.getValueType(DL, I->getType());
+  if (!VT.isSimple() || !RetVT.isSimple())
+    return false;
+  unsigned Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
+                                        getRegForValue(I->getOperand(0)),
+                                        I->getOperand(0)->hasOneUse());
+  if (!Reg)
+    return false;
+  MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
+  --Iter;
+  assert(Iter->isBitcast());
+  Iter->setPhysRegsDeadExcept(ArrayRef<unsigned>(), TRI);
+  updateValueMap(I, Reg);
+  return true;
+}
+
+bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
+  const LoadInst *Load = cast<LoadInst>(I);
+  if (Load->isAtomic())
+    return false;
+
+  Address Addr;
+  if (!computeAddress(Load->getPointerOperand(), Addr))
+    return false;
+
+  // TODO: Fold a following sign-/zero-extend into the load instruction.
+
+  unsigned Opc;
+  const TargetRegisterClass *RC;
+  switch (Load->getType()->getTypeID()) {
+  case Type::PointerTyID:
+    if (Subtarget->hasAddr64())
+      goto i64_load_addr;
+    goto i32_load_addr;
+  case Type::IntegerTyID:
+    switch (Load->getType()->getPrimitiveSizeInBits()) {
+    case 1: case 8:
+      Opc = WebAssembly::LOAD8_U_I32;
+      RC = &WebAssembly::I32RegClass;
+      break;
+    case 16:
+      Opc = WebAssembly::LOAD16_U_I32;
+      RC = &WebAssembly::I32RegClass;
+      break;
+    case 32:
+    i32_load_addr:
+      Opc = WebAssembly::LOAD_I32;
+      RC = &WebAssembly::I32RegClass;
+      break;
+    case 64:
+    i64_load_addr:
+      Opc = WebAssembly::LOAD_I64;
+      RC = &WebAssembly::I64RegClass;
+      break;
+    default: return false;
+    }
+    break;
+  case Type::FloatTyID:
+    Opc = WebAssembly::LOAD_F32;
+    RC = &WebAssembly::F32RegClass;
+    break;
+  case Type::DoubleTyID:
+    Opc = WebAssembly::LOAD_F64;
+    RC = &WebAssembly::F64RegClass;
+    break;
+  default: return false;
+  }
+
+  materializeLoadStoreOperands(Addr);
+
+  unsigned ResultReg = createResultReg(RC);
+  auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
+                     ResultReg);
+
+  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
+
+  updateValueMap(Load, ResultReg);
+  return true;
+}
+
+bool WebAssemblyFastISel::selectStore(const Instruction *I) {
+  const StoreInst *Store = cast<StoreInst>(I);
+  if (Store->isAtomic())
+    return false;
+
+  Address Addr;
+  if (!computeAddress(Store->getPointerOperand(), Addr))
+    return false;
+
+  unsigned Opc;
+  const TargetRegisterClass *RC;
+  bool VTIsi1 = false;
+  switch (Store->getValueOperand()->getType()->getTypeID()) {
+  case Type::PointerTyID:
+    if (Subtarget->hasAddr64())
+      goto i64_store_addr;
+    goto i32_store_addr;
+  case Type::IntegerTyID:
+    switch (Store->getValueOperand()->getType()->getPrimitiveSizeInBits()) {
+    case 1:
+      VTIsi1 = true;
+    case 8:
+      Opc = WebAssembly::STORE8_I32;
+      RC = &WebAssembly::I32RegClass;
+      break;
+    case 16:
+      Opc = WebAssembly::STORE16_I32;
+      RC = &WebAssembly::I32RegClass;
+      break;
+    case 32:
+    i32_store_addr:
+      Opc = WebAssembly::STORE_I32;
+      RC = &WebAssembly::I32RegClass;
+      break;
+    case 64:
+    i64_store_addr:
+      Opc = WebAssembly::STORE_I64;
+      RC = &WebAssembly::I64RegClass;
+      break;
+    default: return false;
+    }
+    break;
+  case Type::FloatTyID:
+    Opc = WebAssembly::STORE_F32;
+    RC = &WebAssembly::F32RegClass;
+    break;
+  case Type::DoubleTyID:
+    Opc = WebAssembly::STORE_F64;
+    RC = &WebAssembly::F64RegClass;
+    break;
+  default: return false;
+  }
+
+  materializeLoadStoreOperands(Addr);
+
+  unsigned ValueReg = getRegForValue(Store->getValueOperand());
+  if (VTIsi1)
+    ValueReg = maskI1Value(ValueReg, RC, Store->getValueOperand());
+
+  unsigned ResultReg = createResultReg(RC);
+  auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
+                     ResultReg);
+
+  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Store));
+
+  MIB.addReg(ValueReg);
+  return true;
+}
+
+bool WebAssemblyFastISel::selectBr(const Instruction *I) {
+  const BranchInst *Br = cast<BranchInst>(I);
+  if (Br->isUnconditional()) {
+    MachineBasicBlock *MSucc = FuncInfo.MBBMap[Br->getSuccessor(0)];
+    fastEmitBranch(MSucc, Br->getDebugLoc());
+    return true;
+  }
+
+  MachineBasicBlock *TBB = FuncInfo.MBBMap[Br->getSuccessor(0)];
+  MachineBasicBlock *FBB = FuncInfo.MBBMap[Br->getSuccessor(1)];
+
+  Value *Cond = Br->getCondition();
+  unsigned Opc = WebAssembly::BR_IF;
+  if (BinaryOperator::isNot(Cond)) {
+    Cond = BinaryOperator::getNotArgument(Cond);
+    Opc = WebAssembly::BR_UNLESS;
+  }
+
+  unsigned CondReg = getRegForI1Value(Cond);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc))
+      .addMBB(TBB)
+      .addReg(CondReg);
+  
+  finishCondBranch(Br->getParent(), TBB, FBB);
+  return true;
+}
+
+bool WebAssemblyFastISel::selectRet(const Instruction *I) {
+  if (!FuncInfo.CanLowerReturn)
+    return false;
+
+  const ReturnInst *Ret = cast<ReturnInst>(I);
+
+  if (Ret->getNumOperands() == 0) {
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(WebAssembly::RETURN_VOID));
+    return true;
+  }
+
+  Value *RV = Ret->getOperand(0);
+  unsigned Opc;
+  switch (RV->getType()->getTypeID()) {
+  case Type::PointerTyID:
+    if (Subtarget->hasAddr64())
+      goto i64_ret_value;
+    goto i32_ret_value;
+  case Type::IntegerTyID:
+    switch (RV->getType()->getPrimitiveSizeInBits()) {
+    case 1: case 8:
+    case 16: case 32:
+    i32_ret_value:
+      Opc = WebAssembly::RETURN_I32;
+      break;
+    case 64:
+    i64_ret_value:
+      Opc = WebAssembly::RETURN_I64;
+      break;
+    default: return false;
+    }
+    break;
+  case Type::FloatTyID:  Opc = WebAssembly::RETURN_F32; break;
+  case Type::DoubleTyID: Opc = WebAssembly::RETURN_F64; break;
+  default: return false;
+  }
+
+  unsigned Reg = getRegForValue(RV);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc)).addReg(Reg);
+  return true;
+}
+
+bool WebAssemblyFastISel::selectUnreachable(const Instruction *I) {
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+          TII.get(WebAssembly::UNREACHABLE));
+  return true;
+}
+
+bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
+  switch (I->getOpcode()) {
+  case Instruction::BitCast:     return selectBitCast(I);
+  case Instruction::Load:        return selectLoad(I);
+  case Instruction::Store:       return selectStore(I);
+  case Instruction::Br:          return selectBr(I);
+  case Instruction::Ret:         return selectRet(I);
+  case Instruction::Unreachable: return selectUnreachable(I);
+  default: break;
   }
 
   // Fall back to target-independent instruction selection.

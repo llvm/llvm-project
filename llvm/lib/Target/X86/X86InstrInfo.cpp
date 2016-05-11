@@ -4527,8 +4527,9 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // first frame index.
     // See X86ISelLowering.cpp - X86::hasCopyImplyingStackAdjustment.
 
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
     MachineBasicBlock::LivenessQueryResult LQR =
-        MBB.computeRegisterLiveness(&getRegisterInfo(), AX, MI);
+        MBB.computeRegisterLiveness(TRI, AX, MI);
     // We do not want to save and restore AX if we do not have to.
     // Moreover, if we do so whereas AX is dead, we would need to set
     // an undef flag on the use of AX, otherwise the verifier will
@@ -4536,15 +4537,19 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // We do not want to change the behavior of the machine verifier
     // as this is usually wrong to read an undef value.
     if (MachineBasicBlock::LQR_Unknown == LQR) {
-      LivePhysRegs LPR(&getRegisterInfo());
+      LivePhysRegs LPR(TRI);
       LPR.addLiveOuts(MBB);
       MachineBasicBlock::iterator I = MBB.end();
       while (I != MI) {
         --I;
         LPR.stepBackward(*I);
       }
-      LQR = LPR.contains(AX) ? MachineBasicBlock::LQR_Live
-                             : MachineBasicBlock::LQR_Dead;
+      // AX contains the top most register in the aliasing hierarchy.
+      // It may not be live, but one of its aliases may be.
+      for (MCRegAliasIterator AI(AX, TRI, true);
+           AI.isValid() && LQR != MachineBasicBlock::LQR_Live; ++AI)
+        LQR = LPR.contains(*AI) ? MachineBasicBlock::LQR_Live
+                                : MachineBasicBlock::LQR_Dead;
     }
     bool AXDead = (Reg == AX) || (MachineBasicBlock::LQR_Dead == LQR);
     if (!AXDead)

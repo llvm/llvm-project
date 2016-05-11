@@ -11,8 +11,8 @@
 ;; Test constant cast expressions
 ;;-------------------------------
 
-global i63 u0x00001     ; hexadecimal unsigned integer constants
-global i63  s0x012312   ; hexadecimal signed integer constants
+@0 = global i63 u0x00001     ; hexadecimal unsigned integer constants
+@1 = global i63  s0x012312   ; hexadecimal signed integer constants
 
 @t2 = global i33* @t1                             ;; Forward reference without cast
 @t3 = global i33* bitcast (i33* @t1 to i33*)       ;; Forward reference with cast
@@ -24,9 +24,9 @@ global i63  s0x012312   ; hexadecimal signed integer constants
 @t9 = global i33 fptosi (float sitofp (i33 8 to float) to i33) ;; Nested cast expression
 
 
-global i32* bitcast (float* @4 to i32*)   ;; Forward numeric reference
-global float* @4                       ;; Duplicate forward numeric reference
-global float 0.0
+@2 = global i32* bitcast (float* @4 to i32*)   ;; Forward numeric reference
+@3 = global float* @4                     ;; Duplicate forward numeric reference
+@4 = global float 0.0
 
 
 ;;---------------------------------------------------

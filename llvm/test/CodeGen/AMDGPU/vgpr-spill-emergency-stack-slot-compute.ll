@@ -21,16 +21,23 @@
 
 ; GCNMESA-DAG: s_mov_b32 s16, s3
 ; GCNMESA-DAG: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
-; GCNMESA-DAG: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GCNMESA--DAG: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; GCNMESA-DAG: s_mov_b32 s14, -1
-; SIMESA-DAG: s_mov_b32 s15, 0x98f000
-; VIMESA-DAG: s_mov_b32 s15, 0x980000
+; SIMESA-DAG: s_mov_b32 s15, 0x88f000
+; VIMESA-DAG: s_mov_b32 s15, 0x880000
 
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, s[12:15], s16 offset:{{[0-9]+}} ; 4-byte Folded Spill
 
-; GCN: buffer_store_dwordx4 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
-; GCN: buffer_load_dwordx4 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+; GCN: buffer_store_dword {{v[0-9]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+; GCN: buffer_store_dword {{v[0-9]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+; GCN: buffer_store_dword {{v[0-9]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+; GCN: buffer_store_dword {{v[0-9]}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+
+; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
+; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[12:15], s16 offen offset:{{[0-9]+}}
 
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 1024

@@ -1158,20 +1158,15 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       BPtr->getType()->getPointerAddressSpace())
     return Dependence::Unknown;
 
-  const SCEV *AScev = replaceSymbolicStrideSCEV(PSE, Strides, APtr);
-  const SCEV *BScev = replaceSymbolicStrideSCEV(PSE, Strides, BPtr);
-
   int StrideAPtr = getPtrStride(PSE, APtr, InnermostLoop, Strides, true);
   int StrideBPtr = getPtrStride(PSE, BPtr, InnermostLoop, Strides, true);
 
-  const SCEV *Src = AScev;
-  const SCEV *Sink = BScev;
+  const SCEV *Src = PSE.getSCEV(APtr);
+  const SCEV *Sink = PSE.getSCEV(BPtr);
 
   // If the induction step is negative we have to invert source and sink of the
   // dependence.
   if (StrideAPtr < 0) {
-    //Src = BScev;
-    //Sink = AScev;
     std::swap(APtr, BPtr);
     std::swap(Src, Sink);
     std::swap(AIsWrite, BIsWrite);

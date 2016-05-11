@@ -83,7 +83,9 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_condbl", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_blx", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_thumb_bl", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_blx", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_arm_thumb_blx", 0, 32,
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_thumb_cb", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_thumb_cp", 0, 8,
        MCFixupKindInfo::FKF_IsPCRel |
@@ -131,7 +133,9 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_condbl", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_blx", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_thumb_bl", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_blx", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_arm_thumb_blx", 0, 32,
+       MCFixupKindInfo::FKF_IsPCRel |
+           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_thumb_cb", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_arm_thumb_cp", 8, 8,
        MCFixupKindInfo::FKF_IsPCRel |
@@ -535,7 +539,12 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     //
     // Note that the halfwords are stored high first, low second; so we need
     // to transpose the fixup value here to map properly.
-    uint32_t offset = (Value - 2) >> 2;
+    if (Ctx && Value  % 4 != 0) {
+      Ctx->reportError(Fixup.getLoc(), "misaligned ARM call destination");
+      return 0;
+    }
+
+    uint32_t offset = (Value - 4) >> 2;
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
       if (SRE->getKind() == MCSymbolRefExpr::VK_TLSCALL)

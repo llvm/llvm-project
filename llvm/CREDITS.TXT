@@ -396,7 +396,7 @@ D: Fixes and improvements to the ARM fast-isel pass
 D: Fixes and improvements to the AArch64 backend
 
 N: Nadav Rotem
-E: nrotem@apple.com
+E: nadav.rotem@me.com
 D: X86 code generation improvements, Loop Vectorizer.
 
 N: Roman Samoilov

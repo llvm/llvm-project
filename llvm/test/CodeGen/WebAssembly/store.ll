@@ -1,4 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -fast-isel -fast-isel-abort=1 | FileCheck %s
 
 ; Test that basic stores are assembled properly.
 

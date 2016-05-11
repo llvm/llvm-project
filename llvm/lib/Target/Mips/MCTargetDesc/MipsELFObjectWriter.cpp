@@ -476,9 +476,20 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
 
 bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
                                                   unsigned Type) const {
+  // This must be a compound relocation from the N64 ABI.
+  // FIXME: Return false iff all sub-relocations return false.
+  if (!isUInt<8>(Type))
+    return true;
+
   switch (Type) {
   default:
+    errs() << Type << "\n";
+    llvm_unreachable("Unexpected relocation");
     return true;
+
+  // This relocation doesn't affect the section data.
+  case ELF::R_MIPS_NONE:
+    return false;
 
   // On REL ABI's (e.g. O32), these relocations form pairs. The pairing is done
   // by the static linker by matching the symbol and offset.
@@ -502,13 +513,115 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MIPS_32:
     if (cast<MCSymbolELF>(Sym).getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;
-    // falltrough
+    // fallthrough
   case ELF::R_MIPS_26:
   case ELF::R_MIPS_64:
   case ELF::R_MIPS_GPREL16:
   case ELF::R_MIPS_GPREL32:
   case ELF::R_MIPS_PC16:
     return false;
+
+  // FIXME: Many of these relocations should probably return false but this
+  //        hasn't been confirmed to be safe yet.
+  case ELF::R_MIPS_REL32:
+  case ELF::R_MIPS_LITERAL:
+  case ELF::R_MIPS_CALL16:
+  case ELF::R_MIPS_SHIFT5:
+  case ELF::R_MIPS_SHIFT6:
+  case ELF::R_MIPS_GOT_DISP:
+  case ELF::R_MIPS_GOT_PAGE:
+  case ELF::R_MIPS_GOT_OFST:
+  case ELF::R_MIPS_GOT_HI16:
+  case ELF::R_MIPS_GOT_LO16:
+  case ELF::R_MIPS_SUB:
+  case ELF::R_MIPS_INSERT_A:
+  case ELF::R_MIPS_INSERT_B:
+  case ELF::R_MIPS_DELETE:
+  case ELF::R_MIPS_HIGHER:
+  case ELF::R_MIPS_HIGHEST:
+  case ELF::R_MIPS_CALL_HI16:
+  case ELF::R_MIPS_CALL_LO16:
+  case ELF::R_MIPS_SCN_DISP:
+  case ELF::R_MIPS_REL16:
+  case ELF::R_MIPS_ADD_IMMEDIATE:
+  case ELF::R_MIPS_PJUMP:
+  case ELF::R_MIPS_RELGOT:
+  case ELF::R_MIPS_JALR:
+  case ELF::R_MIPS_TLS_DTPMOD32:
+  case ELF::R_MIPS_TLS_DTPREL32:
+  case ELF::R_MIPS_TLS_DTPMOD64:
+  case ELF::R_MIPS_TLS_DTPREL64:
+  case ELF::R_MIPS_TLS_GD:
+  case ELF::R_MIPS_TLS_LDM:
+  case ELF::R_MIPS_TLS_DTPREL_HI16:
+  case ELF::R_MIPS_TLS_DTPREL_LO16:
+  case ELF::R_MIPS_TLS_GOTTPREL:
+  case ELF::R_MIPS_TLS_TPREL32:
+  case ELF::R_MIPS_TLS_TPREL64:
+  case ELF::R_MIPS_TLS_TPREL_HI16:
+  case ELF::R_MIPS_TLS_TPREL_LO16:
+  case ELF::R_MIPS_GLOB_DAT:
+  case ELF::R_MIPS_PC21_S2:
+  case ELF::R_MIPS_PC26_S2:
+  case ELF::R_MIPS_PC18_S3:
+  case ELF::R_MIPS_PC19_S2:
+  case ELF::R_MIPS_PCHI16:
+  case ELF::R_MIPS_PCLO16:
+  case ELF::R_MIPS_COPY:
+  case ELF::R_MIPS_JUMP_SLOT:
+  case ELF::R_MIPS_NUM:
+  case ELF::R_MIPS_PC32:
+  case ELF::R_MIPS_EH:
+  case ELF::R_MICROMIPS_26_S1:
+  case ELF::R_MICROMIPS_GPREL16:
+  case ELF::R_MICROMIPS_LITERAL:
+  case ELF::R_MICROMIPS_PC7_S1:
+  case ELF::R_MICROMIPS_PC10_S1:
+  case ELF::R_MICROMIPS_PC16_S1:
+  case ELF::R_MICROMIPS_CALL16:
+  case ELF::R_MICROMIPS_GOT_DISP:
+  case ELF::R_MICROMIPS_GOT_PAGE:
+  case ELF::R_MICROMIPS_GOT_OFST:
+  case ELF::R_MICROMIPS_GOT_HI16:
+  case ELF::R_MICROMIPS_GOT_LO16:
+  case ELF::R_MICROMIPS_SUB:
+  case ELF::R_MICROMIPS_HIGHER:
+  case ELF::R_MICROMIPS_HIGHEST:
+  case ELF::R_MICROMIPS_CALL_HI16:
+  case ELF::R_MICROMIPS_CALL_LO16:
+  case ELF::R_MICROMIPS_SCN_DISP:
+  case ELF::R_MICROMIPS_JALR:
+  case ELF::R_MICROMIPS_HI0_LO16:
+  case ELF::R_MICROMIPS_TLS_GD:
+  case ELF::R_MICROMIPS_TLS_LDM:
+  case ELF::R_MICROMIPS_TLS_DTPREL_HI16:
+  case ELF::R_MICROMIPS_TLS_DTPREL_LO16:
+  case ELF::R_MICROMIPS_TLS_GOTTPREL:
+  case ELF::R_MICROMIPS_TLS_TPREL_HI16:
+  case ELF::R_MICROMIPS_TLS_TPREL_LO16:
+  case ELF::R_MICROMIPS_GPREL7_S2:
+  case ELF::R_MICROMIPS_PC23_S2:
+  case ELF::R_MICROMIPS_PC21_S2:
+  case ELF::R_MICROMIPS_PC26_S1:
+  case ELF::R_MICROMIPS_PC18_S3:
+  case ELF::R_MICROMIPS_PC19_S2:
+    return true;
+
+  // FIXME: Many of these should probably return false but MIPS16 isn't
+  //        supported by the integrated assembler.
+  case ELF::R_MIPS16_26:
+  case ELF::R_MIPS16_GPREL:
+  case ELF::R_MIPS16_CALL16:
+  case ELF::R_MIPS16_TLS_GD:
+  case ELF::R_MIPS16_TLS_LDM:
+  case ELF::R_MIPS16_TLS_DTPREL_HI16:
+  case ELF::R_MIPS16_TLS_DTPREL_LO16:
+  case ELF::R_MIPS16_TLS_GOTTPREL:
+  case ELF::R_MIPS16_TLS_TPREL_HI16:
+  case ELF::R_MIPS16_TLS_TPREL_LO16:
+    llvm_unreachable("Unsupported MIPS16 relocation");
+    return true;
+
   }
 }
 

@@ -29,7 +29,7 @@ target triple = "thumbv7-apple-darwin10"
 @"\01_fnmatch.initial" = external constant %union.__mbstate_t, align 4
 
 ; CHECK: _fnmatch
-; CHECK: blx _fnmatch1
+; CHECK: bl _fnmatch1
 
 define i32 @"\01_fnmatch"(i8* %pattern, i8* %string, i32 %flags) nounwind optsize {
 entry:

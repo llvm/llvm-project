@@ -81,12 +81,83 @@ size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize) {
   return F->GetMD().Mutate(Data, Size, MaxSize);
 }
 
+struct CoverageController {
+  static void Reset() {
+    CHECK_WEAK_API_FUNCTION(__sanitizer_reset_coverage);
+    __sanitizer_reset_coverage();
+    PcMapResetCurrent();
+  }
+
+  static void ResetCounters(const Fuzzer::FuzzingOptions &Options) {
+    if (Options.UseCounters) {
+      __sanitizer_update_counter_bitset_and_clear_counters(0);
+    }
+  }
+
+  static void Prepare(const Fuzzer::FuzzingOptions &Options,
+                      Fuzzer::Coverage *C) {
+    if (Options.UseCounters) {
+      size_t NumCounters = __sanitizer_get_number_of_counters();
+      C->CounterBitmap.resize(NumCounters);
+    }
+  }
+
+  // Records data to a maximum coverage tracker. Returns true if additional
+  // coverage was discovered.
+  static bool RecordMax(const Fuzzer::FuzzingOptions &Options,
+                        Fuzzer::Coverage *C) {
+    bool Res = false;
+
+    uint64_t NewBlockCoverage = __sanitizer_get_total_unique_coverage();
+    if (NewBlockCoverage > C->BlockCoverage) {
+      Res = true;
+      C->BlockCoverage = NewBlockCoverage;
+    }
+
+    if (Options.UseIndirCalls &&
+        __sanitizer_get_total_unique_caller_callee_pairs) {
+      uint64_t NewCallerCalleeCoverage =
+          __sanitizer_get_total_unique_caller_callee_pairs();
+      if (NewCallerCalleeCoverage > C->CallerCalleeCoverage) {
+        Res = true;
+        C->CallerCalleeCoverage = NewCallerCalleeCoverage;
+      }
+    }
+
+    if (Options.UseCounters) {
+      uint64_t CounterDelta =
+          __sanitizer_update_counter_bitset_and_clear_counters(
+              C->CounterBitmap.data());
+      if (CounterDelta > 0) {
+        Res = true;
+        C->CounterBitmapBits += CounterDelta;
+      }
+    }
+
+    uint64_t NewPcMapBits = PcMapMergeInto(&C->PCMap);
+    if (NewPcMapBits > C->PcMapBits) {
+      Res = true;
+      C->PcMapBits = NewPcMapBits;
+    }
+
+    uintptr_t *CoverageBuf;
+    uint64_t NewPcBufferLen = __sanitizer_get_coverage_pc_buffer(&CoverageBuf);
+    if (NewPcBufferLen > C->PcBufferLen) {
+      Res = true;
+      C->PcBufferLen = NewPcBufferLen;
+    }
+
+    return Res;
+  }
+};
+
 Fuzzer::Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options)
     : CB(CB), MD(MD), Options(Options) {
   SetDeathCallback();
   InitializeTraceState();
   assert(!F);
   F = this;
+  ResetCoverage();
 }
 
 void Fuzzer::SetDeathCallback() {
@@ -208,22 +279,21 @@ void Fuzzer::PrintStats(const char *Where, const char *End) {
       Printf("runs,block_cov,bits,cc_cov,corpus,execs_per_sec,tbms,reason\n");
     }
     Printf("%zd,%zd,%zd,%zd,%zd,%zd,%s\n", TotalNumberOfRuns,
-           LastRecordedBlockCoverage, TotalBits(),
-           LastRecordedCallerCalleeCoverage, Corpus.size(), ExecPerSec,
-           Where);
+           MaxCoverage.BlockCoverage, MaxCoverage.CounterBitmapBits,
+           MaxCoverage.CallerCalleeCoverage, Corpus.size(), ExecPerSec, Where);
   }
 
   if (!Options.Verbosity)
     return;
   Printf("#%zd\t%s", TotalNumberOfRuns, Where);
-  if (LastRecordedBlockCoverage)
-    Printf(" cov: %zd", LastRecordedBlockCoverage);
-  if (LastRecordedPcMapSize)
-    Printf(" path: %zd", LastRecordedPcMapSize);
-  if (auto TB = TotalBits())
+  if (MaxCoverage.BlockCoverage)
+    Printf(" cov: %zd", MaxCoverage.BlockCoverage);
+  if (MaxCoverage.PcMapBits)
+    Printf(" path: %zd", MaxCoverage.PcMapBits);
+  if (auto TB = MaxCoverage.CounterBitmapBits)
     Printf(" bits: %zd", TB);
-  if (LastRecordedCallerCalleeCoverage)
-    Printf(" indir: %zd", LastRecordedCallerCalleeCoverage);
+  if (MaxCoverage.CallerCalleeCoverage)
+    Printf(" indir: %zd", MaxCoverage.CallerCalleeCoverage);
   Printf(" units: %zd exec/s: %zd", Corpus.size(), ExecPerSec);
   Printf("%s", End);
 }
@@ -298,7 +368,7 @@ void Fuzzer::ShuffleAndMinimize() {
     if (RunOne(U)) {
       NewCorpus.push_back(U);
       if (Options.Verbosity >= 2)
-        Printf("NEW0: %zd L %zd\n", LastRecordedBlockCoverage, U.size());
+        Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
     }
   }
   Corpus = NewCorpus;
@@ -309,12 +379,29 @@ void Fuzzer::ShuffleAndMinimize() {
   CheckForMemoryLeaks();
 }
 
+bool Fuzzer::UpdateMaxCoverage() {
+  uintptr_t PrevBufferLen = MaxCoverage.PcBufferLen;
+  bool Res = CoverageController::RecordMax(Options, &MaxCoverage);
+
+  if (Options.PrintNewCovPcs && PrevBufferLen != MaxCoverage.PcBufferLen) {
+    uintptr_t *CoverageBuf;
+    __sanitizer_get_coverage_pc_buffer(&CoverageBuf);
+    assert(CoverageBuf);
+    for (size_t I = PrevBufferLen; I < MaxCoverage.PcBufferLen; ++I) {
+      Printf("%p\n", CoverageBuf[I]);
+    }
+  }
+
+  return Res;
+}
+
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size) {
   TotalNumberOfRuns++;
 
-  PrepareCoverageBeforeRun();
+  // TODO(aizatsky): this Reset call seems to be not needed.
+  CoverageController::ResetCounters(Options);
   ExecuteCallback(Data, Size);
-  bool Res = CheckCoverageAfterRun();
+  bool Res = UpdateMaxCoverage();
 
   auto UnitStopTime = system_clock::now();
   auto TimeOfUnit =
@@ -378,61 +465,14 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   assert(Res == 0);
 }
 
-size_t Fuzzer::RecordBlockCoverage() {
-  CHECK_WEAK_API_FUNCTION(__sanitizer_get_total_unique_coverage);
-  uintptr_t PrevCoverage = LastRecordedBlockCoverage;
-  LastRecordedBlockCoverage = __sanitizer_get_total_unique_coverage();
-
-  if (PrevCoverage == LastRecordedBlockCoverage || !Options.PrintNewCovPcs)
-    return LastRecordedBlockCoverage;
-
-  uintptr_t PrevBufferLen = LastCoveragePcBufferLen;
-  uintptr_t *CoverageBuf;
-  LastCoveragePcBufferLen = __sanitizer_get_coverage_pc_buffer(&CoverageBuf);
-  assert(CoverageBuf);
-  for (size_t i = PrevBufferLen; i < LastCoveragePcBufferLen; ++i) {
-    Printf("%p\n", CoverageBuf[i]);
-  }
-
-  return LastRecordedBlockCoverage;
-}
-
-size_t Fuzzer::RecordCallerCalleeCoverage() {
-  if (!Options.UseIndirCalls)
-    return 0;
-  if (!__sanitizer_get_total_unique_caller_callee_pairs)
-    return 0;
-  return LastRecordedCallerCalleeCoverage =
-             __sanitizer_get_total_unique_caller_callee_pairs();
-}
-
-void Fuzzer::PrepareCoverageBeforeRun() {
-  if (Options.UseCounters) {
-    size_t NumCounters = __sanitizer_get_number_of_counters();
-    CounterBitmap.resize(NumCounters);
-    __sanitizer_update_counter_bitset_and_clear_counters(0);
-  }
-  RecordBlockCoverage();
-  RecordCallerCalleeCoverage();
-}
-
-bool Fuzzer::CheckCoverageAfterRun() {
-  size_t OldCoverage = LastRecordedBlockCoverage;
-  size_t NewCoverage = RecordBlockCoverage();
-  size_t OldCallerCalleeCoverage = LastRecordedCallerCalleeCoverage;
-  size_t NewCallerCalleeCoverage = RecordCallerCalleeCoverage();
-  size_t NumNewBits = 0;
-  size_t OldPcMapSize = LastRecordedPcMapSize;
-  PcMapMergeCurrentToCombined();
-  size_t NewPcMapSize = PcMapCombinedSize();
-  LastRecordedPcMapSize = NewPcMapSize;
-  if (NewPcMapSize > OldPcMapSize)
-    return true;
-  if (Options.UseCounters)
-    NumNewBits = __sanitizer_update_counter_bitset_and_clear_counters(
-        CounterBitmap.data());
-  return NewCoverage > OldCoverage ||
-         NewCallerCalleeCoverage > OldCallerCalleeCoverage || NumNewBits;
+std::string Fuzzer::Coverage::DebugString() const {
+  std::string Result =
+      std::string("Coverage{") + "BlockCoverage=" +
+      std::to_string(BlockCoverage) + " CallerCalleeCoverage=" +
+      std::to_string(CallerCalleeCoverage) + " CounterBitmapBits=" +
+      std::to_string(CounterBitmapBits) + " PcMapBits=" +
+      std::to_string(PcMapBits) + "}";
+  return Result;
 }
 
 void Fuzzer::WriteToOutputCorpus(const Unit &U) {
@@ -639,9 +679,9 @@ size_t Fuzzer::ChooseUnitIdxToMutate() {
 }
 
 void Fuzzer::ResetCoverage() {
-  CHECK_WEAK_API_FUNCTION(__sanitizer_reset_coverage);
-  __sanitizer_reset_coverage();
-  CounterBitmap.clear();
+  CoverageController::Reset();
+  MaxCoverage.Reset();
+  CoverageController::Prepare(Options, &MaxCoverage);
 }
 
 // Experimental search heuristic: drilling.

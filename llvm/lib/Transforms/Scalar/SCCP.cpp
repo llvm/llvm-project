@@ -1331,6 +1331,9 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         }
 
         Op1LV = getValueState(I.getOperand(1));
+
+        if (!Op0LV.isUndefined() && !Op1LV.isUndefined())
+          break;
       }
       // If this is an instructions whose result is defined even if the input is
       // not fully defined, propagate the information.
