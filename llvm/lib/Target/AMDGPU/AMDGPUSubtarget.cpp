@@ -73,7 +73,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   // Set defaults if needed.
   if (MaxPrivateElementSize == 0)
-    MaxPrivateElementSize = 16;
+    MaxPrivateElementSize = 4;
 
   return *this;
 }

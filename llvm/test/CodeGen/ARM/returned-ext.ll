@@ -18,9 +18,9 @@ entry:
 ; CHECKELF: mov r0, [[SAVEX]]
 ; CHECKT2D-LABEL: test_identity:
 ; CHECKT2D: mov [[SAVEX:r[0-9]+]], r0
-; CHECKT2D: blx _identity16
+; CHECKT2D: bl _identity16
 ; CHECKT2D: uxth r0, r0
-; CHECKT2D: blx _identity32
+; CHECKT2D: bl _identity32
 ; CHECKT2D: mov r0, [[SAVEX]]
   %call = tail call i16 @identity16(i16 %x)
   %b = zext i16 %call to i32
@@ -49,9 +49,9 @@ entry:
 ; This shouldn't be required
 ; CHECKT2D: mov [[SAVEX:r[0-9]+]], r0
 
-; CHECKT2D: blx _retzext16
+; CHECKT2D: bl _retzext16
 ; CHECKT2D-NOT: uxth r0, {{r[0-9]+}}
-; CHECKT2D: blx _identity32
+; CHECKT2D: bl _identity32
 
 ; This shouldn't be required
 ; CHECKT2D: mov r0, [[SAVEX]]
@@ -72,9 +72,9 @@ entry:
 ; CHECKELF: mov r0, [[SAVEX]]
 ; CHECKT2D-LABEL: test_mismatched_ret:
 ; CHECKT2D: mov [[SAVEX:r[0-9]+]], r0
-; CHECKT2D: blx _retzext16
+; CHECKT2D: bl _retzext16
 ; CHECKT2D: sxth r0, {{r[0-9]+}}
-; CHECKT2D: blx _identity32
+; CHECKT2D: bl _identity32
 ; CHECKT2D: mov r0, [[SAVEX]]
   %call = tail call i16 @retzext16(i16 %x)
   %b = sext i16 %call to i32
@@ -92,9 +92,9 @@ entry:
 ; CHECKELF: b paramzext16
 ; CHECKT2D-LABEL: test_matched_paramext:
 ; CHECKT2D: uxth r0, r0
-; CHECKT2D: blx _paramzext16
+; CHECKT2D: bl _paramzext16
 ; CHECKT2D: uxth r0, r0
-; CHECKT2D: blx _identity32
+; CHECKT2D: bl _identity32
 ; CHECKT2D: b.w _paramzext16
   %call = tail call i16 @paramzext16(i16 %x)
   %b = zext i16 %call to i32
@@ -118,8 +118,8 @@ entry:
 ; CHECKELF: bl identity32
 ; CHECKELF: b paramzext16
 ; CHECKT2D-LABEL: test_matched_paramext2:
-; CHECKT2D: blx _paramzext16
-; CHECKT2D: blx _identity32
+; CHECKT2D: bl _paramzext16
+; CHECKT2D: bl _identity32
 ; CHECKT2D: b.w _paramzext16
   %call = tail call i16 @paramzext16(i16 %x)
 
@@ -143,11 +143,11 @@ entry:
 
 ; CHECKT2D-LABEL: test_matched_bothext:
 ; CHECKT2D: uxth r0, r0
-; CHECKT2D: blx _bothzext16
+; CHECKT2D: bl _bothzext16
 ; CHECKT2D-NOT: uxth r0, r0
 
 ; FIXME: Tail call should be OK here
-; CHECKT2D: blx _identity32
+; CHECKT2D: bl _identity32
 
   %call = tail call i16 @bothzext16(i16 %x)
   %b = zext i16 %x to i32
@@ -167,9 +167,9 @@ entry:
 ; CHECKT2D-LABEL: test_mismatched_bothext:
 ; CHECKT2D: mov [[SAVEX:r[0-9]+]], r0
 ; CHECKT2D: uxth r0, {{r[0-9]+}}
-; CHECKT2D: blx _bothzext16
+; CHECKT2D: bl _bothzext16
 ; CHECKT2D: sxth r0, [[SAVEX]]
-; CHECKT2D: blx _identity32
+; CHECKT2D: bl _identity32
 ; CHECKT2D: mov r0, [[SAVEX]]
   %call = tail call i16 @bothzext16(i16 %x)
   %b = sext i16 %x to i32

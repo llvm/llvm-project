@@ -529,13 +529,6 @@ void DwarfDebug::finishSubprogramDefinitions() {
         forBothCUs(*CUMap.lookup(SP->getUnit()), [&](DwarfCompileUnit &CU) {
           CU.finishSubprogramDefinition(SP);
         });
-  for (auto *AbsScope : LScopes.getAbstractScopesList())
-    if (auto *SP = dyn_cast<DISubprogram>(AbsScope->getScopeNode()))
-      if (ProcessedSPNodes.count(SP) &&
-          SP->getUnit()->getEmissionKind() != DICompileUnit::NoDebug)
-        forBothCUs(*CUMap.lookup(SP->getUnit()), [&](DwarfCompileUnit &CU) {
-          CU.finishSubprogramDefinition(SP);
-        });
 }
 
 void DwarfDebug::finalizeModuleInfo() {

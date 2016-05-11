@@ -2093,8 +2093,28 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
     break;
   }
 
-  case Instruction::SDiv:
   case Instruction::UDiv:
+    if (ConstantInt *DivLHS = dyn_cast<ConstantInt>(LHSI->getOperand(0))) {
+      Value *X = LHSI->getOperand(1);
+      APInt C1 = RHS->getValue();
+      APInt C2 = DivLHS->getValue();
+      assert(C2 != 0 && "udiv 0, X should have been simplified already.");
+      // (icmp ugt (udiv C2, X), C1) -> (icmp ule X, C2/(C1+1))
+      if (ICI.getPredicate() == ICmpInst::ICMP_UGT) {
+        assert(!C1.isMaxValue() &&
+               "icmp ugt X, UINT_MAX should have been simplified already.");
+        return new ICmpInst(ICmpInst::ICMP_ULE, X,
+                            ConstantInt::get(X->getType(), C2.udiv(C1 + 1)));
+      }
+      // (icmp ult (udiv C2, X), C1) -> (icmp ugt X, C2/C1)
+      if (ICI.getPredicate() == ICmpInst::ICMP_ULT) {
+        assert(C1 != 0 && "icmp ult X, 0 should have been simplified already.");
+        return new ICmpInst(ICmpInst::ICMP_UGT, X,
+                            ConstantInt::get(X->getType(), C2.udiv(C1)));
+      }
+    }
+  // fall-through
+  case Instruction::SDiv:
     // Fold: icmp pred ([us]div X, C1), C2 -> range test
     // Fold this div into the comparison, producing a range check.
     // Determine, based on the divide type, what the range is being
@@ -2105,8 +2125,6 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
       if (Instruction *R = FoldICmpDivCst(ICI, cast<BinaryOperator>(LHSI),
                                           DivRHS))
         return R;
-    // FIXME: Handle (icmp ugt (udiv i32 CI2, A), CI) and
-    // (icmp ult (udiv i32 CI2, A), CI).
     break;
 
   case Instruction::Sub: {

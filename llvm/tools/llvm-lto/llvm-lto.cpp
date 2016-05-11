@@ -66,6 +66,8 @@ static cl::opt<bool>
 
 enum ThinLTOModes {
   THINLINK,
+  THINDISTRIBUTE,
+  THINEMITIMPORTS,
   THINPROMOTE,
   THINIMPORT,
   THININTERNALIZE,
@@ -80,6 +82,10 @@ cl::opt<ThinLTOModes> ThinLTOMode(
         clEnumValN(
             THINLINK, "thinlink",
             "ThinLink: produces the index by linking only the summaries."),
+        clEnumValN(THINDISTRIBUTE, "distributedindexes",
+                   "Produces individual indexes for distributed backends."),
+        clEnumValN(THINEMITIMPORTS, "emitimports",
+                   "Emit imports files for distributed backends."),
         clEnumValN(THINPROMOTE, "promote",
                    "Perform pre-import promotion (requires -thinlto-index)."),
         clEnumValN(THINIMPORT, "import", "Perform both promotion and "
@@ -354,6 +360,10 @@ public:
     switch (ThinLTOMode) {
     case THINLINK:
       return thinLink();
+    case THINDISTRIBUTE:
+      return distributedIndexes();
+    case THINEMITIMPORTS:
+      return emitImports();
     case THINPROMOTE:
       return promote();
     case THINIMPORT:
@@ -394,6 +404,55 @@ private:
     error(EC, "error opening the file '" + OutputFilename + "'");
     WriteIndexToFile(*CombinedIndex, OS);
     return;
+  }
+
+  /// Load the combined index from disk, then compute and generate
+  /// individual index files suitable for ThinLTO distributed backend builds
+  /// on the files mentioned on the command line (these must match the index
+  /// content).
+  void distributedIndexes() {
+    if (InputFilenames.size() != 1 && !OutputFilename.empty())
+      report_fatal_error("Can't handle a single output filename and multiple "
+                         "input files, do not provide an output filename and "
+                         "the output files will be suffixed from the input "
+                         "ones.");
+
+    auto Index = loadCombinedIndex();
+    for (auto &Filename : InputFilenames) {
+      // Build a map of module to the GUIDs and summary objects that should
+      // be written to its index.
+      std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+      ThinLTOCodeGenerator::gatherImportedSummariesForModule(
+          Filename, *Index, ModuleToSummariesForIndex);
+
+      std::string OutputName = OutputFilename;
+      if (OutputName.empty()) {
+        OutputName = Filename + ".thinlto.bc";
+      }
+      std::error_code EC;
+      raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
+      error(EC, "error opening the file '" + OutputName + "'");
+      WriteIndexToFile(*Index, OS, &ModuleToSummariesForIndex);
+    }
+  }
+
+  /// Load the combined index from disk, compute the imports, and emit
+  /// the import file lists for each module to disk.
+  void emitImports() {
+    if (InputFilenames.size() != 1 && !OutputFilename.empty())
+      report_fatal_error("Can't handle a single output filename and multiple "
+                         "input files, do not provide an output filename and "
+                         "the output files will be suffixed from the input "
+                         "ones.");
+
+    auto Index = loadCombinedIndex();
+    for (auto &Filename : InputFilenames) {
+      std::string OutputName = OutputFilename;
+      if (OutputName.empty()) {
+        OutputName = Filename + ".imports";
+      }
+      ThinLTOCodeGenerator::emitImports(Filename, OutputName, *Index);
+    }
   }
 
   /// Load the combined index from disk, then load every file referenced by

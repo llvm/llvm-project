@@ -2821,15 +2821,23 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
   // Update branch weight for PBI.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+  uint64_t PredCommon, PredOther, SuccCommon, SuccOther;
   bool PredHasWeights =
       PBI->extractProfMetadata(PredTrueWeight, PredFalseWeight);
   bool SuccHasWeights =
       BI->extractProfMetadata(SuccTrueWeight, SuccFalseWeight);
-  if (PredHasWeights && SuccHasWeights) {
-    uint64_t PredCommon = PBIOp ? PredFalseWeight : PredTrueWeight;
-    uint64_t PredOther = PBIOp ?PredTrueWeight : PredFalseWeight;
-    uint64_t SuccCommon = BIOp ? SuccFalseWeight : SuccTrueWeight;
-    uint64_t SuccOther = BIOp ? SuccTrueWeight : SuccFalseWeight;
+  bool HasWeights = PredHasWeights || SuccHasWeights;
+  if (HasWeights) {
+    if (!PredHasWeights) {
+      PredFalseWeight = PredTrueWeight = 1;
+    }
+    if (!SuccHasWeights) {
+      SuccFalseWeight = SuccTrueWeight = 1;
+    }
+    PredCommon = PBIOp ? PredFalseWeight : PredTrueWeight;
+    PredOther = PBIOp ? PredTrueWeight : PredFalseWeight;
+    SuccCommon = BIOp ? SuccFalseWeight : SuccTrueWeight;
+    SuccOther = BIOp ? SuccTrueWeight : SuccFalseWeight;
     // The weight to CommonDest should be PredCommon * SuccTotal +
     //                                    PredOther * SuccCommon.
     // The weight to OtherDest should be PredOther * SuccOther.

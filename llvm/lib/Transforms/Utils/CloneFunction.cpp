@@ -172,30 +172,14 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                        TypeMapper, Materializer);
 }
 
-// Clone the module-level debug info associated with OldFunc. The cloned data
-// will point to NewFunc instead.
-static void CloneDebugInfoMetadata(Function *NewFunc, const Function *OldFunc,
-                                   ValueToValueMapTy &VMap) {
-  if (const DISubprogram *OldSP = OldFunc->getSubprogram()) {
-    auto *NewSP = cast<DISubprogram>(MapMetadata(OldSP, VMap));
-    // FIXME: There ought to be a better way to do this: ValueMapper
-    // will clone the distinct DICompileUnit. Use the original one
-    // instead.
-    NewSP->replaceUnit(OldSP->getUnit());
-    NewFunc->setSubprogram(NewSP);
-  }
-}
-
-/// Return a copy of the specified function, but without
-/// embedding the function into another module.  Also, any references specified
-/// in the VMap are changed to refer to their mapped value instead of the
-/// original one.  If any of the arguments to the function are in the VMap,
-/// the arguments are deleted from the resultant function.  The VMap is
-/// updated to include mappings from all of the instructions and basicblocks in
-/// the function from their old to new values.
+/// Return a copy of the specified function and add it to that function's
+/// module.  Also, any references specified in the VMap are changed to refer to
+/// their mapped value instead of the original one.  If any of the arguments to
+/// the function are in the VMap, the arguments are deleted from the resultant
+/// function.  The VMap is updated to include mappings from all of the
+/// instructions and basicblocks in the function from their old to new values.
 ///
-Function *llvm::CloneFunction(const Function *F, ValueToValueMapTy &VMap,
-                              bool ModuleLevelChanges,
+Function *llvm::CloneFunction(Function *F, ValueToValueMapTy &VMap,
                               ClonedCodeInfo *CodeInfo) {
   std::vector<Type*> ArgTypes;
 
@@ -211,7 +195,8 @@ Function *llvm::CloneFunction(const Function *F, ValueToValueMapTy &VMap,
                                     ArgTypes, F->getFunctionType()->isVarArg());
 
   // Create the new function...
-  Function *NewF = Function::Create(FTy, F->getLinkage(), F->getName());
+  Function *NewF =
+      Function::Create(FTy, F->getLinkage(), F->getName(), F->getParent());
 
   // Loop over the arguments, copying the names of the mapped arguments over...
   Function::arg_iterator DestI = NewF->arg_begin();
@@ -221,11 +206,10 @@ Function *llvm::CloneFunction(const Function *F, ValueToValueMapTy &VMap,
       VMap[&I] = &*DestI++;        // Add mapping to VMap
     }
 
-  if (ModuleLevelChanges)
-    CloneDebugInfoMetadata(NewF, F, VMap);
-
   SmallVector<ReturnInst*, 8> Returns;  // Ignore returns cloned.
-  CloneFunctionInto(NewF, F, VMap, ModuleLevelChanges, Returns, "", CodeInfo);
+  CloneFunctionInto(NewF, F, VMap, /*ModuleLevelChanges=*/false, Returns, "",
+                    CodeInfo);
+
   return NewF;
 }
 

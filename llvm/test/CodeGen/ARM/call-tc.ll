@@ -87,7 +87,7 @@ entry:
 ; CHECKT2D-NEXT: bne.w _foo
 ; CHECKT2D-NEXT: push
 ; CHECKT2D-NEXT: mov r7, sp
-; CHECKT2D-NEXT: blx _foo
+; CHECKT2D-NEXT: bl _foo
   br i1 undef, label %bb, label %bb1.lr.ph
 
 bb1.lr.ph:
@@ -150,8 +150,8 @@ declare i32 @c(i32)
 
 define i32 @t9() nounwind {
 ; CHECKT2D-LABEL: t9:
-; CHECKT2D: blx __ZN9MutexLockC1Ev
-; CHECKT2D: blx __ZN9MutexLockD1Ev
+; CHECKT2D: bl __ZN9MutexLockC1Ev
+; CHECKT2D: bl __ZN9MutexLockD1Ev
 ; CHECKT2D: b.w ___divsi3
   %lock = alloca %class.MutexLock, align 1
   %1 = call %class.MutexLock* @_ZN9MutexLockC1Ev(%class.MutexLock* %lock)
@@ -170,7 +170,7 @@ declare %class.MutexLock* @_ZN9MutexLockD1Ev(%class.MutexLock*) unnamed_addr nou
 ; otherwise the call to floorf is lost.
 define float @libcall_tc_test2(float* nocapture %a, float %b) {
 ; CHECKT2D-LABEL: libcall_tc_test2:
-; CHECKT2D: blx _floorf
+; CHECKT2D: bl _floorf
 ; CHECKT2D: b.w _truncf
   %1 = load float, float* %a, align 4
   %call = tail call float @floorf(float %1)

@@ -1,7 +1,10 @@
-; RUN: llc < %s -asm-verbose=false -disable-block-placement -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck -check-prefix=OPT %s
+; RUN: llc < %s -asm-verbose=false -disable-block-placement -verify-machineinstrs -fast-isel=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -fast-isel=false | FileCheck -check-prefix=OPT %s
 
 ; Test the CFG stackifier pass.
+
+; Explicitly disable fast-isel, since it gets implicitly enabled in the
+; optnone test.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

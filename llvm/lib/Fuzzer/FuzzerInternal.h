@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "FuzzerInterface.h"
+#include "FuzzerTracePC.h"
 
 namespace fuzzer {
 using namespace std::chrono;
@@ -111,13 +112,6 @@ int NumberOfCpuCores();
 int GetPid();
 int SignalToMainThread();
 void SleepSeconds(int Seconds);
-
-// Clears the current PC Map.
-void PcMapResetCurrent();
-// Merges the current PC Map into the combined one, and clears the former.
-void PcMapMergeCurrentToCombined();
-// Returns the size of the combined PC Map.
-size_t PcMapCombinedSize();
 
 class Random {
  public:
@@ -309,6 +303,35 @@ public:
     bool PrintFinalStats = false;
     bool DetectLeaks = true;
   };
+
+  // Aggregates all available coverage measurements.
+  struct Coverage {
+    Coverage() { Reset(); }
+
+    void Reset() {
+      BlockCoverage = 0;
+      CallerCalleeCoverage = 0;
+      PcMapBits = 0;
+      CounterBitmapBits = 0;
+      PcBufferLen = 0;
+      CounterBitmap.clear();
+      PCMap.Reset();
+    }
+
+    std::string DebugString() const;
+
+    size_t BlockCoverage;
+    size_t CallerCalleeCoverage;
+
+    size_t PcBufferLen;
+    // Precalculated number of bits in CounterBitmap.
+    size_t CounterBitmapBits;
+    std::vector<uint8_t> CounterBitmap;
+    // Precalculated number of bits in PCMap.
+    size_t PcMapBits;
+    PcCoverageMap PCMap;
+  };
+
   Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options);
   void AddToCorpus(const Unit &U) {
     Corpus.push_back(U);
@@ -378,11 +401,8 @@ private:
   // Must be called whenever the corpus or unit weights are changed.
   void UpdateCorpusDistribution();
 
-  size_t RecordBlockCoverage();
-  size_t RecordCallerCalleeCoverage();
-  void PrepareCoverageBeforeRun();
-  bool CheckCoverageAfterRun();
   void ResetCoverage();
+  bool UpdateMaxCoverage();
 
   // Trace-based fuzzing: we run a unit with some kind of tracing
   // enabled and record potentially useful mutations. Then
@@ -410,16 +430,6 @@ private:
 
   std::vector<Unit> Corpus;
   std::unordered_set<std::string> UnitHashesAddedToCorpus;
-
-  // For UseCounters
-  std::vector<uint8_t> CounterBitmap;
-  size_t TotalBits() { // Slow. Call it only for printing stats.
-    size_t Res = 0;
-    for (auto x : CounterBitmap)
-      Res += __builtin_popcount(x);
-    return Res;
-  }
-
   std::vector<uint8_t> MutateInPlaceHere;
 
   std::piecewise_constant_distribution<double> CorpusDistribution;
@@ -430,10 +440,9 @@ private:
   system_clock::time_point UnitStartTime;
   long TimeOfLongestUnitInSeconds = 0;
   long EpochOfLastReadOfOutputCorpus = 0;
-  size_t LastRecordedBlockCoverage = 0;
-  size_t LastRecordedPcMapSize = 0;
-  size_t LastRecordedCallerCalleeCoverage = 0;
-  size_t LastCoveragePcBufferLen = 0;
+
+  // Maximum recorded coverage.
+  Coverage MaxCoverage;
 };
 
 }; // namespace fuzzer

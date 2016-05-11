@@ -621,7 +621,7 @@ Variables and aliases can have a
 
 Syntax::
 
-    [@<GlobalVarName> =] [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
+      @<GlobalVarName> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
                          [unnamed_addr] [AddrSpace] [ExternallyInitialized]
                          <global | constant> <Type> [<InitializerConstant>]
                          [, section "name"] [, comdat [($name)]]

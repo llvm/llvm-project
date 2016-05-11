@@ -49,9 +49,9 @@ define i32 @t3() {
 define void @t4(i32 %a0, i32 %a1, i32 %a2) {
 ; ALL-LABEL: t4:
 ; ALL: stm.w sp, {r0, r1, r2}
-; ALL: blx _ext
+; ALL: bl _ext
 ; ALL: ldm.w sp, {r0, r1, r2}
-; ALL: blx _f2
+; ALL: bl _f2
   %arr = alloca [4 x i32], align 4
   %p0 = getelementptr inbounds [4 x i32], [4 x i32]* %arr, i64 0, i64 0
   %p1 = getelementptr inbounds [4 x i32], [4 x i32]* %arr, i64 0, i64 1

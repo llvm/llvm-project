@@ -948,24 +948,45 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
         "Cannot schedule terminators or labels!");
 
     // Add register-based dependencies (data, anti, and output).
+    // For some instructions (calls, returns, inline-asm, etc.) there can
+    // be explicit uses and implicit defs, in which case the use will appear
+    // on the operand list before the def. Do two passes over the operand
+    // list to make sure that defs are processed before any uses.
     bool HasVRegDef = false;
     for (unsigned j = 0, n = MI->getNumOperands(); j != n; ++j) {
       const MachineOperand &MO = MI->getOperand(j);
-      if (!MO.isReg()) continue;
+      if (!MO.isReg() || !MO.isDef())
+        continue;
       unsigned Reg = MO.getReg();
-      if (Reg == 0) continue;
+      if (Reg == 0)
+        continue;
 
       if (TRI->isPhysicalRegister(Reg))
         addPhysRegDeps(SU, j);
       else {
-        if (MO.isDef()) {
-          HasVRegDef = true;
-          addVRegDefDeps(SU, j);
-        }
-        else if (MO.readsReg()) // ignore undef operands
-          addVRegUseDeps(SU, j);
+        HasVRegDef = true;
+        addVRegDefDeps(SU, j);
       }
     }
+    // Now process all uses.
+    for (unsigned j = 0, n = MI->getNumOperands(); j != n; ++j) {
+      const MachineOperand &MO = MI->getOperand(j);
+      // Only look at use operands.
+      // We do not need to check for MO.readsReg() here because subsequent
+      // subregister defs will get output dependence edges and need no
+      // additional use dependencies.
+      if (!MO.isReg() || !MO.isUse())
+        continue;
+      unsigned Reg = MO.getReg();
+      if (Reg == 0)
+        continue;
+
+      if (TRI->isPhysicalRegister(Reg))
+        addPhysRegDeps(SU, j);
+      else if (MO.readsReg()) // ignore undef operands
+        addVRegUseDeps(SU, j);
+    }
+
     // If we haven't seen any uses in this scheduling region, create a
     // dependence edge to ExitSU to model the live-out latency. This is required
     // for vreg defs with no in-region use, and prefetches with no vreg def.
@@ -1196,7 +1217,8 @@ void ScheduleDAGInstrs::startBlockForKills(MachineBasicBlock *BB) {
 /// operands, then we also need to propagate that to any instructions inside
 /// the bundle which had the same kill state.
 static void toggleBundleKillFlag(MachineInstr *MI, unsigned Reg,
-                                 bool NewKillState) {
+                                 bool NewKillState,
+                                 const TargetRegisterInfo *TRI) {
   if (MI->getOpcode() != TargetOpcode::BUNDLE)
     return;
 
@@ -1207,28 +1229,11 @@ static void toggleBundleKillFlag(MachineInstr *MI, unsigned Reg,
   MachineBasicBlock::instr_iterator Begin = MI->getIterator();
   MachineBasicBlock::instr_iterator End = getBundleEnd(*MI);
   while (Begin != End) {
-    for (MachineOperand &MO : (--End)->operands()) {
-      if (!MO.isReg() || MO.isDef() || Reg != MO.getReg())
-        continue;
-
-      // DEBUG_VALUE nodes do not contribute to code generation and should
-      // always be ignored.  Failure to do so may result in trying to modify
-      // KILL flags on DEBUG_VALUE nodes, which is distressing.
-      if (MO.isDebug())
-        continue;
-
-      // If the register has the internal flag then it could be killing an
-      // internal def of the register.  In this case, just skip.  We only want
-      // to toggle the flag on operands visible outside the bundle.
-      if (MO.isInternalRead())
-        continue;
-
-      if (MO.isKill() == NewKillState)
-        continue;
-      MO.setIsKill(NewKillState);
-      if (NewKillState)
-        return;
-    }
+    if (NewKillState) {
+      if ((--End)->addRegisterKilled(Reg, TRI, /* addIfNotFound= */ false))
+         return;
+    } else
+        (--End)->clearRegisterKills(Reg, TRI);
   }
 }
 
@@ -1236,21 +1241,21 @@ bool ScheduleDAGInstrs::toggleKillFlag(MachineInstr *MI, MachineOperand &MO) {
   // Setting kill flag...
   if (!MO.isKill()) {
     MO.setIsKill(true);
-    toggleBundleKillFlag(MI, MO.getReg(), true);
+    toggleBundleKillFlag(MI, MO.getReg(), true, TRI);
     return false;
   }
 
   // If MO itself is live, clear the kill flag...
   if (LiveRegs.test(MO.getReg())) {
     MO.setIsKill(false);
-    toggleBundleKillFlag(MI, MO.getReg(), false);
+    toggleBundleKillFlag(MI, MO.getReg(), false, TRI);
     return false;
   }
 
   // If any subreg of MO is live, then create an imp-def for that
   // subreg and keep MO marked as killed.
   MO.setIsKill(false);
-  toggleBundleKillFlag(MI, MO.getReg(), false);
+  toggleBundleKillFlag(MI, MO.getReg(), false, TRI);
   bool AllDead = true;
   const unsigned SuperReg = MO.getReg();
   MachineInstrBuilder MIB(MF, MI);
@@ -1263,7 +1268,7 @@ bool ScheduleDAGInstrs::toggleKillFlag(MachineInstr *MI, MachineOperand &MO) {
 
   if(AllDead) {
     MO.setIsKill(true);
-    toggleBundleKillFlag(MI, MO.getReg(), true);
+    toggleBundleKillFlag(MI, MO.getReg(), true, TRI);
   }
   return false;
 }

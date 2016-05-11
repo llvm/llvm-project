@@ -512,11 +512,11 @@ static const SCEVConstant *getIncrmentFactorSCEV(ScalarEvolution *SE,
 
 // Check if an IV is only used to control the loop. There are two cases:
 // 1. It only has one use which is loop increment, and the increment is only
-// used by comparison and the PHI, and the comparison is only used by branch.
+// used by comparison and the PHI (could has sext with nsw in between), and the
+// comparison is only used by branch.
 // 2. It is used by loop increment and the comparison, the loop increment is
 // only used by the PHI, and the comparison is used only by the branch.
 bool LoopReroll::isLoopControlIV(Loop *L, Instruction *IV) {
-
   unsigned IVUses = IV->getNumUses();
   if (IVUses != 2 && IVUses != 1)
     return false;
@@ -551,9 +551,17 @@ bool LoopReroll::isLoopControlIV(Loop *L, Instruction *IV) {
             if (PN != IV)
               return false;
           }
-          // Must be a CMP
-          else if (!isCompareUsedByBranch(dyn_cast<Instruction>(UU)))
-            return false;
+          // Must be a CMP or an ext (of a value with nsw) then CMP
+          else {
+            Instruction *UUser = dyn_cast<Instruction>(UU);
+            // Skip SExt if we are extending an nsw value
+            // TODO: Allow ZExt too
+            if (BO->hasNoSignedWrap() && UUser && UUser->getNumUses() == 1 &&
+                isa<SExtInst>(UUser))
+              UUser = dyn_cast<Instruction>(*(UUser->user_begin()));
+            if (!isCompareUsedByBranch(UUser))
+              return false;
+          }
         }
       } else
         return false;
@@ -1161,6 +1169,11 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
         Instruction *UUser = dyn_cast<Instruction>(UU);
         // UUser could be compare, PHI or branch
         Uses[UUser].set(IL_All);
+        // Skip SExt
+        if (isa<SExtInst>(UUser)) {
+          UUser = dyn_cast<Instruction>(*(UUser->user_begin()));
+          Uses[UUser].set(IL_All);
+        }
         // Is UUser a compare instruction?
         if (UU->hasOneUse()) {
           Instruction *BI = dyn_cast<BranchInst>(*UUser->user_begin());
@@ -1502,8 +1515,6 @@ void LoopReroll::DAGRootTracker::replaceIV(Instruction *Inst,
         if (NeedNewIV)
           ICSCEV = SE->getMulExpr(IterCount,
                                   SE->getConstant(IterCount->getType(), Scale));
-        else
-          ICSCEV = RealIVSCEV->evaluateAtIteration(IterCount, *SE);
 
         // Iteration count SCEV minus or plus 1
         const SCEV *MinusPlus1SCEV =
@@ -1515,17 +1526,25 @@ void LoopReroll::DAGRootTracker::replaceIV(Instruction *Inst,
 
         const SCEV *ICMinusPlus1SCEV = SE->getMinusSCEV(ICSCEV, MinusPlus1SCEV);
         // Iteration count minus 1
-        Value *ICMinusPlus1 = nullptr;
+        Instruction *InsertPtr = nullptr;
         if (isa<SCEVConstant>(ICMinusPlus1SCEV)) {
-          ICMinusPlus1 =
-              Expander.expandCodeFor(ICMinusPlus1SCEV, NewIV->getType(), BI);
+          InsertPtr = BI;
         } else {
           BasicBlock *Preheader = L->getLoopPreheader();
           if (!Preheader)
             Preheader = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
-          ICMinusPlus1 = Expander.expandCodeFor(
-              ICMinusPlus1SCEV, NewIV->getType(), Preheader->getTerminator());
+          InsertPtr = Preheader->getTerminator();
         }
+
+        if (!isa<PointerType>(NewIV->getType()) && NeedNewIV &&
+            (SE->getTypeSizeInBits(NewIV->getType()) <
+             SE->getTypeSizeInBits(ICMinusPlus1SCEV->getType()))) {
+          IRBuilder<> Builder(BI);
+          Builder.SetCurrentDebugLocation(BI->getDebugLoc());
+          NewIV = Builder.CreateSExt(NewIV, ICMinusPlus1SCEV->getType());
+        }
+        Value *ICMinusPlus1 = Expander.expandCodeFor(
+            ICMinusPlus1SCEV, NewIV->getType(), InsertPtr);
 
         Value *Cond =
             new ICmpInst(BI, CmpInst::ICMP_EQ, NewIV, ICMinusPlus1, "exitcond");
@@ -1705,6 +1724,7 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   const SCEV *LIBETC = SE->getBackedgeTakenCount(L);
   const SCEV *IterCount = SE->getAddExpr(LIBETC, SE->getOne(LIBETC->getType()));
+  DEBUG(dbgs() << "\n Before Reroll:\n" << *(L->getHeader()) << "\n");
   DEBUG(dbgs() << "LRR: iteration count = " << *IterCount << "\n");
 
   // First, we need to find the induction variable with respect to which we can
@@ -1731,6 +1751,7 @@ bool LoopReroll::runOnLoop(Loop *L, LPPassManager &LPM) {
       Changed = true;
       break;
     }
+  DEBUG(dbgs() << "\n After Reroll:\n" << *(L->getHeader()) << "\n");
 
   // Trip count of L has changed so SE must be re-evaluated.
   if (Changed)

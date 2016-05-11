@@ -7,7 +7,7 @@ define i32 @main(i32 %argc, i8** %argv) nounwind {
 entry:
 ; THUMB: main
   call void @printArgsNoRet(i32 1, float 0x4000CCCCC0000000, i8 signext 99, double 4.100000e+00)
-; THUMB: blx _printArgsNoRet
+; THUMB: bl _printArgsNoRet
 ; THUMB-NOT: ldr
 ; THUMB-NOT: vldr
 ; THUMB-NOT: vmov

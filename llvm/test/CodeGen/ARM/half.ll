@@ -41,7 +41,7 @@ define float @test_extend32(half* %addr) {
 define double @test_extend64(half* %addr) {
 ; CHECK-LABEL: test_extend64:
 
-; CHECK-OLD: blx ___extendhfsf2
+; CHECK-OLD: bl ___extendhfsf2
 ; CHECK-OLD: vcvt.f64.f32
 ; CHECK-F16: vcvtb.f32.f16
 ; CHECK-F16: vcvt.f64.f32
@@ -54,7 +54,7 @@ define double @test_extend64(half* %addr) {
 define void @test_trunc32(float %in, half* %addr) {
 ; CHECK-LABEL: test_trunc32:
 
-; CHECK-OLD: blx ___truncsfhf2
+; CHECK-OLD: bl ___truncsfhf2
 ; CHECK-F16: vcvtb.f16.f32
 ; CHECK-V8: vcvtb.f16.f32
   %val16 = fptrunc float %in to half
@@ -65,8 +65,8 @@ define void @test_trunc32(float %in, half* %addr) {
 define void @test_trunc64(double %in, half* %addr) {
 ; CHECK-LABEL: test_trunc64:
 
-; CHECK-OLD: blx ___truncdfhf2
-; CHECK-F16: blx ___truncdfhf2
+; CHECK-OLD: bl ___truncdfhf2
+; CHECK-F16: bl ___truncdfhf2
 ; CHECK-V8: vcvtb.f16.f64
   %val16 = fptrunc double %in to half
   store half %val16, half* %addr

@@ -238,8 +238,8 @@ namespace llvm {
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
 
-    bool hasSignExtendedAtomicOps() const override {
-      return true;
+    ISD::NodeType getExtendForAtomicOps() const override {
+      return ISD::SIGN_EXTEND;
     }
 
     void LowerOperationWrapper(SDNode *N,

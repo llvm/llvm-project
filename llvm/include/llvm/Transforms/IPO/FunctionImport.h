@@ -87,6 +87,26 @@ void ComputeCrossModuleImport(
 void ComputeCrossModuleImportForModule(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList);
+
+/// Compute the set of summaries needed for a ThinLTO backend compilation of
+/// \p ModulePath.
+//
+/// This includes summaries from that module (in case any global summary based
+/// optimizations were recorded) and from any definitions in other modules that
+/// should be imported.
+//
+/// \p ModuleToSummariesForIndex will be populated with the needed summaries
+/// from each required module path. Use a std::map instead of StringMap to get
+/// stable order for bitcode emission.
+void gatherImportedSummariesForModule(
+    StringRef ModulePath,
+    const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+
+std::error_code
+EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
+                 const StringMap<FunctionImporter::ImportMapTy> &ImportLists);
 }
 
 #endif // LLVM_FUNCTIONIMPORT_H

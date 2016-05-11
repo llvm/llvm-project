@@ -15,10 +15,6 @@
 // Thumb specific DAG Nodes.
 //
 
-def ARMtcall : SDNode<"ARMISD::tCALL", SDT_ARMcall,
-                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
-                       SDNPVariadic]>;
-
 def imm_sr_XFORM: SDNodeXForm<imm, [{
   unsigned Imm = N->getZExtValue();
   return CurDAG->getTargetConstant((Imm == 32 ? 0 : Imm), SDLoc(N), MVT::i32);
@@ -468,7 +464,7 @@ let isCall = 1,
   def tBL  : TIx2<0b11110, 0b11, 1,
                   (outs), (ins pred:$p, t_bltarget:$func), IIC_Br,
                   "bl${p}\t$func",
-                  [(ARMtcall tglobaladdr:$func)]>,
+                  [(ARMcall tglobaladdr:$func)]>,
              Requires<[IsThumb]>, Sched<[WriteBrL]> {
     bits<24> func;
     let Inst{26} = func{23};
@@ -481,8 +477,7 @@ let isCall = 1,
   // ARMv5T and above, also used for Thumb2
   def tBLXi : TIx2<0b11110, 0b11, 0,
                  (outs), (ins pred:$p, t_blxtarget:$func), IIC_Br,
-                   "blx${p}\t$func",
-                   [(ARMcall tglobaladdr:$func)]>,
+                   "blx${p}\t$func", []>,
               Requires<[IsThumb, HasV5T, IsNotMClass]>, Sched<[WriteBrL]> {
     bits<24> func;
     let Inst{26} = func{23};
@@ -496,7 +491,7 @@ let isCall = 1,
   // Also used for Thumb2
   def tBLXr : TI<(outs), (ins pred:$p, GPR:$func), IIC_Br,
                   "blx${p}\t$func",
-                  [(ARMtcall GPR:$func)]>,
+                  [(ARMcall GPR:$func)]>,
               Requires<[IsThumb, HasV5T]>,
               T1Special<{1,1,1,?}>, Sched<[WriteBrL]> { // A6.2.3 & A8.6.24;
     bits<4> func;
@@ -1406,11 +1401,9 @@ def : T1Pat<(ARMWrapperJT tjumptable:$dst),
             (tLEApcrelJT tjumptable:$dst)>;
 
 // Direct calls
-def : T1Pat<(ARMtcall texternalsym:$func), (tBL texternalsym:$func)>,
+def : T1Pat<(ARMcall texternalsym:$func), (tBL texternalsym:$func)>,
       Requires<[IsThumb]>;
 
-def : Tv5Pat<(ARMcall texternalsym:$func), (tBLXi texternalsym:$func)>,
-      Requires<[IsThumb, HasV5T, IsNotMClass]>;
 
 // Indirect calls to ARM routines
 def : Tv5Pat<(ARMcall GPR:$dst), (tBLXr GPR:$dst)>,

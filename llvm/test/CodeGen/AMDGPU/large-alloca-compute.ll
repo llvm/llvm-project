@@ -7,11 +7,11 @@
 
 ; ALL-LABEL: {{^}}large_alloca_compute_shader:
 
-; GCN: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
-; GCN: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
-; GCN: s_mov_b32 s10, -1
-; CI: s_mov_b32 s11, 0x98f000
-; VI: s_mov_b32 s11, 0x980000
+; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
+; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
+; GCN-DAG: s_mov_b32 s{{[0-9]+}}, -1
+; CI-DAG: s_mov_b32 s{{[0-9]+}}, 0x88f000
+; VI-DAG: s_mov_b32 s{{[0-9]+}}, 0x880000
 
 
 ; GCNHSA: .amd_kernel_code_t

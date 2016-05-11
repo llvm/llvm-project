@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck %s
 
-; CHECK: NumVgprs: 63
+; CHECK: NumVgprs: 64
 define void @main([9 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <8 x i32>] addrspace(2)* byval, [16 x <8 x i32>] addrspace(2)* byval, [16 x <4 x i32>] addrspace(2)* byval, <3 x i32> inreg, <3 x i32> inreg, <3 x i32>) #0 {
 main_body:
   %8 = getelementptr [16 x <4 x i32>], [16 x <4 x i32>] addrspace(2)* %4, i64 0, i64 8

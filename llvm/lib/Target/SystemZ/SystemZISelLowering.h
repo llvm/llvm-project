@@ -459,6 +459,10 @@ public:
                                       SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+  ISD::NodeType getExtendForAtomicOps() const override {
+    return ISD::ANY_EXTEND;
+  }
+
   bool supportSwiftError() const override {
     return true;
   }

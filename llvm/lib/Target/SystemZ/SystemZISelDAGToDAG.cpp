@@ -286,7 +286,7 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
 
   // Try to implement AND or shift node N using RISBG with the zero flag set.
   // Return the selected node on success, otherwise return null.
-  SDNode *tryRISBGZero(SDNode *N);
+  bool tryRISBGZero(SDNode *N);
 
   // Try to use RISBG or Opcode to implement OR or XOR node N.
   // Return the selected node on success, otherwise return null.
@@ -907,23 +907,23 @@ SDValue SystemZDAGToDAGISel::convertTo(SDLoc DL, EVT VT, SDValue N) const {
   return N;
 }
 
-SDNode *SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
+bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   if (!VT.isInteger() || VT.getSizeInBits() > 64)
-    return nullptr;
+    return false;
   RxSBGOperands RISBG(SystemZ::RISBG, SDValue(N, 0));
   unsigned Count = 0;
   while (expandRxSBG(RISBG))
     if (RISBG.Input.getOpcode() != ISD::ANY_EXTEND)
       Count += 1;
   if (Count == 0)
-    return nullptr;
+    return false;
   if (Count == 1) {
     // Prefer to use normal shift instructions over RISBG, since they can handle
     // all cases and are sometimes shorter.
     if (N->getOpcode() != ISD::AND)
-      return nullptr;
+      return false;
 
     // Prefer register extensions like LLC over RISBG.  Also prefer to start
     // out with normal ANDs if one instruction would be enough.  We can convert
@@ -938,9 +938,10 @@ SDNode *SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
       if (MaskN->getZExtValue() != RISBG.Mask) {
         SDValue NewMask = CurDAG->getConstant(RISBG.Mask, DL, VT);
         N = CurDAG->UpdateNodeOperands(N, N->getOperand(0), NewMask);
-        return SelectCode(N);
+        SelectCode(N);
+        return true;
       }
-      return nullptr;
+      return false;
     }
   }
 
@@ -956,8 +957,11 @@ SDNode *SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
     }
 
     SDValue In = convertTo(DL, VT, RISBG.Input);
-    N = CurDAG->getMachineNode(OpCode, DL, VT, In);
-    return convertTo(DL, VT, SDValue(N, 0)).getNode();
+    SDValue New = convertTo(
+        DL, VT, SDValue(CurDAG->getMachineNode(OpCode, DL, VT, In), 0));
+    ReplaceUses(N, New.getNode());
+    CurDAG->RemoveDeadNode(N);
+    return true;
   }
 
   unsigned Opcode = SystemZ::RISBG;
@@ -978,8 +982,11 @@ SDNode *SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
     CurDAG->getTargetConstant(RISBG.End | 128, DL, MVT::i32),
     CurDAG->getTargetConstant(RISBG.Rotate, DL, MVT::i32)
   };
-  N = CurDAG->getMachineNode(Opcode, DL, OpcodeVT, Ops);
-  return convertTo(DL, VT, SDValue(N, 0)).getNode();
+  SDValue New = convertTo(
+      DL, VT, SDValue(CurDAG->getMachineNode(Opcode, DL, OpcodeVT, Ops), 0));
+  ReplaceUses(N, New.getNode());
+  CurDAG->RemoveDeadNode(N);
+  return true;
 }
 
 SDNode *SystemZDAGToDAGISel::tryRxSBG(SDNode *N, unsigned Opcode) {
@@ -1238,7 +1245,8 @@ SDNode *SystemZDAGToDAGISel::SelectImpl(SDNode *Node) {
   case ISD::SRL:
   case ISD::ZERO_EXTEND:
     if (!ResNode)
-      ResNode = tryRISBGZero(Node);
+      if (tryRISBGZero(Node))
+        return nullptr;
     break;
 
   case ISD::Constant:

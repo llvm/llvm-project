@@ -367,7 +367,7 @@ Toy example
 A simple function that does something interesting if it receives the input
 "HI!"::
 
-  cat << EOF >> test_fuzzer.cc
+  cat << EOF > test_fuzzer.cc
   #include <stdint.h>
   #include <stddef.h>
   extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
@@ -613,6 +613,9 @@ You can run both fuzzers on the same corpus, one after another:
 
 Periodically restart both fuzzers so that they can use each other's findings.
 Currently, there is no simple way to run both fuzzing engines in parallel while sharing the same corpus dir.
+
+You may also use AFL on your target function ``LLVMFuzzerTestOneInput``:
+see an example `here <https://github.com/llvm-mirror/llvm/blob/master/lib/Fuzzer/afl/afl_driver.cpp>`__.
 
 How good is my fuzzer?
 ----------------------

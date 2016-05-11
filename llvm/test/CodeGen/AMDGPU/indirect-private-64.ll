@@ -1,14 +1,20 @@
-; RUN: llc -march=amdgcn -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mattr=-promote-alloca,+max-private-element-size-16 -verify-machineinstrs < %s | FileCheck -check-prefix=SI-ALLOCA16 -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mattr=-promote-alloca,+max-private-element-size-4 -verify-machineinstrs < %s | FileCheck -check-prefix=SI-ALLOCA4 -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-ALLOCA -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-promote-alloca,+max-private-element-size-16 -verify-machineinstrs < %s | FileCheck -check-prefix=SI-ALLOCA16 -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=SI-PROMOTE -check-prefix=SI %s
 
 declare void @llvm.amdgcn.s.barrier() #1
 
 ; SI-LABEL: {{^}}private_access_f64_alloca:
 
-; SI-ALLOCA: buffer_store_dwordx2
-; SI-ALLOCA: buffer_load_dwordx2
+; SI-ALLOCA16: buffer_store_dwordx2
+; SI-ALLOCA16: buffer_load_dwordx2
+
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
 
 ; SI-PROMOTE: ds_write_b64
 ; SI-PROMOTE: ds_read_b64
@@ -25,8 +31,17 @@ define void @private_access_f64_alloca(double addrspace(1)* noalias %out, double
 
 ; SI-LABEL: {{^}}private_access_v2f64_alloca:
 
-; SI-ALLOCA: buffer_store_dwordx4
-; SI-ALLOCA: buffer_load_dwordx4
+; SI-ALLOCA16: buffer_store_dwordx4
+; SI-ALLOCA16: buffer_load_dwordx4
+
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
 
 ; SI-PROMOTE: ds_write_b64
 ; SI-PROMOTE: ds_write_b64
@@ -45,8 +60,14 @@ define void @private_access_v2f64_alloca(<2 x double> addrspace(1)* noalias %out
 
 ; SI-LABEL: {{^}}private_access_i64_alloca:
 
-; SI-ALLOCA: buffer_store_dwordx2
-; SI-ALLOCA: buffer_load_dwordx2
+; SI-ALLOCA16: buffer_store_dwordx2
+; SI-ALLOCA16: buffer_load_dwordx2
+
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
+
 
 ; SI-PROMOTE: ds_write_b64
 ; SI-PROMOTE: ds_read_b64
@@ -63,8 +84,18 @@ define void @private_access_i64_alloca(i64 addrspace(1)* noalias %out, i64 addrs
 
 ; SI-LABEL: {{^}}private_access_v2i64_alloca:
 
-; SI-ALLOCA: buffer_store_dwordx4
-; SI-ALLOCA: buffer_load_dwordx4
+; SI-ALLOCA16: buffer_store_dwordx4
+; SI-ALLOCA16: buffer_load_dwordx4
+
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+; SI-ALLOCA4: buffer_store_dword v
+
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
+; SI-ALLOCA4: buffer_load_dword v
 
 ; SI-PROMOTE: ds_write_b64
 ; SI-PROMOTE: ds_write_b64

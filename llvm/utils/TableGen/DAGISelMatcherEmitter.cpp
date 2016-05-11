@@ -841,8 +841,9 @@ void llvm::EmitMatcherTable(const Matcher *TheMatcher,
   MatcherEmitter.EmitHistogram(TheMatcher, OS);
 
   OS << "  #undef TARGET_VAL\n";
-  OS << "  return SelectCodeCommon(N, MatcherTable,sizeof(MatcherTable));\n}\n";
-  OS << '\n';
+  OS << "  SelectCodeCommon(N, MatcherTable,sizeof(MatcherTable));\n";
+  OS << "  return nullptr;\n";
+  OS << "}\n";
 
   // Next up, emit the function for node and pattern predicates:
   MatcherEmitter.EmitPredicateFunctions(OS);

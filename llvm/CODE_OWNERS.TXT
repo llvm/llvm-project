@@ -155,7 +155,7 @@ E: mcrosier@codeaurora.org
 D: Fast-Isel
 
 N: Nadav Rotem
-E: nrotem@apple.com
+E: nadav.rotem@me.com
 D: X86 Backend, Loop Vectorizer
 
 N: Daniel Sanders

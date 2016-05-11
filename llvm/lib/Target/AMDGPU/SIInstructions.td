@@ -1218,7 +1218,9 @@ def V_READFIRSTLANE_B32 : VOP1 <
   (ins VS_32:$src0),
   "v_readfirstlane_b32 $vdst, $src0",
   []
->;
+> {
+  let isConvergent = 1;
+}
 
 }
 
@@ -1585,6 +1587,8 @@ defm V_SUBBREV_U32 : VOP2bInst <vop2<0x2a, 0x1e>, "v_subbrev_u32",
 
 } // End isCommutable = 1
 
+let isConvergent = 1 in {
+
 defm V_READLANE_B32 : VOP2SI_3VI_m <
   vop3 <0x001, 0x289>,
   "v_readlane_b32",
@@ -1600,6 +1604,8 @@ defm V_WRITELANE_B32 : VOP2SI_3VI_m <
   (ins SReg_32:$src0, SCSrc_32:$src1),
   "v_writelane_b32 $vdst, $src0, $src1"
 >;
+
+} // End isConvergent = 1
 
 // These instructions only exist on SI and CI
 let SubtargetPredicate = isSICI in {

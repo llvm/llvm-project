@@ -1248,9 +1248,10 @@ public:
     return nullptr;
   }
 
-  /// Returns true if the platform's atomic operations are sign extended.
-  virtual bool hasSignExtendedAtomicOps() const {
-    return false;
+  /// Returns how the platform's atomic operations are extended (ZERO_EXTEND,
+  /// SIGN_EXTEND, or ANY_EXTEND).
+  virtual ISD::NodeType getExtendForAtomicOps() const {
+    return ISD::ZERO_EXTEND;
   }
 
   /// @}

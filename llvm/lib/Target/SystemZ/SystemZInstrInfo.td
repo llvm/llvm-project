@@ -165,7 +165,7 @@ defm AsmC : CompareBranches<imm32zx4, "", "$M3, ">;
 
 // Define AsmParser mnemonics for each general condition-code mask
 // (integer or floating-point)
-multiclass CondExtendedMnemonic<bits<4> ccmask, string name> {
+multiclass CondExtendedMnemonicA<bits<4> ccmask, string name> {
   let isBranch = 1, isTerminator = 1, R1 = ccmask in {
     def J : InstRI<0xA74, (outs), (ins brtarget16:$I2),
                    "j"##name##"\t$I2", []>;
@@ -180,20 +180,27 @@ multiclass CondExtendedMnemonic<bits<4> ccmask, string name> {
   def STOC  : FixedCondStoreRSY<"stoc"##name,  0xEBF3, GR32, ccmask, 4>;
   def STOCG : FixedCondStoreRSY<"stocg"##name, 0xEBE3, GR64, ccmask, 8>;
 }
-defm AsmO   : CondExtendedMnemonic<1,  "o">;
-defm AsmH   : CondExtendedMnemonic<2,  "h">;
-defm AsmNLE : CondExtendedMnemonic<3,  "nle">;
-defm AsmL   : CondExtendedMnemonic<4,  "l">;
-defm AsmNHE : CondExtendedMnemonic<5,  "nhe">;
-defm AsmLH  : CondExtendedMnemonic<6,  "lh">;
-defm AsmNE  : CondExtendedMnemonic<7,  "ne">;
-defm AsmE   : CondExtendedMnemonic<8,  "e">;
-defm AsmNLH : CondExtendedMnemonic<9,  "nlh">;
-defm AsmHE  : CondExtendedMnemonic<10, "he">;
-defm AsmNL  : CondExtendedMnemonic<11, "nl">;
-defm AsmLE  : CondExtendedMnemonic<12, "le">;
-defm AsmNH  : CondExtendedMnemonic<13, "nh">;
-defm AsmNO  : CondExtendedMnemonic<14, "no">;
+
+multiclass CondExtendedMnemonic<bits<4> ccmask, string name1, string name2>
+  : CondExtendedMnemonicA<ccmask, name1> {
+  let isAsmParserOnly = 1 in
+    defm Alt : CondExtendedMnemonicA<ccmask, name2>;
+}
+
+defm AsmO   : CondExtendedMnemonicA<1,  "o">;
+defm AsmH   : CondExtendedMnemonic<2,  "h", "p">;
+defm AsmNLE : CondExtendedMnemonicA<3,  "nle">;
+defm AsmL   : CondExtendedMnemonic<4,  "l", "m">;
+defm AsmNHE : CondExtendedMnemonicA<5,  "nhe">;
+defm AsmLH  : CondExtendedMnemonicA<6,  "lh">;
+defm AsmNE  : CondExtendedMnemonic<7,  "ne", "nz">;
+defm AsmE   : CondExtendedMnemonic<8,  "e", "z">;
+defm AsmNLH : CondExtendedMnemonicA<9,  "nlh">;
+defm AsmHE  : CondExtendedMnemonicA<10, "he">;
+defm AsmNL  : CondExtendedMnemonic<11, "nl", "nm">;
+defm AsmLE  : CondExtendedMnemonicA<12, "le">;
+defm AsmNH  : CondExtendedMnemonic<13, "nh", "np">;
+defm AsmNO  : CondExtendedMnemonicA<14, "no">;
 
 // Define AsmParser mnemonics for each integer condition-code mask.
 // This is like the list above, except that condition 3 is not possible

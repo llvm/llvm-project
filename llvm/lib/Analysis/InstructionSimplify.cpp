@@ -1315,6 +1315,22 @@ static Value *SimplifyShift(unsigned Opcode, Value *Op0, Value *Op1,
     if (Value *V = ThreadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
       return V;
 
+  // If any bits in the shift amount make that value greater than or equal to
+  // the number of bits in the type, the shift is undefined.
+  unsigned BitWidth = Op1->getType()->getScalarSizeInBits();
+  APInt KnownZero(BitWidth, 0);
+  APInt KnownOne(BitWidth, 0);
+  computeKnownBits(Op1, KnownZero, KnownOne, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+  if (KnownOne.getLimitedValue() >= BitWidth)
+    return UndefValue::get(Op0->getType());
+
+  // If all valid bits in the shift amount are known zero, the first operand is
+  // unchanged.
+  unsigned NumValidShiftBits = Log2_32_Ceil(BitWidth);
+  APInt ShiftAmountMask = APInt::getLowBitsSet(BitWidth, NumValidShiftBits);
+  if ((KnownZero & ShiftAmountMask) == ShiftAmountMask)
+    return Op0;
+
   return nullptr;
 }
 
