@@ -22,7 +22,7 @@ smoothstep(T##N edge0, T##N edge1, T##N x) \
 ATTR T \
 smoothstep(T edge0, T edge1, T x) \
 { \
-    T##N t = clamp((x - edge0) / (edge1 - edge0), (T)0, (T)1); \
+    T t = clamp((x - edge0) / (edge1 - edge0), (T)0, (T)1); \
     return t * t * mad(t, -(T)2, (T)3); \
 }
 
@@ -33,4 +33,8 @@ smoothstep(T edge0, T edge1, T x) \
     GENN(3,T) \
     GENN(2,T) \
     GEN1(T)
+
+GEN(float)
+GEN(double)
+GEN(half)
 

@@ -82,6 +82,14 @@ WRAPST(ldexp,float,int)
 WRAPST(ldexp,double,int)
 WRAPST(ldexp,half,int)
 
+WRAPST(max,float,float)
+WRAPST(max,double,double)
+WRAPST(max,half,half)
+
+WRAPST(min,float,float)
+WRAPST(min,double,double)
+WRAPST(min,half,half)
+
 WRAPT(pown,float,int)
 WRAPT(pown,double,int)
 WRAPT(pown,half,int)
