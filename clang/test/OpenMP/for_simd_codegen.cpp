@@ -54,13 +54,13 @@ void simple(float *a, float *b, float *c, float *d) {
 
   long long k = get_val();
 
-  #pragma omp for simd linear(k : 3) schedule(dynamic)
+  #pragma omp for simd linear(k : 3) schedule(simd, nonmonotonic: dynamic)
 // CHECK: [[K0:%.+]] = call {{.*}}i64 @{{.*}}get_val
 // CHECK-NEXT: store i64 [[K0]], i64* [[K_VAR:%[^,]+]]
 // CHECK: [[K0LOAD:%.+]] = load i64, i64* [[K_VAR]]
 // CHECK-NEXT: store i64 [[K0LOAD]], i64* [[LIN0:%[^,]+]]
 
-// CHECK: call void @__kmpc_dispatch_init_4(%ident_t* {{.+}}, i32 %{{.+}}, i32 35, i32 0, i32 8, i32 1, i32 1)
+// CHECK: call void @__kmpc_dispatch_init_4(%ident_t* {{.+}}, i32 %{{.+}}, i32 1073741859, i32 0, i32 8, i32 1, i32 1)
 // CHECK: [[NEXT:%.+]] = call i32 @__kmpc_dispatch_next_4(%ident_t* {{.+}}, i32 %{{.+}}, i32* %{{.+}}, i32* [[LB:%.+]], i32* [[UB:%.+]], i32* %{{.+}})
 // CHECK: [[COND:%.+]] = icmp ne i32 [[NEXT]], 0
 // CHECK: br i1 [[COND]], label %[[CONT:.+]], label %[[END:.+]]

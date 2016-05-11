@@ -60,7 +60,6 @@ int main() {
   // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
   // LAMBDA: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^ ]+}} @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i64 80, i64 16, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[TASK_ENTRY:@[^ ]+]] to i32 (i32, i8*)*))
 // LAMBDA: [[PRIVATES:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i{{.+}} 0, i{{.+}} 1
-// LAMBDA: [[G_PRIVATE_ADDR:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[PRIVATES]], i{{.+}} 0, i{{.+}} 0
 
 // LAMBDA: call void @__kmpc_taskloop(%{{.+}}* @{{.+}}, i32 %{{.+}}, i8* [[RES]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 0, i32 0, i64 0, i8* bitcast (void ([[KMP_TASK_MAIN_TY:%[^*]+]]*, [[KMP_TASK_MAIN_TY]]*, i32)* [[MAIN_DUP:@.+]] to i8*))
 // LAMBDA: ret
@@ -102,9 +101,6 @@ int main() {
   // BLOCKS: define{{.*}} internal{{.*}} void {{.+}}(i8*
   // BLOCKS: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^ ]+}} @{{[^,]+}}, i32 %{{[^,]+}}, i32 1, i64 80, i64 16, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[TASK_ENTRY:@[^ ]+]] to i32 (i32, i8*)*))
   // BLOCKS: [[PRIVATES:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i{{.+}} 0, i{{.+}} 1
-  // BLOCKS: [[G_PRIVATE_ADDR:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[PRIVATES]], i{{.+}} 0, i{{.+}} 0
-
-  // BLOCKS: [[SIVAR_PRIVATE_ADDR:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
   // BLOCKS: call void @__kmpc_taskloop(%{{.+}}* @{{.+}}, i32 %{{.+}}, i8* [[RES]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 0, i32 0, i64 0, i8* bitcast (void ([[KMP_TASK_MAIN_TY:%[^*]+]]*, [[KMP_TASK_MAIN_TY]]*, i32)* [[MAIN_DUP:@.+]] to i8*))
   // BLOCKS: ret
 #pragma omp taskloop lastprivate(g, sivar)
@@ -187,7 +183,7 @@ int main() {
 //         [[KMP_TASK_T]] task_data;
 //         [[KMP_TASK_MAIN_TY]] privates;
 //       };
-// CHECK: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc([[LOC]], i32 [[GTID]], i32 1, i64 104, i64 40, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_MAIN_TY]]*)* [[TASK_ENTRY:@[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc([[LOC]], i32 [[GTID]], i32 9, i64 104, i64 40, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_MAIN_TY]]*)* [[TASK_ENTRY:@[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[RES_KMP_TASK:%.+]] = bitcast i8* [[RES]] to [[KMP_TASK_MAIN_TY]]*
 
 // Fill kmp_task_t->shareds by copying from original capture argument.
@@ -214,11 +210,8 @@ int main() {
 // CHECK: call {{.*}} [[S_DOUBLE_TY_CONSTR]]([[S_DOUBLE_TY]]* [[PRIVATE_VAR_REF]])
 
 // t_var;
-// CHECK: [[PRIVATE_T_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
 // vec;
-// CHECK: [[PRIVATE_VEC_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
 // sivar;
-// CHECK: [[PRIVATE_SIVAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 4
 
 // Provide pointer to destructor function, which will destroy private variables at the end of the task.
 // CHECK: [[DESTRUCTORS_REF:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], [[KMP_TASK_T_TY]]* [[TASK]], i{{.+}} 0, i{{.+}} 3
@@ -363,7 +356,7 @@ int main() {
 //         [[KMP_TASK_T_TY]] task_data;
 //         [[KMP_TASK_TMAIN_TY]] privates;
 //       };
-// CHECK: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc([[LOC]], i32 [[GTID]], i32 1, i64 256, i64 32, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_TMAIN_TY]]*)* [[TASK_ENTRY:@[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc([[LOC]], i32 [[GTID]], i32 9, i64 256, i64 32, i32 (i32, i8*)* bitcast (i32 (i32, [[KMP_TASK_TMAIN_TY]]*)* [[TASK_ENTRY:@[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[RES_KMP_TASK:%.+]] = bitcast i8* [[RES]] to [[KMP_TASK_TMAIN_TY]]*
 
 // Fill kmp_task_t->shareds by copying from original capture argument.
@@ -377,10 +370,7 @@ int main() {
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_TMAIN_TY]], [[KMP_TASK_TMAIN_TY]]* [[RES_KMP_TASK]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 
 // t_var;
-// CHECK: [[PRIVATE_T_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 0
-
 // vec;
-// CHECK: [[PRIVATE_VEC_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
 
 // Constructors for s_arr and var.
 // a_arr;

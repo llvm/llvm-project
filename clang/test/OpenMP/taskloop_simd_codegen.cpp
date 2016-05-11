@@ -9,7 +9,7 @@
 // CHECK-LABEL: @main
 int main(int argc, char **argv) {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%ident_t* [[DEFLOC:@.+]])
-// CHECK: [[TASKV:%.+]] = call i8* @__kmpc_omp_task_alloc(%ident_t* [[DEFLOC]], i32 [[GTID]], i32 1, i64 64, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, [[TDP_TY:%.+]]*)* [[TASK1:@.+]] to i32 (i32, i8*)*))
+// CHECK: [[TASKV:%.+]] = call i8* @__kmpc_omp_task_alloc(%ident_t* [[DEFLOC]], i32 [[GTID]], i32 33, i64 64, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, [[TDP_TY:%.+]]*)* [[TASK1:@.+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK:%.+]] = bitcast i8* [[TASKV]] to [[TDP_TY]]*
 // CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds [[TDP_TY]], [[TDP_TY]]* [[TASK]], i32 0, i32 0
 // CHECK: getelementptr inbounds [[TD_TY:%.+]], [[TD_TY]]* [[TASK_DATA]], i32 0, i32 3
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
 // CHECK: call void @__kmpc_taskloop(%ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 0, i64 0, i8* null)
-#pragma omp taskloop simd
+#pragma omp taskloop simd priority(argc)
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: [[TASKV:%.+]] = call i8* @__kmpc_omp_task_alloc(%ident_t* [[DEFLOC]], i32 [[GTID]], i32 1, i64 64, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, [[TDP_TY:%.+]]*)* [[TASK2:@.+]] to i32 (i32, i8*)*))

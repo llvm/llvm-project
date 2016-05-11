@@ -156,9 +156,7 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
 
   // Clone to thunk.
   llvm::ValueToValueMapTy VMap;
-  llvm::Function *NewFn = llvm::CloneFunction(BaseFn, VMap,
-                                              /*ModuleLevelChanges=*/false);
-  CGM.getModule().getFunctionList().push_back(NewFn);
+  llvm::Function *NewFn = llvm::CloneFunction(BaseFn, VMap);
   Fn->replaceAllUsesWith(NewFn);
   NewFn->takeName(Fn);
   Fn->eraseFromParent();

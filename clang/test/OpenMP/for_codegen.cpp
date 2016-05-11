@@ -98,8 +98,8 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
 // CHECK-LABEL: define {{.*void}} @{{.*}}static_chunked{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
 void static_chunked(float *a, float *b, float *c, float *d) {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])
-  #pragma omp for schedule(static, 5)
-// CHECK: call void @__kmpc_for_static_init_4u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32 33, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 5)
+  #pragma omp for schedule(monotonic: static, 5)
+// CHECK: call void @__kmpc_for_static_init_4u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32 536870945, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 5)
 // UB = min(UB, GlobalUB)
 // CHECK: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
 // CHECK-NEXT: [[UBCMP:%.+]] = icmp ugt i32 [[UB]], 16908288
@@ -158,8 +158,8 @@ void static_chunked(float *a, float *b, float *c, float *d) {
 // CHECK-LABEL: define {{.*void}} @{{.*}}dynamic1{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
 void dynamic1(float *a, float *b, float *c, float *d) {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])
-  #pragma omp for schedule(dynamic)
-// CHECK: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32 35, i64 0, i64 16908287, i64 1, i64 1)
+  #pragma omp for schedule(nonmonotonic: dynamic)
+// CHECK: call void @__kmpc_dispatch_init_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32 1073741859, i64 0, i64 16908287, i64 1, i64 1)
 //
 // CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8u([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0

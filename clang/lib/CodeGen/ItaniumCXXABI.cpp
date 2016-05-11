@@ -443,6 +443,7 @@ private:
            (isa<CXXDestructorDecl>(GD.getDecl()) &&
             GD.getDtorType() != Dtor_Deleting);
   }
+  bool canCallMismatchedFunctionType() const override { return false; }
 };
 }
 
