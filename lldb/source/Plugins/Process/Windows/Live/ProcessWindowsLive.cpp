@@ -820,7 +820,7 @@ ProcessWindowsLive::OnExitProcess(uint32_t exit_code)
         target->ModulesDidUnload(unloaded_modules, true);
     }
 
-    SetProcessExitStatus(nullptr, GetID(), true, 0, exit_code);
+    SetProcessExitStatus(GetID(), true, 0, exit_code);
     SetPrivateState(eStateExited);
 }
 

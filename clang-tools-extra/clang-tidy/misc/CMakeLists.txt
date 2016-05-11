@@ -50,4 +50,5 @@ add_clang_library(clangTidyMiscModule
   clangLex
   clangTidy
   clangTidyUtils
+  clangTooling
   )

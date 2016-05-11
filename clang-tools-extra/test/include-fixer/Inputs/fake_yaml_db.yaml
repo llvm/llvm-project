@@ -9,3 +9,14 @@ FilePath:        foo.h
 LineNumber:      1
 Type:            Class
 ...
+---
+Name:           bar
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+  - ContextType:     Namespace
+    ContextName:     b
+FilePath:        ../include/bar.h
+LineNumber:      1
+Type:            Class
+...

@@ -55,7 +55,7 @@ public:
   /// \brief Get symbol type.
   SymbolKind getSymbolKind() const;
 
-  /// \brief Get the file path where symbol comes from
+  /// \brief Get a relative file path where symbol comes from.
   llvm::StringRef getFilePath() const;
 
   /// \brief Get symbol contexts.
@@ -77,7 +77,8 @@ private:
   /// \brief Symbol type.
   SymbolKind Type;
 
-  /// \brief The file path where the symbol comes from.
+  /// \brief The file path where the symbol comes from. It's a relative file
+  /// path based on the build directory.
   std::string FilePath;
 
   /// \brief Contains information about symbol contexts. Context information is

@@ -124,7 +124,8 @@ GDBRemoteCommunicationServerPlatform::LaunchGDBServer(const lldb_private::Args& 
     // Do not run in a new session so that it can not linger after the
     // platform closes.
     debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
-    debugserver_launch_info.SetMonitorProcessCallback(ReapDebugserverProcess, this, false);
+    debugserver_launch_info.SetMonitorProcessCallback(
+        std::bind(&GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped, this, std::placeholders::_1), false);
 
     std::string platform_scheme;
     std::string platform_ip;
@@ -445,18 +446,7 @@ GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped (lldb::pid_t pid)
 {
     Mutex::Locker locker (m_spawned_pids_mutex);
     FreePortForProcess(pid);
-    return m_spawned_pids.erase(pid) > 0;
-}
-
-bool
-GDBRemoteCommunicationServerPlatform::ReapDebugserverProcess (void *callback_baton,
-                                                   lldb::pid_t pid,
-                                                   bool exited,
-                                                   int signal,    // Zero for no signal
-                                                   int status)    // Exit value of process if signal is zero
-{
-    GDBRemoteCommunicationServerPlatform *server = (GDBRemoteCommunicationServerPlatform *)callback_baton;
-    server->DebugserverProcessReaped (pid);
+    m_spawned_pids.erase(pid);
     return true;
 }
 
@@ -470,7 +460,9 @@ GDBRemoteCommunicationServerPlatform::LaunchProcess ()
     // generally be what happens since we need to reap started
     // processes.
     if (!m_process_launch_info.GetMonitorProcessCallback ())
-        m_process_launch_info.SetMonitorProcessCallback(ReapDebugserverProcess, this, false);
+        m_process_launch_info.SetMonitorProcessCallback(
+            std::bind(&GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped, this, std::placeholders::_1),
+            false);
 
     Error error = m_platform_sp->LaunchProcess (m_process_launch_info);
     if (!error.Success ())

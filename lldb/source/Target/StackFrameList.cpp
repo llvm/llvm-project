@@ -350,6 +350,7 @@ StackFrameList::GetFramesUpTo(uint32_t end_idx)
             if (unwind_block)
             {
                 Address curr_frame_address (unwind_frame_sp->GetFrameCodeAddress());
+                TargetSP target_sp = m_thread.CalculateTarget();
                 // Be sure to adjust the frame address to match the address
                 // that was used to lookup the symbol context above. If we are
                 // in the first concrete frame, then we lookup using the current
@@ -362,9 +363,8 @@ StackFrameList::GetFramesUpTo(uint32_t end_idx)
                         // If curr_frame_address points to the first address in a section then after
                         // adjustment it will point to an other section. In that case resolve the
                         // address again to the correct section plus offset form.
-                        TargetSP target = m_thread.CalculateTarget();
-                        addr_t load_addr = curr_frame_address.GetOpcodeLoadAddress(target.get(), eAddressClassCode);
-                        curr_frame_address.SetOpcodeLoadAddress(load_addr - 1, target.get(), eAddressClassCode);
+                        addr_t load_addr = curr_frame_address.GetOpcodeLoadAddress(target_sp.get(), eAddressClassCode);
+                        curr_frame_address.SetOpcodeLoadAddress(load_addr - 1, target_sp.get(), eAddressClassCode);
                     }
                     else
                     {
@@ -377,17 +377,18 @@ StackFrameList::GetFramesUpTo(uint32_t end_idx)
                 
                 while (unwind_sc.GetParentOfInlinedScope(curr_frame_address, next_frame_sc, next_frame_address))
                 {
-                        StackFrameSP frame_sp(new StackFrame (m_thread.shared_from_this(),
-                                                              m_frames.size(),
-                                                              idx,
-                                                              unwind_frame_sp->GetRegisterContextSP (),
-                                                              cfa,
-                                                              next_frame_address,
-                                                              &next_frame_sc));  
-                                                    
-                        m_frames.push_back (frame_sp);
-                        unwind_sc = next_frame_sc;
-                        curr_frame_address = next_frame_address;
+                    next_frame_sc.line_entry.ApplyFileMappings(target_sp);
+                    StackFrameSP frame_sp(new StackFrame(m_thread.shared_from_this(),
+                                                         m_frames.size(),
+                                                         idx,
+                                                         unwind_frame_sp->GetRegisterContextSP (),
+                                                         cfa,
+                                                         next_frame_address,
+                                                         &next_frame_sc));  
+
+                    m_frames.push_back (frame_sp);
+                    unwind_sc = next_frame_sc;
+                    curr_frame_address = next_frame_address;
                 }
             }
         } while (m_frames.size() - 1 < end_idx);

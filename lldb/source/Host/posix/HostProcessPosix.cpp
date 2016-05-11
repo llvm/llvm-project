@@ -107,7 +107,7 @@ bool HostProcessPosix::IsRunning() const
 }
 
 HostThread
-HostProcessPosix::StartMonitoring(HostProcess::MonitorCallback callback, void *callback_baton, bool monitor_signals)
+HostProcessPosix::StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals)
 {
-    return Host::StartMonitoringChildProcess(callback, callback_baton, m_process, monitor_signals);
+    return Host::StartMonitoringChildProcess(callback, m_process, monitor_signals);
 }

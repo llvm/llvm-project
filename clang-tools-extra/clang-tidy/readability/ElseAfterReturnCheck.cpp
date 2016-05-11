@@ -10,6 +10,7 @@
 #include "ElseAfterReturnCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -28,20 +29,17 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static FixItHint removeToken(SourceLocation Loc) {
-  return FixItHint::CreateRemoval(CharSourceRange::getTokenRange(Loc, Loc));
-}
-
 void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
   SourceLocation ElseLoc = If->getElseLoc();
   DiagnosticBuilder Diag = diag(ElseLoc, "don't use else after return");
-  Diag << removeToken(ElseLoc);
+  Diag << tooling::fixit::createRemoval(ElseLoc);
 
   // FIXME: Removing the braces isn't always safe. Do a more careful analysis.
   // FIXME: Change clang-format to correctly un-indent the code.
   if (const auto *CS = Result.Nodes.getNodeAs<CompoundStmt>("else"))
-    Diag << removeToken(CS->getLBracLoc()) << removeToken(CS->getRBracLoc());
+    Diag << tooling::fixit::createRemoval(CS->getLBracLoc())
+         << tooling::fixit::createRemoval(CS->getRBracLoc());
 }
 
 } // namespace readability

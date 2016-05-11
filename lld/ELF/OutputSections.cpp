@@ -180,7 +180,7 @@ GotSection<ELFT>::getMipsLocalEntryOffset(uintX_t EntryValue) {
   size_t NewIndex = MipsLocalGotPos.size() + 2;
   auto P = MipsLocalGotPos.insert(std::make_pair(EntryValue, NewIndex));
   assert(!P.second || MipsLocalGotPos.size() <= MipsLocalEntries);
-  return P.first->second * sizeof(uintX_t) - MipsGPOffset;
+  return (uintX_t)P.first->second * sizeof(uintX_t) - MipsGPOffset;
 }
 
 template <class ELFT>

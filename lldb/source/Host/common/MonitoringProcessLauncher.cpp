@@ -75,12 +75,10 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info, E
 
         Host::MonitorChildProcessCallback callback = launch_info.GetMonitorProcessCallback();
 
-        void *baton = nullptr;
         bool monitor_signals = false;
         if (callback)
         {
             // If the ProcessLaunchInfo specified a callback, use that.
-            baton = launch_info.GetMonitorProcessBaton();
             monitor_signals = launch_info.GetMonitorSignals();
         }
         else
@@ -88,7 +86,7 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info, E
             callback = Process::SetProcessExitStatus;
         }
 
-        process.StartMonitoring(callback, baton, monitor_signals);
+        process.StartMonitoring(callback, monitor_signals);
         if (log)
             log->PutCString("started monitoring child process.");
     }

@@ -1334,7 +1334,6 @@ Host::LaunchProcess (ProcessLaunchInfo &launch_info)
                 callback = Process::SetProcessExitStatus;
 
             StartMonitoringChildProcess (callback,
-                                         NULL, 
                                          pid, 
                                          monitor_signals);
         }
@@ -1449,7 +1448,8 @@ Host::ShellExpandArguments (ProcessLaunchInfo &launch_info)
 }
 
 HostThread
-Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, void *callback_baton, lldb::pid_t pid, bool monitor_signals)
+Host::StartMonitoringChildProcess(const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
+                                  bool monitor_signals)
 {
     unsigned long mask = DISPATCH_PROC_EXIT;
     if (monitor_signals)
@@ -1465,14 +1465,13 @@ Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, vo
 
     if (log)
         log->Printf("Host::StartMonitoringChildProcess "
-                    "(callback=%p, baton=%p, pid=%i, monitor_signals=%i) "
+                    "(callback, pid=%i, monitor_signals=%i) "
                     "source = %p\n",
-                    reinterpret_cast<void *>(callback), callback_baton,
-                    static_cast<int>(pid), monitor_signals,
-                    reinterpret_cast<void *>(source));
+                    static_cast<int>(pid), monitor_signals, reinterpret_cast<void *>(source));
 
     if (source)
     {
+        Host::MonitorChildProcessCallback callback_copy = callback;
         ::dispatch_source_set_cancel_handler (source, ^{
             ::dispatch_release (source);
         });
@@ -1524,8 +1523,8 @@ Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, vo
                                  signal,
                                  exit_status);
 
-                if (callback)
-                    cancel = callback (callback_baton, pid, exited, signal, exit_status);
+                if (callback_copy)
+                    cancel = callback_copy(pid, exited, signal, exit_status);
 
                 if (exited || cancel)
                 {

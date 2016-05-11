@@ -155,7 +155,7 @@ ThreadPlanStepRange::InRange ()
         SymbolContext new_context(frame->GetSymbolContext(eSymbolContextEverything));
         if (m_addr_context.line_entry.IsValid() && new_context.line_entry.IsValid())
         {
-            if (m_addr_context.line_entry.file == new_context.line_entry.file)
+            if (m_addr_context.line_entry.original_file == new_context.line_entry.original_file)
             {
                 if (m_addr_context.line_entry.line == new_context.line_entry.line)
                 {

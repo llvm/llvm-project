@@ -17,7 +17,6 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 
 using namespace clang::ast_matchers;
 
@@ -76,21 +75,7 @@ llvm::Optional<SymbolInfo> CreateSymbolInfo(const NamedDecl *ND,
   if (FilePath.empty())
     return llvm::None;
 
-  llvm::SmallString<128> AbsolutePath;
-  if (llvm::sys::path::is_absolute(FilePath)) {
-    AbsolutePath = FilePath;
-  } else {
-    auto WorkingDir = SM.getFileManager()
-                          .getVirtualFileSystem()
-                          ->getCurrentWorkingDirectory();
-    if (!WorkingDir)
-      return llvm::None;
-    AbsolutePath = *WorkingDir;
-    llvm::sys::path::append(AbsolutePath, FilePath);
-  }
-
-  llvm::sys::path::remove_dots(AbsolutePath, true);
-  return SymbolInfo(ND->getNameAsString(), Type, AbsolutePath.str(),
+  return SymbolInfo(ND->getNameAsString(), Type, FilePath.str(),
                     GetContexts(ND), SM.getExpansionLineNumber(Loc));
 }
 

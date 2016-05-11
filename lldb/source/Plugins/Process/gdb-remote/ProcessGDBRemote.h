@@ -405,11 +405,7 @@ protected:
     AsyncThread (void *arg);
 
     static bool
-    MonitorDebugserverProcess (void *callback_baton,
-                               lldb::pid_t pid,
-                               bool exited,
-                               int signo,
-                               int exit_status);
+    MonitorDebugserverProcess(ProcessGDBRemote *process, lldb::pid_t pid, bool exited, int signo, int exit_status);
 
     lldb::StateType
     SetThreadStopInfo (StringExtractor& stop_packet);

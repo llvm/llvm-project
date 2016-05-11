@@ -3584,6 +3584,8 @@ ProcessGDBRemote::EstablishConnectionIfNeeded (const ProcessInfo &process_info)
 Error
 ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info)
 {
+    using namespace std::placeholders; // For _1, _2, etc.
+
     Error error;
     if (m_debugserver_pid == LLDB_INVALID_PROCESS_ID)
     {
@@ -3595,7 +3597,8 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
         // special terminal key sequences (^C) don't affect debugserver.
         debugserver_launch_info.SetLaunchInSeparateProcessGroup(true);
 
-        debugserver_launch_info.SetMonitorProcessCallback (MonitorDebugserverProcess, this, false);
+        debugserver_launch_info.SetMonitorProcessCallback(std::bind(MonitorDebugserverProcess, this, _1, _2, _3, _4),
+                                                          false);
         debugserver_launch_info.SetUserID(process_info.GetUserID());
 
 #if defined (__APPLE__) && (defined (__arm__) || defined (__arm64__) || defined (__aarch64__))
@@ -3657,14 +3660,11 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
 }
 
 bool
-ProcessGDBRemote::MonitorDebugserverProcess
-(
-    void *callback_baton,
-    lldb::pid_t debugserver_pid,
-    bool exited,        // True if the process did exit
-    int signo,          // Zero for no signal
-    int exit_status     // Exit value of process if signal is zero
-)
+ProcessGDBRemote::MonitorDebugserverProcess(ProcessGDBRemote *process, lldb::pid_t debugserver_pid,
+                                            bool exited,    // True if the process did exit
+                                            int signo,      // Zero for no signal
+                                            int exit_status // Exit value of process if signal is zero
+                                            )
 {
     // The baton is a "ProcessGDBRemote *". Now this class might be gone
     // and might not exist anymore, so we need to carefully try to get the
@@ -3680,15 +3680,14 @@ ProcessGDBRemote::MonitorDebugserverProcess
     // debugserver that we are tracking...
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
 
-    ProcessGDBRemote *process = (ProcessGDBRemote *)callback_baton;
-
     // Get a shared pointer to the target that has a matching process pointer.
     // This target could be gone, or the target could already have a new process
     // object inside of it
     TargetSP target_sp (Debugger::FindTargetWithProcess(process));
 
     if (log)
-        log->Printf ("ProcessGDBRemote::MonitorDebugserverProcess (baton=%p, pid=%" PRIu64 ", signo=%i (0x%x), exit_status=%i)", callback_baton, debugserver_pid, signo, signo, exit_status);
+        log->Printf("ProcessGDBRemote::%s(process=%p, pid=%" PRIu64 ", signo=%i (0x%x), exit_status=%i)", __FUNCTION__,
+                    process, debugserver_pid, signo, signo, exit_status);
 
     if (target_sp)
     {
