@@ -119,7 +119,6 @@ def ext_vla : Extension<"variable length arrays are a C99 feature">,
   InGroup<VLAExtension>;
 def warn_vla_used : Warning<"variable length array used">,
   InGroup<VLA>, DefaultIgnore;
-def err_vla_non_pod : Error<"variable length array of non-POD element type %0">;
 def err_vla_in_sfinae : Error<
   "variable length array cannot be formed during template argument deduction">;
 def err_array_star_in_function_definition : Error<
@@ -6650,7 +6649,13 @@ def warn_cast_pointer_from_sel : Warning<
 def warn_function_def_in_objc_container : Warning<
   "function definition inside an Objective-C container is deprecated">,
   InGroup<FunctionDefInObjCContainer>;
-  
+
+def warn_cast_calling_conv : Warning<
+  "cast between incompatible calling conventions '%0' and '%1'; "
+  "calls through this pointer may abort at runtime">,
+  InGroup<DiagGroup<"cast-calling-convention">>, DefaultIgnore;
+def note_change_calling_conv_fixit : Note<
+  "consider defining %0 with the '%1' calling convention">;
 def warn_bad_function_cast : Warning<
   "cast from function call of type %0 to non-matching type %1">,
   InGroup<BadFunctionCast>, DefaultIgnore;

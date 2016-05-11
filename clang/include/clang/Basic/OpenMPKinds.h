@@ -120,6 +120,13 @@ enum OpenMPDefaultmapClauseModifier {
   OMPC_DEFAULTMAP_MODIFIER_last
 };
 
+/// Scheduling data for loop-based OpenMP directives.
+struct OpenMPScheduleTy final {
+  OpenMPScheduleClauseKind Schedule = OMPC_SCHEDULE_unknown;
+  OpenMPScheduleClauseModifier M1 = OMPC_SCHEDULE_MODIFIER_unknown;
+  OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
+};
+
 OpenMPDirectiveKind getOpenMPDirectiveKind(llvm::StringRef Str);
 const char *getOpenMPDirectiveName(OpenMPDirectiveKind Kind);
 

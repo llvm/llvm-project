@@ -283,6 +283,32 @@ their address taken, unless all of the conditions specified by said
     ptr = &i; // OK: 'TrueConstant' is a truthy constant
     ptr = &j; // error: 'FalseConstant' is a constant, but not truthy
   }
+
+Because ``enable_if`` evaluation happens during overload resolution,
+``enable_if`` may give unintuitive results when used with templates, depending
+on when overloads are resolved. In the example below, clang will emit a
+diagnostic about no viable overloads for ``foo`` in ``bar``, but not in ``baz``:
+
+.. code-block:: c++
+
+  double foo(int i) __attribute__((enable_if(i > 0, "")));
+  void *foo(int i) __attribute__((enable_if(i <= 0, "")));
+  template <int I>
+  auto bar() { return foo(I); }
+
+  template <typename T>
+  auto baz() { return foo(T::number); }
+
+  struct WithNumber { constexpr static int number = 1; };
+  void callThem() {
+    bar<sizeof(WithNumber)>();
+    baz<WithNumber>();
+  }
+
+This is because, in ``bar``, ``foo`` is resolved prior to template
+instantiation, so the value for ``I`` isn't known (thus, both ``enable_if``
+conditions for ``foo`` fail). However, in ``baz``, ``foo`` is resolved during
+template instantiation, so the value for ``T::number`` is known.
   }];
 }
 
