@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <set>
 #include <string>
@@ -21,19 +22,54 @@ namespace clang {
 namespace find_all_symbols {
 
 /// \brief Contains all information for a Symbol.
-// FIXME: add static members for creating complete instances.
-struct SymbolInfo {
+class SymbolInfo {
+public:
+  /// \brief The SymbolInfo Type.
   enum SymbolKind {
     Function,
     Class,
     Variable,
     TypedefName,
+    Unknown,
   };
 
+  /// \brief The Context Type.
   enum ContextType {
     Namespace, // Symbols declared in a namespace.
     Record,    // Symbols declared in a class.
   };
+
+  /// \brief A pair of <ContextType, ContextName>.
+  typedef std::pair<ContextType, std::string> Context;
+
+  // The default constructor is required by YAML traits in
+  // LLVM_YAML_IS_DOCUMENT_LIST_VECTOR.
+  SymbolInfo() : Type(Unknown), LineNumber(-1) {};
+
+  SymbolInfo(llvm::StringRef Name, SymbolKind Type, llvm::StringRef FilePath,
+             const std::vector<Context> &Contexts, int LineNumber);
+
+  /// \brief Get symbol name.
+  llvm::StringRef getName() const;
+
+  /// \brief Get symbol type.
+  SymbolKind getSymbolKind() const;
+
+  /// \brief Get the file path where symbol comes from
+  llvm::StringRef getFilePath() const;
+
+  /// \brief Get symbol contexts.
+  const std::vector<SymbolInfo::Context> &getContexts() const;
+
+  /// \brief Get a 1-based line number of the symbol's declaration.
+  int getLineNumber() const;
+
+  bool operator<(const SymbolInfo &Symbol) const;
+
+  bool operator==(const SymbolInfo &Symbol) const;
+
+private:
+  friend struct llvm::yaml::MappingTraits<SymbolInfo>;
 
   /// \brief Identifier name.
   std::string Name;
@@ -43,9 +79,6 @@ struct SymbolInfo {
 
   /// \brief The file path where the symbol comes from.
   std::string FilePath;
-
-  /// \brief A pair of <ContextType, ContextName>.
-  typedef std::pair<ContextType, std::string> Context;
 
   /// \brief Contains information about symbol contexts. Context information is
   /// stored from the inner-most level to outer-most level.
@@ -61,32 +94,6 @@ struct SymbolInfo {
 
   /// \brief The 1-based line number of of the symbol's declaration.
   int LineNumber;
-
-  struct FunctionInfo {
-    std::string ReturnType;
-    std::vector<std::string> ParameterTypes;
-  };
-
-  struct TypedefNameInfo {
-    std::string UnderlyingType;
-  };
-
-  struct VariableInfo {
-    std::string Type;
-  };
-
-  /// \brief The function information.
-  llvm::Optional<FunctionInfo> FunctionInfos;
-
-  /// \brief The typedef information.
-  llvm::Optional<TypedefNameInfo> TypedefNameInfos;
-
-  /// \brief The variable information.
-  llvm::Optional<VariableInfo> VariableInfos;
-
-  bool operator==(const SymbolInfo &Symbol) const;
-
-  bool operator<(const SymbolInfo &Symbol) const;
 };
 
 /// \brief Write SymbolInfos to a stream (YAML format).

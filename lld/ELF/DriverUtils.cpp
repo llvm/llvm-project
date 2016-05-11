@@ -150,6 +150,8 @@ static void maybePrintCpioMember(StringRef Path, StringRef Data) {
 
   // Print the trailer and seek back. This way we have a valid archive if we
   // crash.
+  // See http://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html#tag_20_92_13_11
+  // for the format details.
   uint64_t Pos = OS.tell();
   maybePrintCpioMemberAux(OS, "TRAILER!!!", "");
   OS.seek(Pos);

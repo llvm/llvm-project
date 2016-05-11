@@ -127,6 +127,16 @@ SCEVAffinator::~SCEVAffinator() {
     freePWACtx(CachedPair.second);
 }
 
+void SCEVAffinator::interpretAsUnsigned(__isl_keep PWACtx &PWAC,
+                                        unsigned Width) {
+  auto *PWA = PWAC.first;
+  auto *NonNegDom = isl_pw_aff_nonneg_set(isl_pw_aff_copy(PWA));
+  auto *NonNegPWA = isl_pw_aff_intersect_domain(isl_pw_aff_copy(PWA),
+                                                isl_set_copy(NonNegDom));
+  auto *ExpPWA = getWidthExpValOnDomain(Width, isl_set_complement(NonNegDom));
+  PWAC.first = isl_pw_aff_union_add(NonNegPWA, isl_pw_aff_add(PWA, ExpPWA));
+}
+
 void SCEVAffinator::takeNonNegativeAssumption(PWACtx &PWAC) {
   auto *NegPWA = isl_pw_aff_neg(isl_pw_aff_copy(PWAC.first));
   auto *NegDom = isl_pw_aff_pos_set(NegPWA);
@@ -353,12 +363,7 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
 
   // If the width is small build the piece for the non-negative part and
   // the one for the negative part and unify them.
-  auto *NonNegDom = isl_pw_aff_nonneg_set(isl_pw_aff_copy(OpPWAC.first));
-  auto *NonNegPWA = isl_pw_aff_intersect_domain(isl_pw_aff_copy(OpPWAC.first),
-                                                isl_set_copy(NonNegDom));
-  auto *ExpPWA = getWidthExpValOnDomain(Width, isl_set_complement(NonNegDom));
-  OpPWAC.first = isl_pw_aff_add(OpPWAC.first, ExpPWA);
-  OpPWAC.first = isl_pw_aff_union_add(NonNegPWA, OpPWAC.first);
+  interpretAsUnsigned(OpPWAC, Width);
   return OpPWAC;
 }
 

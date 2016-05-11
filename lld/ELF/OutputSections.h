@@ -274,7 +274,7 @@ class RelocationSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  RelocationSection(StringRef Name);
+  RelocationSection(StringRef Name, bool Sort);
   void addReloc(const DynamicReloc<ELFT> &Reloc);
   unsigned getRelocOffset();
   void finalize() override;
@@ -284,6 +284,7 @@ public:
   bool Static = false;
 
 private:
+  bool Sort;
   std::vector<DynamicReloc<ELFT>> Relocs;
 };
 

@@ -76,6 +76,7 @@ enum AssumptionKind {
   INBOUNDS,
   WRAPPING,
   UNSIGNED,
+  PROFITABLE,
   ERRORBLOCK,
   COMPLEXITY,
   INFINITELOOP,
@@ -1156,10 +1157,6 @@ public:
   /// statements, return its entry block.
   BasicBlock *getEntryBlock() const;
 
-  /// @brief Return RegionInfo's RegionNode for this statements' BB or
-  ///        subregion.
-  RegionNode *getRegionNode() const;
-
   /// @brief Return true if this statement does not contain any accesses.
   bool isEmpty() const { return MemAccs.empty(); }
 
@@ -1277,7 +1274,7 @@ public:
   ///
   /// @param Dimension The dimension of the induction variable
   /// @return The loop at a certain dimension.
-  const Loop *getLoopForDimension(unsigned Dimension) const;
+  Loop *getLoopForDimension(unsigned Dimension) const;
 
   /// @brief Align the parameters in the statement to the scop context
   void realignParams();
@@ -1567,7 +1564,9 @@ private:
   ///
   /// @param L  The loop to process.
   /// @param LI The LoopInfo for the current function.
-  void addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI);
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI);
 
   /// @brief Compute the branching constraints for each basic block in @p R.
   ///
@@ -1586,7 +1585,9 @@ private:
   /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void propagateDomainConstraints(Region *R, ScopDetection &SD,
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool propagateDomainConstraints(Region *R, ScopDetection &SD,
                                   DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Propagate invalid domains of statements through @p R.
@@ -1600,7 +1601,9 @@ private:
   /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
                                    DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Compute the domain for each basic block in @p R.
@@ -1614,28 +1617,11 @@ private:
   bool buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
                     LoopInfo &LI);
 
-  /// @brief Check if a region part should be represented in the SCoP or not.
-  ///
-  /// If @p RN does not contain any useful calculation or is only reachable
-  /// via error blocks we do not model it in the polyhedral representation.
-  ///
-  /// @param RN The region part to check.
-  /// @param DT The DominatorTree for the current function.
-  /// @param LI The LoopInfo for the current function.
-  ///
-  /// @return True if the part should be ignored, otherwise false.
-  bool isIgnored(RegionNode *RN, DominatorTree &DT, LoopInfo &LI);
-
   /// @brief Add parameter constraints to @p C that imply a non-empty domain.
   __isl_give isl_set *addNonEmptyDomainConstraints(__isl_take isl_set *C) const;
 
   /// @brief Simplify the SCoP representation
-  ///
-  /// At the moment we perform the following simplifications:
-  ///   - removal of no-op statements
-  /// @param RemoveIgnoredStmts If true, also removed ignored statments.
-  /// @see isIgnored()
-  void simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT, LoopInfo &LI);
+  void simplifySCoP(bool AfterHoisting, DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Create equivalence classes for required invariant accesses.
   ///
@@ -2103,6 +2089,9 @@ public:
 
   /// @brief Align the parameters in the statement to the scop context
   void realignParams();
+
+  /// @brief Return true if this SCoP can be profitably optimized.
+  bool isProfitable() const;
 
   /// @brief Return true if the SCoP contained at least one error block.
   bool hasErrorBlock() const { return HasErrorBlock; }

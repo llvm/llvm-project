@@ -18,6 +18,7 @@
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/ParallelCG.h"
+#include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Support/StringSaver.h"
@@ -99,6 +100,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   Module &M = Obj->getModule();
   if (M.getDataLayoutStr().empty())
     fatal("invalid bitcode file: " + F.getName() + " has no datalayout");
+
+  // Discard non-compatible debug infos if necessary.
+  M.materializeMetadata();
+  UpgradeDebugInfo(M);
 
   // If a symbol appears in @llvm.used, the linker is required
   // to treat the symbol as there is a reference to the symbol

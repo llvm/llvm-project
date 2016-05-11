@@ -33,7 +33,7 @@ cl::opt<DatabaseFormatTy> DatabaseFormat(
     cl::values(clEnumVal(fixed, "Hard-coded mapping"),
                clEnumVal(yaml, "Yaml database created by find-all-symbols"),
                clEnumValEnd),
-    cl::init(fixed), cl::cat(IncludeFixerCategory));
+    cl::init(yaml), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string> Input("input",
                            cl::desc("String to initialize the database"),
@@ -43,6 +43,9 @@ cl::opt<bool>
     MinimizeIncludePaths("minimize-paths",
                          cl::desc("Whether to minimize added include paths"),
                          cl::init(true), cl::cat(IncludeFixerCategory));
+
+cl::opt<bool> Quiet("q", cl::desc("Reduce terminal output"), cl::init(false),
+                    cl::cat(IncludeFixerCategory));
 
 int includeFixerMain(int argc, const char **argv) {
   tooling::CommonOptionsParser options(argc, argv, IncludeFixerCategory);
@@ -103,6 +106,10 @@ int includeFixerMain(int argc, const char **argv) {
                                                    MinimizeIncludePaths);
 
   tool.run(&Factory); // Always succeeds.
+
+  if (!Quiet)
+    for (const tooling::Replacement &Replacement : Replacements)
+      llvm::errs() << "Added " << Replacement.getReplacementText();
 
   // Set up a new source manager for applying the resulting replacements.
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);

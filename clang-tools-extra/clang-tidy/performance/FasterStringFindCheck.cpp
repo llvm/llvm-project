@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FasterStringFindCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/Optional.h"
@@ -20,20 +21,6 @@ namespace tidy {
 namespace performance {
 
 namespace {
-
-static const char StringLikeClassesDelimiter[] = ";";
-
-std::vector<std::string> ParseClasses(StringRef Option) {
-  SmallVector<StringRef, 4> Classes;
-  Option.split(Classes, StringLikeClassesDelimiter);
-  std::vector<std::string> Result;
-  for (StringRef &Class : Classes) {
-    Class = Class.trim();
-    if (!Class.empty())
-      Result.push_back(Class);
-  }
-  return Result;
-}
 
 llvm::Optional<std::string> MakeCharacterLiteral(const StringLiteral *Literal) {
   std::string Result;
@@ -64,14 +51,13 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<Expr>,
 FasterStringFindCheck::FasterStringFindCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StringLikeClasses(
-          ParseClasses(Options.get("StringLikeClasses", "std::basic_string"))) {
+      StringLikeClasses(utils::options::parseStringList(
+          Options.get("StringLikeClasses", "std::basic_string"))) {
 }
 
 void FasterStringFindCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StringLikeClasses",
-                llvm::join(StringLikeClasses.begin(), StringLikeClasses.end(),
-                           StringLikeClassesDelimiter));
+                utils::options::serializeStringList(StringLikeClasses));
 }
 
 void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {

@@ -33,9 +33,6 @@ template <> struct MappingTraits<SymbolInfo> {
     io.mapRequired("FilePath", Symbol.FilePath);
     io.mapRequired("LineNumber", Symbol.LineNumber);
     io.mapRequired("Type", Symbol.Type);
-    io.mapOptional("Variable", Symbol.VariableInfos);
-    io.mapOptional("Function", Symbol.FunctionInfos);
-    io.mapOptional("TypedefName", Symbol.TypedefNameInfos);
   }
 };
 
@@ -62,39 +59,40 @@ template <> struct MappingTraits<SymbolInfo::Context> {
   }
 };
 
-template <> struct MappingTraits<SymbolInfo::FunctionInfo> {
-  static void mapping(IO &io, SymbolInfo::FunctionInfo &Value) {
-    io.mapRequired("ReturnType", Value.ReturnType);
-    io.mapRequired("ParameterTypes", Value.ParameterTypes);
-  }
-};
-
-template <> struct MappingTraits<SymbolInfo::VariableInfo> {
-  static void mapping(IO &io, SymbolInfo::VariableInfo &Value) {
-    io.mapRequired("VariableType", Value.Type);
-  }
-};
-
-template <> struct MappingTraits<SymbolInfo::TypedefNameInfo> {
-  static void mapping(IO &io, SymbolInfo::TypedefNameInfo &Value) {
-    io.mapRequired("TypedefNameType", Value.UnderlyingType);
-  }
-};
-
 } // namespace yaml
 } // namespace llvm
 
 namespace clang {
 namespace find_all_symbols {
 
+SymbolInfo::SymbolInfo(llvm::StringRef Name, SymbolKind Type,
+                       llvm::StringRef FilePath,
+                       const std::vector<Context> &Contexts, int LineNumber)
+    : Name(Name), Type(Type), FilePath(FilePath), Contexts(Contexts),
+      LineNumber(LineNumber) {}
+
+llvm::StringRef SymbolInfo::getName() const { return Name; }
+
+SymbolKind SymbolInfo::getSymbolKind() const { return Type; }
+
+llvm::StringRef SymbolInfo::getFilePath() const { return FilePath; }
+
+const std::vector<SymbolInfo::Context> &SymbolInfo::getContexts() const {
+  return Contexts;
+}
+
+int SymbolInfo::getLineNumber() const { return LineNumber; }
+
 bool SymbolInfo::operator==(const SymbolInfo &Symbol) const {
-  return Name == Symbol.Name && FilePath == Symbol.FilePath &&
-         LineNumber == Symbol.LineNumber && Contexts == Symbol.Contexts;
+  return std::tie(Name, Type, FilePath, LineNumber, Contexts) ==
+         std::tie(Symbol.Name, Symbol.Type, Symbol.FilePath, Symbol.LineNumber,
+                  Symbol.Contexts);
 }
 
 bool SymbolInfo::operator<(const SymbolInfo &Symbol) const {
-  return std::tie(Name, FilePath, LineNumber) <
-         std::tie(Symbol.Name, Symbol.FilePath, Symbol.LineNumber);
+  return std::tie(Name, Type, FilePath, LineNumber, Contexts) <
+         std::tie(Symbol.Name, Symbol.Type, Symbol.FilePath, Symbol.LineNumber,
+                  Symbol.Contexts);
 }
 
 bool WriteSymbolInfosToStream(llvm::raw_ostream &OS,
