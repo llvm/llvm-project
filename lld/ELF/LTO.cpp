@@ -91,6 +91,10 @@ BitcodeCompiler::BitcodeCompiler()
     : Combined(new llvm::Module("ld-temp.o", Driver->Context)),
       Mover(*Combined) {}
 
+static void undefine(Symbol *S) {
+  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, 0);
+}
+
 void BitcodeCompiler::add(BitcodeFile &F) {
   std::unique_ptr<IRObjectFile> Obj = std::move(F.Obj);
   std::vector<GlobalValue *> Keep;
@@ -139,7 +143,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // needs to be able to replace the original definition without conflicting.
     // In the latter case, we need to allow the combined LTO object to provide a
     // definition with the same name, for example when doing parallel codegen.
-    replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, 0);
+    undefine(S);
 
     if (!GV)
       // Module asm symbol.

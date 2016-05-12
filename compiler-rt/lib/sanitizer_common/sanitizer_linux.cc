@@ -336,6 +336,15 @@ void internal__exit(int exitcode) {
   Die();  // Unreachable.
 }
 
+unsigned int internal_sleep(unsigned int seconds) {
+  struct timespec ts;
+  ts.tv_sec = 1;
+  ts.tv_nsec = 0;
+  int res = internal_syscall(SYSCALL(nanosleep), &ts, &ts);
+  if (res) return ts.tv_sec;
+  return 0;
+}
+
 uptr internal_execve(const char *filename, char *const argv[],
                      char *const envp[]) {
   return internal_syscall(SYSCALL(execve), (uptr)filename, (uptr)argv,
@@ -960,8 +969,18 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                        "bnez $2,1f;\n"
 
                        /* Call "fn(arg)". */
+#if SANITIZER_WORDSIZE == 32
+#ifdef __BIG_ENDIAN__
+                       "lw $25,4($29);\n"
+                       "lw $4,12($29);\n"
+#else
+                       "lw $25,0($29);\n"
+                       "lw $4,8($29);\n"
+#endif
+#else
                        "ld $25,0($29);\n"
                        "ld $4,8($29);\n"
+#endif
                        "jal $25;\n"
 
                        /* Call _exit($v0). */

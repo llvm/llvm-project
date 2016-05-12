@@ -161,6 +161,10 @@ void internal__exit(int exitcode) {
   _exit(exitcode);
 }
 
+unsigned int internal_sleep(unsigned int seconds) {
+  return sleep(seconds);
+}
+
 uptr internal_getpid() {
   return getpid();
 }
@@ -195,7 +199,11 @@ int internal_forkpty(int *amaster) {
   }
   if (pid == 0) {
     close(master);
-    CHECK_EQ(login_tty(slave), 0);
+    if (login_tty(slave) != 0) {
+      // We already forked, there's not much we can do.  Let's quit.
+      Report("login_tty failed (errno %d)\n", errno);
+      internal__exit(1);
+    }
   } else {
     *amaster = master;
     close(slave);

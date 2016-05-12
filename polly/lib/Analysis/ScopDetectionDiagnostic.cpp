@@ -36,6 +36,8 @@
 
 #include <string>
 
+using namespace llvm;
+
 #define BADSCOP_STAT(NAME, DESC)                                               \
   STATISTIC(Bad##NAME##ForScop, "Number of bad regions for Scop: " DESC)
 
@@ -67,8 +69,21 @@ static bool operator<(const llvm::DebugLoc &LHS, const llvm::DebugLoc &RHS) {
 }
 
 namespace polly {
-void getDebugLocations(const Region *R, DebugLoc &Begin, DebugLoc &End) {
-  for (const BasicBlock *BB : R->blocks())
+BBPair getBBPairForRegion(const Region *R) {
+  return std::make_pair(R->getEntry(), R->getExit());
+}
+
+void getDebugLocations(const BBPair &P, DebugLoc &Begin, DebugLoc &End) {
+  SmallPtrSet<BasicBlock *, 32> Seen;
+  SmallVector<BasicBlock *, 32> Todo;
+  Todo.push_back(P.first);
+  while (!Todo.empty()) {
+    auto *BB = Todo.pop_back_val();
+    if (BB == P.second)
+      continue;
+    if (!Seen.insert(BB).second)
+      continue;
+    Todo.append(succ_begin(BB), succ_end(BB));
     for (const Instruction &Inst : *BB) {
       DebugLoc DL = Inst.getDebugLoc();
       if (!DL)
@@ -77,15 +92,15 @@ void getDebugLocations(const Region *R, DebugLoc &Begin, DebugLoc &End) {
       Begin = Begin ? std::min(Begin, DL) : DL;
       End = End ? std::max(End, DL) : DL;
     }
+  }
 }
 
-void emitRejectionRemarks(const llvm::Function &F, const RejectLog &Log) {
+void emitRejectionRemarks(const BBPair &P, const RejectLog &Log) {
+  Function &F = *P.first->getParent();
   LLVMContext &Ctx = F.getContext();
 
-  const Region *R = Log.region();
   DebugLoc Begin, End;
-
-  getDebugLocations(R, Begin, End);
+  getDebugLocations(P, Begin, End);
 
   emitOptimizationRemarkMissed(
       Ctx, DEBUG_TYPE, F, Begin,

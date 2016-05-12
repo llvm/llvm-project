@@ -35,6 +35,10 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *TargetDecl =
         Using->shadow_begin()->getTargetDecl()->getCanonicalDecl();
 
+    // Ignores using-declarations defined in macros.
+    if (TargetDecl->getLocation().isMacroID())
+      return;
+
     // Ignores using-declarations defined in class definition.
     if (isa<CXXRecordDecl>(TargetDecl->getDeclContext()))
       return;
