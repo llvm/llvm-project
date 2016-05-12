@@ -130,6 +130,7 @@ lprofGatherValueProfData(const __llvm_profile_data *Data) {
     VD = (ValueProfData *)calloc(VS, sizeof(uint8_t));
     if (!VD)
       PROF_OOM_RETURN("Failed to write value profile data ");
+    VD->TotalSize = VS;
     serializeValueProfDataFromRT(&R, VD);
   }
   finalizeValueProfRuntimeRecord(&R);

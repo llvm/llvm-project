@@ -13,12 +13,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "esan.h"
+#include "esan_shadow.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __esan; // NOLINT
+
+// FIXME: if this gets more complex as more platforms are added we may
+// want to split pieces into separate platform-specific files.
+#if SANITIZER_LINUX
+// Sanitizer runtimes in general want to avoid including system headers.
+// We define the few constants we need here:
+const int EINVAL = 22; // from /usr/include/asm-generic/errno-base.h
+const int MAP_FIXED = 0x10; // from /usr/include/sys/mman.h
+extern "C" int *__errno_location();
+#define errno (*__errno_location())
+#else
+#error Other platforms are not yet supported.
+#endif
 
 #define CUR_PC() (StackTrace::GetCurrentPc())
 
@@ -249,72 +263,6 @@ INTERCEPTOR(char *, strncpy, char *dst, char *src, uptr n) {
   return REAL(strncpy)(dst, src, n);
 }
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_FREEBSD
-INTERCEPTOR(int, __xstat64, int version, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __xstat64, version, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(__xstat64)(version, path, buf);
-}
-#define ESAN_MAYBE_INTERCEPT___XSTAT64 INTERCEPT_FUNCTION(__xstat64)
-#else
-#define ESAN_MAYBE_INTERCEPT___XSTAT64
-#endif
-
-#if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_FREEBSD
-INTERCEPTOR(int, stat64, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, stat64, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(stat64)(path, buf);
-}
-#define ESAN_MAYBE_INTERCEPT_STAT64 INTERCEPT_FUNCTION(stat64)
-#else
-#define ESAN_MAYBE_INTERCEPT_STAT64
-#endif
-
-#if SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_ANDROID
-INTERCEPTOR(int, lstat, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, lstat, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(lstat)(path, buf);
-}
-#define ESAN_INTERCEPT_LSTAT INTERCEPT_FUNCTION(lstat)
-#else
-INTERCEPTOR(int, __lxstat, int version, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __lxstat, version, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(__lxstat)(version, path, buf);
-}
-#define ESAN_INTERCEPT_LSTAT INTERCEPT_FUNCTION(__lxstat)
-#endif
-
-#if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_FREEBSD
-INTERCEPTOR(int, __lxstat64, int version, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __lxstat64, version, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(__lxstat64)(version, path, buf);
-}
-#define ESAN_MAYBE_INTERCEPT___LXSTAT64 INTERCEPT_FUNCTION(__lxstat64)
-#else
-#define ESAN_MAYBE_INTERCEPT___LXSTAT64
-#endif
-
-#if SANITIZER_LINUX && !SANITIZER_ANDROID && !SANITIZER_FREEBSD
-INTERCEPTOR(int, lstat64, const char *path, void *buf) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, lstat64, path, buf);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
-  return REAL(lstat64)(path, buf);
-}
-#define ESAN_MAYBE_INTERCEPT_LSTAT64 INTERCEPT_FUNCTION(lstat64)
-#else
-#define ESAN_MAYBE_INTERCEPT_LSTAT64
-#endif
-
 INTERCEPTOR(int, open, const char *name, int flags, int mode) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, open, name, flags, mode);
@@ -388,6 +336,56 @@ INTERCEPTOR(int, rmdir, char *path) {
   return REAL(rmdir)(path);
 }
 
+//===----------------------------------------------------------------------===//
+// Shadow-related interceptors
+//===----------------------------------------------------------------------===//
+
+// These are candidates for sharing with all sanitizers if shadow memory
+// support is also standardized.
+
+static bool fixMmapAddr(void **addr, SIZE_T sz, int flags) {
+  if (*addr) {
+    uptr AppStart, AppEnd;
+    bool SingleApp = false;
+    for (int i = 0; getAppRegion(i, &AppStart, &AppEnd); ++i) {
+      if ((uptr)*addr >= AppStart && (uptr)*addr + sz - 1 <= AppEnd) {
+        SingleApp = true;
+        break;
+      }
+    }
+    if (!SingleApp) {
+      VPrintf(1, "mmap conflict: [%p-%p) is not in an app region\n",
+              *addr, (uptr)*addr + sz);
+      if (flags & MAP_FIXED) {
+        errno = EINVAL;
+        return false;
+      } else {
+        *addr = 0;
+      }
+    }
+  }
+  return true;
+}
+
+INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
+                 int fd, OFF_T off) {
+  if (!fixMmapAddr(&addr, sz, flags))
+    return (void *)-1;
+  return REAL(mmap)(addr, sz, prot, flags, fd, off);
+}
+
+#if SANITIZER_LINUX
+INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
+                 int fd, OFF64_T off) {
+  if (!fixMmapAddr(&addr, sz, flags))
+    return (void *)-1;
+  return REAL(mmap64)(addr, sz, prot, flags, fd, off);
+}
+#define ESAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
+#else
+#define ESAN_MAYBE_INTERCEPT_MMAP64
+#endif
+
 namespace __esan {
 
 void initializeInterceptors() {
@@ -396,11 +394,6 @@ void initializeInterceptors() {
   INTERCEPT_FUNCTION(strcpy); // NOLINT
   INTERCEPT_FUNCTION(strncpy);
 
-  ESAN_MAYBE_INTERCEPT_STAT64;
-  ESAN_MAYBE_INTERCEPT___XSTAT64;
-  ESAN_INTERCEPT_LSTAT;
-  ESAN_MAYBE_INTERCEPT_LSTAT64;
-  ESAN_MAYBE_INTERCEPT___LXSTAT64;
   INTERCEPT_FUNCTION(open);
   ESAN_MAYBE_INTERCEPT_OPEN64;
   INTERCEPT_FUNCTION(creat);
@@ -410,6 +403,9 @@ void initializeInterceptors() {
   INTERCEPT_FUNCTION(fwrite);
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(rmdir);
+
+  INTERCEPT_FUNCTION(mmap);
+  ESAN_MAYBE_INTERCEPT_MMAP64;
 
   // TODO(bruening): we should intercept calloc() and other memory allocation
   // routines that zero memory and update our shadow memory appropriately.

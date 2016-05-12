@@ -381,9 +381,6 @@ typedef struct ValueProfRuntimeRecord {
   /* Total number of value profile kinds which have at least one
    *  value profile sites. */
   uint32_t NumValueKinds;
-  /* An array recording the number of values tracked at each site.
-   * The size of the array is TotalNumValueSites. */
-  uint8_t *SiteCountArray[IPVK_Last + 1];
   ValueProfNode **NodesKind[IPVK_Last + 1];
 } ValueProfRuntimeRecord;
 
@@ -531,12 +528,15 @@ void serializeValueProfRecordFrom(ValueProfRecord *This,
 /*!
  * Extract value profile data of a function  from the \c Closure
  * and serialize the data into \c DstData if it is not NULL or heap
- * memory allocated by the \c Closure's allocator method.
+ * memory allocated by the \c Closure's allocator method. If \c
+ * DstData is not null, the caller is expected to set the TotalSize
+ * in DstData.
  */
 ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
                                           ValueProfData *DstData) {
   uint32_t Kind;
-  uint32_t TotalSize = getValueProfDataSize(Closure);
+  uint32_t TotalSize = 
+      DstData ? DstData->TotalSize : getValueProfDataSize(Closure);
 
   ValueProfData *VPD =
       DstData ? DstData : Closure->AllocValueProfData(TotalSize);
@@ -566,46 +566,23 @@ ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
                                      const uint16_t *NumValueSites,
                                      ValueProfNode **Nodes) {
-  unsigned I, J, S = 0, NumValueKinds = 0;
+  unsigned I, S = 0, NumValueKinds = 0;
   RuntimeRecord->NumValueSites = NumValueSites;
   RuntimeRecord->Nodes = Nodes;
   for (I = 0; I <= IPVK_Last; I++) {
     uint16_t N = NumValueSites[I];
-    if (!N) {
-      RuntimeRecord->SiteCountArray[I] = INSTR_PROF_NULLPTR;
+    if (!N)
       continue;
-    }
     NumValueKinds++;
-    RuntimeRecord->SiteCountArray[I] = (uint8_t *)calloc(N, 1);
-    if (!RuntimeRecord->SiteCountArray[I])
-      return 1;
+
     RuntimeRecord->NodesKind[I] = Nodes ? &Nodes[S] : INSTR_PROF_NULLPTR;
-    for (J = 0; J < N; J++) {
-      /* Compute value count for each site. */
-      uint32_t C = 0;
-      ValueProfNode *Site =
-          Nodes ? RuntimeRecord->NodesKind[I][J] : INSTR_PROF_NULLPTR;
-      while (Site) {
-        C++;
-        Site = Site->Next;
-      }
-      if (C > UCHAR_MAX)
-        C = UCHAR_MAX;
-      RuntimeRecord->SiteCountArray[I][J] = C;
-    }
     S += N;
   }
   RuntimeRecord->NumValueKinds = NumValueKinds;
   return 0;
 }
 
-void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord) {
-  unsigned I;
-  for (I = 0; I <= IPVK_Last; I++) {
-    if (RuntimeRecord->SiteCountArray[I])
-      free(RuntimeRecord->SiteCountArray[I]);
-  }
-}
+void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord) {}
 
 /* ValueProfRecordClosure Interface implementation for
  * ValueProfDataRuntimeRecord.  */
@@ -618,17 +595,25 @@ uint32_t getNumValueSitesRT(const void *R, uint32_t VK) {
 }
 
 uint32_t getNumValueDataForSiteRT(const void *R, uint32_t VK, uint32_t S) {
+  uint32_t C = 0;
   const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
-  return Record->SiteCountArray[VK][S];
+  ValueProfNode *Site =
+      Record->NodesKind[VK] ? Record->NodesKind[VK][S] : INSTR_PROF_NULLPTR;
+  while (Site) {
+    C++;
+    Site = Site->Next;
+  }
+  if (C > UCHAR_MAX)
+    C = UCHAR_MAX;
+
+  return C;
 }
 
 uint32_t getNumValueDataRT(const void *R, uint32_t VK) {
   unsigned I, S = 0;
   const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
-  if (Record->SiteCountArray[VK] == INSTR_PROF_NULLPTR)
-    return 0;
   for (I = 0; I < Record->NumValueSites[VK]; I++)
-    S += Record->SiteCountArray[VK][I];
+    S += getNumValueDataForSiteRT(Record, VK, I);
   return S;
 }
 
