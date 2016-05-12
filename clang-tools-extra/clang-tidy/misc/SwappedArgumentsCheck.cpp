@@ -10,6 +10,7 @@
 #include "SwappedArgumentsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang::ast_matchers;
@@ -46,25 +47,9 @@ static bool isImplicitCastCandidate(const CastExpr *Cast) {
          Cast->getCastKind() == CK_PointerToBoolean;
 }
 
-/// \brief Get a StringRef representing a SourceRange.
-static StringRef getAsString(const MatchFinder::MatchResult &Result,
-                             SourceRange R) {
-  const SourceManager &SM = *Result.SourceManager;
-  // Don't even try to resolve macro or include contraptions. Not worth emitting
-  // a fixit for.
-  if (R.getBegin().isMacroID() ||
-      !SM.isWrittenInSameFile(R.getBegin(), R.getEnd()))
-    return StringRef();
-
-  const char *Begin = SM.getCharacterData(R.getBegin());
-  const char *End = SM.getCharacterData(Lexer::getLocForEndOfToken(
-      R.getEnd(), 0, SM, Result.Context->getLangOpts()));
-
-  return StringRef(Begin, End - Begin);
-}
-
 void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
-  auto *Call = Result.Nodes.getStmtAs<CallExpr>("call");
+  const ASTContext &Ctx = *Result.Context;
+  const auto *Call = Result.Nodes.getStmtAs<CallExpr>("call");
 
   llvm::SmallPtrSet<const Expr *, 4> UsedArgs;
   for (unsigned I = 1, E = Call->getNumArgs(); I < E; ++I) {
@@ -99,24 +84,14 @@ void SwappedArgumentsCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
 
     // Emit a warning and fix-its that swap the arguments.
-    SourceRange LHSRange = LHS->getSourceRange(),
-                RHSRange = RHS->getSourceRange();
-    auto D =
-        diag(Call->getLocStart(), "argument with implicit conversion from %0 "
-                                  "to %1 followed by argument converted from "
-                                  "%2 to %3, potentially swapped arguments.")
+    diag(Call->getLocStart(), "argument with implicit conversion from %0 "
+                              "to %1 followed by argument converted from "
+                              "%2 to %3, potentially swapped arguments.")
         << LHS->getType() << LHSFrom->getType() << RHS->getType()
-        << RHSFrom->getType() << LHSRange << RHSRange;
-
-    StringRef RHSString = getAsString(Result, RHSRange);
-    StringRef LHSString = getAsString(Result, LHSRange);
-    if (!LHSString.empty() && !RHSString.empty()) {
-      D << FixItHint::CreateReplacement(
-               CharSourceRange::getTokenRange(LHSRange), RHSString)
-        << FixItHint::CreateReplacement(
-               CharSourceRange::getTokenRange(RHSRange), LHSString);
-    }
-
+        << RHSFrom->getType()
+        << tooling::fixit::createReplacement(*LHS, *RHS, Ctx)
+        << tooling::fixit::createReplacement(*RHS, *LHS, Ctx);
+    
     // Remember that we emitted a warning for this argument.
     UsedArgs.insert(RHSCast);
   }

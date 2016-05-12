@@ -288,7 +288,7 @@ static void computeImportForFunction(
     /// Since the traversal of the call graph is DFS, we can revisit a function
     /// a second time with a higher threshold. In this case, it is added back to
     /// the worklist with the new threshold.
-    if (ProcessedThreshold && ProcessedThreshold > Threshold) {
+    if (ProcessedThreshold && ProcessedThreshold >= Threshold) {
       DEBUG(dbgs() << "ignored! Target was already seen with Threshold "
                    << ProcessedThreshold << "\n");
       continue;

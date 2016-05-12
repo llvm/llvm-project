@@ -648,7 +648,7 @@ void HexagonFrameLowering::insertCFIInstructions(MachineFunction &MF) const {
 void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator At) const {
   MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = *MF.getFrameInfo();
   MachineModuleInfo &MMI = MF.getMMI();
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
@@ -661,8 +661,9 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
   const MCInstrDesc &CFID = HII.get(TargetOpcode::CFI_INSTRUCTION);
 
   MCSymbol *FrameLabel = MMI.getContext().createTempSymbol();
+  bool HasFP = hasFP(MF);
 
-  if (hasFP(MF)) {
+  if (HasFP) {
     unsigned DwFPReg = HRI.getDwarfRegNum(HRI.getFrameRegister(), true);
     unsigned DwRAReg = HRI.getDwarfRegNum(HRI.getRARegister(), true);
 
@@ -700,7 +701,7 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
     Hexagon::NoRegister
   };
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   for (unsigned i = 0; RegsToMove[i] != Hexagon::NoRegister; ++i) {
     unsigned Reg = RegsToMove[i];
@@ -711,9 +712,22 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
     if (F == CSI.end())
       continue;
 
+    int64_t Offset;
+    if (HasFP) {
+      // If the function has a frame pointer (i.e. has an allocframe),
+      // then the CFA has been defined in terms of FP. Any offsets in
+      // the following CFI instructions have to be defined relative
+      // to FP, which points to the bottom of the stack frame.
+      // The function getFrameIndexReference can still choose to use SP
+      // for the offset calculation, so we cannot simply call it here.
+      // Instead, get the offset (relative to the FP) directly.
+      Offset = MFI.getObjectOffset(F->getFrameIdx());
+    } else {
+      unsigned FrameReg;
+      Offset = getFrameIndexReference(MF, F->getFrameIdx(), FrameReg);
+    }
     // Subtract 8 to make room for R30 and R31, which are added above.
-    unsigned FrameReg;
-    int64_t Offset = getFrameIndexReference(MF, F->getFrameIdx(), FrameReg) - 8;
+    Offset -= 8;
 
     if (Reg < Hexagon::D0 || Reg > Hexagon::D15) {
       unsigned DwarfReg = HRI.getDwarfRegNum(Reg, true);

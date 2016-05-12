@@ -353,6 +353,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     error("number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
+  Config->ZDefs = hasZOption(Args, "defs");
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNow = hasZOption(Args, "now");

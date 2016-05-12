@@ -99,6 +99,11 @@ static cl::opt<bool>
                         cl::desc("Model the cost of loop rotation more "
                                  "precisely by using profile data."),
                         cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    ForcePreciseRotationCost("force-precise-rotation-cost",
+                             cl::desc("Model the cost of loop rotation more "
+                                      "precisely by using profile data."),
+                             cl::init(false), cl::Hidden);
 
 static cl::opt<unsigned> MisfetchCost(
     "misfetch-cost",
@@ -1126,7 +1131,8 @@ void MachineBlockPlacement::buildLoopChains(MachineFunction &F,
   // this loop by modeling costs more precisely which requires the profile data
   // for better layout.
   bool RotateLoopWithProfile =
-      PreciseRotationCost && F.getFunction()->getEntryCount();
+      ForcePreciseRotationCost ||
+      (PreciseRotationCost && F.getFunction()->getEntryCount());
 
   // First check to see if there is an obviously preferable top block for the
   // loop. This will default to the header, but may end up as one of the

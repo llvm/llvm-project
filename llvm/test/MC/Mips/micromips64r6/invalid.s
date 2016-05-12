@@ -228,3 +228,11 @@
   swp $31, 8($4)               # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swp $16, 8($34)              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
   swp $16, 4096($4)            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  dsll $3, $4, 64              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
+  dsll $3, $4, -1              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
+  dsll32 $3, $4, 32            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
+  dsll32 $3, $4, -1            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
+  dsra $4, $5, 64              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
+  dsra $4, $5, -1              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
+  dsra32 $4, $5, 32            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
+  dsra32 $4, $5, -1            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate

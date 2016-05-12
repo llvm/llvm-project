@@ -96,10 +96,11 @@ void MipsTargetStreamer::emitDirectiveSetHardFloat() {
 void MipsTargetStreamer::emitDirectiveSetDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
-void MipsTargetStreamer::emitDirectiveCpRestore(int Offset, unsigned ATReg,
-                                                SMLoc IDLoc,
-                                                const MCSubtargetInfo *STI) {
+bool MipsTargetStreamer::emitDirectiveCpRestore(
+    int Offset, std::function<unsigned()> GetATReg, SMLoc IDLoc,
+    const MCSubtargetInfo *STI) {
   forbidModuleDirective();
+  return true;
 }
 void MipsTargetStreamer::emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                                               const MCSymbol &Sym, bool IsReg) {
@@ -578,11 +579,12 @@ void MipsTargetAsmStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   forbidModuleDirective();
 }
 
-void MipsTargetAsmStreamer::emitDirectiveCpRestore(int Offset, unsigned ATReg,
-                                                   SMLoc IDLoc,
-                                                   const MCSubtargetInfo *STI) {
-  MipsTargetStreamer::emitDirectiveCpRestore(Offset, ATReg, IDLoc, STI);
+bool MipsTargetAsmStreamer::emitDirectiveCpRestore(
+    int Offset, std::function<unsigned()> GetATReg, SMLoc IDLoc,
+    const MCSubtargetInfo *STI) {
+  MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   OS << "\t.cprestore\t" << Offset << "\n";
+  return true;
 }
 
 void MipsTargetAsmStreamer::emitDirectiveCpsetup(unsigned RegNo,
@@ -1034,10 +1036,10 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   forbidModuleDirective();
 }
 
-void MipsTargetELFStreamer::emitDirectiveCpRestore(int Offset, unsigned ATReg,
-                                                   SMLoc IDLoc,
-                                                   const MCSubtargetInfo *STI) {
-  MipsTargetStreamer::emitDirectiveCpRestore(Offset, ATReg, IDLoc, STI);
+bool MipsTargetELFStreamer::emitDirectiveCpRestore(
+    int Offset, std::function<unsigned()> GetATReg, SMLoc IDLoc,
+    const MCSubtargetInfo *STI) {
+  MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   // .cprestore offset
   // When PIC mode is enabled and the O32 ABI is used, this directive expands
   // to:
@@ -1047,11 +1049,16 @@ void MipsTargetELFStreamer::emitDirectiveCpRestore(int Offset, unsigned ATReg,
   // Note that .cprestore is ignored if used with the N32 and N64 ABIs or if it
   // is used in non-PIC mode.
   if (!Pic || (getABI().IsN32() || getABI().IsN64()))
-    return;
+    return true;
+
+  unsigned ATReg = GetATReg();
+  if (!ATReg)
+    return false;
 
   // Store the $gp on the stack.
   emitStoreWithImmOffset(Mips::SW, Mips::GP, Mips::SP, Offset, ATReg, IDLoc,
                          STI);
+  return true;
 }
 
 void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,

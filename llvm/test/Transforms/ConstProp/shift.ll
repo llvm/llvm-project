@@ -1,5 +1,4 @@
 ; RUN: opt < %s -constprop -S | FileCheck %s
-; RUN: opt < %s -sccp -S | FileCheck %s
 
 ; CHECK-LABEL: shift_undef_64
 define void @shift_undef_64(i64* %p) {

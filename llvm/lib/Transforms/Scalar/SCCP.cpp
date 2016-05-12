@@ -1331,9 +1331,6 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         }
 
         Op1LV = getValueState(I.getOperand(1));
-
-        if (!Op0LV.isUndefined() && !Op1LV.isUndefined())
-          break;
       }
       // If this is an instructions whose result is defined even if the input is
       // not fully defined, propagate the information.
@@ -1419,6 +1416,14 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         // X >>a undef -> undef.
         if (Op1LV.isUndefined()) break;
 
+        // Shifting by the bitwidth or more is undefined.
+        if (Op1LV.isConstant()) {
+          auto *ShiftAmt = Op1LV.getConstantInt();
+          if (ShiftAmt->getLimitedValue() >=
+              ShiftAmt->getType()->getScalarSizeInBits())
+            break;
+        }
+
         // undef >>a X -> all ones
         markForcedConstant(&I, Constant::getAllOnesValue(ITy));
         return true;
@@ -1427,6 +1432,14 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         // X << undef -> undef.
         // X >> undef -> undef.
         if (Op1LV.isUndefined()) break;
+
+        // Shifting by the bitwidth or more is undefined.
+        if (Op1LV.isConstant()) {
+          auto *ShiftAmt = Op1LV.getConstantInt();
+          if (ShiftAmt->getLimitedValue() >=
+              ShiftAmt->getType()->getScalarSizeInBits())
+            break;
+        }
 
         // undef << X -> 0
         // undef >> X -> 0

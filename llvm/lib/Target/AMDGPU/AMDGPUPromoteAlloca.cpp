@@ -32,6 +32,7 @@ class AMDGPUPromoteAlloca : public FunctionPass {
 private:
   const TargetMachine *TM;
   Module *Mod;
+  const DataLayout *DL;
   MDNode *MaxWorkGroupSizeRange;
 
   // FIXME: This should be per-kernel.
@@ -43,6 +44,20 @@ private:
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
+  /// BaseAlloca is the alloca root the search started from.
+  /// Val may be that alloca or a recursive user of it.
+  bool collectUsesWithPtrTypes(Value *BaseAlloca,
+                               Value *Val,
+                               std::vector<Value*> &WorkList) const;
+
+  /// Val is a derived pointer from Alloca. OpIdx0/OpIdx1 are the operand
+  /// indices to an instruction with 2 pointer inputs (e.g. select, icmp).
+  /// Returns true if both operands are derived from the same alloca. Val should
+  /// be the same value as one of the input operands of UseInst.
+  bool binaryOpIsDerivedFromSameAlloca(Value *Alloca, Value *Val,
+                                       Instruction *UseInst,
+                                       int OpIdx0, int OpIdx1) const;
+
 public:
   static char ID;
 
@@ -50,6 +65,7 @@ public:
     FunctionPass(ID),
     TM(TM_),
     Mod(nullptr),
+    DL(nullptr),
     MaxWorkGroupSizeRange(nullptr),
     LocalMemAvailable(0),
     IsAMDGCN(false),
@@ -63,6 +79,11 @@ public:
   }
 
   void handleAlloca(AllocaInst &I);
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    FunctionPass::getAnalysisUsage(AU);
+  }
 };
 
 } // End anonymous namespace
@@ -80,6 +101,7 @@ bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
     return false;
 
   Mod = &M;
+  DL = &Mod->getDataLayout();
 
   // The maximum workitem id.
   //
@@ -131,8 +153,7 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
         continue;
 
       if (Use->getParent()->getParent() == &F) {
-        LocalMemAvailable -=
-          Mod->getDataLayout().getTypeAllocSize(GV.getValueType());
+        LocalMemAvailable -= DL->getTypeAllocSize(GV.getValueType());
         break;
       }
     }
@@ -428,7 +449,39 @@ static bool isCallPromotable(CallInst *CI) {
   }
 }
 
-static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
+bool AMDGPUPromoteAlloca::binaryOpIsDerivedFromSameAlloca(Value *BaseAlloca,
+                                                          Value *Val,
+                                                          Instruction *Inst,
+                                                          int OpIdx0,
+                                                          int OpIdx1) const {
+  // Figure out which operand is the one we might not be promoting.
+  Value *OtherOp = Inst->getOperand(OpIdx0);
+  if (Val == OtherOp)
+    OtherOp = Inst->getOperand(OpIdx1);
+
+  Value *OtherObj = GetUnderlyingObject(OtherOp, *DL);
+  if (!isa<AllocaInst>(OtherObj))
+    return false;
+
+  // TODO: We should be able to replace undefs with the right pointer type.
+
+  // TODO: If we know the other base object is another promotable
+  // alloca, not necessarily this alloca, we can do this. The
+  // important part is both must have the same address space at
+  // the end.
+  if (OtherObj != BaseAlloca) {
+    DEBUG(dbgs() << "Found a binary instruction with another alloca object\n");
+    return false;
+  }
+
+  return true;
+}
+
+bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
+  Value *BaseAlloca,
+  Value *Val,
+  std::vector<Value*> &WorkList) const {
+
   for (User *User : Val->users()) {
     if (std::find(WorkList.begin(), WorkList.end(), User) != WorkList.end())
       continue;
@@ -441,11 +494,11 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
       continue;
     }
 
-    Instruction *UseInst = dyn_cast<Instruction>(User);
-    if (UseInst && UseInst->getOpcode() == Instruction::PtrToInt)
+    Instruction *UseInst = cast<Instruction>(User);
+    if (UseInst->getOpcode() == Instruction::PtrToInt)
       return false;
 
-    if (StoreInst *SI = dyn_cast_or_null<StoreInst>(UseInst)) {
+    if (StoreInst *SI = dyn_cast<StoreInst>(UseInst)) {
       if (SI->isVolatile())
         return false;
 
@@ -464,6 +517,13 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
         return false;
     }
 
+    // Only promote a select if we know that the other select operand
+    // is from another pointer that will also be promoted.
+    if (ICmpInst *ICmp = dyn_cast<ICmpInst>(UseInst)) {
+      if (!binaryOpIsDerivedFromSameAlloca(BaseAlloca, Val, ICmp, 0, 1))
+        return false;
+    }
+
     if (!User->getType()->isPointerTy())
       continue;
 
@@ -474,8 +534,31 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
         return false;
     }
 
+    // Only promote a select if we know that the other select operand is from
+    // another pointer that will also be promoted.
+    if (SelectInst *SI = dyn_cast<SelectInst>(UseInst)) {
+      if (!binaryOpIsDerivedFromSameAlloca(BaseAlloca, Val, SI, 1, 2))
+        return false;
+    }
+
+    // Repeat for phis.
+    if (PHINode *Phi = dyn_cast<PHINode>(UseInst)) {
+      // TODO: Handle more complex cases. We should be able to replace loops
+      // over arrays.
+      switch (Phi->getNumIncomingValues()) {
+      case 1:
+        break;
+      case 2:
+        if (!binaryOpIsDerivedFromSameAlloca(BaseAlloca, Val, Phi, 0, 1))
+          return false;
+        break;
+      default:
+        return false;
+      }
+    }
+
     WorkList.push_back(User);
-    if (!collectUsesWithPtrTypes(User, WorkList))
+    if (!collectUsesWithPtrTypes(BaseAlloca, User, WorkList))
       return false;
   }
 
@@ -516,7 +599,7 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
 
   std::vector<Value*> WorkList;
 
-  if (!collectUsesWithPtrTypes(&I, WorkList)) {
+  if (!collectUsesWithPtrTypes(&I, &I, WorkList)) {
     DEBUG(dbgs() << " Do not know how to convert all uses\n");
     return;
   }

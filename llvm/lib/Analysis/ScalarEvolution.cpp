@@ -1742,11 +1742,23 @@ const SCEV *ScalarEvolution::getSignExtendExpr(const SCEV *Op,
                 getZeroExtendExpr(Step, Ty), L, AR->getNoWrapFlags());
           }
         }
+      }
 
-        // If the backedge is guarded by a comparison with the pre-inc value
-        // the addrec is safe. Also, if the entry is guarded by a comparison
-        // with the start value and the backedge is guarded by a comparison
-        // with the post-inc value, the addrec is safe.
+      // Normally, in the cases we can prove no-overflow via a
+      // backedge guarding condition, we can also compute a backedge
+      // taken count for the loop.  The exceptions are assumptions and
+      // guards present in the loop -- SCEV is not great at exploiting
+      // these to compute max backedge taken counts, but can still use
+      // these to prove lack of overflow.  Use this fact to avoid
+      // doing extra work that may not pay off.
+
+      if (!isa<SCEVCouldNotCompute>(MaxBECount) || HasGuards ||
+          !AC.assumptions().empty()) {
+        // If the backedge is guarded by a comparison with the pre-inc
+        // value the addrec is safe. Also, if the entry is guarded by
+        // a comparison with the start value and the backedge is
+        // guarded by a comparison with the post-inc value, the addrec
+        // is safe.
         ICmpInst::Predicate Pred;
         const SCEV *OverflowLimit =
             getSignedOverflowLimitForStep(Step, &Pred, this);
@@ -1762,6 +1774,7 @@ const SCEV *ScalarEvolution::getSignExtendExpr(const SCEV *Op,
               getSignExtendExpr(Step, Ty), L, AR->getNoWrapFlags());
         }
       }
+
       // If Start and Step are constants, check if we can apply this
       // transformation:
       // sext{C1,+,C2} --> C1 + sext{0,+,C2} if C1 < C2

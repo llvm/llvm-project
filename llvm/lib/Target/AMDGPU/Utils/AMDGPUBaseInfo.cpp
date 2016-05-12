@@ -109,18 +109,18 @@ bool isReadOnlySegment(const GlobalValue *GV) {
   return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }
 
-static unsigned getIntegerAttribute(const Function &F, const char *Name,
-                                    unsigned Default) {
+int getIntegerAttribute(const Function &F, StringRef Name, int Default) {
   Attribute A = F.getFnAttribute(Name);
-  unsigned Result = Default;
+  int Result = Default;
 
   if (A.isStringAttribute()) {
     StringRef Str = A.getValueAsString();
     if (Str.getAsInteger(0, Result)) {
       LLVMContext &Ctx = F.getContext();
-      Ctx.emitError("can't parse shader type");
+      Ctx.emitError("can't parse integer attribute " + Name);
     }
   }
+
   return Result;
 }
 

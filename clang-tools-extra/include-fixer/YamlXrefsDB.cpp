@@ -50,7 +50,7 @@ YamlXrefsDB::createFromDirectory(llvm::StringRef Directory,
 std::vector<SymbolInfo> YamlXrefsDB::search(llvm::StringRef Identifier) {
   std::vector<SymbolInfo> Results;
   for (const auto &Symbol : Symbols) {
-    if (Symbol.Name == Identifier)
+    if (Symbol.getName() == Identifier)
       Results.push_back(Symbol);
   }
   return Results;

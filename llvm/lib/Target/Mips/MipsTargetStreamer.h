@@ -16,6 +16,7 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include <functional>
 
 namespace llvm {
 
@@ -81,8 +82,9 @@ public:
 
   // PIC support
   virtual void emitDirectiveCpLoad(unsigned RegNo);
-  virtual void emitDirectiveCpRestore(int Offset, unsigned ATReg, SMLoc IDLoc,
-                                      const MCSubtargetInfo *STI);
+  virtual bool emitDirectiveCpRestore(int Offset,
+                                      std::function<unsigned()> GetATReg,
+                                      SMLoc IDLoc, const MCSubtargetInfo *STI);
   virtual void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                                     const MCSymbol &Sym, bool IsReg);
   virtual void emitDirectiveCpreturn(unsigned SaveLocation,
@@ -235,8 +237,8 @@ public:
 
   // PIC support
   void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpRestore(int Offset, unsigned ATReg, SMLoc IDLoc,
-                              const MCSubtargetInfo *STI) override;
+  bool emitDirectiveCpRestore(int Offset, std::function<unsigned()> GetATReg,
+                              SMLoc IDLoc, const MCSubtargetInfo *STI) override;
   void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,
@@ -290,8 +292,8 @@ public:
 
   // PIC support
   void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpRestore(int Offset, unsigned ATReg, SMLoc IDLoc,
-                              const MCSubtargetInfo *STI) override;
+  bool emitDirectiveCpRestore(int Offset, std::function<unsigned()> GetATReg,
+                              SMLoc IDLoc, const MCSubtargetInfo *STI) override;
   void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,

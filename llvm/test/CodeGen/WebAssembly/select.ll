@@ -1,5 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -fast-isel | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -fast-isel -fast-isel-abort=1 | FileCheck %s
 
 ; Test that wasm select instruction is selected from LLVM select instruction.
 

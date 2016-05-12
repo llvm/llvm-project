@@ -297,13 +297,14 @@ static MachineInstr *MoveAndTeeForMultiUse(
   unsigned NewReg = MRI.createVirtualRegister(RegClass);
   unsigned TeeReg = MRI.createVirtualRegister(RegClass);
   unsigned DefReg = MRI.createVirtualRegister(RegClass);
+  MachineOperand &DefMO = Def->getOperand(0);
   MRI.replaceRegWith(Reg, NewReg);
   MachineInstr *Tee = BuildMI(MBB, Insert, Insert->getDebugLoc(),
                               TII->get(GetTeeLocalOpcode(RegClass)), TeeReg)
                           .addReg(NewReg, RegState::Define)
-                          .addReg(DefReg);
+                          .addReg(DefReg, getUndefRegState(DefMO.isDead()));
   Op.setReg(TeeReg);
-  Def->getOperand(0).setReg(DefReg);
+  DefMO.setReg(DefReg);
   LIS.InsertMachineInstrInMaps(*Tee);
   LIS.removeInterval(Reg);
   LIS.createAndComputeVirtRegInterval(NewReg);

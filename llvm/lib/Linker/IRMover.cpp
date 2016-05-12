@@ -786,7 +786,7 @@ Constant *IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
       return nullptr;
     }
 
-    if (StringRef(DstGV->getSection()) != SrcGV->getSection()) {
+    if (DstGV->getSection() != SrcGV->getSection()) {
       emitError(
           "Appending variables with different section name need to be linked!");
       return nullptr;

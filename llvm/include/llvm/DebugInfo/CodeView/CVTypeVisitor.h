@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/RecordIterator.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/Support/ErrorOr.h"
 
 namespace llvm {
 namespace codeview {
@@ -42,12 +43,10 @@ public:
   /// FIXME: Make the visitor interpret the trailing bytes so that clients don't
   /// need to.
 #define TYPE_RECORD(ClassName, LeafEnum)                                       \
-  void visit##ClassName(TypeLeafKind LeafType, const ClassName *Record,        \
-                        ArrayRef<uint8_t> LeafData) {}
+  void visit##ClassName(TypeLeafKind LeafType, ClassName &Record) {}
 #define TYPE_RECORD_ALIAS(ClassName, LeafEnum)
 #define MEMBER_RECORD(ClassName, LeafEnum)                                     \
-  void visit##ClassName(TypeLeafKind LeafType, const ClassName *Record,        \
-                        ArrayRef<uint8_t> &FieldData) {}
+  void visit##ClassName(TypeLeafKind LeafType, ClassName &Record) {}
 #define MEMBER_RECORD_ALIAS(ClassName, LeafEnum)
 #include "TypeRecords.def"
 
@@ -68,10 +67,11 @@ public:
       break;
 #define TYPE_RECORD(ClassName, LeafEnum)                                       \
   case LeafEnum: {                                                             \
-    const ClassName *Rec;                                                      \
-    if (!CVTypeVisitor::consumeObject(LeafData, Rec))                          \
-      return;                                                                  \
-    DerivedThis->visit##ClassName(Record.Type, Rec, LeafData);                 \
+    TypeRecordKind RK = static_cast<TypeRecordKind>(LeafEnum);                 \
+    auto Result = ClassName::deserialize(RK, LeafData);                        \
+    if (Result.getError())                                                     \
+      return parseError();                                                     \
+    DerivedThis->visit##ClassName(Record.Type, *Result);                       \
     break;                                                                     \
   }
 #include "TypeRecords.def"
@@ -120,10 +120,11 @@ public:
         return parseError();
 #define MEMBER_RECORD(ClassName, LeafEnum)                                     \
   case LeafEnum: {                                                             \
-    const ClassName *Rec;                                                      \
-    if (!CVTypeVisitor::consumeObject(FieldData, Rec))                         \
-      return;                                                                  \
-    static_cast<Derived *>(this)->visit##ClassName(Leaf, Rec, FieldData);      \
+    TypeRecordKind RK = static_cast<TypeRecordKind>(LeafEnum);                 \
+    auto Result = ClassName::deserialize(RK, FieldData);                       \
+    if (Result.getError())                                                     \
+      return parseError();                                                     \
+    static_cast<Derived *>(this)->visit##ClassName(Leaf, *Result);             \
     break;                                                                     \
   }
 #include "TypeRecords.def"

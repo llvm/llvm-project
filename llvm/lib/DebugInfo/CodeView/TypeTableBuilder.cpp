@@ -17,27 +17,6 @@
 using namespace llvm;
 using namespace codeview;
 
-namespace {
-
-const int PointerKindShift = 0;
-const int PointerModeShift = 5;
-const int PointerSizeShift = 13;
-
-const int ClassHfaKindShift = 11;
-const int ClassWindowsRTClassKindShift = 14;
-
-void writePointerBase(TypeRecordBuilder &Builder,
-                      const PointerRecordBase &Record) {
-  Builder.writeTypeIndex(Record.getReferentType());
-  uint32_t flags =
-      static_cast<uint32_t>(Record.getOptions()) |
-      (Record.getSize() << PointerSizeShift) |
-      (static_cast<uint32_t>(Record.getMode()) << PointerModeShift) |
-      (static_cast<uint32_t>(Record.getPointerKind()) << PointerKindShift);
-  Builder.writeUInt32(flags);
-}
-}
-
 TypeTableBuilder::TypeTableBuilder() {}
 
 TypeTableBuilder::~TypeTableBuilder() {}
@@ -46,7 +25,7 @@ TypeIndex TypeTableBuilder::writeModifier(const ModifierRecord &Record) {
   TypeRecordBuilder Builder(TypeRecordKind::Modifier);
 
   Builder.writeTypeIndex(Record.getModifiedType());
-  Builder.writeUInt16(static_cast<uint16_t>(Record.getOptions()));
+  Builder.writeUInt16(static_cast<uint16_t>(Record.getModifiers()));
 
   return writeRecord(Builder);
 }
@@ -79,12 +58,11 @@ TypeTableBuilder::writeMemberFunction(const MemberFunctionRecord &Record) {
   return writeRecord(Builder);
 }
 
-TypeIndex
-TypeTableBuilder::writeArgumentList(const ArgumentListRecord &Record) {
+TypeIndex TypeTableBuilder::writeArgumentList(const StringListRecord &Record) {
   TypeRecordBuilder Builder(TypeRecordKind::ArgumentList);
 
-  Builder.writeUInt32(Record.getArgumentTypes().size());
-  for (TypeIndex TI : Record.getArgumentTypes()) {
+  Builder.writeUInt32(Record.getIndices().size());
+  for (TypeIndex TI : Record.getIndices()) {
     Builder.writeTypeIndex(TI);
   }
 
@@ -94,19 +72,20 @@ TypeTableBuilder::writeArgumentList(const ArgumentListRecord &Record) {
 TypeIndex TypeTableBuilder::writePointer(const PointerRecord &Record) {
   TypeRecordBuilder Builder(TypeRecordKind::Pointer);
 
-  writePointerBase(Builder, Record);
+  Builder.writeTypeIndex(Record.getReferentType());
+  uint32_t flags = static_cast<uint32_t>(Record.getOptions()) |
+                   (Record.getSize() << PointerRecord::PointerSizeShift) |
+                   (static_cast<uint32_t>(Record.getMode())
+                    << PointerRecord::PointerModeShift) |
+                   (static_cast<uint32_t>(Record.getPointerKind())
+                    << PointerRecord::PointerKindShift);
+  Builder.writeUInt32(flags);
 
-  return writeRecord(Builder);
-}
-
-TypeIndex
-TypeTableBuilder::writePointerToMember(const PointerToMemberRecord &Record) {
-  TypeRecordBuilder Builder(TypeRecordKind::Pointer);
-
-  writePointerBase(Builder, Record);
-
-  Builder.writeTypeIndex(Record.getContainingType());
-  Builder.writeUInt16(static_cast<uint16_t>(Record.getRepresentation()));
+  if (Record.isPointerToMember()) {
+    const MemberPointerInfo &M = Record.getMemberInfo();
+    Builder.writeTypeIndex(M.getContainingType());
+    Builder.writeUInt16(static_cast<uint16_t>(M.getRepresentation()));
+  }
 
   return writeRecord(Builder);
 }
@@ -122,7 +101,7 @@ TypeIndex TypeTableBuilder::writeArray(const ArrayRecord &Record) {
   return writeRecord(Builder);
 }
 
-TypeIndex TypeTableBuilder::writeAggregate(const AggregateRecord &Record) {
+TypeIndex TypeTableBuilder::writeClass(const ClassRecord &Record) {
   assert((Record.getKind() == TypeRecordKind::Structure) ||
          (Record.getKind() == TypeRecordKind::Class) ||
          (Record.getKind() == TypeRecordKind::Union));
@@ -132,18 +111,13 @@ TypeIndex TypeTableBuilder::writeAggregate(const AggregateRecord &Record) {
   Builder.writeUInt16(Record.getMemberCount());
   uint16_t Flags =
       static_cast<uint16_t>(Record.getOptions()) |
-      (static_cast<uint16_t>(Record.getHfa()) << ClassHfaKindShift) |
+      (static_cast<uint16_t>(Record.getHfa()) << ClassRecord::HfaKindShift) |
       (static_cast<uint16_t>(Record.getWinRTKind())
-       << ClassWindowsRTClassKindShift);
+       << ClassRecord::WinRTKindShift);
   Builder.writeUInt16(Flags);
   Builder.writeTypeIndex(Record.getFieldList());
-  if (Record.getKind() != TypeRecordKind::Union) {
-    Builder.writeTypeIndex(Record.getDerivationList());
-    Builder.writeTypeIndex(Record.getVTableShape());
-  } else {
-    assert(Record.getDerivationList() == TypeIndex());
-    assert(Record.getVTableShape() == TypeIndex());
-  }
+  Builder.writeTypeIndex(Record.getDerivationList());
+  Builder.writeTypeIndex(Record.getVTableShape());
   Builder.writeEncodedUnsignedInteger(Record.getSize());
   Builder.writeNullTerminatedString(Record.getName());
   if ((Record.getOptions() & ClassOptions::HasUniqueName) !=

@@ -2,6 +2,7 @@
 
 declare i8 @llvm.experimental.deoptimize.i8(...)
 declare void @llvm.experimental.deoptimize.isVoid(...)
+declare cc40 void @llvm.experimental.deoptimize.double(...)
 
 declare void @unknown()
 
@@ -40,3 +41,5 @@ entry:
 ; CHECK: calls to experimental_deoptimize must be followed by a return of the value computed by experimental_deoptimize
   ret i8 0
 }
+
+; CHECK: All llvm.experimental.deoptimize declarations must have the same calling convention

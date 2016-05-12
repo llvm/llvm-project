@@ -507,6 +507,11 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MIPS_LO16:
   case ELF::R_MIPS16_LO16:
   case ELF::R_MICROMIPS_LO16:
+    // FIXME: It should be safe to return false for the STO_MIPS_MICROMIPS but
+    //        we neglect to handle the adjustment to the LSB of the addend that
+    //        it causes in applyFixup() and similar.
+    if (cast<MCSymbolELF>(Sym).getOther() & ELF::STO_MIPS_MICROMIPS)
+      return true;
     return false;
 
   case ELF::R_MIPS_16:

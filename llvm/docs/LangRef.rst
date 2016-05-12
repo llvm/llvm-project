@@ -12339,6 +12339,9 @@ The inliner composes the ``"deopt"`` continuations of the caller into the
 ``"deopt"`` continuations present in the inlinee, and also updates calls to this
 intrinsic to return directly from the frame of the function it inlined into.
 
+All declarations of ``@llvm.experimental.deoptimize`` must share the
+same calling convention.
+
 .. _deoptimize_lowering:
 
 Lowering:

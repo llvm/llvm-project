@@ -1,7 +1,7 @@
 ; RUN: opt -S -always-inline < %s | FileCheck %s
 
 declare i8 @llvm.experimental.deoptimize.i8(...)
-declare cc42 i32 @llvm.experimental.deoptimize.i32(...)
+declare i32 @llvm.experimental.deoptimize.i32(...)
 
 define i8 @callee(i1* %c) alwaysinline {
   %c0 = load volatile i1, i1* %c
@@ -119,19 +119,5 @@ define void @caller_with_stacksaverestore(i32 %n) {
 
   %p = alloca i32, i32 %n
   call i8 @callee_with_dynamic_alloca(i32 %n)
-  ret void
-}
-
-define i32 @callee_with_coldcc() alwaysinline {
-  %v0 = call cc42 i32(...) @llvm.experimental.deoptimize.i32(i32 1) [ "deopt"() ]
-  ret i32 %v0
-}
-
-define void @caller_with_coldcc() {
-; CHECK-LABEL: @caller_with_coldcc(
-; CHECK-NEXT:  call cc42 void (...) @llvm.experimental.deoptimize.isVoid(i32 1) [ "deopt"() ]
-; CHECK-NEXT:  ret void
-
-  %val = call i32 @callee_with_coldcc()
   ret void
 }

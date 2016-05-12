@@ -234,6 +234,11 @@ protected:
     CurDAG->ReplaceAllUsesWith(F, T);
   }
 
+  /// Replace all uses of \c F with \c T, then remove \c F from the DAG.
+  void ReplaceNode(SDNode *F, SDNode *T) {
+    CurDAG->ReplaceAllUsesWith(F, T);
+    CurDAG->RemoveDeadNode(F);
+  }
 
   /// SelectInlineAsmMemoryOperands - Calls to this are automatically generated
   /// by tblgen.  Others should not call it.

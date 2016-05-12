@@ -197,7 +197,7 @@ namespace {
 
   private:
     void Select(SDNode *N) override;
-    SDNode *selectGather(SDNode *N, unsigned Opc);
+    bool tryGather(SDNode *N, unsigned Opc);
 
     bool foldOffsetIntoAddress(uint64_t Offset, X86ISelAddressMode &AM);
     bool matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM);
@@ -1895,7 +1895,7 @@ static unsigned getFusedLdStOpcode(EVT &LdVT, unsigned Opc) {
 }
 
 /// Customized ISel for GATHER operations.
-SDNode *X86DAGToDAGISel::selectGather(SDNode *Node, unsigned Opc) {
+bool X86DAGToDAGISel::tryGather(SDNode *Node, unsigned Opc) {
   // Operands of Gather: VSrc, Base, VIdx, VMask, Scale
   SDValue Chain = Node->getOperand(0);
   SDValue VSrc = Node->getOperand(2);
@@ -1904,7 +1904,7 @@ SDNode *X86DAGToDAGISel::selectGather(SDNode *Node, unsigned Opc) {
   SDValue VMask = Node->getOperand(5);
   ConstantSDNode *Scale = dyn_cast<ConstantSDNode>(Node->getOperand(6));
   if (!Scale)
-    return nullptr;
+    return false;
 
   SDVTList VTs = CurDAG->getVTList(VSrc.getValueType(), VSrc.getValueType(),
                                    MVT::Other);
@@ -1923,7 +1923,8 @@ SDNode *X86DAGToDAGISel::selectGather(SDNode *Node, unsigned Opc) {
   // of ResNode.
   ReplaceUses(SDValue(Node, 0), SDValue(ResNode, 0));
   ReplaceUses(SDValue(Node, 1), SDValue(ResNode, 2));
-  return ResNode;
+  CurDAG->RemoveDeadNode(Node);
+  return true;
 }
 
 void X86DAGToDAGISel::Select(SDNode *Node) {
@@ -2005,9 +2006,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       case Intrinsic::x86_avx2_gather_q_d:      Opc = X86::VPGATHERQDrm;  break;
       case Intrinsic::x86_avx2_gather_q_d_256:  Opc = X86::VPGATHERQDYrm; break;
       }
-      SDNode *RetVal = selectGather(Node, Opc);
-      if (RetVal)
-        // We already called ReplaceUses inside SelectGather.
+      if (tryGather(Node, Opc))
         return;
       break;
     }
@@ -2015,8 +2014,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case X86ISD::GlobalBaseReg:
-    ReplaceUses(Node, getGlobalBaseReg());
-    CurDAG->RemoveDeadNode(Node);
+    ReplaceNode(Node, getGlobalBaseReg());
     return;
 
   case X86ISD::SHRUNKBLEND: {
@@ -2128,8 +2126,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue Ops[] = {N1, InFlag};
     SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
 
-    ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
-    ReplaceUses(SDValue(Node, 1), SDValue(CNode, 1));
+    ReplaceNode(Node, CNode);
     return;
   }
 
@@ -2153,9 +2150,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue Ops[] = {N1, InFlag};
     SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
 
-    ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
-    ReplaceUses(SDValue(Node, 1), SDValue(CNode, 1));
-    ReplaceUses(SDValue(Node, 2), SDValue(CNode, 2));
+    ReplaceNode(Node, CNode);
     return;
   }
 

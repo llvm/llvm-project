@@ -91,9 +91,12 @@ static bool isDereferenceableAndAlignedPointer(
   // Note that it is not safe to speculate into a malloc'd region because
   // malloc may return null.
 
-  // These are obviously ok if aligned.
-  if (isa<AllocaInst>(V))
+  bool CheckForNonNull;
+  if (V->isPointerDereferenceable(CheckForNonNull)) {
+    if (CheckForNonNull && !isKnownNonNullAt(V, CtxI, DT, TLI))
+      return false;
     return isAligned(V, Align, DL);
+  }
 
   // It's not always safe to follow a bitcast, for example:
   //   bitcast i8* (alloca i8) to i32*
@@ -111,16 +114,6 @@ static bool isDereferenceableAndAlignedPointer(
       return isDereferenceableAndAlignedPointer(BC->getOperand(0), Align, DL,
                                                 CtxI, DT, TLI, Visited);
   }
-
-  // Global variables which can't collapse to null are ok.
-  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
-    if (!GV->hasExternalWeakLinkage())
-      return isAligned(V, Align, DL);
-
-  // byval arguments are okay.
-  if (const Argument *A = dyn_cast<Argument>(V))
-    if (A->hasByValAttr())
-      return isAligned(V, Align, DL);
 
   if (isDereferenceableFromAttribute(V, DL, CtxI, DT, TLI))
     return isAligned(V, Align, DL);

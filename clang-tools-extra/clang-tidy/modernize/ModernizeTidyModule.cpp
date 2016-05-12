@@ -20,6 +20,7 @@
 #include "ReplaceAutoPtrCheck.h"
 #include "ShrinkToFitCheck.h"
 #include "UseAutoCheck.h"
+#include "UseBoolLiteralsCheck.h"
 #include "UseDefaultCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
@@ -47,6 +48,8 @@ public:
         "modernize-replace-auto-ptr");
     CheckFactories.registerCheck<ShrinkToFitCheck>("modernize-shrink-to-fit");
     CheckFactories.registerCheck<UseAutoCheck>("modernize-use-auto");
+    CheckFactories.registerCheck<UseBoolLiteralsCheck>(
+        "modernize-use-bool-literals");
     CheckFactories.registerCheck<UseDefaultCheck>("modernize-use-default");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");

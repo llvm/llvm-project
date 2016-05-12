@@ -54,8 +54,8 @@ public:
   unsigned getGlobalObjectSubClassData() const;
   void setGlobalObjectSubClassData(unsigned Val);
 
-  bool hasSection() const { return !StringRef(getSection()).empty(); }
-  const char *getSection() const { return Section.c_str(); }
+  bool hasSection() const { return !getSection().empty(); }
+  StringRef getSection() const { return Section; }
   void setSection(StringRef S);
 
   bool hasComdat() const { return getComdat() != nullptr; }

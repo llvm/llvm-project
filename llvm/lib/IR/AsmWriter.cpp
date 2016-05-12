@@ -2377,6 +2377,7 @@ static const char *getLinkagePrintName(GlobalValue::LinkageTypes LT) {
   case GlobalValue::AvailableExternallyLinkage:
     return "available_externally ";
   }
+  llvm_unreachable("invalid linkage");
 }
 
 static void PrintVisibility(GlobalValue::VisibilityTypes Vis,

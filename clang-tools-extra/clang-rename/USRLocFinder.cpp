@@ -60,6 +60,11 @@ public:
   bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
     for (clang::CXXConstructorDecl::init_const_iterator it = ConstructorDecl->init_begin(); it != ConstructorDecl->init_end(); ++it) {
       const clang::CXXCtorInitializer* Initializer = *it;
+      if (Initializer->getSourceOrder() == -1) {
+        // Ignore implicit initializers.
+        continue;
+      }
+
       if (const clang::FieldDecl *FieldDecl = Initializer->getAnyMember()) {
         if (getUSRForDecl(FieldDecl) == USR) {
           // The initializer refers to a field that is to be renamed.

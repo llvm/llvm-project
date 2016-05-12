@@ -38,6 +38,85 @@ STATISTIC(NumRemats,   "Number of rematerialized defs for splitting");
 STATISTIC(NumRepairs,  "Number of invalid live ranges repaired");
 
 //===----------------------------------------------------------------------===//
+//                     Last Insert Point Analysis
+//===----------------------------------------------------------------------===//
+
+InsertPointAnalysis::InsertPointAnalysis(const LiveIntervals &lis,
+                                         unsigned BBNum)
+    : LIS(lis), CurLI(nullptr), LastInsertPoint(BBNum) {}
+
+SlotIndex
+InsertPointAnalysis::computeLastInsertPoint(const MachineBasicBlock &MBB) {
+  unsigned Num = MBB.getNumber();
+  std::pair<SlotIndex, SlotIndex> &LIP = LastInsertPoint[Num];
+  SlotIndex MBBEnd = LIS.getMBBEndIdx(&MBB);
+
+  SmallVector<const MachineBasicBlock *, 1> EHPadSucessors;
+  for (const MachineBasicBlock *SMBB : MBB.successors())
+    if (SMBB->isEHPad())
+      EHPadSucessors.push_back(SMBB);
+
+  // Compute insert points on the first call. The pair is independent of the
+  // current live interval.
+  if (!LIP.first.isValid()) {
+    MachineBasicBlock::const_iterator FirstTerm = MBB.getFirstTerminator();
+    if (FirstTerm == MBB.end())
+      LIP.first = MBBEnd;
+    else
+      LIP.first = LIS.getInstructionIndex(*FirstTerm);
+
+    // If there is a landing pad successor, also find the call instruction.
+    if (EHPadSucessors.empty())
+      return LIP.first;
+    // There may not be a call instruction (?) in which case we ignore LPad.
+    LIP.second = LIP.first;
+    for (MachineBasicBlock::const_iterator I = MBB.end(), E = MBB.begin();
+         I != E;) {
+      --I;
+      if (I->isCall()) {
+        LIP.second = LIS.getInstructionIndex(*I);
+        break;
+      }
+    }
+  }
+
+  // If CurLI is live into a landing pad successor, move the last insert point
+  // back to the call that may throw.
+  if (!LIP.second)
+    return LIP.first;
+
+  assert(CurLI && "CurLI not being set");
+  if (none_of(EHPadSucessors, [&](const MachineBasicBlock *EHPad) {
+        return LIS.isLiveInToMBB(*CurLI, EHPad);
+      }))
+    return LIP.first;
+
+  // Find the value leaving MBB.
+  const VNInfo *VNI = CurLI->getVNInfoBefore(MBBEnd);
+  if (!VNI)
+    return LIP.first;
+
+  // If the value leaving MBB was defined after the call in MBB, it can't
+  // really be live-in to the landing pad.  This can happen if the landing pad
+  // has a PHI, and this register is undef on the exceptional edge.
+  // <rdar://problem/10664933>
+  if (!SlotIndex::isEarlierInstr(VNI->def, LIP.second) && VNI->def < MBBEnd)
+    return LIP.first;
+
+  // Value is properly live-in to the landing pad.
+  // Only allow inserts before the call.
+  return LIP.second;
+}
+
+MachineBasicBlock::iterator
+InsertPointAnalysis::getLastInsertPointIter(MachineBasicBlock &MBB) {
+  SlotIndex LIP = getLastInsertPoint(MBB);
+  if (LIP == LIS.getMBBEndIdx(&MBB))
+    return MBB.end();
+  return LIS.getInstructionFromIndex(LIP);
+}
+
+//===----------------------------------------------------------------------===//
 //                                 Split Analysis
 //===----------------------------------------------------------------------===//
 
@@ -45,7 +124,7 @@ SplitAnalysis::SplitAnalysis(const VirtRegMap &vrm, const LiveIntervals &lis,
                              const MachineLoopInfo &mli)
     : MF(vrm.getMachineFunction()), VRM(vrm), LIS(lis), Loops(mli),
       TII(*MF.getSubtarget().getInstrInfo()), CurLI(nullptr),
-      LastSplitPoint(MF.getNumBlockIDs()) {}
+      IPA(lis, MF.getNumBlockIDs()) {}
 
 void SplitAnalysis::clear() {
   UseSlots.clear();
@@ -53,75 +132,6 @@ void SplitAnalysis::clear() {
   ThroughBlocks.clear();
   CurLI = nullptr;
   DidRepairRange = false;
-}
-
-SlotIndex SplitAnalysis::computeLastSplitPoint(unsigned Num) {
-  const MachineBasicBlock *MBB = MF.getBlockNumbered(Num);
-  std::pair<SlotIndex, SlotIndex> &LSP = LastSplitPoint[Num];
-  SlotIndex MBBEnd = LIS.getMBBEndIdx(MBB);
-
-  SmallVector<const MachineBasicBlock *, 1> EHPadSucessors;
-  for (const MachineBasicBlock *SMBB : MBB->successors())
-    if (SMBB->isEHPad())
-      EHPadSucessors.push_back(SMBB);
-
-  // Compute split points on the first call. The pair is independent of the
-  // current live interval.
-  if (!LSP.first.isValid()) {
-    MachineBasicBlock::const_iterator FirstTerm = MBB->getFirstTerminator();
-    if (FirstTerm == MBB->end())
-      LSP.first = MBBEnd;
-    else
-      LSP.first = LIS.getInstructionIndex(*FirstTerm);
-
-    // If there is a landing pad successor, also find the call instruction.
-    if (EHPadSucessors.empty())
-      return LSP.first;
-    // There may not be a call instruction (?) in which case we ignore LPad.
-    LSP.second = LSP.first;
-    for (MachineBasicBlock::const_iterator I = MBB->end(), E = MBB->begin();
-         I != E;) {
-      --I;
-      if (I->isCall()) {
-        LSP.second = LIS.getInstructionIndex(*I);
-        break;
-      }
-    }
-  }
-
-  // If CurLI is live into a landing pad successor, move the last split point
-  // back to the call that may throw.
-  if (!LSP.second)
-    return LSP.first;
-
-  if (none_of(EHPadSucessors, [&](const MachineBasicBlock *EHPad) {
-        return LIS.isLiveInToMBB(*CurLI, EHPad);
-      }))
-    return LSP.first;
-
-  // Find the value leaving MBB.
-  const VNInfo *VNI = CurLI->getVNInfoBefore(MBBEnd);
-  if (!VNI)
-    return LSP.first;
-
-  // If the value leaving MBB was defined after the call in MBB, it can't
-  // really be live-in to the landing pad.  This can happen if the landing pad
-  // has a PHI, and this register is undef on the exceptional edge.
-  // <rdar://problem/10664933>
-  if (!SlotIndex::isEarlierInstr(VNI->def, LSP.second) && VNI->def < MBBEnd)
-    return LSP.first;
-
-  // Value is properly live-in to the landing pad.
-  // Only allow splits before the call.
-  return LSP.second;
-}
-
-MachineBasicBlock::iterator
-SplitAnalysis::getLastSplitPointIter(MachineBasicBlock *MBB) {
-  SlotIndex LSP = getLastSplitPoint(MBB->getNumber());
-  if (LSP == LIS.getMBBEndIdx(MBB))
-    return MBB->end();
-  return LIS.getInstructionFromIndex(LSP);
 }
 
 /// analyzeUses - Count instructions, basic blocks, and loops using CurLI.
@@ -318,6 +328,7 @@ bool SplitAnalysis::isOriginalEndpoint(SlotIndex Idx) const {
 void SplitAnalysis::analyze(const LiveInterval *li) {
   clear();
   CurLI = li;
+  IPA.setInterval(li);
   analyzeUses();
 }
 

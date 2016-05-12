@@ -77,6 +77,9 @@ static cl::opt<bool> EnableBitSimplify("hexagon-bit", cl::init(true),
 static cl::opt<bool> EnableLoopResched("hexagon-loop-resched", cl::init(true),
   cl::Hidden, cl::desc("Loop rescheduling"));
 
+static cl::opt<bool> HexagonNoOpt("hexagon-noopt", cl::init(false),
+  cl::Hidden, cl::desc("Disable backend optimizations"));
+
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -139,7 +142,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, "e-m:e-p:32:32:32-a:0-n16:32-"
          "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
          "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048",
-         TT, CPU, FS, Options, RM, CM, OL),
+         TT, CPU, FS, Options, RM, CM, (HexagonNoOpt ? CodeGenOpt::None : OL)),
       TLOF(make_unique<HexagonTargetObjectFile>()) {
   initAsmInfo();
 }

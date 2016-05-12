@@ -75,8 +75,6 @@ namespace llvm {
     static inline bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
     }
-
-    static Value *StripCast(Value *C);
   };
 
   /// This represents the llvm.dbg.declare instruction.
