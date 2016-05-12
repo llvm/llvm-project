@@ -436,7 +436,6 @@ MachException::Message::Reply(MachProcess *process, int signal)
             if (state.task_port == process->Task().TaskPort())
             {
                 DNBLogThreaded("error: mach_msg() returned an error when replying to a mach exception: error = %u", err.Error());
-                abort ();
             }
             else
             {
