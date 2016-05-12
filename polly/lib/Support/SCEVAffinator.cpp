@@ -39,9 +39,17 @@ static int const MaxDisjunctionsInPwAff = 100;
 // The maximal number of bits for which a zero-extend is modeled precisely.
 static unsigned const MaxZextSmallBitWidth = 7;
 
+// The maximal number of bits for which a truncate is modeled precisely.
+static unsigned const MaxTruncateSmallBitWidth = 31;
+
 /// @brief Return true if a zero-extend from @p Width bits is precisely modeled.
 static bool isPreciseZeroExtend(unsigned Width) {
   return Width <= MaxZextSmallBitWidth;
+}
+
+/// @brief Return true if a truncate from @p Width bits is precisely modeled.
+static bool isPreciseTruncate(unsigned Width) {
+  return Width <= MaxTruncateSmallBitWidth;
 }
 
 /// @brief Add the number of basic sets in @p Domain to @p User
@@ -291,7 +299,33 @@ __isl_give PWACtx SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
 
 __isl_give PWACtx
 SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-  llvm_unreachable("SCEVTruncateExpr not yet supported");
+  // Truncate operations are basically modulo operations, thus we can
+  // model them that way. However, for large types we assume the operand
+  // to fit in the new type size instead of introducing a modulo with a very
+  // large constant.
+
+  auto *Op = Expr->getOperand();
+  auto OpPWAC = visit(Op);
+
+  unsigned Width = TD.getTypeSizeInBits(Expr->getType());
+  bool Precise = isPreciseTruncate(Width);
+
+  if (Precise) {
+    OpPWAC.first = addModuloSemantic(OpPWAC.first, Expr->getType());
+    return OpPWAC;
+  }
+
+  auto *Dom = isl_pw_aff_domain(isl_pw_aff_copy(OpPWAC.first));
+  auto *ExpPWA = getWidthExpValOnDomain(Width - 1, Dom);
+  auto *GreaterDom =
+      isl_pw_aff_ge_set(isl_pw_aff_copy(OpPWAC.first), isl_pw_aff_copy(ExpPWA));
+  auto *SmallerDom =
+      isl_pw_aff_lt_set(isl_pw_aff_copy(OpPWAC.first), isl_pw_aff_neg(ExpPWA));
+  auto *OutOfBoundsDom = isl_set_union(SmallerDom, GreaterDom);
+  OpPWAC.second = isl_set_union(OpPWAC.second, isl_set_copy(OutOfBoundsDom));
+  S->recordAssumption(UNSIGNED, OutOfBoundsDom, DebugLoc(), AS_RESTRICTION, BB);
+
+  return OpPWAC;
 }
 
 __isl_give PWACtx
@@ -352,8 +386,7 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
 
   auto OpPWAC = visit(Op);
   if (OpCanWrap)
-    OpPWAC.first =
-        addModuloSemantic(OpPWAC.first, Expr->getOperand()->getType());
+    OpPWAC.first = addModuloSemantic(OpPWAC.first, Op->getType());
 
   // If the width is to big we assume the negative part does not occur.
   if (!Precise) {

@@ -92,6 +92,20 @@ COMPILER_RT_VISIBILITY int lprofBufferIOFlush(ProfBufferIO *BufferIO) {
 }
 
 #define VP_BUFFER_SIZE 8 * 1024
+
+static int writeOneValueProfData(ProfBufferIO *BufferIO,
+                                 VPGatherHookType VPDataGatherer,
+                                 const __llvm_profile_data *Data) {
+  ValueProfData *CurVData = VPDataGatherer(Data);
+  if (!CurVData)
+    return 0;
+  if (lprofBufferIOWrite(BufferIO, (const uint8_t *)CurVData,
+                         CurVData->TotalSize) != 0)
+    return -1;
+  FreeHook(CurVData);
+  return 0;
+}
+
 static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
                               VPGatherHookType VPDataGatherer,
                               const __llvm_profile_data *DataBegin,
@@ -107,13 +121,8 @@ static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
   BufferIO = lprofCreateBufferIO(Writer, WriterCtx, BufferSz);
 
   for (DI = DataBegin; DI < DataEnd; DI++) {
-    ValueProfData *CurVData = VPDataGatherer(DI);
-    if (!CurVData)
-      continue;
-    if (lprofBufferIOWrite(BufferIO, (const uint8_t *)CurVData,
-                           CurVData->TotalSize) != 0)
+    if (writeOneValueProfData(BufferIO, VPDataGatherer, DI))
       return -1;
-    FreeHook(CurVData);
   }
 
   if (lprofBufferIOFlush(BufferIO) != 0)

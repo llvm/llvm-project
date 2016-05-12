@@ -384,16 +384,6 @@ typedef struct ValueProfRuntimeRecord {
   ValueProfNode **NodesKind[IPVK_Last + 1];
 } ValueProfRuntimeRecord;
 
-/* Forward declarations of C interfaces.  */
-int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
-                                     const uint16_t *NumValueSites,
-                                     ValueProfNode **Nodes);
-void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord);
-uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record);
-ValueProfData *
-serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
-                             ValueProfData *Dst);
-uint32_t getNumValueKindsRT(const void *R);
 ValueProfRecord *getFirstValueProfRecord(ValueProfData *VPD);
 ValueProfRecord *getValueProfRecordNext(ValueProfRecord *VPR);
 InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *VPR);
@@ -552,115 +542,6 @@ ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
     VR = getValueProfRecordNext(VR);
   }
   return VPD;
-}
-
-/*
- * The value profiler runtime library stores the value profile data
- * for a given function in \c NumValueSites and \c Nodes structures.
- * \c ValueProfRuntimeRecord class is used to encapsulate the runtime
- * profile data and provides fast interfaces to retrieve the profile
- * information. This interface is used to initialize the runtime record
- * and pre-compute the information needed for efficient implementation
- * of callbacks required by ValueProfRecordClosure class.
- */
-int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
-                                     const uint16_t *NumValueSites,
-                                     ValueProfNode **Nodes) {
-  unsigned I, S = 0, NumValueKinds = 0;
-  RuntimeRecord->NumValueSites = NumValueSites;
-  RuntimeRecord->Nodes = Nodes;
-  for (I = 0; I <= IPVK_Last; I++) {
-    uint16_t N = NumValueSites[I];
-    if (!N)
-      continue;
-    NumValueKinds++;
-
-    RuntimeRecord->NodesKind[I] = Nodes ? &Nodes[S] : INSTR_PROF_NULLPTR;
-    S += N;
-  }
-  RuntimeRecord->NumValueKinds = NumValueKinds;
-  return 0;
-}
-
-void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord) {}
-
-/* ValueProfRecordClosure Interface implementation for
- * ValueProfDataRuntimeRecord.  */
-uint32_t getNumValueKindsRT(const void *R) {
-  return ((const ValueProfRuntimeRecord *)R)->NumValueKinds;
-}
-
-uint32_t getNumValueSitesRT(const void *R, uint32_t VK) {
-  return ((const ValueProfRuntimeRecord *)R)->NumValueSites[VK];
-}
-
-uint32_t getNumValueDataForSiteRT(const void *R, uint32_t VK, uint32_t S) {
-  uint32_t C = 0;
-  const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
-  ValueProfNode *Site =
-      Record->NodesKind[VK] ? Record->NodesKind[VK][S] : INSTR_PROF_NULLPTR;
-  while (Site) {
-    C++;
-    Site = Site->Next;
-  }
-  if (C > UCHAR_MAX)
-    C = UCHAR_MAX;
-
-  return C;
-}
-
-uint32_t getNumValueDataRT(const void *R, uint32_t VK) {
-  unsigned I, S = 0;
-  const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
-  for (I = 0; I < Record->NumValueSites[VK]; I++)
-    S += getNumValueDataForSiteRT(Record, VK, I);
-  return S;
-}
-
-void getValueForSiteRT(const void *R, InstrProfValueData *Dst, uint32_t VK,
-                       uint32_t S) {
-  unsigned I, N = 0;
-  const ValueProfRuntimeRecord *Record = (const ValueProfRuntimeRecord *)R;
-  N = getNumValueDataForSiteRT(R, VK, S);
-  if (N == 0)
-    return;
-  ValueProfNode *VNode = Record->NodesKind[VK][S];
-  for (I = 0; I < N; I++) {
-    Dst[I] = VNode->VData;
-    VNode = VNode->Next;
-  }
-}
-
-ValueProfData *allocValueProfDataRT(size_t TotalSizeInBytes) {
-  return (ValueProfData *)calloc(TotalSizeInBytes, 1);
-}
-
-static ValueProfRecordClosure RTRecordClosure = {
-    INSTR_PROF_NULLPTR, getNumValueKindsRT,       getNumValueSitesRT,
-    getNumValueDataRT,  getNumValueDataForSiteRT, INSTR_PROF_NULLPTR,
-    getValueForSiteRT,  allocValueProfDataRT};
-
-/*
- * Return the size of ValueProfData structure to store data
- * recorded in the runtime record.
- */
-uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record) {
-  RTRecordClosure.Record = Record;
-  return getValueProfDataSize(&RTRecordClosure);
-}
-
-/*
- * Return a ValueProfData instance that stores the data collected
- * from runtime. If \c DstData is provided by the caller, the value
- * profile data will be store in *DstData and DstData is returned,
- * otherwise the method will allocate space for the value data and
- * return pointer to the newly allocated space.
- */
-ValueProfData *
-serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
-                             ValueProfData *DstData) {
-  RTRecordClosure.Record = Record;
-  return serializeValueProfDataFrom(&RTRecordClosure, DstData);
 }
 
 #undef INSTR_PROF_COMMON_API_IMPL

@@ -57,6 +57,7 @@ public:
         bool        top_level;
         bool        unwind_on_error;
         bool        ignore_breakpoints;
+        bool        allow_jit;
         bool        show_types;
         bool        show_summary;
         bool        debug;

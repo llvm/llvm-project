@@ -279,6 +279,10 @@ Symbolizer *Symbolizer::PlatformInit() {
   return new(symbolizer_allocator_) Symbolizer(list);
 }
 
+void Symbolizer::LateInitialize() {
+  Symbolizer::GetOrInit();
+}
+
 }  // namespace __sanitizer
 
 #endif  // _WIN32

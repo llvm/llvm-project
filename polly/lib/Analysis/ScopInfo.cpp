@@ -4909,7 +4909,7 @@ bool ScopInfo::runOnRegion(Region *R, RGPassManager &RGM) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
 
   DebugLoc Beg, End;
-  getDebugLocations(R, Beg, End);
+  getDebugLocations(getBBPairForRegion(R), Beg, End);
   std::string Msg = "SCoP begins here.";
   emitOptimizationRemarkAnalysis(F->getContext(), DEBUG_TYPE, *F, Beg, Msg);
 

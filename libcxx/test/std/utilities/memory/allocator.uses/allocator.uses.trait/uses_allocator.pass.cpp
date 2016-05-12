@@ -30,7 +30,7 @@ struct C {
 };
 
 struct D {
-  static int allocator_type() {}
+  static int allocator_type() { return 0; }
 };
 
 struct E {

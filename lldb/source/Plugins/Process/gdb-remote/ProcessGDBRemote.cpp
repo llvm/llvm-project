@@ -3597,7 +3597,8 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
         // special terminal key sequences (^C) don't affect debugserver.
         debugserver_launch_info.SetLaunchInSeparateProcessGroup(true);
 
-        debugserver_launch_info.SetMonitorProcessCallback(std::bind(MonitorDebugserverProcess, this, _1, _2, _3, _4),
+        const std::weak_ptr<ProcessGDBRemote> this_wp = std::static_pointer_cast<ProcessGDBRemote>(shared_from_this());
+        debugserver_launch_info.SetMonitorProcessCallback(std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3, _4),
                                                           false);
         debugserver_launch_info.SetUserID(process_info.GetUserID());
 
@@ -3660,87 +3661,58 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
 }
 
 bool
-ProcessGDBRemote::MonitorDebugserverProcess(ProcessGDBRemote *process, lldb::pid_t debugserver_pid,
+ProcessGDBRemote::MonitorDebugserverProcess(std::weak_ptr<ProcessGDBRemote> process_wp, lldb::pid_t debugserver_pid,
                                             bool exited,    // True if the process did exit
                                             int signo,      // Zero for no signal
                                             int exit_status // Exit value of process if signal is zero
                                             )
 {
-    // The baton is a "ProcessGDBRemote *". Now this class might be gone
-    // and might not exist anymore, so we need to carefully try to get the
-    // target for this process first since we have a race condition when
-    // we are done running between getting the notice that the inferior
-    // process has died and the debugserver that was debugging this process.
-    // In our test suite, we are also continually running process after
-    // process, so we must be very careful to make sure:
-    // 1 - process object hasn't been deleted already
-    // 2 - that a new process object hasn't been recreated in its place
-
     // "debugserver_pid" argument passed in is the process ID for
     // debugserver that we are tracking...
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-
-    // Get a shared pointer to the target that has a matching process pointer.
-    // This target could be gone, or the target could already have a new process
-    // object inside of it
-    TargetSP target_sp (Debugger::FindTargetWithProcess(process));
+    const bool handled = true;
 
     if (log)
-        log->Printf("ProcessGDBRemote::%s(process=%p, pid=%" PRIu64 ", signo=%i (0x%x), exit_status=%i)", __FUNCTION__,
-                    process, debugserver_pid, signo, signo, exit_status);
+        log->Printf("ProcessGDBRemote::%s(process_wp, pid=%" PRIu64 ", signo=%i (0x%x), exit_status=%i)", __FUNCTION__,
+                    debugserver_pid, signo, signo, exit_status);
 
-    if (target_sp)
+    std::shared_ptr<ProcessGDBRemote> process_sp = process_wp.lock();
+    if (log)
+        log->Printf("ProcessGDBRemote::%s(process = %p)", __FUNCTION__, process_sp.get());
+    if (!process_sp || process_sp->m_debugserver_pid != debugserver_pid)
+        return handled;
+
+    // Sleep for a half a second to make sure our inferior process has
+    // time to set its exit status before we set it incorrectly when
+    // both the debugserver and the inferior process shut down.
+    usleep(500000);
+    // If our process hasn't yet exited, debugserver might have died.
+    // If the process did exit, then we are reaping it.
+    const StateType state = process_sp->GetState();
+
+    if (state != eStateInvalid && state != eStateUnloaded && state != eStateExited && state != eStateDetached)
     {
-        // We found a process in a target that matches, but another thread
-        // might be in the process of launching a new process that will
-        // soon replace it, so get a shared pointer to the process so we
-        // can keep it alive.
-        ProcessSP process_sp (target_sp->GetProcessSP());
-        // Now we have a shared pointer to the process that can't go away on us
-        // so we now make sure it was the same as the one passed in, and also make
-        // sure that our previous "process *" didn't get deleted and have a new
-        // "process *" created in its place with the same pointer. To verify this
-        // we make sure the process has our debugserver process ID. If we pass all
-        // of these tests, then we are sure that this process is the one we were
-        // looking for.
-        if (process_sp && process == process_sp.get() && process->m_debugserver_pid == debugserver_pid)
+        char error_str[1024];
+        if (signo)
         {
-            // Sleep for a half a second to make sure our inferior process has
-            // time to set its exit status before we set it incorrectly when
-            // both the debugserver and the inferior process shut down.
-            usleep (500000);
-            // If our process hasn't yet exited, debugserver might have died.
-            // If the process did exit, the we are reaping it.
-            const StateType state = process->GetState();
-
-            if (process->m_debugserver_pid != LLDB_INVALID_PROCESS_ID &&
-                state != eStateInvalid &&
-                state != eStateUnloaded &&
-                state != eStateExited &&
-                state != eStateDetached)
-            {
-                char error_str[1024];
-                if (signo)
-                {
-                    const char *signal_cstr = process->GetUnixSignals()->GetSignalAsCString(signo);
-                    if (signal_cstr)
-                        ::snprintf (error_str, sizeof (error_str), DEBUGSERVER_BASENAME " died with signal %s", signal_cstr);
-                    else
-                        ::snprintf (error_str, sizeof (error_str), DEBUGSERVER_BASENAME " died with signal %i", signo);
-                }
-                else
-                {
-                    ::snprintf (error_str, sizeof (error_str), DEBUGSERVER_BASENAME " died with an exit status of 0x%8.8x", exit_status);
-                }
-
-                process->SetExitStatus (-1, error_str);
-            }
-            // Debugserver has exited we need to let our ProcessGDBRemote
-            // know that it no longer has a debugserver instance
-            process->m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
+            const char *signal_cstr = process_sp->GetUnixSignals()->GetSignalAsCString(signo);
+            if (signal_cstr)
+                ::snprintf(error_str, sizeof(error_str), DEBUGSERVER_BASENAME " died with signal %s", signal_cstr);
+            else
+                ::snprintf(error_str, sizeof(error_str), DEBUGSERVER_BASENAME " died with signal %i", signo);
         }
+        else
+        {
+            ::snprintf(error_str, sizeof(error_str), DEBUGSERVER_BASENAME " died with an exit status of 0x%8.8x",
+                       exit_status);
+        }
+
+        process_sp->SetExitStatus(-1, error_str);
     }
-    return true;
+    // Debugserver has exited we need to let our ProcessGDBRemote
+    // know that it no longer has a debugserver instance
+    process_sp->m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
+    return handled;
 }
 
 void

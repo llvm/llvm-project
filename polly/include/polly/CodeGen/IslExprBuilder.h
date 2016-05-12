@@ -74,14 +74,12 @@ namespace polly {
 /// in the wild. Signed computations are needed, as loop bounds may become
 /// negative.
 ///
+/// It is possible to track overflows that occured in the generated IR. See the
+/// description of @see OverflowState for more information.
+///
 /// FIXME: Hardcoding sizes can cause issues:
 ///
-///   a) Certain run-time checks that we may want to generate can involve the
-///      size of the data types the computation is performed on. When code
-///      generating these run-time checks to isl_ast_expr[essions], the
-///      resulting computation may require more than 64 bit.
-///
-///   b) On embedded systems and especially for high-level-synthesis 64 bit
+///   -  On embedded systems and especially for high-level-synthesis 64 bit
 ///      computations are very costly.
 ///
 ///   The right approach is to compute the minimal necessary bitwidth and
@@ -89,11 +87,6 @@ namespace polly {
 ///   to use this information in our IslAstGenerator. Preliminary patches are
 ///   available, but have not been committed yet.
 ///
-/// 2) We always flag computations with 'nsw'
-///
-/// As isl_ast_expr[essions] assume arbitrary precision, no wrapping should
-/// ever occur in the generated LLVM-IR (assuming the data type chosen is large
-/// enough).
 class IslExprBuilder {
 public:
   /// @brief A map from isl_ids to llvm::Values.
@@ -112,9 +105,7 @@ public:
   IslExprBuilder(Scop &S, PollyIRBuilder &Builder, IDToValueTy &IDToValue,
                  ValueMapT &GlobalMap, const llvm::DataLayout &DL,
                  llvm::ScalarEvolution &SE, llvm::DominatorTree &DT,
-                 llvm::LoopInfo &LI)
-      : S(S), Builder(Builder), IDToValue(IDToValue), GlobalMap(GlobalMap),
-        DL(DL), SE(SE), DT(DT), LI(LI) {}
+                 llvm::LoopInfo &LI);
 
   /// @brief Create LLVM-IR for an isl_ast_expr[ession].
   ///
@@ -140,8 +131,36 @@ public:
   /// @return The type with which the expression should be computed.
   llvm::IntegerType *getType(__isl_keep isl_ast_expr *Expr);
 
+  /// @brief Change if runtime overflows are tracked or not.
+  ///
+  /// @param Enable Flag to enable/disable the tracking.
+  ///
+  /// Note that this will reset the tracking state and that tracking is only
+  /// allowed if the last tracked expression dominates the current insert point.
+  void setTrackOverflow(bool Enable);
+
+  /// @brief Return the current overflow status or nullptr if it is not tracked.
+  ///
+  /// @return A nullptr if tracking is disabled or otherwise an i1 that has the
+  ///         value of "0" if and only if no overflow happened since tracking
+  ///         was enabled.
+  llvm::Value *getOverflowState() const;
+
 private:
   Scop &S;
+
+  /// @brief Flag that will be set if an overflow occurred at runtime.
+  ///
+  /// Note that this flag is by default a nullptr and if it is a nullptr
+  /// we will not record overflows but simply perform the computations.
+  /// The intended usage is as follows:
+  ///   - If overflows in [an] expression[s] should be tracked, call
+  ///     the setTrackOverflow(true) function.
+  ///   - Use create(...) for all expressions that should be checked.
+  ///   - Call getOverflowState() to get the value representing the current
+  ///     state of the overflow flag.
+  ///   - To stop tracking call setTrackOverflow(false).
+  llvm::Value *OverflowState;
 
   PollyIRBuilder &Builder;
   IDToValueTy &IDToValue;
@@ -165,6 +184,48 @@ private:
   llvm::Value *createInt(__isl_take isl_ast_expr *Expr);
   llvm::Value *createOpAddressOf(__isl_take isl_ast_expr *Expr);
   llvm::Value *createAccessAddress(__isl_take isl_ast_expr *Expr);
+
+  /// @brief Create a binary operation @p Opc and track overflows if requested.
+  ///
+  /// @param OpC  The binary operation that should be performed [Add/Sub/Mul].
+  /// @param LHS  The left operand.
+  /// @param RHS  The right operand.
+  /// @param Name The (base) name of the new IR operations.
+  ///
+  /// @return A value that represents the result of the binary operation.
+  llvm::Value *createBinOp(llvm::BinaryOperator::BinaryOps Opc,
+                           llvm::Value *LHS, llvm::Value *RHS,
+                           const llvm::Twine &Name);
+
+  /// @brief Create an addition and track overflows if requested.
+  ///
+  /// @param LHS  The left operand.
+  /// @param RHS  The right operand.
+  /// @param Name The (base) name of the new IR operations.
+  ///
+  /// @return A value that represents the result of the addition.
+  llvm::Value *createAdd(llvm::Value *LHS, llvm::Value *RHS,
+                         const llvm::Twine &Name = "");
+
+  /// @brief Create a subtraction and track overflows if requested.
+  ///
+  /// @param LHS  The left operand.
+  /// @param RHS  The right operand.
+  /// @param Name The (base) name of the new IR operations.
+  ///
+  /// @return A value that represents the result of the subtraction.
+  llvm::Value *createSub(llvm::Value *LHS, llvm::Value *RHS,
+                         const llvm::Twine &Name = "");
+
+  /// @brief Create a multiplication and track overflows if requested.
+  ///
+  /// @param LHS  The left operand.
+  /// @param RHS  The right operand.
+  /// @param Name The (base) name of the new IR operations.
+  ///
+  /// @return A value that represents the result of the multiplication.
+  llvm::Value *createMul(llvm::Value *LHS, llvm::Value *RHS,
+                         const llvm::Twine &Name = "");
 };
 }
 

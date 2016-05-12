@@ -82,6 +82,7 @@ class Symbolizer final {
   /// Initialize and return platform-specific implementation of symbolizer
   /// (if it wasn't already initialized).
   static Symbolizer *GetOrInit();
+  static void LateInitialize();
   // Returns a list of symbolized frames for a given address (containing
   // all inlined functions, if necessary).
   SymbolizedStack *SymbolizePC(uptr address);

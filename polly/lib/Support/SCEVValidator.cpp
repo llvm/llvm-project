@@ -136,23 +136,7 @@ public:
   }
 
   class ValidatorResult visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    ValidatorResult Op = visit(Expr->getOperand());
-
-    switch (Op.getType()) {
-    case SCEVType::INT:
-    case SCEVType::PARAM:
-      // We currently do not represent a truncate expression as an affine
-      // expression. If it is constant during Scop execution, we treat it as a
-      // parameter.
-      return ValidatorResult(SCEVType::PARAM, Expr);
-    case SCEVType::IV:
-      DEBUG(dbgs() << "INVALID: Truncation of SCEVType::IV expression");
-      return ValidatorResult(SCEVType::INVALID);
-    case SCEVType::INVALID:
-      return Op;
-    }
-
-    llvm_unreachable("Unknown SCEVType");
+    return visit(Expr->getOperand());
   }
 
   class ValidatorResult visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
@@ -160,10 +144,6 @@ public:
   }
 
   class ValidatorResult visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-    // We currently allow only signed SCEV expressions. In the case of a
-    // signed value, a sign extend is a noop.
-    //
-    // TODO: Reconsider this when we add support for unsigned values.
     return visit(Expr->getOperand());
   }
 
@@ -179,7 +159,6 @@ public:
         break;
     }
 
-    // TODO: Check for NSW and NUW.
     return Return;
   }
 
@@ -215,7 +194,6 @@ public:
     if (HasMultipleParams && Return.isValid())
       return ValidatorResult(SCEVType::PARAM, Expr);
 
-    // TODO: Check for NSW and NUW.
     return Return;
   }
 
@@ -289,8 +267,8 @@ public:
   }
 
   class ValidatorResult visitUMaxExpr(const SCEVUMaxExpr *Expr) {
-    // We do not support unsigned operations. If 'Expr' is constant during Scop
-    // execution we treat this as a parameter, otherwise we bail out.
+    // We do not support unsigned max operations. If 'Expr' is constant during
+    // Scop execution we treat this as a parameter, otherwise we bail out.
     for (int i = 0, e = Expr->getNumOperands(); i < e; ++i) {
       ValidatorResult Op = visit(Expr->getOperand(i));
 
