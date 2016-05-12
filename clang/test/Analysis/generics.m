@@ -328,6 +328,21 @@ void returnToIdVariable(NSArray<NSString *> *arr) {
   NSNumber *res = a; // expected-warning {{Object has a dynamic type 'NSString *' which is incompatible with static type 'NSNumber *'}}
 }
 
+@interface UnrelatedTypeGeneric<T> : NSObject<NSCopying>
+- (void)takesType:(T)v;
+@end
+
+void testGetMostInformativeDerivedForId(NSArray<NSString *> *a,
+                                  UnrelatedTypeGeneric<NSString *> *b) {
+  id idB = b;
+  a = idB; // expected-warning {{Conversion from value of type 'UnrelatedTypeGeneric<NSString *> *' to incompatible type 'NSArray<NSString *> *'}}
+
+  // rdar://problem/26086914 crash here caused by symbolic type being unrelated
+  // to compile-time source type of cast.
+  id x = a; // Compile-time type is NSArray<>, Symbolic type is UnrelatedTypeGeneric<>.
+  [x takesType:[[NSNumber alloc] init]]; // expected-warning {{Conversion from value of type 'NSNumber *' to incompatible type 'NSString *'}}
+}
+
 // CHECK: <key>diagnostics</key>
 // CHECK-NEXT: <array>
 // CHECK-NEXT:  <dict>
@@ -6623,6 +6638,264 @@ void returnToIdVariable(NSArray<NSString *> *arr) {
 // CHECK-NEXT:  <dict>
 // CHECK-NEXT:   <key>line</key><integer>328</integer>
 // CHECK-NEXT:   <key>col</key><integer>19</integer>
+// CHECK-NEXT:   <key>file</key><integer>0</integer>
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:   <key>path</key>
+// CHECK-NEXT:   <array>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:     <key>kind</key><string>event</string>
+// CHECK-NEXT:     <key>location</key>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>line</key><integer>337</integer>
+// CHECK-NEXT:      <key>col</key><integer>12</integer>
+// CHECK-NEXT:      <key>file</key><integer>0</integer>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <key>ranges</key>
+// CHECK-NEXT:     <array>
+// CHECK-NEXT:       <array>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>337</integer>
+// CHECK-NEXT:         <key>col</key><integer>12</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>337</integer>
+// CHECK-NEXT:         <key>col</key><integer>12</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:       </array>
+// CHECK-NEXT:     </array>
+// CHECK-NEXT:     <key>depth</key><integer>0</integer>
+// CHECK-NEXT:     <key>extended_message</key>
+// CHECK-NEXT:     <string>Type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; is inferred from implicit cast (from &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to &apos;id&apos;)</string>
+// CHECK-NEXT:     <key>message</key>
+// CHECK-NEXT:     <string>Type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; is inferred from implicit cast (from &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to &apos;id&apos;)</string>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:     <key>kind</key><string>control</string>
+// CHECK-NEXT:     <key>edges</key>
+// CHECK-NEXT:      <array>
+// CHECK-NEXT:       <dict>
+// CHECK-NEXT:        <key>start</key>
+// CHECK-NEXT:         <array>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>337</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>337</integer>
+// CHECK-NEXT:           <key>col</key><integer>4</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:         </array>
+// CHECK-NEXT:        <key>end</key>
+// CHECK-NEXT:         <array>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>338</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>338</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:         </array>
+// CHECK-NEXT:       </dict>
+// CHECK-NEXT:      </array>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:     <key>kind</key><string>control</string>
+// CHECK-NEXT:     <key>edges</key>
+// CHECK-NEXT:      <array>
+// CHECK-NEXT:       <dict>
+// CHECK-NEXT:        <key>start</key>
+// CHECK-NEXT:         <array>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>338</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>338</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:         </array>
+// CHECK-NEXT:        <key>end</key>
+// CHECK-NEXT:         <array>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>338</integer>
+// CHECK-NEXT:           <key>col</key><integer>7</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>338</integer>
+// CHECK-NEXT:           <key>col</key><integer>9</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:         </array>
+// CHECK-NEXT:       </dict>
+// CHECK-NEXT:      </array>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:     <key>kind</key><string>event</string>
+// CHECK-NEXT:     <key>location</key>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>line</key><integer>338</integer>
+// CHECK-NEXT:      <key>col</key><integer>7</integer>
+// CHECK-NEXT:      <key>file</key><integer>0</integer>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <key>ranges</key>
+// CHECK-NEXT:     <array>
+// CHECK-NEXT:       <array>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>338</integer>
+// CHECK-NEXT:         <key>col</key><integer>7</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>338</integer>
+// CHECK-NEXT:         <key>col</key><integer>9</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:       </array>
+// CHECK-NEXT:     </array>
+// CHECK-NEXT:     <key>depth</key><integer>0</integer>
+// CHECK-NEXT:     <key>extended_message</key>
+// CHECK-NEXT:     <string>Conversion from value of type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSString *&gt; *&apos;</string>
+// CHECK-NEXT:     <key>message</key>
+// CHECK-NEXT:     <string>Conversion from value of type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSString *&gt; *&apos;</string>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:   </array>
+// CHECK-NEXT:   <key>description</key><string>Conversion from value of type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to incompatible type &apos;NSArray&lt;NSString *&gt; *&apos;</string>
+// CHECK-NEXT:   <key>category</key><string>Core Foundation/Objective-C</string>
+// CHECK-NEXT:   <key>type</key><string>Generics</string>
+// CHECK-NEXT:   <key>check_name</key><string>core.DynamicTypePropagation</string>
+// CHECK-NEXT:   <!-- This hash is experimental and going to change! -->
+// CHECK-NEXT:   <key>issue_hash_content_of_line_in_context</key><string>8347f65fb51a85ccd462d75ffd761078</string>
+// CHECK-NEXT:  <key>issue_context_kind</key><string>function</string>
+// CHECK-NEXT:  <key>issue_context</key><string>testGetMostInformativeDerivedForId</string>
+// CHECK-NEXT:  <key>issue_hash_function_offset</key><string>2</string>
+// CHECK-NEXT:  <key>location</key>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:   <key>line</key><integer>338</integer>
+// CHECK-NEXT:   <key>col</key><integer>7</integer>
+// CHECK-NEXT:   <key>file</key><integer>0</integer>
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:   <key>path</key>
+// CHECK-NEXT:   <array>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:     <key>kind</key><string>event</string>
+// CHECK-NEXT:     <key>location</key>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>line</key><integer>337</integer>
+// CHECK-NEXT:      <key>col</key><integer>12</integer>
+// CHECK-NEXT:      <key>file</key><integer>0</integer>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <key>ranges</key>
+// CHECK-NEXT:     <array>
+// CHECK-NEXT:       <array>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>337</integer>
+// CHECK-NEXT:         <key>col</key><integer>12</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>337</integer>
+// CHECK-NEXT:         <key>col</key><integer>12</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:       </array>
+// CHECK-NEXT:     </array>
+// CHECK-NEXT:     <key>depth</key><integer>0</integer>
+// CHECK-NEXT:     <key>extended_message</key>
+// CHECK-NEXT:     <string>Type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; is inferred from implicit cast (from &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to &apos;id&apos;)</string>
+// CHECK-NEXT:     <key>message</key>
+// CHECK-NEXT:     <string>Type &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; is inferred from implicit cast (from &apos;UnrelatedTypeGeneric&lt;NSString *&gt; *&apos; to &apos;id&apos;)</string>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:     <key>kind</key><string>control</string>
+// CHECK-NEXT:     <key>edges</key>
+// CHECK-NEXT:      <array>
+// CHECK-NEXT:       <dict>
+// CHECK-NEXT:        <key>start</key>
+// CHECK-NEXT:         <array>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>337</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>337</integer>
+// CHECK-NEXT:           <key>col</key><integer>4</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:         </array>
+// CHECK-NEXT:        <key>end</key>
+// CHECK-NEXT:         <array>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>343</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:          <dict>
+// CHECK-NEXT:           <key>line</key><integer>343</integer>
+// CHECK-NEXT:           <key>col</key><integer>3</integer>
+// CHECK-NEXT:           <key>file</key><integer>0</integer>
+// CHECK-NEXT:          </dict>
+// CHECK-NEXT:         </array>
+// CHECK-NEXT:       </dict>
+// CHECK-NEXT:      </array>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:    <dict>
+// CHECK-NEXT:     <key>kind</key><string>event</string>
+// CHECK-NEXT:     <key>location</key>
+// CHECK-NEXT:     <dict>
+// CHECK-NEXT:      <key>line</key><integer>343</integer>
+// CHECK-NEXT:      <key>col</key><integer>3</integer>
+// CHECK-NEXT:      <key>file</key><integer>0</integer>
+// CHECK-NEXT:     </dict>
+// CHECK-NEXT:     <key>ranges</key>
+// CHECK-NEXT:     <array>
+// CHECK-NEXT:       <array>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>343</integer>
+// CHECK-NEXT:         <key>col</key><integer>16</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:        <dict>
+// CHECK-NEXT:         <key>line</key><integer>343</integer>
+// CHECK-NEXT:         <key>col</key><integer>38</integer>
+// CHECK-NEXT:         <key>file</key><integer>0</integer>
+// CHECK-NEXT:        </dict>
+// CHECK-NEXT:       </array>
+// CHECK-NEXT:     </array>
+// CHECK-NEXT:     <key>depth</key><integer>0</integer>
+// CHECK-NEXT:     <key>extended_message</key>
+// CHECK-NEXT:     <string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
+// CHECK-NEXT:     <key>message</key>
+// CHECK-NEXT:     <string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
+// CHECK-NEXT:    </dict>
+// CHECK-NEXT:   </array>
+// CHECK-NEXT:   <key>description</key><string>Conversion from value of type &apos;NSNumber *&apos; to incompatible type &apos;NSString *&apos;</string>
+// CHECK-NEXT:   <key>category</key><string>Core Foundation/Objective-C</string>
+// CHECK-NEXT:   <key>type</key><string>Generics</string>
+// CHECK-NEXT:   <key>check_name</key><string>core.DynamicTypePropagation</string>
+// CHECK-NEXT:   <!-- This hash is experimental and going to change! -->
+// CHECK-NEXT:   <key>issue_hash_content_of_line_in_context</key><string>6528db66f562ac0c2a94933f3ca5f6a8</string>
+// CHECK-NEXT:  <key>issue_context_kind</key><string>function</string>
+// CHECK-NEXT:  <key>issue_context</key><string>testGetMostInformativeDerivedForId</string>
+// CHECK-NEXT:  <key>issue_hash_function_offset</key><string>7</string>
+// CHECK-NEXT:  <key>location</key>
+// CHECK-NEXT:  <dict>
+// CHECK-NEXT:   <key>line</key><integer>343</integer>
+// CHECK-NEXT:   <key>col</key><integer>3</integer>
 // CHECK-NEXT:   <key>file</key><integer>0</integer>
 // CHECK-NEXT:  </dict>
 // CHECK-NEXT:  </dict>
