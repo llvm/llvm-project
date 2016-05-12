@@ -2792,8 +2792,9 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
               DeduceTemplateArguments(Partial, TemplateArgList, Info)) {
         // Store the failed-deduction information for use in diagnostics, later.
         // TODO: Actually use the failed-deduction info?
-        FailedCandidates.addCandidate()
-            .set(Partial, MakeDeductionFailureInfo(Context, Result, Info));
+        FailedCandidates.addCandidate().set(
+            DeclAccessPair::make(Template, AS_public), Partial,
+            MakeDeductionFailureInfo(Context, Result, Info));
         (void)Result;
       } else {
         Matched.push_back(PartialSpecMatchResult());
@@ -6897,12 +6898,13 @@ bool Sema::CheckFunctionTemplateSpecialization(
       FunctionDecl *Specialization = nullptr;
       if (TemplateDeductionResult TDK = DeduceTemplateArguments(
               cast<FunctionTemplateDecl>(FunTmpl->getFirstDecl()),
-              ExplicitTemplateArgs ? &Args : nullptr, FT, Specialization, Info)) {
+              ExplicitTemplateArgs ? &Args : nullptr, FT, Specialization,
+              Info)) {
         // Template argument deduction failed; record why it failed, so
         // that we can provide nifty diagnostics.
-        FailedCandidates.addCandidate()
-            .set(FunTmpl->getTemplatedDecl(),
-                 MakeDeductionFailureInfo(Context, TDK, Info));
+        FailedCandidates.addCandidate().set(
+            I.getPair(), FunTmpl->getTemplatedDecl(),
+            MakeDeductionFailureInfo(Context, TDK, Info));
         (void)TDK;
         continue;
       }
@@ -7929,7 +7931,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                                     R, Specialization, Info)) {
       // Keep track of almost-matches.
       FailedCandidates.addCandidate()
-          .set(FunTmpl->getTemplatedDecl(),
+          .set(P.getPair(), FunTmpl->getTemplatedDecl(),
                MakeDeductionFailureInfo(Context, TDK, Info));
       (void)TDK;
       continue;

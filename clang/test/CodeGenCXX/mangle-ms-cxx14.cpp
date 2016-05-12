@@ -55,3 +55,8 @@ struct Foo {};
 
 Foo<&x<int>, &x<int>> Zoo;
 // CHECK-DAG: "\01?Zoo@@3U?$Foo@$1??$x@H@@3HA$1?1@3HA@@A"
+
+template <typename T> T unaligned_x;
+extern auto test_unaligned() { return unaligned_x<int __unaligned *>; }
+// CHECK-DAG: "\01??$unaligned_x@PFAH@@3PFAHA"
+

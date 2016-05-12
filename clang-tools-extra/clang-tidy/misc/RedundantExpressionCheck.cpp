@@ -9,8 +9,10 @@
 
 #include "RedundantExpressionCheck.h"
 #include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -18,7 +20,18 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-static bool AreIdenticalExpr(const Expr *Left, const Expr *Right) {
+static const char KnownBannedMacroNames[] =
+    "EAGAIN;EWOULDBLOCK;SIGCLD;SIGCHLD;";
+
+static bool areEquivalentNameSpecifier(const NestedNameSpecifier *Left,
+                                       const NestedNameSpecifier *Right) {
+  llvm::FoldingSetNodeID LeftID, RightID;
+  Left->Profile(LeftID);
+  Right->Profile(RightID);
+  return LeftID == RightID;
+}
+
+static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
   if (!Left || !Right)
     return !Left && !Right;
 
@@ -33,8 +46,8 @@ static bool AreIdenticalExpr(const Expr *Left, const Expr *Right) {
   Expr::const_child_iterator LeftIter = Left->child_begin();
   Expr::const_child_iterator RightIter = Right->child_begin();
   while (LeftIter != Left->child_end() && RightIter != Right->child_end()) {
-    if (!AreIdenticalExpr(dyn_cast<Expr>(*LeftIter),
-                          dyn_cast<Expr>(*RightIter)))
+    if (!areEquivalentExpr(dyn_cast<Expr>(*LeftIter),
+                           dyn_cast<Expr>(*RightIter)))
       return false;
     ++LeftIter;
     ++RightIter;
@@ -53,7 +66,8 @@ static bool AreIdenticalExpr(const Expr *Left, const Expr *Right) {
   case Stmt::IntegerLiteralClass: {
     llvm::APInt LeftLit = cast<IntegerLiteral>(Left)->getValue();
     llvm::APInt RightLit = cast<IntegerLiteral>(Right)->getValue();
-    return LeftLit.getBitWidth() == RightLit.getBitWidth() && LeftLit == RightLit;
+    return LeftLit.getBitWidth() == RightLit.getBitWidth() &&
+           LeftLit == RightLit;
   }
   case Stmt::FloatingLiteralClass:
     return cast<FloatingLiteral>(Left)->getValue().bitwiseIsEqual(
@@ -62,6 +76,13 @@ static bool AreIdenticalExpr(const Expr *Left, const Expr *Right) {
     return cast<StringLiteral>(Left)->getBytes() ==
            cast<StringLiteral>(Right)->getBytes();
 
+  case Stmt::DependentScopeDeclRefExprClass:
+    if (cast<DependentScopeDeclRefExpr>(Left)->getDeclName() !=
+        cast<DependentScopeDeclRefExpr>(Right)->getDeclName())
+      return false;
+    return areEquivalentNameSpecifier(
+        cast<DependentScopeDeclRefExpr>(Left)->getQualifier(),
+        cast<DependentScopeDeclRefExpr>(Right)->getQualifier());
   case Stmt::DeclRefExprClass:
     return cast<DeclRefExpr>(Left)->getDecl() ==
            cast<DeclRefExpr>(Right)->getDecl();
@@ -89,21 +110,51 @@ static bool AreIdenticalExpr(const Expr *Left, const Expr *Right) {
   }
 }
 
-AST_MATCHER(BinaryOperator, OperandsAreEquivalent) {
-  return AreIdenticalExpr(Node.getLHS(), Node.getRHS());
+AST_MATCHER(BinaryOperator, operandsAreEquivalent) {
+  return areEquivalentExpr(Node.getLHS(), Node.getRHS());
 }
 
-AST_MATCHER(BinaryOperator, isInMacro) {
+AST_MATCHER(ConditionalOperator, expressionsAreEquivalent) {
+  return areEquivalentExpr(Node.getTrueExpr(), Node.getFalseExpr());
+}
+
+AST_MATCHER(CallExpr, parametersAreEquivalent) {
+  return Node.getNumArgs() == 2 &&
+         areEquivalentExpr(Node.getArg(0), Node.getArg(1));
+}
+
+AST_MATCHER(BinaryOperator, binaryOperatorIsInMacro) {
   return Node.getOperatorLoc().isMacroID();
 }
 
-AST_MATCHER(Expr, isInstantiationDependent) {
-  return Node.isInstantiationDependent();
+AST_MATCHER(ConditionalOperator, conditionalOperatorIsInMacro) {
+  return Node.getQuestionLoc().isMacroID() || Node.getColonLoc().isMacroID();
+}
+
+AST_MATCHER(Expr, isMacro) { return Node.getExprLoc().isMacroID(); }
+
+AST_MATCHER_P(Expr, expandedByMacro, std::set<std::string>, Names) {
+  const SourceManager &SM = Finder->getASTContext().getSourceManager();
+  const LangOptions &LO = Finder->getASTContext().getLangOpts();
+  SourceLocation Loc = Node.getExprLoc();
+  while (Loc.isMacroID()) {
+    std::string MacroName = Lexer::getImmediateMacroName(Loc, SM, LO);
+    if (Names.find(MacroName) != Names.end())
+      return true;
+    Loc = SM.getImmediateMacroCallerLoc(Loc);
+  }
+  return false;
 }
 
 void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto AnyLiteralExpr = ignoringParenImpCasts(
       anyOf(cxxBoolLiteral(), characterLiteral(), integerLiteral()));
+
+  std::vector<std::string> MacroNames =
+      utils::options::parseStringList(KnownBannedMacroNames);
+  std::set<std::string> Names(MacroNames.begin(), MacroNames.end());
+
+  const auto BannedIntegerLiteral = integerLiteral(expandedByMacro(Names));
 
   Finder->addMatcher(
       binaryOperator(anyOf(hasOperatorName("-"), hasOperatorName("/"),
@@ -112,20 +163,52 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                            matchers::isComparisonOperator(),
                            hasOperatorName("&&"), hasOperatorName("||"),
                            hasOperatorName("=")),
-                     OperandsAreEquivalent(),
+                     operandsAreEquivalent(),
                      // Filter noisy false positives.
-                     unless(isInstantiationDependent()),
-                     unless(isInMacro()),
+                     unless(isInTemplateInstantiation()),
+                     unless(binaryOperatorIsInMacro()),
                      unless(hasType(realFloatingPointType())),
                      unless(hasEitherOperand(hasType(realFloatingPointType()))),
-                     unless(hasLHS(AnyLiteralExpr)))
+                     unless(hasLHS(AnyLiteralExpr)),
+                     unless(hasDescendant(BannedIntegerLiteral)))
           .bind("binary"),
+      this);
+
+  Finder->addMatcher(
+      conditionalOperator(expressionsAreEquivalent(),
+                          // Filter noisy false positives.
+                          unless(conditionalOperatorIsInMacro()),
+                          unless(hasTrueExpression(AnyLiteralExpr)),
+                          unless(isInTemplateInstantiation()))
+          .bind("cond"),
+      this);
+
+  Finder->addMatcher(
+      cxxOperatorCallExpr(
+          anyOf(
+              hasOverloadedOperatorName("-"), hasOverloadedOperatorName("/"),
+              hasOverloadedOperatorName("%"), hasOverloadedOperatorName("|"),
+              hasOverloadedOperatorName("&"), hasOverloadedOperatorName("^"),
+              hasOverloadedOperatorName("=="), hasOverloadedOperatorName("!="),
+              hasOverloadedOperatorName("<"), hasOverloadedOperatorName("<="),
+              hasOverloadedOperatorName(">"), hasOverloadedOperatorName(">="),
+              hasOverloadedOperatorName("&&"), hasOverloadedOperatorName("||"),
+              hasOverloadedOperatorName("=")),
+          parametersAreEquivalent(),
+          // Filter noisy false positives.
+          unless(isMacro()), unless(isInTemplateInstantiation()))
+          .bind("call"),
       this);
 }
 
 void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binary"))
     diag(BinOp->getOperatorLoc(), "both side of operator are equivalent");
+  if (const auto *CondOp = Result.Nodes.getNodeAs<ConditionalOperator>("cond"))
+    diag(CondOp->getColonLoc(), "'true' and 'false' expression are equivalent");
+  if (const auto *Call = Result.Nodes.getNodeAs<CXXOperatorCallExpr>("call"))
+    diag(Call->getOperatorLoc(),
+         "both side of overloaded operator are equivalent");
 }
 
 } // namespace misc

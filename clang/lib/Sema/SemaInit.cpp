@@ -3449,18 +3449,13 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
   CandidateSet.clear();
 
   for (NamedDecl *D : Ctors) {
-    DeclAccessPair FoundDecl = DeclAccessPair::make(D, D->getAccess());
+    auto Info = getConstructorInfo(D);
+    if (!Info.Constructor)
+      continue;
+
     bool SuppressUserConversions = false;
 
-    // Find the constructor (which may be a template).
-    CXXConstructorDecl *Constructor = nullptr;
-    FunctionTemplateDecl *ConstructorTmpl = dyn_cast<FunctionTemplateDecl>(D);
-    if (ConstructorTmpl)
-      Constructor = cast<CXXConstructorDecl>(
-                                           ConstructorTmpl->getTemplatedDecl());
-    else {
-      Constructor = cast<CXXConstructorDecl>(D);
-
+    if (!Info.ConstructorTmpl) {
       // C++11 [over.best.ics]p4:
       //   ... and the constructor or user-defined conversion function is a
       //   candidate by
@@ -3477,15 +3472,15 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
       //     parameter of a constructor of X.
       if ((CopyInitializing ||
            (IsListInit && Args.size() == 1 && isa<InitListExpr>(Args[0]))) &&
-          Constructor->isCopyOrMoveConstructor())
+          Info.Constructor->isCopyOrMoveConstructor())
         SuppressUserConversions = true;
     }
 
-    if (!Constructor->isInvalidDecl() &&
-        (AllowExplicit || !Constructor->isExplicit()) &&
-        (!OnlyListConstructors || S.isInitListConstructor(Constructor))) {
-      if (ConstructorTmpl)
-        S.AddTemplateOverloadCandidate(ConstructorTmpl, FoundDecl,
+    if (!Info.Constructor->isInvalidDecl() &&
+        (AllowExplicit || !Info.Constructor->isExplicit()) &&
+        (!OnlyListConstructors || S.isInitListConstructor(Info.Constructor))) {
+      if (Info.ConstructorTmpl)
+        S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
                                        /*ExplicitArgs*/ nullptr, Args,
                                        CandidateSet, SuppressUserConversions);
       else {
@@ -3497,9 +3492,9 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
         //     are also considered.
         bool AllowExplicitConv = AllowExplicit && !CopyInitializing && 
                                  Args.size() == 1 &&
-                                 Constructor->isCopyOrMoveConstructor();
-        S.AddOverloadCandidate(Constructor, FoundDecl, Args, CandidateSet,
-                               SuppressUserConversions,
+                                 Info.Constructor->isCopyOrMoveConstructor();
+        S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl, Args,
+                               CandidateSet, SuppressUserConversions,
                                /*PartialOverloading=*/false,
                                /*AllowExplicit=*/AllowExplicitConv);
       }
@@ -3991,26 +3986,19 @@ static OverloadingResult TryRefInitWithConversionFunction(Sema &S,
     CXXRecordDecl *T1RecordDecl = cast<CXXRecordDecl>(T1RecordType->getDecl());
 
     for (NamedDecl *D : S.LookupConstructors(T1RecordDecl)) {
-      DeclAccessPair FoundDecl = DeclAccessPair::make(D, D->getAccess());
+      auto Info = getConstructorInfo(D);
+      if (!Info.Constructor)
+        continue;
 
-      // Find the constructor (which may be a template).
-      CXXConstructorDecl *Constructor = nullptr;
-      FunctionTemplateDecl *ConstructorTmpl = dyn_cast<FunctionTemplateDecl>(D);
-      if (ConstructorTmpl)
-        Constructor = cast<CXXConstructorDecl>(
-                                         ConstructorTmpl->getTemplatedDecl());
-      else
-        Constructor = cast<CXXConstructorDecl>(D);
-
-      if (!Constructor->isInvalidDecl() &&
-          Constructor->isConvertingConstructor(AllowExplicit)) {
-        if (ConstructorTmpl)
-          S.AddTemplateOverloadCandidate(ConstructorTmpl, FoundDecl,
+      if (!Info.Constructor->isInvalidDecl() &&
+          Info.Constructor->isConvertingConstructor(AllowExplicit)) {
+        if (Info.ConstructorTmpl)
+          S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
                                          /*ExplicitArgs*/ nullptr,
                                          Initializer, CandidateSet,
                                          /*SuppressUserConversions=*/true);
         else
-          S.AddOverloadCandidate(Constructor, FoundDecl,
+          S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl,
                                  Initializer, CandidateSet,
                                  /*SuppressUserConversions=*/true);
       }
@@ -4614,27 +4602,19 @@ static void TryUserDefinedConversion(Sema &S,
              Con = CopyOfCon.begin(), ConEnd = CopyOfCon.end();
            Con != ConEnd; ++Con) {
         NamedDecl *D = *Con;
-        DeclAccessPair FoundDecl = DeclAccessPair::make(D, D->getAccess());
+        auto Info = getConstructorInfo(D);
+        if (!Info.Constructor)
+          continue;
 
-        // Find the constructor (which may be a template).
-        CXXConstructorDecl *Constructor = nullptr;
-        FunctionTemplateDecl *ConstructorTmpl
-          = dyn_cast<FunctionTemplateDecl>(D);
-        if (ConstructorTmpl)
-          Constructor = cast<CXXConstructorDecl>(
-                                           ConstructorTmpl->getTemplatedDecl());
-        else
-          Constructor = cast<CXXConstructorDecl>(D);
-
-        if (!Constructor->isInvalidDecl() &&
-            Constructor->isConvertingConstructor(AllowExplicit)) {
-          if (ConstructorTmpl)
-            S.AddTemplateOverloadCandidate(ConstructorTmpl, FoundDecl,
+        if (!Info.Constructor->isInvalidDecl() &&
+            Info.Constructor->isConvertingConstructor(AllowExplicit)) {
+          if (Info.ConstructorTmpl)
+            S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
                                            /*ExplicitArgs*/ nullptr,
                                            Initializer, CandidateSet,
                                            /*SuppressUserConversions=*/true);
           else
-            S.AddOverloadCandidate(Constructor, FoundDecl,
+            S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl,
                                    Initializer, CandidateSet,
                                    /*SuppressUserConversions=*/true);
         }
@@ -5378,38 +5358,33 @@ static void LookupCopyAndMoveConstructors(Sema &S,
   for (SmallVectorImpl<NamedDecl *>::iterator
          CI = Ctors.begin(), CE = Ctors.end(); CI != CE; ++CI) {
     NamedDecl *D = *CI;
-    CXXConstructorDecl *Constructor = nullptr;
+    auto Info = getConstructorInfo(D);
+    if (!Info.Constructor)
+      continue;
 
-    if ((Constructor = dyn_cast<CXXConstructorDecl>(D))) {
-      // Handle copy/moveconstructors, only.
-      if (!Constructor || Constructor->isInvalidDecl() ||
-          !Constructor->isCopyOrMoveConstructor() ||
-          !Constructor->isConvertingConstructor(/*AllowExplicit=*/true))
+    if (!Info.ConstructorTmpl) {
+      // Handle copy/move constructors, only.
+      if (Info.Constructor->isInvalidDecl() ||
+          !Info.Constructor->isCopyOrMoveConstructor() ||
+          !Info.Constructor->isConvertingConstructor(/*AllowExplicit=*/true))
         continue;
 
-      DeclAccessPair FoundDecl
-        = DeclAccessPair::make(Constructor, Constructor->getAccess());
-      S.AddOverloadCandidate(Constructor, FoundDecl,
+      S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl,
                              CurInitExpr, CandidateSet);
       continue;
     }
 
     // Handle constructor templates.
-    FunctionTemplateDecl *ConstructorTmpl = cast<FunctionTemplateDecl>(D);
-    if (ConstructorTmpl->isInvalidDecl())
+    if (Info.ConstructorTmpl->isInvalidDecl())
       continue;
 
-    Constructor = cast<CXXConstructorDecl>(
-                                         ConstructorTmpl->getTemplatedDecl());
-    if (!Constructor->isConvertingConstructor(/*AllowExplicit=*/true))
+    if (!Info.Constructor->isConvertingConstructor(/*AllowExplicit=*/true))
       continue;
 
     // FIXME: Do we need to limit this to copy-constructor-like
     // candidates?
-    DeclAccessPair FoundDecl
-      = DeclAccessPair::make(ConstructorTmpl, ConstructorTmpl->getAccess());
-    S.AddTemplateOverloadCandidate(ConstructorTmpl, FoundDecl, nullptr,
-                                   CurInitExpr, CandidateSet, true);
+    S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
+                                   nullptr, CurInitExpr, CandidateSet, true);
   }
 }
 
@@ -5584,7 +5559,8 @@ static ExprResult CopyObject(Sema &S,
     return ExprError();
 
   // Actually perform the constructor call.
-  CurInit = S.BuildCXXConstructExpr(Loc, T, Constructor, Elidable,
+  CurInit = S.BuildCXXConstructExpr(Loc, T, Best->FoundDecl, Constructor,
+                                    Elidable,
                                     ConstructorArgs,
                                     HadMultipleCandidates,
                                     /*ListInit*/ false,
@@ -5770,9 +5746,10 @@ PerformConstructorInitialization(Sema &S,
       : Kind.getParenRange();
 
     CurInit = new (S.Context) CXXTemporaryObjectExpr(
-        S.Context, Constructor, TSInfo, ConstructorArgs, ParenOrBraceRange,
-        HadMultipleCandidates, IsListInitialization,
-        IsStdInitListInitialization, ConstructorInitRequiresZeroInit);
+        S.Context, Step.Function.FoundDecl, Constructor, TSInfo,
+        ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,
+        IsListInitialization, IsStdInitListInitialization,
+        ConstructorInitRequiresZeroInit);
   } else {
     CXXConstructExpr::ConstructionKind ConstructKind =
       CXXConstructExpr::CK_Complete;
@@ -5797,6 +5774,7 @@ PerformConstructorInitialization(Sema &S,
     // unconditionally.
     if (Entity.allowsNRVO())
       CurInit = S.BuildCXXConstructExpr(Loc, Entity.getType(),
+                                        Step.Function.FoundDecl,
                                         Constructor, /*Elidable=*/true,
                                         ConstructorArgs,
                                         HadMultipleCandidates,
@@ -5807,6 +5785,7 @@ PerformConstructorInitialization(Sema &S,
                                         ParenOrBraceRange);
     else
       CurInit = S.BuildCXXConstructExpr(Loc, Entity.getType(),
+                                        Step.Function.FoundDecl,
                                         Constructor,
                                         ConstructorArgs,
                                         HadMultipleCandidates,
@@ -6511,7 +6490,8 @@ InitializationSequence::Perform(Sema &S,
           return ExprError();
 
         // Build an expression that constructs a temporary.
-        CurInit = S.BuildCXXConstructExpr(Loc, Step->Type, Constructor,
+        CurInit = S.BuildCXXConstructExpr(Loc, Step->Type,
+                                          FoundFn, Constructor,
                                           ConstructorArgs,
                                           HadMultipleCandidates,
                                           /*ListInit*/ false,

@@ -432,6 +432,12 @@ SourceLocation CXXConstructExpr::getLocEnd() const {
   return End;
 }
 
+NamedDecl *CXXConstructExpr::getFoundDecl() const {
+  if (auto *Template = Constructor->getPrimaryTemplate())
+    return Template;
+  return Constructor;
+}
+
 SourceRange CXXOperatorCallExpr::getSourceRangeImpl() const {
   OverloadedOperatorKind Kind = getOperator();
   if (Kind == OO_PlusPlus || Kind == OO_MinusMinus) {
@@ -717,6 +723,7 @@ CXXBindTemporaryExpr *CXXBindTemporaryExpr::Create(const ASTContext &C,
 }
 
 CXXTemporaryObjectExpr::CXXTemporaryObjectExpr(const ASTContext &C,
+                                               NamedDecl *Found,
                                                CXXConstructorDecl *Cons,
                                                TypeSourceInfo *Type,
                                                ArrayRef<Expr*> Args,
@@ -728,7 +735,7 @@ CXXTemporaryObjectExpr::CXXTemporaryObjectExpr(const ASTContext &C,
   : CXXConstructExpr(C, CXXTemporaryObjectExprClass, 
                      Type->getType().getNonReferenceType(), 
                      Type->getTypeLoc().getBeginLoc(),
-                     Cons, false, Args,
+                     Found, Cons, false, Args,
                      HadMultipleCandidates,
                      ListInitialization,
                      StdInitListInitialization,
@@ -750,7 +757,9 @@ SourceLocation CXXTemporaryObjectExpr::getLocEnd() const {
 
 CXXConstructExpr *CXXConstructExpr::Create(const ASTContext &C, QualType T,
                                            SourceLocation Loc,
-                                           CXXConstructorDecl *D, bool Elidable,
+                                           NamedDecl *Found,
+                                           CXXConstructorDecl *Ctor,
+                                           bool Elidable,
                                            ArrayRef<Expr*> Args,
                                            bool HadMultipleCandidates,
                                            bool ListInitialization,
@@ -758,8 +767,8 @@ CXXConstructExpr *CXXConstructExpr::Create(const ASTContext &C, QualType T,
                                            bool ZeroInitialization,
                                            ConstructionKind ConstructKind,
                                            SourceRange ParenOrBraceRange) {
-  return new (C) CXXConstructExpr(C, CXXConstructExprClass, T, Loc, D, 
-                                  Elidable, Args,
+  return new (C) CXXConstructExpr(C, CXXConstructExprClass, T, Loc,
+                                  Found, Ctor, Elidable, Args,
                                   HadMultipleCandidates, ListInitialization,
                                   StdInitListInitialization,
                                   ZeroInitialization, ConstructKind,
@@ -768,8 +777,9 @@ CXXConstructExpr *CXXConstructExpr::Create(const ASTContext &C, QualType T,
 
 CXXConstructExpr::CXXConstructExpr(const ASTContext &C, StmtClass SC,
                                    QualType T, SourceLocation Loc,
-                                   CXXConstructorDecl *D, bool elidable,
-                                   ArrayRef<Expr*> args,
+                                   NamedDecl *Found, CXXConstructorDecl *Ctor,
+                                   bool Elidable,
+                                   ArrayRef<Expr*> Args,
                                    bool HadMultipleCandidates,
                                    bool ListInitialization,
                                    bool StdInitListInitialization,
@@ -780,28 +790,30 @@ CXXConstructExpr::CXXConstructExpr(const ASTContext &C, StmtClass SC,
          T->isDependentType(), T->isDependentType(),
          T->isInstantiationDependentType(),
          T->containsUnexpandedParameterPack()),
-    Constructor(D), Loc(Loc), ParenOrBraceRange(ParenOrBraceRange),
-    NumArgs(args.size()),
-    Elidable(elidable), HadMultipleCandidates(HadMultipleCandidates),
+    Constructor(Ctor), Loc(Loc), ParenOrBraceRange(ParenOrBraceRange),
+    NumArgs(Args.size()),
+    Elidable(Elidable), HadMultipleCandidates(HadMultipleCandidates),
     ListInitialization(ListInitialization),
     StdInitListInitialization(StdInitListInitialization),
     ZeroInitialization(ZeroInitialization),
     ConstructKind(ConstructKind), Args(nullptr)
 {
+  assert(declaresSameEntity(Found, Ctor) ||
+         declaresSameEntity(Found, Ctor->getPrimaryTemplate()));
   if (NumArgs) {
-    Args = new (C) Stmt*[args.size()];
+    this->Args = new (C) Stmt*[Args.size()];
     
-    for (unsigned i = 0; i != args.size(); ++i) {
-      assert(args[i] && "NULL argument in CXXConstructExpr");
+    for (unsigned i = 0; i != Args.size(); ++i) {
+      assert(Args[i] && "NULL argument in CXXConstructExpr");
 
-      if (args[i]->isValueDependent())
+      if (Args[i]->isValueDependent())
         ExprBits.ValueDependent = true;
-      if (args[i]->isInstantiationDependent())
+      if (Args[i]->isInstantiationDependent())
         ExprBits.InstantiationDependent = true;
-      if (args[i]->containsUnexpandedParameterPack())
+      if (Args[i]->containsUnexpandedParameterPack())
         ExprBits.ContainsUnexpandedParameterPack = true;
   
-      Args[i] = args[i];
+      this->Args[i] = Args[i];
     }
   }
 }

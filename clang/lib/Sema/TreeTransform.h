@@ -2637,6 +2637,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildCXXConstructExpr(QualType T,
                                      SourceLocation Loc,
+                                     NamedDecl *Found,
                                      CXXConstructorDecl *Constructor,
                                      bool IsElidable,
                                      MultiExprArg Args,
@@ -2651,7 +2652,8 @@ public:
                                           ConvertedArgs))
       return ExprError();
 
-    return getSema().BuildCXXConstructExpr(Loc, T, Constructor, IsElidable,
+    return getSema().BuildCXXConstructExpr(Loc, T, Found, Constructor,
+                                           IsElidable,
                                            ConvertedArgs,
                                            HadMultipleCandidates,
                                            ListInitialization,
@@ -9880,6 +9882,11 @@ TreeTransform<Derived>::TransformCXXConstructExpr(CXXConstructExpr *E) {
   if (T.isNull())
     return ExprError();
 
+  NamedDecl *FoundDecl = cast_or_null<NamedDecl>(
+      getDerived().TransformDecl(E->getLocStart(), E->getFoundDecl()));
+  if (!FoundDecl)
+    return ExprError();
+
   CXXConstructorDecl *Constructor
     = cast_or_null<CXXConstructorDecl>(
                                 getDerived().TransformDecl(E->getLocStart(),
@@ -9895,6 +9902,7 @@ TreeTransform<Derived>::TransformCXXConstructExpr(CXXConstructExpr *E) {
 
   if (!getDerived().AlwaysRebuild() &&
       T == E->getType() &&
+      FoundDecl == E->getFoundDecl() &&
       Constructor == E->getConstructor() &&
       !ArgumentChanged) {
     // Mark the constructor as referenced.
@@ -9904,8 +9912,8 @@ TreeTransform<Derived>::TransformCXXConstructExpr(CXXConstructExpr *E) {
   }
 
   return getDerived().RebuildCXXConstructExpr(T, /*FIXME:*/E->getLocStart(),
-                                              Constructor, E->isElidable(),
-                                              Args,
+                                              FoundDecl, Constructor,
+                                              E->isElidable(), Args,
                                               E->hadMultipleCandidates(),
                                               E->isListInitialization(),
                                               E->isStdInitListInitialization(),

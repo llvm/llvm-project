@@ -1760,7 +1760,15 @@ static void DiagnoseCallingConvCast(Sema &Self, const ExprResult &SrcExpr,
   if (!FD || !FD->hasBody(Definition))
     return;
 
-  // The source expression is a pointer to a known function defined in this TU.
+  // Only warn if we are casting from the default convention to a non-default
+  // convention. This can happen when the programmer forgot to apply the calling
+  // convention to the function definition and then inserted this cast to
+  // satisfy the type system.
+  CallingConv DefaultCC = Self.getASTContext().getDefaultCallingConvention(
+      FD->isVariadic(), FD->isCXXInstanceMember());
+  if (DstCC == DefaultCC || SrcCC != DefaultCC)
+    return;
+
   // Diagnose this cast, as it is probably bad.
   StringRef SrcCCName = FunctionType::getNameForCallConv(SrcCC);
   StringRef DstCCName = FunctionType::getNameForCallConv(DstCC);

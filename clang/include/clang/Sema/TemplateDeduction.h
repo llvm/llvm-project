@@ -244,6 +244,10 @@ struct DeductionFailureInfo {
 /// TODO: In the future, we may need to unify/generalize this with
 /// OverloadCandidate.
 struct TemplateSpecCandidate {
+  /// \brief The declaration that was looked up, together with its access.
+  /// Might be a UsingShadowDecl, but usually a FunctionTemplateDecl.
+  DeclAccessPair FoundDecl;
+
   /// Specialization - The actual specialization that this candidate
   /// represents. When NULL, this may be a built-in candidate.
   Decl *Specialization;
@@ -251,7 +255,8 @@ struct TemplateSpecCandidate {
   /// Template argument deduction info
   DeductionFailureInfo DeductionFailure;
 
-  void set(Decl *Spec, DeductionFailureInfo Info) {
+  void set(DeclAccessPair Found, Decl *Spec, DeductionFailureInfo Info) {
+    FoundDecl = Found;
     Specialization = Spec;
     DeductionFailure = Info;
   }

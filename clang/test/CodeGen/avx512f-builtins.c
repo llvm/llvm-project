@@ -3109,16 +3109,57 @@ __m512i test_mm512_maskz_permutex2var_epi32(__mmask16 __U, __m512i __A, __m512i 
   return _mm512_maskz_permutex2var_epi32(__U, __A, __I, __B); 
 }
 
+__m512i test_mm512_mask_permutex2var_epi32 (__m512i __A, __mmask16 __U, __m512i __I, __m512i __B)
+{
+  // CHECK-LABEL: @test_mm512_mask_permutex2var_epi32 
+  // CHECK: @llvm.x86.avx512.mask.vpermt2var.d.512
+  return _mm512_mask_permutex2var_epi32 (__A,__U,__I,__B);
+}
+
+__m512d test_mm512_permutex2var_pd (__m512d __A, __m512i __I, __m512d __B)
+{
+  // CHECK-LABEL: @test_mm512_permutex2var_pd 
+  // CHECK: @llvm.x86.avx512.mask.vpermt2var.pd.512
+  return _mm512_permutex2var_pd (__A, __I,__B);
+}
+
+__m512d test_mm512_mask_permutex2var_pd (__m512d __A, __mmask8 __U, __m512i __I, __m512d __B)
+{
+  // CHECK-LABEL: @test_mm512_mask_permutex2var_pd 
+  // CHECK: @llvm.x86.avx512.mask.vpermt2var.pd.512
+  return _mm512_mask_permutex2var_pd (__A,__U,__I,__B);
+}
+
 __m512d test_mm512_maskz_permutex2var_pd(__mmask8 __U, __m512d __A, __m512i __I, __m512d __B) {
   // CHECK-LABEL: @test_mm512_maskz_permutex2var_pd
   // CHECK: @llvm.x86.avx512.maskz.vpermt2var.pd.512
   return _mm512_maskz_permutex2var_pd(__U, __A, __I, __B); 
 }
 
+__m512 test_mm512_permutex2var_ps (__m512 __A, __m512i __I, __m512 __B)
+{
+  // CHECK-LABEL: @test_mm512_permutex2var_ps 
+  // CHECK: @llvm.x86.avx512.mask.vpermt2var.ps.512
+  return _mm512_permutex2var_ps (__A, __I, __B);
+}
+
+__m512 test_mm512_mask_permutex2var_ps (__m512 __A, __mmask16 __U, __m512i __I, __m512 __B)
+{
+  // CHECK-LABEL: @test_mm512_mask_permutex2var_ps 
+  // CHECK: @llvm.x86.avx512.mask.vpermt2var.ps.512
+  return _mm512_mask_permutex2var_ps (__A,__U,__I,__B);
+}
+
 __m512 test_mm512_maskz_permutex2var_ps(__mmask16 __U, __m512 __A, __m512i __I, __m512 __B) {
   // CHECK-LABEL: @test_mm512_maskz_permutex2var_ps
   // CHECK: @llvm.x86.avx512.maskz.vpermt2var.ps.512
   return _mm512_maskz_permutex2var_ps(__U, __A, __I, __B); 
+}
+
+__m512i test_mm512_mask_permutex2var_epi64 (__m512i __A, __mmask8 __U, __m512i __I, __m512i __B){
+  // CHECK-LABEL: @test_mm512_mask_permutex2var_epi64
+  // CHECK: @llvm.x86.avx512.mask.vpermt2var.q.512
+  return _mm512_mask_permutex2var_epi64(__A, __U, __I, __B);
 }
 
 __m512i test_mm512_maskz_permutex2var_epi64(__mmask8 __U, __m512i __A, __m512i __I, __m512i __B) {
@@ -3149,6 +3190,21 @@ __mmask8 test_mm512_mask_testn_epi64_mask(__mmask8 __U, __m512i __A, __m512i __B
   // CHECK: @llvm.x86.avx512.ptestnm.q.512
   return _mm512_mask_testn_epi64_mask(__U, __A, __B); 
 }
+
+__mmask16 test_mm512_mask_test_epi32_mask (__mmask16 __U, __m512i __A, __m512i __B)
+{
+  // CHECK-LABEL: @test_mm512_mask_test_epi32_mask 
+  // CHECK: @llvm.x86.avx512.ptestm.d.512
+  return _mm512_mask_test_epi32_mask (__U,__A,__B);
+}
+
+__mmask8 test_mm512_mask_test_epi64_mask (__mmask8 __U, __m512i __A, __m512i __B)
+{
+  // CHECK-LABEL: @test_mm512_mask_test_epi64_mask 
+  // CHECK: @llvm.x86.avx512.ptestm.q.512
+  return _mm512_mask_test_epi64_mask (__U,__A,__B);
+}
+
 __m512i test_mm512_maskz_unpackhi_epi32(__mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_unpackhi_epi32
   // CHECK: @llvm.x86.avx512.mask.punpckhd.q.512
@@ -6326,3 +6382,75 @@ __m512i test_mm512_maskz_min_epu64 (__mmask8 __M, __m512i __A, __m512i __B)
   // CHECK: @llvm.x86.avx512.mask.pminu.q.512
   return _mm512_maskz_min_epu64 (__M,__A,__B);
 }
+
+__m512i test_mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
+{
+    //CHECK-LABLE: @test_mm512_mask_set1_epi32
+    //CHECK: @llvm.x86.avx512.mask.pbroadcast.d.gpr.512
+  return _mm512_mask_set1_epi32 ( __O, __M, __A);
+}
+
+__m512i test_mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
+{
+    //CHECK-LABLE: @test_mm512_mask_set1_epi64
+    //CHECK: @llvm.x86.avx512.mask.pbroadcast.q.gpr.512
+  return _mm512_mask_set1_epi64 (__O, __M, __A);
+}
+
+__m512i test_mm512_set_epi64 (long long __A, long long __B, long long __C,
+                              long long __D, long long __E, long long __F,
+                              long long __G, long long __H)
+{
+    //CHECK-LABLE: @test_mm512_set_epi64
+    //CHECK: insertelement{{.*}}i32 0
+    //CHECK: insertelement{{.*}}i32 1
+    //CHECK: insertelement{{.*}}i32 2
+    //CHECK: insertelement{{.*}}i32 3
+    //CHECK: insertelement{{.*}}i32 4
+    //CHECK: insertelement{{.*}}i32 5
+    //CHECK: insertelement{{.*}}i32 6
+    //CHECK: insertelement{{.*}}i32 7
+  return _mm512_set_epi64(__A, __B, __C, __D, __E, __F, __G, __H );
+}
+
+__m512d test_mm512_set_pd (double __A, double __B, double __C, double __D,
+                           double __E, double __F, double __G, double __H)
+{
+    //CHECK-LABLE: @test_mm512_set_pd
+    //CHECK: insertelement{{.*}}i32 0
+    //CHECK: insertelement{{.*}}i32 1
+    //CHECK: insertelement{{.*}}i32 2
+    //CHECK: insertelement{{.*}}i32 3
+    //CHECK: insertelement{{.*}}i32 4
+    //CHECK: insertelement{{.*}}i32 5
+    //CHECK: insertelement{{.*}}i32 6
+    //CHECK: insertelement{{.*}}i32 7
+  return _mm512_set_pd( __A, __B, __C, __D, __E, __F, __G, __H);
+}
+
+__m512 test_mm512_set_ps (float __A, float __B, float __C, float __D,
+                          float __E, float __F, float __G, float __H,
+                          float __I, float __J, float __K, float __L,
+                          float __M, float __N, float __O, float __P)
+{
+    //CHECK-LABLE: @test_mm512_set_ps
+    //CHECK: insertelement{{.*}}i32 0
+    //CHECK: insertelement{{.*}}i32 1
+    //CHECK: insertelement{{.*}}i32 2
+    //CHECK: insertelement{{.*}}i32 3
+    //CHECK: insertelement{{.*}}i32 4
+    //CHECK: insertelement{{.*}}i32 5
+    //CHECK: insertelement{{.*}}i32 6
+    //CHECK: insertelement{{.*}}i32 7
+    //CHECK: insertelement{{.*}}i32 8
+    //CHECK: insertelement{{.*}}i32 9
+    //CHECK: insertelement{{.*}}i32 10
+    //CHECK: insertelement{{.*}}i32 11
+    //CHECK: insertelement{{.*}}i32 12
+    //CHECK: insertelement{{.*}}i32 13
+    //CHECK: insertelement{{.*}}i32 14
+    //CHECK: insertelement{{.*}}i32 15
+    return _mm512_set_ps( __A, __B, __C, __D, __E, __F, __G, __H,
+                          __I, __J, __K, __L, __M, __N, __O, __P);
+}
+

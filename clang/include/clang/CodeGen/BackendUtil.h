@@ -16,6 +16,7 @@
 
 namespace llvm {
   class Module;
+  class MemoryBufferRef;
 }
 
 namespace clang {
@@ -37,6 +38,9 @@ namespace clang {
                          const TargetOptions &TOpts, const LangOptions &LOpts,
                          const llvm::DataLayout &TDesc, llvm::Module *M,
                          BackendAction Action, raw_pwrite_stream *OS);
+
+  void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
+                    llvm::MemoryBufferRef Buf);
 }
 
 #endif

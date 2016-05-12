@@ -7140,7 +7140,7 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
     else if (lhq.getObjCLifetime() != rhq.getObjCLifetime())
       ConvTy = Sema::IncompatiblePointerDiscardsQualifiers;
     
-    // For GCC compatibility, other qualifier mismatches are treated
+    // For GCC/MS compatibility, other qualifier mismatches are treated
     // as still compatible in C.
     else ConvTy = Sema::CompatiblePointerDiscardsQualifiers;
   }

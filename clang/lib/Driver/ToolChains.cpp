@@ -3040,6 +3040,38 @@ SanitizerMask CloudABI::getDefaultSanitizers() const {
   return SanitizerKind::SafeStack;
 }
 
+/// Haiku - Haiku tool chain which can call as(1) and ld(1) directly.
+
+Haiku::Haiku(const Driver &D, const llvm::Triple& Triple, const ArgList &Args)
+  : Generic_ELF(D, Triple, Args) {
+
+}
+
+void Haiku::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                          ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx:
+    addSystemInclude(DriverArgs, CC1Args,
+                     getDriver().SysRoot + "/system/develop/headers/c++/v1");
+    break;
+  case ToolChain::CST_Libstdcxx:
+    addSystemInclude(DriverArgs, CC1Args,
+                     getDriver().SysRoot + "/system/develop/headers/c++");
+    addSystemInclude(DriverArgs, CC1Args,
+                     getDriver().SysRoot + "/system/develop/headers/c++/backward");
+
+    StringRef Triple = getTriple().str();
+    addSystemInclude(DriverArgs, CC1Args,
+                     getDriver().SysRoot + "/system/develop/headers/c++/" +
+                     Triple);
+    break;
+  }
+}
+
 /// OpenBSD - OpenBSD tool chain which can call as(1) and ld(1) directly.
 
 OpenBSD::OpenBSD(const Driver &D, const llvm::Triple &Triple,

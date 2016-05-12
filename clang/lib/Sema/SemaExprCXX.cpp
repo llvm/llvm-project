@@ -3077,7 +3077,7 @@ static ExprResult BuildCXXCastArgument(Sema &S,
       return ExprError();
 
     ExprResult Result = S.BuildCXXConstructExpr(
-        CastLoc, Ty, cast<CXXConstructorDecl>(Method),
+        CastLoc, Ty, FoundDecl, cast<CXXConstructorDecl>(Method),
         ConstructorArgs, HadMultipleCandidates,
         /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
         CXXConstructExpr::CK_Complete, SourceRange());
@@ -3228,13 +3228,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                   ConstructorArgs))
         return ExprError();
       return BuildCXXConstructExpr(
-          /*FIXME:ConstructLoc*/ SourceLocation(), ToType, SCS.CopyConstructor,
+          /*FIXME:ConstructLoc*/ SourceLocation(), ToType,
+          SCS.FoundCopyConstructor, SCS.CopyConstructor,
           ConstructorArgs, /*HadMultipleCandidates*/ false,
           /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
           CXXConstructExpr::CK_Complete, SourceRange());
     }
     return BuildCXXConstructExpr(
-        /*FIXME:ConstructLoc*/ SourceLocation(), ToType, SCS.CopyConstructor,
+        /*FIXME:ConstructLoc*/ SourceLocation(), ToType,
+        SCS.FoundCopyConstructor, SCS.CopyConstructor,
         From, /*HadMultipleCandidates*/ false,
         /*ListInit*/ false, /*StdInitListInit*/ false, /*ZeroInit*/ false,
         CXXConstructExpr::CK_Complete, SourceRange());

@@ -1785,12 +1785,13 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
 }
 
 QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
-                                  unsigned CVRA, const DeclSpec *DS) {
+                                  unsigned CVRAU, const DeclSpec *DS) {
   if (T.isNull())
     return QualType();
 
-  // Convert from DeclSpec::TQ to Qualifiers::TQ by just dropping TQ_atomic.
-  unsigned CVR = CVRA & ~DeclSpec::TQ_atomic;
+  // Convert from DeclSpec::TQ to Qualifiers::TQ by just dropping TQ_atomic and
+  // TQ_unaligned;
+  unsigned CVR = CVRAU & ~(DeclSpec::TQ_atomic | DeclSpec::TQ_unaligned);
 
   // C11 6.7.3/5:
   //   If the same qualifier appears more than once in the same
@@ -1800,7 +1801,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   // It's not specified what happens when the _Atomic qualifier is applied to
   // a type specified with the _Atomic specifier, but we assume that this
   // should be treated as if the _Atomic qualifier appeared multiple times.
-  if (CVRA & DeclSpec::TQ_atomic && !T->isAtomicType()) {
+  if (CVRAU & DeclSpec::TQ_atomic && !T->isAtomicType()) {
     // C11 6.7.3/5:
     //   If other qualifiers appear along with the _Atomic qualifier in a
     //   specifier-qualifier-list, the resulting type is the so-qualified
@@ -1817,7 +1818,9 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     return BuildQualifiedType(T, Loc, Split.Quals);
   }
 
-  return BuildQualifiedType(T, Loc, Qualifiers::fromCVRMask(CVR), DS);
+  Qualifiers Q = Qualifiers::fromCVRMask(CVR);
+  Q.setUnaligned(CVRAU & DeclSpec::TQ_unaligned);
+  return BuildQualifiedType(T, Loc, Q, DS);
 }
 
 /// \brief Build a paren type including \p T.
@@ -2652,7 +2655,8 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
                                      SourceLocation ConstQualLoc,
                                      SourceLocation VolatileQualLoc,
                                      SourceLocation RestrictQualLoc,
-                                     SourceLocation AtomicQualLoc) {
+                                     SourceLocation AtomicQualLoc,
+                                     SourceLocation UnalignedQualLoc) {
   if (!Quals)
     return;
 
@@ -2660,26 +2664,27 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
     const char *Name;
     unsigned Mask;
     SourceLocation Loc;
-  } const QualKinds[4] = {
+  } const QualKinds[5] = {
     { "const", DeclSpec::TQ_const, ConstQualLoc },
     { "volatile", DeclSpec::TQ_volatile, VolatileQualLoc },
     { "restrict", DeclSpec::TQ_restrict, RestrictQualLoc },
-    { "_Atomic", DeclSpec::TQ_atomic, AtomicQualLoc }
+    { "_Atomic", DeclSpec::TQ_atomic, AtomicQualLoc },
+    { "__unaligned", DeclSpec::TQ_unaligned, UnalignedQualLoc }
   };
 
   SmallString<32> QualStr;
   unsigned NumQuals = 0;
   SourceLocation Loc;
-  FixItHint FixIts[4];
+  FixItHint FixIts[5];
 
   // Build a string naming the redundant qualifiers.
-  for (unsigned I = 0; I != 4; ++I) {
-    if (Quals & QualKinds[I].Mask) {
+  for (auto &E : QualKinds) {
+    if (Quals & E.Mask) {
       if (!QualStr.empty()) QualStr += ' ';
-      QualStr += QualKinds[I].Name;
+      QualStr += E.Name;
 
       // If we have a location for the qualifier, offer a fixit.
-      SourceLocation QualLoc = QualKinds[I].Loc;
+      SourceLocation QualLoc = E.Loc;
       if (QualLoc.isValid()) {
         FixIts[NumQuals] = FixItHint::CreateRemoval(QualLoc);
         if (Loc.isInvalid() ||
@@ -2725,7 +2730,8 @@ static void diagnoseRedundantReturnTypeQualifiers(Sema &S, QualType RetTy,
           SourceLocation::getFromRawEncoding(PTI.ConstQualLoc),
           SourceLocation::getFromRawEncoding(PTI.VolatileQualLoc),
           SourceLocation::getFromRawEncoding(PTI.RestrictQualLoc),
-          SourceLocation::getFromRawEncoding(PTI.AtomicQualLoc));
+          SourceLocation::getFromRawEncoding(PTI.AtomicQualLoc),
+          SourceLocation::getFromRawEncoding(PTI.UnalignedQualLoc));
       return;
     }
 
@@ -2761,7 +2767,8 @@ static void diagnoseRedundantReturnTypeQualifiers(Sema &S, QualType RetTy,
                               D.getDeclSpec().getConstSpecLoc(),
                               D.getDeclSpec().getVolatileSpecLoc(),
                               D.getDeclSpec().getRestrictSpecLoc(),
-                              D.getDeclSpec().getAtomicSpecLoc());
+                              D.getDeclSpec().getAtomicSpecLoc(),
+                              D.getDeclSpec().getUnalignedSpecLoc());
 }
 
 static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,

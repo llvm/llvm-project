@@ -16,9 +16,11 @@
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/IR/DataLayout.h"
@@ -761,5 +763,95 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                                     "expected target description '%1'");
       Diags.Report(DiagID) << DLDesc << TDesc.getStringRepresentation();
     }
+  }
+}
+
+static const char* getSectionNameForBitcode(const Triple &T) {
+  switch (T.getObjectFormat()) {
+  case Triple::MachO:
+    return "__LLVM,__bitcode";
+  case Triple::COFF:
+  case Triple::ELF:
+  case Triple::UnknownObjectFormat:
+    return ".llvmbc";
+  }
+  llvm_unreachable("Unimplemented ObjectFormatType");
+}
+
+static const char* getSectionNameForCommandline(const Triple &T) {
+  switch (T.getObjectFormat()) {
+  case Triple::MachO:
+    return "__LLVM,__cmdline";
+  case Triple::COFF:
+  case Triple::ELF:
+  case Triple::UnknownObjectFormat:
+    return ".llvmcmd";
+  }
+  llvm_unreachable("Unimplemented ObjectFormatType");
+}
+
+// With -fembed-bitcode, save a copy of the llvm IR as data in the
+// __LLVM,__bitcode section.
+void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
+                         llvm::MemoryBufferRef Buf) {
+  if (CGOpts.getEmbedBitcode() == CodeGenOptions::Embed_Off)
+    return;
+
+  // Embed the bitcode for the llvm module.
+  std::string Data;
+  ArrayRef<uint8_t> ModuleData;
+  Triple T(M->getTargetTriple());
+  // Create a constant that contains the bitcode.
+  // In case of embedding a marker, ignore the input Buf and use the empty
+  // ArrayRef. It is also legal to create a bitcode marker even Buf is empty.
+  if (CGOpts.getEmbedBitcode() != CodeGenOptions::Embed_Marker) {
+    if (!isBitcode((const unsigned char *)Buf.getBufferStart(),
+                   (const unsigned char *)Buf.getBufferEnd())) {
+      // If the input is LLVM Assembly, bitcode is produced by serializing
+      // the module. Use-lists order need to be perserved in this case.
+      llvm::raw_string_ostream OS(Data);
+      llvm::WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ true);
+      ModuleData =
+          ArrayRef<uint8_t>((const uint8_t *)OS.str().data(), OS.str().size());
+    } else
+      // If the input is LLVM bitcode, write the input byte stream directly.
+      ModuleData = ArrayRef<uint8_t>((const uint8_t *)Buf.getBufferStart(),
+                                     Buf.getBufferSize());
+  }
+  llvm::Constant *ModuleConstant =
+      llvm::ConstantDataArray::get(M->getContext(), ModuleData);
+  // Use Appending linkage so it doesn't get optimized out.
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      *M, ModuleConstant->getType(), true, llvm::GlobalValue::AppendingLinkage,
+      ModuleConstant);
+  GV->setSection(getSectionNameForBitcode(T));
+  if (llvm::GlobalVariable *Old =
+          M->getGlobalVariable("llvm.embedded.module")) {
+    assert(Old->use_empty() && "llvm.embedded.module must have no uses");
+    GV->takeName(Old);
+    Old->eraseFromParent();
+  } else {
+    GV->setName("llvm.embedded.module");
+  }
+
+  // Return if only bitcode needs to be embedded.
+  if (CGOpts.getEmbedBitcode() == CodeGenOptions::Embed_Bitcode)
+    return;
+
+  // Embed command-line options.
+  ArrayRef<uint8_t> CmdData((uint8_t*)CGOpts.CmdArgs.data(),
+                            CGOpts.CmdArgs.size());
+  llvm::Constant *CmdConstant =
+    llvm::ConstantDataArray::get(M->getContext(), CmdData);
+  GV = new llvm::GlobalVariable(*M, CmdConstant->getType(), true,
+                                llvm::GlobalValue::AppendingLinkage,
+                                CmdConstant);
+  GV->setSection(getSectionNameForCommandline(T));
+  if (llvm::GlobalVariable *Old = M->getGlobalVariable("llvm.cmdline")) {
+    assert(Old->use_empty() && "llvm.cmdline must have no uses");
+    GV->takeName(Old);
+    Old->eraseFromParent();
+  } else {
+    GV->setName("llvm.cmdline");
   }
 }

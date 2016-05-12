@@ -644,7 +644,8 @@ Not matching Hex-encoded chars (e.g. 0x1234, which is a IntegerLiteral),
 though.
 
 Example matches 'a', L'a'
-  char ch = 'a'; wchar_t chw = L'a';
+  char ch = 'a';
+  wchar_t chw = L'a';
 </pre></td></tr>
 
 
@@ -652,7 +653,8 @@ Example matches 'a', L'a'
 <tr><td colspan="4" class="doc" id="compoundLiteralExpr0"><pre>Matches compound (i.e. non-scalar) literals
 
 Example match: {1}, (1, 2)
-  int array[4] = {1}; vector int myvec = (vector int)(1, 2);
+  int array[4] = {1};
+  vector int myvec = (vector int)(1, 2);
 </pre></td></tr>
 
 
@@ -1217,7 +1219,8 @@ Example match: ({ int X = 4; X; })
 <tr><td colspan="4" class="doc" id="stringLiteral0"><pre>Matches string literals (also matches wide string literals).
 
 Example matches "abcd", L"abcd"
-  char *s = "abcd"; wchar_t *ws = L"abcd"
+  char *s = "abcd";
+  wchar_t *ws = L"abcd";
 </pre></td></tr>
 
 
@@ -2191,14 +2194,19 @@ compoundStmt(statementCountIs(0)))
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ConstantArrayType.html">ConstantArrayType</a>&gt;</td><td class="name" onclick="toggle('hasSize0')"><a name="hasSize0Anchor">hasSize</a></td><td>unsigned N</td></tr>
-<tr><td colspan="4" class="doc" id="hasSize0"><pre>Matches ConstantArrayType nodes that have the specified size.
+<tr><td colspan="4" class="doc" id="hasSize0"><pre>Matches nodes that have the specified size.
 
 Given
   int a[42];
   int b[2 * 21];
   int c[41], d[43];
+  char *s = "abcd";
+  wchar_t *ws = L"abcd";
+  char *w = "a";
 constantArrayType(hasSize(42))
   matches "int a[42]" and "int b[2 * 21]"
+stringLiteral(hasSize(4))
+  matches "abcd", L"abcd"
 </pre></td></tr>
 
 
@@ -2952,6 +2960,23 @@ SystemHeader.h:
   class Y {};
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1StringLiteral.html">StringLiteral</a>&gt;</td><td class="name" onclick="toggle('hasSize1')"><a name="hasSize1Anchor">hasSize</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="hasSize1"><pre>Matches nodes that have the specified size.
+
+Given
+  int a[42];
+  int b[2 * 21];
+  int c[41], d[43];
+  char *s = "abcd";
+  wchar_t *ws = L"abcd";
+  char *w = "a";
+constantArrayType(hasSize(42))
+  matches "int a[42]" and "int b[2 * 21]"
+stringLiteral(hasSize(4))
+  matches "abcd", L"abcd"
 </pre></td></tr>
 
 

@@ -11372,6 +11372,7 @@ static bool hasOneRealArgument(MultiExprArg Args) {
 
 ExprResult
 Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
+                            NamedDecl *FoundDecl,
                             CXXConstructorDecl *Constructor,
                             MultiExprArg ExprArgs,
                             bool HadMultipleCandidates,
@@ -11398,7 +11399,8 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
     Elidable = SubExpr->isTemporaryObject(Context, Constructor->getParent());
   }
 
-  return BuildCXXConstructExpr(ConstructLoc, DeclInitType, Constructor,
+  return BuildCXXConstructExpr(ConstructLoc, DeclInitType,
+                               FoundDecl, Constructor,
                                Elidable, ExprArgs, HadMultipleCandidates,
                                IsListInitialization,
                                IsStdInitListInitialization, RequiresZeroInit,
@@ -11409,7 +11411,9 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
 /// including handling of its default argument expressions.
 ExprResult
 Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                            CXXConstructorDecl *Constructor, bool Elidable,
+                            NamedDecl *FoundDecl,
+                            CXXConstructorDecl *Constructor,
+                            bool Elidable,
                             MultiExprArg ExprArgs,
                             bool HadMultipleCandidates,
                             bool IsListInitialization,
@@ -11419,9 +11423,9 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
                             SourceRange ParenRange) {
   MarkFunctionReferenced(ConstructLoc, Constructor);
   return CXXConstructExpr::Create(
-      Context, DeclInitType, ConstructLoc, Constructor, Elidable, ExprArgs,
-      HadMultipleCandidates, IsListInitialization, IsStdInitListInitialization,
-      RequiresZeroInit,
+      Context, DeclInitType, ConstructLoc, FoundDecl, Constructor, Elidable,
+      ExprArgs, HadMultipleCandidates, IsListInitialization,
+      IsStdInitListInitialization, RequiresZeroInit,
       static_cast<CXXConstructExpr::ConstructionKind>(ConstructKind),
       ParenRange);
 }

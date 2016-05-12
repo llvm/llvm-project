@@ -1651,6 +1651,19 @@ inline const Stmt *GetBodyMatcher<FunctionDecl>::get(const FunctionDecl &Node) {
 }
 
 template <typename Ty>
+struct HasSizeMatcher {
+  static bool hasSize(const Ty &Node, unsigned int N) {
+    return Node.getSize() == N;
+  }
+};
+
+template <>
+inline bool HasSizeMatcher<StringLiteral>::hasSize(
+    const StringLiteral &Node, unsigned int N) {
+  return Node.getLength() == N;
+}
+
+template <typename Ty>
 struct GetSourceExpressionMatcher {
   static const Expr *get(const Ty &Node) {
     return Node.getSubExpr();
