@@ -134,15 +134,15 @@ extern __attribute__((const)) half __llvm_amdgcn_ldexp_f16(half, int) __asm("llv
 extern __attribute__((const)) float __llvm_amdgcn_ldexp_f32(float, int) __asm("llvm.amdgcn.ldexp.f32");
 extern __attribute__((const)) double __llvm_amdgcn_ldexp_f64(double, int) __asm("llvm.amdgcn.ldexp.f64");
 
-extern __attribute__((const)) half __llvm_amdgcn_frexp_mant_f16(half) __asm("llvm.amdgcn.frexp_mant.f16");
-extern __attribute__((const)) float __llvm_amdgcn_frexp_mant_f32(float) __asm("llvm.amdgcn.frexp_mant.f32");
-extern __attribute__((const)) double __llvm_amdgcn_frexp_mant_f64(double) __asm("llvm.amdgcn.frexp_mant.f64");
+extern __attribute__((const)) half __llvm_amdgcn_frexp_mant_f16(half) __asm("llvm.amdgcn.frexp.mant.f16");
+extern __attribute__((const)) float __llvm_amdgcn_frexp_mant_f32(float) __asm("llvm.amdgcn.frexp.mant.f32");
+extern __attribute__((const)) double __llvm_amdgcn_frexp_mant_f64(double) __asm("llvm.amdgcn.frexp.mant.f64");
 
-extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f16(half) __asm("llvm.amdgcn.frexp_exp.f16");
-extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f32(float) __asm("llvm.amdgcn.frexp_exp.f32");
-extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f64(double) __asm("llvm.amdgcn.frexp_exp.f64");
+extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f16(half) __asm("llvm.amdgcn.frexp.exp.f16");
+extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f32(float) __asm("llvm.amdgcn.frexp.exp.f32");
+extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f64(double) __asm("llvm.amdgcn.frexp.exp.f64");
 
-extern __attribute__((const)) double __llvm_amdgcn_trig_preop_f64(double, int) __asm("llvm.amdgcn.trig_preop.f64");
+extern __attribute__((const)) double __llvm_amdgcn_trig_preop_f64(double, int) __asm("llvm.amdgcn.trig.preop.f64");
 
 extern __attribute__((const)) float __llvm_amdgcn_max3_f32(float, float, float) __asm("llvm.amdgcn.max3.f32");
 extern __attribute__((const)) float __llvm_amdgcn_med3_f32(float, float, float) __asm("llvm.amdgcn.med3.f32");
@@ -172,7 +172,7 @@ extern void __llvm_amdgcn_s_sleep(uint) __asm("llvm.amdgcn.s.sleep");
 extern ulong __llvm_amdgcn_s_memtime(void) __asm("llvm.amdgcn.s.memtime");
 extern ulong __llvm_amdgcn_s_memrealtime(void) __asm("llvm.amdgcn.s.memrealtime");
 
-extern uint __attribute__((pure)) __llvm_amdgcn_ds_bpermute(uint, uint) __asm("llvm.amdgcn.ds_bpermute");
+extern uint __attribute__((pure)) __llvm_amdgcn_ds_bpermute(uint, uint) __asm("llvm.amdgcn.ds.bpermute");
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // LLVM_H
