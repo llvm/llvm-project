@@ -9,6 +9,8 @@ set(SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/lldb-versioning.h
 )
 
+include(FindPythonInterp)
+
 find_package(SWIG REQUIRED)
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp

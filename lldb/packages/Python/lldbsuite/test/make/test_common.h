@@ -43,6 +43,13 @@
 
 #endif
 
+#if defined(__APPLE__) && defined(LLDB_USING_LIBSTDCPP)              
+
+// on Darwin, libstdc++ is missing <atomic>, so this would cause any test to fail building
+// since this header file is being included in every C-family test case, we need to not include it
+// on Darwin, most tests use libc++ by default, so this will only affect tests that explicitly require libstdc++
+
+#else
 #ifdef __cplusplus
 #include <atomic>
 
@@ -65,3 +72,4 @@ typedef std::atomic<int> pseudo_barrier_t;
         (barrier) = (count);                \
     } while (0)
 #endif // __cplusplus
+#endif // defined(__APPLE__) && defined(LLDB_USING_LIBSTDCPP)

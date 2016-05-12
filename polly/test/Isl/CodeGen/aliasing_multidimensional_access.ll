@@ -1,12 +1,28 @@
 ; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
 ;
-; Check that we calculate the maximal access into array A correctly.
+; Check that we calculate the maximal access into array A correctly and track the overflow state.
 ;
-; CHECK:  %[[TMP0:[._0-9a-zA-Z]*]] = mul i64 99, %m
-; CHECK:  %[[TMP1:[._0-9a-zA-Z]*]] = add i64 %[[TMP0]], 149
-; CHECK:  %[[TMP2:[._0-9a-zA-Z]*]] = mul i64 %[[TMP1]], %p
-; CHECK:  %[[TMP3:[._0-9a-zA-Z]*]] = add i64 %[[TMP2]], 150
-; CHECK:  %polly.access.A{{[0-9]*}} = getelementptr double, double* %A, i64 %[[TMP3]]
+; CHECK:  %[[TMP0:[._0-9a-zA-Z]*]]  = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 99, i64 %m)
+; CHECK:  %[[TMP0O:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP0]], 1
+; CHECK:  %[[OS0:[._0-9a-zA-Z]*]]   = or i1 {{[^,]*}}, %[[TMP0O]]
+; CHECK:  %[[TMP0R:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP0]], 0
+; CHECK:  %[[TMP1:[._0-9a-zA-Z]*]]  = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %[[TMP0R]], i64 149)
+; CHECK:  %[[TMP1O:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP1]], 1
+; CHECK:  %[[OS1:[._0-9a-zA-Z]*]]   = or i1 %[[OS0]], %[[TMP1O]]
+; CHECK:  %[[TMP1R:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP1]], 0
+; CHECK:  %[[TMP2:[._0-9a-zA-Z]*]]  = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %[[TMP1R]], i64 %p)
+; CHECK:  %[[TMP2O:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP2]], 1
+; CHECK:  %[[OS2:[._0-9a-zA-Z]*]]   = or i1 %[[OS1]], %[[TMP2O]]
+; CHECK:  %[[TMP2R:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP2]], 0
+; CHECK:  %[[TMP3:[._0-9a-zA-Z]*]]  = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %[[TMP2R]], i64 150)
+; CHECK:  %[[TMP3O:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP3]], 1
+; CHECK:  %[[OS3:[._0-9a-zA-Z]*]]   = or i1 %[[OS2]], %[[TMP3O]]
+; CHECK:  %[[TMP3R:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP3]], 0
+; CHECK:  %polly.access.A{{[0-9]*}} = getelementptr double, double* %A, i64 %[[TMP3R]]
+;
+; CHECK:  %polly.rtc.overflown = xor i1 %[[OS3]], true
+; CHECK:  %polly.rtc.result = and i1 %{{[^,]*}}, %polly.rtc.overflown
+; CHECK:  br i1 %polly.rtc.result,
 ;
 ;    void foo(long n, long m, long p, double A[n][m][p], int *B) {
 ;      for (long i = 0; i < 100; i++)

@@ -12,6 +12,8 @@
 
 // C Includes
 // C++ Includes
+#include <functional>
+#include <list>
 #include <map>
 #include <string>
 #include <vector>
@@ -99,10 +101,10 @@ public:
     ~BroadcasterManager() = default;
 
     uint32_t
-    RegisterListenerForEvents (lldb::ListenerSP listener_sp, BroadcastEventSpec event_spec);
+    RegisterListenerForEvents (const lldb::ListenerSP &listener_sp, BroadcastEventSpec event_spec);
     
     bool
-    UnregisterListenerForEvents (lldb::ListenerSP listener_sp, BroadcastEventSpec event_spec);
+    UnregisterListenerForEvents (const lldb::ListenerSP &listener_sp, BroadcastEventSpec event_spec);
     
     lldb::ListenerSP
     GetListenerForEventSpec (BroadcastEventSpec event_spec) const;
@@ -111,7 +113,7 @@ public:
     SignUpListenersForBroadcaster (Broadcaster &broadcaster);
     
     void
-    RemoveListener (lldb::ListenerSP listener_sp);
+    RemoveListener (const lldb::ListenerSP &listener_sp);
 
     void
     RemoveListener (Listener *listener);
@@ -170,8 +172,7 @@ private:
     class ListenerMatchesAndSharedBits
     {
     public:
-        ListenerMatchesAndSharedBits (BroadcastEventSpec broadcaster_spec, 
-                                                   const lldb::ListenerSP listener_sp) :
+        explicit ListenerMatchesAndSharedBits (BroadcastEventSpec broadcaster_spec, const lldb::ListenerSP listener_sp) :
             m_broadcaster_spec (broadcaster_spec),
             m_listener_sp (listener_sp)
         {
@@ -194,7 +195,7 @@ private:
     class ListenerMatches
     {
     public:
-        ListenerMatches (const lldb::ListenerSP in_listener_sp) :
+        explicit ListenerMatches (const lldb::ListenerSP in_listener_sp) :
             m_listener_sp (in_listener_sp)
         {
         }
@@ -331,6 +332,12 @@ public:
     }
 
     void
+    BroadcastEvent(uint32_t event_type, const lldb::EventDataSP &event_data_sp)
+    {
+        m_broadcaster_sp->BroadcastEvent(event_type, event_data_sp);
+    }
+
+    void
     BroadcastEvent(uint32_t event_type, EventData *event_data = nullptr)
     {
         m_broadcaster_sp->BroadcastEvent(event_type, event_data);
@@ -349,7 +356,7 @@ public:
     }
 
     virtual void
-    AddInitialEventsToListener (lldb::ListenerSP listener_sp, uint32_t requested_events);
+    AddInitialEventsToListener (const lldb::ListenerSP &listener_sp, uint32_t requested_events);
 
     //------------------------------------------------------------------
     /// Listen for any events specified by \a event_mask.
@@ -374,7 +381,7 @@ public:
     ///     The actual event bits that were acquired by \a listener.
     //------------------------------------------------------------------
     uint32_t
-    AddListener (lldb::ListenerSP listener_sp, uint32_t event_mask)
+    AddListener (const lldb::ListenerSP &listener_sp, uint32_t event_mask)
     {
         return m_broadcaster_sp->AddListener(listener_sp, event_mask);
     }
@@ -454,7 +461,7 @@ public:
     /// @see uint32_t Broadcaster::AddListener (Listener*, uint32_t)
     //------------------------------------------------------------------
     bool
-    RemoveListener (lldb::ListenerSP listener_sp, uint32_t event_mask = UINT32_MAX)
+    RemoveListener (const lldb::ListenerSP &listener_sp, uint32_t event_mask = UINT32_MAX)
     {
         return m_broadcaster_sp->RemoveListener(listener_sp, event_mask);
     }
@@ -481,7 +488,7 @@ public:
     /// @see uint32_t Broadcaster::AddListener (Listener*, uint32_t)
     //------------------------------------------------------------------
     bool
-    HijackBroadcaster (lldb::ListenerSP listener_sp, uint32_t event_mask = UINT32_MAX)
+    HijackBroadcaster (const lldb::ListenerSP &listener_sp, uint32_t event_mask = UINT32_MAX)
     {
         return m_broadcaster_sp->HijackBroadcaster(listener_sp, event_mask);
     }
@@ -542,13 +549,16 @@ protected:
         BroadcastEvent(uint32_t event_type, EventData *event_data = nullptr);
 
         void
+        BroadcastEvent(uint32_t event_type, const lldb::EventDataSP &event_data_sp);
+
+        void
         BroadcastEventIfUnique(uint32_t event_type, EventData *event_data = nullptr);
 
         void
         Clear();
 
         uint32_t
-        AddListener (lldb::ListenerSP listener_sp, uint32_t event_mask);
+        AddListener (const lldb::ListenerSP &listener_sp, uint32_t event_mask);
 
         const char *
         GetBroadcasterName () const
@@ -581,10 +591,13 @@ protected:
         EventTypeHasListeners (uint32_t event_type);
 
         bool
-        RemoveListener (lldb::ListenerSP listener_sp, uint32_t event_mask = UINT32_MAX);
+        RemoveListener (lldb_private::Listener *listener, uint32_t event_mask = UINT32_MAX);
+
+        bool
+        RemoveListener (const lldb::ListenerSP &listener_sp, uint32_t event_mask = UINT32_MAX);
         
         bool
-        HijackBroadcaster (lldb::ListenerSP listener_sp, uint32_t event_mask = UINT32_MAX);
+        HijackBroadcaster (const lldb::ListenerSP &listener_sp, uint32_t event_mask = UINT32_MAX);
         
         bool
         IsHijackedForEvent (uint32_t event_mask);
@@ -602,9 +615,13 @@ protected:
         //------------------------------------------------------------------
         //
         //------------------------------------------------------------------
-        typedef std::vector< std::pair<lldb::ListenerSP,uint32_t> > collection;
+        typedef std::list< std::pair<lldb::ListenerWP,uint32_t> > collection;
         typedef std::map<uint32_t, std::string> event_names_map;
-        
+
+        void
+        ListenerIterator (std::function <bool (const lldb::ListenerSP &listener_sp, uint32_t &event_mask)> const &callback);
+
+
         Broadcaster &m_broadcaster;                     ///< The broadcsater that this implements
         event_names_map m_event_names;                  ///< Optionally define event names for readability and logging for each event bit
         collection m_listeners;                         ///< A list of Listener / event_mask pairs that are listening to this broadcaster.

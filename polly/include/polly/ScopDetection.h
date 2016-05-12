@@ -136,6 +136,8 @@ public:
     Region &CurRegion;   // The region to check.
     AliasSetTracker AST; // The AliasSetTracker to hold the alias information.
     bool Verifying;      // If we are in the verification phase?
+
+    /// @brief Container to remember rejection reasons for this region.
     RejectLog Log;
 
     /// @brief Map a base pointer to all access functions accessing it.
@@ -214,12 +216,9 @@ private:
   /// BLACK - Visited and completely processed BB.
   enum Color { WHITE, GREY, BLACK };
 
-  /// @brief Map to remember detection contexts for valid regions.
-  using DetectionContextMapTy = DenseMap<const Region *, DetectionContext>;
+  /// @brief Map to remember detection contexts for all regions.
+  using DetectionContextMapTy = DenseMap<BBPair, DetectionContext>;
   mutable DetectionContextMapTy DetectionContextMap;
-
-  // Remember a list of errors for every region.
-  mutable RejectLogsContainer RejectLogs;
 
   /// @brief Remove cached results for @p R.
   void removeCachedResults(const Region &R);
@@ -551,6 +550,9 @@ public:
   /// @brief Return the set of required invariant loads for @p R.
   const InvariantLoadsSetTy *getRequiredInvariantLoads(const Region *R) const;
 
+  /// @brief Return the set of rejection causes for @p R.
+  const RejectLog *lookupRejectionLog(const Region *R) const;
+
   /// @brief Return true if @p SubR is a non-affine subregion in @p ScopR.
   bool isNonAffineSubRegion(const Region *SubR, const Region *ScopR) const;
 
@@ -576,36 +578,10 @@ public:
   const_iterator end() const { return ValidRegions.end(); }
   //@}
 
-  /// @name Reject log iterators
-  ///
-  /// These iterators iterate over the logs of all rejected regions of this
-  //  function.
-  //@{
-  typedef std::map<const Region *, RejectLog>::iterator reject_iterator;
-  typedef std::map<const Region *, RejectLog>::const_iterator
-      const_reject_iterator;
-
-  reject_iterator reject_begin() { return RejectLogs.begin(); }
-  reject_iterator reject_end() { return RejectLogs.end(); }
-
-  const_reject_iterator reject_begin() const { return RejectLogs.begin(); }
-  const_reject_iterator reject_end() const { return RejectLogs.end(); }
-  //@}
-
-  /// @brief Emit rejection remarks for all smallest invalid regions.
+  /// @brief Emit rejection remarks for all rejected regions.
   ///
   /// @param F The function to emit remarks for.
-  /// @param R The region to start the region tree traversal for.
-  void emitMissedRemarksForLeaves(const Function &F, const Region *R);
-
-  /// @brief Emit rejection remarks for the parent regions of all valid regions.
-  ///
-  /// Emitting rejection remarks for the parent regions of all valid regions
-  /// may give the end-user clues about how to increase the size of the
-  /// detected Scops.
-  ///
-  /// @param F The function to emit remarks for.
-  void emitMissedRemarksForValidRegions(const Function &F);
+  void emitMissedRemarks(const Function &F);
 
   /// @brief Mark the function as invalid so we will not extract any scop from
   ///        the function.

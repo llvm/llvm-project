@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/CodeGen/IslExprBuilder.h"
+#include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ScopHelper.h"
@@ -18,6 +19,123 @@
 
 using namespace llvm;
 using namespace polly;
+
+/// @brief Different overflow tracking modes.
+enum OverflowTrackingChoice {
+  OT_NEVER,   ///< Never tack potential overflows.
+  OT_REQUEST, ///< Track potential overflows if requested.
+  OT_ALWAYS   ///< Always track potential overflows.
+};
+
+static cl::opt<OverflowTrackingChoice> OTMode(
+    "polly-overflow-tracking",
+    cl::desc("Define where potential integer overflows in generated "
+             "expressions should be tracked."),
+    cl::values(clEnumValN(OT_NEVER, "never", "Never track the overflow bit."),
+               clEnumValN(OT_REQUEST, "request",
+                          "Track the overflow bit if requested."),
+               clEnumValN(OT_ALWAYS, "always",
+                          "Always track the overflow bit."),
+               clEnumValEnd),
+    cl::Hidden, cl::init(OT_REQUEST), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,
+                               IDToValueTy &IDToValue, ValueMapT &GlobalMap,
+                               const DataLayout &DL, ScalarEvolution &SE,
+                               DominatorTree &DT, LoopInfo &LI)
+    : S(S), Builder(Builder), IDToValue(IDToValue), GlobalMap(GlobalMap),
+      DL(DL), SE(SE), DT(DT), LI(LI) {
+  OverflowState = (OTMode == OT_ALWAYS) ? Builder.getFalse() : nullptr;
+}
+
+void IslExprBuilder::setTrackOverflow(bool Enable) {
+  // If potential overflows are tracked always or never we ignore requests
+  // to change the behaviour.
+  if (OTMode != OT_REQUEST)
+    return;
+
+  if (Enable) {
+    // If tracking should be enabled initialize the OverflowState.
+    OverflowState = Builder.getFalse();
+  } else {
+    // If tracking should be disabled just unset the OverflowState.
+    OverflowState = nullptr;
+  }
+}
+
+Value *IslExprBuilder::getOverflowState() const {
+  // If the overflow tracking was requested but it is disabled we avoid the
+  // additional nullptr checks at the call sides but instead provide a
+  // meaningful result.
+  if (OTMode == OT_NEVER)
+    return Builder.getFalse();
+  return OverflowState;
+}
+
+Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
+                                   Value *RHS, const Twine &Name) {
+  // Handle the plain operation (without overflow tracking) first.
+  if (!OverflowState) {
+    switch (Opc) {
+    case Instruction::Add:
+      return Builder.CreateNSWAdd(LHS, RHS, Name);
+    case Instruction::Sub:
+      return Builder.CreateNSWSub(LHS, RHS, Name);
+    case Instruction::Mul:
+      return Builder.CreateNSWMul(LHS, RHS, Name);
+    default:
+      llvm_unreachable("Unknown binary operator!");
+    }
+  }
+
+  Function *F = nullptr;
+  Module *M = Builder.GetInsertBlock()->getModule();
+  switch (Opc) {
+  case Instruction::Add:
+    F = Intrinsic::getDeclaration(M, Intrinsic::sadd_with_overflow,
+                                  {LHS->getType()});
+    break;
+  case Instruction::Sub:
+    F = Intrinsic::getDeclaration(M, Intrinsic::ssub_with_overflow,
+                                  {LHS->getType()});
+    break;
+  case Instruction::Mul:
+    F = Intrinsic::getDeclaration(M, Intrinsic::smul_with_overflow,
+                                  {LHS->getType()});
+    break;
+  default:
+    llvm_unreachable("No overflow intrinsic for binary operator found!");
+  }
+
+  auto *ResultStruct = Builder.CreateCall(F, {LHS, RHS}, Name);
+  assert(ResultStruct->getType()->isStructTy());
+
+  auto *OverflowFlag =
+      Builder.CreateExtractValue(ResultStruct, 1, Name + ".obit");
+
+  // If all overflows are tracked we do not combine the results as this could
+  // cause dominance problems. Instead we will always keep the last overflow
+  // flag as current state.
+  if (OTMode == OT_ALWAYS)
+    OverflowState = OverflowFlag;
+  else
+    OverflowState =
+        Builder.CreateOr(OverflowState, OverflowFlag, "polly.overflow.state");
+
+  return Builder.CreateExtractValue(ResultStruct, 0, Name + ".res");
+}
+
+Value *IslExprBuilder::createAdd(Value *LHS, Value *RHS, const Twine &Name) {
+  return createBinOp(Instruction::Add, LHS, RHS, Name);
+}
+
+Value *IslExprBuilder::createSub(Value *LHS, Value *RHS, const Twine &Name) {
+  return createBinOp(Instruction::Sub, LHS, RHS, Name);
+}
+
+Value *IslExprBuilder::createMul(Value *LHS, Value *RHS, const Twine &Name) {
+  return createBinOp(Instruction::Mul, LHS, RHS, Name);
+}
 
 Type *IslExprBuilder::getWidestType(Type *T1, Type *T2) {
   assert(isa<IntegerType>(T1) && isa<IntegerType>(T2));
@@ -142,8 +260,7 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
       if (Ty != IndexOp->getType())
         IndexOp = Builder.CreateIntCast(IndexOp, Ty, true);
 
-      IndexOp =
-          Builder.CreateAdd(IndexOp, NextIndex, "polly.access.add." + BaseName);
+      IndexOp = createAdd(IndexOp, NextIndex, "polly.access.add." + BaseName);
     }
 
     // For every but the last dimension multiply the size, for the last
@@ -167,8 +284,7 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     if (Ty != DimSize->getType())
       DimSize = Builder.CreateSExtOrTrunc(DimSize, Ty,
                                           "polly.access.sext." + BaseName);
-    IndexOp =
-        Builder.CreateMul(IndexOp, DimSize, "polly.access.mul." + BaseName);
+    IndexOp = createMul(IndexOp, DimSize, "polly.access.mul." + BaseName);
   }
 
   Access = Builder.CreateGEP(Base, IndexOp, "polly.access." + BaseName);
@@ -237,13 +353,13 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
   default:
     llvm_unreachable("This is no binary isl ast expression");
   case isl_ast_op_add:
-    Res = Builder.CreateNSWAdd(LHS, RHS);
+    Res = createAdd(LHS, RHS);
     break;
   case isl_ast_op_sub:
-    Res = Builder.CreateNSWSub(LHS, RHS);
+    Res = createSub(LHS, RHS);
     break;
   case isl_ast_op_mul:
-    Res = Builder.CreateNSWMul(LHS, RHS);
+    Res = createMul(LHS, RHS);
     break;
   case isl_ast_op_div:
     Res = Builder.CreateSDiv(LHS, RHS, "pexp.div", true);
@@ -265,8 +381,8 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
     // floord(n,d) ((n < 0) ? (n - d + 1) : n) / d
     Value *One = ConstantInt::get(MaxType, 1);
     Value *Zero = ConstantInt::get(MaxType, 0);
-    Value *Sum1 = Builder.CreateSub(LHS, RHS, "pexp.fdiv_q.0");
-    Value *Sum2 = Builder.CreateAdd(Sum1, One, "pexp.fdiv_q.1");
+    Value *Sum1 = createSub(LHS, RHS, "pexp.fdiv_q.0");
+    Value *Sum2 = createAdd(Sum1, One, "pexp.fdiv_q.1");
     Value *isNegative = Builder.CreateICmpSLT(LHS, Zero, "pexp.fdiv_q.2");
     Value *Dividend =
         Builder.CreateSelect(isNegative, Sum2, LHS, "pexp.fdiv_q.3");

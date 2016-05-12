@@ -26,15 +26,30 @@ using namespace lldb;
 using namespace lldb_private;
 
 Event::Event (Broadcaster *broadcaster, uint32_t event_type, EventData *data) :
-    m_broadcaster_wp (broadcaster->GetBroadcasterImpl()),
-    m_type (event_type),
-    m_data_ap (data)
+    m_broadcaster_wp(broadcaster->GetBroadcasterImpl()),
+    m_type(event_type),
+    m_data_sp(data)
+{
+}
+
+Event::Event (Broadcaster *broadcaster, uint32_t event_type, const EventDataSP &event_data_sp) :
+    m_broadcaster_wp(broadcaster->GetBroadcasterImpl()),
+    m_type(event_type),
+    m_data_sp(event_data_sp)
 {
 }
 
 Event::Event(uint32_t event_type, EventData *data) :
-    m_type (event_type),
-    m_data_ap (data)
+    m_broadcaster_wp(),
+    m_type(event_type),
+    m_data_sp(data)
+{
+}
+
+Event::Event(uint32_t event_type, const EventDataSP &event_data_sp) :
+    m_broadcaster_wp(),
+    m_type(event_type),
+    m_data_sp(event_data_sp)
 {
 }
 
@@ -69,10 +84,10 @@ Event::Dump (Stream *s) const
         s->Printf("%p Event: broadcaster = NULL, type = 0x%8.8x, data = ",
                   static_cast<const void*>(this), m_type);
 
-    if (m_data_ap)
+    if (m_data_sp)
     {
         s->PutChar('{');
-        m_data_ap->Dump (s);
+        m_data_sp->Dump (s);
         s->PutChar('}');
     }
     else
@@ -82,8 +97,8 @@ Event::Dump (Stream *s) const
 void
 Event::DoOnRemoval ()
 {
-    if (m_data_ap)
-        m_data_ap->DoOnRemoval (this);
+    if (m_data_sp)
+        m_data_sp->DoOnRemoval (this);
 }
 
 EventData::EventData() = default;

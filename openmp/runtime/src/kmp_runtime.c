@@ -5219,6 +5219,8 @@ __kmp_free_team( kmp_root_t *root, kmp_team_t *team  USE_NESTED_HOT_ARG(kmp_info
 
         // Reset pointer to parent team only for non-hot teams.
         team->t.t_parent = NULL;
+        team->t.t_level = 0;
+        team->t.t_active_level = 0;
 
         /* free the worker threads */
         for ( f = 1; f < team->t.t_nproc; ++ f ) {

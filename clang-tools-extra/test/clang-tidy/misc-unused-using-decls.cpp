@@ -70,6 +70,14 @@ using n::UnusedFunc; // UnusedFunc
 using n::cout;
 using n::endl;
 
+#define DEFINE_INT(name)        \
+  namespace INT {               \
+  static const int _##name = 1; \
+  }                             \
+  using INT::_##name
+DEFINE_INT(test);
+#undef DEFIND_INT
+
 // ----- Usages -----
 void f(B b);
 void g() {

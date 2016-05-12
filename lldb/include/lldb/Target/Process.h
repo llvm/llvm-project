@@ -3344,7 +3344,6 @@ protected:
     Broadcaster                 m_private_state_broadcaster;  // This broadcaster feeds state changed events into the private state thread's listener.
     Broadcaster                 m_private_state_control_broadcaster; // This is the control broadcaster, used to pause, resume & stop the private state thread.
     lldb::ListenerSP            m_private_state_listener_sp;     // This is the listener for the private state thread.
-    Predicate<bool>             m_private_state_control_wait; /// This Predicate is used to signal that a control operation is complete.
     HostThread                  m_private_state_thread; ///< Thread ID for the thread that watches internal state events
     ProcessModID                m_mod_id;               ///< Tracks the state of the process over stops and other alterations.
     uint32_t                    m_process_unique_id;    ///< Each lldb_private::Process class that is created gets a unique integer ID that increments with each new instance
