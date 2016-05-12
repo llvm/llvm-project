@@ -14,3 +14,4 @@
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c
 // RUN: llvm-profdata merge -text  %t.ir.profdata -o %t.ir.proftxt 
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=SHARED
+// RUN: FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=IR < %t.ir.proftxt

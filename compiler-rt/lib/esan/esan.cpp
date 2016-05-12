@@ -14,6 +14,7 @@
 
 #include "esan.h"
 #include "esan_interface_internal.h"
+#include "esan_shadow.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -27,6 +28,7 @@ namespace __esan {
 
 bool EsanIsInitialized;
 ToolType WhichTool;
+ShadowMapping Mapping;
 
 static const char EsanOptsEnv[] = "ESAN_OPTIONS";
 
@@ -56,6 +58,69 @@ void processRangeAccess(uptr PC, uptr Addr, int Size, bool IsWrite) {
   if (WhichTool == ESAN_CacheFrag) {
     // TODO(bruening): add shadow mapping and update shadow bits here.
     // We'll move this to cache_frag.cpp once we have something.
+  }
+}
+
+#if SANITIZER_DEBUG
+static bool verifyShadowScheme() {
+  // Sanity checks for our shadow mapping scheme.
+  for (int Scale = 0; Scale < 8; ++Scale) {
+    Mapping.initialize(Scale);
+    uptr AppStart, AppEnd;
+    for (int i = 0; getAppRegion(i, &AppStart, &AppEnd); ++i) {
+      DCHECK(isAppMem(AppStart));
+      DCHECK(!isAppMem(AppStart - 1));
+      DCHECK(isAppMem(AppEnd - 1));
+      DCHECK(!isAppMem(AppEnd));
+      DCHECK(!isShadowMem(AppStart));
+      DCHECK(!isShadowMem(AppEnd - 1));
+      DCHECK(isShadowMem(appToShadow(AppStart)));
+      DCHECK(isShadowMem(appToShadow(AppEnd - 1)));
+      // Double-shadow checks.
+      DCHECK(!isShadowMem(appToShadow(appToShadow(AppStart))));
+      DCHECK(!isShadowMem(appToShadow(appToShadow(AppEnd - 1))));
+    }
+    // Ensure no shadow regions overlap each other.
+    uptr ShadowAStart, ShadowBStart, ShadowAEnd, ShadowBEnd;
+    for (int i = 0; getShadowRegion(i, &ShadowAStart, &ShadowAEnd); ++i) {
+      for (int j = 0; getShadowRegion(j, &ShadowBStart, &ShadowBEnd); ++j) {
+        DCHECK(i == j || ShadowAStart >= ShadowBEnd ||
+               ShadowAEnd <= ShadowBStart);
+      }
+    }
+  }
+  return true;
+}
+#endif
+
+static void initializeShadow() {
+  DCHECK(verifyShadowScheme());
+
+  if (WhichTool == ESAN_CacheFrag)
+    Mapping.initialize(2); // 4B:1B, so 4 to 1 == >>2.
+  else
+    UNREACHABLE("unknown tool shadow mapping");
+
+  VPrintf(1, "Shadow scale=%d offset=%p\n", Mapping.Scale, Mapping.Offset);
+
+  uptr ShadowStart, ShadowEnd;
+  for (int i = 0; getShadowRegion(i, &ShadowStart, &ShadowEnd); ++i) {
+    VPrintf(1, "Shadow #%d: [%zx-%zx) (%zuGB)\n", i, ShadowStart, ShadowEnd,
+            (ShadowEnd - ShadowStart) >> 30);
+
+    uptr Map = (uptr)MmapFixedNoReserve(ShadowStart, ShadowEnd - ShadowStart,
+                                        "shadow");
+    if (Map != ShadowStart) {
+      Printf("FATAL: EfficiencySanitizer failed to map its shadow memory.\n");
+      Die();
+    }
+
+    if (common_flags()->no_huge_pages_for_shadow)
+      NoHugePagesInRegion(ShadowStart, ShadowEnd - ShadowStart);
+    if (common_flags()->use_madv_dontdump)
+      DontDumpShadowMemory(ShadowStart, ShadowEnd - ShadowStart);
+
+    // TODO: Call MmapNoAccess() on in-between regions.
   }
 }
 
@@ -95,6 +160,7 @@ void initializeLibrary(ToolType Tool) {
     Die();
   }
 
+  initializeShadow();
   initializeInterceptors();
 
   EsanIsInitialized = true;

@@ -5561,6 +5561,54 @@ INTERCEPTOR(int, __xstat, int version, const char *path, void *buf) {
 #define INIT___XSTAT
 #endif
 
+#if SANITIZER_INTERCEPT___XSTAT64
+INTERCEPTOR(int, __xstat64, int version, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __xstat64, version, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(__xstat64)(version, path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat64_sz);
+  return res;
+}
+#define INIT___XSTAT64 COMMON_INTERCEPT_FUNCTION(__xstat64)
+#else
+#define INIT___XSTAT64
+#endif
+
+#if SANITIZER_INTERCEPT___LXSTAT
+INTERCEPTOR(int, __lxstat, int version, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __lxstat, version, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(__lxstat)(version, path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  return res;
+}
+#define INIT___LXSTAT COMMON_INTERCEPT_FUNCTION(__lxstat)
+#else
+#define INIT___LXSTAT
+#endif
+
+#if SANITIZER_INTERCEPT___LXSTAT64
+INTERCEPTOR(int, __lxstat64, int version, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __lxstat64, version, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(__lxstat64)(version, path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat64_sz);
+  return res;
+}
+#define INIT___LXSTAT64 COMMON_INTERCEPT_FUNCTION(__lxstat64)
+#else
+#define INIT___LXSTAT64
+#endif
+
 // FIXME: add other *stat interceptor
 
 static void InitializeCommonInterceptors() {
@@ -5750,5 +5798,8 @@ static void InitializeCommonInterceptors() {
   INIT_RECV_RECVFROM;
   INIT_STAT;
   INIT___XSTAT;
+  INIT___XSTAT64;
+  INIT___LXSTAT;
+  INIT___LXSTAT64;
   // FIXME: add other *stat interceptors.
 }

@@ -48,6 +48,11 @@ unwind_backtrace_signal_arch_func unwind_backtrace_signal_arch;
 
 #if SANITIZER_ANDROID
 void SanitizerInitializeUnwinder() {
+  if (AndroidGetApiLevel() >= ANDROID_LOLLIPOP_MR1) return;
+
+  // Pre-lollipop Android can not unwind through signal handler frames with
+  // libgcc unwinder, but it has a libcorkscrew.so library with the necessary
+  // workarounds.
   void *p = dlopen("libcorkscrew.so", RTLD_LAZY);
   if (!p) {
     VReport(1,
