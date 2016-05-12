@@ -56,7 +56,7 @@ void FieldListRecordBuilder::writeMethod(uint16_t OverloadCount,
                                          TypeIndex MethodList, StringRef Name) {
   TypeRecordBuilder &Builder = getBuilder();
 
-  Builder.writeTypeRecordKind(TypeRecordKind::Method);
+  Builder.writeTypeRecordKind(TypeRecordKind::OverloadedMethod);
   Builder.writeUInt16(OverloadCount);
   Builder.writeTypeIndex(MethodList);
   Builder.writeNullTerminatedString(Name);

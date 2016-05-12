@@ -7,6 +7,8 @@
   # the diagnostic for the 10-bit form. This isn't exactly wrong but it is
   # misleading. Ideally, we'd emit every way to achieve a valid match instead
   # of picking only one.
+  ldc2 $11, -1025($12)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+  ldc2 $11, 1024($12)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
   teq $8, $9, $2           # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
   teq $8, $9, -1           # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
   teq $8, $9, 16           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled

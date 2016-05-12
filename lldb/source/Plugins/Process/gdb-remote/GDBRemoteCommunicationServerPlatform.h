@@ -121,13 +121,6 @@ private:
     bool
     DebugserverProcessReaped (lldb::pid_t pid);
 
-    static bool
-    ReapDebugserverProcess (void *callback_baton,
-                            lldb::pid_t pid,
-                            bool exited,
-                            int signal,
-                            int status);
-
     static const FileSpec&
     GetDomainSocketDir();
 

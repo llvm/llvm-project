@@ -333,21 +333,24 @@ public:
       // is empty. This will be handled specially in operator== as well.
       if (Writer.ModuleToSummariesForIndex &&
           !Writer.ModuleToSummariesForIndex->empty()) {
-        ModuleSummariesIter = Writer.ModuleToSummariesForIndex->begin();
         for (ModuleSummariesBack = Writer.ModuleToSummariesForIndex->begin();
              std::next(ModuleSummariesBack) !=
              Writer.ModuleToSummariesForIndex->end();
              ModuleSummariesBack++)
           ;
+        ModuleSummariesIter = !IsAtEnd
+                                  ? Writer.ModuleToSummariesForIndex->begin()
+                                  : ModuleSummariesBack;
         ModuleGVSummariesIter = !IsAtEnd ? ModuleSummariesIter->second.begin()
                                          : ModuleSummariesBack->second.end();
       } else if (!Writer.ModuleToSummariesForIndex &&
                  Writer.Index.begin() != Writer.Index.end()) {
-        IndexSummariesIter = Writer.Index.begin();
         for (IndexSummariesBack = Writer.Index.begin();
              std::next(IndexSummariesBack) != Writer.Index.end();
              IndexSummariesBack++)
           ;
+        IndexSummariesIter =
+            !IsAtEnd ? Writer.Index.begin() : IndexSummariesBack;
         IndexGVSummariesIter = !IsAtEnd ? IndexSummariesIter->second.begin()
                                         : IndexSummariesBack->second.end();
       }
@@ -398,6 +401,10 @@ public:
         // empty, they both are.
         if (Writer.ModuleToSummariesForIndex->empty())
           return true;
+        // Ensure the ModuleGVSummariesIter are iterating over the same
+        // container before checking them below.
+        if (ModuleSummariesIter != RHS.ModuleSummariesIter)
+          return false;
         return ModuleGVSummariesIter == RHS.ModuleGVSummariesIter;
       }
       // First ensure RHS also writing the full index, and that both are
@@ -409,6 +416,10 @@ public:
       // empty, they both are.
       if (Writer.Index.begin() == Writer.Index.end())
         return true;
+      // Ensure the IndexGVSummariesIter are iterating over the same
+      // container before checking them below.
+      if (IndexSummariesIter != RHS.IndexSummariesIter)
+        return false;
       return IndexGVSummariesIter == RHS.IndexGVSummariesIter;
     }
   };

@@ -38,12 +38,10 @@ class ProcessLaunchInfo;
 class Host
 {
 public:
-
-    typedef bool (*MonitorChildProcessCallback) (void *callback_baton,
-                                                 lldb::pid_t pid,
-                                                 bool exited,
-                                                 int signal,    // Zero for no signal
-                                                 int status);   // Exit value of process if signal is zero
+    typedef std::function<bool(lldb::pid_t pid, bool exited,
+                               int signal,  // Zero for no signal
+                               int status)> // Exit value of process if signal is zero
+        MonitorChildProcessCallback;
 
     //------------------------------------------------------------------
     /// Start monitoring a child process.
@@ -65,10 +63,6 @@ public:
     ///     A function callback to call when a child receives a signal
     ///     (if \a monitor_signals is true) or a child exits.
     ///
-    /// @param[in] callback_baton
-    ///     A void * of user data that will be pass back when
-    ///     \a callback is called.
-    ///
     /// @param[in] pid
     ///     The process ID of a child process to monitor, -1 for all
     ///     processes.
@@ -84,8 +78,8 @@ public:
     ///
     /// @see static void Host::StopMonitoringChildProcess (uint32_t)
     //------------------------------------------------------------------
-    static HostThread StartMonitoringChildProcess(MonitorChildProcessCallback callback, void *callback_baton, lldb::pid_t pid,
-                                                  bool monitor_signals);
+    static HostThread
+    StartMonitoringChildProcess(const MonitorChildProcessCallback &callback, lldb::pid_t pid, bool monitor_signals);
 
     enum SystemLogType
     {

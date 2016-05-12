@@ -559,6 +559,29 @@ unsigned Value::getPointerDereferenceableBytes(bool &CanBeNull) const {
   return DerefBytes;
 }
 
+bool Value::isPointerDereferenceable(bool &CanBeNull) const {
+  assert(getType()->isPointerTy() && "must be pointer");
+
+  CanBeNull = false;
+
+  // These are obviously ok.
+  if (isa<AllocaInst>(this))
+    return true;
+
+  // Global variables which can't collapse to null are ok.
+  // TODO: return true for those but set CanBeNull flag
+  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
+    if (!GV->hasExternalWeakLinkage())
+      return true;
+
+  // byval arguments are okay.
+  if (const Argument *A = dyn_cast<Argument>(this))
+    if (A->hasByValAttr())
+      return true;
+
+  return false;
+}
+
 unsigned Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
 

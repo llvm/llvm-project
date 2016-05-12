@@ -248,7 +248,7 @@ uint32_t IRObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   if (GV->getName().startswith("llvm."))
     Res |= BasicSymbolRef::SF_FormatSpecific;
   else if (auto *Var = dyn_cast<GlobalVariable>(GV)) {
-    if (Var->getSection() == StringRef("llvm.metadata"))
+    if (Var->getSection() == "llvm.metadata")
       Res |= BasicSymbolRef::SF_FormatSpecific;
   }
 

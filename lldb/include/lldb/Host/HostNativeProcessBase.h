@@ -46,9 +46,10 @@ class HostNativeProcessBase
         return m_process;
     }
 
-    virtual HostThread StartMonitoring(HostProcess::MonitorCallback callback, void *callback_baton, bool monitor_signals) = 0;
+    virtual HostThread
+    StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals) = 0;
 
-  protected:
+protected:
     lldb::process_t m_process;
 };
 

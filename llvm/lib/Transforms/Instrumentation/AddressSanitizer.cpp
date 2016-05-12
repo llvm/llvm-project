@@ -1242,7 +1242,7 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
   if (G->getAlignment() > MinRedzoneSizeForGlobal()) return false;
 
   if (G->hasSection()) {
-    StringRef Section(G->getSection());
+    StringRef Section = G->getSection();
 
     // Globals from llvm.metadata aren't emitted, do not instrument them.
     if (Section == "llvm.metadata") return false;

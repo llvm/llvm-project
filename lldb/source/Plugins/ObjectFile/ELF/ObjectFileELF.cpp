@@ -1697,8 +1697,7 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
 
                 I->section_name = name;
 
-                if (arch_spec.GetMachine() == llvm::Triple::mips || arch_spec.GetMachine() == llvm::Triple::mipsel
-                    || arch_spec.GetMachine() == llvm::Triple::mips64 || arch_spec.GetMachine() == llvm::Triple::mips64el)
+                if (arch_spec.IsMIPS())
                 {
                     uint32_t arch_flags = arch_spec.GetFlags ();
                     DataExtractor data;
@@ -1712,13 +1711,27 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                         }
                     }
                     // Settings appropriate ArchSpec ABI Flags
-                    if (header.e_flags & llvm::ELF::EF_MIPS_ABI2)
+                    switch(header.e_flags & llvm::ELF::EF_MIPS_ABI)
                     {
-                        arch_flags |= lldb_private::ArchSpec::eMIPSABI_N32;
-                    }
-                    else if (header.e_flags & llvm::ELF::EF_MIPS_ABI_O32)
-                    {
-                         arch_flags |= lldb_private::ArchSpec::eMIPSABI_O32;
+                        case llvm::ELF::EF_MIPS_ABI_O32:
+                            arch_flags |= lldb_private::ArchSpec::eMIPSABI_O32;
+                            break;
+                        case EF_MIPS_ABI_O64:
+                            arch_flags |= lldb_private::ArchSpec::eMIPSABI_O64;
+                            break;
+                        case EF_MIPS_ABI_EABI32:
+                            arch_flags |= lldb_private::ArchSpec::eMIPSABI_EABI32;
+                            break;
+                        case EF_MIPS_ABI_EABI64:
+                            arch_flags |= lldb_private::ArchSpec::eMIPSABI_EABI64;
+                            break;
+                        default:
+                            // ABI Mask doesn't cover N32 and N64 ABI.
+                            if (header.e_ident[EI_CLASS] == llvm::ELF::ELFCLASS64)
+                                arch_flags |= lldb_private::ArchSpec::eMIPSABI_N64;
+                            else if (header.e_flags && llvm::ELF::EF_MIPS_ABI2)
+                                arch_flags |= lldb_private::ArchSpec::eMIPSABI_N32;
+                                break;                    
                     }
                     arch_spec.SetFlags (arch_flags);
                 }

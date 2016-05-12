@@ -21,17 +21,15 @@ InMemoryXrefsDB::InMemoryXrefsDB(
     llvm::SmallVector<llvm::StringRef, 8> Names;
     Identifier.split(Names, "::");
     for (const auto &Header : Entry.second) {
-      // FIXME: create a complete instance with static member function when it
-      // is implemented.
-      SymbolInfo Info;
-      Info.Name = Names.back();
-      Info.FilePath = Header;
+      std::vector<SymbolInfo::Context> Contexts;
       for (auto IdentiferContext = Names.rbegin() + 1;
            IdentiferContext != Names.rend(); ++IdentiferContext) {
-        Info.Contexts.push_back(
-            {SymbolInfo::ContextType::Namespace, *IdentiferContext});
+        Contexts.emplace_back(SymbolInfo::ContextType::Namespace,
+                              *IdentiferContext);
       }
-      this->LookupTable[Info.Name].push_back(Info);
+
+      SymbolInfo Symbol(Names.back(), SymbolInfo::Class, Header, Contexts, 1);
+      this->LookupTable[Symbol.getName()].push_back(Symbol);
     }
   }
 }

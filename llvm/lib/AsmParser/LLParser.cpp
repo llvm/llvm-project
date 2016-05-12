@@ -825,8 +825,9 @@ bool LLParser::ParseGlobal(const std::string &Name, LocTy NameLoc,
   // If the linkage is specified and is external, then no initializer is
   // present.
   Constant *Init = nullptr;
-  if (!HasLinkage || (Linkage != GlobalValue::ExternalWeakLinkage &&
-                      Linkage != GlobalValue::ExternalLinkage)) {
+  if (!HasLinkage ||
+      !GlobalValue::isValidDeclarationLinkage(
+          (GlobalValue::LinkageTypes)Linkage)) {
     if (ParseGlobalValue(Ty, Init))
       return true;
   }

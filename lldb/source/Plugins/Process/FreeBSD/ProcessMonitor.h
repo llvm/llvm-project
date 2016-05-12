@@ -302,8 +302,7 @@ private:
     DupDescriptor(const lldb_private::FileSpec &file_spec, int fd, int flags);
 
     static bool
-    MonitorCallback(void *callback_baton,
-                    lldb::pid_t pid, bool exited, int signal, int status);
+    MonitorCallback(ProcessMonitor *monitor, lldb::pid_t pid, bool exited, int signal, int status);
 
     static ProcessMessage
     MonitorSIGTRAP(ProcessMonitor *monitor,

@@ -33,9 +33,10 @@ class HostProcessWindows : public HostNativeProcessBase
     virtual lldb::pid_t GetProcessId() const;
     virtual bool IsRunning() const;
 
-    virtual HostThread StartMonitoring(HostProcess::MonitorCallback callback, void *callback_baton, bool monitor_signals);
+    HostThread
+    StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals) override;
 
-  private:
+private:
     static lldb::thread_result_t MonitorThread(void *thread_arg);
 
     void Close();

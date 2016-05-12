@@ -793,7 +793,7 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (!Config->NoUndefined) {
     if (Config->Relocatable)
       return;
-    if (Config->Shared)
+    if (Config->Shared && !Config->ZDefs)
       if (Sym->symbol()->Visibility == STV_DEFAULT)
         return;
   }

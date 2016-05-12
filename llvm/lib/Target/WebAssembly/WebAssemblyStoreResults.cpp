@@ -115,9 +115,11 @@ static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
     O.setReg(ToReg);
 
     // If the store's def was previously dead, it is no longer.
-    MI.getOperand(0).setIsDead(false);
+    if (!O.isUndef()) {
+      MI.getOperand(0).setIsDead(false);
 
-    Indices.push_back(WhereIdx.getRegSlot());
+      Indices.push_back(WhereIdx.getRegSlot());
+    }
   }
 
   if (Changed) {

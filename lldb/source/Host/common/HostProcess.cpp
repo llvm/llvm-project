@@ -49,9 +49,9 @@ bool HostProcess::IsRunning() const
 }
 
 HostThread
-HostProcess::StartMonitoring(HostProcess::MonitorCallback callback, void *callback_baton, bool monitor_signals)
+HostProcess::StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals)
 {
-    return m_native_process->StartMonitoring(callback, callback_baton, monitor_signals);
+    return m_native_process->StartMonitoring(callback, monitor_signals);
 }
 
 HostNativeProcessBase &HostProcess::GetNativeProcess()

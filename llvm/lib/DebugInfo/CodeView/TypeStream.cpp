@@ -13,7 +13,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/DebugInfo/CodeView/TypeStream.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

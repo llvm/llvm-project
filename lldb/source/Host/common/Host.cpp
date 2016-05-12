@@ -93,7 +93,6 @@ struct MonitorInfo
 {
     lldb::pid_t pid;                            // The process ID to monitor
     Host::MonitorChildProcessCallback callback; // The callback function to call when "pid" exits or signals
-    void *callback_baton;                       // The callback baton for the callback function
     bool monitor_signals;                       // If true, call the callback when "pid" gets signaled.
 };
 
@@ -101,13 +100,13 @@ static thread_result_t
 MonitorChildProcessThreadFunction (void *arg);
 
 HostThread
-Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, void *callback_baton, lldb::pid_t pid, bool monitor_signals)
+Host::StartMonitoringChildProcess(const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
+                                  bool monitor_signals)
 {
     MonitorInfo * info_ptr = new MonitorInfo();
 
     info_ptr->pid = pid;
     info_ptr->callback = callback;
-    info_ptr->callback_baton = callback_baton;
     info_ptr->monitor_signals = monitor_signals;
     
     char thread_name[256];
@@ -184,7 +183,6 @@ MonitorChildProcessThreadFunction (void *arg)
     MonitorInfo *info = (MonitorInfo *)arg;
 
     const Host::MonitorChildProcessCallback callback = info->callback;
-    void * const callback_baton = info->callback_baton;
     const bool monitor_signals = info->monitor_signals;
 
     assert (info->pid <= UINT32_MAX);
@@ -285,8 +283,8 @@ MonitorChildProcessThreadFunction (void *arg)
                 {
                     bool callback_return = false;
                     if (callback)
-                        callback_return = callback (callback_baton, wait_pid, exited, signal, exit_status);
-                    
+                        callback_return = callback(wait_pid, exited, signal, exit_status);
+
                     // If our process exited, then this thread should exit
                     if (exited && wait_pid == abs(pid))
                     {
@@ -500,7 +498,6 @@ struct ShellInfo
 {
     ShellInfo () :
         process_reaped (false),
-        can_delete (false),
         pid (LLDB_INVALID_PROCESS_ID),
         signo(-1),
         status(-1)
@@ -508,33 +505,23 @@ struct ShellInfo
     }
 
     lldb_private::Predicate<bool> process_reaped;
-    lldb_private::Predicate<bool> can_delete;
     lldb::pid_t pid;
     int signo;
     int status;
 };
 
 static bool
-MonitorShellCommand (void *callback_baton,
-                     lldb::pid_t pid,
-                     bool exited,       // True if the process did exit
-                     int signo,         // Zero for no signal
-                     int status)   // Exit value of process if signal is zero
+MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
+                    bool exited, // True if the process did exit
+                    int signo,   // Zero for no signal
+                    int status)  // Exit value of process if signal is zero
 {
-    ShellInfo *shell_info = (ShellInfo *)callback_baton;
     shell_info->pid = pid;
     shell_info->signo = signo;
     shell_info->status = status;
     // Let the thread running Host::RunShellCommand() know that the process
     // exited and that ShellInfo has been filled in by broadcasting to it
-    shell_info->process_reaped.SetValue(1, eBroadcastAlways);
-    // Now wait for a handshake back from that thread running Host::RunShellCommand
-    // so we know that we can delete shell_info_ptr
-    shell_info->can_delete.WaitForValueEqualTo(true);
-    // Sleep a bit to allow the shell_info->can_delete.SetValue() to complete...
-    usleep(1000);
-    // Now delete the shell info that was passed into this function
-    delete shell_info;
+    shell_info->process_reaped.SetValue(true, eBroadcastAlways);
     return true;
 }
 
@@ -617,13 +604,14 @@ Host::RunShellCommand(const Args &args,
         launch_info.AppendSuppressFileAction (STDOUT_FILENO, false, true);
         launch_info.AppendSuppressFileAction (STDERR_FILENO, false, true);
     }
-    
-    // The process monitor callback will delete the 'shell_info_ptr' below...
-    std::unique_ptr<ShellInfo> shell_info_ap (new ShellInfo());
-    
+
+    std::shared_ptr<ShellInfo> shell_info_sp(new ShellInfo());
     const bool monitor_signals = false;
-    launch_info.SetMonitorProcessCallback(MonitorShellCommand, shell_info_ap.get(), monitor_signals);
-    
+    launch_info.SetMonitorProcessCallback(std::bind(MonitorShellCommand, shell_info_sp, std::placeholders::_1,
+                                                    std::placeholders::_2, std::placeholders::_3,
+                                                    std::placeholders::_4),
+                                          monitor_signals);
+
     error = LaunchProcess (launch_info);
     const lldb::pid_t pid = launch_info.GetProcessID();
     
@@ -632,11 +620,6 @@ Host::RunShellCommand(const Args &args,
     
     if (error.Success())
     {
-        // The process successfully launched, so we can defer ownership of
-        // "shell_info" to the MonitorShellCommand callback function that will
-        // get called when the process dies. We release the unique pointer as it
-        // doesn't need to delete the ShellInfo anymore.
-        ShellInfo *shell_info = shell_info_ap.release();
         TimeValue *timeout_ptr = nullptr;
         TimeValue timeout_time(TimeValue::Now());
         if (timeout_sec > 0) {
@@ -644,7 +627,7 @@ Host::RunShellCommand(const Args &args,
             timeout_ptr = &timeout_time;
         }
         bool timed_out = false;
-        shell_info->process_reaped.WaitForValueEqualTo(true, timeout_ptr, &timed_out);
+        shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout_ptr, &timed_out);
         if (timed_out)
         {
             error.SetErrorString("timed out waiting for shell command to complete");
@@ -655,16 +638,16 @@ Host::RunShellCommand(const Args &args,
             timeout_time = TimeValue::Now();
             timeout_time.OffsetWithSeconds(1);
             timed_out = false;
-            shell_info->process_reaped.WaitForValueEqualTo(true, &timeout_time, &timed_out);
+            shell_info_sp->process_reaped.WaitForValueEqualTo(true, &timeout_time, &timed_out);
         }
         else
         {
             if (status_ptr)
-                *status_ptr = shell_info->status;
-            
+                *status_ptr = shell_info_sp->status;
+
             if (signo_ptr)
-                *signo_ptr = shell_info->signo;
-            
+                *signo_ptr = shell_info_sp->signo;
+
             if (command_output_ptr)
             {
                 command_output_ptr->clear();
@@ -685,14 +668,10 @@ Host::RunShellCommand(const Args &args,
                 }
             }
         }
-        shell_info->can_delete.SetValue(true, eBroadcastAlways);
     }
 
     if (FileSystem::GetFileExists(output_file_spec))
         FileSystem::Unlink(output_file_spec);
-    // Handshake with the monitor thread, or just let it know in advance that
-    // it can delete "shell_info" in case we timed out and were not able to kill
-    // the process...
     return error;
 }
 

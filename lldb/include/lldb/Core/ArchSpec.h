@@ -69,6 +69,9 @@ public:
         eMIPSABI_O32        = 0x00002000,
         eMIPSABI_N32        = 0x00004000,
         eMIPSABI_N64        = 0x00008000,
+        eMIPSABI_O64        = 0x00020000,
+        eMIPSABI_EABI32     = 0x00040000,
+        eMIPSABI_EABI64     = 0x00080000,
         eMIPSABI_mask       = 0x000ff000
     };
 
@@ -288,6 +291,14 @@ public:
     //------------------------------------------------------------------
     const char *
     GetArchitectureName () const;
+
+    //-----------------------------------------------------------------
+    /// if MIPS architecture return true.
+    ///
+    ///  @return a boolean value.
+    //-----------------------------------------------------------------
+    bool
+    IsMIPS() const;
 
     //------------------------------------------------------------------
     /// Returns a string representing current architecture as a target CPU

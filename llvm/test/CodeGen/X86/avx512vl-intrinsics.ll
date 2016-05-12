@@ -4834,9 +4834,9 @@ define <4 x double>@test_int_x86_avx512_mask_vpermil_pd_256(<4 x double> %x0, <4
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermilpd $22, %ymm0, %ymm1 {%k1}
-; CHECK-NEXT:    ## ymm1 = ymm1[0,1,3,2]
+; CHECK-NEXT:    ## ymm1 = ymm0[0,1,3,2]
 ; CHECK-NEXT:    vpermilpd $22, %ymm0, %ymm2 {%k1} {z}
-; CHECK-NEXT:    ## ymm2 = k1[0,1,3,2]
+; CHECK-NEXT:    ## ymm2 = ymm0[0,1,3,2]
 ; CHECK-NEXT:    vpermilpd $22, %ymm0, %ymm0
 ; CHECK-NEXT:    ## ymm0 = ymm0[0,1,3,2]
 ; CHECK-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
@@ -4857,9 +4857,9 @@ define <2 x double>@test_int_x86_avx512_mask_vpermil_pd_128(<2 x double> %x0, <2
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermilpd $1, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    ## xmm1 = xmm1[1,0]
+; CHECK-NEXT:    ## xmm1 = xmm0[1,0]
 ; CHECK-NEXT:    vpermilpd $1, %xmm0, %xmm2 {%k1} {z}
-; CHECK-NEXT:    ## xmm2 = k1[1,0]
+; CHECK-NEXT:    ## xmm2 = xmm0[1,0]
 ; CHECK-NEXT:    vpermilpd $1, %xmm0, %xmm0
 ; CHECK-NEXT:    ## xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
@@ -4880,9 +4880,9 @@ define <8 x float>@test_int_x86_avx512_mask_vpermil_ps_256(<8 x float> %x0, <8 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermilps $22, %ymm0, %ymm1 {%k1}
-; CHECK-NEXT:    ## ymm1 = ymm1[2,1,1,0,6,5,5,4]
+; CHECK-NEXT:    ## ymm1 = ymm0[2,1,1,0,6,5,5,4]
 ; CHECK-NEXT:    vpermilps $22, %ymm0, %ymm2 {%k1} {z}
-; CHECK-NEXT:    ## ymm2 = k1[2,1,1,0,6,5,5,4]
+; CHECK-NEXT:    ## ymm2 = ymm0[2,1,1,0,6,5,5,4]
 ; CHECK-NEXT:    vpermilps $22, %ymm0, %ymm0
 ; CHECK-NEXT:    ## ymm0 = ymm0[2,1,1,0,6,5,5,4]
 ; CHECK-NEXT:    vaddps %ymm2, %ymm1, %ymm1
@@ -4903,9 +4903,9 @@ define <4 x float>@test_int_x86_avx512_mask_vpermil_ps_128(<4 x float> %x0, <4 x
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vpermilps $22, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    ## xmm1 = xmm1[2,1,1,0]
+; CHECK-NEXT:    ## xmm1 = xmm0[2,1,1,0]
 ; CHECK-NEXT:    vpermilps $22, %xmm0, %xmm2 {%k1} {z}
-; CHECK-NEXT:    ## xmm2 = k1[2,1,1,0]
+; CHECK-NEXT:    ## xmm2 = xmm0[2,1,1,0]
 ; CHECK-NEXT:    vpermilps $22, %xmm0, %xmm0
 ; CHECK-NEXT:    ## xmm0 = xmm0[2,1,1,0]
 ; CHECK-NEXT:    vaddps %xmm2, %xmm1, %xmm1

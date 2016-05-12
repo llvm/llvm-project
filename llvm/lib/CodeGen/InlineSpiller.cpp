@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Spiller.h"
+#include "SplitKit.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -69,6 +70,8 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   const TargetRegisterInfo &TRI;
   const MachineBlockFrequencyInfo &MBFI;
 
+  InsertPointAnalysis IPA;
+
   // Map from StackSlot to its original register.
   DenseMap<int, unsigned> StackSlotToReg;
   // Map from pair of (StackSlot and Original VNI) to a set of spills which
@@ -114,7 +117,8 @@ public:
         MFI(*mf.getFrameInfo()), MRI(mf.getRegInfo()),
         TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()),
-        MBFI(pass.getAnalysis<MachineBlockFrequencyInfo>()) {}
+        MBFI(pass.getAnalysis<MachineBlockFrequencyInfo>()),
+        IPA(LIS, mf.getNumBlockIDs()) {}
 
   void addToMergeableSpills(MachineInstr *Spill, int StackSlot,
                             unsigned Original);
@@ -1075,7 +1079,7 @@ bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr *Spill,
 bool HoistSpillHelper::isSpillCandBB(unsigned OrigReg, VNInfo &OrigVNI,
                                      MachineBasicBlock &BB, unsigned &LiveReg) {
   SlotIndex Idx;
-  MachineBasicBlock::iterator MI = BB.getFirstTerminator();
+  MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(BB);
   if (MI != BB.end())
     Idx = LIS.getInstructionIndex(*MI);
   else
@@ -1376,6 +1380,8 @@ void HoistSpillHelper::hoistAllSpills() {
   for (auto &Ent : MergeableSpills) {
     int Slot = Ent.first.first;
     unsigned OrigReg = SlotToOrigReg[Slot];
+    LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+    IPA.setInterval(&OrigLI);
     VNInfo *OrigVNI = Ent.first.second;
     SmallPtrSet<MachineInstr *, 16> &EqValSpills = Ent.second;
     if (Ent.second.empty())
@@ -1408,17 +1414,15 @@ void HoistSpillHelper::hoistAllSpills() {
 
     // Stack live range update.
     LiveInterval &StackIntvl = LSS.getInterval(Slot);
-    if (!SpillsToIns.empty() || !SpillsToRm.empty()) {
-      LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+    if (!SpillsToIns.empty() || !SpillsToRm.empty())
       StackIntvl.MergeValueInAsValue(OrigLI, OrigVNI,
                                      StackIntvl.getValNumInfo(0));
-    }
 
     // Insert hoisted spills.
     for (auto const Insert : SpillsToIns) {
       MachineBasicBlock *BB = Insert.first;
       unsigned LiveReg = Insert.second;
-      MachineBasicBlock::iterator MI = BB->getFirstTerminator();
+      MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(*BB);
       TII.storeRegToStackSlot(*BB, MI, LiveReg, false, Slot,
                               MRI.getRegClass(LiveReg), &TRI);
       LIS.InsertMachineInstrRangeInMaps(std::prev(MI), MI);

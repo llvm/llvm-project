@@ -5448,11 +5448,9 @@ bool MipsAsmParser::parseDirectiveCpRestore(SMLoc Loc) {
     return false;
   }
 
-  unsigned ATReg = getATReg(Loc);
-  if (!ATReg)
+  if (!getTargetStreamer().emitDirectiveCpRestore(
+          CpRestoreOffset, [&]() { return getATReg(Loc); }, Loc, STI))
     return true;
-
-  getTargetStreamer().emitDirectiveCpRestore(CpRestoreOffset, ATReg, Loc, STI);
   Parser.Lex(); // Consume the EndOfStatement.
   return false;
 }

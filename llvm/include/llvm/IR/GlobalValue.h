@@ -198,14 +198,8 @@ public:
   }
   void setDLLStorageClass(DLLStorageClassTypes C) { DllStorageClass = C; }
 
-  bool hasSection() const { return !StringRef(getSection()).empty(); }
-  // It is unfortunate that we have to use "char *" in here since this is
-  // always non NULL, but:
-  // * The C API expects a null terminated string, so we cannot use StringRef.
-  // * The C API expects us to own it, so we cannot use a std:string.
-  // * For GlobalAliases we can fail to find the section and we have to
-  //   return "", so we cannot use a "const std::string &".
-  const char *getSection() const;
+  bool hasSection() const { return !getSection().empty(); }
+  StringRef getSection() const;
 
   /// Global values are always pointers.
   PointerType *getType() const { return cast<PointerType>(User::getType()); }
@@ -257,6 +251,9 @@ public:
   }
   static bool isCommonLinkage(LinkageTypes Linkage) {
     return Linkage == CommonLinkage;
+  }
+  static bool isValidDeclarationLinkage(LinkageTypes Linkage) {
+    return isExternalWeakLinkage(Linkage) || isExternalLinkage(Linkage);
   }
 
   /// Whether the definition of this global may be replaced by something
@@ -366,6 +363,9 @@ public:
     return isExternalWeakLinkage(getLinkage());
   }
   bool hasCommonLinkage() const { return isCommonLinkage(getLinkage()); }
+  bool hasValidDeclarationLinkage() const {
+    return isValidDeclarationLinkage(getLinkage());
+  }
 
   void setLinkage(LinkageTypes LT) {
     if (isLocalLinkage(LT))

@@ -284,15 +284,51 @@ inline std::error_code make_error_code(instrprof_error E) {
   return std::error_code(static_cast<int>(E), instrprof_category());
 }
 
-inline instrprof_error MergeResult(instrprof_error &Accumulator,
-                                   instrprof_error Result) {
-  // Prefer first error encountered as later errors may be secondary effects of
-  // the initial problem.
-  if (Accumulator == instrprof_error::success &&
-      Result != instrprof_error::success)
-    Accumulator = Result;
-  return Accumulator;
-}
+class SoftInstrProfErrors {
+  /// Count the number of soft instrprof_errors encountered and keep track of
+  /// the first such error for reporting purposes.
+
+  /// The first soft error encountered.
+  instrprof_error FirstError;
+
+  /// The number of hash mismatches.
+  unsigned NumHashMismatches;
+
+  /// The number of count mismatches.
+  unsigned NumCountMismatches;
+
+  /// The number of counter overflows.
+  unsigned NumCounterOverflows;
+
+  /// The number of value site count mismatches.
+  unsigned NumValueSiteCountMismatches;
+
+public:
+  SoftInstrProfErrors()
+      : FirstError(instrprof_error::success), NumHashMismatches(0),
+        NumCountMismatches(0), NumCounterOverflows(0),
+        NumValueSiteCountMismatches(0) {}
+
+  /// Track a soft error (\p IE) and increment its associated counter.
+  void addError(instrprof_error IE);
+
+  /// Get the number of hash mismatches.
+  unsigned getNumHashMismatches() const { return NumHashMismatches; }
+
+  /// Get the number of count mismatches.
+  unsigned getNumCountMismatches() const { return NumCountMismatches; }
+
+  /// Get the number of counter overflows.
+  unsigned getNumCounterOverflows() const { return NumCounterOverflows; }
+
+  /// Get the number of value site count mismatches.
+  unsigned getNumValueSiteCountMismatches() const {
+    return NumValueSiteCountMismatches;
+  }
+
+  /// Return an error code for the first encountered error.
+  std::error_code getError() const { return make_error_code(FirstError); }
+};
 
 namespace object {
 class SectionRef;
@@ -465,19 +501,21 @@ struct InstrProfValueSiteRecord {
 
   /// Merge data from another InstrProfValueSiteRecord
   /// Optionally scale merged counts by \p Weight.
-  instrprof_error merge(InstrProfValueSiteRecord &Input, uint64_t Weight = 1);
+  void merge(SoftInstrProfErrors &SIPE, InstrProfValueSiteRecord &Input,
+             uint64_t Weight = 1);
   /// Scale up value profile data counts.
-  instrprof_error scale(uint64_t Weight);
+  void scale(SoftInstrProfErrors &SIPE, uint64_t Weight);
 };
 
 /// Profiling information for a single function.
 struct InstrProfRecord {
-  InstrProfRecord() {}
+  InstrProfRecord() : SIPE() {}
   InstrProfRecord(StringRef Name, uint64_t Hash, std::vector<uint64_t> Counts)
-      : Name(Name), Hash(Hash), Counts(std::move(Counts)) {}
+      : Name(Name), Hash(Hash), Counts(std::move(Counts)), SIPE() {}
   StringRef Name;
   uint64_t Hash;
   std::vector<uint64_t> Counts;
+  SoftInstrProfErrors SIPE;
 
   typedef std::vector<std::pair<uint64_t, uint64_t>> ValueMapType;
 
@@ -512,11 +550,11 @@ struct InstrProfRecord {
 
   /// Merge the counts in \p Other into this one.
   /// Optionally scale merged counts by \p Weight.
-  instrprof_error merge(InstrProfRecord &Other, uint64_t Weight = 1);
+  void merge(InstrProfRecord &Other, uint64_t Weight = 1);
 
   /// Scale up profile counts (including value profile data) by
   /// \p Weight.
-  instrprof_error scale(uint64_t Weight);
+  void scale(uint64_t Weight);
 
   /// Sort value profile data (per site) by count.
   void sortValueData() {
@@ -532,6 +570,9 @@ struct InstrProfRecord {
     for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
       getValueSitesForKind(Kind).clear();
   }
+
+  /// Get the error contained within the record's soft error counter.
+  std::error_code getError() const { return SIPE.getError(); }
 
 private:
   std::vector<InstrProfValueSiteRecord> IndirectCallSites;
@@ -559,10 +600,10 @@ private:
 
   // Merge Value Profile data from Src record to this record for ValueKind.
   // Scale merged value counts by \p Weight.
-  instrprof_error mergeValueProfData(uint32_t ValueKind, InstrProfRecord &Src,
-                                     uint64_t Weight);
+  void mergeValueProfData(uint32_t ValueKind, InstrProfRecord &Src,
+                          uint64_t Weight);
   // Scale up value profile data count.
-  instrprof_error scaleValueProfData(uint32_t ValueKind, uint64_t Weight);
+  void scaleValueProfData(uint32_t ValueKind, uint64_t Weight);
 };
 
 uint32_t InstrProfRecord::getNumValueKinds() const {

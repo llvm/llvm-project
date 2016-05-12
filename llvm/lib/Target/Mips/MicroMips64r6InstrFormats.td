@@ -142,3 +142,46 @@ class PCREL18_FM_MMR6<bits<3> funct> : MipsR6Inst {
   let Inst{20-18} = funct;
   let Inst{17-0} = imm;
 }
+
+class POOL32S_2R_FM_MMR6<bits<10> funct> {
+  bits<5> rt;
+  bits<5> rs;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010110;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-6} = funct;
+  let Inst{5-0} = 0b111100;
+}
+
+class POOL32S_2RSA5B0_FM_MMR6<bits<9> funct> {
+  bits<5> rt;
+  bits<5> rs;
+  bits<5> sa;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010110;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-11} = sa;
+  let Inst{10-9} = 0b00;
+  let Inst{8-0} = funct;
+}
+
+class POOL32S_3R_FM_MMR6<bits<9> funct> {
+  bits<5> rt;
+  bits<5> rs;
+  bits<5> rd;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010110;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-11} = rd;
+  let Inst{10-9} = 0b00;
+  let Inst{8-0} = funct;
+}

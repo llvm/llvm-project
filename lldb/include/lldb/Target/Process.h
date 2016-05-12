@@ -999,16 +999,14 @@ public:
     /// Subclasses should call Host::StartMonitoringChildProcess ()
     /// with:
     ///     callback = Process::SetHostProcessExitStatus
-    ///     callback_baton = nullptr
     ///     pid = Process::GetID()
     ///     monitor_signals = false
     //------------------------------------------------------------------
     static bool
-    SetProcessExitStatus(void *callback_baton,   // The callback baton which should be set to nullptr
-                         lldb::pid_t pid,        // The process ID we want to monitor
+    SetProcessExitStatus(lldb::pid_t pid, // The process ID we want to monitor
                          bool exited,
-                         int signo,              // Zero for no signal
-                         int status);            // Exit value of process if signal is zero
+                         int signo,   // Zero for no signal
+                         int status); // Exit value of process if signal is zero
 
     lldb::ByteOrder
     GetByteOrder () const;

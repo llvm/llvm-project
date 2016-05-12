@@ -45,6 +45,8 @@ bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
+int getIntegerAttribute(const Function &F, StringRef Name, int Default);
+
 unsigned getMaximumWorkGroupSize(const Function &F);
 unsigned getInitialPSInputAddr(const Function &F);
 

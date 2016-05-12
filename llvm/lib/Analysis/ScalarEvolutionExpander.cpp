@@ -1794,52 +1794,55 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       continue;
 
     if (BasicBlock *LatchBlock = L->getLoopLatch()) {
-      Instruction *OrigInc =
-        cast<Instruction>(OrigPhiRef->getIncomingValueForBlock(LatchBlock));
+      Instruction *OrigInc = dyn_cast<Instruction>(
+          OrigPhiRef->getIncomingValueForBlock(LatchBlock));
       Instruction *IsomorphicInc =
-        cast<Instruction>(Phi->getIncomingValueForBlock(LatchBlock));
+          dyn_cast<Instruction>(Phi->getIncomingValueForBlock(LatchBlock));
 
-      // If this phi has the same width but is more canonical, replace the
-      // original with it. As part of the "more canonical" determination,
-      // respect a prior decision to use an IV chain.
-      if (OrigPhiRef->getType() == Phi->getType() &&
-          !(ChainedPhis.count(Phi) ||
-            isExpandedAddRecExprPHI(OrigPhiRef, OrigInc, L)) &&
-          (ChainedPhis.count(Phi) ||
-           isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
-        std::swap(OrigPhiRef, Phi);
-        std::swap(OrigInc, IsomorphicInc);
-      }
-      // Replacing the congruent phi is sufficient because acyclic redundancy
-      // elimination, CSE/GVN, should handle the rest. However, once SCEV proves
-      // that a phi is congruent, it's often the head of an IV user cycle that
-      // is isomorphic with the original phi. It's worth eagerly cleaning up the
-      // common case of a single IV increment so that DeleteDeadPHIs can remove
-      // cycles that had postinc uses.
-      const SCEV *TruncExpr = SE.getTruncateOrNoop(SE.getSCEV(OrigInc),
-                                                   IsomorphicInc->getType());
-      if (OrigInc != IsomorphicInc && TruncExpr == SE.getSCEV(IsomorphicInc) &&
-          SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
-          ((isa<PHINode>(OrigInc) && isa<PHINode>(IsomorphicInc)) ||
-           hoistIVInc(OrigInc, IsomorphicInc))) {
-        DEBUG_WITH_TYPE(DebugType,
-                        dbgs() << "INDVARS: Eliminated congruent iv.inc: "
-                               << *IsomorphicInc << '\n');
-        Value *NewInc = OrigInc;
-        if (OrigInc->getType() != IsomorphicInc->getType()) {
-          Instruction *IP = nullptr;
-          if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
-            IP = &*PN->getParent()->getFirstInsertionPt();
-          else
-            IP = OrigInc->getNextNode();
-
-          IRBuilder<> Builder(IP);
-          Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
-          NewInc = Builder.
-            CreateTruncOrBitCast(OrigInc, IsomorphicInc->getType(), IVName);
+      if (OrigInc && IsomorphicInc) {
+        // If this phi has the same width but is more canonical, replace the
+        // original with it. As part of the "more canonical" determination,
+        // respect a prior decision to use an IV chain.
+        if (OrigPhiRef->getType() == Phi->getType() &&
+            !(ChainedPhis.count(Phi) ||
+              isExpandedAddRecExprPHI(OrigPhiRef, OrigInc, L)) &&
+            (ChainedPhis.count(Phi) ||
+             isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
+          std::swap(OrigPhiRef, Phi);
+          std::swap(OrigInc, IsomorphicInc);
         }
-        IsomorphicInc->replaceAllUsesWith(NewInc);
-        DeadInsts.emplace_back(IsomorphicInc);
+        // Replacing the congruent phi is sufficient because acyclic
+        // redundancy elimination, CSE/GVN, should handle the
+        // rest. However, once SCEV proves that a phi is congruent,
+        // it's often the head of an IV user cycle that is isomorphic
+        // with the original phi. It's worth eagerly cleaning up the
+        // common case of a single IV increment so that DeleteDeadPHIs
+        // can remove cycles that had postinc uses.
+        const SCEV *TruncExpr =
+            SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
+        if (OrigInc != IsomorphicInc &&
+            TruncExpr == SE.getSCEV(IsomorphicInc) &&
+            SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
+            hoistIVInc(OrigInc, IsomorphicInc)) {
+          DEBUG_WITH_TYPE(DebugType,
+                          dbgs() << "INDVARS: Eliminated congruent iv.inc: "
+                                 << *IsomorphicInc << '\n');
+          Value *NewInc = OrigInc;
+          if (OrigInc->getType() != IsomorphicInc->getType()) {
+            Instruction *IP = nullptr;
+            if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
+              IP = &*PN->getParent()->getFirstInsertionPt();
+            else
+              IP = OrigInc->getNextNode();
+
+            IRBuilder<> Builder(IP);
+            Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
+            NewInc = Builder.CreateTruncOrBitCast(
+                OrigInc, IsomorphicInc->getType(), IVName);
+          }
+          IsomorphicInc->replaceAllUsesWith(NewInc);
+          DeadInsts.emplace_back(IsomorphicInc);
+        }
       }
     }
     DEBUG_WITH_TYPE(DebugType, dbgs() << "INDVARS: Eliminated congruent iv: "

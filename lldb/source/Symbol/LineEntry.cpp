@@ -43,6 +43,7 @@ LineEntry::LineEntry
 ) :
     range(section_sp, section_offset, byte_size),
     file(_file),
+    original_file(_file),
     line(_line),
     column(_column),
     is_start_of_statement(_is_start_of_statement),
@@ -58,6 +59,7 @@ LineEntry::Clear()
 {
     range.Clear();
     file.Clear();
+    original_file.Clear();
     line = LLDB_INVALID_LINE_NUMBER;
     column = 0;
     is_start_of_statement = 0;
@@ -260,7 +262,7 @@ LineEntry::GetSameLineContiguousAddressRange () const
 
         if (next_line_sc.line_entry.IsValid() 
             && next_line_sc.line_entry.range.GetByteSize() > 0
-            && file == next_line_sc.line_entry.file)
+            && original_file == next_line_sc.line_entry.original_file)
         {
             // Include any line 0 entries - they indicate that this is compiler-generated code 
             // that does not correspond to user source code.
@@ -282,4 +284,16 @@ LineEntry::GetSameLineContiguousAddressRange () const
         break;
     }
     return complete_line_range;
+}
+
+void
+LineEntry::ApplyFileMappings(lldb::TargetSP target_sp)
+{
+    if (target_sp)
+    {
+        // Apply any file remappings to our file
+        FileSpec new_file_spec;
+        if (target_sp->GetSourcePathMap().FindFile(original_file, new_file_spec))
+            file = new_file_spec;
+    }
 }

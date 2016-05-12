@@ -47,6 +47,14 @@ class DMUL_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmul", 0b000011000>;
 class DMUH_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmuh", 0b001011000>;
 class DMULU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmulu", 0b010011000>;
 class DMUHU_MM64R6_ENC : POOL32S_ARITH_FM_MMR6<"dmuhu", 0b011011000>;
+class DSBH_MM64R6_ENC : POOL32S_2R_FM_MMR6<0b0111101100>;
+class DSHD_MM64R6_ENC : POOL32S_2R_FM_MMR6<0b1111101100>;
+class DSLL_MM64R6_ENC : POOL32S_2RSA5B0_FM_MMR6<0b000000000>;
+class DSLL32_MM64R6_ENC : POOL32S_2RSA5B0_FM_MMR6<0b000001000>;
+class DSLLV_MM64R6_ENC : POOL32S_3R_FM_MMR6<0b000010000>;
+class DSRAV_MM64R6_ENC : POOL32S_3R_FM_MMR6<0b010010000>;
+class DSRA_MM64R6_ENC : POOL32S_2RSA5B0_FM_MMR6<0b010000000>;
+class DSRA32_MM64R6_ENC : POOL32S_2RSA5B0_FM_MMR6<0b010000100>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -167,6 +175,73 @@ class DMULU_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmulu", GPR64Opnd, II_DMULU>;
 class DMUHU_MM64R6_DESC : MUL_MM64R6_DESC_BASE<"dmuhu", GPR64Opnd, II_DMUHU,
                                                mulhu>;
 
+class DSBH_DSHD_DESC_BASE<string instr_asm, RegisterOperand GPROpnd>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  dag OutOperandList = (outs GPROpnd:$rt);
+  dag InOperandList = (ins GPROpnd:$rs);
+  string AsmString = !strconcat(instr_asm, "\t$rt, $rs");
+  bit hasSideEffects = 0;
+  list<dag> Pattern = [];
+  InstrItinClass Itinerary = NoItinerary;
+  Format Form = FrmR;
+}
+
+class DSBH_MM64R6_DESC : DSBH_DSHD_DESC_BASE<"dsbh", GPR64Opnd>;
+class DSHD_MM64R6_DESC : DSBH_DSHD_DESC_BASE<"dshd", GPR64Opnd>;
+
+class DSLL_DSLL32_DESC_BASE<string instr_asm, Operand ImmOpnd,
+                            InstrItinClass itin,
+                            SDPatternOperator OpNode = null_frag,
+                            SDPatternOperator PO = null_frag>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  dag OutOperandList = (outs GPR64Opnd:$rt);
+  dag InOperandList = (ins GPR64Opnd:$rs, ImmOpnd:$sa);
+  string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $sa");
+  InstrItinClass Itinerary = itin;
+  list<dag> Pattern = [(set GPR64Opnd:$rt, (OpNode GPR64Opnd:$rs, PO:$sa))];
+  string TwoOperandAliasConstraint = "$rs = $rt";
+}
+
+class DSLL_MM64R6_DESC : DSLL_DSLL32_DESC_BASE<"dsll", uimm6, II_DSLL, shl,
+                                               immZExt6>;
+class DSLL32_MM64R6_DESC : DSLL_DSLL32_DESC_BASE<"dsll32", uimm5, II_DSLL32>;
+
+class DSLLV_DSRAV_MM64R6_DESC_BASE<string instr_asm, RegisterOperand RO,
+                                   InstrItinClass itin,
+                                   SDPatternOperator OpNode = null_frag>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  dag OutOperandList = (outs RO:$rd);
+  dag InOperandList = (ins RO:$rt, GPR32Opnd:$rs);
+  string AsmString = !strconcat(instr_asm, "\t$rd, $rt, $rs");
+  list<dag> Pattern = [(set RO:$rd, (OpNode RO:$rt, GPR32Opnd:$rs))];
+  InstrItinClass Itinerary = itin;
+  Format Form = FrmR;
+}
+
+class DSLLV_MM64R6_DESC : DSLLV_DSRAV_MM64R6_DESC_BASE<"dsllv", GPR64Opnd,
+                                                       II_DSLLV, shl>;
+class DSRAV_MM64R6_DESC : DSLLV_DSRAV_MM64R6_DESC_BASE<"dsrav", GPR64Opnd,
+                                                       II_DSRAV, sra>;
+
+class DSRA_DSRA32_MM64R6_DESC_BASE<string instr_asm, Operand ImmOpnd,
+                              RegisterOperand RO, InstrItinClass itin,
+                              SDPatternOperator OpNode = null_frag,
+                              SDPatternOperator PF = null_frag>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  dag OutOperandList = (outs RO:$rt);
+  dag InOperandList = (ins RO:$rs, ImmOpnd:$sa);
+  string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $sa");
+  list<dag> Pattern = [(set RO:$rt, (OpNode RO:$rs, PF:$sa))];
+  InstrItinClass Itinerary = itin;
+  Format Form = FrmR;
+  string BaseOpcode = instr_asm;
+}
+
+class DSRA_MM64R6_DESC : DSRA_DSRA32_MM64R6_DESC_BASE<"dsra", uimm6, GPR64Opnd,
+                                                      II_DSRA, sra, immZExt6>;
+class DSRA32_MM64R6_DESC : DSRA_DSRA32_MM64R6_DESC_BASE<"dsra32", uimm5,
+                                                        GPR64Opnd, II_DSRA32>;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -231,6 +306,22 @@ let DecoderNamespace = "MicroMipsR6" in {
                      ISA_MICROMIPS64R6;
   def DMUHU_MM64R6 : R6MMR6Rel, DMUHU_MM64R6_DESC, DMUHU_MM64R6_ENC,
                      ISA_MICROMIPS64R6;
+  def DSBH_MM64R6 : R6MMR6Rel, DSBH_MM64R6_DESC, DSBH_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DSHD_MM64R6 : R6MMR6Rel, DSHD_MM64R6_DESC, DSHD_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DSLL_MM64R6 : R6MMR6Rel, DSLL_MM64R6_DESC, DSLL_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DSLL32_MM64R6 : R6MMR6Rel, DSLL32_MM64R6_DESC, DSLL32_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DSLLV_MM64R6 : R6MMR6Rel, DSLLV_MM64R6_DESC, DSLLV_MM64R6_ENC,
+                     ISA_MICROMIPS64R6;
+  def DSRAV_MM64R6 : R6MMR6Rel, DSRAV_MM64R6_DESC, DSRAV_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DSRA_MM64R6 : R6MMR6Rel, DSRA_MM64R6_DESC, DSRA_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
+  def DSRA32_MM64R6 : R6MMR6Rel, DSRA32_MM64R6_DESC, DSRA32_MM64R6_ENC,
+                    ISA_MICROMIPS64R6;
 }
 
 //===----------------------------------------------------------------------===//

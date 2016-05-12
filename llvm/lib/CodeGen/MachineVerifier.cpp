@@ -221,6 +221,7 @@ namespace {
     void report_context_liverange(const LiveRange &LR) const;
     void report_context_regunit(unsigned RegUnit) const;
     void report_context_lanemask(LaneBitmask LaneMask) const;
+    void report_context_vreg(unsigned VReg) const;
     void report_context_vreg_regunit(unsigned VRegOrRegUnit) const;
 
     void verifyInlineAsm(const MachineInstr *MI);
@@ -498,9 +499,13 @@ void MachineVerifier::report_context_regunit(unsigned RegUnit) const {
   errs() << "- regunit:     " << PrintRegUnit(RegUnit, TRI) << '\n';
 }
 
+void MachineVerifier::report_context_vreg(unsigned VReg) const {
+  errs() << "- v. register: " << PrintReg(VReg, TRI) << '\n';
+}
+
 void MachineVerifier::report_context_vreg_regunit(unsigned VRegOrUnit) const {
   if (TargetRegisterInfo::isVirtualRegister(VRegOrUnit)) {
-    errs() << "- v. register: " << PrintReg(VRegOrUnit, TRI) << '\n';
+    report_context_vreg(VRegOrUnit);
   } else {
     errs() << "- regunit:     " << PrintRegUnit(VRegOrUnit, TRI) << '\n';
   }
@@ -1513,9 +1518,10 @@ void MachineVerifier::visitMachineFunctionAfter() {
     BBInfo &MInfo = MBBInfoMap[&MF->front()];
     for (RegSet::iterator
          I = MInfo.vregsRequired.begin(), E = MInfo.vregsRequired.end(); I != E;
-         ++I)
-      report("Virtual register def doesn't dominate all uses.",
-             MRI->getVRegDef(*I));
+         ++I) {
+      report("Virtual register defs don't dominate all uses.", MF);
+      report_context_vreg(*I);
+    }
   }
 
   if (LiveVars)

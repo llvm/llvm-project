@@ -490,14 +490,7 @@ StackFrame::GetSymbolContext (uint32_t resolve_scope)
                 if ((resolved & eSymbolContextLineEntry) && !m_sc.line_entry.IsValid())
                 {
                     m_sc.line_entry = sc.line_entry;
-                    if (m_sc.target_sp)
-                    {
-                        // Be sure to apply and file remappings to our file and line
-                        // entries when handing out a line entry
-                        FileSpec new_file_spec;
-                        if (m_sc.target_sp->GetSourcePathMap().FindFile (m_sc.line_entry.file, new_file_spec))
-                            m_sc.line_entry.file = new_file_spec;
-                    }
+                    m_sc.line_entry.ApplyFileMappings(m_sc.target_sp);
                 }
             }
         }

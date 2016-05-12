@@ -36,13 +36,13 @@ XrefsDBManager::search(llvm::StringRef Identifier) const {
   std::vector<std::string> Results;
   for (const auto &Symbol : Symbols) {
     // Match the identifier name without qualifier.
-    if (Symbol.Name == Names.back()) {
+    if (Symbol.getName() == Names.back()) {
       bool IsMatched = true;
-      auto SymbolContext = Symbol.Contexts.begin();
+      auto SymbolContext = Symbol.getContexts().begin();
       // Match the remaining context names.
       for (auto IdentiferContext = Names.rbegin() + 1;
            IdentiferContext != Names.rend() &&
-           SymbolContext != Symbol.Contexts.end();
+           SymbolContext != Symbol.getContexts().end();
            ++IdentiferContext, ++SymbolContext) {
         if (SymbolContext->second != *IdentiferContext) {
           IsMatched = false;
@@ -56,10 +56,10 @@ XrefsDBManager::search(llvm::StringRef Identifier) const {
         // need to be changed.
         // FIXME: if the file path is a system header name, we want to use angle
         // brackets.
-        Results.push_back(
-            (Symbol.FilePath[0] == '"' || Symbol.FilePath[0] == '<')
-                ? Symbol.FilePath
-                : "\"" + Symbol.FilePath + "\"");
+        std::string FilePath = Symbol.getFilePath().str();
+        Results.push_back((FilePath[0] == '"' || FilePath[0] == '<')
+                              ? FilePath
+                              : "\"" + FilePath + "\"");
       }
     }
   }

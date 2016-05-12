@@ -1874,7 +1874,13 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           continue;
         }
 
-        auto CallingConv = DeoptCall->getCallingConv();
+        // The calling convention on the deoptimize call itself may be bogus,
+        // since the code we're inlining may have undefined behavior (and may
+        // never actually execute at runtime); but all
+        // @llvm.experimental.deoptimize declarations have to have the same
+        // calling convention in a well-formed module.
+        auto CallingConv = DeoptCall->getCalledFunction()->getCallingConv();
+        NewDeoptIntrinsic->setCallingConv(CallingConv);
         auto *CurBB = RI->getParent();
         RI->eraseFromParent();
 

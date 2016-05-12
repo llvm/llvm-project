@@ -2127,12 +2127,7 @@ void SelectionDAGISel::Select_WRITE_REGISTER(SDNode *Op) {
 }
 
 void SelectionDAGISel::Select_UNDEF(SDNode *N) {
-  SDNode *New =
-      CurDAG->SelectNodeTo(N, TargetOpcode::IMPLICIT_DEF, N->getValueType(0));
-  if (New != N) {
-    ReplaceUses(N, New);
-    CurDAG->RemoveDeadNode(N);
-  }
+  CurDAG->SelectNodeTo(N, TargetOpcode::IMPLICIT_DEF, N->getValueType(0));
 }
 
 /// GetVBR - decode a vbr encoding whose top bit is set.

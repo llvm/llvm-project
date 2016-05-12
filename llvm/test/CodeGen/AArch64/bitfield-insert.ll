@@ -237,3 +237,77 @@ define i32 @test_nouseful_bits(i8 %a, i32 %b) {
   %shl.4 = shl i32 %or.3, 8     ;   A A A 0
   ret i32 %shl.4
 }
+
+define void @test_nouseful_strb(i32* %ptr32, i8* %ptr8, i32 %x)  {
+entry:
+; CHECK-LABEL: @test_nouseful_strb
+; CHECK: ldr [[REG1:w[0-9]+]],
+; CHECK-NOT:  and {{w[0-9]+}}, {{w[0-9]+}}, #0xf8
+; CHECK-NEXT: bfxil [[REG1]], w2, #16, #3
+; CHECK-NEXT: strb [[REG1]],
+; CHECK-NEXT: ret
+  %0 = load i32, i32* %ptr32, align 8
+  %and = and i32 %0, -8
+  %shr = lshr i32 %x, 16
+  %and1 = and i32 %shr, 7
+  %or = or i32 %and, %and1
+  %trunc = trunc i32 %or to i8
+  store i8 %trunc, i8* %ptr8
+  ret void
+}
+
+define void @test_nouseful_strh(i32* %ptr32, i16* %ptr16, i32 %x)  {
+entry:
+; CHECK-LABEL: @test_nouseful_strh
+; CHECK: ldr [[REG1:w[0-9]+]],
+; CHECK-NOT:  and {{w[0-9]+}}, {{w[0-9]+}}, #0xfff0
+; CHECK-NEXT: bfxil [[REG1]], w2, #16, #4
+; CHECK-NEXT: strh [[REG1]],
+; CHECK-NEXT: ret
+  %0 = load i32, i32* %ptr32, align 8
+  %and = and i32 %0, -16
+  %shr = lshr i32 %x, 16
+  %and1 = and i32 %shr, 15
+  %or = or i32 %and, %and1
+  %trunc = trunc i32 %or to i16
+  store i16 %trunc, i16* %ptr16
+  ret void
+}
+
+define void @test_nouseful_sturb(i32* %ptr32, i8* %ptr8, i32 %x)  {
+entry:
+; CHECK-LABEL: @test_nouseful_sturb
+; CHECK: ldr [[REG1:w[0-9]+]],
+; CHECK-NOT:  and {{w[0-9]+}}, {{w[0-9]+}}, #0xf8
+; CHECK-NEXT: bfxil [[REG1]], w2, #16, #3
+; CHECK-NEXT: sturb [[REG1]],
+; CHECK-NEXT: ret
+  %0 = load i32, i32* %ptr32, align 8
+  %and = and i32 %0, -8
+  %shr = lshr i32 %x, 16
+  %and1 = and i32 %shr, 7
+  %or = or i32 %and, %and1
+  %trunc = trunc i32 %or to i8
+  %gep = getelementptr i8, i8* %ptr8, i64 -1
+  store i8 %trunc, i8* %gep
+  ret void
+}
+
+define void @test_nouseful_sturh(i32* %ptr32, i16* %ptr16, i32 %x)  {
+entry:
+; CHECK-LABEL: @test_nouseful_sturh
+; CHECK: ldr [[REG1:w[0-9]+]],
+; CHECK-NOT:  and {{w[0-9]+}}, {{w[0-9]+}}, #0xfff0
+; CHECK-NEXT: bfxil [[REG1]], w2, #16, #4
+; CHECK-NEXT: sturh [[REG1]],
+; CHECK-NEXT: ret
+  %0 = load i32, i32* %ptr32, align 8
+  %and = and i32 %0, -16
+  %shr = lshr i32 %x, 16
+  %and1 = and i32 %shr, 15
+  %or = or i32 %and, %and1
+  %trunc = trunc i32 %or to i16
+  %gep = getelementptr i16, i16* %ptr16, i64 -1
+  store i16 %trunc, i16* %gep
+  ret void
+}

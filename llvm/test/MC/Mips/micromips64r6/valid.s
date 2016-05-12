@@ -261,5 +261,13 @@ a:
         dmuhu $3, $4, $5         # CHECK dmuhu $3, $4, $5         # encoding: [0x58,0xa4,0x18,0xd8]
         lwp $16, 8($4)           # CHECK: lwp $16, 8($4)          # encoding: [0x22,0x04,0x10,0x08]
         swp $16, 8($4)           # CHECK: swp $16, 8($4)          # encoding: [0x22,0x04,0x90,0x08]
+        dsbh $3, $4              # CHECK: dsbh $3, $4             # encoding: [0x58,0x64,0x7b,0x3c]
+        dshd $3, $4              # CHECK: dshd $3, $4             # encoding: [0x58,0x64,0xfb,0x3c]
+        dsll $3, $4, 5           # CHECK: dsll $3, $4, 5          # encoding: [0x58,0x64,0x28,0x00]
+        dsll32 $3, $4, 5         # CHECK: dsll32 $3, $4, 5        # encoding: [0x58,0x64,0x28,0x08]
+        dsllv $4, $5, $6         # CHECK: dsllv $4, $5, $6        # encoding: [0x58,0xa6,0x20,0x10]
+        dsra $4, $5, 5           # CHECK: dsra $4, $5, 5          # encoding: [0x58,0x85,0x28,0x80]
+        dsra32 $4, $5, 5         # CHECK: dsra32 $4, $5, 5        # encoding: [0x58,0x85,0x28,0x84]
+        dsrav $4, $5, $6         # CHECK: dsrav $4, $5, $6        # encoding: [0x58,0xa6,0x20,0x90]
 
 1:

@@ -80,6 +80,31 @@ const std::error_category &llvm::instrprof_category() {
 
 namespace llvm {
 
+void SoftInstrProfErrors::addError(instrprof_error IE) {
+  if (IE == instrprof_error::success)
+    return;
+
+  if (FirstError == instrprof_error::success)
+    FirstError = IE;
+
+  switch (IE) {
+  case instrprof_error::hash_mismatch:
+    ++NumHashMismatches;
+    break;
+  case instrprof_error::count_mismatch:
+    ++NumCountMismatches;
+    break;
+  case instrprof_error::counter_overflow:
+    ++NumCounterOverflows;
+    break;
+  case instrprof_error::value_site_count_mismatch:
+    ++NumValueSiteCountMismatches;
+    break;
+  default:
+    llvm_unreachable("Not a soft error");
+  }
+}
+
 std::string getPGOFuncName(StringRef RawFuncName,
                            GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
@@ -291,13 +316,13 @@ std::error_code readPGOFuncNameStrings(StringRef NameStrings,
   return make_error_code(instrprof_error::success);
 }
 
-instrprof_error InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
-                                                uint64_t Weight) {
+void InstrProfValueSiteRecord::merge(SoftInstrProfErrors &SIPE,
+                                     InstrProfValueSiteRecord &Input,
+                                     uint64_t Weight) {
   this->sortByTargetValues();
   Input.sortByTargetValues();
   auto I = ValueData.begin();
   auto IE = ValueData.end();
-  instrprof_error Result = instrprof_error::success;
   for (auto J = Input.ValueData.begin(), JE = Input.ValueData.end(); J != JE;
        ++J) {
     while (I != IE && I->Value < J->Value)
@@ -306,92 +331,80 @@ instrprof_error InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
       bool Overflowed;
       I->Count = SaturatingMultiplyAdd(J->Count, Weight, I->Count, &Overflowed);
       if (Overflowed)
-        Result = instrprof_error::counter_overflow;
+        SIPE.addError(instrprof_error::counter_overflow);
       ++I;
       continue;
     }
     ValueData.insert(I, *J);
   }
-  return Result;
 }
 
-instrprof_error InstrProfValueSiteRecord::scale(uint64_t Weight) {
-  instrprof_error Result = instrprof_error::success;
+void InstrProfValueSiteRecord::scale(SoftInstrProfErrors &SIPE,
+                                     uint64_t Weight) {
   for (auto I = ValueData.begin(), IE = ValueData.end(); I != IE; ++I) {
     bool Overflowed;
     I->Count = SaturatingMultiply(I->Count, Weight, &Overflowed);
     if (Overflowed)
-      Result = instrprof_error::counter_overflow;
+      SIPE.addError(instrprof_error::counter_overflow);
   }
-  return Result;
 }
 
 // Merge Value Profile data from Src record to this record for ValueKind.
 // Scale merged value counts by \p Weight.
-instrprof_error InstrProfRecord::mergeValueProfData(uint32_t ValueKind,
-                                                    InstrProfRecord &Src,
-                                                    uint64_t Weight) {
+void InstrProfRecord::mergeValueProfData(uint32_t ValueKind,
+                                         InstrProfRecord &Src,
+                                         uint64_t Weight) {
   uint32_t ThisNumValueSites = getNumValueSites(ValueKind);
   uint32_t OtherNumValueSites = Src.getNumValueSites(ValueKind);
-  if (ThisNumValueSites != OtherNumValueSites)
-    return instrprof_error::value_site_count_mismatch;
+  if (ThisNumValueSites != OtherNumValueSites) {
+    SIPE.addError(instrprof_error::value_site_count_mismatch);
+    return;
+  }
   std::vector<InstrProfValueSiteRecord> &ThisSiteRecords =
       getValueSitesForKind(ValueKind);
   std::vector<InstrProfValueSiteRecord> &OtherSiteRecords =
       Src.getValueSitesForKind(ValueKind);
-  instrprof_error Result = instrprof_error::success;
   for (uint32_t I = 0; I < ThisNumValueSites; I++)
-    MergeResult(Result, ThisSiteRecords[I].merge(OtherSiteRecords[I], Weight));
-  return Result;
+    ThisSiteRecords[I].merge(SIPE, OtherSiteRecords[I], Weight);
 }
 
-instrprof_error InstrProfRecord::merge(InstrProfRecord &Other,
-                                       uint64_t Weight) {
+void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight) {
   // If the number of counters doesn't match we either have bad data
   // or a hash collision.
-  if (Counts.size() != Other.Counts.size())
-    return instrprof_error::count_mismatch;
-
-  instrprof_error Result = instrprof_error::success;
+  if (Counts.size() != Other.Counts.size()) {
+    SIPE.addError(instrprof_error::count_mismatch);
+    return;
+  }
 
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
     bool Overflowed;
     Counts[I] =
         SaturatingMultiplyAdd(Other.Counts[I], Weight, Counts[I], &Overflowed);
     if (Overflowed)
-      Result = instrprof_error::counter_overflow;
+      SIPE.addError(instrprof_error::counter_overflow);
   }
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
-    MergeResult(Result, mergeValueProfData(Kind, Other, Weight));
-
-  return Result;
+    mergeValueProfData(Kind, Other, Weight);
 }
 
-instrprof_error InstrProfRecord::scaleValueProfData(uint32_t ValueKind,
-                                                    uint64_t Weight) {
+void InstrProfRecord::scaleValueProfData(uint32_t ValueKind, uint64_t Weight) {
   uint32_t ThisNumValueSites = getNumValueSites(ValueKind);
   std::vector<InstrProfValueSiteRecord> &ThisSiteRecords =
       getValueSitesForKind(ValueKind);
-  instrprof_error Result = instrprof_error::success;
   for (uint32_t I = 0; I < ThisNumValueSites; I++)
-    MergeResult(Result, ThisSiteRecords[I].scale(Weight));
-  return Result;
+    ThisSiteRecords[I].scale(SIPE, Weight);
 }
 
-instrprof_error InstrProfRecord::scale(uint64_t Weight) {
-  instrprof_error Result = instrprof_error::success;
+void InstrProfRecord::scale(uint64_t Weight) {
   for (auto &Count : this->Counts) {
     bool Overflowed;
     Count = SaturatingMultiply(Count, Weight, &Overflowed);
-    if (Overflowed && Result == instrprof_error::success) {
-      Result = instrprof_error::counter_overflow;
-    }
+    if (Overflowed)
+      SIPE.addError(instrprof_error::counter_overflow);
   }
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
-    MergeResult(Result, scaleValueProfData(Kind, Weight));
-
-  return Result;
+    scaleValueProfData(Kind, Weight);
 }
 
 // Map indirect call target name hash to name string.
@@ -428,7 +441,7 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getValueSitesForKind(ValueKind);
   if (N == 0)
-    ValueSites.push_back(InstrProfValueSiteRecord());
+    ValueSites.emplace_back();
   else
     ValueSites.emplace_back(VData, VData + N);
 }

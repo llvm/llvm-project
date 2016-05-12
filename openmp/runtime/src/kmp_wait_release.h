@@ -580,6 +580,8 @@ public:
 // Used to wake up threads, volatile void* flag is usually the th_sleep_loc associated
 // with int gtid.
 static inline void __kmp_null_resume_wrapper(int gtid, volatile void *flag) {
+    if (!flag) return;
+
     switch (((kmp_flag_64 *)flag)->get_type()) {
     case flag32: __kmp_resume_32(gtid, NULL); break;
     case flag64: __kmp_resume_64(gtid, NULL); break;
