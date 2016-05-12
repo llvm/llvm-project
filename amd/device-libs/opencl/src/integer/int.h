@@ -9,7 +9,7 @@
 
 #define UEXPN(N,T,F) \
 UEXPATTR T##N \
-F(T##N x, T##N y) \
+F(T##N x) \
 { \
     return (T##N) ( ULIST##N(F) ); \
 }
