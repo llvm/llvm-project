@@ -507,14 +507,23 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Ignore -fembed-bitcode options with LTO
   // since the output will be bitcode anyway.
   if (!Args.hasFlag(options::OPT_flto, options::OPT_fno_lto, false)) {
-    if (Args.hasArg(options::OPT_fembed_bitcode))
-      BitcodeEmbed = EmbedBitcode;
-    else if (Args.hasArg(options::OPT_fembed_bitcode_marker))
-      BitcodeEmbed = EmbedMarker;
+    if (Arg *A = Args.getLastArg(options::OPT_fembed_bitcode_EQ)) {
+      StringRef Name = A->getValue();
+      unsigned Model = llvm::StringSwitch<unsigned>(Name)
+          .Case("off", EmbedNone)
+          .Case("all", EmbedBitcode)
+          .Case("bitcode", EmbedBitcode)
+          .Case("marker", EmbedMarker)
+          .Default(~0U);
+      if (Model == ~0U) {
+        Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
+                                                  << Name;
+      } else
+        BitcodeEmbed = static_cast<BitcodeEmbedMode>(Model);
+    }
   } else {
     // claim the bitcode option under LTO so no warning is issued.
-    Args.ClaimAllArgs(options::OPT_fembed_bitcode);
-    Args.ClaimAllArgs(options::OPT_fembed_bitcode_marker);
+    Args.ClaimAllArgs(options::OPT_fembed_bitcode_EQ);
   }
 
   setLTOMode(Args);
@@ -2425,6 +2434,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
   ToolChain *&TC = ToolChains[Target.str()];
   if (!TC) {
     switch (Target.getOS()) {
+    case llvm::Triple::Haiku:
+      TC = new toolchains::Haiku(*this, Target, Args);
+      break;
     case llvm::Triple::CloudABI:
       TC = new toolchains::CloudABI(*this, Target, Args);
       break;

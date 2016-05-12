@@ -21,6 +21,10 @@ void mismatched(int x) {}
 typedef void (WINAPI *callback_t)(int);
 void take_callback(callback_t callback);
 
+void WINAPI mismatched_stdcall(int x) {}
+
+void take_opaque_fn(void (*callback)(int));
+
 int main() {
   // expected-warning@+1 {{cast between incompatible calling conventions 'cdecl' and 'stdcall'}}
   take_callback((callback_t)mismatched);
@@ -44,6 +48,11 @@ int main() {
 
   // Another way to suppress the warning.
   take_callback((callback_t)(void*)mismatched);
+
+  // Don't warn, because we're casting from stdcall to cdecl. Usually that means
+  // the programmer is rinsing the function pointer through some kind of opaque
+  // API.
+  take_opaque_fn((void (*)(int))mismatched_stdcall);
 }
 
 // MSFIXIT: fix-it:"{{.*}}callingconv-cast.c":{19:6-19:6}:"WINAPI "

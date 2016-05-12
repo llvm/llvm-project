@@ -499,3 +499,25 @@ void callit(C *p) {
 // CHECK: %[[B_i8:.*]] = getelementptr i8, i8* %{{.*}}, i32 4
 // CHECK: call x86_thiscallcc void @"\01?g@C@pr27621@@UAEXXZ"(i8* %[[B_i8]])
 }
+
+namespace test6 {
+class A {};
+class B : virtual A {};
+class C : virtual B {
+  virtual void m_fn1();
+  float field;
+};
+class D : C {
+  D();
+};
+D::D() : C() {}
+// CHECK-LABEL: define x86_thiscallcc %"class.test6::D"* @"\01??0D@test6@@AAE@XZ"(
+// CHECK:   %[[THIS:.*]] = load %"class.test6::D"*, %"class.test6::D"**
+// CHECK:   br i1 %{{.*}}, label %[[INIT_VBASES:.*]], label %[[SKIP_VBASES:.*]]
+
+// CHECK: %[[SKIP_VBASES]]
+// CHECK:   %[[C:.*]] = bitcast %"class.test6::D"* %[[THIS]] to %"class.test6::C"*
+// CHECK:   %[[C_i8:.*]] = bitcast %"class.test6::C"* %[[C]] to i8*
+// CHECK:   %[[FIELD:.*]] = getelementptr inbounds i8, i8* %[[C_i8]], i32 8
+// CHECK:   call void @llvm.memset.p0i8.i32(i8* %[[FIELD]], i8 0, i32 4, i32 4, i1 false)
+}

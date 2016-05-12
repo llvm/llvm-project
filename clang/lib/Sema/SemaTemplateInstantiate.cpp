@@ -2321,8 +2321,9 @@ bool Sema::InstantiateClassTemplateSpecialization(
                                     Info)) {
       // Store the failed-deduction information for use in diagnostics, later.
       // TODO: Actually use the failed-deduction info?
-      FailedCandidates.addCandidate()
-          .set(Partial, MakeDeductionFailureInfo(Context, Result, Info));
+      FailedCandidates.addCandidate().set(
+          DeclAccessPair::make(Template, AS_public), Partial,
+          MakeDeductionFailureInfo(Context, Result, Info));
       (void)Result;
     } else {
       Matched.push_back(PartialSpecMatchResult());

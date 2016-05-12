@@ -370,6 +370,9 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
   std::vector<CharUnits> VBPtrOffsets =
       CGF.CGM.getCXXABI().getVBPtrOffsets(Base);
   for (CharUnits VBPtrOffset : VBPtrOffsets) {
+    // Stop before we hit any virtual base pointers located in virtual bases.
+    if (VBPtrOffset >= NVSize)
+      break;
     std::pair<CharUnits, CharUnits> LastStore = Stores.pop_back_val();
     CharUnits LastStoreOffset = LastStore.first;
     CharUnits LastStoreSize = LastStore.second;

@@ -51,7 +51,6 @@ TEST(Finder, DynamicOnlyAcceptsSomeMatchers) {
 
   // Do not accept non-toplevel matchers.
   EXPECT_FALSE(Finder.addDynamicMatcher(isArrow(), nullptr));
-  EXPECT_FALSE(Finder.addDynamicMatcher(hasSize(2), nullptr));
   EXPECT_FALSE(Finder.addDynamicMatcher(hasName("x"), nullptr));
 }
 
@@ -2534,6 +2533,17 @@ TEST(Matcher, StringLiterals) {
   EXPECT_TRUE(matches("const char *s = \"\x05five\";", Literal));
   // no matching -- though the data type is the same, there is no string literal
   EXPECT_TRUE(notMatches("const char s[1] = {'a'};", Literal));
+}
+
+TEST(StringLiteral, HasSize) {
+  StatementMatcher Literal = stringLiteral(hasSize(4));
+  EXPECT_TRUE(matches("const char *s = \"abcd\";", Literal));
+  // wide string
+  EXPECT_TRUE(matches("const wchar_t *s = L\"abcd\";", Literal));
+  // with escaped characters
+  EXPECT_TRUE(matches("const char *s = \"\x05\x06\x07\x08\";", Literal));
+  // no matching, too small
+  EXPECT_TRUE(notMatches("const char *s = \"ab\";", Literal));
 }
 
 TEST(Matcher, CharacterLiterals) {

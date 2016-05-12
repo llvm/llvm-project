@@ -3305,6 +3305,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
 
   CXXConstructExpr *TheCXXConstructExpr =
     CXXConstructExpr::Create(C, Ty, SourceLocation(),
+                             CXXConstExpr->getFoundDecl(),
                              CXXConstExpr->getConstructor(),
                              CXXConstExpr->isElidable(),
                              ConstructorArgs,

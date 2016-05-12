@@ -634,6 +634,45 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       }
     }
   }
+	// Handle -fembed-bitcode option.
+  if (Arg *A = Args.getLastArg(OPT_fembed_bitcode_EQ)) {
+    StringRef Name = A->getValue();
+    unsigned Model = llvm::StringSwitch<unsigned>(Name)
+        .Case("off", CodeGenOptions::Embed_Off)
+        .Case("all", CodeGenOptions::Embed_All)
+        .Case("bitcode", CodeGenOptions::Embed_Bitcode)
+        .Case("marker", CodeGenOptions::Embed_Marker)
+        .Default(~0U);
+    if (Model == ~0U) {
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
+      Success = false;
+    } else
+      Opts.setEmbedBitcode(
+          static_cast<CodeGenOptions::EmbedBitcodeKind>(Model));
+  }
+  // FIXME: For backend options that are not yet recorded as function
+  // attributes in the IR, keep track of them so we can embed them in a
+  // separate data section and use them when building the bitcode.
+  if (Opts.getEmbedBitcode() == CodeGenOptions::Embed_All) {
+    for (const auto &A : Args) {
+      // Do not encode output and input.
+      if (A->getOption().getID() == options::OPT_o ||
+          A->getOption().getID() == options::OPT_INPUT ||
+          A->getOption().getID() == options::OPT_x ||
+          A->getOption().getID() == options::OPT_fembed_bitcode ||
+          (A->getOption().getGroup().isValid() &&
+           A->getOption().getGroup().getID() == options::OPT_W_Group))
+        continue;
+      ArgStringList ASL;
+      A->render(Args, ASL);
+      for (const auto &arg : ASL) {
+        StringRef ArgStr(arg);
+        Opts.CmdArgs.insert(Opts.CmdArgs.end(), ArgStr.begin(), ArgStr.end());
+        // using \00 to seperate each commandline options.
+        Opts.CmdArgs.push_back('\0');
+      }
+    }
+  }
 
   Opts.InstrumentFunctions = Args.hasArg(OPT_finstrument_functions);
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);

@@ -12,18 +12,19 @@ endif()
 add_clang_unittest(ToolingTests
   CommentHandlerTest.cpp
   CompilationDatabaseTest.cpp
+  FixItTest.cpp  
   LookupTest.cpp
-  ToolingTest.cpp
+  QualTypeNamesTest.cpp
   RecursiveASTVisitorTest.cpp
   RecursiveASTVisitorTestCallVisitor.cpp
   RecursiveASTVisitorTestDeclVisitor.cpp
   RecursiveASTVisitorTestExprVisitor.cpp
   RecursiveASTVisitorTestTypeLocVisitor.cpp
-  RefactoringTest.cpp
-  RewriterTest.cpp
   RefactoringCallbacksTest.cpp
+  RefactoringTest.cpp
   ReplacementsYamlTest.cpp
-  QualTypeNamesTest.cpp
+  RewriterTest.cpp
+  ToolingTest.cpp
   )
 
 target_link_libraries(ToolingTests

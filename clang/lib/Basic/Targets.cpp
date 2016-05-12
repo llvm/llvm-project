@@ -382,6 +382,29 @@ public:
       : OSTargetInfo<Target>(Triple, Opts) {}
 };
 
+// Haiku Target
+template<typename Target>
+class HaikuTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    // Haiku defines; list based off of gcc output
+    Builder.defineMacro("__HAIKU__");
+    Builder.defineMacro("__ELF__");
+    DefineStd(Builder, "unix", Opts);
+  }
+public:
+  HaikuTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    this->SizeType = TargetInfo::UnsignedLong;
+    this->IntPtrType = TargetInfo::SignedLong;
+    this->PtrDiffType = TargetInfo::SignedLong;
+    this->ProcessIDType = TargetInfo::SignedLong;
+    this->TLSSupported = false;
+
+  }
+};
+
 // Minix Target
 template<typename Target>
 class MinixTargetInfo : public OSTargetInfo<Target> {
@@ -4088,21 +4111,15 @@ public:
 };
 
 // x86-32 Haiku target
-class HaikuX86_32TargetInfo : public X86_32TargetInfo {
+class HaikuX86_32TargetInfo : public HaikuTargetInfo<X86_32TargetInfo> {
 public:
   HaikuX86_32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : X86_32TargetInfo(Triple, Opts) {
-    SizeType = UnsignedLong;
-    IntPtrType = SignedLong;
-    PtrDiffType = SignedLong;
-    ProcessIDType = SignedLong;
-    this->TLSSupported = false;
+    : HaikuTargetInfo<X86_32TargetInfo>(Triple, Opts) {
   }
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
-    X86_32TargetInfo::getTargetDefines(Opts, Builder);
+    HaikuTargetInfo<X86_32TargetInfo>::getTargetDefines(Opts, Builder);
     Builder.defineMacro("__INTEL__");
-    Builder.defineMacro("__HAIKU__");
   }
 };
 
@@ -8360,6 +8377,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         return new MicrosoftX86_64TargetInfo(Triple, Opts);
       }
     }
+    case llvm::Triple::Haiku:
+      return new HaikuTargetInfo<X86_64TargetInfo>(Triple, Opts);
     case llvm::Triple::NaCl:
       return new NaClTargetInfo<X86_64TargetInfo>(Triple, Opts);
     case llvm::Triple::PS4:

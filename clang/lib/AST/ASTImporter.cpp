@@ -5767,9 +5767,14 @@ Expr *ASTNodeImporter::VisitCXXConstructExpr(CXXConstructExpr *E) {
   if (T.isNull())
     return nullptr;
 
+  NamedDecl *ToFound =
+    dyn_cast<NamedDecl>(Importer.Import(E->getFoundDecl()));
+  if (!ToFound)
+    return nullptr;
+
   CXXConstructorDecl *ToCCD =
     dyn_cast<CXXConstructorDecl>(Importer.Import(E->getConstructor()));
-  if (!ToCCD && E->getConstructor())
+  if (!ToCCD)
     return nullptr;
 
   SmallVector<Expr *, 6> ToArgs(E->getNumArgs());
@@ -5779,7 +5784,7 @@ Expr *ASTNodeImporter::VisitCXXConstructExpr(CXXConstructExpr *E) {
 
   return CXXConstructExpr::Create(Importer.getToContext(), T,
                                   Importer.Import(E->getLocation()),
-                                  ToCCD, E->isElidable(),
+                                  ToFound, ToCCD, E->isElidable(),
                                   ToArgs, E->hadMultipleCandidates(),
                                   E->isListInitialization(),
                                   E->isStdInitListInitialization(),

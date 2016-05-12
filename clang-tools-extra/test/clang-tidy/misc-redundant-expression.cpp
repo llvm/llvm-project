@@ -68,14 +68,14 @@ int Test(int X, int Y) {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: both side of operator are equivalent
 
   if (foo(0) - 2 < foo(0) - 2) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: both side of operator are equivalent  
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: both side of operator are equivalent
   if (foo(bar(0)) < (foo(bar((0))))) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: both side of operator are equivalent  
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: both side of operator are equivalent
 
   if (P1.x < P2.x && P1.x < P2.x) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: both side of operator are equivalent  
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: both side of operator are equivalent
   if (P2.a[P1.x + 2] < P2.x && P2.a[(P1.x) + (2)] < (P2.x)) return 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: both side of operator are equivalent  
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: both side of operator are equivalent
 
   return 0;
 }
@@ -100,13 +100,36 @@ int Valid(int X, int Y) {
   return 0;
 }
 
+int TestConditional(int x, int y) {
+  int k = 0;
+  k += (y < 0) ? x : x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: 'true' and 'false' expression are equivalent
+  k += (y < 0) ? x + 1 : x + 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: 'true' and 'false' expression are equivalent
+  return k;
+}
+
+struct MyStruct {
+  int x;
+} Q;
+bool operator==(const MyStruct& lhs, const MyStruct& rhs) { return lhs.x == rhs.x; }
+bool TestOperator(const MyStruct& S) {
+  if (S == Q) return false;
+  return S == S;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: both side of overloaded operator are equivalent
+}
+
 #define LT(x, y) (void)((x) < (y))
+#define COND(x, y, z) ((x)?(y):(z))
+#define EQUALS(x, y) (x) == (y)
 
 int TestMacro(int X, int Y) {
   LT(0, 0);
   LT(1, 0);
   LT(X, X);
   LT(X+1, X + 1);
+  COND(X < Y, X, X);
+  EQUALS(Q, Q);
 }
 
 int TestFalsePositive(int* A, int X, float F) {
@@ -118,3 +141,22 @@ int TestFalsePositive(int* A, int X, float F) {
   if (F != F && F == F) return 1;
   return 0;
 }
+
+int TestBannedMacros() {
+#define EAGAIN 3
+#define NOT_EAGAIN 3
+  if (EAGAIN == 0 | EAGAIN == 0) return 0;
+  if (NOT_EAGAIN == 0 | NOT_EAGAIN == 0) return 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: both side of operator are equivalent
+}
+
+struct MyClass {
+static const int Value = 42;
+};
+template <typename T, typename U>
+void TemplateCheck() {
+  static_assert(T::Value == U::Value, "should be identical");
+  static_assert(T::Value == T::Value, "should be identical");
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: both side of overloaded operator are equivalent
+}
+void TestTemplate() { TemplateCheck<MyClass, MyClass>(); }

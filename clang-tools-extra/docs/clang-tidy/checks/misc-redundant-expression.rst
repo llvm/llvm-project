@@ -12,6 +12,7 @@ Depending on the operator expressions may be
   * always be a constant (zero or one)
 
 Example:
+
 .. code:: c++
 
   ((x+1) | (x+1))             // (x+1) is redundant

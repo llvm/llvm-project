@@ -7,6 +7,7 @@ add_clang_library(clangTooling
   CommonOptionsParser.cpp
   CompilationDatabase.cpp
   FileMatchTrie.cpp
+  FixIt.cpp
   JSONCompilationDatabase.cpp
   Refactoring.cpp
   RefactoringCallbacks.cpp
