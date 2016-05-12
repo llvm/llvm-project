@@ -155,6 +155,10 @@ void internal__exit(int exitcode) {
   _exit(exitcode);
 }
 
+unsigned int internal_sleep(unsigned int seconds) {
+  sleep(seconds);
+}
+
 uptr internal_getpid() {
   return getpid();
 }
