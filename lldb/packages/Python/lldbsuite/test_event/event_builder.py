@@ -321,6 +321,19 @@ class EventBuilder(object):
         return event
 
     @staticmethod
+    def event_for_job_test_add_error(test_filename, exception, backtrace):
+        event = EventBuilder.bare_event(EventBuilder.TYPE_JOB_RESULT)
+        event["status"] = EventBuilder.STATUS_ERROR
+        if test_filename is not None:
+            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(test_filename)
+        if exception is not None and "__class__" in dir(exception):
+            event["issue_class"] = exception.__class__
+        event["issue_message"] = exception
+        if backtrace is not None:
+            event["issue_backtrace"] = backtrace
+        return event
+
+    @staticmethod
     def event_for_job_exceptional_exit(
             pid, worker_index, exception_code, exception_description,
             test_filename, command_line):
