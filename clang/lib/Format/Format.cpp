@@ -1652,7 +1652,7 @@ private:
       for (FormatToken *FormatTok = Line->First; FormatTok;
            FormatTok = FormatTok->Next) {
         StringRef Input = FormatTok->TokenText;
-        if (!FormatTok->isStringLiteral() ||
+        if (FormatTok->Finalized || !FormatTok->isStringLiteral() ||
             // NB: testing for not starting with a double quote to avoid
             // breaking
             // `template strings`.

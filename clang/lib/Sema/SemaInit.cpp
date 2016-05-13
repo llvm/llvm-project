@@ -3224,13 +3224,9 @@ void InitializationSequence::AddListInitializationStep(QualType T) {
   Steps.push_back(S);
 }
 
-void
-InitializationSequence
-::AddConstructorInitializationStep(CXXConstructorDecl *Constructor,
-                                   AccessSpecifier Access,
-                                   QualType T,
-                                   bool HadMultipleCandidates,
-                                   bool FromInitList, bool AsInitList) {
+void InitializationSequence::AddConstructorInitializationStep(
+    DeclAccessPair FoundDecl, CXXConstructorDecl *Constructor, QualType T,
+    bool HadMultipleCandidates, bool FromInitList, bool AsInitList) {
   Step S;
   S.Kind = FromInitList ? AsInitList ? SK_StdInitializerListConstructorCall
                                      : SK_ConstructorInitializationFromList
@@ -3238,7 +3234,7 @@ InitializationSequence
   S.Type = T;
   S.Function.HadMultipleCandidates = HadMultipleCandidates;
   S.Function.Function = Constructor;
-  S.Function.FoundDecl = DeclAccessPair::make(Constructor, Access);
+  S.Function.FoundDecl = FoundDecl;
   Steps.push_back(S);
 }
 
@@ -3628,7 +3624,7 @@ static void TryConstructorInitialization(Sema &S,
   // subsumed by the initialization.
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
   Sequence.AddConstructorInitializationStep(
-      CtorDecl, Best->FoundDecl.getAccess(), DestType, HadMultipleCandidates,
+      Best->FoundDecl, CtorDecl, DestType, HadMultipleCandidates,
       IsListInit | IsInitListCopy, AsInitializerList);
 }
 

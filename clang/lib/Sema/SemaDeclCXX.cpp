@@ -4774,7 +4774,6 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
   // The class is either imported or exported.
   const bool ClassExported = ClassAttr->getKind() == attr::DLLExport;
-  const bool ClassImported = !ClassExported;
 
   TemplateSpecializationKind TSK = Class->getTemplateSpecializationKind();
 
@@ -4809,9 +4808,12 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         if (!Context.getTargetInfo().getCXXABI().isMicrosoft())
           continue;
 
-        // MSVC versions before 2015 don't export the move assignment operators,
-        // so don't attempt to import them if we have a definition.
-        if (ClassImported && MD->isMoveAssignmentOperator() &&
+        // MSVC versions before 2015 don't export the move assignment operators
+        // and move constructor, so don't attempt to import/export them if
+        // we have a definition.
+        auto *CXXC = dyn_cast<CXXConstructorDecl>(MD);
+        if ((MD->isMoveAssignmentOperator() ||
+             (CXXC && CXXC->isMoveConstructor())) &&
             !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))
           continue;
       }
@@ -6455,20 +6457,28 @@ void Sema::AddImplicitlyDeclaredMembersToClass(CXXRecordDecl *ClassDecl) {
   if (!ClassDecl->hasUserDeclaredConstructor())
     ++ASTContext::NumImplicitDefaultConstructors;
 
+  // If this class inherited any constructors, declare the default constructor
+  // now in case it displaces one from a base class.
+  if (ClassDecl->needsImplicitDefaultConstructor() &&
+      ClassDecl->hasInheritedConstructor())
+    DeclareImplicitDefaultConstructor(ClassDecl);
+
   if (!ClassDecl->hasUserDeclaredCopyConstructor()) {
     ++ASTContext::NumImplicitCopyConstructors;
 
     // If the properties or semantics of the copy constructor couldn't be
     // determined while the class was being declared, force a declaration
     // of it now.
-    if (ClassDecl->needsOverloadResolutionForCopyConstructor())
+    if (ClassDecl->needsOverloadResolutionForCopyConstructor() ||
+        ClassDecl->hasInheritedConstructor())
       DeclareImplicitCopyConstructor(ClassDecl);
   }
 
   if (getLangOpts().CPlusPlus11 && ClassDecl->needsImplicitMoveConstructor()) {
     ++ASTContext::NumImplicitMoveConstructors;
 
-    if (ClassDecl->needsOverloadResolutionForMoveConstructor())
+    if (ClassDecl->needsOverloadResolutionForMoveConstructor() ||
+        ClassDecl->hasInheritedConstructor())
       DeclareImplicitMoveConstructor(ClassDecl);
   }
 
@@ -6480,7 +6490,8 @@ void Sema::AddImplicitlyDeclaredMembersToClass(CXXRecordDecl *ClassDecl) {
     // it shows up in the right place in the vtable and that we diagnose
     // problems with the implicit exception specification.
     if (ClassDecl->isDynamicClass() ||
-        ClassDecl->needsOverloadResolutionForCopyAssignment())
+        ClassDecl->needsOverloadResolutionForCopyAssignment() ||
+        ClassDecl->hasInheritedAssignment())
       DeclareImplicitCopyAssignment(ClassDecl);
   }
 
@@ -6489,7 +6500,8 @@ void Sema::AddImplicitlyDeclaredMembersToClass(CXXRecordDecl *ClassDecl) {
 
     // Likewise for the move assignment operator.
     if (ClassDecl->isDynamicClass() ||
-        ClassDecl->needsOverloadResolutionForMoveAssignment())
+        ClassDecl->needsOverloadResolutionForMoveAssignment() ||
+        ClassDecl->hasInheritedAssignment())
       DeclareImplicitMoveAssignment(ClassDecl);
   }
 
@@ -8901,10 +8913,11 @@ namespace {
 struct DeclaringSpecialMember {
   Sema &S;
   Sema::SpecialMemberDecl D;
+  Sema::ContextRAII SavedContext;
   bool WasAlreadyBeingDeclared;
 
   DeclaringSpecialMember(Sema &S, CXXRecordDecl *RD, Sema::CXXSpecialMember CSM)
-    : S(S), D(RD, CSM) {
+    : S(S), D(RD, CSM), SavedContext(S, RD) {
     WasAlreadyBeingDeclared = !S.SpecialMembersBeingDeclared.insert(D).second;
     if (WasAlreadyBeingDeclared)
       // This almost never happens, but if it does, ensure that our cache
@@ -8924,6 +8937,20 @@ struct DeclaringSpecialMember {
     return WasAlreadyBeingDeclared;
   }
 };
+}
+
+void Sema::CheckImplicitSpecialMemberDeclaration(Scope *S, FunctionDecl *FD) {
+  // Look up any existing declarations, but don't trigger declaration of all
+  // implicit special members with this name.
+  DeclarationName Name = FD->getDeclName();
+  LookupResult R(*this, Name, SourceLocation(), LookupOrdinaryName,
+                 ForRedeclaration);
+  for (auto *D : FD->getParent()->lookup(Name))
+    if (auto *Acceptable = R.getAcceptableDecl(D))
+      R.addDecl(Acceptable);
+  R.resolveKind();
+
+  CheckFunctionDeclaration(S, FD, R, /*IsExplicitSpecialization*/false);
 }
 
 CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
@@ -8974,13 +9001,16 @@ CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
   // constructors is easy to compute.
   DefaultCon->setTrivial(ClassDecl->hasTrivialDefaultConstructor());
 
-  if (ShouldDeleteSpecialMember(DefaultCon, CXXDefaultConstructor))
-    SetDeclDeleted(DefaultCon, ClassLoc);
-
   // Note that we have declared this constructor.
   ++ASTContext::NumImplicitDefaultConstructorsDeclared;
 
-  if (Scope *S = getScopeForContext(ClassDecl))
+  Scope *S = getScopeForContext(ClassDecl);
+  CheckImplicitSpecialMemberDeclaration(S, DefaultCon);
+
+  if (ShouldDeleteSpecialMember(DefaultCon, CXXDefaultConstructor))
+    SetDeclDeleted(DefaultCon, ClassLoc);
+
+  if (S)
     PushOnScopeChains(DefaultCon, S, false);
   ClassDecl->addDecl(DefaultCon);
 
@@ -9436,20 +9466,21 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   FunctionProtoType::ExtProtoInfo EPI = getImplicitMethodEPI(*this, Destructor);
   Destructor->setType(Context.getFunctionType(Context.VoidTy, None, EPI));
 
-  AddOverriddenMethods(ClassDecl, Destructor);
-
   // We don't need to use SpecialMemberIsTrivial here; triviality for
   // destructors is easy to compute.
   Destructor->setTrivial(ClassDecl->hasTrivialDestructor());
 
-  if (ShouldDeleteSpecialMember(Destructor, CXXDestructor))
-    SetDeclDeleted(Destructor, ClassLoc);
-
   // Note that we have declared this destructor.
   ++ASTContext::NumImplicitDestructorsDeclared;
 
+  Scope *S = getScopeForContext(ClassDecl);
+  CheckImplicitSpecialMemberDeclaration(S, Destructor);
+
+  if (ShouldDeleteSpecialMember(Destructor, CXXDestructor))
+    SetDeclDeleted(Destructor, ClassLoc);
+
   // Introduce this destructor into its scope.
-  if (Scope *S = getScopeForContext(ClassDecl))
+  if (S)
     PushOnScopeChains(Destructor, S, false);
   ClassDecl->addDecl(Destructor);
 
@@ -10150,20 +10181,21 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
                                                nullptr);
   CopyAssignment->setParams(FromParam);
 
-  AddOverriddenMethods(ClassDecl, CopyAssignment);
-
   CopyAssignment->setTrivial(
     ClassDecl->needsOverloadResolutionForCopyAssignment()
       ? SpecialMemberIsTrivial(CopyAssignment, CXXCopyAssignment)
       : ClassDecl->hasTrivialCopyAssignment());
 
-  if (ShouldDeleteSpecialMember(CopyAssignment, CXXCopyAssignment))
-    SetDeclDeleted(CopyAssignment, ClassLoc);
-
   // Note that we have added this copy-assignment operator.
   ++ASTContext::NumImplicitCopyAssignmentOperatorsDeclared;
 
-  if (Scope *S = getScopeForContext(ClassDecl))
+  Scope *S = getScopeForContext(ClassDecl);
+  CheckImplicitSpecialMemberDeclaration(S, CopyAssignment);
+
+  if (ShouldDeleteSpecialMember(CopyAssignment, CXXCopyAssignment))
+    SetDeclDeleted(CopyAssignment, ClassLoc);
+
+  if (S)
     PushOnScopeChains(CopyAssignment, S, false);
   ClassDecl->addDecl(CopyAssignment);
 
@@ -10541,22 +10573,23 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
                                                nullptr);
   MoveAssignment->setParams(FromParam);
 
-  AddOverriddenMethods(ClassDecl, MoveAssignment);
-
   MoveAssignment->setTrivial(
     ClassDecl->needsOverloadResolutionForMoveAssignment()
       ? SpecialMemberIsTrivial(MoveAssignment, CXXMoveAssignment)
       : ClassDecl->hasTrivialMoveAssignment());
+
+  // Note that we have added this copy-assignment operator.
+  ++ASTContext::NumImplicitMoveAssignmentOperatorsDeclared;
+
+  Scope *S = getScopeForContext(ClassDecl);
+  CheckImplicitSpecialMemberDeclaration(S, MoveAssignment);
 
   if (ShouldDeleteSpecialMember(MoveAssignment, CXXMoveAssignment)) {
     ClassDecl->setImplicitMoveAssignmentIsDeleted();
     SetDeclDeleted(MoveAssignment, ClassLoc);
   }
 
-  // Note that we have added this copy-assignment operator.
-  ++ASTContext::NumImplicitMoveAssignmentOperatorsDeclared;
-
-  if (Scope *S = getScopeForContext(ClassDecl))
+  if (S)
     PushOnScopeChains(MoveAssignment, S, false);
   ClassDecl->addDecl(MoveAssignment);
 
@@ -10982,13 +11015,16 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
       ? SpecialMemberIsTrivial(CopyConstructor, CXXCopyConstructor)
       : ClassDecl->hasTrivialCopyConstructor());
 
-  if (ShouldDeleteSpecialMember(CopyConstructor, CXXCopyConstructor))
-    SetDeclDeleted(CopyConstructor, ClassLoc);
-
   // Note that we have declared this constructor.
   ++ASTContext::NumImplicitCopyConstructorsDeclared;
 
-  if (Scope *S = getScopeForContext(ClassDecl))
+  Scope *S = getScopeForContext(ClassDecl);
+  CheckImplicitSpecialMemberDeclaration(S, CopyConstructor);
+
+  if (ShouldDeleteSpecialMember(CopyConstructor, CXXCopyConstructor))
+    SetDeclDeleted(CopyConstructor, ClassLoc);
+
+  if (S)
     PushOnScopeChains(CopyConstructor, S, false);
   ClassDecl->addDecl(CopyConstructor);
 
@@ -11159,15 +11195,18 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
       ? SpecialMemberIsTrivial(MoveConstructor, CXXMoveConstructor)
       : ClassDecl->hasTrivialMoveConstructor());
 
+  // Note that we have declared this constructor.
+  ++ASTContext::NumImplicitMoveConstructorsDeclared;
+
+  Scope *S = getScopeForContext(ClassDecl);
+  CheckImplicitSpecialMemberDeclaration(S, MoveConstructor);
+
   if (ShouldDeleteSpecialMember(MoveConstructor, CXXMoveConstructor)) {
     ClassDecl->setImplicitMoveConstructorIsDeleted();
     SetDeclDeleted(MoveConstructor, ClassLoc);
   }
 
-  // Note that we have declared this constructor.
-  ++ASTContext::NumImplicitMoveConstructorsDeclared;
-
-  if (Scope *S = getScopeForContext(ClassDecl))
+  if (S)
     PushOnScopeChains(MoveConstructor, S, false);
   ClassDecl->addDecl(MoveConstructor);
 

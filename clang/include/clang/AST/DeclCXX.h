@@ -382,6 +382,14 @@ class CXXRecordDecl : public RecordDecl {
     /// provided default ctor also doesn't have an in-class initializer.
     unsigned HasUninitializedFields : 1;
 
+    /// \brief True if there are any member using-declarations that inherit
+    /// constructors from a base class.
+    unsigned HasInheritedConstructor : 1;
+
+    /// \brief True if there are any member using-declarations named
+    /// 'operator='.
+    unsigned HasInheritedAssignment : 1;
+
     /// \brief These flags are \c true if a defaulted corresponding special
     /// member can't be fully analyzed without performing overload resolution.
     /// @{
@@ -1306,6 +1314,18 @@ public:
   /// non-static data member or base class.
   bool hasNonLiteralTypeFieldsOrBases() const {
     return data().HasNonLiteralTypeFieldsOrBases;
+  }
+
+  /// \brief Determine whether this class has a using-declaration that names
+  /// a base class constructor.
+  bool hasInheritedConstructor() const {
+    return data().HasInheritedConstructor;
+  }
+
+  /// \brief Determine whether this class has a using-declaration that names
+  /// a base class assignment operator.
+  bool hasInheritedAssignment() const {
+    return data().HasInheritedAssignment;
   }
 
   /// \brief Determine whether this class is considered trivially copyable per

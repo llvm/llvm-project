@@ -11,24 +11,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
+#include <cassert>
 #include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <map>
 #include <memory>
 #include <set>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
 namespace {
+
 class FlattenedSpelling {
   std::string V, N, NS;
   bool K;
@@ -54,6 +66,7 @@ public:
   const std::string &nameSpace() const { return NS; }
   bool knownToGCC() const { return K; }
 };
+
 } // end anonymous namespace
 
 static std::vector<FlattenedSpelling>
@@ -159,6 +172,7 @@ static ParsedAttrMap getParsedAttrList(const RecordKeeper &Records,
 }
 
 namespace {
+
   class Argument {
     std::string lowerName, upperName;
     StringRef attrName;
@@ -230,35 +244,45 @@ namespace {
       OS << "    return " << getLowerName() << ";\n";
       OS << "  }";
     }
+
     void writeCloneArgs(raw_ostream &OS) const override {
       OS << getLowerName();
     }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       OS << "A->get" << getUpperName() << "()";
     }
+
     void writeCtorInitializers(raw_ostream &OS) const override {
       OS << getLowerName() << "(" << getUpperName() << ")";
     }
+
     void writeCtorDefaultInitializers(raw_ostream &OS) const override {
       OS << getLowerName() << "()";
     }
+
     void writeCtorParameters(raw_ostream &OS) const override {
       OS << type << " " << getUpperName();
     }
+
     void writeDeclarations(raw_ostream &OS) const override {
       OS << type << " " << getLowerName() << ";";
     }
+
     void writePCHReadDecls(raw_ostream &OS) const override {
       std::string read = ReadPCHRecord(type);
       OS << "    " << type << " " << getLowerName() << " = " << read << ";\n";
     }
+
     void writePCHReadArgs(raw_ostream &OS) const override {
       OS << getLowerName();
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    " << WritePCHRecord(type, "SA->get" +
                                            std::string(getUpperName()) + "()");
     }
+
     void writeValue(raw_ostream &OS) const override {
       if (type == "FunctionDecl *") {
         OS << "\" << get" << getUpperName()
@@ -271,6 +295,7 @@ namespace {
         OS << "\" << get" << getUpperName() << "() << \"";
       }
     }
+
     void writeDump(raw_ostream &OS) const override {
       if (type == "FunctionDecl *") {
         OS << "    OS << \" \";\n";
@@ -306,7 +331,12 @@ namespace {
       SimpleArgument::writeAccessors(OS);
 
       OS << "\n\n  static const " << getType() << " Default" << getUpperName()
-         << " = " << Default << ";";
+         << " = ";
+      if (getType() == "bool")
+        OS << (Default != 0 ? "true" : "false");
+      else
+        OS << Default;
+      OS << ";";
     }
   };
 
@@ -334,45 +364,57 @@ namespace {
          << getLowerName() << "Length);\n";
       OS << "  }";
     }
+
     void writeCloneArgs(raw_ostream &OS) const override {
       OS << "get" << getUpperName() << "()";
     }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       OS << "A->get" << getUpperName() << "()";
     }
+
     void writeCtorBody(raw_ostream &OS) const override {
       OS << "      if (!" << getUpperName() << ".empty())\n";
       OS << "        std::memcpy(" << getLowerName() << ", " << getUpperName()
-         << ".data(), " << getLowerName() << "Length);";
+         << ".data(), " << getLowerName() << "Length);\n";
     }
+
     void writeCtorInitializers(raw_ostream &OS) const override {
       OS << getLowerName() << "Length(" << getUpperName() << ".size()),"
          << getLowerName() << "(new (Ctx, 1) char[" << getLowerName()
          << "Length])";
     }
+
     void writeCtorDefaultInitializers(raw_ostream &OS) const override {
       OS << getLowerName() << "Length(0)," << getLowerName() << "(nullptr)";
     }
+
     void writeCtorParameters(raw_ostream &OS) const override {
       OS << "llvm::StringRef " << getUpperName();
     }
+
     void writeDeclarations(raw_ostream &OS) const override {
       OS << "unsigned " << getLowerName() << "Length;\n";
       OS << "char *" << getLowerName() << ";";
     }
+
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    std::string " << getLowerName()
          << "= ReadString(Record, Idx);\n";
     }
+
     void writePCHReadArgs(raw_ostream &OS) const override {
       OS << getLowerName();
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    Record.AddString(SA->get" << getUpperName() << "());\n";
     }
+
     void writeValue(raw_ostream &OS) const override {
       OS << "\\\"\" << get" << getUpperName() << "() << \"\\\"";
     }
+
     void writeDump(raw_ostream &OS) const override {
       OS << "    OS << \" \\\"\" << SA->get" << getUpperName()
          << "() << \"\\\"\";\n";
@@ -404,6 +446,7 @@ namespace {
       OS << "    return " << getLowerName() << "Type;\n";
       OS << "  }";
     }
+
     void writeAccessorDefinitions(raw_ostream &OS) const override {
       OS << "bool " << getAttrName() << "Attr::is" << getUpperName()
          << "Dependent() const {\n";
@@ -431,16 +474,19 @@ namespace {
       OS << "    return 0; // FIXME\n";
       OS << "}\n";
     }
+
     void writeCloneArgs(raw_ostream &OS) const override {
       OS << "is" << getLowerName() << "Expr, is" << getLowerName()
          << "Expr ? static_cast<void*>(" << getLowerName()
          << "Expr) : " << getLowerName()
          << "Type";
     }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       // FIXME: move the definition in Sema::InstantiateAttrs to here.
       // In the meantime, aligned attributes are cloned.
     }
+
     void writeCtorBody(raw_ostream &OS) const override {
       OS << "    if (is" << getLowerName() << "Expr)\n";
       OS << "       " << getLowerName() << "Expr = reinterpret_cast<Expr *>("
@@ -448,20 +494,25 @@ namespace {
       OS << "    else\n";
       OS << "       " << getLowerName()
          << "Type = reinterpret_cast<TypeSourceInfo *>(" << getUpperName()
-         << ");";
+         << ");\n";
     }
+
     void writeCtorInitializers(raw_ostream &OS) const override {
       OS << "is" << getLowerName() << "Expr(Is" << getUpperName() << "Expr)";
     }
+
     void writeCtorDefaultInitializers(raw_ostream &OS) const override {
       OS << "is" << getLowerName() << "Expr(false)";
     }
+
     void writeCtorParameters(raw_ostream &OS) const override {
       OS << "bool Is" << getUpperName() << "Expr, void *" << getUpperName();
     }
+
     void writeImplicitCtorArgs(raw_ostream &OS) const override {
       OS << "Is" << getUpperName() << "Expr, " << getUpperName();
     }
+
     void writeDeclarations(raw_ostream &OS) const override {
       OS << "bool is" << getLowerName() << "Expr;\n";
       OS << "union {\n";
@@ -469,9 +520,11 @@ namespace {
       OS << "TypeSourceInfo *" << getLowerName() << "Type;\n";
       OS << "};";
     }
+
     void writePCHReadArgs(raw_ostream &OS) const override {
       OS << "is" << getLowerName() << "Expr, " << getLowerName() << "Ptr";
     }
+
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    bool is" << getLowerName() << "Expr = Record[Idx++];\n";
       OS << "    void *" << getLowerName() << "Ptr;\n";
@@ -481,6 +534,7 @@ namespace {
       OS << "      " << getLowerName()
          << "Ptr = GetTypeSourceInfo(F, Record, Idx);\n";
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    Record.push_back(SA->is" << getUpperName() << "Expr());\n";
       OS << "    if (SA->is" << getUpperName() << "Expr())\n";
@@ -489,6 +543,7 @@ namespace {
       OS << "      Record.AddTypeSourceInfo(SA->get" << getUpperName()
          << "Type());\n";
     }
+
     void writeValue(raw_ostream &OS) const override {
       OS << "\";\n";
       // The aligned attribute argument expression is optional.
@@ -497,8 +552,9 @@ namespace {
       OS << "      " << getLowerName() << "Expr->printPretty(OS, nullptr, Policy);\n";
       OS << "    OS << \"";
     }
-    void writeDump(raw_ostream &OS) const override {
-    }
+
+    void writeDump(raw_ostream &OS) const override {}
+
     void writeDumpChildren(raw_ostream &OS) const override {
       OS << "    if (SA->is" << getUpperName() << "Expr())\n";
       OS << "      dumpStmt(SA->get" << getUpperName() << "Expr());\n";
@@ -506,6 +562,7 @@ namespace {
       OS << "      dumpType(SA->get" << getUpperName()
          << "Type()->getType());\n";
     }
+
     void writeHasChildren(raw_ostream &OS) const override {
       OS << "SA->is" << getUpperName() << "Expr()";
     }
@@ -546,37 +603,46 @@ namespace {
          << "() const { return llvm::make_range(" << BeginFn << ", " << EndFn
          << "); }\n";
     }
+
     void writeCloneArgs(raw_ostream &OS) const override {
       OS << ArgName << ", " << ArgSizeName;
     }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       // This isn't elegant, but we have to go through public methods...
       OS << "A->" << getLowerName() << "_begin(), "
          << "A->" << getLowerName() << "_size()";
     }
+
     void writeCtorBody(raw_ostream &OS) const override {
       OS << "    std::copy(" << getUpperName() << ", " << getUpperName()
-         << " + " << ArgSizeName << ", " << ArgName << ");";
+         << " + " << ArgSizeName << ", " << ArgName << ");\n";
     }
+
     void writeCtorInitializers(raw_ostream &OS) const override {
       OS << ArgSizeName << "(" << getUpperName() << "Size), "
          << ArgName << "(new (Ctx, 16) " << getType() << "["
          << ArgSizeName << "])";
     }
+
     void writeCtorDefaultInitializers(raw_ostream &OS) const override {
       OS << ArgSizeName << "(0), " << ArgName << "(nullptr)";
     }
+
     void writeCtorParameters(raw_ostream &OS) const override {
       OS << getType() << " *" << getUpperName() << ", unsigned "
          << getUpperName() << "Size";
     }
+
     void writeImplicitCtorArgs(raw_ostream &OS) const override {
       OS << getUpperName() << ", " << getUpperName() << "Size";
     }
+
     void writeDeclarations(raw_ostream &OS) const override {
       OS << "  unsigned " << ArgSizeName << ";\n";
       OS << "  " << getType() << " *" << ArgName << ";";
     }
+
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "  unsigned " << getLowerName() << "Size = Record[Idx++];\n";
       OS << "  SmallVector<" << Type << ", 4> " << getLowerName()
@@ -588,14 +654,17 @@ namespace {
       std::string read = ReadPCHRecord(Type);
       OS << "    " << getLowerName() << ".push_back(" << read << ");\n";
     }
+
     void writePCHReadArgs(raw_ostream &OS) const override {
       OS << getLowerName() << ".data(), " << getLowerName() << "Size";
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    Record.push_back(SA->" << getLowerName() << "_size());\n";
       OS << "    for (auto &Val : SA->" << RangeName << "())\n";
       OS << "      " << WritePCHRecord(Type, "Val");
     }
+
     void writeValue(raw_ostream &OS) const override {
       OS << "\";\n";
       OS << "  bool isFirst = true;\n"
@@ -606,6 +675,7 @@ namespace {
       OS << "  }\n";
       OS << "  OS << \"";
     }
+
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (const auto &Val : SA->" << RangeName << "())\n";
       OS << "      OS << \" \" << Val;\n";
@@ -648,9 +718,11 @@ namespace {
       OS << "    return " << getLowerName() << ";\n";
       OS << "  }";
     }
+
     void writeCloneArgs(raw_ostream &OS) const override {
       OS << getLowerName();
     }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       OS << "A->get" << getUpperName() << "()";
     }
@@ -677,17 +749,21 @@ namespace {
       OS << "private:\n";
       OS << "  " << type << " " << getLowerName() << ";";
     }
+
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    " << getAttrName() << "Attr::" << type << " " << getLowerName()
          << "(static_cast<" << getAttrName() << "Attr::" << type
          << ">(Record[Idx++]));\n";
     }
+
     void writePCHReadArgs(raw_ostream &OS) const override {
       OS << getLowerName();
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "Record.push_back(SA->get" << getUpperName() << "());\n";
     }
+
     void writeValue(raw_ostream &OS) const override {
       // FIXME: this isn't 100% correct -- some enum arguments require printing
       // as a string literal, while others require printing as an identifier.
@@ -695,6 +771,7 @@ namespace {
       OS << "\\\"\" << " << getAttrName() << "Attr::Convert" << type << "ToStr(get"
          << getUpperName() << "()) << \"\\\"";
     }
+
     void writeDump(raw_ostream &OS) const override {
       OS << "    switch(SA->get" << getUpperName() << "()) {\n";
       for (const auto &I : uniques) {
@@ -783,6 +860,7 @@ namespace {
       
       VariadicArgument::writeDeclarations(OS);
     }
+
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
          << "_iterator I = SA->" << getLowerName() << "_begin(), E = SA->"
@@ -796,6 +874,7 @@ namespace {
       OS << "      }\n";
       OS << "    }\n";
     }
+
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    unsigned " << getLowerName() << "Size = Record[Idx++];\n";
       OS << "    SmallVector<" << QualifiedTypeName << ", 4> " << getLowerName()
@@ -806,6 +885,7 @@ namespace {
       OS << "      " << getLowerName() << ".push_back(" << "static_cast<"
          << QualifiedTypeName << ">(Record[Idx++]));\n";
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    Record.push_back(SA->" << getLowerName() << "_size());\n";
       OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
@@ -813,6 +893,7 @@ namespace {
          << getLowerName() << "_end(); i != e; ++i)\n";
       OS << "      " << WritePCHRecord(QualifiedTypeName, "(*i)");
     }
+
     void writeConversion(raw_ostream &OS) const {
       OS << "  static bool ConvertStrTo" << type << "(StringRef Val, ";
       OS << type << " &Out) {\n";
@@ -858,37 +939,48 @@ namespace {
       OS << "    " << getLowerName() << " = V;\n";
       OS << "  }";
     }
+
     void writeCloneArgs(raw_ostream &OS) const override {
       OS << "get" << getUpperName() << "()";
     }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       OS << "A->get" << getUpperName() << "()";
     }
+
     void writeCtorInitializers(raw_ostream &OS) const override {
       OS << getLowerName() << "(" << getUpperName() << ")";
     }
+
     void writeCtorDefaultInitializers(raw_ostream &OS) const override {
       OS << getLowerName() << "()";
     }
+
     void writeCtorParameters(raw_ostream &OS) const override {
       OS << "VersionTuple " << getUpperName();
     }
+
     void writeDeclarations(raw_ostream &OS) const override {
       OS << "VersionTuple " << getLowerName() << ";\n";
     }
+
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    VersionTuple " << getLowerName()
          << "= ReadVersionTuple(Record, Idx);\n";
     }
+
     void writePCHReadArgs(raw_ostream &OS) const override {
       OS << getLowerName();
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    Record.AddVersionTuple(SA->get" << getUpperName() << "());\n";
     }
+
     void writeValue(raw_ostream &OS) const override {
       OS << getLowerName() << "=\" << get" << getUpperName() << "() << \"";
     }
+
     void writeDump(raw_ostream &OS) const override {
       OS << "    OS << \" \" << SA->get" << getUpperName() << "();\n";
     }
@@ -927,6 +1019,7 @@ namespace {
     void writeDumpChildren(raw_ostream &OS) const override {
       OS << "    dumpStmt(SA->get" << getUpperName() << "());\n";
     }
+
     void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
   };
 
@@ -994,6 +1087,7 @@ namespace {
     VariadicStringArgument(const Record &Arg, StringRef Attr)
       : VariadicArgument(Arg, Attr, "StringRef")
     {}
+
     void writeCtorBody(raw_ostream &OS) const override {
       OS << "    for (size_t I = 0, E = " << getArgSizeName() << "; I != E;\n"
             "         ++I) {\n"
@@ -1003,8 +1097,9 @@ namespace {
             "        std::memcpy(Mem, Ref.data(), Ref.size());\n"
             "        " << getArgName() << "[I] = StringRef(Mem, Ref.size());\n"
             "      }\n"
-            "    }";
+            "    }\n";
     }
+
     void writeValueImpl(raw_ostream &OS) const override {
       OS << "    OS << \"\\\"\" << Val << \"\\\"\";\n";
     }
@@ -1024,14 +1119,17 @@ namespace {
       OS << "    return " << getLowerName() << ";\n";
       OS << "  }";
     }
+
     void writeTemplateInstantiationArgs(raw_ostream &OS) const override {
       OS << "A->get" << getUpperName() << "Loc()";
     }
+
     void writePCHWrite(raw_ostream &OS) const override {
       OS << "    " << WritePCHRecord(
           getType(), "SA->get" + std::string(getUpperName()) + "Loc()");
     }
   };
+
 } // end anonymous namespace
 
 static std::unique_ptr<Argument>
@@ -1328,7 +1426,7 @@ CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
     std::string Variety = S.variety();
     std::string Spelling = S.name();
     std::string Namespace = S.nameSpace();
-    std::string EnumName = "";
+    std::string EnumName;
 
     EnumName += (Variety + "_");
     if (!Namespace.empty())
@@ -1528,7 +1626,7 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
       }
     }
 
-    OS << "\npublic:\n";
+    OS << "public:\n";
 
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
 
@@ -1598,8 +1696,8 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
 
       OS << "             )\n";
       OS << "    : " << SuperName << "(attr::" << R.getName() << ", R, SI, "
-         << R.getValueAsBit("LateParsed") << ", "
-         << R.getValueAsBit("DuplicatesAllowedWhileMerging") << ")\n";
+         << ( R.getValueAsBit("LateParsed") ? "true" : "false" ) << ", "
+         << ( R.getValueAsBit("DuplicatesAllowedWhileMerging") ? "true" : "false" ) << ")\n";
 
       for (auto const &ai : Args) {
         OS << "              , ";
@@ -1616,10 +1714,8 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
       for (auto const &ai : Args) {
         if (!shouldEmitArg(ai)) continue;
         ai->writeCtorBody(OS);
-        OS << "\n";
       }
       OS << "  }\n\n";
-
     };
 
     // Emit a constructor that includes all the arguments.
@@ -1762,11 +1858,13 @@ static bool AttrHasPragmaSpelling(const Record *R) {
 }
 
 namespace {
+
   struct AttrClassDescriptor {
     const char * const MacroName;
     const char * const TableGenName;
   };
-}
+
+} // end anonymous namespace
 
 static const AttrClassDescriptor AttrClassDescriptors[] = {
   { "ATTR", "Attr" },
@@ -1785,6 +1883,7 @@ static void emitDefaultDefine(raw_ostream &OS, StringRef name,
 }
 
 namespace {
+
   /// A class of attributes.
   struct AttrClass {
     const AttrClassDescriptor &Descriptor;
@@ -1860,6 +1959,7 @@ namespace {
   /// The entire hierarchy of attribute classes.
   class AttrClassHierarchy {
     std::vector<std::unique_ptr<AttrClass>> Classes;
+
   public:
     AttrClassHierarchy(RecordKeeper &Records) {
       // Find records for all the classes.
@@ -1932,9 +2032,11 @@ namespace {
       return nullptr;
     }
   };
-}
+
+} // end anonymous namespace
 
 namespace clang {
+
 // Emits the enumeration list for attributes.
 void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("List of all attributes that Clang recognizes", OS);

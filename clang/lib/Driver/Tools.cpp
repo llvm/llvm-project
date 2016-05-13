@@ -5636,6 +5636,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_fshow_overloads_EQ))
     A->render(Args, CmdArgs);
 
+  if (Arg *A = Args.getLastArg(
+          options::OPT_fsanitize_undefined_strip_path_components_EQ))
+    A->render(Args, CmdArgs);
+
   // -fdollars-in-identifiers default varies depending on platform and
   // language; only pass if specified.
   if (Arg *A = Args.getLastArg(options::OPT_fdollars_in_identifiers,
@@ -10512,12 +10516,12 @@ void CrossWindows::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     } else {
       for (const auto &Lib : {"asan_dynamic", "asan_dynamic_runtime_thunk"})
         CmdArgs.push_back(TC.getCompilerRTArgString(Args, Lib));
-        // Make sure the dynamic runtime thunk is not optimized out at link time
-        // to ensure proper SEH handling.
-        CmdArgs.push_back(Args.MakeArgString("--undefined"));
-        CmdArgs.push_back(Args.MakeArgString(TC.getArch() == llvm::Triple::x86
-                                                 ? "___asan_seh_interceptor"
-                                                 : "__asan_seh_interceptor"));
+      // Make sure the dynamic runtime thunk is not optimized out at link time
+      // to ensure proper SEH handling.
+      CmdArgs.push_back(Args.MakeArgString("--undefined"));
+      CmdArgs.push_back(Args.MakeArgString(TC.getArch() == llvm::Triple::x86
+                                               ? "___asan_seh_interceptor"
+                                               : "__asan_seh_interceptor"));
     }
   }
 

@@ -32,6 +32,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 
 using namespace clang;
@@ -360,9 +361,16 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
                            ConvertTypeForMem(E->getType())
                              ->getPointerTo(Object.getAddressSpace())),
                        Object.getAlignment());
-      // We should not have emitted the initializer for this temporary as a
-      // constant.
-      assert(!Var->hasInitializer());
+
+      // createReferenceTemporary will promote the temporary to a global with a
+      // constant initializer if it can.  It can only do this to a value of
+      // ARC-manageable type if the value is global and therefore "immune" to
+      // ref-counting operations.  Therefore we have no need to emit either a
+      // dynamic initialization or a cleanup and we can just return the address
+      // of the temporary.
+      if (Var->hasInitializer())
+        return MakeAddrLValue(Object, M->getType(), AlignmentSource::Decl);
+
       Var->setInitializer(CGM.EmitNullConstant(E->getType()));
     }
     LValue RefTempDst = MakeAddrLValue(Object, M->getType(),
@@ -2367,7 +2375,33 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
 
   PresumedLoc PLoc = getContext().getSourceManager().getPresumedLoc(Loc);
   if (PLoc.isValid()) {
-    auto FilenameGV = CGM.GetAddrOfConstantCString(PLoc.getFilename(), ".src");
+    StringRef FilenameString = PLoc.getFilename();
+
+    int PathComponentsToStrip =
+        CGM.getCodeGenOpts().EmitCheckPathComponentsToStrip;
+    if (PathComponentsToStrip < 0) {
+      assert(PathComponentsToStrip != INT_MIN);
+      int PathComponentsToKeep = -PathComponentsToStrip;
+      auto I = llvm::sys::path::rbegin(FilenameString);
+      auto E = llvm::sys::path::rend(FilenameString);
+      while (I != E && --PathComponentsToKeep)
+        ++I;
+
+      FilenameString = FilenameString.substr(I - E);
+    } else if (PathComponentsToStrip > 0) {
+      auto I = llvm::sys::path::begin(FilenameString);
+      auto E = llvm::sys::path::end(FilenameString);
+      while (I != E && PathComponentsToStrip--)
+        ++I;
+
+      if (I != E)
+        FilenameString =
+            FilenameString.substr(I - llvm::sys::path::begin(FilenameString));
+      else
+        FilenameString = llvm::sys::path::filename(FilenameString);
+    }
+
+    auto FilenameGV = CGM.GetAddrOfConstantCString(FilenameString, ".src");
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(
                           cast<llvm::GlobalVariable>(FilenameGV.getPointer()));
     Filename = FilenameGV.getPointer();

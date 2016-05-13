@@ -2115,6 +2115,8 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
     ToData.HasUninitializedReferenceMember
       = FromData.HasUninitializedReferenceMember;
     ToData.HasUninitializedFields = FromData.HasUninitializedFields;
+    ToData.HasInheritedConstructor = FromData.HasInheritedConstructor;
+    ToData.HasInheritedAssignment = FromData.HasInheritedAssignment;
     ToData.NeedOverloadResolutionForMoveConstructor
       = FromData.NeedOverloadResolutionForMoveConstructor;
     ToData.NeedOverloadResolutionForMoveAssignment

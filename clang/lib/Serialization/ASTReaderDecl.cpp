@@ -1466,6 +1466,8 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.HasInClassInitializer = Record[Idx++];
   Data.HasUninitializedReferenceMember = Record[Idx++];
   Data.HasUninitializedFields = Record[Idx++];
+  Data.HasInheritedConstructor = Record[Idx++];
+  Data.HasInheritedAssignment = Record[Idx++];
   Data.NeedOverloadResolutionForMoveConstructor = Record[Idx++];
   Data.NeedOverloadResolutionForMoveAssignment = Record[Idx++];
   Data.NeedOverloadResolutionForDestructor = Record[Idx++];
@@ -1593,6 +1595,8 @@ void ASTDeclReader::MergeDefinitionData(
   MATCH_FIELD(HasInClassInitializer)
   MATCH_FIELD(HasUninitializedReferenceMember)
   MATCH_FIELD(HasUninitializedFields)
+  MATCH_FIELD(HasInheritedConstructor)
+  MATCH_FIELD(HasInheritedAssignment)
   MATCH_FIELD(NeedOverloadResolutionForMoveConstructor)
   MATCH_FIELD(NeedOverloadResolutionForMoveAssignment)
   MATCH_FIELD(NeedOverloadResolutionForDestructor)
