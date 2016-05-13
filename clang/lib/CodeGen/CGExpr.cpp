@@ -360,9 +360,16 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
                            ConvertTypeForMem(E->getType())
                              ->getPointerTo(Object.getAddressSpace())),
                        Object.getAlignment());
-      // We should not have emitted the initializer for this temporary as a
-      // constant.
-      assert(!Var->hasInitializer());
+
+      // createReferenceTemporary will promote the temporary to a global with a
+      // constant initializer if it can.  It can only do this to a value of
+      // ARC-manageable type if the value is global and therefore "immune" to
+      // ref-counting operations.  Therefore we have no need to emit either a
+      // dynamic initialization or a cleanup and we can just return the address
+      // of the temporary.
+      if (Var->hasInitializer())
+        return MakeAddrLValue(Object, M->getType(), AlignmentSource::Decl);
+
       Var->setInitializer(CGM.EmitNullConstant(E->getType()));
     }
     LValue RefTempDst = MakeAddrLValue(Object, M->getType(),
