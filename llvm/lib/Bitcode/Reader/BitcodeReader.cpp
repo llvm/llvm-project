@@ -2484,28 +2484,30 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         return error("Invalid record");
 
       IsDistinct =
-          Record[0] || Record[8]; // All definitions should be distinct.
+          (Record[0] & 1) || Record[8]; // All definitions should be distinct.
       // Version 1 has a Function as Record[15].
       // Version 2 has removed Record[15].
       // Version 3 has the Unit as Record[15].
+      bool HasUnit = Record[0] >= 2;
+      if (HasUnit && Record.size() != 19)
+        return error("Invalid record");
       Metadata *CUorFn = getMDOrNull(Record[15]);
       unsigned Offset = Record.size() == 19 ? 1 : 0;
-      bool HasFn = Offset && dyn_cast_or_null<ConstantAsMetadata>(CUorFn);
-      bool HasCU = Offset && !HasFn;
+      bool HasFn = Offset && !HasUnit;
       DISubprogram *SP = GET_OR_DISTINCT(
           DISubprogram,
           (Context, getDITypeRefOrNull(Record[1]), getMDString(Record[2]),
            getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
            getMDOrNull(Record[6]), Record[7], Record[8], Record[9],
            getDITypeRefOrNull(Record[10]), Record[11], Record[12], Record[13],
-           Record[14], HasCU ? CUorFn : nullptr,
+           Record[14], HasUnit ? CUorFn : nullptr,
            getMDOrNull(Record[15 + Offset]), getMDOrNull(Record[16 + Offset]),
            getMDOrNull(Record[17 + Offset])));
       MetadataList.assignValue(SP, NextMetadataNo++);
 
       // Upgrade sp->function mapping to function->sp mapping.
       if (HasFn) {
-        if (auto *CMD = dyn_cast<ConstantAsMetadata>(CUorFn))
+        if (auto *CMD = dyn_cast_or_null<ConstantAsMetadata>(CUorFn))
           if (auto *F = dyn_cast<Function>(CMD->getValue())) {
             if (F->isMaterializable())
               // Defer until materialized; unmaterialized functions may not have
