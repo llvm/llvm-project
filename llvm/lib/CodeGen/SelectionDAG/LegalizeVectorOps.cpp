@@ -860,16 +860,19 @@ SDValue VectorLegalizer::ExpandZERO_EXTEND_VECTOR_INREG(SDValue Op) {
                      DAG.getVectorShuffle(SrcVT, DL, Zero, Src, ShuffleMask));
 }
 
+static void createBSWAPShuffleMask(EVT VT, SmallVectorImpl<int> &ShuffleMask) {
+  int ScalarSizeInBytes = VT.getScalarSizeInBits() / 8;
+  for (int I = 0, E = VT.getVectorNumElements(); I != E; ++I)
+    for (int J = ScalarSizeInBytes - 1; J >= 0; --J)
+      ShuffleMask.push_back((I * ScalarSizeInBytes) + J);
+}
+
 SDValue VectorLegalizer::ExpandBSWAP(SDValue Op) {
   EVT VT = Op.getValueType();
 
   // Generate a byte wise shuffle mask for the BSWAP.
   SmallVector<int, 16> ShuffleMask;
-  int ScalarSizeInBytes = VT.getScalarSizeInBits() / 8;
-  for (int I = 0, E = VT.getVectorNumElements(); I != E; ++I)
-    for (int J = ScalarSizeInBytes - 1; J >= 0; --J)
-      ShuffleMask.push_back((I * ScalarSizeInBytes) + J);
-
+  createBSWAPShuffleMask(VT, ShuffleMask);
   EVT ByteVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, ShuffleMask.size());
 
   // Only emit a shuffle if the mask is legal.
@@ -889,6 +892,30 @@ SDValue VectorLegalizer::ExpandBITREVERSE(SDValue Op) {
   // If we have the scalar operation, it's probably cheaper to unroll it.
   if (TLI.isOperationLegalOrCustom(ISD::BITREVERSE, VT.getScalarType()))
     return DAG.UnrollVectorOp(Op.getNode());
+
+  // If the vector element width is a whole number of bytes, test if its legal
+  // to BSWAP shuffle the bytes and then perform the BITREVERSE on the byte
+  // vector. This greatly reduces the number of bit shifts necessary.
+  unsigned ScalarSizeInBits = VT.getScalarSizeInBits();
+  if (ScalarSizeInBits > 8 && (ScalarSizeInBits % 8) == 0) {
+    SmallVector<int, 16> BSWAPMask;
+    createBSWAPShuffleMask(VT, BSWAPMask);
+
+    EVT ByteVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8, BSWAPMask.size());
+    if (TLI.isShuffleMaskLegal(BSWAPMask, ByteVT) &&
+        (TLI.isOperationLegalOrCustom(ISD::BITREVERSE, ByteVT) ||
+         (TLI.isOperationLegalOrCustom(ISD::SHL, ByteVT) &&
+          TLI.isOperationLegalOrCustom(ISD::SRL, ByteVT) &&
+          TLI.isOperationLegalOrCustomOrPromote(ISD::AND, ByteVT) &&
+          TLI.isOperationLegalOrCustomOrPromote(ISD::OR, ByteVT)))) {
+      SDLoc DL(Op);
+      Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Op.getOperand(0));
+      Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT),
+                                BSWAPMask.data());
+      Op = DAG.getNode(ISD::BITREVERSE, DL, ByteVT, Op);
+      return DAG.getNode(ISD::BITCAST, DL, VT, Op);
+    }
+  }
 
   // If we have the appropriate vector bit operations, it is better to use them
   // than unrolling and expanding each component.

@@ -35,10 +35,11 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Target/TargetMachine.h"
+#include "DWPError.h"
 #include <iostream>
 #include <memory>
-#include <system_error>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -59,7 +60,7 @@ static int error(const Twine &Error, const Twine &Context) {
   return 1;
 }
 
-static std::error_code
+static Error
 writeStringsAndOffsets(MCStreamer &Out, StringMap<uint32_t> &Strings,
                        uint32_t &StringOffset, MCSection *StrSection,
                        MCSection *StrOffsetSection, StringRef CurStrSection,
@@ -67,7 +68,7 @@ writeStringsAndOffsets(MCStreamer &Out, StringMap<uint32_t> &Strings,
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
-    return std::error_code();
+    return Error();
 
   DenseMap<uint32_t, uint32_t> OffsetRemapping;
 
@@ -99,7 +100,7 @@ writeStringsAndOffsets(MCStreamer &Out, StringMap<uint32_t> &Strings,
     Out.EmitIntValue(NewOffset, 4);
   }
 
-  return std::error_code();
+  return Error();
 }
 
 static uint32_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
@@ -364,7 +365,7 @@ void printDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
   }
   errs() << '\n';
 }
-static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
+static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
@@ -393,7 +394,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);
     if (!ErrOrObj)
-      return errorToErrorCode(ErrOrObj.takeError());
+      return ErrOrObj.takeError();
 
     UnitIndexEntry CurEntry = {};
 
@@ -415,19 +416,22 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
       StringRef Name;
       if (std::error_code Err = Section.getName(Name))
-        return Err;
+        return errorCodeToError(Err);
 
       Name = Name.substr(Name.find_first_not_of("._"));
 
       StringRef Contents;
       if (auto Err = Section.getContents(Contents))
-        return Err;
+        return errorCodeToError(Err);
 
       if (Name.startswith("zdebug_")) {
         uint64_t OriginalSize;
-        if (!zlib::isAvailable() ||
-            !consumeCompressedDebugSectionHeader(Contents, OriginalSize))
-          return make_error_code(std::errc::invalid_argument);
+        if (!zlib::isAvailable())
+          return make_error<DWPError>("zlib not available");
+        if (!consumeCompressedDebugSectionHeader(Contents, OriginalSize))
+          return make_error<DWPError>(
+              ("failure while decompressing compressed section: '" + Name +
+               "\'").str());
         UncompressedSections.resize(UncompressedSections.size() + 1);
         if (zlib::uncompress(Contents, UncompressedSections.back(), OriginalSize) !=
             zlib::StatusOK) {
@@ -487,7 +491,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       DataExtractor CUIndexData(CurCUIndexSection,
                                 ErrOrObj->getBinary()->isLittleEndian(), 0);
       if (!CUIndex.parse(CUIndexData))
-        return make_error_code(std::errc::invalid_argument);
+        return make_error<DWPError>("Failed to parse cu_index");
 
       for (const DWARFUnitIndex::Entry &E : CUIndex.getRows()) {
         auto *I = E.getOffsets();
@@ -502,7 +506,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
             CurStrSection);
         if (!P.second) {
           printDuplicateError(*P.first, ID, Input);
-          return make_error_code(std::errc::invalid_argument);
+          return make_error<DWPError>("Duplicate DWO ID");
         }
         auto &NewEntry = P.first->second;
         NewEntry.Name = ID.Name;
@@ -518,13 +522,11 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
       if (!CurTypesSection.empty()) {
         assert(CurTypesSection.size() == 1);
-        if (CurTUIndexSection.empty())
-          return make_error_code(std::errc::invalid_argument);
         DWARFUnitIndex TUIndex(DW_SECT_TYPES);
         DataExtractor TUIndexData(CurTUIndexSection,
                                   ErrOrObj->getBinary()->isLittleEndian(), 0);
         if (!TUIndex.parse(TUIndexData))
-          return make_error_code(std::errc::invalid_argument);
+          return make_error<DWPError>("Failed to parse tu_index");
         addAllTypesFromDWP(Out, TypeIndexEntries, TUIndex, TypesSection,
                            CurTypesSection.front(), CurEntry,
                            ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO]);
@@ -535,7 +537,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       auto P = IndexEntries.insert(std::make_pair(ID.Signature, CurEntry));
       if (!P.second) {
         printDuplicateError(*P.first, ID, "");
-        return make_error_code(std::errc::invalid_argument);
+        return make_error<DWPError>("Duplicate DWO ID");
       }
       P.first->second.Name = ID.Name;
       P.first->second.DWOName = ID.DWOName;
@@ -563,7 +565,7 @@ static std::error_code write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   writeIndex(Out, MCOFI.getDwarfCUIndexSection(), ContributionOffsets,
              IndexEntries);
 
-  return std::error_code();
+  return Error();
 }
 
 int main(int argc, char **argv) {
@@ -631,8 +633,10 @@ int main(int argc, char **argv) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, InputFiles))
-    return error(Err.message(), "Writing DWP file");
+  if (auto Err = write(*MS, InputFiles)) {
+    logAllUnhandledErrors(std::move(Err), errs(), "error: ");
+    return 1;
+  }
 
   MS->Finish();
 }

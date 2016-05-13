@@ -40,10 +40,10 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // createDependenceAnalysisPass - This creates an instance of the
-  // DependenceAnalysis pass.
+  // createDependenceAnalysisWrapperPass - This creates an instance of the
+  // DependenceAnalysisWrapper pass.
   //
-  FunctionPass *createDependenceAnalysisPass();
+  FunctionPass *createDependenceAnalysisWrapperPass();
 
   //===--------------------------------------------------------------------===//
   //

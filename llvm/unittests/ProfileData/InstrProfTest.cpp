@@ -659,39 +659,36 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge_site_trunc) {
   }
 }
 
-// Synthesize runtime value profile data.
-ValueProfNode Site1Values[5] = {{{uint64_t(callee1), 400}, &Site1Values[1]},
-                                {{uint64_t(callee2), 1000}, &Site1Values[2]},
-                                {{uint64_t(callee3), 500}, &Site1Values[3]},
-                                {{uint64_t(callee4), 300}, &Site1Values[4]},
-                                {{uint64_t(callee5), 100}, nullptr}};
+static void addValueProfData(InstrProfRecord &Record) {
+  Record.reserveSites(IPVK_IndirectCallTarget, 5);
+  InstrProfValueData VD0[] = {{uint64_t(callee1), 400},
+                              {uint64_t(callee2), 1000},
+                              {uint64_t(callee3), 500},
+                              {uint64_t(callee4), 300},
+                              {uint64_t(callee5), 100}};
+  Record.addValueData(IPVK_IndirectCallTarget, 0, VD0, 5, nullptr);
+  InstrProfValueData VD1[] = {{uint64_t(callee5), 800},
+                              {uint64_t(callee3), 1000},
+                              {uint64_t(callee2), 2500},
+                              {uint64_t(callee1), 1300}};
+  Record.addValueData(IPVK_IndirectCallTarget, 1, VD1, 4, nullptr);
+  InstrProfValueData VD2[] = {{uint64_t(callee6), 800},
+                              {uint64_t(callee3), 1000},
+                              {uint64_t(callee4), 5500}};
+  Record.addValueData(IPVK_IndirectCallTarget, 2, VD2, 3, nullptr);
+  InstrProfValueData VD3[] = {{uint64_t(callee2), 1800},
+                              {uint64_t(callee3), 2000}};
+  Record.addValueData(IPVK_IndirectCallTarget, 3, VD3, 2, nullptr);
+  Record.addValueData(IPVK_IndirectCallTarget, 4, nullptr, 0, nullptr);
+}
 
-ValueProfNode Site2Values[4] = {{{uint64_t(callee5), 800}, &Site2Values[1]},
-                                {{uint64_t(callee3), 1000}, &Site2Values[2]},
-                                {{uint64_t(callee2), 2500}, &Site2Values[3]},
-                                {{uint64_t(callee1), 1300}, nullptr}};
-
-ValueProfNode Site3Values[3] = {{{uint64_t(callee6), 800}, &Site3Values[1]},
-                                {{uint64_t(callee3), 1000}, &Site3Values[2]},
-                                {{uint64_t(callee4), 5500}, nullptr}};
-
-ValueProfNode Site4Values[2] = {{{uint64_t(callee2), 1800}, &Site4Values[1]},
-                                {{uint64_t(callee3), 2000}, nullptr}};
-
-static ValueProfNode *ValueProfNodes[5] = {&Site1Values[0], &Site2Values[0],
-                                           &Site3Values[0], &Site4Values[0],
-                                           nullptr};
-
-static uint16_t NumValueSites[IPVK_Last + 1] = {5};
-TEST_P(MaybeSparseInstrProfTest, runtime_value_prof_data_read_write) {
-  ValueProfRuntimeRecord RTRecord;
-  initializeValueProfRuntimeRecord(&RTRecord, &NumValueSites[0],
-                                   &ValueProfNodes[0]);
-
-  ValueProfData *VPData = serializeValueProfDataFromRT(&RTRecord, nullptr);
+TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
+  InstrProfRecord SrcRecord("caller", 0x1234, {1ULL << 31, 2});
+  addValueProfData(SrcRecord);
+  std::unique_ptr<ValueProfData> VPData =
+      ValueProfData::serializeFrom(SrcRecord);
 
   InstrProfRecord Record("caller", 0x1234, {1ULL << 31, 2});
-
   VPData->deserializeTo(Record, nullptr);
 
   // Now read data from Record and sanity check the data
@@ -748,18 +745,14 @@ TEST_P(MaybeSparseInstrProfTest, runtime_value_prof_data_read_write) {
   ASSERT_EQ(2000U, VD_3[0].Count);
   ASSERT_EQ(StringRef((const char *)VD_3[1].Value, 7), StringRef("callee2"));
   ASSERT_EQ(1800U, VD_3[1].Count);
-
-  finalizeValueProfRuntimeRecord(&RTRecord);
-  free(VPData);
 }
 
-static uint16_t NumValueSites2[IPVK_Last + 1] = {1};
-TEST_P(MaybeSparseInstrProfTest, runtime_value_prof_data_read_write_mapping) {
-  ValueProfRuntimeRecord RTRecord;
-  initializeValueProfRuntimeRecord(&RTRecord, &NumValueSites2[0],
-                                   &ValueProfNodes[0]);
+TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
 
-  ValueProfData *VPData = serializeValueProfDataFromRT(&RTRecord, nullptr);
+  InstrProfRecord SrcRecord("caller", 0x1234, {1ULL << 31, 2});
+  addValueProfData(SrcRecord);
+  std::unique_ptr<ValueProfData> VPData =
+      ValueProfData::serializeFrom(SrcRecord);
 
   InstrProfRecord Record("caller", 0x1234, {1ULL << 31, 2});
   InstrProfSymtab Symtab;
@@ -773,7 +766,7 @@ TEST_P(MaybeSparseInstrProfTest, runtime_value_prof_data_read_write_mapping) {
   VPData->deserializeTo(Record, &Symtab.getAddrHashMap());
 
   // Now read data from Record and sanity check the data
-  ASSERT_EQ(1U, Record.getNumValueSites(IPVK_IndirectCallTarget));
+  ASSERT_EQ(5U, Record.getNumValueSites(IPVK_IndirectCallTarget));
   ASSERT_EQ(5U, Record.getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
 
   auto Cmp = [](const InstrProfValueData &VD1, const InstrProfValueData &VD2) {
@@ -791,8 +784,6 @@ TEST_P(MaybeSparseInstrProfTest, runtime_value_prof_data_read_write_mapping) {
 
   // callee5 does not have a mapped value -- default to 0.
   ASSERT_EQ(VD_0[4].Value, 0ULL);
-  finalizeValueProfRuntimeRecord(&RTRecord);
-  free(VPData);
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_max_function_count) {

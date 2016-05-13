@@ -82,7 +82,7 @@ namespace {
       (void) llvm::createDeadCodeEliminationPass();
       (void) llvm::createDeadInstEliminationPass();
       (void) llvm::createDeadStoreEliminationPass();
-      (void) llvm::createDependenceAnalysisPass();
+      (void) llvm::createDependenceAnalysisWrapperPass();
       (void) llvm::createDivergenceAnalysisPass();
       (void) llvm::createDomOnlyPrinterPass();
       (void) llvm::createDomPrinterPass();

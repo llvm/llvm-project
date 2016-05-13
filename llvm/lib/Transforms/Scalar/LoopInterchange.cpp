@@ -71,7 +71,7 @@ void printDepMatrix(CharMatrix &DepMatrix) {
 #endif
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
-                                     Loop *L, DependenceAnalysis *DA) {
+                                     Loop *L, DependenceInfo *DI) {
   typedef SmallVector<Value *, 16> ValueVector;
   ValueVector MemInstr;
 
@@ -116,7 +116,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         continue;
       if (isa<LoadInst>(Src) && isa<LoadInst>(Des))
         continue;
-      if (auto D = DA->depends(Src, Des, true)) {
+      if (auto D = DI->depends(Src, Des, true)) {
         DEBUG(dbgs() << "Found Dependency between Src=" << Src << " Des=" << Des
                      << "\n");
         if (D->isFlow()) {
@@ -429,11 +429,11 @@ struct LoopInterchange : public FunctionPass {
   static char ID;
   ScalarEvolution *SE;
   LoopInfo *LI;
-  DependenceAnalysis *DA;
+  DependenceInfo *DI;
   DominatorTree *DT;
   bool PreserveLCSSA;
   LoopInterchange()
-      : FunctionPass(ID), SE(nullptr), LI(nullptr), DA(nullptr), DT(nullptr) {
+      : FunctionPass(ID), SE(nullptr), LI(nullptr), DI(nullptr), DT(nullptr) {
     initializeLoopInterchangePass(*PassRegistry::getPassRegistry());
   }
 
@@ -442,7 +442,7 @@ struct LoopInterchange : public FunctionPass {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<DependenceAnalysis>();
+    AU.addRequired<DependenceAnalysisWrapperPass>();
     AU.addRequiredID(LoopSimplifyID);
     AU.addRequiredID(LCSSAID);
   }
@@ -453,7 +453,7 @@ struct LoopInterchange : public FunctionPass {
 
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    DA = &getAnalysis<DependenceAnalysis>();
+    DI = &getAnalysis<DependenceAnalysisWrapperPass>().getDI();
     auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     DT = DTWP ? &DTWP->getDomTree() : nullptr;
     PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
@@ -517,7 +517,7 @@ struct LoopInterchange : public FunctionPass {
                  << "\n");
 
     if (!populateDependencyMatrix(DependencyMatrix, LoopList.size(),
-                                  OuterMostLoop, DA)) {
+                                  OuterMostLoop, DI)) {
       DEBUG(dbgs() << "Populating Dependency matrix failed\n");
       return false;
     }
@@ -1296,7 +1296,7 @@ char LoopInterchange::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopInterchange, "loop-interchange",
                       "Interchanges loops for cache reuse", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DependenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)

@@ -45,6 +45,7 @@
     #define FTN_GET_AFFINITY_MASK_PROC           kmp_get_affinity_mask_proc
 
     #define FTN_MALLOC                           kmp_malloc
+    #define FTN_ALIGNED_MALLOC                   kmp_aligned_malloc
     #define FTN_CALLOC                           kmp_calloc
     #define FTN_REALLOC                          kmp_realloc
     #define FTN_FREE                             kmp_free
@@ -151,6 +152,7 @@
     #define FTN_GET_AFFINITY_MASK_PROC           kmp_get_affinity_mask_proc_
 
     #define FTN_MALLOC                           kmp_malloc_
+    #define FTN_ALIGNED_MALLOC                   kmp_aligned_malloc_
     #define FTN_CALLOC                           kmp_calloc_
     #define FTN_REALLOC                          kmp_realloc_
     #define FTN_FREE                             kmp_free_
@@ -258,6 +260,7 @@
     #define FTN_GET_AFFINITY_MASK_PROC           KMP_GET_AFFINITY_MASK_PROC
 
     #define FTN_MALLOC                           KMP_MALLOC
+    #define FTN_ALIGNED_MALLOC                   KMP_ALIGNED_MALLOC
     #define FTN_CALLOC                           KMP_CALLOC
     #define FTN_REALLOC                          KMP_REALLOC
     #define FTN_FREE                             KMP_FREE
@@ -365,6 +368,7 @@
     #define FTN_GET_AFFINITY_MASK_PROC           KMP_GET_AFFINITY_MASK_PROC_
 
     #define FTN_MALLOC                           KMP_MALLOC_
+    #define FTN_ALIGNED_MALLOC                   KMP_ALIGNED_MALLOC_
     #define FTN_CALLOC                           KMP_CALLOC_
     #define FTN_REALLOC                          KMP_REALLOC_
     #define FTN_FREE                             KMP_FREE_

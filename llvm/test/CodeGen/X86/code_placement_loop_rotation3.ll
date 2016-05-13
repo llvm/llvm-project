@@ -15,17 +15,17 @@ entry:
 header:
   call void @e()
   %call = call zeroext i1 @a()
-  br i1 %call, label %if.then, label %latch, !prof !2
+  br i1 %call, label %if.then, label %latch, !prof !1
 
 if.then:
   call void @f()
   %call3 = call zeroext i1 @a()
-  br i1 %call3, label %latch, label %end, !prof !3
+  br i1 %call3, label %latch, label %end, !prof !2
 
 latch:
   call void @h()
   %call2 = call zeroext i1 @a()
-  br i1 %call2, label %header, label %end, !prof !4
+  br i1 %call2, label %header, label %end, !prof !3
 
 end:
   ret void
@@ -38,6 +38,5 @@ declare void @g()
 declare void @h()
 
 !1 = !{!"branch_weights", i32 16, i32 16}
-!2 = !{!"branch_weights", i32 16, i32 16}
+!2 = !{!"branch_weights", i32 97, i32 3}
 !3 = !{!"branch_weights", i32 97, i32 3}
-!4 = !{!"branch_weights", i32 97, i32 3}

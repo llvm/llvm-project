@@ -101,8 +101,8 @@ static cl::opt<bool>
                         cl::init(false), cl::Hidden);
 static cl::opt<bool>
     ForcePreciseRotationCost("force-precise-rotation-cost",
-                             cl::desc("Model the cost of loop rotation more "
-                                      "precisely by using profile data."),
+                             cl::desc("Force the use of precise cost "
+                                      "loop rotation strategy."),
                              cl::init(false), cl::Hidden);
 
 static cl::opt<unsigned> MisfetchCost(

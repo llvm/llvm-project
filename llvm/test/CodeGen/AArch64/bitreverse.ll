@@ -7,6 +7,7 @@ declare <2 x i16> @llvm.bitreverse.v2i16(<2 x i16>) readnone
 
 define <2 x i16> @f(<2 x i16> %a) {
 ; CHECK-LABEL: f:
+; CHECK: rev32
 ; CHECK: ushr
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b

@@ -65,8 +65,8 @@ static const EnumEntry<SimpleTypeKind> SimpleTypeNames[] = {
 };
 
 static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
-#define LEAF_TYPE(enum, val) { #enum, enum },
-#include "llvm/DebugInfo/CodeView/CVLeafTypes.def"
+#define CV_TYPE(enum, val) {#enum, enum},
+#include "llvm/DebugInfo/CodeView/TypeRecords.def"
 };
 
 #define ENUM_ENTRY(enum_class, enum)                                           \
@@ -200,16 +200,13 @@ public:
       : CVTD(CVTD), W(W), PrintRecordBytes(PrintRecordBytes) {}
 
   /// CVTypeVisitor overrides.
-#define TYPE_RECORD(ClassName, LeafEnum)                                       \
+#define TYPE_RECORD(EnumName, EnumVal, ClassName, PrintName)                   \
   void visit##ClassName(TypeLeafKind LeafType, ClassName &Record);
-#define TYPE_RECORD_ALIAS(ClassName, LeafEnum)
-#define MEMBER_RECORD(ClassName, LeafEnum)                                     \
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
+#define MEMBER_RECORD(EnumName, EnumVal, ClassName, PrintName)                 \
   void visit##ClassName(TypeLeafKind LeafType, ClassName &Record);
-#define MEMBER_RECORD_ALIAS(ClassName, LeafEnum)
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
-
-  /// Method overload lists are a special case.
-  void visitMethodList(TypeLeafKind Leaf, ArrayRef<uint8_t> LeafData);
 
   void visitUnknownMember(TypeLeafKind Leaf);
 
@@ -242,9 +239,10 @@ private:
 
 static StringRef getLeafTypeName(TypeLeafKind LT) {
   switch (LT) {
-#define KNOWN_TYPE(LeafName, Value, ClassName) \
-  case LeafName: return #ClassName;
-#include "llvm/DebugInfo/CodeView/CVLeafTypes.def"
+#define TYPE_RECORD(ename, value, class_name, print_name)                      \
+  case ename:                                                                  \
+    return #print_name;
+#include "llvm/DebugInfo/CodeView/TypeRecords.def"
   default:
     break;
   }
@@ -405,21 +403,14 @@ void CVTypeDumperImpl::visitMemberFunctionRecord(TypeLeafKind Leaf,
   Name = CVTD.saveName(TypeName);
 }
 
-void CVTypeDumperImpl::visitMethodList(TypeLeafKind Leaf,
-                                       ArrayRef<uint8_t> LeafData) {
-  while (!LeafData.empty()) {
-    auto Method =
-        MethodListRecord::deserialize(TypeRecordKind::MethodList, LeafData);
-    if (Method)
-      return;
-    const MethodListRecord &M = *Method;
-
+void CVTypeDumperImpl::visitMethodOverloadListRecord(TypeLeafKind Leaf,
+                                             MethodOverloadListRecord &MethodList) {
+  for (auto &M : MethodList.getMethods()) {
     ListScope S(W, "Method");
-    printMemberAttributes(M.getAccess(), M.getMethodKind(), M.getOptions());
-    printTypeIndex("Type", Method->getType());
-    if (Method->getMethodKind() == MethodKind::IntroducingVirtual ||
-        Method->getMethodKind() == MethodKind::PureIntroducingVirtual)
-      W.printHex("VFTableOffset", Method->getVFTableOffset());
+    printMemberAttributes(M.getAccess(), M.getKind(), M.getOptions());
+    printTypeIndex("Type", M.getType());
+    if (M.isIntroducingVirtual())
+      W.printHex("VFTableOffset", M.getVFTableOffset());
   }
 }
 

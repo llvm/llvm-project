@@ -1543,3 +1543,8 @@ def : tInstAlias<"lsr${s}${p} $Rdm, $imm",
              (tLSRri tGPR:$Rdm, cc_out:$s, tGPR:$Rdm, imm_sr:$imm, pred:$p)>;
 def : tInstAlias<"asr${s}${p} $Rdm, $imm",
              (tASRri tGPR:$Rdm, cc_out:$s, tGPR:$Rdm, imm_sr:$imm, pred:$p)>;
+
+// Pseudo instruction ldr Rt, =immediate
+def tLDRConstPool
+  : tAsmPseudo<"ldr${p} $Rt, $immediate",
+               (ins tGPR:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;

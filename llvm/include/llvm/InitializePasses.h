@@ -111,6 +111,7 @@ void initializeDeadMachineInstructionElimPass(PassRegistry&);
 void initializeDelinearizationPass(PassRegistry &);
 void initializeDependenceAnalysisPass(PassRegistry&);
 void initializeDetectDeadLanesPass(PassRegistry&);
+void initializeDependenceAnalysisWrapperPassPass(PassRegistry&);
 void initializeDivergenceAnalysisPass(PassRegistry&);
 void initializeDomOnlyPrinterPass(PassRegistry&);
 void initializeDomOnlyViewerPass(PassRegistry&);

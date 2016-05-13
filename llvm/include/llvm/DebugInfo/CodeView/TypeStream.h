@@ -27,8 +27,8 @@ namespace codeview {
 
 typedef RecordIterator<TypeLeafKind> TypeIterator;
 
-inline iterator_range<TypeIterator> makeTypeRange(ArrayRef<uint8_t> Data) {
-  return make_range(TypeIterator(Data), TypeIterator());
+inline iterator_range<TypeIterator> makeTypeRange(ArrayRef<uint8_t> Data, bool *HadError) {
+  return make_range(TypeIterator(Data, HadError), TypeIterator());
 }
 
 } // end namespace codeview

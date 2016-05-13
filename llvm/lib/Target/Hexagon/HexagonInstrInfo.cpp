@@ -1152,6 +1152,44 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI)
       MBB.erase(MI);
       return true;
     }
+    case Hexagon::VSelectPseudo_V6: {
+      const MachineOperand &Op0 = MI->getOperand(0);
+      const MachineOperand &Op1 = MI->getOperand(1);
+      const MachineOperand &Op2 = MI->getOperand(2);
+      const MachineOperand &Op3 = MI->getOperand(3);
+      BuildMI(MBB, MI, DL, get(Hexagon::V6_vcmov))
+        .addOperand(Op0)
+        .addOperand(Op1)
+        .addOperand(Op2);
+      BuildMI(MBB, MI, DL, get(Hexagon::V6_vncmov))
+        .addOperand(Op0)
+        .addOperand(Op1)
+        .addOperand(Op3);
+      MBB.erase(MI);
+      return true;
+    }
+    case Hexagon::VSelectDblPseudo_V6: {
+      MachineOperand &Op0 = MI->getOperand(0);
+      MachineOperand &Op1 = MI->getOperand(1);
+      MachineOperand &Op2 = MI->getOperand(2);
+      MachineOperand &Op3 = MI->getOperand(3);
+      unsigned SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::subreg_loreg);
+      unsigned SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::subreg_hireg);
+      BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
+        .addOperand(Op0)
+        .addOperand(Op1)
+        .addReg(SrcHi)
+        .addReg(SrcLo);
+      SrcLo = HRI.getSubReg(Op3.getReg(), Hexagon::subreg_loreg);
+      SrcHi = HRI.getSubReg(Op3.getReg(), Hexagon::subreg_hireg);
+      BuildMI(MBB, MI, DL, get(Hexagon::V6_vnccombine))
+        .addOperand(Op0)
+        .addOperand(Op1)
+        .addReg(SrcHi)
+        .addReg(SrcLo);
+      MBB.erase(MI);
+      return true;
+    }
     case Hexagon::TCRETURNi:
       MI->setDesc(get(Hexagon::J2_jump));
       return true;

@@ -84,58 +84,14 @@ namespace llvm {
       LC_REQ_DYLD    = 0x80000000u
     };
 
+#define HANDLE_LOAD_COMMAND(LoadCommandName, LoadCommandValue) \
+    LoadCommandName = LoadCommandValue,
+
     enum LoadCommandType : uint32_t {
-      // Constants for the "cmd" field in llvm::MachO::load_command
-      LC_SEGMENT              = 0x00000001u,
-      LC_SYMTAB               = 0x00000002u,
-      LC_SYMSEG               = 0x00000003u,
-      LC_THREAD               = 0x00000004u,
-      LC_UNIXTHREAD           = 0x00000005u,
-      LC_LOADFVMLIB           = 0x00000006u,
-      LC_IDFVMLIB             = 0x00000007u,
-      LC_IDENT                = 0x00000008u,
-      LC_FVMFILE              = 0x00000009u,
-      LC_PREPAGE              = 0x0000000Au,
-      LC_DYSYMTAB             = 0x0000000Bu,
-      LC_LOAD_DYLIB           = 0x0000000Cu,
-      LC_ID_DYLIB             = 0x0000000Du,
-      LC_LOAD_DYLINKER        = 0x0000000Eu,
-      LC_ID_DYLINKER          = 0x0000000Fu,
-      LC_PREBOUND_DYLIB       = 0x00000010u,
-      LC_ROUTINES             = 0x00000011u,
-      LC_SUB_FRAMEWORK        = 0x00000012u,
-      LC_SUB_UMBRELLA         = 0x00000013u,
-      LC_SUB_CLIENT           = 0x00000014u,
-      LC_SUB_LIBRARY          = 0x00000015u,
-      LC_TWOLEVEL_HINTS       = 0x00000016u,
-      LC_PREBIND_CKSUM        = 0x00000017u,
-      LC_LOAD_WEAK_DYLIB      = 0x80000018u,
-      LC_SEGMENT_64           = 0x00000019u,
-      LC_ROUTINES_64          = 0x0000001Au,
-      LC_UUID                 = 0x0000001Bu,
-      LC_RPATH                = 0x8000001Cu,
-      LC_CODE_SIGNATURE       = 0x0000001Du,
-      LC_SEGMENT_SPLIT_INFO   = 0x0000001Eu,
-      LC_REEXPORT_DYLIB       = 0x8000001Fu,
-      LC_LAZY_LOAD_DYLIB      = 0x00000020u,
-      LC_ENCRYPTION_INFO      = 0x00000021u,
-      LC_DYLD_INFO            = 0x00000022u,
-      LC_DYLD_INFO_ONLY       = 0x80000022u,
-      LC_LOAD_UPWARD_DYLIB    = 0x80000023u,
-      LC_VERSION_MIN_MACOSX   = 0x00000024u,
-      LC_VERSION_MIN_IPHONEOS = 0x00000025u,
-      LC_FUNCTION_STARTS      = 0x00000026u,
-      LC_DYLD_ENVIRONMENT     = 0x00000027u,
-      LC_MAIN                 = 0x80000028u,
-      LC_DATA_IN_CODE         = 0x00000029u,
-      LC_SOURCE_VERSION       = 0x0000002Au,
-      LC_DYLIB_CODE_SIGN_DRS  = 0x0000002Bu,
-      LC_ENCRYPTION_INFO_64   = 0x0000002Cu,
-      LC_LINKER_OPTION        = 0x0000002Du,
-      LC_LINKER_OPTIMIZATION_HINT = 0x0000002Eu,
-      LC_VERSION_MIN_TVOS     = 0x0000002Fu,
-      LC_VERSION_MIN_WATCHOS  = 0x00000030u,
+      #include "llvm/Support/MachO.def"
     };
+
+#undef HANDLE_LOAD_COMMAND
 
     enum : uint32_t {
       // Constant bits for the "flags" field in llvm::MachO::segment_command

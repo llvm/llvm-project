@@ -226,14 +226,14 @@ let SubRegIndices = [sub_ymm] in {
 }
 
 // Mask Registers, used by AVX-512 instructions.
-def K0 : X86Reg<"k0", 0>, DwarfRegNum<[118, -2, -2]>;
-def K1 : X86Reg<"k1", 1>, DwarfRegNum<[119, -2, -2]>;
-def K2 : X86Reg<"k2", 2>, DwarfRegNum<[120, -2, -2]>;
-def K3 : X86Reg<"k3", 3>, DwarfRegNum<[121, -2, -2]>;
-def K4 : X86Reg<"k4", 4>, DwarfRegNum<[122, -2, -2]>;
-def K5 : X86Reg<"k5", 5>, DwarfRegNum<[123, -2, -2]>;
-def K6 : X86Reg<"k6", 6>, DwarfRegNum<[124, -2, -2]>;
-def K7 : X86Reg<"k7", 7>, DwarfRegNum<[125, -2, -2]>;
+def K0 : X86Reg<"k0", 0>, DwarfRegNum<[118,  93,  93]>;
+def K1 : X86Reg<"k1", 1>, DwarfRegNum<[119,  94,  94]>;
+def K2 : X86Reg<"k2", 2>, DwarfRegNum<[120,  95,  95]>;
+def K3 : X86Reg<"k3", 3>, DwarfRegNum<[121,  96,  96]>;
+def K4 : X86Reg<"k4", 4>, DwarfRegNum<[122,  97,  97]>;
+def K5 : X86Reg<"k5", 5>, DwarfRegNum<[123,  98,  98]>;
+def K6 : X86Reg<"k6", 6>, DwarfRegNum<[124,  99,  99]>;
+def K7 : X86Reg<"k7", 7>, DwarfRegNum<[125, 100, 100]>;
 
 // Floating point stack registers. These don't map one-to-one to the FP
 // pseudo registers, but we still mark them as aliasing FP registers. That

@@ -3249,7 +3249,10 @@ bool DwarfLinker::registerModuleReference(
 
   auto Cached = ClangModules.find(PCMfile);
   if (Cached != ClangModules.end()) {
-    if (Cached->second != DwoId)
+    // FIXME: Until PR27449 (https://llvm.org/bugs/show_bug.cgi?id=27449) is
+    // fixed in clang, only warn about DWO_id mismatches in verbose mode.
+    // ASTFileSignatures will change randomly when a module is rebuilt.
+    if (Options.Verbose && (Cached->second != DwoId))
       reportWarning(Twine("hash mismatch: this object file was built against a "
                           "different version of the module ") + PCMfile);
     if (Options.Verbose)
@@ -3343,10 +3346,15 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
       // FIXME: Until PR27449 (https://llvm.org/bugs/show_bug.cgi?id=27449) is
       // fixed in clang, only warn about DWO_id mismatches in verbose mode.
       // ASTFileSignatures will change randomly when a module is rebuilt.
-      if (Options.Verbose && (getDwoId(*CUDie, *CU) != DwoId))
-        reportWarning(
-            Twine("hash mismatch: this object file was built against a "
-                  "different version of the module ") + Filename);
+      uint64_t PCMDwoId = getDwoId(*CUDie, *CU);
+      if (PCMDwoId != DwoId) {
+        if (Options.Verbose)
+          reportWarning(
+              Twine("hash mismatch: this object file was built against a "
+                    "different version of the module ") + Filename);
+        // Update the cache entry with the DwoId of the module loaded from disk.
+        ClangModules[Filename] = PCMDwoId;
+      }
 
       // Add this module.
       Unit = llvm::make_unique<CompileUnit>(*CU, UnitID++, !Options.NoODR,

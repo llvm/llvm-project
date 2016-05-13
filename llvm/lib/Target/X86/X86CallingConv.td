@@ -890,18 +890,23 @@ def CSR_64_MostRegs : CalleeSavedRegs<(add RBX, RCX, RDX, RSI, RDI, R8, R9, R10,
                                            (sequence "XMM%u", 0, 15))>;
 
 def CSR_32_AllRegs     : CalleeSavedRegs<(add EAX, EBX, ECX, EDX, EBP, ESI,
-                                              EDI, ESP)>;
+                                              EDI)>;
 def CSR_32_AllRegs_SSE : CalleeSavedRegs<(add CSR_32_AllRegs,
                                               (sequence "XMM%u", 0, 7))>;
+def CSR_32_AllRegs_AVX : CalleeSavedRegs<(add CSR_32_AllRegs,
+                                              (sequence "YMM%u", 0, 7))>;
+def CSR_32_AllRegs_AVX512 : CalleeSavedRegs<(add CSR_32_AllRegs,
+                                                 (sequence "ZMM%u", 0, 7),
+                                                 (sequence "K%u", 0, 7))>;
 
-def CSR_64_AllRegs     : CalleeSavedRegs<(add CSR_64_MostRegs, RAX, RSP,
-                                              (sequence "XMM%u", 16, 31))>;
-def CSR_64_AllRegs_AVX : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX, RSP,
+def CSR_64_AllRegs     : CalleeSavedRegs<(add CSR_64_MostRegs, RAX)>;
+def CSR_64_AllRegs_AVX : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
                                                    (sequence "YMM%u", 0, 15)),
                                               (sequence "XMM%u", 0, 15))>;
-def CSR_64_AllRegs_AVX512 : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX, RSP,
-                                                   (sequence "ZMM%u", 0, 31)),
-                                              (sequence "XMM%u", 0, 15))>;
+def CSR_64_AllRegs_AVX512 : CalleeSavedRegs<(sub (add CSR_64_MostRegs, RAX,
+                                                      (sequence "ZMM%u", 0, 31),
+                                                      (sequence "K%u", 0, 7)),
+                                                 (sequence "XMM%u", 0, 15))>;
 
 // Standard C + YMM6-15
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,

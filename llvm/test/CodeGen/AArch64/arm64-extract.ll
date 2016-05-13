@@ -1,4 +1,4 @@
-; RUN: llc -aarch64-extr-generation=true -verify-machineinstrs < %s \
+; RUN: llc -verify-machineinstrs < %s \
 ; RUN: -march=arm64 | FileCheck %s
 
 define i64 @ror_i64(i64 %in) {

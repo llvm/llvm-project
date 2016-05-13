@@ -3214,6 +3214,7 @@ extern void __kmp_initialize_bget( kmp_info_t *th );
 extern void __kmp_finalize_bget( kmp_info_t *th );
 
 KMP_EXPORT void *kmpc_malloc( size_t size );
+KMP_EXPORT void *kmpc_aligned_malloc( size_t size, size_t alignment );
 KMP_EXPORT void *kmpc_calloc( size_t nelem, size_t elsize );
 KMP_EXPORT void *kmpc_realloc( void *ptr, size_t size );
 KMP_EXPORT void  kmpc_free( void *ptr );

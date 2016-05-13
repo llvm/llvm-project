@@ -6,14 +6,14 @@
 # RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown -target-abi n32 -filetype=obj -o - %s | \
-# RUN:   llvm-objdump -d -r -t -arch=mips64 - | \
+# RUN:   llvm-objdump -d -r -arch=mips64 - | \
 # RUN:     FileCheck -check-prefix=ALL -check-prefix=NXX -check-prefix=N32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown -target-abi n32 %s | \
 # RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown %s -filetype=obj -o - | \
-# RUN:   llvm-objdump -d -r -t -arch=mips64 - | \
+# RUN:   llvm-objdump -d -r -arch=mips64 - | \
 # RUN:     FileCheck -check-prefix=ALL -check-prefix=NXX -check-prefix=N64 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown %s | \
@@ -105,12 +105,11 @@ t3:
 # N32 doesn't allow 3 operations to be specified in the same relocation
 # record like N64 does.
 
-# NXX: $tmp0:
 # NXX-NEXT: move     $2, $gp
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  $tmp0
+# NXX-NEXT: {{^ *0+}}40: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16 .text
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  $tmp0
+# NXX-NEXT: {{^ *0+}}44: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16 .text
 # N32-NEXT: addu     $gp, $gp, $25
 # N64-NEXT: daddu    $gp, $gp, $25
 # NXX-NEXT: nop
@@ -174,8 +173,3 @@ t5:
 
 # ALL-NEXT: nop
 
-# NXX-LABEL: SYMBOL TABLE:
-
-# For .cpsetup with local labels, we need to check if $tmp0 is in the symbol
-# table:
-# NXX: .text  00000000 $tmp0

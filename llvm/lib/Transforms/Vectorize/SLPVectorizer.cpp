@@ -1640,7 +1640,14 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::FCmp:
     case Instruction::ICmp:
-    case Instruction::Select:
+    case Instruction::Select: {
+      // Calculate the cost of this instruction.
+      VectorType *MaskTy = VectorType::get(Builder.getInt1Ty(), VL.size());
+      int ScalarCost = VecTy->getNumElements() *
+          TTI->getCmpSelInstrCost(Opcode, ScalarTy, Builder.getInt1Ty());
+      int VecCost = TTI->getCmpSelInstrCost(Opcode, VecTy, MaskTy);
+      return VecCost - ScalarCost;
+    }
     case Instruction::Add:
     case Instruction::FAdd:
     case Instruction::Sub:
@@ -1659,59 +1666,48 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Xor: {
-      // Calculate the cost of this instruction.
-      int ScalarCost = 0;
-      int VecCost = 0;
-      if (Opcode == Instruction::FCmp || Opcode == Instruction::ICmp ||
-          Opcode == Instruction::Select) {
-        VectorType *MaskTy = VectorType::get(Builder.getInt1Ty(), VL.size());
-        ScalarCost = VecTy->getNumElements() *
-        TTI->getCmpSelInstrCost(Opcode, ScalarTy, Builder.getInt1Ty());
-        VecCost = TTI->getCmpSelInstrCost(Opcode, VecTy, MaskTy);
-      } else {
-        // Certain instructions can be cheaper to vectorize if they have a
-        // constant second vector operand.
-        TargetTransformInfo::OperandValueKind Op1VK =
-            TargetTransformInfo::OK_AnyValue;
-        TargetTransformInfo::OperandValueKind Op2VK =
-            TargetTransformInfo::OK_UniformConstantValue;
-        TargetTransformInfo::OperandValueProperties Op1VP =
-            TargetTransformInfo::OP_None;
-        TargetTransformInfo::OperandValueProperties Op2VP =
-            TargetTransformInfo::OP_None;
+      // Certain instructions can be cheaper to vectorize if they have a
+      // constant second vector operand.
+      TargetTransformInfo::OperandValueKind Op1VK =
+          TargetTransformInfo::OK_AnyValue;
+      TargetTransformInfo::OperandValueKind Op2VK =
+          TargetTransformInfo::OK_UniformConstantValue;
+      TargetTransformInfo::OperandValueProperties Op1VP =
+          TargetTransformInfo::OP_None;
+      TargetTransformInfo::OperandValueProperties Op2VP =
+          TargetTransformInfo::OP_None;
 
-        // If all operands are exactly the same ConstantInt then set the
-        // operand kind to OK_UniformConstantValue.
-        // If instead not all operands are constants, then set the operand kind
-        // to OK_AnyValue. If all operands are constants but not the same,
-        // then set the operand kind to OK_NonUniformConstantValue.
-        ConstantInt *CInt = nullptr;
-        for (unsigned i = 0; i < VL.size(); ++i) {
-          const Instruction *I = cast<Instruction>(VL[i]);
-          if (!isa<ConstantInt>(I->getOperand(1))) {
-            Op2VK = TargetTransformInfo::OK_AnyValue;
-            break;
-          }
-          if (i == 0) {
-            CInt = cast<ConstantInt>(I->getOperand(1));
-            continue;
-          }
-          if (Op2VK == TargetTransformInfo::OK_UniformConstantValue &&
-              CInt != cast<ConstantInt>(I->getOperand(1)))
-            Op2VK = TargetTransformInfo::OK_NonUniformConstantValue;
+      // If all operands are exactly the same ConstantInt then set the
+      // operand kind to OK_UniformConstantValue.
+      // If instead not all operands are constants, then set the operand kind
+      // to OK_AnyValue. If all operands are constants but not the same,
+      // then set the operand kind to OK_NonUniformConstantValue.
+      ConstantInt *CInt = nullptr;
+      for (unsigned i = 0; i < VL.size(); ++i) {
+        const Instruction *I = cast<Instruction>(VL[i]);
+        if (!isa<ConstantInt>(I->getOperand(1))) {
+          Op2VK = TargetTransformInfo::OK_AnyValue;
+          break;
         }
-        // FIXME: Currently cost of model modification for division by power of
-        // 2 is handled for X86 and AArch64. Add support for other targets.
-        if (Op2VK == TargetTransformInfo::OK_UniformConstantValue && CInt &&
-            CInt->getValue().isPowerOf2())
-          Op2VP = TargetTransformInfo::OP_PowerOf2;
-
-        ScalarCost = VecTy->getNumElements() *
-                     TTI->getArithmeticInstrCost(Opcode, ScalarTy, Op1VK, Op2VK,
-                                                 Op1VP, Op2VP);
-        VecCost = TTI->getArithmeticInstrCost(Opcode, VecTy, Op1VK, Op2VK,
-                                              Op1VP, Op2VP);
+        if (i == 0) {
+          CInt = cast<ConstantInt>(I->getOperand(1));
+          continue;
+        }
+        if (Op2VK == TargetTransformInfo::OK_UniformConstantValue &&
+            CInt != cast<ConstantInt>(I->getOperand(1)))
+          Op2VK = TargetTransformInfo::OK_NonUniformConstantValue;
       }
+      // FIXME: Currently cost of model modification for division by power of
+      // 2 is handled for X86 and AArch64. Add support for other targets.
+      if (Op2VK == TargetTransformInfo::OK_UniformConstantValue && CInt &&
+          CInt->getValue().isPowerOf2())
+        Op2VP = TargetTransformInfo::OP_PowerOf2;
+
+      int ScalarCost = VecTy->getNumElements() *
+                       TTI->getArithmeticInstrCost(Opcode, ScalarTy, Op1VK,
+                                                   Op2VK, Op1VP, Op2VP);
+      int VecCost = TTI->getArithmeticInstrCost(Opcode, VecTy, Op1VK, Op2VK,
+                                                Op1VP, Op2VP);
       return VecCost - ScalarCost;
     }
     case Instruction::GetElementPtr: {

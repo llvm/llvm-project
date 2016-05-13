@@ -10,8 +10,8 @@
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         jalr.hb $31          # CHECK: :[[@LINE]]:9: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:9: error: source and destination must be different
-        ldc2 $11, -32769($12)   # CHECK: :[[@LINE]]:19: error: expected memory with 16-bit signed offset
-        ldc2 $11, 32768($12) # CHECK: :[[@LINE]]:19: error: expected memory with 16-bit signed offset
+        pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
+        pref 32, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
         mtc0  $4, $3, -1     # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
         mtc0  $4, $3, 8      # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
         mtc2  $4, $3, -1     # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
@@ -20,5 +20,3 @@
         mfc0  $4, $3, 8      # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
         mfc2  $4, $3, -1     # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
         mfc2  $4, $3, 8      # CHECK: :[[@LINE]]:23: error: expected 3-bit unsigned immediate
-        pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
-        pref 32, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate

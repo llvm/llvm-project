@@ -1142,6 +1142,13 @@ FTN_MALLOC( size_t KMP_DEREF size )
 }
 
 void * FTN_STDCALL
+FTN_ALIGNED_MALLOC( size_t KMP_DEREF size, size_t KMP_DEREF alignment )
+{
+    // kmpc_aligned_malloc initializes the library if needed
+    return kmpc_aligned_malloc( KMP_DEREF size, KMP_DEREF alignment );
+}
+
+void * FTN_STDCALL
 FTN_CALLOC( size_t KMP_DEREF nelem, size_t KMP_DEREF elsize )
 {
     // kmpc_calloc initializes the library if needed

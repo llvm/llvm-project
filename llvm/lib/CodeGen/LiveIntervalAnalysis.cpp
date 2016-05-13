@@ -1585,9 +1585,3 @@ void LiveIntervals::renameDisconnectedComponents() {
     SubRegClasses.renameComponents(*LI);
   }
 }
-
-void LiveIntervals::constructMainRangeFromSubranges(LiveInterval &LI) {
-  assert(LRCalc && "LRCalc not initialized.");
-  LRCalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
-  LRCalc->constructMainRangeFromSubranges(LI);
-}

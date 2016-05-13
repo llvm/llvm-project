@@ -559,7 +559,7 @@ protected:
   /// The ExitBlock of the scalar loop.
   BasicBlock *LoopExitBlock;
   /// The vector loop body.
-  SmallVector<BasicBlock *, 4> LoopVectorBody;
+  BasicBlock *LoopVectorBody;
   /// The scalar loop body.
   BasicBlock *LoopScalarBody;
   /// A list of all bypass blocks. The first block is the entry of the loop.
@@ -2066,9 +2066,7 @@ struct LoopVectorize : public FunctionPass {
 Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
   // We need to place the broadcast of invariant variables outside the loop.
   Instruction *Instr = dyn_cast<Instruction>(V);
-  bool NewInstr = (Instr &&
-                   std::find(LoopVectorBody.begin(), LoopVectorBody.end(),
-                             Instr->getParent()) != LoopVectorBody.end());
+  bool NewInstr = (Instr && Instr->getParent() == LoopVectorBody);
   bool Invariant = OrigLoop->isLoopInvariant(V) && !NewInstr;
 
   // Place the code for broadcasting invariant variables in the new preheader.
@@ -3195,7 +3193,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
   LoopScalarPreHeader = ScalarPH;
   LoopMiddleBlock = MiddleBlock;
   LoopExitBlock = ExitBlock;
-  LoopVectorBody.push_back(VecBody);
+  LoopVectorBody = VecBody;
   LoopScalarBody = OldBasicBlock;
 
   // Keep all loop hints from the original loop on the vector loop (we'll
@@ -3233,40 +3231,25 @@ struct CSEDenseMapInfo {
 };
 }
 
-/// \brief Check whether this block is a predicated block.
-/// Due to if predication of stores we might create a sequence of "if(pred) a[i]
-/// = ...;  " blocks. We start with one vectorized basic block. For every
-/// conditional block we split this vectorized block. Therefore, every second
-/// block will be a predicated one.
-static bool isPredicatedBlock(unsigned BlockNum) { return BlockNum % 2; }
-
 ///\brief Perform cse of induction variable instructions.
-static void cse(SmallVector<BasicBlock *, 4> &BBs) {
+static void cse(BasicBlock *BB) {
   // Perform simple cse.
   SmallDenseMap<Instruction *, Instruction *, 4, CSEDenseMapInfo> CSEMap;
-  for (unsigned i = 0, e = BBs.size(); i != e; ++i) {
-    BasicBlock *BB = BBs[i];
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
-      Instruction *In = &*I++;
+  for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
+    Instruction *In = &*I++;
 
-      if (!CSEDenseMapInfo::canHandle(In))
-        continue;
+    if (!CSEDenseMapInfo::canHandle(In))
+      continue;
 
-      // Check if we can replace this instruction with any of the
-      // visited instructions.
-      if (Instruction *V = CSEMap.lookup(In)) {
-        In->replaceAllUsesWith(V);
-        In->eraseFromParent();
-        continue;
-      }
-      // Ignore instructions in conditional blocks. We create "if (pred) a[i] =
-      // ...;" blocks for predicated stores. Every second block is a predicated
-      // block.
-      if (isPredicatedBlock(i))
-        continue;
-
-      CSEMap[In] = In;
+    // Check if we can replace this instruction with any of the
+    // visited instructions.
+    if (Instruction *V = CSEMap.lookup(In)) {
+      In->replaceAllUsesWith(V);
+      In->eraseFromParent();
+      continue;
     }
+
+    CSEMap[In] = In;
   }
 }
 
@@ -3613,7 +3596,7 @@ void InnerLoopVectorizer::vectorizeLoop() {
       cast<PHINode>(VecRdxPhi[part])
           ->addIncoming(StartVal, LoopVectorPreHeader);
       cast<PHINode>(VecRdxPhi[part])
-          ->addIncoming(Val[part], LoopVectorBody.back());
+          ->addIncoming(Val[part], LoopVectorBody);
     }
 
     // Before each round, move the insertion point right between
@@ -3630,7 +3613,7 @@ void InnerLoopVectorizer::vectorizeLoop() {
     // entire expression in the smaller type.
     if (VF > 1 && Phi->getType() != RdxDesc.getRecurrenceType()) {
       Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
-      Builder.SetInsertPoint(LoopVectorBody.back()->getTerminator());
+      Builder.SetInsertPoint(LoopVectorBody->getTerminator());
       for (unsigned part = 0; part < UF; ++part) {
         Value *Trunc = Builder.CreateTrunc(RdxParts[part], RdxVecTy);
         Value *Extnd = RdxDesc.isSigned() ? Builder.CreateSExt(Trunc, VecTy)
@@ -3884,7 +3867,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
 
   // Fix the latch value of the new recurrence in the vector loop.
   VecPhi->addIncoming(Incoming,
-                      LI->getLoopFor(LoopVectorBody[0])->getLoopLatch());
+                      LI->getLoopFor(LoopVectorBody)->getLoopLatch());
 
   // Extract the last vector element in the middle block. This will be the
   // initial value for the recurrence when jumping to the scalar loop.
@@ -4005,7 +3988,7 @@ void InnerLoopVectorizer::widenPHIInstruction(
       Type *VecTy =
           (VF == 1) ? PN->getType() : VectorType::get(PN->getType(), VF);
       Entry[part] = PHINode::Create(
-          VecTy, 2, "vec.phi", &*LoopVectorBody.back()->getFirstInsertionPt());
+          VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
     }
     PV->push_back(P);
     return;
@@ -4369,10 +4352,9 @@ void InnerLoopVectorizer::updateAnalysis() {
 
   // We don't predicate stores by this point, so the vector body should be a
   // single loop.
-  assert(LoopVectorBody.size() == 1 && "Expected single block loop!");
-  DT->addNewBlock(LoopVectorBody[0], LoopVectorPreHeader);
+  DT->addNewBlock(LoopVectorBody, LoopVectorPreHeader);
 
-  DT->addNewBlock(LoopMiddleBlock, LoopVectorBody.back());
+  DT->addNewBlock(LoopMiddleBlock, LoopVectorBody);
   DT->addNewBlock(LoopScalarPreHeader, LoopBypassBlocks[0]);
   DT->changeImmediateDominator(LoopScalarBody, LoopScalarPreHeader);
   DT->changeImmediateDominator(LoopExitBlock, LoopBypassBlocks[0]);

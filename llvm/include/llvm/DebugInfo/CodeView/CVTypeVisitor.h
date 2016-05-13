@@ -42,12 +42,12 @@ public:
   /// expected to consume the trailing bytes used by the field.
   /// FIXME: Make the visitor interpret the trailing bytes so that clients don't
   /// need to.
-#define TYPE_RECORD(ClassName, LeafEnum)                                       \
+#define TYPE_RECORD(EnumName, EnumVal, ClassName, PrintName)                   \
   void visit##ClassName(TypeLeafKind LeafType, ClassName &Record) {}
-#define TYPE_RECORD_ALIAS(ClassName, LeafEnum)
-#define MEMBER_RECORD(ClassName, LeafEnum)                                     \
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
+#define MEMBER_RECORD(EnumName, EnumVal, ClassName, PrintName)                 \
   void visit##ClassName(TypeLeafKind LeafType, ClassName &Record) {}
-#define MEMBER_RECORD_ALIAS(ClassName, LeafEnum)
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
 #include "TypeRecords.def"
 
   void visitTypeRecord(const TypeIterator::Record &Record) {
@@ -62,12 +62,9 @@ public:
     case LF_FIELDLIST:
       DerivedThis->visitFieldList(Record.Type, LeafData);
       break;
-    case LF_METHODLIST:
-      DerivedThis->visitMethodList(Record.Type, LeafData);
-      break;
-#define TYPE_RECORD(ClassName, LeafEnum)                                       \
-  case LeafEnum: {                                                             \
-    TypeRecordKind RK = static_cast<TypeRecordKind>(LeafEnum);                 \
+#define TYPE_RECORD(EnumName, EnumVal, ClassName, PrintName)                   \
+  case EnumName: {                                                             \
+    TypeRecordKind RK = static_cast<TypeRecordKind>(EnumName);                 \
     auto Result = ClassName::deserialize(RK, LeafData);                        \
     if (Result.getError())                                                     \
       return parseError();                                                     \
@@ -81,8 +78,11 @@ public:
 
   /// Visits the type records in Data. Sets the error flag on parse failures.
   void visitTypeStream(ArrayRef<uint8_t> Data) {
-    for (const auto &I : makeTypeRange(Data))
+    for (const auto &I : makeTypeRange(Data, &HadError)) {
       visitTypeRecord(I);
+      if (hadError())
+        break;
+    }
   }
 
   /// Action to take on unknown types. By default, they are ignored.
@@ -118,9 +118,9 @@ public:
         // continue parsing past an unknown member type.
         visitUnknownMember(Leaf);
         return parseError();
-#define MEMBER_RECORD(ClassName, LeafEnum)                                     \
-  case LeafEnum: {                                                             \
-    TypeRecordKind RK = static_cast<TypeRecordKind>(LeafEnum);                 \
+#define MEMBER_RECORD(EnumName, EnumVal, ClassName, PrintName)                 \
+  case EnumName: {                                                             \
+    TypeRecordKind RK = static_cast<TypeRecordKind>(EnumName);                 \
     auto Result = ClassName::deserialize(RK, FieldData);                       \
     if (Result.getError())                                                     \
       return parseError();                                                     \
@@ -132,12 +132,6 @@ public:
       FieldData = skipPadding(FieldData);
     }
   }
-
-  /// Action to take on method overload lists, which do not have a common record
-  /// prefix. The LeafData is composed of MethodListEntry objects, each of which
-  /// may have a trailing 32-bit vftable offset.
-  /// FIXME: Hoist this complexity into the visitor.
-  void visitMethodList(TypeLeafKind Leaf, ArrayRef<uint8_t> LeafData) {}
 
   /// Action to take on unknown members. By default, they are ignored. Member
   /// record parsing cannot recover from an unknown member record, so this

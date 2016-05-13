@@ -226,7 +226,7 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; SI: s_endpgm
 define void @icmp_users_different_blocks(i32 %cond, i32 addrspace(1)* %out) {
 bb:
-  %tmp = tail call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp1 = icmp sgt i32 %cond, 0
   br i1 %tmp1, label %bb2, label %bb9
 
@@ -279,7 +279,7 @@ done:
 ; SI: buffer_store_dword [[ONE]]
 define void @uniform_inside_divergent(i32 addrspace(1)* %out, i32 %cond) {
 entry:
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %d_cmp = icmp ult i32 %tid, 16
   br i1 %d_cmp, label %if, label %endif
 
@@ -313,7 +313,7 @@ entry:
 
 if:
   store i32 0, i32 addrspace(1)* %out
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %d_cmp = icmp ult i32 %tid, 16
   br i1 %d_cmp, label %if_uniform, label %endif
 
@@ -325,7 +325,7 @@ endif:
   ret void
 }
 
-; SI: {{^}}divergent_if_uniform_if:
+; SI-LABEL: {{^}}divergent_if_uniform_if:
 ; SI: v_cmp_eq_i32_e32 vcc, 0, v0
 ; SI: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI: s_xor_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[MASK]]
@@ -340,7 +340,7 @@ endif:
 ; SI: s_endpgm
 define void @divergent_if_uniform_if(i32 addrspace(1)* %out, i32 %cond) {
 entry:
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %d_cmp = icmp eq i32 %tid, 0
   br i1 %d_cmp, label %if, label %endif
 
@@ -360,6 +360,44 @@ exit:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #0
+; The condition of the branches in the two blocks are
+; uniform. MachineCSE replaces the 2nd condition with the inverse of
+; the first, leaving an scc use in a different block than it was
+; defed.
+
+; SI-LABEL: {{^}}cse_uniform_condition_different_blocks:
+; SI: s_load_dword [[COND:s[0-9]+]]
+; SI: s_cmp_lt_i32 [[COND]], 1
+; SI: s_cbranch_scc1 BB13_3
+
+; SI: BB#1:
+; SI-NOT: cmp
+; SI: buffer_load_dword
+; SI: buffer_store_dword
+; SI: s_cbranch_scc1 BB13_3
+
+; SI: BB13_3:
+; SI: s_endpgm
+define void @cse_uniform_condition_different_blocks(i32 %cond, i32 addrspace(1)* %out) {
+bb:
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
+  %tmp1 = icmp sgt i32 %cond, 0
+  br i1 %tmp1, label %bb2, label %bb9
+
+bb2:                                              ; preds = %bb
+  %tmp3 = load volatile i32, i32 addrspace(1)* undef
+  store volatile i32 0, i32 addrspace(1)* undef
+  %tmp9 = icmp sle i32 %cond, 0
+  br i1 %tmp9, label %bb9, label %bb7
+
+bb7:                                              ; preds = %bb5
+  store i32 %tmp3, i32 addrspace(1)* %out
+  br label %bb9
+
+bb9:                                              ; preds = %bb8, %bb4
+  ret void
+}
+
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { readnone }
