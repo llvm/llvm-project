@@ -5297,14 +5297,20 @@ namespace {
       Result = V;
       return true;
     }
-    bool ZeroInitialization(const Expr *E);
+    bool ZeroInitialization(const Expr *E) {
+      return ZeroInitialization(E, E->getType());
+    }
+    bool ZeroInitialization(const Expr *E, QualType T);
 
     bool VisitCallExpr(const CallExpr *E) {
       return handleCallExpr(E, Result, &This);
     }
     bool VisitCastExpr(const CastExpr *E);
     bool VisitInitListExpr(const InitListExpr *E);
-    bool VisitCXXConstructExpr(const CXXConstructExpr *E);
+    bool VisitCXXConstructExpr(const CXXConstructExpr *E) {
+      return VisitCXXConstructExpr(E, E->getType());
+    }
+    bool VisitCXXConstructExpr(const CXXConstructExpr *E, QualType T);
     bool VisitCXXStdInitializerListExpr(const CXXStdInitializerListExpr *E);
   };
 }
@@ -5359,8 +5365,8 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
   return true;
 }
 
-bool RecordExprEvaluator::ZeroInitialization(const Expr *E) {
-  const RecordDecl *RD = E->getType()->castAs<RecordType>()->getDecl();
+bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
+  const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
   if (RD->isInvalidDecl()) return false;
   if (RD->isUnion()) {
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
@@ -5514,7 +5520,10 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   return Success;
 }
 
-bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
+bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
+                                                QualType T) {
+  // Note that E's type is not necessarily the type of our class here; we might
+  // be initializing an array element instead.
   const CXXConstructorDecl *FD = E->getConstructor();
   if (FD->isInvalidDecl() || FD->getParent()->isInvalidDecl()) return false;
 
@@ -5532,7 +5541,7 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
     //     lifetimes of all the base subobjects (there can be no data member
     //     subobjects in this case) per [basic.life]p1.
     // Either way, ZeroInitialization is appropriate.
-    return ZeroInitialization(E);
+    return ZeroInitialization(E, T);
   }
 
   const FunctionDecl *Definition = nullptr;
@@ -5547,7 +5556,7 @@ bool RecordExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E) {
           = dyn_cast<MaterializeTemporaryExpr>(E->getArg(0)))
       return Visit(ME->GetTemporaryExpr());
 
-  if (ZeroInit && !ZeroInitialization(E))
+  if (ZeroInit && !ZeroInitialization(E, T))
     return false;
 
   auto Args = llvm::makeArrayRef(E->getArgs(), E->getNumArgs());
@@ -6011,34 +6020,8 @@ bool ArrayExprEvaluator::VisitCXXConstructExpr(const CXXConstructExpr *E,
   if (!Type->isRecordType())
     return Error(E);
 
-  const CXXConstructorDecl *FD = E->getConstructor();
-
-  bool ZeroInit = E->requiresZeroInitialization();
-  if (CheckTrivialDefaultConstructor(Info, E->getExprLoc(), FD, ZeroInit)) {
-    if (HadZeroInit)
-      return true;
-
-    // See RecordExprEvaluator::VisitCXXConstructExpr for explanation.
-    ImplicitValueInitExpr VIE(Type);
-    return EvaluateInPlace(*Value, Info, Subobject, &VIE);
-  }
-
-  const FunctionDecl *Definition = nullptr;
-  auto Body = FD->getBody(Definition);
-
-  if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body))
-    return false;
-
-  if (ZeroInit && !HadZeroInit) {
-    ImplicitValueInitExpr VIE(Type);
-    if (!EvaluateInPlace(*Value, Info, Subobject, &VIE))
-      return false;
-  }
-
-  auto Args = llvm::makeArrayRef(E->getArgs(), E->getNumArgs());
-  return HandleConstructorCall(E->getExprLoc(), Subobject, Args,
-                               cast<CXXConstructorDecl>(Definition),
-                               Info, *Value);
+  return RecordExprEvaluator(Info, Subobject, *Value)
+             .VisitCXXConstructExpr(E, Type);
 }
 
 //===----------------------------------------------------------------------===//

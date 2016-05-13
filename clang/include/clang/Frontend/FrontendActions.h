@@ -129,6 +129,7 @@ protected:
                                                  StringRef InFile) override;
 
 public:
+  ~SyntaxOnlyAction() override;
   bool hasCodeCompletionSupport() const override { return true; }
 };
 

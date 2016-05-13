@@ -1046,8 +1046,8 @@ public:
   /// \param FromInitList The constructor call is syntactically an initializer
   /// list.
   /// \param AsInitList The constructor is called as an init list constructor.
-  void AddConstructorInitializationStep(CXXConstructorDecl *Constructor,
-                                        AccessSpecifier Access,
+  void AddConstructorInitializationStep(DeclAccessPair FoundDecl,
+                                        CXXConstructorDecl *Constructor,
                                         QualType T,
                                         bool HadMultipleCandidates,
                                         bool FromInitList, bool AsInitList);

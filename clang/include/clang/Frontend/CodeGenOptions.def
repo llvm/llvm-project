@@ -225,6 +225,10 @@ ENUM_CODEGENOPT(VecLib, VectorLibrary, 1, NoLibrary)
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 
+/// Number of path components to strip when emitting checks. (0 == full
+/// filename)
+VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

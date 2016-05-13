@@ -43,6 +43,7 @@ module Clang_Basic {
   textual header "Basic/OpenCLExtensions.def"
   textual header "Basic/OpenCLImageTypes.def"
   textual header "Basic/OpenMPKinds.def"
+  textual header "Basic/OperationKinds.def"
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TokenKinds.def"

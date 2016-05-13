@@ -685,6 +685,10 @@ def fsanitize_stats : Flag<["-"], "fsanitize-stats">,
 def fno_sanitize_stats : Flag<["-"], "fno-sanitize-stats">,
                                  Group<f_clang_Group>, Flags<[CC1Option]>,
                                  HelpText<"Disable sanitizer statistics gathering.">;
+def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-undefined-strip-path-components=">,
+  Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<number>">,
+  HelpText<"Strip (or keep only, if negative) a given number of path components "
+           "when emitting check metadata.">;
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   Group<f_Group>;
 def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">,

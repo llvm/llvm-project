@@ -719,7 +719,13 @@ public:
                             Status S)
       : Entry(EK_Directory, Name), Contents(std::move(Contents)),
         S(std::move(S)) {}
+  RedirectingDirectoryEntry(StringRef Name, Status S)
+      : Entry(EK_Directory, Name), S(std::move(S)) {}
   Status getStatus() { return S; }
+  void addContent(std::unique_ptr<Entry> Content) {
+    Contents.push_back(std::move(Content));
+  }
+  Entry *getLastContent() const { return Contents.back().get(); }
   typedef decltype(Contents)::iterator iterator;
   iterator contents_begin() { return Contents.begin(); }
   iterator contents_end() { return Contents.end(); }
@@ -747,6 +753,7 @@ public:
     return UseName == NK_NotSet ? GlobalUseExternalName
                                 : (UseName == NK_External);
   }
+  NameKind getUseName() const { return UseName; }
   static bool classof(const Entry *E) { return E->getKind() == EK_File; }
 };
 
@@ -1023,6 +1030,70 @@ class RedirectingFileSystemParser {
     return true;
   }
 
+  Entry *lookupOrCreateEntry(RedirectingFileSystem *FS, StringRef Name,
+                             Entry *ParentEntry = nullptr) {
+    if (!ParentEntry) { // Look for a existent root
+      for (const std::unique_ptr<Entry> &Root : FS->Roots) {
+        if (Name.equals(Root->getName())) {
+          ParentEntry = Root.get();
+          return ParentEntry;
+        }
+      }
+    } else { // Advance to the next component
+      auto *DE = dyn_cast<RedirectingDirectoryEntry>(ParentEntry);
+      for (std::unique_ptr<Entry> &Content :
+           llvm::make_range(DE->contents_begin(), DE->contents_end())) {
+        auto *DirContent = dyn_cast<RedirectingDirectoryEntry>(Content.get());
+        if (DirContent && Name.equals(Content->getName()))
+          return DirContent;
+      }
+    }
+
+    // ... or create a new one
+    std::unique_ptr<Entry> E = llvm::make_unique<RedirectingDirectoryEntry>(
+        Name, Status("", getNextVirtualUniqueID(), sys::TimeValue::now(), 0, 0,
+                     0, file_type::directory_file, sys::fs::all_all));
+
+    if (!ParentEntry) { // Add a new root to the overlay
+      FS->Roots.push_back(std::move(E));
+      ParentEntry = FS->Roots.back().get();
+      return ParentEntry;
+    }
+
+    auto *DE = dyn_cast<RedirectingDirectoryEntry>(ParentEntry);
+    DE->addContent(std::move(E));
+    return DE->getLastContent();
+  }
+
+  void uniqueOverlayTree(RedirectingFileSystem *FS, Entry *SrcE,
+                         Entry *NewParentE = nullptr) {
+    StringRef Name = SrcE->getName();
+    switch (SrcE->getKind()) {
+    case EK_Directory: {
+      auto *DE = dyn_cast<RedirectingDirectoryEntry>(SrcE);
+      assert(DE && "Must be a directory");
+      // Empty directories could be present in the YAML as a way to
+      // describe a file for a current directory after some of its subdir
+      // is parsed. This only leads to redundant walks, ignore it.
+      if (!Name.empty())
+        NewParentE = lookupOrCreateEntry(FS, Name, NewParentE);
+      for (std::unique_ptr<Entry> &SubEntry :
+           llvm::make_range(DE->contents_begin(), DE->contents_end()))
+        uniqueOverlayTree(FS, SubEntry.get(), NewParentE);
+      break;
+    }
+    case EK_File: {
+      auto *FE = dyn_cast<RedirectingFileEntry>(SrcE);
+      assert(FE && "Must be a file");
+      assert(NewParentE && "Parent entry must exist");
+      auto *DE = dyn_cast<RedirectingDirectoryEntry>(NewParentE);
+      DE->addContent(llvm::make_unique<RedirectingFileEntry>(
+          Name, FE->getExternalContentsPath(), FE->getUseName()));
+      break;
+    }
+    }
+  }
+
   std::unique_ptr<Entry> parseEntry(yaml::Node *N, RedirectingFileSystem *FS) {
     yaml::MappingNode *M = dyn_cast<yaml::MappingNode>(N);
     if (!M) {
@@ -1225,6 +1296,7 @@ public:
     };
 
     DenseMap<StringRef, KeyStatus> Keys(std::begin(Fields), std::end(Fields));
+    std::vector<std::unique_ptr<Entry>> RootEntries;
 
     // Parse configuration and 'roots'
     for (yaml::MappingNode::iterator I = Top->begin(), E = Top->end(); I != E;
@@ -1247,7 +1319,7 @@ public:
         for (yaml::SequenceNode::iterator I = Roots->begin(), E = Roots->end();
              I != E; ++I) {
           if (std::unique_ptr<Entry> E = parseEntry(&*I, FS))
-            FS->Roots.push_back(std::move(E));
+            RootEntries.push_back(std::move(E));
           else
             return false;
         }
@@ -1288,6 +1360,13 @@ public:
 
     if (!checkMissingKeys(Top, Keys))
       return false;
+
+    // Now that we sucessefully parsed the YAML file, canonicalize the internal
+    // representation to a proper directory tree so that we can search faster
+    // inside the VFS.
+    for (std::unique_ptr<Entry> &E : RootEntries)
+      uniqueOverlayTree(FS, E.get());
+
     return true;
   }
 };

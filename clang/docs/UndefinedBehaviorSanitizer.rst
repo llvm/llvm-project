@@ -228,6 +228,26 @@ UndefinedBehaviorSanitizer is available on selected platforms starting from LLVM
 3.3. The test suite is integrated into the CMake build and can be run with
 ``check-ubsan`` command.
 
+Additional Configuration
+========================
+
+UndefinedBehaviorSanitizer adds static check data for each check unless it is
+in trap mode. This check data includes the full file name. The option
+``-fsanitize-undefined-strip-path-components=N`` can be used to trim this
+information. If ``N`` is positive, file information emitted by
+UndefinedBehaviorSanitizer will drop the first ``N`` components from the file
+path. If ``N`` is negative, the last ``N`` components will be kept.
+
+Example
+-------
+
+For a file called ``/code/library/file.cpp``, here is what would be emitted:
+* Default (No flag, or ``-fsanitize-undefined-strip-path-components=0``): ``/code/library/file.cpp``
+* ``-fsanitize-undefined-strip-path-components=1``: ``code/library/file.cpp``
+* ``-fsanitize-undefined-strip-path-components=2``: ``library/file.cpp``
+* ``-fsanitize-undefined-strip-path-components=-1``: ``file.cpp``
+* ``-fsanitize-undefined-strip-path-components=-2``: ``library/file.cpp``
+
 More Information
 ================
 

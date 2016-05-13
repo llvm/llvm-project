@@ -406,6 +406,9 @@ raw_pwrite_stream *GenerateModuleAction::ComputeASTConsumerArguments(
   return OS;
 }
 
+SyntaxOnlyAction::~SyntaxOnlyAction() {
+}
+
 std::unique_ptr<ASTConsumer>
 SyntaxOnlyAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return llvm::make_unique<ASTConsumer>();

@@ -8,7 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/VirtualFileSystem.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -386,7 +388,7 @@ static void checkContents(DirIter I, ArrayRef<StringRef> ExpectedOut) {
 
   unsigned LastElt = std::min(InputToCheck.size(), Expected.size());
   for (unsigned Idx = 0; Idx != LastElt; ++Idx)
-    EXPECT_EQ(Expected[Idx], StringRef(InputToCheck[Idx]));
+    EXPECT_EQ(StringRef(InputToCheck[Idx]), Expected[Idx]);
 }
 
 TEST(VirtualFileSystemTest, OverlayIteration) {
@@ -679,6 +681,12 @@ public:
     std::string VersionPlusContent("{\n  'version':0,\n");
     VersionPlusContent += Content.slice(Content.find('{') + 1, StringRef::npos);
     return getFromYAMLRawString(VersionPlusContent, ExternalFS);
+  }
+
+  // This is intended as a "XFAIL" for windows hosts.
+  bool supportsSameDirMultipleYAMLEntries() {
+    Triple Host(Triple::normalize(sys::getProcessTriple()));
+    return !Host.isOSWindows();
   }
 };
 
@@ -1065,4 +1073,52 @@ TEST_F(VFSFromYAMLTest, DirectoryIteration) {
 
   checkContents(O->dir_begin("//root/foo/bar", EC),
                 {"//root/foo/bar/a", "//root/foo/bar/b"});
+}
+
+TEST_F(VFSFromYAMLTest, DirectoryIterationSameDirMultipleEntries) {
+  // https://llvm.org/bugs/show_bug.cgi?id=27725
+  if (!supportsSameDirMultipleYAMLEntries())
+    return;
+
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addDirectory("//root/zab");
+  Lower->addDirectory("//root/baz");
+  Lower->addRegularFile("//root/zab/a");
+  Lower->addRegularFile("//root/zab/b");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'use-external-names': false,\n"
+      "  'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/baz/',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'x',\n"
+      "                  'external-contents': '//root/zab/a'\n"
+      "                }\n"
+      "              ]\n"
+      "},\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/baz/',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'y',\n"
+      "                  'external-contents': '//root/zab/b'\n"
+      "                }\n"
+      "              ]\n"
+      "}\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
+      new vfs::OverlayFileSystem(Lower));
+  O->pushOverlay(FS);
+
+  std::error_code EC;
+
+  checkContents(O->dir_begin("//root/baz/", EC),
+                {"//root/baz/x", "//root/baz/y"});
 }

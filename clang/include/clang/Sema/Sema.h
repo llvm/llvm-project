@@ -4552,6 +4552,9 @@ public:
   /// class.
   void ForceDeclarationOfImplicitMembers(CXXRecordDecl *Class);
 
+  /// \brief Check a completed declaration of an implicit special member.
+  void CheckImplicitSpecialMemberDeclaration(Scope *S, FunctionDecl *FD);
+
   /// \brief Determine whether the given function is an implicitly-deleted
   /// special member function.
   bool isImplicitlyDeleted(FunctionDecl *FD);

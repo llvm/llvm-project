@@ -1236,6 +1236,14 @@ TEST_F(FormatTestJS, RequoteStringsSingle) {
   // Code below fits into 15 chars *after* removing the \ escape.
   verifyFormat("var x = 'fo\"o';", "var x = \"fo\\\"o\";",
                getGoogleJSStyleWithColumns(15));
+  verifyFormat("// clang-format off\n"
+               "let x = \"double\";\n"
+               "// clang-format on\n"
+               "let x = 'single';\n",
+               "// clang-format off\n"
+               "let x = \"double\";\n"
+               "// clang-format on\n"
+               "let x = \"single\";\n");
 }
 
 TEST_F(FormatTestJS, RequoteStringsDouble) {
