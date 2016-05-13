@@ -1076,10 +1076,8 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(unsigned Distance,
   // Store-load forwarding distance.
   const unsigned NumCyclesForStoreLoadThroughMemory = 8*TypeByteSize;
   // Maximum vector factor.
-  unsigned MaxVFWithoutSLForwardIssues =
-    VectorizerParams::MaxVectorWidth * TypeByteSize;
-  if(MaxSafeDepDistBytes < MaxVFWithoutSLForwardIssues)
-    MaxVFWithoutSLForwardIssues = MaxSafeDepDistBytes;
+  unsigned MaxVFWithoutSLForwardIssues = std::min(
+      VectorizerParams::MaxVectorWidth * TypeByteSize, MaxSafeDepDistBytes);
 
   for (unsigned vf = 2*TypeByteSize; vf <= MaxVFWithoutSLForwardIssues;
        vf *= 2) {

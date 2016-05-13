@@ -72,12 +72,12 @@ struct CoverageMappingReaderMock : CoverageMappingReader {
 
   std::error_code readNextRecord(CoverageMappingRecord &Record) override {
     if (Functions.empty())
-      return instrprof_error::eof;
+      return coveragemap_error::eof;
 
     Functions.front().fillCoverageMappingRecord(Record);
     Functions = Functions.slice(1);
 
-    return instrprof_error::success;
+    return coveragemap_error::success;
   }
 };
 

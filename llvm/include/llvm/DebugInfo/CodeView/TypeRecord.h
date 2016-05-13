@@ -14,10 +14,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/ErrorOr.h"
 #include <cinttypes>
-#include <tuple>
 
 namespace llvm {
 namespace codeview {
@@ -26,79 +26,6 @@ using llvm::support::little32_t;
 using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
 
-/// Decodes a numeric "leaf" value. These are integer literals encountered in
-/// the type stream. If the value is positive and less than LF_NUMERIC (1 <<
-/// 15), it is emitted directly in Data. Otherwise, it has a tag like LF_CHAR
-/// that indicates the bitwidth and sign of the numeric data.
-bool decodeNumericLeaf(ArrayRef<uint8_t> &Data, APSInt &Num);
-
-inline bool decodeNumericLeaf(StringRef &Data, APSInt &Num) {
-  ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Data.data()),
-                          Data.size());
-  bool Success = decodeNumericLeaf(Bytes, Num);
-  Data = StringRef(reinterpret_cast<const char *>(Bytes.data()), Bytes.size());
-  return Success;
-}
-
-/// Decode a numeric leaf value that is known to be a uint32_t.
-bool decodeUIntLeaf(ArrayRef<uint8_t> &Data, uint64_t &Num);
-
-/// Reinterpret a byte array as an array of characters. Does not interpret as
-/// a C string, as StringRef has several helpers (split) that make that easy.
-inline StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData) {
-  return StringRef(reinterpret_cast<const char *>(LeafData.data()),
-                   LeafData.size());
-}
-
-inline StringRef getBytesAsCString(ArrayRef<uint8_t> LeafData) {
-  return getBytesAsCharacters(LeafData).split('\0').first;
-}
-
-/// Consumes sizeof(T) bytes from the given byte sequence. Returns an error if
-/// there are not enough bytes remaining. Reinterprets the consumed bytes as a
-/// T object and points 'Res' at them.
-template <typename T, typename U>
-inline std::error_code consumeObject(U &Data, const T *&Res) {
-  if (Data.size() < sizeof(*Res))
-    return std::make_error_code(std::errc::illegal_byte_sequence);
-  Res = reinterpret_cast<const T *>(Data.data());
-  Data = Data.drop_front(sizeof(*Res));
-  return std::error_code();
-}
-
-inline std::error_code consumeCString(ArrayRef<uint8_t> &Data, StringRef &Str) {
-  if (Data.empty())
-    return std::make_error_code(std::errc::illegal_byte_sequence);
-
-  StringRef Rest;
-  std::tie(Str, Rest) = getBytesAsCharacters(Data).split('\0');
-  // We expect this to be null terminated.  If it was not, it is an error.
-  if (Data.size() == Str.size())
-    return std::make_error_code(std::errc::illegal_byte_sequence);
-
-  Data = ArrayRef<uint8_t>(Rest.bytes_begin(), Rest.bytes_end());
-  return std::error_code();
-}
-
-template <typename T>
-inline std::error_code consumeArray(ArrayRef<uint8_t> &Data,
-                                    ArrayRef<T> &Result, uint32_t N) {
-  uint32_t Size = sizeof(T) * N;
-  if (Data.size() < Size)
-    return std::make_error_code(std::errc::illegal_byte_sequence);
-
-  Result = ArrayRef<T>(reinterpret_cast<const T *>(Data.data()), N);
-  Data = Data.drop_front(Size);
-  return std::error_code();
-}
-
-inline std::error_code consumeUInt32(StringRef &Data, uint32_t &Res) {
-  const support::ulittle32_t *IntPtr;
-  if (auto EC = consumeObject(Data, IntPtr))
-    return EC;
-  Res = *IntPtr;
-  return std::error_code();
-}
 
 /// Equvalent to CV_fldattr_t in cvinfo.h.
 struct MemberAttributes {
@@ -278,8 +205,7 @@ public:
   static ErrorOr<MemberFunctionRecord> deserialize(TypeRecordKind Kind,
                                                    ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
+    CV_DESERIALIZE(Data, L);
 
     return MemberFunctionRecord(L->ReturnType, L->ClassType, L->ThisType,
                                 L->CallConv, L->Options, L->NumParameters,
@@ -328,12 +254,9 @@ public:
   static ErrorOr<MemberFunctionIdRecord> deserialize(TypeRecordKind Kind,
                                                      ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Name);
+
     return MemberFunctionIdRecord(L->ClassType, L->FunctionType, Name);
   }
 
@@ -365,12 +288,9 @@ public:
       return std::make_error_code(std::errc::illegal_byte_sequence);
 
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     ArrayRef<TypeIndex> Indices;
-    if (auto EC = consumeArray(Data, Indices, L->NumArgs))
-      return EC;
+    CV_DESERIALIZE(Data, L, CV_ARRAY_FIELD_N(Indices, L->NumArgs));
+
     return StringListRecord(Kind, Indices);
   }
 
@@ -505,12 +425,9 @@ public:
   static ErrorOr<NestedTypeRecord> deserialize(TypeRecordKind Kind,
                                                ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Name);
+
     return NestedTypeRecord(L->Type, Name);
   }
 
@@ -539,15 +456,10 @@ public:
   static ErrorOr<ArrayRecord> deserialize(TypeRecordKind Kind,
                                           ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     uint64_t Size;
-    if (!decodeUIntLeaf(Data, Size))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Size), Name);
+
     return ArrayRecord(L->ElementType, L->IndexType, Size, Name);
   }
 
@@ -614,25 +526,16 @@ public:
     StringRef Name;
     StringRef UniqueName;
     uint16_t Props;
-
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
+
+    CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Size), Name,
+                   CV_CONDITIONAL_FIELD(UniqueName, L->hasUniqueName()));
 
     Props = L->Properties;
     uint16_t WrtValue = (Props & WinRTKindMask) >> WinRTKindShift;
     WindowsRTClassKind WRT = static_cast<WindowsRTClassKind>(WrtValue);
     uint16_t HfaMask = (Props & HfaKindMask) >> HfaKindShift;
     HfaKind Hfa = static_cast<HfaKind>(HfaMask);
-
-    if (!decodeUIntLeaf(Data, Size))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
-    if (Props & uint16_t(ClassOptions::HasUniqueName)) {
-      if (auto EC = consumeCString(Data, UniqueName))
-        return EC;
-    }
 
     ClassOptions Options = static_cast<ClassOptions>(Props);
     return ClassRecord(Kind, L->MemberCount, Options, Hfa, WRT, L->FieldList,
@@ -655,6 +558,10 @@ private:
     // SizeOf: The 'sizeof' the UDT in bytes is encoded as an LF_NUMERIC
     // integer.
     // Name: The null-terminated name follows.
+
+    bool hasUniqueName() const {
+      return Properties & uint16_t(ClassOptions::HasUniqueName);
+    }
   };
 
   HfaKind Hfa;
@@ -681,23 +588,13 @@ struct UnionRecord : public TagRecord {
     uint16_t Props;
 
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
+    CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Size), Name,
+                   CV_CONDITIONAL_FIELD(UniqueName, L->hasUniqueName()));
 
     Props = L->Properties;
 
     uint16_t HfaMask = (Props & HfaKindMask) >> HfaKindShift;
     HfaKind Hfa = static_cast<HfaKind>(HfaMask);
-
-    if (!decodeUIntLeaf(Data, Size))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
-    if (Props & uint16_t(ClassOptions::HasUniqueName)) {
-      if (auto EC = consumeCString(Data, UniqueName))
-        return EC;
-    }
-
     ClassOptions Options = static_cast<ClassOptions>(Props);
     return UnionRecord(L->MemberCount, Options, Hfa, L->FieldList, Size, Name,
                        UniqueName);
@@ -714,6 +611,10 @@ private:
     // SizeOf: The 'sizeof' the UDT in bytes is encoded as an LF_NUMERIC
     // integer.
     // Name: The null-terminated name follows.
+
+    bool hasUniqueName() const {
+      return Properties & uint16_t(ClassOptions::HasUniqueName);
+    }
   };
 
   HfaKind Hfa;
@@ -732,14 +633,11 @@ public:
   static ErrorOr<EnumRecord> deserialize(TypeRecordKind Kind,
                                          ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
+    StringRef Name;
+    CV_DESERIALIZE(Data, L, Name);
 
     uint16_t P = L->Properties;
     ClassOptions Options = static_cast<ClassOptions>(P);
-    StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
     return EnumRecord(L->NumEnumerators, Options, L->FieldListType, Name, Name,
                       L->UnderlyingType);
   }
@@ -839,12 +737,9 @@ public:
   static ErrorOr<TypeServer2Record> deserialize(TypeRecordKind Kind,
                                                 ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Name);
+
     return TypeServer2Record(StringRef(L->Guid, 16), L->Age, Name);
   }
 
@@ -875,12 +770,9 @@ public:
   static ErrorOr<StringIdRecord> deserialize(TypeRecordKind Kind,
                                              ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Name);
+
     return StringIdRecord(L->id, Name);
   }
 
@@ -908,12 +800,8 @@ public:
   static ErrorOr<FuncIdRecord> deserialize(TypeRecordKind Kind,
                                            ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Name);
 
     return FuncIdRecord(L->ParentScope, L->FunctionType, Name);
   }
@@ -946,8 +834,7 @@ public:
   static ErrorOr<UdtSourceLineRecord> deserialize(TypeRecordKind Kind,
                                                   ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
+    CV_DESERIALIZE(Data, L);
 
     return UdtSourceLineRecord(L->UDT, L->SourceFile, L->LineNumber);
   }
@@ -977,12 +864,9 @@ public:
   static ErrorOr<BuildInfoRecord> deserialize(TypeRecordKind Kind,
                                               ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     ArrayRef<TypeIndex> Indices;
-    if (auto EC = consumeArray(Data, Indices, L->NumArgs))
-      return EC;
+    CV_DESERIALIZE(Data, L, CV_ARRAY_FIELD_N(Indices, L->NumArgs));
+
     return BuildInfoRecord(Indices);
   }
 
@@ -1015,19 +899,10 @@ public:
   static ErrorOr<VirtualTableRecord> deserialize(TypeRecordKind Kind,
                                                  ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
-
     std::vector<StringRef> Names;
-    while (!Data.empty()) {
-      if (auto EC = consumeCString(Data, Name))
-        return EC;
-      Names.push_back(Name);
-    }
+    CV_DESERIALIZE(Data, L, Name, CV_ARRAY_FIELD_TAIL(Names));
+
     return VirtualTableRecord(L->CompleteClass, L->OverriddenVFTable,
                               L->VFPtrOffset, Name, Names);
   }
@@ -1072,23 +947,16 @@ public:
   static ErrorOr<OneMethodRecord> deserialize(TypeRecordKind Kind,
                                               ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
+    StringRef Name;
+    int32_t VFTableOffset = 0;
+
+    CV_DESERIALIZE(Data, L, CV_CONDITIONAL_FIELD(
+                                VFTableOffset, L->Attrs.isIntroducedVirtual()),
+                   Name);
 
     MethodOptions Options = L->Attrs.getFlags();
     MethodKind MethKind = L->Attrs.getMethodKind();
     MemberAccess Access = L->Attrs.getAccess();
-    int32_t VFTableOffset = 0;
-    if (L->Attrs.isIntroducedVirtual()) {
-      const little32_t *L;
-      if (consumeObject(Data, L))
-        return std::make_error_code(std::errc::illegal_byte_sequence);
-      VFTableOffset = *L;
-    }
-    StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
-
     return OneMethodRecord(L->Type, MethKind, Options, Access, VFTableOffset,
                            Name);
   }
@@ -1125,38 +993,38 @@ private:
 };
 
 // LF_METHODLIST
-class MethodListRecord : public TypeRecord {
+class MethodOverloadListRecord : public TypeRecord {
 public:
-  MethodListRecord(TypeIndex Type, MethodKind Kind, MethodOptions Options,
-                   MemberAccess Access, int32_t VFTableOffset)
-      : TypeRecord(TypeRecordKind::MethodList), Type(Type), Kind(Kind),
-        Options(Options), Access(Access), VFTableOffset(VFTableOffset) {}
+  MethodOverloadListRecord(ArrayRef<OneMethodRecord> Methods)
+      : TypeRecord(TypeRecordKind::MethodList), MethodsRef(Methods) {}
+  MethodOverloadListRecord(std::vector<OneMethodRecord> &Methods)
+      : TypeRecord(TypeRecordKind::MethodList), Methods(Methods) {}
 
-  static ErrorOr<MethodListRecord> deserialize(TypeRecordKind Kind,
+  static ErrorOr<MethodOverloadListRecord> deserialize(TypeRecordKind Kind,
                                                ArrayRef<uint8_t> &Data) {
-    const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
+    std::vector<OneMethodRecord> Methods;
+    while (!Data.empty()) {
+      const Layout *L = nullptr;
+      int32_t VFTableOffset = 0;
+      CV_DESERIALIZE(
+          Data, L,
+          CV_CONDITIONAL_FIELD(VFTableOffset, L->Attrs.isIntroducedVirtual()));
 
-    MethodOptions Options = L->Attrs.getFlags();
-    MethodKind MethKind = L->Attrs.getMethodKind();
-    MemberAccess Access = L->Attrs.getAccess();
-    int32_t VFTableOffset = 0;
-    if (L->Attrs.isIntroducedVirtual()) {
-      const little32_t *L;
-      if (consumeObject(Data, L))
-        return std::make_error_code(std::errc::illegal_byte_sequence);
-      VFTableOffset = *L;
+      MethodOptions Options = L->Attrs.getFlags();
+      MethodKind MethKind = L->Attrs.getMethodKind();
+      MemberAccess Access = L->Attrs.getAccess();
+
+      Methods.emplace_back(L->Type, MethKind, Options, Access, VFTableOffset,
+                           StringRef());
     }
-
-    return MethodListRecord(L->Type, MethKind, Options, Access, VFTableOffset);
+    return MethodOverloadListRecord(Methods);
   }
 
-  TypeIndex getType() const { return Type; }
-  MethodKind getMethodKind() const { return Kind; }
-  MethodOptions getOptions() const { return Options; }
-  MemberAccess getAccess() const { return Access; }
-  int32_t getVFTableOffset() const { return VFTableOffset; }
+  ArrayRef<OneMethodRecord> getMethods() const {
+    if (!MethodsRef.empty())
+      return MethodsRef;
+    return Methods;
+  }
 
 private:
   struct Layout {
@@ -1168,11 +1036,8 @@ private:
     //   VFTableOffset: int32_t offset in vftable
   };
 
-  TypeIndex Type;
-  MethodKind Kind;
-  MethodOptions Options;
-  MemberAccess Access;
-  int32_t VFTableOffset;
+  ArrayRef<OneMethodRecord> MethodsRef;
+  std::vector<OneMethodRecord> Methods;
 };
 
 /// For method overload sets.  LF_METHOD
@@ -1186,11 +1051,8 @@ public:
   static ErrorOr<OverloadedMethodRecord> deserialize(TypeRecordKind Kind,
                                                      ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Name);
 
     return OverloadedMethodRecord(L->MethodCount, L->MethList, Name);
   }
@@ -1222,15 +1084,9 @@ public:
   static ErrorOr<DataMemberRecord> deserialize(TypeRecordKind Kind,
                                                ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     uint64_t Offset;
-    if (!decodeUIntLeaf(Data, Offset))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Offset), Name);
 
     return DataMemberRecord(L->Attrs.getAccess(), L->Type, Offset, Name);
   }
@@ -1264,12 +1120,8 @@ public:
   static ErrorOr<StaticDataMemberRecord> deserialize(TypeRecordKind Kind,
                                                      ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Name);
 
     return StaticDataMemberRecord(L->Attrs.getAccess(), L->Type, Name);
   }
@@ -1300,18 +1152,9 @@ public:
   static ErrorOr<EnumeratorRecord> deserialize(TypeRecordKind Kind,
                                                ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
-    if (Data.empty())
-      return std::make_error_code(std::errc::illegal_byte_sequence);
     APSInt Value;
-    if (!decodeNumericLeaf(Data, Value))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
-
     StringRef Name;
-    if (auto EC = consumeCString(Data, Name))
-      return EC;
+    CV_DESERIALIZE(Data, L, Value, Name);
 
     return EnumeratorRecord(L->Attrs.getAccess(), Value, Name);
   }
@@ -1366,12 +1209,8 @@ public:
   static ErrorOr<BaseClassRecord> deserialize(TypeRecordKind Kind,
                                               ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     uint64_t Offset;
-    if (!decodeUIntLeaf(Data, Offset))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
+    CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Offset));
 
     return BaseClassRecord(L->Attrs.getAccess(), L->BaseType, Offset);
   }
@@ -1403,15 +1242,9 @@ public:
   static ErrorOr<VirtualBaseClassRecord> deserialize(TypeRecordKind Kind,
                                                      ArrayRef<uint8_t> &Data) {
     const Layout *L = nullptr;
-    if (auto EC = consumeObject(Data, L))
-      return EC;
-
     uint64_t Offset;
     uint64_t Index;
-    if (!decodeUIntLeaf(Data, Offset))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
-    if (!decodeUIntLeaf(Data, Index))
-      return std::make_error_code(std::errc::illegal_byte_sequence);
+    CV_DESERIALIZE(Data, L, CV_NUMERIC_FIELD(Offset), CV_NUMERIC_FIELD(Index));
 
     return VirtualBaseClassRecord(L->Attrs.getAccess(), L->BaseType,
                                   L->VBPtrType, Offset, Index);

@@ -24,7 +24,7 @@ foo:
 
   .cpload $25
   .cprestore 8
-# O32: :[[@LINE-1]]:3: error: pseudo-instruction requires $at, which is not available
+# O32-NOT: error: pseudo-instruction requires $at, which is not available
 # N32-NOT: error: pseudo-instruction requires $at, which is not available
 # N64-NOT: error: pseudo-instruction requires $at, which is not available
 # NO-STORE-NOT: sw  $gp, 8($sp)
@@ -34,3 +34,22 @@ foo:
   jal foo
 
   .end foo
+
+  .ent bar
+bar:
+  .frame  $sp, 0, $ra
+  .set noreorder
+  .set noat
+
+  .cpload $25
+  .cprestore 65536
+# O32: :[[@LINE-1]]:3: error: pseudo-instruction requires $at, which is not available
+# N32-NOT: error: pseudo-instruction requires $at, which is not available
+# N64-NOT: error: pseudo-instruction requires $at, which is not available
+# NO-STORE-NOT: sw $gp,
+
+  jal $25
+  jal $4, $25
+  jal bar
+
+  .end bar

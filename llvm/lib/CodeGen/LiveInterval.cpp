@@ -815,6 +815,239 @@ void LiveInterval::clearSubRanges() {
   SubRanges = nullptr;
 }
 
+/// Helper function for constructMainRangeFromSubranges(): Search the CFG
+/// backwards until we find a place covered by a LiveRange segment that actually
+/// has a valno set.
+static VNInfo *searchForVNI(const SlotIndexes &Indexes, LiveRange &LR,
+    const MachineBasicBlock *MBB,
+    SmallPtrSetImpl<const MachineBasicBlock*> &Visited) {
+  // We start the search at the end of MBB.
+  SlotIndex EndIdx = Indexes.getMBBEndIdx(MBB);
+  // In our use case we can't live the area covered by the live segments without
+  // finding an actual VNI def.
+  LiveRange::iterator I = LR.find(EndIdx.getPrevSlot());
+  assert(I != LR.end());
+  LiveRange::Segment &S = *I;
+  if (S.valno != nullptr)
+    return S.valno;
+
+  VNInfo *VNI = nullptr;
+  // Continue at predecessors (we could even go to idom with domtree available).
+  for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+    // Avoid going in circles.
+    if (!Visited.insert(Pred).second)
+      continue;
+
+    VNI = searchForVNI(Indexes, LR, Pred, Visited);
+    if (VNI != nullptr) {
+      S.valno = VNI;
+      break;
+    }
+  }
+
+  return VNI;
+}
+
+static void determineMissingVNIs(const SlotIndexes &Indexes, LiveInterval &LI) {
+  SmallPtrSet<const MachineBasicBlock*, 5> Visited;
+
+  LiveRange::iterator OutIt;
+  VNInfo *PrevValNo = nullptr;
+  for (LiveRange::iterator I = LI.begin(), E = LI.end(); I != E; ++I) {
+    LiveRange::Segment &S = *I;
+    // Determine final VNI if necessary.
+    if (S.valno == nullptr) {
+      // This can only happen at the begin of a basic block.
+      assert(S.start.isBlock() && "valno should only be missing at block begin");
+
+      Visited.clear();
+      const MachineBasicBlock *MBB = Indexes.getMBBFromIndex(S.start);
+      for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+        VNInfo *VNI = searchForVNI(Indexes, LI, Pred, Visited);
+        if (VNI != nullptr) {
+          S.valno = VNI;
+          break;
+        }
+      }
+      assert(S.valno != nullptr && "could not determine valno");
+    }
+    // Merge with previous segment if it has the same VNI.
+    if (PrevValNo == S.valno && OutIt->end == S.start) {
+      OutIt->end = S.end;
+    } else {
+      // Didn't merge. Move OutIt to next segment.
+      if (PrevValNo == nullptr)
+        OutIt = LI.begin();
+      else
+        ++OutIt;
+
+      if (OutIt != I)
+        *OutIt = *I;
+      PrevValNo = S.valno;
+    }
+  }
+  // If we merged some segments chop off the end.
+  ++OutIt;
+  LI.segments.erase(OutIt, LI.end());
+}
+
+void LiveInterval::constructMainRangeFromSubranges(
+    const SlotIndexes &Indexes, VNInfo::Allocator &VNIAllocator) {
+  // The basic observations on which this algorithm is based:
+  // - Each Def/ValNo in a subrange must have a corresponding def on the main
+  //   range, but not further defs/valnos are necessary.
+  // - If any of the subranges is live at a point the main liverange has to be
+  //   live too, conversily if no subrange is live the main range mustn't be
+  //   live either.
+  // We do this by scanning through all the subranges simultaneously creating new
+  // segments in the main range as segments start/ends come up in the subranges.
+  assert(hasSubRanges() && "expected subranges to be present");
+  assert(segments.empty() && valnos.empty() && "expected empty main range");
+
+  // Collect subrange, iterator pairs for the walk and determine first and last
+  // SlotIndex involved.
+  SmallVector<std::pair<const SubRange*, const_iterator>, 4> SRs;
+  SlotIndex First;
+  SlotIndex Last;
+  for (const SubRange &SR : subranges()) {
+    if (SR.empty())
+      continue;
+    SRs.push_back(std::make_pair(&SR, SR.begin()));
+    if (!First.isValid() || SR.segments.front().start < First)
+      First = SR.segments.front().start;
+    if (!Last.isValid() || SR.segments.back().end > Last)
+      Last = SR.segments.back().end;
+  }
+
+  // Walk over all subranges simultaneously.
+  Segment CurrentSegment;
+  bool ConstructingSegment = false;
+  bool NeedVNIFixup = false;
+  LaneBitmask ActiveMask = 0;
+  SlotIndex Pos = First;
+  while (true) {
+    SlotIndex NextPos = Last;
+    enum {
+      NOTHING,
+      BEGIN_SEGMENT,
+      END_SEGMENT,
+    } Event = NOTHING;
+    // Which subregister lanes are affected by the current event.
+    LaneBitmask EventMask = 0;
+    // Whether a BEGIN_SEGMENT is also a valno definition point.
+    bool IsDef = false;
+    // Find the next begin or end of a subrange segment. Combine masks if we
+    // have multiple begins/ends at the same position. Ends take precedence over
+    // Begins.
+    for (auto &SRP : SRs) {
+      const SubRange &SR = *SRP.first;
+      const_iterator &I = SRP.second;
+      // Advance iterator of subrange to a segment involving Pos; the earlier
+      // segments are already merged at this point.
+      while (I != SR.end() &&
+             (I->end < Pos ||
+              (I->end == Pos && (ActiveMask & SR.LaneMask) == 0)))
+        ++I;
+      if (I == SR.end())
+        continue;
+      if ((ActiveMask & SR.LaneMask) == 0 &&
+          Pos <= I->start && I->start <= NextPos) {
+        // Merge multiple begins at the same position.
+        if (I->start == NextPos && Event == BEGIN_SEGMENT) {
+          EventMask |= SR.LaneMask;
+          IsDef |= I->valno->def == I->start;
+        } else if (I->start < NextPos || Event != END_SEGMENT) {
+          Event = BEGIN_SEGMENT;
+          NextPos = I->start;
+          EventMask = SR.LaneMask;
+          IsDef = I->valno->def == I->start;
+        }
+      }
+      if ((ActiveMask & SR.LaneMask) != 0 &&
+          Pos <= I->end && I->end <= NextPos) {
+        // Merge multiple ends at the same position.
+        if (I->end == NextPos && Event == END_SEGMENT)
+          EventMask |= SR.LaneMask;
+        else {
+          Event = END_SEGMENT;
+          NextPos = I->end;
+          EventMask = SR.LaneMask;
+        }
+      }
+    }
+
+    // Advance scan position.
+    Pos = NextPos;
+    if (Event == BEGIN_SEGMENT) {
+      if (ConstructingSegment && IsDef) {
+        // Finish previous segment because we have to start a new one.
+        CurrentSegment.end = Pos;
+        append(CurrentSegment);
+        ConstructingSegment = false;
+      }
+
+      // Start a new segment if necessary.
+      if (!ConstructingSegment) {
+        // Determine value number for the segment.
+        VNInfo *VNI;
+        if (IsDef) {
+          VNI = getNextValue(Pos, VNIAllocator);
+        } else {
+          // We have to reuse an existing value number, if we are lucky
+          // then we already passed one of the predecessor blocks and determined
+          // its value number (with blocks in reverse postorder this would be
+          // always true but we have no such guarantee).
+          assert(Pos.isBlock());
+          const MachineBasicBlock *MBB = Indexes.getMBBFromIndex(Pos);
+          // See if any of the predecessor blocks has a lower number and a VNI
+          for (const MachineBasicBlock *Pred : MBB->predecessors()) {
+            SlotIndex PredEnd = Indexes.getMBBEndIdx(Pred);
+            VNI = getVNInfoBefore(PredEnd);
+            if (VNI != nullptr)
+              break;
+          }
+          // Def will come later: We have to do an extra fixup pass.
+          if (VNI == nullptr)
+            NeedVNIFixup = true;
+        }
+
+        // In rare cases we can produce adjacent segments with the same value
+        // number (if they come from different subranges, but happen to have
+        // the same defining instruction). VNIFixup will fix those cases.
+        if (!empty() && segments.back().end == Pos &&
+            segments.back().valno == VNI)
+          NeedVNIFixup = true;
+        CurrentSegment.start = Pos;
+        CurrentSegment.valno = VNI;
+        ConstructingSegment = true;
+      }
+      ActiveMask |= EventMask;
+    } else if (Event == END_SEGMENT) {
+      assert(ConstructingSegment);
+      // Finish segment if no lane is active anymore.
+      ActiveMask &= ~EventMask;
+      if (ActiveMask == 0) {
+        CurrentSegment.end = Pos;
+        append(CurrentSegment);
+        ConstructingSegment = false;
+      }
+    } else {
+      // We reached the end of the last subranges and can stop.
+      assert(Event == NOTHING);
+      break;
+    }
+  }
+
+  // We might not be able to assign new valnos for all segments if the basic
+  // block containing the definition comes after a segment using the valno.
+  // Do a fixup pass for this uncommon case.
+  if (NeedVNIFixup)
+    determineMissingVNIs(Indexes, *this);
+
+  assert(ActiveMask == 0 && !ConstructingSegment && "all segments ended");
+  verify();
+}
+
 unsigned LiveInterval::getSize() const {
   unsigned Sum = 0;
   for (const Segment &S : segments)
@@ -1421,45 +1654,37 @@ void ConnectedSubRegClasses::distribute(const IntEqClasses &Classes,
   }
 }
 
-static bool subRangeLiveAt(const LiveInterval &LI, SlotIndex Pos) {
-  for (const LiveInterval::SubRange &SR : LI.subranges()) {
-    if (SR.liveAt(Pos))
-      return true;
-  }
-  return false;
-}
-
 void ConnectedSubRegClasses::computeMainRangesFixFlags(
     const IntEqClasses &Classes,
     const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
+  BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
   for (size_t I = 0, E = Intervals.size(); I < E; ++I) {
-    LiveInterval &LI = *Intervals[I];
-    LI.removeEmptySubRanges();
+    LiveInterval *LI = Intervals[I];
+    LI->removeEmptySubRanges();
+    if (I == 0)
+      LI->clear();
+    LI->constructMainRangeFromSubranges(*LIS.getSlotIndexes(), Allocator);
 
-    for (MachineOperand &MO : MRI.reg_nodbg_operands(LI.reg)) {
+    for (MachineOperand &MO : MRI.reg_nodbg_operands(LI->reg)) {
       if (!MO.isDef())
         continue;
       unsigned SubRegIdx = MO.getSubReg();
       if (SubRegIdx == 0)
         continue;
       // After assigning the new vreg we may not have any other sublanes living
-      // in and out of the instruction anymore. We need to add new dead and
-      // undef flags in these cases.
+      // in and out of the instruction anymore. We need to add new dead and kill
+      // flags in these cases.
       if (!MO.isUndef()) {
         SlotIndex Pos = LIS.getInstructionIndex(*MO.getParent());
-        if (!subRangeLiveAt(LI, Pos))
+        if (!LI->liveAt(Pos.getBaseIndex()))
           MO.setIsUndef();
       }
       if (!MO.isDead()) {
-        SlotIndex Pos = LIS.getInstructionIndex(*MO.getParent()).getDeadSlot();
-        if (!subRangeLiveAt(LI, Pos))
+        SlotIndex Pos = LIS.getInstructionIndex(*MO.getParent());
+        if (!LI->liveAt(Pos.getDeadSlot()))
           MO.setIsDead();
       }
     }
-
-    if (I == 0)
-      LI.clear();
-    LIS.constructMainRangeFromSubranges(LI);
   }
 }

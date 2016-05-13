@@ -588,15 +588,14 @@ private:
 /// \brief The actual class performing the per-loop work.
 class LoopDistributeForLoop {
 public:
-  LoopDistributeForLoop(Loop *L, Function *F, LoopInfo *LI,
-                        const LoopAccessInfo &LAI, DominatorTree *DT,
+  LoopDistributeForLoop(Loop *L, Function *F, LoopInfo *LI, DominatorTree *DT,
                         ScalarEvolution *SE)
-      : L(L), F(F), LI(LI), LAI(LAI), DT(DT), SE(SE) {
+      : L(L), F(F), LI(LI), LAI(nullptr), DT(DT), SE(SE) {
     setForced();
   }
 
   /// \brief Try to distribute an inner-most loop.
-  bool processLoop() {
+  bool processLoop(LoopAccessAnalysis *LAA) {
     assert(L->empty() && "Only process inner loops.");
 
     DEBUG(dbgs() << "\nLDist: In \"" << L->getHeader()->getParent()->getName()
@@ -607,14 +606,16 @@ public:
       return fail("no preheader");
     if (!L->getExitBlock())
       return fail("multiple exit blocks");
+
     // LAA will check that we only have a single exiting block.
+    LAI = &LAA->getInfo(L, ValueToValueMap());
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.
-    if (LAI.canVectorizeMemory())
+    if (LAI->canVectorizeMemory())
       return fail("memory operations are safe for vectorization");
 
-    auto *Dependences = LAI.getDepChecker().getDependences();
+    auto *Dependences = LAI->getDepChecker().getDependences();
     if (!Dependences || Dependences->empty())
       return fail("no unsafe dependences to isolate");
 
@@ -639,7 +640,7 @@ public:
     // NumUnsafeDependencesActive > 0 indicates this situation and in this case
     // we just keep assigning to the same cyclic partition until
     // NumUnsafeDependencesActive reaches 0.
-    const MemoryDepChecker &DepChecker = LAI.getDepChecker();
+    const MemoryDepChecker &DepChecker = LAI->getDepChecker();
     MemoryInstructionDependences MID(DepChecker.getMemoryInstructions(),
                                      *Dependences);
 
@@ -692,7 +693,7 @@ public:
     }
 
     // Don't distribute the loop if we need too many SCEV run-time checks.
-    const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
+    const SCEVUnionPredicate &Pred = LAI->PSE.getUnionPredicate();
     if (Pred.getComplexity() > (IsForced.getValueOr(false)
                                     ? PragmaDistributeSCEVCheckThreshold
                                     : DistributeSCEVCheckThreshold))
@@ -710,18 +711,18 @@ public:
       SplitBlock(PH, PH->getTerminator(), DT, LI);
 
     // If we need run-time checks, version the loop now.
-    auto PtrToPartition = Partitions.computePartitionSetForPointers(LAI);
-    const auto *RtPtrChecking = LAI.getRuntimePointerChecking();
+    auto PtrToPartition = Partitions.computePartitionSetForPointers(*LAI);
+    const auto *RtPtrChecking = LAI->getRuntimePointerChecking();
     const auto &AllChecks = RtPtrChecking->getChecks();
     auto Checks = includeOnlyCrossPartitionChecks(AllChecks, PtrToPartition,
                                                   RtPtrChecking);
 
     if (!Pred.isAlwaysTrue() || !Checks.empty()) {
       DEBUG(dbgs() << "\nPointers:\n");
-      DEBUG(LAI.getRuntimePointerChecking()->printChecks(dbgs(), Checks));
-      LoopVersioning LVer(LAI, L, LI, DT, SE, false);
+      DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
+      LoopVersioning LVer(*LAI, L, LI, DT, SE, false);
       LVer.setAliasChecks(std::move(Checks));
-      LVer.setSCEVChecks(LAI.PSE.getUnionPredicate());
+      LVer.setSCEVChecks(LAI->PSE.getUnionPredicate());
       LVer.versionLoop(DefsUsedOutside);
       LVer.annotateLoopWithNoAlias();
     }
@@ -842,7 +843,7 @@ private:
 
   // Analyses used.
   LoopInfo *LI;
-  const LoopAccessInfo &LAI;
+  const LoopAccessInfo *LAI;
   DominatorTree *DT;
   ScalarEvolution *SE;
 
@@ -893,13 +894,12 @@ public:
     // Now walk the identified inner loops.
     bool Changed = false;
     for (Loop *L : Worklist) {
-      const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
-      LoopDistributeForLoop LDL(L, &F, LI, LAI, DT, SE);
+      LoopDistributeForLoop LDL(L, &F, LI, DT, SE);
 
       // If distribution was forced for the specific loop to be
       // enabled/disabled, follow that.  Otherwise use the global flag.
       if (LDL.isForced().getValueOr(ProcessAllLoops))
-        Changed |= LDL.processLoop();
+        Changed |= LDL.processLoop(LAA);
     }
 
     // Process each loop nest in the function.

@@ -232,12 +232,10 @@ namespace llvm {
     bool ParseOptionalAddrSpace(unsigned &AddrSpace);
     bool ParseOptionalParamAttrs(AttrBuilder &B);
     bool ParseOptionalReturnAttrs(AttrBuilder &B);
-    bool ParseOptionalLinkage(unsigned &Linkage, bool &HasLinkage);
-    bool ParseOptionalLinkage(unsigned &Linkage) {
-      bool HasLinkage; return ParseOptionalLinkage(Linkage, HasLinkage);
-    }
-    bool ParseOptionalVisibility(unsigned &Visibility);
-    bool ParseOptionalDLLStorageClass(unsigned &DLLStorageClass);
+    bool ParseOptionalLinkage(unsigned &Linkage, bool &HasLinkage,
+                              unsigned &Visibility, unsigned &DLLStorageClass);
+    void ParseOptionalVisibility(unsigned &Visibility);
+    void ParseOptionalDLLStorageClass(unsigned &DLLStorageClass);
     bool ParseOptionalCallingConv(unsigned &CC);
     bool ParseOptionalAlignment(unsigned &Alignment);
     bool ParseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);

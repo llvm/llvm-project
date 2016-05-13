@@ -125,3 +125,6 @@
 
 # RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64 -mattr=+nan2008 %s -o -| llvm-readobj -h | FileCheck --check-prefix=MIPS64EL-MIPS64-NAN2008 %s
 # MIPS64EL-MIPS64-NAN2008: Flags [ (0x60000406)
+
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux -mcpu=octeon %s -o -| llvm-readobj -h | FileCheck --check-prefix=MIPSEL-OCTEON %s
+# MIPSEL-OCTEON: Flags [ (0x808B0006)

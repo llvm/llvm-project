@@ -300,10 +300,13 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         return CSR_64_AllRegs_AVX_SaveList;
       return CSR_64_AllRegs_SaveList;
     } else {
+      if (HasAVX512)
+        return CSR_32_AllRegs_AVX512_SaveList;
+      if (HasAVX)
+        return CSR_32_AllRegs_AVX_SaveList;
       if (HasSSE)
         return CSR_32_AllRegs_SSE_SaveList;
-      else
-        return CSR_32_AllRegs_SaveList;
+      return CSR_32_AllRegs_SaveList;
     }
   default:
     break;
@@ -389,16 +392,18 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
         return CSR_64_AllRegs_AVX512_RegMask;
       if (HasAVX)
         return CSR_64_AllRegs_AVX_RegMask;
-      else
-        return CSR_64_AllRegs_RegMask;
+      return CSR_64_AllRegs_RegMask;
     } else {
+      if (HasAVX512)
+        return CSR_32_AllRegs_AVX512_RegMask;
+      if (HasAVX)
+        return CSR_32_AllRegs_AVX_RegMask;
       if (HasSSE)
         return CSR_32_AllRegs_SSE_RegMask;
-      else
-        return CSR_32_AllRegs_RegMask;
+      return CSR_32_AllRegs_RegMask;
     }
-    default:
-      break;
+  default:
+    break;
   }
 
   // Unlike getCalleeSavedRegs(), we don't have MMI so we can't check

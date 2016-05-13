@@ -306,7 +306,7 @@ endif
 ifeq (1,$(USE_LIBSTDCPP))
 	# Clang requires an extra flag: -stdlib=libstdc++
 	ifneq (,$(findstring clang,$(CC)))
-		CXXFLAGS += -stdlib=libstdc++
+		CXXFLAGS += -stdlib=libstdc++ -DLLDB_USING_LIBSTDCPP
 		LDFLAGS += -stdlib=libstdc++
 	endif
 endif

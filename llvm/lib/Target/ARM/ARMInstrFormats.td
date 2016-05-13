@@ -246,6 +246,15 @@ def shr_imm64 : Operand<i32>, ImmLeaf<i32, [{ return Imm > 0 && Imm <= 64; }]> {
   let ParserMatchClass = shr_imm64_asm_operand;
 }
 
+
+// ARM Assembler operand for ldr Rd, =expression which generates an offset
+// to a constant pool entry or a MOV depending on the value of expression
+def const_pool_asm_operand : AsmOperandClass { let Name = "ConstPoolAsmImm"; }
+def const_pool_asm_imm : Operand<i32> {
+  let ParserMatchClass = const_pool_asm_operand;
+}
+
+
 //===----------------------------------------------------------------------===//
 // ARM Assembler alias templates.
 //

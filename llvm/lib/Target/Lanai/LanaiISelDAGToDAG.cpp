@@ -68,11 +68,11 @@ private:
 #include "LanaiGenDAGISel.inc"
 
   // Instruction Selection not handled by the auto-generated tablgen
-  SDNode *SelectImpl(SDNode *N) override;
+  void Select(SDNode *N) override;
 
   // Support functions for the opcodes of Instruction Selection
   // not handled by the auto-generated tablgen
-  SDNode *selectFrameIndex(SDNode *N);
+  void selectFrameIndex(SDNode *N);
 
   // Complex Pattern for address selection.
   bool selectAddrRi(SDValue Addr, SDValue &Base, SDValue &Offset,
@@ -270,7 +270,7 @@ bool LanaiDAGToDAGISel::SelectInlineAsmMemoryOperand(
 
 // Select instructions not customized! Used for
 // expanded, promoted and normal instructions
-SDNode *LanaiDAGToDAGISel::SelectImpl(SDNode *Node) {
+void LanaiDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
 
   // Dump information about the Node being selected
@@ -279,43 +279,35 @@ SDNode *LanaiDAGToDAGISel::SelectImpl(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
     DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
-    return NULL;
+    return;
   }
 
   // Instruction Selection not handled by the auto-generated
   // tablegen selection should be handled here.
-  SDNode *ResNode = nullptr;
   switch (Opcode) {
   case ISD::FrameIndex:
-    ResNode = selectFrameIndex(Node);
-    break;
+    selectFrameIndex(Node);
+    return;
   default:
     break;
   }
 
   // Select the default instruction
-  if (ResNode == nullptr)
-    ResNode = SelectCode(Node);
-
-  DEBUG(errs() << "=> ");
-  if (ResNode == NULL || ResNode == Node)
-    DEBUG(Node->dump(CurDAG));
-  else
-    DEBUG(ResNode->dump(CurDAG));
-  DEBUG(errs() << "\n");
-  return ResNode;
+  SelectCode(Node);
 }
 
-SDNode *LanaiDAGToDAGISel::selectFrameIndex(SDNode *Node) {
+void LanaiDAGToDAGISel::selectFrameIndex(SDNode *Node) {
   SDLoc DL(Node);
   SDValue Imm = CurDAG->getTargetConstant(0, DL, MVT::i32);
   int FI = dyn_cast<FrameIndexSDNode>(Node)->getIndex();
   EVT VT = Node->getValueType(0);
   SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
   unsigned Opc = Lanai::ADD_I_LO;
-  if (Node->hasOneUse())
-    return CurDAG->SelectNodeTo(Node, Opc, VT, TFI, Imm);
-  return CurDAG->getMachineNode(Opc, DL, VT, TFI, Imm);
+  if (Node->hasOneUse()) {
+    CurDAG->SelectNodeTo(Node, Opc, VT, TFI, Imm);
+    return;
+  }
+  ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, VT, TFI, Imm));
 }
 
 // createLanaiISelDag - This pass converts a legalized DAG into a

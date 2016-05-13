@@ -110,16 +110,27 @@ static bool LowerStoreInst(StoreInst *SI) {
 }
 
 namespace {
-  struct LowerAtomic : public BasicBlockPass {
+  struct LowerAtomic : public FunctionPass {
     static char ID;
-    LowerAtomic() : BasicBlockPass(ID) {
+
+    LowerAtomic() : FunctionPass(ID) {
       initializeLowerAtomicPass(*PassRegistry::getPassRegistry());
     }
-    bool runOnBasicBlock(BasicBlock &BB) override {
-      if (skipBasicBlock(BB))
+
+    bool runOnFunction(Function &F) override {
+      if (skipFunction(F))
         return false;
       bool Changed = false;
-      for (BasicBlock::iterator DI = BB.begin(), DE = BB.end(); DI != DE; ) {
+      for (BasicBlock &BB: F) {
+        Changed |= runOnBasicBlock(BB);
+      }
+      return Changed;
+    }
+
+  private:
+    bool runOnBasicBlock(BasicBlock &BB) {
+      bool Changed = false;
+      for (BasicBlock::iterator DI = BB.begin(), DE = BB.end(); DI != DE;) {
         Instruction *Inst = &*DI++;
         if (FenceInst *FI = dyn_cast<FenceInst>(Inst))
           Changed |= LowerFenceInst(FI);

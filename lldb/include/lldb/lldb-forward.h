@@ -332,6 +332,7 @@ namespace lldb {
     typedef std::shared_ptr<lldb_private::DynamicLoader> DynamicLoaderSP;
     typedef std::unique_ptr<lldb_private::DynamicLoader> DynamicLoaderUP;
     typedef std::shared_ptr<lldb_private::Event> EventSP;
+    typedef std::shared_ptr<lldb_private::EventData> EventDataSP;
     typedef std::shared_ptr<lldb_private::ExecutionContextRef> ExecutionContextRefSP;
     typedef std::shared_ptr<lldb_private::ExpressionVariable> ExpressionVariableSP;
     typedef std::shared_ptr<lldb_private::File> FileSP;
@@ -352,6 +353,7 @@ namespace lldb {
     typedef std::unique_ptr<lldb_private::SystemRuntime> SystemRuntimeUP;
     typedef std::shared_ptr<lldb_private::LineTable> LineTableSP;
     typedef std::shared_ptr<lldb_private::Listener> ListenerSP;
+    typedef std::weak_ptr<lldb_private::Listener> ListenerWP;
     typedef std::shared_ptr<lldb_private::LogChannel> LogChannelSP;
     typedef std::shared_ptr<lldb_private::MemoryHistory> MemoryHistorySP;
     typedef std::shared_ptr<lldb_private::Module> ModuleSP;

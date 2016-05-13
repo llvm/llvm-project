@@ -44,6 +44,7 @@
 #include "llvm/DebugInfo/PDB/Raw/ModStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
@@ -376,7 +377,8 @@ static Error dumpTpiStream(ScopedPrinter &P, PDBFile &File) {
     ListScope L(P, "Records");
     codeview::CVTypeDumper TD(P, false);
 
-    for (auto &Type : Tpi.types()) {
+    bool HadError = false;
+    for (auto &Type : Tpi.types(&HadError)) {
       DictScope DD(P, "");
 
       if (opts::DumpTpiRecords)
@@ -385,6 +387,9 @@ static Error dumpTpiStream(ScopedPrinter &P, PDBFile &File) {
       if (opts::DumpTpiRecordBytes)
         P.printBinaryBlock("Bytes", Type.Data);
     }
+    if (HadError)
+      return make_error<RawError>(raw_error_code::corrupt_file,
+                                  "TPI stream contained corrupt record");
   }
   return Error::success();
 }

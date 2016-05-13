@@ -372,6 +372,7 @@ SDNode *SparcDAGToDAGISel::SelectImpl(SDNode *N) {
         CurDAG->getMachineNode(Opcode, dl, MVT::i32, MVT::i32, MulLHS, MulRHS);
     SDValue ResultHigh = SDValue(Mul, 1);
     ReplaceUses(SDValue(N, 0), ResultHigh);
+    CurDAG->RemoveDeadNode(N);
     return nullptr;
   }
   }

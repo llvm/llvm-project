@@ -129,6 +129,6 @@ uint32_t TpiStream::NumTypeRecords() const {
   return TypeIndexEnd() - TypeIndexBegin();
 }
 
-iterator_range<codeview::TypeIterator> TpiStream::types() const {
-  return codeview::makeTypeRange(RecordsBuffer.data());
+iterator_range<codeview::TypeIterator> TpiStream::types(bool *HadError) const {
+  return codeview::makeTypeRange(RecordsBuffer.data(), /*HadError=*/HadError);
 }

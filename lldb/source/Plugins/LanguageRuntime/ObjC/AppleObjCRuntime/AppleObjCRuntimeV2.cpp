@@ -241,7 +241,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
             DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt->headeropt_offset);
             DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt->clsopt_offset);
         }
-        if (objc_opt->version == 12 || objc_opt->version == 13 || objc_opt->version == 14)
+        if (objc_opt->version == 12 || objc_opt->version == 13 || objc_opt->version == 14 || objc_opt->version == 15)
         {
             const objc_clsopt_t* clsopt = NULL;
             if (is_v14_format)

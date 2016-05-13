@@ -1489,16 +1489,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr *MI,
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
 
-  // Make sure we don't have SCC live-ins to basic blocks.  moveToVALU assumes
-  // all SCC users are in the same blocks as their defs.
-  const MachineBasicBlock *MBB = MI->getParent();
-  if (MI == &MBB->front()) {
-    if (MBB->isLiveIn(AMDGPU::SCC)) {
-      ErrInfo = "scc register cannot be live across blocks.";
-      return false;
-    }
-  }
-
   // Make sure the number of operands is correct.
   const MCInstrDesc &Desc = get(Opcode);
   if (!Desc.isVariadic() &&

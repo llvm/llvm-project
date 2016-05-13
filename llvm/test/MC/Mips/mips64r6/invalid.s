@@ -12,6 +12,7 @@ local_label:
         align   $4, $2, $3, 4     # CHECK: :[[@LINE]]:29: error: expected 2-bit unsigned immediate
         jalr.hb $31 # CHECK: :[[@LINE]]:9: error: source and destination must be different
         jalr.hb $31, $31 # CHECK: :[[@LINE]]:9: error: source and destination must be different
+        ldc2    $8,-21181($at)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         break -1          # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
         break 1024        # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
         break -1, 5       # CHECK: :[[@LINE]]:15: error: expected 10-bit unsigned immediate
@@ -38,8 +39,6 @@ local_label:
         drotr32 $2, $3, 32   # CHECK: :[[@LINE]]:25: error: expected 5-bit unsigned immediate
         jalr.hb $31          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
-        ldc2    $8,-21181($at)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        ldc2    $11, 1024($12)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         lsa     $2, $3, $4, 0     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         lsa     $2, $3, $4, 5     # CHECK: :[[@LINE]]:29: error: expected immediate in range 1 .. 4
         pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate

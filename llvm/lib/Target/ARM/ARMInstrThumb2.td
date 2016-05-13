@@ -4802,6 +4802,11 @@ def : t2InstAlias<"ldrsh${p}.w $Rt, $addr",
 def : t2InstAlias<"add${p} $Rd, pc, $imm",
                   (t2ADR rGPR:$Rd, imm0_4095:$imm, pred:$p)>;
 
+// Pseudo instruction ldr Rt, =immediate
+def t2LDRConstPool
+  : t2AsmPseudo<"ldr${p} $Rt, $immediate",
+                (ins GPRnopc:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
+
 // PLD/PLDW/PLI with alternate literal form.
 def : t2InstAlias<"pld${p} $addr",
                   (t2PLDpci t2ldr_pcrel_imm12:$addr, pred:$p)>;

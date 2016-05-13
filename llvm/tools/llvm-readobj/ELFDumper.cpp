@@ -992,6 +992,8 @@ static const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_OS_NONCONFORMING, "o"),
   ENUM_ENT(SHF_GROUP,            "G"),
   ENUM_ENT(SHF_TLS,              "T"),
+  ENUM_ENT(SHF_MASKOS,           "o"),
+  ENUM_ENT(SHF_MASKPROC,         "p"),
   ENUM_ENT_1(XCORE_SHF_CP_SECTION),
   ENUM_ENT_1(XCORE_SHF_DP_SECTION),
 };
@@ -1042,9 +1044,9 @@ static std::string getGNUFlags(uint64_t Flags) {
       Str += Entry.AltName;
       break;
     default:
-      if (Flags & ELF::SHF_MASKOS)
+      if (Flag & ELF::SHF_MASKOS)
         Str += "o";
-      else if (Flags & ELF::SHF_MASKPROC)
+      else if (Flag & ELF::SHF_MASKPROC)
         Str += "p";
       else if (Flag)
         Str += "x";
@@ -1576,6 +1578,7 @@ StringRef ELFDumper<ELFT>::getDynamicString(uint64_t Value) const {
 template <class ELFT>
 void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
   raw_ostream &OS = W.getOStream();
+  const char* ConvChar = (opts::Output == opts::GNU) ? "0x%" PRIx64 : "0x%" PRIX64;
   switch (Type) {
   case DT_PLTREL:
     if (Value == DT_REL) {
@@ -1610,7 +1613,7 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
   case DT_MIPS_RLD_MAP_REL:
   case DT_MIPS_PLTGOT:
   case DT_MIPS_OPTIONS:
-    OS << format("0x%" PRIX64, Value);
+    OS << format(ConvChar, Value);
     break;
   case DT_RELACOUNT:
   case DT_RELCOUNT:
@@ -1654,7 +1657,7 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
     printFlags(Value, makeArrayRef(ElfDynamicDTFlags1), OS);
     break;
   default:
-    OS << format("0x%" PRIX64, Value);
+    OS << format(ConvChar, Value);
     break;
   }
 }
@@ -1707,7 +1710,7 @@ void ELFDumper<ELFT>::printDynamicTable() {
     const Elf_Dyn &Entry = *I;
     uintX_t Tag = Entry.getTag();
     ++I;
-    W.startLine() << "  " << format_hex(Tag, Is64 ? 18 : 10, true) << " "
+    W.startLine() << "  " << format_hex(Tag, Is64 ? 18 : 10, opts::Output != opts::GNU) << " "
                   << format("%-21s", getTypeString(Tag));
     printValue(Tag, Entry.getVal());
     OS << "\n";
@@ -2831,7 +2834,7 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
                      48 + Bias, 56 + Bias, 64 + Bias, 68 + Bias};
   OS << "\nElf file type is "
      << printEnum(Header->e_type, makeArrayRef(ElfObjectFileType)) << "\n"
-     << "Entry point " << format_hex(Header->e_entry, 1) << "\n"
+     << "Entry point " << format_hex(Header->e_entry, 3) << "\n"
      << "There are " << Header->e_phnum << " program headers,"
      << " starting at offset " << Header->e_phoff << "\n\n"
      << "Program Headers:\n";

@@ -970,7 +970,10 @@ void CodeGen::runLTOPasses() {
   PMB.SLPVectorize = true;
   PMB.OptLevel = options::OptLevel;
   PMB.ModuleSummary = CombinedIndex;
-  PMB.populateLTOPassManager(passes);
+  if (options::thinlto)
+    PMB.populateThinLTOPassManager(passes);
+  else
+    PMB.populateLTOPassManager(passes);
   passes.run(*M);
 }
 

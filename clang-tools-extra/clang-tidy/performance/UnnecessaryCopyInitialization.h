@@ -33,9 +33,10 @@ public:
 
 private:
   void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
-                                  ASTContext &Context);
+                                  bool IssueFix, ASTContext &Context);
   void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
-                              const Stmt &BlockStmt, ASTContext &Context);
+                              const Stmt &BlockStmt, bool IssueFix,
+                              ASTContext &Context);
 };
 
 } // namespace performance

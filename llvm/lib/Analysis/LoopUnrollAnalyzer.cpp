@@ -59,7 +59,7 @@ bool UnrolledInstAnalyzer::simplifyInstWithSCEV(Instruction *I) {
   Address.Base = Base->getValue();
   Address.Offset = Offset->getValue();
   SimplifiedAddresses[I] = Address;
-  return true;
+  return false;
 }
 
 /// Try to simplify binary operator I.

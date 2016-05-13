@@ -988,7 +988,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
         NextMII->bundleWithPred();
     }
 
-    if (!NextInSameBundle && MI->isInsideBundle()) {
+    if (BundleMI && !NextInSameBundle && MI->isInsideBundle()) {
       // FIXME: Since post-ra scheduler operates on bundles, the CPSR kill
       // marker is only on the BUNDLE instruction. Process the BUNDLE
       // instruction as we finish with the bundled instruction to work around

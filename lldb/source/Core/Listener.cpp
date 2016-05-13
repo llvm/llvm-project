@@ -45,8 +45,7 @@ Listener::Listener(const char *name) :
     m_broadcasters(),
     m_broadcasters_mutex (Mutex::eMutexTypeRecursive),
     m_events (),
-    m_events_mutex (Mutex::eMutexTypeRecursive),
-    m_cond_wait()
+    m_events_mutex (Mutex::eMutexTypeNormal)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
     if (log != nullptr)
@@ -74,11 +73,10 @@ Listener::Clear()
     {
         Broadcaster::BroadcasterImplSP broadcaster_sp(pos->first.lock());
         if (broadcaster_sp)
-            broadcaster_sp->RemoveListener (this->shared_from_this(), pos->second.event_mask);
+            broadcaster_sp->RemoveListener (this, pos->second.event_mask);
     }
     m_broadcasters.clear();
-    m_cond_wait.SetValue (false, eBroadcastNever);
-    m_broadcasters.clear();
+
     Mutex::Locker event_locker(m_events_mutex);
     m_events.clear();
     size_t num_managers = m_broadcaster_managers.size();
@@ -193,9 +191,6 @@ Listener::BroadcasterWillDestruct (Broadcaster *broadcaster)
             else
                 ++pos;
         }
-
-        if (m_events.empty())
-            m_cond_wait.SetValue (false, eBroadcastNever);
     }
 }
 
@@ -221,12 +216,9 @@ Listener::AddEvent (EventSP &event_sp)
                      static_cast<void*>(this), m_name.c_str(),
                      static_cast<void*>(event_sp.get()));
 
-    // Scope for "locker"
-    {
-        Mutex::Locker locker(m_events_mutex);
-        m_events.push_back (event_sp);
-    }
-    m_cond_wait.SetValue (true, eBroadcastAlways);
+    Mutex::Locker locker(m_events_mutex);
+    m_events.push_back (event_sp);
+    m_events_condition.Broadcast();
 }
 
 class EventBroadcasterMatches
@@ -293,6 +285,7 @@ private:
 bool
 Listener::FindNextEventInternal
 (
+    Mutex::Locker& lock,
     Broadcaster *broadcaster,   // nullptr for any broadcaster
     const ConstString *broadcaster_names, // nullptr for any event
     uint32_t num_broadcaster_names,
@@ -300,9 +293,9 @@ Listener::FindNextEventInternal
     EventSP &event_sp,
     bool remove)
 {
+    // NOTE: callers of this function must lock m_events_mutex using a Mutex::Locker
+    // and pass the locker as the first argument. m_events_mutex is no longer recursive.
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS));
-
-    Mutex::Locker lock(m_events_mutex);
 
     if (m_events.empty())
         return false;
@@ -333,20 +326,12 @@ Listener::FindNextEventInternal
         if (remove)
         {
             m_events.erase(pos);
-
-            if (m_events.empty())
-                m_cond_wait.SetValue (false, eBroadcastNever);
-        }
-
-        // Unlock the event queue here.  We've removed this event and are about to return
-        // it so it should be okay to get the next event off the queue here - and it might
-        // be useful to do that in the "DoOnRemoval".
-        lock.Unlock();
-
-        // Don't call DoOnRemoval if you aren't removing the event...
-        if (remove)
+            // Unlock the event queue here.  We've removed this event and are about to return
+            // it so it should be okay to get the next event off the queue here - and it might
+            // be useful to do that in the "DoOnRemoval".
+            lock.Unlock();
             event_sp->DoOnRemoval();
-
+        }
         return true;
     }
 
@@ -357,8 +342,9 @@ Listener::FindNextEventInternal
 Event *
 Listener::PeekAtNextEvent ()
 {
+    Mutex::Locker lock(m_events_mutex);
     EventSP event_sp;
-    if (FindNextEventInternal(nullptr, nullptr, 0, 0, event_sp, false))
+    if (FindNextEventInternal(lock, nullptr, nullptr, 0, 0, event_sp, false))
         return event_sp.get();
     return nullptr;
 }
@@ -366,8 +352,9 @@ Listener::PeekAtNextEvent ()
 Event *
 Listener::PeekAtNextEventForBroadcaster (Broadcaster *broadcaster)
 {
+    Mutex::Locker lock(m_events_mutex);
     EventSP event_sp;
-    if (FindNextEventInternal(broadcaster, nullptr, 0, 0, event_sp, false))
+    if (FindNextEventInternal(lock, broadcaster, nullptr, 0, 0, event_sp, false))
         return event_sp.get();
     return nullptr;
 }
@@ -375,8 +362,9 @@ Listener::PeekAtNextEventForBroadcaster (Broadcaster *broadcaster)
 Event *
 Listener::PeekAtNextEventForBroadcasterWithType (Broadcaster *broadcaster, uint32_t event_type_mask)
 {
+    Mutex::Locker lock(m_events_mutex);
     EventSP event_sp;
-    if (FindNextEventInternal(broadcaster, nullptr, 0, event_type_mask, event_sp, false))
+    if (FindNextEventInternal(lock, broadcaster, nullptr, 0, event_type_mask, event_sp, false))
         return event_sp.get();
     return nullptr;
 }
@@ -388,7 +376,8 @@ Listener::GetNextEventInternal(Broadcaster *broadcaster,             // nullptr 
                                uint32_t event_type_mask,
                                EventSP &event_sp)
 {
-    return FindNextEventInternal (broadcaster, broadcaster_names, num_broadcaster_names, event_type_mask, event_sp, true);
+    Mutex::Locker lock(m_events_mutex);
+    return FindNextEventInternal (lock, broadcaster, broadcaster_names, num_broadcaster_names, event_type_mask, event_sp, true);
 }
 
 bool
@@ -418,52 +407,40 @@ Listener::WaitForEventsInternal(const TimeValue *timeout,
                                 EventSP &event_sp)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS));
-    bool timed_out = false;
-
     if (log != nullptr)
         log->Printf ("%p Listener::WaitForEventsInternal (timeout = { %p }) for %s",
                      static_cast<void*>(this), static_cast<const void*>(timeout),
                      m_name.c_str());
 
+    Mutex::Locker lock(m_events_mutex);
+
     while (true)
     {
-        // Note, we don't want to lock the m_events_mutex in the call to GetNextEventInternal, since the DoOnRemoval
-        // code might require that new events be serviced.  For instance, the Breakpoint Command's 
-        if (GetNextEventInternal (broadcaster, broadcaster_names, num_broadcaster_names, event_type_mask, event_sp))
-                return true;
-
+        if (FindNextEventInternal (lock, broadcaster, broadcaster_names, num_broadcaster_names, event_type_mask, event_sp, true))
         {
-            // Reset condition value to false, so we can wait for new events to be
-            // added that might meet our current filter
-            // But first poll for any new event that might satisfy our condition, and if so consume it,
-            // otherwise wait.
-
-            Mutex::Locker event_locker(m_events_mutex);
-            const bool remove = false;
-            if (FindNextEventInternal (broadcaster, broadcaster_names, num_broadcaster_names, event_type_mask, event_sp, remove))
-                continue;
-            else
-                m_cond_wait.SetValue (false, eBroadcastNever);
-        }
-
-        if (m_cond_wait.WaitForValueEqualTo (true, timeout, &timed_out))
-            continue;
-
-        else if (timed_out)
-        {
-            log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS);
-            if (log != nullptr)
-                log->Printf ("%p Listener::WaitForEventsInternal() timed out for %s",
-                             static_cast<void*>(this), m_name.c_str());
-            break;
+            return true;
         }
         else
         {
-            log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS);
-            if (log != nullptr)
-                log->Printf ("%p Listener::WaitForEventsInternal() unknown error for %s",
-                             static_cast<void*>(this), m_name.c_str());
-            break;
+            bool timed_out = false;
+            if (m_events_condition.Wait(m_events_mutex, timeout, &timed_out) != 0)
+            {
+                if (timed_out)
+                {
+                    log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS);
+                    if (log != nullptr)
+                        log->Printf ("%p Listener::WaitForEventsInternal() timed out for %s",
+                                     static_cast<void*>(this), m_name.c_str());
+                }
+                else
+                {
+                    log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EVENTS);
+                    if (log != nullptr)
+                        log->Printf ("%p Listener::WaitForEventsInternal() unknown error for %s",
+                                     static_cast<void*>(this), m_name.c_str());
+                }
+                return false;
+            }
         }
     }
 

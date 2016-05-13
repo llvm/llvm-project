@@ -329,7 +329,7 @@ struct ThreadLocalDataSym {
 typedef RecordIterator<SymbolRecordKind> SymbolIterator;
 
 inline iterator_range<SymbolIterator> makeSymbolRange(ArrayRef<uint8_t> Data) {
-  return make_range(SymbolIterator(Data), SymbolIterator());
+  return make_range(SymbolIterator(Data, nullptr), SymbolIterator());
 }
 
 } // namespace codeview

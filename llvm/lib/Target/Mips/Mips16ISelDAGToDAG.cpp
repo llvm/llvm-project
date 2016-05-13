@@ -302,6 +302,7 @@ std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
     if (!SDValue(Node, 1).use_empty())
       ReplaceUses(SDValue(Node, 1), SDValue(LoHi.second, 0));
 
+    CurDAG->RemoveDeadNode(Node);
     return std::make_pair(true, nullptr);
   }
 

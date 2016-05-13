@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=100 -unroll-dynamic-cost-savings-discount=1000 -unroll-threshold=10 -unroll-percent-dynamic-cost-saved-threshold=50 | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=100 -unroll-dynamic-cost-savings-discount=1000 -unroll-threshold=10 -unroll-percent-dynamic-cost-saved-threshold=40 | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @known_constant = internal unnamed_addr constant [10 x i32] [i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1], align 16

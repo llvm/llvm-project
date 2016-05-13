@@ -2633,15 +2633,16 @@ void MipsAsmParser::expandStoreInst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   unsigned SrcReg = Inst.getOperand(0).getReg();
   unsigned BaseReg = Inst.getOperand(1).getReg();
 
+  if (IsImmOpnd) {
+    TOut.emitStoreWithImmOffset(Inst.getOpcode(), SrcReg, BaseReg,
+                                Inst.getOperand(2).getImm(),
+                                [&]() { return getATReg(IDLoc); }, IDLoc, STI);
+    return;
+  }
+
   unsigned ATReg = getATReg(IDLoc);
   if (!ATReg)
     return;
-
-  if (IsImmOpnd) {
-    TOut.emitStoreWithImmOffset(Inst.getOpcode(), SrcReg, BaseReg,
-                                Inst.getOperand(2).getImm(), ATReg, IDLoc, STI);
-    return;
-  }
 
   const MCExpr *ExprOffset = Inst.getOperand(2).getExpr();
   MCOperand LoOperand = MCOperand::createExpr(
@@ -3626,12 +3627,8 @@ void MipsAsmParser::createCpRestoreMemOp(bool IsLoad, int StackOffset,
     return;
   }
 
-  unsigned ATReg = getATReg(IDLoc);
-  if (!ATReg)
-    return;
-
-  TOut.emitStoreWithImmOffset(Mips::SW, Mips::GP, Mips::SP, StackOffset, ATReg,
-                              IDLoc, STI);
+  TOut.emitStoreWithImmOffset(Mips::SW, Mips::GP, Mips::SP, StackOffset,
+                              [&]() { return getATReg(IDLoc); }, IDLoc, STI);
 }
 
 unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {

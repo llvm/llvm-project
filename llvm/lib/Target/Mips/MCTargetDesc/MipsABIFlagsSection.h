@@ -35,7 +35,7 @@ struct MipsABIFlagsSection {
   // The size of co-processor 2 registers.
   Mips::AFL_REG CPR2Size;
   // Processor-specific extension.
-  uint32_t ISAExtensionSet;
+  Mips::AFL_EXT ISAExtension;
   // Mask of ASEs used.
   uint32_t ASESet;
 
@@ -51,8 +51,8 @@ public:
   MipsABIFlagsSection()
       : Version(0), ISALevel(0), ISARevision(0), GPRSize(Mips::AFL_REG_NONE),
         CPR1Size(Mips::AFL_REG_NONE), CPR2Size(Mips::AFL_REG_NONE),
-        ISAExtensionSet(0), ASESet(0), OddSPReg(false), Is32BitABI(false),
-        FpABI(FpABIKind::ANY) {}
+        ISAExtension(Mips::AFL_EXT_NONE), ASESet(0), OddSPReg(false),
+        Is32BitABI(false), FpABI(FpABIKind::ANY) {}
 
   uint16_t getVersionValue() { return (uint16_t)Version; }
   uint8_t getISALevelValue() { return (uint8_t)ISALevel; }
@@ -61,7 +61,7 @@ public:
   uint8_t getCPR1SizeValue();
   uint8_t getCPR2SizeValue() { return (uint8_t)CPR2Size; }
   uint8_t getFpABIValue();
-  uint32_t getISAExtensionSetValue() { return (uint32_t)ISAExtensionSet; }
+  uint32_t getISAExtensionValue() { return (uint32_t)ISAExtension; }
   uint32_t getASESetValue() { return (uint32_t)ASESet; }
 
   uint32_t getFlags1Value() {
@@ -141,6 +141,14 @@ public:
   }
 
   template <class PredicateLibrary>
+  void setISAExtensionFromPredicates(const PredicateLibrary &P) {
+    if (P.hasCnMips())
+      ISAExtension = Mips::AFL_EXT_OCTEON;
+    else
+      ISAExtension = Mips::AFL_EXT_NONE;
+  }
+
+  template <class PredicateLibrary>
   void setASESetFromPredicates(const PredicateLibrary &P) {
     ASESet = 0;
     if (P.hasDSP())
@@ -179,6 +187,7 @@ public:
     setISALevelAndRevisionFromPredicates(P);
     setGPRSizeFromPredicates(P);
     setCPR1SizeFromPredicates(P);
+    setISAExtensionFromPredicates(P);
     setASESetFromPredicates(P);
     setFpAbiFromPredicates(P);
     OddSPReg = P.useOddSPReg();

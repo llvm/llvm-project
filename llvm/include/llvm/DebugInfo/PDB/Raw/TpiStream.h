@@ -38,7 +38,7 @@ public:
   uint32_t TypeIndexEnd() const;
   uint32_t NumTypeRecords() const;
 
-  iterator_range<codeview::TypeIterator> types() const;
+  iterator_range<codeview::TypeIterator> types(bool *HadError) const;
 
 private:
   PDBFile &Pdb;
