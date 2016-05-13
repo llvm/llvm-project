@@ -59,6 +59,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
@@ -4368,15 +4369,38 @@ FunctionPass *llvm::createVerifierPass(bool FatalErrors) {
   return new VerifierLegacyPass(FatalErrors);
 }
 
-PreservedAnalyses VerifierPass::run(Module &M) {
-  if (verifyModule(M, &dbgs()) && FatalErrors)
-    report_fatal_error("Broken module found, compilation aborted!");
+char VerifierAnalysis::PassID;
+VerifierAnalysis::Result VerifierAnalysis::run(Module &M) {
+  Result Res;
+  Res.IRBroken = llvm::verifyModule(M, &dbgs(), &Res.DebugInfoBroken);
+  return Res;
+}
 
+VerifierAnalysis::Result VerifierAnalysis::run(Function &F) {
+  return { llvm::verifyFunction(F, &dbgs()), false };
+}
+
+PreservedAnalyses VerifierPass::run(Module &M, ModuleAnalysisManager &AM) {
+  auto Res = AM.getResult<VerifierAnalysis>(M);
+  if (FatalErrors) {
+    if (Res.IRBroken)
+      report_fatal_error("Broken module found, compilation aborted!");
+    assert(!Res.DebugInfoBroken && "Module contains invalid debug info");
+  }
+
+  // Strip broken debug info.
+  if (Res.DebugInfoBroken) {
+    DiagnosticInfoIgnoringInvalidDebugMetadata DiagInvalid(M);
+    M.getContext().diagnose(DiagInvalid);
+    if (!StripDebugInfo(M))
+      report_fatal_error("Failed to strip malformed debug info");
+  }
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses VerifierPass::run(Function &F) {
-  if (verifyFunction(F, &dbgs()) && FatalErrors)
+PreservedAnalyses VerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto res = AM.getResult<VerifierAnalysis>(F);
+  if (res.IRBroken && FatalErrors)
     report_fatal_error("Broken function found, compilation aborted!");
 
   return PreservedAnalyses::all();

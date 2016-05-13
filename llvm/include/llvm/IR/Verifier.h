@@ -54,6 +54,28 @@ bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
 bool verifyModule(const Module &M, raw_ostream *OS = nullptr,
                   bool *BrokenDebugInfo = nullptr);
 
+FunctionPass *createVerifierPass(bool FatalErrors = true);
+
+/// Check a module for errors, and report separate error states for IR
+/// and debug info errors.
+class VerifierAnalysis : public AnalysisInfoMixin<VerifierAnalysis> {
+  friend AnalysisInfoMixin<VerifierAnalysis>;
+  static char PassID;
+
+public:
+  struct Result {
+    bool IRBroken, DebugInfoBroken;
+  };
+  static void *ID() { return (void *)&PassID; }
+  Result run(Module &M);
+  Result run(Function &F);
+};
+
+/// Check a module for errors, but report debug info errors separately.
+/// Otherwise behaves as the normal verifyModule. Debug info errors can be
+/// "recovered" from by stripping the debug info.
+bool verifyModule(bool &BrokenDebugInfo, const Module &M, raw_ostream *OS);
+
 /// \brief Create a verifier pass.
 ///
 /// Check a module or function for validity. This is essentially a pass wrapped
@@ -64,19 +86,16 @@ bool verifyModule(const Module &M, raw_ostream *OS = nullptr,
 ///
 /// Note that this creates a pass suitable for the legacy pass manager. It has
 /// nothing to do with \c VerifierPass.
-FunctionPass *createVerifierPass(bool FatalErrors = true);
-
-class VerifierPass {
+class VerifierPass : public PassInfoMixin<VerifierPass> {
   bool FatalErrors;
 
 public:
   explicit VerifierPass(bool FatalErrors = true) : FatalErrors(FatalErrors) {}
 
-  PreservedAnalyses run(Module &M);
-  PreservedAnalyses run(Function &F);
-
-  static StringRef name() { return "VerifierPass"; }
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
 
 } // End llvm namespace
 
