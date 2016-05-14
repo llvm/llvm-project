@@ -99,6 +99,7 @@ class BitfieldsTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIfWindows # BitFields exhibit crashes in record layout on Windows (http://llvm.org/pr21800)
+    @expectedFailureAll(oslist=["linux"], bugnumber="https://bugs.swift.org/browse/SR-1524")
     def test_and_python_api(self):
         """Use Python APIs to inspect a bitfields variable."""
         self.build()
