@@ -787,6 +787,11 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   const GlobalValue *GV = G->getGlobal();
 
   switch (G->getAddressSpace()) {
+  case AMDGPUAS::CONSTANT_ADDRESS: {
+    MVT ConstPtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
+    SDValue GA = DAG.getTargetGlobalAddress(GV, SDLoc(G), ConstPtrVT);
+    return DAG.getNode(AMDGPUISD::CONST_DATA_PTR, SDLoc(G), ConstPtrVT, GA);
+  }
   case AMDGPUAS::LOCAL_ADDRESS: {
     // XXX: What does the value of G->getOffset() mean?
     assert(G->getOffset() == 0 &&

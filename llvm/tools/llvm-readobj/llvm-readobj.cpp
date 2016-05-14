@@ -22,6 +22,7 @@
 #include "llvm-readobj.h"
 #include "Error.h"
 #include "ObjDumper.h"
+#include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -143,6 +144,11 @@ namespace opts {
   // -codeview
   cl::opt<bool> CodeView("codeview",
                          cl::desc("Display CodeView debug information"));
+
+  // -codeview-merged-types
+  cl::opt<bool>
+      CodeViewMergedTypes("codeview-merged-types",
+                          cl::desc("Display the merged CodeView type stream"));
 
   // -codeview-subsection-bytes
   cl::opt<bool> CodeViewSubsectionBytes(
@@ -296,6 +302,8 @@ static bool isMipsArch(unsigned Arch) {
   }
 }
 
+static llvm::codeview::MemoryTypeTableBuilder CVTypes;
+
 /// @brief Creates an format-specific object file dumper.
 static std::error_code createDumper(const ObjectFile *Obj,
                                     ScopedPrinter &Writer,
@@ -386,6 +394,8 @@ static void dumpObject(const ObjectFile *Obj) {
       Dumper->printCOFFBaseReloc();
     if (opts::CodeView)
       Dumper->printCodeViewDebugInfo();
+    if (opts::CodeViewMergedTypes)
+      Dumper->mergeCodeViewTypes(CVTypes);
   }
   if (Obj->isMachO()) {
     if (opts::MachODataInCode)
@@ -477,6 +487,11 @@ int main(int argc, const char *argv[]) {
 
   std::for_each(opts::InputFilenames.begin(), opts::InputFilenames.end(),
                 dumpInput);
+
+  if (opts::CodeViewMergedTypes) {
+    ScopedPrinter W(outs());
+    dumpCodeViewMergedTypes(W, CVTypes);
+  }
 
   return 0;
 }

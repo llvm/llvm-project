@@ -246,6 +246,14 @@ def CSR_NoRegs : CalleeSavedRegs<(add)>;
 def CSR_AAPCS : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7, R6, R5, R4,
                                      (sequence "D%u", 15, 8))>;
 
+// The order of callee-saved registers needs to match the order we actually push
+// them in FrameLowering, because this order is what's used by
+// PrologEpilogInserter to allocate frame index slots. So when R7 is the frame
+// pointer, we use this AAPCS alternative.
+def CSR_AAPCS_SplitPush : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
+                                               R11, R10, R9, R8,
+                                               (sequence "D%u", 15, 8))>;
+
 // Constructors and destructors return 'this' in the ARM C++ ABI; since 'this'
 // and the pointer return value are both passed in R0 in these cases, this can
 // be partially modelled by treating R0 as a callee-saved register

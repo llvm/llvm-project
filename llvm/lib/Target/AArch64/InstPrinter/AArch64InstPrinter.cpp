@@ -928,14 +928,21 @@ void AArch64InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     unsigned Reg = Op.getReg();
     O << getRegisterName(Reg);
   } else if (Op.isImm()) {
-    O << '#' << Op.getImm();
+    printImm(MI, OpNo, STI, O);
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     Op.getExpr()->print(O, &MAI);
   }
 }
 
-void AArch64InstPrinter::printHexImm(const MCInst *MI, unsigned OpNo,
+void AArch64InstPrinter::printImm(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  O << "#" << formatImm(Op.getImm());
+}
+
+void AArch64InstPrinter::printImmHex(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
@@ -981,12 +988,12 @@ void AArch64InstPrinter::printAddSubImm(const MCInst *MI, unsigned OpNum,
     assert(Val == MO.getImm() && "Add/sub immediate out of range!");
     unsigned Shift =
         AArch64_AM::getShiftValue(MI->getOperand(OpNum + 1).getImm());
-    O << '#' << Val;
+    O << '#' << formatImm(Val);
     if (Shift != 0)
       printShifter(MI, OpNum + 1, STI, O);
 
     if (CommentStream)
-      *CommentStream << '=' << (Val << Shift) << '\n';
+      *CommentStream << '=' << formatImm(Val << Shift) << '\n';
   } else {
     assert(MO.isExpr() && "Unexpected operand type!");
     MO.getExpr()->print(O, &MAI);
@@ -1104,14 +1111,14 @@ template<int Scale>
 void AArch64InstPrinter::printImmScale(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
-  O << '#' << Scale * MI->getOperand(OpNum).getImm();
+  O << '#' << formatImm(Scale * MI->getOperand(OpNum).getImm());
 }
 
 void AArch64InstPrinter::printUImm12Offset(const MCInst *MI, unsigned OpNum,
                                            unsigned Scale, raw_ostream &O) {
   const MCOperand MO = MI->getOperand(OpNum);
   if (MO.isImm()) {
-    O << "#" << (MO.getImm() * Scale);
+    O << "#" << formatImm(MO.getImm() * Scale);
   } else {
     assert(MO.isExpr() && "Unexpected operand type!");
     MO.getExpr()->print(O, &MAI);
@@ -1123,7 +1130,7 @@ void AArch64InstPrinter::printAMIndexedWB(const MCInst *MI, unsigned OpNum,
   const MCOperand MO1 = MI->getOperand(OpNum + 1);
   O << '[' << getRegisterName(MI->getOperand(OpNum).getReg());
   if (MO1.isImm()) {
-      O << ", #" << (MO1.getImm() * Scale);
+      O << ", #" << formatImm(MO1.getImm() * Scale);
   } else {
     assert(MO1.isExpr() && "Unexpected operand type!");
     O << ", ";
@@ -1142,7 +1149,7 @@ void AArch64InstPrinter::printPrefetchOp(const MCInst *MI, unsigned OpNum,
   if (Valid)
     O << Name;
   else
-    O << '#' << prfop;
+    O << '#' << formatImm(prfop);
 }
 
 void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,
@@ -1155,7 +1162,7 @@ void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,
   if (Valid)
     O << Name;
   else
-    O << '#' << psbhintop;
+    O << '#' << formatImm(psbhintop);
 }
 
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
@@ -1310,7 +1317,7 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, unsigned OpNum,
   // If the label has already been resolved to an immediate offset (say, when
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
-    O << "#" << (Op.getImm() * 4);
+    O << "#" << formatImm(Op.getImm() * 4);
     return;
   }
 
@@ -1335,7 +1342,7 @@ void AArch64InstPrinter::printAdrpLabel(const MCInst *MI, unsigned OpNum,
   // If the label has already been resolved to an immediate offset (say, when
   // we're running the disassembler), just print the immediate.
   if (Op.isImm()) {
-    O << "#" << (Op.getImm() * (1 << 12));
+    O << "#" << formatImm(Op.getImm() * (1 << 12));
     return;
   }
 
@@ -1396,7 +1403,7 @@ void AArch64InstPrinter::printSystemPStateField(const MCInst *MI, unsigned OpNo,
   if (Valid)
     O << Name.upper();
   else
-    O << "#" << Val;
+    O << "#" << formatImm(Val);
 }
 
 void AArch64InstPrinter::printSIMDType10Operand(const MCInst *MI, unsigned OpNo,

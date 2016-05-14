@@ -502,7 +502,15 @@ public:
       OS << OutputBuffer.getBuffer();
     }
     // Rename to final destination (hopefully race condition won't matter here)
-    sys::fs::rename(TempFilename, EntryPath);
+    EC = sys::fs::rename(TempFilename, EntryPath);
+    if (EC) {
+      sys::fs::remove(TempFilename);
+      raw_fd_ostream OS(EntryPath, EC, sys::fs::F_None);
+      if (EC)
+        report_fatal_error(Twine("Failed to open ") + EntryPath +
+                           " to save cached entry\n");
+      OS << OutputBuffer.getBuffer();
+    }
   }
 };
 

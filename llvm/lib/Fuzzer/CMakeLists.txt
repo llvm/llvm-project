@@ -4,7 +4,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${LIBFUZZER_FLAGS_BASE} -O2 -fno-sanitize=all -fno-
 if( LLVM_USE_SANITIZE_COVERAGE )
   add_library(LLVMFuzzerNoMainObjects OBJECT
     FuzzerCrossOver.cpp
-    FuzzerInterface.cpp
     FuzzerTraceState.cpp
     FuzzerDriver.cpp
     FuzzerIO.cpp

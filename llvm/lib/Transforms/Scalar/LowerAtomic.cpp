@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LowerAtomic.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "loweratomic"
@@ -109,51 +110,64 @@ static bool LowerStoreInst(StoreInst *SI) {
   return true;
 }
 
+static bool runOnBasicBlock(BasicBlock &BB) {
+  bool Changed = false;
+  for (BasicBlock::iterator DI = BB.begin(), DE = BB.end(); DI != DE;) {
+    Instruction *Inst = &*DI++;
+    if (FenceInst *FI = dyn_cast<FenceInst>(Inst))
+      Changed |= LowerFenceInst(FI);
+    else if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(Inst))
+      Changed |= LowerAtomicCmpXchgInst(CXI);
+    else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(Inst))
+      Changed |= LowerAtomicRMWInst(RMWI);
+    else if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
+      if (LI->isAtomic())
+        LowerLoadInst(LI);
+    } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
+      if (SI->isAtomic())
+        LowerStoreInst(SI);
+    }
+  }
+  return Changed;
+}
+
+static bool lowerAtomics(Function &F) {
+  bool Changed = false;
+  for (BasicBlock &BB : F) {
+    Changed |= runOnBasicBlock(BB);
+  }
+  return Changed;
+}
+
+PreservedAnalyses LowerAtomicPass::run(Function &F) {
+  if (lowerAtomics(F))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
 namespace {
-  struct LowerAtomic : public FunctionPass {
-    static char ID;
+class LowerAtomicLegacyPass : public FunctionPass {
+public:
+  static char ID;
 
-    LowerAtomic() : FunctionPass(ID) {
-      initializeLowerAtomicPass(*PassRegistry::getPassRegistry());
-    }
+  LowerAtomicLegacyPass() : FunctionPass(ID) {
+    initializeLowerAtomicLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      if (skipFunction(F))
-        return false;
-      bool Changed = false;
-      for (BasicBlock &BB: F) {
-        Changed |= runOnBasicBlock(BB);
-      }
-      return Changed;
-    }
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+    auto PA = Impl.run(F);
+    return !PA.areAllPreserved();
+  }
 
-  private:
-    bool runOnBasicBlock(BasicBlock &BB) {
-      bool Changed = false;
-      for (BasicBlock::iterator DI = BB.begin(), DE = BB.end(); DI != DE;) {
-        Instruction *Inst = &*DI++;
-        if (FenceInst *FI = dyn_cast<FenceInst>(Inst))
-          Changed |= LowerFenceInst(FI);
-        else if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(Inst))
-          Changed |= LowerAtomicCmpXchgInst(CXI);
-        else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(Inst))
-          Changed |= LowerAtomicRMWInst(RMWI);
-        else if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
-          if (LI->isAtomic())
-            LowerLoadInst(LI);
-        } else if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-          if (SI->isAtomic())
-            LowerStoreInst(SI);
-        }
-      }
-      return Changed;
-    }
+private:
+  LowerAtomicPass Impl;
   };
 }
 
-char LowerAtomic::ID = 0;
-INITIALIZE_PASS(LowerAtomic, "loweratomic",
-                "Lower atomic intrinsics to non-atomic form",
-                false, false)
+char LowerAtomicLegacyPass::ID = 0;
+INITIALIZE_PASS(LowerAtomicLegacyPass, "loweratomic",
+                "Lower atomic intrinsics to non-atomic form", false, false)
 
-Pass *llvm::createLowerAtomicPass() { return new LowerAtomic(); }
+Pass *llvm::createLowerAtomicPass() { return new LowerAtomicLegacyPass(); }

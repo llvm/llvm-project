@@ -19,18 +19,16 @@
 
 RUN: llvm-readobj -codeview %p/Inputs/codeview-vftable.obj.coff | FileCheck %s
 
-CHECK:       VFTableType {
+CHECK:       VFTable (0x10F0) {
 CHECK-NEXT:    TypeLeafKind: LF_VFTABLE (0x151D)
-CHECK-NEXT:    TypeIndex: 0x10F0
 CHECK-NEXT:    CompleteClass: A
 CHECK-NEXT:    OverriddenVFTable: 0x0
 CHECK-NEXT:    VFPtrOffset: 0x0
 CHECK-NEXT:    VFTableName: ??_7A@@6B@
 CHECK-NEXT:    MethodName: ?f@A@@UEAAXXZ
 CHECK-NEXT:  }
-CHECK-NEXT:  VFTableType {
+CHECK-NEXT:  VFTable (0x10F1) {
 CHECK-NEXT:    TypeLeafKind: LF_VFTABLE (0x151D)
-CHECK-NEXT:    TypeIndex: 0x10F1
 CHECK-NEXT:    CompleteClass: B
 CHECK-NEXT:    OverriddenVFTable: ??_7A@@6B@ (0x10F0)
 CHECK-NEXT:    VFPtrOffset: 0x0
@@ -38,9 +36,8 @@ CHECK-NEXT:    VFTableName: ??_7B@@6B@
 CHECK-NEXT:    MethodName: ?f@B@@UEAAXXZ
 CHECK-NEXT:    MethodName: ?g@B@@UEAAXXZ
 CHECK-NEXT:  }
-CHECK-NEXT:  VFTableType {
+CHECK-NEXT:  VFTable (0x10F2) {
 CHECK-NEXT:    TypeLeafKind: LF_VFTABLE (0x151D)
-CHECK-NEXT:    TypeIndex: 0x10F2
 CHECK-NEXT:    CompleteClass: C
 CHECK-NEXT:    OverriddenVFTable: ??_7B@@6B@ (0x10F1)
 CHECK-NEXT:    VFPtrOffset: 0x0

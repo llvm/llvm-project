@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/RecordIterator.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/Support/ErrorOr.h"
 
 namespace llvm {
@@ -42,12 +43,12 @@ public:
   /// expected to consume the trailing bytes used by the field.
   /// FIXME: Make the visitor interpret the trailing bytes so that clients don't
   /// need to.
-#define TYPE_RECORD(EnumName, EnumVal, ClassName, PrintName)                   \
-  void visit##ClassName(TypeLeafKind LeafType, ClassName &Record) {}
-#define TYPE_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
-#define MEMBER_RECORD(EnumName, EnumVal, ClassName, PrintName)                 \
-  void visit##ClassName(TypeLeafKind LeafType, ClassName &Record) {}
-#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
+#define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
+  void visit##Name(TypeLeafKind LeafType, Name##Record &Record) {}
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
+  void visit##Name(TypeLeafKind LeafType, Name##Record &Record) {}
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "TypeRecords.def"
 
   void visitTypeRecord(const TypeIterator::Record &Record) {
@@ -62,15 +63,18 @@ public:
     case LF_FIELDLIST:
       DerivedThis->visitFieldList(Record.Type, LeafData);
       break;
-#define TYPE_RECORD(EnumName, EnumVal, ClassName, PrintName)                   \
+#define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   case EnumName: {                                                             \
     TypeRecordKind RK = static_cast<TypeRecordKind>(EnumName);                 \
-    auto Result = ClassName::deserialize(RK, LeafData);                        \
+    auto Result = Name##Record::deserialize(RK, LeafData);                     \
     if (Result.getError())                                                     \
       return parseError();                                                     \
-    DerivedThis->visit##ClassName(Record.Type, *Result);                       \
+    DerivedThis->visit##Name(Record.Type, *Result);                            \
     break;                                                                     \
   }
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)                  \
+  TYPE_RECORD(EnumVal, EnumVal, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)
 #include "TypeRecords.def"
       }
       DerivedThis->visitTypeEnd(Record.Type, RecordData);
@@ -107,6 +111,7 @@ public:
   /// Visits individual member records of a field list record. Member records do
   /// not describe their own length, and need special handling.
   void visitFieldList(TypeLeafKind Leaf, ArrayRef<uint8_t> FieldData) {
+    auto *DerivedThis = static_cast<Derived *>(this);
     while (!FieldData.empty()) {
       const ulittle16_t *LeafPtr;
       if (!CVTypeVisitor::consumeObject(FieldData, LeafPtr))
@@ -116,17 +121,19 @@ public:
       default:
         // Field list records do not describe their own length, so we cannot
         // continue parsing past an unknown member type.
-        visitUnknownMember(Leaf);
+        DerivedThis->visitUnknownMember(Leaf);
         return parseError();
-#define MEMBER_RECORD(EnumName, EnumVal, ClassName, PrintName)                 \
+#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   case EnumName: {                                                             \
     TypeRecordKind RK = static_cast<TypeRecordKind>(EnumName);                 \
-    auto Result = ClassName::deserialize(RK, FieldData);                       \
+    auto Result = Name##Record::deserialize(RK, FieldData);                    \
     if (Result.getError())                                                     \
       return parseError();                                                     \
-    static_cast<Derived *>(this)->visit##ClassName(Leaf, *Result);             \
+    DerivedThis->visit##Name(Leaf, *Result);                                   \
     break;                                                                     \
   }
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)                \
+  MEMBER_RECORD(EnumVal, EnumVal, AliasName)
 #include "TypeRecords.def"
       }
       FieldData = skipPadding(FieldData);

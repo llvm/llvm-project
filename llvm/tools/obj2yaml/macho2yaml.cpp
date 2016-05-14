@@ -21,10 +21,10 @@ class MachODumper {
 
 public:
   MachODumper(const object::MachOObjectFile &O) : Obj(O) {}
-  Expected<std::unique_ptr<MachOYAML::Object> > dump();
+  Expected<std::unique_ptr<MachOYAML::Object>> dump();
 };
 
-Expected<std::unique_ptr<MachOYAML::Object> > MachODumper::dump() {
+Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = make_unique<MachOYAML::Object>();
   Y->Header.magic = Obj.getHeader().magic;
   Y->Header.cputype = Obj.getHeader().cputype;
@@ -34,12 +34,19 @@ Expected<std::unique_ptr<MachOYAML::Object> > MachODumper::dump() {
   Y->Header.sizeofcmds = Obj.getHeader().sizeofcmds;
   Y->Header.flags = Obj.getHeader().flags;
 
+  for (auto load_command : Obj.load_commands()) {
+    auto LC = make_unique<MachOYAML::LoadCommand>();
+    LC->cmd = static_cast<MachO::LoadCommandType>(load_command.C.cmd);
+    LC->cmdsize = load_command.C.cmdsize;
+    Y->LoadCommands.push_back(std::move(LC));
+  }
+
   return std::move(Y);
 }
 
 Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj) {
   MachODumper Dumper(Obj);
-  Expected<std::unique_ptr<MachOYAML::Object> > YAML = Dumper.dump();
+  Expected<std::unique_ptr<MachOYAML::Object>> YAML = Dumper.dump();
   if (!YAML)
     return YAML.takeError();
 

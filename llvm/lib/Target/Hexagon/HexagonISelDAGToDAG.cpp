@@ -654,7 +654,7 @@ bool HexagonDAGToDAGISel::tryLoadOfLoadIntrinsic(LoadSDNode *N) {
     // This transformation will leave the intrinsic dead. If it remains in
     // the DAG, the selection code will see it again, but without the load,
     // and it will generate a store that is normally required for it.
-    CurDAG->RemoveDeadNodes();
+    CurDAG->RemoveDeadNode(C);
     return true;
   }
 
@@ -1045,6 +1045,7 @@ void HexagonDAGToDAGISel::SelectZeroExtend(SDNode *N) {
 void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
   if (MachineSDNode *L = LoadInstrForLoadIntrinsic(N)) {
     StoreInstrForLoadIntrinsic(L, N);
+    CurDAG->RemoveDeadNode(N);
     return;
   }
   SelectCode(N);

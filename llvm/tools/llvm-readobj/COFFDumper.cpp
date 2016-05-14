@@ -25,11 +25,13 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeStream.h"
+#include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/COFF.h"
@@ -71,6 +73,8 @@ public:
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
   void printCodeViewDebugInfo() override;
+  void
+  mergeCodeViewTypes(llvm::codeview::MemoryTypeTableBuilder &CVTypes) override;
   void printStackMap() const override;
 private:
   void printSymbol(const SymbolRef &Sym);
@@ -1621,6 +1625,25 @@ void COFFDumper::printFileNameForOffset(StringRef Label, uint32_t FileOffset) {
   W.printHex(Label, getFileNameForFileOffset(FileOffset), FileOffset);
 }
 
+void COFFDumper::mergeCodeViewTypes(MemoryTypeTableBuilder &CVTypes) {
+  for (const SectionRef &S : Obj->sections()) {
+    StringRef SectionName;
+    error(S.getName(SectionName));
+    if (SectionName == ".debug$T") {
+      StringRef Data;
+      error(S.getContents(Data));
+      unsigned Magic = *reinterpret_cast<const ulittle32_t *>(Data.data());
+      if (Magic != 4)
+        error(object_error::parse_failed);
+      Data = Data.drop_front(4);
+      ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Data.data()),
+                              Data.size());
+      if (!mergeTypeStreams(CVTypes, Bytes))
+        return error(object_error::parse_failed);
+    }
+  }
+}
+
 void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
                                           const SectionRef &Section) {
   ListScope D(W, "CodeViewTypes");
@@ -2075,4 +2098,24 @@ void COFFDumper::printStackMap() const {
   else
     prettyPrintStackMap(llvm::outs(),
                         StackMapV1Parser<support::big>(StackMapContentsArray));
+}
+
+void llvm::dumpCodeViewMergedTypes(
+    ScopedPrinter &Writer, llvm::codeview::MemoryTypeTableBuilder &CVTypes) {
+  // Flatten it first, then run our dumper on it.
+  ListScope S(Writer, "MergedTypeStream");
+  SmallString<0> Buf;
+  CVTypes.ForEachRecord([&](TypeIndex TI, MemoryTypeTableBuilder::Record *R) {
+    // The record data doesn't include the 16 bit size.
+    Buf.push_back(R->size() & 0xff);
+    Buf.push_back((R->size() >> 8) & 0xff);
+    Buf.append(R->data(), R->data() + R->size());
+  });
+  CVTypeDumper CVTD(Writer, opts::CodeViewSubsectionBytes);
+  ArrayRef<uint8_t> BinaryData(reinterpret_cast<const uint8_t *>(Buf.data()),
+                               Buf.size());
+  if (!CVTD.dump(BinaryData)) {
+    Writer.flush();
+    error(object_error::parse_failed);
+  }
 }

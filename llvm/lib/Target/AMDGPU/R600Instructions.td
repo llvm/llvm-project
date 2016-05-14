@@ -760,6 +760,13 @@ def : Pat <
   (MOV_IMM_I32 imm:$val)
 >;
 
+def MOV_IMM_GLOBAL_ADDR : MOV_IMM<iPTR, i32imm>;
+def : Pat <
+  (AMDGPUconstdata_ptr tglobaladdr:$addr),
+  (MOV_IMM_GLOBAL_ADDR tglobaladdr:$addr)
+>;
+
+
 def MOV_IMM_F32 : MOV_IMM<f32, f32imm>;
 def : Pat <
   (fpimm:$val),

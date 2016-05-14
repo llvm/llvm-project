@@ -135,13 +135,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
-
-  // Disable 128-bit shift libcalls. Currently the signature of the functions
-  // i128(i128, i32) aka void(i32, i64, i64, i32) doesn't match the signature
-  // of the call emitted by the default lowering, void(i32, i64, i64).
-  setLibcallName(RTLIB::SRL_I128, nullptr);
-  setLibcallName(RTLIB::SRA_I128, nullptr);
-  setLibcallName(RTLIB::SHL_I128, nullptr);
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(
@@ -161,9 +154,11 @@ MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
   if (BitWidth > 1 && BitWidth < 8) BitWidth = 8;
 
   if (BitWidth > 64) {
-    BitWidth = 64;
+    // The shift will be lowered to a libcall, and compiler-rt libcalls expect
+    // the count to be an i32.
+    BitWidth = 32;
     assert(BitWidth >= Log2_32_Ceil(VT.getSizeInBits()) &&
-           "64-bit shift counts ought to be enough for anyone");
+           "32-bit shift counts ought to be enough for anyone");
   }
 
   MVT Result = MVT::getIntegerVT(BitWidth);

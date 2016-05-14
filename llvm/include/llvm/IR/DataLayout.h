@@ -427,13 +427,13 @@ public:
 
   /// \brief Returns the largest legal integer type, or null if none are set.
   Type *getLargestLegalIntType(LLVMContext &C) const {
-    unsigned LargestSize = getLargestLegalIntTypeSize();
+    unsigned LargestSize = getLargestLegalIntTypeSizeInBits();
     return (LargestSize == 0) ? nullptr : Type::getIntNTy(C, LargestSize);
   }
 
   /// \brief Returns the size of largest legal integer type size, or 0 if none
   /// are set.
-  unsigned getLargestLegalIntTypeSize() const;
+  unsigned getLargestLegalIntTypeSizeInBits() const;
 
   /// \brief Returns the offset from the beginning of the type for the specified
   /// indices.

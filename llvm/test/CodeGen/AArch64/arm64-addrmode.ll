@@ -82,7 +82,7 @@ define void @t7(i64 %a) {
 
 define void @t8(i64 %a) {
 ; CHECK-LABEL: t8:
-; CHECK: movn [[REG:x[0-9]+]], #0x1235
+; CHECK: movn [[REG:x[0-9]+]], #4661
 ; CHECK-NEXT: ldr xzr, [x0, [[REG]]]
   %1 = sub i64 %a, 4662   ;-4662 is 0xffffffffffffedca
   %2 = inttoptr i64 %1 to i64*
@@ -92,7 +92,7 @@ define void @t8(i64 %a) {
 
 define void @t9(i64 %a) {
 ; CHECK-LABEL: t9:
-; CHECK: movn [[REG:x[0-9]+]], #0x1235, lsl #16
+; CHECK: movn [[REG:x[0-9]+]], #4661, lsl #16
 ; CHECK-NEXT: ldr xzr, [x0, [[REG]]]
   %1 = add i64 -305463297, %a   ;-305463297 is 0xffffffffedcaffff
   %2 = inttoptr i64 %1 to i64*
@@ -102,7 +102,7 @@ define void @t9(i64 %a) {
 
 define void @t10(i64 %a) {
 ; CHECK-LABEL: t10:
-; CHECK: movz [[REG:x[0-9]+]], #0x123, lsl #48
+; CHECK: movz [[REG:x[0-9]+]], #291, lsl #48
 ; CHECK-NEXT: ldr xzr, [x0, [[REG]]]
   %1 = add i64 %a, 81909218222800896   ;0x123000000000000
   %2 = inttoptr i64 %1 to i64*
@@ -112,8 +112,8 @@ define void @t10(i64 %a) {
 
 define void @t11(i64 %a) {
 ; CHECK-LABEL: t11:
-; CHECK: movz w[[NUM:[0-9]+]], #0x123, lsl #16
-; CHECK: movk w[[NUM:[0-9]+]], #0x4567
+; CHECK: movz w[[NUM:[0-9]+]], #291, lsl #16
+; CHECK: movk w[[NUM:[0-9]+]], #17767
 ; CHECK-NEXT: ldr xzr, [x0, x[[NUM]]]
   %1 = add i64 %a, 19088743   ;0x1234567
   %2 = inttoptr i64 %1 to i64*

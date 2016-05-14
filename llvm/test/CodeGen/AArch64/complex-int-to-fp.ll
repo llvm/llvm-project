@@ -155,7 +155,7 @@ define <4 x float> @test_signed_v4i8_to_v4f32(<4 x i8> %v) nounwind readnone {
 }
 define <4 x float> @test_unsigned_v4i8_to_v4f32(<4 x i8> %v) nounwind readnone {
 ; CHECK-LABEL: test_unsigned_v4i8_to_v4f32
-; CHECK: bic.4h v0, #0xff, lsl #8
+; CHECK: bic.4h v0, #255, lsl #8
 ; CHECK: ushll.4s [[VAL32:v[0-9]+]], v0, #0
 ; CHECK: ucvtf.4s v0, [[VAL32]]
 

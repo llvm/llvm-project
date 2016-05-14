@@ -55,7 +55,7 @@ public:
     }
   }
 
-private:
+protected:
   TypeIndex writeRecord(llvm::StringRef Data) override;
 
 private:

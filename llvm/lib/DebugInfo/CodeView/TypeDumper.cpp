@@ -200,12 +200,12 @@ public:
       : CVTD(CVTD), W(W), PrintRecordBytes(PrintRecordBytes) {}
 
   /// CVTypeVisitor overrides.
-#define TYPE_RECORD(EnumName, EnumVal, ClassName, PrintName)                   \
-  void visit##ClassName(TypeLeafKind LeafType, ClassName &Record);
-#define TYPE_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
-#define MEMBER_RECORD(EnumName, EnumVal, ClassName, PrintName)                 \
-  void visit##ClassName(TypeLeafKind LeafType, ClassName &Record);
-#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, ClassName, PrintName)
+#define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
+  void visit##Name(TypeLeafKind LeafType, Name##Record &Record);
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
+  void visit##Name(TypeLeafKind LeafType, Name##Record &Record);
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
   void visitUnknownMember(TypeLeafKind Leaf);
@@ -239,9 +239,9 @@ private:
 
 static StringRef getLeafTypeName(TypeLeafKind LT) {
   switch (LT) {
-#define TYPE_RECORD(ename, value, class_name, print_name)                      \
+#define TYPE_RECORD(ename, value, name)                                        \
   case ename:                                                                  \
-    return #print_name;
+    return #name;
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
   default:
     break;
@@ -254,10 +254,10 @@ void CVTypeDumperImpl::visitTypeBegin(TypeLeafKind Leaf,
   // Reset Name to the empty string. If the visitor sets it, we know it.
   Name = "";
 
-  W.startLine() << getLeafTypeName(Leaf) << " {\n";
+  W.startLine() << getLeafTypeName(Leaf) << " ("
+                << HexNumber(CVTD.getNextTypeIndex()) << ") {\n";
   W.indent();
   W.printEnum("TypeLeafKind", unsigned(Leaf), makeArrayRef(LeafTypeNames));
-  W.printHex("TypeIndex", CVTD.getNextTypeIndex());
 }
 
 void CVTypeDumperImpl::visitTypeEnd(TypeLeafKind Leaf,
@@ -273,15 +273,15 @@ void CVTypeDumperImpl::visitTypeEnd(TypeLeafKind Leaf,
   W.startLine() << "}\n";
 }
 
-void CVTypeDumperImpl::visitStringIdRecord(TypeLeafKind Leaf,
+void CVTypeDumperImpl::visitStringId(TypeLeafKind Leaf,
                                            StringIdRecord &String) {
   printTypeIndex("Id", String.getId());
   W.printString("StringData", String.getString());
   // Put this in CVUDTNames so it gets printed with LF_UDT_SRC_LINE.
   Name = String.getString();
 }
-void CVTypeDumperImpl::visitStringListRecord(TypeLeafKind Leaf,
-                                             StringListRecord &Args) {
+
+void CVTypeDumperImpl::visitArgList(TypeLeafKind Leaf, ArgListRecord &Args) {
   auto Indices = Args.getIndices();
   uint32_t Size = Indices.size();
   W.printNumber("NumArgs", Size);
@@ -298,7 +298,7 @@ void CVTypeDumperImpl::visitStringListRecord(TypeLeafKind Leaf,
   Name = CVTD.saveName(TypeName);
 }
 
-void CVTypeDumperImpl::visitClassRecord(TypeLeafKind Leaf, ClassRecord &Class) {
+void CVTypeDumperImpl::visitClass(TypeLeafKind Leaf, ClassRecord &Class) {
   uint16_t Props = static_cast<uint16_t>(Class.getOptions());
   W.printNumber("MemberCount", Class.getMemberCount());
   W.printFlags("Properties", Props, makeArrayRef(ClassOptionNames));
@@ -312,7 +312,7 @@ void CVTypeDumperImpl::visitClassRecord(TypeLeafKind Leaf, ClassRecord &Class) {
   Name = Class.getName();
 }
 
-void CVTypeDumperImpl::visitUnionRecord(TypeLeafKind Leaf, UnionRecord &Union) {
+void CVTypeDumperImpl::visitUnion(TypeLeafKind Leaf, UnionRecord &Union) {
   uint16_t Props = static_cast<uint16_t>(Union.getOptions());
   W.printNumber("MemberCount", Union.getMemberCount());
   W.printFlags("Properties", Props, makeArrayRef(ClassOptionNames));
@@ -324,7 +324,7 @@ void CVTypeDumperImpl::visitUnionRecord(TypeLeafKind Leaf, UnionRecord &Union) {
   Name = Union.getName();
 }
 
-void CVTypeDumperImpl::visitEnumRecord(TypeLeafKind Leaf, EnumRecord &Enum) {
+void CVTypeDumperImpl::visitEnum(TypeLeafKind Leaf, EnumRecord &Enum) {
   W.printNumber("NumEnumerators", Enum.getMemberCount());
   W.printFlags("Properties", uint16_t(Enum.getOptions()),
                makeArrayRef(ClassOptionNames));
@@ -334,7 +334,7 @@ void CVTypeDumperImpl::visitEnumRecord(TypeLeafKind Leaf, EnumRecord &Enum) {
   Name = Enum.getName();
 }
 
-void CVTypeDumperImpl::visitArrayRecord(TypeLeafKind Leaf, ArrayRecord &AT) {
+void CVTypeDumperImpl::visitArray(TypeLeafKind Leaf, ArrayRecord &AT) {
   printTypeIndex("ElementType", AT.getElementType());
   printTypeIndex("IndexType", AT.getIndexType());
   W.printNumber("SizeOf", AT.getSize());
@@ -342,8 +342,7 @@ void CVTypeDumperImpl::visitArrayRecord(TypeLeafKind Leaf, ArrayRecord &AT) {
   Name = AT.getName();
 }
 
-void CVTypeDumperImpl::visitVirtualTableRecord(TypeLeafKind Leaf,
-                                               VirtualTableRecord &VFT) {
+void CVTypeDumperImpl::visitVFTable(TypeLeafKind Leaf, VFTableRecord &VFT) {
   printTypeIndex("CompleteClass", VFT.getCompleteClass());
   printTypeIndex("OverriddenVFTable", VFT.getOverriddenVTable());
   W.printHex("VFPtrOffset", VFT.getVFPtrOffset());
@@ -353,16 +352,16 @@ void CVTypeDumperImpl::visitVirtualTableRecord(TypeLeafKind Leaf,
   Name = VFT.getName();
 }
 
-void CVTypeDumperImpl::visitMemberFunctionIdRecord(TypeLeafKind Leaf,
-                                                   MemberFunctionIdRecord &Id) {
+void CVTypeDumperImpl::visitMemberFuncId(TypeLeafKind Leaf,
+                                               MemberFuncIdRecord &Id) {
   printTypeIndex("ClassType", Id.getClassType());
   printTypeIndex("FunctionType", Id.getFunctionType());
   W.printString("Name", Id.getName());
   Name = Id.getName();
 }
 
-void CVTypeDumperImpl::visitProcedureRecord(TypeLeafKind Leaf,
-                                            ProcedureRecord &Proc) {
+void CVTypeDumperImpl::visitProcedure(TypeLeafKind Leaf,
+                                      ProcedureRecord &Proc) {
   printTypeIndex("ReturnType", Proc.getReturnType());
   W.printEnum("CallingConvention", uint8_t(Proc.getCallConv()),
               makeArrayRef(CallingConventions));
@@ -379,8 +378,8 @@ void CVTypeDumperImpl::visitProcedureRecord(TypeLeafKind Leaf,
   Name = CVTD.saveName(TypeName);
 }
 
-void CVTypeDumperImpl::visitMemberFunctionRecord(TypeLeafKind Leaf,
-                                                 MemberFunctionRecord &MF) {
+void CVTypeDumperImpl::visitMemberFunction(TypeLeafKind Leaf,
+                                           MemberFunctionRecord &MF) {
   printTypeIndex("ReturnType", MF.getReturnType());
   printTypeIndex("ClassType", MF.getClassType());
   printTypeIndex("ThisType", MF.getThisType());
@@ -403,8 +402,8 @@ void CVTypeDumperImpl::visitMemberFunctionRecord(TypeLeafKind Leaf,
   Name = CVTD.saveName(TypeName);
 }
 
-void CVTypeDumperImpl::visitMethodOverloadListRecord(TypeLeafKind Leaf,
-                                             MethodOverloadListRecord &MethodList) {
+void CVTypeDumperImpl::visitMethodOverloadList(
+    TypeLeafKind Leaf, MethodOverloadListRecord &MethodList) {
   for (auto &M : MethodList.getMethods()) {
     ListScope S(W, "Method");
     printMemberAttributes(M.getAccess(), M.getKind(), M.getOptions());
@@ -414,24 +413,22 @@ void CVTypeDumperImpl::visitMethodOverloadListRecord(TypeLeafKind Leaf,
   }
 }
 
-void CVTypeDumperImpl::visitFuncIdRecord(TypeLeafKind Leaf,
-                                         FuncIdRecord &Func) {
+void CVTypeDumperImpl::visitFuncId(TypeLeafKind Leaf, FuncIdRecord &Func) {
   printTypeIndex("ParentScope", Func.getParentScope());
   printTypeIndex("FunctionType", Func.getFunctionType());
   W.printString("Name", Func.getName());
   Name = Func.getName();
 }
 
-void CVTypeDumperImpl::visitTypeServer2Record(TypeLeafKind Leaf,
-                                              TypeServer2Record &TS) {
+void CVTypeDumperImpl::visitTypeServer2(TypeLeafKind Leaf,
+                                        TypeServer2Record &TS) {
   W.printBinary("Signature", TS.getGuid());
   W.printNumber("Age", TS.getAge());
   W.printString("Name", TS.getName());
   Name = TS.getName();
 }
 
-void CVTypeDumperImpl::visitPointerRecord(TypeLeafKind Leaf,
-                                          PointerRecord &Ptr) {
+void CVTypeDumperImpl::visitPointer(TypeLeafKind Leaf, PointerRecord &Ptr) {
   printTypeIndex("PointeeType", Ptr.getReferentType());
   W.printHex("PointerAttributes", uint32_t(Ptr.getOptions()));
   W.printEnum("PtrType", unsigned(Ptr.getPointerKind()),
@@ -479,8 +476,7 @@ void CVTypeDumperImpl::visitPointerRecord(TypeLeafKind Leaf,
   }
 }
 
-void CVTypeDumperImpl::visitModifierRecord(TypeLeafKind Leaf,
-                                           ModifierRecord &Mod) {
+void CVTypeDumperImpl::visitModifier(TypeLeafKind Leaf, ModifierRecord &Mod) {
   uint16_t Mods = static_cast<uint16_t>(Mod.getModifiers());
   printTypeIndex("ModifiedType", Mod.getModifiedType());
   W.printFlags("Modifiers", Mods, makeArrayRef(TypeModifierNames));
@@ -497,20 +493,20 @@ void CVTypeDumperImpl::visitModifierRecord(TypeLeafKind Leaf,
   Name = CVTD.saveName(TypeName);
 }
 
-void CVTypeDumperImpl::visitVirtualTableShapeRecord(
-    TypeLeafKind Leaf, VirtualTableShapeRecord &Shape) {
+void CVTypeDumperImpl::visitVFTableShape(TypeLeafKind Leaf,
+                                         VFTableShapeRecord &Shape) {
   W.printNumber("VFEntryCount", Shape.getEntryCount());
 }
 
-void CVTypeDumperImpl::visitUdtSourceLineRecord(TypeLeafKind Leaf,
-                                                UdtSourceLineRecord &Line) {
+void CVTypeDumperImpl::visitUdtSourceLine(TypeLeafKind Leaf,
+                                          UdtSourceLineRecord &Line) {
   printTypeIndex("UDT", Line.getUDT());
   printTypeIndex("SourceFile", Line.getSourceFile());
   W.printNumber("LineNumber", Line.getLineNumber());
 }
 
-void CVTypeDumperImpl::visitBuildInfoRecord(TypeLeafKind Leaf,
-                                            BuildInfoRecord &Args) {
+void CVTypeDumperImpl::visitBuildInfo(TypeLeafKind Leaf,
+                                      BuildInfoRecord &Args) {
   W.printNumber("NumArgs", static_cast<uint32_t>(Args.getArgs().size()));
 
   ListScope Arguments(W, "Arguments");
@@ -542,16 +538,16 @@ void CVTypeDumperImpl::visitUnknownMember(TypeLeafKind Leaf) {
   W.printHex("UnknownMember", unsigned(Leaf));
 }
 
-void CVTypeDumperImpl::visitNestedTypeRecord(TypeLeafKind Leaf,
-                                             NestedTypeRecord &Nested) {
+void CVTypeDumperImpl::visitNestedType(TypeLeafKind Leaf,
+                                       NestedTypeRecord &Nested) {
   DictScope S(W, "NestedType");
   printTypeIndex("Type", Nested.getNestedType());
   W.printString("Name", Nested.getName());
   Name = Nested.getName();
 }
 
-void CVTypeDumperImpl::visitOneMethodRecord(TypeLeafKind Leaf,
-                                            OneMethodRecord &Method) {
+void CVTypeDumperImpl::visitOneMethod(TypeLeafKind Leaf,
+                                      OneMethodRecord &Method) {
   DictScope S(W, "OneMethod");
   MethodKind K = Method.getKind();
   printMemberAttributes(Method.getAccess(), K, Method.getOptions());
@@ -563,8 +559,8 @@ void CVTypeDumperImpl::visitOneMethodRecord(TypeLeafKind Leaf,
   Name = Method.getName();
 }
 
-void CVTypeDumperImpl::visitOverloadedMethodRecord(
-    TypeLeafKind Leaf, OverloadedMethodRecord &Method) {
+void CVTypeDumperImpl::visitOverloadedMethod(TypeLeafKind Leaf,
+                                             OverloadedMethodRecord &Method) {
   DictScope S(W, "OverloadedMethod");
   W.printHex("MethodCount", Method.getNumOverloads());
   printTypeIndex("MethodListIndex", Method.getMethodList());
@@ -572,8 +568,8 @@ void CVTypeDumperImpl::visitOverloadedMethodRecord(
   Name = Method.getName();
 }
 
-void CVTypeDumperImpl::visitDataMemberRecord(TypeLeafKind Leaf,
-                                             DataMemberRecord &Field) {
+void CVTypeDumperImpl::visitDataMember(TypeLeafKind Leaf,
+                                       DataMemberRecord &Field) {
   DictScope S(W, "DataMember");
   printMemberAttributes(Field.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -583,8 +579,8 @@ void CVTypeDumperImpl::visitDataMemberRecord(TypeLeafKind Leaf,
   Name = Field.getName();
 }
 
-void CVTypeDumperImpl::visitStaticDataMemberRecord(
-    TypeLeafKind Leaf, StaticDataMemberRecord &Field) {
+void CVTypeDumperImpl::visitStaticDataMember(TypeLeafKind Leaf,
+                                             StaticDataMemberRecord &Field) {
   DictScope S(W, "StaticDataMember");
   printMemberAttributes(Field.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -593,14 +589,13 @@ void CVTypeDumperImpl::visitStaticDataMemberRecord(
   Name = Field.getName();
 }
 
-void CVTypeDumperImpl::visitVirtualFunctionPointerRecord(
-    TypeLeafKind Leaf, VirtualFunctionPointerRecord &VFTable) {
-  DictScope S(W, "VirtualFunctionPointer");
+void CVTypeDumperImpl::visitVFPtr(TypeLeafKind Leaf, VFPtrRecord &VFTable) {
+  DictScope S(W, "VFPtr");
   printTypeIndex("Type", VFTable.getType());
 }
 
-void CVTypeDumperImpl::visitEnumeratorRecord(TypeLeafKind Leaf,
-                                             EnumeratorRecord &Enum) {
+void CVTypeDumperImpl::visitEnumerator(TypeLeafKind Leaf,
+                                       EnumeratorRecord &Enum) {
   DictScope S(W, "Enumerator");
   printMemberAttributes(Enum.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -609,8 +604,8 @@ void CVTypeDumperImpl::visitEnumeratorRecord(TypeLeafKind Leaf,
   Name = Enum.getName();
 }
 
-void CVTypeDumperImpl::visitBaseClassRecord(TypeLeafKind Leaf,
-                                            BaseClassRecord &Base) {
+void CVTypeDumperImpl::visitBaseClass(TypeLeafKind Leaf,
+                                      BaseClassRecord &Base) {
   DictScope S(W, "BaseClass");
   printMemberAttributes(Base.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -618,8 +613,8 @@ void CVTypeDumperImpl::visitBaseClassRecord(TypeLeafKind Leaf,
   W.printHex("BaseOffset", Base.getBaseOffset());
 }
 
-void CVTypeDumperImpl::visitVirtualBaseClassRecord(
-    TypeLeafKind Leaf, VirtualBaseClassRecord &Base) {
+void CVTypeDumperImpl::visitVirtualBaseClass(TypeLeafKind Leaf,
+                                             VirtualBaseClassRecord &Base) {
   DictScope S(W, "VirtualBaseClass");
   printMemberAttributes(Base.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);

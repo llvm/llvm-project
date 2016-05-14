@@ -89,6 +89,7 @@ private:
   bool visitLoad(LoadInst &I);
   bool visitCastInst(CastInst &I);
   bool visitCmpInst(CmpInst &I);
+  bool visitPHINode(PHINode &PN);
 };
 }
 #endif

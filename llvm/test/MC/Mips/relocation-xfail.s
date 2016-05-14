@@ -11,10 +11,12 @@
 // The addend must therefore be 0x9.
 // DATA-LABEL: Name: .text
 // DATA:       SectionData (
-// DATA:       0000: 30430000 30420009
+// DATA:       0000: 30430000 30420009 30430000 30420009
         addiu $2, $3, %got(baz)
         addiu $2, $2, %lo(baz)
 baz:
+        addiu $2, $3, %hi(baz)
+        addiu $2, $2, %lo(baz)
 
 // DATA-LABEL: Name: .data
 // DATA:       SectionData (

@@ -716,6 +716,20 @@ TEST_F(FileSystemTest, DirectoryIteration) {
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/recursive/z0/za1"));
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/recursive/z0"));
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/recursive"));
+
+  // Test recursive_directory_iterator level()
+  ASSERT_NO_ERROR(
+      fs::create_directories(Twine(TestDirectory) + "/reclevel/a/b/c"));
+  fs::recursive_directory_iterator I(Twine(TestDirectory) + "/reclevel", ec), E;
+  for (int l = 0; I != E; I.increment(ec), ++l) {
+    ASSERT_NO_ERROR(ec);
+    EXPECT_EQ(I.level(), l);
+  }
+  EXPECT_EQ(I, E);
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel/a/b/c"));
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel/a/b"));
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel/a"));
+  ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel"));
 }
 
 const char archive[] = "!<arch>\x0A";

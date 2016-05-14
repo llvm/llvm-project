@@ -383,88 +383,22 @@ enum class PointerToMemberRepresentation : uint16_t {
 
 /// Distinguishes individual records in .debug$T section or PDB type stream. The
 /// documentation and headers talk about this as the "leaf" type.
+enum class TypeRecordKind : uint16_t {
+#define TYPE_RECORD(lf_ename, value, name) name = value,
+#include "TypeRecords.def"
+  // FIXME: Add serialization support
+  FieldList = 0x1203,
+  BitField = 0x1205,
+};
+
+/// Duplicate copy of the above enum, but using the official CV names. Useful
+/// for reference purposes and when dealing with unknown record types.
 enum TypeLeafKind : uint16_t {
 #define CV_TYPE(name, val) name = val,
 #include "TypeRecords.def"
 };
 
-enum class TypeRecordKind : uint16_t {
-  None = 0,
-
-  VirtualTableShape = 0x000a,
-  Label = 0x000e,
-  EndPrecompiledHeader = 0x0014,
-
-  Modifier = 0x1001,
-  Pointer = 0x1002,
-  Procedure = 0x1008,
-  MemberFunction = 0x1009,
-
-  Oem = 0x100f,
-  Oem2 = 0x1011,
-
-  ArgumentList = 0x1201,
-  FieldList = 0x1203,
-  BitField = 0x1205,
-  MethodList = 0x1206,
-
-  BaseClass = 0x1400,
-  VirtualBaseClass = 0x1401,
-  IndirectVirtualBaseClass = 0x1402,
-  Index = 0x1404,
-  VirtualFunctionTablePointer = 0x1409,
-
-  Enumerate = 0x1502,
-  Array = 0x1503,
-  Class = 0x1504,
-  Structure = 0x1505,
-  Union = 0x1506,
-  Enum = 0x1507,
-  Alias = 0x150a,
-  Member = 0x150d,
-  StaticMember = 0x150e,
-  OverloadedMethod = 0x150f,
-  NestedType = 0x1510,
-  OneMethod = 0x1511,
-  TypeServer2 = 0x1515,
-  VirtualFunctionTable = 0x151d,
-
-  FunctionId = 0x1601,
-  MemberFunctionId = 0x1602,
-  BuildInfo = 0x1603,
-  SubstringList = 0x1604,
-  StringId = 0x1605,
-  UdtSourceLine = 0x1606,
-
-  SByte = 0x8000,
-  Int16 = 0x8001,
-  UInt16 = 0x8002,
-  Int32 = 0x8003,
-  UInt32 = 0x8004,
-  Single = 0x8005,
-  Double = 0x8006,
-  Float80 = 0x8007,
-  Float128 = 0x8008,
-  Int64 = 0x8009,
-  UInt64 = 0x800a,
-  Float48 = 0x800b,
-  Complex32 = 0x800c,
-  Complex64 = 0x800d,
-  Complex80 = 0x800e,
-  Complex128 = 0x800f,
-  VarString = 0x8010,
-
-  Int128 = 0x8017,
-  UInt128 = 0x8018,
-
-  Decimal = 0x8019,
-  Date = 0x801a,
-  Utf8String = 0x801b,
-
-  Float16 = 0x801c
-};
-
-enum class VirtualTableSlotKind : uint8_t {
+enum class VFTableSlotKind : uint8_t {
   Near16 = 0x00,
   Far16 = 0x01,
   This = 0x02,

@@ -48,14 +48,14 @@ define <8 x i8> @g_vec(<8 x i8> %a) {
 ; Try and match as much of the sequence as precisely as possible.
 
 ; CHECK-LABEL: g_vec:
-; CHECK-DAG: movi [[M1:v.*]], #0x80
-; CHECK-DAG: movi [[M2:v.*]], #0x40
-; CHECK-DAG: movi [[M3:v.*]], #0x20
-; CHECK-DAG: movi [[M4:v.*]], #0x10
-; CHECK-DAG: movi [[M5:v.*]], #0x8
-; CHECK-DAG: movi [[M6:v.*]], #0x4{{$}}
-; CHECK-DAG: movi [[M7:v.*]], #0x2{{$}}
-; CHECK-DAG: movi [[M8:v.*]], #0x1{{$}}
+; CHECK-DAG: movi [[M1:v.*]], #128
+; CHECK-DAG: movi [[M2:v.*]], #64
+; CHECK-DAG: movi [[M3:v.*]], #32
+; CHECK-DAG: movi [[M4:v.*]], #16
+; CHECK-DAG: movi [[M5:v.*]], #8
+; CHECK-DAG: movi [[M6:v.*]], #4{{$}}
+; CHECK-DAG: movi [[M7:v.*]], #2{{$}}
+; CHECK-DAG: movi [[M8:v.*]], #1{{$}}
 ; CHECK-DAG: shl  [[S1:v.*]], v0.8b, #7
 ; CHECK-DAG: shl  [[S2:v.*]], v0.8b, #5
 ; CHECK-DAG: shl  [[S3:v.*]], v0.8b, #3

@@ -41,10 +41,13 @@ public:
   void writeEncodedUnsignedInteger(uint64_t Value);
   void writeNullTerminatedString(const char *Value);
   void writeNullTerminatedString(StringRef Value);
+  void writeGuid(StringRef Guid);
 
   llvm::StringRef str();
 
   uint64_t size() const { return Stream.tell(); }
+
+  void reset() { Buffer.clear(); }
 
 private:
   llvm::SmallVector<char, 256> Buffer;

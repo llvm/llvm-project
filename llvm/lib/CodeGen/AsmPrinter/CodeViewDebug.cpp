@@ -263,7 +263,7 @@ void CodeViewDebug::emitTypeInformation() {
   // type here.
   unsigned ArgListIndex = getNextTypeIndex();
   OS.AddComment("Type record length");
-  OS.EmitIntValue(StringListRecord::getLayoutSize(), 2);
+  OS.EmitIntValue(ArgListRecord::getLayoutSize(), 2);
   OS.AddComment("Leaf type: LF_ARGLIST");
   OS.EmitIntValue(LF_ARGLIST, 2);
   OS.AddComment("Number of arguments");

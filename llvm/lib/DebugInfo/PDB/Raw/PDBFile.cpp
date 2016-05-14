@@ -11,6 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/Endian.h"
@@ -291,4 +292,18 @@ Expected<TpiStream &> PDBFile::getPDBTpiStream() {
       return std::move(EC);
   }
   return *Tpi;
+}
+
+Expected<PublicsStream &> PDBFile::getPDBPublicsStream() {
+  if (!Publics) {
+    auto DbiS = getPDBDbiStream();
+    if (auto EC = DbiS.takeError())
+      return std::move(EC);
+    uint32_t PublicsStreamNum = DbiS->getPublicSymbolStreamIndex();
+
+    Publics.reset(new PublicsStream(*this, PublicsStreamNum));
+    if (auto EC = Publics->reload())
+      return std::move(EC);
+  }
+  return *Publics;
 }

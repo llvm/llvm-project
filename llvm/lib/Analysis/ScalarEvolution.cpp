@@ -5567,6 +5567,8 @@ ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
   if (NumExits == 1)
     return;
 
+  assert(ENT && "ExitNotTakenExtras is NULL while having more than one exit");
+
   auto &Exits = ExitNotTaken.ExtraInfo->Exits;
 
   // Handle the rare case of multiple computable exits.

@@ -1690,7 +1690,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   // Only handle legal scalar cases. Anything else requires too much work.
   Type *Ty = CountZeros->getType();
   unsigned SizeInBits = Ty->getPrimitiveSizeInBits();
-  if (Ty->isVectorTy() || SizeInBits > DL->getLargestLegalIntTypeSize())
+  if (Ty->isVectorTy() || SizeInBits > DL->getLargestLegalIntTypeSizeInBits())
     return false;
 
   // The intrinsic will be sunk behind a compare against zero and branch.

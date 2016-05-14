@@ -3755,7 +3755,7 @@ void InnerLoopVectorizer::vectorizeLoop() {
 
 void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
 
-  // This is the second phase of vectorizing first-order rececurrences. An
+  // This is the second phase of vectorizing first-order recurrences. An
   // overview of the transformation is described below. Suppose we have the
   // following loop.
   //

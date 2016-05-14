@@ -740,6 +740,9 @@ enum : unsigned {
   // This section holds Thread-Local Storage.
   SHF_TLS = 0x400U,
 
+  // Identifies a section containing compressed data.
+  SHF_COMPRESSED = 0x800U,
+
   // This section is excluded from the final executable or shared library.
   SHF_EXCLUDE = 0x80000000U,
 
@@ -1313,6 +1316,30 @@ enum {
 // SHT_NOTE section types
 enum {
   NT_GNU_BUILD_ID = 3
+};
+
+// Compressed section header for ELF32.
+struct Elf32_Chdr {
+  Elf32_Word ch_type;
+  Elf32_Word ch_size;
+  Elf32_Word ch_addralign;
+};
+
+// Compressed section header for ELF64.
+struct Elf64_Chdr {
+  Elf64_Word ch_type;
+  Elf64_Word ch_reserved;
+  Elf64_Xword ch_size;
+  Elf64_Xword ch_addralign;
+};
+
+// Legal values for ch_type field of compressed section header.
+enum {
+  ELFCOMPRESS_ZLIB = 1,            // ZLIB/DEFLATE algorithm.
+  ELFCOMPRESS_LOOS = 0x60000000,   // Start of OS-specific.
+  ELFCOMPRESS_HIOS = 0x6fffffff,   // End of OS-specific.
+  ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.
+  ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
 
 } // end namespace ELF

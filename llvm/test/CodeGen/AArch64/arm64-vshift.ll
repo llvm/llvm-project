@@ -1315,7 +1315,7 @@ define <8 x i8> @uqshli8b(<8 x i8>* %A) nounwind {
 
 define <8 x i8> @uqshli8b_1(<8 x i8>* %A) nounwind {
 ;CHECK-LABEL: uqshli8b_1:
-;CHECK: movi.8b [[REG:v[0-9]+]], #0x8
+;CHECK: movi.8b [[REG:v[0-9]+]], #8
 ;CHECK: uqshl.8b v0, v0, [[REG]]
         %tmp1 = load <8 x i8>, <8 x i8>* %A
         %tmp3 = call <8 x i8> @llvm.aarch64.neon.uqshl.v8i8(<8 x i8> %tmp1, <8 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>)

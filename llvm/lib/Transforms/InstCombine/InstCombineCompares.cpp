@@ -3125,11 +3125,65 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I,
       assert(!Op1C->isMinValue(true));  // A >=s MIN -> TRUE
       return new ICmpInst(ICmpInst::ICMP_SGT, Op0, Builder.getInt(Op1Val - 1));
     default:
-      break;
+      return nullptr;
     }
   }
 
-  // TODO: Handle vectors.
+  // The usual vector types are ConstantDataVector. Exotic vector types are
+  // ConstantVector. Zeros are special. They all derive from Constant.
+  if (isa<ConstantDataVector>(Op1) || isa<ConstantVector>(Op1) ||
+      isa<ConstantAggregateZero>(Op1)) {
+    Constant *Op1C = cast<Constant>(Op1);
+    Type *Op1Type = Op1->getType();
+    unsigned NumElts = Op1Type->getVectorNumElements();
+
+    // Set the new comparison predicate and splat a vector of 1 or -1 to
+    // increment or decrement the vector constants. But first, check that no
+    // elements of the constant vector would overflow/underflow when we
+    // increment/decrement the constants.
+    //
+    // TODO? If the edge cases for vectors were guaranteed to be handled as they
+    // are for scalar, we could remove the min/max checks here. However, to do
+    // that, we would have to use insertelement/shufflevector to replace edge
+    // values.
+    
+    CmpInst::Predicate NewPred;
+    Constant *OneOrNegOne = nullptr;
+    switch (I.getPredicate()) {
+    case ICmpInst::ICMP_ULE:
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (cast<ConstantInt>(Op1C->getAggregateElement(i))->isMaxValue(false))
+          return nullptr;
+      NewPred = ICmpInst::ICMP_ULT;
+      OneOrNegOne = ConstantInt::get(Op1Type, 1);
+      break;
+    case ICmpInst::ICMP_SLE:
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (cast<ConstantInt>(Op1C->getAggregateElement(i))->isMaxValue(true))
+          return nullptr;
+      NewPred = ICmpInst::ICMP_SLT;
+      OneOrNegOne = ConstantInt::get(Op1Type, 1);
+      break;
+    case ICmpInst::ICMP_UGE:
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (cast<ConstantInt>(Op1C->getAggregateElement(i))->isMinValue(false))
+          return nullptr;
+      NewPred = ICmpInst::ICMP_UGT;
+      OneOrNegOne = ConstantInt::get(Op1Type, -1);
+      break;
+    case ICmpInst::ICMP_SGE:
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (cast<ConstantInt>(Op1C->getAggregateElement(i))->isMinValue(true))
+          return nullptr;
+      NewPred = ICmpInst::ICMP_SGT;
+      OneOrNegOne = ConstantInt::get(Op1Type, -1);
+      break;
+    default:
+      return nullptr;
+    }
+
+    return new ICmpInst(NewPred, Op0, ConstantExpr::getAdd(Op1C, OneOrNegOne));
+  }
 
   return nullptr;
 }

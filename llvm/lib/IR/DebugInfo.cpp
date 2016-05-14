@@ -248,18 +248,11 @@ bool llvm::stripDebugInfo(Function &F) {
     F.setSubprogram(nullptr);
   }
 
-  Function *Declare = F.getParent()->getFunction("llvm.dbg.declare");
-  Function *DbgVal = F.getParent()->getFunction("llvm.dbg.value");
   for (BasicBlock &BB : F) {
     for (auto II = BB.begin(), End = BB.end(); II != End;) {
       Instruction &I = *II++; // We may delete the instruction, increment now.
-      // Remove all of the calls to the debugger intrinsics, and remove them
-      // from the module.
-      CallInst *CI = dyn_cast<CallInst>(&I);
-      if (CI && CI->getCalledFunction() &&
-          (CI->getCalledFunction() == Declare ||
-           CI->getCalledFunction() == DbgVal)) {
-        CI->eraseFromParent();
+      if (isa<DbgInfoIntrinsic>(&I)) {
+        I.eraseFromParent();
         Changed = true;
         continue;
       }

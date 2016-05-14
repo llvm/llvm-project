@@ -212,7 +212,6 @@ namespace {
       if (Comma)
         OS << ',';
       OS << "used";
-      Comma = true;
     }
     OS << "} ";
     if (GN.Flags & GepNode::Root)

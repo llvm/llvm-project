@@ -52,17 +52,17 @@ const uint16_t BuildMajorShift = 8;
 struct DbiStream::HeaderInfo {
   little32_t VersionSignature;
   ulittle32_t VersionHeader;
-  ulittle32_t Age;                  // Should match InfoStream.
-  ulittle16_t GSSyms;               // Number of global symbols
-  ulittle16_t BuildNumber;          // See DbiBuildNo structure.
-  ulittle16_t PSSyms;               // Number of public symbols
-  ulittle16_t PdbDllVersion;        // version of mspdbNNN.dll
-  ulittle16_t SymRecords;           // Number of symbols
-  ulittle16_t PdbDllRbld;           // rbld number of mspdbNNN.dll
-  little32_t ModiSubstreamSize;     // Size of module info stream
-  little32_t SecContrSubstreamSize; // Size of sec. contribution stream
-  little32_t SectionMapSize;        // Size of sec. map substream
-  little32_t FileInfoSize;          // Size of file info substream
+  ulittle32_t Age;                     // Should match InfoStream.
+  ulittle16_t GSSyms;                  // Number of global symbols
+  ulittle16_t BuildNumber;             // See DbiBuildNo structure.
+  ulittle16_t PublicSymbolStreamIndex; // Number of public symbols
+  ulittle16_t PdbDllVersion;           // version of mspdbNNN.dll
+  ulittle16_t SymRecords;              // Number of symbols
+  ulittle16_t PdbDllRbld;              // rbld number of mspdbNNN.dll
+  little32_t ModiSubstreamSize;        // Size of module info stream
+  little32_t SecContrSubstreamSize;    // Size of sec. contribution stream
+  little32_t SectionMapSize;           // Size of sec. map substream
+  little32_t FileInfoSize;             // Size of file info substream
   little32_t TypeServerSize;      // Size of type server map
   ulittle32_t MFCTypeServerIndex; // Index of MFC Type Server
   little32_t OptionalDbgHdrSize;  // Size of DbgHeader info
@@ -183,6 +183,10 @@ PdbRaw_DbiVer DbiStream::getDbiVersion() const {
 }
 
 uint32_t DbiStream::getAge() const { return Header->Age; }
+
+uint16_t DbiStream::getPublicSymbolStreamIndex() const {
+  return Header->PublicSymbolStreamIndex;
+}
 
 bool DbiStream::isIncrementallyLinked() const {
   return (Header->Flags & FlagIncrementalMask) != 0;

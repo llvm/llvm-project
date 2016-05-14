@@ -2947,6 +2947,8 @@ emitBPOSGE32(MachineInstr *MI, MachineBasicBlock *BB) const{
 
   // Insert the real bposge32 instruction to $BB.
   BuildMI(BB, DL, TII->get(Mips::BPOSGE32)).addMBB(TBB);
+  // Insert the real bposge32c instruction to $BB.
+  BuildMI(BB, DL, TII->get(Mips::BPOSGE32C_MMR3)).addMBB(TBB);
 
   // Fill $FBB.
   unsigned VR2 = RegInfo.createVirtualRegister(RC);

@@ -33,12 +33,23 @@ struct FileHeader {
   llvm::yaml::Hex32 reserved;
 };
 
+struct LoadCommand {
+  virtual ~LoadCommand();
+  MachO::LoadCommandType cmd;
+  uint32_t cmdsize;
+};
+
 struct Object {
   FileHeader Header;
+  std::vector<std::unique_ptr<LoadCommand>> LoadCommands;
 };
 
 } // namespace llvm::MachOYAML
+} // namespace llvm
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::MachOYAML::LoadCommand>)
+
+namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<MachOYAML::FileHeader> {
@@ -48,6 +59,22 @@ template <> struct MappingTraits<MachOYAML::FileHeader> {
 template <> struct MappingTraits<MachOYAML::Object> {
   static void mapping(IO &IO, MachOYAML::Object &Object);
 };
+
+template <> struct MappingTraits<std::unique_ptr<MachOYAML::LoadCommand>> {
+  static void mapping(IO &IO,
+                      std::unique_ptr<MachOYAML::LoadCommand> &LoadCommand);
+};
+
+#define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                 \
+  io.enumCase(value, #LCName, MachO::LCName);
+
+template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
+  static void enumeration(IO &io, MachO::LoadCommandType &value) {
+#include "llvm/Support/MachO.def"
+  }
+};
+
+#undef HANDLE_LOAD_COMMAND
 
 } // namespace llvm::yaml
 

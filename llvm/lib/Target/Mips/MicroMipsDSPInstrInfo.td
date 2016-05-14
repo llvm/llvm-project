@@ -155,6 +155,11 @@ class PICK_QB_MM_ENC : POOL32A_3RB0_FMT<"pick.qb", 0b0111101101>;
 class SHILO_MM_ENC : POOL32A_4B0SHIFT6AC4B0_FMT<"shilo", 0b0000011101>;
 class SHILOV_MM_ENC : POOL32A_5B01RAC_FMT<"shilov", 0b01001001>;
 class WRDSP_MM_ENC : POOL32A_1RMASK7_FMT<"wrdsp", 0b01011001>;
+class APPEND_MMR2_ENC : POOL32A_2RSA5B0_FMT<"append", 0b1000010101>;
+class MODSUB_MM_ENC : POOL32A_3RB0_FMT<"modsub", 0b1010010101>;
+class MULSA_W_PH_MMR2_ENC : POOL32A_2RAC_FMT<"mulsa.w.ph", 0b10110010>;
+class MULSAQ_S_W_PH_MM_ENC : POOL32A_2RAC_FMT<"mulsaq_s.w.ph", 0b11110010>;
+class BPOSGE32C_MMR3_ENC : POOL32I_IMMB0_FMT<"bposge32c", 0b11001>;
 
 // Instruction desc.
 class ABSQ_S_PH_MM_R2_DESC_BASE<string opstr, SDPatternOperator OpNode,
@@ -368,6 +373,16 @@ class WRDSP_MM_DESC {
   InstrItinClass Itinerary = NoItinerary;
 }
 
+class BPOSGE32C_MMR3_DESC {
+  dag OutOperandList = (outs);
+  dag InOperandList = (ins brtarget1SImm16:$offset);
+  string AsmString = !strconcat("bposge32c", "\t$offset");
+  InstrItinClass Itinerary = NoItinerary;
+  bit isBranch = 1;
+  bit isTerminator = 1;
+  bit hasDelaySlot = 0;
+}
+
 // Instruction defs.
 // microMIPS DSP Rev 1
 def ADDQ_PH_MM : DspMMRel, ADDQ_PH_MM_ENC, ADDQ_PH_DESC;
@@ -472,6 +487,8 @@ def PICK_QB_MM : DspMMRel, PICK_QB_MM_ENC, PICK_QB_DESC;
 def SHILO_MM : DspMMRel, SHILO_MM_ENC, SHILO_DESC;
 def SHILOV_MM : DspMMRel, SHILOV_MM_ENC, SHILOV_DESC;
 def WRDSP_MM : DspMMRel, WRDSP_MM_ENC, WRDSP_MM_DESC;
+def MODSUB_MM : DspMMRel, MODSUB_MM_ENC, MODSUB_DESC;
+def MULSAQ_S_W_PH_MM : DspMMRel, MULSAQ_S_W_PH_MM_ENC, MULSAQ_S_W_PH_DESC;
 // microMIPS DSP Rev 2
 def ABSQ_S_QB_MMR2 : DspMMRel, ABSQ_S_QB_MMR2_ENC, ABSQ_S_QB_MMR2_DESC,
                      ISA_DSPR2;
@@ -526,3 +543,8 @@ def PREPEND_MMR2 : DspMMRel, PREPEND_MMR2_ENC, PREPEND_DESC, ISA_DSPR2;
 
 // Instruction alias.
 def : MMDSPInstAlias<"wrdsp $rt", (WRDSP_MM GPR32Opnd:$rt, 0x1F), 1>;
+def APPEND_MMR2 : DspMMRel, APPEND_MMR2_ENC, APPEND_DESC, ISA_DSPR2;
+def MULSA_W_PH_MMR2 : DspMMRel, MULSA_W_PH_MMR2_ENC, MULSA_W_PH_DESC, ISA_DSPR2;
+// microMIPS DSP Rev 3
+def BPOSGE32C_MMR3 : DspMMRel, BPOSGE32C_MMR3_ENC, BPOSGE32C_MMR3_DESC,
+                     ISA_DSPR3;

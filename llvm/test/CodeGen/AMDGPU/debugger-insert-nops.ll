@@ -1,18 +1,15 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s
 
-; CHECK: test01.cl:2:3
+; CHECK: test01.cl:2:{{[0-9]+}}
 ; CHECK-NEXT: s_nop 0
 
-; CHECK: s_nop 0
-; CHECK-NEXT: test01.cl:3:3
+; CHECK: test01.cl:3:{{[0-9]+}}
 ; CHECK-NEXT: s_nop 0
 
-; CHECK: s_nop 0
-; CHECK-NEXT: test01.cl:4:3
+; CHECK: test01.cl:4:{{[0-9]+}}
 ; CHECK-NEXT: s_nop 0
 
-; CHECK: s_nop 0
-; CHECK-NEXT: test01.cl:5:1
+; CHECK: test01.cl:5:{{[0-9]+}}
 ; CHECK-NEXT: s_nop 0
 ; CHECK-NEXT: s_endpgm
 
