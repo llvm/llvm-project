@@ -3551,6 +3551,17 @@ AST_POLYMORPHIC_MATCHER_P(hasSourceExpression,
           InnerMatcher.matches(*SubExpression, Finder, Builder));
 }
 
+/// \brief Matches casts that has a given cast kind.
+///
+/// Example: matches the implicit cast around \c 0
+/// (matcher = castExpr(hasCastKind(CK_NullToPointer)))
+/// \code
+///   int *p = 0;
+/// \endcode
+AST_MATCHER_P(CastExpr, hasCastKind, CastKind, Kind) {
+  return Node.getCastKind() == Kind;
+}
+
 /// \brief Matches casts whose destination type matches a given matcher.
 ///
 /// (Note: Clang's AST refers to other conversions as "casts" too, and calls

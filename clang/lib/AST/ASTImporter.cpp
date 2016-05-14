@@ -2820,8 +2820,17 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         Decl *CDecl = Importer.Import(DCXX->getLambdaContextDecl());
         if (DCXX->getLambdaContextDecl() && !CDecl)
           return nullptr;
-        D2CXX->setLambdaMangling(DCXX->getLambdaManglingNumber(),
-                                 CDecl);
+        D2CXX->setLambdaMangling(DCXX->getLambdaManglingNumber(), CDecl);
+      } else if (DCXX->isInjectedClassName()) {                                                 
+        // We have to be careful to do a similar dance to the one in                            
+        // Sema::ActOnStartCXXMemberDeclarations                                                
+        CXXRecordDecl *const PrevDecl = nullptr;                                                
+        const bool DelayTypeCreation = true;                                                    
+        D2CXX = CXXRecordDecl::Create(                                                          
+            Importer.getToContext(), D->getTagKind(), DC, StartLoc, Loc,                        
+            Name.getAsIdentifierInfo(), PrevDecl, DelayTypeCreation);                           
+        Importer.getToContext().getTypeDeclType(                                                
+            D2CXX, llvm::dyn_cast<CXXRecordDecl>(DC));                                          
       } else {
         D2CXX = CXXRecordDecl::Create(Importer.getToContext(),
                                       D->getTagKind(),
@@ -3020,6 +3029,22 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
                                             D->isInlineSpecified(), 
                                             D->isImplicit(),
                                             D->isConstexpr());
+    if (unsigned NumInitializers = FromConstructor->getNumCtorInitializers()) {
+      SmallVector<CXXCtorInitializer *, 4> CtorInitializers;
+      for (CXXCtorInitializer *I : FromConstructor->inits()) {
+        CXXCtorInitializer *ToI =
+            cast_or_null<CXXCtorInitializer>(Importer.Import(I));
+        if (!ToI && I)
+          return nullptr;
+        CtorInitializers.push_back(ToI);
+      }
+      CXXCtorInitializer **Memory =
+          new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
+      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
+      CXXConstructorDecl *ToCtor = llvm::cast<CXXConstructorDecl>(ToFunction);
+      ToCtor->setCtorInitializers(Memory);
+      ToCtor->setNumCtorInitializers(NumInitializers);
+    }
   } else if (isa<CXXDestructorDecl>(D)) {
     ToFunction = CXXDestructorDecl::Create(Importer.getToContext(),
                                            cast<CXXRecordDecl>(DC),
@@ -6351,6 +6376,72 @@ FileID ASTImporter::Import(FileID FromID) {
   return ToID;
 }
 
+CXXCtorInitializer *ASTImporter::Import(CXXCtorInitializer *From) {
+  Expr *ToExpr = Import(From->getInit());
+  if (!ToExpr && From->getInit())
+    return nullptr;
+
+  if (From->isBaseInitializer()) {
+    TypeSourceInfo *ToTInfo = Import(From->getTypeSourceInfo());
+    if (!ToTInfo && From->getTypeSourceInfo())
+      return nullptr;
+
+    return new (ToContext) CXXCtorInitializer(
+        ToContext, ToTInfo, From->isBaseVirtual(), Import(From->getLParenLoc()),
+        ToExpr, Import(From->getRParenLoc()),
+        From->isPackExpansion() ? Import(From->getEllipsisLoc())
+                                : SourceLocation());
+  } else if (From->isMemberInitializer()) {
+    FieldDecl *ToField =
+        llvm::cast_or_null<FieldDecl>(Import(From->getMember()));
+    if (!ToField && From->getMember())
+      return nullptr;
+
+    return new (ToContext) CXXCtorInitializer(
+        ToContext, ToField, Import(From->getMemberLocation()),
+        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()));
+  } else if (From->isIndirectMemberInitializer()) {
+    IndirectFieldDecl *ToIField = llvm::cast_or_null<IndirectFieldDecl>(
+        Import(From->getIndirectMember()));
+    if (!ToIField && From->getIndirectMember())
+      return nullptr;
+
+    return new (ToContext) CXXCtorInitializer(
+        ToContext, ToIField, Import(From->getMemberLocation()),
+        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()));
+  } else if (From->isDelegatingInitializer()) {
+    TypeSourceInfo *ToTInfo = Import(From->getTypeSourceInfo());
+    if (!ToTInfo && From->getTypeSourceInfo())
+      return nullptr;
+
+    return new (ToContext)
+        CXXCtorInitializer(ToContext, ToTInfo, Import(From->getLParenLoc()),
+                           ToExpr, Import(From->getRParenLoc()));
+  } else if (unsigned NumArrayIndices = From->getNumArrayIndices()) {
+    FieldDecl *ToField =
+        llvm::cast_or_null<FieldDecl>(Import(From->getMember()));
+    if (!ToField && From->getMember())
+      return nullptr;
+
+    SmallVector<VarDecl *, 4> ToAIs(NumArrayIndices);
+
+    for (unsigned AII = 0; AII < NumArrayIndices; ++AII) {
+      VarDecl *ToArrayIndex =
+          dyn_cast_or_null<VarDecl>(Import(From->getArrayIndex(AII)));
+      if (!ToArrayIndex && From->getArrayIndex(AII))
+        return nullptr;
+    }
+
+    return CXXCtorInitializer::Create(
+        ToContext, ToField, Import(From->getMemberLocation()),
+        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()),
+        ToAIs.data(), NumArrayIndices);
+  } else {
+    return nullptr;
+  }
+}
+
+
 void ASTImporter::ImportDefinition(Decl *From) {
   Decl *To = Import(From);
   if (!To)
@@ -6455,7 +6546,12 @@ IdentifierInfo *ASTImporter::Import(const IdentifierInfo *FromId) {
   if (!FromId)
     return nullptr;
 
-  return &ToContext.Idents.get(FromId->getName());
+  IdentifierInfo *ToId = &ToContext.Idents.get(FromId->getName());
+
+  if (!ToId->getBuiltinID() && FromId->getBuiltinID())
+    ToId->setBuiltinID(FromId->getBuiltinID());
+
+  return ToId;
 }
 
 Selector ASTImporter::Import(Selector FromSel) {

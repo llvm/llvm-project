@@ -2159,6 +2159,15 @@ Example matches f(0, 0) (matcher = callExpr(argumentCountIs(2)))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CastExpr.html">CastExpr</a>&gt;</td><td class="name" onclick="toggle('hasCastKind0')"><a name="hasCastKind0Anchor">hasCastKind</a></td><td>CastKind Kind</td></tr>
+<tr><td colspan="4" class="doc" id="hasCastKind0"><pre>Matches casts that has a given cast kind.
+
+Example: matches the implicit cast around 0
+(matcher = castExpr(hasCastKind(CK_NullToPointer)))
+  int *p = 0;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;</td><td class="name" onclick="toggle('equals3')"><a name="equals3Anchor">equals</a></td><td>ValueT  Value</td></tr>
 <tr><td colspan="4" class="doc" id="equals3"><pre>Matches literals that are equal to the given value.
 

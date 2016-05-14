@@ -1680,9 +1680,12 @@ void ASTReader::ReadDefinedMacros() {
           break;
           
         case PP_MACRO_OBJECT_LIKE:
-        case PP_MACRO_FUNCTION_LIKE:
-          getLocalIdentifier(*I, Record[0]);
+        case PP_MACRO_FUNCTION_LIKE: {
+          IdentifierInfo *II = getLocalIdentifier(*I, Record[0]);
+          if (II->isOutOfDate())
+            updateOutOfDateIdentifier(*II);
           break;
+        }
           
         case PP_TOKEN:
           // Ignore tokens.

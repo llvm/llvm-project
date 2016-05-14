@@ -11,6 +11,7 @@
 #define LLVM_CLANG_DRIVER_TOOLCHAIN_H
 
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/VersionTuple.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Types.h"
@@ -422,6 +423,10 @@ public:
 
   /// \brief Return sanitizers which are enabled by default.
   virtual SanitizerMask getDefaultSanitizers() const { return 0; }
+
+  /// \brief On Windows, returns the version of cl.exe.  On other platforms,
+  /// returns an empty VersionTuple.
+  virtual VersionTuple getMSVCVersionFromExe() const { return VersionTuple(); }
 };
 
 } // end namespace driver

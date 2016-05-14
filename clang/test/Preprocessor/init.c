@@ -2170,13 +2170,13 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
 // ARM-NONE-EABI: #define __ELF__ 1
 
-// RUN: %clang -target arm-apple-darwin-eabi -arch armv7s -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-DARWIN-NO-EABI %s
-// RUN: %clang -target arm-apple-darwin-eabi -arch armv6m -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-DARWIN-EABI %s
-// RUN: %clang -target arm-apple-darwin-eabi -arch armv7m -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-DARWIN-EABI %s
-// RUN: %clang -target arm-apple-darwin-eabi -arch armv7em -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-DARWIN-EABI %s
-// RUN: %clang -target thumbv7-apple-darwin-eabi -arch armv7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-DARWIN-NO-EABI %s
-// ARM-DARWIN-NO-EABI-NOT: #define __ARM_EABI__ 1
-// ARM-DARWIN-EABI: #define __ARM_EABI__ 1
+// No MachO targets use the full EABI, even if AAPCS is used.
+// RUN: %clang -target x86_64-apple-darwin -arch armv7s -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-MACHO-NO-EABI %s
+// RUN: %clang -target x86_64-apple-darwin -arch armv6m -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-MACHO-NO-EABI %s
+// RUN: %clang -target x86_64-apple-darwin -arch armv7m -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-MACHO-NO-EABI %s
+// RUN: %clang -target x86_64-apple-darwin -arch armv7em -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-MACHO-NO-EABI %s
+// RUN: %clang -target x86_64-apple-darwin -arch armv7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARM-MACHO-NO-EABI %s
+// ARM-MACHO-NO-EABI-NOT: #define __ARM_EABI__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=armv7-bitrig-gnueabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-BITRIG %s
 // ARM-BITRIG:#define __ARM_DWARF_EH__ 1

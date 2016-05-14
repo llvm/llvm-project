@@ -3,6 +3,11 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+if(WIN32)
+  # MSVCToolChain.cpp uses version.dll.
+  set(system_libs version)
+endif()
+
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
@@ -26,4 +31,5 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
+  ${system_libs}
   )

@@ -19,6 +19,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
@@ -457,6 +458,45 @@ bool MSVCToolChain::getVisualStudioBinariesFolder(const char *clangProgramPath,
   return true;
 }
 
+VersionTuple MSVCToolChain::getMSVCVersionFromExe() const {
+  VersionTuple Version;
+#ifdef USE_WIN32
+  std::string BinPath;
+  if (!getVisualStudioBinariesFolder("", BinPath))
+    return Version;
+  SmallString<128> ClExe(BinPath);
+  llvm::sys::path::append(ClExe, "cl.exe");
+
+  std::wstring ClExeWide;
+  if (!llvm::ConvertUTF8toWide(ClExe.c_str(), ClExeWide))
+    return Version;
+
+  const DWORD VersionSize = ::GetFileVersionInfoSizeW(ClExeWide.c_str(),
+                                                      nullptr);
+  if (VersionSize == 0)
+    return Version;
+
+  SmallVector<uint8_t, 4 * 1024> VersionBlock(VersionSize);
+  if (!::GetFileVersionInfoW(ClExeWide.c_str(), 0, VersionSize,
+                             VersionBlock.data()))
+    return Version;
+
+  VS_FIXEDFILEINFO *FileInfo = nullptr;
+  UINT FileInfoSize = 0;
+  if (!::VerQueryValueW(VersionBlock.data(), L"\\",
+                        reinterpret_cast<LPVOID *>(&FileInfo), &FileInfoSize) ||
+      FileInfoSize < sizeof(*FileInfo))
+    return Version;
+
+  const unsigned Major = (FileInfo->dwFileVersionMS >> 16) & 0xFFFF;
+  const unsigned Minor = (FileInfo->dwFileVersionMS      ) & 0xFFFF;
+  const unsigned Micro = (FileInfo->dwFileVersionLS >> 16) & 0xFFFF;
+
+  Version = VersionTuple(Major, Minor, Micro);
+#endif
+  return Version;
+}
+
 // Get Visual Studio installation directory.
 bool MSVCToolChain::getVisualStudioInstallDir(std::string &path) const {
   // First check the environment variables that vsvars32.bat sets.
@@ -618,7 +658,7 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
       ToolChain::ComputeEffectiveClangTriple(Args, InputType);
   llvm::Triple Triple(TripleStr);
   VersionTuple MSVT =
-      tools::visualstudio::getMSVCVersion(/*D=*/nullptr, Triple, Args,
+      tools::visualstudio::getMSVCVersion(/*D=*/nullptr, *this, Triple, Args,
                                           /*IsWindowsMSVC=*/true);
   if (MSVT.empty())
     return TripleStr;

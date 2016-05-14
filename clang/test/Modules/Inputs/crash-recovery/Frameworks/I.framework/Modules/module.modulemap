@@ -1,0 +1,5 @@
+framework module I [extern_c] {
+  umbrella header "I.h"
+  export *
+  module * { export * }
+}

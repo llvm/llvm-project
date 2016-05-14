@@ -1122,3 +1122,45 @@ TEST_F(VFSFromYAMLTest, DirectoryIterationSameDirMultipleEntries) {
   checkContents(O->dir_begin("//root/baz/", EC),
                 {"//root/baz/x", "//root/baz/y"});
 }
+
+TEST_F(VFSFromYAMLTest, RecursiveDirectoryIterationLevel) {
+
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addDirectory("//root/a");
+  Lower->addDirectory("//root/a/b");
+  Lower->addDirectory("//root/a/b/c");
+  Lower->addRegularFile("//root/a/b/c/file");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'use-external-names': false,\n"
+      "  'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/a/b/c/',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'file',\n"
+      "                  'external-contents': '//root/a/b/c/file'\n"
+      "                }\n"
+      "              ]\n"
+      "},\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
+      new vfs::OverlayFileSystem(Lower));
+  O->pushOverlay(FS);
+
+  std::error_code EC;
+
+  // Test recursive_directory_iterator level()
+  vfs::recursive_directory_iterator I = vfs::recursive_directory_iterator(
+                                        *O, "//root", EC), E;
+  ASSERT_FALSE(EC);
+  for (int l = 0; I != E; I.increment(EC), ++l) {
+    ASSERT_FALSE(EC);
+    EXPECT_EQ(I.level(), l);
+  }
+  EXPECT_EQ(I, E);
+}

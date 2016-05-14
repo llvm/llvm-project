@@ -3293,7 +3293,7 @@ static void appendUserToPath(SmallVectorImpl<char> &Result) {
   Result.append(UID.begin(), UID.end());
 }
 
-VersionTuple visualstudio::getMSVCVersion(const Driver *D,
+VersionTuple visualstudio::getMSVCVersion(const Driver *D, const ToolChain &TC,
                                           const llvm::Triple &Triple,
                                           const llvm::opt::ArgList &Args,
                                           bool IsWindowsMSVC) {
@@ -3335,8 +3335,14 @@ VersionTuple visualstudio::getMSVCVersion(const Driver *D,
     if (Major || Minor || Micro)
       return VersionTuple(Major, Minor, Micro);
 
-    // FIXME: Consider bumping this to 19 (MSVC2015) soon.
-    return VersionTuple(18);
+    if (IsWindowsMSVC) {
+      VersionTuple MSVT = TC.getMSVCVersionFromExe();
+      if (!MSVT.empty())
+        return MSVT;
+
+      // FIXME: Consider bumping this to 19 (MSVC2015) soon.
+      return VersionTuple(18);
+    }
   }
   return VersionTuple();
 }
@@ -5255,7 +5261,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fms-compatibility-version=18.00 is default.
   VersionTuple MSVT = visualstudio::getMSVCVersion(
-      &D, getToolChain().getTriple(), Args, IsWindowsMSVC);
+      &D, getToolChain(), getToolChain().getTriple(), Args, IsWindowsMSVC);
   if (!MSVT.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-fms-compatibility-version=" + MSVT.getAsString()));
@@ -8986,9 +8992,10 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
 static std::string getLinuxDynamicLinker(const ArgList &Args,
                                          const toolchains::Linux &ToolChain) {
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
+  const llvm::Triple &Triple = ToolChain.getTriple();
 
-  if (ToolChain.getTriple().isAndroid()) {
-    if (ToolChain.getTriple().isArch64Bit())
+  if (Triple.isAndroid()) {
+    if (Triple.isArch64Bit())
       return "/system/bin/linker64";
     else
       return "/system/bin/linker";
@@ -9000,29 +9007,29 @@ static std::string getLinuxDynamicLinker(const ArgList &Args,
   else if (Arch == llvm::Triple::aarch64_be)
     return "/lib/ld-linux-aarch64_be.so.1";
   else if (Arch == llvm::Triple::arm || Arch == llvm::Triple::thumb) {
-    if (ToolChain.getTriple().getEnvironment() == llvm::Triple::GNUEABIHF ||
+    if (Triple.getEnvironment() == llvm::Triple::GNUEABIHF ||
         arm::getARMFloatABI(ToolChain, Args) == arm::FloatABI::Hard)
       return "/lib/ld-linux-armhf.so.3";
     else
       return "/lib/ld-linux.so.3";
   } else if (Arch == llvm::Triple::armeb || Arch == llvm::Triple::thumbeb) {
     // TODO: check which dynamic linker name.
-    if (ToolChain.getTriple().getEnvironment() == llvm::Triple::GNUEABIHF ||
+    if (Triple.getEnvironment() == llvm::Triple::GNUEABIHF ||
         arm::getARMFloatABI(ToolChain, Args) == arm::FloatABI::Hard)
       return "/lib/ld-linux-armhf.so.3";
     else
       return "/lib/ld-linux.so.3";
   } else if (Arch == llvm::Triple::mips || Arch == llvm::Triple::mipsel ||
              Arch == llvm::Triple::mips64 || Arch == llvm::Triple::mips64el) {
-    std::string LibDir =
-        "/lib" + mips::getMipsABILibSuffix(Args, ToolChain.getTriple());
+    std::string LibDir = "/lib" + mips::getMipsABILibSuffix(Args, Triple);
     StringRef LibName;
-    bool IsNaN2008 = mips::isNaN2008(Args, ToolChain.getTriple());
+    bool IsNaN2008 = mips::isNaN2008(Args, Triple);
     if (mips::isUCLibc(Args))
       LibName = IsNaN2008 ? "ld-uClibc-mipsn8.so.0" : "ld-uClibc.so.0";
-    else if (!ToolChain.getTriple().hasEnvironment()) {
-      bool LE = (ToolChain.getTriple().getArch() == llvm::Triple::mipsel) ||
-                (ToolChain.getTriple().getArch() == llvm::Triple::mips64el);
+    else if (!Triple.hasEnvironment() &&
+             Triple.getVendor() == llvm::Triple::VendorType::MipsTechnologies) {
+      bool LE = (Triple.getArch() == llvm::Triple::mipsel) ||
+                (Triple.getArch() == llvm::Triple::mips64el);
       LibName = LE ? "ld-musl-mipsel.so.1" : "ld-musl-mips.so.1";
     } else
       LibName = IsNaN2008 ? "ld-linux-mipsn8.so.1" : "ld.so.1";
@@ -9043,7 +9050,7 @@ static std::string getLinuxDynamicLinker(const ArgList &Args,
   else if (Arch == llvm::Triple::sparcv9)
     return "/lib64/ld-linux.so.2";
   else if (Arch == llvm::Triple::x86_64 &&
-           ToolChain.getTriple().getEnvironment() == llvm::Triple::GNUX32)
+           Triple.getEnvironment() == llvm::Triple::GNUX32)
     return "/libx32/ld-linux-x32.so.2";
   else
     return "/lib64/ld-linux-x86-64.so.2";

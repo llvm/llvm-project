@@ -3485,6 +3485,15 @@ TEST(CastExpression, DoesNotMatchNonCasts) {
   EXPECT_TRUE(notMatches("int i = 0;", castExpr()));
 }
 
+TEST(CastExpression, HasCastKind) {
+  EXPECT_TRUE(matches("char *p = 0;",
+              castExpr(hasCastKind(CK_NullToPointer))));
+  EXPECT_TRUE(notMatches("char *p = 0;",
+              castExpr(hasCastKind(CK_DerivedToBase))));
+  EXPECT_TRUE(matches("char *p = 0;",
+              implicitCastExpr(hasCastKind(CK_NullToPointer))));
+}
+
 TEST(ReinterpretCast, MatchesSimpleCase) {
   EXPECT_TRUE(matches("char* p = reinterpret_cast<char*>(&p);",
                       cxxReinterpretCastExpr()));

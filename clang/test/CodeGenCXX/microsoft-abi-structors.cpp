@@ -7,7 +7,7 @@
 // RUN: FileCheck --check-prefix DTORS3 %s < %t
 // RUN: FileCheck --check-prefix DTORS4 %s < %t
 //
-// RUN: %clang_cc1 -emit-llvm %s -o - -mconstructor-aliases -triple=x86_64-pc-win32 -fno-rtti | FileCheck --check-prefix DTORS-X64 %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -mconstructor-aliases -triple=x86_64-pc-win32 -fno-rtti -std=c++11 | FileCheck --check-prefix DTORS-X64 %s
 
 namespace basic {
 
@@ -443,6 +443,20 @@ void g() { new MoveOnly(f()); }
 // CHECK: store {{.*}} @"\01??_7MoveOnly@implicit_copy_vtable@@6B@"
 }
 
+namespace delegating_ctor {
+struct Y {};
+struct X : virtual Y {
+  X(int);
+  X();
+};
+X::X(int) : X() {}
+}
+// CHECK: define x86_thiscallcc %"struct.delegating_ctor::X"* @"\01??0X@delegating_ctor@@QAE@H@Z"(
+// CHECK:  %[[is_most_derived_addr:.*]] = alloca i32, align 4
+// CHECK:  store i32 %is_most_derived, i32* %[[is_most_derived_addr]]
+// CHECK:  %[[is_most_derived:.*]] = load i32, i32* %[[is_most_derived_addr]]
+// CHECK:  call x86_thiscallcc {{.*}}* @"\01??0X@delegating_ctor@@QAE@XZ"({{.*}} i32 %[[is_most_derived]])
+
 // Dtor thunks for classes in anonymous namespaces should be internal, not
 // linkonce_odr.
 namespace {
@@ -471,4 +485,3 @@ class G {
 extern void testG() {
   G g;
 }
-

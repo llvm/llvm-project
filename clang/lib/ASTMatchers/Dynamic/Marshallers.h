@@ -96,6 +96,28 @@ public:
   }
 };
 
+template <> struct ArgTypeTraits<clang::CastKind> {
+private:
+  static clang::CastKind getCastKind(llvm::StringRef AttrKind) {
+    return llvm::StringSwitch<clang::CastKind>(AttrKind)
+#define CAST_OPERATION(Name) .Case( #Name, CK_##Name)
+#include "clang/AST/OperationKinds.def"
+        .Default(CK_Invalid);
+  }
+
+public:
+  static bool is(const VariantValue &Value) {
+    return Value.isString() &&  
+        getCastKind(Value.getString()) != CK_Invalid;
+  }
+  static clang::CastKind get(const VariantValue &Value) {
+    return getCastKind(Value.getString());
+  }
+  static ArgKind getKind() {
+    return ArgKind(ArgKind::AK_String);
+  }
+};
+
 /// \brief Matcher descriptor interface.
 ///
 /// Provides a \c create() method that constructs the matcher from the provided

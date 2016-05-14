@@ -210,6 +210,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasBody);
   REGISTER_MATCHER(hasCanonicalType);
   REGISTER_MATCHER(hasCaseConstant);
+  REGISTER_MATCHER(hasCastKind);
   REGISTER_MATCHER(hasCondition);
   REGISTER_MATCHER(hasConditionVariableStatement);
   REGISTER_MATCHER(hasDecayedType);
