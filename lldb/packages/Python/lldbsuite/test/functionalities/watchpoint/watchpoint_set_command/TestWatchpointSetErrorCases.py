@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -24,6 +25,7 @@ class WatchpointSetErrorTestCase(TestBase):
         self.line = line_number(self.source, '// Set break point at this line.')
         # Build dictionary to have unique executable names for each test method.
 
+    @expectedFailureAll(oslist=["windows"])
     def test_error_cases_with_watchpoint_set(self):
         """Test error cases with the 'watchpoint set' command."""
         self.build()

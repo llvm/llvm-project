@@ -84,6 +84,7 @@ def create_results_formatter(config):
     results_file_object = None
     cleanup_func = None
 
+    file_is_stream = False
     if config.filename:
         # Open the results file for writing.
         if config.filename == 'stdout':
@@ -102,6 +103,7 @@ def create_results_formatter(config):
         results_file_object, cleanup_func = create_socket(config.port)
         default_formatter_name = (
             "lldbsuite.test_event.formatter.pickled.RawPickledFormatter")
+        file_is_stream = True
 
     # If we have a results formatter name specified and we didn't specify
     # a results file, we should use stdout.
@@ -137,7 +139,10 @@ def create_results_formatter(config):
             command_line_options)
 
         # Create the TestResultsFormatter given the processed options.
-        results_formatter_object = cls(results_file_object, formatter_options)
+        results_formatter_object = cls(
+            results_file_object,
+            formatter_options,
+            file_is_stream)
 
         def shutdown_formatter():
             """Shuts down the formatter when it is no longer needed."""

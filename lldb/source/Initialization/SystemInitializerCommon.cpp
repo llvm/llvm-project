@@ -13,8 +13,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Symbol/GoASTContext.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "Plugins/Instruction/ARM/EmulateInstructionARM.h"
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
@@ -98,9 +96,6 @@ SystemInitializerCommon::Initialize()
     process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
     // Initialize plug-ins
-    ClangASTContext::Initialize();
-    GoASTContext::Initialize();
-
     ObjectContainerBSDArchive::Initialize();
     ObjectFileELF::Initialize();
     ObjectFilePECOFF::Initialize();
@@ -153,9 +148,6 @@ SystemInitializerCommon::Terminate()
     ObjectContainerUniversalMachO::Terminate();
     PlatformMacOSX::Terminate();
     PlatformRemoteiOS::Terminate();
-
-    ClangASTContext::Terminate();
-    GoASTContext::Terminate();
 
     EmulateInstructionARM::Terminate();
     EmulateInstructionMIPS::Terminate();

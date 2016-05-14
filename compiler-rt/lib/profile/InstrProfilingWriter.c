@@ -13,9 +13,13 @@
 
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "InstrProfData.inc"
+
 COMPILER_RT_VISIBILITY void (*FreeHook)(void *) = NULL;
-COMPILER_RT_VISIBILITY void *(*CallocHook)(size_t, size_t) = NULL;
-uint32_t VPBufferSize = 0;
+static ProfBufferIO TheBufferIO;
+#define VP_BUFFER_SIZE 8 * 1024
+static uint8_t BufferIOBuffer[VP_BUFFER_SIZE];
+COMPILER_RT_VISIBILITY uint8_t *DynamicBufferIOBuffer = 0;
+COMPILER_RT_VISIBILITY uint32_t VPBufferSize = 0;
 
 /* The buffer writer is reponsponsible in keeping writer state
  * across the call.
@@ -43,20 +47,23 @@ static void llvmInitBufferIO(ProfBufferIO *BufferIO, WriterCallback FileWriter,
 }
 
 COMPILER_RT_VISIBILITY ProfBufferIO *
-lprofCreateBufferIO(WriterCallback FileWriter, void *File, uint32_t BufferSz) {
-  ProfBufferIO *BufferIO = (ProfBufferIO *)CallocHook(1, sizeof(ProfBufferIO));
-  uint8_t *Buffer = (uint8_t *)CallocHook(1, BufferSz);
+lprofCreateBufferIO(WriterCallback FileWriter, void *File) {
+  uint8_t *Buffer = DynamicBufferIOBuffer;
+  uint32_t BufferSize = VPBufferSize;
   if (!Buffer) {
-    FreeHook(BufferIO);
-    return 0;
+    Buffer = &BufferIOBuffer[0];
+    BufferSize = sizeof(BufferIOBuffer);
   }
-  llvmInitBufferIO(BufferIO, FileWriter, File, Buffer, BufferSz);
-  return BufferIO;
+  llvmInitBufferIO(&TheBufferIO, FileWriter, File, Buffer, BufferSize);
+  return &TheBufferIO;
 }
 
 COMPILER_RT_VISIBILITY void lprofDeleteBufferIO(ProfBufferIO *BufferIO) {
-  FreeHook(BufferIO->BufferStart);
-  FreeHook(BufferIO);
+  if (DynamicBufferIOBuffer) {
+    DynamicBufferIOBuffer = 0;
+    VPBufferSize = 0;
+    FreeHook(DynamicBufferIOBuffer);
+  }
 }
 
 COMPILER_RT_VISIBILITY int
@@ -91,8 +98,6 @@ COMPILER_RT_VISIBILITY int lprofBufferIOFlush(ProfBufferIO *BufferIO) {
   return 0;
 }
 
-#define VP_BUFFER_SIZE 8 * 1024
-
 static int writeOneValueProfData(ProfBufferIO *BufferIO,
                                  VPGatherHookType VPDataGatherer,
                                  const __llvm_profile_data *Data) {
@@ -111,14 +116,12 @@ static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
                               const __llvm_profile_data *DataBegin,
                               const __llvm_profile_data *DataEnd) {
   ProfBufferIO *BufferIO;
-  uint32_t BufferSz;
   const __llvm_profile_data *DI = 0;
 
   if (!VPDataGatherer)
     return 0;
 
-  BufferSz = VPBufferSize ? VPBufferSize : VP_BUFFER_SIZE;
-  BufferIO = lprofCreateBufferIO(Writer, WriterCtx, BufferSz);
+  BufferIO = lprofCreateBufferIO(Writer, WriterCtx);
 
   for (DI = DataBegin; DI < DataEnd; DI++) {
     if (writeOneValueProfData(BufferIO, VPDataGatherer, DI))

@@ -57,7 +57,6 @@ class BasicExprCommandsTestCase(TestBase):
             patterns = ["\(float\) \$.* = 2\.234"])
         # (float) $2 = 2.234
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_many_expr_commands(self):
         self.build_and_run()
 

@@ -3617,10 +3617,14 @@ DWARFASTParserClang::GetClangDeclForDIE (const DWARFDIE &die)
         {
             SymbolFileDWARF *dwarf = die.GetDWARF();
             Type *type = GetTypeForDIE(die);
-            const char *name = die.GetName();
-            clang::DeclContext *decl_context = ClangASTContext::DeclContextGetAsDeclContext(dwarf->GetDeclContextContainingUID(die.GetID()));
-            decl = m_ast.CreateVariableDeclaration(decl_context, name,
-                                                   ClangUtil::GetQualType(type->GetForwardCompilerType()));
+            if (dwarf && type)
+            {
+                const char *name = die.GetName();
+                clang::DeclContext *decl_context =
+                    ClangASTContext::DeclContextGetAsDeclContext(dwarf->GetDeclContextContainingUID(die.GetID()));
+                decl = m_ast.CreateVariableDeclaration(decl_context, name,
+                                                       ClangUtil::GetQualType(type->GetForwardCompilerType()));
+            }
             break;
         }
         case DW_TAG_imported_declaration:

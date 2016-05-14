@@ -30,7 +30,7 @@ enum ELFKind {
   ELF64BEKind
 };
 
-enum class BuildIdKind { None, Fnv1, Md5, Sha1 };
+enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring };
 
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
@@ -53,6 +53,7 @@ struct Configuration {
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
   std::vector<llvm::StringRef> VersionScriptGlobals;
+  std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
   bool Bsymbolic;

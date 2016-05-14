@@ -1,7 +1,7 @@
-.. title:: clang-tidy - modernize-avoid-std-bind
+.. title:: clang-tidy - modernize-avoid-bind
 
 modernize-avoid-bind
-==========================
+====================
 
 The check finds uses of ``std::bind`` and replaces simple uses with lambdas.
 Lambdas will use value-capture where required.

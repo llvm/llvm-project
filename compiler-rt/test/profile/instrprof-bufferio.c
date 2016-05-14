@@ -11,7 +11,7 @@
 #include <string.h>
 
 typedef struct ProfBufferIO ProfBufferIO;
-ProfBufferIO *lprofCreateBufferIOInternal(FILE *File, uint32_t DefaultBufferSz);
+ProfBufferIO *lprofCreateBufferIOInternal(void *File, uint32_t BufferSz);
 void lprofDeleteBufferIO(ProfBufferIO *BufferIO);
 
 int lprofBufferIOWrite(ProfBufferIO *BufferIO, const char *Data, uint32_t Size);
@@ -44,7 +44,8 @@ int main(int argc, const char *argv[]) {
 
     BufferIO = lprofCreateBufferIOInternal(File[J], IOBufferSize[J]);
 
-    lprofBufferIOWrite(BufferIO, "Short Strings:\n", strlen("Short Strings:\n"));
+    lprofBufferIOWrite(BufferIO, "Short Strings:\n",
+                       strlen("Short Strings:\n"));
     for (I = 0; I < 1024; I++) {
       lprofBufferIOWrite(BufferIO, SmallData, strlen(SmallData));
     }

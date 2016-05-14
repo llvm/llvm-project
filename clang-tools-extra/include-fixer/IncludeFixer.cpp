@@ -58,8 +58,9 @@ private:
 class Action : public clang::ASTFrontendAction,
                public clang::ExternalSemaSource {
 public:
-  explicit Action(XrefsDBManager &XrefsDBMgr, bool MinimizeIncludePaths)
-      : XrefsDBMgr(XrefsDBMgr), MinimizeIncludePaths(MinimizeIncludePaths) {}
+  explicit Action(SymbolIndexManager &SymbolIndexMgr, bool MinimizeIncludePaths)
+      : SymbolIndexMgr(SymbolIndexMgr),
+        MinimizeIncludePaths(MinimizeIncludePaths) {}
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
@@ -115,6 +116,19 @@ public:
     if (getCompilerInstance().getSema().isSFINAEContext())
       return clang::TypoCorrection();
 
+    std::string TypoScopeString;
+    if (S) {
+      // FIXME: Currently we only use namespace contexts. Use other context
+      // types for query.
+      for (const auto *Context = S->getEntity(); Context;
+           Context = Context->getParent()) {
+        if (const auto *ND = dyn_cast<NamespaceDecl>(Context)) {
+          if (!ND->getName().empty())
+            TypoScopeString = ND->getNameAsString() + "::" + TypoScopeString;
+        }
+      }
+    }
+
     /// If we have a scope specification, use that to get more precise results.
     std::string QueryString;
     if (SS && SS->getRange().isValid()) {
@@ -149,7 +163,23 @@ public:
       QueryString = Typo.getAsString();
     }
 
-    return query(QueryString, Typo.getLoc());
+    // Follow C++ Lookup rules. Firstly, lookup the identifier with scoped
+    // namespace contexts. If fails, falls back to identifier.
+    // For example:
+    //
+    // namespace a {
+    // b::foo f;
+    // }
+    //
+    // 1. lookup a::b::foo.
+    // 2. lookup b::foo.
+    if (!query(TypoScopeString + QueryString, Typo.getLoc()))
+      query(QueryString, Typo.getLoc());
+
+    // FIXME: We should just return the name we got as input here and prevent
+    // clang from trying to correct the typo by itself. That may change the
+    // identifier to something that's not wanted by the user.
+    return clang::TypoCorrection();
   }
 
   StringRef filename() const { return Filename; }
@@ -234,35 +264,32 @@ public:
 
 private:
   /// Query the database for a given identifier.
-  clang::TypoCorrection query(StringRef Query, SourceLocation Loc) {
+  bool query(StringRef Query, SourceLocation Loc) {
     assert(!Query.empty() && "Empty query!");
 
     // Save database lookups by not looking up identifiers multiple times.
     if (!SeenQueries.insert(Query).second)
-      return clang::TypoCorrection();
+      return true;
 
     DEBUG(llvm::dbgs() << "Looking up '" << Query << "' at ");
     DEBUG(Loc.print(llvm::dbgs(), getCompilerInstance().getSourceManager()));
     DEBUG(llvm::dbgs() << " ...");
 
     std::string error_text;
-    auto SearchReply = XrefsDBMgr.search(Query);
+    auto SearchReply = SymbolIndexMgr.search(Query);
     DEBUG(llvm::dbgs() << SearchReply.size() << " replies\n");
     if (SearchReply.empty())
-      return clang::TypoCorrection();
+      return false;
 
     // Add those files to the set of includes to try out.
     // FIXME: Rank the results and pick the best one instead of the first one.
     TryInclude(Query, SearchReply[0]);
 
-    // FIXME: We should just return the name we got as input here and prevent
-    // clang from trying to correct the typo by itself. That may change the
-    // identifier to something that's not wanted by the user.
-    return clang::TypoCorrection();
+    return true;
   }
 
   /// The client to use to find cross-references.
-  XrefsDBManager &XrefsDBMgr;
+  SymbolIndexManager &SymbolIndexMgr;
 
   // Remeber things we looked up to avoid querying things twice.
   llvm::StringSet<> SeenQueries;
@@ -328,10 +355,10 @@ void PreprocessorHooks::InclusionDirective(
 } // namespace
 
 IncludeFixerActionFactory::IncludeFixerActionFactory(
-    XrefsDBManager &XrefsDBMgr,
+    SymbolIndexManager &SymbolIndexMgr,
     std::vector<clang::tooling::Replacement> &Replacements,
     bool MinimizeIncludePaths)
-    : XrefsDBMgr(XrefsDBMgr), Replacements(Replacements),
+    : SymbolIndexMgr(SymbolIndexMgr), Replacements(Replacements),
       MinimizeIncludePaths(MinimizeIncludePaths) {}
 
 IncludeFixerActionFactory::~IncludeFixerActionFactory() = default;
@@ -355,7 +382,7 @@ bool IncludeFixerActionFactory::runInvocation(
 
   // Run the parser, gather missing includes.
   auto ScopedToolAction =
-      llvm::make_unique<Action>(XrefsDBMgr, MinimizeIncludePaths);
+      llvm::make_unique<Action>(SymbolIndexMgr, MinimizeIncludePaths);
   Compiler.ExecuteAction(*ScopedToolAction);
 
   // Generate replacements.

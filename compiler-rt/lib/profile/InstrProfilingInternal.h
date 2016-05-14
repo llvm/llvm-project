@@ -68,12 +68,13 @@ typedef struct ProfBufferIO {
 } ProfBufferIO;
 
 /* The creator interface used by testing.  */
-ProfBufferIO *lprofCreateBufferIOInternal(void *File, uint32_t DefaultBufferSz);
+ProfBufferIO *lprofCreateBufferIOInternal(void *File, uint32_t BufferSz);
+
 /*!
  * This is the interface to create a handle for buffered IO.
  */
-ProfBufferIO *lprofCreateBufferIO(WriterCallback FileWriter, void *File,
-                                  uint32_t DefaultBufferSz);
+ProfBufferIO *lprofCreateBufferIO(WriterCallback FileWriter, void *File);
+
 /*!
  * The interface to destroy the bufferIO handle and reclaim
  * the memory.
@@ -119,8 +120,8 @@ void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
 
 COMPILER_RT_VISIBILITY extern char *(*GetEnvHook)(const char *);
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
-COMPILER_RT_VISIBILITY extern void *(*CallocHook)(size_t, size_t);
+COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;
+COMPILER_RT_VISIBILITY extern uint32_t VPBufferSize;
 extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
-extern uint32_t VPBufferSize;
 
 #endif

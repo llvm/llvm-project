@@ -23,6 +23,13 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace find_all_symbols {
 namespace {
+
+AST_MATCHER(EnumConstantDecl, isInScopedEnum) {
+  if (const auto *ED = dyn_cast<EnumDecl>(Node.getDeclContext()))
+    return ED->isScoped();
+  return false;
+}
+
 std::vector<SymbolInfo::Context> GetContexts(const NamedDecl *ND) {
   std::vector<SymbolInfo::Context> Contexts;
   for (const auto *Context = ND->getDeclContext(); Context;
@@ -34,12 +41,16 @@ std::vector<SymbolInfo::Context> GetContexts(const NamedDecl *ND) {
     assert(llvm::isa<NamedDecl>(Context) &&
            "Expect Context to be a NamedDecl");
     if (const auto *NSD = dyn_cast<NamespaceDecl>(Context)) {
-      Contexts.emplace_back(SymbolInfo::Namespace, NSD->isAnonymousNamespace()
-                                                       ? ""
-                                                       : NSD->getName().str());
+      Contexts.emplace_back(SymbolInfo::ContextType::Namespace,
+                            NSD->isAnonymousNamespace() ? ""
+                                                        : NSD->getName().str());
+    } else if (const auto *ED = dyn_cast<EnumDecl>(Context)) {
+      Contexts.emplace_back(SymbolInfo::ContextType::EnumDecl,
+                            ED->getName().str());
     } else {
       const auto *RD = cast<RecordDecl>(Context);
-      Contexts.emplace_back(SymbolInfo::Record, RD->getName().str());
+      Contexts.emplace_back(SymbolInfo::ContextType::Record,
+                            RD->getName().str());
     }
   }
   return Contexts;
@@ -49,19 +60,24 @@ llvm::Optional<SymbolInfo> CreateSymbolInfo(const NamedDecl *ND,
                                             const SourceManager &SM) {
   SymbolInfo::SymbolKind Type;
   if (llvm::isa<VarDecl>(ND)) {
-    Type = SymbolInfo::Variable;
+    Type = SymbolInfo::SymbolKind::Variable;
   } else if (llvm::isa<FunctionDecl>(ND)) {
-    Type = SymbolInfo::Function;
+    Type = SymbolInfo::SymbolKind::Function;
   } else if (llvm::isa<TypedefNameDecl>(ND)) {
-    Type = SymbolInfo::TypedefName;
+    Type = SymbolInfo::SymbolKind::TypedefName;
+  } else if (llvm::isa<EnumConstantDecl>(ND)) {
+    Type = SymbolInfo::SymbolKind::EnumConstantDecl;
+  } else if (llvm::isa<EnumDecl>(ND)) {
+    Type = SymbolInfo::SymbolKind::EnumDecl;
   } else {
-    assert(llvm::isa<RecordDecl>(ND) && "Matched decl must be one of VarDecl, "
-                                        "FunctionDecl, TypedefNameDecl and "
-                                        "RecordDecl!");
+    assert(llvm::isa<RecordDecl>(ND) &&
+           "Matched decl must be one of VarDecl, "
+           "FunctionDecl, TypedefNameDecl, EnumConstantDecl, "
+           "EnumDecl and RecordDecl!");
     // C-style record decl can have empty name, e.g "struct { ... } var;".
     if (ND->getName().empty())
       return llvm::None;
-    Type = SymbolInfo::Class;
+    Type = SymbolInfo::SymbolKind::Class;
   }
 
   SourceLocation Loc = SM.getExpansionLoc(ND->getLocation());
@@ -76,7 +92,7 @@ llvm::Optional<SymbolInfo> CreateSymbolInfo(const NamedDecl *ND,
     return llvm::None;
 
   return SymbolInfo(ND->getNameAsString(), Type, FilePath.str(),
-                    GetContexts(ND), SM.getExpansionLineNumber(Loc));
+                    SM.getExpansionLineNumber(Loc), GetContexts(ND));
 }
 
 } // namespace
@@ -157,6 +173,23 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
   MatchFinder->addMatcher(
       typedefNameDecl(CommonFilter, anyOf(HasNSOrTUCtxMatcher,
                                           hasDeclContext(linkageSpecDecl())))
+          .bind("decl"),
+      this);
+
+  // Matchers for enum declarations.
+  MatchFinder->addMatcher(
+      enumDecl(CommonFilter, anyOf(HasNSOrTUCtxMatcher, ExternCMatcher))
+          .bind("decl"),
+      this);
+
+  // Matchers for enum constant declarations.
+  // We only match the enum constants in non-scoped enum declarations which are
+  // inside toplevel translation unit or a namespace.
+  MatchFinder->addMatcher(
+      enumConstantDecl(
+          CommonFilter,
+          unless(isInScopedEnum()),
+          anyOf(hasDeclContext(enumDecl(HasNSOrTUCtxMatcher)), ExternCMatcher))
           .bind("decl"),
       this);
 }

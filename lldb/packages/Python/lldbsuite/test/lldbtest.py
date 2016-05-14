@@ -419,7 +419,14 @@ def system(commands, **kwargs):
             cmd = kwargs.get("args")
             if cmd is None:
                 cmd = shellCommand
-            raise CalledProcessError(retcode, cmd)
+            cpe = CalledProcessError(retcode, cmd)
+            # Ensure caller can access the stdout/stderr.
+            cpe.lldb_extensions = {
+                "stdout_content": this_output,
+                "stderr_content": this_error,
+                "command": shellCommand
+            }
+            raise cpe
         output = output + this_output
         error = error + this_error
     return (output, error)

@@ -9,6 +9,7 @@ from __future__ import print_function
 import os, time
 import re
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -22,6 +23,7 @@ class UnsignedTypesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
+    @expectedFailureAll(oslist=["windows"])
     def test(self):
         """Test that variables with unsigned types display correctly."""
         self.build()
