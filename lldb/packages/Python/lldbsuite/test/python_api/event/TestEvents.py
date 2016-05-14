@@ -107,6 +107,7 @@ class EventAPITestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux("llvm.org/pr23730") # Flaky, fails ~1/100 cases
+    @expectedFlakeyOS(oslist=["windows"])
     def test_wait_for_event(self):
         """Exercise SBListener.WaitForEvent() API."""
         self.build()

@@ -581,6 +581,13 @@ public:
   void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
+template <class ELFT>
+class BuildIdHexstring final : public BuildIdSection<ELFT> {
+public:
+  BuildIdHexstring();
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
+};
+
 // All output sections that are hadnled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them
 // until Writer is initialized.

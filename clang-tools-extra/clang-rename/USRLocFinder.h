@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "llvm/ADT/StringRef.h"
+
 namespace clang {
 
 class Decl;
@@ -27,7 +29,8 @@ class SourceLocation;
 namespace rename {
 
 // FIXME: make this an AST matcher. Wouldn't that be awesome??? I agree!
-std::vector<SourceLocation> getLocationsOfUSR(const std::string usr,
+std::vector<SourceLocation> getLocationsOfUSR(llvm::StringRef usr,
+                                              llvm::StringRef PrevName,
                                               Decl *decl);
 }
 }

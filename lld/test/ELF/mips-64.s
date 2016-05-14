@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-objdump -t -s %t.so | FileCheck -check-prefix=SYM %s
+# RUN: llvm-objdump -t %t.so | FileCheck -check-prefix=SYM %s
 # RUN: llvm-readobj -r -dynamic-table -mips-plt-got %t.so | FileCheck %s
 
 # REQUIRES: mips
@@ -24,11 +24,6 @@ v2:
   .quad v2+8 # R_MIPS_64 target v2 addend 8
   .quad v1   # R_MIPS_64 target v1 addend 0
 
-# SYM: Contents of section .data:
-# SYM-NEXT: 30000 00000000 00000000 00000000 00000000
-#                                   ^-- v2
-# SYM-NEXT: 30010 00000000 00030000
-#                 ^-- v1
 
 # SYM: SYMBOL TABLE:
 # SYM: 00030000 l       .data           00000004 v1
@@ -37,6 +32,7 @@ v2:
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (7) .rela.dyn {
 # CHECK-NEXT:     0x30010 R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE - 0x30000
+#                                                             ^-- v1
 # CHECK-NEXT:     0x30008 R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE v2 0x8
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]

@@ -121,7 +121,7 @@ SymbolFilePDB::CalculateAbilities()
         auto error = loadDataForEXE(PDB_ReaderType::DIA, llvm::StringRef(exePath), m_session_up);
         if (error)
         {
-            handleAllErrors(std::move(error), [](const GenericError &GE) {});
+            llvm::consumeError(std::move(error));
             return 0;
         }
     }

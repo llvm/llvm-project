@@ -20,10 +20,6 @@ namespace {
 
 void recordFixes(const VarDecl &Var, ASTContext &Context,
                  DiagnosticBuilder &Diagnostic) {
-  // Do not propose fixes in macros since we cannot place them correctly.
-  if (Var.getLocation().isMacroID())
-    return;
-
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified())
     Diagnostic << utils::fixit::changeVarDeclToConst(Var);
@@ -57,14 +53,16 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
   auto localVarCopiedFrom = [](const internal::Matcher<Expr> &CopyCtorArg) {
     return compoundStmt(
                forEachDescendant(
-                   varDecl(hasLocalStorage(),
-                           hasType(matchers::isExpensiveToCopy()),
-                           hasInitializer(cxxConstructExpr(
-                                              hasDeclaration(cxxConstructorDecl(
-                                                  isCopyConstructor())),
-                                              hasArgument(0, CopyCtorArg))
-                                              .bind("ctorCall")))
-                       .bind("newVarDecl")))
+                   declStmt(
+                       has(varDecl(hasLocalStorage(),
+                                   hasType(matchers::isExpensiveToCopy()),
+                                   hasInitializer(
+                                       cxxConstructExpr(
+                                           hasDeclaration(cxxConstructorDecl(
+                                               isCopyConstructor())),
+                                           hasArgument(0, CopyCtorArg))
+                                           .bind("ctorCall")))
+                               .bind("newVarDecl"))).bind("declStmt")))
         .bind("blockStmt");
   };
 
@@ -84,6 +82,11 @@ void UnnecessaryCopyInitialization::check(
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>("oldVarDecl");
   const auto *BlockStmt = Result.Nodes.getNodeAs<Stmt>("blockStmt");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
+  // Do not propose fixes if the DeclStmt has multiple VarDecls or in macros
+  // since we cannot place them correctly.
+  bool IssueFix =
+      Result.Nodes.getNodeAs<DeclStmt>("declStmt")->isSingleDecl() &&
+      !NewVar->getLocation().isMacroID();
 
   // A constructor that looks like T(const T& t, bool arg = false) counts as a
   // copy only when it is called with default arguments for the arguments after
@@ -93,14 +96,16 @@ void UnnecessaryCopyInitialization::check(
       return;
 
   if (OldVar == nullptr) {
-    handleCopyFromMethodReturn(*NewVar, *BlockStmt, *Result.Context);
+    handleCopyFromMethodReturn(*NewVar, *BlockStmt, IssueFix, *Result.Context);
   } else {
-    handleCopyFromLocalVar(*NewVar, *OldVar, *BlockStmt, *Result.Context);
+    handleCopyFromLocalVar(*NewVar, *OldVar, *BlockStmt, IssueFix,
+                           *Result.Context);
   }
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
-    const VarDecl &Var, const Stmt &BlockStmt, ASTContext &Context) {
+    const VarDecl &Var, const Stmt &BlockStmt, bool IssueFix,
+    ASTContext &Context) {
   bool IsConstQualified = Var.getType().isConstQualified();
   if (!IsConstQualified && !isOnlyUsedAsConst(Var, BlockStmt, Context))
     return;
@@ -114,12 +119,13 @@ void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
                               "const reference but is only used as const "
                               "reference; consider making it a const reference")
       << &Var;
-  recordFixes(Var, Context, Diagnostic);
+  if (IssueFix)
+    recordFixes(Var, Context, Diagnostic);
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
     const VarDecl &NewVar, const VarDecl &OldVar, const Stmt &BlockStmt,
-    ASTContext &Context) {
+    bool IssueFix, ASTContext &Context) {
   if (!isOnlyUsedAsConst(NewVar, BlockStmt, Context) ||
       !isOnlyUsedAsConst(OldVar, BlockStmt, Context))
     return;
@@ -128,7 +134,8 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
                          "local copy %0 of the variable %1 is never modified; "
                          "consider avoiding the copy")
                     << &NewVar << &OldVar;
-  recordFixes(NewVar, Context, Diagnostic);
+  if (IssueFix)
+    recordFixes(NewVar, Context, Diagnostic);
 }
 
 } // namespace performance

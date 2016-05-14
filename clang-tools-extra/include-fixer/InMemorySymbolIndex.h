@@ -1,4 +1,4 @@
-//===-- InMemoryXrefsDB.h ---------------------------------------*- C++ -*-===//
+//===-- InMemorySymbolIndex.h -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INMEMORYXREFSDB_H
-#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INMEMORYXREFSDB_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INMEMORYSYMBOLINDEX_H
+#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INMEMORYSYMBOLINDEX_H
 
-#include "XrefsDB.h"
+#include "SymbolIndex.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -19,10 +19,9 @@ namespace clang {
 namespace include_fixer {
 
 /// Xref database with fixed content.
-class InMemoryXrefsDB : public XrefsDB {
+class InMemorySymbolIndex : public SymbolIndex {
 public:
-  InMemoryXrefsDB(
-      const std::map<std::string, std::vector<std::string>> &LookupTable);
+  InMemorySymbolIndex(const std::vector<find_all_symbols::SymbolInfo> &Symbols);
 
   std::vector<clang::find_all_symbols::SymbolInfo>
   search(llvm::StringRef Identifier) override;
@@ -35,4 +34,4 @@ private:
 } // namespace include_fixer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INMEMORYXREFSDB_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_INMEMORYSYMBOLINDEX_H

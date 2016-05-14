@@ -40,6 +40,7 @@ template <> struct ScalarEnumerationTraits<ContextType> {
   static void enumeration(IO &io, ContextType &value) {
     io.enumCase(value, "Record", ContextType::Record);
     io.enumCase(value, "Namespace", ContextType::Namespace);
+    io.enumCase(value, "EnumDecl", ContextType::EnumDecl);
   }
 };
 
@@ -49,6 +50,9 @@ template <> struct ScalarEnumerationTraits<SymbolKind> {
     io.enumCase(value, "Function", SymbolKind::Function);
     io.enumCase(value, "Class", SymbolKind::Class);
     io.enumCase(value, "TypedefName", SymbolKind::TypedefName);
+    io.enumCase(value, "EnumDecl", SymbolKind::EnumDecl);
+    io.enumCase(value, "EnumConstantDecl", SymbolKind::EnumConstantDecl);
+    io.enumCase(value, "Unknown", SymbolKind::Unknown);
   }
 };
 
@@ -66,8 +70,8 @@ namespace clang {
 namespace find_all_symbols {
 
 SymbolInfo::SymbolInfo(llvm::StringRef Name, SymbolKind Type,
-                       llvm::StringRef FilePath,
-                       const std::vector<Context> &Contexts, int LineNumber)
+                       llvm::StringRef FilePath, int LineNumber,
+                       const std::vector<Context> &Contexts)
     : Name(Name), Type(Type), FilePath(FilePath), Contexts(Contexts),
       LineNumber(LineNumber) {}
 

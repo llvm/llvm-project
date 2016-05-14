@@ -676,73 +676,98 @@ def setupSysPath():
         # This is to locate the lldb.py module.  Insert it right after sys.path[0].
         sys.path[1:1] = [lldbPythonDir]
 
+
+def visit_file(dir, name):
+    # Try to match the regexp pattern, if specified.
+    if configuration.regexp:
+        import re
+        if not re.search(configuration.regexp, name):
+            # We didn't match the regex, we're done.
+            return
+
+    # We found a match for our test.  Add it to the suite.
+
+    # Update the sys.path first.
+    if not sys.path.count(dir):
+        sys.path.insert(0, dir)
+    base = os.path.splitext(name)[0]
+
+    # Thoroughly check the filterspec against the base module and admit
+    # the (base, filterspec) combination only when it makes sense.
+    filterspec = None
+    for filterspec in configuration.filters:
+        # Optimistically set the flag to True.
+        filtered = True
+        module = __import__(base)
+        parts = filterspec.split('.')
+        obj = module
+        for part in parts:
+            try:
+                parent, obj = obj, getattr(obj, part)
+            except AttributeError:
+                # The filterspec has failed.
+                filtered = False
+                break
+
+        # If filtered, we have a good filterspec.  Add it.
+        if filtered:
+            # print("adding filter spec %s to module %s" % (filterspec, module))
+            configuration.suite.addTests(
+                unittest2.defaultTestLoader.loadTestsFromName(filterspec, module))
+            continue
+
+    # Forgo this module if the (base, filterspec) combo is invalid
+    if configuration.filters and not filtered:
+        return
+
+    if not filterspec or not filtered:
+        # Add the entire file's worth of tests since we're not filtered.
+        # Also the fail-over case when the filterspec branch
+        # (base, filterspec) combo doesn't make sense.
+        configuration.suite.addTests(unittest2.defaultTestLoader.loadTestsFromName(base))
+
+
 def visit(prefix, dir, names):
     """Visitor function for os.path.walk(path, visit, arg)."""
 
     dir_components = set(dir.split(os.sep))
     excluded_components = set(['.svn', '.git'])
     if dir_components.intersection(excluded_components):
-        #print("Detected an excluded dir component: %s" % dir)
         return
 
-    for name in names:
-        if '.py' == os.path.splitext(name)[1] and name.startswith(prefix):
+    # Gather all the Python test file names that follow the Test*.py pattern.
+    python_test_files = [
+        name
+        for name in names
+        if name.endswith('.py') and name.startswith(prefix)]
 
+    # Visit all the python test files.
+    for name in python_test_files:
+        try:
+            # Ensure we error out if we have multiple tests with the same
+            # base name.
+            # Future improvement: find all the places where we work with base
+            # names and convert to full paths.  We have directory structure
+            # to disambiguate these, so we shouldn't need this constraint.
             if name in configuration.all_tests:
                 raise Exception("Found multiple tests with the name %s" % name)
             configuration.all_tests.add(name)
 
-            # Try to match the regexp pattern, if specified.
-            if configuration.regexp:
-                import re
-                if re.search(configuration.regexp, name):
-                    #print("Filename: '%s' matches pattern: '%s'" % (name, regexp))
-                    pass
-                else:
-                    #print("Filename: '%s' does not match pattern: '%s'" % (name, regexp))
-                    continue
+            # Run the relevant tests in the python file.
+            visit_file(dir, name)
+        except Exception as ex:
+            # Convert this exception to a test event error for the file.
+            test_filename = os.path.abspath(os.path.join(dir, name))
+            if configuration.results_formatter_object is not None:
+                # Grab the backtrace for the exception.
+                import traceback
+                backtrace = traceback.format_exc()
 
-            # We found a match for our test.  Add it to the suite.
-
-            # Update the sys.path first.
-            if not sys.path.count(dir):
-                sys.path.insert(0, dir)
-            base = os.path.splitext(name)[0]
-
-            # Thoroughly check the filterspec against the base module and admit
-            # the (base, filterspec) combination only when it makes sense.
-            filterspec = None
-            for filterspec in configuration.filters:
-                # Optimistically set the flag to True.
-                filtered = True
-                module = __import__(base)
-                parts = filterspec.split('.')
-                obj = module
-                for part in parts:
-                    try:
-                        parent, obj = obj, getattr(obj, part)
-                    except AttributeError:
-                        # The filterspec has failed.
-                        filtered = False
-                        break
-
-                # If filtered, we have a good filterspec.  Add it.
-                if filtered:
-                    #print("adding filter spec %s to module %s" % (filterspec, module))
-                    configuration.suite.addTests(
-                        unittest2.defaultTestLoader.loadTestsFromName(filterspec, module))
-                    continue
-
-            # Forgo this module if the (base, filterspec) combo is invalid
-            if configuration.filters and not filtered:
-                continue
-
-            # Add either the filtered test case(s) (which is done before) or the entire test class.
-            if not filterspec or not filtered:
-                # A simple case of just the module name.  Also the failover case
-                # from the filterspec branch when the (base, filterspec) combo
-                # doesn't make sense.
-                configuration.suite.addTests(unittest2.defaultTestLoader.loadTestsFromName(base))
+                # Generate the test event.
+                configuration.results_formatter_object.handle_event(
+                    EventBuilder.event_for_job_test_add_error(
+                        test_filename, ex, backtrace))
+            raise
 
 
 def disabledynamics():

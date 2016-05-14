@@ -5280,7 +5280,7 @@ __kmp_env_initialize( char const * string ) {
             if(__kmp_affinity_verbose)
                 KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
         }
-# if HWLOC_API_VERSION >= 0x00020000
+#  if HWLOC_API_VERSION >= 0x00020000
         // new hwloc API
         hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L1CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
         hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L2CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
@@ -5290,10 +5290,10 @@ __kmp_env_initialize( char const * string ) {
         hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L1ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
         hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L2ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
         hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L3ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-# else
+#  else
         // old hwloc API
         hwloc_topology_ignore_type(__kmp_hwloc_topology, HWLOC_OBJ_CACHE);
-# endif
+#  endif
 # endif
         if ( __kmp_affinity_type == affinity_disabled ) {
             KMP_AFFINITY_DISABLE();
