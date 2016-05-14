@@ -79,7 +79,6 @@ void HexagonInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   }
   if (HexagonMCInstrInfo::isOuterLoop(*MI)) {
     OS << Separator;
-    Separator = " ";
     MCInst ME;
     ME.setOpcode(Hexagon::ENDLOOP1);
     printInstruction(&ME, OS);

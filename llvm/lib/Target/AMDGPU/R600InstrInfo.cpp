@@ -337,10 +337,13 @@ R600InstrInfo::getSrcs(MachineInstr *MI) const {
       continue;
     }
     if (Reg == AMDGPU::ALU_LITERAL_X) {
-      MachineOperand &Imm = MI->getOperand(
+      MachineOperand &Operand = MI->getOperand(
           getOperandIdx(MI->getOpcode(), AMDGPU::OpName::literal));
-      Result.push_back(std::make_pair(&MO, Imm.getImm()));
-      continue;
+      if (Operand.isImm()) {
+        Result.push_back(std::make_pair(&MO, Operand.getImm()));
+        continue;
+      }
+      assert(Operand.isGlobal());
     }
     Result.push_back(std::make_pair(&MO, 0));
   }

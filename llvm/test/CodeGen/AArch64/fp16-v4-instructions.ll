@@ -15,7 +15,7 @@ entry:
 define <4 x half> @build_h4(<4 x half> %a) {
 entry:
 ; CHECK-LABEL: build_h4:
-; CHECK: movz [[GPR:w[0-9]+]], #0x3ccd
+; CHECK: movz [[GPR:w[0-9]+]], #15565
 ; CHECK: dup v0.4h, [[GPR]]
   ret <4 x half> <half 0xH3CCD, half 0xH3CCD, half 0xH3CCD, half 0xH3CCD>
 }
@@ -176,7 +176,7 @@ define <4 x half> @sitofp_i64(<4 x i64> %a) #0 {
 
 define <4 x half> @uitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-LABEL: uitofp_i8:
-; CHECK-NEXT: bic v0.4h, #0xff, lsl #8
+; CHECK-NEXT: bic v0.4h, #255, lsl #8
 ; CHECK-NEXT: ushll [[OP1:v[0-9]+\.4s]], v0.4h, #0
 ; CHECK-NEXT: ucvtf [[OP2:v[0-9]+\.4s]], [[OP1]]
 ; CHECK-NEXT: fcvtn v0.4h, [[OP2]]

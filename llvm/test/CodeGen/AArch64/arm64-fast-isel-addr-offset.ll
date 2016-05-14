@@ -9,7 +9,7 @@ entry:
 ; CHECK: @foo
 ; CHECK: adrp x[[REG:[0-9]+]], _sortlist@GOTPAGE
 ; CHECK: ldr x[[REG1:[0-9]+]], [x[[REG]], _sortlist@GOTPAGEOFF]
-; CHECK: movz x[[REG2:[0-9]+]], #0x4e20
+; CHECK: movz x[[REG2:[0-9]+]], #20000
 ; CHECK: add x[[REG3:[0-9]+]], x[[REG1]], x[[REG2]]
 ; CHECK: ldr w0, [x[[REG3]]]
 ; CHECK: ret
@@ -22,7 +22,7 @@ entry:
 ; CHECK: @foo2
 ; CHECK: adrp x[[REG:[0-9]+]], _sortlist2@GOTPAGE
 ; CHECK: ldr x[[REG1:[0-9]+]], [x[[REG]], _sortlist2@GOTPAGEOFF]
-; CHECK: movz x[[REG2:[0-9]+]], #0x9c40
+; CHECK: movz x[[REG2:[0-9]+]], #40000
 ; CHECK: add x[[REG3:[0-9]+]], x[[REG1]], x[[REG2]]
 ; CHECK: ldr x0, [x[[REG3]]]
 ; CHECK: ret
@@ -37,9 +37,9 @@ entry:
 define signext i8 @foo3() nounwind ssp {
 entry:
 ; CHECK: @foo3
-; CHECK: movz x[[REG:[0-9]+]], #0xb3a, lsl #32
-; CHECK: movk x[[REG]], #0x73ce, lsl #16
-; CHECK: movk x[[REG]], #0x2ff2
+; CHECK: movz x[[REG:[0-9]+]], #2874, lsl #32
+; CHECK: movk x[[REG]], #29646, lsl #16
+; CHECK: movk x[[REG]], #12274
   %0 = load i8*, i8** @pd2, align 8
   %arrayidx = getelementptr inbounds i8, i8* %0, i64 12345678901234
   %1 = load i8, i8* %arrayidx, align 1

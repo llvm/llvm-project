@@ -185,6 +185,40 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
 }
 
 namespace {
+/// A struct to densely store the state of an instruction after unrolling at
+/// each iteration.
+///
+/// This is designed to work like a tuple of <Instruction *, int> for the
+/// purposes of hashing and lookup, but to be able to associate two boolean
+/// states with each key.
+struct UnrolledInstState {
+  Instruction *I;
+  int Iteration : 30;
+  unsigned IsFree : 1;
+  unsigned IsCounted : 1;
+};
+
+/// Hashing and equality testing for a set of the instruction states.
+struct UnrolledInstStateKeyInfo {
+  typedef DenseMapInfo<Instruction *> PtrInfo;
+  typedef DenseMapInfo<std::pair<Instruction *, int>> PairInfo;
+  static inline UnrolledInstState getEmptyKey() {
+    return {PtrInfo::getEmptyKey(), 0, 0, 0};
+  }
+  static inline UnrolledInstState getTombstoneKey() {
+    return {PtrInfo::getTombstoneKey(), 0, 0, 0};
+  }
+  static inline unsigned getHashValue(const UnrolledInstState &S) {
+    return PairInfo::getHashValue({S.I, S.Iteration});
+  }
+  static inline bool isEqual(const UnrolledInstState &LHS,
+                             const UnrolledInstState &RHS) {
+    return PairInfo::isEqual({LHS.I, LHS.Iteration}, {RHS.I, RHS.Iteration});
+  }
+};
+}
+
+namespace {
 struct EstimatedUnrollCost {
   /// \brief The estimated cost after unrolling.
   int UnrolledCost;
@@ -218,24 +252,122 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
   assert(UnrollMaxIterationsCountToAnalyze < (INT_MAX / 2) &&
          "The unroll iterations max is too large!");
 
+  // Only analyze inner loops. We can't properly estimate cost of nested loops
+  // and we won't visit inner loops again anyway.
+  if (!L->empty())
+    return None;
+
   // Don't simulate loops with a big or unknown tripcount
   if (!UnrollMaxIterationsCountToAnalyze || !TripCount ||
       TripCount > UnrollMaxIterationsCountToAnalyze)
     return None;
 
   SmallSetVector<BasicBlock *, 16> BBWorklist;
+  SmallSetVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitWorklist;
   DenseMap<Value *, Constant *> SimplifiedValues;
   SmallVector<std::pair<Value *, Constant *>, 4> SimplifiedInputValues;
 
   // The estimated cost of the unrolled form of the loop. We try to estimate
   // this by simplifying as much as we can while computing the estimate.
   int UnrolledCost = 0;
+
   // We also track the estimated dynamic (that is, actually executed) cost in
   // the rolled form. This helps identify cases when the savings from unrolling
   // aren't just exposing dead control flows, but actual reduced dynamic
   // instructions due to the simplifications which we expect to occur after
   // unrolling.
   int RolledDynamicCost = 0;
+
+  // We track the simplification of each instruction in each iteration. We use
+  // this to recursively merge costs into the unrolled cost on-demand so that
+  // we don't count the cost of any dead code. This is essentially a map from
+  // <instruction, int> to <bool, bool>, but stored as a densely packed struct.
+  DenseSet<UnrolledInstState, UnrolledInstStateKeyInfo> InstCostMap;
+
+  // A small worklist used to accumulate cost of instructions from each
+  // observable and reached root in the loop.
+  SmallVector<Instruction *, 16> CostWorklist;
+
+  // PHI-used worklist used between iterations while accumulating cost.
+  SmallVector<Instruction *, 4> PHIUsedList;
+
+  // Helper function to accumulate cost for instructions in the loop.
+  auto AddCostRecursively = [&](Instruction &RootI, int Iteration) {
+    assert(Iteration >= 0 && "Cannot have a negative iteration!");
+    assert(CostWorklist.empty() && "Must start with an empty cost list");
+    assert(PHIUsedList.empty() && "Must start with an empty phi used list");
+    CostWorklist.push_back(&RootI);
+    for (;; --Iteration) {
+      do {
+        Instruction *I = CostWorklist.pop_back_val();
+
+        // InstCostMap only uses I and Iteration as a key, the other two values
+        // don't matter here.
+        auto CostIter = InstCostMap.find({I, Iteration, 0, 0});
+        if (CostIter == InstCostMap.end())
+          // If an input to a PHI node comes from a dead path through the loop
+          // we may have no cost data for it here. What that actually means is
+          // that it is free.
+          continue;
+        auto &Cost = *CostIter;
+        if (Cost.IsCounted)
+          // Already counted this instruction.
+          continue;
+
+        // Mark that we are counting the cost of this instruction now.
+        Cost.IsCounted = true;
+
+        // If this is a PHI node in the loop header, just add it to the PHI set.
+        if (auto *PhiI = dyn_cast<PHINode>(I))
+          if (PhiI->getParent() == L->getHeader()) {
+            assert(Cost.IsFree && "Loop PHIs shouldn't be evaluated as they "
+                                  "inherently simplify during unrolling.");
+            if (Iteration == 0)
+              continue;
+
+            // Push the incoming value from the backedge into the PHI used list
+            // if it is an in-loop instruction. We'll use this to populate the
+            // cost worklist for the next iteration (as we count backwards).
+            if (auto *OpI = dyn_cast<Instruction>(
+                    PhiI->getIncomingValueForBlock(L->getLoopLatch())))
+              if (L->contains(OpI))
+                PHIUsedList.push_back(OpI);
+            continue;
+          }
+
+        // First accumulate the cost of this instruction.
+        if (!Cost.IsFree) {
+          UnrolledCost += TTI.getUserCost(I);
+          DEBUG(dbgs() << "Adding cost of instruction (iteration " << Iteration
+                       << "): ");
+          DEBUG(I->dump());
+        }
+
+        // We must count the cost of every operand which is not free,
+        // recursively. If we reach a loop PHI node, simply add it to the set
+        // to be considered on the next iteration (backwards!).
+        for (Value *Op : I->operands()) {
+          // Check whether this operand is free due to being a constant or
+          // outside the loop.
+          auto *OpI = dyn_cast<Instruction>(Op);
+          if (!OpI || !L->contains(OpI))
+            continue;
+
+          // Otherwise accumulate its cost.
+          CostWorklist.push_back(OpI);
+        }
+      } while (!CostWorklist.empty());
+
+      if (PHIUsedList.empty())
+        // We've exhausted the search.
+        break;
+
+      assert(Iteration > 0 &&
+             "Cannot track PHI-used values past the first iteration!");
+      CostWorklist.append(PHIUsedList.begin(), PHIUsedList.end());
+      PHIUsedList.clear();
+    }
+  };
 
   // Ensure that we don't violate the loop structure invariants relied on by
   // this analysis.
@@ -291,22 +423,32 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
       // it.  We don't change the actual IR, just count optimization
       // opportunities.
       for (Instruction &I : *BB) {
-        int InstCost = TTI.getUserCost(&I);
+        // Track this instruction's expected baseline cost when executing the
+        // rolled loop form.
+        RolledDynamicCost += TTI.getUserCost(&I);
 
         // Visit the instruction to analyze its loop cost after unrolling,
-        // and if the visitor returns false, include this instruction in the
-        // unrolled cost.
-        if (!Analyzer.visit(I))
-          UnrolledCost += InstCost;
-        else {
-          DEBUG(dbgs() << "  " << I
-                       << " would be simplified if loop is unrolled.\n");
-          (void)0;
-        }
+        // and if the visitor returns true, mark the instruction as free after
+        // unrolling and continue.
+        bool IsFree = Analyzer.visit(I);
+        bool Inserted = InstCostMap.insert({&I, (int)Iteration,
+                                           (unsigned)IsFree,
+                                           /*IsCounted*/ false}).second;
+        (void)Inserted;
+        assert(Inserted && "Cannot have a state for an unvisited instruction!");
 
-        // Also track this instructions expected cost when executing the rolled
-        // loop form.
-        RolledDynamicCost += InstCost;
+        if (IsFree)
+          continue;
+
+        // If the instruction might have a side-effect recursively account for
+        // the cost of it and all the instructions leading up to it.
+        if (I.mayHaveSideEffects())
+          AddCostRecursively(I, Iteration);
+
+        // Can't properly model a cost of a call.
+        // FIXME: With a proper cost model we should be able to do it.
+        if(isa<CallInst>(&I))
+          return None;
 
         // If unrolled body turns out to be too big, bail out.
         if (UnrolledCost > MaxUnrolledLoopSize) {
@@ -335,6 +477,8 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
                   cast<ConstantInt>(SimpleCond)->isZero() ? 1 : 0);
             if (L->contains(Succ))
               BBWorklist.insert(Succ);
+            else
+              ExitWorklist.insert({BB, Succ});
             continue;
           }
         }
@@ -350,6 +494,8 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
                        .getCaseSuccessor();
           if (L->contains(Succ))
             BBWorklist.insert(Succ);
+          else
+            ExitWorklist.insert({BB, Succ});
           continue;
         }
       }
@@ -358,6 +504,8 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
       for (BasicBlock *Succ : successors(BB))
         if (L->contains(Succ))
           BBWorklist.insert(Succ);
+        else
+          ExitWorklist.insert({BB, Succ});
     }
 
     // If we found no optimization opportunities on the first iteration, we
@@ -368,6 +516,23 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
       return None;
     }
   }
+
+  while (!ExitWorklist.empty()) {
+    BasicBlock *ExitingBB, *ExitBB;
+    std::tie(ExitingBB, ExitBB) = ExitWorklist.pop_back_val();
+
+    for (Instruction &I : *ExitBB) {
+      auto *PN = dyn_cast<PHINode>(&I);
+      if (!PN)
+        break;
+
+      Value *Op = PN->getIncomingValueForBlock(ExitingBB);
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        if (L->contains(OpI))
+          AddCostRecursively(*OpI, TripCount - 1);
+    }
+  }
+
   DEBUG(dbgs() << "Analysis finished:\n"
                << "UnrolledCost: " << UnrolledCost << ", "
                << "RolledDynamicCost: " << RolledDynamicCost << "\n");

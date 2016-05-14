@@ -241,7 +241,7 @@ bool Mips16DAGToDAGISel::selectAddr16(
 
 /// Select instructions not customized! Used for
 /// expanded, promoted and normal instructions
-std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
+bool Mips16DAGToDAGISel::trySelect(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
   SDLoc DL(Node);
 
@@ -285,9 +285,8 @@ std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
     SDNode *AddCarry = CurDAG->getMachineNode(Addu_op, DL, VT,
                                               SDValue(Carry,0), RHS);
 
-    SDNode *Result = CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS,
-                                          SDValue(AddCarry,0));
-    return std::make_pair(true, Result);
+    CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS, SDValue(AddCarry, 0));
+    return true;
   }
 
   /// Mul with two results
@@ -303,18 +302,19 @@ std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
       ReplaceUses(SDValue(Node, 1), SDValue(LoHi.second, 0));
 
     CurDAG->RemoveDeadNode(Node);
-    return std::make_pair(true, nullptr);
+    return true;
   }
 
   case ISD::MULHS:
   case ISD::MULHU: {
     MultOpc = (Opcode == ISD::MULHU ? Mips::MultuRxRy16 : Mips::MultRxRy16);
-    SDNode *Result = selectMULT(Node, MultOpc, DL, NodeTy, false, true).second;
-    return std::make_pair(true, Result);
+    auto LoHi = selectMULT(Node, MultOpc, DL, NodeTy, false, true);
+    ReplaceNode(Node, LoHi.second);
+    return true;
   }
   }
 
-  return std::make_pair(false, nullptr);
+  return false;
 }
 
 FunctionPass *llvm::createMips16ISelDag(MipsTargetMachine &TM) {

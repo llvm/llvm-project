@@ -130,7 +130,6 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
 
   // Second pass - check each loop instruction to see if it needs to be
   // converted.
-  InstOffset = 0;
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     InstOffset = BlockToInstOffset[&MBB];

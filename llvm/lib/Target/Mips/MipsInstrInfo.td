@@ -622,6 +622,12 @@ def brtarget    : Operand<OtherVT> {
   let DecoderMethod = "DecodeBranchTarget";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
 }
+def brtarget1SImm16 : Operand<OtherVT> {
+  let EncoderMethod = "getBranchTargetOpValue1SImm16";
+  let OperandType = "OPERAND_PCREL";
+  let DecoderMethod = "DecodeBranchTarget1SImm16";
+  let ParserMatchClass = MipsJumpTargetAsmOperand;
+}
 def calltarget  : Operand<iPTR> {
   let EncoderMethod = "getJumpTargetOpValue";
   let ParserMatchClass = MipsJumpTargetAsmOperand;

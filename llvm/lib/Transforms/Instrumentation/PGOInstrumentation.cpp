@@ -111,6 +111,16 @@ static cl::opt<unsigned> MaxNumAnnotations(
     cl::desc("Max number of annotations for a single indirect "
              "call callsite"));
 
+// Command line option to enable/disable the warning about missing profile
+// information.
+static cl::opt<bool> NoPGOWarnMissing("no-pgo-warn-missing", cl::init(false),
+                                      cl::Hidden);
+
+// Command line option to enable/disable the warning about a hash mismatch in
+// the profile data.
+static cl::opt<bool> NoPGOWarnMismatch("no-pgo-warn-mismatch", cl::init(false),
+                                       cl::Hidden);
+
 namespace {
 class PGOInstrumentationGenLegacyPass : public ModulePass {
 public:
@@ -575,11 +585,16 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
   ErrorOr<InstrProfRecord> Result =
       PGOReader->getInstrProfRecord(FuncInfo.FuncName, FuncInfo.FunctionHash);
   if (std::error_code EC = Result.getError()) {
-    if (EC == instrprof_error::unknown_function)
+    if (EC == instrprof_error::unknown_function) {
       NumOfPGOMissing++;
-    else if (EC == instrprof_error::hash_mismatch ||
-             EC == llvm::instrprof_error::malformed)
+      if (NoPGOWarnMissing)
+        return false;
+    } else if (EC == instrprof_error::hash_mismatch ||
+               EC == llvm::instrprof_error::malformed) {
       NumOfPGOMismatch++;
+      if (NoPGOWarnMismatch)
+        return false;
+    }
 
     std::string Msg = EC.message() + std::string(" ") + F.getName().str();
     Ctx.diagnose(

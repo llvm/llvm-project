@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_FIELDLISTRECORDBUILDER_H
 
 #include "llvm/DebugInfo/CodeView/ListRecordBuilder.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 
 namespace llvm {
 namespace codeview {
@@ -46,31 +47,15 @@ private:
 public:
   FieldListRecordBuilder();
 
-  void writeBaseClass(MemberAccess Access, TypeIndex Type, uint64_t Offset);
-  void writeEnumerate(MemberAccess Access, uint64_t Value, StringRef Name);
-  void writeIndirectVirtualBaseClass(MemberAccess Access, TypeIndex Type,
-                                     TypeIndex VirtualBasePointerType,
-                                     int64_t VirtualBasePointerOffset,
-                                     uint64_t SlotIndex);
-  void writeMember(MemberAccess Access, TypeIndex Type, uint64_t Offset,
-                   StringRef Name);
-  void writeOneMethod(MemberAccess Access, MethodKind Kind,
-                      MethodOptions Options, TypeIndex Type,
-                      int32_t VTableSlotOffset, StringRef Name);
-  void writeOneMethod(const MethodInfo &Method, StringRef Name);
-  void writeMethod(uint16_t OverloadCount, TypeIndex MethodList,
-                   StringRef Name);
-  void writeNestedType(TypeIndex Type, StringRef Name);
-  void writeStaticMember(MemberAccess Access, TypeIndex Type, StringRef Name);
-  void writeVirtualBaseClass(MemberAccess Access, TypeIndex Type,
-                             TypeIndex VirtualBasePointerType,
-                             int64_t VirtualBasePointerOffset,
-                             uint64_t SlotIndex);
-  void writeVirtualBaseClass(TypeRecordKind Kind, MemberAccess Access,
-                             TypeIndex Type, TypeIndex VirtualBasePointerType,
-                             int64_t VirtualBasePointerOffset,
-                             uint64_t SlotIndex);
-  void writeVirtualFunctionTablePointer(TypeIndex Type);
+  void writeBaseClass(const BaseClassRecord &Record);
+  void writeEnumerator(const EnumeratorRecord &Record);
+  void writeDataMember(const DataMemberRecord &Record);
+  void writeOneMethod(const OneMethodRecord &Record);
+  void writeOverloadedMethod(const OverloadedMethodRecord &Record);
+  void writeNestedType(const NestedTypeRecord &Record);
+  void writeStaticDataMember(const StaticDataMemberRecord &Record);
+  void writeVirtualBaseClass(const VirtualBaseClassRecord &Record);
+  void writeVFPtr(const VFPtrRecord &Type);
 };
 }
 }

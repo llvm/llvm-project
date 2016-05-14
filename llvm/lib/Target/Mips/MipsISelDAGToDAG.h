@@ -114,9 +114,9 @@ private:
   /// starting at bit zero.
   virtual bool selectVSplatMaskR(SDValue N, SDValue &Imm) const;
 
-  SDNode *SelectImpl(SDNode *N) override;
+  void Select(SDNode *N) override;
 
-  virtual std::pair<bool, SDNode*> selectNode(SDNode *Node) = 0;
+  virtual bool trySelect(SDNode *Node) = 0;
 
   // getImm - Return a target constant with the specified value.
   inline SDValue getImm(const SDNode *Node, uint64_t Imm) {

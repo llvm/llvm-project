@@ -40,8 +40,9 @@ public:
 
 private:
   Error writeHeader(raw_ostream &OS);
+  Error writeLoadCommands(raw_ostream &OS);
 
-  MachOYAML::Object Obj;
+  MachOYAML::Object &Obj;
   bool is64Bit;
 
   union {
@@ -52,6 +53,8 @@ private:
 
 Error MachOWriter::writeMachO(raw_ostream &OS) {
   if (auto Err = writeHeader(OS))
+    return Err;
+  if (auto Err = writeLoadCommands(OS))
     return Err;
   return Error::success();
 }
@@ -66,12 +69,29 @@ Error MachOWriter::writeHeader(raw_ostream &OS) {
   Header.flags = Obj.Header.flags;
   Header64.reserved = Obj.Header.reserved;
 
-  if (is64Bit) {
+  if (is64Bit)
     OS.write((const char *)&Header64, sizeof(MachO::mach_header_64));
-  }
   else
     OS.write((const char *)&Header, sizeof(MachO::mach_header));
 
+  return Error::success();
+}
+
+Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
+  for (auto &LC : Obj.LoadCommands) {
+    MachO::load_command LCTemp;
+    LCTemp.cmd = LC->cmd;
+    LCTemp.cmdsize = LC->cmdsize;
+    OS.write(reinterpret_cast<const char *>(&LCTemp),
+             sizeof(MachO::load_command));
+    auto remaining_size = LC->cmdsize - sizeof(MachO::load_command);
+    if (remaining_size > 0) {
+      // TODO: Replace all this once the load command data is present in yaml.
+      std::vector<char> fill_data;
+      fill_data.insert(fill_data.begin(), remaining_size, 0);
+      OS.write(fill_data.data(), remaining_size);
+    }
+  }
   return Error::success();
 }
 

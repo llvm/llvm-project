@@ -129,7 +129,7 @@ namespace AMDGPUAS {
 enum AddressSpaces : unsigned {
   PRIVATE_ADDRESS  = 0, ///< Address space for private memory.
   GLOBAL_ADDRESS   = 1, ///< Address space for global memory (RAT0, VTX0).
-  CONSTANT_ADDRESS = 2, ///< Address space for constant memory
+  CONSTANT_ADDRESS = 2, ///< Address space for constant memory (VTX2)
   LOCAL_ADDRESS    = 3, ///< Address space for local memory.
   FLAT_ADDRESS     = 4, ///< Address space for flat memory.
   REGION_ADDRESS   = 5, ///< Address space for region memory.

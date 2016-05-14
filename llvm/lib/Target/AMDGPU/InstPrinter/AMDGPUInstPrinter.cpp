@@ -650,8 +650,15 @@ void AMDGPUInstPrinter::printOModSI(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printLiteral(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
-  int32_t Imm = MI->getOperand(OpNo).getImm();
-  O << Imm << '(' << BitsToFloat(Imm) << ')';
+  const MCOperand &Op = MI->getOperand(OpNo);
+  assert(Op.isImm() || Op.isExpr());
+  if (Op.isImm()) {
+    int64_t Imm = Op.getImm();
+    O << Imm << '(' << BitsToFloat(Imm) << ')';
+  }
+  if (Op.isExpr()) {
+    Op.getExpr()->print(O << '@', &MAI);
+  }
 }
 
 void AMDGPUInstPrinter::printLast(const MCInst *MI, unsigned OpNo,

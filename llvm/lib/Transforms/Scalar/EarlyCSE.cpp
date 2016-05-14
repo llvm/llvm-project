@@ -301,7 +301,8 @@ public:
   /// values.
   ///
   /// It uses the same generation count as loads.
-  typedef ScopedHashTable<CallValue, std::pair<Value *, unsigned>> CallHTType;
+  typedef ScopedHashTable<CallValue, std::pair<Instruction *, unsigned>>
+      CallHTType;
   CallHTType AvailableCalls;
 
   /// \brief This is the current generation of the memory value.
@@ -654,7 +655,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (CallValue::canHandle(Inst)) {
       // If we have an available version of this call, and if it is the right
       // generation, replace this instruction.
-      std::pair<Value *, unsigned> InVal = AvailableCalls.lookup(Inst);
+      std::pair<Instruction *, unsigned> InVal = AvailableCalls.lookup(Inst);
       if (InVal.first != nullptr && InVal.second == CurrentGeneration) {
         DEBUG(dbgs() << "EarlyCSE CSE CALL: " << *Inst
                      << "  to: " << *InVal.first << '\n');
@@ -668,7 +669,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
       // Otherwise, remember that we have this instruction.
       AvailableCalls.insert(
-          Inst, std::pair<Value *, unsigned>(Inst, CurrentGeneration));
+          Inst, std::pair<Instruction *, unsigned>(Inst, CurrentGeneration));
       continue;
     }
 

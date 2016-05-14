@@ -15,7 +15,7 @@ entry:
 }
 
 ; CHECK-LABEL: _test2
-; CHECK: movi.16b  v0, #0x3f
+; CHECK: movi.16b  v0, #63
 ; CHECK: str  q0, [sp, #-16]!
 ; CHECK: mov  x8, sp
 ; CHECK: ldr s0, [x8, w1, sxtw #2]

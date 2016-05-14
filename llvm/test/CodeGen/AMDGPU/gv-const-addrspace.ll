@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
 @b = internal addrspace(2) constant [1 x i16] [ i16 7 ], align 2
@@ -10,13 +11,10 @@
 ; FUNC-LABEL: {{^}}float:
 ; GCN: s_load_dword
 
-; EG-DAG: MOV {{\** *}}T2.X
-; EG-DAG: MOV {{\** *}}T3.X
-; EG-DAG: MOV {{\** *}}T4.X
-; EG-DAG: MOV {{\** *}}T5.X
-; EG-DAG: MOV {{\** *}}T6.X
-; EG: MOVA_INT
-
+; EG: VTX_READ_32
+; EG: @float_gv
+; EG-NOT: MOVA_INT
+; EG-NOT: MOV
 define void @float(float addrspace(1)* %out, i32 %index) {
 entry:
   %0 = getelementptr inbounds [5 x float], [5 x float] addrspace(2)* @float_gv, i32 0, i32 %index
@@ -31,13 +29,10 @@ entry:
 
 ; GCN: s_load_dword
 
-; EG-DAG: MOV {{\** *}}T2.X
-; EG-DAG: MOV {{\** *}}T3.X
-; EG-DAG: MOV {{\** *}}T4.X
-; EG-DAG: MOV {{\** *}}T5.X
-; EG-DAG: MOV {{\** *}}T6.X
-; EG: MOVA_INT
-
+; EG: VTX_READ_32
+; EG: @i32_gv
+; EG-NOT: MOVA_INT
+; EG-NOT: MOV
 define void @i32(i32 addrspace(1)* %out, i32 %index) {
 entry:
   %0 = getelementptr inbounds [5 x i32], [5 x i32] addrspace(2)* @i32_gv, i32 0, i32 %index
@@ -54,6 +49,10 @@ entry:
 ; FUNC-LABEL: {{^}}struct_foo_gv_load:
 ; GCN: s_load_dword
 
+; EG: VTX_READ_32
+; EG: @struct_foo_gv
+; EG-NOT: MOVA_INT
+; EG-NOT: MOV
 define void @struct_foo_gv_load(i32 addrspace(1)* %out, i32 %index) {
   %gep = getelementptr inbounds [1 x %struct.foo], [1 x %struct.foo] addrspace(2)* @struct_foo_gv, i32 0, i32 0, i32 1, i32 %index
   %load = load i32, i32 addrspace(2)* %gep, align 4
@@ -68,6 +67,11 @@ define void @struct_foo_gv_load(i32 addrspace(1)* %out, i32 %index) {
 
 ; FUNC-LABEL: {{^}}array_v1_gv_load:
 ; GCN: s_load_dword
+
+; EG: VTX_READ_32
+; EG: @array_v1_gv
+; EG-NOT: MOVA_INT
+; EG-NOT: MOV
 define void @array_v1_gv_load(<1 x i32> addrspace(1)* %out, i32 %index) {
   %gep = getelementptr inbounds [4 x <1 x i32>], [4 x <1 x i32>] addrspace(2)* @array_v1_gv, i32 0, i32 %index
   %load = load <1 x i32>, <1 x i32> addrspace(2)* %gep, align 4
@@ -75,6 +79,11 @@ define void @array_v1_gv_load(<1 x i32> addrspace(1)* %out, i32 %index) {
   ret void
 }
 
+; FUNC-LABEL: {{^}}gv_addressing_in_branch:
+
+; EG: VTX_READ_32
+; EG: @float_gv
+; EG-NOT: MOVA_INT
 define void @gv_addressing_in_branch(float addrspace(1)* %out, i32 %index, i32 %a) {
 entry:
   %0 = icmp eq i32 0, %a

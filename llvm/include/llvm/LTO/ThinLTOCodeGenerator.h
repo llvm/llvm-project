@@ -121,7 +121,6 @@ public:
   /// Cache policy: interval (seconds) between two prune of the cache. Set to a
   /// negative value (default) to disable pruning. A value of 0 will be ignored.
   void setCachePruningInterval(int Interval) {
-    fprintf(stderr, "setCachePruningInterval %d\n", Interval);
     if (Interval)
       CacheOptions.PruningInterval = Interval;
   }

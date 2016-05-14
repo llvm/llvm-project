@@ -44,6 +44,11 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
 // AMDGPU DAG Nodes
 //
 
+def AMDGPUconstdata_ptr : SDNode<
+  "AMDGPUISD::CONST_DATA_PTR", SDTypeProfile <1, 1, [SDTCisVT<0, iPTR>,
+                                                     SDTCisVT<0, iPTR>]>
+>;
+
 // This argument to this node is a dword address.
 def AMDGPUdwordaddr : SDNode<"AMDGPUISD::DWORDADDR", SDTIntUnaryOp>;
 

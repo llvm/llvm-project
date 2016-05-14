@@ -16,6 +16,8 @@
 
 namespace llvm {
 
+MachOYAML::LoadCommand::~LoadCommand() {}
+
 namespace yaml {
 
 void MappingTraits<MachOYAML::FileHeader>::mapping(
@@ -40,7 +42,16 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
     IO.mapTag("!mach-o", true);
   }
   IO.mapRequired("FileHeader", Object.Header);
+  IO.mapOptional("LoadCommands", Object.LoadCommands);
   IO.setContext(nullptr);
+}
+
+void MappingTraits<std::unique_ptr<MachOYAML::LoadCommand>>::mapping(
+    IO &IO, std::unique_ptr<MachOYAML::LoadCommand> &LoadCommand) {
+  if (!IO.outputting())
+    LoadCommand.reset(new MachOYAML::LoadCommand());
+  IO.mapRequired("cmd", LoadCommand->cmd);
+  IO.mapRequired("cmdsize", LoadCommand->cmdsize);
 }
 
 } // namespace llvm::yaml

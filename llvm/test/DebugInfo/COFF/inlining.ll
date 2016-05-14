@@ -72,28 +72,24 @@
 ; We should only the LF_FUNC_ID records that we needed to reference.
 ; OBJ: CodeViewTypes [
 ; OBJ:   Section: .debug$T (4)
-; OBJ:   ArgList {
+; OBJ:   ArgList (0x1000) {
 ; OBJ:     TypeLeafKind: LF_ARGLIST (0x1201)
-; OBJ:     TypeIndex: 0x1000
 ; OBJ:     NumArgs: 0
 ; OBJ:   }
-; OBJ:   ProcedureType {
+; OBJ:   Procedure (0x1001) {
 ; OBJ:     TypeLeafKind: LF_PROCEDURE (0x1008)
-; OBJ:     TypeIndex: 0x1001
 ; OBJ:     ReturnType: void (0x3)
 ; OBJ:     NumParameters: 0
 ; OBJ:     ArgListType: () (0x1000)
 ; OBJ:   }
-; OBJ:   FuncId {
+; OBJ:   FuncId (0x1002) {
 ; OBJ:     TypeLeafKind: LF_FUNC_ID (0x1601)
-; OBJ:     TypeIndex: 0x1002
 ; OBJ:     ParentScope: 0x0
 ; OBJ:     FunctionType: void () (0x1001)
 ; OBJ:     Name: bar
 ; OBJ:   }
-; OBJ:   FuncId {
+; OBJ:   FuncId (0x1003) {
 ; OBJ:     TypeLeafKind: LF_FUNC_ID (0x1601)
-; OBJ:     TypeIndex: 0x1003
 ; OBJ:     ParentScope: 0x0
 ; OBJ:     FunctionType: void () (0x1001)
 ; OBJ:     Name: foo

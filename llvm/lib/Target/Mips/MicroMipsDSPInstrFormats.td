@@ -242,3 +242,12 @@ class POOL32A_5B01RAC_FMT<string opstr, bits<8> op> : MMDSPInst<opstr> {
   let Inst{13-6}  = op;
   let Inst{5-0}   = 0b111100;
 }
+
+class POOL32I_IMMB0_FMT<string opstr, bits<5> op> : MMDSPInst<opstr> {
+  bits<16> offset;
+
+  let Inst{31-26} = 0b010000;
+  let Inst{25-21} = op;
+  let Inst{20-16} = 0;
+  let Inst{15-0} = offset;
+}

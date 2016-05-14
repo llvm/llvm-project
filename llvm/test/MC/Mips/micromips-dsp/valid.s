@@ -103,3 +103,5 @@
   wrdsp $5                     # CHECK: wrdsp $5                # encoding: [0x00,0xa7,0xd6,0x7c]
   wrdsp $5, 2                  # CHECK: wrdsp $5, 2             # encoding: [0x00,0xa0,0x96,0x7c]
   wrdsp $5, 31                 # CHECK: wrdsp $5                # encoding: [0x00,0xa7,0xd6,0x7c]
+  modsub $4, $5, $6            # CHECK: modsub $4, $5, $6       # encoding: [0x00,0xc5,0x22,0x95]
+  mulsaq_s.w.ph $ac0, $3, $2   # CHECK: mulsaq_s.w.ph $ac0, $3, $2 # encoding: [0x00,0x43,0x3c,0xbc]

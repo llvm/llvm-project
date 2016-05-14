@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
 
 ;CHECK: @func30
-;CHECK: movi.4h v1, #0x1
+;CHECK: movi.4h v1, #1
 ;CHECK: and.8b v0, v0, v1
 ;CHECK: ushll.4s  v0, v0, #0
 ;CHECK: str  q0, [x0]

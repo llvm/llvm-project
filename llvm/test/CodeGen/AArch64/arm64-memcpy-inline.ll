@@ -75,7 +75,7 @@ define void @t5(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t5:
 ; CHECK: strb wzr, [x0, #6]
-; CHECK: movz [[REG7:w[0-9]+]], #0x5453
+; CHECK: movz [[REG7:w[0-9]+]], #21587
 ; CHECK: strh [[REG7]], [x0, #4]
 ; CHECK: movz [[REG8:w[0-9]+]],
 ; CHECK: movk [[REG8]],

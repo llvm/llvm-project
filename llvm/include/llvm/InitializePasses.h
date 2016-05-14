@@ -189,7 +189,7 @@ void initializeLoopUnrollPass(PassRegistry&);
 void initializeLoopUnswitchPass(PassRegistry&);
 void initializeLoopVersioningLICMPass(PassRegistry&);
 void initializeLoopIdiomRecognizePass(PassRegistry&);
-void initializeLowerAtomicPass(PassRegistry&);
+void initializeLowerAtomicLegacyPassPass(PassRegistry &);
 void initializeLowerBitSetsPass(PassRegistry&);
 void initializeLowerExpectIntrinsicPass(PassRegistry&);
 void initializeLowerGuardIntrinsicPass(PassRegistry&);

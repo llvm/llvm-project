@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=aarch64   < %s -filetype=obj | llvm-objdump -arch=aarch64 -d - | FileCheck %s
 
 ; CHECK-LABEL: foo:
-; CHECK:       a0 79 95 d2 	 movz	x0, #0xabcd
+; CHECK:       a0 79 95 d2 	 movz	x0, #43981
 ; CHECK:       c0 03 5f d6   ret
 define i32 @foo() nounwind {
 entry:

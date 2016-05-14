@@ -3865,12 +3865,12 @@ static bool EliminateDeadSwitchCases(SwitchInst *SI, AssumptionCache *AC,
 
   // Gather dead cases.
   SmallVector<ConstantInt*, 8> DeadCases;
-  for (SwitchInst::CaseIt I = SI->case_begin(), E = SI->case_end(); I != E; ++I) {
-    if ((I.getCaseValue()->getValue() & KnownZero) != 0 ||
-        (I.getCaseValue()->getValue() & KnownOne) != KnownOne) {
-      DeadCases.push_back(I.getCaseValue());
+  for (auto &Case : SI->cases()) {
+    if ((Case.getCaseValue()->getValue() & KnownZero) != 0 ||
+        (Case.getCaseValue()->getValue() & KnownOne) != KnownOne) {
+      DeadCases.push_back(Case.getCaseValue());
       DEBUG(dbgs() << "SimplifyCFG: switch case '"
-                   << I.getCaseValue() << "' is dead.\n");
+                   << Case.getCaseValue() << "' is dead.\n");
     }
   }
 
@@ -3905,8 +3905,8 @@ static bool EliminateDeadSwitchCases(SwitchInst *SI, AssumptionCache *AC,
   }
 
   // Remove dead cases from the switch.
-  for (unsigned I = 0, E = DeadCases.size(); I != E; ++I) {
-    SwitchInst::CaseIt Case = SI->findCaseValue(DeadCases[I]);
+  for (ConstantInt *DeadCase : DeadCases) {
+    SwitchInst::CaseIt Case = SI->findCaseValue(DeadCase);
     assert(Case != SI->case_default() &&
            "Case was not found. Probably mistake in DeadCases forming.");
     if (HasWeight) {

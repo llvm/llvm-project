@@ -1381,6 +1381,18 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     if (PushedRegs)
       emitCalleeSavedFrameMoves(MBB, MBBI, DL);
   }
+
+  // X86 Interrupt handling function cannot assume anything about the direction
+  // flag (DF in EFLAGS register). Clear this flag by creating "cld" instruction
+  // in each prologue of interrupt handler function.
+  //
+  // FIXME: Create "cld" instruction only in these cases:
+  // 1. The interrupt handling function uses any of the "rep" instructions.
+  // 2. Interrupt handling function calls another function.
+  //
+  if (Fn->getCallingConv() == CallingConv::X86_INTR)
+    BuildMI(MBB, MBBI, DL, TII.get(X86::CLD))
+        .setMIFlag(MachineInstr::FrameSetup);
 }
 
 bool X86FrameLowering::canUseLEAForSPInEpilogue(

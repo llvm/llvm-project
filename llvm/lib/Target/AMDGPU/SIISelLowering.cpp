@@ -1494,22 +1494,6 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   return DAG.getUNDEF(ASC->getValueType(0));
 }
 
-SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
-                                             SDValue Op,
-                                             SelectionDAG &DAG) const {
-  GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
-
-  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
-    return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
-
-  SDLoc DL(GSD);
-  const GlobalValue *GV = GSD->getGlobal();
-  MVT PtrVT = getPointerTy(DAG.getDataLayout(), GSD->getAddressSpace());
-
-  SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32);
-  return DAG.getNode(AMDGPUISD::CONST_DATA_PTR, DL, PtrVT, GA);
-}
-
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
                                    SDValue V) const {
   // We can't use S_MOV_B32 directly, because there is no way to specify m0 as

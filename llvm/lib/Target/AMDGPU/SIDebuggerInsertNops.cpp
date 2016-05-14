@@ -8,20 +8,19 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// \brief Inserts two nop instructions for each high level source statement for
+/// \brief Inserts one nop instruction for each high level source statement for
 /// debugger usage.
 ///
-/// Tools, such as debugger, need to pause execution based on user input (i.e.
-/// breakpoint). In order to do this, two nop instructions are inserted for each
-/// high level source statement: one before first isa instruction of high level
-/// source statement, and one after last isa instruction of high level source
-/// statement. Further, debugger may replace nop instructions with trap
-/// instructions based on user input.
+/// Tools, such as a debugger, need to pause execution based on user input (i.e.
+/// breakpoint). In order to do this, one nop instruction is inserted before the
+/// first isa instruction of each high level source statement. Further, the
+/// debugger may replace nop instructions with trap instructions based on user
+/// input.
 //
 //===----------------------------------------------------------------------===//
 
 #include "SIInstrInfo.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -69,44 +68,24 @@ bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
   const SIInstrInfo *TII =
     static_cast<const SIInstrInfo*>(MF.getSubtarget().getInstrInfo());
 
-  // Mapping from high level source statement line number to last corresponding
-  // isa instruction.
-  DenseMap<unsigned, MachineBasicBlock::iterator> LineToInst;
-  // Insert nop instruction before first isa instruction of each high level
-  // source statement and collect last isa instruction for each high level
-  // source statement.
+  // Set containing line numbers that have nop inserted.
+  DenseSet<unsigned> NopInserted;
+
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
+      // Skip DBG_VALUE instructions and instructions without location.
       if (MI->isDebugValue() || !MI->getDebugLoc())
         continue;
 
+      // Insert nop instruction if line number does not have nop inserted.
       auto DL = MI->getDebugLoc();
-      auto CL = DL.getLine();
-      auto LineToInstEntry = LineToInst.find(CL);
-      if (LineToInstEntry == LineToInst.end()) {
+      if (NopInserted.find(DL.getLine()) == NopInserted.end()) {
         BuildMI(MBB, *MI, DL, TII->get(AMDGPU::S_NOP))
           .addImm(0);
-        LineToInst.insert(std::make_pair(CL, MI));
-      } else {
-        LineToInstEntry->second = MI;
+        NopInserted.insert(DL.getLine());
       }
     }
   }
-  // Insert nop instruction after last isa instruction of each high level source
-  // statement.
-  for (auto const &LineToInstEntry : LineToInst) {
-    auto MBB = LineToInstEntry.second->getParent();
-    auto DL = LineToInstEntry.second->getDebugLoc();
-    MachineBasicBlock::iterator MI = LineToInstEntry.second;
-    if (MI->getOpcode() != AMDGPU::S_ENDPGM)
-      BuildMI(*MBB, *(++MI), DL, TII->get(AMDGPU::S_NOP))
-        .addImm(0);
-  }
-  // Insert nop instruction before prologue.
-  MachineBasicBlock &MBB = MF.front();
-  MachineInstr &MI = MBB.front();
-  BuildMI(MBB, MI, DebugLoc(), TII->get(AMDGPU::S_NOP))
-    .addImm(0);
 
   return true;
 }

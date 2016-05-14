@@ -15,67 +15,72 @@
 // If the type is known, then we have a record describing it in TypeRecord.h.
 
 #ifndef CV_TYPE
-#define CV_TYPE(ename, value)
+#define CV_TYPE(lf_ename, value)
 #endif
 
 // If the type is known, then we have a record describing it in TypeRecord.h.
 #ifndef TYPE_RECORD
-#define TYPE_RECORD(ename, value, class_name, print_name) CV_TYPE(ename, value)
+#define TYPE_RECORD(lf_ename, value, name) CV_TYPE(lf_ename, value)
 #endif
 
 #ifndef TYPE_RECORD_ALIAS
-#define TYPE_RECORD_ALIAS(ename, value, class_name, print_name) TYPE_RECORD(ename, value, class_name, print_name)
+#define TYPE_RECORD_ALIAS(lf_ename, value, name, alias_name)                   \
+  TYPE_RECORD(lf_ename, value, name)
 #endif
 
 #ifndef MEMBER_RECORD
-#define MEMBER_RECORD(ename, value, class_name, print_name) TYPE_RECORD(ename, value, class_name, print_name)
+#define MEMBER_RECORD(lf_ename, value, name) TYPE_RECORD(lf_ename, value, name)
 #endif
 
 #ifndef MEMBER_RECORD_ALIAS
-#define MEMBER_RECORD_ALIAS(ename, value, class_name, print_name) MEMBER_RECORD(ename, value, class_name, print_name)
+#define MEMBER_RECORD_ALIAS(lf_ename, value, name, alias_name)                 \
+  MEMBER_RECORD(lf_ename, value, name)
 #endif
 
-TYPE_RECORD(LF_POINTER, 0x1002, PointerRecord, PointerType)
-TYPE_RECORD(LF_MODIFIER, 0x1001, ModifierRecord, TypeModifier)
-TYPE_RECORD(LF_PROCEDURE, 0x1008, ProcedureRecord, ProcedureType)
-TYPE_RECORD(LF_MFUNCTION, 0x1009, MemberFunctionRecord, MemberFunctionType)
-TYPE_RECORD(LF_ARGLIST, 0x1201, StringListRecord, ArgList)
+TYPE_RECORD(LF_POINTER, 0x1002, Pointer)
+TYPE_RECORD(LF_MODIFIER, 0x1001, Modifier)
+TYPE_RECORD(LF_PROCEDURE, 0x1008, Procedure)
+TYPE_RECORD(LF_MFUNCTION, 0x1009, MemberFunction)
+TYPE_RECORD(LF_ARGLIST, 0x1201, ArgList)
 
-TYPE_RECORD(LF_ARRAY, 0x1503, ArrayRecord, ArrayType)
-TYPE_RECORD(LF_CLASS, 0x1504, ClassRecord, ClassType)
-TYPE_RECORD_ALIAS(LF_STRUCTURE, 0x1505, ClassRecord, ClassType)
-TYPE_RECORD_ALIAS(LF_INTERFACE, 0x1519, ClassRecord, ClassType)
-TYPE_RECORD(LF_UNION, 0x1506, UnionRecord, UnionType)
-TYPE_RECORD(LF_ENUM, 0x1507, EnumRecord, EnumType)
-TYPE_RECORD(LF_TYPESERVER2, 0x1515, TypeServer2Record, TypeServer2)
-TYPE_RECORD(LF_VFTABLE, 0x151d, VirtualTableRecord, VFTableType)
-TYPE_RECORD(LF_VTSHAPE, 0x000a, VirtualTableShapeRecord, VTableShape)
+TYPE_RECORD(LF_ARRAY, 0x1503, Array)
+TYPE_RECORD(LF_CLASS, 0x1504, Class)
+TYPE_RECORD_ALIAS(LF_STRUCTURE, 0x1505, Struct, Class)
+TYPE_RECORD_ALIAS(LF_INTERFACE, 0x1519, Interface, Class)
+TYPE_RECORD(LF_UNION, 0x1506, Union)
+TYPE_RECORD(LF_ENUM, 0x1507, Enum)
+TYPE_RECORD(LF_TYPESERVER2, 0x1515, TypeServer2)
+TYPE_RECORD(LF_VFTABLE, 0x151d, VFTable)
+TYPE_RECORD(LF_VTSHAPE, 0x000a, VFTableShape)
 
 // Member type records. These are generally not length prefixed, and appear
 // inside of a field list record.
-MEMBER_RECORD(LF_BCLASS, 0x1400, BaseClassRecord, BaseClass)
-MEMBER_RECORD_ALIAS(LF_BINTERFACE, 0x151a, BaseClassRecord, BaseClass)
+MEMBER_RECORD(LF_BCLASS, 0x1400, BaseClass)
+MEMBER_RECORD_ALIAS(LF_BINTERFACE, 0x151a, BaseInterface, BaseClass)
 
-MEMBER_RECORD(LF_VBCLASS, 0x1401, VirtualBaseClassRecord, VirtualBaseClass)
-MEMBER_RECORD_ALIAS(LF_IVBCLASS, 0x1402, VirtualBaseClassRecord, VirtualBaseClass)
+MEMBER_RECORD(LF_VBCLASS, 0x1401, VirtualBaseClass)
+MEMBER_RECORD_ALIAS(LF_IVBCLASS, 0x1402, IndirectVirtualBaseClass,
+                    VirtualBaseClass)
 
-MEMBER_RECORD(LF_VFUNCTAB, 0x1409, VirtualFunctionPointerRecord, VirtualFunctionPointer)
-MEMBER_RECORD(LF_STMEMBER, 0x150e, StaticDataMemberRecord, StaticDataMember)
-MEMBER_RECORD(LF_METHOD, 0x150f, OverloadedMethodRecord, OverloadedMethod)
-MEMBER_RECORD(LF_MEMBER, 0x150d, DataMemberRecord, DataMember)
-MEMBER_RECORD(LF_NESTTYPE, 0x1510, NestedTypeRecord, NestedType)
-MEMBER_RECORD(LF_ONEMETHOD, 0x1511, OneMethodRecord, OneMethod)
-MEMBER_RECORD(LF_ENUMERATE, 0x1502, EnumeratorRecord, Enumerator)
+MEMBER_RECORD(LF_VFUNCTAB, 0x1409, VFPtr)
+MEMBER_RECORD(LF_STMEMBER, 0x150e, StaticDataMember)
+MEMBER_RECORD(LF_METHOD, 0x150f, OverloadedMethod)
+MEMBER_RECORD(LF_MEMBER, 0x150d, DataMember)
+MEMBER_RECORD(LF_NESTTYPE, 0x1510, NestedType)
+MEMBER_RECORD(LF_ONEMETHOD, 0x1511, OneMethod)
+MEMBER_RECORD(LF_ENUMERATE, 0x1502, Enumerator)
 
 // ID leaf records. Subsequent leaf types may be referenced from .debug$S.
-TYPE_RECORD(LF_FUNC_ID, 0x1601, FuncIdRecord, FuncId)
-TYPE_RECORD(LF_MFUNC_ID, 0x1602, MemberFunctionIdRecord, MemberFuncId)
-TYPE_RECORD(LF_BUILDINFO, 0x1603, BuildInfoRecord, BuildInfo)
-TYPE_RECORD_ALIAS(LF_SUBSTR_LIST, 0x1604, StringListRecord, ArgList)
-TYPE_RECORD(LF_STRING_ID, 0x1605, StringIdRecord, StringId)
-TYPE_RECORD(LF_UDT_SRC_LINE, 0x1606, UdtSourceLineRecord, UDTSrcLine)
+TYPE_RECORD(LF_FUNC_ID, 0x1601, FuncId)
+TYPE_RECORD(LF_MFUNC_ID, 0x1602, MemberFuncId)
+TYPE_RECORD(LF_BUILDINFO, 0x1603, BuildInfo)
+// FIXME: We reuse the structure of ArgListRecord for substring lists, but it
+// makes for confusing dumper output.
+TYPE_RECORD_ALIAS(LF_SUBSTR_LIST, 0x1604, StringList, ArgList)
+TYPE_RECORD(LF_STRING_ID, 0x1605, StringId)
+TYPE_RECORD(LF_UDT_SRC_LINE, 0x1606, UdtSourceLine)
 
-TYPE_RECORD(LF_METHODLIST, 0x1206, MethodOverloadListRecord, MethodListEntry)
+TYPE_RECORD(LF_METHODLIST, 0x1206, MethodOverloadList)
 
 
 // 16 bit type records.

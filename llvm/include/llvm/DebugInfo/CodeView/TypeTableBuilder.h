@@ -40,19 +40,27 @@ public:
   TypeIndex writeModifier(const ModifierRecord &Record);
   TypeIndex writeProcedure(const ProcedureRecord &Record);
   TypeIndex writeMemberFunction(const MemberFunctionRecord &Record);
-  TypeIndex writeArgumentList(const StringListRecord &Record);
-  TypeIndex writeRecord(TypeRecordBuilder &builder);
+  TypeIndex writeArgList(const ArgListRecord &Record);
   TypeIndex writePointer(const PointerRecord &Record);
   TypeIndex writeArray(const ArrayRecord &Record);
   TypeIndex writeClass(const ClassRecord &Record);
+  TypeIndex writeUnion(const UnionRecord &Record);
   TypeIndex writeEnum(const EnumRecord &Record);
   TypeIndex writeBitField(const BitFieldRecord &Record);
-  TypeIndex writeVirtualTableShape(const VirtualTableShapeRecord &Record);
+  TypeIndex writeVFTableShape(const VFTableShapeRecord &Record);
+  TypeIndex writeStringId(const StringIdRecord &Record);
+  TypeIndex writeVFTable(const VFTableRecord &Record);
+  TypeIndex writeUdtSourceLine(const UdtSourceLineRecord &Record);
+  TypeIndex writeFuncId(const FuncIdRecord &Record);
+  TypeIndex writeMemberFuncId(const MemberFuncIdRecord &Record);
+  TypeIndex writeBuildInfo(const BuildInfoRecord &Record);
+  TypeIndex writeMethodOverloadList(const MethodOverloadListRecord &Record);
+  TypeIndex writeTypeServer2(const TypeServer2Record &Record);
 
   TypeIndex writeFieldList(FieldListRecordBuilder &FieldList);
-  TypeIndex writeMethodList(MethodListRecordBuilder &MethodList);
 
-private:
+  TypeIndex writeRecord(TypeRecordBuilder &builder);
+
   virtual TypeIndex writeRecord(llvm::StringRef record) = 0;
 };
 }

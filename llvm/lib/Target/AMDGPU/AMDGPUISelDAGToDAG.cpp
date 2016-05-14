@@ -18,6 +18,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -607,10 +608,16 @@ bool AMDGPUDAGToDAGISel::isConstantLoad(const MemSDNode *N, int CbId) const {
 bool AMDGPUDAGToDAGISel::isGlobalLoad(const MemSDNode *N) const {
   if (!N->readMem())
     return false;
-  if (N->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS)
-    if (Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS ||
-        N->getMemoryVT().bitsLT(MVT::i32))
+  if (N->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS) {
+    if (Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS)
+      return !isa<GlobalValue>(
+        GetUnderlyingObject(N->getMemOperand()->getValue(),
+	CurDAG->getDataLayout()));
+
+    //TODO: Why do we need this?
+    if (N->getMemoryVT().bitsLT(MVT::i32))
       return true;
+  }
 
   return checkType(N->getMemOperand()->getValue(), AMDGPUAS::GLOBAL_ADDRESS);
 }

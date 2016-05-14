@@ -28,6 +28,10 @@
 #include "FuzzerTracePC.h"
 
 namespace fuzzer {
+
+typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
+int FuzzerDriver(int argc, char **argv, UserCallback Callback);
+
 using namespace std::chrono;
 typedef std::vector<uint8_t> Unit;
 typedef std::vector<Unit> UnitVector;

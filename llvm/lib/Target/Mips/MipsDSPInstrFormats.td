@@ -32,6 +32,10 @@ class ISA_DSPR2 {
   list<Predicate> InsnPredicates = [HasDSPR2];
 }
 
+class ISA_DSPR3 {
+  list<Predicate> InsnPredicates = [HasDSPR3];
+}
+
 // Fields.
 class Field6<bits<6> val> {
   bits<6> V = val;

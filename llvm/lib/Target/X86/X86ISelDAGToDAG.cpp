@@ -1957,7 +1957,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       SDValue ZextTarget = CurDAG->getZExtOrTrunc(Target, dl, EVT(MVT::i64));
       SDValue Brind = CurDAG->getNode(ISD::BRIND, dl, MVT::Other,
                                       Node->getOperand(0), ZextTarget);
-      ReplaceUses(SDValue(Node, 0), Brind);
+      ReplaceNode(Node, Brind.getNode());
       SelectCode(ZextTarget.getNode());
       SelectCode(Brind.getNode());
       return;

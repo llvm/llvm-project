@@ -24,6 +24,7 @@ namespace pdb {
 struct PDBFileContext;
 class DbiStream;
 class InfoStream;
+class PublicsStream;
 class TpiStream;
 
 class PDBFile {
@@ -62,12 +63,14 @@ public:
   Expected<InfoStream &> getPDBInfoStream();
   Expected<DbiStream &> getPDBDbiStream();
   Expected<TpiStream &> getPDBTpiStream();
+  Expected<PublicsStream &> getPDBPublicsStream();
 
 private:
   std::unique_ptr<PDBFileContext> Context;
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;
   std::unique_ptr<TpiStream> Tpi;
+  std::unique_ptr<PublicsStream> Publics;
 };
 }
 }

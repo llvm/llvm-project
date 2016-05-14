@@ -108,18 +108,6 @@ INITIALIZE_PASS(HexagonSplitDoubleRegs, "hexagon-split-double",
   "Hexagon Split Double Registers", false, false)
 
 
-static inline uint32_t getRegState(const MachineOperand &R) {
-  assert(R.isReg());
-  return getDefRegState(R.isDef()) |
-         getImplRegState(R.isImplicit()) |
-         getKillRegState(R.isKill()) |
-         getDeadRegState(R.isDead()) |
-         getUndefRegState(R.isUndef()) |
-         getInternalReadRegState(R.isInternalRead()) |
-         (R.isDebug() ? RegState::Debug : 0);
-}
-
-
 void HexagonSplitDoubleRegs::dump_partition(raw_ostream &os,
       const USet &Part, const TargetRegisterInfo &TRI) {
   dbgs() << '{';

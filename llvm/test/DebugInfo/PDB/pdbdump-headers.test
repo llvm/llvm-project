@@ -1,5 +1,5 @@
 ; RUN: llvm-pdbdump --dump-headers -dump-tpi-records -dump-tpi-record-bytes -dump-module-syms \
-; RUN:              %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
+; RUN:              --dump-publics %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
 ; RUN: llvm-pdbdump --dump-headers %p/Inputs/bad-block-size.pdb | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
@@ -246,9 +246,8 @@
 ; EMPTY-NEXT:   Record count: 75
 ; EMPTY-NEXT:   Records [
 ; EMPTY-NEXT:     {
-; EMPTY-NEXT:       ArgList {
+; EMPTY-NEXT:       ArgList (0x1000) {
 ; EMPTY-NEXT:         TypeLeafKind: LF_ARGLIST (0x1201)
-; EMPTY-NEXT:         TypeIndex: 0x1000
 ; EMPTY-NEXT:         NumArgs: 0
 ; EMPTY-NEXT:         Arguments [
 ; EMPTY-NEXT:         ]
@@ -258,9 +257,8 @@
 ; EMPTY-NEXT:       )
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:     {
-; EMPTY-NEXT:       ProcedureType {
+; EMPTY-NEXT:       Procedure (0x1001) {
 ; EMPTY-NEXT:         TypeLeafKind: LF_PROCEDURE (0x1008)
-; EMPTY-NEXT:         TypeIndex: 0x1001
 ; EMPTY-NEXT:         ReturnType: int (0x74)
 ; EMPTY-NEXT:         CallingConvention: NearC (0x0)
 ; EMPTY-NEXT:         FunctionOptions [ (0x0)
@@ -273,9 +271,8 @@
 ; EMPTY-NEXT:       )
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:     {
-; EMPTY-NEXT:       UnknownLeaf {
+; EMPTY-NEXT:       UnknownLeaf (0x1002) {
 ; EMPTY-NEXT:         TypeLeafKind: LF_FIELDLIST (0x1203)
-; EMPTY-NEXT:         TypeIndex: 0x1002
 ; EMPTY-NEXT:         Enumerator {
 ; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
 ; EMPTY-NEXT:           EnumValue: 1
@@ -310,6 +307,13 @@
 ; EMPTY-NEXT:         0040: 0500626F 746800F1                    |..both..|
 ; EMPTY-NEXT:       )
 ; EMPTY-NEXT:     }
+
+; EMPTY:      Publics Stream {
+; EMPTY-NEXT:   Stream number: 7
+; EMPTY-NEXT:   SymHash: 556
+; EMPTY-NEXT:   AddrMap: 8
+; EMPTY-NEXT:   Number of buckets: 2
+; EMPTY-NEXT: }
 
 ; BIG:      FileHeaders {
 ; BIG-NEXT:   BlockSize: 4096

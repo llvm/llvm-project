@@ -386,6 +386,17 @@ inline unsigned getDebugRegState(bool B) {
   return B ? RegState::Debug : 0;
 }
 
+/// Get all register state flags from machine operand \p RegOp.
+inline unsigned getRegState(const MachineOperand &RegOp) {
+  assert(RegOp.isReg() && "Not a register operand");
+  return getDefRegState(RegOp.isDef())                    |
+         getImplRegState(RegOp.isImplicit())              |
+         getKillRegState(RegOp.isKill())                  |
+         getDeadRegState(RegOp.isDead())                  |
+         getUndefRegState(RegOp.isUndef())                |
+         getInternalReadRegState(RegOp.isInternalRead())  |
+         getDebugRegState(RegOp.isDebug());
+}
 
 /// Helper class for constructing bundles of MachineInstrs.
 ///

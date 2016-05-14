@@ -73,12 +73,16 @@ void AMDGPUMCObjectWriter::writeObject(MCAssembler &Asm,
 
 static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
+  case FK_SecRel_1:
   case FK_Data_1:
     return 1;
+  case FK_SecRel_2:
   case FK_Data_2:
     return 2;
+  case FK_SecRel_4:
   case FK_Data_4:
     return 4;
+  case FK_SecRel_8:
   case FK_Data_8:
     return 8;
   default:

@@ -182,7 +182,7 @@ bool MipsDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
 
 /// Select instructions not customized! Used for
 /// expanded, promoted and normal instructions
-SDNode *MipsDAGToDAGISel::SelectImpl(SDNode *Node) {
+void MipsDAGToDAGISel::Select(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
 
   // Dump information about the Node being selected
@@ -192,21 +192,20 @@ SDNode *MipsDAGToDAGISel::SelectImpl(SDNode *Node) {
   if (Node->isMachineOpcode()) {
     DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
     Node->setNodeId(-1);
-    return nullptr;
+    return;
   }
 
   // See if subclasses can handle this node.
-  std::pair<bool, SDNode*> Ret = selectNode(Node);
-
-  if (Ret.first)
-    return Ret.second;
+  if (trySelect(Node))
+    return;
 
   switch(Opcode) {
   default: break;
 
   // Get target GOT address.
   case ISD::GLOBAL_OFFSET_TABLE:
-    return getGlobalBaseReg();
+    ReplaceNode(Node, getGlobalBaseReg());
+    return;
 
 #ifndef NDEBUG
   case ISD::LOAD:
@@ -220,15 +219,7 @@ SDNode *MipsDAGToDAGISel::SelectImpl(SDNode *Node) {
   }
 
   // Select the default instruction
-  SDNode *ResNode = SelectCode(Node);
-
-  DEBUG(errs() << "=> ");
-  if (ResNode == nullptr || ResNode == Node)
-    DEBUG(Node->dump(CurDAG));
-  else
-    DEBUG(ResNode->dump(CurDAG));
-  DEBUG(errs() << "\n");
-  return ResNode;
+  SelectCode(Node);
 }
 
 bool MipsDAGToDAGISel::

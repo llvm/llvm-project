@@ -723,7 +723,7 @@ define half @test_maxnum(half %a, half %b) #0 {
 ; CHECK-LABEL: test_copysign:
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: fcvt h0, s0
 ; CHECK-NEXT: ret
@@ -734,7 +734,7 @@ define half @test_copysign(half %a, half %b) #0 {
 
 ; CHECK-LABEL: test_copysign_f32:
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: fcvt h0, s0
 ; CHECK-NEXT: ret
@@ -747,7 +747,7 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 ; CHECK-LABEL: test_copysign_f64:
 ; CHECK-NEXT: fcvt s1, d1
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: fcvt h0, s0
 ; CHECK-NEXT: ret
@@ -763,7 +763,7 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; CHECK-LABEL: test_copysign_extended:
 ; CHECK-NEXT: fcvt s1, h1
 ; CHECK-NEXT: fcvt s0, h0
-; CHECK-NEXT: movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-NEXT: bit.16b v0, v1, v2
 ; CHECK-NEXT: ret
 define float @test_copysign_extended(half %a, half %b) #0 {

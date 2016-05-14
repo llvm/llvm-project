@@ -1066,6 +1066,11 @@ void RuntimeDyldELF::resolveSystemZRelocation(const SectionEntry &Section,
   case ELF::R_390_64:
     writeInt64BE(LocalAddress, Value + Addend);
     break;
+  case ELF::R_390_PC64: {
+    int64_t Delta = (Value + Addend) - Section.getLoadAddressWithOffset(Offset);
+    writeInt64BE(LocalAddress, Delta);
+    break;
+  }
   }
 }
 

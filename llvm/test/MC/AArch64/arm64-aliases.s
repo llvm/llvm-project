@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -output-asm-variant=1 -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -output-asm-variant=1 -show-encoding -print-imm-hex < %s | FileCheck %s
 
 foo:
 ;-----------------------------------------------------------------------------
@@ -66,8 +66,8 @@ foo:
   cmn x2, w3, uxtb #1
   cmn x4, x5, uxtx #1
 
-; CHECK: cmn	w1, #3                  ; encoding: [0x3f,0x0c,0x00,0x31]
-; CHECK: cmn	x2, #1024, lsl #12      ; encoding: [0x5f,0x00,0x50,0xb1]
+; CHECK: cmn	w1, #0x3                  ; encoding: [0x3f,0x0c,0x00,0x31]
+; CHECK: cmn	x2, #0x400, lsl #12      ; encoding: [0x5f,0x00,0x50,0xb1]
 ; CHECK: cmn	w4, w5                  ; encoding: [0x9f,0x00,0x05,0x2b]
 ; CHECK: cmn	x6, x7                  ; encoding: [0xdf,0x00,0x07,0xab]
 ; CHECK: cmn	w8, w9, asr #3          ; encoding: [0x1f,0x0d,0x89,0x2b]
@@ -92,8 +92,8 @@ foo:
   cmp w9, w8, uxtw
   cmp wsp, w9, lsl #0
 
-; CHECK: cmp	w1, #1024, lsl #12      ; encoding: [0x3f,0x00,0x50,0x71]
-; CHECK: cmp	x2, #1024               ; encoding: [0x5f,0x00,0x10,0xf1]
+; CHECK: cmp	w1, #0x400, lsl #12      ; encoding: [0x3f,0x00,0x50,0x71]
+; CHECK: cmp	x2, #0x400               ; encoding: [0x5f,0x00,0x10,0xf1]
 ; CHECK: cmp	w4, w5                  ; encoding: [0x9f,0x00,0x05,0x6b]
 ; CHECK: cmp	x6, x7                  ; encoding: [0xdf,0x00,0x07,0xeb]
 ; CHECK: cmp	w8, w9, asr #3          ; encoding: [0x1f,0x0d,0x89,0x6b]
@@ -218,8 +218,8 @@ foo:
    ubfm x0, x0, #63, #62
    ubfm w0, w0, #4, #31
    ubfm x0, x0, #4, #63
-; CHECK: ror w1, w3, #5
-; CHECK: ror x1, x3, #5
+; CHECK: ror w1, w3, #0x5
+; CHECK: ror x1, x3, #0x5
    ror w1, w3, #5
    ror x1, x3, #5
 ; CHECK: lsl w1, wzr, #3
@@ -745,7 +745,7 @@ foo:
   movi v1.2d, #0x000000000000ff
   movi v2.2D, #0x000000000000ff
 
-; CHECK: movi.16b	v4, #0              ; encoding: [0x04,0xe4,0x00,0x4f]
+; CHECK: movi.16b	v4, #0x0              ; encoding: [0x04,0xe4,0x00,0x4f]
 ; CHECK: movi.16b	v4, #0x1              ; encoding: [0x24,0xe4,0x00,0x4f]
 ; CHECK: movi.8b	v4, #0x2               ; encoding: [0x44,0xe4,0x00,0x0f]
 ; CHECK: movi.8b	v4, #0x3               ; encoding: [0x64,0xe4,0x00,0x0f]

@@ -2110,12 +2110,7 @@ bool AArch64DAGToDAGISel::tryBitfieldInsertInZeroOp(SDNode *N) {
     return false;
 
   EVT VT = N->getValueType(0);
-  unsigned Opc;
-  if (VT == MVT::i32)
-    Opc = AArch64::UBFMWri;
-  else if (VT == MVT::i64)
-    Opc = AArch64::UBFMXri;
-  else
+  if (VT != MVT::i32 && VT != MVT::i64)
     return false;
 
   SDValue Op0;
@@ -2132,6 +2127,7 @@ bool AArch64DAGToDAGISel::tryBitfieldInsertInZeroOp(SDNode *N) {
   SDLoc DL(N);
   SDValue Ops[] = {Op0, CurDAG->getTargetConstant(ImmR, DL, VT),
                    CurDAG->getTargetConstant(ImmS, DL, VT)};
+  unsigned Opc = (VT == MVT::i32) ? AArch64::UBFMWri : AArch64::UBFMXri;
   CurDAG->SelectNodeTo(N, Opc, VT, Ops);
   return true;
 }

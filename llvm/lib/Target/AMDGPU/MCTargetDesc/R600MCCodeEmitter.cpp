@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600Defines.h"
+#include "MCTargetDesc/AMDGPUFixupKinds.h"
 #include "MCTargetDesc/AMDGPUMCCodeEmitter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -164,12 +165,25 @@ unsigned R600MCCodeEmitter::getHWReg(unsigned RegNo) const {
 
 uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                               const MCOperand &MO,
-                                        SmallVectorImpl<MCFixup> &Fixup,
+                                        SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
   if (MO.isReg()) {
     if (HAS_NATIVE_OPERANDS(MCII.get(MI.getOpcode()).TSFlags))
       return MRI.getEncodingValue(MO.getReg());
     return getHWReg(MO.getReg());
+  }
+
+  if (MO.isExpr()) {
+    const MCSymbolRefExpr *Expr = cast<MCSymbolRefExpr>(MO.getExpr());
+    // We put rodata at the end of code section, then map the entire
+    // code secetion as vtx buf. Thus the section relative address is the
+    // correct one.
+    // Each R600 literal instruction has two operands
+    // We can't easily get the order of the current one, so compare against
+    // the first one and adjust offset.
+    const unsigned offset = (&MO == &MI.getOperand(0)) ? 0 : 4;
+    Fixups.push_back(MCFixup::create(offset, Expr, FK_SecRel_4, MI.getLoc()));
+    return 0;
   }
 
   assert(MO.isImm());

@@ -16,9 +16,7 @@ comp-goto-1.c
 pr17377.c
 
 # Error: invalid output constraint '=t' in asm.
-980709-1.c
 990413-2.c
-990826-0.c
 
 # Error: __builtin_setjmp / __builtin_longjmp is not supported for the current target.
 built-in-setjmp.c
@@ -67,3 +65,5 @@ pr41935.c
 920501-3.c
 920728-1.c
 pr28865.c
+widechar-2.c
+pr41463.c

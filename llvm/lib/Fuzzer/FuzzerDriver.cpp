@@ -367,11 +367,12 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
            Inputs->size(), Runs);
     for (auto &Path : *Inputs) {
       auto StartTime = system_clock::now();
+      Printf("%s ... ", Path.c_str());
       for (int Iter = 0; Iter < Runs; Iter++)
         RunOneTest(&F, Path.c_str());
       auto StopTime = system_clock::now();
       auto MS = duration_cast<milliseconds>(StopTime - StartTime).count();
-      Printf("%s: %zd ms\n", Path.c_str(), (long)MS);
+      Printf("%zd ms\n", (long)MS);
     }
     F.PrintFinalStats();
     exit(0);

@@ -41,7 +41,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  SDNode *SelectImpl(SDNode *N) override;
+  void Select(SDNode *N) override;
 
   // Complex Pattern Selectors.
   bool SelectADDRrr(SDValue N, SDValue &R1, SDValue &R2);
@@ -62,7 +62,7 @@ public:
 
 private:
   SDNode* getGlobalBaseReg();
-  SDNode *SelectInlineAsm(SDNode *N);
+  bool tryInlineAsm(SDNode *N);
 };
 }  // end anonymous namespace
 
@@ -154,7 +154,7 @@ bool SparcDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
 // TODO: fix inline asm support so I can simply tell it that 'i64'
 // inputs to asm need to be allocated to the IntPair register type,
 // and have that work. Then, delete this function.
-SDNode *SparcDAGToDAGISel::SelectInlineAsm(SDNode *N){
+bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
   std::vector<SDValue> AsmNodeOperands;
   unsigned Flag, Kind;
   bool Changed = false;
@@ -309,31 +309,32 @@ SDNode *SparcDAGToDAGISel::SelectInlineAsm(SDNode *N){
   if (Glue.getNode())
     AsmNodeOperands.push_back(Glue);
   if (!Changed)
-    return nullptr;
+    return false;
 
   SDValue New = CurDAG->getNode(ISD::INLINEASM, SDLoc(N),
       CurDAG->getVTList(MVT::Other, MVT::Glue), AsmNodeOperands);
   New->setNodeId(-1);
-  return New.getNode();
+  ReplaceNode(N, New.getNode());
+  return true;
 }
 
-SDNode *SparcDAGToDAGISel::SelectImpl(SDNode *N) {
+void SparcDAGToDAGISel::Select(SDNode *N) {
   SDLoc dl(N);
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
-    return nullptr;   // Already selected.
+    return;   // Already selected.
   }
 
   switch (N->getOpcode()) {
   default: break;
-    case ISD::INLINEASM: {
-    SDNode *ResNode = SelectInlineAsm(N);
-    if (ResNode)
-      return ResNode;
+  case ISD::INLINEASM: {
+    if (tryInlineAsm(N))
+      return;
     break;
   }
   case SPISD::GLOBAL_BASE_REG:
-    return getGlobalBaseReg();
+    ReplaceNode(N, getGlobalBaseReg());
+    return;
 
   case ISD::SDIV:
   case ISD::UDIV: {
@@ -359,8 +360,8 @@ SDNode *SparcDAGToDAGISel::SelectImpl(SDNode *N) {
 
     // FIXME: Handle div by immediate.
     unsigned Opcode = N->getOpcode() == ISD::SDIV ? SP::SDIVrr : SP::UDIVrr;
-    return CurDAG->SelectNodeTo(N, Opcode, MVT::i32, DivLHS, DivRHS,
-                                TopPart);
+    CurDAG->SelectNodeTo(N, Opcode, MVT::i32, DivLHS, DivRHS, TopPart);
+    return;
   }
   case ISD::MULHU:
   case ISD::MULHS: {
@@ -373,11 +374,11 @@ SDNode *SparcDAGToDAGISel::SelectImpl(SDNode *N) {
     SDValue ResultHigh = SDValue(Mul, 1);
     ReplaceUses(SDValue(N, 0), ResultHigh);
     CurDAG->RemoveDeadNode(N);
-    return nullptr;
+    return;
   }
   }
 
-  return SelectCode(N);
+  SelectCode(N);
 }
 
 

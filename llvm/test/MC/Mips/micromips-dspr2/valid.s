@@ -125,3 +125,5 @@
   wrdsp $5                     # CHECK: wrdsp $5                # encoding: [0x00,0xa7,0xd6,0x7c]
   wrdsp $5, 2                  # CHECK: wrdsp $5, 2             # encoding: [0x00,0xa0,0x96,0x7c]
   wrdsp $5, 31                 # CHECK: wrdsp $5                # encoding: [0x00,0xa7,0xd6,0x7c]
+  append $3, $4, 5             # CHECK: append $3, $4, 5           # encoding: [0x00,0x64,0x2a,0x15]
+  mulsa.w.ph $ac0, $3, $2      # CHECK: mulsa.w.ph $ac0, $3, $2    # encoding: [0x00,0x43,0x2c,0xbc]

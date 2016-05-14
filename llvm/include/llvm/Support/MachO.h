@@ -84,8 +84,8 @@ namespace llvm {
       LC_REQ_DYLD    = 0x80000000u
     };
 
-#define HANDLE_LOAD_COMMAND(LoadCommandName, LoadCommandValue) \
-    LoadCommandName = LoadCommandValue,
+#define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct) \
+    LCName = LCValue,
 
     enum LoadCommandType : uint32_t {
       #include "llvm/Support/MachO.def"
@@ -1233,6 +1233,58 @@ namespace llvm {
 
     inline void swapStruct(uint32_t &C) {
       sys::swapByteOrder(C);
+    }
+
+    inline void swapStruct(prebind_cksum_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.cksum);
+    }
+
+    inline void swapStruct(twolevel_hints_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.offset);
+      sys::swapByteOrder(C.nhints);
+    }
+
+    inline void swapStruct(prebound_dylib_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.name);
+      sys::swapByteOrder(C.nmodules);
+      sys::swapByteOrder(C.linked_modules);
+    }
+
+    inline void swapStruct(fvmfile_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.name);
+      sys::swapByteOrder(C.header_addr);
+    }
+
+    inline void swapStruct(symseg_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      sys::swapByteOrder(C.offset);
+      sys::swapByteOrder(C.size);
+    }
+
+    inline void swapStruct(ident_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+    }
+
+    inline void swapStruct(fvmlib &C) {
+      sys::swapByteOrder(C.name);
+      sys::swapByteOrder(C.minor_version);
+      sys::swapByteOrder(C.header_addr);
+    }
+
+    inline void swapStruct(fvmlib_command &C) {
+      sys::swapByteOrder(C.cmd);
+      sys::swapByteOrder(C.cmdsize);
+      swapStruct(C.fvmlib);
     }
 
     // Get/Set functions from <mach-o/nlist.h>

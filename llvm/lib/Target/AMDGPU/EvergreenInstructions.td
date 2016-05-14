@@ -239,6 +239,7 @@ def VTX_READ_GLOBAL_8_eg : VTX_READ_8_eg <1,
   [(set i32:$dst_gpr, (az_extloadi8_global ADDRVTX_READ:$src_gpr))]
 >;
 
+// 16-bit reads
 def VTX_READ_GLOBAL_16_eg : VTX_READ_16_eg <1,
   [(set i32:$dst_gpr, (az_extloadi16_global ADDRVTX_READ:$src_gpr))]
 >;
@@ -256,6 +257,31 @@ def VTX_READ_GLOBAL_64_eg : VTX_READ_64_eg <1,
 // 128-bit reads
 def VTX_READ_GLOBAL_128_eg : VTX_READ_128_eg <1,
   [(set v4i32:$dst_gpr, (global_load ADDRVTX_READ:$src_gpr))]
+>;
+
+// 8-bit reads
+def VTX_READ_CONSTANT_8_eg : VTX_READ_8_eg <2,
+  [(set i32:$dst_gpr, (az_extloadi8_constant ADDRVTX_READ:$src_gpr))]
+>;
+
+// 16-bit reads
+def VTX_READ_CONSTANT_16_eg : VTX_READ_16_eg <2,
+  [(set i32:$dst_gpr, (az_extloadi16_constant ADDRVTX_READ:$src_gpr))]
+>;
+
+// 32-bit reads
+def VTX_READ_CONSTANT_32_eg : VTX_READ_32_eg <2,
+  [(set i32:$dst_gpr, (constant_load ADDRVTX_READ:$src_gpr))]
+>;
+
+// 64-bit reads
+def VTX_READ_CONSTANT_64_eg : VTX_READ_64_eg <2,
+  [(set v2i32:$dst_gpr, (constant_load ADDRVTX_READ:$src_gpr))]
+>;
+
+// 128-bit reads
+def VTX_READ_CONSTANT_128_eg : VTX_READ_128_eg <2,
+  [(set v4i32:$dst_gpr, (constant_load ADDRVTX_READ:$src_gpr))]
 >;
 
 } // End Predicates = [isEG]
