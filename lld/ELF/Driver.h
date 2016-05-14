@@ -72,6 +72,7 @@ enum {
 
 void printHelp(const char *Argv0);
 void printVersion();
+std::vector<uint8_t> parseHexstring(StringRef S);
 
 void createResponseFile(const llvm::opt::InputArgList &Args);
 void maybeCopyInputFile(StringRef Path, StringRef Buffer);

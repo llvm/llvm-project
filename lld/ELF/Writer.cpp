@@ -163,6 +163,8 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     BuildId.reset(new BuildIdMd5<ELFT>);
   else if (Config->BuildId == BuildIdKind::Sha1)
     BuildId.reset(new BuildIdSha1<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Hexstring)
+    BuildId.reset(new BuildIdHexstring<ELFT>);
 
   if (Config->GnuHash)
     GnuHashTab.reset(new GnuHashTableSection<ELFT>);
@@ -674,17 +676,22 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     if (needsPlt(Expr) || Expr == R_THUNK || refersToGotEntry(Expr) ||
         !Body.isPreemptible()) {
-      // If the relocation points to something in the file, remember it so that
-      // we can apply it when writting the section.
-      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+      // If the relocation points to something in the file, we can process it.
+      bool Constant = isStaticLinkTimeConstant<ELFT>(Expr, Type, Body);
 
       // If the output being produced is position independent, the final value
       // is still not known. In that case we still need some help from the
       // dynamic linker. We can however do better than just copying the incoming
       // relocation. We can process some of it and and just ask the dynamic
       // linker to add the load address.
-      if (!isStaticLinkTimeConstant<ELFT>(Expr, Type, Body))
+      if (!Constant)
         AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body, Addend});
+
+      // If the produced value is a constant, we just remember to write it
+      // when outputting this section. We also have to do it if the format
+      // uses Elf_Rel, since in that case the written value is the addend.
+      if (Constant || !RelTy::IsRela)
+        C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     } else {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.

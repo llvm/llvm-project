@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_FIND_ALL_SYMBOLS_SYMBOL_INFO_H
-#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_FIND_ALL_SYMBOLS_SYMBOL_INFO_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_FIND_ALL_SYMBOLS_SYMBOLINFO_H
+#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_FIND_ALL_SYMBOLS_SYMBOLINFO_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,18 +25,21 @@ namespace find_all_symbols {
 class SymbolInfo {
 public:
   /// \brief The SymbolInfo Type.
-  enum SymbolKind {
+  enum class SymbolKind {
     Function,
     Class,
     Variable,
     TypedefName,
+    EnumDecl,
+    EnumConstantDecl,
     Unknown,
   };
 
   /// \brief The Context Type.
-  enum ContextType {
+  enum class ContextType {
     Namespace, // Symbols declared in a namespace.
     Record,    // Symbols declared in a class.
+    EnumDecl,  // Enum constants declared in a enum declaration.
   };
 
   /// \brief A pair of <ContextType, ContextName>.
@@ -44,10 +47,10 @@ public:
 
   // The default constructor is required by YAML traits in
   // LLVM_YAML_IS_DOCUMENT_LIST_VECTOR.
-  SymbolInfo() : Type(Unknown), LineNumber(-1) {};
+  SymbolInfo() : Type(SymbolKind::Unknown), LineNumber(-1) {}
 
   SymbolInfo(llvm::StringRef Name, SymbolKind Type, llvm::StringRef FilePath,
-             const std::vector<Context> &Contexts, int LineNumber);
+             int LineNumber, const std::vector<Context> &Contexts);
 
   /// \brief Get symbol name.
   llvm::StringRef getName() const;
@@ -107,4 +110,4 @@ std::vector<SymbolInfo> ReadSymbolInfosFromYAML(llvm::StringRef Yaml);
 } // namespace find_all_symbols
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_FIND_ALL_SYMBOLS_SYMBOL_INFO_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_FIND_ALL_SYMBOLS_SYMBOLINFO_H

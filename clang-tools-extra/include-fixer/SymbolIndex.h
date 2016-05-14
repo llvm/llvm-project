@@ -1,4 +1,4 @@
-//===-- XrefsDB.h - Interface for symbol-header matching --------*- C++ -*-===//
+//===-- SymbolIndex.h - Interface for symbol-header matching ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_XREFSDB_H
-#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_XREFSDB_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_SYMBOLINDEX_H
+#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_SYMBOLINDEX_H
 
 #include "find-all-symbols/SymbolInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -19,9 +19,9 @@ namespace include_fixer {
 
 /// This class provides an interface for finding all `SymbolInfo`s corresponding
 /// to a symbol name from a symbol database.
-class XrefsDB {
+class SymbolIndex {
 public:
-  virtual ~XrefsDB() = default;
+  virtual ~SymbolIndex() = default;
 
   /// Search for all `SymbolInfo`s corresponding to an identifier.
   /// \param Identifier The unqualified identifier being searched for.
@@ -35,4 +35,4 @@ public:
 } // namespace include_fixer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_XREFSDB_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_SYMBOLINDEX_H

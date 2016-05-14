@@ -88,6 +88,22 @@ void elf::printVersion() {
   outs() << "\n";
 }
 
+// Converts a hex string (e.g. "0x123456") to a vector.
+std::vector<uint8_t> elf::parseHexstring(StringRef S) {
+  if (S.find_first_not_of("0123456789abcdefABCDEF") != StringRef::npos ||
+      S.size() % 2) {
+    error("malformed hexstring: " + S);
+    return {};
+  }
+  std::vector<uint8_t> V;
+  for (; !S.empty(); S = S.substr(2)) {
+    int I;
+    S.substr(0, 2).getAsInteger(16, I);
+    V.push_back(I);
+  }
+  return V;
+}
+
 // Makes a given pathname an absolute path first, and then remove
 // beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
 // assuming that the current directory is "/home/john/bar".

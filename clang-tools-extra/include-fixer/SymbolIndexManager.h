@@ -1,4 +1,4 @@
-//===-- XrefsDBManager.h - Managing multiple XrefsDBs -----------*- C++ -*-===//
+//===-- SymbolIndexManager.h - Managing multiple SymbolIndices --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_XREFSDBMANAGER_H
-#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_XREFSDBMANAGER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_SYMBOLINDEXMANAGER_H
+#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_SYMBOLINDEXMANAGER_H
 
-#include "XrefsDB.h"
+#include "SymbolIndex.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -18,10 +18,10 @@ namespace include_fixer {
 
 /// This class provides an interface for finding the header files corresponding
 /// to an indentifier in the source code from multiple symbol databases.
-class XrefsDBManager {
+class SymbolIndexManager {
 public:
-  void addXrefsDB(std::unique_ptr<XrefsDB> DB) {
-    XrefsDBs.push_back(std::move(DB));
+  void addSymbolIndex(std::unique_ptr<SymbolIndex> DB) {
+    SymbolIndices.push_back(std::move(DB));
   }
 
   /// Search for header files to be included for an identifier.
@@ -32,11 +32,11 @@ public:
   // FIXME: Expose the type name so we can also insert using declarations (or
   // fix the usage)
   // FIXME: Move mapping from SymbolInfo to headers out of
-  // XrefsDBManager::search and return SymbolInfos instead of header paths.
+  // SymbolIndexManager::search and return SymbolInfos instead of header paths.
   std::vector<std::string> search(llvm::StringRef Identifier) const;
 
 private:
-  std::vector<std::unique_ptr<XrefsDB>> XrefsDBs;
+  std::vector<std::unique_ptr<SymbolIndex>> SymbolIndices;
 };
 
 } // namespace include_fixer

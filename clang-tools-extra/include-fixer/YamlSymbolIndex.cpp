@@ -1,4 +1,4 @@
-//===-- YamlXrefsDB.cpp ---------------------------------------------------===//
+//===-- YamlSymbolIndex.cpp -----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "YamlXrefsDB.h"
+#include "YamlSymbolIndex.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -21,20 +21,20 @@ using clang::find_all_symbols::SymbolInfo;
 namespace clang {
 namespace include_fixer {
 
-llvm::ErrorOr<std::unique_ptr<YamlXrefsDB>>
-YamlXrefsDB::createFromFile(llvm::StringRef FilePath) {
+llvm::ErrorOr<std::unique_ptr<YamlSymbolIndex>>
+YamlSymbolIndex::createFromFile(llvm::StringRef FilePath) {
   auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
   if (!Buffer)
     return Buffer.getError();
 
-  return std::unique_ptr<YamlXrefsDB>(
-      new YamlXrefsDB(clang::find_all_symbols::ReadSymbolInfosFromYAML(
+  return std::unique_ptr<YamlSymbolIndex>(
+      new YamlSymbolIndex(clang::find_all_symbols::ReadSymbolInfosFromYAML(
           Buffer.get()->getBuffer())));
 }
 
-llvm::ErrorOr<std::unique_ptr<YamlXrefsDB>>
-YamlXrefsDB::createFromDirectory(llvm::StringRef Directory,
-                                 llvm::StringRef Name) {
+llvm::ErrorOr<std::unique_ptr<YamlSymbolIndex>>
+YamlSymbolIndex::createFromDirectory(llvm::StringRef Directory,
+                                     llvm::StringRef Name) {
   // Walk upwards from Directory, looking for files.
   for (llvm::SmallString<128> PathStorage = Directory; !Directory.empty();
        Directory = llvm::sys::path::parent_path(Directory)) {
@@ -47,7 +47,7 @@ YamlXrefsDB::createFromDirectory(llvm::StringRef Directory,
   return llvm::make_error_code(llvm::errc::no_such_file_or_directory);
 }
 
-std::vector<SymbolInfo> YamlXrefsDB::search(llvm::StringRef Identifier) {
+std::vector<SymbolInfo> YamlSymbolIndex::search(llvm::StringRef Identifier) {
   std::vector<SymbolInfo> Results;
   for (const auto &Symbol : Symbols) {
     if (Symbol.getName() == Identifier)

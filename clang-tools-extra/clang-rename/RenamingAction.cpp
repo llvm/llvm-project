@@ -49,7 +49,7 @@ public:
     std::vector<SourceLocation> NewCandidates;
 
     for (const auto &USR : USRs) {
-      NewCandidates = getLocationsOfUSR(USR, Context.getTranslationUnitDecl());
+      NewCandidates = getLocationsOfUSR(USR, PrevName, Context.getTranslationUnitDecl());
       RenamingCandidates.insert(RenamingCandidates.end(), NewCandidates.begin(),
                                 NewCandidates.end());
       NewCandidates.clear();

@@ -1,4 +1,4 @@
-//===-- YamlXrefsDB.h -------------------------------------------*- C++ -*-===//
+//===-- YamlSymbolIndex.h ---------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_YAMLXREFSDB_H
-#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_YAMLXREFSDB_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_YAMLSYMBOLINDEX_H
+#define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_YAMLSYMBOLINDEX_H
 
-#include "XrefsDB.h"
+#include "SymbolIndex.h"
 #include "find-all-symbols/SymbolInfo.h"
 #include "llvm/Support/ErrorOr.h"
 #include <map>
@@ -20,20 +20,21 @@ namespace clang {
 namespace include_fixer {
 
 /// Yaml format database.
-class YamlXrefsDB : public XrefsDB {
+class YamlSymbolIndex : public SymbolIndex {
 public:
   /// Create a new Yaml db from a file.
-  static llvm::ErrorOr<std::unique_ptr<YamlXrefsDB>>
+  static llvm::ErrorOr<std::unique_ptr<YamlSymbolIndex>>
   createFromFile(llvm::StringRef FilePath);
   /// Look for a file called \c Name in \c Directory and all parent directories.
-  static llvm::ErrorOr<std::unique_ptr<YamlXrefsDB>>
+  static llvm::ErrorOr<std::unique_ptr<YamlSymbolIndex>>
   createFromDirectory(llvm::StringRef Directory, llvm::StringRef Name);
 
   std::vector<clang::find_all_symbols::SymbolInfo>
   search(llvm::StringRef Identifier) override;
 
 private:
-  explicit YamlXrefsDB(std::vector<clang::find_all_symbols::SymbolInfo> Symbols)
+  explicit YamlSymbolIndex(
+      std::vector<clang::find_all_symbols::SymbolInfo> Symbols)
       : Symbols(std::move(Symbols)) {}
 
   std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
@@ -42,4 +43,4 @@ private:
 } // namespace include_fixer
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_YAMLXREFSDB_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_YAMLSYMBOLINDEX_H

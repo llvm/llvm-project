@@ -1687,6 +1687,16 @@ void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
 }
 
 template <class ELFT>
+BuildIdHexstring<ELFT>::BuildIdHexstring()
+    : BuildIdSection<ELFT>(Config->BuildIdVector.size()) {}
+
+template <class ELFT>
+void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+  memcpy(this->HashBuf, Config->BuildIdVector.data(),
+         Config->BuildIdVector.size());
+}
+
+template <class ELFT>
 MipsReginfoOutputSection<ELFT>::MipsReginfoOutputSection()
     : OutputSectionBase<ELFT>(".reginfo", SHT_MIPS_REGINFO, SHF_ALLOC) {
   this->Header.sh_addralign = 4;
@@ -1852,5 +1862,10 @@ template class BuildIdSha1<ELF32LE>;
 template class BuildIdSha1<ELF32BE>;
 template class BuildIdSha1<ELF64LE>;
 template class BuildIdSha1<ELF64BE>;
+
+template class BuildIdHexstring<ELF32LE>;
+template class BuildIdHexstring<ELF32BE>;
+template class BuildIdHexstring<ELF64LE>;
+template class BuildIdHexstring<ELF64BE>;
 }
 }

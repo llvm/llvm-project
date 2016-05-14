@@ -180,6 +180,11 @@ identified.  The improvements since the 3.8 release include:
 
   Finds unused ``using`` declarations.
 
+- New `modernize-avoid-bind
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-avoid-bind.html>`_ check
+
+  Finds uses of ``std::bind`` and replaces simple uses with lambdas.
+
 - New `modernize-deprecated-headers
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-headers.html>`_ check
 
