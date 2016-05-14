@@ -18,7 +18,7 @@ import traceback
 # Third-party modules
 
 # LLDB modules
-
+from . import build_exception
 
 class EventBuilder(object):
     """Helper class to build test result event dictionaries."""
@@ -49,7 +49,11 @@ class EventBuilder(object):
     """Test methods or jobs with a status matching any of these
     status values will cause a testrun failure, unless
     the test methods rerun and do not trigger an issue when rerun."""
-    TESTRUN_ERROR_STATUS_VALUES = {STATUS_ERROR, STATUS_EXCEPTIONAL_EXIT, STATUS_FAILURE, STATUS_TIMEOUT}
+    TESTRUN_ERROR_STATUS_VALUES = {
+        STATUS_ERROR,
+        STATUS_EXCEPTIONAL_EXIT,
+        STATUS_FAILURE,
+        STATUS_TIMEOUT}
 
     @staticmethod
     def _get_test_name_info(test):
@@ -300,8 +304,31 @@ class EventBuilder(object):
 
         @return the event dictionary
         """
-        return EventBuilder._event_dictionary_issue(
+        event = EventBuilder._event_dictionary_issue(
             test, EventBuilder.STATUS_ERROR, error_tuple)
+        event["issue_phase"] = "test"
+        return event
+
+    @staticmethod
+    def event_for_build_error(test, error_tuple):
+        """Returns an event dictionary for a test that hit a test execution error
+        during the test cleanup phase.
+
+        @param test a unittest.TestCase instance.
+
+        @param error_tuple the error tuple as reported by the test runner.
+        This is of the form (type<error>, error).
+
+        @return the event dictionary
+        """
+        event = EventBuilder._event_dictionary_issue(
+            test, EventBuilder.STATUS_ERROR, error_tuple)
+        event["issue_phase"] = "build"
+
+        build_error = error_tuple[1]
+        event["build_command"] = build_error.command
+        event["build_error"] = build_error.build_error
+        return event
 
     @staticmethod
     def event_for_cleanup_error(test, error_tuple):

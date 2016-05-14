@@ -21,6 +21,7 @@ import six
 
 # Local modules
 from ..event_builder import EventBuilder
+from ..build_exception import BuildError
 from .results_formatter import ResultsFormatter
 
 
@@ -246,7 +247,28 @@ class XunitFormatter(ResultsFormatter):
         with self.lock:
             self.elements["failures"].append(result)
 
-    def _handle_error(self, test_event):
+    def _handle_error_build(self, test_event):
+        """Handles a test error.
+        @param test_event the test event to handle.
+        """
+        message = self._replace_invalid_xml(test_event["issue_message"])
+        build_issue_description = self._replace_invalid_xml(
+            BuildError.format_build_error(
+                test_event.get("build_command", "<None>"),
+                test_event.get("build_error", "<None>")))
+
+        result = self._common_add_testcase_entry(
+            test_event,
+            inner_content=(
+                '<error type={} message={}><![CDATA[{}]]></error>'.format(
+                    XunitFormatter._quote_attribute(test_event["issue_class"]),
+                    XunitFormatter._quote_attribute(message),
+                    build_issue_description)
+            ))
+        with self.lock:
+            self.elements["errors"].append(result)
+
+    def _handle_error_standard(self, test_event):
         """Handles a test error.
         @param test_event the test event to handle.
         """
@@ -264,6 +286,12 @@ class XunitFormatter(ResultsFormatter):
             ))
         with self.lock:
             self.elements["errors"].append(result)
+
+    def _handle_error(self, test_event):
+        if test_event.get("issue_phase", None) == "build":
+            self._handle_error_build(test_event)
+        else:
+            self._handle_error_standard(test_event)
 
     def _handle_exceptional_exit(self, test_event):
         """Handles an exceptional exit.
