@@ -532,7 +532,11 @@ public:
       OS << OutputBuffer.getBuffer();
     }
     // Rename to final destination (hopefully race condition won't matter here)
-    sys::fs::rename(TempFilename, EntryPath);
+    EC = sys::fs::rename(TempFilename, EntryPath);
+    if (EC) {
+      errs() << "Error: " << EC.message() << "\n";
+      report_fatal_error("ThinLTO: Can't rename temporary file " + TempFilename + " to " + EntryPath);
+    }
   }
 };
 
