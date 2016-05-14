@@ -387,7 +387,7 @@
 // RTTI-NOT: "-fno-rtti"
 
 // thread safe statics are off for versions < 19.
-// RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=NoThreadSafeStatics %s
+// RUN: %clang_cl /c -### -fms-compatibility-version=18 -- %s 2>&1 | FileCheck -check-prefix=NoThreadSafeStatics %s
 // RUN: %clang_cl /Zc:threadSafeInit /Zc:threadSafeInit- /c -### -- %s 2>&1 | FileCheck -check-prefix=NoThreadSafeStatics %s
 // NoThreadSafeStatics: "-fno-threadsafe-statics"
 

@@ -110,7 +110,6 @@ namespace clang {
   class EnumConstantDecl;
   class Expr;
   class ExtVectorType;
-  class ExternalSemaSource;
   class FormatAttr;
   class FriendDecl;
   class FunctionDecl;

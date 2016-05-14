@@ -64,7 +64,7 @@ const IdentifierInfo* QualType::getBaseTypeIdentifier() const {
   return nullptr;
 }
 
-bool QualType::isConstant(QualType T, ASTContext &Ctx) {
+bool QualType::isConstant(QualType T, const ASTContext &Ctx) {
   if (T.isConstQualified())
     return true;
 
@@ -74,7 +74,7 @@ bool QualType::isConstant(QualType T, ASTContext &Ctx) {
   return T.getAddressSpace() == LangAS::opencl_constant;
 }
 
-unsigned ConstantArrayType::getNumAddressingBits(ASTContext &Context,
+unsigned ConstantArrayType::getNumAddressingBits(const ASTContext &Context,
                                                  QualType ElementType,
                                                const llvm::APInt &NumElements) {
   uint64_t ElementSize = Context.getTypeSizeInChars(ElementType).getQuantity();
@@ -109,7 +109,7 @@ unsigned ConstantArrayType::getNumAddressingBits(ASTContext &Context,
   return TotalSize.getActiveBits();
 }
 
-unsigned ConstantArrayType::getMaxSizeBits(ASTContext &Context) {
+unsigned ConstantArrayType::getMaxSizeBits(const ASTContext &Context) {
   unsigned Bits = Context.getTypeSize(Context.getSizeType());
   
   // Limit the number of bits in size_t so that maximal bit size fits 64 bit
@@ -1616,7 +1616,7 @@ bool Type::hasIntegerRepresentation() const {
 /// \param Ctx The context in which this type occurs.
 ///
 /// \returns true if the type is considered an integral type, false otherwise.
-bool Type::isIntegralType(ASTContext &Ctx) const {
+bool Type::isIntegralType(const ASTContext &Ctx) const {
   if (const BuiltinType *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Int128;
@@ -1958,7 +1958,7 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
   }
 }
 
-bool QualType::isPODType(ASTContext &Context) const {
+bool QualType::isPODType(const ASTContext &Context) const {
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
     return isCXX11PODType(Context);
@@ -1966,7 +1966,7 @@ bool QualType::isPODType(ASTContext &Context) const {
   return isCXX98PODType(Context);
 }
 
-bool QualType::isCXX98PODType(ASTContext &Context) const {
+bool QualType::isCXX98PODType(const ASTContext &Context) const {
   // The compiler shouldn't query this for incomplete types, but the user might.
   // We return false for that case. Except for incomplete arrays of PODs, which
   // are PODs according to the standard.
@@ -2026,7 +2026,7 @@ bool QualType::isCXX98PODType(ASTContext &Context) const {
   }
 }
 
-bool QualType::isTrivialType(ASTContext &Context) const {
+bool QualType::isTrivialType(const ASTContext &Context) const {
   // The compiler shouldn't query this for incomplete types, but the user might.
   // We return false for that case. Except for incomplete arrays of PODs, which
   // are PODs according to the standard.
@@ -2089,7 +2089,7 @@ bool QualType::isTrivialType(ASTContext &Context) const {
   return false;
 }
 
-bool QualType::isTriviallyCopyableType(ASTContext &Context) const {
+bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   if ((*this)->isArrayType())
     return Context.getBaseElementType(*this).isTriviallyCopyableType(Context);
 
@@ -2249,7 +2249,7 @@ bool Type::isStandardLayoutType() const {
 // This is effectively the intersection of isTrivialType and
 // isStandardLayoutType. We implement it directly to avoid redundant
 // conversions from a type to a CXXRecordDecl.
-bool QualType::isCXX11PODType(ASTContext &Context) const {
+bool QualType::isCXX11PODType(const ASTContext &Context) const {
   const Type *ty = getTypePtr();
   if (ty->isDependentType())
     return false;
