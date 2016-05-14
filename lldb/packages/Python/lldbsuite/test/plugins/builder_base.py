@@ -12,16 +12,11 @@ Same idea holds for LLDB_ARCH environment variable, which maps to the ARCH make
 variable.
 """
 
-# System imports
-import os
+import os, sys
+import os.path
 import platform
-import subprocess
-import sys
-
-# Our imports
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
-from lldbsuite.test_event import build_exception
 import swift
 
 def getArchitecture():
@@ -109,16 +104,6 @@ def getCmdLine(d):
     return cmdline
 
 
-def runBuildCommands(commands, sender):
-    try:
-        lldbtest.system(commands, sender=sender)
-    except subprocess.CalledProcessError as called_process_error:
-        # Convert to a build-specific error.
-        # We don't do that in lldbtest.system() since that
-        # is more general purpose.
-        raise build_exception.BuildError(called_process_error)
-
-
 def buildDefault(sender=None, architecture=None, compiler=None, dictionary=None, clean=True):
     """Build the binaries the default way."""
     commands = []
@@ -126,7 +111,7 @@ def buildDefault(sender=None, architecture=None, compiler=None, dictionary=None,
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
     commands.append([getMake(), getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
 
-    runBuildCommands(commands, sender=sender)
+    lldbtest.system(commands, sender=sender)
 
     # True signifies that we can handle building default.
     return True
@@ -141,7 +126,7 @@ def buildDwarf(sender=None, architecture=None, compiler=None, dictionary=None, c
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
     commands.append([getMake(), "MAKE_DSYM=NO", getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
 
-    runBuildCommands(commands, sender=sender)
+    lldbtest.system(commands, sender=sender)
     # True signifies that we can handle building dwarf.
     return True
 
@@ -152,7 +137,7 @@ def buildDwo(sender=None, architecture=None, compiler=None, dictionary=None, cle
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
     commands.append([getMake(), "MAKE_DSYM=NO", "MAKE_DWO=YES", getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
 
-    runBuildCommands(commands, sender=sender)
+    lldbtest.system(commands, sender=sender)
     # True signifies that we can handle building dwo.
     return True
 
@@ -164,6 +149,6 @@ def cleanup(sender=None, dictionary=None):
     if os.path.isfile("Makefile"):
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
 
-    runBuildCommands(commands, sender=sender)
+    lldbtest.system(commands, sender=sender)
     # True signifies that we can handle cleanup.
     return True
