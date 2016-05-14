@@ -111,7 +111,7 @@ class ResultsFormatter(object):
                   'the summary output.'))
         return parser
 
-    def __init__(self, out_file, options, file_is_stream):
+    def __init__(self, out_file, options):
         super(ResultsFormatter, self).__init__()
         self.out_file = out_file
         self.options = options
@@ -120,7 +120,6 @@ class ResultsFormatter(object):
             raise Exception("ResultsFormatter created with no file object")
         self.start_time_by_test = {}
         self.terminate_called = False
-        self.file_is_stream = file_is_stream
 
         # Store counts of test_result events by status.
         self.result_status_counts = {
