@@ -6168,6 +6168,20 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
       << FixItHint::CreateRemoval(SourceRange(RParen, RParen));
 }
 
+static void CheckForNullPointerDereference(Sema &S, const Expr *E) {
+  // Check to see if we are dereferencing a null pointer.  If so, this is
+  // undefined behavior, so warn about it.  This only handles the pattern
+  // "*null", which is a very syntactic check.
+  if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E->IgnoreParenCasts()))
+    if (UO->getOpcode() == UO_Deref &&
+        UO->getSubExpr()->IgnoreParenCasts()->
+        isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNotNull)) {
+    S.DiagRuntimeBehavior(UO->getOperatorLoc(), UO,
+                          S.PDiag(diag::warn_binding_null_to_reference)
+                            << UO->getSubExpr()->getSourceRange());
+  }
+}
+
 ExprResult
 InitializationSequence::Perform(Sema &S,
                                 const InitializedEntity &Entity,
@@ -6420,6 +6434,7 @@ InitializationSequence::Perform(Sema &S,
                                   /*IsInitializerList=*/false,
                                   ExtendingEntity->getDecl());
 
+      CheckForNullPointerDereference(S, CurInit.get());
       break;
 
     case SK_BindReferenceToTemporary: {

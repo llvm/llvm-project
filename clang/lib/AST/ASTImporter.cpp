@@ -3029,22 +3029,6 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
                                             D->isInlineSpecified(), 
                                             D->isImplicit(),
                                             D->isConstexpr());
-    if (unsigned NumInitializers = FromConstructor->getNumCtorInitializers()) {
-      SmallVector<CXXCtorInitializer *, 4> CtorInitializers;
-      for (CXXCtorInitializer *I : FromConstructor->inits()) {
-        CXXCtorInitializer *ToI =
-            cast_or_null<CXXCtorInitializer>(Importer.Import(I));
-        if (!ToI && I)
-          return nullptr;
-        CtorInitializers.push_back(ToI);
-      }
-      CXXCtorInitializer **Memory =
-          new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
-      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
-      CXXConstructorDecl *ToCtor = llvm::cast<CXXConstructorDecl>(ToFunction);
-      ToCtor->setCtorInitializers(Memory);
-      ToCtor->setNumCtorInitializers(NumInitializers);
-    }
   } else if (isa<CXXDestructorDecl>(D)) {
     ToFunction = CXXDestructorDecl::Create(Importer.getToContext(),
                                            cast<CXXRecordDecl>(DC),
@@ -6375,72 +6359,6 @@ FileID ASTImporter::Import(FileID FromID) {
   ImportedFileIDs[FromID] = ToID;
   return ToID;
 }
-
-CXXCtorInitializer *ASTImporter::Import(CXXCtorInitializer *From) {
-  Expr *ToExpr = Import(From->getInit());
-  if (!ToExpr && From->getInit())
-    return nullptr;
-
-  if (From->isBaseInitializer()) {
-    TypeSourceInfo *ToTInfo = Import(From->getTypeSourceInfo());
-    if (!ToTInfo && From->getTypeSourceInfo())
-      return nullptr;
-
-    return new (ToContext) CXXCtorInitializer(
-        ToContext, ToTInfo, From->isBaseVirtual(), Import(From->getLParenLoc()),
-        ToExpr, Import(From->getRParenLoc()),
-        From->isPackExpansion() ? Import(From->getEllipsisLoc())
-                                : SourceLocation());
-  } else if (From->isMemberInitializer()) {
-    FieldDecl *ToField =
-        llvm::cast_or_null<FieldDecl>(Import(From->getMember()));
-    if (!ToField && From->getMember())
-      return nullptr;
-
-    return new (ToContext) CXXCtorInitializer(
-        ToContext, ToField, Import(From->getMemberLocation()),
-        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()));
-  } else if (From->isIndirectMemberInitializer()) {
-    IndirectFieldDecl *ToIField = llvm::cast_or_null<IndirectFieldDecl>(
-        Import(From->getIndirectMember()));
-    if (!ToIField && From->getIndirectMember())
-      return nullptr;
-
-    return new (ToContext) CXXCtorInitializer(
-        ToContext, ToIField, Import(From->getMemberLocation()),
-        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()));
-  } else if (From->isDelegatingInitializer()) {
-    TypeSourceInfo *ToTInfo = Import(From->getTypeSourceInfo());
-    if (!ToTInfo && From->getTypeSourceInfo())
-      return nullptr;
-
-    return new (ToContext)
-        CXXCtorInitializer(ToContext, ToTInfo, Import(From->getLParenLoc()),
-                           ToExpr, Import(From->getRParenLoc()));
-  } else if (unsigned NumArrayIndices = From->getNumArrayIndices()) {
-    FieldDecl *ToField =
-        llvm::cast_or_null<FieldDecl>(Import(From->getMember()));
-    if (!ToField && From->getMember())
-      return nullptr;
-
-    SmallVector<VarDecl *, 4> ToAIs(NumArrayIndices);
-
-    for (unsigned AII = 0; AII < NumArrayIndices; ++AII) {
-      VarDecl *ToArrayIndex =
-          dyn_cast_or_null<VarDecl>(Import(From->getArrayIndex(AII)));
-      if (!ToArrayIndex && From->getArrayIndex(AII))
-        return nullptr;
-    }
-
-    return CXXCtorInitializer::Create(
-        ToContext, ToField, Import(From->getMemberLocation()),
-        Import(From->getLParenLoc()), ToExpr, Import(From->getRParenLoc()),
-        ToAIs.data(), NumArrayIndices);
-  } else {
-    return nullptr;
-  }
-}
-
 
 void ASTImporter::ImportDefinition(Decl *From) {
   Decl *To = Import(From);

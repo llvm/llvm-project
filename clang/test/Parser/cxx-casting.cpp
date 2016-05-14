@@ -37,7 +37,7 @@ char postfix_expr_test()
 // This was being incorrectly tentatively parsed.
 namespace test1 {
   template <class T> class A {}; // expected-note 2{{here}}
-  void foo() { A<int>(*(A<int>*)0); }
+  void foo() { A<int>(*(A<int>*)0); } // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
 }
 
 typedef char* c;

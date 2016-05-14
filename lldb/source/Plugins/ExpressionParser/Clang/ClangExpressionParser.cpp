@@ -180,7 +180,7 @@ public:
             diag_str.push_back('\0');
             const char *data = diag_str.data();
 
-            DiagnosticSeverity severity;
+            lldb_private::DiagnosticSeverity severity;
             bool make_new_diagnostic = true;
             
             switch (DiagLevel)
