@@ -6,7 +6,7 @@
 //
 // FIXME: https://github.com/google/sanitizers/issues/316
 // XFAIL: android
-// XFAIL: mips
+// XFAIL: mips64
 //
 // RUN: %clangxx_asan -DBUILD_INSTRUMENTED_DSO=1 -fPIC -shared -mllvm -asan-use-private-alias %s -o %t-INSTRUMENTED-SO.so
 // RUN: %clangxx -DBUILD_UNINSTRUMENTED_DSO=1 -fPIC -shared %s -o %t-UNINSTRUMENTED-SO.so

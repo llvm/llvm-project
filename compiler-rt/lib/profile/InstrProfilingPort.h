@@ -25,11 +25,14 @@
 #define COMPILER_RT_MAX_HOSTLEN 128
 #ifdef _MSC_VER
 #define COMPILER_RT_GETHOSTNAME(Name, Len) gethostname(Name, Len)
+#define COMPILER_RT_ALLOCA _alloca
 #elif defined(__PS4__)
 #define COMPILER_RT_GETHOSTNAME(Name, Len) (-1)
+#define COMPILER_RT_ALLOCA alloca
 #else
 #define COMPILER_RT_GETHOSTNAME(Name, Len) lprofGetHostName(Name, Len)
 #define COMPILER_RT_HAS_UNAME 1
+#define COMPILER_RT_ALLOCA alloca
 #endif
 
 #if COMPILER_RT_HAS_ATOMICS == 1
