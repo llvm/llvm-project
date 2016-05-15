@@ -371,7 +371,7 @@ void PassManagerBuilder::populateModulePassManager(
     /// not run it a second time
     addPGOInstrPasses(MPM);
     // Indirect call promotion that promotes intra-module targets only.
-    MPM.add(createPGOIndirectCallPromotionPass());
+    MPM.add(createPGOIndirectCallPromotionLegacyPass());
   }
 
   if (EnableNonLTOGlobalsModRef)
@@ -583,7 +583,7 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   // by the earlier promotion pass that promotes intra-module targets.
   // This two-step promotion is to save the compile time. For LTO, it should
   // produce the same result as if we only do promotion here.
-  PM.add(createPGOIndirectCallPromotionPass(true));
+  PM.add(createPGOIndirectCallPromotionLegacyPass(true));
 
   // Propagate constants at call sites into the functions they call.  This
   // opens opportunities for globalopt (and inlining) by substituting function

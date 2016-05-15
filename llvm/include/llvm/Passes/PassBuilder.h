@@ -123,6 +123,15 @@ public:
 
   explicit PassBuilder(TargetMachine *TM = nullptr) : TM(TM) {}
 
+  /// \brief Cross register the analysis managers through their proxies.
+  ///
+  /// This is an interface that can be used to cross register each
+  // AnalysisManager with all the others analysis managers.
+  void crossRegisterProxies(LoopAnalysisManager &LAM,
+                            FunctionAnalysisManager &FAM,
+                            CGSCCAnalysisManager &CGAM,
+                            ModuleAnalysisManager &MAM);
+
   /// \brief Registers all available module analysis passes.
   ///
   /// This is an interface that can be used to populate a \c

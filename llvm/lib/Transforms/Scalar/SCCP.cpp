@@ -1573,8 +1573,11 @@ namespace {
 } // end anonymous namespace
 
 char SCCP::ID = 0;
-INITIALIZE_PASS(SCCP, "sccp",
+INITIALIZE_PASS_BEGIN(SCCP, "sccp",
                 "Sparse Conditional Constant Propagation", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(SCCP, "sccp",
+                    "Sparse Conditional Constant Propagation", false, false)
 
 // createSCCPPass - This is the public interface to this file.
 FunctionPass *llvm::createSCCPPass() {
@@ -1702,32 +1705,32 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
   // Loop over all functions, marking arguments to those with their addresses
   // taken or that are external as overdefined.
   //
-  for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
-    if (F->isDeclaration())
+  for (Function &F : M) {
+    if (F.isDeclaration())
       continue;
 
     // If this is an exact definition of this function, then we can propagate
     // information about its result into callsites of it.
-    if (F->hasExactDefinition())
-      Solver.AddTrackedFunction(&*F);
+    if (F.hasExactDefinition())
+      Solver.AddTrackedFunction(&F);
 
     // If this function only has direct calls that we can see, we can track its
     // arguments and return value aggressively, and can assume it is not called
     // unless we see evidence to the contrary.
-    if (F->hasLocalLinkage()) {
-      if (AddressIsTaken(&*F))
-        AddressTakenFunctions.insert(&*F);
+    if (F.hasLocalLinkage()) {
+      if (AddressIsTaken(&F))
+        AddressTakenFunctions.insert(&F);
       else {
-        Solver.AddArgumentTrackedFunction(&*F);
+        Solver.AddArgumentTrackedFunction(&F);
         continue;
       }
     }
 
     // Assume the function is called.
-    Solver.MarkBlockExecutable(&F->front());
+    Solver.MarkBlockExecutable(&F.front());
 
     // Assume nothing about the incoming arguments.
-    for (Argument &AI : F->args())
+    for (Argument &AI : F.args())
       Solver.markAnythingOverdefined(&AI);
   }
 

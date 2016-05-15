@@ -1438,25 +1438,25 @@ static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
   // form these situations when matching bigger pattern (bitfield insert).
 
   // For unsigned extracts, check for a shift right and mask
-  uint64_t And_imm = 0;
-  if (!isOpcWithIntImmediate(N, ISD::AND, And_imm))
+  uint64_t AndImm = 0;
+  if (!isOpcWithIntImmediate(N, ISD::AND, AndImm))
     return false;
 
   const SDNode *Op0 = N->getOperand(0).getNode();
 
   // Because of simplify-demanded-bits in DAGCombine, the mask may have been
   // simplified. Try to undo that
-  And_imm |= (1 << NumberOfIgnoredLowBits) - 1;
+  AndImm |= (1 << NumberOfIgnoredLowBits) - 1;
 
   // The immediate is a mask of the low bits iff imm & (imm+1) == 0
-  if (And_imm & (And_imm + 1))
+  if (AndImm & (AndImm + 1))
     return false;
 
   bool ClampMSB = false;
-  uint64_t Srl_imm = 0;
+  uint64_t SrlImm = 0;
   // Handle the SRL + ANY_EXTEND case.
   if (VT == MVT::i64 && Op0->getOpcode() == ISD::ANY_EXTEND &&
-      isOpcWithIntImmediate(Op0->getOperand(0).getNode(), ISD::SRL, Srl_imm)) {
+      isOpcWithIntImmediate(Op0->getOperand(0).getNode(), ISD::SRL, SrlImm)) {
     // Extend the incoming operand of the SRL to 64-bit.
     Opd0 = Widen(CurDAG, Op0->getOperand(0).getOperand(0));
     // Make sure to clamp the MSB so that we preserve the semantics of the
@@ -1464,13 +1464,13 @@ static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
     ClampMSB = true;
   } else if (VT == MVT::i32 && Op0->getOpcode() == ISD::TRUNCATE &&
              isOpcWithIntImmediate(Op0->getOperand(0).getNode(), ISD::SRL,
-                                   Srl_imm)) {
+                                   SrlImm)) {
     // If the shift result was truncated, we can still combine them.
     Opd0 = Op0->getOperand(0).getOperand(0);
 
     // Use the type of SRL node.
     VT = Opd0->getValueType(0);
-  } else if (isOpcWithIntImmediate(Op0, ISD::SRL, Srl_imm)) {
+  } else if (isOpcWithIntImmediate(Op0, ISD::SRL, SrlImm)) {
     Opd0 = Op0->getOperand(0);
   } else if (BiggerPattern) {
     // Let's pretend a 0 shift right has been performed.
@@ -1484,15 +1484,15 @@ static bool isBitfieldExtractOpFromAnd(SelectionDAG *CurDAG, SDNode *N,
 
   // Bail out on large immediates. This happens when no proper
   // combining/constant folding was performed.
-  if (!BiggerPattern && (Srl_imm <= 0 || Srl_imm >= VT.getSizeInBits())) {
+  if (!BiggerPattern && (SrlImm <= 0 || SrlImm >= VT.getSizeInBits())) {
     DEBUG((dbgs() << N
            << ": Found large shift immediate, this should not happen\n"));
     return false;
   }
 
-  LSB = Srl_imm;
-  MSB = Srl_imm + (VT == MVT::i32 ? countTrailingOnes<uint32_t>(And_imm)
-                                  : countTrailingOnes<uint64_t>(And_imm)) -
+  LSB = SrlImm;
+  MSB = SrlImm + (VT == MVT::i32 ? countTrailingOnes<uint32_t>(AndImm)
+                                 : countTrailingOnes<uint64_t>(AndImm)) -
         1;
   if (ClampMSB)
     // Since we're moving the extend before the right shift operation, we need
@@ -1519,32 +1519,32 @@ static bool isSeveralBitsExtractOpFromShr(SDNode *N, unsigned &Opc,
   //
   // This gets selected into a single UBFM:
   //
-  // UBFM Value, ShiftImm, BitWide + Srl_imm -1
+  // UBFM Value, ShiftImm, BitWide + SrlImm -1
   //
 
   if (N->getOpcode() != ISD::SRL)
     return false;
 
-  uint64_t And_mask = 0;
-  if (!isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::AND, And_mask))
+  uint64_t AndMask = 0;
+  if (!isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::AND, AndMask))
     return false;
 
   Opd0 = N->getOperand(0).getOperand(0);
 
-  uint64_t Srl_imm = 0;
-  if (!isIntImmediate(N->getOperand(1), Srl_imm))
+  uint64_t SrlImm = 0;
+  if (!isIntImmediate(N->getOperand(1), SrlImm))
     return false;
 
   // Check whether we really have several bits extract here.
-  unsigned BitWide = 64 - countLeadingOnes(~(And_mask >> Srl_imm));
-  if (BitWide && isMask_64(And_mask >> Srl_imm)) {
+  unsigned BitWide = 64 - countLeadingOnes(~(AndMask >> SrlImm));
+  if (BitWide && isMask_64(AndMask >> SrlImm)) {
     if (N->getValueType(0) == MVT::i32)
       Opc = AArch64::UBFMWri;
     else
       Opc = AArch64::UBFMXri;
 
-    LSB = Srl_imm;
-    MSB = BitWide + Srl_imm - 1;
+    LSB = SrlImm;
+    MSB = BitWide + SrlImm - 1;
     return true;
   }
 
@@ -1570,9 +1570,9 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
     return true;
 
   // we're looking for a shift of a shift
-  uint64_t Shl_imm = 0;
-  uint64_t Trunc_bits = 0;
-  if (isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::SHL, Shl_imm)) {
+  uint64_t ShlImm = 0;
+  uint64_t TruncBits = 0;
+  if (isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::SHL, ShlImm)) {
     Opd0 = N->getOperand(0).getOperand(0);
   } else if (VT == MVT::i32 && N->getOpcode() == ISD::SRL &&
              N->getOperand(0).getNode()->getOpcode() == ISD::TRUNCATE) {
@@ -1581,7 +1581,7 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
     // always generate 64bit UBFM. This consistency will help the CSE pass
     // later find more redundancy.
     Opd0 = N->getOperand(0).getOperand(0);
-    Trunc_bits = Opd0->getValueType(0).getSizeInBits() - VT.getSizeInBits();
+    TruncBits = Opd0->getValueType(0).getSizeInBits() - VT.getSizeInBits();
     VT = Opd0->getValueType(0);
     assert(VT == MVT::i64 && "the promoted type should be i64");
   } else if (BiggerPattern) {
@@ -1594,21 +1594,21 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
 
   // Missing combines/constant folding may have left us with strange
   // constants.
-  if (Shl_imm >= VT.getSizeInBits()) {
+  if (ShlImm >= VT.getSizeInBits()) {
     DEBUG((dbgs() << N
            << ": Found large shift immediate, this should not happen\n"));
     return false;
   }
 
-  uint64_t Srl_imm = 0;
-  if (!isIntImmediate(N->getOperand(1), Srl_imm))
+  uint64_t SrlImm = 0;
+  if (!isIntImmediate(N->getOperand(1), SrlImm))
     return false;
 
-  assert(Srl_imm > 0 && Srl_imm < VT.getSizeInBits() &&
+  assert(SrlImm > 0 && SrlImm < VT.getSizeInBits() &&
          "bad amount in shift node!");
-  int immr = Srl_imm - Shl_imm;
+  int immr = SrlImm - ShlImm;
   Immr = immr < 0 ? immr + VT.getSizeInBits() : immr;
-  Imms = VT.getSizeInBits() - Shl_imm - Trunc_bits - 1;
+  Imms = VT.getSizeInBits() - ShlImm - TruncBits - 1;
   // SRA requires a signed extraction
   if (VT == MVT::i32)
     Opc = N->getOpcode() == ISD::SRA ? AArch64::SBFMWri : AArch64::UBFMWri;
