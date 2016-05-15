@@ -50,7 +50,7 @@ static void setupIOBuffer() {
 static int writeFile(FILE *File) {
   FreeHook = &free;
   setupIOBuffer();
-  return lprofWriteData(fileWriter, File, lprofGatherValueProfData);
+  return lprofWriteData(fileWriter, File, lprofGetVPDataReader());
 }
 
 static int writeFileWithName(const char *OutputName) {
