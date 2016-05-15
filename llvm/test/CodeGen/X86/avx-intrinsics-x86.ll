@@ -104,8 +104,10 @@ define i32 @test_x86_sse2_comieq_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_comieq_sd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcomisd %xmm1, %xmm0
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setnp %al
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comieq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -142,8 +144,8 @@ declare i32 @llvm.x86.sse2.comigt.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comile_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_comile_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcomisd %xmm1, %xmm0
-; CHECK-NEXT:    setbe %al
+; CHECK-NEXT:    vcomisd %xmm0, %xmm1
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comile.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
@@ -155,9 +157,9 @@ declare i32 @llvm.x86.sse2.comile.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comilt_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_comilt_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcomisd %xmm1, %xmm0
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    vcomisd %xmm0, %xmm1
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comilt.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -169,8 +171,10 @@ define i32 @test_x86_sse2_comineq_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_comineq_sd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcomisd %xmm1, %xmm0
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setp %al
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comineq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -912,8 +916,10 @@ define i32 @test_x86_sse2_ucomieq_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_ucomieq_sd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vucomisd %xmm1, %xmm0
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setnp %al
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomieq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -950,8 +956,8 @@ declare i32 @llvm.x86.sse2.ucomigt.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomile_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_ucomile_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vucomisd %xmm1, %xmm0
-; CHECK-NEXT:    setbe %al
+; CHECK-NEXT:    vucomisd %xmm0, %xmm1
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomile.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
@@ -963,9 +969,9 @@ declare i32 @llvm.x86.sse2.ucomile.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomilt_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_ucomilt_sd:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vucomisd %xmm1, %xmm0
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    vucomisd %xmm0, %xmm1
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomilt.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -977,8 +983,10 @@ define i32 @test_x86_sse2_ucomineq_sd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse2_ucomineq_sd:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vucomisd %xmm1, %xmm0
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setp %al
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomineq.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1699,8 +1707,10 @@ define i32 @test_x86_sse_comieq_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_comieq_ss:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcomiss %xmm1, %xmm0
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setnp %al
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comieq.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1737,8 +1747,8 @@ declare i32 @llvm.x86.sse.comigt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comile_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_comile_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcomiss %xmm1, %xmm0
-; CHECK-NEXT:    setbe %al
+; CHECK-NEXT:    vcomiss %xmm0, %xmm1
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comile.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -1750,9 +1760,9 @@ declare i32 @llvm.x86.sse.comile.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comilt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_comilt_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcomiss %xmm1, %xmm0
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    vcomiss %xmm0, %xmm1
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comilt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1764,8 +1774,10 @@ define i32 @test_x86_sse_comineq_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_comineq_ss:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcomiss %xmm1, %xmm0
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setp %al
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comineq.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2003,8 +2015,10 @@ define i32 @test_x86_sse_ucomieq_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_ucomieq_ss:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm0
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setnp %al
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2041,8 +2055,8 @@ declare i32 @llvm.x86.sse.ucomigt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomile_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_ucomile_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vucomiss %xmm1, %xmm0
-; CHECK-NEXT:    setbe %al
+; CHECK-NEXT:    vucomiss %xmm0, %xmm1
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomile.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
@@ -2054,9 +2068,9 @@ declare i32 @llvm.x86.sse.ucomile.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomilt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_ucomilt_ss:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vucomiss %xmm1, %xmm0
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    vucomiss %xmm0, %xmm1
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2068,8 +2082,10 @@ define i32 @test_x86_sse_ucomineq_ss(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: test_x86_sse_ucomineq_ss:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm0
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    setp %al
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    orb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomineq.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res

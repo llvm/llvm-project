@@ -17503,30 +17503,66 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
       ISD::CondCode CC = (ISD::CondCode)IntrData->Opc1;
       SDValue LHS = Op.getOperand(1);
       SDValue RHS = Op.getOperand(2);
-      unsigned X86CC = TranslateX86CC(CC, dl, true, LHS, RHS, DAG);
-      assert(X86CC != X86::COND_INVALID && "Unexpected illegal condition!");
-      SDValue Cond = DAG.getNode(IntrData->Opc0, dl, MVT::i32, LHS, RHS);
-      SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-                                  DAG.getConstant(X86CC, dl, MVT::i8), Cond);
+      SDValue Comi = DAG.getNode(IntrData->Opc0, dl, MVT::i32, LHS, RHS);
+      SDValue InvComi = DAG.getNode(IntrData->Opc0, dl, MVT::i32, RHS, LHS);
+      SDValue SetCC;
+      switch (CC) {
+      case ISD::SETEQ: { // (ZF = 0 and PF = 0)
+        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                            DAG.getConstant(X86::COND_E, dl, MVT::i8), Comi);
+        SDValue SetNP = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                                    DAG.getConstant(X86::COND_NP, dl, MVT::i8),
+                                    Comi);
+        SetCC = DAG.getNode(ISD::AND, dl, MVT::i8, SetCC, SetNP);
+        break;
+      }
+      case ISD::SETNE: { // (ZF = 1 or PF = 1)
+        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                            DAG.getConstant(X86::COND_NE, dl, MVT::i8), Comi);
+        SDValue SetP = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                                   DAG.getConstant(X86::COND_P, dl, MVT::i8),
+                                   Comi);
+        SetCC = DAG.getNode(ISD::OR, dl, MVT::i8, SetCC, SetP);
+        break;
+      }
+      case ISD::SETGT: // (CF = 0 and ZF = 0)
+        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                            DAG.getConstant(X86::COND_A, dl, MVT::i8), Comi);
+        break;
+      case ISD::SETLT: { // The condition is opposite to GT. Swap the operands.
+        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                            DAG.getConstant(X86::COND_A, dl, MVT::i8), InvComi);
+        break;
+      }
+      case ISD::SETGE: // CF = 0
+        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                            DAG.getConstant(X86::COND_AE, dl, MVT::i8), Comi);
+        break;
+      case ISD::SETLE: // The condition is opposite to GE. Swap the operands.
+        SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
+                            DAG.getConstant(X86::COND_AE, dl, MVT::i8), InvComi);
+        break;
+      default:
+        llvm_unreachable("Unexpected illegal condition!");
+      }
       return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
     }
     case COMI_RM: { // Comparison intrinsics with Sae
       SDValue LHS = Op.getOperand(1);
       SDValue RHS = Op.getOperand(2);
-      SDValue CC = Op.getOperand(3);
+      unsigned CondVal = cast<ConstantSDNode>(Op.getOperand(3))->getZExtValue();
       SDValue Sae = Op.getOperand(4);
-      auto ComiType = TranslateX86ConstCondToX86CC(CC);
-      // choose between ordered and unordered (comi/ucomi)
-      unsigned comiOp = std::get<0>(ComiType) ? IntrData->Opc0 : IntrData->Opc1;
-      SDValue Cond;
-      if (cast<ConstantSDNode>(Sae)->getZExtValue() !=
-                                           X86::STATIC_ROUNDING::CUR_DIRECTION)
-        Cond = DAG.getNode(comiOp, dl, MVT::i32, LHS, RHS, Sae);
+
+      SDValue FCmp;
+      if (cast<ConstantSDNode>(Sae)->getZExtValue() ==
+          X86::STATIC_ROUNDING::CUR_DIRECTION)
+        FCmp = DAG.getNode(X86ISD::FSETCC, dl, MVT::i1, LHS, RHS,
+                                  DAG.getConstant(CondVal, dl, MVT::i8));
       else
-        Cond = DAG.getNode(comiOp, dl, MVT::i32, LHS, RHS);
-      SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
-        DAG.getConstant(std::get<1>(ComiType), dl, MVT::i8), Cond);
-      return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
+        FCmp = DAG.getNode(X86ISD::FSETCC, dl, MVT::i1, LHS, RHS,
+                                  DAG.getConstant(CondVal, dl, MVT::i8), Sae);
+      // AnyExt just uses KMOVW %kreg, %r32; ZeroExt emits "and $1, %reg"
+      return DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, FCmp);
     }
     case VSHIFT:
       return getTargetVShiftNode(IntrData->Opc0, dl, Op.getSimpleValueType(),

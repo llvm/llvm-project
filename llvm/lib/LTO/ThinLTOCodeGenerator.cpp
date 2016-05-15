@@ -884,6 +884,11 @@ void ThinLTOCodeGenerator::run() {
   auto GUIDPreservedSymbols =
       computeGUIDPreservedSymbols(PreservedSymbols, TMBuilder.TheTriple);
 
+  // Make sure that every module has an entry in the ExportLists to enable
+  // threaded access to this map below
+  for (auto &DefinedGVSummaries : ModuleToDefinedGVSummaries)
+    ExportLists[DefinedGVSummaries.first()];
+
   // Parallel optimizer + codegen
   {
     ThreadPool Pool(ThreadCount);

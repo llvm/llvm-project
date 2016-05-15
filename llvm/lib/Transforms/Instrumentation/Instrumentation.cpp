@@ -62,7 +62,7 @@ void llvm::initializeInstrumentation(PassRegistry &Registry) {
   initializeGCOVProfilerPass(Registry);
   initializePGOInstrumentationGenLegacyPassPass(Registry);
   initializePGOInstrumentationUseLegacyPassPass(Registry);
-  initializePGOIndirectCallPromotionPass(Registry);
+  initializePGOIndirectCallPromotionLegacyPassPass(Registry);
   initializeInstrProfilingLegacyPassPass(Registry);
   initializeMemorySanitizerPass(Registry);
   initializeThreadSanitizerPass(Registry);

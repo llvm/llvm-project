@@ -83,7 +83,7 @@ ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
 ModulePass *createPGOInstrumentationGenLegacyPass();
 ModulePass *
 createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
-ModulePass *createPGOIndirectCallPromotionPass(bool InLTO = false);
+ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false);
 
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {

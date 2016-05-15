@@ -14,6 +14,7 @@
 #include "llvm/Support/CachePruning.h"
 
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,8 +55,8 @@ bool CachePruning::prune() {
   sys::path::append(TimestampFile, "llvmcache.timestamp");
   sys::fs::file_status FileStatus;
   sys::TimeValue CurrentTime = sys::TimeValue::now();
-  if (sys::fs::status(TimestampFile, FileStatus)) {
-    if (errno == ENOENT) {
+  if (auto EC = sys::fs::status(TimestampFile, FileStatus)) {
+    if (EC == errc::no_such_file_or_directory) {
       // If the timestamp file wasn't there, create one now.
       writeTimestampFile(TimestampFile);
     } else {

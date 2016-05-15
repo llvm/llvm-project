@@ -76,16 +76,7 @@ bool llvm::runPassPipeline(StringRef Arg0, LLVMContext &Context, Module &M,
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
-
-  // Cross register the analysis managers through their proxies.
-  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
-  MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
-  CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(FAM); });
-  CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
-  FAM.registerPass([&] { return CGSCCAnalysisManagerFunctionProxy(CGAM); });
-  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
-  FAM.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
-  LAM.registerPass([&] { return FunctionAnalysisManagerLoopProxy(FAM); });
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM(DebugPM);
   if (VK > VK_NoVerifier)

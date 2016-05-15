@@ -126,7 +126,7 @@ void initializeAAResultsWrapperPassPass(PassRegistry &);
 void initializeGCOVProfilerPass(PassRegistry&);
 void initializePGOInstrumentationGenLegacyPassPass(PassRegistry&);
 void initializePGOInstrumentationUseLegacyPassPass(PassRegistry&);
-void initializePGOIndirectCallPromotionPass(PassRegistry&);
+void initializePGOIndirectCallPromotionLegacyPassPass(PassRegistry&);
 void initializeInstrProfilingLegacyPassPass(PassRegistry &);
 void initializeAddressSanitizerPass(PassRegistry&);
 void initializeAddressSanitizerModulePass(PassRegistry&);
