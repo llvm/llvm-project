@@ -2440,7 +2440,9 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
 
     bool IsDef = false;
     for (const MachineOperand &MO : Prev->implicit_operands()) {
-      if (MO.isReg() && MO.isDef() && MO.getReg() == Candidate) {
+      if (MO.isReg() && MO.isDef() &&
+          (TRI->isSubRegisterEq(MO.getReg(), Candidate) ||
+           TRI->isSuperRegister(MO.getReg(), Candidate))) {
         IsDef = true;
         break;
       }
