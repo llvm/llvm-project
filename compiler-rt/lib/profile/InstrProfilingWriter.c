@@ -10,11 +10,8 @@
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 #ifdef _MSC_VER
+/* For _alloca */
 #include <malloc.h>
-#elif defined(__FreeBSD__)
-#include <stdlib.h>
-#else
-#include <alloca.h>
 #endif
 #include <string.h>
 
