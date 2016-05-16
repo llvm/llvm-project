@@ -52,6 +52,8 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
+#include <numeric>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "thinlto"
@@ -881,11 +883,24 @@ void ThinLTOCodeGenerator::run() {
   for (auto &DefinedGVSummaries : ModuleToDefinedGVSummaries)
     ExportLists[DefinedGVSummaries.first()];
 
+  // Compute the ordering we will process the inputs: the rough heuristic here
+  // is to sort them per size so that the largest module get schedule as soon as
+  // possible. This is purely a compile-time optimization.
+  std::vector<int> ModulesOrdering;
+  ModulesOrdering.resize(Modules.size());
+  std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
+  std::sort(ModulesOrdering.begin(), ModulesOrdering.end(),
+            [&](int LeftIndex, int RightIndex) {
+              auto LSize = Modules[LeftIndex].getBufferSize();
+              auto RSize = Modules[RightIndex].getBufferSize();
+              return LSize > RSize;
+            });
+
   // Parallel optimizer + codegen
   {
     ThreadPool Pool(getNumCores());
-    int count = 0;
-    for (auto &ModuleBuffer : Modules) {
+    for (auto IndexCount : ModulesOrdering) {
+      auto &ModuleBuffer = Modules[IndexCount];
       Pool.async([&](int count) {
         auto ModuleIdentifier = ModuleBuffer.getBufferIdentifier();
         auto &ExportList = ExportLists[ModuleIdentifier];
@@ -937,8 +952,7 @@ void ThinLTOCodeGenerator::run() {
 
         OutputBuffer = CacheEntry.write(std::move(OutputBuffer));
         ProducedBinaries[count] = std::move(OutputBuffer);
-      }, count);
-      count++;
+      }, IndexCount);
     }
   }
 
