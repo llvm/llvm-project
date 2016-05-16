@@ -3000,11 +3000,24 @@ void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
   NameVals.push_back(FS->instCount());
   NameVals.push_back(FS->refs().size());
 
+  // Compute refs in a separate vector to be able to sort them for determinism.
+  std::vector<uint64_t> Refs;
+  Refs.reserve(FS->refs().size());
   for (auto &RI : FS->refs())
-    NameVals.push_back(VE.getValueID(RI.getValue()));
+    Refs.push_back(VE.getValueID(RI.getValue()));
+  std::sort(Refs.begin(), Refs.end());
 
+  NameVals.insert(NameVals.end(), Refs.begin(), Refs.end());
+
+  std::vector<FunctionSummary::EdgeTy> Calls = FS->calls();
+  std::sort(Calls.begin(), Calls.end(),
+            [this](const FunctionSummary::EdgeTy &L,
+                   const FunctionSummary::EdgeTy &R) {
+              return VE.getValueID(L.first.getValue()) <
+                     VE.getValueID(R.first.getValue());
+            });
   bool HasProfileData = F.getEntryCount().hasValue();
-  for (auto &ECI : FS->calls()) {
+  for (auto &ECI : Calls) {
     NameVals.push_back(VE.getValueID(ECI.first.getValue()));
     assert(ECI.second.CallsiteCount > 0 && "Expected at least one callsite");
     NameVals.push_back(ECI.second.CallsiteCount);
@@ -3033,8 +3046,15 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
   NameVals.push_back(getEncodedGVSummaryFlags(V));
   auto *Summary = Index->getGlobalValueSummary(V);
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
-  for (auto Ref : VS->refs())
-    NameVals.push_back(VE.getValueID(Ref.getValue()));
+
+  // Compute refs in a separate vector to be able to sort them for determinism.
+  std::vector<uint64_t> Refs;
+  Refs.reserve(VS->refs().size());
+  for (auto &RI : VS->refs())
+    Refs.push_back(VE.getValueID(RI.getValue()));
+  std::sort(Refs.begin(), Refs.end());
+  NameVals.insert(NameVals.end(), Refs.begin(), Refs.end());
+
   Stream.EmitRecord(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS, NameVals,
                     FSModRefsAbbrev);
   NameVals.clear();
