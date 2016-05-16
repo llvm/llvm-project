@@ -3009,8 +3009,15 @@ void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
 
   NameVals.insert(NameVals.end(), Refs.begin(), Refs.end());
 
+  std::vector<FunctionSummary::EdgeTy> Calls = FS->calls();
+  std::sort(Calls.begin(), Calls.end(),
+            [this](const FunctionSummary::EdgeTy &L,
+                   const FunctionSummary::EdgeTy &R) {
+              return VE.getValueID(L.first.getValue()) <
+                     VE.getValueID(R.first.getValue());
+            });
   bool HasProfileData = F.getEntryCount().hasValue();
-  for (auto &ECI : FS->calls()) {
+  for (auto &ECI : Calls) {
     NameVals.push_back(VE.getValueID(ECI.first.getValue()));
     assert(ECI.second.CallsiteCount > 0 && "Expected at least one callsite");
     NameVals.push_back(ECI.second.CallsiteCount);
