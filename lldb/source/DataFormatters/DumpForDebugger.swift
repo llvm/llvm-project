@@ -106,7 +106,6 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
                     // but if I can't provide a value, just use the type anyway
                     return "\(x_mirror.subjectType)"
                 }
-            default: ()
             }
             if let x = x_opt {
                 return Swift.String(reflecting: x)
