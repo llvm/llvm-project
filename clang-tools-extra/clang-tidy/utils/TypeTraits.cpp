@@ -10,6 +10,7 @@
 #include "TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 
 namespace clang {
 namespace tidy {
@@ -17,19 +18,34 @@ namespace utils {
 namespace type_traits {
 
 namespace {
+
 bool classHasTrivialCopyAndDestroy(QualType Type) {
   auto *Record = Type->getAsCXXRecordDecl();
   return Record && Record->hasDefinition() &&
          !Record->hasNonTrivialCopyConstructor() &&
          !Record->hasNonTrivialDestructor();
 }
+
+bool hasDeletedCopyConstructor(QualType Type) {
+  auto *Record = Type->getAsCXXRecordDecl();
+  if (!Record || !Record->hasDefinition())
+    return false;
+  for (const auto *Constructor : Record->ctors()) {
+    if (Constructor->isCopyConstructor() && Constructor->isDeleted())
+      return true;
+  }
+  return false;
+}
+
 } // namespace
 
-llvm::Optional<bool> isExpensiveToCopy(QualType Type, ASTContext &Context) {
+llvm::Optional<bool> isExpensiveToCopy(QualType Type,
+                                       const ASTContext &Context) {
   if (Type->isDependentType())
     return llvm::None;
   return !Type.isTriviallyCopyableType(Context) &&
-         !classHasTrivialCopyAndDestroy(Type);
+         !classHasTrivialCopyAndDestroy(Type) &&
+         !hasDeletedCopyConstructor(Type);
 }
 
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,

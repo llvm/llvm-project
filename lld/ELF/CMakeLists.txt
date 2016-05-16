@@ -31,6 +31,7 @@ add_lld_library(lldELF
   Linker
   Object
   Option
+  Passes
   MC
   Support
   Target

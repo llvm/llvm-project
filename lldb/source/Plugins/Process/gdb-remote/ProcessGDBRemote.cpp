@@ -3678,7 +3678,7 @@ ProcessGDBRemote::MonitorDebugserverProcess(std::weak_ptr<ProcessGDBRemote> proc
 
     std::shared_ptr<ProcessGDBRemote> process_sp = process_wp.lock();
     if (log)
-        log->Printf("ProcessGDBRemote::%s(process = %p)", __FUNCTION__, process_sp.get());
+        log->Printf("ProcessGDBRemote::%s(process = %p)", __FUNCTION__, static_cast<void *>(process_sp.get()));
     if (!process_sp || process_sp->m_debugserver_pid != debugserver_pid)
         return handled;
 

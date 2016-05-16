@@ -1281,15 +1281,15 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
     return R_PC;
   case R_MIPS_GOT16:
     if (S.isLocal())
-      return R_MIPS_GOT_LOCAL;
+      return R_MIPS_GOT_LOCAL_PAGE;
   // fallthrough
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
     if (!S.isPreemptible())
-      return R_MIPS_GOT;
+      return R_MIPS_GOT_LOCAL;
     return R_GOT_OFF;
   case R_MIPS_GOT_PAGE:
-    return R_MIPS_GOT_LOCAL;
+    return R_MIPS_GOT_LOCAL_PAGE;
   }
 }
 

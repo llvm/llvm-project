@@ -107,7 +107,7 @@ std::vector<uint8_t> elf::parseHexstring(StringRef S) {
 // Makes a given pathname an absolute path first, and then remove
 // beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
 // assuming that the current directory is "/home/john/bar".
-static std::string relativeToRoot(StringRef Path) {
+std::string elf::relativeToRoot(StringRef Path) {
   SmallString<128> Abs = Path;
   if (std::error_code EC = fs::make_absolute(Abs))
     fatal("make_absolute failed: " + EC.message());
@@ -127,22 +127,26 @@ static std::string relativeToRoot(StringRef Path) {
   return Res.str();
 }
 
-static std::string getDestPath(StringRef Path) {
-  std::string Relpath = relativeToRoot(Path);
-  SmallString<128> Dest;
-  path::append(Dest, path::filename(Config->Reproduce), Relpath);
-  return Dest.str();
+CpioFile::CpioFile(std::unique_ptr<llvm::raw_fd_ostream> OS, StringRef S)
+    : OS(std::move(OS)), Basename(S) {}
+
+CpioFile *CpioFile::create(StringRef OutputPath) {
+  std::string Path = (OutputPath + ".cpio").str();
+  std::error_code EC;
+  auto OS = llvm::make_unique<raw_fd_ostream>(Path, EC, fs::F_None);
+  if (EC) {
+    error(EC, "--reproduce: failed to open " + Path);
+    return nullptr;
+  }
+  return new CpioFile(std::move(OS), path::filename(OutputPath));
 }
 
-static void maybePrintCpioMemberAux(raw_fd_ostream &OS, StringRef Path,
-                                    StringRef Data) {
-  OS << "070707"; // c_magic
-
-  // The c_dev/c_ino pair should be unique according to the spec, but no one
-  // seems to care.
-  OS << "000000"; // c_dev
-  OS << "000000"; // c_ino
-
+static void writeMember(raw_fd_ostream &OS, StringRef Path, StringRef Data) {
+  // The c_dev/c_ino pair should be unique according to the spec,
+  // but no one seems to care.
+  OS << "070707";                        // c_magic
+  OS << "000000";                        // c_dev
+  OS << "000000";                        // c_ino
   OS << "100664";                        // c_mode: C_ISREG | rw-rw-r--
   OS << "000000";                        // c_uid
   OS << "000000";                        // c_gid
@@ -155,28 +159,22 @@ static void maybePrintCpioMemberAux(raw_fd_ostream &OS, StringRef Path,
   OS << Data;                            // c_filedata
 }
 
-static void maybePrintCpioMember(StringRef Path, StringRef Data) {
-  if (Config->Reproduce.empty())
+void CpioFile::append(StringRef Path, StringRef Data) {
+  if (!Seen.insert(Path).second)
     return;
 
-  if (!Driver->IncludedFiles.insert(Path).second)
-    return;
-  raw_fd_ostream &OS = *Driver->ReproduceArchive;
-  maybePrintCpioMemberAux(OS, Path, Data);
+  // Construct an in-archive filename so that /home/foo/bar is stored
+  // as baz/home/foo/bar where baz is the basename of the output file.
+  // (i.e. in that case we are creating baz.cpio.)
+  SmallString<128> Fullpath;
+  path::append(Fullpath, Basename, Path);
+  writeMember(*OS, Fullpath, Data);
 
-  // Print the trailer and seek back. This way we have a valid archive if we
-  // crash.
-  // See http://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html#tag_20_92_13_11
-  // for the format details.
-  uint64_t Pos = OS.tell();
-  maybePrintCpioMemberAux(OS, "TRAILER!!!", "");
-  OS.seek(Pos);
-}
-
-// Write file Src with content Data to the archive.
-void elf::maybeCopyInputFile(StringRef Src, StringRef Data) {
-  std::string Dest = getDestPath(Src);
-  maybePrintCpioMember(Dest, Data);
+  // Print the trailer and seek back.
+  // This way we have a valid archive if we crash.
+  uint64_t Pos = OS->tell();
+  writeMember(*OS, "TRAILER!!!", "");
+  OS->seek(Pos);
 }
 
 // Quote a given string if it contains a space character.
@@ -202,15 +200,13 @@ static std::string stringize(opt::Arg *Arg) {
   return K + " " + V;
 }
 
-// Copies all input files to Config->Reproduce directory and
-// create a response file as "response.txt", so that you can re-run
-// the same command with the same inputs just by executing
-// "ld.lld @response.txt". Used by --reproduce. This feature is
-// supposed to be used by users to report an issue to LLD developers.
-void elf::createResponseFile(const opt::InputArgList &Args) {
+// Reconstructs command line arguments so that so that you can re-run
+// the same command with the same inputs. This is for --reproduce.
+std::string elf::createResponseFile(const opt::InputArgList &Args) {
   SmallString<0> Data;
   raw_svector_ostream OS(Data);
-  // Copy the command line to response.txt while rewriting paths.
+
+  // Copy the command line to the output while rewriting paths.
   for (auto *Arg : Args) {
     switch (Arg->getOption().getID()) {
     case OPT_reproduce:
@@ -230,10 +226,7 @@ void elf::createResponseFile(const opt::InputArgList &Args) {
       OS << stringize(Arg) << "\n";
     }
   }
-
-  SmallString<128> Dest;
-  path::append(Dest, path::filename(Config->Reproduce), "response.txt");
-  maybePrintCpioMember(Dest, Data);
+  return Data.str();
 }
 
 std::string elf::findFromSearchPaths(StringRef Path) {

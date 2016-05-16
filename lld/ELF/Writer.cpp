@@ -457,9 +457,10 @@ template <class ELFT>
 static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
                                      const SymbolBody &Body) {
   // These expressions always compute a constant
-  if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF || E == R_MIPS_GOT ||
-      E == R_MIPS_GOT_LOCAL || E == R_GOT_PAGE_PC || E == R_GOT_PC ||
-      E == R_PLT_PC || E == R_TLSGD_PC || E == R_TLSGD || E == R_PPC_PLT_OPD)
+  if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
+      E == R_MIPS_GOT_LOCAL || E == R_MIPS_GOT_LOCAL_PAGE ||
+      E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC ||
+      E == R_TLSGD || E == R_PPC_PLT_OPD)
     return true;
 
   // These never do, except if the entire file is position dependent or if
