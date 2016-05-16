@@ -21,6 +21,7 @@
 #include "kmp_str.h"
 #include "kmp_settings.h"
 #include "kmp_i18n.h"
+#include "kmp_lock.h"
 #include "kmp_io.h"
 
 static int __kmp_env_toPrint( char const * name, int flag );
@@ -3924,7 +3925,7 @@ __kmp_stg_parse_lock_kind( char const * name, char const * value, void * data ) 
         __kmp_user_lock_kind = lk_tas;
         KMP_STORE_LOCK_SEQ(tas);
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
+#if KMP_USE_FUTEX
     else if ( __kmp_str_match( "futex", 1, value ) ) {
         if ( __kmp_futex_determine_capable() ) {
             __kmp_user_lock_kind = lk_futex;
@@ -3998,7 +3999,7 @@ __kmp_stg_print_lock_kind( kmp_str_buf_t * buffer, char const * name, void * dat
         value = "tas";
         break;
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
+#if KMP_USE_FUTEX
         case lk_futex:
         value = "futex";
         break;

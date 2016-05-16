@@ -26,6 +26,7 @@
 
 typedef long long __m64 __attribute__((__vector_size__(8)));
 
+typedef long long __v1di __attribute__((__vector_size__(8)));
 typedef int __v2si __attribute__((__vector_size__(8)));
 typedef short __v4hi __attribute__((__vector_size__(8)));
 typedef char __v8qi __attribute__((__vector_size__(8)));
@@ -246,13 +247,13 @@ _mm_slli_pi32(__m64 __m, int __count)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_sll_si64(__m64 __m, __m64 __count)
 {
-    return (__m64)__builtin_ia32_psllq(__m, __count);
+    return (__m64)__builtin_ia32_psllq((__v1di)__m, __count);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_slli_si64(__m64 __m, int __count)
 {
-    return (__m64)__builtin_ia32_psllqi(__m, __count);
+    return (__m64)__builtin_ia32_psllqi((__v1di)__m, __count);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
@@ -306,37 +307,37 @@ _mm_srli_pi32(__m64 __m, int __count)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_srl_si64(__m64 __m, __m64 __count)
 {
-    return (__m64)__builtin_ia32_psrlq(__m, __count);
+    return (__m64)__builtin_ia32_psrlq((__v1di)__m, __count);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_srli_si64(__m64 __m, int __count)
 {
-    return (__m64)__builtin_ia32_psrlqi(__m, __count);
+    return (__m64)__builtin_ia32_psrlqi((__v1di)__m, __count);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_and_si64(__m64 __m1, __m64 __m2)
 {
-    return __builtin_ia32_pand(__m1, __m2);
+    return __builtin_ia32_pand((__v1di)__m1, (__v1di)__m2);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_andnot_si64(__m64 __m1, __m64 __m2)
 {
-    return __builtin_ia32_pandn(__m1, __m2);
+    return __builtin_ia32_pandn((__v1di)__m1, (__v1di)__m2);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_or_si64(__m64 __m1, __m64 __m2)
 {
-    return __builtin_ia32_por(__m1, __m2);
+    return __builtin_ia32_por((__v1di)__m1, (__v1di)__m2);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_xor_si64(__m64 __m1, __m64 __m2)
 {
-    return __builtin_ia32_pxor(__m1, __m2);
+    return __builtin_ia32_pxor((__v1di)__m1, (__v1di)__m2);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS

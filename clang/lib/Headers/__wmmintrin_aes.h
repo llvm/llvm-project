@@ -45,7 +45,7 @@
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_aesenc_si128(__m128i __V, __m128i __R)
 {
-  return (__m128i)__builtin_ia32_aesenc128(__V, __R);
+  return (__m128i)__builtin_ia32_aesenc128((__v2di)__V, (__v2di)__R);
 }
 
 /// \brief Performs the final round of AES encryption using the Equivalent
@@ -65,7 +65,7 @@ _mm_aesenc_si128(__m128i __V, __m128i __R)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_aesenclast_si128(__m128i __V, __m128i __R)
 {
-  return (__m128i)__builtin_ia32_aesenclast128(__V, __R);
+  return (__m128i)__builtin_ia32_aesenclast128((__v2di)__V, (__v2di)__R);
 }
 
 /// \brief Performs a single round of AES decryption using the Equivalent
@@ -85,7 +85,7 @@ _mm_aesenclast_si128(__m128i __V, __m128i __R)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_aesdec_si128(__m128i __V, __m128i __R)
 {
-  return (__m128i)__builtin_ia32_aesdec128(__V, __R);
+  return (__m128i)__builtin_ia32_aesdec128((__v2di)__V, (__v2di)__R);
 }
 
 /// \brief Performs the final round of AES decryption using the Equivalent
@@ -105,7 +105,7 @@ _mm_aesdec_si128(__m128i __V, __m128i __R)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_aesdeclast_si128(__m128i __V, __m128i __R)
 {
-  return (__m128i)__builtin_ia32_aesdeclast128(__V, __R);
+  return (__m128i)__builtin_ia32_aesdeclast128((__v2di)__V, (__v2di)__R);
 }
 
 /// \brief Applies the AES InvMixColumns() transformation to an expanded key
@@ -122,7 +122,7 @@ _mm_aesdeclast_si128(__m128i __V, __m128i __R)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_aesimc_si128(__m128i __V)
 {
-  return (__m128i)__builtin_ia32_aesimc128(__V);
+  return (__m128i)__builtin_ia32_aesimc128((__v2di)__V);
 }
 
 /// \brief Generates a round key for AES encyption, operating on 128-bit data 

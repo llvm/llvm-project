@@ -18,6 +18,7 @@
 #include "kmp_itt.h"
 #include "kmp_str.h"
 #include "kmp_i18n.h"
+#include "kmp_lock.h"
 #include "kmp_io.h"
 #include "kmp_stats.h"
 #include "kmp_wait_release.h"
@@ -34,7 +35,7 @@
 
 #if KMP_OS_LINUX && !KMP_OS_CNK
 # include <sys/sysinfo.h>
-# if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+# if KMP_USE_FUTEX
 // We should really include <futex.h>, but that causes compatibility problems on different
 // Linux* OS distributions that either require that you include (or break when you try to include)
 // <pci/types.h>.
@@ -422,7 +423,7 @@ __kmp_affinity_determine_capable(const char *env_var)
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && !KMP_OS_CNK
+#if KMP_USE_FUTEX && !KMP_OS_CNK
 
 int
 __kmp_futex_determine_capable()
@@ -439,7 +440,7 @@ __kmp_futex_determine_capable()
     return retval;
 }
 
-#endif // KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM) && !KMP_OS_CNK
+#endif // KMP_USE_FUTEX && !KMP_OS_CNK
 
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */

@@ -62,7 +62,7 @@ typedef long long __m256i __attribute__((__vector_size__(32)));
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_add_pd(__m256d __a, __m256d __b)
 {
-  return __a+__b;
+  return (__m256d)((__v4df)__a+(__v4df)__b);
 }
 
 /// \brief Adds two 256-bit vectors of [8 x float].
@@ -80,7 +80,7 @@ _mm256_add_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_add_ps(__m256 __a, __m256 __b)
 {
-  return __a+__b;
+  return (__m256)((__v8sf)__a+(__v8sf)__b);
 }
 
 /// \brief Subtracts two 256-bit vectors of [4 x double].
@@ -98,7 +98,7 @@ _mm256_add_ps(__m256 __a, __m256 __b)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_sub_pd(__m256d __a, __m256d __b)
 {
-  return __a-__b;
+  return (__m256d)((__v4df)__a-(__v4df)__b);
 }
 
 /// \brief Subtracts two 256-bit vectors of [8 x float].
@@ -116,7 +116,7 @@ _mm256_sub_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_sub_ps(__m256 __a, __m256 __b)
 {
-  return __a-__b;
+  return (__m256)((__v8sf)__a-(__v8sf)__b);
 }
 
 /// \brief Adds the even-indexed values and subtracts the odd-indexed values of
@@ -172,7 +172,7 @@ _mm256_addsub_ps(__m256 __a, __m256 __b)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_div_pd(__m256d __a, __m256d __b)
 {
-  return __a / __b;
+  return (__m256d)((__v4df)__a/(__v4df)__b);
 }
 
 /// \brief Divides two 256-bit vectors of [8 x float].
@@ -190,7 +190,7 @@ _mm256_div_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_div_ps(__m256 __a, __m256 __b)
 {
-  return __a / __b;
+  return (__m256)((__v8sf)__a/(__v8sf)__b);
 }
 
 /// \brief Compares two 256-bit vectors of [4 x double] and returns the greater
@@ -284,7 +284,7 @@ _mm256_min_ps(__m256 __a, __m256 __b)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_mul_pd(__m256d __a, __m256d __b)
 {
-  return __a * __b;
+  return (__m256d)((__v4df)__a * (__v4df)__b);
 }
 
 /// \brief Multiplies two 256-bit vectors of [8 x float].
@@ -302,7 +302,7 @@ _mm256_mul_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_mul_ps(__m256 __a, __m256 __b)
 {
-  return __a * __b;
+  return (__m256)((__v8sf)__a * (__v8sf)__b);
 }
 
 /// \brief Calculates the square roots of the values stored in a 256-bit vector
@@ -1443,44 +1443,44 @@ _mm256_cvttps_epi32(__m256 __a)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_movehdup_ps(__m256 __a)
 {
-  return __builtin_shufflevector(__a, __a, 1, 1, 3, 3, 5, 5, 7, 7);
+  return __builtin_shufflevector((__v8sf)__a, (__v8sf)__a, 1, 1, 3, 3, 5, 5, 7, 7);
 }
 
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_moveldup_ps(__m256 __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 0, 2, 2, 4, 4, 6, 6);
+  return __builtin_shufflevector((__v8sf)__a, (__v8sf)__a, 0, 0, 2, 2, 4, 4, 6, 6);
 }
 
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_movedup_pd(__m256d __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 0, 2, 2);
+  return __builtin_shufflevector((__v4df)__a, (__v4df)__a, 0, 0, 2, 2);
 }
 
 /* Unpack and Interleave */
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_unpackhi_pd(__m256d __a, __m256d __b)
 {
-  return __builtin_shufflevector(__a, __b, 1, 5, 1+2, 5+2);
+  return __builtin_shufflevector((__v4df)__a, (__v4df)__b, 1, 5, 1+2, 5+2);
 }
 
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_unpacklo_pd(__m256d __a, __m256d __b)
 {
-  return __builtin_shufflevector(__a, __b, 0, 4, 0+2, 4+2);
+  return __builtin_shufflevector((__v4df)__a, (__v4df)__b, 0, 4, 0+2, 4+2);
 }
 
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_unpackhi_ps(__m256 __a, __m256 __b)
 {
-  return __builtin_shufflevector(__a, __b, 2, 10, 2+1, 10+1, 6, 14, 6+1, 14+1);
+  return __builtin_shufflevector((__v8sf)__a, (__v8sf)__b, 2, 10, 2+1, 10+1, 6, 14, 6+1, 14+1);
 }
 
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_unpacklo_ps(__m256 __a, __m256 __b)
 {
-  return __builtin_shufflevector(__a, __b, 0, 8, 0+1, 8+1, 4, 12, 4+1, 12+1);
+  return __builtin_shufflevector((__v8sf)__a, (__v8sf)__b, 0, 8, 0+1, 8+1, 4, 12, 4+1, 12+1);
 }
 
 /* Bit Test */
@@ -1625,13 +1625,13 @@ _mm256_broadcast_ss(float const *__a)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_broadcast_pd(__m128d const *__a)
 {
-  return (__m256d)__builtin_ia32_vbroadcastf128_pd256(__a);
+  return (__m256d)__builtin_ia32_vbroadcastf128_pd256((__v2df const *)__a);
 }
 
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_broadcast_ps(__m128 const *__a)
 {
-  return (__m256)__builtin_ia32_vbroadcastf128_ps256(__a);
+  return (__m256)__builtin_ia32_vbroadcastf128_ps256((__v4sf const *)__a);
 }
 
 /* SIMD load ops */
@@ -2019,37 +2019,37 @@ _mm256_castsi256_pd(__m256i __a)
 static __inline __m128d __DEFAULT_FN_ATTRS
 _mm256_castpd256_pd128(__m256d __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 1);
+  return __builtin_shufflevector((__v4df)__a, (__v4df)__a, 0, 1);
 }
 
 static __inline __m128 __DEFAULT_FN_ATTRS
 _mm256_castps256_ps128(__m256 __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 1, 2, 3);
+  return __builtin_shufflevector((__v8sf)__a, (__v8sf)__a, 0, 1, 2, 3);
 }
 
 static __inline __m128i __DEFAULT_FN_ATTRS
 _mm256_castsi256_si128(__m256i __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 1);
+  return __builtin_shufflevector((__v4di)__a, (__v4di)__a, 0, 1);
 }
 
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_castpd128_pd256(__m128d __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 1, -1, -1);
+  return __builtin_shufflevector((__v2df)__a, (__v2df)__a, 0, 1, -1, -1);
 }
 
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_castps128_ps256(__m128 __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 1, 2, 3, -1, -1, -1, -1);
+  return __builtin_shufflevector((__v4sf)__a, (__v4sf)__a, 0, 1, 2, 3, -1, -1, -1, -1);
 }
 
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_castsi128_si256(__m128i __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 1, -1, -1);
+  return __builtin_shufflevector((__v2di)__a, (__v2di)__a, 0, 1, -1, -1);
 }
 
 /*
@@ -2187,7 +2187,7 @@ _mm256_storeu2_m128i(__m128i *__addr_hi, __m128i *__addr_lo, __m256i __a)
 
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_set_m128 (__m128 __hi, __m128 __lo) {
-  return (__m256) __builtin_shufflevector(__lo, __hi, 0, 1, 2, 3, 4, 5, 6, 7);
+  return (__m256) __builtin_shufflevector((__v4sf)__lo, (__v4sf)__hi, 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
 static __inline __m256d __DEFAULT_FN_ATTRS

@@ -23,6 +23,7 @@ class CreateDuringInstructionStepTestCase(TestBase):
 
     @skipUnlessPlatform(['linux'])
     @expectedFailureAndroid('llvm.org/pr24737', archs=['arm'])
+    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr24737")
     def test_step_inst(self):
         self.build(dictionary=self.getBuildFlags())
         exe = os.path.join(os.getcwd(), "a.out")

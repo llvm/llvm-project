@@ -21,7 +21,7 @@
 #include "kmp_lock.h"
 #include "kmp_io.h"
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
 # include <unistd.h>
 # include <sys/syscall.h>
 // We should really include <futex.h>, but that causes compatibility problems on different
@@ -362,7 +362,7 @@ __kmp_destroy_nested_tas_lock_with_checks( kmp_tas_lock_t *lck )
 }
 
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
 
 /* ------------------------------------------------------------------------ */
 /* futex locks */
@@ -710,7 +710,7 @@ __kmp_destroy_nested_futex_lock_with_checks( kmp_futex_lock_t *lck )
     __kmp_destroy_nested_futex_lock( lck );
 }
 
-#endif // KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
+#endif // KMP_USE_FUTEX
 
 
 /* ------------------------------------------------------------------------ */
@@ -3496,7 +3496,7 @@ __kmp_get_user_lock_owner(kmp_user_lock_p lck, kmp_uint32 seq)
         case lockseq_tas:
         case lockseq_nested_tas:
             return __kmp_get_tas_lock_owner((kmp_tas_lock_t *)lck);
-#if KMP_HAS_FUTEX
+#if KMP_USE_FUTEX
         case lockseq_futex:
         case lockseq_nested_futex:
             return __kmp_get_futex_lock_owner((kmp_futex_lock_t *)lck);
@@ -3721,7 +3721,7 @@ void __kmp_set_user_lock_vptrs( kmp_lock_kind_t user_lock_kind )
         }
         break;
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
+#if KMP_USE_FUTEX
 
         case lk_futex: {
             __kmp_base_user_lock_size = sizeof( kmp_base_futex_lock_t );
@@ -3761,7 +3761,7 @@ void __kmp_set_user_lock_vptrs( kmp_lock_kind_t user_lock_kind )
         }
         break;
 
-#endif // KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
+#endif // KMP_USE_FUTEX
 
         case lk_ticket: {
             __kmp_base_user_lock_size = sizeof( kmp_base_ticket_lock_t );
