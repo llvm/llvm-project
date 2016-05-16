@@ -3000,8 +3000,14 @@ void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
   NameVals.push_back(FS->instCount());
   NameVals.push_back(FS->refs().size());
 
+  // Compute refs in a separate vector to be able to sort them for determinism.
+  std::vector<uint64_t> Refs;
+  Refs.reserve(FS->refs().size());
   for (auto &RI : FS->refs())
-    NameVals.push_back(VE.getValueID(RI.getValue()));
+    Refs.push_back(VE.getValueID(RI.getValue()));
+  std::sort(Refs.begin(), Refs.end());
+
+  NameVals.insert(NameVals.end(), Refs.begin(), Refs.end());
 
   bool HasProfileData = F.getEntryCount().hasValue();
   for (auto &ECI : FS->calls()) {
