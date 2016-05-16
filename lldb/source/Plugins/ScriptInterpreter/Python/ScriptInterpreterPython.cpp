@@ -1551,10 +1551,12 @@ ScriptInterpreterPython::OSPlugin_RegisterInfo(StructuredData::ObjectSP os_plugi
         PyErr_Print();
         PyErr_Clear();
     }
-    assert(PythonDictionary::Check(py_return.get()) && "get_register_info returned unknown object type!");
-
-    PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
-    return result_dict.CreateStructuredDictionary();
+    if (py_return.get())
+    {
+        PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
+        return result_dict.CreateStructuredDictionary();
+    }
+    return StructuredData::DictionarySP();
 }
 
 StructuredData::ArraySP
@@ -1607,10 +1609,12 @@ ScriptInterpreterPython::OSPlugin_ThreadsInfo(StructuredData::ObjectSP os_plugin
         PyErr_Clear();
     }
 
-    assert(PythonList::Check(py_return.get()) && "get_thread_info returned unknown object type!");
-
-    PythonList result_list(PyRefType::Borrowed, py_return.get());
-    return result_list.CreateStructuredArray();
+    if (py_return.get())
+    {
+        PythonList result_list(PyRefType::Borrowed, py_return.get());
+        return result_list.CreateStructuredArray();
+    }
+    return StructuredData::ArraySP();
 }
 
 // GetPythonValueFormatString provides a system independent type safe way to
@@ -1688,10 +1692,12 @@ ScriptInterpreterPython::OSPlugin_RegisterContextData(StructuredData::ObjectSP o
         PyErr_Clear();
     }
 
-    assert(PythonBytes::Check(py_return.get()) && "get_register_data returned unknown object type!");
-
-    PythonBytes result(PyRefType::Borrowed, py_return.get());
-    return result.CreateStructuredString();
+    if (py_return.get())
+    {
+        PythonBytes result(PyRefType::Borrowed, py_return.get());
+        return result.CreateStructuredString();
+    }
+    return StructuredData::StringSP();
 }
 
 StructuredData::DictionarySP
@@ -1746,10 +1752,12 @@ ScriptInterpreterPython::OSPlugin_CreateThread(StructuredData::ObjectSP os_plugi
         PyErr_Clear();
     }
 
-    assert(PythonDictionary::Check(py_return.get()) && "create_thread returned unknown object type!");
-
-    PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
-    return result_dict.CreateStructuredDictionary();
+    if (py_return.get())
+    {
+        PythonDictionary result_dict(PyRefType::Borrowed, py_return.get());
+        return result_dict.CreateStructuredDictionary();
+    }
+    return StructuredData::DictionarySP();
 }
 
 StructuredData::ObjectSP

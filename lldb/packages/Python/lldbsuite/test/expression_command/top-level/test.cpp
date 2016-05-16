@@ -55,9 +55,53 @@ public:
 
 // --
 
+class DiamondA
+{
+private:
+  struct {
+    int m_i;
+  };
+public:
+  DiamondA(int i) : m_i(i) { }
+  int accessor() { return m_i; }
+};
+
+// --
+
+class DiamondB : public virtual DiamondA
+{
+public:
+  DiamondB(int i) : DiamondA(i) { }
+};
+
+// --
+
+class DiamondC : public virtual DiamondA
+{
+public:
+  DiamondC(int i) : DiamondA(i) { }
+};
+
+// --
+
+class DiamondD : public DiamondB, public DiamondC
+{
+public:
+  DiamondD(int i) : DiamondA(i), DiamondB(i), DiamondC(i) { }
+};
+
+// --
+
 int doTest()
 {
-    return m.memberResult() + MyClass::staticResult() + m.externResult() + MyEnum::myEnumThree + myEnumOne + AnotherClass().complicatedFunction();
+    int a = m.memberResult();
+    a += MyClass::staticResult();
+    a += m.externResult();
+    a += MyEnum::myEnumThree;
+    a += myEnumOne;
+    a += AnotherClass().complicatedFunction();
+    a += DiamondD(3).accessor();
+    return a;
 }
 
 // --

@@ -77,7 +77,8 @@ bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
 }
 
 // Based on QualType::isTrivial.
-bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
+bool isTriviallyDefaultConstructible(QualType Type,
+                                     const ASTContext &Context) {
   if (Type.isNull())
     return false;
 

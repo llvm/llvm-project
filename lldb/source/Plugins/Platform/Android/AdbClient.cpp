@@ -34,7 +34,7 @@ using namespace lldb_private::platform_android;
 
 namespace {
 
-const std::chrono::seconds kReadTimeout(6);
+const std::chrono::seconds kReadTimeout(8);
 const char * kOKAY = "OKAY";
 const char * kFAIL = "FAIL";
 const char * kDATA = "DATA";
