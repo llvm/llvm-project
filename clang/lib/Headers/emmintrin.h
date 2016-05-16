@@ -54,7 +54,7 @@ _mm_add_sd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_add_pd(__m128d __a, __m128d __b)
 {
-  return __a + __b;
+  return (__m128d)((__v2df)__a + (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -67,7 +67,7 @@ _mm_sub_sd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sub_pd(__m128d __a, __m128d __b)
 {
-  return __a - __b;
+  return (__m128d)((__v2df)__a - (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -80,7 +80,7 @@ _mm_mul_sd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mul_pd(__m128d __a, __m128d __b)
 {
-  return __a * __b;
+  return (__m128d)((__v2df)__a * (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -93,44 +93,44 @@ _mm_div_sd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_div_pd(__m128d __a, __m128d __b)
 {
-  return __a / __b;
+  return (__m128d)((__v2df)__a / (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sqrt_sd(__m128d __a, __m128d __b)
 {
-  __m128d __c = __builtin_ia32_sqrtsd(__b);
+  __m128d __c = __builtin_ia32_sqrtsd((__v2df)__b);
   return (__m128d) { __c[0], __a[1] };
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_sqrt_pd(__m128d __a)
 {
-  return __builtin_ia32_sqrtpd(__a);
+  return __builtin_ia32_sqrtpd((__v2df)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_min_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_minsd(__a, __b);
+  return __builtin_ia32_minsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_min_pd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_minpd(__a, __b);
+  return __builtin_ia32_minpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_max_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_maxsd(__a, __b);
+  return __builtin_ia32_maxsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_max_pd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_maxpd(__a, __b);
+  return __builtin_ia32_maxpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -160,233 +160,233 @@ _mm_xor_pd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpeq_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpeqpd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpeqpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmplt_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpltpd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpltpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmple_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmplepd(__a, __b);
+  return (__m128d)__builtin_ia32_cmplepd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpgt_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpltpd(__b, __a);
+  return (__m128d)__builtin_ia32_cmpltpd((__v2df)__b, (__v2df)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpge_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmplepd(__b, __a);
+  return (__m128d)__builtin_ia32_cmplepd((__v2df)__b, (__v2df)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpord_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpordpd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpordpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpunord_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpunordpd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpunordpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpneq_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpneqpd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpneqpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnlt_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpnltpd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpnltpd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnle_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpnlepd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpnlepd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpngt_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpnltpd(__b, __a);
+  return (__m128d)__builtin_ia32_cmpnltpd((__v2df)__b, (__v2df)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnge_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpnlepd(__b, __a);
+  return (__m128d)__builtin_ia32_cmpnlepd((__v2df)__b, (__v2df)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpeq_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpeqsd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpeqsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmplt_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpltsd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpltsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmple_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmplesd(__a, __b);
+  return (__m128d)__builtin_ia32_cmplesd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpgt_sd(__m128d __a, __m128d __b)
 {
-  __m128d __c = __builtin_ia32_cmpltsd(__b, __a);
+  __m128d __c = __builtin_ia32_cmpltsd((__v2df)__b, (__v2df)__a);
   return (__m128d) { __c[0], __a[1] };
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpge_sd(__m128d __a, __m128d __b)
 {
-  __m128d __c = __builtin_ia32_cmplesd(__b, __a);
+  __m128d __c = __builtin_ia32_cmplesd((__v2df)__b, (__v2df)__a);
   return (__m128d) { __c[0], __a[1] };
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpord_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpordsd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpordsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpunord_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpunordsd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpunordsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpneq_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpneqsd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpneqsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnlt_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpnltsd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpnltsd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnle_sd(__m128d __a, __m128d __b)
 {
-  return (__m128d)__builtin_ia32_cmpnlesd(__a, __b);
+  return (__m128d)__builtin_ia32_cmpnlesd((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpngt_sd(__m128d __a, __m128d __b)
 {
-  __m128d __c = __builtin_ia32_cmpnltsd(__b, __a);
+  __m128d __c = __builtin_ia32_cmpnltsd((__v2df)__b, (__v2df)__a);
   return (__m128d) { __c[0], __a[1] };
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cmpnge_sd(__m128d __a, __m128d __b)
 {
-  __m128d __c = __builtin_ia32_cmpnlesd(__b, __a);
+  __m128d __c = __builtin_ia32_cmpnlesd((__v2df)__b, (__v2df)__a);
   return (__m128d) { __c[0], __a[1] };
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comieq_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_comisdeq(__a, __b);
+  return __builtin_ia32_comisdeq((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comilt_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_comisdlt(__a, __b);
+  return __builtin_ia32_comisdlt((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comile_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_comisdle(__a, __b);
+  return __builtin_ia32_comisdle((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comigt_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_comisdgt(__a, __b);
+  return __builtin_ia32_comisdgt((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comige_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_comisdge(__a, __b);
+  return __builtin_ia32_comisdge((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_comineq_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_comisdneq(__a, __b);
+  return __builtin_ia32_comisdneq((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomieq_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_ucomisdeq(__a, __b);
+  return __builtin_ia32_ucomisdeq((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomilt_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_ucomisdlt(__a, __b);
+  return __builtin_ia32_ucomisdlt((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomile_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_ucomisdle(__a, __b);
+  return __builtin_ia32_ucomisdle((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomigt_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_ucomisdgt(__a, __b);
+  return __builtin_ia32_ucomisdgt((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomige_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_ucomisdge(__a, __b);
+  return __builtin_ia32_ucomisdge((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_ucomineq_sd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_ucomisdneq(__a, __b);
+  return __builtin_ia32_ucomisdneq((__v2df)__a, (__v2df)__b);
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cvtpd_ps(__m128d __a)
 {
-  return __builtin_ia32_cvtpd2ps(__a);
+  return __builtin_ia32_cvtpd2ps((__v2df)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cvtps_pd(__m128 __a)
 {
-  return __builtin_ia32_cvtps2pd(__a);
+  return __builtin_ia32_cvtps2pd((__v4sf)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -398,13 +398,13 @@ _mm_cvtepi32_pd(__m128i __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtpd_epi32(__m128d __a)
 {
-  return __builtin_ia32_cvtpd2dq(__a);
+  return __builtin_ia32_cvtpd2dq((__v2df)__a);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_cvtsd_si32(__m128d __a)
 {
-  return __builtin_ia32_cvtsd2si(__a);
+  return __builtin_ia32_cvtsd2si((__v2df)__a);
 }
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
@@ -431,7 +431,7 @@ _mm_cvtss_sd(__m128d __a, __m128 __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvttpd_epi32(__m128d __a)
 {
-  return (__m128i)__builtin_ia32_cvttpd2dq(__a);
+  return (__m128i)__builtin_ia32_cvttpd2dq((__v2df)__a);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
@@ -443,13 +443,13 @@ _mm_cvttsd_si32(__m128d __a)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_cvtpd_pi32(__m128d __a)
 {
-  return (__m64)__builtin_ia32_cvtpd2pi(__a);
+  return (__m64)__builtin_ia32_cvtpd2pi((__v2df)__a);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_cvttpd_pi32(__m128d __a)
 {
-  return (__m64)__builtin_ia32_cvttpd2pi(__a);
+  return (__m64)__builtin_ia32_cvttpd2pi((__v2df)__a);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -486,7 +486,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_loadr_pd(double const *__dp)
 {
   __m128d __u = *(__m128d*)__dp;
-  return __builtin_shufflevector(__u, __u, 1, 0);
+  return __builtin_shufflevector((__v2df)__u, (__v2df)__u, 1, 0);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -598,13 +598,13 @@ _mm_store_pd(double *__dp, __m128d __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storeu_pd(double *__dp, __m128d __a)
 {
-  __builtin_ia32_storeupd(__dp, __a);
+  __builtin_ia32_storeupd(__dp, (__v2df)__a);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storer_pd(double *__dp, __m128d __a)
 {
-  __a = __builtin_shufflevector(__a, __a, 1, 0);
+  __a = __builtin_shufflevector((__v2df)__a, (__v2df)__a, 1, 0);
   *(__m128d *)__dp = __a;
 }
 
@@ -647,13 +647,13 @@ _mm_add_epi32(__m128i __a, __m128i __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_add_si64(__m64 __a, __m64 __b)
 {
-  return (__m64)__builtin_ia32_paddq(__a, __b);
+  return (__m64)__builtin_ia32_paddq((__v1di)__a, (__v1di)__b);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_add_epi64(__m128i __a, __m128i __b)
 {
-  return __a + __b;
+  return (__m128i)((__v2di)__a + (__v2di)__b);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -883,7 +883,7 @@ _mm_sub_epi32(__m128i __a, __m128i __b)
 static __inline__ __m64 __DEFAULT_FN_ATTRS
 _mm_sub_si64(__m64 __a, __m64 __b)
 {
-  return (__m64)__builtin_ia32_psubq(__a, __b);
+  return (__m64)__builtin_ia32_psubq((__v1di)__a, (__v1di)__b);
 }
 
 /// \brief Subtracts the corresponding elements of two [2 x i64] vectors.
@@ -901,7 +901,7 @@ _mm_sub_si64(__m64 __a, __m64 __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sub_epi64(__m128i __a, __m128i __b)
 {
-  return __a - __b;
+  return (__m128i)((__v2di)__a - (__v2di)__b);
 }
 
 /// \brief Subtracts corresponding 8-bit signed integer values in the input and
@@ -1001,7 +1001,7 @@ _mm_subs_epu16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_and_si128(__m128i __a, __m128i __b)
 {
-  return __a & __b;
+  return (__m128i)((__v2di)__a & (__v2di)__b);
 }
 
 /// \brief Performs a bitwise AND of two 128-bit integer vectors, using the
@@ -1021,7 +1021,7 @@ _mm_and_si128(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_andnot_si128(__m128i __a, __m128i __b)
 {
-  return ~__a & __b;
+  return (__m128i)(~(__v2di)__a & (__v2di)__b);
 }
 /// \brief Performs a bitwise OR of two 128-bit integer vectors.
 ///
@@ -1038,7 +1038,7 @@ _mm_andnot_si128(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_or_si128(__m128i __a, __m128i __b)
 {
-  return __a | __b;
+  return (__m128i)((__v2di)__a | (__v2di)__b);
 }
 
 /// \brief Performs a bitwise exclusive OR of two 128-bit integer vectors.
@@ -1056,7 +1056,7 @@ _mm_or_si128(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_xor_si128(__m128i __a, __m128i __b)
 {
-  return __a ^ __b;
+  return (__m128i)((__v2di)__a ^ (__v2di)__b);
 }
 
 /// \brief Left-shifts the 128-bit integer vector operand by the specified
@@ -1191,7 +1191,7 @@ _mm_sll_epi32(__m128i __a, __m128i __count)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_slli_epi64(__m128i __a, int __count)
 {
-  return __builtin_ia32_psllqi128(__a, __count);
+  return __builtin_ia32_psllqi128((__v2di)__a, __count);
 }
 
 /// \brief Left-shifts each 64-bit value in the 128-bit integer vector operand
@@ -1210,7 +1210,7 @@ _mm_slli_epi64(__m128i __a, int __count)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sll_epi64(__m128i __a, __m128i __count)
 {
-  return __builtin_ia32_psllq128(__a, __count);
+  return __builtin_ia32_psllq128((__v2di)__a, (__v2di)__count);
 }
 
 /// \brief Right-shifts each 16-bit value in the 128-bit integer vector operand
@@ -1425,7 +1425,7 @@ _mm_srl_epi32(__m128i __a, __m128i __count)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srli_epi64(__m128i __a, int __count)
 {
-  return __builtin_ia32_psrlqi128(__a, __count);
+  return __builtin_ia32_psrlqi128((__v2di)__a, __count);
 }
 
 /// \brief Right-shifts each of 64-bit values in the 128-bit integer vector
@@ -1444,7 +1444,7 @@ _mm_srli_epi64(__m128i __a, int __count)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_srl_epi64(__m128i __a, __m128i __count)
 {
-  return __builtin_ia32_psrlq128(__a, __count);
+  return __builtin_ia32_psrlq128((__v2di)__a, (__v2di)__count);
 }
 
 /// \brief Compares each of the corresponding 8-bit values of the 128-bit
@@ -1665,7 +1665,7 @@ _mm_cvtsi64_sd(__m128d __a, long long __b)
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm_cvtsd_si64(__m128d __a)
 {
-  return __builtin_ia32_cvtsd2si64(__a);
+  return __builtin_ia32_cvtsd2si64((__v2df)__a);
 }
 
 /// \brief Converts the first (lower) element of a vector of [2 x double] into a
@@ -1714,7 +1714,7 @@ _mm_cvtepi32_ps(__m128i __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtps_epi32(__m128 __a)
 {
-  return (__m128i)__builtin_ia32_cvtps2dq(__a);
+  return (__m128i)__builtin_ia32_cvtps2dq((__v4sf)__a);
 }
 
 /// \brief Converts a vector of [4 x float] into a vector of [4 x i32],
@@ -1730,7 +1730,7 @@ _mm_cvtps_epi32(__m128 __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvttps_epi32(__m128 __a)
 {
-  return (__m128i)__builtin_ia32_cvttps2dq(__a);
+  return (__m128i)__builtin_ia32_cvttps2dq((__v4sf)__a);
 }
 
 /// \brief Returns a vector of [4 x i32] where the lowest element is the input
@@ -2190,13 +2190,13 @@ _mm_storel_epi64(__m128i *__p, __m128i __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_stream_pd(double *__p, __m128d __a)
 {
-  __builtin_ia32_movntpd(__p, __a);
+  __builtin_ia32_movntpd(__p, (__v2df)__a);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_stream_si128(__m128i *__p, __m128i __a)
 {
-  __builtin_ia32_movntdq(__p, __a);
+  __builtin_ia32_movntdq(__p, (__v2di)__a);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
@@ -2313,7 +2313,7 @@ _mm_unpackhi_epi32(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_unpackhi_epi64(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_shufflevector(__a, __b, 1, 2+1);
+  return (__m128i)__builtin_shufflevector((__v2di)__a, (__v2di)__b, 1, 2+1);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -2337,7 +2337,7 @@ _mm_unpacklo_epi32(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_unpacklo_epi64(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_shufflevector(__a, __b, 0, 2+0);
+  return (__m128i)__builtin_shufflevector((__v2di)__a, (__v2di)__b, 0, 2+0);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
@@ -2355,25 +2355,25 @@ _mm_movpi64_epi64(__m64 __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_move_epi64(__m128i __a)
 {
-  return __builtin_shufflevector(__a, (__m128i){ 0 }, 0, 2);
+  return __builtin_shufflevector((__v2di)__a, (__m128i){ 0 }, 0, 2);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_unpackhi_pd(__m128d __a, __m128d __b)
 {
-  return __builtin_shufflevector(__a, __b, 1, 2+1);
+  return __builtin_shufflevector((__v2df)__a, (__v2df)__b, 1, 2+1);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_unpacklo_pd(__m128d __a, __m128d __b)
 {
-  return __builtin_shufflevector(__a, __b, 0, 2+0);
+  return __builtin_shufflevector((__v2df)__a, (__v2df)__b, 0, 2+0);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_movemask_pd(__m128d __a)
 {
-  return __builtin_ia32_movmskpd(__a);
+  return __builtin_ia32_movmskpd((__v2df)__a);
 }
 
 #define _mm_shuffle_pd(a, b, i) __extension__ ({ \

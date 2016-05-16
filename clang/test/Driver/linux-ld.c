@@ -762,6 +762,14 @@
 // CHECK-MIPS64EL-N32-NAN2008: "-dynamic-linker" "{{.*}}/lib32/ld-linux-mipsn8.so.1"
 // CHECK-MIPS64EL-N32-NAN2008-NOT: "--hash-style={{gnu|both}}"
 //
+// RUN: %clang %s -### -o %t.o 2>&1 --target=mips64el-redhat-linux \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-REDHAT %s
+// CHECK-MIPS64EL-REDHAT: "{{.*}}ld{{(.exe)?}}"
+// CHECK-MIPS64EL-REDHAT: "-m" "elf64ltsmip"
+// CHECK-MIPS64EL-REDHAT: "-dynamic-linker" "{{.*}}/lib64/ld.so.1"
+// CHECK-MIPS64EL-REDHAT-NOT: "-dynamic-linker" "{{.*}}/lib64/ld-musl-mipsel.so.1"
+// CHECK-MIPS64EL-REDHAT-NOT: "--hash-style={{gnu|both}}"
+//
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=sparc-unknown-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARCV8 %s

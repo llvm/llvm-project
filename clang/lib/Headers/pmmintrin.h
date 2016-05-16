@@ -64,7 +64,7 @@ _mm_lddqu_si128(__m128i const *__p)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_addsub_ps(__m128 __a, __m128 __b)
 {
-  return __builtin_ia32_addsubps(__a, __b);
+  return __builtin_ia32_addsubps((__v4sf)__a, (__v4sf)__b);
 }
 
 /// \brief Horizontally adds the adjacent pairs of values contained in two
@@ -87,7 +87,7 @@ _mm_addsub_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_hadd_ps(__m128 __a, __m128 __b)
 {
-  return __builtin_ia32_haddps(__a, __b);
+  return __builtin_ia32_haddps((__v4sf)__a, (__v4sf)__b);
 }
 
 /// \brief Horizontally subtracts the adjacent pairs of values contained in two
@@ -110,7 +110,7 @@ _mm_hadd_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_hsub_ps(__m128 __a, __m128 __b)
 {
-  return __builtin_ia32_hsubps(__a, __b);
+  return __builtin_ia32_hsubps((__v4sf)__a, (__v4sf)__b);
 }
 
 /// \brief Moves and duplicates high-order (odd-indexed) values from a 128-bit
@@ -132,7 +132,7 @@ _mm_hsub_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_movehdup_ps(__m128 __a)
 {
-  return __builtin_shufflevector(__a, __a, 1, 1, 3, 3);
+  return __builtin_shufflevector((__v4sf)__a, (__v4sf)__a, 1, 1, 3, 3);
 }
 
 /// \brief Duplicates low-order (even-indexed) values from a 128-bit
@@ -154,7 +154,7 @@ _mm_movehdup_ps(__m128 __a)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_moveldup_ps(__m128 __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 0, 2, 2);
+  return __builtin_shufflevector((__v4sf)__a, (__v4sf)__a, 0, 0, 2, 2);
 }
 
 /// \brief Adds the even-indexed values and subtracts the odd-indexed values of
@@ -173,7 +173,7 @@ _mm_moveldup_ps(__m128 __a)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_addsub_pd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_addsubpd(__a, __b);
+  return __builtin_ia32_addsubpd((__v2df)__a, (__v2df)__b);
 }
 
 /// \brief Horizontally adds the pairs of values contained in two 128-bit 
@@ -196,7 +196,7 @@ _mm_addsub_pd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_hadd_pd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_haddpd(__a, __b);
+  return __builtin_ia32_haddpd((__v2df)__a, (__v2df)__b);
 }
 
 /// \brief Horizontally subtracts the pairs of values contained in two 128-bit
@@ -219,7 +219,7 @@ _mm_hadd_pd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_hsub_pd(__m128d __a, __m128d __b)
 {
-  return __builtin_ia32_hsubpd(__a, __b);
+  return __builtin_ia32_hsubpd((__v2df)__a, (__v2df)__b);
 }
 
 /// \brief Moves and duplicates one double-precision value to double-precision
@@ -255,7 +255,7 @@ _mm_hsub_pd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_movedup_pd(__m128d __a)
 {
-  return __builtin_shufflevector(__a, __a, 0, 0);
+  return __builtin_shufflevector((__v2df)__a, (__v2df)__a, 0, 0);
 }
 
 #define _MM_DENORMALS_ZERO_ON   (0x0040)

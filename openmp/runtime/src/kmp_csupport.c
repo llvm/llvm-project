@@ -17,6 +17,7 @@
 #include "kmp.h"
 #include "kmp_i18n.h"
 #include "kmp_itt.h"
+#include "kmp_lock.h"
 #include "kmp_error.h"
 #include "kmp_stats.h"
 

@@ -12,11 +12,39 @@ __m512d test_mm512_sqrt_pd(__m512d a)
   return _mm512_sqrt_pd(a);
 }
 
+__m512d test_mm512_mask_sqrt_pd (__m512d __W, __mmask8 __U, __m512d __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_sqrt_pd 
+  // CHECK: @llvm.x86.avx512.mask.sqrt.pd.512
+  return _mm512_mask_sqrt_pd (__W,__U,__A);
+}
+
+__m512d test_mm512_maskz_sqrt_pd (__mmask8 __U, __m512d __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_sqrt_pd 
+  // CHECK: @llvm.x86.avx512.mask.sqrt.pd.512
+  return _mm512_maskz_sqrt_pd (__U,__A);
+}
+
 __m512 test_mm512_sqrt_ps(__m512 a)
 {
   // CHECK-LABEL: @test_mm512_sqrt_ps
   // CHECK: @llvm.x86.avx512.mask.sqrt.ps.512
   return _mm512_sqrt_ps(a);
+}
+
+__m512 test_mm512_mask_sqrt_ps(__m512 __W, __mmask8 __U, __m512 __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_sqrt_ps
+  // CHECK: @llvm.x86.avx512.mask.sqrt.ps.512
+  return _mm512_mask_sqrt_ps( __W, __U, __A);
+}
+
+__m512 test_mm512_maskz_sqrt_ps( __mmask8 __U, __m512 __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_sqrt_ps
+  // CHECK: @llvm.x86.avx512.mask.sqrt.ps.512
+  return _mm512_maskz_sqrt_ps(__U ,__A);
 }
 
 __m512d test_mm512_rsqrt14_pd(__m512d a)
@@ -26,11 +54,39 @@ __m512d test_mm512_rsqrt14_pd(__m512d a)
   return _mm512_rsqrt14_pd(a);
 }
 
+__m512d test_mm512_mask_rsqrt14_pd (__m512d __W, __mmask8 __U, __m512d __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_rsqrt14_pd 
+  // CHECK: @llvm.x86.avx512.rsqrt14.pd.512
+  return _mm512_mask_rsqrt14_pd (__W,__U,__A);
+}
+
+__m512d test_mm512_maskz_rsqrt14_pd (__mmask8 __U, __m512d __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_rsqrt14_pd 
+  // CHECK: @llvm.x86.avx512.rsqrt14.pd.512
+  return _mm512_maskz_rsqrt14_pd (__U,__A);
+}
+
 __m512 test_mm512_rsqrt14_ps(__m512 a)
 {
   // CHECK-LABEL: @test_mm512_rsqrt14_ps
   // CHECK: @llvm.x86.avx512.rsqrt14.ps.512
   return _mm512_rsqrt14_ps(a);
+}
+
+__m512 test_mm512_mask_rsqrt14_ps (__m512 __W, __mmask16 __U, __m512 __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_rsqrt14_ps 
+  // CHECK: @llvm.x86.avx512.rsqrt14.ps.512
+  return _mm512_mask_rsqrt14_ps (__W,__U,__A);
+}
+
+__m512 test_mm512_maskz_rsqrt14_ps (__mmask16 __U, __m512 __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_rsqrt14_ps 
+  // CHECK: @llvm.x86.avx512.rsqrt14.ps.512
+  return _mm512_maskz_rsqrt14_ps (__U,__A);
 }
 
 __m512 test_mm512_add_ps(__m512 a, __m512 b)
@@ -1348,7 +1404,7 @@ __m512i test_mm512_maskz_xor_epi64(__mmask8 __k, __m512i __a, __m512i __b) {
 
 __m512i test_mm512_and_epi32(__m512i __src,__mmask16 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_and_epi32
-  // CHECK: and <8 x i64>
+  // CHECK: and <16 x i32>
   return _mm512_and_epi32(__a, __b);
 }
 
@@ -1360,7 +1416,7 @@ __m512i test_mm512_and_epi64(__m512i __src,__mmask8 __k, __m512i __a, __m512i __
 
 __m512i test_mm512_or_epi32(__m512i __src,__mmask16 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_or_epi32
-  // CHECK: or <8 x i64>
+  // CHECK: or <16 x i32>
   return _mm512_or_epi32(__a, __b);
 }
 
@@ -1372,7 +1428,7 @@ __m512i test_mm512_or_epi64(__m512i __src,__mmask8 __k, __m512i __a, __m512i __b
 
 __m512i test_mm512_xor_epi32(__m512i __src,__mmask16 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_xor_epi32
-  // CHECK: xor <8 x i64>
+  // CHECK: xor <16 x i32>
   return _mm512_xor_epi32(__a, __b);
 }
 
@@ -4877,6 +4933,34 @@ __m128 test_mm_maskz_rsqrt14_ss(__mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_maskz_rsqrt14_ss
   // CHECK: @llvm.x86.avx512.rsqrt14.ss
   return _mm_maskz_rsqrt14_ss(__U, __A, __B);
+}
+
+__m512d test_mm512_mask_rcp14_pd (__m512d __W, __mmask8 __U, __m512d __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_rcp14_pd 
+  // CHECK: @llvm.x86.avx512.rcp14.pd.512
+  return _mm512_mask_rcp14_pd (__W,__U,__A);
+}
+
+__m512d test_mm512_maskz_rcp14_pd (__mmask8 __U, __m512d __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_rcp14_pd 
+  // CHECK: @llvm.x86.avx512.rcp14.pd.512
+  return _mm512_maskz_rcp14_pd (__U,__A);
+}
+
+__m512 test_mm512_mask_rcp14_ps (__m512 __W, __mmask16 __U, __m512 __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_rcp14_ps 
+  // CHECK: @llvm.x86.avx512.rcp14.ps.512
+  return _mm512_mask_rcp14_ps (__W,__U,__A);
+}
+
+__m512 test_mm512_maskz_rcp14_ps (__mmask16 __U, __m512 __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_rcp14_ps 
+  // CHECK: @llvm.x86.avx512.rcp14.ps.512
+  return _mm512_maskz_rcp14_ps (__U,__A);
 }
 
 __m128d test_mm_mask_rcp14_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
