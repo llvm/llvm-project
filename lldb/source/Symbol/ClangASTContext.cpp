@@ -4803,121 +4803,127 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
 {
     if (!type)
         return lldb::eEncodingInvalid;
-    
+
     count = 1;
     clang::QualType qual_type(GetCanonicalQualType(type));
-    
+
     switch (qual_type->getTypeClass())
     {
         case clang::Type::UnaryTransform:
             break;
-            
+
         case clang::Type::FunctionNoProto:
         case clang::Type::FunctionProto:
             break;
-            
+
         case clang::Type::IncompleteArray:
         case clang::Type::VariableArray:
             break;
-            
+
         case clang::Type::ConstantArray:
             break;
-            
+
         case clang::Type::ExtVector:
         case clang::Type::Vector:
             // TODO: Set this to more than one???
             break;
-            
+
         case clang::Type::Builtin:
             switch (llvm::cast<clang::BuiltinType>(qual_type)->getKind())
-        {
-            case clang::BuiltinType::Void:
-                break;
-                
-            case clang::BuiltinType::Bool:
-            case clang::BuiltinType::Char_S:
-            case clang::BuiltinType::SChar:
-            case clang::BuiltinType::WChar_S:
-            case clang::BuiltinType::Char16:
-            case clang::BuiltinType::Char32:
-            case clang::BuiltinType::Short:
-            case clang::BuiltinType::Int:
-            case clang::BuiltinType::Long:
-            case clang::BuiltinType::LongLong:
-            case clang::BuiltinType::Int128:        return lldb::eEncodingSint;
-                
-            case clang::BuiltinType::Char_U:
-            case clang::BuiltinType::UChar:
-            case clang::BuiltinType::WChar_U:
-            case clang::BuiltinType::UShort:
-            case clang::BuiltinType::UInt:
-            case clang::BuiltinType::ULong:
-            case clang::BuiltinType::ULongLong:
-            case clang::BuiltinType::UInt128:       return lldb::eEncodingUint;
-                
-            case clang::BuiltinType::Half:
-            case clang::BuiltinType::Float:
-            case clang::BuiltinType::Double:
-            case clang::BuiltinType::LongDouble:    return lldb::eEncodingIEEE754;
-                
-            case clang::BuiltinType::ObjCClass:
-            case clang::BuiltinType::ObjCId:
-            case clang::BuiltinType::ObjCSel:       return lldb::eEncodingUint;
-                
-            case clang::BuiltinType::NullPtr:       return lldb::eEncodingUint;
-                
-            case clang::BuiltinType::Kind::ARCUnbridgedCast:
-            case clang::BuiltinType::Kind::BoundMember:
-            case clang::BuiltinType::Kind::BuiltinFn:
-            case clang::BuiltinType::Kind::Dependent:
-            case clang::BuiltinType::Kind::OCLClkEvent:
-            case clang::BuiltinType::Kind::OCLEvent:
-            case clang::BuiltinType::Kind::OCLImage1dRO:
-            case clang::BuiltinType::Kind::OCLImage1dWO:
-            case clang::BuiltinType::Kind::OCLImage1dRW:
-            case clang::BuiltinType::Kind::OCLImage1dArrayRO:
-            case clang::BuiltinType::Kind::OCLImage1dArrayWO:
-            case clang::BuiltinType::Kind::OCLImage1dArrayRW:
-            case clang::BuiltinType::Kind::OCLImage1dBufferRO:
-            case clang::BuiltinType::Kind::OCLImage1dBufferWO:
-            case clang::BuiltinType::Kind::OCLImage1dBufferRW:
-            case clang::BuiltinType::Kind::OCLImage2dRO:
-            case clang::BuiltinType::Kind::OCLImage2dWO:
-            case clang::BuiltinType::Kind::OCLImage2dRW:
-            case clang::BuiltinType::Kind::OCLImage2dArrayRO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayWO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayRW:
-            case clang::BuiltinType::Kind::OCLImage2dArrayDepthRO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayDepthWO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayDepthRW:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAARO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAAWO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAARW:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthRO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthWO:
-            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthRW:
-            case clang::BuiltinType::Kind::OCLImage2dDepthRO:
-            case clang::BuiltinType::Kind::OCLImage2dDepthWO:
-            case clang::BuiltinType::Kind::OCLImage2dDepthRW:
-            case clang::BuiltinType::Kind::OCLImage2dMSAARO:
-            case clang::BuiltinType::Kind::OCLImage2dMSAAWO:
-            case clang::BuiltinType::Kind::OCLImage2dMSAARW:
-            case clang::BuiltinType::Kind::OCLImage2dMSAADepthRO:
-            case clang::BuiltinType::Kind::OCLImage2dMSAADepthWO:
-            case clang::BuiltinType::Kind::OCLImage2dMSAADepthRW:
-            case clang::BuiltinType::Kind::OCLImage3dRO:
-            case clang::BuiltinType::Kind::OCLImage3dWO:
-            case clang::BuiltinType::Kind::OCLImage3dRW:
-            case clang::BuiltinType::Kind::OCLQueue:
-            case clang::BuiltinType::Kind::OCLNDRange:
-            case clang::BuiltinType::Kind::OCLReserveID:
-            case clang::BuiltinType::Kind::OCLSampler:
-            case clang::BuiltinType::Kind::OMPArraySection:
-            case clang::BuiltinType::Kind::Overload:
-            case clang::BuiltinType::Kind::PseudoObject:
-            case clang::BuiltinType::Kind::UnknownAny:
-                break;
-        }
+            {
+                case clang::BuiltinType::Void:
+                    break;
+
+                case clang::BuiltinType::Bool:
+                case clang::BuiltinType::Char_S:
+                case clang::BuiltinType::SChar:
+                case clang::BuiltinType::WChar_S:
+                case clang::BuiltinType::Char16:
+                case clang::BuiltinType::Char32:
+                case clang::BuiltinType::Short:
+                case clang::BuiltinType::Int:
+                case clang::BuiltinType::Long:
+                case clang::BuiltinType::LongLong:
+                case clang::BuiltinType::Int128:
+                    return lldb::eEncodingSint;
+
+                case clang::BuiltinType::Char_U:
+                case clang::BuiltinType::UChar:
+                case clang::BuiltinType::WChar_U:
+                case clang::BuiltinType::UShort:
+                case clang::BuiltinType::UInt:
+                case clang::BuiltinType::ULong:
+                case clang::BuiltinType::ULongLong:
+                case clang::BuiltinType::UInt128:
+                    return lldb::eEncodingUint;
+
+                case clang::BuiltinType::Half:
+                case clang::BuiltinType::Float:
+                case clang::BuiltinType::Float128:
+                case clang::BuiltinType::Double:
+                case clang::BuiltinType::LongDouble:
+                    return lldb::eEncodingIEEE754;
+
+                case clang::BuiltinType::ObjCClass:
+                case clang::BuiltinType::ObjCId:
+                case clang::BuiltinType::ObjCSel:
+                    return lldb::eEncodingUint;
+
+                case clang::BuiltinType::NullPtr:
+                    return lldb::eEncodingUint;
+
+                case clang::BuiltinType::Kind::ARCUnbridgedCast:
+                case clang::BuiltinType::Kind::BoundMember:
+                case clang::BuiltinType::Kind::BuiltinFn:
+                case clang::BuiltinType::Kind::Dependent:
+                case clang::BuiltinType::Kind::OCLClkEvent:
+                case clang::BuiltinType::Kind::OCLEvent:
+                case clang::BuiltinType::Kind::OCLImage1dRO:
+                case clang::BuiltinType::Kind::OCLImage1dWO:
+                case clang::BuiltinType::Kind::OCLImage1dRW:
+                case clang::BuiltinType::Kind::OCLImage1dArrayRO:
+                case clang::BuiltinType::Kind::OCLImage1dArrayWO:
+                case clang::BuiltinType::Kind::OCLImage1dArrayRW:
+                case clang::BuiltinType::Kind::OCLImage1dBufferRO:
+                case clang::BuiltinType::Kind::OCLImage1dBufferWO:
+                case clang::BuiltinType::Kind::OCLImage1dBufferRW:
+                case clang::BuiltinType::Kind::OCLImage2dRO:
+                case clang::BuiltinType::Kind::OCLImage2dWO:
+                case clang::BuiltinType::Kind::OCLImage2dRW:
+                case clang::BuiltinType::Kind::OCLImage2dArrayRO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayWO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayRW:
+                case clang::BuiltinType::Kind::OCLImage2dArrayDepthRO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayDepthWO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayDepthRW:
+                case clang::BuiltinType::Kind::OCLImage2dArrayMSAARO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayMSAAWO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayMSAARW:
+                case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthRO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthWO:
+                case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepthRW:
+                case clang::BuiltinType::Kind::OCLImage2dDepthRO:
+                case clang::BuiltinType::Kind::OCLImage2dDepthWO:
+                case clang::BuiltinType::Kind::OCLImage2dDepthRW:
+                case clang::BuiltinType::Kind::OCLImage2dMSAARO:
+                case clang::BuiltinType::Kind::OCLImage2dMSAAWO:
+                case clang::BuiltinType::Kind::OCLImage2dMSAARW:
+                case clang::BuiltinType::Kind::OCLImage2dMSAADepthRO:
+                case clang::BuiltinType::Kind::OCLImage2dMSAADepthWO:
+                case clang::BuiltinType::Kind::OCLImage2dMSAADepthRW:
+                case clang::BuiltinType::Kind::OCLImage3dRO:
+                case clang::BuiltinType::Kind::OCLImage3dWO:
+                case clang::BuiltinType::Kind::OCLImage3dRW:
+                case clang::BuiltinType::Kind::OCLQueue:
+                case clang::BuiltinType::Kind::OCLNDRange:
+                case clang::BuiltinType::Kind::OCLReserveID:
+                case clang::BuiltinType::Kind::OCLSampler:
+                case clang::BuiltinType::Kind::OMPArraySection:
+                case clang::BuiltinType::Kind::Overload:
+                case clang::BuiltinType::Kind::PseudoObject:
+                case clang::BuiltinType::Kind::UnknownAny:
+                    break;
+            }
             break;
             // All pointer types are represented as unsigned integer encodings.
             // We may nee to add a eEncodingPointer if we ever need to know the
@@ -4944,7 +4950,7 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
             count = 2;
             return encoding;
         }
-            
+
         case clang::Type::ObjCInterface:            break;
         case clang::Type::Record:                   break;
         case clang::Type::Enum:                     return lldb::eEncodingSint;
@@ -4953,13 +4959,13 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
 
         case clang::Type::Auto:
             return CompilerType(getASTContext(), llvm::cast<clang::AutoType>(qual_type)->getDeducedType()).GetEncoding(count);
-            
+
         case clang::Type::Elaborated:
             return CompilerType(getASTContext(), llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType()).GetEncoding(count);
-            
+
         case clang::Type::Paren:
             return CompilerType(getASTContext(), llvm::cast<clang::ParenType>(qual_type)->desugar()).GetEncoding(count);
-            
+
         case clang::Type::DependentSizedArray:
         case clang::Type::DependentSizedExtVector:
         case clang::Type::UnresolvedUsing:
@@ -4972,7 +4978,7 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
         case clang::Type::DependentTemplateSpecialization:
         case clang::Type::PackExpansion:
         case clang::Type::ObjCObject:
-            
+
         case clang::Type::TypeOfExpr:
         case clang::Type::TypeOf:
         case clang::Type::Decltype:
@@ -4981,7 +4987,7 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
         case clang::Type::Adjusted:
         case clang::Type::Pipe:
             break;
-            
+
             // pointer type decayed from an array or function type.
         case clang::Type::Decayed:
             break;

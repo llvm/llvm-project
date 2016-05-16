@@ -13,6 +13,9 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -20,7 +23,10 @@
 #include "llvm/CodeGen/ParallelCG.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Linker/IRMover.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
@@ -56,10 +62,44 @@ static void saveBCFile(Module &M, StringRef Suffix) {
   WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
-// Run LTO passes.
-// Note that the gold plugin has a similar piece of code, so
-// it is probably better to move this code to a common place.
-static void runLTOPasses(Module &M, TargetMachine &TM) {
+static void runNewCustomLtoPasses(Module &M, TargetMachine &TM) {
+  PassBuilder PB(&TM);
+
+  AAManager AA;
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  // Register the AA manager first so that our version is the one used.
+  FAM.registerPass([&] { return std::move(AA); });
+
+  // Register all the basic analyses with the managers.
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM;
+  if (!Config->DisableVerify)
+    MPM.addPass(VerifierPass());
+
+  // Now, add all the passes we've been requested to.
+  if (!PB.parsePassPipeline(MPM, Config->LtoNewPmPasses)) {
+    error("unable to parse pass pipeline description: " +
+          Config->LtoNewPmPasses);
+    return;
+  }
+
+  if (!Config->DisableVerify)
+    MPM.addPass(VerifierPass());
+  MPM.run(M, MAM);
+}
+
+static void runOldLtoPasses(Module &M, TargetMachine &TM) {
+  // Note that the gold plugin has a similar piece of code, so
+  // it is probably better to move this code to a common place.
   legacy::PassManager LtoPasses;
   LtoPasses.add(createTargetTransformInfoWrapperPass(TM.getTargetIRAnalysis()));
   PassManagerBuilder PMB;
@@ -71,6 +111,21 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
   PMB.OptLevel = Config->LtoO;
   PMB.populateLTOPassManager(LtoPasses);
   LtoPasses.run(M);
+}
+
+static void runLTOPasses(Module &M, TargetMachine &TM) {
+  if (!Config->LtoNewPmPasses.empty()) {
+    // The user explicitly asked for a set of passes to be run.
+    // This needs the new PM to work as there's no clean way to
+    // pass a set of passes to run in the legacy PM.
+    runNewCustomLtoPasses(M, TM);
+    if (HasError)
+      return;
+  } else {
+    // Run the 'default' set of LTO passes. This code still uses
+    // the legacy PM as the new one is not the default.
+    runOldLtoPasses(M, TM);
+  }
 
   if (Config->SaveTemps)
     saveBCFile(M, ".lto.opt.bc");
@@ -226,6 +281,8 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
 
   std::unique_ptr<TargetMachine> TM = CreateTargetMachine();
   runLTOPasses(*Combined, *TM);
+  if (HasError)
+    return {};
 
   return runSplitCodegen(CreateTargetMachine);
 }

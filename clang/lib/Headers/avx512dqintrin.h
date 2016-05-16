@@ -1027,6 +1027,30 @@ __builtin_ia32_extracti64x2_512_mask ((__v8di)( __A),\
                 (__mmask8) ( __U));\
 })
 
+#define _mm512_insertf32x8( __A, __B, __imm) __extension__ ({ \
+__builtin_ia32_insertf32x8_mask ((__v16sf)( __A),\
+                (__v8sf)( __B),\
+                ( __imm),\
+                (__v16sf) _mm512_setzero_ps (),\
+                (__mmask16) -1);\
+})
+
+#define _mm512_mask_insertf32x8( __W, __U, __A, __B, __imm) __extension__ ({ \
+__builtin_ia32_insertf32x8_mask ((__v16sf)( __A),\
+                (__v8sf)( __B),\
+                ( __imm),\
+                (__v16sf)( __W),\
+                (__mmask16)( __U));\
+})
+
+#define _mm512_maskz_insertf32x8( __U, __A, __B, __imm) __extension__ ({ \
+__builtin_ia32_insertf32x8_mask ((__v16sf)( __A),\
+                (__v8sf)( __B),\
+                ( __imm),\
+                (__v16sf) _mm512_setzero_ps (),\
+                (__mmask16)( __U));\
+})
+
 #define _mm512_insertf64x2( __A, __B, __imm) __extension__ ({ \
 __builtin_ia32_insertf64x2_512_mask ((__v8df)( __A),\
                 (__v2df)( __B),\

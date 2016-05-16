@@ -60,7 +60,7 @@ Listener::~Listener()
     Clear();
 
     if (log)
-        log->Printf("%p Listener::%s('%s')", this, __FUNCTION__, m_name.c_str());
+        log->Printf("%p Listener::%s('%s')", static_cast<void *>(this), __FUNCTION__, m_name.c_str());
 }
 
 void
@@ -89,7 +89,7 @@ Listener::Clear()
     }
 
     if (log)
-        log->Printf("%p Listener::%s('%s')", this, __FUNCTION__, m_name.c_str());
+        log->Printf("%p Listener::%s('%s')", static_cast<void *>(this), __FUNCTION__, m_name.c_str());
 }
 
 uint32_t

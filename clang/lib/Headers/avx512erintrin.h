@@ -55,17 +55,17 @@
 #define _mm512_exp2a23_round_ps(A, R) __extension__ ({ \
   (__m512)__builtin_ia32_exp2ps_mask((__v16sf)(__m512)(A), \
                                      (__v16sf)_mm512_setzero_ps(), \
-                                     (__mmask8)-1, (R)); })
+                                     (__mmask16)-1, (R)); })
 
 #define _mm512_mask_exp2a23_round_ps(S, M, A, R) __extension__ ({ \
   (__m512)__builtin_ia32_exp2ps_mask((__v16sf)(__m512)(A), \
                                      (__v16sf)(__m512)(S), \
-                                     (__mmask8)(M), (R)); })
+                                     (__mmask16)(M), (R)); })
 
 #define _mm512_maskz_exp2a23_round_ps(M, A, R) __extension__ ({ \
   (__m512)__builtin_ia32_exp2ps_mask((__v16sf)(__m512)(A), \
                                      (__v16sf)_mm512_setzero_ps(), \
-                                     (__mmask8)(M), (R)); })
+                                     (__mmask16)(M), (R)); })
 
 #define _mm512_exp2a23_ps(A) \
    _mm512_exp2a23_round_ps((A), _MM_FROUND_CUR_DIRECTION)

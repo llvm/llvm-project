@@ -191,12 +191,12 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
     return Body.getVA<ELFT>(A);
   case R_GOT_OFF:
     return Body.getGotOffset<ELFT>() + A;
-  case R_MIPS_GOT_LOCAL:
+  case R_MIPS_GOT_LOCAL_PAGE:
     // If relocation against MIPS local symbol requires GOT entry, this entry
     // should be initialized by 'page address'. This address is high 16-bits
     // of sum the symbol's value and the addend.
     return Out<ELFT>::Got->getMipsLocalPageOffset(Body.getVA<ELFT>(A));
-  case R_MIPS_GOT:
+  case R_MIPS_GOT_LOCAL:
     // For non-local symbols GOT entries should contain their full
     // addresses. But if such symbol cannot be preempted, we do not
     // have to put them into the "global" part of GOT and use dynamic

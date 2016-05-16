@@ -44,11 +44,11 @@ struct Configuration {
   llvm::StringRef Emulation;
   llvm::StringRef Fini;
   llvm::StringRef Init;
+  llvm::StringRef LtoNewPmPasses;
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   std::string RPath;
-  std::string Reproduce;
   std::vector<llvm::StringRef> DynamicList;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
