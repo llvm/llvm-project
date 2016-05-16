@@ -14,6 +14,7 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+namespace {
 class GenericErrorCategory : public std::error_category {
 public:
   const char *name() const LLVM_NOEXCEPT override { return "llvm.pdb"; }
@@ -33,6 +34,7 @@ public:
     llvm_unreachable("Unrecognized generic_error_code");
   }
 };
+} // end anonymous namespace
 
 static ManagedStatic<GenericErrorCategory> Category;
 

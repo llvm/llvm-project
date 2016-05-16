@@ -144,6 +144,7 @@ ModulePass *llvm::createPGOIndirectCallPromotionLegacyPass(bool InLTO) {
   return new PGOIndirectCallPromotionLegacyPass(InLTO);
 }
 
+namespace {
 // The class for main data structure to promote indirect calls to conditional
 // direct calls.
 class ICallPromotionFunc {
@@ -234,6 +235,7 @@ public:
   }
   bool processFunction();
 };
+} // end anonymous namespace
 
 bool ICallPromotionFunc::isPromotionProfitable(uint64_t Count,
                                                uint64_t TotalCount) {

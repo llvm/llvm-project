@@ -131,6 +131,7 @@ ModulePass *llvm::createRewriteStatepointsForGCPass() {
 INITIALIZE_PASS_BEGIN(RewriteStatepointsForGC, "rewrite-statepoints-for-gc",
                       "Make relocations explicit at statepoints", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(RewriteStatepointsForGC, "rewrite-statepoints-for-gc",
                     "Make relocations explicit at statepoints", false, false)
 

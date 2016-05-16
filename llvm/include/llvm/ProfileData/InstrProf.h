@@ -688,27 +688,6 @@ void InstrProfValueSiteRecord::sortByCount() {
     ValueData.resize(max_s);
 }
 
-/*
-* Initialize the record for runtime value profile data.
-* Return 0 if the initialization is successful, otherwise
-* return 1.
-*/
-int initializeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord,
-                                     const uint16_t *NumValueSites,
-                                     ValueProfNode **Nodes);
-
-/* Release memory allocated for the runtime record.  */
-void finalizeValueProfRuntimeRecord(ValueProfRuntimeRecord *RuntimeRecord);
-
-/* Return the size of ValueProfData structure that can be used to store
-   the value profile data collected at runtime. */
-uint32_t getValueProfDataSizeRT(const ValueProfRuntimeRecord *Record);
-
-/* Return a ValueProfData instance that stores the data collected at runtime. */
-ValueProfData *
-serializeValueProfDataFromRT(const ValueProfRuntimeRecord *Record,
-                             ValueProfData *Dst);
-
 namespace IndexedInstrProf {
 
 enum class HashT : uint32_t {

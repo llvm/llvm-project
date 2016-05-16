@@ -5,6 +5,7 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+namespace {
 class RawErrorCategory : public std::error_category {
 public:
   const char *name() const LLVM_NOEXCEPT override { return "llvm.pdb.raw"; }
@@ -24,6 +25,7 @@ public:
     llvm_unreachable("Unrecognized raw_error_code");
   }
 };
+} // end anonymous namespace
 
 static ManagedStatic<RawErrorCategory> Category;
 

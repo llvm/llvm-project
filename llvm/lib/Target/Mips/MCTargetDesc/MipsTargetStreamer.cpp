@@ -40,6 +40,7 @@ MipsTargetStreamer::MipsTargetStreamer(MCStreamer &S)
 }
 void MipsTargetStreamer::emitDirectiveSetMicroMips() {}
 void MipsTargetStreamer::emitDirectiveSetNoMicroMips() {}
+void MipsTargetStreamer::setUsesMicroMips() {}
 void MipsTargetStreamer::emitDirectiveSetMips16() {}
 void MipsTargetStreamer::emitDirectiveSetNoMips16() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetReorder() { forbidModuleDirective(); }
@@ -830,17 +831,19 @@ MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
 
 void MipsTargetELFStreamer::emitDirectiveSetMicroMips() {
   MicroMipsEnabled = true;
-
-  MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned Flags = MCA.getELFHeaderEFlags();
-  Flags |= ELF::EF_MIPS_MICROMIPS;
-  MCA.setELFHeaderEFlags(Flags);
   forbidModuleDirective();
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetNoMicroMips() {
   MicroMipsEnabled = false;
   forbidModuleDirective();
+}
+
+void MipsTargetELFStreamer::setUsesMicroMips() {
+  MCAssembler &MCA = getStreamer().getAssembler();
+  unsigned Flags = MCA.getELFHeaderEFlags();
+  Flags |= ELF::EF_MIPS_MICROMIPS;
+  MCA.setELFHeaderEFlags(Flags);
 }
 
 void MipsTargetELFStreamer::emitDirectiveSetMips16() {

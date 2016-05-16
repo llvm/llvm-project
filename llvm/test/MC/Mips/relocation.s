@@ -20,6 +20,7 @@
 //         unknown.
 // FIXME - Placeholder. Generation method is known but doesn't work.
 
+// RELOC-LABEL: .rel.text {
 // DATA-LABEL: Name: .text
 // DATA:       SectionData (
 
@@ -264,4 +265,82 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
 	.word 0
 bar:
 	.word 1
-// DATA-LABEL: Section {
+
+        .section .text_mm, "ax", @progbits
+        .set micromips
+mm:
+// RELOC-LABEL: .rel.text_mm {
+// ENCBE-LABEL: mm:
+// ENCLE-LABEL: mm:
+// DATA-LABEL: Name: .text_mm
+// DATA:       SectionData (
+
+// DATA-NEXT:  0000: 30430000 30420000 30430000 30420004
+        addiu $2, $3, %got(foo_mm)         // RELOC: R_MICROMIPS_GOT16 foo_mm
+                                           // ENCBE: addiu $2, $3, %got(foo_mm) # encoding: [0x30,0x43,A,A]
+                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
+                                           // ENCLE: addiu $2, $3, %got(foo_mm) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %got(foo_mm), kind: fixup_MICROMIPS_GOT16
+        // %got requires a %lo pair
+        addiu $2, $2, %lo(foo_mm)          // RELOC: R_MICROMIPS_LO16 foo_mm
+                                           // ENCBE: addiu $2, $2, %lo(foo_mm) # encoding: [0x30,0x42,A,A]
+                                           // ENCLE: addiu $2, $2, %lo(foo_mm) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %lo(foo_mm), kind: fixup_MICROMIPS_LO16
+
+foo_mm:
+        addiu $2, $3, %got(bar)            // RELOC: R_MICROMIPS_GOT16 .data
+                                           // ENCBE: addiu $2, $3, %got(bar) # encoding: [0x30,0x43,A,A]
+                                           // ENCLE: addiu $2, $3, %got(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %got(bar), kind: fixup_MICROMIPS_GOT16
+        // %got requires a %lo pair
+        addiu $2, $2, %lo(bar)             // RELOC: R_MICROMIPS_LO16 .data
+                                           // ENCBE: addiu $2, $2, %lo(bar) # encoding: [0x30,0x42,A,A]
+                                           // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %lo(bar), kind: fixup_MICROMIPS_LO16
+
+// DATA-NEXT:  0010: 30430000 30420004 30430001 30420030
+        addiu $2, $3, %got(baz)            // RELOC: R_MICROMIPS_GOT16 .text
+                                           // ENCBE: addiu $2, $3, %got(baz) # encoding: [0x30,0x43,A,A]
+                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
+                                           // ENCLE: addiu $2, $3, %got(baz) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %got(baz), kind: fixup_MICROMIPS_GOT16
+        // %got requires a %lo pair
+        addiu $2, $2, %lo(baz)             // RELOC: R_MICROMIPS_LO16 .text
+                                           // ENCBE: addiu $2, $2, %lo(baz) # encoding: [0x30,0x42,A,A]
+                                           // ENCLE: addiu $2, $2, %lo(baz) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %lo(baz), kind: fixup_MICROMIPS_LO16
+
+        addiu $2, $3, %got(long_mm)        // RELOC: R_MICROMIPS_GOT16 .text
+                                           // ENCBE: addiu $2, $3, %got(long_mm) # encoding: [0x30,0x43,A,A]
+                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
+                                           // ENCLE: addiu $2, $3, %got(long_mm) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %got(long_mm), kind: fixup_MICROMIPS_GOT16
+        // %got requires a %lo pair
+        addiu $2, $2, %lo(long_mm)         // RELOC: R_MICROMIPS_LO16 .text
+                                           // ENCBE: addiu $2, $2, %lo(long_mm) # encoding: [0x30,0x42,A,A]
+                                           // ENCLE: addiu $2, $2, %lo(long_mm) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %lo(long_mm), kind: fixup_MICROMIPS_LO16
+
+// DATA-NEXT:  0020: 30430000 30420000 30430000 30420004
+        addiu $2, $3, %hi(foo_mm)          // RELOC: R_MICROMIPS_HI16 foo_mm
+                                           // ENCBE: addiu $2, $3, %hi(foo_mm) # encoding: [0x30,0x43,A,A]
+                                           // ENCLE: addiu $2, $3, %hi(foo_mm) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %hi(foo_mm), kind: fixup_MICROMIPS_HI16
+
+        addiu $2, $2, %lo(foo_mm)          // RELOC: R_MICROMIPS_LO16 foo_mm
+                                           // ENCBE: addiu $2, $2, %lo(foo_mm) # encoding: [0x30,0x42,A,A]
+                                           // ENCLE: addiu $2, $2, %lo(foo_mm) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %lo(foo_mm), kind: fixup_MICROMIPS_LO16
+
+        addiu $2, $3, %hi(bar)             // RELOC: R_MICROMIPS_HI16 .data
+                                           // ENCBE: addiu $2, $3, %hi(bar) # encoding: [0x30,0x43,A,A]
+                                           // ENCLE: addiu $2, $3, %hi(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %hi(bar), kind: fixup_MICROMIPS_HI16
+
+        addiu $2, $2, %lo(bar)             // RELOC: R_MICROMIPS_LO16 .data
+                                           // ENCBE: addiu $2, $2, %lo(bar) # encoding: [0x30,0x42,A,A]
+                                           // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %lo(bar), kind: fixup_MICROMIPS_LO16
+
+        .space 65536, 0
+long_mm:
