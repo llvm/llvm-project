@@ -3046,8 +3046,15 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
   NameVals.push_back(getEncodedGVSummaryFlags(V));
   auto *Summary = Index->getGlobalValueSummary(V);
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
-  for (auto Ref : VS->refs())
-    NameVals.push_back(VE.getValueID(Ref.getValue()));
+
+  // Compute refs in a separate vector to be able to sort them for determinism.
+  std::vector<uint64_t> Refs;
+  Refs.reserve(VS->refs().size());
+  for (auto &RI : VS->refs())
+    Refs.push_back(VE.getValueID(RI.getValue()));
+  std::sort(Refs.begin(), Refs.end());
+  NameVals.insert(NameVals.end(), Refs.begin(), Refs.end());
+
   Stream.EmitRecord(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS, NameVals,
                     FSModRefsAbbrev);
   NameVals.clear();
