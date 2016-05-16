@@ -60,8 +60,11 @@ static unsigned getFramePointerReg(const ARMSubtarget &STI) {
 const MCPhysReg*
 ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
+  bool UseSplitPush = STI.splitFramePushPop();
   const MCPhysReg *RegList =
-      STI.isTargetDarwin() ? CSR_iOS_SaveList : CSR_AAPCS_SaveList;
+      STI.isTargetDarwin()
+          ? CSR_iOS_SaveList
+          : (UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList);
 
   const Function *F = MF->getFunction();
   if (F->getCallingConv() == CallingConv::GHC) {
@@ -72,7 +75,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.
-      return CSR_AAPCS_SaveList;
+      return UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList;
     } else if (F->getFnAttribute("interrupt").getValueAsString() == "FIQ") {
       // Fast interrupt mode gives the handler a private copy of R8-R14, so less
       // need to be saved to restore user-mode state.

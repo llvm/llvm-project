@@ -151,7 +151,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R9:
     case ARM::R10:
     case ARM::R11:
-      if (STI.isTargetMachO()) {
+      if (STI.splitFramePushPop()) {
         GPRCS2Size += 4;
         break;
       }
@@ -213,7 +213,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R10:
     case ARM::R11:
     case ARM::R12:
-      if (STI.isTargetMachO())
+      if (STI.splitFramePushPop())
         break;
       // fallthough
     case ARM::R0:
