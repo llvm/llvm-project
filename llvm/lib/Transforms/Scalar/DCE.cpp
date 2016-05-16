@@ -100,7 +100,7 @@ static bool DCEInstruction(Instruction *I,
   return false;
 }
 
-bool eliminateDeadCode(Function &F, TargetLibraryInfo *TLI) {
+static bool eliminateDeadCode(Function &F, TargetLibraryInfo *TLI) {
   bool MadeChange = false;
   SmallSetVector<Instruction *, 16> WorkList;
   // Iterate over the original function, only adding insts to the worklist

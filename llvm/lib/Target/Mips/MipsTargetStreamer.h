@@ -30,6 +30,7 @@ public:
 
   virtual void emitDirectiveSetMicroMips();
   virtual void emitDirectiveSetNoMicroMips();
+  virtual void setUsesMicroMips();
   virtual void emitDirectiveSetMips16();
   virtual void emitDirectiveSetNoMips16();
 
@@ -290,6 +291,7 @@ public:
 
   void emitDirectiveSetMicroMips() override;
   void emitDirectiveSetNoMicroMips() override;
+  void setUsesMicroMips() override;
   void emitDirectiveSetMips16() override;
 
   void emitDirectiveSetNoReorder() override;

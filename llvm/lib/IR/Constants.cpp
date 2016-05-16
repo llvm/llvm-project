@@ -1912,8 +1912,16 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   assert(DestTy && "GEP indices invalid!");
   unsigned AS = C->getType()->getPointerAddressSpace();
   Type *ReqTy = DestTy->getPointerTo(AS);
-  if (VectorType *VecTy = dyn_cast<VectorType>(C->getType()))
-    ReqTy = VectorType::get(ReqTy, VecTy->getNumElements());
+
+  unsigned NumVecElts = 0;
+  if (C->getType()->isVectorTy())
+    NumVecElts = C->getType()->getVectorNumElements();
+  else for (auto Idx : Idxs)
+    if (Idx->getType()->isVectorTy())
+      NumVecElts = Idx->getType()->getVectorNumElements();
+
+  if (NumVecElts)
+    ReqTy = VectorType::get(ReqTy, NumVecElts);
 
   if (OnlyIfReducedTy == ReqTy)
     return nullptr;
@@ -1923,13 +1931,14 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   ArgVec.reserve(1 + Idxs.size());
   ArgVec.push_back(C);
   for (unsigned i = 0, e = Idxs.size(); i != e; ++i) {
-    assert(Idxs[i]->getType()->isVectorTy() == ReqTy->isVectorTy() &&
-           "getelementptr index type missmatch");
     assert((!Idxs[i]->getType()->isVectorTy() ||
-            ReqTy->getVectorNumElements() ==
-            Idxs[i]->getType()->getVectorNumElements()) &&
+            Idxs[i]->getType()->getVectorNumElements() == NumVecElts) &&
            "getelementptr index type missmatch");
-    ArgVec.push_back(cast<Constant>(Idxs[i]));
+
+    Constant *Idx = cast<Constant>(Idxs[i]);
+    if (NumVecElts && !Idxs[i]->getType()->isVectorTy())
+      Idx = ConstantVector::getSplat(NumVecElts, Idx);
+    ArgVec.push_back(Idx);
   }
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
                                 InBounds ? GEPOperator::IsInBounds : 0, None,

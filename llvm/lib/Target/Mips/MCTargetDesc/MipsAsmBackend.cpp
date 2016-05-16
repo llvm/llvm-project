@@ -91,6 +91,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     break;
   case Mips::fixup_Mips_HI16:
   case Mips::fixup_Mips_GOT:
+  case Mips::fixup_MICROMIPS_GOT16:
   case Mips::fixup_Mips_GOT_HI16:
   case Mips::fixup_Mips_CALL_HI16:
   case Mips::fixup_MICROMIPS_HI16:

@@ -589,7 +589,7 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
   return true;
 }
 
-void addPostLoopLiveIns(MachineBasicBlock *MBB, LivePhysRegs &LiveRegs) {
+static void addPostLoopLiveIns(MachineBasicBlock *MBB, LivePhysRegs &LiveRegs) {
   for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
     MBB->addLiveIn(*I);
 }

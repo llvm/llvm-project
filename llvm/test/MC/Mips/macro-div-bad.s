@@ -9,7 +9,7 @@
 
   .text
   div $25, $11
-  # R6: :[[@LINE-1]]:3: error: instruction not supported on mips32r6 or mips64r6
+  # R6: :[[@LINE-1]]:3: error: instruction requires a CPU feature not currently enabled
 
   div $25, $0
   # NOT-R6: :[[@LINE-1]]:3: warning: division by zero
