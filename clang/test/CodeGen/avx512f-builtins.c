@@ -4483,6 +4483,42 @@ __m512i test_mm512_maskz_inserti64x4(__mmask8 __U, __m512i __A, __m256i __B) {
   return _mm512_maskz_inserti64x4(__U, __A, __B, 1); 
 }
 
+__m512 test_mm512_insertf32x4(__m512 __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm512_insertf32x4
+  // CHECK: @llvm.x86.avx512.mask.insertf32x4
+  return _mm512_insertf32x4(__A, __B, 1);
+}
+
+__m512 test_mm512_mask_insertf32x4(__m512 __W, __mmask16 __U, __m512 __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm512_mask_insertf32x4
+  // CHECK: @llvm.x86.avx512.mask.insertf32x4
+  return _mm512_mask_insertf32x4(__W, __U, __A, __B, 1); 
+}
+
+__m512 test_mm512_maskz_insertf32x4(__mmask16 __U, __m512 __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm512_maskz_insertf32x4
+  // CHECK: @llvm.x86.avx512.mask.insertf32x4
+  return _mm512_maskz_insertf32x4(__U, __A, __B, 1); 
+}
+
+__m512i test_mm512_inserti32x4(__m512i __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm512_inserti32x4
+  // CHECK: @llvm.x86.avx512.mask.inserti32x4
+  return _mm512_inserti32x4(__A, __B, 1); 
+}
+
+__m512i test_mm512_mask_inserti32x4(__m512i __W, __mmask16 __U, __m512i __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm512_mask_inserti32x4
+  // CHECK: @llvm.x86.avx512.mask.inserti32x4
+  return _mm512_mask_inserti32x4(__W, __U, __A, __B, 1); 
+}
+
+__m512i test_mm512_maskz_inserti32x4(__mmask16 __U, __m512i __A, __m128i __B) {
+  // CHECK-LABEL: @test_mm512_maskz_inserti32x4
+  // CHECK: @llvm.x86.avx512.mask.inserti32x4
+  return _mm512_maskz_inserti32x4(__U, __A, __B, 1); 
+}
+
 __m512d test_mm512_getmant_round_pd(__m512d __A) {
   // CHECK-LABEL: @test_mm512_getmant_round_pd
   // CHECK: @llvm.x86.avx512.mask.getmant.pd.512
@@ -6243,14 +6279,14 @@ __m512d test_mm512_mask_ceil_pd (__m512d __W, __mmask8 __U, __m512d __A)
   return _mm512_mask_ceil_pd (__W,__U,__A);
 }
 
-__m512 test_mm512_mask_roundscale_ps(__m512d __W, __mmask8 __U, __m512d __A) 
+__m512 test_mm512_mask_roundscale_ps(__m512 __W, __mmask16 __U, __m512 __A) 
 {
   // CHECK-LABEL: @test_mm512_mask_roundscale_ps
   // CHECK: @llvm.x86.avx512.mask.rndscale.ps.512
   return _mm512_mask_roundscale_ps(__W,__U,__A, 1);
 }
 
-__m512 test_mm512_maskz_roundscale_ps(__mmask8 __U, __m512d __A) 
+__m512 test_mm512_maskz_roundscale_ps(__mmask16 __U, __m512 __A) 
 {
   // CHECK-LABEL: @test_mm512_maskz_roundscale_ps
   // CHECK: @llvm.x86.avx512.mask.rndscale.ps.512
