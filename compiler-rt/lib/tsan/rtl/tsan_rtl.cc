@@ -371,7 +371,8 @@ void Initialize(ThreadState *thr) {
   ctx->initialized = true;
 
 #ifndef SANITIZER_GO
-  Symbolizer::LateInitialize();
+  // TODO(kuba) Fix Me.
+  // Symbolizer::LateInitialize();
 #endif
 
   if (flags()->stop_on_start) {

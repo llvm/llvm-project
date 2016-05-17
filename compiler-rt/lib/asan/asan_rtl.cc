@@ -553,7 +553,8 @@ static void AsanInitInternal() {
 
   InitializeSuppressions();
 
-  Symbolizer::LateInitialize();
+  // TODO(kuba) Fix Me.
+  // Symbolizer::LateInitialize();
 
   VReport(1, "AddressSanitizer Init done\n");
 }
