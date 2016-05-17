@@ -25,11 +25,11 @@ int test_omp_single_private()
     myit = 0;
     for (i = 0; i < LOOPCOUNT; i++) {
       #pragma omp single private(nr_threads_in_single) nowait
-      {  
+      {
         nr_threads_in_single = 0;
         #pragma omp flush
         nr_threads_in_single++;
-        #pragma omp flush             
+        #pragma omp flush
         myit++;
         myresult = myresult + nr_threads_in_single;
       }
@@ -41,7 +41,7 @@ int test_omp_single_private()
     }
   }
   return ((result == 0) && (nr_iterations == LOOPCOUNT));
-} /* end of check_single private */ 
+} /* end of check_single private */
 
 int main()
 {

@@ -536,7 +536,25 @@ __m128d test_mm_load1_pd(double const* A) {
 __m128d test_mm_loadh_pd(__m128d x, void* y) {
   // CHECK-LABEL: test_mm_loadh_pd
   // CHECK: load double, double* %{{.*}}, align 1{{$}}
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_loadh_pd(x, y);
+}
+
+__m128i test_mm_loadl_epi64(__m128i* y) {
+  // CHECK: test_mm_loadl_epi64
+  // CHECK: load i64, i64* {{.*}}, align 1{{$}}
+  // CHECK: insertelement <2 x i64> undef, i64 {{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> {{.*}}, i64 0, i32 1
+  return _mm_loadl_epi64(y);
+}
+
+__m128d test_mm_loadl_pd(__m128d x, void* y) {
+  // CHECK-LABEL: test_mm_loadl_pd
+  // CHECK: load double, double* %{{.*}}, align 1{{$}}
+  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 1
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
+  return _mm_loadl_pd(x, y);
 }
 
 __m128d test_mm_loadr_pd(double const* A) {
@@ -888,16 +906,40 @@ void test_mm_store_si128(__m128i* A, __m128i B) {
   _mm_store_si128(A, B);
 }
 
+void test_mm_store1_pd(__m128d x, void* y) {
+  // CHECK-LABEL: test_mm_store1_pd
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: store {{.*}} double* {{.*}}, align 1{{$}}
+  // CHECK: store {{.*}} double* {{.*}}, align 1{{$}}
+  _mm_store1_pd(y, x);
+}
+
 void test_mm_storeh_pd(double* A, __m128d B) {
   // CHECK-LABEL: test_mm_storeh_pd
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 1
   // CHECK: store double %{{.*}}, double* %{{.*}}, align 1
   _mm_storeh_pd(A, B);
 }
 
+void test_mm_storel_epi64(__m128i x, void* y) {
+  // CHECK-LABEL: test_mm_storel_epi64
+  // CHECK: extractelement <2 x i64> %{{.*}}, i32 0
+  // CHECK: store {{.*}} i64* {{.*}}, align 1{{$}}
+  _mm_storel_epi64(y, x);
+}
+
 void test_mm_storel_pd(double* A, __m128d B) {
   // CHECK-LABEL: test_mm_storel_pd
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
   // CHECK: store double %{{.*}}, double* %{{.*}}, align 1
   _mm_storel_pd(A, B);
+}
+
+void test_mm_storer_pd(__m128d A, double* B) {
+  // CHECK-LABEL: test_mm_storer_pd
+  // CHECK: shufflevector <2 x double> {{.*}}, <2 x double> {{.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: store {{.*}} <2 x double>* {{.*}}, align 16{{$}}
+  _mm_storer_pd(B, A);
 }
 
 void test_mm_storeu_pd(double* A, __m128d B) {
@@ -1030,6 +1072,18 @@ int test_mm_ucomineq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomineq_sd
   // CHECK: call i32 @llvm.x86.sse2.ucomineq.sd
   return _mm_ucomineq_sd(A, B);
+}
+
+__m128d test_mm_undefined_pd() {
+  // CHECK-LABEL: @test_mm_undefined_pd
+  // CHECK: ret <2 x double> undef
+  return _mm_undefined_pd();
+}
+
+__m128i test_mm_undefined_si128() {
+  // CHECK-LABEL: @test_mm_undefined_si128
+  // CHECK: ret <2 x i64> undef
+  return _mm_undefined_si128();
 }
 
 __m128i test_mm_unpackhi_epi8(__m128i A, __m128i B) {

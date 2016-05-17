@@ -24,20 +24,6 @@ namespace {
 
 const char CastSequence[] = "sequence";
 
-/// \brief Matches cast expressions that have a cast kind of CK_NullToPointer
-/// or CK_NullToMemberPointer.
-///
-/// Given
-/// \code
-///   int *p = 0;
-/// \endcode
-/// implicitCastExpr(isNullToPointer()) matches the implicit cast clang adds
-/// around \c 0.
-AST_MATCHER(CastExpr, isNullToPointer) {
-  return Node.getCastKind() == CK_NullToPointer ||
-         Node.getCastKind() == CK_NullToMemberPointer;
-}
-
 AST_MATCHER(Type, sugaredNullptrType) {
   const Type *DesugaredType = Node.getUnqualifiedDesugaredType();
   if (const BuiltinType *BT = dyn_cast<BuiltinType>(DesugaredType))
@@ -52,7 +38,8 @@ AST_MATCHER(Type, sugaredNullptrType) {
 /// can be replaced instead of just the inner-most implicit cast.
 StatementMatcher makeCastSequenceMatcher() {
   StatementMatcher ImplicitCastToNull = implicitCastExpr(
-      isNullToPointer(),
+      anyOf(hasCastKind(CK_NullToPointer),
+            hasCastKind(CK_NullToMemberPointer)),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))));
 
   return castExpr(anyOf(ImplicitCastToNull,

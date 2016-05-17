@@ -87,7 +87,7 @@ int test_omp_for_schedule_static()
   /**** analysing the data in array tids ****/
 
   lasttid = tids[0];
-  tmp_count = 0; 
+  tmp_count = 0;
 
   for (i = 0; i < CFSMAX_SIZE + 1; ++i) {
     /* If the work  was done by the same thread increase tmp_count by one. */
@@ -99,9 +99,9 @@ int test_omp_for_schedule_static()
       continue;
     }
 
-    /* Check if the next thread had has the right thread number. When finding 
-     * threadnumber -1 the end should be reached. 
-     */    
+    /* Check if the next thread had has the right thread number. When finding
+     * threadnumber -1 the end should be reached.
+     */
     if (tids[i] == (lasttid + 1) % threads || tids[i] == -1) {
       /* checking for the right chunk size */
       if (tmp_count == chunk_size) {

@@ -14,7 +14,7 @@ How to Build the LLVM* OpenMP* Runtime Library using CMake
 ==========================================================
 
 ==== Version of CMake required: v2.8.0 or above ====
- 
+
 ============================================
 How to call cmake initially, then repeatedly
 ============================================
@@ -40,9 +40,9 @@ How to call cmake initially, then repeatedly
   for an empty build directory, but other Build options are used at any time.
 - The file CMakeCache.txt which is created after the first call to cmake
   is a configuration file which holds all the values for the Build options.
-  These configuration values can be changed using a text editor to modify 
+  These configuration values can be changed using a text editor to modify
   CMakeCache.txt as opposed to using definitions on the command line.
-- To have cmake create a particular type of build generator file simply 
+- To have cmake create a particular type of build generator file simply
   inlude the -G <Generator name> option:
   $ cmake -G "Unix Makefiles" ...
   You can see a list of generators cmake supports by executing cmake with
@@ -106,7 +106,7 @@ Specify the Fortran compiler
 This option is Windows* Only
 
 -DLIBOMP_ARCH=i386|x86_64|arm|ppc64|ppc64le|aarch64|mic
-The default for the option is chosen based on the probing the compiler for 
+The default for the option is chosen based on the probing the compiler for
 architecture macros (e.g., is __x86_64__ predefined by compiler?).
 
 ==== First values listed are the default value ====
@@ -122,13 +122,13 @@ OpenMP version can be either 41, 40 or 30.
 -DLIBOMP_MIC_ARCH=knc|knf
 This value is ignored if LIBOMP_ARCH != mic
 Intel(R) MIC Architecture, can be knf or knc.
-  
+
 -DLIBOMP_FORTRAN_MODULES=off|on
 Should the Fortran modules be created (requires Fortran compiler)
 
--DLIBOMP_USE_ADAPTIVE_LOCKS=on|off       
-Should adaptive (TSX-based) locks be included?  
-These are x86 specific.  This feature is turned on by default 
+-DLIBOMP_USE_ADAPTIVE_LOCKS=on|off
+Should adaptive (TSX-based) locks be included?
+These are x86 specific.  This feature is turned on by default
 for i386 and x86_64.  Otherwise, it is turned off.
 
 -DLIBOMP_USE_INTERNODE_ALIGNMENT=off|on
@@ -173,7 +173,7 @@ http://www.open-mpi.org/projects/hwloc
 Default: /usr/local
 This option is only used if LIBOMP_USE_HWLOC is on.
 Specifies install location of Hwloc. The configuration system will look for
-hwloc.h in ${LIBOMP_HWLOC_INSTALL_DIR}/include and the library in 
+hwloc.h in ${LIBOMP_HWLOC_INSTALL_DIR}/include and the library in
 ${LIBOMP_HWLOC_INSTALL_DIR}/lib.
 
 -DLIBOMP_LLVM_LIT_EXECUTABLE=/path/to/llvm-lit
@@ -187,7 +187,7 @@ Additional path to search for LLVM tools needed by tests.
 ================================
 How to append flags to the build
 ================================
-- These flags are *appended*.  They do not 
+- These flags are *appended*.  They do not
   overwrite any of the preset flags.
 -DLIBOMP_CPPFLAGS=<space-separated flags> -- Additional C preprocessor flags
 -DLIBOMP_CFLAGS=<space-separated flags>   -- Additional C compiler flags

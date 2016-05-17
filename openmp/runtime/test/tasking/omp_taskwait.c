@@ -12,17 +12,17 @@ int test_omp_taskwait()
   int i;
 
   /* fill array */
-  for (i = 0; i < NUM_TASKS; i++) 
+  for (i = 0; i < NUM_TASKS; i++)
     array[i] = 0;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     #pragma omp single
     {
       for (i = 0; i < NUM_TASKS; i++) {
         /* First we have to store the value of the loop index in a new variable
          * which will be private for each task because otherwise it will be overwritten
-         * if the execution of the task takes longer than the time which is needed to 
+         * if the execution of the task takes longer than the time which is needed to
          * enter the next step of the loop!
          */
         int myi;
@@ -35,11 +35,11 @@ int test_omp_taskwait()
       } /* end of for */
       #pragma omp taskwait
       /* check if all tasks were finished */
-      for (i = 0; i < NUM_TASKS; i++) 
+      for (i = 0; i < NUM_TASKS; i++)
         if (array[i] != 1)
           result1++;
 
-      /* generate some more tasks which now shall overwrite 
+      /* generate some more tasks which now shall overwrite
        * the values in the tids array */
       for (i = 0; i < NUM_TASKS; i++) {
         int myi;

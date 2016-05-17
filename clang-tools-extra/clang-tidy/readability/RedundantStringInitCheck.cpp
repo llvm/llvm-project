@@ -8,24 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantStringInitCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang {
 namespace tidy {
 namespace readability {
-
-namespace {
-
-AST_MATCHER(StringLiteral, lengthIsZero) { return Node.getLength() == 0; }
-
-AST_MATCHER_P(Expr, ignoringImplicit,
-              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  return InnerMatcher.matches(*Node.IgnoreImplicit(), Finder, Builder);
-}
-
-} // namespace
 
 void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
@@ -45,7 +36,7 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
   const auto EmptyStringCtorExpr =
       cxxConstructExpr(StringConstructorExpr,
           hasArgument(0, ignoringParenImpCasts(
-                             stringLiteral(lengthIsZero()))));
+                             stringLiteral(hasSize(0)))));
 
   const auto EmptyStringCtorExprWithTemporaries =
       expr(ignoringImplicit(

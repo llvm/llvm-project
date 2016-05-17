@@ -12,7 +12,7 @@ int test_omp_test_nest_lock()
   int i;
 
   omp_init_nest_lock (&lck);
-  #pragma omp parallel shared(lck) 
+  #pragma omp parallel shared(lck)
   {
     #pragma omp for
     for (i = 0; i < LOOPCOUNT; i++)
@@ -22,7 +22,7 @@ int test_omp_test_nest_lock()
       {};
       #pragma omp flush
       nr_threads_in_single++;
-      #pragma omp flush       
+      #pragma omp flush
       nr_iterations++;
       nr_threads_in_single--;
       result = result + nr_threads_in_single;

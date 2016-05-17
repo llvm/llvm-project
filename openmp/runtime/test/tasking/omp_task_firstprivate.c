@@ -27,7 +27,7 @@ int test_omp_task_firstprivate()
 
           /* check if calculated sum was right */
           if (sum != known_sum) {
-            #pragma omp critical 
+            #pragma omp critical
             { result++; }
           }
         } /* omp task */

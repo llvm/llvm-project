@@ -32,7 +32,7 @@ int test_omp_atomic()
   double dpt, div;
   int logicsArray[LOOPCOUNT];
   logics = logicsArray;
-  
+
   sum = 0;
   diff = 0;
   product = 1;
@@ -46,17 +46,17 @@ int test_omp_atomic()
       #pragma omp atomic
       sum += i;
     }
-  
+
   }
   known_sum = (LOOPCOUNT * (LOOPCOUNT + 1)) / 2;
   if (known_sum != sum)
   {
-    fprintf(stderr, 
-      "Error in sum with integers: Result was %d instead of %d.\n", 
+    fprintf(stderr,
+      "Error in sum with integers: Result was %d instead of %d.\n",
       sum, known_sum);
     result++;
   }
-  
+
   // difference of integers test
   #pragma omp parallel
   {
@@ -113,7 +113,7 @@ int test_omp_atomic()
       #pragma omp atomic
       ddiff -= pow (dt, i);
     }
-  } 
+  }
   if (fabs (ddiff) > rounding_error) {
     fprintf (stderr,
       "Error in difference with doubles: Result was %E instead of 0.0\n",
@@ -157,7 +157,7 @@ int test_omp_atomic()
       product);
     result++;
   }
-  
+
   // division of doubles test
   div = 5.0E+5;
   #pragma omp parallel
@@ -266,7 +266,7 @@ int test_omp_atomic()
   logics[LOOPCOUNT / 2] = 1;
   #pragma omp parallel
   {
-    
+
     int i;
     #pragma omp for
     for (i = 0; i < LOOPCOUNT; ++i) {
@@ -309,7 +309,7 @@ int test_omp_atomic()
       #pragma omp atomic
       exclusiv_bit_or ^= logics[i];
     }
-    
+
   }
   if (!exclusiv_bit_or) {
     result++;
@@ -326,7 +326,7 @@ int test_omp_atomic()
       #pragma omp atomic
       x <<= 1;
     }
-    
+
   }
   if ( x != 1024) {
     result++;

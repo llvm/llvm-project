@@ -6,7 +6,7 @@
 int test_omp_parallel_sections_reduction()
 {
   int sum;
-  int known_sum;  
+  int known_sum;
   double dpt;
   double dsum;
   double dknown_sum;
@@ -123,7 +123,7 @@ int test_omp_parallel_sections_reduction()
     }
   }
   if( fabs(dsum-dknown_sum) > rounding_error ) {
-    result++; 
+    result++;
     fprintf(stderr,"Error in sum with doubles: Result was %f"
       " instead of %f (Difference: %E)\n",
       dsum, dknown_sum, dsum-dknown_sum);
@@ -168,7 +168,7 @@ int test_omp_parallel_sections_reduction()
   #pragma omp parallel sections private(i) reduction(*:product)
   {
     #pragma omp section
-    {  
+    {
       for(i=1;i<3;i++) {
         product *= i;
       }
@@ -319,19 +319,19 @@ int test_omp_parallel_sections_reduction()
   #pragma omp parallel sections private(i) reduction(&:bit_and)
   {
     #pragma omp section
-    {  
+    {
       for(i=0;i<300;++i) {
         bit_and = (bit_and & logics[i]);
       }
     }
     #pragma omp section
-    {  
+    {
       for(i=300;i<700;++i) {
         bit_and = (bit_and & logics[i]);
       }
     }
     #pragma omp section
-    {  
+    {
       for(i=700;i<1000;++i) {
         bit_and = (bit_and & logics[i]);
       }
@@ -438,19 +438,19 @@ int test_omp_parallel_sections_reduction()
   #pragma omp parallel sections private(i) reduction(^:exclusiv_bit_or)
   {
     #pragma omp section
-    {  
+    {
       for(i=0;i<300;++i) {
         exclusiv_bit_or = exclusiv_bit_or ^ logics[i];
       }
     }
     #pragma omp section
-    {  
+    {
       for(i=300;i<700;++i) {
         exclusiv_bit_or = exclusiv_bit_or ^ logics[i];
       }
     }
     #pragma omp section
-    {  
+    {
       for(i=700;i<1000;++i) {
         exclusiv_bit_or = exclusiv_bit_or ^ logics[i];
       }

@@ -4,7 +4,7 @@
 
 /*
  * Checks that false is returned when called from serial region
- * and true is returned when called within parallel region. 
+ * and true is returned when called within parallel region.
  */
 int test_omp_in_parallel()
 {

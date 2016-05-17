@@ -617,8 +617,8 @@ const FileEntry *HeaderSearch::LookupFile(
       // from a module build. We should treat this as a system header if we're
       // building a [system] module.
       bool IncluderIsSystemHeader =
-          (Includer && getFileInfo(Includer).DirInfo != SrcMgr::C_User) ||
-          (!Includer && BuildSystemModule);
+          Includer ? getFileInfo(Includer).DirInfo != SrcMgr::C_User :
+          BuildSystemModule;
       if (const FileEntry *FE = getFileAndSuggestModule(
               TmpDir, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {

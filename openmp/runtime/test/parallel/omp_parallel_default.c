@@ -17,7 +17,7 @@ int test_omp_parallel_default()
     #pragma omp for
     for (i = 1; i <= LOOPCOUNT; i++) {
       mysum = mysum + i;
-    } 
+    }
     #pragma omp critical
     {
       sum = sum + mysum;

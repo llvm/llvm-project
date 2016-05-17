@@ -17,6 +17,14 @@
 #include <sstream>
 #include <cassert>
 
+
+struct MyTraits : std::char_traits<char> {};
+
+typedef std::basic_ostringstream<char, MyTraits> StringStream;
+typedef std::basic_ostream<char, MyTraits> BasicStream;
+
+void operator&(BasicStream const&) {}
+
 int main()
 {
     {
@@ -27,6 +35,11 @@ int main()
     {
         std::wostringstream outf;
         std::ostream_iterator<double, wchar_t> i(outf, L", ");
+        assert(outf.good());
+    }
+    {
+        StringStream outf;
+        std::ostream_iterator<int, char, MyTraits> i(outf, ", ");
         assert(outf.good());
     }
 }

@@ -4130,11 +4130,11 @@ void Linux::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   if (GetCXXStdlibType(DriverArgs) == ToolChain::CST_Libcxx) {
     const std::string LibCXXIncludePathCandidates[] = {
         DetectLibcxxIncludePath(getDriver().Dir + "/../include/c++"),
-
-        // We also check the system as for a long time this is the only place
-        // Clang looked.
-        // FIXME: We should really remove this. It doesn't make any sense.
-        DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/include/c++")};
+        // If this is a development, non-installed, clang, libcxx will
+        // not be found at ../include/c++ but it likely to be found at
+        // one of the following two locations:
+        DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/local/include/c++"),
+        DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/include/c++") };
     for (const auto &IncludePath : LibCXXIncludePathCandidates) {
       if (IncludePath.empty() || !getVFS().exists(IncludePath))
         continue;
