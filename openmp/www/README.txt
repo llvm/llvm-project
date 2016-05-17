@@ -6,10 +6,10 @@ How to Build Documentation
 ==========================
 
 The main documentation is in Doxygen* format, and this distribution
-should come with pre-built PDF documentation in doc/Reference.pdf.  
+should come with pre-built PDF documentation in doc/Reference.pdf.
 However, an HTML version can be built by executing:
 
-% doxygen doc/doxygen/config 
+% doxygen doc/doxygen/config
 
 in the runtime directory.
 
@@ -45,7 +45,7 @@ For details about building, please look at Build_With_CMake.txt
 
 Architectures Supported
 =======================
-* IA-32 architecture 
+* IA-32 architecture
 * Intel(R) 64 architecture
 * Intel(R) Many Integrated Core Architecture
 * ARM* architecture
@@ -56,7 +56,7 @@ Architectures Supported
 Supported RTL Build Configurations
 ==================================
 
-Supported Architectures: IA-32 architecture, Intel(R) 64, and 
+Supported Architectures: IA-32 architecture, Intel(R) 64, and
 Intel(R) Many Integrated Core Architecture
 
               ----------------------------------------------
@@ -68,15 +68,15 @@ Intel(R) Many Integrated Core Architecture
 | Windows* OS |   Yes(1,4)    |  No         | No           |
 ------------------------------------------------------------
 
-(1) On IA-32 architecture and Intel(R) 64, icc/icl versions 12.x are 
+(1) On IA-32 architecture and Intel(R) 64, icc/icl versions 12.x are
     supported (12.1 is recommended).
 (2) GCC* version 4.7 is supported.
 (3) For icc on OS X*, OS X* version 10.5.8 is supported.
 (4) Intel(R) Many Integrated Core Architecture not supported.
-(5) On Intel(R) Many Integrated Core Architecture, icc/icl versions 13.0 
+(5) On Intel(R) Many Integrated Core Architecture, icc/icl versions 13.0
     or later are required.
 (6) Clang* version 3.3 is supported.
-(7) Clang* currently does not offer a software-implemented 128 bit extended 
+(7) Clang* currently does not offer a software-implemented 128 bit extended
     precision type.  Thus, all entry points reliant on this type are removed
     from the library and cannot be called in the user program.  The following
     functions are not available:

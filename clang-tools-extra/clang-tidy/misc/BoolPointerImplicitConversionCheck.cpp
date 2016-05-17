@@ -15,14 +15,6 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-namespace {
-
-AST_MATCHER(CastExpr, isPointerToBoolean) {
-  return Node.getCastKind() == CK_PointerToBoolean;
-}
-
-} // namespace
-
 void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
   // Look for ifs that have an implicit bool* to bool conversion in the
   // condition. Filter negations.
@@ -32,7 +24,7 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
                        hasSourceExpression(expr(
                            hasType(pointerType(pointee(booleanType()))),
                            ignoringParenImpCasts(declRefExpr().bind("expr")))),
-                       isPointerToBoolean())))),
+                       hasCastKind(CK_PointerToBoolean))))),
              unless(isInTemplateInstantiation())).bind("if"),
       this);
 }

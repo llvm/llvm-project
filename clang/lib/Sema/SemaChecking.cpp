@@ -1323,52 +1323,23 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return SemaBuiltinCpuSupports(*this, TheCall);
   case X86::BI__builtin_ms_va_start:
     return SemaBuiltinMSVAStart(TheCall);
-  case X86::BI__builtin_ia32_extractf64x4_mask:
-  case X86::BI__builtin_ia32_extracti64x4_mask:
-  case X86::BI__builtin_ia32_extractf32x8_mask:
-  case X86::BI__builtin_ia32_extracti32x8_mask:
-  case X86::BI__builtin_ia32_extractf64x2_256_mask:
-  case X86::BI__builtin_ia32_extracti64x2_256_mask:
-  case X86::BI__builtin_ia32_extractf32x4_256_mask:
-  case X86::BI__builtin_ia32_extracti32x4_256_mask:
-    i = 1; l = 0; u = 1;
-    break;
   case X86::BI_mm_prefetch:
-  case X86::BI__builtin_ia32_extractf32x4_mask:
-  case X86::BI__builtin_ia32_extracti32x4_mask:
-  case X86::BI__builtin_ia32_vpermilpd_mask:
-  case X86::BI__builtin_ia32_vpermilps_mask:
-  case X86::BI__builtin_ia32_extractf64x2_512_mask:
-  case X86::BI__builtin_ia32_extracti64x2_512_mask:
-    i = 1; l = 0; u = 3;
-    break;
-  case X86::BI__builtin_ia32_insertf32x8_mask:
-  case X86::BI__builtin_ia32_inserti32x8_mask:
-  case X86::BI__builtin_ia32_insertf64x4_mask:
-  case X86::BI__builtin_ia32_inserti64x4_mask:
-  case X86::BI__builtin_ia32_insertf64x2_256_mask:
-  case X86::BI__builtin_ia32_inserti64x2_256_mask:
-  case X86::BI__builtin_ia32_insertf32x4_256_mask:
-  case X86::BI__builtin_ia32_inserti32x4_256_mask:
-    i = 2; l = 0; u = 1;
+    i = 1;
+    l = 0;
+    u = 3;
     break;
   case X86::BI__builtin_ia32_sha1rnds4:
-  case X86::BI__builtin_ia32_shuf_f32x4_256_mask:
-  case X86::BI__builtin_ia32_shuf_f64x2_256_mask:
-  case X86::BI__builtin_ia32_shuf_i32x4_256_mask:
-  case X86::BI__builtin_ia32_shuf_i64x2_256_mask:
-  case X86::BI__builtin_ia32_shufpd128_mask:
-  case X86::BI__builtin_ia32_insertf64x2_512_mask:
-  case X86::BI__builtin_ia32_inserti64x2_512_mask:
-  case X86::BI__builtin_ia32_insertf32x4_mask:
-  case X86::BI__builtin_ia32_inserti32x4_mask:
-    i = 2; l = 0; u = 3;
+    i = 2;
+    l = 0;
+    u = 3;
     break;
   case X86::BI__builtin_ia32_vpermil2pd:
   case X86::BI__builtin_ia32_vpermil2pd256:
   case X86::BI__builtin_ia32_vpermil2ps:
   case X86::BI__builtin_ia32_vpermil2ps256:
-    i = 3; l = 0; u = 3;
+    i = 3;
+    l = 0;
+    u = 3;
     break;
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpw128_mask:
@@ -1394,6 +1365,36 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_ucmpw512_mask:
   case X86::BI__builtin_ia32_ucmpd512_mask:
   case X86::BI__builtin_ia32_ucmpq512_mask:
+    i = 2;
+    l = 0;
+    u = 7;
+    break;
+  case X86::BI__builtin_ia32_roundps:
+  case X86::BI__builtin_ia32_roundpd:
+  case X86::BI__builtin_ia32_roundps256:
+  case X86::BI__builtin_ia32_roundpd256:
+    i = 1;
+    l = 0;
+    u = 15;
+    break;
+  case X86::BI__builtin_ia32_roundss:
+  case X86::BI__builtin_ia32_roundsd:
+    i = 2;
+    l = 0;
+    u = 15;
+    break;
+  case X86::BI__builtin_ia32_cmpps:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmpsd:
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd256:
+  case X86::BI__builtin_ia32_cmpps512_mask:
+  case X86::BI__builtin_ia32_cmppd512_mask:
+    i = 2;
+    l = 0;
+    u = 31;
+    break;
   case X86::BI__builtin_ia32_vpcomub:
   case X86::BI__builtin_ia32_vpcomuw:
   case X86::BI__builtin_ia32_vpcomud:
@@ -1402,212 +1403,9 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vpcomw:
   case X86::BI__builtin_ia32_vpcomd:
   case X86::BI__builtin_ia32_vpcomq:
-    i = 2; l = 0; u = 7;
-    break;
-  case X86::BI__builtin_ia32_roundps:
-  case X86::BI__builtin_ia32_roundpd:
-  case X86::BI__builtin_ia32_roundps256:
-  case X86::BI__builtin_ia32_roundpd256:
-  case X86::BI__builtin_ia32_vpermilpd256_mask:
-  case X86::BI__builtin_ia32_vpermilps256_mask:
-    i = 1; l = 0; u = 15;
-    break;
-  case X86::BI__builtin_ia32_roundss:
-  case X86::BI__builtin_ia32_roundsd:
-  case X86::BI__builtin_ia32_rangepd128_mask:
-  case X86::BI__builtin_ia32_rangepd256_mask:
-  case X86::BI__builtin_ia32_rangepd512_mask:
-  case X86::BI__builtin_ia32_rangeps128_mask:
-  case X86::BI__builtin_ia32_rangeps256_mask:
-  case X86::BI__builtin_ia32_rangeps512_mask:
-  case X86::BI__builtin_ia32_getmantsd_round_mask:
-  case X86::BI__builtin_ia32_getmantss_round_mask:
-  case X86::BI__builtin_ia32_shufpd256_mask:
-    i = 2; l = 0; u = 15;
-    break;
-  case X86::BI__builtin_ia32_cmpps:
-  case X86::BI__builtin_ia32_cmpss:
-  case X86::BI__builtin_ia32_cmppd:
-  case X86::BI__builtin_ia32_cmpsd:
-  case X86::BI__builtin_ia32_cmpps256:
-  case X86::BI__builtin_ia32_cmppd256:
-  case X86::BI__builtin_ia32_cmpps128_mask:
-  case X86::BI__builtin_ia32_cmppd128_mask:
-  case X86::BI__builtin_ia32_cmpps256_mask:
-  case X86::BI__builtin_ia32_cmppd256_mask:
-  case X86::BI__builtin_ia32_cmpps512_mask:
-  case X86::BI__builtin_ia32_cmppd512_mask:
-  case X86::BI__builtin_ia32_cmpsd_mask:
-  case X86::BI__builtin_ia32_cmpss_mask:
-    i = 2; l = 0; u = 31;
-    break;
-  case X86::BI__builtin_ia32_xabort:
-    i = 0; l = 0; u = 255;
-    break;
-  case X86::BI__builtin_ia32_pshufw:
-  case X86::BI__builtin_ia32_aeskeygenassist128:
-  case X86::BI__builtin_ia32_vcvtps2ph:
-  case X86::BI__builtin_ia32_vcvtps2ph256:
-  case X86::BI__builtin_ia32_vcvtps2ph512:
-  case X86::BI__builtin_ia32_rndscaleps_128_mask:
-  case X86::BI__builtin_ia32_rndscalepd_128_mask:
-  case X86::BI__builtin_ia32_rndscaleps_256_mask:
-  case X86::BI__builtin_ia32_rndscalepd_256_mask:
-  case X86::BI__builtin_ia32_rndscaleps_mask:
-  case X86::BI__builtin_ia32_rndscalepd_mask:
-  case X86::BI__builtin_ia32_reducepd128_mask:
-  case X86::BI__builtin_ia32_reducepd256_mask:
-  case X86::BI__builtin_ia32_reducepd512_mask:
-  case X86::BI__builtin_ia32_reduceps128_mask:
-  case X86::BI__builtin_ia32_reduceps256_mask:
-  case X86::BI__builtin_ia32_reduceps512_mask:
-  case X86::BI__builtin_ia32_prold512_mask:
-  case X86::BI__builtin_ia32_prolq512_mask:
-  case X86::BI__builtin_ia32_prold128_mask:
-  case X86::BI__builtin_ia32_prold256_mask:
-  case X86::BI__builtin_ia32_prolq128_mask:
-  case X86::BI__builtin_ia32_prolq256_mask:
-  case X86::BI__builtin_ia32_prord128_mask:
-  case X86::BI__builtin_ia32_prord256_mask:
-  case X86::BI__builtin_ia32_prorq128_mask:
-  case X86::BI__builtin_ia32_prorq256_mask:
-  case X86::BI__builtin_ia32_pshufhw512_mask:
-  case X86::BI__builtin_ia32_pshuflw512_mask:
-  case X86::BI__builtin_ia32_pshufhw128_mask:
-  case X86::BI__builtin_ia32_pshufhw256_mask:
-  case X86::BI__builtin_ia32_pshuflw128_mask:
-  case X86::BI__builtin_ia32_pshuflw256_mask:
-  case X86::BI__builtin_ia32_psllwi512_mask:
-  case X86::BI__builtin_ia32_psllwi128_mask:
-  case X86::BI__builtin_ia32_psllwi256_mask:
-  case X86::BI__builtin_ia32_psrldi128_mask:
-  case X86::BI__builtin_ia32_psrldi256_mask:
-  case X86::BI__builtin_ia32_psrldi512_mask:
-  case X86::BI__builtin_ia32_psrlqi128_mask:
-  case X86::BI__builtin_ia32_psrlqi256_mask:
-  case X86::BI__builtin_ia32_psrlqi512_mask:
-  case X86::BI__builtin_ia32_psrawi512_mask:
-  case X86::BI__builtin_ia32_psrawi128_mask:
-  case X86::BI__builtin_ia32_psrawi256_mask:
-  case X86::BI__builtin_ia32_psrlwi512_mask:
-  case X86::BI__builtin_ia32_psrlwi128_mask:
-  case X86::BI__builtin_ia32_psrlwi256_mask:
-  case X86::BI__builtin_ia32_vpermilpd512_mask:
-  case X86::BI__builtin_ia32_vpermilps512_mask:
-  case X86::BI__builtin_ia32_psradi128_mask:
-  case X86::BI__builtin_ia32_psradi256_mask:
-  case X86::BI__builtin_ia32_psradi512_mask:
-  case X86::BI__builtin_ia32_psraqi128_mask:
-  case X86::BI__builtin_ia32_psraqi256_mask:
-  case X86::BI__builtin_ia32_psraqi512_mask:
-  case X86::BI__builtin_ia32_pslldi128_mask:
-  case X86::BI__builtin_ia32_pslldi256_mask:
-  case X86::BI__builtin_ia32_pslldi512_mask:
-  case X86::BI__builtin_ia32_psllqi128_mask:
-  case X86::BI__builtin_ia32_psllqi256_mask:
-  case X86::BI__builtin_ia32_psllqi512_mask:
-  case X86::BI__builtin_ia32_permdf512_mask:
-  case X86::BI__builtin_ia32_permdi512_mask:
-  case X86::BI__builtin_ia32_permdf256_mask:
-  case X86::BI__builtin_ia32_permdi256_mask:
-  case X86::BI__builtin_ia32_fpclasspd128_mask:
-  case X86::BI__builtin_ia32_fpclasspd256_mask:
-  case X86::BI__builtin_ia32_fpclassps128_mask:
-  case X86::BI__builtin_ia32_fpclassps256_mask:
-  case X86::BI__builtin_ia32_fpclassps512_mask:
-  case X86::BI__builtin_ia32_fpclasspd512_mask:
-  case X86::BI__builtin_ia32_fpclasssd_mask:
-  case X86::BI__builtin_ia32_fpclassss_mask:
-  case X86::BI__builtin_ia32_pshufd512_mask:
-  case X86::BI__builtin_ia32_pshufd256_mask:
-  case X86::BI__builtin_ia32_pshufd128_mask:
-    i = 1; l = 0; u = 255;
-    break;
-  case X86::BI__builtin_ia32_palignr:
-  case X86::BI__builtin_ia32_palignr128:
-  case X86::BI__builtin_ia32_palignr256:
-  case X86::BI__builtin_ia32_palignr128_mask:
-  case X86::BI__builtin_ia32_palignr256_mask:
-  case X86::BI__builtin_ia32_palignr512_mask:
-  case X86::BI__builtin_ia32_insertps128:
-  case X86::BI__builtin_ia32_dpps:
-  case X86::BI__builtin_ia32_dppd:
-  case X86::BI__builtin_ia32_dpps256:
-  case X86::BI__builtin_ia32_mpsadbw128:
-  case X86::BI__builtin_ia32_mpsadbw256:
-  case X86::BI__builtin_ia32_pcmpistrm128:
-  case X86::BI__builtin_ia32_pcmpistri128:
-  case X86::BI__builtin_ia32_pcmpistria128:
-  case X86::BI__builtin_ia32_pcmpistric128:
-  case X86::BI__builtin_ia32_pcmpistrio128:
-  case X86::BI__builtin_ia32_pcmpistris128:
-  case X86::BI__builtin_ia32_pcmpistriz128:
-  case X86::BI__builtin_ia32_pclmulqdq128:
-  case X86::BI__builtin_ia32_vperm2f128_pd256:
-  case X86::BI__builtin_ia32_vperm2f128_ps256:
-  case X86::BI__builtin_ia32_vperm2f128_si256:
-  case X86::BI__builtin_ia32_permti256:
-  case X86::BI__builtin_ia32_alignq512_mask:
-  case X86::BI__builtin_ia32_alignd512_mask:
-  case X86::BI__builtin_ia32_alignd128_mask:
-  case X86::BI__builtin_ia32_alignd256_mask:
-  case X86::BI__builtin_ia32_alignq128_mask:
-  case X86::BI__builtin_ia32_alignq256_mask:
-  case X86::BI__builtin_ia32_vcomisd:
-  case X86::BI__builtin_ia32_vcomiss:
-  case X86::BI__builtin_ia32_shuf_f32x4_mask:
-  case X86::BI__builtin_ia32_shuf_f64x2_mask:
-  case X86::BI__builtin_ia32_shuf_i32x4_mask:
-  case X86::BI__builtin_ia32_shuf_i64x2_mask:
-  case X86::BI__builtin_ia32_shufpd512_mask:
-  case X86::BI__builtin_ia32_shufps128_mask:
-  case X86::BI__builtin_ia32_shufps256_mask:
-  case X86::BI__builtin_ia32_shufps512_mask:
-  case X86::BI__builtin_ia32_dbpsadbw128_mask:
-  case X86::BI__builtin_ia32_dbpsadbw256_mask:
-  case X86::BI__builtin_ia32_dbpsadbw512_mask:
-    i = 2; l = 0; u = 255;
-    break;
-  case X86::BI__builtin_ia32_fixupimmpd512_mask:
-  case X86::BI__builtin_ia32_fixupimmpd512_maskz:
-  case X86::BI__builtin_ia32_fixupimmps512_mask:
-  case X86::BI__builtin_ia32_fixupimmps512_maskz:
-  case X86::BI__builtin_ia32_fixupimmsd_mask:
-  case X86::BI__builtin_ia32_fixupimmsd_maskz:
-  case X86::BI__builtin_ia32_fixupimmss_mask:
-  case X86::BI__builtin_ia32_fixupimmss_maskz:
-  case X86::BI__builtin_ia32_fixupimmpd128_mask:
-  case X86::BI__builtin_ia32_fixupimmpd128_maskz:
-  case X86::BI__builtin_ia32_fixupimmpd256_mask:
-  case X86::BI__builtin_ia32_fixupimmpd256_maskz:
-  case X86::BI__builtin_ia32_fixupimmps128_mask:
-  case X86::BI__builtin_ia32_fixupimmps128_maskz:
-  case X86::BI__builtin_ia32_fixupimmps256_mask:
-  case X86::BI__builtin_ia32_fixupimmps256_maskz:
-  case X86::BI__builtin_ia32_pternlogd512_mask:
-  case X86::BI__builtin_ia32_pternlogd512_maskz:
-  case X86::BI__builtin_ia32_pternlogq512_mask:
-  case X86::BI__builtin_ia32_pternlogq512_maskz:
-  case X86::BI__builtin_ia32_pternlogd128_mask:
-  case X86::BI__builtin_ia32_pternlogd128_maskz:
-  case X86::BI__builtin_ia32_pternlogd256_mask:
-  case X86::BI__builtin_ia32_pternlogd256_maskz:
-  case X86::BI__builtin_ia32_pternlogq128_mask:
-  case X86::BI__builtin_ia32_pternlogq128_maskz:
-  case X86::BI__builtin_ia32_pternlogq256_mask:
-  case X86::BI__builtin_ia32_pternlogq256_maskz:
-    i = 3; l = 0; u = 255;
-    break;
-  case X86::BI__builtin_ia32_pcmpestrm128:
-  case X86::BI__builtin_ia32_pcmpestri128:
-  case X86::BI__builtin_ia32_pcmpestria128:
-  case X86::BI__builtin_ia32_pcmpestric128:
-  case X86::BI__builtin_ia32_pcmpestrio128:
-  case X86::BI__builtin_ia32_pcmpestris128:
-  case X86::BI__builtin_ia32_pcmpestriz128:
-  case X86::BI__builtin_ia32_rndscalesd_round_mask:
-  case X86::BI__builtin_ia32_rndscaless_round_mask:
-    i = 4; l = 0; u = 255;
+    i = 2;
+    l = 0;
+    u = 7;
     break;
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);

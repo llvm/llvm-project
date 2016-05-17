@@ -44,8 +44,8 @@ __m64 test_mm_add_pi32(__m64 a, __m64 b) {
 
 __m64 test_mm_add_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_add_si64
-  // CHECK: call x86_mmx @llvm.x86.mmx.padd.q
-  return __builtin_ia32_paddq(a, b);
+  // CHECK: call x86_mmx @llvm.x86.mmx.padd.q(x86_mmx %{{.*}}, x86_mmx %{{.*}})
+  return _mm_add_si64(a, b);
 }
 
 __m64 test_mm_adds_pi8(__m64 a, __m64 b) {
@@ -315,7 +315,7 @@ int test_mm_movemask_pi8(__m64 a) {
 
 __m64 test_mm_mul_su32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mul_su32
-  // CHECK: call x86_mmx @llvm.x86.mmx.pmulu.dq
+  // CHECK: call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %{{.*}}, x86_mmx %{{.*}})
   return _mm_mul_su32(a, b);
 }
 
@@ -525,8 +525,8 @@ __m64 test_mm_sub_pi32(__m64 a, __m64 b) {
 
 __m64 test_mm_sub_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sub_si64
-  // CHECK: call x86_mmx @llvm.x86.mmx.psub.q
-  return __builtin_ia32_psubq(a, b);
+  // CHECK: call x86_mmx @llvm.x86.mmx.psub.q(x86_mmx %{{.*}}, x86_mmx %{{.*}})
+  return _mm_sub_si64(a, b);
 }
 
 __m64 test_mm_subs_pi8(__m64 a, __m64 b) {

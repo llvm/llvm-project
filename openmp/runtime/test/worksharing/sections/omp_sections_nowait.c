@@ -12,7 +12,7 @@ int test_omp_sections_nowait()
   result = 0;
   count = 0;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int rank;
     rank = omp_get_thread_num ();

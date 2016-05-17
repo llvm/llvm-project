@@ -53,8 +53,8 @@ sub canon_arch($) {
         } elsif ( $arch =~ m{\Appc64le} ) {
 			$arch = "ppc64le";
         } elsif ( $arch =~ m{\Appc64} ) {
-        	$arch = "ppc64";            
-        } elsif ( $arch =~ m{\Aaarch64} ) {               
+        	$arch = "ppc64";
+        } elsif ( $arch =~ m{\Aaarch64} ) {
                 $arch = "aarch64";
         } elsif ( $arch =~ m{\Amic} ) {
             $arch = "mic";
@@ -207,8 +207,8 @@ sub target_options() {
         $_host_arch = "ppc64le";
     } elsif ( $hardware_platform eq "ppc64" ) {
         $_host_arch = "ppc64";
-    } elsif ( $hardware_platform eq "aarch64" ) {         
-        $_host_arch = "aarch64";  
+    } elsif ( $hardware_platform eq "aarch64" ) {
+        $_host_arch = "aarch64";
     } else {
         die "Unsupported host hardware platform: \"$hardware_platform\"; stopped";
     }; # if

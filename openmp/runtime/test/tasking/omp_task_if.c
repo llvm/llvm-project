@@ -12,7 +12,7 @@ int test_omp_task_if()
 
   count=0;
   condition_false = (count == 1);
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     #pragma omp single
     {

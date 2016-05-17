@@ -11,14 +11,14 @@ int test_omp_parallel_shared()
   sum = 0;
   known_sum = (LOOPCOUNT * (LOOPCOUNT + 1)) / 2 ;
 
-  #pragma omp parallel private(i) shared(sum) 
+  #pragma omp parallel private(i) shared(sum)
   {
 
     int mysum = 0;
     #pragma omp for
     for (i = 1; i <= LOOPCOUNT; i++) {
       mysum = mysum + i;
-    } 
+    }
     #pragma omp critical
     {
       sum = sum + mysum;

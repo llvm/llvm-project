@@ -321,6 +321,7 @@ def parseOptionsAndInitTestdirs():
         if args.s.startswith('-'):
             usage(parser)
         configuration.sdir_name = args.s
+    configuration.session_file_format = args.session_file_format
 
     if args.t:
         os.environ['LLDB_COMMAND_TRACE'] = 'YES'

@@ -49,7 +49,7 @@ int test_omp_parallel_reduction()
 
   if(known_sum!=sum) {
     result++;
-    fprintf(stderr,"Error in sum with integers: Result was %d instead of %d\n",sum,known_sum); 
+    fprintf(stderr,"Error in sum with integers: Result was %d instead of %d\n",sum,known_sum);
   }
 
   diff = (LOOPCOUNT*(LOOPCOUNT+1))/2;
@@ -76,7 +76,7 @@ int test_omp_parallel_reduction()
   }
 
   if( fabs(dsum-dknown_sum) > rounding_error ) {
-    result++; 
+    result++;
     fprintf(stderr,"Error in sum with doubles: Result was %f instead of %f (Difference: %E)\n",dsum,dknown_sum, dsum-dknown_sum);
   }
 

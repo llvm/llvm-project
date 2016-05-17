@@ -13,7 +13,7 @@ int test_omp_master_3()
 
   #pragma omp parallel
   {
-    #pragma omp master 
+    #pragma omp master
     {
       int tid = omp_get_thread_num();
       if (tid != 0) {

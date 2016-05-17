@@ -13,8 +13,8 @@ int i;
 static int ii;
 #pragma omp threadprivate(ii)
 
-/*! 
-  Utility function: returns true if the passed argument is larger than 
+/*!
+  Utility function: returns true if the passed argument is larger than
   the argument of the last call of this function.
  */
 static int check_i_islarger2(int i)

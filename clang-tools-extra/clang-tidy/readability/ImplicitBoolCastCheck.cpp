@@ -20,10 +20,6 @@ namespace readability {
 
 namespace {
 
-AST_MATCHER_P(CastExpr, hasCastKind, CastKind, Kind) {
-  return Node.getCastKind() == Kind;
-}
-
 AST_MATCHER(Stmt, isMacroExpansion) {
   SourceManager &SM = Finder->getASTContext().getSourceManager();
   SourceLocation Loc = Node.getLocStart();

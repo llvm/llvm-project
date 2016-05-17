@@ -25,7 +25,7 @@
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE fdim(__CLC_GENTYPE x, __CLC_GENTYPE y) {
     if (__builtin_isnan(x) || __builtin_isnan(y))
         return as_float(QNANBITPATT_SP32);
-    return __builtin_fmax(x - y, 0);
+    return fmax(x - y, 0.0f);
 }
 #define __CLC_FDIM_VEC(width) \
 _CLC_OVERLOAD _CLC_DEF float##width fdim(float##width x, float##width y) { \

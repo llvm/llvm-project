@@ -100,6 +100,15 @@ regexp = None
 # run.  Use '-s session-dir-name' to specify a specific dir name.
 sdir_name = None
 
+# Valid options:
+# f - test file name (without extension)
+# n - test class name
+# m - test method name
+# a - architecture
+# c - compiler path
+# The default is to write all fields.
+session_file_format = 'fnmac'
+
 # Set this flag if there is any session info dumped during the test run.
 sdir_has_content = False
 

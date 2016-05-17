@@ -48,7 +48,7 @@ int test_omp_for_schedule_static_3()
   if (threads < 2) {
     omp_set_num_threads(2);
     threads = 2;
-  } 
+  }
   fprintf (stderr,"Using an internal count of %d\nUsing a"
     " specified chunksize of %d\n", CFSMAX_SIZE, chunk_size);
   tids[CFSMAX_SIZE] = -1;  /* setting endflag */
@@ -95,10 +95,10 @@ int test_omp_for_schedule_static_3()
   /**** analysing the data in array tids ****/
 
   lasttid = tids[0];
-  tmp_count = 0; 
+  tmp_count = 0;
 
   for (i = 0; i < CFSMAX_SIZE + 1; ++i) {
-    /* If the work  was done by the same thread 
+    /* If the work  was done by the same thread
        increase tmp_count by one. */
     if (tids[i] == lasttid) {
       tmp_count++;
@@ -108,9 +108,9 @@ int test_omp_for_schedule_static_3()
       continue;
     }
 
-    /* Check if the next thread had has the right thread number. 
-     * When finding threadnumber -1 the end should be reached. 
-     */    
+    /* Check if the next thread had has the right thread number.
+     * When finding threadnumber -1 the end should be reached.
+     */
     if (tids[i] == (lasttid + 1) % threads || tids[i] == -1) {
       /* checking for the right chunk size */
       if (tmp_count == chunk_size) {
@@ -148,7 +148,7 @@ int test_omp_for_schedule_static_3()
   }
 
   /* Now we check if several loop regions in one parallel region have the
-   * same logical assignement of chunks to threads. We use the nowait 
+   * same logical assignement of chunks to threads. We use the nowait
    * clause to increase the probability to get an error. */
 
   /* First we allocate some more memmory */
@@ -156,7 +156,7 @@ int test_omp_for_schedule_static_3()
   tids = (int *) malloc (sizeof (int) * LOOPCOUNT);
   tids2 = (int *) malloc (sizeof (int) * LOOPCOUNT);
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     {
       int n;

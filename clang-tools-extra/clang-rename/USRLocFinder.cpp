@@ -123,9 +123,9 @@ private:
   }
 
   // All the locations of the USR were found.
-  StringRef USR;
+  const std::string USR;
   // Old name that is renamed.
-  StringRef PrevName;
+  const std::string PrevName;
   std::vector<clang::SourceLocation> LocationsFound;
 };
 } // namespace

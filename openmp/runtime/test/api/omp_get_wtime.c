@@ -9,11 +9,11 @@ int test_omp_get_wtime()
   double start;
   double end;
   double measured_time;
-  double wait_time = 5.0; 
+  double wait_time = 5.0;
   start = 0;
   end = 0;
   start = omp_get_wtime();
-  my_sleep (wait_time); 
+  my_sleep (wait_time);
   end = omp_get_wtime();
   measured_time = end-start;
   return ((measured_time > 0.97 * wait_time) && (measured_time < 1.03 * wait_time)) ;

@@ -15,25 +15,11 @@
 #define LLVM_CLANG_AST_ATTRITERATOR_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include <iterator>
 
 namespace clang {
   class ASTContext;
   class Attr;
-}
-
-namespace llvm {
-  // Explicitly opt into 4 byte alignment for Attr*, to avoid the need to
-  // include the heavyweight Attr.h to use a TinyPtrVector<Attr*>.
-  template <>
-  struct PointerLikeTypeTraits<clang::Attr *> {
-    static void *getAsVoidPointer(clang::Attr *P) { return P; }
-    static clang::Attr *getFromVoidPointer(void *P) {
-      return static_cast<clang::Attr *>(P);
-    }
-    enum { NumLowBitsAvailable = 2 };
-  };
 }
 
 // Defined in ASTContext.h
@@ -53,8 +39,8 @@ void operator delete[](void *Ptr, const clang::ASTContext &C, size_t);
 namespace clang {
 
 /// AttrVec - A vector of Attr, which is how they are stored on the AST.
-typedef llvm::TinyPtrVector<Attr*> AttrVec;
-typedef llvm::TinyPtrVector<const Attr*> ConstAttrVec;
+typedef SmallVector<Attr*, 2> AttrVec;
+typedef SmallVector<const Attr*, 2> ConstAttrVec;
 
 /// specific_attr_iterator - Iterates over a subrange of an AttrVec, only
 /// providing attributes that are of a specific type.
