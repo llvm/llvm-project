@@ -248,7 +248,7 @@ def warn_drv_ps4_force_pic : Warning<
   InGroup<OptionIgnored>;
 
 def warn_drv_ps4_sdk_dir : Warning<
-  "environment variable SCE_PS4_SDK_DIR is set, but points to invalid or nonexistent directory '%0'">,
+  "environment variable SCE_ORBIS_SDK_DIR is set, but points to invalid or nonexistent directory '%0'">,
   InGroup<InvalidOrNonExistentDirectory>;
 
 def err_drv_unsupported_linker : Error<"unsupported value '%0' for -linker option">;

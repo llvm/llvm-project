@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-pch -o %t %s
-// RUN: %clang_cc1 -include-pch %t -fsyntax-only %s 
+// RUN: %clang_cc1 -emit-pch -o %t %s -triple spir-unknown-unknown
+// RUN: %clang_cc1 -include-pch %t -fsyntax-only %s  -triple spir-unknown-unknown
 
 #ifndef HEADER
 #define HEADER

@@ -969,6 +969,19 @@ public:
   /// \brief Whether target allows to overalign ABI-specified prefered alignment
   virtual bool allowsLargerPreferedTypeAlignment() const { return true; }
 
+  /// \brief Set supported OpenCL extensions and optional core features.
+  virtual void setSupportedOpenCLOpts() {}
+
+  /// \brief Get supported OpenCL extensions and optional core features.
+  OpenCLOptions &getSupportedOpenCLOpts() {
+    return getTargetOpts().SupportedOpenCLOptions;
+  }
+
+  /// \brief Get const supported OpenCL extensions and optional core features.
+  const OpenCLOptions &getSupportedOpenCLOpts() const {
+      return getTargetOpts().SupportedOpenCLOptions;
+  }
+
 protected:
   virtual uint64_t getPointerWidthV(unsigned AddrSpace) const {
     return PointerWidth;

@@ -938,6 +938,15 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__CUDA_ARCH__");
   }
 
+  // OpenCL definitions.
+  if (LangOpts.OpenCL) {
+#define OPENCLEXT(Ext) \
+    if (TI.getSupportedOpenCLOpts().is_##Ext##_supported( \
+        LangOpts.OpenCLVersion)) \
+      Builder.defineMacro(#Ext);
+#include "clang/Basic/OpenCLExtensions.def"
+  }
+
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
 }

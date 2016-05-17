@@ -3365,19 +3365,19 @@ __m128 test_mm_roundscale_ss(__m128 __A, __m128 __B) {
   return _mm_roundscale_ss(__A, __B, 3); 
 }
 
-__m128d test_mm_mask_roundscale_ss(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
+__m128 test_mm_mask_roundscale_ss(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_mask_roundscale_ss
   // CHECK: @llvm.x86.avx512.mask.rndscale.ss
     return _mm_mask_roundscale_ss(__W,__U,__A,__B,3);
 }
 
-__m128d test_mm_maskz_roundscale_round_ss( __mmask8 __U, __m128d __A, __m128d __B){
+__m128 test_mm_maskz_roundscale_round_ss( __mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_maskz_roundscale_round_ss
   // CHECK: @llvm.x86.avx512.mask.rndscale.ss
     return _mm_maskz_roundscale_round_ss(__U,__A,__B,3,_MM_FROUND_CUR_DIRECTION);
 }
 
-__m128d test_mm_maskz_roundscale_ss(__mmask8 __U, __m128d __A, __m128d __B){
+__m128 test_mm_maskz_roundscale_ss(__mmask8 __U, __m128d __A, __m128d __B){
   // CHECK-LABEL: @test_mm_maskz_roundscale_ss
   // CHECK: @llvm.x86.avx512.mask.rndscale.ss
     return _mm_maskz_roundscale_ss(__U,__A,__B,3);
@@ -6574,3 +6574,30 @@ __m512 test_mm512_set_ps (float __A, float __B, float __C, float __D,
                           __I, __J, __K, __L, __M, __N, __O, __P);
 }
 
+__m512i test_mm512_mask_abs_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_abs_epi64 
+  // CHECK: @llvm.x86.avx512.mask.pabs.q.512
+  return _mm512_mask_abs_epi64 (__W,__U,__A);
+}
+
+__m512i test_mm512_maskz_abs_epi64 (__mmask8 __U, __m512i __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_abs_epi64 
+  // CHECK: @llvm.x86.avx512.mask.pabs.q.512
+  return _mm512_maskz_abs_epi64 (__U,__A);
+}
+
+__m512i test_mm512_mask_abs_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
+{
+  // CHECK-LABEL: @test_mm512_mask_abs_epi32 
+  // CHECK: @llvm.x86.avx512.mask.pabs.d.512
+  return _mm512_mask_abs_epi32 (__W,__U,__A);
+}
+
+__m512i test_mm512_maskz_abs_epi32 (__mmask16 __U, __m512i __A)
+{
+  // CHECK-LABEL: @test_mm512_maskz_abs_epi32 
+  // CHECK: @llvm.x86.avx512.mask.pabs.d.512
+  return _mm512_maskz_abs_epi32 (__U,__A);
+}

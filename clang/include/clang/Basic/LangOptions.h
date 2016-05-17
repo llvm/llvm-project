@@ -160,18 +160,6 @@ public:
     fp_contract(LangOpts.DefaultFPContract) {}
 };
 
-/// \brief OpenCL volatile options
-class OpenCLOptions {
-public:
-#define OPENCLEXT(nm)  unsigned nm : 1;
-#include "clang/Basic/OpenCLExtensions.def"
-
-  OpenCLOptions() {
-#define OPENCLEXT(nm)   nm = 0;
-#include "clang/Basic/OpenCLExtensions.def"
-  }
-};
-
 /// \brief Describes the kind of translation unit being processed.
 enum TranslationUnitKind {
   /// \brief The translation unit is a complete translation unit.

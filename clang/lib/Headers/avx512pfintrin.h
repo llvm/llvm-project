@@ -31,61 +31,61 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512pf")))
 
-#define _mm512_mask_prefetch_i32gather_pd( index,  mask, addr,  scale, hint) __extension__ ({\
-__builtin_ia32_gatherpfdpd (mask, (__v8si) index, (long long const *) addr, scale, hint);\
-})
+#define _mm512_mask_prefetch_i32gather_pd(index, mask, addr, scale, hint) __extension__ ({\
+  __builtin_ia32_gatherpfdpd((__mmask8)(mask), (__v8si)(__m256i)(index), \
+                             (long long const *)(addr), (int)(scale), \
+                             (int)(hint)); })
 
-#define _mm512_mask_prefetch_i32gather_ps( index,  mask, addr, scale,  hint) ({\
-__builtin_ia32_gatherpfdps (mask, (__v16si) index, (int const *) addr, scale, hint);\
-})
+#define _mm512_mask_prefetch_i32gather_ps(index, mask, addr, scale, hint) ({\
+  __builtin_ia32_gatherpfdps((__mmask16)(mask), \
+                             (__v16si)(__m512i)(index), (int const *)(addr), \
+                             (int)(scale), (int)(hint)); })
 
-#define _mm512_mask_prefetch_i64gather_pd( index,  mask, addr,  scale, hint) __extension__ ({\
-__builtin_ia32_gatherpfqpd (mask, (__v8di) index, (long long const *) addr, scale, hint);\
-})
+#define _mm512_mask_prefetch_i64gather_pd(index, mask, addr, scale, hint) __extension__ ({\
+  __builtin_ia32_gatherpfqpd((__mmask8)(mask), (__v8di)(__m512i)(index), \
+                             (long long const *)(addr), (int)(scale), \
+                             (int)(hint)); })
 
-#define _mm512_mask_prefetch_i64gather_ps( index,  mask, addr, scale,  hint) ({\
-__builtin_ia32_gatherpfqps (mask, (__v8di) index, (int const *) addr, scale, hint);\
-})
+#define _mm512_mask_prefetch_i64gather_ps(index, mask, addr, scale, hint) ({\
+  __builtin_ia32_gatherpfqps((__mmask8)(mask), (__v8di)(__m512i)(index), \
+                             (int const *)(addr), (int)(scale), (int)(hint)); })
 
-#define _mm512_prefetch_i32scatter_pd(addr,  index,  scale,  hint) __extension__ ({\
-__builtin_ia32_scatterpfdpd ((__mmask8) -1, (__v8si) index, \
-                            (void  *)addr, scale, hint);\
-})
+#define _mm512_prefetch_i32scatter_pd(addr, index, scale, hint) __extension__ ({\
+  __builtin_ia32_scatterpfdpd((__mmask8)-1, (__v8si)(__m256i)(index), \
+                              (long long *)(addr), (int)(scale), \
+                              (int)(hint)); })
 
-#define _mm512_mask_prefetch_i32scatter_pd(addr,  mask,  index,  scale,  hint) __extension__ ({\
-__builtin_ia32_scatterpfdpd (mask, (__v8si) index, (void  *) addr,\
-                             scale, hint);\
-})
+#define _mm512_mask_prefetch_i32scatter_pd(addr, mask, index, scale, hint) __extension__ ({\
+  __builtin_ia32_scatterpfdpd((__mmask8)(mask), (__v8si)(__m256i)(index), \
+                              (long long *)(addr), (int)(scale), \
+                              (int)(hint)); })
 
 #define _mm512_prefetch_i32scatter_ps(addr, index, scale, hint) __extension__ ({\
-__builtin_ia32_scatterpfdps ((__mmask16) -1, (__v16si) index, (void  *) addr,\
-                             scale, hint);\
-})
+  __builtin_ia32_scatterpfdps((__mmask16)-1, (__v16si)(__m512i)(index), \
+                              (int *)(addr), (int)(scale), (int)(hint)); })
 
 #define _mm512_mask_prefetch_i32scatter_ps(addr, mask, index, scale, hint) __extension__ ({\
-__builtin_ia32_scatterpfdps (mask, (__v16si) index, (void  *) addr,\
-                             scale, hint);\
-})
+  __builtin_ia32_scatterpfdps((__mmask16)(mask), \
+                              (__v16si)(__m512i)(index), (int *)(addr), \
+                              (int)(scale), (int)(hint)); })
 
 #define _mm512_prefetch_i64scatter_pd(addr, index, scale, hint) __extension__ ({\
-__builtin_ia32_scatterpfqpd ((__mmask8) -1, (__v8di) index, (void  *) addr,\
-                             scale, hint);\
-})
+  __builtin_ia32_scatterpfqpd((__mmask8)-1, (__v8di)(__m512i)(index), \
+                              (long long *)(addr), (int)(scale), \
+                              (int)(hint)); })
 
 #define _mm512_mask_prefetch_i64scatter_pd(addr, mask, index, scale, hint) __extension__ ({\
-__builtin_ia32_scatterpfqpd (mask, (__v8di) index, (void  *) addr,\
-                             scale, hint);\
-})
+  __builtin_ia32_scatterpfqpd((__mmask8)(mask), (__v8di)(__m512i)(index), \
+                              (long long *)(addr), (int)(scale), \
+                              (int)(hint)); })
 
 #define _mm512_prefetch_i64scatter_ps(addr, index, scale, hint) __extension__ ({\
-__builtin_ia32_scatterpfqps ((__mmask8) -1, (__v8di) index, (void  *) addr,\
-                             scale, hint);\
-})
+  __builtin_ia32_scatterpfqps((__mmask8)-1, (__v8di)(__m512i)(index), \
+                              (int *)(addr), (int)(scale), (int)(hint)); })
 
 #define _mm512_mask_prefetch_i64scatter_ps(addr, mask, index, scale, hint) __extension__ ({\
-__builtin_ia32_scatterpfqps (mask, (__v8di) index, (void  *) addr,\
-                             scale, hint);\
-})
+  __builtin_ia32_scatterpfqps((__mmask8)(mask), (__v8di)(__m512i)(index), \
+                              (int *)(addr), (int)(scale), (int)(hint)); })
 
 #undef __DEFAULT_FN_ATTRS
 

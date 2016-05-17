@@ -3571,6 +3571,22 @@ TEST(HasDestinationType, MatchesSimpleCase) {
                           pointsTo(TypeMatcher(anything()))))));
 }
 
+TEST(hasDynamicExceptionSpec, MatchesDynamicExceptionSpecifications) {
+  EXPECT_TRUE(notMatches("void f();", functionDecl(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(notMatches("void g() noexcept;",
+                         functionDecl(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(notMatches("void h() noexcept(true);",
+                         functionDecl(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(notMatches("void i() noexcept(false);",
+                         functionDecl(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(
+      matches("void j() throw();", functionDecl(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(
+      matches("void k() throw(int);", functionDecl(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(
+      matches("void l() throw(...);", functionDecl(hasDynamicExceptionSpec())));
+}
+
 TEST(HasImplicitDestinationType, MatchesSimpleCase) {
   // This test creates an implicit const cast.
   EXPECT_TRUE(matches("int x; const int i = x;",

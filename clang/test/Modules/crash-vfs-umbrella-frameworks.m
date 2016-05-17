@@ -40,3 +40,16 @@
 // CHECKYAML-NEXT:          'external-contents': "/[[PATH]]/i/Frameworks/B.framework/Headers/B.h"
 
 @import I;
+
+// Run the reproducer script - regular exit code is enough to test it works. The
+// intent here is to guarantee that the collect umbrella headers into the VFS
+// can be used, testing that vfs::recursive_directory_iterator is used correctly
+// Make sure to erase the include paths used to build the modules to guarantee
+// that the VFS overlay won't fallback to use it. Also wipe out the module cache
+// to force header search.
+//
+// RUN: cd %t
+// RUN: rm -rf i
+// RUN: rm -rf crash-vfs-umbrella-*.cache/modules/*
+// RUN: chmod 755 crash-vfs-*.sh
+// RUN: ./crash-vfs-*.sh

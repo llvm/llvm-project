@@ -76,23 +76,20 @@ int main() {
   #pragma omp target
   #pragma omp teams firstprivate(g, sivar)
   {
-    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) [[G_IN:%.+]], i32* dereferenceable(4) [[SIVAR_IN:%.+]])
+    // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable(4) [[G_IN:%.+]], i32 {{.*}}[[SIVAR_IN:%.+]])
     // LAMBDA: store i{{[0-9]+}}* [[G_IN]], i{{[0-9]+}}** [[G_ADDR:%.+]],
-    // LAMBDA: store i{{[0-9]+}}* [[SIVAR_IN]], i{{[0-9]+}}** [[SIVAR_ADDR:%.+]],
+    // LAMBDA: store i{{[0-9]+}} [[SIVAR_IN]], i{{[0-9]+}}* [[SIVAR_ADDR:%.+]],
     // LAMBDA: [[G_ADDR_VAL:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[G_ADDR]],
-    // LAMBDA: [[SIVAR_ADDR_VAL:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[SIVAR_ADDR]],
     // LAMBDA: [[G_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[G_ADDR_VAL]],
     // LAMBDA: store i{{[0-9]+}} [[G_VAL]], i{{[0-9]+}}* [[G_LOCAL:%.+]],
-    // LAMBDA: [[SIVAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR_ADDR_VAL]],
-    // LAMBDA: store i{{[0-9]+}} [[SIVAR_VAL]], i{{[0-9]+}}* [[SIVAR_LOCAL:%.+]],
     g = 1;
     sivar = 2;
     // LAMBDA: store i{{[0-9]+}} 1, i{{[0-9]+}}* [[G_LOCAL]],
-    // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[SIVAR_LOCAL]],
+    // LAMBDA: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[SIVAR_ADDR]],
     // LAMBDA: [[G_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
     // LAMBDA: store i{{[0-9]+}}* [[G_LOCAL]], i{{[0-9]+}}** [[G_PRIVATE_ADDR_REF]]
     // LAMBDA: [[SIVAR_PRIVATE_ADDR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-    // LAMBDA: store i{{[0-9]+}}* [[SIVAR_LOCAL]], i{{[0-9]+}}** [[SIVAR_PRIVATE_ADDR_REF]]
+    // LAMBDA: store i{{[0-9]+}}* [[SIVAR_ADDR]], i{{[0-9]+}}** [[SIVAR_PRIVATE_ADDR_REF]]
     // LAMBDA: call{{.*}} void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG]])
     [&]() {
       // LAMBDA: define {{.+}} void [[INNER_LAMBDA]](%{{.+}}* [[ARG_PTR:%.+]])
@@ -130,24 +127,20 @@ int main() {
 }
 
 // CHECK: define internal {{.*}}void [[OMP_OFFLOADING:@.+]](
-// CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i32]*, i32*, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}}*)* [[OMP_OUTLINED:@.+]] to void
+// CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [2 x i32]*, i32, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}})* [[OMP_OUTLINED:@.+]] to void
 // CHECK: ret
 //
-// CHECK: define internal {{.*}}void [[OMP_OUTLINED]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) [[SIVAR:%.+]])
+// CHECK: define internal {{.*}}void [[OMP_OUTLINED]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, i32 {{.*}}%{{.+}}, [2 x [[S_FLOAT_TY]]]* dereferenceable(8) %{{.+}}, [[S_FLOAT_TY]]* dereferenceable(4) %{{.+}}, i32 {{.*}}[[SIVAR:%.+]])
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[SIVAR7_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
-// CHECK: [[SIVAR7_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
 // CHECK: [[VEC_REF:%.+]] = load [2 x i{{[0-9]+}}]*, [2 x i{{[0-9]+}}]** %
-// CHECK: [[T_VAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** %
 // CHECK: [[S_ARR_REF:%.+]] = load [2 x [[S_FLOAT_TY]]]*, [2 x [[S_FLOAT_TY]]]** %
 // CHECK: [[VAR_REF:%.+]] = load [[S_FLOAT_TY]]*, [[S_FLOAT_TY]]** %
-// CHECK: [[SIVAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** %{{.+}},
-// CHECK: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_REF]],
-// CHECK: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
 // CHECK: [[VEC_SRC:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_REF]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST]], i8* [[VEC_SRC]],
@@ -165,8 +158,6 @@ int main() {
 // CHECK: call {{.*}} [[S_FLOAT_TY_COPY_CONSTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]], [[S_FLOAT_TY]]* {{.*}} [[VAR_REF]], [[ST_TY]]* [[ST_TY_TEMP]])
 // CHECK: call {{.*}} [[ST_TY_DESTR]]([[ST_TY]]* [[ST_TY_TEMP]])
 
-// CHECK: [[SIVAR_REF_ADDR:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[SIVAR_REF]],
-// CHECK: store i{{[0-9]+}} [[SIVAR_REF_ADDR]], i{{[0-9]+}}* [[SIVAR7_PRIV]],
 // CHECK: store i{{[0-9]+}} 2, i{{[0-9]+}}* [[SIVAR7_PRIV]],
 
 // CHECK-DAG: call {{.*}} [[S_FLOAT_TY_DESTR:@.+]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
@@ -174,15 +165,12 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define internal {{.*}}void [[OMP_OFFLOADING_1:@.+]](
-// CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}}*)* [[OMP_OUTLINED_1:@.+]] to void
+// CHECK: call {{.*}}void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_teams(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i{{[0-9]+}})* [[OMP_OUTLINED_1:@.+]] to void
 // CHECK: ret
 
-// CHECK: define internal {{.*}}void [[OMP_OUTLINED_1]](i{{[0-9]+}}* noalias {{%.+}}, i{{[0-9]+}}* noalias {{%.+}}, i32* dereferenceable(4) [[T_VAR:%.+]])
+// CHECK: define internal {{.*}}void [[OMP_OUTLINED_1]](i{{[0-9]+}}* noalias {{%.+}}, i{{[0-9]+}}* noalias {{%.+}}, i32 {{.*}}[[T_VAR:%.+]])
 // CHECK: [[T_VAR_LOC:%.+]] = alloca i{{[0-9]+}},
-// CHECK: store i{{[0-9]+}}* [[T_VAR]], i{{[0-9]+}}** [[T_VAR_ADDR:%.+]],
-// CHECK: [[T_VAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[T_VAR_ADDR]],
-// CHECK: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_REF]],
-// CHECK: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_LOC]],
+// CHECK: store i{{[0-9]+}} [[T_VAR]], i{{[0-9]+}}* [[T_VAR_LOC]],
 // CHECK: ret
 
 // CHECK: define internal {{.*}}void [[OMP_OFFLOADING_2:@.+]](i{{[0-9]+}}* {{.+}} {{%.+}}, [2 x i32]* {{.+}} {{%.+}}, [2 x [[S_INT_TY]]]* {{.+}} {{%.+}}, [[S_INT_TY]]* {{.+}} {{%.+}})
@@ -229,7 +217,7 @@ int main() {
 // CHECK: ret
 
 // CHECK: define internal {{.*}}void [[OMP_OUTLINED_3]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* dereferenceable(4) [[T_VAR:%.+]])
-// CHECK [[T_VAR_LOC:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[T_VAR_LOC:%.+]] = alloca i{{[0-9]+}},
 // CHECK: store i{{[0-9]+}}* [[T_VAR]], i{{[0-9]+}}** [[T_VAR_ADDR:%.+]],
 // CHECK: [[T_VAR_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[T_VAR_ADDR]],
 // CHECK: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR_REF]],
@@ -254,14 +242,14 @@ struct St {
 void array_func(float a[3], St s[2], int n, long double vla1[n]) {
   double vla2[n][n] __attribute__((aligned(128)));
 // ARRAY: call {{.+}} @__kmpc_fork_teams(
-// ARRAY-DAG: [[PRIV_A:%.+]] = alloca float**,
-// ARRAY-DAG: [[PRIV_S:%.+]] = alloca %struct.St**,
-// ARRAY-64-DAG: [[PRIV_VLA1:%.+]] = alloca ppc_fp128**,
+// ARRAY-DAG: [[PRIV_S:%.+]] = alloca %struct.St*,
+// ARRAY-64-DAG: [[PRIV_VLA1:%.+]] = alloca ppc_fp128*,
 // ARRAY-32-DAG: [[PRIV_VLA1:%.+]] = alloca x86_fp80*,
+// ARRAY-DAG: [[PRIV_A:%.+]] = alloca float*,
 // ARRAY-DAG: [[PRIV_VLA2:%.+]] = alloca double*,
-// ARRAY-DAG: store float** %{{.+}}, float*** [[PRIV_A]],
-// ARRAY-DAG: store %struct.St** %{{.+}}, %struct.St*** [[PRIV_S]],
-// ARRAY-64-DAG: store ppc_fp128** %{{.+}}, ppc_fp128*** [[PRIV_VLA1]],
+// ARRAY-DAG: store float* %{{.+}}, float** [[PRIV_A]],
+// ARRAY-DAG: store %struct.St* %{{.+}}, %struct.St** [[PRIV_S]],
+// ARRAY-64-DAG: store ppc_fp128* %{{.+}}, ppc_fp128** [[PRIV_VLA1]],
 // ARRAY-32-DAG: store x86_fp80* %{{.+}}, x86_fp80** [[PRIV_VLA1]],
 // ARRAY-DAG: store double* %{{.+}}, double** [[PRIV_VLA2]],
 // ARRAY: call i8* @llvm.stacksave()
@@ -274,13 +262,13 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 }
 
 // ARRAY: @__kmpc_fork_teams(
-// ARRAY-DAG: [[PRIV_S:%.+]] = alloca %struct.St**,
-// ARRAY-64-DAG: [[PRIV_VLA1:%.+]] = alloca ppc_fp128**,
-// ARRAY-32-DAG: [[PRIV_VLA1:%.+]] = alloca x86_fp80**,
+// ARRAY-DAG: [[PRIV_S:%.+]] = alloca %struct.St*,
+// ARRAY-64-DAG: [[PRIV_VLA1:%.+]] = alloca ppc_fp128*,
+// ARRAY-32-DAG: [[PRIV_VLA1:%.+]] = alloca x86_fp80*,
 // ARRAY-DAG: [[PRIV_VLA2:%.+]] = alloca double*,
-// ARRAY-DAG: store %struct.St** %{{.+}}, %struct.St*** [[PRIV_S]],
-// ARRAY-64-DAG: store ppc_fp128** %{{.+}}, ppc_fp128*** [[PRIV_VLA1]],
-// ARRAY-32-DAG: store x86_fp80** %{{.+}}, x86_fp80*** [[PRIV_VLA1]],
+// ARRAY-DAG: store %struct.St* %{{.+}}, %struct.St** [[PRIV_S]],
+// ARRAY-64-DAG: store ppc_fp128* %{{.+}}, ppc_fp128** [[PRIV_VLA1]],
+// ARRAY-32-DAG: store x86_fp80* %{{.+}}, x86_fp80** [[PRIV_VLA1]],
 // ARRAY-DAG: store double* %{{.+}}, double** [[PRIV_VLA2]],
 // ARRAY: call i8* @llvm.stacksave()
 // ARRAY: [[SIZE:%.+]] = mul nuw i{{[0-9]+}} %{{.+}}, 8

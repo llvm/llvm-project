@@ -468,14 +468,24 @@ void Parser::HandlePragmaOpenCLExtension() {
   ConsumeToken(); // The annotation token.
 
   OpenCLOptions &f = Actions.getOpenCLOptions();
+  auto CLVer = getLangOpts().OpenCLVersion;
+  auto &Supp = getTargetInfo().getSupportedOpenCLOpts();
   // OpenCL 1.1 9.1: "The all variant sets the behavior for all extensions,
   // overriding all previously issued extension directives, but only if the
   // behavior is set to disable."
   if (state == 0 && ename->isStr("all")) {
-#define OPENCLEXT(nm)   f.nm = 0;
+#define OPENCLEXT(nm) \
+    if (Supp.is_##nm##_supported_extension(CLVer)) \
+      f.nm = 0;
 #include "clang/Basic/OpenCLExtensions.def"
   }
-#define OPENCLEXT(nm) else if (ename->isStr(#nm)) { f.nm = state; }
+#define OPENCLEXT(nm) else if (ename->isStr(#nm)) \
+   if (Supp.is_##nm##_supported_extension(CLVer)) \
+     f.nm = state; \
+   else if (Supp.is_##nm##_supported_core(CLVer)) \
+     PP.Diag(NameLoc, diag::warn_pragma_extension_is_core) << ename; \
+   else \
+     PP.Diag(NameLoc, diag::warn_pragma_unsupported_extension) << ename;
 #include "clang/Basic/OpenCLExtensions.def"
   else {
     PP.Diag(NameLoc, diag::warn_pragma_unknown_extension) << ename;

@@ -209,17 +209,18 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
     std::error_code EC;
     SmallString<128> DirNative;
     llvm::sys::path::native(UmbrellaDir.Entry->getName(), DirNative);
-    for (llvm::sys::fs::recursive_directory_iterator Dir(DirNative, EC), 
-                                                     DirEnd;
-         Dir != DirEnd && !EC; Dir.increment(EC)) {
+
+    vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+    for (vfs::recursive_directory_iterator Dir(FS, DirNative, EC), End;
+         Dir != End && !EC; Dir.increment(EC)) {
       // Check whether this entry has an extension typically associated with 
       // headers.
-      if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->path()))
+      if (!llvm::StringSwitch<bool>(llvm::sys::path::extension(Dir->getName()))
           .Cases(".h", ".H", ".hh", ".hpp", true)
           .Default(false))
         continue;
 
-      const FileEntry *Header = FileMgr.getFile(Dir->path());
+      const FileEntry *Header = FileMgr.getFile(Dir->getName());
       // FIXME: This shouldn't happen unless there is a file system race. Is
       // that worth diagnosing?
       if (!Header)
@@ -232,7 +233,7 @@ collectModuleHeaderIncludes(const LangOptions &LangOpts, FileManager &FileMgr,
 
       // Compute the relative path from the directory to this file.
       SmallVector<StringRef, 16> Components;
-      auto PathIt = llvm::sys::path::rbegin(Dir->path());
+      auto PathIt = llvm::sys::path::rbegin(Dir->getName());
       for (int I = 0; I != Dir.level() + 1; ++I, ++PathIt)
         Components.push_back(*PathIt);
       SmallString<128> RelativeHeader(UmbrellaDir.NameAsWritten);

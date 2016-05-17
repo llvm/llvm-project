@@ -39,7 +39,7 @@
 ///
 /// This intrinsic corresponds to the \c VCVTPH2PS instruction.
 ///
-/// \param a
+/// \param __a
 ///    A 16-bit half-precision float value.
 /// \returns The converted 32-bit float value.
 static __inline float __DEFAULT_FN_ATTRS
@@ -109,7 +109,7 @@ _cvtsh_ss(unsigned short __a)
 ///
 /// This intrinsic corresponds to the \c VCVTPH2PS instruction.
 ///
-/// \param a
+/// \param __a
 ///    A 128-bit vector containing 16-bit half-precision float values. The lower
 ///    64 bits are used in the conversion.
 /// \returns A 128-bit vector of [4 x float] containing converted float values.

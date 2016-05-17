@@ -72,7 +72,7 @@ __mmask8 __attribute__((__target__("avx512vl"))) mm_cmpeq_epi32_mask_wrap(__m128
   return _mm_cmpeq_epi32_mask(a, b);
 }
 
-__v64qi __attribute__((__target__("avx512bw"))) mm512_setzero_qi_wrap(void) {
+__m512i __attribute__((__target__("avx512bw"))) mm512_setzero_qi_wrap(void) {
   return _mm512_setzero_qi();
 }
 

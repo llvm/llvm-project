@@ -191,6 +191,8 @@ public:
           CXXThisFieldDecl = *Field;
         else if (I->capturesVariable())
           CaptureFields[I->getCapturedVar()] = *Field;
+        else if (I->capturesVariableByCopy())
+          CaptureFields[I->getCapturedVar()] = *Field;
       }
     }
 
@@ -2229,8 +2231,7 @@ public:
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
   llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                                     QualType ReturnQTy);
-  llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S);
+                                                     bool CastValToPtr = false);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,

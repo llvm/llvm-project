@@ -632,7 +632,7 @@ protected:
     Builder.defineMacro("__KPRINTF_ATTRIBUTE__");
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__ELF__");
-    Builder.defineMacro("__PS4__");
+    Builder.defineMacro("__ORBIS__");
   }
 public:
   PS4OSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -1999,17 +1999,6 @@ public:
       Builder.defineMacro("__HAS_FMAF__");
     if (hasLDEXPF)
       Builder.defineMacro("__HAS_LDEXPF__");
-    if (hasFP64 && Opts.OpenCL)
-      Builder.defineMacro("cl_khr_fp64");
-    if (Opts.OpenCL) {
-      if (GPU >= GK_NORTHERN_ISLANDS) {
-        Builder.defineMacro("cl_khr_byte_addressable_store");
-        Builder.defineMacro("cl_khr_global_int32_base_atomics");
-        Builder.defineMacro("cl_khr_global_int32_extended_atomics");
-        Builder.defineMacro("cl_khr_local_int32_base_atomics");
-        Builder.defineMacro("cl_khr_local_int32_extended_atomics");
-      }
-    }
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -2096,6 +2085,31 @@ public:
     }
 
     return true;
+  }
+
+   void setSupportedOpenCLOpts() override {
+     auto &Opts = getSupportedOpenCLOpts();
+     Opts.cl_clang_storage_class_specifiers = 1;
+     Opts.cl_khr_gl_sharing = 1;
+     Opts.cl_khr_gl_event = 1;
+     Opts.cl_khr_d3d10_sharing = 1;
+     Opts.cl_khr_subgroups = 1;
+
+     if (hasFP64)
+       Opts.cl_khr_fp64 = 1;
+     if (GPU >= GK_NORTHERN_ISLANDS) {
+       Opts.cl_khr_byte_addressable_store = 1;
+       Opts.cl_khr_global_int32_base_atomics = 1;
+       Opts.cl_khr_global_int32_extended_atomics = 1;
+       Opts.cl_khr_local_int32_base_atomics = 1;
+       Opts.cl_khr_local_int32_extended_atomics = 1;
+     }
+     if (GPU >= GK_SOUTHERN_ISLANDS)
+       Opts.cl_khr_fp16 = 1;
+       Opts.cl_khr_int64_base_atomics = 1;
+       Opts.cl_khr_int64_extended_atomics = 1;
+       Opts.cl_khr_3d_image_writes = 1;
+       Opts.cl_khr_gl_msaa_sharing = 1;
   }
 };
 
@@ -2715,6 +2729,10 @@ public:
 
   bool hasSjLjLowering() const override {
     return true;
+  }
+
+  void setSupportedOpenCLOpts() override {
+    getSupportedOpenCLOpts().setAll();
   }
 };
 
@@ -7858,6 +7876,12 @@ public:
   CallingConv getDefaultCallingConv(CallingConvMethodType MT) const override {
     return CC_SpirFunction;
   }
+
+  void setSupportedOpenCLOpts() override {
+    // Assume all OpenCL extensions and optional core features are supported
+    // for SPIR since it is a generic target.
+    getSupportedOpenCLOpts().setAll();
+  }
 };
 
 class SPIR32TargetInfo : public SPIRTargetInfo {
@@ -8457,6 +8481,8 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
 
   if (!Target->handleTargetFeatures(Opts->Features, Diags))
     return nullptr;
+
+  Target->setSupportedOpenCLOpts();
 
   return Target.release();
 }

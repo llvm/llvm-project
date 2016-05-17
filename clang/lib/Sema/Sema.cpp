@@ -208,8 +208,14 @@ void Sema::Initialize() {
     addImplicitTypedef("size_t", Context.getSizeType());
   }
 
-  // Initialize predefined OpenCL types.
+  // Initialize predefined OpenCL types and supported optional core features.
   if (getLangOpts().OpenCL) {
+#define OPENCLEXT(Ext) \
+     if (Context.getTargetInfo().getSupportedOpenCLOpts().is_##Ext##_supported_core( \
+         getLangOpts().OpenCLVersion)) \
+       getOpenCLOptions().Ext = 1;
+#include "clang/Basic/OpenCLExtensions.def"
+
     addImplicitTypedef("sampler_t", Context.OCLSamplerTy);
     addImplicitTypedef("event_t", Context.OCLEventTy);
     if (getLangOpts().OpenCLVersion >= 200) {
@@ -1487,7 +1493,8 @@ IdentifierInfo *Sema::getFloat128Identifier() const {
 void Sema::PushCapturedRegionScope(Scope *S, CapturedDecl *CD, RecordDecl *RD,
                                    CapturedRegionKind K) {
   CapturingScopeInfo *CSI = new CapturedRegionScopeInfo(
-      getDiagnostics(), S, CD, RD, CD->getContextParam(), K);
+      getDiagnostics(), S, CD, RD, CD->getContextParam(), K,
+      (getLangOpts().OpenMP && K == CR_OpenMP) ? getOpenMPNestingLevel() : 0);
   CSI->ReturnType = Context.VoidTy;
   FunctionScopes.push_back(CSI);
 }
