@@ -9,6 +9,7 @@
 
 #include "HeaderFileExtensionsUtils.h"
 #include "clang/Basic/CharInfo.h"
+#include "llvm/Support/Path.h"
 
 namespace clang {
 namespace tidy {

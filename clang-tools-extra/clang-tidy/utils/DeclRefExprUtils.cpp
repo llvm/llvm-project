@@ -15,7 +15,7 @@
 
 namespace clang {
 namespace tidy {
-namespace utils {  
+namespace utils {
 namespace decl_ref_expr {
 
 using namespace ::clang::ast_matchers;

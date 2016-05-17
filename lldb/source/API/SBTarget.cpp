@@ -2204,6 +2204,13 @@ SBTarget::SetSectionLoadAddress (lldb::SBSection section,
                     ProcessSP process_sp (target_sp->GetProcessSP());
                     if (target_sp->SetSectionLoadAddress (section_sp, section_base_addr))
                     {
+                        ModuleSP module_sp(section_sp->GetModule());
+                        if (module_sp)
+                        {
+                            ModuleList module_list;
+                            module_list.Append(module_sp);
+                            target_sp->ModulesDidLoad (module_list);
+                        }
                         // Flush info in the process (stack frames, etc)
                         if (process_sp)
                             process_sp->Flush();
@@ -2233,12 +2240,27 @@ SBTarget::ClearSectionLoadAddress (lldb::SBSection section)
         }
         else
         {
-            ProcessSP process_sp (target_sp->GetProcessSP());
-            if (target_sp->SetSectionUnloaded (section.GetSP()))
+            SectionSP section_sp (section.GetSP());
+            if (section_sp)
             {
-                // Flush info in the process (stack frames, etc)
-                if (process_sp)
-                    process_sp->Flush();                
+                ProcessSP process_sp (target_sp->GetProcessSP());
+                if (target_sp->SetSectionUnloaded(section_sp))
+                {
+                    ModuleSP module_sp(section_sp->GetModule());
+                    if (module_sp)
+                    {
+                        ModuleList module_list;
+                        module_list.Append(module_sp);
+                        target_sp->ModulesDidUnload(module_list, false);
+                    }
+                    // Flush info in the process (stack frames, etc)
+                    if (process_sp)
+                        process_sp->Flush();                
+                }
+            }
+            else
+            {
+                sb_error.SetErrorStringWithFormat ("invalid section");
             }
         }
     }
@@ -2320,6 +2342,9 @@ SBTarget::ClearModuleLoadAddress (lldb::SBModule module)
                     }
                     if (changed)
                     {
+                        ModuleList module_list;
+                        module_list.Append(module_sp);
+                        target_sp->ModulesDidUnload(module_list, false);
                         // Flush info in the process (stack frames, etc)
                         ProcessSP process_sp (target_sp->GetProcessSP());
                         if (process_sp)

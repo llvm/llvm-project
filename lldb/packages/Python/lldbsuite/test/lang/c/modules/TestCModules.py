@@ -18,7 +18,6 @@ class CModulesTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfFreeBSD
-    @expectedFailureDarwin('http://llvm.org/pr24302')
     @expectedFailureAll(oslist=["linux"], bugnumber="http://llvm.org/pr23456 'fopen' has unknown return type")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr(self):
@@ -43,11 +42,11 @@ class CModulesTestCase(TestBase):
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
             substrs = [' resolved, hit count = 1'])
 
-        self.expect("expr @import Darwin; 3", VARIABLES_DISPLAYED_CORRECTLY,
+        self.expect("expr -l objc++ -- @import Darwin; 3", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ["int", "3"])
 
         self.expect("expr *fopen(\"/dev/zero\", \"w\")", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ["FILE", "_close", "__sclose"])
+            substrs = ["FILE", "_close"])
 
         self.expect("expr *myFile", VARIABLES_DISPLAYED_CORRECTLY,
             substrs = ["a", "5", "b", "9"])

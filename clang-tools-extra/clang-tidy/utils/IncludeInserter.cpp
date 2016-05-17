@@ -67,9 +67,9 @@ IncludeInserter::CreateIncludeInsertion(FileID FileID, StringRef Header,
   return IncludeSorterByFile[FileID]->CreateIncludeInsertion(Header, IsAngled);
 }
 
-void IncludeInserter::AddInclude(StringRef file_name, bool IsAngled,
+void IncludeInserter::AddInclude(StringRef FileName, bool IsAngled,
                                  SourceLocation HashLocation,
-                                 SourceLocation end_location) {
+                                 SourceLocation EndLocation) {
   FileID FileID = SourceMgr.getFileID(HashLocation);
   if (IncludeSorterByFile.find(FileID) == IncludeSorterByFile.end()) {
     IncludeSorterByFile.insert(std::make_pair(
@@ -77,8 +77,8 @@ void IncludeInserter::AddInclude(StringRef file_name, bool IsAngled,
                     &SourceMgr, &LangOpts, FileID,
                     SourceMgr.getFilename(HashLocation), Style)));
   }
-  IncludeSorterByFile[FileID]->AddInclude(file_name, IsAngled, HashLocation,
-                                          end_location);
+  IncludeSorterByFile[FileID]->AddInclude(FileName, IsAngled, HashLocation,
+                                          EndLocation);
 }
 
 } // namespace utils

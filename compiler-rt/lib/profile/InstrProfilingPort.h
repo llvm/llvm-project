@@ -27,7 +27,7 @@
 #define COMPILER_RT_MAX_HOSTLEN 128
 #ifdef _MSC_VER
 #define COMPILER_RT_GETHOSTNAME(Name, Len) gethostname(Name, Len)
-#elif defined(__PS4__)
+#elif defined(__ORBIS__)
 #define COMPILER_RT_GETHOSTNAME(Name, Len) (-1)
 #else
 #define COMPILER_RT_GETHOSTNAME(Name, Len) lprofGetHostName(Name, Len)
@@ -44,19 +44,29 @@
 #define COMPILER_RT_BOOL_CMPXCHG(Ptr, OldV, NewV)                              \
   (InterlockedCompareExchange64((LONGLONG volatile *)Ptr, (LONGLONG)NewV,      \
                                 (LONGLONG)OldV) == (LONGLONG)OldV)
+#define COMPILER_RT_PTR_FETCH_ADD(DomType, PtrVar, PtrIncr)                    \
+  (DomType *)InterlockedExchangeAdd64((LONGLONG volatile *)&PtrVar,            \
+                                      (LONGLONG)sizeof(DomType) * PtrIncr)
 #else /* !defined(_WIN64) */
 #define COMPILER_RT_BOOL_CMPXCHG(Ptr, OldV, NewV)                              \
   (InterlockedCompareExchange((LONG volatile *)Ptr, (LONG)NewV, (LONG)OldV) == \
    (LONG)OldV)
+#define COMPILER_RT_PTR_FETCH_ADD(DomType, PtrVar, PtrIncr)                    \
+  (DomType *)InterlockedExchangeAdd((LONG volatile *)&PtrVar,                  \
+                                    (LONG)sizeof(DomType) * PtrIncr)
 #endif
 #else /* !defined(_MSC_VER) */
 #define COMPILER_RT_BOOL_CMPXCHG(Ptr, OldV, NewV)                              \
   __sync_bool_compare_and_swap(Ptr, OldV, NewV)
+#define COMPILER_RT_PTR_FETCH_ADD(DomType, PtrVar, PtrIncr)                    \
+  (DomType *)__sync_fetch_and_add((long *)&PtrVar, sizeof(DomType) * PtrIncr)
 #endif
 #else /* COMPILER_RT_HAS_ATOMICS != 1 */
 #include "InstrProfilingUtil.h"
 #define COMPILER_RT_BOOL_CMPXCHG(Ptr, OldV, NewV)                              \
   lprofBoolCmpXchg((void **)Ptr, OldV, NewV)
+#define COMPILER_RT_PTR_FETCH_ADD(DomType, PtrVar, PtrIncr)                    \
+  (DomType *)lprofPtrFetchAdd((void **)&PtrVar, sizeof(DomType) * PtrIncr)
 #endif
 
 #define PROF_ERR(Format, ...)                                                  \

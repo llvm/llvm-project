@@ -51,6 +51,13 @@ uint32_t lprofBoolCmpXchg(void **Ptr, void *OldV, void *NewV) {
   }
   return 0;
 }
+COMPILER_RT_VISIBILITY
+void *lprofPtrFetchAdd(void **Mem, long ByteIncr) {
+  void *Old = *Mem;
+  *((char **)Mem) += ByteIncr;
+  return Old;
+}
+
 #endif
 
 #ifdef COMPILER_RT_HAS_UNAME

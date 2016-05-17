@@ -19,29 +19,16 @@ namespace tidy {
 namespace utils {
 
 /// \brief canonicalize a path by removing ./ and ../ components.
-// FIXME: Consider moving this to llvm::sys::path.
 static std::string cleanPath(StringRef Path) {
-  SmallString<256> NewPath;
-  for (auto I = llvm::sys::path::begin(Path), E = llvm::sys::path::end(Path);
-       I != E; ++I) {
-    if (*I == ".")
-      continue;
-    if (*I == "..") {
-      // Drop the last component.
-      NewPath.resize(llvm::sys::path::parent_path(NewPath).size());
-    } else {
-      if (!NewPath.empty() && !NewPath.endswith("/"))
-        NewPath += '/';
-      NewPath += *I;
-    }
-  }
-  return NewPath.str();
+  SmallString<256> Result =  Path;
+  llvm::sys::path::remove_dots(Result, true);
+  return Result.str();
 }
 
 namespace {
 class HeaderGuardPPCallbacks : public PPCallbacks {
 public:
-  explicit HeaderGuardPPCallbacks(Preprocessor *PP, HeaderGuardCheck *Check)
+  HeaderGuardPPCallbacks(Preprocessor *PP, HeaderGuardCheck *Check)
       : PP(PP), Check(Check) {}
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,

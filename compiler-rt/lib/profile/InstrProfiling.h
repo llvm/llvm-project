@@ -30,6 +30,12 @@ typedef struct __llvm_profile_header {
 #include "InstrProfData.inc"
 } __llvm_profile_header;
 
+typedef struct ValueProfNode * PtrToNodeT;
+typedef struct ValueProfNode {
+#define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Initializer) Type Name;
+#include "InstrProfData.inc"
+} ValueProfNode;
+
 /*!
  * \brief Get number of bytes necessary to pad the argument to eight
  * byte boundary.
