@@ -238,6 +238,7 @@ def no_copy_dt_needed_entries : Flag<["--"], "no-copy-dt-needed-entries">,
                                 Alias<no_add_needed>;
 def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
+def no_undefined_version : Flag<["--", "-"], "no-undefined-version">;
 def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
 def rpath_link : Separate<["--", "-"], "rpath-link">;

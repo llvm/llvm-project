@@ -426,6 +426,7 @@ def process_dir(root, files, dotest_argv, inferior_pid_events):
         script_file = main.__file__
         command = ([sys.executable, script_file] +
                    dotest_argv +
+                   ["-S", dotest_options.session_file_format] +
                    ["--inferior", "-p", base_name, root])
 
         timeout_name = os.path.basename(os.path.splitext(base_name)[0]).upper()

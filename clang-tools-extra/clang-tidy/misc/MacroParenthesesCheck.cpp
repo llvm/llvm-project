@@ -184,6 +184,10 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
         Next.isOneOf(tok::comma, tok::greater))
       continue;
 
+    // Namespaces.
+    if (Prev.is(tok::kw_namespace))
+      continue;
+
     Check->diag(Tok.getLocation(), "macro argument should be enclosed in "
                                    "parentheses")
         << FixItHint::CreateInsertion(Tok.getLocation(), "(")

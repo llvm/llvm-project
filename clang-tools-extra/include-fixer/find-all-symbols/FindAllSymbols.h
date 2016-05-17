@@ -17,6 +17,8 @@
 namespace clang {
 namespace find_all_symbols {
 
+class HeaderMapCollector;
+
 /// \brief FindAllSymbols collects all classes, free standing functions and
 /// global variables with some extra information such as the path of the header
 /// file, the namespaces they are contained in, the type of variables and the
@@ -39,7 +41,9 @@ public:
                               const SymbolInfo &Symbol) = 0;
   };
 
-  explicit FindAllSymbols(ResultReporter *Reporter) : Reporter(Reporter) {}
+  explicit FindAllSymbols(ResultReporter *Reporter,
+                          HeaderMapCollector *Collector)
+      : Reporter(Reporter), Collector(Collector) {}
 
   void registerMatchers(clang::ast_matchers::MatchFinder *MatchFinder);
 
@@ -47,7 +51,11 @@ public:
   run(const clang::ast_matchers::MatchFinder::MatchResult &result) override;
 
 private:
+  // Reporter for SymbolInfo.
   ResultReporter *const Reporter;
+  // A remapping header file collector allowing clients include a different
+  // header.
+  HeaderMapCollector *const Collector;
 };
 
 } // namespace find_all_symbols

@@ -126,9 +126,19 @@ TEST(IncludeFixer, MinimizeInclude) {
             runIncludeFixer("a::b::foo bar;\n", IncludePath));
 }
 
-#if 0
+#ifndef _WIN32
 // It doesn't pass for targeting win32. Investigating.
 TEST(IncludeFixer, NestedName) {
+  EXPECT_EQ("#include \"dir/otherdir/qux.h\"\n"
+            "int x = a::b::foo(0);\n",
+            runIncludeFixer("int x = a::b::foo(0);\n"));
+
+  // FIXME: Handle simple macros.
+  EXPECT_EQ("#define FOO a::b::foo\nint x = FOO;\n",
+            runIncludeFixer("#define FOO a::b::foo\nint x = FOO;\n"));
+  EXPECT_EQ("#define FOO(x) a::##x\nint x = FOO(b::foo);\n",
+            runIncludeFixer("#define FOO(x) a::##x\nint x = FOO(b::foo);\n"));
+
   EXPECT_EQ("#include \"dir/otherdir/qux.h\"\n"
             "namespace a {}\nint a = a::b::foo(0);\n",
             runIncludeFixer("namespace a {}\nint a = a::b::foo(0);\n"));

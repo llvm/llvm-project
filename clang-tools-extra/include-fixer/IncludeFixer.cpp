@@ -129,11 +129,7 @@ public:
       }
     }
 
-    /// If we have a scope specification, use that to get more precise results.
-    std::string QueryString;
-    if (SS && SS->getRange().isValid()) {
-      auto Range = CharSourceRange::getTokenRange(SS->getRange().getBegin(),
-                                                  Typo.getLoc());
+    auto ExtendNestedNameSpecifier = [this](CharSourceRange Range) {
       StringRef Source =
           Lexer::getSourceText(Range, getCompilerInstance().getSourceManager(),
                                getCompilerInstance().getLangOpts());
@@ -158,7 +154,21 @@ public:
       while (isIdentifierBody(*End) || *End == ':')
         ++End;
 
-      QueryString = std::string(Source.begin(), End);
+      return std::string(Source.begin(), End);
+    };
+
+    /// If we have a scope specification, use that to get more precise results.
+    std::string QueryString;
+    if (SS && SS->getRange().isValid()) {
+      auto Range = CharSourceRange::getTokenRange(SS->getRange().getBegin(),
+                                                  Typo.getLoc());
+
+      QueryString = ExtendNestedNameSpecifier(Range);
+    } else if (Typo.getName().isIdentifier() && !Typo.getLoc().isMacroID()) {
+      auto Range =
+          CharSourceRange::getTokenRange(Typo.getBeginLoc(), Typo.getEndLoc());
+
+      QueryString = ExtendNestedNameSpecifier(Range);
     } else {
       QueryString = Typo.getAsString();
     }

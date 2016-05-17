@@ -8,11 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "FindAllSymbols.h"
+#include "HeaderMapCollector.h"
+#include "PragmaCommentHandler.h"
 #include "SymbolInfo.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -50,6 +53,41 @@ private:
   std::vector<SymbolInfo> Symbols;
 };
 
+class TestFindAllSymbolsAction : public clang::ASTFrontendAction {
+public:
+  TestFindAllSymbolsAction(FindAllSymbols::ResultReporter *Reporter)
+      : MatchFinder(), Collector(), Handler(&Collector),
+        Matcher(Reporter, &Collector) {
+    Matcher.registerMatchers(&MatchFinder);
+  }
+
+  std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &Compiler,
+                    StringRef InFile) override {
+    Compiler.getPreprocessor().addCommentHandler(&Handler);
+    return MatchFinder.newASTConsumer();
+  }
+
+private:
+  ast_matchers::MatchFinder MatchFinder;
+  HeaderMapCollector Collector;
+  PragmaCommentHandler Handler;
+  FindAllSymbols Matcher;
+};
+
+class TestFindAllSymbolsActionFactory
+    : public clang::tooling::FrontendActionFactory {
+public:
+  TestFindAllSymbolsActionFactory(MockReporter *Reporter)
+      : Reporter(Reporter) {}
+  clang::FrontendAction *create() override {
+    return new TestFindAllSymbolsAction(Reporter);
+  }
+
+private:
+  MockReporter *const Reporter;
+};
+
 class FindAllSymbolsTest : public ::testing::Test {
 public:
   bool hasSymbol(const SymbolInfo &Symbol) {
@@ -57,18 +95,16 @@ public:
   }
 
   bool runFindAllSymbols(StringRef Code) {
-    FindAllSymbols matcher(&Reporter);
-    clang::ast_matchers::MatchFinder MatchFinder;
-    matcher.registerMatchers(&MatchFinder);
-
     llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
         new vfs::InMemoryFileSystem);
     llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
     std::string FileName = "symbol.cc";
-    std::unique_ptr<clang::tooling::FrontendActionFactory> Factory =
-        clang::tooling::newFrontendActionFactory(&MatchFinder);
+
+    std::unique_ptr<clang::tooling::FrontendActionFactory> Factory(
+        new TestFindAllSymbolsActionFactory(&Reporter));
+
     tooling::ToolInvocation Invocation(
         {std::string("find_all_symbols"), std::string("-fsyntax-only"),
          std::string("-std=c++11"), FileName},
@@ -316,6 +352,8 @@ TEST_F(FindAllSymbolsTest, EnumTest) {
   Symbol = SymbolInfo("A2", SymbolInfo::SymbolKind::EnumConstantDecl,
                       HeaderName, 4, {{SymbolInfo::ContextType::EnumDecl, ""}});
   EXPECT_TRUE(hasSymbol(Symbol));
+  Symbol = SymbolInfo("", SymbolInfo::SymbolKind::EnumDecl, HeaderName, 4, {});
+  EXPECT_FALSE(hasSymbol(Symbol));
 
   Symbol = SymbolInfo("A_ENUM", SymbolInfo::SymbolKind::EnumDecl, HeaderName, 7,
                       {{SymbolInfo::ContextType::Record, "A"}});
@@ -325,6 +363,19 @@ TEST_F(FindAllSymbolsTest, EnumTest) {
                       {{SymbolInfo::ContextType::EnumDecl, "A_ENUM"},
                        {SymbolInfo::ContextType::Record, "A"}});
   EXPECT_FALSE(hasSymbol(Symbol));
+}
+
+TEST_F(FindAllSymbolsTest, IWYUPrivatePragmaTest) {
+  static const char Code[] = R"(
+    // IWYU pragma: private, include "bar.h"
+    struct Bar {
+    };
+  )";
+  runFindAllSymbols(Code);
+
+  SymbolInfo Symbol =
+      SymbolInfo("Bar", SymbolInfo::SymbolKind::Class, "bar.h", 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
 }
 
 } // namespace find_all_symbols

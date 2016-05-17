@@ -38,6 +38,7 @@ set(LLDB_TEST_COMMON_ARGS
   ${CMAKE_BINARY_DIR}/bin/lldb${CMAKE_EXECUTABLE_SUFFIX}
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
+  -S nm
   -u CXXFLAGS
   -u CFLAGS
   )

@@ -209,6 +209,10 @@ floating_point hypot (arithmetic x, arithmetic y);
 float          hypotf(float x, float y);
 long double    hypotl(long double x, long double y);
 
+double       hypot(double x, double y, double z);                // C++17
+float        hypot(float x, float y, float z);                   // C++17
+long double  hypot(long double x, long double y, long double z); // C++17
+
 int ilogb (arithmetic x);
 int ilogbf(float x);
 int ilogbl(long double x);
@@ -547,6 +551,30 @@ using ::truncl;
 using ::lgamma;
 using ::lgammaf;
 #endif // __sun__
+
+#if _LIBCPP_STD_VER > 14
+inline _LIBCPP_INLINE_VISIBILITY float       hypot(       float x,       float y,       float z ) { return sqrt(x*x + y*y + z*z); }
+inline _LIBCPP_INLINE_VISIBILITY double      hypot(      double x,      double y,      double z ) { return sqrt(x*x + y*y + z*z); }
+inline _LIBCPP_INLINE_VISIBILITY long double hypot( long double x, long double y, long double z ) { return sqrt(x*x + y*y + z*z); }
+
+template <class _A1, class _A2, class _A3>
+inline _LIBCPP_INLINE_VISIBILITY
+typename std::__lazy_enable_if
+<
+    std::is_arithmetic<_A1>::value &&
+    std::is_arithmetic<_A2>::value &&
+    std::is_arithmetic<_A3>::value,
+    std::__promote<_A1, _A2, _A3>
+>::type
+hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT
+{
+    typedef typename std::__promote<_A1, _A2, _A3>::type __result_type;
+    static_assert((!(std::is_same<_A1, __result_type>::value &&
+                     std::is_same<_A2, __result_type>::value &&
+                     std::is_same<_A3, __result_type>::value)), "");
+    return hypot((__result_type)__lcpp_x, (__result_type)__lcpp_y, (__result_type)__lcpp_z);
+}
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

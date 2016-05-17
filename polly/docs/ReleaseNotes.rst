@@ -21,12 +21,14 @@ an additional module. This makes using Polly significantly easier.
 Instead of
 
 .. code-block:: bash
+
     opt -load lib/LLVMPolly.so -O3 -polly file.ll
     clang -Xclang -load -Xclang lib/LLVMPolly.so -O3 -mllvm -polly file.ll
 
 one can now use
 
 .. code-block:: bash
+
     opt -O3 -polly file.ll
     clang -O3 -mllvm -polly file.c
 

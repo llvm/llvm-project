@@ -38,7 +38,7 @@ if(${LIBOMP_STANDALONE_BUILD})
   set(LIBOMP_LLVM_LIT_EXECUTABLE "" CACHE STRING
     "Path to llvm-lit")
   find_program(LIT_EXECUTABLE
-    NAMES llvm-lit
+    NAMES llvm-lit lit.py
     HINTS ${LIBOMP_LLVM_LIT_EXECUTABLE}
     PATHS ${OPENMP_LLVM_TOOLS_DIR})
   if(NOT LIT_EXECUTABLE)

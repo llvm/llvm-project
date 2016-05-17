@@ -36,6 +36,7 @@
 #define GOOD25(t)         std::set<t,t,t> s
 #define GOOD26(x)         (a->*x)
 #define GOOD27(x)         (a.*x)
+#define GOOD28(x)         namespace x {int b;}
 
 // These are allowed for now..
 #define MAYBE1            *12.34

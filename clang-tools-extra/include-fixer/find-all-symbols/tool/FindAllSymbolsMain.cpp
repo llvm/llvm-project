@@ -8,8 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "FindAllSymbols.h"
+#include "HeaderMapCollector.h"
+#include "PragmaCommentHandler.h"
 #include "SymbolInfo.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -82,6 +88,31 @@ private:
   std::map<std::string, std::set<SymbolInfo>> Symbols;
 };
 
+class FindAllSymbolsAction : public clang::ASTFrontendAction {
+public:
+  FindAllSymbolsAction()
+      : Reporter(), MatchFinder(), Collector(), Handler(&Collector),
+        Matcher(&Reporter, &Collector) {
+    Matcher.registerMatchers(&MatchFinder);
+  }
+
+  std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &Compiler,
+                    StringRef InFile) override {
+    Compiler.getPreprocessor().addCommentHandler(&Handler);
+    return MatchFinder.newASTConsumer();
+  }
+
+  void EndSourceFileAction() override { Reporter.Write(OutputDir); }
+
+private:
+  YamlReporter Reporter;
+  clang::ast_matchers::MatchFinder MatchFinder;
+  HeaderMapCollector Collector;
+  PragmaCommentHandler Handler;
+  FindAllSymbols Matcher;
+};
+
 bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
   std::error_code EC;
   std::set<SymbolInfo> UniqueSymbols;
@@ -141,12 +172,8 @@ int main(int argc, const char **argv) {
     clang::find_all_symbols::Merge(MergeDir, sources[0]);
     return 0;
   }
-
-  clang::find_all_symbols::YamlReporter Reporter;
-  clang::find_all_symbols::FindAllSymbols Matcher(&Reporter);
-  clang::ast_matchers::MatchFinder MatchFinder;
-  Matcher.registerMatchers(&MatchFinder);
-  Tool.run(newFrontendActionFactory(&MatchFinder).get());
-  Reporter.Write(OutputDir);
+  Tool.run(
+      newFrontendActionFactory<clang::find_all_symbols::FindAllSymbolsAction>()
+          .get());
   return 0;
 }
