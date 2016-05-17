@@ -476,7 +476,7 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   std::vector<Entry> Entries;
 
 public:
-  DynamicSection(SymbolTable<ELFT> &SymTab);
+  explicit DynamicSection(SymbolTable<ELFT> &SymTab);
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
 

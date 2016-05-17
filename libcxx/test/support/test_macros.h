@@ -45,12 +45,6 @@
 # define TEST_STD_VER 99    // greater than current standard
 #endif
 
-/* Features that were introduced in C++11 */
-#if TEST_STD_VER >= 11
-#define TEST_HAS_RVALUE_REFERENCES
-#define TEST_HAS_VARIADIC_TEMPLATES
-#endif
-
 /* Features that were introduced in C++14 */
 #if TEST_STD_VER >= 14
 #define TEST_HAS_EXTENDED_CONSTEXPR

@@ -155,10 +155,27 @@ function(add_compiler_rt_runtime name type)
     set_target_link_flags(${libname} ${extra_linkflags_${libname}})
     set_property(TARGET ${libname} APPEND PROPERTY 
                 COMPILE_DEFINITIONS ${LIB_DEFS})
-    set_target_properties(${libname} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-        LIBRARY_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-        RUNTIME_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+
+    # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
+    # append a per-configuration subdirectory to the specified directory.
+    # To avoid the appended folder, the configuration specific variable must be
+    # set 'RUNTIME_OUTPUT_DIRECTORY_${CONF}':
+    # RUNTIME_OUTPUT_DIRECTORY_DEBUG, RUNTIME_OUTPUT_DIRECTORY_RELEASE, ...
+    if(CMAKE_CONFIGURATION_TYPES)
+      foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER "${build_mode}" CONFIG_SUFFIX)
+        set_target_properties(${libname} PROPERTIES
+            "ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+            "LIBRARY_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+            "RUNTIME_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+      endforeach()
+    else()
+      set_target_properties(${libname} PROPERTIES
+          ARCHIVE_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+          LIBRARY_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
+          RUNTIME_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+    endif()
+
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})
     if(LIB_LINK_LIBS AND ${type} STREQUAL "SHARED")
@@ -247,14 +264,18 @@ endif()
 #                      LINK_FLAGS <link flags>)
 macro(add_compiler_rt_test test_suite test_name)
   cmake_parse_arguments(TEST "" "SUBDIR" "OBJECTS;DEPS;LINK_FLAGS" "" ${ARGN})
+  set(output_bin ${CMAKE_CURRENT_BINARY_DIR})
   if(TEST_SUBDIR)
-    set(output_bin "${CMAKE_CURRENT_BINARY_DIR}/${TEST_SUBDIR}/${test_name}")
-  else()
-    set(output_bin "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
+    set(output_bin "${output_bin}/${TEST_SUBDIR}")
   endif()
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_bin "${output_bin}/${CMAKE_CFG_INTDIR}")
+  endif()
+  set(output_bin "${output_bin}/${test_name}")
   if(MSVC)
     set(output_bin "${output_bin}.exe")
   endif()
+
   # Use host compiler in a standalone build, and just-built Clang otherwise.
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND TEST_DEPS clang)

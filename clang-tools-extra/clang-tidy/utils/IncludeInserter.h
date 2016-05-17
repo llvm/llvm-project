@@ -60,8 +60,8 @@ public:
   CreateIncludeInsertion(FileID FileID, llvm::StringRef Header, bool IsAngled);
 
 private:
-  void AddInclude(StringRef file_name, bool IsAngled,
-                  SourceLocation hash_location, SourceLocation end_location);
+  void AddInclude(StringRef FileName, bool IsAngled,
+                  SourceLocation HashLocation, SourceLocation EndLocation);
 
   llvm::DenseMap<FileID, std::unique_ptr<IncludeSorter>> IncludeSorterByFile;
   llvm::DenseMap<FileID, std::set<std::string>> InsertedHeaders;

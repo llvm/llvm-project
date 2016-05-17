@@ -85,8 +85,8 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
 
   uint8_t VDataCount = 0;
   while (CurrentVNode) {
-    if (TargetValue == CurrentVNode->VData.Value) {
-      CurrentVNode->VData.Count++;
+    if (TargetValue == CurrentVNode->Value) {
+      CurrentVNode->Count++;
       return;
     }
     PrevVNode = CurrentVNode;
@@ -101,8 +101,8 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
   if (!CurrentVNode)
     return;
 
-  CurrentVNode->VData.Value = TargetValue;
-  CurrentVNode->VData.Count++;
+  CurrentVNode->Value = TargetValue;
+  CurrentVNode->Count++;
 
   uint32_t Success = 0;
   if (!ValueCounters[CounterIndex])
@@ -200,7 +200,8 @@ static ValueProfNode *getNextNValueData(uint32_t VK, uint32_t Site,
   unsigned I;
   ValueProfNode *VNode = StartNode ? StartNode : RTRecord.NodesKind[VK][Site];
   for (I = 0; I < N; I++) {
-    Dst[I] = VNode->VData;
+    Dst[I].Value = VNode->Value;
+    Dst[I].Count = VNode->Count;
     VNode = VNode->Next;
   }
   return VNode;

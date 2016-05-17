@@ -61,7 +61,7 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
       ValueProfNode *CurrentVNode = ValueCounters[i];
 
       while (CurrentVNode) {
-        CurrentVNode->VData.Count = 0;
+        CurrentVNode->Count = 0;
         CurrentVNode = CurrentVNode->Next;
       }
     }
