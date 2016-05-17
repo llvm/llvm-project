@@ -56,6 +56,10 @@ RUN: llvm-nm -pax %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF-nm-pax %s
 NAME-PAST-EOF-nm-pax: 0000000000000000 64 00 0000 fe000002 bad string index
 
+RUN: not llvm-objdump -t %p/Inputs/macho-bad-archive1.a 2>&1 \
+RUN:      | FileCheck -check-prefix NAME-PAST-EOF-ARCHIVE %s
+NAME-PAST-EOF-ARCHIVE: macho-bad-archive1.a(macho-invalid-symbol-name-past-eof) truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
+
 RUN: llvm-nm %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC %s
 INVALID-SECTION-IDX-SYMBOL-SEC: 0000000100000000 S __mh_execute_header
@@ -74,3 +78,6 @@ INVALID-HEADER: The file was not recognized as a valid object file
 
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
 INCOMPLETE-SEGMENT-LOADC: truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-bad-archive2.a 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-ARCHIVE %s
+INCOMPLETE-SEGMENT-LOADC-ARCHIVE: macho-bad-archive2.a(macho64-invalid-incomplete-segment-load-command) truncated or malformed object (load commands extend past the end of the file)

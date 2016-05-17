@@ -20,22 +20,21 @@
 namespace llvm {
 
 class MCCodeGenInfo {
-  /// RelocationModel - Relocation model: static, pic, etc.
+  /// Relocation model: static, pic, etc.
   ///
   Reloc::Model RelocationModel;
 
-  /// CMModel - Code model.
+  /// Code model.
   ///
   CodeModel::Model CMModel;
 
-  /// OptLevel - Optimization level.
+  /// Optimization level.
   ///
   CodeGenOpt::Level OptLevel;
 
 public:
-  void initMCCodeGenInfo(Reloc::Model RM = Reloc::Default,
-                         CodeModel::Model CM = CodeModel::Default,
-                         CodeGenOpt::Level OL = CodeGenOpt::Default);
+  void initMCCodeGenInfo(Reloc::Model RM, CodeModel::Model CM,
+                         CodeGenOpt::Level OL);
 
   Reloc::Model getRelocationModel() const { return RelocationModel; }
 

@@ -3927,17 +3927,21 @@ bool X86InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
   return !isPredicated(MI);
 }
 
-// Given a MBB and its TBB, find the FBB which was a fallthrough MBB (it may not
-// be a fallthorough MBB now due to layout changes). Return nullptr if the
-// fallthough MBB cannot be identified.
+// Given a MBB and its TBB, find the FBB which was a fallthrough MBB (it may
+// not be a fallthrough MBB now due to layout changes). Return nullptr if the
+// fallthrough MBB cannot be identified.
 static MachineBasicBlock *getFallThroughMBB(MachineBasicBlock *MBB,
                                             MachineBasicBlock *TBB) {
+  // Look for non-EHPad successors other than TBB. If we find exactly one, it
+  // is the fallthrough MBB. If we find zero, then TBB is both the target MBB
+  // and fallthrough MBB. If we find more than one, we cannot identify the
+  // fallthrough MBB and should return nullptr.
   MachineBasicBlock *FallthroughBB = nullptr;
   for (auto SI = MBB->succ_begin(), SE = MBB->succ_end(); SI != SE; ++SI) {
-    if ((*SI)->isEHPad() || *SI == TBB)
+    if ((*SI)->isEHPad() || (*SI == TBB && FallthroughBB))
       continue;
     // Return a nullptr if we found more than one fallthrough successor.
-    if (FallthroughBB)
+    if (FallthroughBB && FallthroughBB != TBB)
       return nullptr;
     FallthroughBB = *SI;
   }
@@ -7329,7 +7333,6 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_DARWIN_STUB, "x86-darwin-stub"},
       {MO_DARWIN_NONLAZY, "x86-darwin-nonlazy"},
       {MO_DARWIN_NONLAZY_PIC_BASE, "x86-darwin-nonlazy-pic-base"},
-      {MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE, "x86-darwin-hidden-nonlazy-pic-base"},
       {MO_TLVP, "x86-tlvp"},
       {MO_TLVP_PIC_BASE, "x86-tlvp-pic-base"},
       {MO_SECREL, "x86-secrel"}};

@@ -485,11 +485,17 @@ static void dumpArchive(const Archive *Arc) {
   for (auto &ErrorOrChild : Arc->children()) {
     error(ErrorOrChild.getError());
     const Archive::Child &ArcC = *ErrorOrChild;
-    ErrorOr<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
-    if (std::error_code EC = ChildOrErr.getError()) {
+    Expected<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
+    if (!ChildOrErr) {
       // Ignore non-object files.
-      if (EC != object_error::invalid_file_type)
-        reportError(Arc->getFileName(), EC.message());
+      if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError())) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(std::move(E), OS, "");
+        OS.flush();
+        reportError(Arc->getFileName(), Buf);
+      }
+      ChildOrErr.takeError();
       continue;
     }
 

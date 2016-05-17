@@ -47,7 +47,10 @@ public:
 
   uint64_t size() const { return Stream.tell(); }
 
-  void reset() { Buffer.clear(); }
+  void reset(TypeRecordKind K) {
+    Buffer.clear();
+    writeTypeRecordKind(K);
+  }
 
 private:
   llvm::SmallVector<char, 256> Buffer;

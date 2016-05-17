@@ -132,7 +132,6 @@ GetSymbolFromOperand(const MachineOperand &MO) const {
     break;
   case X86II::MO_DARWIN_NONLAZY:
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:
-  case X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE:
     Suffix = "$non_lazy_ptr";
     break;
   }
@@ -167,18 +166,6 @@ GetSymbolFromOperand(const MachineOperand &MO) const {
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE: {
     MachineModuleInfoImpl::StubValueTy &StubSym =
       getMachOMMI().getGVStubEntry(Sym);
-    if (!StubSym.getPointer()) {
-      assert(MO.isGlobal() && "Extern symbol not handled yet");
-      StubSym =
-        MachineModuleInfoImpl::
-        StubValueTy(AsmPrinter.getSymbol(MO.getGlobal()),
-                    !MO.getGlobal()->hasInternalLinkage());
-    }
-    break;
-  }
-  case X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE: {
-    MachineModuleInfoImpl::StubValueTy &StubSym =
-      getMachOMMI().getHiddenGVStubEntry(Sym);
     if (!StubSym.getPointer()) {
       assert(MO.isGlobal() && "Extern symbol not handled yet");
       StubSym =
@@ -252,7 +239,6 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case X86II::MO_PLT:       RefKind = MCSymbolRefExpr::VK_PLT; break;
   case X86II::MO_PIC_BASE_OFFSET:
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:
-  case X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE:
     Expr = MCSymbolRefExpr::create(Sym, Ctx);
     // Subtract the pic base.
     Expr = MCBinaryExpr::createSub(Expr,

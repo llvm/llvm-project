@@ -72,6 +72,13 @@ private:
   std::string Msg;
 };
 
+/// isNotObjectErrorInvalidFileType() is used when looping through the children
+/// of an archive after calling getAsBinary() on the child and it returns an
+/// llvm::Error.  In the cases we want to loop through the children and ignore the
+/// non-objects in the archive this is used to test the error to see if an
+/// error() function needs to called on the llvm::Error.
+Error isNotObjectErrorInvalidFileType(llvm::Error Err);
+
 } // end namespace object.
 
 } // end namespace llvm.

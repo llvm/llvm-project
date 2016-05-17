@@ -111,14 +111,14 @@ void TypeStreamMerger::visitFieldList(TypeLeafKind Leaf,
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   void TypeStreamMerger::visit##Name(TypeLeafKind LeafType,                    \
                                      Name##Record &Record) {                   \
-    FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);              \
+    FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);                   \
     IndexMap.push_back(DestStream.write##Name(Record));                        \
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   void TypeStreamMerger::visit##Name(TypeLeafKind LeafType,                    \
                                      Name##Record &Record) {                   \
-    FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);              \
+    FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);                   \
     FieldBuilder.write##Name(Record);                                          \
   }
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)

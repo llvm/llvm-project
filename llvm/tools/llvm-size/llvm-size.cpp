@@ -99,6 +99,29 @@ static bool error(std::error_code ec) {
   return true;
 }
 
+// This version of error() prints the archive name and member name, for example:
+// "libx.a(foo.o)" after the ToolName before the error message.  It sets
+// HadError but returns allowing the code to move on to other archive members. 
+static void error(llvm::Error E, StringRef FileName, const Archive::Child &C) {
+  HadError = true;
+  errs() << ToolName << ": " << FileName;
+
+  ErrorOr<StringRef> NameOrErr = C.getName();
+  // TODO: if we have a error getting the name then it would be nice to print
+  // the index of which archive member this is and or its offset in the
+  // archive instead of "???" as the name.
+  if (NameOrErr.getError())
+    errs() << "(" << "???" << ")";
+  else
+    errs() << "(" << NameOrErr.get() << ")";
+
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  logAllUnhandledErrors(std::move(E), OS, "");
+  OS.flush();
+  errs() << " " << Buf << "\n";
+}
+
 /// Get the length of the string that represents @p num in Radix including the
 /// leading 0x or 0 for hexadecimal and octal respectively.
 static size_t getNumLengthAsString(uint64_t num) {
@@ -480,9 +503,12 @@ static void printFileSectionSizes(StringRef file) {
          i != e; ++i) {
       if (error(i->getError()))
         exit(1);
-      ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
-      if (error(ChildOrErr.getError()))
+      Expected<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
+      if (!ChildOrErr) {
+        if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+          error(std::move(E), a->getFileName(), i->get());
         continue;
+      }
       if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
         MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
         if (!checkMachOAndArchFlags(o, file))
@@ -542,9 +568,13 @@ static void printFileSectionSizes(StringRef file) {
                    i != e; ++i) {
                 if (error(i->getError()))
                   exit(1);
-                ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
-                if (error(ChildOrErr.getError()))
+                Expected<std::unique_ptr<Binary>> ChildOrErr =
+                                                  i->get().getAsBinary();
+                if (!ChildOrErr) {
+                  if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+                    error(std::move(E), a->getFileName(), i->get());
                   continue;
+                }
                 if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
                   MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
                   if (OutputFormat == sysv)
@@ -618,9 +648,13 @@ static void printFileSectionSizes(StringRef file) {
                  i != e; ++i) {
               if (error(i->getError()))
                 exit(1);
-              ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
-              if (error(ChildOrErr.getError()))
+              Expected<std::unique_ptr<Binary>> ChildOrErr =
+                                                i->get().getAsBinary();
+              if (!ChildOrErr) {
+                if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+                  error(std::move(E), a->getFileName(), i->get());
                 continue;
+              }
               if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
                 MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
                 if (OutputFormat == sysv)
@@ -681,9 +715,12 @@ static void printFileSectionSizes(StringRef file) {
              i != e; ++i) {
           if (error(i->getError()))
             exit(1);
-          ErrorOr<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
-          if (error(ChildOrErr.getError()))
+          Expected<std::unique_ptr<Binary>> ChildOrErr = i->get().getAsBinary();
+          if (!ChildOrErr) {
+            if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+              error(std::move(E), UA->getFileName(), i->get());
             continue;
+          }
           if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get())) {
             MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o);
             if (OutputFormat == sysv)

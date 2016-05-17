@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
@@ -103,6 +104,13 @@ static cl::opt<std::string>
     ThinLTOIndex("thinlto-index",
                  cl::desc("Provide the index produced by a ThinLink, required "
                           "to perform the promotion and/or importing."));
+
+static cl::opt<std::string> ThinLTOPrefixReplace(
+    "thinlto-prefix-replace",
+    cl::desc("Control where files for distributed backends are "
+             "created. Expects 'oldprefix;newprefix' and if path "
+             "prefix of output file is oldprefix it will be "
+             "replaced with newprefix."));
 
 static cl::opt<std::string> ThinLTOModuleId(
     "thinlto-module-id",
@@ -294,6 +302,37 @@ static void createCombinedModuleSummaryIndex() {
   OS.close();
 }
 
+/// Parse the thinlto_prefix_replace option into the \p OldPrefix and
+/// \p NewPrefix strings, if it was specified.
+static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
+                                      std::string &NewPrefix) {
+  assert(ThinLTOPrefixReplace.empty() ||
+         ThinLTOPrefixReplace.find(";") != StringRef::npos);
+  StringRef PrefixReplace = ThinLTOPrefixReplace;
+  std::pair<StringRef, StringRef> Split = PrefixReplace.split(";");
+  OldPrefix = Split.first.str();
+  NewPrefix = Split.second.str();
+}
+
+/// Given the original \p Path to an output file, replace any path
+/// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
+/// resulting directory if it does not yet exist.
+static std::string getThinLTOOutputFile(const std::string &Path,
+                                        const std::string &OldPrefix,
+                                        const std::string &NewPrefix) {
+  if (OldPrefix.empty() && NewPrefix.empty())
+    return Path;
+  SmallString<128> NewPath(Path);
+  llvm::sys::path::replace_path_prefix(NewPath, OldPrefix, NewPrefix);
+  StringRef ParentPath = llvm::sys::path::parent_path(NewPath.str());
+  if (!ParentPath.empty()) {
+    // Make sure the new directory exists, creating it if necessary.
+    if (std::error_code EC = llvm::sys::fs::create_directories(ParentPath))
+      error(EC, "error creating the directory '" + ParentPath + "'");
+  }
+  return NewPath.str();
+}
+
 namespace thinlto {
 
 std::vector<std::unique_ptr<MemoryBuffer>>
@@ -421,6 +460,9 @@ private:
                          "the output files will be suffixed from the input "
                          "ones.");
 
+    std::string OldPrefix, NewPrefix;
+    getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
+
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
       // Build a map of module to the GUIDs and summary objects that should
@@ -433,6 +475,7 @@ private:
       if (OutputName.empty()) {
         OutputName = Filename + ".thinlto.bc";
       }
+      OutputName = getThinLTOOutputFile(OutputName, OldPrefix, NewPrefix);
       std::error_code EC;
       raw_fd_ostream OS(OutputName, EC, sys::fs::OpenFlags::F_None);
       error(EC, "error opening the file '" + OutputName + "'");
@@ -449,12 +492,16 @@ private:
                          "the output files will be suffixed from the input "
                          "ones.");
 
+    std::string OldPrefix, NewPrefix;
+    getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
+
     auto Index = loadCombinedIndex();
     for (auto &Filename : InputFilenames) {
       std::string OutputName = OutputFilename;
       if (OutputName.empty()) {
         OutputName = Filename + ".imports";
       }
+      OutputName = getThinLTOOutputFile(OutputName, OldPrefix, NewPrefix);
       ThinLTOCodeGenerator::emitImports(Filename, OutputName, *Index);
     }
   }

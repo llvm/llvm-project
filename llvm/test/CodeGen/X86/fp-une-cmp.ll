@@ -102,6 +102,34 @@ if.end:
   ret void
 }
 
+; Test that an FP oeq/une conditional branch can be inverted successfully even
+; when the true and false targets are the same (PR27750).
+; 
+; CHECK-LABEL: pr27750
+; CHECK: ucomiss
+; CHECK-NEXT: jne [[TARGET:.*]]
+; CHECK-NEXT: jp [[TARGET]]
+define void @pr27750(i32* %b, float %x, i1 %y) {
+entry:
+  br label %for.cond
+
+for.cond:
+  br label %for.cond1
+
+for.cond1:
+  br i1 %y, label %for.body3.lr.ph, label %for.end
+
+for.body3.lr.ph:
+  store i32 0, i32* %b, align 4
+  br label %for.end
+
+for.end:
+; After block %for.cond gets eliminated, the two target blocks of this
+; conditional block are the same.
+  %tobool = fcmp une float %x, 0.000000e+00
+  br i1 %tobool, label %for.cond, label %for.cond1
+}
+
 declare void @a()
 
 !1 = !{!"branch_weights", i32 1, i32 1000}

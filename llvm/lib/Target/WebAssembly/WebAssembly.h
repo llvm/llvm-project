@@ -32,9 +32,6 @@ FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
 FunctionPass *createWebAssemblyArgumentMove();
 FunctionPass *createWebAssemblySetP2AlignOperands();
 
-// Regalloc-time passes.
-FunctionPass *createWebAssemblyPEI();
-
 // Late passes.
 FunctionPass *createWebAssemblyReplacePhysRegs();
 FunctionPass *createWebAssemblyPrepareForLiveIntervals();

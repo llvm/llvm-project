@@ -11,9 +11,7 @@
 //
 //,,,----------------------------------------------------------------------,,,//
 
-#ifndef HANDLE_LOAD_COMMAND
-#define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)
-#endif
+#ifdef HANDLE_LOAD_COMMAND
 
 HANDLE_LOAD_COMMAND(LC_SEGMENT, 0x00000001u, segment_command)
 HANDLE_LOAD_COMMAND(LC_SYMTAB, 0x00000002u, symtab_command)
@@ -65,3 +63,44 @@ HANDLE_LOAD_COMMAND(LC_LINKER_OPTION, 0x0000002Du, linker_option_command)
 HANDLE_LOAD_COMMAND(LC_LINKER_OPTIMIZATION_HINT, 0x0000002Eu, linkedit_data_command)
 HANDLE_LOAD_COMMAND(LC_VERSION_MIN_TVOS, 0x0000002Fu, version_min_command)
 HANDLE_LOAD_COMMAND(LC_VERSION_MIN_WATCHOS, 0x00000030u, version_min_command)
+
+#endif
+
+#ifdef LOAD_COMMAND_STRUCT
+
+LOAD_COMMAND_STRUCT(dyld_info_command)
+LOAD_COMMAND_STRUCT(dylib_command)
+LOAD_COMMAND_STRUCT(dylinker_command)
+LOAD_COMMAND_STRUCT(dysymtab_command)
+LOAD_COMMAND_STRUCT(encryption_info_command)
+LOAD_COMMAND_STRUCT(encryption_info_command_64)
+LOAD_COMMAND_STRUCT(entry_point_command)
+LOAD_COMMAND_STRUCT(fvmfile_command)
+LOAD_COMMAND_STRUCT(fvmlib_command)
+LOAD_COMMAND_STRUCT(ident_command)
+LOAD_COMMAND_STRUCT(linkedit_data_command)
+LOAD_COMMAND_STRUCT(linker_option_command)
+LOAD_COMMAND_STRUCT(load_command)
+LOAD_COMMAND_STRUCT(prebind_cksum_command)
+LOAD_COMMAND_STRUCT(prebound_dylib_command)
+LOAD_COMMAND_STRUCT(routines_command)
+LOAD_COMMAND_STRUCT(routines_command_64)
+LOAD_COMMAND_STRUCT(rpath_command)
+LOAD_COMMAND_STRUCT(segment_command)
+LOAD_COMMAND_STRUCT(segment_command_64)
+LOAD_COMMAND_STRUCT(source_version_command)
+LOAD_COMMAND_STRUCT(sub_client_command)
+LOAD_COMMAND_STRUCT(sub_framework_command)
+LOAD_COMMAND_STRUCT(sub_library_command)
+LOAD_COMMAND_STRUCT(sub_umbrella_command)
+LOAD_COMMAND_STRUCT(symseg_command)
+LOAD_COMMAND_STRUCT(symtab_command)
+LOAD_COMMAND_STRUCT(thread_command)
+LOAD_COMMAND_STRUCT(twolevel_hints_command)
+LOAD_COMMAND_STRUCT(uuid_command)
+LOAD_COMMAND_STRUCT(version_min_command)
+
+#endif
+
+#undef HANDLE_LOAD_COMMAND
+#undef LOAD_COMMAND_STRUCT

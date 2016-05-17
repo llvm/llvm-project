@@ -101,7 +101,7 @@ public:
 
     ErrorOr<MemoryBufferRef> getMemoryBufferRef() const;
 
-    ErrorOr<std::unique_ptr<Binary>>
+    Expected<std::unique_ptr<Binary>>
     getAsBinary(LLVMContext *Context = nullptr) const;
   };
 

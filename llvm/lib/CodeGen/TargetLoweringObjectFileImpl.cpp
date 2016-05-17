@@ -686,9 +686,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getTTypeGlobalReference(
 
     // Add information about the stub reference to MachOMMI so that the stub
     // gets emitted by the asmprinter.
-    MachineModuleInfoImpl::StubValueTy &StubSym =
-      GV->hasHiddenVisibility() ? MachOMMI.getHiddenGVStubEntry(SSym) :
-                                  MachOMMI.getGVStubEntry(SSym);
+    MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(SSym);
     if (!StubSym.getPointer()) {
       MCSymbol *Sym = TM.getSymbol(GV, Mang);
       StubSym = MachineModuleInfoImpl::StubValueTy(Sym, !GV->hasLocalLinkage());

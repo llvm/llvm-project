@@ -281,15 +281,36 @@ define i32 @commute() {
 ; an implicit get_local for the register.
 
 ; CHECK-LABEL: no_stackify_past_use:
-; CHECK: i32.call        $1=, callee@FUNCTION, $0
+; CHECK:      i32.call        $1=, callee@FUNCTION, $0
+; CHECK-NEXT: i32.const       $push0=, 1
+; CHECK-NEXT: i32.add         $push1=, $0, $pop0
+; CHECK-NEXT: i32.call        $push2=, callee@FUNCTION, $pop1
+; CHECK-NEXT: i32.sub         $push3=, $pop2, $1
+; CHECK-NEXT: i32.div_s       $push4=, $pop3, $1
+; CHECK-NEXT: return          $pop4
+declare i32 @callee(i32)
+define i32 @no_stackify_past_use(i32 %arg) {
+  %tmp1 = call i32 @callee(i32 %arg)
+  %tmp2 = add i32 %arg, 1
+  %tmp3 = call i32 @callee(i32 %tmp2)
+  %tmp5 = sub i32 %tmp3, %tmp1
+  %tmp6 = sdiv i32 %tmp5, %tmp1
+  ret i32 %tmp6
+}
+
+; This is the same as no_stackify_past_use, except using a commutative operator,
+; so we can reorder the operands and stackify.
+
+; CHECK-LABEL: commute_to_fix_ordering:
+; CHECK: i32.call        $push[[L0:.+]]=, callee@FUNCTION, $0
+; CHECK: tee_local       $push[[L1:.+]]=, $1=, $pop[[L0]]
 ; CHECK: i32.const       $push0=, 1
 ; CHECK: i32.add         $push1=, $0, $pop0
 ; CHECK: i32.call        $push2=, callee@FUNCTION, $pop1
 ; CHECK: i32.add         $push3=, $1, $pop2
-; CHECK: i32.mul         $push4=, $1, $pop3
+; CHECK: i32.mul         $push4=, $pop[[L1]], $pop3
 ; CHECK: return          $pop4
-declare i32 @callee(i32)
-define i32 @no_stackify_past_use(i32 %arg) {
+define i32 @commute_to_fix_ordering(i32 %arg) {
   %tmp1 = call i32 @callee(i32 %arg)
   %tmp2 = add i32 %arg, 1
   %tmp3 = call i32 @callee(i32 %tmp2)
@@ -398,6 +419,44 @@ define i32 @no_stackify_past_epilogue() {
   %x = alloca i32
   %call = call i32 @use_memory(i32* %x)
   ret i32 %call
+}
+
+; Stackify a loop induction variable into a loop comparison.
+
+; CHECK-LABEL: stackify_indvar:
+; CHECK:             i32.const   $push[[L5:.+]]=, 1{{$}}
+; CHECK-NEXT:        i32.add     $push[[L4:.+]]=, $[[R0:.+]], $pop[[L5]]{{$}}
+; CHECK-NEXT:        tee_local   $push[[L3:.+]]=, $[[R0]]=, $pop[[L4]]{{$}}
+; CHECK-NEXT:        i32.ne      $push[[L2:.+]]=, $0, $pop[[L3]]{{$}}
+define void @stackify_indvar(i32 %tmp, i32* %v) #0 {
+bb:
+  br label %bb3
+
+bb3:                                              ; preds = %bb3, %bb2
+  %tmp4 = phi i32 [ %tmp7, %bb3 ], [ 0, %bb ]
+  %tmp5 = load volatile i32, i32* %v, align 4
+  %tmp6 = add nsw i32 %tmp5, %tmp4
+  store volatile i32 %tmp6, i32* %v, align 4
+  %tmp7 = add nuw nsw i32 %tmp4, 1
+  %tmp8 = icmp eq i32 %tmp7, %tmp
+  br i1 %tmp8, label %bb10, label %bb3
+
+bb10:                                             ; preds = %bb9, %bb
+  ret void
+}
+
+; Don't stackify a call past a __stack_pointer store.
+
+; CHECK-LABEL: stackpointer_dependency:
+; CHECK:      call {{.+}}, stackpointer_callee@FUNCTION,
+; CHECK:      i32.const $push[[L0:.+]]=, __stack_pointer
+; CHECK-NEXT: i32.store $discard=, 0($pop[[L0]]),
+declare i32 @stackpointer_callee(i8* readnone, i8* readnone)
+declare i8* @llvm.frameaddress(i32)
+define i32 @stackpointer_dependency(i8* readnone) {
+  %2 = tail call i8* @llvm.frameaddress(i32 0)
+  %3 = tail call i32 @stackpointer_callee(i8* %0, i8* %2)
+  ret i32 %3
 }
 
 !llvm.module.flags = !{!0}

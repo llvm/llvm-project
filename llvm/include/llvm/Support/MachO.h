@@ -1677,6 +1677,13 @@ namespace llvm {
     const uint32_t x86_EXCEPTION_STATE_COUNT =
       sizeof(x86_exception_state_t) / sizeof(uint32_t);
 
+    // Define a union of all load command structs
+    #define LOAD_COMMAND_STRUCT(LCStruct) LCStruct LCStruct##_data;
+
+    union macho_load_command {
+      #include "llvm/Support/MachO.def"
+    };
+
   } // end namespace MachO
 } // end namespace llvm
 

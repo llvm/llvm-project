@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=obj -mtriple=armeb-none-linux %s -o - \
+; RUN: llc -O0 -filetype=obj -mtriple=armeb-none-freebsd -debugger-tune=lldb %s -o - \
 ; RUN: | llvm-dwarfdump --debug-dump=info - | FileCheck %s
 ; Generated from:
 ;   struct S {

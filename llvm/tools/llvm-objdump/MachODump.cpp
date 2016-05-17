@@ -1211,7 +1211,7 @@ static void ProcessMachO(StringRef Filename, MachOObjectFile *MachOOF,
   // If we are doing some processing here on the Mach-O file print the header
   // info.  And don't print it otherwise like in the case of printing the
   // UniversalHeaders or ArchiveHeaders.
-  if (Disassemble || PrivateHeaders || ExportsTrie || Rebase || Bind ||
+  if (Disassemble || PrivateHeaders || ExportsTrie || Rebase || Bind || SymbolTable ||
       LazyBind || WeakBind || IndirectSymbols || DataInCode || LinkOptHints ||
       DylibsUsed || DylibId || ObjcMetaData || (FilterSections.size() != 0)) {
     outs() << Filename;
@@ -1244,8 +1244,10 @@ static void ProcessMachO(StringRef Filename, MachOObjectFile *MachOOF,
     PrintDylibs(MachOOF, false);
   if (DylibId)
     PrintDylibs(MachOOF, true);
-  if (SymbolTable)
-    PrintSymbolTable(MachOOF);
+  if (SymbolTable) {
+    StringRef ArchiveName = ArchiveMemberName == StringRef() ? "" : Filename;
+    PrintSymbolTable(MachOOF, ArchiveName);
+  }
   if (UnwindInfo)
     printMachOUnwindInfo(MachOOF);
   if (PrivateHeaders) {
@@ -1552,9 +1554,12 @@ void llvm::ParseInputMachO(StringRef Filename) {
       if (std::error_code EC = I->getError())
         report_error(Filename, EC);
       auto &C = I->get();
-      ErrorOr<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-      if (ChildOrErr.getError())
+      Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+      if (!ChildOrErr) {
+        if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+          report_error(Filename, C, std::move(E));
         continue;
+      }
       if (MachOObjectFile *O = dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
         if (!checkMachOAndArchFlags(O, Filename))
           return;
@@ -1603,9 +1608,12 @@ void llvm::ParseInputMachO(StringRef Filename) {
                 if (std::error_code EC = AI->getError())
                   report_error(Filename, EC);
                 auto &C = AI->get();
-                ErrorOr<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-                if (ChildOrErr.getError())
+                Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+                if (!ChildOrErr) {
+                  if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+                    report_error(Filename, C, std::move(E));
                   continue;
+                }
                 if (MachOObjectFile *O =
                         dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
                   ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
@@ -1648,9 +1656,12 @@ void llvm::ParseInputMachO(StringRef Filename) {
               if (std::error_code EC = AI->getError())
                 report_error(Filename, EC);
               auto &C = AI->get();
-              ErrorOr<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-              if (ChildOrErr.getError())
+              Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+              if (!ChildOrErr) {
+                if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+                  report_error(Filename, C, std::move(E));
                 continue;
+              }
               if (MachOObjectFile *O =
                       dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
                 ProcessMachO(Filename, O, O->getFileName());
@@ -1687,9 +1698,12 @@ void llvm::ParseInputMachO(StringRef Filename) {
           if (std::error_code EC = AI->getError())
             report_error(Filename, EC);
           auto &C = AI->get();
-          ErrorOr<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-          if (ChildOrErr.getError())
+          Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+          if (!ChildOrErr) {
+            if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+              report_error(Filename, C, std::move(E));
             continue;
+          }
           if (MachOObjectFile *O =
                   dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
             if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))

@@ -3132,6 +3132,9 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
     unsigned NumElts = Op1Type->getVectorNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = Op1C->getAggregateElement(i);
+      if (!Elt)
+        return nullptr;
+
       if (isa<UndefValue>(Elt))
         continue;
       // Bail out if we can't determine if this constant is min/max or if we
@@ -3147,7 +3150,7 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
 
   // Increment or decrement the constant and set the new comparison predicate:
   // ULE -> ULT ; UGE -> UGT ; SLE -> SLT ; SGE -> SGT
-  Constant *OneOrNegOne = ConstantInt::get(Op1Type, IsLE ? 1 : -1);
+  Constant *OneOrNegOne = ConstantInt::get(Op1Type, IsLE ? 1 : -1, true);
   CmpInst::Predicate NewPred = IsLE ? ICmpInst::ICMP_ULT: ICmpInst::ICMP_UGT;
   NewPred = IsSigned ? ICmpInst::getSignedPredicate(NewPred) : NewPred;
   return new ICmpInst(NewPred, Op0, ConstantExpr::getAdd(Op1C, OneOrNegOne));

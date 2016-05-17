@@ -11,9 +11,34 @@
 #define LLVM_DEBUGINFO_CODEVIEW_CODEVIEW_H
 
 #include <cinttypes>
+#include <type_traits>
 
 namespace llvm {
 namespace codeview {
+
+#define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
+  inline Class operator|(Class a, Class b) {                                   \
+    return static_cast<Class>(                                                 \
+        static_cast<std::underlying_type<Class>::type>(a) |                    \
+        static_cast<std::underlying_type<Class>::type>(b));                    \
+  }                                                                            \
+  inline Class operator&(Class a, Class b) {                                   \
+    return static_cast<Class>(                                                 \
+        static_cast<std::underlying_type<Class>::type>(a) &                    \
+        static_cast<std::underlying_type<Class>::type>(b));                    \
+  }                                                                            \
+  inline Class operator~(Class a) {                                            \
+    return static_cast<Class>(                                                 \
+        ~static_cast<std::underlying_type<Class>::type>(a));                   \
+  }                                                                            \
+  inline Class &operator|=(Class &a, Class b) {                                \
+    a = a | b;                                                                 \
+    return a;                                                                  \
+  }                                                                            \
+  inline Class &operator&=(Class &a, Class b) {                                \
+    a = a & b;                                                                 \
+    return a;                                                                  \
+  }
 
 /// These values correspond to the CV_CPU_TYPE_e enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/b2fc64ek.aspx
@@ -149,20 +174,7 @@ enum class ClassOptions : uint16_t {
   Sealed = 0x0400,
   Intrinsic = 0x2000
 };
-
-inline ClassOptions operator|(ClassOptions a, ClassOptions b) {
-  return static_cast<ClassOptions>(static_cast<uint16_t>(a) |
-                                   static_cast<uint16_t>(b));
-}
-
-inline ClassOptions operator&(ClassOptions a, ClassOptions b) {
-  return static_cast<ClassOptions>(static_cast<uint16_t>(a) &
-                                   static_cast<uint16_t>(b));
-}
-
-inline ClassOptions operator~(ClassOptions a) {
-  return static_cast<ClassOptions>(~static_cast<uint16_t>(a));
-}
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ClassOptions)
 
 enum class FrameProcedureOptions : uint32_t {
   None = 0x00000000,
@@ -186,22 +198,7 @@ enum class FrameProcedureOptions : uint32_t {
   GuardCfg = 0x00200000,
   GuardCfw = 0x00400000
 };
-
-inline FrameProcedureOptions operator|(FrameProcedureOptions a,
-                                       FrameProcedureOptions b) {
-  return static_cast<FrameProcedureOptions>(static_cast<uint32_t>(a) |
-                                            static_cast<uint32_t>(b));
-}
-
-inline FrameProcedureOptions operator&(FrameProcedureOptions a,
-                                       FrameProcedureOptions b) {
-  return static_cast<FrameProcedureOptions>(static_cast<uint32_t>(a) &
-                                            static_cast<uint32_t>(b));
-}
-
-inline FrameProcedureOptions operator~(FrameProcedureOptions a) {
-  return static_cast<FrameProcedureOptions>(~static_cast<uint32_t>(a));
-}
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(FrameProcedureOptions)
 
 enum class FunctionOptions : uint8_t {
   None = 0x00,
@@ -209,20 +206,7 @@ enum class FunctionOptions : uint8_t {
   Constructor = 0x02,
   ConstructorWithVirtualBases = 0x04
 };
-
-inline FunctionOptions operator|(FunctionOptions a, FunctionOptions b) {
-  return static_cast<FunctionOptions>(static_cast<uint8_t>(a) |
-                                      static_cast<uint8_t>(b));
-}
-
-inline FunctionOptions operator&(FunctionOptions a, FunctionOptions b) {
-  return static_cast<FunctionOptions>(static_cast<uint8_t>(a) &
-                                      static_cast<uint8_t>(b));
-}
-
-inline FunctionOptions operator~(FunctionOptions a) {
-  return static_cast<FunctionOptions>(~static_cast<uint8_t>(a));
-}
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(FunctionOptions)
 
 enum class HfaKind : uint8_t {
   None = 0x00,
@@ -261,20 +245,7 @@ enum class MethodOptions : uint16_t {
   CompilerGenerated = 0x0100,
   Sealed = 0x0200
 };
-
-inline MethodOptions operator|(MethodOptions a, MethodOptions b) {
-  return static_cast<MethodOptions>(static_cast<uint16_t>(a) |
-                                    static_cast<uint16_t>(b));
-}
-
-inline MethodOptions operator&(MethodOptions a, MethodOptions b) {
-  return static_cast<MethodOptions>(static_cast<uint16_t>(a) &
-                                    static_cast<uint16_t>(b));
-}
-
-inline MethodOptions operator~(MethodOptions a) {
-  return static_cast<MethodOptions>(~static_cast<uint16_t>(a));
-}
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(MethodOptions)
 
 /// Equivalent to CV_modifier_t.
 enum class ModifierOptions : uint16_t {
@@ -283,20 +254,7 @@ enum class ModifierOptions : uint16_t {
   Volatile = 0x0002,
   Unaligned = 0x0004
 };
-
-inline ModifierOptions operator|(ModifierOptions a, ModifierOptions b) {
-  return static_cast<ModifierOptions>(static_cast<uint16_t>(a) |
-                                      static_cast<uint16_t>(b));
-}
-
-inline ModifierOptions operator&(ModifierOptions a, ModifierOptions b) {
-  return static_cast<ModifierOptions>(static_cast<uint16_t>(a) &
-                                      static_cast<uint16_t>(b));
-}
-
-inline ModifierOptions operator~(ModifierOptions a) {
-  return static_cast<ModifierOptions>(~static_cast<uint16_t>(a));
-}
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ModifierOptions)
 
 enum class ModuleSubstreamKind : uint32_t {
   Symbols = 0xf1,
@@ -353,20 +311,7 @@ enum class PointerOptions : uint32_t {
   Restrict = 0x00001000,
   WinRTSmartPointer = 0x00080000
 };
-
-inline PointerOptions operator|(PointerOptions a, PointerOptions b) {
-  return static_cast<PointerOptions>(static_cast<uint16_t>(a) |
-                                     static_cast<uint16_t>(b));
-}
-
-inline PointerOptions operator&(PointerOptions a, PointerOptions b) {
-  return static_cast<PointerOptions>(static_cast<uint16_t>(a) &
-                                     static_cast<uint16_t>(b));
-}
-
-inline PointerOptions operator~(PointerOptions a) {
-  return static_cast<PointerOptions>(~static_cast<uint16_t>(a));
-}
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(PointerOptions)
 
 /// Equivalent to CV_pmtype_e.
 enum class PointerToMemberRepresentation : uint16_t {

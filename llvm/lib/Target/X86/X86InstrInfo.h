@@ -90,7 +90,6 @@ inline static bool isGlobalStubReference(unsigned char TargetFlag) {
   case X86II::MO_GOT:       // normal GOT reference.
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:        // Normal $non_lazy_ptr ref.
   case X86II::MO_DARWIN_NONLAZY:                 // Normal $non_lazy_ptr ref.
-  case X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE: // Hidden $non_lazy_ptr ref.
     return true;
   default:
     return false;
@@ -106,7 +105,6 @@ inline static bool isGlobalRelativeToPICBase(unsigned char TargetFlag) {
   case X86II::MO_GOT:                            // isPICStyleGOT: other global.
   case X86II::MO_PIC_BASE_OFFSET:                // Darwin local global.
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:        // Darwin/32 external global.
-  case X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE: // Darwin/32 hidden global.
   case X86II::MO_TLVP:                           // ??? Pretty sure..
     return true;
   default:

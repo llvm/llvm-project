@@ -201,12 +201,6 @@ namespace X86II {
     /// a PIC-base-relative reference to a non-hidden dyld lazy pointer stub.
     MO_DARWIN_NONLAZY_PIC_BASE,
 
-    /// MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE - On a symbol operand "FOO", this
-    /// indicates that the reference is actually to "FOO$non_lazy_ptr -PICBASE",
-    /// which is a PIC-base-relative reference to a hidden dyld lazy pointer
-    /// stub.
-    MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE,
-
     /// MO_TLVP - On a symbol operand this indicates that the immediate is
     /// some TLS offset.
     ///

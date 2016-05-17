@@ -343,6 +343,26 @@ getBranchTarget21OpValue(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
+/// getBranchTarget21OpValueMM - Return binary encoding of the branch
+/// target operand for microMIPS. If the machine operand requires
+/// relocation, record the relocation and return zero.
+unsigned MipsMCCodeEmitter::
+getBranchTarget21OpValueMM(const MCInst &MI, unsigned OpNo,
+                           SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const {
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, divide by 2.
+  if (MO.isImm()) return MO.getImm() >> 1;
+
+  assert(MO.isExpr() &&
+    "getBranchTarget21OpValueMM expects only expressions or immediates");
+
+  // TODO: Push fixup.
+  return 0;
+}
+
 /// getBranchTarget26OpValue - Return binary encoding of the branch
 /// target operand. If the machine operand requires relocation,
 /// record the relocation and return zero.

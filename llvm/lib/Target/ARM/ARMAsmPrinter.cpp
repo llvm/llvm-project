@@ -515,18 +515,6 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
       OutStreamer->AddBlankLine();
     }
 
-    Stubs = MMIMacho.GetHiddenGVStubList();
-    if (!Stubs.empty()) {
-      OutStreamer->SwitchSection(TLOFMacho.getNonLazySymbolPointerSection());
-      EmitAlignment(2);
-
-      for (auto &Stub : Stubs)
-        emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
-
-      Stubs.clear();
-      OutStreamer->AddBlankLine();
-    }
-
     Stubs = MMIMacho.GetThreadLocalGVStubList();
     if (!Stubs.empty()) {
       // Switch with ".non_lazy_symbol_pointer" directive.
@@ -927,10 +915,8 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
     MachineModuleInfoMachO &MMIMachO =
       MMI->getObjFileInfo<MachineModuleInfoMachO>();
     MachineModuleInfoImpl::StubValueTy &StubSym =
-        GV->isThreadLocal()
-            ? MMIMachO.getThreadLocalGVStubEntry(MCSym)
-            : (GV->hasHiddenVisibility() ? MMIMachO.getHiddenGVStubEntry(MCSym)
-                                         : MMIMachO.getGVStubEntry(MCSym));
+        GV->isThreadLocal() ? MMIMachO.getThreadLocalGVStubEntry(MCSym)
+                            : MMIMachO.getGVStubEntry(MCSym);
 
     if (!StubSym.getPointer())
       StubSym = MachineModuleInfoImpl::StubValueTy(getSymbol(GV),

@@ -875,12 +875,6 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple,
   }
 }
 
-void MCObjectFileInfo::InitMCObjectFileInfo(StringRef TT, Reloc::Model RM,
-                                            CodeModel::Model CM,
-                                            MCContext &ctx) {
-  InitMCObjectFileInfo(Triple(TT), RM, CM, ctx);
-}
-
 MCSection *MCObjectFileInfo::getDwarfTypesSection(uint64_t Hash) const {
   return Ctx->getELFSection(".debug_types", ELF::SHT_PROGBITS, ELF::SHF_GROUP,
                             0, utostr(Hash));

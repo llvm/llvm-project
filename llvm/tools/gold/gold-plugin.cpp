@@ -35,6 +35,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
@@ -189,6 +190,13 @@ namespace options {
   // bitcode file, listing the files it imports from in plain text. This is to
   // support distributed build file staging.
   static bool thinlto_emit_imports_files = false;
+  // Option to control where files for a distributed backend (the individual
+  // index files and optional imports files) are created.
+  // If specified, expects a string of the form "oldprefix:newprefix", and
+  // instead of generating these files in the same directory path as the
+  // corresponding bitcode file, will use a path formed by replacing the
+  // bitcode file's path prefix matching oldprefix with newprefix.
+  static std::string thinlto_prefix_replace;
   // Additional options to pass into the code generator.
   // Note: This array will contain all plugin options which are not claimed
   // as plugin exclusive to pass to the code generator.
@@ -224,6 +232,10 @@ namespace options {
       thinlto_index_only = true;
     } else if (opt == "thinlto-emit-imports-files") {
       thinlto_emit_imports_files = true;
+    } else if (opt.startswith("thinlto-prefix-replace=")) {
+      thinlto_prefix_replace = opt.substr(strlen("thinlto-prefix-replace="));
+      if (thinlto_prefix_replace.find(";") == std::string::npos)
+        message(LDPL_FATAL, "thinlto-prefix-replace expects 'old;new' format");
     } else if (opt.size() == 2 && opt[0] == 'O') {
       if (opt[1] < '0' || opt[1] > '3')
         message(LDPL_FATAL, "Optimization level must be between 0 and 3");
@@ -1202,6 +1214,37 @@ static void thinLTOBackends(raw_fd_ostream *ApiFile,
     Task.cleanup();
 }
 
+/// Parse the thinlto_prefix_replace option into the \p OldPrefix and
+/// \p NewPrefix strings, if it was specified.
+static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
+                                      std::string &NewPrefix) {
+  StringRef PrefixReplace = options::thinlto_prefix_replace;
+  assert(PrefixReplace.empty() || PrefixReplace.find(";") != StringRef::npos);
+  std::pair<StringRef, StringRef> Split = PrefixReplace.split(";");
+  OldPrefix = Split.first.str();
+  NewPrefix = Split.second.str();
+}
+
+/// Given the original \p Path to an output file, replace any path
+/// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
+/// resulting directory if it does not yet exist.
+static std::string getThinLTOOutputFile(const std::string &Path,
+                                        const std::string &OldPrefix,
+                                        const std::string &NewPrefix) {
+  if (OldPrefix.empty() && NewPrefix.empty())
+    return Path;
+  SmallString<128> NewPath(Path);
+  llvm::sys::path::replace_path_prefix(NewPath, OldPrefix, NewPrefix);
+  StringRef ParentPath = llvm::sys::path::parent_path(NewPath.str());
+  if (!ParentPath.empty()) {
+    // Make sure the new directory exists, creating it if necessary.
+    if (std::error_code EC = llvm::sys::fs::create_directories(ParentPath))
+      llvm::errs() << "warning: could not create directory '" << ParentPath
+                   << "': " << EC.message() << '\n';
+  }
+  return NewPath.str();
+}
+
 /// Perform ThinLTO link, which creates the combined index file.
 /// Also, either launch backend threads or (under thinlto-index-only)
 /// emit individual index files for distributed backends and exit.
@@ -1240,17 +1283,25 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     ComputeCrossModuleImport(CombinedIndex, ModuleToDefinedGVSummaries,
                              ImportLists, ExportLists);
 
+    // If the thinlto-prefix-replace option was specified, parse it and
+    // extract the old and new prefixes.
+    std::string OldPrefix, NewPrefix;
+    getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
+
     // For each input bitcode file, generate an individual index that
     // contains summaries only for its own global values, and for any that
     // should be imported.
     for (claimed_file &F : Modules) {
       PluginInputFile InputFile(F.handle);
       std::error_code EC;
-      raw_fd_ostream OS((Twine(InputFile.file().name) + ".thinlto.bc").str(),
-                        EC, sys::fs::OpenFlags::F_None);
+
+      std::string NewModulePath =
+          getThinLTOOutputFile(InputFile.file().name, OldPrefix, NewPrefix);
+      raw_fd_ostream OS((Twine(NewModulePath) + ".thinlto.bc").str(), EC,
+                        sys::fs::OpenFlags::F_None);
       if (EC)
         message(LDPL_FATAL, "Unable to open %s.thinlto.bc for writing: %s",
-                InputFile.file().name, EC.message().c_str());
+                NewModulePath.c_str(), EC.message().c_str());
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
       std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
@@ -1262,10 +1313,10 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
       if (options::thinlto_emit_imports_files) {
         if ((EC = EmitImportsFiles(
                  InputFile.file().name,
-                 (Twine(InputFile.file().name) + ".imports").str(),
+                 (Twine(NewModulePath) + ".imports").str(),
                  ImportLists)))
           message(LDPL_FATAL, "Unable to open %s.imports",
-                  InputFile.file().name, EC.message().c_str());
+                  NewModulePath.c_str(), EC.message().c_str());
       }
     }
 

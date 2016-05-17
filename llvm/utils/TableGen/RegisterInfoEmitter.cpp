@@ -16,22 +16,38 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "SequenceToOffsetTable.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/SetTheory.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <iterator>
 #include <set>
+#include <string>
 #include <vector>
+
 using namespace llvm;
 
 namespace {
+
 class RegisterInfoEmitter {
   RecordKeeper &Records;
+
 public:
   RegisterInfoEmitter(RecordKeeper &R) : Records(R) {}
 
@@ -65,7 +81,8 @@ private:
   void emitComposeSubRegIndexLaneMask(raw_ostream &OS, CodeGenRegBank &RegBank,
                                       const std::string &ClassName);
 };
-} // End anonymous namespace
+
+} // end anonymous namespace
 
 // runEnums - Print out enum values for all of the registers.
 void RegisterInfoEmitter::runEnums(raw_ostream &OS,
@@ -81,7 +98,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
   emitSourceFileHeader("Target Register Enum Values", OS);
 
   OS << "\n#ifdef GET_REGINFO_ENUM\n";
-  OS << "#undef GET_REGINFO_ENUM\n";
+  OS << "#undef GET_REGINFO_ENUM\n\n";
 
   OS << "namespace llvm {\n\n";
 
@@ -100,7 +117,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
   OS << "  NUM_TARGET_REGS \t// " << Registers.size()+1 << "\n";
   OS << "};\n";
   if (!Namespace.empty())
-    OS << "}\n";
+    OS << "} // end namespace " << Namespace << "\n";
 
   const auto &RegisterClasses = Bank.getRegClasses();
   if (!RegisterClasses.empty()) {
@@ -109,7 +126,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     assert(RegisterClasses.size() <= 0xffff &&
            "Too many register classes to fit in tables");
 
-    OS << "\n// Register classes\n";
+    OS << "\n// Register classes\n\n";
     if (!Namespace.empty())
       OS << "namespace " << Namespace << " {\n";
     OS << "enum {\n";
@@ -118,14 +135,14 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
          << " = " << RC.EnumValue << ",\n";
     OS << "\n  };\n";
     if (!Namespace.empty())
-      OS << "}\n";
+      OS << "} // end namespace " << Namespace << "\n\n";
   }
 
   const std::vector<Record*> &RegAltNameIndices = Target.getRegAltNameIndices();
   // If the only definition is the default NoRegAltName, we don't need to
   // emit anything.
   if (RegAltNameIndices.size() > 1) {
-    OS << "\n// Register alternate name indices\n";
+    OS << "\n// Register alternate name indices\n\n";
     if (!Namespace.empty())
       OS << "namespace " << Namespace << " {\n";
     OS << "enum {\n";
@@ -134,12 +151,12 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
     OS << "  NUM_TARGET_REG_ALT_NAMES = " << RegAltNameIndices.size() << "\n";
     OS << "};\n";
     if (!Namespace.empty())
-      OS << "}\n";
+      OS << "} // end namespace " << Namespace << "\n\n";
   }
 
   auto &SubRegIndices = Bank.getSubRegIndices();
   if (!SubRegIndices.empty()) {
-    OS << "\n// Subregister indices\n";
+    OS << "\n// Subregister indices\n\n";
     std::string Namespace = SubRegIndices.front().getNamespace();
     if (!Namespace.empty())
       OS << "namespace " << Namespace << " {\n";
@@ -149,10 +166,10 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
       OS << "  " << Idx.getName() << ",\t// " << ++i << "\n";
     OS << "  NUM_TARGET_SUBREGS\n};\n";
     if (!Namespace.empty())
-      OS << "}\n";
+      OS << "} // end namespace " << Namespace << "\n\n";
   }
 
-  OS << "} // End llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_ENUM\n\n";
 }
 
@@ -800,7 +817,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   emitSourceFileHeader("MC Register Information", OS);
 
   OS << "\n#ifdef GET_REGINFO_MC_DESC\n";
-  OS << "#undef GET_REGINFO_MC_DESC\n";
+  OS << "#undef GET_REGINFO_MC_DESC\n\n";
 
   const auto &Regs = RegBank.getRegisters();
 
@@ -999,7 +1016,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     OS << "\n  };\n\n";
 
   }
-  OS << "}\n\n";
+  OS << "} // end anonymous namespace\n\n";
 
   RegClassStrings.layout();
   OS << "extern const char " << TargetName << "RegClassStrings[] = {\n";
@@ -1023,7 +1040,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
        << RC.SpillSize/8 << ", "
        << RC.SpillAlignment/8 << ", "
        << RC.CopyCost << ", "
-       << RC.Allocatable << " },\n";
+       << ( RC.Allocatable ? "true" : "false" ) << " },\n";
   }
 
   OS << "};\n\n";
@@ -1066,7 +1083,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "}\n\n";
 
-  OS << "} // End llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_MC_DESC\n\n";
 }
 
@@ -1076,7 +1093,7 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
   emitSourceFileHeader("Register Information Header Fragment", OS);
 
   OS << "\n#ifdef GET_REGINFO_HEADER\n";
-  OS << "#undef GET_REGINFO_HEADER\n";
+  OS << "#undef GET_REGINFO_HEADER\n\n";
 
   const std::string &TargetName = Target.getName();
   std::string ClassName = TargetName + "GenRegisterInfo";
@@ -1130,9 +1147,9 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
       // Output the extern for the instance.
       OS << "  extern const TargetRegisterClass " << Name << "RegClass;\n";
     }
-    OS << "} // end of namespace " << TargetName << "\n\n";
+    OS << "} // end namespace " << RegisterClasses.front().Namespace << "\n\n";
   }
-  OS << "} // End llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_HEADER\n\n";
 }
 
@@ -1145,7 +1162,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   emitSourceFileHeader("Target Register and Register Classes Information", OS);
 
   OS << "\n#ifdef GET_REGINFO_TARGET_DESC\n";
-  OS << "#undef GET_REGINFO_TARGET_DESC\n";
+  OS << "#undef GET_REGINFO_TARGET_DESC\n\n";
 
   OS << "namespace llvm {\n\n";
 
@@ -1325,7 +1342,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
       OS << "  };\n\n";
     }
 
-    OS << "}\n";
+    OS << "} // end namespace " << RegisterClasses.front().Namespace << "\n";
   }
 
   OS << "\nnamespace {\n";
@@ -1333,19 +1350,20 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   for (const auto &RC : RegisterClasses)
     OS << "    &" << RC.getQualifiedName() << "RegClass,\n";
   OS << "  };\n";
-  OS << "}\n";       // End of anonymous namespace...
+  OS << "} // end anonymous namespace\n";
 
   // Emit extra information about registers.
   const std::string &TargetName = Target.getName();
   OS << "\nstatic const TargetRegisterInfoDesc "
      << TargetName << "RegInfoDesc[] = { // Extra Descriptors\n";
-  OS << "  { 0, 0 },\n";
+  OS << "  { 0, false },\n";
 
   const auto &Regs = RegBank.getRegisters();
   for (const auto &Reg : Regs) {
     OS << "  { ";
     OS << Reg.CostPerUse << ", "
-       << int(AllocatableRegs.count(Reg.TheDef)) << " },\n";
+       << ( AllocatableRegs.count(Reg.TheDef) != 0 ? "true" : "false" )
+       << " },\n";
   }
   OS << "};\n";      // End of register descriptors...
 
@@ -1433,7 +1451,6 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "}\n\n";
 
-
   // Emit CalleeSavedRegs information.
   std::vector<Record*> CSRSets =
     Records.getAllDerivedDefinitions("CalleeSavedRegs");
@@ -1501,7 +1518,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "      MF.getSubtarget().getFrameLowering());\n"
      << "}\n\n";
 
-  OS << "} // End llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_REGINFO_TARGET_DESC\n\n";
 }
 
@@ -1522,4 +1539,4 @@ void EmitRegisterInfo(RecordKeeper &RK, raw_ostream &OS) {
   RegisterInfoEmitter(RK).run(OS);
 }
 
-} // End llvm namespace
+} // end namespace llvm

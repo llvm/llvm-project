@@ -1055,14 +1055,6 @@ findBasePointers(const StatepointLiveSetTy &live,
             DT->dominates(cast<Instruction>(base)->getParent(),
                           cast<Instruction>(ptr)->getParent())) &&
            "The base we found better dominate the derived pointer");
-
-    // If you see this trip and like to live really dangerously, the code should
-    // be correct, just with idioms the verifier can't handle.  You can try
-    // disabling the verifier at your own substantial risk.
-    assert(!isa<ConstantPointerNull>(base) &&
-           "the relocation code needs adjustment to handle the relocation of "
-           "a null pointer constant without causing false positives in the "
-           "safepoint ir verifier.");
   }
 }
 

@@ -1521,11 +1521,22 @@ const SCEV *ScalarEvolution::getZeroExtendExpr(const SCEV *Op,
                 getSignExtendExpr(Step, Ty), L, AR->getNoWrapFlags());
           }
         }
+      }
 
-        // If the backedge is guarded by a comparison with the pre-inc value
-        // the addrec is safe. Also, if the entry is guarded by a comparison
-        // with the start value and the backedge is guarded by a comparison
-        // with the post-inc value, the addrec is safe.
+      // Normally, in the cases we can prove no-overflow via a
+      // backedge guarding condition, we can also compute a backedge
+      // taken count for the loop.  The exceptions are assumptions and
+      // guards present in the loop -- SCEV is not great at exploiting
+      // these to compute max backedge taken counts, but can still use
+      // these to prove lack of overflow.  Use this fact to avoid
+      // doing extra work that may not pay off.
+      if (!isa<SCEVCouldNotCompute>(MaxBECount) || HasGuards ||
+          !AC.assumptions().empty()) {
+        // If the backedge is guarded by a comparison with the pre-inc
+        // value the addrec is safe. Also, if the entry is guarded by
+        // a comparison with the start value and the backedge is
+        // guarded by a comparison with the post-inc value, the addrec
+        // is safe.
         if (isKnownPositive(Step)) {
           const SCEV *N = getConstant(APInt::getMinValue(BitWidth) -
                                       getUnsignedRange(Step).getUnsignedMax());
@@ -1533,7 +1544,8 @@ const SCEV *ScalarEvolution::getZeroExtendExpr(const SCEV *Op,
               (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_ULT, Start, N) &&
                isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT,
                                            AR->getPostIncExpr(*this), N))) {
-            // Cache knowledge of AR NUW, which is propagated to this AddRec.
+            // Cache knowledge of AR NUW, which is propagated to this
+            // AddRec.
             const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(SCEV::FlagNUW);
             // Return the expression with the addrec on the outside.
             return getAddRecExpr(
@@ -1547,8 +1559,9 @@ const SCEV *ScalarEvolution::getZeroExtendExpr(const SCEV *Op,
               (isLoopEntryGuardedByCond(L, ICmpInst::ICMP_UGT, Start, N) &&
                isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT,
                                            AR->getPostIncExpr(*this), N))) {
-            // Cache knowledge of AR NW, which is propagated to this AddRec.
-            // Negative step causes unsigned wrap, but it still can't self-wrap.
+            // Cache knowledge of AR NW, which is propagated to this
+            // AddRec.  Negative step causes unsigned wrap, but it
+            // still can't self-wrap.
             const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(SCEV::FlagNW);
             // Return the expression with the addrec on the outside.
             return getAddRecExpr(
