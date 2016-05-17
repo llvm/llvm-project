@@ -178,6 +178,10 @@ public:
   /// If no substitution exists, return StandardID.
   IdentifyingPassPtr getPassSubstitution(AnalysisID StandardID) const;
 
+  /// Return true if the pass has been substituted by the target or
+  /// overridden on the command line.
+  bool isPassSubstitutedOrOverridden(AnalysisID ID) const;
+
   /// Return true if the optimized regalloc pipeline is enabled.
   bool getOptimizeRegAlloc() const;
 

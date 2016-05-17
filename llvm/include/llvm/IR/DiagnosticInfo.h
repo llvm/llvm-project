@@ -34,7 +34,7 @@ class Module;
 class SMDiagnostic;
 
 /// \brief Defines the different supported severity of a diagnostic.
-enum DiagnosticSeverity {
+enum DiagnosticSeverity : char {
   DS_Error,
   DS_Warning,
   DS_Remark,

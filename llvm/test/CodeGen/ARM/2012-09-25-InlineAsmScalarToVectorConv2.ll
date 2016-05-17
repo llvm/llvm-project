@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=arm-eabi -mcpu=cortex-a8 %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=arm-eabi -mcpu=cortex-a8 -exit-on-error %s -o - 2>&1 | FileCheck %s
 
 ; Check for error message:
 ; CHECK: scalar-to-vector conversion failed, possible invalid constraint for vector type

@@ -125,14 +125,14 @@ struct CompileUnitIdentifiers {
   const char *DWOName = "";
 };
 
-static const char *getIndexedString(uint32_t Form, DataExtractor InfoData,
-                                    uint32_t &InfoOffset, StringRef StrOffsets,
-                                    StringRef Str) {
+static Expected<const char *>
+getIndexedString(uint32_t Form, DataExtractor InfoData, uint32_t &InfoOffset,
+                 StringRef StrOffsets, StringRef Str) {
   if (Form == dwarf::DW_FORM_string)
     return InfoData.getCStr(&InfoOffset);
-  assert(Form == dwarf::DW_FORM_GNU_str_index && "Only string and str_index "
-                                                 "forms are supported for DWP "
-                                                 "string attributes");
+  if (Form != dwarf::DW_FORM_GNU_str_index)
+    return make_error<DWPError>(
+        "string field encoded without DW_FORM_string or DW_FORM_GNU_str_index");
   auto StrIndex = InfoData.getULEB128(&InfoOffset);
   DataExtractor StrOffsetsData(StrOffsets, true, 0);
   uint32_t StrOffsetsOffset = 4 * StrIndex;
@@ -141,9 +141,10 @@ static const char *getIndexedString(uint32_t Form, DataExtractor InfoData,
   return StrData.getCStr(&StrOffset);
 }
 
-static CompileUnitIdentifiers getCUIdentifiers(StringRef Abbrev, StringRef Info,
-                                               StringRef StrOffsets,
-                                               StringRef Str) {
+static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
+                                                         StringRef Info,
+                                                         StringRef StrOffsets,
+                                                         StringRef Str) {
   uint32_t Offset = 0;
   DataExtractor InfoData(Info, true, 0);
   InfoData.getU32(&Offset); // Length
@@ -156,9 +157,8 @@ static CompileUnitIdentifiers getCUIdentifiers(StringRef Abbrev, StringRef Info,
   DataExtractor AbbrevData(Abbrev, true, 0);
   uint32_t AbbrevOffset = getCUAbbrev(Abbrev, AbbrCode);
   uint64_t Tag = AbbrevData.getULEB128(&AbbrevOffset);
-  (void)Tag;
-  // FIXME: Real error handling
-  assert(Tag == dwarf::DW_TAG_compile_unit);
+  if (Tag != dwarf::DW_TAG_compile_unit)
+    return make_error<DWPError>("top level DIE is not a compile unit");
   // DW_CHILDREN
   AbbrevData.getU8(&AbbrevOffset);
   uint32_t Name;
@@ -169,11 +169,19 @@ static CompileUnitIdentifiers getCUIdentifiers(StringRef Abbrev, StringRef Info,
          (Name != 0 || Form != 0)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
-      ID.Name = getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
+      Expected<const char *> EName =
+          getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
+      if (!EName)
+        return EName.takeError();
+      ID.Name = *EName;
       break;
     }
     case dwarf::DW_AT_GNU_dwo_name: {
-      ID.DWOName = getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
+      Expected<const char *> EName =
+          getIndexedString(Form, InfoData, Offset, StrOffsets, Str);
+      if (!EName)
+        return EName.takeError();
+      ID.DWOName = *EName;
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
@@ -346,24 +354,31 @@ static bool consumeCompressedDebugSectionHeader(StringRef &data,
   return true;
 }
 
-void printDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
-                         const CompileUnitIdentifiers &ID, StringRef DWPName) {
-  errs() << "Duplicate DWO ID (" << PrevE.first << ") in '" << PrevE.second.Name
-         << '\'';
-  if (!PrevE.second.DWPName.empty()) {
-    errs() << " (from ";
-    if (!PrevE.second.DWOName.empty())
-      errs() << '\'' << PrevE.second.DWOName << "' in ";
-    errs() << "'" << PrevE.second.DWPName.str() << "')";
-  }
-  errs() << " and '" << ID.Name << '\'';
+std::string buildDWODescription(StringRef Name, StringRef DWPName, StringRef DWOName) {
+  std::string Text = "\'";
+  Text += Name;
+  Text += '\'';
   if (!DWPName.empty()) {
-    errs() << " (from ";
-    if (*ID.DWOName)
-      errs() << '\'' << ID.DWOName << "\' in ";
-    errs() << '\'' << DWPName << "')";
+    Text += " (from ";
+    if (!DWOName.empty()) {
+      Text += '\'';
+      Text += DWOName;
+      Text += "' in ";
+    }
+    Text += '\'';
+    Text += DWPName;
+    Text += "')";
   }
-  errs() << '\n';
+  return Text;
+}
+
+std::string
+buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
+                    const CompileUnitIdentifiers &ID, StringRef DWPName) {
+  return std::string("Duplicate DWO ID (") + utohexstr(PrevE.first) + ") in " +
+         buildDWODescription(PrevE.second.Name, PrevE.second.DWPName,
+                             PrevE.second.DWOName) +
+         " and " + buildDWODescription(ID.Name, DWPName, ID.DWOName);
 }
 static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
@@ -499,15 +514,16 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           continue;
         auto P =
             IndexEntries.insert(std::make_pair(E.getSignature(), CurEntry));
-        CompileUnitIdentifiers ID = getCUIdentifiers(
+        Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
             getSubsection(AbbrevSection, E, DW_SECT_ABBREV),
             getSubsection(InfoSection, E, DW_SECT_INFO),
             getSubsection(CurStrOffsetSection, E, DW_SECT_STR_OFFSETS),
             CurStrSection);
-        if (!P.second) {
-          printDuplicateError(*P.first, ID, Input);
-          return make_error<DWPError>("Duplicate DWO ID");
-        }
+        if (!EID)
+          return EID.takeError();
+        const auto &ID = *EID;
+        if (!P.second)
+          return make_error<DWPError>(buildDuplicateError(*P.first, ID, Input));
         auto &NewEntry = P.first->second;
         NewEntry.Name = ID.Name;
         NewEntry.DWOName = ID.DWOName;
@@ -532,13 +548,14 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
                            ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO]);
       }
     } else {
-      CompileUnitIdentifiers ID = getCUIdentifiers(
+      Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
           AbbrevSection, InfoSection, CurStrOffsetSection, CurStrSection);
+      if (!EID)
+        return EID.takeError();
+      const auto &ID = *EID;
       auto P = IndexEntries.insert(std::make_pair(ID.Signature, CurEntry));
-      if (!P.second) {
-        printDuplicateError(*P.first, ID, "");
-        return make_error<DWPError>("Duplicate DWO ID");
-      }
+      if (!P.second)
+        return make_error<DWPError>(buildDuplicateError(*P.first, ID, ""));
       P.first->second.Name = ID.Name;
       P.first->second.DWOName = ID.DWOName;
       addAllTypes(Out, TypeIndexEntries, TypesSection, CurTypesSection,

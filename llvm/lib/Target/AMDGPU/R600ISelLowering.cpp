@@ -1679,6 +1679,7 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     EVT ElemVT = VT.getVectorElementType();
     SDValue Loads[4];
 
+    assert(NumElemVT <= 4);
     assert(NumElemVT >= StackWidth && "Stack width cannot be greater than "
                                       "vector width in load");
 
@@ -1692,11 +1693,8 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
                              DAG.getTargetConstant(Channel, DL, MVT::i32),
                              Op.getOperand(2));
     }
-    for (unsigned i = NumElemVT; i < 4; ++i) {
-      Loads[i] = DAG.getUNDEF(ElemVT);
-    }
-    EVT TargetVT = EVT::getVectorVT(*DAG.getContext(), ElemVT, 4);
-    LoweredLoad = DAG.getBuildVector(TargetVT, DL, Loads);
+    EVT TargetVT = EVT::getVectorVT(*DAG.getContext(), ElemVT, NumElemVT);
+    LoweredLoad = DAG.getBuildVector(TargetVT, DL, makeArrayRef(Loads, NumElemVT));
   } else {
     LoweredLoad = DAG.getNode(AMDGPUISD::REGISTER_LOAD, DL, VT,
                               Chain, Ptr,

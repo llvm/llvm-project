@@ -539,6 +539,20 @@ bool PassBuilder::parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
   }
 }
 
+void PassBuilder::crossRegisterProxies(LoopAnalysisManager &LAM,
+                                       FunctionAnalysisManager &FAM,
+                                       CGSCCAnalysisManager &CGAM,
+                                       ModuleAnalysisManager &MAM) {
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
+  CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(FAM); });
+  CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
+  FAM.registerPass([&] { return CGSCCAnalysisManagerFunctionProxy(CGAM); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+  FAM.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
+  LAM.registerPass([&] { return FunctionAnalysisManagerLoopProxy(FAM); });
+}
+
 bool PassBuilder::parseModulePassPipeline(ModulePassManager &MPM,
                                           StringRef &PipelineText,
                                           bool VerifyEachPass,
@@ -676,18 +690,4 @@ bool PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   }
 
   return true;
-}
-
-void PassBuilder::crossRegisterProxies(LoopAnalysisManager &LAM,
-                                       FunctionAnalysisManager &FAM,
-                                       CGSCCAnalysisManager &CGAM,
-                                       ModuleAnalysisManager &MAM) {
-  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
-  MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
-  CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(FAM); });
-  CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
-  FAM.registerPass([&] { return CGSCCAnalysisManagerFunctionProxy(CGAM); });
-  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
-  FAM.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });
-  LAM.registerPass([&] { return FunctionAnalysisManagerLoopProxy(FAM); });
 }

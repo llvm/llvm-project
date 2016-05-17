@@ -1,6 +1,6 @@
-; RUN: not llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s 2>&1 | FileCheck %s
-; RUN: not llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s 2>&1 | FileCheck %s
-; RUN: not llc -march=r600 -mcpu=cypress < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=SI -verify-machineinstrs -exit-on-error < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -exit-on-error < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=r600 -mcpu=cypress -exit-on-error < %s 2>&1 | FileCheck %s
 
 ; CHECK: in function test_call_external{{.*}}: unsupported call to function external_function
 

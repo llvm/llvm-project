@@ -236,3 +236,5 @@
   dsra $4, $5, -1              # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
   dsra32 $4, $5, 32            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
   dsra32 $4, $5, -1            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
+                               # bposge32 is microMIPS DSP instruction
+  bposge32 342                 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled

@@ -1126,7 +1126,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // FIXME: the usual format is actually better if unwinding isn't needed.
     if (produceCompactUnwindFrame(MF) && !SavedRegs.test(PairedReg)) {
       SavedRegs.set(PairedReg);
-      ExtraCSSpill = true;
+      if (AArch64::GPR64RegClass.contains(PairedReg) &&
+          !RegInfo->isReservedReg(MF, PairedReg))
+        ExtraCSSpill = true;
     }
   }
 

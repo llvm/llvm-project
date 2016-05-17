@@ -47,6 +47,6 @@ define void @test_private_array_ptr_calc(i32 addrspace(1)* noalias %out, i32 add
   ret void
 }
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-max-waves-per-eu"="1" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind convergent }

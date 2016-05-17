@@ -318,17 +318,14 @@ void AsmPrinter::EmitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
       OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Weak);
     }
     return;
-  case GlobalValue::AppendingLinkage:
-    // FIXME: appending linkage variables should go into a section of
-    // their name or something.  For now, just emit them as external.
   case GlobalValue::ExternalLinkage:
-    // If external or appending, declare as a global symbol.
-    // .globl _foo
+    // If external, declare as a global symbol: .globl _foo
     OutStreamer->EmitSymbolAttribute(GVSym, MCSA_Global);
     return;
   case GlobalValue::PrivateLinkage:
   case GlobalValue::InternalLinkage:
     return;
+  case GlobalValue::AppendingLinkage:
   case GlobalValue::AvailableExternallyLinkage:
   case GlobalValue::ExternalWeakLinkage:
     llvm_unreachable("Should never emit this");
@@ -1562,7 +1559,7 @@ bool AsmPrinter::EmitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  return false;
+  report_fatal_error("unknown special variable");
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -pgo-icall-prom -pass-remarks-missed=PGOIndirectCallPromotion -S 2>& 1 | FileCheck %s
+; RUN: opt < %s -passes=pgo-icall-prom -pass-remarks-missed=PGOIndirectCallPromotion -S 2>& 1 | FileCheck %s
 
 ; CHECK: remark: <unknown>:0:0: Cannot promote indirect call to func4 with count of 1234: The number of arguments mismatch
 ; CHECK: remark: <unknown>:0:0: Cannot promote indirect call to 11517462787082255043 with count of 2345: Cannot find the target

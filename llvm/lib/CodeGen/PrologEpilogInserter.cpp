@@ -47,19 +47,41 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pei"
 
+typedef SmallVector<MachineBasicBlock *, 4> MBBVector;
+static void doSpillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCXFrameIndex,
+                                   const MBBVector &SaveBlocks,
+                                   const MBBVector &RestoreBlocks);
+
+static void doScavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger *RS);
+
 namespace {
 class PEI : public MachineFunctionPass {
 public:
   static char ID;
-  PEI() : MachineFunctionPass(ID) {
+  explicit PEI(const TargetMachine *TM = nullptr) : MachineFunctionPass(ID) {
     initializePEIPass(*PassRegistry::getPassRegistry());
+
+    if (TM && (!TM->usesPhysRegsForPEI())) {
+      SpillCalleeSavedRegisters = [](MachineFunction &, RegScavenger *,
+                                     unsigned &, unsigned &, const MBBVector &,
+                                     const MBBVector &) {};
+      ScavengeFrameVirtualRegs = [](MachineFunction &, RegScavenger *) {};
+    } else {
+      SpillCalleeSavedRegisters = doSpillCalleeSavedRegs;
+      ScavengeFrameVirtualRegs = doScavengeFrameVirtualRegs;
+      UsesCalleeSaves = true;
+    }
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::AllVRegsAllocated);
+    MachineFunctionProperties MFP;
+    if (UsesCalleeSaves)
+      MFP.set(MachineFunctionProperties::Property::AllVRegsAllocated);
+    return MFP;
   }
 
   /// runOnMachineFunction - Insert prolog/epilog code and replace abstract
@@ -68,32 +90,40 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
 private:
+  std::function<void(MachineFunction &MF, RegScavenger *RS,
+                     unsigned &MinCSFrameIndex, unsigned &MaxCSFrameIndex,
+                     const MBBVector &SaveBlocks,
+                     const MBBVector &RestoreBlocks)>
+      SpillCalleeSavedRegisters;
+  std::function<void(MachineFunction &MF, RegScavenger *RS)>
+      ScavengeFrameVirtualRegs;
+
+  bool UsesCalleeSaves = false;
+
   RegScavenger *RS;
 
   // MinCSFrameIndex, MaxCSFrameIndex - Keeps the range of callee saved
   // stack frame indexes.
-  unsigned MinCSFrameIndex, MaxCSFrameIndex;
+  unsigned MinCSFrameIndex = std::numeric_limits<unsigned>::max();
+  unsigned MaxCSFrameIndex = 0;
 
   // Save and Restore blocks of the current function. Typically there is a
   // single save block, unless Windows EH funclets are involved.
-  SmallVector<MachineBasicBlock *, 1> SaveBlocks;
-  SmallVector<MachineBasicBlock *, 4> RestoreBlocks;
+  MBBVector SaveBlocks;
+  MBBVector RestoreBlocks;
 
   // Flag to control whether to use the register scavenger to resolve
   // frame index materialization registers. Set according to
   // TRI->requiresFrameIndexScavenging() for the current function.
   bool FrameIndexVirtualScavenging;
 
-  void calculateSets(MachineFunction &Fn);
-  void calculateCallsInformation(MachineFunction &Fn);
-  void assignCalleeSavedSpillSlots(MachineFunction &Fn,
-                                   const BitVector &SavedRegs);
-  void insertCSRSpillsAndRestores(MachineFunction &Fn);
+  void calculateCallFrameInfo(MachineFunction &Fn);
+  void calculateSaveRestoreBlocks(MachineFunction &Fn);
+
   void calculateFrameObjectOffsets(MachineFunction &Fn);
   void replaceFrameIndices(MachineFunction &Fn);
   void replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
                            int &SPAdj);
-  void scavengeFrameVirtualRegs(MachineFunction &Fn);
   void insertPrologEpilogCode(MachineFunction &Fn);
 };
 } // namespace
@@ -106,14 +136,19 @@ WarnStackSize("warn-stack-size", cl::Hidden, cl::init((unsigned)-1),
               cl::desc("Warn for stack size bigger than the given"
                        " number"));
 
-INITIALIZE_PASS_BEGIN(PEI, "prologepilog",
-                "Prologue/Epilogue Insertion", false, false)
+INITIALIZE_TM_PASS_BEGIN(PEI, "prologepilog", "Prologue/Epilogue Insertion",
+                         false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
-INITIALIZE_PASS_END(PEI, "prologepilog",
-                    "Prologue/Epilogue Insertion & Frame Finalization",
-                    false, false)
+INITIALIZE_TM_PASS_END(PEI, "prologepilog",
+                       "Prologue/Epilogue Insertion & Frame Finalization",
+                       false, false)
+
+MachineFunctionPass *
+llvm::createPrologEpilogInserterPass(const TargetMachine *TM) {
+  return new PEI(TM);
+}
 
 STATISTIC(NumScavengedRegs, "Number of frame index regs scavenged");
 STATISTIC(NumBytesStackSpace,
@@ -127,36 +162,6 @@ void PEI::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-/// Compute the set of return blocks
-void PEI::calculateSets(MachineFunction &Fn) {
-  const MachineFrameInfo *MFI = Fn.getFrameInfo();
-
-  // Even when we do not change any CSR, we still want to insert the
-  // prologue and epilogue of the function.
-  // So set the save points for those.
-
-  // Use the points found by shrink-wrapping, if any.
-  if (MFI->getSavePoint()) {
-    SaveBlocks.push_back(MFI->getSavePoint());
-    assert(MFI->getRestorePoint() && "Both restore and save must be set");
-    MachineBasicBlock *RestoreBlock = MFI->getRestorePoint();
-    // If RestoreBlock does not have any successor and is not a return block
-    // then the end point is unreachable and we do not need to insert any
-    // epilogue.
-    if (!RestoreBlock->succ_empty() || RestoreBlock->isReturnBlock())
-      RestoreBlocks.push_back(RestoreBlock);
-    return;
-  }
-
-  // Save refs to entry and return blocks.
-  SaveBlocks.push_back(&Fn.front());
-  for (MachineBasicBlock &MBB : Fn) {
-    if (MBB.isEHFuncletEntry())
-      SaveBlocks.push_back(&MBB);
-    if (MBB.isReturnBlock())
-      RestoreBlocks.push_back(&MBB);
-  }
-}
 
 /// StackObjSet - A set of stack object indexes
 typedef SmallSetVector<int, 8> StackObjSet;
@@ -169,30 +174,21 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   const TargetRegisterInfo *TRI = Fn.getSubtarget().getRegisterInfo();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
 
-  assert(!Fn.getRegInfo().getNumVirtRegs() && "Regalloc must assign all vregs");
-
   RS = TRI->requiresRegisterScavenging(Fn) ? new RegScavenger() : nullptr;
   FrameIndexVirtualScavenging = TRI->requiresFrameIndexScavenging(Fn);
 
   // Calculate the MaxCallFrameSize and AdjustsStack variables for the
   // function's frame information. Also eliminates call frame pseudo
   // instructions.
-  calculateCallsInformation(Fn);
+  calculateCallFrameInfo(Fn);
 
-  // Determine which of the registers in the callee save list should be saved.
-  BitVector SavedRegs;
-  TFI->determineCalleeSaves(Fn, SavedRegs, RS);
-
-  // Insert spill code for any callee saved registers that are modified.
-  assignCalleeSavedSpillSlots(Fn, SavedRegs);
-
-  // Determine placement of CSR spill/restore code:
+  // Determine placement of CSR spill/restore code and prolog/epilog code:
   // place all spills in the entry block, all restores in return blocks.
-  calculateSets(Fn);
+  calculateSaveRestoreBlocks(Fn);
 
-  // Add the code to save and restore the callee saved registers.
-  if (!F->hasFnAttribute(Attribute::Naked))
-    insertCSRSpillsAndRestores(Fn);
+  // Handle CSR spilling and restoring, for targets that need it.
+  SpillCalleeSavedRegisters(Fn, RS, MinCSFrameIndex, MaxCSFrameIndex,
+                            SaveBlocks, RestoreBlocks);
 
   // Allow the target machine to make final modifications to the function
   // before the frame layout is finalized.
@@ -217,11 +213,12 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   // If register scavenging is needed, as we've enabled doing it as a
   // post-pass, scavenge the virtual registers that frame index elimination
   // inserted.
-  if (TRI->requiresRegisterScavenging(Fn) && FrameIndexVirtualScavenging)
-    scavengeFrameVirtualRegs(Fn);
+  if (TRI->requiresRegisterScavenging(Fn) && FrameIndexVirtualScavenging) {
+      ScavengeFrameVirtualRegs(Fn, RS);
 
-  // Clear any vregs created by virtual scavenging.
-  Fn.getRegInfo().clearVirtRegs();
+      // Clear any vregs created by virtual scavenging.
+      Fn.getRegInfo().clearVirtRegs();
+  }
 
   // Warn on stack size when we exceeds the given limit.
   MachineFrameInfo *MFI = Fn.getFrameInfo();
@@ -239,10 +236,10 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   return true;
 }
 
-/// calculateCallsInformation - Calculate the MaxCallFrameSize and AdjustsStack
+/// Calculate the MaxCallFrameSize and AdjustsStack
 /// variables for the function's frame information and eliminate call frame
 /// pseudo instructions.
-void PEI::calculateCallsInformation(MachineFunction &Fn) {
+void PEI::calculateCallFrameInfo(MachineFunction &Fn) {
   const TargetInstrInfo &TII = *Fn.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
   MachineFrameInfo *MFI = Fn.getFrameInfo();
@@ -293,12 +290,42 @@ void PEI::calculateCallsInformation(MachineFunction &Fn) {
   }
 }
 
-void PEI::assignCalleeSavedSpillSlots(MachineFunction &F,
-                                      const BitVector &SavedRegs) {
-  // These are used to keep track the callee-save area. Initialize them.
-  MinCSFrameIndex = INT_MAX;
-  MaxCSFrameIndex = 0;
+/// Compute the sets of entry and return blocks for saving and restoring
+/// callee-saved registers, and placing prolog and epilog code.
+void PEI::calculateSaveRestoreBlocks(MachineFunction &Fn) {
+  const MachineFrameInfo *MFI = Fn.getFrameInfo();
 
+  // Even when we do not change any CSR, we still want to insert the
+  // prologue and epilogue of the function.
+  // So set the save points for those.
+
+  // Use the points found by shrink-wrapping, if any.
+  if (MFI->getSavePoint()) {
+    SaveBlocks.push_back(MFI->getSavePoint());
+    assert(MFI->getRestorePoint() && "Both restore and save must be set");
+    MachineBasicBlock *RestoreBlock = MFI->getRestorePoint();
+    // If RestoreBlock does not have any successor and is not a return block
+    // then the end point is unreachable and we do not need to insert any
+    // epilogue.
+    if (!RestoreBlock->succ_empty() || RestoreBlock->isReturnBlock())
+      RestoreBlocks.push_back(RestoreBlock);
+    return;
+  }
+
+  // Save refs to entry and return blocks.
+  SaveBlocks.push_back(&Fn.front());
+  for (MachineBasicBlock &MBB : Fn) {
+    if (MBB.isEHFuncletEntry())
+      SaveBlocks.push_back(&MBB);
+    if (MBB.isReturnBlock())
+      RestoreBlocks.push_back(&MBB);
+  }
+}
+
+static void assignCalleeSavedSpillSlots(MachineFunction &F,
+                                        const BitVector &SavedRegs,
+                                        unsigned &MinCSFrameIndex,
+                                        unsigned &MaxCSFrameIndex) {
   if (SavedRegs.empty())
     return;
 
@@ -429,7 +456,9 @@ static void updateLiveness(MachineFunction &MF) {
 /// insertCSRSpillsAndRestores - Insert spill and restore code for
 /// callee saved registers used in the function.
 ///
-void PEI::insertCSRSpillsAndRestores(MachineFunction &Fn) {
+static void insertCSRSpillsAndRestores(MachineFunction &Fn,
+                                       const MBBVector &SaveBlocks,
+                                       const MBBVector &RestoreBlocks) {
   // Get callee saved register information.
   MachineFrameInfo *MFI = Fn.getFrameInfo();
   const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
@@ -496,6 +525,28 @@ void PEI::insertCSRSpillsAndRestores(MachineFunction &Fn) {
       }
     }
   }
+}
+
+static void doSpillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCSFrameIndex,
+                                   const MBBVector &SaveBlocks,
+                                   const MBBVector &RestoreBlocks) {
+  const Function *F = Fn.getFunction();
+  const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
+  MinCSFrameIndex = std::numeric_limits<unsigned>::max();
+  MaxCSFrameIndex = 0;
+
+  // Determine which of the registers in the callee save list should be saved.
+  BitVector SavedRegs;
+  TFI->determineCalleeSaves(Fn, SavedRegs, RS);
+
+  // Assign stack slots for any callee-saved registers that must be spilled.
+  assignCalleeSavedSpillSlots(Fn, SavedRegs, MinCSFrameIndex, MaxCSFrameIndex);
+
+  // Add the code to save and restore the callee saved registers.
+  if (!F->hasFnAttribute(Attribute::Naked))
+    insertCSRSpillsAndRestores(Fn, SaveBlocks, RestoreBlocks);
 }
 
 /// AdjustStackOffset - Helper function used to adjust the stack frame offset.
@@ -604,8 +655,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
       MFI->setObjectOffset(i, -Offset);        // Set the computed offset
     }
   } else {
-    int MaxCSFI = MaxCSFrameIndex, MinCSFI = MinCSFrameIndex;
-    for (int i = MaxCSFI; i >= MinCSFI ; --i) {
+    unsigned MaxCSFI = MaxCSFrameIndex, MinCSFI = MinCSFrameIndex;
+    for (unsigned i = MaxCSFI; i >= MinCSFI; --i) {
       unsigned Align = MFI->getObjectAlignment(i);
       // Adjust to alignment boundary
       Offset = alignTo(Offset, Align, Skew);
@@ -977,15 +1028,15 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
   }
 }
 
-/// scavengeFrameVirtualRegs - Replace all frame index virtual registers
+/// doScavengeFrameVirtualRegs - Replace all frame index virtual registers
 /// with physical registers. Use the register scavenger to find an
 /// appropriate register to use.
 ///
 /// FIXME: Iterating over the instruction stream is unnecessary. We can simply
 /// iterate over the vreg use list, which at this point only contains machine
 /// operands for which eliminateFrameIndex need a new scratch reg.
-void
-PEI::scavengeFrameVirtualRegs(MachineFunction &Fn) {
+static void
+doScavengeFrameVirtualRegs(MachineFunction &Fn, RegScavenger *RS) {
   // Run through the instructions and find any virtual registers.
   for (MachineFunction::iterator BB = Fn.begin(),
        E = Fn.end(); BB != E; ++BB) {

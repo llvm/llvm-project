@@ -250,6 +250,11 @@ linkage:
     together. This is the LLVM, typesafe, equivalent of having the
     system linker append together "sections" with identical names when
     .o files are linked.
+
+    Unfortunately this doesn't correspond to any feature in .o files, so it
+    can only be used for variables like ``llvm.global_ctors`` which llvm
+    interprets specially.
+
 ``extern_weak``
     The semantics of this linkage follow the ELF object file model: the
     symbol is weak until linked, if not linked, the symbol becomes null

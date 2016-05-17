@@ -116,24 +116,24 @@ def : Processor<"at697f", LEON2Itineraries,
 def : Processor<"leon3", LEON3Itineraries,
                 [FeatureLeon, UMACSMACSupport]>;
 
-// LEON 3 FT (UT699)
-// TO DO: Place-holder: Processor specific features will be added *very* soon here.
+// LEON 3 FT (UT699). Provides features for the UT699 processor
+// - covers all the erratum fixes for LEON3, but does not support the CASA instruction.
 def : Processor<"ut699", LEON3Itineraries, 
                 [FeatureLeon, UMACSMACSupport]>;
 
-// LEON3 FT (GR712RC) 
-// TO DO: Place-holder: Processor specific features will be added *very* soon here.
+// LEON3 FT (GR712RC). Provides features for the GR712RC processor.
+// - covers all the erratum fixed for LEON3 and support for the CASA instruction. 
 def : Processor<"gr712rc", LEON3Itineraries,
-                [FeatureLeon, UMACSMACSupport]>;
+                [FeatureLeon, UMACSMACSupport, LeonCASA]>;
 
 // LEON 4 FT generic
 def : Processor<"leon4", LEON4Itineraries,
-                [FeatureLeon, UMACSMACSupport]>;
+                [FeatureLeon, UMACSMACSupport, LeonCASA]>;
 
 // LEON 4 FT (GR740) 
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"gr740", LEON4Itineraries, 
-                [FeatureLeon, UMACSMACSupport]>;
+                [FeatureLeon, UMACSMACSupport, LeonCASA]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

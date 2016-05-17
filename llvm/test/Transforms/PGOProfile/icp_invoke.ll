@@ -1,4 +1,5 @@
 ; RUN: opt < %s -icp-lto -pgo-icall-prom -S -icp-count-threshold=0 | FileCheck %s --check-prefix=ICP
+; RUN: opt < %s -icp-lto -passes=pgo-icall-prom -S -icp-count-threshold=0 | FileCheck %s --check-prefix=ICP
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

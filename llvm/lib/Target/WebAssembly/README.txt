@@ -113,3 +113,18 @@ particularly when duplicating code, to allow register coloring to be aware of
 the duplication.
 
 //===---------------------------------------------------------------------===//
+
+WebAssemblyRegStackify could use AliasAnalysis to reorder loads and stores more
+aggressively.
+
+//===---------------------------------------------------------------------===//
+
+WebAssemblyRegStackify is currently a greedy algorithm. This means that, for
+example, a binary operator will stackify with its user before its operands.
+However, if moving the binary operator to its user moves it to a place where
+its operands can't be moved to, it would be better to leave it in place, or
+perhaps move it up, so that it can stackify its operands. A binary operator
+has two operands and one result, so in such cases there could be a net win by
+prefering the operands.
+
+//===---------------------------------------------------------------------===//

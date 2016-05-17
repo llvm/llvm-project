@@ -44,6 +44,8 @@ public:
 
   /// \brief Get the TargetIRAnalysis for this target.
   TargetIRAnalysis getTargetIRAnalysis() override;
+
+  bool usesPhysRegsForPEI() const override { return false; }
 };
 
 } // end namespace llvm

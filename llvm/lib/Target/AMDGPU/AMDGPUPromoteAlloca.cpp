@@ -36,7 +36,8 @@ private:
   MDNode *MaxWorkGroupSizeRange;
 
   // FIXME: This should be per-kernel.
-  int LocalMemAvailable;
+  uint32_t LocalMemLimit;
+  uint32_t CurrentLocalMemUsage;
 
   bool IsAMDGCN;
   bool IsAMDHSA;
@@ -67,7 +68,8 @@ public:
     Mod(nullptr),
     DL(nullptr),
     MaxWorkGroupSizeRange(nullptr),
-    LocalMemAvailable(0),
+    LocalMemLimit(0),
+    CurrentLocalMemUsage(0),
     IsAMDGCN(false),
     IsAMDHSA(false) { }
 
@@ -130,37 +132,86 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
   for (Type *ParamTy : FTy->params()) {
     PointerType *PtrTy = dyn_cast<PointerType>(ParamTy);
     if (PtrTy && PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      LocalMemAvailable = 0;
-      DEBUG(dbgs() << "Function has local memory argument.  Promoting to "
+      LocalMemLimit = 0;
+      DEBUG(dbgs() << "Function has local memory argument. Promoting to "
                       "local memory disabled.\n");
       return false;
     }
   }
 
   const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
-  LocalMemAvailable = ST.getLocalMemorySize();
-  if (LocalMemAvailable == 0)
+
+  LocalMemLimit = ST.getLocalMemorySize();
+  if (LocalMemLimit == 0)
     return false;
 
+  const DataLayout &DL = Mod->getDataLayout();
+
   // Check how much local memory is being used by global objects
+  CurrentLocalMemUsage = 0;
   for (GlobalVariable &GV : Mod->globals()) {
     if (GV.getType()->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
       continue;
 
-    for (User *U : GV.users()) {
-      Instruction *Use = dyn_cast<Instruction>(U);
+    for (const User *U : GV.users()) {
+      const Instruction *Use = dyn_cast<Instruction>(U);
       if (!Use)
         continue;
 
       if (Use->getParent()->getParent() == &F) {
-        LocalMemAvailable -= DL->getTypeAllocSize(GV.getValueType());
+        unsigned Align = GV.getAlignment();
+        if (Align == 0)
+          Align = DL.getABITypeAlignment(GV.getValueType());
+
+        // FIXME: Try to account for padding here. The padding is currently
+        // determined from the inverse order of uses in the function. I'm not
+        // sure if the use list order is in any way connected to this, so the
+        // total reported size is likely incorrect.
+        uint64_t AllocSize = DL.getTypeAllocSize(GV.getValueType());
+        CurrentLocalMemUsage = alignTo(CurrentLocalMemUsage, Align);
+        CurrentLocalMemUsage += AllocSize;
         break;
       }
     }
   }
 
-  LocalMemAvailable = std::max(0, LocalMemAvailable);
-  DEBUG(dbgs() << LocalMemAvailable << " bytes free in local memory.\n");
+  unsigned MaxOccupancy = ST.getOccupancyWithLocalMemSize(CurrentLocalMemUsage);
+
+  // Restrict local memory usage so that we don't drastically reduce occupancy,
+  // unless it is already significantly reduced.
+
+  // TODO: Have some sort of hint or other heuristics to guess occupancy based
+  // on other factors..
+  unsigned OccupancyHint
+    = AMDGPU::getIntegerAttribute(F, "amdgpu-max-waves-per-eu", 0);
+  if (OccupancyHint == 0)
+    OccupancyHint = 7;
+
+  // Clamp to max value.
+  OccupancyHint = std::min(OccupancyHint, ST.getMaxWavesPerCU());
+
+  // Check the hint but ignore it if it's obviously wrong from the existing LDS
+  // usage.
+  MaxOccupancy = std::min(OccupancyHint, MaxOccupancy);
+
+
+  // Round up to the next tier of usage.
+  unsigned MaxSizeWithWaveCount
+    = ST.getMaxLocalMemSizeWithWaveCount(MaxOccupancy);
+
+  // Program is possibly broken by using more local mem than available.
+  if (CurrentLocalMemUsage > MaxSizeWithWaveCount)
+    return false;
+
+  LocalMemLimit = MaxSizeWithWaveCount;
+
+  DEBUG(
+    dbgs() << F.getName() << " uses " << CurrentLocalMemUsage << " bytes of LDS\n"
+    << "  Rounding size to " << MaxSizeWithWaveCount
+    << " with a maximum occupancy of " << MaxOccupancy << '\n'
+    << " and " << (LocalMemLimit - CurrentLocalMemUsage)
+    << " available for promotion\n"
+  );
 
   BasicBlock &EntryBB = *F.begin();
   for (auto I = EntryBB.begin(), E = EntryBB.end(); I != E; ) {
@@ -565,6 +616,7 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
   return true;
 }
 
+// FIXME: Should try to pick the most likely to be profitable allocas first.
 void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
   // Array allocations are probably not worth handling, since an allocation of
   // the array type is the canonical form.
@@ -578,10 +630,10 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
 
   DEBUG(dbgs() << "Trying to promote " << I << '\n');
 
-  if (tryPromoteAllocaToVector(&I))
+  if (tryPromoteAllocaToVector(&I)) {
+    DEBUG(dbgs() << " alloca is not a candidate for vectorization.\n");
     return;
-
-  DEBUG(dbgs() << " alloca is not a candidate for vectorization.\n");
+  }
 
   const Function &ContainingFunction = *I.getParent()->getParent();
 
@@ -589,13 +641,29 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
   // function attribute if it is available.
   unsigned WorkGroupSize = AMDGPU::getMaximumWorkGroupSize(ContainingFunction);
 
-  int AllocaSize =
-      WorkGroupSize * Mod->getDataLayout().getTypeAllocSize(AllocaTy);
+  const DataLayout &DL = Mod->getDataLayout();
 
-  if (AllocaSize > LocalMemAvailable) {
-    DEBUG(dbgs() << " Not enough local memory to promote alloca.\n");
+  unsigned Align = I.getAlignment();
+  if (Align == 0)
+    Align = DL.getABITypeAlignment(I.getAllocatedType());
+
+  // FIXME: This computed padding is likely wrong since it depends on inverse
+  // usage order.
+  //
+  // FIXME: It is also possible that if we're allowed to use all of the memory
+  // could could end up using more than the maximum due to alignment padding.
+
+  uint32_t NewSize = alignTo(CurrentLocalMemUsage, Align);
+  uint32_t AllocSize = WorkGroupSize * DL.getTypeAllocSize(AllocaTy);
+  NewSize += AllocSize;
+
+  if (NewSize > LocalMemLimit) {
+    DEBUG(dbgs() << "  " << AllocSize
+          << " bytes of local memory not available to promote\n");
     return;
   }
+
+  CurrentLocalMemUsage = NewSize;
 
   std::vector<Value*> WorkList;
 
@@ -605,7 +673,6 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
   }
 
   DEBUG(dbgs() << "Promoting alloca to local memory\n");
-  LocalMemAvailable -= AllocaSize;
 
   Function *F = I.getParent()->getParent();
 

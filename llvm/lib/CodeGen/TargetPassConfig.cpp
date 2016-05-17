@@ -312,6 +312,13 @@ IdentifyingPassPtr TargetPassConfig::getPassSubstitution(AnalysisID ID) const {
   return I->second;
 }
 
+bool TargetPassConfig::isPassSubstitutedOrOverridden(AnalysisID ID) const {
+  IdentifyingPassPtr TargetID = getPassSubstitution(ID);
+  IdentifyingPassPtr FinalPtr = overridePass(ID, TargetID);
+  return !FinalPtr.isValid() || FinalPtr.isInstance() ||
+      FinalPtr.getID() != ID;
+}
+
 /// Add a pass to the PassManager if that pass is supposed to be run.  If the
 /// Started/Stopped flags indicate either that the compilation should start at
 /// a later pass or that it should stop after an earlier pass, then do not add
@@ -565,7 +572,10 @@ void TargetPassConfig::addMachinePasses() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(&ShrinkWrapID);
 
-  addPass(&PrologEpilogCodeInserterID);
+  // Prolog/Epilog inserter needs a TargetMachine to instantiate. But only
+  // do so if it hasn't been disabled, substituted, or overridden.
+  if (!isPassSubstitutedOrOverridden(&PrologEpilogCodeInserterID))
+      addPass(createPrologEpilogInserterPass(TM));
 
   /// Add passes that optimize machine instructions after register allocation.
   if (getOptLevel() != CodeGenOpt::None)

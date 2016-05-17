@@ -35,5 +35,15 @@ private:
   std::string ProfileFileName;
 };
 
+/// The indirect function call promotion pass.
+class PGOIndirectCallPromotion : public PassInfoMixin<PGOIndirectCallPromotion> {
+public:
+  PGOIndirectCallPromotion() : InLTO(false) {}
+  PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
+  void setInLTO() { InLTO = true; }
+private:
+  bool InLTO;
+};
+
 } // End llvm namespace
 #endif

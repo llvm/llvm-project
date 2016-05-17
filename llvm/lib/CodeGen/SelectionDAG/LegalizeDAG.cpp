@@ -2565,7 +2565,7 @@ SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, SDLoc dl) {
   EVT VT = Op.getValueType();
   EVT SHVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   unsigned Sz = VT.getScalarSizeInBits();
-  
+
   SDValue Tmp, Tmp2;
   Tmp = DAG.getConstant(0, dl, VT);
   for (unsigned I = 0, J = Sz-1; I < Sz; ++I, --J) {

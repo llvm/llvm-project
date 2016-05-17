@@ -44,6 +44,38 @@ define i32 @yes1(i32* %q) {
   ret i32 %t
 }
 
+; Yes because undefined behavior can be sunk past a store.
+
+; CHECK-LABEL: sink_trap:
+; CHECK: return $pop0{{$}}
+define i32 @sink_trap(i32 %x, i32 %y, i32* %p) {
+  %t = sdiv i32 %x, %y
+  store volatile i32 0, i32* %p
+  ret i32 %t
+}
+
+; Yes because the call is readnone.
+
+; CHECK-LABEL: sink_readnone_call:
+; CHECK: return $pop0{{$}}
+declare i32 @readnone_callee() readnone nounwind
+define i32 @sink_readnone_call(i32 %x, i32 %y, i32* %p) {
+  %t = call i32 @readnone_callee()
+  store volatile i32 0, i32* %p
+  ret i32 %t
+}
+
+; No because the call is readonly and there's an intervening store.
+
+; CHECK-LABEL: no_sink_readonly_call:
+; CHECK: return ${{[0-9]+}}{{$}}
+declare i32 @readonly_callee() readonly nounwind
+define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
+  %t = call i32 @readonly_callee()
+  store i32 0, i32* %p
+  ret i32 %t
+}
+
 ; Don't schedule stack uses into the stack. To reduce register pressure, the
 ; scheduler might be tempted to move the definition of $2 down. However, this
 ; would risk getting incorrect liveness if the instructions are later
@@ -69,7 +101,7 @@ define i32 @yes1(i32* %q) {
 ; CHECK-NEXT: br_if       0, $pop8{{$}}
 ; CHECK-NEXT: i32.const   $push9=, 0{{$}}
 ; CHECK-NEXT: return      $pop9{{$}}
-; CHECK-NEXT: .LBB4_2:
+; CHECK-NEXT: .LBB7_2:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: i32.const   $push14=, 1{{$}}
 ; CHECK-NEXT: return      $pop14{{$}}
@@ -103,7 +135,7 @@ false:
 ; CHECK-NEXT: i32.lt_u    $push[[NUM3:[0-9]+]]=, $3, $0{{$}}
 ; CHECK-NEXT: br_if       0, $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: i32.store   $discard=, 0($2), $3{{$}}
-; CHECK-NEXT: .LBB5_3:
+; CHECK-NEXT: .LBB8_3:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @multiple_uses(i32* %arg0, i32* %arg1, i32* %arg2) nounwind {

@@ -2,7 +2,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=ASM %s
 
 
-@global_array= internal unnamed_addr addrspace(3) global [1500 x [10 x i32]] undef, align 4
+@global_array0 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] undef, align 4
+@global_array1 = internal unnamed_addr addrspace(3) global [750 x [10 x i32]] undef, align 4
 
 ; IR-LABEL: define void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 ; IR: alloca [10 x i32]
@@ -26,7 +27,9 @@ entry:
   %tmp3 = load i32, i32* %arrayidx12
   %arrayidx13 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 1
   store i32 %tmp3, i32 addrspace(1)* %arrayidx13
-  %v = getelementptr inbounds [1500 x [10 x i32]], [1500 x [10 x i32]] addrspace(3)* @global_array, i32 0, i32 0, i32 0
-  store i32 %tmp3, i32 addrspace(3)* %v
+  %v0 = getelementptr inbounds [750 x [10 x i32]], [750 x [10 x i32]] addrspace(3)* @global_array0, i32 0, i32 0, i32 0
+  store i32 %tmp3, i32 addrspace(3)* %v0
+  %v1 = getelementptr inbounds [750 x [10 x i32]], [750 x [10 x i32]] addrspace(3)* @global_array1, i32 0, i32 0, i32 0
+  store i32 %tmp3, i32 addrspace(3)* %v1
   ret void
 }

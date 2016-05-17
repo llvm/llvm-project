@@ -78,7 +78,7 @@
 ; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !0
 ; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !0
 ; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !0
-define void @mova_same_clause(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+define void @mova_same_clause(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -100,7 +100,7 @@ entry:
 
 ; OPT-LABEL: @high_alignment(
 ; OPT: getelementptr inbounds [256 x [8 x i32]], [256 x [8 x i32]] addrspace(3)* @high_alignment.stack, i32 0, i32 %{{[0-9]+}}
-define void @high_alignment(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+define void @high_alignment(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca [8 x i32], align 16
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -125,7 +125,7 @@ entry:
 ; OPT: alloca [5 x i32]
 
 ; SI-NOT: ds_write
-define void @no_replace_inbounds_gep(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+define void @no_replace_inbounds_gep(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4
   %0 = load i32, i32 addrspace(1)* %in, align 4
@@ -160,7 +160,7 @@ entry:
 ; SI-NOT: v_movrel
 %struct.point = type { i32, i32 }
 
-define void @multiple_structs(i32 addrspace(1)* %out) {
+define void @multiple_structs(i32 addrspace(1)* %out) #0 {
 entry:
   %a = alloca %struct.point
   %b = alloca %struct.point
@@ -189,7 +189,7 @@ entry:
 ; R600-NOT: MOVA_INT
 ; SI-NOT: v_movrel
 
-define void @direct_loop(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define void @direct_loop(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
 entry:
   %prv_array_const = alloca [2 x i32]
   %prv_array = alloca [2 x i32]
@@ -228,7 +228,7 @@ for.end:
 ; SI-PROMOTE-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x68,0xe0
 ; SI-PROMOTE-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:2 ; encoding: [0x02,0x10,0x68,0xe0
 ; SI-PROMOTE: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}
-define void @short_array(i32 addrspace(1)* %out, i32 %index) {
+define void @short_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i16]
   %1 = getelementptr inbounds [2 x i16], [2 x i16]* %0, i32 0, i32 0
@@ -248,7 +248,7 @@ entry:
 
 ; SI-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen ; encoding: [0x00,0x10,0x60,0xe0
 ; SI-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:1 ; encoding: [0x01,0x10,0x60,0xe0
-define void @char_array(i32 addrspace(1)* %out, i32 %index) {
+define void @char_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i8]
   %1 = getelementptr inbounds [2 x i8], [2 x i8]* %0, i32 0, i32 0
@@ -263,7 +263,6 @@ entry:
 
 }
 
-
 ; Test that two stack objects are not stored in the same register
 ; The second stack object should be in T3.X
 ; FUNC-LABEL: {{^}}no_overlap:
@@ -271,7 +270,7 @@ entry:
 ; R600_CHECK: [[CHAN:[XYZW]]]+
 ; R600-NOT: [[CHAN]]+
 ; SI: v_mov_b32_e32 v3
-define void @no_overlap(i32 addrspace(1)* %out, i32 %in) {
+define void @no_overlap(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1
   %1 = alloca [2 x i8], align 1
@@ -295,7 +294,7 @@ entry:
   ret void
 }
 
-define void @char_array_array(i32 addrspace(1)* %out, i32 %index) {
+define void @char_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i8]]
   %gep0 = getelementptr [2 x [2 x i8]], [2 x [2 x i8]]* %alloca, i32 0, i32 0, i32 0
@@ -309,7 +308,7 @@ entry:
   ret void
 }
 
-define void @i32_array_array(i32 addrspace(1)* %out, i32 %index) {
+define void @i32_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i32]]
   %gep0 = getelementptr [2 x [2 x i32]], [2 x [2 x i32]]* %alloca, i32 0, i32 0, i32 0
@@ -322,7 +321,7 @@ entry:
   ret void
 }
 
-define void @i64_array_array(i64 addrspace(1)* %out, i32 %index) {
+define void @i64_array_array(i64 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i64]]
   %gep0 = getelementptr [2 x [2 x i64]], [2 x [2 x i64]]* %alloca, i32 0, i32 0, i32 0
@@ -337,7 +336,7 @@ entry:
 
 %struct.pair32 = type { i32, i32 }
 
-define void @struct_array_array(i32 addrspace(1)* %out, i32 %index) {
+define void @struct_array_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x %struct.pair32]]
   %gep0 = getelementptr [2 x [2 x %struct.pair32]], [2 x [2 x %struct.pair32]]* %alloca, i32 0, i32 0, i32 0, i32 1
@@ -350,7 +349,7 @@ entry:
   ret void
 }
 
-define void @struct_pair32_array(i32 addrspace(1)* %out, i32 %index) {
+define void @struct_pair32_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x %struct.pair32]
   %gep0 = getelementptr [2 x %struct.pair32], [2 x %struct.pair32]* %alloca, i32 0, i32 0, i32 1
@@ -384,7 +383,7 @@ entry:
 ; SI-NOT: ds_write
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen
 ; SI: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offen offset:5 ;
-define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) {
+define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %alloca = alloca [16 x i32]
   %tmp0 = getelementptr [16 x i32], [16 x i32]* %alloca, i32 0, i32 %a
   store i32 5, i32* %tmp0
@@ -401,3 +400,110 @@ define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) {
 ; HSAOPT: !1 = !{i32 0, i32 2048}
 
 ; NOHSAOPT: !0 = !{i32 0, i32 2048}
+
+
+; FUNC-LABEL: v16i32_stack:
+
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+
+define void @v16i32_stack(<16 x i32> addrspace(1)* %out, i32 %a) {
+  %alloca = alloca [2 x <16 x i32>]
+  %tmp0 = getelementptr [2 x <16 x i32>], [2 x <16 x i32>]* %alloca, i32 0, i32 %a
+  %tmp5 = load <16 x i32>, <16 x i32>* %tmp0
+  store <16 x i32> %tmp5, <16 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: v16float_stack:
+
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+; R600: MOVA_INT
+
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+
+define void @v16float_stack(<16 x float> addrspace(1)* %out, i32 %a) {
+  %alloca = alloca [2 x <16 x float>]
+  %tmp0 = getelementptr [2 x <16 x float>], [2 x <16 x float>]* %alloca, i32 0, i32 %a
+  %tmp5 = load <16 x float>, <16 x float>* %tmp0
+  store <16 x float> %tmp5, <16 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: v2float_stack:
+
+; R600: MOVA_INT
+; R600: MOVA_INT
+
+; SI: buffer_load_dword
+; SI: buffer_load_dword
+
+define void @v2float_stack(<2 x float> addrspace(1)* %out, i32 %a) {
+  %alloca = alloca [16 x <2 x float>]
+  %tmp0 = getelementptr [16 x <2 x float>], [16 x <2 x float>]* %alloca, i32 0, i32 %a
+  %tmp5 = load <2 x float>, <2 x float>* %tmp0
+  store <2 x float> %tmp5, <2 x float> addrspace(1)* %out
+  ret void
+}
+
+attributes #0 = { nounwind "amdgpu-max-waves-per-eu"="2" }

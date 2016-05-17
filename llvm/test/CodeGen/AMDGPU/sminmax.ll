@@ -128,3 +128,76 @@ define void @v_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %
   store <4 x i32> %res2, <4 x i32> addrspace(1)* %out, align 4
   ret void
 }
+
+; FUNC-LABEL: {{^}}s_min_max_i32:
+; GCN: s_load_dword [[VAL0:s[0-9]+]]
+; GCN: s_load_dword [[VAL1:s[0-9]+]]
+
+; GCN-DAG: s_min_i32 s{{[0-9]+}}, [[VAL0]], [[VAL1]]
+; GCN-DAG: s_max_i32 s{{[0-9]+}}, [[VAL0]], [[VAL1]]
+define void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 %val0, i32 %val1) nounwind {
+  %cond0 = icmp sgt i32 %val0, %val1
+  %sel0 = select i1 %cond0, i32 %val0, i32 %val1
+  %sel1 = select i1 %cond0, i32 %val1, i32 %val0
+
+  store volatile i32 %sel0, i32 addrspace(1)* %out0, align 4
+  store volatile i32 %sel1, i32 addrspace(1)* %out1, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_min_max_i32:
+; GCN: buffer_load_dword [[VAL0:v[0-9]+]]
+; GCN: buffer_load_dword [[VAL1:v[0-9]+]]
+
+; GCN-DAG: v_min_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]
+; GCN-DAG: v_max_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]
+define void @v_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr0, i32 addrspace(1)* %ptr1) nounwind {
+  %val0 = load volatile i32, i32 addrspace(1)* %ptr0
+  %val1 = load volatile i32, i32 addrspace(1)* %ptr1
+
+  %cond0 = icmp sgt i32 %val0, %val1
+  %sel0 = select i1 %cond0, i32 %val0, i32 %val1
+  %sel1 = select i1 %cond0, i32 %val1, i32 %val0
+
+  store volatile i32 %sel0, i32 addrspace(1)* %out0, align 4
+  store volatile i32 %sel1, i32 addrspace(1)* %out1, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}s_min_max_v4i32:
+; GCN-DAG: s_min_i32
+; GCN-DAG: s_min_i32
+; GCN-DAG: s_min_i32
+; GCN-DAG: s_min_i32
+; GCN-DAG: s_max_i32
+; GCN-DAG: s_max_i32
+; GCN-DAG: s_max_i32
+; GCN-DAG: s_max_i32
+define void @s_min_max_v4i32(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(1)* %out1, <4 x i32> %val0, <4 x i32> %val1) nounwind {
+  %cond0 = icmp sgt <4 x i32> %val0, %val1
+  %sel0 = select <4 x i1> %cond0, <4 x i32> %val0, <4 x i32> %val1
+  %sel1 = select <4 x i1> %cond0, <4 x i32> %val1, <4 x i32> %val0
+
+  store volatile <4 x i32> %sel0, <4 x i32> addrspace(1)* %out0, align 4
+  store volatile <4 x i32> %sel1, <4 x i32> addrspace(1)* %out1, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_min_max_i32_user:
+; GCN: v_cmp_gt_i32_e32
+; GCN-DAG: v_cndmask_b32_e32
+; GCN-DAG: v_cndmask_b32_e32
+; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
+define void @v_min_max_i32_user(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr0, i32 addrspace(1)* %ptr1) nounwind {
+  %val0 = load volatile i32, i32 addrspace(1)* %ptr0
+  %val1 = load volatile i32, i32 addrspace(1)* %ptr1
+
+  %cond0 = icmp sgt i32 %val0, %val1
+  %sel0 = select i1 %cond0, i32 %val0, i32 %val1
+  %sel1 = select i1 %cond0, i32 %val1, i32 %val0
+
+  store volatile i32 %sel0, i32 addrspace(1)* %out0, align 4
+  store volatile i32 %sel1, i32 addrspace(1)* %out1, align 4
+  store volatile i1 %cond0, i1 addrspace(1)* undef
+  ret void
+}

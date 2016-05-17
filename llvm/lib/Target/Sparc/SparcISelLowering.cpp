@@ -1612,18 +1612,19 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   }
 
   // ATOMICs.
-  // Atomics are only supported on Sparcv9. (32bit atomics are also
-  // supported by the Leon sparcv8 variant, but we don't support that
-  // yet.)
+  // Atomics are supported on SparcV9. 32-bit atomics are also
+  // supported by some Leon SparcV8 variants. Otherwise, atomics
+  // are unsupported.
   if (Subtarget->isV9())
     setMaxAtomicSizeInBitsSupported(64);
+  else if (false && Subtarget->hasLeonCasa())
+   // Test made to fail pending completion of AtomicExpandPass,
+   // as this will cause a regression until that work is completed.
+    setMaxAtomicSizeInBitsSupported(32);
   else
     setMaxAtomicSizeInBitsSupported(0);
 
   setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, Legal);
-  setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32,
-                     (Subtarget->isV9() ? Legal: Expand));
-
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Legal);
 
