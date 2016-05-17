@@ -149,7 +149,6 @@ bool isAppMem(uptr Mem) {
 
 ALWAYS_INLINE
 uptr appToShadow(uptr App) {
-  DCHECK(isAppMem(App));
   return (((App & ShadowMapping::Mask) + Mapping.Offset) >> Mapping.Scale);
 }
 
@@ -186,7 +185,7 @@ bool isShadowMem(uptr Mem) {
   // no need to hardcode the mapping results.
   for (uptr i = 0; i < NumAppRegions; ++i) {
     if (Mem >= appToShadow(AppRegions[i].Start) &&
-        Mem < appToShadow(AppRegions[i].End))
+        Mem < appToShadow(AppRegions[i].End - 1) + 1)
       return true;
   }
   return false;
