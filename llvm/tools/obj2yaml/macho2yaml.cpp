@@ -33,6 +33,7 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   Y->Header.ncmds = Obj.getHeader().ncmds;
   Y->Header.sizeofcmds = Obj.getHeader().sizeofcmds;
   Y->Header.flags = Obj.getHeader().flags;
+  Y->Header.reserved = 0;
 
   for (auto load_command : Obj.load_commands()) {
     auto LC = make_unique<MachOYAML::LoadCommand>();

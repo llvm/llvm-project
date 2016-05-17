@@ -286,6 +286,7 @@ class CMP_EQ_QB_R2_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt");
   list<dag> Pattern = [(OpNode ROS:$rs, ROT:$rt)];
   InstrItinClass Itinerary = itin;
+  string BaseOpcode = instr_asm;
 }
 
 class CMP_EQ_QB_R3_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -513,14 +514,16 @@ class BPOSGE32_PSEUDO_DESC_BASE<SDPatternOperator OpNode, InstrItinClass itin> :
   bit usesCustomInserter = 1;
 }
 
-class BPOSGE32_DESC_BASE<string instr_asm, InstrItinClass itin> {
+class BPOSGE32_DESC_BASE<string instr_asm, DAGOperand opnd,
+                         InstrItinClass itin> {
   dag OutOperandList = (outs);
-  dag InOperandList = (ins brtarget:$offset);
+  dag InOperandList = (ins opnd:$offset);
   string AsmString = !strconcat(instr_asm, "\t$offset");
   InstrItinClass Itinerary = itin;
   bit isBranch = 1;
   bit isTerminator = 1;
   bit hasDelaySlot = 1;
+  string BaseOpcode = instr_asm;
 }
 
 class INSV_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -871,7 +874,7 @@ class LHX_DESC : LX_DESC_BASE<"lhx", int_mips_lhx, NoItinerary>;
 
 class LBUX_DESC : LX_DESC_BASE<"lbux", int_mips_lbux, NoItinerary>;
 
-class BPOSGE32_DESC : BPOSGE32_DESC_BASE<"bposge32", NoItinerary>;
+class BPOSGE32_DESC : BPOSGE32_DESC_BASE<"bposge32", brtarget, NoItinerary>;
 
 // Extr
 class EXTP_DESC : EXTR_W_TY1_R1_DESC_BASE<"extp", MipsEXTP, NoItinerary>,
@@ -1177,16 +1180,16 @@ def MADD_DSP : DspMMRel, MADD_DSP_ENC, MADD_DSP_DESC;
 def MADDU_DSP : DspMMRel, MADDU_DSP_ENC, MADDU_DSP_DESC;
 def MSUB_DSP : DspMMRel, MSUB_DSP_ENC, MSUB_DSP_DESC;
 def MSUBU_DSP : DspMMRel, MSUBU_DSP_ENC, MSUBU_DSP_DESC;
-def CMPU_EQ_QB : CMPU_EQ_QB_ENC, CMPU_EQ_QB_DESC;
-def CMPU_LT_QB : CMPU_LT_QB_ENC, CMPU_LT_QB_DESC;
-def CMPU_LE_QB : CMPU_LE_QB_ENC, CMPU_LE_QB_DESC;
-def CMPGU_EQ_QB : CMPGU_EQ_QB_ENC, CMPGU_EQ_QB_DESC;
-def CMPGU_LT_QB : CMPGU_LT_QB_ENC, CMPGU_LT_QB_DESC;
-def CMPGU_LE_QB : CMPGU_LE_QB_ENC, CMPGU_LE_QB_DESC;
-def CMP_EQ_PH : CMP_EQ_PH_ENC, CMP_EQ_PH_DESC;
-def CMP_LT_PH : CMP_LT_PH_ENC, CMP_LT_PH_DESC;
-def CMP_LE_PH : CMP_LE_PH_ENC, CMP_LE_PH_DESC;
-def BITREV : BITREV_ENC, BITREV_DESC;
+def CMPU_EQ_QB : DspMMRel, CMPU_EQ_QB_ENC, CMPU_EQ_QB_DESC;
+def CMPU_LT_QB : DspMMRel, CMPU_LT_QB_ENC, CMPU_LT_QB_DESC;
+def CMPU_LE_QB : DspMMRel, CMPU_LE_QB_ENC, CMPU_LE_QB_DESC;
+def CMPGU_EQ_QB : DspMMRel, CMPGU_EQ_QB_ENC, CMPGU_EQ_QB_DESC;
+def CMPGU_LT_QB : DspMMRel, CMPGU_LT_QB_ENC, CMPGU_LT_QB_DESC;
+def CMPGU_LE_QB : DspMMRel, CMPGU_LE_QB_ENC, CMPGU_LE_QB_DESC;
+def CMP_EQ_PH : DspMMRel, CMP_EQ_PH_ENC, CMP_EQ_PH_DESC;
+def CMP_LT_PH : DspMMRel, CMP_LT_PH_ENC, CMP_LT_PH_DESC;
+def CMP_LE_PH : DspMMRel, CMP_LE_PH_ENC, CMP_LE_PH_DESC;
+def BITREV : DspMMRel, BITREV_ENC, BITREV_DESC;
 def PACKRL_PH : DspMMRel, PACKRL_PH_ENC, PACKRL_PH_DESC;
 def REPL_QB : DspMMRel, REPL_QB_ENC, REPL_QB_DESC;
 def REPL_PH : DspMMRel, REPL_PH_ENC, REPL_PH_DESC;
@@ -1197,7 +1200,9 @@ def PICK_PH : DspMMRel, PICK_PH_ENC, PICK_PH_DESC;
 def LWX : DspMMRel, LWX_ENC, LWX_DESC;
 def LHX : DspMMRel, LHX_ENC, LHX_DESC;
 def LBUX : DspMMRel, LBUX_ENC, LBUX_DESC;
-def BPOSGE32 : DspMMRel, BPOSGE32_ENC, BPOSGE32_DESC;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def BPOSGE32 : DspMMRel, BPOSGE32_ENC, BPOSGE32_DESC;
+}
 def INSV : DspMMRel, INSV_ENC, INSV_DESC;
 def EXTP : DspMMRel, EXTP_ENC, EXTP_DESC;
 def EXTPV : DspMMRel, EXTPV_ENC, EXTPV_DESC;
@@ -1224,9 +1229,9 @@ def ADDU_PH : DspMMRel, ADDU_PH_ENC, ADDU_PH_DESC, ISA_DSPR2;
 def ADDU_S_PH : DspMMRel, ADDU_S_PH_ENC, ADDU_S_PH_DESC, ISA_DSPR2;
 def SUBU_PH : DspMMRel, SUBU_PH_ENC, SUBU_PH_DESC, ISA_DSPR2;
 def SUBU_S_PH : DspMMRel, SUBU_S_PH_ENC, SUBU_S_PH_DESC, ISA_DSPR2;
-def CMPGDU_EQ_QB : CMPGDU_EQ_QB_ENC, CMPGDU_EQ_QB_DESC, ISA_DSPR2;
-def CMPGDU_LT_QB : CMPGDU_LT_QB_ENC, CMPGDU_LT_QB_DESC, ISA_DSPR2;
-def CMPGDU_LE_QB : CMPGDU_LE_QB_ENC, CMPGDU_LE_QB_DESC, ISA_DSPR2;
+def CMPGDU_EQ_QB : DspMMRel, CMPGDU_EQ_QB_ENC, CMPGDU_EQ_QB_DESC, ISA_DSPR2;
+def CMPGDU_LT_QB : DspMMRel, CMPGDU_LT_QB_ENC, CMPGDU_LT_QB_DESC, ISA_DSPR2;
+def CMPGDU_LE_QB : DspMMRel, CMPGDU_LE_QB_ENC, CMPGDU_LE_QB_DESC, ISA_DSPR2;
 def ABSQ_S_QB : DspMMRel, ABSQ_S_QB_ENC, ABSQ_S_QB_DESC, ISA_DSPR2;
 def ADDUH_QB : DspMMRel, ADDUH_QB_ENC, ADDUH_QB_DESC, ISA_DSPR2;
 def ADDUH_R_QB : DspMMRel, ADDUH_R_QB_ENC, ADDUH_R_QB_DESC, ISA_DSPR2;
@@ -1264,7 +1269,7 @@ def SHRAV_R_QB : DspMMRel, SHRAV_R_QB_ENC, SHRAV_R_QB_DESC, ISA_DSPR2;
 def SHRL_PH : DspMMRel, SHRL_PH_ENC, SHRL_PH_DESC, ISA_DSPR2;
 def SHRLV_PH : DspMMRel, SHRLV_PH_ENC, SHRLV_PH_DESC, ISA_DSPR2;
 def APPEND : DspMMRel, APPEND_ENC, APPEND_DESC, ISA_DSPR2;
-def BALIGN : BALIGN_ENC, BALIGN_DESC, ISA_DSPR2;
+def BALIGN : DspMMRel, BALIGN_ENC, BALIGN_DESC, ISA_DSPR2;
 def PREPEND : DspMMRel, PREPEND_ENC, PREPEND_DESC, ISA_DSPR2;
 
 // Pseudos.

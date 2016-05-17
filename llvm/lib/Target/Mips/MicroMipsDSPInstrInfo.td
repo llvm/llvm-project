@@ -160,6 +160,21 @@ class MODSUB_MM_ENC : POOL32A_3RB0_FMT<"modsub", 0b1010010101>;
 class MULSA_W_PH_MMR2_ENC : POOL32A_2RAC_FMT<"mulsa.w.ph", 0b10110010>;
 class MULSAQ_S_W_PH_MM_ENC : POOL32A_2RAC_FMT<"mulsaq_s.w.ph", 0b11110010>;
 class BPOSGE32C_MMR3_ENC : POOL32I_IMMB0_FMT<"bposge32c", 0b11001>;
+class BITREV_MM_ENC : POOL32A_2R_FMT<"bitrev", 0b0011000100>;
+class BALIGN_MMR2_ENC : POOL32A_2RBP_FMT<"balign">;
+class BPOSGE32_MM_ENC : POOL32I_IMMB0_FMT<"bposge32", 0b11011>;
+class CMP_EQ_PH_MM_ENC : POOL32A_2RB0_FMT<"cmp.eq.ph", 0b0000000101>;
+class CMP_LE_PH_MM_ENC : POOL32A_2RB0_FMT<"cmp.le.ph", 0b0010000101>;
+class CMP_LT_PH_MM_ENC : POOL32A_2RB0_FMT<"cmp.lt.ph", 0b0001000101>;
+class CMPGDU_EQ_QB_MMR2_ENC : POOL32A_3RB0_FMT<"cmpgdu.eq.qb", 0b0110000101>;
+class CMPGDU_LT_QB_MMR2_ENC : POOL32A_3RB0_FMT<"cmpgdu.lt.qb", 0b0111000101>;
+class CMPGDU_LE_QB_MMR2_ENC : POOL32A_3RB0_FMT<"cmpgdu.le.qb", 0b1000000101>;
+class CMPGU_EQ_QB_MM_ENC : POOL32S_3RB0_FMT<"cmpgu.eq.qb", 0b0011000101>;
+class CMPGU_LT_QB_MM_ENC : POOL32S_3RB0_FMT<"cmpgu.lt.qb", 0b0100000101>;
+class CMPGU_LE_QB_MM_ENC : POOL32S_3RB0_FMT<"cmpgu.le.qb", 0b0101000101>;
+class CMPU_EQ_QB_MM_ENC : POOL32A_2R2B0_FMT<"cmpu.eq.qb", 0b1001000101>;
+class CMPU_LT_QB_MM_ENC : POOL32A_2R2B0_FMT<"cmpu.lt.qb", 0b1010000101>;
+class CMPU_LE_QB_MM_ENC : POOL32A_2R2B0_FMT<"cmpu.le.qb", 0b1011000101>;
 
 // Instruction desc.
 class ABSQ_S_PH_MM_R2_DESC_BASE<string opstr, SDPatternOperator OpNode,
@@ -383,6 +398,23 @@ class BPOSGE32C_MMR3_DESC {
   bit hasDelaySlot = 0;
 }
 
+class BALIGN_MMR2_DESC {
+  dag OutOperandList = (outs GPR32Opnd:$rt);
+  dag InOperandList = (ins GPR32Opnd:$rs, uimm2:$bp, GPR32Opnd:$src);
+  string AsmString = !strconcat("balign", "\t$rt, $rs, $bp");
+  list<dag> Pattern =  [(set GPR32Opnd:$rt, (int_mips_balign GPR32Opnd:$src,
+                                                             GPR32Opnd:$rs,
+                                                             immZExt2:$bp))];
+  InstrItinClass Itinerary = NoItinerary;
+  string Constraints = "$src = $rt";
+}
+
+class BITREV_MM_DESC : ABSQ_S_PH_MM_R2_DESC_BASE<"bitrev", int_mips_bitrev,
+                                                 NoItinerary, GPR32Opnd>;
+
+class BPOSGE32_MM_DESC : BPOSGE32_DESC_BASE<"bposge32", brtarget_mm,
+                                            NoItinerary>;
+
 // Instruction defs.
 // microMIPS DSP Rev 1
 def ADDQ_PH_MM : DspMMRel, ADDQ_PH_MM_ENC, ADDQ_PH_DESC;
@@ -489,6 +521,18 @@ def SHILOV_MM : DspMMRel, SHILOV_MM_ENC, SHILOV_DESC;
 def WRDSP_MM : DspMMRel, WRDSP_MM_ENC, WRDSP_MM_DESC;
 def MODSUB_MM : DspMMRel, MODSUB_MM_ENC, MODSUB_DESC;
 def MULSAQ_S_W_PH_MM : DspMMRel, MULSAQ_S_W_PH_MM_ENC, MULSAQ_S_W_PH_DESC;
+def BITREV_MM : DspMMRel, BITREV_MM_ENC, BITREV_MM_DESC;
+def BPOSGE32_MM : DspMMRel, BPOSGE32_MM_ENC, BPOSGE32_MM_DESC,
+                  ISA_MIPS1_NOT_32R6_64R6;
+def CMP_EQ_PH_MM : DspMMRel, CMP_EQ_PH_MM_ENC, CMP_EQ_PH_DESC;
+def CMP_LT_PH_MM : DspMMRel, CMP_LT_PH_MM_ENC, CMP_LT_PH_DESC;
+def CMP_LE_PH_MM : DspMMRel, CMP_LE_PH_MM_ENC, CMP_LE_PH_DESC;
+def CMPGU_EQ_QB_MM : DspMMRel, CMPGU_EQ_QB_MM_ENC, CMPGU_EQ_QB_DESC;
+def CMPGU_LT_QB_MM : DspMMRel, CMPGU_LT_QB_MM_ENC, CMPGU_LT_QB_DESC;
+def CMPGU_LE_QB_MM : DspMMRel, CMPGU_LE_QB_MM_ENC, CMPGU_LE_QB_DESC;
+def CMPU_EQ_QB_MM : DspMMRel, CMPU_EQ_QB_MM_ENC, CMPU_EQ_QB_DESC;
+def CMPU_LT_QB_MM : DspMMRel, CMPU_LT_QB_MM_ENC, CMPU_LT_QB_DESC;
+def CMPU_LE_QB_MM : DspMMRel, CMPU_LE_QB_MM_ENC, CMPU_LE_QB_DESC;
 // microMIPS DSP Rev 2
 def ABSQ_S_QB_MMR2 : DspMMRel, ABSQ_S_QB_MMR2_ENC, ABSQ_S_QB_MMR2_DESC,
                      ISA_DSPR2;
@@ -512,6 +556,13 @@ def SHRA_R_QB_MMR2 : DspMMRel, SHRA_R_QB_MMR2_ENC, SHRA_R_QB_MMR2_DESC,
 def SHRAV_QB_MMR2 : DspMMRel, SHRAV_QB_MMR2_ENC, SHRAV_QB_MMR2_DESC, ISA_DSPR2;
 def SHRAV_R_QB_MMR2 : DspMMRel, SHRAV_R_QB_MMR2_ENC, SHRAV_R_QB_MMR2_DESC,
                       ISA_DSPR2;
+def BALIGN_MMR2 : DspMMRel, BALIGN_MMR2_ENC, BALIGN_MMR2_DESC, ISA_DSPR2;
+def CMPGDU_EQ_QB_MMR2 : DspMMRel, CMPGDU_EQ_QB_MMR2_ENC, CMPGDU_EQ_QB_DESC,
+                        ISA_DSPR2;
+def CMPGDU_LT_QB_MMR2 : DspMMRel, CMPGDU_LT_QB_MMR2_ENC, CMPGDU_LT_QB_DESC,
+                        ISA_DSPR2;
+def CMPGDU_LE_QB_MMR2 : DspMMRel, CMPGDU_LE_QB_MMR2_ENC, CMPGDU_LE_QB_DESC,
+                        ISA_DSPR2;
 def SHRL_PH_MMR2 : DspMMRel, SHRL_PH_MMR2_ENC, SHRL_PH_MMR2_DESC, ISA_DSPR2;
 def SHRLV_PH_MMR2 : DspMMRel, SHRLV_PH_MMR2_ENC, SHRLV_PH_MMR2_DESC, ISA_DSPR2;
 def SUBQH_PH_MMR2 : DspMMRel, SUBQH_PH_MMR2_ENC, SUBQH_PH_DESC, ISA_DSPR2;

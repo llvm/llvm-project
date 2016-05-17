@@ -2697,6 +2697,14 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
   setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Condition));
 }
 
+// Check if the condition of the select has one use or two users that are both
+// selects with the same condition.
+bool hasOnlySelectUsers(const Value *Cond) {
+  return std::all_of(Cond->user_begin(), Cond->user_end(), [](const Value *V) {
+    return isa<SelectInst>(V);
+  });
+}
+
 void SelectionDAGBuilder::visitSelect(const User &I) {
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(), I.getType(),
@@ -2782,7 +2790,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
         // If the underlying comparison instruction is used by any other
         // instruction, the consumed instructions won't be destroyed, so it is
         // not profitable to convert to a min/max.
-        cast<SelectInst>(&I)->getCondition()->hasOneUse()) {
+        hasOnlySelectUsers(cast<SelectInst>(I).getCondition())) {
       OpCode = Opc;
       LHSVal = getValue(LHS);
       RHSVal = getValue(RHS);

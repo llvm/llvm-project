@@ -1261,8 +1261,7 @@ bb50:
 ; OPT:        block
 ; OPT:        block
 ; OPT-NEXT:   i32.const   $push
-; OPT-NEXT:   i32.const   $push
-; OPT-NEXT:   i32.eq      $push{{.*}}=, $pop{{.*}}, $pop{{.*}}{{$}}
+; OPT-NEXT:   i32.eqz     $push{{.*}}=, $pop{{.*}}{{$}}
 ; OPT-NEXT:   br_if       0, $pop{{.*}}{{$}}
 ; OPT-NEXT:   call        test15_callee1@FUNCTION{{$}}
 ; OPT-NEXT:   br          1{{$}}

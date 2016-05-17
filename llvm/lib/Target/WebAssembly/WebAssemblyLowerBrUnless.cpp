@@ -106,16 +106,10 @@ bool WebAssemblyLowerBrUnless::runOnMachineFunction(MachineFunction &MF) {
       // If we weren't able to invert the condition in place. Insert an
       // expression to invert it.
       if (!Inverted) {
-        unsigned ZeroReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-        MFI.stackifyVReg(ZeroReg);
-        BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::CONST_I32),
-                ZeroReg)
-            .addImm(0);
         unsigned Tmp = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
         MFI.stackifyVReg(Tmp);
-        BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::EQ_I32), Tmp)
-            .addReg(Cond)
-            .addReg(ZeroReg);
+        BuildMI(MBB, MI, MI->getDebugLoc(), TII.get(WebAssembly::EQZ_I32), Tmp)
+            .addReg(Cond);
         Cond = Tmp;
         Inverted = true;
       }

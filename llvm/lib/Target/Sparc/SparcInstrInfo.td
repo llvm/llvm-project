@@ -49,6 +49,10 @@ def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
 
+// HasLeonCASA - This is true when the target processor supports the CASA
+// instruction
+def HasLeonCASA : Predicate<"Subtarget->hasLeonCasa()">;
+
 // HasUMAC_SMAC - This is true when the target processor supports the
 // UMAC and SMAC instructions
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
@@ -1492,12 +1496,9 @@ let Predicates = [HasV9], hasSideEffects = 1, rd = 0, rs1 = 0b01111 in
  def MEMBARi : F3_2<2, 0b101000, (outs), (ins simm13Op:$simm13),
                     "membar $simm13", []>;
 
-// TODO: Should add a CASArr variant. In fact, the CAS instruction,
-// unlike other instructions, only comes in a form which requires an
-// ASI be provided. The ASI value hardcoded here is ASI_PRIMARY, the
-// default unprivileged ASI for SparcV9.  (Also of note: some modern
-// SparcV8 implementations provide CASA as an extension, but require
-// the use of SparcV8's default ASI, 0xA ("User Data") instead.)
+// The CAS instruction, unlike other instructions, only comes in a 
+// form which requires an ASI be provided. The ASI value hardcoded 
+// here is ASI_PRIMARY, the default unprivileged ASI for SparcV9.
 let Predicates = [HasV9], Constraints = "$swap = $rd", asi = 0b10000000 in
   def CASrr: F3_1_asi<3, 0b111100,
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
@@ -1506,6 +1507,26 @@ let Predicates = [HasV9], Constraints = "$swap = $rd", asi = 0b10000000 in
                  [(set i32:$rd,
                      (atomic_cmp_swap iPTR:$rs1, i32:$rs2, i32:$swap))]>;
 
+
+// CASA is supported as an instruction on some LEON3 and all LEON4 processors.
+// This version can be automatically lowered from C code, selecting ASI 10
+let Predicates = [HasLeonCASA], Constraints = "$swap = $rd", asi = 0b00001010 in
+  def CASAasi10: F3_1_asi<3, 0b111100,
+                (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
+                                     IntRegs:$swap),
+                 "casa [$rs1] 10, $rs2, $rd",
+                 [(set i32:$rd,
+                     (atomic_cmp_swap iPTR:$rs1, i32:$rs2, i32:$swap))]>;
+                 
+// CASA supported on some LEON3 and all LEON4 processors. Same pattern as
+// CASrr, above, but with a different ASI. This version is supported for
+// inline assembly lowering only. 
+let Predicates = [HasLeonCASA], Constraints = "$swap = $rd" in
+  def CASArr: F3_1_asi<3, 0b111100,
+                (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
+                                     IntRegs:$swap, i8imm:$asi),
+                 "casa [$rs1] $asi, $rs2, $rd", []>;
+                
 // TODO: Add DAG sequence to lower these instructions. Currently, only provided
 // as inline assembler-supported instructions. 
 let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {

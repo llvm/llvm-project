@@ -1569,7 +1569,7 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
   if (isSeveralBitsExtractOpFromShr(N, Opc, Opd0, Immr, Imms))
     return true;
 
-  // we're looking for a shift of a shift
+  // We're looking for a shift of a shift.
   uint64_t ShlImm = 0;
   uint64_t TruncBits = 0;
   if (isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::SHL, ShlImm)) {

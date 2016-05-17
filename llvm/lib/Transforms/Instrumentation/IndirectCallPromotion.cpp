@@ -31,6 +31,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <string>
 #include <utility>
@@ -692,4 +693,12 @@ bool PGOIndirectCallPromotionLegacyPass::runOnModule(Module &M) {
   // Command-line option has the priority for InLTO.
   InLTO |= ICPLTOMode;
   return promoteIndirectCalls(M, InLTO);
+}
+
+PreservedAnalyses PGOIndirectCallPromotion::run(Module &M, AnalysisManager<Module> &AM) {
+  InLTO |= ICPLTOMode;
+  if (!promoteIndirectCalls(M, InLTO))
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
 }

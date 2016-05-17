@@ -99,4 +99,4 @@ bb2:
   ret void
 }
 
-attributes #0 = { norecurse nounwind }
+attributes #0 = { norecurse nounwind "amdgpu-max-waves-per-eu"="1" }

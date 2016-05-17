@@ -61,7 +61,8 @@ public:
   unsigned getFrameRegister() const;
   unsigned getStackRegister() const;
 
-  const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF) const;
+  const MCPhysReg *getCallerSavedRegs(const MachineFunction *MF,
+        const TargetRegisterClass *RC) const;
 
   unsigned getFirstCallerSavedNonParamReg() const;
 

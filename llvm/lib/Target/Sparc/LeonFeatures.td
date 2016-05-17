@@ -22,3 +22,18 @@ def UMACSMACSupport : SubtargetFeature<
   "true", 
   "Enable UMAC and SMAC for LEON3 and LEON4 processors"
 >;
+
+
+//===----------------------------------------------------------------------===//
+// CASA Support differs between LEON3-FT GR712RC and LEON3-FT UT699
+// We need to have the option to switch this on and off.
+//===----------------------------------------------------------------------===//
+
+//support to casa instruction; for leon3 subtarget only
+def LeonCASA : SubtargetFeature<
+  "hasleoncasa", 
+  "HasLeonCasa", 
+  "true", 
+  "Enable CASA instruction for LEON3 and LEON4 processors"
+>;
+  

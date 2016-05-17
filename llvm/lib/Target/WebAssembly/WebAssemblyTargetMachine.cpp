@@ -167,9 +167,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 
   // Has no asserts of its own, but was not written to handle virtual regs.
   disablePass(&ShrinkWrapID);
-  // We use our own PrologEpilogInserter which is very slightly modified to
-  // tolerate virtual registers.
-  disablePass(&PrologEpilogCodeInserterID);
 
   // These functions all require the AllVRegsAllocated property.
   disablePass(&MachineCopyPropagationID);
@@ -180,11 +177,6 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&PatchableFunctionID);
 
   TargetPassConfig::addPostRegAlloc();
-
-  // Run WebAssembly's version of the PrologEpilogInserter. Target-independent
-  // PEI runs after PostRegAlloc and after ShrinkWrap. Putting it here will run
-  // PEI before ShrinkWrap but otherwise in the same position in the order.
-  addPass(createWebAssemblyPEI());
 }
 
 void WebAssemblyPassConfig::addPreEmitPass() {

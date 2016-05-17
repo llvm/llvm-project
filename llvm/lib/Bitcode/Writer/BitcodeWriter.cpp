@@ -3168,14 +3168,12 @@ void ModuleBitcodeWriter::writePerModuleFunctionSummaryRecord(
   NameVals.push_back(FS->instCount());
   NameVals.push_back(FS->refs().size());
 
-  // Compute refs in a separate vector to be able to sort them for determinism.
-  std::vector<uint64_t> Refs;
-  Refs.reserve(FS->refs().size());
+  unsigned SizeBeforeRefs = NameVals.size();
   for (auto &RI : FS->refs())
-    Refs.push_back(VE.getValueID(RI.getValue()));
-  std::sort(Refs.begin(), Refs.end());
-
-  NameVals.insert(NameVals.end(), Refs.begin(), Refs.end());
+    NameVals.push_back(VE.getValueID(RI.getValue()));
+  // Sort the refs for determinism output, the vector returned by FS->refs() has
+  // been initialized from a DenseSet.
+  std::sort(NameVals.begin() + SizeBeforeRefs, NameVals.end());
 
   std::vector<FunctionSummary::EdgeTy> Calls = FS->calls();
   std::sort(Calls.begin(), Calls.end(),
@@ -3215,13 +3213,12 @@ void ModuleBitcodeWriter::writeModuleLevelReferences(
   auto *Summary = Index->getGlobalValueSummary(V);
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
 
-  // Compute refs in a separate vector to be able to sort them for determinism.
-  std::vector<uint64_t> Refs;
-  Refs.reserve(VS->refs().size());
+  unsigned SizeBeforeRefs = NameVals.size();
   for (auto &RI : VS->refs())
-    Refs.push_back(VE.getValueID(RI.getValue()));
-  std::sort(Refs.begin(), Refs.end());
-  NameVals.insert(NameVals.end(), Refs.begin(), Refs.end());
+    NameVals.push_back(VE.getValueID(RI.getValue()));
+  // Sort the refs for determinism output, the vector returned by FS->refs() has
+  // been initialized from a DenseSet.
+  std::sort(NameVals.begin() + SizeBeforeRefs, NameVals.end());
 
   Stream.EmitRecord(bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS, NameVals,
                     FSModRefsAbbrev);

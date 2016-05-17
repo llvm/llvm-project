@@ -854,6 +854,14 @@ public:
     return InterleaveGroupMap.count(Instr);
   }
 
+  /// \brief Return the maximum interleave factor of all interleaved groups.
+  unsigned getMaxInterleaveFactor() const {
+    unsigned MaxFactor = 1;
+    for (auto &Entry : InterleaveGroupMap)
+      MaxFactor = std::max(MaxFactor, Entry.second->getFactor());
+    return MaxFactor;
+  }
+
   /// \brief Get the interleave group that \p Instr belongs to.
   ///
   /// \returns nullptr if doesn't have such group.
@@ -1332,6 +1340,11 @@ public:
   /// \brief Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) {
     return InterleaveInfo.isInterleaved(Instr);
+  }
+
+  /// \brief Return the maximum interleave factor of all interleaved groups.
+  unsigned getMaxInterleaveFactor() const {
+    return InterleaveInfo.getMaxInterleaveFactor();
   }
 
   /// \brief Get the interleaved access group that \p Instr belongs to.
@@ -5183,8 +5196,17 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
   unsigned WidestRegister = TTI.getRegisterBitWidth(true);
   unsigned MaxSafeDepDist = -1U;
+
+  // Get the maximum safe dependence distance in bits computed by LAA. If the
+  // loop contains any interleaved accesses, we divide the dependence distance
+  // by the maximum interleave factor of all interleaved groups. Note that
+  // although the division ensures correctness, this is a fairly conservative
+  // computation because the maximum distance computed by LAA may not involve
+  // any of the interleaved accesses.
   if (Legal->getMaxSafeDepDistBytes() != -1U)
-    MaxSafeDepDist = Legal->getMaxSafeDepDistBytes() * 8;
+    MaxSafeDepDist =
+        Legal->getMaxSafeDepDistBytes() * 8 / Legal->getMaxInterleaveFactor();
+
   WidestRegister =
       ((WidestRegister < MaxSafeDepDist) ? WidestRegister : MaxSafeDepDist);
   unsigned MaxVectorSize = WidestRegister / WidestType;

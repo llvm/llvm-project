@@ -321,6 +321,9 @@ private:
 
   /// \brief Check whether the data dependence could prevent store-load
   /// forwarding.
+  ///
+  /// \return false if we shouldn't vectorize at all or avoid larger
+  /// vectorization factors by limiting MaxSafeDepDistBytes.
   bool couldPreventStoreLoadForward(unsigned Distance, unsigned TypeByteSize);
 };
 

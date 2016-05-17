@@ -196,3 +196,5 @@
   swp $31, 8($4)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swp $16, 8($34)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
   swp $16, 4096($4)        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+                           # bposge32 is microMIPS DSP instruction
+  bposge32 342             # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled

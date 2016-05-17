@@ -152,6 +152,7 @@ namespace llvm {
   /// PrologEpilogCodeInserter - This pass inserts prolog and epilog code,
   /// and eliminates abstract frame references.
   extern char &PrologEpilogCodeInserterID;
+  MachineFunctionPass *createPrologEpilogInserterPass(const TargetMachine *TM);
 
   /// ExpandPostRAPseudos - This pass expands pseudo instructions after
   /// register allocation.

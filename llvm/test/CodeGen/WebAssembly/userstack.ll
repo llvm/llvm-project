@@ -131,10 +131,10 @@ define void @allocarray_inbounds() {
 
 ; CHECK-LABEL: dynamic_alloca:
 define void @dynamic_alloca(i32 %alloc) {
+ ; CHECK: i32.const $push[[L7:.+]]=, __stack_pointer
  ; CHECK: i32.const $push[[L1:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load $push[[L13:.+]]=, 0($pop[[L1]])
  ; CHECK-NEXT: tee_local $push[[L12:.+]]=, [[SP:.+]], $pop[[L13]]{{$}}
- ; CHECK-NEXT: copy_local [[FP:.+]]=, $pop[[L12]]{{$}}
  ; Target independent codegen bumps the stack pointer.
  ; CHECK: i32.sub
  ; Check that SP is written back to memory after decrement
@@ -144,7 +144,7 @@ define void @dynamic_alloca(i32 %alloc) {
  ; CHECK: call ext_func_i32@FUNCTION
  call void @ext_func_i32(i32* %r)
  ; CHECK: i32.const $push[[L3:.+]]=, __stack_pointer
- ; CHECK-NEXT: i32.store $discard=, 0($pop[[L3]]), [[FP]]
+ ; CHECK: i32.store $discard=, 0($pop[[L3]]), $pop{{.+}}
  ret void
 }
 
@@ -169,12 +169,14 @@ define void @dynamic_alloca_redzone(i32 %alloc) {
 ; CHECK-LABEL: dynamic_static_alloca:
 define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; Decrement SP in the prolog by the static amount and writeback to memory.
+ ; CHECK: i32.const $push[[L7:.+]]=, __stack_pointer
+ ; CHECK: i32.const $push[[L8:.+]]=, __stack_pointer
  ; CHECK: i32.const $push[[L9:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.load $push[[L10:.+]]=, 0($pop[[L9]])
  ; CHECK-NEXT: i32.const $push[[L11:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L20:.+]]=, $pop[[L10]], $pop[[L11]]
  ; CHECK-NEXT: tee_local $push[[L19:.+]]=, $[[FP:.+]]=, $pop[[L20]]
- ; CHECK:      i32.store $push[[L0:.+]]=, 0($pop{{.+}}), $[[FP]]
+ ; CHECK:      i32.store $push[[L0:.+]]=, 0($pop{{.+}}), $pop{{.+}}
  ; Decrement SP in the body by the dynamic amount.
  ; CHECK: i32.sub
  ; Writeback to memory.

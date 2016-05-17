@@ -20,7 +20,7 @@ class ObjectFile;
 }
 namespace codeview {
 class MemoryTypeTableBuilder;
-};
+}
 
 class ScopedPrinter;
 
