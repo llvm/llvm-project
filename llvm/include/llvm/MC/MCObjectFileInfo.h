@@ -196,10 +196,6 @@ protected:
 public:
   void InitMCObjectFileInfo(const Triple &TT, Reloc::Model RM,
                             CodeModel::Model CM, MCContext &ctx);
-  LLVM_ATTRIBUTE_DEPRECATED(
-      void InitMCObjectFileInfo(StringRef TT, Reloc::Model RM,
-                                CodeModel::Model CM, MCContext &ctx),
-      "StringRef GNU Triple argument replaced by a llvm::Triple object");
 
   bool getSupportsWeakOmittedEHFrame() const {
     return SupportsWeakOmittedEHFrame;

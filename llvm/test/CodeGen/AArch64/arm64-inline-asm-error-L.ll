@@ -1,4 +1,4 @@
-; RUN: not llc -march=arm64 -exit-on-error < %s  2> %t
+; RUN: not llc -march=arm64 < %s  2> %t
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 ; Check for at least one invalid constant.

@@ -95,3 +95,25 @@ entry:
   %res = extractelement <2 x i8 addrspace(1)*> <i8 addrspace(1)* @G, i8 addrspace(1)* @G>, i32 0
   ret i8 addrspace(1)* %res
 }
+
+define i8 addrspace(1)* @test6(i64 %arg) gc "statepoint-example" {
+entry:
+  ; Don't fail any assertions and don't record null as a live value
+  ; CHECK-LABEL: test6
+  ; CHECK: gc.statepoint
+  ; CHECK-NOT: call {{.*}}gc.relocate
+  %load_addr = getelementptr i8, i8 addrspace(1)* null, i64 %arg
+  call void @foo() [ "deopt"() ]
+  ret i8 addrspace(1)* %load_addr
+}
+
+define i8 addrspace(1)* @test7(i64 %arg) gc "statepoint-example" {
+entry:
+  ; Same as test7 but use regular constant instead of a null
+  ; CHECK-LABEL: test7
+  ; CHECK: gc.statepoint
+  ; CHECK-NOT: call {{.*}}gc.relocate
+  %load_addr = getelementptr i8, i8 addrspace(1)* inttoptr (i64 15 to i8 addrspace(1)*), i64 %arg
+  call void @foo() [ "deopt"() ]
+  ret i8 addrspace(1)* %load_addr
+}

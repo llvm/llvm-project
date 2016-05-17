@@ -264,6 +264,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // https://sourceware.org/bugzilla/show_bug.cgi?id=11616
   UseGNUTLSOpcode = tuneForGDB() || DwarfVersion < 3;
 
+  // GDB does not fully support the DWARF 4 representation for bitfields.
+  UseDWARF2Bitfields = (DwarfVersion < 4) || tuneForGDB();
+
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
 
   {

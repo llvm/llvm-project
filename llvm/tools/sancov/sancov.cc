@@ -414,8 +414,8 @@ visitObjectFiles(const object::Archive &A,
   for (auto &ErrorOrChild : A.children()) {
     FailIfError(ErrorOrChild);
     const object::Archive::Child &C = *ErrorOrChild;
-    ErrorOr<std::unique_ptr<object::Binary>> ChildOrErr = C.getAsBinary();
-    FailIfError(ChildOrErr);
+    Expected<std::unique_ptr<object::Binary>> ChildOrErr = C.getAsBinary();
+    FailIfError(errorToErrorCode(ChildOrErr.takeError()));
     if (auto *O = dyn_cast<object::ObjectFile>(&*ChildOrErr.get()))
       Fn(*O);
     else

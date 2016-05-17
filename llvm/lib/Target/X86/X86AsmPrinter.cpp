@@ -91,8 +91,7 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     if (MO.getTargetFlags() == X86II::MO_DARWIN_STUB)
       GVSym = P.getSymbolWithGlobalValueBase(GV, "$stub");
     else if (MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY ||
-             MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE ||
-             MO.getTargetFlags() == X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE)
+             MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE)
       GVSym = P.getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
     else
       GVSym = P.getSymbol(GV);
@@ -107,14 +106,6 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
       MCSymbol *Sym = P.getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
       MachineModuleInfoImpl::StubValueTy &StubSym =
           P.MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(Sym);
-      if (!StubSym.getPointer())
-        StubSym = MachineModuleInfoImpl::
-          StubValueTy(P.getSymbol(GV), !GV->hasInternalLinkage());
-    } else if (MO.getTargetFlags() == X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE){
-      MCSymbol *Sym = P.getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
-      MachineModuleInfoImpl::StubValueTy &StubSym =
-          P.MMI->getObjFileInfo<MachineModuleInfoMachO>().getHiddenGVStubEntry(
-              Sym);
       if (!StubSym.getPointer())
         StubSym = MachineModuleInfoImpl::
           StubValueTy(P.getSymbol(GV), !GV->hasInternalLinkage());
@@ -158,7 +149,6 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case X86II::MO_PIC_BASE_OFFSET:
   case X86II::MO_DARWIN_NONLAZY_PIC_BASE:
-  case X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE:
     O << '-';
     P.MF->getPICBaseSymbol()->print(O, P.MAI);
     break;
@@ -629,20 +619,6 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
 
     // Output stubs for external and common global variables.
     Stubs = MMIMacho.GetGVStubList();
-    if (!Stubs.empty()) {
-      MCSection *TheSection = OutContext.getMachOSection(
-          "__IMPORT", "__pointers", MachO::S_NON_LAZY_SYMBOL_POINTERS,
-          SectionKind::getMetadata());
-      OutStreamer->SwitchSection(TheSection);
-
-      for (auto &Stub : Stubs)
-        emitNonLazySymbolPointer(*OutStreamer, Stub.first, Stub.second);
-
-      Stubs.clear();
-      OutStreamer->AddBlankLine();
-    }
-
-    Stubs = MMIMacho.GetHiddenGVStubList();
     if (!Stubs.empty()) {
       MCSection *TheSection = OutContext.getMachOSection(
           "__IMPORT", "__pointers", MachO::S_NON_LAZY_SYMBOL_POINTERS,

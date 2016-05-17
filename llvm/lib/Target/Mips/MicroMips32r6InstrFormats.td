@@ -993,3 +993,14 @@ class POOL32B_LWP_SWP_FM_MMR6<bits<4> funct> : MipsR6Inst {
   let Inst{15-12} = funct;
   let Inst{11-0}  = offset;
 }
+
+class CMP_BRANCH_OFF21_FM_MMR6<string opstr, bits<6> funct> : MipsR6Inst {
+  bits<5> rs;
+  bits<21> offset;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = funct;
+  let Inst{25-21} = rs;
+  let Inst{20-0} = offset;
+}

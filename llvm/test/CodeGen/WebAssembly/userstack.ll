@@ -56,14 +56,14 @@ define void @allocarray() {
  ; CHECK-NEXT: i32.load $push[[L5:.+]]=, 0($pop[[L4]])
  ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 144{{$}}
  ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, $pop[[L5]], $pop[[L6]]
- ; CHECK-NEXT: i32.store $[[SP:.+]]=, 0($pop[[L7]]), $pop[[L11]]
+ ; CHECK-NEXT: i32.store ${{.+}}=, 0($pop[[L7]]), $pop[[L11]]
  %r = alloca [33 x i32]
 
- ; CHECK-NEXT: i32.const $push[[L2:.+]]=, 24
- ; CHECK-NEXT: i32.add $push[[L3:.+]]=, $[[SP]], $pop[[L2]]
+ ; CHECK:      i32.const $push{{.+}}=, 24
+ ; CHECK-NEXT: i32.add $push[[L3:.+]]=, $[[SP]], $pop{{.+}}
  ; CHECK-NEXT: i32.const $push[[L1:.+]]=, 1{{$}}
  ; CHECK-NEXT: i32.store $push[[L0:.+]]=, 0($pop[[L3]]), $pop[[L1]]{{$}}
- ; CHECK-NEXT: i32.store $discard=, 12($[[SP]]), $pop[[L0]]{{$}}
+ ; CHECK-NEXT: i32.store $discard=, 12(${{.+}}), $pop[[L0]]{{$}}
  %p = getelementptr [33 x i32], [33 x i32]* %r, i32 0, i32 0
  store i32 1, i32* %p
  %p2 = getelementptr [33 x i32], [33 x i32]* %r, i32 0, i32 3
@@ -111,20 +111,20 @@ define void @allocarray_inbounds() {
  ; CHECK-NEXT: i32.load $push[[L4:.+]]=, 0($pop[[L3]])
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 32{{$}}
  ; CHECK-NEXT: i32.sub $push[[L10:.+]]=, $pop[[L4]], $pop[[L5]]
- ; CHECK-NEXT: i32.store $[[SP:.+]]=, 0($pop[[L6]]), $pop[[L10]]{{$}}
+ ; CHECK-NEXT: i32.store ${{.+}}=, 0($pop[[L6]]), $pop[[L10]]{{$}}
  %r = alloca [5 x i32]
  ; CHECK: i32.const $push[[L3:.+]]=, 1
- ; CHECK: i32.store {{.*}}=, 12($[[SP]]), $pop[[L3]]
+ ; CHECK: i32.store {{.*}}=, 12(${{.+}}), $pop[[L3]]
  %p = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 0
  store i32 1, i32* %p
  ; This store should have both the GEP and the FI folded into it.
- ; CHECK-NEXT: i32.store {{.*}}=, 24($[[SP]]), $pop
+ ; CHECK-NEXT: i32.store {{.*}}=, 24(${{.+}}), $pop
  %p2 = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 3
  store i32 1, i32* %p2
  call void @ext_func(i64* null);
  ; CHECK: i32.const $push[[L6:.+]]=, __stack_pointer
  ; CHECK-NEXT: i32.const $push[[L5:.+]]=, 32
- ; CHECK-NEXT: i32.add $push[[L7:.+]]=, $[[SP]], $pop[[L5]]
+ ; CHECK-NEXT: i32.add $push[[L7:.+]]=, ${{.+}}, $pop[[L5]]
  ; CHECK-NEXT: i32.store $discard=, 0($pop[[L6]]), $pop[[L7]]
  ret void
 }

@@ -77,19 +77,66 @@ Error MachOWriter::writeHeader(raw_ostream &OS) {
   return Error::success();
 }
 
+template <typename SectionType>
+SectionType constructSection(MachOYAML::Section Sec) {
+  SectionType TempSec;
+  memcpy(reinterpret_cast<void *>(&TempSec.sectname[0]), &Sec.sectname[0], 16);
+  memcpy(reinterpret_cast<void *>(&TempSec.segname[0]), &Sec.segname[0], 16);
+  TempSec.addr = Sec.addr;
+  TempSec.size = Sec.size;
+  TempSec.offset = Sec.offset;
+  TempSec.align = Sec.align;
+  TempSec.reloff = Sec.reloff;
+  TempSec.nreloc = Sec.nreloc;
+  TempSec.flags = Sec.flags;
+  TempSec.reserved1 = Sec.reserved1;
+  TempSec.reserved2 = Sec.reserved2;
+  return TempSec;
+}
+
 Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
   for (auto &LC : Obj.LoadCommands) {
-    MachO::load_command LCTemp;
-    LCTemp.cmd = LC->cmd;
-    LCTemp.cmdsize = LC->cmdsize;
-    OS.write(reinterpret_cast<const char *>(&LCTemp),
-             sizeof(MachO::load_command));
-    auto remaining_size = LC->cmdsize - sizeof(MachO::load_command);
-    if (remaining_size > 0) {
+    size_t BytesWritten = 0;
+#define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
+  case MachO::LCName:                                                          \
+    OS.write(reinterpret_cast<const char *>(&(LC.Data.LCStruct##_data)),       \
+             sizeof(MachO::LCStruct));                                         \
+    BytesWritten = sizeof(MachO::LCStruct);                                    \
+    break;
+
+    switch (LC.Data.load_command_data.cmd) {
+    default:
+      OS.write(reinterpret_cast<const char *>(&(LC.Data.load_command_data)),
+               sizeof(MachO::load_command));
+      BytesWritten = sizeof(MachO::load_command);
+      break;
+#include "llvm/Support/MachO.def"
+    }
+
+    if(LC.Data.load_command_data.cmd == MachO::LC_SEGMENT) {
+      for(auto Sec : LC.Sections) {
+        auto TempSec = constructSection<MachO::section>(Sec);
+        OS.write(reinterpret_cast<const char *>(&(TempSec)), sizeof(MachO::section));
+        BytesWritten += sizeof(MachO::section);
+      }
+    } else if(LC.Data.load_command_data.cmd == MachO::LC_SEGMENT_64) {
+      for(auto Sec : LC.Sections) {
+        auto TempSec = constructSection<MachO::section_64>(Sec);
+        TempSec.reserved3 = Sec.reserved3;
+        OS.write(reinterpret_cast<const char *>(&(TempSec)), sizeof(MachO::section_64));
+        BytesWritten += sizeof(MachO::section_64);
+      }
+    }
+
+    auto BytesRemaining =
+        LC.Data.load_command_data.cmdsize - BytesWritten;
+    if (BytesRemaining > 0) {
       // TODO: Replace all this once the load command data is present in yaml.
-      std::vector<char> fill_data;
-      fill_data.insert(fill_data.begin(), remaining_size, 0);
-      OS.write(fill_data.data(), remaining_size);
+      // For now I fill with 0xDEADBEEF because it is easy to spot on a hex
+      // viewer.
+      std::vector<uint32_t> FillData;
+      FillData.insert(FillData.begin(), BytesRemaining / 4 + 1, 0xDEADBEEFu);
+      OS.write(reinterpret_cast<char *>(FillData.data()), BytesRemaining);
     }
   }
   return Error::success();

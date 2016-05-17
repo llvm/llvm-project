@@ -62,6 +62,28 @@ static cl::opt<bool> DisableBackwardSearch(
   cl::desc("Disallow MIPS delay filler to search backward."),
   cl::Hidden);
 
+enum CompactBranchPolicy {
+  CB_Never,   ///< The policy 'never' may in some circumstances or for some
+              ///< ISAs not be absolutely adhered to.
+  CB_Optimal, ///< Optimal is the default and will produce compact branches
+              ///< when delay slots cannot be filled.
+  CB_Always   ///< 'always' may in some circumstances may not be
+              ///< absolutely adhered to there may not be a corresponding
+              ///< compact form of a branch.
+};
+
+static cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
+  "mips-compact-branches",cl::Optional,
+  cl::init(CB_Optimal),
+  cl::desc("MIPS Specific: Compact branch policy."),
+  cl::values(
+    clEnumValN(CB_Never, "never", "Do not use compact branches if possible."),
+    clEnumValN(CB_Optimal, "optimal", "Use compact branches where appropiate (default)."),
+    clEnumValN(CB_Always, "always", "Always use compact branches if possible."),
+    clEnumValEnd
+  )
+);
+
 namespace {
   typedef MachineBasicBlock::iterator Iter;
   typedef MachineBasicBlock::reverse_iterator ReverseIter;
@@ -563,14 +585,17 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     if (!DisableDelaySlotFiller && (TM.getOptLevel() != CodeGenOpt::None)) {
       bool Filled = false;
 
-      if (searchBackward(MBB, I)) {
-        Filled = true;
-      } else if (I->isTerminator()) {
-        if (searchSuccBBs(MBB, I)) {
+      if (MipsCompactBranchPolicy.getValue() != CB_Always ||
+           !TII->getEquivalentCompactForm(I)) {
+        if (searchBackward(MBB, I)) {
+          Filled = true;
+        } else if (I->isTerminator()) {
+          if (searchSuccBBs(MBB, I)) {
+            Filled = true;
+          }
+        } else if (searchForward(MBB, I)) {
           Filled = true;
         }
-      } else if (searchForward(MBB, I)) {
-        Filled = true;
       }
 
       if (Filled) {
@@ -596,8 +621,9 @@ bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     // For MIPSR6 attempt to produce the corresponding compact (no delay slot)
     // form of the CTI. For indirect jumps this will not require inserting a
     // NOP and for branches will hopefully avoid requiring a NOP.
-    if ((InMicroMipsMode || STI.hasMips32r6()) &&
-         TII->getEquivalentCompactForm(I)) {
+    if ((InMicroMipsMode ||
+         (STI.hasMips32r6() && MipsCompactBranchPolicy != CB_Never)) &&
+        TII->getEquivalentCompactForm(I)) {
       I = replaceWithCompactBranch(MBB, I, I->getDebugLoc());
       continue;
     }

@@ -421,14 +421,17 @@ static void dumpArchive(const Archive *Arc) {
     if (std::error_code EC = ErrorOrChild.getError())
       reportError(Arc->getFileName(), EC.message());
     const auto &Child = *ErrorOrChild;
-    ErrorOr<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
-    if (std::error_code EC = ChildOrErr.getError()) {
-      // Ignore non-object files.
-      if (EC != object_error::invalid_file_type)
-        reportError(Arc->getFileName(), EC.message());
+    Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
+    if (!ChildOrErr) {
+      if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError())) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(ChildOrErr.takeError(), OS, "");
+        OS.flush();
+        reportError(Arc->getFileName(), Buf);
+      }
       continue;
     }
-
     if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
       dumpObject(Obj);
     else

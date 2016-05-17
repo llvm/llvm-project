@@ -2097,3 +2097,24 @@ if.then3:                                         ; preds = %if.end
 return:                                           ; preds = %if.end, %entry, %if.then3
   ret void
 }
+
+; When canonicalizing to 'gt/lt', make sure the constant is correct.
+
+define i1 @PR27792(i128 %a) {
+; CHECK-LABEL: @PR27792(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i128 %a, -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp sge i128 %a, 0
+  ret i1 %cmp
+}
+
+define i1 @PR27792_2(i128 %a) {
+; CHECK-LABEL: @PR27792_2(
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i128 %a, 0
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %b = icmp uge i128 %a, 1
+  ret i1 %b
+}
+

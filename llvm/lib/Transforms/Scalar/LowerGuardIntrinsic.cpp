@@ -21,11 +21,17 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
+
+static cl::opt<uint32_t> LikelyBranchWeight(
+    "guards-likely-branch-weight", cl::Hidden, cl::init(1 << 20),
+    cl::desc("The probability of a guard failing is assumed to be the "
+             "reciprocal of this value (default = 1 << 20)"));
 
 namespace {
 struct LowerGuardIntrinsic : public FunctionPass {
@@ -58,6 +64,10 @@ static void MakeGuardControlFlowExplicit(Function *DeoptIntrinsic,
 
   if (auto *MD = CI->getMetadata(LLVMContext::MD_make_implicit))
     CheckBI->setMetadata(LLVMContext::MD_make_implicit, MD);
+
+  MDBuilder MDB(CI->getContext());
+  CheckBI->setMetadata(LLVMContext::MD_prof,
+                       MDB.createBranchWeights(LikelyBranchWeight, 1));
 
   IRBuilder<> B(DeoptBlockTerm);
   auto *DeoptCall = B.CreateCall(DeoptIntrinsic, Args, {DeoptOB}, "");

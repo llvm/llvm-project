@@ -1,4 +1,4 @@
-; RUN: not llc -mcpu=pwr7 -exit-on-error -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: not llc -mcpu=pwr7 -o /dev/null %s 2>&1 | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

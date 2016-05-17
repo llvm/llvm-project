@@ -281,6 +281,36 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
   exit(1);
 }
 
+LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef ArchiveName,
+                                                StringRef FileName,
+                                                llvm::Error E) {
+  assert(E);
+  errs() << ToolName << ": ";
+  if (ArchiveName != "")
+    errs() << ArchiveName << "(" << FileName << ")";
+  else
+    errs() << FileName;
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  logAllUnhandledErrors(std::move(E), OS, "");
+  OS.flush();
+  errs() << " " << Buf;
+  exit(1);
+}
+
+LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef ArchiveName,
+                                                const object::Archive::Child &C,
+                                                llvm::Error E) {
+  ErrorOr<StringRef> NameOrErr = C.getName();
+  // TODO: if we have a error getting the name then it would be nice to print
+  // the index of which archive member this is and or its offset in the
+  // archive instead of "???" as the name.
+  if (NameOrErr.getError())
+    llvm::report_error(ArchiveName, "???", std::move(E));
+  else
+    llvm::report_error(ArchiveName, NameOrErr.get(), std::move(E));
+}
+
 static const Target *getTarget(const ObjectFile *Obj = nullptr) {
   // Figure out the target triple.
   llvm::Triple TheTriple("unknown-unknown-unknown");
@@ -1346,7 +1376,7 @@ void llvm::PrintSectionContents(const ObjectFile *Obj) {
   }
 }
 
-void llvm::PrintSymbolTable(const ObjectFile *o) {
+void llvm::PrintSymbolTable(const ObjectFile *o, StringRef ArchiveName) {
   outs() << "SYMBOL TABLE:\n";
 
   if (const COFFObjectFile *coff = dyn_cast<const COFFObjectFile>(o)) {
@@ -1359,7 +1389,7 @@ void llvm::PrintSymbolTable(const ObjectFile *o) {
     uint64_t Address = *AddressOrError;
     Expected<SymbolRef::Type> TypeOrError = Symbol.getType();
     if (!TypeOrError)
-      report_error(o->getFileName(), TypeOrError.takeError());
+      report_error(ArchiveName, o->getFileName(), TypeOrError.takeError());
     SymbolRef::Type Type = *TypeOrError;
     uint32_t Flags = Symbol.getFlags();
     Expected<section_iterator> SectionOrErr = Symbol.getSection();
@@ -1371,7 +1401,7 @@ void llvm::PrintSymbolTable(const ObjectFile *o) {
     } else {
       Expected<StringRef> NameOrErr = Symbol.getName();
       if (!NameOrErr)
-        report_error(o->getFileName(), NameOrErr.takeError());
+        report_error(ArchiveName, o->getFileName(), NameOrErr.takeError());
       Name = *NameOrErr;
     }
 
@@ -1603,12 +1633,16 @@ static void printFirstPrivateFileHeader(const ObjectFile *o) {
     report_fatal_error("Invalid/Unsupported object file format");
 }
 
-static void DumpObject(const ObjectFile *o) {
+static void DumpObject(const ObjectFile *o, const Archive *a = nullptr) {
+  StringRef ArchiveName = a != nullptr ? a->getFileName() : "";
   // Avoid other output when using a raw option.
   if (!RawClangAST) {
     outs() << '\n';
-    outs() << o->getFileName()
-           << ":\tfile format " << o->getFileFormatName() << "\n\n";
+    if (a)
+      outs() << a->getFileName() << "(" << o->getFileName() << ")";
+    else
+      outs() << o->getFileName();
+    outs() << ":\tfile format " << o->getFileFormatName() << "\n\n";
   }
 
   if (Disassemble)
@@ -1620,7 +1654,7 @@ static void DumpObject(const ObjectFile *o) {
   if (SectionContents)
     PrintSectionContents(o);
   if (SymbolTable)
-    PrintSymbolTable(o);
+    PrintSymbolTable(o, ArchiveName);
   if (UnwindInfo)
     PrintUnwindInfo(o);
   if (PrivateHeaders)
@@ -1654,12 +1688,14 @@ static void DumpArchive(const Archive *a) {
     if (std::error_code EC = ErrorOrChild.getError())
       report_error(a->getFileName(), EC);
     const Archive::Child &C = *ErrorOrChild;
-    ErrorOr<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
-    if (std::error_code EC = ChildOrErr.getError())
-      if (EC != object_error::invalid_file_type)
-        report_error(a->getFileName(), EC);
+    Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
+    if (!ChildOrErr) {
+      if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
+        report_error(a->getFileName(), C, std::move(E));
+      continue;
+    }
     if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
-      DumpObject(o);
+      DumpObject(o, a);
     else
       report_error(a->getFileName(), object_error::invalid_file_type);
   }

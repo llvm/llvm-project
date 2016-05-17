@@ -13,16 +13,20 @@
 
 #include "CodeGenTarget.h"
 #include "CodeGenSchedule.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -32,6 +36,7 @@ using namespace llvm;
 #define DEBUG_TYPE "subtarget-emitter"
 
 namespace {
+
 class SubtargetEmitter {
   // Each processor has a SchedClassDesc table with an entry for each SchedClass.
   // The SchedClassDesc table indexes into a global write resource table, write
@@ -107,6 +112,7 @@ public:
 
   void run(raw_ostream &o);
 };
+
 } // end anonymous namespace
 
 //
@@ -142,7 +148,8 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   }
 
   // Close enumeration and namespace
-  OS << "};\n}\n";
+  OS << "};\n";
+  OS << "} // end namespace " << Target << "\n";
 }
 
 //
@@ -374,7 +381,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
       OS << "  const unsigned " << FUs[j]->getName()
          << " = 1 << " << j << ";\n";
 
-    OS << "}\n";
+    OS << "} // end namespace " << Name << "FU\n";
 
     std::vector<Record*> BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (!BPs.empty()) {
@@ -386,7 +393,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
         OS << "  const unsigned " << BPs[j]->getName()
            << " = 1 << " << j << ";\n";
 
-      OS << "}\n";
+      OS << "} // end namespace " << Name << "Bypass\n";
     }
   }
 
@@ -1114,7 +1121,7 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
            && "invalid class not first");
     OS << "  {DBGFIELD(\"InvalidSchedClass\")  "
        << MCSchedClassDesc::InvalidNumMicroOps
-       << ", 0, 0,  0, 0,  0, 0,  0, 0},\n";
+       << ", false, false,  0, 0,  0, 0,  0, 0},\n";
 
     for (unsigned SCIdx = 1, SCEnd = SCTab.size(); SCIdx != SCEnd; ++SCIdx) {
       MCSchedClassDesc &MCDesc = SCTab[SCIdx];
@@ -1123,7 +1130,8 @@ void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
       if (SchedClass.Name.size() < 18)
         OS.indent(18 - SchedClass.Name.size());
       OS << MCDesc.NumMicroOps
-         << ", " << MCDesc.BeginGroup << ", " << MCDesc.EndGroup
+         << ", " << ( MCDesc.BeginGroup ? "true" : "false" )
+         << ", " << ( MCDesc.EndGroup ? "true" : "false" )
          << ", " << format("%2d", MCDesc.WriteProcResIdx)
          << ", " << MCDesc.NumWriteProcResEntries
          << ", " << format("%2d", MCDesc.WriteLatencyIdx)
@@ -1158,13 +1166,17 @@ void SubtargetEmitter::EmitProcessorModels(raw_ostream &OS) {
     EmitProcessorProp(OS, PM.ModelDef, "HighLatency", ',');
     EmitProcessorProp(OS, PM.ModelDef, "MispredictPenalty", ',');
 
-    OS << "  " << (bool)(PM.ModelDef ?
-                         PM.ModelDef->getValueAsBit("PostRAScheduler") : 0)
-       << ", // " << "PostRAScheduler\n";
+    bool PostRAScheduler =
+      (PM.ModelDef ? PM.ModelDef->getValueAsBit("PostRAScheduler") : false);
 
-    OS << "  " << (bool)(PM.ModelDef ?
-                         PM.ModelDef->getValueAsBit("CompleteModel") : 0)
-       << ", // " << "CompleteModel\n";
+    OS << "  " << (PostRAScheduler ? "true" : "false")  << ", // "
+       << "PostRAScheduler\n";
+
+    bool CompleteModel =
+      (PM.ModelDef ? PM.ModelDef->getValueAsBit("CompleteModel") : false);
+
+    OS << "  " << (CompleteModel ? "true" : "false") << ", // "
+       << "CompleteModel\n";
 
     OS << "  " << PM.Index << ", // Processor ID\n";
     if (PM.hasInstrSchedModel())
@@ -1376,15 +1388,15 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Subtarget Enumeration Source Fragment", OS);
 
   OS << "\n#ifdef GET_SUBTARGETINFO_ENUM\n";
-  OS << "#undef GET_SUBTARGETINFO_ENUM\n";
+  OS << "#undef GET_SUBTARGETINFO_ENUM\n\n";
 
   OS << "namespace llvm {\n";
   Enumeration(OS);
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
 
   OS << "\n#ifdef GET_SUBTARGETINFO_MC_DESC\n";
-  OS << "#undef GET_SUBTARGETINFO_MC_DESC\n";
+  OS << "#undef GET_SUBTARGETINFO_MC_DESC\n\n";
 
   OS << "namespace llvm {\n";
 #if 0
@@ -1397,7 +1409,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   EmitSchedModel(OS);
   OS << "\n";
 #if 0
-  OS << "}\n";
+  OS << "} // end anonymous namespace\n\n";
 #endif
 
   // MCInstrInfo initialization routine.
@@ -1427,22 +1439,22 @@ void SubtargetEmitter::run(raw_ostream &OS) {
     OS << "0, 0, 0";
   OS << ");\n}\n\n";
 
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_MC_DESC\n\n";
 
   OS << "\n#ifdef GET_SUBTARGETINFO_TARGET_DESC\n";
-  OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n";
+  OS << "#undef GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
   OS << "#include \"llvm/Support/Debug.h\"\n";
-  OS << "#include \"llvm/Support/raw_ostream.h\"\n";
+  OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
   ParseFeaturesFunction(OS, NumFeatures, NumProcs);
 
   OS << "#endif // GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
   // Create a TargetSubtargetInfo subclass to hide the MC layer initialization.
   OS << "\n#ifdef GET_SUBTARGETINFO_HEADER\n";
-  OS << "#undef GET_SUBTARGETINFO_HEADER\n";
+  OS << "#undef GET_SUBTARGETINFO_HEADER\n\n";
 
   std::string ClassName = Target + "GenSubtargetInfo";
   OS << "namespace llvm {\n";
@@ -1457,14 +1469,14 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n"
      << "};\n";
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_HEADER\n\n";
 
   OS << "\n#ifdef GET_SUBTARGETINFO_CTOR\n";
-  OS << "#undef GET_SUBTARGETINFO_CTOR\n";
+  OS << "#undef GET_SUBTARGETINFO_CTOR\n\n";
 
-  OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n";
+  OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
   OS << "namespace llvm {\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "FeatureKV[];\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "SubTypeKV[];\n";
@@ -1509,7 +1521,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   EmitSchedModelHelpers(ClassName, OS);
 
-  OS << "} // end llvm namespace\n";
+  OS << "} // end namespace llvm\n\n";
 
   OS << "#endif // GET_SUBTARGETINFO_CTOR\n\n";
 }
@@ -1521,4 +1533,4 @@ void EmitSubtarget(RecordKeeper &RK, raw_ostream &OS) {
   SubtargetEmitter(RK, CGTarget).run(OS);
 }
 
-} // end llvm namespace
+} // end namespace llvm

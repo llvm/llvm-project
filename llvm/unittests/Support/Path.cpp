@@ -970,4 +970,29 @@ TEST(Support, RemoveDots) {
   EXPECT_EQ("c", Path1);
 #endif
 }
+
+TEST(Support, ReplacePathPrefix) {
+  SmallString<64> Path1("/foo");
+  SmallString<64> Path2("/old/foo");
+  SmallString<64> OldPrefix("/old");
+  SmallString<64> NewPrefix("/new");
+  SmallString<64> NewPrefix2("/longernew");
+  SmallString<64> EmptyPrefix("");
+
+  SmallString<64> Path = Path1;
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix);
+  EXPECT_EQ(Path, "/foo");
+  Path = Path2;
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix);
+  EXPECT_EQ(Path, "/new/foo");
+  Path = Path2;
+  path::replace_path_prefix(Path, OldPrefix, NewPrefix2);
+  EXPECT_EQ(Path, "/longernew/foo");
+  Path = Path1;
+  path::replace_path_prefix(Path, EmptyPrefix, NewPrefix);
+  EXPECT_EQ(Path, "/new/foo");
+  Path = Path2;
+  path::replace_path_prefix(Path, OldPrefix, EmptyPrefix);
+  EXPECT_EQ(Path, "/foo");
+}
 } // anonymous namespace

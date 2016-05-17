@@ -53,10 +53,7 @@ STATISTIC(NumLCSSA, "Number of live out of a loop variables");
 /// Return true if the specified block is in the list.
 static bool isExitBlock(BasicBlock *BB,
                         const SmallVectorImpl<BasicBlock *> &ExitBlocks) {
-  for (unsigned i = 0, e = ExitBlocks.size(); i != e; ++i)
-    if (ExitBlocks[i] == BB)
-      return true;
-  return false;
+  return llvm::any_of(ExitBlocks, [&](BasicBlock *EB) { return EB == BB; });
 }
 
 /// Given an instruction in the loop, check to see if it has any uses that are
@@ -210,11 +207,9 @@ blockDominatesAnExit(BasicBlock *BB,
                      DominatorTree &DT,
                      const SmallVectorImpl<BasicBlock *> &ExitBlocks) {
   DomTreeNode *DomNode = DT.getNode(BB);
-  for (BasicBlock *ExitBB : ExitBlocks)
-    if (DT.dominates(DomNode, DT.getNode(ExitBB)))
-      return true;
-
-  return false;
+  return llvm::any_of(ExitBlocks, [&](BasicBlock * EB) {
+    return DT.dominates(DomNode, DT.getNode(EB));
+  });
 }
 
 bool llvm::formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
@@ -311,8 +306,6 @@ char LCSSA::ID = 0;
 INITIALIZE_PASS_BEGIN(LCSSA, "lcssa", "Loop-Closed SSA Form Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(SCEVAAWrapperPass)
 INITIALIZE_PASS_END(LCSSA, "lcssa", "Loop-Closed SSA Form Pass", false, false)
 
 Pass *llvm::createLCSSAPass() { return new LCSSA(); }

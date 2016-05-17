@@ -47,6 +47,8 @@ private:
 public:
   FieldListRecordBuilder();
 
+  void reset() { ListRecordBuilder::reset(TypeRecordKind::FieldList); }
+
   void writeBaseClass(const BaseClassRecord &Record);
   void writeEnumerator(const EnumeratorRecord &Record);
   void writeDataMember(const DataMemberRecord &Record);

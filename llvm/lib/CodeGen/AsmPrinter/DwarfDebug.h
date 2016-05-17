@@ -248,6 +248,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Whether to use the GNU TLS opcode (instead of the standard opcode).
   bool UseGNUTLSOpcode;
 
+  /// Whether to use DWARF 2 bitfields (instead of the DWARF 4 format).
+  bool UseDWARF2Bitfields;
+
   /// Whether to emit all linkage names, or just abstract subprograms.
   bool UseAllLinkageNames;
 
@@ -481,6 +484,10 @@ public:
   /// Returns whether to use DW_OP_GNU_push_tls_address, instead of the
   /// standard DW_OP_form_tls_address opcode
   bool useGNUTLSOpcode() const { return UseGNUTLSOpcode; }
+
+  /// Returns whether to use the DWARF2 format for bitfields instyead of the
+  /// DWARF4 format.
+  bool useDWARF2Bitfields() const { return UseDWARF2Bitfields; }
 
   /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
   ///

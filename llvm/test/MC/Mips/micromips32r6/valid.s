@@ -32,6 +32,8 @@
   bgtzalc $2, 1332         # CHECK: bgtzalc $2, 1332    # encoding: [0xe0,0x40,0x02,0x9a]
   bltzalc $2, 1332         # CHECK: bltzalc $2, 1332    # encoding: [0xe0,0x42,0x02,0x9a]
   blezalc $2, 1332         # CHECK: blezalc $2, 1332    # encoding: [0xc0,0x40,0x02,0x9a]
+  beqzc   $3, 64           # CHECK: beqzc   $3, 64      # encoding: [0x80,0x60,0x00,0x20]
+  bnezc   $3, 64           # CHECK: bnezc   $3, 64      # encoding: [0xa0,0x60,0x00,0x20]
   balc 7286128             # CHECK: balc 7286128        # encoding: [0xb4,0x37,0x96,0xb8]
   b 132                    # CHECK: bc16 132            # encoding: [0xcc,0x42]
   bc 7286128               # CHECK: bc 7286128          # encoding: [0x94,0x37,0x96,0xb8]

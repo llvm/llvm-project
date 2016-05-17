@@ -228,6 +228,11 @@ ErrorOr<StringRef> Archive::Child::getName() const {
     if (name.substr(3).rtrim(' ').getAsInteger(10, name_size))
       llvm_unreachable("Long name length is not an ingeter");
     return Data.substr(sizeof(ArchiveMemberHeader), name_size).rtrim('\0');
+  } else {
+    // It is not a long name so trim the blanks at the end of the name.
+    if (name[name.size() - 1] != '/') {
+      return name.rtrim(' ');
+    }
   }
   // It's a simple name.
   if (name[name.size() - 1] == '/')
@@ -246,16 +251,16 @@ ErrorOr<MemoryBufferRef> Archive::Child::getMemoryBufferRef() const {
   return MemoryBufferRef(*Buf, Name);
 }
 
-ErrorOr<std::unique_ptr<Binary>>
+Expected<std::unique_ptr<Binary>>
 Archive::Child::getAsBinary(LLVMContext *Context) const {
   ErrorOr<MemoryBufferRef> BuffOrErr = getMemoryBufferRef();
   if (std::error_code EC = BuffOrErr.getError())
-    return EC;
+    return errorCodeToError(EC);
 
   auto BinaryOrErr = createBinary(BuffOrErr.get(), Context);
   if (BinaryOrErr)
     return std::move(*BinaryOrErr);
-  return errorToErrorCode(BinaryOrErr.takeError());
+  return BinaryOrErr.takeError();
 }
 
 ErrorOr<std::unique_ptr<Archive>> Archive::create(MemoryBufferRef Source) {
