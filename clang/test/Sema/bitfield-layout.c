@@ -97,7 +97,7 @@ struct g0 {
   char c;
 };
 
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_SIZE(struct, g0, 16);
 CHECK_ALIGN(struct, g0, 16);
 CHECK_OFFSET(struct, g0, c, 2);
@@ -116,7 +116,7 @@ struct g1 {
 
 CHECK_SIZE(struct, g1, 4);
 CHECK_ALIGN(struct, g1, 4);
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_OFFSET(struct, g1, c, 2);
 #else
 CHECK_OFFSET(struct, g1, c, 3);
@@ -142,7 +142,7 @@ struct __attribute__((packed)) g3 {
 };
 
 CHECK_ALIGN(struct, g3, 16);
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_SIZE(struct, g3, 16);
 CHECK_OFFSET(struct, g3, c, 2);
 #else
@@ -158,7 +158,7 @@ struct __attribute__((packed)) g4 {
 
 CHECK_SIZE(struct, g4, 4);
 CHECK_ALIGN(struct, g4, 2);
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_OFFSET(struct, g4, c, 2);
 #else
 CHECK_OFFSET(struct, g4, c, 3);
@@ -182,7 +182,7 @@ struct g7 {
   char : 1;
   __attribute__((aligned(1))) int n : 25;
 };
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_SIZE(struct, g7, 4);
 #else
 CHECK_SIZE(struct, g7, 8);
@@ -193,7 +193,7 @@ struct __attribute__((packed)) g8 {
   char : 1;
   __attribute__((aligned(1))) int n : 25;
 };
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_SIZE(struct, g8, 4);
 #else
 CHECK_SIZE(struct, g8, 5);
@@ -204,7 +204,7 @@ struct g9 {
   __attribute__((aligned(1))) char a : 2, b : 2, c : 2, d : 2, e : 2;
   int i;
 };
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_SIZE(struct, g9, 8);
 #else
 CHECK_SIZE(struct, g9, 12);
@@ -215,7 +215,7 @@ struct __attribute__((packed)) g10 {
   __attribute__((aligned(1))) char a : 2, b : 2, c : 2, d : 2, e : 2;
   int i;
 };
-#if defined(__PS4__)
+#if defined(__ORBIS__)
 CHECK_SIZE(struct, g10, 6);
 #else
 CHECK_SIZE(struct, g10, 9);

@@ -327,7 +327,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     // <isysroot> gets prepended later in AddPath().
     std::string BaseSDKPath = "";
     if (!HasSysroot) {
-      const char *envValue = getenv("SCE_PS4_SDK_DIR");
+      const char *envValue = getenv("SCE_ORBIS_SDK_DIR");
       if (envValue)
         BaseSDKPath = envValue;
       else {

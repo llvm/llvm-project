@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-unused-value
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -Wno-unused-value -triple spir-unknown-unknown
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 constant float f = 1.0h; // expected-error{{half precision constant requires cl_khr_fp16}}

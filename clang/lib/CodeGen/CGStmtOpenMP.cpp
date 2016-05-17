@@ -172,7 +172,8 @@ static Address castValueFromUintptr(CodeGenFunction &CGF, QualType DstType,
 }
 
 llvm::Function *
-CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
+CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
+                                                    bool CastValToPtr) {
   assert(
       CapturedStmtInfo &&
       "CapturedStmtInfo should be set when generating the captured function");
@@ -196,9 +197,11 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
     // uintptr. This is necessary given that the runtime library is only able to
     // deal with pointers. We can pass in the same way the VLA type sizes to the
     // outlined function.
-    if ((I->capturesVariableByCopy() && !ArgType->isAnyPointerType()) ||
-        I->capturesVariableArrayType())
-      ArgType = Ctx.getUIntPtrType();
+    if (CastValToPtr) {
+      if ((I->capturesVariableByCopy() && !ArgType->isAnyPointerType()) ||
+          I->capturesVariableArrayType())
+        ArgType = Ctx.getUIntPtrType();
+    }
 
     if (I->capturesVariable() || I->capturesVariableByCopy()) {
       CapVar = I->getCapturedVar();
@@ -252,9 +255,12 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
                        AlignmentSource::Decl);
     if (FD->hasCapturedVLAType()) {
       LValue CastedArgLVal =
-          MakeAddrLValue(castValueFromUintptr(*this, FD->getType(),
-                                              Args[Cnt]->getName(), ArgLVal),
-                         FD->getType(), AlignmentSource::Decl);
+          CastValToPtr
+              ? MakeAddrLValue(castValueFromUintptr(*this, FD->getType(),
+                                                    Args[Cnt]->getName(),
+                                                    ArgLVal),
+                               FD->getType(), AlignmentSource::Decl)
+              : ArgLVal;
       auto *ExprArg =
           EmitLoadOfLValue(CastedArgLVal, SourceLocation()).getScalarVal();
       auto VAT = FD->getCapturedVLAType();
@@ -274,10 +280,16 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
              "Not expecting a captured pointer.");
       auto *Var = I->getCapturedVar();
       QualType VarTy = Var->getType();
-      setAddrOfLocalVar(I->getCapturedVar(),
-                        castValueFromUintptr(*this, FD->getType(),
-                                             Args[Cnt]->getName(), ArgLVal,
-                                             VarTy->isReferenceType()));
+      if (!CastValToPtr && VarTy->isReferenceType()) {
+        Address Temp = CreateMemTemp(VarTy);
+        Builder.CreateStore(ArgLVal.getPointer(), Temp);
+        ArgLVal = MakeAddrLValue(Temp, VarTy);
+      }
+      setAddrOfLocalVar(Var, CastValToPtr ? castValueFromUintptr(
+                                                *this, FD->getType(),
+                                                Args[Cnt]->getName(), ArgLVal,
+                                                VarTy->isReferenceType())
+                                          : ArgLVal.getAddress());
     } else {
       // If 'this' is captured, load it into CXXThisValue.
       assert(I->capturesThis());
@@ -564,18 +576,25 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
     auto InitsRef = C->inits().begin();
     for (auto IInit : C->private_copies()) {
       auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      bool ThisFirstprivateIsLastprivate =
+          Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
+      auto *FD = CapturedStmtInfo->lookup(OrigVD);
+      if (!ThisFirstprivateIsLastprivate && FD &&
+          !FD->getType()->isReferenceType()) {
+        EmittedAsFirstprivate.insert(OrigVD->getCanonicalDecl());
+        ++IRef;
+        ++InitsRef;
+        continue;
+      }
       FirstprivateIsLastprivate =
-          FirstprivateIsLastprivate ||
-          (Lastprivates.count(OrigVD->getCanonicalDecl()) > 0);
+          FirstprivateIsLastprivate || ThisFirstprivateIsLastprivate;
       if (EmittedAsFirstprivate.insert(OrigVD->getCanonicalDecl()).second) {
         auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
         auto *VDInit = cast<VarDecl>(cast<DeclRefExpr>(*InitsRef)->getDecl());
         bool IsRegistered;
-        DeclRefExpr DRE(
-            const_cast<VarDecl *>(OrigVD),
-            /*RefersToEnclosingVariableOrCapture=*/CapturedStmtInfo->lookup(
-                OrigVD) != nullptr,
-            (*IRef)->getType(), VK_LValue, (*IRef)->getExprLoc());
+        DeclRefExpr DRE(const_cast<VarDecl *>(OrigVD),
+                        /*RefersToEnclosingVariableOrCapture=*/FD != nullptr,
+                        (*IRef)->getType(), VK_LValue, (*IRef)->getExprLoc());
         Address OriginalAddr = EmitLValue(&DRE).getAddress();
         QualType Type = VD->getType();
         if (Type->isArrayType()) {

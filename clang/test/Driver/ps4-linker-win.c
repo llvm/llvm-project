@@ -7,8 +7,8 @@
 
 // REQUIRES: system-windows, x86-registered-target
 
-// RUN: touch %T/ps4-ld.exe
-// RUN: touch %T/ps4-ld.gold.exe
+// RUN: touch %T/orbis-ld.exe
+// RUN: touch %T/orbis-ld.gold.exe
 
 // RUN: env "PATH=%T;%PATH%;" %clang -target x86_64-scei-ps4  %s -fuse-ld=gold -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PS4-GOLD %s
@@ -22,5 +22,5 @@
 // RUN: env "PATH=%T;%PATH%;" %clang -target x86_64-scei-ps4  %s -shared \
 // RUN:     -fuse-ld=ps4 -### 2>&1 | FileCheck --check-prefix=CHECK-PS4-LINKER %s
 
-// CHECK-PS4-GOLD: \\ps4-ld.gold
-// CHECK-PS4-LINKER: \\ps4-ld
+// CHECK-PS4-GOLD: \\orbis-ld.gold.exe"
+// CHECK-PS4-LINKER: \\orbis-ld.exe"

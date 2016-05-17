@@ -8369,8 +8369,8 @@
 // PS4:#define __LP64__ 1
 // PS4:#define __MMX__ 1
 // PS4:#define __NO_MATH_INLINES 1
+// PS4:#define __ORBIS__ 1
 // PS4:#define __POINTER_WIDTH__ 64
-// PS4:#define __PS4__ 1
 // PS4:#define __PTRDIFF_MAX__ 9223372036854775807L
 // PS4:#define __PTRDIFF_TYPE__ long int
 // PS4:#define __PTRDIFF_WIDTH__ 64

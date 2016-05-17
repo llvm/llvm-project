@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -pedantic -Wno-empty-translation-unit -fsyntax-only
+// RUN: %clang_cc1 %s -verify -pedantic -Wno-empty-translation-unit -fsyntax-only -triple spir-unknown-unknown
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 

@@ -225,17 +225,19 @@ void array_func(int n, int a[n], St s[2]) {
 #endif
 
 // CHECK-LABEL:@_ZN2SSC2ERi(
-// CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SS_TY]]*, i32*, i32*, i32*)* [[SS_MICROTASK:@.+]] to void
+// CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SS_TY]]*, i32, i32, i32)* [[SS_MICROTASK:@.+]] to void
 // CHECK-NEXT: ret void
 
-// CHECK: define internal void [[SS_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SS_TY]]* {{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+// CHECK: define internal void [[SS_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SS_TY]]* {{.+}}, i32 {{.+}}, i32 {{.+}}, i32 {{.+}})
 // Private a
 // CHECK: alloca i32,
-// CHECK: alloca i32*,
 // Private b
 // CHECK: alloca i32,
 // Private c
 // CHECK: alloca i32,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
 // CHECK: alloca i32*,
 // CHECK: [[DID_IT:%.+]] = alloca i32,
 // CHECK: store i32 0, i32* [[DID_IT]],
@@ -296,24 +298,29 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-NEXT: store i32 %
 // CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 1
 // CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
 // CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 2
 // CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
 // CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 3
 // CHECK-NEXT: load i32*, i32** %
-// CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SS_TY]]*, i32*, i32*, i32*)* [[SS_MICROTASK1:@.+]] to void
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SS_TY]]*, i32, i32, i32)* [[SS_MICROTASK1:@.+]] to void
 // CHECK-NEXT: ret void
 
 // CHECK: define internal void [[COPY_FUNC]](i8*, i8*)
 // CHECK: ret void
 
-// CHECK: define internal void [[SS_MICROTASK1]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SS_TY]]* {{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+// CHECK: define internal void [[SS_MICROTASK1]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SS_TY]]* {{.+}}, i32 {{.+}}, i32 {{.+}}, i32 {{.+}})
 // Private a
 // CHECK: alloca i32,
-// CHECK: alloca i32*,
 // Private b
 // CHECK: alloca i32,
 // Private c
 // CHECK: alloca i32,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
 // CHECK: alloca i32*,
 // CHECK: [[DID_IT:%.+]] = alloca i32,
 // CHECK: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
@@ -363,10 +370,11 @@ void array_func(int n, int a[n], St s[2]) {
 // CHECK-NEXT: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
 // CHECK-NEXT: store double* %
 // CHECK-NEXT: load double*, double** %
-// CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SST_TY]]*, double*)* [[SST_MICROTASK:@.+]] to void
+// CHECK-NEXT: load double, double* %
+// CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SST_TY]]*, double)* [[SST_MICROTASK:@.+]] to void
 // CHECK-NEXT: ret void
 
-// CHECK: define internal void [[SST_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SST_TY]]* {{.+}}, double* {{.+}})
+// CHECK: define internal void [[SST_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SST_TY]]* {{.+}}, double {{.+}})
 // CHECK: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
 // CHECK-NEXT: icmp ne i32 [[RES]], 0
 // CHECK-NEXT: br i1

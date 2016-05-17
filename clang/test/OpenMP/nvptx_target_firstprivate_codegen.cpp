@@ -30,12 +30,8 @@ int foo(int n, double *ptr) {
   
   // TCHECK:  define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK:  [[A1:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK-NOT:  alloca i{{[0-9]+}},
   // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
-  // TCHECK-64:  [[CONV:%.+]] = bitcast i{{[0-9]+}}* [[A_ADDR]] to i{{[0-9]+}}*
-  // TCHECK-64:  [[A_ADDR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[CONV]],
-  // TCHECK-32:  [[A_ADDR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_ADDR]],
-  // TCHECK:  store i{{[0-9]+}} [[A_ADDR_VAL]], i{{[0-9]+}}* [[A1]],
   // TCHECK:  ret void  
 
 #pragma omp target firstprivate(aa,b,c,d)
@@ -54,7 +50,7 @@ int foo(int n, double *ptr) {
   // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x float]*,
   // TCHECK:  [[C_ADDR:%.+]] = alloca [5 x [10 x double]]*,
   // TCHECK:  [[D_ADDR:%.+]] = alloca [[TT]]*,
-  // TCHECK:  [[A2_PRIV:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK-NOT: alloca i{{[0-9]+}},
   // TCHECK:  [[B_PRIV:%.+]] = alloca [10 x float],
   // TCHECK:  [[C_PRIV:%.+]] = alloca [5 x [10 x double]],
   // TCHECK:  [[D_PRIV:%.+]] = alloca [[TT]],
@@ -68,8 +64,6 @@ int foo(int n, double *ptr) {
   // TCHECK:  [[D_ADDR_REF:%.+]] = load [[TT]]*, [[TT]]** [[D_ADDR]],
 
   // firstprivate(aa): a_priv = a_in
-  // TCHECK:  [[A2_CONV_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[CONV_A2ADDR]],
-  // TCHECK:  store i{{[0-9]+}} [[A2_CONV_VAL]], i{{[0-9]+}}* [[A2_PRIV]],
 
   //  firstprivate(b): memcpy(b_priv,b_in)
   // TCHECK:  [[B_PRIV_BCAST:%.+]] = bitcast [10 x float]* [[B_PRIV]] to i8*
@@ -86,6 +80,8 @@ int foo(int n, double *ptr) {
   // TCHECK:  [[D_IN_BCAST:%.+]] = bitcast [[TT]]* [[D_ADDR_REF]] to i8*
   // TCHECK:  call void @llvm.memcpy.{{.+}}(i8* [[D_PRIV_BCAST]], i8* [[D_IN_BCAST]],{{.+}})
 
+  // TCHECK: load i16, i16* [[CONV_A2ADDR]],
+
   
   #pragma omp target firstprivate(ptr)
   {
@@ -94,10 +90,10 @@ int foo(int n, double *ptr) {
 
   // TCHECK:  define void @__omp_offloading_{{.+}}(double* [[PTR_IN:%.+]])
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
-  // TCHECK:  [[PTR_PRIV:%.+]] = alloca double*,
+  // TCHECK-NOT: alloca double*,
   // TCHECK:  store double* [[PTR_IN]], double** [[PTR_ADDR]],
   // TCHECK:  [[PTR_IN_REF:%.+]] = load double*, double** [[PTR_ADDR]],
-  // TCHECK:  store double* [[PTR_IN_REF]], double** [[PTR_PRIV]],
+  // TCHECK-NOT:  store double* [[PTR_IN_REF]], double** [[PTR_PRIV]],
 
   return a;
 }
@@ -137,8 +133,7 @@ int fstatic(int n) {
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A3_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x i{{[0-9]+}}]*,
-// TCHECK:  [[A_PRIV:%.+]] = alloca i{{[0-9]+}},
-// TCHECK:  [[A3_PRIV:%.+]] = alloca i{{[0-9]+}},
+// TCHECK-NOT:  alloca i{{[0-9]+}},
 // TCHECK:  [[B_PRIV:%.+]] = alloca [10 x i{{[0-9]+}}],
 // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
 // TCHECK:  store i{{[0-9]+}} [[A3_IN]], i{{[0-9]+}}* [[A3_ADDR]],
@@ -148,13 +143,10 @@ int fstatic(int n) {
 // TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x i{{[0-9]+}}]*, [10 x i{{[0-9]+}}]** [[B_ADDR]],
 
 // firstprivate(a): a_priv = a_in
-// TCHECK-64:  [[A_IN_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_CONV]],
-// TCHECK-32:  [[A_IN_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_ADDR]],
-// TCHECK:  store i{{[0-9]+}} [[A_IN_VAL]], i{{[0-9]+}}* [[A_PRIV]],
 
 // firstprivate(aaa)
-// TCHECK:  [[A3_IN_VAL:%.+]] = load i8, i8* [[A3_CONV]],
-// TCHECK:  store i{{[0-9]+}} [[A3_IN_VAL]], i{{[0-9]+}}* [[A3_PRIV]],
+
+// TCHECK-NOT:  store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}*
 
 // firstprivate(b)
 // TCHECK:  [[B_PRIV_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B_PRIV]] to i8*
@@ -180,7 +172,7 @@ struct S1 {
   // TCHECK: define void @__omp_offloading_{{.+}}([[S1]]* [[TH:%.+]], i{{[0-9]+}} [[B_IN:%.+]])
   // TCHECK:  [[TH_ADDR:%.+]] = alloca [[S1]]*,
   // TCHECK:  [[B_ADDR:%.+]] = alloca i{{[0-9]+}},
-  // TCHECK:  [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK-NOT: alloca i{{[0-9]+}},
 
   // TCHECK:  store [[S1]]* [[TH]], [[S1]]** [[TH_ADDR]],
   // TCHECK:  store i{{[0-9]+}} [[B_IN]], i{{[0-9]+}}* [[B_ADDR]],
@@ -188,9 +180,7 @@ struct S1 {
   // TCHECK-64:  [[B_ADDR_CONV:%.+]] = bitcast i{{[0-9]+}}* [[B_ADDR]] to i{{[0-9]+}}*
 
   // firstprivate(b)
-  // TCHECK-64:  [[B_IN_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[B_ADDR_CONV]],
-  // TCHECK-32:  [[B_IN_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[B_ADDR]],
-  // TCHECK:  store i{{[0-9]+}} [[B_IN_VAL]], i{{[0-9]+}}* [[B_PRIV]], 
+  // TCHECK-NOT:  store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}*
 
   // TCHECK: ret void
 };
@@ -213,7 +203,7 @@ int bar(int n, double *ptr){
 // TCHECK: define void @__omp_offloading_{{.+}}(i{{[0-9]+}} [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x i{{[0-9]+}}]*,
-// TCHECK:  [[A_PRIV:%.+]] = alloca i{{[0-9]+}},
+// TCHECK-NOT: alloca i{{[0-9]+}},
 // TCHECK:  [[B_PRIV:%.+]] = alloca [10 x i{{[0-9]+}}],
 // TCHECK:  store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[A_ADDR]],
 // TCHECK:  store [10 x i{{[0-9]+}}]* [[B_IN]], [10 x i{{[0-9]+}}]** [[B_ADDR]],
@@ -221,9 +211,7 @@ int bar(int n, double *ptr){
 // TCHECK:  [[B_ADDR_REF:%.+]] = load [10 x i{{[0-9]+}}]*, [10 x i{{[0-9]+}}]** [[B_ADDR]],
 
 // firstprivate(a)
-// TCHECK-64:  [[A_IN_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_ADDR_CONV]]
-// TCHECK-32:  [[A_IN_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_ADDR]]
-// TCHECK:  store i{{[0-9]+}} [[A_IN_VAL]], i{{[0-9]+}}* [[A_PRIV]],
+// TCHECK-NOT:  store i{{[0-9]+}} %{{.+}}, i{{[0-9]+}}*
 
 // firstprivate(b)
 // TCHECK:  [[B_PRIV_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B_PRIV]] to i8*

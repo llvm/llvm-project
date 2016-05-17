@@ -75,7 +75,7 @@
 ///
 /// This intrinsic corresponds to the \c BLSI instruction.
 ///
-/// \parama a
+/// \param a
 ///    An unsigned integer whose bits are to be cleared.
 /// \returns An unsigned integer containing the result of clearing the bits from
 ///    the source operand.

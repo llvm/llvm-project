@@ -4709,7 +4709,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
 
-  OutlinedFn = CGF.GenerateOpenMPCapturedStmtFunction(CS);
+  OutlinedFn =
+      CGF.GenerateOpenMPCapturedStmtFunction(CS, /*CastValToPtr=*/true);
 
   // If this target outline function is not an offload entry, we don't need to
   // register it.
@@ -5553,8 +5554,7 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
           CurMapTypes.push_back(MappableExprsHandler::OMP_MAP_BYCOPY);
           if (!RI->getType()->isAnyPointerType()) {
             // If the field is not a pointer, we need to save the actual value
-            // and
-            // load it as a void pointer.
+            // and load it as a void pointer.
             auto DstAddr = CGF.CreateMemTemp(
                 Ctx.getUIntPtrType(),
                 Twine(CI->getCapturedVar()->getName()) + ".casted");

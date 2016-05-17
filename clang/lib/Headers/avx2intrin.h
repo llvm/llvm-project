@@ -32,7 +32,9 @@
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx2")))
 
 /* SSE4 Multiple Packed Sums of Absolute Difference.  */
-#define _mm256_mpsadbw_epu8(X, Y, M) __builtin_ia32_mpsadbw256((X), (Y), (M))
+#define _mm256_mpsadbw_epu8(X, Y, M) \
+  (__m256i)__builtin_ia32_mpsadbw256((__v32qi)(__m256i)(X), \
+                                     (__v32qi)(__m256i)(Y), (int)(M))
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_abs_epi8(__m256i __a)

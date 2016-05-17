@@ -220,16 +220,16 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 #define _mm_insert_epi8(X, I, N) (__extension__                           \
                                   ({ __v16qi __a = (__v16qi)(__m128i)(X); \
                                      __a[(N) & 15] = (I);                 \
-                                     __a;}))
+                                     (__m128i)__a;}))
 #define _mm_insert_epi32(X, I, N) (__extension__                         \
                                    ({ __v4si __a = (__v4si)(__m128i)(X); \
                                       __a[(N) & 3] = (I);                \
-                                      __a;}))
+                                      (__m128i)__a;}))
 #ifdef __x86_64__
 #define _mm_insert_epi64(X, I, N) (__extension__                         \
                                    ({ __v2di __a = (__v2di)(__m128i)(X); \
                                       __a[(N) & 1] = (I);                \
-                                      __a;}))
+                                      (__m128i)__a;}))
 #endif /* __x86_64__ */
 
 /* Extract int from packed integer array at index.  This returns the element

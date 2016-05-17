@@ -3215,6 +3215,26 @@ AST_MATCHER(FunctionDecl, isDefaulted) {
   return Node.isDefaulted();
 }
 
+/// \brief Matches functions that have a dynamic exception specification.
+///
+/// Given:
+/// \code
+///   void f();
+///   void g() noexcept;
+///   void h() noexcept(true);
+///   void i() noexcept(false);
+///   void j() throw();
+///   void k() throw(int);
+///   void l() throw(...);
+/// \endcode
+/// functionDecl(hasDynamicExceptionSpec())
+///   matches the declarations of j, k, and l, but not f, g, h, or i.
+AST_MATCHER(FunctionDecl, hasDynamicExceptionSpec) {
+  if (const auto *FnTy = Node.getType()->getAs<FunctionProtoType>())
+    return FnTy->hasDynamicExceptionSpec();
+  return false;
+}
+
 /// \brief Matches functions that have a non-throwing exception specification.
 ///
 /// Given:

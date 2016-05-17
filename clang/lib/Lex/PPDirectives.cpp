@@ -671,6 +671,7 @@ const FileEntry *Preprocessor::LookupFile(
   // stack, record the parent #includes.
   SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 16>
       Includers;
+  bool BuildSystemModule = false;
   if (!FromDir && !FromFile) {
     FileID FID = getCurrentFileLexer()->getFileID();
     const FileEntry *FileEnt = SourceMgr.getFileEntryForID(FID);
@@ -688,9 +689,10 @@ const FileEntry *Preprocessor::LookupFile(
     // come from header declarations in the module map) relative to the module
     // map file.
     if (!FileEnt) {
-      if (FID == SourceMgr.getMainFileID() && MainFileDir)
+      if (FID == SourceMgr.getMainFileID() && MainFileDir) {
         Includers.push_back(std::make_pair(nullptr, MainFileDir));
-      else if ((FileEnt =
+        BuildSystemModule = getCurrentModule()->IsSystem;
+      } else if ((FileEnt =
                     SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())))
         Includers.push_back(std::make_pair(FileEnt, FileMgr.getDirectory(".")));
     } else {
@@ -736,7 +738,8 @@ const FileEntry *Preprocessor::LookupFile(
   // Do a standard file entry lookup.
   const FileEntry *FE = HeaderInfo.LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, CurDir, Includers, SearchPath,
-      RelativePath, RequestingModule, SuggestedModule, SkipCache);
+      RelativePath, RequestingModule, SuggestedModule, SkipCache,
+      BuildSystemModule);
   if (FE) {
     if (SuggestedModule && !LangOpts.AsmPreprocessor)
       HeaderInfo.getModuleMap().diagnoseHeaderInclusion(

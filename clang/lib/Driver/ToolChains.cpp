@@ -4598,12 +4598,12 @@ PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   if (Args.hasArg(options::OPT_static))
     D.Diag(diag::err_drv_unsupported_opt_for_target) << "-static" << "PS4";
 
-  // Determine where to find the PS4 libraries. We use SCE_PS4_SDK_DIR
+  // Determine where to find the PS4 libraries. We use SCE_ORBIS_SDK_DIR
   // if it exists; otherwise use the driver's installation path, which
   // should be <SDK_DIR>/host_tools/bin.
 
   SmallString<512> PS4SDKDir;
-  if (const char *EnvValue = getenv("SCE_PS4_SDK_DIR")) {
+  if (const char *EnvValue = getenv("SCE_ORBIS_SDK_DIR")) {
     if (!llvm::sys::fs::exists(EnvValue))
       getDriver().Diag(clang::diag::warn_drv_ps4_sdk_dir) << EnvValue;
     PS4SDKDir = EnvValue;

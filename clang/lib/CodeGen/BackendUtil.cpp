@@ -797,6 +797,20 @@ void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
   if (CGOpts.getEmbedBitcode() == CodeGenOptions::Embed_Off)
     return;
 
+  // Save llvm.compiler.used and remote it.
+  SmallVector<Constant*, 2> UsedArray;
+  SmallSet<GlobalValue*, 4> UsedGlobals;
+  Type *UsedElementType = Type::getInt8Ty(M->getContext())->getPointerTo(0);
+  GlobalVariable *Used = collectUsedGlobalVariables(*M, UsedGlobals, true);
+  for (auto *GV : UsedGlobals) {
+    if (GV->getName() != "llvm.embedded.module" &&
+        GV->getName() != "llvm.cmdline")
+      UsedArray.push_back(
+          ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
+  }
+  if (Used)
+    Used->eraseFromParent();
+
   // Embed the bitcode for the llvm module.
   std::string Data;
   ArrayRef<uint8_t> ModuleData;
@@ -820,38 +834,53 @@ void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
   }
   llvm::Constant *ModuleConstant =
       llvm::ConstantDataArray::get(M->getContext(), ModuleData);
-  // Use Appending linkage so it doesn't get optimized out.
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
-      *M, ModuleConstant->getType(), true, llvm::GlobalValue::AppendingLinkage,
+      *M, ModuleConstant->getType(), true, llvm::GlobalValue::PrivateLinkage,
       ModuleConstant);
   GV->setSection(getSectionNameForBitcode(T));
+  UsedArray.push_back(
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
   if (llvm::GlobalVariable *Old =
-          M->getGlobalVariable("llvm.embedded.module")) {
-    assert(Old->use_empty() && "llvm.embedded.module must have no uses");
+          M->getGlobalVariable("llvm.embedded.module", true)) {
+    assert(Old->hasOneUse() &&
+           "llvm.embedded.module can only be used once in llvm.compiler.used");
     GV->takeName(Old);
     Old->eraseFromParent();
   } else {
     GV->setName("llvm.embedded.module");
   }
 
-  // Return if only bitcode needs to be embedded.
-  if (CGOpts.getEmbedBitcode() == CodeGenOptions::Embed_Bitcode)
+  // Skip if only bitcode needs to be embedded.
+  if (CGOpts.getEmbedBitcode() != CodeGenOptions::Embed_Bitcode) {
+    // Embed command-line options.
+    ArrayRef<uint8_t> CmdData((uint8_t*)CGOpts.CmdArgs.data(),
+                              CGOpts.CmdArgs.size());
+    llvm::Constant *CmdConstant =
+      llvm::ConstantDataArray::get(M->getContext(), CmdData);
+    GV = new llvm::GlobalVariable(*M, CmdConstant->getType(), true,
+                                  llvm::GlobalValue::PrivateLinkage,
+                                  CmdConstant);
+    GV->setSection(getSectionNameForCommandline(T));
+    UsedArray.push_back(
+        ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, UsedElementType));
+    if (llvm::GlobalVariable *Old =
+            M->getGlobalVariable("llvm.cmdline", true)) {
+      assert(Old->hasOneUse() &&
+             "llvm.cmdline can only be used once in llvm.compiler.used");
+      GV->takeName(Old);
+      Old->eraseFromParent();
+    } else {
+      GV->setName("llvm.cmdline");
+    }
+  }
+
+  if (UsedArray.empty())
     return;
 
-  // Embed command-line options.
-  ArrayRef<uint8_t> CmdData((uint8_t*)CGOpts.CmdArgs.data(),
-                            CGOpts.CmdArgs.size());
-  llvm::Constant *CmdConstant =
-    llvm::ConstantDataArray::get(M->getContext(), CmdData);
-  GV = new llvm::GlobalVariable(*M, CmdConstant->getType(), true,
-                                llvm::GlobalValue::AppendingLinkage,
-                                CmdConstant);
-  GV->setSection(getSectionNameForCommandline(T));
-  if (llvm::GlobalVariable *Old = M->getGlobalVariable("llvm.cmdline")) {
-    assert(Old->use_empty() && "llvm.cmdline must have no uses");
-    GV->takeName(Old);
-    Old->eraseFromParent();
-  } else {
-    GV->setName("llvm.cmdline");
-  }
+  // Recreate llvm.compiler.used.
+  ArrayType *ATy = ArrayType::get(UsedElementType, UsedArray.size());
+  auto *NewUsed = new GlobalVariable(
+      *M, ATy, false, llvm::GlobalValue::AppendingLinkage,
+      llvm::ConstantArray::get(ATy, UsedArray), "llvm.compiler.used");
+  NewUsed->setSection("llvm.metadata");
 }

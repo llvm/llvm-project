@@ -31,10 +31,10 @@
 ; RUN:    -fembed-bitcode=all -x ir - -o /dev/null
 
 ; check the magic number of bitcode at the beginning of the string
-; CHECK: @llvm.embedded.module
+; CHECK: @llvm.embedded.module = private constant
 ; CHECK: c"\DE\C0\17\0B
 ; CHECK: section "__LLVM,__bitcode"
-; CHECK: @llvm.cmdline
+; CHECK: @llvm.cmdline = private constant
 ; CHECK: section "__LLVM,__cmdline"
 
 ; CHECK-ELF: @llvm.embedded.module
@@ -42,10 +42,10 @@
 ; CHECK-ELF: @llvm.cmdline
 ; CHECK-ELF: section ".llvmcmd"
 
-; CHECK-ONLY-BITCODE: @llvm.embedded.module
+; CHECK-ONLY-BITCODE: @llvm.embedded.module = private constant
 ; CHECK-ONLY-BITCODE: c"\DE\C0\17\0B
 ; CHECK-ONLY-BITCODE: section "__LLVM,__bitcode"
-; CHECK-ONLY-BITCODE-NOT: @llvm.cmdline
+; CHECK-ONLY-BITCODE-NOT: @llvm.cmdline = private constant
 ; CHECK-ONLY-BITCODE-NOT: section "__LLVM,__cmdline"
 
 ; CHECK-MARKER: @llvm.embedded.module
