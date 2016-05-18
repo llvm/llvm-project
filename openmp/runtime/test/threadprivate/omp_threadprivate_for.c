@@ -26,7 +26,7 @@ int test_omp_threadprivate_for()
     {
       sum = sum + sum0;
     }
-  } /* end of parallel */  
+  } /* end of parallel */
 
   if (known_sum != sum ) {
     fprintf(stderr, " known_sum = %d, sum = %d\n", known_sum, sum);

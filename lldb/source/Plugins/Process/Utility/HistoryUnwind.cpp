@@ -40,7 +40,7 @@ HistoryUnwind::~HistoryUnwind ()
 void
 HistoryUnwind::DoClear ()
 {
-    Mutex::Locker locker(m_unwind_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_unwind_mutex);
     m_pcs.clear();
     m_stop_id_is_valid = false;
 }
@@ -64,7 +64,9 @@ HistoryUnwind::DoCreateRegisterContextForFrame (StackFrame *frame)
 bool
 HistoryUnwind::DoGetFrameInfoAtIndex (uint32_t frame_idx, lldb::addr_t& cfa, lldb::addr_t& pc)
 {
-    Mutex::Locker (m_unwind_mutex);   // FIXME do not throw away the lock after we acquire it..
+    // FIXME do not throw away the lock after we acquire it..
+    std::unique_lock<std::recursive_mutex> guard(m_unwind_mutex);
+    guard.release();
     if (frame_idx < m_pcs.size())
     {
         cfa = frame_idx;

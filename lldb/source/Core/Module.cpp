@@ -72,7 +72,7 @@ GetModuleCollection()
     return *g_module_collection;
 }
 
-Mutex *
+std::recursive_mutex &
 Module::GetAllocationModuleCollectionMutex()
 {
     // NOTE: The mutex below must be leaked since the global module list in
@@ -80,23 +80,23 @@ Module::GetAllocationModuleCollectionMutex()
     // if it will tear itself down before the "g_module_collection_mutex" below
     // will. So we leak a Mutex object below to safeguard against that
 
-    static Mutex *g_module_collection_mutex = nullptr;
+    static std::recursive_mutex *g_module_collection_mutex = nullptr;
     if (g_module_collection_mutex == nullptr)
-        g_module_collection_mutex = new Mutex (Mutex::eMutexTypeRecursive); // NOTE: known leak
-    return g_module_collection_mutex;
+        g_module_collection_mutex = new std::recursive_mutex; // NOTE: known leak
+    return *g_module_collection_mutex;
 }
 
 size_t
 Module::GetNumberAllocatedModules ()
 {
-    Mutex::Locker locker (GetAllocationModuleCollectionMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetAllocationModuleCollectionMutex());
     return GetModuleCollection().size();
 }
 
 Module *
 Module::GetAllocatedModuleAtIndex (size_t idx)
 {
-    Mutex::Locker locker (GetAllocationModuleCollectionMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetAllocationModuleCollectionMutex());
     ModuleCollection &modules = GetModuleCollection();
     if (idx < modules.size())
         return modules[idx];
@@ -140,44 +140,42 @@ namespace lldb {
 
 #endif
 
-Module::Module (const ModuleSpec &module_spec) :
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_mod_time (),
-    m_arch (),
-    m_uuid (),
-    m_file (),
-    m_platform_file(),
-    m_remote_install_file(),
-    m_symfile_spec (),
-    m_object_name (),
-    m_object_offset (),
-    m_object_mod_time (),
-    m_objfile_sp (),
-    m_symfile_ap (),
-    m_type_system_map(),
-    m_source_mappings (),
-    m_sections_ap(),
-    m_did_load_objfile (false),
-    m_did_load_symbol_vendor (false),
-    m_did_parse_uuid (false),
-    m_file_has_changed (false),
-    m_first_file_changed_log (false)
+Module::Module(const ModuleSpec &module_spec)
+    : m_mutex(),
+      m_mod_time(),
+      m_arch(),
+      m_uuid(),
+      m_file(),
+      m_platform_file(),
+      m_remote_install_file(),
+      m_symfile_spec(),
+      m_object_name(),
+      m_object_offset(),
+      m_object_mod_time(),
+      m_objfile_sp(),
+      m_symfile_ap(),
+      m_type_system_map(),
+      m_source_mappings(),
+      m_sections_ap(),
+      m_did_load_objfile(false),
+      m_did_load_symbol_vendor(false),
+      m_did_parse_uuid(false),
+      m_file_has_changed(false),
+      m_first_file_changed_log(false)
 {
     // Scope for locker below...
     {
-        Mutex::Locker locker (GetAllocationModuleCollectionMutex());
+        std::lock_guard<std::recursive_mutex> guard(GetAllocationModuleCollectionMutex());
         GetModuleCollection().push_back(this);
     }
 
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_OBJECT|LIBLLDB_LOG_MODULES));
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES));
     if (log != nullptr)
-        log->Printf ("%p Module::Module((%s) '%s%s%s%s')",
-                     static_cast<void*>(this),
-                     module_spec.GetArchitecture().GetArchitectureName(),
-                     module_spec.GetFileSpec().GetPath().c_str(),
-                     module_spec.GetObjectName().IsEmpty() ? "" : "(",
-                     module_spec.GetObjectName().IsEmpty() ? "" : module_spec.GetObjectName().AsCString(""),
-                     module_spec.GetObjectName().IsEmpty() ? "" : ")");
+        log->Printf("%p Module::Module((%s) '%s%s%s%s')", static_cast<void *>(this),
+                    module_spec.GetArchitecture().GetArchitectureName(), module_spec.GetFileSpec().GetPath().c_str(),
+                    module_spec.GetObjectName().IsEmpty() ? "" : "(",
+                    module_spec.GetObjectName().IsEmpty() ? "" : module_spec.GetObjectName().AsCString(""),
+                    module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
     // First extract all module specifications from the file using the local
     // file path. If there are no specifications, then don't fill anything in
@@ -194,18 +192,18 @@ Module::Module (const ModuleSpec &module_spec) :
     ModuleSpec matching_module_spec;
     if (modules_specs.FindMatchingModuleSpec(module_spec, matching_module_spec) == 0)
         return;
-    
+
     if (module_spec.GetFileSpec())
         m_mod_time = module_spec.GetFileSpec().GetModificationTime();
     else if (matching_module_spec.GetFileSpec())
         m_mod_time = matching_module_spec.GetFileSpec().GetModificationTime();
-    
+
     // Copy the architecture from the actual spec if we got one back, else use the one that was specified
     if (matching_module_spec.GetArchitecture().IsValid())
         m_arch = matching_module_spec.GetArchitecture();
     else if (module_spec.GetArchitecture().IsValid())
         m_arch = module_spec.GetArchitecture();
-    
+
     // Copy the file spec over and use the specified one (if there was one) so we
     // don't use a path that might have gotten resolved a path in 'matching_module_spec'
     if (module_spec.GetFileSpec())
@@ -218,57 +216,53 @@ Module::Module (const ModuleSpec &module_spec) :
         m_platform_file = module_spec.GetPlatformFileSpec();
     else if (matching_module_spec.GetPlatformFileSpec())
         m_platform_file = matching_module_spec.GetPlatformFileSpec();
-    
+
     // Copy the symbol file spec over
     if (module_spec.GetSymbolFileSpec())
         m_symfile_spec = module_spec.GetSymbolFileSpec();
     else if (matching_module_spec.GetSymbolFileSpec())
         m_symfile_spec = matching_module_spec.GetSymbolFileSpec();
-    
+
     // Copy the object name over
     if (matching_module_spec.GetObjectName())
         m_object_name = matching_module_spec.GetObjectName();
     else
         m_object_name = module_spec.GetObjectName();
-    
+
     // Always trust the object offset (file offset) and object modification
     // time (for mod time in a BSD static archive) of from the matching
     // module specification
     m_object_offset = matching_module_spec.GetObjectOffset();
     m_object_mod_time = matching_module_spec.GetObjectModificationTime();
-    
 }
 
-Module::Module(const FileSpec& file_spec, 
-               const ArchSpec& arch, 
-               const ConstString *object_name, 
-               lldb::offset_t object_offset,
-               const TimeValue *object_mod_time_ptr) :
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_mod_time (file_spec.GetModificationTime()),
-    m_arch (arch),
-    m_uuid (),
-    m_file (file_spec),
-    m_platform_file(),
-    m_remote_install_file (),
-    m_symfile_spec (),
-    m_object_name (),
-    m_object_offset (object_offset),
-    m_object_mod_time (),
-    m_objfile_sp (),
-    m_symfile_ap (),
-    m_type_system_map(),
-    m_source_mappings (),
-    m_sections_ap(),
-    m_did_load_objfile (false),
-    m_did_load_symbol_vendor (false),
-    m_did_parse_uuid (false),
-    m_file_has_changed (false),
-    m_first_file_changed_log (false)
+Module::Module(const FileSpec &file_spec, const ArchSpec &arch, const ConstString *object_name,
+               lldb::offset_t object_offset, const TimeValue *object_mod_time_ptr)
+    : m_mutex(),
+      m_mod_time(file_spec.GetModificationTime()),
+      m_arch(arch),
+      m_uuid(),
+      m_file(file_spec),
+      m_platform_file(),
+      m_remote_install_file(),
+      m_symfile_spec(),
+      m_object_name(),
+      m_object_offset(object_offset),
+      m_object_mod_time(),
+      m_objfile_sp(),
+      m_symfile_ap(),
+      m_type_system_map(),
+      m_source_mappings(),
+      m_sections_ap(),
+      m_did_load_objfile(false),
+      m_did_load_symbol_vendor(false),
+      m_did_parse_uuid(false),
+      m_file_has_changed(false),
+      m_first_file_changed_log(false)
 {
     // Scope for locker below...
     {
-        Mutex::Locker locker (GetAllocationModuleCollectionMutex());
+        std::lock_guard<std::recursive_mutex> guard(GetAllocationModuleCollectionMutex());
         GetModuleCollection().push_back(this);
     }
 
@@ -278,40 +272,37 @@ Module::Module(const FileSpec& file_spec,
     if (object_mod_time_ptr)
         m_object_mod_time = *object_mod_time_ptr;
 
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_OBJECT|LIBLLDB_LOG_MODULES));
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT | LIBLLDB_LOG_MODULES));
     if (log != nullptr)
-        log->Printf ("%p Module::Module((%s) '%s%s%s%s')",
-                     static_cast<void*>(this), m_arch.GetArchitectureName(),
-                     m_file.GetPath().c_str(),
-                     m_object_name.IsEmpty() ? "" : "(",
-                     m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""),
-                     m_object_name.IsEmpty() ? "" : ")");
+        log->Printf("%p Module::Module((%s) '%s%s%s%s')", static_cast<void *>(this), m_arch.GetArchitectureName(),
+                    m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
+                    m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""), m_object_name.IsEmpty() ? "" : ")");
 }
 
-Module::Module () :
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_mod_time (),
-    m_arch (),
-    m_uuid (),
-    m_file (),
-    m_platform_file(),
-    m_remote_install_file (),
-    m_symfile_spec (),
-    m_object_name (),
-    m_object_offset (0),
-    m_object_mod_time (),
-    m_objfile_sp (),
-    m_symfile_ap (),
-    m_type_system_map(),
-    m_source_mappings (),
-    m_sections_ap(),
-    m_did_load_objfile (false),
-    m_did_load_symbol_vendor (false),
-    m_did_parse_uuid (false),
-    m_file_has_changed (false),
-    m_first_file_changed_log (false)
+Module::Module()
+    : m_mutex(),
+      m_mod_time(),
+      m_arch(),
+      m_uuid(),
+      m_file(),
+      m_platform_file(),
+      m_remote_install_file(),
+      m_symfile_spec(),
+      m_object_name(),
+      m_object_offset(0),
+      m_object_mod_time(),
+      m_objfile_sp(),
+      m_symfile_ap(),
+      m_type_system_map(),
+      m_source_mappings(),
+      m_sections_ap(),
+      m_did_load_objfile(false),
+      m_did_load_symbol_vendor(false),
+      m_did_parse_uuid(false),
+      m_file_has_changed(false),
+      m_first_file_changed_log(false)
 {
-    Mutex::Locker locker (GetAllocationModuleCollectionMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetAllocationModuleCollectionMutex());
     GetModuleCollection().push_back(this);
 }
 
@@ -319,10 +310,10 @@ Module::~Module()
 {
     // Lock our module down while we tear everything down to make sure
     // we don't get any access to the module while it is being destroyed
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     // Scope for locker below...
     {
-        Mutex::Locker locker (GetAllocationModuleCollectionMutex());
+        std::lock_guard<std::recursive_mutex> guard(GetAllocationModuleCollectionMutex());
         ModuleCollection &modules = GetModuleCollection();
         ModuleCollection::iterator end = modules.end();
         ModuleCollection::iterator pos = std::find(modules.begin(), end, this);
@@ -357,7 +348,7 @@ Module::GetMemoryObjectFile (const lldb::ProcessSP &process_sp, lldb::addr_t hea
     }
     else
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (process_sp)
         {
             m_did_load_objfile = true;
@@ -405,7 +396,7 @@ Module::GetUUID()
 {
     if (!m_did_parse_uuid.load())
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (!m_did_parse_uuid.load())
         {
             ObjectFile * obj_file = GetObjectFile ();
@@ -429,7 +420,7 @@ Module::GetTypeSystemForLanguage (LanguageType language)
 void
 Module::ParseAllDebugSymbols()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     size_t num_comp_units = GetNumCompileUnits();
     if (num_comp_units == 0)
         return;
@@ -484,7 +475,7 @@ Module::DumpSymbolContext(Stream *s)
 size_t
 Module::GetNumCompileUnits()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     Timer scoped_timer(__PRETTY_FUNCTION__,
                        "Module::GetNumCompileUnits (module = %p)",
                        static_cast<void*>(this));
@@ -497,7 +488,7 @@ Module::GetNumCompileUnits()
 CompUnitSP
 Module::GetCompileUnitAtIndex (size_t index)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     size_t num_comp_units = GetNumCompileUnits ();
     CompUnitSP cu_sp;
 
@@ -513,7 +504,7 @@ Module::GetCompileUnitAtIndex (size_t index)
 bool
 Module::ResolveFileAddress (lldb::addr_t vm_addr, Address& so_addr)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     Timer scoped_timer(__PRETTY_FUNCTION__, "Module::ResolveFileAddress (vm_addr = 0x%" PRIx64 ")", vm_addr);
     SectionList *section_list = GetSectionList();
     if (section_list)
@@ -525,7 +516,7 @@ uint32_t
 Module::ResolveSymbolContextForAddress (const Address& so_addr, uint32_t resolve_scope, SymbolContext& sc,
                                         bool resolve_tail_call_address)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     uint32_t resolved_flags = 0;
 
     // Clear the result symbol context in case we don't find anything, but don't clear the target
@@ -675,7 +666,7 @@ Module::ResolveSymbolContextForFilePath
 uint32_t
 Module::ResolveSymbolContextsForFileSpec (const FileSpec &file_spec, uint32_t line, bool check_inlines, uint32_t resolve_scope, SymbolContextList& sc_list)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     Timer scoped_timer(__PRETTY_FUNCTION__,
                        "Module::ResolveSymbolContextForFilePath (%s:%u, check_inlines = %s, resolve_scope = 0x%8.8x)",
                        file_spec.GetPath().c_str(),
@@ -1037,7 +1028,7 @@ Module::GetSymbolVendor (bool can_create, lldb_private::Stream *feedback_strm)
 {
     if (!m_did_load_symbol_vendor.load())
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (!m_did_load_symbol_vendor.load() && can_create)
         {
             ObjectFile *obj_file = GetObjectFile ();
@@ -1084,7 +1075,7 @@ Module::GetSpecificationDescription () const
 void
 Module::GetDescription (Stream *s, lldb::DescriptionLevel level)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (level >= eDescriptionLevelFull)
     {
@@ -1245,7 +1236,7 @@ Module::LogMessageVerboseBacktrace (Log *log, const char *format, ...)
 void
 Module::Dump(Stream *s)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     //s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
     s->Indent();
     s->Printf("Module %s%s%s%s\n",
@@ -1287,7 +1278,7 @@ Module::GetObjectFile()
 {
     if (!m_did_load_objfile.load())
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (!m_did_load_objfile.load())
         {
             Timer scoped_timer(__PRETTY_FUNCTION__,
@@ -1710,14 +1701,14 @@ Module::MatchesModuleSpec (const ModuleSpec &module_ref)
 bool
 Module::FindSourceFile (const FileSpec &orig_spec, FileSpec &new_spec) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_source_mappings.FindFile (orig_spec, new_spec);
 }
 
 bool
 Module::RemapSourceFile (const char *path, std::string &new_path) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_source_mappings.RemapPath(path, new_path);
 }
 

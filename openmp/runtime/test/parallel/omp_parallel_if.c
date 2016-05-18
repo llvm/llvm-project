@@ -17,7 +17,7 @@ int test_omp_parallel_if()
     mysum = 0;
     for (i = 1; i <= LOOPCOUNT; i++) {
       mysum = mysum + i;
-    } 
+    }
     #pragma omp critical
     {
       sum = sum + mysum;

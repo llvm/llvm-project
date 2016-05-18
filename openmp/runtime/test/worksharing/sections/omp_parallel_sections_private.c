@@ -14,7 +14,7 @@ int test_omp_parallel_sections_private()
 
   #pragma omp parallel sections private(sum0, i)
   {
-    #pragma omp section 
+    #pragma omp section
     {
       sum0=0;
       for (i=1;i<400;i++)
@@ -47,7 +47,7 @@ int test_omp_parallel_sections_private()
   }
 
   known_sum=(999*1000)/2+7;
-  return (known_sum==sum); 
+  return (known_sum==sum);
 } /* end of check_section_private*/
 
 int main()

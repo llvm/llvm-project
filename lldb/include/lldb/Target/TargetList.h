@@ -12,12 +12,12 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Broadcaster.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Target.h"
 
 namespace lldb_private {
@@ -229,7 +229,7 @@ protected:
     //------------------------------------------------------------------
     collection m_target_list;
     lldb::TargetSP m_dummy_target_sp;
-    mutable Mutex m_target_list_mutex;
+    mutable std::recursive_mutex m_target_list_mutex;
     uint32_t m_selected_target_idx;
 
 private:

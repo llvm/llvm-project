@@ -169,13 +169,13 @@ IOHandler::WaitForPop ()
 }
 
 void
-IOHandlerStack::PrintAsync (Stream *stream, const char *s, size_t len)
+IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len)
 {
     if (stream)
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (m_top)
-            m_top->PrintAsync (stream, s, len);
+            m_top->PrintAsync(stream, s, len);
     }
 }
 

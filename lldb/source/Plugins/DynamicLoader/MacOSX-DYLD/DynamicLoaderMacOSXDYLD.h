@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
@@ -20,7 +21,6 @@
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/UUID.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/SafeMachO.h"
 
@@ -374,7 +374,7 @@ protected:
     lldb::user_id_t m_break_id;
     DYLDImageInfo::collection m_dyld_image_infos;   // Current shared libraries information
     uint32_t m_dyld_image_infos_stop_id;    // The process stop ID that "m_dyld_image_infos" is valid for
-    mutable lldb_private::Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     lldb_private::Process::Notifications m_notification_callbacks;
     bool m_process_image_addr_is_all_images_infos;
 

@@ -499,11 +499,9 @@ ClassDescriptorV2::GetInstanceSize ()
     return 0;
 }
 
-ClassDescriptorV2::iVarsStorage::iVarsStorage ():
-m_filled(false),
-m_ivars(),
-m_mutex(Mutex::eMutexTypeRecursive)
-{}
+ClassDescriptorV2::iVarsStorage::iVarsStorage() : m_filled(false), m_ivars(), m_mutex()
+{
+}
 
 size_t
 ClassDescriptorV2::iVarsStorage::size ()
@@ -522,7 +520,7 @@ ClassDescriptorV2::iVarsStorage::fill (AppleObjCRuntimeV2& runtime, ClassDescrip
 {
     if (m_filled)
         return;
-    Mutex::Locker lock(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES | LIBLLDB_LOG_VERBOSE));
     if (log)
         log->Printf("[ClassDescriptorV2::iVarsStorage::fill] class_name = %s", descriptor.GetClassName().AsCString("<unknown"));

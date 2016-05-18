@@ -2069,7 +2069,7 @@ DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Ty
 {
     SymbolFileDWARF *dwarf = die.GetDWARF();
 
-    lldb_private::Mutex::Locker locker(dwarf->GetObjectFile()->GetModule()->GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(dwarf->GetObjectFile()->GetModule()->GetMutex());
 
     // Disable external storage for this type so we don't get anymore
     // clang::ExternalASTSource queries for this type.

@@ -15,6 +15,7 @@
 #include <atomic>
 #include <initializer_list>
 #include <map>
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
@@ -289,7 +290,7 @@ private:
 
     std::atomic<uint32_t> m_last_revision;
     FormatCache m_format_cache;
-    Mutex m_language_categories_mutex;
+    std::recursive_mutex m_language_categories_mutex;
     LanguageCategories m_language_categories_map;
     NamedSummariesMap m_named_summaries_map;
     TypeCategoryMap m_categories_map;

@@ -751,8 +751,8 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread, ValueList &dis
 
     // Scope for mutex locker:
     {
-        Mutex::Locker locker(m_impl_function_mutex);
-        
+        std::lock_guard<std::mutex> guard(m_impl_function_mutex);
+
         // First stage is to make the ClangUtility to hold our injected function:
 
         if (!m_impl_code.get())

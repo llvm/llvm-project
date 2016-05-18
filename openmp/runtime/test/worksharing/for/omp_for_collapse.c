@@ -3,7 +3,7 @@
 #include <math.h>
 #include "omp_testsuite.h"
 
-/* Utility function to check that i is increasing monotonically 
+/* Utility function to check that i is increasing monotonically
    with each call */
 static int check_i_islarger (int i)
 {

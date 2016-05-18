@@ -16,11 +16,11 @@ int test_omp_single()
   #pragma omp parallel private(i)
   {
     for (i = 0; i < LOOPCOUNT; i++) {
-      #pragma omp single 
-      {  
+      #pragma omp single
+      {
         #pragma omp flush
         nr_threads_in_single++;
-        #pragma omp flush             
+        #pragma omp flush
         nr_iterations++;
         nr_threads_in_single--;
         result = result + nr_threads_in_single;

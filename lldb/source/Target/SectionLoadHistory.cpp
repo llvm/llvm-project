@@ -23,21 +23,21 @@ using namespace lldb_private;
 bool
 SectionLoadHistory::IsEmpty() const
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_stop_id_to_section_load_list.empty();
 }
 
 void
 SectionLoadHistory::Clear ()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_stop_id_to_section_load_list.clear();
 }
 
 uint32_t
 SectionLoadHistory::GetLastStopID() const
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_stop_id_to_section_load_list.empty())
         return 0;
     else
@@ -108,7 +108,7 @@ SectionLoadList &
 SectionLoadHistory::GetCurrentSectionLoadList ()
 {
     const bool read_only = true;
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     SectionLoadList *section_load_list = GetSectionLoadListForStopID (eStopIDNow, read_only);
     assert(section_load_list != NULL);
     return *section_load_list;
@@ -117,7 +117,7 @@ SectionLoadHistory::GetCurrentSectionLoadList ()
 addr_t
 SectionLoadHistory::GetSectionLoadAddress (uint32_t stop_id, const lldb::SectionSP &section_sp)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     const bool read_only = true;
     SectionLoadList *section_load_list = GetSectionLoadListForStopID (stop_id, read_only);
     return section_load_list->GetSectionLoadAddress(section_sp);
@@ -127,7 +127,7 @@ bool
 SectionLoadHistory::ResolveLoadAddress (uint32_t stop_id, addr_t load_addr, Address &so_addr)
 {
     // First find the top level section that this load address exists in
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     const bool read_only = true;
     SectionLoadList *section_load_list = GetSectionLoadListForStopID (stop_id, read_only);
     return section_load_list->ResolveLoadAddress (load_addr, so_addr);
@@ -139,7 +139,7 @@ SectionLoadHistory::SetSectionLoadAddress (uint32_t stop_id,
                                            addr_t load_addr,
                                            bool warn_multiple)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     const bool read_only = false;
     SectionLoadList *section_load_list = GetSectionLoadListForStopID (stop_id, read_only);
     return section_load_list->SetSectionLoadAddress(section_sp, load_addr, warn_multiple);
@@ -148,7 +148,7 @@ SectionLoadHistory::SetSectionLoadAddress (uint32_t stop_id,
 size_t
 SectionLoadHistory::SetSectionUnloaded (uint32_t stop_id, const lldb::SectionSP &section_sp)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     const bool read_only = false;
     SectionLoadList *section_load_list = GetSectionLoadListForStopID (stop_id, read_only);
     return section_load_list->SetSectionUnloaded (section_sp);
@@ -157,7 +157,7 @@ SectionLoadHistory::SetSectionUnloaded (uint32_t stop_id, const lldb::SectionSP 
 bool
 SectionLoadHistory::SetSectionUnloaded (uint32_t stop_id, const lldb::SectionSP &section_sp, addr_t load_addr)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     const bool read_only = false;
     SectionLoadList *section_load_list = GetSectionLoadListForStopID (stop_id, read_only);
     return section_load_list->SetSectionUnloaded (section_sp, load_addr);
@@ -166,7 +166,7 @@ SectionLoadHistory::SetSectionUnloaded (uint32_t stop_id, const lldb::SectionSP 
 void
 SectionLoadHistory::Dump (Stream &s, Target *target)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     StopIDToSectionLoadList::iterator pos, end = m_stop_id_to_section_load_list.end();
     for (pos = m_stop_id_to_section_load_list.begin(); pos != end; ++pos)
     {

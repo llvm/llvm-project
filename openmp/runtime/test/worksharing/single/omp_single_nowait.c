@@ -19,13 +19,13 @@ int test_omp_single_nowait()
     for (i = 0; i < LOOPCOUNT; i++) {
       #pragma omp single nowait
       {
-        #pragma omp atomic  
+        #pragma omp atomic
         nr_iterations++;
       }
     }
   }
 
-  #pragma omp parallel private(i) 
+  #pragma omp parallel private(i)
   {
     my_iterations = 0;
     for (i = 0; i < LOOPCOUNT; i++) {

@@ -60,7 +60,7 @@ int test_omp_for_schedule_guided()
     threads = 2;
   }
 
-  /* Now the real parallel work:  
+  /* Now the real parallel work:
    * Each thread will start immediately with the first chunk.
    */
   #pragma omp parallel shared(tids,maxiter)
@@ -82,7 +82,7 @@ int test_omp_for_schedule_guided()
         }
       }
       /*printf ("thread %d sleeping\n", tid);*/
-      #pragma omp flush(maxiter,notout)  
+      #pragma omp flush(maxiter,notout)
       while (notout && (count < MAX_TIME) && (maxiter == j)) {
         #pragma omp flush(maxiter,notout)
         my_sleep (SLEEPTIME);
@@ -126,8 +126,8 @@ int test_omp_for_schedule_guided()
      */
     // fprintf(stderr,"# global_chunknr thread local_chunknr chunksize\n");
     for(i = 1; i <= CFSMAX_SIZE; ++i) {
-      if (last_threadnr==tids[i]) { 
-        determined_chunksize++; 
+      if (last_threadnr==tids[i]) {
+        determined_chunksize++;
       } else {
         /* fprintf(stderr, "%d\t%d\t%d\t%d\n", global_chunknr,
            last_threadnr, local_chunknr[last_threadnr], m); */
@@ -145,15 +145,15 @@ int test_omp_for_schedule_guided()
     */
     global_chunknr = 0;
     determined_chunksize = 1;
-    last_threadnr = tids[0];    
+    last_threadnr = tids[0];
     for (i = 1; i <= CFSMAX_SIZE; ++i) {
       /* If the threadnumber was the same as before increase the
-       * detected chunksize for this chunk otherwise set the detected 
-       * chunksize again to one and save the number of the next 
-       * thread in last_threadnr. 
+       * detected chunksize for this chunk otherwise set the detected
+       * chunksize again to one and save the number of the next
+       * thread in last_threadnr.
        */
-      if (last_threadnr == tids[i]) { 
-        determined_chunksize++; 
+      if (last_threadnr == tids[i]) {
+        determined_chunksize++;
       } else {
         chunksizes[global_chunknr] = determined_chunksize;
         global_chunknr++;
@@ -167,14 +167,14 @@ int test_omp_for_schedule_guided()
     fprintf(stderr, "found\texpected\tconstant\n");
 #endif
 
-    /* identify the constant c for the exponential 
+    /* identify the constant c for the exponential
        decrease of the chunksize */
     expected_chunk_size = openwork / threads;
     c = (double) chunksizes[0] / expected_chunk_size;
-    
+
     for (i = 0; i < global_chunknr; i++) {
       /* calculate the new expected chunksize */
-      if (expected_chunk_size > 1) 
+      if (expected_chunk_size > 1)
         expected_chunk_size = c * openwork / threads;
 #ifdef VERBOSE
       fprintf(stderr, "%8d\t%8d\t%lf\n", chunksizes[i],
@@ -199,7 +199,7 @@ int test_omp_for_schedule_guided()
 
       /* calculating the remaining amount of work */
       openwork -= chunksizes[i];
-    }  
+    }
   }
   return result;
 }

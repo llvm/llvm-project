@@ -15,6 +15,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <mutex>
 
 // Other libraries and framework includes
 // Project includes
@@ -131,8 +132,8 @@ namespace lldb_private {
                 return ptr.get() == other.get();
             }
         };
-        
-        Mutex m_map_mutex;
+
+        std::recursive_mutex m_map_mutex;
         IFormatChangeListener* listener;
         
         MapType m_map;
@@ -147,12 +148,13 @@ namespace lldb_private {
         {
             return m_active_categories;
         }
-        
-        Mutex& mutex ()
+
+        std::recursive_mutex &
+        mutex()
         {
             return m_map_mutex;
         }
-        
+
         friend class FormattersContainer<KeyType, ValueType>;
         friend class FormatManager;
     };

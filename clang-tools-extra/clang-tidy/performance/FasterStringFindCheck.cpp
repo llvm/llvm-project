@@ -38,8 +38,6 @@ llvm::Optional<std::string> MakeCharacterLiteral(const StringLiteral *Literal) {
   return Result;
 }
 
-AST_MATCHER(StringLiteral, lengthIsOne) { return Node.getLength() == 1; }
-
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<Expr>,
                      hasSubstitutedType) {
   return hasType(qualType(anyOf(substTemplateTypeParmType(),
@@ -65,7 +63,7 @@ void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   const auto SingleChar =
-      expr(ignoringParenCasts(stringLiteral(lengthIsOne()).bind("literal")));
+      expr(ignoringParenCasts(stringLiteral(hasSize(1)).bind("literal")));
 
   const auto StringFindFunctions =
       anyOf(hasName("find"), hasName("rfind"), hasName("find_first_of"),

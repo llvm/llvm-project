@@ -15,7 +15,7 @@ int test_omp_parallel_sections_lastprivate()
 
   #pragma omp parallel sections private(i,sum0) lastprivate(i0)
   {
-    #pragma omp section  
+    #pragma omp section
     {
       sum0=0;
       for (i=1;i<400;i++) {
@@ -27,7 +27,7 @@ int test_omp_parallel_sections_lastprivate()
         sum= sum+sum0;
       }
     }
-    #pragma omp section 
+    #pragma omp section
     {
       sum0=0;
       for(i=400;i<700;i++) {
@@ -39,7 +39,7 @@ int test_omp_parallel_sections_lastprivate()
         sum= sum+sum0;
       }
     }
-    #pragma omp section 
+    #pragma omp section
     {
       sum0=0;
       for(i=700;i<1000;i++) {

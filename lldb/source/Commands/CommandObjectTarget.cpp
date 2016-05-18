@@ -1978,7 +1978,7 @@ FindModulesByName (Target *target,
     if (check_global_list)
     {
         // Check the global list
-        Mutex::Locker locker(Module::GetAllocationModuleCollectionMutex());
+        std::lock_guard<std::recursive_mutex> guard(Module::GetAllocationModuleCollectionMutex());
         const size_t num_modules = Module::GetNumberAllocatedModules();
         ModuleSP module_sp;
         for (size_t image_idx = 0; image_idx<num_modules; ++image_idx)
@@ -2470,7 +2470,7 @@ protected:
                     else
                     {
                         // Check the global list
-                        Mutex::Locker locker(Module::GetAllocationModuleCollectionMutex());
+                        std::lock_guard<std::recursive_mutex> guard(Module::GetAllocationModuleCollectionMutex());
 
                         result.AppendWarningWithFormat("Unable to find an image that matches '%s'.\n", arg_cstr);
                     }
@@ -3291,16 +3291,20 @@ protected:
             }
 
             size_t num_modules = 0;
-            Mutex::Locker locker;      // This locker will be locked on the mutex in module_list_ptr if it is non-nullptr.
-                                       // Otherwise it will lock the AllocationModuleCollectionMutex when accessing
-                                       // the global module list directly.
+
+            // This locker will be locked on the mutex in module_list_ptr if it is non-nullptr.
+            // Otherwise it will lock the AllocationModuleCollectionMutex when accessing
+            // the global module list directly.
+            std::unique_lock<std::recursive_mutex> guard(Module::GetAllocationModuleCollectionMutex(), std::defer_lock);
+            Mutex::Locker locker;
+
             const ModuleList *module_list_ptr = nullptr;
             const size_t argc = command.GetArgumentCount();
             if (argc == 0)
             {
                 if (use_global_module_list)
                 {
-                    locker.Lock (Module::GetAllocationModuleCollectionMutex());
+                    guard.lock();
                     num_modules = Module::GetNumberAllocatedModules();
                 }
                 else
@@ -3331,6 +3335,7 @@ protected:
 
             if (module_list_ptr != nullptr)
             {
+                assert(use_global_module_list == false && "locking violation");
                 locker.Lock(module_list_ptr->GetMutex());
                 num_modules = module_list_ptr->GetSize();
             }

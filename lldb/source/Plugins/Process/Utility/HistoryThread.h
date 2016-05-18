@@ -12,10 +12,11 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/UserID.h"
@@ -125,7 +126,7 @@ protected:
     virtual lldb::StackFrameListSP
     GetStackFrameList ();
 
-    mutable Mutex               m_framelist_mutex;
+    mutable std::mutex m_framelist_mutex;
     lldb::StackFrameListSP      m_framelist;
     std::vector<lldb::addr_t>   m_pcs;
     uint32_t                    m_stop_id;

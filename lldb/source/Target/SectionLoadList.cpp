@@ -24,13 +24,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-
-SectionLoadList::SectionLoadList (const SectionLoadList& rhs) :
-    m_addr_to_sect(),
-    m_sect_to_addr(),
-    m_mutex (Mutex::eMutexTypeRecursive)
+SectionLoadList::SectionLoadList(const SectionLoadList &rhs) : m_addr_to_sect(), m_sect_to_addr(), m_mutex()
 {
-    Mutex::Locker locker(rhs.m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(rhs.m_mutex);
     m_addr_to_sect = rhs.m_addr_to_sect;
     m_sect_to_addr = rhs.m_sect_to_addr;
 }
@@ -38,8 +34,8 @@ SectionLoadList::SectionLoadList (const SectionLoadList& rhs) :
 void
 SectionLoadList::operator=(const SectionLoadList &rhs)
 {
-    Mutex::Locker lhs_locker (m_mutex);
-    Mutex::Locker rhs_locker (rhs.m_mutex);
+    std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex);
+    std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex);
     m_addr_to_sect = rhs.m_addr_to_sect;
     m_sect_to_addr = rhs.m_sect_to_addr;
 }
@@ -47,14 +43,14 @@ SectionLoadList::operator=(const SectionLoadList &rhs)
 bool
 SectionLoadList::IsEmpty() const
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_addr_to_sect.empty();
 }
 
 void
 SectionLoadList::Clear ()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_addr_to_sect.clear();
     m_sect_to_addr.clear();
 }
@@ -66,7 +62,7 @@ SectionLoadList::GetSectionLoadAddress (const lldb::SectionSP &section) const
     addr_t section_load_addr = LLDB_INVALID_ADDRESS;
     if (section)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         sect_to_addr_collection::const_iterator pos = m_sect_to_addr.find (section.get());
         
         if (pos != m_sect_to_addr.end())
@@ -98,7 +94,7 @@ SectionLoadList::SetSectionLoadAddress (const lldb::SectionSP &section, addr_t l
             return false; // No change
 
         // Fill in the section -> load_addr map
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         sect_to_addr_collection::iterator sta_pos = m_sect_to_addr.find(section.get());
         if (sta_pos != m_sect_to_addr.end())
         {
@@ -185,7 +181,7 @@ SectionLoadList::SetSectionUnloaded (const lldb::SectionSP &section_sp)
                          section_sp->GetName().AsCString());
         }
 
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
         sect_to_addr_collection::iterator sta_pos = m_sect_to_addr.find(section_sp.get());
         if (sta_pos != m_sect_to_addr.end())
@@ -222,7 +218,7 @@ SectionLoadList::SetSectionUnloaded (const lldb::SectionSP &section_sp, addr_t l
                      section_sp->GetName().AsCString(), load_addr);
     }
     bool erased = false;
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     sect_to_addr_collection::iterator sta_pos = m_sect_to_addr.find(section_sp.get());
     if (sta_pos != m_sect_to_addr.end())
     {
@@ -244,8 +240,8 @@ SectionLoadList::SetSectionUnloaded (const lldb::SectionSP &section_sp, addr_t l
 bool
 SectionLoadList::ResolveLoadAddress (addr_t load_addr, Address &so_addr) const
 {
-    // First find the top level section that this load address exists in    
-    Mutex::Locker locker(m_mutex);
+    // First find the top level section that this load address exists in
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_addr_to_sect.empty())
     {
         addr_to_sect_collection::const_iterator pos = m_addr_to_sect.lower_bound (load_addr);
@@ -289,7 +285,7 @@ SectionLoadList::ResolveLoadAddress (addr_t load_addr, Address &so_addr) const
 void
 SectionLoadList::Dump (Stream &s, Target *target)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     addr_to_sect_collection::const_iterator pos, end;
     for (pos = m_addr_to_sect.begin(), end = m_addr_to_sect.end(); pos != end; ++pos)
     {

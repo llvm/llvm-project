@@ -13,14 +13,14 @@ int test_omp_for_nowait()
   result = 0;
   count = 0;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int rank;
     int i;
 
     rank = omp_get_thread_num();
 
-    #pragma omp for nowait 
+    #pragma omp for nowait
     for (i = 0; i < LOOPCOUNT; i++) {
       if (i == 0) {
         my_sleep(SLEEPTIME);
@@ -28,7 +28,7 @@ int test_omp_for_nowait()
         #pragma omp flush(count)
       }
     }
-    
+
     #pragma omp for
     for (i = 0; i < LOOPCOUNT; i++) {
       #pragma omp flush(count)

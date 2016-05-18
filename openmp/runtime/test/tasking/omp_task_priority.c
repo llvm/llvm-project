@@ -8,7 +8,7 @@
 int main (void) {
     int passed;
 
-    passed = (omp_get_max_task_priority() == 42);    
+    passed = (omp_get_max_task_priority() == 42);
     printf("Got %d\n", omp_get_max_task_priority());
 
     if (passed) {

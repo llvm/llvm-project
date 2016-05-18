@@ -12,13 +12,13 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 #include <string>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Core/UserID.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -632,7 +632,7 @@ private:
 
     ThreadPlanKind m_kind;
     std::string m_name;
-    Mutex m_plan_complete_mutex;
+    std::recursive_mutex m_plan_complete_mutex;
     LazyBool m_cached_plan_explains_stop;
     bool m_plan_complete;
     bool m_plan_private;

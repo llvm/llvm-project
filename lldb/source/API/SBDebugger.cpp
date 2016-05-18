@@ -191,8 +191,8 @@ SBDebugger::Create(bool source_init_files, lldb::LogOutputCallback callback, voi
     // uses global collections and having two threads parsing the .lldbinit files can cause
     // mayhem. So to get around this for now we need to use a mutex to prevent bad things
     // from happening.
-    static Mutex g_mutex(Mutex::eMutexTypeRecursive);
-    Mutex::Locker locker(g_mutex);
+    static std::recursive_mutex g_mutex;
+    std::lock_guard<std::recursive_mutex> guard(g_mutex);
 
     debugger.reset(Debugger::CreateInstance(callback, baton));
 

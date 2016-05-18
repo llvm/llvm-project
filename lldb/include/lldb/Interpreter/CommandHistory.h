@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -19,7 +20,6 @@
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Core/Stream.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
     
@@ -66,7 +66,7 @@ private:
     DISALLOW_COPY_AND_ASSIGN(CommandHistory);
     
     typedef std::vector<std::string> History;
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     History m_history;
 };
 

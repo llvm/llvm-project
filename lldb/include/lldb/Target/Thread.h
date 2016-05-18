@@ -13,13 +13,13 @@
 // C Includes
 // C++ Includes
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/StructuredData.h"
@@ -1446,11 +1446,11 @@ protected:
     const uint32_t      m_index_id;             ///< A unique 1 based index assigned to each thread for easy UI/command line access.
     lldb::RegisterContextSP m_reg_context_sp;   ///< The register context for this thread's current register state.
     lldb::StateType     m_state;                ///< The state of our process.
-    mutable Mutex       m_state_mutex;          ///< Multithreaded protection for m_state.
+    mutable std::recursive_mutex m_state_mutex; ///< Multithreaded protection for m_state.
     plan_stack          m_plan_stack;           ///< The stack of plans this thread is executing.
     plan_stack          m_completed_plan_stack; ///< Plans that have been completed by this stop.  They get deleted when the thread resumes.
     plan_stack          m_discarded_plan_stack; ///< Plans that have been discarded by this stop.  They get deleted when the thread resumes.
-    mutable Mutex       m_frame_mutex;          ///< Multithreaded protection for m_state.
+    mutable std::recursive_mutex m_frame_mutex; ///< Multithreaded protection for m_state.
     lldb::StackFrameListSP m_curr_frames_sp;    ///< The stack frames that get lazily populated after a thread stops.
     lldb::StackFrameListSP m_prev_frames_sp;    ///< The previous stack frames from the last time this thread stopped.
     int                 m_resume_signal;        ///< The signal that should be used when continuing this thread.

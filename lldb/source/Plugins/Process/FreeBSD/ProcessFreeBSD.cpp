@@ -229,7 +229,7 @@ ProcessFreeBSD::WillResume()
 void
 ProcessFreeBSD::SendMessage(const ProcessMessage &message)
 {
-    Mutex::Locker lock(m_message_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_message_mutex);
 
     switch (message.GetKind())
     {
@@ -274,7 +274,7 @@ ProcessFreeBSD::ProcessFreeBSD(lldb::TargetSP target_sp, lldb::ListenerSP listen
       m_byte_order(endian::InlHostByteOrder()),
       m_monitor(NULL),
       m_module(NULL),
-      m_message_mutex (Mutex::eMutexTypeRecursive),
+      m_message_mutex(),
       m_exit_now(false),
       m_seen_initial_stop(),
       m_resume_signo(0)
@@ -603,7 +603,7 @@ ProcessFreeBSD::RefreshStateAfterStop()
     if (log && log->GetMask().Test(POSIX_LOG_VERBOSE))
         log->Printf ("ProcessFreeBSD::%s(), message_queue size = %d", __FUNCTION__, (int)m_message_queue.size());
 
-    Mutex::Locker lock(m_message_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_message_mutex);
 
     // This method used to only handle one message.  Changing it to loop allows
     // it to handle the case where we hit a breakpoint while handling a different

@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
@@ -20,7 +21,6 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/PathMappingList.h"
 
 namespace lldb_private {
@@ -447,30 +447,24 @@ protected:
 class ModuleSpecList
 {
 public:
-    ModuleSpecList () :
-        m_specs(),
-        m_mutex(Mutex::eMutexTypeRecursive) 
-    {
-    }
+    ModuleSpecList() : m_specs(), m_mutex() {}
 
-    ModuleSpecList (const ModuleSpecList &rhs) :
-        m_specs(),
-        m_mutex(Mutex::eMutexTypeRecursive)
+    ModuleSpecList(const ModuleSpecList &rhs) : m_specs(), m_mutex()
     {
-        Mutex::Locker lhs_locker(m_mutex);
-        Mutex::Locker rhs_locker(rhs.m_mutex);
+        std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex);
+        std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex);
         m_specs = rhs.m_specs;
     }
 
     ~ModuleSpecList() = default;
 
     ModuleSpecList &
-    operator = (const ModuleSpecList &rhs)
+    operator=(const ModuleSpecList &rhs)
     {
         if (this != &rhs)
         {
-            Mutex::Locker lhs_locker(m_mutex);
-            Mutex::Locker rhs_locker(rhs.m_mutex);
+            std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex);
+            std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex);
             m_specs = rhs.m_specs;
         }
         return *this;
@@ -479,29 +473,29 @@ public:
     size_t
     GetSize() const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         return m_specs.size();
     }
 
     void
-    Clear ()
+    Clear()
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         m_specs.clear();
     }
 
     void
-    Append (const ModuleSpec &spec)
+    Append(const ModuleSpec &spec)
     {
-        Mutex::Locker locker(m_mutex);
-        m_specs.push_back (spec);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
+        m_specs.push_back(spec);
     }
 
     void
-    Append (const ModuleSpecList &rhs)
+    Append(const ModuleSpecList &rhs)
     {
-        Mutex::Locker lhs_locker(m_mutex);
-        Mutex::Locker rhs_locker(rhs.m_mutex);
+        std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex);
+        std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex);
         m_specs.insert(m_specs.end(), rhs.m_specs.begin(), rhs.m_specs.end());
     }
 
@@ -514,9 +508,9 @@ public:
     }
 
     bool
-    GetModuleSpecAtIndex (size_t i, ModuleSpec &module_spec) const
+    GetModuleSpecAtIndex(size_t i, ModuleSpec &module_spec) const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (i < m_specs.size())
         {
             module_spec = m_specs[i];
@@ -527,11 +521,11 @@ public:
     }
 
     bool
-    FindMatchingModuleSpec (const ModuleSpec &module_spec, ModuleSpec &match_module_spec) const
+    FindMatchingModuleSpec(const ModuleSpec &module_spec, ModuleSpec &match_module_spec) const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         bool exact_arch_match = true;
-        for (auto spec: m_specs)
+        for (auto spec : m_specs)
         {
             if (spec.Matches(module_spec, exact_arch_match))
             {
@@ -539,12 +533,12 @@ public:
                 return true;
             }
         }
-        
+
         // If there was an architecture, retry with a compatible arch
         if (module_spec.GetArchitecturePtr())
         {
             exact_arch_match = false;
-            for (auto spec: m_specs)
+            for (auto spec : m_specs)
             {
                 if (spec.Matches(module_spec, exact_arch_match))
                 {
@@ -556,41 +550,41 @@ public:
         match_module_spec.Clear();
         return false;
     }
-    
+
     size_t
-    FindMatchingModuleSpecs (const ModuleSpec &module_spec, ModuleSpecList &matching_list) const
+    FindMatchingModuleSpecs(const ModuleSpec &module_spec, ModuleSpecList &matching_list) const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         bool exact_arch_match = true;
         const size_t initial_match_count = matching_list.GetSize();
-        for (auto spec: m_specs)
+        for (auto spec : m_specs)
         {
             if (spec.Matches(module_spec, exact_arch_match))
-                matching_list.Append (spec);
+                matching_list.Append(spec);
         }
-        
+
         // If there was an architecture, retry with a compatible arch if no matches were found
         if (module_spec.GetArchitecturePtr() && (initial_match_count == matching_list.GetSize()))
         {
             exact_arch_match = false;
-            for (auto spec: m_specs)
+            for (auto spec : m_specs)
             {
                 if (spec.Matches(module_spec, exact_arch_match))
-                    matching_list.Append (spec);
+                    matching_list.Append(spec);
             }
         }
         return matching_list.GetSize() - initial_match_count;
     }
 
     void
-    Dump (Stream &strm)
+    Dump(Stream &strm)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         uint32_t idx = 0;
-        for (auto spec: m_specs)
+        for (auto spec : m_specs)
         {
             strm.Printf("[%u] ", idx);
-            spec.Dump (strm);
+            spec.Dump(strm);
             strm.EOL();
             ++idx;
         }
@@ -599,7 +593,7 @@ public:
 protected:
     typedef std::vector<ModuleSpec> collection; ///< The module collection type.
     collection m_specs; ///< The collection of modules.
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
 };
 
 } // namespace lldb_private

@@ -252,7 +252,7 @@ FileSpec
 PlatformAppleSimulator::GetCoreSimulatorPath()
 {
 #if defined(__APPLE__)
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (!m_core_simulator_framework_path.hasValue())
     {
         const char *developer_dir = GetDeveloperDirectory();

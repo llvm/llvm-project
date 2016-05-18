@@ -208,7 +208,7 @@ public:
             ObjectFile *oso_objfile = GetObjectFile ();
             if (oso_objfile)
             {
-                Mutex::Locker locker (m_mutex);
+                std::lock_guard<std::recursive_mutex> guard(m_mutex);
                 SymbolVendor* symbol_vendor = Module::GetSymbolVendor(can_create, feedback_strm);
                 if (symbol_vendor)
                 {

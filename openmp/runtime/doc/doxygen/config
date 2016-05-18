@@ -669,10 +669,10 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = src  doc/doxygen/libomp_interface.h 
+INPUT                  = src  doc/doxygen/libomp_interface.h
 # The ittnotify code also has doxygen documentation, but if we include it here
 # it takes over from us!
-# src/thirdparty/ittnotify                         
+# src/thirdparty/ittnotify
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
@@ -690,7 +690,7 @@ INPUT_ENCODING         = UTF-8
 # *.hxx *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.dox *.py
 # *.f90 *.f *.for *.vhd *.vhdl
 
-FILE_PATTERNS          = *.c *.h *.cpp 
+FILE_PATTERNS          = *.c *.h *.cpp
 # We may also want to include the asm files with appropriate ifdef to ensure
 # doxygen doesn't see the content, just the documentation...
 

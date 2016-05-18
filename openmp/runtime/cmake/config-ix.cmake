@@ -194,11 +194,11 @@ endif()
 if(${LIBOMP_STATS})
   check_c_source_compiles(
      "__thread int x;
-     int main(int argc, char** argv) 
+     int main(int argc, char** argv)
      { x = argc; return x; }"
      LIBOMP_HAVE___THREAD)
   check_c_source_compiles(
-     "int main(int argc, char** argv) 
+     "int main(int argc, char** argv)
      { unsigned long long t = __builtin_readcyclecounter(); return 0; }"
      LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
   if(NOT LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER)
@@ -253,7 +253,7 @@ if(${LIBOMP_USE_HWLOC})
     set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INSTALL_DIR}/include)
     check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
     set(CMAKE_REQUIRED_INCLUDES)
-    check_library_exists(hwloc hwloc_topology_init 
+    check_library_exists(hwloc hwloc_topology_init
       ${LIBOMP_HWLOC_INSTALL_DIR}/lib LIBOMP_HAVE_LIBHWLOC)
     find_library(LIBOMP_HWLOC_LIBRARY hwloc ${LIBOMP_HWLOC_INSTALL_DIR}/lib)
     get_filename_component(LIBOMP_HWLOC_LIBRARY_DIR ${LIBOMP_HWLOC_LIBRARY} PATH)

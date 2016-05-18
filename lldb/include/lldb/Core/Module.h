@@ -13,6 +13,7 @@
 // C Includes
 // C++ Includes
 #include <atomic>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -22,7 +23,6 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/TimeValue.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -68,7 +68,7 @@ public:
     static Module *
     GetAllocatedModuleAtIndex (size_t idx);
 
-    static Mutex *
+    static std::recursive_mutex &
     GetAllocationModuleCollectionMutex();
 
     //------------------------------------------------------------------
@@ -986,8 +986,8 @@ public:
     // SymbolVendor, SymbolFile and ObjectFile member objects should
     // lock the module mutex to avoid deadlocks.
     //------------------------------------------------------------------
-    Mutex &
-    GetMutex () const
+    std::recursive_mutex &
+    GetMutex() const
     {
         return m_mutex;
     }
@@ -1106,7 +1106,7 @@ protected:
     //------------------------------------------------------------------
     // Member Variables
     //------------------------------------------------------------------
-    mutable Mutex               m_mutex;        ///< A mutex to keep this object happy in multi-threaded environments.
+    mutable std::recursive_mutex m_mutex;       ///< A mutex to keep this object happy in multi-threaded environments.
     TimeValue                   m_mod_time;     ///< The modification time for this module when it was created.
     ArchSpec                    m_arch;         ///< The architecture for this module.
     UUID                        m_uuid;         ///< Each module is assumed to have a unique identifier to help match it up to debug symbols.

@@ -18,7 +18,7 @@ int test_omp_parallel_private()
     int i;
     sum1 = 7;
     /*printf("sum1=%d\n",sum1);*/
-    #pragma omp for 
+    #pragma omp for
     for (i = 1; i < 1000; i++) {
       sum1 = sum1 + i;
     }

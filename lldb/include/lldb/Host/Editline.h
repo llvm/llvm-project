@@ -50,13 +50,13 @@
 #endif
 #endif
 
+#include <mutex>
 #include <string>
 #include <vector>
 
 #include "lldb/Host/Condition.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/Predicate.h"
 
 namespace lldb_private {
@@ -359,7 +359,7 @@ namespace lldb_private {
         CompleteCallbackType m_completion_callback = nullptr;
         void * m_completion_callback_baton = nullptr;
 
-        Mutex m_output_mutex;
+        std::mutex m_output_mutex;
     };
 }
 

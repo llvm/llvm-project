@@ -11,10 +11,12 @@
 #define liblldb_ThreadSafeValue_h_
 
 // C Includes
+
 // C++ Includes
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -25,28 +27,20 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    ThreadSafeValue() :
-        m_value (),
-        m_mutex (Mutex::eMutexTypeRecursive)
-    {
-    }
+    ThreadSafeValue() : m_value(), m_mutex() {}
 
-    ThreadSafeValue(const T& value) :
-        m_value (value),
-        m_mutex (Mutex::eMutexTypeRecursive)
-    {
-    }
+    ThreadSafeValue(const T &value) : m_value(value), m_mutex() {}
 
     ~ThreadSafeValue()
     {
     }
 
     T
-    GetValue () const
+    GetValue() const
     {
         T value;
         {
-            Mutex::Locker locker(m_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_mutex);
             value = m_value;
         }
         return value;
@@ -61,9 +55,9 @@ public:
     }
 
     void
-    SetValue (const T& value)
+    SetValue(const T &value)
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         m_value = value;
     }
 
@@ -75,15 +69,15 @@ public:
         m_value = value;
     }
 
-    Mutex &
-    GetMutex ()
+    std::recursive_mutex &
+    GetMutex()
     {
         return m_mutex;
     }
 
 private:
     T m_value;
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
 
     //------------------------------------------------------------------
     // For ThreadSafeValue only

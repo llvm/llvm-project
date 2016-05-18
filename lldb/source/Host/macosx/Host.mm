@@ -556,10 +556,10 @@ LaunchInNewTerminalWithAppleScript (const char *exe_path, ProcessLaunchInfo &lau
 // On MacOSX CrashReporter will display a string for each shared library if
 // the shared library has an exported symbol named "__crashreporter_info__".
 
-static Mutex&
-GetCrashReporterMutex ()
+static std::mutex &
+GetCrashReporterMutex()
 {
-    static Mutex g_mutex;
+    static std::mutex g_mutex;
     return g_mutex;
 }
 
@@ -573,8 +573,8 @@ void
 Host::SetCrashDescriptionWithFormat (const char *format, ...)
 {
     static StreamString g_crash_description;
-    Mutex::Locker locker (GetCrashReporterMutex ());
-    
+    std::lock_guard<std::mutex> guard(GetCrashReporterMutex());
+
     if (format)
     {
         va_list args;
@@ -593,7 +593,7 @@ Host::SetCrashDescriptionWithFormat (const char *format, ...)
 void
 Host::SetCrashDescription (const char *cstr)
 {
-    Mutex::Locker locker (GetCrashReporterMutex ());
+    std::lock_guard<std::mutex> guard(GetCrashReporterMutex());
     static std::string g_crash_description;
     if (cstr)
     {

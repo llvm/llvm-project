@@ -12,6 +12,8 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Symbol/ObjectContainer.h"
@@ -138,8 +140,8 @@ protected:
         static Map &
         GetArchiveCache ();
 
-        static lldb_private::Mutex &
-        GetArchiveCacheMutex ();
+        static std::recursive_mutex &
+        GetArchiveCacheMutex();
 
         static Archive::shared_ptr
         FindCachedArchive (const lldb_private::FileSpec &file,

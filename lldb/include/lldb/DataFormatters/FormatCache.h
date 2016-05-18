@@ -13,12 +13,12 @@
 // C Includes
 // C++ Includes
 #include <map>
+#include <mutex>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-public.h"
 #include "lldb/Core/ConstString.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 class FormatCache
@@ -82,8 +82,8 @@ private:
     };
     typedef std::map<ConstString,Entry> CacheMap;
     CacheMap m_map;
-    Mutex m_mutex;
-    
+    std::recursive_mutex m_mutex;
+
     uint64_t m_cache_hits;
     uint64_t m_cache_misses;
     

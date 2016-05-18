@@ -12,7 +12,7 @@ int test_omp_master()
 
   #pragma omp parallel
   {
-    #pragma omp master 
+    #pragma omp master
     {
       #pragma omp critical
       {

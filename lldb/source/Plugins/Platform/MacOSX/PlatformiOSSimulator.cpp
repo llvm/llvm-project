@@ -308,7 +308,7 @@ EnumerateDirectoryCallback (void *baton, FileSpec::FileType file_type, const Fil
 const char *
 PlatformiOSSimulator::GetSDKDirectoryAsCString()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_sdk_directory.empty())
     {
         const char *developer_dir = GetDeveloperDirectory();

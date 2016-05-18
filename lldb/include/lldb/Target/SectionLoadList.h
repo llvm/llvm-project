@@ -13,13 +13,13 @@
 // C Includes
 // C++ Includes
 #include <map>
+#include <mutex>
 
 // Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 // Project includes
 #include "lldb/lldb-public.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -29,13 +29,7 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    SectionLoadList () :
-        m_addr_to_sect (),
-        m_sect_to_addr (),
-        m_mutex (Mutex::eMutexTypeRecursive)
-
-    {
-    }
+    SectionLoadList() : m_addr_to_sect(), m_sect_to_addr(), m_mutex() {}
 
     SectionLoadList (const SectionLoadList& rhs);
 
@@ -84,7 +78,7 @@ protected:
     typedef llvm::DenseMap<const Section *, lldb::addr_t> sect_to_addr_collection;
     addr_to_sect_collection m_addr_to_sect;
     sect_to_addr_collection m_sect_to_addr;
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
 };
 
 } // namespace lldb_private

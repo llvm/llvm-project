@@ -22,7 +22,7 @@ int test_set_schedule_0()
       if(a > 10)
         exit(1);
     }
-  }    
+  }
   return a==10;
 }
 

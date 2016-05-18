@@ -44,10 +44,10 @@ int test_omp_for_private()
     {
       sum = sum + sum1;
     }  /*end of critical*/
-  }  /* end of parallel*/  
+  }  /* end of parallel*/
   known_sum = (LOOPCOUNT * (LOOPCOUNT + 1)) / 2;
   return (known_sum == sum);
-}                
+}
 
 int main()
 {

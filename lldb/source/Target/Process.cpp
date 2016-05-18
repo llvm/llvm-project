@@ -1795,7 +1795,7 @@ Process::SetPrivateState (StateType new_state)
         log->Printf("Process::SetPrivateState (%s)", StateAsCString(new_state));
 
     Mutex::Locker thread_locker(m_thread_list.GetMutex());
-    Mutex::Locker locker(m_private_state.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_private_state.GetMutex());
 
     const StateType old_state = m_private_state.GetValueNoLock ();
     state_changed = old_state != new_state;

@@ -2611,11 +2611,11 @@ Target::GetSourceManager ()
 ClangModulesDeclVendor *
 Target::GetClangModulesDeclVendor ()
 {
-    static Mutex s_clang_modules_decl_vendor_mutex; // If this is contended we can make it per-target
-    
+    static std::mutex s_clang_modules_decl_vendor_mutex; // If this is contended we can make it per-target
+
     {
-        Mutex::Locker clang_modules_decl_vendor_locker(s_clang_modules_decl_vendor_mutex);
-        
+        std::lock_guard<std::mutex> guard(s_clang_modules_decl_vendor_mutex);
+
         if (!m_clang_modules_decl_vendor_ap)
         {
             m_clang_modules_decl_vendor_ap.reset(ClangModulesDeclVendor::Create(*this));
