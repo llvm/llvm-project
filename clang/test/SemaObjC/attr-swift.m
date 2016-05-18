@@ -145,11 +145,12 @@ Point3D getLastPoint3D(void) __attribute__((swift_name("getter:lastPoint3D()")))
 
 void setLastPoint3D(Point3D point) __attribute__((swift_name("setter:lastPoint3D(newValue:)")));
 
-Point3D getZeroPoint() __attribute__((swift_name("getter:Point3D.zero()")));
+Point3D getZeroPoint(void) __attribute__((swift_name("getter:Point3D.zero()")));
+Point3D getZeroPointNoPrototype() __attribute__((swift_name("getter:Point3D.zeroNoPrototype()"))); // expected-error{{'swift_name' attribute can only be applied to function declarations with prototypes}}
 void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D.zero(newValue:)")));
 
 Point3D badGetter1(int x) __attribute__((swift_name("getter:bad1(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
-void badSetter1() __attribute__((swift_name("getter:bad1())"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+void badSetter1(void) __attribute__((swift_name("getter:bad1())"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
 
 Point3D badGetter2(Point3D point) __attribute__((swift_name("getter:bad2(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
 
