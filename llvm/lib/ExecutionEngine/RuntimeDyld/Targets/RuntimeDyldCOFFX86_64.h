@@ -118,13 +118,8 @@ public:
     if (Symbol == Obj.symbol_end())
       report_fatal_error("Unknown symbol in relocation");
     auto SectionOrError = Symbol->getSection();
-    if (!SectionOrError) {
-      std::string Buf;
-      raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(SectionOrError.takeError(), OS, "");
-      OS.flush();
-      report_fatal_error(Buf);
-    }
+    if (!SectionOrError)
+      return SectionOrError.takeError();
     section_iterator SecI = *SectionOrError;
     // If there is no section, this must be an external reference.
     const bool IsExtern = SecI == Obj.section_end();
@@ -161,13 +156,8 @@ public:
     }
 
     Expected<StringRef> TargetNameOrErr = Symbol->getName();
-    if (!TargetNameOrErr) {
-      std::string Buf;
-      raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(TargetNameOrErr.takeError(), OS, "");
-      OS.flush();
-      report_fatal_error(Buf);
-    }
+    if (!TargetNameOrErr)
+      return TargetNameOrErr.takeError();
     StringRef TargetName = *TargetNameOrErr;
 
     DEBUG(dbgs() << "\t\tIn Section " << SectionID << " Offset " << Offset

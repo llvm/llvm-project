@@ -22,7 +22,8 @@ namespace llvm {
 
 class SparcTargetMachine : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-  SparcSubtarget Subtarget;
+  bool is64Bit;
+  mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;
 public:
   SparcTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
@@ -30,9 +31,7 @@ public:
                      bool is64bit);
   ~SparcTargetMachine() override;
 
-  const SparcSubtarget *getSubtargetImpl(const Function &) const override {
-    return &Subtarget;
-  }
+  const SparcSubtarget *getSubtargetImpl(const Function &) const override;
 
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

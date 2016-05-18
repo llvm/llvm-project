@@ -54,13 +54,7 @@ static opt<std::string> OutputFilename(Required, "o",
                                        value_desc("filename"),
                                        cat(DwpCategory));
 
-static int error(const Twine &Error, const Twine &Context) {
-  errs() << Twine("while processing ") + Context + ":\n";
-  errs() << Twine("error: ") + Error + "\n";
-  return 1;
-}
-
-static Error
+static void
 writeStringsAndOffsets(MCStreamer &Out, StringMap<uint32_t> &Strings,
                        uint32_t &StringOffset, MCSection *StrSection,
                        MCSection *StrOffsetSection, StringRef CurStrSection,
@@ -68,7 +62,7 @@ writeStringsAndOffsets(MCStreamer &Out, StringMap<uint32_t> &Strings,
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
-    return Error();
+    return;
 
   DenseMap<uint32_t, uint32_t> OffsetRemapping;
 
@@ -99,8 +93,6 @@ writeStringsAndOffsets(MCStreamer &Out, StringMap<uint32_t> &Strings,
     auto NewOffset = OffsetRemapping[OldOffset];
     Out.EmitIntValue(NewOffset, 4);
   }
-
-  return Error();
 }
 
 static uint32_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
@@ -564,10 +556,9 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
                   CurEntry, ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO]);
     }
 
-    if (auto Err = writeStringsAndOffsets(Out, Strings, StringOffset,
-                                          StrSection, StrOffsetSection,
-                                          CurStrSection, CurStrOffsetSection))
-      return Err;
+    writeStringsAndOffsets(Out, Strings, StringOffset, StrSection,
+                           StrOffsetSection, CurStrSection,
+                           CurStrOffsetSection);
   }
 
   // Lie about there being no info contributions so the TU index only includes
@@ -585,6 +576,12 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
              IndexEntries);
 
   return Error();
+}
+
+static int error(const Twine &Error, const Twine &Context) {
+  errs() << Twine("while processing ") + Context + ":\n";
+  errs() << Twine("error: ") + Error + "\n";
+  return 1;
 }
 
 int main(int argc, char **argv) {

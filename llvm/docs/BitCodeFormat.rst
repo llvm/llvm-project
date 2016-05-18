@@ -690,6 +690,7 @@ global variable. The operand fields are:
 .. _linkage type:
 
 * *linkage*: An encoding of the linkage type for this variable:
+
   * ``external``: code 0
   * ``weak``: code 1
   * ``appending``: code 2
@@ -714,12 +715,16 @@ global variable. The operand fields are:
 .. _visibility:
 
 * *visibility*: If present, an encoding of the visibility of this variable:
+
   * ``default``: code 0
   * ``hidden``: code 1
   * ``protected``: code 2
 
+.. _bcthreadlocal:
+
 * *threadlocal*: If present, an encoding of the thread local storage mode of the
   variable:
+
   * ``not thread local``: code 0
   * ``thread local; default TLS model``: code 1
   * ``localdynamic``: code 2
@@ -736,6 +741,8 @@ global variable. The operand fields are:
   * ``default``: code 0
   * ``dllimport``: code 1
   * ``dllexport``: code 2
+
+* *comdat*: An encoding of the COMDAT of this function
 
 .. _FUNCTION:
 
@@ -804,7 +811,7 @@ function. The operand fields are:
 MODULE_CODE_ALIAS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-``[ALIAS, alias type, aliasee val#, linkage, visibility, dllstorageclass]``
+``[ALIAS, alias type, aliasee val#, linkage, visibility, dllstorageclass, threadlocal, unnamed_addr]``
 
 The ``ALIAS`` record (code 9) marks the definition of an alias. The operand
 fields are
@@ -819,6 +826,12 @@ fields are
 
 * *dllstorageclass*: If present, an encoding of the
   :ref:`dllstorageclass<bcdllstorageclass>` of the alias
+
+* *threadlocal*: If present, an encoding of the
+  :ref:`thread local property<bcthreadlocal>` of the alias
+
+* *unnamed_addr*: If present and non-zero, indicates that the alias has
+  ``unnamed_addr``
 
 MODULE_CODE_PURGEVALS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

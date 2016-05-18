@@ -52,7 +52,7 @@ define i64 @load_s_i1_i64(i1* %p) {
 ; CHECK-LABEL: store_i32_i1:
 ; CHECK:      i32.const $push[[NUM0:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.and $push[[NUM1:[0-9]+]]=, $1, $pop[[NUM0]]{{$}}
-; CHECK-NEXT: i32.store8 $discard=, 0($0), $pop[[NUM1]]{{$}}
+; CHECK-NEXT: i32.store8 $drop=, 0($0), $pop[[NUM1]]{{$}}
 define void @store_i32_i1(i1* %p, i32 %v) {
   %t = trunc i32 %v to i1
   store i1 %t, i1* %p
@@ -62,7 +62,7 @@ define void @store_i32_i1(i1* %p, i32 %v) {
 ; CHECK-LABEL: store_i64_i1:
 ; CHECK:      i64.const $push[[NUM0:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i64.and $push[[NUM1:[0-9]+]]=, $1, $pop[[NUM0]]{{$}}
-; CHECK-NEXT: i64.store8 $discard=, 0($0), $pop[[NUM1]]{{$}}
+; CHECK-NEXT: i64.store8 $drop=, 0($0), $pop[[NUM1]]{{$}}
 define void @store_i64_i1(i1* %p, i64 %v) {
   %t = trunc i64 %v to i1
   store i1 %t, i1* %p

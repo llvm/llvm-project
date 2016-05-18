@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=pic 2>%t1
+# RUN: not llvm-mc %s -arch=mips -mcpu=mips32 2>%t1
 # RUN: FileCheck %s < %t1
 
   .text

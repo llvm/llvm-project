@@ -33,22 +33,16 @@ class raw_pwrite_stream;
 
 extern Target TheAVRTarget;
 
-/**
- * Creates a machine code emitter for AVR.
- */
+/// Creates a machine code emitter for AVR.
 MCCodeEmitter *createAVRMCCodeEmitter(const MCInstrInfo &MCII,
                                       const MCRegisterInfo &MRI,
                                       MCContext &Ctx);
 
-/**
- * Creates an assembly backend for AVR.
- */
+/// Creates an assembly backend for AVR.
 MCAsmBackend *createAVRAsmBackend(const Target &T, const MCRegisterInfo &MRI,
                                   const Triple &TT, StringRef CPU);
 
-/**
- * Creates an ELF object writer for AVR.
- */
+/// Creates an ELF object writer for AVR.
 MCObjectWriter *createAVRELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI);
 
 } // end namespace llvm

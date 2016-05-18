@@ -1,9 +1,9 @@
-# RUN: llvm-mc -triple=mips64el-unknown-linux -mcpu=mips64r6 -relocation-model=pic -code-model=small -filetype=obj -o %T/test_ELF_N64R6.o %s
-# RUN: llc -mtriple=mips64el-unknown-linux -mcpu=mips64r6 -relocation-model=pic -filetype=obj -o %T/test_ELF_ExternalFunction_N64R6.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-mc -triple=mips64el-unknown-linux -mcpu=mips64r6 -code-model=small -filetype=obj -o %T/test_ELF_N64R6.o %s
+# RUN: llc -mtriple=mips64el-unknown-linux -mcpu=mips64r6 -filetype=obj -o %T/test_ELF_ExternalFunction_N64R6.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mips64el-unknown-linux -mcpu=mips64r6 -verify -map-section test_ELF_N64R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_N64R6.o,.text=0x10000 -check=%s %/T/test_ELF_N64R6.o %T/test_ELF_ExternalFunction_N64R6.o
 
-# RUN: llvm-mc -triple=mips64-unknown-linux -mcpu=mips64r6 -relocation-model=pic -code-model=small -filetype=obj -o %T/test_ELF_N64R6.o %s
-# RUN: llc -mtriple=mips64-unknown-linux -mcpu=mips64r6 -relocation-model=pic -filetype=obj -o %T/test_ELF_ExternalFunction_N64R6.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-mc -triple=mips64-unknown-linux -mcpu=mips64r6 -code-model=small -filetype=obj -o %T/test_ELF_N64R6.o %s
+# RUN: llc -mtriple=mips64-unknown-linux -mcpu=mips64r6 -filetype=obj -o %T/test_ELF_ExternalFunction_N64R6.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mips64-unknown-linux -mcpu=mips64r6 -verify -map-section test_ELF_N64R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_N64R6.o,.text=0x10000 -check=%s %/T/test_ELF_N64R6.o %T/test_ELF_ExternalFunction_N64R6.o
 
 	.text

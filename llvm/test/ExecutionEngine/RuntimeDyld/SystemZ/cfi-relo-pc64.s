@@ -1,9 +1,9 @@
 // Test that R_390_PC32 and R_390_PC64 relocations can be generated.
-// RUN: llvm-mc -triple s390x-linux-gnu -relocation-model=pic -filetype=obj %s -o - | llvm-readobj -s -sr -sd | FileCheck %s
+// RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s -o - | llvm-readobj -s -sr -sd | FileCheck %s
 
 // Test that RuntimeDyld can fix up such relocations.
-// RUN: llvm-mc -triple s390x-linux-gnu -relocation-model=pic -filetype=obj %s -o %T/test-s390x-cfi-relo-pc64.o
-// RUN: llc -mtriple=s390x-linux-gnu -relocation-model=pic -filetype=obj %S/Inputs/rtdyld-globals.ll -o %T/test-s390x-rtdyld-globals.o
+// RUN: llvm-mc -triple s390x-linux-gnu  -filetype=obj %s -o %T/test-s390x-cfi-relo-pc64.o
+// RUN: llc -mtriple=s390x-linux-gnu -filetype=obj %S/Inputs/rtdyld-globals.ll -o %T/test-s390x-rtdyld-globals.o
 // RUN: llvm-rtdyld -triple=s390x-linux-gnu -verify %T/test-s390x-cfi-relo-pc64.o %T/test-s390x-rtdyld-globals.o
 
 f1:

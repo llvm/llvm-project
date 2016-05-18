@@ -16,6 +16,37 @@
 namespace llvm {
 namespace codeview {
 
+/// Distinguishes individual records in .debug$T section or PDB type stream. The
+/// documentation and headers talk about this as the "leaf" type.
+enum class TypeRecordKind : uint16_t {
+#define TYPE_RECORD(lf_ename, value, name) name = value,
+#include "TypeRecords.def"
+  // FIXME: Add serialization support
+  FieldList = 0x1203,
+  BitField = 0x1205,
+};
+
+/// Duplicate copy of the above enum, but using the official CV names. Useful
+/// for reference purposes and when dealing with unknown record types.
+enum TypeLeafKind : uint16_t {
+#define CV_TYPE(name, val) name = val,
+#include "TypeRecords.def"
+};
+
+/// Distinguishes individual records in the Symbols subsection of a .debug$S
+/// section. Equivalent to SYM_ENUM_e in cvinfo.h.
+enum class SymbolRecordKind : uint16_t {
+#define SYMBOL_RECORD(lf_ename, value, name) name = value,
+#include "CVSymbolTypes.def"
+};
+
+/// Duplicate copy of the above enum, but using the official CV names. Useful
+/// for reference purposes and when dealing with unknown record types.
+enum SymbolKind : uint16_t {
+#define CV_SYMBOL(name, val) name = val,
+#include "CVSymbolTypes.def"
+};
+
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
   inline Class operator|(Class a, Class b) {                                   \
     return static_cast<Class>(                                                 \
@@ -326,23 +357,6 @@ enum class PointerToMemberRepresentation : uint16_t {
   GeneralFunction = 0x08              // member function, most general
 };
 
-/// Distinguishes individual records in .debug$T section or PDB type stream. The
-/// documentation and headers talk about this as the "leaf" type.
-enum class TypeRecordKind : uint16_t {
-#define TYPE_RECORD(lf_ename, value, name) name = value,
-#include "TypeRecords.def"
-  // FIXME: Add serialization support
-  FieldList = 0x1203,
-  BitField = 0x1205,
-};
-
-/// Duplicate copy of the above enum, but using the official CV names. Useful
-/// for reference purposes and when dealing with unknown record types.
-enum TypeLeafKind : uint16_t {
-#define CV_TYPE(name, val) name = val,
-#include "TypeRecords.def"
-};
-
 enum class VFTableSlotKind : uint8_t {
   Near16 = 0x00,
   Far16 = 0x01,
@@ -358,6 +372,79 @@ enum class WindowsRTClassKind : uint8_t {
   RefClass = 0x01,
   ValueClass = 0x02,
   Interface = 0x03
+};
+
+/// Corresponds to CV_LVARFLAGS bitfield.
+enum class LocalSymFlags : uint16_t {
+  None = 0,
+  IsParameter = 1 << 0,
+  IsAddressTaken = 1 << 1,
+  IsCompilerGenerated = 1 << 2,
+  IsAggregate = 1 << 3,
+  IsAggregated = 1 << 4,
+  IsAliased = 1 << 5,
+  IsAlias = 1 << 6,
+  IsReturnValue = 1 << 7,
+  IsOptimizedOut = 1 << 8,
+  IsEnregisteredGlobal = 1 << 9,
+  IsEnregisteredStatic = 1 << 10,
+};
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(LocalSymFlags)
+
+/// Corresponds to the CV_PROCFLAGS bitfield.
+enum class ProcSymFlags : uint8_t {
+  None = 0,
+  HasFP = 1 << 0,
+  HasIRET = 1 << 1,
+  HasFRET = 1 << 2,
+  IsNoReturn = 1 << 3,
+  IsUnreachable = 1 << 4,
+  HasCustomCallingConv = 1 << 5,
+  IsNoInline = 1 << 6,
+  HasOptimizedDebugInfo = 1 << 7,
+};
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ProcSymFlags)
+
+/// Corresponds to COMPILESYM3::Flags bitfield.
+enum CompileSym3Flags : uint32_t {
+  EC = 1 << 8,
+  NoDbgInfo = 1 << 9,
+  LTCG = 1 << 10,
+  NoDataAlign = 1 << 11,
+  ManagedPresent = 1 << 12,
+  SecurityChecks = 1 << 13,
+  HotPatch = 1 << 14,
+  CVTCIL = 1 << 15,
+  MSILModule = 1 << 16,
+  Sdl = 1 << 17,
+  PGO = 1 << 18,
+  Exp = 1 << 19,
+};
+
+// Corresponds to BinaryAnnotationOpcode enum.
+enum class BinaryAnnotationsOpCode : uint32_t {
+  Invalid,
+  CodeOffset,
+  ChangeCodeOffsetBase,
+  ChangeCodeOffset,
+  ChangeCodeLength,
+  ChangeFile,
+  ChangeLineOffset,
+  ChangeLineEndDelta,
+  ChangeRangeKind,
+  ChangeColumnStart,
+  ChangeColumnEndDelta,
+  ChangeCodeOffsetAndLineOffset,
+  ChangeCodeLengthAndCodeOffset,
+  ChangeColumnEnd,
+};
+
+// Corresponds to CV_cookietype_e enum.
+enum class FrameCookieKind : uint32_t {
+  Copy,
+  XorStackPointer,
+  XorFramePointer,
+  XorR13,
 };
 }
 }

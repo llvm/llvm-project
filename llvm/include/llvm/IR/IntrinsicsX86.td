@@ -142,16 +142,16 @@ let TargetPrefix = "x86" in {
 
 // Arithmetic ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse_add_ss : GCCBuiltin<"__builtin_ia32_addss">,
+  def int_x86_sse_add_ss :
               Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                          llvm_v4f32_ty], [IntrNoMem]>;
-  def int_x86_sse_sub_ss : GCCBuiltin<"__builtin_ia32_subss">,
+  def int_x86_sse_sub_ss :
               Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                          llvm_v4f32_ty], [IntrNoMem]>;
-  def int_x86_sse_mul_ss : GCCBuiltin<"__builtin_ia32_mulss">,
+  def int_x86_sse_mul_ss :
               Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                          llvm_v4f32_ty], [IntrNoMem]>;
-  def int_x86_sse_div_ss : GCCBuiltin<"__builtin_ia32_divss">,
+  def int_x86_sse_div_ss :
               Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                          llvm_v4f32_ty], [IntrNoMem]>;
   def int_x86_sse_sqrt_ss : GCCBuiltin<"__builtin_ia32_sqrtss">,
@@ -291,16 +291,16 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 
 // FP arithmetic ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_sse2_add_sd : GCCBuiltin<"__builtin_ia32_addsd">,
+  def int_x86_sse2_add_sd :
               Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
                          llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse2_sub_sd : GCCBuiltin<"__builtin_ia32_subsd">,
+  def int_x86_sse2_sub_sd :
               Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
                          llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse2_mul_sd : GCCBuiltin<"__builtin_ia32_mulsd">,
+  def int_x86_sse2_mul_sd :
               Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
                          llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse2_div_sd : GCCBuiltin<"__builtin_ia32_divsd">,
+  def int_x86_sse2_div_sd :
               Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
                          llvm_v2f64_ty], [IntrNoMem]>;
   def int_x86_sse2_sqrt_sd : GCCBuiltin<"__builtin_ia32_sqrtsd">,

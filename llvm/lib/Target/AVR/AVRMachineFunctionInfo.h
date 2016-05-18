@@ -20,9 +20,7 @@
 
 namespace llvm {
 
-/**
- * Contains AVR-specific information for each MachineFunction.
- */
+/// Contains AVR-specific information for each MachineFunction.
 class AVRMachineFunctionInfo : public MachineFunctionInfo {
   /// Indicates if a register has been spilled by the register
   /// allocator.

@@ -20,7 +20,7 @@ define i8* @copy_yes(i8* %dst, i8* %src, i32 %len) {
 }
 
 ; CHECK-LABEL: copy_no:
-; CHECK:      i32.call $discard=, memcpy@FUNCTION, $0, $1, $2{{$}}
+; CHECK:      i32.call $drop=, memcpy@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @copy_no(i8* %dst, i8* %src, i32 %len) {
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i32 1, i1 false)
@@ -36,7 +36,7 @@ define i8* @move_yes(i8* %dst, i8* %src, i32 %len) {
 }
 
 ; CHECK-LABEL: move_no:
-; CHECK:      i32.call $discard=, memmove@FUNCTION, $0, $1, $2{{$}}
+; CHECK:      i32.call $drop=, memmove@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @move_no(i8* %dst, i8* %src, i32 %len) {
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %dst, i8* %src, i32 %len, i32 1, i1 false)
@@ -52,7 +52,7 @@ define i8* @set_yes(i8* %dst, i8 %src, i32 %len) {
 }
 
 ; CHECK-LABEL: set_no:
-; CHECK:      i32.call $discard=, memset@FUNCTION, $0, $1, $2{{$}}
+; CHECK:      i32.call $drop=, memset@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @set_no(i8* %dst, i8 %src, i32 %len) {
   call void @llvm.memset.p0i8.i32(i8* %dst, i8 %src, i32 %len, i32 1, i1 false)
@@ -61,7 +61,7 @@ define void @set_no(i8* %dst, i8 %src, i32 %len) {
 
 
 ; CHECK-LABEL: frame_index:
-; CHECK: i32.call $discard=, memset@FUNCTION, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK: i32.call $drop=, memset@FUNCTION, $pop{{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK: i32.call $push{{[0-9]+}}=, memset@FUNCTION, ${{[0-9]+}}, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK: return{{$}}
 define void @frame_index() {
@@ -76,14 +76,14 @@ entry:
 }
 
 ; If the result value of memset doesn't get stackified, it should be marked
-; $discard. Note that we use a call to prevent tail dup so that we can test
+; $drop. Note that we use a call to prevent tail dup so that we can test
 ; this specific functionality.
 
-; CHECK-LABEL: discard_result:
-; CHECK: i32.call $discard=, memset@FUNCTION, $0, $1, $2
+; CHECK-LABEL: drop_result:
+; CHECK: i32.call $drop=, memset@FUNCTION, $0, $1, $2
 declare i8* @def()
 declare void @block_tail_dup()
-define i8* @discard_result(i8* %arg, i8 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
+define i8* @drop_result(i8* %arg, i8 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
 bb:
   %tmp = icmp eq i32 %arg3, 0
   br i1 %tmp, label %bb5, label %bb9
@@ -109,7 +109,7 @@ bb11:
   ret i8* %tmp12
 }
 
-; This is the same as discard_result, except we let tail dup happen, so the
+; This is the same as drop_result, except we let tail dup happen, so the
 ; result of the memset *is* stackified.
 
 ; CHECK-LABEL: tail_dup_to_reuse_result:

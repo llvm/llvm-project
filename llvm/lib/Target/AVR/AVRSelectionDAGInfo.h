@@ -17,9 +17,8 @@
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 namespace llvm {
-/**
- * Holds information about the AVR instruction selection DAG.
- */
+
+/// Holds information about the AVR instruction selection DAG.
 class AVRSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
 };

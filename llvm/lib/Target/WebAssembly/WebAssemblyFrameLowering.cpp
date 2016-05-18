@@ -88,7 +88,7 @@ static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
   const TargetRegisterClass *PtrRC =
       MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
   unsigned SPAddr = MRI.createVirtualRegister(PtrRC);
-  unsigned Discard = MRI.createVirtualRegister(PtrRC);
+  unsigned Drop = MRI.createVirtualRegister(PtrRC);
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   BuildMI(MBB, InsertAddr, DL, TII->get(WebAssembly::CONST_I32), SPAddr)
@@ -96,8 +96,7 @@ static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
   auto *MMO = new MachineMemOperand(MachinePointerInfo(MF.getPSVManager()
                                         .getExternalSymbolCallEntry(ES)),
                                     MachineMemOperand::MOStore, 4, 4);
-  BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::STORE_I32),
-          Discard)
+  BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::STORE_I32), Drop)
       .addImm(0)
       .addReg(SPAddr)
       .addImm(2)  // p2align

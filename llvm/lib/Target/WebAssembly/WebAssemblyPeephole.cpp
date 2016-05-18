@@ -55,11 +55,11 @@ static const TargetRegisterClass *GetRegClass(const MachineRegisterInfo &MRI,
              : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(RegNo);
 }
 
-/// If desirable, rewrite NewReg to a discard register.
-static bool MaybeRewriteToDiscard(unsigned OldReg, unsigned NewReg,
-                                  MachineOperand &MO,
-                                  WebAssemblyFunctionInfo &MFI,
-                                  MachineRegisterInfo &MRI) {
+/// If desirable, rewrite NewReg to a drop register.
+static bool MaybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
+                               MachineOperand &MO,
+                               WebAssemblyFunctionInfo &MFI,
+                               MachineRegisterInfo &MRI) {
   bool Changed = false;
   if (OldReg == NewReg) {
     Changed = true;
@@ -101,12 +101,12 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE_I64: {
         // Store instructions return their value operand. If we ended up using
         // the same register for both, replace it with a dead def so that it
-        // can use $discard instead.
+        // can use $drop instead.
         MachineOperand &MO = MI.getOperand(0);
         unsigned OldReg = MO.getReg();
         unsigned NewReg =
             MI.getOperand(WebAssembly::StoreValueOperandNo).getReg();
-        Changed |= MaybeRewriteToDiscard(OldReg, NewReg, MO, MFI, MRI);
+        Changed |= MaybeRewriteToDrop(OldReg, NewReg, MO, MFI, MRI);
         break;
       }
       case WebAssembly::CALL_I32:
@@ -130,7 +130,7 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
               if (GetRegClass(MRI, NewReg) != GetRegClass(MRI, OldReg))
                 report_fatal_error("Peephole: call to builtin function with "
                                    "wrong signature, from/to mismatch");
-              Changed |= MaybeRewriteToDiscard(OldReg, NewReg, MO, MFI, MRI);
+              Changed |= MaybeRewriteToDrop(OldReg, NewReg, MO, MFI, MRI);
             }
           }
         }

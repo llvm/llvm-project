@@ -292,6 +292,16 @@ class DwarfDebug : public DebugHandlerBase {
   // Identify a debugger for "tuning" the debug info.
   DebuggerKind DebuggerTuning;
 
+  /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
+  ///
+  /// Returns whether we are "tuning" for a given debugger.
+  /// Should be used only within the constructor, to set feature flags.
+  /// @{
+  bool tuneForGDB() const { return DebuggerTuning == DebuggerKind::GDB; }
+  bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
+  bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
+  /// @}
+
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
 
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
@@ -488,15 +498,6 @@ public:
   /// Returns whether to use the DWARF2 format for bitfields instyead of the
   /// DWARF4 format.
   bool useDWARF2Bitfields() const { return UseDWARF2Bitfields; }
-
-  /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.
-  ///
-  /// Returns whether we are "tuning" for a given debugger.
-  /// @{
-  bool tuneForGDB() const { return DebuggerTuning == DebuggerKind::GDB; }
-  bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
-  bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
-  /// @}
 
   // Experimental DWARF5 features.
 

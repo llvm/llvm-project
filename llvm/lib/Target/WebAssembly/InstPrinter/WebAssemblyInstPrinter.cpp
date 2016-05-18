@@ -149,7 +149,7 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     else if (WAReg != WebAssemblyFunctionInfo::UnusedReg)
       O << "$push" << (WAReg & INT32_MAX);
     else
-      O << "$discard";
+      O << "$drop";
     // Add a '=' suffix if this is a def.
     if (OpNo < MII.get(MI->getOpcode()).getNumDefs())
       O << '=';

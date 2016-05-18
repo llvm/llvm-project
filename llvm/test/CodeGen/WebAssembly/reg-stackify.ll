@@ -134,7 +134,7 @@ false:
 ; CHECK-NEXT: br_if       0, $pop[[NUM2]]{{$}}
 ; CHECK-NEXT: i32.lt_u    $push[[NUM3:[0-9]+]]=, $3, $0{{$}}
 ; CHECK-NEXT: br_if       0, $pop[[NUM3]]{{$}}
-; CHECK-NEXT: i32.store   $discard=, 0($2), $3{{$}}
+; CHECK-NEXT: i32.store   $drop=, 0($2), $3{{$}}
 ; CHECK-NEXT: .LBB8_3:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
@@ -450,7 +450,7 @@ bb10:                                             ; preds = %bb9, %bb
 ; CHECK-LABEL: stackpointer_dependency:
 ; CHECK:      call {{.+}}, stackpointer_callee@FUNCTION,
 ; CHECK:      i32.const $push[[L0:.+]]=, __stack_pointer
-; CHECK-NEXT: i32.store $discard=, 0($pop[[L0]]),
+; CHECK-NEXT: i32.store $drop=, 0($pop[[L0]]),
 declare i32 @stackpointer_callee(i8* readnone, i8* readnone)
 declare i8* @llvm.frameaddress(i32)
 define i32 @stackpointer_dependency(i8* readnone) {

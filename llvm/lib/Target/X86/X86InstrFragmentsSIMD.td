@@ -274,7 +274,16 @@ def X86testnm  : SDNode<"X86ISD::TESTNM", SDTX86Testm, [SDNPCommutative]>;
 def X86movmsk : SDNode<"X86ISD::MOVMSK",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVec<1>]>>;
 
-def X86select  : SDNode<"X86ISD::SELECT"     , SDTSelect>;
+def X86select  : SDNode<"X86ISD::SELECT",
+                        SDTypeProfile<1, 3, [SDTCVecEltisVT<1, i1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCisSameAs<2, 3>,
+                                             SDTCisSameNumEltsAs<0, 1>]>>;
+
+def X86selects : SDNode<"X86ISD::SELECT",
+                        SDTypeProfile<1, 3, [SDTCisVT<1, i1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCisSameAs<2, 3>]>>;
 
 def X86pmuludq : SDNode<"X86ISD::PMULUDQ",
                         SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i64>,
@@ -310,13 +319,15 @@ def SDTShuff2OpI : SDTypeProfile<1, 2, [SDTCisVec<0>,
 def SDTShuff3OpI : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                  SDTCisSameAs<0,2>, SDTCisVT<3, i8>]>;
 def SDTFPBinOpImmRound: SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisSameAs<0,1>,
-                             SDTCisSameAs<0,2>, SDTCisInt<3>, SDTCisInt<4>]>;
+                             SDTCisSameAs<0,2>, SDTCisVT<3, i32>, SDTCisVT<4, i32>]>;
 def SDTFPTernaryOpImmRound: SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisSameAs<0,1>,
-                             SDTCisSameAs<0,2>, SDTCisVec<3>, SDTCisInt<4>, SDTCisInt<5>]>;
+                             SDTCisSameAs<0,2>, SDTCisVec<3>, SDTCisVT<4, i32>,
+                             SDTCisVT<5, i32>]>;
 def SDTFPTernaryOpImmRounds: SDTypeProfile<1, 5, [SDTCisSameAs<0,1>,
-                             SDTCisSameAs<0,2>,SDTCisInt<3>, SDTCisInt<4>, SDTCisInt<5>]>;
+                             SDTCisSameAs<0,2>,SDTCisInt<3>, SDTCisVT<4, i32>,
+                             SDTCisVT<5, i32>]>;
 def SDTFPUnaryOpImmRound: SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
-                              SDTCisInt<2>, SDTCisInt<3>]>;
+                              SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
 
 def SDTVBroadcast  : SDTypeProfile<1, 1, [SDTCisVec<0>]>;
 def SDTVBroadcastm : SDTypeProfile<1, 1, [SDTCisVec<0>,
@@ -330,15 +341,16 @@ def SDTTernlog  : SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                 SDTCisVT<4, i8>]>;
 
 def SDTFPBinOpRound : SDTypeProfile<1, 3, [      // fadd_round, fmul_round, etc.
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>, SDTCisInt<3>]>;
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>, SDTCisVT<3, i32>]>;
 
 def SDTFPUnaryOpRound : SDTypeProfile<1, 2, [      // fsqrt_round, fgetexp_round, etc.
-  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisInt<2>]>;
+  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisVT<2, i32>]>;
 
 def SDTFma : SDTypeProfile<1, 3, [SDTCisSameAs<0,1>,
                            SDTCisSameAs<1,2>, SDTCisSameAs<1,3>]>;
 def SDTFmaRound : SDTypeProfile<1, 4, [SDTCisSameAs<0,1>,
-                           SDTCisSameAs<1,2>, SDTCisSameAs<1,3>, SDTCisInt<4>]>;
+                           SDTCisSameAs<1,2>, SDTCisSameAs<1,3>,
+                           SDTCisVT<4, i32>]>;
 def STDFp1SrcRm : SDTypeProfile<1, 2, [SDTCisSameAs<0,1>,
                            SDTCisVec<0>, SDTCisVT<2, i32>]>;
 def STDFp2SrcRm : SDTypeProfile<1, 3, [SDTCisSameAs<0,1>,
@@ -512,26 +524,30 @@ def SDTFloatToInt: SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>,
                                          SDTCisInt<0>, SDTCVecEltisVT<1, f32>]>;
 
 def SDTDoubleToIntRnd: SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
-                                         SDTCisInt<0>, SDTCVecEltisVT<1, f64>]>;
-def SDTSDoubleToIntRnd: SDTypeProfile<1, 2, [SDTCisInt<0>,SDTCisFP<1>, 
-                                             SDTCVecEltisVT<1, f64>, SDTCisInt<2>]>;
+                                         SDTCisInt<0>, SDTCVecEltisVT<1, f64>,
+                                         SDTCisVT<2, i32>]>;
+def SDTSDoubleToIntRnd: SDTypeProfile<1, 2, [SDTCisInt<0>,SDTCisFP<1>,
+                                             SDTCVecEltisVT<1, f64>,
+                                             SDTCisVT<2, i32>]>;
 def SDTFloatToIntRnd: SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
-                                         SDTCisInt<0>, SDTCVecEltisVT<1, f32>]>;
+                                         SDTCisInt<0>, SDTCVecEltisVT<1, f32>,
+                                         SDTCisVT<2, i32>]>;
 def SDTSFloatToIntRnd: SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisFP<1>,
-                                            SDTCVecEltisVT<1, f32>, SDTCisInt<2>]>;
+                                            SDTCVecEltisVT<1, f32>,
+                                            SDTCisVT<2, i32>]>;
 def SDTVintToFPRound: SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisFP<0>, SDTCVecEltisVT<1, i32>,
-                                           SDTCisInt<2>]>;
+                                           SDTCisVT<2, i32>]>;
 def SDTVlongToFPRound: SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisFP<0>, SDTCVecEltisVT<1, i64>,
-                                           SDTCisInt<2>]>;
+                                           SDTCisVT<2, i32>]>;
 
 def SDTVFPToIntRound: SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisFP<1>, SDTCVecEltisVT<0, i32>,
-                                           SDTCisInt<2>]>;
+                                           SDTCisVT<2, i32>]>;
 def SDTVFPToLongRound: SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisFP<1>, SDTCVecEltisVT<0, i64>,
-                                           SDTCisInt<2>]>;
+                                           SDTCisVT<2, i32>]>;
 
 // Scalar
 def X86SintToFpRnd  : SDNode<"X86ISD::SINT_TO_FP_RND",  SDTintToFPRound>;
