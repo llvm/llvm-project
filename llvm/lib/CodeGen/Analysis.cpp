@@ -639,6 +639,11 @@ bool llvm::canBeOmittedFromSymbolTable(const GlobalValue *GV) {
   if (isa<GlobalAlias>(GV))
     return false;
 
+  // If we don't see every use, we have to be conservative and assume the value
+  // address is significant.
+  if (GV->getParent()->getMaterializer())
+    return false;
+
   GlobalStatus GS;
   if (GlobalStatus::analyzeGlobal(GV, GS))
     return false;
