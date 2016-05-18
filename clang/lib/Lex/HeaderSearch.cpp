@@ -1343,19 +1343,20 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
                                 DirNative);
 
         // Search each of the ".framework" directories to load them as modules.
-        for (llvm::sys::fs::directory_iterator Dir(DirNative, EC), DirEnd;
+        vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+        for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
-          if (llvm::sys::path::extension(Dir->path()) != ".framework")
+          if (llvm::sys::path::extension(Dir->getName()) != ".framework")
             continue;
 
           const DirectoryEntry *FrameworkDir =
-              FileMgr.getDirectory(Dir->path());
+              FileMgr.getDirectory(Dir->getName());
           if (!FrameworkDir)
             continue;
 
           // Load this framework module.
-          loadFrameworkModule(llvm::sys::path::stem(Dir->path()), FrameworkDir,
-                              IsSystem);
+          loadFrameworkModule(llvm::sys::path::stem(Dir->getName()),
+                              FrameworkDir, IsSystem);
         }
         continue;
       }
@@ -1410,11 +1411,13 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   std::error_code EC;
   SmallString<128> DirNative;
   llvm::sys::path::native(SearchDir.getDir()->getName(), DirNative);
-  for (llvm::sys::fs::directory_iterator Dir(DirNative, EC), DirEnd;
+  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
+    bool IsFramework =
+        llvm::sys::path::extension(Dir->getName()) == ".framework";
     if (IsFramework == SearchDir.isFramework())
-      loadModuleMapFile(Dir->path(), SearchDir.isSystemHeaderDirectory(),
+      loadModuleMapFile(Dir->getName(), SearchDir.isSystemHeaderDirectory(),
                         SearchDir.isFramework());
   }
 
