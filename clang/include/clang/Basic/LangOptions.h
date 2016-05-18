@@ -65,6 +65,14 @@ public:
     PPTMK_FullGeneralityVirtualInheritance
   };
 
+  enum DefaultCallingConvention {
+    DCC_None,
+    DCC_CDecl,
+    DCC_FastCall,
+    DCC_StdCall,
+    DCC_VectorCall
+  };
+
   enum AddrSpaceMapMangling { ASMM_Target, ASMM_On, ASMM_Off };
 
   enum MSVCMajorVersion {

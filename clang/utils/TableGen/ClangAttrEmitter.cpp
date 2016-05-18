@@ -98,6 +98,13 @@ static std::string ReadPCHRecord(StringRef type) {
     .Default("Record[Idx++]");
 }
 
+// Get a type that is suitable for storing an object of the specified type.
+static StringRef getStorageType(StringRef type) {
+  return StringSwitch<StringRef>(type)
+    .Case("StringRef", "std::string")
+    .Default(type);
+}
+
 // Assumes that the way to get the value is SA->getname()
 static std::string WritePCHRecord(StringRef type, StringRef name) {
   return "Record." + StringSwitch<std::string>(type)
@@ -644,15 +651,34 @@ namespace {
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "  unsigned " << getLowerName() << "Size = Record[Idx++];\n";
-      OS << "  SmallVector<" << Type << ", 4> " << getLowerName()
-         << ";\n";
-      OS << "  " << getLowerName() << ".reserve(" << getLowerName()
+      OS << "    unsigned " << getLowerName() << "Size = Record[Idx++];\n";
+      OS << "    SmallVector<" << getType() << ", 4> "
+         << getLowerName() << ";\n";
+      OS << "    " << getLowerName() << ".reserve(" << getLowerName()
          << "Size);\n";
-      OS << "    for (unsigned i = " << getLowerName() << "Size; i; --i)\n";
-      
+
+      // If we can't store the values in the current type (if it's something
+      // like StringRef), store them in a different type and convert the
+      // container afterwards.
+      std::string StorageType = getStorageType(getType());
+      std::string StorageName = getLowerName();
+      if (StorageType != getType()) {
+        StorageName += "Storage";
+        OS << "    SmallVector<" << StorageType << ", 4> "
+           << StorageName << ";\n";
+        OS << "    " << StorageName << ".reserve(" << getLowerName()
+           << "Size);\n";
+      }
+
+      OS << "    for (unsigned i = 0; i != " << getLowerName() << "Size; ++i)\n";
       std::string read = ReadPCHRecord(Type);
-      OS << "    " << getLowerName() << ".push_back(" << read << ");\n";
+      OS << "      " << StorageName << ".push_back(" << read << ");\n";
+
+      if (StorageType != getType()) {
+        OS << "    for (unsigned i = 0; i != " << getLowerName() << "Size; ++i)\n";
+        OS << "      " << getLowerName() << ".push_back("
+           << StorageName << "[i]);\n";
+      }
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {

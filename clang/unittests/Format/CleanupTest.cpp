@@ -113,6 +113,133 @@ TEST_F(CleanupTest, EmptyNamespaceWithCommentsBreakBeforeBrace) {
   EXPECT_EQ(Expected, Result);
 }
 
+TEST_F(CleanupTest, CtorInitializationSimpleRedundantComma) {
+  std::string Code = "class A {\nA() : , {} };";
+  std::string Expected = "class A {\nA()  {} };";
+  std::vector<tooling::Range> Ranges;
+  Ranges.push_back(tooling::Range(17, 0));
+  Ranges.push_back(tooling::Range(19, 0));
+  std::string Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  Code = "class A {\nA() : x(1), {} };";
+  Expected = "class A {\nA() : x(1) {} };";
+  Ranges.clear();
+  Ranges.push_back(tooling::Range(23, 0));
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  Code = "class A {\nA() :,,,,{} };";
+  Expected = "class A {\nA() {} };";
+  Ranges.clear();
+  Ranges.push_back(tooling::Range(15, 0));
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+}
+
+TEST_F(CleanupTest, ListSimpleRedundantComma) {
+  std::string Code = "void f() { std::vector<int> v = {1,2,,,3,{4,5}}; }";
+  std::string Expected = "void f() { std::vector<int> v = {1,2,3,{4,5}}; }";
+  std::vector<tooling::Range> Ranges;
+  Ranges.push_back(tooling::Range(40, 0));
+  std::string Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  Code = "int main() { f(1,,2,3,,4);}";
+  Expected = "int main() { f(1,2,3,4);}";
+  Ranges.clear();
+  Ranges.push_back(tooling::Range(17, 0));
+  Ranges.push_back(tooling::Range(22, 0));
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+}
+
+TEST_F(CleanupTest, CtorInitializationBracesInParens) {
+  std::string Code = "class A {\nA() : x({1}),, {} };";
+  std::string Expected = "class A {\nA() : x({1}) {} };";
+  std::vector<tooling::Range> Ranges;
+  Ranges.push_back(tooling::Range(24, 0));
+  Ranges.push_back(tooling::Range(26, 0));
+  std::string Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+}
+
+TEST_F(CleanupTest, RedundantCommaNotInAffectedRanges) {
+  std::string Code =
+      "class A {\nA() : x({1}), /* comment */, { int x = 0; } };";
+  std::string Expected =
+      "class A {\nA() : x({1}), /* comment */, { int x = 0; } };";
+  // Set the affected range to be "int x = 0", which does not intercept the
+  // constructor initialization list.
+  std::vector<tooling::Range> Ranges(1, tooling::Range(42, 9));
+  std::string Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  Code = "class A {\nA() : x(1), {} };";
+  Expected = "class A {\nA() : x(1), {} };";
+  // No range. Fixer should do nothing.
+  Ranges.clear();
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+}
+
+// FIXME: delete comments too.
+TEST_F(CleanupTest, CtorInitializationCommentAroundCommas) {
+  // Remove redundant commas around comment.
+  std::string Code = "class A {\nA() : x({1}), /* comment */, {} };";
+  std::string Expected = "class A {\nA() : x({1}) /* comment */ {} };";
+  std::vector<tooling::Range> Ranges;
+  Ranges.push_back(tooling::Range(25, 0));
+  Ranges.push_back(tooling::Range(40, 0));
+  std::string Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  // Remove trailing comma and ignore comment.
+  Code = "class A {\nA() : x({1}), // comment\n{} };";
+  Expected = "class A {\nA() : x({1}) // comment\n{} };";
+  Ranges = std::vector<tooling::Range>(1, tooling::Range(25, 0));
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  // Remove trailing comma and ignore comment.
+  Code = "class A {\nA() : x({1}), // comment\n , y(1),{} };";
+  Expected = "class A {\nA() : x({1}), // comment\n  y(1){} };";
+  Ranges = std::vector<tooling::Range>(1, tooling::Range(38, 0));
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  // Remove trailing comma and ignore comment.
+  Code = "class A {\nA() : x({1}), \n/* comment */, y(1),{} };";
+  Expected = "class A {\nA() : x({1}), \n/* comment */ y(1){} };";
+  Ranges = std::vector<tooling::Range>(1, tooling::Range(40, 0));
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+
+  // Remove trailing comma and ignore comment.
+  Code = "class A {\nA() : , // comment\n y(1),{} };";
+  Expected = "class A {\nA() :  // comment\n y(1){} };";
+  Ranges = std::vector<tooling::Range>(1, tooling::Range(17, 0));
+  Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+}
+
+TEST_F(CleanupTest, CtorInitializerInNamespace) {
+  std::string Code = "namespace A {\n"
+                     "namespace B {\n" // missing r_brace
+                     "} // namespace A\n\n"
+                     "namespace C {\n"
+                     "class A { A() : x(0),, {} };\n"
+                     "inline namespace E { namespace { } }\n"
+                     "}";
+  std::string Expected = "namespace A {\n"
+                         "\n\n\nnamespace C {\n"
+                         "class A { A() : x(0) {} };\n   \n"
+                         "}";
+  std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
+  std::string Result = cleanup(Code, Ranges);
+  EXPECT_EQ(Expected, Result);
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

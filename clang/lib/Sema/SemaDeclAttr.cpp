@@ -3950,11 +3950,12 @@ bool Sema::CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
 
     // This convention is not valid for the target. Use the default function or
     // method calling convention.
-    TargetInfo::CallingConvMethodType MT = TargetInfo::CCMT_Unknown;
-    if (FD)
-      MT = FD->isCXXInstanceMember() ? TargetInfo::CCMT_Member : 
-                                    TargetInfo::CCMT_NonMember;
-    CC = TI.getDefaultCallingConv(MT);
+    bool IsCXXMethod = false, IsVariadic = false;
+    if (FD) {
+      IsCXXMethod = FD->isCXXInstanceMember();
+      IsVariadic = FD->isVariadic();
+    }
+    CC = Context.getDefaultCallingConvention(IsVariadic, IsCXXMethod);
   }
 
   attr.setProcessingCache((unsigned) CC);

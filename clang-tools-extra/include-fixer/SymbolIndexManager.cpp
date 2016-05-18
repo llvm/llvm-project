@@ -41,10 +41,16 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
       auto SymbolContext = Symbol.getContexts().begin();
       auto IdentiferContext = Names.rbegin() + 1; // Skip identifier name;
       // Match the remaining context names.
-      for (; IdentiferContext != Names.rend() &&
-             SymbolContext != Symbol.getContexts().end();
-           ++IdentiferContext, ++SymbolContext) {
-        if (SymbolContext->second != *IdentiferContext) {
+      while (IdentiferContext != Names.rend() &&
+             SymbolContext != Symbol.getContexts().end()) {
+        if (SymbolContext->second == *IdentiferContext) {
+          ++IdentiferContext;
+          ++SymbolContext;
+        } else if (SymbolContext->first ==
+                   find_all_symbols::SymbolInfo::ContextType::EnumDecl) {
+          // Skip non-scoped enum context.
+          ++SymbolContext;
+        } else {
           IsMatched = false;
           break;
         }

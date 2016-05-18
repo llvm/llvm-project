@@ -268,6 +268,15 @@ def _SLASH_Y_ : CLFlag<"Y-">,
 def _SLASH_Fp : CLJoined<"Fp">,
   HelpText<"Set pch filename (with /Yc and /Yu)">, MetaVarName<"<filename>">;
 
+def _SLASH_Gd : CLFlag<"Gd">,
+  HelpText<"Set __cdecl as a default calling convention">;
+def _SLASH_Gr : CLFlag<"Gr">,
+  HelpText<"Set __fastcall as a default calling convention">;
+def _SLASH_Gz : CLFlag<"Gz">,
+  HelpText<"Set __stdcall as a default calling convention">;
+def _SLASH_Gv : CLFlag<"Gv">,
+  HelpText<"Set __vectorcall as a default calling convention">;
+
 // Ignored:
 
 def _SLASH_analyze_ : CLIgnoredFlag<"analyze-">;
@@ -279,7 +288,6 @@ def _SLASH_errorReport : CLIgnoredJoined<"errorReport">;
 def _SLASH_Fd : CLIgnoredJoined<"Fd">;
 def _SLASH_FC : CLIgnoredFlag<"FC">;
 def _SLASH_FS : CLIgnoredFlag<"FS">, HelpText<"Force synchronous PDB writes">;
-def _SLASH_Gd : CLIgnoredFlag<"Gd">;
 def _SLASH_GF : CLIgnoredFlag<"GF">;
 def _SLASH_GS_ : CLIgnoredFlag<"GS-">;
 def _SLASH_kernel_ : CLIgnoredFlag<"kernel-">;
@@ -324,12 +332,9 @@ def _SLASH_GL : CLFlag<"GL">;
 def _SLASH_GL_ : CLFlag<"GL-">;
 def _SLASH_Gm : CLFlag<"Gm">;
 def _SLASH_Gm_ : CLFlag<"Gm-">;
-def _SLASH_Gr : CLFlag<"Gr">;
 def _SLASH_GS : CLFlag<"GS">;
 def _SLASH_GT : CLFlag<"GT">;
 def _SLASH_Guard : CLJoined<"guard:">;
-def _SLASH_Gv : CLFlag<"Gv">;
-def _SLASH_Gz : CLFlag<"Gz">;
 def _SLASH_GZ : CLFlag<"GZ">;
 def _SLASH_H : CLFlag<"H">;
 def _SLASH_homeparams : CLFlag<"homeparams">;
