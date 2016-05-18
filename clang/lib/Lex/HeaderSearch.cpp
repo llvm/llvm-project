@@ -567,7 +567,7 @@ const FileEntry *HeaderSearch::LookupFile(
     ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
-    bool SkipCache) {
+    bool SkipCache, bool BuildSystemModule) {
   if (SuggestedModule)
     *SuggestedModule = ModuleMap::KnownHeader();
     
@@ -615,11 +615,12 @@ const FileEntry *HeaderSearch::LookupFile(
       // getFileAndSuggestModule, because it's a reference to an element of
       // a container that could be reallocated across this call.
       //
-      // FIXME: If we have no includer, that means we're processing a #include
+      // If we have no includer, that means we're processing a #include
       // from a module build. We should treat this as a system header if we're
       // building a [system] module.
       bool IncluderIsSystemHeader =
-          Includer && getFileInfo(Includer).DirInfo != SrcMgr::C_User;
+          (Includer && getFileInfo(Includer).DirInfo != SrcMgr::C_User) ||
+          (!Includer && BuildSystemModule);
       if (const FileEntry *FE = getFileAndSuggestModule(
               TmpDir, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
