@@ -62,6 +62,10 @@ static std::string runIncludeFixer(
       SymbolInfo("bar", SymbolInfo::SymbolKind::Class, "\"bar.h\"",
                  1, {{SymbolInfo::ContextType::Namespace, "b"},
                      {SymbolInfo::ContextType::Namespace, "a"}}),
+      SymbolInfo("Green", SymbolInfo::SymbolKind::Class, "\"color.h\"",
+                 1, {{SymbolInfo::ContextType::EnumDecl, "Color"},
+                     {SymbolInfo::ContextType::Namespace, "b"},
+                     {SymbolInfo::ContextType::Namespace, "a"}}),
   };
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
   SymbolIndexMgr->addSymbolIndex(
@@ -166,6 +170,12 @@ TEST(IncludeFixer, ScopedNamespaceSymbols) {
   EXPECT_EQ("#include \"bar.h\"\nnamespace A { b::bar b; }\n",
             runIncludeFixer("namespace A { b::bar b; }\n"));
 }
+
+TEST(IncludeFixer, EnumConstantSymbols) {
+  EXPECT_EQ("#include \"color.h\"\nint test = a::b::Green;\n",
+            runIncludeFixer("int test = a::b::Green;\n"));
+}
+
 } // namespace
 } // namespace include_fixer
 } // namespace clang

@@ -25,7 +25,9 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include <memory>
+
 using namespace clang;
+using namespace CodeGen;
 
 namespace {
   class CodeGeneratorImpl : public CodeGenerator {
@@ -65,7 +67,7 @@ namespace {
     SmallVector<CXXMethodDecl *, 8> DeferredInlineMethodDefinitions;
 
   public:
-    CodeGeneratorImpl(DiagnosticsEngine &diags, const std::string &ModuleName,
+    CodeGeneratorImpl(DiagnosticsEngine &diags, llvm::StringRef ModuleName,
                       const HeaderSearchOptions &HSO,
                       const PreprocessorOptions &PPO, const CodeGenOptions &CGO,
                       llvm::LLVMContext &C,
@@ -82,11 +84,19 @@ namespace {
              Diags.hasErrorOccurred());
     }
 
-    llvm::Module* GetModule() override {
+    CodeGenModule &CGM() {
+      return *Builder;
+    }
+
+    llvm::Module *GetModule() {
       return M.get();
     }
 
-    const Decl *GetDeclForMangledName(StringRef MangledName) override {
+    llvm::Module *ReleaseModule() {
+      return M.release();
+    }
+
+    const Decl *GetDeclForMangledName(StringRef MangledName) {
       GlobalDecl Result;
       if (!Builder->lookupRepresentativeDecl(MangledName, Result))
         return nullptr;
@@ -101,7 +111,9 @@ namespace {
       return D;
     }
 
-    llvm::Module *ReleaseModule() override { return M.release(); }
+    llvm::Constant *GetAddrOfGlobal(GlobalDecl global, bool isForDefinition) {
+      return Builder->GetAddrOfGlobal(global, isForDefinition);
+    }
 
     void Initialize(ASTContext &Context) override {
       Ctx = &Context;
@@ -275,8 +287,30 @@ namespace {
 
 void CodeGenerator::anchor() { }
 
+CodeGenModule &CodeGenerator::CGM() {
+  return static_cast<CodeGeneratorImpl*>(this)->CGM();
+}
+
+llvm::Module *CodeGenerator::GetModule() {
+  return static_cast<CodeGeneratorImpl*>(this)->GetModule();
+}
+
+llvm::Module *CodeGenerator::ReleaseModule() {
+  return static_cast<CodeGeneratorImpl*>(this)->ReleaseModule();
+}
+
+const Decl *CodeGenerator::GetDeclForMangledName(llvm::StringRef name) {
+  return static_cast<CodeGeneratorImpl*>(this)->GetDeclForMangledName(name);
+}
+
+llvm::Constant *CodeGenerator::GetAddrOfGlobal(GlobalDecl global,
+                                               bool isForDefinition) {
+  return static_cast<CodeGeneratorImpl*>(this)
+           ->GetAddrOfGlobal(global, isForDefinition);
+}
+
 CodeGenerator *clang::CreateLLVMCodeGen(
-    DiagnosticsEngine &Diags, const std::string &ModuleName,
+    DiagnosticsEngine &Diags, llvm::StringRef ModuleName,
     const HeaderSearchOptions &HeaderSearchOpts,
     const PreprocessorOptions &PreprocessorOpts, const CodeGenOptions &CGO,
     llvm::LLVMContext &C, CoverageSourceInfo *CoverageInfo) {
