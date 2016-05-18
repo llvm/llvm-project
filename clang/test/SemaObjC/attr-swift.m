@@ -70,8 +70,8 @@ __attribute__((swift_name("SNFooClass")))
 
 + (instancetype)trailingParen __attribute__((swift_name("foo("))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
 + (instancetype)trailingColon:(int)value __attribute__((swift_name("foo(value)"))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
-+ (instancetype)initialIgnore:(int)value __attribute__((swift_name("_(value:)"))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
-+ (instancetype)middleOmitted:(int)value __attribute__((swift_name("foo(:)"))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
++ (instancetype)initialIgnore:(int)value __attribute__((swift_name("_(value:)"))); // expected-error {{'swift_name' attribute has invalid identifier for base name}}
++ (instancetype)middleOmitted:(int)value __attribute__((swift_name("foo(:)"))); // expected-error {{'swift_name' attribute has invalid identifier for parameter name}}
 
 @property(strong) id someProp __attribute__((swift_name("prop")));
 @end
@@ -106,19 +106,47 @@ extern struct Point3D identityPoint __attribute__((swift_name("Point3D.identity"
 // Getters and setters.
 float Point3DGetMagnitude(Point3D point) __attribute__((swift_name("getter:Point3D.magnitude(self:)")));
 
+float Point3DGetMagnitudeAndSomethingElse(Point3D point, float wat) __attribute__((swift_name("getter:Point3D.magnitude(self:wat:)"))); // expected-error {{'swift_name' attribute for getter must not take any parameters besides 'self:'}}
+
 float Point3DGetRadius(Point3D point) __attribute__((swift_name("getter:Point3D.radius(self:)")));
-void Point3DSetRadius(Point3D point, float radius) __attribute__((swift_name("setter:Point3D.radius(self:_:)")));
+void Point3DSetRadius(Point3D point, float radius) __attribute__((swift_name("setter:Point3D.radius(self:newValue:)")));
+
+float Point3DPreGetRadius(Point3D point) __attribute__((swift_name("getter:Point3D.preRadius(self:)")));
+void Point3DPreSetRadius(float radius, Point3D point) __attribute__((swift_name("setter:Point3D.preRadius(newValue:self:)")));
+
+void Point3DSetRadiusAndSomethingElse(Point3D point, float radius, float wat) __attribute__((swift_name("setter:Point3D.radius(self:newValue:wat:)"))); // expected-error {{'swift_name' attribute for setter must take one parameter for new value}}
+
+float Point3DGetComponent(Point3D point, unsigned index) __attribute__((swift_name("getter:Point3D.subscript(self:_:)")));
+float Point3DSetComponent(Point3D point, unsigned index, float value) __attribute__((swift_name("setter:Point3D.subscript(self:_:newValue:)")));
+
+float Point3DGetMatrixComponent(Point3D point, unsigned x, unsigned y) __attribute__((swift_name("getter:Point3D.subscript(self:x:y:)")));
+void Point3DSetMatrixComponent(Point3D point, unsigned x, float value, unsigned y) __attribute__((swift_name("setter:Point3D.subscript(self:x:newValue:y:)")));
+
+float Point3DSetWithoutNewValue(Point3D point, unsigned x, unsigned y) __attribute__((swift_name("setter:Point3D.subscript(self:x:y:)"))); // expected-error {{'swift_name' attribute for 'subscript' setter must take a 'newValue:' parameter}}
+
+float Point3DSubscriptButNotGetterSetter(Point3D point, unsigned x) __attribute__((swift_name("Point3D.subscript(self:_:)"))); // expected-error {{'swift_name' attribute for 'subscript' must be a getter or setter}}
+
+void Point3DSubscriptSetterTwoNewValues(Point3D point, unsigned x, float a, float b) __attribute__((swift_name("setter:Point3D.subscript(self:_:newValue:newValue:)"))); // expected-error {{'swift_name' attribute for 'subscript' setter cannot take multiple 'newValue:' parameters}}
+float Point3DSubscriptGetterNewValue(Point3D point, unsigned x, float a, float b) __attribute__((swift_name("getter:Point3D.subscript(self:_:newValue:newValue:)"))); // expected-error {{'swift_name' attribute for 'subscript' getter cannot take a 'newValue:' parameter}}
+
+void Point3DMethodWithNewValue(Point3D point, float newValue) __attribute__((swift_name("Point3D.method(self:newValue:)")));
+void Point3DMethodWithNewValues(Point3D point, float newValue, float newValueB) __attribute__((swift_name("Point3D.method(self:newValue:newValue:)")));
+
+float Point3DStaticSubscript(unsigned x) __attribute__((swift_name("getter:Point3D.subscript(_:)"))); // expected-error {{'swift_name' attribute for 'subscript' must take a 'self:' parameter}}
+float Point3DStaticSubscriptNoArgs(void) __attribute__((swift_name("getter:Point3D.subscript()"))); // expected-error {{'swift_name' attribute for 'subscript' must take at least one parameter}}
+
+float Point3DPreGetComponent(Point3D point, unsigned index) __attribute__((swift_name("getter:Point3D.subscript(self:_:)")));
 
 Point3D getCurrentPoint3D(void) __attribute__((swift_name("getter:currentPoint3D()")));
 
-void setCurrentPoint3D(Point3D point) __attribute__((swift_name("setter:currentPoint3D(_:)")));
+void setCurrentPoint3D(Point3D point) __attribute__((swift_name("setter:currentPoint3D(newValue:)")));
 
 Point3D getLastPoint3D(void) __attribute__((swift_name("getter:lastPoint3D()")));
 
-void setLastPoint3D(Point3D point) __attribute__((swift_name("setter:lastPoint3D(_:)")));
+void setLastPoint3D(Point3D point) __attribute__((swift_name("setter:lastPoint3D(newValue:)")));
 
 Point3D getZeroPoint() __attribute__((swift_name("getter:Point3D.zero()")));
-void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D.zero(_:)")));
+void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D.zero(newValue:)")));
 
 Point3D badGetter1(int x) __attribute__((swift_name("getter:bad1(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
 void badSetter1() __attribute__((swift_name("getter:bad1())"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
