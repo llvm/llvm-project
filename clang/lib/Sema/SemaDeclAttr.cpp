@@ -4671,8 +4671,10 @@ static void handleObjCPreciseLifetimeAttr(Sema &S, Decl *D,
 
 /// Do a very rough check to make sure \p Name looks like a Swift function name,
 /// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
-/// and return the number of parameter names.
-static bool validateSwiftFunctionName(StringRef Name,
+/// and output the number of parameter names, whether this is a single-arg
+/// initializer. Returns None if the name is valid, otherwise returns a
+/// one-parameter diagnostic ID describing the problem.
+static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
                                       unsigned &ParamCount,
                                       bool &IsSingleParamInit) {
   ParamCount = 0;
@@ -4690,7 +4692,7 @@ static bool validateSwiftFunctionName(StringRef Name,
   }
 
   if (Name.back() != ')')
-    return false;
+    return diag::err_attr_swift_name_function;
 
   StringRef BaseName, Parameters;
   std::tie(BaseName, Parameters) = Name.split('(');
@@ -4704,47 +4706,69 @@ static bool validateSwiftFunctionName(StringRef Name,
     BaseName = ContextName;
     ContextName = StringRef();
   } else if (ContextName.empty() || !isValidIdentifier(ContextName)) {
-    return false;
+    return diag::err_attr_swift_name_context_name_invalid_identifier;
   } else {
     IsMember = true;
   }
 
   if (!isValidIdentifier(BaseName) || BaseName == "_")
-    return false;
+    return diag::err_attr_swift_name_basename_invalid_identifier;
 
+  bool IsSubscript = BaseName == "subscript";
+  // A subscript accessor must be a getter or setter.
+  if (IsSubscript && !isGetter && !isSetter)
+    return diag::err_attr_swift_name_subscript_not_accessor;
+  
   if (Parameters.empty())
-    return false;
+    return diag::err_attr_swift_name_missing_parameters;
   Parameters = Parameters.drop_back(); // ')'
 
   if (Parameters.empty()) {
-    // Setters must have at least one parameter.
-    if (isSetter) return false;
-
-    return true;
+    // Setters and subscripts must have at least one parameter.
+    if (IsSubscript)
+      return diag::err_attr_swift_name_subscript_no_parameter;
+    if (isSetter)
+      return diag::err_attr_swift_name_setter_parameters;
+    
+    return None;
   }
 
   if (Parameters.back() != ':')
-    return false;
+    return diag::err_attr_swift_name_function;
 
   Optional<unsigned> SelfLocation;
+  Optional<unsigned> NewValueLocation;
+  unsigned NewValueCount = 0;
   StringRef NextParam;
   do {
     std::tie(NextParam, Parameters) = Parameters.split(':');
 
     if (!isValidIdentifier(NextParam))
-      return false;
+      return diag::err_attr_swift_name_parameter_invalid_identifier;
 
     // "self" indicates the "self" argument for a member.
     if (IsMember && NextParam == "self") {
       // More than one "self"?
-      if (SelfLocation) return false;
+      if (SelfLocation) return diag::err_attr_swift_name_multiple_selfs;
 
       // The "self" location is the current parameter.
       SelfLocation = ParamCount;
     }
-
+    
+    // "newValue" indicates the "newValue" argument for a setter.
+    if (NextParam == "newValue") {
+      // There should only be one 'newValue', but it's only significant for
+      // subscript accessors, so don't error right away.
+      ++NewValueCount;
+      
+      NewValueLocation = ParamCount;
+    }
     ++ParamCount;
   } while (!Parameters.empty());
+
+  // Only instance subscripts are currently supported.
+  if (IsSubscript && !SelfLocation)
+    return diag::err_attr_swift_name_static_subscript;
 
   IsSingleParamInit =
       (ParamCount == 1 && BaseName == "init" && NextParam != "_");
@@ -4752,15 +4776,46 @@ static bool validateSwiftFunctionName(StringRef Name,
   // Check the number of parameters for a getter/setter.
   if (isGetter || isSetter) {
     // Setters have one parameter for the new value.
-    unsigned NumExpectedParams = isSetter ? 1 : 0;
+    unsigned NumExpectedParams;
+    unsigned ParamDiag;
+    
+    if (isSetter) {
+      NumExpectedParams = 1;
+      ParamDiag = diag::err_attr_swift_name_setter_parameters;
+    } else {
+      NumExpectedParams = 0;
+      ParamDiag = diag::err_attr_swift_name_getter_parameters;
+    }
 
     // Instance methods have one parameter for "self".
     if (SelfLocation) ++NumExpectedParams;
-
-    if (ParamCount != NumExpectedParams) return true;
+    
+    // Subscripts may have additional parameters beyond the expected params for
+    // the index.
+    if (IsSubscript) {
+      if (ParamCount < NumExpectedParams)
+        return ParamDiag;
+      // A subscript setter must explicitly label its newValue parameter to
+      // distinguish it from index parameters.
+      if (isSetter) {
+        if (!NewValueLocation)
+          return diag::err_attr_swift_name_subscript_setter_no_newValue;
+        // There can only be one.
+        if (NewValueCount > 1)
+          return diag::err_attr_swift_name_subscript_setter_multiple_newValues;
+      } else {
+        // Subscript getters should have no 'newValue:' parameter.
+        if (NewValueLocation)
+          return diag::err_attr_swift_name_subscript_getter_newValue;
+      }
+    } else {
+      // Property accessors must have exactly the number of expected params.
+      if (ParamCount != NumExpectedParams)
+        return ParamDiag;
+    }
   }
   
-  return true;
+  return None;
 }
 
 static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
@@ -4784,8 +4839,9 @@ static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
 
     bool IsSingleParamInit;
     unsigned SwiftParamCount;
-    if (!validateSwiftFunctionName(Name, SwiftParamCount, IsSingleParamInit)) {
-      S.Diag(ArgLoc, diag::err_attr_swift_name_function) << Attr.getName();
+    if (auto diagID
+         = validateSwiftFunctionName(Name, SwiftParamCount, IsSingleParamInit)){
+      S.Diag(ArgLoc, *diagID) << Attr.getName();
       return;
     }
 
