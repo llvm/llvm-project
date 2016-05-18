@@ -176,6 +176,11 @@ public:
   bool operator!=(const recursive_directory_iterator &RHS) const {
     return !(*this == RHS);
   }
+  /// \brief Gets the current level. Starting path is at level 0.
+  int level() const {
+    assert(State->size() && "Cannot get level without any iteration state");
+    return State->size()-1;
+  }
 };
 
 /// \brief The virtual file system interface.
