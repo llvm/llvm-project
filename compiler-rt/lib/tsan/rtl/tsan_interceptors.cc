@@ -773,7 +773,11 @@ TSAN_INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
   if (res != MAP_FAILED) {
     if (fd > 0)
       FdAccess(thr, pc, fd);
-    MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
+
+    if (thr->ignore_reads_and_writes == 0)
+      MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
+    else
+      MemoryResetRange(thr, pc, (uptr)res, sz);
   }
   return res;
 }
@@ -788,7 +792,11 @@ TSAN_INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
   if (res != MAP_FAILED) {
     if (fd > 0)
       FdAccess(thr, pc, fd);
-    MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
+
+    if (thr->ignore_reads_and_writes == 0)
+      MemoryRangeImitateWrite(thr, pc, (uptr)res, sz);
+    else
+      MemoryResetRange(thr, pc, (uptr)res, sz);
   }
   return res;
 }
