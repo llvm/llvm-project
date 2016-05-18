@@ -3063,6 +3063,8 @@ def err_attr_swift_name_identifier : Error<
   "parameter of %0 attribute must be an ASCII identifier string">;
 def err_attr_swift_name_function : Error<
   "parameter of %0 attribute must be a Swift function name string">;
+def err_attr_swift_name_function_no_prototype : Error<
+  "%0 attribute can only be applied to function declarations with prototypes">;
 def err_attr_swift_name_context_name_invalid_identifier : Error<
   "%0 attribute has invalid identifier for context name">;
 def err_attr_swift_name_basename_invalid_identifier : Error<

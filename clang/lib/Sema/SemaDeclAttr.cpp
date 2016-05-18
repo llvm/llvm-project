@@ -4836,6 +4836,10 @@ static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
       const auto *Function = cast<FunctionDecl>(D);
       ParamCount = Function->getNumParams();
       Params = Function->parameters();
+      
+      if (!Function->hasWrittenPrototype())
+        S.Diag(ArgLoc, diag::err_attr_swift_name_function_no_prototype)
+          << Attr.getName();
     }
 
     bool IsSingleParamInit;
