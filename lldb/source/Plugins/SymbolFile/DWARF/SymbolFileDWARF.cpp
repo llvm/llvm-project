@@ -1619,7 +1619,7 @@ SymbolFileDWARF::HasForwardDeclForClangType (const CompilerType &compiler_type)
 bool
 SymbolFileDWARF::CompleteType (CompilerType &compiler_type)
 {
-    lldb_private::Mutex::Locker locker(GetObjectFile()->GetModule()->GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetObjectFile()->GetModule()->GetMutex());
 
     ClangASTContext *clang_type_system = llvm::dyn_cast_or_null<ClangASTContext>(compiler_type.GetTypeSystem());
     if (clang_type_system)

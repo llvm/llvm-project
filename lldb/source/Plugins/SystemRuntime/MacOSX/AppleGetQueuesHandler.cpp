@@ -96,12 +96,12 @@ extern \"C\"                                                                    
 }                                                                                                               \n\
 ";
 
-AppleGetQueuesHandler::AppleGetQueuesHandler (Process *process) :
-    m_process (process),
-    m_get_queues_impl_code_up (),
-    m_get_queues_function_mutex(),
-    m_get_queues_return_buffer_addr (LLDB_INVALID_ADDRESS),
-    m_get_queues_retbuffer_mutex()
+AppleGetQueuesHandler::AppleGetQueuesHandler(Process *process)
+    : m_process(process),
+      m_get_queues_impl_code_up(),
+      m_get_queues_function_mutex(),
+      m_get_queues_return_buffer_addr(LLDB_INVALID_ADDRESS),
+      m_get_queues_retbuffer_mutex()
 {
 }
 
@@ -110,14 +110,14 @@ AppleGetQueuesHandler::~AppleGetQueuesHandler ()
 }
 
 void
-AppleGetQueuesHandler::Detach ()
+AppleGetQueuesHandler::Detach()
 {
 
     if (m_process && m_process->IsAlive() && m_get_queues_return_buffer_addr != LLDB_INVALID_ADDRESS)
     {
-        Mutex::Locker locker;
-        locker.TryLock (m_get_queues_retbuffer_mutex);  // Even if we don't get the lock, deallocate the buffer
-        m_process->DeallocateMemory (m_get_queues_return_buffer_addr);
+        std::unique_lock<std::mutex> lock(m_get_queues_retbuffer_mutex, std::defer_lock);
+        lock.try_lock(); // Even if we don't get the lock, deallocate the buffer
+        m_process->DeallocateMemory(m_get_queues_return_buffer_addr);
     }
 }
 
@@ -159,8 +159,8 @@ AppleGetQueuesHandler::SetupGetQueuesFunction (Thread &thread, ValueList &get_qu
 
     // Scope for mutex locker:
     {
-        Mutex::Locker locker(m_get_queues_function_mutex);
-        
+        std::lock_guard<std::mutex> guard(m_get_queues_function_mutex);
+
         // First stage is to make the ClangUtility to hold our injected function:
 
         if (!m_get_queues_impl_code_up.get())
@@ -297,8 +297,7 @@ AppleGetQueuesHandler::GetCurrentQueues (Thread &thread, addr_t page_to_free, ui
     page_to_free_size_value.SetValueType (Value::eValueTypeScalar);
     page_to_free_size_value.SetCompilerType (clang_uint64_type);
 
-
-    Mutex::Locker locker(m_get_queues_retbuffer_mutex);
+    std::lock_guard<std::mutex> guard(m_get_queues_retbuffer_mutex);
     if (m_get_queues_return_buffer_addr == LLDB_INVALID_ADDRESS)
     {
         addr_t bufaddr = process_sp->AllocateMemory (32, ePermissionsReadable | ePermissionsWritable, error);

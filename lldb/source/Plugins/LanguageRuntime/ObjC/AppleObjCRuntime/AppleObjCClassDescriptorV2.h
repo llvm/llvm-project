@@ -12,10 +12,11 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "AppleObjCRuntimeV2.h"
 
@@ -247,7 +248,7 @@ private:
     private:
         bool m_filled;
         std::vector<iVarDescriptor> m_ivars;
-        Mutex m_mutex;
+        std::recursive_mutex m_mutex;
     };
     
     // The constructor should only be invoked by the runtime as it builds its caches

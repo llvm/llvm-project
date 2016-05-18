@@ -14,6 +14,7 @@
 // C++ Includes
 #include <list>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -175,7 +176,7 @@ private:
 
     std::string m_name;
     broadcaster_collection m_broadcasters;
-    Mutex m_broadcasters_mutex; // Protects m_broadcasters
+    std::recursive_mutex m_broadcasters_mutex; // Protects m_broadcasters
     event_collection m_events;
     Mutex m_events_mutex; // Protects m_broadcasters and m_events
     Condition m_events_condition;

@@ -23,17 +23,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-BreakpointSite::BreakpointSite(BreakpointSiteList *list,
-                               const BreakpointLocationSP& owner,
-                               lldb::addr_t addr,
-                               bool use_hardware) :
-    StoppointLocation(GetNextID(), addr, 0, use_hardware),
-    m_type (eSoftware), // Process subclasses need to set this correctly using SetType()
-    m_saved_opcode(),
-    m_trap_opcode(),
-    m_enabled(false), // Need to create it disabled, so the first enable turns it on.
-    m_owners(),
-    m_owners_mutex(Mutex::eMutexTypeRecursive)
+BreakpointSite::BreakpointSite(BreakpointSiteList *list, const BreakpointLocationSP &owner, lldb::addr_t addr,
+                               bool use_hardware)
+    : StoppointLocation(GetNextID(), addr, 0, use_hardware),
+      m_type(eSoftware), // Process subclasses need to set this correctly using SetType()
+      m_saved_opcode(),
+      m_trap_opcode(),
+      m_enabled(false), // Need to create it disabled, so the first enable turns it on.
+      m_owners(),
+      m_owners_mutex()
 {
     m_owners.Add(owner);
 }
@@ -61,7 +59,7 @@ BreakpointSite::GetNextID()
 bool
 BreakpointSite::ShouldStop (StoppointCallbackContext *context)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     IncrementHitCount();
     return m_owners.ShouldStop (context);
 }
@@ -69,7 +67,7 @@ BreakpointSite::ShouldStop (StoppointCallbackContext *context)
 bool
 BreakpointSite::IsBreakpointAtThisSite (lldb::break_id_t bp_id)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     const size_t owner_count = m_owners.GetSize();
     for (size_t i = 0; i < owner_count; i++)
     {
@@ -96,7 +94,7 @@ BreakpointSite::Dump(Stream *s) const
 void
 BreakpointSite::GetDescription (Stream *s, lldb::DescriptionLevel level)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     if (level != lldb::eDescriptionLevelBrief)
         s->Printf ("breakpoint site: %d at 0x%8.8" PRIx64, GetID(), GetLoadAddress());
     m_owners.GetDescription (s, level);
@@ -166,14 +164,14 @@ BreakpointSite::SetEnabled (bool enabled)
 void
 BreakpointSite::AddOwner (const BreakpointLocationSP &owner)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     m_owners.Add(owner);
 }
 
 size_t
 BreakpointSite::RemoveOwner (lldb::break_id_t break_id, lldb::break_id_t break_loc_id)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     m_owners.Remove(break_id, break_loc_id);
     return m_owners.GetSize();
 }
@@ -181,28 +179,28 @@ BreakpointSite::RemoveOwner (lldb::break_id_t break_id, lldb::break_id_t break_l
 size_t
 BreakpointSite::GetNumberOfOwners ()
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     return m_owners.GetSize();
 }
 
 BreakpointLocationSP
 BreakpointSite::GetOwnerAtIndex (size_t index)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     return m_owners.GetByIndex (index);
 }
 
 bool
 BreakpointSite::ValidForThisThread (Thread *thread)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     return m_owners.ValidForThisThread(thread);
 }
 
 void
 BreakpointSite::BumpHitCounts()
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     for (BreakpointLocationSP loc_sp : m_owners.BreakpointLocations())
     {
         loc_sp->BumpHitCount();
@@ -255,7 +253,7 @@ BreakpointSite::IntersectsRange(lldb::addr_t addr, size_t size, lldb::addr_t *in
 size_t
 BreakpointSite::CopyOwnersList (BreakpointLocationCollection &out_collection)
 {
-    Mutex::Locker locker(m_owners_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
     for (BreakpointLocationSP loc_sp : m_owners.BreakpointLocations())
     {
         out_collection.Add(loc_sp);

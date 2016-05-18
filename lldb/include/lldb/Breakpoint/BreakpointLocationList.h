@@ -13,13 +13,13 @@
 // C Includes
 // C++ Includes
 #include <map>
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Utility/Iterable.h"
 
 namespace lldb_private {
@@ -270,7 +270,7 @@ protected:
     Breakpoint &m_owner;
     collection m_locations;         // Vector of locations, sorted by ID 
     addr_map m_address_to_location;
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     lldb::break_id_t m_next_id;
     BreakpointLocationCollection *m_new_location_recorder;
 

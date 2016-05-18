@@ -13,11 +13,11 @@
 // C Includes
 // C++ Includes
 #include <map>
+#include <mutex>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-defines.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -31,11 +31,7 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    ThreadSafeSTLMap() :
-        m_collection (),
-        m_mutex (Mutex::eMutexTypeRecursive)
-    {
-    }
+    ThreadSafeSTLMap() : m_collection(), m_mutex() {}
 
     ~ThreadSafeSTLMap()
     {
@@ -44,22 +40,22 @@ public:
     bool
     IsEmpty() const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         return m_collection.empty();
     }
-    
+
     void
     Clear()
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         return m_collection.clear();
     }
 
     size_t
-    Erase (const _Key& key)
+    Erase(const _Key &key)
     {
-        Mutex::Locker locker(m_mutex);
-        return EraseNoLock (key);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
+        return EraseNoLock(key);
     }
 
     size_t
@@ -69,10 +65,10 @@ public:
     }
 
     bool
-    GetValueForKey (const _Key& key, _Tp &value) const
+    GetValueForKey(const _Key &key, _Tp &value) const
     {
-        Mutex::Locker locker(m_mutex);
-        return GetValueForKeyNoLock (key, value);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
+        return GetValueForKeyNoLock(key, value);
     }
 
     // Call this if you have already manually locked the mutex using the
@@ -90,10 +86,10 @@ public:
     }
 
     bool
-    GetFirstKeyForValue (const _Tp &value, _Key& key) const
+    GetFirstKeyForValue(const _Tp &value, _Key &key) const
     {
-        Mutex::Locker locker(m_mutex);
-        return GetFirstKeyForValueNoLock (value, key);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
+        return GetFirstKeyForValueNoLock(value, key);
     }
 
     bool
@@ -112,13 +108,10 @@ public:
     }
 
     bool
-    LowerBound (const _Key& key,
-                _Key& match_key,
-                _Tp &match_value,
-                bool decrement_if_not_equal) const
+    LowerBound(const _Key &key, _Key &match_key, _Tp &match_value, bool decrement_if_not_equal) const
     {
-        Mutex::Locker locker(m_mutex);
-        return LowerBoundNoLock (key, match_key, match_value, decrement_if_not_equal);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
+        return LowerBoundNoLock(key, match_key, match_value, decrement_if_not_equal);
     }
 
     bool
@@ -149,10 +142,10 @@ public:
     }
 
     void
-    SetValueForKey (const _Key& key, const _Tp &value)
+    SetValueForKey(const _Key &key, const _Tp &value)
     {
-        Mutex::Locker locker(m_mutex);
-        SetValueForKeyNoLock (key, value);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
+        SetValueForKeyNoLock(key, value);
     }
 
     // Call this if you have already manually locked the mutex using the
@@ -163,15 +156,15 @@ public:
         m_collection[key] = value;
     }
 
-    Mutex &
-    GetMutex ()
+    std::recursive_mutex &
+    GetMutex()
     {
         return m_mutex;
     }
 
 private:
     collection m_collection;
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
 
     //------------------------------------------------------------------
     // For ThreadSafeSTLMap only

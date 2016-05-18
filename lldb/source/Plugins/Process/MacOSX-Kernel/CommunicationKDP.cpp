@@ -284,8 +284,8 @@ bool
 CommunicationKDP::CheckForPacket (const uint8_t *src, size_t src_len, DataExtractor &packet)
 {
     // Put the packet data into the buffer in a thread safe fashion
-    Mutex::Locker locker(m_bytes_mutex);
-    
+    std::lock_guard<std::recursive_mutex> guard(m_bytes_mutex);
+
     Log *log (ProcessKDPLog::GetLogIfAllCategoriesSet (KDP_LOG_PACKETS));
 
     if (src && src_len > 0)

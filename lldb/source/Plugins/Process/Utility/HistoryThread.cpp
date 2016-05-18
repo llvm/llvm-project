@@ -22,28 +22,24 @@ using namespace lldb_private;
 
 //  Constructor
 
-HistoryThread::HistoryThread (lldb_private::Process &process, 
-                              lldb::tid_t tid,
-                              std::vector<lldb::addr_t> pcs, 
-                              uint32_t stop_id, 
-                              bool stop_id_is_valid) : 
-        Thread (process, tid, true),
-        m_framelist_mutex(),
-        m_framelist(),
-        m_pcs (pcs),
-        m_stop_id (stop_id),
-        m_stop_id_is_valid (stop_id_is_valid),
-        m_extended_unwind_token (LLDB_INVALID_ADDRESS),
-        m_queue_name (),
-        m_thread_name (),
-        m_originating_unique_thread_id (tid),
-        m_queue_id (LLDB_INVALID_QUEUE_ID)
+HistoryThread::HistoryThread(lldb_private::Process &process, lldb::tid_t tid, std::vector<lldb::addr_t> pcs,
+                             uint32_t stop_id, bool stop_id_is_valid)
+    : Thread(process, tid, true),
+      m_framelist_mutex(),
+      m_framelist(),
+      m_pcs(pcs),
+      m_stop_id(stop_id),
+      m_stop_id_is_valid(stop_id_is_valid),
+      m_extended_unwind_token(LLDB_INVALID_ADDRESS),
+      m_queue_name(),
+      m_thread_name(),
+      m_originating_unique_thread_id(tid),
+      m_queue_id(LLDB_INVALID_QUEUE_ID)
 {
-    m_unwinder_ap.reset (new HistoryUnwind (*this, pcs, stop_id_is_valid));
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
+    m_unwinder_ap.reset(new HistoryUnwind(*this, pcs, stop_id_is_valid));
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
     if (log)
-        log->Printf ("%p HistoryThread::HistoryThread",
-                     static_cast<void*>(this));
+        log->Printf("%p HistoryThread::HistoryThread", static_cast<void *>(this));
 }
 
 //  Destructor
@@ -78,7 +74,9 @@ HistoryThread::CreateRegisterContextForFrame (StackFrame *frame)
 lldb::StackFrameListSP
 HistoryThread::GetStackFrameList ()
 {
-    Mutex::Locker (m_framelist_mutex);   // FIXME do not throw away the lock after we acquire it..
+    // FIXME do not throw away the lock after we acquire it..
+    std::unique_lock<std::mutex> lock(m_framelist_mutex);
+    lock.release();
     if (m_framelist.get() == NULL)
     {
         m_framelist.reset (new StackFrameList (*this, StackFrameListSP(), true));

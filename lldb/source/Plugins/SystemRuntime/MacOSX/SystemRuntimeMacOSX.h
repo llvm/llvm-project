@@ -12,8 +12,9 @@
 
 // C Includes
 // C++ Includes
-#include <vector>
+#include <mutex>
 #include <string>
+#include <vector>
 
 // Other libraries and framework include
 // Project includes
@@ -23,7 +24,6 @@
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/UUID.h"
 #include "lldb/Host/FileSpec.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/QueueItem.h"
 
@@ -124,7 +124,7 @@ public:
 
 protected:
     lldb::user_id_t m_break_id;
-    mutable lldb_private::Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
 
 private:
     struct libBacktraceRecording_info {

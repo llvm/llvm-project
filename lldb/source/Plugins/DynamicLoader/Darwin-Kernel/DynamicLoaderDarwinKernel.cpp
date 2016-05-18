@@ -452,16 +452,16 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress (lldb::addr_t addr, Proc
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------
-DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel (Process* process, lldb::addr_t kernel_addr) :
-    DynamicLoader(process),
-    m_kernel_load_address (kernel_addr),
-    m_kernel(),
-    m_kext_summary_header_ptr_addr (),
-    m_kext_summary_header_addr (),
-    m_kext_summary_header (),
-    m_known_kexts (),
-    m_mutex(Mutex::eMutexTypeRecursive),
-    m_break_id (LLDB_INVALID_BREAK_ID)
+DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel(Process *process, lldb::addr_t kernel_addr)
+    : DynamicLoader(process),
+      m_kernel_load_address(kernel_addr),
+      m_kernel(),
+      m_kext_summary_header_ptr_addr(),
+      m_kext_summary_header_addr(),
+      m_kext_summary_header(),
+      m_known_kexts(),
+      m_mutex(),
+      m_break_id(LLDB_INVALID_BREAK_ID)
 {
     Error error;
     PlatformSP platform_sp(Platform::Create(PlatformDarwinKernel::GetPluginNameStatic(), error));
@@ -470,7 +470,7 @@ DynamicLoaderDarwinKernel::DynamicLoaderDarwinKernel (Process* process, lldb::ad
     // shouldn't be done if kext loading is explicitly disabled.
     if (platform_sp.get() && GetGlobalProperties()->GetLoadKexts())
     {
-        process->GetTarget().SetPlatform (platform_sp);
+        process->GetTarget().SetPlatform(platform_sp);
     }
 }
 
@@ -521,7 +521,7 @@ DynamicLoaderDarwinKernel::DidLaunch ()
 void
 DynamicLoaderDarwinKernel::Clear (bool clear_process)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (m_process->IsAlive() && LLDB_BREAK_ID_IS_VALID(m_break_id))
         m_process->ClearBreakpointSiteByID(m_break_id);
@@ -1131,7 +1131,7 @@ DynamicLoaderDarwinKernel::BreakpointHit (StoppointCallbackContext *context,
 bool
 DynamicLoaderDarwinKernel::ReadKextSummaryHeader ()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // the all image infos is already valid for this process stop ID
 
@@ -1216,8 +1216,8 @@ DynamicLoaderDarwinKernel::ParseKextSummaries (const Address &kext_summary_addr,
     Log *log(GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
     if (log)
         log->Printf ("Kexts-changed breakpoint hit, there are %d kexts currently.\n", count);
-        
-    Mutex::Locker locker(m_mutex);
+
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (!ReadKextSummaries (kext_summary_addr, count, kext_summaries))
         return false;
@@ -1438,8 +1438,8 @@ DynamicLoaderDarwinKernel::ReadKextSummaries (const Address &kext_summary_addr,
 bool
 DynamicLoaderDarwinKernel::ReadAllKextSummaries ()
 {
-    Mutex::Locker locker(m_mutex);
-    
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
     if (ReadKextSummaryHeader ())
     {
         if (m_kext_summary_header.entry_count > 0 && m_kext_summary_header_addr.IsValid())
@@ -1508,7 +1508,7 @@ DynamicLoaderDarwinKernel::PutToLog(Log *log) const
     if (log == NULL)
         return;
 
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     log->Printf("gLoadedKextSummaries = 0x%16.16" PRIx64 " { version=%u, entry_size=%u, entry_count=%u }",
                 m_kext_summary_header_addr.GetFileAddress(),
                 m_kext_summary_header.version,

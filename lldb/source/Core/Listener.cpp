@@ -40,12 +40,8 @@ namespace
     };
 } // anonymous namespace
 
-Listener::Listener(const char *name) :
-    m_name (name),
-    m_broadcasters(),
-    m_broadcasters_mutex (Mutex::eMutexTypeRecursive),
-    m_events (),
-    m_events_mutex (Mutex::eMutexTypeNormal)
+Listener::Listener(const char *name)
+    : m_name(name), m_broadcasters(), m_broadcasters_mutex(), m_events(), m_events_mutex(Mutex::eMutexTypeNormal)
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
     if (log != nullptr)
@@ -67,7 +63,7 @@ void
 Listener::Clear()
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
-    Mutex::Locker locker(m_broadcasters_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
     broadcaster_collection::iterator pos, end = m_broadcasters.end();
     for (pos = m_broadcasters.begin(); pos != end; ++pos)
     {
@@ -100,7 +96,7 @@ Listener::StartListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask
         // Scope for "locker"
         // Tell the broadcaster to add this object as a listener
         {
-            Mutex::Locker locker(m_broadcasters_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
             Broadcaster::BroadcasterImplWP impl_wp(broadcaster->GetBroadcasterImpl());
             m_broadcasters.insert(std::make_pair(impl_wp, BroadcasterInfo(event_mask)));
         }
@@ -127,7 +123,7 @@ Listener::StartListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask
         // Scope for "locker"
         // Tell the broadcaster to add this object as a listener
         {
-            Mutex::Locker locker(m_broadcasters_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
             Broadcaster::BroadcasterImplWP impl_wp(broadcaster->GetBroadcasterImpl());
             m_broadcasters.insert(std::make_pair(impl_wp,
                                                  BroadcasterInfo(event_mask, callback, callback_user_data)));
@@ -158,7 +154,7 @@ Listener::StopListeningForEvents (Broadcaster* broadcaster, uint32_t event_mask)
     {
         // Scope for "locker"
         {
-            Mutex::Locker locker(m_broadcasters_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
             m_broadcasters.erase (broadcaster->GetBroadcasterImpl());
         }
         // Remove the broadcaster from our set of broadcasters
@@ -175,7 +171,7 @@ Listener::BroadcasterWillDestruct (Broadcaster *broadcaster)
 {
     // Scope for "broadcasters_locker"
     {
-        Mutex::Locker broadcasters_locker(m_broadcasters_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
         m_broadcasters.erase (broadcaster->GetBroadcasterImpl());
     }
 
@@ -474,7 +470,7 @@ size_t
 Listener::HandleBroadcastEvent (EventSP &event_sp)
 {
     size_t num_handled = 0;
-    Mutex::Locker locker(m_broadcasters_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
     Broadcaster *broadcaster = event_sp->GetBroadcaster();
     if (!broadcaster)
         return 0;
@@ -507,8 +503,8 @@ Listener::StartListeningForEventSpec (BroadcasterManagerSP manager_sp,
     
     // The BroadcasterManager mutex must be locked before m_broadcasters_mutex 
     // to avoid violating the lock hierarchy (manager before broadcasters).
-    Mutex::Locker manager_locker(manager_sp->m_manager_mutex);
-    Mutex::Locker locker(m_broadcasters_mutex);
+    std::lock_guard<std::recursive_mutex> manager_guard(manager_sp->m_manager_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
 
     uint32_t bits_acquired = manager_sp->RegisterListenerForEvents(this->shared_from_this(), event_spec);
     if (bits_acquired)
@@ -530,8 +526,8 @@ Listener::StopListeningForEventSpec (BroadcasterManagerSP manager_sp,
 {
     if (!manager_sp)
         return false;
-    
-    Mutex::Locker locker(m_broadcasters_mutex);
+
+    std::lock_guard<std::recursive_mutex> guard(m_broadcasters_mutex);
     return manager_sp->UnregisterListenerForEvents (this->shared_from_this(), event_spec);
 }
     

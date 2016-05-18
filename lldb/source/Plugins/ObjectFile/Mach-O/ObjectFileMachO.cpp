@@ -1217,7 +1217,7 @@ ObjectFileMachO::ParseHeader ()
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         bool can_parse = false;
         lldb::offset_t offset = 0;
         m_data.SetByteOrder (endian::InlHostByteOrder());
@@ -1457,7 +1457,7 @@ ObjectFileMachO::GetSymtab()
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         if (m_symtab_ap.get() == NULL)
         {
             m_symtab_ap.reset(new Symtab(this));
@@ -4755,7 +4755,7 @@ ObjectFileMachO::Dump (Stream *s)
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         s->Printf("%p: ", static_cast<void*>(this));
         s->Indent();
         if (m_header.magic == MH_MAGIC_64 || m_header.magic == MH_CIGAM_64)
@@ -4911,7 +4911,7 @@ ObjectFileMachO::GetUUID (lldb_private::UUID* uuid)
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
         return GetUUID (m_header, m_data, offset, *uuid);
     }
@@ -4925,7 +4925,7 @@ ObjectFileMachO::GetDependentModules (FileSpecList& files)
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         struct load_command load_cmd;
         lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
         std::vector<std::string> rpath_paths;
@@ -5053,7 +5053,7 @@ ObjectFileMachO::GetEntryPointAddress ()
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         struct load_command load_cmd;
         lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
         uint32_t i;
@@ -5203,7 +5203,7 @@ ObjectFileMachO::GetNumThreadContexts ()
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         if (!m_thread_context_offsets_valid)
         {
             m_thread_context_offsets_valid = true;
@@ -5237,7 +5237,7 @@ ObjectFileMachO::GetThreadContextAtIndex (uint32_t idx, lldb_private::Thread &th
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         if (!m_thread_context_offsets_valid)
             GetNumThreadContexts ();
 
@@ -5373,7 +5373,7 @@ ObjectFileMachO::GetVersion (uint32_t *versions, uint32_t num_versions)
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         struct dylib_command load_cmd;
         lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
         uint32_t version_cmd = 0;
@@ -5428,7 +5428,7 @@ ObjectFileMachO::GetArchitecture (ArchSpec &arch)
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         return GetArchitecture (m_header, m_data, MachHeaderSizeFromMagic(m_header.magic), arch);
     }
     return false;

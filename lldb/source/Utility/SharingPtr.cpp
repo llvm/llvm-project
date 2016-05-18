@@ -14,12 +14,12 @@
 // If ENABLE_SP_LOGGING is defined, then log all shared pointer assignments
 // and allow them to be queried using a pointer by a call to:
 #include <execinfo.h>
-#include <map>
 #include <assert.h>
-#include "lldb/Host/Mutex.h"
 
 #include "llvm/ADT/STLExtras.h"
 
+#include <map>
+#include <mutex>
 #include <vector>
 
 class Backtrace
@@ -70,8 +70,8 @@ extern "C" void track_sp (void *sp_this, void *ptr, long use_count)
 {
     typedef std::pair<void *, Backtrace> PtrBacktracePair;
     typedef std::map<void *, PtrBacktracePair> PtrToBacktraceMap;
-    static lldb_private::Mutex g_mutex(lldb_private::Mutex::eMutexTypeNormal);
-    lldb_private::Mutex::Locker locker (g_mutex);
+    static std::mutex g_mutex;
+    std::lock_guard<std::mutex> guard(g_mutex);
     static PtrToBacktraceMap g_map;
 
     if (sp_this)

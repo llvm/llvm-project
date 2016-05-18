@@ -14,7 +14,6 @@
 
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/RangeMap.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/lldb-private.h"
 

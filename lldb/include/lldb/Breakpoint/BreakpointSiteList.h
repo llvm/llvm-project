@@ -12,12 +12,13 @@
 
 // C Includes
 // C++ Includes
-#include <map>
 #include <functional>
+#include <map>
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/BreakpointSite.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -189,16 +190,17 @@ public:
     size_t
     GetSize() const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         return m_bp_site_list.size();
     }
 
     bool
     IsEmpty() const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         return m_bp_site_list.empty();
     }
+
 protected:
     typedef std::map<lldb::addr_t, lldb::BreakpointSiteSP> collection;
 
@@ -208,7 +210,7 @@ protected:
     collection::const_iterator
     GetIDConstIterator(lldb::break_id_t breakID) const;
 
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     collection m_bp_site_list;  // The breakpoint site list.
 };
 

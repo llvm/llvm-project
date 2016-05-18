@@ -247,7 +247,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
 {
     lldb::ProcessSP process_sp(GetProcessWP().lock());
 
-    static Mutex s_runnable_info_mutex(Mutex::Type::eMutexTypeRecursive);
+    static std::recursive_mutex s_runnable_info_mutex;
 
     func_addr = LLDB_INVALID_ADDRESS;
     func_end = LLDB_INVALID_ADDRESS;
@@ -267,7 +267,7 @@ IRExecutionUnit::GetRunnableInfo(Error &error,
         return;
     };
 
-    Mutex::Locker runnable_info_mutex_locker(s_runnable_info_mutex);
+    std::lock_guard<std::recursive_mutex> guard(s_runnable_info_mutex);
 
     m_did_jit = true;
 

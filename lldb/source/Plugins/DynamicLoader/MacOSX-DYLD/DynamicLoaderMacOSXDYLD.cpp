@@ -138,18 +138,18 @@ DynamicLoaderMacOSXDYLD::CreateInstance (Process* process, bool force)
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------
-DynamicLoaderMacOSXDYLD::DynamicLoaderMacOSXDYLD (Process* process) :
-    DynamicLoader(process),
-    m_dyld(),
-    m_dyld_module_wp(),
-    m_dyld_all_image_infos_addr(LLDB_INVALID_ADDRESS),
-    m_dyld_all_image_infos(),
-    m_dyld_all_image_infos_stop_id (UINT32_MAX),
-    m_break_id(LLDB_INVALID_BREAK_ID),
-    m_dyld_image_infos(),
-    m_dyld_image_infos_stop_id (UINT32_MAX),
-    m_mutex(Mutex::eMutexTypeRecursive),
-    m_process_image_addr_is_all_images_infos (false)
+DynamicLoaderMacOSXDYLD::DynamicLoaderMacOSXDYLD(Process *process)
+    : DynamicLoader(process),
+      m_dyld(),
+      m_dyld_module_wp(),
+      m_dyld_all_image_infos_addr(LLDB_INVALID_ADDRESS),
+      m_dyld_all_image_infos(),
+      m_dyld_all_image_infos_stop_id(UINT32_MAX),
+      m_break_id(LLDB_INVALID_BREAK_ID),
+      m_dyld_image_infos(),
+      m_dyld_image_infos_stop_id(UINT32_MAX),
+      m_mutex(),
+      m_process_image_addr_is_all_images_infos(false)
 {
 }
 
@@ -244,7 +244,7 @@ DynamicLoaderMacOSXDYLD::ProcessDidExec ()
 void
 DynamicLoaderMacOSXDYLD::Clear (bool clear_process)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (LLDB_BREAK_ID_IS_VALID(m_break_id))
         m_process->GetTarget().RemoveBreakpointByID (m_break_id);
@@ -683,7 +683,7 @@ DynamicLoaderMacOSXDYLD::NotifyBreakpointHit (void *baton,
 bool
 DynamicLoaderMacOSXDYLD::ReadAllImageInfosStructure ()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // the all image infos is already valid for this process stop ID
     if (m_process->GetStopID() == m_dyld_all_image_infos_stop_id)
@@ -974,8 +974,8 @@ DynamicLoaderMacOSXDYLD::AddModulesUsingImageInfosAddress (lldb::addr_t image_in
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
     if (log)
         log->Printf ("Adding %d modules.\n", image_infos_count);
-        
-    Mutex::Locker locker(m_mutex);
+
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_process->GetStopID() == m_dyld_image_infos_stop_id)
         return true;
 
@@ -1097,8 +1097,8 @@ DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress (lldb::addr_t image
 {
     DYLDImageInfo::collection image_infos;
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
-    
-    Mutex::Locker locker(m_mutex);
+
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_process->GetStopID() == m_dyld_image_infos_stop_id)
         return true;
 
@@ -1239,8 +1239,8 @@ bool
 DynamicLoaderMacOSXDYLD::InitializeFromAllImageInfos ()
 {
     Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
-    
-    Mutex::Locker locker(m_mutex);
+
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_process->GetStopID() == m_dyld_image_infos_stop_id
           || m_dyld_image_infos.size() != 0)
         return false;
@@ -1678,7 +1678,7 @@ DynamicLoaderMacOSXDYLD::PutToLog(Log *log) const
     if (log == NULL)
         return;
 
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     log->Printf("dyld_all_image_infos = { version=%d, count=%d, addr=0x%8.8" PRIx64 ", notify=0x%8.8" PRIx64 " }",
                     m_dyld_all_image_infos.version,
                     m_dyld_all_image_infos.dylib_info_count,

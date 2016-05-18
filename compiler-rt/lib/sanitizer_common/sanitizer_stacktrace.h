@@ -110,6 +110,11 @@ struct BufferedStackTrace : public StackTrace {
   void operator=(const BufferedStackTrace &);
 };
 
+// Check if given pointer points into allocated stack area.
+static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
+  return frame > stack_bottom && frame < stack_top - 2 * sizeof (uhwptr);
+}
+
 }  // namespace __sanitizer
 
 // Use this macro if you want to print stack trace with the caller

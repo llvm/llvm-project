@@ -26,22 +26,22 @@ using namespace lldb_private;
 // NativeProcessProtocol Members
 // -----------------------------------------------------------------------------
 
-NativeProcessProtocol::NativeProcessProtocol (lldb::pid_t pid) :
-    m_pid (pid),
-    m_threads (),
-    m_current_thread_id (LLDB_INVALID_THREAD_ID),
-    m_threads_mutex (Mutex::eMutexTypeRecursive),
-    m_state (lldb::eStateInvalid),
-    m_state_mutex (Mutex::eMutexTypeRecursive),
-    m_exit_type (eExitTypeInvalid),
-    m_exit_status (0),
-    m_exit_description (),
-    m_delegates_mutex (Mutex::eMutexTypeRecursive),
-    m_delegates (),
-    m_breakpoint_list (),
-    m_watchpoint_list (),
-    m_terminal_fd (-1),
-    m_stop_id (0)
+NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid)
+    : m_pid(pid),
+      m_threads(),
+      m_current_thread_id(LLDB_INVALID_THREAD_ID),
+      m_threads_mutex(),
+      m_state(lldb::eStateInvalid),
+      m_state_mutex(),
+      m_exit_type(eExitTypeInvalid),
+      m_exit_status(0),
+      m_exit_description(),
+      m_delegates_mutex(),
+      m_delegates(),
+      m_breakpoint_list(),
+      m_watchpoint_list(),
+      m_terminal_fd(-1),
+      m_stop_id(0)
 {
 }
 
@@ -117,7 +117,7 @@ NativeProcessProtocol::SetExitStatus (ExitType exit_type, int status, const char
 NativeThreadProtocolSP
 NativeProcessProtocol::GetThreadAtIndex (uint32_t idx)
 {
-    Mutex::Locker locker (m_threads_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
     if (idx < m_threads.size ())
         return m_threads[idx];
     return NativeThreadProtocolSP ();
@@ -137,7 +137,7 @@ NativeProcessProtocol::GetThreadByIDUnlocked (lldb::tid_t tid)
 NativeThreadProtocolSP
 NativeProcessProtocol::GetThreadByID (lldb::tid_t tid)
 {
-    Mutex::Locker locker (m_threads_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
     return GetThreadByIDUnlocked (tid);
 }
 
@@ -221,7 +221,7 @@ NativeProcessProtocol::SetWatchpoint (lldb::addr_t addr, size_t size, uint32_t w
     // conceivable that if there are more threads than hardware
     // watchpoints available, some of the threads will fail to set
     // hardware watchpoints while software ones may be available.
-    Mutex::Locker locker (m_threads_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
     for (auto thread_sp : m_threads)
     {
         assert (thread_sp && "thread list should not have a NULL thread!");
@@ -276,7 +276,7 @@ NativeProcessProtocol::RemoveWatchpoint (lldb::addr_t addr)
 
     Error overall_error;
 
-    Mutex::Locker locker (m_threads_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
     for (auto thread_sp : m_threads)
     {
         assert (thread_sp && "thread list should not have a NULL thread!");
@@ -300,7 +300,7 @@ NativeProcessProtocol::RemoveWatchpoint (lldb::addr_t addr)
 bool
 NativeProcessProtocol::RegisterNativeDelegate (NativeDelegate &native_delegate)
 {
-    Mutex::Locker locker (m_delegates_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
     if (std::find (m_delegates.begin (), m_delegates.end (), &native_delegate) != m_delegates.end ())
         return false;
 
@@ -312,7 +312,7 @@ NativeProcessProtocol::RegisterNativeDelegate (NativeDelegate &native_delegate)
 bool
 NativeProcessProtocol::UnregisterNativeDelegate (NativeDelegate &native_delegate)
 {
-    Mutex::Locker locker (m_delegates_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
 
     const auto initial_size = m_delegates.size ();
     m_delegates.erase (remove (m_delegates.begin (), m_delegates.end (), &native_delegate), m_delegates.end ());
@@ -327,7 +327,7 @@ NativeProcessProtocol::SynchronouslyNotifyProcessStateChanged (lldb::StateType s
 {
     Log *log (GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
 
-    Mutex::Locker locker (m_delegates_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
     for (auto native_delegate: m_delegates)
         native_delegate->ProcessStateChanged (this, state);
 
@@ -354,7 +354,7 @@ NativeProcessProtocol::NotifyDidExec ()
         log->Printf ("NativeProcessProtocol::%s - preparing to call delegates", __FUNCTION__);
 
     {
-        Mutex::Locker locker (m_delegates_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
         for (auto native_delegate: m_delegates)
             native_delegate->DidExec (this);
     }
@@ -394,14 +394,14 @@ NativeProcessProtocol::DisableBreakpoint (lldb::addr_t addr)
 lldb::StateType
 NativeProcessProtocol::GetState () const
 {
-    Mutex::Locker locker (m_state_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
     return m_state;
 }
 
 void
 NativeProcessProtocol::SetState (lldb::StateType state, bool notify_delegates)
 {
-    Mutex::Locker locker (m_state_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
 
     if (state == m_state)
         return;
@@ -426,8 +426,8 @@ NativeProcessProtocol::SetState (lldb::StateType state, bool notify_delegates)
 
 uint32_t NativeProcessProtocol::GetStopID () const
 {
-   Mutex::Locker locker (m_state_mutex);
-   return m_stop_id;
+    std::lock_guard<std::recursive_mutex> guard(m_state_mutex);
+    return m_stop_id;
 }
 
 void

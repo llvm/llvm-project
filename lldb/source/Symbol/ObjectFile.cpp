@@ -600,7 +600,7 @@ ObjectFile::ClearSymtab ()
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
         if (log)
             log->Printf ("%p ObjectFile::ClearSymtab () symtab = %p",
@@ -620,7 +620,7 @@ ObjectFile::GetSectionList(bool update_module_section_list)
             ModuleSP module_sp(GetModule());
             if (module_sp)
             {
-                lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
                 CreateSections(*module_sp->GetUnifiedSectionList());
             }
         }

@@ -19,7 +19,6 @@
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb_private;
@@ -227,9 +226,9 @@ namespace lldb_private
             GetHistory (const std::string &prefix)
             {
                 typedef std::map<std::string, EditlineHistoryWP> WeakHistoryMap;
-                static Mutex g_mutex (Mutex::eMutexTypeRecursive);
+                static std::recursive_mutex g_mutex;
                 static WeakHistoryMap g_weak_map;
-                Mutex::Locker locker (g_mutex);
+                std::lock_guard<std::recursive_mutex> guard(g_mutex);
                 WeakHistoryMap::const_iterator pos = g_weak_map.find (prefix);
                 EditlineHistorySP history_sp;
                 if (pos != g_weak_map.end())
@@ -587,9 +586,9 @@ Editline::GetCharacter (EditLineCharType * c)
         // (blocking operation), so we do not hold the mutex indefinitely. This gives a chance
         // for someone to interrupt us. After Read returns, immediately lock the mutex again and
         // check if we were interrupted.
-        m_output_mutex.Unlock();
+        m_output_mutex.unlock();
         int read_count = m_input_connection.Read(&ch, 1, UINT32_MAX, status, NULL);
-        m_output_mutex.Lock();
+        m_output_mutex.lock();
         if (m_editor_status == EditorStatus::Interrupted)
         {
             while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
@@ -1284,7 +1283,7 @@ bool
 Editline::Interrupt()
 {
     bool result = true;
-    Mutex::Locker locker(m_output_mutex);
+    std::lock_guard<std::mutex> guard(m_output_mutex);
     if (m_editor_status == EditorStatus::Editing) {
         fprintf(m_output_file, "^C\n");
         result = m_input_connection.InterruptRead();
@@ -1297,7 +1296,7 @@ bool
 Editline::Cancel()
 {
     bool result = true;
-    Mutex::Locker locker(m_output_mutex);
+    std::lock_guard<std::mutex> guard(m_output_mutex);
     if (m_editor_status == EditorStatus::Editing) {
         MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
         fprintf(m_output_file, ANSI_CLEAR_BELOW);
@@ -1338,8 +1337,8 @@ Editline::GetLine (std::string &line, bool &interrupted)
     ConfigureEditor (false);
     m_input_lines = std::vector<EditLineStringType>();
     m_input_lines.insert (m_input_lines.begin(), EditLineConstString(""));
-    
-    Mutex::Locker locker(m_output_mutex);
+
+    std::lock_guard<std::mutex> guard(m_output_mutex);
 
     lldbassert(m_editor_status != EditorStatus::Editing);
     if (m_editor_status == EditorStatus::Interrupted)
@@ -1392,8 +1391,8 @@ Editline::GetLines (int first_line_number, StringList &lines, bool &interrupted)
     SetBaseLineNumber (first_line_number);
     m_input_lines = std::vector<EditLineStringType>();
     m_input_lines.insert (m_input_lines.begin(), EditLineConstString(""));
-    
-    Mutex::Locker locker(m_output_mutex);
+
+    std::lock_guard<std::mutex> guard(m_output_mutex);
     // Begin the line editing loop
     DisplayInput();
     SetCurrentLine (0);
@@ -1427,7 +1426,7 @@ Editline::GetLines (int first_line_number, StringList &lines, bool &interrupted)
 void
 Editline::PrintAsync (Stream *stream, const char *s, size_t len)
 {
-    Mutex::Locker locker(m_output_mutex);
+    std::lock_guard<std::mutex> guard(m_output_mutex);
     if (m_editor_status == EditorStatus::Editing)
     {
         MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);

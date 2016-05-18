@@ -11,7 +11,6 @@
 #define utility_SharedCluster_h_
 
 #include "lldb/Utility/SharingPtr.h"
-#include "lldb/Host/Mutex.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -46,14 +45,12 @@ template <class T>
 class ClusterManager
 {
 public:
-    ClusterManager () : 
-        m_objects(),
-        m_external_ref(0),
-        m_mutex(Mutex::eMutexTypeNormal) {}
-    
-    ~ClusterManager ()
+    ClusterManager() : m_objects(), m_external_ref(0), m_mutex() {}
+
+    ~ClusterManager()
     {
-        for (typename llvm::SmallPtrSet<T *, 16>::iterator pos = m_objects.begin(), end = m_objects.end(); pos != end; ++pos)
+        for (typename llvm::SmallPtrSet<T *, 16>::iterator pos = m_objects.begin(), end = m_objects.end(); pos != end;
+             ++pos)
         {
             T *object = *pos;
             delete object;
@@ -62,42 +59,44 @@ public:
         // Decrement refcount should have been called on this ClusterManager,
         // and it should have locked the mutex, now we will unlock it before
         // we destroy it...
-        m_mutex.Unlock();
+        m_mutex.unlock();
     }
-    
-    void ManageObject (T *new_object)
+
+    void
+    ManageObject(T *new_object)
     {
-        Mutex::Locker locker (m_mutex);
-        m_objects.insert (new_object);
+        std::lock_guard<std::mutex> guard(m_mutex);
+        m_objects.insert(new_object);
     }
-    
-    typename lldb_private::SharingPtr<T> GetSharedPointer(T *desired_object)
+
+    typename lldb_private::SharingPtr<T>
+    GetSharedPointer(T *desired_object)
     {
         {
-            Mutex::Locker locker (m_mutex);
+            std::lock_guard<std::mutex> guard(m_mutex);
             m_external_ref++;
-            assert (m_objects.count(desired_object));
+            assert(m_objects.count(desired_object));
         }
-        return typename lldb_private::SharingPtr<T> (desired_object, new imp::shared_ptr_refcount<ClusterManager> (this));
+        return typename lldb_private::SharingPtr<T>(desired_object, new imp::shared_ptr_refcount<ClusterManager>(this));
     }
-    
+
 private:
-    
-    void DecrementRefCount () 
+    void
+    DecrementRefCount()
     {
-        m_mutex.Lock();
+        m_mutex.lock();
         m_external_ref--;
         if (m_external_ref == 0)
             delete this;
         else
-            m_mutex.Unlock();
+            m_mutex.unlock();
     }
-    
+
     friend class imp::shared_ptr_refcount<ClusterManager>;
-    
+
     llvm::SmallPtrSet<T *, 16> m_objects;
     int m_external_ref;
-    Mutex m_mutex;
+    std::mutex m_mutex;
 };
 
 } // namespace lldb_private

@@ -18,21 +18,20 @@
 using namespace lldb;
 using namespace lldb_private;
 
-TypeCategoryImpl::TypeCategoryImpl(IFormatChangeListener* clist,
-                                   ConstString name,
-                                   std::initializer_list<lldb::LanguageType> langs) :
-m_format_cont("format","regex-format",clist),
-m_summary_cont("summary","regex-summary",clist),
-m_filter_cont("filter","regex-filter",clist),
+TypeCategoryImpl::TypeCategoryImpl(IFormatChangeListener *clist, ConstString name,
+                                   std::initializer_list<lldb::LanguageType> langs)
+    : m_format_cont("format", "regex-format", clist),
+      m_summary_cont("summary", "regex-summary", clist),
+      m_filter_cont("filter", "regex-filter", clist),
 #ifndef LLDB_DISABLE_PYTHON
-m_synth_cont("synth","regex-synth",clist),
+      m_synth_cont("synth", "regex-synth", clist),
 #endif
-m_validator_cont("validator","regex-validator",clist),
-m_enabled(false),
-m_change_listener(clist),
-m_mutex(Mutex::eMutexTypeRecursive),
-m_name(name),
-m_languages()
+      m_validator_cont("validator", "regex-validator", clist),
+      m_enabled(false),
+      m_change_listener(clist),
+      m_mutex(),
+      m_name(name),
+      m_languages()
 {
     for (const lldb::LanguageType lang : langs)
         AddLanguage(lang);
@@ -673,7 +672,7 @@ TypeCategoryImpl::GetTypeNameSpecifierForValidatorAtIndex (size_t index)
 void
 TypeCategoryImpl::Enable (bool value, uint32_t position)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if ( (m_enabled = value) )
         m_enabled_position = position;
     if (m_change_listener)

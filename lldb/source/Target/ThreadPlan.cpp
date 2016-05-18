@@ -27,21 +27,21 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // ThreadPlan constructor
 //----------------------------------------------------------------------
-ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread, Vote stop_vote, Vote run_vote) :
-    m_thread (thread),
-    m_stop_vote (stop_vote),
-    m_run_vote (run_vote),
-    m_kind (kind),
-    m_name (name),
-    m_plan_complete_mutex (Mutex::eMutexTypeRecursive),
-    m_cached_plan_explains_stop (eLazyBoolCalculate),
-    m_plan_complete (false),
-    m_plan_private (false),
-    m_okay_to_discard (true),
-    m_is_master_plan (false),
-    m_plan_succeeded(true)
+ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread, Vote stop_vote, Vote run_vote)
+    : m_thread(thread),
+      m_stop_vote(stop_vote),
+      m_run_vote(run_vote),
+      m_kind(kind),
+      m_name(name),
+      m_plan_complete_mutex(),
+      m_cached_plan_explains_stop(eLazyBoolCalculate),
+      m_plan_complete(false),
+      m_plan_private(false),
+      m_okay_to_discard(true),
+      m_is_master_plan(false),
+      m_plan_succeeded(true)
 {
-    SetID (GetNextID());
+    SetID(GetNextID());
 }
 
 //----------------------------------------------------------------------
@@ -67,14 +67,14 @@ ThreadPlan::PlanExplainsStop (Event *event_ptr)
 bool
 ThreadPlan::IsPlanComplete ()
 {
-    Mutex::Locker locker(m_plan_complete_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_plan_complete_mutex);
     return m_plan_complete;
 }
 
 void
 ThreadPlan::SetPlanComplete (bool success)
 {
-    Mutex::Locker locker(m_plan_complete_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_plan_complete_mutex);
     m_plan_complete = true;
     m_plan_succeeded = success;
 }
@@ -82,7 +82,7 @@ ThreadPlan::SetPlanComplete (bool success)
 bool
 ThreadPlan::MischiefManaged ()
 {
-    Mutex::Locker locker(m_plan_complete_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_plan_complete_mutex);
     // Mark the plan is complete, but don't override the success flag.
     m_plan_complete = true;
     return true;

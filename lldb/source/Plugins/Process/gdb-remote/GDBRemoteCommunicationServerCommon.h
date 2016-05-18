@@ -17,7 +17,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private-forward.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 
 #include "GDBRemoteCommunicationServer.h"

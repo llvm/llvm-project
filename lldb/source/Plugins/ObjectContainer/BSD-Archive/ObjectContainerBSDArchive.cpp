@@ -35,7 +35,6 @@ typedef struct ar_hdr
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/Timer.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/ObjectFile.h"
 
 using namespace lldb;
@@ -226,7 +225,7 @@ ObjectContainerBSDArchive::Archive::FindObject (const ConstString &object_name, 
 ObjectContainerBSDArchive::Archive::shared_ptr
 ObjectContainerBSDArchive::Archive::FindCachedArchive (const FileSpec &file, const ArchSpec &arch, const TimeValue &time, lldb::offset_t file_offset)
 {
-    Mutex::Locker locker(Archive::GetArchiveCacheMutex ());
+    std::lock_guard<std::recursive_mutex> guard(Archive::GetArchiveCacheMutex());
     shared_ptr archive_sp;
     Archive::Map &archive_map = Archive::GetArchiveCache ();
     Archive::Map::iterator pos = archive_map.find (file);
@@ -281,7 +280,7 @@ ObjectContainerBSDArchive::Archive::ParseAndCacheArchiveForFile
         const size_t num_objects = archive_sp->ParseObjects ();
         if (num_objects > 0)
         {
-            Mutex::Locker locker(Archive::GetArchiveCacheMutex ());
+            std::lock_guard<std::recursive_mutex> guard(Archive::GetArchiveCacheMutex());
             Archive::GetArchiveCache().insert(std::make_pair(file, archive_sp));
         }
         else
@@ -299,13 +298,12 @@ ObjectContainerBSDArchive::Archive::GetArchiveCache ()
     return g_archive_map;
 }
 
-Mutex &
-ObjectContainerBSDArchive::Archive::GetArchiveCacheMutex ()
+std::recursive_mutex &
+ObjectContainerBSDArchive::Archive::GetArchiveCacheMutex()
 {
-    static Mutex g_archive_map_mutex (Mutex::eMutexTypeRecursive);
+    static std::recursive_mutex g_archive_map_mutex;
     return g_archive_map_mutex;
 }
-
 
 void
 ObjectContainerBSDArchive::Initialize()

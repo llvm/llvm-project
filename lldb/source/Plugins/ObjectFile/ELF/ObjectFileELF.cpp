@@ -2938,7 +2938,7 @@ ObjectFileELF::GetSymtab()
             return NULL;
 
         uint64_t symbol_id = 0;
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
         // Sharable objects and dynamic executables usually have 2 distinct symbol
         // tables, one named ".symtab", and the other ".dynsym". The dynsym is a smaller
@@ -3102,7 +3102,7 @@ ObjectFileELF::Dump(Stream *s)
         return;
     }
 
-    lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     s->Printf("%p: ", static_cast<void *>(this));
     s->Indent();
     s->PutCString("ObjectFileELF");

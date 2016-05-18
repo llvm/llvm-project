@@ -1348,7 +1348,7 @@ ProcessMonitor::ServeOperation(OperationArgs *args)
 void
 ProcessMonitor::DoOperation(Operation *op)
 {
-    Mutex::Locker lock(m_operation_mutex);
+    std::lock_guard<std::mutex> guard(m_operation_mutex);
 
     m_operation = op;
 

@@ -13,13 +13,13 @@
 // C++ Includes
 #include <atomic>
 #include <memory>
+#include <mutex>
 
 #include "lldb/lldb-forward.h"
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Connection.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/IOObject.h"
@@ -105,7 +105,7 @@ class ConnectionFileDescriptor : public Connection
                                           // the port number.
 
     Pipe m_pipe;
-    Mutex m_mutex;
+    std::recursive_mutex m_mutex;
     std::atomic<bool> m_shutting_down; // This marks that we are shutting down so if we get woken up from
                                        // BytesAvailable to disconnect, we won't try to read again.
     bool m_waiting_for_accept;

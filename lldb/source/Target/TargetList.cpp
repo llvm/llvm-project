@@ -42,11 +42,11 @@ TargetList::GetStaticBroadcasterClass ()
 //----------------------------------------------------------------------
 // TargetList constructor
 //----------------------------------------------------------------------
-TargetList::TargetList(Debugger &debugger) :
-    Broadcaster(debugger.GetBroadcasterManager(), TargetList::GetStaticBroadcasterClass().AsCString()),
-    m_target_list(),
-    m_target_list_mutex (Mutex::eMutexTypeRecursive),
-    m_selected_target_idx (0)
+TargetList::TargetList(Debugger &debugger)
+    : Broadcaster(debugger.GetBroadcasterManager(), TargetList::GetStaticBroadcasterClass().AsCString()),
+      m_target_list(),
+      m_target_list_mutex(),
+      m_selected_target_idx(0)
 {
     CheckInWithManager();
 }
@@ -56,7 +56,7 @@ TargetList::TargetList(Debugger &debugger) :
 //----------------------------------------------------------------------
 TargetList::~TargetList()
 {
-    Mutex::Locker locker(m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     m_target_list.clear();
 }
 
@@ -515,7 +515,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
         // Don't put the dummy target in the target list, it's held separately.
         if (!is_dummy_target)
         {
-            Mutex::Locker locker(m_target_list_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
             m_selected_target_idx = m_target_list.size();
             m_target_list.push_back(target_sp);
             // Now prime this from the dummy target:
@@ -533,7 +533,7 @@ TargetList::CreateTargetInternal (Debugger &debugger,
 bool
 TargetList::DeleteTarget (TargetSP &target_sp)
 {
-    Mutex::Locker locker(m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     collection::iterator pos, end = m_target_list.end();
 
     for (pos = m_target_list.begin(); pos != end; ++pos)
@@ -551,7 +551,7 @@ TargetSP
 TargetList::FindTargetWithExecutableAndArchitecture(const FileSpec &exe_file_spec,
                                                     const ArchSpec *exe_arch_ptr) const
 {
-    Mutex::Locker locker (m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     TargetSP target_sp;
     bool full_match = (bool)exe_file_spec.GetDirectory();
 
@@ -580,7 +580,7 @@ TargetList::FindTargetWithExecutableAndArchitecture(const FileSpec &exe_file_spe
 TargetSP
 TargetList::FindTargetWithProcessID (lldb::pid_t pid) const
 {
-    Mutex::Locker locker(m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     TargetSP target_sp;
     collection::const_iterator pos, end = m_target_list.end();
     for (pos = m_target_list.begin(); pos != end; ++pos)
@@ -601,7 +601,7 @@ TargetList::FindTargetWithProcess (Process *process) const
     TargetSP target_sp;
     if (process)
     {
-        Mutex::Locker locker(m_target_list_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
         collection::const_iterator pos, end = m_target_list.end();
         for (pos = m_target_list.begin(); pos != end; ++pos)
         {
@@ -621,7 +621,7 @@ TargetList::GetTargetSP (Target *target) const
     TargetSP target_sp;
     if (target)
     {
-        Mutex::Locker locker(m_target_list_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
         collection::const_iterator pos, end = m_target_list.end();
         for (pos = m_target_list.begin(); pos != end; ++pos)
         {
@@ -671,7 +671,7 @@ TargetList::SignalIfRunning (lldb::pid_t pid, int signo)
     if (pid == LLDB_INVALID_PROCESS_ID)
     {
         // Signal all processes with signal
-        Mutex::Locker locker(m_target_list_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
         collection::iterator pos, end = m_target_list.end();
         for (pos = m_target_list.begin(); pos != end; ++pos)
         {
@@ -709,7 +709,7 @@ TargetList::SignalIfRunning (lldb::pid_t pid, int signo)
 int
 TargetList::GetNumTargets () const
 {
-    Mutex::Locker locker (m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     return m_target_list.size();
 }
 
@@ -717,7 +717,7 @@ lldb::TargetSP
 TargetList::GetTargetAtIndex (uint32_t idx) const
 {
     TargetSP target_sp;
-    Mutex::Locker locker (m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     if (idx < m_target_list.size())
         target_sp = m_target_list[idx];
     return target_sp;
@@ -726,7 +726,7 @@ TargetList::GetTargetAtIndex (uint32_t idx) const
 uint32_t
 TargetList::GetIndexOfTarget (lldb::TargetSP target_sp) const
 {
-    Mutex::Locker locker (m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     size_t num_targets = m_target_list.size();
     for (size_t idx = 0; idx < num_targets; idx++)
     {
@@ -739,7 +739,7 @@ TargetList::GetIndexOfTarget (lldb::TargetSP target_sp) const
 uint32_t
 TargetList::SetSelectedTarget (Target* target)
 {
-    Mutex::Locker locker (m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     collection::const_iterator pos,
         begin = m_target_list.begin(),
         end = m_target_list.end();
@@ -758,7 +758,7 @@ TargetList::SetSelectedTarget (Target* target)
 lldb::TargetSP
 TargetList::GetSelectedTarget ()
 {
-    Mutex::Locker locker (m_target_list_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
     if (m_selected_target_idx >= m_target_list.size())
         m_selected_target_idx = 0;
     return GetTargetAtIndex (m_selected_target_idx);

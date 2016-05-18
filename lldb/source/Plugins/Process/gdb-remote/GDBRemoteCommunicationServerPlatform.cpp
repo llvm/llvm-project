@@ -48,14 +48,14 @@ using namespace lldb_private::process_gdb_remote;
 // GDBRemoteCommunicationServerPlatform constructor
 //----------------------------------------------------------------------
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(const Socket::SocketProtocol socket_protocol,
-                                                                           const char* socket_scheme) :
-    GDBRemoteCommunicationServerCommon ("gdb-remote.server", "gdb-remote.server.rx_packet"),
-    m_socket_protocol(socket_protocol),
-    m_socket_scheme(socket_scheme),
-    m_spawned_pids_mutex (Mutex::eMutexTypeRecursive),
-    m_platform_sp (Platform::GetHostPlatform ()),
-    m_port_map (),
-    m_port_offset(0)
+                                                                           const char *socket_scheme)
+    : GDBRemoteCommunicationServerCommon("gdb-remote.server", "gdb-remote.server.rx_packet"),
+      m_socket_protocol(socket_protocol),
+      m_socket_scheme(socket_scheme),
+      m_spawned_pids_mutex(),
+      m_platform_sp(Platform::GetHostPlatform()),
+      m_port_map(),
+      m_port_offset(0)
 {
     m_pending_gdb_server.pid = LLDB_INVALID_PROCESS_ID;
     m_pending_gdb_server.port = 0;
@@ -78,11 +78,7 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(const
                                   &GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo);
 
     RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_interrupt,
-                          [this](StringExtractorGDBRemote packet,
-                                 Error &error,
-                                 bool &interrupt,
-                                 bool &quit)
-                          {
+                          [this](StringExtractorGDBRemote packet, Error &error, bool &interrupt, bool &quit) {
                               error.SetErrorString("interrupt received");
                               interrupt = true;
                               return PacketResult::Success;
@@ -156,7 +152,7 @@ GDBRemoteCommunicationServerPlatform::LaunchGDBServer(const lldb_private::Args& 
     pid = debugserver_launch_info.GetProcessID();
     if (pid != LLDB_INVALID_PROCESS_ID)
     {
-        Mutex::Locker locker (m_spawned_pids_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
         m_spawned_pids.insert(pid);
         if (port > 0)
             AssociatePortWithProcess(port, pid);
@@ -261,7 +257,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qKillSpawnedProcess (StringExtracto
     // verify that we know anything about this pid.
     // Scope for locker
     {
-        Mutex::Locker locker (m_spawned_pids_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
         if (m_spawned_pids.find(pid) == m_spawned_pids.end())
         {
             // not a pid we know about
@@ -281,7 +277,7 @@ GDBRemoteCommunicationServerPlatform::KillSpawnedProcess (lldb::pid_t pid)
 {
     // make sure we know about this process
     {
-        Mutex::Locker locker (m_spawned_pids_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
         if (m_spawned_pids.find(pid) == m_spawned_pids.end())
             return false;
     }
@@ -293,7 +289,7 @@ GDBRemoteCommunicationServerPlatform::KillSpawnedProcess (lldb::pid_t pid)
     for (size_t i=0; i<10; ++i)
     {
         {
-            Mutex::Locker locker (m_spawned_pids_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
             if (m_spawned_pids.find(pid) == m_spawned_pids.end())
             {
                 // it is now killed
@@ -305,7 +301,7 @@ GDBRemoteCommunicationServerPlatform::KillSpawnedProcess (lldb::pid_t pid)
 
     // check one more time after the final usleep
     {
-        Mutex::Locker locker (m_spawned_pids_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
         if (m_spawned_pids.find(pid) == m_spawned_pids.end())
             return true;
     }
@@ -317,7 +313,7 @@ GDBRemoteCommunicationServerPlatform::KillSpawnedProcess (lldb::pid_t pid)
     for (size_t i=0; i<10; ++i)
     {
         {
-            Mutex::Locker locker (m_spawned_pids_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
             if (m_spawned_pids.find(pid) == m_spawned_pids.end())
             {
                 // it is now killed
@@ -330,7 +326,7 @@ GDBRemoteCommunicationServerPlatform::KillSpawnedProcess (lldb::pid_t pid)
     // check one more time after the final usleep
     // Scope for locker
     {
-        Mutex::Locker locker (m_spawned_pids_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
         if (m_spawned_pids.find(pid) == m_spawned_pids.end())
             return true;
     }
@@ -444,7 +440,7 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(StringExtractorGDBRemo
 bool
 GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped (lldb::pid_t pid)
 {
-    Mutex::Locker locker (m_spawned_pids_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
     FreePortForProcess(pid);
     m_spawned_pids.erase(pid);
     return true;
@@ -479,7 +475,7 @@ GDBRemoteCommunicationServerPlatform::LaunchProcess ()
     if (pid != LLDB_INVALID_PROCESS_ID)
     {
         // add to spawned pids
-        Mutex::Locker locker (m_spawned_pids_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
         m_spawned_pids.insert(pid);
     }
 

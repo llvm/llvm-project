@@ -379,27 +379,27 @@ ExtractRuntimeGlobalSymbol (Process* process,
     }
 }
 
-AppleObjCRuntimeV2::AppleObjCRuntimeV2 (Process *process,
-                                        const ModuleSP &objc_module_sp) :
-    AppleObjCRuntime (process),
-    m_get_class_info_code(),
-    m_get_class_info_args (LLDB_INVALID_ADDRESS),
-    m_get_class_info_args_mutex (Mutex::eMutexTypeNormal),
-    m_get_shared_cache_class_info_code(),
-    m_get_shared_cache_class_info_args (LLDB_INVALID_ADDRESS),
-    m_get_shared_cache_class_info_args_mutex (Mutex::eMutexTypeNormal),
-    m_decl_vendor_ap (),
-    m_isa_hash_table_ptr (LLDB_INVALID_ADDRESS),
-    m_hash_signature (),
-    m_has_object_getClass (false),
-    m_loaded_objc_opt (false),
-    m_non_pointer_isa_cache_ap(NonPointerISACache::CreateInstance(*this,objc_module_sp)),
-    m_tagged_pointer_vendor_ap(TaggedPointerVendorV2::CreateInstance(*this,objc_module_sp)),
-    m_encoding_to_type_sp(),
-    m_noclasses_warning_emitted(false)
+AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process, const ModuleSP &objc_module_sp)
+    : AppleObjCRuntime(process),
+      m_get_class_info_code(),
+      m_get_class_info_args(LLDB_INVALID_ADDRESS),
+      m_get_class_info_args_mutex(),
+      m_get_shared_cache_class_info_code(),
+      m_get_shared_cache_class_info_args(LLDB_INVALID_ADDRESS),
+      m_get_shared_cache_class_info_args_mutex(),
+      m_decl_vendor_ap(),
+      m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS),
+      m_hash_signature(),
+      m_has_object_getClass(false),
+      m_loaded_objc_opt(false),
+      m_non_pointer_isa_cache_ap(NonPointerISACache::CreateInstance(*this, objc_module_sp)),
+      m_tagged_pointer_vendor_ap(TaggedPointerVendorV2::CreateInstance(*this, objc_module_sp)),
+      m_encoding_to_type_sp(),
+      m_noclasses_warning_emitted(false)
 {
     static const ConstString g_gdb_object_getClass("gdb_object_getClass");
-    m_has_object_getClass = (objc_module_sp->FindFirstSymbolWithNameAndType(g_gdb_object_getClass, eSymbolTypeCode) != NULL);
+    m_has_object_getClass =
+        (objc_module_sp->FindFirstSymbolWithNameAndType(g_gdb_object_getClass, eSymbolTypeCode) != NULL);
 }
 
 bool
@@ -1483,8 +1483,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     
     if (class_infos_addr == LLDB_INVALID_ADDRESS)
         return false;
-    
-    Mutex::Locker locker(m_get_class_info_args_mutex);
+
+    std::lock_guard<std::mutex> guard(m_get_class_info_args_mutex);
 
     // Fill in our function argument values
     arguments.GetValueAtIndex(0)->GetScalar() = hash_table.GetTableLoadAddress();
@@ -1735,9 +1735,9 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     
     if (class_infos_addr == LLDB_INVALID_ADDRESS)
         return DescriptorMapUpdateResult::Fail();
-    
-    Mutex::Locker locker(m_get_shared_cache_class_info_args_mutex);
-    
+
+    std::lock_guard<std::mutex> guard(m_get_shared_cache_class_info_args_mutex);
+
     // Fill in our function argument values
     arguments.GetValueAtIndex(0)->GetScalar() = objc_opt_ptr;
     arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;

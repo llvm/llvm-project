@@ -267,39 +267,39 @@ ProcessGDBRemote::CanDebug (lldb::TargetSP target_sp, bool plugin_specified_by_n
 //----------------------------------------------------------------------
 // ProcessGDBRemote constructor
 //----------------------------------------------------------------------
-ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener_sp) :
-    Process (target_sp, listener_sp),
-    m_flags (0),
-    m_gdb_comm (),
-    m_debugserver_pid (LLDB_INVALID_PROCESS_ID),
-    m_last_stop_packet_mutex (Mutex::eMutexTypeRecursive),
-    m_register_info (),
-    m_async_broadcaster (NULL, "lldb.process.gdb-remote.async-broadcaster"),
-    m_async_listener_sp(Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
-    m_async_thread_state_mutex(Mutex::eMutexTypeRecursive),
-    m_thread_ids (),
-    m_thread_pcs (),
-    m_jstopinfo_sp (),
-    m_jthreadsinfo_sp (),
-    m_continue_c_tids (),
-    m_continue_C_tids (),
-    m_continue_s_tids (),
-    m_continue_S_tids (),
-    m_max_memory_size (0),
-    m_remote_stub_max_memory_size (0),
-    m_addr_to_mmap_size (),
-    m_thread_create_bp_sp (),
-    m_waiting_for_attach (false),
-    m_destroy_tried_resuming (false),
-    m_command_sp (),
-    m_breakpoint_pc_offset (0),
-    m_initial_tid (LLDB_INVALID_THREAD_ID)
+ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener_sp)
+    : Process(target_sp, listener_sp),
+      m_flags(0),
+      m_gdb_comm(),
+      m_debugserver_pid(LLDB_INVALID_PROCESS_ID),
+      m_last_stop_packet_mutex(),
+      m_register_info(),
+      m_async_broadcaster(NULL, "lldb.process.gdb-remote.async-broadcaster"),
+      m_async_listener_sp(Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
+      m_async_thread_state_mutex(),
+      m_thread_ids(),
+      m_thread_pcs(),
+      m_jstopinfo_sp(),
+      m_jthreadsinfo_sp(),
+      m_continue_c_tids(),
+      m_continue_C_tids(),
+      m_continue_s_tids(),
+      m_continue_S_tids(),
+      m_max_memory_size(0),
+      m_remote_stub_max_memory_size(0),
+      m_addr_to_mmap_size(),
+      m_thread_create_bp_sp(),
+      m_waiting_for_attach(false),
+      m_destroy_tried_resuming(false),
+      m_command_sp(),
+      m_breakpoint_pc_offset(0),
+      m_initial_tid(LLDB_INVALID_THREAD_ID)
 {
-    m_async_broadcaster.SetEventName (eBroadcastBitAsyncThreadShouldExit,   "async thread should exit");
-    m_async_broadcaster.SetEventName (eBroadcastBitAsyncContinue,           "async thread continue");
-    m_async_broadcaster.SetEventName (eBroadcastBitAsyncThreadDidExit,      "async thread did exit");
+    m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit, "async thread should exit");
+    m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue, "async thread continue");
+    m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadDidExit, "async thread did exit");
 
-    Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_ASYNC));
+    Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_ASYNC));
 
     const uint32_t async_event_mask = eBroadcastBitAsyncContinue | eBroadcastBitAsyncThreadShouldExit;
 
@@ -309,8 +309,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener
             log->Printf("ProcessGDBRemote::%s failed to listen for m_async_broadcaster events", __FUNCTION__);
     }
 
-    const uint32_t gdb_event_mask = Communication::eBroadcastBitReadThreadDidExit |
-                                    GDBRemoteCommunication::eBroadcastBitGdbReadThreadGotNotify;
+    const uint32_t gdb_event_mask =
+        Communication::eBroadcastBitReadThreadDidExit | GDBRemoteCommunication::eBroadcastBitGdbReadThreadGotNotify;
     if (m_async_listener_sp->StartListeningForEvents(&m_gdb_comm, gdb_event_mask) != gdb_event_mask)
     {
         if (log)
@@ -1729,8 +1729,8 @@ ProcessGDBRemote::UpdateThreadIDList ()
 
         // Lock the thread stack while we access it
         //Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
-        Mutex::Locker stop_stack_lock;
-        if (stop_stack_lock.TryLock(m_last_stop_packet_mutex))
+        std::unique_lock<std::recursive_mutex> stop_stack_lock(m_last_stop_packet_mutex, std::defer_lock);
+        if (stop_stack_lock.try_lock())
         {
             // Get the number of stop packets on the stack
             int nItems = m_stop_packet_stack.size();
@@ -2673,7 +2673,7 @@ ProcessGDBRemote::RefreshStateAfterStop ()
     // Scope for the lock
     {
         // Lock the thread stack while we access it
-        Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
         // Get the number of stop packets on the stack
         int nItems = m_stop_packet_stack.size();
         // Iterate over them
@@ -2975,7 +2975,7 @@ ProcessGDBRemote::SetLastStopPacket (const StringExtractorGDBRemote &response)
     // Scope the lock
     {
         // Lock the thread stack while we access it
-        Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
 
         // We are are not using non-stop mode, there can only be one last stop
         // reply packet, so clear the list.
@@ -3761,7 +3761,7 @@ ProcessGDBRemote::StartAsyncThread ()
     if (log)
         log->Printf ("ProcessGDBRemote::%s ()", __FUNCTION__);
 
-    Mutex::Locker start_locker(m_async_thread_state_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_async_thread_state_mutex);
     if (!m_async_thread.IsJoinable())
     {
         // Create a thread that watches our internal state and controls which
@@ -3783,7 +3783,7 @@ ProcessGDBRemote::StopAsyncThread ()
     if (log)
         log->Printf ("ProcessGDBRemote::%s ()", __FUNCTION__);
 
-    Mutex::Locker start_locker(m_async_thread_state_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_async_thread_state_mutex);
     if (m_async_thread.IsJoinable())
     {
         m_async_broadcaster.BroadcastEvent (eBroadcastBitAsyncThreadShouldExit);
