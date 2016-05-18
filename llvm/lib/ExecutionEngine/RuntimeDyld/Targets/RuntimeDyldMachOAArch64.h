@@ -417,7 +417,7 @@ private:
     addRelocationForSection(TargetRE, RE.SectionID);
   }
 
-  relocation_iterator
+  Expected<relocation_iterator>
   processSubtractRelocation(unsigned SectionID, relocation_iterator RelI,
                             const ObjectFile &BaseObjT,
                             ObjSectionToIDMap &ObjSectionToID) {
@@ -432,13 +432,8 @@ private:
     unsigned NumBytes = 1 << Size;
 
     Expected<StringRef> SubtrahendNameOrErr = RelI->getSymbol()->getName();
-    if (!SubtrahendNameOrErr) {
-      std::string Buf;
-      raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(SubtrahendNameOrErr.takeError(), OS, "");
-      OS.flush();
-      report_fatal_error(Buf);
-    }
+    if (!SubtrahendNameOrErr)
+      return SubtrahendNameOrErr.takeError();
     auto SubtrahendI = GlobalSymbolTable.find(*SubtrahendNameOrErr);
     unsigned SectionBID = SubtrahendI->second.getSectionID();
     uint64_t SectionBOffset = SubtrahendI->second.getOffset();
@@ -447,13 +442,8 @@ private:
 
     ++RelI;
     Expected<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
-    if (!MinuendNameOrErr) {
-      std::string Buf;
-      raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(MinuendNameOrErr.takeError(), OS, "");
-      OS.flush();
-      report_fatal_error(Buf);
-    }
+    if (!MinuendNameOrErr)
+      return MinuendNameOrErr.takeError();
     auto MinuendI = GlobalSymbolTable.find(*MinuendNameOrErr);
     unsigned SectionAID = MinuendI->second.getSectionID();
     uint64_t SectionAOffset = MinuendI->second.getOffset();

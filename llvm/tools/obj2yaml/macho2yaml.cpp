@@ -13,8 +13,6 @@
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#include <string.h> // for memcpy
-
 using namespace llvm;
 
 class MachODumper {
@@ -33,24 +31,6 @@ public:
     if (Obj.isLittleEndian() != sys::IsLittleEndianHost)                       \
       MachO::swapStruct(LC.Data.LCStruct##_data);                              \
     break;
-
-template <typename SectionType>
-MachOYAML::Section constructSection(SectionType Sec) {
-  MachOYAML::Section TempSec;
-  memcpy(reinterpret_cast<void *>(&TempSec.sectname[0]), &Sec.sectname[0], 16);
-  memcpy(reinterpret_cast<void *>(&TempSec.segname[0]), &Sec.segname[0], 16);
-  TempSec.addr = Sec.addr;
-  TempSec.size = Sec.size;
-  TempSec.offset = Sec.offset;
-  TempSec.align = Sec.align;
-  TempSec.reloff = Sec.reloff;
-  TempSec.nreloc = Sec.nreloc;
-  TempSec.flags = Sec.flags;
-  TempSec.reserved1 = Sec.reserved1;
-  TempSec.reserved2 = Sec.reserved2;
-  TempSec.reserved3 = 0;
-  return TempSec;
-}
 
 Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = make_unique<MachOYAML::Object>();
@@ -73,40 +53,6 @@ Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
         MachO::swapStruct(LC.Data.load_command_data);
       break;
 #include "llvm/Support/MachO.def"
-    }
-    if (LoadCmd.C.cmd == MachO::LC_SEGMENT) {
-      auto End = LoadCmd.Ptr + LoadCmd.C.cmdsize;
-      const MachO::section *Curr = reinterpret_cast<const MachO::section *>(
-          LoadCmd.Ptr + sizeof(MachO::segment_command));
-      for (; reinterpret_cast<const void *>(Curr) < End; Curr++) {
-        if (Obj.isLittleEndian() != sys::IsLittleEndianHost) {
-          MachO::section Sec;
-          memcpy((void *)&Sec, Curr, sizeof(MachO::section));
-          MachO::swapStruct(Sec);
-          LC.Sections.push_back(constructSection(Sec));
-        } else {
-          LC.Sections.push_back(constructSection(*Curr));
-        }
-      }
-    } else if (LoadCmd.C.cmd == MachO::LC_SEGMENT_64) {
-      auto End = LoadCmd.Ptr + LoadCmd.C.cmdsize;
-      const MachO::section_64 *Curr =
-          reinterpret_cast<const MachO::section_64 *>(
-              LoadCmd.Ptr + sizeof(MachO::segment_command_64));
-      for (; reinterpret_cast<const void *>(Curr) < End; Curr++) {
-        MachOYAML::Section TempSec;
-        if (Obj.isLittleEndian() != sys::IsLittleEndianHost) {
-          MachO::section_64 Sec;
-          memcpy((void *)&Sec, Curr, sizeof(MachO::section_64));
-          MachO::swapStruct(Sec);
-          LC.Sections.push_back(constructSection(Sec));
-          TempSec = constructSection(Sec);
-        } else {
-          TempSec = constructSection(*Curr);
-        }
-        TempSec.reserved3 = Curr->reserved3;
-        LC.Sections.push_back(TempSec);
-      }
     }
     Y->LoadCommands.push_back(std::move(LC));
   }

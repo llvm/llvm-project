@@ -22,36 +22,6 @@ using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
 using llvm::support::little32_t;
 
-/// Distinguishes individual records in the Symbols subsection of a .debug$S
-/// section. Equivalent to SYM_ENUM_e in cvinfo.h.
-enum SymbolRecordKind : uint16_t {
-#define SYMBOL_TYPE(ename, value) ename = value,
-#include "CVSymbolTypes.def"
-};
-
-/// Data preceding all symbol records.
-struct SymRecord {
-  ulittle16_t RecordLength; // Record length, starting from the next field
-  ulittle16_t RecordKind;   // Record kind (SymbolRecordKind)
-  // Symbol data follows.
-
-  SymbolRecordKind getKind() const {
-    return SymbolRecordKind(uint16_t(RecordKind));
-  }
-};
-
-/// Corresponds to the CV_PROCFLAGS bitfield.
-enum ProcFlags : uint8_t {
-  HasFP = 1 << 0,
-  HasIRET = 1 << 1,
-  HasFRET = 1 << 2,
-  IsNoReturn = 1 << 3,
-  IsUnreachable = 1 << 4,
-  HasCustomCallingConv = 1 << 5,
-  IsNoInline = 1 << 6,
-  HasOptimizedDebugInfo = 1 << 7,
-};
-
 // S_GPROC32, S_LPROC32, S_GPROC32_ID, S_LPROC32_ID, S_LPROC32_DPC or
 // S_LPROC32_DPC_ID
 struct ProcSym {
@@ -64,25 +34,8 @@ struct ProcSym {
   TypeIndex FunctionType;
   ulittle32_t CodeOffset;
   ulittle16_t Segment;
-  uint8_t Flags; // CV_PROCFLAGS
+  uint8_t Flags; // ProcSymFlags enum
   // Name: The null-terminated name follows.
-};
-
-enum BinaryAnnotationsOpCode : uint32_t {
-  Invalid,
-  CodeOffset,
-  ChangeCodeOffsetBase,
-  ChangeCodeOffset,
-  ChangeCodeLength,
-  ChangeFile,
-  ChangeLineOffset,
-  ChangeLineEndDelta,
-  ChangeRangeKind,
-  ChangeColumnStart,
-  ChangeColumnEndDelta,
-  ChangeCodeOffsetAndLineOffset,
-  ChangeCodeLengthAndCodeOffset,
-  ChangeColumnEnd,
 };
 
 // S_INLINESITE
@@ -96,20 +49,7 @@ struct InlineSiteSym {
 // S_LOCAL
 struct LocalSym {
   TypeIndex Type;
-  ulittle16_t Flags;
-  enum : uint16_t {
-    IsParameter = 1 << 0,
-    IsAddressTaken = 1 << 1,
-    IsCompilerGenerated = 1 << 2,
-    IsAggregate = 1 << 3,
-    IsAggregated = 1 << 4,
-    IsAliased = 1 << 5,
-    IsAlias = 1 << 6,
-    IsReturnValue = 1 << 7,
-    IsOptimizedOut = 1 << 8,
-    IsEnregisteredGlobal = 1 << 9,
-    IsEnregisteredStatic = 1 << 10,
-  };
+  ulittle16_t Flags; // LocalSymFlags enum
   // Name: The null-terminated name follows.
 };
 
@@ -208,22 +148,8 @@ struct ObjNameSym {
 
 // S_COMPILE3
 struct CompileSym3 {
-  ulittle32_t flags;
+  ulittle32_t flags; // CompileSym3Flags enum
   uint8_t getLanguage() const { return flags & 0xff; }
-  enum Flags : uint32_t {
-    EC = 1 << 8,
-    NoDbgInfo = 1 << 9,
-    LTCG = 1 << 10,
-    NoDataAlign = 1 << 11,
-    ManagedPresent = 1 << 12,
-    SecurityChecks = 1 << 13,
-    HotPatch = 1 << 14,
-    CVTCIL = 1 << 15,
-    MSILModule = 1 << 16,
-    Sdl = 1 << 17,
-    PGO = 1 << 18,
-    Exp = 1 << 19,
-  };
   ulittle16_t Machine; // CPUType
   ulittle16_t VersionFrontendMajor;
   ulittle16_t VersionFrontendMinor;
@@ -267,14 +193,7 @@ struct HeapAllocationSiteSym {
 struct FrameCookieSym {
   ulittle32_t CodeOffset;
   ulittle16_t Register;
-  ulittle16_t CookieKind;
-
-  enum : uint16_t {
-    Copy,
-    XorStackPointer,
-    XorFramePointer,
-    XorR13,
-  };
+  ulittle32_t CookieKind;
 };
 
 // S_UDT, S_COBOLUDT

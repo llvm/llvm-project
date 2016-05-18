@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -relocation-model=pic -filetype=obj -o %T/test_x86-64.o %s
+# RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %T/test_x86-64.o %s
 # RUN: llvm-rtdyld -triple=x86_64-apple-macosx10.9 -dummy-extern ds1=0xfffffffffffffffe -dummy-extern ds2=0xffffffffffffffff -verify -check=%s %/T/test_x86-64.o
 
         .section	__TEXT,__text,regular,pure_instructions

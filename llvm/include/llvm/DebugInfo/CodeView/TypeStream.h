@@ -11,10 +11,10 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPESTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/RecordIterator.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>
 #include <system_error>

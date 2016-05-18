@@ -275,13 +275,13 @@ entry:
 ; CHECK-LABEL: minimal_loop:
 ; CHECK-NOT: br
 ; CHECK: .LBB7_1:
-; CHECK: i32.store $discard=, 0($0), $pop{{[0-9]+}}{{$}}
+; CHECK: i32.store $drop=, 0($0), $pop{{[0-9]+}}{{$}}
 ; CHECK: br 0{{$}}
 ; CHECK: .LBB7_2:
 ; OPT-LABEL: minimal_loop:
 ; OPT-NOT: br
 ; OPT: .LBB7_1:
-; OPT: i32.store $discard=, 0($0), $pop{{[0-9]+}}{{$}}
+; OPT: i32.store $drop=, 0($0), $pop{{[0-9]+}}{{$}}
 ; OPT: br 0{{$}}
 ; OPT: .LBB7_2:
 define i32 @minimal_loop(i32* %p) {

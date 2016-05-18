@@ -27,9 +27,7 @@
 
 namespace llvm {
 
-/**
- * A generic AVR implementation.
- */
+/// A generic AVR implementation.
 class AVRTargetMachine : public LLVMTargetMachine {
 public:
   AVRTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

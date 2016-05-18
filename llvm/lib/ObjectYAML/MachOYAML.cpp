@@ -110,40 +110,18 @@ void MappingTraits<MachOYAML::LoadCommand>::mapping(
   switch (LoadCommand.Data.load_command_data.cmd) {
 #include "llvm/Support/MachO.def"
   }
-  if (LoadCommand.Data.load_command_data.cmd == MachO::LC_SEGMENT ||
-      LoadCommand.Data.load_command_data.cmd == MachO::LC_SEGMENT_64) {
-    IO.mapOptional("Sections", LoadCommand.Sections);
-  }
 }
 
 void MappingTraits<MachO::dyld_info_command>::mapping(
     IO &IO, MachO::dyld_info_command &LoadCommand) {
   IO.mapRequired("rebase_off", LoadCommand.rebase_off);
   IO.mapRequired("rebase_size", LoadCommand.rebase_size);
-  IO.mapRequired("bind_off", LoadCommand.bind_off);
-  IO.mapRequired("bind_size", LoadCommand.bind_size);
+  IO.mapRequired("bind_off", LoadCommand.bind_size);
   IO.mapRequired("weak_bind_off", LoadCommand.weak_bind_off);
   IO.mapRequired("weak_bind_size", LoadCommand.weak_bind_size);
-  IO.mapRequired("lazy_bind_off", LoadCommand.lazy_bind_off);
-  IO.mapRequired("lazy_bind_size", LoadCommand.lazy_bind_size);
+  IO.mapRequired("lazy_bind_off", LoadCommand.lazy_bind_size);
   IO.mapRequired("export_off", LoadCommand.export_off);
   IO.mapRequired("export_size", LoadCommand.export_size);
-}
-
-void MappingTraits<MachOYAML::Section>::mapping(IO &IO,
-                                                MachOYAML::Section &Section) {
-  IO.mapRequired("sectname", Section.sectname);
-  IO.mapRequired("segname", Section.segname);
-  IO.mapRequired("addr", Section.addr);
-  IO.mapRequired("size", Section.size);
-  IO.mapRequired("offset", Section.offset);
-  IO.mapRequired("align", Section.align);
-  IO.mapRequired("reloff", Section.reloff);
-  IO.mapRequired("nreloc", Section.nreloc);
-  IO.mapRequired("flags", Section.flags);
-  IO.mapRequired("reserved1", Section.reserved1);
-  IO.mapRequired("reserved2", Section.reserved2);
-  IO.mapOptional("reserved3", Section.reserved3);
 }
 
 void MappingTraits<MachO::dylib>::mapping(IO &IO, MachO::dylib &DylibStruct) {

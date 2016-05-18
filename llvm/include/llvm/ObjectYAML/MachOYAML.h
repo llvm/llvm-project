@@ -22,21 +22,6 @@
 namespace llvm {
 namespace MachOYAML {
 
-struct Section {
-  char sectname[16];
-  char segname[16];
-  llvm::yaml::Hex64 addr;
-  uint64_t size;
-  llvm::yaml::Hex32 offset;
-  uint32_t align;
-  llvm::yaml::Hex32 reloff;
-  uint32_t nreloc;
-  llvm::yaml::Hex32 flags;
-  llvm::yaml::Hex32 reserved1;
-  llvm::yaml::Hex32 reserved2;
-  llvm::yaml::Hex32 reserved3;
-};
-
 struct FileHeader {
   llvm::yaml::Hex32 magic;
   llvm::yaml::Hex32 cputype;
@@ -51,20 +36,17 @@ struct FileHeader {
 struct LoadCommand {
   virtual ~LoadCommand();
   llvm::MachO::macho_load_command Data;
-  std::vector<Section> Sections;
 };
 
 struct Object {
   FileHeader Header;
   std::vector<LoadCommand> LoadCommands;
-  std::vector<Section> Sections;
 };
 
 } // namespace llvm::MachOYAML
 } // namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::LoadCommand)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::Section)
 
 namespace llvm {
 namespace yaml {
@@ -79,10 +61,6 @@ template <> struct MappingTraits<MachOYAML::Object> {
 
 template <> struct MappingTraits<MachOYAML::LoadCommand> {
   static void mapping(IO &IO, MachOYAML::LoadCommand &LoadCommand);
-};
-
-template <> struct MappingTraits<MachOYAML::Section> {
-  static void mapping(IO &IO, MachOYAML::Section &Section);
 };
 
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \

@@ -39,6 +39,7 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   bool Is64Bit;
   bool HasHardQuad;
   bool UsePopc;
+  bool UseSoftFloat;
 
   // LEON features
   bool HasUmacSmac;
@@ -77,6 +78,7 @@ public:
   bool useDeprecatedV8Instructions() const { return V8DeprecatedInsts; }
   bool hasHardQuad() const { return HasHardQuad; }
   bool usePopc() const { return UsePopc; }
+  bool useSoftFloat() const { return UseSoftFloat; }
 
   // Leon options
   bool hasUmacSmac() const { return HasUmacSmac; }

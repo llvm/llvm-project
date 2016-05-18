@@ -254,8 +254,8 @@ std::vector<FixItHint> IncludeSorter::GetEdits() {
       // Otherwise report the current block edit and start a new block.
     } else {
       if (CurrentEndLine) {
-        Fixes.push_back(
-            FixItHint::CreateReplacement(CurrentRange, CurrentText));
+        Fixes.push_back(FixItHint::CreateReplacement(
+            CharSourceRange::getCharRange(CurrentRange), CurrentText));
       }
 
       CurrentEndLine = LineEdit.first;
@@ -265,7 +265,8 @@ std::vector<FixItHint> IncludeSorter::GetEdits() {
   }
   // Finally, report the current block edit if there is one.
   if (CurrentEndLine) {
-    Fixes.push_back(FixItHint::CreateReplacement(CurrentRange, CurrentText));
+    Fixes.push_back(FixItHint::CreateReplacement(
+        CharSourceRange::getCharRange(CurrentRange), CurrentText));
   }
 
   // Reset the remaining internal state.

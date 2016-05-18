@@ -62,12 +62,46 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOpt::Level OL, bool is64bit)
     : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
                         RM, CM, OL),
-      TLOF(make_unique<SparcELFTargetObjectFile>()),
-      Subtarget(TT, CPU, FS, *this, is64bit) {
+      TLOF(make_unique<SparcELFTargetObjectFile>()) {
   initAsmInfo();
+  this->is64Bit = is64bit;
 }
 
 SparcTargetMachine::~SparcTargetMachine() {}
+
+const SparcSubtarget * 
+SparcTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
+
+  std::string CPU = !CPUAttr.hasAttribute(Attribute::None)
+                        ? CPUAttr.getValueAsString().str()
+                        : TargetCPU;
+  std::string FS = !FSAttr.hasAttribute(Attribute::None)
+                       ? FSAttr.getValueAsString().str()
+                       : TargetFS;
+
+  // FIXME: This is related to the code below to reset the target options,
+  // we need to know whether or not the soft float flag is set on the
+  // function, so we can enable it as a subtarget feature.
+  bool softFloat =
+      F.hasFnAttribute("use-soft-float") &&
+      F.getFnAttribute("use-soft-float").getValueAsString() == "true";
+
+  if (softFloat)         
+    FS += FS.empty() ? "+soft-float" : ",+soft-float";
+
+  auto &I = SubtargetMap[CPU + FS];
+  if (!I) {
+    // This needs to be done before we create a new subtarget since any
+    // creation will depend on the TM and the code generation flags on the
+    // function that reside in TargetOptions.
+    resetTargetOptions(F);
+    I = llvm::make_unique<SparcSubtarget>(TargetTriple, CPU, FS, *this,
+                                          this->is64Bit);
+  }
+  return I.get();
+}
 
 namespace {
 /// Sparc Code Generator Pass Configuration Options.

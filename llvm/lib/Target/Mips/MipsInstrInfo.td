@@ -1715,12 +1715,13 @@ let AdditionalPredicates = [NotInMicroMips] in {
 def LB  : Load<"lb", GPR32Opnd, sextloadi8, II_LB>, MMRel, LW_FM<0x20>;
 def LBu : Load<"lbu", GPR32Opnd, zextloadi8, II_LBU, addrDefault>, MMRel,
           LW_FM<0x24>;
-def LH  : Load<"lh", GPR32Opnd, sextloadi16, II_LH, addrDefault>, MMRel,
-          LW_FM<0x21>;
-def LHu : Load<"lhu", GPR32Opnd, zextloadi16, II_LHU>, MMRel, LW_FM<0x25>;
 let AdditionalPredicates = [NotInMicroMips] in {
-def LW  : StdMMR6Rel, Load<"lw", GPR32Opnd, load, II_LW, addrDefault>, MMRel,
-          LW_FM<0x23>;
+  def LH  : LoadMemory<"lh", GPR32Opnd, mem_simm16, sextloadi16, II_LH,
+                       addrDefault>, MMRel, LW_FM<0x21>;
+  def LHu : LoadMemory<"lhu", GPR32Opnd, mem_simm16, zextloadi16, II_LHU>,
+            MMRel, LW_FM<0x25>;
+  def LW  : StdMMR6Rel, Load<"lw", GPR32Opnd, load, II_LW, addrDefault>, MMRel,
+            LW_FM<0x23>;
 }
 def SB  : StdMMR6Rel, Store<"sb", GPR32Opnd, truncstorei8, II_SB>, MMRel,
           LW_FM<0x28>;
@@ -2505,7 +2506,9 @@ def : MipsPat<(not GPR32:$in),
 // extended loads
 def : MipsPat<(i32 (extloadi1  addr:$src)), (LBu addr:$src)>;
 def : MipsPat<(i32 (extloadi8  addr:$src)), (LBu addr:$src)>;
-def : MipsPat<(i32 (extloadi16 addr:$src)), (LHu addr:$src)>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(i32 (extloadi16 addr:$src)), (LHu addr:$src)>;
+}
 
 // peepholes
 def : MipsPat<(store (i32 0), addr:$dst), (SW ZERO, addr:$dst)>;
@@ -2602,15 +2605,17 @@ def : MipsPat<(bswap GPR32:$rt), (ROTR (WSBH GPR32:$rt), 16)>;
 // Load halfword/word patterns.
 let AddedComplexity = 40 in {
   def : LoadRegImmPat<LBu, i32, zextloadi8>;
-  def : LoadRegImmPat<LH, i32, sextloadi16>;
   let AdditionalPredicates = [NotInMicroMips] in {
-  def : LoadRegImmPat<LW, i32, load>;
+    def : LoadRegImmPat<LH, i32, sextloadi16>;
+    def : LoadRegImmPat<LW, i32, load>;
   }
 }
 
 // Atomic load patterns.
 def : MipsPat<(atomic_load_8 addr:$a), (LB addr:$a)>;
-def : MipsPat<(atomic_load_16 addr:$a), (LH addr:$a)>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(atomic_load_16 addr:$a), (LH addr:$a)>;
+}
 def : MipsPat<(atomic_load_32 addr:$a), (LW addr:$a)>;
 
 // Atomic store patterns.

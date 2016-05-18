@@ -26,7 +26,6 @@ using llvm::support::little32_t;
 using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
 
-
 /// Equvalent to CV_fldattr_t in cvinfo.h.
 struct MemberAttributes {
   ulittle16_t Attrs;

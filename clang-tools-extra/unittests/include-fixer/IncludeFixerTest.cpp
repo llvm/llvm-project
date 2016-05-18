@@ -27,7 +27,9 @@ static bool runOnCode(tooling::ToolAction *ToolAction, StringRef Code,
       new vfs::InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), InMemoryFileSystem));
-  std::vector<std::string> Args = {"include_fixer", "-fsyntax-only", FileName};
+  // FIXME: Investigate why -fms-compatibility breaks tests.
+  std::vector<std::string> Args = {"include_fixer", "-fsyntax-only",
+                                   "-fno-ms-compatibility", FileName};
   Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
   tooling::ToolInvocation Invocation(
       Args, ToolAction, Files.get(),
@@ -130,8 +132,6 @@ TEST(IncludeFixer, MinimizeInclude) {
             runIncludeFixer("a::b::foo bar;\n", IncludePath));
 }
 
-#ifndef _WIN32
-// It doesn't pass for targeting win32. Investigating.
 TEST(IncludeFixer, NestedName) {
   // Some tests don't pass for target *-win32.
   std::vector<std::string> args = {"-target", "x86_64-unknown-unknown"};
@@ -149,7 +149,6 @@ TEST(IncludeFixer, NestedName) {
             "namespace a {}\nint a = a::b::foo(0);\n",
             runIncludeFixer("namespace a {}\nint a = a::b::foo(0);\n", args));
 }
-#endif
 
 TEST(IncludeFixer, MultipleMissingSymbols) {
   EXPECT_EQ("#include <string>\nstd::string bar;\nstd::sting foo;\n",

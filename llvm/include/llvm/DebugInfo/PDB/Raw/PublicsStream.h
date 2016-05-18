@@ -36,11 +36,17 @@ public:
   uint32_t getSymHash() const;
   uint32_t getAddrMap() const;
   uint32_t getNumBuckets() const { return NumBuckets; }
+  ArrayRef<uint32_t> getHashBuckets() const { return HashBuckets; }
+  ArrayRef<uint32_t> getAddressMap() const { return AddressMap; }
+  ArrayRef<uint32_t> getThunkMap() const { return ThunkMap; }
 
 private:
   uint32_t StreamNum;
   MappedBlockStream Stream;
   uint32_t NumBuckets = 0;
+  std::vector<uint32_t> HashBuckets;
+  std::vector<uint32_t> AddressMap;
+  std::vector<uint32_t> ThunkMap;
 
   std::unique_ptr<HeaderInfo> Header;
   std::unique_ptr<GSIHashHeader> HashHdr;

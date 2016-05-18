@@ -313,6 +313,9 @@
 ; EMPTY-NEXT:   SymHash: 556
 ; EMPTY-NEXT:   AddrMap: 8
 ; EMPTY-NEXT:   Number of buckets: 2
+; EMPTY-NEXT:   Hash Buckets: [0, 12]
+; EMPTY-NEXT:   Address Map: [36, 0]
+; EMPTY-NEXT:   Thunk Map: [4112]
 ; EMPTY-NEXT: }
 
 ; BIG:      FileHeaders {

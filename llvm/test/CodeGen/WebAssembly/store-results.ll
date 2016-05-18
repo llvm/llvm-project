@@ -26,7 +26,7 @@ entry:
 @pos = global %class.Vec3 zeroinitializer, align 4
 
 ; CHECK-LABEL: foo:
-; CHECK: i32.store $discard=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
+; CHECK: i32.store $drop=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
 define void @foo() {
 for.body.i:
   br label %for.body5.i
@@ -44,7 +44,7 @@ for.cond.cleanup4.i:
 }
 
 ; CHECK-LABEL: bar:
-; CHECK: i32.store $discard=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
+; CHECK: i32.store $drop=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
 define void @bar() {
 for.body.i:
   br label %for.body5.i

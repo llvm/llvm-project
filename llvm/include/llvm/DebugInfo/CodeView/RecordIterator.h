@@ -12,18 +12,14 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
 namespace codeview {
+
 // A const input iterator interface to the CodeView record stream.
 template <typename Kind> class RecordIterator {
-private:
-  struct RecordPrefix {
-    support::ulittle16_t RecordLen;  // Record length, starting from &Leaf.
-    support::ulittle16_t RecordKind; // Record kind (from the `Kind` enum).
-  };
-
 public:
   struct Record {
     std::size_t Length;

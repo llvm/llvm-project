@@ -1,5 +1,6 @@
-; RUN: llc < %s -march=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
-; RUN: llc < %s -march=sparcel -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
+; RUN: llc < %s -march=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-BE
+; RUN: llc < %s -march=sparcel -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-LE
+; RUN: llc < %s -march=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=CHECK-BE
 
 ; CHECK-LABEL: intarg:
 ; The save/restore frame is not strictly necessary here, but we would need to
@@ -55,29 +56,80 @@ define void @call_intarg(i32 %i0, i8* %i1) {
 ;; straddling the boundary of regs and mem, and floats in regs and mem.
 ;
 ; CHECK-LABEL: floatarg:
-; CHECK: save %sp, -120, %sp
-; CHECK: mov %i5, %g2
-; CHECK-NEXT: ld [%fp+92], %g3
-; CHECK-NEXT: mov %i4, %i5
-; CHECK-NEXT: std %g2, [%fp+-24]
-; CHECK-NEXT: mov %i3, %i4
-; CHECK-NEXT: std %i4, [%fp+-16]
-; CHECK-NEXT: std %i0, [%fp+-8]
-; CHECK-NEXT: st %i2, [%fp+-28]
-; CHECK-NEXT: ld [%fp+104], %f0
-; CHECK-NEXT: ldd [%fp+96], %f2
-; CHECK-NEXT: ld [%fp+-28], %f1
-; CHECK-NEXT: ldd [%fp+-8], %f4
-; CHECK-NEXT: ldd [%fp+-16], %f6
-; CHECK-NEXT: ldd [%fp+-24], %f8
-; CHECK-NEXT: fstod %f1, %f10
-; CHECK-NEXT: faddd %f4, %f10, %f4
-; CHECK-NEXT: faddd %f6, %f4, %f4
-; CHECK-NEXT: faddd %f8, %f4, %f4
-; CHECK-NEXT: faddd %f2, %f4, %f2
-; CHECK-NEXT: fstod %f0, %f0
-; CHECK-NEXT: faddd %f0, %f2, %f0
-; CHECK-NEXT: restore
+; HARD: save %sp, -120, %sp
+; HARD: mov %i5, %g2
+; HARD-NEXT: ld [%fp+92], %g3
+; HARD-NEXT: mov %i4, %i5
+; HARD-NEXT: std %g2, [%fp+-24]
+; HARD-NEXT: mov %i3, %i4
+; HARD-NEXT: std %i4, [%fp+-16]
+; HARD-NEXT: std %i0, [%fp+-8]
+; HARD-NEXT: st %i2, [%fp+-28]
+; HARD-NEXT: ld [%fp+104], %f0
+; HARD-NEXT: ldd [%fp+96], %f2
+; HARD-NEXT: ld [%fp+-28], %f1
+; HARD-NEXT: ldd [%fp+-8], %f4
+; HARD-NEXT: ldd [%fp+-16], %f6
+; HARD-NEXT: ldd [%fp+-24], %f8
+; HARD-NEXT: fstod %f1, %f10
+; HARD-NEXT: faddd %f4, %f10, %f4
+; HARD-NEXT: faddd %f6, %f4, %f4
+; HARD-NEXT: faddd %f8, %f4, %f4
+; HARD-NEXT: faddd %f2, %f4, %f2
+; HARD-NEXT: fstod %f0, %f0
+; HARD-NEXT: faddd %f0, %f2, %f0
+; SOFT: save %sp, -96, %sp
+; SOFT: ld [%fp+104], %l0
+; SOFT-NEXT: ld [%fp+96], %l1
+; SOFT-NEXT: ld [%fp+100], %l2
+; SOFT-NEXT: ld [%fp+92], %l3
+; SOFT-NEXT:  mov  %i2, %o0
+; SOFT-NEXT: call __extendsfdf2
+; SOFT-NEXT: nop
+; SOFT-NEXT:  mov  %o0, %i2
+; SOFT-NEXT:  mov  %o1, %g2
+; SOFT-NEXT:  mov  %i0, %o0
+; SOFT-NEXT:  mov  %i1, %o1
+; SOFT-NEXT:  mov  %i2, %o2
+; SOFT-NEXT:  mov  %g2, %o3
+; SOFT-NEXT:  call __adddf3
+; SOFT-NEXT:  nop
+; SOFT-NEXT:  mov  %o0, %i0
+; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %i3, %o0
+; SOFT-NEXT:  mov  %i4, %o1
+; SOFT-NEXT:  mov  %i0, %o2
+; SOFT-NEXT:  mov  %i1, %o3
+; SOFT-NEXT:  call __adddf3
+; SOFT-NEXT:  nop
+; SOFT-NEXT:  mov  %o0, %i0
+; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %i5, %o0
+; SOFT-NEXT:  mov  %l3, %o1
+; SOFT-NEXT:  mov  %i0, %o2
+; SOFT-NEXT:  mov  %i1, %o3
+; SOFT-NEXT:  call __adddf3
+; SOFT-NEXT:  nop
+; SOFT-NEXT:  mov  %o0, %i0
+; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %l1, %o0
+; SOFT-NEXT:  mov  %l2, %o1
+; SOFT-NEXT:  mov  %i0, %o2
+; SOFT-NEXT:  mov  %i1, %o3
+; SOFT-NEXT:  call __adddf3
+; SOFT-NEXT:  nop
+; SOFT-NEXT:  mov  %o0, %i0
+; SOFT-NEXT:  mov  %o1, %i1
+; SOFT-NEXT:  mov  %l0, %o0
+; SOFT-NEXT:  call __extendsfdf2
+; SOFT-NEXT:  nop
+; SOFT-NEXT:  mov  %i0, %o2
+; SOFT-NEXT:  mov  %i1, %o3
+; SOFT-NEXT:  call __adddf3
+; SOFT-NEXT:  nop
+; SOFT-NEXT:  mov  %o0, %i0
+; SOFT-NEXT:  mov  %o1, %i1
+; CHECK: restore
 define double @floatarg(double %a0,   ; %i0,%i1
                         float %a1,    ; %i2
                         double %a2,   ; %i3, %i4
@@ -95,18 +147,30 @@ define double @floatarg(double %a0,   ; %i0,%i1
 }
 
 ; CHECK-LABEL: call_floatarg:
-; CHECK: save %sp, -112, %sp
-; CHECK: mov %i2, %o1
-; CHECK-NEXT: mov %i1, %o0
-; CHECK-NEXT: st %i0, [%sp+104]
-; CHECK-NEXT: std %o0, [%sp+96]
-; CHECK-NEXT: st %o1, [%sp+92]
-; CHECK-NEXT: mov %i0, %o2
-; CHECK-NEXT: mov %o0, %o3
-; CHECK-NEXT: mov %o1, %o4
-; CHECK-NEXT: mov %o0, %o5
-; CHECK-NEXT: call floatarg
-; CHECK: std %f0, [%i4]
+; HARD: save %sp, -112, %sp
+; HARD: mov %i2, %o1
+; HARD-NEXT: mov %i1, %o0
+; HARD-NEXT: st %i0, [%sp+104]
+; HARD-NEXT: std %o0, [%sp+96]
+; HARD-NEXT: st %o1, [%sp+92]
+; HARD-NEXT: mov %i0, %o2
+; HARD-NEXT: mov %o0, %o3
+; HARD-NEXT: mov %o1, %o4
+; HARD-NEXT: mov %o0, %o5
+; HARD-NEXT: call floatarg
+; HARD: std %f0, [%i4]
+; SOFT: st %i0, [%sp+104]
+; SOFT-NEXT:  st %i2, [%sp+100]
+; SOFT-NEXT:  st %i1, [%sp+96]
+; SOFT-NEXT:  st %i2, [%sp+92]
+; SOFT-NEXT:  mov  %i1, %o0
+; SOFT-NEXT:  mov  %i2, %o1
+; SOFT-NEXT:  mov  %i0, %o2
+; SOFT-NEXT:  mov  %i1, %o3
+; SOFT-NEXT:  mov  %i2, %o4
+; SOFT-NEXT:  mov  %i1, %o5
+; SOFT-NEXT:  call floatarg
+; SOFT:  std %o0, [%i4]
 ; CHECK: restore
 define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
   %r = call double @floatarg(double %d2, float %f1, double %d2, double %d2,

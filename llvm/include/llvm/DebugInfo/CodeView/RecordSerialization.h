@@ -24,6 +24,11 @@ using llvm::support::little32_t;
 using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
 
+struct RecordPrefix {
+  ulittle16_t RecordLen;  // Record length, starting from &Leaf.
+  ulittle16_t RecordKind; // Record kind enum (SymRecordKind or TypeRecordKind)
+};
+
 /// Reinterpret a byte array as an array of characters. Does not interpret as
 /// a C string, as StringRef has several helpers (split) that make that easy.
 StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData);
