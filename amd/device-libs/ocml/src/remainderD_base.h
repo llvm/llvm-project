@@ -11,7 +11,7 @@
         CLO = MATH_MAD(__ta, __tb, MATH_MAD(__ta, __hb, MATH_MAD(__ha, __tb, MATH_MAD(__ha, __hb, -CHI)))); \
     } while (0)
 
-static inline double
+CONSTATTR static inline double
 fnma(double a, double b, double c)
 {
     double d;

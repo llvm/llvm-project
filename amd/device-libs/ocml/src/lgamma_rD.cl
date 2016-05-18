@@ -85,7 +85,7 @@
 
 
 
-PUREATTR double
+double
 MATH_MANGLE(lgamma_r)(double x, __private int *signp)
 {
     const double two52=  4.50359962737049600000e+15;

@@ -12,7 +12,7 @@
         CLO = MATH_MAD(__ta, __tb, MATH_MAD(__ta, __hb, MATH_MAD(__ha, __tb, MATH_MAD(__ha, __hb, -CHI)))); \
     } while (0)
 
-static inline float
+CONSTATTR static inline float
 fnma(float a, float b, float c)
 {
     float d;

@@ -1,7 +1,7 @@
 
 #include "mathH.h"
 
-static inline bool
+CONSTATTR static inline bool
 samesign(half x, half y)
 {
     return (as_ushort(x) & (ushort)SIGNBIT_HP16) == (as_ushort(y) & (ushort)SIGNBIT_HP16);
