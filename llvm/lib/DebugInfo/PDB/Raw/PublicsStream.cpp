@@ -138,28 +138,40 @@ Error PublicsStream::reload() {
   // corrupted streams.
 
   // Hash buckets follow.
-  HashBuckets.resize(NumBuckets);
-  if (auto EC = Reader.readArray<uint32_t>(HashBuckets))
+  std::vector<ulittle32_t> TempHashBuckets(NumBuckets);
+  if (auto EC = Reader.readArray<ulittle32_t>(TempHashBuckets))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Hash buckets corrupted.");
+  HashBuckets.resize(NumBuckets);
+  std::copy(TempHashBuckets.begin(), TempHashBuckets.end(),
+            HashBuckets.begin());
 
   // Something called "address map" follows.
-  AddressMap.resize(Header->AddrMap / sizeof(uint32_t));
-  if (auto EC = Reader.readArray<uint32_t>(AddressMap))
+  std::vector<ulittle32_t> TempAddressMap(Header->AddrMap / sizeof(uint32_t));
+  if (auto EC = Reader.readArray<ulittle32_t>(TempAddressMap))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read an address map.");
+  AddressMap.resize(Header->AddrMap / sizeof(uint32_t));
+  std::copy(TempAddressMap.begin(), TempAddressMap.end(), AddressMap.begin());
 
   // Something called "thunk map" follows.
+  std::vector<ulittle32_t> TempThunkMap(Header->NumThunks);
   ThunkMap.resize(Header->NumThunks);
-  if (auto EC = Reader.readArray<uint32_t>(ThunkMap))
+  if (auto EC = Reader.readArray<ulittle32_t>(TempThunkMap))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read a thunk map.");
+  ThunkMap.resize(Header->NumThunks);
+  std::copy(TempThunkMap.begin(), TempThunkMap.end(), ThunkMap.begin());
 
   // Something called "section map" follows.
-  std::vector<SectionOffset> SectionMap(Header->NumSections);
-  if (auto EC = Reader.readArray<SectionOffset>(SectionMap))
+  std::vector<SectionOffset> Offsets(Header->NumSections);
+  if (auto EC = Reader.readArray<SectionOffset>(Offsets))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read a section map.");
+  for (auto &SO : Offsets) {
+    SectionOffsets.push_back(SO.Off);
+    SectionOffsets.push_back(SO.Isect);
+  }
 
   if (Reader.bytesRemaining() > 0)
     return make_error<RawError>(raw_error_code::corrupt_file,

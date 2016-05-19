@@ -1,17 +1,17 @@
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=pic -filetype=obj \
+# RUN: not llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -filetype=obj \
 # RUN:   -o /dev/null 2>&1 | FileCheck %s -check-prefix=O32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -relocation-model=pic \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 \
 # RUN:   -filetype=obj -o /dev/null 2>&1 | FileCheck %s -allow-empty -check-prefix=N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -relocation-model=pic -target-abi=n32 \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi=n32 \
 # RUN:   -filetype=obj -o /dev/null 2>&1 | FileCheck %s -allow-empty -check-prefix=N64
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -relocation-model=pic -target-abi=n32 \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi=n32 \
 # RUN:   -filetype=obj -o - | llvm-objdump -d -r - | \
 # RUN:   FileCheck %s -check-prefix=NO-STORE
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -relocation-model=pic -filetype=obj -o - | \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -filetype=obj -o - | \
 # RUN:   llvm-objdump -d -r - | \
 # RUN:   FileCheck %s -check-prefix=NO-STORE
 

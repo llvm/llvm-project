@@ -28,8 +28,8 @@
 
 using namespace llvm;
 
-static cl::opt<uint32_t> LikelyBranchWeight(
-    "guards-likely-branch-weight", cl::Hidden, cl::init(1 << 20),
+static cl::opt<uint32_t> PredicatePassBranchWeight(
+    "guards-predicate-pass-branch-weight", cl::Hidden, cl::init(1 << 20),
     cl::desc("The probability of a guard failing is assumed to be the "
              "reciprocal of this value (default = 1 << 20)"));
 
@@ -67,7 +67,7 @@ static void MakeGuardControlFlowExplicit(Function *DeoptIntrinsic,
 
   MDBuilder MDB(CI->getContext());
   CheckBI->setMetadata(LLVMContext::MD_prof,
-                       MDB.createBranchWeights(LikelyBranchWeight, 1));
+                       MDB.createBranchWeights(PredicatePassBranchWeight, 1));
 
   IRBuilder<> B(DeoptBlockTerm);
   auto *DeoptCall = B.CreateCall(DeoptIntrinsic, Args, {DeoptOB}, "");

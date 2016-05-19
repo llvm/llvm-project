@@ -65,7 +65,7 @@ define <2 x i64> @test_mm_insert_si64(<2 x i64> %x, <2 x i64> %y) {
 }
 declare <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64>, <2 x i64>) nounwind readnone
 
-define void @test_stream_sd(i8* %p, <2 x double> %a) {
+define void @test_stream_sd(double* %p, <2 x double> %a) {
 ; X32-LABEL: test_stream_sd:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -76,12 +76,13 @@ define void @test_stream_sd(i8* %p, <2 x double> %a) {
 ; X64:       # BB#0:
 ; X64-NEXT:    movntsd %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  call void @llvm.x86.sse4a.movnt.sd(i8* %p, <2 x double> %a)
+  %bc = bitcast double* %p to i8*
+  call void @llvm.x86.sse4a.movnt.sd(i8* %bc, <2 x double> %a)
   ret void
 }
 declare void @llvm.x86.sse4a.movnt.sd(i8*, <2 x double>) nounwind readnone
 
-define void @test_mm_stream_ss(i8* %p, <4 x float> %a) {
+define void @test_mm_stream_ss(float* %p, <4 x float> %a) {
 ; X32-LABEL: test_mm_stream_ss:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -92,7 +93,8 @@ define void @test_mm_stream_ss(i8* %p, <4 x float> %a) {
 ; X64:       # BB#0:
 ; X64-NEXT:    movntss %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  call void @llvm.x86.sse4a.movnt.ss(i8* %p, <4 x float> %a)
+  %bc = bitcast float* %p to i8*
+  call void @llvm.x86.sse4a.movnt.ss(i8* %bc, <4 x float> %a)
   ret void
 }
 declare void @llvm.x86.sse4a.movnt.ss(i8*, <4 x float>) nounwind readnone

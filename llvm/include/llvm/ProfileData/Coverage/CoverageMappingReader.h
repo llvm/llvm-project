@@ -69,7 +69,7 @@ public:
 
 class CoverageMappingReader {
 public:
-  virtual std::error_code readNextRecord(CoverageMappingRecord &Record) = 0;
+  virtual Error readNextRecord(CoverageMappingRecord &Record) = 0;
   CoverageMappingIterator begin() { return CoverageMappingIterator(this); }
   CoverageMappingIterator end() { return CoverageMappingIterator(); }
   virtual ~CoverageMappingReader() {}
@@ -82,10 +82,10 @@ protected:
 
   RawCoverageReader(StringRef Data) : Data(Data) {}
 
-  std::error_code readULEB128(uint64_t &Result);
-  std::error_code readIntMax(uint64_t &Result, uint64_t MaxPlus1);
-  std::error_code readSize(uint64_t &Result);
-  std::error_code readString(StringRef &Result);
+  Error readULEB128(uint64_t &Result);
+  Error readIntMax(uint64_t &Result, uint64_t MaxPlus1);
+  Error readSize(uint64_t &Result);
+  Error readString(StringRef &Result);
 };
 
 /// \brief Reader for the raw coverage filenames.
@@ -100,7 +100,7 @@ public:
   RawCoverageFilenamesReader(StringRef Data, std::vector<StringRef> &Filenames)
       : RawCoverageReader(Data), Filenames(Filenames) {}
 
-  std::error_code read();
+  Error read();
 };
 
 /// \brief Reader for the raw coverage mapping data.
@@ -125,12 +125,12 @@ public:
         Filenames(Filenames), Expressions(Expressions),
         MappingRegions(MappingRegions) {}
 
-  std::error_code read();
+  Error read();
 
 private:
-  std::error_code decodeCounter(unsigned Value, Counter &C);
-  std::error_code readCounter(Counter &C);
-  std::error_code
+  Error decodeCounter(unsigned Value, Counter &C);
+  Error readCounter(Counter &C);
+  Error
   readMappingRegionsSubArray(std::vector<CounterMappingRegion> &MappingRegions,
                              unsigned InferredFileID, size_t NumFileIDs);
 };
@@ -170,11 +170,11 @@ private:
   BinaryCoverageReader() : CurrentRecord(0) {}
 
 public:
-  static ErrorOr<std::unique_ptr<BinaryCoverageReader>>
+  static Expected<std::unique_ptr<BinaryCoverageReader>>
   create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
          StringRef Arch);
 
-  std::error_code readNextRecord(CoverageMappingRecord &Record) override;
+  Error readNextRecord(CoverageMappingRecord &Record) override;
 };
 
 } // end namespace coverage

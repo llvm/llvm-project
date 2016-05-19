@@ -29,8 +29,7 @@ define void @fake_weights(i1 %a, i1 %b) {
 entry:
   br i1 %a, label %Y, label %X, !prof !12
 ; CHECK:        %or.cond = and i1 %a.not, %c
-; CHECK-NEXT:   br i1 %or.cond, label %Z, label %Y
-; CHECK-NOT:    !prof !0
+; CHECK-NEXT:   br i1 %or.cond, label %Z, label %Y, !prof !1
 ; CHECK:      Y:
 X:
   %c = or i1 %b, false
@@ -49,7 +48,7 @@ define void @test2(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test2(
 entry:
   br i1 %a, label %X, label %Y, !prof !1
-; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !1
+; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !2
 ; CHECK-NOT: !prof
 
 X:
@@ -67,7 +66,7 @@ Z:
 
 define void @test3(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test3(
-; CHECK-NOT: !prof
+; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !1
 entry:
   br i1 %a, label %X, label %Y, !prof !1
 
@@ -86,7 +85,7 @@ Z:
 
 define void @test4(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test4(
-; CHECK-NOT: !prof
+; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !1
 entry:
   br i1 %a, label %X, label %Y
 
@@ -115,7 +114,7 @@ entry:
 ; CHECK: switch i32 %N, label %sw2 [
 ; CHECK: i32 3, label %sw.bb1
 ; CHECK: i32 2, label %sw.bb
-; CHECK: ], !prof !2
+; CHECK: ], !prof !3
 
 sw.bb:
   call void @helper(i32 0)
@@ -148,7 +147,7 @@ entry:
 ; CHECK: i32 3, label %sw.bb1
 ; CHECK: i32 2, label %sw.bb
 ; CHECK: i32 4, label %sw.bb5
-; CHECK: ], !prof !3
+; CHECK: ], !prof !4
 
 sw.bb:
   call void @helper(i32 0)
@@ -183,7 +182,7 @@ define void @test1_swap(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test1_swap(
 entry:
   br i1 %a, label %Y, label %X, !prof !0
-; CHECK: br i1 %or.cond, label %Y, label %Z, !prof !4
+; CHECK: br i1 %or.cond, label %Y, label %Z, !prof !5
 
 X:
   %c = or i1 %b, false
@@ -203,7 +202,7 @@ define void @test7(i1 %a, i1 %b) {
 entry:
   %c = or i1 %b, false
   br i1 %a, label %Y, label %X, !prof !0
-; CHECK: br i1 %brmerge, label %Y, label %Z, !prof !5
+; CHECK: br i1 %brmerge, label %Y, label %Z, !prof !6
 
 X:
   br i1 %c, label %Y, label %Z, !prof !6
@@ -222,7 +221,7 @@ define void @test8(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @test8(
 entry:
     %lt = icmp slt i64 %x, %y
-; CHECK: br i1 %lt, label %a, label %b, !prof !6
+; CHECK: br i1 %lt, label %a, label %b, !prof !7
     %qux = select i1 %lt, i32 0, i32 2
     switch i32 %qux, label %bees [
         i32 0, label %a
@@ -255,7 +254,7 @@ entry:
 ; CHECK: i32 1, label %end
 ; CHECK: i32 2, label %end
 ; CHECK: i32 92, label %end
-; CHECK: ], !prof !7
+; CHECK: ], !prof !8
 
 a:
     call void @helper(i32 0) nounwind
@@ -293,7 +292,7 @@ lor.end:
 ; CHECK-LABEL: @test10(
 ; CHECK: %x.off = add i32 %x, -1
 ; CHECK: %switch = icmp ult i32 %x.off, 3
-; CHECK: br i1 %switch, label %lor.end, label %lor.rhs, !prof !8
+; CHECK: br i1 %switch, label %lor.end, label %lor.rhs, !prof !9
 }
 
 ; Remove dead cases from the switch.
@@ -305,7 +304,7 @@ define void @test11(i32 %x) nounwind {
   ], !prof !8
 ; CHECK-LABEL: @test11(
 ; CHECK: %cond = icmp eq i32 %i, 24
-; CHECK: br i1 %cond, label %c, label %a, !prof !9
+; CHECK: br i1 %cond, label %c, label %a, !prof !10
 
 a:
  call void @helper(i32 0) nounwind
@@ -368,7 +367,7 @@ c:
 @max_regno = common global i32 0, align 4
 define void @test14(i32* %old, i32 %final) {
 ; CHECK-LABEL: @test14
-; CHECK: br i1 %or.cond, label %for.exit, label %for.inc, !prof !10
+; CHECK: br i1 %or.cond, label %for.exit, label %for.inc, !prof !11
 for.cond:
   br label %for.cond2
 for.cond2:
@@ -394,7 +393,7 @@ define i32 @HoistThenElseCodeToIf(i32 %n) {
 ; CHECK-LABEL: @HoistThenElseCodeToIf(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 %n, 0
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 1, i32 234, !prof !11
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 1, i32 234, !prof !12
 ; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 entry:
@@ -418,8 +417,8 @@ define i32 @SimplifyCondBranchToCondBranch(i1 %cmpa, i1 %cmpb) {
 ; CHECK-LABEL: @SimplifyCondBranchToCondBranch(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 %cmpa, %cmpb
-; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 %cmpa, i32 0, i32 2, !prof !12
-; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !13
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 %cmpa, i32 0, i32 2, !prof !13
+; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !14
 ; CHECK-NEXT:    ret i32 [[OUTVAL]]
 ;
 block1:
@@ -445,8 +444,8 @@ define i32 @SimplifyCondBranchToCondBranchSwap(i1 %cmpa, i1 %cmpb) {
 ; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 %cmpa, true
 ; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 %cmpb, true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPA_NOT]], [[CMPB_NOT]]
-; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2, !prof !14
-; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !15
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2, !prof !15
+; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !16
 ; CHECK-NEXT:    ret i32 [[OUTVAL]]
 ;
 block1:
@@ -470,8 +469,8 @@ define i32 @SimplifyCondBranchToCondBranchSwapMissingWeight(i1 %cmpa, i1 %cmpb) 
 ; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 %cmpa, true 
 ; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 %cmpb, true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPA_NOT]], [[CMPB_NOT]]
-; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2
-; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !16
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2, !prof !17
+; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !18
 ; CHECK-NEXT:    ret i32 [[OUTVAL]]
 ;
 block1:
@@ -506,21 +505,23 @@ exit:
 !14 = !{!"branch_weights", i32 4, i32 7}
 
 ; CHECK: !0 = !{!"branch_weights", i32 5, i32 11}
-; CHECK: !1 = !{!"branch_weights", i32 1, i32 5}
-; CHECK: !2 = !{!"branch_weights", i32 7, i32 1, i32 2}
-; CHECK: !3 = !{!"branch_weights", i32 49, i32 12, i32 24, i32 35}
-; CHECK: !4 = !{!"branch_weights", i32 11, i32 5}
-; CHECK: !5 = !{!"branch_weights", i32 17, i32 15}
-; CHECK: !6 = !{!"branch_weights", i32 9, i32 7}
-; CHECK: !7 = !{!"branch_weights", i32 17, i32 9, i32 8, i32 7, i32 17}
-; CHECK: !8 = !{!"branch_weights", i32 24, i32 33}
-; CHECK: !9 = !{!"branch_weights", i32 8, i32 33}
+; CHECK: !1 = !{!"branch_weights", i32 1, i32 3}
+; CHECK: !2 = !{!"branch_weights", i32 1, i32 5}
+; CHECK: !3 = !{!"branch_weights", i32 7, i32 1, i32 2}
+; CHECK: !4 = !{!"branch_weights", i32 49, i32 12, i32 24, i32 35}
+; CHECK: !5 = !{!"branch_weights", i32 11, i32 5}
+; CHECK: !6 = !{!"branch_weights", i32 17, i32 15}
+; CHECK: !7 = !{!"branch_weights", i32 9, i32 7}
+; CHECK: !8 = !{!"branch_weights", i32 17, i32 9, i32 8, i32 7, i32 17}
+; CHECK: !9 = !{!"branch_weights", i32 24, i32 33}
+; CHECK: !10 = !{!"branch_weights", i32 8, i32 33}
 ;; The false weight prints out as a negative integer here, but inside llvm, we
 ;; treat the weight as an unsigned integer.
-; CHECK: !10 = !{!"branch_weights", i32 112017436, i32 -735157296}
-; CHECK: !11 = !{!"branch_weights", i32 3, i32 5}
-; CHECK: !12 = !{!"branch_weights", i32 22, i32 12}
-; CHECK: !13 = !{!"branch_weights", i32 34, i32 21}
-; CHECK: !14 = !{!"branch_weights", i32 33, i32 14}
-; CHECK: !15 = !{!"branch_weights", i32 47, i32 8}
-; CHECK: !16 = !{!"branch_weights", i32 8, i32 2}
+; CHECK: !11 = !{!"branch_weights", i32 112017436, i32 -735157296}
+; CHECK: !12 = !{!"branch_weights", i32 3, i32 5}
+; CHECK: !13 = !{!"branch_weights", i32 22, i32 12}
+; CHECK: !14 = !{!"branch_weights", i32 34, i32 21}
+; CHECK: !15 = !{!"branch_weights", i32 33, i32 14}
+; CHECK: !16 = !{!"branch_weights", i32 47, i32 8}
+; CHECK: !17 = !{!"branch_weights", i32 6, i32 2}
+; CHECK: !18 = !{!"branch_weights", i32 8, i32 2}

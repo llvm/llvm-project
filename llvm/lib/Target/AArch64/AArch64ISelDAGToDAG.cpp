@@ -1974,31 +1974,30 @@ static bool isBitfieldPositioningOp(SelectionDAG *CurDAG, SDValue Op,
   return true;
 }
 
-// Given a OR operation, check if we have the following pattern
-// ubfm c, b, imm, imm2 (or something that does the same jobs, see
-//                       isBitfieldExtractOp)
-// d = e & mask2 ; where mask is a binary sequence of 1..10..0 and
-//                 countTrailingZeros(mask2) == imm2 - imm + 1
-// f = d | c
-// if yes, given reference arguments will be update so that one can replace
-// the OR instruction with:
-// f = Opc Opd0, Opd1, LSB, MSB ; where Opc is a BFM, LSB = imm, and MSB = imm2
 static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
                                       SelectionDAG *CurDAG) {
   assert(N->getOpcode() == ISD::OR && "Expect a OR operation");
 
-  SDValue Dst, Src;
-  unsigned ImmR, ImmS;
-
   EVT VT = N->getValueType(0);
   if (VT != MVT::i32 && VT != MVT::i64)
     return false;
+
+  unsigned BitWidth = VT.getSizeInBits();
 
   // Because of simplify-demanded-bits in DAGCombine, involved masks may not
   // have the expected shape. Try to undo that.
 
   unsigned NumberOfIgnoredLowBits = UsefulBits.countTrailingZeros();
   unsigned NumberOfIgnoredHighBits = UsefulBits.countLeadingZeros();
+
+  // Given a OR operation, check if we have the following pattern
+  // ubfm c, b, imm, imm2 (or something that does the same jobs, see
+  //                       isBitfieldExtractOp)
+  // d = e & mask2 ; where mask is a binary sequence of 1..10..0 and
+  //                 countTrailingZeros(mask2) == imm2 - imm + 1
+  // f = d | c
+  // if yes, replace the OR instruction with:
+  // f = BFM Opd0, Opd1, LSB, MSB ; where LSB = imm, and MSB = imm2
 
   // OR is commutative, check all combinations of operand order and values of
   // BiggerPattern, i.e.
@@ -2011,6 +2010,8 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
   // and/or inserting fewer extra instructions.
   for (int I = 0; I < 4; ++I) {
 
+    SDValue Dst, Src;
+    unsigned ImmR, ImmS;
     bool BiggerPattern = I / 2;
     SDNode *OrOpd0 = N->getOperand(I % 2).getNode();
     SDValue OrOpd1Val = N->getOperand((I + 1) % 2);
@@ -2040,7 +2041,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
     } else if (isBitfieldPositioningOp(CurDAG, SDValue(OrOpd0, 0),
                                        BiggerPattern,
                                        Src, DstLSB, Width)) {
-      ImmR = (VT.getSizeInBits() - DstLSB) % VT.getSizeInBits();
+      ImmR = (BitWidth - DstLSB) % BitWidth;
       ImmS = Width - 1;
     } else
       continue;

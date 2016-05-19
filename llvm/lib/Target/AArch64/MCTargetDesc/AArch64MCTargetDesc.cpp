@@ -90,15 +90,6 @@ static MCCodeGenInfo *createAArch64MCCodeGenInfo(const Triple &TT,
     report_fatal_error(
         "Only small and large code models are allowed on AArch64");
 
-  // AArch64 Darwin is always PIC.
-  if (TT.isOSDarwin())
-    RM = Reloc::PIC_;
-  // On ELF platforms the default static relocation model has a smart enough
-  // linker to cope with referencing external symbols defined in a shared
-  // library. Hence DynamicNoPIC doesn't need to be promoted to PIC.
-  else if (RM == Reloc::Default || RM == Reloc::DynamicNoPIC)
-    RM = Reloc::Static;
-
   MCCodeGenInfo *X = new MCCodeGenInfo();
   X->initMCCodeGenInfo(RM, CM, OL);
   return X;

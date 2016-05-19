@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=pic -filetype=asm < %s | \
-; RUN:     llvm-mc -triple=mipsel-linux-gnu -relocation-model=pic -filetype=obj | \
+; RUN:     llvm-mc -triple=mipsel-linux-gnu --position-independent -filetype=obj | \
 ; RUN:     llvm-objdump -d - | FileCheck %s
 ; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=pic -filetype=obj < %s | \
 ; RUN:     llvm-objdump -d - | FileCheck %s

@@ -1439,9 +1439,9 @@ class BinaryRRE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 
 class BinaryRRF<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 RegisterOperand cls1, RegisterOperand cls2>
-  : InstRRF<opcode, (outs cls1:$R1), (ins cls1:$R3, cls2:$R2),
+  : InstRRF<opcode, (outs cls1:$R1), (ins cls1:$R2, cls2:$R3),
             mnemonic#"r\t$R1, $R3, $R2",
-            [(set cls1:$R1, (operator cls1:$R3, cls2:$R2))]> {
+            [(set cls1:$R1, (operator cls1:$R2, cls2:$R3))]> {
   let OpKey = mnemonic ## cls1;
   let OpType = "reg";
   let R4 = 0;

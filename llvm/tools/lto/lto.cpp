@@ -357,7 +357,7 @@ bool lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model model) {
     unwrap(cg)->setCodePICModel(Reloc::DynamicNoPIC);
     return false;
   case LTO_CODEGEN_PIC_MODEL_DEFAULT:
-    unwrap(cg)->setCodePICModel(Reloc::Default);
+    unwrap(cg)->setCodePICModel(None);
     return false;
   }
   sLastErrorString = "Unknown PIC model";
@@ -552,7 +552,7 @@ lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
     unwrap(cg)->setCodePICModel(Reloc::DynamicNoPIC);
     return false;
   case LTO_CODEGEN_PIC_MODEL_DEFAULT:
-    unwrap(cg)->setCodePICModel(Reloc::Default);
+    unwrap(cg)->setCodePICModel(None);
     return false;
   }
   sLastErrorString = "Unknown PIC model";

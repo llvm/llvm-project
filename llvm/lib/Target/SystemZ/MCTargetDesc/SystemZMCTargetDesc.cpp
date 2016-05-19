@@ -164,12 +164,6 @@ static MCCodeGenInfo *createSystemZMCCodeGenInfo(const Triple &TT,
                                                  CodeModel::Model CM,
                                                  CodeGenOpt::Level OL) {
   MCCodeGenInfo *X = new MCCodeGenInfo();
-
-  // Static code is suitable for use in a dynamic executable; there is no
-  // separate DynamicNoPIC model.
-  if (RM == Reloc::Default || RM == Reloc::DynamicNoPIC)
-    RM = Reloc::Static;
-
   // For SystemZ we define the models as follows:
   //
   // Small:  BRASL can call any function and will use a stub if necessary.

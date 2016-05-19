@@ -35,11 +35,12 @@ bb2:                                              ; preds = %bb
   br label %bb3
 
 bb3:                                              ; preds = %bb3, %bb2
-  %tmp4 = icmp eq i32 undef, %arg1
+  %val = load volatile i32, i32 addrspace(2)* undef
+  %tmp4 = icmp eq i32 %val, %arg1
   br i1 %tmp4, label %bb5, label %bb3
 
 bb5:                                              ; preds = %bb3, %bb
-  %tmp6 = tail call i32 @llvm.r600.read.tidig.y() #1
+  %tmp6 = tail call i32 @llvm.amdgcn.workitem.id.y() #1
   %tmp10 = icmp ult i32 %tmp6, %arg
   br i1 %tmp10, label %bb11, label %bb12
 
@@ -51,6 +52,6 @@ bb12:                                             ; preds = %bb11, %bb5
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.y() #1
+declare i32 @llvm.amdgcn.workitem.id.y() #1
 
 attributes #1 = { nounwind readnone }

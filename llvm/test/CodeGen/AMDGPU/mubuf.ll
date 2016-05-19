@@ -62,8 +62,7 @@ main_body:
   %tmp2 = shl i32 %6, 2
   %tmp3 = call i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8> %tmp1, i32 %tmp2, i32 64, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0)
   %tmp4 = add i32 %6, 16
-  %tmp5 = bitcast float 0.0 to i32
-  call void @llvm.SI.tbuffer.store.i32(<16 x i8> %tmp1, i32 %tmp5, i32 1, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
+  call void @llvm.SI.tbuffer.store.i32(<16 x i8> %tmp1, i32 %tmp3, i32 1, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
   ret void
 }
 
@@ -81,8 +80,7 @@ main_body:
   %tmp2 = shl i32 %6, 2
   %tmp3 = call i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8> %tmp1, i32 %tmp2, i32 65, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0)
   %tmp4 = add i32 %6, 16
-  %tmp5 = bitcast float 0.0 to i32
-  call void @llvm.SI.tbuffer.store.i32(<16 x i8> %tmp1, i32 %tmp5, i32 1, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
+  call void @llvm.SI.tbuffer.store.i32(<16 x i8> %tmp1, i32 %tmp3, i32 1, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
   ret void
 }
 

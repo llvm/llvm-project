@@ -128,3 +128,10 @@ has two operands and one result, so in such cases there could be a net win by
 prefering the operands.
 
 //===---------------------------------------------------------------------===//
+
+Instruction ordering has a significant influence on register stackification and
+coloring. Consider experimenting with the MachineScheduler (enable via
+enableMachineScheduler) and determine if it can be configured to schedule
+instructions advantageously for this purpose.
+
+//===---------------------------------------------------------------------===//

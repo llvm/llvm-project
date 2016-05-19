@@ -28,7 +28,7 @@ define i32 @no1(i32* %p, i32* dereferenceable(4) %q) {
 ; Yes because of invariant load and no side effects.
 
 ; CHECK-LABEL: yes0:
-; CHECK: return $pop0{{$}}
+; CHECK: return $pop{{[0-9]+}}{{$}}
 define i32 @yes0(i32* %p, i32* dereferenceable(4) %q) {
   %t = load i32, i32* %q, !invariant.load !0
   store i32 0, i32* %p
@@ -47,7 +47,7 @@ define i32 @yes1(i32* %q) {
 ; Yes because undefined behavior can be sunk past a store.
 
 ; CHECK-LABEL: sink_trap:
-; CHECK: return $pop0{{$}}
+; CHECK: return $pop{{[0-9]+}}{{$}}
 define i32 @sink_trap(i32 %x, i32 %y, i32* %p) {
   %t = sdiv i32 %x, %y
   store volatile i32 0, i32* %p
@@ -85,17 +85,17 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; CHECK: .param i32, i32, i32, i32{{$}}
 ; CHECK-NEXT: .result i32{{$}}
 ; CHECK-NEXT: block{{$}}
-; CHECK-NEXT: i32.const   $push13=, 1{{$}}
-; CHECK-NEXT: i32.lt_s    $push0=, $0, $pop13{{$}}
-; CHECK-NEXT: i32.const   $push1=, 2{{$}}
-; CHECK-NEXT: i32.lt_s    $push2=, $1, $pop1{{$}}
-; CHECK-NEXT: i32.xor     $push5=, $pop0, $pop2{{$}}
-; CHECK-NEXT: i32.const   $push12=, 1{{$}}
-; CHECK-NEXT: i32.lt_s    $push3=, $2, $pop12{{$}}
-; CHECK-NEXT: i32.const   $push11=, 2{{$}}
-; CHECK-NEXT: i32.lt_s    $push4=, $3, $pop11{{$}}
-; CHECK-NEXT: i32.xor     $push6=, $pop3, $pop4{{$}}
-; CHECK-NEXT: i32.xor     $push7=, $pop5, $pop6{{$}}
+; CHECK-NEXT: i32.const   $push[[L13:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: i32.lt_s    $push[[L0:[0-9]+]]=, $0, $pop[[L13]]{{$}}
+; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, 2{{$}}
+; CHECK-NEXT: i32.lt_s    $push[[L2:[0-9]+]]=, $1, $pop[[L1]]{{$}}
+; CHECK-NEXT: i32.xor     $push[[L5:[0-9]+]]=, $pop[[L0]], $pop[[L2]]{{$}}
+; CHECK-NEXT: i32.const   $push[[L12:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: i32.lt_s    $push[[L3:[0-9]+]]=, $2, $pop[[L12]]{{$}}
+; CHECK-NEXT: i32.const   $push[[L11:[0-9]+]]=, 2{{$}}
+; CHECK-NEXT: i32.lt_s    $push[[L4:[0-9]+]]=, $3, $pop[[L11]]{{$}}
+; CHECK-NEXT: i32.xor     $push[[L6:[0-9]+]]=, $pop[[L3]], $pop[[L4]]{{$}}
+; CHECK-NEXT: i32.xor     $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
 ; CHECK-NEXT: i32.const   $push10=, 1{{$}}
 ; CHECK-NEXT: i32.ne      $push8=, $pop7, $pop10{{$}}
 ; CHECK-NEXT: br_if       0, $pop8{{$}}
@@ -185,22 +185,22 @@ entry:
 ; CHECK-LABEL: div_tree:
 ; CHECK: .param i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32{{$}}
 ; CHECK-NEXT: .result     i32{{$}}
-; CHECK-NEXT: i32.div_s   $push0=, $0, $1
-; CHECK-NEXT: i32.div_s   $push1=, $2, $3
-; CHECK-NEXT: i32.div_s   $push2=, $pop0, $pop1
-; CHECK-NEXT: i32.div_s   $push3=, $4, $5
-; CHECK-NEXT: i32.div_s   $push4=, $6, $7
-; CHECK-NEXT: i32.div_s   $push5=, $pop3, $pop4
-; CHECK-NEXT: i32.div_s   $push6=, $pop2, $pop5
-; CHECK-NEXT: i32.div_s   $push7=, $8, $9
-; CHECK-NEXT: i32.div_s   $push8=, $10, $11
-; CHECK-NEXT: i32.div_s   $push9=, $pop7, $pop8
-; CHECK-NEXT: i32.div_s   $push10=, $12, $13
-; CHECK-NEXT: i32.div_s   $push11=, $14, $15
-; CHECK-NEXT: i32.div_s   $push12=, $pop10, $pop11
-; CHECK-NEXT: i32.div_s   $push13=, $pop9, $pop12
-; CHECK-NEXT: i32.div_s   $push14=, $pop6, $pop13
-; CHECK-NEXT: return      $pop14
+; CHECK-NEXT: i32.div_s   $push[[L0:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L1:[0-9]+]]=, $2, $3{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L3:[0-9]+]]=, $4, $5{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L4:[0-9]+]]=, $6, $7{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L5:[0-9]+]]=, $pop[[L3]], $pop[[L4]]{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L6:[0-9]+]]=, $pop[[L2]], $pop[[L5]]{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L7:[0-9]+]]=, $8, $9{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L8:[0-9]+]]=, $10, $11{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L9:[0-9]+]]=, $pop[[L7]], $pop[[L8]]{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L10:[0-9]+]]=, $12, $13{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L11:[0-9]+]]=, $14, $15{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L12:[0-9]+]]=, $pop[[L10]], $pop[[L11]]{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L13:[0-9]+]]=, $pop[[L9]], $pop[[L12]]{{$}}
+; CHECK-NEXT: i32.div_s   $push[[L14:[0-9]+]]=, $pop[[L6]], $pop[[L13]]{{$}}
+; CHECK-NEXT: return      $pop[[L14]]{{$}}
 define i32 @div_tree(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p) {
 entry:
   %div = sdiv i32 %a, %b

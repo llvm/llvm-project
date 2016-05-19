@@ -114,6 +114,11 @@ public:
                                                   const ConstantRange &Other,
                                                   unsigned NoWrapKind);
 
+  /// Set up \p Pred and \p RHS such that
+  /// ConstantRange::makeExactICmpRegion(Pred, RHS) == *this.  Return true if
+  /// successful.
+  bool getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS) const;
+
   /// Return the lower value for this range.
   ///
   const APInt &getLower() const { return Lower; }

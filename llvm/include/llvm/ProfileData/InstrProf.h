@@ -25,7 +25,6 @@
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
@@ -204,20 +203,17 @@ StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
 ///  third field is the uncompressed strings; otherwise it is the
 /// compressed string. When the string compression is off, the
 /// second field will have value zero.
-std::error_code
-collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
-                          bool doCompression, std::string &Result);
+Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
+                                bool doCompression, std::string &Result);
 /// Produce \c Result string with the same format described above. The input
 /// is vector of PGO function name variables that are referenced.
-std::error_code
-collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
-                          std::string &Result, bool doCompression = true);
+Error collectPGOFuncNameStrings(const std::vector<GlobalVariable *> &NameVars,
+                                std::string &Result, bool doCompression = true);
 class InstrProfSymtab;
 /// \c NameStrings is a string composed of one of more sub-strings encoded in
 /// the format described above. The substrings are seperated by 0 or more zero
 /// bytes. This method decodes the string and populates the \c Symtab.
-std::error_code readPGOFuncNameStrings(StringRef NameStrings,
-                                       InstrProfSymtab &Symtab);
+Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
 
 enum InstrProfValueKind : uint32_t {
 #define VALUE_PROF_KIND(Enumerator, Value) Enumerator = Value,
@@ -284,6 +280,39 @@ inline std::error_code make_error_code(instrprof_error E) {
   return std::error_code(static_cast<int>(E), instrprof_category());
 }
 
+class InstrProfError : public ErrorInfo<InstrProfError> {
+public:
+  InstrProfError(instrprof_error Err) : Err(Err) {
+    assert(Err != instrprof_error::success && "Not an error");
+  }
+
+  std::string message() const override;
+
+  void log(raw_ostream &OS) const override { OS << message(); }
+
+  std::error_code convertToErrorCode() const override {
+    return make_error_code(Err);
+  }
+
+  instrprof_error get() const { return Err; }
+
+  /// Consume an Error and return the raw enum value contained within it. The
+  /// Error must either be a success value, or contain a single InstrProfError.
+  static instrprof_error take(Error E) {
+    auto Err = instrprof_error::success;
+    handleAllErrors(std::move(E), [&Err](const InstrProfError &IPE) {
+      assert(Err == instrprof_error::success && "Multiple errors encountered");
+      Err = IPE.get();
+    });
+    return Err;
+  }
+
+  static char ID;
+
+private:
+  instrprof_error Err;
+};
+
 class SoftInstrProfErrors {
   /// Count the number of soft instrprof_errors encountered and keep track of
   /// the first such error for reporting purposes.
@@ -309,6 +338,11 @@ public:
         NumCountMismatches(0), NumCounterOverflows(0),
         NumValueSiteCountMismatches(0) {}
 
+  ~SoftInstrProfErrors() {
+    assert(FirstError == instrprof_error::success &&
+           "Unchecked soft error encountered");
+  }
+
   /// Track a soft error (\p IE) and increment its associated counter.
   void addError(instrprof_error IE);
 
@@ -326,8 +360,15 @@ public:
     return NumValueSiteCountMismatches;
   }
 
-  /// Return an error code for the first encountered error.
-  std::error_code getError() const { return make_error_code(FirstError); }
+  /// Return the first encountered error and reset FirstError to a success
+  /// value.
+  Error takeError() {
+    if (FirstError == instrprof_error::success)
+      return Error::success();
+    auto E = make_error<InstrProfError>(FirstError);
+    FirstError = instrprof_error::success;
+    return E;
+  }
 };
 
 namespace object {
@@ -372,14 +413,14 @@ public:
   /// only initialize the symtab with reference to the data and
   /// the section base address. The decompression will be delayed
   /// until before it is used. See also \c create(StringRef) method.
-  std::error_code create(object::SectionRef &Section);
+  Error create(object::SectionRef &Section);
   /// This interface is used by reader of CoverageMapping test
   /// format.
-  inline std::error_code create(StringRef D, uint64_t BaseAddr);
+  inline Error create(StringRef D, uint64_t BaseAddr);
   /// \c NameStrings is a string composed of one of more sub-strings
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
   /// This method is a wrapper to \c readPGOFuncNameStrings method.
-  inline std::error_code create(StringRef NameStrings);
+  inline Error create(StringRef NameStrings);
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
   /// passes such as indirect function call promotion. Variable \c InLTO
@@ -424,13 +465,13 @@ public:
   inline StringRef getNameData() const { return Data; }
 };
 
-std::error_code InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
+Error InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
   Data = D;
   Address = BaseAddr;
-  return std::error_code();
+  return Error::success();
 }
 
-std::error_code InstrProfSymtab::create(StringRef NameStrings) {
+Error InstrProfSymtab::create(StringRef NameStrings) {
   return readPGOFuncNameStrings(NameStrings, *this);
 }
 
@@ -572,7 +613,7 @@ struct InstrProfRecord {
   }
 
   /// Get the error contained within the record's soft error counter.
-  std::error_code getError() const { return SIPE.getError(); }
+  Error takeError() { return SIPE.takeError(); }
 
 private:
   std::vector<InstrProfValueSiteRecord> IndirectCallSites;
@@ -868,10 +909,5 @@ struct Header {
 } // end namespace RawInstrProf
 
 } // end namespace llvm
-
-namespace std {
-template <>
-struct is_error_code_enum<llvm::instrprof_error> : std::true_type {};
-}
 
 #endif // LLVM_PROFILEDATA_INSTRPROF_H

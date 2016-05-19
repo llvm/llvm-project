@@ -253,6 +253,8 @@ public:
   unsigned getRegisterListOpValue16(const MCInst &MI, unsigned OpNo,
                                     SmallVectorImpl<MCFixup> &Fixups,
                                     const MCSubtargetInfo &STI) const;
+  private:
+  void LowerCompactBranch(MCInst& Inst) const;
 }; // class MipsMCCodeEmitter
 } // namespace llvm.
 

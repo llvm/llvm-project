@@ -1,24 +1,41 @@
-#include "llvm/Analysis/Passes.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
-#include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Target/TargetMachine.h"
+#include <cassert>
 #include <cctype>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -177,6 +194,7 @@ struct IfExprAST : public ExprAST {
   IfExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Then,
             std::unique_ptr<ExprAST> Else)
     : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+
   Value *IRGen(IRGenContext &C) const override;
 
   std::unique_ptr<ExprAST> Cond, Then, Else;
@@ -303,7 +321,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   getNextToken();  // eat (
   std::vector<std::unique_ptr<ExprAST>> Args;
   if (CurTok != ')') {
-    while (1) {
+    while (true) {
       auto Arg = ParseExpression();
       if (!Arg) return nullptr;
       Args.push_back(std::move(Arg));
@@ -429,7 +447,7 @@ static std::unique_ptr<VarExprAST> ParseVarExpr() {
   if (CurTok != tok_identifier)
     return ErrorU<VarExprAST>("expected identifier after var");
 
-  while (1) {
+  while (true) {
     std::string Name = IdentifierStr;
     getNextToken();  // eat identifier.
 
@@ -505,7 +523,7 @@ static std::unique_ptr<ExprAST> ParseUnary() {
 static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
                                               std::unique_ptr<ExprAST> LHS) {
   // If this is a binop, find its precedence.
-  while (1) {
+  while (true) {
     int TokPrec = GetTokPrecedence();
 
     // If this is a binop that binds at least as tightly as the current binop,
@@ -687,6 +705,7 @@ public:
   TargetMachine& getTarget() { return *TM; }
   void addPrototypeAST(std::unique_ptr<PrototypeAST> P);
   PrototypeAST* getPrototypeAST(const std::string &Name);
+
 private:
   typedef std::map<std::string, std::unique_ptr<PrototypeAST>> PrototypeMap;
 
@@ -709,7 +728,6 @@ PrototypeAST* SessionContext::getPrototypeAST(const std::string &Name) {
 
 class IRGenContext {
 public:
-
   IRGenContext(SessionContext &S)
     : Session(S),
       M(new Module(GenerateUniqueName("jit_module_"),
@@ -726,6 +744,7 @@ public:
   Function* getPrototype(const std::string &Name);
 
   std::map<std::string, AllocaInst*> NamedValues;
+
 private:
   SessionContext &Session;
   std::unique_ptr<Module> M;
@@ -745,9 +764,9 @@ Function* IRGenContext::getPrototype(const std::string &Name) {
 static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                           const std::string &VarName) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
-                 TheFunction->getEntryBlock().begin());
+                   TheFunction->getEntryBlock().begin());
   return TmpB.CreateAlloca(Type::getDoubleTy(TheFunction->getContext()),
-                           nullptr, VarName.c_str());
+                           nullptr, VarName);
 }
 
 Value *NumberExprAST::IRGen(IRGenContext &C) const {
@@ -1266,7 +1285,7 @@ static void MainLoop() {
   SessionContext S(TheContext);
   KaleidoscopeJIT J(S);
 
-  while (1) {
+  while (true) {
     switch (CurTok) {
     case tok_eof:    return;
     case ';':        getNextToken(); continue;  // ignore top-level semicolons.

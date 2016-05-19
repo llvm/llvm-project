@@ -47,38 +47,50 @@ static void exitWithError(const Twine &Message, StringRef Whence = "",
   ::exit(1);
 }
 
-static void exitWithErrorCode(const std::error_code &Error,
-                              StringRef Whence = "") {
-  if (Error.category() == instrprof_category()) {
-    instrprof_error instrError = static_cast<instrprof_error>(Error.value());
-    if (instrError == instrprof_error::unrecognized_format) {
-      // Hint for common error of forgetting -sample for sample profiles.
-      exitWithError(Error.message(), Whence,
-                    "Perhaps you forgot to use the -sample option?");
-    }
+static void exitWithError(Error E, StringRef Whence = "") {
+  if (E.isA<InstrProfError>()) {
+    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
+      instrprof_error instrError = IPE.get();
+      StringRef Hint = "";
+      if (instrError == instrprof_error::unrecognized_format) {
+        // Hint for common error of forgetting -sample for sample profiles.
+        Hint = "Perhaps you forgot to use the -sample option?";
+      }
+      exitWithError(IPE.message(), Whence, Hint);
+    });
   }
-  exitWithError(Error.message(), Whence);
+
+  exitWithError(toString(std::move(E)), Whence);
+}
+
+static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
+  exitWithError(EC.message(), Whence);
 }
 
 namespace {
 enum ProfileKinds { instr, sample };
 }
 
-static void handleMergeWriterError(std::error_code &Error,
-                                   StringRef WhenceFile = "",
+static void handleMergeWriterError(Error E, StringRef WhenceFile = "",
                                    StringRef WhenceFunction = "",
                                    bool ShowHint = true) {
   if (!WhenceFile.empty())
     errs() << WhenceFile << ": ";
   if (!WhenceFunction.empty())
     errs() << WhenceFunction << ": ";
-  errs() << Error.message() << "\n";
+
+  auto IPE = instrprof_error::success;
+  E = handleErrors(std::move(E),
+                   [&IPE](std::unique_ptr<InstrProfError> E) -> Error {
+                     IPE = E->get();
+                     return Error(std::move(E));
+                   });
+  errs() << toString(std::move(E)) << "\n";
 
   if (ShowHint) {
     StringRef Hint = "";
-    if (Error.category() == instrprof_category()) {
-      instrprof_error instrError = static_cast<instrprof_error>(Error.value());
-      switch (instrError) {
+    if (IPE != instrprof_error::success) {
+      switch (IPE) {
       case instrprof_error::hash_mismatch:
       case instrprof_error::count_mismatch:
       case instrprof_error::value_site_count_mismatch:
@@ -120,11 +132,11 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     exitWithErrorCode(EC, OutputFilename);
 
   InstrProfWriter Writer(OutputSparse);
-  SmallSet<std::error_code, 4> WriterErrorCodes;
+  SmallSet<instrprof_error, 4> WriterErrorCodes;
   for (const auto &Input : Inputs) {
     auto ReaderOrErr = InstrProfReader::create(Input.Filename);
-    if (std::error_code ec = ReaderOrErr.getError())
-      exitWithErrorCode(ec, Input.Filename);
+    if (Error E = ReaderOrErr.takeError())
+      exitWithError(std::move(E), Input.Filename);
 
     auto Reader = std::move(ReaderOrErr.get());
     bool IsIRProfile = Reader->isIRLevelProfile();
@@ -132,14 +144,16 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       exitWithError("Merge IR generated profile with Clang generated profile.");
 
     for (auto &I : *Reader) {
-      if (std::error_code EC = Writer.addRecord(std::move(I), Input.Weight)) {
+      if (Error E = Writer.addRecord(std::move(I), Input.Weight)) {
         // Only show hint the first time an error occurs.
-        bool firstTime = WriterErrorCodes.insert(EC).second;
-        handleMergeWriterError(EC, Input.Filename, I.Name, firstTime);
+        instrprof_error IPE = InstrProfError::take(std::move(E));
+        bool firstTime = WriterErrorCodes.insert(IPE).second;
+        handleMergeWriterError(make_error<InstrProfError>(IPE), Input.Filename,
+                               I.Name, firstTime);
       }
     }
     if (Reader->hasError())
-      exitWithErrorCode(Reader->getError(), Input.Filename);
+      exitWithError(Reader->getError(), Input.Filename);
   }
   if (OutputFormat == PF_Text)
     Writer.writeText(Output);
@@ -187,7 +201,7 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       sampleprof_error Result = ProfileMap[FName].merge(Samples, Input.Weight);
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
-        handleMergeWriterError(EC, Input.Filename, FName);
+        handleMergeWriterError(errorCodeToError(EC), Input.Filename, FName);
       }
     }
   }
@@ -268,8 +282,8 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
     Cutoffs = {800000, 900000, 950000, 990000, 999000, 999900, 999990};
   }
   InstrProfSummary PS(Cutoffs);
-  if (std::error_code EC = ReaderOrErr.getError())
-    exitWithErrorCode(EC, Filename);
+  if (Error E = ReaderOrErr.takeError())
+    exitWithError(std::move(E), Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRInstr = Reader->isIRLevelProfile();
@@ -335,7 +349,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
   }
 
   if (Reader->hasError())
-    exitWithErrorCode(Reader->getError(), Filename);
+    exitWithError(Reader->getError(), Filename);
 
   if (ShowCounts && TextFormat)
     return 0;

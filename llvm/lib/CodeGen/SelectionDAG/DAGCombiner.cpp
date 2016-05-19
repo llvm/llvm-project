@@ -2430,15 +2430,13 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     }
     // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
     if (N1.getOpcode() == ISD::SHL) {
-      if (ConstantSDNode *SHC = getAsNonOpaqueConstant(N1.getOperand(0))) {
-        if (SHC->getAPIntValue().isPowerOf2()) {
-          SDValue Add =
-            DAG.getNode(ISD::ADD, DL, VT, N1,
-                 DAG.getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), DL,
-                                 VT));
-          AddToWorklist(Add.getNode());
-          return DAG.getNode(ISD::AND, DL, VT, N0, Add);
-        }
+      ConstantSDNode *SHC = getAsNonOpaqueConstant(N1.getOperand(0));
+      if (SHC && SHC->getAPIntValue().isPowerOf2()) {
+        APInt NegOne = APInt::getAllOnesValue(VT.getSizeInBits());
+        SDValue Add =
+            DAG.getNode(ISD::ADD, DL, VT, N1, DAG.getConstant(NegOne, DL, VT));
+        AddToWorklist(Add.getNode());
+        return DAG.getNode(ISD::AND, DL, VT, N0, Add);
       }
     }
   }

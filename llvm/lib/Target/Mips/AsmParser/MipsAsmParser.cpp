@@ -433,8 +433,7 @@ public:
 
     CurrentFn = nullptr;
 
-    IsPicEnabled =
-        (getContext().getObjectFileInfo()->getRelocM() == Reloc::PIC_);
+    IsPicEnabled = getContext().getObjectFileInfo()->isPositionIndependent();
 
     IsCpRestoreSet = false;
     CpRestoreOffset = -1;
@@ -1567,6 +1566,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     case Mips::BLTZAL_MM:
     case Mips::BC1F_MM:
     case Mips::BC1T_MM:
+    case Mips::BC1EQZC_MMR6:
+    case Mips::BC1NEZC_MMR6:
+    case Mips::BC2EQZC_MMR6:
+    case Mips::BC2NEZC_MMR6:
       assert(MCID.getNumOperands() == 2 && "unexpected number of operands");
       Offset = Inst.getOperand(1);
       if (!Offset.isImm())

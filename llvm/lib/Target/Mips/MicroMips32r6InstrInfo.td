@@ -208,6 +208,10 @@ class TLBINV_MMR6_ENC : POOL32A_TLBINV_FM_MMR6<"tlbinv", 0x10d>;
 class TLBINVF_MMR6_ENC : POOL32A_TLBINV_FM_MMR6<"tlbinvf", 0x14d>;
 class DVP_MMR6_ENC : POOL32A_DVPEVP_FM_MMR6<"dvp", 0b0001100101>;
 class EVP_MMR6_ENC : POOL32A_DVPEVP_FM_MMR6<"evp", 0b0011100101>;
+class BC1EQZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc1eqzc", 0b01000>;
+class BC1NEZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc1nezc", 0b01001>;
+class BC2EQZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc2eqzc", 0b01010>;
+class BC2NEZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc2nezc", 0b01011>;
 
 class CMP_CBR_RT_Z_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
                                   RegisterOperand GPROpnd>
@@ -1169,6 +1173,26 @@ class BNEZC_MMR6_DESC
     : CMP_CBR_EQNE_Z_DESC_BASE<"bnezc", brtarget21_mm, GPR32Opnd>,
       MMR6Arch<"bnezc">;
 
+class BRANCH_COP1_MMR6_DESC_BASE<string opstr> :
+    InstSE<(outs), (ins FGR64Opnd:$rt, brtarget_mm:$offset),
+           !strconcat(opstr, "\t$rt, $offset"), [], II_BC1CCZ, FrmI>,
+    HARDFLOAT, BRANCH_DESC_BASE {
+  list<Register> Defs = [AT];
+}
+
+class BC1EQZC_MMR6_DESC : BRANCH_COP1_MMR6_DESC_BASE<"bc1eqzc">;
+class BC1NEZC_MMR6_DESC : BRANCH_COP1_MMR6_DESC_BASE<"bc1nezc">;
+
+class BRANCH_COP2_MMR6_DESC_BASE<string opstr> : BRANCH_DESC_BASE {
+  dag InOperandList = (ins COP2Opnd:$rt, brtarget_mm:$offset);
+  dag OutOperandList = (outs);
+  string AsmString = !strconcat(opstr, "\t$rt, $offset");
+  list<Register> Defs = [AT];
+}
+
+class BC2EQZC_MMR6_DESC : BRANCH_COP2_MMR6_DESC_BASE<"bc2eqzc">;
+class BC2NEZC_MMR6_DESC : BRANCH_COP2_MMR6_DESC_BASE<"bc2nezc">;
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -1474,6 +1498,14 @@ def TLBINVF_MMR6 : StdMMR6Rel, TLBINVF_MMR6_ENC, TLBINVF_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def DVP_MMR6 : R6MMR6Rel, DVP_MMR6_ENC, DVP_MMR6_DESC, ISA_MICROMIPS32R6;
 def EVP_MMR6 : R6MMR6Rel, EVP_MMR6_ENC, EVP_MMR6_DESC, ISA_MICROMIPS32R6;
+def BC1EQZC_MMR6 : R6MMR6Rel, BC1EQZC_MMR6_DESC, BC1EQZC_MMR6_ENC,
+                   ISA_MICROMIPS32R6;
+def BC1NEZC_MMR6 : R6MMR6Rel, BC1NEZC_MMR6_DESC, BC1NEZC_MMR6_ENC,
+                   ISA_MICROMIPS32R6;
+def BC2EQZC_MMR6 : R6MMR6Rel, MipsR6Inst, BC2EQZC_MMR6_ENC, BC2EQZC_MMR6_DESC,
+                   ISA_MICROMIPS32R6;
+def BC2NEZC_MMR6 : R6MMR6Rel, MipsR6Inst, BC2NEZC_MMR6_ENC, BC2NEZC_MMR6_DESC,
+                   ISA_MICROMIPS32R6;
 }
 
 def BGEC_MMR6 : R6MMR6Rel, BGEC_MMR6_ENC, BGEC_MMR6_DESC, ISA_MICROMIPS32R6;

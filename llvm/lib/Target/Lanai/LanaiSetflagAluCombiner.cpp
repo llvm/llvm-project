@@ -142,47 +142,8 @@ static unsigned flagSettingOpcodeVariant(unsigned OldOpcode) {
 }
 
 // Returns whether opcode corresponds to instruction that sets flags.
-static bool isFlagSettingInstruction(unsigned Opcode) {
-  switch (Opcode) {
-  case Lanai::ADDC_F_I_HI:
-  case Lanai::ADDC_F_I_LO:
-  case Lanai::ADDC_F_R:
-  case Lanai::ADDC_F_R_CC:
-  case Lanai::ADD_F_I_HI:
-  case Lanai::ADD_F_I_LO:
-  case Lanai::ADD_F_R:
-  case Lanai::ADD_F_R_CC:
-  case Lanai::AND_F_I_HI:
-  case Lanai::AND_F_I_LO:
-  case Lanai::AND_F_R:
-  case Lanai::AND_F_R_CC:
-  case Lanai::OR_F_I_HI:
-  case Lanai::OR_F_I_LO:
-  case Lanai::OR_F_R:
-  case Lanai::OR_F_R_CC:
-  case Lanai::SFSUB_F_RI:
-  case Lanai::SFSUB_F_RR:
-  case Lanai::SA_F_I:
-  case Lanai::SL_F_I:
-  case Lanai::SHL_F_R:
-  case Lanai::SRA_F_R:
-  case Lanai::SRL_F_R:
-  case Lanai::SUBB_F_I_HI:
-  case Lanai::SUBB_F_I_LO:
-  case Lanai::SUBB_F_R:
-  case Lanai::SUBB_F_R_CC:
-  case Lanai::SUB_F_I_HI:
-  case Lanai::SUB_F_I_LO:
-  case Lanai::SUB_F_R:
-  case Lanai::SUB_F_R_CC:
-  case Lanai::XOR_F_I_HI:
-  case Lanai::XOR_F_I_LO:
-  case Lanai::XOR_F_R:
-  case Lanai::XOR_F_R_CC:
-    return true;
-  default:
-    return false;
-  }
+static bool isFlagSettingInstruction(MbbIterator Instruction) {
+  return Instruction->killsRegister(Lanai::SR);
 }
 
 // Return the Conditional Code operand for a given instruction kind. For
@@ -233,9 +194,13 @@ static bool isSuitableSetflag(MbbIterator Instruction, MbbIterator End) {
     MbbIterator SCCUserIter = Instruction;
     while (SCCUserIter != End) {
       ++SCCUserIter;
+      if (SCCUserIter == End)
+        break;
+      // Skip debug instructions. Debug instructions don't affect codegen.
+      if (SCCUserIter->isDebugValue())
+        continue;
       // Early exit when encountering flag setting or return instruction.
-      if (isFlagSettingInstruction(SCCUserIter->getOpcode()) ||
-          SCCUserIter->isReturn())
+      if (isFlagSettingInstruction(SCCUserIter))
         // Only return true if flags are set post the flag setting instruction
         // tested or a return is executed.
         return true;
@@ -274,13 +239,11 @@ bool LanaiSetflagAluCombiner::CombineSetflagAluInBasicBlock(
       while (AluIter != Begin) {
         --AluIter;
         // Skip debug instructions. Debug instructions don't affect codegen.
-        if (AluIter->isDebugValue()) {
+        if (AluIter->isDebugValue())
           continue;
-        }
         // Early exit when encountering flag setting instruction.
-        if (isFlagSettingInstruction(AluIter->getOpcode())) {
+        if (isFlagSettingInstruction(AluIter))
           break;
-        }
         // Check that output of AluIter is equal to input of SetflagIter.
         if (AluIter->getNumOperands() > 1 && AluIter->getOperand(0).isReg() &&
             (AluIter->getOperand(0).getReg() ==
@@ -299,14 +262,11 @@ bool LanaiSetflagAluCombiner::CombineSetflagAluInBasicBlock(
         }
       }
       // Erase the setflag instruction if merged.
-      if (Replaced) {
+      if (Replaced)
         BB->erase(SetflagIter++);
-      }
     }
 
     Modified |= Replaced;
-    if (SetflagIter == End)
-      break;
     if (!Replaced)
       ++SetflagIter;
   }

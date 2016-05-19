@@ -230,8 +230,8 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
       CPU = "cyclone";
   }
 
-  TargetMachine *target = march->createTargetMachine(TripleStr, CPU, FeatureStr,
-                                                     options);
+  TargetMachine *target =
+      march->createTargetMachine(TripleStr, CPU, FeatureStr, options, None);
   M->setDataLayout(target->createDataLayout());
 
   std::unique_ptr<object::IRObjectFile> IRObj(

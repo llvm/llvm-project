@@ -77,6 +77,23 @@ Error MachOWriter::writeHeader(raw_ostream &OS) {
   return Error::success();
 }
 
+template <typename SectionType>
+SectionType constructSection(MachOYAML::Section Sec) {
+  SectionType TempSec;
+  memcpy(reinterpret_cast<void *>(&TempSec.sectname[0]), &Sec.sectname[0], 16);
+  memcpy(reinterpret_cast<void *>(&TempSec.segname[0]), &Sec.segname[0], 16);
+  TempSec.addr = Sec.addr;
+  TempSec.size = Sec.size;
+  TempSec.offset = Sec.offset;
+  TempSec.align = Sec.align;
+  TempSec.reloff = Sec.reloff;
+  TempSec.nreloc = Sec.nreloc;
+  TempSec.flags = Sec.flags;
+  TempSec.reserved1 = Sec.reserved1;
+  TempSec.reserved2 = Sec.reserved2;
+  return TempSec;
+}
+
 Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
   for (auto &LC : Obj.LoadCommands) {
     size_t BytesWritten = 0;
@@ -94,6 +111,21 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
       BytesWritten = sizeof(MachO::load_command);
       break;
 #include "llvm/Support/MachO.def"
+    }
+
+    if(LC.Data.load_command_data.cmd == MachO::LC_SEGMENT) {
+      for(auto Sec : LC.Sections) {
+        auto TempSec = constructSection<MachO::section>(Sec);
+        OS.write(reinterpret_cast<const char *>(&(TempSec)), sizeof(MachO::section));
+        BytesWritten += sizeof(MachO::section);
+      }
+    } else if(LC.Data.load_command_data.cmd == MachO::LC_SEGMENT_64) {
+      for(auto Sec : LC.Sections) {
+        auto TempSec = constructSection<MachO::section_64>(Sec);
+        TempSec.reserved3 = Sec.reserved3;
+        OS.write(reinterpret_cast<const char *>(&(TempSec)), sizeof(MachO::section_64));
+        BytesWritten += sizeof(MachO::section_64);
+      }
     }
 
     auto BytesRemaining =

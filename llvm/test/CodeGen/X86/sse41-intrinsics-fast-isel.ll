@@ -119,14 +119,14 @@ declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>, <4 x floa
 define <2 x double> @test_mm_ceil_pd(<2 x double> %a0) {
 ; X32-LABEL: test_mm_ceil_pd:
 ; X32:       # BB#0:
-; X32-NEXT:    roundpd $10, %xmm0, %xmm0
+; X32-NEXT:    roundpd $2, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ceil_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    roundpd $10, %xmm0, %xmm0
+; X64-NEXT:    roundpd $2, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %a0, i32 10)
+  %res = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %a0, i32 2)
   ret <2 x double> %res
 }
 declare <2 x double> @llvm.x86.sse41.round.pd(<2 x double>, i32) nounwind readnone
@@ -134,14 +134,14 @@ declare <2 x double> @llvm.x86.sse41.round.pd(<2 x double>, i32) nounwind readno
 define <4 x float> @test_mm_ceil_ps(<4 x float> %a0) {
 ; X32-LABEL: test_mm_ceil_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    roundps $10, %xmm0, %xmm0
+; X32-NEXT:    roundps $2, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ceil_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    roundps $10, %xmm0, %xmm0
+; X64-NEXT:    roundps $2, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %a0, i32 10)
+  %res = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %a0, i32 2)
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.sse41.round.ps(<4 x float>, i32) nounwind readnone
@@ -149,14 +149,14 @@ declare <4 x float> @llvm.x86.sse41.round.ps(<4 x float>, i32) nounwind readnone
 define <2 x double> @test_mm_ceil_sd(<2 x double> %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_ceil_sd:
 ; X32:       # BB#0:
-; X32-NEXT:    roundsd $10, %xmm1, %xmm0
+; X32-NEXT:    roundsd $2, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ceil_sd:
 ; X64:       # BB#0:
-; X64-NEXT:    roundsd $10, %xmm1, %xmm0
+; X64-NEXT:    roundsd $2, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 10)
+  %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 2)
   ret <2 x double> %res
 }
 declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
@@ -164,14 +164,14 @@ declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) n
 define <4 x float> @test_mm_ceil_ss(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_ceil_ss:
 ; X32:       # BB#0:
-; X32-NEXT:    roundss $10, %xmm1, %xmm0
+; X32-NEXT:    roundss $2, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_ceil_ss:
 ; X64:       # BB#0:
-; X64-NEXT:    roundss $10, %xmm1, %xmm0
+; X64-NEXT:    roundss $2, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 10)
+  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 2)
   ret <4 x float> %res
 }
 declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
@@ -422,17 +422,17 @@ declare <4 x float> @llvm.x86.sse41.dpps(<4 x float>, <4 x float>, i8) nounwind 
 define i32 @test_mm_extract_epi8(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_extract_epi8:
 ; X32:       # BB#0:
-; X32-NEXT:    pextrb $0, %xmm0, %eax
+; X32-NEXT:    pextrb $1, %xmm0, %eax
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_extract_epi8:
 ; X64:       # BB#0:
-; X64-NEXT:    pextrb $0, %xmm0, %eax
+; X64-NEXT:    pextrb $1, %xmm0, %eax
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %ext = extractelement <16 x i8> %arg0, i32 0
+  %ext = extractelement <16 x i8> %arg0, i32 1
   %res = zext i8 %ext to i32
   ret i32 %res
 }
@@ -473,56 +473,56 @@ define i64 @test_mm_extract_epi64(<2 x i64> %a0) {
 define <2 x double> @test_mm_floor_pd(<2 x double> %a0) {
 ; X32-LABEL: test_mm_floor_pd:
 ; X32:       # BB#0:
-; X32-NEXT:    roundpd $9, %xmm0, %xmm0
+; X32-NEXT:    roundpd $1, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_floor_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    roundpd $9, %xmm0, %xmm0
+; X64-NEXT:    roundpd $1, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %a0, i32 9)
+  %res = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %a0, i32 1)
   ret <2 x double> %res
 }
 
 define <4 x float> @test_mm_floor_ps(<4 x float> %a0) {
 ; X32-LABEL: test_mm_floor_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    roundps $9, %xmm0, %xmm0
+; X32-NEXT:    roundps $1, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_floor_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    roundps $9, %xmm0, %xmm0
+; X64-NEXT:    roundps $1, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %a0, i32 9)
+  %res = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %a0, i32 1)
   ret <4 x float> %res
 }
 
 define <2 x double> @test_mm_floor_sd(<2 x double> %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_floor_sd:
 ; X32:       # BB#0:
-; X32-NEXT:    roundsd $9, %xmm1, %xmm0
+; X32-NEXT:    roundsd $1, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_floor_sd:
 ; X64:       # BB#0:
-; X64-NEXT:    roundsd $9, %xmm1, %xmm0
+; X64-NEXT:    roundsd $1, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 9)
+  %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 1)
   ret <2 x double> %res
 }
 
 define <4 x float> @test_mm_floor_ss(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_floor_ss:
 ; X32:       # BB#0:
-; X32-NEXT:    roundss $9, %xmm1, %xmm0
+; X32-NEXT:    roundss $1, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_floor_ss:
 ; X64:       # BB#0:
-; X64-NEXT:    roundss $9, %xmm1, %xmm0
+; X64-NEXT:    roundss $1, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 9)
+  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 1)
   ret <4 x float> %res
 }
 
@@ -824,56 +824,56 @@ declare <8 x i16> @llvm.x86.sse41.packusdw(<4 x i32>, <4 x i32>) nounwind readno
 define <2 x double> @test_mm_round_pd(<2 x double> %a0) {
 ; X32-LABEL: test_mm_round_pd:
 ; X32:       # BB#0:
-; X32-NEXT:    roundpd $2, %xmm0, %xmm0
+; X32-NEXT:    roundpd $4, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_round_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    roundpd $2, %xmm0, %xmm0
+; X64-NEXT:    roundpd $4, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %a0, i32 2)
+  %res = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %a0, i32 4)
   ret <2 x double> %res
 }
 
 define <4 x float> @test_mm_round_ps(<4 x float> %a0) {
 ; X32-LABEL: test_mm_round_ps:
 ; X32:       # BB#0:
-; X32-NEXT:    roundps $2, %xmm0, %xmm0
+; X32-NEXT:    roundps $4, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_round_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    roundps $2, %xmm0, %xmm0
+; X64-NEXT:    roundps $4, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %a0, i32 2)
+  %res = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %a0, i32 4)
   ret <4 x float> %res
 }
 
 define <2 x double> @test_mm_round_sd(<2 x double> %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_round_sd:
 ; X32:       # BB#0:
-; X32-NEXT:    roundsd $2, %xmm1, %xmm0
+; X32-NEXT:    roundsd $4, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_round_sd:
 ; X64:       # BB#0:
-; X64-NEXT:    roundsd $2, %xmm1, %xmm0
+; X64-NEXT:    roundsd $4, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 2)
+  %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1, i32 4)
   ret <2 x double> %res
 }
 
 define <4 x float> @test_mm_round_ss(<4 x float> %a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_round_ss:
 ; X32:       # BB#0:
-; X32-NEXT:    roundss $2, %xmm1, %xmm0
+; X32-NEXT:    roundss $4, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_round_ss:
 ; X64:       # BB#0:
-; X64-NEXT:    roundss $2, %xmm1, %xmm0
+; X64-NEXT:    roundss $4, %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 2)
+  %res = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %a0, <4 x float> %a1, i32 4)
   ret <4 x float> %res
 }
 

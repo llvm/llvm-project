@@ -15,5 +15,5 @@ define void @bar() {
   ret void
 }
 ; CHECK-LABEL: _bar:
-; CHECK: calll __chkstk
+; CHECK: pushl %eax
 ; CHECK: retl

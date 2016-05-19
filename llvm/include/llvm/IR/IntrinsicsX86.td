@@ -8709,3 +8709,14 @@ let TargetPrefix = "x86" in {
   def int_x86_sha256msg2 : GCCBuiltin<"__builtin_ia32_sha256msg2">,
       Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty], [IntrNoMem]>;
 }
+
+//===----------------------------------------------------------------------===//
+// Thread synchronization ops with timer.
+let TargetPrefix = "x86" in {
+  def int_x86_monitorx
+      : GCCBuiltin<"__builtin_ia32_monitorx">,
+        Intrinsic<[], [ llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty ], []>;
+  def int_x86_mwaitx
+      : GCCBuiltin<"__builtin_ia32_mwaitx">,
+        Intrinsic<[], [ llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ], []>;
+}

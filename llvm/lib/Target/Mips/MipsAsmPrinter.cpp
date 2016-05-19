@@ -674,7 +674,7 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
   // MipsTargetStreamer has an initialization order problem when emitting an
   // object file directly (see MipsTargetELFStreamer for full details). Work
   // around it by re-initializing the PIC state here.
-  TS.setPic(OutContext.getObjectFileInfo()->getRelocM());
+  TS.setPic(OutContext.getObjectFileInfo()->isPositionIndependent());
 
   // Compute MIPS architecture attributes based on the default subtarget
   // that we'd have constructed. Module level directives aren't LTO

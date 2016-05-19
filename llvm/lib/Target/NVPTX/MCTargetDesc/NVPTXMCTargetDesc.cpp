@@ -55,9 +55,7 @@ static MCCodeGenInfo *createNVPTXMCCodeGenInfo(const Triple &TT,
                                                CodeGenOpt::Level OL) {
   MCCodeGenInfo *X = new MCCodeGenInfo();
 
-  // The default relocation model is used regardless of what the client has
-  // specified, as it is the only relocation model currently supported.
-  X->initMCCodeGenInfo(Reloc::Default, CM, OL);
+  X->initMCCodeGenInfo(RM, CM, OL);
   return X;
 }
 

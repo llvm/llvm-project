@@ -1004,3 +1004,16 @@ class CMP_BRANCH_OFF21_FM_MMR6<string opstr, bits<6> funct> : MipsR6Inst {
   let Inst{25-21} = rs;
   let Inst{20-0} = offset;
 }
+
+class POOL32I_BRANCH_COP_1_2_FM_MMR6<string instr_asm, bits<5> funct>
+    : MMR6Arch<instr_asm> {
+  bits<5> rt;
+  bits<16> offset;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010000;
+  let Inst{25-21} = funct;
+  let Inst{20-16} = rt;
+  let Inst{15-0}  = offset;
+}

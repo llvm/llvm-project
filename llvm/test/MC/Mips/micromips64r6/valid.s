@@ -273,5 +273,9 @@ a:
         dsra $4, $5, 5           # CHECK: dsra $4, $5, 5          # encoding: [0x58,0x85,0x28,0x80]
         dsra32 $4, $5, 5         # CHECK: dsra32 $4, $5, 5        # encoding: [0x58,0x85,0x28,0x84]
         dsrav $4, $5, $6         # CHECK: dsrav $4, $5, $6        # encoding: [0x58,0xa6,0x20,0x90]
+        bc1eqzc $f31, 4          # CHECK: bc1eqzc $f31, 4         # encoding: [0x41,0x1f,0x00,0x02]
+        bc1nezc $f31, 4          # CHECK: bc1nezc $f31, 4         # encoding: [0x41,0x3f,0x00,0x02]
+        bc2eqzc $31, 8           # CHECK: bc2eqzc $31, 8          # encoding: [0x41,0x5f,0x00,0x04]
+        bc2nezc $31, 8           # CHECK: bc2nezc $31, 8          # encoding: [0x41,0x7f,0x00,0x04]
 
 1:

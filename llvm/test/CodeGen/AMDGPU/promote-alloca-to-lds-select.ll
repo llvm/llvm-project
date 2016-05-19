@@ -99,4 +99,35 @@ bb2:
   ret void
 }
 
+; CHECK-LABEL: @select_null_rhs(
+; CHECK-NOT: alloca
+; CHECK: select i1 %tmp2, double addrspace(3)* %{{[0-9]+}}, double addrspace(3)* null
+define void @select_null_rhs(double addrspace(1)* nocapture %arg, i32 %arg1) #1 {
+bb:
+  %tmp = alloca double, align 8
+  store double 0.000000e+00, double* %tmp, align 8
+  %tmp2 = icmp eq i32 %arg1, 0
+  %tmp3 = select i1 %tmp2, double* %tmp, double* null
+  store double 1.000000e+00, double* %tmp3, align 8
+  %tmp4 = load double, double* %tmp, align 8
+  store double %tmp4, double addrspace(1)* %arg
+  ret void
+}
+
+; CHECK-LABEL: @select_null_lhs(
+; CHECK-NOT: alloca
+; CHECK: select i1 %tmp2, double addrspace(3)* null, double addrspace(3)* %{{[0-9]+}}
+define void @select_null_lhs(double addrspace(1)* nocapture %arg, i32 %arg1) #1 {
+bb:
+  %tmp = alloca double, align 8
+  store double 0.000000e+00, double* %tmp, align 8
+  %tmp2 = icmp eq i32 %arg1, 0
+  %tmp3 = select i1 %tmp2, double* null, double* %tmp
+  store double 1.000000e+00, double* %tmp3, align 8
+  %tmp4 = load double, double* %tmp, align 8
+  store double %tmp4, double addrspace(1)* %arg
+  ret void
+}
+
 attributes #0 = { norecurse nounwind "amdgpu-max-waves-per-eu"="1" }
+attributes #1 = { norecurse nounwind }
