@@ -84,7 +84,6 @@ public:
   unsigned GotPltHeaderEntriesNum = 3;
 
   uint32_t ThunkSize = 0;
-  bool UseLazyBinding = false;
 
   virtual void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
   virtual void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;

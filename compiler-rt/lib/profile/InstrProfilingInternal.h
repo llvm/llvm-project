@@ -150,10 +150,13 @@ void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
 
 VPDataReaderType *lprofGetVPDataReader();
 
+void lprofSetupValueProfiler();
+
 COMPILER_RT_VISIBILITY extern char *(*GetEnvHook)(const char *);
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;
 COMPILER_RT_VISIBILITY extern uint32_t VPBufferSize;
+COMPILER_RT_VISIBILITY extern uint32_t VPMaxNumValsPerSite;
 extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
 
 #endif

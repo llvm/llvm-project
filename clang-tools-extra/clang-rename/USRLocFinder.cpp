@@ -79,6 +79,11 @@ public:
         }
       }
     }
+
+    if (getUSRForDecl(ConstructorDecl) == USR) {
+      // This takes care of the class name part of a non-inline ctor definition.
+      LocationsFound.push_back(ConstructorDecl->getLocStart());
+    }
     return true;
   }
 

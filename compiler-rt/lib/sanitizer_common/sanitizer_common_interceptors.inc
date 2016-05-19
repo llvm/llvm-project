@@ -5609,7 +5609,106 @@ INTERCEPTOR(int, __lxstat64, int version, const char *path, void *buf) {
 #define INIT___LXSTAT64
 #endif
 
-// FIXME: add other *stat interceptor
+#if SANITIZER_INTERCEPT_FSTAT
+INTERCEPTOR(int, fstat, int fd, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fstat, fd, buf);
+  if (common_flags()->intercept_stat && fd > 0)
+    COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  int res = REAL(fstat)(fd, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  return res;
+}
+#define INIT_FSTAT COMMON_INTERCEPT_FUNCTION(fstat)
+#else
+#define INIT_FSTAT
+#endif
+
+#if SANITIZER_INTERCEPT___FXSTAT
+INTERCEPTOR(int, __fxstat, int version, int fd, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __fxstat, version, fd, buf);
+  if (common_flags()->intercept_stat && fd > 0)
+    COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  int res = REAL(__fxstat)(version, fd, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  return res;
+}
+#define INIT___FXSTAT COMMON_INTERCEPT_FUNCTION(__fxstat)
+#else
+#define INIT___FXSTAT
+#endif
+
+#if SANITIZER_INTERCEPT___FXSTAT64
+INTERCEPTOR(int, __fxstat64, int version, int fd, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __fxstat64, version, fd, buf);
+  if (common_flags()->intercept_stat && fd > 0)
+    COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  int res = REAL(__fxstat64)(version, fd, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat64_sz);
+  return res;
+}
+#define INIT___FXSTAT64 COMMON_INTERCEPT_FUNCTION(__fxstat64)
+#else
+#define INIT___FXSTAT64
+#endif
+
+#if SANITIZER_INTERCEPT_FSTATAT
+INTERCEPTOR(int, fstatat, int fd, char *pathname, void *buf, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fstatat, fd, pathname, buf, flags);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, pathname, 0);
+  int res = REAL(fstatat)(fd, pathname, buf, flags);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  return res;
+}
+#define INIT_FSTATAT COMMON_INTERCEPT_FUNCTION(fstatat);
+#else
+#define INIT_FSTATAT
+#endif
+
+#if SANITIZER_INTERCEPT___FXSTATAT
+INTERCEPTOR(int, __fxstatat, int version, int fd, char *pathname, void *buf,
+            int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __fxstatat, version, fd, pathname, buf, flags);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, pathname, 0);
+  int res = REAL(__fxstatat)(fd, version, pathname, buf, flags);
+  if (!res) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat_sz);
+  }
+  return res;
+}
+#define INIT___FXSTATAT COMMON_INTERCEPT_FUNCTION(__fxstatat);
+#else
+#define INIT___FXSTATAT
+#endif
+
+#if SANITIZER_INTERCEPT___FXSTATAT64
+INTERCEPTOR(int, __fxstatat64, int version, int fd, char *pathname, void *buf,
+            int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __fxstatat64, version, fd, pathname, buf,
+                           flags);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, pathname, 0);
+  int res = REAL(__fxstatat64)(fd, version, pathname, buf, flags);
+  if (!res) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat64_sz);
+  }
+  return res;
+}
+#define INIT___FXSTATAT64 COMMON_INTERCEPT_FUNCTION(__fxstatat64);
+#else
+#define INIT___FXSTATAT64
+#endif
 
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
@@ -5801,5 +5900,10 @@ static void InitializeCommonInterceptors() {
   INIT___XSTAT64;
   INIT___LXSTAT;
   INIT___LXSTAT64;
-  // FIXME: add other *stat interceptors.
+  INIT_FSTAT;
+  INIT___FXSTAT;
+  INIT___FXSTAT64;
+  INIT_FSTATAT;
+  INIT___FXSTATAT;
+  INIT___FXSTATAT64;
 }

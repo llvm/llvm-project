@@ -390,6 +390,10 @@ bool IncludeFixerActionFactory::runInvocation(
                              /*ShouldOwnClient=*/true);
   Compiler.createSourceManager(*Files);
 
+  // We abort on fatal errors so don't let a large number of errors become
+  // fatal. A missing #include can cause thousands of errors.
+  Compiler.getDiagnostics().setErrorLimit(0);
+
   // Run the parser, gather missing includes.
   auto ScopedToolAction =
       llvm::make_unique<Action>(SymbolIndexMgr, MinimizeIncludePaths);
@@ -401,8 +405,9 @@ bool IncludeFixerActionFactory::runInvocation(
                             Replacements);
 
   // Technically this should only return true if we're sure that we have a
-  // parseable file. We don't know that though.
-  return true;
+  // parseable file. We don't know that though. Only inform users of fatal
+  // errors.
+  return !Compiler.getDiagnostics().hasFatalErrorOccurred();
 }
 
 } // namespace include_fixer

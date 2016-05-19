@@ -9,7 +9,6 @@
  */
 #include <stdio.h>
 #include <omp.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include "omp_testsuite.h"
 

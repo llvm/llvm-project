@@ -170,7 +170,7 @@ template <class ELFT> static bool shouldMerge(const typename ELFT::Shdr &Sec) {
   if (!EntSize || Sec.sh_size % EntSize)
     fatal("SHF_MERGE section size must be a multiple of sh_entsize");
 
-  // Don't try to merge if the aligment is larger than the sh_entsize and this
+  // Don't try to merge if the alignment is larger than the sh_entsize and this
   // is not SHF_STRINGS.
   //
   // Since this is not a SHF_STRINGS, we would need to pad after every entity.

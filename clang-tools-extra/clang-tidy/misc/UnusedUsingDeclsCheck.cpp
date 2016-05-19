@@ -24,6 +24,8 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(loc(recordType(DeclMatcher)), this);
   Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
   Finder->addMatcher(declRefExpr().bind("used"), this);
+  Finder->addMatcher(callExpr(callee(unresolvedLookupExpr().bind("used"))),
+                     this);
 }
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
@@ -79,6 +81,13 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
         removeFromFoundDecls(FD);
     } else if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       removeFromFoundDecls(VD);
+    }
+  }
+  // Check the uninstantiated template function usage.
+  if (const auto *ULE = Result.Nodes.getNodeAs<UnresolvedLookupExpr>("used")) {
+    for (const NamedDecl* ND : ULE->decls()) {
+      if (const auto *USD = dyn_cast<UsingShadowDecl>(ND))
+        removeFromFoundDecls(USD->getTargetDecl()->getCanonicalDecl());
     }
   }
 }
