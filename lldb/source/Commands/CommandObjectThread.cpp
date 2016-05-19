@@ -68,34 +68,33 @@ public:
         if (command.GetArgumentCount() == 0)
         {
             Thread *thread = m_exe_ctx.GetThreadPtr();
-            if (!HandleOneThread (*thread, result))
+            if (!HandleOneThread (thread->GetID(), result))
                 return false;
+            return result.Succeeded();
         }
-        else if (command.GetArgumentCount() == 1 && ::strcmp (command.GetArgumentAtIndex(0), "all") == 0)
+
+        // Use tids instead of ThreadSPs to prevent deadlocking problems which result from JIT-ing
+        // code while iterating over the (locked) ThreadSP list.
+        std::vector<lldb::tid_t> tids;
+
+        if (command.GetArgumentCount() == 1 && ::strcmp (command.GetArgumentAtIndex(0), "all") == 0)
         {
             Process *process = m_exe_ctx.GetProcessPtr();
-            uint32_t idx = 0;
-            for (ThreadSP thread_sp : process->Threads())
-            {
-                if (idx != 0 && m_add_return)
-                    result.AppendMessage("");
 
-                if (!HandleOneThread(*(thread_sp.get()), result))
-                    return false;
-                ++idx;
-            }
+            for (ThreadSP thread_sp : process->Threads())
+                tids.push_back(thread_sp->GetID());
         }
         else
         {
             const size_t num_args = command.GetArgumentCount();
             Process *process = m_exe_ctx.GetProcessPtr();
+
             Mutex::Locker locker (process->GetThreadList().GetMutex());
-            std::vector<ThreadSP> thread_sps;
 
             for (size_t i = 0; i < num_args; i++)
             {
                 bool success;
-                
+
                 uint32_t thread_idx = StringConvert::ToUInt32(command.GetArgumentAtIndex(i), 0, 0, &success);
                 if (!success)
                 {
@@ -103,26 +102,30 @@ public:
                     result.SetStatus (eReturnStatusFailed);
                     return false;
                 }
-                
-                thread_sps.push_back(process->GetThreadList().FindThreadByIndexID(thread_idx));
-                
-                if (!thread_sps[i])
+
+                ThreadSP thread = process->GetThreadList().FindThreadByIndexID(thread_idx);
+
+                if (!thread)
                 {
                     result.AppendErrorWithFormat ("no thread with index: \"%s\"\n", command.GetArgumentAtIndex(i));
                     result.SetStatus (eReturnStatusFailed);
                     return false;
                 }
-                
-            }
-            
-            for (uint32_t i = 0; i < num_args; i++)
-            {
-                if (!HandleOneThread (*(thread_sps[i].get()), result))
-                    return false;
 
-                if (i < num_args - 1 && m_add_return)
-                    result.AppendMessage("");
+                tids.push_back(thread->GetID());
             }
+        }
+
+        uint32_t idx = 0;
+        for (const lldb::tid_t &tid : tids)
+        {
+            if (idx != 0 && m_add_return)
+                result.AppendMessage("");
+
+            if (!HandleOneThread (tid, result))
+                return false;
+
+            ++idx;
         }
         return result.Succeeded();
     }
@@ -137,7 +140,7 @@ protected:
     // If m_add_return is true, a blank line will be inserted between each of the listings (except the last one.)
 
     virtual bool
-    HandleOneThread (Thread &thread, CommandReturnObject &result) = 0;
+    HandleOneThread (lldb::tid_t, CommandReturnObject &result) = 0;
 
     ReturnStatus m_success_return = eReturnStatusSuccessFinishResult;
     bool m_add_return = true;
@@ -287,25 +290,35 @@ protected:
     }
 
     bool
-    HandleOneThread (Thread &thread, CommandReturnObject &result) override
+    HandleOneThread (lldb::tid_t tid, CommandReturnObject &result) override
     {
+        ThreadSP thread_sp = m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
+        if (!thread_sp)
+        {
+            result.AppendErrorWithFormat ("thread disappeared while computing backtraces: 0x%" PRIx64 "\n", tid);
+            result.SetStatus (eReturnStatusFailed);
+            return false;
+        }
+
+        Thread *thread = thread_sp.get();
+
         Stream &strm = result.GetOutputStream();
 
         // Don't show source context when doing backtraces.
         const uint32_t num_frames_with_source = 0;
 
-        if (!thread.GetStatus (strm,
-                                   m_options.m_start,
-                                   m_options.m_count,
-                                   num_frames_with_source))
+        if (!thread->GetStatus (strm,
+                                m_options.m_start,
+                                m_options.m_count,
+                                num_frames_with_source))
         {
-            result.AppendErrorWithFormat ("error displaying backtrace for thread: \"0x%4.4x\"\n", thread.GetIndexID());
+            result.AppendErrorWithFormat ("error displaying backtrace for thread: \"0x%4.4x\"\n", thread->GetIndexID());
             result.SetStatus (eReturnStatusFailed);
             return false;
         }
         if (m_options.m_extended_backtrace)
         {
-            DoExtendedBacktrace (&thread, result);
+            DoExtendedBacktrace (thread, result);
         }
 
         return true;
@@ -1541,12 +1554,22 @@ public:
     }
 
     bool
-    HandleOneThread (Thread &thread, CommandReturnObject &result) override
+    HandleOneThread (lldb::tid_t tid, CommandReturnObject &result) override
     {
-        Stream &strm = result.GetOutputStream();
-        if (!thread.GetDescription (strm, eDescriptionLevelFull, m_options.m_json_thread, m_options.m_json_stopinfo))
+        ThreadSP thread_sp = m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
+        if (!thread_sp)
         {
-            result.AppendErrorWithFormat ("error displaying info for thread: \"%d\"\n", thread.GetIndexID());
+            result.AppendErrorWithFormat ("thread no longer exists: 0x%" PRIx64 "\n", tid);
+            result.SetStatus (eReturnStatusFailed);
+            return false;
+        }
+
+        Thread *thread = thread_sp.get();
+
+        Stream &strm = result.GetOutputStream();
+        if (!thread->GetDescription (strm, eDescriptionLevelFull, m_options.m_json_thread, m_options.m_json_stopinfo))
+        {
+            result.AppendErrorWithFormat ("error displaying info for thread: \"%d\"\n", thread->GetIndexID());
             result.SetStatus (eReturnStatusFailed);
             return false;
         }
@@ -2078,14 +2101,24 @@ public:
 
 protected:
     bool
-    HandleOneThread (Thread &thread, CommandReturnObject &result) override
+    HandleOneThread (lldb::tid_t tid, CommandReturnObject &result) override
     {
+        ThreadSP thread_sp = m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
+        if (!thread_sp)
+        {
+            result.AppendErrorWithFormat ("thread no longer exists: 0x%" PRIx64 "\n", tid);
+            result.SetStatus (eReturnStatusFailed);
+            return false;
+        }
+
+        Thread *thread = thread_sp.get();
+
         Stream &strm = result.GetOutputStream();
         DescriptionLevel desc_level = eDescriptionLevelFull;
         if (m_options.m_verbose)
             desc_level = eDescriptionLevelVerbose;
 
-        thread.DumpThreadPlans (&strm, desc_level, m_options.m_internal, true);
+        thread->DumpThreadPlans (&strm, desc_level, m_options.m_internal, true);
         return true;
     }
     CommandOptions m_options;
