@@ -53,13 +53,13 @@ public:
 
   /// \brief Called when a header is added during module map parsing.
   ///
-  /// \param File The header file itself.
+  /// \param Filename The header file itself.
   virtual void moduleMapAddHeader(StringRef Filename) {}
 
   /// \brief Called when an umbrella header is added during module map parsing.
   ///
   /// \param FileMgr FileManager instance
-  /// \param Filename The umbreall header to collect.
+  /// \param Header The umbrella header to collect.
   virtual void moduleMapAddUmbrellaHeader(FileManager *FileMgr,
                                           const FileEntry *Header) {}
 };
