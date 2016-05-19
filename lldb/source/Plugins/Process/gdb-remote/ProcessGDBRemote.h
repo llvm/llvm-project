@@ -461,7 +461,7 @@ protected:
 
     // Query remote GDBServer for register information
     bool
-    GetGDBServerRegisterInfo ();
+    GetGDBServerRegisterInfo (ArchSpec &arch);
 
     // Query remote GDBServer for a detailed loaded library list
     Error
