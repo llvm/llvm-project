@@ -4,6 +4,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lldb)
   cmake_minimum_required(VERSION 2.8.12.2)
 
+  if (POLICY CMP0022)
+    cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required
+  endif()
+
   option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
   # Rely on llvm-config.
@@ -96,7 +100,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # Import CMake library targets from LLVM and Clang.
   include("${LLVM_OBJ_ROOT}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm/LLVMConfig.cmake")
-  include("${LLVM_OBJ_ROOT}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake")
+  # cmake/clang/ClangConfig.cmake is not created when LLVM and Cland are built together.
+  if (EXISTS "${LLVM_OBJ_ROOT}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake")
+    include("${LLVM_OBJ_ROOT}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake")
+  endif()
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 
@@ -104,6 +111,17 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   include_directories("${LLVM_BINARY_DIR}/include" "${LLVM_MAIN_INCLUDE_DIR}")
+  # Next three include directories are needed when llvm-config is located in build directory.
+  # LLVM and Cland are assumed to be built together
+  if (EXISTS "${LLVM_OBJ_ROOT}/include")
+    include_directories("${LLVM_OBJ_ROOT}/include")
+  endif()
+  if (EXISTS "${LLVM_MAIN_SRC_DIR}/tools/clang/include")
+    include_directories("${LLVM_MAIN_SRC_DIR}/tools/clang/include")
+  endif()
+  if (EXISTS "${LLVM_OBJ_ROOT}/tools/clang/include")
+    include_directories("${LLVM_OBJ_ROOT}/tools/clang/include")
+  endif()
   link_directories("${LLVM_LIBRARY_DIR}")
 
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

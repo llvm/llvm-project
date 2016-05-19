@@ -13,7 +13,6 @@
 
 #include "lldb/Target/Language.h"
 
-#include "lldb/Host/Mutex.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Stream.h"
 

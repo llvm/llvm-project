@@ -156,12 +156,12 @@ SBFunction::GetInstructions (SBTarget target, const char *flavor)
     SBInstructionList sb_instructions;
     if (m_opaque_ptr)
     {
-        Mutex::Locker api_locker;
         ExecutionContext exe_ctx;
         TargetSP target_sp (target.GetSP());
+        std::unique_lock<std::recursive_mutex> lock;
         if (target_sp)
         {
-            api_locker.Lock (target_sp->GetAPIMutex());
+            lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
             target_sp->CalculateExecutionContext (exe_ctx);
             exe_ctx.SetProcessSP(target_sp->GetProcessSP());
         }

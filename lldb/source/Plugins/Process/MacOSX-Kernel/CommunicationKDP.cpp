@@ -37,21 +37,21 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // CommunicationKDP constructor
 //----------------------------------------------------------------------
-CommunicationKDP::CommunicationKDP (const char *comm_name) :
-    Communication(comm_name),
-    m_addr_byte_size (4),
-    m_byte_order (eByteOrderLittle),
-    m_packet_timeout (5),
-    m_sequence_mutex (Mutex::eMutexTypeRecursive),
-    m_is_running (false),
-    m_session_key (0u),
-    m_request_sequence_id (0u),
-    m_exception_sequence_id (0u),
-    m_kdp_version_version (0u),
-    m_kdp_version_feature (0u),
-    m_kdp_hostinfo_cpu_mask (0u),
-    m_kdp_hostinfo_cpu_type (0u),
-    m_kdp_hostinfo_cpu_subtype (0u)
+CommunicationKDP::CommunicationKDP(const char *comm_name)
+    : Communication(comm_name),
+      m_addr_byte_size(4),
+      m_byte_order(eByteOrderLittle),
+      m_packet_timeout(5),
+      m_sequence_mutex(),
+      m_is_running(false),
+      m_session_key(0u),
+      m_request_sequence_id(0u),
+      m_exception_sequence_id(0u),
+      m_kdp_version_version(0u),
+      m_kdp_version_feature(0u),
+      m_kdp_hostinfo_cpu_mask(0u),
+      m_kdp_hostinfo_cpu_type(0u),
+      m_kdp_hostinfo_cpu_subtype(0u)
 {
 }
 
@@ -69,7 +69,7 @@ CommunicationKDP::~CommunicationKDP()
 bool
 CommunicationKDP::SendRequestPacket (const PacketStreamType &request_packet)
 {
-    Mutex::Locker locker(m_sequence_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
     return SendRequestPacketNoLock (request_packet);
 }
 
@@ -111,7 +111,7 @@ CommunicationKDP::SendRequestAndGetReply (const CommandType command,
         return false;
     }
 
-    Mutex::Locker locker(m_sequence_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
 #ifdef LLDB_CONFIGURATION_DEBUG
     // NOTE: this only works for packets that are in native endian byte order
     assert (request_packet.GetSize() == *((uint16_t *)(request_packet.GetData() + 2)));
@@ -205,9 +205,9 @@ CommunicationKDP::SendRequestPacketNoLock (const PacketStreamType &request_packe
 }
 
 bool
-CommunicationKDP::GetSequenceMutex (Mutex::Locker& locker)
+CommunicationKDP::GetSequenceMutex(std::unique_lock<std::recursive_mutex> &lock)
 {
-    return locker.TryLock (m_sequence_mutex);
+    return (lock = std::unique_lock<std::recursive_mutex>(m_sequence_mutex, std::try_to_lock)).owns_lock();
 }
 
 
@@ -220,7 +220,7 @@ CommunicationKDP::WaitForNotRunningPrivate (const TimeValue *timeout_ptr)
 size_t
 CommunicationKDP::WaitForPacketWithTimeoutMicroSeconds (DataExtractor &packet, uint32_t timeout_usec)
 {
-    Mutex::Locker locker(m_sequence_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
     return WaitForPacketWithTimeoutMicroSecondsNoLock (packet, timeout_usec);
 }
 

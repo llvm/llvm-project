@@ -11,12 +11,12 @@
 #ifndef liblldb_Symtab_h_
 #define liblldb_Symtab_h_
 
+#include <mutex>
 #include <vector>
 
 #include "lldb/lldb-private.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/Symbol.h"
 
 namespace lldb_private {
@@ -50,10 +50,11 @@ public:
             void        Dump(Stream *s, Target *target, SortOrder sort_type);
             void        Dump(Stream *s, Target *target, std::vector<uint32_t>& indexes) const;
             uint32_t    GetIndexForSymbol (const Symbol *symbol) const;
-            Mutex &     GetMutex ()
-                        {
-                            return m_mutex;
-                        }
+            std::recursive_mutex &
+            GetMutex()
+            {
+                return m_mutex;
+            }
             Symbol *    FindSymbolByID (lldb::user_id_t uid) const;
             Symbol *    SymbolAtIndex (size_t idx);
     const   Symbol *    SymbolAtIndex (size_t idx) const;
@@ -124,7 +125,7 @@ protected:
     UniqueCStringMap<uint32_t> m_basename_to_index;
     UniqueCStringMap<uint32_t> m_method_to_index;
     UniqueCStringMap<uint32_t> m_selector_to_index;
-    mutable Mutex       m_mutex; // Provide thread safety for this symbol table
+    mutable std::recursive_mutex m_mutex; // Provide thread safety for this symbol table
     bool                m_file_addr_to_index_computed:1,
                         m_name_indexes_computed:1;
 private:

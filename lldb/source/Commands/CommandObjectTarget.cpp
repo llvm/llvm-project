@@ -1548,7 +1548,7 @@ static size_t
 DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list)
 {
     size_t num_dumped = 0;
-    Mutex::Locker modules_locker(module_list.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
     const size_t num_modules = module_list.GetSize();
     if (num_modules > 0)
     {
@@ -2302,7 +2302,7 @@ protected:
             if (command.GetArgumentCount() == 0)
             {
                 // Dump all sections for all modules images
-                Mutex::Locker modules_locker(target->GetImages().GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(target->GetImages().GetMutex());
                 const size_t num_modules = target->GetImages().GetSize();
                 if (num_modules > 0)
                 {
@@ -2532,7 +2532,7 @@ protected:
             {
                 // Dump all sections for all modules images
                 const ModuleList &target_modules = target->GetImages();
-                Mutex::Locker modules_locker (target_modules.GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
                 const size_t num_modules = target_modules.GetSize();
                 if (num_modules > 0)
                 {
@@ -2633,7 +2633,7 @@ protected:
                 FileSpec file_spec(arg_cstr, false);
 
                 const ModuleList &target_modules = target->GetImages();
-                Mutex::Locker modules_locker(target_modules.GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
                 const size_t num_modules = target_modules.GetSize();
                 if (num_modules > 0)
                 {
@@ -3296,7 +3296,6 @@ protected:
             // Otherwise it will lock the AllocationModuleCollectionMutex when accessing
             // the global module list directly.
             std::unique_lock<std::recursive_mutex> guard(Module::GetAllocationModuleCollectionMutex(), std::defer_lock);
-            Mutex::Locker locker;
 
             const ModuleList *module_list_ptr = nullptr;
             const size_t argc = command.GetArgumentCount();
@@ -3333,10 +3332,11 @@ protected:
                 module_list_ptr = &module_list;
             }
 
+            std::unique_lock<std::recursive_mutex> lock;
             if (module_list_ptr != nullptr)
             {
-                assert(use_global_module_list == false && "locking violation");
-                locker.Lock(module_list_ptr->GetMutex());
+                lock = std::unique_lock<std::recursive_mutex>(module_list_ptr->GetMutex());
+
                 num_modules = module_list_ptr->GetSize();
             }
 
@@ -4239,7 +4239,7 @@ protected:
                 // Dump all sections for all other modules
 
                 const ModuleList &target_modules = target->GetImages();
-                Mutex::Locker modules_locker(target_modules.GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
                 const size_t num_modules = target_modules.GetSize();
                 if (num_modules > 0)
                 {

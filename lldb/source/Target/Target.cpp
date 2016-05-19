@@ -68,45 +68,47 @@ Target::GetStaticBroadcasterClass ()
     return class_name;
 }
 
-Target::Target(Debugger &debugger, const ArchSpec &target_arch, const lldb::PlatformSP &platform_sp, bool is_dummy_target) :
-    TargetProperties (this),
-    Broadcaster (debugger.GetBroadcasterManager(), Target::GetStaticBroadcasterClass().AsCString()),
-    ExecutionContextScope (),
-    m_debugger (debugger),
-    m_platform_sp (platform_sp),
-    m_mutex (Mutex::eMutexTypeRecursive), 
-    m_arch (target_arch),
-    m_images (this),
-    m_section_load_history (),
-    m_breakpoint_list (false),
-    m_internal_breakpoint_list (true),
-    m_watchpoint_list (),
-    m_process_sp (),
-    m_search_filter_sp (),
-    m_image_search_paths (ImageSearchPathsChanged, this),
-    m_ast_importer_sp (),
-    m_source_manager_ap(),
-    m_stop_hooks (),
-    m_stop_hook_next_id (0),
-    m_valid (true),
-    m_suppress_stop_hooks (false),
-    m_is_dummy_target(is_dummy_target)
+Target::Target(Debugger &debugger, const ArchSpec &target_arch, const lldb::PlatformSP &platform_sp,
+               bool is_dummy_target)
+    : TargetProperties(this),
+      Broadcaster(debugger.GetBroadcasterManager(), Target::GetStaticBroadcasterClass().AsCString()),
+      ExecutionContextScope(),
+      m_debugger(debugger),
+      m_platform_sp(platform_sp),
+      m_mutex(),
+      m_arch(target_arch),
+      m_images(this),
+      m_section_load_history(),
+      m_breakpoint_list(false),
+      m_internal_breakpoint_list(true),
+      m_watchpoint_list(),
+      m_process_sp(),
+      m_search_filter_sp(),
+      m_image_search_paths(ImageSearchPathsChanged, this),
+      m_ast_importer_sp(),
+      m_source_manager_ap(),
+      m_stop_hooks(),
+      m_stop_hook_next_id(0),
+      m_valid(true),
+      m_suppress_stop_hooks(false),
+      m_is_dummy_target(is_dummy_target)
 
 {
-    SetEventName (eBroadcastBitBreakpointChanged, "breakpoint-changed");
-    SetEventName (eBroadcastBitModulesLoaded, "modules-loaded");
-    SetEventName (eBroadcastBitModulesUnloaded, "modules-unloaded");
-    SetEventName (eBroadcastBitWatchpointChanged, "watchpoint-changed");
-    SetEventName (eBroadcastBitSymbolsLoaded, "symbols-loaded");
+    SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
+    SetEventName(eBroadcastBitModulesLoaded, "modules-loaded");
+    SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
+    SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
+    SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
 
     CheckInWithManager();
 
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
     if (log)
-        log->Printf ("%p Target::Target()", static_cast<void*>(this));
+        log->Printf("%p Target::Target()", static_cast<void *>(this));
     if (m_arch.IsValid())
     {
-        LogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET, "Target::Target created with architecture %s (%s)", m_arch.GetArchitectureName(), m_arch.GetTriple().getTriple().c_str());
+        LogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET, "Target::Target created with architecture %s (%s)",
+                              m_arch.GetArchitectureName(), m_arch.GetTriple().getTriple().c_str());
     }
 }
 
@@ -169,8 +171,8 @@ Target::CleanupProcess ()
     m_breakpoint_list.ClearAllBreakpointSites();
     m_internal_breakpoint_list.ClearAllBreakpointSites();
     // Disable watchpoints just on the debugger side.
-    Mutex::Locker locker;
-    this->GetWatchpointList().GetListMutex(locker);
+    std::unique_lock<std::recursive_mutex> lock;
+    this->GetWatchpointList().GetListMutex(lock);
     DisableAllWatchpoints(false);
     ClearAllWatchpointHitCounts();
     ClearAllWatchpointHistoricValues();
@@ -273,7 +275,7 @@ Target::SetREPL (lldb::LanguageType language, lldb::REPLSP repl_sp)
 void
 Target::Destroy()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_valid = false;
     DeleteCurrentProcess ();
     m_platform_sp.reset();
@@ -753,8 +755,8 @@ Target::CreateWatchpoint(lldb::addr_t addr, size_t size, const CompilerType *typ
 
     // Grab the list mutex while doing operations.
     const bool notify = false;   // Don't notify about all the state changes we do on creating the watchpoint.
-    Mutex::Locker locker;
-    this->GetWatchpointList().GetListMutex(locker);
+    std::unique_lock<std::recursive_mutex> lock;
+    this->GetWatchpointList().GetListMutex(lock);
     WatchpointSP matched_sp = m_watchpoint_list.FindByAddress(addr);
     if (matched_sp)
     {

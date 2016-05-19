@@ -575,8 +575,8 @@ Args::ParseOptions (Options &options)
             }
         }
     }
-    Mutex::Locker options_locker(NULL);
-    OptionParser::Prepare(options_locker);
+    std::unique_lock<std::mutex> lock;
+    OptionParser::Prepare(lock);
     int val;
     while (1)
     {
@@ -1218,8 +1218,8 @@ Args::ParseAliasOptions (Options &options,
         }
     }
 
-    Mutex::Locker options_locker(NULL);
-    OptionParser::Prepare(options_locker);
+    std::unique_lock<std::mutex> lock;
+    OptionParser::Prepare(lock);
     int val;
     while (1)
     {
@@ -1396,8 +1396,8 @@ Args::ParseArgsForCompletion
         }
     }
 
-    Mutex::Locker options_locker(NULL);
-    OptionParser::Prepare(options_locker);
+    std::unique_lock<std::mutex> lock;
+    OptionParser::Prepare(lock);
     OptionParser::EnableError(false);
 
     int val;

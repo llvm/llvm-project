@@ -10,6 +10,7 @@
 #ifndef liblldb_ThreadList_h_
 #define liblldb_ThreadList_h_
 
+#include <mutex>
 #include <vector>
 
 #include "lldb/lldb-private.h"
@@ -164,9 +165,9 @@ public:
     void
     SetStopID (uint32_t stop_id);
 
-    Mutex &
+    std::recursive_mutex &
     GetMutex() override;
-    
+
     void
     Update (ThreadList &rhs);
     

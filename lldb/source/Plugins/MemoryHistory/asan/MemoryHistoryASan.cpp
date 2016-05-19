@@ -38,7 +38,7 @@ MemoryHistoryASan::CreateInstance (const ProcessSP &process_sp)
     Target & target = process_sp->GetTarget();
 
     const ModuleList &target_modules = target.GetImages();
-    Mutex::Locker modules_locker(target_modules.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
     const size_t num_modules = target_modules.GetSize();
     for (size_t i = 0; i < num_modules; ++i)
     {

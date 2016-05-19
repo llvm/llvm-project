@@ -197,7 +197,7 @@ OperatingSystemGo::CreateInstance(Process *process, bool force)
         if (!target_sp)
             return nullptr;
         ModuleList &module_list = target_sp->GetImages();
-        Mutex::Locker modules_locker(module_list.GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
         const size_t num_modules = module_list.GetSize();
         bool found_go_runtime = false;
         for (size_t i = 0; i < num_modules; ++i)

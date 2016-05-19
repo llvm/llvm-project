@@ -1,6 +1,5 @@
 // RUN: %libomp-compile-and-run
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include "omp_testsuite.h"
 #include "omp_my_sleep.h"

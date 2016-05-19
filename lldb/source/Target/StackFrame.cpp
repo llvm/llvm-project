@@ -44,135 +44,119 @@ using namespace lldb_private;
 #define RESOLVED_VARIABLES              (GOT_FRAME_BASE << 1)
 #define RESOLVED_GLOBAL_VARIABLES       (RESOLVED_VARIABLES << 1)
 
-StackFrame::StackFrame (const ThreadSP &thread_sp, 
-                        user_id_t frame_idx, 
-                        user_id_t unwind_frame_index, 
-                        addr_t cfa, 
-                        bool cfa_is_valid,
-                        addr_t pc, 
-                        uint32_t stop_id,
-                        bool stop_id_is_valid,
-                        bool is_history_frame,
-                        const SymbolContext *sc_ptr) :
-    m_thread_wp (thread_sp),
-    m_frame_index (frame_idx),
-    m_concrete_frame_index (unwind_frame_index),    
-    m_reg_context_sp (),
-    m_id(pc, cfa, nullptr),
-    m_frame_code_addr (pc),
-    m_sc (),
-    m_flags (),
-    m_frame_base (),
-    m_frame_base_error (),
-    m_cfa_is_valid (cfa_is_valid),
-    m_stop_id  (stop_id),
-    m_stop_id_is_valid (stop_id_is_valid),
-    m_is_history_frame (is_history_frame),
-    m_variable_list_sp (),
-    m_variable_list_value_objects (),
-    m_disassembly (),
-    m_mutex (Mutex::eMutexTypeRecursive)
+StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx, user_id_t unwind_frame_index, addr_t cfa,
+                       bool cfa_is_valid, addr_t pc, uint32_t stop_id, bool stop_id_is_valid, bool is_history_frame,
+                       const SymbolContext *sc_ptr)
+    : m_thread_wp(thread_sp),
+      m_frame_index(frame_idx),
+      m_concrete_frame_index(unwind_frame_index),
+      m_reg_context_sp(),
+      m_id(pc, cfa, nullptr),
+      m_frame_code_addr(pc),
+      m_sc(),
+      m_flags(),
+      m_frame_base(),
+      m_frame_base_error(),
+      m_cfa_is_valid(cfa_is_valid),
+      m_stop_id(stop_id),
+      m_stop_id_is_valid(stop_id_is_valid),
+      m_is_history_frame(is_history_frame),
+      m_variable_list_sp(),
+      m_variable_list_value_objects(),
+      m_disassembly(),
+      m_mutex()
 {
     // If we don't have a CFA value, use the frame index for our StackID so that recursive
     // functions properly aren't confused with one another on a history stack.
     if (m_is_history_frame && !m_cfa_is_valid)
     {
-        m_id.SetCFA (m_frame_index);
+        m_id.SetCFA(m_frame_index);
     }
 
     if (sc_ptr != nullptr)
     {
         m_sc = *sc_ptr;
-        m_flags.Set(m_sc.GetResolvedMask ());
+        m_flags.Set(m_sc.GetResolvedMask());
     }
 }
 
-StackFrame::StackFrame (const ThreadSP &thread_sp, 
-                        user_id_t frame_idx, 
-                        user_id_t unwind_frame_index, 
-                        const RegisterContextSP &reg_context_sp, 
-                        addr_t cfa, 
-                        addr_t pc, 
-                        const SymbolContext *sc_ptr) :
-    m_thread_wp (thread_sp),
-    m_frame_index (frame_idx),
-    m_concrete_frame_index (unwind_frame_index),    
-    m_reg_context_sp (reg_context_sp),
-    m_id(pc, cfa, nullptr),
-    m_frame_code_addr (pc),
-    m_sc (),
-    m_flags (),
-    m_frame_base (),
-    m_frame_base_error (),
-    m_cfa_is_valid (true),
-    m_stop_id  (0),
-    m_stop_id_is_valid (false),
-    m_is_history_frame (false),
-    m_variable_list_sp (),
-    m_variable_list_value_objects (),
-    m_disassembly (),
-    m_mutex (Mutex::eMutexTypeRecursive)
+StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx, user_id_t unwind_frame_index,
+                       const RegisterContextSP &reg_context_sp, addr_t cfa, addr_t pc, const SymbolContext *sc_ptr)
+    : m_thread_wp(thread_sp),
+      m_frame_index(frame_idx),
+      m_concrete_frame_index(unwind_frame_index),
+      m_reg_context_sp(reg_context_sp),
+      m_id(pc, cfa, nullptr),
+      m_frame_code_addr(pc),
+      m_sc(),
+      m_flags(),
+      m_frame_base(),
+      m_frame_base_error(),
+      m_cfa_is_valid(true),
+      m_stop_id(0),
+      m_stop_id_is_valid(false),
+      m_is_history_frame(false),
+      m_variable_list_sp(),
+      m_variable_list_value_objects(),
+      m_disassembly(),
+      m_mutex()
 {
     if (sc_ptr != nullptr)
     {
         m_sc = *sc_ptr;
-        m_flags.Set(m_sc.GetResolvedMask ());
+        m_flags.Set(m_sc.GetResolvedMask());
     }
-    
+
     if (reg_context_sp && !m_sc.target_sp)
     {
         m_sc.target_sp = reg_context_sp->CalculateTarget();
         if (m_sc.target_sp)
-            m_flags.Set (eSymbolContextTarget);
+            m_flags.Set(eSymbolContextTarget);
     }
 }
 
-StackFrame::StackFrame (const ThreadSP &thread_sp, 
-                        user_id_t frame_idx, 
-                        user_id_t unwind_frame_index, 
-                        const RegisterContextSP &reg_context_sp, 
-                        addr_t cfa, 
-                        const Address& pc_addr,
-                        const SymbolContext *sc_ptr) :
-    m_thread_wp (thread_sp),
-    m_frame_index (frame_idx),
-    m_concrete_frame_index (unwind_frame_index),    
-    m_reg_context_sp (reg_context_sp),
-    m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa, nullptr),
-    m_frame_code_addr (pc_addr),
-    m_sc (),
-    m_flags (),
-    m_frame_base (),
-    m_frame_base_error (),
-    m_cfa_is_valid (true),
-    m_stop_id  (0),
-    m_stop_id_is_valid (false),
-    m_is_history_frame (false),
-    m_variable_list_sp (),
-    m_variable_list_value_objects (),
-    m_disassembly (),
-    m_mutex (Mutex::eMutexTypeRecursive)
+StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx, user_id_t unwind_frame_index,
+                       const RegisterContextSP &reg_context_sp, addr_t cfa, const Address &pc_addr,
+                       const SymbolContext *sc_ptr)
+    : m_thread_wp(thread_sp),
+      m_frame_index(frame_idx),
+      m_concrete_frame_index(unwind_frame_index),
+      m_reg_context_sp(reg_context_sp),
+      m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa, nullptr),
+      m_frame_code_addr(pc_addr),
+      m_sc(),
+      m_flags(),
+      m_frame_base(),
+      m_frame_base_error(),
+      m_cfa_is_valid(true),
+      m_stop_id(0),
+      m_stop_id_is_valid(false),
+      m_is_history_frame(false),
+      m_variable_list_sp(),
+      m_variable_list_value_objects(),
+      m_disassembly(),
+      m_mutex()
 {
     if (sc_ptr != nullptr)
     {
         m_sc = *sc_ptr;
-        m_flags.Set(m_sc.GetResolvedMask ());
+        m_flags.Set(m_sc.GetResolvedMask());
     }
-    
+
     if (!m_sc.target_sp && reg_context_sp)
     {
         m_sc.target_sp = reg_context_sp->CalculateTarget();
         if (m_sc.target_sp)
-            m_flags.Set (eSymbolContextTarget);
+            m_flags.Set(eSymbolContextTarget);
     }
-    
-    ModuleSP pc_module_sp (pc_addr.GetModule());
+
+    ModuleSP pc_module_sp(pc_addr.GetModule());
     if (!m_sc.module_sp || m_sc.module_sp != pc_module_sp)
     {
         if (pc_module_sp)
         {
             m_sc.module_sp = pc_module_sp;
-            m_flags.Set (eSymbolContextModule);
+            m_flags.Set(eSymbolContextModule);
         }
         else
         {
@@ -186,7 +170,7 @@ StackFrame::~StackFrame() = default;
 StackID&
 StackFrame::GetStackID()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     // Make sure we have resolved the StackID object's symbol context scope if
     // we already haven't looked it up.
 
@@ -233,7 +217,7 @@ StackFrame::GetFrameIndex () const
 void
 StackFrame::SetSymbolContextScope (SymbolContextScope *symbol_scope)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_flags.Set (RESOLVED_FRAME_ID_SYMBOL_SCOPE);
     m_id.SetSymbolContextScope (symbol_scope);
 }
@@ -241,7 +225,7 @@ StackFrame::SetSymbolContextScope (SymbolContextScope *symbol_scope)
 const Address&
 StackFrame::GetFrameCodeAddress()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_flags.IsClear(RESOLVED_FRAME_CODE_ADDR) && !m_frame_code_addr.IsSectionOffset())
     {
         m_flags.Set (RESOLVED_FRAME_CODE_ADDR);
@@ -272,7 +256,7 @@ StackFrame::GetFrameCodeAddress()
 bool
 StackFrame::ChangePC (addr_t pc)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     // We can't change the pc value of a history stack frame - it is immutable.
     if (m_is_history_frame)
         return false;
@@ -288,7 +272,7 @@ StackFrame::ChangePC (addr_t pc)
 const char *
 StackFrame::Disassemble ()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_disassembly.GetSize() == 0)
     {
         ExecutionContext exe_ctx (shared_from_this());
@@ -348,7 +332,7 @@ StackFrame::GetFrameBlock ()
 const SymbolContext&
 StackFrame::GetSymbolContext (uint32_t resolve_scope)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     // Copy our internal symbol context into "sc".
     if ((m_flags.Get() & resolve_scope) != resolve_scope)
     {
@@ -521,7 +505,7 @@ StackFrame::GetSymbolContext (uint32_t resolve_scope)
 VariableList *
 StackFrame::GetVariableList (bool get_file_globals)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_flags.IsClear(RESOLVED_VARIABLES))
     {
         m_flags.Set(RESOLVED_VARIABLES);
@@ -566,7 +550,7 @@ StackFrame::GetVariableList (bool get_file_globals)
 VariableListSP
 StackFrame::GetInScopeVariableList (bool get_file_globals, bool must_have_valid_location)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     // We can't fetch variable information for a history stack frame.
     if (m_is_history_frame)
         return VariableListSP();
@@ -1197,7 +1181,7 @@ StackFrame::GetValueForVariableExpressionPath (const char *var_expr_cstr,
 bool
 StackFrame::GetFrameBaseValue (Scalar &frame_base, Error *error_ptr)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_cfa_is_valid)
     {
         m_frame_base_error.SetErrorString("No frame base available for this historical stack frame.");
@@ -1255,7 +1239,7 @@ StackFrame::GetFrameBaseValue (Scalar &frame_base, Error *error_ptr)
 RegisterContextSP
 StackFrame::GetRegisterContext ()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_reg_context_sp)
     {
         ThreadSP thread_sp (GetThread());
@@ -1275,7 +1259,7 @@ StackFrame::HasDebugInformation ()
 ValueObjectSP
 StackFrame::GetValueObjectForFrameVariable (const VariableSP &variable_sp, DynamicValueType use_dynamic)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     ValueObjectSP valobj_sp;
     if (m_is_history_frame)
     {
@@ -1311,7 +1295,7 @@ StackFrame::GetValueObjectForFrameVariable (const VariableSP &variable_sp, Dynam
 ValueObjectSP
 StackFrame::TrackGlobalVariable (const VariableSP &variable_sp, DynamicValueType use_dynamic)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_is_history_frame)
         return ValueObjectSP();
 
@@ -1471,7 +1455,7 @@ StackFrame::Dump (Stream *strm, bool show_frame_index, bool show_fullpaths)
 void
 StackFrame::UpdateCurrentFrameFromPreviousFrame (StackFrame &prev_frame)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     assert (GetStackID() == prev_frame.GetStackID());    // TODO: remove this after some testing
     m_variable_list_sp = prev_frame.m_variable_list_sp;
     m_variable_list_value_objects.Swap (prev_frame.m_variable_list_value_objects);
@@ -1482,7 +1466,7 @@ StackFrame::UpdateCurrentFrameFromPreviousFrame (StackFrame &prev_frame)
 void
 StackFrame::UpdatePreviousFrameFromCurrentFrame (StackFrame &curr_frame)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     assert (GetStackID() == curr_frame.GetStackID());        // TODO: remove this after some testing
     m_id.SetPC (curr_frame.m_id.GetPC());       // Update the Stack ID PC value
     assert (GetThread() == curr_frame.GetThread());

@@ -1008,8 +1008,8 @@ struct __is_referenceable_impl {
 };
 
 template <class _Tp>
-struct __is_referenceable : std::integral_constant<bool,
-    !std::is_same<decltype(__is_referenceable_impl::__test<_Tp>(0)), __two>::value> {};
+struct __is_referenceable : integral_constant<bool,
+    !is_same<decltype(__is_referenceable_impl::__test<_Tp>(0)), __two>::value> {};
 
 
 // add_const
@@ -1095,8 +1095,11 @@ template <class _Tp> using add_rvalue_reference_t = typename add_rvalue_referenc
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
+template <class _Tp> _Tp&& __declval(int);
+template <class _Tp> _Tp   __declval(long);
+
 template <class _Tp>
-typename add_rvalue_reference<_Tp>::type
+decltype(_VSTD::__declval<_Tp>(0))
 declval() _NOEXCEPT;
 
 #else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
@@ -2174,7 +2177,7 @@ move(_Tp&& __t) _NOEXCEPT
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _Tp&&
-forward(typename std::remove_reference<_Tp>::type& __t) _NOEXCEPT
+forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
 {
     return static_cast<_Tp&&>(__t);
 }
@@ -2182,9 +2185,9 @@ forward(typename std::remove_reference<_Tp>::type& __t) _NOEXCEPT
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _Tp&&
-forward(typename std::remove_reference<_Tp>::type&& __t) _NOEXCEPT
+forward(typename remove_reference<_Tp>::type&& __t) _NOEXCEPT
 {
-    static_assert(!std::is_lvalue_reference<_Tp>::value,
+    static_assert(!is_lvalue_reference<_Tp>::value,
                   "Can not forward an rvalue as an lvalue.");
     return static_cast<_Tp&&>(__t);
 }
@@ -2210,7 +2213,7 @@ move(const _Tp& __t)
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _Tp&
-forward(typename std::remove_reference<_Tp>::type& __t) _NOEXCEPT
+forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
 {
     return __t;
 }
@@ -4565,7 +4568,7 @@ struct underlying_type
 #endif // _LIBCPP_UNDERLYING_TYPE
 
 
-template <class _Tp, bool = std::is_enum<_Tp>::value>
+template <class _Tp, bool = is_enum<_Tp>::value>
 struct __sfinae_underlying_type
 {
     typedef typename underlying_type<_Tp>::type type;

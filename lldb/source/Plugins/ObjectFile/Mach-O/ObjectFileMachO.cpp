@@ -1461,7 +1461,7 @@ ObjectFileMachO::GetSymtab()
         if (m_symtab_ap.get() == NULL)
         {
             m_symtab_ap.reset(new Symtab(this));
-            Mutex::Locker symtab_locker (m_symtab_ap->GetMutex());
+            std::lock_guard<std::recursive_mutex> symtab_guard(m_symtab_ap->GetMutex());
             ParseSymtab ();
             m_symtab_ap->Finalize ();
         }

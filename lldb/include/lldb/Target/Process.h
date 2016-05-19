@@ -3351,8 +3351,9 @@ protected:
     std::map<uint64_t, uint32_t> m_thread_id_to_index_id_map;
     int                         m_exit_status;          ///< The exit status of the process, or -1 if not set.
     std::string                 m_exit_string;          ///< A textual description of why a process exited.
-    Mutex                       m_exit_status_mutex;    ///< Mutex so m_exit_status m_exit_string can be safely accessed from multiple threads
-    Mutex                       m_thread_mutex;
+    std::mutex
+        m_exit_status_mutex; ///< Mutex so m_exit_status m_exit_string can be safely accessed from multiple threads
+    std::recursive_mutex m_thread_mutex;
     ThreadList                  m_thread_list_real;     ///< The threads for this process as are known to the protocol we are debugging with
     ThreadList                  m_thread_list;          ///< The threads for this process as the user will see them. This is usually the same as
                                                         ///< m_thread_list_real, but might be different if there is an OS plug-in creating memory threads
@@ -3373,11 +3374,11 @@ protected:
     lldb::ABISP                 m_abi_sp;
     lldb::IOHandlerSP           m_process_input_reader;
     Communication               m_stdio_communication;
-    Mutex                       m_stdio_communication_mutex;
+    std::recursive_mutex m_stdio_communication_mutex;
     bool                        m_stdin_forward;           /// Remember if stdin must be forwarded to remote debug server
     std::string                 m_stdout_data;
     std::string                 m_stderr_data;
-    Mutex                       m_profile_data_comm_mutex;
+    std::recursive_mutex m_profile_data_comm_mutex;
     std::vector<std::string>    m_profile_data;
     Predicate<uint32_t>         m_iohandler_sync;
     MemoryCache                 m_memory_cache;

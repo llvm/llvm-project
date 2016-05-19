@@ -1092,9 +1092,9 @@ protected:
             return false;
         }
 
-        Mutex::Locker locker;
-        target->GetBreakpointList().GetListMutex(locker);
-        
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList().GetListMutex(lock);
+
         BreakpointIDList valid_bp_ids;
 
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs (command, target, result, &valid_bp_ids);
@@ -1222,8 +1222,8 @@ protected:
             return false;
         }
 
-        Mutex::Locker locker;
-        target->GetBreakpointList().GetListMutex(locker);
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList().GetListMutex(lock);
 
         const BreakpointList &breakpoints = target->GetBreakpointList();
 
@@ -1339,8 +1339,8 @@ protected:
             return false;
         }
 
-        Mutex::Locker locker;
-        target->GetBreakpointList().GetListMutex(locker);
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList().GetListMutex(lock);
 
         const BreakpointList &breakpoints = target->GetBreakpointList();
         size_t num_breakpoints = breakpoints.GetSize();
@@ -1523,8 +1523,8 @@ protected:
         }
 
         const BreakpointList &breakpoints = target->GetBreakpointList(m_options.m_internal);
-        Mutex::Locker locker;
-        target->GetBreakpointList(m_options.m_internal).GetListMutex(locker);
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList(m_options.m_internal).GetListMutex(lock);
 
         size_t num_breakpoints = breakpoints.GetSize();
 
@@ -1713,8 +1713,8 @@ protected:
         if (m_options.m_line_num != 0)
             break_type = eClearTypeFileAndLine;
 
-        Mutex::Locker locker;
-        target->GetBreakpointList().GetListMutex(locker);
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList().GetListMutex(lock);
 
         BreakpointList &breakpoints = target->GetBreakpointList();
         size_t num_breakpoints = breakpoints.GetSize();
@@ -1901,9 +1901,9 @@ protected:
             return false;
         }
 
-        Mutex::Locker locker;
-        target->GetBreakpointList().GetListMutex(locker);
-        
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList().GetListMutex(lock);
+
         const BreakpointList &breakpoints = target->GetBreakpointList();
 
         size_t num_breakpoints = breakpoints.GetSize();
@@ -2118,9 +2118,9 @@ protected:
             return false;
         }
 
-        Mutex::Locker locker;
-        target->GetBreakpointList().GetListMutex(locker);
-        
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList().GetListMutex(lock);
+
         const BreakpointList &breakpoints = target->GetBreakpointList();
 
         size_t num_breakpoints = breakpoints.GetSize();
@@ -2211,9 +2211,9 @@ protected:
             return false;
         }
 
-        Mutex::Locker locker;
-        target->GetBreakpointList().GetListMutex(locker);
-        
+        std::unique_lock<std::recursive_mutex> lock;
+        target->GetBreakpointList().GetListMutex(lock);
+
         const BreakpointList &breakpoints = target->GetBreakpointList();
 
         size_t num_breakpoints = breakpoints.GetSize();
@@ -2292,9 +2292,9 @@ protected:
         if (m_name_options.m_name.OptionWasSet())
         {
             const char *name = m_name_options.m_name.GetCurrentValue();
-            Mutex::Locker locker;
-            target->GetBreakpointList().GetListMutex(locker);
-            
+            std::unique_lock<std::recursive_mutex> lock;
+            target->GetBreakpointList().GetListMutex(lock);
+
             BreakpointList &breakpoints = target->GetBreakpointList();
             for (BreakpointSP bp_sp : breakpoints.Breakpoints())
             {

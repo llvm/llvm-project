@@ -27,7 +27,9 @@ static bool runOnCode(tooling::ToolAction *ToolAction, StringRef Code,
       new vfs::InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), InMemoryFileSystem));
-  std::vector<std::string> Args = {"include_fixer", "-fsyntax-only", FileName};
+  // FIXME: Investigate why -fms-compatibility breaks tests.
+  std::vector<std::string> Args = {"include_fixer", "-fsyntax-only",
+                                   "-fno-ms-compatibility", FileName};
   Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
   tooling::ToolInvocation Invocation(
       Args, ToolAction, Files.get(),
@@ -53,14 +55,15 @@ static std::string runIncludeFixer(
                  {{SymbolInfo::ContextType::Namespace, "std"}}),
       SymbolInfo("sting", SymbolInfo::SymbolKind::Class, "\"sting\"", 1,
                  {{SymbolInfo::ContextType::Namespace, "std"}}),
-      SymbolInfo("size_type", SymbolInfo::SymbolKind::Variable, "<string>", 1,
-                 {{SymbolInfo::ContextType::Namespace, "string"},
-                  {SymbolInfo::ContextType::Namespace, "std"}}),
       SymbolInfo("foo", SymbolInfo::SymbolKind::Class, "\"dir/otherdir/qux.h\"",
                  1, {{SymbolInfo::ContextType::Namespace, "b"},
                      {SymbolInfo::ContextType::Namespace, "a"}}),
       SymbolInfo("bar", SymbolInfo::SymbolKind::Class, "\"bar.h\"",
                  1, {{SymbolInfo::ContextType::Namespace, "b"},
+                     {SymbolInfo::ContextType::Namespace, "a"}}),
+      SymbolInfo("Green", SymbolInfo::SymbolKind::Class, "\"color.h\"",
+                 1, {{SymbolInfo::ContextType::EnumDecl, "Color"},
+                     {SymbolInfo::ContextType::Namespace, "b"},
                      {SymbolInfo::ContextType::Namespace, "a"}}),
   };
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
@@ -126,8 +129,6 @@ TEST(IncludeFixer, MinimizeInclude) {
             runIncludeFixer("a::b::foo bar;\n", IncludePath));
 }
 
-#ifndef _WIN32
-// It doesn't pass for targeting win32. Investigating.
 TEST(IncludeFixer, NestedName) {
   // Some tests don't pass for target *-win32.
   std::vector<std::string> args = {"-target", "x86_64-unknown-unknown"};
@@ -145,7 +146,6 @@ TEST(IncludeFixer, NestedName) {
             "namespace a {}\nint a = a::b::foo(0);\n",
             runIncludeFixer("namespace a {}\nint a = a::b::foo(0);\n", args));
 }
-#endif
 
 TEST(IncludeFixer, MultipleMissingSymbols) {
   EXPECT_EQ("#include <string>\nstd::string bar;\nstd::sting foo;\n",
@@ -166,6 +166,12 @@ TEST(IncludeFixer, ScopedNamespaceSymbols) {
   EXPECT_EQ("#include \"bar.h\"\nnamespace A { b::bar b; }\n",
             runIncludeFixer("namespace A { b::bar b; }\n"));
 }
+
+TEST(IncludeFixer, EnumConstantSymbols) {
+  EXPECT_EQ("#include \"color.h\"\nint test = a::b::Green;\n",
+            runIncludeFixer("int test = a::b::Green;\n"));
+}
+
 } // namespace
 } // namespace include_fixer
 } // namespace clang

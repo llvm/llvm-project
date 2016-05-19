@@ -462,7 +462,7 @@ AppleObjCTrampolineHandler::AppleObjCVTables::InitializeVTableSymbols ()
         Target &target = process_sp->GetTarget();
         
         const ModuleList &target_modules = target.GetImages();
-        Mutex::Locker modules_locker(target_modules.GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
         size_t num_modules = target_modules.GetSize();
         if (!m_objc_module_sp)
         {

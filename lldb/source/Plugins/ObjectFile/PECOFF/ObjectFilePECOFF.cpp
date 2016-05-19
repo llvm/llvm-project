@@ -539,8 +539,8 @@ ObjectFilePECOFF::GetSymtab()
         {
             SectionList *sect_list = GetSectionList();
             m_symtab_ap.reset(new Symtab(this));
-            Mutex::Locker symtab_locker (m_symtab_ap->GetMutex());
-            
+            std::lock_guard<std::recursive_mutex> guard(m_symtab_ap->GetMutex());
+
             const uint32_t num_syms = m_coff_header.nsyms;
 
             if (num_syms > 0 && m_coff_header.symoff > 0)

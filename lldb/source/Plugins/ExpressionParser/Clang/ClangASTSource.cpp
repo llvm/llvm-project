@@ -708,7 +708,7 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
     else
     {
         const ModuleList &target_images = m_target->GetImages();
-        Mutex::Locker modules_locker (target_images.GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
 
         for (size_t i = 0, e = target_images.GetSize(); i < e; ++i)
         {
@@ -1826,7 +1826,7 @@ ClangASTSource::CompleteNamespaceMap (ClangASTImporter::NamespaceMapSP &namespac
     else
     {
         const ModuleList &target_images = m_target->GetImages();
-        Mutex::Locker modules_locker(target_images.GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
 
         CompilerDeclContext null_namespace_decl;
 

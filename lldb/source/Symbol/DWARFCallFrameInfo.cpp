@@ -308,9 +308,9 @@ DWARFCallFrameInfo::GetFDEIndex ()
     
     if (m_fde_index_initialized)
         return;
-    
-    Mutex::Locker locker(m_fde_index_mutex);
-    
+
+    std::lock_guard<std::mutex> guard(m_fde_index_mutex);
+
     if (m_fde_index_initialized) // if two threads hit the locker
         return;
 

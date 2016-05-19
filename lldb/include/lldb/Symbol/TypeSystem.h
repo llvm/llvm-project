@@ -14,6 +14,7 @@
 // C++ Includes
 #include <functional>
 #include <map>
+#include <mutex>
 #include <string>
 
 // Other libraries and framework includes
@@ -24,7 +25,6 @@
 #include "lldb/lldb-private.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 
@@ -617,7 +617,7 @@ protected:
         AddToMap (lldb::LanguageType language, lldb::TypeSystemSP const &type_system_sp);
 
         typedef std::map<lldb::LanguageType, lldb::TypeSystemSP> collection;
-        mutable Mutex m_mutex; ///< A mutex to keep this object happy in multi-threaded environments.
+        mutable std::mutex m_mutex; ///< A mutex to keep this object happy in multi-threaded environments.
         collection m_map;
         bool m_clear_in_progress;
     };

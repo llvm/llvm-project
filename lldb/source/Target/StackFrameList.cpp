@@ -36,26 +36,21 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // StackFrameList constructor
 //----------------------------------------------------------------------
-StackFrameList::StackFrameList
-(
-    Thread &thread, 
-    const lldb::StackFrameListSP &prev_frames_sp, 
-    bool show_inline_frames
-) :
-    m_thread (thread),
-    m_prev_frames_sp (prev_frames_sp),
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_frames (),
-    m_selected_frame_idx (0),
-    m_concrete_frames_fetched (0),
-    m_current_inlined_depth (UINT32_MAX),
-    m_current_inlined_pc (LLDB_INVALID_ADDRESS),
-    m_show_inlined_frames (show_inline_frames)
+StackFrameList::StackFrameList(Thread &thread, const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames)
+    : m_thread(thread),
+      m_prev_frames_sp(prev_frames_sp),
+      m_mutex(),
+      m_frames(),
+      m_selected_frame_idx(0),
+      m_concrete_frames_fetched(0),
+      m_current_inlined_depth(UINT32_MAX),
+      m_current_inlined_pc(LLDB_INVALID_ADDRESS),
+      m_show_inlined_frames(show_inline_frames)
 {
     if (prev_frames_sp)
     {
         m_current_inlined_depth = prev_frames_sp->m_current_inlined_depth;
-        m_current_inlined_pc =    prev_frames_sp->m_current_inlined_pc;
+        m_current_inlined_pc = prev_frames_sp->m_current_inlined_pc;
     }
 }
 
@@ -101,7 +96,7 @@ StackFrameList::GetCurrentInlinedDepth ()
 void
 StackFrameList::ResetCurrentInlinedDepth ()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (m_show_inlined_frames)
     {        
@@ -485,7 +480,7 @@ StackFrameList::GetFramesUpTo(uint32_t end_idx)
 uint32_t
 StackFrameList::GetNumFrames (bool can_create)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (can_create)
         GetFramesUpTo (UINT32_MAX);
@@ -502,7 +497,8 @@ StackFrameList::Dump (Stream *s)
 {
     if (s == nullptr)
         return;
-    Mutex::Locker locker (m_mutex);
+
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     const_iterator pos, begin = m_frames.begin(), end = m_frames.end();
     for (pos = begin; pos != end; ++pos)
@@ -525,7 +521,7 @@ StackFrameSP
 StackFrameList::GetFrameAtIndex (uint32_t idx)
 {
     StackFrameSP frame_sp;
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     uint32_t original_idx = idx;
     
     uint32_t inlined_depth = GetCurrentInlinedDepth();
@@ -634,7 +630,7 @@ StackFrameList::GetFrameWithStackID (const StackID &stack_id)
     
     if (stack_id.IsValid())
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         uint32_t frame_idx = 0;
         // Do a binary search in case the stack frame is already in our cache
         collection::const_iterator begin = m_frames.begin();
@@ -680,14 +676,14 @@ StackFrameList::SetFrameAtIndex (uint32_t idx, StackFrameSP &frame_sp)
 uint32_t
 StackFrameList::GetSelectedFrameIndex () const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_selected_frame_idx;
 }
 
 uint32_t
 StackFrameList::SetSelectedFrame (lldb_private::StackFrame *frame)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     const_iterator pos;
     const_iterator begin = m_frames.begin();
     const_iterator end = m_frames.end();
@@ -711,7 +707,7 @@ StackFrameList::SetSelectedFrame (lldb_private::StackFrame *frame)
 bool
 StackFrameList::SetSelectedFrameByIndex (uint32_t idx)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     StackFrameSP frame_sp (GetFrameAtIndex (idx));
     if (frame_sp)
     {
@@ -743,7 +739,7 @@ StackFrameList::SetDefaultFileAndLineToSelectedFrame()
 void
 StackFrameList::Clear ()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_frames.clear();
     m_concrete_frames_fetched = 0;
 }
@@ -751,7 +747,7 @@ StackFrameList::Clear ()
 void
 StackFrameList::InvalidateFrames (uint32_t start_idx)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_show_inlined_frames)
     {
         Clear();
@@ -770,8 +766,11 @@ StackFrameList::InvalidateFrames (uint32_t start_idx)
 void
 StackFrameList::Merge (std::unique_ptr<StackFrameList>& curr_ap, lldb::StackFrameListSP& prev_sp)
 {
-    Mutex::Locker curr_locker(curr_ap ? &curr_ap->m_mutex : nullptr);
-    Mutex::Locker prev_locker(prev_sp ? &prev_sp->m_mutex : nullptr);
+    std::unique_lock<std::recursive_mutex> current_lock, previous_lock;
+    if (curr_ap)
+        current_lock = std::unique_lock<std::recursive_mutex>(curr_ap->m_mutex);
+    if (prev_sp)
+        previous_lock = std::unique_lock<std::recursive_mutex>(prev_sp->m_mutex);
 
 #if defined (DEBUG_STACK_FRAMES)
     StreamFile s(stdout, false);

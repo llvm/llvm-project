@@ -162,7 +162,7 @@ ObjectFileJIT::GetSymtab()
         if (m_symtab_ap.get() == NULL)
         {
             m_symtab_ap.reset(new Symtab(this));
-            Mutex::Locker symtab_locker (m_symtab_ap->GetMutex());
+            std::lock_guard<std::recursive_mutex> symtab_guard(m_symtab_ap->GetMutex());
             ObjectFileJITDelegateSP delegate_sp (m_delegate_wp.lock());
             if (delegate_sp)
                 delegate_sp->PopulateSymtab(this, *m_symtab_ap);
