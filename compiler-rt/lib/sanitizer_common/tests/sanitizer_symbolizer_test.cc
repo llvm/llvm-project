@@ -55,4 +55,14 @@ TEST(Symbolizer, ExtractTokenUpToDelimiter) {
   InternalFree(token);
 }
 
+TEST(Symbolizer, DemangleSwiftAndCXX) {
+  // Swift names are not demangled in default llvm build because Swift
+  // runtime is not linked in.
+  EXPECT_STREQ("_TtSd", DemangleSwiftAndCXX("_TtSd"));
+  // Check that the rest demangles properly.
+  EXPECT_STREQ("f1(char*, int)", DemangleSwiftAndCXX("_Z2f1Pci"));
+  EXPECT_STREQ("foo", DemangleSwiftAndCXX("foo"));
+  EXPECT_STREQ("", DemangleSwiftAndCXX(""));
+}
+
 }  // namespace __sanitizer

@@ -26,6 +26,7 @@
 #include "sanitizer_symbolizer_libbacktrace.h"
 #include "sanitizer_symbolizer_mac.h"
 
+#include <dlfcn.h>   // for dlsym()
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -59,6 +60,38 @@ const char *DemangleCXXABI(const char *name) {
       return demangled_name;
 
   return name;
+}
+
+// Attempts to demangle a Swift name. The demangler will return nullptr
+/// if a non-Swift name is passed in.
+const char *DemangleSwift(const char *name) {
+  // Not to call dlsym every time we demangle, check if we are dealing with
+  // Swift mangled name first.
+  if (name[0] != '_' || name[1] != 'T') {
+    return nullptr;
+  }
+
+  // As of now, there are no headers for the Swift runtime. Once they are
+  // present, we will weakly link since we do not require Swift runtime to be
+  // linked.
+  typedef char *(*swift_demangle_ft)(const char *mangledName,
+                                     size_t mangledNameLength,
+                                     char *outputBuffer,
+                                     size_t *outputBufferSize,
+                                     uint32_t flags);
+  swift_demangle_ft swift_demangle_f =
+    (swift_demangle_ft) dlsym(RTLD_DEFAULT, "swift_demangle");
+  if (swift_demangle_f)
+    return swift_demangle_f(name, internal_strlen(name), 0, 0, 0);
+
+  return nullptr;
+}
+
+const char *DemangleSwiftAndCXX(const char *name) {
+  CHECK(name);
+  if (const char *swift_demangled_name = DemangleSwift(name))
+    return swift_demangled_name;
+  return DemangleCXXABI(name);
 }
 
 bool SymbolizerProcess::StartSymbolizerSubprocess() {
@@ -374,7 +407,7 @@ class InternalSymbolizer : public SymbolizerTool {
 #endif  // SANITIZER_SUPPORTS_WEAK_HOOKS
 
 const char *Symbolizer::PlatformDemangle(const char *name) {
-  return DemangleCXXABI(name);
+  return DemangleSwiftAndCXX(name);
 }
 
 void Symbolizer::PlatformPrepareForSandboxing() {}
