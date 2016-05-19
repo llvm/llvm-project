@@ -264,7 +264,6 @@ X86TargetInfo::X86TargetInfo() {
   TlsGotRel = R_386_TLS_TPOFF;
   TlsModuleIndexRel = R_386_TLS_DTPMOD32;
   TlsOffsetRel = R_386_TLS_DTPOFF32;
-  UseLazyBinding = true;
   PltEntrySize = 16;
   PltZeroSize = 16;
   TlsGdToLeSkip = 2;
@@ -364,8 +363,7 @@ void X86TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 
   // jmp *foo@GOT(%ebx) or jmp *foo_in_GOT
   Buf[1] = Config->Pic ? 0xa3 : 0x25;
-  uint32_t Got = UseLazyBinding ? Out<ELF32LE>::GotPlt->getVA()
-                                : Out<ELF32LE>::Got->getVA();
+  uint32_t Got = Out<ELF32LE>::GotPlt->getVA();
   write32le(Buf + 2, Config->Shared ? GotEntryAddr - Got : GotEntryAddr);
   write32le(Buf + 7, RelOff);
   write32le(Buf + 12, -Index * PltEntrySize - PltZeroSize - 16);
@@ -496,7 +494,6 @@ X86_64TargetInfo::X86_64TargetInfo() {
   TlsGotRel = R_X86_64_TPOFF64;
   TlsModuleIndexRel = R_X86_64_DTPMOD64;
   TlsOffsetRel = R_X86_64_DTPOFF64;
-  UseLazyBinding = true;
   PltEntrySize = 16;
   PltZeroSize = 16;
   TlsGdToLeSkip = 2;
@@ -761,7 +758,7 @@ RelExpr PPCTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
 }
 
 PPC64TargetInfo::PPC64TargetInfo() {
-  GotRel = R_PPC64_GLOB_DAT;
+  PltRel = GotRel = R_PPC64_GLOB_DAT;
   RelativeRel = R_PPC64_RELATIVE;
   PltEntrySize = 32;
 
@@ -937,7 +934,6 @@ AArch64TargetInfo::AArch64TargetInfo() {
   TlsGotRel = R_AARCH64_TLS_TPREL64;
   TlsModuleIndexRel = R_AARCH64_TLS_DTPMOD64;
   TlsOffsetRel = R_AARCH64_TLS_DTPREL64;
-  UseLazyBinding = true;
   PltEntrySize = 16;
   PltZeroSize = 32;
 }
@@ -1236,7 +1232,6 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   PltEntrySize = 16;
   PltZeroSize = 32;
   ThunkSize = 16;
-  UseLazyBinding = true;
   CopyRel = R_MIPS_COPY;
   PltRel = R_MIPS_JUMP_SLOT;
   if (ELFT::Is64Bits)

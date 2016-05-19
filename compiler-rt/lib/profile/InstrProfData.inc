@@ -322,16 +322,15 @@ typedef struct ValueProfData {
   static std::unique_ptr<ValueProfData>
   serializeFrom(const InstrProfRecord &Record);
   /*!
-   * Check the integrity of the record. Return the error code when
-   * an error is detected, otherwise return instrprof_error::success.
+   * Check the integrity of the record.
    */
-  instrprof_error checkIntegrity();
+  Error checkIntegrity();
   /*!
    * Return a pointer to \c ValueProfileData instance ready to be read.
    * All data in the instance are properly byte swapped. The input
    * data is assumed to be in little endian order.
    */
-  static ErrorOr<std::unique_ptr<ValueProfData>>
+  static Expected<std::unique_ptr<ValueProfData>>
   getValueProfData(const unsigned char *SrcBuffer,
                    const unsigned char *const SrcBufferEnd,
                    support::endianness SrcDataEndianness);

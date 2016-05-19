@@ -47,10 +47,39 @@ cl::opt<bool>
 cl::opt<bool> Quiet("q", cl::desc("Reduce terminal output"), cl::init(false),
                     cl::cat(IncludeFixerCategory));
 
+cl::opt<bool>
+    STDINMode("stdin",
+              cl::desc("Override source file's content (in the overlaying\n"
+                       "virtual file system) with input from <stdin> and run\n"
+                       "the tool on the new content with the compilation\n"
+                       "options of the source file. This mode is currently\n"
+                       "used for editor integration."),
+              cl::init(false), cl::cat(IncludeFixerCategory));
+
 int includeFixerMain(int argc, const char **argv) {
   tooling::CommonOptionsParser options(argc, argv, IncludeFixerCategory);
   tooling::ClangTool tool(options.getCompilations(),
                           options.getSourcePathList());
+
+  // In STDINMode, we override the file content with the <stdin> input.
+  // Since `tool.mapVirtualFile` takes `StringRef`, we define `Code` outside of
+  // the if-block so that `Code` is not released after the if-block.
+  std::unique_ptr<llvm::MemoryBuffer> Code;
+  if (STDINMode) {
+    assert(options.getSourcePathList().size() == 1 &&
+           "Expect exactly one file path in STDINMode.");
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> CodeOrErr =
+        MemoryBuffer::getSTDIN();
+    if (std::error_code EC = CodeOrErr.getError()) {
+      errs() << EC.message() << "\n";
+      return 1;
+    }
+    Code = std::move(CodeOrErr.get());
+    if (Code->getBufferSize() == 0)
+      return 0;  // Skip empty files.
+
+    tool.mapVirtualFile(options.getSourcePathList().front(), Code->getBuffer());
+  }
 
   // Set up data source.
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
@@ -108,7 +137,11 @@ int includeFixerMain(int argc, const char **argv) {
   include_fixer::IncludeFixerActionFactory Factory(
       *SymbolIndexMgr, Replacements, MinimizeIncludePaths);
 
-  tool.run(&Factory); // Always succeeds.
+  if (tool.run(&Factory) != 0) {
+    llvm::errs()
+        << "Clang died with a fatal error! (incorrect include paths?)\n";
+    return 1;
+  }
 
   if (!Quiet)
     for (const tooling::Replacement &Replacement : Replacements)
@@ -120,6 +153,15 @@ int includeFixerMain(int argc, const char **argv) {
   TextDiagnosticPrinter DiagnosticPrinter(outs(), &*DiagOpts);
   SourceManager SM(Diagnostics, tool.getFiles());
   Diagnostics.setClient(&DiagnosticPrinter, false);
+
+  if (STDINMode) {
+    for (const tooling::Replacement &Replacement : Replacements) {
+      FileID ID = SM.getMainFileID();
+      unsigned LineNum = SM.getLineNumber(ID, Replacement.getOffset());
+      llvm::outs() << LineNum << "," << Replacement.getReplacementText();
+    }
+    return 0;
+  }
 
   // Write replacements to disk.
   Rewriter Rewrites(SM, LangOptions());

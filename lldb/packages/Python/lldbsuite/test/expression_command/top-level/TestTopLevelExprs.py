@@ -51,6 +51,7 @@ class TopLevelExpressionsTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFailureAndroid(api_levels=[21, 22], bugnumber="llvm.org/pr27787")
+    @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr27787")
     def test_top_level_expressions(self):
         self.build_and_run()
 

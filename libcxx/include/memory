@@ -5541,14 +5541,17 @@ template <class _Tp>
 bool
 atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w)
 {
+    shared_ptr<_Tp> __temp;
     __sp_mut& __m = __get_sp_mut(__p);
     __m.lock();
     if (__p->__owner_equivalent(*__v))
     {
+        _VSTD::swap(__temp, *__p);
         *__p = __w;
         __m.unlock();
         return true;
     }
+    _VSTD::swap(__temp, *__v);
     *__v = *__p;
     __m.unlock();
     return false;

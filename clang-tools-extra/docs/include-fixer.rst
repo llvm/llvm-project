@@ -51,6 +51,20 @@ database for LLVM, any project built by CMake should follow similar steps.
   $ clang-include-fixer -db=yaml path/to/file/with/missing/include.cpp
     Added #include "foo.h"
 
+Integrate with Vim
+-------------------
+To run `clang-include-fixer` on a potentially unsaved buffer in Vim. Add the
+following key binding to your ``.vimrc``:
+
+.. code-block:: console
+
+  map ,cf :pyf path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/clang-include-fixer.py<cr>
+
+This enables `clang-include-fixer` for NORMAL and VISUAL mode. Change ``,cf`` to
+another binding if you need clang-include-fixer on a different key.
+
+See ``clang-include-fixer.py`` for more details.
+
 How it Works
 ============
 

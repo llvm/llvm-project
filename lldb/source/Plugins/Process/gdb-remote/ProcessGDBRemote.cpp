@@ -3307,7 +3307,8 @@ ProcessGDBRemote::EnableBreakpointSite (BreakpointSite *bp_site)
     if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware) && (!bp_site->HardwareRequired()))
     {
         // Try to send off a software breakpoint packet ($Z0)
-        if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, true, addr, bp_op_size) == 0)
+        uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointSoftware, true, addr, bp_op_size);
+        if (error_no == 0)
         {
             // The breakpoint was placed successfully
             bp_site->SetEnabled(true);
@@ -3323,7 +3324,13 @@ ProcessGDBRemote::EnableBreakpointSite (BreakpointSite *bp_site)
         // with the error code.  If they are now unsupported, then we would like to fall through
         // and try another form of breakpoint.
         if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware))
+        {
+            if (error_no != UINT8_MAX)
+                error.SetErrorStringWithFormat("error: %d sending the breakpoint request", errno);
+            else
+                error.SetErrorString("error sending the breakpoint request");
             return error;
+        }
 
         // We reach here when software breakpoints have been found to be unsupported. For future
         // calls to set a breakpoint, we will not attempt to set a breakpoint with a type that is
@@ -3340,7 +3347,8 @@ ProcessGDBRemote::EnableBreakpointSite (BreakpointSite *bp_site)
     if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware))
     {
         // Try to send off a hardware breakpoint packet ($Z1)
-        if (m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, true, addr, bp_op_size) == 0)
+        uint8_t error_no = m_gdb_comm.SendGDBStoppointTypePacket(eBreakpointHardware, true, addr, bp_op_size);
+        if (error_no == 0)
         {
             // The breakpoint was placed successfully
             bp_site->SetEnabled(true);
@@ -3352,7 +3360,13 @@ ProcessGDBRemote::EnableBreakpointSite (BreakpointSite *bp_site)
         if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware))
         {
             // Unable to set this hardware breakpoint
-            error.SetErrorString("failed to set hardware breakpoint (hardware breakpoint resources might be exhausted or unavailable)");
+            if (error_no != UINT8_MAX)
+                error.SetErrorStringWithFormat("error: %d sending the hardware breakpoint request "
+                                               "(hardware breakpoint resources might be exhausted or unavailable)",
+                                               error_no);
+            else
+                error.SetErrorString("error sending the hardware breakpoint request (hardware breakpoint resources "
+                                     "might be exhausted or unavailable)");
             return error;
         }
 

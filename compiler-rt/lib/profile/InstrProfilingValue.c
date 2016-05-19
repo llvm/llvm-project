@@ -24,6 +24,18 @@
     return NULL;                                                               \
   }
 
+COMPILER_RT_VISIBILITY uint32_t VPMaxNumValsPerSite =
+    INSTR_PROF_MAX_NUM_VAL_PER_SITE;
+
+COMPILER_RT_VISIBILITY void lprofSetupValueProfiler() {
+  const char *Str = 0;
+  Str = getenv("LLVM_VP_MAX_NUM_VALS_PER_SITE");
+  if (Str && Str[0])
+    VPMaxNumValsPerSite = atoi(Str);
+  if (VPMaxNumValsPerSite > INSTR_PROF_MAX_NUM_VAL_PER_SITE)
+    VPMaxNumValsPerSite = INSTR_PROF_MAX_NUM_VAL_PER_SITE;
+}
+
 /* This method is only used in value profiler mock testing.  */
 COMPILER_RT_VISIBILITY void
 __llvm_profile_set_num_value_sites(__llvm_profile_data *Data,
@@ -94,7 +106,7 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
     ++VDataCount;
   }
 
-  if (VDataCount >= INSTR_PROF_MAX_NUM_VAL_PER_SITE)
+  if (VDataCount >= VPMaxNumValsPerSite)
     return;
 
   CurrentVNode = (ValueProfNode *)calloc(1, sizeof(ValueProfNode));

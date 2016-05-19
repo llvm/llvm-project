@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-unused-using-decls %t
+// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- -- -fno-delayed-template-parsing
 
 // ----- Definitions -----
 template <typename T> class vector {};
@@ -16,6 +16,7 @@ class I {
  public:
   static int ii;
 };
+template <typename T> class J {};
 
 class Base {
  public:
@@ -29,6 +30,7 @@ int UsedFunc() { return 1; }
 int UnusedFunc() { return 1; }
 template <typename T> int UsedTemplateFunc() { return 1; }
 template <typename T> int UnusedTemplateFunc() { return 1; }
+template <typename T> int UsedInTemplateFunc() { return 1; }
 
 class ostream {
 public:
@@ -69,6 +71,13 @@ using n::UnusedFunc; // UnusedFunc
 // CHECK-FIXES: {{^}}// UnusedFunc
 using n::cout;
 using n::endl;
+
+using n::UsedInTemplateFunc;
+using n::J;
+template <typename T> void Callee() {
+  J<T> j;
+  UsedInTemplateFunc<T>();
+}
 
 #define DEFINE_INT(name)        \
   namespace INT {               \
