@@ -28,6 +28,7 @@
 
 #include <dlfcn.h>   // for dlsym()
 #include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
