@@ -1117,8 +1117,8 @@ TEST(MemorySanitizer, gethostbyname_r_erange) {
   struct hostent he;
   struct hostent *result;
   int err;
-  int res = gethostbyname_r("localhost", &he, buf, sizeof(buf), &result, &err);
-  ASSERT_EQ(ERANGE, res);
+  gethostbyname_r("localhost", &he, buf, sizeof(buf), &result, &err);
+  ASSERT_EQ(ERANGE, errno);
   EXPECT_NOT_POISONED(err);
 }
 
