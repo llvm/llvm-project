@@ -609,11 +609,14 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
     return;
   }
 
-  // If -inline-threshold is not given, listen to the optsize and minsize
-  // attributes when they would decrease the threshold.
   Function *Caller = CS.getCaller();
-
-  if (!(DefaultInlineThreshold.getNumOccurrences() > 0)) {
+  if (DefaultInlineThreshold.getNumOccurrences() > 0) {
+    // Explicitly specified -inline-threhold overrides the threshold passed to
+    // CallAnalyzer's constructor.
+    Threshold = DefaultInlineThreshold;
+  } else {
+    // If -inline-threshold is not given, listen to the optsize and minsize
+    // attributes when they would decrease the threshold.
     if (Caller->optForMinSize() && OptMinSizeThreshold < Threshold)
       Threshold = OptMinSizeThreshold;
     else if (Caller->optForSize() && OptSizeThreshold < Threshold)
