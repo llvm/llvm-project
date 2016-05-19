@@ -177,6 +177,19 @@ TEST(EnumConstant, Matches) {
   EXPECT_TRUE(notMatches("enum X {};", Matcher));
 }
 
+TEST(Matcher, UnresolvedLookupExpr) {
+  // FIXME: The test is known to be broken on Windows with delayed template
+  // parsing.
+  EXPECT_TRUE(matchesConditionally("template<typename T>"
+                                   "T foo() { T a; return a; }"
+                                   "template<typename T>"
+                                   "void bar() {"
+                                   "  foo<T>();"
+                                   "}",
+                                   unresolvedLookupExpr(),
+                                   /*ExpectMatch=*/true,
+                                   "-fno-delayed-template-parsing"));
+}
 
 TEST(Matcher, Call) {
   // FIXME: Do we want to overload Call() to directly take

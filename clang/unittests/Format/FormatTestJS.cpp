@@ -148,6 +148,7 @@ TEST_F(FormatTestJS, CppKeywords) {
 
 TEST_F(FormatTestJS, ES6DestructuringAssignment) {
   verifyFormat("var [a, b, c] = [1, 2, 3];");
+  verifyFormat("const [a, b, c] = [1, 2, 3];");
   verifyFormat("let [a, b, c] = [1, 2, 3];");
   verifyFormat("var {a, b} = {a: 1, b: 2};");
   verifyFormat("let {a, b} = {a: 1, b: 2};");

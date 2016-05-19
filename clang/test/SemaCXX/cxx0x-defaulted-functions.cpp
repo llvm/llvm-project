@@ -150,6 +150,14 @@ namespace PR13527 {
   Y::~Y() = default; // expected-error {{definition of explicitly defaulted}}
 }
 
+namespace PR27699 {
+  struct X {
+    X();
+  };
+  X::X() = default; // expected-note {{here}}
+  X::X() = default; // expected-error {{redefinition of 'X'}}
+}
+
 namespace PR14577 {
   template<typename T>
   struct Outer {

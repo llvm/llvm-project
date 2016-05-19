@@ -1086,6 +1086,24 @@ const internal::VariadicDynCastAllOfMatcher<
   Decl,
   UsingDirectiveDecl> usingDirectiveDecl;
 
+/// \brief Matches reference to a name that can be looked up during parsing
+/// but could not be resolved to a specific declaration.
+///
+/// Given
+/// \code
+///   template<typename T>
+///   T foo() { T a; return a; }
+///   template<typename T>
+///   void bar() {
+///     foo<T>();
+///   }
+/// \endcode
+/// unresolvedLookupExpr()
+///   matches \code foo<T>() \endcode
+const internal::VariadicDynCastAllOfMatcher<
+   Stmt,
+   UnresolvedLookupExpr> unresolvedLookupExpr;
+
 /// \brief Matches unresolved using value declarations.
 ///
 /// Given

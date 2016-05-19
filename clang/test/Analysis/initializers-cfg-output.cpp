@@ -61,7 +61,7 @@ class TestDelegating {
 // CHECK:    6: B([B1.5]) (Base initializer)
 // CHECK:    7:  (CXXConstructExpr, class A)
 // CHECK:    8: A([B1.7]) (Base initializer)
-// CHECK:    9: /*implicit*/int()
+// CHECK:    9: /*implicit*/(int)0
 // CHECK:   10: i([B1.9]) (Member initializer)
 // CHECK:   11: this
 // CHECK:   12: [B1.11]->i

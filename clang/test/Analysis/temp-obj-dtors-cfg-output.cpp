@@ -1077,7 +1077,7 @@ int testConsistencyNestedNormalReturn(bool value) {
 // CHECK:    14: a([B1.13]) (Member initializer)
 // CHECK:    15: ~B() (Temporary object destructor)
 // CHECK:    16: ~A() (Temporary object destructor)
-// CHECK:    17: /*implicit*/int()
+// CHECK:    17: /*implicit*/(int)0
 // CHECK:    18: b([B1.17]) (Member initializer)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0

@@ -528,7 +528,7 @@ TargetMachine *EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
 
   // Keep this synced with the equivalent code in tools/driver/cc1as_main.cpp.
-  llvm::Reloc::Model RM = llvm::Reloc::Default;
+  llvm::Optional<llvm::Reloc::Model> RM;
   if (CodeGenOpts.RelocationModel == "static") {
     RM = llvm::Reloc::Static;
   } else if (CodeGenOpts.RelocationModel == "pic") {

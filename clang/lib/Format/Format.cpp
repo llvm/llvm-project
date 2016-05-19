@@ -2140,13 +2140,23 @@ tooling::Replacements formatReplacements(StringRef Code,
                                          const tooling::Replacements &Replaces,
                                          const FormatStyle &Style) {
   // We need to use lambda function here since there are two versions of
+  // `sortIncludes`.
+  auto SortIncludes = [](const FormatStyle &Style, StringRef Code,
+                         std::vector<tooling::Range> Ranges,
+                         StringRef FileName) -> tooling::Replacements {
+    return sortIncludes(Style, Code, Ranges, FileName);
+  };
+  tooling::Replacements SortedReplaces =
+      processReplacements(SortIncludes, Code, Replaces, Style);
+
+  // We need to use lambda function here since there are two versions of
   // `reformat`.
   auto Reformat = [](const FormatStyle &Style, StringRef Code,
                      std::vector<tooling::Range> Ranges,
                      StringRef FileName) -> tooling::Replacements {
     return reformat(Style, Code, Ranges, FileName);
   };
-  return processReplacements(Reformat, Code, Replaces, Style);
+  return processReplacements(Reformat, Code, SortedReplaces, Style);
 }
 
 tooling::Replacements

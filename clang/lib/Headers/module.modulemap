@@ -125,6 +125,10 @@ module _Builtin_intrinsics [system] [extern_c] {
       export pclmul
     }
 
+    explicit module mwaitx {
+      header "mwaitxintrin.h"
+    }
+
     explicit module aes {
       header "__wmmintrin_aes.h"
     }

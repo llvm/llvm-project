@@ -1451,6 +1451,17 @@ __m512i test_mm512_mask_andnot_epi32 (__mmask16 __k,__m512i __A, __m512i __B,
   return _mm512_mask_andnot_epi32(__src,__k,__A,__B);
 }
 
+__m512i test_mm512_andnot_si512(__m512i __A, __m512i __B)
+{
+  //CHECK-LABLE: @test_mm512_andnot_si512
+  //CHECK: load {{.*}}%__A.addr.i, align 64
+  //CHECK: %neg.i = xor{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+  //CHECK: load {{.*}}%__B.addr.i, align 64
+  //CHECK: and <8 x i64> %neg.i,{{.*}}
+
+  return _mm512_andnot_si512(__A, __B);
+}
+
 __m512i test_mm512_andnot_epi32(__m512i __A, __m512i __B) {
   //CHECK-LABEL: @test_mm512_andnot_epi32
   //CHECK: @llvm.x86.avx512.mask.pandn.d.512

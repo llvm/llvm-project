@@ -243,6 +243,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   QualType ObjCClassRedefinitionType;
   QualType ObjCSelRedefinitionType;
 
+  /// The identifier 'bool'.
+  mutable IdentifierInfo *BoolName = nullptr;
+
   /// The identifier 'NSObject'.
   IdentifierInfo *NSObjectName = nullptr;
 
@@ -1455,6 +1458,13 @@ public:
     }
 
     return NSCopyingName;
+  }
+
+  /// Retrieve the identifier 'bool'.
+  IdentifierInfo *getBoolName() const {
+    if (!BoolName)
+      BoolName = &Idents.get("bool");
+    return BoolName;
   }
 
   IdentifierInfo *getMakeIntegerSeqName() const {
