@@ -4585,15 +4585,11 @@ static void handleObjCPreciseLifetimeAttr(Sema &S, Decl *D,
                                      Attr.getAttributeSpellingListIndex()));
 }
 
-/// Do a very rough check to make sure \p Name looks like a Swift function name,
-/// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
-/// and output the number of parameter names, whether this is a single-arg
-/// initializer. Returns None if the name is valid, otherwise returns a
-/// one-parameter diagnostic ID describing the problem.
-static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
-                                      unsigned &ParamCount,
-                                      bool &IsSingleParamInit) {
-  ParamCount = 0;
+static Optional<unsigned>
+validateSwiftFunctionName(StringRef Name,
+                          unsigned &SwiftParamCount,
+                          bool &IsSingleParamInit) {
+  SwiftParamCount = 0;
 
   // Check whether this will be mapped to a getter or setter of a
   // property.
@@ -4608,7 +4604,7 @@ static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
   }
 
   if (Name.back() != ')')
-    return diag::err_attr_swift_name_function;
+    return diag::warn_attr_swift_name_function;
 
   StringRef BaseName, Parameters;
   std::tie(BaseName, Parameters) = Name.split('(');
@@ -4622,35 +4618,35 @@ static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
     BaseName = ContextName;
     ContextName = StringRef();
   } else if (ContextName.empty() || !isValidIdentifier(ContextName)) {
-    return diag::err_attr_swift_name_context_name_invalid_identifier;
+    return diag::warn_attr_swift_name_context_name_invalid_identifier;
   } else {
     IsMember = true;
   }
 
   if (!isValidIdentifier(BaseName) || BaseName == "_")
-    return diag::err_attr_swift_name_basename_invalid_identifier;
+    return diag::warn_attr_swift_name_basename_invalid_identifier;
 
   bool IsSubscript = BaseName == "subscript";
   // A subscript accessor must be a getter or setter.
   if (IsSubscript && !isGetter && !isSetter)
-    return diag::err_attr_swift_name_subscript_not_accessor;
+    return diag::warn_attr_swift_name_subscript_not_accessor;
   
   if (Parameters.empty())
-    return diag::err_attr_swift_name_missing_parameters;
+    return diag::warn_attr_swift_name_missing_parameters;
   Parameters = Parameters.drop_back(); // ')'
 
   if (Parameters.empty()) {
     // Setters and subscripts must have at least one parameter.
     if (IsSubscript)
-      return diag::err_attr_swift_name_subscript_no_parameter;
+      return diag::warn_attr_swift_name_subscript_no_parameter;
     if (isSetter)
-      return diag::err_attr_swift_name_setter_parameters;
+      return diag::warn_attr_swift_name_setter_parameters;
     
     return None;
   }
 
   if (Parameters.back() != ':')
-    return diag::err_attr_swift_name_function;
+    return diag::warn_attr_swift_name_function;
 
   Optional<unsigned> SelfLocation;
   Optional<unsigned> NewValueLocation;
@@ -4660,15 +4656,15 @@ static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
     std::tie(NextParam, Parameters) = Parameters.split(':');
 
     if (!isValidIdentifier(NextParam))
-      return diag::err_attr_swift_name_parameter_invalid_identifier;
+      return diag::warn_attr_swift_name_parameter_invalid_identifier;
 
     // "self" indicates the "self" argument for a member.
     if (IsMember && NextParam == "self") {
       // More than one "self"?
-      if (SelfLocation) return diag::err_attr_swift_name_multiple_selfs;
+      if (SelfLocation) return diag::warn_attr_swift_name_multiple_selfs;
 
       // The "self" location is the current parameter.
-      SelfLocation = ParamCount;
+      SelfLocation = SwiftParamCount;
     }
     
     // "newValue" indicates the "newValue" argument for a setter.
@@ -4677,17 +4673,17 @@ static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
       // subscript accessors, so don't error right away.
       ++NewValueCount;
       
-      NewValueLocation = ParamCount;
+      NewValueLocation = SwiftParamCount;
     }
-    ++ParamCount;
+    ++SwiftParamCount;
   } while (!Parameters.empty());
 
   // Only instance subscripts are currently supported.
   if (IsSubscript && !SelfLocation)
-    return diag::err_attr_swift_name_static_subscript;
+    return diag::warn_attr_swift_name_static_subscript;
 
   IsSingleParamInit =
-      (ParamCount == 1 && BaseName == "init" && NextParam != "_");
+      (SwiftParamCount == 1 && BaseName == "init" && NextParam != "_");
 
   // Check the number of parameters for a getter/setter.
   if (isGetter || isSetter) {
@@ -4697,10 +4693,10 @@ static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
     
     if (isSetter) {
       NumExpectedParams = 1;
-      ParamDiag = diag::err_attr_swift_name_setter_parameters;
+      ParamDiag = diag::warn_attr_swift_name_setter_parameters;
     } else {
       NumExpectedParams = 0;
-      ParamDiag = diag::err_attr_swift_name_getter_parameters;
+      ParamDiag = diag::warn_attr_swift_name_getter_parameters;
     }
 
     // Instance methods have one parameter for "self".
@@ -4709,24 +4705,24 @@ static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
     // Subscripts may have additional parameters beyond the expected params for
     // the index.
     if (IsSubscript) {
-      if (ParamCount < NumExpectedParams)
+      if (SwiftParamCount < NumExpectedParams)
         return ParamDiag;
       // A subscript setter must explicitly label its newValue parameter to
       // distinguish it from index parameters.
       if (isSetter) {
         if (!NewValueLocation)
-          return diag::err_attr_swift_name_subscript_setter_no_newValue;
+          return diag::warn_attr_swift_name_subscript_setter_no_newValue;
         // There can only be one.
         if (NewValueCount > 1)
-          return diag::err_attr_swift_name_subscript_setter_multiple_newValues;
+          return diag::warn_attr_swift_name_subscript_setter_multiple_newValues;
       } else {
         // Subscript getters should have no 'newValue:' parameter.
         if (NewValueLocation)
-          return diag::err_attr_swift_name_subscript_getter_newValue;
+          return diag::warn_attr_swift_name_subscript_getter_newValue;
       }
     } else {
       // Property accessors must have exactly the number of expected params.
-      if (ParamCount != NumExpectedParams)
+      if (SwiftParamCount != NumExpectedParams)
         return ParamDiag;
     }
   }
@@ -4734,12 +4730,23 @@ static Optional<unsigned> validateSwiftFunctionName(StringRef Name,
   return None;
 }
 
-static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
-  StringRef Name;
-  SourceLocation ArgLoc;
-  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Name, &ArgLoc))
-    return;
-
+/// Do a check to make sure \p Name looks like a legal swift_name
+/// attribute for the decl \p D. Raise a diagnostic if the name is invalid
+/// for the given declaration.
+///
+/// For a function, this will validate a compound Swift name,
+/// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
+/// and the function will output the number of parameter names, and whether this
+/// is a single-arg initializer.
+///
+/// For a type, enum constant, property, or variable declaration, this will
+/// validate either a simple identifier, or a qualified
+/// <code>context.identifier</code> name.
+///
+/// \returns true if the name is a valid swift name for \p D, false otherwise.
+bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
+                             SourceLocation ArgLoc,
+                             IdentifierInfo *AttrName) {
   if (isa<ObjCMethodDecl>(D) || isa<FunctionDecl>(D)) {
     ArrayRef<ParmVarDecl*> Params;
     unsigned ParamCount;
@@ -4752,19 +4759,21 @@ static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
       ParamCount = Function->getNumParams();
       Params = Function->parameters();
       
-      if (!Function->hasWrittenPrototype())
-        S.Diag(ArgLoc, diag::err_attr_swift_name_function_no_prototype)
-          << Attr.getName();
+      if (!Function->hasWrittenPrototype()) {
+        Diag(ArgLoc, diag::warn_attr_swift_name_function_no_prototype)
+          << AttrName;
+        return false;
+      }
     }
 
-    bool IsSingleParamInit;
     unsigned SwiftParamCount;
-    if (auto diagID
-         = validateSwiftFunctionName(Name, SwiftParamCount, IsSingleParamInit)){
-      S.Diag(ArgLoc, *diagID) << Attr.getName();
-      return;
+    bool IsSingleParamInit;
+    if (auto diagID = validateSwiftFunctionName(Name, SwiftParamCount,
+                                                IsSingleParamInit)) {
+      Diag(ArgLoc, *diagID) << AttrName;
+      return false;
     }
-
+  
     bool ParamsOK;
     if (SwiftParamCount == ParamCount) {
       ParamsOK = true;
@@ -4786,10 +4795,10 @@ static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
     }
 
     if (!ParamsOK) {
-      S.Diag(ArgLoc, diag::warn_attr_swift_name_num_params)
-          << (SwiftParamCount > ParamCount) << Attr.getName()
+      Diag(ArgLoc, diag::warn_attr_swift_name_num_params)
+          << (SwiftParamCount > ParamCount) << AttrName
           << ParamCount << SwiftParamCount;
-      return;
+      return false;
     }
 
   } else if (isa<EnumConstantDecl>(D) || isa<ObjCProtocolDecl>(D) ||
@@ -4802,24 +4811,35 @@ static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
       BaseName = ContextName;
       ContextName = StringRef();
     } else if (!isValidIdentifier(ContextName)) {
-      S.Diag(ArgLoc, diag::err_attr_swift_name_identifier) << Attr.getName();
-      return;      
+      Diag(ArgLoc, diag::warn_attr_swift_name_context_name_invalid_identifier)
+        << AttrName;
+      return false;
     }
 
     if (!isValidIdentifier(BaseName)) {
-      S.Diag(ArgLoc, diag::err_attr_swift_name_identifier) << Attr.getName();
-      return;
+      Diag(ArgLoc, diag::warn_attr_swift_name_basename_invalid_identifier)
+        << AttrName;
+      return false;
     }
 
   } else {
-    S.Diag(Attr.getLoc(), diag::err_attr_swift_name_decl_kind)
-        << Attr.getName();
-    return;
+    Diag(ArgLoc, diag::warn_attr_swift_name_decl_kind) << AttrName;
+    return false;
   }
+  return true;
+}
 
-  D->addAttr(::new (S.Context)
-             SwiftNameAttr(Attr.getRange(), S.Context, Name,
-                           Attr.getAttributeSpellingListIndex()));
+static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
+  StringRef Name;
+  SourceLocation ArgLoc;
+  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Name, &ArgLoc))
+    return;
+
+  if (!S.DiagnoseSwiftName(D, Name, ArgLoc, Attr.getName()))
+    return;
+
+  D->addAttr(::new (S.Context) SwiftNameAttr(Attr.getRange(), S.Context, Name,
+                                         Attr.getAttributeSpellingListIndex()));
 }
 
 static bool isErrorParameter(Sema &S, QualType paramType) {
