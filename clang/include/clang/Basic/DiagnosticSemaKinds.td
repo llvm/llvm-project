@@ -3057,39 +3057,37 @@ def err_objc_attr_protocol_requires_definition : Error<
   "attribute %0 can only be applied to @protocol definitions, not forward declarations">;
 
 // Swift attributes
-def err_attr_swift_name_decl_kind : Error<
+def warn_attr_swift_name_decl_kind : Warning<
   "%0 attribute cannot be applied to this declaration">;
-def err_attr_swift_name_identifier : Error<
-  "parameter of %0 attribute must be an ASCII identifier string">;
-def err_attr_swift_name_function : Error<
+def warn_attr_swift_name_function : Warning<
   "parameter of %0 attribute must be a Swift function name string">;
-def err_attr_swift_name_function_no_prototype : Error<
+def warn_attr_swift_name_function_no_prototype : Warning<
   "%0 attribute can only be applied to function declarations with prototypes">;
-def err_attr_swift_name_context_name_invalid_identifier : Error<
+def warn_attr_swift_name_context_name_invalid_identifier : Warning<
   "%0 attribute has invalid identifier for context name">;
-def err_attr_swift_name_basename_invalid_identifier : Error<
+def warn_attr_swift_name_basename_invalid_identifier : Warning<
   "%0 attribute has invalid identifier for base name">;
-def err_attr_swift_name_parameter_invalid_identifier : Error<
+def warn_attr_swift_name_parameter_invalid_identifier : Warning<
   "%0 attribute has invalid identifier for parameter name">;
-def err_attr_swift_name_missing_parameters : Error<
+def warn_attr_swift_name_missing_parameters : Warning<
   "%0 attribute is missing parameter label clause">;
-def err_attr_swift_name_subscript_not_accessor : Error<
+def warn_attr_swift_name_subscript_not_accessor : Warning<
   "%0 attribute for 'subscript' must be a getter or setter">;
-def err_attr_swift_name_subscript_no_parameter : Error<
+def warn_attr_swift_name_subscript_no_parameter : Warning<
   "%0 attribute for 'subscript' must take at least one parameter">;
-def err_attr_swift_name_subscript_getter_newValue : Error<
+def warn_attr_swift_name_subscript_getter_newValue : Warning<
   "%0 attribute for 'subscript' getter cannot take a 'newValue:' parameter">;
-def err_attr_swift_name_subscript_setter_no_newValue : Error<
+def warn_attr_swift_name_subscript_setter_no_newValue : Warning<
   "%0 attribute for 'subscript' setter must take a 'newValue:' parameter">;
-def err_attr_swift_name_subscript_setter_multiple_newValues : Error<
+def warn_attr_swift_name_subscript_setter_multiple_newValues : Warning<
   "%0 attribute for 'subscript' setter cannot take multiple 'newValue:' parameters">;
-def err_attr_swift_name_getter_parameters : Error<
+def warn_attr_swift_name_getter_parameters : Warning<
   "%0 attribute for getter must not take any parameters besides 'self:'">;
-def err_attr_swift_name_setter_parameters : Error<
+def warn_attr_swift_name_setter_parameters : Warning<
   "%0 attribute for setter must take one parameter for new value">;
-def err_attr_swift_name_multiple_selfs : Error<
+def warn_attr_swift_name_multiple_selfs : Warning<
   "%0 attribute cannot specify more than one 'self:' parameter">;
-def err_attr_swift_name_static_subscript : Error<
+def warn_attr_swift_name_static_subscript : Warning<
   "%0 attribute for 'subscript' must take a 'self:' parameter">;
 def warn_attr_swift_name_num_params : Warning<
   "too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
