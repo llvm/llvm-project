@@ -114,11 +114,11 @@ define void @allocarray_inbounds() {
  ; CHECK-NEXT: i32.store ${{.+}}=, 0($pop[[L6]]), $pop[[L10]]{{$}}
  %r = alloca [5 x i32]
  ; CHECK: i32.const $push[[L3:.+]]=, 1
- ; CHECK: i32.store {{.*}}=, 12(${{.+}}), $pop[[L3]]
+ ; CHECK-DAG: i32.store $push{{.*}}=, 24(${{.+}}), $pop[[L3]]
  %p = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 0
  store i32 1, i32* %p
  ; This store should have both the GEP and the FI folded into it.
- ; CHECK-NEXT: i32.store {{.*}}=, 24(${{.+}}), $pop
+ ; CHECK-DAG: i32.store {{.*}}=, 12(${{.+}}), $pop
  %p2 = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 3
  store i32 1, i32* %p2
  call void @ext_func(i64* null);

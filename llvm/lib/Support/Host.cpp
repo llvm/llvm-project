@@ -803,6 +803,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["xop"]    = HasExtLeaf1 && ((ECX >> 11) & 1) && HasAVXSave;
   Features["fma4"]   = HasExtLeaf1 && ((ECX >> 16) & 1) && HasAVXSave;
   Features["tbm"]    = HasExtLeaf1 && ((ECX >> 21) & 1);
+  Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);
 
   bool HasLeaf7 = MaxLevel >= 7 &&
                   !GetX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);

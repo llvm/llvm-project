@@ -1,20 +1,20 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=pic -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -show-encoding | \
 # RUN:  FileCheck %s
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=pic -filetype=obj -o -| \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -filetype=obj -o -| \
 # RUN:  llvm-objdump -d -r -arch=mips - | \
 # RUN:   FileCheck %s -check-prefix=CHECK-FOR-STORE
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+micromips -relocation-model=pic -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+micromips --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=MICROMIPS
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -relocation-model=static -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=NO-PIC
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 -relocation-model=pic -show-encoding | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=BAD-ABI -check-prefix=BAD-ABI-N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -relocation-model=pic -show-encoding | \
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=BAD-ABI -check-prefix=BAD-ABI-N64
 
   .text

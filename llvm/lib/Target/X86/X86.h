@@ -59,6 +59,9 @@ FunctionPass *createX86FixupLEAs();
 /// recalculations.
 FunctionPass *createX86OptimizeLEAs();
 
+/// Return a pass that expands WinAlloca pseudo-instructions.
+FunctionPass *createX86WinAllocaExpander();
+
 /// Return a pass that optimizes the code-size of x86 call sequences. This is
 /// done by replacing esp-relative movs with pushes.
 FunctionPass *createX86CallFrameOptimization();

@@ -32,6 +32,40 @@ endif:
   ret void
 }
 
+; CHECK-LABEL: @branch_ptr_phi_alloca_null_0(
+; CHECK: %phi.ptr = phi i32 addrspace(3)* [ %arrayidx0, %if ], [ null, %entry ]
+define void @branch_ptr_phi_alloca_null_0(i32 %a, i32 %b) #0 {
+entry:
+  %alloca = alloca [64 x i32], align 4
+  br i1 undef, label %if, label %endif
+
+if:
+  %arrayidx0 = getelementptr inbounds [64 x i32], [64 x i32]* %alloca, i32 0, i32 %a
+  br label %endif
+
+endif:
+  %phi.ptr = phi i32* [ %arrayidx0, %if ], [ null, %entry ]
+  store i32 0, i32* %phi.ptr, align 4
+  ret void
+}
+
+; CHECK-LABEL: @branch_ptr_phi_alloca_null_1(
+; CHECK: %phi.ptr = phi i32 addrspace(3)*  [ null, %entry ], [ %arrayidx0, %if ]
+define void @branch_ptr_phi_alloca_null_1(i32 %a, i32 %b) #0 {
+entry:
+  %alloca = alloca [64 x i32], align 4
+  br i1 undef, label %if, label %endif
+
+if:
+  %arrayidx0 = getelementptr inbounds [64 x i32], [64 x i32]* %alloca, i32 0, i32 %a
+  br label %endif
+
+endif:
+  %phi.ptr = phi i32* [ null, %entry ], [ %arrayidx0, %if ]
+  store i32 0, i32* %phi.ptr, align 4
+  ret void
+}
+
 ; CHECK-LABEL: @one_phi_value(
 ; CHECK: getelementptr inbounds [256 x [64 x i32]], [256 x [64 x i32]] addrspace(3)* @one_phi_value.alloca, i32 0, i32 %14
 ; CHECK:  %arrayidx0 = getelementptr inbounds [64 x i32], [64 x i32] addrspace(3)* %{{[0-9]+}}, i32 0, i32 %a

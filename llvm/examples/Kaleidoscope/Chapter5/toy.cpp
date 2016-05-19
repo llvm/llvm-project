@@ -1,19 +1,30 @@
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/Passes.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "../include/KaleidoscopeJIT.h"
+#include <cassert>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
-#include "../include/KaleidoscopeJIT.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -286,7 +297,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   getNextToken(); // eat (
   std::vector<std::unique_ptr<ExprAST>> Args;
   if (CurTok != ')') {
-    while (1) {
+    while (true) {
       if (auto Arg = ParseExpression())
         Args.push_back(std::move(Arg));
       else
@@ -411,7 +422,7 @@ static std::unique_ptr<ExprAST> ParsePrimary() {
 static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
                                               std::unique_ptr<ExprAST> LHS) {
   // If this is a binop, find its precedence.
-  while (1) {
+  while (true) {
     int TokPrec = GetTokPrecedence();
 
     // If this is a binop that binds at least as tightly as the current binop,
@@ -680,7 +691,7 @@ Value *ForExprAST::codegen() {
 
   // Start the PHI node with an entry for Start.
   PHINode *Variable =
-      Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, VarName.c_str());
+      Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, VarName);
   Variable->addIncoming(StartVal, PreheaderBB);
 
   // Within the loop, the variable is defined equal to the PHI node.  If it
@@ -848,7 +859,6 @@ static void HandleTopLevelExpression() {
   // Evaluate a top-level expression into an anonymous function.
   if (auto FnAST = ParseTopLevelExpr()) {
     if (FnAST->codegen()) {
-
       // JIT the module containing the anonymous expression, keeping a handle so
       // we can free it later.
       auto H = TheJIT->addModule(std::move(TheModule));
@@ -874,7 +884,7 @@ static void HandleTopLevelExpression() {
 
 /// top ::= definition | external | expression | ';'
 static void MainLoop() {
-  while (1) {
+  while (true) {
     fprintf(stderr, "ready> ");
     switch (CurTok) {
     case tok_eof:

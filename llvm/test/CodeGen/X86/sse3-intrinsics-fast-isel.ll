@@ -94,7 +94,7 @@ define <4 x float> @test_mm_hsub_ps(<4 x float> %a0, <4 x float> %a1) {
 }
 declare <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float>, <4 x float>) nounwind readnone
 
-define <2 x i64> @test_mm_lddqu_si128(i8* %a0) {
+define <2 x i64> @test_mm_lddqu_si128(<2 x i64>* %a0) {
 ; X32-LABEL: test_mm_lddqu_si128:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -105,7 +105,8 @@ define <2 x i64> @test_mm_lddqu_si128(i8* %a0) {
 ; X64:       # BB#0:
 ; X64-NEXT:    lddqu (%rdi), %xmm0
 ; X64-NEXT:    retq
-  %call = call <16 x i8> @llvm.x86.sse3.ldu.dq(i8* %a0)
+  %bc = bitcast <2 x i64>* %a0 to i8*
+  %call = call <16 x i8> @llvm.x86.sse3.ldu.dq(i8* %bc)
   %res = bitcast <16 x i8> %call to <2 x i64>
   ret <2 x i64> %res
 }

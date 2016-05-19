@@ -519,7 +519,7 @@ private:
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver;
   TargetOptions Options;
-  Reloc::Model RelocModel;
+  Optional<Reloc::Model> RelocModel;
   CodeModel::Model CMModel;
   std::string MArch;
   std::string MCPU;

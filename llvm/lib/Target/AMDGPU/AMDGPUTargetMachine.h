@@ -38,8 +38,9 @@ protected:
 
 public:
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                      StringRef FS, TargetOptions Options, Reloc::Model RM,
-                      CodeModel::Model CM, CodeGenOpt::Level OL);
+                      StringRef FS, TargetOptions Options,
+                      Optional<Reloc::Model> RM, CodeModel::Model CM,
+                      CodeGenOpt::Level OL);
   ~AMDGPUTargetMachine();
 
   const AMDGPUSubtarget *getSubtargetImpl() const { return &Subtarget; }
@@ -64,8 +65,9 @@ class R600TargetMachine final : public AMDGPUTargetMachine {
 
 public:
   R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                    StringRef FS, TargetOptions Options, Reloc::Model RM,
-                    CodeModel::Model CM, CodeGenOpt::Level OL);
+                    StringRef FS, TargetOptions Options,
+                    Optional<Reloc::Model> RM, CodeModel::Model CM,
+                    CodeGenOpt::Level OL);
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 };
@@ -78,8 +80,9 @@ class GCNTargetMachine final : public AMDGPUTargetMachine {
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                   StringRef FS, TargetOptions Options, Reloc::Model RM,
-                   CodeModel::Model CM, CodeGenOpt::Level OL);
+                   StringRef FS, TargetOptions Options,
+                   Optional<Reloc::Model> RM, CodeModel::Model CM,
+                   CodeGenOpt::Level OL);
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 };

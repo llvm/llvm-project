@@ -335,3 +335,7 @@
   srl $3, 7                # CHECK: srl $3, $3, 7          # encoding: [0x00,0x63,0x38,0x40]
   lwp $16, 8($4)           # CHECK: lwp $16, 8($4)         # encoding: [0x22,0x04,0x10,0x08]
   swp $16, 8($4)           # CHECK: swp $16, 8($4)         # encoding: [0x22,0x04,0x90,0x08]
+  bc1eqzc $f31, 4          # CHECK: bc1eqzc $f31, 4        # encoding: [0x41,0x1f,0x00,0x02]
+  bc1nezc $f31, 4          # CHECK: bc1nezc $f31, 4        # encoding: [0x41,0x3f,0x00,0x02]
+  bc2eqzc $31, 8           # CHECK: bc2eqzc $31, 8         # encoding: [0x41,0x5f,0x00,0x04]
+  bc2nezc $31, 8           # CHECK: bc2nezc $31, 8         # encoding: [0x41,0x7f,0x00,0x04]

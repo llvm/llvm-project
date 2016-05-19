@@ -716,4 +716,50 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {
             ConstantRange(APInt(32, 0), APInt(32, 1)));
 }
 
+TEST(ConstantRange, GetEquivalentICmp) {
+  APInt RHS;
+  CmpInst::Predicate Pred;
+
+  EXPECT_TRUE(ConstantRange(APInt::getMinValue(32), APInt(32, 100))
+                  .getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_ULT);
+  EXPECT_EQ(RHS, APInt(32, 100));
+
+  EXPECT_TRUE(ConstantRange(APInt::getSignedMinValue(32), APInt(32, 100))
+                  .getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_SLT);
+  EXPECT_EQ(RHS, APInt(32, 100));
+
+  EXPECT_TRUE(ConstantRange(APInt(32, 100), APInt::getMinValue(32))
+                  .getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_UGE);
+  EXPECT_EQ(RHS, APInt(32, 100));
+
+  EXPECT_TRUE(ConstantRange(APInt(32, 100), APInt::getSignedMinValue(32))
+                  .getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_SGE);
+  EXPECT_EQ(RHS, APInt(32, 100));
+
+  EXPECT_TRUE(
+      ConstantRange(32, /*isFullSet=*/true).getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_UGE);
+  EXPECT_EQ(RHS, APInt(32, 0));
+
+  EXPECT_TRUE(
+      ConstantRange(32, /*isFullSet=*/false).getEquivalentICmp(Pred, RHS));
+  EXPECT_EQ(Pred, CmpInst::ICMP_ULT);
+  EXPECT_EQ(RHS, APInt(32, 0));
+
+  EXPECT_FALSE(ConstantRange(APInt(32, 100), APInt(32, 200))
+                   .getEquivalentICmp(Pred, RHS));
+
+  EXPECT_FALSE(ConstantRange(APInt::getSignedMinValue(32) - APInt(32, 100),
+                             APInt::getSignedMinValue(32) + APInt(32, 100))
+                   .getEquivalentICmp(Pred, RHS));
+
+  EXPECT_FALSE(ConstantRange(APInt::getMinValue(32) - APInt(32, 100),
+                             APInt::getMinValue(32) + APInt(32, 100))
+                   .getEquivalentICmp(Pred, RHS));
+}
+
 }  // anonymous namespace

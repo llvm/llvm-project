@@ -7,7 +7,7 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
-%struct.S = type { [12 x i8] }
+%struct.S = type { [8192 x i8] }
 
 define x86_thiscallcc void @call_inalloca(i1 %x) {
 entry:
@@ -29,7 +29,7 @@ bb2:
 ; CHECK-LABEL: _call_inalloca: # @call_inalloca
 ; CHECK: pushl %ebp
 ; CHECK: movl %esp, %ebp
-; CHECK: movl $12, %eax
+; CHECK: movl $8192, %eax
 ; CHECK: calll __chkstk
 ; CHECK: calll _inalloca_params
 ; CHECK: movl %ebp, %esp

@@ -78,6 +78,13 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   return Ret;
 }
 
+static Reloc::Model getEffectiveRelocModel(CodeModel::Model CM,
+                                           Optional<Reloc::Model> RM) {
+  if (!RM.hasValue() || CM == CodeModel::JITDefault)
+    return Reloc::Static;
+  return *RM;
+}
+
 // On function prologue, the stack is created by decrementing
 // its pointer. Once decremented, all references are done with positive
 // offset from the stack/frame pointer, using StackGrowsUp enables
@@ -86,10 +93,12 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,
                                      const TargetOptions &Options,
-                                     Reloc::Model RM, CodeModel::Model CM,
-                                     CodeGenOpt::Level OL, bool isLittle)
+                                     Optional<Reloc::Model> RM,
+                                     CodeModel::Model CM, CodeGenOpt::Level OL,
+                                     bool isLittle)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, RM, CM, OL),
+                        CPU, FS, Options, getEffectiveRelocModel(CM, RM), CM,
+                        OL),
       isLittle(isLittle), TLOF(make_unique<MipsTargetObjectFile>()),
       ABI(MipsABIInfo::computeTargetABI(TT, CPU, Options.MCOptions)),
       Subtarget(nullptr), DefaultSubtarget(TT, CPU, FS, isLittle, *this),
@@ -108,7 +117,8 @@ void MipsebTargetMachine::anchor() { }
 MipsebTargetMachine::MipsebTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
-                                         Reloc::Model RM, CodeModel::Model CM,
+                                         Optional<Reloc::Model> RM,
+                                         CodeModel::Model CM,
                                          CodeGenOpt::Level OL)
     : MipsTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
@@ -117,7 +127,8 @@ void MipselTargetMachine::anchor() { }
 MipselTargetMachine::MipselTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
-                                         Reloc::Model RM, CodeModel::Model CM,
+                                         Optional<Reloc::Model> RM,
+                                         CodeModel::Model CM,
                                          CodeGenOpt::Level OL)
     : MipsTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 

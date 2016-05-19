@@ -392,11 +392,35 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
     return SReg;
   }
 
-  // Find an available scavenging slot.
-  unsigned SI;
-  for (SI = 0; SI < Scavenged.size(); ++SI)
-    if (Scavenged[SI].Reg == 0)
-      break;
+  // Find an available scavenging slot with size and alignment matching
+  // the requirements of the class RC.
+  MachineFunction &MF = *I->getParent()->getParent();
+  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  unsigned NeedSize = RC->getSize();
+  unsigned NeedAlign = RC->getAlignment();
+
+  unsigned SI = Scavenged.size(), Diff = UINT_MAX;
+  for (unsigned I = 0; I < Scavenged.size(); ++I) {
+    if (Scavenged[I].Reg != 0)
+      continue;
+    // Verify that this slot is valid for this register.
+    int FI = Scavenged[I].FrameIndex;
+    unsigned S = MFI.getObjectSize(FI);
+    unsigned A = MFI.getObjectAlignment(FI);
+    if (NeedSize > S || NeedAlign > A)
+      continue;
+    // Avoid wasting slots with large size and/or large alignment. Pick one
+    // that is the best fit for this register class (in street metric).
+    // Picking a larger slot than necessary could happen if a slot for a
+    // larger register is reserved before a slot for a smaller one. When
+    // trying to spill a smaller register, the large slot would be found
+    // first, thus making it impossible to spill the larger register later.
+    unsigned D = (S-NeedSize) + (A-NeedAlign);
+    if (D < Diff) {
+      SI = I;
+      Diff = D;
+    }
+  }
 
   if (SI == Scavenged.size()) {
     // We need to scavenge a register but have no spill slot, the target
@@ -411,8 +435,15 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   // otherwise, use the emergency stack spill slot.
   if (!TRI->saveScavengerRegister(*MBB, I, UseMI, RC, SReg)) {
     // Spill the scavenged register before I.
-    assert(Scavenged[SI].FrameIndex >= 0 &&
-           "Cannot scavenge register without an emergency spill slot!");
+    if (Scavenged[SI].FrameIndex < 0) {
+      Twine Msg = Twine("Error while trying to spill ") + TRI->getName(SReg) +
+           " from class " + TRI->getRegClassName(RC) +
+           ": Cannot scavenge register without an emergency spill slot!";
+      // Keep both error functions, since llvm_unreachable prints the call
+      // stack, but it does not terminate program in release mode.
+      llvm_unreachable(Msg.str().c_str());
+      report_fatal_error(Msg);
+    }
     TII->storeRegToStackSlot(*MBB, I, SReg, true, Scavenged[SI].FrameIndex,
                              RC, TRI);
     MachineBasicBlock::iterator II = std::prev(I);

@@ -112,6 +112,8 @@ def SDT_X86TLSBASEADDR : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
 def SDT_X86TLSCALL : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
+def SDT_X86WIN_ALLOCA : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
+
 def SDT_X86SEG_ALLOCA : SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
 
 def SDT_X86EHRET : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
@@ -273,8 +275,8 @@ def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
 
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
 
-def X86WinAlloca : SDNode<"X86ISD::WIN_ALLOCA", SDTX86Void,
-                          [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def X86WinAlloca : SDNode<"X86ISD::WIN_ALLOCA", SDT_X86WIN_ALLOCA,
+                          [SDNPHasChain, SDNPOutGlue]>;
 
 def X86SegAlloca : SDNode<"X86ISD::SEG_ALLOCA", SDT_X86SEG_ALLOCA,
                           [SDNPHasChain]>;
@@ -847,6 +849,7 @@ def HasPRFCHW    : Predicate<"Subtarget->hasPRFCHW()">;
 def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasPrefetchW : Predicate<"Subtarget->hasPRFCHW()">;
 def HasLAHFSAHF  : Predicate<"Subtarget->hasLAHFSAHF()">;
+def HasMWAITX    : Predicate<"Subtarget->hasMWAITX()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
 def HasMPX       : Predicate<"Subtarget->hasMPX()">;
@@ -2401,22 +2404,34 @@ defm TZMSK   : tbm_binary_intr<0x01, "tzmsk", MRM4r, MRM4m>;
 //===----------------------------------------------------------------------===//
 // MONITORX/MWAITX Instructions
 //
-let SchedRW = [WriteSystem] in {
-let Uses = [EAX, ECX, EDX] in
-def MONITORXrrr : I<0x01, MRM_FA, (outs), (ins), "monitorx", [],
-                    IIC_SSE_MONITOR>, TB;
-let Uses = [ECX, EAX, EBX] in
-def MWAITXrr   : I<0x01, MRM_FB, (outs), (ins), "mwaitx", [], IIC_SSE_MWAIT>,
-                 TB;
+let SchedRW = [ WriteSystem ] in {
+  let usesCustomInserter = 1 in {
+    def MONITORX : PseudoI<(outs), (ins i32mem:$src1, GR32:$src2, GR32:$src3),
+                           [(int_x86_monitorx addr:$src1, GR32:$src2, GR32:$src3)]>,
+                   Requires<[ HasMWAITX ]>;
+  }
+
+  let Uses = [ EAX, ECX, EDX ] in {
+    def MONITORXrrr : I<0x01, MRM_FA, (outs), (ins), "monitorx", [], IIC_SSE_MONITORX>,
+                      TB, Requires<[ HasMWAITX ]>;
+  }
+
+  let Uses = [ ECX, EAX, EBX ] in {
+    def MWAITXrrr : I<0x01, MRM_FB, (outs), (ins), "mwaitx", 
+                    [(int_x86_mwaitx ECX, EAX, EBX)], IIC_SSE_MWAITX>,
+                    TB, Requires<[ HasMWAITX ]>;
+  }
 } // SchedRW
 
-def : InstAlias<"mwaitx\t{%eax, %ecx, %ebx|ebx, ecx, eax}", (MWAITXrr)>, Requires<[Not64BitMode]>;
-def : InstAlias<"mwaitx\t{%rax, %rcx, %rbx|rbx, rcx, rax}", (MWAITXrr)>, Requires<[In64BitMode]>;
+def : InstAlias<"mwaitx\t{%eax, %ecx, %ebx|ebx, ecx, eax}", (MWAITXrrr)>,
+      Requires<[ Not64BitMode ]>;
+def : InstAlias<"mwaitx\t{%rax, %rcx, %rbx|rbx, rcx, rax}", (MWAITXrrr)>,
+      Requires<[ In64BitMode ]>;
 
 def : InstAlias<"monitorx\t{%eax, %ecx, %edx|edx, ecx, eax}", (MONITORXrrr)>,
-      Requires<[Not64BitMode]>;
+      Requires<[ Not64BitMode ]>;
 def : InstAlias<"monitorx\t{%rax, %rcx, %rdx|rdx, rcx, rax}", (MONITORXrrr)>,
-      Requires<[In64BitMode]>;
+      Requires<[ In64BitMode ]>;
 
 //===----------------------------------------------------------------------===//
 // CLZERO Instruction

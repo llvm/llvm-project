@@ -2839,6 +2839,20 @@ HexagonTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
 // Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
+TargetLowering::ConstraintType
+HexagonTargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+      case 'q':
+      case 'v':
+        if (Subtarget.useHVXOps())
+          return C_Register;
+        break;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 HexagonTargetLowering::getRegForInlineAsmConstraint(
     const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {

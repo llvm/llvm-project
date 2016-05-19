@@ -254,3 +254,23 @@
   dsra32 $4, $5, -1            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
                                # bposge32 is microMIPS DSP instruction
   bposge32 342                 # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+  bc1eqzc $f32, 4              # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  bc1eqzc $f31, -65535         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc1eqzc $f31, -65537         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  bc1eqzc $f31, 65535          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc1eqzc $f31, 65536          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  bc1nezc $f32, 4              # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  bc1nezc $f31, -65535         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc1nezc $f31, -65537         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  bc1nezc $f31, 65535          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc1nezc $f31, 65536          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  bc2eqzc $32, 4               # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  bc2eqzc $31, -65535          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc2eqzc $31, -65537          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  bc2eqzc $31, 65535           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc2eqzc $31, 65536           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  bc2nezc $32, 4               # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  bc2nezc $31, -65535          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc2nezc $31, -65537          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  bc2nezc $31, 65535           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  bc2nezc $31, 65536           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range

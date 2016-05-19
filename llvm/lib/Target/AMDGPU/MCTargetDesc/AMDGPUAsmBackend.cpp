@@ -96,8 +96,12 @@ void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
 
   switch ((unsigned)Fixup.getKind()) {
     case AMDGPU::fixup_si_sopp_br: {
+      int64_t BrImm = ((int64_t)Value - 4) / 4;
+      if (!isInt<16>(BrImm))
+        report_fatal_error("branch size exceeds simm16");
+
       uint16_t *Dst = (uint16_t*)(Data + Fixup.getOffset());
-      *Dst = (Value - 4) / 4;
+      *Dst = BrImm;
       break;
     }
 

@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
@@ -51,16 +50,16 @@ public:
 /// Base class and interface for reading profiling data of any known instrprof
 /// format. Provides an iterator over InstrProfRecords.
 class InstrProfReader {
-  std::error_code LastError;
+  instrprof_error LastError;
 
 public:
   InstrProfReader() : LastError(instrprof_error::success), Symtab() {}
   virtual ~InstrProfReader() {}
 
   /// Read the header.  Required before reading first record.
-  virtual std::error_code readHeader() = 0;
+  virtual Error readHeader() = 0;
   /// Read a single record.
-  virtual std::error_code readNextRecord(InstrProfRecord &Record) = 0;
+  virtual Error readNextRecord(InstrProfRecord &Record) = 0;
   /// Iterator over profile data.
   InstrProfIterator begin() { return InstrProfIterator(this); }
   InstrProfIterator end() { return InstrProfIterator(); }
@@ -80,28 +79,35 @@ public:
 
 protected:
   std::unique_ptr<InstrProfSymtab> Symtab;
-  /// Set the current std::error_code and return same.
-  std::error_code error(std::error_code EC) {
-    LastError = EC;
-    return EC;
+  /// Set the current error and return same.
+  Error error(instrprof_error Err) {
+    LastError = Err;
+    if (Err == instrprof_error::success)
+      return Error::success();
+    return make_error<InstrProfError>(Err);
   }
+  Error error(Error E) { return error(InstrProfError::take(std::move(E))); }
 
-  /// Clear the current error code and return a successful one.
-  std::error_code success() { return error(instrprof_error::success); }
+  /// Clear the current error and return a successful one.
+  Error success() { return error(instrprof_error::success); }
 
 public:
   /// Return true if the reader has finished reading the profile data.
   bool isEOF() { return LastError == instrprof_error::eof; }
   /// Return true if the reader encountered an error reading profiling data.
-  bool hasError() { return LastError && !isEOF(); }
-  /// Get the current error code.
-  std::error_code getError() { return LastError; }
+  bool hasError() { return LastError != instrprof_error::success && !isEOF(); }
+  /// Get the current error.
+  Error getError() {
+    if (hasError())
+      return make_error<InstrProfError>(LastError);
+    return Error::success();
+  }
 
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
-  static ErrorOr<std::unique_ptr<InstrProfReader>> create(std::string Path);
+  static Expected<std::unique_ptr<InstrProfReader>> create(std::string Path);
 
-  static ErrorOr<std::unique_ptr<InstrProfReader>>
+  static Expected<std::unique_ptr<InstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);
 };
 
@@ -123,7 +129,7 @@ private:
 
   TextInstrProfReader(const TextInstrProfReader &) = delete;
   TextInstrProfReader &operator=(const TextInstrProfReader &) = delete;
-  std::error_code readValueProfileData(InstrProfRecord &Record);
+  Error readValueProfileData(InstrProfRecord &Record);
 
 public:
   TextInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer_)
@@ -136,9 +142,9 @@ public:
   bool isIRLevelProfile() const override { return IsIRLevelProfile; }
 
   /// Read the header.
-  std::error_code readHeader() override;
+  Error readHeader() override;
   /// Read a single record.
-  std::error_code readNextRecord(InstrProfRecord &Record) override;
+  Error readNextRecord(InstrProfRecord &Record) override;
 
   InstrProfSymtab &getSymtab() override {
     assert(Symtab.get());
@@ -185,8 +191,8 @@ public:
       : DataBuffer(std::move(DataBuffer)) { }
 
   static bool hasFormat(const MemoryBuffer &DataBuffer);
-  std::error_code readHeader() override;
-  std::error_code readNextRecord(InstrProfRecord &Record) override;
+  Error readHeader() override;
+  Error readNextRecord(InstrProfRecord &Record) override;
   bool isIRLevelProfile() const override {
     return (Version & VARIANT_MASK_IR_PROF) != 0;
   }
@@ -197,9 +203,9 @@ public:
   }
 
 private:
-  std::error_code createSymtab(InstrProfSymtab &Symtab);
-  std::error_code readNextHeader(const char *CurrentPos);
-  std::error_code readHeader(const RawInstrProf::Header &Header);
+  Error createSymtab(InstrProfSymtab &Symtab);
+  Error readNextHeader(const char *CurrentPos);
+  Error readHeader(const RawInstrProf::Header &Header);
   template <class IntT> IntT swap(IntT Int) const {
     return ShouldSwapBytes ? sys::getSwappedBytes(Int) : Int;
   }
@@ -216,10 +222,10 @@ private:
   inline uint8_t getNumPaddingBytes(uint64_t SizeInBytes) {
     return 7 & (sizeof(uint64_t) - SizeInBytes % sizeof(uint64_t));
   }
-  std::error_code readName(InstrProfRecord &Record);
-  std::error_code readFuncHash(InstrProfRecord &Record);
-  std::error_code readRawCounts(InstrProfRecord &Record);
-  std::error_code readValueProfilingData(InstrProfRecord &Record);
+  Error readName(InstrProfRecord &Record);
+  Error readFuncHash(InstrProfRecord &Record);
+  Error readRawCounts(InstrProfRecord &Record);
+  Error readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
   void advanceData() {
     Data++;
@@ -300,9 +306,9 @@ public:
 struct InstrProfReaderIndexBase {
   // Read all the profile records with the same key pointed to the current
   // iterator.
-  virtual std::error_code getRecords(ArrayRef<InstrProfRecord> &Data) = 0;
+  virtual Error getRecords(ArrayRef<InstrProfRecord> &Data) = 0;
   // Read all the profile records with the key equal to FuncName
-  virtual std::error_code getRecords(StringRef FuncName,
+  virtual Error getRecords(StringRef FuncName,
                                      ArrayRef<InstrProfRecord> &Data) = 0;
   virtual void advanceToNextKey() = 0;
   virtual bool atEnd() const = 0;
@@ -330,9 +336,9 @@ public:
                        const unsigned char *const Base,
                        IndexedInstrProf::HashT HashType, uint64_t Version);
 
-  std::error_code getRecords(ArrayRef<InstrProfRecord> &Data) override;
-  std::error_code getRecords(StringRef FuncName,
-                             ArrayRef<InstrProfRecord> &Data) override;
+  Error getRecords(ArrayRef<InstrProfRecord> &Data) override;
+  Error getRecords(StringRef FuncName,
+                   ArrayRef<InstrProfRecord> &Data) override;
   void advanceToNextKey() override { RecordIterator++; }
   bool atEnd() const override {
     return RecordIterator == HashTable->data_end();
@@ -379,27 +385,27 @@ public:
   static bool hasFormat(const MemoryBuffer &DataBuffer);
 
   /// Read the file header.
-  std::error_code readHeader() override;
+  Error readHeader() override;
   /// Read a single record.
-  std::error_code readNextRecord(InstrProfRecord &Record) override;
+  Error readNextRecord(InstrProfRecord &Record) override;
 
   /// Return the pointer to InstrProfRecord associated with FuncName
   /// and FuncHash
-  ErrorOr<InstrProfRecord> getInstrProfRecord(StringRef FuncName,
-                                              uint64_t FuncHash);
+  Expected<InstrProfRecord> getInstrProfRecord(StringRef FuncName,
+                                               uint64_t FuncHash);
 
   /// Fill Counts with the profile data for the given function name.
-  std::error_code getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
-                                    std::vector<uint64_t> &Counts);
+  Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
+                          std::vector<uint64_t> &Counts);
 
   /// Return the maximum of all known function counts.
   uint64_t getMaximumFunctionCount() { return Summary->getMaxFunctionCount(); }
 
   /// Factory method to create an indexed reader.
-  static ErrorOr<std::unique_ptr<IndexedInstrProfReader>>
+  static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::string Path);
 
-  static ErrorOr<std::unique_ptr<IndexedInstrProfReader>>
+  static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);
 
   // Used for testing purpose only.

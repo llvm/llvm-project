@@ -204,8 +204,6 @@ static MCCodeGenInfo *createHexagonMCCodeGenInfo(const Triple &TT,
                                                  CodeModel::Model CM,
                                                  CodeGenOpt::Level OL) {
   MCCodeGenInfo *X = new MCCodeGenInfo();
-  if (RM == Reloc::Default)
-    RM = Reloc::Static;
   X->initMCCodeGenInfo(RM, CM, OL);
   return X;
 }

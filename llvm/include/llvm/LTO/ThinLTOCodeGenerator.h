@@ -37,7 +37,7 @@ struct TargetMachineBuilder {
   std::string MCpu;
   std::string MAttr;
   TargetOptions Options;
-  Reloc::Model RelocModel = Reloc::Default;
+  Optional<Reloc::Model> RelocModel;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
 
   std::unique_ptr<TargetMachine> create() const;
@@ -168,7 +168,9 @@ public:
   }
 
   /// CodeModel
-  void setCodePICModel(Reloc::Model Model) { TMBuilder.RelocModel = Model; }
+  void setCodePICModel(Optional<Reloc::Model> Model) {
+    TMBuilder.RelocModel = Model;
+  }
 
   /// CodeGen optimization level
   void setCodeGenOptLevel(CodeGenOpt::Level CGOptLevel) {

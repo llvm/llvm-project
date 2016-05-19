@@ -14,8 +14,6 @@
 #ifndef LLVM_AVR_MCTARGET_DESC_H
 #define LLVM_AVR_MCTARGET_DESC_H
 
-#include "AVRConfig.h"
-
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {

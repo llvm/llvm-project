@@ -139,6 +139,32 @@ ConstantRange ConstantRange::makeExactICmpRegion(CmpInst::Predicate Pred,
   return makeAllowedICmpRegion(Pred, C);
 }
 
+bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
+                                      APInt &RHS) const {
+  bool Success = false;
+
+  if (isFullSet() || isEmptySet()) {
+    Pred = isEmptySet() ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
+    RHS = APInt(getBitWidth(), 0);
+    Success = true;
+  } else if (getLower().isMinSignedValue() || getLower().isMinValue()) {
+    Pred =
+        getLower().isMinSignedValue() ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
+    RHS = getUpper();
+    Success = true;
+  } else if (getUpper().isMinSignedValue() || getUpper().isMinValue()) {
+    Pred =
+        getUpper().isMinSignedValue() ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE;
+    RHS = getLower();
+    Success = true;
+  }
+
+  assert((!Success || ConstantRange::makeExactICmpRegion(Pred, RHS) == *this) &&
+         "Bad result!");
+
+  return Success;
+}
+
 ConstantRange
 ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                                           const ConstantRange &Other,

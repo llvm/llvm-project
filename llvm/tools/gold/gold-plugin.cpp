@@ -143,7 +143,7 @@ static ld_plugin_get_symbols get_symbols = nullptr;
 static ld_plugin_add_input_file add_input_file = nullptr;
 static ld_plugin_set_extra_library_path set_extra_library_path = nullptr;
 static ld_plugin_get_view get_view = nullptr;
-static Reloc::Model RelocationModel = Reloc::Default;
+static Optional<Reloc::Model> RelocationModel;
 static std::string output_name = "";
 static std::list<claimed_file> Modules;
 static StringMap<ResolutionInfo> ResInfo;

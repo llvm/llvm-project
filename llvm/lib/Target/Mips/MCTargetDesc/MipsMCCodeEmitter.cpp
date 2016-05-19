@@ -106,6 +106,26 @@ static void LowerDins(MCInst& InstIn) {
   return;
 }
 
+// Fix a bad compact branch encoding for beqc/bnec.
+void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
+
+  // Encoding may be illegal !(rs < rt), but this situation is
+  // easily fixed.
+  unsigned RegOp0 = Inst.getOperand(0).getReg();
+  unsigned RegOp1 = Inst.getOperand(1).getReg();
+
+  unsigned Reg0 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp0);
+  unsigned Reg1 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp1);
+
+  assert(Reg0 != Reg1 && "Instruction has bad operands ($rs == $rt)!");
+  if (Reg0 < Reg1)
+    return;
+
+  Inst.getOperand(0).setReg(RegOp1);
+  Inst.getOperand(1).setReg(RegOp0);
+
+}
+
 bool MipsMCCodeEmitter::isMicroMips(const MCSubtargetInfo &STI) const {
   return STI.getFeatureBits()[Mips::FeatureMicroMips];
 }
@@ -160,6 +180,11 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
     // Double extract instruction is chosen by pos and size operands
   case Mips::DINS:
     LowerDins(TmpInst);
+    break;
+  // Compact branches.
+  case Mips::BEQC:
+  case Mips::BNEC:
+    LowerCompactBranch(TmpInst);
   }
 
   unsigned long N = Fixups.size();

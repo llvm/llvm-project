@@ -1,13 +1,15 @@
-; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 ; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
 ; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE
 ; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
 ; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
 
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=HSAOPT -check-prefix=OPT %s
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck -check-prefix=NOHSAOPT -check-prefix=OPT %s
+
+; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
+
 
 ; HSAOPT: @mova_same_clause.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] undef, align 4
 ; HSAOPT: @high_alignment.stack = internal unnamed_addr addrspace(3) global [256 x [8 x i32]] undef, align 16
@@ -393,6 +395,25 @@ define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
   %tmp4 = getelementptr i32, i32* %tmp3, i32 %b
   %tmp5 = load i32, i32* %tmp4
   store i32 %tmp5, i32 addrspace(1)* %out
+  ret void
+}
+
+; OPT-LABEL: @pointer_typed_alloca(
+; OPT:  getelementptr inbounds [256 x i32 addrspace(1)*], [256 x i32 addrspace(1)*] addrspace(3)* @pointer_typed_alloca.A.addr, i32 0, i32 %{{[0-9]+}}
+; OPT: load i32 addrspace(1)*, i32 addrspace(1)* addrspace(3)* %{{[0-9]+}}, align 4
+define void @pointer_typed_alloca(i32 addrspace(1)* %A) {
+entry:
+  %A.addr = alloca i32 addrspace(1)*, align 4
+  store i32 addrspace(1)* %A, i32 addrspace(1)** %A.addr, align 4
+  %ld0 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4
+  %arrayidx = getelementptr inbounds i32, i32 addrspace(1)* %ld0, i32 0
+  store i32 1, i32 addrspace(1)* %arrayidx, align 4
+  %ld1 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32 addrspace(1)* %ld1, i32 1
+  store i32 2, i32 addrspace(1)* %arrayidx1, align 4
+  %ld2 = load i32 addrspace(1)*, i32 addrspace(1)** %A.addr, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %ld2, i32 2
+  store i32 3, i32 addrspace(1)* %arrayidx2, align 4
   ret void
 }
 

@@ -26,8 +26,8 @@ static bool hasOnlySGPRSpills(const SIMachineFunctionInfo *FuncInfo,
 }
 
 static ArrayRef<MCPhysReg> getAllSGPR128() {
-  return makeArrayRef(AMDGPU::SReg_128RegClass.begin(),
-                      AMDGPU::SReg_128RegClass.getNumRegs());
+  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
+                      AMDGPU::SGPR_128RegClass.getNumRegs());
 }
 
 static ArrayRef<MCPhysReg> getAllSGPRs() {

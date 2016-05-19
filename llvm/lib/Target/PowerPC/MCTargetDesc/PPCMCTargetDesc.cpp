@@ -92,12 +92,6 @@ static MCCodeGenInfo *createPPCMCCodeGenInfo(const Triple &TT, Reloc::Model RM,
                                              CodeGenOpt::Level OL) {
   MCCodeGenInfo *X = new MCCodeGenInfo();
 
-  if (RM == Reloc::Default) {
-    if (TT.isOSDarwin())
-      RM = Reloc::DynamicNoPIC;
-    else
-      RM = Reloc::Static;
-  }
   if (CM == CodeModel::Default) {
     if (!TT.isOSDarwin() &&
         (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le))

@@ -99,18 +99,6 @@ def VAARG_64 : I<0, Pseudo,
                     (X86vaarg64 addr:$ap, imm:$size, imm:$mode, imm:$align)),
                   (implicit EFLAGS)]>;
 
-// Dynamic stack allocation yields a _chkstk or _alloca call for all Windows
-// targets.  These calls are needed to probe the stack when allocating more than
-// 4k bytes in one go. Touching the stack at 4K increments is necessary to
-// ensure that the guard pages used by the OS virtual memory manager are
-// allocated in correct sequence.
-// The main point of having separate instruction are extra unmodelled effects
-// (compared to ordinary calls) like stack pointer change.
-
-let Defs = [EAX, ESP, EFLAGS], Uses = [ESP] in
-  def WIN_ALLOCA : I<0, Pseudo, (outs), (ins),
-                     "# dynamic stack allocation",
-                     [(X86WinAlloca)]>;
 
 // When using segmented stacks these are lowered into instructions which first
 // check if the current stacklet has enough free memory. If it does, memory is
@@ -131,6 +119,27 @@ def SEG_ALLOCA_64 : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$size),
                          (X86SegAlloca GR64:$size))]>,
                     Requires<[In64BitMode]>;
 }
+
+// Dynamic stack allocation yields a _chkstk or _alloca call for all Windows
+// targets.  These calls are needed to probe the stack when allocating more than
+// 4k bytes in one go. Touching the stack at 4K increments is necessary to
+// ensure that the guard pages used by the OS virtual memory manager are
+// allocated in correct sequence.
+// The main point of having separate instruction are extra unmodelled effects
+// (compared to ordinary calls) like stack pointer change.
+
+let Defs = [EAX, ESP, EFLAGS], Uses = [ESP] in
+def WIN_ALLOCA_32 : I<0, Pseudo, (outs), (ins GR32:$size),
+                     "# dynamic stack allocation",
+                     [(X86WinAlloca GR32:$size)]>,
+                     Requires<[NotLP64]>;
+
+let Defs = [RAX, RSP, EFLAGS], Uses = [RSP] in
+def WIN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
+                     "# dynamic stack allocation",
+                     [(X86WinAlloca GR64:$size)]>,
+                     Requires<[In64BitMode]>;
+
 
 //===----------------------------------------------------------------------===//
 // EH Pseudo Instructions

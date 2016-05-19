@@ -39,6 +39,7 @@ public:
   ArrayRef<uint32_t> getHashBuckets() const { return HashBuckets; }
   ArrayRef<uint32_t> getAddressMap() const { return AddressMap; }
   ArrayRef<uint32_t> getThunkMap() const { return ThunkMap; }
+  ArrayRef<uint32_t> getSectionOffsets() const { return SectionOffsets; }
 
 private:
   uint32_t StreamNum;
@@ -47,6 +48,7 @@ private:
   std::vector<uint32_t> HashBuckets;
   std::vector<uint32_t> AddressMap;
   std::vector<uint32_t> ThunkMap;
+  std::vector<uint32_t> SectionOffsets;
 
   std::unique_ptr<HeaderInfo> Header;
   std::unique_ptr<GSIHashHeader> HashHdr;

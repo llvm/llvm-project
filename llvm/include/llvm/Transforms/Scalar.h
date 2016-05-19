@@ -81,6 +81,16 @@ FunctionPass *createDeadStoreEliminationPass();
 //
 FunctionPass *createAggressiveDCEPass();
 
+
+//===----------------------------------------------------------------------===//
+//
+// GuardWidening - An optimization over the @llvm.experimental.guard intrinsic
+// that (optimistically) combines multiple guards into one to have fewer checks
+// at runtime.
+//
+FunctionPass *createGuardWideningPass();
+
+
 //===----------------------------------------------------------------------===//
 //
 // BitTrackingDCE - This pass uses a bit-tracking DCE algorithm in order to

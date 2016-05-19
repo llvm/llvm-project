@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 class Function;

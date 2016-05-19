@@ -194,8 +194,8 @@ protected:
   MCSection *SXDataSection;
 
 public:
-  void InitMCObjectFileInfo(const Triple &TT, Reloc::Model RM,
-                            CodeModel::Model CM, MCContext &ctx);
+  void InitMCObjectFileInfo(const Triple &TT, bool PIC, CodeModel::Model CM,
+                            MCContext &ctx);
 
   bool getSupportsWeakOmittedEHFrame() const {
     return SupportsWeakOmittedEHFrame;
@@ -347,11 +347,11 @@ public:
   enum Environment { IsMachO, IsELF, IsCOFF };
   Environment getObjectFileType() const { return Env; }
 
-  Reloc::Model getRelocM() const { return RelocM; }
+  bool isPositionIndependent() const { return PositionIndependent; }
 
 private:
   Environment Env;
-  Reloc::Model RelocM;
+  bool PositionIndependent;
   CodeModel::Model CMModel;
   MCContext *Ctx;
   Triple TT;

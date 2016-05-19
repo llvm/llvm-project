@@ -5,3 +5,5 @@ add_llvm_library(LLVMAVRInfo
   AVRTargetInfo.cpp
 )
 
+add_dependencies(LLVMAVRInfo AVRCommonTableGen)
+

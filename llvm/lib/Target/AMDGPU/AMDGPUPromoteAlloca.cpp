@@ -510,6 +510,9 @@ bool AMDGPUPromoteAlloca::binaryOpIsDerivedFromSameAlloca(Value *BaseAlloca,
   if (Val == OtherOp)
     OtherOp = Inst->getOperand(OpIdx1);
 
+  if (isa<ConstantPointerNull>(OtherOp))
+    return true;
+
   Value *OtherObj = GetUnderlyingObject(OtherOp, *DL);
   if (!isa<AllocaInst>(OtherObj))
     return false;
@@ -549,15 +552,19 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
     if (UseInst->getOpcode() == Instruction::PtrToInt)
       return false;
 
+    if (LoadInst *LI = dyn_cast_or_null<LoadInst>(UseInst)) {
+      if (LI->isVolatile())
+        return false;
+
+      continue;
+    }
+
     if (StoreInst *SI = dyn_cast<StoreInst>(UseInst)) {
       if (SI->isVolatile())
         return false;
 
       // Reject if the stored value is not the pointer operand.
       if (SI->getPointerOperand() != Val)
-        return false;
-    } else if (LoadInst *LI = dyn_cast_or_null<LoadInst>(UseInst)) {
-      if (LI->isVolatile())
         return false;
     } else if (AtomicRMWInst *RMW = dyn_cast_or_null<AtomicRMWInst>(UseInst)) {
       if (RMW->isVolatile())
@@ -573,6 +580,9 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
     if (ICmpInst *ICmp = dyn_cast<ICmpInst>(UseInst)) {
       if (!binaryOpIsDerivedFromSameAlloca(BaseAlloca, Val, ICmp, 0, 1))
         return false;
+
+      // May need to rewrite constant operands.
+      WorkList.push_back(ICmp);
     }
 
     if (!User->getType()->isPointerTy())
@@ -713,16 +723,45 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
   for (Value *V : WorkList) {
     CallInst *Call = dyn_cast<CallInst>(V);
     if (!Call) {
-      Type *EltTy = V->getType()->getPointerElementType();
-      PointerType *NewTy = PointerType::get(EltTy, AMDGPUAS::LOCAL_ADDRESS);
+      if (ICmpInst *CI = dyn_cast<ICmpInst>(V)) {
+        Value *Src0 = CI->getOperand(0);
+        Type *EltTy = Src0->getType()->getPointerElementType();
+        PointerType *NewTy = PointerType::get(EltTy, AMDGPUAS::LOCAL_ADDRESS);
+
+        if (isa<ConstantPointerNull>(CI->getOperand(0)))
+          CI->setOperand(0, ConstantPointerNull::get(NewTy));
+
+        if (isa<ConstantPointerNull>(CI->getOperand(1)))
+          CI->setOperand(1, ConstantPointerNull::get(NewTy));
+
+        continue;
+      }
 
       // The operand's value should be corrected on its own.
       if (isa<AddrSpaceCastInst>(V))
         continue;
 
+      Type *EltTy = V->getType()->getPointerElementType();
+      PointerType *NewTy = PointerType::get(EltTy, AMDGPUAS::LOCAL_ADDRESS);
+
       // FIXME: It doesn't really make sense to try to do this for all
       // instructions.
       V->mutateType(NewTy);
+
+      // Adjust the types of any constant operands.
+      if (SelectInst *SI = dyn_cast<SelectInst>(V)) {
+        if (isa<ConstantPointerNull>(SI->getOperand(1)))
+          SI->setOperand(1, ConstantPointerNull::get(NewTy));
+
+        if (isa<ConstantPointerNull>(SI->getOperand(2)))
+          SI->setOperand(2, ConstantPointerNull::get(NewTy));
+      } else if (PHINode *Phi = dyn_cast<PHINode>(V)) {
+        for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
+          if (isa<ConstantPointerNull>(Phi->getIncomingValue(I)))
+            Phi->setIncomingValue(I, ConstantPointerNull::get(NewTy));
+        }
+      }
+
       continue;
     }
 

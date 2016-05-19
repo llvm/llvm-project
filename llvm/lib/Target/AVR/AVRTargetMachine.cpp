@@ -26,7 +26,7 @@
 namespace llvm {
 
 /// Processes a CPU name.
-static StringRef getTargetCPU(StringRef CPU) {
+static StringRef getCPU(StringRef CPU) {
   if (CPU.empty() || CPU == "generic") {
     return "avr2";
   }
@@ -41,8 +41,8 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOpt::Level OL)
     : LLVMTargetMachine(
           T, "e-p:16:8:8-i8:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-n8", TT,
-          getTargetCPU(CPU), FS, Options, RM, CM, OL),
-      SubTarget(TT, GetTargetCPU(CPU), FS, *this) {
+          getCPU(CPU), FS, Options, RM, CM, OL),
+      SubTarget(TT, getCPU(CPU), FS, *this) {
   this->TLOF = make_unique<AVRTargetObjectFile>();
   initAsmInfo();
 }

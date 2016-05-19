@@ -1,20 +1,36 @@
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/Passes.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Target/TargetMachine.h"
+#include "../include/KaleidoscopeJIT.h"
+#include <cassert>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
-#include "../include/KaleidoscopeJIT.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -84,9 +100,9 @@ std::string getTokName(int Tok) {
 }
 
 namespace {
-class PrototypeAST;
 class ExprAST;
-}
+} // end anonymous namespace
+
 static LLVMContext TheContext;
 static IRBuilder<> Builder(TheContext);
 struct DebugInfo {
@@ -207,6 +223,7 @@ public:
   virtual Value *codegen() = 0;
   int getLine() const { return Loc.Line; }
   int getCol() const { return Loc.Col; }
+
   virtual raw_ostream &dump(raw_ostream &out, int ind) {
     return out << ':' << getLine() << ':' << getCol() << '\n';
   }
@@ -218,10 +235,11 @@ class NumberExprAST : public ExprAST {
 
 public:
   NumberExprAST(double Val) : Val(Val) {}
+  Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     return ExprAST::dump(out << Val, ind);
   }
-  Value *codegen() override;
 };
 
 /// VariableExprAST - Expression class for referencing a variable, like "a".
@@ -233,6 +251,7 @@ public:
       : ExprAST(Loc), Name(Name) {}
   const std::string &getName() const { return Name; }
   Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     return ExprAST::dump(out << Name, ind);
   }
@@ -247,6 +266,7 @@ public:
   UnaryExprAST(char Opcode, std::unique_ptr<ExprAST> Operand)
       : Opcode(Opcode), Operand(std::move(Operand)) {}
   Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     ExprAST::dump(out << "unary" << Opcode, ind);
     Operand->dump(out, ind + 1);
@@ -264,6 +284,7 @@ public:
                 std::unique_ptr<ExprAST> RHS)
       : ExprAST(Loc), Op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
   Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     ExprAST::dump(out << "binary" << Op, ind);
     LHS->dump(indent(out, ind) << "LHS:", ind + 1);
@@ -282,6 +303,7 @@ public:
               std::vector<std::unique_ptr<ExprAST>> Args)
       : ExprAST(Loc), Callee(Callee), Args(std::move(Args)) {}
   Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     ExprAST::dump(out << "call " << Callee, ind);
     for (const auto &Arg : Args)
@@ -300,6 +322,7 @@ public:
       : ExprAST(Loc), Cond(std::move(Cond)), Then(std::move(Then)),
         Else(std::move(Else)) {}
   Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     ExprAST::dump(out << "if", ind);
     Cond->dump(indent(out, ind) << "Cond:", ind + 1);
@@ -321,6 +344,7 @@ public:
       : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
         Step(std::move(Step)), Body(std::move(Body)) {}
   Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     ExprAST::dump(out << "for", ind);
     Start->dump(indent(out, ind) << "Cond:", ind + 1);
@@ -342,6 +366,7 @@ public:
       std::unique_ptr<ExprAST> Body)
       : VarNames(std::move(VarNames)), Body(std::move(Body)) {}
   Value *codegen() override;
+
   raw_ostream &dump(raw_ostream &out, int ind) override {
     ExprAST::dump(out << "var", ind);
     for (const auto &NamedVar : VarNames)
@@ -392,6 +417,7 @@ public:
               std::unique_ptr<ExprAST> Body)
       : Proto(std::move(Proto)), Body(std::move(Body)) {}
   Function *codegen();
+
   raw_ostream &dump(raw_ostream &out, int ind) {
     indent(out, ind) << "FunctionAST\n";
     ++ind;
@@ -477,7 +503,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   getNextToken(); // eat (
   std::vector<std::unique_ptr<ExprAST>> Args;
   if (CurTok != ')') {
-    while (1) {
+    while (true) {
       if (auto Arg = ParseExpression())
         Args.push_back(std::move(Arg));
       else
@@ -587,7 +613,7 @@ static std::unique_ptr<ExprAST> ParseVarExpr() {
   if (CurTok != tok_identifier)
     return LogError("expected identifier after var");
 
-  while (1) {
+  while (true) {
     std::string Name = IdentifierStr;
     getNextToken(); // eat identifier.
 
@@ -671,7 +697,7 @@ static std::unique_ptr<ExprAST> ParseUnary() {
 static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
                                               std::unique_ptr<ExprAST> LHS) {
   // If this is a binop, find its precedence.
-  while (1) {
+  while (true) {
     int TokPrec = GetTokPrecedence();
 
     // If this is a binop that binds at least as tightly as the current binop,
@@ -887,8 +913,7 @@ static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                           const std::string &VarName) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                    TheFunction->getEntryBlock().begin());
-  return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), nullptr,
-                           VarName.c_str());
+  return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), nullptr, VarName);
 }
 
 Value *NumberExprAST::codegen() {
@@ -1355,7 +1380,7 @@ static void HandleTopLevelExpression() {
 
 /// top ::= definition | external | expression | ';'
 static void MainLoop() {
-  while (1) {
+  while (true) {
     switch (CurTok) {
     case tok_eof:
       return;
@@ -1430,7 +1455,7 @@ int main() {
   // Currently down as "fib.ks" as a filename since we're redirecting stdin
   // but we'd like actual source locations.
   KSDbgInfo.TheCU = DBuilder->createCompileUnit(
-      dwarf::DW_LANG_C, "fib.ks", ".", "Kaleidoscope Compiler", 0, "", 0);
+      dwarf::DW_LANG_C, "fib.ks", ".", "Kaleidoscope Compiler", false, "", 0);
 
   // Run the main "interpreter loop" now.
   MainLoop();

@@ -506,6 +506,7 @@ analyzeLoopUnrollCost(const Loop *L, unsigned TripCount, DominatorTree &DT,
           BBWorklist.insert(Succ);
         else
           ExitWorklist.insert({BB, Succ});
+      AddCostRecursively(*TI, Iteration);
     }
 
     // If we found no optimization opportunities on the first iteration, we

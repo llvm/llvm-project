@@ -668,7 +668,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // covers all cases so this statement covers most cases and direct object
   // emission must call setPic() once MCObjectFileInfo has been initialized. The
   // cases we don't handle here are covered by MipsAsmPrinter.
-  Pic = MCA.getContext().getObjectFileInfo()->getRelocM() == Reloc::PIC_;
+  Pic = MCA.getContext().getObjectFileInfo()->isPositionIndependent();
 
   const FeatureBitset &Features = STI.getFeatureBits();
 

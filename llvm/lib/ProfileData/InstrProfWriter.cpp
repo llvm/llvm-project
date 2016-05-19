@@ -156,8 +156,7 @@ void InstrProfWriter::setOutputSparse(bool Sparse) {
   this->Sparse = Sparse;
 }
 
-std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
-                                           uint64_t Weight) {
+Error InstrProfWriter::addRecord(InstrProfRecord &&I, uint64_t Weight) {
   auto &ProfileDataMap = FunctionData[I.Name];
 
   bool NewFunc;
@@ -180,7 +179,7 @@ std::error_code InstrProfWriter::addRecord(InstrProfRecord &&I,
 
   Dest.sortValueData();
 
-  return Dest.getError();
+  return Dest.takeError();
 }
 
 bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {

@@ -24,3 +24,22 @@ entry:
   store volatile i32 %tmp, i32* %arrayidx1
  ret void
 }
+
+; Has on OK non-volatile user but also a volatile user
+; CHECK-LABEL: @volatile_and_non_volatile_load(
+; CHECK: alloca double
+; CHECK: load double
+; CHECK: load volatile double
+define void @volatile_and_non_volatile_load(double addrspace(1)* nocapture %arg, i32 %arg1) #0 {
+bb:
+  %tmp = alloca double, align 8
+  store double 0.000000e+00, double* %tmp, align 8
+
+  %tmp4 = load double, double* %tmp, align 8
+  %tmp5 = load volatile double, double* %tmp, align 8
+
+  store double %tmp4, double addrspace(1)* %arg
+  ret void
+}
+
+attributes #0 = { nounwind }

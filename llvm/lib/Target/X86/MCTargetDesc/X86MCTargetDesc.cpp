@@ -204,37 +204,6 @@ static MCCodeGenInfo *createX86MCCodeGenInfo(const Triple &TT, Reloc::Model RM,
 
   bool is64Bit = TT.getArch() == Triple::x86_64;
 
-  if (RM == Reloc::Default) {
-    // Darwin defaults to PIC in 64 bit mode and dynamic-no-pic in 32 bit mode.
-    // Win64 requires rip-rel addressing, thus we force it to PIC. Otherwise we
-    // use static relocation model by default.
-    if (TT.isOSDarwin()) {
-      if (is64Bit)
-        RM = Reloc::PIC_;
-      else
-        RM = Reloc::DynamicNoPIC;
-    } else if (TT.isOSWindows() && is64Bit)
-      RM = Reloc::PIC_;
-    else
-      RM = Reloc::Static;
-  }
-
-  // ELF and X86-64 don't have a distinct DynamicNoPIC model.  DynamicNoPIC
-  // is defined as a model for code which may be used in static or dynamic
-  // executables but not necessarily a shared library. On X86-32 we just
-  // compile in -static mode, in x86-64 we use PIC.
-  if (RM == Reloc::DynamicNoPIC) {
-    if (is64Bit)
-      RM = Reloc::PIC_;
-    else if (!TT.isOSDarwin())
-      RM = Reloc::Static;
-  }
-
-  // If we are on Darwin, disallow static relocation model in X86-64 mode, since
-  // the Mach-O file format doesn't support it.
-  if (RM == Reloc::Static && TT.isOSDarwin() && is64Bit)
-    RM = Reloc::PIC_;
-
   // For static codegen, if we're not already set, use Small codegen.
   if (CM == CodeModel::Default)
     CM = CodeModel::Small;
