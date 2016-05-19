@@ -198,10 +198,11 @@ bool
 GDBRemoteRegisterContext::GetPrimordialRegister(const RegisterInfo *reg_info,
                                                 GDBRemoteCommunicationClient &gdb_comm)
 {
-    const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    const uint32_t lldb_reg = reg_info->kinds[eRegisterKindLLDB];
+    const uint32_t remote_reg = reg_info->kinds[eRegisterKindProcessPlugin];
     StringExtractorGDBRemote response;
-    if (gdb_comm.ReadRegister(m_thread.GetProtocolID(), reg, response))
-        return PrivateSetRegisterValue (reg, response);
+    if (gdb_comm.ReadRegister(m_thread.GetProtocolID(), remote_reg, response))
+        return PrivateSetRegisterValue (lldb_reg, response);
     return false;
 }
 
@@ -316,7 +317,7 @@ GDBRemoteRegisterContext::SetPrimordialRegister(const RegisterInfo *reg_info,
     StreamString packet;
     StringExtractorGDBRemote response;
     const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
-    packet.Printf ("P%x=", reg);
+    packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
     packet.PutBytesAsRawHex8 (m_reg_data.PeekData(reg_info->byte_offset, reg_info->byte_size),
                               reg_info->byte_size,
                               endian::InlHostByteOrder(),
@@ -813,7 +814,7 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
                             if (restore_src)
                             {
                                 StreamString packet;
-                                packet.Printf ("P%x=", reg);
+                                packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
                                 packet.PutBytesAsRawHex8 (restore_src,
                                                           reg_byte_size,
                                                           endian::InlHostByteOrder(),
@@ -836,7 +837,7 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
                                 if (write_reg)
                                 {
                                     StreamString packet;
-                                    packet.Printf ("P%x=", reg);
+                                    packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
                                     packet.PutBytesAsRawHex8 (restore_src,
                                                               reg_byte_size,
                                                               endian::InlHostByteOrder(),
@@ -894,7 +895,7 @@ GDBRemoteRegisterContext::WriteAllRegisterValues (const lldb::DataBufferSP &data
                         continue;
                     }
                     StreamString packet;
-                    packet.Printf ("P%x=", reg_info->kinds[eRegisterKindLLDB]);
+                    packet.Printf ("P%x=", reg_info->kinds[eRegisterKindProcessPlugin]);
                     packet.PutBytesAsRawHex8 (data_sp->GetBytes() + reg_info->byte_offset, reg_info->byte_size, endian::InlHostByteOrder(), endian::InlHostByteOrder());
                     if (thread_suffix_supported)
                         packet.Printf (";thread:%4.4" PRIx64 ";", m_thread.GetProtocolID());
