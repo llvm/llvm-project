@@ -111,7 +111,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
 
   if (Info.UnavailableInSwift) {
     D->addAttr(AvailabilityAttr::CreateImplicit(
-		 S.Context,
+		             S.Context,
                  &S.Context.Idents.get("swift"),
                  VersionTuple(),
                  VersionTuple(),
@@ -129,9 +129,14 @@ static void ProcessAPINotes(Sema &S, Decl *D,
 
   // swift_name
   if (!Info.SwiftName.empty() && !D->hasAttr<SwiftNameAttr>()) {
+    auto &APINoteName = S.getASTContext().Idents.get("SwiftName API Note");
+    
+    if (!S.DiagnoseSwiftName(D, Info.SwiftName, D->getLocation(),
+                             &APINoteName)) {
+      return;
+    }
     D->addAttr(SwiftNameAttr::CreateImplicit(S.Context,
-					     CopyString(S.Context,
-							Info.SwiftName)));
+                                       CopyString(S.Context, Info.SwiftName)));
   }
 }
 
