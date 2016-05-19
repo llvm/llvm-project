@@ -4344,13 +4344,10 @@ struct GdbServerTargetInfo
 };
 
 bool
-ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemoteDynamicRegisterInfo &dyn_reg_info, ABISP abi_sp)
+ParseRegisters (XMLNode feature_node, GdbServerTargetInfo &target_info, GDBRemoteDynamicRegisterInfo &dyn_reg_info, ABISP abi_sp, uint32_t &cur_reg_num, uint32_t &reg_offset)
 {
     if (!feature_node)
         return false;
-
-    uint32_t cur_reg_num = 0;
-    uint32_t reg_offset = 0;
 
     feature_node.ForEachChildElementWithName("reg", [&target_info, &dyn_reg_info, &cur_reg_num, &reg_offset, &abi_sp](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
@@ -4607,12 +4604,16 @@ ProcessGDBRemote::GetGDBServerRegisterInfo (ArchSpec &arch_to_use)
                 return true; // Keep iterating through all children of the target_node
             });
 
+            // Initialize these outside of ParseRegisters, since they should not be reset inside each include feature
+            uint32_t cur_reg_num = 0;
+            uint32_t reg_offset = 0;
+
             // Don't use Process::GetABI, this code gets called from DidAttach, and in that context we haven't
             // set the Target's architecture yet, so the ABI is also potentially incorrect.
             ABISP abi_to_use_sp = ABI::FindPlugin(arch_to_use);
             if (feature_node)
             {
-                ParseRegisters(feature_node, target_info, this->m_register_info, abi_to_use_sp);
+                ParseRegisters(feature_node, target_info, this->m_register_info, abi_to_use_sp, cur_reg_num, reg_offset);
             }
 
             for (const auto &include : target_info.includes)
@@ -4630,7 +4631,7 @@ ProcessGDBRemote::GetGDBServerRegisterInfo (ArchSpec &arch_to_use)
                 XMLNode include_feature_node = include_xml_document.GetRootElement("feature");
                 if (include_feature_node)
                 {
-                    ParseRegisters(include_feature_node, target_info, this->m_register_info, abi_to_use_sp);
+                    ParseRegisters(include_feature_node, target_info, this->m_register_info, abi_to_use_sp, cur_reg_num, reg_offset);
                 }
             }
             this->m_register_info.Finalize(arch_to_use);
