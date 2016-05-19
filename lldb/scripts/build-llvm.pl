@@ -22,10 +22,6 @@ our $archive_filelist_file = $ENV{SCRIPT_INPUT_FILE_2};
 
 our $llvm_configuration = $ENV{LLVM_CONFIGURATION};
 
-our $llvm_revision = "HEAD";
-our $clang_revision = "HEAD";
-our $compiler_rt_revision = "HEAD";
-
 our $SRCROOT = "$ENV{SRCROOT}";
 our @archs = split (/\s+/, $ENV{ARCHS});
 my $os_release = 11;
@@ -64,12 +60,12 @@ if (-e "$llvm_srcroot/lib")
 }
 else
 {
-    print "Checking out llvm sources from revision $llvm_revision...\n";
-    do_command ("cd '$SRCROOT' && svn co --quiet --revision $llvm_revision http://llvm.org/svn/llvm-project/llvm/trunk llvm", "checking out llvm from repository", 1);
-    print "Checking out clang sources from revision $clang_revision...\n";
-    do_command ("cd '$llvm_srcroot/tools' && svn co --quiet --revision $clang_revision http://llvm.org/svn/llvm-project/cfe/trunk clang", "checking out clang from repository", 1);
-#    print "Checking out compiler-rt sources from revision $compiler_rt_revision...\n";
-#    do_command ("cd '$llvm_srcroot/projects' && svn co --quiet --revision $compiler_rt_revision http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt", "checking out compiler-rt from repository", 1);
+    print "Checking out llvm sources from release_38...\n";
+    do_command ("cd '$SRCROOT' && svn co --quiet http://llvm.org/svn/llvm-project/llvm/branches/release_38 llvm", "checking out llvm from repository", 1);
+    print "Checking out clang sources from release_38...\n";
+    do_command ("cd '$llvm_srcroot/tools' && svn co --quiet http://llvm.org/svn/llvm-project/cfe/branches/release_38 clang", "checking out clang from repository", 1);
+#    print "Checking out compiler-rt sources from release_38...\n";
+#    do_command ("cd '$llvm_srcroot/projects' && svn co --quiet http://llvm.org/svn/llvm-project/compiler-rt/branches/release_38 compiler-rt", "checking out compiler-rt from repository", 1);
     print "Applying any local patches to LLVM/Clang...";
 
     my @llvm_patches = bsd_glob("$ENV{SRCROOT}/scripts/llvm.*.diff");
