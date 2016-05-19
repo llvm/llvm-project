@@ -574,34 +574,6 @@ DynamicLoaderHexagonDYLD::LoadAllCurrentModules()
     m_process->GetTarget().ModulesDidLoad(module_list);
 }
 
-/// Helper for the entry breakpoint callback.  Resolves the load addresses
-/// of all dependent modules.
-ModuleSP
-DynamicLoaderHexagonDYLD::LoadModuleAtAddress(const FileSpec &file,
-                                              addr_t link_map_addr,
-                                              addr_t base_addr,
-                                              bool base_addr_is_offset)
-{
-    Target &target = m_process->GetTarget();
-    ModuleList &modules = target.GetImages();
-    ModuleSP module_sp;
-
-    ModuleSpec module_spec (file, target.GetArchitecture());
-
-    // check if module is currently loaded
-    if ((module_sp = modules.FindFirstModule (module_spec))) 
-    {
-        UpdateLoadedSections(module_sp, link_map_addr, base_addr, true);
-    }
-    // try to load this module from disk
-    else if ((module_sp = target.GetSharedModule(module_spec))) 
-    {
-        UpdateLoadedSections(module_sp, link_map_addr, base_addr, true);
-    }
-
-    return module_sp;
-}
-
 /// Computes a value for m_load_offset returning the computed address on
 /// success and LLDB_INVALID_ADDRESS on failure.
 addr_t

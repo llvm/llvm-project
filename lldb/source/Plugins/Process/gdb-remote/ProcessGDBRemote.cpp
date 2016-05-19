@@ -4795,25 +4795,14 @@ ProcessGDBRemote::GetLoadedModuleList (LoadedModuleInfoList & list)
 }
 
 lldb::ModuleSP
-ProcessGDBRemote::LoadModuleAtAddress (const FileSpec &file, lldb::addr_t base_addr, bool value_is_offset)
+ProcessGDBRemote::LoadModuleAtAddress (const FileSpec &file, lldb::addr_t link_map,
+                                       lldb::addr_t base_addr, bool value_is_offset)
 {
-    Target &target = m_process->GetTarget();
-    ModuleList &modules = target.GetImages();
-    ModuleSP module_sp;
+    DynamicLoader *loader = GetDynamicLoader();
+    if (!loader)
+        return nullptr;
 
-    bool changed = false;
-
-    ModuleSpec module_spec (file, target.GetArchitecture());
-    if ((module_sp = modules.FindFirstModule (module_spec)))
-    {
-        module_sp->SetLoadAddress (target, base_addr, value_is_offset, changed);
-    }
-    else if ((module_sp = target.GetSharedModule (module_spec)))
-    {
-        module_sp->SetLoadAddress (target, base_addr, value_is_offset, changed);
-    }
-
-    return module_sp;
+    return loader->LoadModuleAtAddress(file, link_map, base_addr, value_is_offset);
 }
 
 size_t
@@ -4832,6 +4821,7 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
     {
         std::string  mod_name;
         lldb::addr_t mod_base;
+        lldb::addr_t link_map;
         bool         mod_base_is_offset;
 
         bool valid = true;
@@ -4841,6 +4831,9 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
         if (!valid)
             continue;
 
+        if (!modInfo.get_link_map (link_map))
+            link_map = LLDB_INVALID_ADDRESS;
+
         // hack (cleaner way to get file name only?) (win/unix compat?)
         size_t marker = mod_name.rfind ('/');
         if (marker == std::string::npos)
@@ -4849,7 +4842,8 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
             marker += 1;
 
         FileSpec file (mod_name.c_str()+marker, true);
-        lldb::ModuleSP module_sp = LoadModuleAtAddress (file, mod_base, mod_base_is_offset);
+        lldb::ModuleSP module_sp = LoadModuleAtAddress (file, link_map, mod_base,
+                                                        mod_base_is_offset);
 
         if (module_sp.get())
             new_modules.Append (module_sp);

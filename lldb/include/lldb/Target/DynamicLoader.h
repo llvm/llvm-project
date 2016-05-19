@@ -243,6 +243,14 @@ public:
         return LLDB_INVALID_ADDRESS;
     }
 
+    /// Locates or creates a module given by @p file and updates/loads the
+    /// resulting module at the virtual base address @p base_addr.
+    virtual lldb::ModuleSP
+    LoadModuleAtAddress(const lldb_private::FileSpec &file,
+                        lldb::addr_t link_map_addr,
+                        lldb::addr_t base_addr,
+                        bool base_addr_is_offset);
+
 protected:
     //------------------------------------------------------------------
     // Utility methods for derived classes
@@ -281,14 +289,6 @@ protected:
     // Utility method so base classes can share implementation of UnloadSections
     void
     UnloadSectionsCommon(const lldb::ModuleSP module);
-
-    /// Locates or creates a module given by @p file and updates/loads the
-    /// resulting module at the virtual base address @p base_addr.
-    virtual lldb::ModuleSP
-    LoadModuleAtAddress(const lldb_private::FileSpec &file,
-                        lldb::addr_t link_map_addr,
-                        lldb::addr_t base_addr,
-                        bool base_addr_is_offset);
 
     const lldb_private::SectionList *
     GetSectionListFromModule(const lldb::ModuleSP module) const;

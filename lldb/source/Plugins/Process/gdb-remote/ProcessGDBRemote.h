@@ -468,7 +468,8 @@ protected:
     GetLoadedModuleList (LoadedModuleInfoList &);
 
     lldb::ModuleSP
-    LoadModuleAtAddress (const FileSpec &file, lldb::addr_t base_addr, bool value_is_offset);
+    LoadModuleAtAddress (const FileSpec &file, lldb::addr_t link_map, lldb::addr_t base_addr,
+                         bool value_is_offset);
 
 private:
     //------------------------------------------------------------------
