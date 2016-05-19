@@ -2275,7 +2275,7 @@ MachProcess::GetGenealogyImageInfo (size_t idx)
 bool
 MachProcess::GetOSVersionNumbers (uint64_t *major, uint64_t *minor, uint64_t *patch)
 {
-#if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101000)
+#if defined (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101000)
     return false;
 #else
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
