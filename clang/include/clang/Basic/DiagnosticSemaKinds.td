@@ -3058,40 +3058,56 @@ def err_objc_attr_protocol_requires_definition : Error<
 
 // Swift attributes
 def warn_attr_swift_name_decl_kind : Warning<
-  "%0 attribute cannot be applied to this declaration">;
+  "%0 attribute cannot be applied to this declaration">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_function : Warning<
-  "parameter of %0 attribute must be a Swift function name string">;
+  "parameter of %0 attribute must be a Swift function name string">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_function_no_prototype : Warning<
-  "%0 attribute can only be applied to function declarations with prototypes">;
+  "%0 attribute can only be applied to function declarations with prototypes">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_context_name_invalid_identifier : Warning<
-  "%0 attribute has invalid identifier for context name">;
+  "%0 attribute has invalid identifier for context name">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_basename_invalid_identifier : Warning<
-  "%0 attribute has invalid identifier for base name">;
+  "%0 attribute has invalid identifier for base name">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_parameter_invalid_identifier : Warning<
-  "%0 attribute has invalid identifier for parameter name">;
+  "%0 attribute has invalid identifier for parameter name">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_missing_parameters : Warning<
-  "%0 attribute is missing parameter label clause">;
+  "%0 attribute is missing parameter label clause">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_subscript_not_accessor : Warning<
-  "%0 attribute for 'subscript' must be a getter or setter">;
+  "%0 attribute for 'subscript' must be a getter or setter">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_subscript_no_parameter : Warning<
-  "%0 attribute for 'subscript' must take at least one parameter">;
+  "%0 attribute for 'subscript' must take at least one parameter">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_subscript_getter_newValue : Warning<
-  "%0 attribute for 'subscript' getter cannot take a 'newValue:' parameter">;
+  "%0 attribute for 'subscript' getter cannot take a 'newValue:' parameter">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_subscript_setter_no_newValue : Warning<
-  "%0 attribute for 'subscript' setter must take a 'newValue:' parameter">;
+  "%0 attribute for 'subscript' setter must take a 'newValue:' parameter">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_subscript_setter_multiple_newValues : Warning<
-  "%0 attribute for 'subscript' setter cannot take multiple 'newValue:' parameters">;
+  "%0 attribute for 'subscript' setter cannot take multiple 'newValue:' parameters">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_getter_parameters : Warning<
-  "%0 attribute for getter must not take any parameters besides 'self:'">;
+  "%0 attribute for getter must not take any parameters besides 'self:'">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_setter_parameters : Warning<
-  "%0 attribute for setter must take one parameter for new value">;
+  "%0 attribute for setter must take one parameter for new value">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_multiple_selfs : Warning<
-  "%0 attribute cannot specify more than one 'self:' parameter">;
+  "%0 attribute cannot specify more than one 'self:' parameter">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_static_subscript : Warning<
-  "%0 attribute for 'subscript' must take a 'self:' parameter">;
+  "%0 attribute for 'subscript' must take a 'self:' parameter">,
+  InGroup<SwiftNameAttribute>;
 def warn_attr_swift_name_num_params : Warning<
   "too %select{few|many}0 parameters in %1 attribute (expected %2; got %3)">,
-  InGroup<DiagGroup<"swift-name-attribute">>;
+  InGroup<SwiftNameAttribute>;
 def err_attr_swift_error_no_error_parameter : Error<
   "%0 attribute can only be applied to a %select{function|method}1 "
   "with an error parameter">;
