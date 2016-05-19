@@ -26,7 +26,7 @@ class PExpectTest(TestBase):
     def launch(self, timeout=None):
         if timeout is None: timeout = 30
         logfile = sys.stdout if self.TraceOn() else None
-        self.child = pexpect.spawn('%s %s' % (lldbtest_config.lldbExec, self.launchArgs()), logfile=logfile)
+        self.child = pexpect.spawn('%s --no-use-colors %s' % (lldbtest_config.lldbExec, self.launchArgs()), logfile=logfile)
         self.child.timeout = timeout
         self.timeout = timeout
 

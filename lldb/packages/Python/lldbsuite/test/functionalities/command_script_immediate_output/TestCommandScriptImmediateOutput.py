@@ -28,8 +28,8 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
         self.launch(timeout=60)
 
         script = os.path.join(os.getcwd(), 'custom_command.py')
-        prompt = "(lldb)"
-        
+        prompt = "\(lldb\) "
+                                                                      
         self.sendline('command script import %s' % script, patterns=[prompt])
         self.sendline('command script add -f custom_command.command_function mycommand', patterns=[prompt])
         self.sendline('mycommand', patterns='this is a test string, just a test string')
@@ -51,7 +51,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
 
         self.sendline('command script add -f custom_command.write_file mywrite', patterns=[prompt])
         for path, mode in test_files.iteritems():
-            command = 'mywrite ' + path + ' ' + mode
+            command = 'mywrite "' + path + '" ' + mode
 
             self.sendline(command, patterns=[prompt])
 
