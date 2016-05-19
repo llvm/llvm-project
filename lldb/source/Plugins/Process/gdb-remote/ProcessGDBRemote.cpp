@@ -1646,7 +1646,7 @@ ProcessGDBRemote::HandleStopReplySequence ()
 void
 ProcessGDBRemote::ClearThreadIDList ()
 {
-    Mutex::Locker locker(m_thread_list_real.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
     m_thread_ids.clear();
     m_thread_pcs.clear();
 }
@@ -1696,7 +1696,7 @@ ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue (std::string &value)
 bool
 ProcessGDBRemote::UpdateThreadIDList ()
 {
-    Mutex::Locker locker(m_thread_list_real.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
     if (m_jthreadsinfo_sp)
     {
@@ -1944,7 +1944,7 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
             // m_thread_list_real does have its own mutex, but we need to
             // hold onto the mutex between the call to m_thread_list_real.FindThreadByID(...)
             // and the m_thread_list_real.AddThread(...) so it doesn't change on us
-            Mutex::Locker locker (m_thread_list_real.GetMutex ());
+            std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
             thread_sp = m_thread_list_real.FindThreadByProtocolID(tid, false);
 
             if (!thread_sp)
@@ -2440,7 +2440,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                 }
                 else if (key.compare("threads") == 0)
                 {
-                    Mutex::Locker locker(m_thread_list_real.GetMutex());
+                    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+
                     m_thread_ids.clear();
                     // A comma separated list of all threads in the current
                     // process that includes the thread for this stop reply
@@ -2663,7 +2664,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
 void
 ProcessGDBRemote::RefreshStateAfterStop ()
 {
-    Mutex::Locker locker(m_thread_list_real.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+
     m_thread_ids.clear();
     m_thread_pcs.clear();
     // Set the thread stop info. It might have a "threads" key whose value is
@@ -2818,7 +2820,7 @@ ProcessGDBRemote::DoDestroy ()
                 ThreadList &threads = GetThreadList();
 
                 {
-                    Mutex::Locker locker(threads.GetMutex());
+                    std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
 
                     size_t num_threads = threads.GetSize();
                     for (size_t i = 0; i < num_threads; i++)
@@ -2853,7 +2855,7 @@ ProcessGDBRemote::DoDestroy ()
                     // have to run the risk of letting those threads proceed a bit.
 
                     {
-                        Mutex::Locker locker(threads.GetMutex());
+                        std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
 
                         size_t num_threads = threads.GetSize();
                         for (size_t i = 0; i < num_threads; i++)

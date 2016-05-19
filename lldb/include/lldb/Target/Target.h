@@ -713,8 +713,8 @@ public:
     static const lldb::TargetPropertiesSP &
     GetGlobalProperties();
 
-    Mutex &
-    GetAPIMutex ()
+    std::recursive_mutex &
+    GetAPIMutex()
     {
         return m_mutex;
     }
@@ -1594,7 +1594,8 @@ protected:
     //------------------------------------------------------------------
     Debugger &      m_debugger;
     lldb::PlatformSP m_platform_sp;     ///< The platform for this target.
-    Mutex           m_mutex;            ///< An API mutex that is used by the lldb::SB* classes make the SB interface thread safe
+    std::recursive_mutex
+        m_mutex; ///< An API mutex that is used by the lldb::SB* classes make the SB interface thread safe
     ArchSpec        m_arch;
     ModuleList      m_images;           ///< The list of images for this process (shared libraries and anything dynamically loaded).
     SectionLoadHistory m_section_load_history;

@@ -1517,7 +1517,6 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
                                    ResultBuilder &Results) {
   CodeCompletionAllocator &Allocator = Results.getAllocator();
   CodeCompletionBuilder Builder(Allocator, Results.getCodeCompletionTUInfo());
-  PrintingPolicy Policy = getCompletionPrintingPolicy(SemaRef);
   
   typedef CodeCompletionResult Result;
   switch (CCC) {

@@ -12,9 +12,9 @@
 #define liblldb_UnwindTable_h
 
 #include <map>
+#include <mutex>
 
 #include "lldb/lldb-private.h" 
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -69,7 +69,7 @@ private:
     collection          m_unwinds;
 
     bool                m_initialized;  // delay some initialization until ObjectFile is set up
-    Mutex               m_mutex;
+    std::mutex m_mutex;
 
     std::unique_ptr<DWARFCallFrameInfo> m_eh_frame_up;
     std::unique_ptr<CompactUnwindInfo>  m_compact_unwind_up;

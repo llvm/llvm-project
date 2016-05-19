@@ -78,6 +78,7 @@ set(files
   xsaveoptintrin.h
   xsavecintrin.h
   xsavesintrin.h
+  mwaitxintrin.h
   xtestintrin.h
   avx512ifmaintrin.h
   avx512ifmavlintrin.h

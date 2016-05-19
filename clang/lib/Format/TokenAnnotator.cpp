@@ -1965,7 +1965,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::less) || Right.isOneOf(tok::greater, tok::less))
     return false;
   if (Right.is(tok::ellipsis))
-    return Left.Tok.isLiteral();
+    return Left.Tok.isLiteral() || (Left.is(tok::identifier) && Left.Previous &&
+                                    Left.Previous->is(tok::kw_case));
   if (Left.is(tok::l_square) && Right.is(tok::amp))
     return false;
   if (Right.is(TT_PointerOrReference))
@@ -2082,7 +2083,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))
       return false;
     if (Left.isOneOf(Keywords.kw_let, Keywords.kw_var, Keywords.kw_in,
-                     Keywords.kw_of) &&
+                     Keywords.kw_of, tok::kw_const) &&
         (!Left.Previous || !Left.Previous->is(tok::period)))
       return true;
     if (Left.is(tok::kw_default) && Left.Previous &&

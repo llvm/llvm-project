@@ -10,6 +10,7 @@
 #ifndef liblldb_QueueList_h_
 #define liblldb_QueueList_h_
 
+#include <mutex>
 #include <vector>
 
 #include "lldb/lldb-private.h"
@@ -60,7 +61,7 @@ public:
     GetQueueAtIndex (uint32_t idx);
 
     typedef std::vector<lldb::QueueSP> collection;
-    typedef LockingAdaptedIterable<collection, lldb::QueueSP, vector_adapter> QueueIterable;
+    typedef LockingAdaptedIterable<collection, lldb::QueueSP, vector_adapter, std::mutex> QueueIterable;
 
     //------------------------------------------------------------------
     /// Iterate over the list of queues
@@ -119,8 +120,8 @@ public:
     lldb::QueueSP
     FindQueueByIndexID (uint32_t index_id);
 
-    lldb_private::Mutex &
-    GetMutex ();
+    std::mutex &
+    GetMutex();
 
 protected:
 
@@ -130,7 +131,7 @@ protected:
     Process *m_process; ///< The process that manages this queue list.
     uint32_t m_stop_id; ///< The process stop ID that this queue list is valid for.
     collection m_queues; ///< The queues for this process.
-    Mutex   m_mutex;
+    std::mutex m_mutex;
 
 private:
     QueueList ();

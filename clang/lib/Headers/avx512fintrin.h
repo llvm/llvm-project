@@ -418,6 +418,12 @@ _mm512_maskz_and_epi64(__mmask8 __k, __m512i __a, __m512i __b)
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_andnot_si512 (__m512i __A, __m512i __B)
+{
+  return (__m512i)(~(__A) & __B);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_andnot_epi32 (__m512i __A, __m512i __B)
 {
   return (__m512i) __builtin_ia32_pandnd512_mask ((__v16si) __A,

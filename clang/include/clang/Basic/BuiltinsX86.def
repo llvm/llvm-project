@@ -2272,5 +2272,9 @@ TARGET_BUILTIN(__builtin_ia32_cvtusi2sd64, "V2dV2dULLiIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtusi2ss32, "V4fV4fUiIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_cvtusi2ss64, "V4fV4fULLiIi","","avx512f")
 
+// MONITORX/MWAITX
+TARGET_BUILTIN(__builtin_ia32_monitorx, "vv*UiUi", "", "mwaitx")
+TARGET_BUILTIN(__builtin_ia32_mwaitx, "vUiUiUi", "", "mwaitx")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

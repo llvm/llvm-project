@@ -25,16 +25,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-
-
-Symtab::Symtab(ObjectFile *objfile) :
-    m_objfile (objfile),
-    m_symbols (),
-    m_file_addr_to_index (),
-    m_name_to_index (),
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_file_addr_to_index_computed (false),
-    m_name_indexes_computed (false)
+Symtab::Symtab(ObjectFile *objfile)
+    : m_objfile(objfile),
+      m_symbols(),
+      m_file_addr_to_index(),
+      m_name_to_index(),
+      m_mutex(),
+      m_file_addr_to_index_computed(false),
+      m_name_indexes_computed(false)
 {
 }
 
@@ -76,7 +74,7 @@ Symtab::AddSymbol(const Symbol& symbol)
 size_t
 Symtab::GetNumSymbols() const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_symbols.size();
 }
 
@@ -90,9 +88,9 @@ Symtab::SectionFileAddressesChanged ()
 void
 Symtab::Dump (Stream *s, Target *target, SortOrder sort_order)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-//    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
+    //    s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
     s->Indent();
     const FileSpec &file_spec = m_objfile->GetFileSpec();
     const char * object_name = nullptr;
@@ -171,7 +169,7 @@ Symtab::Dump (Stream *s, Target *target, SortOrder sort_order)
 void
 Symtab::Dump(Stream *s, Target *target, std::vector<uint32_t>& indexes) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     const size_t num_symbols = GetNumSymbols();
     //s->Printf("%.*p: ", (int)sizeof(void*) * 2, this);
@@ -224,7 +222,7 @@ CompareSymbolID (const void *key, const void *p)
 Symbol *
 Symtab::FindSymbolByID (lldb::user_id_t symbol_uid) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     Symbol *symbol = (Symbol*)::bsearch (&symbol_uid, 
                                          &m_symbols[0], 
@@ -474,7 +472,7 @@ Symtab::AppendSymbolNamesToMap (const IndexCollection &indexes,
     if (add_demangled || add_mangled)
     {
         Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
         // Create the name index vector to be able to quickly search by name
         NameToIndexMap::Entry entry;
@@ -506,7 +504,7 @@ Symtab::AppendSymbolNamesToMap (const IndexCollection &indexes,
 uint32_t
 Symtab::AppendSymbolIndexesWithType (SymbolType symbol_type, std::vector<uint32_t>& indexes, uint32_t start_idx, uint32_t end_index) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     uint32_t prev_size = indexes.size();
 
@@ -524,7 +522,7 @@ Symtab::AppendSymbolIndexesWithType (SymbolType symbol_type, std::vector<uint32_
 uint32_t
 Symtab::AppendSymbolIndexesWithTypeAndFlagsValue (SymbolType symbol_type, uint32_t flags_value, std::vector<uint32_t>& indexes, uint32_t start_idx, uint32_t end_index) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     uint32_t prev_size = indexes.size();
 
@@ -542,7 +540,7 @@ Symtab::AppendSymbolIndexesWithTypeAndFlagsValue (SymbolType symbol_type, uint32
 uint32_t
 Symtab::AppendSymbolIndexesWithType (SymbolType symbol_type, Debug symbol_debug_type, Visibility symbol_visibility, std::vector<uint32_t>& indexes, uint32_t start_idx, uint32_t end_index) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     uint32_t prev_size = indexes.size();
 
@@ -632,7 +630,7 @@ namespace {
 void
 Symtab::SortSymbolIndexesByValue (std::vector<uint32_t>& indexes, bool remove_duplicates) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     Timer scoped_timer (__PRETTY_FUNCTION__,__PRETTY_FUNCTION__);
     // No need to sort if we have zero or one items...
@@ -657,7 +655,7 @@ Symtab::SortSymbolIndexesByValue (std::vector<uint32_t>& indexes, bool remove_du
 uint32_t
 Symtab::AppendSymbolIndexesWithName (const ConstString& symbol_name, std::vector<uint32_t>& indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
     if (symbol_name)
@@ -674,7 +672,7 @@ Symtab::AppendSymbolIndexesWithName (const ConstString& symbol_name, std::vector
 uint32_t
 Symtab::AppendSymbolIndexesWithName (const ConstString& symbol_name, Debug symbol_debug_type, Visibility symbol_visibility, std::vector<uint32_t>& indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
     if (symbol_name)
@@ -700,7 +698,7 @@ Symtab::AppendSymbolIndexesWithName (const ConstString& symbol_name, Debug symbo
 uint32_t
 Symtab::AppendSymbolIndexesWithNameAndType (const ConstString& symbol_name, SymbolType symbol_type, std::vector<uint32_t>& indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (AppendSymbolIndexesWithName(symbol_name, indexes) > 0)
     {
@@ -719,7 +717,7 @@ Symtab::AppendSymbolIndexesWithNameAndType (const ConstString& symbol_name, Symb
 uint32_t
 Symtab::AppendSymbolIndexesWithNameAndType (const ConstString& symbol_name, SymbolType symbol_type, Debug symbol_debug_type, Visibility symbol_visibility, std::vector<uint32_t>& indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (AppendSymbolIndexesWithName(symbol_name, symbol_debug_type, symbol_visibility, indexes) > 0)
     {
@@ -739,7 +737,7 @@ Symtab::AppendSymbolIndexesWithNameAndType (const ConstString& symbol_name, Symb
 uint32_t
 Symtab::AppendSymbolIndexesMatchingRegExAndType (const RegularExpression &regexp, SymbolType symbol_type, std::vector<uint32_t>& indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     uint32_t prev_size = indexes.size();
     uint32_t sym_end = m_symbols.size();
@@ -763,7 +761,7 @@ Symtab::AppendSymbolIndexesMatchingRegExAndType (const RegularExpression &regexp
 uint32_t
 Symtab::AppendSymbolIndexesMatchingRegExAndType (const RegularExpression &regexp, SymbolType symbol_type, Debug symbol_debug_type, Visibility symbol_visibility, std::vector<uint32_t>& indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     uint32_t prev_size = indexes.size();
     uint32_t sym_end = m_symbols.size();
@@ -790,7 +788,7 @@ Symtab::AppendSymbolIndexesMatchingRegExAndType (const RegularExpression &regexp
 Symbol *
 Symtab::FindSymbolWithType (SymbolType symbol_type, Debug symbol_debug_type, Visibility symbol_visibility, uint32_t& start_idx)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     const size_t count = m_symbols.size();
     for (size_t idx = start_idx; idx < count; ++idx)
@@ -810,7 +808,7 @@ Symtab::FindSymbolWithType (SymbolType symbol_type, Debug symbol_debug_type, Vis
 size_t
 Symtab::FindAllSymbolsWithNameAndType (const ConstString &name, SymbolType symbol_type, std::vector<uint32_t>& symbol_indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
     // Initialize all of the lookup by name indexes before converting NAME
@@ -830,7 +828,7 @@ Symtab::FindAllSymbolsWithNameAndType (const ConstString &name, SymbolType symbo
 size_t
 Symtab::FindAllSymbolsWithNameAndType (const ConstString &name, SymbolType symbol_type, Debug symbol_debug_type, Visibility symbol_visibility, std::vector<uint32_t>& symbol_indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
     // Initialize all of the lookup by name indexes before converting NAME
@@ -850,7 +848,7 @@ Symtab::FindAllSymbolsWithNameAndType (const ConstString &name, SymbolType symbo
 size_t
 Symtab::FindAllSymbolsMatchingRexExAndType (const RegularExpression &regex, SymbolType symbol_type, Debug symbol_debug_type, Visibility symbol_visibility, std::vector<uint32_t>& symbol_indexes)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     AppendSymbolIndexesMatchingRegExAndType(regex, symbol_type, symbol_debug_type, symbol_visibility, symbol_indexes);
     return symbol_indexes.size();
@@ -859,7 +857,7 @@ Symtab::FindAllSymbolsMatchingRexExAndType (const RegularExpression &regex, Symb
 Symbol *
 Symtab::FindFirstSymbolWithNameAndType (const ConstString &name, SymbolType symbol_type, Debug symbol_debug_type, Visibility symbol_visibility)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     Timer scoped_timer (__PRETTY_FUNCTION__, "%s", __PRETTY_FUNCTION__);
     if (!m_name_indexes_computed)
@@ -1026,7 +1024,7 @@ Symtab::InitAddressIndexes()
 void
 Symtab::CalculateSymbolSizes ()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (!m_symbols.empty())
     {
@@ -1060,7 +1058,7 @@ Symtab::CalculateSymbolSizes ()
 Symbol *
 Symtab::FindSymbolAtFileAddress (addr_t file_addr)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_file_addr_to_index_computed)
         InitAddressIndexes();
 
@@ -1077,7 +1075,7 @@ Symtab::FindSymbolAtFileAddress (addr_t file_addr)
 Symbol *
 Symtab::FindSymbolContainingFileAddress (addr_t file_addr)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (!m_file_addr_to_index_computed)
         InitAddressIndexes();
@@ -1095,7 +1093,7 @@ Symtab::FindSymbolContainingFileAddress (addr_t file_addr)
 void
 Symtab::ForEachSymbolContainingFileAddress(addr_t file_addr, std::function<bool(Symbol *)> const &callback)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (!m_file_addr_to_index_computed)
         InitAddressIndexes();
@@ -1159,7 +1157,7 @@ Symtab::FindFunctionSymbols (const ConstString &name,
         unsigned temp_symbol_indexes_size = temp_symbol_indexes.size();
         if (temp_symbol_indexes_size > 0)
         {
-            Mutex::Locker locker (m_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_mutex);
             for (unsigned i = 0; i < temp_symbol_indexes_size; i++)
             {
                 SymbolContext sym_ctx;

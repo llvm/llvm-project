@@ -16,10 +16,10 @@
 using namespace lldb_private;
 
 void
-OptionParser::Prepare(Mutex::Locker &locker)
+OptionParser::Prepare(std::unique_lock<std::mutex> &lock)
 {
-    static Mutex g_mutex(Mutex::eMutexTypeNormal);
-    locker.Lock(g_mutex);
+    static std::mutex g_mutex;
+    lock = std::unique_lock<std::mutex>(g_mutex);
 #ifdef __GLIBC__
     optind = 0;
 #else

@@ -18,11 +18,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-BreakpointList::BreakpointList (bool is_internal) :
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_breakpoints(),
-    m_next_break_id (0),
-    m_is_internal (is_internal)
+BreakpointList::BreakpointList(bool is_internal)
+    : m_mutex(), m_breakpoints(), m_next_break_id(0), m_is_internal(is_internal)
 {
 }
 
@@ -34,7 +31,7 @@ BreakpointList::~BreakpointList()
 break_id_t
 BreakpointList::Add (BreakpointSP &bp_sp, bool notify)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     // Internal breakpoint IDs are negative, normal ones are positive
     bp_sp->SetID (m_is_internal ? --m_next_break_id : ++m_next_break_id);
     
@@ -51,7 +48,7 @@ BreakpointList::Add (BreakpointSP &bp_sp, bool notify)
 bool
 BreakpointList::Remove (break_id_t break_id, bool notify)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     bp_collection::iterator pos = GetBreakpointIDIterator(break_id);    // Predicate
     if (pos != m_breakpoints.end())
     {
@@ -71,7 +68,7 @@ BreakpointList::Remove (break_id_t break_id, bool notify)
 void
 BreakpointList::RemoveInvalidLocations (const ArchSpec &arch)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     for (const auto &bp_sp : m_breakpoints)
         bp_sp->RemoveInvalidLocations(arch);
 }
@@ -80,7 +77,7 @@ BreakpointList::RemoveInvalidLocations (const ArchSpec &arch)
 void
 BreakpointList::SetEnabledAll (bool enabled)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     for (const auto &bp_sp : m_breakpoints)
         bp_sp->SetEnabled (enabled);
 }
@@ -89,7 +86,7 @@ BreakpointList::SetEnabledAll (bool enabled)
 void
 BreakpointList::RemoveAll (bool notify)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     ClearAllBreakpointSites ();
 
     if (notify)
@@ -142,7 +139,7 @@ BreakpointList::GetBreakpointIDConstIterator (break_id_t break_id) const
 BreakpointSP
 BreakpointList::FindBreakpointByID (break_id_t break_id)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     BreakpointSP stop_sp;
     bp_collection::iterator pos = GetBreakpointIDIterator(break_id);
     if (pos != m_breakpoints.end())
@@ -154,7 +151,7 @@ BreakpointList::FindBreakpointByID (break_id_t break_id)
 const BreakpointSP
 BreakpointList::FindBreakpointByID (break_id_t break_id) const
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     BreakpointSP stop_sp;
     bp_collection::const_iterator pos = GetBreakpointIDConstIterator(break_id);
     if (pos != m_breakpoints.end())
@@ -166,7 +163,7 @@ BreakpointList::FindBreakpointByID (break_id_t break_id) const
 void
 BreakpointList::Dump (Stream *s) const
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     s->Printf("%p: ", static_cast<const void*>(this));
     s->Indent();
     s->Printf("BreakpointList with %u Breakpoints:\n", (uint32_t)m_breakpoints.size());
@@ -180,7 +177,7 @@ BreakpointList::Dump (Stream *s) const
 BreakpointSP
 BreakpointList::GetBreakpointAtIndex (size_t i)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     BreakpointSP stop_sp;
     bp_collection::iterator end = m_breakpoints.end();
     bp_collection::iterator pos;
@@ -196,7 +193,7 @@ BreakpointList::GetBreakpointAtIndex (size_t i)
 const BreakpointSP
 BreakpointList::GetBreakpointAtIndex (size_t i) const
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     BreakpointSP stop_sp;
     bp_collection::const_iterator end = m_breakpoints.end();
     bp_collection::const_iterator pos;
@@ -212,7 +209,7 @@ BreakpointList::GetBreakpointAtIndex (size_t i) const
 void
 BreakpointList::UpdateBreakpoints (ModuleList& module_list, bool added, bool delete_locations)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     for (const auto &bp_sp : m_breakpoints)
         bp_sp->ModulesChanged (module_list, added, delete_locations);
 
@@ -221,7 +218,7 @@ BreakpointList::UpdateBreakpoints (ModuleList& module_list, bool added, bool del
 void
 BreakpointList::UpdateBreakpointsWhenModuleIsReplaced (ModuleSP old_module_sp, ModuleSP new_module_sp)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     for (const auto &bp_sp : m_breakpoints)
         bp_sp->ModuleReplaced (old_module_sp, new_module_sp);
 
@@ -230,14 +227,14 @@ BreakpointList::UpdateBreakpointsWhenModuleIsReplaced (ModuleSP old_module_sp, M
 void
 BreakpointList::ClearAllBreakpointSites ()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     for (const auto &bp_sp : m_breakpoints)
         bp_sp->ClearAllBreakpointSites ();
 
 }
 
 void
-BreakpointList::GetListMutex (Mutex::Locker &locker)
+BreakpointList::GetListMutex(std::unique_lock<std::recursive_mutex> &lock)
 {
-    return locker.Lock (m_mutex);
+    lock = std::unique_lock<std::recursive_mutex>(m_mutex);
 }

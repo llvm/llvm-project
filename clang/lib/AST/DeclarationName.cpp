@@ -135,7 +135,10 @@ int DeclarationName::compare(DeclarationName LHS, DeclarationName RHS) {
 
 static void printCXXConstructorDestructorName(QualType ClassType,
                                               raw_ostream &OS,
-                                              const PrintingPolicy &Policy) {
+                                              PrintingPolicy Policy) {
+  // We know we're printing C++ here. Ensure we print types properly.
+  Policy.adjustForCPlusPlus();
+
   if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
     OS << *ClassRec->getDecl();
     return;
@@ -146,14 +149,7 @@ static void printCXXConstructorDestructorName(QualType ClassType,
       return;
     }
   }
-  if (!Policy.LangOpts.CPlusPlus) {
-    // Passed policy is the default one from operator <<, use a C++ policy.
-    LangOptions LO;
-    LO.CPlusPlus = true;
-    ClassType.print(OS, PrintingPolicy(LO));
-  } else {
-    ClassType.print(OS, Policy);
-  }
+  ClassType.print(OS, Policy);
 }
 
 void DeclarationName::print(raw_ostream &OS, const PrintingPolicy &Policy) {
@@ -206,15 +202,10 @@ void DeclarationName::print(raw_ostream &OS, const PrintingPolicy &Policy) {
       OS << *Rec->getDecl();
       return;
     }
-    if (!Policy.LangOpts.CPlusPlus) {
-      // Passed policy is the default one from operator <<, use a C++ policy.
-      LangOptions LO;
-      LO.CPlusPlus = true;
-      LO.Bool = true;
-      Type.print(OS, PrintingPolicy(LO));
-    } else {
-      Type.print(OS, Policy);
-    }
+    // We know we're printing C++ here, ensure we print 'bool' properly.
+    PrintingPolicy CXXPolicy = Policy;
+    CXXPolicy.adjustForCPlusPlus();
+    Type.print(OS, CXXPolicy);
     return;
   }
   case DeclarationName::CXXUsingDirective:

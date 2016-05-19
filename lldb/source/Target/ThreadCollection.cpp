@@ -30,14 +30,14 @@ ThreadCollection::ThreadCollection(collection threads) :
 void
 ThreadCollection::AddThread (const ThreadSP &thread_sp)
 {
-    Mutex::Locker locker(GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
     m_threads.push_back (thread_sp);
 }
 
 void
 ThreadCollection::InsertThread (const lldb::ThreadSP &thread_sp, uint32_t idx)
 {
-    Mutex::Locker locker(GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
     if (idx < m_threads.size())
         m_threads.insert(m_threads.begin() + idx, thread_sp);
     else
@@ -47,14 +47,14 @@ ThreadCollection::InsertThread (const lldb::ThreadSP &thread_sp, uint32_t idx)
 uint32_t
 ThreadCollection::GetSize ()
 {
-    Mutex::Locker locker(GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
     return m_threads.size();
 }
 
 ThreadSP
 ThreadCollection::GetThreadAtIndex (uint32_t idx)
 {
-    Mutex::Locker locker(GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
     ThreadSP thread_sp;
     if (idx < m_threads.size())
         thread_sp = m_threads[idx];

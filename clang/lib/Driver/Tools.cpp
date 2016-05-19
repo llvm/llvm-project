@@ -1359,8 +1359,9 @@ static void getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   AddTargetFeature(Args, Features, options::OPT_mmsa, options::OPT_mno_msa,
                    "msa");
 
-  // Add the last -mfp32/-mfpxx/-mfp64 or if none are given and the ABI is O32
-  // pass -mfpxx
+  // Add the last -mfp32/-mfpxx/-mfp64, if none are given and the ABI is O32
+  // pass -mfpxx, or if none are given and fp64a is default, pass fp64 and
+  // nooddspreg.
   if (Arg *A = Args.getLastArg(options::OPT_mfp32, options::OPT_mfpxx,
                                options::OPT_mfp64)) {
     if (A->getOption().matches(options::OPT_mfp32))
@@ -1372,6 +1373,9 @@ static void getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Features.push_back(Args.MakeArgString("+fp64"));
   } else if (mips::shouldUseFPXX(Args, Triple, CPUName, ABIName, FloatABI)) {
     Features.push_back(Args.MakeArgString("+fpxx"));
+    Features.push_back(Args.MakeArgString("+nooddspreg"));
+  } else if (mips::isFP64ADefault(Triple, CPUName)) {
+    Features.push_back(Args.MakeArgString("+fp64"));
     Features.push_back(Args.MakeArgString("+nooddspreg"));
   }
 
@@ -3605,8 +3609,6 @@ ParsePICArgs(const ToolChain &ToolChain, const llvm::Triple &Triple,
 
 static const char *RelocationModelName(llvm::Reloc::Model Model) {
   switch (Model) {
-  case llvm::Reloc::Default:
-    return nullptr;
   case llvm::Reloc::Static:
     return "static";
   case llvm::Reloc::PIC_:
@@ -7068,10 +7070,21 @@ bool mips::isNaN2008(const ArgList &Args, const llvm::Triple &Triple) {
   return false;
 }
 
+bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {
+  if (!Triple.isAndroid())
+    return false;
+
+  // Android MIPS32R6 defaults to FP64A.
+  return llvm::StringSwitch<bool>(CPUName)
+      .Case("mips32r6", true)
+      .Default(false);
+}
+
 bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
                          StringRef ABIName, mips::FloatABI FloatABI) {
   if (Triple.getVendor() != llvm::Triple::ImaginationTechnologies &&
-      Triple.getVendor() != llvm::Triple::MipsTechnologies)
+      Triple.getVendor() != llvm::Triple::MipsTechnologies &&
+      !Triple.isAndroid())
     return false;
 
   if (ABIName != "32")

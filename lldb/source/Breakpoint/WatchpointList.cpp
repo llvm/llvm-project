@@ -18,10 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-WatchpointList::WatchpointList() :
-    m_watchpoints (),
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_next_wp_id (0)
+WatchpointList::WatchpointList() : m_watchpoints(), m_mutex(), m_next_wp_id(0)
 {
 }
 
@@ -33,7 +30,7 @@ WatchpointList::~WatchpointList()
 lldb::watch_id_t
 WatchpointList::Add (const WatchpointSP &wp_sp, bool notify)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     wp_sp->SetID(++m_next_wp_id);
     m_watchpoints.push_back(wp_sp);
     if (notify)
@@ -54,7 +51,7 @@ WatchpointList::Dump (Stream *s) const
 void
 WatchpointList::DumpWithLevel (Stream *s, lldb::DescriptionLevel description_level) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     s->Printf("%p: ", static_cast<const void*>(this));
     //s->Indent();
     s->Printf("WatchpointList with %" PRIu64 " Watchpoints:\n",
@@ -70,7 +67,7 @@ const WatchpointSP
 WatchpointList::FindByAddress (lldb::addr_t addr) const
 {
     WatchpointSP wp_sp;
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_watchpoints.empty())
     {
         wp_collection::const_iterator pos, end = m_watchpoints.end();
@@ -93,7 +90,7 @@ const WatchpointSP
 WatchpointList::FindBySpec (std::string spec) const
 {
     WatchpointSP wp_sp;
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_watchpoints.empty())
     {
         wp_collection::const_iterator pos, end = m_watchpoints.end();
@@ -142,7 +139,7 @@ WatchpointSP
 WatchpointList::FindByID (lldb::watch_id_t watch_id) const
 {
     WatchpointSP wp_sp;
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     wp_collection::const_iterator pos = GetIDConstIterator(watch_id);
     if (pos != m_watchpoints.end())
         wp_sp = *pos;
@@ -175,7 +172,7 @@ WatchpointList::FindIDBySpec (std::string spec)
 WatchpointSP
 WatchpointList::GetByIndex (uint32_t i)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     WatchpointSP wp_sp;
     if (i < m_watchpoints.size())
     {
@@ -189,7 +186,7 @@ WatchpointList::GetByIndex (uint32_t i)
 const WatchpointSP
 WatchpointList::GetByIndex (uint32_t i) const
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     WatchpointSP wp_sp;
     if (i < m_watchpoints.size())
     {
@@ -213,7 +210,7 @@ WatchpointList::GetWatchpointIDs() const
 bool
 WatchpointList::Remove (lldb::watch_id_t watch_id, bool notify)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     wp_collection::iterator pos = GetIDIterator(watch_id);
     if (pos != m_watchpoints.end())
     {
@@ -234,7 +231,7 @@ uint32_t
 WatchpointList::GetHitCount () const
 {
     uint32_t hit_count = 0;
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     wp_collection::const_iterator pos, end = m_watchpoints.end();
     for (pos = m_watchpoints.begin(); pos != end; ++pos)
         hit_count += (*pos)->GetHitCount();
@@ -261,7 +258,7 @@ WatchpointList::ShouldStop (StoppointCallbackContext *context, lldb::watch_id_t 
 void
 WatchpointList::GetDescription (Stream *s, lldb::DescriptionLevel level)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     wp_collection::iterator pos, end = m_watchpoints.end();
 
     for (pos = m_watchpoints.begin(); pos != end; ++pos)
@@ -274,7 +271,7 @@ WatchpointList::GetDescription (Stream *s, lldb::DescriptionLevel level)
 void
 WatchpointList::SetEnabledAll (bool enabled)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     wp_collection::iterator pos, end = m_watchpoints.end();
     for (pos = m_watchpoints.begin(); pos != end; ++pos)
@@ -284,7 +281,7 @@ WatchpointList::SetEnabledAll (bool enabled)
 void
 WatchpointList::RemoveAll (bool notify)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (notify)
     {
         
@@ -305,7 +302,7 @@ WatchpointList::RemoveAll (bool notify)
 }
 
 void
-WatchpointList::GetListMutex (Mutex::Locker &locker)
+WatchpointList::GetListMutex(std::unique_lock<std::recursive_mutex> &lock)
 {
-    return locker.Lock (m_mutex);
+    lock = std::unique_lock<std::recursive_mutex>(m_mutex);
 }

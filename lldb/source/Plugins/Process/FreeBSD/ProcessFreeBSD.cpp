@@ -143,7 +143,7 @@ ProcessFreeBSD::DoResume()
 
     SetPrivateState(eStateRunning);
 
-    Mutex::Locker lock(m_thread_list.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
     bool do_step = false;
 
     for (tid_collection::const_iterator t_pos = m_run_tids.begin(), t_end = m_run_tids.end(); t_pos != t_end; ++t_pos)
@@ -630,7 +630,7 @@ ProcessFreeBSD::RefreshStateAfterStop()
             if (log)
                 log->Printf ("ProcessFreeBSD::%s() removing thread, tid = %" PRIi64, __FUNCTION__, tid);
 
-            Mutex::Locker lock(m_thread_list.GetMutex());
+            std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
 
             ThreadSP thread_sp = m_thread_list.RemoveThreadByID(tid, false);
             thread_sp.reset();
@@ -801,7 +801,7 @@ ProcessFreeBSD::EnableWatchpoint(Watchpoint *wp, bool notify)
 
         // Try to find a vacant watchpoint slot in the inferiors' main thread
         uint32_t wp_hw_index = LLDB_INVALID_INDEX32;
-        Mutex::Locker lock(m_thread_list.GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
         FreeBSDThread *thread = static_cast<FreeBSDThread*>(
                                m_thread_list.GetThreadAtIndex(0, false).get());
 
@@ -871,7 +871,7 @@ ProcessFreeBSD::DisableWatchpoint(Watchpoint *wp, bool notify)
         if (wp->IsHardware())
         {
             bool wp_disabled = true;
-            Mutex::Locker lock(m_thread_list.GetMutex());
+            std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
             uint32_t thread_count = m_thread_list.GetSize(false);
             for (uint32_t i = 0; i < thread_count; ++i)
             {
@@ -901,7 +901,7 @@ Error
 ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num)
 {
     Error error;
-    Mutex::Locker lock(m_thread_list.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
     FreeBSDThread *thread = static_cast<FreeBSDThread*>(
                           m_thread_list.GetThreadAtIndex(0, false).get());
     if (thread)
@@ -924,7 +924,7 @@ ProcessFreeBSD::GetWatchpointSupportInfo(uint32_t &num, bool &after)
 uint32_t
 ProcessFreeBSD::UpdateThreadListIfNeeded()
 {
-    Mutex::Locker lock(m_thread_list.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
     // Do not allow recursive updates.
     return m_thread_list.GetSize(false);
 }
@@ -1015,7 +1015,7 @@ bool
 ProcessFreeBSD::IsAThreadRunning()
 {
     bool is_running = false;
-    Mutex::Locker lock(m_thread_list.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
     uint32_t thread_count = m_thread_list.GetSize(false);
     for (uint32_t i = 0; i < thread_count; ++i)
     {

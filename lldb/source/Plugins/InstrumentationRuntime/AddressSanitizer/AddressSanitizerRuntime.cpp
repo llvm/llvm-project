@@ -98,8 +98,8 @@ AddressSanitizerRuntime::ModulesDidLoad(lldb_private::ModuleList &module_list)
         Activate();
         return;
     }
-    
-    Mutex::Locker modules_locker(module_list.GetMutex());
+
+    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
     const size_t num_modules = module_list.GetSize();
     for (size_t i = 0; i < num_modules; ++i)
     {

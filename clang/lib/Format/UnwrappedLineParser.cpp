@@ -1430,6 +1430,8 @@ void UnwrappedLineParser::parseIfThenElse() {
       addUnwrappedLine();
       ++Line->Level;
       parseStructuralElement();
+      if (FormatTok->is(tok::eof))
+        addUnwrappedLine();
       --Line->Level;
     }
   } else if (NeedsUnwrappedLine) {

@@ -155,21 +155,21 @@ __m128i test_mm_cvtepu32_epi64(__m128i a) {
 
 __m128d test_mm_dp_pd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_dp_pd
-  // CHECK: call <2 x double> @llvm.x86.sse41.dppd
-  return _mm_dp_pd(x, y, 2);
+  // CHECK: call <2 x double> @llvm.x86.sse41.dppd(<2 x double> {{.*}}, <2 x double> {{.*}}, i8 7)
+  return _mm_dp_pd(x, y, 7);
 }
 
 __m128 test_mm_dp_ps(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_dp_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.dpps
-  return _mm_dp_ps(x, y, 2);
+  // CHECK: call <4 x float> @llvm.x86.sse41.dpps(<4 x float> {{.*}}, <4 x float> {{.*}}, i8 7)
+  return _mm_dp_ps(x, y, 7);
 }
 
 int test_mm_extract_epi8(__m128i x) {
   // CHECK-LABEL: test_mm_extract_epi8
-  // CHECK: extractelement <16 x i8> %{{.*}}, i32 0
+  // CHECK: extractelement <16 x i8> %{{.*}}, i32 1
   // CHECK: zext i8 %{{.*}} to i32
-  return _mm_extract_epi8(x, 16);
+  return _mm_extract_epi8(x, 1);
 }
 
 int test_mm_extract_epi32(__m128i x) {
@@ -233,8 +233,8 @@ __m128i test_mm_insert_epi64(__m128i x, long long b) {
 
 __m128 test_mm_insert_ps(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_insert_ps
-  // CHECK: call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 5)
-  return _mm_insert_ps(x, y, 5);
+  // CHECK: call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 4)
+  return _mm_insert_ps(x, y, 4);
 }
 
 __m128i test_mm_max_epi8(__m128i x, __m128i y) {
@@ -243,16 +243,16 @@ __m128i test_mm_max_epi8(__m128i x, __m128i y) {
   return _mm_max_epi8(x, y);
 }
 
-__m128i test_mm_max_epu16(__m128i x, __m128i y) {
-  // CHECK-LABEL: test_mm_max_epu16
-  // CHECK: call <8 x i16> @llvm.x86.sse41.pmaxuw(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  return _mm_max_epu16(x, y);
-}
-
 __m128i test_mm_max_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_max_epi32
   // CHECK: call <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_max_epi32(x, y);
+}
+
+__m128i test_mm_max_epu16(__m128i x, __m128i y) {
+  // CHECK-LABEL: test_mm_max_epu16
+  // CHECK: call <8 x i16> @llvm.x86.sse41.pmaxuw(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  return _mm_max_epu16(x, y);
 }
 
 __m128i test_mm_max_epu32(__m128i x, __m128i y) {
@@ -267,16 +267,16 @@ __m128i test_mm_min_epi8(__m128i x, __m128i y) {
   return _mm_min_epi8(x, y);
 }
 
-__m128i test_mm_min_epu16(__m128i x, __m128i y) {
-  // CHECK-LABEL: test_mm_min_epu16
-  // CHECK: call <8 x i16> @llvm.x86.sse41.pminuw(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  return _mm_min_epu16(x, y);
-}
-
 __m128i test_mm_min_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_min_epi32
   // CHECK: call <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_min_epi32(x, y);
+}
+
+__m128i test_mm_min_epu16(__m128i x, __m128i y) {
+  // CHECK-LABEL: test_mm_min_epu16
+  // CHECK: call <8 x i16> @llvm.x86.sse41.pminuw(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  return _mm_min_epu16(x, y);
 }
 
 __m128i test_mm_min_epu32(__m128i x, __m128i y) {

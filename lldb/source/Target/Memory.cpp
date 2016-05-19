@@ -25,13 +25,13 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // MemoryCache constructor
 //----------------------------------------------------------------------
-MemoryCache::MemoryCache(Process &process) :
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_L1_cache (),
-    m_L2_cache (),
-    m_invalid_ranges (),
-    m_process (process),
-    m_L2_cache_line_byte_size (process.GetMemoryCacheLineSize())
+MemoryCache::MemoryCache(Process &process)
+    : m_mutex(),
+      m_L1_cache(),
+      m_L2_cache(),
+      m_invalid_ranges(),
+      m_process(process),
+      m_L2_cache_line_byte_size(process.GetMemoryCacheLineSize())
 {
 }
 
@@ -45,7 +45,7 @@ MemoryCache::~MemoryCache()
 void
 MemoryCache::Clear(bool clear_invalid_ranges)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_L1_cache.clear();
     m_L2_cache.clear();
     if (clear_invalid_ranges)
@@ -62,7 +62,7 @@ MemoryCache::AddL1CacheData(lldb::addr_t addr, const void *src, size_t src_len)
 void
 MemoryCache::AddL1CacheData(lldb::addr_t addr, const DataBufferSP &data_buffer_sp)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     m_L1_cache[addr] = data_buffer_sp;
 }
 
@@ -72,7 +72,7 @@ MemoryCache::Flush (addr_t addr, size_t size)
     if (size == 0)
         return;
 
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Erase any blocks from the L1 cache that intersect with the flush range
     if (!m_L1_cache.empty())
@@ -123,7 +123,7 @@ MemoryCache::AddInvalidRange (lldb::addr_t base_addr, lldb::addr_t byte_size)
 {
     if (byte_size > 0)
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         InvalidRanges::Entry range (base_addr, byte_size);
         m_invalid_ranges.Append(range);
         m_invalid_ranges.Sort();
@@ -135,7 +135,7 @@ MemoryCache::RemoveInvalidRange (lldb::addr_t base_addr, lldb::addr_t byte_size)
 {
     if (byte_size > 0)
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         const uint32_t idx = m_invalid_ranges.FindEntryIndexThatContains(base_addr);
         if (idx != UINT32_MAX)
         {
@@ -164,7 +164,7 @@ MemoryCache::Read (addr_t addr,
     // m_L2_cache_line_byte_size bytes in size, so we don't try anything
     // tricky when reading from them (no partial reads from the L1 cache).
 
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_L1_cache.empty())
     {
         AddrRange read_range(addr, dst_len);
@@ -436,11 +436,7 @@ AllocatedBlock::FreeBlock (addr_t addr)
     return success;
 }
 
-
-AllocatedMemoryCache::AllocatedMemoryCache (Process &process) :
-    m_process (process),
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_memory_map()
+AllocatedMemoryCache::AllocatedMemoryCache(Process &process) : m_process(process), m_mutex(), m_memory_map()
 {
 }
 
@@ -452,7 +448,7 @@ AllocatedMemoryCache::~AllocatedMemoryCache ()
 void
 AllocatedMemoryCache::Clear()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_process.IsAlive())
     {
         PermissionsToBlockMap::iterator pos, end = m_memory_map.end();
@@ -498,8 +494,8 @@ AllocatedMemoryCache::AllocateMemory (size_t byte_size,
                                       uint32_t permissions, 
                                       Error &error)
 {
-    Mutex::Locker locker (m_mutex);
-    
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
     addr_t addr = LLDB_INVALID_ADDRESS;
     std::pair<PermissionsToBlockMap::iterator, PermissionsToBlockMap::iterator> range = m_memory_map.equal_range (permissions);
 
@@ -526,7 +522,7 @@ AllocatedMemoryCache::AllocateMemory (size_t byte_size,
 bool
 AllocatedMemoryCache::DeallocateMemory (lldb::addr_t addr)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     PermissionsToBlockMap::iterator pos, end = m_memory_map.end();
     bool success = false;

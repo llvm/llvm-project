@@ -394,8 +394,8 @@ AppleObjCRuntime::GetObjCVersion (Process *process, ModuleSP &objc_module_sp)
         return ObjCRuntimeVersions::eObjC_VersionUnknown;
 
     const ModuleList &target_modules = target.GetImages();
-    Mutex::Locker modules_locker(target_modules.GetMutex());
-    
+    std::lock_guard<std::recursive_mutex> gaurd(target_modules.GetMutex());
+
     size_t num_images = target_modules.GetSize();
     for (size_t i = 0; i < num_images; i++)
     {
@@ -524,7 +524,7 @@ AppleObjCRuntime::ReadObjCLibraryIfNeeded (const ModuleList &module_list)
 {
     if (!HasReadObjCLibrary ())
     {
-        Mutex::Locker locker (module_list.GetMutex ());
+        std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
 
         size_t num_modules = module_list.GetSize();
         for (size_t i = 0; i < num_modules; i++)

@@ -733,7 +733,7 @@ protected:
             }
             
             {  // Scope for thread list mutex:
-                Mutex::Locker locker (process->GetThreadList().GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(process->GetThreadList().GetMutex());
                 const uint32_t num_threads = process->GetThreadList().GetSize();
 
                 // Set the actions that the threads should each take when resuming

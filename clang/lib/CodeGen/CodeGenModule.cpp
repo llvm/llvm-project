@@ -141,11 +141,13 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
   if (CodeGenOpts.hasProfileClangUse()) {
     auto ReaderOrErr = llvm::IndexedInstrProfReader::create(
         CodeGenOpts.ProfileInstrumentUsePath);
-    if (std::error_code EC = ReaderOrErr.getError()) {
+    if (auto E = ReaderOrErr.takeError()) {
       unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                               "Could not read profile %0: %1");
-      getDiags().Report(DiagID) << CodeGenOpts.ProfileInstrumentUsePath
-                                << EC.message();
+      llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
+        getDiags().Report(DiagID) << CodeGenOpts.ProfileInstrumentUsePath
+                                  << EI.message();
+      });
     } else
       PGOReader = std::move(ReaderOrErr.get());
   }

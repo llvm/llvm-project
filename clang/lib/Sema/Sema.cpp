@@ -52,13 +52,14 @@ ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
 PrintingPolicy Sema::getPrintingPolicy(const ASTContext &Context,
                                        const Preprocessor &PP) {
   PrintingPolicy Policy = Context.getPrintingPolicy();
+  // Our printing policy is copied over the ASTContext printing policy whenever
+  // a diagnostic is emitted, so recompute it.
   Policy.Bool = Context.getLangOpts().Bool;
   if (!Policy.Bool) {
-    if (const MacroInfo *
-          BoolMacro = PP.getMacroInfo(&Context.Idents.get("bool"))) {
+    if (const MacroInfo *BoolMacro = PP.getMacroInfo(Context.getBoolName())) {
       Policy.Bool = BoolMacro->isObjectLike() &&
-        BoolMacro->getNumTokens() == 1 &&
-        BoolMacro->getReplacementToken(0).is(tok::kw__Bool);
+                    BoolMacro->getNumTokens() == 1 &&
+                    BoolMacro->getReplacementToken(0).is(tok::kw__Bool);
     }
   }
 

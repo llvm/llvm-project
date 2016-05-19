@@ -186,18 +186,17 @@ ExecutionContext::ExecutionContext (const ExecutionContextRef *exe_ctx_ref_ptr, 
     }
 }
 
-ExecutionContext::ExecutionContext (const ExecutionContextRef *exe_ctx_ref_ptr, Mutex::Locker &locker) :
-    m_target_sp (),
-    m_process_sp (),
-    m_thread_sp (),
-    m_frame_sp ()
+ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
+                                   std::unique_lock<std::recursive_mutex> &lock)
+    : m_target_sp(), m_process_sp(), m_thread_sp(), m_frame_sp()
 {
     if (exe_ctx_ref_ptr)
     {
-        m_target_sp  = exe_ctx_ref_ptr->GetTargetSP();
+        m_target_sp = exe_ctx_ref_ptr->GetTargetSP();
         if (m_target_sp)
         {
-            locker.Lock(m_target_sp->GetAPIMutex());
+            lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
+
             m_process_sp = exe_ctx_ref_ptr->GetProcessSP();
             m_thread_sp = exe_ctx_ref_ptr->GetThreadSP();
             m_frame_sp = exe_ctx_ref_ptr->GetFrameSP();
@@ -205,18 +204,16 @@ ExecutionContext::ExecutionContext (const ExecutionContextRef *exe_ctx_ref_ptr, 
     }
 }
 
-ExecutionContext::ExecutionContext (const ExecutionContextRef &exe_ctx_ref, Mutex::Locker &locker) :
-    m_target_sp (exe_ctx_ref.GetTargetSP()),
-    m_process_sp (),
-    m_thread_sp (),
-    m_frame_sp ()
+ExecutionContext::ExecutionContext(const ExecutionContextRef &exe_ctx_ref, std::unique_lock<std::recursive_mutex> &lock)
+    : m_target_sp(exe_ctx_ref.GetTargetSP()), m_process_sp(), m_thread_sp(), m_frame_sp()
 {
     if (m_target_sp)
     {
-        locker.Lock(m_target_sp->GetAPIMutex());
+        lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
+
         m_process_sp = exe_ctx_ref.GetProcessSP();
-        m_thread_sp  = exe_ctx_ref.GetThreadSP();
-        m_frame_sp   = exe_ctx_ref.GetFrameSP();
+        m_thread_sp = exe_ctx_ref.GetThreadSP();
+        m_frame_sp = exe_ctx_ref.GetFrameSP();
     }
 }
 

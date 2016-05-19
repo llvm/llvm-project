@@ -163,10 +163,7 @@ TypeSystem::DeclContextFindDeclByName (void *opaque_decl_ctx,
 
 #pragma mark TypeSystemMap
 
-TypeSystemMap::TypeSystemMap() :
-    m_mutex (),
-    m_map (),
-    m_clear_in_progress(false)
+TypeSystemMap::TypeSystemMap() : m_mutex(), m_map(), m_clear_in_progress(false)
 {
 }
 
@@ -179,7 +176,7 @@ TypeSystemMap::Clear ()
 {
     collection map;
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::mutex> guard(m_mutex);
         map = m_map;
         m_clear_in_progress = true;
     }
@@ -195,7 +192,7 @@ TypeSystemMap::Clear ()
     }
     map.clear();
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::mutex> guard(m_mutex);
         m_map.clear();
         m_clear_in_progress = false;
     }
@@ -205,7 +202,7 @@ TypeSystemMap::Clear ()
 void
 TypeSystemMap::ForEach (std::function <bool(TypeSystem *)> const &callback)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     // Use a std::set so we only call the callback once for each unique
     // TypeSystem instance
     std::set<TypeSystem *> visited;
@@ -224,7 +221,7 @@ TypeSystemMap::ForEach (std::function <bool(TypeSystem *)> const &callback)
 TypeSystem *
 TypeSystemMap::GetTypeSystemForLanguage (lldb::LanguageType language, Module *module, bool can_create)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     collection::iterator pos = m_map.find(language);
     if (pos != m_map.end())
         return pos->second.get();
@@ -252,7 +249,7 @@ TypeSystemMap::GetTypeSystemForLanguage (lldb::LanguageType language, Module *mo
 TypeSystem *
 TypeSystemMap::GetTypeSystemForLanguage (lldb::LanguageType language, Target *target, bool can_create)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     collection::iterator pos = m_map.find(language);
     if (pos != m_map.end())
         return pos->second.get();

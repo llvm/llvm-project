@@ -12,11 +12,12 @@
 
 // C Includes
 // C++ Includes
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Target/StackID.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -412,8 +413,8 @@ public:
     
     // These two variants take in a locker, and grab the target, lock the API mutex into locker, then
     // fill in the rest of the shared pointers.
-    ExecutionContext (const ExecutionContextRef &exe_ctx_ref, Mutex::Locker &locker);
-    ExecutionContext (const ExecutionContextRef *exe_ctx_ref, Mutex::Locker &locker);
+    ExecutionContext(const ExecutionContextRef &exe_ctx_ref, std::unique_lock<std::recursive_mutex> &locker);
+    ExecutionContext(const ExecutionContextRef *exe_ctx_ref, std::unique_lock<std::recursive_mutex> &locker);
     //------------------------------------------------------------------
     // Create execution contexts from execution context scopes
     //------------------------------------------------------------------

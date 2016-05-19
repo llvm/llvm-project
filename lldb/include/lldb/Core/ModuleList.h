@@ -14,12 +14,12 @@
 // C++ Includes
 #include <functional>
 #include <list>
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Utility/Iterable.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -164,13 +164,13 @@ public:
 
     void
     LogUUIDAndPaths (Log *log, const char *prefix_cstr);
-                     
-    Mutex &
-    GetMutex () const
+
+    std::recursive_mutex &
+    GetMutex() const
     {
         return m_modules_mutex;
     }
-    
+
     size_t
     GetIndexForModule (const Module *module) const;
 
@@ -593,12 +593,12 @@ protected:
     // Member variables.
     //------------------------------------------------------------------
     collection m_modules; ///< The collection of modules.
-    mutable Mutex m_modules_mutex;
+    mutable std::recursive_mutex m_modules_mutex;
 
     Notifier* m_notifier;
     
 public:
-    typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter> ModuleIterable;
+    typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter, std::recursive_mutex> ModuleIterable;
     ModuleIterable
     Modules()
     {

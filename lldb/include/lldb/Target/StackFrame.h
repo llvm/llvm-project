@@ -13,6 +13,7 @@
 // C Includes
 // C++ Includes
 #include <memory>
+#include <mutex>
 
 // Other libraries and framework includes
 // Project includes
@@ -537,7 +538,7 @@ private:
     lldb::VariableListSP m_variable_list_sp;
     ValueObjectList m_variable_list_value_objects;  // Value objects for each variable in m_variable_list_sp
     StreamString m_disassembly;
-    Mutex m_mutex;
+    std::recursive_mutex m_mutex;
 
     DISALLOW_COPY_AND_ASSIGN (StackFrame);
 };

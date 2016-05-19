@@ -87,7 +87,7 @@ public:
             const size_t num_args = command.GetArgumentCount();
             Process *process = m_exe_ctx.GetProcessPtr();
 
-            Mutex::Locker locker (process->GetThreadList().GetMutex());
+            std::lock_guard<std::recursive_mutex> guard(process->GetThreadList().GetMutex());
 
             for (size_t i = 0; i < num_args; i++)
             {
@@ -859,7 +859,7 @@ public:
                 // These two lines appear at the beginning of both blocks in
                 // this if..else, but that is because we need to release the
                 // lock before calling process->Resume below.
-                Mutex::Locker locker (process->GetThreadList().GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(process->GetThreadList().GetMutex());
                 const uint32_t num_threads = process->GetThreadList().GetSize();
                 std::vector<Thread *> resume_threads;
                 for (uint32_t i = 0; i < argc; ++i)
@@ -932,7 +932,7 @@ public:
                 // These two lines appear at the beginning of both blocks in
                 // this if..else, but that is because we need to release the
                 // lock before calling process->Resume below.
-                Mutex::Locker locker (process->GetThreadList().GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(process->GetThreadList().GetMutex());
                 const uint32_t num_threads = process->GetThreadList().GetSize();
                 Thread *current_thread = GetDefaultThread();
                 if (current_thread == nullptr)

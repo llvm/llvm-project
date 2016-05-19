@@ -755,6 +755,7 @@ TEST_F(FormatTest, CaseRanges) {
   verifyFormat("switch (x) {\n"
                "case 'A' ... 'Z':\n"
                "case 1 ... 5:\n"
+               "case a ... b:\n"
                "  break;\n"
                "}");
 }
@@ -2766,6 +2767,12 @@ TEST_F(FormatTest, MacroDefinitionsWithIncompleteCode) {
                "  case 1:          \\\n"
                "  case 2\n",
                getLLVMStyleWithColumns(20));
+  verifyFormat("#define MACRO(a) \\\n"
+               "  if (a)         \\\n"
+               "    f();         \\\n"
+               "  else           \\\n"
+               "    g()",
+               getLLVMStyleWithColumns(18));
   verifyFormat("#define A template <typename T>");
   verifyIncompleteFormat("#define STR(x) #x\n"
                          "f(STR(this_is_a_string_literal{));");
@@ -11556,6 +11563,31 @@ TEST_F(ReplacementTest, FixOnlyAffectedCodeAfterReplacements) {
   format::FormatStyle Style = format::getLLVMStyle();
   auto FinalReplaces = formatReplacements(
       Code, cleanupAroundReplacements(Code, Replaces, Style), Style);
+  EXPECT_EQ(Expected, applyAllReplacements(Code, FinalReplaces));
+}
+
+TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
+  std::string Code = "#include \"a.h\"\n"
+                     "#include \"c.h\"\n"
+                     "\n"
+                     "int main() {\n"
+                     "  return 0;\n"
+                     "}";
+  std::string Expected = "#include \"a.h\"\n"
+                         "#include \"b.h\"\n"
+                         "#include \"c.h\"\n"
+                         "\n"
+                         "int main() {\n"
+                         "  return 0;\n"
+                         "}";
+  FileID ID = Context.createInMemoryFile("fix.cpp", Code);
+  tooling::Replacements Replaces;
+  Replaces.insert(tooling::Replacement(
+      Context.Sources, Context.getLocation(ID, 1, 1), 0, "#include \"b.h\"\n"));
+
+  format::FormatStyle Style = format::getLLVMStyle();
+  Style.SortIncludes = true;
+  auto FinalReplaces = formatReplacements(Code, Replaces, Style);
   EXPECT_EQ(Expected, applyAllReplacements(Code, FinalReplaces));
 }
 

@@ -15,7 +15,6 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamString.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Target/Target.h"
 
@@ -125,7 +124,7 @@ SBAddress::GetLoadAddress (const SBTarget &target) const
     {
         if (m_opaque_ap->IsValid())
         {
-            Mutex::Locker api_locker (target_sp->GetAPIMutex());
+            std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
             addr = m_opaque_ap->GetLoadAddress (target_sp.get());
         }
     }

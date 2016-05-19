@@ -29,7 +29,6 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Core/ValueObjectList.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/Predicate.h"
 
 namespace curses
