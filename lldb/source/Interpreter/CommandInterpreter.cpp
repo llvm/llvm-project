@@ -350,7 +350,7 @@ CommandInterpreter::Initialize ()
             po->SetHelpLong("");
         }
 
-        AddAlias ("repl", cmd_obj_sp, "--repl --");
+        AddAlias ("repl", cmd_obj_sp, "--repl -- ");
 
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --")->SetHelpLong("");
         AddAlias("poarray", cmd_obj_sp, "--object-description --element-count %1 --")->SetHelpLong("");
