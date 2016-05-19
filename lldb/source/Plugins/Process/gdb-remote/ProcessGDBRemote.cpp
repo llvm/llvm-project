@@ -4851,7 +4851,31 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
 
     if (new_modules.GetSize() > 0)
     {
+        ModuleList removed_modules;
         Target &target = GetTarget();
+        ModuleList &loaded_modules = m_process->GetTarget().GetImages();
+
+        for (size_t i = 0; i < loaded_modules.GetSize(); ++i)
+        {
+            const lldb::ModuleSP loaded_module = loaded_modules.GetModuleAtIndex(i);
+
+            bool found = false;
+            for (size_t j = 0; j < new_modules.GetSize(); ++j)
+            {
+                if (new_modules.GetModuleAtIndex(j).get() == loaded_module.get())
+                    found = true;
+            }
+
+            if (!found)
+            {
+                lldb_private::ObjectFile * obj = loaded_module->GetObjectFile ();
+                if (obj && obj->GetType () != ObjectFile::Type::eTypeExecutable)
+                    removed_modules.Append (loaded_module);
+            }
+        }
+
+        loaded_modules.Remove (removed_modules);
+        m_process->GetTarget().ModulesDidUnload (removed_modules, false);
 
         new_modules.ForEach ([&target](const lldb::ModuleSP module_sp) -> bool
         {
@@ -4867,13 +4891,11 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
             return false;
         });
 
-        ModuleList &loaded_modules = m_process->GetTarget().GetImages();
         loaded_modules.AppendIfNeeded (new_modules);
         m_process->GetTarget().ModulesDidLoad (new_modules);
     }
 
     return new_modules.GetSize();
-
 }
 
 size_t
