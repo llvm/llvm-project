@@ -486,16 +486,24 @@ uint32_t
 Block::AppendBlockVariables (bool can_create,
                              bool get_child_block_variables,
                              bool stop_if_child_block_is_inlined_function,
+                             const std::function<bool(Variable*)>& filter,
                              VariableList *variable_list)
 {
     uint32_t num_variables_added = 0;
     VariableList *block_var_list = GetBlockVariableList (can_create).get();
     if (block_var_list)
     {
-        num_variables_added += block_var_list->GetSize();
-        variable_list->AddVariables (block_var_list);
+        for (size_t i = 0; i < block_var_list->GetSize(); ++i)
+        {
+            VariableSP variable = block_var_list->GetVariableAtIndex(i);
+            if (filter(variable.get()))
+            {
+                num_variables_added++;
+                variable_list->AddVariable(variable);
+            }
+        }
     }
-    
+
     if (get_child_block_variables)
     {
         collection::const_iterator pos, end = m_children.end();
@@ -508,6 +516,7 @@ Block::AppendBlockVariables (bool can_create,
                 num_variables_added += child_block->AppendBlockVariables (can_create,
                                                                           get_child_block_variables,
                                                                           stop_if_child_block_is_inlined_function,
+                                                                          filter,
                                                                           variable_list);
             }
         }
@@ -521,6 +530,7 @@ Block::AppendVariables
     bool can_create, 
     bool get_parent_variables, 
     bool stop_if_block_is_inlined_function,
+    const std::function<bool(Variable*)>& filter,
     VariableList *variable_list
 )
 {
@@ -528,12 +538,19 @@ Block::AppendVariables
     VariableListSP variable_list_sp(GetBlockVariableList(can_create));
 
     bool is_inlined_function = GetInlinedFunctionInfo() != nullptr;
-    if (variable_list_sp.get())
+    if (variable_list_sp)
     {
-        num_variables_added = variable_list_sp->GetSize();
-        variable_list->AddVariables(variable_list_sp.get());
+        for (size_t i = 0; i < variable_list_sp->GetSize(); ++i)
+        {
+            VariableSP variable = variable_list_sp->GetVariableAtIndex(i);
+            if (filter(variable.get()))
+            {
+                num_variables_added++;
+                variable_list->AddVariable(variable);
+            }
+        }
     }
-    
+
     if (get_parent_variables)
     {
         if (stop_if_block_is_inlined_function && is_inlined_function)
@@ -541,7 +558,11 @@ Block::AppendVariables
             
         Block* parent_block = GetParent();
         if (parent_block)
-            num_variables_added += parent_block->AppendVariables (can_create, get_parent_variables, stop_if_block_is_inlined_function, variable_list);
+            num_variables_added += parent_block->AppendVariables(can_create,
+                                                                 get_parent_variables,
+                                                                 stop_if_block_is_inlined_function,
+                                                                 filter,
+                                                                 variable_list);
     }
     return num_variables_added;
 }
