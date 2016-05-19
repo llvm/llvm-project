@@ -83,14 +83,3 @@ NameToDIE::ForEach (std::function <bool(const char *name, const DIERef& die_ref)
             break;
     }
 }
-
-void
-NameToDIE::Append (const NameToDIE& other)
-{
-    const uint32_t size = other.m_map.GetSize();
-    for (uint32_t i = 0; i < size; ++i)
-    {
-        m_map.Append(other.m_map.GetCStringAtIndexUnchecked (i),
-                     other.m_map.GetValueAtIndexUnchecked (i));
-    }
-}

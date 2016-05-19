@@ -51,8 +51,6 @@
 
 #include "lldb/Target/Language.h"
 
-#include "lldb/Utility/TaskPool.h"
-
 #include "DWARFASTParser.h"
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAbbrev.h"
@@ -2093,77 +2091,37 @@ SymbolFileDWARF::Index ()
     DWARFDebugInfo* debug_info = DebugInfo();
     if (debug_info)
     {
+        uint32_t cu_idx = 0;
         const uint32_t num_compile_units = GetNumCompileUnits();
-        std::vector<NameToDIE> function_basename_index(num_compile_units);
-        std::vector<NameToDIE> function_fullname_index(num_compile_units);
-        std::vector<NameToDIE> function_method_index(num_compile_units);
-        std::vector<NameToDIE> function_selector_index(num_compile_units);
-        std::vector<NameToDIE> objc_class_selectors_index(num_compile_units);
-        std::vector<NameToDIE> global_index(num_compile_units);
-        std::vector<NameToDIE> type_index(num_compile_units);
-        std::vector<NameToDIE> namespace_index(num_compile_units);
-        
-        auto parser_fn = [this,
-                          debug_info,
-                          &function_basename_index,
-                          &function_fullname_index,
-                          &function_method_index,
-                          &function_selector_index,
-                          &objc_class_selectors_index,
-                          &global_index,
-                          &type_index,
-                          &namespace_index](uint32_t cu_idx)
+        for (cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
         {
             DWARFCompileUnit* dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
-            bool clear_dies = dwarf_cu->ExtractDIEsIfNeeded(false) > 1;
 
-            dwarf_cu->Index(function_basename_index[cu_idx],
-                            function_fullname_index[cu_idx],
-                            function_method_index[cu_idx],
-                            function_selector_index[cu_idx],
-                            objc_class_selectors_index[cu_idx],
-                            global_index[cu_idx],
-                            type_index[cu_idx],
-                            namespace_index[cu_idx]);
+            bool clear_dies = dwarf_cu->ExtractDIEsIfNeeded (false) > 1;
 
+            dwarf_cu->Index (m_function_basename_index,
+                             m_function_fullname_index,
+                             m_function_method_index,
+                             m_function_selector_index,
+                             m_objc_class_selectors_index,
+                             m_global_index, 
+                             m_type_index,
+                             m_namespace_index);
+            
             // Keep memory down by clearing DIEs if this generate function
             // caused them to be parsed
             if (clear_dies)
-                dwarf_cu->ClearDIEs(true);
-
-            return cu_idx;
-        };
-
-        TaskRunner<uint32_t> task_runner;
-        for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
-            task_runner.AddTask(parser_fn, cu_idx);
-
-        while (true)
-        {
-            std::future<uint32_t> f = task_runner.WaitForNextCompletedTask();
-            if (!f.valid())
-                break;
-            uint32_t cu_idx = f.get();
-
-            m_function_basename_index.Append(function_basename_index[cu_idx]);
-            m_function_fullname_index.Append(function_fullname_index[cu_idx]);
-            m_function_method_index.Append(function_method_index[cu_idx]);
-            m_function_selector_index.Append(function_selector_index[cu_idx]);
-            m_objc_class_selectors_index.Append(objc_class_selectors_index[cu_idx]);
-            m_global_index.Append(global_index[cu_idx]);
-            m_type_index.Append(type_index[cu_idx]);
-            m_namespace_index.Append(namespace_index[cu_idx]);
+                dwarf_cu->ClearDIEs (true);
         }
-
-        TaskPool::RunTasks(
-            [&]() { m_function_basename_index.Finalize(); },
-            [&]() { m_function_fullname_index.Finalize(); },
-            [&]() { m_function_method_index.Finalize(); },
-            [&]() { m_function_selector_index.Finalize(); },
-            [&]() { m_objc_class_selectors_index.Finalize(); },
-            [&]() { m_global_index.Finalize(); },
-            [&]() { m_type_index.Finalize(); },
-            [&]() { m_namespace_index.Finalize(); });
+        
+        m_function_basename_index.Finalize();
+        m_function_fullname_index.Finalize();
+        m_function_method_index.Finalize();
+        m_function_selector_index.Finalize();
+        m_objc_class_selectors_index.Finalize();
+        m_global_index.Finalize(); 
+        m_type_index.Finalize();
+        m_namespace_index.Finalize();
 
 #if defined (ENABLE_DEBUG_PRINTF)
         StreamFile s(stdout, false);

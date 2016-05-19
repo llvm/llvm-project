@@ -38,9 +38,6 @@ public:
     Insert (const lldb_private::ConstString& name, const DIERef& die_ref);
 
     void
-    Append (const NameToDIE& other);
-
-    void
     Finalize();
 
     size_t
