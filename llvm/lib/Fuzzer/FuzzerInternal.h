@@ -27,6 +27,17 @@
 #include "FuzzerInterface.h"
 #include "FuzzerTracePC.h"
 
+// Platform detection.
+#ifdef __linux__
+#define LIBFUZZER_LINUX 1
+#define LIBFUZZER_APPLE 0
+#elif __APPLE__
+#define LIBFUZZER_LINUX 0
+#define LIBFUZZER_APPLE 1
+#else
+#error "Support for your platform has not been implemented"
+#endif
+
 namespace fuzzer {
 
 typedef int (*UserCallback)(const uint8_t *Data, size_t Size);

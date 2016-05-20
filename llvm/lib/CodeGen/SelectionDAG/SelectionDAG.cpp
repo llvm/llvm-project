@@ -2502,6 +2502,35 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
   assert((KnownZero & KnownOne) == 0 && "Bits known to be one AND zero?");
 }
 
+bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
+  // A left-shift of a constant one will have exactly one bit set because
+  // shifting the bit off the end is undefined.
+  if (Val.getOpcode() == ISD::SHL) {
+    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
+    if (C && C->getAPIntValue() == 1)
+      return true;
+  }
+
+  // Similarly, a logical right-shift of a constant sign-bit will have exactly
+  // one bit set.
+  if (Val.getOpcode() == ISD::SRL) {
+    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
+    if (C && C->getAPIntValue().isSignBit())
+      return true;
+  }
+
+  // More could be done here, though the above checks are enough
+  // to handle some common cases.
+
+  // Fall back to computeKnownBits to catch other known cases.
+  EVT OpVT = Val.getValueType();
+  unsigned BitWidth = OpVT.getScalarType().getSizeInBits();
+  APInt KnownZero, KnownOne;
+  computeKnownBits(Val, KnownZero, KnownOne);
+  return (KnownZero.countPopulation() == BitWidth - 1) &&
+         (KnownOne.countPopulation() == 1);
+}
+
 /// ComputeNumSignBits - Return the number of times the sign bit of the
 /// register is replicated into the other bits.  We know that at least 1 bit
 /// is always equal to the sign bit (itself), but other cases can give us

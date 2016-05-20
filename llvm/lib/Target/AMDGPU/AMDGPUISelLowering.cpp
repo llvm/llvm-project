@@ -1176,7 +1176,8 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 // This is a shortcut for integer division because we have fast i32<->f32
 // conversions, and fast f32 reciprocal instructions. The fractional part of a
 // float is enough to accurately represent up to a 24-bit integer.
-SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const {
+SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
+                                            bool Sign) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   SDValue LHS = Op.getOperand(0);
@@ -1184,20 +1185,14 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool 
   MVT IntVT = MVT::i32;
   MVT FltVT = MVT::f32;
 
-  ISD::NodeType ToFp  = sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
-  ISD::NodeType ToInt = sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+  ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+  ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
 
-  if (VT.isVector()) {
-    unsigned NElts = VT.getVectorNumElements();
-    IntVT = MVT::getVectorVT(MVT::i32, NElts);
-    FltVT = MVT::getVectorVT(MVT::f32, NElts);
-  }
-
-  unsigned BitSize = VT.getScalarType().getSizeInBits();
+  unsigned BitSize = VT.getSizeInBits();
 
   SDValue jq = DAG.getConstant(1, DL, IntVT);
 
-  if (sign) {
+  if (Sign) {
     // char|short jq = ia ^ ib;
     jq = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
 
@@ -1207,18 +1202,13 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool 
 
     // jq = jq | 0x1
     jq = DAG.getNode(ISD::OR, DL, VT, jq, DAG.getConstant(1, DL, VT));
-
-    // jq = (int)jq
-    jq = DAG.getSExtOrTrunc(jq, DL, IntVT);
   }
 
   // int ia = (int)LHS;
-  SDValue ia = sign ?
-    DAG.getSExtOrTrunc(LHS, DL, IntVT) : DAG.getZExtOrTrunc(LHS, DL, IntVT);
+  SDValue ia = LHS;
 
   // int ib, (int)RHS;
-  SDValue ib = sign ?
-    DAG.getSExtOrTrunc(RHS, DL, IntVT) : DAG.getZExtOrTrunc(RHS, DL, IntVT);
+  SDValue ib = RHS;
 
   // float fa = (float)ia;
   SDValue fa = DAG.getNode(ToFp, DL, FltVT, ia);
@@ -1226,8 +1216,6 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool 
   // float fb = (float)ib;
   SDValue fb = DAG.getNode(ToFp, DL, FltVT, ib);
 
-  // TODO: Should this propagate fast-math-flags?
-  // float fq = native_divide(fa, fb);
   SDValue fq = DAG.getNode(ISD::FMUL, DL, FltVT,
                            fa, DAG.getNode(AMDGPUISD::RCP, DL, FltVT, fb));
 
@@ -1238,8 +1226,7 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool 
   SDValue fqneg = DAG.getNode(ISD::FNEG, DL, FltVT, fq);
 
   // float fr = mad(fqneg, fb, fa);
-  SDValue fr = DAG.getNode(ISD::FADD, DL, FltVT,
-                           DAG.getNode(ISD::FMUL, DL, FltVT, fqneg, fb), fa);
+  SDValue fr = DAG.getNode(ISD::FMAD, DL, FltVT, fqneg, fb, fa);
 
   // int iq = (int)fq;
   SDValue iq = DAG.getNode(ToInt, DL, IntVT, fq);
@@ -1258,9 +1245,6 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool 
   // jq = (cv ? jq : 0);
   jq = DAG.getNode(ISD::SELECT, DL, VT, cv, jq, DAG.getConstant(0, DL, VT));
 
-  // dst = trunc/extend to legal type
-  iq = sign ? DAG.getSExtOrTrunc(iq, DL, VT) : DAG.getZExtOrTrunc(iq, DL, VT);
-
   // dst = iq + jq;
   SDValue Div = DAG.getNode(ISD::ADD, DL, VT, iq, jq);
 
@@ -1268,11 +1252,7 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool 
   SDValue Rem = DAG.getNode(ISD::MUL, DL, VT, Div, RHS);
   Rem = DAG.getNode(ISD::SUB, DL, VT, LHS, Rem);
 
-  SDValue Res[2] = {
-    Div,
-    Rem
-  };
-  return DAG.getMergeValues(Res, DL);
+  return DAG.getMergeValues({ Div, Rem }, DL);
 }
 
 void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,

@@ -1,4 +1,4 @@
-//===-- FindAllSymbolsTests.cpp - find all symbols unit tests -------------===//
+//===-- FindAllSymbolsTests.cpp - find all symbols unit tests ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FindAllMacros.h"
 #include "FindAllSymbols.h"
 #include "HeaderMapCollector.h"
 #include "PragmaCommentHandler.h"
 #include "SymbolInfo.h"
+#include "SymbolReporter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -31,17 +33,16 @@ namespace find_all_symbols {
 
 static const char HeaderName[] = "symbols.h";
 
-class MockReporter
-    : public clang::find_all_symbols::FindAllSymbols::ResultReporter {
+class TestSymbolReporter : public clang::find_all_symbols::SymbolReporter {
 public:
-  ~MockReporter() override {}
+  ~TestSymbolReporter() override {}
 
-  void reportResult(llvm::StringRef FileName,
+  void reportSymbol(llvm::StringRef FileName,
                     const SymbolInfo &Symbol) override {
     Symbols.push_back(Symbol);
   }
 
-  bool hasSymbol(const SymbolInfo &Symbol) {
+  bool hasSymbol(const SymbolInfo &Symbol) const {
     for (const auto &S : Symbols) {
       if (S == Symbol)
         return true;
@@ -55,8 +56,8 @@ private:
 
 class TestFindAllSymbolsAction : public clang::ASTFrontendAction {
 public:
-  TestFindAllSymbolsAction(FindAllSymbols::ResultReporter *Reporter)
-      : MatchFinder(), Collector(), Handler(&Collector),
+  TestFindAllSymbolsAction(SymbolReporter *Reporter)
+      : Reporter(Reporter), MatchFinder(), Collector(), Handler(&Collector),
         Matcher(Reporter, &Collector) {
     Matcher.registerMatchers(&MatchFinder);
   }
@@ -65,10 +66,13 @@ public:
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
     Compiler.getPreprocessor().addCommentHandler(&Handler);
+    Compiler.getPreprocessor().addPPCallbacks(llvm::make_unique<FindAllMacros>(
+        Reporter, &Compiler.getSourceManager(), &Collector));
     return MatchFinder.newASTConsumer();
   }
 
 private:
+  SymbolReporter *const Reporter;
   ast_matchers::MatchFinder MatchFinder;
   HeaderMapCollector Collector;
   PragmaCommentHandler Handler;
@@ -78,14 +82,14 @@ private:
 class TestFindAllSymbolsActionFactory
     : public clang::tooling::FrontendActionFactory {
 public:
-  TestFindAllSymbolsActionFactory(MockReporter *Reporter)
+  TestFindAllSymbolsActionFactory(TestSymbolReporter *Reporter)
       : Reporter(Reporter) {}
   clang::FrontendAction *create() override {
     return new TestFindAllSymbolsAction(Reporter);
   }
 
 private:
-  MockReporter *const Reporter;
+  TestSymbolReporter *const Reporter;
 };
 
 class FindAllSymbolsTest : public ::testing::Test {
@@ -122,7 +126,7 @@ public:
   }
 
 private:
-  MockReporter Reporter;
+  TestSymbolReporter Reporter;
 };
 
 TEST_F(FindAllSymbolsTest, VariableSymbols) {
@@ -375,6 +379,43 @@ TEST_F(FindAllSymbolsTest, IWYUPrivatePragmaTest) {
 
   SymbolInfo Symbol =
       SymbolInfo("Bar", SymbolInfo::SymbolKind::Class, "bar.h", 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+}
+
+TEST_F(FindAllSymbolsTest, MacroTest) {
+  static const char Code[] = R"(
+    #define X
+    #define Y 1
+    #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+  )";
+  runFindAllSymbols(Code);
+  SymbolInfo Symbol =
+      SymbolInfo("X", SymbolInfo::SymbolKind::Macro, HeaderName, 2, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("Y", SymbolInfo::SymbolKind::Macro, HeaderName, 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("MAX", SymbolInfo::SymbolKind::Macro, HeaderName, 4, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+}
+
+TEST_F(FindAllSymbolsTest, MacroTestWithIWYU) {
+  static const char Code[] = R"(
+    // IWYU pragma: private, include "bar.h"
+    #define X
+    #define Y 1
+    #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+  )";
+  runFindAllSymbols(Code);
+  SymbolInfo Symbol =
+      SymbolInfo("X", SymbolInfo::SymbolKind::Macro, "bar.h", 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("Y", SymbolInfo::SymbolKind::Macro, "bar.h", 4, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("MAX", SymbolInfo::SymbolKind::Macro, "bar.h", 5, {});
   EXPECT_TRUE(hasSymbol(Symbol));
 }
 

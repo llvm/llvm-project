@@ -156,10 +156,11 @@ TEST_F(InstrProfTest, get_profile_summary) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  auto VerifySummary = [](InstrProfSummary &IPS) mutable {
+  auto VerifySummary = [](ProfileSummary &IPS) mutable {
+    ASSERT_EQ(ProfileSummary::PSK_Instr, IPS.getKind());
     ASSERT_EQ(2305843009213693952U, IPS.getMaxFunctionCount());
-    ASSERT_EQ(2305843009213693952U, IPS.getMaxBlockCount());
-    ASSERT_EQ(10U, IPS.getNumBlocks());
+    ASSERT_EQ(2305843009213693952U, IPS.getMaxCount());
+    ASSERT_EQ(10U, IPS.getNumCounts());
     ASSERT_EQ(4539628424389557499U, IPS.getTotalCount());
     std::vector<ProfileSummaryEntry> &Details = IPS.getDetailedSummary();
     uint32_t Cutoff = 800000;
@@ -180,7 +181,7 @@ TEST_F(InstrProfTest, get_profile_summary) {
     ASSERT_EQ(288230376151711744U, NinetyFivePerc->MinCount);
     ASSERT_EQ(72057594037927936U, NinetyNinePerc->MinCount);
   };
-  InstrProfSummary &PS = Reader->getSummary();
+  ProfileSummary &PS = Reader->getSummary();
   VerifySummary(PS);
 
   // Test that conversion of summary to and from Metadata works.
@@ -189,10 +190,8 @@ TEST_F(InstrProfTest, get_profile_summary) {
   ASSERT_TRUE(MD);
   ProfileSummary *PSFromMD = ProfileSummary::getFromMD(MD);
   ASSERT_TRUE(PSFromMD);
-  ASSERT_TRUE(isa<InstrProfSummary>(PSFromMD));
-  InstrProfSummary *IPS = cast<InstrProfSummary>(PSFromMD);
-  VerifySummary(*IPS);
-  delete IPS;
+  VerifySummary(*PSFromMD);
+  delete PSFromMD;
 
   // Test that summary can be attached to and read back from module.
   Module M("my_module", Context);
@@ -201,10 +200,8 @@ TEST_F(InstrProfTest, get_profile_summary) {
   ASSERT_TRUE(MD);
   PSFromMD = ProfileSummary::getFromMD(MD);
   ASSERT_TRUE(PSFromMD);
-  ASSERT_TRUE(isa<InstrProfSummary>(PSFromMD));
-  IPS = cast<InstrProfSummary>(PSFromMD);
-  VerifySummary(*IPS);
-  delete IPS;
+  VerifySummary(*PSFromMD);
+  delete PSFromMD;
 }
 
 static const char callee1[] = "callee1";

@@ -113,11 +113,36 @@ void SetSigIntHandler() { SetSigaction(SIGINT, InterruptHandler); }
 void SetSigTermHandler() { SetSigaction(SIGTERM, InterruptHandler); }
 
 int NumberOfCpuCores() {
-  FILE *F = popen("nproc", "r");
-  int N = 0;
-  if (fscanf(F, "%d", &N) != 1)
+  const char *CmdLine = nullptr;
+  if (LIBFUZZER_LINUX) {
+    CmdLine = "nproc";
+  } else if (LIBFUZZER_APPLE) {
+    CmdLine = "sysctl -n hw.ncpu";
+  } else {
+    assert(0 && "NumberOfCpuCores() is not implemented for your platform");
+  }
+
+  FILE *F = popen(CmdLine, "r");
+  int N = 1;
+  if (!F || fscanf(F, "%d", &N) != 1) {
+    Printf("WARNING: Failed to parse output of command \"%s\" in %s(). "
+           "Assuming CPU count of 1.\n",
+           CmdLine, __func__);
     N = 1;
-  fclose(F);
+  }
+
+  if (pclose(F)) {
+    Printf("WARNING: Executing command \"%s\" failed in %s(). "
+           "Assuming CPU count of 1.\n",
+           CmdLine, __func__);
+    N = 1;
+  }
+  if (N < 1) {
+    Printf("WARNING: Reported CPU count (%d) from command \"%s\" was invalid "
+           "in %s(). Assuming CPU count of 1.\n",
+           N, CmdLine, __func__);
+    N = 1;
+  }
   return N;
 }
 
@@ -263,7 +288,15 @@ size_t GetPeakRSSMb() {
   struct rusage usage;
   if (getrusage(RUSAGE_SELF, &usage))
     return 0;
-  return usage.ru_maxrss >> 10;
+  if (LIBFUZZER_LINUX) {
+    // ru_maxrss is in KiB
+    return usage.ru_maxrss >> 10;
+  } else if (LIBFUZZER_APPLE) {
+    // ru_maxrss is in bytes
+    return usage.ru_maxrss >> 20;
+  }
+  assert(0 && "GetPeakRSSMb() is not implemented for your platform");
+  return 0;
 }
 
 }  // namespace fuzzer

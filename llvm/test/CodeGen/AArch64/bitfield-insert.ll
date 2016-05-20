@@ -311,3 +311,70 @@ entry:
   store i16 %trunc, i16* %gep
   ret void
 }
+
+; The next set of tests generate a BFXIL from 'or (and X, Mask0Imm),
+; (and Y, Mask1Imm)' iff Mask0Imm and ~Mask1Imm are equivalent and one of the
+; MaskImms is a shifted mask (e.g., 0x000ffff0).
+
+; CHECK-LABEL: @test_or_and_and1
+; CHECK: lsr w8, w1, #4
+; CHECK: bfi w0, w8, #4, #12
+define i32 @test_or_and_and1(i32 %a, i32 %b) {
+entry:
+  %and = and i32 %a, -65521 ; 0xffff000f
+  %and1 = and i32 %b, 65520 ; 0x0000fff0
+  %or = or i32 %and1, %and
+  ret i32 %or
+}
+
+; CHECK-LABEL: @test_or_and_and2
+; CHECK: lsr w8, w0, #4
+; CHECK: bfi w1, w8, #4, #12
+define i32 @test_or_and_and2(i32 %a, i32 %b) {
+entry:
+  %and = and i32 %a, 65520   ; 0x0000fff0
+  %and1 = and i32 %b, -65521 ; 0xffff000f
+  %or = or i32 %and1, %and
+  ret i32 %or
+}
+
+; CHECK-LABEL: @test_or_and_and3
+; CHECK: lsr x8, x1, #16
+; CHECK: bfi x0, x8, #16, #32
+define i64 @test_or_and_and3(i64 %a, i64 %b) {
+entry:
+  %and = and i64 %a, -281474976645121 ; 0xffff00000000ffff
+  %and1 = and i64 %b, 281474976645120 ; 0x0000ffffffff0000
+  %or = or i64 %and1, %and
+  ret i64 %or
+}
+
+; Don't convert 'and' with multiple uses.
+; CHECK-LABEL: @test_or_and_and4
+; CHECK: and w8, w0, #0xffff000f
+; CHECK: and w9, w1, #0xfff0
+; CHECK: orr w0, w9, w8
+; CHECK: str w8, [x2
+define i32 @test_or_and_and4(i32 %a, i32 %b, i32* %ptr) {
+entry:
+  %and = and i32 %a, -65521
+  store i32 %and, i32* %ptr, align 4
+  %and2 = and i32 %b, 65520
+  %or = or i32 %and2, %and
+  ret i32 %or
+}
+
+; Don't convert 'and' with multiple uses.
+; CHECK-LABEL: @test_or_and_and5
+; CHECK: and w8, w1, #0xfff0
+; CHECK: and w9, w0, #0xffff000f
+; CHECK: orr w0, w8, w9
+; CHECK: str w8, [x2]
+define i32 @test_or_and_and5(i32 %a, i32 %b, i32* %ptr) {
+entry:
+  %and = and i32 %b, 65520
+  store i32 %and, i32* %ptr, align 4
+  %and1 = and i32 %a, -65521
+  %or = or i32 %and, %and1
+  ret i32 %or
+}

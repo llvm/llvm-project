@@ -1212,8 +1212,18 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   unsigned TypeByteSize = DL.getTypeAllocSize(ATy);
 
-  // Negative distances are not plausible dependencies.
   const APInt &Val = C->getAPInt();
+  int64_t Distance = Val.getSExtValue();
+  unsigned Stride = std::abs(StrideAPtr);
+
+  // Attempt to prove strided accesses independent.
+  if (std::abs(Distance) > 0 && Stride > 1 && ATy == BTy &&
+      areStridedAccessesIndependent(std::abs(Distance), Stride, TypeByteSize)) {
+    DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
+    return Dependence::NoDep;
+  }
+
+  // Negative distances are not plausible dependencies.
   if (Val.isNegative()) {
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
     if (IsTrueDataDependence && EnableForwardingConflictDetection &&
@@ -1242,15 +1252,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     DEBUG(dbgs() <<
           "LAA: ReadWrite-Write positive dependency with different types\n");
     return Dependence::Unknown;
-  }
-
-  unsigned Distance = (unsigned) Val.getZExtValue();
-
-  unsigned Stride = std::abs(StrideAPtr);
-  if (Stride > 1 &&
-      areStridedAccessesIndependent(Distance, Stride, TypeByteSize)) {
-    DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
-    return Dependence::NoDep;
   }
 
   // Bail out early if passed-in parameters make vectorization not feasible.

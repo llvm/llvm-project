@@ -296,7 +296,7 @@ public:
   create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C);
 
   /// \brief Return the profile summary.
-  SampleProfileSummary &getSummary() { return *(Summary.get()); }
+  ProfileSummary &getSummary() { return *(Summary.get()); }
 
 protected:
   /// \brief Map every function to its associated profile.
@@ -313,7 +313,7 @@ protected:
   std::unique_ptr<MemoryBuffer> Buffer;
 
   /// \brief Profile summary information.
-  std::unique_ptr<SampleProfileSummary> Summary;
+  std::unique_ptr<ProfileSummary> Summary;
 
   /// \brief Compute summary for this profile.
   void computeSummary();

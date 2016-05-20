@@ -44,7 +44,7 @@ public:
 
   uint32_t getPdbDllVersion() const;
 
-  uint32_t getNumberOfSymbols() const;
+  uint32_t getSymRecordStreamIndex() const;
 
   PDB_Machine getMachineType() const;
 

@@ -74,11 +74,6 @@ via a register.)
 
 --
 
-We don't use the halfword forms of LOAD REVERSED and STORE REVERSED
-(LRVH and STRVH).
-
---
-
 We don't use ICM or STCM.
 
 --

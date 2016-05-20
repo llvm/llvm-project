@@ -16,7 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; -vectorizer-maximize-bandwidth is indicated.
 ;
 ; CHECK-label: foo
-; CHECK: LV: Selecting VF: 16.
+; CHECK: LV: Selecting VF: 32.
 define void @foo() {
 entry:
   br label %for.body

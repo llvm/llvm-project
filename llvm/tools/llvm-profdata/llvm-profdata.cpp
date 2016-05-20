@@ -281,7 +281,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
   if (ShowDetailedSummary && DetailedSummaryCutoffs.empty()) {
     Cutoffs = {800000, 900000, 950000, 990000, 999000, 999900, 999990};
   }
-  InstrProfSummary PS(Cutoffs);
+  InstrProfSummaryBuilder Builder(Cutoffs);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -302,7 +302,7 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
     }
 
     assert(Func.Counts.size() > 0 && "function missing entry counter");
-    PS.addRecord(Func);
+    Builder.addRecord(Func);
 
     if (Show) {
 
@@ -353,18 +353,18 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
 
   if (ShowCounts && TextFormat)
     return 0;
-
+  std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
-  OS << "Total functions: " << PS.getNumFunctions() << "\n";
-  OS << "Maximum function count: " << PS.getMaxFunctionCount() << "\n";
-  OS << "Maximum internal block count: " << PS.getMaxInternalBlockCount() << "\n";
+  OS << "Total functions: " << PS->getNumFunctions() << "\n";
+  OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
+  OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
 
   if (ShowDetailedSummary) {
     OS << "Detailed summary:\n";
-    OS << "Total number of blocks: " << PS.getNumBlocks() << "\n";
-    OS << "Total count: " << PS.getTotalCount() << "\n";
-    for (auto Entry : PS.getDetailedSummary()) {
+    OS << "Total number of blocks: " << PS->getNumCounts() << "\n";
+    OS << "Total count: " << PS->getTotalCount() << "\n";
+    for (auto Entry : PS->getDetailedSummary()) {
       OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount
          << " account for "
          << format("%0.6g", (float)Entry.Cutoff / ProfileSummary::Scale * 100)

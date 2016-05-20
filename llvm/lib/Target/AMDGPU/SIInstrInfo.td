@@ -2836,7 +2836,7 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
   let mayStore = 1, mayLoad = 1, hasPostISelHook = 1, hasSideEffects = 1 in {
 
     // No return variants
-    let glc = 0 in {
+    let glc = 0, AsmMatchConverter = "cvtMubufAtomic" in {
 
       defm _ADDR64 : MUBUFAtomicAddr64_m <
         op, name#"_addr64", (outs),
@@ -2883,13 +2883,14 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
 
     // Variant that return values
     let glc = 1, Constraints = "$vdata = $vdata_in",
+        AsmMatchConverter = "cvtMubufAtomicReturn",
         DisableEncoding = "$vdata_in"  in {
 
       defm _RTN_ADDR64 : MUBUFAtomicAddr64_m <
         op, name#"_rtn_addr64", (outs rc:$vdata),
         (ins rc:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
              SCSrc_32:$soffset, offset:$offset, slc:$slc),
-        name#" $vdata, $vaddr, $srsrc, $soffset addr64"#"$offset"#" glc"#"$slc",
+        name#" $vdata, $vaddr, $srsrc, $soffset addr64$offset glc$slc",
         [(set vt:$vdata,
          (atomic (MUBUFAddr64Atomic v4i32:$srsrc, i64:$vaddr, i32:$soffset,
 	                            i16:$offset, i1:$slc), vt:$vdata_in))], 1
@@ -2899,7 +2900,7 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
         op, name#"_rtn_offset", (outs rc:$vdata),
         (ins rc:$vdata_in, SReg_128:$srsrc, SCSrc_32:$soffset,
              offset:$offset, slc:$slc),
-        name#" $vdata, off, $srsrc, $soffset $offset glc$slc",
+        name#" $vdata, off, $srsrc, $soffset$offset glc$slc",
         [(set vt:$vdata,
          (atomic (MUBUFOffsetAtomic v4i32:$srsrc, i32:$soffset, i16:$offset,
                                     i1:$slc), vt:$vdata_in))], 1
@@ -2910,7 +2911,7 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
           op, name#"_rtn_offen", (outs rc:$vdata),
           (ins rc:$vdata_in, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
                 offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset offen"#"$offset"#" glc"#"$slc",
+          name#" $vdata, $vaddr, $srsrc, $soffset offen$offset glc$slc",
           [], 1
         >;
       }
@@ -2920,7 +2921,7 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
           op, name#"_rtn_idxen", (outs rc:$vdata),
           (ins rc:$vdata_in, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
                 offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset idxen"#"$offset"#" glc"#"$slc",
+          name#" $vdata, $vaddr, $srsrc, $soffset idxen$offset glc$slc",
           [], 1
         >;
       }
@@ -2930,7 +2931,7 @@ multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
           op, name#"_rtn_bothen", (outs rc:$vdata),
           (ins rc:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_32:$soffset,
                 offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset idxen offen"#"$offset"#" glc"#"$slc",
+          name#" $vdata, $vaddr, $srsrc, $soffset idxen offen$offset glc$slc",
           [], 1
         >;
       }

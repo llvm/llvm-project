@@ -103,6 +103,16 @@ public:
   Error read();
 };
 
+/// \brief Checks if the given coverage mapping data is exported for
+/// an unused function.
+class RawCoverageMappingDummyChecker : public RawCoverageReader {
+public:
+  RawCoverageMappingDummyChecker(StringRef MappingData)
+      : RawCoverageReader(MappingData) {}
+
+  Expected<bool> isDummy();
+};
+
 /// \brief Reader for the raw coverage mapping data.
 class RawCoverageMappingReader : public RawCoverageReader {
   ArrayRef<StringRef> TranslationUnitFilenames;

@@ -158,7 +158,8 @@ bool SILowerControlFlow::shouldSkip(MachineBasicBlock *From,
       // When a uniform loop is inside non-uniform control flow, the branch
       // leaving the loop might be an S_CBRANCH_VCCNZ, which is never taken
       // when EXEC = 0. We should skip the loop lest it becomes infinite.
-      if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ)
+      if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ ||
+          I->getOpcode() == AMDGPU::S_CBRANCH_VCCZ)
         return true;
 
       if (++NumInstr >= SkipThreshold)

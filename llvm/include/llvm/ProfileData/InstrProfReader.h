@@ -364,7 +364,7 @@ private:
   /// The index into the profile data.
   std::unique_ptr<InstrProfReaderIndexBase> Index;
   /// Profile summary data.
-  std::unique_ptr<InstrProfSummary> Summary;
+  std::unique_ptr<ProfileSummary> Summary;
 
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
@@ -417,7 +417,7 @@ public:
   // to be used by llvm-profdata (for dumping). Avoid using this when
   // the client is the compiler.
   InstrProfSymtab &getSymtab() override;
-  InstrProfSummary &getSummary() { return *(Summary.get()); }
+  ProfileSummary &getSummary() { return *(Summary.get()); }
 };
 
 } // end namespace llvm

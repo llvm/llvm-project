@@ -384,7 +384,10 @@ getBranchTarget21OpValueMM(const MCInst &MI, unsigned OpNo,
   assert(MO.isExpr() &&
     "getBranchTarget21OpValueMM expects only expressions or immediates");
 
-  // TODO: Push fixup.
+  const MCExpr *FixupExpression = MCBinaryExpr::createAdd(
+      MO.getExpr(), MCConstantExpr::create(-4, Ctx), Ctx);
+  Fixups.push_back(MCFixup::create(0, FixupExpression,
+                                   MCFixupKind(Mips::fixup_MICROMIPS_PC21_S1)));
   return 0;
 }
 

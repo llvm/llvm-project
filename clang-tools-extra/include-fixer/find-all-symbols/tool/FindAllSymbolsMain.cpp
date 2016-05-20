@@ -1,4 +1,4 @@
-//===-- FindAllSymbolsMain.cpp --------------------------------------------===//
+//===-- FindAllSymbolsMain.cpp - find all symbols tool ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FindAllMacros.h"
 #include "FindAllSymbols.h"
 #include "HeaderMapCollector.h"
 #include "PragmaCommentHandler.h"
 #include "SymbolInfo.h"
+#include "SymbolReporter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -63,12 +65,11 @@ The directory for merging symbols.)"),
 namespace clang {
 namespace find_all_symbols {
 
-class YamlReporter
-    : public clang::find_all_symbols::FindAllSymbols::ResultReporter {
+class YamlReporter : public clang::find_all_symbols::SymbolReporter {
 public:
   ~YamlReporter() override {}
 
-  void reportResult(StringRef FileName, const SymbolInfo &Symbol) override {
+  void reportSymbol(StringRef FileName, const SymbolInfo &Symbol) override {
     Symbols[FileName].insert(Symbol);
   }
 
@@ -88,6 +89,7 @@ private:
   std::map<std::string, std::set<SymbolInfo>> Symbols;
 };
 
+// FIXME: Move this out from the main file, make it reusable in unittest.
 class FindAllSymbolsAction : public clang::ASTFrontendAction {
 public:
   FindAllSymbolsAction()
@@ -100,6 +102,8 @@ public:
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
     Compiler.getPreprocessor().addCommentHandler(&Handler);
+    Compiler.getPreprocessor().addPPCallbacks(llvm::make_unique<FindAllMacros>(
+        &Reporter, &Collector, &Compiler.getSourceManager()));
     return MatchFinder.newASTConsumer();
   }
 

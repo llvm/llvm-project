@@ -59,8 +59,8 @@ struct PublicsStream::HeaderInfo {
 
 // This is GSIHashHdr struct defined in
 struct PublicsStream::GSIHashHeader {
-  enum {
-    HdrSignature = -1,
+  enum : unsigned {
+    HdrSignature = ~0U,
     HdrVersion = 0xeffe0000 + 19990810,
   };
   ulittle32_t VerSignature;

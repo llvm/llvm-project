@@ -138,3 +138,7 @@ s_setpc_b64   [ttmp2,ttmp3]
 v_readfirstlane_b32  ttmp8, v1
 // SICI: v_readfirstlane_b32 ttmp8, v1   ; encoding: [0x01,0x05,0xf0,0x7e]
 // VI:   v_readfirstlane_b32 ttmp8, v1   ; encoding: [0x01,0x05,0xf0,0x7e]
+
+buffer_atomic_inc  v1, off, ttmp[8:11], 56 glc
+// SICI: buffer_atomic_inc v1, off, ttmp[8:11], 56  glc ; encoding: [0x00,0x40,0xf0,0xe0,0x00,0x01,0x1e,0xb8]
+// VI:   buffer_atomic_inc v1, off, ttmp[8:11], 56  glc ; encoding: [0x00,0x40,0x2c,0xe1,0x00,0x01,0x1e,0xb8]

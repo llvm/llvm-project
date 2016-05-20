@@ -1,4 +1,4 @@
-//===-- SymbolInfo.cpp ----------------------------------------------------===//
+//===-- SymbolInfo.cpp - Symbol Info ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -52,6 +52,7 @@ template <> struct ScalarEnumerationTraits<SymbolKind> {
     io.enumCase(value, "TypedefName", SymbolKind::TypedefName);
     io.enumCase(value, "EnumDecl", SymbolKind::EnumDecl);
     io.enumCase(value, "EnumConstantDecl", SymbolKind::EnumConstantDecl);
+    io.enumCase(value, "Macro", SymbolKind::Macro);
     io.enumCase(value, "Unknown", SymbolKind::Unknown);
   }
 };

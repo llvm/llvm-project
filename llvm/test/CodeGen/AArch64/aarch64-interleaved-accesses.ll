@@ -268,3 +268,15 @@ define void @store_illegal_factor2(<3 x float>* %p, <3 x float> %v) nounwind {
   store <3 x float> %tmp1, <3 x float>* %p, align 16
   ret void
 }
+
+; NEON-LABEL: load_factor2_with_extract_user:
+; NEON: ld2 { v0.4s, v1.4s }, [x0]
+; NEON: mov w0, v0.s[1]
+; NONEON-LABEL: load_factor2_with_extract_user:
+; NONEON-NOT: ld2
+define i32 @load_factor2_with_extract_user(<8 x i32>* %a) {
+  %1 = load <8 x i32>, <8 x i32>* %a, align 8
+  %2 = shufflevector <8 x i32> %1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = extractelement <8 x i32> %1, i32 2
+  ret i32 %3
+}

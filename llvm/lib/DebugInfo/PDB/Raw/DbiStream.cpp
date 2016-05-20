@@ -53,11 +53,11 @@ struct DbiStream::HeaderInfo {
   little32_t VersionSignature;
   ulittle32_t VersionHeader;
   ulittle32_t Age;                     // Should match InfoStream.
-  ulittle16_t GSSyms;                  // Number of global symbols
+  ulittle16_t GlobalSymbolStreamIndex; // Global symbol stream #
   ulittle16_t BuildNumber;             // See DbiBuildNo structure.
-  ulittle16_t PublicSymbolStreamIndex; // Number of public symbols
+  ulittle16_t PublicSymbolStreamIndex; // Public symbols stream #
   ulittle16_t PdbDllVersion;           // version of mspdbNNN.dll
-  ulittle16_t SymRecords;              // Number of symbols
+  ulittle16_t SymRecordStreamIndex;    // Symbol records stream #
   ulittle16_t PdbDllRbld;              // rbld number of mspdbNNN.dll
   little32_t ModiSubstreamSize;        // Size of module info stream
   little32_t SecContrSubstreamSize;    // Size of sec. contribution stream
@@ -210,7 +210,9 @@ uint16_t DbiStream::getBuildMinorVersion() const {
 
 uint32_t DbiStream::getPdbDllVersion() const { return Header->PdbDllVersion; }
 
-uint32_t DbiStream::getNumberOfSymbols() const { return Header->SymRecords; }
+uint32_t DbiStream::getSymRecordStreamIndex() const {
+  return Header->SymRecordStreamIndex;
+}
 
 PDB_Machine DbiStream::getMachineType() const {
   uint16_t Machine = Header->MachineType;

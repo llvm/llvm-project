@@ -1551,7 +1551,7 @@ def: UncondBranch16_pat<br, Bimm16>;
 
 // Small immediates
 def: Mips16Pat<(i32 immSExt16:$in),
-               (AddiuRxRxImmX16 (Move32R16 ZERO), immSExt16:$in)>;
+               (AddiuRxRxImmX16 (MoveR3216 ZERO), immSExt16:$in)>;
 
 def: Mips16Pat<(i32 immZExt16:$in), (LiRxImmX16 immZExt16:$in)>;
 

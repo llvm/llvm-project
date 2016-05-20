@@ -1974,6 +1974,13 @@ static bool isBitfieldPositioningOp(SelectionDAG *CurDAG, SDValue Op,
   return true;
 }
 
+static bool isShiftedMask(uint64_t Mask, EVT VT) {
+  assert(VT == MVT::i32 || VT == MVT::i64);
+  if (VT == MVT::i32)
+    return isShiftedMask_32(Mask);
+  return isShiftedMask_64(Mask);
+}
+
 static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
                                       SelectionDAG *CurDAG) {
   assert(N->getOpcode() == ISD::OR && "Expect a OR operation");
@@ -2084,6 +2091,58 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
     CurDAG->SelectNodeTo(N, Opc, VT, Ops);
     return true;
   }
+
+  // Generate a BFXIL from 'or (and X, Mask0Imm), (and Y, Mask1Imm)' iff
+  // Mask0Imm and ~Mask1Imm are equivalent and one of the MaskImms is a shifted
+  // mask (e.g., 0x000ffff0).
+  uint64_t Mask0Imm, Mask1Imm;
+  SDValue And0 = N->getOperand(0);
+  SDValue And1 = N->getOperand(1);
+  if (And0.hasOneUse() && And1.hasOneUse() &&
+      isOpcWithIntImmediate(And0.getNode(), ISD::AND, Mask0Imm) &&
+      isOpcWithIntImmediate(And1.getNode(), ISD::AND, Mask1Imm) &&
+      APInt(BitWidth, Mask0Imm) == ~APInt(BitWidth, Mask1Imm) &&
+      (isShiftedMask(Mask0Imm, VT) || isShiftedMask(Mask1Imm, VT))) {
+
+    // We should have already caught the case where we extract hi and low parts.
+    // E.g. BFXIL from 'or (and X, 0xffff0000), (and Y, 0x0000ffff)'.
+    assert(!(isShiftedMask(Mask0Imm, VT) && isShiftedMask(Mask1Imm, VT)) &&
+           "BFXIL should have already been optimized.");
+
+    // ORR is commutative, so canonicalize to the form 'or (and X, Mask0Imm),
+    // (and Y, Mask1Imm)' where Mask1Imm is the shifted mask masking off the
+    // bits to be inserted.
+    if (isShiftedMask(Mask0Imm, VT)) {
+      std::swap(And0, And1);
+      std::swap(Mask0Imm, Mask1Imm);
+    }
+
+    SDValue Src = And1->getOperand(0);
+    SDValue Dst = And0->getOperand(0);
+    unsigned LSB = countTrailingZeros(Mask1Imm);
+    int Width = BitWidth - APInt(BitWidth, Mask0Imm).countPopulation();
+
+    // The BFXIL inserts the low-order bits from a source register, so right
+    // shift the needed bits into place.
+    SDLoc DL(N);
+    unsigned ShiftOpc = (VT == MVT::i32) ? AArch64::UBFMWri : AArch64::UBFMXri;
+    SDNode *LSR = CurDAG->getMachineNode(
+        ShiftOpc, DL, VT, Src, CurDAG->getTargetConstant(LSB, DL, VT),
+        CurDAG->getTargetConstant(BitWidth - 1, DL, VT));
+
+    // BFXIL is an alias of BFM, so translate to BFM operands.
+    unsigned ImmR = (BitWidth - LSB) % BitWidth;
+    unsigned ImmS = Width - 1;
+
+    // Create the BFXIL instruction.
+    SDValue Ops[] = {Dst, SDValue(LSR, 0),
+                     CurDAG->getTargetConstant(ImmR, DL, VT),
+                     CurDAG->getTargetConstant(ImmS, DL, VT)};
+    unsigned Opc = (VT == MVT::i32) ? AArch64::BFMWri : AArch64::BFMXri;
+    CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+    return true;
+  }
+
   return false;
 }
 

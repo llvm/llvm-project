@@ -1276,6 +1276,11 @@ public:
   void computeKnownBits(SDValue Op, APInt &KnownZero, APInt &KnownOne,
                         unsigned Depth = 0) const;
 
+  /// Test if the given value is known to have exactly one bit set. This differs
+  /// from computeKnownBits in that it doesn't necessarily determine which bit
+  /// is set.
+  bool isKnownToBeAPowerOfTwo(SDValue Val) const;
+
   /// Return the number of times the sign bit of the
   /// register is replicated into the other bits.  We know that at least 1 bit
   /// is always equal to the sign bit (itself), but other cases can give us

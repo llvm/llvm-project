@@ -2,7 +2,7 @@ add_llvm_library(LLVMProfileData
   InstrProf.cpp
   InstrProfReader.cpp
   InstrProfWriter.cpp
-  ProfileSummary.cpp
+  ProfileSummaryBuilder.cpp
   SampleProf.cpp
   SampleProfReader.cpp
   SampleProfWriter.cpp

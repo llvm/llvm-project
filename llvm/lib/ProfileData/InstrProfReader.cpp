@@ -576,6 +576,7 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
 const unsigned char *
 IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
                                     const unsigned char *Cur) {
+  using namespace IndexedInstrProf;
   using namespace support;
   if (Version >= IndexedInstrProf::Version4) {
     const IndexedInstrProf::Summary *SummaryInLE =
@@ -594,15 +595,29 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
     for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
       Dst[I] = endian::byte_swap<uint64_t, little>(Src[I]);
 
+    llvm::SummaryEntryVector DetailedSummary;
+    for (unsigned I = 0; I < SummaryData->NumCutoffEntries; I++) {
+      const IndexedInstrProf::Summary::Entry &Ent = SummaryData->getEntry(I);
+      DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
+                                   Ent.NumBlocks);
+    }
     // initialize InstrProfSummary using the SummaryData from disk.
-    this->Summary = llvm::make_unique<InstrProfSummary>(*(SummaryData.get()));
+    this->Summary = llvm::make_unique<ProfileSummary>(
+        ProfileSummary::PSK_Instr, DetailedSummary,
+        SummaryData->get(Summary::TotalBlockCount),
+        SummaryData->get(Summary::MaxBlockCount),
+        SummaryData->get(Summary::MaxInternalBlockCount),
+        SummaryData->get(Summary::MaxFunctionCount),
+        SummaryData->get(Summary::TotalNumBlocks),
+        SummaryData->get(Summary::TotalNumFunctions));
     return Cur + SummarySize;
   } else {
     // For older version of profile data, we need to compute on the fly:
     using namespace IndexedInstrProf;
-    this->Summary =
-        llvm::make_unique<InstrProfSummary>(ProfileSummary::DefaultCutoffs);
-    this->Summary->computeDetailedSummary();
+    InstrProfSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
+    // FIXME: This only computes an empty summary. Need to call addRecord for
+    // all InstrProfRecords to get the correct summary.
+    this->Summary = Builder.getSummary();
     return Cur;
   }
 }
