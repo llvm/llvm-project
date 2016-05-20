@@ -189,7 +189,7 @@ public:
 
 private:
   /// Test whether two basic blocks have equivalent behaviour.
-  int cmpBasicBlocks(const BasicBlock *BBL, const BasicBlock *BBR);
+  int cmpBasicBlocks(const BasicBlock *BBL, const BasicBlock *BBR) const;
 
   /// Constants comparison.
   /// Its analog to lexicographical comparison between hypothetical numbers
@@ -293,11 +293,11 @@ private:
   /// look at their particular properties (bit-width for vectors, and
   /// address space for pointers).
   /// If these properties are equal - compare their contents.
-  int cmpConstants(const Constant *L, const Constant *R);
+  int cmpConstants(const Constant *L, const Constant *R) const;
 
   /// Compares two global values by number. Uses the GlobalNumbersState to
   /// identify the same gobals across function calls.
-  int cmpGlobalValues(GlobalValue *L, GlobalValue *R);
+  int cmpGlobalValues(GlobalValue *L, GlobalValue *R) const;
 
   /// Assign or look up previously assigned numbers for the two values, and
   /// return whether the numbers are equal. Numbers are assigned in the order
@@ -317,7 +317,7 @@ private:
   ///          then left value is greater.
   ///          In another words, we compare serial numbers, for more details
   ///          see comments for sn_mapL and sn_mapR.
-  int cmpValues(const Value *L, const Value *R);
+  int cmpValues(const Value *L, const Value *R) const;
 
   /// Compare two Instructions for equivalence, similar to
   /// Instruction::isSameOperationAs but with modifications to the type
@@ -353,8 +353,9 @@ private:
   /// 3. Pointer operand type (using cmpType method).
   /// 4. Number of operands.
   /// 5. Compare operands, using cmpValues method.
-  int cmpGEPs(const GEPOperator *GEPL, const GEPOperator *GEPR);
-  int cmpGEPs(const GetElementPtrInst *GEPL, const GetElementPtrInst *GEPR) {
+  int cmpGEPs(const GEPOperator *GEPL, const GEPOperator *GEPR) const;
+  int cmpGEPs(const GetElementPtrInst *GEPL,
+              const GetElementPtrInst *GEPR) const {
     return cmpGEPs(cast<GEPOperator>(GEPL), cast<GEPOperator>(GEPR));
   }
 
@@ -406,7 +407,7 @@ private:
   int cmpInlineAsm(const InlineAsm *L, const InlineAsm *R) const;
   int cmpMem(StringRef L, StringRef R) const;
   int cmpAttrs(const AttributeSet L, const AttributeSet R) const;
-  int cmpRangeMetadata(const MDNode* L, const MDNode* R) const;
+  int cmpRangeMetadata(const MDNode *L, const MDNode *R) const;
   int cmpOperandBundlesSchema(const Instruction *L, const Instruction *R) const;
 
   // The two functions undergoing comparison.
@@ -445,7 +446,7 @@ private:
   /// But, we are still not able to compare operands of PHI nodes, since those
   /// could be operands from further BBs we didn't scan yet.
   /// So it's impossible to use dominance properties in general.
-  DenseMap<const Value*, int> sn_mapL, sn_mapR;
+  mutable DenseMap<const Value*, int> sn_mapL, sn_mapR;
 
   // The global state we will use
   GlobalNumberState* GlobalNumbers;
@@ -538,8 +539,8 @@ int FunctionComparator::cmpAttrs(const AttributeSet L,
   return 0;
 }
 
-int FunctionComparator::cmpRangeMetadata(const MDNode* L,
-                                         const MDNode* R) const {
+int FunctionComparator::cmpRangeMetadata(const MDNode *L,
+                                         const MDNode *R) const {
   if (L == R)
     return 0;
   if (!L)
@@ -547,7 +548,7 @@ int FunctionComparator::cmpRangeMetadata(const MDNode* L,
   if (!R)
     return 1;
   // Range metadata is a sequence of numbers. Make sure they are the same
-  // sequence. 
+  // sequence.
   // TODO: Note that as this is metadata, it is possible to drop and/or merge
   // this data when considering functions to merge. Thus this comparison would
   // return 0 (i.e. equivalent), but merging would become more complicated
@@ -557,8 +558,8 @@ int FunctionComparator::cmpRangeMetadata(const MDNode* L,
   if (int Res = cmpNumbers(L->getNumOperands(), R->getNumOperands()))
     return Res;
   for (size_t I = 0; I < L->getNumOperands(); ++I) {
-    ConstantInt* LLow = mdconst::extract<ConstantInt>(L->getOperand(I));
-    ConstantInt* RLow = mdconst::extract<ConstantInt>(R->getOperand(I));
+    ConstantInt *LLow = mdconst::extract<ConstantInt>(L->getOperand(I));
+    ConstantInt *RLow = mdconst::extract<ConstantInt>(R->getOperand(I));
     if (int Res = cmpAPInts(LLow->getValue(), RLow->getValue()))
       return Res;
   }
@@ -596,7 +597,8 @@ int FunctionComparator::cmpOperandBundlesSchema(const Instruction *L,
 /// type.
 /// 2. Compare constant contents.
 /// For more details see declaration comments.
-int FunctionComparator::cmpConstants(const Constant *L, const Constant *R) {
+int FunctionComparator::cmpConstants(const Constant *L,
+                                     const Constant *R) const {
 
   Type *TyL = L->getType();
   Type *TyR = R->getType();
@@ -793,7 +795,7 @@ int FunctionComparator::cmpConstants(const Constant *L, const Constant *R) {
   }
 }
 
-int FunctionComparator::cmpGlobalValues(GlobalValue *L, GlobalValue* R) {
+int FunctionComparator::cmpGlobalValues(GlobalValue *L, GlobalValue *R) const {
   return cmpNumbers(GlobalNumbers->getNumber(L), GlobalNumbers->getNumber(R));
 }
 
@@ -1043,13 +1045,24 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     return cmpNumbers(RMWI->getSynchScope(),
                       cast<AtomicRMWInst>(R)->getSynchScope());
   }
+  if (const PHINode *PNL = dyn_cast<PHINode>(L)) {
+    const PHINode *PNR = cast<PHINode>(R);
+    // Ensure that in addition to the incoming values being identical
+    // (checked by the caller of this function), the incoming blocks
+    // are also identical.
+    for (unsigned i = 0, e = PNL->getNumIncomingValues(); i != e; ++i) {
+      if (int Res =
+              cmpValues(PNL->getIncomingBlock(i), PNR->getIncomingBlock(i)))
+        return Res;
+    }
+  }
   return 0;
 }
 
 // Determine whether two GEP operations perform the same underlying arithmetic.
 // Read method declaration comments for more details.
 int FunctionComparator::cmpGEPs(const GEPOperator *GEPL,
-                               const GEPOperator *GEPR) {
+                                const GEPOperator *GEPR) const {
 
   unsigned int ASL = GEPL->getPointerAddressSpace();
   unsigned int ASR = GEPR->getPointerAddressSpace();
@@ -1106,7 +1119,7 @@ int FunctionComparator::cmpInlineAsm(const InlineAsm *L,
 /// this is the first time the values are seen, they're added to the mapping so
 /// that we will detect mismatches on next use.
 /// See comments in declaration for more details.
-int FunctionComparator::cmpValues(const Value *L, const Value *R) {
+int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   // Catch self-reference case.
   if (L == FnL) {
     if (R == FnR)
@@ -1149,7 +1162,7 @@ int FunctionComparator::cmpValues(const Value *L, const Value *R) {
 }
 // Test whether two basic blocks have equivalent behaviour.
 int FunctionComparator::cmpBasicBlocks(const BasicBlock *BBL,
-                                       const BasicBlock *BBR) {
+                                       const BasicBlock *BBR) const {
   BasicBlock::const_iterator InstL = BBL->begin(), InstLE = BBL->end();
   BasicBlock::const_iterator InstR = BBR->begin(), InstRE = BBR->end();
 
