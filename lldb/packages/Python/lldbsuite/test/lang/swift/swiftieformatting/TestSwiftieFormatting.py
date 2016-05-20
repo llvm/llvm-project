@@ -26,7 +26,7 @@ class TestSwiftieFormatting(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(oslist=["macosx"], bugnumber="swift.org/SR-1568")
+    @decorators.expectedFailureAll(oslist=["macosx"], bugnumber="swift.org/SR-1568;rdar://26394885")
     def test_swiftie_formatting(self):
         """Test that data formatters honor Swift conventions"""
         self.build()

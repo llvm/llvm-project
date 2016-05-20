@@ -2788,7 +2788,7 @@ Scalar::ExtractBitfield (uint32_t bit_size,
         case Scalar::e_slonglong:
         case Scalar::e_sint128:
         case Scalar::e_sint256:
-            m_integer = m_integer.ashr(bit_offset).trunc(bit_size).sext(8 * GetByteSize());
+            m_integer = m_integer.ashr(bit_offset).sextOrTrunc(bit_size).sextOrSelf(8 * GetByteSize());
             return true;
 
         case Scalar::e_uint:
@@ -2796,7 +2796,7 @@ Scalar::ExtractBitfield (uint32_t bit_size,
         case Scalar::e_ulonglong:
         case Scalar::e_uint128:
         case Scalar::e_uint256:
-            m_integer = m_integer.lshr(bit_offset).trunc(bit_size).zext(8 * GetByteSize());
+            m_integer = m_integer.lshr(bit_offset).zextOrTrunc(bit_size).zextOrSelf(8 * GetByteSize());
             return true;
     }
     return false;

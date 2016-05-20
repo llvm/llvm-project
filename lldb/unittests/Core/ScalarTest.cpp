@@ -79,3 +79,27 @@ TEST(ScalarTest, CastOperations)
     ASSERT_EQ((unsigned long long)a, a_scalar.ULongLong());
 }
 
+TEST(ScalarTest, ExtractBitfield)
+{
+    uint32_t len = sizeof(long long) * 8;
+
+    long long a1 = 0xf1f2f3f4f5f6f7f8LL;
+    long long b1 = 0xff1f2f3f4f5f6f7fLL;
+    Scalar s_scalar(a1);
+    ASSERT_TRUE(s_scalar.ExtractBitfield(0, 0));
+    ASSERT_EQ(0, memcmp(&a1, s_scalar.GetBytes(), sizeof(a1)));
+    ASSERT_TRUE(s_scalar.ExtractBitfield(len, 0));
+    ASSERT_EQ(0, memcmp(&a1, s_scalar.GetBytes(), sizeof(a1)));
+    ASSERT_TRUE(s_scalar.ExtractBitfield(len - 4, 4));
+    ASSERT_EQ(0, memcmp(&b1, s_scalar.GetBytes(), sizeof(b1)));
+
+    unsigned long long a2 = 0xf1f2f3f4f5f6f7f8ULL;
+    unsigned long long b2 = 0x0f1f2f3f4f5f6f7fULL;
+    Scalar u_scalar(a2);
+    ASSERT_TRUE(u_scalar.ExtractBitfield(0, 0));
+    ASSERT_EQ(0, memcmp(&a2, u_scalar.GetBytes(), sizeof(a2)));
+    ASSERT_TRUE(u_scalar.ExtractBitfield(len, 0));
+    ASSERT_EQ(0, memcmp(&a2, u_scalar.GetBytes(), sizeof(a2)));
+    ASSERT_TRUE(u_scalar.ExtractBitfield(len - 4, 4));
+    ASSERT_EQ(0, memcmp(&b2, u_scalar.GetBytes(), sizeof(b2)));
+}
