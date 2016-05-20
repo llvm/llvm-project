@@ -567,6 +567,11 @@ IsSwiftReferenceType (ValueObject &object)
 bool
 SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
 {
+    if (object.IsUninitializedReference())
+    {
+        str.Printf("<uninitialized>");
+        return true;
+    }
     Error error;
     if (!LoadDumpForDebugger(error))
     {
