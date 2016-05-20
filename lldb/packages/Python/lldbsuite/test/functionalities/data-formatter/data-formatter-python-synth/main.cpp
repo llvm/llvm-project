@@ -48,7 +48,7 @@ struct wrapint
 
 int main()
 {
-    foo f00_1(0);
+    foo f00_1(1);
     foo *f00_ptr = new foo(12);
     
     f00_1.a++; // Set break point at this line.

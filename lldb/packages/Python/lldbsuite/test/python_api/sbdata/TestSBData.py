@@ -186,7 +186,10 @@ class SBDataAPICase(TestBase):
         
         self.assertTrue(new_object.GetValue() == "1", 'new_object == 1')
 
-        data.SetData(error, 'A\0\0\0', data.GetByteOrder(), data.GetAddressByteSize())
+        if data.GetByteOrder() == lldb.eByteOrderBig:
+            data.SetData(error, '\0\0\0A', data.GetByteOrder(), data.GetAddressByteSize())
+        else:
+            data.SetData(error, 'A\0\0\0', data.GetByteOrder(), data.GetAddressByteSize())
         self.assertTrue(error.Success())
         
         data2 = lldb.SBData()
@@ -311,8 +314,8 @@ class SBDataAPICase(TestBase):
         self.assert_data(data2.GetSignedInt32, 4, -2)
         
         data2.SetDataFromSInt64Array([2, -2])
-        self.assert_data(data2.GetSignedInt32, 0, 2)
-        self.assert_data(data2.GetSignedInt32, 8, -2)
+        self.assert_data(data2.GetSignedInt64, 0, 2)
+        self.assert_data(data2.GetSignedInt64, 8, -2)
         
         data2.SetDataFromUInt32Array([1,2,3,4,5])
         self.assert_data(data2.GetUnsignedInt32, 0, 1)

@@ -51,7 +51,7 @@ class MemoryCacheTestCase(TestBase):
         self.assertTrue(0x00000042 == int(line.split(':')[1], 0))
 
         # Change the value of my_ints[0] in memory.
-        self.runCmd("memory write `&my_ints` AA")
+        self.runCmd("memory write -s 4 `&my_ints` AA")
 
         # Re-read the chunk of memory. The cache line should have been
         # flushed because of the 'memory write'.

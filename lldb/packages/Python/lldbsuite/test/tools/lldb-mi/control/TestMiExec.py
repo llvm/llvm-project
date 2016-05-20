@@ -234,18 +234,20 @@ class MiExecTestCase(lldbmi_testcase.MiTestCaseBase):
         # Test that --thread is optional
         self.runCmd("-exec-next-instruction --frame 0")
         self.expect("\^running")
-        self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"28\"")
+        # Depending on compiler, it can stop at different line
+        self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(28|29)\"")
 
         # Test that --frame is optional
         self.runCmd("-exec-next-instruction --thread 1")
         self.expect("\^running")
-        self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"29\"")
+        # Depending on compiler, it can stop at different line
+        self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(29|30)\"")
 
         # Test that both --thread and --frame are optional
         self.runCmd("-exec-next-instruction")
         self.expect("\^running")
         # Depending on compiler, it can stop at different line
-        self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(29|30)\"")
+        self.expect("\*stopped,reason=\"end-stepping-range\".+?main\.cpp\",line=\"(29|30|31)\"")
 
         # Test that an invalid --thread is handled
         self.runCmd("-exec-next-instruction --thread 0")

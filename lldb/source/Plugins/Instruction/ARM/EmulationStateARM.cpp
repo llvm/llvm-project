@@ -61,11 +61,15 @@ EmulationStateARM::LoadPseudoRegistersFromFrame (StackFrame &frame)
 
         if (reg_ctx->ReadRegister (reg_info, reg_value))
         {
+            uint64_t value = reg_value.GetAsUInt64();
             uint32_t idx = i - dwarf_d0;
             if (i < 16)
-                m_vfp_regs.sd_regs[idx].d_reg = reg_value.GetAsUInt64();
+            {
+                m_vfp_regs.s_regs[idx * 2] = (uint32_t)value;
+                m_vfp_regs.s_regs[idx * 2 + 1] = (uint32_t)(value >> 32);
+            }
             else
-                m_vfp_regs.d_regs[idx - 16] = reg_value.GetAsUInt64();
+                m_vfp_regs.d_regs[idx - 16] = value;
         }
         else
             success = false;
@@ -82,16 +86,18 @@ EmulationStateARM::StorePseudoRegisterValue (uint32_t reg_num, uint64_t value)
     else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31))
     {
         uint32_t idx = reg_num - dwarf_s0;
-        m_vfp_regs.sd_regs[idx / 2].s_reg[idx % 2] = (uint32_t) value;
+        m_vfp_regs.s_regs[idx] = (uint32_t)value;
     }
     else if ((dwarf_d0 <= reg_num) && (reg_num <= dwarf_d31))
     {
-        if ((reg_num - dwarf_d0) < 16)
+        uint32_t idx = reg_num - dwarf_d0;
+        if (idx < 16)
         {
-            m_vfp_regs.sd_regs[reg_num - dwarf_d0].d_reg = value;
+            m_vfp_regs.s_regs[idx * 2] = (uint32_t)value;
+            m_vfp_regs.s_regs[idx * 2 + 1] = (uint32_t)(value >> 32);
         }
         else
-            m_vfp_regs.d_regs[reg_num - dwarf_d16] = value;
+            m_vfp_regs.d_regs[idx - 16] = value;
     }
     else
         return false;
@@ -110,14 +116,15 @@ EmulationStateARM::ReadPseudoRegisterValue (uint32_t reg_num, bool &success)
     else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31))
     {
         uint32_t idx = reg_num - dwarf_s0;
-        value = m_vfp_regs.sd_regs[idx / 2].s_reg[idx % 2];
+        value = m_vfp_regs.d_regs[idx];
     }
     else if ((dwarf_d0 <= reg_num) && (reg_num <= dwarf_d31))
     {
-        if ((reg_num - dwarf_d0) < 16)
-            value = m_vfp_regs.sd_regs[reg_num - dwarf_d0].d_reg;
+        uint32_t idx = reg_num - dwarf_d0;
+        if (idx < 16)
+            value = (uint64_t)m_vfp_regs.s_regs[idx * 2] | ((uint64_t)m_vfp_regs.s_regs[idx * 2 + 1] >> 32);
         else
-            value = m_vfp_regs.d_regs[reg_num - dwarf_d16];
+            value = m_vfp_regs.d_regs[idx - 16];
     }
     else
         success = false;
@@ -131,8 +138,8 @@ EmulationStateARM::ClearPseudoRegisters ()
     for (int i = 0; i < 17; ++i)
         m_gpr[i] = 0;
     
-    for (int i = 0; i < 16; ++i)
-        m_vfp_regs.sd_regs[i].d_reg = 0;
+    for (int i = 0; i < 32; ++i)
+        m_vfp_regs.s_regs[i] = 0;
     
     for (int i = 0; i < 16; ++i)
         m_vfp_regs.d_regs[i] = 0;
@@ -145,23 +152,14 @@ EmulationStateARM::ClearPseudoMemory ()
 }
     
 bool
-EmulationStateARM::StoreToPseudoAddress (lldb::addr_t p_address, uint64_t value, uint32_t size)
+EmulationStateARM::StoreToPseudoAddress (lldb::addr_t p_address, uint32_t value)
 {
-    if (size > 8)
-        return false;
-    
-    if (size <= 4)
-        m_memory[p_address] = value;
-    else if (size == 8)
-    {
-        m_memory[p_address] = (value << 32) >> 32;
-        m_memory[p_address + 4] = value << 32;
-    }
+    m_memory[p_address] = value;
     return true;
 }
     
 uint32_t
-EmulationStateARM::ReadFromPseudoAddress (lldb::addr_t p_address, uint32_t size, bool &success)
+EmulationStateARM::ReadFromPseudoAddress (lldb::addr_t p_address, bool &success)
 {
     std::map<lldb::addr_t,uint32_t>::iterator pos;
     uint32_t ret_val = 0;
@@ -191,25 +189,31 @@ EmulationStateARM::ReadPseudoMemory (EmulateInstruction *instruction,
     EmulationStateARM *pseudo_state = (EmulationStateARM *) baton;
     if (length <= 4)
     {
-        uint32_t value = pseudo_state->ReadFromPseudoAddress (addr, length, success);
+        uint32_t value = pseudo_state->ReadFromPseudoAddress (addr, success);
         if (!success)
             return 0;
             
+        if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
+            value = llvm::ByteSwap_32 (value);
         *((uint32_t *) dst) = value;
     }
     else if (length == 8)
     {
-        uint32_t value1 = pseudo_state->ReadFromPseudoAddress (addr, 4, success);
+        uint32_t value1 = pseudo_state->ReadFromPseudoAddress (addr, success);
         if (!success)
             return 0;
             
-        uint32_t value2 = pseudo_state->ReadFromPseudoAddress (addr + 4, 4, success);
+        uint32_t value2 = pseudo_state->ReadFromPseudoAddress (addr + 4, success);
         if (!success)
             return 0;
             
-        uint64_t value64 = value2;
-        value64 = (value64 << 32) | value1;
-        *((uint64_t *) dst) = value64;
+        if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
+        {
+            value1 = llvm::ByteSwap_32 (value1);
+            value2 = llvm::ByteSwap_32 (value2);
+        }
+        ((uint32_t *) dst)[0] = value1;
+        ((uint32_t *) dst)[1] = value2;
     }
     else
         success = false;
@@ -231,13 +235,32 @@ EmulationStateARM::WritePseudoMemory (EmulateInstruction *instruction,
     if (!baton)
         return 0;
         
-    bool success;
     EmulationStateARM *pseudo_state = (EmulationStateARM *) baton;
-    uint64_t value = *((const uint64_t *) dst);
-    success = pseudo_state->StoreToPseudoAddress (addr, value, length);
-    if (success)
+
+    if (length <= 4)
+    {
+        uint32_t value = *((const uint32_t *) dst);
+        if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
+            value = llvm::ByteSwap_32 (value);
+
+        pseudo_state->StoreToPseudoAddress (addr, value);
         return length;
-        
+    }
+    else if (length == 8)
+    {
+        uint32_t value1 = ((const uint32_t *) dst)[0];
+        uint32_t value2 = ((const uint32_t *) dst)[1];
+        if (endian::InlHostByteOrder() == lldb::eByteOrderBig)
+        {
+            value1 = llvm::ByteSwap_32 (value1);
+            value2 = llvm::ByteSwap_32 (value2);
+        }
+
+        pseudo_state->StoreToPseudoAddress (addr, value1);
+        pseudo_state->StoreToPseudoAddress (addr + 4, value2);
+        return length;
+    }
+
     return 0;
 }
     
@@ -289,27 +312,16 @@ EmulationStateARM::CompareState (EmulationStateARM &other_state)
             match = false;
     }
     
-    for (int i = 0; match && i < 16; ++i)
+    for (int i = 0; match && i < 32; ++i)
     {
-        if (m_vfp_regs.sd_regs[i].s_reg[0] != other_state.m_vfp_regs.sd_regs[i].s_reg[0])
-            match = false;
-
-        if (m_vfp_regs.sd_regs[i].s_reg[1] != other_state.m_vfp_regs.sd_regs[i].s_reg[1])
+        if (m_vfp_regs.s_regs[i] != other_state.m_vfp_regs.s_regs[i])
             match = false;
     }
     
-    for (int i = 0; match && i < 32; ++i)
+    for (int i = 0; match && i < 16; ++i)
     {
-        if (i < 16)
-        {
-            if (m_vfp_regs.sd_regs[i].d_reg != other_state.m_vfp_regs.sd_regs[i].d_reg)
-                match = false;
-        }
-        else
-        {
-            if (m_vfp_regs.d_regs[i - 16] != other_state.m_vfp_regs.d_regs[i - 16])
-                match = false;
-        }
+        if (m_vfp_regs.d_regs[i] != other_state.m_vfp_regs.d_regs[i])
+            match = false;
     }
     
     return match;
@@ -355,7 +367,7 @@ EmulationStateARM::LoadStateFromDictionary (OptionValueDictionary *test_data)
             if (value_sp.get() == NULL)
                 return false;
             uint64_t value = value_sp->GetUInt64Value();
-            StoreToPseudoAddress (address, value, 4);
+            StoreToPseudoAddress (address, value);
             address = address + 4;
         }
     }

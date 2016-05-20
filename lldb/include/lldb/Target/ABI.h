@@ -16,6 +16,7 @@
 // Project includes
 #include "lldb/Core/Error.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -109,6 +110,10 @@ public:
 
     virtual bool
     RegisterIsVolatile (const RegisterInfo *reg_info) = 0;
+
+    virtual bool
+    GetFallbackRegisterLocation (const RegisterInfo *reg_info,
+                                 UnwindPlan::Row::RegisterLocation &unwind_regloc);
 
     // Should take a look at a call frame address (CFA) which is just the stack
     // pointer value upon entry to a function. ABIs usually impose alignment

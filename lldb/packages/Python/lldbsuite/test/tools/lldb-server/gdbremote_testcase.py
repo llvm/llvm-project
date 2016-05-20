@@ -1356,6 +1356,9 @@ class GdbRemoteTestCaseBase(TestBase):
         #MIPS required "3" (ADDIU, SB, LD) machine instructions for updation of variable value
         if re.match("mips",arch):
            expected_step_count = 3
+        #S390X requires "2" (LARL, MVI) machine instructions for updation of variable value
+        if re.match("s390x",arch):
+           expected_step_count = 2
         self.assertEqual(step_count, expected_step_count)
 
         # Verify we hit the next state.

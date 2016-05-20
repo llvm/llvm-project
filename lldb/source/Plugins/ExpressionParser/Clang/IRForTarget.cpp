@@ -1105,7 +1105,13 @@ IRForTarget::MaterializeInitializer (uint8_t *data, Constant *initializer)
 
     if (ConstantInt *int_initializer = dyn_cast<ConstantInt>(initializer))
     {
-        memcpy (data, int_initializer->getValue().getRawData(), m_target_data->getTypeStoreSize(initializer_type));
+        size_t constant_size = m_target_data->getTypeStoreSize(initializer_type);
+        lldb_private::Scalar scalar = int_initializer->getValue().zextOrTrunc(llvm::NextPowerOf2(constant_size) * 8);
+
+        lldb_private::Error get_data_error;
+        if (!scalar.GetAsMemoryData(data, constant_size, lldb_private::endian::InlHostByteOrder(), get_data_error))
+            return false;
+
         return true;
     }
     else if (ConstantDataArray *array_initializer = dyn_cast<ConstantDataArray>(initializer))

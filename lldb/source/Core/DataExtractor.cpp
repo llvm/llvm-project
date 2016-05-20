@@ -733,8 +733,11 @@ DataExtractor::GetMaxU64Bitfield (offset_t *offset_ptr, size_t size, uint32_t bi
     uint64_t uval64 = GetMaxU64 (offset_ptr, size);
     if (bitfield_bit_size > 0)
     {
-        if (bitfield_bit_offset > 0)
-            uval64 >>= bitfield_bit_offset;
+        int32_t lsbcount = bitfield_bit_offset;
+        if (m_byte_order == eByteOrderBig)
+            lsbcount = size * 8 - bitfield_bit_offset - bitfield_bit_size;
+        if (lsbcount > 0)
+            uval64 >>= lsbcount;
         uint64_t bitfield_mask = ((1ul << bitfield_bit_size) - 1);
         if (!bitfield_mask && bitfield_bit_offset == 0 && bitfield_bit_size == 64)
             return uval64;
@@ -749,8 +752,11 @@ DataExtractor::GetMaxS64Bitfield (offset_t *offset_ptr, size_t size, uint32_t bi
     int64_t sval64 = GetMaxS64 (offset_ptr, size);
     if (bitfield_bit_size > 0)
     {
-        if (bitfield_bit_offset > 0)
-            sval64 >>= bitfield_bit_offset;
+        int32_t lsbcount = bitfield_bit_offset;
+        if (m_byte_order == eByteOrderBig)
+            lsbcount = size * 8 - bitfield_bit_offset - bitfield_bit_size;
+        if (lsbcount > 0)
+            sval64 >>= lsbcount;
         uint64_t bitfield_mask = (((uint64_t)1) << bitfield_bit_size) - 1;
         sval64 &= bitfield_mask;
         // sign extend if needed

@@ -30,10 +30,10 @@ public:
     ReadPseudoRegisterValue (uint32_t reg_num, bool &success);
     
     bool
-    StoreToPseudoAddress (lldb::addr_t p_address, uint64_t value, uint32_t size);
+    StoreToPseudoAddress (lldb::addr_t p_address, uint32_t value);
     
     uint32_t
-    ReadFromPseudoAddress (lldb::addr_t p_address, uint32_t size, bool &success);
+    ReadFromPseudoAddress (lldb::addr_t p_address, bool &success);
     
     void
     ClearPseudoRegisters ();
@@ -82,11 +82,7 @@ private:
     uint32_t m_gpr[17];
     struct _sd_regs
     {
-        union 
-        {
-            uint32_t s_reg[2];
-            uint64_t d_reg;
-        } sd_regs[16];  // sregs 0 - 31 & dregs 0 - 15
+        uint32_t s_regs[32]; // sregs 0 - 31 & dregs 0 - 15
         
         uint64_t d_regs[16]; // dregs 16-31
  

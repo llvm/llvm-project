@@ -2118,6 +2118,14 @@ Platform::GetSoftwareBreakpointTrapOpcode(Target &target, BreakpointSite *bp_sit
         }
         break;
 
+    case llvm::Triple::systemz:
+        {
+            static const uint8_t g_hex_opcode[] = {0x00, 0x01};
+            trap_opcode = g_hex_opcode;
+            trap_opcode_size = sizeof(g_hex_opcode);
+        }
+        break;
+
     case llvm::Triple::hexagon:
         {
             static const uint8_t g_hex_opcode[] = {0x0c, 0xdb, 0x00, 0x54};

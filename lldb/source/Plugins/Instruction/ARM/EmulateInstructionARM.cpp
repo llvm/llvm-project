@@ -13683,14 +13683,14 @@ EmulateInstructionARM::TestEmulation (Stream *out_stream, ArchSpec &arch, Option
     {
         m_opcode_mode = eModeThumb;
         if (test_opcode < 0x10000)
-            m_opcode.SetOpcode16 (test_opcode, GetByteOrder());
+            m_opcode.SetOpcode16 (test_opcode, endian::InlHostByteOrder());
         else
-            m_opcode.SetOpcode32 (test_opcode, GetByteOrder());
+            m_opcode.SetOpcode32 (test_opcode, endian::InlHostByteOrder());
     }
     else if (arch.GetTriple().getArch() == llvm::Triple::arm)
     {
         m_opcode_mode = eModeARM;
-        m_opcode.SetOpcode32 (test_opcode, GetByteOrder());
+        m_opcode.SetOpcode32 (test_opcode, endian::InlHostByteOrder());
     }
     else
     {

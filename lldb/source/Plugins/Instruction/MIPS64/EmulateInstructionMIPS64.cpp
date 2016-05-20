@@ -1874,7 +1874,7 @@ EmulateInstructionMIPS64::Emulate_MSA_Branch_DF (llvm::MCInst& insn, int element
     bool success = false, branch_hit = true;
     int64_t target = 0;
     RegisterValue reg_value;
-    uint8_t * ptr = NULL;
+    const uint8_t *ptr = NULL;
 
     uint32_t wt = m_reg_info->getEncodingValue (insn.getOperand(0).getReg());
     int64_t offset = insn.getOperand(1).getImm();
@@ -1884,7 +1884,7 @@ EmulateInstructionMIPS64::Emulate_MSA_Branch_DF (llvm::MCInst& insn, int element
         return false;
 
     if (ReadRegister (eRegisterKindDWARF, dwarf_w0_mips64 + wt, reg_value))
-        ptr = (uint8_t *)reg_value.GetBytes();
+        ptr = (const uint8_t *)reg_value.GetBytes();
     else
         return false;
 
@@ -1897,15 +1897,15 @@ EmulateInstructionMIPS64::Emulate_MSA_Branch_DF (llvm::MCInst& insn, int element
                     branch_hit = false;
                 break;
             case 2:
-                if((*(uint16_t *)ptr == 0 && bnz) || (*(uint16_t *)ptr != 0 && !bnz))
+                if ((*(const uint16_t *)ptr == 0 && bnz) || (*(const uint16_t *)ptr != 0 && !bnz))
                     branch_hit = false;
                 break;
             case 4:
-                if((*(uint32_t *)ptr == 0 && bnz) || (*(uint32_t *)ptr != 0 && !bnz))
+                if ((*(const uint32_t *)ptr == 0 && bnz) || (*(const uint32_t *)ptr != 0 && !bnz))
                     branch_hit = false;
                 break;
             case 8:
-                if((*(uint64_t *)ptr == 0 && bnz) || (*(uint64_t *)ptr != 0 && !bnz))
+                if ((*(const uint64_t *)ptr == 0 && bnz) || (*(const uint64_t *)ptr != 0 && !bnz))
                     branch_hit = false;
                 break;
         }

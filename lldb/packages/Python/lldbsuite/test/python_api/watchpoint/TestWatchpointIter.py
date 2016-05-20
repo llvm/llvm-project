@@ -58,7 +58,7 @@ class WatchpointIteratorTestCase(TestBase):
         # Watch 'global' for read and write.
         value = frame0.FindValue('global', lldb.eValueTypeVariableGlobal)
         error = lldb.SBError();
-        watchpoint = value.Watch(True, True, True, error)
+        watchpoint = value.Watch(True, False, True, error)
         self.assertTrue(value and watchpoint,
                         "Successfully found the variable and set a watchpoint")
         self.DebugSBValue(value)

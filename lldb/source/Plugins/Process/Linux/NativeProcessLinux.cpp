@@ -2247,12 +2247,17 @@ NativeProcessLinux::GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size)
     // FIXME put this behind a breakpoint protocol class that can be
     // set per architecture.  Need ARM, MIPS support here.
     static const uint8_t g_i386_opcode [] = { 0xCC };
+    static const uint8_t g_s390x_opcode[] = { 0x00, 0x01 };
 
     switch (m_arch.GetMachine ())
     {
         case llvm::Triple::x86:
         case llvm::Triple::x86_64:
             actual_opcode_size = static_cast<uint32_t> (sizeof(g_i386_opcode));
+            return Error ();
+
+        case llvm::Triple::systemz:
+            actual_opcode_size = static_cast<uint32_t> (sizeof(g_s390x_opcode));
             return Error ();
 
         case llvm::Triple::arm:
@@ -2294,6 +2299,7 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode (size_t trap_opcode_size_hin
     static const uint8_t g_i386_opcode [] = { 0xCC };
     static const uint8_t g_mips64_opcode[] = { 0x00, 0x00, 0x00, 0x0d };
     static const uint8_t g_mips64el_opcode[] = { 0x0d, 0x00, 0x00, 0x00 };
+    static const uint8_t g_s390x_opcode[] = { 0x00, 0x01 };
     static const uint8_t g_thumb_breakpoint_opcode[] = { 0x01, 0xde };
 
     switch (m_arch.GetMachine ())
@@ -2335,6 +2341,11 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode (size_t trap_opcode_size_hin
     case llvm::Triple::mips64el:
         trap_opcode_bytes = g_mips64el_opcode;
         actual_opcode_size = sizeof(g_mips64el_opcode);
+        return Error ();
+
+    case llvm::Triple::systemz:
+        trap_opcode_bytes = g_s390x_opcode;
+        actual_opcode_size = sizeof(g_s390x_opcode);
         return Error ();
 
     default:

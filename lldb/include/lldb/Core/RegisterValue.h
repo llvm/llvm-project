@@ -354,9 +354,6 @@ namespace lldb_private {
               lldb::Format format,
               uint32_t reg_name_right_align_at = 0) const;
 
-        void *
-        GetBytes ();
-        
         const void *
         GetBytes () const;
 

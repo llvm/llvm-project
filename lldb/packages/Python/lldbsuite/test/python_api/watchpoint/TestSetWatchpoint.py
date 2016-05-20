@@ -28,6 +28,7 @@ class SetWatchpointAPITestCase(TestBase):
     @add_test_categories(['pyapi'])
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
     def test_watch_val(self):
         """Exercise SBValue.Watch() API to set a watchpoint."""
         self.build()

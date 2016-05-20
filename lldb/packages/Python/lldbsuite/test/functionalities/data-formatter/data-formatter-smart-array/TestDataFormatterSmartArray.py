@@ -36,6 +36,8 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        process = self.dbg.GetSelectedTarget().GetProcess()
+
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
             substrs = ['stopped',
@@ -311,39 +313,81 @@ class SmartArrayDataFormatterTestCase(TestBase):
         self.runCmd("type summary add --summary-string \"arr = ${var%y}\" \"float [7]\"")
         self.runCmd("type summary add --summary-string \"arr = ${var%y}\" \"int [5]\"")
 
-        self.expect("frame variable flarr",
-                    substrs = ['flarr = arr =',
-                               '00 00 9d 42,00 80 9a 42,00 00 9c 42,00 40 98 42,00 80 99 42,00 c0 99 42,00 00 9a 42'])
-        
-        self.expect("frame variable other.flarr",
-                    substrs = ['flarr = arr =',
-                               '00 00 cc 41,00 00 ca 41,00 00 c9 41,00 00 d6 41,00 00 db 41,00 00 dc 41,00 00 d1 41'])
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable flarr",
+                        substrs = ['flarr = arr =',
+                                   '00 00 9d 42,00 80 9a 42,00 00 9c 42,00 40 98 42,00 80 99 42,00 c0 99 42,00 00 9a 42'])
+        else:
+            self.expect("frame variable flarr",
+                        substrs = ['flarr = arr =',
+                                   '42 9d 00 00,42 9a 80 00,42 9c 00 00,42 98 40 00,42 99 80 00,42 99 c0 00,42 9a 00 00'])
 
-        self.expect("frame variable intarr",
-                    substrs = ['intarr = arr =',
-                               '01 00 00 00,01 00 00 00,02 00 00 00,03 00 00 00,05 00 00 00'])
-        
-        self.expect("frame variable other.intarr",
-                    substrs = ['intarr = arr = ',
-                               '09 00 00 00,08 00 00 00,07 00 00 00,06 00 00 00,05 00 00 00'])
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable other.flarr",
+                        substrs = ['flarr = arr =',
+                                   '00 00 cc 41,00 00 ca 41,00 00 c9 41,00 00 d6 41,00 00 db 41,00 00 dc 41,00 00 d1 41'])
+        else:
+            self.expect("frame variable other.flarr",
+                        substrs = ['flarr = arr =',
+                                   '41 cc 00 00,41 ca 00 00,41 c9 00 00,41 d6 00 00,41 db 00 00,41 dc 00 00,41 d1 00 00'])
+
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable intarr",
+                        substrs = ['intarr = arr =',
+                                   '01 00 00 00,01 00 00 00,02 00 00 00,03 00 00 00,05 00 00 00'])
+        else:
+            self.expect("frame variable intarr",
+                        substrs = ['intarr = arr =',
+                                   '00 00 00 01,00 00 00 01,00 00 00 02,00 00 00 03,00 00 00 05'])
+
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable other.intarr",
+                        substrs = ['intarr = arr = ',
+                                   '09 00 00 00,08 00 00 00,07 00 00 00,06 00 00 00,05 00 00 00'])
+        else:
+            self.expect("frame variable other.intarr",
+                        substrs = ['intarr = arr = ',
+                                   '00 00 00 09,00 00 00 08,00 00 00 07,00 00 00 06,00 00 00 05'])
                     
         self.runCmd("type summary add --summary-string \"arr = ${var%Y}\" \"float [7]\"")
         self.runCmd("type summary add --summary-string \"arr = ${var%Y}\" \"int [5]\"")
             
-        self.expect("frame variable flarr",
-                    substrs = ['flarr = arr =',
-                               '00 00 9d 42             ...B,00 80 9a 42             ...B,00 00 9c 42             ...B,00 40 98 42             .@.B,00 80 99 42             ...B,00 c0 99 42             ...B,00 00 9a 42             ...B'])
-        
-        self.expect("frame variable other.flarr",
-                    substrs = ['flarr = arr =',
-                               '00 00 cc 41             ...A,00 00 ca 41             ...A,00 00 c9 41             ...A,00 00 d6 41             ...A,00 00 db 41             ...A,00 00 dc 41             ...A,00 00 d1 41             ...A'])
-        
-        self.expect("frame variable intarr",
-                    substrs = ['intarr = arr =',
-                               '....,01 00 00 00',
-                               '....,05 00 00 00'])
-        
-        self.expect("frame variable other.intarr",
-                    substrs = ['intarr = arr = ',
-                               '09 00 00 00',
-                               '....,07 00 00 00'])
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable flarr",
+                        substrs = ['flarr = arr =',
+                                   '00 00 9d 42             ...B,00 80 9a 42             ...B,00 00 9c 42             ...B,00 40 98 42             .@.B,00 80 99 42             ...B,00 c0 99 42             ...B,00 00 9a 42             ...B'])
+        else:
+            self.expect("frame variable flarr",
+                        substrs = ['flarr = arr =',
+                                   '42 9d 00 00             B...,42 9a 80 00             B...,42 9c 00 00             B...,42 98 40 00             B.@.,42 99 80 00             B...,42 99 c0 00             B...,42 9a 00 00             B...'])
+
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable other.flarr",
+                        substrs = ['flarr = arr =',
+                                   '00 00 cc 41             ...A,00 00 ca 41             ...A,00 00 c9 41             ...A,00 00 d6 41             ...A,00 00 db 41             ...A,00 00 dc 41             ...A,00 00 d1 41             ...A'])
+        else:
+            self.expect("frame variable other.flarr",
+                        substrs = ['flarr = arr =',
+                                   '41 cc 00 00             A...,41 ca 00 00             A...,41 c9 00 00             A...,41 d6 00 00             A...,41 db 00 00             A...,41 dc 00 00             A...,41 d1 00 00             A...'])
+
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable intarr",
+                        substrs = ['intarr = arr =',
+                                   '....,01 00 00 00',
+                                   '....,05 00 00 00'])
+        else:
+            self.expect("frame variable intarr",
+                        substrs = ['intarr = arr =',
+                                   '....,00 00 00 01',
+                                   '....,00 00 00 05'])
+
+        if process.GetByteOrder() == lldb.eByteOrderLittle:
+            self.expect("frame variable other.intarr",
+                        substrs = ['intarr = arr = ',
+                                   '09 00 00 00',
+                                   '....,07 00 00 00'])
+        else:
+            self.expect("frame variable other.intarr",
+                        substrs = ['intarr = arr = ',
+                                   '00 00 00 09',
+                                   '....,00 00 00 07'])

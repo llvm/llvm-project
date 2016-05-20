@@ -73,6 +73,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/RegularExpression.h"
+#include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
@@ -808,8 +809,8 @@ ClangASTContext::GetBuiltinTypeForEncodingAndBitSize (ASTContext *ast, Encoding 
         break;
         
     case eEncodingSint:
-        if (QualTypeMatchesBitSize (bit_size, ast, ast->CharTy))
-            return CompilerType (ast, ast->CharTy);
+        if (QualTypeMatchesBitSize (bit_size, ast, ast->SignedCharTy))
+            return CompilerType (ast, ast->SignedCharTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->ShortTy))
             return CompilerType (ast, ast->ShortTy);
         if (QualTypeMatchesBitSize (bit_size, ast, ast->IntTy))
@@ -6215,8 +6216,9 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                                                         {
                                                             clang::CharUnits base_offset_offset = itanium_vtable_ctx->getVirtualBaseOffsetOffset(cxx_record_decl, base_class_decl);
                                                             const lldb::addr_t base_offset_addr = vtable_ptr + base_offset_offset.getQuantity();
-                                                            const uint32_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, 4, UINT32_MAX, err);
-                                                            if (base_offset != UINT32_MAX)
+                                                            const uint32_t base_offset_size = process->GetAddressByteSize();
+                                                            const uint64_t base_offset = process->ReadUnsignedIntegerFromMemory(base_offset_addr, base_offset_size, UINT32_MAX, err);
+                                                            if (base_offset < UINT32_MAX)
                                                             {
                                                                 handled = true;
                                                                 bit_offset = base_offset * 8;
@@ -8790,18 +8792,10 @@ ClangASTContext::ConvertStringToFloatValue (lldb::opaque_compiler_type_t type, c
             const uint64_t byte_size = bit_size / 8;
             if (dst_size >= byte_size)
             {
-                if (bit_size == sizeof(float)*8)
-                {
-                    float float32 = ap_float.convertToFloat();
-                    ::memcpy (dst, &float32, byte_size);
+                Scalar scalar = ap_float.bitcastToAPInt().zextOrTrunc(llvm::NextPowerOf2(byte_size) * 8);
+                lldb_private::Error get_data_error;
+                if (scalar.GetAsMemoryData(dst, byte_size, lldb_private::endian::InlHostByteOrder(), get_data_error))
                     return byte_size;
-                }
-                else if (bit_size >= 64)
-                {
-                    llvm::APInt ap_int(ap_float.bitcastToAPInt());
-                    ::memcpy (dst, ap_int.getRawData(), byte_size);
-                    return byte_size;
-                }
             }
         }
     }

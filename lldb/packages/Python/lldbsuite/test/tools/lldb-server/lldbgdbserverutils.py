@@ -387,7 +387,10 @@ def pack_register_hex(endian, value, byte_size=None):
         return retval
 
     elif endian == 'big':
-        retval = value.encode("hex")
+        retval = ""
+        while value != 0:
+            retval = "{:02x}".format(value & 0xff) + retval
+            value = value >> 8
         if byte_size:
             # Add zero-fill to the left/front (MSB side) of the value.
             retval = ("00" * (byte_size - len(retval)/2)) + retval

@@ -113,6 +113,8 @@ class BreakpointConditionsTestCase(TestBase):
             self.runCmd("breakpoint modify -c ($r0&&i)")
         elif re.match("mips",arch):
             self.runCmd("breakpoint modify -c ($r2&&i)")
+        elif arch in ['s390x']:
+            self.runCmd("breakpoint modify -c ($r2&&i)")
         self.runCmd("run")
 
         self.expect("process status", PROCESS_STOPPED,

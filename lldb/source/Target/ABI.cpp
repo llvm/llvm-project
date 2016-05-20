@@ -205,3 +205,27 @@ ABI::PrepareTrivialCall (Thread &thread,
     assert( !"Should never get here!" );
     return false;
 }
+
+bool
+ABI::GetFallbackRegisterLocation (const RegisterInfo *reg_info,
+                                  UnwindPlan::Row::RegisterLocation &unwind_regloc)
+{
+    // Did the UnwindPlan fail to give us the caller's stack pointer?
+    // The stack pointer is defined to be the same as THIS frame's CFA, so return the CFA value as
+    // the caller's stack pointer.  This is true on x86-32/x86-64 at least.
+    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_SP)
+    {
+        unwind_regloc.SetIsCFAPlusOffset(0);
+        return true;
+    }
+
+    // If a volatile register is being requested, we don't want to forward the next frame's register contents
+    // up the stack -- the register is not retrievable at this frame.
+    if (RegisterIsVolatile(reg_info))
+    {
+        unwind_regloc.SetUndefined();
+        return true;
+    }
+
+    return false;
+}
