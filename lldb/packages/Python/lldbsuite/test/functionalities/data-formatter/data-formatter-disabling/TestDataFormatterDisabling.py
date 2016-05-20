@@ -62,6 +62,8 @@ class DataFormatterDisablingTestCase(TestBase):
 
         self.expect('frame variable string1', matching=False, substrs = ['hello world'])
 
+        self.expect('type summary list', substrs=['Category: system (disabled)'])
+
         self.expect('type category list', substrs = ['system','disabled',])
         
         # now enable and check that we are back to normal

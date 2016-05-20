@@ -262,10 +262,10 @@ bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) const {
     return false;
 
   if (Verify) {
-    DetectionContextMap.erase(&R);
-    const auto &It = DetectionContextMap.insert(
-        std::make_pair(&R, DetectionContext(const_cast<Region &>(R), *AA,
-                                            false /*verifying*/)));
+    DetectionContextMap.erase(getBBPairForRegion(&R));
+    const auto &It = DetectionContextMap.insert(std::make_pair(
+        getBBPairForRegion(&R),
+        DetectionContext(const_cast<Region &>(R), *AA, false /*verifying*/)));
     DetectionContext &Context = It.first->second;
     return isValidRegion(Context);
   }
@@ -274,19 +274,16 @@ bool ScopDetection::isMaxRegionInScop(const Region &R, bool Verify) const {
 }
 
 std::string ScopDetection::regionIsInvalidBecause(const Region *R) const {
-  if (!RejectLogs.count(R))
-    return "";
-
   // Get the first error we found. Even in keep-going mode, this is the first
   // reason that caused the candidate to be rejected.
-  RejectLog Errors = RejectLogs.at(R);
+  auto *Log = lookupRejectionLog(R);
 
   // This can happen when we marked a region invalid, but didn't track
   // an error for it.
-  if (Errors.size() == 0)
+  if (!Log || !Log->hasErrors())
     return "";
 
-  RejectReasonPtr RR = *Errors.begin();
+  RejectReasonPtr RR = *Log->begin();
   return RR->getMessage();
 }
 
@@ -1093,7 +1090,7 @@ Region *ScopDetection::expandRegion(Region &R) {
 
   while (ExpandedRegion) {
     const auto &It = DetectionContextMap.insert(std::make_pair(
-        ExpandedRegion.get(),
+        getBBPairForRegion(ExpandedRegion.get()),
         DetectionContext(*ExpandedRegion, *AA, false /*verifying*/)));
     DetectionContext &Context = It.first->second;
     DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
@@ -1156,12 +1153,11 @@ unsigned ScopDetection::removeCachedResultsRecursively(const Region &R) {
 
 void ScopDetection::removeCachedResults(const Region &R) {
   ValidRegions.remove(&R);
-  DetectionContextMap.erase(&R);
 }
 
 void ScopDetection::findScops(Region &R) {
-  const auto &It = DetectionContextMap.insert(
-      std::make_pair(&R, DetectionContext(R, *AA, false /*verifying*/)));
+  const auto &It = DetectionContextMap.insert(std::make_pair(
+      getBBPairForRegion(&R), DetectionContext(R, *AA, false /*verifying*/)));
   DetectionContext &Context = It.first->second;
 
   bool RegionIsValid = false;
@@ -1171,9 +1167,6 @@ void ScopDetection::findScops(Region &R) {
     RegionIsValid = isValidRegion(Context);
 
   bool HasErrors = !RegionIsValid || Context.Log.size() > 0;
-
-  if (PollyTrackFailures && HasErrors)
-    RejectLogs.insert(std::make_pair(&R, Context.Log));
 
   if (HasErrors) {
     removeCachedResults(R);
@@ -1198,14 +1191,14 @@ void ScopDetection::findScops(Region &R) {
     ToExpand.push_back(SubRegion.get());
 
   for (Region *CurrentRegion : ToExpand) {
-    // Skip regions that had errors.
-    bool HadErrors = RejectLogs.hasErrors(CurrentRegion);
-    if (HadErrors)
-      continue;
-
     // Skip invalid regions. Regions may become invalid, if they are element of
     // an already expanded region.
     if (!ValidRegions.count(CurrentRegion))
+      continue;
+
+    // Skip regions that had errors.
+    bool HadErrors = lookupRejectionLog(CurrentRegion)->hasErrors();
+    if (HadErrors)
       continue;
 
     Region *ExpandedR = expandRegion(*CurrentRegion);
@@ -1269,6 +1262,26 @@ bool ScopDetection::hasSufficientCompute(DetectionContext &Context,
   return InstCount >= ProfitabilityMinPerLoopInstructions;
 }
 
+bool ScopDetection::hasPossiblyDistributableLoop(
+    DetectionContext &Context) const {
+  for (auto *BB : Context.CurRegion.blocks()) {
+    auto *L = LI->getLoopFor(BB);
+    if (!Context.CurRegion.contains(L))
+      continue;
+    if (Context.BoxedLoopsSet.count(L))
+      continue;
+    unsigned StmtsWithStoresInLoops = 0;
+    for (auto *LBB : L->blocks()) {
+      bool MemStore = false;
+      for (auto &I : *LBB)
+        MemStore |= isa<StoreInst>(&I);
+      StmtsWithStoresInLoops += MemStore;
+    }
+    return (StmtsWithStoresInLoops > 1);
+  }
+  return false;
+}
+
 bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
@@ -1286,6 +1299,10 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   // Scops with at least two loops may allow either loop fusion or tiling and
   // are consequently interesting to look at.
   if (NumAffineLoops >= 2)
+    return true;
+
+  // A loop with multiple non-trivial blocks migt be amendable to distribution.
+  if (NumAffineLoops == 1 && hasPossiblyDistributableLoop(Context))
     return true;
 
   // Scops that contain a loop with a non-trivial amount of computation per
@@ -1332,9 +1349,6 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
     return invalid<ReportIrreducibleRegion>(Context, /*Assert=*/true,
                                             &CurRegion, DbgLoc);
 
-  if (!isProfitableRegion(Context))
-    return false;
-
   DEBUG(dbgs() << "OK\n");
   return true;
 }
@@ -1358,31 +1372,20 @@ void ScopDetection::printLocations(llvm::Function &F) {
   }
 }
 
-void ScopDetection::emitMissedRemarksForValidRegions(const Function &F) {
-  for (const Region *R : ValidRegions) {
-    const Region *Parent = R->getParent();
-    if (Parent && !Parent->isTopLevelRegion() && RejectLogs.count(Parent))
-      emitRejectionRemarks(F, RejectLogs.at(Parent));
+void ScopDetection::emitMissedRemarks(const Function &F) {
+  for (auto &DIt : DetectionContextMap) {
+    auto &DC = DIt.getSecond();
+    if (DC.Log.hasErrors())
+      emitRejectionRemarks(DIt.getFirst(), DC.Log);
   }
 }
 
-void ScopDetection::emitMissedRemarksForLeaves(const Function &F,
-                                               const Region *R) {
-  for (const std::unique_ptr<Region> &Child : *R) {
-    bool IsValid = DetectionContextMap.count(Child.get());
-    if (IsValid)
-      continue;
-
-    bool IsLeaf = Child->begin() == Child->end();
-    if (!IsLeaf)
-      emitMissedRemarksForLeaves(F, Child.get());
-    else {
-      if (RejectLogs.count(Child.get())) {
-        emitRejectionRemarks(F, RejectLogs.at(Child.get()));
-      }
-    }
-  }
-}
+/// @brief Enum for coloring BBs in Region.
+///
+/// WHITE - Unvisited BB in DFS walk.
+/// GREY - BBs which are currently on the DFS stack for processing.
+/// BLACK - Visited and completely processed BB.
+enum Color { WHITE, GREY, BLACK };
 
 bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
   BasicBlock *REntry = R.getEntry();
@@ -1398,10 +1401,10 @@ bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
 
   // Initialize the map for all BB with WHITE color.
   for (auto *BB : R.blocks())
-    BBColorMap[BB] = ScopDetection::WHITE;
+    BBColorMap[BB] = WHITE;
 
   // Process the entry block of the Region.
-  BBColorMap[CurrBB] = ScopDetection::GREY;
+  BBColorMap[CurrBB] = GREY;
   DFSStack.push(std::make_pair(CurrBB, 0));
 
   while (!DFSStack.empty()) {
@@ -1422,15 +1425,15 @@ bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
         continue;
 
       // WHITE indicates an unvisited BB in DFS walk.
-      if (BBColorMap[SuccBB] == ScopDetection::WHITE) {
+      if (BBColorMap[SuccBB] == WHITE) {
         // Push the current BB and the index of the next child to be visited.
         DFSStack.push(std::make_pair(CurrBB, I + 1));
         // Push the next BB to be processed.
         DFSStack.push(std::make_pair(SuccBB, 0));
         // First time the BB is being processed.
-        BBColorMap[SuccBB] = ScopDetection::GREY;
+        BBColorMap[SuccBB] = GREY;
         break;
-      } else if (BBColorMap[SuccBB] == ScopDetection::GREY) {
+      } else if (BBColorMap[SuccBB] == GREY) {
         // GREY indicates a loop in the control flow.
         // If the destination dominates the source, it is a natural loop
         // else, an irreducible control flow in the region is detected.
@@ -1445,7 +1448,7 @@ bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
     // If all children of current BB have been processed,
     // then mark that BB as fully processed.
     if (AdjacentBlockIndex == NSucc)
-      BBColorMap[CurrBB] = ScopDetection::BLACK;
+      BBColorMap[CurrBB] = BLACK;
   }
 
   return true;
@@ -1472,54 +1475,42 @@ bool ScopDetection::runOnFunction(llvm::Function &F) {
 
   findScops(*TopRegion);
 
-  // Only makes sense when we tracked errors.
-  if (PollyTrackFailures) {
-    emitMissedRemarksForValidRegions(F);
-    emitMissedRemarksForLeaves(F, TopRegion);
+  // Prune non-profitable regions.
+  for (auto &DIt : DetectionContextMap) {
+    auto &DC = DIt.getSecond();
+    if (DC.Log.hasErrors())
+      continue;
+    if (!ValidRegions.count(&DC.CurRegion))
+      continue;
+    if (isProfitableRegion(DC))
+      continue;
+
+    ValidRegions.remove(&DC.CurRegion);
   }
+
+  // Only makes sense when we tracked errors.
+  if (PollyTrackFailures)
+    emitMissedRemarks(F);
 
   if (ReportLevel)
     printLocations(F);
 
-  assert(ValidRegions.size() == DetectionContextMap.size() &&
+  assert(ValidRegions.size() <= DetectionContextMap.size() &&
          "Cached more results than valid regions");
   return false;
 }
 
-bool ScopDetection::isNonAffineSubRegion(const Region *SubR,
-                                         const Region *ScopR) const {
-  const DetectionContext *DC = getDetectionContext(ScopR);
-  assert(DC && "ScopR is no valid region!");
-  return DC->NonAffineSubRegionSet.count(SubR);
-}
-
 const ScopDetection::DetectionContext *
 ScopDetection::getDetectionContext(const Region *R) const {
-  auto DCMIt = DetectionContextMap.find(R);
+  auto DCMIt = DetectionContextMap.find(getBBPairForRegion(R));
   if (DCMIt == DetectionContextMap.end())
     return nullptr;
   return &DCMIt->second;
 }
 
-const ScopDetection::BoxedLoopsSetTy *
-ScopDetection::getBoxedLoops(const Region *R) const {
+const RejectLog *ScopDetection::lookupRejectionLog(const Region *R) const {
   const DetectionContext *DC = getDetectionContext(R);
-  assert(DC && "ScopR is no valid region!");
-  return &DC->BoxedLoopsSet;
-}
-
-const MapInsnToMemAcc *
-ScopDetection::getInsnToMemAccMap(const Region *R) const {
-  const DetectionContext *DC = getDetectionContext(R);
-  assert(DC && "ScopR is no valid region!");
-  return &DC->InsnToMemAcc;
-}
-
-const InvariantLoadsSetTy *
-ScopDetection::getRequiredInvariantLoads(const Region *R) const {
-  const DetectionContext *DC = getDetectionContext(R);
-  assert(DC && "ScopR is no valid region!");
-  return &DC->RequiredILS;
+  return DC ? &DC->Log : nullptr;
 }
 
 void polly::ScopDetection::verifyRegion(const Region &R) const {
@@ -1555,7 +1546,6 @@ void ScopDetection::print(raw_ostream &OS, const Module *) const {
 }
 
 void ScopDetection::releaseMemory() {
-  RejectLogs.clear();
   ValidRegions.clear();
   DetectionContextMap.clear();
 

@@ -24,7 +24,7 @@ movl bar@GOTPCREL(%rip), %eax
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
-// CHECK-NEXT:     0x2090 R_X86_64_GLOB_DAT foo 0x0
 // CHECK-NEXT:     0x2098 R_X86_64_GLOB_DAT bar 0x0
+// CHECK-NEXT:     0x2090 R_X86_64_GLOB_DAT foo 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

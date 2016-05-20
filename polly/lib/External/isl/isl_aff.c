@@ -1718,10 +1718,9 @@ __isl_give isl_aff *isl_aff_ceil(__isl_take isl_aff *aff)
  * The expansion itself is given by "exp" while the resulting
  * list of divs is given by "div".
  */
-__isl_give isl_aff *isl_aff_expand_divs( __isl_take isl_aff *aff,
+__isl_give isl_aff *isl_aff_expand_divs(__isl_take isl_aff *aff,
 	__isl_take isl_mat *div, int *exp)
 {
-	int i, j;
 	int old_n_div;
 	int new_n_div;
 	int offset;
@@ -1732,30 +1731,12 @@ __isl_give isl_aff *isl_aff_expand_divs( __isl_take isl_aff *aff,
 
 	old_n_div = isl_local_space_dim(aff->ls, isl_dim_div);
 	new_n_div = isl_mat_rows(div);
-	if (new_n_div < old_n_div)
-		isl_die(isl_mat_get_ctx(div), isl_error_invalid,
-			"not an expansion", goto error);
-
-	aff->v = isl_vec_extend(aff->v, aff->v->size + new_n_div - old_n_div);
-	if (!aff->v)
-		goto error;
-
 	offset = 1 + isl_local_space_offset(aff->ls, isl_dim_div);
-	j = old_n_div - 1;
-	for (i = new_n_div - 1; i >= 0; --i) {
-		if (j >= 0 && exp[j] == i) {
-			if (i != j)
-				isl_int_swap(aff->v->el[offset + i],
-					     aff->v->el[offset + j]);
-			j--;
-		} else
-			isl_int_set_si(aff->v->el[offset + i], 0);
-	}
 
-	aff->ls = isl_local_space_replace_divs(aff->ls, isl_mat_copy(div));
-	if (!aff->ls)
-		goto error;
-	isl_mat_free(div);
+	aff->v = isl_vec_expand(aff->v, offset, old_n_div, exp, new_n_div);
+	aff->ls = isl_local_space_replace_divs(aff->ls, div);
+	if (!aff->v || !aff->ls)
+		return isl_aff_free(aff);
 	return aff;
 error:
 	isl_aff_free(aff);
@@ -2342,6 +2323,26 @@ __isl_give isl_set *isl_aff_le_set(__isl_take isl_aff *aff1,
 	__isl_take isl_aff *aff2)
 {
 	return isl_aff_ge_set(aff2, aff1);
+}
+
+/* Return a basic set containing those elements in the shared space
+ * of aff1 and aff2 where aff1 and aff2 are equal.
+ */
+__isl_give isl_basic_set *isl_aff_eq_basic_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2)
+{
+	aff1 = isl_aff_sub(aff1, aff2);
+
+	return isl_aff_zero_basic_set(aff1);
+}
+
+/* Return a set containing those elements in the shared space
+ * of aff1 and aff2 where aff1 and aff2 are equal.
+ */
+__isl_give isl_set *isl_aff_eq_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2)
+{
+	return isl_set_from_basic_set(isl_aff_eq_basic_set(aff1, aff2));
 }
 
 __isl_give isl_aff *isl_aff_add_on_domain(__isl_keep isl_set *dom,
@@ -5504,29 +5505,44 @@ __isl_give isl_multi_aff *isl_multi_aff_pullback_multi_aff(
 
 /* Extend the local space of "dst" to include the divs
  * in the local space of "src".
+ *
+ * If "src" does not have any divs or if the local spaces of "dst" and
+ * "src" are the same, then no extension is required.
  */
 __isl_give isl_aff *isl_aff_align_divs(__isl_take isl_aff *dst,
 	__isl_keep isl_aff *src)
 {
 	isl_ctx *ctx;
+	int src_n_div, dst_n_div;
 	int *exp1 = NULL;
 	int *exp2 = NULL;
+	isl_bool equal;
 	isl_mat *div;
 
 	if (!src || !dst)
 		return isl_aff_free(dst);
 
 	ctx = isl_aff_get_ctx(src);
-	if (!isl_space_is_equal(src->ls->dim, dst->ls->dim))
+	equal = isl_local_space_has_equal_space(src->ls, dst->ls);
+	if (equal < 0)
+		return isl_aff_free(dst);
+	if (!equal)
 		isl_die(ctx, isl_error_invalid,
 			"spaces don't match", goto error);
 
-	if (src->ls->div->n_row == 0)
+	src_n_div = isl_local_space_dim(src->ls, isl_dim_div);
+	if (src_n_div == 0)
+		return dst;
+	equal = isl_local_space_is_equal(src->ls, dst->ls);
+	if (equal < 0)
+		return isl_aff_free(dst);
+	if (equal)
 		return dst;
 
-	exp1 = isl_alloc_array(ctx, int, src->ls->div->n_row);
-	exp2 = isl_alloc_array(ctx, int, dst->ls->div->n_row);
-	if (!exp1 || (dst->ls->div->n_row && !exp2))
+	dst_n_div = isl_local_space_dim(dst->ls, isl_dim_div);
+	exp1 = isl_alloc_array(ctx, int, src_n_div);
+	exp2 = isl_alloc_array(ctx, int, dst_n_div);
+	if (!exp1 || (dst_n_div && !exp2))
 		goto error;
 
 	div = isl_merge_divs(src->ls->div, dst->ls->div, exp1, exp2);

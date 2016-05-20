@@ -137,6 +137,7 @@
     extern omp_proc_bind_t __KAI_KMPC_CONVENTION omp_get_proc_bind (void);
 
     extern void * __KAI_KMPC_CONVENTION  kmp_malloc  (size_t);
+    extern void * __KAI_KMPC_CONVENTION  kmp_aligned_malloc  (size_t, size_t);
     extern void * __KAI_KMPC_CONVENTION  kmp_calloc  (size_t, size_t);
     extern void * __KAI_KMPC_CONVENTION  kmp_realloc (void *, size_t);
     extern void   __KAI_KMPC_CONVENTION  kmp_free    (void *);

@@ -148,6 +148,7 @@ public:
     PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
 
     IslNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, S);
+    IslExprBuilder &ExprBuilder = NodeBuilder.getExprBuilder();
 
     // Only build the run-time condition and parameters _after_ having
     // introduced the conditional branch. This is important as the conditional
@@ -191,7 +192,13 @@ public:
 
       NodeBuilder.addParameters(S.getContext());
 
-      Value *RTC = buildRTC(Builder, NodeBuilder.getExprBuilder());
+      ExprBuilder.setTrackOverflow(true);
+      Value *RTC = buildRTC(Builder, ExprBuilder);
+      Value *OverflowHappened = Builder.CreateNot(
+          ExprBuilder.getOverflowState(), "polly.rtc.overflown");
+      RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");
+      ExprBuilder.setTrackOverflow(false);
+
       Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
       Builder.SetInsertPoint(&StartBlock->front());
 

@@ -325,6 +325,7 @@ def parseOptionsAndInitTestdirs():
         if args.s.startswith('-'):
             usage(parser)
         configuration.sdir_name = args.s
+    configuration.session_file_format = args.session_file_format
 
     if args.t:
         os.environ['LLDB_COMMAND_TRACE'] = 'YES'
@@ -656,16 +657,15 @@ def setupSysPath():
         if not lldbPythonDir:
             if platform.system() == "Darwin":
                 python_resource_dir = ['LLDB.framework', 'Resources', 'Python']
-                outputPaths = getXcodeOutputPaths()
+                outputPaths = getXcodeOutputPaths(lldbRootDirectory)
                 for outputPath in outputPaths:
-                    candidatePath = os.path.join(outputPath, python_resource_dir)
+                    candidatePath = os.path.join(outputPath, *python_resource_dir)
                     if os.path.isfile(os.path.join(candidatePath, init_in_python_dir)):
                         lldbPythonDir = candidatePath
                         break
 
                 if not lldbPythonDir:
-                    print('This script requires lldb.py to be in either ' + dbgPath + ',', end=' ')
-                    print(relPath + ', or ' + baiPath + '. Some tests might fail.')
+                    print("lldb.py is not found, some tests may fail.")
             else:
                 print("Unable to load lldb extension module.  Possible reasons for this include:")
                 print("  1) LLDB was built with LLDB_DISABLE_PYTHON=1")

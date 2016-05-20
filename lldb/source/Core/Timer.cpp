@@ -8,12 +8,12 @@
 //===----------------------------------------------------------------------===//
 #include "lldb/Core/Timer.h"
 
-#include <map>
-#include <vector>
 #include <algorithm>
+#include <map>
+#include <mutex>
+#include <vector>
 
 #include "lldb/Core/Stream.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/Host.h"
 
 #include <stdio.h>
@@ -52,11 +52,10 @@ GetFileMutex()
     return *g_file_mutex_ptr;
 }
 
-
-static Mutex &
+static std::mutex &
 GetCategoryMutex()
 {
-    static Mutex g_category_mutex(Mutex::eMutexTypeNormal);
+    static std::mutex g_category_mutex;
     return g_category_mutex;
 }
 
@@ -169,7 +168,7 @@ Timer::~Timer()
         }
 
         // Keep total results for each category so we can dump results.
-        Mutex::Locker locker (GetCategoryMutex());
+        std::lock_guard<std::mutex> guard(GetCategoryMutex());
         TimerCategoryMap &category_map = GetCategoryMap();
         category_map[m_category] += timer_nsec_uint;
     }
@@ -240,7 +239,7 @@ CategoryMapIteratorSortCriterion (const TimerCategoryMap::const_iterator& lhs, c
 void
 Timer::ResetCategoryTimes ()
 {
-    Mutex::Locker locker (GetCategoryMutex());
+    std::lock_guard<std::mutex> guard(GetCategoryMutex());
     TimerCategoryMap &category_map = GetCategoryMap();
     category_map.clear();
 }
@@ -248,7 +247,7 @@ Timer::ResetCategoryTimes ()
 void
 Timer::DumpCategoryTimes (Stream *s)
 {
-    Mutex::Locker locker (GetCategoryMutex());
+    std::lock_guard<std::mutex> guard(GetCategoryMutex());
     TimerCategoryMap &category_map = GetCategoryMap();
     std::vector<TimerCategoryMap::const_iterator> sorted_iterators;
     TimerCategoryMap::const_iterator pos, end = category_map.end();

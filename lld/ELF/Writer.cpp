@@ -69,7 +69,12 @@ private:
 
   void scanRelocs(InputSection<ELFT> &C);
   void scanRelocs(InputSectionBase<ELFT> &S, const Elf_Shdr &RelSec);
-  RelExpr adjustExpr(SymbolBody &S, bool IsWrite, RelExpr Expr, uint32_t Type);
+  RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &S,
+                     bool IsWrite, RelExpr Expr, uint32_t Type);
+  template <class RelTy>
+  uintX_t computeAddend(const elf::ObjectFile<ELFT> &File,
+                        const uint8_t *SectionData, const RelTy *End,
+                        const RelTy &RI, RelExpr Expr, SymbolBody &Body);
   void createPhdrs();
   void assignAddresses();
   void assignFileOffsets();
@@ -129,7 +134,8 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   GotSection<ELFT> Got;
   InterpSection<ELFT> Interp;
   PltSection<ELFT> Plt;
-  RelocationSection<ELFT> RelaDyn(Config->Rela ? ".rela.dyn" : ".rel.dyn");
+  RelocationSection<ELFT> RelaDyn(Config->Rela ? ".rela.dyn" : ".rel.dyn",
+                                  Config->ZCombreloc);
   StringTableSection<ELFT> DynStrTab(".dynstr", true);
   StringTableSection<ELFT> ShStrTab(".shstrtab", false);
   SymbolTableSection<ELFT> DynSymTab(*Symtab, DynStrTab);
@@ -157,16 +163,16 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     BuildId.reset(new BuildIdMd5<ELFT>);
   else if (Config->BuildId == BuildIdKind::Sha1)
     BuildId.reset(new BuildIdSha1<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Hexstring)
+    BuildId.reset(new BuildIdHexstring<ELFT>);
 
   if (Config->GnuHash)
     GnuHashTab.reset(new GnuHashTableSection<ELFT>);
   if (Config->SysvHash)
     HashTab.reset(new HashTableSection<ELFT>);
-  if (Target->UseLazyBinding) {
-    StringRef S = Config->Rela ? ".rela.plt" : ".rel.plt";
-    GotPlt.reset(new GotPltSection<ELFT>);
-    RelaPlt.reset(new RelocationSection<ELFT>(S));
-  }
+  StringRef S = Config->Rela ? ".rela.plt" : ".rel.plt";
+  GotPlt.reset(new GotPltSection<ELFT>);
+  RelaPlt.reset(new RelocationSection<ELFT>(S, false /*Sort*/));
   if (!Config->StripAll) {
     StrTab.reset(new StringTableSection<ELFT>(".strtab", false));
     SymTabSec.reset(new SymbolTableSection<ELFT>(*Symtab, *StrTab));
@@ -439,20 +445,53 @@ static bool needsPlt(RelExpr Expr) {
   return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT;
 }
 
+// True if this expression is of the form Sym - X, where X is a position in the
+// file (PC, or GOT for example).
+static bool isRelExpr(RelExpr Expr) {
+  return Expr == R_PC || Expr == R_GOTREL || Expr == R_PAGE_PC;
+}
+
 template <class ELFT>
-static bool isRelRelative(RelExpr E, uint32_t Type, const SymbolBody &Body) {
-  if (E == R_SIZE)
+static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
+                                     const SymbolBody &Body) {
+  // These expressions always compute a constant
+  if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
+      E == R_MIPS_GOT_LOCAL || E == R_MIPS_GOT_LOCAL_PAGE ||
+      E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC ||
+      E == R_TLSGD || E == R_PPC_PLT_OPD)
     return true;
 
-  bool AbsVal = (isAbsolute<ELFT>(Body) || Body.isTls()) &&
-                !refersToGotEntry(E) && !needsPlt(E);
+  // These never do, except if the entire file is position dependent or if
+  // only the low bits are used.
+  if (E == R_GOT || E == R_PLT)
+    return Target->usesOnlyLowPageBits(Type) || !Config->Pic;
 
-  bool RelE = E == R_PC || E == R_PLT_PC || E == R_GOT_PC || E == R_GOTREL ||
-              E == R_PAGE_PC;
+  if (Body.isPreemptible())
+    return false;
+
+  if (!Config->Pic)
+    return true;
+
+  bool AbsVal = isAbsolute<ELFT>(Body) || Body.isTls();
+  bool RelE = isRelExpr(E);
   if (AbsVal && !RelE)
     return true;
   if (!AbsVal && RelE)
     return true;
+
+  // Relative relocation to an absolute value. This is normally unrepresentable,
+  // but if the relocation refers to a weak undefined symbol, we allow it to
+  // resolve to the image base. This is a little strange, but it allows us to
+  // link function calls to such symbols. Normally such a call will be guarded
+  // with a comparison, which will load a zero from the GOT.
+  if (AbsVal && RelE) {
+    if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
+      return true;
+    StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
+    error("relocation " + S + " cannot refer to absolute symbol " +
+          Body.getName());
+    return true;
+  }
 
   return Target->usesOnlyLowPageBits(Type);
 }
@@ -480,66 +519,100 @@ static RelExpr fromPlt(RelExpr Expr) {
 }
 
 template <class ELFT>
-RelExpr Writer<ELFT>::adjustExpr(SymbolBody &Body, bool IsWrite, RelExpr Expr,
+RelExpr Writer<ELFT>::adjustExpr(const elf::ObjectFile<ELFT> &File,
+                                 SymbolBody &Body, bool IsWrite, RelExpr Expr,
                                  uint32_t Type) {
-  if (Body.isGnuIFunc())
-    return toPlt(Expr);
+  if (Target->needsThunk(Type, File, Body))
+    return R_THUNK;
   bool Preemptible = Body.isPreemptible();
-  if (needsPlt(Expr)) {
-    if (Preemptible)
-      return Expr;
-    return fromPlt(Expr);
-  }
+  if (Body.isGnuIFunc())
+    Expr = toPlt(Expr);
+  else if (needsPlt(Expr) && !Preemptible)
+    Expr = fromPlt(Expr);
 
-  if (!IsWrite && !refersToGotEntry(Expr) && !needsPlt(Expr) && Preemptible) {
-    // This relocation would require the dynamic linker to write a value
-    // to read only memory. We can hack around it if we are producing an
-    // executable and the refered symbol can be preemepted to refer to the
-    // executable.
-    if (Config->Shared) {
-      StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-      error("relocation " + S + " cannot be used when making a shared "
-                                "object; recompile with -fPIC.");
-      return Expr;
-    }
-    if (Body.getVisibility() != STV_DEFAULT) {
-      error("Cannot preempt symbol");
-      return Expr;
-    }
-    if (Body.isObject()) {
-      // Produce a copy relocation.
-      auto *B = cast<SharedSymbol<ELFT>>(&Body);
-      if (!B->needsCopy())
-        addCopyRelSymbol(B);
-      return Expr;
-    }
-    if (Body.isFunc()) {
-      // This handles a non PIC program call to function in a shared library.In
-      // an ideal world, we could just report an error saying the relocation can
-      // overflow at runtime. In the real world with glibc, crt1.o has a
-      // R_X86_64_PC32 pointing to libc.so.
-      //
-      // The general idea on how to handle such cases is to create a PLT entry
-      // and use that as the function value.
-      //
-      // For the static linking part, we just return a plt expr and everything
-      // else will use the the PLT entry as the address.
-      //
-      // The remaining problem is making sure pointer equality still works. We
-      // need the help of the dynamic linker for that. We let it know that we
-      // have a direct reference to a so symbol by creating an undefined symbol
-      // with a non zero st_value. Seeing that, the dynamic linker resolves the
-      // symbol to the value of the symbol we created. This is true even for got
-      // entries, so pointer equality is maintained. To avoid an infinite loop,
-      // the only entry that points to the real function is a dedicated got
-      // entry used by the plt. That is identified by special relocation types
-      // (R_X86_64_JUMP_SLOT, R_386_JMP_SLOT, etc).
-      Body.NeedsCopyOrPltAddr = true;
-      return toPlt(Expr);
-    }
-    error("Symbol is missing type");
+  if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body))
+    return Expr;
+
+  // This relocation would require the dynamic linker to write a value to read
+  // only memory. We can hack around it if we are producing an executable and
+  // the refered symbol can be preemepted to refer to the executable.
+  if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
+    StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
+    error("relocation " + S + " cannot be used when making a shared "
+                              "object; recompile with -fPIC.");
+    return Expr;
   }
+  if (Body.getVisibility() != STV_DEFAULT) {
+    error("Cannot preempt symbol");
+    return Expr;
+  }
+  if (Body.isObject()) {
+    // Produce a copy relocation.
+    auto *B = cast<SharedSymbol<ELFT>>(&Body);
+    if (!B->needsCopy())
+      addCopyRelSymbol(B);
+    return Expr;
+  }
+  if (Body.isFunc()) {
+    // This handles a non PIC program call to function in a shared library. In
+    // an ideal world, we could just report an error saying the relocation can
+    // overflow at runtime. In the real world with glibc, crt1.o has a
+    // R_X86_64_PC32 pointing to libc.so.
+    //
+    // The general idea on how to handle such cases is to create a PLT entry and
+    // use that as the function value.
+    //
+    // For the static linking part, we just return a plt expr and everything
+    // else will use the the PLT entry as the address.
+    //
+    // The remaining problem is making sure pointer equality still works. We
+    // need the help of the dynamic linker for that. We let it know that we have
+    // a direct reference to a so symbol by creating an undefined symbol with a
+    // non zero st_value. Seeing that, the dynamic linker resolves the symbol to
+    // the value of the symbol we created. This is true even for got entries, so
+    // pointer equality is maintained. To avoid an infinite loop, the only entry
+    // that points to the real function is a dedicated got entry used by the
+    // plt. That is identified by special relocation types (R_X86_64_JUMP_SLOT,
+    // R_386_JMP_SLOT, etc).
+    Body.NeedsCopyOrPltAddr = true;
+    return toPlt(Expr);
+  }
+  error("Symbol is missing type");
+
   return Expr;
+}
+
+template <class ELFT>
+template <class RelTy>
+typename ELFT::uint
+Writer<ELFT>::computeAddend(const elf::ObjectFile<ELFT> &File,
+                            const uint8_t *SectionData, const RelTy *End,
+                            const RelTy &RI, RelExpr Expr, SymbolBody &Body) {
+  uint32_t Type = RI.getType(Config->Mips64EL);
+  uintX_t Addend = getAddend<ELFT>(RI);
+  const uint8_t *BufLoc = SectionData + RI.r_offset;
+  if (!RelTy::IsRela)
+    Addend += Target->getImplicitAddend(BufLoc, Type);
+  if (Config->EMachine == EM_MIPS) {
+    Addend += findMipsPairedAddend<ELFT>(SectionData, BufLoc, Body, &RI, End);
+    if (Type == R_MIPS_LO16 && Expr == R_PC)
+      // R_MIPS_LO16 expression has R_PC type iif the target is _gp_disp
+      // symbol. In that case we should use the following formula for
+      // calculation "AHL + GP - P + 4". Let's add 4 right here.
+      // For details see p. 4-19 at
+      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+      Addend += 4;
+    if (Expr == R_GOT_OFF)
+      Addend -= MipsGPOffset;
+    if (Expr == R_GOTREL) {
+      Addend -= MipsGPOffset;
+      if (Body.isLocal())
+        Addend += File.getMipsGp0();
+    }
+  }
+  if (Config->Pic && Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
+    Addend += getPPC64TocBase();
+  return Addend;
 }
 
 // The reason we have to do this early scan is as follows
@@ -573,43 +646,26 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     SymbolBody &Body = File.getRelocTargetSym(RI);
     uint32_t Type = RI.getType(Config->Mips64EL);
 
+    RelExpr Expr = Target->getRelExpr(Type, Body);
     // Ignore "hint" relocation because it is for optional code optimization.
-    if (Target->isHintRel(Type))
+    if (Expr == R_HINT)
       continue;
 
     uintX_t Offset = C.getOffset(RI.r_offset);
     if (Offset == (uintX_t)-1)
       continue;
 
-    RelExpr Expr = Target->getRelExpr(Type, Body);
-
-    Expr = adjustExpr(Body, IsWrite, Expr, Type);
+    bool Preemptible = Body.isPreemptible();
+    Expr = adjustExpr(File, Body, IsWrite, Expr, Type);
     if (HasError)
       continue;
-    bool Preemptible = Body.isPreemptible();
-    if (auto *B = dyn_cast<SharedSymbol<ELFT>>(&Body))
-      if (B->needsCopy())
-        Preemptible = false;
 
     // This relocation does not require got entry, but it is relative to got and
     // needs it to be created. Here we request for that.
     if (Expr == R_GOTONLY_PC || Expr == R_GOTREL || Expr == R_PPC_TOC)
       HasGotOffRel = true;
 
-    uintX_t Addend = getAddend<ELFT>(RI);
-    const uint8_t *BufLoc = Buf + RI.r_offset;
-    if (!RelTy::IsRela)
-      Addend += Target->getImplicitAddend(BufLoc, Type);
-    if (Config->EMachine == EM_MIPS) {
-      Addend += findMipsPairedAddend<ELFT>(Buf, BufLoc, Body, &RI, E);
-      if (Type == R_MIPS_LO16 && Expr == R_PC)
-        // R_MIPS_LO16 expression has R_PC type iif the target is _gp_disp
-        // symbol. In that case we should use the following formula for
-        // calculation "AHL + GP – P + 4". Let's add 4 right here.
-        // For details see p. 4-19 at
-        // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-        Addend += 4;
-    }
+    uintX_t Addend = computeAddend(File, Buf, E, RI, Expr, Body);
 
     if (unsigned Processed =
             handleTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr)) {
@@ -617,52 +673,74 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    if (Expr == R_GOT && !isRelRelative<ELFT>(Expr, Type, Body) &&
-        Config->Shared)
-      AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body,
-              getAddend<ELFT>(RI)});
+    if (needsPlt(Expr) || Expr == R_THUNK || refersToGotEntry(Expr) ||
+        !Body.isPreemptible()) {
+      // If the relocation points to something in the file, we can process it.
+      bool Constant = isStaticLinkTimeConstant<ELFT>(Expr, Type, Body);
 
-    // If a relocation needs PLT, we create a PLT and a GOT slot
-    // for the symbol.
+      // If the output being produced is position independent, the final value
+      // is still not known. In that case we still need some help from the
+      // dynamic linker. We can however do better than just copying the incoming
+      // relocation. We can process some of it and and just ask the dynamic
+      // linker to add the load address.
+      if (!Constant)
+        AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body, Addend});
+
+      // If the produced value is a constant, we just remember to write it
+      // when outputting this section. We also have to do it if the format
+      // uses Elf_Rel, since in that case the written value is the addend.
+      if (Constant || !RelTy::IsRela)
+        C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+    } else {
+      // We don't know anything about the finaly symbol. Just ask the dynamic
+      // linker to handle the relocation for us.
+      AddDyn({Target->getDynRel(Type), C.OutSec, Offset, false, &Body, Addend});
+      // MIPS ABI turns using of GOT and dynamic relocations inside out.
+      // While regular ABI uses dynamic relocations to fill up GOT entries
+      // MIPS ABI requires dynamic linker to fills up GOT entries using
+      // specially sorted dynamic symbol table. This affects even dynamic
+      // relocations against symbols which do not require GOT entries
+      // creation explicitly, i.e. do not have any GOT-relocations. So if
+      // a preemptible symbol has a dynamic relocation we anyway have
+      // to create a GOT entry for it.
+      // If a non-preemptible symbol has a dynamic relocation against it,
+      // dynamic linker takes it st_value, adds offset and writes down
+      // result of the dynamic relocation. In case of preemptible symbol
+      // dynamic linker performs symbol resolution, writes the symbol value
+      // to the GOT entry and reads the GOT entry when it needs to perform
+      // a dynamic relocation.
+      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
+      if (Config->EMachine == EM_MIPS && !Body.isInGot())
+        Out<ELFT>::Got->addEntry(Body);
+      continue;
+    }
+
+    if (Expr == R_THUNK)
+      continue;
+
+    // At this point we are done with the relocated position. Some relocations
+    // also require us to create a got or plt entry.
+
+    // If a relocation needs PLT, we create a PLT and a GOT slot for the symbol.
     if (needsPlt(Expr)) {
-      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
-
       if (Body.isInPlt())
         continue;
       Out<ELFT>::Plt->addEntry(Body);
 
       uint32_t Rel;
-      if (Body.isGnuIFunc())
-        Rel = Preemptible ? Target->PltRel : Target->IRelativeRel;
+      if (Body.isGnuIFunc() && !Preemptible)
+        Rel = Target->IRelativeRel;
       else
-        Rel = Target->UseLazyBinding ? Target->PltRel : Target->GotRel;
+        Rel = Target->PltRel;
 
-      if (Target->UseLazyBinding) {
-        Out<ELFT>::GotPlt->addEntry(Body);
-        Out<ELFT>::RelaPlt->addReloc({Rel, Out<ELFT>::GotPlt,
-                                      Body.getGotPltOffset<ELFT>(),
-                                      !Preemptible, &Body, 0});
-      } else {
-        if (Body.isInGot())
-          continue;
-        Out<ELFT>::Got->addEntry(Body);
-        AddDyn({Rel, Out<ELFT>::Got, Body.getGotOffset<ELFT>(), !Preemptible,
-                &Body, 0});
-      }
+      Out<ELFT>::GotPlt->addEntry(Body);
+      Out<ELFT>::RelaPlt->addReloc({Rel, Out<ELFT>::GotPlt,
+                                    Body.getGotPltOffset<ELFT>(), !Preemptible,
+                                    &Body, 0});
       continue;
     }
 
-    if (Target->needsThunk(Type, File, Body)) {
-      C.Relocations.push_back({R_THUNK, Type, Offset, Addend, &Body});
-      continue;
-    }
-
-    // If a relocation needs GOT, we create a GOT slot for the symbol.
     if (refersToGotEntry(Expr)) {
-      uint32_t T = Body.isTls() ? Target->getTlsGotRel(Type) : Type;
-      if (Config->EMachine == EM_MIPS && Expr == R_GOT_OFF)
-        Addend -= MipsGPOffset;
-      C.Relocations.push_back({Expr, T, Offset, Addend, &Body});
       if (Body.isInGot())
         continue;
       Out<ELFT>::Got->addEntry(Body);
@@ -688,50 +766,6 @@ void Writer<ELFT>::scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       }
       continue;
     }
-
-    if (Preemptible) {
-      // We don't know anything about the finaly symbol. Just ask the dynamic
-      // linker to handle the relocation for us.
-      AddDyn({Target->getDynRel(Type), C.OutSec, Offset, false, &Body, Addend});
-      // MIPS ABI turns using of GOT and dynamic relocations inside out.
-      // While regular ABI uses dynamic relocations to fill up GOT entries
-      // MIPS ABI requires dynamic linker to fills up GOT entries using
-      // specially sorted dynamic symbol table. This affects even dynamic
-      // relocations against symbols which do not require GOT entries
-      // creation explicitly, i.e. do not have any GOT-relocations. So if
-      // a preemptible symbol has a dynamic relocation we anyway have
-      // to create a GOT entry for it.
-      // If a non-preemptible symbol has a dynamic relocation against it,
-      // dynamic linker takes it st_value, adds offset and writes down
-      // result of the dynamic relocation. In case of preemptible symbol
-      // dynamic linker performs symbol resolution, writes the symbol value
-      // to the GOT entry and reads the GOT entry when it needs to perform
-      // a dynamic relocation.
-      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
-      if (Config->EMachine == EM_MIPS && !Body.isInGot())
-        Out<ELFT>::Got->addEntry(Body);
-      continue;
-    }
-
-    // We know that this is the final symbol. If the program being produced
-    // is position independent, the final value is still not known.
-    // If the relocation depends on the symbol value (not the size or distances
-    // in the output), we still need some help from the dynamic linker.
-    // We can however do better than just copying the incoming relocation. We
-    // can process some of it and and just ask the dynamic linker to add the
-    // load address.
-    if (!Config->Pic || isRelRelative<ELFT>(Expr, Type, Body)) {
-      if (Config->EMachine == EM_MIPS && Body.isLocal() &&
-          (Type == R_MIPS_GPREL16 || Type == R_MIPS_GPREL32))
-        Addend += File.getMipsGp0();
-      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
-      continue;
-    }
-
-    if (Config->EMachine == EM_PPC64 && Type == R_PPC64_TOC)
-      Addend += getPPC64TocBase();
-    AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body, Addend});
-    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
   }
 
   // Scan relocations for necessary thunks.
@@ -765,14 +799,14 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (!Config->NoUndefined) {
     if (Config->Relocatable)
       return;
-    if (Config->Shared)
+    if (Config->Shared && !Config->ZDefs)
       if (Sym->symbol()->Visibility == STV_DEFAULT)
         return;
   }
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
-  if (InputFile *File = Symtab.findFile(Sym))
-    Msg += " in " + File->getName().str();
+  if (InputFile *File = Sym->getSourceFile<ELFT>())
+    Msg += " in " + getFilename(File);
   if (Config->NoinhibitExec)
     warning(Msg);
   else
@@ -810,6 +844,25 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
 }
 
+template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
+  if (!B.isLocal() && !B.symbol()->IsUsedInRegularObj)
+    return false;
+
+  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
+    // Always include absolute symbols.
+    if (!D->Section)
+      return true;
+    // Exclude symbols pointing to garbage-collected sections.
+    if (!D->Section->Live)
+      return false;
+    if (auto *S = dyn_cast<MergeInputSection<ELFT>>(D->Section))
+      if (S->getRangeAndSize(D->Value).first->second ==
+          MergeInputSection<ELFT>::PieceDead)
+        return false;
+  }
+  return true;
+}
+
 // Local symbols are not in the linker's symbol table. This function scans
 // each object file's symbol table to copy local symbols to the output.
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
@@ -823,23 +876,12 @@ template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
       // No reason to keep local undefined symbol in symtab.
       if (!DR)
         continue;
+      if (!includeInSymtab<ELFT>(*B))
+        continue;
       StringRef SymName(StrTab + B->getNameOffset());
       InputSectionBase<ELFT> *Sec = DR->Section;
       if (!shouldKeepInSymtab<ELFT>(Sec, SymName, *B))
         continue;
-      if (Sec) {
-        if (!Sec->Live)
-          continue;
-
-        // Garbage collection is normally able to remove local symbols if they
-        // point to gced sections. In the case of SHF_MERGE sections, we want it
-        // to also be able to drop them if part of the section is gced.
-        // We could look at the section offset map to keep some of these
-        // symbols, but almost all local symbols are .L* symbols, so it
-        // is probably not worth the complexity.
-        if (Config->GcSections && isa<MergeInputSection<ELFT>>(Sec))
-          continue;
-      }
       ++Out<ELFT>::SymTab->NumLocals;
       if (Config->Relocatable)
         B->DynsymIndex = Out<ELFT>::SymTab->NumLocals;
@@ -1067,10 +1109,13 @@ bool Writer<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) const {
 
 template <class ELFT>
 static Symbol *addOptionalSynthetic(SymbolTable<ELFT> &Table, StringRef Name,
-                                    OutputSectionBase<ELFT> &Sec,
+                                    OutputSectionBase<ELFT> *Sec,
                                     typename ELFT::uint Val) {
-  if (!Table.find(Name))
+  SymbolBody *S = Table.find(Name);
+  if (!S)
     return nullptr;
+  if (!S->isUndefined() && !S->isShared())
+    return S->symbol();
   return Table.addSynthetic(Name, Sec, Val);
 }
 
@@ -1084,23 +1129,11 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   if (isOutputDynamic() || !Out<ELFT>::RelaPlt)
     return;
   StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
-  addOptionalSynthetic(Symtab, S, *Out<ELFT>::RelaPlt, 0);
+  addOptionalSynthetic(Symtab, S, Out<ELFT>::RelaPlt, 0);
 
   S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
-  addOptionalSynthetic(Symtab, S, *Out<ELFT>::RelaPlt,
+  addOptionalSynthetic(Symtab, S, Out<ELFT>::RelaPlt,
                        DefinedSynthetic<ELFT>::SectionEnd);
-}
-
-template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
-  if (!B.symbol()->IsUsedInRegularObj)
-    return false;
-
-  if (auto *D = dyn_cast<DefinedRegular<ELFT>>(&B)) {
-    // Exclude symbols pointing to garbage-collected sections.
-    if (D->Section && !D->Section->Live)
-      return false;
-  }
-  return true;
 }
 
 // This class knows how to create an output section for a given
@@ -1152,6 +1185,9 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   case InputSectionBase<ELFT>::MipsReginfo:
     Sec = new MipsReginfoOutputSection<ELFT>();
     break;
+  case InputSectionBase<ELFT>::MipsOptions:
+    Sec = new MipsOptionsOutputSection<ELFT>();
+    break;
   }
   return {Sec, true};
 }
@@ -1189,18 +1225,20 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     // so that it points to an absolute address which is relative to GOT.
     // See "Global Data Symbols" in Chapter 6 in the following document:
     // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-    Symtab.addSynthetic("_gp", *Out<ELFT>::Got, MipsGPOffset);
+    Symtab.addSynthetic("_gp", Out<ELFT>::Got, MipsGPOffset);
 
     // On MIPS O32 ABI, _gp_disp is a magic symbol designates offset between
     // start of function and 'gp' pointer into GOT.
-    ElfSym<ELFT>::MipsGpDisp =
-        addOptionalSynthetic(Symtab, "_gp_disp", *Out<ELFT>::Got, MipsGPOffset)
-            ->body();
+    Symbol *Sym =
+        addOptionalSynthetic(Symtab, "_gp_disp", Out<ELFT>::Got, MipsGPOffset);
+    if (Sym)
+      ElfSym<ELFT>::MipsGpDisp = Sym->body();
+
     // The __gnu_local_gp is a magic symbol equal to the current value of 'gp'
     // pointer. This symbol is used in the code generated by .cpload pseudo-op
     // in case of using -mno-shared option.
     // https://sourceware.org/ml/binutils/2004-12/msg00094.html
-    addOptionalSynthetic(Symtab, "__gnu_local_gp", *Out<ELFT>::Got,
+    addOptionalSynthetic(Symtab, "__gnu_local_gp", Out<ELFT>::Got,
                          MipsGPOffset);
   }
 
@@ -1327,7 +1365,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (isOutputDynamic())
-    Symtab.addSynthetic("_DYNAMIC", *Out<ELFT>::Dynamic, 0);
+    Symtab.addSynthetic("_DYNAMIC", Out<ELFT>::Dynamic, 0);
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
@@ -1368,7 +1406,9 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
         SS->File->IsUsed = true;
 
-    if (Body->isUndefined() && !S->isWeak())
+    // We only report undefined symbols in regular objects. This means that we
+    // will accept an undefined reference in bitcode if it can be optimized out.
+    if (S->IsUsedInRegularObj && Body->isUndefined() && !S->isWeak())
       reportUndefined<ELFT>(Symtab, Body);
 
     if (auto *C = dyn_cast<DefinedCommon>(Body))
@@ -1487,11 +1527,13 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   auto Define = [&](StringRef Start, StringRef End,
                     OutputSectionBase<ELFT> *OS) {
     if (OS) {
-      this->Symtab.addSynthetic(Start, *OS, 0);
-      this->Symtab.addSynthetic(End, *OS, DefinedSynthetic<ELFT>::SectionEnd);
+      this->Symtab.addSynthetic(Start, OS, 0);
+      this->Symtab.addSynthetic(End, OS, DefinedSynthetic<ELFT>::SectionEnd);
     } else {
-      this->Symtab.addIgnored(Start);
-      this->Symtab.addIgnored(End);
+      addOptionalSynthetic(this->Symtab, Start,
+                           (OutputSectionBase<ELFT> *)nullptr, 0);
+      addOptionalSynthetic(this->Symtab, End,
+                           (OutputSectionBase<ELFT> *)nullptr, 0);
     }
   };
 
@@ -1518,10 +1560,10 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
   StringRef Stop = Saver.save("__stop_" + S);
   if (SymbolBody *B = Symtab.find(Start))
     if (B->isUndefined())
-      Symtab.addSynthetic(Start, *Sec, 0);
+      Symtab.addSynthetic(Start, Sec, 0);
   if (SymbolBody *B = Symtab.find(Stop))
     if (B->isUndefined())
-      Symtab.addSynthetic(Stop, *Sec, DefinedSynthetic<ELFT>::SectionEnd);
+      Symtab.addSynthetic(Stop, Sec, DefinedSynthetic<ELFT>::SectionEnd);
 }
 
 template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
@@ -1907,16 +1949,15 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   // other sections are the same.
   uint8_t *Start = Buffer->getBufferStart();
   uint8_t *Last = Start;
+  std::vector<ArrayRef<uint8_t>> Regions;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
     uint8_t *End = Start + Sec->getFileOff();
     if (!Sec->getName().startswith(".debug_"))
-      S->update({Last, End});
+      Regions.push_back({Last, End});
     Last = End;
   }
-  S->update({Last, Start + FileSize});
-
-  // Fill the hash value field in the .note.gnu.build-id section.
-  S->writeBuildId();
+  Regions.push_back({Last, Start + FileSize});
+  S->writeBuildId(Regions);
 }
 
 template void elf::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);

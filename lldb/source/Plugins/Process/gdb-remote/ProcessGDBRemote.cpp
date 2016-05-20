@@ -267,39 +267,39 @@ ProcessGDBRemote::CanDebug (lldb::TargetSP target_sp, bool plugin_specified_by_n
 //----------------------------------------------------------------------
 // ProcessGDBRemote constructor
 //----------------------------------------------------------------------
-ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener_sp) :
-    Process (target_sp, listener_sp),
-    m_flags (0),
-    m_gdb_comm (),
-    m_debugserver_pid (LLDB_INVALID_PROCESS_ID),
-    m_last_stop_packet_mutex (Mutex::eMutexTypeRecursive),
-    m_register_info (),
-    m_async_broadcaster (NULL, "lldb.process.gdb-remote.async-broadcaster"),
-    m_async_listener_sp(Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
-    m_async_thread_state_mutex(Mutex::eMutexTypeRecursive),
-    m_thread_ids (),
-    m_thread_pcs (),
-    m_jstopinfo_sp (),
-    m_jthreadsinfo_sp (),
-    m_continue_c_tids (),
-    m_continue_C_tids (),
-    m_continue_s_tids (),
-    m_continue_S_tids (),
-    m_max_memory_size (0),
-    m_remote_stub_max_memory_size (0),
-    m_addr_to_mmap_size (),
-    m_thread_create_bp_sp (),
-    m_waiting_for_attach (false),
-    m_destroy_tried_resuming (false),
-    m_command_sp (),
-    m_breakpoint_pc_offset (0),
-    m_initial_tid (LLDB_INVALID_THREAD_ID)
+ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener_sp)
+    : Process(target_sp, listener_sp),
+      m_flags(0),
+      m_gdb_comm(),
+      m_debugserver_pid(LLDB_INVALID_PROCESS_ID),
+      m_last_stop_packet_mutex(),
+      m_register_info(),
+      m_async_broadcaster(NULL, "lldb.process.gdb-remote.async-broadcaster"),
+      m_async_listener_sp(Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
+      m_async_thread_state_mutex(),
+      m_thread_ids(),
+      m_thread_pcs(),
+      m_jstopinfo_sp(),
+      m_jthreadsinfo_sp(),
+      m_continue_c_tids(),
+      m_continue_C_tids(),
+      m_continue_s_tids(),
+      m_continue_S_tids(),
+      m_max_memory_size(0),
+      m_remote_stub_max_memory_size(0),
+      m_addr_to_mmap_size(),
+      m_thread_create_bp_sp(),
+      m_waiting_for_attach(false),
+      m_destroy_tried_resuming(false),
+      m_command_sp(),
+      m_breakpoint_pc_offset(0),
+      m_initial_tid(LLDB_INVALID_THREAD_ID)
 {
-    m_async_broadcaster.SetEventName (eBroadcastBitAsyncThreadShouldExit,   "async thread should exit");
-    m_async_broadcaster.SetEventName (eBroadcastBitAsyncContinue,           "async thread continue");
-    m_async_broadcaster.SetEventName (eBroadcastBitAsyncThreadDidExit,      "async thread did exit");
+    m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit, "async thread should exit");
+    m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue, "async thread continue");
+    m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadDidExit, "async thread did exit");
 
-    Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_ASYNC));
+    Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_ASYNC));
 
     const uint32_t async_event_mask = eBroadcastBitAsyncContinue | eBroadcastBitAsyncThreadShouldExit;
 
@@ -309,8 +309,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp, ListenerSP listener
             log->Printf("ProcessGDBRemote::%s failed to listen for m_async_broadcaster events", __FUNCTION__);
     }
 
-    const uint32_t gdb_event_mask = Communication::eBroadcastBitReadThreadDidExit |
-                                    GDBRemoteCommunication::eBroadcastBitGdbReadThreadGotNotify;
+    const uint32_t gdb_event_mask =
+        Communication::eBroadcastBitReadThreadDidExit | GDBRemoteCommunication::eBroadcastBitGdbReadThreadGotNotify;
     if (m_async_listener_sp->StartListeningForEvents(&m_gdb_comm, gdb_event_mask) != gdb_event_mask)
     {
         if (log)
@@ -1646,7 +1646,7 @@ ProcessGDBRemote::HandleStopReplySequence ()
 void
 ProcessGDBRemote::ClearThreadIDList ()
 {
-    Mutex::Locker locker(m_thread_list_real.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
     m_thread_ids.clear();
     m_thread_pcs.clear();
 }
@@ -1696,7 +1696,7 @@ ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue (std::string &value)
 bool
 ProcessGDBRemote::UpdateThreadIDList ()
 {
-    Mutex::Locker locker(m_thread_list_real.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
     if (m_jthreadsinfo_sp)
     {
@@ -1729,8 +1729,8 @@ ProcessGDBRemote::UpdateThreadIDList ()
 
         // Lock the thread stack while we access it
         //Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
-        Mutex::Locker stop_stack_lock;
-        if (stop_stack_lock.TryLock(m_last_stop_packet_mutex))
+        std::unique_lock<std::recursive_mutex> stop_stack_lock(m_last_stop_packet_mutex, std::defer_lock);
+        if (stop_stack_lock.try_lock())
         {
             // Get the number of stop packets on the stack
             int nItems = m_stop_packet_stack.size();
@@ -1944,7 +1944,7 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
             // m_thread_list_real does have its own mutex, but we need to
             // hold onto the mutex between the call to m_thread_list_real.FindThreadByID(...)
             // and the m_thread_list_real.AddThread(...) so it doesn't change on us
-            Mutex::Locker locker (m_thread_list_real.GetMutex ());
+            std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
             thread_sp = m_thread_list_real.FindThreadByProtocolID(tid, false);
 
             if (!thread_sp)
@@ -2440,7 +2440,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
                 }
                 else if (key.compare("threads") == 0)
                 {
-                    Mutex::Locker locker(m_thread_list_real.GetMutex());
+                    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+
                     m_thread_ids.clear();
                     // A comma separated list of all threads in the current
                     // process that includes the thread for this stop reply
@@ -2663,7 +2664,8 @@ ProcessGDBRemote::SetThreadStopInfo (StringExtractor& stop_packet)
 void
 ProcessGDBRemote::RefreshStateAfterStop ()
 {
-    Mutex::Locker locker(m_thread_list_real.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+
     m_thread_ids.clear();
     m_thread_pcs.clear();
     // Set the thread stop info. It might have a "threads" key whose value is
@@ -2673,7 +2675,7 @@ ProcessGDBRemote::RefreshStateAfterStop ()
     // Scope for the lock
     {
         // Lock the thread stack while we access it
-        Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
         // Get the number of stop packets on the stack
         int nItems = m_stop_packet_stack.size();
         // Iterate over them
@@ -2818,7 +2820,7 @@ ProcessGDBRemote::DoDestroy ()
                 ThreadList &threads = GetThreadList();
 
                 {
-                    Mutex::Locker locker(threads.GetMutex());
+                    std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
 
                     size_t num_threads = threads.GetSize();
                     for (size_t i = 0; i < num_threads; i++)
@@ -2853,7 +2855,7 @@ ProcessGDBRemote::DoDestroy ()
                     // have to run the risk of letting those threads proceed a bit.
 
                     {
-                        Mutex::Locker locker(threads.GetMutex());
+                        std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
 
                         size_t num_threads = threads.GetSize();
                         for (size_t i = 0; i < num_threads; i++)
@@ -2975,7 +2977,7 @@ ProcessGDBRemote::SetLastStopPacket (const StringExtractorGDBRemote &response)
     // Scope the lock
     {
         // Lock the thread stack while we access it
-        Mutex::Locker stop_stack_lock(m_last_stop_packet_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
 
         // We are are not using non-stop mode, there can only be one last stop
         // reply packet, so clear the list.
@@ -3598,6 +3600,8 @@ ProcessGDBRemote::EstablishConnectionIfNeeded (const ProcessInfo &process_info)
 Error
 ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info)
 {
+    using namespace std::placeholders; // For _1, _2, etc.
+
     Error error;
     if (m_debugserver_pid == LLDB_INVALID_PROCESS_ID)
     {
@@ -3609,7 +3613,9 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
         // special terminal key sequences (^C) don't affect debugserver.
         debugserver_launch_info.SetLaunchInSeparateProcessGroup(true);
 
-        debugserver_launch_info.SetMonitorProcessCallback (MonitorDebugserverProcess, this, false);
+        const std::weak_ptr<ProcessGDBRemote> this_wp = std::static_pointer_cast<ProcessGDBRemote>(shared_from_this());
+        debugserver_launch_info.SetMonitorProcessCallback(std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3, _4),
+                                                          false);
         debugserver_launch_info.SetUserID(process_info.GetUserID());
 
 #if defined (__APPLE__) && (defined (__arm__) || defined (__arm64__) || defined (__aarch64__))
@@ -3671,91 +3677,58 @@ ProcessGDBRemote::LaunchAndConnectToDebugserver (const ProcessInfo &process_info
 }
 
 bool
-ProcessGDBRemote::MonitorDebugserverProcess
-(
-    void *callback_baton,
-    lldb::pid_t debugserver_pid,
-    bool exited,        // True if the process did exit
-    int signo,          // Zero for no signal
-    int exit_status     // Exit value of process if signal is zero
-)
+ProcessGDBRemote::MonitorDebugserverProcess(std::weak_ptr<ProcessGDBRemote> process_wp, lldb::pid_t debugserver_pid,
+                                            bool exited,    // True if the process did exit
+                                            int signo,      // Zero for no signal
+                                            int exit_status // Exit value of process if signal is zero
+                                            )
 {
-    // The baton is a "ProcessGDBRemote *". Now this class might be gone
-    // and might not exist anymore, so we need to carefully try to get the
-    // target for this process first since we have a race condition when
-    // we are done running between getting the notice that the inferior
-    // process has died and the debugserver that was debugging this process.
-    // In our test suite, we are also continually running process after
-    // process, so we must be very careful to make sure:
-    // 1 - process object hasn't been deleted already
-    // 2 - that a new process object hasn't been recreated in its place
-
     // "debugserver_pid" argument passed in is the process ID for
     // debugserver that we are tracking...
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-
-    ProcessGDBRemote *process = (ProcessGDBRemote *)callback_baton;
-
-    // Get a shared pointer to the target that has a matching process pointer.
-    // This target could be gone, or the target could already have a new process
-    // object inside of it
-    TargetSP target_sp (Debugger::FindTargetWithProcess(process));
+    const bool handled = true;
 
     if (log)
-        log->Printf ("ProcessGDBRemote::MonitorDebugserverProcess (baton=%p, pid=%" PRIu64 ", signo=%i (0x%x), exit_status=%i)", callback_baton, debugserver_pid, signo, signo, exit_status);
+        log->Printf("ProcessGDBRemote::%s(process_wp, pid=%" PRIu64 ", signo=%i (0x%x), exit_status=%i)", __FUNCTION__,
+                    debugserver_pid, signo, signo, exit_status);
 
-    if (target_sp)
+    std::shared_ptr<ProcessGDBRemote> process_sp = process_wp.lock();
+    if (log)
+        log->Printf("ProcessGDBRemote::%s(process = %p)", __FUNCTION__, static_cast<void *>(process_sp.get()));
+    if (!process_sp || process_sp->m_debugserver_pid != debugserver_pid)
+        return handled;
+
+    // Sleep for a half a second to make sure our inferior process has
+    // time to set its exit status before we set it incorrectly when
+    // both the debugserver and the inferior process shut down.
+    usleep(500000);
+    // If our process hasn't yet exited, debugserver might have died.
+    // If the process did exit, then we are reaping it.
+    const StateType state = process_sp->GetState();
+
+    if (state != eStateInvalid && state != eStateUnloaded && state != eStateExited && state != eStateDetached)
     {
-        // We found a process in a target that matches, but another thread
-        // might be in the process of launching a new process that will
-        // soon replace it, so get a shared pointer to the process so we
-        // can keep it alive.
-        ProcessSP process_sp (target_sp->GetProcessSP());
-        // Now we have a shared pointer to the process that can't go away on us
-        // so we now make sure it was the same as the one passed in, and also make
-        // sure that our previous "process *" didn't get deleted and have a new
-        // "process *" created in its place with the same pointer. To verify this
-        // we make sure the process has our debugserver process ID. If we pass all
-        // of these tests, then we are sure that this process is the one we were
-        // looking for.
-        if (process_sp && process == process_sp.get() && process->m_debugserver_pid == debugserver_pid)
+        char error_str[1024];
+        if (signo)
         {
-            // Sleep for a half a second to make sure our inferior process has
-            // time to set its exit status before we set it incorrectly when
-            // both the debugserver and the inferior process shut down.
-            usleep (500000);
-            // If our process hasn't yet exited, debugserver might have died.
-            // If the process did exit, the we are reaping it.
-            const StateType state = process->GetState();
-
-            if (process->m_debugserver_pid != LLDB_INVALID_PROCESS_ID &&
-                state != eStateInvalid &&
-                state != eStateUnloaded &&
-                state != eStateExited &&
-                state != eStateDetached)
-            {
-                char error_str[1024];
-                if (signo)
-                {
-                    const char *signal_cstr = process->GetUnixSignals()->GetSignalAsCString(signo);
-                    if (signal_cstr)
-                        ::snprintf (error_str, sizeof (error_str), DEBUGSERVER_BASENAME " died with signal %s", signal_cstr);
-                    else
-                        ::snprintf (error_str, sizeof (error_str), DEBUGSERVER_BASENAME " died with signal %i", signo);
-                }
-                else
-                {
-                    ::snprintf (error_str, sizeof (error_str), DEBUGSERVER_BASENAME " died with an exit status of 0x%8.8x", exit_status);
-                }
-
-                process->SetExitStatus (-1, error_str);
-            }
-            // Debugserver has exited we need to let our ProcessGDBRemote
-            // know that it no longer has a debugserver instance
-            process->m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
+            const char *signal_cstr = process_sp->GetUnixSignals()->GetSignalAsCString(signo);
+            if (signal_cstr)
+                ::snprintf(error_str, sizeof(error_str), DEBUGSERVER_BASENAME " died with signal %s", signal_cstr);
+            else
+                ::snprintf(error_str, sizeof(error_str), DEBUGSERVER_BASENAME " died with signal %i", signo);
         }
+        else
+        {
+            ::snprintf(error_str, sizeof(error_str), DEBUGSERVER_BASENAME " died with an exit status of 0x%8.8x",
+                       exit_status);
+        }
+
+        process_sp->SetExitStatus(-1, error_str);
     }
-    return true;
+    // Debugserver has exited we need to let our ProcessGDBRemote
+    // know that it no longer has a debugserver instance
+    process_sp->m_debugserver_pid = LLDB_INVALID_PROCESS_ID;
+    return handled;
 }
 
 void
@@ -3804,7 +3777,7 @@ ProcessGDBRemote::StartAsyncThread ()
     if (log)
         log->Printf ("ProcessGDBRemote::%s ()", __FUNCTION__);
 
-    Mutex::Locker start_locker(m_async_thread_state_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_async_thread_state_mutex);
     if (!m_async_thread.IsJoinable())
     {
         // Create a thread that watches our internal state and controls which
@@ -3826,7 +3799,7 @@ ProcessGDBRemote::StopAsyncThread ()
     if (log)
         log->Printf ("ProcessGDBRemote::%s ()", __FUNCTION__);
 
-    Mutex::Locker start_locker(m_async_thread_state_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_async_thread_state_mutex);
     if (m_async_thread.IsJoinable())
     {
         m_async_broadcaster.BroadcastEvent (eBroadcastBitAsyncThreadShouldExit);

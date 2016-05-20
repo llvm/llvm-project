@@ -22,6 +22,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace misc {  
 
 StaticAssertCheck::StaticAssertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
@@ -62,11 +63,15 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
                 hasArgument(0, AssertCondition))),
             AssertCondition);
 
-  Finder->addMatcher(stmt(anyOf(conditionalOperator(hasCondition(Condition)),
-                                ifStmt(hasCondition(Condition))),
-                          unless(isInTemplateInstantiation()))
+  Finder->addMatcher(conditionalOperator(hasCondition(Condition),
+                                         unless(isInTemplateInstantiation()))
                          .bind("condStmt"),
                      this);
+
+  Finder->addMatcher(
+      ifStmt(hasCondition(Condition), unless(isInTemplateInstantiation()))
+          .bind("condStmt"),
+      this);
 }
 
 void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
@@ -164,5 +169,6 @@ SourceLocation StaticAssertCheck::getLastParenLoc(const ASTContext *ASTCtx,
   return Token.getLocation();
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

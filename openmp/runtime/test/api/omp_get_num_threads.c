@@ -11,14 +11,14 @@ int test_omp_get_num_threads()
 
   nthreads_lib = -1;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     #pragma omp critical
     {
       nthreads++;
     } /* end of critical */
     #pragma omp single
-    { 
+    {
       nthreads_lib = omp_get_num_threads ();
     }  /* end of single */
   } /* end of parallel */

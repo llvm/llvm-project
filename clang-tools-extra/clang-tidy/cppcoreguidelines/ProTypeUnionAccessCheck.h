@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 /// This check flags all access to members of unions.
 /// Access to a union as a whole (e.g. passing to a function) is not flagged.
@@ -28,6 +29,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
 

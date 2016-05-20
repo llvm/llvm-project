@@ -61,7 +61,8 @@ static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
 }
 
 template <class ELFT, class RelT>
-static ResolvedReloc<ELFT> resolveReloc(InputSection<ELFT> *Sec, RelT &Rel) {
+static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> *Sec,
+                                        RelT &Rel) {
   SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
@@ -72,24 +73,40 @@ static ResolvedReloc<ELFT> resolveReloc(InputSection<ELFT> *Sec, RelT &Rel) {
   return {D->Section->Repl, Offset};
 }
 
+template <class ELFT, class Elf_Shdr>
+static void run(ELFFile<ELFT> &Obj, InputSectionBase<ELFT> *Sec,
+                Elf_Shdr *RelSec, std::function<void(ResolvedReloc<ELFT>)> Fn) {
+  if (RelSec->sh_type == SHT_RELA) {
+    for (const typename ELFT::Rela &RI : Obj.relas(RelSec))
+      Fn(resolveReloc(Sec, RI));
+  } else {
+    for (const typename ELFT::Rel &RI : Obj.rels(RelSec))
+      Fn(resolveReloc(Sec, RI));
+  }
+}
+
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> *Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
-  typedef typename ELFT::Rel Elf_Rel;
-  typedef typename ELFT::Rela Elf_Rela;
-  typedef typename ELFT::Shdr Elf_Shdr;
-
   ELFFile<ELFT> &Obj = Sec->getFile()->getObj();
-  for (const Elf_Shdr *RelSec : Sec->RelocSections) {
-    if (RelSec->sh_type == SHT_RELA) {
-      for (const Elf_Rela &RI : Obj.relas(RelSec))
-        Fn(resolveReloc(Sec, RI));
-    } else {
-      for (const Elf_Rel &RI : Obj.rels(RelSec))
-        Fn(resolveReloc(Sec, RI));
-    }
-  }
+  for (const typename ELFT::Shdr *RelSec : Sec->RelocSections)
+    run(Obj, Sec, RelSec, Fn);
+}
+
+template <class ELFT>
+static void scanEhFrameSection(EHInputSection<ELFT> &EH,
+                               std::function<void(ResolvedReloc<ELFT>)> Fn) {
+  if (!EH.RelocSection)
+    return;
+  ELFFile<ELFT> &EObj = EH.getFile()->getObj();
+  run<ELFT>(EObj, &EH, EH.RelocSection, [&](ResolvedReloc<ELFT> R) {
+    if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
+      return;
+    if (R.Sec->getSectionHdr()->sh_flags & SHF_EXECINSTR)
+      return;
+    Fn({R.Sec, 0});
+  });
 }
 
 // Sections listed below are special because they are used by the loader
@@ -118,7 +135,7 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
 // This is the main function of the garbage collector.
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
-template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
+template <class ELFT> void elf::markLive() {
   typedef typename ELFT::uint uintX_t;
   SmallVector<InputSection<ELFT> *, 256> Q;
 
@@ -128,7 +145,7 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
     if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec)) {
       std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
           MS->getRangeAndSize(R.Offset);
-      T.first->second = 0;
+      T.first->second = MergeInputSection<ELFT>::PieceLive;
     }
     if (R.Sec->Live)
       return;
@@ -145,31 +162,38 @@ template <class ELFT> void elf::markLive(SymbolTable<ELFT> *Symtab) {
   // Add GC root symbols.
   if (Config->EntrySym)
     MarkSymbol(Config->EntrySym->body());
-  MarkSymbol(Symtab->find(Config->Init));
-  MarkSymbol(Symtab->find(Config->Fini));
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Init));
+  MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
   for (StringRef S : Config->Undefined)
-    MarkSymbol(Symtab->find(S));
+    MarkSymbol(Symtab<ELFT>::X->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (const Symbol *S : Symtab->getSymbols())
+  for (const Symbol *S : Symtab<ELFT>::X->getSymbols())
     if (S->includeInDynsym())
       MarkSymbol(S->body());
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F : Symtab->getObjectFiles())
+  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
+       Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *Sec : F->getSections())
-      if (Sec && Sec != &InputSection<ELFT>::Discarded)
+      if (Sec && Sec != &InputSection<ELFT>::Discarded) {
+        // .eh_frame is always marked as live now, but also it can reference to
+        // sections that contain personality. We preserve all non-text sections
+        // referred by .eh_frame here.
+        if (auto *EH = dyn_cast_or_null<EHInputSection<ELFT>>(Sec))
+          scanEhFrameSection<ELFT>(*EH, Enqueue);
         if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
           Enqueue({Sec, 0});
+      }
 
   // Mark all reachable sections.
   while (!Q.empty())
     forEachSuccessor<ELFT>(Q.pop_back_val(), Enqueue);
 }
 
-template void elf::markLive<ELF32LE>(SymbolTable<ELF32LE> *);
-template void elf::markLive<ELF32BE>(SymbolTable<ELF32BE> *);
-template void elf::markLive<ELF64LE>(SymbolTable<ELF64LE> *);
-template void elf::markLive<ELF64BE>(SymbolTable<ELF64BE> *);
+template void elf::markLive<ELF32LE>();
+template void elf::markLive<ELF32BE>();
+template void elf::markLive<ELF64LE>();
+template void elf::markLive<ELF64BE>();

@@ -11,7 +11,8 @@
 
 namespace clang {
 namespace tidy {
-namespace lexer_utils {
+namespace utils {
+namespace lexer {
 
 Token getPreviousNonCommentToken(const ASTContext &Context,
                                  SourceLocation Location) {
@@ -34,6 +35,7 @@ Token getPreviousNonCommentToken(const ASTContext &Context,
   return Token;
 }
 
-} // namespace lexer_utils
+} // namespace lexer
+} // namespace utils
 } // namespace tidy
 } // namespace clang

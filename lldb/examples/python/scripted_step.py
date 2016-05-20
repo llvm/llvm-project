@@ -184,3 +184,28 @@ class StepCheckingCondition:
     def should_step (self):
         return True
 
+# Here's an example that steps out of the current frame, gathers some information
+# and then continues.  The information in this case is rax.  Currently the thread
+# plans are not a safe place to call lldb command-line commands, so the information
+# is gathered through SB API calls.
+
+class FinishPrintAndContinue:
+    def __init__ (self, thread_plan, dict):
+        self.thread_plan = thread_plan
+        self.step_out_thread_plan = thread_plan.QueueThreadPlanForStepOut(0, True)
+        self.thread = self.thread_plan.GetThread()
+
+    def explains_stop (self, event):
+        return False
+
+    def should_stop (self, event):
+        if  self.step_out_thread_plan.IsPlanComplete():
+            frame_0 = self.thread.frames[0]
+            rax_value = frame_0.FindRegister("rax")
+            if rax_value.GetError().Success():
+                print "RAX on exit: ", rax_value.GetValue()
+            else:
+                print "Couldn't get rax value:", rax_value.GetError().GetCString()
+
+            self.thread_plan.SetPlanComplete(True)
+        return False

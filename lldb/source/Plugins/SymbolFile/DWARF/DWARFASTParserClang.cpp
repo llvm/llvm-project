@@ -2070,7 +2070,7 @@ DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Ty
 {
     SymbolFileDWARF *dwarf = die.GetDWARF();
 
-    lldb_private::Mutex::Locker locker(dwarf->GetObjectFile()->GetModule()->GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(dwarf->GetObjectFile()->GetModule()->GetMutex());
 
     // Disable external storage for this type so we don't get anymore
     // clang::ExternalASTSource queries for this type.
@@ -3618,10 +3618,14 @@ DWARFASTParserClang::GetClangDeclForDIE (const DWARFDIE &die)
         {
             SymbolFileDWARF *dwarf = die.GetDWARF();
             Type *type = GetTypeForDIE(die);
-            const char *name = die.GetName();
-            clang::DeclContext *decl_context = ClangASTContext::DeclContextGetAsDeclContext(dwarf->GetDeclContextContainingUID(die.GetID()));
-            decl = m_ast.CreateVariableDeclaration(decl_context, name,
-                                                   ClangUtil::GetQualType(type->GetForwardCompilerType()));
+            if (dwarf && type)
+            {
+                const char *name = die.GetName();
+                clang::DeclContext *decl_context =
+                    ClangASTContext::DeclContextGetAsDeclContext(dwarf->GetDeclContextContainingUID(die.GetID()));
+                decl = m_ast.CreateVariableDeclaration(decl_context, name,
+                                                       ClangUtil::GetQualType(type->GetForwardCompilerType()));
+            }
             break;
         }
         case DW_TAG_imported_declaration:

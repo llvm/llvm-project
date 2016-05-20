@@ -3,7 +3,7 @@
 ;        void f(int *A, int N, int c, int v) {
 ; CHECK:   #pragma minimal dependence distance: 1
 ;          for (int j = 0; j < N; j++)
-; CHECK:     #pragma minimal dependence distance: c + v <= -1 ? -c - v : c + v
+; CHECK:     #pragma minimal dependence distance: max(-c - v, c + v)
 ;            for (int i = 0; i < N; i++)
 ;              A[i + c + v] = A[i] + 1;
 ;        }

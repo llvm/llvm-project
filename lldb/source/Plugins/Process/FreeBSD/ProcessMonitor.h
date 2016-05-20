@@ -15,11 +15,12 @@
 #include <signal.h>
 
 // C++ Includes
+#include <mutex>
+
 // Other libraries and framework includes
 #include "lldb/lldb-types.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private
 {
@@ -223,7 +224,7 @@ private:
 
     // current operation which must be executed on the privileged thread
     Operation *m_operation;
-    lldb_private::Mutex m_operation_mutex;
+    std::mutex m_operation_mutex;
 
     // semaphores notified when Operation is ready to be processed and when
     // the operation is complete.
@@ -302,8 +303,7 @@ private:
     DupDescriptor(const lldb_private::FileSpec &file_spec, int fd, int flags);
 
     static bool
-    MonitorCallback(void *callback_baton,
-                    lldb::pid_t pid, bool exited, int signal, int status);
+    MonitorCallback(ProcessMonitor *monitor, lldb::pid_t pid, bool exited, int signal, int status);
 
     static ProcessMessage
     MonitorSIGTRAP(ProcessMonitor *monitor,

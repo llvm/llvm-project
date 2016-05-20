@@ -56,10 +56,10 @@ bool isAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
                   const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
                   InvariantLoadsSetTy *ILS = nullptr);
 
-/// @brief Check if @p V describes an affine parameter constraint in @p R.
-bool isAffineParamConstraint(llvm::Value *V, const llvm::Region *R,
-                             llvm::Loop *Scope, llvm::ScalarEvolution &SE,
-                             ParameterSetTy &Params, bool OrExpr = false);
+/// @brief Check if @p V describes an affine constraint in @p R.
+bool isAffineConstraint(llvm::Value *V, const llvm::Region *R,
+                        llvm::Loop *Scope, llvm::ScalarEvolution &SE,
+                        ParameterSetTy &Params, bool OrExpr = false);
 
 ParameterSetTy getParamsInAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
                                      const llvm::SCEV *Expression,

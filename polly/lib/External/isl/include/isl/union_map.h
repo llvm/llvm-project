@@ -204,6 +204,7 @@ __isl_export
 isl_bool isl_union_map_is_injective(__isl_keep isl_union_map *umap);
 __isl_export
 isl_bool isl_union_map_is_bijective(__isl_keep isl_union_map *umap);
+isl_bool isl_union_map_is_identity(__isl_keep isl_union_map *umap);
 
 __isl_export
 isl_bool isl_union_map_is_subset(__isl_keep isl_union_map *umap1,

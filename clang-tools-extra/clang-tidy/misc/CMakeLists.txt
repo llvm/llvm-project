@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS support)
 add_clang_library(clangTidyMiscModule
   ArgumentCommentCheck.cpp
   AssertSideEffectCheck.cpp
-  AssignOperatorSignatureCheck.cpp
+  UnconventionalAssignOperatorCheck.cpp
   BoolPointerImplicitConversionCheck.cpp
   DanglingHandleCheck.cpp
   DefinitionsInHeadersCheck.cpp
@@ -50,4 +50,5 @@ add_clang_library(clangTidyMiscModule
   clangLex
   clangTidy
   clangTidyUtils
+  clangTooling
   )

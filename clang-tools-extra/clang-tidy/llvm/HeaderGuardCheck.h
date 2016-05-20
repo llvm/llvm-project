@@ -17,7 +17,7 @@ namespace tidy {
 namespace llvm {
 
 /// Finds and fixes header guards that do not adhere to LLVM style.
-class LLVMHeaderGuardCheck : public HeaderGuardCheck {
+class LLVMHeaderGuardCheck : public utils::HeaderGuardCheck {
 public:
   LLVMHeaderGuardCheck(StringRef Name, ClangTidyContext *Context)
       : HeaderGuardCheck(Name, Context) {}

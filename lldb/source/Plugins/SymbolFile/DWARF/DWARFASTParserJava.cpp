@@ -147,7 +147,7 @@ DWARFASTParserJava::ParseArrayTypeFromDIE(const DWARFDIE &die)
 
     CompilerType element_compiler_type = element_type->GetForwardCompilerType();
     CompilerType array_compiler_type =
-        m_ast.CreateArrayType(element_compiler_type, length_expression, data_offset);
+        m_ast.CreateArrayType(linkage_name, element_compiler_type, length_expression, data_offset);
 
     Declaration decl;
     TypeSP type_sp(new Type(die.GetID(), dwarf, array_compiler_type.GetTypeName(), -1, nullptr,

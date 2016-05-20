@@ -338,3 +338,10 @@ void NegativeLocalCopyWeirdNonCopy() {
   WeirdCopyCtorType neg_weird_1(orig, false);
   WeirdCopyCtorType neg_weird_2(orig, true);
 }
+
+void WarningOnlyMultiDeclStmt() {
+  ExpensiveToCopyType orig;
+  ExpensiveToCopyType copy = orig, copy2;
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy' of the variable 'orig' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
+  // CHECK-FIXES: ExpensiveToCopyType copy = orig, copy2;
+}

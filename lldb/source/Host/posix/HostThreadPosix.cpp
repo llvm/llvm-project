@@ -56,7 +56,9 @@ HostThreadPosix::Cancel()
     if (IsJoinable())
     {
 #ifndef __ANDROID__
+#ifndef __FreeBSD__
         assert(false && "someone is calling HostThread::Cancel()");
+#endif
         int err = ::pthread_cancel(m_thread);
         error.SetError(err, eErrorTypePOSIX);
 #else

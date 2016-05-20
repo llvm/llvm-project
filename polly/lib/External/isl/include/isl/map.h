@@ -541,6 +541,7 @@ __isl_export
 isl_bool isl_map_is_injective(__isl_keep isl_map *map);
 __isl_export
 isl_bool isl_map_is_bijective(__isl_keep isl_map *map);
+isl_bool isl_map_is_identity(__isl_keep isl_map *map);
 int isl_map_is_translation(__isl_keep isl_map *map);
 int isl_map_has_equal_space(__isl_keep isl_map *map1, __isl_keep isl_map *map2);
 

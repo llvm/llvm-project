@@ -2,7 +2,7 @@
 /*
  * Threadprivate is tested in 2 ways:
  * 1. The global variable declared as threadprivate should have
- *  local copy for each thread. Otherwise race condition and 
+ *  local copy for each thread. Otherwise race condition and
  *  wrong result.
  * 2. If the value of local copy is retained for the two adjacent
  *  parallel regions
@@ -21,7 +21,7 @@ int test_omp_threadprivate()
 {
   int sum = 0;
   int known_sum;
-  int i; 
+  int i;
   int iter;
   int *data;
   int size;
@@ -29,10 +29,10 @@ int test_omp_threadprivate()
   int my_random;
   omp_set_dynamic(0);
 
-  #pragma omp parallel private(i) 
+  #pragma omp parallel private(i)
   {
     sum0 = 0;
-    #pragma omp for 
+    #pragma omp for
     for (i = 1; i <= LOOPCOUNT; i++) {
       sum0 = sum0 + i;
     } /*end of for*/
@@ -40,7 +40,7 @@ int test_omp_threadprivate()
     {
       sum = sum + sum0;
     } /*end of critical */
-  } /* end of parallel */  
+  } /* end of parallel */
   known_sum = (LOOPCOUNT * (LOOPCOUNT + 1)) / 2;
   if (known_sum != sum ) {
     fprintf (stderr, " known_sum = %d, sum = %d\n", known_sum, sum);
@@ -59,7 +59,7 @@ int test_omp_threadprivate()
 
   srand(45);
   for (iter = 0; iter < 100; iter++) {
-    my_random = rand(); /* random number generator is 
+    my_random = rand(); /* random number generator is
                  called inside serial region*/
 
     /* the first parallel region is used to initialiye myvalue
@@ -71,7 +71,7 @@ int test_omp_threadprivate()
       myvalue = data[rank] = my_random + rank;
     }
 
-    /* the second parallel region verifies that the 
+    /* the second parallel region verifies that the
        value of "myvalue" is retained */
     #pragma omp parallel reduction(+:num_failed)
     {

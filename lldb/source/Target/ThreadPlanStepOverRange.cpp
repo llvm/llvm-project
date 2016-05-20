@@ -232,7 +232,7 @@ ThreadPlanStepOverRange::ShouldStop (Event *event_ptr)
                 sc = frame_sp->GetSymbolContext (eSymbolContextEverything);
                 if (sc.line_entry.IsValid())
                 {
-                    if (sc.line_entry.file != m_addr_context.line_entry.file
+                    if (sc.line_entry.original_file != m_addr_context.line_entry.original_file
                          && sc.comp_unit == m_addr_context.comp_unit
                          && sc.function == m_addr_context.function)
                     {
@@ -256,7 +256,7 @@ ThreadPlanStepOverRange::ShouldStop (Event *event_ptr)
                                     // some code fragment by using #include <source-fragment.c> directly.
                                     LineEntry prev_line_entry;
                                     if (line_table->GetLineEntryAtIndex(entry_idx - 1, prev_line_entry)
-                                        && prev_line_entry.file == line_entry.file)
+                                        && prev_line_entry.original_file == line_entry.original_file)
                                     {
                                         SymbolContext prev_sc;
                                         Address prev_address = prev_line_entry.range.GetBaseAddress();
@@ -289,7 +289,7 @@ ThreadPlanStepOverRange::ShouldStop (Event *event_ptr)
                                         if (next_line_function != m_addr_context.function)
                                             break;
                                         
-                                        if (next_line_entry.file == m_addr_context.line_entry.file)
+                                        if (next_line_entry.original_file == m_addr_context.line_entry.original_file)
                                         {
                                             const bool abort_other_plans = false;
                                             const RunMode stop_other_threads = RunMode::eAllThreads;

@@ -897,7 +897,7 @@ protected:
         operator == (const SourceInfo &rhs) const
         {
             return function == rhs.function &&
-            line_entry.file == rhs.line_entry.file &&
+            line_entry.original_file == rhs.line_entry.original_file &&
             line_entry.line == rhs.line_entry.line;
         }
         
@@ -905,7 +905,7 @@ protected:
         operator != (const SourceInfo &rhs) const
         {
             return function != rhs.function ||
-            line_entry.file != rhs.line_entry.file ||
+            line_entry.original_file != rhs.line_entry.original_file ||
             line_entry.line != rhs.line_entry.line;
         }
         

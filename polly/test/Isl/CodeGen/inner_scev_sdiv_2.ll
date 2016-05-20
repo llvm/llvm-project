@@ -7,8 +7,6 @@
 ;
 ; CHECK:    polly.split_new_and_old:
 ; CHECK-NOT:  = sdiv i64 0, -4
-; CHECK:      %div43polly = sdiv i64 %param, 2
-; CHECK:      %div44polly = sdiv i64 %div43polly, 2
 ;
 target triple = "x86_64-unknown-linux-gnu"
 

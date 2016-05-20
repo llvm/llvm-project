@@ -17,7 +17,7 @@ int test_omp_section_lastprivate()
   {
     #pragma omp sections lastprivate(i0) private(i,sum0)
     {
-      #pragma omp section  
+      #pragma omp section
       {
         sum0 = 0;
         for (i = 1; i < 400; i++)
@@ -30,7 +30,7 @@ int test_omp_section_lastprivate()
           sum = sum + sum0;
         } /*end of critical*/
       } /* end of section */
-      #pragma omp section 
+      #pragma omp section
       {
         sum0 = 0;
         for(i = 400; i < 700; i++)
@@ -43,7 +43,7 @@ int test_omp_section_lastprivate()
           sum = sum + sum0;
         } /*end of critical*/
       }
-      #pragma omp section 
+      #pragma omp section
       {
         sum0 = 0;
         for(i = 700; i < 1000; i++)
@@ -57,7 +57,7 @@ int test_omp_section_lastprivate()
         } /*end of critical*/
       } /* end of section */
     } /* end of sections*/
-  } /* end of parallel*/  
+  } /* end of parallel*/
   known_sum = (999 * 1000) / 2;
   return ((known_sum == sum) && (i0 == 999) );
 }

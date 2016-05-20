@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 namespace {
 class MacroParenthesesPPCallbacks : public PPCallbacks {
@@ -183,6 +184,10 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
         Next.isOneOf(tok::comma, tok::greater))
       continue;
 
+    // Namespaces.
+    if (Prev.is(tok::kw_namespace))
+      continue;
+
     Check->diag(Tok.getLocation(), "macro argument should be enclosed in "
                                    "parentheses")
         << FixItHint::CreateInsertion(Tok.getLocation(), "(")
@@ -198,5 +203,6 @@ void MacroParenthesesCheck::registerPPCallbacks(CompilerInstance &Compiler) {
           &Compiler.getPreprocessor(), this));
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

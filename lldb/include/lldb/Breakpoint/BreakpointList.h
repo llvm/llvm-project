@@ -13,10 +13,11 @@
 // C Includes
 // C++ Includes
 #include <list>
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -116,7 +117,7 @@ public:
     size_t
     GetSize() const 
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         return m_breakpoints.size(); 
     }
 
@@ -193,7 +194,7 @@ public:
     ///   The locker object that is set.
     //------------------------------------------------------------------
     void
-    GetListMutex (lldb_private::Mutex::Locker &locker);
+    GetListMutex(std::unique_lock<std::recursive_mutex> &lock);
 
 protected:
     typedef std::list<lldb::BreakpointSP> bp_collection;
@@ -204,19 +205,20 @@ protected:
     bp_collection::const_iterator
     GetBreakpointIDConstIterator(lldb::break_id_t breakID) const;
 
-    Mutex &
-    GetMutex () const
+    std::recursive_mutex &
+    GetMutex() const
     {
         return m_mutex;
     }
 
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     bp_collection m_breakpoints;  // The breakpoint list, currently a list.
     lldb::break_id_t m_next_break_id;
     bool m_is_internal;
 
 public:
-    typedef LockingAdaptedIterable<bp_collection, lldb::BreakpointSP, list_adapter> BreakpointIterable;
+    typedef LockingAdaptedIterable<bp_collection, lldb::BreakpointSP, list_adapter, std::recursive_mutex>
+        BreakpointIterable;
     BreakpointIterable
     Breakpoints()
     {

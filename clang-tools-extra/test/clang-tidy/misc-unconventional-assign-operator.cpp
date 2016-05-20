@@ -1,0 +1,89 @@
+// RUN: %check_clang_tidy %s misc-unconventional-assign-operator %t -- -- -std=c++11 -isystem %S/Inputs/Headers
+
+namespace std {
+template <typename T>
+struct remove_reference { typedef T type; };
+template <typename T>
+struct remove_reference<T &> { typedef T type; };
+template <typename T>
+struct remove_reference<T &&> { typedef T type; };
+template <typename T>
+typename remove_reference<T>::type &&move(T &&t);
+}
+
+
+struct Good {
+  Good& operator=(const Good&);
+  Good& operator=(Good&&);
+
+  // Assign from other types is fine too.
+  Good& operator=(int);
+};
+
+struct AlsoGood {
+  // By value is also fine.
+  AlsoGood& operator=(AlsoGood);
+};
+
+struct BadReturnType {
+  void operator=(const BadReturnType&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'BadReturnType&' [misc-unconventional-assign-operator]
+  const BadReturnType& operator=(BadReturnType&&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
+  void operator=(int);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
+};
+
+struct BadReturnType2 {
+  BadReturnType2&& operator=(const BadReturnType2&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
+  int operator=(BadReturnType2&&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
+};
+
+struct BadArgument {
+  BadArgument& operator=(BadArgument&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should take 'BadArgument const&', 'BadArgument&&' or 'BadArgument'
+  BadArgument& operator=(const BadArgument&&);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should take 'BadAr
+};
+
+struct BadModifier {
+  BadModifier& operator=(const BadModifier&) const;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should not be marked 'const'
+};
+
+struct Deleted {
+  // We don't check the return value of deleted operators.
+  void operator=(const Deleted&) = delete;
+  void operator=(Deleted&&) = delete;
+};
+
+class Private {
+  // We don't check the return value of private operators.
+  // Pre-C++11 way of disabling assignment.
+  void operator=(const Private &);
+};
+
+struct Virtual {
+  virtual Virtual& operator=(const Virtual &);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should not be marked 'virtual'
+};
+
+class BadReturnStatement {
+  int n;
+
+public:
+  BadReturnStatement& operator=(BadReturnStatement&& rhs) {
+    n = std::move(rhs.n);
+    return rhs;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: operator=() should always return '*this'
+  }
+
+  // Do not check if return type is different from '&BadReturnStatement'
+  int operator=(int i) {
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'Bad
+    n = i;
+    return n;
+  }
+};

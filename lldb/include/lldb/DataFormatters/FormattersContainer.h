@@ -15,6 +15,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 
 // Other libraries and framework includes
@@ -81,33 +82,27 @@ public:
     typedef std::map<KeyType, ValueSP> MapType;
     typedef typename MapType::iterator MapIterator;
     typedef std::function<bool(KeyType, const ValueSP&)> ForEachCallback;
-    
-    FormatMap(IFormatChangeListener* lst) :
-    m_map(),
-    m_map_mutex(Mutex::eMutexTypeRecursive),
-    listener(lst)
-    {
-    }
-    
+
+    FormatMap(IFormatChangeListener *lst) : m_map(), m_map_mutex(), listener(lst) {}
+
     void
-    Add(KeyType name,
-        const ValueSP& entry)
+    Add(KeyType name, const ValueSP &entry)
     {
         if (listener)
             entry->GetRevision() = listener->GetCurrentRevision();
         else
             entry->GetRevision() = 0;
 
-        Mutex::Locker locker(m_map_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
         m_map[name] = entry;
         if (listener)
             listener->Changed();
     }
-    
+
     bool
-    Delete (KeyType name)
+    Delete(KeyType name)
     {
-        Mutex::Locker locker(m_map_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
         MapIterator iter = m_map.find(name);
         if (iter == m_map.end())
             return false;
@@ -116,34 +111,33 @@ public:
             listener->Changed();
         return true;
     }
-    
+
     void
-    Clear ()
+    Clear()
     {
-        Mutex::Locker locker(m_map_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
         m_map.clear();
         if (listener)
             listener->Changed();
     }
-    
+
     bool
-    Get(KeyType name,
-        ValueSP& entry)
+    Get(KeyType name, ValueSP &entry)
     {
-        Mutex::Locker locker(m_map_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
         MapIterator iter = m_map.find(name);
         if (iter == m_map.end())
             return false;
         entry = iter->second;
         return true;
     }
-    
+
     void
-    ForEach (ForEachCallback callback)
+    ForEach(ForEachCallback callback)
     {
         if (callback)
         {
-            Mutex::Locker locker(m_map_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
             MapIterator pos, end = m_map.end();
             for (pos = m_map.begin(); pos != end; pos++)
             {
@@ -153,17 +147,17 @@ public:
             }
         }
     }
-    
+
     uint32_t
     GetCount ()
     {
         return m_map.size();
     }
-    
+
     ValueSP
-    GetValueAtIndex (size_t index)
+    GetValueAtIndex(size_t index)
     {
-        Mutex::Locker locker(m_map_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
         MapIterator iter = m_map.begin();
         MapIterator end = m_map.end();
         while (index > 0)
@@ -175,11 +169,11 @@ public:
         }
         return iter->second;
     }
-    
+
     KeyType
-    GetKeyAtIndex (size_t index)
+    GetKeyAtIndex(size_t index)
     {
-        Mutex::Locker locker(m_map_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
         MapIterator iter = m_map.begin();
         MapIterator end = m_map.end();
         while (index > 0)
@@ -191,24 +185,24 @@ public:
         }
         return iter->first;
     }
-    
+
 protected:
-    MapType m_map;    
-    Mutex m_map_mutex;
+    MapType m_map;
+    std::recursive_mutex m_map_mutex;
     IFormatChangeListener* listener;
-    
+
     MapType&
     map ()
     {
         return m_map;
     }
-    
-    Mutex&
-    mutex ()
+
+    std::recursive_mutex &
+    mutex()
     {
         return m_map_mutex;
     }
-    
+
     friend class FormattersContainer<KeyType, ValueType>;
     friend class FormatManager;
 };
@@ -332,24 +326,23 @@ protected:
     }
 
     bool
-    Delete_Impl (ConstString type, lldb::RegularExpressionSP *dummy)
+    Delete_Impl(ConstString type, lldb::RegularExpressionSP *dummy)
     {
-       Mutex& x_mutex = m_format_map.mutex();
-        lldb_private::Mutex::Locker locker(x_mutex);
-       MapIterator pos, end = m_format_map.map().end();
-       for (pos = m_format_map.map().begin(); pos != end; pos++)
-       {
-           lldb::RegularExpressionSP regex = pos->first;
-           if ( ::strcmp(type.AsCString(),regex->GetText()) == 0)
-           {
-               m_format_map.map().erase(pos);
-               if (m_format_map.listener)
-                   m_format_map.listener->Changed();
-               return true;
-           }
-       }
-       return false;
-    }    
+        std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
+        MapIterator pos, end = m_format_map.map().end();
+        for (pos = m_format_map.map().begin(); pos != end; pos++)
+        {
+            lldb::RegularExpressionSP regex = pos->first;
+            if (::strcmp(type.AsCString(), regex->GetText()) == 0)
+            {
+                m_format_map.map().erase(pos);
+                if (m_format_map.listener)
+                    m_format_map.listener->Changed();
+                return true;
+            }
+        }
+        return false;
+    }
 
     bool
     Get_Impl (ConstString type, MapValueType& entry, ConstString *dummy)
@@ -385,36 +378,34 @@ protected:
     }
 
     bool
-    Get_Impl (ConstString key, MapValueType& value, lldb::RegularExpressionSP *dummy)
+    Get_Impl(ConstString key, MapValueType &value, lldb::RegularExpressionSP *dummy)
     {
-       const char* key_cstr = key.AsCString();
-       if (!key_cstr)
-           return false;
-       Mutex& x_mutex = m_format_map.mutex();
-       lldb_private::Mutex::Locker locker(x_mutex);
-       MapIterator pos, end = m_format_map.map().end();
-       for (pos = m_format_map.map().begin(); pos != end; pos++)
-       {
-           lldb::RegularExpressionSP regex = pos->first;
-           if (regex->Execute(key_cstr))
-           {
-               value = pos->second;
-               return true;
-           }
-       }
-       return false;
-    }
-    
-    bool
-    GetExact_Impl (ConstString key, MapValueType& value, lldb::RegularExpressionSP *dummy)
-    {
-        Mutex& x_mutex = m_format_map.mutex();
-        lldb_private::Mutex::Locker locker(x_mutex);
+        const char *key_cstr = key.AsCString();
+        if (!key_cstr)
+            return false;
+        std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
         MapIterator pos, end = m_format_map.map().end();
         for (pos = m_format_map.map().begin(); pos != end; pos++)
         {
             lldb::RegularExpressionSP regex = pos->first;
-            if (strcmp(regex->GetText(),key.AsCString()) == 0)
+            if (regex->Execute(key_cstr))
+            {
+                value = pos->second;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool
+    GetExact_Impl(ConstString key, MapValueType &value, lldb::RegularExpressionSP *dummy)
+    {
+        std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
+        MapIterator pos, end = m_format_map.map().end();
+        for (pos = m_format_map.map().begin(); pos != end; pos++)
+        {
+            lldb::RegularExpressionSP regex = pos->first;
+            if (strcmp(regex->GetText(), key.AsCString()) == 0)
             {
                 value = pos->second;
                 return true;

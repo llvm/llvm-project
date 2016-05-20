@@ -23,7 +23,7 @@ int test_omp_for_auto()
   //       threads 0 and 3 did not, threads 1 and 2 did
   int max_threads = omp_get_max_threads();
   int* active_threads = (int*)malloc(sizeof(int)*max_threads);
-  for(j = 0; j < max_threads; j++) 
+  for(j = 0; j < max_threads; j++)
     active_threads[j] = 0;
 
   #pragma omp parallel
@@ -36,7 +36,7 @@ int test_omp_for_auto()
       sum0 = sum0 + i;
       sum1 = sum0;
     }
-  
+
     #pragma omp critical
     {
       sum = sum + sum1;

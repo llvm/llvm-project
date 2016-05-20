@@ -21,6 +21,7 @@ Contents
    :maxdepth: 2
 
    clang-tidy/index
+   include-fixer
    modularize
    pp-trace
 

@@ -109,6 +109,32 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
+#if KMP_OS_LINUX && KMP_ARCH_AARCH64
+
+#  define KMP_PREFIX_UNDERSCORE(x) x  // no extra underscore for Linux* OS symbols
+// Format labels so that they don't override function names in gdb's backtraces
+#  define KMP_LABEL(x) .L_##x         // local label hidden from backtraces
+
+.macro ALIGN size
+	.align 1<<(\size)
+.endm
+
+.macro DEBUG_INFO proc
+	.cfi_endproc
+// Not sure why we need .type and .size for the functions
+	ALIGN 2
+	.type  \proc,@function
+	.size  \proc,.-\proc
+.endm
+
+.macro PROC proc
+	ALIGN 2
+	.globl KMP_PREFIX_UNDERSCORE(\proc)
+KMP_PREFIX_UNDERSCORE(\proc):
+	.cfi_startproc
+.endm
+
+#endif // KMP_OS_LINUX && KMP_ARCH_AARCH64
 
 // -----------------------------------------------------------------------
 // data
@@ -1413,6 +1439,121 @@ KMP_LABEL(kmp_1_exit):
 	
 // -----------------------------------------------------------------------
 #endif /* KMP_ARCH_X86_64 */
+
+// '
+#if KMP_OS_LINUX && KMP_ARCH_AARCH64
+
+//------------------------------------------------------------------------
+//
+// typedef void	(*microtask_t)( int *gtid, int *tid, ... );
+//
+// int
+// __kmp_invoke_microtask( void (*pkfn) (int gtid, int tid, ...),
+//		           int gtid, int tid,
+//                         int argc, void *p_argv[] ) {
+//    (*pkfn)( & gtid, & tid, argv[0], ... );
+//    return 1;
+// }
+//
+// parameters:
+//	x0:	pkfn
+//	w1:	gtid
+//	w2:	tid
+//	w3:	argc
+//	x4:	p_argv
+//	x5:	&exit_frame
+//
+// locals:
+//	__gtid:	gtid parm pushed on stack so can pass &gtid to pkfn
+//	__tid:	tid parm pushed on stack so can pass &tid to pkfn
+//
+// reg temps:
+//	 x8:	used to hold pkfn address
+//	 w9:	used as temporary for number of pkfn parms
+//	x10:	used to traverse p_argv array
+//	x11:	used as temporary for stack placement calculation
+//	x12:	used as temporary for stack parameters
+//	x19:	used to preserve exit_frame_ptr, callee-save
+//
+// return:	w0	(always 1/TRUE)
+//
+
+__gtid = 4
+__tid = 8
+
+// -- Begin __kmp_invoke_microtask
+// mark_begin;
+	.text
+	PROC __kmp_invoke_microtask
+
+	stp	x29, x30, [sp, #-16]!
+# if OMPT_SUPPORT
+	stp	x19, x20, [sp, #-16]!
+# endif
+	mov	x29, sp
+
+	orr	w9, wzr, #1
+	add	w9, w9, w3, lsr #1
+	sub	sp, sp, w9, lsl #4
+	mov	x11, sp
+
+	mov	x8, x0
+	str	w1, [x29, #-__gtid]
+	str	w2, [x29, #-__tid]
+	mov	w9, w3
+	mov	x10, x4
+# if OMPT_SUPPORT
+	mov	x19, x5
+	str	x29, [x19]
+# endif
+
+	sub	x0, x29, #__gtid
+	sub	x1, x29, #__tid
+
+	cbz	w9, KMP_LABEL(kmp_1)
+	ldr	x2, [x10]
+
+	sub	w9, w9, #1
+	cbz	w9, KMP_LABEL(kmp_1)
+	ldr	x3, [x10, #8]!
+
+	sub	w9, w9, #1
+	cbz	w9, KMP_LABEL(kmp_1)
+	ldr	x4, [x10, #8]!
+
+	sub	w9, w9, #1
+	cbz	w9, KMP_LABEL(kmp_1)
+	ldr	x5, [x10, #8]!
+
+	sub	w9, w9, #1
+	cbz	w9, KMP_LABEL(kmp_1)
+	ldr	x6, [x10, #8]!
+
+	sub	w9, w9, #1
+	cbz	w9, KMP_LABEL(kmp_1)
+	ldr	x7, [x10, #8]!
+
+KMP_LABEL(kmp_0):
+	sub	w9, w9, #1
+	cbz	w9, KMP_LABEL(kmp_1)
+	ldr	x12, [x10, #8]!
+	str	x12, [x11], #8
+	b	KMP_LABEL(kmp_0)
+KMP_LABEL(kmp_1):
+	blr	x8
+	orr	w0, wzr, #1
+	mov	sp, x29
+# if OMPT_SUPPORT
+	str	xzr, [x19]
+	ldp	x19, x20, [sp], #16
+# endif
+	ldp	x29, x30, [sp], #16
+	ret
+
+	DEBUG_INFO __kmp_invoke_microtask
+// -- End  __kmp_invoke_microtask
+
+#endif /* KMP_OS_LINUX && KMP_ARCH_AARCH64 */
 
 #if KMP_ARCH_ARM
     .data

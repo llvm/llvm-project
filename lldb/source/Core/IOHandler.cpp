@@ -167,13 +167,13 @@ IOHandler::WaitForPop ()
 }
 
 void
-IOHandlerStack::PrintAsync (Stream *stream, const char *s, size_t len)
+IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len)
 {
     if (stream)
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         if (m_top)
-            m_top->PrintAsync (stream, s, len);
+            m_top->PrintAsync(stream, s, len);
     }
 }
 
@@ -3309,7 +3309,7 @@ public:
                 if (thread_sp)
                 {
                     ThreadList &thread_list = thread_sp->GetProcess()->GetThreadList();
-                    Mutex::Locker locker (thread_list.GetMutex());
+                    std::lock_guard<std::recursive_mutex> guard(thread_list.GetMutex());
                     ThreadSP selected_thread_sp = thread_list.GetSelectedThread();
                     if (selected_thread_sp->GetID() != thread_sp->GetID())
                     {
@@ -3391,7 +3391,7 @@ public:
                 
                 TreeItem t (&item, *m_thread_delegate_sp, false);
                 ThreadList &threads = process_sp->GetThreadList();
-                Mutex::Locker locker (threads.GetMutex());
+                std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
                 size_t num_threads = threads.GetSize();
                 item.Resize (num_threads, t);
                 for (size_t i = 0; i < num_threads; ++i)
@@ -4410,7 +4410,7 @@ public:
                             submenus.erase (submenus.begin() + 8, submenus.end());
                         
                         ThreadList &threads = process->GetThreadList();
-                        Mutex::Locker locker (threads.GetMutex());
+                        std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
                         size_t num_threads = threads.GetSize();
                         for (size_t i = 0; i < num_threads; ++i)
                         {

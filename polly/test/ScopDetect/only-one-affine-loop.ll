@@ -1,14 +1,11 @@
 ; RUN: opt %loadPolly -polly-detect -polly-process-unprofitable=false -analyze \
 ; RUN:     -polly-allow-nonaffine-loops < %s | FileCheck %s
 ;
-; RUN: opt %loadPolly -polly-detect -analyze \
-; RUN:     -polly-allow-nonaffine-loops < %s | FileCheck %s --check-prefix=UNPROFIT
-;
 ; Even if we allow non-affine loops we can only model the outermost loop, all
-; other loops are boxed in non-affine regions
+; other loops are boxed in non-affine regions. However, the inner loops can be
+; distributed as black-boxes, thus we will recognize the outer loop as profitable.
 ;
-; CHECK-NOT: Valid
-; UNPROFIT:  Valid Region for Scop: for.cond => for.end.51
+; CHECK:  Valid Region for Scop: for.cond => for.end.51
 ;
 ;    void f(int *A) {
 ;      for (int i = 0; i < 100; i++) {

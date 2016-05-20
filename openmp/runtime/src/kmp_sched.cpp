@@ -84,7 +84,7 @@ __kmp_for_static_init(
     typename traits_t< T >::signed_t  chunk
 ) {
     KMP_COUNT_BLOCK(OMP_FOR_static);
-    KMP_TIME_BLOCK (FOR_static_scheduling);
+    KMP_TIME_PARTITIONED_BLOCK(FOR_static_scheduling);
 
     typedef typename traits_t< T >::unsigned_t  UT;
     typedef typename traits_t< T >::signed_t    ST;

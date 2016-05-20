@@ -208,6 +208,7 @@ set(LLVM_LINK_COMPONENTS
   runtimedyld
   option
   support
+  coverage
   )
 
 if ( NOT LLDB_DISABLE_PYTHON )

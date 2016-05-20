@@ -610,7 +610,7 @@ DWARFDebugInfoEntry::GetDIENamesAndRanges
         {
             if (die_ref.die_offset != DW_INVALID_OFFSET)
             {
-                DWARFDIE die = dwarf2Data->DebugInfo()->GetDIE(die_ref);
+                DWARFDIE die = dwarf2Data->GetDIE(die_ref);
                 if (die)
                     die.GetDIE()->GetDIENamesAndRanges(die.GetDWARF(), die.GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column, call_file, call_line, call_column);
             }

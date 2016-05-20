@@ -274,7 +274,7 @@ class RelocationSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  RelocationSection(StringRef Name);
+  RelocationSection(StringRef Name, bool Sort);
   void addReloc(const DynamicReloc<ELFT> &Reloc);
   unsigned getRelocOffset();
   void finalize() override;
@@ -284,6 +284,7 @@ public:
   bool Static = false;
 
 private:
+  bool Sort;
   std::vector<DynamicReloc<ELFT>> Relocs;
 };
 
@@ -310,8 +311,6 @@ template <class ELFT>
 class MergeOutputSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
-  bool shouldTailMerge() const;
-
 public:
   MergeOutputSection(StringRef Name, uint32_t Type, uintX_t Flags,
                      uintX_t Alignment);
@@ -319,6 +318,7 @@ public:
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
   void finalize() override;
+  bool shouldTailMerge() const;
 
 private:
   llvm::StringTableBuilder Builder;
@@ -476,7 +476,7 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   std::vector<Entry> Entries;
 
 public:
-  DynamicSection(SymbolTable<ELFT> &SymTab);
+  explicit DynamicSection(SymbolTable<ELFT> &SymTab);
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
 
@@ -494,6 +494,20 @@ class MipsReginfoOutputSection final : public OutputSectionBase<ELFT> {
 
 public:
   MipsReginfoOutputSection();
+  void writeTo(uint8_t *Buf) override;
+  void addSection(InputSectionBase<ELFT> *S) override;
+
+private:
+  uint32_t GprMask = 0;
+};
+
+template <class ELFT>
+class MipsOptionsOutputSection final : public OutputSectionBase<ELFT> {
+  typedef llvm::object::Elf_Mips_Options<ELFT> Elf_Mips_Options;
+  typedef llvm::object::Elf_Mips_RegInfo<ELFT> Elf_Mips_RegInfo;
+
+public:
+  MipsOptionsOutputSection();
   void writeTo(uint8_t *Buf) override;
   void addSection(InputSectionBase<ELFT> *S) override;
 
@@ -541,8 +555,7 @@ private:
 template <class ELFT> class BuildIdSection : public OutputSectionBase<ELFT> {
 public:
   void writeTo(uint8_t *Buf) override;
-  virtual void update(ArrayRef<uint8_t> Buf) = 0;
-  virtual void writeBuildId() = 0;
+  virtual void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) = 0;
 
 protected:
   BuildIdSection(size_t HashSize);
@@ -553,32 +566,26 @@ protected:
 template <class ELFT> class BuildIdFnv1 final : public BuildIdSection<ELFT> {
 public:
   BuildIdFnv1() : BuildIdSection<ELFT>(8) {}
-  void update(ArrayRef<uint8_t> Buf) override;
-  void writeBuildId() override;
-
-private:
-  // 64-bit FNV-1 initial value
-  uint64_t Hash = 0xcbf29ce484222325;
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
 template <class ELFT> class BuildIdMd5 final : public BuildIdSection<ELFT> {
 public:
   BuildIdMd5() : BuildIdSection<ELFT>(16) {}
-  void update(ArrayRef<uint8_t> Buf) override;
-  void writeBuildId() override;
-
-private:
-  llvm::MD5 Hash;
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
 template <class ELFT> class BuildIdSha1 final : public BuildIdSection<ELFT> {
 public:
   BuildIdSha1() : BuildIdSection<ELFT>(20) {}
-  void update(ArrayRef<uint8_t> Buf) override;
-  void writeBuildId() override;
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
+};
 
-private:
-  llvm::SHA1 Hash;
+template <class ELFT>
+class BuildIdHexstring final : public BuildIdSection<ELFT> {
+public:
+  BuildIdHexstring();
+  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
 };
 
 // All output sections that are hadnled by the linker specially are

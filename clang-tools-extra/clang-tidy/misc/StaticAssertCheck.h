@@ -16,6 +16,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {	
 
 /// Replaces `assert()` with `static_assert()` if the condition is evaluatable
 /// at compile time.
@@ -33,6 +34,7 @@ private:
                                  SourceLocation AssertLoc);
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

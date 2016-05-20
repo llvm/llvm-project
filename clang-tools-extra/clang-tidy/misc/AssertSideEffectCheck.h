@@ -17,6 +17,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 /// Finds `assert()` with side effect.
 ///
@@ -44,6 +45,7 @@ private:
   SmallVector<StringRef, 5> AssertMacros;
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

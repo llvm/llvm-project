@@ -33,36 +33,29 @@
 using namespace lldb;
 using namespace lldb_private;
 
-BreakpointLocation::BreakpointLocation
-(
-    break_id_t loc_id,
-    Breakpoint &owner,
-    const Address &addr,
-    lldb::tid_t tid,
-    bool hardware,
-    bool check_for_resolver
-) :
-    StoppointLocation (loc_id, addr.GetOpcodeLoadAddress(&owner.GetTarget()), hardware),
-    m_being_created(true),
-    m_should_resolve_indirect_functions (false),
-    m_is_reexported (false),
-    m_is_indirect (false),
-    m_address (addr),
-    m_owner (owner),
-    m_options_ap (),
-    m_bp_site_sp (),
-    m_condition_mutex ()
+BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner, const Address &addr, lldb::tid_t tid,
+                                       bool hardware, bool check_for_resolver)
+    : StoppointLocation(loc_id, addr.GetOpcodeLoadAddress(&owner.GetTarget()), hardware),
+      m_being_created(true),
+      m_should_resolve_indirect_functions(false),
+      m_is_reexported(false),
+      m_is_indirect(false),
+      m_address(addr),
+      m_owner(owner),
+      m_options_ap(),
+      m_bp_site_sp(),
+      m_condition_mutex()
 {
     if (check_for_resolver)
     {
         Symbol *symbol = m_address.CalculateSymbolContextSymbol();
         if (symbol && symbol->IsIndirect())
         {
-            SetShouldResolveIndirectFunctions (true);
+            SetShouldResolveIndirectFunctions(true);
         }
     }
-    
-    SetThreadID (tid);
+
+    SetThreadID(tid);
     m_being_created = false;
 }
 
@@ -267,9 +260,9 @@ bool
 BreakpointLocation::ConditionSaysStop (ExecutionContext &exe_ctx, Error &error)
 {
     Log *log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_BREAKPOINTS);
- 
-    Mutex::Locker evaluation_locker(m_condition_mutex);
-    
+
+    std::lock_guard<std::mutex> guard(m_condition_mutex);
+
     size_t condition_hash;
     const char *condition_text = GetConditionText(&condition_hash);
     

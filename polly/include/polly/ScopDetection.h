@@ -125,17 +125,13 @@ public:
   // Remember the valid regions
   RegionSet ValidRegions;
 
-  /// @brief Set of loops (used to remember loops in non-affine subregions).
-  using BoxedLoopsSetTy = SetVector<const Loop *>;
-
-  /// @brief Set to remember non-affine branches in regions.
-  using NonAffineSubRegionSetTy = RegionSet;
-
   /// @brief Context variables for SCoP detection.
   struct DetectionContext {
     Region &CurRegion;   // The region to check.
     AliasSetTracker AST; // The AliasSetTracker to hold the alias information.
     bool Verifying;      // If we are in the verification phase?
+
+    /// @brief Container to remember rejection reasons for this region.
     RejectLog Log;
 
     /// @brief Map a base pointer to all access functions accessing it.
@@ -161,7 +157,7 @@ public:
     bool HasUnknownAccess;
 
     /// @brief The set of non-affine subregions in the region we analyze.
-    NonAffineSubRegionSetTy NonAffineSubRegionSet;
+    RegionSet NonAffineSubRegionSet;
 
     /// @brief The set of loops contained in non-affine regions.
     BoxedLoopsSetTy BoxedLoopsSet;
@@ -207,19 +203,9 @@ private:
   AliasAnalysis *AA;
   //@}
 
-  /// @brief Enum for coloring BBs in Region.
-  ///
-  /// WHITE - Unvisited BB in DFS walk.
-  /// GREY - BBs which are currently on the DFS stack for processing.
-  /// BLACK - Visited and completely processed BB.
-  enum Color { WHITE, GREY, BLACK };
-
-  /// @brief Map to remember detection contexts for valid regions.
-  using DetectionContextMapTy = DenseMap<const Region *, DetectionContext>;
+  /// @brief Map to remember detection contexts for all regions.
+  using DetectionContextMapTy = DenseMap<BBPair, DetectionContext>;
   mutable DetectionContextMapTy DetectionContextMap;
-
-  // Remember a list of errors for every region.
-  mutable RejectLogsContainer RejectLogs;
 
   /// @brief Remove cached results for @p R.
   void removeCachedResults(const Region &R);
@@ -317,6 +303,17 @@ private:
   ///         false otherwise.
   bool hasSufficientCompute(DetectionContext &Context,
                             int NumAffineLoops) const;
+
+  /// @brief Check if the unique affine loop might be amendable to distribution.
+  ///
+  /// This function checks if the number of non-trivial blocks in the unique
+  /// affine loop in Context.CurRegion is at least two, thus if the loop might
+  /// be amendable to distribution.
+  ///
+  /// @param Context  The context of scop detection.
+  ///
+  /// @return True only if the affine loop might be amendable to distributable.
+  bool hasPossiblyDistributableLoop(DetectionContext &Context) const;
 
   /// @brief Check if a region is profitable to optimize.
   ///
@@ -530,15 +527,8 @@ public:
   /// @brief Return the detection context for @p R, nullptr if @p R was invalid.
   const DetectionContext *getDetectionContext(const Region *R) const;
 
-  /// @brief Return the set of loops in non-affine subregions for @p R.
-  const BoxedLoopsSetTy *getBoxedLoops(const Region *R) const;
-
-  /// @brief Get the instruction to memory access mapping of the current
-  ///        function for @p R.
-  const MapInsnToMemAcc *getInsnToMemAccMap(const Region *R) const;
-
-  /// @brief Return the set of required invariant loads for @p R.
-  const InvariantLoadsSetTy *getRequiredInvariantLoads(const Region *R) const;
+  /// @brief Return the set of rejection causes for @p R.
+  const RejectLog *lookupRejectionLog(const Region *R) const;
 
   /// @brief Return true if @p SubR is a non-affine subregion in @p ScopR.
   bool isNonAffineSubRegion(const Region *SubR, const Region *ScopR) const;
@@ -565,36 +555,10 @@ public:
   const_iterator end() const { return ValidRegions.end(); }
   //@}
 
-  /// @name Reject log iterators
-  ///
-  /// These iterators iterate over the logs of all rejected regions of this
-  //  function.
-  //@{
-  typedef std::map<const Region *, RejectLog>::iterator reject_iterator;
-  typedef std::map<const Region *, RejectLog>::const_iterator
-      const_reject_iterator;
-
-  reject_iterator reject_begin() { return RejectLogs.begin(); }
-  reject_iterator reject_end() { return RejectLogs.end(); }
-
-  const_reject_iterator reject_begin() const { return RejectLogs.begin(); }
-  const_reject_iterator reject_end() const { return RejectLogs.end(); }
-  //@}
-
-  /// @brief Emit rejection remarks for all smallest invalid regions.
+  /// @brief Emit rejection remarks for all rejected regions.
   ///
   /// @param F The function to emit remarks for.
-  /// @param R The region to start the region tree traversal for.
-  void emitMissedRemarksForLeaves(const Function &F, const Region *R);
-
-  /// @brief Emit rejection remarks for the parent regions of all valid regions.
-  ///
-  /// Emitting rejection remarks for the parent regions of all valid regions
-  /// may give the end-user clues about how to increase the size of the
-  /// detected Scops.
-  ///
-  /// @param F The function to emit remarks for.
-  void emitMissedRemarksForValidRegions(const Function &F);
+  void emitMissedRemarks(const Function &F);
 
   /// @brief Mark the function as invalid so we will not extract any scop from
   ///        the function.

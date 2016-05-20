@@ -16,6 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace readability {
 
 void UniqueptrDeleteReleaseCheck::registerMatchers(MatchFinder *Finder) {
   auto IsSusbstituted = qualType(anyOf(
@@ -64,6 +65,7 @@ void UniqueptrDeleteReleaseCheck::check(
              " = nullptr");
 }
 
+} // namespace readability
 } // namespace tidy
 } // namespace clang
 

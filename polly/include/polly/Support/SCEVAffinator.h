@@ -67,6 +67,9 @@ public:
   /// @brief Take the asumption that @p PWAC is non-negative.
   void takeNonNegativeAssumption(PWACtx &PWAC);
 
+  /// @brief Interpret the PWA in @p PWAC as an unsigned value.
+  void interpretAsUnsigned(__isl_keep PWACtx &PWAC, unsigned Width);
+
   /// @brief Check an <nsw> AddRec for the loop @p L is cached.
   bool hasNSWAddRecForLoop(llvm::Loop *L) const;
 

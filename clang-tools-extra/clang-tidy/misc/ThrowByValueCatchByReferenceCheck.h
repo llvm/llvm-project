@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 ///\brief checks for locations that do not throw by value
 // or catch by reference.
@@ -43,6 +44,7 @@ private:
   const bool CheckAnonymousTemporaries;
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

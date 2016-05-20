@@ -1731,6 +1731,33 @@ static isl_stat extend_max(struct isl_from_pw_aff_data *data,
 	return isl_stat_ok;
 }
 
+/* Extend the domain of the current entry of "data", which is assumed
+ * to contain a single subpiece, with "set".  If "replace" is set,
+ * then also replace the affine function by "aff".  Otherwise,
+ * simply free "aff".
+ */
+static isl_stat extend_domain(struct isl_from_pw_aff_data *data,
+	__isl_take isl_set *set, __isl_take isl_aff *aff, int replace)
+{
+	int n = data->n;
+	isl_set *set_n;
+
+	set_n = isl_set_list_get_set(data->p[n].set_list, 0);
+	set_n = isl_set_union(set_n, set);
+	data->p[n].set_list =
+		isl_set_list_set_set(data->p[n].set_list, 0, set_n);
+
+	if (replace)
+		data->p[n].aff_list =
+			isl_aff_list_set_aff(data->p[n].aff_list, 0, aff);
+	else
+		isl_aff_free(aff);
+
+	if (!data->p[n].set_list || !data->p[n].aff_list)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
 /* Construct an isl_ast_expr from "list" within "build".
  * If "state" is isl_state_single, then "list" contains a single entry and
  * an isl_ast_expr is constructed for that entry.
@@ -1918,6 +1945,22 @@ static isl_ast_expr *build_pieces(struct isl_from_pw_aff_data *data)
 	return res;
 }
 
+/* Is the domain of the current entry of "data", which is assumed
+ * to contain a single subpiece, a subset of "set"?
+ */
+static isl_bool single_is_subset(struct isl_from_pw_aff_data *data,
+	__isl_keep isl_set *set)
+{
+	isl_bool subset;
+	isl_set *set_n;
+
+	set_n = isl_set_list_get_set(data->p[data->n].set_list, 0);
+	subset = isl_set_is_subset(set_n, set);
+	isl_set_free(set_n);
+
+	return subset;
+}
+
 /* Can the list of subpieces in the last piece of "data" be extended with
  * "set" and "aff" based on "test"?
  * In particular, is it the case for each entry (set_i, aff_i) that
@@ -2010,6 +2053,13 @@ static isl_bool extends_max(struct isl_from_pw_aff_data *data,
 
 /* This function is called during the construction of an isl_ast_expr
  * that evaluates an isl_pw_aff.
+ * If the last piece of "data" contains a single subpiece and
+ * if its affine function is equal to "aff" on a part of the domain
+ * that includes either "set" or the domain of that single subpiece,
+ * then extend the domain of that single subpiece with "set".
+ * If it was the original domain of the single subpiece where
+ * the two affine functions are equal, then also replace
+ * the affine function of the single subpiece by "aff".
  * If the last piece of "data" contains either a single subpiece
  * or a minimum, then check if this minimum expression can be extended
  * with (set, aff).
@@ -2027,6 +2077,23 @@ static isl_stat ast_expr_from_pw_aff(__isl_take isl_set *set,
 	enum isl_from_pw_aff_state state;
 
 	state = data->p[data->n].state;
+	if (state == isl_state_single) {
+		isl_aff *aff0;
+		isl_set *eq;
+		isl_bool subset1, subset2 = isl_bool_false;
+		aff0 = isl_aff_list_get_aff(data->p[data->n].aff_list, 0);
+		eq = isl_aff_eq_set(isl_aff_copy(aff), aff0);
+		subset1 = isl_set_is_subset(set, eq);
+		if (subset1 >= 0 && !subset1)
+			subset2 = single_is_subset(data, eq);
+		isl_set_free(eq);
+		if (subset1 < 0 || subset2 < 0)
+			goto error;
+		if (subset1)
+			return extend_domain(data, set, aff, 0);
+		if (subset2)
+			return extend_domain(data, set, aff, 1);
+	}
 	if (state == isl_state_single || state == isl_state_min) {
 		test = extends_min(data, set, aff);
 		if (test < 0)

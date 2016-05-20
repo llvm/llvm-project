@@ -83,25 +83,25 @@ SystemRuntimeMacOSX::CreateInstance (Process* process)
 //----------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------
-SystemRuntimeMacOSX::SystemRuntimeMacOSX (Process* process) :
-    SystemRuntime(process),
-    m_break_id(LLDB_INVALID_BREAK_ID),
-    m_mutex(Mutex::eMutexTypeRecursive),
-    m_get_queues_handler(process),
-    m_get_pending_items_handler(process),
-    m_get_item_info_handler(process),
-    m_get_thread_item_info_handler(process),
-    m_page_to_free(LLDB_INVALID_ADDRESS),
-    m_page_to_free_size(0),
-    m_lib_backtrace_recording_info(),
-    m_dispatch_queue_offsets_addr (LLDB_INVALID_ADDRESS),
-    m_libdispatch_offsets(),
-    m_libpthread_layout_offsets_addr (LLDB_INVALID_ADDRESS),
-    m_libpthread_offsets(),
-    m_dispatch_tsd_indexes_addr (LLDB_INVALID_ADDRESS),
-    m_libdispatch_tsd_indexes(),
-    m_dispatch_voucher_offsets_addr (LLDB_INVALID_ADDRESS),
-    m_libdispatch_voucher_offsets()
+SystemRuntimeMacOSX::SystemRuntimeMacOSX(Process *process)
+    : SystemRuntime(process),
+      m_break_id(LLDB_INVALID_BREAK_ID),
+      m_mutex(),
+      m_get_queues_handler(process),
+      m_get_pending_items_handler(process),
+      m_get_item_info_handler(process),
+      m_get_thread_item_info_handler(process),
+      m_page_to_free(LLDB_INVALID_ADDRESS),
+      m_page_to_free_size(0),
+      m_lib_backtrace_recording_info(),
+      m_dispatch_queue_offsets_addr(LLDB_INVALID_ADDRESS),
+      m_libdispatch_offsets(),
+      m_libpthread_layout_offsets_addr(LLDB_INVALID_ADDRESS),
+      m_libpthread_offsets(),
+      m_dispatch_tsd_indexes_addr(LLDB_INVALID_ADDRESS),
+      m_libdispatch_tsd_indexes(),
+      m_dispatch_voucher_offsets_addr(LLDB_INVALID_ADDRESS),
+      m_libdispatch_voucher_offsets()
 {
 }
 
@@ -128,7 +128,7 @@ SystemRuntimeMacOSX::Detach ()
 void
 SystemRuntimeMacOSX::Clear (bool clear_process)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (m_process->IsAlive() && LLDB_BREAK_ID_IS_VALID(m_break_id))
         m_process->ClearBreakpointSiteByID(m_break_id);

@@ -98,8 +98,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 #include <tuple>
 #endif
-#include <pthread.h>
-#include <sched.h>
+#include <__threading_support>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -137,7 +136,7 @@ public:
 template <class _Tp>
 class __thread_specific_ptr
 {
-    pthread_key_t __key_;
+    __libcpp_tl_key __key_;
 
      // Only __thread_local_data() may construct a __thread_specific_ptr
      // and only with _Tp == __thread_struct.
@@ -155,7 +154,7 @@ public:
     ~__thread_specific_ptr();
 
     _LIBCPP_INLINE_VISIBILITY
-    pointer get() const {return static_cast<_Tp*>(pthread_getspecific(__key_));}
+    pointer get() const {return static_cast<_Tp*>(__libcpp_tl_get(__key_));}
     _LIBCPP_INLINE_VISIBILITY
     pointer operator*() const {return *get();}
     _LIBCPP_INLINE_VISIBILITY
@@ -174,7 +173,9 @@ __thread_specific_ptr<_Tp>::__at_thread_exit(void* __p)
 template <class _Tp>
 __thread_specific_ptr<_Tp>::__thread_specific_ptr()
 {
-    int __ec = pthread_key_create(&__key_, &__thread_specific_ptr::__at_thread_exit);
+    int __ec = __libcpp_tl_create(
+        &__key_,
+        &__thread_specific_ptr::__at_thread_exit);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     if (__ec)
         throw system_error(error_code(__ec, system_category()),
@@ -196,7 +197,7 @@ typename __thread_specific_ptr<_Tp>::pointer
 __thread_specific_ptr<_Tp>::release()
 {
     pointer __p = get();
-    pthread_setspecific(__key_, 0);
+    __libcpp_tl_set(__key_, nullptr);
     return __p;
 }
 
@@ -205,7 +206,7 @@ void
 __thread_specific_ptr<_Tp>::reset(pointer __p)
 {
     pointer __p_old = get();
-    pthread_setspecific(__key_, __p);
+    __libcpp_tl_set(__key_, __p);
     delete __p_old;
 }
 
@@ -226,7 +227,7 @@ class _LIBCPP_TYPE_VIS_ONLY __thread_id
     // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
     // NULL is the no-thread value on Darwin.  Someone needs to check
     // on other platforms.  We assume 0 works everywhere for now.
-    pthread_t __id_;
+    __libcpp_thread_id __id_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
@@ -234,13 +235,13 @@ public:
 
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return __x.__id_ == __y.__id_;}
+        {return __libcpp_thread_id_equal(__x.__id_, __y.__id_);}
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT
         {return !(__x == __y);}
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator< (__thread_id __x, __thread_id __y) _NOEXCEPT
-        {return __x.__id_ < __y.__id_;}
+        {return  __libcpp_thread_id_less(__x.__id_, __y.__id_);}
     friend _LIBCPP_INLINE_VISIBILITY
         bool operator<=(__thread_id __x, __thread_id __y) _NOEXCEPT
         {return !(__y < __x);}
@@ -260,7 +261,7 @@ public:
 
 private:
     _LIBCPP_INLINE_VISIBILITY
-    __thread_id(pthread_t __id) : __id_(__id) {}
+    __thread_id(__libcpp_thread_id __id) : __id_(__id) {}
 
     friend __thread_id this_thread::get_id() _NOEXCEPT;
     friend class _LIBCPP_TYPE_VIS thread;
@@ -274,7 +275,7 @@ struct _LIBCPP_TYPE_VIS_ONLY hash<__thread_id>
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(__thread_id __v) const
     {
-        return hash<pthread_t>()(__v.__id_);
+        return hash<__libcpp_thread_id>()(__v.__id_);
     }
 };
 
@@ -285,20 +286,20 @@ inline _LIBCPP_INLINE_VISIBILITY
 __thread_id
 get_id() _NOEXCEPT
 {
-    return pthread_self();
+    return __libcpp_thread_get_current_id();
 }
 
 }  // this_thread
 
 class _LIBCPP_TYPE_VIS thread
 {
-    pthread_t __t_;
+    __libcpp_thread_t __t_;
 
     thread(const thread&);
     thread& operator=(const thread&);
 public:
     typedef __thread_id id;
-    typedef pthread_t native_handle_type;
+    typedef __libcpp_thread_t native_handle_type;
 
     _LIBCPP_INLINE_VISIBILITY
     thread() _NOEXCEPT : __t_(0) {}
@@ -330,7 +331,7 @@ public:
     void join();
     void detach();
     _LIBCPP_INLINE_VISIBILITY
-    id get_id() const _NOEXCEPT {return __t_;}
+    id get_id() const _NOEXCEPT {return __libcpp_thread_get_id(&__t_);}
     _LIBCPP_INLINE_VISIBILITY
     native_handle_type native_handle() _NOEXCEPT {return __t_;}
 
@@ -370,7 +371,7 @@ thread::thread(_Fp&& __f, _Args&&... __args)
             new _Gp(std::move(__tsp),
                     __decay_copy(_VSTD::forward<_Fp>(__f)),
                     __decay_copy(_VSTD::forward<_Args>(__args))...));
-    int __ec = pthread_create(&__t_, 0, &__thread_proxy<_Gp>, __p.get());
+    int __ec = __libcpp_thread_create(&__t_, &__thread_proxy<_Gp>, __p.get());
     if (__ec == 0)
         __p.release();
     else
@@ -405,7 +406,7 @@ thread::thread(_Fp __f)
     typedef __thread_invoke_pair<_Fp> _InvokePair;
     typedef std::unique_ptr<_InvokePair> _PairPtr;
     _PairPtr __pp(new _InvokePair(__f));
-    int __ec = pthread_create(&__t_, 0, &__thread_proxy_cxx03<_InvokePair>, __pp.get());
+    int __ec = __libcpp_thread_create(&__t_, &__thread_proxy_cxx03<_InvokePair>, __pp.get());
     if (__ec == 0)
         __pp.release();
     else
@@ -480,7 +481,7 @@ sleep_until(const chrono::time_point<chrono::steady_clock, _Duration>& __t)
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-void yield() _NOEXCEPT {sched_yield();}
+void yield() _NOEXCEPT {__libcpp_thread_yield();}
 
 }  // this_thread
 

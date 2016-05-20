@@ -871,7 +871,7 @@ RenderScriptRuntime::IsRenderScriptModule(const lldb::ModuleSP &module_sp)
 void
 RenderScriptRuntime::ModulesDidLoad(const ModuleList &module_list)
 {
-    Mutex::Locker locker(module_list.GetMutex());
+    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
 
     size_t num_modules = module_list.GetSize();
     for (size_t i = 0; i < num_modules; i++)

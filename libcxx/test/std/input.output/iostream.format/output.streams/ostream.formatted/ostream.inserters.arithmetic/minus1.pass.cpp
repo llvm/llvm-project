@@ -56,7 +56,7 @@ void test_hex(const char *expected)
     assert(str == expected);
 }
 
-int main(int argc, char* argv[])
+int main()
 {
 
     test_octal<uint16_t>(                "177777");

@@ -92,7 +92,7 @@ SBBreakpointLocation::GetLoadAddress ()
 
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         ret_addr = m_opaque_sp->GetLoadAddress();
     }
 
@@ -104,7 +104,7 @@ SBBreakpointLocation::SetEnabled (bool enabled)
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->SetEnabled (enabled);
     }
 }
@@ -114,7 +114,7 @@ SBBreakpointLocation::IsEnabled ()
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->IsEnabled();
     }
     else
@@ -126,7 +126,7 @@ SBBreakpointLocation::GetIgnoreCount ()
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->GetIgnoreCount();
     }
     else
@@ -138,7 +138,7 @@ SBBreakpointLocation::SetIgnoreCount (uint32_t n)
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->SetIgnoreCount (n);
     }
 }
@@ -148,7 +148,7 @@ SBBreakpointLocation::SetCondition (const char *condition)
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->SetCondition (condition);
     }
 }
@@ -158,7 +158,7 @@ SBBreakpointLocation::GetCondition ()
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->GetConditionText ();
     }
     return NULL;
@@ -176,7 +176,7 @@ SBBreakpointLocation::SetScriptCallbackFunction (const char *callback_function_n
 
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         BreakpointOptions *bp_options = m_opaque_sp->GetLocationOptions();
         m_opaque_sp->GetBreakpoint().GetTarget().GetDebugger().GetCommandInterpreter().GetScriptInterpreter()->SetBreakpointCommandCallbackFunction (bp_options,
                                                                                                                                      callback_function_name);
@@ -195,7 +195,7 @@ SBBreakpointLocation::SetScriptCallbackBody (const char *callback_body_text)
     SBError sb_error;
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         BreakpointOptions *bp_options = m_opaque_sp->GetLocationOptions();
         Error error = m_opaque_sp->GetBreakpoint().GetTarget().GetDebugger().GetCommandInterpreter().GetScriptInterpreter()->SetBreakpointCommandCallback (bp_options,
                                                                                                                                                            callback_body_text);
@@ -212,7 +212,7 @@ SBBreakpointLocation::SetThreadID (tid_t thread_id)
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->SetThreadID (thread_id);
     }
 }
@@ -223,7 +223,7 @@ SBBreakpointLocation::GetThreadID ()
     tid_t tid = LLDB_INVALID_THREAD_ID;
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->GetThreadID();
     }
     return tid;
@@ -234,7 +234,7 @@ SBBreakpointLocation::SetThreadIndex (uint32_t index)
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->SetThreadIndex (index);
     }
 }
@@ -245,7 +245,7 @@ SBBreakpointLocation::GetThreadIndex() const
     uint32_t thread_idx = UINT32_MAX;
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->GetThreadIndex();
     }
     return thread_idx;
@@ -257,7 +257,7 @@ SBBreakpointLocation::SetThreadName (const char *thread_name)
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->SetThreadName (thread_name);
     }
 }
@@ -267,7 +267,7 @@ SBBreakpointLocation::GetThreadName () const
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->GetThreadName();
     }
     return NULL;
@@ -278,7 +278,7 @@ SBBreakpointLocation::SetQueueName (const char *queue_name)
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->SetQueueName (queue_name);
     }
 }
@@ -288,7 +288,7 @@ SBBreakpointLocation::GetQueueName () const
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->GetQueueName ();
     }
     return NULL;
@@ -299,7 +299,7 @@ SBBreakpointLocation::IsResolved ()
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->IsResolved();
     }
     return false;
@@ -319,7 +319,7 @@ SBBreakpointLocation::GetDescription (SBStream &description, DescriptionLevel le
 
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         m_opaque_sp->GetDescription (&strm, level);
         strm.EOL();
     }
@@ -334,7 +334,7 @@ SBBreakpointLocation::GetID ()
 {
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         return m_opaque_sp->GetID ();
     }
     else
@@ -352,7 +352,7 @@ SBBreakpointLocation::GetBreakpoint ()
     SBBreakpoint sb_bp;
     if (m_opaque_sp)
     {
-        Mutex::Locker api_locker (m_opaque_sp->GetBreakpoint().GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(m_opaque_sp->GetTarget().GetAPIMutex());
         *sb_bp = m_opaque_sp->GetBreakpoint ().shared_from_this();
     }
 

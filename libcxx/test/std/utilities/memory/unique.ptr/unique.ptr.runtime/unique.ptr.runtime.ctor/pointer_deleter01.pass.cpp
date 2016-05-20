@@ -40,4 +40,10 @@ int main()
     assert(s.get_deleter().state() == 0);
     }
     assert(A::count == 0);
+
+    { // LWG#2520 says that nullptr is a valid input as well as null
+    std::unique_ptr<A[], Deleter<A[]> > s1(NULL, Deleter<A[]>());
+    std::unique_ptr<A[], Deleter<A[]> > s2(nullptr, Deleter<A[]>());
+    }
+    assert(A::count == 0);
 }

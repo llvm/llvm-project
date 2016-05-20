@@ -108,6 +108,10 @@ public:
   template <class ELFT> typename ELFT::uint getThunkVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
 
+  // Returns the file from which the symbol was created.
+  // For logging purpose only.
+  template <class ELFT> InputFile *getSourceFile();
+
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
 
@@ -126,6 +130,13 @@ public:
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value
+
+  // The Type field may also have this value. It means that we have not yet seen
+  // a non-Lazy symbol with this name, so we don't know what its type is. The
+  // Type field is normally set to this value for Lazy symbols unless we saw a
+  // weak undefined symbol first, in which case we need to remember the original
+  // symbol's type in order to check for TLS mismatches.
+  enum { UnknownType = 255 };
 
   bool isSection() const { return Type == llvm::ELF::STT_SECTION; }
   bool isTls() const { return Type == llvm::ELF::STT_TLS; }
@@ -233,11 +244,12 @@ InputSectionBase<ELFT> *DefinedRegular<ELFT>::NullInputSection;
 // The difference from the regular symbol is that DefinedSynthetic symbols
 // don't belong to any input files or sections. Thus, its constructor
 // takes an output section to calculate output VA, etc.
+// If Section is null, this symbol is relative to the image base.
 template <class ELFT> class DefinedSynthetic : public Defined {
 public:
   typedef typename ELFT::uint uintX_t;
   DefinedSynthetic(StringRef N, uintX_t Value,
-                   OutputSectionBase<ELFT> &Section);
+                   OutputSectionBase<ELFT> *Section);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedSyntheticKind;
@@ -248,7 +260,7 @@ public:
   static const uintX_t SectionEnd = uintX_t(-1);
 
   uintX_t Value;
-  const OutputSectionBase<ELFT> &Section;
+  const OutputSectionBase<ELFT> *Section;
 };
 
 class Undefined : public SymbolBody {
@@ -259,6 +271,10 @@ public:
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
   }
+
+  // The file this undefined symbol was created from.
+  // For logging purpose only.
+  InputFile *File = nullptr;
 };
 
 template <class ELFT> class SharedSymbol : public Defined {

@@ -39,7 +39,8 @@ class HostProcessPosix : public HostNativeProcessBase
     lldb::pid_t GetProcessId() const override;
     bool IsRunning() const override;
 
-    HostThread StartMonitoring(HostProcess::MonitorCallback callback, void *callback_baton, bool monitor_signals) override;
+    HostThread
+    StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals) override;
 };
 
 } // namespace lldb_private

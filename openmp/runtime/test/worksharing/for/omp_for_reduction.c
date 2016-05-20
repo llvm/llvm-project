@@ -54,7 +54,7 @@ int test_omp_for_reduction ()
   /************************************************************************/
 
   /**** Testing integer addition ****/
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(+:sum)
@@ -65,12 +65,12 @@ int test_omp_for_reduction ()
   if (known_sum != sum) {
     result++;
     fprintf (stderr, "Error in sum with integers: Result was %d"
-      " instead of %d.\n", sum, known_sum); 
+      " instead of %d.\n", sum, known_sum);
   }
 
   /**** Testing integer subtracton ****/
   diff = (LOOPCOUNT * (LOOPCOUNT + 1)) / 2;
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(-:diff)
@@ -85,7 +85,7 @@ int test_omp_for_reduction ()
   }
 
   /**** Testing integer multiplication ****/
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(*:product)
@@ -111,16 +111,16 @@ int test_omp_for_reduction ()
     dpt *= dt;
   }
   dknown_sum = (1 - dpt) / (1 - dt);
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(+:dsum)
-    for (j = 0; j < DOUBLE_DIGITS; j++) {  
+    for (j = 0; j < DOUBLE_DIGITS; j++) {
       dsum += pow (dt, j);
     }
   }
   if (fabs (dsum - dknown_sum) > rounding_error) {
-    result++; 
+    result++;
     fprintf (stderr, "\nError in sum with doubles: Result was %f"
       " instead of: %f (Difference: %E)\n",
       dsum, dknown_sum, dsum-dknown_sum);
@@ -128,7 +128,7 @@ int test_omp_for_reduction ()
 
   /**** Testing double subtraction ****/
   ddiff = (1 - dpt) / (1 - dt);
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(-:ddiff)
@@ -152,7 +152,7 @@ int test_omp_for_reduction ()
     logics[i] = 1;
   }
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(&&:logic_and)
@@ -168,7 +168,7 @@ int test_omp_for_reduction ()
   logic_and = 1;
   logics[LOOPCOUNT / 2] = 0;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(&&:logic_and)
@@ -186,10 +186,10 @@ int test_omp_for_reduction ()
     logics[i] = 0;
   }
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
-    #pragma omp for schedule(dynamic,1) reduction(||:logic_or)  
+    #pragma omp for schedule(dynamic,1) reduction(||:logic_or)
     for (j = 0; j < LOOPCOUNT; ++j) {
       logic_or = logic_or || logics[j];
     }
@@ -202,7 +202,7 @@ int test_omp_for_reduction ()
   logic_or = 0;
   logics[LOOPCOUNT / 2] = 1;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(||:logic_or)
@@ -224,10 +224,10 @@ int test_omp_for_reduction ()
     logics[i] = 1;
   }
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
-    #pragma omp for schedule(dynamic,1) reduction(&:bit_and)  
+    #pragma omp for schedule(dynamic,1) reduction(&:bit_and)
     for (j = 0; j < LOOPCOUNT; ++j) {
       bit_and = (bit_and & logics[j]);
     }
@@ -240,7 +240,7 @@ int test_omp_for_reduction ()
   bit_and = 1;
   logics[LOOPCOUNT / 2] = 0;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(&:bit_and)
@@ -258,7 +258,7 @@ int test_omp_for_reduction ()
     logics[i] = 0;
   }
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(|:bit_or)
@@ -274,7 +274,7 @@ int test_omp_for_reduction ()
   bit_or = 0;
   logics[LOOPCOUNT / 2] = 1;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(|:bit_or)
@@ -292,7 +292,7 @@ int test_omp_for_reduction ()
     logics[i] = 0;
   }
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(^:exclusiv_bit_or)
@@ -308,7 +308,7 @@ int test_omp_for_reduction ()
   exclusiv_bit_or = 0;
   logics[LOOPCOUNT / 2] = 1;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     int j;
     #pragma omp for schedule(dynamic,1) reduction(^:exclusiv_bit_or)

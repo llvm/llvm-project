@@ -115,7 +115,7 @@ SBWatchpoint::GetHardwareIndex ()
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         hw_index = watchpoint_sp->GetHardwareIndex();
     }
 
@@ -130,7 +130,7 @@ SBWatchpoint::GetWatchAddress ()
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         ret_addr = watchpoint_sp->GetLoadAddress();
     }
 
@@ -145,7 +145,7 @@ SBWatchpoint::GetWatchSize ()
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         watch_size = watchpoint_sp->GetByteSize();
     }
 
@@ -158,7 +158,7 @@ SBWatchpoint::SetEnabled (bool enabled)
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         watchpoint_sp->GetTarget().DisableWatchpointByID(watchpoint_sp->GetID());
     }
 }
@@ -169,7 +169,7 @@ SBWatchpoint::IsEnabled ()
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         return watchpoint_sp->IsEnabled();
     }
     else
@@ -183,7 +183,7 @@ SBWatchpoint::GetHitCount ()
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         count = watchpoint_sp->GetHitCount();
     }
 
@@ -201,7 +201,7 @@ SBWatchpoint::GetIgnoreCount ()
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         return watchpoint_sp->GetIgnoreCount();
     }
     else
@@ -214,7 +214,7 @@ SBWatchpoint::SetIgnoreCount (uint32_t n)
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         watchpoint_sp->SetIgnoreCount (n);
     }
 }
@@ -225,7 +225,7 @@ SBWatchpoint::GetCondition ()
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         return watchpoint_sp->GetConditionText ();
     }
     return NULL;
@@ -237,7 +237,7 @@ SBWatchpoint::SetCondition (const char *condition)
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         watchpoint_sp->SetCondition (condition);
     }
 }
@@ -250,7 +250,7 @@ SBWatchpoint::GetDescription (SBStream &description, DescriptionLevel level)
     lldb::WatchpointSP watchpoint_sp(GetSP());
     if (watchpoint_sp)
     {
-        Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
+        std::lock_guard<std::recursive_mutex> guard(watchpoint_sp->GetTarget().GetAPIMutex());
         watchpoint_sp->GetDescription (&strm, level);
         strm.EOL();
     }

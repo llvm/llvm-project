@@ -264,6 +264,17 @@ __isl_give isl_vec *isl_tab_basic_set_non_trivial_lexmin(
 __isl_give isl_vec *isl_tab_basic_set_non_neg_lexmin(
 	__isl_take isl_basic_set *bset);
 
+struct isl_tab_lexmin;
+typedef struct isl_tab_lexmin isl_tab_lexmin;
+
+__isl_give isl_tab_lexmin *isl_tab_lexmin_from_basic_set(
+	__isl_take isl_basic_set *bset);
+int isl_tab_lexmin_dim(__isl_keep isl_tab_lexmin *tl);
+__isl_give isl_tab_lexmin *isl_tab_lexmin_add_eq(__isl_take isl_tab_lexmin *tl,
+	isl_int *eq);
+__isl_give isl_vec *isl_tab_lexmin_get_solution(__isl_keep isl_tab_lexmin *tl);
+__isl_null isl_tab_lexmin *isl_tab_lexmin_free(__isl_take isl_tab_lexmin *tl);
+
 /* private */
 
 struct isl_tab_var *isl_tab_var_from_row(struct isl_tab *tab, int i);

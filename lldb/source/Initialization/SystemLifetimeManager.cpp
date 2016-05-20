@@ -10,16 +10,13 @@
 #include "lldb/Initialization/SystemLifetimeManager.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Initialization/SystemInitializer.h"
 
 #include <utility>
 
 using namespace lldb_private;
 
-SystemLifetimeManager::SystemLifetimeManager()
-    : m_mutex(Mutex::eMutexTypeRecursive)
-    , m_initialized(false)
+SystemLifetimeManager::SystemLifetimeManager() : m_mutex(), m_initialized(false)
 {
 }
 
@@ -32,7 +29,7 @@ void
 SystemLifetimeManager::Initialize(std::unique_ptr<SystemInitializer> initializer,
                                   LoadPluginCallbackType plugin_callback)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_initialized)
     {
         assert(!m_initializer &&
@@ -48,7 +45,7 @@ SystemLifetimeManager::Initialize(std::unique_ptr<SystemInitializer> initializer
 void
 SystemLifetimeManager::Terminate()
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     if (m_initialized)
     {

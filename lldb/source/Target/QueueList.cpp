@@ -14,11 +14,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-QueueList::QueueList (Process *process) :
-    m_process (process),
-    m_stop_id (0),
-    m_queues (),
-    m_mutex ()
+QueueList::QueueList(Process *process) : m_process(process), m_stop_id(0), m_queues(), m_mutex()
 {
 }
 
@@ -30,14 +26,14 @@ QueueList::~QueueList ()
 uint32_t
 QueueList::GetSize ()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     return m_queues.size();
 }
 
 lldb::QueueSP
 QueueList::GetQueueAtIndex (uint32_t idx)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (idx < m_queues.size())
     {
         return m_queues[idx];
@@ -51,14 +47,14 @@ QueueList::GetQueueAtIndex (uint32_t idx)
 void
 QueueList::Clear ()
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     m_queues.clear();
 }
 
 void
 QueueList::AddQueue (QueueSP queue_sp)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (queue_sp.get ())
     {
         m_queues.push_back (queue_sp);
@@ -95,8 +91,8 @@ QueueList::FindQueueByIndexID (uint32_t index_id)
     return ret;
 }
 
-lldb_private::Mutex &
-QueueList::GetMutex ()
+std::mutex &
+QueueList::GetMutex()
 {
     return m_mutex;
 }

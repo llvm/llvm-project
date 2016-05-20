@@ -396,6 +396,7 @@ kmpc_set_defaults                           224
         __kmpc_taskloop                     266
     %endif
 %endif
+kmpc_aligned_malloc                         265
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
 # Number for lowercase version is indicated.  Number for uppercase is obtained by adding 1000.
@@ -448,6 +449,7 @@ kmp_get_num_known_threads                   743
 kmp_set_stacksize_s                         744
 kmp_get_stacksize_s                         745
 kmp_set_defaults                            746
+kmp_aligned_malloc                          747
 kmp_set_warnings_on                         779
 kmp_set_warnings_off                        780
 

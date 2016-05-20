@@ -23,6 +23,9 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
   Finder->addMatcher(loc(recordType(DeclMatcher)), this);
   Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
+  Finder->addMatcher(declRefExpr().bind("used"), this);
+  Finder->addMatcher(callExpr(callee(unresolvedLookupExpr().bind("used"))),
+                     this);
 }
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
@@ -34,8 +37,17 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *TargetDecl =
         Using->shadow_begin()->getTargetDecl()->getCanonicalDecl();
 
-    // FIXME: Handle other target types.
-    if (!isa<RecordDecl>(TargetDecl) && !isa<ClassTemplateDecl>(TargetDecl))
+    // Ignores using-declarations defined in macros.
+    if (TargetDecl->getLocation().isMacroID())
+      return;
+
+    // Ignores using-declarations defined in class definition.
+    if (isa<CXXRecordDecl>(TargetDecl->getDeclContext()))
+      return;
+
+    if (!isa<RecordDecl>(TargetDecl) && !isa<ClassTemplateDecl>(TargetDecl) &&
+        !isa<FunctionDecl>(TargetDecl) && !isa<VarDecl>(TargetDecl) &&
+        !isa<FunctionTemplateDecl>(TargetDecl))
       return;
 
     FoundDecls[TargetDecl] = Using;
@@ -57,10 +69,33 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     if (const auto *Specialization =
             dyn_cast<ClassTemplateSpecializationDecl>(Used))
       Used = Specialization->getSpecializedTemplate();
-    auto I = FoundDecls.find(Used->getCanonicalDecl());
-    if (I != FoundDecls.end())
-      I->second = nullptr;
+    removeFromFoundDecls(Used);
+    return;
   }
+
+  if (const auto *DRE = Result.Nodes.getNodeAs<DeclRefExpr>("used")) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
+      if (const auto *FDT = FD->getPrimaryTemplate())
+        removeFromFoundDecls(FDT);
+      else
+        removeFromFoundDecls(FD);
+    } else if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      removeFromFoundDecls(VD);
+    }
+  }
+  // Check the uninstantiated template function usage.
+  if (const auto *ULE = Result.Nodes.getNodeAs<UnresolvedLookupExpr>("used")) {
+    for (const NamedDecl* ND : ULE->decls()) {
+      if (const auto *USD = dyn_cast<UsingShadowDecl>(ND))
+        removeFromFoundDecls(USD->getTargetDecl()->getCanonicalDecl());
+    }
+  }
+}
+
+void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
+  auto I = FoundDecls.find(D->getCanonicalDecl());
+  if (I != FoundDecls.end())
+    I->second = nullptr;
 }
 
 void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {

@@ -19,7 +19,6 @@
 #include "Writer.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -106,16 +105,17 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
 // Opens and parses a file. Path has to be resolved already.
 // Newly created memory buffers are owned by this driver.
 void LinkerDriver::addFile(StringRef Path) {
-  using namespace llvm::sys::fs;
+  using namespace sys::fs;
   if (Config->Verbose)
-    llvm::outs() << Path << "\n";
-  if (!Config->Reproduce.empty())
-    copyInputFile(Path);
+    outs() << Path << "\n";
 
   Optional<MemoryBufferRef> Buffer = readFile(Path);
   if (!Buffer.hasValue())
     return;
   MemoryBufferRef MBRef = *Buffer;
+
+  if (Cpio)
+    Cpio->append(relativeToRoot(Path), MBRef.getBuffer());
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
@@ -253,8 +253,13 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   readConfigs(Args);
   initLLVM(Args);
 
-  if (!Config->Reproduce.empty())
-    createResponseFile(Args);
+  if (auto *Arg = Args.getLastArg(OPT_reproduce)) {
+    // Note that --reproduce is a debug option so you can ignore it
+    // if you are trying to understand the whole picture of the code.
+    Cpio.reset(CpioFile::create(Arg->getValue()));
+    if (Cpio)
+      Cpio->append("response.txt", createResponseFile(Args));
+  }
 
   createFiles(Args);
   checkOptions(Args);
@@ -332,8 +337,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Entry = getString(Args, OPT_entry);
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
+  Config->LtoNewPmPasses = getString(Args, OPT_lto_newpm_passes);
   Config->OutputFile = getString(Args, OPT_o);
-  Config->Reproduce = getString(Args, OPT_reproduce);
   Config->SoName = getString(Args, OPT_soname);
   Config->Sysroot = getString(Args, OPT_sysroot);
 
@@ -345,6 +350,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   if (Config->LtoJobs == 0)
     error("number of threads must be > 0");
 
+  Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
+  Config->ZDefs = hasZOption(Args, "defs");
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNow = hasZOption(Args, "now");
@@ -381,8 +388,14 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->BuildId = BuildIdKind::Md5;
     } else if (S == "sha1") {
       Config->BuildId = BuildIdKind::Sha1;
-    } else
+    } else if (S == "none") {
+      Config->BuildId = BuildIdKind::None;
+    } else if (S.startswith("0x")) {
+      Config->BuildId = BuildIdKind::Hexstring;
+      Config->BuildIdVector = parseHexstring(S.substr(2));
+    } else {
       error("unknown --build-id style: " + S);
+    }
   }
 
   for (auto *Arg : Args.filtered(OPT_undefined))
@@ -483,14 +496,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanVersionScript();
 
   Symtab.addCombinedLtoObject();
+  if (HasError)
+    return;
 
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
 
   // Write the result to the file.
   if (Config->GcSections)
-    markLive<ELFT>(&Symtab);
+    markLive<ELFT>();
   if (Config->ICF)
-    doIcf<ELFT>(&Symtab);
+    doIcf<ELFT>();
   writeResult<ELFT>(&Symtab);
 }

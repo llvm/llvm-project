@@ -14,9 +14,11 @@
 #include "RedundantStringCStrCheck.h"
 #include "clang/Lex/Lexer.h"
 
-namespace clang {
+using namespace clang::ast_matchers;
 
-using namespace ast_matchers;
+namespace clang {
+namespace tidy {
+namespace readability {
 
 namespace {
 
@@ -66,9 +68,6 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
 }
 
 } // end namespace
-
-namespace tidy {
-namespace readability {
 
 void RedundantStringCStrCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {

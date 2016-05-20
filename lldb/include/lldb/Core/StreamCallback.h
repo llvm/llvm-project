@@ -10,11 +10,11 @@
 #ifndef liblldb_StreamCallback_h_
 #define liblldb_StreamCallback_h_
 
+#include <mutex>
 #include <string>
 
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamString.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -37,8 +37,8 @@ private:
     lldb::LogOutputCallback m_callback;
     void *m_baton;
     collection m_accumulated_data;
-    Mutex m_collection_mutex;
-    
+    std::mutex m_collection_mutex;
+
     StreamString &FindStreamForThread(lldb::tid_t cur_tid);
 };
 

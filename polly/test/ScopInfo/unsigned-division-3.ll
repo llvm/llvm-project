@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
 ;    void f(int *A, unsigned char N) {
-;      for (unsigned i = 0; i < N / -128; i++)
+;      for (unsigned i = 0; i <= N / -128; i++)
 ;        A[i]++;
 ;    }
 ;
@@ -11,7 +11,7 @@
 ; CHECK-NEXT:    [N] -> {  : N < 0 }
 ;
 ; CHECK:       Domain :=
-; CHECK-NEXT:    [N] -> { Stmt_for_body[i0] : i0 >= 0 and 128i0 <= -128 + N };
+; CHECK-NEXT:    [N] -> { Stmt_for_body[0] : N >= 0 };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -23,7 +23,7 @@ entry:
 for.cond:                                         ; preds = %for.inc, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
   %lftr.wideiv = trunc i64 %indvars.iv to i8
-  %exitcond = icmp ne i8 %lftr.wideiv, %tmp
+  %exitcond = icmp sle i8 %lftr.wideiv, %tmp
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond

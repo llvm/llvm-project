@@ -10,6 +10,7 @@ add_clang_library(clangRename
   clangAST
   clangBasic
   clangIndex
+  clangLex
   clangToolingCore
   )
 

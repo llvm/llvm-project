@@ -14,15 +14,15 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
+namespace tidy {
+namespace misc {
+
 namespace {
 AST_MATCHER(CXXRecordDecl, hasNonTrivialDestructor) {
   // TODO: If the dtor is there but empty we don't want to warn either.
   return Node.hasDefinition() && Node.hasNonTrivialDestructor();
 }
 } // namespace
-
-namespace tidy {
-namespace misc {
 
 void UnusedRAIICheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not

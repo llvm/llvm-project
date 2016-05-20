@@ -10,6 +10,7 @@
 #include "StringConstructorCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -54,7 +55,7 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       isDefinition(),
       hasType(pointerType(pointee(isAnyCharacter(), isConstQualified()))),
       hasInitializer(ignoringParenImpCasts(BoundStringLiteral)));
-  auto ConstStrLiteral = expr(ignoringParenImpCasts(anyOf(
+  const auto ConstStrLiteral = expr(ignoringParenImpCasts(anyOf(
       BoundStringLiteral, declRefExpr(hasDeclaration(anyOf(
                               ConstPtrStrLiteralDecl, ConstStrLiteralDecl))))));
 
@@ -88,7 +89,7 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
               // Detect the expression: string("...", 0);
               hasArgument(1, ZeroExpr.bind("empty-string")),
               // Detect the expression: string("...", -4);
-              hasArgument(1, NegativeExpr.bind("negative-length")),              
+              hasArgument(1, NegativeExpr.bind("negative-length")),
               // Detect the expression: string("lit", 0x1234567);
               hasArgument(1, LargeLengthExpr.bind("large-length")),
               // Detect the expression: string("lit", 5)
@@ -100,11 +101,18 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *E = Result.Nodes.getNodeAs<Expr>("constructor");
+  const ASTContext &Ctx = *Result.Context;
+  const auto *E = Result.Nodes.getNodeAs<CXXConstructExpr>("constructor");
+  assert(E && "missing constructor expression");
   SourceLocation Loc = E->getLocStart();
 
   if (Result.Nodes.getNodeAs<Expr>("swapped-parameter")) {
-    diag(Loc, "constructor parameters are probably swapped");
+    const Expr *P0 = E->getArg(0);
+    const Expr *P1 = E->getArg(1);
+    diag(Loc, "string constructor parameters are probably swapped;"
+              " expecting string(count, character)")
+        << tooling::fixit::createReplacement(*P0, *P1, Ctx)
+        << tooling::fixit::createReplacement(*P1, *P0, Ctx);
   } else if (Result.Nodes.getNodeAs<Expr>("empty-string")) {
     diag(Loc, "constructor creating an empty string");
   } else if (Result.Nodes.getNodeAs<Expr>("negative-length")) {

@@ -1328,6 +1328,9 @@ static int last_var_col_or_int_par_col(struct isl_tab *tab, int row)
  * If not, we add the equality as two inequalities.
  * In this case, the equality was a pure parameter equality and there
  * is no need to resolve any constraint violations.
+ *
+ * This function assumes that at least two more rows and at least
+ * two more elements in the constraint array are available in the tableau.
  */
 static struct isl_tab *add_lexmin_valid_eq(struct isl_tab *tab, isl_int *eq)
 {
@@ -1385,6 +1388,9 @@ static int is_constant(struct isl_tab *tab, int row)
  * each time checking that they can be satisfied.
  * In the end we try to use one of the two constraints to eliminate
  * a column.
+ *
+ * This function assumes that at least two more rows and at least
+ * two more elements in the constraint array are available in the tableau.
  */
 static int add_lexmin_eq(struct isl_tab *tab, isl_int *eq) WARN_UNUSED;
 static int add_lexmin_eq(struct isl_tab *tab, isl_int *eq)
@@ -1461,6 +1467,9 @@ static int add_lexmin_eq(struct isl_tab *tab, isl_int *eq)
 
 /* Add an inequality to the tableau, resolving violations using
  * restore_lexmin.
+ *
+ * This function assumes that at least one more row and at least
+ * one more element in the constraint array are available in the tableau.
  */
 static struct isl_tab *add_lexmin_ineq(struct isl_tab *tab, isl_int *ineq)
 {
@@ -4990,11 +4999,14 @@ static int is_optimal(__isl_keep isl_vec *sol, int n_op)
 }
 
 /* Add constraints to "tab" that ensure that any solution is significantly
- * better that that represented by "sol".  That is, find the first
+ * better than that represented by "sol".  That is, find the first
  * relevant (within first n_op) non-zero coefficient and force it (along
  * with all previous coefficients) to be zero.
  * If the solution is already optimal (all relevant coefficients are zero),
  * then just mark the table as empty.
+ *
+ * This function assumes that at least 2 * n_op more rows and at least
+ * 2 * n_op more elements in the constraint array are available in the tableau.
  */
 static int force_better_solution(struct isl_tab *tab,
 	__isl_keep isl_vec *sol, int n_op)
@@ -5204,6 +5216,106 @@ error:
 	return NULL;
 }
 
+/* Wrapper for a tableau that is used for computing
+ * the lexicographically smallest rational point of a non-negative set.
+ * This point is represented by the sample value of "tab",
+ * unless "tab" is empty.
+ */
+struct isl_tab_lexmin {
+	isl_ctx *ctx;
+	struct isl_tab *tab;
+};
+
+/* Free "tl" and return NULL.
+ */
+__isl_null isl_tab_lexmin *isl_tab_lexmin_free(__isl_take isl_tab_lexmin *tl)
+{
+	if (!tl)
+		return NULL;
+	isl_ctx_deref(tl->ctx);
+	isl_tab_free(tl->tab);
+	free(tl);
+
+	return NULL;
+}
+
+/* Construct an isl_tab_lexmin for computing
+ * the lexicographically smallest rational point in "bset",
+ * assuming that all variables are non-negative.
+ */
+__isl_give isl_tab_lexmin *isl_tab_lexmin_from_basic_set(
+	__isl_take isl_basic_set *bset)
+{
+	isl_ctx *ctx;
+	isl_tab_lexmin *tl;
+
+	if (!bset)
+		return NULL;
+
+	ctx = isl_basic_set_get_ctx(bset);
+	tl = isl_calloc_type(ctx, struct isl_tab_lexmin);
+	if (!tl)
+		goto error;
+	tl->ctx = ctx;
+	isl_ctx_ref(ctx);
+	tl->tab = tab_for_lexmin(bset, NULL, 0, 0);
+	isl_basic_set_free(bset);
+	if (!tl->tab)
+		return isl_tab_lexmin_free(tl);
+	return tl;
+error:
+	isl_basic_set_free(bset);
+	isl_tab_lexmin_free(tl);
+	return NULL;
+}
+
+/* Return the dimension of the set represented by "tl".
+ */
+int isl_tab_lexmin_dim(__isl_keep isl_tab_lexmin *tl)
+{
+	return tl ? tl->tab->n_var : -1;
+}
+
+/* Add the equality with coefficients "eq" to "tl", updating the optimal
+ * solution if needed.
+ * The equality is added as two opposite inequality constraints.
+ */
+__isl_give isl_tab_lexmin *isl_tab_lexmin_add_eq(__isl_take isl_tab_lexmin *tl,
+	isl_int *eq)
+{
+	unsigned n_var;
+
+	if (!tl || !eq)
+		return isl_tab_lexmin_free(tl);
+
+	if (isl_tab_extend_cons(tl->tab, 2) < 0)
+		return isl_tab_lexmin_free(tl);
+	n_var = tl->tab->n_var;
+	isl_seq_neg(eq, eq, 1 + n_var);
+	tl->tab = add_lexmin_ineq(tl->tab, eq);
+	isl_seq_neg(eq, eq, 1 + n_var);
+	tl->tab = add_lexmin_ineq(tl->tab, eq);
+
+	if (!tl->tab)
+		return isl_tab_lexmin_free(tl);
+
+	return tl;
+}
+
+/* Return the lexicographically smallest rational point in the basic set
+ * from which "tl" was constructed.
+ * If the original input was empty, then return a zero-length vector.
+ */
+__isl_give isl_vec *isl_tab_lexmin_get_solution(__isl_keep isl_tab_lexmin *tl)
+{
+	if (!tl)
+		return NULL;
+	if (tl->tab->empty)
+		return isl_vec_alloc(tl->ctx, 0);
+	else
+		return isl_tab_get_sample_value(tl->tab);
+}
+
 /* Return the lexicographically smallest rational point in "bset",
  * assuming that all variables are non-negative.
  * If "bset" is empty, then return a zero-length vector.
@@ -5211,27 +5323,13 @@ error:
 __isl_give isl_vec *isl_tab_basic_set_non_neg_lexmin(
 	__isl_take isl_basic_set *bset)
 {
-	struct isl_tab *tab;
-	isl_ctx *ctx = isl_basic_set_get_ctx(bset);
+	isl_tab_lexmin *tl;
 	isl_vec *sol;
 
-	if (!bset)
-		return NULL;
-
-	tab = tab_for_lexmin(bset, NULL, 0, 0);
-	if (!tab)
-		goto error;
-	if (tab->empty)
-		sol = isl_vec_alloc(ctx, 0);
-	else
-		sol = isl_tab_get_sample_value(tab);
-	isl_tab_free(tab);
-	isl_basic_set_free(bset);
+	tl = isl_tab_lexmin_from_basic_set(bset);
+	sol = isl_tab_lexmin_get_solution(tl);
+	isl_tab_lexmin_free(tl);
 	return sol;
-error:
-	isl_tab_free(tab);
-	isl_basic_set_free(bset);
-	return NULL;
 }
 
 struct isl_sol_pma {

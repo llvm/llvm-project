@@ -18,7 +18,7 @@ D: Contributor to testsuite from OpenUH
 N: Barbara Chapman
 D: Contributor to testsuite from OpenUH
 
-N: University of Houston 
+N: University of Houston
 W: http://web.cs.uh.edu/~openuh/download/
 D: OpenUH test suite
 
@@ -49,5 +49,5 @@ N: Alp Toker
 E: alp@nuanti.com
 D: Making build work for FreeBSD.
 
-N: Cheng Wang 
+N: Cheng Wang
 D: Contributor to testsuite from OpenUH

@@ -17,6 +17,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 /// The check flags user-defined move constructors that have a ctor-initializer
 /// initializing a member or base class through a copy constructor instead of a
@@ -37,11 +38,12 @@ private:
   void
   handleParamNotMoved(const ast_matchers::MatchFinder::MatchResult &Result);
 
-  std::unique_ptr<IncludeInserter> Inserter;
-  const IncludeSorter::IncludeStyle IncludeStyle;
+  std::unique_ptr<utils::IncludeInserter> Inserter;
+  const utils::IncludeSorter::IncludeStyle IncludeStyle;
   const bool UseCERTSemantics;
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

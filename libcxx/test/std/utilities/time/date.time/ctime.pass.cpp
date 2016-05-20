@@ -21,11 +21,15 @@
 int main()
 {
     std::clock_t c = 0;
-    ((void)c); // avoid unused warning
     std::size_t s = 0;
     std::time_t t = 0;
     std::tm tm = {0};
     char str[3];
+    ((void)c); // Prevent unused warning
+    ((void)s); // Prevent unused warning
+    ((void)t); // Prevent unused warning
+    ((void)tm); // Prevent unused warning
+    ((void)str); // Prevent unused warning
     static_assert((std::is_same<decltype(std::clock()), std::clock_t>::value), "");
     static_assert((std::is_same<decltype(std::difftime(t,t)), double>::value), "");
     static_assert((std::is_same<decltype(std::mktime(&tm)), std::time_t>::value), "");

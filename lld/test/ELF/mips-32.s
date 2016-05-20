@@ -47,8 +47,8 @@ v2:
 
 # REL:      Relocations [
 # REL-NEXT:   Section (7) .rel.dyn {
-# REL-NEXT:     0x30004 R_MIPS_REL32 v2 0x0
 # REL-NEXT:     0x30008 R_MIPS_REL32 - 0x0
+# REL-NEXT:     0x30004 R_MIPS_REL32 v2 0x0
 # REL-NEXT:   }
 # REL-NEXT: ]
 

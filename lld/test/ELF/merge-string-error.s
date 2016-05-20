@@ -5,7 +5,7 @@
         .section	.rodata.str1.1,"aMS",@progbits,1
 	.asciz	"abc"
 
-        .text
+        .data
         .long .rodata.str1.1 + 4
 
 // CHECK: entry is past the end of the section

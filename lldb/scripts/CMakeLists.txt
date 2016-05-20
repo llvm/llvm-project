@@ -11,6 +11,8 @@ set(SWIG_HEADERS
 
 set(PREPARE_BINDINGS_ARGS "--src-root=${LLDB_SOURCE_DIR}" "--target-dir=${CMAKE_CURRENT_BINARY_DIR}" "--config-build-dir=${CMAKE_CURRENT_BINARY_DIR}" "--prefix=${CMAKE_BINARY_DIR}")
 
+include(FindPythonInterp)
+
 find_package(SWIG)
 if( ${SWIG_FOUND} )
     set(PREPARE_BINDINGS_ARGS ${PREPARE_BINDINGS_ARGS} "--swig-executable=${SWIG_EXECUTABLE}")

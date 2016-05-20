@@ -40,7 +40,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   ASTContext &Ctxt = *Result.Context;
-  auto Token = lexer_utils::getPreviousNonCommentToken(Ctxt, LocStart);
+  auto Token = utils::lexer::getPreviousNonCommentToken(Ctxt, LocStart);
   auto &SM = *Result.SourceManager;
   unsigned SemicolonLine = SM.getSpellingLineNumber(LocStart);
 

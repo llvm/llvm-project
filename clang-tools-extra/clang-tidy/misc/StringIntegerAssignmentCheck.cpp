@@ -16,6 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace misc {  
 
 void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
@@ -81,5 +82,6 @@ void StringIntegerAssignmentCheck::check(
   }
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang

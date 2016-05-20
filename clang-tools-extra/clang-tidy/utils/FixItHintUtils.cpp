@@ -14,11 +14,11 @@
 namespace clang {
 namespace tidy {
 namespace utils {
-namespace create_fix_it {
+namespace fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
-  auto Token = lexer_utils::getPreviousNonCommentToken(Context, AmpLocation);
+  auto Token = utils::lexer::getPreviousNonCommentToken(Context, AmpLocation);
   if (!Token.is(tok::unknown))
     AmpLocation = Lexer::getLocForEndOfToken(Token.getLocation(), 0,
                                              Context.getSourceManager(),
@@ -30,7 +30,7 @@ FixItHint changeVarDeclToConst(const VarDecl &Var) {
   return FixItHint::CreateInsertion(Var.getTypeSpecStartLoc(), "const ");
 }
 
-} // namespace create_fix_it
+} // namespace fixit
 } // namespace utils
 } // namespace tidy
 } // namespace clang

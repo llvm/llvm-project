@@ -15,6 +15,7 @@
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 /// This checks that all array subscriptions on static arrays and std::arrays
 /// have a constant index and are within bounds
@@ -23,8 +24,8 @@ namespace tidy {
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-bounds-constant-array-index.html
 class ProBoundsConstantArrayIndexCheck : public ClangTidyCheck {
   const std::string GslHeader;
-  const IncludeSorter::IncludeStyle IncludeStyle;
-  std::unique_ptr<IncludeInserter> Inserter;
+  const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  std::unique_ptr<utils::IncludeInserter> Inserter;
 
 public:
   ProBoundsConstantArrayIndexCheck(StringRef Name, ClangTidyContext *Context);
@@ -34,6 +35,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
 

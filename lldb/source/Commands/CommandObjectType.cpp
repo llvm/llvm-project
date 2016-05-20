@@ -1351,7 +1351,9 @@ protected:
         bool any_printed = false;
         
         auto category_closure = [&result, &formatter_regex, &any_printed] (const lldb::TypeCategoryImplSP& category) -> void {
-            result.GetOutputStream().Printf("-----------------------\nCategory: %s\n-----------------------\n", category->GetName());
+            result.GetOutputStream().Printf("-----------------------\nCategory: %s%s\n-----------------------\n",
+                                            category->GetName(),
+                                            category->IsEnabled() ? "" : " (disabled)");
 
             TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
             foreach.SetExact([&result, &formatter_regex, &any_printed] (ConstString name, const FormatterSharedPointer& format_sp) -> bool {

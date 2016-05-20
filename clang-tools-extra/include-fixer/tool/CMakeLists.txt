@@ -8,4 +8,5 @@ target_link_libraries(clang-include-fixer
   clangRewrite
   clangTooling
   clangToolingCore
+  findAllSymbols
   )

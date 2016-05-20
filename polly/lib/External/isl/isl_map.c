@@ -3,6 +3,7 @@
  * Copyright 2010      INRIA Saclay
  * Copyright 2012-2014 Ecole Normale Superieure
  * Copyright 2014      INRIA Rocquencourt
+ * Copyright 2016      Sven Verdoolaege
  *
  * Use of this software is governed by the MIT license
  *
@@ -3672,6 +3673,38 @@ __isl_give isl_set *isl_set_project_out(__isl_take isl_set *set,
 	return (isl_set *)isl_map_project_out((isl_map *)set, type, first, n);
 }
 
+/* Return a map that projects the elements in "set" onto their
+ * "n" set dimensions starting at "first".
+ * "type" should be equal to isl_dim_set.
+ */
+__isl_give isl_map *isl_set_project_onto_map(__isl_take isl_set *set,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	int i;
+	int dim;
+	isl_map *map;
+
+	if (!set)
+		return NULL;
+	if (type != isl_dim_set)
+		isl_die(isl_set_get_ctx(set), isl_error_invalid,
+			"only set dimensions can be projected out", goto error);
+	dim = isl_set_dim(set, isl_dim_set);
+	if (first + n > dim || first + n < first)
+		isl_die(isl_set_get_ctx(set), isl_error_invalid,
+			"index out of bounds", goto error);
+
+	map = isl_map_from_domain(set);
+	map = isl_map_add_dims(map, isl_dim_out, n);
+	for (i = 0; i < n; ++i)
+		map = isl_map_equate(map, isl_dim_in, first + i,
+					isl_dim_out, i);
+	return map;
+error:
+	isl_set_free(set);
+	return NULL;
+}
+
 static struct isl_basic_map *add_divs(struct isl_basic_map *bmap, unsigned n)
 {
 	int i, j;
@@ -6195,65 +6228,31 @@ error:
 #include "isl_map_lexopt_templ.c"
 
 /* Given a map "map", compute the lexicographically minimal
- * (or maximal) image element for each domain element in dom.
- * Set *empty to those elements in dom that do not have an image element.
+ * (or maximal) image element for each domain element in "dom",
+ * in the form of an isl_map.
+ * If "empty" is not NULL, then set *empty to those elements in "dom" that
+ * do not have an image element.
  *
- * We first compute the lexicographically minimal or maximal element
- * in the first basic map.  This results in a partial solution "res"
- * and a subset "todo" of dom that still need to be handled.
- * We then consider each of the remaining maps in "map" and successively
- * update both "res" and "todo".
+ * If the input consists of more than one disjunct, then first
+ * compute the desired result in the form of an isl_pw_multi_aff and
+ * then convert that into an isl_map.
  *
- * Let res^k and todo^k be the results after k steps and let i = k + 1.
- * Assume we are computing the lexicographical maximum.
- * We first compute the lexicographically maximal element in basic map i.
- * This results in a partial solution res_i and a subset todo_i.
- * Then we combine these results with those obtain for the first k basic maps
- * to obtain a result that is valid for the first k+1 basic maps.
- * In particular, the set where there is no solution is the set where
- * there is no solution for the first k basic maps and also no solution
- * for the ith basic map, i.e.,
- *
- *	todo^i = todo^k * todo_i
- *
- * On dom(res^k) * dom(res_i), we need to pick the larger of the two
- * solutions, arbitrarily breaking ties in favor of res^k.
- * That is, when res^k(a) >= res_i(a), we pick res^k and
- * when res^k(a) < res_i(a), we pick res_i.  (Here, ">=" and "<" denote
- * the lexicographic order.)
- * In practice, we compute
- *
- *	res^k * (res_i . "<=")
- *
- * and
- *
- *	res_i * (res^k . "<")
- *
- * Finally, we consider the symmetric difference of dom(res^k) and dom(res_i),
- * where only one of res^k and res_i provides a solution and we simply pick
- * that one, i.e.,
- *
- *	res^k * todo_i
- * and
- *	res_i * todo^k
- *
- * Note that we only compute these intersections when dom(res^k) intersects
- * dom(res_i).  Otherwise, the only effect of these intersections is to
- * potentially break up res^k and res_i into smaller pieces.
- * We want to avoid such splintering as much as possible.
- * In fact, an earlier implementation of this function would look for
- * better results in the domain of res^k and for extra results in todo^k,
- * but this would always result in a splintering according to todo^k,
- * even when the domain of basic map i is disjoint from the domains of
- * the previous basic maps.
+ * This function used to have an explicit implementation in terms
+ * of isl_maps, but it would continually intersect the domains of
+ * partial results with the complement of the domain of the next
+ * partial solution, potentially leading to an explosion in the number
+ * of disjuncts if there are several disjuncts in the input.
+ * An even earlier implementation of this function would look for
+ * better results in the domain of the partial result and for extra
+ * results in the complement of this domain, which would lead to
+ * even more splintering.
  */
 static __isl_give isl_map *isl_map_partial_lexopt_aligned(
 		__isl_take isl_map *map, __isl_take isl_set *dom,
 		__isl_give isl_set **empty, int max)
 {
-	int i;
 	struct isl_map *res;
-	struct isl_set *todo;
+	isl_pw_multi_aff *pma;
 
 	if (!map || !dom)
 		goto error;
@@ -6266,53 +6265,15 @@ static __isl_give isl_map *isl_map_partial_lexopt_aligned(
 		return map;
 	}
 
-	res = basic_map_partial_lexopt(isl_basic_map_copy(map->p[0]),
-					isl_set_copy(dom), &todo, max);
-
-	for (i = 1; i < map->n; ++i) {
-		isl_map *lt, *le;
-		isl_map *res_i;
-		isl_set *todo_i;
-		isl_space *dim = isl_space_range(isl_map_get_space(res));
-
-		res_i = basic_map_partial_lexopt(isl_basic_map_copy(map->p[i]),
-					isl_set_copy(dom), &todo_i, max);
-
-		if (max) {
-			lt = isl_map_lex_lt(isl_space_copy(dim));
-			le = isl_map_lex_le(dim);
-		} else {
-			lt = isl_map_lex_gt(isl_space_copy(dim));
-			le = isl_map_lex_ge(dim);
-		}
-		lt = isl_map_apply_range(isl_map_copy(res), lt);
-		lt = isl_map_intersect(lt, isl_map_copy(res_i));
-		le = isl_map_apply_range(isl_map_copy(res_i), le);
-		le = isl_map_intersect(le, isl_map_copy(res));
-
-		if (!isl_map_is_empty(lt) || !isl_map_is_empty(le)) {
-			res = isl_map_intersect_domain(res,
-							isl_set_copy(todo_i));
-			res_i = isl_map_intersect_domain(res_i,
-							isl_set_copy(todo));
-		}
-
-		res = isl_map_union_disjoint(res, res_i);
-		res = isl_map_union_disjoint(res, lt);
-		res = isl_map_union_disjoint(res, le);
-
-		todo = isl_set_intersect(todo, todo_i);
+	if (map->n == 1) {
+		res = basic_map_partial_lexopt(isl_basic_map_copy(map->p[0]),
+						dom, empty, max);
+		isl_map_free(map);
+		return res;
 	}
 
-	isl_set_free(dom);
-	isl_map_free(map);
-
-	if (empty)
-		*empty = todo;
-	else
-		isl_set_free(todo);
-
-	return res;
+	pma = isl_map_partial_lexopt_aligned_pw_multi_aff(map, dom, empty, max);
+	return isl_map_from_pw_multi_aff(pma);
 error:
 	if (empty)
 		*empty = NULL;
@@ -10896,6 +10857,32 @@ isl_bool isl_map_is_bijective(__isl_keep isl_map *map)
 isl_bool isl_set_is_singleton(__isl_keep isl_set *set)
 {
 	return isl_map_is_single_valued((isl_map *)set);
+}
+
+/* Does "map" only map elements to themselves?
+ *
+ * If the domain and range spaces are different, then "map"
+ * is considered not to be an identity relation, even if it is empty.
+ * Otherwise, construct the maximal identity relation and
+ * check whether "map" is a subset of this relation.
+ */
+isl_bool isl_map_is_identity(__isl_keep isl_map *map)
+{
+	isl_space *space;
+	isl_map *id;
+	isl_bool equal, is_identity;
+
+	space = isl_map_get_space(map);
+	equal = isl_space_tuple_is_equal(space, isl_dim_in, space, isl_dim_out);
+	isl_space_free(space);
+	if (equal < 0 || !equal)
+		return equal;
+
+	id = isl_map_identity(isl_map_get_space(map));
+	is_identity = isl_map_is_subset(map, id);
+	isl_map_free(id);
+
+	return is_identity;
 }
 
 int isl_map_is_translation(__isl_keep isl_map *map)

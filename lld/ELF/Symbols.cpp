@@ -36,9 +36,12 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
   switch (Body.kind()) {
   case SymbolBody::DefinedSyntheticKind: {
     auto &D = cast<DefinedSynthetic<ELFT>>(Body);
+    const OutputSectionBase<ELFT> *Sec = D.Section;
+    if (!Sec)
+      return D.Value;
     if (D.Value == DefinedSynthetic<ELFT>::SectionEnd)
-      return D.Section.getVA() + D.Section.getSize();
-    return D.Section.getVA() + D.Value;
+      return Sec->getVA() + Sec->getSize();
+    return Sec->getVA() + D.Value;
   }
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(Body);
@@ -110,9 +113,11 @@ bool SymbolBody::isPreemptible() const {
   if (isLocal())
     return false;
 
-  // Shared symbols resolve to the definition in the DSO.
+  // Shared symbols resolve to the definition in the DSO. The exceptions are
+  // symbols with copy relocations (which resolve to .bss) or preempt plt
+  // entries (which resolve to that plt entry).
   if (isShared())
-    return true;
+    return !NeedsCopyOrPltAddr;
 
   // That's all that can be preempted in a non-DSO.
   if (!Config->Shared)
@@ -127,6 +132,18 @@ bool SymbolBody::isPreemptible() const {
   if (Config->Bsymbolic || (Config->BsymbolicFunctions && isFunc()))
     return !isDefined();
   return symbol()->Visibility == STV_DEFAULT;
+}
+
+template <class ELFT> InputFile *SymbolBody::getSourceFile() {
+  if (auto *S = dyn_cast<DefinedRegular<ELFT>>(this))
+    return S->Section ? S->Section->getFile() : nullptr;
+  if (auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
+    return S->File;
+  if (auto *S = dyn_cast<DefinedBitcode>(this))
+    return S->File;
+  if (auto *S = dyn_cast<Undefined>(this))
+    return S->File;
+  return nullptr;
 }
 
 template <class ELFT>
@@ -196,7 +213,7 @@ Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type)
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
-                                         OutputSectionBase<ELFT> &Section)
+                                         OutputSectionBase<ELFT> *Section)
     : Defined(SymbolBody::DefinedSyntheticKind, N, STV_HIDDEN, 0 /* Type */),
       Value(Value), Section(Section) {}
 
@@ -257,6 +274,11 @@ bool Symbol::includeInDynsym() const {
   return (ExportDynamic && VersionScriptGlobal) || body()->isShared() ||
          (body()->isUndefined() && Config->Shared);
 }
+
+template InputFile *SymbolBody::template getSourceFile<ELF32LE>();
+template InputFile *SymbolBody::template getSourceFile<ELF32BE>();
+template InputFile *SymbolBody::template getSourceFile<ELF64LE>();
+template InputFile *SymbolBody::template getSourceFile<ELF64BE>();
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
 template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;

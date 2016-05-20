@@ -48,11 +48,11 @@
 using namespace polly;
 using namespace llvm;
 
-// The maximal number of basic sets we allow during invariant load construction.
+// The maximal number of dimensions we allow during invariant load construction.
 // More complex access ranges will result in very high compile time and are also
 // unlikely to result in good code. This value is very high and should only
 // trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
-static int const MaxConjunctsInAccessRange = 80;
+static int const MaxDimensionsInAccessRange = 9;
 
 __isl_give isl_ast_expr *
 IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
@@ -922,16 +922,27 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set, bool All) {
   return true;
 }
 
+/// @brief Add the number of dimensions in @p BS to @p U.
+static isl_stat countTotalDims(isl_basic_set *BS, void *U) {
+  unsigned *NumTotalDim = static_cast<unsigned *>(U);
+  *NumTotalDim += isl_basic_set_total_dim(BS);
+  isl_basic_set_free(BS);
+  return isl_stat_ok;
+}
+
 Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
                                               isl_ast_build *Build,
                                               Instruction *AccInst) {
-  if (isl_set_n_basic_set(AccessRange) > MaxConjunctsInAccessRange) {
+
+  // TODO: This check could be performed in the ScopInfo already.
+  unsigned NumTotalDim = 0;
+  isl_set_foreach_basic_set(AccessRange, countTotalDims, &NumTotalDim);
+  if (NumTotalDim > MaxDimensionsInAccessRange) {
     isl_set_free(AccessRange);
     return nullptr;
   }
 
   isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
-  PWAccRel = isl_pw_multi_aff_gist_params(PWAccRel, S.getContext());
   isl_ast_expr *Access =
       isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
   auto *Address = isl_ast_expr_address_of(Access);
@@ -956,6 +967,8 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
                                             isl_set *Domain) {
 
   isl_set *AccessRange = isl_map_range(MA.getAddressFunction());
+  AccessRange = isl_set_gist_params(AccessRange, S.getContext());
+
   if (!materializeParameters(AccessRange, false)) {
     isl_set_free(AccessRange);
     isl_set_free(Domain);
@@ -988,7 +1001,13 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   isl_ast_expr *DomainCond = isl_ast_build_expr_from_set(Build, Domain);
   Domain = nullptr;
 
+  ExprBuilder.setTrackOverflow(true);
   Value *Cond = ExprBuilder.create(DomainCond);
+  Value *OverflowHappened = Builder.CreateNot(ExprBuilder.getOverflowState(),
+                                              "polly.preload.cond.overflown");
+  Cond = Builder.CreateAnd(Cond, OverflowHappened, "polly.preload.cond.result");
+  ExprBuilder.setTrackOverflow(false);
+
   if (!Cond->getType()->isIntegerTy(1))
     Cond = Builder.CreateIsNotNull(Cond);
 

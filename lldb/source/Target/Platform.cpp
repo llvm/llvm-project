@@ -162,10 +162,10 @@ GetPlatformList()
     return g_platform_list;
 }
 
-static Mutex &
-GetPlatformListMutex ()
+static std::recursive_mutex &
+GetPlatformListMutex()
 {
-    static Mutex g_mutex(Mutex::eMutexTypeRecursive);
+    static std::recursive_mutex g_mutex;
     return g_mutex;
 }
 
@@ -182,7 +182,7 @@ Platform::Terminate ()
     {
         if (--g_initialize_count == 0)
         {
-            Mutex::Locker locker(GetPlatformListMutex ());
+            std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
             GetPlatformList().clear();
         }
     }
@@ -204,7 +204,7 @@ Platform::SetHostPlatform (const lldb::PlatformSP &platform_sp)
 
     if (platform_sp)
     {
-        Mutex::Locker locker(GetPlatformListMutex ());
+        std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
         GetPlatformList().push_back(platform_sp);
     }
 }
@@ -309,7 +309,7 @@ Platform::Find (const ConstString &name)
         if (name == g_host_platform_name)
             return GetHostPlatform();
 
-        Mutex::Locker locker(GetPlatformListMutex ());
+        std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
         for (const auto &platform_sp : GetPlatformList())
         {
             if (platform_sp->GetName() == name)
@@ -341,7 +341,7 @@ Platform::Create (const ConstString &name, Error &error)
 
     if (platform_sp)
     {
-        Mutex::Locker locker(GetPlatformListMutex ());
+        std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
         GetPlatformList().push_back(platform_sp);
     }
 
@@ -357,7 +357,7 @@ Platform::Create (const ArchSpec &arch, ArchSpec *platform_arch_ptr, Error &erro
         // Scope for locker
         {
             // First try exact arch matches across all platforms already created
-            Mutex::Locker locker(GetPlatformListMutex ());
+            std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
             for (const auto &platform_sp : GetPlatformList())
             {
                 if (platform_sp->IsCompatibleArchitecture(arch, true, platform_arch_ptr))
@@ -382,7 +382,7 @@ Platform::Create (const ArchSpec &arch, ArchSpec *platform_arch_ptr, Error &erro
                 platform_sp = create_callback(false, &arch);
                 if (platform_sp && platform_sp->IsCompatibleArchitecture(arch, true, platform_arch_ptr))
                 {
-                    Mutex::Locker locker(GetPlatformListMutex ());
+                    std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
                     GetPlatformList().push_back(platform_sp);
                     return platform_sp;
                 }
@@ -396,7 +396,7 @@ Platform::Create (const ArchSpec &arch, ArchSpec *platform_arch_ptr, Error &erro
                 platform_sp = create_callback(false, &arch);
                 if (platform_sp && platform_sp->IsCompatibleArchitecture(arch, false, platform_arch_ptr))
                 {
-                    Mutex::Locker locker(GetPlatformListMutex ());
+                    std::lock_guard<std::recursive_mutex> guard(GetPlatformListMutex());
                     GetPlatformList().push_back(platform_sp);
                     return platform_sp;
                 }
@@ -414,37 +414,37 @@ Platform::Create (const ArchSpec &arch, ArchSpec *platform_arch_ptr, Error &erro
 //------------------------------------------------------------------
 /// Default Constructor
 //------------------------------------------------------------------
-Platform::Platform (bool is_host) :
-    m_is_host (is_host),
-    m_os_version_set_while_connected (false),
-    m_system_arch_set_while_connected (false),
-    m_sdk_sysroot (),
-    m_sdk_build (),
-    m_working_dir (),
-    m_remote_url (),
-    m_name (),
-    m_major_os_version (UINT32_MAX),
-    m_minor_os_version (UINT32_MAX),
-    m_update_os_version (UINT32_MAX),
-    m_system_arch(),
-    m_mutex (Mutex::eMutexTypeRecursive),
-    m_uid_map(),
-    m_gid_map(),
-    m_max_uid_name_len (0),
-    m_max_gid_name_len (0),
-    m_supports_rsync (false),
-    m_rsync_opts (),
-    m_rsync_prefix (),
-    m_supports_ssh (false),
-    m_ssh_opts (),
-    m_ignores_remote_hostname (false),
-    m_trap_handlers(),
-    m_calculated_trap_handlers (false),
-    m_module_cache (llvm::make_unique<ModuleCache> ())
+Platform::Platform(bool is_host)
+    : m_is_host(is_host),
+      m_os_version_set_while_connected(false),
+      m_system_arch_set_while_connected(false),
+      m_sdk_sysroot(),
+      m_sdk_build(),
+      m_working_dir(),
+      m_remote_url(),
+      m_name(),
+      m_major_os_version(UINT32_MAX),
+      m_minor_os_version(UINT32_MAX),
+      m_update_os_version(UINT32_MAX),
+      m_system_arch(),
+      m_mutex(),
+      m_uid_map(),
+      m_gid_map(),
+      m_max_uid_name_len(0),
+      m_max_gid_name_len(0),
+      m_supports_rsync(false),
+      m_rsync_opts(),
+      m_rsync_prefix(),
+      m_supports_ssh(false),
+      m_ssh_opts(),
+      m_ignores_remote_hostname(false),
+      m_trap_handlers(),
+      m_calculated_trap_handlers(false),
+      m_module_cache(llvm::make_unique<ModuleCache>())
 {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_OBJECT));
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
     if (log)
-        log->Printf ("%p Platform::Platform()", static_cast<void*>(this));
+        log->Printf("%p Platform::Platform()", static_cast<void *>(this));
 }
 
 //------------------------------------------------------------------
@@ -528,7 +528,7 @@ Platform::GetOSVersion (uint32_t &major,
                         uint32_t &update,
                         Process *process)
 {
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
 
     bool success = m_major_os_version != UINT32_MAX;
     if (IsHost())
@@ -1741,7 +1741,7 @@ Platform::GetTrapHandlerSymbolNames ()
 {
     if (!m_calculated_trap_handlers)
     {
-        Mutex::Locker locker (m_mutex);
+        std::lock_guard<std::mutex> guard(m_mutex);
         if (!m_calculated_trap_handlers)
         {
             CalculateTrapHandlerSymbolNames();

@@ -4,12 +4,14 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangIncludeFixer
   IncludeFixer.cpp
-  InMemoryXrefsDB.cpp
-  YamlXrefsDB.cpp
+  InMemorySymbolIndex.cpp
+  SymbolIndexManager.cpp
+  YamlSymbolIndex.cpp
 
   LINK_LIBS
   clangAST
   clangBasic
+  clangFormat
   clangFrontend
   clangLex
   clangParse

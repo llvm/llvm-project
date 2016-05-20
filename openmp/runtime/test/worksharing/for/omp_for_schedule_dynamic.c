@@ -9,7 +9,6 @@
  */
 #include <stdio.h>
 #include <omp.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include "omp_testsuite.h"
 
@@ -26,7 +25,7 @@ int test_omp_for_schedule_dynamic()
   int tmp_count = 0; /*dispatch times*/
   int *tmp;  /*store chunk size for each dispatch*/
   int result = 0;
-  
+
   tids = tidsArray;
 
   #pragma omp parallel private(tid) shared(tids)
@@ -69,7 +68,7 @@ int test_omp_for_schedule_dynamic()
       /* result += ((tmp[i] / chunk_size) - 1); */
     }
   }
-  if ((tmp[count]%chunk_size)!=(CFDMAX_SIZE%chunk_size)) { 
+  if ((tmp[count]%chunk_size)!=(CFDMAX_SIZE%chunk_size)) {
     result++;
     fprintf(stderr,"the last dispatch has wrong chunksize.\n");
   }

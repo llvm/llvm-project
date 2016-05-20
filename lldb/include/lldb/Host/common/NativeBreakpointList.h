@@ -12,11 +12,11 @@
 
 #include "lldb/lldb-private-forward.h"
 #include "lldb/Core/Error.h"
-#include "lldb/Host/Mutex.h"
 // #include "lldb/Host/NativeBreakpoint.h"
 
 #include <functional>
 #include <map>
+#include <mutex>
 
 namespace lldb_private
 {
@@ -48,7 +48,7 @@ namespace lldb_private
     private:
         typedef std::map<lldb::addr_t, NativeBreakpointSP> BreakpointMap;
 
-        Mutex m_mutex;
+        std::recursive_mutex m_mutex;
         BreakpointMap m_breakpoints;
     };
 }

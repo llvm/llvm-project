@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuspiciousStringCompareCheck.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "../utils/Matchers.h"
 
 using namespace clang::ast_matchers;
 
@@ -19,6 +20,9 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+
+// Semicolon separated list of known string compare-like functions. The list
+// must ends with a semicolon.
 static const char KnownStringCompareFunctions[] = "__builtin_memcmp;"
                                                   "__builtin_strcasecmp;"
                                                   "__builtin_strcmp;"
@@ -64,19 +68,6 @@ static const char KnownStringCompareFunctions[] = "__builtin_memcmp;"
                                                   "wcsnicmp;"
                                                   "wmemcmp;";
 
-static const char StringCompareLikeFunctionsDelimiter[] = ";";
-
-static void ParseFunctionNames(StringRef Option,
-                               std::vector<std::string> *Result) {
-  SmallVector<StringRef, 4> Functions;
-  Option.split(Functions, StringCompareLikeFunctionsDelimiter);
-  for (StringRef &Function : Functions) {
-    Function = Function.trim();
-    if (!Function.empty())
-      Result->push_back(Function);
-  }
-}
-
 SuspiciousStringCompareCheck::SuspiciousStringCompareCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -102,9 +93,9 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
 
   // Add the list of known string compare-like functions and add user-defined
   // functions.
-  std::vector<std::string> FunctionNames;
-  ParseFunctionNames(KnownStringCompareFunctions, &FunctionNames);
-  ParseFunctionNames(StringCompareLikeFunctions, &FunctionNames);
+  std::vector<std::string> FunctionNames = utils::options::parseStringList(
+      (llvm::Twine(KnownStringCompareFunctions) + StringCompareLikeFunctions)
+          .str());
 
   // Match a call to a string compare functions.
   const auto FunctionCompareDecl =

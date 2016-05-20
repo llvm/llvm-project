@@ -26,7 +26,6 @@
 #include "lldb/lldb-private.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Expression/IRMemoryMap.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 

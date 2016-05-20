@@ -17,6 +17,7 @@
 #include "Error.h"
 #include "lld/Config/Version.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -57,7 +58,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Expand response files. '@<filename>' is replaced by the file's contents.
   SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
   StringSaver Saver(Alloc);
-  llvm::cl::ExpandResponseFiles(Saver, llvm::cl::TokenizeGNUCommandLine, Vec);
+  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Vec);
 
   // Parse options and then do error checking.
   opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
@@ -87,10 +88,26 @@ void elf::printVersion() {
   outs() << "\n";
 }
 
+// Converts a hex string (e.g. "0x123456") to a vector.
+std::vector<uint8_t> elf::parseHexstring(StringRef S) {
+  if (S.find_first_not_of("0123456789abcdefABCDEF") != StringRef::npos ||
+      S.size() % 2) {
+    error("malformed hexstring: " + S);
+    return {};
+  }
+  std::vector<uint8_t> V;
+  for (; !S.empty(); S = S.substr(2)) {
+    int I;
+    S.substr(0, 2).getAsInteger(16, I);
+    V.push_back(I);
+  }
+  return V;
+}
+
 // Makes a given pathname an absolute path first, and then remove
 // beginning /. For example, "../foo.o" is converted to "home/john/foo.o",
 // assuming that the current directory is "/home/john/bar".
-static std::string relativeToRoot(StringRef Path) {
+std::string elf::relativeToRoot(StringRef Path) {
   SmallString<128> Abs = Path;
   if (std::error_code EC = fs::make_absolute(Abs))
     fatal("make_absolute failed: " + EC.message());
@@ -100,7 +117,7 @@ static std::string relativeToRoot(StringRef Path) {
   // (e.g. "c:") or a UNC name (//net). We want to keep it as part
   // of the result.
   SmallString<128> Res;
-  StringRef Root = path::root_name(Path);
+  StringRef Root = path::root_name(Abs);
   if (Root.endswith(":"))
     Res = Root.drop_back();
   else if (Root.startswith("//"))
@@ -110,24 +127,54 @@ static std::string relativeToRoot(StringRef Path) {
   return Res.str();
 }
 
-static std::string getDestPath(StringRef Path) {
-  std::string Relpath = relativeToRoot(Path);
-  SmallString<128> Dest;
-  path::append(Dest, Config->Reproduce, Relpath);
-  return Dest.str();
+CpioFile::CpioFile(std::unique_ptr<llvm::raw_fd_ostream> OS, StringRef S)
+    : OS(std::move(OS)), Basename(S) {}
+
+CpioFile *CpioFile::create(StringRef OutputPath) {
+  std::string Path = (OutputPath + ".cpio").str();
+  std::error_code EC;
+  auto OS = llvm::make_unique<raw_fd_ostream>(Path, EC, fs::F_None);
+  if (EC) {
+    error(EC, "--reproduce: failed to open " + Path);
+    return nullptr;
+  }
+  return new CpioFile(std::move(OS), path::filename(OutputPath));
 }
 
-// Copies file Src to {Config->Reproduce}/Src.
-void elf::copyInputFile(StringRef Src) {
-  std::string Dest = getDestPath(Src);
-  SmallString<128> Dir(Dest);
-  path::remove_filename(Dir);
-  if (std::error_code EC = sys::fs::create_directories(Dir)) {
-    error(EC, Dir + ": can't create directory");
+static void writeMember(raw_fd_ostream &OS, StringRef Path, StringRef Data) {
+  // The c_dev/c_ino pair should be unique according to the spec,
+  // but no one seems to care.
+  OS << "070707";                        // c_magic
+  OS << "000000";                        // c_dev
+  OS << "000000";                        // c_ino
+  OS << "100664";                        // c_mode: C_ISREG | rw-rw-r--
+  OS << "000000";                        // c_uid
+  OS << "000000";                        // c_gid
+  OS << "000001";                        // c_nlink
+  OS << "000000";                        // c_rdev
+  OS << "00000000000";                   // c_mtime
+  OS << format("%06o", Path.size() + 1); // c_namesize
+  OS << format("%011o", Data.size());    // c_filesize
+  OS << Path << '\0';                    // c_name
+  OS << Data;                            // c_filedata
+}
+
+void CpioFile::append(StringRef Path, StringRef Data) {
+  if (!Seen.insert(Path).second)
     return;
-  }
-  if (std::error_code EC = sys::fs::copy_file(Src, Dest))
-    error(EC, "failed to copy file: " + Dest);
+
+  // Construct an in-archive filename so that /home/foo/bar is stored
+  // as baz/home/foo/bar where baz is the basename of the output file.
+  // (i.e. in that case we are creating baz.cpio.)
+  SmallString<128> Fullpath;
+  path::append(Fullpath, Basename, Path);
+  writeMember(*OS, Fullpath, Data);
+
+  // Print the trailer and seek back.
+  // This way we have a valid archive if we crash.
+  uint64_t Pos = OS->tell();
+  writeMember(*OS, "TRAILER!!!", "");
+  OS->seek(Pos);
 }
 
 // Quote a given string if it contains a space character.
@@ -139,31 +186,27 @@ static std::string quote(StringRef S) {
 
 static std::string rewritePath(StringRef S) {
   if (fs::exists(S))
-    return getDestPath(S);
+    return relativeToRoot(S);
   return S;
 }
 
-// Copies all input files to Config->Reproduce directory and
-// create a response file as "response.txt", so that you can re-run
-// the same command with the same inputs just by executing
-// "ld.lld @response.txt". Used by --reproduce. This feature is
-// supposed to be used by users to report an issue to LLD developers.
-void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
-  // Create the output directory.
-  if (std::error_code EC = sys::fs::create_directories(
-        Config->Reproduce, /*IgnoreExisting=*/false)) {
-    error(EC, Config->Reproduce + ": can't create directory");
-    return;
-  }
+static std::string stringize(opt::Arg *Arg) {
+  std::string K = Arg->getSpelling();
+  if (Arg->getNumValues() == 0)
+    return K;
+  std::string V = quote(Arg->getValue());
+  if (Arg->getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
+    return K + V;
+  return K + " " + V;
+}
 
-  // Open "response.txt".
-  SmallString<128> Path;
-  path::append(Path, Config->Reproduce, "response.txt");
-  std::error_code EC;
-  raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
-  check(EC);
+// Reconstructs command line arguments so that so that you can re-run
+// the same command with the same inputs. This is for --reproduce.
+std::string elf::createResponseFile(const opt::InputArgList &Args) {
+  SmallString<0> Data;
+  raw_svector_ostream OS(Data);
 
-  // Copy the command line to response.txt while rewriting paths.
+  // Copy the command line to the output while rewriting paths.
   for (auto *Arg : Args) {
     switch (Arg->getOption().getID()) {
     case OPT_reproduce:
@@ -173,7 +216,6 @@ void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
       break;
     case OPT_L:
     case OPT_dynamic_list:
-    case OPT_export_dynamic_symbol:
     case OPT_rpath:
     case OPT_script:
     case OPT_version_script:
@@ -181,15 +223,16 @@ void elf::createResponseFile(const llvm::opt::InputArgList &Args) {
          << quote(rewritePath(Arg->getValue())) << "\n";
       break;
     default:
-      OS << quote(Arg->getAsString(Args)) << "\n";
+      OS << stringize(Arg) << "\n";
     }
   }
+  return Data.str();
 }
 
 std::string elf::findFromSearchPaths(StringRef Path) {
   for (StringRef Dir : Config->SearchPaths) {
     std::string FullPath = buildSysrootedPath(Dir, Path);
-    if (sys::fs::exists(FullPath))
+    if (fs::exists(FullPath))
       return FullPath;
   }
   return "";
@@ -214,8 +257,8 @@ std::string elf::searchLibrary(StringRef Path) {
 std::string elf::buildSysrootedPath(StringRef Dir, StringRef File) {
   SmallString<128> Path;
   if (Dir.startswith("="))
-    sys::path::append(Path, Config->Sysroot, Dir.substr(1), File);
+    path::append(Path, Config->Sysroot, Dir.substr(1), File);
   else
-    sys::path::append(Path, Dir, File);
+    path::append(Path, Dir, File);
   return Path.str();
 }

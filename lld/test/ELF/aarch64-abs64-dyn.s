@@ -17,8 +17,8 @@ bar:
 // RUN: llvm-readobj -symbols -dyn-relocations %t.so | FileCheck %s
 
 // CHECK:      Dynamic Relocations {
-// CHECK-NEXT:   {{.*}} R_AARCH64_ABS64 foo 0x0
 // CHECK-NEXT:   {{.*}} R_AARCH64_RELATIVE - [[BAR_ADDR:.*]]
+// CHECK-NEXT:   {{.*}} R_AARCH64_ABS64 foo 0x0
 // CHECK-NEXT: }
 
 // CHECK:      Symbols [

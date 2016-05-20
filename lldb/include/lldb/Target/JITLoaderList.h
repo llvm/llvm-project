@@ -10,10 +10,10 @@
 #ifndef liblldb_JITLoaderList_h_
 #define liblldb_JITLoaderList_h_
 
+#include <mutex>
 #include <vector>
 
 #include "lldb/lldb-forward.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -52,7 +52,7 @@ public:
 
 private:
     std::vector<lldb::JITLoaderSP> m_jit_loaders_vec;
-    lldb_private::Mutex m_jit_loaders_mutex;
+    std::recursive_mutex m_jit_loaders_mutex;
 };
 
 } // namespace lldb_private

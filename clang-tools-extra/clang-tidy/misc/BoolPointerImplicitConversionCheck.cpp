@@ -12,14 +12,6 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
-namespace {
-
-AST_MATCHER(CastExpr, isPointerToBoolean) {
-  return Node.getCastKind() == CK_PointerToBoolean;
-}
-
-} // namespace
-
 namespace tidy {
 namespace misc {
 
@@ -32,7 +24,7 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
                        hasSourceExpression(expr(
                            hasType(pointerType(pointee(booleanType()))),
                            ignoringParenImpCasts(declRefExpr().bind("expr")))),
-                       isPointerToBoolean())))),
+                       hasCastKind(CK_PointerToBoolean))))),
              unless(isInTemplateInstantiation())).bind("if"),
       this);
 }

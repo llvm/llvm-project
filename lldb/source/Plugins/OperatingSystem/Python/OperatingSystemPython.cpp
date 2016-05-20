@@ -183,16 +183,16 @@ OperatingSystemPython::UpdateThreadList (ThreadList &old_thread_list,
     // This is a recursive lock so we can grant it to any Python code called on
     // the stack below us.
     Target &target = m_process->GetTarget();
-    Mutex::Locker api_locker;
-    api_locker.TryLock(target.GetAPIMutex());
-    
+    std::unique_lock<std::recursive_mutex> lock(target.GetAPIMutex(), std::defer_lock);
+    lock.try_lock();
+
     if (log)
         log->Printf ("OperatingSystemPython::UpdateThreadList() fetching thread data from python for pid %" PRIu64, m_process->GetID());
 
     // The threads that are in "new_thread_list" upon entry are the threads from the
     // lldb_private::Process subclass, no memory threads will be in this list.
-    
-    auto lock = m_interpreter->AcquireInterpreterLock(); // to make sure threads_list stays alive
+
+    auto interpreter_lock = m_interpreter->AcquireInterpreterLock(); // to make sure threads_list stays alive
     StructuredData::ArraySP threads_list = m_interpreter->OSPlugin_ThreadsInfo(m_python_object_sp);
 
     const uint32_t num_cores = core_thread_list.GetSize(false);
@@ -324,7 +324,7 @@ OperatingSystemPython::CreateRegisterContextForThread (Thread *thread, addr_t re
     // content of the process, and we're going to use python, which requires the API lock to do it.
     // So get & hold that.  This is a recursive lock so we can grant it to any Python code called on the stack below us.
     Target &target = m_process->GetTarget();
-    Mutex::Locker api_locker (target.GetAPIMutex());
+    std::lock_guard<std::recursive_mutex> guard(target.GetAPIMutex());
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_THREAD));
 
@@ -399,8 +399,8 @@ OperatingSystemPython::CreateThread (lldb::tid_t tid, addr_t context)
         // content of the process, and we're going to use python, which requires the API lock to do it.
         // So get & hold that.  This is a recursive lock so we can grant it to any Python code called on the stack below us.
         Target &target = m_process->GetTarget();
-        Mutex::Locker api_locker (target.GetAPIMutex());
-        
+        std::lock_guard<std::recursive_mutex> guard(target.GetAPIMutex());
+
         auto lock = m_interpreter->AcquireInterpreterLock(); // to make sure thread_info_dict stays alive
         StructuredData::DictionarySP thread_info_dict = m_interpreter->OSPlugin_CreateThread(m_python_object_sp, tid, context);
         std::vector<bool> core_used_map;

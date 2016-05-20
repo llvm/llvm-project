@@ -189,11 +189,12 @@ static bool checkTokenIsAutoPtr(SourceLocation TokenStart,
 ReplaceAutoPtrCheck::ReplaceAutoPtrCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(IncludeSorter::parseIncludeStyle(
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
           Options.get("IncludeStyle", "llvm"))) {}
 
 void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "IncludeStyle",
+                utils::IncludeSorter::toString(IncludeStyle));
 }
 
 void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
@@ -211,8 +212,8 @@ void ReplaceAutoPtrCheck::registerPPCallbacks(CompilerInstance &Compiler) {
   // currently does not provide any benefit to other languages, despite being
   // benign.
   if (getLangOpts().CPlusPlus) {
-    Inserter.reset(new IncludeInserter(Compiler.getSourceManager(),
-                                       Compiler.getLangOpts(), IncludeStyle));
+    Inserter.reset(new utils::IncludeInserter(
+        Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
     Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
   }
 }

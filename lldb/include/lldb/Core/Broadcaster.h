@@ -15,6 +15,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -22,7 +23,6 @@
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -126,8 +126,8 @@ private:
     typedef std::set<lldb::ListenerSP> listener_collection;
     collection m_event_map;
     listener_collection m_listeners;
-    
-    Mutex m_manager_mutex;
+
+    mutable std::recursive_mutex m_manager_mutex;
 
     // A couple of comparator classes for find_if:
     
@@ -625,7 +625,7 @@ protected:
         Broadcaster &m_broadcaster;                     ///< The broadcsater that this implements
         event_names_map m_event_names;                  ///< Optionally define event names for readability and logging for each event bit
         collection m_listeners;                         ///< A list of Listener / event_mask pairs that are listening to this broadcaster.
-        Mutex m_listeners_mutex;                        ///< A mutex that protects \a m_listeners.
+        std::recursive_mutex m_listeners_mutex;         ///< A mutex that protects \a m_listeners.
         std::vector<lldb::ListenerSP> m_hijacking_listeners;  // A simple mechanism to intercept events from a broadcaster
         std::vector<uint32_t> m_hijacking_masks;        // At some point we may want to have a stack or Listener
                                                         // collections, but for now this is just for private hijacking.

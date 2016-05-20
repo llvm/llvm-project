@@ -13,12 +13,13 @@
 // C Includes
 // C++ Includes
 #include <list>
+#include <mutex>
 #include <vector>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Core/Address.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -217,7 +218,7 @@ public:
     size_t
     GetSize() const
     {
-        Mutex::Locker locker(m_mutex);
+        std::lock_guard<std::recursive_mutex> guard(m_mutex);
         return m_watchpoints.size();
     }
 
@@ -250,7 +251,7 @@ public:
     ///   The locker object that is set.
     //------------------------------------------------------------------
     void
-    GetListMutex (lldb_private::Mutex::Locker &locker);
+    GetListMutex(std::unique_lock<std::recursive_mutex> &lock);
 
 protected:
     typedef std::list<lldb::WatchpointSP> wp_collection;
@@ -266,7 +267,7 @@ protected:
     GetIDConstIterator(lldb::watch_id_t watchID) const;
 
     wp_collection m_watchpoints;
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
 
     lldb::watch_id_t m_next_wp_id;
 };

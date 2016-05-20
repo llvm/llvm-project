@@ -27,14 +27,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-UnwindTable::UnwindTable (ObjectFile& objfile) : 
-    m_object_file (objfile), 
-    m_unwinds (),
-    m_initialized (false),
-    m_mutex (),
-    m_eh_frame_up (),
-    m_compact_unwind_up (),
-    m_arm_unwind_up ()
+UnwindTable::UnwindTable(ObjectFile &objfile)
+    : m_object_file(objfile),
+      m_unwinds(),
+      m_initialized(false),
+      m_mutex(),
+      m_eh_frame_up(),
+      m_compact_unwind_up(),
+      m_arm_unwind_up()
 {
 }
 
@@ -47,7 +47,7 @@ UnwindTable::Initialize ()
     if (m_initialized)
         return;
 
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
 
     if (m_initialized) // check again once we've acquired the lock
         return;
@@ -90,7 +90,7 @@ UnwindTable::GetFuncUnwindersContainingAddress (const Address& addr, SymbolConte
 
     Initialize();
 
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
 
     // There is an UnwindTable per object file, so we can safely use file handles
     addr_t file_addr = addr.GetFileAddress();
@@ -152,7 +152,7 @@ UnwindTable::GetUncachedFuncUnwindersContainingAddress (const Address& addr, Sym
 void
 UnwindTable::Dump (Stream &s)
 {
-    Mutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     s.Printf("UnwindTable for '%s':\n", m_object_file.GetFileSpec().GetPath().c_str());
     const_iterator begin = m_unwinds.begin();
     const_iterator end = m_unwinds.end();

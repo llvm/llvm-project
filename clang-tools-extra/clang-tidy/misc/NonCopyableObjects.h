@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace misc {
 
 /// The check flags dereferences and non-pointer declarations of objects that
 /// are not meant to be passed by value, such as C FILE objects.
@@ -25,6 +26,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

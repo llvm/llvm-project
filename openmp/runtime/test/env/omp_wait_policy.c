@@ -1,9 +1,9 @@
 // RUN: %libomp-compile && env OMP_WAIT_POLICY=active %libomp-run active
 // RUN: %libomp-compile && env OMP_WAIT_POLICY=passive %libomp-run passive
 //
-// OMP_WAIT_POLICY=active should imply blocktime == INT_MAX 
+// OMP_WAIT_POLICY=active should imply blocktime == INT_MAX
 // i.e., threads spin-wait forever
-// OMP_WAIT_POLICY=passive should imply blocktime == 0 
+// OMP_WAIT_POLICY=passive should imply blocktime == 0
 // i.e., threads immediately sleep
 #include <stdio.h>
 #include <string.h>
@@ -25,7 +25,7 @@ int main(int argc, char** argv)
   }
 
   blocktime = kmp_get_blocktime();
-  
+
   env_var_value = argv[1];
   if (!strcmp(env_var_value, "active")) {
     retval = (blocktime != INT_MAX);

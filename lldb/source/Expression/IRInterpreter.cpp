@@ -106,6 +106,7 @@ public:
     DataLayout                             &m_target_data;
     lldb_private::IRExecutionUnit          &m_execution_unit;
     const BasicBlock                       *m_bb;
+    const BasicBlock                       *m_prev_bb;
     BasicBlock::const_iterator              m_ii;
     BasicBlock::const_iterator              m_ie;
 
@@ -121,7 +122,9 @@ public:
                            lldb::addr_t stack_frame_bottom,
                            lldb::addr_t stack_frame_top) :
         m_target_data (target_data),
-        m_execution_unit (execution_unit)
+        m_execution_unit (execution_unit),
+        m_bb (nullptr),
+        m_prev_bb (nullptr)
     {
         m_byte_order = (target_data.isLittleEndian() ? lldb::eByteOrderLittle : lldb::eByteOrderBig);
         m_addr_byte_size = (target_data.getPointerSize(0));
@@ -137,6 +140,7 @@ public:
 
     void Jump (const BasicBlock *bb)
     {
+        m_prev_bb = m_bb;
         m_bb = bb;
         m_ii = m_bb->begin();
         m_ie = m_bb->end();
@@ -477,6 +481,7 @@ static const char *memory_write_error               = "Interpreter couldn't writ
 static const char *memory_read_error                = "Interpreter couldn't read from memory";
 static const char *infinite_loop_error              = "Interpreter ran for too many cycles";
 //static const char *bad_result_error                 = "Result of expression is in bad memory";
+static const char *too_many_functions_error = "Interpreter doesn't handle modules with multiple function bodies.";
 
 static bool
 CanResolveConstant (llvm::Constant *constant)
@@ -506,7 +511,7 @@ CanResolveConstant (llvm::Constant *constant)
                     Constant *base = dyn_cast<Constant>(*op_cursor);
                     if (!base)
                         return false;
-                    
+
                     return CanResolveConstant(base);
                 }
             }
@@ -535,7 +540,13 @@ IRInterpreter::CanInterpret (llvm::Module &module,
         if (fi->begin() != fi->end())
         {
             if (saw_function_with_body)
+            {
+                if (log)
+                    log->Printf("More than one function in the module has a body");
+                error.SetErrorToGenericError();
+                error.SetErrorString(too_many_functions_error);
                 return false;
+            }
             saw_function_with_body = true;
         }
     }
@@ -562,6 +573,7 @@ IRInterpreter::CanInterpret (llvm::Module &module,
             case Instruction::Alloca:
             case Instruction::BitCast:
             case Instruction::Br:
+            case Instruction::PHI:
                 break;
             case Instruction::Call:
                 {
@@ -664,7 +676,7 @@ IRInterpreter::CanInterpret (llvm::Module &module,
                         return false;
                     }
                 }
-                
+
                 if (Constant *constant = llvm::dyn_cast<Constant>(operand))
                 {
                     if (!CanResolveConstant(constant))
@@ -680,7 +692,8 @@ IRInterpreter::CanInterpret (llvm::Module &module,
 
     }
 
-    return true;}
+    return true;
+}
 
 bool
 IRInterpreter::Interpret (llvm::Module &module,
@@ -1055,6 +1068,46 @@ IRInterpreter::Interpret (llvm::Module &module,
                 }
             }
                 continue;
+            case Instruction::PHI:
+            {
+                const PHINode *phi_inst = dyn_cast<PHINode>(inst);
+
+                if (!phi_inst)
+                {
+                    if (log)
+                        log->Printf("getOpcode() returns PHI, but instruction is not a PHINode");
+                    error.SetErrorToGenericError();
+                    error.SetErrorString(interpreter_internal_error);
+                    return false;
+                }
+                if (!frame.m_prev_bb)
+                {
+                    if (log)
+                        log->Printf("Encountered PHI node without having jumped from another basic block");
+                    error.SetErrorToGenericError();
+                    error.SetErrorString(interpreter_internal_error);
+                    return false;
+                }
+
+                Value* value = phi_inst->getIncomingValueForBlock(frame.m_prev_bb);
+                lldb_private::Scalar result;
+                if (!frame.EvaluateValue(result, value, module))
+                {
+                    if (log)
+                        log->Printf("Couldn't evaluate %s", PrintValue(value).c_str());
+                    error.SetErrorToGenericError();
+                    error.SetErrorString(bad_value_error);
+                    return false;
+                }
+                frame.AssignValue(inst, result, module);
+
+                if (log)
+                {
+                    log->Printf("Interpreted a %s", inst->getOpcodeName());
+                    log->Printf("  Incoming value : %s", frame.SummarizeValue(value).c_str());
+                }
+            }
+            break;
             case Instruction::GetElementPtr:
             {
                 const GetElementPtrInst *gep_inst = dyn_cast<GetElementPtrInst>(inst);

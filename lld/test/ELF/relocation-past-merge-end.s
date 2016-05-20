@@ -3,5 +3,6 @@
 // RUN: not ld.lld %t.o -o %t.so -shared 2>&1 | FileCheck %s
 // CHECK: entry is past the end of the section
 
+        .data
         .long .foo + 1
         .section	.foo,"aM",@progbits,4

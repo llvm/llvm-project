@@ -15,6 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
@@ -53,5 +54,6 @@ ProBoundsPointerArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
   diag(MatchedExpr->getExprLoc(), "do not use pointer arithmetic");
 }
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang

@@ -37,4 +37,4 @@
 // CHECK-NEXT: ]
 
 foo:
-        .quad foo
+        .quad foo - .

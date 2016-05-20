@@ -406,6 +406,7 @@ void IslAst::init(const Dependences &D) {
 
   isl_ctx *Ctx = S->getIslCtx();
   isl_options_set_ast_build_atomic_upper_bound(Ctx, true);
+  isl_options_set_ast_build_detect_min_max(Ctx, true);
   isl_ast_build *Build;
   AstBuildUserInfo BuildInfo;
 

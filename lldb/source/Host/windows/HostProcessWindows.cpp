@@ -24,8 +24,7 @@ namespace
 {
 struct MonitorInfo
 {
-    HostProcess::MonitorCallback callback;
-    void *baton;
+    Host::MonitorChildProcessCallback callback;
     HANDLE process_handle;
 };
 }
@@ -104,12 +103,11 @@ bool HostProcessWindows::IsRunning() const
 }
 
 HostThread
-HostProcessWindows::StartMonitoring(HostProcess::MonitorCallback callback, void *callback_baton, bool monitor_signals)
+HostProcessWindows::StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals)
 {
     HostThread monitor_thread;
     MonitorInfo *info = new MonitorInfo;
     info->callback = callback;
-    info->baton = callback_baton;
 
     // Since the life of this HostProcessWindows instance and the life of the process may be different, duplicate the handle so that
     // the monitor thread can have ownership over its own copy of the handle.
@@ -129,7 +127,7 @@ HostProcessWindows::MonitorThread(void *thread_arg)
     {
         ::WaitForSingleObject(info->process_handle, INFINITE);
         ::GetExitCodeProcess(info->process_handle, &exit_code);
-        info->callback(info->baton, ::GetProcessId(info->process_handle), true, 0, exit_code);
+        info->callback(::GetProcessId(info->process_handle), true, 0, exit_code);
         ::CloseHandle(info->process_handle);
         delete (info);
     }

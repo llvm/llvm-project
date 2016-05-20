@@ -15,6 +15,9 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
+namespace tidy {
+namespace misc {
+
 namespace {
 // FIXME: it would be good to make a list that is also user-configurable so that
 // users can add their own elements to the list. However, it may require some
@@ -49,7 +52,6 @@ AST_MATCHER(NamedDecl, isPOSIXType) {
 }
 } // namespace
 
-namespace tidy {
 void NonCopyableObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // There are two ways to get into trouble with objects like FILE *:
   // dereferencing the pointer type to be a non-pointer type, and declaring
@@ -91,6 +93,7 @@ void NonCopyableObjectsCheck::check(const MatchFinder::MatchResult &Result) {
         << BD;
 }
 
+} // namespace misc
 } // namespace tidy
 } // namespace clang
 

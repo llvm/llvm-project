@@ -30,7 +30,7 @@ enum ELFKind {
   ELF64BEKind
 };
 
-enum class BuildIdKind { None, Fnv1, Md5, Sha1 };
+enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring };
 
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
@@ -44,15 +44,16 @@ struct Configuration {
   llvm::StringRef Emulation;
   llvm::StringRef Fini;
   llvm::StringRef Init;
+  llvm::StringRef LtoNewPmPasses;
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
   std::string RPath;
-  std::string Reproduce;
   std::vector<llvm::StringRef> DynamicList;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
   std::vector<llvm::StringRef> VersionScriptGlobals;
+  std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
   bool Bsymbolic;
@@ -88,6 +89,8 @@ struct Configuration {
   bool Verbose;
   bool VersionScript = false;
   bool WarnCommon;
+  bool ZCombreloc;
+  bool ZDefs;
   bool ZExecStack;
   bool ZNodelete;
   bool ZNow;

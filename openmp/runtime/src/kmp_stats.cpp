@@ -157,6 +157,7 @@ std::string statistic::format(char unit, bool total) const
 
 void explicitTimer::start(timer_e timerEnumValue) {
     startTime = tsc_tick_count::now();
+    totalPauseTime = 0;
     if(timeStat::logEvent(timerEnumValue)) {
         __kmp_stats_thread_ptr->incrementNestValue();
     }
@@ -170,7 +171,7 @@ void explicitTimer::stop(timer_e timerEnumValue) {
     tsc_tick_count finishTime = tsc_tick_count::now();
 
     //stat->addSample ((tsc_tick_count::now() - startTime).ticks());
-    stat->addSample ((finishTime - startTime).ticks());
+    stat->addSample(((finishTime - startTime) - totalPauseTime).ticks());
 
     if(timeStat::logEvent(timerEnumValue)) {
         __kmp_stats_thread_ptr->push_event(startTime.getValue() - __kmp_stats_start_time.getValue(), finishTime.getValue() - __kmp_stats_start_time.getValue(), __kmp_stats_thread_ptr->getNestValue(), timerEnumValue);
@@ -180,6 +181,74 @@ void explicitTimer::stop(timer_e timerEnumValue) {
     /* We accept the risk that we drop a sample because it really did start at t==0. */
     startTime = 0;
     return;
+}
+
+/* ************************************************************** */
+/* ************* partitionedTimers member functions ************* */
+partitionedTimers::partitionedTimers() {
+    timer_stack.reserve(8);
+}
+
+// add a timer to this collection of partitioned timers.
+void partitionedTimers::add_timer(explicit_timer_e timer_index, explicitTimer* timer_pointer) {
+    KMP_DEBUG_ASSERT((int)timer_index < (int)EXPLICIT_TIMER_LAST+1);
+    timers[timer_index] = timer_pointer;
+}
+
+// initialize the paritioned timers to an initial timer
+void partitionedTimers::init(timerPair init_timer_pair) {
+    KMP_DEBUG_ASSERT(this->timer_stack.size() == 0);
+    timer_stack.push_back(init_timer_pair);
+    timers[init_timer_pair.get_index()]->start(init_timer_pair.get_timer());
+}
+
+// stop/save the current timer, and start the new timer (timer_pair)
+// There is a special condition where if the current timer is equal to
+// the one you are trying to push, then it only manipulates the stack,
+// and it won't stop/start the currently running timer.
+void partitionedTimers::push(timerPair timer_pair) {
+    // get the current timer
+    // stop current timer
+    // push new timer
+    // start the new timer
+    KMP_DEBUG_ASSERT(this->timer_stack.size() > 0);
+    timerPair current_timer = timer_stack.back();
+    timer_stack.push_back(timer_pair);
+    if(current_timer != timer_pair) {
+        timers[current_timer.get_index()]->pause();
+        timers[timer_pair.get_index()]->start(timer_pair.get_timer());
+    }
+}
+
+// stop/discard the current timer, and start the previously saved timer
+void partitionedTimers::pop() {
+    // get the current timer
+    // stop current timer
+    // pop current timer
+    // get the new current timer and start it back up
+    KMP_DEBUG_ASSERT(this->timer_stack.size() > 1);
+    timerPair current_timer = timer_stack.back();
+    timer_stack.pop_back();
+    timerPair new_timer = timer_stack.back();
+    if(current_timer != new_timer) {
+        timers[current_timer.get_index()]->stop(current_timer.get_timer());
+        timers[new_timer.get_index()]->resume();
+    }
+}
+
+// Wind up all the currently running timers.
+// This pops off all the timers from the stack and clears the stack
+// After this is called, init() must be run again to initialize the
+// stack of timers
+void partitionedTimers::windup() {
+    while(timer_stack.size() > 1) {
+        this->pop();
+    }
+    if(timer_stack.size() > 0) {
+        timerPair last_timer = timer_stack.back();
+        timer_stack.pop_back();
+        timers[last_timer.get_index()]->stop(last_timer.get_timer());
+    }
 }
 
 /* ******************************************************************* */
@@ -397,8 +466,10 @@ void kmp_stats_output_module::windupExplicitTimers()
     // If the timer wasn't running, this won't record anything anyway.
     kmp_stats_list::iterator it;
     for(it = __kmp_stats_list.begin(); it != __kmp_stats_list.end(); it++) {
+        kmp_stats_list* ptr = *it;
+        ptr->getPartitionedTimers()->windup();
         for (int timer=0; timer<EXPLICIT_TIMER_LAST; timer++) {
-            (*it)->getExplicitTimer(explicit_timer_e(timer))->stop((timer_e)timer);
+            ptr->getExplicitTimer(explicit_timer_e(timer))->stop((timer_e)timer);
         }
     }
 }
@@ -595,11 +666,7 @@ void __kmp_reset_stats()
 
         // reset the event vector so all previous events are "erased"
         (*it)->resetEventVector();
-
-        // May need to restart the explicit timers in thread zero?
     }
-    KMP_START_EXPLICIT_TIMER(OMP_serial);
-    KMP_START_EXPLICIT_TIMER(OMP_start_end);
 }
 
 // This function will reset all stats and stop all threads' explicit timers if they haven't been stopped already.

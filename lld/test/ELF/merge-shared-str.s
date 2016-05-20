@@ -8,7 +8,7 @@
         .asciz "bar"
         .asciz "ar"
 
-        .text
+        .data
         .quad foo + 4
 
 

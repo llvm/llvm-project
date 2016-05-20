@@ -37,7 +37,10 @@ void test_pointer()
 {
      typename std::allocator_traits<Alloc>::pointer        vp;
      typename std::allocator_traits<Alloc>::const_pointer cvp;
-     
+
+     ((void)vp); // Prevent unused warning
+     ((void)cvp); // Prevent unused warning
+
      static_assert(std::is_same<bool, decltype( vp ==  vp)>::value, "");
      static_assert(std::is_same<bool, decltype( vp !=  vp)>::value, "");
      static_assert(std::is_same<bool, decltype( vp >   vp)>::value, "");
@@ -71,7 +74,10 @@ void test_void_pointer()
 {
      typename std::allocator_traits<Alloc>::void_pointer        vp;
      typename std::allocator_traits<Alloc>::const_void_pointer cvp;
-     
+
+     ((void)vp); // Prevent unused warning
+     ((void)cvp); // Prevent unused warning
+
      static_assert(std::is_same<bool, decltype( vp ==  vp)>::value, "");
      static_assert(std::is_same<bool, decltype( vp !=  vp)>::value, "");
      static_assert(std::is_same<bool, decltype( vp >   vp)>::value, "");

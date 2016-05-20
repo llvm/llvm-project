@@ -30,6 +30,7 @@ class WatchpointConditionAPITestCase(TestBase):
         self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
 
     @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
+    @expectedFailureAll(oslist=["linux"], archs=["aarch64"], bugnumber="llvm.org/pr27710")
     @skipIfWindows # Watchpoints not supported on Windows, and this test hangs
     def test_watchpoint_cond_api(self):
         """Test watchpoint condition API."""

@@ -34,7 +34,7 @@ static_assert(( std::__is_referenceable<Foo>::value), "");
 static_assert(( std::__is_referenceable<const Foo>::value), "");
 static_assert(( std::__is_referenceable<Foo &>::value), "");
 static_assert(( std::__is_referenceable<const Foo &>::value), "");
-#ifdef TEST_HAS_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
 static_assert(( std::__is_referenceable<Foo &&>::value), "");
 static_assert(( std::__is_referenceable<const Foo &&>::value), "");
 #endif

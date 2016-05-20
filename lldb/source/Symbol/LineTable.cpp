@@ -299,6 +299,7 @@ LineTable::ConvertEntryAtIndexToLineEntry (uint32_t idx, LineEntry &line_entry)
                 line_entry.range.SetByteSize(0);
 
             line_entry.file = m_comp_unit->GetSupportFiles().GetFileSpecAtIndex (entry.file_idx);
+            line_entry.original_file = m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
             line_entry.line = entry.line;
             line_entry.column = entry.column;
             line_entry.is_start_of_statement = entry.is_start_of_statement;
@@ -462,9 +463,9 @@ LineTable::Dump (Stream *s, Target *target, Address::DumpStyle style, Address::D
     for (size_t idx = 0; idx < count; ++idx)
     {
         ConvertEntryAtIndexToLineEntry (idx, line_entry);
-        line_entry.Dump (s, target, prev_file != line_entry.file, style, fallback_style, show_line_ranges);
+        line_entry.Dump (s, target, prev_file != line_entry.original_file, style, fallback_style, show_line_ranges);
         s->EOL();
-        prev_file = line_entry.file;
+        prev_file = line_entry.original_file;
     }
 }
 

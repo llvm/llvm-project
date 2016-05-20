@@ -111,6 +111,9 @@ __isl_give isl_schedule_tree *isl_schedule_tree_from_pair(
 __isl_give isl_schedule_tree *isl_schedule_tree_sequence_pair(
 	__isl_take isl_schedule_tree *tree1,
 	__isl_take isl_schedule_tree *tree2);
+__isl_give isl_schedule_tree *isl_schedule_tree_set_pair(
+	__isl_take isl_schedule_tree *tree1,
+	__isl_take isl_schedule_tree *tree2);
 
 isl_bool isl_schedule_tree_is_subtree_anchored(
 	__isl_keep isl_schedule_tree *tree);

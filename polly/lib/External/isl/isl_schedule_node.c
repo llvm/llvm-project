@@ -1,6 +1,7 @@
 /*
  * Copyright 2013-2014 Ecole Normale Superieure
  * Copyright 2014      INRIA Rocquencourt
+ * Copyright 2016      Sven Verdoolaege
  *
  * Use of this software is governed by the MIT license
  *
@@ -101,9 +102,6 @@ isl_ctx *isl_schedule_node_get_ctx(__isl_keep isl_schedule_node *node)
 }
 
 /* Return a pointer to the leaf of the schedule into which "node" points.
- *
- * Even though these leaves are not reference counted, we still
- * indicate that this function does not return a copy.
  */
 __isl_keep isl_schedule_tree *isl_schedule_node_peek_leaf(
 	__isl_keep isl_schedule_node *node)
@@ -111,11 +109,7 @@ __isl_keep isl_schedule_tree *isl_schedule_node_peek_leaf(
 	return node ? isl_schedule_peek_leaf(node->schedule) : NULL;
 }
 
-/* Return a pointer to the leaf of the schedule into which "node" points.
- *
- * Even though these leaves are not reference counted, we still
- * return a "copy" of the leaf here such that it can still be "freed"
- * by the user.
+/* Return a copy of the leaf of the schedule into which "node" points.
  */
 __isl_give isl_schedule_tree *isl_schedule_node_get_leaf(
 	__isl_keep isl_schedule_node *node)
@@ -222,10 +216,6 @@ __isl_give isl_schedule_node *isl_schedule_node_copy(
 }
 
 /* Free "node" and return NULL.
- *
- * Since the node may point to a leaf of its schedule, which
- * point to a field inside the schedule, we need to make sure
- * we free the tree before freeing the schedule.
  */
 __isl_null isl_schedule_node *isl_schedule_node_free(
 	__isl_take isl_schedule_node *node)
@@ -1908,7 +1898,10 @@ error:
  * If the node only has a leaf child, then nothing needs to be done.
  * Otherwise, the child of the node is removed and the result is
  * appended to all the leaves in the subtree rooted at the original child.
- * The original node is then replaced by the result of this operation.
+ * Since the node is moved to the leaves, it needs to be expanded
+ * according to the expansion, if any, defined by that subtree.
+ * In the end, the original node is replaced by the result of
+ * attaching copies of the expanded node to the leaves.
  *
  * If any of the nodes in the subtree rooted at "node" depend on
  * the set of outer band nodes then we refuse to sink the band node.
@@ -1918,6 +1911,7 @@ __isl_give isl_schedule_node *isl_schedule_node_band_sink(
 {
 	enum isl_schedule_node_type type;
 	isl_schedule_tree *tree, *child;
+	isl_union_pw_multi_aff *contraction;
 	int anchored;
 
 	if (!node)
@@ -1937,9 +1931,12 @@ __isl_give isl_schedule_node *isl_schedule_node_band_sink(
 	if (isl_schedule_tree_n_children(node->tree) == 0)
 		return node;
 
+	contraction = isl_schedule_node_get_subtree_contraction(node);
+
 	tree = isl_schedule_node_get_tree(node);
 	child = isl_schedule_tree_get_child(tree, 0);
 	tree = isl_schedule_tree_reset_children(tree);
+	tree = isl_schedule_tree_pullback_union_pw_multi_aff(tree, contraction);
 	tree = isl_schedule_tree_append_to_leaves(child, tree);
 
 	return isl_schedule_node_graft_tree(node, tree);
@@ -3194,6 +3191,39 @@ static __isl_give isl_schedule_node *gist_enter_expansion(
 	return node;
 }
 
+/* Leave the expansion node "node" during a isl_schedule_node_gist traversal.
+ *
+ * In particular, remove the element in data->filters that was added by
+ * gist_enter_expansion and decrement the number of outer expansions.
+ *
+ * The expansion has already been simplified in gist_enter_expansion.
+ * If this simplification results in an identity expansion, then
+ * it is removed here.
+ */
+static __isl_give isl_schedule_node *gist_leave_expansion(
+	__isl_take isl_schedule_node *node, struct isl_node_gist_data *data)
+{
+	int n;
+	isl_bool identity;
+	isl_union_map *expansion;
+
+	expansion = isl_schedule_node_expansion_get_expansion(node);
+	identity = isl_union_map_is_identity(expansion);
+	isl_union_map_free(expansion);
+
+	if (identity < 0)
+		node = isl_schedule_node_free(node);
+	else if (identity)
+		node = isl_schedule_node_delete(node);
+
+	n = isl_union_set_list_n_union_set(data->filters);
+	data->filters = isl_union_set_list_drop(data->filters, n - 1, 1);
+
+	data->n_expansion--;
+
+	return node;
+}
+
 /* Enter the extension node "node" during a isl_schedule_node_gist traversal.
  *
  * In particular, add an extra element to data->filters containing
@@ -3341,9 +3371,7 @@ static __isl_give isl_schedule_node *gist_enter(
  * the node.  There is no need to compute any gist here, since we
  * already did that when we entered the node.
  *
- * If the current node is an expansion, then we decrement
- * the number of outer expansions and remove the element
- * in data->filters that was added by gist_enter_expansion.
+ * Expansion nodes are handled by gist_leave_expansion.
  *
  * If the current node is an extension, then remove the element
  * in data->filters that was added by gist_enter_extension.
@@ -3374,7 +3402,8 @@ static __isl_give isl_schedule_node *gist_leave(
 	case isl_schedule_node_error:
 		return isl_schedule_node_free(node);
 	case isl_schedule_node_expansion:
-		data->n_expansion--;
+		node = gist_leave_expansion(node, data);
+		break;
 	case isl_schedule_node_extension:
 	case isl_schedule_node_filter:
 		n = isl_union_set_list_n_union_set(data->filters);
@@ -4447,6 +4476,98 @@ __isl_give isl_schedule_node *isl_schedule_node_pullback_union_pw_multi_aff(
 	tree = isl_schedule_tree_pullback_union_pw_multi_aff(tree, upma);
 	node = isl_schedule_node_graft_tree(node, tree);
 
+	return node;
+}
+
+/* Internal data structure for isl_schedule_node_expand.
+ * "tree" is the tree that needs to be plugged in in all the leaves.
+ * "domain" is the set of domain elements in the original leaves
+ * to which the tree applies.
+ */
+struct isl_schedule_expand_data {
+	isl_schedule_tree *tree;
+	isl_union_set *domain;
+};
+
+/* If "node" is a leaf, then plug in data->tree, simplifying it
+ * within its new context.
+ *
+ * If there are any domain elements at the leaf where the tree
+ * should not be plugged in (i.e., there are elements not in data->domain)
+ * then first extend the tree to only apply to the elements in data->domain
+ * by constructing a set node that selects data->tree for elements
+ * in data->domain and a leaf for the other elements.
+ */
+static __isl_give isl_schedule_node *expand(__isl_take isl_schedule_node *node,
+	void *user)
+{
+	struct isl_schedule_expand_data *data = user;
+	isl_schedule_tree *tree, *leaf;
+	isl_union_set *domain, *left;
+	isl_bool empty;
+
+	if (isl_schedule_node_get_type(node) != isl_schedule_node_leaf)
+		return node;
+
+	domain = isl_schedule_node_get_domain(node);
+	tree = isl_schedule_tree_copy(data->tree);
+
+	left = isl_union_set_copy(domain);
+	left = isl_union_set_subtract(left, isl_union_set_copy(data->domain));
+	empty = isl_union_set_is_empty(left);
+	if (empty >= 0 && !empty) {
+		leaf = isl_schedule_node_get_leaf(node);
+		leaf = isl_schedule_tree_insert_filter(leaf, left);
+		left = isl_union_set_copy(data->domain);
+		tree = isl_schedule_tree_insert_filter(tree, left);
+		tree = isl_schedule_tree_set_pair(tree, leaf);
+	} else {
+		if (empty < 0)
+			node = isl_schedule_node_free(node);
+		isl_union_set_free(left);
+	}
+
+	node = isl_schedule_node_graft_tree(node, tree);
+	node = isl_schedule_node_gist(node, domain);
+
+	return node;
+}
+
+/* Expand the tree rooted at "node" by extending all leaves
+ * with an expansion node with as child "tree".
+ * The expansion is determined by "contraction" and "domain".
+ * That is, the elements of "domain" are contracted according
+ * to "contraction".  The expansion relation is then the inverse
+ * of "contraction" with its range intersected with "domain".
+ *
+ * Insert the appropriate expansion node on top of "tree" and
+ * then plug in the result in all leaves of "node".
+ */
+__isl_give isl_schedule_node *isl_schedule_node_expand(
+	__isl_take isl_schedule_node *node,
+	__isl_take isl_union_pw_multi_aff *contraction,
+	__isl_take isl_union_set *domain,
+	__isl_take isl_schedule_tree *tree)
+{
+	struct isl_schedule_expand_data data;
+	isl_union_map *expansion;
+	isl_union_pw_multi_aff *copy;
+
+	if (!node || !contraction || !tree)
+		node = isl_schedule_node_free(node);
+
+	copy = isl_union_pw_multi_aff_copy(contraction);
+	expansion = isl_union_map_from_union_pw_multi_aff(copy);
+	expansion = isl_union_map_reverse(expansion);
+	expansion = isl_union_map_intersect_range(expansion, domain);
+	data.domain = isl_union_map_domain(isl_union_map_copy(expansion));
+
+	tree = isl_schedule_tree_insert_expansion(tree, contraction, expansion);
+	data.tree = tree;
+
+	node = isl_schedule_node_map_descendant_bottom_up(node, &expand, &data);
+	isl_union_set_free(data.domain);
+	isl_schedule_tree_free(data.tree);
 	return node;
 }
 

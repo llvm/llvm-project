@@ -14,13 +14,6 @@ int test_omp_section_firstprivate()
   {
     #pragma omp  sections firstprivate(sum0)
     {
-      #pragma omp section 
-      {
-        #pragma omp critical
-        {
-          sum = sum + sum0;
-        }
-      }  
       #pragma omp section
       {
         #pragma omp critical
@@ -34,11 +27,18 @@ int test_omp_section_firstprivate()
         {
           sum = sum + sum0;
         }
-      }         
+      }
+      #pragma omp section
+      {
+        #pragma omp critical
+        {
+          sum = sum + sum0;
+        }
+      }
     }
   }
   known_sum = 11 * 3 + 7;
-  return (known_sum == sum); 
+  return (known_sum == sum);
 } /* end of check_section_firstprivate*/
 
 int main()

@@ -591,6 +591,18 @@ __isl_give isl_schedule_tree *isl_schedule_tree_sequence_pair(
 						tree1, tree2);
 }
 
+/* Construct a tree with a set root node and as children
+ * "tree1" and "tree2".
+ * If the root of one (or both) of the input trees is itself a set,
+ * then the tree is replaced by its children.
+ */
+__isl_give isl_schedule_tree *isl_schedule_tree_set_pair(
+	__isl_take isl_schedule_tree *tree1,
+	__isl_take isl_schedule_tree *tree2)
+{
+	return isl_schedule_tree_from_pair(isl_schedule_node_set, tree1, tree2);
+}
+
 /* Return the isl_ctx to which "tree" belongs.
  */
 isl_ctx *isl_schedule_tree_get_ctx(__isl_keep isl_schedule_tree *tree)

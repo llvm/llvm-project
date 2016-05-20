@@ -18,6 +18,7 @@
 #include "kmp_itt.h"
 #include "kmp_str.h"
 #include "kmp_i18n.h"
+#include "kmp_lock.h"
 #include "kmp_io.h"
 #include "kmp_stats.h"
 #include "kmp_wait_release.h"
@@ -34,7 +35,7 @@
 
 #if KMP_OS_LINUX && !KMP_OS_CNK
 # include <sys/sysinfo.h>
-# if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+# if KMP_USE_FUTEX
 // We should really include <futex.h>, but that causes compatibility problems on different
 // Linux* OS distributions that either require that you include (or break when you try to include)
 // <pci/types.h>.
@@ -422,7 +423,7 @@ __kmp_affinity_determine_capable(const char *env_var)
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && !KMP_OS_CNK
+#if KMP_USE_FUTEX && !KMP_OS_CNK
 
 int
 __kmp_futex_determine_capable()
@@ -439,7 +440,7 @@ __kmp_futex_determine_capable()
     return retval;
 }
 
-#endif // KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM) && !KMP_OS_CNK
+#endif // KMP_USE_FUTEX && !KMP_OS_CNK
 
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
@@ -518,7 +519,7 @@ __kmp_test_then_and32( volatile kmp_int32 *p, kmp_int32 d )
     return old_value;
 }
 
-# if KMP_ARCH_X86 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64
+# if KMP_ARCH_X86 || KMP_ARCH_PPC64 || (KMP_OS_LINUX && KMP_ARCH_AARCH64)
 kmp_int8
 __kmp_test_then_add8( volatile kmp_int8 *p, kmp_int8 d )
 {
@@ -552,7 +553,7 @@ __kmp_test_then_add64( volatile kmp_int64 *p, kmp_int64 d )
     }
     return old_value;
 }
-# endif /* KMP_ARCH_X86 */
+# endif /* KMP_ARCH_X86 || KMP_ARCH_PPC64 || (KMP_OS_LINUX && KMP_ARCH_AARCH64) */
 
 kmp_int64
 __kmp_test_then_or64( volatile kmp_int64 *p, kmp_int64 d )
@@ -697,6 +698,9 @@ __kmp_launch_worker( void *thr )
 #if KMP_STATS_ENABLED
     // set __thread local index to point to thread-specific stats
     __kmp_stats_thread_ptr = ((kmp_info_t*)thr)->th.th_stats;
+    KMP_START_EXPLICIT_TIMER(OMP_worker_thread_life);
+    KMP_SET_THREAD_STATE(IDLE);
+    KMP_INIT_PARTITIONED_TIMERS(OMP_idle);
 #endif
 
 #if USE_ITT_BUILD
@@ -972,8 +976,9 @@ __kmp_create_worker( int gtid, kmp_info_t *th, size_t stack_size )
         __kmp_stats_start_time = tsc_tick_count::now();
         __kmp_stats_thread_ptr = th->th.th_stats;
         __kmp_stats_init();
-        KMP_START_EXPLICIT_TIMER(OMP_serial);
-        KMP_START_EXPLICIT_TIMER(OMP_start_end);
+        KMP_START_EXPLICIT_TIMER(OMP_worker_thread_life);
+        KMP_SET_THREAD_STATE(SERIAL_REGION);
+        KMP_INIT_PARTITIONED_TIMERS(OMP_serial);
     }
     __kmp_release_tas_lock(&__kmp_stats_lock, gtid);
 
@@ -1856,6 +1861,7 @@ void __kmp_resume_oncore(int target_gtid, kmp_flag_oncore *flag) {
 void
 __kmp_resume_monitor()
 {
+    KMP_TIME_DEVELOPER_BLOCK(USER_resume);
     int status;
 #ifdef KMP_DEBUG
     int gtid = TCR_4(__kmp_init_gtid) ? __kmp_get_gtid() : -1;
@@ -2569,7 +2575,7 @@ __kmp_get_load_balance( int max )
 
 #endif // USE_LOAD_BALANCE
 
-#if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC)
+#if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC || (KMP_OS_LINUX && KMP_ARCH_AARCH64))
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t -- -- -std=c++11 -fno-delayed-template-parsing
 
 struct PositiveFieldBeforeConstructor {
   int F;
@@ -83,6 +83,14 @@ struct NegativeConstructorDelegated {
 struct NegativeInitializedInBody {
   NegativeInitializedInBody() { I = 0; }
   int I;
+};
+
+struct A {};
+template <class> class AA;
+template <class T> class NegativeTemplateConstructor {
+  NegativeTemplateConstructor(const AA<T> &, A) {}
+  bool Bool{false};
+  // CHECK-FIXES: bool Bool{false};
 };
 
 #define UNINITIALIZED_FIELD_IN_MACRO_BODY(FIELD) \
@@ -337,4 +345,25 @@ struct NegativeDeletedConstructor : NegativeAggregateType {
   NegativeDeletedConstructor() = delete;
 
   Template<int> F;
+};
+
+// This pathological template fails to compile if actually instantiated. It
+// results in the check seeing a null RecordDecl when examining the base class
+// initializer list.
+template <typename T>
+class PositiveSelfInitialization : NegativeAggregateType
+{
+  PositiveSelfInitialization() : PositiveSelfInitialization() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these bases: NegativeAggregateType
+  // CHECK-FIXES: PositiveSelfInitialization() : NegativeAggregateType(), PositiveSelfInitialization() {}
+};
+
+class PositiveIndirectMember {
+  struct {
+    int *A;
+    // CHECK-FIXES: int *A{};
+  };
+
+  PositiveIndirectMember() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A
 };

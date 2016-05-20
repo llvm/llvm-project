@@ -1,7 +1,10 @@
+.. title:: clang-tidy - misc-virtual-near-miss
+
 misc-virtual-near-miss
 ======================
 
-Warn if a function is a near miss (ie. the name is very similar and the function signiture is the same) to a virtual function from a base class.
+Warn if a function is a near miss (ie. the name is very similar and the function
+signiture is the same) to a virtual function from a base class.
 
 Example:
 

@@ -15,6 +15,7 @@
 
 // C++ Includes
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -28,7 +29,6 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Core/ValueObjectList.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/Predicate.h"
 
 namespace curses
@@ -711,7 +711,7 @@ namespace lldb_private {
     public:
         IOHandlerStack () :
             m_stack(),
-            m_mutex(Mutex::eMutexTypeRecursive),
+            m_mutex(),
             m_top (nullptr),
             m_repl_active (false),
             m_repl_enabled (false)
@@ -719,57 +719,57 @@ namespace lldb_private {
         }
         
         ~IOHandlerStack() = default;
-        
+
         size_t
-        GetSize () const
+        GetSize() const
         {
-            Mutex::Locker locker (m_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_mutex);
             return m_stack.size();
         }
-        
+
         void
-        Push (const lldb::IOHandlerSP& sp)
+        Push(const lldb::IOHandlerSP &sp)
         {
             if (sp)
             {
-                Mutex::Locker locker (m_mutex);
-                sp->SetPopped (false);
-                m_stack.push_back (sp);
+                std::lock_guard<std::recursive_mutex> guard(m_mutex);
+                sp->SetPopped(false);
+                m_stack.push_back(sp);
                 // Set m_top the non-locking IsTop() call
                 m_top = sp.get();
 
                 UpdateREPLIsActive();
             }
         }
-        
+
         bool
-        IsEmpty () const
+        IsEmpty() const
         {
-            Mutex::Locker locker (m_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_mutex);
             return m_stack.empty();
         }
-        
+
         lldb::IOHandlerSP
-        Top ()
+        Top()
         {
             lldb::IOHandlerSP sp;
             {
-                Mutex::Locker locker (m_mutex);
+                std::lock_guard<std::recursive_mutex> guard(m_mutex);
                 if (!m_stack.empty())
                     sp = m_stack.back();
             }
             return sp;
         }
-        
+
         void
-        Pop ()
+        Pop()
         {
-            Mutex::Locker locker (m_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_mutex);
             if (!m_stack.empty())
             {
-                lldb::IOHandlerSP sp (m_stack.back());
+                lldb::IOHandlerSP sp(m_stack.back());
                 m_stack.pop_back();
-                sp->SetPopped (true);
+                sp->SetPopped(true);
             }
             // Set m_top the non-locking IsTop() call
             m_top = (m_stack.empty() ? nullptr : m_stack.back().get());
@@ -777,12 +777,12 @@ namespace lldb_private {
             UpdateREPLIsActive();
         }
 
-        Mutex &
+        std::recursive_mutex &
         GetMutex()
         {
             return m_mutex;
         }
-      
+
         bool
         IsTop (const lldb::IOHandlerSP &io_handler_sp) const
         {
@@ -790,13 +790,12 @@ namespace lldb_private {
         }
 
         bool
-        CheckTopIOHandlerTypes (IOHandler::Type top_type, IOHandler::Type second_top_type)
+        CheckTopIOHandlerTypes(IOHandler::Type top_type, IOHandler::Type second_top_type)
         {
-            Mutex::Locker locker (m_mutex);
+            std::lock_guard<std::recursive_mutex> guard(m_mutex);
             const size_t num_io_handlers = m_stack.size();
-            return (num_io_handlers >= 2 &&
-                    m_stack[num_io_handlers-1]->GetType() == top_type &&
-                    m_stack[num_io_handlers-2]->GetType() == second_top_type);
+            return (num_io_handlers >= 2 && m_stack[num_io_handlers - 1]->GetType() == top_type &&
+                    m_stack[num_io_handlers - 2]->GetType() == second_top_type);
         }
 
         ConstString
@@ -888,11 +887,11 @@ namespace lldb_private {
 
         typedef std::vector<lldb::IOHandlerSP> collection;
         collection m_stack;
-        mutable Mutex m_mutex;
+        mutable std::recursive_mutex m_mutex;
         IOHandler *m_top;
         bool m_repl_active;  // REPL is the active IOHandler or right underneath the process IO handler
         bool m_repl_enabled; // REPL is on IOHandler stack somewhere
-        
+
     private:
         DISALLOW_COPY_AND_ASSIGN (IOHandlerStack);
     };

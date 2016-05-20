@@ -26,7 +26,7 @@
 ; CHECK-NEXT:             [N] -> { Stmt_for_cond[i0] -> MemRef_x_addr_0[] };
 ; CHECK-NEXT:     Stmt_for_body
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] : N >= 2 and 0 <= i0 <= -2 + N };
+; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] : 0 <= i0 <= -2 + N };
 ; CHECK-NEXT:         Schedule :=
 ; CHECK-NEXT:             [N] -> { Stmt_for_body[i0] -> [i0, 1, 0, 0] };
 ; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]

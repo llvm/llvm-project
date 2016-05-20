@@ -12,7 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
-#include "AssignOperatorSignatureCheck.h"
+#include "UnconventionalAssignOperatorCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DefinitionsInHeadersCheck.h"
@@ -61,8 +61,8 @@ public:
     CheckFactories.registerCheck<ArgumentCommentCheck>("misc-argument-comment");
     CheckFactories.registerCheck<AssertSideEffectCheck>(
         "misc-assert-side-effect");
-    CheckFactories.registerCheck<AssignOperatorSignatureCheck>(
-        "misc-assign-operator-signature");
+    CheckFactories.registerCheck<UnconventionalAssignOperatorCheck>(
+        "misc-unconventional-assign-operator");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "misc-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<DanglingHandleCheck>(

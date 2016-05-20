@@ -10,8 +10,10 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AvoidBindCheck.h"
 #include "DeprecatedHeadersCheck.h"
 #include "LoopConvertCheck.h"
+#include "MakeSharedCheck.h"
 #include "MakeUniqueCheck.h"
 #include "PassByValueCheck.h"
 #include "RawStringLiteralCheck.h"
@@ -19,6 +21,7 @@
 #include "ReplaceAutoPtrCheck.h"
 #include "ShrinkToFitCheck.h"
 #include "UseAutoCheck.h"
+#include "UseBoolLiteralsCheck.h"
 #include "UseDefaultCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
@@ -32,9 +35,12 @@ namespace modernize {
 class ModernizeModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidBindCheck>(
+        "modernize-avoid-bind");
     CheckFactories.registerCheck<DeprecatedHeadersCheck>(
         "modernize-deprecated-headers");
     CheckFactories.registerCheck<LoopConvertCheck>("modernize-loop-convert");
+    CheckFactories.registerCheck<MakeSharedCheck>("modernize-make-shared");
     CheckFactories.registerCheck<MakeUniqueCheck>("modernize-make-unique");
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<RawStringLiteralCheck>(
@@ -45,6 +51,8 @@ public:
         "modernize-replace-auto-ptr");
     CheckFactories.registerCheck<ShrinkToFitCheck>("modernize-shrink-to-fit");
     CheckFactories.registerCheck<UseAutoCheck>("modernize-use-auto");
+    CheckFactories.registerCheck<UseBoolLiteralsCheck>(
+        "modernize-use-bool-literals");
     CheckFactories.registerCheck<UseDefaultCheck>("modernize-use-default");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");

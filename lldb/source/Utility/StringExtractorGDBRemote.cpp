@@ -14,7 +14,6 @@
 // Other libraries and framework includes
 // Project includes
 #include "Utility/StringExtractorGDBRemote.h"
-#include "lldb/Utility/LLDBAssert.h"
 
 StringExtractorGDBRemote::ResponseType
 StringExtractorGDBRemote::GetResponseType () const
@@ -405,7 +404,6 @@ OKErrorNotSupportedResponseValidator(void *, const StringExtractorGDBRemote &res
         case StringExtractorGDBRemote::eResponse:
             break;
     }
-    lldbassert(!"Packet validatation failed, check why this is happening");
     return false;
 }
 
@@ -438,7 +436,6 @@ JSONResponseValidator(void *, const StringExtractorGDBRemote &response)
             }
             break;
     }
-    lldbassert(!"Packet validatation failed, check why this is happening");
     return false;
 }
 
@@ -463,7 +460,6 @@ ASCIIHexBytesResponseValidator(void *, const StringExtractorGDBRemote &response)
                 {
                     if (!isxdigit(ch))
                     {
-                        lldbassert(!"Packet validatation failed, check why this is happening");
                         return false;
                     }
                     if (++valid_count >= 16)
@@ -473,7 +469,6 @@ ASCIIHexBytesResponseValidator(void *, const StringExtractorGDBRemote &response)
             }
             break;
     }
-    lldbassert(!"Packet validatation failed, check why this is happening");
     return false;
 }
 

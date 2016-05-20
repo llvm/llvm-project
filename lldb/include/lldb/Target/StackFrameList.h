@@ -13,11 +13,11 @@
 // C Includes
 // C++ Includes
 #include <memory>
+#include <mutex>
 #include <vector>
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/StackFrame.h"
 
 namespace lldb_private {
@@ -135,7 +135,7 @@ protected:
 
     Thread &m_thread;
     lldb::StackFrameListSP m_prev_frames_sp;
-    mutable Mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     collection m_frames;
     uint32_t m_selected_frame_idx;
     uint32_t m_concrete_frames_fetched;

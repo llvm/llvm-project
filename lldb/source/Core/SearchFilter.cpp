@@ -131,7 +131,7 @@ SearchFilter::SearchInModuleList (Searcher &searcher, ModuleList &modules)
         searcher.SearchCallback(*this, empty_sc, nullptr, false);
     else
     {
-        Mutex::Locker modules_locker(modules.GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(modules.GetMutex());
         const size_t numModules = modules.GetSize();
 
         for (size_t i = 0; i < numModules; i++)
@@ -173,8 +173,8 @@ SearchFilter::DoModuleIteration (const SymbolContext &context, Searcher &searche
         else
         {
             const ModuleList &target_images = m_target_sp->GetImages();
-            Mutex::Locker modules_locker(target_images.GetMutex());
-            
+            std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
+
             size_t n_modules = target_images.GetSize();
             for (size_t i = 0; i < n_modules; i++)
             {
@@ -364,8 +364,8 @@ SearchFilterByModule::Search (Searcher &searcher)
     // find the ones that match the file name.
 
     const ModuleList &target_modules = m_target_sp->GetImages();
-    Mutex::Locker modules_locker (target_modules.GetMutex());
-    
+    std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
+
     const size_t num_modules = target_modules.GetSize ();
     for (size_t i = 0; i < num_modules; i++)
     {
@@ -503,8 +503,8 @@ SearchFilterByModuleList::Search (Searcher &searcher)
     // find the ones that match the file name.
 
     const ModuleList &target_modules = m_target_sp->GetImages();
-    Mutex::Locker modules_locker (target_modules.GetMutex());
-    
+    std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
+
     const size_t num_modules = target_modules.GetSize ();
     for (size_t i = 0; i < num_modules; i++)
     {
@@ -657,8 +657,8 @@ SearchFilterByModuleListAndCU::Search (Searcher &searcher)
     // find the ones that match the file name.
 
     const ModuleList &target_images = m_target_sp->GetImages();
-    Mutex::Locker modules_locker(target_images.GetMutex());
-    
+    std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
+
     const size_t num_modules = target_images.GetSize ();
     bool no_modules_in_filter = m_module_spec_list.GetSize() == 0;
     for (size_t i = 0; i < num_modules; i++)

@@ -1,6 +1,7 @@
 ; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
+; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [i, N, M] -> {  : N <= i or (N > i and N >= 0) }
 ; CHECK-NEXT: remark: <unknown>:0:0: Inbounds assumption:    [i, N, M] -> {  : N <= i or (N > i and M <= 100) }
 ; CHECK-NEXT: remark: <unknown>:0:0: SCoP ends here.
 ;

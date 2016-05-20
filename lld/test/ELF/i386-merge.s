@@ -21,26 +21,27 @@
 // CHECK-NEXT: )
 
 
-// CHECK:      Name: .text
+// CHECK:      Name: .data
 // CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_EXECINSTR
+// CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x1000
-// CHECK-NEXT: Offset: 0x1000
+// CHECK-NEXT: Address: 0x2000
+// CHECK-NEXT: Offset: 0x2000
 // CHECK-NEXT: Size: 4
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
-// CHECK-NEXT: AddressAlignment: 4
+// CHECK-NEXT: AddressAlignment: 1
 // CHECK-NEXT: EntrySize: 0
 // CHECK-NEXT: SectionData (
 // CHECK-NEXT:   0000: 14010000 |
 // CHECK-NEXT: )
 
-// The content of .text should be the address of .mysec. 14010000 is 0x114 in
+// The content of .data should be the address of .mysec. 14010000 is 0x114 in
 // little endian.
 
+        .data
         .long .mysec+4
 
         .section        .mysec,"aM",@progbits,4

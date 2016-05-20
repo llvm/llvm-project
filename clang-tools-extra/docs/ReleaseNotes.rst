@@ -100,6 +100,11 @@ identified.  The improvements since the 3.8 release include:
   Flags user-defined constructor definitions that do not initialize all builtin
   and pointer fields which leaves their memory in an undefined state.
 
+- New `google-default-arguments
+  <http://clang.llvm.org/extra/clang-tidy/checks/google-default-arguments.html>`_ check
+
+  Flags default arguments in virtual methods.
+
 - New `misc-dangling-handle
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-dangling-handle.html>`_ check
 
@@ -175,16 +180,31 @@ identified.  The improvements since the 3.8 release include:
 
   Finds unused ``using`` declarations.
 
+- New `modernize-avoid-bind
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-avoid-bind.html>`_ check
+
+  Finds uses of ``std::bind`` and replaces simple uses with lambdas.
+
 - New `modernize-deprecated-headers
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-headers.html>`_ check
 
   Replaces C standard library headers with their C++ alternatives.
+
+- New `modernize-make-shared
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_ check
+
+  Replaces creation of ``std::shared_ptr`` from new expression with call to ``std::make_shared``.
 
 - New `modernize-raw-string-literal
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-raw-string-literal.html>`_ check
 
   Selectively replaces string literals containing escaped characters with raw
   string literals.
+
+- New `modernize-use-bool-literals
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-bool-literals.html>`_ check
+
+  Finds integer literals which are cast to ``bool``.
 
 - New `performance-faster-string-find
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-faster-string-find.html>`_ check
@@ -230,6 +250,13 @@ identified.  The improvements since the 3.8 release include:
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html>`_ check
 
   Finds static function and variable definitions in anonymous namespace.
+
+- New `misc-unconventional-assign-operator
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-unconventional-assign-operator.html>`_
+  check replacing the *misc-assign-operator-signature* check.
+
+  Does not only checks for correct signature but also for correct ``return``
+  statements (returning ``*this``)
 
 Fixed bugs:
 

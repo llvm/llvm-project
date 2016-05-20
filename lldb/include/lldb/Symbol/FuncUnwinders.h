@@ -1,12 +1,12 @@
 #ifndef liblldb_FuncUnwinders_h
 #define liblldb_FuncUnwinders_h
 
+#include <mutex>
 #include <vector>
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -119,7 +119,7 @@ private:
     UnwindTable& m_unwind_table;
     AddressRange m_range;
 
-    Mutex m_mutex;
+    std::recursive_mutex m_mutex;
 
     lldb::UnwindPlanSP              m_unwind_plan_assembly_sp;
     lldb::UnwindPlanSP              m_unwind_plan_eh_frame_sp;

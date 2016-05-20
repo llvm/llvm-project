@@ -180,7 +180,7 @@ GotSection<ELFT>::getMipsLocalEntryOffset(uintX_t EntryValue) {
   size_t NewIndex = MipsLocalGotPos.size() + 2;
   auto P = MipsLocalGotPos.insert(std::make_pair(EntryValue, NewIndex));
   assert(!P.second || MipsLocalGotPos.size() <= MipsLocalEntries);
-  return P.first->second * sizeof(uintX_t) - MipsGPOffset;
+  return (uintX_t)P.first->second * sizeof(uintX_t) - MipsGPOffset;
 }
 
 template <class ELFT>
@@ -270,17 +270,14 @@ PltSection<ELFT>::PltSection()
 
 template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
   size_t Off = 0;
-  if (Target->UseLazyBinding) {
-    // At beginning of PLT, we have code to call the dynamic linker
-    // to resolve dynsyms at runtime. Write such code.
-    Target->writePltZero(Buf);
-    Off += Target->PltZeroSize;
-  }
+  // At beginning of PLT, we have code to call the dynamic linker
+  // to resolve dynsyms at runtime. Write such code.
+  Target->writePltZero(Buf);
+  Off += Target->PltZeroSize;
   for (auto &I : Entries) {
     const SymbolBody *B = I.first;
     unsigned RelOff = I.second;
-    uint64_t Got =
-        Target->UseLazyBinding ? B->getGotPltVA<ELFT>() : B->getGotVA<ELFT>();
+    uint64_t Got = B->getGotPltVA<ELFT>();
     uint64_t Plt = this->getVA() + Off;
     Target->writePlt(Buf + Off, Got, Plt, B->PltIndex, RelOff);
     Off += Target->PltEntrySize;
@@ -289,9 +286,7 @@ template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
   Sym.PltIndex = Entries.size();
-  unsigned RelOff = Target->UseLazyBinding
-                        ? Out<ELFT>::RelaPlt->getRelocOffset()
-                        : Out<ELFT>::RelaDyn->getRelocOffset();
+  unsigned RelOff = Out<ELFT>::RelaPlt->getRelocOffset();
   Entries.push_back(std::make_pair(&Sym, RelOff));
 }
 
@@ -301,9 +296,10 @@ template <class ELFT> void PltSection<ELFT>::finalize() {
 }
 
 template <class ELFT>
-RelocationSection<ELFT>::RelocationSection(StringRef Name)
+RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
     : OutputSectionBase<ELFT>(Name, Config->Rela ? SHT_RELA : SHT_REL,
-                              SHF_ALLOC) {
+                              SHF_ALLOC),
+      Sort(Sort) {
   this->Header.sh_entsize = Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
   this->Header.sh_addralign = sizeof(uintX_t);
 }
@@ -313,7 +309,13 @@ void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
   Relocs.push_back(Reloc);
 }
 
+template <class ELFT, class RelTy>
+static bool compRelocations(const RelTy &A, const RelTy &B) {
+  return A.getSymbol(Config->Mips64EL) < B.getSymbol(Config->Mips64EL);
+}
+
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
+  uint8_t *BufBegin = Buf;
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rela *>(Buf);
     Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
@@ -324,6 +326,16 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     P->r_offset = Rel.OffsetInSec + Rel.OffsetSec->getVA();
     uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
     P->setSymbolAndType(SymIdx, Rel.Type, Config->Mips64EL);
+  }
+
+  if (Sort) {
+    if (Config->Rela)
+      std::stable_sort((Elf_Rela *)BufBegin,
+                       (Elf_Rela *)BufBegin + Relocs.size(),
+                       compRelocations<ELFT, Elf_Rela>);
+    else
+      std::stable_sort((Elf_Rel *)BufBegin, (Elf_Rel *)BufBegin + Relocs.size(),
+                       compRelocations<ELFT, Elf_Rel>);
   }
 }
 
@@ -1249,8 +1261,8 @@ template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
     memcpy(Buf, Data.data(), Data.size());
     return;
   }
-  for (const std::pair<StringRef, size_t> &P : Builder.getMap()) {
-    StringRef Data = P.first;
+  for (const std::pair<CachedHash<StringRef>, size_t> &P : Builder.getMap()) {
+    StringRef Data = P.first.Val;
     memcpy(Buf + P.second, Data.data(), Data.size());
   }
 }
@@ -1271,7 +1283,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   if (this->Header.sh_flags & SHF_STRINGS) {
     for (unsigned I = 0, N = Offsets.size(); I != N; ++I) {
       auto &P = Offsets[I];
-      if (P.second == (uintX_t)-1)
+      if (P.second == MergeInputSection<ELFT>::PieceDead)
         continue;
 
       uintX_t Start = P.first;
@@ -1279,7 +1291,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
       StringRef Entry = Data.substr(Start, End - Start);
       uintX_t OutputOffset = Builder.add(Entry);
       if (shouldTailMerge())
-        OutputOffset = -1;
+        OutputOffset = MergeInputSection<ELFT>::PieceLive;
       P.second = OutputOffset;
     }
     return;
@@ -1496,7 +1508,7 @@ const OutputSectionBase<ELFT> *
 SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   switch (Sym->kind()) {
   case SymbolBody::DefinedSyntheticKind:
-    return &cast<DefinedSynthetic<ELFT>>(Sym)->Section;
+    return cast<DefinedSynthetic<ELFT>>(Sym)->Section;
   case SymbolBody::DefinedRegularKind: {
     auto &D = cast<DefinedRegular<ELFT>>(*Sym);
     if (D.Section)
@@ -1636,36 +1648,47 @@ template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
   HashBuf = Buf + 16;
 }
 
-template <class ELFT> void BuildIdFnv1<ELFT>::update(ArrayRef<uint8_t> Buf) {
-  // 64-bit FNV-1 hash
-  const uint64_t Prime = 0x100000001b3;
-  for (uint8_t B : Buf) {
-    Hash *= Prime;
-    Hash ^= B;
-  }
-}
-
-template <class ELFT> void BuildIdFnv1<ELFT>::writeBuildId() {
+template <class ELFT>
+void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
   const endianness E = ELFT::TargetEndianness;
+
+  // 64-bit FNV-1 hash
+  uint64_t Hash = 0xcbf29ce484222325;
+  for (ArrayRef<uint8_t> Buf : Bufs) {
+    for (uint8_t B : Buf) {
+      Hash *= 0x100000001b3;
+      Hash ^= B;
+    }
+  }
   write64<E>(this->HashBuf, Hash);
 }
 
-template <class ELFT> void BuildIdMd5<ELFT>::update(ArrayRef<uint8_t> Buf) {
-  Hash.update(Buf);
-}
-
-template <class ELFT> void BuildIdMd5<ELFT>::writeBuildId() {
+template <class ELFT>
+void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+  llvm::MD5 Hash;
+  for (ArrayRef<uint8_t> Buf : Bufs)
+    Hash.update(Buf);
   MD5::MD5Result Res;
   Hash.final(Res);
   memcpy(this->HashBuf, Res, 16);
 }
 
-template <class ELFT> void BuildIdSha1<ELFT>::update(ArrayRef<uint8_t> Buf) {
-  Hash.update(Buf);
+template <class ELFT>
+void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+  llvm::SHA1 Hash;
+  for (ArrayRef<uint8_t> Buf : Bufs)
+    Hash.update(Buf);
+  memcpy(this->HashBuf, Hash.final().data(), 20);
 }
 
-template <class ELFT> void BuildIdSha1<ELFT>::writeBuildId() {
-  memcpy(this->HashBuf, Hash.final().data(), 20);
+template <class ELFT>
+BuildIdHexstring<ELFT>::BuildIdHexstring()
+    : BuildIdSection<ELFT>(Config->BuildIdVector.size()) {}
+
+template <class ELFT>
+void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+  memcpy(this->HashBuf, Config->BuildIdVector.data(),
+         Config->BuildIdVector.size());
 }
 
 template <class ELFT>
@@ -1688,6 +1711,34 @@ void MipsReginfoOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   // Copy input object file's .reginfo gprmask to output.
   auto *S = cast<MipsReginfoInputSection<ELFT>>(C);
   GprMask |= S->Reginfo->ri_gprmask;
+}
+
+template <class ELFT>
+MipsOptionsOutputSection<ELFT>::MipsOptionsOutputSection()
+    : OutputSectionBase<ELFT>(".MIPS.options", SHT_MIPS_OPTIONS,
+                              SHF_ALLOC | SHF_MIPS_NOSTRIP) {
+  this->Header.sh_addralign = 8;
+  this->Header.sh_entsize = 1;
+  this->Header.sh_size = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
+}
+
+template <class ELFT>
+void MipsOptionsOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  auto *Opt = reinterpret_cast<Elf_Mips_Options *>(Buf);
+  Opt->kind = ODK_REGINFO;
+  Opt->size = this->Header.sh_size;
+  Opt->section = 0;
+  Opt->info = 0;
+  auto *Reg = reinterpret_cast<Elf_Mips_RegInfo *>(Buf + sizeof(*Opt));
+  Reg->ri_gp_value = Out<ELFT>::Got->getVA() + MipsGPOffset;
+  Reg->ri_gprmask = GprMask;
+}
+
+template <class ELFT>
+void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+  auto *S = cast<MipsOptionsInputSection<ELFT>>(C);
+  if (S->Reginfo)
+    GprMask |= S->Reginfo->ri_gprmask;
 }
 
 namespace lld {
@@ -1757,6 +1808,11 @@ template class MipsReginfoOutputSection<ELF32BE>;
 template class MipsReginfoOutputSection<ELF64LE>;
 template class MipsReginfoOutputSection<ELF64BE>;
 
+template class MipsOptionsOutputSection<ELF32LE>;
+template class MipsOptionsOutputSection<ELF32BE>;
+template class MipsOptionsOutputSection<ELF64LE>;
+template class MipsOptionsOutputSection<ELF64BE>;
+
 template class MergeOutputSection<ELF32LE>;
 template class MergeOutputSection<ELF32BE>;
 template class MergeOutputSection<ELF64LE>;
@@ -1801,5 +1857,10 @@ template class BuildIdSha1<ELF32LE>;
 template class BuildIdSha1<ELF32BE>;
 template class BuildIdSha1<ELF64LE>;
 template class BuildIdSha1<ELF64BE>;
+
+template class BuildIdHexstring<ELF32LE>;
+template class BuildIdHexstring<ELF32BE>;
+template class BuildIdHexstring<ELF64LE>;
+template class BuildIdHexstring<ELF64BE>;
 }
 }

@@ -6,6 +6,7 @@
 # RUN: echo "INPUT(\"%t.dir/build/foo.o\")" > %t.dir/build/foo.script
 # RUN: cd %t.dir
 # RUN: ld.lld build/foo.script -o bar --reproduce repro
+# RUN: cpio -id < repro.cpio
 # RUN: diff build/foo.script repro/%:t.dir/build/foo.script
 # RUN: diff build/foo.o repro/%:t.dir/build/foo.o
 

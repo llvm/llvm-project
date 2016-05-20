@@ -14,13 +14,13 @@
 #include <stdint.h>
 
 // C++ Includes
+#include <mutex>
 #include <stack>
 #include <string>
 
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-public.h"
-#include "lldb/Host/Mutex.h"
 
 namespace lldb_private {
 
@@ -34,11 +34,7 @@ class HistorySource
 public:
     typedef const void * HistoryEvent;
 
-    HistorySource () :
-        m_mutex (Mutex::eMutexTypeRecursive),
-        m_events ()
-    {
-    }
+    HistorySource() : m_mutex(), m_events() {}
 
     virtual 
     ~HistorySource()
@@ -50,20 +46,20 @@ public:
     // onto the end of the history stack.
 
     virtual HistoryEvent
-    CreateHistoryEvent () = 0; 
-    
+    CreateHistoryEvent () = 0;
+
     virtual void
     DeleteHistoryEvent (HistoryEvent event) = 0;
-    
+
     virtual void
     DumpHistoryEvent (Stream &strm, HistoryEvent event) = 0;
 
     virtual size_t
     GetHistoryEventCount() = 0;
-    
+
     virtual HistoryEvent
     GetHistoryEventAtIndex (uint32_t idx) = 0;
-    
+
     virtual HistoryEvent
     GetCurrentHistoryEvent () = 0;
 
@@ -71,16 +67,16 @@ public:
     virtual int
     CompareHistoryEvents (const HistoryEvent lhs, 
                           const HistoryEvent rhs) = 0;
-    
+
     virtual bool
     IsCurrentHistoryEvent (const HistoryEvent event) = 0;
 
 private:
     typedef std::stack<HistoryEvent> collection;
 
-    Mutex m_mutex;
+    std::recursive_mutex m_mutex;
     collection m_events;
-    
+
     DISALLOW_COPY_AND_ASSIGN (HistorySource);
 };
     

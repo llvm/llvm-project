@@ -453,6 +453,13 @@
             integer (kind=kmp_size_t_kind) size
           end function kmp_malloc
 
+          function kmp_aligned_malloc(size, alignment)
+            use omp_lib_kinds
+            integer (kind=kmp_pointer_kind) kmp_aligned_malloc
+            integer (kind=kmp_size_t_kind) size
+            integer (kind=kmp_size_t_kind) alignment
+          end function kmp_aligned_malloc
+
           function kmp_calloc(nelem, elsize)
             use omp_lib_kinds
             integer (kind=kmp_pointer_kind) kmp_calloc
@@ -575,6 +582,7 @@
 !dec$ attributes alias:'KMP_UNSET_AFFINITY_MASK_PROC'::kmp_unset_affinity_mask_proc
 !dec$ attributes alias:'KMP_GET_AFFINITY_MASK_PROC'::kmp_get_affinity_mask_proc
 !dec$ attributes alias:'KMP_MALLOC'::kmp_malloc
+!dec$ attributes alias:'KMP_ALIGNED_MALLOC'::kmp_aligned_malloc
 !dec$ attributes alias:'KMP_CALLOC'::kmp_calloc
 !dec$ attributes alias:'KMP_REALLOC'::kmp_realloc
 !dec$ attributes alias:'KMP_FREE'::kmp_free
@@ -654,6 +662,7 @@
 !dec$ attributes alias:'_KMP_UNSET_AFFINITY_MASK_PROC'::kmp_unset_affinity_mask_proc
 !dec$ attributes alias:'_KMP_GET_AFFINITY_MASK_PROC'::kmp_get_affinity_mask_proc
 !dec$ attributes alias:'_KMP_MALLOC'::kmp_malloc
+!dec$ attributes alias:'_KMP_ALIGNED_MALLOC'::kmp_aligned_malloc
 !dec$ attributes alias:'_KMP_CALLOC'::kmp_calloc
 !dec$ attributes alias:'_KMP_REALLOC'::kmp_realloc
 !dec$ attributes alias:'_KMP_FREE'::kmp_free
@@ -736,6 +745,7 @@
 !dec$ attributes alias:'kmp_unset_affinity_mask_proc_'::kmp_unset_affinity_mask_proc
 !dec$ attributes alias:'kmp_get_affinity_mask_proc_'::kmp_get_affinity_mask_proc
 !dec$ attributes alias:'kmp_malloc_'::kmp_malloc
+!dec$ attributes alias:'kmp_aligned_malloc_'::kmp_aligned_malloc
 !dec$ attributes alias:'kmp_calloc_'::kmp_calloc
 !dec$ attributes alias:'kmp_realloc_'::kmp_realloc
 !dec$ attributes alias:'kmp_free_'::kmp_free
@@ -814,6 +824,7 @@
 !dec$ attributes alias:'_kmp_unset_affinity_mask_proc_'::kmp_unset_affinity_mask_proc
 !dec$ attributes alias:'_kmp_get_affinity_mask_proc_'::kmp_get_affinity_mask_proc
 !dec$ attributes alias:'_kmp_malloc_'::kmp_malloc
+!dec$ attributes alias:'_kmp_aligned_malloc_'::kmp_aligned_malloc
 !dec$ attributes alias:'_kmp_calloc_'::kmp_calloc
 !dec$ attributes alias:'_kmp_realloc_'::kmp_realloc
 !dec$ attributes alias:'_kmp_free_'::kmp_free

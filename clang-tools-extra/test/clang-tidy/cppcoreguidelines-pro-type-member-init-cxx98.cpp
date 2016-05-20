@@ -103,3 +103,14 @@ public:
 
   int X;
 };
+
+class PositiveIndirectMember {
+  struct {
+    int *A;
+  };
+
+  PositiveIndirectMember() : A() {}
+  PositiveIndirectMember(int) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A
+  // CHECK-FIXES: PositiveIndirectMember(int) : A() {}
+};

@@ -23,7 +23,7 @@ int main()
         assert(p1.first == 3);
         assert(p1.second == 4);
     }
-    
+
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
         typedef std::pair<std::unique_ptr<int>, short> P1;

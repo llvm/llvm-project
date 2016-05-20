@@ -1124,6 +1124,46 @@ static int test_plain_unshifted_simple_hull(isl_ctx *ctx)
 	return 0;
 }
 
+/* Pairs of sets and the corresponding expected results of
+ * isl_set_unshifted_simple_hull.
+ */
+struct {
+	const char *set;
+	const char *hull;
+} unshifted_simple_hull_tests[] = {
+	{ "{ [0,x,y] : x <= -1; [1,x,y] : x <= y <= -x; [2,x,y] : x <= 1 }",
+	  "{ [t,x,y] : 0 <= t <= 2 and x <= 1 }" },
+};
+
+/* Basic tests for isl_set_unshifted_simple_hull.
+ */
+static int test_unshifted_simple_hull(isl_ctx *ctx)
+{
+	int i;
+	isl_set *set;
+	isl_basic_set *hull, *expected;
+	isl_bool equal;
+
+	for (i = 0; i < ARRAY_SIZE(unshifted_simple_hull_tests); ++i) {
+		const char *str;
+		str = unshifted_simple_hull_tests[i].set;
+		set = isl_set_read_from_str(ctx, str);
+		str = unshifted_simple_hull_tests[i].hull;
+		expected = isl_basic_set_read_from_str(ctx, str);
+		hull = isl_set_unshifted_simple_hull(set);
+		equal = isl_basic_set_is_equal(hull, expected);
+		isl_basic_set_free(hull);
+		isl_basic_set_free(expected);
+		if (equal < 0)
+			return -1;
+		if (!equal)
+			isl_die(ctx, isl_error_unknown, "unexpected hull",
+				return -1);
+	}
+
+	return 0;
+}
+
 static int test_simple_hull(struct isl_ctx *ctx)
 {
 	const char *str;
@@ -1146,6 +1186,8 @@ static int test_simple_hull(struct isl_ctx *ctx)
 			return -1);
 
 	if (test_plain_unshifted_simple_hull(ctx) < 0)
+		return -1;
+	if (test_unshifted_simple_hull(ctx) < 0)
 		return -1;
 
 	return 0;
@@ -1398,6 +1440,12 @@ struct {
 	{ "{ [a, b, c] : a mod 6 = 0 and a = c }",
 	  "{ [a, b, c] : b mod 2 = 0 and b = c }",
 	  "{ [a, b, c = a] : a mod 3 = 0 }" },
+	{ "{ [x] : 0 <= x <= 4 or 6 <= x <= 9 }",
+	  "{ [x] : 1 <= x <= 3 or 7 <= x <= 8 }",
+	  "{ [x] }" },
+	{ "{ [x,y] : x < 0 and 0 <= y <= 4 or x >= -2 and -x <= y <= 10 + x }",
+	  "{ [x,y] : 1 <= y <= 3 }",
+	  "{ [x,y] }" },
 };
 
 /* Check that isl_set_gist behaves as expected.
@@ -3631,6 +3679,10 @@ static int test_conflicting_context_schedule(isl_ctx *ctx)
  * the coefficients.  Earlier versions of isl would take this
  * bound into account while carrying dependences, breaking
  * fundamental assumptions.
+ * On the other hand, the dependence carrying step now tries
+ * to prevent loop coalescing by default, so check that indeed
+ * no loop coalescing occurs by comparing the computed schedule
+ * to the expected non-coalescing schedule.
  */
 static int test_bounded_coefficients_schedule(isl_ctx *ctx)
 {
@@ -3639,6 +3691,8 @@ static int test_bounded_coefficients_schedule(isl_ctx *ctx)
 	isl_union_map *D;
 	isl_schedule_constraints *sc;
 	isl_schedule *schedule;
+	isl_union_map *sched1, *sched2;
+	isl_bool equal;
 
 	domain = "{ C[i0, i1] : 2 <= i0 <= 3999 and 0 <= i1 <= -1 + i0 }";
 	dep = "{ C[i0, i1] -> C[i0, 1 + i1] : i0 <= 3999 and i1 >= 0 and "
@@ -3654,11 +3708,50 @@ static int test_bounded_coefficients_schedule(isl_ctx *ctx)
 	schedule = isl_schedule_constraints_compute_schedule(sc);
 	isl_options_set_schedule_max_coefficient(ctx, -1);
 	isl_options_set_schedule_outer_coincidence(ctx, 0);
+	sched1 = isl_schedule_get_map(schedule);
 	isl_schedule_free(schedule);
 
+	sched2 = isl_union_map_read_from_str(ctx, "{ C[x,y] -> [x,y] }");
+	equal = isl_union_map_is_equal(sched1, sched2);
+	isl_union_map_free(sched1);
+	isl_union_map_free(sched2);
+
+	if (equal < 0)
+		return -1;
+	if (!equal)
+		isl_die(ctx, isl_error_unknown,
+			"unexpected schedule", return -1);
+
+	return 0;
+}
+
+/* Check that a set of schedule constraints that only allow for
+ * a coalescing schedule still produces a schedule even if the user
+ * request a non-coalescing schedule.  Earlier versions of isl
+ * would not handle this case correctly.
+ */
+static int test_coalescing_schedule(isl_ctx *ctx)
+{
+	const char *domain, *dep;
+	isl_union_set *I;
+	isl_union_map *D;
+	isl_schedule_constraints *sc;
+	isl_schedule *schedule;
+	int treat_coalescing;
+
+	domain = "{ S[a, b] : 0 <= a <= 1 and 0 <= b <= 1 }";
+	dep = "{ S[a, b] -> S[a + b, 1 - b] }";
+	I = isl_union_set_read_from_str(ctx, domain);
+	D = isl_union_map_read_from_str(ctx, dep);
+	sc = isl_schedule_constraints_on_domain(I);
+	sc = isl_schedule_constraints_set_validity(sc, D);
+	treat_coalescing = isl_options_get_schedule_treat_coalescing(ctx);
+	isl_options_set_schedule_treat_coalescing(ctx, 1);
+	schedule = isl_schedule_constraints_compute_schedule(sc);
+	isl_options_set_schedule_treat_coalescing(ctx, treat_coalescing);
+	isl_schedule_free(schedule);
 	if (!schedule)
 		return -1;
-
 	return 0;
 }
 
@@ -3666,6 +3759,7 @@ int test_schedule(isl_ctx *ctx)
 {
 	const char *D, *W, *R, *V, *P, *S;
 	int max_coincidence;
+	int treat_coalescing;
 
 	/* Handle resulting schedule with zero bands. */
 	if (test_one_schedule(ctx, "{[]}", "{}", "{}", "{[] -> []}", 0, 0) < 0)
@@ -3879,8 +3973,11 @@ int test_schedule(isl_ctx *ctx)
 		"[i0, 5i0 + i1, 6i0 + i1 + i2, 1 + 6i0 + i1 + i2 + i3, 1];"
 	    "Stmt_for_body7[i0, i1, i2] -> [0, 5i0, 6i0 + i1, 6i0 + i2, 0] }";
 
+	treat_coalescing = isl_options_get_schedule_treat_coalescing(ctx);
+	isl_options_set_schedule_treat_coalescing(ctx, 0);
 	if (test_special_schedule(ctx, D, V, P, S) < 0)
 		return -1;
+	isl_options_set_schedule_treat_coalescing(ctx, treat_coalescing);
 
 	D = "{ S_0[i, j] : i >= 1 and i <= 10 and j >= 1 and j <= 8 }";
 	V = "{ S_0[i, j] -> S_0[i, 1 + j] : i >= 1 and i <= 10 and "
@@ -3965,6 +4062,8 @@ int test_schedule(isl_ctx *ctx)
 		return -1;
 
 	if (test_bounded_coefficients_schedule(ctx) < 0)
+		return -1;
+	if (test_coalescing_schedule(ctx) < 0)
 		return -1;
 
 	return 0;

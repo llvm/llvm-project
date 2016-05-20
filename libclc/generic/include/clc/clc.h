@@ -47,11 +47,13 @@
 #include <clc/math/cos.h>
 #include <clc/math/cospi.h>
 #include <clc/math/ceil.h>
+#include <clc/math/erf.h>
 #include <clc/math/erfc.h>
 #include <clc/math/exp.h>
 #include <clc/math/exp10.h>
 #include <clc/math/exp2.h>
 #include <clc/math/fabs.h>
+#include <clc/math/fdim.h>
 #include <clc/math/floor.h>
 #include <clc/math/fma.h>
 #include <clc/math/fmax.h>

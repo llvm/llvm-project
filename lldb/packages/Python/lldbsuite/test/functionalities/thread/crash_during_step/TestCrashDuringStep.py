@@ -22,6 +22,7 @@ class CreateDuringStepTestCase(TestBase):
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureAndroid("llvm.org/pr24497", archs=['arm', 'aarch64'])
+    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr24497")
     @expectedFailureAll(triple = re.compile('^mips'))    # IO error due to breakpoint at invalid address
     def test_step_inst_with(self):
         """Test thread creation during step-inst handling."""

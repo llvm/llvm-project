@@ -22,7 +22,11 @@
 #include <random>
 #include <system_error>
 #include <cassert>
+
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
+
 
 bool is_valid_random_device(const std::string &token) {
 #if defined(_LIBCPP_USING_DEV_RANDOM)
@@ -41,13 +45,37 @@ void check_random_device_invalid(const std::string &token) {
   try {
     std::random_device r(token);
     assert(false);
-  } catch (const std::system_error &e) {
+  } catch (const std::system_error&) {
   }
 }
 
-int main() {
-  { std::random_device r; }
 
+int main() {
+  {
+    std::random_device r;
+  }
+  {
+    std::string token = "wrong file";
+    check_random_device_invalid(token);
+  }
+  {
+    std::string token = "/dev/urandom";
+    if (is_valid_random_device(token))
+      check_random_device_valid(token);
+    else
+      check_random_device_invalid(token);
+  }
+  {
+    std::string token = "/dev/random";
+    if (is_valid_random_device(token))
+      check_random_device_valid(token);
+    else
+      check_random_device_invalid(token);
+  }
+#if !defined(_WIN32)
+// Test that random_device(const string&) properly handles getting
+// a file descriptor with the value '0'. Do this by closing the standard
+// streams so that the descriptor '0' is available.
   {
     int ec;
     ec = close(STDIN_FILENO);
@@ -58,28 +86,5 @@ int main() {
     assert(!ec);
     std::random_device r;
   }
-
-  {
-    std::string token = "wrong file";
-    if (is_valid_random_device(token))
-      check_random_device_valid(token);
-    else
-      check_random_device_invalid(token);
-  }
-
-  {
-    std::string token = "/dev/urandom";
-    if (is_valid_random_device(token))
-      check_random_device_valid(token);
-    else
-      check_random_device_invalid(token);
-  }
-
-  {
-    std::string token = "/dev/random";
-    if (is_valid_random_device(token))
-      check_random_device_valid(token);
-    else
-      check_random_device_invalid(token);
-  }
+#endif // !defined(_WIN32)
 }

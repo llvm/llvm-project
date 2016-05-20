@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 /// Flags all occurrences of reinterpret_cast
 ///
@@ -27,6 +28,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
 

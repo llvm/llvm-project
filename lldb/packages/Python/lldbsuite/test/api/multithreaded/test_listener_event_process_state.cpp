@@ -18,7 +18,6 @@ using namespace std;
 // listener thread control
 extern atomic<bool> g_done;
 
-multithreaded_queue<string> g_thread_descriptions;
 multithreaded_queue<string> g_frame_functions;
 
 extern SBListener g_listener;
@@ -30,26 +29,21 @@ void listener_func() {
     if (got_event) {
       if (!event.IsValid())
         throw Exception("event is not valid in listener thread");
+        // send process description
+        SBProcess process = SBProcess::GetProcessFromEvent(event);
+        SBStream description;
 
-      // send process description
-      SBProcess process = SBProcess::GetProcessFromEvent(event);
-      SBStream description;
-
-      for (int i = 0; i < process.GetNumThreads(); ++i) {
-        // send each thread description
-        description.Clear();
-        SBThread thread = process.GetThreadAtIndex(i);
-        thread.GetDescription(description);
-        g_thread_descriptions.push(description.GetData());
-
-        // send each frame function name
-        uint32_t num_frames = thread.GetNumFrames();
-        for(int j = 0; j < num_frames; ++j) {
-          const char* function_name = thread.GetFrameAtIndex(j).GetSymbol().GetName();
-          if (function_name)
-            g_frame_functions.push(function_name);
+        for (int i = 0; i < process.GetNumThreads(); ++i) {
+            // send each thread description
+            SBThread thread = process.GetThreadAtIndex(i);
+            // send each frame function name
+            uint32_t num_frames = thread.GetNumFrames();
+            for(int j = 0; j < num_frames; ++j) {
+                const char* function_name = thread.GetFrameAtIndex(j).GetSymbol().GetName();
+                if (function_name)
+                    g_frame_functions.push(string(function_name));
+            }
         }
-      }
     }
   }
 }
@@ -57,12 +51,8 @@ void listener_func() {
 void check_listener(SBDebugger &dbg) {
   // check thread description
   bool got_description = false;
-  string desc = g_thread_descriptions.pop(5, got_description);
-  if (!got_description)
-    throw Exception("Expected at least one thread description string");
-
-  // check at least one frame has a function name
-  desc = g_frame_functions.pop(5, got_description);
-  if (!got_description)
-    throw Exception("Expected at least one frame function name string");
+  string func_name = g_frame_functions.pop(5, got_description);
+  
+  if(got_description == false)
+    throw Exception("Expected at least one frame function");
 }

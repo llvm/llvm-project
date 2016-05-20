@@ -183,7 +183,7 @@ public:
             diag_str.push_back('\0');
             const char *data = diag_str.data();
 
-            DiagnosticSeverity severity;
+            lldb_private::DiagnosticSeverity severity;
             bool make_new_diagnostic = true;
             
             switch (DiagLevel)
@@ -349,7 +349,8 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     lldb::LanguageType frame_lang = expr.Language(); // defaults to lldb::eLanguageTypeUnknown
     bool overridden_target_opts = false;
     lldb_private::LanguageRuntime *lang_rt = nullptr;
-    
+
+    std::string abi;
     ArchSpec target_arch;
     target_arch = target_sp->GetArchitecture();
 
@@ -415,6 +416,11 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     // Set the target CPU to generate code for.
     // This will be empty for any CPU that doesn't really need to make a special CPU string.
     m_compiler->getTargetOpts().CPU = target_arch.GetClangTargetCPU();
+
+    // Set the target ABI
+    abi = GetClangTargetABI(target_arch);
+    if (!abi.empty())
+        m_compiler->getTargetOpts().ABI = abi;
 
     // 3. Now allow the runtime to provide custom configuration options for the target.
     // In this case, a specialized language runtime is available and we can query it for extra options.
@@ -708,6 +714,28 @@ ClangExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
     adapter->ResetManager();
 
     return num_errors;
+}
+
+std::string
+ClangExpressionParser::GetClangTargetABI (const ArchSpec &target_arch)
+{
+    std::string abi;
+ 
+    if(target_arch.IsMIPS())
+    {
+       switch (target_arch.GetFlags () & ArchSpec::eMIPSABI_mask)
+       {
+       case ArchSpec::eMIPSABI_N64:
+            abi = "n64"; break;
+       case ArchSpec::eMIPSABI_N32:
+            abi = "n32"; break;
+       case ArchSpec::eMIPSABI_O32:
+            abi = "o32"; break;
+       default:
+              break;
+       }
+    }
+    return abi;
 }
 
 bool

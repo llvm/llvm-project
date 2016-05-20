@@ -13,9 +13,9 @@
 # CHECK: Disassembly of section .text:
 # CHECK: _start:
 # CHECK-NEXT: 11000:  00 00 a0 d2   movz   x0, #0, lsl #16
-# CHECK-NEXT: 11004:  80 02 80 f2   movk   x0, #0x14
+# CHECK-NEXT: 11004:  80 02 80 f2   movk   x0, #20
 # CHECK-NEXT: 11008:  00 00 a0 d2   movz   x0, #0, lsl #16
-# CHECK-NEXT: 1100c:  00 02 80 f2   movk   x0, #0x10
+# CHECK-NEXT: 1100c:  00 02 80 f2   movk   x0, #16
 
 .section .tdata
 .align 2

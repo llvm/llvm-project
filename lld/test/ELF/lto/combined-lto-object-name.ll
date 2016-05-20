@@ -11,4 +11,4 @@ define void @_start() {
   ret void
 }
 
-; CHECK: undefined symbol: foo in LLD-INTERNAL-combined-lto-object
+; CHECK: undefined symbol: foo in {{.*}}combined-lto-object-name.ll.tmp.o

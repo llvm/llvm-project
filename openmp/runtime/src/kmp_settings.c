@@ -21,6 +21,7 @@
 #include "kmp_str.h"
 #include "kmp_settings.h"
 #include "kmp_i18n.h"
+#include "kmp_lock.h"
 #include "kmp_io.h"
 
 static int __kmp_env_toPrint( char const * name, int flag );
@@ -3924,7 +3925,7 @@ __kmp_stg_parse_lock_kind( char const * name, char const * value, void * data ) 
         __kmp_user_lock_kind = lk_tas;
         KMP_STORE_LOCK_SEQ(tas);
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)
+#if KMP_USE_FUTEX
     else if ( __kmp_str_match( "futex", 1, value ) ) {
         if ( __kmp_futex_determine_capable() ) {
             __kmp_user_lock_kind = lk_futex;
@@ -3998,7 +3999,7 @@ __kmp_stg_print_lock_kind( kmp_str_buf_t * buffer, char const * name, void * dat
         value = "tas";
         break;
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
+#if KMP_USE_FUTEX
         case lk_futex:
         value = "futex";
         break;
@@ -5280,7 +5281,20 @@ __kmp_env_initialize( char const * string ) {
             if(__kmp_affinity_verbose)
                 KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
         }
+#  if HWLOC_API_VERSION >= 0x00020000
+        // new hwloc API
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L1CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L2CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L3CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L4CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L5CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L1ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L2ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L3ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
+#  else
+        // old hwloc API
         hwloc_topology_ignore_type(__kmp_hwloc_topology, HWLOC_OBJ_CACHE);
+#  endif
 # endif
         if ( __kmp_affinity_type == affinity_disabled ) {
             KMP_AFFINITY_DISABLE();

@@ -10,6 +10,7 @@
 #ifndef lldb_Host_HostProcess_h_
 #define lldb_Host_HostProcess_h_
 
+#include "lldb/Host/Host.h"
 #include "lldb/lldb-types.h"
 
 //----------------------------------------------------------------------
@@ -36,9 +37,7 @@ class HostThread;
 
 class HostProcess
 {
-  public:
-    typedef bool (*MonitorCallback)(void *callback_baton, lldb::pid_t process, bool exited, int signal, int status);
-
+public:
     HostProcess();
     HostProcess(lldb::process_t process);
     ~HostProcess();
@@ -49,7 +48,8 @@ class HostProcess
     lldb::pid_t GetProcessId() const;
     bool IsRunning() const;
 
-    HostThread StartMonitoring(MonitorCallback callback, void *callback_baton, bool monitor_signals);
+    HostThread
+    StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals);
 
     HostNativeProcessBase &GetNativeProcess();
     const HostNativeProcessBase &GetNativeProcess() const;

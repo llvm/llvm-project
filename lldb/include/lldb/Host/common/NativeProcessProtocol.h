@@ -10,12 +10,12 @@
 #ifndef liblldb_NativeProcessProtocol_h_
 #define liblldb_NativeProcessProtocol_h_
 
+#include <mutex>
 #include <vector>
 
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
 #include "lldb/Core/Error.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/MainLoop.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -364,15 +364,15 @@ namespace lldb_private
 
         std::vector<NativeThreadProtocolSP> m_threads;
         lldb::tid_t m_current_thread_id;
-        mutable Mutex m_threads_mutex;
+        mutable std::recursive_mutex m_threads_mutex;
 
         lldb::StateType m_state;
-        mutable Mutex m_state_mutex;
+        mutable std::recursive_mutex m_state_mutex;
 
         lldb_private::ExitType m_exit_type;
         int m_exit_status;
         std::string m_exit_description;
-        Mutex m_delegates_mutex;
+        std::recursive_mutex m_delegates_mutex;
         std::vector<NativeDelegate*> m_delegates;
         NativeBreakpointList m_breakpoint_list;
         NativeWatchpointList m_watchpoint_list;

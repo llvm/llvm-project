@@ -737,9 +737,9 @@
 		49D8FB3913B5598F00411094 /* ClangASTImporter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49D8FB3513B558DE00411094 /* ClangASTImporter.cpp */; };
 		49DCF6FE170E6B4A0092F75E /* IRMemoryMap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF6FD170E6B4A0092F75E /* IRMemoryMap.cpp */; };
 		49DCF702170E70120092F75E /* Materializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DCF700170E70120092F75E /* Materializer.cpp */; };
-		49E431651BB5ED070085B52D /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
-		49DEF1221CD7BD90006A7C7D /* BlockPointer.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 49DEF1201CD7BD90006A7C7D /* BlockPointer.h */; };
+		49DEF1221CD7BD90006A7C7D /* BlockPointer.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 49DEF1201CD7BD90006A7C7D /* BlockPointer.h */; };
 		49DEF1251CD7C6DF006A7C7D /* BlockPointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49DEF11F1CD7BD90006A7C7D /* BlockPointer.cpp */; };
+		49E431651BB5ED070085B52D /* ClangModulesDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4959511E1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
 		49FA9B44192282A100EE381B /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9438E18B19217ABA00AE7A2A /* main.swift */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
@@ -1291,6 +1291,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
+				49DEF1221CD7BD90006A7C7D /* BlockPointer.h in Copy Files */,
 				AF90106515AB7D3600FF120D /* lldb.1 in Copy Files */,
 			);
 			name = "Copy Files";
@@ -6358,7 +6359,6 @@
 				6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
 				267F684B1CC02DED0086832B /* ABISysV_s390x.h in Headers */,
-				AF8AD6311BEC28A400150209 /* PlatformAppleWatchSimulator.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6605,15 +6605,66 @@
 				TargetAttributes = {
 					2387551E1C24974600CCE8C3 = {
 						CreatedOnToolsVersion = 7.2;
+						ProvisioningStyle = Manual;
 					};
 					239504D31BDD451400963CEA = {
 						CreatedOnToolsVersion = 7.1;
+						ProvisioningStyle = Manual;
+					};
+					26579F67126A25920007C5CB = {
+						ProvisioningStyle = Manual;
+					};
+					26680206115FD0ED008E1FE4 = {
+						LastSwiftUpdateCheck = 0800;
+						ProvisioningStyle = Manual;
+					};
+					2687EAC51508110B00DD8C2E = {
+						ProvisioningStyle = Manual;
+					};
+					2689FFC913353D7A00698AC0 = {
+						ProvisioningStyle = Manual;
 					};
 					2690CD161A6DC0D000E717C8 = {
 						CreatedOnToolsVersion = 6.3;
+						ProvisioningStyle = Manual;
+					};
+					26CEF3A914FD58BF007286B2 = {
+						ProvisioningStyle = Manual;
+					};
+					26CEF3B114FD592B007286B2 = {
+						ProvisioningStyle = Manual;
+					};
+					26CEF3BC14FD596A007286B2 = {
+						ProvisioningStyle = Manual;
+					};
+					26DC6A0F1337FE6900FF7998 = {
+						ProvisioningStyle = Manual;
+					};
+					26F5C26910F3D9A4009D5894 = {
+						ProvisioningStyle = Manual;
+					};
+					26F8EA1618F6096400EFD6B1 = {
+						LastSwiftUpdateCheck = 0800;
+						ProvisioningStyle = Manual;
+					};
+					49753FA91BEAB2BB00019E45 = {
+						ProvisioningStyle = Manual;
 					};
 					941E2F521AE81CA100AAA711 = {
 						CreatedOnToolsVersion = 7.0;
+						ProvisioningStyle = Manual;
+					};
+					942829BF1A89835300521B30 = {
+						ProvisioningStyle = Manual;
+					};
+					A54A7D0B1A0D99BB001912FE = {
+						ProvisioningStyle = Manual;
+					};
+					AF6967871B4609A80014D221 = {
+						ProvisioningStyle = Manual;
+					};
+					AF6967911B460A0B0014D221 = {
+						ProvisioningStyle = Manual;
 					};
 				};
 			};

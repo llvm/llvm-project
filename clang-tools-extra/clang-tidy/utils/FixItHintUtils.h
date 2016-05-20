@@ -16,7 +16,7 @@
 namespace clang {
 namespace tidy {
 namespace utils {
-namespace create_fix_it {
+namespace fixit {
 
 /// \brief Creates fix to make VarDecl a reference by adding '&'.
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context);
@@ -24,8 +24,8 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context);
 /// \brief Creates fix to make VarDecl const qualified.
 FixItHint changeVarDeclToConst(const VarDecl &Var);
 
-} // namespace create_fix_it
-} // utils
+} // namespace fixit
+} // namespace utils
 } // namespace tidy
 } // namespace clang
 

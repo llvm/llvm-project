@@ -1048,6 +1048,8 @@ __kmp_barrier(enum barrier_type bt, int gtid, int is_split, size_t reduce_size,
               void *reduce_data, void (*reduce)(void *, void *))
 {
     KMP_TIME_DEVELOPER_BLOCK(KMP_barrier);
+    KMP_SET_THREAD_STATE_BLOCK(PLAIN_BARRIER);
+    KMP_TIME_PARTITIONED_BLOCK(OMP_plain_barrier);
     register int tid = __kmp_tid_from_gtid(gtid);
     register kmp_info_t *this_thr = __kmp_threads[gtid];
     register kmp_team_t *team = this_thr->th.th_team;
@@ -1348,6 +1350,8 @@ __kmp_end_split_barrier(enum barrier_type bt, int gtid)
 void
 __kmp_join_barrier(int gtid)
 {
+    KMP_TIME_PARTITIONED_BLOCK(OMP_fork_join_barrier);
+    KMP_SET_THREAD_STATE_BLOCK(FORK_JOIN_BARRIER);
     KMP_TIME_DEVELOPER_BLOCK(KMP_join_barrier);
     register kmp_info_t *this_thr = __kmp_threads[gtid];
     register kmp_team_t *team;
@@ -1463,6 +1467,18 @@ __kmp_join_barrier(int gtid)
             __kmp_task_team_wait(this_thr, team
                                  USE_ITT_BUILD_ARG(itt_sync_obj) );
         }
+#if KMP_STATS_ENABLED
+        // Have master thread flag the workers to indicate they are now waiting for
+        // next parallel region, Also wake them up so they switch their timers to idle.
+        for (int i=0; i<team->t.t_nproc; ++i) {
+            kmp_info_t* team_thread = team->t.t_threads[i];
+            if (team_thread == this_thr)
+                continue;
+            team_thread->th.th_stats->setIdleFlag();
+            if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME && team_thread->th.th_sleep_loc != NULL)
+                __kmp_null_resume_wrapper(__kmp_gtid_from_thread(team_thread), team_thread->th.th_sleep_loc);
+        }
+#endif
 #if USE_ITT_BUILD
         if (__itt_sync_create_ptr || KMP_ITT_DEBUG)
             __kmp_itt_barrier_middle(gtid, itt_sync_obj);
@@ -1546,6 +1562,8 @@ __kmp_join_barrier(int gtid)
 void
 __kmp_fork_barrier(int gtid, int tid)
 {
+    KMP_TIME_PARTITIONED_BLOCK(OMP_fork_join_barrier);
+    KMP_SET_THREAD_STATE_BLOCK(FORK_JOIN_BARRIER);
     KMP_TIME_DEVELOPER_BLOCK(KMP_fork_barrier);
     kmp_info_t *this_thr = __kmp_threads[gtid];
     kmp_team_t *team = (tid == 0) ? this_thr->th.th_team : NULL;

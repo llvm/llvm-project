@@ -76,6 +76,7 @@ enum AssumptionKind {
   INBOUNDS,
   WRAPPING,
   UNSIGNED,
+  PROFITABLE,
   ERRORBLOCK,
   COMPLEXITY,
   INFINITELOOP,
@@ -947,9 +948,7 @@ public:
   ScopStmt(Scop &parent, Region &R);
 
   /// Initialize members after all MemoryAccesses have been added.
-  ///
-  /// @param SD The ScopDetection analysis for the current function.
-  void init(ScopDetection &SD);
+  void init(LoopInfo &LI);
 
 private:
   /// Polyhedral description
@@ -1082,10 +1081,10 @@ private:
   /// result scanning for GEP[s] is imprecise. Even though this is not a
   /// correctness problem, this imprecision may result in missed optimizations
   /// or non-optimal run-time checks.
-  void deriveAssumptionsFromGEP(GetElementPtrInst *Inst, ScopDetection &SD);
+  void deriveAssumptionsFromGEP(GetElementPtrInst *Inst, LoopInfo &LI);
 
   /// @brief Derive assumptions about parameter values.
-  void deriveAssumptions(ScopDetection &SD);
+  void deriveAssumptions(LoopInfo &LI);
 
 public:
   ~ScopStmt();
@@ -1156,10 +1155,6 @@ public:
   /// statements, return its entry block.
   BasicBlock *getEntryBlock() const;
 
-  /// @brief Return RegionInfo's RegionNode for this statements' BB or
-  ///        subregion.
-  RegionNode *getRegionNode() const;
-
   /// @brief Return true if this statement does not contain any accesses.
   bool isEmpty() const { return MemAccs.empty(); }
 
@@ -1221,13 +1216,6 @@ public:
     return PHIWrites.lookup(PHI);
   }
 
-  void setBasicBlock(BasicBlock *Block) {
-    // TODO: Handle the case where the statement is a region statement, thus
-    //       the entry block was split and needs to be changed in the region R.
-    assert(BB && "Cannot set a block for a region statement");
-    BB = Block;
-  }
-
   /// @brief Add @p Access to this statement's list of accesses.
   void addAccess(MemoryAccess *Access);
 
@@ -1246,7 +1234,6 @@ public:
   const_iterator end() const { return MemAccs.end(); }
   size_t size() const { return MemAccs.size(); }
 
-  unsigned getNumParams() const;
   unsigned getNumIterators() const;
 
   Scop *getParent() { return &Parent; }
@@ -1277,7 +1264,7 @@ public:
   ///
   /// @param Dimension The dimension of the induction variable
   /// @return The loop at a certain dimension.
-  const Loop *getLoopForDimension(unsigned Dimension) const;
+  Loop *getLoopForDimension(unsigned Dimension) const;
 
   /// @brief Align the parameters in the statement to the scop context
   void realignParams();
@@ -1365,6 +1352,9 @@ private:
 
   /// @brief Mapping from parameters to their ids.
   DenseMap<const SCEV *, isl_id *> ParameterIds;
+
+  /// @brief The context of the SCoP created during SCoP detection.
+  const ScopDetection::DetectionContext &DC;
 
   /// Isl context.
   ///
@@ -1504,7 +1494,8 @@ private:
   InvariantEquivClassesTy InvariantEquivClasses;
 
   /// @brief Scop constructor; invoked from ScopInfo::buildScop.
-  Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI, unsigned MaxLoopDepth);
+  Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
+       const ScopDetection::DetectionContext &DC);
 
   /// @brief Get or create the access function set in a BasicBlock
   AccFuncSetType &getOrCreateAccessFunctions(const BasicBlock *BB) {
@@ -1513,8 +1504,8 @@ private:
   //@}
 
   /// @brief Initialize this ScopInfo .
-  void init(AliasAnalysis &AA, AssumptionCache &AC, ScopDetection &SD,
-            DominatorTree &DT, LoopInfo &LI);
+  void init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
+            LoopInfo &LI);
 
   /// @brief Propagate domains that are known due to graph properties.
   ///
@@ -1536,13 +1527,11 @@ private:
   /// @param BB The block for which the domain is currently propagated.
   /// @param BBLoop The innermost affine loop surrounding @p BB.
   /// @param FinishedExitBlocks Set of region exits the domain was set for.
-  /// @param SD The ScopDetection analysis for the current function.
   /// @param LI The LoopInfo for the current function.
   ///
   void propagateDomainConstraintsToRegionExit(
       BasicBlock *BB, Loop *BBLoop,
-      SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, ScopDetection &SD,
-      LoopInfo &LI);
+      SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, LoopInfo &LI);
 
   /// @brief Compute the union of predecessor domains for @p BB.
   ///
@@ -1552,14 +1541,12 @@ private:
   ///
   /// @param BB     The block for which the predecessor domains are collected.
   /// @param Domain The domain under which BB is executed.
-  /// @param SD     The ScopDetection analysis for the current function.
   /// @param DT     The DominatorTree for the current function.
   /// @param LI     The LoopInfo for the current function.
   ///
   /// @returns The domain under which @p BB is executed.
   __isl_give isl_set *getPredecessorDomainConstraints(BasicBlock *BB,
                                                       isl_set *Domain,
-                                                      ScopDetection &SD,
                                                       DominatorTree &DT,
                                                       LoopInfo &LI);
 
@@ -1567,27 +1554,28 @@ private:
   ///
   /// @param L  The loop to process.
   /// @param LI The LoopInfo for the current function.
-  void addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI);
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI);
 
   /// @brief Compute the branching constraints for each basic block in @p R.
   ///
   /// @param R  The region we currently build branching conditions for.
-  /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
   ///
   /// @returns True if there was no problem and false otherwise.
-  bool buildDomainsWithBranchConstraints(Region *R, ScopDetection &SD,
-                                         DominatorTree &DT, LoopInfo &LI);
+  bool buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
+                                         LoopInfo &LI);
 
   /// @brief Propagate the domain constraints through the region @p R.
   ///
   /// @param R  The region we currently build branching conditions for.
-  /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
-  void propagateDomainConstraints(Region *R, ScopDetection &SD,
-                                  DominatorTree &DT, LoopInfo &LI);
+  ///
+  /// @returns True if there was no problem and false otherwise.
+  bool propagateDomainConstraints(Region *R, DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Propagate invalid domains of statements through @p R.
   ///
@@ -1597,45 +1585,26 @@ private:
   /// replaced by an empty set. Later those will be removed completely.
   ///
   /// @param R  The currently traversed region.
-  /// @param SD The ScopDetection analysis for the current function.
-  /// @param DT The DominatorTree for the current function.
-  /// @param LI The LoopInfo for the current function.
-  void propagateInvalidStmtDomains(Region *R, ScopDetection &SD,
-                                   DominatorTree &DT, LoopInfo &LI);
-
-  /// @brief Compute the domain for each basic block in @p R.
-  ///
-  /// @param R  The region we currently traverse.
-  /// @param SD The ScopDetection analysis for the current function.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
   ///
   /// @returns True if there was no problem and false otherwise.
-  bool buildDomains(Region *R, ScopDetection &SD, DominatorTree &DT,
-                    LoopInfo &LI);
+  bool propagateInvalidStmtDomains(Region *R, DominatorTree &DT, LoopInfo &LI);
 
-  /// @brief Check if a region part should be represented in the SCoP or not.
+  /// @brief Compute the domain for each basic block in @p R.
   ///
-  /// If @p RN does not contain any useful calculation or is only reachable
-  /// via error blocks we do not model it in the polyhedral representation.
-  ///
-  /// @param RN The region part to check.
+  /// @param R  The region we currently traverse.
   /// @param DT The DominatorTree for the current function.
   /// @param LI The LoopInfo for the current function.
   ///
-  /// @return True if the part should be ignored, otherwise false.
-  bool isIgnored(RegionNode *RN, DominatorTree &DT, LoopInfo &LI);
+  /// @returns True if there was no problem and false otherwise.
+  bool buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Add parameter constraints to @p C that imply a non-empty domain.
   __isl_give isl_set *addNonEmptyDomainConstraints(__isl_take isl_set *C) const;
 
   /// @brief Simplify the SCoP representation
-  ///
-  /// At the moment we perform the following simplifications:
-  ///   - removal of no-op statements
-  /// @param RemoveIgnoredStmts If true, also removed ignored statments.
-  /// @see isIgnored()
-  void simplifySCoP(bool RemoveIgnoredStmts, DominatorTree &DT, LoopInfo &LI);
+  void simplifySCoP(bool AfterHoisting, DominatorTree &DT, LoopInfo &LI);
 
   /// @brief Create equivalence classes for required invariant accesses.
   ///
@@ -1649,9 +1618,7 @@ private:
   /// consequence Scop::getIdForParam() will only return an id for the
   /// representing element of each equivalence class, thus for each required
   /// invariant location.
-  ///
-  /// @param SD The ScopDetection analysis for the current function.
-  void buildInvariantEquivalenceClasses(ScopDetection &SD);
+  void buildInvariantEquivalenceClasses();
 
   /// @brief Check if a memory access can be hoisted.
   ///
@@ -1676,8 +1643,7 @@ private:
   ///   for (int j = 1; j < Bound[1]; j++)
   ///     ...
   ///
-  /// @param SD The ScopDetection analysis for the current function.
-  void verifyInvariantLoads(ScopDetection &SD);
+  void verifyInvariantLoads();
 
   /// @brief Hoist invariant memory loads and check for required ones.
   ///
@@ -1697,8 +1663,7 @@ private:
   /// Common inv. loads: V, A[0][0], LB[0], LB[1]
   /// Required inv. loads: LB[0], LB[1], (V, if it may alias with A or LB)
   ///
-  /// @param SD The ScopDetection analysis for the current function.
-  void hoistInvariantLoads(ScopDetection &SD);
+  void hoistInvariantLoads();
 
   /// @brief Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
   void addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs);
@@ -1754,9 +1719,8 @@ private:
 
   /// @brief Construct the schedule of this SCoP.
   ///
-  /// @param SD The ScopDetection analysis for the current function.
   /// @param LI The LoopInfo for the current function.
-  void buildSchedule(ScopDetection &SD, LoopInfo &LI);
+  void buildSchedule(LoopInfo &LI);
 
   /// @brief A loop stack element to keep track of per-loop information during
   ///        schedule construction.
@@ -1795,10 +1759,8 @@ private:
   /// @param R              The region which to process.
   /// @param LoopStack      A stack of loops that are currently under
   ///                       construction.
-  /// @param SD The ScopDetection analysis for the current function.
   /// @param LI The LoopInfo for the current function.
-  void buildSchedule(Region *R, LoopStackTy &LoopStack, ScopDetection &SD,
-                     LoopInfo &LI);
+  void buildSchedule(Region *R, LoopStackTy &LoopStack, LoopInfo &LI);
 
   /// @brief Build Schedule for the region node @p RN and add the derived
   ///        information to @p LoopStack.
@@ -1813,10 +1775,8 @@ private:
   /// @param RN             The RegionNode region traversed.
   /// @param LoopStack      A stack of loops that are currently under
   ///                       construction.
-  /// @param SD The ScopDetection analysis for the current function.
   /// @param LI The LoopInfo for the current function.
-  void buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, ScopDetection &SD,
-                     LoopInfo &LI);
+  void buildSchedule(RegionNode *RN, LoopStackTy &LoopStack, LoopInfo &LI);
 
   /// @brief Collect all memory access relations of a given type.
   ///
@@ -1861,8 +1821,6 @@ public:
 
   /// @brief Take a list of parameters and add the new ones to the scop.
   void addParams(const ParameterSetTy &NewParameters);
-
-  int getNumArrays() { return ScopArrayInfoMap.size(); }
 
   /// @brief Return whether this scop is empty, i.e. contains no statements that
   /// could be executed.
@@ -2075,6 +2033,15 @@ public:
   const_reverse_iterator rend() const { return Stmts.rend(); }
   //@}
 
+  const InvariantLoadsSetTy &getRequiredInvariantLoads() const {
+    return DC.RequiredILS;
+  }
+  const BoxedLoopsSetTy &getBoxedLoops() const { return DC.BoxedLoopsSet; }
+  bool isNonAffineSubRegion(const Region *R) {
+    return DC.NonAffineSubRegionSet.count(R);
+  }
+  const MapInsnToMemAcc &getInsnToMemAccMap() const { return DC.InsnToMemAcc; }
+
   /// @brief Return the (possibly new) ScopArrayInfo object for @p Access.
   ///
   /// @param ElementType The type of the elements stored in this array.
@@ -2103,6 +2070,9 @@ public:
 
   /// @brief Align the parameters in the statement to the scop context
   void realignParams();
+
+  /// @brief Return true if this SCoP can be profitably optimized.
+  bool isProfitable() const;
 
   /// @brief Return true if the SCoP contained at least one error block.
   bool hasErrorBlock() const { return HasErrorBlock; }
@@ -2256,14 +2226,9 @@ class ScopInfo : public RegionPass {
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
   /// @param R          The region on which to build the data access dictionary.
-  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
-  /// @param ScopRIL    The required invariant loads equivalence classes.
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool
-  buildAccessMultiDimFixed(MemAccInst Inst, Loop *L, Region *R,
-                           const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-                           const InvariantLoadsSetTy &ScopRIL);
+  bool buildAccessMultiDimFixed(MemAccInst Inst, Loop *L, Region *R);
 
   /// @brief Try to build a multi-dimensional parameteric sized MemoryAccess
   ///        from the Load/Store instruction.
@@ -2271,42 +2236,27 @@ class ScopInfo : public RegionPass {
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
   /// @param R          The region on which to build the data access dictionary.
-  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
-  /// @param ScopRIL    The required invariant loads equivalence classes.
-  /// @param InsnToMemAcc The Instruction to MemoryAccess mapping
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool
-  buildAccessMultiDimParam(MemAccInst Inst, Loop *L, Region *R,
-                           const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-                           const InvariantLoadsSetTy &ScopRIL,
-                           const MapInsnToMemAcc &InsnToMemAcc);
+  bool buildAccessMultiDimParam(MemAccInst Inst, Loop *L, Region *R);
 
   /// @brief Try to build a MemoryAccess for a memory intrinsic.
   ///
   /// @param Inst       The instruction that access the memory
   /// @param L          The parent loop of the instruction
   /// @param R          The region on which to build the data access dictionary.
-  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
-  /// @param ScopRIL    The required invariant loads equivalence classes.
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMemIntrinsic(MemAccInst Inst, Loop *L, Region *R,
-                               const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-                               const InvariantLoadsSetTy &ScopRIL);
+  bool buildAccessMemIntrinsic(MemAccInst Inst, Loop *L, Region *R);
 
   /// @brief Try to build a MemoryAccess for a call instruction.
   ///
   /// @param Inst       The call instruction that access the memory
   /// @param L          The parent loop of the instruction
   /// @param R          The region on which to build the data access dictionary.
-  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
-  /// @param ScopRIL    The required invariant loads equivalence classes.
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessCallInst(MemAccInst Inst, Loop *L, Region *R,
-                           const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-                           const InvariantLoadsSetTy &ScopRIL);
+  bool buildAccessCallInst(MemAccInst Inst, Loop *L, Region *R);
 
   /// @brief Build a single-dimensional parameteric sized MemoryAccess
   ///        from the Load/Store instruction.
@@ -2314,24 +2264,14 @@ class ScopInfo : public RegionPass {
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
   /// @param R          The region on which to build the data access dictionary.
-  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
-  /// @param ScopRIL    The required invariant loads equivalence classes.
-  void buildAccessSingleDim(MemAccInst Inst, Loop *L, Region *R,
-                            const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-                            const InvariantLoadsSetTy &ScopRIL);
+  void buildAccessSingleDim(MemAccInst Inst, Loop *L, Region *R);
 
   /// @brief Build an instance of MemoryAccess from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
   /// @param R          The region on which to build the data access dictionary.
-  /// @param BoxedLoops The set of loops that are overapproximated in @p R.
-  /// @param ScopRIL    The required invariant loads equivalence classes.
-  /// @param InsnToMemAcc The Instruction to MemoryAccess mapping.
-  void buildMemoryAccess(MemAccInst Inst, Loop *L, Region *R,
-                         const ScopDetection::BoxedLoopsSetTy *BoxedLoops,
-                         const InvariantLoadsSetTy &ScopRIL,
-                         const MapInsnToMemAcc &InsnToMemAcc);
+  void buildMemoryAccess(MemAccInst Inst, Loop *L, Region *R);
 
   /// @brief Analyze and extract the cross-BB scalar dependences (or,
   ///        dataflow dependencies) of an instruction.
@@ -2360,8 +2300,7 @@ class ScopInfo : public RegionPass {
   /// @param R            The SCoP region.
   /// @param SR           A subregion of @p R.
   /// @param InsnToMemAcc The Instruction to MemoryAccess mapping.
-  void buildAccessFunctions(Region &R, Region &SR,
-                            const MapInsnToMemAcc &InsnToMemAcc);
+  void buildAccessFunctions(Region &R, Region &SR);
 
   /// @brief Create ScopStmt for all BBs and non-affine subregions of @p SR.
   ///
@@ -2376,11 +2315,9 @@ class ScopInfo : public RegionPass {
   ///
   /// @param R                  The SCoP region.
   /// @param BB                 A basic block in @p R.
-  /// @param InsnToMemAcc       The Instruction to MemoryAccess mapping.
   /// @param NonAffineSubRegion The non affine sub-region @p BB is in.
   /// @param IsExitBlock        Flag to indicate that @p BB is in the exit BB.
   void buildAccessFunctions(Region &R, BasicBlock &BB,
-                            const MapInsnToMemAcc &InsnToMemAcc,
                             Region *NonAffineSubRegion = nullptr,
                             bool IsExitBlock = false);
 

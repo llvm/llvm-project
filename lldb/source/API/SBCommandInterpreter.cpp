@@ -398,7 +398,7 @@ SBCommandInterpreter::GetProcess ()
         TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
         if (target_sp)
         {
-            Mutex::Locker api_locker(target_sp->GetAPIMutex());
+            std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
             process_sp = target_sp->GetProcessSP();
             sb_process.SetSP(process_sp);
         }
@@ -483,9 +483,9 @@ SBCommandInterpreter::SourceInitFileInHomeDirectory (SBCommandReturnObject &resu
     if (IsValid())
     {
         TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
-        Mutex::Locker api_locker;
+        std::unique_lock<std::recursive_mutex> lock;
         if (target_sp)
-            api_locker.Lock(target_sp->GetAPIMutex());
+            lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
         m_opaque_ptr->SourceInitFile (false, result.ref());
     }
     else
@@ -508,9 +508,9 @@ SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory (SBCommandReturnOb
     if (IsValid())
     {
         TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
-        Mutex::Locker api_locker;
+        std::unique_lock<std::recursive_mutex> lock;
         if (target_sp)
-            api_locker.Lock(target_sp->GetAPIMutex());
+            lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
         m_opaque_ptr->SourceInitFile (true, result.ref());
     }
     else

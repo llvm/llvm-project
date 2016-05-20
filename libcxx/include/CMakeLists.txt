@@ -53,7 +53,7 @@ if (LIBCXX_INSTALL_HEADERS)
     # this target is just needed as a placeholder for the distribution target
     add_custom_target(libcxx-headers)
     add_custom_target(install-libcxx-headers
-                      DEPENDS ${name} libcxx-headers
+                      DEPENDS libcxx-headers
                       COMMAND "${CMAKE_COMMAND}"
                               -DCMAKE_INSTALL_COMPONENT=libcxx-headers
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")

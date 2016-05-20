@@ -10,11 +10,18 @@
 ; CHECK-NEXT:            Execution Context: [c] -> {  : 1 = 0 }
 ; CHECK-NEXT:    }
 ;
+; TODO: FIXME: We should remove the statement as it has an empty domain.
+; CHECK:      Stmt_if_then
+; CHECK-NEXT: Domain :=
+; CHECK-NEXT: [c] -> { Stmt_if_then[i0] : 1 = 0 };
+;
 ;    int I[1024];
 ;    void f(int *A, unsigned char c) {
 ;      for (int i = 0; i < 10; i++)
 ;        if ((signed char)(c + (unsigned char)1) == 127)
 ;          A[i] += I[c];
+;        else
+;          A[i] = 0;
 ;    }
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -33,21 +40,22 @@ for.cond:                                         ; preds = %for.inc, %entry
 for.body:                                         ; preds = %for.cond
   %add = add i8 %c, 1
   %cmp3 = icmp eq i8 %add, 128
-  br i1 %cmp3, label %if.then, label %if.end
+  %arrayidx6 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  br i1 %cmp3, label %if.then, label %if.else
 
 if.then:                                          ; preds = %for.body
   %arrayidx = getelementptr inbounds [1024 x i32], [1024 x i32]* @I, i64 0, i8 %c
   %tmp = load i32, i32* %arrayidx, align 4
-  %arrayidx6 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
   %tmp1 = load i32, i32* %arrayidx6, align 4
   %add7 = add nsw i32 %tmp1, %tmp
   store i32 %add7, i32* %arrayidx6, align 4
-  br label %if.end
-
-if.end:                                           ; preds = %if.then, %for.body
   br label %for.inc
 
-for.inc:                                          ; preds = %if.end
+if.else:                                           ; preds = %if.then, %for.body
+  store i32 0, i32* %arrayidx6, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.else, if.then
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br label %for.cond
 

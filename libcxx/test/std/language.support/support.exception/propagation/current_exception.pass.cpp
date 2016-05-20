@@ -74,7 +74,7 @@ int main()
             throw A();
             assert(false);
         }
-        catch (A& a)
+        catch (A&)
         {
             std::exception_ptr p = std::current_exception();
             assert(A::constructed == 1);
@@ -94,7 +94,7 @@ int main()
             throw A();
             assert(false);
         }
-        catch (A a)
+        catch (A)
         {
             std::exception_ptr p = std::current_exception();
             assert(A::constructed == 2);

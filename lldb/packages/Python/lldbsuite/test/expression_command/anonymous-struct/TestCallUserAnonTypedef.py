@@ -23,6 +23,7 @@ class TestExprLookupAnonStructTypedef(TestBase):
         # Find the breakpoint
         self.line = line_number('main.cpp', '// lldb testsuite break')
 
+    @expectedFailureAll(oslist=["windows"])
     def test(self):
         """Test typedeffed untagged struct arguments for function call expressions"""
         self.build()

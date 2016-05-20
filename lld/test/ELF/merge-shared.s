@@ -7,7 +7,7 @@
         .long 42
         .long 42
 
-        .text
+        .data
         .quad foo + 6
 
 

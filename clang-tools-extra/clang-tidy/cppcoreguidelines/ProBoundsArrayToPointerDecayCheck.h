@@ -14,7 +14,8 @@
 
 namespace clang {
 namespace tidy {
-
+namespace cppcoreguidelines {
+	
 /// This check flags all array to pointer decays
 ///
 /// For the user-facing documentation see:
@@ -27,6 +28,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang
 

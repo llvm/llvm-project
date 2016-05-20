@@ -56,7 +56,7 @@
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb16[i0] -> MemRef_A[i0] };
 ; INNERMOST-NEXT:     Stmt_bb26
 ; INNERMOST-NEXT:         Domain :=
-; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb26[] : p_0 >= 0 };
+; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb26[] };
 ; INNERMOST-NEXT:         Schedule :=
 ; INNERMOST-NEXT:             [p_0, p_1, p_2] -> { Stmt_bb26[] -> [1, 0] };
 ; INNERMOST-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]

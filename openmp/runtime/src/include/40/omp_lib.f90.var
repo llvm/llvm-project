@@ -412,6 +412,13 @@
             integer (kind=kmp_size_t_kind), value :: size
           end function kmp_malloc
 
+          function kmp_aligned_malloc(size, alignment) bind(c)
+            use omp_lib_kinds
+            integer (kind=kmp_pointer_kind) kmp_aligned_malloc
+            integer (kind=kmp_size_t_kind), value :: size
+            integer (kind=kmp_size_t_kind), value :: alignment
+          end function kmp_aligned_malloc
+
           function kmp_calloc(nelem, elsize) bind(c)
             use omp_lib_kinds
             integer (kind=kmp_pointer_kind) kmp_calloc

@@ -158,11 +158,11 @@ ObjectFileJIT::GetSymtab()
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         if (m_symtab_ap.get() == NULL)
         {
             m_symtab_ap.reset(new Symtab(this));
-            Mutex::Locker symtab_locker (m_symtab_ap->GetMutex());
+            std::lock_guard<std::recursive_mutex> symtab_guard(m_symtab_ap->GetMutex());
             ObjectFileJITDelegateSP delegate_sp (m_delegate_wp.lock());
             if (delegate_sp)
                 delegate_sp->PopulateSymtab(this, *m_symtab_ap);
@@ -200,7 +200,7 @@ ObjectFileJIT::Dump (Stream *s)
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
         s->Printf("%p: ", static_cast<void*>(this));
         s->Indent();
         s->PutCString("ObjectFileJIT");

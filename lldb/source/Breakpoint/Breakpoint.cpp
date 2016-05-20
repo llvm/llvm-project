@@ -410,8 +410,8 @@ Breakpoint::ModulesChanged (ModuleList &module_list, bool load, bool delete_loca
     if (log)
         log->Printf ("Breakpoint::ModulesChanged: num_modules: %zu load: %i delete_locations: %i\n",
                      module_list.GetSize(), load, delete_locations);
-    
-    Mutex::Locker modules_mutex(module_list.GetMutex());
+
+    std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
     if (load)
     {
         // The logic for handling new modules is:

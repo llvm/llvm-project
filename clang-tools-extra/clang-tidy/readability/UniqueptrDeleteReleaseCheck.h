@@ -14,6 +14,7 @@
 
 namespace clang {
 namespace tidy {
+namespace readability {
 
 /// Flag statements of the form: delete <unique_ptr expr>.release()
 /// and replace them with: <unique_ptr expr> = nullptr
@@ -28,6 +29,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
+} // namespace readability
 } // namespace tidy
 } // namespace clang
 

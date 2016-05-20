@@ -43,17 +43,23 @@ class Region;
 
 namespace polly {
 
-/// @brief Set the begin and end source location for the given region @p R.
-void getDebugLocations(const Region *R, DebugLoc &Begin, DebugLoc &End);
+/// @brief Type to hold region delimitors (entry & exit block).
+using BBPair = std::pair<BasicBlock *, BasicBlock *>;
+
+/// @brief Return the region delimitors (entry & exit block) of @p R.
+BBPair getBBPairForRegion(const Region *R);
+
+/// @brief Set the begin and end source location for the region limited by @p P.
+void getDebugLocations(const BBPair &P, DebugLoc &Begin, DebugLoc &End);
 
 class RejectLog;
 /// @brief Emit optimization remarks about the rejected regions to the user.
 ///
 /// This emits the content of the reject log as optimization remarks.
 /// Remember to at least track failures (-polly-detect-track-failures).
-/// @param F The function we emit remarks for.
+/// @param P The region delimitors (entry & exit) we emit remarks for.
 /// @param Log The error log containing all messages being emitted as remark.
-void emitRejectionRemarks(const llvm::Function &F, const RejectLog &Log);
+void emitRejectionRemarks(const BBPair &P, const RejectLog &Log);
 
 // Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
 enum RejectReasonKind {
@@ -163,50 +169,6 @@ public:
 
   const Region *region() const { return R; }
   void report(RejectReasonPtr Reject) { ErrorReports.push_back(Reject); }
-};
-
-/// @brief Store reject logs
-class RejectLogsContainer {
-  std::map<const Region *, RejectLog> Logs;
-
-public:
-  typedef std::map<const Region *, RejectLog>::iterator iterator;
-  typedef std::map<const Region *, RejectLog>::const_iterator const_iterator;
-
-  iterator begin() { return Logs.begin(); }
-  iterator end() { return Logs.end(); }
-
-  const_iterator begin() const { return Logs.begin(); }
-  const_iterator end() const { return Logs.end(); }
-
-  std::pair<iterator, bool>
-  insert(const std::pair<const Region *, RejectLog> &New) {
-    return Logs.insert(New);
-  }
-
-  std::map<const Region *, RejectLog>::mapped_type at(const Region *R) {
-    return Logs.at(R);
-  }
-
-  void clear() { Logs.clear(); }
-
-  size_t count(const Region *R) const { return Logs.count(R); }
-
-  size_t size(const Region *R) const {
-    if (!Logs.count(R))
-      return 0;
-    return Logs.at(R).size();
-  }
-
-  bool hasErrors(const Region *R) const {
-    if (!Logs.count(R))
-      return false;
-
-    RejectLog Log = Logs.at(R);
-    return Log.hasErrors();
-  }
-
-  bool hasErrors(Region *R) const { return hasErrors((const Region *)R); }
 };
 
 //===----------------------------------------------------------------------===//

@@ -155,13 +155,13 @@ is dropped.
 
 \subsection{Introduction}\label{s:intro}
 
-Parametric integer programming \shortcite{Feautrier88parametric}
+Parametric integer programming \parencite{Feautrier88parametric}
 is used to solve many problems within the context of the polyhedral model.
-Here, we are mainly interested in dependence analysis \shortcite{Fea91}
+Here, we are mainly interested in dependence analysis \parencite{Fea91}
 and in computing a unique representation for existentially quantified
 variables.  The latter operation has been used for counting elements
 in sets involving such variables
-\shortcite{BouletRe98,Verdoolaege2005experiences} and lies at the core
+\parencite{BouletRe98,Verdoolaege2005experiences} and lies at the core
 of the internal representation of {\tt isl}.
 
 Parametric integer programming was first implemented in \texttt{PipLib}.
@@ -169,7 +169,7 @@ An alternative method for parametric integer programming
 was later implemented in {\tt barvinok} \cite{barvinok-0.22}.
 This method is not based on Feautrier's algorithm, but on rational
 generating functions \cite{Woods2003short} and was inspired by the
-``digging'' technique of \shortciteN{DeLoera2004Three} for solving
+``digging'' technique of \textcite{DeLoera2004Three} for solving
 non-parametric integer programming problems.
 
 In the following sections, we briefly recall the dual simplex
@@ -186,9 +186,9 @@ Tableaus can be represented in several slightly different ways.
 In {\tt isl}, the dual simplex method uses the same representation
 as that used by its incremental LP solver based on the \emph{primal}
 simplex method.  The implementation of this LP solver is based
-on that of {\tt Simplify} \shortcite{Detlefs2005simplify}, which, in turn,
-was derived from the work of \shortciteN{Nelson1980phd}.
-In the original \shortcite{Nelson1980phd}, the tableau was implemented
+on that of {\tt Simplify} \parencite{Detlefs2005simplify}, which, in turn,
+was derived from the work of \textcite{Nelson1980phd}.
+In the original \parencite{Nelson1980phd}, the tableau was implemented
 as a sparse matrix, but neither {\tt Simplify} nor the current
 implementation of {\tt isl} does so.
 
@@ -306,7 +306,7 @@ There are two places in the above algorithm where the unknowns $\vec x$
 are assumed to be non-negative: the initial tableau starts from
 sample value $\vec x = \vec 0$ and $\vec c$ is assumed to be non-negative
 during the construction of Gomory cuts.
-To deal with negative unknowns, \shortciteN[Appendix A.2]{Fea91}
+To deal with negative unknowns, \textcite[Appendix A.2]{Fea91}
 proposed to use a ``big parameter'', say $M$, that is taken to be
 an arbitrarily large positive number.  Instead of looking for the
 lexicographically minimal value of $\vec x$, we search instead
@@ -339,11 +339,11 @@ indicates an incorrect formulation of the problem.
 
 The original version of {\tt PipLib} required the user to ``manually''
 add a big parameter, perform the reformulation and interpret the result
-\shortcite{Feautrier02}.  Recent versions allow the user to simply
+\parencite{Feautrier02}.  Recent versions allow the user to simply
 specify that the unknowns may be negative or that the maximum should
 be computed and then these transformations are performed internally.
 Although there are some application, e.g.,
-that of \shortciteN{Feautrier92multi},
+that of \textcite{Feautrier92multi},
 where it is useful to have explicit control over the big parameter,
 negative unknowns and maximization are by far the most common applications
 of the big parameter and we believe that the user should not be bothered
@@ -399,7 +399,7 @@ on the input.
 If there are any (explicit) equalities in the input description,
 {\tt PipLib} converts each into a pair of inequalities.
 It is also possible to write $r$ equalities as $r+1$ inequalities
-\shortcite{Feautrier02}, but it is even better to \emph{exploit} the
+\parencite{Feautrier02}, but it is even better to \emph{exploit} the
 equalities to reduce the dimensionality of the problem.
 Given an equality involving at least one unknown, we pivot
 the row corresponding to the equality with the column corresponding
@@ -447,7 +447,7 @@ would obviate the need for removing parametric equalities.
 
 \subsubsection{Offline Symmetry Detection}\label{s:offline}
 
-Some problems, notably those of \shortciteN{Bygde2010licentiate},
+Some problems, notably those of \textcite{Bygde2010licentiate},
 have a collection of constraints, say
 $b_i(\vec p) + \sp {\vec a} {\vec x} \ge 0$,
 that only differ in their (parametric) constant terms.
@@ -478,7 +478,7 @@ the dual simplex method.
 It may in some cases be apparent from the equalities in the problem
 description that there can only be a solution for a sublattice
 of the parameters.  In such cases ``parameter compression''
-\shortcite{Meister2004PhD,Meister2008} can be used to replace
+\parencite{Meister2004PhD,Meister2008} can be used to replace
 the parameters by alternative ``dense'' parameters.
 For example, if there is a constraint $2x = n$, then the system
 will only have solutions for even values of $n$ and $n$ can be replaced
@@ -545,7 +545,7 @@ on the sign of an affine expression over the elements of the context.
 This sign can be determined by solving two integer linear feasibility
 problems, one with a constraint added to the context that enforces
 the expression to be non-negative and one where the expression is
-negative.  As already mentioned by \shortciteN{Feautrier88parametric},
+negative.  As already mentioned by \textcite{Feautrier88parametric},
 any integer linear feasibility solver could be used, but the {\tt PipLib}
 implementation uses a recursive call to the dual simplex with Gomory
 cuts algorithm to determine the feasibility of a context.
@@ -632,9 +632,9 @@ In {\tt PipLib}, the extra parameter is not ``big'', but this may be because
 the big parameter of the main tableau also appears
 in the context tableau.
 
-Finally, it was reported by \shortciteN{Galea2009personal}, who
+Finally, it was reported by \textcite{Galea2009personal}, who
 worked on a parametric integer programming implementation
-in {\tt PPL} \shortcite{PPL},
+in {\tt PPL} \parencite{PPL},
 that it is beneficial to add cuts for \emph{all} rational coordinates
 in the context tableau.  Based on this report,
 the initial {\tt isl} implementation was adapted accordingly.
@@ -642,7 +642,7 @@ the initial {\tt isl} implementation was adapted accordingly.
 \subsubsection{Generalized Basis Reduction}\label{s:GBR}
 
 The default algorithm used in {\tt isl} for feasibility checking
-is generalized basis reduction \shortcite{Cook1991implementation}.
+is generalized basis reduction \parencite{Cook1991implementation}.
 This algorithm is also used in the {\tt barvinok} implementation.
 The algorithm is fairly robust, but it has some overhead.
 We therefore try to avoid calling the algorithm in easy cases.
@@ -666,7 +666,7 @@ if the expressions are not identical, or they may be equal to some
 affine combination of other variables.
 To detect such cases, we compute the affine hull of the context
 each time a new integer division is added.  The algorithm used
-for computing this affine hull is that of \shortciteN{Karr1976affine},
+for computing this affine hull is that of \textcite{Karr1976affine},
 while the points used in this algorithm are obtained by performing
 integer feasibility checks on that part of the context outside
 the current approximation of the affine hull.
@@ -684,6 +684,8 @@ integer division.
 (with both types of context tableau)
 on some more difficult instances to those of other tools,
 run on an Intel Xeon W3520 @ 2.66GHz.
+These instances are available in the \lstinline{testsets/pip} directory
+of the {\tt isl} distribution.
 Easier problems such as the
 test cases distributed with {\tt Pip\-Lib} can be solved so quickly
 that we would only be measuring overhead such as input/output and conversions
@@ -695,7 +697,7 @@ We compare the following versions:
 and {\tt PPL} version 0.11.2.
 
 The first test case is the following dependence analysis problem
-originating from the Phideo project \shortcite{Verhaegh1995PhD}
+originating from the Phideo project \parencite{Verhaegh1995PhD}
 that was communicated to us by Bart Kienhuis:
 \begin{lstlisting}[flexiblecolumns=true,breaklines=true]{}
 lexmax { [j1,j2] -> [i1,i2,i3,i4,i5,i6,i7,i8,i9,i10] : 1 <= i1,j1 <= 8 and 1 <= i2,i3,i4,i5,i6,i7,i8,i9,i10 <= 2 and 1 <= j2 <= 128 and i1-1 = j1-1 and i2-1+2*i3-2+4*i4-4+8*i5-8+16*i6-16+32*i7-32+64*i8-64+128*i9-128+256*i10-256=3*j2-3+66 };
@@ -703,12 +705,12 @@ lexmax { [j1,j2] -> [i1,i2,i3,i4,i5,i6,i7,i8,i9,i10] : 1 <= i1,j1 <= 8 and 1 <= 
 This problem was the main inspiration
 for some of the optimizations in \autoref{s:GBR}.
 The second group of test cases are projections used during counting.
-The first nine of these come from \shortciteN{Seghir2006minimizing}.
-The remaining two come from \shortciteN{Verdoolaege2005experiences} and
+The first nine of these come from \textcite{Seghir2006minimizing}.
+The remaining two come from \textcite{Verdoolaege2005experiences} and
 were used to drive the first, Gomory cuts based, implementation
 in {\tt isl}.
 The third and final group of test cases are borrowed from
-\shortciteN{Bygde2010licentiate} and inspired the offline symmetry detection
+\textcite{Bygde2010licentiate} and inspired the offline symmetry detection
 of \autoref{s:offline}.  Without symmetry detection, the running times
 are 11s and 5.9s.
 All running times of {\tt barvinok} and {\tt isl} include a conversion
@@ -755,8 +757,8 @@ jcomplex & TC & max & 3.7s & 3.9s & OOM \\
 \subsection{Online Symmetry Detection}\label{s:online}
 
 Manual experiments on small instances of the problems of
-\shortciteN{Bygde2010licentiate} and an analysis of the results
-by the approximate MPA method developed by \shortciteN{Bygde2010licentiate}
+\textcite{Bygde2010licentiate} and an analysis of the results
+by the approximate MPA method developed by \textcite{Bygde2010licentiate}
 have revealed that these problems contain many more symmetries
 than can be detected using the offline method of \autoref{s:offline}.
 In this section, we present an online detection mechanism that has
@@ -816,8 +818,7 @@ or at least in a quast-like output format.
 
 \section{Coalescing}\label{s:coalescing}
 
-See \shortciteN{Verdoolaege2009isl}, for now.
-More details will be added later.
+See \textcite{Verdoolaege2015impact} for details on integer set coalescing.
 
 \section{Transitive Closure}
 
@@ -857,11 +858,11 @@ R^+ \coloneqq R \cup \left(R \circ R^+\right)
 \end{equation}
 
 Since the transitive closure of a polyhedral relation
-may no longer be a polyhedral relation \shortcite{Kelly1996closure},
+may no longer be a polyhedral relation \parencite{Kelly1996closure},
 we can, in the general case, only compute an approximation
 of the transitive closure.
-Whereas \shortciteN{Kelly1996closure} compute underapproximations,
-we, like \shortciteN{Beletska2009}, compute overapproximations.
+Whereas \textcite{Kelly1996closure} compute underapproximations,
+we, like \textcite{Beletska2009}, compute overapproximations.
 That is, given a relation $R$, we will compute a relation $T$
 such that $R^+ \subseteq T$.  Of course, we want this approximation
 to be as close as possible to the actual transitive closure
@@ -869,7 +870,7 @@ $R^+$ and we want to detect the cases where the approximation is
 exact, i.e., where $T = R^+$.
 
 For computing an approximation of the transitive closure of $R$,
-we follow the same general strategy as \shortciteN{Beletska2009}
+we follow the same general strategy as \textcite{Beletska2009}
 and first compute an approximation of $R^k$ for $k \ge 1$ and then project
 out the parameter $k$ from the resulting relation.
 
@@ -950,7 +951,7 @@ P = \{\, \vec x \to \vec y \mid
 \,\}
 \end{equation}
 and then the approximation computed in \eqref{eq:transitive:approx}
-is essentially the same as that of \shortciteN{Beletska2009}.
+is essentially the same as that of \textcite{Beletska2009}.
 If some of the $\Delta_i$s are not singleton sets or if
 some of $\vec \delta_i$s are parametric, then we need
 to resort to further approximations.
@@ -1106,9 +1107,9 @@ $\{\, \vec x' \in \Q^{d+1} \mid \left[
 A_1 & \vec c_1
 \end{matrix}
 \right] \vec x' \,\}$ and therefore $\Delta'_i(\vec s)$ is
-a Hilbert basis of this cone \shortcite[Theorem~16.4]{Schrijver1986}.
+a Hilbert basis of this cone \parencite[Theorem~16.4]{Schrijver1986}.
 
-Note however that, as pointed out by \shortciteN{DeSmet2010personal},
+Note however that, as pointed out by \textcite{DeSmet2010personal},
 if there \emph{are} any mixed constraints, then the above procedure may
 not compute the most accurate affine approximation of
 $k \, \Delta_i(\vec s)$ with $k \ge 1$.
@@ -1369,7 +1370,7 @@ $$
 T \subseteq R \cup \left(R \circ T\right)
 .
 $$
-This is essentially Theorem~5 of \shortciteN{Kelly1996closure}.
+This is essentially Theorem~5 of \textcite{Kelly1996closure}.
 The only difference is that they only consider lexicographically
 forward relations, a special case of acyclic relations.
 
@@ -1443,7 +1444,7 @@ R_j \circ R_i
 .
 \end{equation}
 The components can be obtained from the graph by applying
-Tarjan's algorithm \shortcite{Tarjan1972}.
+Tarjan's algorithm \parencite{Tarjan1972}.
 
 In practice, we compute the (extended) powers $K_i'$ of each component
 separately and then compose them as in \eqref{eq:transitive:decompose}.
@@ -1496,7 +1497,7 @@ configurable.
 \begin{example}
 \label{ex:closure4}
 Consider the relation in example {\tt closure4} that comes with
-the Omega calculator~\shortcite{Omega_calc}, $R = R_1 \cup R_2$,
+the Omega calculator~\parencite{Omega_calc}, $R = R_1 \cup R_2$,
 with
 $$
 \begin{aligned}
@@ -1575,7 +1576,7 @@ $$
 \end{figure}
 \begin{example}
 \label{ex:decomposition}
-Consider the relation on the right of \shortciteN[Figure~2]{Beletska2009},
+Consider the relation on the right of \textcite[Figure~2]{Beletska2009},
 reproduced in \autoref{f:decomposition}.
 The relation can be described as $R = R_1 \cup R_2 \cup R_3$,
 with
@@ -1626,7 +1627,7 @@ and so $R_1$ and $R_2$ form a strongly connected component.
 By computing the power of $R_3$ and $R_1 \cup R_2$ separately
 and composing the results, the power of $R$ can be computed exactly
 using \eqref{eq:transitive:singleton}.
-As explained by \shortciteN{Beletska2009}, applying the same formula
+As explained by \textcite{Beletska2009}, applying the same formula
 to $R$ directly, without a decomposition, would result in
 an overapproximation of the power.
 \end{example}
@@ -1641,11 +1642,11 @@ However, if $R$ is a union of relations that map between different
 domains, then this assumption no longer holds.
 In particular, when an entire dependence graph is encoded
 in a single relation, as is done by, e.g.,
-\shortciteN[Section~6.1]{Barthou2000MSE}, then it does not make
+\textcite[Section~6.1]{Barthou2000MSE}, then it does not make
 sense to look at differences between iterations of different domains.
 Now, arguably, a modified Floyd-Warshall algorithm should
 be applied to the dependence graph, as advocated by
-\shortciteN{Kelly1996closure}, with the transitive closure operation
+\textcite{Kelly1996closure}, with the transitive closure operation
 only being applied to relations from a given domain to itself.
 However, it is also possible to detect disjoint domains and ranges
 and to apply Floyd-Warshall internally.
@@ -1653,7 +1654,7 @@ and to apply Floyd-Warshall internally.
 \LinesNumbered
 \begin{algorithm}
 \caption{The modified Floyd-Warshall algorithm of
-\protect\shortciteN{Kelly1996closure}}
+\protect\textcite{Kelly1996closure}}
 \label{a:Floyd}
 \SetKwInput{Input}{Input}
 \SetKwInput{Output}{Output}
@@ -1737,12 +1738,12 @@ also exact or an overapproximation.
 \end{tikzpicture}
 \end{center}
 \caption{The relation (solid arrows) on the right of Figure~1 of
-\protect\shortciteN{Beletska2009} and its transitive closure}
+\protect\textcite{Beletska2009} and its transitive closure}
 \label{f:COCOA:1}
 \end{figure}
 \begin{example}
 Consider the relation on the right of Figure~1 of
-\shortciteN{Beletska2009},
+\textcite{Beletska2009},
 reproduced in \autoref{f:COCOA:1}.
 This relation can be described as
 $$
@@ -1819,7 +1820,7 @@ to relax the constraints of $R_i^+$ to include part of the identity relation,
 say on domain $D$.  We will use the notation
 ${\cal C}(R_i,D) = R_i^+ \cup \identity_D$ to represent
 this relaxed version of $R^+$.
-\shortciteN{Kelly1996closure} use the notation $R_i^?$.
+\textcite{Kelly1996closure} use the notation $R_i^?$.
 ${\cal C}(R_i,D)$ can be computed by allowing $k$ to attain
 the value $0$ in \eqref{eq:transitive:Q} and by using
 $$
@@ -1838,11 +1839,11 @@ In order to be able to replace $R^*$ by ${\cal C}(R_i,D)$
 in \eqref{eq:transitive:incremental}, $D$ should be chosen
 to include both $\domain R$ and $\range R$, i.e., such
 that $\identity_D \circ R_j \circ \identity_D = R_j$ for all $j\ne i$.
-\shortciteN{Kelly1996closure} say that they use
+\textcite{Kelly1996closure} say that they use
 $D = \domain R_i \cup \range R_i$, but presumably they mean that
 they use $D = \domain R \cup \range R$.
 Now, this expression of $D$ contains a union, so it not directly usable.
-\shortciteN{Kelly1996closure} do not explain how they avoid this union.
+\textcite{Kelly1996closure} do not explain how they avoid this union.
 Apparently, in their implementation,
 they are using the convex hull of $\domain R \cup \range R$
 or at least an approximation of this convex hull.
@@ -1954,15 +1955,15 @@ the composition of these extra elements with powers of $R_i$.
 
 \subsection{An {\tt Omega}-like implementation}
 
-While the main algorithm of \shortciteN{Kelly1996closure} is
+While the main algorithm of \textcite{Kelly1996closure} is
 designed to compute and underapproximation of the transitive closure,
 the authors mention that they could also compute overapproximations.
 In this section, we describe our implementation of an algorithm
 that is based on their ideas.
 Note that the {\tt Omega} library computes underapproximations
-\shortcite[Section 6.4]{Omega_lib}.
+\parencite[Section 6.4]{Omega_lib}.
 
-The main tool is Equation~(2) of \shortciteN{Kelly1996closure}.
+The main tool is Equation~(2) of \textcite{Kelly1996closure}.
 The input relation $R$ is first overapproximated by a ``d-form'' relation
 $$
 \{\, \vec i \to \vec j \mid \exists \vec \alpha :
@@ -2021,7 +2022,7 @@ In our implementation we take as $D$ the simple hull
 (\autoref{s:simple hull}) of $\domain R \cup \range R$.
 To determine whether it is safe to use ${\cal C}(R_i,D)$,
 we check the following conditions, as proposed by
-\shortciteN{Kelly1996closure}:
+\textcite{Kelly1996closure}:
 ${\cal C}(R_i,D) - R_i^+$ is not a union and for each $j \ne i$
 the condition
 $$

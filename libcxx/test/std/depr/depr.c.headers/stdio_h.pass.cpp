@@ -107,11 +107,17 @@
 int main()
 {
     FILE* fp = 0;
-    fpos_t fpos = {0};
-    size_t s = 0; ((void)s);
+    fpos_t fpos = {};
+    size_t s = 0;
     char* cp = 0;
     char arr[] = {'a', 'b'};
     va_list va;
+    ((void)fp); // Prevent unused warning
+    ((void)fpos); // Prevent unused warning
+    ((void)s); // Prevent unused warning
+    ((void)cp); // Prevent unused warning
+    ((void)arr); // Prevent unused warning
+    ((void)va); // Prevent unused warning
     static_assert((std::is_same<decltype(remove("")), int>::value), "");
     static_assert((std::is_same<decltype(rename("","")), int>::value), "");
     static_assert((std::is_same<decltype(tmpfile()), FILE*>::value), "");

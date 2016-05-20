@@ -1,15 +1,28 @@
 \documentclass{report}
-\usepackage[plainpages=false,pdfpagelabels,breaklinks,pagebackref]{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[plainpages=false,pdfpagelabels,breaklinks]{hyperref}
+\usepackage[backend=biber,isbn=false,url=false,doi=true,%
+maxbibnames=99,style=authoryear,sortcites=true,sorting=nyt,backref=true,%
+indexing=true,mincitenames=2,maxcitenames=2,datelabel=comp,dashed=false,%
+useprefix=true]{biblatex}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{txfonts}
-\usepackage{chicago}
 \usepackage{aliascnt}
 \usepackage{tikz}
 \usepackage{calc}
 \usepackage[ruled]{algorithm2e}
 \usetikzlibrary{matrix,fit,backgrounds,decorations.pathmorphing,positioning}
 \usepackage{listings}
+
+\addbibresource{isl.bib}
+
+\renewbibmacro*{finentry}{\iflistundef{pageref}{}{\renewcommand{\finentrypunct}{}}\finentry}
+\renewbibmacro*{pageref}{%
+  \iflistundef{pageref}
+    {}
+    {\setunit{\adddot\addspace}\printtext{%
+  \mbox{}\penalty100\hfill\hbox{[\printlist[pageref][-\value{listtotal}]{pageref}]}}}}
 
 \lstset{basicstyle=\tt,flexiblecolumns=false}
 
@@ -40,6 +53,10 @@
 \newcommand{\lstnumberautorefname}{Line}
 \renewcommand{\sectionautorefname}{Section}
 \renewcommand{\subsectionautorefname}{Section}
+\renewcommand{\algorithmautorefname}{Algorithm}
+
+\DeclareFieldFormat{date}{\hypertarget{\thefield{entrykey}}{#1}}
+\def\isl{\hyperlink{Verdoolaege2010isl}{\texttt{isl}}\xspace}
 
 \def\Z{\mathbb{Z}}
 \def\Q{\mathbb{Q}}
@@ -69,7 +86,10 @@
 
 \input{implementation}
 
-\bibliography{isl}
-\bibliographystyle{chicago}
+\chapter{Further Reading}
+
+\input{reading}
+
+\printbibliography
 
 \end{document}

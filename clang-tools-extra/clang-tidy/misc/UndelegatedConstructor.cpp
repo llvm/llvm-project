@@ -14,6 +14,8 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
+namespace tidy {
+namespace misc {
 
 namespace {
 AST_MATCHER_P(Stmt, ignoringTemporaryExpr,
@@ -45,9 +47,6 @@ AST_MATCHER_P(CXXRecordDecl, baseOfBoundNode, std::string, ID) {
       });
 }
 } // namespace
-
-namespace tidy {
-namespace misc {
 
 void UndelegatedConstructorCheck::registerMatchers(MatchFinder *Finder) {
   // We look for calls to constructors of the same type in constructors. To do

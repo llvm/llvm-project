@@ -30,7 +30,7 @@ int main()
         r();
         assert(false);
     }
-    catch (const std::system_error& e)
+    catch (const std::system_error&)
     {
     }
 }

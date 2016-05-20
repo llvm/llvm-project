@@ -23,6 +23,13 @@ class SomewhatTrivial {
   SomewhatTrivial& operator=(const SomewhatTrivial&);
 };
 
+struct MoveOnlyType {
+  MoveOnlyType(const MoveOnlyType &) = delete;
+  MoveOnlyType(MoveOnlyType &&) = default;
+  ~MoveOnlyType();
+  void constMethod() const;
+};
+
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj);
 // CHECK-FIXES: void positiveExpensiveConstValue(const ExpensiveToCopyType& Obj);
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj) {
@@ -169,3 +176,7 @@ struct NegativeDeletedMethod {
   NegativeDeletedMethod& operator=(NegativeDeletedMethod N) = delete;
   // CHECK-FIXES: NegativeDeletedMethod& operator=(NegativeDeletedMethod N) = delete;
 };
+
+void NegativeMoveOnlyTypePassedByValue(MoveOnlyType M) {
+  M.constMethod();
+}

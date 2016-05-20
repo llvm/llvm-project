@@ -15,6 +15,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 
 // Class used by IncludeSorterCallback and IncludeInserterCallback to record the
 // names of the inclusions in a given source file being processed and generate
@@ -65,10 +66,6 @@ public:
 private:
   typedef SmallVector<SourceRange, 1> SourceRangeVector;
 
-  // Creates a fix-it for the given replacements.
-  // Takes the the source location that will be replaced, and the new text.
-  FixItHint CreateFixIt(SourceRange EditRange, const std::string &NewText);
-
   const SourceManager *SourceMgr;
   const LangOptions *LangOpts;
   const IncludeStyle Style;
@@ -83,6 +80,7 @@ private:
   SmallVector<std::string, 1> IncludeBucket[IK_InvalidInclude];
 };
 
+} // namespace utils
 } // namespace tidy
 } // namespace clang
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H

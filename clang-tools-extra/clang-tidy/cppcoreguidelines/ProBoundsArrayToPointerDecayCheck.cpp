@@ -15,6 +15,7 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace cppcoreguidelines {
 
 AST_MATCHER_P(CXXForRangeStmt, hasRangeBeginEndStmt,
               ast_matchers::internal::Matcher<DeclStmt>, InnerMatcher) {
@@ -74,5 +75,6 @@ void ProBoundsArrayToPointerDecayCheck::check(
                                   "an explicit cast instead");
 }
 
+} // namespace cppcoreguidelines
 } // namespace tidy
 } // namespace clang

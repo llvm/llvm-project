@@ -17,6 +17,11 @@ namespace clang {
 namespace tidy {
 namespace matchers {
 
+AST_MATCHER_P(Expr, ignoringImplicit,
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  return InnerMatcher.matches(*Node.IgnoreImplicit(), Finder, Builder);
+}
+
 AST_MATCHER(BinaryOperator, isRelationalOperator) {
   return Node.isRelationalOp();
 }
@@ -31,12 +36,12 @@ AST_MATCHER(BinaryOperator, isComparisonOperator) {
 
 AST_MATCHER(QualType, isExpensiveToCopy) {
   llvm::Optional<bool> IsExpensive =
-      type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
+      utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
   return IsExpensive && *IsExpensive;
 }
 
 AST_MATCHER(RecordDecl, isTriviallyDefaultConstructible) {
-  return type_traits::recordIsTriviallyDefaultConstructible(
+  return utils::type_traits::recordIsTriviallyDefaultConstructible(
       Node, Finder->getASTContext());
 }
 

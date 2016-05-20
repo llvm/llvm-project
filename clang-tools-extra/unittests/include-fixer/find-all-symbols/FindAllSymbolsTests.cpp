@@ -8,9 +8,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "FindAllSymbols.h"
+#include "HeaderMapCollector.h"
+#include "PragmaCommentHandler.h"
+#include "SymbolInfo.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
+#include "clang/Basic/VirtualFileSystem.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/YAMLTraits.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace clang {
 namespace find_all_symbols {
@@ -20,7 +34,7 @@ static const char HeaderName[] = "symbols.h";
 class MockReporter
     : public clang::find_all_symbols::FindAllSymbols::ResultReporter {
 public:
-  ~MockReporter() {}
+  ~MockReporter() override {}
 
   void reportResult(llvm::StringRef FileName,
                     const SymbolInfo &Symbol) override {
@@ -35,20 +49,43 @@ public:
     return false;
   }
 
-  bool getSymbolExtraInfo(SymbolInfo *Symbol) {
-    for (const auto &S : Symbols) {
-      if (S == *Symbol) {
-        Symbol->FunctionInfos = S.FunctionInfos;
-        Symbol->TypedefNameInfos = S.TypedefNameInfos;
-        Symbol->VariableInfos = S.VariableInfos;
-        return true;
-      }
-    }
-    return false;
+private:
+  std::vector<SymbolInfo> Symbols;
+};
+
+class TestFindAllSymbolsAction : public clang::ASTFrontendAction {
+public:
+  TestFindAllSymbolsAction(FindAllSymbols::ResultReporter *Reporter)
+      : MatchFinder(), Collector(), Handler(&Collector),
+        Matcher(Reporter, &Collector) {
+    Matcher.registerMatchers(&MatchFinder);
+  }
+
+  std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &Compiler,
+                    StringRef InFile) override {
+    Compiler.getPreprocessor().addCommentHandler(&Handler);
+    return MatchFinder.newASTConsumer();
   }
 
 private:
-  std::vector<SymbolInfo> Symbols;
+  ast_matchers::MatchFinder MatchFinder;
+  HeaderMapCollector Collector;
+  PragmaCommentHandler Handler;
+  FindAllSymbols Matcher;
+};
+
+class TestFindAllSymbolsActionFactory
+    : public clang::tooling::FrontendActionFactory {
+public:
+  TestFindAllSymbolsActionFactory(MockReporter *Reporter)
+      : Reporter(Reporter) {}
+  clang::FrontendAction *create() override {
+    return new TestFindAllSymbolsAction(Reporter);
+  }
+
+private:
+  MockReporter *const Reporter;
 };
 
 class FindAllSymbolsTest : public ::testing::Test {
@@ -57,26 +94,20 @@ public:
     return Reporter.hasSymbol(Symbol);
   }
 
-  bool getSymbolExtraInfo(SymbolInfo &Symbol) {
-    return Reporter.getSymbolExtraInfo(&Symbol);
-  }
-
   bool runFindAllSymbols(StringRef Code) {
-    FindAllSymbols matcher(&Reporter);
-    clang::ast_matchers::MatchFinder MatchFinder;
-    matcher.registerMatchers(&MatchFinder);
-
     llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
         new vfs::InMemoryFileSystem);
     llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
     std::string FileName = "symbol.cc";
-    std::unique_ptr<clang::tooling::FrontendActionFactory> Factory =
-        clang::tooling::newFrontendActionFactory(&MatchFinder);
+
+    std::unique_ptr<clang::tooling::FrontendActionFactory> Factory(
+        new TestFindAllSymbolsActionFactory(&Reporter));
+
     tooling::ToolInvocation Invocation(
         {std::string("find_all_symbols"), std::string("-fsyntax-only"),
-         FileName},
+         std::string("-std=c++11"), FileName},
         Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
@@ -94,19 +125,6 @@ private:
   MockReporter Reporter;
 };
 
-SymbolInfo
-CreateSymbolInfo(StringRef Name, SymbolInfo::SymbolKind Type,
-                 const std::string FilePath, int LineNumber,
-                 const std::vector<SymbolInfo::Context> &Contexts) {
-  SymbolInfo Symbol;
-  Symbol.Name = Name;
-  Symbol.Type = Type;
-  Symbol.FilePath = FilePath;
-  Symbol.LineNumber = LineNumber;
-  Symbol.Contexts = Contexts;
-  return Symbol;
-}
-
 TEST_F(FindAllSymbolsTest, VariableSymbols) {
   static const char Code[] = R"(
       extern int xargc;
@@ -116,29 +134,18 @@ TEST_F(FindAllSymbolsTest, VariableSymbols) {
       })";
   runFindAllSymbols(Code);
 
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("xargc", SymbolInfo::Variable, HeaderName, 2, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.VariableInfos.getValue().Type);
-  }
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("SSSS", SymbolInfo::Variable, HeaderName, 4,
-                         {{SymbolInfo::Namespace, "na"}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("_Bool", Symbol.VariableInfos.getValue().Type);
-  }
-  {
-    SymbolInfo Symbol = CreateSymbolInfo(
-        "XXXX", SymbolInfo::Variable, HeaderName, 5,
-        {{SymbolInfo::Namespace, "nb"}, {SymbolInfo::Namespace, "na"}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("const long long *", Symbol.VariableInfos.getValue().Type);
-  }
+  SymbolInfo Symbol =
+      SymbolInfo("xargc", SymbolInfo::SymbolKind::Variable, HeaderName, 2, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("SSSS", SymbolInfo::SymbolKind::Variable, HeaderName, 4,
+                      {{SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("XXXX", SymbolInfo::SymbolKind::Variable, HeaderName, 5,
+                      {{SymbolInfo::ContextType::Namespace, "nb"},
+                       {SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
 }
 
 TEST_F(FindAllSymbolsTest, ExternCSymbols) {
@@ -151,19 +158,13 @@ TEST_F(FindAllSymbolsTest, ExternCSymbols) {
       })";
   runFindAllSymbols(Code);
 
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("C_Func", SymbolInfo::Function, HeaderName, 3, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.FunctionInfos.getValue().ReturnType);
-    EXPECT_TRUE(Symbol.FunctionInfos.getValue().ParameterTypes.empty());
-  }
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("C_struct", SymbolInfo::Class, HeaderName, 4, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-  }
+  SymbolInfo Symbol =
+      SymbolInfo("C_Func", SymbolInfo::SymbolKind::Function, HeaderName, 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol =
+      SymbolInfo("C_struct", SymbolInfo::SymbolKind::Class, HeaderName, 4, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
 }
 
 TEST_F(FindAllSymbolsTest, CXXRecordSymbols) {
@@ -182,16 +183,18 @@ TEST_F(FindAllSymbolsTest, CXXRecordSymbols) {
       )";
   runFindAllSymbols(Code);
 
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("Glob", SymbolInfo::Class, HeaderName, 2, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-  }
-  {
-    SymbolInfo Symbol = CreateSymbolInfo("A", SymbolInfo::Class, HeaderName, 6,
-                                         {{SymbolInfo::Namespace, "na"}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-  }
+  SymbolInfo Symbol =
+      SymbolInfo("Glob", SymbolInfo::SymbolKind::Class, HeaderName, 2, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("A", SymbolInfo::SymbolKind::Class, HeaderName, 6,
+                      {{SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("AAA", SymbolInfo::SymbolKind::Class, HeaderName, 7,
+                      {{SymbolInfo::ContextType::Record, "A"},
+                       {SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_FALSE(hasSymbol(Symbol));
 }
 
 TEST_F(FindAllSymbolsTest, CXXRecordSymbolsTemplate) {
@@ -212,11 +215,9 @@ TEST_F(FindAllSymbolsTest, CXXRecordSymbolsTemplate) {
       )";
   runFindAllSymbols(Code);
 
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("T_TEMP", SymbolInfo::Class, HeaderName, 3, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-  }
+  SymbolInfo Symbol =
+      SymbolInfo("T_TEMP", SymbolInfo::SymbolKind::Class, HeaderName, 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
 }
 
 TEST_F(FindAllSymbolsTest, FunctionSymbols) {
@@ -235,43 +236,23 @@ TEST_F(FindAllSymbolsTest, FunctionSymbols) {
       )";
   runFindAllSymbols(Code);
 
-  {
-    SymbolInfo Symbol = CreateSymbolInfo("gg", SymbolInfo::Class, HeaderName, 3,
-                                         {{SymbolInfo::Namespace, "na"}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.FunctionInfos.getValue().ReturnType);
-    EXPECT_EQ(1u, Symbol.FunctionInfos.getValue().ParameterTypes.size());
-    EXPECT_EQ("int", Symbol.FunctionInfos.getValue().ParameterTypes[0]);
-  }
-  {
-    SymbolInfo Symbol = CreateSymbolInfo("f", SymbolInfo::Class, HeaderName, 4,
-                                         {{SymbolInfo::Namespace, "na"}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.FunctionInfos.getValue().ReturnType);
-    EXPECT_EQ(1u, Symbol.FunctionInfos.getValue().ParameterTypes.size());
-    EXPECT_EQ("const int &", Symbol.FunctionInfos.getValue().ParameterTypes[0]);
-  }
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("SSSFFF", SymbolInfo::Class, HeaderName, 5,
-                         {{SymbolInfo::Namespace, "na"}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("void", Symbol.FunctionInfos.getValue().ReturnType);
-    EXPECT_TRUE(Symbol.FunctionInfos.getValue().ParameterTypes.empty());
-  }
-  {
-    SymbolInfo Symbol = CreateSymbolInfo(
-        "fun", SymbolInfo::Class, HeaderName, 10,
-        {{SymbolInfo::Namespace, "nb"}, {SymbolInfo::Namespace, "na"}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("void", Symbol.FunctionInfos.getValue().ReturnType);
-    EXPECT_EQ(1u, Symbol.FunctionInfos.getValue().ParameterTypes.size());
-    EXPECT_EQ("T", Symbol.FunctionInfos.getValue().ParameterTypes[0]);
-  }
+  SymbolInfo Symbol =
+      SymbolInfo("gg", SymbolInfo::SymbolKind::Function, HeaderName, 3,
+                 {{SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("f", SymbolInfo::SymbolKind::Function, HeaderName, 4,
+                      {{SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("SSSFFF", SymbolInfo::SymbolKind::Function, HeaderName, 5,
+                      {{SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("fun", SymbolInfo::SymbolKind::Function, HeaderName, 10,
+                      {{SymbolInfo::ContextType::Namespace, "nb"},
+                       {SymbolInfo::ContextType::Namespace, "na"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
 }
 
 TEST_F(FindAllSymbolsTest, NamespaceTest) {
@@ -283,49 +264,31 @@ TEST_F(FindAllSymbolsTest, NamespaceTest) {
       )";
   runFindAllSymbols(Code);
 
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("X1", SymbolInfo::Variable, HeaderName, 2, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.VariableInfos.getValue().Type);
-  }
-  {
-    SymbolInfo Symbol = CreateSymbolInfo("X2", SymbolInfo::Variable, HeaderName,
-                                         3, {{SymbolInfo::Namespace, ""}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.VariableInfos.getValue().Type);
-  }
-  {
-    SymbolInfo Symbol = CreateSymbolInfo(
-        "X3", SymbolInfo::Variable, HeaderName, 4,
-        {{SymbolInfo::Namespace, ""}, {SymbolInfo::Namespace, ""}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.VariableInfos.getValue().Type);
-  }
-  {
-    SymbolInfo Symbol = CreateSymbolInfo(
-        "X4", SymbolInfo::Variable, HeaderName, 5,
-        {{SymbolInfo::Namespace, "nb"}, {SymbolInfo::Namespace, ""}});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("int", Symbol.VariableInfos.getValue().Type);
-  }
+  SymbolInfo Symbol =
+      SymbolInfo("X1", SymbolInfo::SymbolKind::Variable, HeaderName, 2, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("X2", SymbolInfo::SymbolKind::Variable, HeaderName, 3,
+                      {{SymbolInfo::ContextType::Namespace, ""}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("X3", SymbolInfo::SymbolKind::Variable, HeaderName, 4,
+                      {{SymbolInfo::ContextType::Namespace, ""},
+                       {SymbolInfo::ContextType::Namespace, ""}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("X4", SymbolInfo::SymbolKind::Variable, HeaderName, 5,
+                      {{SymbolInfo::ContextType::Namespace, "nb"},
+                       {SymbolInfo::ContextType::Namespace, ""}});
+  EXPECT_TRUE(hasSymbol(Symbol));
 }
 
 TEST_F(FindAllSymbolsTest, DecayedTypeTest) {
   static const char Code[] = "void DecayedFunc(int x[], int y[10]) {}";
   runFindAllSymbols(Code);
-  SymbolInfo Symbol =
-      CreateSymbolInfo("DecayedFunc", SymbolInfo::Class, HeaderName, 1, {});
+  SymbolInfo Symbol = SymbolInfo(
+      "DecayedFunc", SymbolInfo::SymbolKind::Function, HeaderName, 1, {});
   EXPECT_TRUE(hasSymbol(Symbol));
-  getSymbolExtraInfo(Symbol);
-  EXPECT_EQ("void", Symbol.FunctionInfos.getValue().ReturnType);
-  EXPECT_EQ(2u, Symbol.FunctionInfos.getValue().ParameterTypes.size());
-  EXPECT_EQ("int *", Symbol.FunctionInfos.getValue().ParameterTypes[0]);
-  EXPECT_EQ("int *", Symbol.FunctionInfos.getValue().ParameterTypes[1]);
 }
 
 TEST_F(FindAllSymbolsTest, CTypedefTest) {
@@ -336,28 +299,83 @@ TEST_F(FindAllSymbolsTest, CTypedefTest) {
       )";
   runFindAllSymbols(Code);
 
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("size_t_", SymbolInfo::TypedefName, HeaderName, 2, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("unsigned int",
-              Symbol.TypedefNameInfos.getValue().UnderlyingType);
-  }
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("X", SymbolInfo::TypedefName, HeaderName, 3, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("struct X", Symbol.TypedefNameInfos.getValue().UnderlyingType);
-  }
-  {
-    SymbolInfo Symbol =
-        CreateSymbolInfo("XX", SymbolInfo::TypedefName, HeaderName, 4, {});
-    EXPECT_TRUE(hasSymbol(Symbol));
-    getSymbolExtraInfo(Symbol);
-    EXPECT_EQ("X", Symbol.TypedefNameInfos.getValue().UnderlyingType);
-  }
+  SymbolInfo Symbol = SymbolInfo("size_t_", SymbolInfo::SymbolKind::TypedefName,
+                                 HeaderName, 2, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol =
+      SymbolInfo("X", SymbolInfo::SymbolKind::TypedefName, HeaderName, 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol =
+      SymbolInfo("XX", SymbolInfo::SymbolKind::TypedefName, HeaderName, 4, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+}
+
+TEST_F(FindAllSymbolsTest, EnumTest) {
+  static const char Code[] = R"(
+      enum Glob_E { G1, G2 };
+      enum class Altitude { high='h', low='l'};
+      enum { A1, A2 };
+      class A {
+      public:
+        enum A_ENUM { X1, X2 };
+      };
+      )";
+  runFindAllSymbols(Code);
+
+  SymbolInfo Symbol =
+      SymbolInfo("Glob_E", SymbolInfo::SymbolKind::EnumDecl, HeaderName, 2, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol =
+      SymbolInfo("G1", SymbolInfo::SymbolKind::EnumConstantDecl, HeaderName, 2,
+                 {{SymbolInfo::ContextType::EnumDecl, "Glob_E"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol =
+      SymbolInfo("G2", SymbolInfo::SymbolKind::EnumConstantDecl, HeaderName, 2,
+                 {{SymbolInfo::ContextType::EnumDecl, "Glob_E"}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("Altitude", SymbolInfo::SymbolKind::EnumDecl, HeaderName,
+                      3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+  Symbol =
+      SymbolInfo("high", SymbolInfo::SymbolKind::EnumConstantDecl, HeaderName,
+                 3, {{SymbolInfo::ContextType::EnumDecl, "Altitude"}});
+  EXPECT_FALSE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("A1", SymbolInfo::SymbolKind::EnumConstantDecl,
+                      HeaderName, 4, {{SymbolInfo::ContextType::EnumDecl, ""}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+  Symbol = SymbolInfo("A2", SymbolInfo::SymbolKind::EnumConstantDecl,
+                      HeaderName, 4, {{SymbolInfo::ContextType::EnumDecl, ""}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+  Symbol = SymbolInfo("", SymbolInfo::SymbolKind::EnumDecl, HeaderName, 4, {});
+  EXPECT_FALSE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("A_ENUM", SymbolInfo::SymbolKind::EnumDecl, HeaderName, 7,
+                      {{SymbolInfo::ContextType::Record, "A"}});
+  EXPECT_FALSE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("X1", SymbolInfo::SymbolKind::EnumDecl, HeaderName, 7,
+                      {{SymbolInfo::ContextType::EnumDecl, "A_ENUM"},
+                       {SymbolInfo::ContextType::Record, "A"}});
+  EXPECT_FALSE(hasSymbol(Symbol));
+}
+
+TEST_F(FindAllSymbolsTest, IWYUPrivatePragmaTest) {
+  static const char Code[] = R"(
+    // IWYU pragma: private, include "bar.h"
+    struct Bar {
+    };
+  )";
+  runFindAllSymbols(Code);
+
+  SymbolInfo Symbol =
+      SymbolInfo("Bar", SymbolInfo::SymbolKind::Class, "bar.h", 3, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
 }
 
 } // namespace find_all_symbols

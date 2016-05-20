@@ -16,12 +16,9 @@ using namespace clang::ast_matchers;
 
 namespace clang {
 namespace tidy {
+namespace readability {
 
 namespace {
-
-AST_MATCHER_P(CastExpr, hasCastKind, CastKind, Kind) {
-  return Node.getCastKind() == Kind;
-}
 
 AST_MATCHER(Stmt, isMacroExpansion) {
   SourceManager &SM = Finder->getASTContext().getSourceManager();
@@ -415,5 +412,6 @@ void ImplicitBoolCastCheck::handleCastFromBool(
   }
 }
 
+} // namespace readability
 } // namespace tidy
 } // namespace clang

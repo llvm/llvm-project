@@ -23,6 +23,8 @@ struct A
     int i_;
 };
 
+void operator&(A const&) {}
+
 std::istream& operator>>(std::istream& is, A& a)
 {
     return is >> a.d_ >> a.i_;

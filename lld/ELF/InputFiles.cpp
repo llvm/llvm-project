@@ -27,6 +27,15 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
+// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+std::string elf::getFilename(InputFile *F) {
+  if (!F)
+    return "(internal)";
+  if (!F->ArchiveName.empty())
+    return (F->ArchiveName + "(" + F->getName() + ")").str();
+  return F->getName();
+}
+
 template <class ELFT>
 static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   std::error_code EC;
@@ -105,7 +114,9 @@ ArrayRef<SymbolBody *> elf::ObjectFile<ELFT>::getSymbols() {
 }
 
 template <class ELFT> uint32_t elf::ObjectFile<ELFT>::getMipsGp0() const {
-  if (MipsReginfo)
+  if (ELFT::Is64Bits && MipsOptions && MipsOptions->Reginfo)
+    return MipsOptions->Reginfo->ri_gp_value;
+  if (!ELFT::Is64Bits && MipsReginfo && MipsReginfo->Reginfo)
     return MipsReginfo->Reginfo->ri_gp_value;
   return 0;
 }
@@ -159,7 +170,7 @@ template <class ELFT> static bool shouldMerge(const typename ELFT::Shdr &Sec) {
   if (!EntSize || Sec.sh_size % EntSize)
     fatal("SHF_MERGE section size must be a multiple of sh_entsize");
 
-  // Don't try to merge if the aligment is larger than the sh_entsize and this
+  // Don't try to merge if the alignment is larger than the sh_entsize and this
   // is not SHF_STRINGS.
   //
   // Since this is not a SHF_STRINGS, we would need to pad after every entity.
@@ -278,11 +289,17 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   if (Config->StripDebug && Name.startswith(".debug"))
     return &InputSection<ELFT>::Discarded;
 
-  // A MIPS object file has a special section that contains register
-  // usage info, which needs to be handled by the linker specially.
-  if (Config->EMachine == EM_MIPS && Name == ".reginfo") {
-    MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
-    return MipsReginfo.get();
+  // A MIPS object file has a special sections that contain register
+  // usage info, which need to be handled by the linker specially.
+  if (Config->EMachine == EM_MIPS) {
+    if (Name == ".reginfo") {
+      MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
+      return MipsReginfo.get();
+    }
+    if (Name == ".MIPS.options") {
+      MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
+      return MipsOptions.get();
+    }
   }
 
   // We dont need special handling of .eh_frame sections if relocatable
@@ -372,9 +389,16 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
   if (!Seen.insert(C.getChildOffset()).second)
     return MemoryBufferRef();
 
-  return check(C.getMemoryBufferRef(),
-               "could not get the buffer for the member defining symbol " +
-                   Sym->getName());
+  MemoryBufferRef Ret =
+      check(C.getMemoryBufferRef(),
+            "could not get the buffer for the member defining symbol " +
+                Sym->getName());
+
+  if (C.getParent()->isThin() && Driver->Cpio)
+    Driver->Cpio->append(relativeToRoot(check(C.getFullName())),
+                         Ret.getBuffer());
+
+  return Ret;
 }
 
 template <class ELFT>

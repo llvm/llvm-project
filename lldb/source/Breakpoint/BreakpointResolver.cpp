@@ -75,6 +75,7 @@ BreakpointResolver::SetSCMatchesByLine (SearchFilter &filter, SymbolContextList 
         bool first_entry = true;
         
         FileSpec match_file_spec;
+        FileSpec match_original_file_spec;
         uint32_t closest_line_number = UINT32_MAX;
 
         // Pull out the first entry, and all the others that match its file spec, and stuff them in the tmp list.
@@ -86,11 +87,13 @@ BreakpointResolver::SetSCMatchesByLine (SearchFilter &filter, SymbolContextList 
             if (first_entry)
             {
                 match_file_spec = sc.line_entry.file;
+                match_original_file_spec = sc.line_entry.original_file;
                 matches = true;
                 first_entry = false;
             }
             else
-                matches = (sc.line_entry.file == match_file_spec);
+                matches = ((sc.line_entry.file == match_file_spec) ||
+                           (sc.line_entry.original_file == match_original_file_spec));
             
             if (matches)
             {

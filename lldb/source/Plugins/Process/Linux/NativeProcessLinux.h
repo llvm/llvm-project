@@ -19,7 +19,6 @@
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
@@ -144,7 +143,6 @@ namespace process_linux {
 
         LazyBool m_supports_mem_region;
         std::vector<MemoryRegionInfo> m_mem_region_cache;
-        Mutex m_mem_region_cache_mutex;
 
         lldb::tid_t m_pending_notification_tid;
 

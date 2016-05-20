@@ -15,14 +15,16 @@
 
 namespace clang {
 namespace tidy {
-namespace lexer_utils {
+namespace utils {
+namespace lexer {
 
 // Returns previous non-comment token skipping over any comment text or
 // tok::unknown if not found.
 Token getPreviousNonCommentToken(const ASTContext &Context,
                                  SourceLocation Location);
 
-} // namespace lexer_utils
+} // namespace lexer
+} // namespace utils
 } // namespace tidy
 } // namespace clang
 

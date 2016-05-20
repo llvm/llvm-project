@@ -238,6 +238,7 @@ def no_copy_dt_needed_entries : Flag<["--"], "no-copy-dt-needed-entries">,
                                 Alias<no_add_needed>;
 def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
+def no_undefined_version : Flag<["--", "-"], "no-undefined-version">;
 def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
 def rpath_link : Separate<["--", "-"], "rpath-link">;
@@ -255,6 +256,8 @@ def alias_version_script_version_script : Joined<["--"], "version-script=">, Ali
 // LTO-related options.
 def lto_jobs : Joined<["--"], "lto-jobs=">,
   HelpText<"Number of threads to run codegen">;
+def lto_newpm_passes : Joined<["--"], "lto-newpm-passes=">,
+  HelpText<"Passes to run during LTO">;
 def disable_verify : Flag<["-"], "disable-verify">;
 def mllvm : Separate<["-"], "mllvm">;
 def save_temps : Flag<["-"], "save-temps">;

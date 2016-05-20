@@ -19,6 +19,7 @@
   volume    = {1033},
   year      = {1996},
   isbn      = {3-540-60765-X},
+	doi = "10.1007/BFb0014196",
 }
 
 @inproceedings{Beletska2009,
@@ -49,7 +50,8 @@
     publisher = {SIAM},
     title = {Depth-First Search and Linear Graph Algorithms},
     volume = {1},
-    year = {1972}
+    year = {1972},
+    doi = "10.1137/0201010",
 }
 
 @TechReport{ Omega_calc,
@@ -113,6 +115,7 @@
   pages =        {23--53},
   OPTnote =      {},
   OPTannote =    {},
+	doi = "10.1007/BF01407931",
 }
 
 @INPROCEEDINGS{BouletRe98,
@@ -140,6 +143,7 @@
   the data movements its program generates and thus find a good data
   distribution. Our method is based on parametric polyhedral
   computations. It can be applied to a large class of regular codes.},
+    doi = "10.1007/BFb0057861",
 }
 
 @INPROCEEDINGS {Verdoolaege2005experiences,
@@ -188,12 +192,13 @@
     title = {{Short rational generating functions for lattice point
         problems}},
     author = {Alexander Barvinok and Kevin Woods},
+    doi = "10.1090/S0894-0347-03-00428-4",
 }
 
 @misc{barvinok-0.22,
   author = {Sven Verdoolaege},
   title = {{\texttt{barvinok}}, version 0.22},
-  howpublished = {Available from \url{http://freshmeat.net/projects/barvinok/}},
+  howpublished = {Available from \url{http://barvinok.gforge.inria.fr/}},
   year = 2006
 }
 
@@ -206,6 +211,7 @@
     series = "Lecture Notes in Computer Science",
     Volume = 3064,
     Pages = "244-255",
+    doi = "10.1007/978-3-540-25960-2_19",
 }
 
 @TechReport{Feautrier02,
@@ -225,6 +231,7 @@
     year = "1992",
     month = dec,
     url = "citeseer.nj.nec.com/article/feautrier92some.html",
+	doi = "10.1007/BF01379404",
 }
 
 @misc{Bygde2010licentiate,
@@ -288,6 +295,7 @@ pages={133-151},
 year={1976},
 publisher={Springer-Verlag},
 ignore={ },
+	doi = "10.1007/BF00268497",
 }
 
 @PhdThesis{Verhaegh1995PhD,
@@ -302,7 +310,8 @@ ignore={ },
   TITLE = {Memory Optimization by Counting Points in Integer Transformations of Parametric Polytopes},
   BOOKTITLE = {{P}roceedings of the {I}nternational {C}onference on {C}ompilers, {A}rchitectures, and {S}ynthesis for {E}mbedded Systems, CASES 2006, {S}eoul, {K}orea},
   month = oct,
-  YEAR = {2006}
+  YEAR = {2006},
+  doi = {10.1145/1176760.1176771},
 }
 
 @misc{DeSmet2010personal,
@@ -310,4 +319,167 @@ ignore={ },
     title = "personal communication",
     year = 2010,
     month = apr,
+}
+
+@inproceedings{Verdoolaege2015impact,
+ author = {Verdoolaege, Sven},
+ title = {Integer Set Coalescing},
+ booktitle = {Proceedings of the 5th International Workshop on
+	Polyhedral Compilation Techniques},
+ year   = 2015,
+ month  = Jan,
+ address = {Amsterdam, The Netherlands},
+ abstract = {
+In polyhedral compilation, various core concepts such as the set
+of statement instances, the access relations, the dependences and
+the schedule are represented or approximated using sets and binary
+relations of sequences of integers bounded by (quasi-)affine constraints.
+When these sets and relations are represented in disjunctive normal form,
+it is important to keep the number of disjuncts small, both for efficiency
+and to improve the computation of transitive closure overapproximations
+and AST generation.  This paper describes the set coalescing operation
+of isl that looks for opportunities to combine several disjuncts into
+a single disjunct without affecting the elements in the set.  The main
+purpose of the paper is to explain the various heuristics and to prove
+their correctness.
+ },
+	doi = "10.13140/2.1.1313.6968",
+}
+
+@misc{Verdoolaege2016tutorial,
+	author = "Sven Verdoolaege",
+	title = "Presburger Formulas and Polyhedral Compilation",
+	year = 2016,
+	doi = "10.13140/RG.2.1.1174.6323",
+}
+
+@inproceedings{Verdoolaege2009equivalence,
+	author = "Sven Verdoolaege and Gerda Janssens and Maurice Bruynooghe",
+	title = "Equivalence checking of static affine programs using widening to handle recurrences",
+	booktitle = "Computer Aided Verification 21",
+	month = Jun,
+	year = 2009,
+	pages = "599--613",
+	publisher = "Springer",
+	doi = "10.1007/978-3-642-02658-4_44",
+}
+
+@incollection{Verdoolaege2010isl,
+   author = {Verdoolaege, Sven},
+   title = {isl: An Integer Set Library for the Polyhedral Model},
+   booktitle = {Mathematical Software - ICMS 2010},
+   series = {Lecture Notes in Computer Science},
+   editor = {Fukuda, Komei and Hoeven, Joris and Joswig, Michael and Takayama, Nobuki},
+   publisher = {Springer},
+   isbn = {},
+   pages = {299-302},
+   volume = {6327},
+   year = {2010},
+   doi = {10.1007/978-3-642-15582-6_49},
+}
+
+@incollection{Verdoolaege2010networks,
+  author = "Verdoolaege, Sven",
+  title = "Polyhedral process networks",
+  editor = "Bhattacharrya, Shuvra and Deprettere, Ed and Leupers, Rainer and Takala, Jarmo",
+  publisher = "Springer",
+  year = "2010",
+  doi = "10.1007/978-1-4419-6345-1\_{}33",
+  pages = "931--965",
+  booktitle = "Handbook of Signal Processing Systems",
+  url = "https://lirias.kuleuven.be/handle/123456789/235370",
+	doi = "10.1007/978-1-4419-6345-1_33",
+}
+
+@InProceedings{Verdoolaege2011iscc,
+  author = 	 {Sven Verdoolaege},
+  title = 	 {Counting Affine Calculator and Applications},
+  booktitle = { First International Workshop on Polyhedral Compilation Techniques (IMPACT'11)},
+  address = { Chamonix, France},
+  month = 	 apr,
+  year = 	 {2011},
+	doi = "10.13140/RG.2.1.2959.5601",
+}
+
+@inproceedings{Verdoolaege2011closure,
+ author = {Verdoolaege, Sven and Cohen, Albert and Beletska, Anna},
+ title = {Transitive Closures of Affine Integer Tuple Relations and Their Overapproximations},
+ booktitle = {Proceedings of the 18th International Conference on Static Analysis},
+ series = {SAS'11},
+ year = {2011},
+ isbn = {978-3-642-23701-0},
+ location = {Venice, Italy},
+ pages = {216--232},
+ numpages = {17},
+ acmid = {2041570},
+ publisher = {Springer-Verlag},
+ address = {Berlin, Heidelberg},
+ doi = "10.1007/978-3-642-23702-7_18",
+}
+
+@article{Verdoolaege2013PPCG,
+  title={Polyhedral parallel code generation for {CUDA}},
+  author={Verdoolaege, Sven and Juega, Juan Carlos and Cohen, Albert and G{\'o}mez, Jos{\'e} Ignacio and Tenllado, Christian and Catthoor, Francky},
+  journal = {ACM Trans. Archit. Code Optim.},
+  volume={9},
+  number={4},
+  pages={54},
+  year={2013},
+  publisher={ACM},
+    doi = {10.1145/2400682.2400713},
+}
+
+@inproceedings{Verdoolaege2014impact,
+ author = {Verdoolaege, Sven and Guelton, Serge and
+	Grosser, Tobias and Cohen, Albert},
+ title = {Schedule Trees},
+ booktitle = {Proceedings of the 4th International Workshop on Polyhedral Compilation Techniques},
+ year   = 2014,
+ month  = Jan,
+ address = {Vienna, Austria},
+ url = {http://impact.gforge.inria.fr/impact2014/papers/impact2014-verdoolaege.pdf},
+ abstract = {
+ Schedules in the polyhedral model, both those that represent the original
+execution order and those produced by scheduling algorithms, naturally have the
+form of a tree. Generic schedule representations proposed in the literature
+encode this tree structure such that it is only implicitly available.
+Following the internal representation of isl , we propose to represent
+schedules as explicit trees and further extend the concept by introducing
+different kinds of nodes. We compare our schedule trees to other
+representations in detail and illustrate how they have been successfully used
+to simplify the implementation of a non-trivial polyhedral compiler.
+ },
+	DOI = {10.13140/RG.2.1.4475.6001},
+}
+
+@article{Grosser2015AST,
+	author = "Tobias Grosser and Sven Verdoolaege and Albert Cohen",
+	title = "Polyhedral {AST} generation is more than scanning polyhedra",
+	journal = "ACM Transactions on Programming Languages and Systems",
+ issue_date = {August 2015},
+ volume = {37},
+ number = {4},
+ month = jul,
+ year = {2015},
+ issn = {0164-0925},
+ pages = {12:1--12:50},
+ articleno = {12},
+ numpages = {50},
+ url = {http://doi.acm.org/10.1145/2743016},
+ doi = {10.1145/2743016},
+ acmid = {2743016},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {Polyhedral compilation, Presburger relations, code generation, index set splitting, unrolling},
+}
+
+@inproceedings{Verdoolaege2016reordering,
+	author = {Sven Verdoolaege and Albert Cohen},
+	title = "Live-Range Reordering",
+ booktitle = {Proceedings of the sixth International Workshop on
+	Polyhedral Compilation Techniques},
+ year   = 2016,
+ month  = Jan,
+ address = {Prague, Czech Republic},
+	doi = "10.13140/RG.2.1.3272.9680",
 }

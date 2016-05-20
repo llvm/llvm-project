@@ -15,11 +15,11 @@
 #include <functional>
 #include <sstream>
 
+using namespace clang::ast_matchers;
+
 namespace clang {
 namespace tidy {
 namespace readability {
-
-using namespace ast_matchers;
 
 namespace {
 

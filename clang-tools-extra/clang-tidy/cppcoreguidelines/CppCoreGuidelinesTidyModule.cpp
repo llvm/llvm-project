@@ -10,7 +10,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../misc/AssignOperatorSignatureCheck.h"
+#include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "InterfacesGlobalInitCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
@@ -53,7 +53,7 @@ public:
         "cppcoreguidelines-pro-type-union-access");
     CheckFactories.registerCheck<ProTypeVarargCheck>(
         "cppcoreguidelines-pro-type-vararg");
-    CheckFactories.registerCheck<misc::AssignOperatorSignatureCheck>(
+    CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
   }
 };

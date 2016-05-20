@@ -12,10 +12,7 @@
 
 namespace lld {
 namespace elf {
-
-template <class ELFT> class SymbolTable;
-
-template <class ELFT> void doIcf(SymbolTable<ELFT> *);
+template <class ELFT> void doIcf();
 }
 }
 

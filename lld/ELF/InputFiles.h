@@ -63,6 +63,9 @@ private:
   const Kind FileKind;
 };
 
+// Returns "(internal)", "foo.a(bar.o)" or "baz.o".
+std::string getFilename(InputFile *F);
+
 template <typename ELFT> class ELFFileBase : public InputFile {
 public:
   typedef typename ELFT::Shdr Elf_Shdr;
@@ -162,6 +165,8 @@ private:
 
   // MIPS .reginfo section defined by this file.
   std::unique_ptr<MipsReginfoInputSection<ELFT>> MipsReginfo;
+  // MIPS .MIPS.options section defined by this file.
+  std::unique_ptr<MipsOptionsInputSection<ELFT>> MipsOptions;
 
   llvm::BumpPtrAllocator Alloc;
   llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;

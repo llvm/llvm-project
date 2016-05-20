@@ -20,6 +20,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
@@ -33,7 +34,7 @@ namespace {
 class USRLocFindingASTVisitor
     : public clang::RecursiveASTVisitor<USRLocFindingASTVisitor> {
 public:
-  explicit USRLocFindingASTVisitor(const std::string USR) : USR(USR) {
+  explicit USRLocFindingASTVisitor(StringRef USR, StringRef PrevName) : USR(USR), PrevName(PrevName) {
   }
 
   // Declaration visitors:
@@ -41,6 +42,47 @@ public:
   bool VisitNamedDecl(const NamedDecl *Decl) {
     if (getUSRForDecl(Decl) == USR) {
       LocationsFound.push_back(Decl->getLocation());
+    }
+    return true;
+  }
+
+  bool VisitVarDecl(clang::VarDecl *Decl) {
+    clang::QualType Type = Decl->getType();
+    const clang::RecordDecl *RecordDecl = Type->getPointeeCXXRecordDecl();
+    if (RecordDecl) {
+      if (getUSRForDecl(RecordDecl) == USR) {
+        // The declaration refers to a type that is to be renamed.
+        LocationsFound.push_back(Decl->getTypeSpecStartLoc());
+      }
+    }
+    return true;
+  }
+
+  bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
+    const ASTContext &Context = ConstructorDecl->getASTContext();
+    for (clang::CXXConstructorDecl::init_const_iterator it = ConstructorDecl->init_begin(); it != ConstructorDecl->init_end(); ++it) {
+      const clang::CXXCtorInitializer* Initializer = *it;
+      if (Initializer->getSourceOrder() == -1) {
+        // Ignore implicit initializers.
+        continue;
+      }
+
+      if (const clang::FieldDecl *FieldDecl = Initializer->getAnyMember()) {
+        if (getUSRForDecl(FieldDecl) == USR) {
+          // The initializer refers to a field that is to be renamed.
+          SourceLocation Location = Initializer->getSourceLocation();
+          StringRef TokenName = Lexer::getSourceText(CharSourceRange::getTokenRange(Location), Context.getSourceManager(), Context.getLangOpts());
+          if (TokenName == PrevName) {
+            // The token of the source location we find actually has the old name.
+            LocationsFound.push_back(Initializer->getSourceLocation());
+          }
+        }
+      }
+    }
+
+    if (getUSRForDecl(ConstructorDecl) == USR) {
+      // This takes care of the class name part of a non-inline ctor definition.
+      LocationsFound.push_back(ConstructorDecl->getLocStart());
     }
     return true;
   }
@@ -87,13 +129,16 @@ private:
 
   // All the locations of the USR were found.
   const std::string USR;
+  // Old name that is renamed.
+  const std::string PrevName;
   std::vector<clang::SourceLocation> LocationsFound;
 };
 } // namespace
 
-std::vector<SourceLocation> getLocationsOfUSR(const std::string USR,
+std::vector<SourceLocation> getLocationsOfUSR(StringRef USR,
+                                              StringRef PrevName,
                                               Decl *Decl) {
-  USRLocFindingASTVisitor visitor(USR);
+  USRLocFindingASTVisitor visitor(USR, PrevName);
 
   visitor.TraverseDecl(Decl);
   return visitor.getLocationsFound();

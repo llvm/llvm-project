@@ -108,7 +108,7 @@ class BreakpointConditionsTestCase(TestBase):
         if arch in ['x86_64', 'i386']:
             self.runCmd("breakpoint modify -c ($eax&&i)")
         elif arch in ['aarch64']:
-            self.runCmd("breakpoint modify -c ($x1&&i)")
+            self.runCmd("breakpoint modify -c ($x0&&i)")
         elif arch in ['arm']:
             self.runCmd("breakpoint modify -c ($r0&&i)")
         elif re.match("mips",arch):

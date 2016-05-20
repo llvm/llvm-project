@@ -34,14 +34,22 @@ static cl::opt<bool> IgnoreIntegerWrapping(
 // The maximal number of basic sets we allow during the construction of a
 // piecewise affine function. More complex ones will result in very high
 // compile time.
-static int const MaxConjunctsInPwAff = 100;
+static int const MaxDisjunctionsInPwAff = 100;
 
 // The maximal number of bits for which a zero-extend is modeled precisely.
 static unsigned const MaxZextSmallBitWidth = 7;
 
+// The maximal number of bits for which a truncate is modeled precisely.
+static unsigned const MaxTruncateSmallBitWidth = 31;
+
 /// @brief Return true if a zero-extend from @p Width bits is precisely modeled.
 static bool isPreciseZeroExtend(unsigned Width) {
   return Width <= MaxZextSmallBitWidth;
+}
+
+/// @brief Return true if a truncate from @p Width bits is precisely modeled.
+static bool isPreciseTruncate(unsigned Width) {
+  return Width <= MaxTruncateSmallBitWidth;
 }
 
 /// @brief Add the number of basic sets in @p Domain to @p User
@@ -64,14 +72,14 @@ static __isl_give PWACtx copyPWACtx(const __isl_keep PWACtx &PWAC) {
   return std::make_pair(isl_pw_aff_copy(PWAC.first), isl_set_copy(PWAC.second));
 }
 
-/// @brief Determine if @p PWAC is to complex to continue
+/// @brief Determine if @p PWAC is too complex to continue.
 ///
 /// Note that @p PWAC will be "free" (deallocated) if this function returns
 /// true, but not if this function returns false.
-static bool isToComplex(PWACtx &PWAC) {
+static bool isTooComplex(PWACtx &PWAC) {
   unsigned NumBasicSets = 0;
   isl_pw_aff_foreach_piece(PWAC.first, addNumBasicSets, &NumBasicSets);
-  if (NumBasicSets <= MaxConjunctsInPwAff)
+  if (NumBasicSets <= MaxDisjunctionsInPwAff)
     return false;
   freePWACtx(PWAC);
   return true;
@@ -125,6 +133,16 @@ SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
 SCEVAffinator::~SCEVAffinator() {
   for (auto &CachedPair : CachedExpressions)
     freePWACtx(CachedPair.second);
+}
+
+void SCEVAffinator::interpretAsUnsigned(__isl_keep PWACtx &PWAC,
+                                        unsigned Width) {
+  auto *PWA = PWAC.first;
+  auto *NonNegDom = isl_pw_aff_nonneg_set(isl_pw_aff_copy(PWA));
+  auto *NonNegPWA = isl_pw_aff_intersect_domain(isl_pw_aff_copy(PWA),
+                                                isl_set_copy(NonNegDom));
+  auto *ExpPWA = getWidthExpValOnDomain(Width, isl_set_complement(NonNegDom));
+  PWAC.first = isl_pw_aff_union_add(NonNegPWA, isl_pw_aff_add(PWA, ExpPWA));
 }
 
 void SCEVAffinator::takeNonNegativeAssumption(PWACtx &PWAC) {
@@ -281,7 +299,33 @@ __isl_give PWACtx SCEVAffinator::visitConstant(const SCEVConstant *Expr) {
 
 __isl_give PWACtx
 SCEVAffinator::visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-  llvm_unreachable("SCEVTruncateExpr not yet supported");
+  // Truncate operations are basically modulo operations, thus we can
+  // model them that way. However, for large types we assume the operand
+  // to fit in the new type size instead of introducing a modulo with a very
+  // large constant.
+
+  auto *Op = Expr->getOperand();
+  auto OpPWAC = visit(Op);
+
+  unsigned Width = TD.getTypeSizeInBits(Expr->getType());
+  bool Precise = isPreciseTruncate(Width);
+
+  if (Precise) {
+    OpPWAC.first = addModuloSemantic(OpPWAC.first, Expr->getType());
+    return OpPWAC;
+  }
+
+  auto *Dom = isl_pw_aff_domain(isl_pw_aff_copy(OpPWAC.first));
+  auto *ExpPWA = getWidthExpValOnDomain(Width - 1, Dom);
+  auto *GreaterDom =
+      isl_pw_aff_ge_set(isl_pw_aff_copy(OpPWAC.first), isl_pw_aff_copy(ExpPWA));
+  auto *SmallerDom =
+      isl_pw_aff_lt_set(isl_pw_aff_copy(OpPWAC.first), isl_pw_aff_neg(ExpPWA));
+  auto *OutOfBoundsDom = isl_set_union(SmallerDom, GreaterDom);
+  OpPWAC.second = isl_set_union(OpPWAC.second, isl_set_copy(OutOfBoundsDom));
+  S->recordAssumption(UNSIGNED, OutOfBoundsDom, DebugLoc(), AS_RESTRICTION, BB);
+
+  return OpPWAC;
 }
 
 __isl_give PWACtx
@@ -342,8 +386,7 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
 
   auto OpPWAC = visit(Op);
   if (OpCanWrap)
-    OpPWAC.first =
-        addModuloSemantic(OpPWAC.first, Expr->getOperand()->getType());
+    OpPWAC.first = addModuloSemantic(OpPWAC.first, Op->getType());
 
   // If the width is to big we assume the negative part does not occur.
   if (!Precise) {
@@ -353,12 +396,7 @@ SCEVAffinator::visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
 
   // If the width is small build the piece for the non-negative part and
   // the one for the negative part and unify them.
-  auto *NonNegDom = isl_pw_aff_nonneg_set(isl_pw_aff_copy(OpPWAC.first));
-  auto *NonNegPWA = isl_pw_aff_intersect_domain(isl_pw_aff_copy(OpPWAC.first),
-                                                isl_set_copy(NonNegDom));
-  auto *ExpPWA = getWidthExpValOnDomain(Width, isl_set_complement(NonNegDom));
-  OpPWAC.first = isl_pw_aff_add(OpPWAC.first, ExpPWA);
-  OpPWAC.first = isl_pw_aff_union_add(NonNegPWA, OpPWAC.first);
+  interpretAsUnsigned(OpPWAC, Width);
   return OpPWAC;
 }
 
@@ -373,7 +411,7 @@ __isl_give PWACtx SCEVAffinator::visitAddExpr(const SCEVAddExpr *Expr) {
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     combine(Sum, visit(Expr->getOperand(i)), isl_pw_aff_add);
-    if (isToComplex(Sum))
+    if (isTooComplex(Sum))
       return std::make_pair(nullptr, nullptr);
   }
 
@@ -385,7 +423,7 @@ __isl_give PWACtx SCEVAffinator::visitMulExpr(const SCEVMulExpr *Expr) {
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     combine(Prod, visit(Expr->getOperand(i)), isl_pw_aff_mul);
-    if (isToComplex(Prod))
+    if (isTooComplex(Prod))
       return std::make_pair(nullptr, nullptr);
   }
 
@@ -437,7 +475,7 @@ __isl_give PWACtx SCEVAffinator::visitSMaxExpr(const SCEVSMaxExpr *Expr) {
 
   for (int i = 1, e = Expr->getNumOperands(); i < e; ++i) {
     combine(Max, visit(Expr->getOperand(i)), isl_pw_aff_max);
-    if (isToComplex(Max))
+    if (isTooComplex(Max))
       return std::make_pair(nullptr, nullptr);
   }
 

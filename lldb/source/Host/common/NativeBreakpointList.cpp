@@ -17,8 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-NativeBreakpointList::NativeBreakpointList () :
-    m_mutex (Mutex::eMutexTypeRecursive)
+NativeBreakpointList::NativeBreakpointList() : m_mutex()
 {
 }
 
@@ -29,7 +28,7 @@ NativeBreakpointList::AddRef (lldb::addr_t addr, size_t size_hint, bool hardware
     if (log)
         log->Printf ("NativeBreakpointList::%s addr = 0x%" PRIx64 ", size_hint = %lu, hardware = %s", __FUNCTION__, addr, size_hint, hardware ? "true" : "false");
 
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Check if the breakpoint is already set.
     auto iter = m_breakpoints.find (addr);
@@ -72,7 +71,7 @@ NativeBreakpointList::DecRef (lldb::addr_t addr)
     if (log)
         log->Printf ("NativeBreakpointList::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
 
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Check if the breakpoint is already set.
     auto iter = m_breakpoints.find (addr);
@@ -136,7 +135,7 @@ NativeBreakpointList::EnableBreakpoint (lldb::addr_t addr)
     if (log)
         log->Printf ("NativeBreakpointList::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
 
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Ensure we have said breakpoint.
     auto iter = m_breakpoints.find (addr);
@@ -159,7 +158,7 @@ NativeBreakpointList::DisableBreakpoint (lldb::addr_t addr)
     if (log)
         log->Printf ("NativeBreakpointList::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
 
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Ensure we have said breakpoint.
     auto iter = m_breakpoints.find (addr);
@@ -182,7 +181,7 @@ NativeBreakpointList::GetBreakpoint (lldb::addr_t addr, NativeBreakpointSP &brea
     if (log)
         log->Printf ("NativeBreakpointList::%s addr = 0x%" PRIx64, __FUNCTION__, addr);
 
-    Mutex::Locker locker (m_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Ensure we have said breakpoint.
     auto iter = m_breakpoints.find (addr);

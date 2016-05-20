@@ -291,7 +291,7 @@ under the MIT license.
 
 The source of C<isl> can be obtained either as a tarball
 or from the git repository.  Both are available from
-L<http://freshmeat.net/projects/isl/>.
+L<http://isl.gforge.inria.fr/>.
 The installation process depends on how you obtained
 the source.
 
@@ -3274,7 +3274,7 @@ use the following functions.
 		__isl_keep isl_union_pw_aff *upa);
 	isl_stat isl_union_pw_aff_foreach_pw_aff(
 		__isl_keep isl_union_pw_aff *upa,
-		isl_stat (*fn)(__isl_take isl_pw_aff *ma,
+		isl_stat (*fn)(__isl_take isl_pw_aff *pa,
 			void *user), void *user);
 	int isl_union_pw_multi_aff_n_pw_multi_aff(
 		__isl_keep isl_union_pw_multi_aff *upma);
@@ -3682,8 +3682,15 @@ in isl format.
 		__isl_keep isl_union_map *umap);
 
 	#include <isl/aff.h>
+	__isl_give char *isl_aff_to_str(__isl_keep isl_aff *aff);
+	__isl_give char *isl_pw_aff_to_str(
+		__isl_keep isl_pw_aff *pa);
 	__isl_give char *isl_multi_aff_to_str(
-		__isl_keep isl_multi_aff *aff);
+		__isl_keep isl_multi_aff *ma);
+	__isl_give char *isl_pw_multi_aff_to_str(
+		__isl_keep isl_pw_multi_aff *pma);
+	__isl_give char *isl_multi_pw_aff_to_str(
+		__isl_keep isl_multi_pw_aff *mpa);
 	__isl_give char *isl_union_pw_aff_to_str(
 		__isl_keep isl_union_pw_aff *upa);
 	__isl_give char *isl_union_pw_multi_aff_to_str(
@@ -3770,6 +3777,19 @@ is already known to be empty.
 	isl_bool isl_map_is_bijective(
 		__isl_keep isl_map *map);
 	isl_bool isl_union_map_is_bijective(
+		__isl_keep isl_union_map *umap);
+
+=item * Identity
+
+The following functions test whether the given relation
+only maps elements to themselves.
+
+	#include <isl/map.h>
+	isl_bool isl_map_is_identity(
+		__isl_keep isl_map *map);
+
+	#include <isl/union_map.h>
+	isl_bool isl_union_map_is_identity(
 		__isl_keep isl_union_map *umap);
 
 =item * Position
@@ -4248,9 +4268,16 @@ earlier dimensions before those that involve later dimensions.
 		enum isl_dim_type type, unsigned first, unsigned n);
 	__isl_give isl_set *isl_set_project_out(__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned first, unsigned n);
+	__isl_give isl_map *isl_set_project_onto_map(
+		__isl_take isl_set *set,
+		enum isl_dim_type type, unsigned first,
+		unsigned n);
 	__isl_give isl_basic_set *isl_basic_set_params(
 		__isl_take isl_basic_set *bset);
 	__isl_give isl_set *isl_set_params(__isl_take isl_set *set);
+
+The function C<isl_set_project_onto_map> returns a relation
+that projects the input set onto the given set dimensions.
 
 	#include <isl/map.h>
 	__isl_give isl_basic_map *isl_basic_map_project_out(
@@ -4948,6 +4975,10 @@ a singleton subset of the input.  Otherwise, return an empty set.
 	__isl_give isl_val *isl_set_max_val(
 		__isl_keep isl_set *set,
 		__isl_keep isl_aff *obj);
+	__isl_give isl_multi_val *
+	isl_union_set_min_multi_union_pw_aff(
+		__isl_keep isl_union_set *set,
+		__isl_keep isl_multi_union_pw_aff *obj);
 
 Compute the minimum or maximum of the integer affine expression C<obj>
 over the points in C<set>, returning the result in C<opt>.
@@ -6105,6 +6136,12 @@ into the first expression.
 =item * Locus
 
 	#include <isl/aff.h>
+	__isl_give isl_basic_set *isl_aff_eq_basic_set(
+		__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2);
+	__isl_give isl_set *isl_aff_eq_set(
+		__isl_take isl_aff *aff1,
+		__isl_take isl_aff *aff2);
 	__isl_give isl_basic_set *isl_aff_le_basic_set(
 		__isl_take isl_aff *aff1,
 		__isl_take isl_aff *aff2);
@@ -7279,15 +7316,15 @@ Lists can be inspected using the following functions.
 		__isl_keep isl_set_list *list,
 		isl_bool (*follows)(__isl_keep isl_set *a,
 			__isl_keep isl_set *b, void *user),
-		void *follows_user
+		void *follows_user,
 		isl_stat (*fn)(__isl_take isl_set *el, void *user),
 		void *fn_user);
 
 The function C<isl_set_list_foreach_scc> calls C<fn> on each of the
 strongly connected components of the graph with as vertices the elements
 of C<list> and a directed edge from vertex C<b> to vertex C<a>
-iff C<follows(a, b)> returns C<1>.  The callbacks C<follows> and C<fn>
-should return C<-1> on error.
+iff C<follows(a, b)> returns C<isl_bool_true>.  The callbacks C<follows> and
+C<fn> should return C<isl_bool_error> or C<isl_stat_error> on error.
 
 Lists can be printed using
 
@@ -7782,6 +7819,19 @@ any expansion nodes.
 	isl_schedule_pullback_union_pw_multi_aff(
 		__isl_take isl_schedule *schedule,
 		__isl_take isl_union_pw_multi_aff *upma);
+
+The following function can be used to plug in the schedule C<expansion>
+in the leaves of C<schedule>, where C<contraction> describes how
+the domain elements of C<expansion> map to the domain elements
+at the original leaves of C<schedule>.
+The resulting schedule will contain expansion nodes, unless
+C<contraction> is an identity function.
+
+	#include <isl/schedule.h>
+	__isl_give isl_schedule *isl_schedule_expand(
+		__isl_take isl_schedule *schedule,
+		__isl_take isl_union_pw_multi_aff *contraction,
+		__isl_take isl_schedule *expansion);
 
 An C<isl_union_map> representation of the schedule can be obtained
 from an C<isl_schedule> using the following function.
@@ -8807,9 +8857,6 @@ whereas C<isl_restriction_empty> is essentially equivalent to
 
 =head2 Scheduling
 
-B<The functionality described in this section is fairly new
-and may be subject to change.>
-
 	#include <isl/schedule.h>
 	__isl_give isl_schedule *
 	isl_schedule_constraints_compute_schedule(
@@ -8881,6 +8928,10 @@ and manipulated using the following functions.
 		__isl_take isl_schedule_constraints *sc,
 		__isl_take isl_union_map *condition,
 		__isl_take isl_union_map *validity);
+	__isl_give isl_schedule_constraints *
+	isl_schedule_constraints_apply(
+		__isl_take isl_schedule_constraints *sc,
+		__isl_take isl_union_map *umap);
 	__isl_null isl_schedule_constraints *
 	isl_schedule_constraints_free(
 		__isl_take isl_schedule_constraints *sc);
@@ -8926,6 +8977,11 @@ considered adjacent to each other if the entire wrapped relation matches.
 In particular, a relation with a tag will never be considered adjacent
 to a relation without a tag.
 
+The function C<isl_schedule_constraints_compute_schedule> takes
+schedule constraints that are defined on some set of domain elements
+and transforms them to schedule constraints on the elements
+to which these domain elements are mapped by the given transformation.
+
 An C<isl_schedule_constraints> object can be inspected
 using the following functions.
 
@@ -8938,6 +8994,9 @@ using the following functions.
 		__isl_keep isl_schedule_constraints *sc);
 	__isl_give isl_union_map *
 	isl_schedule_constraints_get_coincidence(
+		__isl_keep isl_schedule_constraints *sc);
+	__isl_give isl_union_map *
+	isl_schedule_constraints_get_proximity(
 		__isl_keep isl_schedule_constraints *sc);
 	__isl_give isl_union_map *
 	isl_schedule_constraints_get_conditional_validity(
@@ -8983,6 +9042,10 @@ L</"Schedule Trees">.
 		isl_ctx *ctx, int val);
 	int isl_options_get_schedule_maximize_band_depth(
 		isl_ctx *ctx);
+	isl_stat isl_options_set_schedule_maximize_coincidence(
+		isl_ctx *ctx, int val);
+	int isl_options_get_schedule_maximize_coincidence(
+		isl_ctx *ctx);
 	isl_stat isl_options_set_schedule_outer_coincidence(
 		isl_ctx *ctx, int val);
 	int isl_options_get_schedule_outer_coincidence(
@@ -8990,6 +9053,10 @@ L</"Schedule Trees">.
 	isl_stat isl_options_set_schedule_split_scaled(
 		isl_ctx *ctx, int val);
 	int isl_options_get_schedule_split_scaled(
+		isl_ctx *ctx);
+	isl_stat isl_options_set_schedule_treat_coalescing(
+		isl_ctx *ctx, int val);
+	int isl_options_get_schedule_treat_coalescing(
 		isl_ctx *ctx);
 	isl_stat isl_options_set_schedule_algorithm(
 		isl_ctx *ctx, int val);
@@ -9064,6 +9131,12 @@ If this option is set, then we try to construct schedules
 where the outermost scheduling dimension in each band
 satisfies the coincidence constraints.
 
+=item * schedule_algorithm
+
+Selects the scheduling algorithm to be used.
+Available scheduling algorithms are C<ISL_SCHEDULE_ALGORITHM_ISL>
+and C<ISL_SCHEDULE_ALGORITHM_FEAUTRIER>.
+
 =item * schedule_split_scaled
 
 If this option is set, then we try to construct schedules in which the
@@ -9072,12 +9145,19 @@ the scheduling rows for all nodes in the graphs have a common non-trivial
 divisor.
 The constant term is then placed in a separate band and the linear
 part is reduced.
+This option is only effective when the Feautrier style scheduler is
+being used, either as the main scheduler or as a fallback for the
+Pluto-like scheduler.
 
-=item * schedule_algorithm
+=item * schedule_treat_coalescing
 
-Selects the scheduling algorithm to be used.
-Available scheduling algorithms are C<ISL_SCHEDULE_ALGORITHM_ISL>
-and C<ISL_SCHEDULE_ALGORITHM_FEAUTRIER>.
+If this option is set, then the scheduler will try and avoid
+producing schedules that perform loop coalescing.
+In particular, for the Pluto-like scheduler, this option places
+bounds on the schedule coefficients based on the sizes of the instance sets.
+For the Feautrier style scheduler, this option detects potentially
+coalescing schedules and then tries to adjust the schedule to avoid
+the coalescing.
 
 =item * schedule_separate_components
 

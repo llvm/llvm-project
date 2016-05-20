@@ -12,8 +12,9 @@
 
 // C Includes
 // C++ Includes
-#include <vector>
+#include <mutex>
 #include <string>
+#include <vector>
 
 // Other libraries and framework includes
 // Project includes
@@ -21,7 +22,6 @@
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/TimeValue.h"
 #include "lldb/Core/UUID.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 
 class DynamicLoaderDarwinKernel : public lldb_private::DynamicLoader
@@ -361,7 +361,7 @@ protected:
     lldb_private::Address          m_kext_summary_header_addr;
     OSKextLoadedKextSummaryHeader  m_kext_summary_header;
     KextImageInfo::collection      m_known_kexts;
-    mutable lldb_private::Mutex    m_mutex;
+    mutable std::recursive_mutex m_mutex;
     lldb::user_id_t                m_break_id;
 
 private:

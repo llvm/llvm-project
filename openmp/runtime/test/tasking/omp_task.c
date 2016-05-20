@@ -9,14 +9,14 @@ int test_omp_task()
   int tids[NUM_TASKS];
   int i;
 
-  #pragma omp parallel 
+  #pragma omp parallel
   {
     #pragma omp single
     {
       for (i = 0; i < NUM_TASKS; i++) {
         /* First we have to store the value of the loop index in a new variable
          * which will be private for each task because otherwise it will be overwritten
-         * if the execution of the task takes longer than the time which is needed to 
+         * if the execution of the task takes longer than the time which is needed to
          * enter the next step of the loop!
          */
         int myi;

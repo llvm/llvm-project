@@ -17,7 +17,6 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Core/UUID.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Target/Process.h"
 
 class DynamicLoaderStatic : public lldb_private::DynamicLoader

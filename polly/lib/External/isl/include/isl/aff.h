@@ -130,6 +130,10 @@ __isl_give isl_aff *isl_aff_pullback_multi_aff(__isl_take isl_aff *aff,
 __isl_give isl_basic_set *isl_aff_zero_basic_set(__isl_take isl_aff *aff);
 __isl_give isl_basic_set *isl_aff_neg_basic_set(__isl_take isl_aff *aff);
 
+__isl_give isl_basic_set *isl_aff_eq_basic_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2);
+__isl_give isl_set *isl_aff_eq_set(__isl_take isl_aff *aff1,
+	__isl_take isl_aff *aff2);
 __isl_give isl_basic_set *isl_aff_le_basic_set(__isl_take isl_aff *aff1,
 	__isl_take isl_aff *aff2);
 __isl_give isl_set *isl_aff_le_set(__isl_take isl_aff *aff1,
@@ -141,6 +145,7 @@ __isl_give isl_set *isl_aff_ge_set(__isl_take isl_aff *aff1,
 
 __isl_constructor
 __isl_give isl_aff *isl_aff_read_from_str(isl_ctx *ctx, const char *str);
+__isl_give char *isl_aff_to_str(__isl_keep isl_aff *aff);
 __isl_give isl_printer *isl_printer_print_aff(__isl_take isl_printer *p,
 	__isl_keep isl_aff *aff);
 void isl_aff_dump(__isl_keep isl_aff *aff);
@@ -318,6 +323,7 @@ __isl_give isl_map *isl_pw_aff_gt_map(__isl_take isl_pw_aff *pa1,
 
 __isl_constructor
 __isl_give isl_pw_aff *isl_pw_aff_read_from_str(isl_ctx *ctx, const char *str);
+__isl_give char *isl_pw_aff_to_str(__isl_keep isl_pw_aff *pa);
 __isl_give isl_printer *isl_printer_print_pw_aff(__isl_take isl_printer *p,
 	__isl_keep isl_pw_aff *pwaff);
 void isl_pw_aff_dump(__isl_keep isl_pw_aff *pwaff);
@@ -382,7 +388,7 @@ __isl_give isl_set *isl_multi_aff_lex_gt_set(__isl_take isl_multi_aff *ma1,
 __isl_give isl_set *isl_multi_aff_lex_ge_set(__isl_take isl_multi_aff *ma1,
 	__isl_take isl_multi_aff *ma2);
 
-__isl_give char *isl_multi_aff_to_str(__isl_keep isl_multi_aff *aff);
+__isl_give char *isl_multi_aff_to_str(__isl_keep isl_multi_aff *ma);
 __isl_give isl_printer *isl_printer_print_multi_aff(__isl_take isl_printer *p,
 	__isl_keep isl_multi_aff *maff);
 
@@ -552,6 +558,7 @@ isl_stat isl_pw_multi_aff_foreach_piece(__isl_keep isl_pw_multi_aff *pma,
 __isl_give isl_map *isl_map_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma);
 __isl_give isl_set *isl_set_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma);
 
+__isl_give char *isl_pw_multi_aff_to_str(__isl_keep isl_pw_multi_aff *pma);
 __isl_give isl_printer *isl_printer_print_pw_multi_aff(__isl_take isl_printer *p,
 	__isl_keep isl_pw_multi_aff *pma);
 
@@ -760,6 +767,7 @@ __isl_give isl_map *isl_multi_pw_aff_lex_gt_map(
 __isl_constructor
 __isl_give isl_multi_pw_aff *isl_multi_pw_aff_read_from_str(isl_ctx *ctx,
 	const char *str);
+__isl_give char *isl_multi_pw_aff_to_str(__isl_keep isl_multi_pw_aff *mpa);
 __isl_give isl_printer *isl_printer_print_multi_pw_aff(
 	__isl_take isl_printer *p, __isl_keep isl_multi_pw_aff *mpa);
 void isl_multi_pw_aff_dump(__isl_keep isl_multi_pw_aff *mpa);
@@ -807,7 +815,7 @@ __isl_give isl_union_pw_multi_aff *isl_union_pw_multi_aff_from_union_pw_aff(
 int isl_union_pw_aff_n_pw_aff(__isl_keep isl_union_pw_aff *upa);
 
 isl_stat isl_union_pw_aff_foreach_pw_aff(__isl_keep isl_union_pw_aff *upa,
-	isl_stat (*fn)(__isl_take isl_pw_aff *ma, void *user), void *user);
+	isl_stat (*fn)(__isl_take isl_pw_aff *pa, void *user), void *user);
 __isl_give isl_pw_aff *isl_union_pw_aff_extract_pw_aff(
 	__isl_keep isl_union_pw_aff *upa, __isl_take isl_space *space);
 

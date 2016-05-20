@@ -1427,7 +1427,37 @@ void *
 kmpc_malloc( size_t size )
 {
     void * ptr;
-    ptr = bget( __kmp_entry_thread(), (bufsize) size );
+    ptr = bget( __kmp_entry_thread(), (bufsize)(size + sizeof(ptr)) );
+    if( ptr != NULL ) {
+        // save allocated pointer just before one returned to user
+        *(void**)ptr = ptr;
+        ptr = (void**)ptr + 1;
+    }
+    return ptr;
+}
+
+#define IS_POWER_OF_TWO(n) (((n)&((n)-1))==0)
+
+void *
+kmpc_aligned_malloc( size_t size, size_t alignment )
+{
+    void * ptr;
+    void * ptr_allocated;
+    KMP_DEBUG_ASSERT( alignment < 32 * 1024 ); // Alignment should not be too big
+    if( !IS_POWER_OF_TWO(alignment) ) {
+        // AC: do we need to issue a warning here?
+        errno = EINVAL;
+        return NULL;
+    }
+    size = size + sizeof( void* ) + alignment;
+    ptr_allocated = bget( __kmp_entry_thread(), (bufsize)size );
+    if( ptr_allocated != NULL ) {
+        // save allocated pointer just before one returned to user
+        ptr = (void*)(((kmp_uintptr_t)ptr_allocated + sizeof( void* ) + alignment) & ~(alignment - 1));
+        *((void**)ptr - 1) = ptr_allocated;
+    } else {
+        ptr = NULL;
+    }
     return ptr;
 }
 
@@ -1435,7 +1465,12 @@ void *
 kmpc_calloc( size_t nelem, size_t elsize )
 {
     void * ptr;
-    ptr = bgetz( __kmp_entry_thread(), (bufsize) (nelem * elsize) );
+    ptr = bgetz( __kmp_entry_thread(), (bufsize) (nelem * elsize + sizeof(ptr)) );
+    if( ptr != NULL ) {
+        // save allocated pointer just before one returned to user
+        *(void**)ptr = ptr;
+        ptr = (void**)ptr + 1;
+    }
     return ptr;
 }
 
@@ -1445,14 +1480,24 @@ kmpc_realloc( void * ptr, size_t size )
     void * result = NULL;
     if ( ptr == NULL ) {
         // If pointer is NULL, realloc behaves like malloc.
-        result = bget( __kmp_entry_thread(), (bufsize) size );
+        result = bget( __kmp_entry_thread(), (bufsize)(size + sizeof(ptr)) );
+        // save allocated pointer just before one returned to user
+        if( result != NULL ) {
+            *(void**)result = result;
+            result = (void**)result + 1;
+        }
     } else if ( size == 0 ) {
         // If size is 0, realloc behaves like free.
         // The thread must be registered by the call to kmpc_malloc() or kmpc_calloc() before.
         // So it should be safe to call __kmp_get_thread(), not __kmp_entry_thread().
-        brel( __kmp_get_thread(), ptr );
+        KMP_ASSERT(*((void**)ptr - 1));
+        brel( __kmp_get_thread(), *((void**)ptr - 1) );
     } else {
-        result = bgetr( __kmp_entry_thread(), ptr, (bufsize) size );
+        result = bgetr( __kmp_entry_thread(), *((void**)ptr - 1), (bufsize)(size + sizeof(ptr)) );
+        if( result != NULL ) {
+            *(void**)result = result;
+            result = (void**)result + 1;
+        }
     }; // if
     return result;
 }
@@ -1468,7 +1513,9 @@ kmpc_free( void * ptr )
     if ( ptr != NULL ) {
         kmp_info_t *th = __kmp_get_thread();
         __kmp_bget_dequeue( th );         /* Release any queued buffers */
-        brel( th, ptr );
+        // extract allocated pointer and free it
+        KMP_ASSERT(*((void**)ptr - 1));
+        brel( th, *((void**)ptr - 1) );
     };
 }
 

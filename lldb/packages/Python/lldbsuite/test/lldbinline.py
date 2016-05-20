@@ -205,18 +205,16 @@ def MakeInlineTest(__file, __globals, decorators=None):
     InlineTest.mydir = TestBase.compute_mydir(__file)
 
     test_name, _ = os.path.splitext(file_basename)
-    # Build the test case 
+    # Build the test case
     test = type(test_name, (InlineTest,), {'using_dsym': None})
     test.name = test_name
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-    supported_categories = [x for x in set(test_categories.debug_info_categories) 
-                            if test_categories.is_supported_on_platform(x, target_platform)]
-    if "dsym" in supported_categories:
+    if test_categories.is_supported_on_platform("dsym", target_platform):
         test.test_with_dsym = ApplyDecoratorsToFunction(test._InlineTest__test_with_dsym, decorators)
-    if "dwarf" in supported_categories:
+    if test_categories.is_supported_on_platform("dwarf", target_platform):
         test.test_with_dwarf = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwarf, decorators)
-    if "dwo" in supported_categories:
+    if test_categories.is_supported_on_platform("dwo", target_platform):
         test.test_with_dwo = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwo, decorators)
 
     # Add the test case to the globals, and hide InlineTest

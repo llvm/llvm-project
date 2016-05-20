@@ -507,6 +507,18 @@ ArchSpec::GetArchitectureName () const
     return "unknown";
 }
 
+bool 
+ArchSpec::IsMIPS() const
+{
+    const llvm::Triple::ArchType machine = GetMachine();
+    if(machine == llvm::Triple::mips ||
+       machine == llvm::Triple::mipsel ||
+       machine == llvm::Triple::mips64 ||
+       machine == llvm::Triple::mips64el)
+       return true;
+    return false;
+}
+
 std::string
 ArchSpec::GetClangTargetCPU ()
 {

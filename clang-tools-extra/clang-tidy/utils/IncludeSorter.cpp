@@ -12,6 +12,7 @@
 
 namespace clang {
 namespace tidy {
+namespace utils {
 
 namespace {
 
@@ -253,7 +254,8 @@ std::vector<FixItHint> IncludeSorter::GetEdits() {
       // Otherwise report the current block edit and start a new block.
     } else {
       if (CurrentEndLine) {
-        Fixes.push_back(CreateFixIt(CurrentRange, CurrentText));
+        Fixes.push_back(FixItHint::CreateReplacement(
+            CharSourceRange::getCharRange(CurrentRange), CurrentText));
       }
 
       CurrentEndLine = LineEdit.first;
@@ -263,23 +265,14 @@ std::vector<FixItHint> IncludeSorter::GetEdits() {
   }
   // Finally, report the current block edit if there is one.
   if (CurrentEndLine) {
-    Fixes.push_back(CreateFixIt(CurrentRange, CurrentText));
+    Fixes.push_back(FixItHint::CreateReplacement(
+        CharSourceRange::getCharRange(CurrentRange), CurrentText));
   }
 
   // Reset the remaining internal state.
   SourceLocations.clear();
   IncludeLocations.clear();
   return Fixes;
-}
-
-// Creates a fix-it for the given replacements.
-// Takes the the source location that will be replaced, and the new text.
-FixItHint IncludeSorter::CreateFixIt(SourceRange EditRange,
-                                     const std::string &NewText) {
-  FixItHint Fix;
-  Fix.RemoveRange = CharSourceRange::getCharRange(EditRange);
-  Fix.CodeToInsert = NewText;
-  return Fix;
 }
 
 IncludeSorter::IncludeStyle
@@ -291,5 +284,6 @@ StringRef IncludeSorter::toString(IncludeStyle Style) {
   return Style == IS_LLVM ? "llvm" : "google";
 }
 
+} // namespace utils
 } // namespace tidy
 } // namespace clang
