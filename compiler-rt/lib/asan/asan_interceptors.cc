@@ -168,9 +168,6 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 #define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) \
   do {                                         \
   } while (false)
-#define COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd) \
-  do {                                        \
-  } while (false)
 #define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) \
   do {                                                      \
   } while (false)

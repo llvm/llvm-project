@@ -14,6 +14,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _MSC_VER
+/* For _alloca */
+#include <malloc.h>
+#endif
+
 
 #define UNCONST(ptr) ((void *)(uintptr_t)(ptr))
 
@@ -83,10 +88,9 @@ static void truncateCurrentFile(void) {
 
   /* Create the directory holding the file, if needed. */
   if (strchr(Filename, '/') || strchr(Filename, '\\')) {
-    char *Copy = malloc(strlen(Filename) + 1);
+    char *Copy = (char *)COMPILER_RT_ALLOCA(strlen(Filename) + 1);
     strcpy(Copy, Filename);
     __llvm_profile_recursive_mkdir(Copy);
-    free(Copy);
   }
 
   /* Truncate the file.  Later we'll reopen and append. */
@@ -224,13 +228,13 @@ int __llvm_profile_write_file(void) {
   GetEnvHook = &getenv;
   /* Check the filename. */
   if (!__llvm_profile_CurrentFilename) {
-    PROF_ERR("LLVM Profile: Failed to write file : %s\n", "Filename not set");
+    PROF_ERR("Failed to write file : %s\n", "Filename not set");
     return -1;
   }
 
   /* Check if there is llvm/runtime version mismatch.  */
   if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
-    PROF_ERR("LLVM Profile: runtime and instrumentation version mismatch : "
+    PROF_ERR("Runtime and instrumentation version mismatch : "
              "expected %d, but get %d\n",
              INSTR_PROF_RAW_VERSION,
              (int)GET_VERSION(__llvm_profile_get_version()));
@@ -240,7 +244,7 @@ int __llvm_profile_write_file(void) {
   /* Write the file. */
   rc = writeFileWithName(__llvm_profile_CurrentFilename);
   if (rc)
-    PROF_ERR("LLVM Profile: Failed to write file \"%s\": %s\n",
+    PROF_ERR("Failed to write file \"%s\": %s\n",
             __llvm_profile_CurrentFilename, strerror(errno));
   return rc;
 }
