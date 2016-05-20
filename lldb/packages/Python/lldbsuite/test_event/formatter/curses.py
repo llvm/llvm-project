@@ -27,9 +27,9 @@ from ..event_builder import EventBuilder
 class Curses(results_formatter.ResultsFormatter):
     """Receives live results from tests that are running and reports them to the terminal in a curses GUI"""
 
-    def __init__(self, out_file, options):
+    def __init__(self, out_file, options, file_is_stream):
         # Initialize the parent
-        super(Curses, self).__init__(out_file, options)
+        super(Curses, self).__init__(out_file, options, file_is_stream)
         self.using_terminal = True
         self.have_curses = True
         self.initialize_event = None
@@ -59,7 +59,7 @@ class Curses(results_formatter.ResultsFormatter):
         # if tee_results_formatter:
         #     self.formatters.append(tee_results_formatter)
 
-    def status_to_short_str(self, status):
+    def status_to_short_str(self, status, test_event):
         if status == EventBuilder.STATUS_SUCCESS:
             return '.'
         elif status == EventBuilder.STATUS_FAILURE:
@@ -71,7 +71,11 @@ class Curses(results_formatter.ResultsFormatter):
         elif status == EventBuilder.STATUS_SKIP:
             return 'S'
         elif status == EventBuilder.STATUS_ERROR:
-            return 'E'
+            if test_event.get("issue_phase", None) == "build":
+                # Build failure
+                return 'B'
+            else:
+                return 'E'
         elif status == EventBuilder.STATUS_TIMEOUT:
             return 'T'
         elif status == EventBuilder.STATUS_EXPECTED_TIMEOUT:
@@ -123,7 +127,7 @@ class Curses(results_formatter.ResultsFormatter):
             if status in self.hide_status_list:
                 continue
             name = test_result['test_class'] + '.' + test_result['test_name']
-            self.results_panel.append_line('%s (%6.2f sec) %s' % (self.status_to_short_str(status), test_result['elapsed_time'], name))
+            self.results_panel.append_line('%s (%6.2f sec) %s' % (self.status_to_short_str(status, test_result), test_result['elapsed_time'], name))
         if update:
             self.main_window.refresh()
 
@@ -162,7 +166,7 @@ class Curses(results_formatter.ResultsFormatter):
                         name = test_event['test_class'] + '.' + test_event['test_name']
                         elapsed_time = test_event['event_time'] - self.job_tests[worker_index]['event_time']
                         if not status in self.hide_status_list:
-                            self.results_panel.append_line('%s (%6.2f sec) %s' % (self.status_to_short_str(status), elapsed_time, name))
+                            self.results_panel.append_line('%s (%6.2f sec) %s' % (self.status_to_short_str(status, test_event), elapsed_time, name))
                         self.main_window.refresh()
                         # Append the result pairs
                         test_event['elapsed_time'] = elapsed_time

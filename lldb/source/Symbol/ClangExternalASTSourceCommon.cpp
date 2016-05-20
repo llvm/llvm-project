@@ -19,8 +19,9 @@ typedef llvm::DenseMap<clang::ExternalASTSource *, ClangExternalASTSourceCommon 
 
 static ASTSourceMap &GetSourceMap()
 {
-    static ASTSourceMap s_source_map;
-    return s_source_map;
+    // Intentionally leaked to avoid problems with global destructors.
+    static ASTSourceMap *s_source_map = new ASTSourceMap;
+    return *s_source_map;
 }
 
 ClangExternalASTSourceCommon *

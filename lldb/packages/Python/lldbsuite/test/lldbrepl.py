@@ -53,7 +53,7 @@ class REPLTest(PExpectTest):
         PExpectTest.setUp(self)
 
     def launchArgs(self):
-        return '-x "--repl=-enable-objc-interop -sdk %s -color-diagnostics"' % (swift.getSwiftSDKRoot())
+        return '-x "--repl=-enable-objc-interop -sdk %s"' % (swift.getSwiftSDKRoot())
 
     # run a REPL command and wait for the prompt
     def command(self, command, patterns=None, timeout=None, exact=None, prompt_sync=True):

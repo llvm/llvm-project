@@ -1462,13 +1462,24 @@ RegisterContextLLDB::SavedLocationForRegister (uint32_t lldb_regnum, lldb_privat
 
     if (unwindplan_regloc.IsSame())
     {
-        regloc.type = UnwindLLDB::RegisterLocation::eRegisterInRegister;
-        regloc.location.register_number = regnum.GetAsKind (eRegisterKindLLDB);
-        m_registers[regnum.GetAsKind (eRegisterKindLLDB)] = regloc;
-        UnwindLogMsg ("supplying caller's register %s (%d), saved in register %s (%d)", 
-                      regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB), 
-                      regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB));
-        return UnwindLLDB::RegisterSearchResult::eRegisterFound;
+        if (IsFrameZero() == false 
+            && (regnum.GetAsKind (eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_PC
+                || regnum.GetAsKind (eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_RA))
+        {
+            UnwindLogMsg ("register %s (%d) is marked as 'IsSame' - it is a pc or return address reg on a non-zero frame -- treat as if we have no information", 
+                        regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB));
+            return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
+        }
+        else
+        {
+            regloc.type = UnwindLLDB::RegisterLocation::eRegisterInRegister;
+            regloc.location.register_number = regnum.GetAsKind (eRegisterKindLLDB);
+            m_registers[regnum.GetAsKind (eRegisterKindLLDB)] = regloc;
+            UnwindLogMsg ("supplying caller's register %s (%d), saved in register %s (%d)", 
+                        regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB), 
+                        regnum.GetName(), regnum.GetAsKind (eRegisterKindLLDB));
+            return UnwindLLDB::RegisterSearchResult::eRegisterFound;
+        }
     }
 
     if (unwindplan_regloc.IsCFAPlusOffset())
@@ -1889,12 +1900,13 @@ RegisterContextLLDB::ReadGPRValue (lldb::RegisterKind register_kind, uint32_t re
 
     bool pc_register = false;
     uint32_t generic_regnum;
-    if (register_kind == eRegisterKindGeneric && regnum == LLDB_REGNUM_GENERIC_PC)
+    if (register_kind == eRegisterKindGeneric 
+        && (regnum == LLDB_REGNUM_GENERIC_PC || regnum == LLDB_REGNUM_GENERIC_RA))
     {
         pc_register = true;
     }
     else if (m_thread.GetRegisterContext()->ConvertBetweenRegisterKinds (register_kind, regnum, eRegisterKindGeneric, generic_regnum)
-             && generic_regnum == LLDB_REGNUM_GENERIC_PC)
+             && (generic_regnum == LLDB_REGNUM_GENERIC_PC || generic_regnum == LLDB_REGNUM_GENERIC_RA))
     {
         pc_register = true;
     }
@@ -1936,9 +1948,16 @@ RegisterContextLLDB::ReadRegister (const RegisterInfo *reg_info, RegisterValue &
         return m_thread.GetRegisterContext()->ReadRegister (reg_info, value);
     }
 
+    bool is_pc_regnum = false;
+    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_PC 
+        || reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA)
+    {
+        is_pc_regnum = true;
+    }
+
     lldb_private::UnwindLLDB::RegisterLocation regloc;
     // Find out where the NEXT frame saved THIS frame's register contents
-    if (!m_parent_unwind.SearchForSavedLocationForRegister (lldb_regnum, regloc, m_frame_number - 1, false))
+    if (!m_parent_unwind.SearchForSavedLocationForRegister (lldb_regnum, regloc, m_frame_number - 1, is_pc_regnum))
         return false;
 
     return ReadRegisterValueFromRegisterLocation (regloc, reg_info, value);

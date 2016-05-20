@@ -41,6 +41,7 @@ func main() {
   //% self.expect("po cs", substrs=['CustomDebugStringConvertible'])
   //% self.expect("po cs", substrs=['CustomStringConvertible'], matching=False)
   //% self.expect("po cs", substrs=['a', '12', 'b', '24'])
+  //% self.expect("script lldb.frame.FindVariable('cs').GetObjectDescription()", substrs=['a', '12', 'b', '24'])
   //% self.expect("po (12,24,36,48)", substrs=['12', '24', '36', '48'])
   //% self.expect("po [dm as Any,cm as Any,48 as Any]", substrs=['12', '24', '36', '48'])
 }

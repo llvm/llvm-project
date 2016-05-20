@@ -824,8 +824,9 @@ FileLogCallback(void *baton, uint32_t flags, const char *format, va_list args)
     if (baton == NULL || format == NULL)
         return;
 
-    ::vfprintf ((FILE *)baton, format, args);
-    ::fprintf ((FILE *)baton, "\n");
+    ::vfprintf((FILE *)baton, format, args);
+    ::fprintf((FILE *)baton, "\n");
+    ::fflush((FILE *)baton);
 }
 
 

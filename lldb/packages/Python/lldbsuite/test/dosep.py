@@ -52,7 +52,6 @@ from six.moves import queue
 import lldbsuite
 import lldbsuite.support.seven as seven
 
-from lldbsuite.support import optional_with
 from . import configuration
 from . import dotest_args
 from lldbsuite.support import optional_with

@@ -268,6 +268,96 @@ GetObjectDescription_ResultVariable (Process *process,
 }
 
 static bool
+GetObjectDescription_ObjectReference (Process *process,
+                                      Stream& str,
+                                      ValueObject &object)
+{
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+    
+    StreamString expr_string;
+    expr_string.Printf("$__lldb__DumpForDebugger(Swift.unsafeBitCast(0x%" PRIx64 ", to: AnyObject.self))", object.GetValueAsUnsigned(0));
+
+    if (log)
+        log->Printf("[GetObjectDescription_ObjectReference] expression: %s", expr_string.GetData());
+
+    ValueObjectSP result_sp;
+    EvaluateExpressionOptions eval_options;
+    eval_options.SetLanguage(lldb::eLanguageTypeSwift);
+    eval_options.SetResultIsInternal(true);
+    eval_options.SetGenerateDebugInfo(true);
+    auto eval_result = process->GetTarget().EvaluateExpression(expr_string.GetData(), process->GetThreadList().GetSelectedThread()->GetSelectedFrame().get(), result_sp, eval_options);
+    
+    if (log)
+    {
+        switch (eval_result)
+        {
+            case eExpressionCompleted:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionCompleted");
+            break;
+            case eExpressionSetupError:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionSetupError");
+            break;
+            case eExpressionParseError:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionParseError");
+            break;
+            case eExpressionDiscarded:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionDiscarded");
+            break;
+            case eExpressionInterrupted:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionInterrupted");
+            break;
+            case eExpressionHitBreakpoint:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionHitBreakpoint");
+            break;
+            case eExpressionTimedOut:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionTimedOut");
+            break;
+            case eExpressionResultUnavailable:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionResultUnavailable");
+            break;
+            case eExpressionStoppedForDebug:
+            log->Printf("[GetObjectDescription_ObjectReference] eExpressionStoppedForDebug");
+            break;
+        }
+    }
+    
+    // sanitize the result of the expression before moving forward
+    if (!result_sp)
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated no result");
+        return false;
+    }
+    if (result_sp->GetError().Fail())
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated error: %s", result_sp->GetError().AsCString());
+        return false;
+    }
+    if (false == result_sp->GetCompilerType().IsValid())
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated invalid type");
+        return false;
+    }
+    
+    lldb_private::formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
+    dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(nullptr);
+    if (lldb_private::formatters::swift::String_SummaryProvider(*result_sp.get(), str, TypeSummaryOptions().SetLanguage(lldb::eLanguageTypeSwift).SetCapping(eTypeSummaryUncapped), dump_options))
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression completed successfully");
+        return true;
+    }
+    else
+    {
+        if (log)
+            log->Printf("[GetObjectDescription_ObjectReference] expression generated invalid string data");
+        return false;
+    }
+}
+
+static bool
 GetObjectDescription_ObjectCopy (Process *process,
                                  Stream& str,
                                  ValueObject &object)
@@ -461,6 +551,19 @@ IsSwiftResultVariable (const ConstString &name)
     return false;
 }
 
+static bool
+IsSwiftReferenceType (ValueObject &object)
+{
+    CompilerType object_type(object.GetCompilerType());
+    if (llvm::dyn_cast_or_null<SwiftASTContext>(object_type.GetTypeSystem()))
+    {
+        Flags type_flags(object_type.GetTypeInfo());
+        if (type_flags.AllSet(eTypeIsClass | eTypeHasValue | eTypeInstanceIsPointer))
+            return true;
+    }
+    return false;
+}
+
 bool
 SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
 {
@@ -470,6 +573,7 @@ SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
         str.Printf("error loading helper function: %s", error.AsCString());
         return true;
     }
+    
     if (::IsSwiftResultVariable(object.GetName()))
     {
         // if this thing is a Swift expression result variable, it has two properties:
@@ -483,7 +587,20 @@ SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
             return true;
         }
     }
-    
+    else if (::IsSwiftReferenceType(object))
+    {
+        // if this is a Swift class, it has two properties:
+        // a) we do not need its type name, AnyObject is just as good
+        // b) its value is something we can directly use to refer to it
+        // so, just use the ValueObject's pointer-value and be done with it
+        StreamString probe_stream;
+        if (GetObjectDescription_ObjectReference(m_process, probe_stream, object))
+        {
+            str.Printf("%s", probe_stream.GetData());
+            return true;
+        }
+    }
+
     // in general, don't try to use the name of the ValueObject as it might end up referring to the wrong thing
     return GetObjectDescription_ObjectCopy(m_process, str, object);
 }
@@ -491,7 +608,7 @@ SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
 bool
 SwiftLanguageRuntime::GetObjectDescription (Stream &str, Value &value, ExecutionContextScope *exe_scope)
 {
-    // We need working "expression" before we can do this for Swift
+    // This is only interesting to do with a ValueObject for Swift
     return false;
 }
 
@@ -1144,8 +1261,13 @@ SwiftLanguageRuntime::GetMemoryReader ()
         swift::remote::RemoteAddress
         getSymbolAddress(const std::string &name) override
         {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
             if (name.empty())
                 return swift::remote::RemoteAddress(nullptr);
+            
+            if (log)
+                log->Printf("[MemoryReader] asked to retrieve address of symbol %s", name.c_str());
             
             ConstString name_cs(name.c_str(),name.size());
             SymbolContextList sc_list;
@@ -1156,33 +1278,76 @@ SwiftLanguageRuntime::GetMemoryReader ()
                 {
                     if (sym_ctx.symbol)
                     {
-                        return swift::remote::RemoteAddress(sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget()));
+                        auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process->GetTarget());
+                        if (log)
+                            log->Printf("[MemoryReader] symbol resolved to 0x%" PRIx64, load_addr);
+                        return swift::remote::RemoteAddress(load_addr);
                     }
                 }
             }
-            
+
+            if (log)
+                log->Printf("[MemoryReader] symbol resolution failed");
             return swift::remote::RemoteAddress(nullptr);
         }
         
         bool
         readBytes(swift::remote::RemoteAddress address, uint8_t *dest, uint64_t size) override
         {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+            if (log)
+                log->Printf("[MemoryReader] asked to read %" PRIu64 " bytes at address 0x%" PRIx64,
+                            size,
+                            address.getAddressData());
+             
             if (size > m_max_read_amount)
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read exceeds maximum allowed size");
                 return false;
+            }
 
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
             Error error;
             if (size > target.ReadMemory(addr, true, dest, size, error))
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned fewer bytes than asked for");
                 return false;
+            }
             if (error.Fail())
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned error: %s", error.AsCString());
                 return false;
+            }
+            
+            if (log)
+            {
+                StreamString stream;
+                for (uint64_t i = 0;
+                     i < size;
+                     i++)
+                {
+                    stream.PutHex8(dest[i]);
+                    stream.PutChar(' ');
+                }
+                log->Printf("[MemoryReader] memory read returned data: %s", stream.GetData());
+            }
+            
             return true;
         }
         
         bool
         readString(swift::remote::RemoteAddress address, std::string &dest) override
         {
+            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+            
+            if (log)
+                log->Printf("[MemoryReader] asked to read string data at address 0x%" PRIx64, address.getAddressData());
+
             std::vector<char> storage(m_max_read_amount, 0);
             Target &target(m_process->GetTarget());
             Address addr(address.getAddressData());
@@ -1194,10 +1359,16 @@ SwiftLanguageRuntime::GetMemoryReader ()
             if (error.Success())
             {
                 dest.assign(&storage[0]);
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned data: %s", dest.c_str());
                 return true;
             }
             else
+            {
+                if (log)
+                    log->Printf("[MemoryReader] memory read returned error: %s", error.AsCString());
                 return false;
+            }
         }
         
     private:
@@ -1240,6 +1411,11 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
     if (error)
         error->Clear();
     
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+    
+    if (log)
+        log->Printf("[MemberVariableOffsetResolver] asked to resolve offset for ivar %s", ivar_name.AsCString());
+    
     auto iter = m_offsets.find(ivar_name.AsCString()), end = m_offsets.end();
     if (iter != end)
         return iter->second;
@@ -1252,6 +1428,8 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
         case swift::TypeKind::Class:
         case swift::TypeKind::BoundGenericClass:
         {
+            if (log)
+                log->Printf("[MemberVariableOffsetResolver] type is a class - trying to get metadata for valueobject %s", (valobj ? valobj->GetName().AsCString() : "<null>"));
             // retrieve the metadata for class types as this is where we get the maximum benefit
             if (valobj)
             {
@@ -1271,9 +1449,15 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
                 }
                 optmeta = swift::remote::RemoteAddress(meta_ptr);
             }
+            if (log)
+                log->Printf("[MemberVariableOffsetResolver] optmeta = 0x%" PRIx64, optmeta.getAddressData());
         }
             break;
         default:
+        {
+            if (log)
+                log->Printf("[MemberVariableOffsetResolver] type is not a class - no metadata needed");
+        }
             break;
     }
     
@@ -1281,16 +1465,18 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
     swift::remoteAST::Result<uint64_t> result = m_remote_ast->getOffsetOfMember(m_swift_type, optmeta, ivar_name.GetStringRef());
     if (result)
     {
+        if (log)
+            log->Printf("[MemberVariableOffsetResolver] offset discovered = %llu", (uint64_t)result.getValue());
         m_offsets.emplace(ivar_name.AsCString(), result.getValue());
         return result.getValue();
     }
     else
     {
+        const auto& failure = result.getFailure();
         if (error)
-        {
-            const auto& failure = result.getFailure();
             error->SetErrorStringWithFormat("error in resolving type offset: %s", failure.render().c_str());
-        }
+        if (log)
+            log->Printf("[MemberVariableOffsetResolver] failure: %s", failure.render().c_str());
         return llvm::Optional<uint64_t>();
     }
 }
@@ -1313,20 +1499,30 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise (Error *error)
     if (error)
         error->Clear();
     
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+    
+    if (log)
+        log->Printf("[MetadataPromise] asked to fulfill type promise at location 0x%" PRIx64, m_metadata_location);
+    
     if (m_compiler_type.hasValue())
         return m_compiler_type.getValue();
     
     swift::remoteAST::Result<swift::Type> result = m_remote_ast->getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
     
     if (result)
-        return (m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer())).getValue();
+    {
+        m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer());
+        if (log)
+            log->Printf("[MetadataPromise] result is type %s", m_compiler_type->GetTypeName().AsCString());
+        return m_compiler_type.getValue();
+    }
     else
     {
+        const auto& failure = result.getFailure();
         if (error)
-        {
-            const auto& failure = result.getFailure();
             error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
-        }
+        if (log)
+            log->Printf("[MetadataPromise] failure: %s", failure.render().c_str());
         return (m_compiler_type = CompilerType()).getValue();
     }
 }
@@ -1337,20 +1533,30 @@ SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise (Error *error)
     if (error)
         error->Clear();
 
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+    
+    if (log)
+        log->Printf("[MetadataPromise] asked to fulfill kind promise at location 0x%" PRIx64, m_metadata_location);
+    
     if (m_metadata_kind.hasValue())
         return m_metadata_kind;
     
     swift::remoteAST::Result<swift::MetadataKind> result = m_remote_ast->getKindForRemoteTypeMetadata(swift::remote::RemoteAddress(m_metadata_location));
     
     if (result)
-        return (m_metadata_kind = result.getValue());
+    {
+        m_metadata_kind = result.getValue();
+        if (log)
+            log->Printf("[MetadataPromise] result is kind %u", result.getValue());
+        return m_metadata_kind;
+    }
     else
     {
+        const auto& failure = result.getFailure();
         if (error)
-        {
-            const auto& failure = result.getFailure();
             error->SetErrorStringWithFormat("error in resolving type: %s", failure.render().c_str());
-        }
+        if (log)
+            log->Printf("[MetadataPromise] failure: %s", failure.render().c_str());
         return m_metadata_kind;
     }
 }
@@ -4556,6 +4762,73 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer (lldb::addr_t addr,
         *masked_bits = addr & mask;
     return addr & ~mask;
 }
+
+lldb::addr_t
+SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer (lldb::addr_t addr)
+{
+    if (auto objc_runtime = GetObjCRuntime())
+    {
+        // tagged pointers don't perform any masking
+        if (objc_runtime->IsTaggedPointer(addr))
+            return addr;
+    }
+    
+    if (!m_process)
+        return addr;
+    const ArchSpec& arch_spec(m_process->GetTarget().GetArchitecture());
+    ArchSpec::Core core_kind = arch_spec.GetCore();
+    bool is_arm = false;
+    bool is_intel = false;
+    bool is_32 = false;
+    bool is_64 = false;
+    if (core_kind >= ArchSpec::Core::kCore_arm_first &&
+        core_kind <= ArchSpec::Core::kCore_arm_last)
+    {
+        is_arm = true;
+    }
+    else if (core_kind >= ArchSpec::Core::kCore_x86_64_first &&
+             core_kind <= ArchSpec::Core::kCore_x86_64_last)
+    {
+        is_intel = true;
+    }
+    else if (core_kind >= ArchSpec::Core::kCore_x86_32_first &&
+             core_kind <= ArchSpec::Core::kCore_x86_32_last)
+    {
+        is_intel = true;
+    }
+    else
+    {
+        // this is a really random CPU core to be running on - just get out fast
+        return addr;
+    }
+    
+    switch (arch_spec.GetAddressByteSize())
+    {
+        case 4:
+            is_32 = true;
+            break;
+        case 8:
+            is_64 = true;
+            break;
+        default:
+            // this is a really random pointer size to be running on - just get out fast
+            return addr;
+    }
+    
+    lldb::addr_t mask = 0;
+    
+    if (is_arm && is_64)
+        mask = SWIFT_ABI_ARM64_OBJC_NUM_RESERVED_LOW_BITS;
+    else if (is_intel && is_64)
+        mask = SWIFT_ABI_X86_64_OBJC_NUM_RESERVED_LOW_BITS;
+    else
+        mask = SWIFT_ABI_DEFAULT_OBJC_NUM_RESERVED_LOW_BITS;
+
+    mask = (1<<mask) | (1<<(mask+1));
+    
+    return addr & ~mask;
+}
+
 
 ConstString
 SwiftLanguageRuntime::GetErrorBackstopName ()

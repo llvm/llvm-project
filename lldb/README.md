@@ -1,3 +1,4 @@
+
 # Swift Debugger and REPL
 
 **Welcome to the Swift Debugger and REPL!**
@@ -121,8 +122,8 @@ changes should be made to any of these files, follow the standard
 [cmake]: https://cmake.org
 [lldb]: http://lldb.llvm.org "LLDB debugger"
 [llvm]: http://llvm.org "The LLVM Project"
-[swift-clang]: http://github.com/apple/swift-clang
-[swift-cmark]: http://github.com/apple/swift-cmark
-[swift-llvm]: http://github.com/apple/swift-llvm
+[swift-clang]: https://github.com/apple/swift-clang
+[swift-cmark]: https://github.com/apple/swift-cmark
+[swift-llvm]: https://github.com/apple/swift-llvm
 [upstream]: http://swift.org/contributing/#llvm-and-swift "Upstream LLVM changes"
 [xcode-download]: https://developer.apple.com/xcode/download/

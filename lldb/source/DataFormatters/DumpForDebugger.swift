@@ -12,35 +12,35 @@
 
 import Swift
 
-func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
-    _ x_opt: Any?,
-    _ mirror: Mirror,
-    _ name: String?,
-    _ indent: Int,
-    _ maxDepth: Int,
-    _ root: Bool,
-    _ childOfCollection: Bool,
-    _ refsAlreadySeen : inout Set<ObjectIdentifier>,
-    _ maxItemCounter: inout Int,
+func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
+    _ x_opt: Swift.Any?,
+    _ mirror: Swift.Mirror,
+    _ name: Swift.String?,
+    _ indent: Swift.Int,
+    _ maxDepth: Swift.Int,
+    _ root: Swift.Bool,
+    _ childOfCollection: Swift.Bool,
+    _ refsAlreadySeen : inout Swift.Set<Swift.ObjectIdentifier>,
+    _ maxItemCounter: inout Swift.Int,
     _ targetStream: inout StreamType) {
         
-        func idForObject(_ x: Any) -> ObjectIdentifier? {
-            if let ao = x as? AnyObject {
-                return ObjectIdentifier(ao)
+        func idForObject(_ x: Swift.Any) -> Swift.ObjectIdentifier? {
+            if let ao = x as? Swift.AnyObject {
+                return Swift.ObjectIdentifier(ao)
             } else {
                 return nil
             }
         }
         
-        func asNumericValue(_ x: Any) -> Int {
-            if let ao = x as? AnyObject {
-                return unsafeBitCast(ao, to: Int.self)
+        func asNumericValue(_ x: Swift.Any) -> Swift.Int {
+            if let ao = x as? Swift.AnyObject {
+                return Swift.unsafeBitCast(ao, to: Swift.Int.self)
             } else {
                 return 0
             }
         }
         
-        func isCollectionMirror(_ x_mirror: Mirror) -> Bool {
+        func isCollectionMirror(_ x_mirror: Swift.Mirror) -> Swift.Bool {
             let ds = x_mirror.displayStyle ?? .`struct`
             switch ds {
             case .optional:
@@ -56,9 +56,9 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             }
         }
 
-        func stringForObject(_ x_opt: Any?,
-                             _ x_mirror: Mirror,
-                             _ x_mirror_count: Int) -> String? {
+        func stringForObject(_ x_opt: Swift.Any?,
+                             _ x_mirror: Swift.Mirror,
+                             _ x_mirror_count: Swift.Int) -> Swift.String? {
             let ds = x_mirror.displayStyle ?? .`struct`
             switch ds {
             case .optional:
@@ -77,15 +77,15 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             case .set:
                 fallthrough
             case .tuple:
-                return "\(Int(x_mirror.children.count)) elements"
+                return "\(Swift.Int(x_mirror.children.count)) elements"
             case .`struct`:
                 fallthrough
             case .`enum`:
                 if let x = x_opt {
-                    if let cdsc = (x as? CustomDebugStringConvertible) {
+                    if let cdsc = (x as? Swift.CustomDebugStringConvertible) {
                         return cdsc.debugDescription
                     }
-                    if let csc = (x as? CustomStringConvertible) {
+                    if let csc = (x as? Swift.CustomStringConvertible) {
                         return csc.description
                     }
                 }
@@ -94,28 +94,27 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
                 }
             case .`class`:
                 if let x = x_opt {
-                    if let cdsc = (x as? CustomDebugStringConvertible) {
+                    if let cdsc = (x as? Swift.CustomDebugStringConvertible) {
                         return cdsc.debugDescription
                     }
-                    if let csc = (x as? CustomStringConvertible) {
+                    if let csc = (x as? Swift.CustomStringConvertible) {
                         return csc.description
                     }
                     // for a Class with no custom summary, mimic the Foundation default
-                    return "<\(x.dynamicType): 0x\(String(asNumericValue(x), radix: 16, uppercase: false))>"
+                    return "<\(x.dynamicType): 0x\(Swift.String(asNumericValue(x), radix: 16, uppercase: false))>"
                 } else {
                     // but if I can't provide a value, just use the type anyway
                     return "\(x_mirror.subjectType)"
                 }
-            default: ()
             }
             if let x = x_opt {
-                return String(reflecting: x)
+                return Swift.String(reflecting: x)
             }
             return nil
         }
 
-        func ivarCount(_ x: Mirror) -> Int {
-            let count = Int(x.children.count)
+        func ivarCount(_ x: Swift.Mirror) -> Swift.Int {
+            let count = Swift.Int(x.children.count)
             if let sc = x.superclassMirror {
                 return ivarCount(sc) + count
             } else {
@@ -123,11 +122,11 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             }
         }
 
-        func shouldPrint(_ root: Bool,
-                         _ isChildOfCollection: Bool,
-                         _ x: Mirror) -> Bool {
+        func shouldPrint(_ root: Swift.Bool,
+                         _ isChildOfCollection: Swift.Bool,
+                         _ x: Swift.Mirror) -> Swift.Bool {
             if root || isChildOfCollection { return true }
-            let count = Int(x.children.count)
+            let count = Swift.Int(x.children.count)
             let sc = x.superclassMirror
             if count > 0 { return true }
             if sc == nil { return true }
@@ -139,7 +138,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
         if !shouldPrint(root, childOfCollection, mirror) { return }
         maxItemCounter -= 1
         
-        for _ in 0..<indent { print(" ", terminator: "", to: &targetStream) }
+        for _ in 0..<indent { Swift.print(" ", terminator: "", to: &targetStream) }
         
         // do not expand classes with no custom Mirror
         // yes, a type can lie and say it's a class when it's not since we only
@@ -149,38 +148,38 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
         if let ds = mirror.displayStyle {
             if ds == .`class` {
                 if let x = x_opt {
-                    if !(x is CustomReflectable) { willExpand = false }
+                    if !(x is Swift.CustomReflectable) { willExpand = false }
                 }
             }
         }
-
-        let count = Int(mirror.children.count)
+    
+        let count = Swift.Int(mirror.children.count)
         let bullet = root && (count == 0 || willExpand == false) ? ""
             : count == 0    ? "- "
             : maxDepth <= 0 ? "▹ " : "▿ "
-        print("\(bullet)", terminator: "", to: &targetStream)
+        Swift.print("\(bullet)", terminator: "", to: &targetStream)
         
-        let needColon: Bool
+        let needColon: Swift.Bool
 
-        let isCollection: Bool = isCollectionMirror(mirror)
+        let isCollection: Swift.Bool = isCollectionMirror(mirror)
         
         if let nam = name {
-            print("\(nam) ", terminator: "", to: &targetStream)
+            Swift.print("\(nam) ", terminator: "", to: &targetStream)
             needColon = true
         } else {
             needColon = false
         }
         if let str = stringForObject(x_opt, mirror, count) {
-            if needColon { print(": ", terminator: "", to: &targetStream) }
-            print("\(str)", terminator: "", to: &targetStream)
+            if needColon { Swift.print(": ", terminator: "", to: &targetStream) }
+            Swift.print("\(str)", terminator: "", to: &targetStream)
         }
         
-        if ((maxDepth <= 0) || (false == willExpand)) { print("", to: &targetStream); return }
+        if ((maxDepth <= 0) || (false == willExpand)) { Swift.print("", to: &targetStream); return }
 
         if let x = x_opt {
             if let x_id = idForObject(x) {
                 if refsAlreadySeen.contains(x_id) {
-                    print(" { ... }", to: &targetStream)
+                    Swift.print(" { ... }", to: &targetStream)
                     return
                 } else {
                     refsAlreadySeen.insert(x_id)
@@ -189,7 +188,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
             }
         }
 
-        print("", to: &targetStream)
+        Swift.print("", to: &targetStream)
         
         var i = 0
         
@@ -207,24 +206,24 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
         }
         
         for (name_opt,child) in mirror.children {
-            var name: String
+            var name: Swift.String
             if name_opt == nil { name = "\(i)" }
             else { name = name_opt! }
             if maxItemCounter <= 0 {
-                for _ in 0..<(indent+4) { print(" ", terminator: "", to: &targetStream) }
+                for _ in 0..<(indent+4) { Swift.print(" ", terminator: "", to: &targetStream) }
                 let remainder = count - i
-                print("(\(remainder)", terminator: "", to: &targetStream)
-                if i > 0 { print(" more", terminator: "", to: &targetStream) }
+                Swift.print("(\(remainder)", terminator: "", to: &targetStream)
+                if i > 0 { Swift.print(" more", terminator: "", to: &targetStream) }
                 if remainder == 1 {
-                    print(" child)", to: &targetStream)
+                    Swift.print(" child)", to: &targetStream)
                 } else {
-                    print(" children)", to: &targetStream)
+                    Swift.print(" children)", to: &targetStream)
                 }
                 return
             }
             
             $__lldb__DumpForDebugger_impl(child,
-                Mirror(reflecting: child),
+                Swift.Mirror(reflecting: child),
                 name,
                 indent + 2,
                 maxDepth - 1,
@@ -237,8 +236,8 @@ func $__lldb__DumpForDebugger_impl<StreamType: OutputStream>(
         }
 }
 
-func $__lldb__DumpForDebugger(_ x: Any) -> String {
-    class Output : OutputStream {
+func $__lldb__DumpForDebugger(_ x: Swift.Any) -> Swift.String {
+    class Output : Swift.OutputStream {
         var data = ""
         func _lock() {
         }
@@ -246,17 +245,24 @@ func $__lldb__DumpForDebugger(_ x: Any) -> String {
         func _unlock() {
         }
         
-        func write(_ string: String) {
+        func write(_ string: Swift.String) {
             data += string
         }
     }
     
-    var maxItemCounter = Int.max
-    var refs: Set<ObjectIdentifier> = Set()
+    var maxItemCounter = Swift.Int.max
+    var refs: Swift.Set<Swift.ObjectIdentifier> = Set()
     var targetStream = Output()
-    $__lldb__DumpForDebugger_impl(x, Mirror(reflecting: x), nil,
-        0, Int.max, true, false,
-        &refs, &maxItemCounter, &targetStream)
+    $__lldb__DumpForDebugger_impl(x,
+                                  Swift.Mirror(reflecting: x),
+                                  nil,
+                                  0,
+                                  maxItemCounter,
+                                  true,
+                                  false,
+                                  &refs,
+                                  &maxItemCounter,
+                                  &targetStream)
     var output = targetStream.data
     if output.characters.count > 0 {
         // if not an empty string, it's gonna have a trailing newline by construction

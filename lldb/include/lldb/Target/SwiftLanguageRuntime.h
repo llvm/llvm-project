@@ -418,6 +418,13 @@ public:
     lldb::addr_t
     MaskMaybeBridgedPointer (lldb::addr_t,
                              lldb::addr_t * = nullptr);
+    
+    // Swift uses a few known-unused bits in weak,unowned,unmanaged references
+    // to record useful runtime information
+    // This API's task is to strip those bits if necessary and return
+    // a pure pointer (or a tagged pointer)
+    lldb::addr_t
+    MaybeMaskNonTrivialReferencePointer (lldb::addr_t);
 
     ConstString
     GetErrorBackstopName ();
