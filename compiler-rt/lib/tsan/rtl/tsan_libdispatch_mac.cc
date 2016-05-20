@@ -184,6 +184,29 @@ DISPATCH_INTERCEPT_SYNC_B(dispatch_barrier_sync)
 DISPATCH_INTERCEPT_SYNC_F(dispatch_sync_f)
 DISPATCH_INTERCEPT_SYNC_F(dispatch_barrier_sync_f)
 
+TSAN_INTERCEPTOR(void, dispatch_after, dispatch_time_t when,
+                 dispatch_queue_t queue, dispatch_block_t block) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_after, when, queue, block);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+  dispatch_block_t heap_block = Block_copy(block);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+  tsan_block_context_t *new_context =
+      AllocContext(thr, pc, queue, heap_block, &invoke_and_release_block);
+  Release(thr, pc, (uptr)new_context);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+  REAL(dispatch_after_f)(when, queue, new_context, dispatch_callback_wrap);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+}
+
+TSAN_INTERCEPTOR(void, dispatch_after_f, dispatch_time_t when,
+                 dispatch_queue_t queue, void *context,
+                 dispatch_function_t work) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_after_f, when, queue, context, work);
+  WRAP(dispatch_after)(when, queue, ^(void) {
+    work(context);
+  });
+}
+
 // GCD's dispatch_once implementation has a fast path that contains a racy read
 // and it's inlined into user's code. Furthermore, this fast path doesn't
 // establish a proper happens-before relations between the initialization and
