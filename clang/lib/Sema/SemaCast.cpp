@@ -2441,6 +2441,22 @@ void CastOperation::CheckCStyleCast() {
       return;
     }
 
+    // OpenCL v2.0 s6.13.10 - Allow casts from '0' to event_t type.
+    if (Self.getLangOpts().OpenCL && DestType->isEventT()) {
+      llvm::APSInt CastInt;
+      if (SrcExpr.get()->EvaluateAsInt(CastInt, Self.Context)) {
+        if (0 == CastInt) {
+          Kind = CK_ZeroToOCLEvent;
+          return;
+        }
+        Self.Diag(OpRange.getBegin(),
+                  diag::error_opencl_cast_non_zero_to_event_t)
+                  << CastInt.toString(10) << SrcExpr.get()->getSourceRange();
+        SrcExpr = ExprError();
+        return;
+      }
+    }
+
     // Reject any other conversions to non-scalar types.
     Self.Diag(OpRange.getBegin(), diag::err_typecheck_cond_expect_scalar)
       << DestType << SrcExpr.get()->getSourceRange();

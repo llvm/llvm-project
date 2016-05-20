@@ -852,6 +852,22 @@ extern const char *StyleOptionHelpDescription;
 FormatStyle getStyle(StringRef StyleName, StringRef FileName,
                      StringRef FallbackStyle, vfs::FileSystem *FS = nullptr);
 
+// \brief Returns a string representation of ``Language``.
+inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
+  switch (Language) {
+  case FormatStyle::LK_Cpp:
+    return "C++";
+  case FormatStyle::LK_Java:
+    return "Java";
+  case FormatStyle::LK_JavaScript:
+    return "JavaScript";
+  case FormatStyle::LK_Proto:
+    return "Proto";
+  default:
+    return "Unknown";
+  }
+}
+
 } // end namespace format
 } // end namespace clang
 

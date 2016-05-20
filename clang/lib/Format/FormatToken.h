@@ -535,6 +535,7 @@ struct AdditionalKeywords {
     kw_NS_ENUM = &IdentTable.get("NS_ENUM");
     kw_NS_OPTIONS = &IdentTable.get("NS_OPTIONS");
 
+    kw_as = &IdentTable.get("as");
     kw_async = &IdentTable.get("async");
     kw_await = &IdentTable.get("await");
     kw_finally = &IdentTable.get("finally");
@@ -585,6 +586,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw___except;
 
   // JavaScript keywords.
+  IdentifierInfo *kw_as;
   IdentifierInfo *kw_async;
   IdentifierInfo *kw_await;
   IdentifierInfo *kw_finally;

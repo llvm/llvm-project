@@ -14,5 +14,6 @@ void kernel ker(event_t argevt) { // expected-error {{'event_t' cannot be used a
   foo(e);
   foo(0);
   foo(5); // expected-error {{passing 'int' to parameter of incompatible type 'event_t'}}
+  foo((event_t)1); // expected-error {{cannot cast non-zero value '1' to 'event_t'}}
 }
 
