@@ -172,9 +172,6 @@ public:
   /// The \c CurrentFile can be changed using \c setCurrentFile.
   GlobList &getChecksFilter();
 
-  /// \brief Returns true if the check name is enabled for the \c CurrentFile.
-  bool isCheckEnabled(StringRef CheckName) const;
-
   /// \brief Returns check filter for the \c CurrentFile which
   /// selects checks for upgrade to error.
   GlobList &getWarningAsErrorFilter();

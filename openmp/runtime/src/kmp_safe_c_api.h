@@ -50,7 +50,7 @@
 # define KMP_MEMCPY_S(dst, bsz, src, cnt)   memcpy(dst, src, cnt)
 # define KMP_SNPRINTF                       snprintf
 # define KMP_SSCANF                         sscanf
-# define KMP_STRCPY_S(dst, bsz, src)        strcpy(dst, src) 
+# define KMP_STRCPY_S(dst, bsz, src)        strcpy(dst, src)
 # define KMP_STRNCPY_S(dst, bsz, src, cnt)  strncpy(dst, src, cnt)
 # define KMP_VSNPRINTF                      vsnprintf
 # define KMP_STRNCPY                        strncpy

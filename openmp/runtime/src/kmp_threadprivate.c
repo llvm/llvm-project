@@ -519,11 +519,11 @@ kmp_threadprivate_insert( int gtid, void *pc_addr, void *data_addr, size_t pc_si
 /*!
  @ingroup THREADPRIVATE
 
- @param loc source location information 
- @param data  pointer to data being privatized 
- @param ctor  pointer to constructor function for data 
- @param cctor  pointer to copy constructor function for data 
- @param dtor  pointer to destructor function for data 
+ @param loc source location information
+ @param data  pointer to data being privatized
+ @param ctor  pointer to constructor function for data
+ @param cctor  pointer to copy constructor function for data
+ @param dtor  pointer to destructor function for data
 
  Register constructors and destructors for thread private data.
  This function is called when executing in parallel, when we know the thread id.
@@ -617,14 +617,14 @@ __kmpc_threadprivate(ident_t *loc, kmp_int32 global_tid, void *data, size_t size
 
 /*!
  @ingroup THREADPRIVATE
- @param loc source location information 
- @param global_tid  global thread number 
- @param data  pointer to data to privatize 
- @param size  size of data to privatize 
- @param cache  pointer to cache 
- @return pointer to private storage 
+ @param loc source location information
+ @param global_tid  global thread number
+ @param data  pointer to data to privatize
+ @param size  size of data to privatize
+ @param cache  pointer to cache
+ @return pointer to private storage
 
- Allocate private storage for threadprivate data. 
+ Allocate private storage for threadprivate data.
 */
 void *
 __kmpc_threadprivate_cached(
@@ -653,7 +653,7 @@ __kmpc_threadprivate_cached(
             // No need to zero the allocated memory; __kmp_allocate does that.
             KC_TRACE( 50, ("__kmpc_threadprivate_cached: T#%d allocated cache at address %p\n",
                            global_tid, my_cache ) );
-            
+
             /* TODO: free all this memory in __kmp_common_destroy using __kmp_threadpriv_cache_list */
             /* Add address of mycache to linked list for cleanup later  */
             kmp_cached_addr_t *tp_cache_addr;
@@ -687,11 +687,11 @@ __kmpc_threadprivate_cached(
 
 /*!
  @ingroup THREADPRIVATE
- @param loc source location information 
- @param data  pointer to data being privatized 
- @param ctor  pointer to constructor function for data 
- @param cctor  pointer to copy constructor function for data 
- @param dtor  pointer to destructor function for data 
+ @param loc source location information
+ @param data  pointer to data being privatized
+ @param ctor  pointer to constructor function for data
+ @param cctor  pointer to copy constructor function for data
+ @param dtor  pointer to destructor function for data
  @param vector_length length of the vector (bytes or elements?)
  Register vector constructors and destructors for thread private data.
 */

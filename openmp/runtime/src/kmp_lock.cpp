@@ -3394,7 +3394,7 @@ __kmp_lookup_indirect_lock(void **user_lock, const char *func)
         if (lck == NULL) {
             KMP_FATAL(LockIsUninitialized, func);
         }
-        return lck; 
+        return lck;
     } else {
         if (OMP_LOCK_T_SIZE < sizeof(void *)) {
             return KMP_GET_I_LOCK(KMP_EXTRACT_I_INDEX(user_lock));
@@ -3544,7 +3544,7 @@ __kmp_init_dynamic_user_locks()
     __kmp_i_lock_table.size = KMP_I_LOCK_CHUNK;
     __kmp_i_lock_table.table = (kmp_indirect_lock_t **)__kmp_allocate(sizeof(kmp_indirect_lock_t *));
     *(__kmp_i_lock_table.table) = (kmp_indirect_lock_t *)
-                                  __kmp_allocate(KMP_I_LOCK_CHUNK*sizeof(kmp_indirect_lock_t)); 
+                                  __kmp_allocate(KMP_I_LOCK_CHUNK*sizeof(kmp_indirect_lock_t));
     __kmp_i_lock_table.next = 0;
 
     // Indirect lock size

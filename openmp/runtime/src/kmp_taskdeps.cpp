@@ -239,7 +239,7 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
                      kmp_task_t *task )
 {
     KA_TRACE(30, ("__kmp_process_deps<%d>: T#%d processing %d depencies : dep_barrier = %d\n", filter, gtid, ndeps, dep_barrier ) );
-    
+
     kmp_info_t *thread = __kmp_threads[ gtid ];
     kmp_int32 npredecessors=0;
     for ( kmp_int32 i = 0; i < ndeps ; i++ ) {
@@ -276,9 +276,9 @@ __kmp_process_deps ( kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t *hash,
             if ( last_out->dn.task ) {
                 __kmp_track_dependence(last_out,node,task);
                 last_out->dn.successors = __kmp_add_node(thread, last_out->dn.successors, node);
-                KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n", 
+                KA_TRACE(40,("__kmp_process_deps<%d>: T#%d adding dependence from %p to %p\n",
                              filter,gtid, KMP_TASK_TO_TASKDATA(last_out->dn.task), KMP_TASK_TO_TASKDATA(node->dn.task)));
-                
+
                 npredecessors++;
             }
             KMP_RELEASE_DEPNODE(gtid,last_out);
@@ -373,7 +373,7 @@ __kmp_release_deps ( kmp_int32 gtid, kmp_taskdata_t *task )
     if ( !node ) return;
 
     KA_TRACE(20, ("__kmp_realease_deps: T#%d notifying succesors of task %p.\n", gtid, task ) );
-    
+
     KMP_ACQUIRE_DEPNODE(gtid,node);
     node->dn.task = NULL; // mark this task as finished, so no new dependencies are generated
     KMP_RELEASE_DEPNODE(gtid,node);
@@ -386,7 +386,7 @@ __kmp_release_deps ( kmp_int32 gtid, kmp_taskdata_t *task )
         // successor task can be NULL for wait_depends or because deps are still being processed
         if ( npredecessors == 0 ) {
             KMP_MB();
-            if ( successor->dn.task ) {            
+            if ( successor->dn.task ) {
                 KA_TRACE(20, ("__kmp_realease_deps: T#%d successor %p of %p scheduled for execution.\n", gtid, successor->dn.task, task ) );
                 __kmp_omp_task(gtid,successor->dn.task,false);
             }

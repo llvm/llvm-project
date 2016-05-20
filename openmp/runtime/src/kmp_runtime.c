@@ -5488,7 +5488,7 @@ __kmp_launch_thread( kmp_info_t *this_thr )
                 task_info->frame.exit_runtime_frame = 0;
                 task_info->task_id = 0;
             }
-#endif 
+#endif
         }
     }
     TCR_SYNC_PTR((intptr_t)__kmp_global.g.g_done);
@@ -6842,14 +6842,14 @@ __kmp_teams_master( int gtid )
 #if INCLUDE_SSC_MARKS
     SSC_MARK_JOINING();
 #endif
-    
+
     // AC: last parameter "1" eliminates join barrier which won't work because
     // worker threads are in a fork barrier waiting for more parallel regions
     __kmp_join_call( loc, gtid
 #if OMPT_SUPPORT
         , fork_context_intel
 #endif
-        , 1 ); 
+        , 1 );
 }
 
 int
