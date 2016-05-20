@@ -4781,10 +4781,19 @@ TypoExpr *Sema::CorrectTypoDelayed(
     const ObjCObjectPointerType *OPT) {
   assert(CCC && "CorrectTypoDelayed requires a CorrectionCandidateCallback");
 
-  TypoCorrection Empty;
   auto Consumer = makeTypoCorrectionConsumer(
       TypoName, LookupKind, S, SS, std::move(CCC), MemberContext,
       EnteringContext, OPT, Mode == CTK_ErrorRecovery);
+
+  // Give the external sema source a chance to correct the typo.
+  TypoCorrection ExternalTypo;
+  if (ExternalSource && Consumer) {
+    ExternalTypo = ExternalSource->CorrectTypo(
+        TypoName, LookupKind, S, SS, *Consumer->getCorrectionValidator(),
+        MemberContext, EnteringContext, OPT);
+    if (ExternalTypo)
+      Consumer->addCorrection(ExternalTypo);
+  }
 
   if (!Consumer || Consumer->empty())
     return nullptr;
@@ -4793,7 +4802,7 @@ TypoExpr *Sema::CorrectTypoDelayed(
   // is not more that about a third of the length of the typo's identifier.
   unsigned ED = Consumer->getBestEditDistance(true);
   IdentifierInfo *Typo = TypoName.getName().getAsIdentifierInfo();
-  if (ED > 0 && Typo->getName().size() / ED < 3)
+  if (!ExternalTypo && ED > 0 && Typo->getName().size() / ED < 3)
     return nullptr;
 
   ExprEvalContexts.back().NumTypos++;

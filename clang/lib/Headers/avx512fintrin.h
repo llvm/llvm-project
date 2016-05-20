@@ -8983,6 +8983,21 @@ _mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
                  __M);
 }
 
+static __inline __m512i __DEFAULT_FN_ATTRS
+_mm512_set_epi32 (int __A, int __B, int __C, int __D,
+     int __E, int __F, int __G, int __H,
+     int __I, int __J, int __K, int __L,
+     int __M, int __N, int __O, int __P)
+{
+  return __extension__ (__m512i)(__v16si)
+  { __P, __O, __N, __M, __L, __K, __J, __I,
+    __H, __G, __F, __E, __D, __C, __B, __A };
+}
+
+#define _mm512_setr_epi32(e0,e1,e2,e3,e4,e5,e6,e7,           \
+       e8,e9,e10,e11,e12,e13,e14,e15)          \
+  _mm512_set_epi32(e15,e14,e13,e12,e11,e10,e9,e8,e7,e6,e5,e4,e3,e2,e1,e0)
+  
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_set_epi64 (long long __A, long long __B, long long __C,
      long long __D, long long __E, long long __F,
@@ -8992,6 +9007,9 @@ _mm512_set_epi64 (long long __A, long long __B, long long __C,
   { __H, __G, __F, __E, __D, __C, __B, __A };
 }
 
+#define _mm512_setr_epi64(e0,e1,e2,e3,e4,e5,e6,e7)           \
+  _mm512_set_epi64(e7,e6,e5,e4,e3,e2,e1,e0)
+
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_set_pd (double __A, double __B, double __C, double __D,
         double __E, double __F, double __G, double __H)
@@ -8999,6 +9017,9 @@ _mm512_set_pd (double __A, double __B, double __C, double __D,
   return __extension__ (__m512d)
   { __H, __G, __F, __E, __D, __C, __B, __A };
 }
+
+#define _mm512_setr_pd(e0,e1,e2,e3,e4,e5,e6,e7)              \
+  _mm512_set_pd(e7,e6,e5,e4,e3,e2,e1,e0)
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
 _mm512_set_ps (float __A, float __B, float __C, float __D,
@@ -9010,6 +9031,9 @@ _mm512_set_ps (float __A, float __B, float __C, float __D,
   { __P, __O, __N, __M, __L, __K, __J, __I,
     __H, __G, __F, __E, __D, __C, __B, __A };
 }
+
+#define _mm512_setr_ps(e0,e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15) \
+  _mm512_set_ps(e15,e14,e13,e12,e11,e10,e9,e8,e7,e6,e5,e4,e3,e2,e1,e0)
 
 #undef __DEFAULT_FN_ATTRS
 

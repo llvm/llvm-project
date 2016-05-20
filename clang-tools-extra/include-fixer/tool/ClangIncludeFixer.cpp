@@ -56,6 +56,12 @@ cl::opt<bool>
                        "used for editor integration."),
               cl::init(false), cl::cat(IncludeFixerCategory));
 
+cl::opt<std::string>
+    Style("style",
+          cl::desc("Fallback style for reformatting after inserting new "
+                   "headers if there is no clang-format config file found."),
+          cl::init("llvm"), cl::cat(IncludeFixerCategory));
+
 int includeFixerMain(int argc, const char **argv) {
   tooling::CommonOptionsParser options(argc, argv, IncludeFixerCategory);
   tooling::ClangTool tool(options.getCompilations(),
@@ -133,9 +139,10 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   // Now run our tool.
+  std::set<std::string> Headers;  // Headers to be added.
   std::vector<tooling::Replacement> Replacements;
   include_fixer::IncludeFixerActionFactory Factory(
-      *SymbolIndexMgr, Replacements, MinimizeIncludePaths);
+      *SymbolIndexMgr, Headers, Replacements, Style, MinimizeIncludePaths);
 
   if (tool.run(&Factory) != 0) {
     llvm::errs()
@@ -144,8 +151,8 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   if (!Quiet)
-    for (const tooling::Replacement &Replacement : Replacements)
-      llvm::errs() << "Added " << Replacement.getReplacementText();
+    for (const auto &Header : Headers)
+      llvm::errs() << "Added #include " << Header;
 
   // Set up a new source manager for applying the resulting replacements.
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
@@ -155,11 +162,10 @@ int includeFixerMain(int argc, const char **argv) {
   Diagnostics.setClient(&DiagnosticPrinter, false);
 
   if (STDINMode) {
-    for (const tooling::Replacement &Replacement : Replacements) {
-      FileID ID = SM.getMainFileID();
-      unsigned LineNum = SM.getLineNumber(ID, Replacement.getOffset());
-      llvm::outs() << LineNum << "," << Replacement.getReplacementText();
-    }
+    tooling::Replacements Replaces(Replacements.begin(), Replacements.end());
+    std::string ChangedCode =
+        tooling::applyAllReplacements(Code->getBuffer(), Replaces);
+    llvm::outs() << ChangedCode;
     return 0;
   }
 

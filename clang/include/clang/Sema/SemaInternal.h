@@ -216,6 +216,9 @@ public:
   bool isAddressOfOperand() const { return CorrectionValidator->IsAddressOfOperand; }
   const CXXScopeSpec *getSS() const { return SS.get(); }
   Scope *getScope() const { return S; }
+  CorrectionCandidateCallback *getCorrectionValidator() const {
+    return CorrectionValidator.get();
+  }
 
 private:
   class NamespaceSpecifierSet {

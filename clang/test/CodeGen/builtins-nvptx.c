@@ -1,6 +1,8 @@
 // REQUIRES: nvptx-registered-target
-// RUN: %clang_cc1 -triple nvptx-unknown-unknown -fcuda-is-device -S -emit-llvm -o - -x cuda %s | FileCheck %s
-// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -fcuda-is-device -S -emit-llvm -o - -x cuda %s | FileCheck %s
+// RUN: %clang_cc1 -triple nvptx-unknown-unknown -fcuda-is-device -S -emit-llvm -o - -x cuda %s | \
+// RUN:   FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
+// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -fcuda-is-device -S -emit-llvm -o - -x cuda %s | \
+// RUN:   FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
 
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
@@ -279,4 +281,104 @@ __device__ void nvvm_atom(float *fp, float f, int *ip, int i, unsigned int *uip,
   __nvvm_atom_dec_gen_ui(uip, ui);
 
   // CHECK: ret
+}
+
+// CHECK-LABEL: nvvm_ldg
+__device__ void nvvm_ldg(const void *p) {
+  // CHECK: call i8 @llvm.nvvm.ldg.global.i.i8.p0i8(i8* {{%[0-9]+}}, i32 1)
+  // CHECK: call i8 @llvm.nvvm.ldg.global.i.i8.p0i8(i8* {{%[0-9]+}}, i32 1)
+  __nvvm_ldg_c((const char *)p);
+  __nvvm_ldg_uc((const unsigned char *)p);
+
+  // CHECK: call i16 @llvm.nvvm.ldg.global.i.i16.p0i16(i16* {{%[0-9]+}}, i32 2)
+  // CHECK: call i16 @llvm.nvvm.ldg.global.i.i16.p0i16(i16* {{%[0-9]+}}, i32 2)
+  __nvvm_ldg_s((const short *)p);
+  __nvvm_ldg_us((const unsigned short *)p);
+
+  // CHECK: call i32 @llvm.nvvm.ldg.global.i.i32.p0i32(i32* {{%[0-9]+}}, i32 4)
+  // CHECK: call i32 @llvm.nvvm.ldg.global.i.i32.p0i32(i32* {{%[0-9]+}}, i32 4)
+  __nvvm_ldg_i((const int *)p);
+  __nvvm_ldg_ui((const unsigned int *)p);
+
+  // LP32: call i32 @llvm.nvvm.ldg.global.i.i32.p0i32(i32* {{%[0-9]+}}, i32 4)
+  // LP32: call i32 @llvm.nvvm.ldg.global.i.i32.p0i32(i32* {{%[0-9]+}}, i32 4)
+  // LP64: call i64 @llvm.nvvm.ldg.global.i.i64.p0i64(i64* {{%[0-9]+}}, i32 8)
+  // LP64: call i64 @llvm.nvvm.ldg.global.i.i64.p0i64(i64* {{%[0-9]+}}, i32 8)
+  __nvvm_ldg_l((const long *)p);
+  __nvvm_ldg_ul((const unsigned long *)p);
+
+  // CHECK: call float @llvm.nvvm.ldg.global.f.f32.p0f32(float* {{%[0-9]+}}, i32 4)
+  __nvvm_ldg_f((const float *)p);
+  // CHECK: call double @llvm.nvvm.ldg.global.f.f64.p0f64(double* {{%[0-9]+}}, i32 8)
+  __nvvm_ldg_d((const double *)p);
+
+  // In practice, the pointers we pass to __ldg will be aligned as appropriate
+  // for the CUDA <type>N vector types (e.g. short4), which are not the same as
+  // the LLVM vector types.  However, each LLVM vector type has an alignment
+  // less than or equal to its corresponding CUDA type, so we're OK.
+  //
+  // PTX Interoperability section 2.2: "For a vector with an even number of
+  // elements, its alignment is set to number of elements times the alignment of
+  // its member: n*alignof(t)."
+
+  // CHECK: call <2 x i8> @llvm.nvvm.ldg.global.i.v2i8.p0v2i8(<2 x i8>* {{%[0-9]+}}, i32 2)
+  // CHECK: call <2 x i8> @llvm.nvvm.ldg.global.i.v2i8.p0v2i8(<2 x i8>* {{%[0-9]+}}, i32 2)
+  typedef char char2 __attribute__((ext_vector_type(2)));
+  typedef unsigned char uchar2 __attribute__((ext_vector_type(2)));
+  __nvvm_ldg_c2((const char2 *)p);
+  __nvvm_ldg_uc2((const uchar2 *)p);
+
+  // CHECK: call <4 x i8> @llvm.nvvm.ldg.global.i.v4i8.p0v4i8(<4 x i8>* {{%[0-9]+}}, i32 4)
+  // CHECK: call <4 x i8> @llvm.nvvm.ldg.global.i.v4i8.p0v4i8(<4 x i8>* {{%[0-9]+}}, i32 4)
+  typedef char char4 __attribute__((ext_vector_type(4)));
+  typedef unsigned char uchar4 __attribute__((ext_vector_type(4)));
+  __nvvm_ldg_c4((const char4 *)p);
+  __nvvm_ldg_uc4((const uchar4 *)p);
+
+  // CHECK: call <2 x i16> @llvm.nvvm.ldg.global.i.v2i16.p0v2i16(<2 x i16>* {{%[0-9]+}}, i32 4)
+  // CHECK: call <2 x i16> @llvm.nvvm.ldg.global.i.v2i16.p0v2i16(<2 x i16>* {{%[0-9]+}}, i32 4)
+  typedef short short2 __attribute__((ext_vector_type(2)));
+  typedef unsigned short ushort2 __attribute__((ext_vector_type(2)));
+  __nvvm_ldg_s2((const short2 *)p);
+  __nvvm_ldg_us2((const ushort2 *)p);
+
+  // CHECK: call <4 x i16> @llvm.nvvm.ldg.global.i.v4i16.p0v4i16(<4 x i16>* {{%[0-9]+}}, i32 8)
+  // CHECK: call <4 x i16> @llvm.nvvm.ldg.global.i.v4i16.p0v4i16(<4 x i16>* {{%[0-9]+}}, i32 8)
+  typedef short short4 __attribute__((ext_vector_type(4)));
+  typedef unsigned short ushort4 __attribute__((ext_vector_type(4)));
+  __nvvm_ldg_s4((const short4 *)p);
+  __nvvm_ldg_us4((const ushort4 *)p);
+
+  // CHECK: call <2 x i32> @llvm.nvvm.ldg.global.i.v2i32.p0v2i32(<2 x i32>* {{%[0-9]+}}, i32 8)
+  // CHECK: call <2 x i32> @llvm.nvvm.ldg.global.i.v2i32.p0v2i32(<2 x i32>* {{%[0-9]+}}, i32 8)
+  typedef int int2 __attribute__((ext_vector_type(2)));
+  typedef unsigned int uint2 __attribute__((ext_vector_type(2)));
+  __nvvm_ldg_i2((const int2 *)p);
+  __nvvm_ldg_ui2((const uint2 *)p);
+
+  // CHECK: call <4 x i32> @llvm.nvvm.ldg.global.i.v4i32.p0v4i32(<4 x i32>* {{%[0-9]+}}, i32 16)
+  // CHECK: call <4 x i32> @llvm.nvvm.ldg.global.i.v4i32.p0v4i32(<4 x i32>* {{%[0-9]+}}, i32 16)
+  typedef int int4 __attribute__((ext_vector_type(4)));
+  typedef unsigned int uint4 __attribute__((ext_vector_type(4)));
+  __nvvm_ldg_i4((const int4 *)p);
+  __nvvm_ldg_ui4((const uint4 *)p);
+
+  // CHECK: call <2 x i64> @llvm.nvvm.ldg.global.i.v2i64.p0v2i64(<2 x i64>* {{%[0-9]+}}, i32 16)
+  // CHECK: call <2 x i64> @llvm.nvvm.ldg.global.i.v2i64.p0v2i64(<2 x i64>* {{%[0-9]+}}, i32 16)
+  typedef long long longlong2 __attribute__((ext_vector_type(2)));
+  typedef unsigned long long ulonglong2 __attribute__((ext_vector_type(2)));
+  __nvvm_ldg_ll2((const longlong2 *)p);
+  __nvvm_ldg_ull2((const ulonglong2 *)p);
+
+  // CHECK: call <2 x float> @llvm.nvvm.ldg.global.f.v2f32.p0v2f32(<2 x float>* {{%[0-9]+}}, i32 8)
+  typedef float float2 __attribute__((ext_vector_type(2)));
+  __nvvm_ldg_f2((const float2 *)p);
+
+  // CHECK: call <4 x float> @llvm.nvvm.ldg.global.f.v4f32.p0v4f32(<4 x float>* {{%[0-9]+}}, i32 16)
+  typedef float float4 __attribute__((ext_vector_type(4)));
+  __nvvm_ldg_f4((const float4 *)p);
+
+  // CHECK: call <2 x double> @llvm.nvvm.ldg.global.f.v2f64.p0v2f64(<2 x double>* {{%[0-9]+}}, i32 16)
+  typedef double double2 __attribute__((ext_vector_type(2)));
+  __nvvm_ldg_d2((const double2 *)p);
 }

@@ -125,12 +125,6 @@ public:
   // Remember the valid regions
   RegionSet ValidRegions;
 
-  /// @brief Set of loops (used to remember loops in non-affine subregions).
-  using BoxedLoopsSetTy = SetVector<const Loop *>;
-
-  /// @brief Set to remember non-affine branches in regions.
-  using NonAffineSubRegionSetTy = RegionSet;
-
   /// @brief Context variables for SCoP detection.
   struct DetectionContext {
     Region &CurRegion;   // The region to check.
@@ -163,7 +157,7 @@ public:
     bool HasUnknownAccess;
 
     /// @brief The set of non-affine subregions in the region we analyze.
-    NonAffineSubRegionSetTy NonAffineSubRegionSet;
+    RegionSet NonAffineSubRegionSet;
 
     /// @brief The set of loops contained in non-affine regions.
     BoxedLoopsSetTy BoxedLoopsSet;
@@ -208,13 +202,6 @@ private:
   RegionInfo *RI;
   AliasAnalysis *AA;
   //@}
-
-  /// @brief Enum for coloring BBs in Region.
-  ///
-  /// WHITE - Unvisited BB in DFS walk.
-  /// GREY - BBs which are currently on the DFS stack for processing.
-  /// BLACK - Visited and completely processed BB.
-  enum Color { WHITE, GREY, BLACK };
 
   /// @brief Map to remember detection contexts for all regions.
   using DetectionContextMapTy = DenseMap<BBPair, DetectionContext>;
@@ -539,16 +526,6 @@ public:
 
   /// @brief Return the detection context for @p R, nullptr if @p R was invalid.
   const DetectionContext *getDetectionContext(const Region *R) const;
-
-  /// @brief Return the set of loops in non-affine subregions for @p R.
-  const BoxedLoopsSetTy *getBoxedLoops(const Region *R) const;
-
-  /// @brief Get the instruction to memory access mapping of the current
-  ///        function for @p R.
-  const MapInsnToMemAcc *getInsnToMemAccMap(const Region *R) const;
-
-  /// @brief Return the set of required invariant loads for @p R.
-  const InvariantLoadsSetTy *getRequiredInvariantLoads(const Region *R) const;
 
   /// @brief Return the set of rejection causes for @p R.
   const RejectLog *lookupRejectionLog(const Region *R) const;

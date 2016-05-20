@@ -6,21 +6,23 @@ set(files
   avx2intrin.h
   avx512bwintrin.h
   avx512cdintrin.h
+  avx512dqintrin.h
   avx512erintrin.h
   avx512fintrin.h
+  avx512ifmaintrin.h
+  avx512ifmavlintrin.h
   avx512pfintrin.h
-  avx512vlbwintrin.h
-  avx512vlintrin.h
-  avx512vlcdintrin.h
-  avx512dqintrin.h
-  avx512vldqintrin.h
   avx512vbmiintrin.h
   avx512vbmivlintrin.h
-  pkuintrin.h
+  avx512vlbwintrin.h
+  avx512vlcdintrin.h
+  avx512vldqintrin.h
+  avx512vlintrin.h
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
   __clang_cuda_cmath.h
+  __clang_cuda_intrinsics.h
   __clang_cuda_math_forward_declares.h
   __clang_cuda_runtime_wrapper.h
   cpuid.h
@@ -44,7 +46,9 @@ set(files
   mmintrin.h
   mm_malloc.h
   module.modulemap
+  mwaitxintrin.h
   nmmintrin.h
+  pkuintrin.h
   pmmintrin.h
   popcntintrin.h
   prfchwintrin.h
@@ -68,20 +72,17 @@ set(files
   vadefs.h
   varargs.h
   vecintrin.h
-  __wmmintrin_aes.h
   wmmintrin.h
+  __wmmintrin_aes.h
   __wmmintrin_pclmul.h
   x86intrin.h
   xmmintrin.h
   xopintrin.h
+  xsavecintrin.h
   xsaveintrin.h
   xsaveoptintrin.h
-  xsavecintrin.h
   xsavesintrin.h
-  mwaitxintrin.h
   xtestintrin.h
-  avx512ifmaintrin.h
-  avx512ifmavlintrin.h
   )
 
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)

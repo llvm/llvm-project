@@ -9072,6 +9072,7 @@ public:
   /// \return true if \p CD can be considered empty according to CUDA
   /// (E.2.3.1 in CUDA 7.5 Programming guide).
   bool isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD);
+  bool isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *CD);
 
   /// \name Code completion
   //@{

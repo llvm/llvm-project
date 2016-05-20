@@ -787,6 +787,9 @@ static void updateConsecutiveMacroArgTokens(SourceManager &SM,
     if (CurLoc.isFileID() != NextLoc.isFileID())
       break; // Token from different kind of FileID.
 
+    if (CurLoc.isMacroID() && !SM.isWrittenInSameFile(CurLoc, NextLoc))
+      break; // Token from a different macro.
+
     int RelOffs;
     if (!SM.isInSameSLocAddrSpace(CurLoc, NextLoc, &RelOffs))
       break; // Token from different local/loaded location.

@@ -853,7 +853,7 @@ void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
   // Skip if only bitcode needs to be embedded.
   if (CGOpts.getEmbedBitcode() != CodeGenOptions::Embed_Bitcode) {
     // Embed command-line options.
-    ArrayRef<uint8_t> CmdData((uint8_t*)CGOpts.CmdArgs.data(),
+    ArrayRef<uint8_t> CmdData(const_cast<uint8_t *>(CGOpts.CmdArgs.data()),
                               CGOpts.CmdArgs.size());
     llvm::Constant *CmdConstant =
       llvm::ConstantDataArray::get(M->getContext(), CmdData);

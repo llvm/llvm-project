@@ -538,6 +538,9 @@ private:
       }
       break;
     case tok::kw_for:
+      if (Style.Language == FormatStyle::LK_JavaScript && Tok->Previous &&
+          Tok->Previous->is(tok::period))
+        break;
       Contexts.back().ColonIsForRangeExpr = true;
       next();
       if (!parseParens())

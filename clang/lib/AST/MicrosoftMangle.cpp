@@ -94,7 +94,7 @@ static const DeclContext *getEffectiveDeclContext(const Decl *D) {
     return getEffectiveDeclContext(cast<Decl>(DC));
   }
 
-  return DC;
+  return DC->getRedeclContext();
 }
 
 static const DeclContext *getEffectiveParentContext(const DeclContext *DC) {

@@ -566,4 +566,40 @@ BUILTIN(__nvvm_atom_cas_gen_ll, "LLiLLiD*LLiLLi", "n")
 BUILTIN(__nvvm_compiler_error, "vcC*4", "n")
 BUILTIN(__nvvm_compiler_warn, "vcC*4", "n")
 
+// __ldg.  This is not implemented as a builtin by nvcc.
+BUILTIN(__nvvm_ldg_c, "ccC*", "")
+BUILTIN(__nvvm_ldg_s, "ssC*", "")
+BUILTIN(__nvvm_ldg_i, "iiC*", "")
+BUILTIN(__nvvm_ldg_l, "LiLiC*", "")
+BUILTIN(__nvvm_ldg_ll, "LLiLLiC*", "")
+
+BUILTIN(__nvvm_ldg_uc, "UcUcC*", "")
+BUILTIN(__nvvm_ldg_us, "UsUsC*", "")
+BUILTIN(__nvvm_ldg_ui, "UiUiC*", "")
+BUILTIN(__nvvm_ldg_ul, "ULiULiC*", "")
+BUILTIN(__nvvm_ldg_ull, "ULLiULLiC*", "")
+
+BUILTIN(__nvvm_ldg_f, "ffC*", "")
+BUILTIN(__nvvm_ldg_d, "ddC*", "")
+
+BUILTIN(__nvvm_ldg_c2, "E2cE2cC*", "")
+BUILTIN(__nvvm_ldg_c4, "E4cE4cC*", "")
+BUILTIN(__nvvm_ldg_s2, "E2sE2sC*", "")
+BUILTIN(__nvvm_ldg_s4, "E4sE4sC*", "")
+BUILTIN(__nvvm_ldg_i2, "E2iE2iC*", "")
+BUILTIN(__nvvm_ldg_i4, "E4iE4iC*", "")
+BUILTIN(__nvvm_ldg_ll2, "E2LLiE2LLiC*", "")
+
+BUILTIN(__nvvm_ldg_uc2, "E2UcE2UcC*", "")
+BUILTIN(__nvvm_ldg_uc4, "E4UcE4UcC*", "")
+BUILTIN(__nvvm_ldg_us2, "E2UsE2UsC*", "")
+BUILTIN(__nvvm_ldg_us4, "E4UsE4UsC*", "")
+BUILTIN(__nvvm_ldg_ui2, "E2UiE2UiC*", "")
+BUILTIN(__nvvm_ldg_ui4, "E4UiE4UiC*", "")
+BUILTIN(__nvvm_ldg_ull2, "E2ULLiE2ULLiC*", "")
+
+BUILTIN(__nvvm_ldg_f2, "E2fE2fC*", "")
+BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
+BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")
+
 #undef BUILTIN

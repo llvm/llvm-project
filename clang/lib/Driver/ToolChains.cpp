@@ -1750,6 +1750,10 @@ void Generic_GCC::CudaInstallationDetector::init(
       } else if (GpuArch == "compute_35") {
         CudaLibDeviceMap["sm_35"] = FilePath;
         CudaLibDeviceMap["sm_37"] = FilePath;
+      } else if (GpuArch == "compute_50") {
+        CudaLibDeviceMap["sm_50"] = FilePath;
+        CudaLibDeviceMap["sm_52"] = FilePath;
+        CudaLibDeviceMap["sm_53"] = FilePath;
       }
     }
 
@@ -1923,16 +1927,12 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
             .Maybe(Nan2008)
             .FilterOut(".*sof/nan2008")
             .FilterOut(NonExistent)
-            .setIncludeDirsCallback([](StringRef InstallDir,
-                                       StringRef TripleStr, const Multilib &M) {
-              std::vector<std::string> Dirs;
-              Dirs.push_back((InstallDir + "/include").str());
-              std::string SysRootInc =
-                  InstallDir.str() + "/../../../../sysroot";
+            .setIncludeDirsCallback([](const Multilib &M) {
+              std::vector<std::string> Dirs({"/include"});
               if (StringRef(M.includeSuffix()).startswith("/uclibc"))
-                Dirs.push_back(SysRootInc + "/uclibc/usr/include");
+                Dirs.push_back("/../../../../sysroot/uclibc/usr/include");
               else
-                Dirs.push_back(SysRootInc + "/usr/include");
+                Dirs.push_back("/../../../../sysroot/usr/include");
               return Dirs;
             });
   }
@@ -1954,12 +1954,9 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
     MuslMipsMultilibs = MultilibSet().Either(MArchMipsR2, MArchMipselR2);
 
     // Specify the callback that computes the include directories.
-    MuslMipsMultilibs.setIncludeDirsCallback([](
-        StringRef InstallDir, StringRef TripleStr, const Multilib &M) {
-      std::vector<std::string> Dirs;
-      Dirs.push_back(
-          (InstallDir + "/../sysroot" + M.osSuffix() + "/usr/include").str());
-      return Dirs;
+    MuslMipsMultilibs.setIncludeDirsCallback([](const Multilib &M) {
+      return std::vector<std::string>(
+          {"/../sysroot" + M.osSuffix() + "/usr/include"});
     });
   }
 
@@ -2006,16 +2003,13 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
             .FilterOut("/mips16.*/64")
             .FilterOut("/micromips.*/64")
             .FilterOut(NonExistent)
-            .setIncludeDirsCallback([](StringRef InstallDir,
-                                       StringRef TripleStr, const Multilib &M) {
-              std::vector<std::string> Dirs;
-              Dirs.push_back((InstallDir + "/include").str());
-              std::string SysRootInc =
-                  InstallDir.str() + "/../../../../" + TripleStr.str();
+            .setIncludeDirsCallback([](const Multilib &M) {
+              std::vector<std::string> Dirs({"/include"});
               if (StringRef(M.includeSuffix()).startswith("/uclibc"))
-                Dirs.push_back(SysRootInc + "/libc/uclibc/usr/include");
+                Dirs.push_back(
+                    "/../../../../mips-linux-gnu/libc/uclibc/usr/include");
               else
-                Dirs.push_back(SysRootInc + "/libc/usr/include");
+                Dirs.push_back("/../../../../mips-linux-gnu/libc/usr/include");
               return Dirs;
             });
   }
@@ -2059,13 +2053,9 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
             .Maybe(MAbi64)
             .Maybe(LittleEndian)
             .FilterOut(NonExistent)
-            .setIncludeDirsCallback([](StringRef InstallDir,
-                                       StringRef TripleStr, const Multilib &M) {
-              std::vector<std::string> Dirs;
-              Dirs.push_back((InstallDir + "/include").str());
-              Dirs.push_back(
-                  (InstallDir + "/../../../../sysroot/usr/include").str());
-              return Dirs;
+            .setIncludeDirsCallback([](const Multilib &M) {
+              return std::vector<std::string>(
+                  {"/include", "/../../../../sysroot/usr/include"});
             });
   }
 
@@ -2540,10 +2530,9 @@ void MipsLLVMToolChain::AddClangSystemIncludeArgs(
 
   const auto &Callback = Multilibs.includeDirsCallback();
   if (Callback) {
-    const auto IncludePaths =
-        Callback(D.getInstalledDir(), getTripleString(), SelectedMultilib);
-    for (const auto &Path : IncludePaths)
-      addExternCSystemIncludeIfExists(DriverArgs, CC1Args, Path);
+    for (const auto &Path : Callback(SelectedMultilib))
+      addExternCSystemIncludeIfExists(DriverArgs, CC1Args,
+                                      D.getInstalledDir() + Path);
   }
 }
 
@@ -2588,11 +2577,10 @@ void MipsLLVMToolChain::AddClangCXXStdlibIncludeArgs(
 
   const auto &Callback = Multilibs.includeDirsCallback();
   if (Callback) {
-    const auto IncludePaths = Callback(getDriver().getInstalledDir(),
-                                       getTripleString(), SelectedMultilib);
-    for (const auto &Path : IncludePaths) {
-      if (llvm::sys::fs::exists(Path + "/c++/v1")) {
-        addSystemInclude(DriverArgs, CC1Args, Path + "/c++/v1");
+    for (std::string Path : Callback(SelectedMultilib)) {
+      Path = getDriver().getInstalledDir() + Path + "/c++/v1";
+      if (llvm::sys::fs::exists(Path)) {
+        addSystemInclude(DriverArgs, CC1Args, Path);
         break;
       }
     }
@@ -3970,11 +3958,9 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (GCCInstallation.isValid()) {
     const auto &Callback = Multilibs.includeDirsCallback();
     if (Callback) {
-      const auto IncludePaths = Callback(GCCInstallation.getInstallPath(),
-                                         GCCInstallation.getTriple().str(),
-                                         GCCInstallation.getMultilib());
-      for (const auto &Path : IncludePaths)
-        addExternCSystemIncludeIfExists(DriverArgs, CC1Args, Path);
+      for (const auto &Path : Callback(GCCInstallation.getMultilib()))
+        addExternCSystemIncludeIfExists(
+            DriverArgs, CC1Args, GCCInstallation.getInstallPath() + Path);
     }
   }
 

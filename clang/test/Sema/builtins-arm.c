@@ -48,6 +48,18 @@ void test5() {
 }
 
 void test6(int a, int b, int c) {
+  __builtin_arm_cdp(a, 2, 3, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}
+  __builtin_arm_cdp(1, a, 3, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}
+  __builtin_arm_cdp(1, 2, a, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}
+  __builtin_arm_cdp(1, 2, 3, a, 5, 6); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}
+  __builtin_arm_cdp(1, 2, 3, 4, 5, a); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}
+
+  __builtin_arm_cdp2(a, 2, 3, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp2' must be a constant integer}}
+  __builtin_arm_cdp2(1, a, 3, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp2' must be a constant integer}}
+  __builtin_arm_cdp2(1, 2, a, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp2' must be a constant integer}}
+  __builtin_arm_cdp2(1, 2, 3, a, 5, 6); // expected-error {{argument to '__builtin_arm_cdp2' must be a constant integer}}
+  __builtin_arm_cdp2(1, 2, 3, 4, 5, a); // expected-error {{argument to '__builtin_arm_cdp2' must be a constant integer}}
+
   __builtin_arm_mrc( a, 0, 13, 0, 3); // expected-error {{argument to '__builtin_arm_mrc' must be a constant integer}}
   __builtin_arm_mrc(15, a, 13, 0, 3); // expected-error {{argument to '__builtin_arm_mrc' must be a constant integer}}
   __builtin_arm_mrc(15, 0,  a, 0, 3); // expected-error {{argument to '__builtin_arm_mrc' must be a constant integer}}

@@ -11,6 +11,7 @@ add_clang_library(clangIncludeFixer
   LINK_LIBS
   clangAST
   clangBasic
+  clangFormat
   clangFrontend
   clangLex
   clangParse

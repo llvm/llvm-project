@@ -7349,6 +7349,17 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
 
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                              const CallExpr *E) {
+  auto MakeLdg = [&](unsigned IntrinsicID) {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    AlignmentSource AlignSource;
+    clang::CharUnits Align =
+        getNaturalPointeeTypeAlignment(E->getArg(0)->getType(), &AlignSource);
+    return Builder.CreateCall(
+        CGM.getIntrinsic(IntrinsicID, {Ptr->getType()->getPointerElementType(),
+                                       Ptr->getType()}),
+        {Ptr, ConstantInt::get(Builder.getInt32Ty(), Align.getQuantity())});
+  };
+
   switch (BuiltinID) {
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
@@ -7433,6 +7444,40 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(FnALD32, {Ptr, Val});
   }
 
+  case NVPTX::BI__nvvm_ldg_c:
+  case NVPTX::BI__nvvm_ldg_c2:
+  case NVPTX::BI__nvvm_ldg_c4:
+  case NVPTX::BI__nvvm_ldg_s:
+  case NVPTX::BI__nvvm_ldg_s2:
+  case NVPTX::BI__nvvm_ldg_s4:
+  case NVPTX::BI__nvvm_ldg_i:
+  case NVPTX::BI__nvvm_ldg_i2:
+  case NVPTX::BI__nvvm_ldg_i4:
+  case NVPTX::BI__nvvm_ldg_l:
+  case NVPTX::BI__nvvm_ldg_ll:
+  case NVPTX::BI__nvvm_ldg_ll2:
+  case NVPTX::BI__nvvm_ldg_uc:
+  case NVPTX::BI__nvvm_ldg_uc2:
+  case NVPTX::BI__nvvm_ldg_uc4:
+  case NVPTX::BI__nvvm_ldg_us:
+  case NVPTX::BI__nvvm_ldg_us2:
+  case NVPTX::BI__nvvm_ldg_us4:
+  case NVPTX::BI__nvvm_ldg_ui:
+  case NVPTX::BI__nvvm_ldg_ui2:
+  case NVPTX::BI__nvvm_ldg_ui4:
+  case NVPTX::BI__nvvm_ldg_ul:
+  case NVPTX::BI__nvvm_ldg_ull:
+  case NVPTX::BI__nvvm_ldg_ull2:
+    // PTX Interoperability section 2.2: "For a vector with an even number of
+    // elements, its alignment is set to number of elements times the alignment
+    // of its member: n*alignof(t)."
+    return MakeLdg(Intrinsic::nvvm_ldg_global_i);
+  case NVPTX::BI__nvvm_ldg_f:
+  case NVPTX::BI__nvvm_ldg_f2:
+  case NVPTX::BI__nvvm_ldg_f4:
+  case NVPTX::BI__nvvm_ldg_d:
+  case NVPTX::BI__nvvm_ldg_d2:
+    return MakeLdg(Intrinsic::nvvm_ldg_global_f);
   default:
     return nullptr;
   }
