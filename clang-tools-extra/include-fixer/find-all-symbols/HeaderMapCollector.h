@@ -25,7 +25,7 @@ public:
                         llvm::StringRef MappingHeaderPath) {
     HeaderMappingTable[OrignalHeaderPath] = MappingHeaderPath;
   };
-  const HeaderMap &getHeaderMappingTable() { return HeaderMappingTable; };
+  const HeaderMap &getHeaderMappingTable() const { return HeaderMappingTable; };
 
 private:
   /// A string-to-string map saving the mapping relationship.

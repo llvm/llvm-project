@@ -1,4 +1,4 @@
-//===-- SymbolInfo.h - find all symbols--------------------------*- C++ -*-===//
+//===-- SymbolInfo.h - Symbol Info ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -32,6 +32,7 @@ public:
     TypedefName,
     EnumDecl,
     EnumConstantDecl,
+    Macro,
     Unknown,
   };
 
