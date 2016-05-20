@@ -42,9 +42,9 @@ std::vector<SymbolInfo::Context> GetContexts(const NamedDecl *ND) {
     assert(llvm::isa<NamedDecl>(Context) &&
            "Expect Context to be a NamedDecl");
     if (const auto *NSD = dyn_cast<NamespaceDecl>(Context)) {
-      Contexts.emplace_back(SymbolInfo::ContextType::Namespace,
-                            NSD->isAnonymousNamespace() ? ""
-                                                        : NSD->getName().str());
+      if (!NSD->isInlineNamespace())
+        Contexts.emplace_back(SymbolInfo::ContextType::Namespace,
+                              NSD->getName().str());
     } else if (const auto *ED = dyn_cast<EnumDecl>(Context)) {
       Contexts.emplace_back(SymbolInfo::ContextType::EnumDecl,
                             ED->getName().str());

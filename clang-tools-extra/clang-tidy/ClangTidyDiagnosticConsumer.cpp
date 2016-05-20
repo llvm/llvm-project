@@ -223,10 +223,6 @@ GlobList &ClangTidyContext::getChecksFilter() {
   return *CheckFilter;
 }
 
-bool ClangTidyContext::isCheckEnabled(StringRef CheckName) const {
-  return CheckFilter->contains(CheckName);
-}
-
 GlobList &ClangTidyContext::getWarningAsErrorFilter() {
   assert(WarningAsErrorFilter != nullptr);
   return *WarningAsErrorFilter;

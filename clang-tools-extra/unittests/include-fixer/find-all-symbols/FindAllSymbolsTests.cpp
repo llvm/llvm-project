@@ -125,7 +125,7 @@ public:
     return true;
   }
 
-private:
+protected:
   TestSymbolReporter Reporter;
 };
 
@@ -264,7 +264,8 @@ TEST_F(FindAllSymbolsTest, NamespaceTest) {
       int X1;
       namespace { int X2; }
       namespace { namespace { int X3; } }
-      namespace { namespace nb { int X4;} }
+      namespace { namespace nb { int X4; } }
+      namespace na { inline namespace __1 { int X5; } }
       )";
   runFindAllSymbols(Code);
 
@@ -284,6 +285,10 @@ TEST_F(FindAllSymbolsTest, NamespaceTest) {
   Symbol = SymbolInfo("X4", SymbolInfo::SymbolKind::Variable, HeaderName, 5,
                       {{SymbolInfo::ContextType::Namespace, "nb"},
                        {SymbolInfo::ContextType::Namespace, ""}});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("X5", SymbolInfo::SymbolKind::Variable, HeaderName, 6,
+                      {{SymbolInfo::ContextType::Namespace, "na"}});
   EXPECT_TRUE(hasSymbol(Symbol));
 }
 

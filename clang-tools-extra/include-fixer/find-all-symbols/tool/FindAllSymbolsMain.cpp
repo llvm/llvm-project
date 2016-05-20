@@ -103,7 +103,7 @@ public:
                     StringRef InFile) override {
     Compiler.getPreprocessor().addCommentHandler(&Handler);
     Compiler.getPreprocessor().addPPCallbacks(llvm::make_unique<FindAllMacros>(
-        &Reporter, &Collector, &Compiler.getSourceManager()));
+        &Reporter, &Compiler.getSourceManager(), &Collector));
     return MatchFinder.newASTConsumer();
   }
 
