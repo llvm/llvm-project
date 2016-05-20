@@ -6336,6 +6336,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       AVX512F,
       BMI,
       BMI2,
+      AES,
+      PCLMUL,
+      AVX512VL,
+      AVX512BW,
+      AVX512DQ,
+      AVX512CD,
+      AVX512ER,
+      AVX512PF,
+      AVX512VBMI,
+      AVX512IFMA,
       MAX
     };
 
@@ -6346,6 +6356,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                               .Case("sse", X86Features::SSE)
                               .Case("sse2", X86Features::SSE2)
                               .Case("sse3", X86Features::SSE3)
+                              .Case("ssse3", X86Features::SSSE3)
                               .Case("sse4.1", X86Features::SSE4_1)
                               .Case("sse4.2", X86Features::SSE4_2)
                               .Case("avx", X86Features::AVX)
@@ -6357,6 +6368,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                               .Case("avx512f", X86Features::AVX512F)
                               .Case("bmi", X86Features::BMI)
                               .Case("bmi2", X86Features::BMI2)
+                              .Case("aes", X86Features::AES)
+                              .Case("pclmul", X86Features::PCLMUL)
+                              .Case("avx512vl", X86Features::AVX512VL)
+                              .Case("avx512bw", X86Features::AVX512BW)
+                              .Case("avx512dq", X86Features::AVX512DQ)
+                              .Case("avx512cd", X86Features::AVX512CD)
+                              .Case("avx512er", X86Features::AVX512ER)
+                              .Case("avx512pf", X86Features::AVX512PF)
+                              .Case("avx512vbmi", X86Features::AVX512VBMI)
+                              .Case("avx512ifma", X86Features::AVX512IFMA)
                               .Default(X86Features::MAX);
     assert(Feature != X86Features::MAX && "Invalid feature!");
 

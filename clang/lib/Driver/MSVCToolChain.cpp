@@ -408,7 +408,10 @@ bool MSVCToolChain::getVisualStudioBinariesFolder(const char *clangProgramPath,
 
         SmallString<128> FilePath(PathSegment);
         llvm::sys::path::append(FilePath, "cl.exe");
-        if (llvm::sys::fs::can_execute(FilePath.c_str()) &&
+        // Checking if cl.exe exists is a small optimization over calling
+        // can_execute, which really only checks for existence but will also do
+        // extra checks for cl.exe.exe.  These add up when walking a long path.
+        if (llvm::sys::fs::exists(FilePath.c_str()) &&
             !llvm::sys::fs::equivalent(FilePath.c_str(), clangProgramPath)) {
           // If we found it on the PATH, use it exactly as is with no
           // modifications.
