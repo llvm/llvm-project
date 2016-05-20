@@ -70,6 +70,7 @@ uptr internal_ftruncate(fd_t fd, uptr size);
 
 // OS
 void NORETURN internal__exit(int exitcode);
+unsigned int internal_sleep(unsigned int seconds);
 
 uptr internal_getpid();
 uptr internal_getppid();
