@@ -207,15 +207,6 @@ bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
-static OutputSectionBase<ELFT> *
-findSection(ArrayRef<OutputSectionBase<ELFT> *> V, StringRef Name) {
-  for (OutputSectionBase<ELFT> *Sec : V)
-    if (Sec->getName() == Name)
-      return Sec;
-  return nullptr;
-}
-
-template <class ELFT>
 void LinkerScript<ELFT>::assignAddresses(
     ArrayRef<OutputSectionBase<ELFT> *> Sections) {
   // Orphan sections are sections present in the input files which
@@ -239,23 +230,27 @@ void LinkerScript<ELFT>::assignAddresses(
       continue;
     }
 
-    OutputSectionBase<ELFT> *Sec = findSection<ELFT>(Sections, Cmd.SectionName);
-    if (!Sec)
-      continue;
+    // Find all the sections with required name. There can be more than
+    // ont section with such name, if the alignment, flags or type
+    // attribute differs.
+    for (OutputSectionBase<ELFT> *Sec : Sections) {
+      if (Sec->getName() != Cmd.SectionName)
+        continue;
 
-    if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
-      uintX_t TVA = Dot + ThreadBssOffset;
-      TVA = alignTo(TVA, Sec->getAlign());
-      Sec->setVA(TVA);
-      ThreadBssOffset = TVA - Dot + Sec->getSize();
-      continue;
-    }
+      if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
+        uintX_t TVA = Dot + ThreadBssOffset;
+        TVA = alignTo(TVA, Sec->getAlign());
+        Sec->setVA(TVA);
+        ThreadBssOffset = TVA - Dot + Sec->getSize();
+        continue;
+      }
 
-    if (Sec->getFlags() & SHF_ALLOC) {
-      Dot = alignTo(Dot, Sec->getAlign());
-      Sec->setVA(Dot);
-      Dot += Sec->getSize();
-      continue;
+      if (Sec->getFlags() & SHF_ALLOC) {
+        Dot = alignTo(Dot, Sec->getAlign());
+        Sec->setVA(Dot);
+        Dot += Sec->getSize();
+        continue;
+      }
     }
   }
 }

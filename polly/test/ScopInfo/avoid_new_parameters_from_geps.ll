@@ -3,7 +3,7 @@
 ; Check that we do no introduce a parameter here that is actually not needed.
 ;
 ; CHECK:      Region: %for.body58---%land.lhs.true
-; CHECK-NEXT:     Max Loop Depth:  1
+; CHECK-NEXT:     Max Loop Depth:  0
 ; CHECK-NEXT:     Invariant Accesses: {
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Context:

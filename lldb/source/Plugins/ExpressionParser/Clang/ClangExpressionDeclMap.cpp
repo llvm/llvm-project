@@ -1503,9 +1503,12 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                     {
                         if (llvm::isa<clang::FunctionDecl>(decl))
                         {
-                            clang::NamedDecl *copied_decl = llvm::cast<FunctionDecl>(m_ast_importer_sp->CopyDecl(m_ast_context, &decl->getASTContext(), decl));
-                            context.AddNamedDecl(copied_decl);
-                            context.m_found.function_with_type_info = true;
+                            clang::NamedDecl *copied_decl = llvm::cast_or_null<FunctionDecl>(m_ast_importer_sp->CopyDecl(m_ast_context, &decl->getASTContext(), decl));
+                            if (copied_decl)
+                            {
+                                context.AddNamedDecl(copied_decl);
+                                context.m_found.function_with_type_info = true;
+                            }
                         }
                     }
                 }

@@ -24,6 +24,12 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
   llvm::SmallVector<llvm::StringRef, 8> Names;
   Identifier.split(Names, "::");
 
+  bool IsFullyQualified = false;
+  if (Identifier.startswith("::")) {
+    Names.erase(Names.begin()); // Drop first (empty) element.
+    IsFullyQualified = true;
+  }
+
   // As long as we don't find a result keep stripping name parts from the end.
   // This is to support nested classes which aren't recorded in the database.
   // Eventually we will either hit a class (namespaces aren't in the database
@@ -60,6 +66,11 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
             break;
           }
         }
+
+        // If the name was qualified we only want to add results if we evaluated
+        // all contexts.
+        if (IsFullyQualified)
+          IsMatched &= (SymbolContext == Symbol.getContexts().end());
 
         // FIXME: Support full match. At this point, we only find symbols in
         // database which end with the same contexts with the identifier.

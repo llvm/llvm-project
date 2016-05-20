@@ -1,3 +1,5 @@
+.. title:: clang-tidy - google-runtime-references
+
 google-runtime-references
 =========================
 

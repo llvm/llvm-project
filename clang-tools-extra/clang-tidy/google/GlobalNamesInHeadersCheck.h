@@ -23,7 +23,7 @@ namespace readability {
 ///
 /// The check supports these options:
 ///   - `HeaderFileExtensions`: a comma-separated list of filename extensions
-///     of header files (The filename extensions should not contain "." prefix).
+///     of header files (the filename extensions should not contain "." prefix).
 ///     "h" by default.
 ///     For extension-less header files, using an empty string or leaving an
 ///     empty string between "," if there are other filename extensions.
