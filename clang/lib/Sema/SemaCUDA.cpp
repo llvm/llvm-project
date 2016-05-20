@@ -372,12 +372,60 @@ bool Sema::isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD) {
     return false;
 
   // The only form of initializer allowed is an empty constructor.
-  // This will recursively checks all base classes and member initializers
+  // This will recursively check all base classes and member initializers
   if (!llvm::all_of(CD->inits(), [&](const CXXCtorInitializer *CI) {
         if (const CXXConstructExpr *CE =
                 dyn_cast<CXXConstructExpr>(CI->getInit()))
           return isEmptyCudaConstructor(Loc, CE->getConstructor());
         return false;
+      }))
+    return false;
+
+  return true;
+}
+
+bool Sema::isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *DD) {
+  // No destructor -> no problem.
+  if (!DD)
+    return true;
+
+  if (!DD->isDefined() && DD->isTemplateInstantiation())
+    InstantiateFunctionDefinition(Loc, DD->getFirstDecl());
+
+  // (E.2.3.1, CUDA 7.5) A destructor for a class type is considered
+  // empty at a point in the translation unit, if it is either a
+  // trivial constructor
+  if (DD->isTrivial())
+    return true;
+
+  // ... or it satisfies all of the following conditions:
+  // The destructor function has been defined.
+  // and the function body is an empty compound statement.
+  if (!DD->hasTrivialBody())
+    return false;
+
+  const CXXRecordDecl *ClassDecl = DD->getParent();
+
+  // Its class has no virtual functions and no virtual base classes.
+  if (ClassDecl->isDynamicClass())
+    return false;
+
+  // Only empty destructors are allowed. This will recursively check
+  // destructors for all base classes...
+  if (!llvm::all_of(ClassDecl->bases(), [&](const CXXBaseSpecifier &BS) {
+        if (CXXRecordDecl *RD = BS.getType()->getAsCXXRecordDecl())
+          return isEmptyCudaDestructor(Loc, RD->getDestructor());
+        return true;
+      }))
+    return false;
+
+  // ... and member fields.
+  if (!llvm::all_of(ClassDecl->fields(), [&](const FieldDecl *Field) {
+        if (CXXRecordDecl *RD = Field->getType()
+                                    ->getBaseElementTypeUnsafe()
+                                    ->getAsCXXRecordDecl())
+          return isEmptyCudaDestructor(Loc, RD->getDestructor());
+        return true;
       }))
     return false;
 

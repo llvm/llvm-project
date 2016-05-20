@@ -2082,7 +2082,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
 
       // Check that D is not yet in DiagnosedConflictingDefinitions is required
       // to make sure that we issue an error only once.
-      if (lookupRepresentativeDecl(MangledName, OtherGD) &&
+      if (D && lookupRepresentativeDecl(MangledName, OtherGD) &&
           (D->getCanonicalDecl() != OtherGD.getCanonicalDecl().getDecl()) &&
           (OtherD = dyn_cast<VarDecl>(OtherGD.getDecl())) &&
           OtherD->hasInit() &&
@@ -2301,7 +2301,7 @@ CharUnits CodeGenModule::GetTargetTypeStoreSize(llvm::Type *Ty) const {
 
 unsigned CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D,
                                                  unsigned AddrSpace) {
-  if (LangOpts.CUDA && LangOpts.CUDAIsDevice) {
+  if (D && LangOpts.CUDA && LangOpts.CUDAIsDevice) {
     if (D->hasAttr<CUDAConstantAttr>())
       AddrSpace = getContext().getTargetAddressSpace(LangAS::cuda_constant);
     else if (D->hasAttr<CUDASharedAttr>())

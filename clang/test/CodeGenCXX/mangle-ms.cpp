@@ -4,6 +4,11 @@
 int a;
 // CHECK-DAG: @"\01?a@@3HA"
 
+extern "C++" {
+static int __attribute__((used)) ignore_transparent_context;
+// CHECK-DAG: @ignore_transparent_context
+}
+
 namespace N {
   int b;
 // CHECK-DAG: @"\01?b@N@@3HA"

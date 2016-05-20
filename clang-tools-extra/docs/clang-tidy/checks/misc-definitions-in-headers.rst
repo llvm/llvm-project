@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-definitions-in-headers
+
 misc-definitions-in-headers
 ===========================
 

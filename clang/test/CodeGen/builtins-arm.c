@@ -84,6 +84,20 @@ void prefetch(int i) {
 // CHECK: call {{.*}} @llvm.prefetch(i8* %{{.*}}, i32 1, i32 3, i32 0)
 }
 
+void cdp() {
+  // CHECK: define void @cdp()
+  // CHECK: call void @llvm.arm.cdp(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6)
+  // CHECK-NEXT: ret void
+  __builtin_arm_cdp(1, 2, 3, 4, 5, 6);
+}
+
+void cdp2() {
+  // CHECK: define void @cdp2()
+  // CHECK: call void @llvm.arm.cdp2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6)
+  // CHECK-NEXT: ret void
+  __builtin_arm_cdp2(1, 2, 3, 4, 5, 6);
+}
+
 unsigned mrc() {
   // CHECK: define i32 @mrc()
   // CHECK: [[R:%.*]] = call i32 @llvm.arm.mrc(i32 15, i32 0, i32 13, i32 0, i32 3)

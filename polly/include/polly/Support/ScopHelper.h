@@ -44,6 +44,9 @@ using InvariantLoadsSetTy = llvm::SetVector<llvm::AssertingVH<llvm::LoadInst>>;
 /// @brief Set type for parameters.
 using ParameterSetTy = llvm::SetVector<const llvm::SCEV *>;
 
+/// @brief Set of loops (used to remember loops in non-affine subregions).
+using BoxedLoopsSetTy = llvm::SetVector<const llvm::Loop *>;
+
 /// @brief Utility proxy to wrap the common members of LoadInst and StoreInst.
 ///
 /// This works like the LLVM utility class CallSite, ie. it forwards all calls

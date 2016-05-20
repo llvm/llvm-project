@@ -3862,7 +3862,6 @@ ClangASTContext::GetTypeName (lldb::opaque_compiler_type_t type)
         clang::PrintingPolicy printing_policy (getASTContext()->getPrintingPolicy());
         clang::QualType qual_type(GetQualType(type));
         printing_policy.SuppressTagKeyword = true;
-        printing_policy.LangOpts.WChar = true;
         const clang::TypedefType *typedef_type = qual_type->getAs<clang::TypedefType>();
         if (typedef_type)
         {

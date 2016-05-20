@@ -16,6 +16,7 @@
 # or save any files. To revert a fix, just undo.
 
 import argparse
+import difflib
 import subprocess
 import sys
 import vim
@@ -54,12 +55,10 @@ def main():
 
   if stdout:
     lines = stdout.splitlines()
-    for line in lines:
-      line_num, text = line.split(",")
-      # clang-include-fixer provides 1-based line number
-      line_num = int(line_num) - 1
-      print 'Inserting "{0}" at line {1}'.format(text, line_num)
-      vim.current.buffer[line_num:line_num] = [text]
+    sequence = difflib.SequenceMatcher(None, vim.current.buffer, lines)
+    for op in reversed(sequence.get_opcodes()):
+      if op[0] is not 'equal':
+        vim.current.buffer[op[1]:op[2]] = lines[op[3]:op[4]]
 
 if __name__ == '__main__':
   main()

@@ -1,3 +1,5 @@
+.. title:: clang-tidy - misc-incorrect-roundings
+
 misc-incorrect-roundings
 ========================
 

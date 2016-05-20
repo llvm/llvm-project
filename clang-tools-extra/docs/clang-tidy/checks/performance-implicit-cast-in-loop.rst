@@ -1,3 +1,5 @@
+.. title:: clang-tidy - performance-implicit-cast-in-loop
+
 performance-implicit-cast-in-loop
 =================================
 

@@ -125,6 +125,7 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("x.class.struct = 1;");
   verifyFormat("x.case = 1;");
   verifyFormat("x.interface = 1;");
+  verifyFormat("x.for = 1;");
   verifyFormat("x.of() = 1;");
   verifyFormat("x.in() = 1;");
   verifyFormat("x.let() = 1;");

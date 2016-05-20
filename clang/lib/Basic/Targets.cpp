@@ -1689,6 +1689,9 @@ class NVPTXTargetInfo : public TargetInfo {
     GK_SM30,
     GK_SM35,
     GK_SM37,
+    GK_SM50,
+    GK_SM52,
+    GK_SM53,
   } GPU;
 
 public:
@@ -1787,6 +1790,15 @@ public:
       case GK_SM37:
         CUDAArchCode = "370";
         break;
+      case GK_SM50:
+        CUDAArchCode = "500";
+        break;
+      case GK_SM52:
+        CUDAArchCode = "520";
+        break;
+      case GK_SM53:
+        CUDAArchCode = "530";
+        break;
       default:
         llvm_unreachable("Unhandled target CPU");
       }
@@ -1836,6 +1848,9 @@ public:
               .Case("sm_30", GK_SM30)
               .Case("sm_35", GK_SM35)
               .Case("sm_37", GK_SM37)
+              .Case("sm_50", GK_SM50)
+              .Case("sm_52", GK_SM52)
+              .Case("sm_53", GK_SM53)
               .Default(GK_NONE);
 
     return GPU != GK_NONE;

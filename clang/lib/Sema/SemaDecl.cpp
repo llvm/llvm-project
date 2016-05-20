@@ -10448,6 +10448,12 @@ Sema::FinalizeDeclaration(Decl *ThisDecl) {
         AllowedInit = VD->getInit()->isConstantInitializer(
             Context, VD->getType()->isReferenceType());
 
+      // Also make sure that destructor, if there is one, is empty.
+      if (AllowedInit)
+        if (CXXRecordDecl *RD = VD->getType()->getAsCXXRecordDecl())
+          AllowedInit =
+              isEmptyCudaDestructor(VD->getLocation(), RD->getDestructor());
+
       if (!AllowedInit) {
         Diag(VD->getLocation(), VD->hasAttr<CUDASharedAttr>()
                                     ? diag::err_shared_var_init
