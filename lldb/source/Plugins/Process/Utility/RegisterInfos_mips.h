@@ -39,8 +39,12 @@
       eFormatHex, { kind1, kind2, kind3, kind4, gpr_##reg##_mips }, NULL, NULL }
 
 #define DEFINE_FPR(reg, alt, kind1, kind2, kind3, kind4)           \
-    { #reg, alt, sizeof(((FPR_linux_mips*)NULL)->reg), FPR_OFFSET(reg), eEncodingUint,   \
-      eFormatHex, { kind1, kind2, kind3, kind4, fpr_##reg##_mips }, NULL, NULL }
+    { #reg, alt, sizeof(((FPR_linux_mips*)NULL)->reg), FPR_OFFSET(reg), eEncodingIEEE754,   \
+      eFormatFloat, { kind1, kind2, kind3, kind4, fpr_##reg##_mips }, NULL, NULL }
+
+#define DEFINE_FPR_INFO(reg, alt, kind1, kind2, kind3, kind4)      \
+   { #reg, alt, sizeof(((FPR_linux_mips*)NULL)->reg), FPR_OFFSET(reg), eEncodingUint,   \
+     eFormatHex, { kind1, kind2, kind3, kind4, fpr_##reg##_mips }, NULL, NULL }
 
 #define DEFINE_MSA(reg, alt, kind1, kind2, kind3, kind4)    \
     { #reg, alt, sizeof(((MSA_linux_mips*)0)->reg), MSA_OFFSET(reg), eEncodingVector,   \
@@ -126,9 +130,9 @@ g_register_infos_mips[] =
     DEFINE_FPR (f29,   nullptr,    dwarf_f29_mips,      dwarf_f29_mips,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
     DEFINE_FPR (f30,   nullptr,    dwarf_f30_mips,      dwarf_f30_mips,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
     DEFINE_FPR (f31,   nullptr,    dwarf_f31_mips,      dwarf_f31_mips,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_FPR (fcsr,  nullptr,    dwarf_fcsr_mips,     dwarf_fcsr_mips, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_FPR (fir,   nullptr,    dwarf_fir_mips,      dwarf_fir_mips,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
-    DEFINE_FPR (config5,   nullptr,    dwarf_config5_mips,      dwarf_config5_mips,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_FPR_INFO (fcsr,  nullptr,    dwarf_fcsr_mips,     dwarf_fcsr_mips, LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_FPR_INFO (fir,   nullptr,    dwarf_fir_mips,      dwarf_fir_mips,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
+    DEFINE_FPR_INFO (config5,   nullptr,    dwarf_config5_mips,      dwarf_config5_mips,  LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
     DEFINE_MSA (w0,    nullptr,    dwarf_w0_mips,       dwarf_w0_mips,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
     DEFINE_MSA (w1,    nullptr,    dwarf_w1_mips,       dwarf_w1_mips,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
     DEFINE_MSA (w2,    nullptr,    dwarf_w2_mips,       dwarf_w2_mips,   LLDB_INVALID_REGNUM,    LLDB_INVALID_REGNUM),
@@ -176,6 +180,7 @@ static_assert((sizeof(g_register_infos_mips) / sizeof(g_register_infos_mips[0]))
 #undef MSA_OFFSET
 #undef DEFINE_GPR
 #undef DEFINE_FPR
+#undef DEFINE_FPR_INFO
 #undef DEFINE_MSA
 #undef DEFINE_MSA_INFO
 

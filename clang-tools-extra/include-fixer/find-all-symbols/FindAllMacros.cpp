@@ -29,9 +29,8 @@ void FindAllMacros::MacroDefined(const Token &MacroNameTok,
 
   // If Collector is not nullptr, check pragma remapping header.
   if (Collector) {
-    auto HeaderMappingTable = Collector->getHeaderMappingTable();
-    auto Iter = HeaderMappingTable.find(FilePath);
-    if (Iter != HeaderMappingTable.end())
+    auto Iter = Collector->getHeaderMappingTable().find(FilePath);
+    if (Iter != Collector->getHeaderMappingTable().end())
       FilePath = Iter->second;
   }
 

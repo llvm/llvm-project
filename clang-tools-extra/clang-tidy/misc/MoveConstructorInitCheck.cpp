@@ -44,7 +44,7 @@ MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
           Options.get("IncludeStyle", "llvm"))),
-      UseCERTSemantics(Context->isCheckEnabled("cert-oop11-cpp")) {}
+      UseCERTSemantics(Options.get("UseCERTSemantics", 0) != 0) {}
 
 void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++11; the functionality currently does not
@@ -72,7 +72,7 @@ void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
 
   // This checker is also used to implement cert-oop11-cpp, but when using that
   // form of the checker, we do not want to diagnose movable parameters.
-  if (!UseCERTSemantics)
+  if (!UseCERTSemantics) {
     Finder->addMatcher(
         cxxConstructorDecl(
             allOf(
@@ -89,6 +89,7 @@ void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
                             .bind("init-arg")))))))
             .bind("ctor-decl"),
         this);
+  }
 }
 
 void MoveConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
@@ -176,6 +177,7 @@ void MoveConstructorInitCheck::registerPPCallbacks(CompilerInstance &Compiler) {
 void MoveConstructorInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle",
                 utils::IncludeSorter::toString(IncludeStyle));
+  Options.store(Opts, "UseCERTSemantics", UseCERTSemantics ? 1 : 0);
 }
 
 } // namespace misc

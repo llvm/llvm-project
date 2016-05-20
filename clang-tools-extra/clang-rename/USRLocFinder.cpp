@@ -103,7 +103,9 @@ public:
   bool VisitMemberExpr(const MemberExpr *Expr) {
     const auto *Decl = Expr->getFoundDecl().getDecl();
     if (getUSRForDecl(Decl) == USR) {
-      LocationsFound.push_back(Expr->getMemberLoc());
+      const SourceManager &Manager = Decl->getASTContext().getSourceManager();
+      SourceLocation Location = Manager.getSpellingLoc(Expr->getMemberLoc());
+      LocationsFound.push_back(Location);
     }
     return true;
   }
