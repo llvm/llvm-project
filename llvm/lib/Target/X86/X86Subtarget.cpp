@@ -46,7 +46,7 @@ X86EarlyIfConv("x86-early-ifcvt", cl::Hidden,
 
 /// Classify a blockaddress reference for the current subtarget according to how
 /// we should reference it in a non-pcrel context.
-unsigned char X86Subtarget::ClassifyBlockAddressReference() const {
+unsigned char X86Subtarget::classifyBlockAddressReference() const {
   if (isPICStyleGOT())    // 32-bit ELF targets.
     return X86II::MO_GOTOFF;
 
@@ -59,8 +59,8 @@ unsigned char X86Subtarget::ClassifyBlockAddressReference() const {
 
 /// Classify a global variable reference for the current subtarget according to
 /// how we should reference it in a non-pcrel context.
-unsigned char X86Subtarget::
-ClassifyGlobalReference(const GlobalValue *GV, const TargetMachine &TM) const {
+unsigned char
+X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
   // DLLImport only exists on windows, it is implemented as a load from a
   // DLLIMPORT stub.
   if (GV->hasDLLImportStorageClass())
@@ -88,7 +88,7 @@ ClassifyGlobalReference(const GlobalValue *GV, const TargetMachine &TM) const {
       // overridden.
 
       if (!GV->hasLocalLinkage() && GV->hasDefaultVisibility() &&
-          !isGlobalDefinedInPIE(GV, TM))
+          !isGlobalDefinedInPIE(GV))
         return X86II::MO_GOTPCREL;
     }
 
@@ -100,7 +100,7 @@ ClassifyGlobalReference(const GlobalValue *GV, const TargetMachine &TM) const {
     // PIE as the definition of the global in an executable is not overridden.
 
     if (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
-        isGlobalDefinedInPIE(GV, TM))
+        isGlobalDefinedInPIE(GV))
       return X86II::MO_GOTOFF;
     return X86II::MO_GOT;
   }
@@ -151,16 +151,16 @@ ClassifyGlobalReference(const GlobalValue *GV, const TargetMachine &TM) const {
   return X86II::MO_NO_FLAG;
 }
 
-unsigned char X86Subtarget::classifyGlobalFunctionReference(
-    const GlobalValue *GV, const TargetMachine &TM) const {
+unsigned char
+X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV) const {
   // On ELF targets, in both X86-64 and X86-32 mode, direct calls to
   // external symbols most go through the PLT in PIC mode.  If the symbol
   // has hidden or protected visibility, or if it is static or local, then
   // we don't need to use the PLT - we can directly call it.
   // In PIE mode, calls to global functions don't need to go through PLT
   if (isTargetELF() && TM.getRelocationModel() == Reloc::PIC_ &&
-      !isGlobalDefinedInPIE(GV, TM) &&
-      GV->hasDefaultVisibility() && !GV->hasLocalLinkage()) {
+      !isGlobalDefinedInPIE(GV) && GV->hasDefaultVisibility() &&
+      !GV->hasLocalLinkage()) {
     return X86II::MO_PLT;
   } else if (isPICStyleStubAny() && !GV->isStrongDefinitionForLinker() &&
              (!getTargetTriple().isMacOSX() ||
@@ -200,7 +200,7 @@ bool X86Subtarget::hasSinCos() const {
 }
 
 /// Return true if the subtarget allows calls to immediate address.
-bool X86Subtarget::IsLegalToCallImmediateAddr(const TargetMachine &TM) const {
+bool X86Subtarget::isLegalToCallImmediateAddr() const {
   // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32
   // but WinCOFFObjectWriter::RecordRelocation cannot emit them.  Once it does,
   // the following check for Win32 should be removed.
@@ -347,7 +347,7 @@ X86Subtarget::X86Subtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const X86TargetMachine &TM,
                            unsigned StackAlignOverride)
     : X86GenSubtargetInfo(TT, CPU, FS), X86ProcFamily(Others),
-      PICStyle(PICStyles::None), TargetTriple(TT),
+      PICStyle(PICStyles::None), TM(TM), TargetTriple(TT),
       StackAlignOverride(StackAlignOverride),
       In64BitMode(TargetTriple.getArch() == Triple::x86_64),
       In32BitMode(TargetTriple.getArch() == Triple::x86 &&

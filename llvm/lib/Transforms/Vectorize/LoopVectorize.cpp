@@ -1518,15 +1518,14 @@ private:
 /// different operations.
 class LoopVectorizationCostModel {
 public:
-  LoopVectorizationCostModel(Loop *L, ScalarEvolution *SE, LoopInfo *LI,
-                             LoopVectorizationLegality *Legal,
+  LoopVectorizationCostModel(Loop *L, PredicatedScalarEvolution &PSE,
+                             LoopInfo *LI, LoopVectorizationLegality *Legal,
                              const TargetTransformInfo &TTI,
                              const TargetLibraryInfo *TLI, DemandedBits *DB,
                              AssumptionCache *AC, const Function *F,
-                             const LoopVectorizeHints *Hints,
-                             SmallPtrSetImpl<const Value *> &ValuesToIgnore)
-      : TheLoop(L), SE(SE), LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), DB(DB),
-        TheFunction(F), Hints(Hints), ValuesToIgnore(ValuesToIgnore) {}
+                             const LoopVectorizeHints *Hints)
+      : TheLoop(L), PSE(PSE), LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), DB(DB),
+        AC(AC), TheFunction(F), Hints(Hints) {}
 
   /// Information about vectorization costs
   struct VectorizationFactor {
@@ -1573,6 +1572,9 @@ public:
   /// given vectorization factors.
   SmallVector<RegisterUsage, 8> calculateRegisterUsage(ArrayRef<unsigned> VFs);
 
+  /// Collect values we want to ignore in the cost model.
+  void collectValuesToIgnore();
+
 private:
   /// The vectorization cost is a combination of the cost itself and a boolean
   /// indicating whether any of the contributing operations will actually
@@ -1617,8 +1619,8 @@ public:
 
   /// The loop that we evaluate.
   Loop *TheLoop;
-  /// Scev analysis.
-  ScalarEvolution *SE;
+  /// Predicated scalar evolution analysis.
+  PredicatedScalarEvolution &PSE;
   /// Loop Info analysis.
   LoopInfo *LI;
   /// Vectorization legality.
@@ -1627,13 +1629,17 @@ public:
   const TargetTransformInfo &TTI;
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
-  /// Demanded bits analysis
+  /// Demanded bits analysis.
   DemandedBits *DB;
+  /// Assumption cache.
+  AssumptionCache *AC;
   const Function *TheFunction;
-  // Loop Vectorize Hint.
+  /// Loop Vectorize Hint.
   const LoopVectorizeHints *Hints;
-  // Values to ignore in the cost model.
-  const SmallPtrSetImpl<const Value *> &ValuesToIgnore;
+  /// Values to ignore in the cost model.
+  SmallPtrSet<const Value *, 16> ValuesToIgnore;
+  /// Values to ignore in the cost model when VF > 1.
+  SmallPtrSet<const Value *, 16> VecValuesToIgnore;
 };
 
 /// \brief This holds vectorization requirements that must be verified late in
@@ -1881,19 +1887,10 @@ struct LoopVectorize : public FunctionPass {
       return false;
     }
 
-    // Collect values we want to ignore in the cost model. This includes
-    // type-promoting instructions we identified during reduction detection.
-    SmallPtrSet<const Value *, 32> ValuesToIgnore;
-    CodeMetrics::collectEphemeralValues(L, AC, ValuesToIgnore);
-    for (auto &Reduction : *LVL.getReductionVars()) {
-      RecurrenceDescriptor &RedDes = Reduction.second;
-      SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
-      ValuesToIgnore.insert(Casts.begin(), Casts.end());
-    }
-
     // Use the cost model.
-    LoopVectorizationCostModel CM(L, PSE.getSE(), LI, &LVL, *TTI, TLI, DB, AC,
-                                  F, &Hints, ValuesToIgnore);
+    LoopVectorizationCostModel CM(L, PSE, LI, &LVL, *TTI, TLI, DB, AC, F,
+                                  &Hints);
+    CM.collectValuesToIgnore();
 
     // Check the function attributes to find out if this function should be
     // optimized for size.
@@ -5190,7 +5187,7 @@ LoopVectorizationCostModel::selectVectorizationFactor(bool OptForSize) {
   }
 
   // Find the trip count.
-  unsigned TC = SE->getSmallConstantTripCount(TheLoop);
+  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
 
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
@@ -5409,7 +5406,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(bool OptForSize,
     return 1;
 
   // Do not interleave loops with a relatively small trip count.
-  unsigned TC = SE->getSmallConstantTripCount(TheLoop);
+  unsigned TC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   if (TC > 1 && TC < TinyTripCountInterleaveThreshold)
     return 1;
 
@@ -5639,14 +5636,14 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
     if (!Ends.count(I))
       continue;
 
-    // Skip ignored values.
-    if (ValuesToIgnore.count(I))
-      continue;
-
     // Remove all of the instructions that end at this location.
     InstrList &List = TransposeEnds[i];
     for (unsigned int j = 0, e = List.size(); j < e; ++j)
       OpenIntervals.erase(List[j]);
+
+    // Skip ignored values.
+    if (ValuesToIgnore.count(I))
+      continue;
 
     // For each VF find the maximum usage of registers.
     for (unsigned j = 0, e = VFs.size(); j < e; ++j) {
@@ -5657,8 +5654,12 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
 
       // Count the number of live intervals.
       unsigned RegUsage = 0;
-      for (auto Inst : OpenIntervals)
+      for (auto Inst : OpenIntervals) {
+        // Skip ignored values for VF > 1.
+        if (VecValuesToIgnore.count(Inst))
+          continue;
         RegUsage += GetRegUsage(Inst->getType(), VFs[j]);
+      }
       MaxUsages[j] = std::max(MaxUsages[j], RegUsage);
     }
 
@@ -5830,6 +5831,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   if (VF > 1 && MinBWs.count(I))
     RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
   VectorTy = ToVectorTy(RetTy, VF);
+  auto SE = PSE.getSE();
 
   // TODO: We need to estimate the cost of intrinsic calls.
   switch (I->getOpcode()) {
@@ -6156,6 +6158,79 @@ bool LoopVectorizationCostModel::isConsecutiveLoadOrStore(Instruction *Inst) {
     return Legal->isConsecutivePtr(LI->getPointerOperand()) != 0;
 
   return false;
+}
+
+void LoopVectorizationCostModel::collectValuesToIgnore() {
+  // Ignore ephemeral values.
+  CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
+
+  // Ignore type-promoting instructions we identified during reduction
+  // detection.
+  for (auto &Reduction : *Legal->getReductionVars()) {
+    RecurrenceDescriptor &RedDes = Reduction.second;
+    SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
+    VecValuesToIgnore.insert(Casts.begin(), Casts.end());
+  }
+
+  // Ignore induction phis that are only used in either GetElementPtr or ICmp
+  // instruction to exit loop. Induction variables usually have large types and
+  // can have big impact when estimating register usage.
+  // This is for when VF > 1.
+  for (auto &Induction : *Legal->getInductionVars()) {
+    auto *PN = Induction.first;
+    auto *UpdateV = PN->getIncomingValueForBlock(TheLoop->getLoopLatch());
+
+    // Check that the PHI is only used by the induction increment (UpdateV) or
+    // by GEPs. Then check that UpdateV is only used by a compare instruction or
+    // the loop header PHI.
+    // FIXME: Need precise def-use analysis to determine if this instruction
+    // variable will be vectorized.
+    if (std::all_of(PN->user_begin(), PN->user_end(),
+                    [&](const User *U) -> bool {
+                      return U == UpdateV || isa<GetElementPtrInst>(U);
+                    }) &&
+        std::all_of(UpdateV->user_begin(), UpdateV->user_end(),
+                    [&](const User *U) -> bool {
+                      return U == PN || isa<ICmpInst>(U);
+                    })) {
+      VecValuesToIgnore.insert(PN);
+      VecValuesToIgnore.insert(UpdateV);
+    }
+  }
+
+  // Ignore instructions that will not be vectorized.
+  // This is for when VF > 1.
+  for (auto bb = TheLoop->block_begin(), be = TheLoop->block_end(); bb != be;
+       ++bb) {
+    for (auto &Inst : **bb) {
+      switch (Inst.getOpcode())
+      case Instruction::GetElementPtr: {
+        // Ignore GEP if its last operand is an induction variable so that it is
+        // a consecutive load/store and won't be vectorized as scatter/gather
+        // pattern.
+
+        GetElementPtrInst *Gep = cast<GetElementPtrInst>(&Inst);
+        unsigned NumOperands = Gep->getNumOperands();
+        unsigned InductionOperand = getGEPInductionOperand(Gep);
+        bool GepToIgnore = true;
+
+        // Check that all of the gep indices are uniform except for the
+        // induction operand.
+        for (unsigned i = 0; i != NumOperands; ++i) {
+          if (i != InductionOperand &&
+              !PSE.getSE()->isLoopInvariant(PSE.getSCEV(Gep->getOperand(i)),
+                                            TheLoop)) {
+            GepToIgnore = false;
+            break;
+          }
+        }
+
+        if (GepToIgnore)
+          VecValuesToIgnore.insert(&Inst);
+        break;
+      }
+    }
+  }
 }
 
 void InnerLoopUnroller::scalarizeInstruction(Instruction *Instr,

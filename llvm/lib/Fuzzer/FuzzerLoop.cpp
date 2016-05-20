@@ -437,9 +437,19 @@ struct MallocFreeTracer {
 
 static thread_local MallocFreeTracer AllocTracer;
 
+// FIXME: The hooks only count on Linux because
+// on Mac OSX calls to malloc are intercepted before
+// thread local storage is initialised leading to
+// crashes when accessing ``AllocTracer``.
 extern "C" {
-void __sanitizer_malloc_hook(void *ptr, size_t size) { AllocTracer.Mallocs++; }
-void __sanitizer_free_hook(void *ptr) { AllocTracer.Frees++; }
+void __sanitizer_malloc_hook(void *ptr, size_t size) {
+  if (!LIBFUZZER_APPLE)
+    AllocTracer.Mallocs++;
+}
+void __sanitizer_free_hook(void *ptr) {
+  if (!LIBFUZZER_APPLE)
+    AllocTracer.Frees++;
+}
 }  // extern "C"
 
 void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {

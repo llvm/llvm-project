@@ -1638,7 +1638,8 @@ namespace {
 /// SCCP Class - This class uses the SCCPSolver to implement a per-function
 /// Sparse Conditional Constant Propagator.
 ///
-struct SCCPLegacyPass : public FunctionPass {
+class SCCPLegacyPass : public FunctionPass {
+public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
@@ -1960,7 +1961,8 @@ namespace {
 /// IPSCCP Class - This class implements interprocedural Sparse Conditional
 /// Constant Propagation.
 ///
-struct IPSCCPLegacyPass : public ModulePass {
+class IPSCCPLegacyPass : public ModulePass {
+public:
   static char ID;
 
   IPSCCPLegacyPass() : ModulePass(ID) {

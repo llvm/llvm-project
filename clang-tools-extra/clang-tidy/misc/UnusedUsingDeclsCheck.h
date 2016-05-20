@@ -11,7 +11,8 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_UNUSED_USING_DECLS_H
 
 #include "../ClangTidy.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include <vector>
 
 namespace clang {
 namespace tidy {
@@ -32,8 +33,16 @@ public:
 private:
   void removeFromFoundDecls(const Decl *D);
 
-  llvm::DenseMap<const Decl*, const UsingDecl*> FoundDecls;
-  llvm::DenseMap<const Decl*, CharSourceRange> FoundRanges;
+  struct UsingDeclContext {
+    explicit UsingDeclContext(const UsingDecl *FoundUsingDecl)
+        : FoundUsingDecl(FoundUsingDecl), IsUsed(false) {}
+    llvm::SmallPtrSet<const Decl *, 4> UsingTargetDecls;
+    const UsingDecl *FoundUsingDecl;
+    CharSourceRange UsingDeclRange;
+    bool IsUsed;
+  };
+
+  std::vector<UsingDeclContext> Contexts;
 };
 
 } // namespace misc

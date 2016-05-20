@@ -902,14 +902,14 @@ public:
                                    RegScavenger *RS = nullptr) const = 0;
 
   /// Return the assembly name for \p Reg.
-  virtual std::string getRegAsmName(unsigned Reg) const {
+  virtual StringRef getRegAsmName(unsigned Reg) const {
     // FIXME: We are assuming that the assembly name is equal to the TableGen
     // name converted to lower case
     //
     // The TableGen name is the name of the definition for this register in the
     // target's tablegen files.  For example, the TableGen name of
     // def EAX : Register <...>; is "EAX"
-    return StringRef(getName(Reg)).lower();
+    return StringRef(getName(Reg));
   }
 
   //===--------------------------------------------------------------------===//

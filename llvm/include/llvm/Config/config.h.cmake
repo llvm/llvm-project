@@ -328,6 +328,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
 
+/* Define to 1 if you have the `_Unwind_Backtrace' function. */
+#cmakedefine HAVE_UNWIND_BACKTRACE ${HAVE_UNWIND_BACKTRACE}
+
 /* Define to 1 if you have the <utime.h> header file. */
 #cmakedefine HAVE_UTIME_H ${HAVE_UTIME_H}
 

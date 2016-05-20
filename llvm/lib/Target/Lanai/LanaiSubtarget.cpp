@@ -40,7 +40,6 @@ LanaiSubtarget &LanaiSubtarget::initializeSubtargetDependencies(StringRef CPU,
 LanaiSubtarget::LanaiSubtarget(const Triple &TargetTriple, StringRef Cpu,
                                StringRef FeatureString, const TargetMachine &TM,
                                const TargetOptions &Options,
-                               Reloc::Model RelocationModel,
                                CodeModel::Model CodeModel,
                                CodeGenOpt::Level OptLevel)
     : LanaiGenSubtargetInfo(TargetTriple, Cpu, FeatureString),

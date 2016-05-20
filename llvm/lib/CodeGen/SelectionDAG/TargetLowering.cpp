@@ -1201,37 +1201,6 @@ unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
   return 1;
 }
 
-/// Test if the given value is known to have exactly one bit set. This differs
-/// from computeKnownBits in that it doesn't need to determine which bit is set.
-static bool valueHasExactlyOneBitSet(SDValue Val, const SelectionDAG &DAG) {
-  // A left-shift of a constant one will have exactly one bit set because
-  // shifting the bit off the end is undefined.
-  if (Val.getOpcode() == ISD::SHL) {
-    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
-    if (C && C->getAPIntValue() == 1)
-      return true;
-  }
-
-  // Similarly, a logical right-shift of a constant sign-bit will have exactly
-  // one bit set.
-  if (Val.getOpcode() == ISD::SRL) {
-    auto *C = dyn_cast<ConstantSDNode>(Val.getOperand(0));
-    if (C && C->getAPIntValue().isSignBit())
-      return true;
-  }
-
-  // More could be done here, though the above checks are enough
-  // to handle some common cases.
-
-  // Fall back to computeKnownBits to catch other known cases.
-  EVT OpVT = Val.getValueType();
-  unsigned BitWidth = OpVT.getScalarType().getSizeInBits();
-  APInt KnownZero, KnownOne;
-  DAG.computeKnownBits(Val, KnownZero, KnownOne);
-  return (KnownZero.countPopulation() == BitWidth - 1) &&
-         (KnownOne.countPopulation() == 1);
-}
-
 bool TargetLowering::isConstTrueVal(const SDNode *N) const {
   if (!N)
     return false;
@@ -1334,7 +1303,7 @@ SDValue TargetLowering::simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
 
   SelectionDAG &DAG = DCI.DAG;
   SDValue Zero = DAG.getConstant(0, DL, OpVT);
-  if (valueHasExactlyOneBitSet(Y, DAG)) {
+  if (DAG.isKnownToBeAPowerOfTwo(Y)) {
     // Simplify X & Y == Y to X & Y != 0 if Y has exactly one bit set.
     // Note that where Y is variable and is known to have at most one bit set
     // (for example, if it is Z & 1) we cannot do this; the expressions are not

@@ -38,7 +38,7 @@
 ; EMPTY-NEXT:   Has CTypes: No
 ; EMPTY-NEXT:   Is Stripped: No
 ; EMPTY-NEXT:   Machine Type: x86
-; EMPTY-NEXT:   Number of Symbols: 8
+; EMPTY-NEXT:   Symbol Record Stream Index: 8
 ; EMPTY-NEXT:   Toolchain Version: 12.0
 ; EMPTY-NEXT:   mspdb120.dll version: 12.0.31101
 ; EMPTY-NEXT:   Modules [
@@ -415,7 +415,7 @@
 ; BIG-NEXT:   Has CTypes: No
 ; BIG-NEXT:   Is Stripped: No
 ; BIG-NEXT:   Machine Type: x86
-; BIG-NEXT:   Number of Symbols: 9
+; BIG-NEXT:   Symbol Record Stream Index: 9
 ; BIG-NEXT:   Toolchain Version: 14.0
 ; BIG-NEXT:   mspdb140.dll version: 14.0.23918
 ; BIG-NEXT:   Modules [

@@ -52,6 +52,9 @@ struct LoadCommand {
   virtual ~LoadCommand();
   llvm::MachO::macho_load_command Data;
   std::vector<Section> Sections;
+  std::vector<llvm::yaml::Hex8> PayloadBytes;
+  std::string PayloadString;
+  uint64_t ZeroPadBytes;
 };
 
 struct Object {
@@ -65,6 +68,7 @@ struct Object {
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::LoadCommand)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::Section)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex8)
 
 namespace llvm {
 namespace yaml {

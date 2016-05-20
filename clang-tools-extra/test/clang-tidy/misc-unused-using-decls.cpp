@@ -31,6 +31,8 @@ int UnusedFunc() { return 1; }
 template <typename T> int UsedTemplateFunc() { return 1; }
 template <typename T> int UnusedTemplateFunc() { return 1; }
 template <typename T> int UsedInTemplateFunc() { return 1; }
+void OverloadFunc(int);
+void OverloadFunc(double);
 
 class ostream {
 public:
@@ -78,6 +80,10 @@ template <typename T> void Callee() {
   J<T> j;
   UsedInTemplateFunc<T>();
 }
+
+using n::OverloadFunc; // OverloadFunc
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'OverloadFunc' is unused
+// CHECK-FIXES: {{^}}// OverloadFunc
 
 #define DEFINE_INT(name)        \
   namespace INT {               \

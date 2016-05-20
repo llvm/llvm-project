@@ -3262,8 +3262,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // non-JIT mode.
     const GlobalValue *GV = G->getGlobal();
     if (!GV->hasDLLImportStorageClass()) {
-      unsigned char OpFlags =
-          Subtarget.classifyGlobalFunctionReference(GV, DAG.getTarget());
+      unsigned char OpFlags = Subtarget.classifyGlobalFunctionReference(GV);
 
       Callee = DAG.getTargetGlobalAddress(
           GV, dl, getPointerTy(DAG.getDataLayout()), G->getOffset(), OpFlags);
@@ -3380,6 +3379,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     NumBytesForCalleeToPop = 4;
   else
     NumBytesForCalleeToPop = 0;  // Callee pops nothing.
+
+  if (CLI.DoesNotReturn && !getTargetMachine().Options.TrapUnreachable) {
+    // No need to reset the stack after the call if the call doesn't return. To
+    // make the MI verify, we'll pretend the callee does it for us.
+    NumBytesForCalleeToPop = NumBytes;
+  }
 
   // Returns a flag for retval copy to use.
   if (!IsSibcall) {
@@ -12646,7 +12651,7 @@ SDValue
 X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
   // Create the TargetBlockAddressAddress node.
   unsigned char OpFlags =
-    Subtarget.ClassifyBlockAddressReference();
+    Subtarget.classifyBlockAddressReference();
   CodeModel::Model M = DAG.getTarget().getCodeModel();
   const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
   int64_t Offset = cast<BlockAddressSDNode>(Op)->getOffset();
@@ -12674,8 +12679,7 @@ X86TargetLowering::LowerGlobalAddress(const GlobalValue *GV, SDLoc dl,
                                       int64_t Offset, SelectionDAG &DAG) const {
   // Create the TargetGlobalAddress node, folding in the constant
   // offset if it is legal.
-  unsigned char OpFlags =
-      Subtarget.ClassifyGlobalReference(GV, DAG.getTarget());
+  unsigned char OpFlags = Subtarget.classifyGlobalReference(GV);
   CodeModel::Model M = DAG.getTarget().getCodeModel();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result;
@@ -21978,8 +21982,7 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
 
   if (AM.BaseGV) {
-    unsigned GVFlags =
-      Subtarget.ClassifyGlobalReference(AM.BaseGV, getTargetMachine());
+    unsigned GVFlags = Subtarget.classifyGlobalReference(AM.BaseGV);
 
     // If a reference to this global requires an extra load, we can't fold it.
     if (isGlobalStubReference(GVFlags))
@@ -23450,7 +23453,7 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr *MI,
               .addReg(XII->getGlobalBaseReg(MF))
               .addImm(0)
               .addReg(0)
-              .addMBB(restoreMBB, Subtarget.ClassifyBlockAddressReference())
+              .addMBB(restoreMBB, Subtarget.classifyBlockAddressReference())
               .addReg(0);
     }
   } else
@@ -30181,8 +30184,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     const GlobalValue *GV = GA->getGlobal();
     // If we require an extra load to get this address, as in PIC mode, we
     // can't accept it.
-    if (isGlobalStubReference(
-            Subtarget.ClassifyGlobalReference(GV, DAG.getTarget())))
+    if (isGlobalStubReference(Subtarget.classifyGlobalReference(GV)))
       return;
 
     Result = DAG.getTargetGlobalAddress(GV, SDLoc(Op),

@@ -1820,6 +1820,13 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
 
       auto *LI = dyn_cast<LoadInst>(IncValue);
       if (LI) {
+        // If there is a sequence of one or more load instructions, each loaded
+        // value is used as address of later load instruction, bitcast is
+        // necessary to change the value type, don't optimize it. For
+        // simplicity we give up if the load address comes from another load.
+        Value *Addr = LI->getOperand(0);
+        if (Addr == &CI || isa<LoadInst>(Addr))
+          return nullptr;
         if (LI->hasOneUse() && LI->isSimple())
           continue;
         // If a LoadInst has more than one use, changing the type of loaded

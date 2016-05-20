@@ -109,7 +109,7 @@ OptsizeJumpTableDensity("optsize-jump-table-density", cl::init(40), cl::Hidden,
 // MaxParallelChains default is arbitrarily high to avoid affecting
 // optimization, but could be lowered to improve compile time. Any ld-ld-st-st
 // sequence over this should have been converted to llvm.memcpy by the
-// frontend. It easy to induce this behavior with .ll code such as:
+// frontend. It is easy to induce this behavior with .ll code such as:
 // %buffer = alloca [4096 x i8]
 // %data = load [4096 x i8]* %argPtr
 // store [4096 x i8] %data, [4096 x i8]* %buffer
@@ -121,7 +121,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, SDLoc DL,
 
 /// getCopyFromParts - Create a value that contains the specified legal parts
 /// combined into the value they represent.  If the parts combine to a type
-/// larger then ValueVT then AssertOp can be used to specify whether the extra
+/// larger than ValueVT then AssertOp can be used to specify whether the extra
 /// bits are known to be zero (ISD::AssertZext) or sign extended from ValueVT
 /// (ISD::AssertSext).
 static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
@@ -270,7 +270,7 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
 
 /// getCopyFromPartsVector - Create a value that contains the specified legal
 /// parts combined into the value they represent.  If the parts combine to a
-/// type larger then ValueVT then AssertOp can be used to specify whether the
+/// type larger than ValueVT then AssertOp can be used to specify whether the
 /// extra bits are known to be zero (ISD::AssertZext) or sign extended from
 /// ValueVT (ISD::AssertSext).
 static SDValue getCopyFromPartsVector(SelectionDAG &DAG, SDLoc DL,

@@ -1,4 +1,4 @@
-//===-- FindAllSymbols.cpp - find all symbols -----------------------------===//
+//===-- FindAllSymbols.cpp - find all symbols--------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -59,7 +59,7 @@ std::vector<SymbolInfo::Context> GetContexts(const NamedDecl *ND) {
 
 llvm::Optional<SymbolInfo>
 CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
-                 const HeaderMapCollector::HeaderMap &HeaderMappingTable) {
+                 const HeaderMapCollector *Collector) {
   SymbolInfo::SymbolKind Type;
   if (llvm::isa<VarDecl>(ND)) {
     Type = SymbolInfo::SymbolKind::Variable;
@@ -96,10 +96,12 @@ CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
   if (FilePath.empty())
     return llvm::None;
 
-  // Check pragma remapping header.
-  auto Iter = HeaderMappingTable.find(FilePath);
-  if (Iter != HeaderMappingTable.end())
-    FilePath = Iter->second;
+  // If Collector is not nullptr, check pragma remapping header.
+  if (Collector) {
+    auto Iter = Collector->getHeaderMappingTable().find(FilePath);
+    if (Iter != Collector->getHeaderMappingTable().end())
+      FilePath = Iter->second;
+  }
 
   return SymbolInfo(ND->getNameAsString(), Type, FilePath.str(),
                     SM.getExpansionLineNumber(Loc), GetContexts(ND));
@@ -215,9 +217,9 @@ void FindAllSymbols::run(const MatchFinder::MatchResult &Result) {
   const SourceManager *SM = Result.SourceManager;
 
   llvm::Optional<SymbolInfo> Symbol =
-      CreateSymbolInfo(ND, *SM, Collector->getHeaderMappingTable());
+      CreateSymbolInfo(ND, *SM, Collector);
   if (Symbol)
-    Reporter->reportResult(
+    Reporter->reportSymbol(
         SM->getFileEntryForID(SM->getMainFileID())->getName(), *Symbol);
 }
 

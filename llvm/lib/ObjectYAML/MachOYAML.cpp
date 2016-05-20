@@ -96,6 +96,33 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   IO.setContext(nullptr);
 }
 
+template <typename StructType>
+void mapLoadCommandData(IO &IO, MachOYAML::LoadCommand &LoadCommand) {}
+
+template <>
+void mapLoadCommandData<MachO::segment_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Sections", LoadCommand.Sections);
+}
+
+template <>
+void mapLoadCommandData<MachO::segment_command_64>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Sections", LoadCommand.Sections);
+}
+
+template <>
+void mapLoadCommandData<MachO::dylib_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("PayloadString", LoadCommand.PayloadString);
+}
+
+template <>
+void mapLoadCommandData<MachO::dylinker_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("PayloadString", LoadCommand.PayloadString);
+}
+
 void MappingTraits<MachOYAML::LoadCommand>::mapping(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
   IO.mapRequired(
@@ -106,15 +133,14 @@ void MappingTraits<MachOYAML::LoadCommand>::mapping(
   case MachO::LCName:                                                          \
     MappingTraits<MachO::LCStruct>::mapping(IO,                                \
                                             LoadCommand.Data.LCStruct##_data); \
+    mapLoadCommandData<MachO::LCStruct>(IO, LoadCommand);                      \
     break;
 
   switch (LoadCommand.Data.load_command_data.cmd) {
 #include "llvm/Support/MachO.def"
   }
-  if (LoadCommand.Data.load_command_data.cmd == MachO::LC_SEGMENT ||
-      LoadCommand.Data.load_command_data.cmd == MachO::LC_SEGMENT_64) {
-    IO.mapOptional("Sections", LoadCommand.Sections);
-  }
+  IO.mapOptional("PayloadBytes", LoadCommand.PayloadBytes);
+  IO.mapOptional("ZeroPadBytes", LoadCommand.ZeroPadBytes, (uint64_t)0ull);
 }
 
 void MappingTraits<MachO::dyld_info_command>::mapping(

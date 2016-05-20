@@ -6826,19 +6826,10 @@ multiclass SS48I_binop_rm2<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 let Predicates = [HasAVX, NoVLX] in {
-  defm VPMINSB   : SS48I_binop_rm<0x38, "vpminsb", smin, v16i8, VR128,
-                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V;
   defm VPMINSD   : SS48I_binop_rm<0x39, "vpminsd", smin, v4i32, VR128,
                                   loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V;
   defm VPMINUD   : SS48I_binop_rm<0x3B, "vpminud", umin, v4i32, VR128,
-                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V;
-  defm VPMINUW   : SS48I_binop_rm<0x3A, "vpminuw", umin, v8i16, VR128,
-                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V;
-  defm VPMAXSB   : SS48I_binop_rm<0x3C, "vpmaxsb", smax, v16i8, VR128,
                                   loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V;
   defm VPMAXSD   : SS48I_binop_rm<0x3D, "vpmaxsd", smax, v4i32, VR128,
@@ -6847,28 +6838,30 @@ let Predicates = [HasAVX, NoVLX] in {
   defm VPMAXUD   : SS48I_binop_rm<0x3F, "vpmaxud", umax, v4i32, VR128,
                                   loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V;
-  defm VPMAXUW   : SS48I_binop_rm<0x3E, "vpmaxuw", umax, v8i16, VR128,
-                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V;
   defm VPMULDQ   : SS48I_binop_rm2<0x28, "vpmuldq", X86pmuldq, v2i64, v4i32,
                                    VR128, loadv2i64, i128mem,
                                    SSE_INTMUL_ITINS_P, 1, 0>, VEX_4V;
 }
+let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
+  defm VPMINSB   : SS48I_binop_rm<0x38, "vpminsb", smin, v16i8, VR128,
+                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V;
+  defm VPMINUW   : SS48I_binop_rm<0x3A, "vpminuw", umin, v8i16, VR128,
+                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V;
+  defm VPMAXSB   : SS48I_binop_rm<0x3C, "vpmaxsb", smax, v16i8, VR128,
+                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V;
+  defm VPMAXUW   : SS48I_binop_rm<0x3E, "vpmaxuw", umax, v8i16, VR128,
+                                  loadv2i64, i128mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V;
+}
 
 let Predicates = [HasAVX2, NoVLX] in {
-  defm VPMINSBY  : SS48I_binop_rm<0x38, "vpminsb", smin, v32i8, VR256,
-                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V, VEX_L;
   defm VPMINSDY  : SS48I_binop_rm<0x39, "vpminsd", smin, v8i32, VR256,
                                   loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V, VEX_L;
   defm VPMINUDY  : SS48I_binop_rm<0x3B, "vpminud", umin, v8i32, VR256,
-                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V, VEX_L;
-  defm VPMINUWY  : SS48I_binop_rm<0x3A, "vpminuw", umin, v16i16, VR256,
-                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V, VEX_L;
-  defm VPMAXSBY  : SS48I_binop_rm<0x3C, "vpmaxsb", smax, v32i8, VR256,
                                   loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V, VEX_L;
   defm VPMAXSDY  : SS48I_binop_rm<0x3D, "vpmaxsd", smax, v8i32, VR256,
@@ -6877,12 +6870,23 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm VPMAXUDY  : SS48I_binop_rm<0x3F, "vpmaxud", umax, v8i32, VR256,
                                   loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
                                   VEX_4V, VEX_L;
-  defm VPMAXUWY  : SS48I_binop_rm<0x3E, "vpmaxuw", umax, v16i16, VR256,
-                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
-                                  VEX_4V, VEX_L;
   defm VPMULDQY : SS48I_binop_rm2<0x28, "vpmuldq", X86pmuldq, v4i64, v8i32,
                                   VR256, loadv4i64, i256mem,
                                   SSE_INTMUL_ITINS_P, 1, 0>, VEX_4V, VEX_L;
+}
+let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
+  defm VPMINSBY  : SS48I_binop_rm<0x38, "vpminsb", smin, v32i8, VR256,
+                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V, VEX_L;
+  defm VPMINUWY  : SS48I_binop_rm<0x3A, "vpminuw", umin, v16i16, VR256,
+                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V, VEX_L;
+  defm VPMAXSBY  : SS48I_binop_rm<0x3C, "vpmaxsb", smax, v32i8, VR256,
+                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V, VEX_L;
+  defm VPMAXUWY  : SS48I_binop_rm<0x3E, "vpmaxuw", umax, v16i16, VR256,
+                                  loadv4i64, i256mem, 0, SSE_INTALU_ITINS_P>,
+                                  VEX_4V, VEX_L;
 }
 
 let Constraints = "$src1 = $dst" in {

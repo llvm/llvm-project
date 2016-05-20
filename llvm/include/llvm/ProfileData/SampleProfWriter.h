@@ -76,7 +76,7 @@ protected:
   std::unique_ptr<raw_ostream> OutputStream;
 
   /// \brief Profile summary.
-  std::unique_ptr<SampleProfileSummary> Summary;
+  std::unique_ptr<ProfileSummary> Summary;
 
   /// \brief Compute summary for this profile.
   void computeSummary(const StringMap<FunctionSamples> &ProfileMap);

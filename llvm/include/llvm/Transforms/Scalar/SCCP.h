@@ -27,7 +27,8 @@
 namespace llvm {
 
 /// This pass performs function-level constant propagation and merging.
-struct SCCPPass : PassInfoMixin<SCCPPass> {
+class SCCPPass : public PassInfoMixin<SCCPPass> {
+public:
   PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 }

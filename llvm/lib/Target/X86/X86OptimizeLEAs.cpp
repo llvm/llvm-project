@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the pass that performs some optimizations with LEA
-// instructions in order to improve code size.
+// instructions in order to improve performance and code size.
 // Currently, it does two things:
 // 1) If there are two LEA instructions calculating addresses which only differ
 //    by displacement inside a basic block, one of them is removed.
@@ -614,9 +614,7 @@ bool OptimizeLEAPass::removeRedundantLEAs(MemOpMap &LEAs) {
 bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
-  // Perform this optimization only if we care about code size.
-  if (DisableX86LEAOpt || skipFunction(*MF.getFunction()) ||
-      !MF.getFunction()->optForSize())
+  if (DisableX86LEAOpt || skipFunction(*MF.getFunction()))
     return false;
 
   MRI = &MF.getRegInfo();
@@ -635,13 +633,13 @@ bool OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
     if (LEAs.empty())
       continue;
 
-    // Remove redundant LEA instructions. The optimization may have a negative
-    // effect on performance, so do it only for -Oz.
-    if (MF.getFunction()->optForMinSize())
-      Changed |= removeRedundantLEAs(LEAs);
+    // Remove redundant LEA instructions.
+    Changed |= removeRedundantLEAs(LEAs);
 
-    // Remove redundant address calculations.
-    Changed |= removeRedundantAddrCalc(LEAs);
+    // Remove redundant address calculations. Do it only for -Os/-Oz since only
+    // a code size gain is expected from this part of the pass.
+    if (MF.getFunction()->optForSize())
+      Changed |= removeRedundantAddrCalc(LEAs);
   }
 
   return Changed;

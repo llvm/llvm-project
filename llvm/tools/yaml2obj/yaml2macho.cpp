@@ -94,6 +94,60 @@ SectionType constructSection(MachOYAML::Section Sec) {
   return TempSec;
 }
 
+template <typename StructType>
+size_t writeLoadCommandData(MachOYAML::LoadCommand &LC, raw_ostream &OS) {
+  return 0;
+}
+
+template <>
+size_t writeLoadCommandData<MachO::segment_command>(MachOYAML::LoadCommand &LC,
+                                                    raw_ostream &OS) {
+  size_t BytesWritten = 0;
+  for (auto Sec : LC.Sections) {
+    auto TempSec = constructSection<MachO::section>(Sec);
+    OS.write(reinterpret_cast<const char *>(&(TempSec)),
+             sizeof(MachO::section));
+    BytesWritten += sizeof(MachO::section);
+  }
+  return BytesWritten;
+}
+
+template <>
+size_t
+writeLoadCommandData<MachO::segment_command_64>(MachOYAML::LoadCommand &LC,
+                                                raw_ostream &OS) {
+  size_t BytesWritten = 0;
+  for (auto Sec : LC.Sections) {
+    auto TempSec = constructSection<MachO::section_64>(Sec);
+    TempSec.reserved3 = Sec.reserved3;
+    OS.write(reinterpret_cast<const char *>(&(TempSec)),
+             sizeof(MachO::section_64));
+    BytesWritten += sizeof(MachO::section_64);
+  }
+  return BytesWritten;
+}
+
+size_t writePayloadString(MachOYAML::LoadCommand &LC, raw_ostream &OS) {
+  size_t BytesWritten = 0;
+  if (!LC.PayloadString.empty()) {
+    OS.write(LC.PayloadString.c_str(), LC.PayloadString.length());
+    BytesWritten = LC.PayloadString.length();
+  }
+  return BytesWritten;
+}
+
+template <>
+size_t writeLoadCommandData<MachO::dylib_command>(MachOYAML::LoadCommand &LC,
+                                                  raw_ostream &OS) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::dylinker_command>(MachOYAML::LoadCommand &LC,
+                                                     raw_ostream &OS) {
+  return writePayloadString(LC, OS);
+}
+
 Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
   for (auto &LC : Obj.LoadCommands) {
     size_t BytesWritten = 0;
@@ -102,6 +156,7 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
     OS.write(reinterpret_cast<const char *>(&(LC.Data.LCStruct##_data)),       \
              sizeof(MachO::LCStruct));                                         \
     BytesWritten = sizeof(MachO::LCStruct);                                    \
+    BytesWritten += writeLoadCommandData<MachO::LCStruct>(LC, OS);             \
     break;
 
     switch (LC.Data.load_command_data.cmd) {
@@ -109,33 +164,30 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
       OS.write(reinterpret_cast<const char *>(&(LC.Data.load_command_data)),
                sizeof(MachO::load_command));
       BytesWritten = sizeof(MachO::load_command);
+      BytesWritten += writeLoadCommandData<MachO::load_command>(LC, OS);
       break;
 #include "llvm/Support/MachO.def"
     }
 
-    if(LC.Data.load_command_data.cmd == MachO::LC_SEGMENT) {
-      for(auto Sec : LC.Sections) {
-        auto TempSec = constructSection<MachO::section>(Sec);
-        OS.write(reinterpret_cast<const char *>(&(TempSec)), sizeof(MachO::section));
-        BytesWritten += sizeof(MachO::section);
-      }
-    } else if(LC.Data.load_command_data.cmd == MachO::LC_SEGMENT_64) {
-      for(auto Sec : LC.Sections) {
-        auto TempSec = constructSection<MachO::section_64>(Sec);
-        TempSec.reserved3 = Sec.reserved3;
-        OS.write(reinterpret_cast<const char *>(&(TempSec)), sizeof(MachO::section_64));
-        BytesWritten += sizeof(MachO::section_64);
-      }
+    if (LC.PayloadBytes.size() > 0) {
+      OS.write(reinterpret_cast<const char *>(LC.PayloadBytes.data()),
+               LC.PayloadBytes.size());
+      BytesWritten += LC.PayloadBytes.size();
     }
 
-    auto BytesRemaining =
-        LC.Data.load_command_data.cmdsize - BytesWritten;
+    if (LC.ZeroPadBytes > 0) {
+      std::vector<uint8_t> FillData;
+      FillData.insert(FillData.begin(), LC.ZeroPadBytes, 0);
+      OS.write(reinterpret_cast<char *>(FillData.data()), LC.ZeroPadBytes);
+      BytesWritten += LC.ZeroPadBytes;
+    }
+
+    // Fill remaining bytes with 0. This will only get hit in partially
+    // specified test cases.
+    auto BytesRemaining = LC.Data.load_command_data.cmdsize - BytesWritten;
     if (BytesRemaining > 0) {
-      // TODO: Replace all this once the load command data is present in yaml.
-      // For now I fill with 0xDEADBEEF because it is easy to spot on a hex
-      // viewer.
       std::vector<uint32_t> FillData;
-      FillData.insert(FillData.begin(), BytesRemaining / 4 + 1, 0xDEADBEEFu);
+      FillData.insert(FillData.begin(), BytesRemaining, 0);
       OS.write(reinterpret_cast<char *>(FillData.data()), BytesRemaining);
     }
   }

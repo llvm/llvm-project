@@ -269,7 +269,7 @@ LBB4:
   b LBB2
 
 If BB4 is the only predecessor of BB3, then we can emit BB3 after BB4. We can
-then eliminate beq and and turn the unconditional branch to LBB2 to a bne.
+then eliminate beq and turn the unconditional branch to LBB2 to a bne.
 
 See McCat/18-imp/ComputeBoundingBoxes for an example.
 

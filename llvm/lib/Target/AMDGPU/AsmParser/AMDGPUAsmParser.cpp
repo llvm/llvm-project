@@ -87,6 +87,17 @@ const char* const OpGsSymbolic[] = {
 
 using namespace llvm;
 
+// In some cases (e.g. buffer atomic instructions) MatchOperandParserImpl()
+// may invoke tryCustomParseOperand() multiple times with the same MCK value.
+// That leads to adding of the same "default" operand multiple times in a row,
+// which is wrong. The workaround adds only the 1st default operand, while for
+// the rest the "dummy" operands being added. The reason for dummies is that if
+// we just skip adding an operand, then parser would get stuck in endless loop.
+// Dummies shall be removed prior matching & emitting MCInsts.
+//
+// Comment out this macro to disable the workaround.
+#define WORKAROUND_USE_DUMMY_OPERANDS_INSTEAD_MUTIPLE_DEFAULT_OPERANDS
+
 namespace {
 
 struct OptionalOperand;
@@ -99,6 +110,9 @@ class AMDGPUOperand : public MCParsedAsmOperand {
     Immediate,
     Register,
     Expression
+#ifdef WORKAROUND_USE_DUMMY_OPERANDS_INSTEAD_MUTIPLE_DEFAULT_OPERANDS
+    ,Dummy
+#endif
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -203,6 +217,12 @@ public:
       Inst.addOperand(MCOperand::createExpr(Expr));
     }
   }
+
+#ifdef WORKAROUND_USE_DUMMY_OPERANDS_INSTEAD_MUTIPLE_DEFAULT_OPERANDS
+  bool isDummy() const {
+    return Kind == Dummy;
+  }
+#endif
 
   bool isToken() const override {
     return Kind == Token;
@@ -440,6 +460,11 @@ public:
     case Expression:
       OS << "<expr " << *Expr << '>';
       break;
+#ifdef WORKAROUND_USE_DUMMY_OPERANDS_INSTEAD_MUTIPLE_DEFAULT_OPERANDS
+    case Dummy:
+      OS << "<dummy>";
+      break;
+#endif
     }
   }
 
@@ -489,6 +514,15 @@ public:
     Op->EndLoc = S;
     return Op;
   }
+
+#ifdef WORKAROUND_USE_DUMMY_OPERANDS_INSTEAD_MUTIPLE_DEFAULT_OPERANDS
+  static AMDGPUOperand::Ptr CreateDummy(SMLoc S) {
+    auto Op = llvm::make_unique<AMDGPUOperand>(Dummy);
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+#endif
 
   bool isSWaitCnt() const;
   bool isHwreg() const;
@@ -545,6 +579,7 @@ private:
   bool ParseSectionDirectiveHSARodataReadonlyAgent();
   bool AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth, RegisterKind RegKind, unsigned Reg1, unsigned RegNum);
   bool ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, unsigned& RegNum, unsigned& RegWidth);
+  void cvtMubufImpl(MCInst &Inst, const OperandVector &Operands, bool IsAtomic, bool IsAtomicReturn);
 
 public:
   enum AMDGPUMatchResultTy {
@@ -633,8 +668,9 @@ public:
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultHwreg() const;
 
-
-  void cvtMubuf(MCInst &Inst, const OperandVector &Operands);
+  void cvtMubuf(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false); }
+  void cvtMubufAtomic(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, false); }
+  void cvtMubufAtomicReturn(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, true); }
   AMDGPUOperand::Ptr defaultMubufOffset() const;
   AMDGPUOperand::Ptr defaultGLC() const;
   AMDGPUOperand::Ptr defaultSLC() const;
@@ -925,6 +961,17 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               uint64_t &ErrorInfo,
                                               bool MatchingInlineAsm) {
   MCInst Inst;
+
+#ifdef WORKAROUND_USE_DUMMY_OPERANDS_INSTEAD_MUTIPLE_DEFAULT_OPERANDS
+  // Remove dummies prior matching. Iterate backwards becase vector::erase()
+  // invalidates all iterators which refer after erase point.
+  for (auto I = Operands.rbegin(), E = Operands.rend(); I != E; ) {
+    auto X = I++;
+    if (static_cast<AMDGPUOperand*>(X->get())->isDummy()) {
+      Operands.erase(X.base() -1);
+    }
+  }
+#endif
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
     default: break;
@@ -1430,6 +1477,25 @@ AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
   }
 
   Operands.push_back(AMDGPUOperand::CreateImm(Value, S, ImmTy));
+
+#ifdef WORKAROUND_USE_DUMMY_OPERANDS_INSTEAD_MUTIPLE_DEFAULT_OPERANDS
+  if (Value == Default && AddDefault) {
+    // Reverse lookup in previously added operands (skip just added one)
+    // for the first non-dummy operand. If it is of the same type,
+    // then replace just added default operand with dummy.
+    for (auto I = Operands.rbegin(), E = Operands.rend(); I != E; ++I) {
+      if (I == Operands.rbegin())
+        continue;
+      if (static_cast<AMDGPUOperand*>(I->get())->isDummy())
+        continue;
+      if (static_cast<AMDGPUOperand*>(I->get())->isImmTy(ImmTy)) {
+        Operands.pop_back();
+        Operands.push_back(AMDGPUOperand::CreateDummy(S)); // invalidates iterators
+        break;
+      }
+    }
+  }
+#endif
   return MatchOperand_Success;
 }
 
@@ -2047,9 +2113,11 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultTFE() const {
   return AMDGPUOperand::CreateImm(0, SMLoc(), AMDGPUOperand::ImmTyTFE);
 }
 
-void AMDGPUAsmParser::cvtMubuf(MCInst &Inst,
-                               const OperandVector &Operands) {
+void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
+                               const OperandVector &Operands,
+                               bool IsAtomic, bool IsAtomicReturn) {
   OptionalImmIndexMap OptionalIdx;
+  assert(IsAtomicReturn ? IsAtomic : true);
 
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
@@ -2077,8 +2145,16 @@ void AMDGPUAsmParser::cvtMubuf(MCInst &Inst,
     OptionalIdx[Op.getImmTy()] = i;
   }
 
+  // Copy $vdata_in operand and insert as $vdata for MUBUF_Atomic RTN insns.
+  if (IsAtomicReturn) {
+    MCInst::iterator I = Inst.begin(); // $vdata_in is always at the beginning.
+    Inst.insert(I, *I);
+  }
+
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
+  if (!IsAtomic) { // glc is hard-coded.
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
+  }
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
 }

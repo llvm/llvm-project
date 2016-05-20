@@ -48,13 +48,6 @@ FunctionPass *llvm::createWebAssemblyPeephole() {
   return new WebAssemblyPeephole();
 }
 
-static const TargetRegisterClass *GetRegClass(const MachineRegisterInfo &MRI,
-                                              unsigned RegNo) {
-  return TargetRegisterInfo::isVirtualRegister(RegNo)
-             ? MRI.getRegClass(RegNo)
-             : MRI.getTargetRegisterInfo()->getMinimalPhysRegClass(RegNo);
-}
-
 /// If desirable, rewrite NewReg to a drop register.
 static bool MaybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
                                MachineOperand &MO,
@@ -63,7 +56,7 @@ static bool MaybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
   bool Changed = false;
   if (OldReg == NewReg) {
     Changed = true;
-    unsigned NewReg = MRI.createVirtualRegister(GetRegClass(MRI, OldReg));
+    unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
     MO.setReg(NewReg);
     MO.setIsDead();
     MFI.stackifyVReg(NewReg);
@@ -127,7 +120,7 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
               unsigned OldReg = MO.getReg();
               unsigned NewReg = Op2.getReg();
 
-              if (GetRegClass(MRI, NewReg) != GetRegClass(MRI, OldReg))
+              if (MRI.getRegClass(NewReg) != MRI.getRegClass(OldReg))
                 report_fatal_error("Peephole: call to builtin function with "
                                    "wrong signature, from/to mismatch");
               Changed |= MaybeRewriteToDrop(OldReg, NewReg, MO, MFI, MRI);
