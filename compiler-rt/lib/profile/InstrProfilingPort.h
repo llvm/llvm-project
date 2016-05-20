@@ -70,8 +70,10 @@
 #endif
 
 #define PROF_ERR(Format, ...)                                                  \
-  if (GetEnvHook && GetEnvHook("LLVM_PROFILE_VERBOSE_ERRORS"))                 \
-    fprintf(stderr, Format, __VA_ARGS__);
+  fprintf(stderr, "LLVM Profile Error: " Format, __VA_ARGS__);
+
+#define PROF_WARN(Format, ...)                                                 \
+  fprintf(stderr, "LLVM Profile Warning: " Format, __VA_ARGS__);
 
 #if defined(__FreeBSD__)
 
