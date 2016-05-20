@@ -6271,6 +6271,16 @@ public:
         .Default(false);
   }
 
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+    case CC_C:
+    case CC_Swift:
+      return CCCR_OK;
+    default:
+      return CCCR_Warning;
+    }
+  }
+
   StringRef getABI() const override {
     if (HasVector)
       return "vector";
