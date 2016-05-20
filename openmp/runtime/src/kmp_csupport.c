@@ -283,7 +283,7 @@ __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...)
 {
   int         gtid = __kmp_entry_gtid();
 
-#if (KMP_STATS_ENABLED)  
+#if (KMP_STATS_ENABLED)
   int inParallel = __kmpc_in_parallel(loc);
   if (inParallel)
   {
@@ -620,7 +620,7 @@ __kmpc_flush(ident_t *loc)
             if ( ! __kmp_cpuinfo.sse2 ) {
                 // CPU cannot execute SSE2 instructions.
             } else {
-                #if KMP_COMPILER_ICC 
+                #if KMP_COMPILER_ICC
                 _mm_mfence();
                 #elif KMP_COMPILER_MSVC
                 MemoryBarrier();

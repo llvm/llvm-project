@@ -135,15 +135,44 @@ static uint64_t getAArch64Page(uint64_t Expr) {
   return Expr & (~static_cast<uint64_t>(0xFFF));
 }
 
+// For computing values, each R_RELAX_TLS_* corresponds to whatever expression
+// the target uses in the mode this is being relaxed into. For example, anything
+// that relaxes to LE just needs an R_TLS since that is what is used if we
+// had a local exec expression to begin with.
+static RelExpr getRelaxedExpr(RelExpr Expr) {
+  switch (Expr) {
+  default:
+    return Expr;
+  case R_RELAX_TLS_GD_TO_LE:
+    if (Config->EMachine == EM_386)
+      return R_NEG_TLS;
+    return R_TLS;
+  case R_RELAX_TLS_GD_TO_IE:
+    if (Config->EMachine == EM_386)
+      return R_GOT_FROM_END;
+    return R_GOT_PC;
+  case R_RELAX_TLS_IE_TO_LE:
+  case R_RELAX_TLS_LD_TO_LE:
+    return R_TLS;
+  }
+}
+
 template <class ELFT>
 static typename ELFT::uint
 getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
          const SymbolBody &Body, uint8_t *BufLoc,
          const elf::ObjectFile<ELFT> &File, RelExpr Expr) {
   typedef typename ELFT::uint uintX_t;
+  Expr = getRelaxedExpr(Expr);
+
   switch (Expr) {
   case R_HINT:
     llvm_unreachable("cannot relocate hint relocs");
+  case R_RELAX_TLS_GD_TO_LE:
+  case R_RELAX_TLS_GD_TO_IE:
+  case R_RELAX_TLS_IE_TO_LE:
+  case R_RELAX_TLS_LD_TO_LE:
+    llvm_unreachable("Should have been mapped");
   case R_TLSLD:
     return Out<ELFT>::Got->getTlsIndexOff() + A -
            Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
@@ -171,18 +200,13 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
     return Body.getGotOffset<ELFT>() + A -
            Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
   case R_GOT:
-  case R_RELAX_TLS_GD_TO_IE:
     return Body.getGotVA<ELFT>() + A;
   case R_GOT_PAGE_PC:
     return getAArch64Page(Body.getGotVA<ELFT>() + A) - getAArch64Page(P);
   case R_GOT_PC:
-  case R_RELAX_TLS_GD_TO_IE_PC:
     return Body.getGotVA<ELFT>() + A - P;
   case R_GOTONLY_PC:
     return Out<ELFT>::Got->getVA() + A - P;
-  case R_RELAX_TLS_GD_TO_LE:
-  case R_RELAX_TLS_IE_TO_LE:
-  case R_RELAX_TLS_LD_TO_LE:
   case R_TLS:
     if (Target->TcbSize)
       return Body.getVA<ELFT>(A) +
@@ -292,30 +316,29 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
     uint64_t SymVA = SignExtend64<Bits>(
         getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, BufLoc, *File, Expr));
 
-    if (Expr == R_RELAX_TLS_IE_TO_LE) {
-      Target->relaxTlsIeToLe(BufLoc, Type, SymVA);
-      continue;
-    }
-    if (Expr == R_RELAX_TLS_LD_TO_LE) {
-      Target->relaxTlsLdToLe(BufLoc, Type, SymVA);
-      continue;
-    }
-    if (Expr == R_RELAX_TLS_GD_TO_LE) {
-      Target->relaxTlsGdToLe(BufLoc, Type, SymVA);
-      continue;
-    }
-    if (Expr == R_RELAX_TLS_GD_TO_IE_PC || Expr == R_RELAX_TLS_GD_TO_IE) {
-      Target->relaxTlsGdToIe(BufLoc, Type, SymVA);
-      continue;
-    }
-
     if (Expr == R_PPC_PLT_OPD) {
       uint32_t Nop = 0x60000000;
       if (BufLoc + 8 <= BufEnd && read32be(BufLoc + 4) == Nop)
         write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
     }
 
-    Target->relocateOne(BufLoc, Type, SymVA);
+    switch (Expr) {
+    case R_RELAX_TLS_IE_TO_LE:
+      Target->relaxTlsIeToLe(BufLoc, Type, SymVA);
+      break;
+    case R_RELAX_TLS_LD_TO_LE:
+      Target->relaxTlsLdToLe(BufLoc, Type, SymVA);
+      break;
+    case R_RELAX_TLS_GD_TO_LE:
+      Target->relaxTlsGdToLe(BufLoc, Type, SymVA);
+      break;
+    case R_RELAX_TLS_GD_TO_IE:
+      Target->relaxTlsGdToIe(BufLoc, Type, SymVA);
+      break;
+    default:
+      Target->relocateOne(BufLoc, Type, SymVA);
+      break;
+    }
   }
 }
 

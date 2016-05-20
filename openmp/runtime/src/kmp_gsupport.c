@@ -364,7 +364,7 @@ __kmp_GOMP_fork_call(ident_t *loc, int gtid, void (*unwrapped_task)(void *), mic
         __kmp_run_before_invoked_task(gtid, tid, thr, team);
     }
 
-#if OMPT_SUPPORT 
+#if OMPT_SUPPORT
     if (ompt_enabled) {
 #if OMPT_TRACE
         ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
@@ -493,20 +493,20 @@ xexpand(KMP_API_NAME_GOMP_PARALLEL_END)(void)
         serialized_task_id = task_info->task_id;
 
         // Record that we re-entered the runtime system in the implicit
-        // task frame representing the parallel region. 
+        // task frame representing the parallel region.
         ompt_frame = &task_info->frame;
         ompt_frame->reenter_runtime_frame = __builtin_frame_address(0);
 
         // unlink if necessary. no-op if there is not a lightweight task.
         ompt_lw_taskteam_t *lwt = __ompt_lw_taskteam_unlink(thr);
         // GOMP allocates/frees lwt since it can't be kept on the stack
-        if (lwt) { 
+        if (lwt) {
            __kmp_free(lwt);
-     
+
 #if OMPT_SUPPORT
            if (ompt_enabled) {
               // Since a lightweight task was destroyed, make sure that the
-              // remaining deepest task knows the stack frame where the runtime 
+              // remaining deepest task knows the stack frame where the runtime
               // was reentered.
               ompt_frame = __ompt_get_task_frame_internal(0);
               ompt_frame->reenter_runtime_frame = __builtin_frame_address(0);
@@ -553,14 +553,14 @@ xexpand(KMP_API_NAME_GOMP_PARALLEL_END)(void)
 
 #if OMPT_SUPPORT
         if (ompt_enabled) {
-            // Record that we re-entered the runtime system in the frame that 
+            // Record that we re-entered the runtime system in the frame that
             // created the parallel region.
             ompt_frame->reenter_runtime_frame = __builtin_frame_address(0);
 
             if (ompt_callbacks.ompt_callback(ompt_event_parallel_end)) {
                 ompt_task_info_t *task_info = __ompt_get_taskinfo(0);
                 ompt_callbacks.ompt_callback(ompt_event_parallel_end)(
-                    parallel_id, task_info->task_id, 
+                    parallel_id, task_info->task_id,
                     OMPT_INVOKER(fork_context_gnu));
             }
 
@@ -909,20 +909,20 @@ LOOP_NEXT_ULL(xexpand(KMP_API_NAME_GOMP_LOOP_ULL_ORDERED_RUNTIME_NEXT), \
 
 #else
 
-#define OMPT_LOOP_PRE() 
+#define OMPT_LOOP_PRE()
 
 #define OMPT_LOOP_POST()
 
 #endif
 
 
-PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_STATIC_START), 
+PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_STATIC_START),
                     kmp_sch_static, OMPT_LOOP_PRE, OMPT_LOOP_POST)
-PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_DYNAMIC_START), 
+PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_DYNAMIC_START),
                     kmp_sch_dynamic_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
-PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_GUIDED_START), 
+PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_GUIDED_START),
                     kmp_sch_guided_chunked, OMPT_LOOP_PRE, OMPT_LOOP_POST)
-PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_RUNTIME_START), 
+PARALLEL_LOOP_START(xexpand(KMP_API_NAME_GOMP_PARALLEL_LOOP_RUNTIME_START),
                     kmp_sch_runtime, OMPT_LOOP_PRE, OMPT_LOOP_POST)
 
 

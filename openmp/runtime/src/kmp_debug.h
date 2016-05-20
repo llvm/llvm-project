@@ -42,7 +42,7 @@
 
 #define __KMP_BUILD_ASSERT( expr, suffix )  typedef char __kmp_build_check_##suffix[ (expr) ? 1 : -1 ]
 #define _KMP_BUILD_ASSERT( expr, suffix )   __KMP_BUILD_ASSERT( (expr), suffix )
-#ifdef KMP_USE_ASSERT 
+#ifdef KMP_USE_ASSERT
     #define KMP_BUILD_ASSERT( expr )            _KMP_BUILD_ASSERT( (expr), __LINE__ )
 #else
     #define KMP_BUILD_ASSERT( expr )            /* nothing to do */

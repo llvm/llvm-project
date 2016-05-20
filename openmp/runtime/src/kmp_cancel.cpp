@@ -29,12 +29,12 @@ Request cancellation of the binding OpenMP region.
 */
 kmp_int32 __kmpc_cancel(ident_t* loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
     kmp_info_t *this_thr = __kmp_threads [ gtid ];
-    
+
     KC_TRACE( 10, ("__kmpc_cancel: T#%d request %d OMP_CANCELLATION=%d\n", gtid, cncl_kind, __kmp_omp_cancellation) );
 
     KMP_DEBUG_ASSERT(cncl_kind != cancel_noreq);
-    KMP_DEBUG_ASSERT(cncl_kind == cancel_parallel || cncl_kind == cancel_loop || 
-                     cncl_kind == cancel_sections || cncl_kind == cancel_taskgroup); 
+    KMP_DEBUG_ASSERT(cncl_kind == cancel_parallel || cncl_kind == cancel_loop ||
+                     cncl_kind == cancel_sections || cncl_kind == cancel_taskgroup);
     KMP_DEBUG_ASSERT(__kmp_get_gtid() == gtid);
 
     if (__kmp_omp_cancellation) {
@@ -49,7 +49,7 @@ kmp_int32 __kmpc_cancel(ident_t* loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
                 KMP_DEBUG_ASSERT(this_team);
                 kmp_int32 old = KMP_COMPARE_AND_STORE_RET32(&(this_team->t.t_cancel_request), cancel_noreq, cncl_kind);
                 if (old == cancel_noreq || old == cncl_kind) {
-                    //printf("__kmpc_cancel: this_team->t.t_cancel_request=%d @ %p\n", 
+                    //printf("__kmpc_cancel: this_team->t.t_cancel_request=%d @ %p\n",
                     //       this_team->t.t_cancel_request, &(this_team->t.t_cancel_request));
                     // we do not have a cancellation request in this team or we do have one
                     // that matches the current request -> cancel
@@ -61,12 +61,12 @@ kmp_int32 __kmpc_cancel(ident_t* loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
             // cancellation requests for a task group
             // are handled through the taskgroup structure
             {
-                kmp_taskdata_t*  task; 
+                kmp_taskdata_t*  task;
                 kmp_taskgroup_t* taskgroup;
-                
+
                 task = this_thr->th.th_current_task;
                 KMP_DEBUG_ASSERT( task );
-                
+
                 taskgroup = task->td_taskgroup;
                 if (taskgroup) {
                     kmp_int32 old = KMP_COMPARE_AND_STORE_RET32(&(taskgroup->cancel_request), cancel_noreq, cncl_kind);
@@ -100,7 +100,7 @@ kmp_int32 __kmpc_cancel(ident_t* loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
 @param gtid Global thread ID of encountering thread
 @param cncl_kind Cancellation kind (parallel, for, sections, taskgroup)
 
-@return returns true if a matching cancellation request has been flagged in the RTL and the 
+@return returns true if a matching cancellation request has been flagged in the RTL and the
 encountering thread has to cancel..
 
 Cancellation point for the encountering thread.
@@ -111,8 +111,8 @@ kmp_int32 __kmpc_cancellationpoint(ident_t* loc_ref, kmp_int32 gtid, kmp_int32 c
     KC_TRACE( 10, ("__kmpc_cancellationpoint: T#%d request %d OMP_CANCELLATION=%d\n", gtid, cncl_kind, __kmp_omp_cancellation) );
 
     KMP_DEBUG_ASSERT(cncl_kind != cancel_noreq);
-    KMP_DEBUG_ASSERT(cncl_kind == cancel_parallel || cncl_kind == cancel_loop || 
-                     cncl_kind == cancel_sections || cncl_kind == cancel_taskgroup); 
+    KMP_DEBUG_ASSERT(cncl_kind == cancel_parallel || cncl_kind == cancel_loop ||
+                     cncl_kind == cancel_sections || cncl_kind == cancel_taskgroup);
     KMP_DEBUG_ASSERT(__kmp_get_gtid() == gtid);
 
     if (__kmp_omp_cancellation) {
@@ -144,15 +144,15 @@ kmp_int32 __kmpc_cancellationpoint(ident_t* loc_ref, kmp_int32 gtid, kmp_int32 c
             // cancellation requests for a task group
             // are handled through the taskgroup structure
             {
-                kmp_taskdata_t*  task; 
+                kmp_taskdata_t*  task;
                 kmp_taskgroup_t* taskgroup;
-                
+
                 task = this_thr->th.th_current_task;
                 KMP_DEBUG_ASSERT( task );
-                
+
                 taskgroup = task->td_taskgroup;
                 if (taskgroup) {
-                    // return the current status of cancellation for the 
+                    // return the current status of cancellation for the
                     // taskgroup
                     return !!taskgroup->cancel_request;
                 }
@@ -178,11 +178,11 @@ kmp_int32 __kmpc_cancellationpoint(ident_t* loc_ref, kmp_int32 gtid, kmp_int32 c
 @param loc_ref location of the original task directive
 @param gtid Global thread ID of encountering thread
 
-@return returns true if a matching cancellation request has been flagged in the RTL and the 
+@return returns true if a matching cancellation request has been flagged in the RTL and the
 encountering thread has to cancel..
 
 Barrier with cancellation point to send threads from the barrier to the
-end of the parallel region.  Needs a special code pattern as documented 
+end of the parallel region.  Needs a special code pattern as documented
 in the design document for the cancellation feature.
 */
 kmp_int32
@@ -208,7 +208,7 @@ __kmpc_cancel_barrier(ident_t *loc, kmp_int32 gtid) {
             __kmpc_barrier(loc, gtid);
             this_team->t.t_cancel_request = cancel_noreq;
             // the next barrier is the fork/join barrier, which
-            // synchronizes the threads leaving here        
+            // synchronizes the threads leaving here
             break;
         case cancel_loop:
         case cancel_sections:
@@ -233,7 +233,7 @@ __kmpc_cancel_barrier(ident_t *loc, kmp_int32 gtid) {
             KMP_ASSERT ( 0 /* false */);
         }
     }
-    
+
     return ret;
 }
 
@@ -242,21 +242,21 @@ __kmpc_cancel_barrier(ident_t *loc, kmp_int32 gtid) {
 @param loc_ref location of the original task directive
 @param gtid Global thread ID of encountering thread
 
-@return returns true if a matching cancellation request has been flagged in the RTL and the 
+@return returns true if a matching cancellation request has been flagged in the RTL and the
 encountering thread has to cancel..
 
 Query function to query the current status of cancellation requests.
 Can be used to implement the following pattern:
- 
+
 if (kmp_get_cancellation_status(kmp_cancel_parallel)) {
     perform_cleanup();
-    #pragma omp cancellation point parallel      
+    #pragma omp cancellation point parallel
 }
 */
 int __kmp_get_cancellation_status(int cancel_kind) {
     if (__kmp_omp_cancellation) {
         kmp_info_t *this_thr = __kmp_entry_thread();
-        
+
         switch (cancel_kind) {
         case cancel_parallel:
         case cancel_loop:
@@ -267,7 +267,7 @@ int __kmp_get_cancellation_status(int cancel_kind) {
             }
         case cancel_taskgroup:
             {
-                kmp_taskdata_t*  task; 
+                kmp_taskdata_t*  task;
                 kmp_taskgroup_t* taskgroup;
                 task = this_thr->th.th_current_task;
                 taskgroup = task->td_taskgroup;

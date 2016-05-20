@@ -97,8 +97,8 @@ __kmp_for_static_init(
     register kmp_info_t *th = __kmp_threads[ gtid ];
 
 #if OMPT_SUPPORT && OMPT_TRACE
-    ompt_team_info_t *team_info = NULL; 
-    ompt_task_info_t *task_info = NULL; 
+    ompt_team_info_t *team_info = NULL;
+    ompt_task_info_t *task_info = NULL;
 
     if (ompt_enabled) {
         // Only fully initialize variables needed by OMPT if OMPT is enabled.

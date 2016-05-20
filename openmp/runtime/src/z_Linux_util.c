@@ -1006,10 +1006,10 @@ __kmp_create_worker( int gtid, kmp_info_t *th, size_t stack_size )
         __kmp_msg(kmp_ms_fatal, KMP_MSG( CantSetWorkerState ), KMP_ERR( status ), __kmp_msg_null);
     }; // if
 
-    /* Set stack size for this thread now. 
+    /* Set stack size for this thread now.
      * The multiple of 2 is there because on some machines, requesting an unusual stacksize
      * causes the thread to have an offset before the dummy alloca() takes place to create the
-     * offset.  Since we want the user to have a sufficient stacksize AND support a stack offset, we 
+     * offset.  Since we want the user to have a sufficient stacksize AND support a stack offset, we
      * alloca() twice the offset so that the upcoming alloca() does not eliminate any premade
      * offset, and also gives the user the stack space they requested for all threads */
     stack_size += gtid * __kmp_stkoffset * 2;
@@ -2582,11 +2582,11 @@ __kmp_get_load_balance( int max )
 int
 __kmp_invoke_microtask( microtask_t pkfn,
                         int gtid, int tid,
-                        int argc, void *p_argv[] 
+                        int argc, void *p_argv[]
 #if OMPT_SUPPORT
                         , void **exit_frame_ptr
 #endif
-) 
+)
 {
 #if OMPT_SUPPORT
   *exit_frame_ptr = __builtin_frame_address(0);

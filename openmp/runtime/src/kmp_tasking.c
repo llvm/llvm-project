@@ -1057,9 +1057,9 @@ __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_tasking_flags_t *flags,
 
     // Only need to keep track of child task counts if team parallel and tasking not serialized or if it is a proxy task
 #if OMP_41_ENABLED
-    if ( flags->proxy == TASK_PROXY || !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) ) 
+    if ( flags->proxy == TASK_PROXY || !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) )
 #else
-    if ( !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) ) 
+    if ( !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) )
 #endif
     {
         KMP_TEST_THEN_INC32( (kmp_int32 *)(& parent_task->td_incomplete_child_tasks) );
@@ -1406,12 +1406,12 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
 #if OMPT_SUPPORT && OMPT_TRACE
         ompt_task_id_t my_task_id;
         ompt_parallel_id_t my_parallel_id;
-        
+
         if (ompt_enabled) {
             kmp_team_t *team = thread->th.th_team;
             my_task_id = taskdata->ompt_task_info.task_id;
             my_parallel_id = team->t.ompt_team_info.parallel_id;
-            
+
             taskdata->ompt_task_info.frame.reenter_runtime_frame = __builtin_frame_address(0);
             if (ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)) {
                 ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)(
@@ -1434,9 +1434,9 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
 #endif /* USE_ITT_BUILD */
 
 #if OMP_41_ENABLED
-        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) ) 
+        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
 #else
-        if ( ! taskdata->td_flags.team_serial ) 
+        if ( ! taskdata->td_flags.team_serial )
 #endif
         {
             // GEH: if team serialized, avoid reading the volatile variable below.
@@ -1575,9 +1575,9 @@ __kmpc_end_taskgroup( ident_t* loc, int gtid )
 #endif /* USE_ITT_BUILD */
 
 #if OMP_41_ENABLED
-        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) ) 
+        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
 #else
-        if ( ! taskdata->td_flags.team_serial ) 
+        if ( ! taskdata->td_flags.team_serial )
 #endif
         {
             kmp_flag_32 flag(&(taskgroup->count), 0U);
@@ -1800,7 +1800,7 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
 // spinner == NULL means only execute a single task and return.
 // checker is the value to check to terminate the spin.
 template <class C>
-static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gtid, C *flag, int final_spin, 
+static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gtid, C *flag, int final_spin,
                                                int *thread_finished
                                                USE_ITT_BUILD_ARG(void * itt_sync_obj), kmp_int32 is_constrained)
 {
@@ -1867,9 +1867,9 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
     // of the barrier, check and see if the termination condition is satisfied.
 #if OMP_41_ENABLED
     // The work queue may be empty but there might be proxy tasks still executing
-    if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0) 
+    if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0)
 #else
-    if (final_spin) 
+    if (final_spin)
 #endif
     {
         // First, decrement the #unfinished threads, if that has not already
@@ -1952,9 +1952,9 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
         // of the barrier, check and see if the termination condition is satisfied.
 #if OMP_41_ENABLED
         // The work queue may be empty but there might be proxy tasks still executing
-        if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0) 
+        if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0)
 #else
-        if (final_spin) 
+        if (final_spin)
 #endif
         {
             // First, decrement the #unfinished threads, if that has not already
@@ -2069,9 +2069,9 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
         // termination condition before doing that.
 #if OMP_41_ENABLED
         // The work queue may be empty but there might be proxy tasks still executing
-        if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0) 
+        if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0)
 #else
-        if (final_spin) 
+        if (final_spin)
 #endif
         {
             // First, decrement the #unfinished threads, if that has not already
@@ -2619,17 +2619,17 @@ __kmp_task_team_setup( kmp_info_t *this_thr, kmp_team_t *team, int always )
 
     // If this task_team hasn't been created yet, allocate it. It will be used in the region after the next.
     // If it exists, it is the current task team and shouldn't be touched yet as it may still be in use.
-    if (team->t.t_task_team[this_thr->th.th_task_state] == NULL && (always || team->t.t_nproc > 1) ) { 
+    if (team->t.t_task_team[this_thr->th.th_task_state] == NULL && (always || team->t.t_nproc > 1) ) {
         team->t.t_task_team[this_thr->th.th_task_state] = __kmp_allocate_task_team( this_thr, team );
         KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d created new task_team %p for team %d at parity=%d\n",
                       __kmp_gtid_from_thread(this_thr), team->t.t_task_team[this_thr->th.th_task_state],
                       ((team != NULL) ? team->t.t_id : -1), this_thr->th.th_task_state));
     }
 
-    // After threads exit the release, they will call sync, and then point to this other task_team; make sure it is 
+    // After threads exit the release, they will call sync, and then point to this other task_team; make sure it is
     // allocated and properly initialized. As threads spin in the barrier release phase, they will continue to use the
     // previous task_team struct(above), until they receive the signal to stop checking for tasks (they can't safely
-    // reference the kmp_team_t struct, which could be reallocated by the master thread). No task teams are formed for 
+    // reference the kmp_team_t struct, which could be reallocated by the master thread). No task teams are formed for
     // serialized teams.
     if (team->t.t_nproc > 1) {
         int other_team = 1 - this_thr->th.th_task_state;

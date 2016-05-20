@@ -14,8 +14,29 @@
 #include "lldb/Host/windows/windows.h"
 #else
 #include <sys/mman.h>
-#endif
 
+#define MAP_EXTRA_HOST_READ_FLAGS 0
+
+#if defined (__APPLE__)
+//----------------------------------------------------------------------
+// Newer versions of MacOSX have a flag that will allow us to read from
+// binaries whose code signature is invalid without crashing by using
+// the MAP_RESILIENT_CODESIGN flag. Also if a file from removable media
+// is mapped we can avoid crashing and return zeroes to any pages we try
+// to read if the media becomes unavailable by using the
+// MAP_RESILIENT_MEDIA flag.
+//----------------------------------------------------------------------
+#if defined(MAP_RESILIENT_CODESIGN)
+    #undef MAP_EXTRA_HOST_READ_FLAGS
+    #if defined(MAP_RESILIENT_MEDIA)
+        #define MAP_EXTRA_HOST_READ_FLAGS MAP_RESILIENT_CODESIGN | MAP_RESILIENT_MEDIA
+    #else
+        #define MAP_EXTRA_HOST_READ_FLAGS MAP_RESILIENT_CODESIGN
+    #endif
+#endif // #if defined(MAP_RESILIENT_CODESIGN)
+#endif // #if defined (__APPLE__)
+
+#endif // #else #ifdef _WIN32
 // C++ Includes
 #include <cerrno>
 #include <climits>
@@ -255,10 +276,12 @@ DataBufferMemoryMap::MemoryMapFromFileDescriptor (int fd,
                 if (length > 0)
                 {
                     int prot = PROT_READ;
+                    int flags = MAP_PRIVATE;
                     if (writeable)
                         prot |= PROT_WRITE;
+                    else
+                        flags |= MAP_EXTRA_HOST_READ_FLAGS;
 
-                    int flags = MAP_PRIVATE;
                     if (fd_is_file)
                         flags |= MAP_FILE;
 

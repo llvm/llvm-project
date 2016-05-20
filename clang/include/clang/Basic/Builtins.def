@@ -1305,6 +1305,11 @@ LANGBUILTIN(work_group_commit_write_pipe, "v.", "tn", OCLC_LANG)
 LANGBUILTIN(get_pipe_num_packets, "Ui.", "tn", OCLC_LANG)
 LANGBUILTIN(get_pipe_max_packets, "Ui.", "tn", OCLC_LANG)
 
+// OpenCL v2.0 s6.13.9 - Address space qualifier functions.
+LANGBUILTIN(to_global, "v*v*", "tn", OCLC_LANG)
+LANGBUILTIN(to_local, "v*v*", "tn", OCLC_LANG)
+LANGBUILTIN(to_private, "v*v*", "tn", OCLC_LANG)
+
 #undef BUILTIN
 #undef LIBBUILTIN
 #undef LANGBUILTIN
