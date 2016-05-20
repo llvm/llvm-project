@@ -400,11 +400,14 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   unsigned NeedAlign = RC->getAlignment();
 
   unsigned SI = Scavenged.size(), Diff = UINT_MAX;
+  int FIB = MFI.getObjectIndexBegin(), FIE = MFI.getObjectIndexEnd();
   for (unsigned I = 0; I < Scavenged.size(); ++I) {
     if (Scavenged[I].Reg != 0)
       continue;
     // Verify that this slot is valid for this register.
     int FI = Scavenged[I].FrameIndex;
+    if (FI < FIB || FI >= FIE)
+      continue;
     unsigned S = MFI.getObjectSize(FI);
     unsigned A = MFI.getObjectAlignment(FI);
     if (NeedSize > S || NeedAlign > A)
@@ -425,7 +428,7 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   if (SI == Scavenged.size()) {
     // We need to scavenge a register but have no spill slot, the target
     // must know how to do it (if not, we'll assert below).
-    Scavenged.push_back(ScavengedInfo());
+    Scavenged.push_back(ScavengedInfo(FIE));
   }
 
   // Avoid infinite regress
@@ -435,14 +438,12 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   // otherwise, use the emergency stack spill slot.
   if (!TRI->saveScavengerRegister(*MBB, I, UseMI, RC, SReg)) {
     // Spill the scavenged register before I.
-    if (Scavenged[SI].FrameIndex < 0) {
-      Twine Msg = Twine("Error while trying to spill ") + TRI->getName(SReg) +
-           " from class " + TRI->getRegClassName(RC) +
-           ": Cannot scavenge register without an emergency spill slot!";
-      // Keep both error functions, since llvm_unreachable prints the call
-      // stack, but it does not terminate program in release mode.
-      llvm_unreachable(Msg.str().c_str());
-      report_fatal_error(Msg);
+    int FI = Scavenged[SI].FrameIndex;
+    if (FI < FIB || FI >= FIE) {
+      std::string Msg = std::string("Error while trying to spill ") +
+          TRI->getName(SReg) + " from class " + TRI->getRegClassName(RC) +
+          ": Cannot scavenge register without an emergency spill slot!";
+      llvm_unreachable(Msg.c_str());
     }
     TII->storeRegToStackSlot(*MBB, I, SReg, true, Scavenged[SI].FrameIndex,
                              RC, TRI);

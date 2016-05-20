@@ -208,7 +208,6 @@ LoadCommands:
     name:            12
   - cmd:             LC_UUID
     cmdsize:         24
-    cmdsize:         24
     uuid:            461A1B28-822F-3F38-B670-645419E636F5
   - cmd:             LC_VERSION_MIN_MACOSX
     cmdsize:         16

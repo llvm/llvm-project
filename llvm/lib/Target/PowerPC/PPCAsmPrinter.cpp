@@ -214,7 +214,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
         SymToPrint = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
 
         MachineModuleInfoImpl::StubValueTy &StubSym =
-            MMI->getObjFileInfo<MachineModuleInfoMachO>().getHiddenGVStubEntry(
+            MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(
                 SymToPrint);
         if (!StubSym.getPointer())
           StubSym = MachineModuleInfoImpl::
@@ -1568,25 +1568,6 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
         OutStreamer->EmitValue(MCSymbolRefExpr::create(MCSym.getPointer(),
                                                        OutContext),
                               isPPC64 ? 8 : 4/*size*/);
-    }
-
-    Stubs.clear();
-    OutStreamer->AddBlankLine();
-  }
-
-  Stubs = MMIMacho.GetHiddenGVStubList();
-  if (!Stubs.empty()) {
-    OutStreamer->SwitchSection(getObjFileLowering().getDataSection());
-    EmitAlignment(isPPC64 ? 3 : 2);
-
-    for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
-      // L_foo$stub:
-      OutStreamer->EmitLabel(Stubs[i].first);
-      //   .long _foo
-      OutStreamer->EmitValue(MCSymbolRefExpr::
-                             create(Stubs[i].second.getPointer(),
-                                    OutContext),
-                             isPPC64 ? 8 : 4/*size*/);
     }
 
     Stubs.clear();

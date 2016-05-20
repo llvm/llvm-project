@@ -180,14 +180,17 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
     return Body.getGotVA<ELFT>() + A - P;
   case R_GOTONLY_PC:
     return Out<ELFT>::Got->getVA() + A - P;
+  case R_RELAX_TLS_GD_TO_LE:
+  case R_RELAX_TLS_IE_TO_LE:
+  case R_RELAX_TLS_LD_TO_LE:
   case R_TLS:
+    if (Target->TcbSize)
+      return Body.getVA<ELFT>(A) +
+             alignTo(Target->TcbSize, Out<ELFT>::TlsPhdr->p_align);
     return Body.getVA<ELFT>(A) - Out<ELFT>::TlsPhdr->p_memsz;
   case R_NEG_TLS:
     return Out<ELF32LE>::TlsPhdr->p_memsz - Body.getVA<ELFT>(A);
   case R_ABS:
-  case R_RELAX_TLS_GD_TO_LE:
-  case R_RELAX_TLS_IE_TO_LE:
-  case R_RELAX_TLS_LD_TO_LE:
     return Body.getVA<ELFT>(A);
   case R_GOT_OFF:
     return Body.getGotOffset<ELFT>() + A;

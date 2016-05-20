@@ -663,8 +663,10 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       /// -(a - b + const) ==> (b - a - const)
       if (Value.getSymA() && !Value.getSymB())
         return false;
+
+      // The cast avoids undefined behavior if the constant is INT64_MIN.
       Res = MCValue::get(Value.getSymB(), Value.getSymA(),
-                         -Value.getConstant());
+                         -(uint64_t)Value.getConstant());
       break;
     case MCUnaryExpr::Not:
       if (!Value.isAbsolute())
@@ -697,9 +699,10 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         return false;
       case MCBinaryExpr::Sub:
         // Negate RHS and add.
+        // The cast avoids undefined behavior if the constant is INT64_MIN.
         return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,
                                    RHSValue.getSymB(), RHSValue.getSymA(),
-                                   -RHSValue.getConstant(), Res);
+                                   -(uint64_t)RHSValue.getConstant(), Res);
 
       case MCBinaryExpr::Add:
         return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,

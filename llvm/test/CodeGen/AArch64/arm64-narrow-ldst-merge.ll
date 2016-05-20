@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=LE
-; RUN: llc < %s -mtriple aarch64_be--none-eabi -mcpu=cortex-a57 -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=BE
-; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=kryo -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=LE
+; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=cortex-a57 -verify-machineinstrs -enable-narrow-ld-merge=true | FileCheck %s --check-prefix=CHECK --check-prefix=LE
+; RUN: llc < %s -mtriple aarch64_be--none-eabi -mcpu=cortex-a57 -verify-machineinstrs -enable-narrow-ld-merge=true | FileCheck %s --check-prefix=CHECK --check-prefix=BE
+; RUN: llc < %s -mtriple aarch64--none-eabi -mcpu=kryo -verify-machineinstrs -enable-narrow-ld-merge=true | FileCheck %s --check-prefix=CHECK --check-prefix=LE
 
 ; CHECK-LABEL: Ldrh_merge
 ; CHECK-NOT: ldrh

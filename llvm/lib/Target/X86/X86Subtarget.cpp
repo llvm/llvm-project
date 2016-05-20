@@ -47,135 +47,145 @@ X86EarlyIfConv("x86-early-ifcvt", cl::Hidden,
 /// Classify a blockaddress reference for the current subtarget according to how
 /// we should reference it in a non-pcrel context.
 unsigned char X86Subtarget::classifyBlockAddressReference() const {
-  if (isPICStyleGOT())    // 32-bit ELF targets.
-    return X86II::MO_GOTOFF;
+  return classifyLocalReference(nullptr);
+}
 
-  if (isPICStyleStubPIC())   // Darwin/32 in PIC mode.
-    return X86II::MO_PIC_BASE_OFFSET;
+// FIXME: make this a proper option
+static bool CanUseCopyRelocWithPIE = false;
 
-  // Direct static reference to label.
-  return X86II::MO_NO_FLAG;
+static bool shouldAssumeDSOLocal(Reloc::Model RM, const Triple &TT,
+                                 const Module &M, const GlobalValue *GV) {
+  // DLLImport explicitly marks the GV as external.
+  if (GV && GV->hasDLLImportStorageClass())
+    return false;
+
+  // Every other GV is local on COFF
+  if (TT.isOSBinFormatCOFF())
+    return true;
+
+  if (RM == Reloc::Static)
+    return true;
+
+  if (GV && (GV->hasInternalLinkage() || !GV->hasDefaultVisibility()))
+    return true;
+
+  if (TT.isOSBinFormatELF()) {
+    assert(RM != Reloc::DynamicNoPIC);
+    // Some linkers can use copy relocations with pie executables.
+    if (M.getPIELevel() != PIELevel::Default) {
+      if (CanUseCopyRelocWithPIE)
+        return true;
+
+      // If the symbol is defined, it cannot be preempted.
+      if (GV && !GV->isDeclarationForLinker())
+        return true;
+      return false;
+    }
+
+    // ELF supports preemption of other symbols.
+    return false;
+  }
+
+  assert(TT.isOSBinFormatMachO());
+  if (GV && GV->isStrongDefinitionForLinker())
+    return true;
+
+  return false;
 }
 
 /// Classify a global variable reference for the current subtarget according to
 /// how we should reference it in a non-pcrel context.
 unsigned char
 X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
-  // DLLImport only exists on windows, it is implemented as a load from a
-  // DLLIMPORT stub.
-  if (GV->hasDLLImportStorageClass())
-    return X86II::MO_DLLIMPORT;
+  return classifyGlobalReference(GV, *GV->getParent());
+}
 
-  bool isDef = GV->isStrongDefinitionForLinker();
-
-  // X86-64 in PIC mode.
-  if (isPICStyleRIPRel()) {
-    // Large model never uses stubs.
-    if (TM.getCodeModel() == CodeModel::Large)
-      return X86II::MO_NO_FLAG;
-
-    if (isTargetDarwin()) {
-      // If symbol visibility is hidden, the extra load is not needed if
-      // target is x86-64 or the symbol is definitely defined in the current
-      // translation unit.
-      if (GV->hasDefaultVisibility() && !isDef)
-        return X86II::MO_GOTPCREL;
-    } else if (!isTargetWin64()) {
-      assert(isTargetELF() && "Unknown rip-relative target");
-
-      // Extra load is needed for all externally visible globals except with
-      // PIE as the definition of the global in an executable is not
-      // overridden.
-
-      if (!GV->hasLocalLinkage() && GV->hasDefaultVisibility() &&
-          !isGlobalDefinedInPIE(GV))
-        return X86II::MO_GOTPCREL;
-    }
-
+unsigned char
+X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
+  // 64 bits can use %rip addressing for anything local.
+  if (is64Bit())
     return X86II::MO_NO_FLAG;
-  }
 
-  if (isPICStyleGOT()) {   // 32-bit ELF targets.
-    // Extra load is needed for all externally visible globals except with
-    // PIE as the definition of the global in an executable is not overridden.
+  // If this is for a position dependent executable, the static linker can
+  // figure it out.
+  if (TM.getRelocationModel() != Reloc::PIC_)
+    return X86II::MO_NO_FLAG;
 
-    if (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
-        isGlobalDefinedInPIE(GV))
-      return X86II::MO_GOTOFF;
-    return X86II::MO_GOT;
-  }
+  // The COFF dynamic linker just patches the executable sections.
+  if (isTargetCOFF())
+    return X86II::MO_NO_FLAG;
 
-  if (isPICStyleStubPIC()) {  // Darwin/32 in PIC mode.
-    // Determine whether we have a stub reference and/or whether the reference
-    // is relative to the PIC base or not.
-
-    // If this is a strong reference to a definition, it is definitely not
-    // through a stub.
-    if (isDef)
-      return X86II::MO_PIC_BASE_OFFSET;
-
-    // Unless we have a symbol with hidden visibility, we have to go through a
-    // normal $non_lazy_ptr stub because this symbol might be resolved late.
-    if (!GV->hasHiddenVisibility())  // $non_lazy_ptr reference.
+  if (isTargetDarwin()) {
+    // 32 bit macho has no relocation for a-b if a is undefined, even if
+    // b is in the section that is being relocated.
+    // This means we have to use o load even for GVs that are known to be
+    // local to the dso.
+    if (GV && (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
       return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
 
-    // If symbol visibility is hidden, we have a stub for common symbol
-    // references and external declarations.
-    if (GV->isDeclarationForLinker() || GV->hasCommonLinkage()) {
-      // $non_lazy_ptr reference.
-      return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
-    }
-
-    // Otherwise, no stub.
     return X86II::MO_PIC_BASE_OFFSET;
   }
 
-  if (isPICStyleStubNoDynamic()) {  // Darwin/32 in -mdynamic-no-pic mode.
-    // Determine whether we have a stub reference.
+  return X86II::MO_GOTOFF;
+}
 
-    // If this is a strong reference to a definition, it is definitely not
-    // through a stub.
-    if (isDef)
-      return X86II::MO_NO_FLAG;
-
-    // Unless we have a symbol with hidden visibility, we have to go through a
-    // normal $non_lazy_ptr stub because this symbol might be resolved late.
-    if (!GV->hasHiddenVisibility())  // Non-hidden $non_lazy_ptr reference.
-      return X86II::MO_DARWIN_NONLAZY;
-
-    // Otherwise, no stub.
+unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
+                                                    const Module &M) const {
+  // Large model never uses stubs.
+  if (TM.getCodeModel() == CodeModel::Large)
     return X86II::MO_NO_FLAG;
+
+  Reloc::Model RM = TM.getRelocationModel();
+  if (shouldAssumeDSOLocal(RM, TargetTriple, M, GV))
+    return classifyLocalReference(GV);
+
+  if (isTargetCOFF())
+    return X86II::MO_DLLIMPORT;
+
+  if (is64Bit())
+    return X86II::MO_GOTPCREL;
+
+  if (isTargetDarwin()) {
+    if (RM != Reloc::PIC_)
+      return X86II::MO_DARWIN_NONLAZY;
+    return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
   }
 
-  // Direct static reference to global.
-  return X86II::MO_NO_FLAG;
+  return X86II::MO_GOT;
 }
 
 unsigned char
 X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV) const {
-  // On ELF targets, in both X86-64 and X86-32 mode, direct calls to
-  // external symbols most go through the PLT in PIC mode.  If the symbol
-  // has hidden or protected visibility, or if it is static or local, then
-  // we don't need to use the PLT - we can directly call it.
-  // In PIE mode, calls to global functions don't need to go through PLT
-  if (isTargetELF() && TM.getRelocationModel() == Reloc::PIC_ &&
-      !isGlobalDefinedInPIE(GV) && GV->hasDefaultVisibility() &&
-      !GV->hasLocalLinkage()) {
+  return classifyGlobalFunctionReference(GV, *GV->getParent());
+}
+
+unsigned char
+X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
+                                              const Module &M) const {
+  if (shouldAssumeDSOLocal(TM.getRelocationModel(), TargetTriple, M, GV))
+    return X86II::MO_NO_FLAG;
+
+  assert(!isTargetCOFF());
+
+  if (isTargetELF())
     return X86II::MO_PLT;
-  } else if (isPICStyleStubAny() && !GV->isStrongDefinitionForLinker() &&
-             (!getTargetTriple().isMacOSX() ||
-              getTargetTriple().isMacOSXVersionLT(10, 5))) {
-    // PC-relative references to external symbols should go through $stub,
-    // unless we're building with the leopard linker or later, which
-    // automatically synthesizes these stubs.
-    return X86II::MO_DARWIN_STUB;
-  } else if (isPICStyleRIPRel() && isa<Function>(GV) &&
-             cast<Function>(GV)->hasFnAttribute(Attribute::NonLazyBind)) {
-    // If the function is marked as non-lazy, generate an indirect call
-    // which loads from the GOT directly. This avoids runtime overhead
-    // at the cost of eager binding (and one extra byte of encoding).
-    return X86II::MO_GOTPCREL;
+
+  if (is64Bit()) {
+    auto *F = dyn_cast_or_null<Function>(GV);
+    if (F && F->hasFnAttribute(Attribute::NonLazyBind))
+      // If the function is marked as non-lazy, generate an indirect call
+      // which loads from the GOT directly. This avoids runtime overhead
+      // at the cost of eager binding (and one extra byte of encoding).
+      return X86II::MO_GOTPCREL;
+    return X86II::MO_NO_FLAG;
   }
+
+  // PC-relative references to external symbols should go through $stub,
+  // unless we're building with the leopard linker or later, which
+  // automatically synthesizes these stubs.
+  if (!getTargetTriple().isMacOSX() ||
+      getTargetTriple().isMacOSXVersionLT(10, 5))
+    return X86II::MO_DARWIN_STUB;
 
   return X86II::MO_NO_FLAG;
 }
@@ -343,8 +353,8 @@ X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-X86Subtarget::X86Subtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &FS, const X86TargetMachine &TM,
+X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                           const X86TargetMachine &TM,
                            unsigned StackAlignOverride)
     : X86GenSubtargetInfo(TT, CPU, FS), X86ProcFamily(Others),
       PICStyle(PICStyles::None), TM(TM), TargetTriple(TT),

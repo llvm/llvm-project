@@ -94,11 +94,9 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO, AsmPrinter &AP){
   // then add the suffix.
   if (MO.getTargetFlags() & PPCII::MO_NLP_FLAG) {
     MachineModuleInfoMachO &MachO = getMachOMMI(AP);
-    
-    MachineModuleInfoImpl::StubValueTy &StubSym =
-      (MO.getTargetFlags() & PPCII::MO_NLP_HIDDEN_FLAG) ? 
-         MachO.getHiddenGVStubEntry(Sym) : MachO.getGVStubEntry(Sym);
-    
+
+    MachineModuleInfoImpl::StubValueTy &StubSym = MachO.getGVStubEntry(Sym);
+
     if (!StubSym.getPointer()) {
       assert(MO.isGlobal() && "Extern symbol not handled yet");
       StubSym = MachineModuleInfoImpl::

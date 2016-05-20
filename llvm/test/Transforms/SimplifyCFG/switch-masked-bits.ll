@@ -49,14 +49,10 @@ c:
 define i1 @repeated_signbits(i8 %condition) {
 ; CHECK-LABEL: @repeated_signbits(
 ; CHECK:         switch i32
-; CHECK-DAG:     i32 -2147483648, label %a
-; CHECK-DAG:     i32 -129, label %a
 ; CHECK-DAG:     i32 -128, label %a
 ; CHECK-DAG:     i32 -1, label %a
 ; CHECK-DAG:     i32  0, label %a
 ; CHECK-DAG:     i32  127, label %a
-; CHECK-DAG:     i32  128, label %a
-; CHECK-DAG:     i32  2147483647, label %a
 ; CHECK-NEXT:    ]
 ;
 entry:

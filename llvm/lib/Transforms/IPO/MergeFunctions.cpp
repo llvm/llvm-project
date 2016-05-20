@@ -1050,6 +1050,17 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     return cmpNumbers(RMWI->getSynchScope(),
                       cast<AtomicRMWInst>(R)->getSynchScope());
   }
+  if (const PHINode *PNL = dyn_cast<PHINode>(L)) {
+    const PHINode *PNR = cast<PHINode>(R);
+    // Ensure that in addition to the incoming values being identical
+    // (checked by the caller of this function), the incoming blocks
+    // are also identical.
+    for (unsigned i = 0, e = PNL->getNumIncomingValues(); i != e; ++i) {
+      if (int Res =
+              cmpValues(PNL->getIncomingBlock(i), PNR->getIncomingBlock(i)))
+        return Res;
+    }
+  }
   return 0;
 }
 

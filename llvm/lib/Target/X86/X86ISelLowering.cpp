@@ -3279,21 +3279,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       }
     }
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    unsigned char OpFlags = 0;
-
-    // On ELF targets, in either X86-64 or X86-32 mode, direct calls to
-    // external symbols should go through the PLT.
-    if (Subtarget.isTargetELF() &&
-        DAG.getTarget().getRelocationModel() == Reloc::PIC_) {
-      OpFlags = X86II::MO_PLT;
-    } else if (Subtarget.isPICStyleStubAny() &&
-               (!Subtarget.getTargetTriple().isMacOSX() ||
-                Subtarget.getTargetTriple().isMacOSXVersionLT(10, 5))) {
-      // PC-relative references to external symbols should go through $stub,
-      // unless we're building with the leopard linker or later, which
-      // automatically synthesizes these stubs.
-      OpFlags = X86II::MO_DARWIN_STUB;
-    }
+    const Module *Mod = DAG.getMachineFunction().getFunction()->getParent();
+    unsigned char OpFlags =
+        Subtarget.classifyGlobalFunctionReference(nullptr, *Mod);
 
     Callee = DAG.getTargetExternalSymbol(
         S->getSymbol(), getPointerTy(DAG.getDataLayout()), OpFlags);
@@ -12542,17 +12530,13 @@ X86TargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
 
   // In PIC mode (unless we're in RIPRel PIC mode) we add an offset to the
   // global base reg.
-  unsigned char OpFlag = 0;
+  unsigned char OpFlag = Subtarget.classifyLocalReference(nullptr);
   unsigned WrapperKind = X86ISD::Wrapper;
   CodeModel::Model M = DAG.getTarget().getCodeModel();
 
   if (Subtarget.isPICStyleRIPRel() &&
       (M == CodeModel::Small || M == CodeModel::Kernel))
     WrapperKind = X86ISD::WrapperRIP;
-  else if (Subtarget.isPICStyleGOT())
-    OpFlag = X86II::MO_GOTOFF;
-  else if (Subtarget.isPICStyleStubPIC())
-    OpFlag = X86II::MO_PIC_BASE_OFFSET;
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result = DAG.getTargetConstantPool(
@@ -12574,17 +12558,13 @@ SDValue X86TargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
 
   // In PIC mode (unless we're in RIPRel PIC mode) we add an offset to the
   // global base reg.
-  unsigned char OpFlag = 0;
+  unsigned char OpFlag = Subtarget.classifyLocalReference(nullptr);
   unsigned WrapperKind = X86ISD::Wrapper;
   CodeModel::Model M = DAG.getTarget().getCodeModel();
 
   if (Subtarget.isPICStyleRIPRel() &&
       (M == CodeModel::Small || M == CodeModel::Kernel))
     WrapperKind = X86ISD::WrapperRIP;
-  else if (Subtarget.isPICStyleGOT())
-    OpFlag = X86II::MO_GOTOFF;
-  else if (Subtarget.isPICStyleStubPIC())
-    OpFlag = X86II::MO_PIC_BASE_OFFSET;
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result = DAG.getTargetJumpTable(JT->getIndex(), PtrVT, OpFlag);
@@ -12606,22 +12586,14 @@ X86TargetLowering::LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const {
 
   // In PIC mode (unless we're in RIPRel PIC mode) we add an offset to the
   // global base reg.
-  unsigned char OpFlag = 0;
+  const Module *Mod = DAG.getMachineFunction().getFunction()->getParent();
+  unsigned char OpFlag = Subtarget.classifyGlobalReference(nullptr, *Mod);
   unsigned WrapperKind = X86ISD::Wrapper;
   CodeModel::Model M = DAG.getTarget().getCodeModel();
 
   if (Subtarget.isPICStyleRIPRel() &&
-      (M == CodeModel::Small || M == CodeModel::Kernel)) {
-    if (Subtarget.isTargetDarwin() || Subtarget.isTargetELF())
-      OpFlag = X86II::MO_GOTPCREL;
+      (M == CodeModel::Small || M == CodeModel::Kernel))
     WrapperKind = X86ISD::WrapperRIP;
-  } else if (Subtarget.isPICStyleGOT()) {
-    OpFlag = X86II::MO_GOT;
-  } else if (Subtarget.isPICStyleStubPIC()) {
-    OpFlag = X86II::MO_DARWIN_NONLAZY_PIC_BASE;
-  } else if (Subtarget.isPICStyleStubNoDynamic()) {
-    OpFlag = X86II::MO_DARWIN_NONLAZY;
-  }
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result = DAG.getTargetExternalSymbol(Sym, PtrVT, OpFlag);
@@ -24082,6 +24054,136 @@ static SDValue combineShuffle256(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Attempt to match a combined shuffle mask against supported unary shuffle
+// instructions.
+// TODO: Investigate sharing more of this with shuffle lowering.
+// TODO: Investigate using isShuffleEquivalent() instead of Mask.equals().
+static bool matchUnaryVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
+                                    const X86Subtarget &Subtarget,
+                                    unsigned &Shuffle, MVT &ShuffleVT) {
+  bool FloatDomain = SrcVT.isFloatingPoint();
+
+  // Match a 128-bit integer vector against a VZEXT_MOVL (MOVQ) instruction.
+  if (!FloatDomain && SrcVT.is128BitVector() && Mask.size() == 2 &&
+      Mask[0] == 0 && Mask[1] < 0) {
+    Shuffle = X86ISD::VZEXT_MOVL;
+    ShuffleVT = MVT::v2i64;
+    return true;
+  }
+
+  if (!FloatDomain)
+    return false;
+
+  // Check if we have SSE3 which will let us use MOVDDUP etc. The
+  // instructions are no slower than UNPCKLPD but has the option to
+  // fold the input operand into even an unaligned memory load.
+  if (SrcVT.is128BitVector() && Subtarget.hasSSE3()) {
+    if (Mask.equals({0, 0})) {
+      Shuffle = X86ISD::MOVDDUP;
+      ShuffleVT = MVT::v2f64;
+      return true;
+    }
+    if (Mask.equals({0, 0, 2, 2})) {
+      Shuffle = X86ISD::MOVSLDUP;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
+    if (Mask.equals({1, 1, 3, 3})) {
+      Shuffle = X86ISD::MOVSHDUP;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
+  }
+
+  if (SrcVT.is256BitVector()) {
+    assert(Subtarget.hasAVX() && "AVX required for 256-bit vector shuffles");
+    if (Mask.equals({0, 0, 2, 2})) {
+      Shuffle = X86ISD::MOVDDUP;
+      ShuffleVT = MVT::v4f64;
+      return true;
+    }
+    if (Mask.equals({0, 0, 2, 2, 4, 4, 6, 6})) {
+      Shuffle = X86ISD::MOVSLDUP;
+      ShuffleVT = MVT::v8f32;
+      return true;
+    }
+    if (Mask.equals({1, 1, 3, 3, 5, 5, 7, 7})) {
+      Shuffle = X86ISD::MOVSHDUP;
+      ShuffleVT = MVT::v8f32;
+      return true;
+    }
+  }
+
+  if (SrcVT.is512BitVector()) {
+    assert(Subtarget.hasAVX512() &&
+           "AVX512 required for 512-bit vector shuffles");
+    if (Mask.equals({0, 0, 2, 2, 4, 4, 6, 6})) {
+      Shuffle = X86ISD::MOVDDUP;
+      ShuffleVT = MVT::v8f64;
+      return true;
+    }
+    if (Mask.equals({0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14})) {
+      Shuffle = X86ISD::MOVSLDUP;
+      ShuffleVT = MVT::v16f32;
+      return true;
+    }
+    if (Mask.equals({1, 1, 3, 3, 5, 5, 7, 7, 9, 9, 11, 11, 13, 13, 15, 15})) {
+      Shuffle = X86ISD::MOVSHDUP;
+      ShuffleVT = MVT::v16f32;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Attempt to match a combined unary shuffle mask against supported binary
+// shuffle instructions.
+// TODO: Investigate sharing more of this with shuffle lowering.
+// TODO: Investigate using isShuffleEquivalent() instead of Mask.equals().
+static bool matchBinaryVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
+                                     unsigned &Shuffle, MVT &ShuffleVT) {
+  bool FloatDomain = SrcVT.isFloatingPoint();
+
+  if (SrcVT.is128BitVector()) {
+    if (Mask.equals({0, 0}) && FloatDomain) {
+      Shuffle = X86ISD::MOVLHPS;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
+    if (Mask.equals({1, 1}) && FloatDomain) {
+      Shuffle = X86ISD::MOVHLPS;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
+    if (Mask.equals({0, 0, 1, 1}) && FloatDomain) {
+      Shuffle = X86ISD::UNPCKL;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
+    if (Mask.equals({2, 2, 3, 3}) && FloatDomain) {
+      Shuffle = X86ISD::UNPCKH;
+      ShuffleVT = MVT::v4f32;
+      return true;
+    }
+    if (Mask.equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
+        Mask.equals({0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7})) {
+      Shuffle = X86ISD::UNPCKL;
+      ShuffleVT = Mask.size() == 8 ? MVT::v8i16 : MVT::v16i8;
+      return true;
+    }
+    if (Mask.equals({4, 4, 5, 5, 6, 6, 7, 7}) ||
+        Mask.equals(
+            {8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15})) {
+      Shuffle = X86ISD::UNPCKH;
+      ShuffleVT = Mask.size() == 8 ? MVT::v8i16 : MVT::v16i8;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// \brief Combine an arbitrary chain of shuffles into a single instruction if
 /// possible.
 ///
@@ -24123,117 +24225,34 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   if (MaskEltSizeInBits > 64)
     return false;
 
-  // Use the float domain if the operand type is a floating point type.
-  bool FloatDomain = VT.isFloatingPoint();
-
-  // For floating point shuffles, we don't have free copies in the shuffle
-  // instructions or the ability to load as part of the instruction, so
-  // canonicalize their shuffles to UNPCK or MOV variants.
-  //
-  // Note that even with AVX we prefer the PSHUFD form of shuffle for integer
-  // vectors because it can have a load folded into it that UNPCK cannot. This
-  // doesn't preclude something switching to the shorter encoding post-RA.
-  //
-  // FIXME: Should teach these routines about AVX vector widths.
-  if (FloatDomain && VT.is128BitVector()) {
-    if (Mask.equals({0, 0}) || Mask.equals({1, 1})) {
-      bool Lo = Mask.equals({0, 0});
-      unsigned Shuffle;
-      MVT ShuffleVT;
-      // Check if we have SSE3 which will let us use MOVDDUP. That instruction
-      // is no slower than UNPCKLPD but has the option to fold the input operand
-      // into even an unaligned memory load.
-      if (Lo && Subtarget.hasSSE3()) {
-        Shuffle = X86ISD::MOVDDUP;
-        ShuffleVT = MVT::v2f64;
-      } else {
-        // We have MOVLHPS and MOVHLPS throughout SSE and they encode smaller
-        // than the UNPCK variants.
-        Shuffle = Lo ? X86ISD::MOVLHPS : X86ISD::MOVHLPS;
-        ShuffleVT = MVT::v4f32;
-      }
-      if (Depth == 1 && Root.getOpcode() == Shuffle)
-        return false; // Nothing to do!
-      Res = DAG.getBitcast(ShuffleVT, Input);
-      DCI.AddToWorklist(Res.getNode());
-      if (Shuffle == X86ISD::MOVDDUP)
-        Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
-      else
-        Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res, Res);
-      DCI.AddToWorklist(Res.getNode());
-      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
-                    /*AddTo*/ true);
-      return true;
-    }
-    if (Subtarget.hasSSE3() &&
-        (Mask.equals({0, 0, 2, 2}) || Mask.equals({1, 1, 3, 3}))) {
-      bool Lo = Mask.equals({0, 0, 2, 2});
-      unsigned Shuffle = Lo ? X86ISD::MOVSLDUP : X86ISD::MOVSHDUP;
-      MVT ShuffleVT = MVT::v4f32;
-      if (Depth == 1 && Root.getOpcode() == Shuffle)
-        return false; // Nothing to do!
-      Res = DAG.getBitcast(ShuffleVT, Input);
-      DCI.AddToWorklist(Res.getNode());
-      Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
-      DCI.AddToWorklist(Res.getNode());
-      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
-                    /*AddTo*/ true);
-      return true;
-    }
-    if (Mask.equals({0, 0, 1, 1}) || Mask.equals({2, 2, 3, 3})) {
-      bool Lo = Mask.equals({0, 0, 1, 1});
-      unsigned Shuffle = Lo ? X86ISD::UNPCKL : X86ISD::UNPCKH;
-      MVT ShuffleVT = MVT::v4f32;
-      if (Depth == 1 && Root.getOpcode() == Shuffle)
-        return false; // Nothing to do!
-      Res = DAG.getBitcast(ShuffleVT, Input);
-      DCI.AddToWorklist(Res.getNode());
-      Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res, Res);
-      DCI.AddToWorklist(Res.getNode());
-      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
-                    /*AddTo*/ true);
-      return true;
-    }
+  // Don't combine if we are a AVX512/EVEX target and the mask element size
+  // is different from the root element size - this would prevent writemasks
+  // from being reused.
+  // TODO - check for writemasks usage instead of always preventing combining.
+  // TODO - attempt to narrow Mask back to writemask size.
+  if (RootVT.getScalarSizeInBits() != MaskEltSizeInBits &&
+      (RootSizeInBits == 512 ||
+       (Subtarget.hasVLX() && RootSizeInBits >= 128))) {
+    return false;
   }
 
-  // We always canonicalize the 8 x i16 and 16 x i8 shuffles into their UNPCK
-  // variants as none of these have single-instruction variants that are
-  // superior to the UNPCK formulation.
-  if (!FloatDomain && VT.is128BitVector() &&
-      (Mask.equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
-       Mask.equals({4, 4, 5, 5, 6, 6, 7, 7}) ||
-       Mask.equals({0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7}) ||
-       Mask.equals(
-           {8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15}))) {
-    bool Lo = Mask[0] == 0;
-    unsigned Shuffle = Lo ? X86ISD::UNPCKL : X86ISD::UNPCKH;
+  // Attempt to match the mask against known shuffle patterns.
+  MVT ShuffleVT;
+  unsigned Shuffle;
+
+  if (matchUnaryVectorShuffle(VT, Mask, Subtarget, Shuffle, ShuffleVT)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
-    MVT ShuffleVT;
-    switch (NumMaskElts) {
-    case 8:
-      ShuffleVT = MVT::v8i16;
-      break;
-    case 16:
-      ShuffleVT = MVT::v16i8;
-      break;
-    default:
-      llvm_unreachable("Impossible mask size!");
-    };
     Res = DAG.getBitcast(ShuffleVT, Input);
     DCI.AddToWorklist(Res.getNode());
-    Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res, Res);
+    Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
     DCI.AddToWorklist(Res.getNode());
     DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
                   /*AddTo*/ true);
     return true;
   }
 
-  // Match a 128-bit integer vector against a VZEXT_MOVL (MOVQ) instruction.
-  if (!FloatDomain && VT.is128BitVector() &&
-      Mask.size() == 2 && Mask[0] == 0 && Mask[1] < 0) {
-    unsigned Shuffle = X86ISD::VZEXT_MOVL;
-    MVT ShuffleVT = MVT::v2i64;
+  if (matchBinaryVectorShuffle(VT, Mask, Shuffle, ShuffleVT)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
       return false; // Nothing to do!
     Res = DAG.getBitcast(ShuffleVT, Input);

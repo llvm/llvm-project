@@ -510,11 +510,11 @@ public:
 
   template <typename FBT, typename T>
   void enumFallback(T &Val) {
-    if ( matchEnumFallback() ) {
+    if (matchEnumFallback()) {
       // FIXME: Force integral conversion to allow strong typedefs to convert.
-      FBT Res = (uint64_t)Val;
+      FBT Res = static_cast<typename FBT::BaseType>(Val);
       yamlize(*this, Res, true);
-      Val = (uint64_t)Res;
+      Val = static_cast<T>(static_cast<typename FBT::BaseType>(Res));
     }
   }
 
@@ -1168,6 +1168,7 @@ private:
         bool operator==(const _base &rhs) const { return value == rhs; }       \
         bool operator<(const _type &rhs) const { return value < rhs.value; }   \
         _base value;                                                           \
+        typedef _base BaseType;                                                \
     };
 
 ///
