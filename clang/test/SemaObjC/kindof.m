@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -fsyntax-only %s -verify
+// RUN: %clang_cc1 -fblocks -fsyntax-only %s -verify -Wmethod-signatures
 
 // Tests Objective-C 'kindof' types.
 
@@ -373,6 +373,27 @@ void testNullability() {
   void processCopyable(__typeof(getSomeCopyable()) string);
   processCopyable(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
+
+// Make sure that we don't emit a warning about conflicting parameter types
+// between __kindof id and id.
+@interface A2 : NSObject
+- (void)test:(__kindof id)T;
+@end
+@implementation A2
+- (void)test:(id)T {
+}
+@end
+
+@interface NSGeneric<ObjectType> : NSObject
+- (void)test:(__kindof ObjectType)T;
+- (void)mapUsingBlock:(id (^)(__kindof ObjectType))block;
+@end
+@implementation NSGeneric
+- (void)test:(id)T {
+}
+- (void)mapUsingBlock:(id (^)(id))block {
+}
+@end
 
 // Check that clang doesn't crash when a type parameter is illegal.
 @interface Array1<T> : NSObject
