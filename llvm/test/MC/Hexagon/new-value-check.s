@@ -1,7 +1,7 @@
-# RUN: llvm-mc -triple=hexagon < %s 2>%t ; \
-# RUN:     FileCheck %s < %t --check-prefix=CHECK-STRICT
-# RUN: llvm-mc -triple=hexagon -relax-nv-checks < %s 2>%t ; \
-# RUN:     FileCheck %s < %t --check-prefix=CHECK-RELAXED
+# RUN: not llvm-mc -triple=hexagon < %s 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=CHECK-STRICT
+# RUN: not llvm-mc -triple=hexagon -relax-nv-checks < %s 2>&1 | \
+# RUN:     FileCheck %s --check-prefix=CHECK-RELAXED
 
 # CHECK-STRICT: :12:1: error: register `R0' used with `.new' but not validly modified in the same packet
 # CHECK-RELAXED: :12:1: error: register `R0' used with `.new' but not validly modified in the same packet

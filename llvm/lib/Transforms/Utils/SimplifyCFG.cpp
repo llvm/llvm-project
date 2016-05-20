@@ -3914,14 +3914,20 @@ static bool EliminateDeadSwitchCases(SwitchInst *SI, AssumptionCache *AC,
   APInt KnownZero(Bits, 0), KnownOne(Bits, 0);
   computeKnownBits(Cond, KnownZero, KnownOne, DL, 0, AC, SI);
 
+  // We can also eliminate cases by determining that their values are outside of
+  // the limited range of the condition based on how many significant (non-sign)
+  // bits are in the condition value.
+  unsigned ExtraSignBits = ComputeNumSignBits(Cond, DL, 0, AC, SI) - 1;
+  unsigned MaxSignificantBitsInCond = Bits - ExtraSignBits;
+
   // Gather dead cases.
   SmallVector<ConstantInt *, 8> DeadCases;
   for (auto &Case : SI->cases()) {
-    if ((Case.getCaseValue()->getValue() & KnownZero) != 0 ||
-        (Case.getCaseValue()->getValue() & KnownOne) != KnownOne) {
+    APInt CaseVal = Case.getCaseValue()->getValue();
+    if ((CaseVal & KnownZero) != 0 || (CaseVal & KnownOne) != KnownOne ||
+        (CaseVal.getMinSignedBits() > MaxSignificantBitsInCond)) {
       DeadCases.push_back(Case.getCaseValue());
-      DEBUG(dbgs() << "SimplifyCFG: switch case '" << Case.getCaseValue()
-                   << "' is dead.\n");
+      DEBUG(dbgs() << "SimplifyCFG: switch case " << CaseVal << " is dead.\n");
     }
   }
 

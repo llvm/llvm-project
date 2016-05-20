@@ -32,12 +32,6 @@ class MachineModuleInfoMachO : public MachineModuleInfoImpl {
   /// is true if this GV is external.
   DenseMap<MCSymbol *, StubValueTy> GVStubs;
 
-  /// HiddenGVStubs - Darwin '$non_lazy_ptr' stubs.  The key is something like
-  /// "Lfoo$non_lazy_ptr", the value is something like "_foo".  Unlike GVStubs
-  /// these are for things with hidden visibility. The extra bit is true if
-  /// this GV is external.
-  DenseMap<MCSymbol *, StubValueTy> HiddenGVStubs;
-
   /// ThreadLocalGVStubs - Darwin '$non_lazy_ptr' stubs.  The key is something
   /// like "Lfoo$non_lazy_ptr", the value is something like "_foo". The extra
   /// bit is true if this GV is external.
@@ -57,11 +51,6 @@ public:
     return GVStubs[Sym];
   }
 
-  StubValueTy &getHiddenGVStubEntry(MCSymbol *Sym) {
-    assert(Sym && "Key cannot be null");
-    return HiddenGVStubs[Sym];
-  }
-
   StubValueTy &getThreadLocalGVStubEntry(MCSymbol *Sym) {
     assert(Sym && "Key cannot be null");
     return ThreadLocalGVStubs[Sym];
@@ -70,7 +59,6 @@ public:
   /// Accessor methods to return the set of stubs in sorted order.
   SymbolListTy GetFnStubList() { return getSortedStubs(FnStubs); }
   SymbolListTy GetGVStubList() { return getSortedStubs(GVStubs); }
-  SymbolListTy GetHiddenGVStubList() { return getSortedStubs(HiddenGVStubs); }
   SymbolListTy GetThreadLocalGVStubList() {
     return getSortedStubs(ThreadLocalGVStubs);
   }

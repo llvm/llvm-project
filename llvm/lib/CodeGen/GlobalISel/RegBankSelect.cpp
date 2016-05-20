@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -25,12 +26,18 @@
 using namespace llvm;
 
 char RegBankSelect::ID = 0;
-INITIALIZE_PASS(RegBankSelect, "regbankselect",
-                "Assign register bank of generic virtual registers",
-                false, false);
+INITIALIZE_PASS_BEGIN(RegBankSelect, "regbankselect",
+                      "Assign register bank of generic virtual registers",
+                      false, false);
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_END(RegBankSelect, "regbankselect",
+                    "Assign register bank of generic virtual registers", false,
+                    false);
 
-RegBankSelect::RegBankSelect()
-    : MachineFunctionPass(ID), RBI(nullptr), MRI(nullptr) {
+RegBankSelect::RegBankSelect(Mode RunningMode)
+    : MachineFunctionPass(ID), RBI(nullptr), MRI(nullptr), TRI(nullptr),
+      MBFI(nullptr), MBPI(nullptr), OptMode(RunningMode) {
   initializeRegBankSelectPass(*PassRegistry::getPassRegistry());
 }
 
@@ -39,7 +46,24 @@ void RegBankSelect::init(MachineFunction &MF) {
   assert(RBI && "Cannot work without RegisterBankInfo");
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
+  if (OptMode != Mode::Fast) {
+    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+    MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  } else {
+    MBFI = nullptr;
+    MBPI = nullptr;
+  }
   MIRBuilder.setMF(MF);
+}
+
+void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
+  if (OptMode != Mode::Fast) {
+    // We could preserve the information from these two analysis but
+    // the APIs do not allow to do so yet.
+    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBranchProbabilityInfo>();
+  }
+  MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool RegBankSelect::assignmentMatch(
@@ -112,51 +136,162 @@ void RegBankSelect::repairReg(
   // Legalize NewInstrs if need be.
 }
 
-void RegBankSelect::setSafeInsertionPoint(MachineInstr &InsertPt, bool Before) {
-  // Check that we are not looking to insert before a phi.
-  // Indeed, we would need more information on what to do.
-  // By default that should be all the predecessors, but this is
-  // probably not what we want in general.
-  assert((!Before || !InsertPt.isPHI()) &&
-         "Insertion before phis not implemented");
-  // The same kind of observation hold for terminators if we try to
-  // insert after them.
-  assert((Before || !InsertPt.isTerminator()) &&
-         "Insertion after terminatos not implemented");
-  if (InsertPt.isPHI()) {
-    assert(!Before && "Not supported!!");
-    MachineBasicBlock *MBB = InsertPt.getParent();
-    assert(MBB && "Insertion point is not in a basic block");
-    MachineBasicBlock::iterator FirstNonPHIPt = MBB->getFirstNonPHI();
-    if (FirstNonPHIPt == MBB->end()) {
-      // If there is not any non-phi instruction, insert at the end of MBB.
-      MIRBuilder.setMBB(*MBB, /*Beginning*/ false);
-      return;
+RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
+    MachineInstr &MI, RegisterBankInfo::InstructionMappings &PossibleMappings,
+    SmallVectorImpl<RepairingPlacement> &RepairPts) {
+
+  RegisterBankInfo::InstructionMapping *BestMapping = nullptr;
+  MappingCost Cost = MappingCost::ImpossibleCost();
+  SmallVector<RepairingPlacement, 4> LocalRepairPts;
+  for (RegisterBankInfo::InstructionMapping &CurMapping : PossibleMappings) {
+    MappingCost CurCost = computeMapping(MI, CurMapping, LocalRepairPts, &Cost);
+    if (CurCost < Cost) {
+      Cost = CurCost;
+      BestMapping = &CurMapping;
+      RepairPts.clear();
+      for (RepairingPlacement &RepairPt : LocalRepairPts)
+        RepairPts.emplace_back(std::move(RepairPt));
     }
-    // The insertion point before the first non-phi instruction.
-    MIRBuilder.setInstr(*FirstNonPHIPt, /*Before*/ true);
+  }
+  assert(BestMapping && "No suitable mapping for instruction");
+  return *BestMapping;
+}
+
+void RegBankSelect::tryAvoidingSplit(
+    RegBankSelect::RepairingPlacement &RepairPt, const MachineOperand &MO,
+    const RegisterBankInfo::ValueMapping &ValMapping) const {
+  const MachineInstr &MI = *MO.getParent();
+  assert(RepairPt.hasSplit() && "We should not have to adjust for split");
+  // Splitting should only occur for PHIs or between terminators,
+  // because we only do local repairing.
+  assert((MI.isPHI() || MI.isTerminator()) && "Why do we split?");
+
+  assert(&MI.getOperand(RepairPt.getOpIdx()) == &MO &&
+         "Repairing placement does not match operand");
+
+  // If we need splitting for phis, that means it is because we
+  // could not find an insertion point before the terminators of
+  // the predecessor block for this argument. In other words,
+  // the input value is defined by one of the terminators.
+  assert((!MI.isPHI() || !MO.isDef()) && "Need split for phi def?");
+
+  // We split to repair the use of a phi or a terminator.
+  if (!MO.isDef()) {
+    if (MI.isTerminator()) {
+      assert(&MI != &(*MI.getParent()->getFirstTerminator()) &&
+             "Need to split for the first terminator?!");
+    } else {
+      // For the PHI case, the split may not be actually required.
+      // In the copy case, a phi is already a copy on the incoming edge,
+      // therefore there is no need to split.
+      if (ValMapping.BreakDown.size() == 1)
+        // This is a already a copy, there is nothing to do.
+        RepairPt.switchTo(RepairingPlacement::RepairingKind::Reassign);
+    }
     return;
   }
-  if (InsertPt.isTerminator()) {
-    MachineBasicBlock *MBB = InsertPt.getParent();
-    assert(MBB && "Insertion point is not in a basic block");
-    MIRBuilder.setInstr(*MBB->getFirstTerminator(), /*Before*/ true);
-    return;
+
+  // At this point, we need to repair a defintion of a terminator.
+
+  // Technically we need to fix the def of MI on all outgoing
+  // edges of MI to keep the repairing local. In other words, we
+  // will create several definitions of the same register. This
+  // does not work for SSA unless that definition is a physical
+  // register.
+  // However, there are other cases where we can get away with
+  // that while still keeping the repairing local.
+  assert(MI.isTerminator() && MO.isDef() &&
+         "This code is for the def of a terminator");
+
+  // Since we use RPO traversal, if we need to repair a definition
+  // this means this definition could be:
+  // 1. Used by PHIs (i.e., this VReg has been visited as part of the
+  //    uses of a phi.), or
+  // 2. Part of a target specific instruction (i.e., the target applied
+  //    some register class constraints when creating the instruction.)
+  // If the constraints come for #2, the target said that another mapping
+  // is supported so we may just drop them. Indeed, if we do not change
+  // the number of registers holding that value, the uses will get fixed
+  // when we get to them.
+  // Uses in PHIs may have already been proceeded though.
+  // If the constraints come for #1, then, those are weak constraints and
+  // no actual uses may rely on them. However, the problem remains mainly
+  // the same as for #2. If the value stays in one register, we could
+  // just switch the register bank of the definition, but we would need to
+  // account for a repairing cost for each phi we silently change.
+  //
+  // In any case, if the value needs to be broken down into several
+  // registers, the repairing is not local anymore as we need to patch
+  // every uses to rebuild the value in just one register.
+  //
+  // To summarize:
+  // - If the value is in a physical register, we can do the split and
+  //   fix locally.
+  // Otherwise if the value is in a virtual register:
+  // - If the value remains in one register, we do not have to split
+  //   just switching the register bank would do, but we need to account
+  //   in the repairing cost all the phi we changed.
+  // - If the value spans several registers, then we cannot do a local
+  //   repairing.
+
+  // Check if this is a physical or virtual register.
+  unsigned Reg = MO.getReg();
+  if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    // We are going to split every outgoing edges.
+    // Check that this is possible.
+    // FIXME: The machine representation is currently broken
+    // since it also several terminators in one basic block.
+    // Because of that we would technically need a way to get
+    // the targets of just one terminator to know which edges
+    // we have to split.
+    // Assert that we do not hit the ill-formed representation.
+
+    // If there are other terminators before that one, some of
+    // the outgoing edges may not be dominated by this definition.
+    assert(&MI == &(*MI.getParent()->getFirstTerminator()) &&
+           "Do not know which outgoing edges are relevant");
+    const MachineInstr *Next = MI.getNextNode();
+    assert((!Next || Next->isUnconditionalBranch()) &&
+           "Do not know where each terminator ends up");
+    if (Next)
+      // If the next terminator uses Reg, this means we have
+      // to split right after MI and thus we need a way to ask
+      // which outgoing edges are affected.
+      assert(!Next->readsRegister(Reg) && "Need to split between terminators");
+    // We will split all the edges and repair there.
+  } else {
+    // This is a virtual register defined by a terminator.
+    if (ValMapping.BreakDown.size() == 1) {
+      // There is nothing to repair, but we may actually lie on
+      // the repairing cost because of the PHIs already proceeded
+      // as already stated.
+      // Though the code will be correct.
+      assert(0 && "Repairing cost may not be accurate");
+    } else {
+      // We need to do non-local repairing. Basically, patch all
+      // the uses (i.e., phis) that we already proceeded.
+      // For now, just say this mapping is not possible.
+      RepairPt.switchTo(RepairingPlacement::RepairingKind::Impossible);
+    }
   }
-  MIRBuilder.setInstr(InsertPt, /*Before*/ Before);
 }
 
 RegBankSelect::MappingCost RegBankSelect::computeMapping(
     MachineInstr &MI, const RegisterBankInfo::InstructionMapping &InstrMapping,
-    SmallVectorImpl<RepairingPlacement> &RepairPts) {
+    SmallVectorImpl<RepairingPlacement> &RepairPts,
+    const RegBankSelect::MappingCost *BestCost) {
+  assert((MBFI || !BestCost) && "Costs comparison require MBFI");
 
   // If mapped with InstrMapping, MI will have the recorded cost.
-  MappingCost Cost(1);
+  MappingCost Cost(MBFI ? MBFI->getBlockFreq(MI.getParent()) : 1);
   bool Saturated = Cost.addLocalCost(InstrMapping.getCost());
   assert(!Saturated && "Possible mapping saturated the cost");
   DEBUG(dbgs() << "Evaluating mapping cost for: " << MI);
   DEBUG(dbgs() << "With: " << InstrMapping << '\n');
   RepairPts.clear();
+  if (BestCost && Cost > *BestCost)
+    return Cost;
+
   // Moreover, to realize this mapping, the register bank of each operand must
   // match this mapping. In other words, we may need to locally reassign the
   // register banks. Account for that repairing cost as well.
@@ -202,14 +337,24 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
         RepairingPlacement(MI, OpIdx, *TRI, *this, RepairingPlacement::Insert));
     RepairingPlacement &RepairPt = RepairPts.back();
 
+    // If we need to split a basic block to materialize this insertion point,
+    // we may give a higher cost to this mapping.
+    // Nevertheless, we may get away with the split, so try that first.
+    if (RepairPt.hasSplit())
+      tryAvoidingSplit(RepairPt, MO, ValMapping);
+
     // Check that the materialization of the repairing is possible.
     if (!RepairPt.canMaterialize())
       return MappingCost::ImpossibleCost();
 
     // Account for the split cost and repair cost.
-    // Unless the cost is already saturated.
-    if (Saturated)
+    // Unless the cost is already saturated or we do not care about the cost.
+    if (!BestCost || Saturated)
       continue;
+
+    // To get accurate information we need MBFI and MBPI.
+    // Thus, if we end up here this information should be here.
+    assert(MBFI && MBPI && "Cost computation requires MBFI and MBPI");
 
     // Sums up the repairing cost of at each insertion point.
     // TODO: Get the actual repairing cost.
@@ -244,6 +389,12 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
         else
           Saturated = Cost.addNonLocalCost(PtCost);
       }
+
+      // Stop looking into what it takes to repair, this is already
+      // too expensive.
+      if (BestCost && Cost > *BestCost)
+        return Cost;
+
       // No need to accumulate more cost information.
       // We need to still gather the repairing information though.
       if (Saturated)
@@ -303,28 +454,39 @@ void RegBankSelect::applyMapping(
 
 void RegBankSelect::assignInstr(MachineInstr &MI) {
   DEBUG(dbgs() << "Assign: " << MI);
-  RegisterBankInfo::InstructionMapping DefaultMapping =
-      RBI->getInstrMapping(MI);
   // Remember the repairing placement for all the operands.
   SmallVector<RepairingPlacement, 4> RepairPts;
 
-  MappingCost DefaultCost = computeMapping(MI, DefaultMapping, RepairPts);
-  (void)DefaultCost;
-  assert(DefaultCost != MappingCost::ImpossibleCost() &&
-         "Default mapping is not suited");
-
+  RegisterBankInfo::InstructionMapping BestMapping;
+  if (OptMode == RegBankSelect::Mode::Fast) {
+    BestMapping = RBI->getInstrMapping(MI);
+    MappingCost DefaultCost = computeMapping(MI, BestMapping, RepairPts);
+    (void)DefaultCost;
+    assert(DefaultCost != MappingCost::ImpossibleCost() &&
+           "Default mapping is not suited");
+  } else {
+    RegisterBankInfo::InstructionMappings PossibleMappings =
+        RBI->getInstrPossibleMappings(MI);
+    assert(!PossibleMappings.empty() &&
+           "Do not know how to map this instruction");
+    BestMapping = std::move(findBestMapping(MI, PossibleMappings, RepairPts));
+  }
   // Make sure the mapping is valid for MI.
-  assert(DefaultMapping.verify(MI) && "Invalid instruction mapping");
+  assert(BestMapping.verify(MI) && "Invalid instruction mapping");
 
-  DEBUG(dbgs() << "Mapping: " << DefaultMapping << '\n');
+  DEBUG(dbgs() << "Mapping: " << BestMapping << '\n');
 
-  applyMapping(MI, DefaultMapping, RepairPts);
+  applyMapping(MI, BestMapping, RepairPts);
 
   DEBUG(dbgs() << "Assigned: " << MI);
 }
 
 bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');
+  const Function *F = MF.getFunction();
+  Mode SaveOptMode = OptMode;
+  if (F->hasFnAttribute(Attribute::OptimizeNone))
+    OptMode = Mode::Fast;
   init(MF);
   // Walk the function and assign register banks to all operands.
   // Use a RPOT to make sure all registers are assigned before we choose
@@ -337,6 +499,7 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : *MBB)
       assignInstr(MI);
   }
+  OptMode = SaveOptMode;
   return false;
 }
 

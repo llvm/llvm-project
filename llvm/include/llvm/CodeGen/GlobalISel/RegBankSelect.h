@@ -71,6 +71,8 @@
 namespace llvm {
 // Forward declarations.
 class BlockFrequency;
+class MachineBranchProbabilityInfo;
+class MachineBlockFrequencyInfo;
 class MachineRegisterInfo;
 class TargetRegisterInfo;
 
@@ -79,6 +81,16 @@ class TargetRegisterInfo;
 class RegBankSelect : public MachineFunctionPass {
 public:
   static char ID;
+
+  /// List of the modes supported by the RegBankSelect pass.
+  enum Mode {
+    /// Assign the register banks as fast as possible (default).
+    Fast,
+    /// Greedily minimize the cost of assigning register banks.
+    /// This should produce code of greater quality, but will
+    /// require more compile time.
+    Greedy
+  };
 
   /// Abstract class used to represent an insertion point in a CFG.
   /// This class records an insertion point and materializes it on
@@ -450,8 +462,19 @@ private:
   /// Information on the register classes for the current function.
   const TargetRegisterInfo *TRI;
 
+  /// Get the frequency of blocks.
+  /// This is required for non-fast mode.
+  MachineBlockFrequencyInfo *MBFI;
+
+  /// Get the frequency of the edges.
+  /// This is required for non-fast mode.
+  MachineBranchProbabilityInfo *MBPI;
+
   /// Helper class used for every code morphing.
   MachineIRBuilder MIRBuilder;
+
+  /// Optimization mode of the pass.
+  Mode OptMode;
 
   /// Assign the register bank of each operand of \p MI.
   void assignInstr(MachineInstr &MI);
@@ -502,18 +525,37 @@ private:
       RegBankSelect::RepairingPlacement &RepairPt,
       const iterator_range<SmallVectorImpl<unsigned>::iterator> &NewVRegs);
 
-  /// Set the insertion point of the MIRBuilder to a safe point
-  /// to insert instructions before (\p Before == true) or after
-  /// \p InsertPt.
-  void setSafeInsertionPoint(MachineInstr &InsertPt, bool Before);
+  /// Find the best mapping for \p MI from \p PossibleMappings.
+  /// \return a reference on the best mapping in \p PossibleMappings.
+  RegisterBankInfo::InstructionMapping &
+  findBestMapping(MachineInstr &MI,
+                  RegisterBankInfo::InstructionMappings &PossibleMappings,
+                  SmallVectorImpl<RepairingPlacement> &RepairPts);
 
   /// Compute the cost of mapping \p MI with \p InstrMapping and
   /// compute the repairing placement for such mapping in \p
   /// RepairPts.
+  /// \p BestCost is used to specify when the cost becomes too high
+  /// and thus it is not worth computing the RepairPts.  Moreover if
+  /// \p BestCost == nullptr, the mapping cost is actually not
+  /// computed.
   MappingCost
   computeMapping(MachineInstr &MI,
                  const RegisterBankInfo::InstructionMapping &InstrMapping,
-                 SmallVectorImpl<RepairingPlacement> &RepairPts);
+                 SmallVectorImpl<RepairingPlacement> &RepairPts,
+                 const MappingCost *BestCost = nullptr);
+
+  /// When \p RepairPt involves splitting to repair \p MO for the
+  /// given \p ValMapping, try to change the way we repair such that
+  /// the splitting is not required anymore.
+  ///
+  /// \pre \p RepairPt.hasSplit()
+  /// \pre \p MO == MO.getParent()->getOperand(\p RepairPt.getOpIdx())
+  /// \pre \p ValMapping is the mapping of \p MO for MO.getParent()
+  ///      that implied \p RepairPt.
+  void tryAvoidingSplit(RegBankSelect::RepairingPlacement &RepairPt,
+                        const MachineOperand &MO,
+                        const RegisterBankInfo::ValueMapping &ValMapping) const;
 
   /// Apply \p Mapping to \p MI. \p RepairPts represents the different
   /// mapping action that need to happen for the mapping to be
@@ -523,12 +565,14 @@ private:
                     SmallVectorImpl<RepairingPlacement> &RepairPts);
 
 public:
-  // Ctor, nothing fancy.
-  RegBankSelect();
+  /// Create a RegBankSelect pass with the specified \p RunningMode.
+  RegBankSelect(Mode RunningMode = Fast);
 
   const char *getPassName() const override {
     return "RegBankSelect";
   }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   /// Walk through \p MF and assign a register bank to every virtual register
   /// that are still mapped to nothing.

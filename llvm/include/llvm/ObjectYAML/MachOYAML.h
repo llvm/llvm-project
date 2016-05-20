@@ -95,6 +95,7 @@ template <> struct MappingTraits<MachOYAML::Section> {
 template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
   static void enumeration(IO &io, MachO::LoadCommandType &value) {
 #include "llvm/Support/MachO.def"
+  io.enumFallback<Hex32>(value);
   }
 };
 

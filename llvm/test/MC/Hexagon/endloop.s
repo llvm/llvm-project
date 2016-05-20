@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=hexagon -filetype=asm %s 2>%t; FileCheck %s <%t
+# RUN: not llvm-mc -triple=hexagon -filetype=asm %s 2>&1 | FileCheck %s
 
 # Check that a branch in an end-loop packet is caught.
 

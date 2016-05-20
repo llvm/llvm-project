@@ -52,7 +52,7 @@ static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
                                      cl::Hidden);
 
 static cl::opt<bool> EnableNarrowLdMerge("enable-narrow-ld-merge", cl::Hidden,
-                                         cl::init(true),
+                                         cl::init(false),
                                          cl::desc("Enable narrow load merge"));
 
 namespace llvm {

@@ -439,7 +439,6 @@ void MappingTraits<MachO::twolevel_hints_command>::mapping(
 void MappingTraits<MachO::uuid_command>::mapping(
     IO &IO, MachO::uuid_command &LoadCommand) {
 
-  IO.mapRequired("cmdsize", LoadCommand.cmdsize);
   IO.mapRequired("uuid", LoadCommand.uuid);
 }
 

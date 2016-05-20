@@ -75,6 +75,7 @@ entry:
 ; SDag-ISel's arg push:
 ; CHECK: movl %esp, [[REGISTER:%[a-z]+]]
 ; CHECK: movl $42, ([[REGISTER]])
-; CHECK: movl __imp__test5dllimport
+; CHECK: movl L_test5dllimport$non_lazy_ptr-L5$pb(%eax), %eax
+
 }
 declare dllimport i32 @test5dllimport(i32)
