@@ -23,7 +23,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define INTEL_NO_MACRO_BODY 
+#define INTEL_NO_MACRO_BODY
 #define INTEL_ITTNOTIFY_API_PRIVATE
 #include "ittnotify.h"
 #include "legacy/ittnotify.h"

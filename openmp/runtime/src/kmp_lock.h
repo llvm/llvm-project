@@ -1200,7 +1200,7 @@ extern kmp_indirect_lock_t * __kmp_allocate_indirect_lock(void **, kmp_int32, km
 // Cleans up global states and data structures for managing dynamic user locks.
 extern void __kmp_cleanup_indirect_user_locks();
 
-// Default user lock sequence when not using hinted locks. 
+// Default user lock sequence when not using hinted locks.
 extern kmp_dyna_lockseq_t __kmp_user_lock_seq;
 
 // Jump table for "set lock location", available only for indirect locks.

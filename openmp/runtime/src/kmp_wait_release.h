@@ -33,7 +33,7 @@ to build higher level operations such as barriers and fork/join.
 @{
 */
 
-/*! 
+/*!
  * The flag_type describes the storage used for the flag.
  */
 enum flag_type {
@@ -365,16 +365,16 @@ class kmp_basic_flag : public kmp_flag<FlagType> {
  public:
     kmp_basic_flag(volatile FlagType *p) : kmp_flag<FlagType>(p, traits_type::t), num_waiting_threads(0) {}
     kmp_basic_flag(volatile FlagType *p, kmp_info_t *thr) : kmp_flag<FlagType>(p, traits_type::t), num_waiting_threads(1) {
-        waiting_threads[0] = thr; 
+        waiting_threads[0] = thr;
     }
     kmp_basic_flag(volatile FlagType *p, FlagType c) : kmp_flag<FlagType>(p, traits_type::t), checker(c), num_waiting_threads(0) {}
     /*!
      * param i in   index into waiting_threads
      * @result the thread that is waiting at index i
      */
-    kmp_info_t * get_waiter(kmp_uint32 i) { 
+    kmp_info_t * get_waiter(kmp_uint32 i) {
         KMP_DEBUG_ASSERT(i<num_waiting_threads);
-        return waiting_threads[i]; 
+        return waiting_threads[i];
     }
     /*!
      * @result num_waiting_threads
@@ -385,8 +385,8 @@ class kmp_basic_flag : public kmp_flag<FlagType> {
      *
      * Insert a waiting thread at index 0.
      */
-    void set_waiter(kmp_info_t *thr) { 
-        waiting_threads[0] = thr; 
+    void set_waiter(kmp_info_t *thr) {
+        waiting_threads[0] = thr;
         num_waiting_threads = 1;
     }
     /*!
@@ -417,22 +417,22 @@ class kmp_basic_flag : public kmp_flag<FlagType> {
      * @result Actual flag value before sleep bit(s) set.
      * Notes that there is at least one thread sleeping on the flag by setting sleep bit(s).
      */
-    FlagType set_sleeping() { 
+    FlagType set_sleeping() {
         return traits_type::test_then_or((volatile FlagType *)this->get(), KMP_BARRIER_SLEEP_STATE);
     }
     /*!
      * @result Actual flag value before sleep bit(s) cleared.
      * Notes that there are no longer threads sleeping on the flag by clearing sleep bit(s).
      */
-    FlagType unset_sleeping() { 
+    FlagType unset_sleeping() {
         return traits_type::test_then_and((volatile FlagType *)this->get(), ~KMP_BARRIER_SLEEP_STATE);
     }
-    /*! 
+    /*!
      * @param old_loc in   old value of flag
      * Test whether there are threads sleeping on the flag's old value in old_loc.
      */
     bool is_sleeping_val(FlagType old_loc) { return old_loc & KMP_BARRIER_SLEEP_STATE; }
-    /*! 
+    /*!
      * Test whether there are threads sleeping on the flag.
      */
     bool is_sleeping() { return is_sleeping_val(*(this->get())); }

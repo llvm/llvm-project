@@ -43,7 +43,7 @@ kmp_bootstrap_lock_t __kmp_console_lock = KMP_BOOTSTRAP_LOCK_INITIALIZER( __kmp_
 
 #if KMP_OS_WINDOWS
 
-    # ifdef KMP_DEBUG 
+    # ifdef KMP_DEBUG
     /* __kmp_stdout is used only for dev build */
     static HANDLE    __kmp_stdout = NULL;
     # endif
@@ -77,7 +77,7 @@ kmp_bootstrap_lock_t __kmp_console_lock = KMP_BOOTSTRAP_LOCK_INITIALIZER( __kmp_
         /* wait until user presses return before closing window */
         /* TODO only close if a window was opened */
         if( __kmp_console_exists ) {
-            #ifdef KMP_DEBUG 
+            #ifdef KMP_DEBUG
             /* standard out is used only in dev build */
             __kmp_stdout = NULL;
             #endif
@@ -95,7 +95,7 @@ kmp_bootstrap_lock_t __kmp_console_lock = KMP_BOOTSTRAP_LOCK_INITIALIZER( __kmp_
         __kmp_acquire_bootstrap_lock( &__kmp_console_lock );
 
         if( ! __kmp_console_exists ) {
-            #ifdef KMP_DEBUG 
+            #ifdef KMP_DEBUG
             /* standard out is used only in dev build */
             HANDLE ho;
             #endif
