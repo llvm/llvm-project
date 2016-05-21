@@ -443,7 +443,7 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
       std::string Msg = std::string("Error while trying to spill ") +
           TRI->getName(SReg) + " from class " + TRI->getRegClassName(RC) +
           ": Cannot scavenge register without an emergency spill slot!";
-      llvm_unreachable(Msg.c_str());
+      report_fatal_error(Msg.c_str());
     }
     TII->storeRegToStackSlot(*MBB, I, SReg, true, Scavenged[SI].FrameIndex,
                              RC, TRI);

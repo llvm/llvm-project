@@ -106,8 +106,8 @@ LanaiTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
 }
 
 /// Return true if this constant should be placed into small data section.
-bool LanaiTargetObjectFile::isConstantInSmallSection(
-    const DataLayout &DL, const Constant *CN) const {
+bool LanaiTargetObjectFile::isConstantInSmallSection(const DataLayout &DL,
+                                                     const Constant *CN) const {
   return isInSmallSection(DL.getTypeAllocSize(CN->getType()));
 }
 

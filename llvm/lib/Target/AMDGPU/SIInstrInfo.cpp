@@ -584,6 +584,12 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   if (RI.isSGPRClass(RC)) {
     MFI->setHasSpilledSGPRs();
 
+    if (TargetRegisterInfo::isVirtualRegister(SrcReg) && RC->getSize() == 4) {
+      // m0 may not be allowed for readlane.
+      MachineRegisterInfo &MRI = MF->getRegInfo();
+      MRI.constrainRegClass(SrcReg, &AMDGPU::SReg_32_XM0RegClass);
+    }
+
     // We are only allowed to create one new instruction when spilling
     // registers, so we need to use pseudo instruction for spilling
     // SGPRs.
@@ -677,6 +683,13 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     // FIXME: Maybe this should not include a memoperand because it will be
     // lowered to non-memory instructions.
     unsigned Opcode = getSGPRSpillRestoreOpcode(RC->getSize());
+
+    if (TargetRegisterInfo::isVirtualRegister(DestReg) && RC->getSize() == 4) {
+      // m0 may not be allowed for readlane.
+      MachineRegisterInfo &MRI = MF->getRegInfo();
+      MRI.constrainRegClass(DestReg, &AMDGPU::SReg_32_XM0RegClass);
+    }
+
     BuildMI(MBB, MI, DL, get(Opcode), DestReg)
       .addFrameIndex(FrameIndex) // frame_idx
       .addMemOperand(MMO);
@@ -1055,6 +1068,138 @@ bool SIInstrInfo::findCommutedOpIndices(MachineInstr *MI,
     return false;
 
   return fixCommutedOpIndices(SrcOpIdx0, SrcOpIdx1, Src0Idx, Src1Idx);
+}
+
+unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {
+  switch (Cond) {
+  case SIInstrInfo::SCC_TRUE:
+    return AMDGPU::S_CBRANCH_SCC1;
+  case SIInstrInfo::SCC_FALSE:
+    return AMDGPU::S_CBRANCH_SCC0;
+  case SIInstrInfo::VCCNZ:
+    return AMDGPU::S_CBRANCH_VCCNZ;
+  case SIInstrInfo::VCCZ:
+    return AMDGPU::S_CBRANCH_VCCZ;
+  case SIInstrInfo::EXECNZ:
+    return AMDGPU::S_CBRANCH_EXECNZ;
+  case SIInstrInfo::EXECZ:
+    return AMDGPU::S_CBRANCH_EXECZ;
+  default:
+    llvm_unreachable("invalid branch predicate");
+  }
+}
+
+SIInstrInfo::BranchPredicate SIInstrInfo::getBranchPredicate(unsigned Opcode) {
+  switch (Opcode) {
+  case AMDGPU::S_CBRANCH_SCC0:
+    return SCC_FALSE;
+  case AMDGPU::S_CBRANCH_SCC1:
+    return SCC_TRUE;
+  case AMDGPU::S_CBRANCH_VCCNZ:
+    return VCCNZ;
+  case AMDGPU::S_CBRANCH_VCCZ:
+    return VCCZ;
+  case AMDGPU::S_CBRANCH_EXECNZ:
+    return EXECNZ;
+  case AMDGPU::S_CBRANCH_EXECZ:
+    return EXECZ;
+  default:
+    return INVALID_BR;
+  }
+}
+
+bool SIInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+                                MachineBasicBlock *&TBB,
+                                MachineBasicBlock *&FBB,
+                                SmallVectorImpl<MachineOperand> &Cond,
+                                bool AllowModify) const {
+  MachineBasicBlock::iterator I = MBB.getFirstTerminator();
+
+  if (I == MBB.end())
+    return false;
+
+  if (I->getOpcode() == AMDGPU::S_BRANCH) {
+    // Unconditional Branch
+    TBB = I->getOperand(0).getMBB();
+    return false;
+  }
+
+  BranchPredicate Pred = getBranchPredicate(I->getOpcode());
+  if (Pred == INVALID_BR)
+    return true;
+
+  MachineBasicBlock *CondBB = I->getOperand(0).getMBB();
+  Cond.push_back(MachineOperand::CreateImm(Pred));
+
+  ++I;
+
+  if (I == MBB.end()) {
+    // Conditional branch followed by fall-through.
+    TBB = CondBB;
+    return false;
+  }
+
+  if (I->getOpcode() == AMDGPU::S_BRANCH) {
+    TBB = CondBB;
+    FBB = I->getOperand(0).getMBB();
+    return false;
+  }
+
+  return true;
+}
+
+unsigned SIInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
+  MachineBasicBlock::iterator I = MBB.getFirstTerminator();
+
+  unsigned Count = 0;
+  while (I != MBB.end()) {
+    MachineBasicBlock::iterator Next = std::next(I);
+    I->eraseFromParent();
+    ++Count;
+    I = Next;
+  }
+
+  return Count;
+}
+
+unsigned SIInstrInfo::InsertBranch(MachineBasicBlock &MBB,
+                                   MachineBasicBlock *TBB,
+                                   MachineBasicBlock *FBB,
+                                   ArrayRef<MachineOperand> Cond,
+                                   DebugLoc DL) const {
+
+  if (!FBB && Cond.empty()) {
+    BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
+      .addMBB(TBB);
+    return 1;
+  }
+
+  assert(TBB && Cond[0].isImm());
+
+  unsigned Opcode
+    = getBranchOpcode(static_cast<BranchPredicate>(Cond[0].getImm()));
+
+  if (!FBB) {
+    BuildMI(&MBB, DL, get(Opcode))
+      .addMBB(TBB);
+    return 1;
+  }
+
+  assert(TBB && FBB);
+
+  BuildMI(&MBB, DL, get(Opcode))
+    .addMBB(TBB);
+  BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
+    .addMBB(FBB);
+
+  return 2;
+}
+
+bool SIInstrInfo::ReverseBranchCondition(
+  SmallVectorImpl<MachineOperand> &Cond) const {
+  assert(Cond.size() == 1);
+  Cond[0].setImm(-Cond[0].getImm());
+  return false;
 }
 
 static void removeModOperands(MachineInstr &MI) {

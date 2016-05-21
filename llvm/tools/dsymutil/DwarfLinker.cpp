@@ -3302,7 +3302,6 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
     bool isClangModule = sys::path::extension(Filename).equals(".pcm");
     bool isArchive = ObjFile.endswith(")");
     if (isClangModule) {
-      sys::path::remove_filename(Path);
       StringRef ModuleCacheDir = sys::path::parent_path(Path);
       if (sys::fs::exists(ModuleCacheDir)) {
         // If the module's parent directory exists, we assume that the module
@@ -3320,8 +3319,11 @@ void DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
         // was built on a different machine. We don't want to discourage module
         // debugging for convenience libraries within a project though.
         if (!ArchiveHintDisplayed) {
-          errs() << "note: Module debugging should be disabled when shipping "
-                    "static libraries.\n";
+          errs() << "note: Linking a static library that was built with "
+                    "-gmodules, but the module cache was not found.  "
+                    "Redistributable static libraries should never be built "
+                    "with module debugging enabled.  The debug experience will "
+                    "be degraded due to incomplete debug information.\n";
           ArchiveHintDisplayed = true;
         }
       }

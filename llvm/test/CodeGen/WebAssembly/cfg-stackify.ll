@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-block-placement -verify-machineinstrs -fast-isel=false | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -fast-isel=false | FileCheck -check-prefix=OPT %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs -fast-isel=false | FileCheck -check-prefix=OPT %s
 
 ; Test the CFG stackifier pass.
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
 ;
 ;
 ; Most SALU instructions ignore control flow, so we need to make sure
@@ -67,7 +67,7 @@ endif:
 ; SI: v_cmp_gt_i32_e32 [[CMP_IF:vcc]], 0, [[AVAL]]
 ; SI: v_cndmask_b32_e64 [[V_CMP:v[0-9]+]], 0, -1, [[CMP_IF]]
 
-; SI: BB2_1:
+; SI: BB2_2:
 ; SI: buffer_load_dword [[AVAL:v[0-9]+]]
 ; SI: v_cmp_eq_i32_e32 [[CMP_ELSE:vcc]], 0, [[AVAL]]
 ; SI: v_cndmask_b32_e64 [[V_CMP]], 0, -1, [[CMP_ELSE]]

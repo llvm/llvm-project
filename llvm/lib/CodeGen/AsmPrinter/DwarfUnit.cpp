@@ -46,9 +46,8 @@ GenerateDwarfTypeUnits("generate-type-units", cl::Hidden,
 
 DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP, DwarfUnit &DU,
                                        DIELoc &DIE)
-    : DwarfExpression(*AP.MF->getSubtarget().getRegisterInfo(),
-                      AP.getDwarfDebug()->getDwarfVersion()),
-      AP(AP), DU(DU), DIE(DIE) {}
+    : DwarfExpression(AP.getDwarfDebug()->getDwarfVersion()), AP(AP), DU(DU),
+      DIE(DIE) {}
 
 void DIEDwarfExpression::EmitOp(uint8_t Op, const char* Comment) {
   DU.addUInt(DIE, dwarf::DW_FORM_data1, Op);
@@ -59,7 +58,8 @@ void DIEDwarfExpression::EmitSigned(int64_t Value) {
 void DIEDwarfExpression::EmitUnsigned(uint64_t Value) {
   DU.addUInt(DIE, dwarf::DW_FORM_udata, Value);
 }
-bool DIEDwarfExpression::isFrameRegister(unsigned MachineReg) {
+bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
+                                         unsigned MachineReg) {
   return MachineReg == TRI.getFrameRegister(*AP.MF);
 }
 
@@ -368,14 +368,16 @@ void DwarfUnit::addSourceLine(DIE &Die, const DINamespace *NS) {
 bool DwarfUnit::addRegisterOpPiece(DIELoc &TheDie, unsigned Reg,
                                    unsigned SizeInBits, unsigned OffsetInBits) {
   DIEDwarfExpression Expr(*Asm, *this, TheDie);
-  Expr.AddMachineRegPiece(Reg, SizeInBits, OffsetInBits);
+  Expr.AddMachineRegPiece(*Asm->MF->getSubtarget().getRegisterInfo(), Reg,
+                          SizeInBits, OffsetInBits);
   return true;
 }
 
 bool DwarfUnit::addRegisterOffset(DIELoc &TheDie, unsigned Reg,
                                   int64_t Offset) {
   DIEDwarfExpression Expr(*Asm, *this, TheDie);
-  return Expr.AddMachineRegIndirect(Reg, Offset);
+  return Expr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
+                                    Reg, Offset);
 }
 
 /* Byref variables, in Blocks, are declared by the programmer as "SomeType

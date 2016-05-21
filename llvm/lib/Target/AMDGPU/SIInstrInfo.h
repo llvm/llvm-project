@@ -26,6 +26,20 @@ class SIInstrInfo final : public AMDGPUInstrInfo {
 private:
   const SIRegisterInfo RI;
 
+  // The the inverse predicate should have the negative value.
+  enum BranchPredicate {
+    INVALID_BR = 0,
+    SCC_TRUE = 1,
+    SCC_FALSE = -1,
+    VCCNZ = 2,
+    VCCZ = -2,
+    EXECNZ = -3,
+    EXECZ = 3
+  };
+
+  static unsigned getBranchOpcode(BranchPredicate Cond);
+  static BranchPredicate getBranchPredicate(unsigned Opcode);
+
   unsigned buildExtractSubReg(MachineBasicBlock::iterator MI,
                               MachineRegisterInfo &MRI,
                               MachineOperand &SuperReg,
@@ -135,6 +149,20 @@ public:
   bool findCommutedOpIndices(MachineInstr *MI,
                              unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
+
+  bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond,
+                     bool AllowModify) const override;
+
+  unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
+
+  unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                        MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
+                        DebugLoc DL) const override;
+
+  bool ReverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const override;
 
   bool areMemAccessesTriviallyDisjoint(
     MachineInstr *MIa, MachineInstr *MIb,
@@ -493,7 +521,6 @@ public:
 
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
-
 };
 
 namespace AMDGPU {

@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
 
 ; These tests check that the compiler won't crash when it needs to spill
 ; SGPRs.

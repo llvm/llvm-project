@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -306,4 +307,18 @@ Expected<PublicsStream &> PDBFile::getPDBPublicsStream() {
       return std::move(EC);
   }
   return *Publics;
+}
+
+Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
+  if (!Symbols) {
+    auto DbiS = getPDBDbiStream();
+    if (auto EC = DbiS.takeError())
+      return std::move(EC);
+    uint32_t SymbolStreamNum = DbiS->getSymRecordStreamIndex();
+
+    Symbols.reset(new SymbolStream(*this, SymbolStreamNum));
+    if (auto EC = Symbols->reload())
+      return std::move(EC);
+  }
+  return *Symbols;
 }

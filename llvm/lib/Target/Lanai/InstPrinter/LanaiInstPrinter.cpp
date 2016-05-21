@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Lanai.h"
 #include "LanaiInstPrinter.h"
+#include "Lanai.h"
 #include "MCTargetDesc/LanaiMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
@@ -138,7 +138,8 @@ bool LanaiInstPrinter::printAlias(const MCInst *MI, raw_ostream &OS) {
 void LanaiInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
                                  StringRef Annotation,
                                  const MCSubtargetInfo &STI) {
-  if (!printAlias(MI, OS) && !printAliasInstr(MI, OS)) printInstruction(MI, OS);
+  if (!printAlias(MI, OS) && !printAliasInstr(MI, OS))
+    printInstruction(MI, OS);
   printAnnotation(OS, Annotation);
 }
 
@@ -210,9 +211,11 @@ static void printMemoryBaseRegister(raw_ostream &OS, const unsigned AluCode,
                                     const MCOperand &RegOp) {
   assert(RegOp.isReg() && "Register operand expected");
   OS << "[";
-  if (LPAC::isPreOp(AluCode)) OS << "*";
+  if (LPAC::isPreOp(AluCode))
+    OS << "*";
   OS << "%" << LanaiInstPrinter::getRegisterName(RegOp.getReg());
-  if (LPAC::isPostOp(AluCode)) OS << "*";
+  if (LPAC::isPostOp(AluCode))
+    OS << "*";
   OS << "]";
 }
 
@@ -254,9 +257,11 @@ void LanaiInstPrinter::printMemRrOperand(const MCInst *MI, int OpNo,
 
   // [ Base OP Offset ]
   OS << "[";
-  if (LPAC::isPreOp(AluCode)) OS << "*";
+  if (LPAC::isPreOp(AluCode))
+    OS << "*";
   OS << "%" << getRegisterName(RegOp.getReg());
-  if (LPAC::isPostOp(AluCode)) OS << "*";
+  if (LPAC::isPostOp(AluCode))
+    OS << "*";
   OS << " " << LPAC::lanaiAluCodeToString(AluCode) << " ";
   OS << "%" << getRegisterName(OffsetOp.getReg());
   OS << "]";

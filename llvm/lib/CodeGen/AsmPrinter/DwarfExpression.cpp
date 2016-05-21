@@ -65,8 +65,9 @@ void DwarfExpression::AddShr(unsigned ShiftBy) {
   EmitOp(dwarf::DW_OP_shr);
 }
 
-bool DwarfExpression::AddMachineRegIndirect(unsigned MachineReg, int Offset) {
-  if (isFrameRegister(MachineReg)) {
+bool DwarfExpression::AddMachineRegIndirect(const TargetRegisterInfo &TRI,
+                                            unsigned MachineReg, int Offset) {
+  if (isFrameRegister(TRI, MachineReg)) {
     // If variable offset is based in frame register then use fbreg.
     EmitOp(dwarf::DW_OP_fbreg);
     EmitSigned(Offset);
@@ -81,7 +82,8 @@ bool DwarfExpression::AddMachineRegIndirect(unsigned MachineReg, int Offset) {
   return true;
 }
 
-bool DwarfExpression::AddMachineRegPiece(unsigned MachineReg,
+bool DwarfExpression::AddMachineRegPiece(const TargetRegisterInfo &TRI,
+                                         unsigned MachineReg,
                                          unsigned PieceSizeInBits,
                                          unsigned PieceOffsetInBits) {
   if (!TRI.isPhysicalRegister(MachineReg))
@@ -200,13 +202,14 @@ static unsigned getOffsetOrZero(unsigned OffsetInBits,
   return OffsetInBits;
 }
 
-bool DwarfExpression::AddMachineRegExpression(const DIExpression *Expr,
+bool DwarfExpression::AddMachineRegExpression(const TargetRegisterInfo &TRI,
+                                              const DIExpression *Expr,
                                               unsigned MachineReg,
                                               unsigned PieceOffsetInBits) {
   auto I = Expr->expr_op_begin();
   auto E = Expr->expr_op_end();
   if (I == E)
-    return AddMachineRegPiece(MachineReg);
+    return AddMachineRegPiece(TRI, MachineReg);
 
   // Pattern-match combinations for which more efficient representations exist
   // first.
@@ -216,7 +219,7 @@ bool DwarfExpression::AddMachineRegExpression(const DIExpression *Expr,
     unsigned OffsetInBits = I->getArg(0);
     unsigned SizeInBits   = I->getArg(1);
     // Piece always comes at the end of the expression.
-    return AddMachineRegPiece(MachineReg, SizeInBits,
+    return AddMachineRegPiece(TRI, MachineReg, SizeInBits,
                getOffsetOrZero(OffsetInBits, PieceOffsetInBits));
   }
   case dwarf::DW_OP_plus:
@@ -227,15 +230,15 @@ bool DwarfExpression::AddMachineRegExpression(const DIExpression *Expr,
     if (N != E && N->getOp() == dwarf::DW_OP_deref) {
       unsigned Offset = I->getArg(0);
       ValidReg = AddMachineRegIndirect(
-          MachineReg, I->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
+          TRI, MachineReg, I->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
       std::advance(I, 2);
       break;
     } else
-      ValidReg = AddMachineRegPiece(MachineReg);
+      ValidReg = AddMachineRegPiece(TRI, MachineReg);
   }
   case dwarf::DW_OP_deref: {
       // [DW_OP_reg,DW_OP_deref] --> [DW_OP_breg].
-      ValidReg = AddMachineRegIndirect(MachineReg);
+      ValidReg = AddMachineRegIndirect(TRI, MachineReg);
       ++I;
       break;
   }

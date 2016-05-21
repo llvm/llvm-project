@@ -194,4 +194,42 @@ entry:
   ret void
 }
 
+
+define void @f_7(i32 %x, i32* %length_buf) {
+; CHECK-LABEL: @f_7(
+
+; CHECK:  [[COND_0:%[^ ]+]] = and i1 %chk3.b, %chk0.b
+; CHECK:  [[COND_1:%[^ ]+]] = and i1 %chk0.a, [[COND_0]]
+; CHECK:  [[COND_2:%[^ ]+]] = and i1 %chk3.a, [[COND_1]]
+; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 [[COND_2]]) [ "deopt"() ]
+
+entry:
+  %length_a = load volatile i32, i32* %length_buf, !range !0
+  %length_b = load volatile i32, i32* %length_buf, !range !0
+  %chk0.a = icmp ult i32 %x, %length_a
+  %chk0.b = icmp ult i32 %x, %length_b
+  %chk0 = and i1 %chk0.a, %chk0.b
+  call void(i1, ...) @llvm.experimental.guard(i1 %chk0) [ "deopt"() ]
+
+  %x.inc1 = add i32 %x, 1
+  %chk1.a = icmp ult i32 %x.inc1, %length_a
+  %chk1.b = icmp ult i32 %x.inc1, %length_b
+  %chk1 = and i1 %chk1.a, %chk1.b
+  call void(i1, ...) @llvm.experimental.guard(i1 %chk1) [ "deopt"() ]
+
+  %x.inc2 = add i32 %x, 2
+  %chk2.a = icmp ult i32 %x.inc2, %length_a
+  %chk2.b = icmp ult i32 %x.inc2, %length_b
+  %chk2 = and i1 %chk2.a, %chk2.b
+  call void(i1, ...) @llvm.experimental.guard(i1 %chk2) [ "deopt"() ]
+
+  %x.inc3 = add i32 %x, 3
+  %chk3.a = icmp ult i32 %x.inc3, %length_a
+  %chk3.b = icmp ult i32 %x.inc3, %length_b
+  %chk3 = and i1 %chk3.a, %chk3.b
+  call void(i1, ...) @llvm.experimental.guard(i1 %chk3) [ "deopt"() ]
+  ret void
+}
+
+
 !0 = !{i32 0, i32 2147483648}

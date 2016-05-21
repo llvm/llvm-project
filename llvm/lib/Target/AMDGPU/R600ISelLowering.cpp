@@ -33,14 +33,43 @@ using namespace llvm;
 R600TargetLowering::R600TargetLowering(TargetMachine &TM,
                                        const AMDGPUSubtarget &STI)
     : AMDGPUTargetLowering(TM, STI), Gen(STI.getGeneration()) {
-  addRegisterClass(MVT::v4f32, &AMDGPU::R600_Reg128RegClass);
   addRegisterClass(MVT::f32, &AMDGPU::R600_Reg32RegClass);
-  addRegisterClass(MVT::v4i32, &AMDGPU::R600_Reg128RegClass);
   addRegisterClass(MVT::i32, &AMDGPU::R600_Reg32RegClass);
   addRegisterClass(MVT::v2f32, &AMDGPU::R600_Reg64RegClass);
   addRegisterClass(MVT::v2i32, &AMDGPU::R600_Reg64RegClass);
+  addRegisterClass(MVT::v4f32, &AMDGPU::R600_Reg128RegClass);
+  addRegisterClass(MVT::v4i32, &AMDGPU::R600_Reg128RegClass);
 
   computeRegisterProperties(STI.getRegisterInfo());
+
+  // Legalize loads and stores to the private address space.
+  setOperationAction(ISD::LOAD, MVT::i32, Custom);
+  setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
+  setOperationAction(ISD::LOAD, MVT::v4i32, Custom);
+
+  // EXTLOAD should be the same as ZEXTLOAD. It is legal for some address
+  // spaces, so it is custom lowered to handle those where it isn't.
+  for (MVT VT : MVT::integer_valuetypes()) {
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Custom);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Custom);
+
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i8, Custom);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Custom);
+
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i8, Custom);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i16, Custom);
+  }
+
+  setOperationAction(ISD::STORE, MVT::i8, Custom);
+  setOperationAction(ISD::STORE, MVT::i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v2i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v4i32, Custom);
+
+  setTruncStoreAction(MVT::i32, MVT::i8, Custom);
+  setTruncStoreAction(MVT::i32, MVT::i16, Custom);
 
   // Set condition code actions
   setCondCodeAction(ISD::SETO,   MVT::f32, Expand);
@@ -72,10 +101,6 @@ R600TargetLowering::R600TargetLowering(TargetMachine &TM,
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
 
   setOperationAction(ISD::FSUB, MVT::f32, Expand);
-
-  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i1, Custom);
 
   setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
@@ -122,37 +147,6 @@ R600TargetLowering::R600TargetLowering(TargetMachine &TM,
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::Other, Expand);
 
-
-  // Legalize loads and stores to the private address space.
-  setOperationAction(ISD::LOAD, MVT::i32, Custom);
-  setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
-  setOperationAction(ISD::LOAD, MVT::v4i32, Custom);
-
-  // EXTLOAD should be the same as ZEXTLOAD. It is legal for some address
-  // spaces, so it is custom lowered to handle those where it isn't.
-  for (MVT VT : MVT::integer_valuetypes()) {
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Custom);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Custom);
-
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i8, Custom);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Custom);
-
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i8, Custom);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i16, Custom);
-  }
-
-  setOperationAction(ISD::STORE, MVT::i8, Custom);
-  setOperationAction(ISD::STORE, MVT::i32, Custom);
-  setOperationAction(ISD::STORE, MVT::v2i32, Custom);
-  setOperationAction(ISD::STORE, MVT::v4i32, Custom);
-  setTruncStoreAction(MVT::i32, MVT::i8, Custom);
-  setTruncStoreAction(MVT::i32, MVT::i16, Custom);
-
-  setOperationAction(ISD::LOAD, MVT::i32, Custom);
-  setOperationAction(ISD::LOAD, MVT::v4i32, Custom);
   setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
 
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Custom);
@@ -164,12 +158,6 @@ R600TargetLowering::R600TargetLowering(TargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f32, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
-
-  setTargetDAGCombine(ISD::FP_ROUND);
-  setTargetDAGCombine(ISD::FP_TO_SINT);
-  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::SELECT_CC);
-  setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
 
   // We don't have 64-bit shifts. Thus we need either SHX i64 or SHX_PARTS i32
   //  to be Legal/Custom in order to avoid library calls.
@@ -188,6 +176,13 @@ R600TargetLowering::R600TargetLowering(TargetMachine &TM,
   }
 
   setSchedulingPreference(Sched::Source);
+
+
+  setTargetDAGCombine(ISD::FP_ROUND);
+  setTargetDAGCombine(ISD::FP_TO_SINT);
+  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+  setTargetDAGCombine(ISD::SELECT_CC);
+  setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
 }
 
 static inline bool isEOP(MachineBasicBlock::iterator I) {

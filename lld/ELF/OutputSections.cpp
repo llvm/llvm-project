@@ -269,11 +269,11 @@ PltSection<ELFT>::PltSection()
 }
 
 template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
-  size_t Off = 0;
   // At beginning of PLT, we have code to call the dynamic linker
   // to resolve dynsyms at runtime. Write such code.
   Target->writePltZero(Buf);
-  Off += Target->PltZeroSize;
+  size_t Off = Target->PltZeroSize;
+
   for (auto &I : Entries) {
     const SymbolBody *B = I.first;
     unsigned RelOff = I.second;

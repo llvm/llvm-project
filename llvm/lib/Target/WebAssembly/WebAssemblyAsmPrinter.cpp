@@ -201,6 +201,30 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // These represent values which are live into the function entry, so there's
     // no instruction to emit.
     break;
+  case WebAssembly::FALLTHROUGH_RETURN_I32:
+  case WebAssembly::FALLTHROUGH_RETURN_I64:
+  case WebAssembly::FALLTHROUGH_RETURN_F32:
+  case WebAssembly::FALLTHROUGH_RETURN_F64: {
+    // These instructions represent the implicit return at the end of a
+    // function body. The operand is always a pop.
+    assert(MFI->isVRegStackified(MI->getOperand(0).getReg()));
+
+    if (isVerbose()) {
+      OutStreamer->AddComment("fallthrough-return: $pop" +
+                              utostr(MFI->getWARegStackId(
+                                  MFI->getWAReg(MI->getOperand(0).getReg()))));
+      OutStreamer->AddBlankLine();
+    }
+    break;
+  }
+  case WebAssembly::FALLTHROUGH_RETURN_VOID:
+    // This instruction represents the implicit return at the end of a
+    // function body with no return value.
+    if (isVerbose()) {
+      OutStreamer->AddComment("fallthrough-return");
+      OutStreamer->AddBlankLine();
+    }
+    break;
   default: {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
     MCInst TmpInst;

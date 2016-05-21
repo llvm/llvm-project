@@ -12,10 +12,6 @@ N: Joe Abbey
 E: jabbey@arxan.com
 D: LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
 
-N: Owen Anderson
-E: resistor@mac.com
-D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
-
 N: Rafael Avila de Espindola
 E: rafael.espindola@gmail.com
 D: Gold plugin (tools/gold/*)
@@ -23,6 +19,7 @@ D: Gold plugin (tools/gold/*)
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
+D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
 
 N: Chandler Carruth
 E: chandlerc@gmail.com

@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that basic memory operations assemble as expected with 64-bit addresses.
 

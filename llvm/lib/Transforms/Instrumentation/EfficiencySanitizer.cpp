@@ -78,18 +78,19 @@ OverrideOptionsFromCL(EfficiencySanitizerOptions Options) {
 }
 
 /// EfficiencySanitizer: instrument each module to find performance issues.
-class EfficiencySanitizer : public FunctionPass {
+class EfficiencySanitizer : public ModulePass {
 public:
   EfficiencySanitizer(
       const EfficiencySanitizerOptions &Opts = EfficiencySanitizerOptions())
-      : FunctionPass(ID), Options(OverrideOptionsFromCL(Opts)) {}
+      : ModulePass(ID), Options(OverrideOptionsFromCL(Opts)) {}
   const char *getPassName() const override;
-  bool runOnFunction(Function &F) override;
-  bool doInitialization(Module &M) override;
+  bool runOnModule(Module &M) override;
   static char ID;
 
 private:
+  bool initOnModule(Module &M);
   void initializeCallbacks(Module &M);
+  bool runOnFunction(Function &F, Module &M);
   bool instrumentLoadOrStore(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(MemIntrinsic *MI);
   bool shouldIgnoreMemoryAccess(Instruction *I);
@@ -125,7 +126,7 @@ const char *EfficiencySanitizer::getPassName() const {
   return "EfficiencySanitizer";
 }
 
-FunctionPass *
+ModulePass *
 llvm::createEfficiencySanitizerPass(const EfficiencySanitizerOptions &Options) {
   return new EfficiencySanitizer(Options);
 }
@@ -172,7 +173,7 @@ void EfficiencySanitizer::initializeCallbacks(Module &M) {
                             IRB.getInt32Ty(), IntptrTy, nullptr));
 }
 
-bool EfficiencySanitizer::doInitialization(Module &M) {
+bool EfficiencySanitizer::initOnModule(Module &M) {
   Ctx = &M.getContext();
   const DataLayout &DL = M.getDataLayout();
   IRBuilder<> IRB(M.getContext());
@@ -198,13 +199,20 @@ bool EfficiencySanitizer::shouldIgnoreMemoryAccess(Instruction *I) {
   return false;
 }
 
-bool EfficiencySanitizer::runOnFunction(Function &F) {
+bool EfficiencySanitizer::runOnModule(Module &M) {
+  bool Res = initOnModule(M);
+  initializeCallbacks(M);
+  for (auto &F : M) {
+    Res |= runOnFunction(F, M);
+  }
+  return Res;
+}
+
+bool EfficiencySanitizer::runOnFunction(Function &F, Module &M) {
   // This is required to prevent instrumenting the call to __esan_init from
   // within the module constructor.
   if (&F == EsanCtorFunction)
     return false;
-  // As a function pass, we must re-initialize every time.
-  initializeCallbacks(*F.getParent());
   SmallVector<Instruction *, 8> LoadsAndStores;
   SmallVector<Instruction *, 8> MemIntrinCalls;
   bool Res = false;

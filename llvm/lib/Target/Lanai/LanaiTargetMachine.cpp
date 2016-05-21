@@ -18,8 +18,8 @@
 #include "LanaiTargetTransformInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
@@ -50,7 +50,7 @@ static std::string computeDataLayout(const Triple &TT) {
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
   if (!RM.hasValue())
-    return Reloc::Static;
+    return Reloc::PIC_;
   return *RM;
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test folding constant offsets and symbols into load and store addresses under
 ; a variety of circumstances.

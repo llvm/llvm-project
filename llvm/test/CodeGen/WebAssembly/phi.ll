@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s
 
 ; Test that phis are lowered.
 

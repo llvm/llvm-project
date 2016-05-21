@@ -34,14 +34,18 @@ static StringRef getCPU(StringRef CPU) {
   return CPU;
 }
 
+static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+  return RM.hasValue() ? *RM : Reloc::Static;
+}
+
 AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
-                                   Reloc::Model RM, CodeModel::Model CM,
+                                   Optional<Reloc::Model> RM, CodeModel::Model CM,
                                    CodeGenOpt::Level OL)
     : LLVMTargetMachine(
           T, "e-p:16:8:8-i8:8:8-i16:8:8-i32:8:8-i64:8:8-f32:8:8-f64:8:8-n8", TT,
-          getCPU(CPU), FS, Options, RM, CM, OL),
+          getCPU(CPU), FS, Options, getEffectiveRelocModel(RM), CM, OL),
       SubTarget(TT, getCPU(CPU), FS, *this) {
   this->TLOF = make_unique<AVRTargetObjectFile>();
   initAsmInfo();

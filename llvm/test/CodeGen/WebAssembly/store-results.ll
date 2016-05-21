@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that the wasm-store-results pass makes users of stored values use the
 ; result of store expressions to reduce get_local/set_local traffic.

@@ -525,6 +525,15 @@ private:
       RegBankSelect::RepairingPlacement &RepairPt,
       const iterator_range<SmallVectorImpl<unsigned>::iterator> &NewVRegs);
 
+  /// Return the cost of the instruction needed to map \p MO to \p ValMapping.
+  /// The cost is free of basic block frequencies.
+  /// \pre MO.isReg()
+  /// \pre MO is assigned to a register bank.
+  /// \pre ValMapping is a valid mapping for MO.
+  uint64_t
+  getRepairCost(const MachineOperand &MO,
+                const RegisterBankInfo::ValueMapping &ValMapping) const;
+
   /// Find the best mapping for \p MI from \p PossibleMappings.
   /// \return a reference on the best mapping in \p PossibleMappings.
   RegisterBankInfo::InstructionMapping &

@@ -127,7 +127,7 @@ struct EfficiencySanitizerOptions {
 };
 
 // Insert EfficiencySanitizer instrumentation.
-FunctionPass *createEfficiencySanitizerPass(
+ModulePass *createEfficiencySanitizerPass(
     const EfficiencySanitizerOptions &Options = EfficiencySanitizerOptions());
 
 // Options for sanitizer coverage instrumentation.

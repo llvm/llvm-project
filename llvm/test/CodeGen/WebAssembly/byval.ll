@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -fast-isel | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs -fast-isel | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"

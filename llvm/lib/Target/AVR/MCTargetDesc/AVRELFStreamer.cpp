@@ -3,6 +3,10 @@
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/FormattedStream.h"
 
+#include "AVRMCTargetDesc.h"
+
+namespace llvm {
+
 static unsigned getEFlagsForFeatureSet(const FeatureBitset &Features) {
   unsigned EFlags = 0;
 
@@ -52,9 +56,11 @@ AVRELFStreamer::AVRELFStreamer(MCStreamer &S,
     : AVRTargetStreamer(S) {
 
   MCAssembler &MCA = getStreamer().getAssembler();
-  unsigned EFlags = MCA.getELFHeaderEFlags(Features);
+  unsigned EFlags = MCA.getELFHeaderEFlags();
 
-  EFlags |= getEFlagsForFeatureSet(STI.getFeatureBits())
+  EFlags |= getEFlagsForFeatureSet(STI.getFeatureBits());
 
   MCA.setELFHeaderEFlags(EFlags);
 }
+
+} // end namespace llvm

@@ -166,18 +166,19 @@ endif:
 }
 
 
-; SI-LABEL: {{^}}uniform_if_else:
+; SI-LABEL: {{^}}uniform_if_else_ret:
 ; SI: s_cmp_lg_i32 s{{[0-9]+}}, 0
-; SI: s_cbranch_scc1 [[ELSE_LABEL:[0-9_A-Za-z]+]]
-; SI: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
-; SI: buffer_store_dword [[ONE]]
-; SI: s_branch [[ENDIF_LABEL:[0-9_A-Za-z]+]]
-; SI: [[ELSE_LABEL]]:
+; SI-NEXT: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
+
 ; SI: v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; SI: buffer_store_dword [[TWO]]
-; SI: [[ENDIF_LABEL]]:
 ; SI: s_endpgm
-define void @uniform_if_else(i32 addrspace(1)* nocapture %out, i32 %a) {
+
+; SI: {{^}}[[IF_LABEL]]:
+; SI: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
+; SI: buffer_store_dword [[ONE]]
+; SI: s_endpgm
+define void @uniform_if_else_ret(i32 addrspace(1)* nocapture %out, i32 %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -191,6 +192,40 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
+  ret void
+}
+
+; SI-LABEL: {{^}}uniform_if_else:
+; SI: s_cmp_lg_i32 s{{[0-9]+}}, 0
+; SI-NEXT: s_cbranch_scc0 [[IF_LABEL:[0-9_A-Za-z]+]]
+
+; SI: v_mov_b32_e32 [[TWO:v[0-9]+]], 2
+; SI: buffer_store_dword [[TWO]]
+; SI: s_branch [[ENDIF_LABEL:[0-9_A-Za-z]+]]
+
+; SI: [[IF_LABEL]]:
+; SI: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
+; SI: buffer_store_dword [[ONE]]
+
+; SI: [[ENDIF_LABEL]]:
+; SI: v_mov_b32_e32 [[THREE:v[0-9]+]], 3
+; SI: buffer_store_dword [[THREE]]
+; SI: s_endpgm
+define void @uniform_if_else(i32 addrspace(1)* nocapture %out0, i32 addrspace(1)* nocapture %out1, i32 %a) {
+entry:
+  %cmp = icmp eq i32 %a, 0
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  store i32 1, i32 addrspace(1)* %out0
+  br label %if.end
+
+if.else:                                          ; preds = %entry
+  store i32 2, i32 addrspace(1)* %out0
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  store i32 3, i32 addrspace(1)* %out1
   ret void
 }
 
@@ -368,15 +403,15 @@ exit:
 ; SI-LABEL: {{^}}cse_uniform_condition_different_blocks:
 ; SI: s_load_dword [[COND:s[0-9]+]]
 ; SI: s_cmp_lt_i32 [[COND]], 1
-; SI: s_cbranch_scc1 BB13_3
+; SI: s_cbranch_scc1 BB[[FNNUM:[0-9]+]]_3
 
 ; SI: BB#1:
 ; SI-NOT: cmp
 ; SI: buffer_load_dword
 ; SI: buffer_store_dword
-; SI: s_cbranch_scc1 BB13_3
+; SI: s_cbranch_scc1 BB[[FNNUM]]_3
 
-; SI: BB13_3:
+; SI: BB[[FNNUM]]_3:
 ; SI: s_endpgm
 define void @cse_uniform_condition_different_blocks(i32 %cond, i32 addrspace(1)* %out) {
 bb:

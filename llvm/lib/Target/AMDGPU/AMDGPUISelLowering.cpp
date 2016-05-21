@@ -65,88 +65,8 @@ EVT AMDGPUTargetLowering::getEquivalentLoadRegType(LLVMContext &Ctx, EVT VT) {
 AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
                                            const AMDGPUSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
-  setOperationAction(ISD::Constant, MVT::i32, Legal);
-  setOperationAction(ISD::Constant, MVT::i64, Legal);
-  setOperationAction(ISD::ConstantFP, MVT::f32, Legal);
-  setOperationAction(ISD::ConstantFP, MVT::f64, Legal);
-
-  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
-  setOperationAction(ISD::BRIND, MVT::Other, Expand);
-
-  // This is totally unsupported, just custom lower to produce an error.
-  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
-
-  // We need to custom lower some of the intrinsics
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
-
-  // Library functions.  These default to Expand, but we have instructions
-  // for them.
-  setOperationAction(ISD::FCEIL,  MVT::f32, Legal);
-  setOperationAction(ISD::FEXP2,  MVT::f32, Legal);
-  setOperationAction(ISD::FPOW,   MVT::f32, Legal);
-  setOperationAction(ISD::FLOG2,  MVT::f32, Legal);
-  setOperationAction(ISD::FABS,   MVT::f32, Legal);
-  setOperationAction(ISD::FFLOOR, MVT::f32, Legal);
-  setOperationAction(ISD::FRINT,  MVT::f32, Legal);
-  setOperationAction(ISD::FTRUNC, MVT::f32, Legal);
-  setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-  setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
-
-  setOperationAction(ISD::FROUND, MVT::f32, Custom);
-  setOperationAction(ISD::FROUND, MVT::f64, Custom);
-
-  setOperationAction(ISD::FREM, MVT::f32, Custom);
-  setOperationAction(ISD::FREM, MVT::f64, Custom);
-
-  // v_mad_f32 does not support denormals according to some sources.
-  if (!Subtarget->hasFP32Denormals())
-    setOperationAction(ISD::FMAD, MVT::f32, Legal);
-
-  // Expand to fneg + fadd.
-  setOperationAction(ISD::FSUB, MVT::f64, Expand);
-
   // Lower floating point store/load to integer store/load to reduce the number
   // of patterns in tablegen.
-  setOperationAction(ISD::STORE, MVT::f32, Promote);
-  AddPromotedToType(ISD::STORE, MVT::f32, MVT::i32);
-
-  setOperationAction(ISD::STORE, MVT::v2f32, Promote);
-  AddPromotedToType(ISD::STORE, MVT::v2f32, MVT::v2i32);
-
-  setOperationAction(ISD::STORE, MVT::v4f32, Promote);
-  AddPromotedToType(ISD::STORE, MVT::v4f32, MVT::v4i32);
-
-  setOperationAction(ISD::STORE, MVT::v8f32, Promote);
-  AddPromotedToType(ISD::STORE, MVT::v8f32, MVT::v8i32);
-
-  setOperationAction(ISD::STORE, MVT::v16f32, Promote);
-  AddPromotedToType(ISD::STORE, MVT::v16f32, MVT::v16i32);
-
-  setOperationAction(ISD::STORE, MVT::f64, Promote);
-  AddPromotedToType(ISD::STORE, MVT::f64, MVT::i64);
-
-  setOperationAction(ISD::STORE, MVT::v2f64, Promote);
-  AddPromotedToType(ISD::STORE, MVT::v2f64, MVT::v2i64);
-
-  // Custom lowering of vector stores is required for local address space
-  // stores.
-  setOperationAction(ISD::STORE, MVT::v4i32, Custom);
-
-  setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
-  setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
-  setTruncStoreAction(MVT::v4i32, MVT::v4i8, Custom);
-
-  // XXX: This can be change to Custom, once ExpandVectorStores can
-  // handle 64-bit stores.
-  setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
-
-  setTruncStoreAction(MVT::i64, MVT::i16, Expand);
-  setTruncStoreAction(MVT::i64, MVT::i8, Expand);
-  setTruncStoreAction(MVT::i64, MVT::i1, Expand);
-  setTruncStoreAction(MVT::v2i64, MVT::v2i1, Expand);
-  setTruncStoreAction(MVT::v4i64, MVT::v4i1, Expand);
-
-
   setOperationAction(ISD::LOAD, MVT::f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::f32, MVT::i32);
 
@@ -162,22 +82,17 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v16f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v16f32, MVT::v16i32);
 
+  setOperationAction(ISD::LOAD, MVT::i64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::i64, MVT::v2i32);
+
+  setOperationAction(ISD::LOAD, MVT::v2i64, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v2i64, MVT::v4i32);
+
   setOperationAction(ISD::LOAD, MVT::f64, Promote);
-  AddPromotedToType(ISD::LOAD, MVT::f64, MVT::i64);
+  AddPromotedToType(ISD::LOAD, MVT::f64, MVT::v2i32);
 
   setOperationAction(ISD::LOAD, MVT::v2f64, Promote);
-  AddPromotedToType(ISD::LOAD, MVT::v2f64, MVT::v2i64);
-
-  setOperationAction(ISD::CONCAT_VECTORS, MVT::v4i32, Custom);
-  setOperationAction(ISD::CONCAT_VECTORS, MVT::v4f32, Custom);
-  setOperationAction(ISD::CONCAT_VECTORS, MVT::v8i32, Custom);
-  setOperationAction(ISD::CONCAT_VECTORS, MVT::v8f32, Custom);
-  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2f32, Custom);
-  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2i32, Custom);
-  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4f32, Custom);
-  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4i32, Custom);
-  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8f32, Custom);
-  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8i32, Custom);
+  AddPromotedToType(ISD::LOAD, MVT::v2f64, MVT::v4i32);
 
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
@@ -185,6 +100,26 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::i64, VT, Expand);
     setLoadExtAction(ISD::SEXTLOAD, MVT::i64, VT, Expand);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::i64, VT, Expand);
+  }
+
+  for (MVT VT : MVT::integer_valuetypes()) {
+    if (VT == MVT::i64)
+      continue;
+
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Legal);
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i32, Expand);
+
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i8, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Legal);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i32, Expand);
+
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i8, Legal);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i16, Legal);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i32, Expand);
   }
 
   for (MVT VT : MVT::integer_vector_valuetypes()) {
@@ -202,7 +137,140 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::v4i16, Expand);
   }
 
-  setOperationAction(ISD::BR_CC, MVT::i1, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
+
+  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f32, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f32, Expand);
+
+  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
+
+  setOperationAction(ISD::STORE, MVT::f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::f32, MVT::i32);
+
+  setOperationAction(ISD::STORE, MVT::v2f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v2f32, MVT::v2i32);
+
+  setOperationAction(ISD::STORE, MVT::v4f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v4f32, MVT::v4i32);
+
+  setOperationAction(ISD::STORE, MVT::v8f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v8f32, MVT::v8i32);
+
+  setOperationAction(ISD::STORE, MVT::v16f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v16f32, MVT::v16i32);
+
+  setOperationAction(ISD::STORE, MVT::i64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::i64, MVT::v2i32);
+
+  setOperationAction(ISD::STORE, MVT::v2i64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v2i64, MVT::v4i32);
+
+  setOperationAction(ISD::STORE, MVT::f64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::f64, MVT::v2i32);
+
+  setOperationAction(ISD::STORE, MVT::v2f64, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v2f64, MVT::v4i32);
+
+  setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
+
+  setTruncStoreAction(MVT::v4i32, MVT::v4i8, Custom);
+  setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
+
+  setTruncStoreAction(MVT::v8i32, MVT::v8i16, Expand);
+  setTruncStoreAction(MVT::v16i32, MVT::v16i8, Expand);
+  setTruncStoreAction(MVT::v16i32, MVT::v16i16, Expand);
+
+  setTruncStoreAction(MVT::i64, MVT::i1, Expand);
+  setTruncStoreAction(MVT::i64, MVT::i8, Expand);
+  setTruncStoreAction(MVT::i64, MVT::i16, Expand);
+  setTruncStoreAction(MVT::i64, MVT::i32, Expand);
+
+  setTruncStoreAction(MVT::v2i64, MVT::v2i1, Expand);
+  setTruncStoreAction(MVT::v2i64, MVT::v2i8, Expand);
+  setTruncStoreAction(MVT::v2i64, MVT::v2i16, Expand);
+  setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
+
+  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+  setTruncStoreAction(MVT::v2f32, MVT::v2f16, Expand);
+  setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
+  setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
+
+  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+
+  setTruncStoreAction(MVT::v2f64, MVT::v2f32, Expand);
+  setTruncStoreAction(MVT::v2f64, MVT::v2f16, Expand);
+
+  setTruncStoreAction(MVT::v4f64, MVT::v4f32, Expand);
+  setTruncStoreAction(MVT::v4f64, MVT::v4f16, Expand);
+
+  setTruncStoreAction(MVT::v8f64, MVT::v8f32, Expand);
+  setTruncStoreAction(MVT::v8f64, MVT::v8f16, Expand);
+
+
+  setOperationAction(ISD::Constant, MVT::i32, Legal);
+  setOperationAction(ISD::Constant, MVT::i64, Legal);
+  setOperationAction(ISD::ConstantFP, MVT::f32, Legal);
+  setOperationAction(ISD::ConstantFP, MVT::f64, Legal);
+
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::BRIND, MVT::Other, Expand);
+
+  // This is totally unsupported, just custom lower to produce an error.
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
+
+  // We need to custom lower some of the intrinsics
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
+
+  // Library functions.  These default to Expand, but we have instructions
+  // for them.
+  setOperationAction(ISD::FCEIL,  MVT::f32, Legal);
+  setOperationAction(ISD::FEXP2,  MVT::f32, Legal);
+  setOperationAction(ISD::FPOW,   MVT::f32, Legal);
+  setOperationAction(ISD::FLOG2,  MVT::f32, Legal);
+  setOperationAction(ISD::FABS,   MVT::f32, Legal);
+  setOperationAction(ISD::FFLOOR, MVT::f32, Legal);
+  setOperationAction(ISD::FRINT,  MVT::f32, Legal);
+  setOperationAction(ISD::FTRUNC, MVT::f32, Legal);
+  setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+
+  setOperationAction(ISD::FROUND, MVT::f32, Custom);
+  setOperationAction(ISD::FROUND, MVT::f64, Custom);
+
+  setOperationAction(ISD::FNEARBYINT, MVT::f32, Custom);
+  setOperationAction(ISD::FNEARBYINT, MVT::f64, Custom);
+
+  setOperationAction(ISD::FREM, MVT::f32, Custom);
+  setOperationAction(ISD::FREM, MVT::f64, Custom);
+
+  // v_mad_f32 does not support denormals according to some sources.
+  if (!Subtarget->hasFP32Denormals())
+    setOperationAction(ISD::FMAD, MVT::f32, Legal);
+
+  // Expand to fneg + fadd.
+  setOperationAction(ISD::FSUB, MVT::f64, Expand);
+
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v4i32, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v4f32, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v8i32, Custom);
+  setOperationAction(ISD::CONCAT_VECTORS, MVT::v8f32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2f32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v2i32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4f32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4i32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8f32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8i32, Custom);
 
   if (Subtarget->getGeneration() < AMDGPUSubtarget::SEA_ISLANDS) {
     setOperationAction(ISD::FCEIL, MVT::f64, Custom);
@@ -219,28 +287,13 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
 
-  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f32, MVT::v2f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
-
-  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
-
-  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
-  setTruncStoreAction(MVT::v2f32, MVT::v2f16, Expand);
-  setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
-  setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
-
-  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
-  setTruncStoreAction(MVT::f64, MVT::f32, Expand);
-
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
   for (MVT VT : ScalarIntVTs) {
-    setOperationAction(ISD::SREM, VT, Expand);
+    // These should use [SU]DIVREM, so set them to expand
     setOperationAction(ISD::SDIV, VT, Expand);
+    setOperationAction(ISD::UDIV, VT, Expand);
+    setOperationAction(ISD::SREM, VT, Expand);
+    setOperationAction(ISD::UREM, VT, Expand);
 
     // GPU does not have divrem function for signed or unsigned.
     setOperationAction(ISD::SDIVREM, VT, Custom);
@@ -378,23 +431,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
     setOperationAction(ISD::VECTOR_SHUFFLE, VT, Expand);
   }
 
-  setOperationAction(ISD::FNEARBYINT, MVT::f32, Custom);
-  setOperationAction(ISD::FNEARBYINT, MVT::f64, Custom);
-
-  setTargetDAGCombine(ISD::AND);
-  setTargetDAGCombine(ISD::SHL);
-  setTargetDAGCombine(ISD::SRA);
-  setTargetDAGCombine(ISD::SRL);
-  setTargetDAGCombine(ISD::MUL);
-  setTargetDAGCombine(ISD::SELECT);
-  setTargetDAGCombine(ISD::SELECT_CC);
-  setTargetDAGCombine(ISD::STORE);
-
-  setTargetDAGCombine(ISD::FADD);
-  setTargetDAGCombine(ISD::FSUB);
-
-  setTargetDAGCombine(ISD::BITCAST);
-
   setBooleanContents(ZeroOrNegativeOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
@@ -425,6 +461,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(TargetMachine &TM,
   MaxStoresPerMemcpy  = 4096;
   MaxStoresPerMemmove = 4096;
   MaxStoresPerMemset  = 4096;
+
+  setTargetDAGCombine(ISD::BITCAST);
+  setTargetDAGCombine(ISD::AND);
+  setTargetDAGCombine(ISD::SHL);
+  setTargetDAGCombine(ISD::SRA);
+  setTargetDAGCombine(ISD::SRL);
+  setTargetDAGCombine(ISD::MUL);
+  setTargetDAGCombine(ISD::SELECT);
+  setTargetDAGCombine(ISD::SELECT_CC);
+  setTargetDAGCombine(ISD::STORE);
+  setTargetDAGCombine(ISD::FADD);
+  setTargetDAGCombine(ISD::FSUB);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1175,7 +1223,7 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 
 // This is a shortcut for integer division because we have fast i32<->f32
 // conversions, and fast f32 reciprocal instructions. The fractional part of a
-// float is enough to accurately represent up to a 24-bit integer.
+// float is enough to accurately represent up to a 24-bit signed integer.
 SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
                                             bool Sign) const {
   SDLoc DL(Op);
@@ -1185,10 +1233,22 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   MVT IntVT = MVT::i32;
   MVT FltVT = MVT::f32;
 
-  ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
-  ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+  unsigned LHSSignBits = DAG.ComputeNumSignBits(LHS);
+  if (LHSSignBits < 9)
+    return SDValue();
+
+  unsigned RHSSignBits = DAG.ComputeNumSignBits(RHS);
+  if (RHSSignBits < 9)
+    return SDValue();
 
   unsigned BitSize = VT.getSizeInBits();
+  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
+  unsigned DivBits = BitSize - SignBits;
+  if (Sign)
+    ++DivBits;
+
+  ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+  ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
 
   SDValue jq = DAG.getConstant(1, DL, IntVT);
 
@@ -1251,6 +1311,18 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   // Rem needs compensation, it's easier to recompute it
   SDValue Rem = DAG.getNode(ISD::MUL, DL, VT, Div, RHS);
   Rem = DAG.getNode(ISD::SUB, DL, VT, LHS, Rem);
+
+  // Truncate to number of bits this divide really is.
+  if (Sign) {
+    SDValue InRegSize
+      = DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), DivBits));
+    Div = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Div, InRegSize);
+    Rem = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Rem, InRegSize);
+  } else {
+    SDValue TruncMask = DAG.getConstant((UINT64_C(1) << DivBits) - 1, DL, VT);
+    Div = DAG.getNode(ISD::AND, DL, VT, Div, TruncMask);
+    Rem = DAG.getNode(ISD::AND, DL, VT, Rem, TruncMask);
+  }
 
   return DAG.getMergeValues({ Div, Rem }, DL);
 }
@@ -1344,18 +1416,13 @@ SDValue AMDGPUTargetLowering::LowerUDIVREM(SDValue Op,
     return DAG.getMergeValues(Results, DL);
   }
 
+  if (VT == MVT::i32) {
+    if (SDValue Res = LowerDIVREM24(Op, DAG, false))
+      return Res;
+  }
+
   SDValue Num = Op.getOperand(0);
   SDValue Den = Op.getOperand(1);
-
-  if (VT == MVT::i32) {
-    if (DAG.MaskedValueIsZero(Num, APInt::getHighBitsSet(32, 8)) &&
-        DAG.MaskedValueIsZero(Den, APInt::getHighBitsSet(32, 8))) {
-      // TODO: We technically could do this for i64, but shouldn't that just be
-      // handled by something generally reducing 64-bit division on 32-bit
-      // values to 32-bit?
-      return LowerDIVREM24(Op, DAG, false);
-    }
-  }
 
   // RCP =  URECIP(Den) = 2^32 / Den + e
   // e is rounding error.
@@ -1464,11 +1531,11 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue NegOne = DAG.getConstant(-1, DL, VT);
 
-  if (VT == MVT::i32 &&
-      DAG.ComputeNumSignBits(LHS) > 8 &&
-      DAG.ComputeNumSignBits(RHS) > 8) {
-    return LowerDIVREM24(Op, DAG, true);
+  if (VT == MVT::i32) {
+    if (SDValue Res = LowerDIVREM24(Op, DAG, true))
+      return Res;
   }
+
   if (VT == MVT::i64 &&
       DAG.ComputeNumSignBits(LHS) > 32 &&
       DAG.ComputeNumSignBits(RHS) > 32) {

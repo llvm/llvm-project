@@ -71,6 +71,10 @@ def END_LOOP  : I<(outs), (ins), [], "end_loop">;
 multiclass RETURN<WebAssemblyRegClass vt> {
   def RETURN_#vt : I<(outs), (ins vt:$val), [(WebAssemblyreturn vt:$val)],
                      "return  \t$val">;
+  // Equivalent to RETURN_#vt, for use at the end of a function when wasm
+  // semantics return by falling off the end of the block.
+  let isCodeGenOnly = 1 in
+  def FALLTHROUGH_RETURN_#vt : I<(outs), (ins vt:$val), []>;
 }
 
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
@@ -80,6 +84,10 @@ let isReturn = 1 in {
   defm : RETURN<F32>;
   defm : RETURN<F64>;
   def RETURN_VOID : I<(outs), (ins), [(WebAssemblyreturn)], "return">;
+
+  // This is to RETURN_VOID what FALLTHROUGH_RETURN_#vt is to RETURN_#vt.
+  let isCodeGenOnly = 1 in
+  def FALLTHROUGH_RETURN_VOID : I<(outs), (ins), []>;
 } // isReturn = 1
   def UNREACHABLE : I<(outs), (ins), [(trap)], "unreachable">;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1

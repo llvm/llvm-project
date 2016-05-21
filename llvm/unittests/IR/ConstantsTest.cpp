@@ -155,6 +155,27 @@ TEST(ConstantsTest, PointerCast) {
   EXPECT_EQ(Constant::getNullValue(Int32PtrVecTy),
             ConstantExpr::getPointerCast(
               Constant::getNullValue(Int8PtrVecTy), Int32PtrVecTy));
+
+  Type *Int32Ptr1Ty = Type::getInt32PtrTy(C, 1);
+  ConstantInt *K = ConstantInt::get(Type::getInt64Ty(C), 1234);
+
+  // Make sure that addrspacecast of inttoptr is not folded away.
+  EXPECT_NE(K,
+            ConstantExpr::getAddrSpaceCast(
+              ConstantExpr::getIntToPtr(K, Int32PtrTy), Int32Ptr1Ty));
+  EXPECT_NE(K,
+            ConstantExpr::getAddrSpaceCast(
+              ConstantExpr::getIntToPtr(K, Int32Ptr1Ty), Int32PtrTy));
+
+  Constant *NullInt32Ptr0 = Constant::getNullValue(Int32PtrTy);
+  Constant *NullInt32Ptr1 = Constant::getNullValue(Int32Ptr1Ty);
+
+  // Make sure that addrspacecast of null is not folded away.
+  EXPECT_NE(Constant::getNullValue(Int32PtrTy),
+            ConstantExpr::getAddrSpaceCast(NullInt32Ptr0, Int32Ptr1Ty));
+
+  EXPECT_NE(Constant::getNullValue(Int32Ptr1Ty),
+            ConstantExpr::getAddrSpaceCast(NullInt32Ptr1, Int32PtrTy));
 }
 
 #define CHECK(x, y) {                                         		\

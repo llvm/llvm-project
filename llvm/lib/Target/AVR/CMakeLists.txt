@@ -16,5 +16,6 @@ add_llvm_target(AVRCodeGen
 
 add_dependencies(LLVMAVRCodeGen intrinsics_gen)
 
+add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
 

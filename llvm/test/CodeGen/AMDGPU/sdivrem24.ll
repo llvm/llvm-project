@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
@@ -181,13 +181,13 @@ define void @srem24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   ret void
 }
 
-; FUNC-LABEL: {{^}}srem25_i32:
+; FUNC-LABEL: {{^}}no_srem25_i32:
 ; SI-NOT: v_cvt_f32_i32
 ; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @srem25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define void @no_srem25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
@@ -200,40 +200,138 @@ define void @srem25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_no_srem24_i32_1:
+; FUNC-LABEL: {{^}}no_sdiv25_i24_i25_i32:
 ; SI-NOT: v_cvt_f32_i32
 ; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @test_no_srem24_i32_1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define void @no_sdiv25_i24_i25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
   %num.i24.0 = shl i32 %num, 8
-  %den.i24.0 = shl i32 %den, 7
+  %den.i25.0 = shl i32 %den, 7
   %num.i24 = ashr i32 %num.i24.0, 8
-  %den.i24 = ashr i32 %den.i24.0, 7
-  %result = srem i32 %num.i24, %den.i24
+  %den.i25 = ashr i32 %den.i25.0, 7
+  %result = sdiv i32 %num.i24, %den.i25
   store i32 %result, i32 addrspace(1)* %out, align 4
   ret void
 }
 
-; FUNC-LABEL: {{^}}test_no_srem24_i32_2:
+; FUNC-LABEL: {{^}}no_sdiv25_i25_i24_i32:
 ; SI-NOT: v_cvt_f32_i32
 ; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
-define void @test_no_srem24_i32_2(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define void @no_sdiv25_i25_i24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %num = load i32, i32 addrspace(1) * %in, align 4
   %den = load i32, i32 addrspace(1) * %den_ptr, align 4
-  %num.i24.0 = shl i32 %num, 7
+  %num.i25.0 = shl i32 %num, 7
   %den.i24.0 = shl i32 %den, 8
-  %num.i24 = ashr i32 %num.i24.0, 7
+  %num.i25 = ashr i32 %num.i25.0, 7
   %den.i24 = ashr i32 %den.i24.0, 8
-  %result = srem i32 %num.i24, %den.i24
+  %result = sdiv i32 %num.i25, %den.i24
+  store i32 %result, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}no_srem25_i24_i25_i32:
+; SI-NOT: v_cvt_f32_i32
+; SI-NOT: v_rcp_f32
+
+; EG-NOT: INT_TO_FLT
+; EG-NOT: RECIP_IEEE
+define void @no_srem25_i24_i25_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+  %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
+  %num = load i32, i32 addrspace(1) * %in, align 4
+  %den = load i32, i32 addrspace(1) * %den_ptr, align 4
+  %num.i24.0 = shl i32 %num, 8
+  %den.i25.0 = shl i32 %den, 7
+  %num.i24 = ashr i32 %num.i24.0, 8
+  %den.i25 = ashr i32 %den.i25.0, 7
+  %result = srem i32 %num.i24, %den.i25
+  store i32 %result, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}no_srem25_i25_i24_i32:
+; SI-NOT: v_cvt_f32_i32
+; SI-NOT: v_rcp_f32
+
+; EG-NOT: INT_TO_FLT
+; EG-NOT: RECIP_IEEE
+define void @no_srem25_i25_i24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+  %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
+  %num = load i32, i32 addrspace(1) * %in, align 4
+  %den = load i32, i32 addrspace(1) * %den_ptr, align 4
+  %num.i25.0 = shl i32 %num, 7
+  %den.i24.0 = shl i32 %den, 8
+  %num.i25 = ashr i32 %num.i25.0, 7
+  %den.i24 = ashr i32 %den.i24.0, 8
+  %result = srem i32 %num.i25, %den.i24
+  store i32 %result, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}srem25_i24_i11_i32:
+; SI: v_cvt_f32_i32
+; SI: v_rcp_f32
+; SI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 24
+
+; EG: INT_TO_FLT
+; EG: RECIP_IEEE
+define void @srem25_i24_i11_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+  %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
+  %num = load i32, i32 addrspace(1) * %in, align 4
+  %den = load i32, i32 addrspace(1) * %den_ptr, align 4
+  %num.i24.0 = shl i32 %num, 8
+  %den.i11.0 = shl i32 %den, 21
+  %num.i24 = ashr i32 %num.i24.0, 8
+  %den.i11 = ashr i32 %den.i11.0, 21
+  %result = srem i32 %num.i24, %den.i11
+  store i32 %result, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}srem25_i11_i24_i32:
+; SI: v_cvt_f32_i32
+; SI: v_rcp_f32
+; SI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 24
+
+; EG: INT_TO_FLT
+; EG: RECIP_IEEE
+define void @srem25_i11_i24_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+  %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
+  %num = load i32, i32 addrspace(1) * %in, align 4
+  %den = load i32, i32 addrspace(1) * %den_ptr, align 4
+  %num.i11.0 = shl i32 %num, 21
+  %den.i24.0 = shl i32 %den, 8
+  %num.i11 = ashr i32 %num.i11.0, 21
+  %den.i24 = ashr i32 %den.i24.0, 8
+  %result = srem i32 %num.i11, %den.i24
+  store i32 %result, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}srem25_i17_i12_i32:
+; SI: v_cvt_f32_i32
+; SI: v_rcp_f32
+; SI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 17
+
+; EG: INT_TO_FLT
+; EG: RECIP_IEEE
+define void @srem25_i17_i12_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+  %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
+  %num = load i32, i32 addrspace(1) * %in, align 4
+  %den = load i32, i32 addrspace(1) * %den_ptr, align 4
+  %num.i17.0 = shl i32 %num, 15
+  %den.i12.0 = shl i32 %den, 20
+  %num.i17 = ashr i32 %num.i17.0, 15
+  %den.i12 = ashr i32 %den.i12.0, 20
+  %result = sdiv i32 %num.i17, %den.i12
   store i32 %result, i32 addrspace(1)* %out, align 4
   ret void
 }

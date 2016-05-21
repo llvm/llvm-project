@@ -86,6 +86,12 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
     assert(VReg = WARegs.size());
     WARegs.push_back(WAReg);
   }
+
+  // For a given stackified WAReg, return the id number to print with push/pop.
+  static unsigned getWARegStackId(unsigned Reg) {
+    assert(Reg & INT32_MIN);
+    return Reg & INT32_MAX;
+  }
 };
 
 } // end namespace llvm

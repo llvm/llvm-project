@@ -3424,11 +3424,23 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI) {
     // This isn't an empty cleanup.
     return false;
 
-  // Check that there are no other instructions except for debug intrinsics.
+  // Check that there are no other instructions except for benign intrinsics.
   BasicBlock::iterator I = CPInst->getIterator(), E = RI->getIterator();
-  while (++I != E)
-    if (!isa<DbgInfoIntrinsic>(I))
+  while (++I != E) {
+    auto *II = dyn_cast<IntrinsicInst>(I);
+    if (!II)
       return false;
+
+    Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+    switch (IntrinsicID) {
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_value:
+    case Intrinsic::lifetime_end:
+      break;
+    default:
+      return false;
+    }
+  }
 
   // If the cleanup return we are simplifying unwinds to the caller, this will
   // set UnwindDest to nullptr.
@@ -3567,10 +3579,10 @@ bool SimplifyCFGOpt::SimplifyCleanupReturn(CleanupReturnInst *RI) {
   if (isa<UndefValue>(RI->getOperand(0)))
     return false;
 
-  if (removeEmptyCleanup(RI))
+  if (mergeCleanupPad(RI))
     return true;
 
-  if (mergeCleanupPad(RI))
+  if (removeEmptyCleanup(RI))
     return true;
 
   return false;

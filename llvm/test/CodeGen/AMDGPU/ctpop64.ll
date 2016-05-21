@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
@@ -113,12 +113,9 @@ define void @v_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> addrs
   ret void
 }
 
-; FIXME: We currently disallow SALU instructions in all branches,
-; but there are some cases when the should be allowed.
-
 ; FUNC-LABEL: {{^}}ctpop_i64_in_br:
-; SI: s_load_dwordx2 s{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0xd
-; VI: s_load_dwordx2 s{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0x34
+; SI-DAG: s_load_dwordx2 s{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0xd
+; VI-DAG: s_load_dwordx2 s{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0x34
 ; GCN-DAG: s_bcnt1_i32_b64 [[RESULT:s[0-9]+]], {{s\[}}[[LOVAL]]:[[HIVAL]]{{\]}}
 ; GCN-DAG: s_mov_b32 [[ZERO:s[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], [[RESULT]]

@@ -551,26 +551,33 @@ bool GuardWideningImpl::combineRangeChecks(
     SmallVectorImpl<GuardWideningImpl::RangeCheck> &RangeChecksOut) {
   unsigned OldCount = Checks.size();
   while (!Checks.empty()) {
-    Value *Base = Checks[0].Base;
-    Value *Length = Checks[0].Length;
-    auto ChecksStart =
-        remove_if(Checks, [&](GuardWideningImpl::RangeCheck &RC) {
-          return RC.Base == Base && RC.Length == Length;
-        });
+    // Pick all of the range checks with a specific base and length, and try to
+    // merge them.
+    Value *CurrentBase = Checks.front().Base;
+    Value *CurrentLength = Checks.front().Length;
 
-    unsigned CheckCount = std::distance(ChecksStart, Checks.end());
-    assert(CheckCount != 0 && "We know we have at least one!");
+    SmallVector<GuardWideningImpl::RangeCheck, 3> CurrentChecks;
 
-    if (CheckCount < 3) {
-      RangeChecksOut.insert(RangeChecksOut.end(), ChecksStart, Checks.end());
-      Checks.erase(ChecksStart, Checks.end());
+    auto IsCurrentCheck = [&](GuardWideningImpl::RangeCheck &RC) {
+      return RC.Base == CurrentBase && RC.Length == CurrentLength;
+    };
+
+    std::copy_if(Checks.begin(), Checks.end(),
+                 std::back_inserter(CurrentChecks), IsCurrentCheck);
+    Checks.erase(remove_if(Checks, IsCurrentCheck), Checks.end());
+
+    assert(CurrentChecks.size() != 0 && "We know we have at least one!");
+
+    if (CurrentChecks.size() < 3) {
+      RangeChecksOut.insert(RangeChecksOut.end(), CurrentChecks.begin(),
+                            CurrentChecks.end());
       continue;
     }
 
-    // CheckCount will typically be 3 here, but so far there has been no need to
-    // hard-code that fact.
+    // CurrentChecks.size() will typically be 3 here, but so far there has been
+    // no need to hard-code that fact.
 
-    std::sort(ChecksStart, Checks.end(),
+    std::sort(CurrentChecks.begin(), CurrentChecks.end(),
               [&](const GuardWideningImpl::RangeCheck &LHS,
                   const GuardWideningImpl::RangeCheck &RHS) {
       return LHS.Offset->getValue().slt(RHS.Offset->getValue());
@@ -578,8 +585,8 @@ bool GuardWideningImpl::combineRangeChecks(
 
     // Note: std::sort should not invalidate the ChecksStart iterator.
 
-    ConstantInt *MinOffset = ChecksStart->Offset,
-                *MaxOffset = Checks.back().Offset;
+    ConstantInt *MinOffset = CurrentChecks.front().Offset,
+                *MaxOffset = CurrentChecks.back().Offset;
 
     unsigned BitWidth = MaxOffset->getValue().getBitWidth();
     if ((MaxOffset->getValue() - MinOffset->getValue())
@@ -593,7 +600,8 @@ bool GuardWideningImpl::combineRangeChecks(
     };
 
     if (MaxDiff.isMinValue() ||
-        !std::all_of(std::next(ChecksStart), Checks.end(), OffsetOK))
+        !std::all_of(std::next(CurrentChecks.begin()), CurrentChecks.end(),
+                     OffsetOK))
       return false;
 
     // We have a series of f+1 checks as:
@@ -631,12 +639,8 @@ bool GuardWideningImpl::combineRangeChecks(
     // For Chk_0 to succeed, we'd have to have k_f-k_0 (the range highlighted
     // with 'x' above) to be at least >u INT_MIN.
 
-    RangeChecksOut.emplace_back(Base, MinOffset, Length,
-                                ChecksStart->CheckInst);
-    RangeChecksOut.emplace_back(Base, MaxOffset, Length,
-                                Checks.back().CheckInst);
-
-    Checks.erase(ChecksStart, Checks.end());
+    RangeChecksOut.emplace_back(CurrentChecks.front());
+    RangeChecksOut.emplace_back(CurrentChecks.back());
   }
 
   assert(RangeChecksOut.size() <= OldCount && "We pessimized!");

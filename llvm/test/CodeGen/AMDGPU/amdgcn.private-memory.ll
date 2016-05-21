@@ -1,9 +1,9 @@
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-PROMOTE %s
+; RUN: llc -mattr=+promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-PROMOTE -check-prefix=HSA %s
+; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-ALLOCA %s
+; RUN: llc -mattr=-promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck  -check-prefix=GCN -check-prefix=GCN-ALLOCA -check-prefix=HSA %s
+; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-PROMOTE %s
+; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=GCN  -check-prefix=GCN-ALLOCA %s
 
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -11,9 +11,10 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; Make sure we don't overwrite workitem information with private memory
 
-; FUNC-LABEL: {{^}}work_item_info:
-
-; SI-NOT: v_mov_b32_e{{(32|64)}} v0
+; GCN-LABEL: {{^}}work_item_info:
+; GCN-NOT: v0
+; GCN: v_add_i32_e32 [[RESULT:v[0-9]+]], vcc, v0, v{{[0-9]+}}
+; GCN: buffer_store_dword [[RESULT]]
 define void @work_item_info(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %0 = alloca [2 x i32]
