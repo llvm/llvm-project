@@ -31,7 +31,7 @@ namespace __esan {
 //
 // [0x00000000'00000000, 0x00000100'00000000) non-PIE + heap
 // [0x00005500'00000000, 0x00005700'00000000) PIE
-// [0x00007f00'00000000, 0x00007fff'ff600000) libraries + stack, part 1
+// [0x00007e00'00000000, 0x00007fff'ff600000) libraries + stack, part 1
 // [0x00007fff'ff601000, 0x00008000'00000000) libraries + stack, part 2
 // [0xffffffff'ff600000, 0xffffffff'ff601000) vsyscall
 //
@@ -39,7 +39,6 @@ namespace __esan {
 // references there (other sanitizers ignore it), we enforce a gap inside the
 // library region to distinguish the vsyscall's shadow, considering this gap to
 // be an invalid app region.
-//
 // We disallow application memory outside of those 5 regions.
 //
 // Our shadow memory is scaled from a 1:1 mapping and supports a scale
@@ -57,34 +56,34 @@ namespace __esan {
 //
 //   shadow(app) = ((app & 0x00000fff'ffffffff) + offset) >> scale
 //
-// Where the offset for 1:1 is 0x00001200'00000000.  For other scales, the
+// Where the offset for 1:1 is 0x00001300'00000000.  For other scales, the
 // offset is shifted left by the scale, except for scales of 1 and 2 where
 // it must be tweaked in order to pass the double-shadow test
 // (see the "shadow(shadow)" comments below):
-//   scale == 0: 0x0000120'000000000
-//   scale == 1: 0x0000220'000000000
-//   scale == 2: 0x0000440'000000000
-//   scale >= 3: (0x0000120'000000000 << scale)
+//   scale == 0: 0x00001300'000000000
+//   scale == 1: 0x00002200'000000000
+//   scale == 2: 0x00004400'000000000
+//   scale >= 3: (0x00001300'000000000 << scale)
 //
 // Do not pass in the open-ended end value to the formula as it will fail.
 //
 // The resulting shadow memory regions for a 0 scaling are:
 //
-// [0x00001200'00000000, 0x00001300'00000000)
-// [0x00001700'00000000, 0x00001900'00000000)
-// [0x00002100'00000000, 0x000021ff'ff600000)
-// [0x000021ff'ff601000, 0x00002200'00000000)
-// [0x000021ff'ff600000, 0x000021ff'ff601000]
+// [0x00001300'00000000, 0x00001400'00000000)
+// [0x00001800'00000000, 0x00001a00'00000000)
+// [0x00002100'00000000, 0x000022ff'ff600000)
+// [0x000022ff'ff601000, 0x00002300'00000000)
+// [0x000022ff'ff600000, 0x000022ff'ff601000]
 //
 // We also want to ensure that a wild access by the application into the shadow
 // regions will not corrupt our own shadow memory.  shadow(shadow) ends up
 // disjoint from shadow(app):
 //
-// [0x00001400'00000000, 0x00001500'00000000)
-// [0x00001900'00000000, 0x00001b00'00000000)
-// [0x00001300'00000000, 0x000013ff'ff600000]
-// [0x000013ff'ff601000, 0x00001400'00000000]
-// [0x000013ff'ff600000, 0x000013ff'ff601000]
+// [0x00001600'00000000, 0x00001700'00000000)
+// [0x00001b00'00000000, 0x00001d00'00000000)
+// [0x00001400'00000000, 0x000015ff'ff600000]
+// [0x000015ff'ff601000, 0x00001600'00000000]
+// [0x000015ff'ff600000, 0x000015ff'ff601000]
 
 struct ApplicationRegion {
   uptr Start;
@@ -98,7 +97,7 @@ static const struct ApplicationRegion AppRegions[] = {
   // We make one shadow mapping to hold the shadow regions for all 3 of these
   // app regions, as the mappings interleave, and the gap between the 3rd and
   // 4th scales down below a page.
-  {0x00007f0000000000u,   0x00007fffff600000u, false},
+  {0x00007e0000000000u,   0x00007fffff600000u, false},
   {0x00007fffff601000u,   0x0000800000000000u, true},
   {0xffffffffff600000u,   0xffffffffff601000u, true},
 };
@@ -112,7 +111,7 @@ public:
   uptr Offset;
   void initialize(uptr ShadowScale) {
     static const uptr OffsetArray[3] = {
-        0x0000120000000000u,
+        0x0000130000000000u,
         0x0000220000000000u,
         0x0000440000000000u,
     };
