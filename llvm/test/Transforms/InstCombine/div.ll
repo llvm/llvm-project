@@ -369,6 +369,21 @@ define i32 @test36(i32 %A) {
   ret i32 %mul
 }
 
+; FIXME: Vector should get same transform as scalar.
+
+define <2 x i32> @test36vec(<2 x i32> %A) {
+; CHECK-LABEL: @test36vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> <i32 1, i32 1>, %A
+; CHECK-NEXT:    [[MUL:%.*]] = sdiv exact <2 x i32> [[AND]], [[SHL]]
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %and = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
+  %shl = shl nsw <2 x i32> <i32 1, i32 1>, %A
+  %mul = sdiv exact <2 x i32> %and, %shl
+  ret <2 x i32> %mul
+}
+
 define i32 @test37(i32* %b) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:  entry:

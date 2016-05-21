@@ -12,7 +12,7 @@
 
 #include "AVRTargetStreamer.h"
 
-#include "llvm/MC/MCELFStreamer.h"
+namespace llvm {
 
 /// A target streamer for an AVR ELF object file.
 class AVRELFStreamer : public AVRTargetStreamer {
@@ -23,5 +23,7 @@ public:
     return static_cast<MCELFStreamer &>(Streamer);
   }
 };
+
+} // end namespace llvm
 
 #endif

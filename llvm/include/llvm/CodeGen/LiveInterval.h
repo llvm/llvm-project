@@ -712,10 +712,6 @@ namespace llvm {
     /// are not considered valid and should only exist temporarily).
     void removeEmptySubRanges();
 
-    /// Construct main live range by merging the SubRanges of @p LI.
-    void constructMainRangeFromSubranges(const SlotIndexes &Indexes,
-                                         VNInfo::Allocator &VNIAllocator);
-
     /// getSize - Returns the sum of sizes of all the LiveRange's.
     ///
     unsigned getSize() const;
@@ -896,10 +892,12 @@ namespace llvm {
   class ConnectedSubRegClasses {
     LiveIntervals &LIS;
     MachineRegisterInfo &MRI;
+    const TargetInstrInfo &TII;
 
   public:
-    ConnectedSubRegClasses(LiveIntervals &LIS, MachineRegisterInfo &MRI)
-      : LIS(LIS), MRI(MRI) {}
+    ConnectedSubRegClasses(LiveIntervals &LIS, MachineRegisterInfo &MRI,
+                           const TargetInstrInfo &TII)
+      : LIS(LIS), MRI(MRI), TII(TII) {}
 
     /// Split unrelated subregister components and rename them to new vregs.
     void renameComponents(LiveInterval &LI) const;

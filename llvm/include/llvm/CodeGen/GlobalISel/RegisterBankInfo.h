@@ -272,9 +272,12 @@ protected:
   /// \post if Force == true then getRegBankForType(SVT) == &RegBank
   void recordRegBankForType(const RegisterBank &RegBank,
                             MVT::SimpleValueType SVT, bool Force = false) {
-    if (!VTToRegBank)
+    if (!VTToRegBank) {
       VTToRegBank.reset(
           new const RegisterBank *[MVT::SimpleValueType::LAST_VALUETYPE]);
+      std::fill(&VTToRegBank[0],
+                &VTToRegBank[MVT::SimpleValueType::LAST_VALUETYPE], nullptr);
+    }
     assert(SVT < MVT::SimpleValueType::LAST_VALUETYPE && "Out-of-bound access");
     // If we want to override the mapping or the mapping does not exits yet,
     // set the register bank for SVT.

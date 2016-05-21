@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Lanai.h"
 #include "InstPrinter/LanaiInstPrinter.h"
+#include "Lanai.h"
 #include "LanaiInstrInfo.h"
 #include "LanaiMCInstLower.h"
 #include "LanaiTargetMachine.h"

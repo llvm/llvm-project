@@ -444,7 +444,6 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
     //
     // MBB::size() uses instr_iterator to count. Here we need a bundle to count
     // as a single instruction.
-    unsigned RemainingInstrs = std::distance(MBB->begin(), MBB->end());
     for(MachineBasicBlock::iterator RegionEnd = MBB->end();
         RegionEnd != MBB->begin(); RegionEnd = Scheduler.begin()) {
 
@@ -452,15 +451,13 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       if (RegionEnd != MBB->end() ||
           isSchedBoundary(&*std::prev(RegionEnd), &*MBB, MF, TII)) {
         --RegionEnd;
-        // Count the boundary instruction.
-        --RemainingInstrs;
       }
 
       // The next region starts above the previous region. Look backward in the
       // instruction stream until we find the nearest boundary.
       unsigned NumRegionInstrs = 0;
       MachineBasicBlock::iterator I = RegionEnd;
-      for(;I != MBB->begin(); --I, --RemainingInstrs) {
+      for (;I != MBB->begin(); --I) {
         if (isSchedBoundary(&*std::prev(I), &*MBB, MF, TII))
           break;
         if (!I->isDebugValue())
@@ -483,8 +480,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
             << "\n  From: " << *I << "    To: ";
             if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
             else dbgs() << "End";
-            dbgs() << " RegionInstrs: " << NumRegionInstrs
-            << " Remaining: " << RemainingInstrs << "\n");
+            dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
       if (DumpCriticalPathLength) {
         errs() << MF->getName();
         errs() << ":BB# " << MBB->getNumber();
@@ -502,7 +498,6 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       // scheduler for the top of it's scheduled region.
       RegionEnd = Scheduler.begin();
     }
-    assert(RemainingInstrs == 0 && "Instruction count mismatch!");
     Scheduler.finishBlock();
     // FIXME: Ideally, no further passes should rely on kill flags. However,
     // thumb2 size reduction is currently an exception, so the PostMIScheduler

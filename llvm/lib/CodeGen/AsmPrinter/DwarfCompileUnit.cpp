@@ -539,7 +539,8 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
     int Offset = TFI->getFrameIndexReference(*Asm->MF, FI, FrameReg);
     assert(Expr != DV.getExpression().end() && "Wrong number of expressions");
-    DwarfExpr.AddMachineRegIndirect(FrameReg, Offset);
+    DwarfExpr.AddMachineRegIndirect(*Asm->MF->getSubtarget().getRegisterInfo(),
+                                    FrameReg, Offset);
     DwarfExpr.AddExpression((*Expr)->expr_op_begin(), (*Expr)->expr_op_end());
     ++Expr;
   }
@@ -766,13 +767,14 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   const DIExpression *Expr = DV.getSingleExpression();
   bool ValidReg;
+  const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
   if (Location.getOffset()) {
-    ValidReg = DwarfExpr.AddMachineRegIndirect(Location.getReg(),
+    ValidReg = DwarfExpr.AddMachineRegIndirect(TRI, Location.getReg(),
                                                Location.getOffset());
     if (ValidReg)
       DwarfExpr.AddExpression(Expr->expr_op_begin(), Expr->expr_op_end());
   } else
-    ValidReg = DwarfExpr.AddMachineRegExpression(Expr, Location.getReg());
+    ValidReg = DwarfExpr.AddMachineRegExpression(TRI, Expr, Location.getReg());
 
   // Now attach the location information to the DIE.
   if (ValidReg)

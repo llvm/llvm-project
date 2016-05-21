@@ -12,16 +12,22 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-peephole"
+
+static cl::opt<bool> DisableWebAssemblyFallthroughReturnOpt(
+    "disable-wasm-fallthrough-return-opt", cl::Hidden,
+    cl::desc("WebAssembly: Disable fallthrough-return optimizations."),
+    cl::init(false));
 
 namespace {
 class WebAssemblyPeephole final : public MachineFunctionPass {
@@ -50,8 +56,7 @@ FunctionPass *llvm::createWebAssemblyPeephole() {
 
 /// If desirable, rewrite NewReg to a drop register.
 static bool MaybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
-                               MachineOperand &MO,
-                               WebAssemblyFunctionInfo &MFI,
+                               MachineOperand &MO, WebAssemblyFunctionInfo &MFI,
                                MachineRegisterInfo &MRI) {
   bool Changed = false;
   if (OldReg == NewReg) {
@@ -60,19 +65,50 @@ static bool MaybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
     MO.setReg(NewReg);
     MO.setIsDead();
     MFI.stackifyVReg(NewReg);
-    MFI.addWAReg(NewReg, WebAssemblyFunctionInfo::UnusedReg);
   }
   return Changed;
 }
 
+static bool MaybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
+                                      const MachineFunction &MF,
+                                      WebAssemblyFunctionInfo &MFI,
+                                      MachineRegisterInfo &MRI,
+                                      const WebAssemblyInstrInfo &TII,
+                                      unsigned FallthroughOpc,
+                                      unsigned CopyLocalOpc) {
+  if (DisableWebAssemblyFallthroughReturnOpt)
+    return false;
+  if (&MBB != &MF.back())
+    return false;
+  if (&MI != &MBB.back())
+    return false;
+
+  // If the operand isn't stackified, insert a COPY_LOCAL to read the operand
+  // and stackify it.
+  MachineOperand &MO = MI.getOperand(0);
+  unsigned Reg = MO.getReg();
+  if (!MFI.isVRegStackified(Reg)) {
+    unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
+    BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(CopyLocalOpc), NewReg)
+        .addReg(Reg);
+    MO.setReg(NewReg);
+    MFI.stackifyVReg(NewReg);
+  }
+
+  // Rewrite the return.
+  MI.setDesc(TII.get(FallthroughOpc));
+  return true;
+}
+
 bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({
-    dbgs() << "********** Store Results **********\n"
+    dbgs() << "********** Peephole **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   const WebAssemblyTargetLowering &TLI =
       *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
   auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
@@ -127,7 +163,34 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
             }
           }
         }
+        break;
       }
+      // Optimize away an explicit void return at the end of the function.
+      case WebAssembly::RETURN_I32:
+        Changed |= MaybeRewriteToFallthrough(
+            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_I32,
+            WebAssembly::COPY_LOCAL_I32);
+        break;
+      case WebAssembly::RETURN_I64:
+        Changed |= MaybeRewriteToFallthrough(
+            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_I64,
+            WebAssembly::COPY_LOCAL_I64);
+        break;
+      case WebAssembly::RETURN_F32:
+        Changed |= MaybeRewriteToFallthrough(
+            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_F32,
+            WebAssembly::COPY_LOCAL_F32);
+        break;
+      case WebAssembly::RETURN_F64:
+        Changed |= MaybeRewriteToFallthrough(
+            MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_F64,
+            WebAssembly::COPY_LOCAL_F64);
+        break;
+      case WebAssembly::RETURN_VOID:
+        if (!DisableWebAssemblyFallthroughReturnOpt &&
+            &MBB == &MF.back() && &MI == &MBB.back())
+          MI.setDesc(TII.get(WebAssembly::FALLTHROUGH_RETURN_VOID));
+        break;
       }
 
   return Changed;

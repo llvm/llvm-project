@@ -248,6 +248,9 @@
 /* Define if you have the shl_load function. */
 #undef HAVE_SHL_LOAD
 
+/* Define to 1 if you have the `sigaltstack' function. */
+#cmakedefine HAVE_SIGALTSTACK ${HAVE_SIGALTSTACK}
+
 /* Define to 1 if you have the `siglongjmp' function. */
 #cmakedefine HAVE_SIGLONGJMP ${HAVE_SIGLONGJMP}
 

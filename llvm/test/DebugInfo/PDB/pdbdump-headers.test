@@ -317,6 +317,7 @@
 ; EMPTY-NEXT:   Address Map: [36, 0]
 ; EMPTY-NEXT:   Thunk Map: [4112]
 ; EMPTY-NEXT:   Section Offsets: [4096, 1]
+; EMPTY-NEXT:   Symbols: [?__purecall@@3PAXA, _main]
 ; EMPTY-NEXT: }
 
 ; BIG:      FileHeaders {

@@ -310,16 +310,16 @@ main_body:
 
 ; ... but only if WQM is necessary.
 ;
-;CHECK-LABEL: {{^}}test_kill_1:
-;CHECK-NEXT: ; %main_body
-;CHECK-NEXT: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
-;CHECK-NEXT: s_wqm_b64 exec, exec
-;CHECK: image_sample
-;CHECK: s_and_b64 exec, exec, [[ORIG]]
-;SI: buffer_store_dword
-;VI: flat_store_dword
-;CHECK-NOT: wqm
-;CHECK: v_cmpx_
+; CHECK-LABEL: {{^}}test_kill_1:
+; CHECK-NEXT: ; %main_body
+; CHECK: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_wqm_b64 exec, exec
+; CHECK: image_sample
+; CHECK: s_and_b64 exec, exec, [[ORIG]]
+; SI: buffer_store_dword
+; VI: flat_store_dword
+; CHECK-NOT: wqm
+; CHECK: v_cmpx_
 define amdgpu_ps <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, float addrspace(1)* inreg %ptr, i32 %idx, float %data, i32 %coord, i32 %coord2, float %z) {
 main_body:
   %tex = call <4 x float> @llvm.SI.image.sample.i32(i32 %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)

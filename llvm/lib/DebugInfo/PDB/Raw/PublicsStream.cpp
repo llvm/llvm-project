@@ -27,9 +27,11 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
+#include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Endian.h"
@@ -56,8 +58,7 @@ struct PublicsStream::HeaderInfo {
   ulittle32_t NumSections;
 };
 
-
-// This is GSIHashHdr struct defined in
+// This is GSIHashHdr.
 struct PublicsStream::GSIHashHeader {
   enum : unsigned {
     HdrSignature = ~0U,
@@ -69,8 +70,9 @@ struct PublicsStream::GSIHashHeader {
   ulittle32_t NumBuckets;
 };
 
-struct PublicsStream::HRFile {
-  ulittle32_t Off;
+// This is HRFile.
+struct PublicsStream::HashRecord {
+  ulittle32_t Off; // Offset in the symbol record stream
   ulittle32_t CRef;
 };
 
@@ -84,7 +86,7 @@ struct SectionOffset {
 }
 
 PublicsStream::PublicsStream(PDBFile &File, uint32_t StreamNum)
-    : StreamNum(StreamNum), Stream(StreamNum, File) {}
+    : Pdb(File), StreamNum(StreamNum), Stream(StreamNum, File) {}
 
 PublicsStream::~PublicsStream() {}
 
@@ -114,12 +116,12 @@ Error PublicsStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Publics Stream does not contain a header.");
 
-  // An array of HRFile follows. Read them.
-  if (HashHdr->HrSize % sizeof(HRFile))
+  // An array of HashRecord follows. Read them.
+  if (HashHdr->HrSize % sizeof(HashRecord))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid HR array size.");
-  std::vector<HRFile> HRs(HashHdr->HrSize / sizeof(HRFile));
-  if (auto EC = Reader.readArray<HRFile>(HRs))
+  HashRecords.resize(HashHdr->HrSize / sizeof(HashRecord));
+  if (auto EC = Reader.readArray<HashRecord>(HashRecords))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read an HR array");
 
@@ -177,4 +179,21 @@ Error PublicsStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupted publics stream.");
   return Error::success();
+}
+
+std::vector<std::string> PublicsStream::getSymbols() const {
+  auto SymbolS = Pdb.getPDBSymbolStream();
+  if (SymbolS.takeError())
+    return {};
+  SymbolStream &SS = SymbolS.get();
+
+  std::vector<std::string> Ret;
+  for (const HashRecord &HR : HashRecords) {
+    // For some reason, symbol offset is biased by one.
+    Expected<std::string> Name = SS.getSymbolName(HR.Off - 1);
+    if (Name.takeError())
+      return Ret;
+    Ret.push_back(std::move(Name.get()));
+  }
+  return Ret;
 }

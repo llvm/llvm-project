@@ -25,7 +25,7 @@ namespace {
 
 class MachOWriter {
 public:
-  MachOWriter(MachOYAML::Object &Obj) : Obj(Obj) {
+  MachOWriter(MachOYAML::Object &Obj) : Obj(Obj), is64Bit(true), fileStart(0) {
     is64Bit = Obj.Header.magic == MachO::MH_MAGIC_64 ||
               Obj.Header.magic == MachO::MH_CIGAM_64;
     memset(reinterpret_cast<void *>(&Header64), 0,
@@ -41,9 +41,11 @@ public:
 private:
   Error writeHeader(raw_ostream &OS);
   Error writeLoadCommands(raw_ostream &OS);
+  Error writeSectionData(raw_ostream &OS);
 
   MachOYAML::Object &Obj;
   bool is64Bit;
+  uint64_t fileStart;
 
   union {
     MachO::mach_header_64 Header64;
@@ -52,9 +54,12 @@ private:
 };
 
 Error MachOWriter::writeMachO(raw_ostream &OS) {
+  fileStart = OS.tell();
   if (auto Err = writeHeader(OS))
     return Err;
   if (auto Err = writeLoadCommands(OS))
+    return Err;
+  if (auto Err = writeSectionData(OS))
     return Err;
   return Error::success();
 }
@@ -148,6 +153,18 @@ size_t writeLoadCommandData<MachO::dylinker_command>(MachOYAML::LoadCommand &LC,
   return writePayloadString(LC, OS);
 }
 
+void ZeroFillBytes(raw_ostream &OS, size_t Size) {
+  std::vector<uint8_t> FillData;
+  FillData.insert(FillData.begin(), Size, 0);
+  OS.write(reinterpret_cast<char *>(FillData.data()), Size);
+}
+
+void Fill(raw_ostream &OS, size_t Size, uint32_t Data) {
+  std::vector<uint32_t> FillData;
+  FillData.insert(FillData.begin(), (Size / 4) + 1, Data);
+  OS.write(reinterpret_cast<char *>(FillData.data()), Size);
+}
+
 Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
   for (auto &LC : Obj.LoadCommands) {
     size_t BytesWritten = 0;
@@ -176,9 +193,7 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
     }
 
     if (LC.ZeroPadBytes > 0) {
-      std::vector<uint8_t> FillData;
-      FillData.insert(FillData.begin(), LC.ZeroPadBytes, 0);
-      OS.write(reinterpret_cast<char *>(FillData.data()), LC.ZeroPadBytes);
+      ZeroFillBytes(OS, LC.ZeroPadBytes);
       BytesWritten += LC.ZeroPadBytes;
     }
 
@@ -186,9 +201,48 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
     // specified test cases.
     auto BytesRemaining = LC.Data.load_command_data.cmdsize - BytesWritten;
     if (BytesRemaining > 0) {
-      std::vector<uint32_t> FillData;
-      FillData.insert(FillData.begin(), BytesRemaining, 0);
-      OS.write(reinterpret_cast<char *>(FillData.data()), BytesRemaining);
+      ZeroFillBytes(OS, BytesRemaining);
+    }
+  }
+  return Error::success();
+}
+
+Error MachOWriter::writeSectionData(raw_ostream &OS) {
+  for (auto &LC : Obj.LoadCommands) {
+    switch (LC.Data.load_command_data.cmd) {
+    case MachO::LC_SEGMENT:
+    case MachO::LC_SEGMENT_64:
+      uint64_t segOff = is64Bit ? LC.Data.segment_command_64_data.fileoff
+                                : LC.Data.segment_command_data.fileoff;
+
+      // Zero Fill any data between the end of the last thing we wrote and the
+      // start of this section.
+      auto currOffset = OS.tell() - fileStart;
+      if (currOffset < segOff) {
+        ZeroFillBytes(OS, segOff - currOffset);
+      }
+
+      for (auto &Sec : LC.Sections) {
+        // Zero Fill any data between the end of the last thing we wrote and the
+        // start of this section.
+        assert(OS.tell() - fileStart <= Sec.offset &&
+               "Wrote too much data somewhere, section offsets don't line up.");
+        currOffset = OS.tell() - fileStart;
+        if (currOffset < Sec.offset) {
+          ZeroFillBytes(OS, Sec.offset - currOffset);
+        }
+
+        // Fills section data with 0xDEADBEEF
+        Fill(OS, Sec.size, 0xDEADBEEFu);
+      }
+      uint64_t segSize = is64Bit ? LC.Data.segment_command_64_data.filesize
+                                 : LC.Data.segment_command_data.filesize;
+      currOffset = OS.tell() - fileStart;
+      if (currOffset < segOff + segSize) {
+        // Fills segment data not covered by a section with 0xBAADDA7A
+        Fill(OS, (segOff + segSize) - currOffset, 0xBAADDA7Au);
+      }
+      break;
     }
   }
   return Error::success();

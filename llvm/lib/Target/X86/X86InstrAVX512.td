@@ -771,6 +771,12 @@ defm : vextract_for_size_lowering<"VEXTRACTI32x4Z256", v4i64x_info, v2i64x_info,
           vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX, NoDQI]>;
 
 // Codegen pattern with the alternative types extract VEC128 from VEC512
+defm : vextract_for_size_lowering<"VEXTRACTI32x4Z256", v16i16x_info, v8i16x_info,
+          vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX]>;
+defm : vextract_for_size_lowering<"VEXTRACTI32x4Z256", v32i8x_info, v16i8x_info,
+          vextract128_extract, EXTRACT_get_vextract128_imm, [HasVLX]>;
+
+// Codegen pattern with the alternative types extract VEC128 from VEC512
 defm : vextract_for_size_lowering<"VEXTRACTI32x4Z", v32i16_info, v8i16x_info,
                  vextract128_extract, EXTRACT_get_vextract128_imm, [HasAVX512]>;
 defm : vextract_for_size_lowering<"VEXTRACTI32x4Z", v64i8_info, v16i8x_info,

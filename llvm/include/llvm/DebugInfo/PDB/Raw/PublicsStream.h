@@ -20,12 +20,13 @@
 
 namespace llvm {
 namespace pdb {
+class DbiStream;
 class PDBFile;
 
 class PublicsStream {
-  struct HeaderInfo;
   struct GSIHashHeader;
-  struct HRFile;
+  struct HashRecord;
+  struct HeaderInfo;
 
 public:
   PublicsStream(PDBFile &File, uint32_t StreamNum);
@@ -36,15 +37,21 @@ public:
   uint32_t getSymHash() const;
   uint32_t getAddrMap() const;
   uint32_t getNumBuckets() const { return NumBuckets; }
+  std::vector<std::string> getSymbols() const;
   ArrayRef<uint32_t> getHashBuckets() const { return HashBuckets; }
   ArrayRef<uint32_t> getAddressMap() const { return AddressMap; }
   ArrayRef<uint32_t> getThunkMap() const { return ThunkMap; }
   ArrayRef<uint32_t> getSectionOffsets() const { return SectionOffsets; }
 
 private:
+  Error readSymbols();
+
+  PDBFile &Pdb;
+
   uint32_t StreamNum;
   MappedBlockStream Stream;
   uint32_t NumBuckets = 0;
+  std::vector<HashRecord> HashRecords;
   std::vector<uint32_t> HashBuckets;
   std::vector<uint32_t> AddressMap;
   std::vector<uint32_t> ThunkMap;

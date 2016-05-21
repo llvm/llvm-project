@@ -136,6 +136,44 @@ void RegBankSelect::repairReg(
   // Legalize NewInstrs if need be.
 }
 
+uint64_t RegBankSelect::getRepairCost(
+    const MachineOperand &MO,
+    const RegisterBankInfo::ValueMapping &ValMapping) const {
+  assert(MO.isReg() && "We should only repair register operand");
+  assert(!ValMapping.BreakDown.empty() && "Nothing to map??");
+
+  bool IsSameNumOfValues = ValMapping.BreakDown.size() == 1;
+  const RegisterBank *CurRegBank = RBI->getRegBank(MO.getReg(), *MRI, *TRI);
+  // If MO does not have a register bank, we should have just been
+  // able to set one unless we have to break the value down.
+  assert((!IsSameNumOfValues || CurRegBank) && "We should not have to repair");
+  // Def: Val <- NewDefs
+  //     Same number of values: copy
+  //     Different number: Val = build_sequence Defs1, Defs2, ...
+  // Use: NewSources <- Val.
+  //     Same number of values: copy.
+  //     Different number: Src1, Src2, ... =
+  //           extract_value Val, Src1Begin, Src1Len, Src2Begin, Src2Len, ...
+  // We should remember that this value is available somewhere else to
+  // coalesce the value.
+
+  if (IsSameNumOfValues) {
+    const RegisterBank *DesiredRegBrank = ValMapping.BreakDown[0].RegBank;
+    // If we repair a definition, swap the source and destination for
+    // the repairing.
+    if (MO.isDef())
+      std::swap(CurRegBank, DesiredRegBrank);
+    unsigned Cost = RBI->copyCost(*DesiredRegBrank, *CurRegBank);
+    // TODO: use a dedicated constant for ImpossibleCost.
+    if (Cost != UINT_MAX)
+      return Cost;
+    assert(false && "Legalization not available yet");
+    // Return the legalization cost of that repairing.
+  }
+  assert(false && "Complex repairing not implemented yet");
+  return 1;
+}
+
 RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
     MachineInstr &MI, RegisterBankInfo::InstructionMappings &PossibleMappings,
     SmallVectorImpl<RepairingPlacement> &RepairPts) {
@@ -320,18 +358,6 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
       continue;
     }
 
-    // TODO:
-    // Ask the repairing module how much it would cost to get this mapping.
-    // Use: NewSources <- Val.
-    //     Same size: copy.
-    //     Different size: Src1, Src2, ... =
-    //           extract_value Val, Src1Begin, Src1Len, Src2Begin, Src2Len, ...
-    // Def: Val <- NewDefs
-    //     Same size: copy
-    //     Different size: Val = build_sequence Defs1, Defs2, ...
-    // We should remember that this value is available somewhere else to
-    // coalesce the value.
-
     // Find the insertion point for the repairing code.
     RepairPts.emplace_back(
         RepairingPlacement(MI, OpIdx, *TRI, *this, RepairingPlacement::Insert));
@@ -356,9 +382,8 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     // Thus, if we end up here this information should be here.
     assert(MBFI && MBPI && "Cost computation requires MBFI and MBPI");
 
-    // Sums up the repairing cost of at each insertion point.
-    // TODO: Get the actual repairing cost.
-    uint64_t RepairCost = 1;
+    // Sums up the repairing cost of MO at each insertion point.
+    uint64_t RepairCost = getRepairCost(MO, ValMapping);
     // Bias used for splitting: 5%.
     const uint64_t PercentageForBias = 5;
     uint64_t Bias = (RepairCost * PercentageForBias + 99) / 100;

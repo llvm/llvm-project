@@ -120,13 +120,29 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
       extendToUses(S, Reg, S.LaneMask);
     }
     LI.clear();
-    LI.constructMainRangeFromSubranges(*Indexes, *Alloc);
+    constructMainRangeFromSubranges(LI);
   } else {
     resetLiveOutMap();
     extendToUses(LI, Reg, ~0u);
   }
 }
 
+void LiveRangeCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
+  // First create dead defs at all defs found in subranges.
+  LiveRange &MainRange = LI;
+  assert(MainRange.segments.empty() && MainRange.valnos.empty() &&
+         "Expect empty main liverange");
+
+  for (const LiveInterval::SubRange &SR : LI.subranges()) {
+    for (const VNInfo *VNI : SR.valnos) {
+      if (!VNI->isUnused() && !VNI->isPHIDef())
+        MainRange.createDeadDef(VNI->def, *Alloc);
+    }
+  }
+
+  resetLiveOutMap();
+  extendToUses(MainRange, LI.reg);
+}
 
 void LiveRangeCalc::createDeadDefs(LiveRange &LR, unsigned Reg) {
   assert(MRI && Indexes && "call reset() first");

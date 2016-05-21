@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Lanai.h"
 #include "LanaiRegisterInfo.h"
+#include "Lanai.h"
 #include "LanaiSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -31,8 +31,7 @@
 
 using namespace llvm;
 
-LanaiRegisterInfo::LanaiRegisterInfo()
-    : LanaiGenRegisterInfo(Lanai::RCA) {}
+LanaiRegisterInfo::LanaiRegisterInfo() : LanaiGenRegisterInfo(Lanai::RCA) {}
 
 const uint16_t *
 LanaiRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {

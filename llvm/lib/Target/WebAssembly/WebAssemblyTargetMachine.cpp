@@ -225,10 +225,10 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Lower br_unless into br_if.
   addPass(createWebAssemblyLowerBrUnless());
 
-  // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
-  addPass(createWebAssemblyRegNumbering());
-
   // Perform the very last peephole optimizations on the code.
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createWebAssemblyPeephole());
+
+  // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
+  addPass(createWebAssemblyRegNumbering());
 }

@@ -46,7 +46,15 @@
 #include <link.h>
 #endif
 #if HAVE_UNWIND_BACKTRACE
+// FIXME: We should be able to use <unwind.h> for any target that has an
+// _Unwind_Backtrace function, but on FreeBSD the configure test passes
+// despite the function not existing, and on Android, <unwind.h> conflicts
+// with <link.h>.
+#ifdef __GLIBC__
 #include <unwind.h>
+#else
+#undef HAVE_UNWIND_BACKTRACE
+#endif
 #endif
 
 using namespace llvm;
@@ -109,6 +117,35 @@ static void RegisterHandler(int Signal) {
   ++NumRegisteredSignals;
 }
 
+#if defined(HAVE_SIGALTSTACK)
+// Hold onto the old alternate signal stack so that it's not reported as a leak.
+// We don't make any attempt to remove our alt signal stack if we remove our
+// signal handlers; that can't be done reliably if someone else is also trying
+// to do the same thing.
+static stack_t OldAltStack;
+
+static void CreateSigAltStack() {
+  const size_t AltStackSize = MINSIGSTKSZ + 8192;
+
+  // If we're executing on the alternate stack, or we already have an alternate
+  // signal stack that we're happy with, there's nothing for us to do. Don't
+  // reduce the size, some other part of the process might need a larger stack
+  // than we do.
+  if (sigaltstack(nullptr, &OldAltStack) != 0 ||
+      OldAltStack.ss_flags & SS_ONSTACK ||
+      (OldAltStack.ss_sp && OldAltStack.ss_size >= AltStackSize))
+    return;
+
+  stack_t AltStack = {};
+  AltStack.ss_sp = reinterpret_cast<char *>(malloc(AltStackSize));
+  AltStack.ss_size = AltStackSize;
+  if (sigaltstack(&AltStack, &OldAltStack) != 0)
+    free(AltStack.ss_sp);
+}
+#else
+static void CreateSigAltStack() {}
+#endif
+
 static void RegisterHandlers() {
   // We need to dereference the signals mutex during handler registration so
   // that we force its construction. This is to prevent the first use being
@@ -118,6 +155,10 @@ static void RegisterHandlers() {
 
   // If the handlers are already registered, we're done.
   if (NumRegisteredSignals != 0) return;
+
+  // Create an alternate stack for signal handling. This is necessary for us to
+  // be able to reliably handle signals due to stack overflow.
+  CreateSigAltStack();
 
   for (auto S : IntSigs) RegisterHandler(S);
   for (auto S : KillSigs) RegisterHandler(S);

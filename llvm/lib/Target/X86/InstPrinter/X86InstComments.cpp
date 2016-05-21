@@ -625,11 +625,15 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     break;
 
   case X86::VPERMQYri:
+  case X86::VPERMQZ256ri:
   case X86::VPERMPDYri:
+  case X86::VPERMPDZ256ri:
     Src1Name = getRegName(MI->getOperand(1).getReg());
     // FALL THROUGH.
   case X86::VPERMQYmi:
+  case X86::VPERMQZ256mi:
   case X86::VPERMPDYmi:
+  case X86::VPERMPDZ256mi:
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodeVPERMMask(MI->getOperand(NumOperands - 1).getImm(),
                       ShuffleMask);

@@ -1,10 +1,16 @@
-;RUN: llc -march=amdgcn -mcpu=verde < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=verde < %s | FileCheck %s
 
 ; Test a simple uniform loop that lives inside non-uniform control flow.
 
-;CHECK-LABEL: {{^}}test1:
-;CHECK: s_cbranch_execz
-;CHECK: %loop_body
+; CHECK-LABEL: {{^}}test1:
+; CHECK: v_cmp_ne_i32_e32 vcc, 0
+; CHECK: s_and_saveexec_b64
+
+; CHECK: [[LOOP_BODY_LABEL:BB[0-9]+_[0-9]+]]:
+; CHECK: s_and_b64 vcc, exec, vcc
+; CHECK: s_cbranch_vccz [[LOOP_BODY_LABEL]]
+
+; CHECK: s_endpgm
 define amdgpu_ps void @test1(<8 x i32> inreg %rsrc, <2 x i32> %addr.base, i32 %y, i32 %p) {
 main_body:
   %cc = icmp eq i32 %p, 0

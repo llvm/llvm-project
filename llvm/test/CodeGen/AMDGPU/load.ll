@@ -725,7 +725,7 @@ define void @load_i32_v2i32_local(<2 x i32> addrspace(1)* %out, i32 addrspace(3)
 ; an immediate.
 ; FUNC-LABEL: {{^}}load_i32_local_const_ptr:
 ; SI: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0
-; SI: ds_read_b32 v0, v[[ZERO]] offset:4
+; SI: ds_read_b32 v{{[0-9]+}}, v[[ZERO]] offset:4
 ; R600: LDS_READ_RET
 define void @load_i32_local_const_ptr(i32 addrspace(1)* %out, i32 addrspace(3)* %in) {
 entry:

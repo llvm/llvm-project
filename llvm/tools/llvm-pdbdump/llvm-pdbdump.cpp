@@ -415,6 +415,7 @@ static Error dumpPublicsStream(ScopedPrinter &P, PDBFile &File) {
   P.printList("Address Map", Publics.getAddressMap());
   P.printList("Thunk Map", Publics.getThunkMap());
   P.printList("Section Offsets", Publics.getSectionOffsets());
+  P.printList("Symbols", Publics.getSymbols());
   return Error::success();
 }
 

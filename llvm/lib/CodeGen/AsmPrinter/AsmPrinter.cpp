@@ -253,6 +253,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     }
     if (!EmitCodeView || MMI->getModule()->getDwarfVersion()) {
       DD = new DwarfDebug(this, &M);
+      DD->beginModule();
       Handlers.push_back(HandlerInfo(DD, DbgTimerName, DWARFGroupName));
     }
   }

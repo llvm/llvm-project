@@ -31,13 +31,10 @@ class DIELoc;
 class DwarfExpression {
 protected:
   // Various convenience accessors that extract things out of AsmPrinter.
-  const TargetRegisterInfo &TRI;
   unsigned DwarfVersion;
 
 public:
-  DwarfExpression(const TargetRegisterInfo &TRI,
-                  unsigned DwarfVersion)
-    : TRI(TRI), DwarfVersion(DwarfVersion) {}
+  DwarfExpression(unsigned DwarfVersion) : DwarfVersion(DwarfVersion) {}
   virtual ~DwarfExpression() {}
 
   /// Output a dwarf operand and an optional assembler comment.
@@ -48,7 +45,7 @@ public:
   virtual void EmitUnsigned(uint64_t Value) = 0;
   /// Return whether the given machine register is the frame register in the
   /// current function.
-  virtual bool isFrameRegister(unsigned MachineReg) = 0;
+  virtual bool isFrameRegister(const TargetRegisterInfo &TRI, unsigned MachineReg) = 0;
 
   /// Emit a dwarf register operation.
   void AddReg(int DwarfReg, const char *Comment = nullptr);
@@ -77,7 +74,8 @@ public:
 
   /// Emit an indirect dwarf register operation for the given machine register.
   /// \return false if no DWARF register exists for MachineReg.
-  bool AddMachineRegIndirect(unsigned MachineReg, int Offset = 0);
+  bool AddMachineRegIndirect(const TargetRegisterInfo &TRI, unsigned MachineReg,
+                             int Offset = 0);
 
   /// \brief Emit a partial DWARF register operation.
   /// \param MachineReg        the register
@@ -93,7 +91,8 @@ public:
   /// subregisters that alias the register.
   ///
   /// \return false if no DWARF register exists for MachineReg.
-  bool AddMachineRegPiece(unsigned MachineReg, unsigned PieceSizeInBits = 0,
+  bool AddMachineRegPiece(const TargetRegisterInfo &TRI, unsigned MachineReg,
+                          unsigned PieceSizeInBits = 0,
                           unsigned PieceOffsetInBits = 0);
 
   /// Emit a signed constant.
@@ -108,7 +107,8 @@ public:
   /// \param PieceOffsetInBits If this is one piece out of a fragmented
   /// location, this is the offset of the piece inside the entire variable.
   /// \return false if no DWARF register exists for MachineReg.
-  bool AddMachineRegExpression(const DIExpression *Expr, unsigned MachineReg,
+  bool AddMachineRegExpression(const TargetRegisterInfo &TRI,
+                               const DIExpression *Expr, unsigned MachineReg,
                                unsigned PieceOffsetInBits = 0);
   /// Emit a the operations remaining the DIExpressionIterator I.
   /// \param PieceOffsetInBits If this is one piece out of a fragmented
@@ -123,14 +123,14 @@ class DebugLocDwarfExpression : public DwarfExpression {
   ByteStreamer &BS;
 
 public:
-  DebugLocDwarfExpression(const TargetRegisterInfo &TRI,
-                          unsigned DwarfVersion, ByteStreamer &BS)
-    : DwarfExpression(TRI, DwarfVersion), BS(BS) {}
+  DebugLocDwarfExpression(unsigned DwarfVersion, ByteStreamer &BS)
+      : DwarfExpression(DwarfVersion), BS(BS) {}
 
   void EmitOp(uint8_t Op, const char *Comment = nullptr) override;
   void EmitSigned(int64_t Value) override;
   void EmitUnsigned(uint64_t Value) override;
-  bool isFrameRegister(unsigned MachineReg) override;
+  bool isFrameRegister(const TargetRegisterInfo &TRI,
+                       unsigned MachineReg) override;
 };
 
 /// DwarfExpression implementation for singular DW_AT_location.
@@ -144,7 +144,8 @@ public:
   void EmitOp(uint8_t Op, const char *Comment = nullptr) override;
   void EmitSigned(int64_t Value) override;
   void EmitUnsigned(uint64_t Value) override;
-  bool isFrameRegister(unsigned MachineReg) override;
+  bool isFrameRegister(const TargetRegisterInfo &TRI,
+                       unsigned MachineReg) override;
 };
 }
 

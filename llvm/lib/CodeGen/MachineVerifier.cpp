@@ -1844,8 +1844,9 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       SlotIndex PEnd = LiveInts->getMBBEndIdx(*PI);
       const VNInfo *PVNI = LR.getVNInfoBefore(PEnd);
 
-      // All predecessors must have a live-out value.
-      if (!PVNI) {
+      // All predecessors must have a live-out value if this is not a
+      // subregister liverange.
+      if (!PVNI && LaneMask == 0) {
         report("Register not marked live out of predecessor", *PI);
         report_context(LR, Reg, LaneMask);
         report_context(*VNI);

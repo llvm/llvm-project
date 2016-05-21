@@ -73,50 +73,25 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
 
   computeRegisterProperties(STI.getRegisterInfo());
 
-  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8i32, Expand);
-  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8f32, Expand);
-  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v16i32, Expand);
-  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v16f32, Expand);
-
-  setOperationAction(ISD::ADD, MVT::i32, Legal);
-  setOperationAction(ISD::ADDC, MVT::i32, Legal);
-  setOperationAction(ISD::ADDE, MVT::i32, Legal);
-  setOperationAction(ISD::SUBC, MVT::i32, Legal);
-  setOperationAction(ISD::SUBE, MVT::i32, Legal);
-
-  setOperationAction(ISD::FSIN, MVT::f32, Custom);
-  setOperationAction(ISD::FCOS, MVT::f32, Custom);
-
-  setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
-  setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
-
   // We need to custom lower vector stores from local memory
+  setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v4i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v8i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v16i32, Custom);
-
-  setOperationAction(ISD::LOAD, MVT::f64, Promote);
-  AddPromotedToType(ISD::LOAD, MVT::f64, MVT::v2i32);
-
-  setOperationAction(ISD::LOAD, MVT::i64, Promote);
-  AddPromotedToType(ISD::LOAD, MVT::i64, MVT::v2i32);
-
-  setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
-
-  setOperationAction(ISD::STORE, MVT::v8i32, Custom);
-  setOperationAction(ISD::STORE, MVT::v16i32, Custom);
-
-  setOperationAction(ISD::STORE, MVT::i1, Custom);
-  setOperationAction(ISD::STORE, MVT::v4i32, Custom);
-
-  setOperationAction(ISD::STORE, MVT::f64, Promote);
-  AddPromotedToType(ISD::STORE, MVT::f64, MVT::v2i32);
-
-  setOperationAction(ISD::STORE, MVT::i64, Promote);
-  AddPromotedToType(ISD::STORE, MVT::i64, MVT::v2i32);
+  setOperationAction(ISD::LOAD, MVT::i1, Custom);
 
   setOperationAction(ISD::STORE, MVT::v2i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v4i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v8i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v16i32, Custom);
+  setOperationAction(ISD::STORE, MVT::i1, Custom);
 
+  setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+  setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
+  setOperationAction(ISD::ConstantPool, MVT::v2i64, Expand);
+
+  setOperationAction(ISD::SELECT, MVT::i1, Promote);
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
   setOperationAction(ISD::SELECT, MVT::f64, Promote);
   AddPromotedToType(ISD::SELECT, MVT::f64, MVT::i64);
@@ -125,119 +100,39 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
+  setOperationAction(ISD::SELECT_CC, MVT::i1, Expand);
 
   setOperationAction(ISD::SETCC, MVT::i1, Promote);
   setOperationAction(ISD::SETCC, MVT::v2i1, Expand);
   setOperationAction(ISD::SETCC, MVT::v4i1, Expand);
 
-  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
-  setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+  setOperationAction(ISD::TRUNCATE, MVT::v2i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v2f32, Expand);
 
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i1, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i1, Custom);
-
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i8, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i8, Custom);
-
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v2i16, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::v4i16, Custom);
-
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i32, Legal);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::Other, Custom);
 
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f32, Custom);
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v16i8, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::v4f32, Custom);
-
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
 
-  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
+  setOperationAction(ISD::BR_CC, MVT::i1, Expand);
   setOperationAction(ISD::BR_CC, MVT::i32, Expand);
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
   setOperationAction(ISD::BR_CC, MVT::f32, Expand);
   setOperationAction(ISD::BR_CC, MVT::f64, Expand);
 
-  // On SI this is s_memtime and s_memrealtime on VI.
-  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
-
-  for (MVT VT : MVT::integer_valuetypes()) {
-    if (VT == MVT::i64)
-      continue;
-
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Legal);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Legal);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i32, Expand);
-
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i8, Legal);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i16, Legal);
-    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i32, Expand);
-
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i8, Legal);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i16, Legal);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i32, Expand);
-  }
-
-  for (MVT VT : MVT::integer_vector_valuetypes()) {
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v8i16, Expand);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v16i16, Expand);
-  }
-
-  for (MVT VT : MVT::fp_valuetypes())
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
-
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f16, Expand);
-  setLoadExtAction(ISD::EXTLOAD, MVT::v2f64, MVT::v2f32, Expand);
-
-  setTruncStoreAction(MVT::i64, MVT::i32, Expand);
-  setTruncStoreAction(MVT::v8i32, MVT::v8i16, Expand);
-  setTruncStoreAction(MVT::v16i32, MVT::v16i8, Expand);
-  setTruncStoreAction(MVT::v16i32, MVT::v16i16, Expand);
-
-
-  setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
-
-  setTruncStoreAction(MVT::v2f64, MVT::v2f32, Expand);
-  setTruncStoreAction(MVT::v2f64, MVT::v2f16, Expand);
-
-  setOperationAction(ISD::LOAD, MVT::i1, Custom);
-
-  setOperationAction(ISD::LOAD, MVT::v2i64, Promote);
-  AddPromotedToType(ISD::LOAD, MVT::v2i64, MVT::v4i32);
-
-  setOperationAction(ISD::STORE, MVT::v2i64, Promote);
-  AddPromotedToType(ISD::STORE, MVT::v2i64, MVT::v4i32);
-
-  setOperationAction(ISD::ConstantPool, MVT::v2i64, Expand);
-
-  setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
-  setOperationAction(ISD::GlobalAddress, MVT::i64, Custom);
-  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
-
-  // These should use UDIVREM, so set them to expand
-  setOperationAction(ISD::UDIV, MVT::i64, Expand);
-  setOperationAction(ISD::UREM, MVT::i64, Expand);
-
-  setOperationAction(ISD::SELECT_CC, MVT::i1, Expand);
-  setOperationAction(ISD::SELECT, MVT::i1, Promote);
-
-  setOperationAction(ISD::TRUNCATE, MVT::v2i32, Expand);
-
-
-  setOperationAction(ISD::FP_ROUND, MVT::v2f32, Expand);
-
   // We only support LOAD/STORE and vector manipulation ops for vectors
   // with > 4 elements.
   for (MVT VT : {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32, MVT::v2i64, MVT::v2f64}) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
-      switch(Op) {
+      switch (Op) {
       case ISD::LOAD:
       case ISD::STORE:
       case ISD::BUILD_VECTOR:
@@ -274,15 +169,10 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
     AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v4i32);
   }
 
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
-    setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
-    setOperationAction(ISD::FCEIL, MVT::f64, Legal);
-    setOperationAction(ISD::FRINT, MVT::f64, Legal);
-  }
-
-  setOperationAction(ISD::FFLOOR, MVT::f64, Legal);
-  setOperationAction(ISD::FDIV, MVT::f32, Custom);
-  setOperationAction(ISD::FDIV, MVT::f64, Custom);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8i32, Expand);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8f32, Expand);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v16i32, Expand);
+  setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v16f32, Expand);
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling,
   // and output demarshalling
@@ -298,6 +188,29 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
     setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
     setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
   }
+
+  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+  setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+
+  // On SI this is s_memtime and s_memrealtime on VI.
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+
+  setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+  setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+
+  if (Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
+    setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
+    setOperationAction(ISD::FCEIL, MVT::f64, Legal);
+    setOperationAction(ISD::FRINT, MVT::f64, Legal);
+  }
+
+  setOperationAction(ISD::FFLOOR, MVT::f64, Legal);
+
+  setOperationAction(ISD::FSIN, MVT::f32, Custom);
+  setOperationAction(ISD::FCOS, MVT::f32, Custom);
+  setOperationAction(ISD::FDIV, MVT::f32, Custom);
+  setOperationAction(ISD::FDIV, MVT::f64, Custom);
+
 
   setTargetDAGCombine(ISD::FADD);
   setTargetDAGCombine(ISD::FSUB);

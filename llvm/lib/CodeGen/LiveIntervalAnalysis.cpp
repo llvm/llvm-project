@@ -1571,7 +1571,7 @@ void LiveIntervals::splitSeparateComponents(LiveInterval &LI,
 }
 
 void LiveIntervals::renameDisconnectedComponents() {
-  ConnectedSubRegClasses SubRegClasses(*this, *MRI);
+  ConnectedSubRegClasses SubRegClasses(*this, *MRI, *TII);
 
   // Iterate over all vregs. Note that we query getNumVirtRegs() the newly
   // created vregs end up with higher numbers but do not need to be visited as
@@ -1584,4 +1584,10 @@ void LiveIntervals::renameDisconnectedComponents() {
 
     SubRegClasses.renameComponents(*LI);
   }
+}
+
+void LiveIntervals::constructMainRangeFromSubranges(LiveInterval &LI) {
+  assert(LRCalc && "LRCalc not initialized.");
+  LRCalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
+  LRCalc->constructMainRangeFromSubranges(LI);
 }

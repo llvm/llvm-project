@@ -29,7 +29,7 @@ namespace llvm {
 class AVRTargetMachine : public LLVMTargetMachine {
 public:
   AVRTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                   StringRef FS, const TargetOptions &Options, Reloc::Model RM,
+                   StringRef FS, const TargetOptions &Options, Optional<Reloc::Model> RM,
                    CodeModel::Model CM, CodeGenOpt::Level OL);
 
   const AVRSubtarget *getSubtargetImpl() const;
@@ -39,7 +39,6 @@ public:
     return this->TLOF.get();
   }
 
-  // Pass Pipeline Configuration.
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
 private:

@@ -410,6 +410,11 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     /// on each virtual register.
     void renameDisconnectedComponents();
 
+    /// For live interval \p LI with correct SubRanges construct matching
+    /// information for the main live range. Expects the main live range to not
+    /// have any segments or value numbers.
+    void constructMainRangeFromSubranges(LiveInterval &LI);
+
   private:
     /// Compute live intervals for all virtual registers.
     void computeVirtRegs();
