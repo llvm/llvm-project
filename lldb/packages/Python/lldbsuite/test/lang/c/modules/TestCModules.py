@@ -20,6 +20,7 @@ class CModulesTestCase(TestBase):
     @skipIfFreeBSD
     @expectedFailureAll(oslist=["linux"], bugnumber="http://llvm.org/pr23456 'fopen' has unknown return type")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://26404254")
     def test_expr(self):
         if platform.system() == "Darwin" and platform.release() < StrictVersion('12.0.0'):
             self.skipTest()
