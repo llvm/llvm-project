@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "esan.h"
+#include "esan_flags.h"
 #include "esan_interface_internal.h"
 #include "esan_shadow.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -29,8 +30,6 @@ namespace __esan {
 bool EsanIsInitialized;
 ToolType WhichTool;
 ShadowMapping Mapping;
-
-static const char EsanOptsEnv[] = "ESAN_OPTIONS";
 
 // We are combining multiple performance tuning tools under the umbrella of
 // one EfficiencySanitizer super-tool.  Most of our tools have very similar
@@ -64,9 +63,27 @@ void processRangeAccess(uptr PC, uptr Addr, int Size, bool IsWrite) {
 #if SANITIZER_DEBUG
 static bool verifyShadowScheme() {
   // Sanity checks for our shadow mapping scheme.
+  uptr AppStart, AppEnd;
+  if (Verbosity() >= 3) {
+    for (int i = 0; getAppRegion(i, &AppStart, &AppEnd); ++i) {
+      VPrintf(3, "App #%d: [%zx-%zx) (%zuGB)\n", i, AppStart, AppEnd,
+              (AppEnd - AppStart) >> 30);
+    }
+  }
   for (int Scale = 0; Scale < 8; ++Scale) {
     Mapping.initialize(Scale);
-    uptr AppStart, AppEnd;
+    if (Verbosity() >= 3) {
+      VPrintf(3, "\nChecking scale %d\n", Scale);
+      uptr ShadowStart, ShadowEnd;
+      for (int i = 0; getShadowRegion(i, &ShadowStart, &ShadowEnd); ++i) {
+        VPrintf(3, "Shadow #%d: [%zx-%zx) (%zuGB)\n", i, ShadowStart,
+                ShadowEnd, (ShadowEnd - ShadowStart) >> 30);
+      }
+      for (int i = 0; getShadowRegion(i, &ShadowStart, &ShadowEnd); ++i) {
+        VPrintf(3, "Shadow(Shadow) #%d: [%zx-%zx)\n", i,
+                appToShadow(ShadowStart), appToShadow(ShadowEnd - 1)+1);
+      }
+    }
     for (int i = 0; getAppRegion(i, &AppStart, &AppEnd); ++i) {
       DCHECK(isAppMem(AppStart));
       DCHECK(!isAppMem(AppStart - 1));
@@ -122,21 +139,6 @@ static void initializeShadow() {
 
     // TODO: Call MmapNoAccess() on in-between regions.
   }
-}
-
-static void initializeFlags() {
-  // Once we add our own flags we'll parse them here.
-  // For now the common ones are sufficient.
-  FlagParser Parser;
-  SetCommonFlagsDefaults();
-  RegisterCommonFlags(&Parser);
-  Parser.ParseString(GetEnv(EsanOptsEnv));
-  InitializeCommonFlags();
-  if (Verbosity())
-    ReportUnrecognizedFlags();
-  if (common_flags()->help)
-    Parser.PrintFlagDescriptions();
-  __sanitizer_set_report_path(common_flags()->log_path);
 }
 
 void initializeLibrary(ToolType Tool) {

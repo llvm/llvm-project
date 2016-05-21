@@ -9,6 +9,7 @@ include_directories(..)
 
 set(ESAN_SOURCES
   esan.cpp
+  esan_flags.cpp
   esan_interface.cpp
   esan_interceptors.cpp)
 
