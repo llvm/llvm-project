@@ -130,6 +130,18 @@ public:
 
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;
 
+// SectionPiece represents a piece of splittable section contents.
+struct SectionPiece {
+  SectionPiece(size_t Off, ArrayRef<uint8_t> Data)
+      : InputOff(Off), Data(Data), Live(!Config->GcSections) {}
+  size_t size() const { return Data.size(); }
+
+  size_t InputOff;
+  size_t OutputOff = -1;
+  ArrayRef<uint8_t> Data; // slice of the input section
+  bool Live;
+};
+
 // Usually sections are copied to the output as atomic chunks of data,
 // but some special types of sections are split into small pieces of data
 // and each piece is copied to a different place in the output.
@@ -142,24 +154,12 @@ public:
   SplitInputSection(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                     typename InputSectionBase<ELFT>::Kind SectionKind);
 
-  // For each piece of data, we maintain the offsets in the input section and
-  // in the output section.
-  std::vector<std::pair<uintX_t, uintX_t>> Offsets;
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  std::vector<SectionPiece> Pieces;
 
-  // Merge input sections may use the following special values as the output
-  // section offset:
-  enum {
-    // The piece is dead.
-    PieceDead = uintX_t(-1),
-    // The piece is live, but an offset has not yet been assigned. After offsets
-    // have been assigned, if the output section uses tail merging, the field
-    // will still have this value and the output section offset is computed
-    // lazilly.
-    PieceLive = uintX_t(-2),
-  };
-
-  std::pair<std::pair<uintX_t, uintX_t> *, uintX_t>
-  getRangeAndSize(uintX_t Offset);
+  // Returns the SectionPiece at a given input section offset.
+  SectionPiece *getSectionPiece(uintX_t Offset);
 };
 
 // This corresponds to a SHF_MERGE section of an input file.

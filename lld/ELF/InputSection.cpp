@@ -269,9 +269,11 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   const unsigned Bits = sizeof(uintX_t) * 8;
   for (const RelTy &Rel : Rels) {
     uint32_t Type = Rel.getType(Config->Mips64EL);
+    uintX_t Offset = this->getOffset(Rel.r_offset);
+    uint8_t *BufLoc = Buf + Offset;
     uintX_t Addend = getAddend<ELFT>(Rel);
     if (!RelTy::IsRela)
-      Addend += Target->getImplicitAddend(Buf + Rel.r_offset, Type);
+      Addend += Target->getImplicitAddend(BufLoc, Type);
 
     SymbolBody &Sym = this->File->getRelocTargetSym(Rel);
     if (Target->getRelExpr(Type, Sym) != R_ABS) {
@@ -279,8 +281,6 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       return;
     }
 
-    uintX_t Offset = this->getOffset(Rel.r_offset);
-    uint8_t *BufLoc = Buf + Offset;
     uintX_t AddrLoc = this->OutSec->getVA() + Offset;
     uint64_t SymVA = SignExtend64<Bits>(getSymVA<ELFT>(
         Type, Addend, AddrLoc, Sym, BufLoc, *this->File, R_ABS));
@@ -414,17 +414,17 @@ typename ELFT::uint EHInputSection<ELFT>::getOffset(uintX_t Offset) {
   // identify the start of the output .eh_frame. Handle this special case.
   if (this->getSectionHdr()->sh_size == 0)
     return Offset;
-  std::pair<uintX_t, uintX_t> *I = this->getRangeAndSize(Offset).first;
-  uintX_t Base = I->second;
-  if (Base == uintX_t(-1))
+  SectionPiece *Piece = this->getSectionPiece(Offset);
+  if (Piece->OutputOff == size_t(-1))
     return -1; // Not in the output
 
-  uintX_t Addend = Offset - I->first;
-  return Base + Addend;
+  uintX_t Addend = Offset - Piece->InputOff;
+  return Piece->OutputOff + Addend;
 }
 
-static size_t findNull(StringRef S, size_t EntSize) {
+static size_t findNull(ArrayRef<uint8_t> A, size_t EntSize) {
   // Optimize the common case.
+  StringRef S((const char *)A.data(), A.size());
   if (EntSize == 1)
     return S.find(0);
 
@@ -441,21 +441,17 @@ MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
                                            const Elf_Shdr *Header)
     : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {
   uintX_t EntSize = Header->sh_entsize;
-  ArrayRef<uint8_t> D = this->getSectionData();
-  StringRef Data((const char *)D.data(), D.size());
-  std::vector<std::pair<uintX_t, uintX_t>> &Offsets = this->Offsets;
+  ArrayRef<uint8_t> Data = this->getSectionData();
 
-  uintX_t V = Config->GcSections ? MergeInputSection<ELFT>::PieceDead
-                                 : MergeInputSection<ELFT>::PieceLive;
   if (Header->sh_flags & SHF_STRINGS) {
     uintX_t Offset = 0;
     while (!Data.empty()) {
       size_t End = findNull(Data, EntSize);
       if (End == StringRef::npos)
         fatal("string is not null terminated");
-      Offsets.push_back(std::make_pair(Offset, V));
       uintX_t Size = End + EntSize;
-      Data = Data.substr(Size);
+      this->Pieces.emplace_back(Offset, Data.slice(0, Size));
+      Data = Data.slice(Size);
       Offset += Size;
     }
     return;
@@ -465,7 +461,7 @@ MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
   size_t Size = Data.size();
   assert((Size % EntSize) == 0);
   for (unsigned I = 0, N = Size; I != N; I += EntSize)
-    Offsets.push_back(std::make_pair(I, V));
+    this->Pieces.emplace_back(I, Data.slice(I, EntSize));
 }
 
 template <class ELFT>
@@ -474,9 +470,7 @@ bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
-std::pair<std::pair<typename ELFT::uint, typename ELFT::uint> *,
-          typename ELFT::uint>
-SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
+SectionPiece *SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t Size = Data.size();
@@ -485,37 +479,29 @@ SplitInputSection<ELFT>::getRangeAndSize(uintX_t Offset) {
 
   // Find the element this offset points to.
   auto I = std::upper_bound(
-      Offsets.begin(), Offsets.end(), Offset,
-      [](const uintX_t &A, const std::pair<uintX_t, uintX_t> &B) {
-        return A < B.first;
-      });
-  uintX_t End = I == Offsets.end() ? Data.size() : I->first;
+      Pieces.begin(), Pieces.end(), Offset,
+      [](const uintX_t &A, const SectionPiece &B) { return A < B.InputOff; });
   --I;
-  return std::make_pair(&*I, End);
+  return &*I;
 }
 
 template <class ELFT>
 typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
-  std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
-      this->getRangeAndSize(Offset);
-  std::pair<uintX_t, uintX_t> *I = T.first;
-  uintX_t End = T.second;
-  uintX_t Start = I->first;
+  SectionPiece &Piece = *this->getSectionPiece(Offset);
+  assert(Piece.Live);
 
   // Compute the Addend and if the Base is cached, return.
-  uintX_t Addend = Offset - Start;
-  uintX_t &Base = I->second;
-  assert(Base != MergeInputSection<ELFT>::PieceDead);
-  if (Base != MergeInputSection<ELFT>::PieceLive)
-    return Base + Addend;
+  uintX_t Addend = Offset - Piece.InputOff;
+  if (Piece.OutputOff != size_t(-1))
+    return Piece.OutputOff + Addend;
 
   // Map the base to the offset in the output section and cache it.
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
-  StringRef Entry = Data.substr(Start, End - Start);
+  StringRef Entry = Data.substr(Piece.InputOff, Piece.size());
   auto *MOS = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
-  Base = MOS->getOffset(Entry);
-  return Base + Addend;
+  Piece.OutputOff = MOS->getOffset(Entry);
+  return Piece.OutputOff + Addend;
 }
 
 template <class ELFT>

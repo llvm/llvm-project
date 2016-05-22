@@ -161,6 +161,9 @@ COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;
 COMPILER_RT_VISIBILITY extern uint32_t VPBufferSize;
 COMPILER_RT_VISIBILITY extern uint32_t VPMaxNumValsPerSite;
+/* Pointer to the start of static value counters to be allocted. */
+COMPILER_RT_VISIBILITY extern ValueProfNode *CurrentVNode;
+COMPILER_RT_VISIBILITY extern ValueProfNode *EndVNode;
 extern void (*VPMergeHook)(struct ValueProfData *, __llvm_profile_data *);
 
 #endif
