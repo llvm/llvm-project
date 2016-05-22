@@ -29,8 +29,6 @@ COMPILER_RT_VISIBILITY void lprofSetupValueProfiler() {
   if (VPMaxNumValsPerSite > INSTR_PROF_MAX_NUM_VAL_PER_SITE)
     VPMaxNumValsPerSite = INSTR_PROF_MAX_NUM_VAL_PER_SITE;
 
-  CurrentVNode = __llvm_profile_begin_vnodes();
-  EndVNode = __llvm_profile_end_vnodes();
   if (!(EndVNode > CurrentVNode)) {
     CurrentVNode = 0;
     EndVNode = 0;
@@ -72,9 +70,16 @@ __llvm_get_function_addr(const __llvm_profile_data *Data) {
  * 0 if allocation fails.
  */
 
+static int hasStaticCounters = 1;
+
 static int allocateValueProfileCounters(__llvm_profile_data *Data) {
   uint64_t NumVSites = 0;
   uint32_t VKI;
+
+  /* This function will never be called when value site array is allocated
+     statically at compile time.  */
+  hasStaticCounters = 0;
+
   for (VKI = IPVK_First; VKI <= IPVK_Last; ++VKI)
     NumVSites += Data->NumValueSites[VKI];
 
@@ -89,15 +94,11 @@ static int allocateValueProfileCounters(__llvm_profile_data *Data) {
   return 1;
 }
 
-COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
-COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
-static int hasNoStaticCounters() { return (EndVNode == 0); }
-
 static ValueProfNode *allocateOneNode(__llvm_profile_data *Data, uint32_t Index,
                                       uint64_t Value) {
   ValueProfNode *Node;
 
-  if (hasNoStaticCounters())
+  if (!hasStaticCounters)
     return (ValueProfNode *)calloc(1, sizeof(ValueProfNode));
 
   Node = COMPILER_RT_PTR_FETCH_ADD(ValueProfNode, CurrentVNode, 1);
@@ -116,8 +117,6 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
   if (!PData)
     return;
 
-  /* This path will never be taken when value site array is allocated
-     statically at compile time.  */
   if (!PData->Values) {
     if (!allocateValueProfileCounters(PData))
       return;
@@ -195,7 +194,7 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
   else if (PrevVNode && !PrevVNode->Next)
     Success = COMPILER_RT_BOOL_CMPXCHG(&(PrevVNode->Next), 0, CurrentVNode);
 
-  if (!Success && hasNoStaticCounters()) {
+  if (!Success && !hasStaticCounters) {
     free(CurrentVNode);
     return;
   }

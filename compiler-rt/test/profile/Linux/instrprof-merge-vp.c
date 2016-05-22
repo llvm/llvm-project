@@ -1,4 +1,4 @@
-// RUN: %clang_profgen -mllvm --enable-value-profiling=true -O2 -o %t %s
+// RUN: %clang_profgen -mllvm --enable-value-profiling=true -mllvm -vp-static-alloc=true -mllvm -vp-counters-per-site=3 -O2 -o %t %s
 // RUN: %run %t %t.profraw
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-profdata show --all-functions --counts --ic-targets %t.profdata > %t.profdump
