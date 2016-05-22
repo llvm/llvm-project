@@ -88,4 +88,7 @@ ValueProfNode *__llvm_profile_begin_vnodes(void) {
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_end_vnodes(void) { return 0; }
 
+COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
+COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
+
 #endif
