@@ -327,14 +327,14 @@ private:
 // FDE or CIE
 template <class ELFT> struct EHRegion {
   typedef typename ELFT::uint uintX_t;
-  EHRegion(EHInputSection<ELFT> *S, unsigned Index);
-  StringRef data() const;
-  EHInputSection<ELFT> *S;
+  EHRegion(EHInputSection<ELFT> *Sec, unsigned Index);
+  ArrayRef<uint8_t> data() const;
+  EHInputSection<ELFT> *Sec;
   unsigned Index;
 };
 
-template <class ELFT> struct Cie : public EHRegion<ELFT> {
-  Cie(EHInputSection<ELFT> *S, unsigned Index);
+template <class ELFT> struct CieRecord : public EHRegion<ELFT> {
+  CieRecord(EHInputSection<ELFT> *S, unsigned Index);
   std::vector<EHRegion<ELFT>> Fdes;
   uint8_t FdeEncoding;
 };
@@ -361,10 +361,10 @@ private:
   uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
 
   std::vector<EHInputSection<ELFT> *> Sections;
-  std::vector<Cie<ELFT>> Cies;
+  std::vector<CieRecord<ELFT>> Cies;
 
   // Maps CIE content + personality to a index in Cies.
-  llvm::DenseMap<std::pair<StringRef, SymbolBody *>, unsigned> CieMap;
+  llvm::DenseMap<std::pair<StringRef, SymbolBody *>, uintX_t> CieMap;
   bool Finalized = false;
 };
 
