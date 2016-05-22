@@ -1139,9 +1139,10 @@ public:
   /// \brief Determine whether this is an empty class in the sense of
   /// (C++11 [meta.unary.prop]).
   ///
-  /// A non-union class is empty iff it has a virtual function, virtual base,
-  /// data member (other than 0-width bit-field) or inherits from a non-empty
-  /// class.
+  /// The CXXRecordDecl is a class type, but not a union type,
+  /// with no non-static data members other than bit-fields of length 0,
+  /// no virtual member functions, no virtual base classes,
+  /// and no base class B for which is_empty<B>::value is false.
   ///
   /// \note This does NOT include a check for union-ness.
   bool isEmpty() const { return data().Empty; }

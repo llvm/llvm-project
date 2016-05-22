@@ -314,21 +314,19 @@ __m256 test_mm256_dp_ps(__m256 A, __m256 B) {
   return _mm256_dp_ps(A, B, 7);
 }
 
-// FIXME: ZEXT instead of SEXT
 int test_mm256_extract_epi8(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi8
   // CHECK: and i32 %{{.*}}, 31
   // CHECK: extractelement <32 x i8> %{{.*}}, i32 %{{.*}}
-  // CHECK: ext i8 %{{.*}} to i32
+  // CHECK: zext i8 %{{.*}} to i32
   return _mm256_extract_epi8(A, 32);
 }
 
-// FIXME: ZEXT instead of SEXT
 int test_mm256_extract_epi16(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi16
   // CHECK: and i32 %{{.*}}, 15
   // CHECK: extractelement <16 x i16> %{{.*}}, i32 %{{.*}}
-  // CHECK: ext i16 %{{.*}} to i32
+  // CHECK: zext i16 %{{.*}} to i32
   return _mm256_extract_epi16(A, 16);
 }
 
