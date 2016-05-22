@@ -826,6 +826,8 @@ public:
                         llvm::opt::ArgStringList &CmdArgs) const override;
   virtual std::string computeSysRoot() const;
 
+  virtual std::string getDynamicLinker(const llvm::opt::ArgList &Args) const;
+
   std::vector<std::string> ExtraOpts;
 
 protected:

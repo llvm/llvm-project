@@ -172,8 +172,6 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     CXXRecordDecl *BaseClassDecl
       = cast<CXXRecordDecl>(BaseType->getAs<RecordType>()->getDecl());
 
-    // A class with a non-empty base class is not empty.
-    // FIXME: Standard ref?
     if (!BaseClassDecl->isEmpty()) {
       if (!data().Empty) {
         // C++0x [class]p7:
@@ -187,6 +185,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
         data().IsStandardLayout = false;
       }
 
+      // C++14 [meta.unary.prop]p4:
+      //   T is a class type [...] with [...] no base class B for which
+      //   is_empty<B>::value is false.
       data().Empty = false;
       data().HasNoNonEmptyBases = false;
     }
@@ -238,9 +239,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       if (SeenVBaseTypes.insert(C.getCanonicalType(BaseType)).second)
         VBases.push_back(Base);
 
-      // C++11 [meta.unary.prop] is_empty:
-      //    T is a class type, but not a union type, with ... no virtual base
-      //    classes
+      // C++14 [meta.unary.prop] is_empty:
+      //   T is a class type, but not a union type, with ... no virtual base
+      //   classes
       data().Empty = false;
 
       // C++1z [dcl.init.agg]p1:
@@ -458,8 +459,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   A POD-struct is an aggregate class...
       data().PlainOldData = false;
       
-      // Virtual functions make the class non-empty.
-      // FIXME: Standard ref?
+      // C++14 [meta.unary.prop]p4:
+      //   T is a class type [...] with [...] no virtual member functions...
       data().Empty = false;
 
       // C++ [class.virtual]p1:
@@ -938,7 +939,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
     if (!data().HasNoNonEmptyBases)
       data().IsStandardLayout = false;
 
-    // If this is not a zero-length bit-field, then the class is not empty.
+    // C++14 [meta.unary.prop]p4:
+    //   T is a class type [...] with [...] no non-static data members other
+    //   than bit-fields of length 0...
     if (data().Empty) {
       if (!Field->isBitField() ||
           (!Field->getBitWidth()->isTypeDependent() &&

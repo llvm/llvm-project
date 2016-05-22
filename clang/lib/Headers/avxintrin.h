@@ -1875,13 +1875,13 @@ _mm256_extract_epi32(__m256i __a, const int __imm)
 /// \param __imm
 ///    An immediate integer operand with bits [3:0] determining which vector
 ///    element is extracted and returned.
-/// \returns A 32-bit integer containing the extracted 16 bits of extended
+/// \returns A 32-bit integer containing the extracted 16 bits of zero extended
 ///    packed data.
 static __inline int __DEFAULT_FN_ATTRS
 _mm256_extract_epi16(__m256i __a, const int __imm)
 {
   __v16hi __b = (__v16hi)__a;
-  return __b[__imm & 15];
+  return (unsigned short)__b[__imm & 15];
 }
 
 /// \brief Takes a [32 x i8] vector and returns the vector element value
@@ -1897,13 +1897,13 @@ _mm256_extract_epi16(__m256i __a, const int __imm)
 /// \param __imm
 ///    An immediate integer operand with bits [4:0] determining which vector
 ///    element is extracted and returned.
-/// \returns A 32-bit integer containing the extracted 8 bits of extended packed
-///    data.
+/// \returns A 32-bit integer containing the extracted 8 bits of zero extended
+///    packed data.
 static __inline int __DEFAULT_FN_ATTRS
 _mm256_extract_epi8(__m256i __a, const int __imm)
 {
   __v32qi __b = (__v32qi)__a;
-  return __b[__imm & 31];
+  return (unsigned char)__b[__imm & 31];
 }
 
 #ifdef __x86_64__
