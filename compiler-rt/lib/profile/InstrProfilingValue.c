@@ -18,13 +18,6 @@
 #define INSTR_PROF_COMMON_API_IMPL
 #include "InstrProfData.inc"
 
-#define PROF_OOM(Msg) PROF_ERR(Msg ":%s\n", "Out of memory");
-#define PROF_OOM_RETURN(Msg)                                                   \
-  {                                                                            \
-    PROF_OOM(Msg)                                                              \
-    return NULL;                                                               \
-  }
-
 COMPILER_RT_VISIBILITY uint32_t VPMaxNumValsPerSite =
     INSTR_PROF_MAX_NUM_VAL_PER_SITE;
 
@@ -35,6 +28,19 @@ COMPILER_RT_VISIBILITY void lprofSetupValueProfiler() {
     VPMaxNumValsPerSite = atoi(Str);
   if (VPMaxNumValsPerSite > INSTR_PROF_MAX_NUM_VAL_PER_SITE)
     VPMaxNumValsPerSite = INSTR_PROF_MAX_NUM_VAL_PER_SITE;
+
+  CurrentVNode = __llvm_profile_begin_vnodes();
+  EndVNode = __llvm_profile_end_vnodes();
+  if (!(EndVNode > CurrentVNode)) {
+    CurrentVNode = 0;
+    EndVNode = 0;
+  }
+  /* Adjust max vals per site to a smaller value
+   * when static allocation is in use. */
+  else {
+    if (!Str || !Str[0])
+      VPMaxNumValsPerSite = 8;
+  }
 }
 
 COMPILER_RT_VISIBILITY void lprofSetMaxValsPerSite(uint32_t MaxVals) {
@@ -83,14 +89,35 @@ static int allocateValueProfileCounters(__llvm_profile_data *Data) {
   return 1;
 }
 
+COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
+COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
+static int hasNoStaticCounters() { return (EndVNode == 0); }
+
+static ValueProfNode *allocateOneNode(__llvm_profile_data *Data, uint32_t Index,
+                                      uint64_t Value) {
+  ValueProfNode *Node;
+
+  if (hasNoStaticCounters())
+    return (ValueProfNode *)calloc(1, sizeof(ValueProfNode));
+
+  Node = COMPILER_RT_PTR_FETCH_ADD(ValueProfNode, CurrentVNode, 1);
+  if (Node >= EndVNode) {
+    PROF_WARN("Running out of nodes: site_%d@func_%" PRIu64
+              ", value=%" PRIu64 " \n", Index, Data->NameRef, Value);
+    return 0;
+  }
+  return Node;
+}
+
 COMPILER_RT_VISIBILITY void
 __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
                                  uint32_t CounterIndex) {
-
   __llvm_profile_data *PData = (__llvm_profile_data *)Data;
   if (!PData)
     return;
 
+  /* This path will never be taken when value site array is allocated
+     statically at compile time.  */
   if (!PData->Values) {
     if (!allocateValueProfileCounters(PData))
       return;
@@ -154,7 +181,7 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
     return;
   }
 
-  CurrentVNode = (ValueProfNode *)calloc(1, sizeof(ValueProfNode));
+  CurrentVNode = allocateOneNode(PData, CounterIndex, TargetValue);
   if (!CurrentVNode)
     return;
 
@@ -168,7 +195,7 @@ __llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
   else if (PrevVNode && !PrevVNode->Next)
     Success = COMPILER_RT_BOOL_CMPXCHG(&(PrevVNode->Next), 0, CurrentVNode);
 
-  if (!Success) {
+  if (!Success && hasNoStaticCounters()) {
     free(CurrentVNode);
     return;
   }

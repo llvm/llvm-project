@@ -61,6 +61,8 @@ const char *__llvm_profile_begin_names(void);
 const char *__llvm_profile_end_names(void);
 uint64_t *__llvm_profile_begin_counters(void);
 uint64_t *__llvm_profile_end_counters(void);
+ValueProfNode *__llvm_profile_begin_vnodes();
+ValueProfNode *__llvm_profile_end_vnodes();
 
 /*!
  * \brief Clear profile counters to zero.

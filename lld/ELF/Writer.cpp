@@ -855,8 +855,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
     if (!D->Section->Live)
       return false;
     if (auto *S = dyn_cast<MergeInputSection<ELFT>>(D->Section))
-      if (S->getRangeAndSize(D->Value).first->second ==
-          MergeInputSection<ELFT>::PieceDead)
+      if (!S->getSectionPiece(D->Value)->Live)
         return false;
   }
   return true;
