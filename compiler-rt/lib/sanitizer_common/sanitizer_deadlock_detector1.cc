@@ -119,11 +119,16 @@ void DD::MutexBeforeLock(DDCallback *cb,
 
 void DD::ReportDeadlock(DDCallback *cb, DDMutex *m) {
   DDLogicalThread *lt = cb->lt;
-  uptr path[10];
+  uptr path[20];
   uptr len = dd.findPathToLock(&lt->dd, m->id, path, ARRAY_SIZE(path));
-  CHECK_GT(len, 0U);  // Hm.. cycle of 10 locks? I'd like to see that.
+  if (len == 0U) {
+    // A cycle of 20+ locks? Well, that's a bit odd...
+    Printf("WARNING: too long mutex cycle found\n");
+    return;
+  }
   CHECK_EQ(m->id, path[0]);
   lt->report_pending = true;
+  len = Min<uptr>(len, DDReport::kMaxLoopSize);
   DDReport *rep = &lt->rep;
   rep->n = len;
   for (uptr i = 0; i < len; i++) {
