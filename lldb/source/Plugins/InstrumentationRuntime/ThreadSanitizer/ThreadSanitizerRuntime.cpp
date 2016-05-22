@@ -465,7 +465,7 @@ ThreadSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report)
     } else if (description == "mutex-double-lock") {
         return "Double lock of a mutex";
     } else if (description == "mutex-invalid-access") {
-        return "Use of an invalid mutex (e.g. uninitialized or destroyed)";
+        return "Use of an uninitialized or destroyed mutex";
     } else if (description == "mutex-bad-unlock") {
         return "Unlock of an unlocked mutex (or by a wrong thread)";
     } else if (description == "mutex-bad-read-lock") {
