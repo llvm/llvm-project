@@ -80,7 +80,7 @@ INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt64PtrTy(Ctx), CounterPtr, \
 INSTR_PROF_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), FunctionPointer, \
                 FunctionAddr)
 INSTR_PROF_DATA(IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
-                ConstantPointerNull::get(Int8PtrTy))
+                ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
 INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
@@ -597,6 +597,12 @@ ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_DATA_SECT_NAME __llvm_prf_data
 #define INSTR_PROF_NAME_SECT_NAME __llvm_prf_names
 #define INSTR_PROF_CNTS_SECT_NAME __llvm_prf_cnts
+/* Array of pointers. Each pointer points to a list
+ * of value nodes associated with one value site.
+ */
+#define INSTR_PROF_VALS_SECT_NAME __llvm_prf_vals
+/* Value profile nodes section. */
+#define INSTR_PROF_VNODES_SECT_NAME __llvm_prf_vnds
 #define INSTR_PROF_COVMAP_SECT_NAME __llvm_covmap
 
 #define INSTR_PROF_DATA_SECT_NAME_STR                                          \
@@ -607,6 +613,10 @@ ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
   INSTR_PROF_QUOTE(INSTR_PROF_CNTS_SECT_NAME)
 #define INSTR_PROF_COVMAP_SECT_NAME_STR                                        \
   INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_SECT_NAME)
+#define INSTR_PROF_VALS_SECT_NAME_STR                                          \
+  INSTR_PROF_QUOTE(INSTR_PROF_VALS_SECT_NAME)
+#define INSTR_PROF_VNODES_SECT_NAME_STR                                        \
+  INSTR_PROF_QUOTE(INSTR_PROF_VNODES_SECT_NAME)
 
 /* Macros to define start/stop section symbol for a given
  * section on Linux. For instance

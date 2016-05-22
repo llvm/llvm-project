@@ -58,6 +58,20 @@ inline StringRef getInstrProfDataSectionName(bool AddSegment) {
                     : INSTR_PROF_DATA_SECT_NAME_STR;
 }
 
+/// Return the name of data section containing pointers to value profile
+/// counters/nodes.
+inline StringRef getInstrProfValuesSectionName(bool AddSegment) {
+  return AddSegment ? "__DATA," INSTR_PROF_VALS_SECT_NAME_STR
+                    : INSTR_PROF_VALS_SECT_NAME_STR;
+}
+
+/// Return the name of data section containing nodes holdling value
+/// profiling data.
+inline StringRef getInstrProfVNodesSectionName(bool AddSegment) {
+  return AddSegment ? "__DATA," INSTR_PROF_VNODES_SECT_NAME_STR
+                    : INSTR_PROF_VNODES_SECT_NAME_STR;
+}
+
 /// Return the name profile runtime entry point to do value profiling
 /// for a given site.
 inline StringRef getInstrProfValueProfFuncName() {
@@ -79,6 +93,12 @@ inline StringRef getInstrProfDataVarPrefix() { return "__profd_"; }
 
 /// Return the name prefix of profile counter variables.
 inline StringRef getInstrProfCountersVarPrefix() { return "__profc_"; }
+
+/// Return the name prefix of value profile variables.
+inline StringRef getInstrProfValuesVarPrefix() { return "__profvp_"; }
+
+/// Return the name of value profile node array variables:
+inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 
 /// Return the name prefix of the COMDAT group for instrumentation variables
 /// associated with a COMDAT function.
