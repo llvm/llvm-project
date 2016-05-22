@@ -994,8 +994,12 @@ static const EnumEntry<unsigned> ElfSectionFlags[] = {
   ENUM_ENT(SHF_TLS,              "T"),
   ENUM_ENT(SHF_MASKOS,           "o"),
   ENUM_ENT(SHF_MASKPROC,         "p"),
-  ENUM_ENT_1(XCORE_SHF_CP_SECTION),
-  ENUM_ENT_1(XCORE_SHF_DP_SECTION),
+  ENUM_ENT_1(SHF_COMPRESSED),
+};
+
+static const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
+  LLVM_READOBJ_ENUM_ENT(ELF, XCORE_SHF_CP_SECTION),
+  LLVM_READOBJ_ENUM_ENT(ELF, XCORE_SHF_DP_SECTION)
 };
 
 static const EnumEntry<unsigned> ElfAMDGPUSectionFlags[] = {
@@ -3280,6 +3284,10 @@ template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
     case EM_X86_64:
       SectionFlags.insert(SectionFlags.end(), std::begin(ElfX86_64SectionFlags),
                           std::end(ElfX86_64SectionFlags));
+      break;
+    case EM_XCORE:
+      SectionFlags.insert(SectionFlags.end(), std::begin(ElfXCoreSectionFlags),
+                          std::end(ElfXCoreSectionFlags));
       break;
     default:
       // Nothing to do.

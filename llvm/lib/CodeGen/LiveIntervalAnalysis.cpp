@@ -1496,7 +1496,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
   else
     endIdx = getInstructionIndex(*End);
 
-  Indexes->repairIndexesInRange(MBB, *Begin, *End);
+  Indexes->repairIndexesInRange(MBB, Begin, End);
 
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;

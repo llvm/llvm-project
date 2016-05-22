@@ -31,6 +31,20 @@ cl::opt<bool> DoNameCompression("enable-name-compression",
                                 cl::desc("Enable name string compression"),
                                 cl::init(true));
 
+cl::opt<bool> ValueProfileStaticAlloc(
+    "vp-static-alloc",
+    cl::desc("Do static counter allocation for value profiler"),
+    cl::init(true));
+cl::opt<double> NumCountersPerValueSite(
+    "vp-counters-per-site",
+    cl::desc("The average number of profile counters allocated "
+             "per value profiling site."),
+    // This is set to a very small value because in real programs, only
+    // a very small percentage of value sites have non-zero targets, e.g, 1/30.
+    // For those sites with non-zero profile, the average number of targets
+    // is usually smaller than 2.
+    cl::init(1.0));
+
 class InstrProfilingLegacyPass : public ModulePass {
   InstrProfiling InstrProf;
 
@@ -141,6 +155,7 @@ bool InstrProfiling::run(Module &M) {
   if (!MadeChange)
     return false;
 
+  emitVNodes();
   emitNameData();
   emitRegistration();
   emitRuntimeHook();
@@ -288,6 +303,20 @@ static inline Comdat *getOrCreateProfileComdat(Module &M, Function &F,
   return M.getOrInsertComdat(StringRef(getVarName(Inc, ComdatPrefix)));
 }
 
+static bool needsRuntimeRegistrationOfSectionRange(const Module &M) {
+  // Don't do this for Darwin.  compiler-rt uses linker magic.
+  if (Triple(M.getTargetTriple()).isOSDarwin())
+    return false;
+
+  // Use linker script magic to get data/cnts/name start/end.
+  if (Triple(M.getTargetTriple()).isOSLinux() ||
+      Triple(M.getTargetTriple()).isOSFreeBSD() ||
+      Triple(M.getTargetTriple()).isPS4CPU())
+    return false;
+
+  return true;
+}
+
 GlobalVariable *
 InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
@@ -321,10 +350,34 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   CounterPtr->setAlignment(8);
   CounterPtr->setComdat(ProfileVarsComdat);
 
-  // Create data variable.
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
+  // Allocate statically the array of pointers to value profile nodes for
+  // the current function.
+  Constant *ValuesPtrExpr = ConstantPointerNull::get(Int8PtrTy);
+  if (ValueProfileStaticAlloc && !needsRuntimeRegistrationOfSectionRange(*M)) {
+
+    uint64_t NS = 0;
+    for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+      NS += PD.NumValueSites[Kind];
+    if (NS) {
+      ArrayType *ValuesTy = ArrayType::get(Type::getInt64Ty(Ctx), NS);
+
+      auto *ValuesVar =
+          new GlobalVariable(*M, ValuesTy, false, NamePtr->getLinkage(),
+                             Constant::getNullValue(ValuesTy),
+                             getVarName(Inc, getInstrProfValuesVarPrefix()));
+      ValuesVar->setVisibility(NamePtr->getVisibility());
+      ValuesVar->setSection(getInstrProfValuesSectionName(isMachO()));
+      ValuesVar->setAlignment(8);
+      ValuesVar->setComdat(ProfileVarsComdat);
+      ValuesPtrExpr =
+          ConstantExpr::getBitCast(ValuesVar, llvm::Type::getInt8PtrTy(Ctx));
+    }
+  }
+
+  // Create data variable.
   auto *Int16Ty = Type::getInt16Ty(Ctx);
-  auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last+1);
+  auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
   Type *DataTypes[] = {
     #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
     #include "llvm/ProfileData/InstrProfData.inc"
@@ -367,18 +420,49 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   return CounterPtr;
 }
 
-static bool needsRuntimeRegistrationOfSectionRange(const Module &M) {
-  // Don't do this for Darwin.  compiler-rt uses linker magic.
-  if (Triple(M.getTargetTriple()).isOSDarwin())
-    return false;
+void InstrProfiling::emitVNodes() {
+  if (!ValueProfileStaticAlloc)
+    return;
 
-  // Use linker script magic to get data/cnts/name start/end.
-  if (Triple(M.getTargetTriple()).isOSLinux() ||
-      Triple(M.getTargetTriple()).isOSFreeBSD() ||
-      Triple(M.getTargetTriple()).isPS4CPU())
-    return false;
+  // For now only support this on platforms that do
+  // not require runtime registration to discover
+  // named section start/end.
+  if (needsRuntimeRegistrationOfSectionRange(*M))
+    return;
 
-  return true;
+  size_t TotalNS = 0;
+  for (auto &PD : ProfileDataMap) {
+    for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+      TotalNS += PD.second.NumValueSites[Kind];
+  }
+
+  if (!TotalNS)
+    return;
+
+  uint64_t NumCounters = TotalNS * NumCountersPerValueSite;
+  // Heuristic for small programs with very few total value sites.
+  // The default value of vp-counters-per-site is chosen based on
+  // the observation that large apps usually have a low percentage
+  // of value sites that actually have any profile data, and thus
+  // the average number of counters per site is low. For small
+  // apps with very few sites, this may not be true. Bump up the
+  // number of counters in this case.
+  if (NumCounters < 10)
+    NumCounters *= 2;
+
+  auto &Ctx = M->getContext();
+  Type *VNodeTypes[] = {
+#define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+  auto *VNodeTy = StructType::get(Ctx, makeArrayRef(VNodeTypes));
+
+  ArrayType *VNodesTy = ArrayType::get(VNodeTy, NumCounters);
+  auto *VNodesVar = new GlobalVariable(
+      *M, VNodesTy, false, llvm::GlobalValue::PrivateLinkage,
+      Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
+  VNodesVar->setSection(getInstrProfVNodesSectionName(isMachO()));
+  UsedVars.push_back(VNodesVar);
 }
 
 void InstrProfiling::emitNameData() {

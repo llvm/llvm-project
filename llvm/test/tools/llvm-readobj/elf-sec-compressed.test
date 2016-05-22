@@ -1,0 +1,9 @@
+RUN: llvm-readobj -sections \
+RUN:   %p/Inputs/compression.zlib.style.elf-x86-64 | FileCheck %s
+
+CHECK:      Section {
+CHECK:       Name: .debug_info
+CHECK-NEXT:  Type: SHT_PROGBITS
+CHECK-NEXT:  Flags [ 
+CHECK-NEXT:   SHF_COMPRESSED (0x800)
+CHECK-NEXT:  ]

@@ -84,6 +84,9 @@ private:
   /// Emit the section with compressed function names.
   void emitNameData();
 
+  /// Emit value nodes section for value profiling.
+  void emitVNodes();
+
   /// Emit runtime registration functions for each profile data variable.
   void emitRegistration();
 
