@@ -10,10 +10,14 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORD_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLRECORD_H
 
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordIterator.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
@@ -22,35 +26,300 @@ using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
 using llvm::support::little32_t;
 
+class SymbolRecord {
+protected:
+  explicit SymbolRecord(SymbolRecordKind Kind) : Kind(Kind) {}
+
+public:
+  SymbolRecordKind getKind() const { return Kind; }
+
+private:
+  SymbolRecordKind Kind;
+};
+
 // S_GPROC32, S_LPROC32, S_GPROC32_ID, S_LPROC32_ID, S_LPROC32_DPC or
 // S_LPROC32_DPC_ID
-struct ProcSym {
-  ulittle32_t PtrParent;
-  ulittle32_t PtrEnd;
-  ulittle32_t PtrNext;
-  ulittle32_t CodeSize;
-  ulittle32_t DbgStart;
-  ulittle32_t DbgEnd;
-  TypeIndex FunctionType;
-  ulittle32_t CodeOffset;
-  ulittle16_t Segment;
-  uint8_t Flags; // ProcSymFlags enum
-  // Name: The null-terminated name follows.
+class ProcSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t PtrParent;
+    ulittle32_t PtrEnd;
+    ulittle32_t PtrNext;
+    ulittle32_t CodeSize;
+    ulittle32_t DbgStart;
+    ulittle32_t DbgEnd;
+    TypeIndex FunctionType;
+    ulittle32_t CodeOffset;
+    ulittle16_t Segment;
+    uint8_t Flags; // ProcSymFlags enum
+                   // Name: The null-terminated name follows.
+  };
+
+  ProcSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
+          StringRef Name)
+      : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name) {
+  }
+
+  static ErrorOr<ProcSym> deserialize(SymbolRecordKind Kind,
+                                      uint32_t RecordOffset,
+                                      ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return ProcSym(Kind, RecordOffset, H, Name);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, CodeOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+};
+
+struct BinaryAnnotationIterator {
+  struct AnnotationData {
+    BinaryAnnotationsOpCode OpCode;
+    StringRef Name;
+    uint32_t U1;
+    uint32_t U2;
+    int32_t S1;
+  };
+
+  BinaryAnnotationIterator(ArrayRef<uint8_t> Annotations) : Data(Annotations) {}
+  BinaryAnnotationIterator() {}
+  BinaryAnnotationIterator(const BinaryAnnotationIterator &Other)
+      : Data(Other.Data) {}
+
+  bool operator==(BinaryAnnotationIterator Other) const {
+    return Data == Other.Data;
+  }
+
+  bool operator!=(BinaryAnnotationIterator Other) const {
+    return !(*this == Other);
+  }
+
+  BinaryAnnotationIterator &operator=(const BinaryAnnotationIterator Other) {
+    Data = Other.Data;
+    return *this;
+  }
+
+  BinaryAnnotationIterator &operator++() {
+    if (!ParseCurrentAnnotation()) {
+      *this = BinaryAnnotationIterator();
+      return *this;
+    }
+    Data = Next;
+    Next = ArrayRef<uint8_t>();
+    Current.reset();
+    return *this;
+  }
+
+  BinaryAnnotationIterator operator++(int) {
+    BinaryAnnotationIterator Orig(*this);
+    ++(*this);
+    return Orig;
+  }
+
+  const AnnotationData &operator*() {
+    ParseCurrentAnnotation();
+    return Current.getValue();
+  }
+
+private:
+  static uint32_t GetCompressedAnnotation(ArrayRef<uint8_t> &Annotations) {
+    if (Annotations.empty())
+      return -1;
+
+    uint8_t FirstByte = Annotations.front();
+    Annotations = Annotations.drop_front();
+
+    if ((FirstByte & 0x80) == 0x00)
+      return FirstByte;
+
+    if (Annotations.empty())
+      return -1;
+
+    uint8_t SecondByte = Annotations.front();
+    Annotations = Annotations.drop_front();
+
+    if ((FirstByte & 0xC0) == 0x80)
+      return ((FirstByte & 0x3F) << 8) | SecondByte;
+
+    if (Annotations.empty())
+      return -1;
+
+    uint8_t ThirdByte = Annotations.front();
+    Annotations = Annotations.drop_front();
+
+    if (Annotations.empty())
+      return -1;
+
+    uint8_t FourthByte = Annotations.front();
+    Annotations = Annotations.drop_front();
+
+    if ((FirstByte & 0xE0) == 0xC0)
+      return ((FirstByte & 0x1F) << 24) | (SecondByte << 16) |
+             (ThirdByte << 8) | FourthByte;
+
+    return -1;
+  };
+
+  static int32_t DecodeSignedOperand(uint32_t Operand) {
+    if (Operand & 1)
+      return -(Operand >> 1);
+    return Operand >> 1;
+  };
+
+  static int32_t DecodeSignedOperand(ArrayRef<uint8_t> &Annotations) {
+    return DecodeSignedOperand(GetCompressedAnnotation(Annotations));
+  };
+
+  bool ParseCurrentAnnotation() {
+    if (Current.hasValue())
+      return true;
+
+    Next = Data;
+    uint32_t Op = GetCompressedAnnotation(Next);
+    AnnotationData Result;
+    Result.OpCode = static_cast<BinaryAnnotationsOpCode>(Op);
+    switch (Result.OpCode) {
+    case BinaryAnnotationsOpCode::Invalid:
+      Result.Name = "Invalid";
+      Next = ArrayRef<uint8_t>();
+      break;
+    case BinaryAnnotationsOpCode::CodeOffset:
+      Result.Name = "CodeOffset";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeOffsetBase:
+      Result.Name = "ChangeCodeOffsetBase";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeOffset:
+      Result.Name = "ChangeCodeOffset";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeLength:
+      Result.Name = "ChangeCodeLength";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeFile:
+      Result.Name = "ChangeFile";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeLineEndDelta:
+      Result.Name = "ChangeLineEndDelta";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeRangeKind:
+      Result.Name = "ChangeRangeKind";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeColumnStart:
+      Result.Name = "ChangeColumnStart";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeColumnEnd:
+      Result.Name = "ChangeColumnEnd";
+      Result.U1 = GetCompressedAnnotation(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeLineOffset:
+      Result.Name = "ChangeLineOffset";
+      Result.S1 = DecodeSignedOperand(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeColumnEndDelta:
+      Result.Name = "ChangeColumnEndDelta";
+      Result.S1 = DecodeSignedOperand(Next);
+      break;
+    case BinaryAnnotationsOpCode::ChangeCodeOffsetAndLineOffset: {
+      Result.Name = "ChangeCodeOffsetAndLineOffset";
+      uint32_t Annotation = GetCompressedAnnotation(Next);
+      Result.S1 = DecodeSignedOperand(Annotation >> 4);
+      Result.U1 = Annotation & 0xf;
+      break;
+    }
+    case BinaryAnnotationsOpCode::ChangeCodeLengthAndCodeOffset: {
+      Result.Name = "ChangeCodeLengthAndCodeOffset";
+      Result.U1 = GetCompressedAnnotation(Next);
+      Result.U2 = GetCompressedAnnotation(Next);
+      break;
+    }
+    }
+    Current = Result;
+    return true;
+  }
+
+  Optional<AnnotationData> Current;
+  ArrayRef<uint8_t> Data;
+  ArrayRef<uint8_t> Next;
 };
 
 // S_INLINESITE
-struct InlineSiteSym {
-  ulittle32_t PtrParent;
-  ulittle32_t PtrEnd;
-  TypeIndex Inlinee;
-  // BinaryAnnotations
+class InlineSiteSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t PtrParent;
+    ulittle32_t PtrEnd;
+    TypeIndex Inlinee;
+    // BinaryAnnotations
+  };
+
+  InlineSiteSym(uint32_t RecordOffset, const Hdr *H,
+                ArrayRef<uint8_t> Annotations)
+      : SymbolRecord(SymbolRecordKind::InlineSiteSym),
+        RecordOffset(RecordOffset), Header(*H), Annotations(Annotations) {}
+
+  static ErrorOr<InlineSiteSym> deserialize(SymbolRecordKind Kind,
+                                            uint32_t RecordOffset,
+                                            ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    ArrayRef<uint8_t> Annotations;
+    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Annotations));
+
+    return InlineSiteSym(RecordOffset, H, Annotations);
+  }
+
+  llvm::iterator_range<BinaryAnnotationIterator> annotations() const {
+    return llvm::make_range(BinaryAnnotationIterator(Annotations),
+                            BinaryAnnotationIterator());
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+
+private:
+  ArrayRef<uint8_t> Annotations;
 };
 
 // S_LOCAL
-struct LocalSym {
-  TypeIndex Type;
-  ulittle16_t Flags; // LocalSymFlags enum
-  // Name: The null-terminated name follows.
+class LocalSym : public SymbolRecord {
+public:
+  struct Hdr {
+    TypeIndex Type;
+    ulittle16_t Flags; // LocalSymFlags enum
+                       // Name: The null-terminated name follows.
+  };
+
+  LocalSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::LocalSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<LocalSym> deserialize(SymbolRecordKind Kind,
+                                       uint32_t RecordOffset,
+                                       ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return LocalSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 struct LocalVariableAddrRange {
@@ -67,182 +336,728 @@ struct LocalVariableAddrGap {
 enum : uint16_t { MaxDefRange = 0xf000 };
 
 // S_DEFRANGE
-struct DefRangeSym {
-  ulittle32_t Program;
-  LocalVariableAddrRange Range;
-  // LocalVariableAddrGap Gaps[];
+class DefRangeSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Program;
+    LocalVariableAddrRange Range;
+    // LocalVariableAddrGap Gaps[];
+  };
+
+  DefRangeSym(uint32_t RecordOffset, const Hdr *H,
+              ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeSym), RecordOffset(RecordOffset),
+        Header(*H), Gaps(Gaps) {}
+
+  static ErrorOr<DefRangeSym> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    ArrayRef<LocalVariableAddrGap> Gaps;
+    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+
+    return DefRangeSym(RecordOffset, H, Gaps);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, Range);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  ArrayRef<LocalVariableAddrGap> Gaps;
 };
 
 // S_DEFRANGE_SUBFIELD
-struct DefRangeSubfieldSym {
-  ulittle32_t Program;
-  ulittle16_t OffsetInParent;
-  LocalVariableAddrRange Range;
-  // LocalVariableAddrGap Gaps[];
+class DefRangeSubfieldSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Program;
+    ulittle16_t OffsetInParent;
+    LocalVariableAddrRange Range;
+    // LocalVariableAddrGap Gaps[];
+  };
+  DefRangeSubfieldSym(uint32_t RecordOffset, const Hdr *H,
+                      ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeSubfieldSym),
+        RecordOffset(RecordOffset), Header(*H), Gaps(Gaps) {}
+
+  static ErrorOr<DefRangeSubfieldSym> deserialize(SymbolRecordKind Kind,
+                                                  uint32_t RecordOffset,
+                                                  ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    ArrayRef<LocalVariableAddrGap> Gaps;
+    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+
+    return DefRangeSubfieldSym(RecordOffset, H, Gaps);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, Range);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  ArrayRef<LocalVariableAddrGap> Gaps;
 };
 
 // S_DEFRANGE_REGISTER
-struct DefRangeRegisterSym {
-  ulittle16_t Register;
-  ulittle16_t MayHaveNoName;
-  LocalVariableAddrRange Range;
-  // LocalVariableAddrGap Gaps[];
+class DefRangeRegisterSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle16_t Register;
+    ulittle16_t MayHaveNoName;
+    LocalVariableAddrRange Range;
+    // LocalVariableAddrGap Gaps[];
+  };
+
+  DefRangeRegisterSym(uint32_t RecordOffset, const Hdr *H,
+                      ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeRegisterSym),
+        RecordOffset(RecordOffset), Header(*H), Gaps(Gaps) {}
+
+  DefRangeRegisterSym(uint16_t Register, uint16_t MayHaveNoName,
+                      uint32_t OffsetStart, uint16_t ISectStart, uint16_t Range,
+                      ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeRegisterSym), RecordOffset(0),
+        Gaps(Gaps) {
+    Header.Register = Register;
+    Header.MayHaveNoName = MayHaveNoName;
+    Header.Range.OffsetStart = OffsetStart;
+    Header.Range.ISectStart = ISectStart;
+    Header.Range.Range = Range;
+  }
+
+  static ErrorOr<DefRangeRegisterSym> deserialize(SymbolRecordKind Kind,
+                                                  uint32_t RecordOffset,
+                                                  ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    ArrayRef<LocalVariableAddrGap> Gaps;
+    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+
+    return DefRangeRegisterSym(RecordOffset, H, Gaps);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, Range);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  ArrayRef<LocalVariableAddrGap> Gaps;
 };
 
 // S_DEFRANGE_SUBFIELD_REGISTER
-struct DefRangeSubfieldRegisterSym {
-  ulittle16_t Register; // Register to which the variable is relative
-  ulittle16_t MayHaveNoName;
-  ulittle32_t OffsetInParent;
-  LocalVariableAddrRange Range;
-  // LocalVariableAddrGap Gaps[];
+class DefRangeSubfieldRegisterSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle16_t Register; // Register to which the variable is relative
+    ulittle16_t MayHaveNoName;
+    ulittle32_t OffsetInParent;
+    LocalVariableAddrRange Range;
+    // LocalVariableAddrGap Gaps[];
+  };
+
+  DefRangeSubfieldRegisterSym(uint32_t RecordOffset, const Hdr *H,
+                              ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeSubfieldRegisterSym),
+        RecordOffset(RecordOffset), Header(*H), Gaps(Gaps) {}
+
+  DefRangeSubfieldRegisterSym(uint16_t Register, uint16_t MayHaveNoName,
+                              uint32_t OffsetInParent,
+                              ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeSubfieldRegisterSym),
+        RecordOffset(0), Gaps(Gaps) {
+    Header.Register = Register;
+    Header.MayHaveNoName = MayHaveNoName;
+    Header.OffsetInParent = OffsetInParent;
+  }
+
+  static ErrorOr<DefRangeSubfieldRegisterSym>
+  deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
+              ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    ArrayRef<LocalVariableAddrGap> Gaps;
+    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+
+    return DefRangeSubfieldRegisterSym(RecordOffset, H, Gaps);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, Range);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  ArrayRef<LocalVariableAddrGap> Gaps;
 };
 
 // S_DEFRANGE_FRAMEPOINTER_REL
-struct DefRangeFramePointerRelSym {
-  little32_t Offset; // Offset from the frame pointer register
-  LocalVariableAddrRange Range;
-  // LocalVariableAddrGap Gaps[];
-};
+class DefRangeFramePointerRelSym : public SymbolRecord {
+public:
+  struct Hdr {
+    little32_t Offset; // Offset from the frame pointer register
+    LocalVariableAddrRange Range;
+    // LocalVariableAddrGap Gaps[];
+  };
 
-// S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
-struct DefRangeFramePointerRelFullScopeSym {
-  little32_t Offset; // Offset from the frame pointer register
+  DefRangeFramePointerRelSym(uint32_t RecordOffset, const Hdr *H,
+                             ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeFramePointerRelSym),
+        RecordOffset(RecordOffset), Header(*H), Gaps(Gaps) {}
+
+  static ErrorOr<DefRangeFramePointerRelSym>
+  deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
+              ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    ArrayRef<LocalVariableAddrGap> Gaps;
+    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+
+    return DefRangeFramePointerRelSym(RecordOffset, H, Gaps);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, Range);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  ArrayRef<LocalVariableAddrGap> Gaps;
 };
 
 // S_DEFRANGE_REGISTER_REL
-struct DefRangeRegisterRelSym {
-  ulittle16_t BaseRegister;
-  ulittle16_t Flags;
-  little32_t BasePointerOffset;
-  LocalVariableAddrRange Range;
-  // LocalVariableAddrGap Gaps[];
+class DefRangeRegisterRelSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle16_t BaseRegister;
+    ulittle16_t Flags;
+    little32_t BasePointerOffset;
+    LocalVariableAddrRange Range;
+    // LocalVariableAddrGap Gaps[];
+  };
 
-  bool hasSpilledUDTMember() const { return Flags & 1; }
-  uint16_t offsetInParent() const { return Flags >> 4; }
+  DefRangeRegisterRelSym(uint32_t RecordOffset, const Hdr *H,
+                         ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelSym),
+        RecordOffset(RecordOffset), Header(*H), Gaps(Gaps) {}
+
+  DefRangeRegisterRelSym(uint16_t BaseRegister, uint16_t Flags,
+                         int32_t BasePointerOffset, uint32_t OffsetStart,
+                         uint16_t ISectStart, uint16_t Range,
+                         ArrayRef<LocalVariableAddrGap> Gaps)
+      : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelSym), RecordOffset(0),
+        Gaps(Gaps) {
+    Header.BaseRegister = BaseRegister;
+    Header.Flags = Flags;
+    Header.BasePointerOffset = BasePointerOffset;
+    Header.Range.OffsetStart = OffsetStart;
+    Header.Range.ISectStart = ISectStart;
+    Header.Range.Range = Range;
+  }
+
+  static ErrorOr<DefRangeRegisterRelSym> deserialize(SymbolRecordKind Kind,
+                                                     uint32_t RecordOffset,
+                                                     ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    ArrayRef<LocalVariableAddrGap> Gaps;
+    CV_DESERIALIZE(Data, H, CV_ARRAY_FIELD_TAIL(Gaps));
+
+    return DefRangeRegisterRelSym(RecordOffset, H, Gaps);
+  }
+
+  bool hasSpilledUDTMember() const { return Header.Flags & 1; }
+  uint16_t offsetInParent() const { return Header.Flags >> 4; }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, Range);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  ArrayRef<LocalVariableAddrGap> Gaps;
+};
+
+// S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
+class DefRangeFramePointerRelFullScopeSym : public SymbolRecord {
+public:
+  struct Hdr {
+    little32_t Offset; // Offset from the frame pointer register
+  };
+
+  DefRangeFramePointerRelFullScopeSym(uint32_t RecordOffset, const Hdr *H)
+      : SymbolRecord(SymbolRecordKind::DefRangeFramePointerRelFullScopeSym),
+        RecordOffset(RecordOffset), Header(*H) {}
+
+  static ErrorOr<DefRangeFramePointerRelFullScopeSym>
+  deserialize(SymbolRecordKind Kind, uint32_t RecordOffset,
+              ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    CV_DESERIALIZE(Data, H);
+
+    return DefRangeFramePointerRelFullScopeSym(RecordOffset, H);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
 };
 
 // S_BLOCK32
-struct BlockSym {
-  ulittle32_t PtrParent;
-  ulittle32_t PtrEnd;
-  ulittle32_t CodeSize;
-  ulittle32_t CodeOffset;
-  ulittle16_t Segment;
-  // Name: The null-terminated name follows.
+class BlockSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t PtrParent;
+    ulittle32_t PtrEnd;
+    ulittle32_t CodeSize;
+    ulittle32_t CodeOffset;
+    ulittle16_t Segment;
+    // Name: The null-terminated name follows.
+  };
+
+  BlockSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::BlockSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<BlockSym> deserialize(SymbolRecordKind Kind,
+                                       uint32_t RecordOffset,
+                                       ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return BlockSym(RecordOffset, H, Name);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, CodeOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_LABEL32
-struct LabelSym {
-  ulittle32_t CodeOffset;
-  ulittle16_t Segment;
-  uint8_t Flags; // CV_PROCFLAGS
-  // Name: The null-terminated name follows.
+class LabelSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t CodeOffset;
+    ulittle16_t Segment;
+    uint8_t Flags; // CV_PROCFLAGS
+                   // Name: The null-terminated name follows.
+  };
+
+  LabelSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::LabelSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<LabelSym> deserialize(SymbolRecordKind Kind,
+                                       uint32_t RecordOffset,
+                                       ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return LabelSym(RecordOffset, H, Name);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, CodeOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_OBJNAME
-struct ObjNameSym {
-  ulittle32_t Signature;
-  // Name: The null-terminated name follows.
+class ObjNameSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Signature;
+    // Name: The null-terminated name follows.
+  };
+
+  ObjNameSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::ObjNameSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<ObjNameSym> deserialize(SymbolRecordKind Kind,
+                                         uint32_t RecordOffset,
+                                         ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return ObjNameSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_COMPILE3
-struct CompileSym3 {
-  ulittle32_t flags; // CompileSym3Flags enum
-  uint8_t getLanguage() const { return flags & 0xff; }
-  ulittle16_t Machine; // CPUType
-  ulittle16_t VersionFrontendMajor;
-  ulittle16_t VersionFrontendMinor;
-  ulittle16_t VersionFrontendBuild;
-  ulittle16_t VersionFrontendQFE;
-  ulittle16_t VersionBackendMajor;
-  ulittle16_t VersionBackendMinor;
-  ulittle16_t VersionBackendBuild;
-  ulittle16_t VersionBackendQFE;
-  // VersionString: The null-terminated version string follows.
+class CompileSym3 : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t flags; // CompileSym3Flags enum
+    uint8_t getLanguage() const { return flags & 0xff; }
+    ulittle16_t Machine; // CPUType
+    ulittle16_t VersionFrontendMajor;
+    ulittle16_t VersionFrontendMinor;
+    ulittle16_t VersionFrontendBuild;
+    ulittle16_t VersionFrontendQFE;
+    ulittle16_t VersionBackendMajor;
+    ulittle16_t VersionBackendMinor;
+    ulittle16_t VersionBackendBuild;
+    ulittle16_t VersionBackendQFE;
+    // VersionString: The null-terminated version string follows.
+  };
+
+  CompileSym3(uint32_t RecordOffset, const Hdr *H, StringRef Version)
+      : SymbolRecord(SymbolRecordKind::Compile3Sym), RecordOffset(RecordOffset),
+        Header(*H), Version(Version) {}
+
+  static ErrorOr<CompileSym3> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Version;
+    CV_DESERIALIZE(Data, H, Version);
+
+    return CompileSym3(RecordOffset, H, Version);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Version;
 };
 
 // S_FRAMEPROC
-struct FrameProcSym {
-  ulittle32_t TotalFrameBytes;
-  ulittle32_t PaddingFrameBytes;
-  ulittle32_t OffsetToPadding;
-  ulittle32_t BytesOfCalleeSavedRegisters;
-  ulittle32_t OffsetOfExceptionHandler;
-  ulittle16_t SectionIdOfExceptionHandler;
-  ulittle32_t Flags;
+class FrameProcSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t TotalFrameBytes;
+    ulittle32_t PaddingFrameBytes;
+    ulittle32_t OffsetToPadding;
+    ulittle32_t BytesOfCalleeSavedRegisters;
+    ulittle32_t OffsetOfExceptionHandler;
+    ulittle16_t SectionIdOfExceptionHandler;
+    ulittle32_t Flags;
+  };
+
+  FrameProcSym(uint32_t RecordOffset, const Hdr *H)
+      : SymbolRecord(SymbolRecordKind::FrameProcSym),
+        RecordOffset(RecordOffset), Header(*H) {}
+
+  static ErrorOr<FrameProcSym> deserialize(SymbolRecordKind Kind,
+                                           uint32_t RecordOffset,
+                                           ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    CV_DESERIALIZE(Data, H);
+
+    return FrameProcSym(RecordOffset, H);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
 };
 
 // S_CALLSITEINFO
-struct CallSiteInfoSym {
-  ulittle32_t CodeOffset;
-  ulittle16_t Segment;
-  ulittle16_t Reserved;
-  TypeIndex Type;
+class CallSiteInfoSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t CodeOffset;
+    ulittle16_t Segment;
+    ulittle16_t Reserved;
+    TypeIndex Type;
+  };
+
+  CallSiteInfoSym(uint32_t RecordOffset, const Hdr *H)
+      : SymbolRecord(SymbolRecordKind::CallSiteInfoSym),
+        RecordOffset(RecordOffset), Header(*H) {}
+
+  static ErrorOr<CallSiteInfoSym> deserialize(SymbolRecordKind Kind,
+                                              uint32_t RecordOffset,
+                                              ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    CV_DESERIALIZE(Data, H);
+
+    return CallSiteInfoSym(RecordOffset, H);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, CodeOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
 };
 
 // S_HEAPALLOCSITE
-struct HeapAllocationSiteSym {
-  ulittle32_t CodeOffset;
-  ulittle16_t Segment;
-  ulittle16_t CallInstructionSize;
-  TypeIndex Type;
+class HeapAllocationSiteSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t CodeOffset;
+    ulittle16_t Segment;
+    ulittle16_t CallInstructionSize;
+    TypeIndex Type;
+  };
+
+  HeapAllocationSiteSym(uint32_t RecordOffset, const Hdr *H)
+      : SymbolRecord(SymbolRecordKind::HeapAllocationSiteSym),
+        RecordOffset(RecordOffset), Header(*H) {}
+
+  static ErrorOr<HeapAllocationSiteSym> deserialize(SymbolRecordKind Kind,
+                                                    uint32_t RecordOffset,
+                                                    ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    CV_DESERIALIZE(Data, H);
+
+    return HeapAllocationSiteSym(RecordOffset, H);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, CodeOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
 };
 
 // S_FRAMECOOKIE
-struct FrameCookieSym {
-  ulittle32_t CodeOffset;
-  ulittle16_t Register;
-  ulittle32_t CookieKind;
+class FrameCookieSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t CodeOffset;
+    ulittle16_t Register;
+    ulittle32_t CookieKind;
+  };
+
+  FrameCookieSym(uint32_t RecordOffset, const Hdr *H)
+      : SymbolRecord(SymbolRecordKind::FrameCookieSym),
+        RecordOffset(RecordOffset), Header(*H) {}
+
+  static ErrorOr<FrameCookieSym> deserialize(SymbolRecordKind Kind,
+                                             uint32_t RecordOffset,
+                                             ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    CV_DESERIALIZE(Data, H);
+
+    return FrameCookieSym(RecordOffset, H);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, CodeOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
 };
 
 // S_UDT, S_COBOLUDT
-struct UDTSym {
-  TypeIndex Type; // Type of the UDT
-  // Name: The null-terminated name follows.
+class UDTSym : public SymbolRecord {
+public:
+  struct Hdr {
+    TypeIndex Type; // Type of the UDT
+                    // Name: The null-terminated name follows.
+  };
+
+  UDTSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::UDTSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<UDTSym> deserialize(SymbolRecordKind Kind,
+                                     uint32_t RecordOffset,
+                                     ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return UDTSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_BUILDINFO
-struct BuildInfoSym {
-  ulittle32_t BuildId;
+class BuildInfoSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t BuildId;
+  };
+
+  BuildInfoSym(uint32_t RecordOffset, const Hdr *H)
+      : SymbolRecord(SymbolRecordKind::BuildInfoSym),
+        RecordOffset(RecordOffset), Header(*H) {}
+
+  static ErrorOr<BuildInfoSym> deserialize(SymbolRecordKind Kind,
+                                           uint32_t RecordOffset,
+                                           ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    CV_DESERIALIZE(Data, H);
+
+    return BuildInfoSym(RecordOffset, H);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
 };
 
 // S_BPREL32
-struct BPRelativeSym {
-  little32_t Offset;  // Offset from the base pointer register
-  TypeIndex Type;     // Type of the variable
-  // Name: The null-terminated name follows.
+class BPRelativeSym : public SymbolRecord {
+public:
+  struct Hdr {
+    little32_t Offset; // Offset from the base pointer register
+    TypeIndex Type;    // Type of the variable
+                       // Name: The null-terminated name follows.
+  };
+
+  BPRelativeSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::BPRelativeSym),
+        RecordOffset(RecordOffset), Header(*H), Name(Name) {}
+
+  static ErrorOr<BPRelativeSym> deserialize(SymbolRecordKind Kind,
+                                            uint32_t RecordOffset,
+                                            ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return BPRelativeSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_REGREL32
-struct RegRelativeSym {
-  ulittle32_t Offset;   // Offset from the register
-  TypeIndex Type;       // Type of the variable
-  ulittle16_t Register; // Register to which the variable is relative
-  // Name: The null-terminated name follows.
+class RegRelativeSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Offset;   // Offset from the register
+    TypeIndex Type;       // Type of the variable
+    ulittle16_t Register; // Register to which the variable is relative
+                          // Name: The null-terminated name follows.
+  };
+
+  RegRelativeSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::RegRelativeSym),
+        RecordOffset(RecordOffset), Header(*H), Name(Name) {}
+
+  static ErrorOr<RegRelativeSym> deserialize(SymbolRecordKind Kind,
+                                             uint32_t RecordOffset,
+                                             ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return RegRelativeSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_CONSTANT, S_MANCONSTANT
-struct ConstantSym {
-  TypeIndex Type;
-  // Value: The value of the constant.
-  // Name: The null-terminated name follows.
+class ConstantSym : public SymbolRecord {
+public:
+  struct Hdr {
+    TypeIndex Type;
+    // Value: The value of the constant.
+    // Name: The null-terminated name follows.
+  };
+
+  ConstantSym(uint32_t RecordOffset, const Hdr *H, const APSInt &Value,
+              StringRef Name)
+      : SymbolRecord(SymbolRecordKind::ConstantSym), RecordOffset(RecordOffset),
+        Header(*H), Value(Value), Name(Name) {}
+
+  static ErrorOr<ConstantSym> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    APSInt Value;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Value, Name);
+
+    return ConstantSym(RecordOffset, H, Value, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  APSInt Value;
+  StringRef Name;
 };
 
 // S_LDATA32, S_GDATA32, S_LMANDATA, S_GMANDATA
-struct DataSym {
-  TypeIndex Type;
-  ulittle32_t DataOffset;
-  ulittle16_t Segment;
-  // Name: The null-terminated name follows.
+class DataSym : public SymbolRecord {
+public:
+  struct Hdr {
+    TypeIndex Type;
+    ulittle32_t DataOffset;
+    ulittle16_t Segment;
+    // Name: The null-terminated name follows.
+  };
+
+  DataSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::DataSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<DataSym> deserialize(SymbolRecordKind Kind,
+                                      uint32_t RecordOffset,
+                                      ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return DataSym(RecordOffset, H, Name);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, DataOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_LTHREAD32, S_GTHREAD32
-struct ThreadLocalDataSym {
-  TypeIndex Type;
-  ulittle32_t DataOffset;
-  ulittle16_t Segment;
-  // Name: The null-terminated name follows.
+class ThreadLocalDataSym : public SymbolRecord {
+public:
+  struct Hdr {
+    TypeIndex Type;
+    ulittle32_t DataOffset;
+    ulittle16_t Segment;
+    // Name: The null-terminated name follows.
+  };
+
+  ThreadLocalDataSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::ThreadLocalDataSym),
+        RecordOffset(RecordOffset), Header(*H), Name(Name) {}
+
+  static ErrorOr<ThreadLocalDataSym> deserialize(SymbolRecordKind Kind,
+                                                 uint32_t RecordOffset,
+                                                 ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return ThreadLocalDataSym(RecordOffset, H, Name);
+  }
+
+  uint32_t getRelocationOffset() const {
+    return RecordOffset + offsetof(Hdr, DataOffset);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 typedef RecordIterator<SymbolRecordKind> SymbolIterator;

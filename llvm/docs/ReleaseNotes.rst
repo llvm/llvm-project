@@ -55,7 +55,7 @@ Non-comprehensive list of changes in this release
   in favor of LLVMGetDataLayoutStr.
 
 * The C API enum LLVMAttribute is deprecated in favor of
-  LLVMGetAttrKindID.
+  LLVMGetAttributeKindForName.
 
 * ``TargetFrameLowering::eliminateCallFramePseudoInstr`` now returns an
   iterator to the next instruction instead of ``void``. Targets that previously

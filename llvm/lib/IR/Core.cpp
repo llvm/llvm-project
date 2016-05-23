@@ -124,13 +124,8 @@ unsigned LLVMGetMDKindID(const char *Name, unsigned SLen) {
 #define GET_ATTR_KIND_FROM_NAME
 #include "AttributesCompatFunc.inc"
 
-unsigned LLVMGetAttrKindID(const char *Name, size_t SLen) {
-  auto K = getAttrKindFromName(StringRef(Name, SLen));
-  if (K == Attribute::None) {
-    return 0;
-  }
-
-  return AttributeImpl::getAttrMask(K);
+unsigned LLVMGetAttributeKindForName(const char *Name, size_t SLen) {
+  return getAttrKindFromName(StringRef(Name, SLen));
 }
 
 char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI) {

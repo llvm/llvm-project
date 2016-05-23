@@ -166,4 +166,4 @@ s_absdiff_i32 s2, s4, s6
 
 s_add_u32 s101, s102, s103
 // SICI: s_add_u32 s101, s102, s103 ; encoding: [0x66,0x67,0x65,0x80]
-// NOVI:   error: invalid operand for instruction
+// NOVI:   error: not a valid operand

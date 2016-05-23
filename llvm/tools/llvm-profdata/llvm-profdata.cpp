@@ -288,6 +288,9 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRInstr = Reader->isIRLevelProfile();
   size_t ShownFunctions = 0;
+  uint64_t TotalNumValueSites = 0;
+  uint64_t TotalNumValueSitesWithValueProfile = 0;
+  uint64_t TotalNumValues = 0;
   for (const auto &Func : *Reader) {
     bool Show =
         ShowAllFunctions || (!ShowFunction.empty() &&
@@ -334,10 +337,14 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
         InstrProfSymtab &Symtab = Reader->getSymtab();
         uint32_t NS = Func.getNumValueSites(IPVK_IndirectCallTarget);
         OS << "    Indirect Target Results: \n";
+        TotalNumValueSites += NS;
         for (size_t I = 0; I < NS; ++I) {
           uint32_t NV = Func.getNumValueDataForSite(IPVK_IndirectCallTarget, I);
           std::unique_ptr<InstrProfValueData[]> VD =
               Func.getValueForSite(IPVK_IndirectCallTarget, I);
+          TotalNumValues += NV;
+          if (NV)
+            TotalNumValueSitesWithValueProfile++;
           for (uint32_t V = 0; V < NV; V++) {
             OS << "\t[ " << I << ", ";
             OS << Symtab.getFuncName(VD[V].Value) << ", " << VD[V].Count
@@ -347,7 +354,6 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
       }
     }
   }
-
   if (Reader->hasError())
     exitWithError(Reader->getError(), Filename);
 
@@ -359,6 +365,13 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
   OS << "Total functions: " << PS->getNumFunctions() << "\n";
   OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
   OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
+  if (ShownFunctions && ShowIndirectCallTargets) {
+    OS << "Total Number of Indirect Call Sites : " << TotalNumValueSites
+       << "\n";
+    OS << "Total Number of Sites With Values : "
+       << TotalNumValueSitesWithValueProfile << "\n";
+    OS << "Total Number of Profiled Values : " << TotalNumValues << "\n";
+  }
 
   if (ShowDetailedSummary) {
     OS << "Detailed summary:\n";

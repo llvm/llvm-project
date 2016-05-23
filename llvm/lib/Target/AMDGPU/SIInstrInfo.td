@@ -1098,6 +1098,7 @@ def InputMods : OperandWithDefaultOps <i32, (ops (i32 0))> {
 
 def InputModsMatchClass : AsmOperandClass {
   let Name = "RegOrImmWithInputMods";
+  let ParserMethod = "parseRegOrImmWithInputMods";
 }
 
 def InputModsNoDefault : Operand <i32> {

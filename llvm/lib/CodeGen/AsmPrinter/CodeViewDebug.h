@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
@@ -34,6 +35,7 @@ class LexicalScope;
 /// \brief Collects and handles line tables information in a CodeView format.
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   MCStreamer &OS;
+  codeview::MemoryTypeTableBuilder TypeTable;
 
   /// Represents the most general definition range.
   struct LocalVarDefRange {
@@ -103,19 +105,15 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// to be confused with type indices for LF_FUNC_ID records.
   unsigned NextFuncId = 0;
 
-  /// The next available type index.
-  unsigned NextTypeIndex = llvm::codeview::TypeIndex::FirstNonSimpleIndex;
+  codeview::TypeIndex VoidFnTyIdx;
 
-  /// Get the next type index and reserve it. Can be used to reserve more than
-  /// one type index.
-  unsigned getNextTypeIndex(unsigned NumRecords = 1) {
-    unsigned Result = NextTypeIndex;
-    NextTypeIndex += NumRecords;
-    return Result;
-  }
+  /// Get a type index for a generic void function type.
+  codeview::TypeIndex getGenericFunctionTypeIndex();
 
   InlineSite &getInlineSite(const DILocation *InlinedAt,
                             const DISubprogram *Inlinee);
+
+  void recordFuncIdForSubprogram(const DISubprogram *SP);
 
   static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
                                         const FunctionInfo &FI,
@@ -128,18 +126,12 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Map from DIFile to .cv_file id.
   DenseMap<const DIFile *, unsigned> FileIdMap;
 
-  /// Map from subprogram to index in InlinedSubprograms.
-  DenseMap<const DISubprogram *, size_t> SubprogramIndices;
-
   /// All inlined subprograms in the order they should be emitted.
-  SmallVector<const DISubprogram *, 4> InlinedSubprograms;
+  SmallSetVector<const DISubprogram *, 4> InlinedSubprograms;
 
-  /// The first type index that refers to an LF_FUNC_ID record. We have one
-  /// record per inlined subprogram.
-  /// FIXME: Keep in sync with emitTypeInformation until we buffer type records
-  /// on the side as we go. Once we buffer type records, we can allocate type
-  /// indices on demand without interleaving our assembly output.
-  unsigned FuncIdTypeIndexStart = NextTypeIndex + 2;
+  /// Map from DI metadata nodes to CodeView type indices. Primarily indexed by
+  /// DIType* and DISubprogram*.
+  DenseMap<const DINode *, codeview::TypeIndex> TypeIndices;
 
   typedef std::map<const DIFile *, std::string> FileToFilepathMapTy;
   FileToFilepathMapTy FileToFilepathMap;

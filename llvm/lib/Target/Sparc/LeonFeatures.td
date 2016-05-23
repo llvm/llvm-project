@@ -36,4 +36,10 @@ def LeonCASA : SubtargetFeature<
   "true", 
   "Enable CASA instruction for LEON3 and LEON4 processors"
 >;
-  
+
+def InsertNOPLoad: SubtargetFeature<
+  "insertnopload",
+  "InsertNOPLoad",
+  "true",
+  "LEON3 erratum fix: Insert a NOP instruction after every single-cycle load instruction when the next instruction is another load/store instruction" 
+>;

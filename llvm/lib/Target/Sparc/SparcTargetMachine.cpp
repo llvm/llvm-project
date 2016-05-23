@@ -13,6 +13,7 @@
 #include "SparcTargetMachine.h"
 #include "SparcTargetObjectFile.h"
 #include "Sparc.h"
+#include "LeonPasses.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -68,9 +69,9 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOpt::Level OL, bool is64bit)
     : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM), CM, OL),
-      TLOF(make_unique<SparcELFTargetObjectFile>()) {
+      TLOF(make_unique<SparcELFTargetObjectFile>()),
+      Subtarget(TT, CPU, FS, *this, is64bit), is64Bit(is64bit) {
   initAsmInfo();
-  this->is64Bit = is64bit;
 }
 
 SparcTargetMachine::~SparcTargetMachine() {}
@@ -143,6 +144,11 @@ bool SparcPassConfig::addInstSelector() {
 
 void SparcPassConfig::addPreEmitPass(){
   addPass(createSparcDelaySlotFillerPass(getSparcTargetMachine()));
+
+  if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad())
+  {
+    addPass(new InsertNOPLoad(getSparcTargetMachine()));
+  }
 }
 
 void SparcV8TargetMachine::anchor() { }

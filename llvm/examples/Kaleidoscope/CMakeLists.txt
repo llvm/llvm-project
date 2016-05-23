@@ -6,6 +6,7 @@ macro(add_kaleidoscope_chapter name)
   add_llvm_example(${name} ${ARGN})
 endmacro(add_kaleidoscope_chapter name)
 
+add_subdirectory(BuildingAJIT)
 add_subdirectory(Chapter2)
 add_subdirectory(Chapter3)
 add_subdirectory(Chapter4)

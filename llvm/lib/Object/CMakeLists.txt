@@ -21,4 +21,6 @@ add_llvm_library(LLVMObject
 
   DEPENDS
   intrinsics_gen
+
+  LINK_LIBS ${XAR_LIB}
   )

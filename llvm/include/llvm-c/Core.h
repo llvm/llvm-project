@@ -487,7 +487,7 @@ unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
  * NB: Attribute names and/or id are subject to change without
  * going through the C API deprecation cycle.
  */
-unsigned LLVMGetAttrKindID(const char *Name, size_t SLen);
+unsigned LLVMGetAttributeKindForName(const char *Name, size_t SLen);
 
 /**
  * @}

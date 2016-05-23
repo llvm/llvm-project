@@ -4,7 +4,7 @@
 ; CHECK-NEXT: InductiveRangeCheck:
 ; CHECK-NEXT:   Kind: RANGE_CHECK_LOWER
 ; CHECK-NEXT:   Offset: (-1 + %n)  Scale: -1  Length: (null)
-; CHECK-NEXT:   Branch:   br i1 %abc, label %in.bounds, label %out.of.bounds
+; CHECK-NEXT:   CheckUse:   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1 Operand: 0
 ; CHECK-NEXT: irce: in function only_lower_check: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
 define void @only_lower_check(i32 *%arr, i32 *%a_len_ptr, i32 %n) {

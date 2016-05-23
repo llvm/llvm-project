@@ -1067,10 +1067,10 @@ define <2 x double> @test_mm_cvtepi32_pd(<2 x i64> %a0) nounwind {
 ; X64-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %res = call <2 x double> @llvm.x86.sse2.cvtdq2pd(<4 x i32> %arg0)
+  %ext = shufflevector <4 x i32> %arg0, <4 x i32> %arg0, <2 x i32> <i32 0, i32 1>
+  %res = sitofp <2 x i32> %ext to <2 x double>
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.sse2.cvtdq2pd(<4 x i32>) nounwind readnone
 
 define <4 x float> @test_mm_cvtepi32_ps(<2 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtepi32_ps:
@@ -1145,10 +1145,10 @@ define <2 x double> @test_mm_cvtps_pd(<4 x float> %a0) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    cvtps2pd %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cvtps2pd(<4 x float> %a0)
+  %ext = shufflevector <4 x float> %a0, <4 x float> %a0, <2 x i32> <i32 0, i32 1>
+  %res = fpext <2 x float> %ext to <2 x double>
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.sse2.cvtps2pd(<4 x float>) nounwind readnone
 
 define double @test_mm_cvtsd_f64(<2 x double> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtsd_f64:

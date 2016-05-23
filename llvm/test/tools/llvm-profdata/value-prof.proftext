@@ -1,7 +1,7 @@
-# RUN: llvm-profdata show -ic-targets  -all-functions %s | FileCheck %s --check-prefix=ICTXT
+# RUN: llvm-profdata show -ic-targets  -all-functions %s | FileCheck %s --check-prefix=ICTXT --check-prefix=ICSUM
 # RUN: llvm-profdata show -ic-targets -counts -text -all-functions %s | FileCheck %s --check-prefix=ICTEXT
 # RUN: llvm-profdata merge -o %t.profdata  %s
-# RUN: llvm-profdata show -ic-targets  -all-functions %t.profdata | FileCheck %s --check-prefix=IC
+# RUN: llvm-profdata show -ic-targets  -all-functions %t.profdata | FileCheck %s --check-prefix=IC --check-prefix=ICSUM
 
 foo
 # Func Hash:
@@ -61,3 +61,9 @@ foo2:20000
 #ICTEXT-NEXT: foo2:1000
 #ICTEXT-NEXT: 1
 #ICTEXT-NEXT: foo2:20000
+#
+
+#ICSUM: Total Number of Indirect Call Sites : 3
+#ICSUM: Total Number of Sites With Values : 2
+#ICSUM: Total Number of Profiled Values : 3
+

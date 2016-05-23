@@ -273,6 +273,15 @@ bool Filler::delayHasHazard(MachineBasicBlock::iterator candidate,
         return true;
     }
   }
+
+  unsigned Opcode = candidate->getOpcode();
+  // LD and LDD may have NOPs inserted afterwards in the case of some LEON
+  // processors, so we can't use the delay slot if this feature is switched-on.
+  if (Subtarget->insertNOPLoad()
+      &&
+      Opcode >=  SP::LDDArr && Opcode <= SP::LDrr)
+    return true;
+
   return false;
 }
 
