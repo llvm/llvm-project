@@ -183,6 +183,7 @@ public:
   typedef typename ELFT::uint uintX_t;
   EHInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
+  void split();
 
   // Translate an offset in the input section to an offset in the output
   // section.

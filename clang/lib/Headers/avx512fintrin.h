@@ -4926,6 +4926,23 @@ _mm512_mask_store_epi32 (void *__P, __mmask16 __U, __m512i __A)
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_mask_mov_epi32 (__m512i __W, __mmask16 __U, __m512i __A)
+{
+  return (__m512i) __builtin_ia32_movdqa32_512_mask ((__v16si) __A,
+                 (__v16si) __W,
+                 (__mmask16) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_mov_epi32 (__mmask16 __U, __m512i __A)
+{
+  return (__m512i) __builtin_ia32_movdqa32_512_mask ((__v16si) __A,
+                 (__v16si)
+                 _mm512_setzero_si512 (),
+                 (__mmask16) __U);
+}
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_mov_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
 {
   return (__m512i) __builtin_ia32_movdqa64_512_mask ((__v8di) __A,
