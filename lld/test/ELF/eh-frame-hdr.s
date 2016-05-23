@@ -44,7 +44,7 @@ _start:
 // HDR:        Section {
 // HDR:        Index: 1
 // HDR-NEXT:    Name: .eh_frame
-// HDR-NEXT:    Type: SHT_X86_64_UNWIND
+// HDR-NEXT:    Type: SHT_PROGBITS
 // HDR-NEXT:    Flags [
 // HDR-NEXT:      SHF_ALLOC
 // HDR-NEXT:    ]

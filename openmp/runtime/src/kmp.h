@@ -1951,6 +1951,9 @@ typedef struct kmp_local {
 
 } kmp_local_t;
 
+#define KMP_CHECK_UPDATE(a, b) if ((a) != (b)) (a) = (b)
+#define KMP_CHECK_UPDATE_SYNC(a, b) if ((a) != (b)) TCW_SYNC_PTR((a), (b))
+
 #define get__blocktime( xteam, xtid )     ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.blocktime)
 #define get__bt_set( xteam, xtid )        ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_set)
 #define get__bt_intervals( xteam, xtid )  ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_intervals)
@@ -2196,7 +2199,7 @@ struct kmp_taskdata {                                 /* aligned during dynamic 
     kmp_uint32              td_taskwait_counter;
     kmp_int32               td_taskwait_thread;       /* gtid + 1 of thread encountered taskwait */
     KMP_ALIGN_CACHE kmp_internal_control_t  td_icvs;  /* Internal control variables for the task */
-    volatile kmp_uint32     td_allocated_child_tasks;  /* Child tasks (+ current task) not yet deallocated */
+    KMP_ALIGN_CACHE volatile kmp_uint32 td_allocated_child_tasks;  /* Child tasks (+ current task) not yet deallocated */
     volatile kmp_uint32     td_incomplete_child_tasks; /* Child tasks not yet complete */
 #if OMP_40_ENABLED
     kmp_taskgroup_t *       td_taskgroup;         // Each task keeps pointer to its current taskgroup
@@ -2515,12 +2518,14 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
     void                    *t_inline_argv[ KMP_INLINE_ARGV_ENTRIES ];
 
     KMP_ALIGN_CACHE kmp_info_t **t_threads;
-    int                      t_max_argc;
+    kmp_taskdata_t *t_implicit_task_taskdata;  // Taskdata for the thread's implicit task
+    int                      t_level;          // nested parallel level
+
+    KMP_ALIGN_CACHE int      t_max_argc;
     int                      t_max_nproc;    // maximum threads this team can handle (dynamicly expandable)
     int                      t_serialized;   // levels deep of serialized teams
     dispatch_shared_info_t  *t_disp_buffer;  // buffers for dispatch system
     int                      t_id;           // team's id, assigned by debugger.
-    int                      t_level;        // nested parallel level
     int                      t_active_level; // nested active parallel level
     kmp_r_sched_t            t_sched;        // run-time schedule for the team
 #if OMP_40_ENABLED && KMP_AFFINITY_SUPPORTED
@@ -2536,8 +2541,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
     // and 'barrier' when CACHE_LINE=64. TODO: investigate more and get rid if this padding.
     char dummy_padding[1024];
 #endif
-    KMP_ALIGN_CACHE kmp_taskdata_t *t_implicit_task_taskdata;  // Taskdata for the thread's implicit task
-    kmp_internal_control_t  *t_control_stack_top;  // internal control stack for additional nested teams.
+    KMP_ALIGN_CACHE kmp_internal_control_t *t_control_stack_top;  // internal control stack for additional nested teams.
                                                    // for SERIALIZED teams nested 2 or more levels deep
 #if OMP_40_ENABLED
     kmp_int32                t_cancel_request; // typed flag to store request state of cancellation

@@ -441,14 +441,15 @@ bool polly::isIgnoredIntrinsic(const Value *V) {
   return false;
 }
 
-bool polly::canSynthesize(const Value *V, const llvm::LoopInfo *LI,
-                          ScalarEvolution *SE, const Region *R, Loop *Scope) {
+bool polly::canSynthesize(const Value *V, const Scop &S,
+                          const llvm::LoopInfo *LI, ScalarEvolution *SE,
+                          Loop *Scope) {
   if (!V || !SE->isSCEVable(V->getType()))
     return false;
 
   if (const SCEV *Scev = SE->getSCEVAtScope(const_cast<Value *>(V), Scope))
     if (!isa<SCEVCouldNotCompute>(Scev))
-      if (!hasScalarDepsInsideRegion(Scev, R, Scope, false))
+      if (!hasScalarDepsInsideRegion(Scev, &S.getRegion(), Scope, false))
         return true;
 
   return false;

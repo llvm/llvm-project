@@ -133,7 +133,7 @@ public:
     LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    DL = &S.getRegion().getEntry()->getParent()->getParent()->getDataLayout();
+    DL = &S.getFunction().getParent()->getDataLayout();
     RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
     Region *R = &S.getRegion();
     assert(!R->isTopLevelRegion() && "Top level regions are not supported");
@@ -143,7 +143,7 @@ public:
 
     simplifyRegion(R, DT, LI, RI);
     assert(R->isSimple());
-    BasicBlock *EnteringBB = S.getRegion().getEnteringBlock();
+    BasicBlock *EnteringBB = S.getEnteringBlock();
     assert(EnteringBB);
     PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
 
@@ -182,7 +182,7 @@ public:
       assert(MergeBlock);
       markBlockUnreachable(*StartBlock, Builder);
       markBlockUnreachable(*ExitingBlock, Builder);
-      auto *ExitingBB = R->getExitingBlock();
+      auto *ExitingBB = S.getExitingBlock();
       assert(ExitingBB);
       DT->changeImmediateDominator(MergeBlock, ExitingBB);
       DT->eraseNode(ExitingBlock);

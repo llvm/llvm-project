@@ -79,8 +79,7 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
   VTV.insert(GlobalMap.begin(), GlobalMap.end());
 
   Scop &S = *Stmt.getParent();
-  const DataLayout &DL =
-      S.getRegion().getEntry()->getParent()->getParent()->getDataLayout();
+  const DataLayout &DL = S.getFunction().getParent()->getDataLayout();
   auto IP = Builder.GetInsertPoint();
 
   assert(IP != Builder.GetInsertBlock()->end() &&
@@ -128,7 +127,7 @@ Value *BlockGenerator::getNewValue(ScopStmt &Stmt, Value *Old, ValueMapT &BBMap,
 
   // A scop-constant value defined by an instruction executed outside the scop.
   if (const Instruction *Inst = dyn_cast<Instruction>(Old))
-    if (!Stmt.getParent()->getRegion().contains(Inst->getParent()))
+    if (!Stmt.getParent()->contains(Inst->getParent()))
       return Old;
 
   // The scalar dependence is neither available nor SCEVCodegenable.
@@ -238,7 +237,7 @@ void BlockGenerator::generateScalarStore(ScopStmt &Stmt, StoreInst *Store,
 bool BlockGenerator::canSyntheziseInStmt(ScopStmt &Stmt, Instruction *Inst) {
   Loop *L = getLoopForStmt(Stmt);
   return (Stmt.isBlockStmt() || !Stmt.getRegion()->contains(L)) &&
-         canSynthesize(Inst, &LI, &SE, &Stmt.getParent()->getRegion(), L);
+         canSynthesize(Inst, *Stmt.getParent(), &LI, &SE, L);
 }
 
 void BlockGenerator::copyInstruction(ScopStmt &Stmt, Instruction *Inst,
@@ -370,7 +369,6 @@ void BlockGenerator::handleOutsideUsers(const Scop &S, Instruction *Inst) {
   if (EscapeMap.count(Inst))
     return;
 
-  const auto &R = S.getRegion();
   EscapeUserVectorTy EscapeUsers;
   for (User *U : Inst->users()) {
 
@@ -379,7 +377,7 @@ void BlockGenerator::handleOutsideUsers(const Scop &S, Instruction *Inst) {
     if (!UI)
       continue;
 
-    if (R.contains(UI))
+    if (S.contains(UI))
       continue;
 
     EscapeUsers.push_back(UI);
@@ -451,17 +449,16 @@ void BlockGenerator::generateScalarStores(ScopStmt &Stmt, LoopToScevMapT &LTS,
 }
 
 void BlockGenerator::createScalarInitialization(Scop &S) {
-  Region &R = S.getRegion();
-  BasicBlock *ExitBB = R.getExit();
+  BasicBlock *ExitBB = S.getExit();
 
   // The split block __just before__ the region and optimized region.
-  BasicBlock *SplitBB = R.getEnteringBlock();
+  BasicBlock *SplitBB = S.getEnteringBlock();
   BranchInst *SplitBBTerm = cast<BranchInst>(SplitBB->getTerminator());
   assert(SplitBBTerm->getNumSuccessors() == 2 && "Bad region entering block!");
 
   // Get the start block of the __optimized__ region.
   BasicBlock *StartBB = SplitBBTerm->getSuccessor(0);
-  if (StartBB == R.getEntry())
+  if (StartBB == S.getEntry())
     StartBB = SplitBBTerm->getSuccessor(1);
 
   Builder.SetInsertPoint(StartBB->getTerminator());
@@ -478,7 +475,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
       auto PHI = cast<PHINode>(Array->getBasePtr());
 
       for (auto BI = PHI->block_begin(), BE = PHI->block_end(); BI != BE; BI++)
-        if (!R.contains(*BI) && *BI != SplitBB)
+        if (!S.contains(*BI) && *BI != SplitBB)
           llvm_unreachable("Incoming edges from outside the scop should always "
                            "come from SplitBB");
 
@@ -494,7 +491,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
 
     auto *Inst = dyn_cast<Instruction>(Array->getBasePtr());
 
-    if (Inst && R.contains(Inst))
+    if (Inst && S.contains(Inst))
       continue;
 
     // PHI nodes that are not marked as such in their SAI object are either exit
@@ -510,11 +507,11 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
   }
 }
 
-void BlockGenerator::createScalarFinalization(Region &R) {
+void BlockGenerator::createScalarFinalization(Scop &S) {
   // The exit block of the __unoptimized__ region.
-  BasicBlock *ExitBB = R.getExitingBlock();
+  BasicBlock *ExitBB = S.getExitingBlock();
   // The merge block __just after__ the region and the optimized region.
-  BasicBlock *MergeBB = R.getExit();
+  BasicBlock *MergeBB = S.getExit();
 
   // The exit block of the __optimized__ region.
   BasicBlock *OptExitBB = *(pred_begin(MergeBB));
@@ -557,7 +554,6 @@ void BlockGenerator::createScalarFinalization(Region &R) {
 }
 
 void BlockGenerator::findOutsideUsers(Scop &S) {
-  auto &R = S.getRegion();
   for (auto &Pair : S.arrays()) {
     auto &Array = Pair.second;
 
@@ -575,7 +571,7 @@ void BlockGenerator::findOutsideUsers(Scop &S) {
     // Scop invariant hoisting moves some of the base pointers out of the scop.
     // We can ignore these, as the invariant load hoisting already registers the
     // relevant outside users.
-    if (!R.contains(Inst))
+    if (!S.contains(Inst))
       continue;
 
     handleOutsideUsers(S, Inst);
@@ -586,10 +582,8 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
   if (S.hasSingleExitEdge())
     return;
 
-  Region &R = S.getRegion();
-
-  auto *ExitBB = R.getExitingBlock();
-  auto *MergeBB = R.getExit();
+  auto *ExitBB = S.getExitingBlock();
+  auto *MergeBB = S.getExit();
   auto *AfterMergeBB = MergeBB->getSingleSuccessor();
   BasicBlock *OptExitBB = *(pred_begin(MergeBB));
   if (OptExitBB == ExitBB)
@@ -636,7 +630,7 @@ void BlockGenerator::finalizeSCoP(Scop &S) {
   findOutsideUsers(S);
   createScalarInitialization(S);
   createExitPHINodeMerges(S);
-  createScalarFinalization(S.getRegion());
+  createScalarFinalization(S);
 }
 
 VectorBlockGenerator::VectorBlockGenerator(BlockGenerator &BlockGen,
@@ -1084,8 +1078,6 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   assert(Stmt.isRegionStmt() &&
          "Only region statements can be copied by the region generator");
 
-  Scop *S = Stmt.getParent();
-
   // Forget all old mappings.
   BlockMap.clear();
   RegionMaps.clear();
@@ -1111,17 +1103,6 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   for (auto PI = pred_begin(EntryBB), PE = pred_end(EntryBB); PI != PE; ++PI)
     if (!R->contains(*PI))
       BlockMap[*PI] = EntryBBCopy;
-
-  // Determine the original exit block of this subregion. If it the exit block
-  // is also the scop's exit, it it has been changed to polly.merge_new_and_old.
-  // We move one block back to find the original block. This only happens if the
-  // scop required simplification.
-  // If the whole scop consists of only this non-affine region, then they share
-  // the same Region object, such that we cannot change the exit of one and not
-  // the other.
-  BasicBlock *ExitBB = R->getExit();
-  if (!S->hasSingleExitEdge() && ExitBB == S->getRegion().getExit())
-    ExitBB = *(++pred_begin(ExitBB));
 
   // Iterate over all blocks in the region in a breadth-first search.
   std::deque<BasicBlock *> Blocks;

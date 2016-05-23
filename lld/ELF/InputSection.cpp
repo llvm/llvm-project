@@ -501,13 +501,19 @@ static std::vector<SectionPiece> splitNonStrings(ArrayRef<uint8_t> Data,
 template <class ELFT>
 MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
                                            const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {
+    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
+
+template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   ArrayRef<uint8_t> Data = this->getSectionData();
   uintX_t EntSize = this->Header->sh_entsize;
   if (this->Header->sh_flags & SHF_STRINGS)
     this->Pieces = splitStrings(Data, EntSize);
   else
     this->Pieces = splitNonStrings(Data, EntSize);
+
+  if (Config->GcSections)
+    for (uintX_t Off : LiveOffsets)
+      this->getSectionPiece(Off)->Live = true;
 }
 
 template <class ELFT>

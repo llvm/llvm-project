@@ -12,6 +12,7 @@
 
 #include "Config.h"
 #include "lld/Core/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Object/ELF.h"
 
@@ -171,9 +172,17 @@ template <class ELFT> class MergeInputSection : public SplitInputSection<ELFT> {
 public:
   MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
-  // Translate an offset in the input section to an offset in the output
-  // section.
+  void splitIntoPieces();
+
+  // Mark the piece at a given offset live. Used by GC.
+  void markLiveAt(uintX_t Offset) { LiveOffsets.insert(Offset); }
+
+  // Translate an offset in the input section to an offset
+  // in the output section.
   uintX_t getOffset(uintX_t Offset);
+
+private:
+  llvm::DenseSet<uintX_t> LiveOffsets;
 };
 
 // This corresponds to a .eh_frame section of an input file.

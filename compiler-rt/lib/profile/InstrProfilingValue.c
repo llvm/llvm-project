@@ -71,6 +71,8 @@ __llvm_get_function_addr(const __llvm_profile_data *Data) {
  */
 
 static int hasStaticCounters = 1;
+static int OutOfNodesWarnings = 0;
+#define MAX_VP_WARNS 10
 
 static int allocateValueProfileCounters(__llvm_profile_data *Data) {
   uint64_t NumVSites = 0;
@@ -102,9 +104,11 @@ static ValueProfNode *allocateOneNode(__llvm_profile_data *Data, uint32_t Index,
     return (ValueProfNode *)calloc(1, sizeof(ValueProfNode));
 
   Node = COMPILER_RT_PTR_FETCH_ADD(ValueProfNode, CurrentVNode, 1);
-  if (Node >= EndVNode) {
-    PROF_WARN("Running out of nodes: site_%d@func_%" PRIu64
-              ", value=%" PRIu64 " \n", Index, Data->NameRef, Value);
+  if (Node >= EndVNode && (OutOfNodesWarnings ++ < MAX_VP_WARNS)) {
+    PROF_WARN("Unable to track new values: %s. "
+              " Consider using option -mllvm -vp-counters-per-site=<n> to allocate more" 
+              " value profile counters at compile time. \n", 
+              "Running out of static counters");
     return 0;
   }
   return Node;

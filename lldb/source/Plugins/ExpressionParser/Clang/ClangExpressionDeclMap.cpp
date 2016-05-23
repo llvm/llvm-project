@@ -1260,7 +1260,16 @@ ClangExpressionDeclMap::FindExternalVisibleDecls (NameSearchContext &context,
                 bool variable_found = false;
                 for (CompilerDecl decl : found_decls)
                 {
-                    var = decl.GetAsVariable();
+                    for (size_t vi = 0, ve = vars->GetSize(); vi != ve; ++vi)
+                    {
+                        VariableSP candidate_var = vars->GetVariableAtIndex(vi);
+                        if (candidate_var->GetDecl() == decl)
+                        {
+                            var = candidate_var;
+                            break;
+                        }
+                    }
+
                     if (var)
                     {
                         variable_found = true;

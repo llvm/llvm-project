@@ -10,7 +10,7 @@
 ; CHECK: remark: test/ScopInfo/remarks.c:9:15: Possibly aliasing pointer, use restrict keyword.
 ; CHECK: remark: test/ScopInfo/remarks.c:14:3: SCoP ends here.
 ; CHECK: remark: test/ScopInfo/remarks.c:19:3: SCoP begins here.
-; CHECK: remark: test/ScopInfo/remarks.c:21:11: Invariant load assumption:    [tmp] -> {  : 1 = 0 }
+; CHECK: remark: test/ScopInfo/remarks.c:21:11: Invariant load restriction:    [tmp] -> {  : tmp < 0 or tmp > 0 }
 ; CHECK: remark: test/ScopInfo/remarks.c:22:16: SCoP ends here but was dismissed.
 ;
 ;    #include <stdio.h>

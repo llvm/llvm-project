@@ -1181,6 +1181,10 @@
 		233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ProcessLaunchInfo.cpp; path = source/Target/ProcessLaunchInfo.cpp; sourceTree = "<group>"; };
 		233B009D19610D6B0090E598 /* Host.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Host.cpp; sourceTree = "<group>"; };
 		2360092C193FB21500189DB1 /* MemoryRegionInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MemoryRegionInfo.h; path = include/lldb/Target/MemoryRegionInfo.h; sourceTree = "<group>"; };
+		236102981CF38A2B00B8E0B9 /* AddLLDB.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = AddLLDB.cmake; sourceTree = "<group>"; };
+		236102991CF38A2B00B8E0B9 /* LLDBConfig.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LLDBConfig.cmake; sourceTree = "<group>"; };
+		2361029A1CF38A2B00B8E0B9 /* LLDBStandalone.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LLDBStandalone.cmake; sourceTree = "<group>"; };
+		2361029E1CF38A3500B8E0B9 /* Android.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Android.cmake; sourceTree = "<group>"; };
 		236124A21986B4E2004EFC37 /* IOObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOObject.cpp; sourceTree = "<group>"; };
 		236124A31986B4E2004EFC37 /* Socket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Socket.cpp; sourceTree = "<group>"; };
 		236124A61986B50E004EFC37 /* IOObject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = IOObject.h; path = include/lldb/Host/IOObject.h; sourceTree = "<group>"; };
@@ -3009,6 +3013,7 @@
 				2690CD181A6DC0D000E717C8 /* lldb-mi */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
 				2321F9331BDD326500BA9A93 /* unittests */,
+				236102941CF389BE00B8E0B9 /* cmake */,
 			);
 			name = lldb;
 			sourceTree = "<group>";
@@ -3152,6 +3157,33 @@
 			);
 			name = linux;
 			path = source/Host/linux;
+			sourceTree = "<group>";
+		};
+		236102941CF389BE00B8E0B9 /* cmake */ = {
+			isa = PBXGroup;
+			children = (
+				236102961CF389F800B8E0B9 /* modules */,
+				236102971CF38A0900B8E0B9 /* platforms */,
+			);
+			path = cmake;
+			sourceTree = "<group>";
+		};
+		236102961CF389F800B8E0B9 /* modules */ = {
+			isa = PBXGroup;
+			children = (
+				236102981CF38A2B00B8E0B9 /* AddLLDB.cmake */,
+				236102991CF38A2B00B8E0B9 /* LLDBConfig.cmake */,
+				2361029A1CF38A2B00B8E0B9 /* LLDBStandalone.cmake */,
+			);
+			path = modules;
+			sourceTree = "<group>";
+		};
+		236102971CF38A0900B8E0B9 /* platforms */ = {
+			isa = PBXGroup;
+			children = (
+				2361029E1CF38A3500B8E0B9 /* Android.cmake */,
+			);
+			path = platforms;
 			sourceTree = "<group>";
 		};
 		23AB0526199FF5D3003B8084 /* FreeBSD */ = {

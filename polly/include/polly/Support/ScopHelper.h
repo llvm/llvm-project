@@ -395,15 +395,15 @@ bool isIgnoredIntrinsic(const llvm::Value *V);
 /// ensure that their operands are available during code generation.
 ///
 /// @param V The value to check.
+/// @param S The current SCoP.
 /// @param LI The LoopInfo analysis.
 /// @param SE The scalar evolution database.
-/// @param R The region out of which SSA names are parameters.
 /// @param Scope Location where the value would by synthesized.
 /// @return If the instruction I can be regenerated from its
 ///         scalar evolution representation, return true,
 ///         otherwise return false.
-bool canSynthesize(const llvm::Value *V, const llvm::LoopInfo *LI,
-                   llvm::ScalarEvolution *SE, const llvm::Region *R,
+bool canSynthesize(const llvm::Value *V, const Scop &S,
+                   const llvm::LoopInfo *LI, llvm::ScalarEvolution *SE,
                    llvm::Loop *Scope);
 
 /// @brief Return the block in which a value is used.

@@ -83,7 +83,6 @@ private:
   Scop *S;
   isl_ctx *Ctx;
   unsigned NumIterators;
-  const llvm::Region &R;
   llvm::ScalarEvolution &SE;
   llvm::LoopInfo &LI;
   llvm::BasicBlock *BB;

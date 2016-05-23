@@ -426,7 +426,7 @@ protected:
   /// If a scalar value was used outside the SCoP we need to promote the value
   /// stored in the memory cell allocated for that scalar and combine it with
   /// the original value in the non-optimized SCoP.
-  void createScalarFinalization(Region &R);
+  void createScalarFinalization(Scop &S);
 
   /// @brief Try to synthesize a new value
   ///

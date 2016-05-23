@@ -2003,32 +2003,38 @@ __kmp_fork_call(
     KF_TRACE( 10, ( "__kmp_fork_call: after __kmp_allocate_team - team = %p\n", team ) );
 
     /* setup the new team */
-    team->t.t_master_tid = master_tid;
-    team->t.t_master_this_cons = master_this_cons;
-    team->t.t_ident      = loc;
-    team->t.t_parent     = parent_team;
-    TCW_SYNC_PTR(team->t.t_pkfn, microtask);
+    KMP_CHECK_UPDATE(team->t.t_master_tid, master_tid);
+    KMP_CHECK_UPDATE(team->t.t_master_this_cons, master_this_cons);
+    KMP_CHECK_UPDATE(team->t.t_ident, loc);
+    KMP_CHECK_UPDATE(team->t.t_parent, parent_team);
+    KMP_CHECK_UPDATE_SYNC(team->t.t_pkfn, microtask);
 #if OMPT_SUPPORT
-    TCW_SYNC_PTR(team->t.ompt_team_info.microtask, unwrapped_task);
+    KMP_CHECK_UPDATE_SYNC(team->t.ompt_team_info.microtask, unwrapped_task);
 #endif
-    team->t.t_invoke     = invoker;  /* TODO move this to root, maybe */
+    KMP_CHECK_UPDATE(team->t.t_invoke, invoker);  /* TODO move this to root, maybe */
     // TODO: parent_team->t.t_level == INT_MAX ???
 #if OMP_40_ENABLED
     if ( !master_th->th.th_teams_microtask || level > teams_level ) {
 #endif /* OMP_40_ENABLED */
-        team->t.t_level        = parent_team->t.t_level + 1;
-        team->t.t_active_level = parent_team->t.t_active_level + 1;
+        int new_level = parent_team->t.t_level + 1;
+        KMP_CHECK_UPDATE(team->t.t_level, new_level);
+        new_level = parent_team->t.t_active_level + 1;
+        KMP_CHECK_UPDATE(team->t.t_active_level, new_level);
 #if OMP_40_ENABLED
     } else {
         // AC: Do not increase parallel level at start of the teams construct
-        team->t.t_level        = parent_team->t.t_level;
-        team->t.t_active_level = parent_team->t.t_active_level;
+        int new_level = parent_team->t.t_level;
+        KMP_CHECK_UPDATE(team->t.t_level, new_level);
+        new_level = parent_team->t.t_active_level;
+        KMP_CHECK_UPDATE(team->t.t_active_level, new_level);
     }
 #endif /* OMP_40_ENABLED */
-    team->t.t_sched      = get__sched_2(parent_team, master_tid); // set master's schedule as new run-time schedule
+    kmp_r_sched_t new_sched = get__sched_2(parent_team, master_tid);
+    if (team->t.t_sched.r_sched_type != new_sched.r_sched_type || new_sched.chunk != new_sched.chunk)
+        team->t.t_sched = new_sched; // set master's schedule as new run-time schedule
 
 #if OMP_40_ENABLED
-    team->t.t_cancel_request = cancel_noreq;
+    KMP_CHECK_UPDATE(team->t.t_cancel_request, cancel_noreq);
 #endif
 
     // Update the floating point rounding in the team if required.
@@ -2095,23 +2101,27 @@ __kmp_fork_call(
 #if OMP_40_ENABLED
     if ( ap ) {
 #endif /* OMP_40_ENABLED */
-        for ( i=argc-1; i >= 0; --i )
+        for ( i=argc-1; i >= 0; --i ) {
 // TODO: revert workaround for Intel(R) 64 tracker #96
 #if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-            *argv++ = va_arg( *ap, void * );
+            void *new_argv = va_arg(*ap, void *);
 #else
-            *argv++ = va_arg( ap, void * );
+            void *new_argv = va_arg(ap, void *);
 #endif
+            KMP_CHECK_UPDATE(*argv, new_argv);
+            argv++;
+        }
 #if OMP_40_ENABLED
     } else {
-        for ( i=0; i < argc; ++i )
+        for ( i=0; i < argc; ++i ) {
             // Get args from parent team for teams construct
-            argv[i] = team->t.t_parent->t.t_argv[i];
+            KMP_CHECK_UPDATE(argv[i], team->t.t_parent->t.t_argv[i]);
+        }
     }
 #endif /* OMP_40_ENABLED */
 
     /* now actually fork the threads */
-    team->t.t_master_active = master_active;
+    KMP_CHECK_UPDATE(team->t.t_master_active, master_active);
     if (!root->r.r_active) // Only do assignment if it prevents cache ping-pong
         root->r.r_active = TRUE;
 
@@ -4320,9 +4330,9 @@ __kmp_reinitialize_team( kmp_team_t *team, kmp_internal_control_t *new_icvs, ide
                     team->t.t_threads[0], team ) );
     KMP_DEBUG_ASSERT( team && new_icvs);
     KMP_DEBUG_ASSERT( ( ! TCR_4(__kmp_init_parallel) ) || new_icvs->nproc );
-    team->t.t_ident = loc;
+    KMP_CHECK_UPDATE(team->t.t_ident, loc);
 
-    team->t.t_id = KMP_GEN_TEAM_ID();
+    KMP_CHECK_UPDATE(team->t.t_id, KMP_GEN_TEAM_ID());
 
     // Copy ICVs to the master thread's implicit taskdata
     __kmp_init_implicit_task( loc, team->t.t_threads[0], team, 0, FALSE );
@@ -4774,11 +4784,13 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
             if ( team->t.t_size_changed == -1 ) {
                 team->t.t_size_changed = 1;
             } else {
-                team->t.t_size_changed = 0;
+                KMP_CHECK_UPDATE(team->t.t_size_changed, 0);
             }
 
             // TODO???: team->t.t_max_active_levels = new_max_active_levels;
-            team->t.t_sched =  new_icvs->sched;
+            kmp_r_sched_t new_sched = new_icvs->sched;
+            if (team->t.t_sched.r_sched_type != new_sched.r_sched_type || new_sched.chunk != new_sched.chunk)
+                team->t.t_sched = new_sched; // set master's schedule as new run-time schedule
 
             __kmp_reinitialize_team( team, new_icvs, root->r.r_uber_thread->th.th_ident );
 
@@ -4795,7 +4807,7 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
                   team->t.t_last_place ) );
             }
             else {
-                team->t.t_proc_bind = new_proc_bind;
+                KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
                 __kmp_partition_places( team );
             }
 # else
@@ -5016,7 +5028,7 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
 
         /* reallocate space for arguments if necessary */
         __kmp_alloc_argv_entries( argc, team, TRUE );
-        team->t.t_argc     = argc;
+        KMP_CHECK_UPDATE(team->t.t_argc, argc);
         //
         // The hot team re-uses the previous task team,
         // if untouched during the previous release->gather phase.
@@ -5059,7 +5071,7 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
 
             /* reallocate space for arguments if necessary */
             __kmp_alloc_argv_entries( argc, team, TRUE );
-            team->t.t_argc     = argc;
+            KMP_CHECK_UPDATE(team->t.t_argc, argc);
 
             KA_TRACE( 20, ("__kmp_allocate_team: team %d init arrived: join=%u, plain=%u\n",
                             team->t.t_id, KMP_INIT_BARRIER_STATE, KMP_INIT_BARRIER_STATE ));
