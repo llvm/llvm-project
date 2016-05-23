@@ -53,7 +53,7 @@ public:
 
   /// \brief Called when a header is added during module map parsing.
   ///
-  /// \param File The header file itself.
+  /// \param Filename The header file itself.
   virtual void moduleMapAddHeader(StringRef Filename) {}
 
   /// \brief Called when an umbrella header is added during module map parsing.
