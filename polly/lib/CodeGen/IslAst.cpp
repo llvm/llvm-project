@@ -564,10 +564,9 @@ isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
 void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
   isl_ast_print_options *Options;
   isl_ast_node *RootNode = getAst();
-  Function *F = S.getRegion().getEntry()->getParent();
+  Function &F = S.getFunction();
 
-  OS << ":: isl ast :: " << F->getName() << " :: " << S.getRegion().getNameStr()
-     << "\n";
+  OS << ":: isl ast :: " << F.getName() << " :: " << S.getNameStr() << "\n";
 
   if (!RootNode) {
     OS << ":: isl ast generation and code generation was skipped!\n\n";

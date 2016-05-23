@@ -188,6 +188,10 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
     if (Prev.is(tok::kw_namespace))
       continue;
 
+    // Variadic templates
+    if (MI->isVariadic())
+      continue;
+
     Check->diag(Tok.getLocation(), "macro argument should be enclosed in "
                                    "parentheses")
         << FixItHint::CreateInsertion(Tok.getLocation(), "(")

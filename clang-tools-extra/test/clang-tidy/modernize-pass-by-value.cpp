@@ -193,4 +193,3 @@ struct S {
   // CHECK-FIXES: S(Movable &&M) : M(M) {}
   Movable M;
 };
-

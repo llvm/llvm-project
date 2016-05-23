@@ -333,25 +333,27 @@ struct CieRecord {
 
 // Output section for .eh_frame.
 template <class ELFT>
-class EHOutputSection final : public OutputSectionBase<ELFT> {
-public:
+class EhOutputSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
-  EHOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
+
+public:
+  EhOutputSection();
   void writeTo(uint8_t *Buf) override;
   void finalize() override;
+  bool empty() const { return Sections.empty(); }
   void
   forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) override;
 
   void addSection(InputSectionBase<ELFT> *S) override;
 
+  size_t NumFdes = 0;
+
 private:
   template <class RelTy>
   void addSectionAux(EHInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
-
-  std::vector<SectionPiece> splitInputSection(const EHInputSection<ELFT> *Sec);
 
   template <class RelTy>
   CieRecord *addCie(SectionPiece &Piece, EHInputSection<ELFT> *Sec,
@@ -536,23 +538,15 @@ class EhFrameHeader final : public OutputSectionBase<ELFT> {
 
 public:
   EhFrameHeader();
+  void finalize() override;
   void writeTo(uint8_t *Buf) override;
-
   void addFde(uint32_t Pc, uint32_t FdeVA);
-  void add(EHOutputSection<ELFT> *Sec);
-  void reserveFde();
-
-  bool Live = false;
-
-  EHOutputSection<ELFT> *Sec = nullptr;
 
 private:
   struct FdeData {
     uint32_t Pc;
     uint32_t FdeVA;
   };
-
-  uintX_t getFdePc(uintX_t EhVA, const FdeData &F);
 
   std::vector<FdeData> Fdes;
 };
@@ -602,6 +596,7 @@ template <class ELFT> struct Out {
   static BuildIdSection<ELFT> *BuildId;
   static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
+  static EhOutputSection<ELFT> *EhFrame;
   static GnuHashTableSection<ELFT> *GnuHashTab;
   static GotPltSection<ELFT> *GotPlt;
   static GotSection<ELFT> *Got;
@@ -629,6 +624,7 @@ template <class ELFT> struct Out {
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
+template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
 template <class ELFT> GotPltSection<ELFT> *Out<ELFT>::GotPlt;
 template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;

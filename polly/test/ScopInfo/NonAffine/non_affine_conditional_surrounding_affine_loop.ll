@@ -9,8 +9,7 @@
 ; Negative test for INNERMOST.
 ; At the moment we will optimistically assume A[i] in the conditional before the inner
 ; loop might be invariant and expand the SCoP from the loop to include the conditional. However,
-; during SCoP generation we will realize that A[i] is in fact not invariant (in this region = the body
-; of the outer loop) and bail.
+; during SCoP generation we will realize that A[i] is in not always invariant.
 ;
 ; Possible solutions could be:
 ;   - Do not optimistically assume it to be invariant (as before this commit), however we would loose
@@ -18,7 +17,51 @@
 ;   - Reduce the size of the SCoP if an assumed invariant access is in fact not invariant instead of
 ;     rejecting the whole region.
 ;
-; INNERMOST-NOT:    Function: f
+; INNERMOST:         Function: f
+; INNERMOST-NEXT:    Region: %bb4---%bb3
+; INNERMOST-NEXT:    Max Loop Depth:  1
+; INNERMOST-NEXT:    Invariant Accesses: {
+; INNERMOST-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb4[] -> MemRef_A[p_2] };
+; INNERMOST-NEXT:            Execution Context: [tmp6, N, p_2] -> { : (tmp6 > 0 and p_2 >= N) or (tmp6 < 0 and p_2 >= N) or tmp6 = 0 }
+; INNERMOST-NEXT:    }
+; INNERMOST-NEXT:    Context:
+; INNERMOST-NEXT:    [tmp6, N, p_2] -> {  : -2147483648 <= tmp6 <= 2147483647 and -2147483648 <= N <= 2147483647 and 0 <= p_2 <= 1024 }
+; INNERMOST-NEXT:    Assumed Context:
+; INNERMOST-NEXT:    [tmp6, N, p_2] -> {  :  }
+; INNERMOST-NEXT:    Invalid Context:
+; INNERMOST-NEXT:    [tmp6, N, p_2] -> {  : p_2 < N and (tmp6 < 0 or tmp6 > 0) }
+; INNERMOST-NEXT:    p0: %tmp6
+; INNERMOST-NEXT:    p1: %N
+; INNERMOST-NEXT:    p2: {0,+,1}<nuw><nsw><%bb3>
+; INNERMOST-NEXT:    Arrays {
+; INNERMOST-NEXT:        i32 MemRef_A[*]; // Element size 4
+; INNERMOST-NEXT:        i64 MemRef_indvars_iv_next2; // Element size 8
+; INNERMOST-NEXT:    }
+; INNERMOST-NEXT:    Arrays (Bounds as pw_affs) {
+; INNERMOST-NEXT:        i32 MemRef_A[*]; // Element size 4
+; INNERMOST-NEXT:        i64 MemRef_indvars_iv_next2; // Element size 8
+; INNERMOST-NEXT:    }
+; INNERMOST-NEXT:    Alias Groups (0):
+; INNERMOST-NEXT:        n/a
+; INNERMOST-NEXT:    Statements {
+; INNERMOST-NEXT:    	Stmt_bb11
+; INNERMOST-NEXT:            Domain :=
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb11[i0] : 0 <= i0 < N and (tmp6 < 0 or tmp6 > 0) };
+; INNERMOST-NEXT:            Schedule :=
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb11[i0] -> [0, i0] : tmp6 < 0 or tmp6 > 0 };
+; INNERMOST-NEXT:            ReadAccess :=	[Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb11[i0] -> MemRef_A[i0] };
+; INNERMOST-NEXT:            MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb11[i0] -> MemRef_A[i0] };
+; INNERMOST-NEXT:    	Stmt_bb18
+; INNERMOST-NEXT:            Domain :=
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb18[] };
+; INNERMOST-NEXT:            Schedule :=
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb18[] -> [1, 0] };
+; INNERMOST-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 1]
+; INNERMOST-NEXT:                [tmp6, N, p_2] -> { Stmt_bb18[] -> MemRef_indvars_iv_next2[] };
+; INNERMOST-NEXT:    }
 ;
 ; ALL:      Function: f
 ; ALL-NEXT: Region: %bb3---%bb19

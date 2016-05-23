@@ -127,8 +127,8 @@ static __isl_give isl_pw_aff *getWidthExpValOnDomain(unsigned Width,
 }
 
 SCEVAffinator::SCEVAffinator(Scop *S, LoopInfo &LI)
-    : S(S), Ctx(S->getIslCtx()), R(S->getRegion()), SE(*S->getSE()), LI(LI),
-      TD(R.getEntry()->getParent()->getParent()->getDataLayout()) {}
+    : S(S), Ctx(S->getIslCtx()), SE(*S->getSE()), LI(LI),
+      TD(S->getFunction().getParent()->getDataLayout()) {}
 
 SCEVAffinator::~SCEVAffinator() {
   for (auto &CachedPair : CachedExpressions)
@@ -170,7 +170,7 @@ __isl_give PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB) {
     NumIterators = 0;
 
   auto *Scope = LI.getLoopFor(BB);
-  S->addParams(getParamsInAffineExpr(&R, Scope, Expr, SE));
+  S->addParams(getParamsInAffineExpr(&S->getRegion(), Scope, Expr, SE));
 
   return visit(Expr);
 }
@@ -437,7 +437,7 @@ __isl_give PWACtx SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
 
   // Directly generate isl_pw_aff for Expr if 'start' is zero.
   if (Expr->getStart()->isZero()) {
-    assert(S->getRegion().contains(Expr->getLoop()) &&
+    assert(S->contains(Expr->getLoop()) &&
            "Scop does not contain the loop referenced in this AddRec");
 
     PWACtx Step = visit(Expr->getOperand(1));
