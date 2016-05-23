@@ -1,4 +1,4 @@
-//===- SCCP.h - Optimize Global Variables ----------------------*- C++ -*-===//
+//===- SCCP.h - Sparse Conditional Constant Propagation ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

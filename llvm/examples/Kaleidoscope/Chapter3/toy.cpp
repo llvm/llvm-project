@@ -388,9 +388,9 @@ static std::unique_ptr<PrototypeAST> ParseExtern() {
 // Code Generation
 //===----------------------------------------------------------------------===//
 
-static std::unique_ptr<Module> TheModule;
 static LLVMContext TheContext;
 static IRBuilder<> Builder(TheContext);
+static std::unique_ptr<Module> TheModule;
 static std::map<std::string, Value *> NamedValues;
 
 Value *LogErrorV(const char *Str) {

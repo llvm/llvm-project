@@ -4755,7 +4755,6 @@ define void @test_x86_avx_vzeroall() {
 ; AVX-LABEL: test_x86_avx_vzeroall:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    vzeroall
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vzeroall:
@@ -4771,7 +4770,6 @@ declare void @llvm.x86.avx.vzeroall() nounwind
 define void @test_x86_avx_vzeroupper() {
 ; AVX-LABEL: test_x86_avx_vzeroupper:
 ; AVX:       ## BB#0:
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;

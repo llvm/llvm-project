@@ -13,15 +13,15 @@
 ;        A[i] += A[(a / b) / (c / d)];
 ;    }
 ;
-; IR:       %[[R0:[0-9]*]] = icmp ne i32 %d, 0
-; IR-NEXT:  %[[R1:[0-9]*]] = select i1 %[[R0]], i32 %d, i32 1
-; IR-NEXT:  %[[R2:[0-9]*]] = udiv i32 %c, %[[R1]]
-; IR-NEXT:  %[[R3:[0-9]*]] = icmp ne i32 %2, 0
-; IR-NEXT:  %[[R4:[0-9]*]] = select i1 %[[R3]], i32 %[[R2]], i32 1
-; IR-NEXT:  %[[R5:[0-9]*]] = icmp ne i32 %b, 0
-; IR-NEXT:  %[[R6:[0-9]*]] = select i1 %[[R5]], i32 %b, i32 1
-; IR-NEXT:  %[[R7:[0-9]*]] = udiv i32 %a, %[[R6]]
-; IR-NEXT:  %[[R8:[0-9]*]] = udiv i32 %[[R7]], %[[R4]]
+; IR:       %[[R0:[.a-zA-Z0-9]*]] = icmp ugt i32 %b, 1
+; IR-NEXT:  %[[R1:[.a-zA-Z0-9]*]] = select i1 %[[R0]], i32 %b, i32 1
+; IR-NEXT:  %[[R2:[.a-zA-Z0-9]*]] = udiv i32 %a, %[[R1]]
+; IR-NEXT:  %[[R5:[.a-zA-Z0-9]*]] = icmp ugt i32 %d, 1
+; IR-NEXT:  %[[R6:[.a-zA-Z0-9]*]] = select i1 %[[R5]], i32 %d, i32 1
+; IR-NEXT:  %[[R7:[.a-zA-Z0-9]*]] = udiv i32 %c, %[[R6]]
+; IR-NEXT:  %[[R3:[.a-zA-Z0-9]*]] = icmp ugt i32 %[[R7]], 1
+; IR-NEXT:  %[[R4:[.a-zA-Z0-9]*]] = select i1 %[[R3]], i32 %[[R7]], i32 1
+; IR-NEXT:  %[[R8:[.a-zA-Z0-9]*]] = udiv i32 %[[R2]], %[[R4]]
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

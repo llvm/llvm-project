@@ -192,6 +192,12 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
     if ((!IsControlFlow || IsReturnFromX86INTR) && CurState == EXITS_DIRTY)
       continue;
 
+    // Ignore existing VZERO* instructions.
+    // FIXME: The existence of these instructions should be used to modify the
+    // current state and/or used when deciding whether we need to create a VZU.
+    if (MI->getOpcode() == X86::VZEROALL || MI->getOpcode() == X86::VZEROUPPER)
+      continue;
+
     if (hasYmmReg(MI)) {
       // We found a ymm-using instruction; this could be an AVX instruction,
       // or it could be control flow.

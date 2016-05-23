@@ -45,28 +45,28 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
 
   // (PowerOfTwo >>u B) --> isExact since shifting out the result would make it
   // inexact.  Similarly for <<.
-  if (BinaryOperator *I = dyn_cast<BinaryOperator>(V))
-    if (I->isLogicalShift() &&
-        isKnownToBeAPowerOfTwo(I->getOperand(0), IC.getDataLayout(), false, 0,
-                               IC.getAssumptionCache(), &CxtI,
-                               IC.getDominatorTree())) {
-      // We know that this is an exact/nuw shift and that the input is a
-      // non-zero context as well.
-      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
-        I->setOperand(0, V2);
-        MadeChange = true;
-      }
-
-      if (I->getOpcode() == Instruction::LShr && !I->isExact()) {
-        I->setIsExact();
-        MadeChange = true;
-      }
-
-      if (I->getOpcode() == Instruction::Shl && !I->hasNoUnsignedWrap()) {
-        I->setHasNoUnsignedWrap();
-        MadeChange = true;
-      }
+  BinaryOperator *I = dyn_cast<BinaryOperator>(V);
+  if (I && I->isLogicalShift() &&
+      isKnownToBeAPowerOfTwo(I->getOperand(0), IC.getDataLayout(), false, 0,
+                             IC.getAssumptionCache(), &CxtI,
+                             IC.getDominatorTree())) {
+    // We know that this is an exact/nuw shift and that the input is a
+    // non-zero context as well.
+    if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
+      I->setOperand(0, V2);
+      MadeChange = true;
     }
+
+    if (I->getOpcode() == Instruction::LShr && !I->isExact()) {
+      I->setIsExact();
+      MadeChange = true;
+    }
+
+    if (I->getOpcode() == Instruction::Shl && !I->hasNoUnsignedWrap()) {
+      I->setHasNoUnsignedWrap();
+      MadeChange = true;
+    }
+  }
 
   // TODO: Lots more we could do here:
   //    If V is a phi node, we can call this on each of its operands.

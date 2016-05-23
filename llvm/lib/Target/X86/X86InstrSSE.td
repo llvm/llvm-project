@@ -761,6 +761,13 @@ let Predicates = [UseSSE2] in {
             (MOVSDrr VR128:$src1, (COPY_TO_REGCLASS VR128:$src2, FR64))>;
 }
 
+// Aliases to help the assembler pick two byte VEX encodings by swapping the
+// operands relative to the normal instructions to use VEX.R instead of VEX.B.
+def : InstAlias<"vmovss\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                (VMOVSSrr_REV VR128L:$dst, VR128:$src1, VR128H:$src2), 0>;
+def : InstAlias<"vmovsd\t{$src2, $src1, $dst|$dst, $src1, $src2}",
+                (VMOVSDrr_REV VR128L:$dst, VR128:$src1, VR128H:$src2), 0>;
+
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Move Aligned/Unaligned FP Instructions
 //===----------------------------------------------------------------------===//
@@ -902,6 +909,25 @@ def : Pat<(int_x86_avx_storeu_ps_256 addr:$dst, VR256:$src),
           (VMOVUPSYmr addr:$dst, VR256:$src)>;
 def : Pat<(int_x86_avx_storeu_pd_256 addr:$dst, VR256:$src),
           (VMOVUPDYmr addr:$dst, VR256:$src)>;
+
+// Aliases to help the assembler pick two byte VEX encodings by swapping the
+// operands relative to the normal instructions to use VEX.R instead of VEX.B.
+def : InstAlias<"vmovaps\t{$src, $dst|$dst, $src}",
+                (VMOVAPSrr_REV VR128L:$dst, VR128H:$src), 0>;
+def : InstAlias<"vmovapd\t{$src, $dst|$dst, $src}",
+                (VMOVAPDrr_REV VR128L:$dst, VR128H:$src), 0>;
+def : InstAlias<"vmovups\t{$src, $dst|$dst, $src}",
+                (VMOVUPSrr_REV VR128L:$dst, VR128H:$src), 0>;
+def : InstAlias<"vmovupd\t{$src, $dst|$dst, $src}",
+                (VMOVUPDrr_REV VR128L:$dst, VR128H:$src), 0>;
+def : InstAlias<"vmovaps\t{$src, $dst|$dst, $src}",
+                (VMOVAPSYrr_REV VR256L:$dst, VR256H:$src), 0>;
+def : InstAlias<"vmovapd\t{$src, $dst|$dst, $src}",
+                (VMOVAPDYrr_REV VR256L:$dst, VR256H:$src), 0>;
+def : InstAlias<"vmovups\t{$src, $dst|$dst, $src}",
+                (VMOVUPSYrr_REV VR256L:$dst, VR256H:$src), 0>;
+def : InstAlias<"vmovupd\t{$src, $dst|$dst, $src}",
+                (VMOVUPDYrr_REV VR256L:$dst, VR256H:$src), 0>;
 
 let SchedRW = [WriteStore] in {
 def MOVAPSmr : PSI<0x29, MRMDestMem, (outs), (ins f128mem:$dst, VR128:$src),
@@ -3885,6 +3911,17 @@ let Predicates = [UseSSE2] in
 def : Pat<(int_x86_sse2_storeu_dq addr:$dst, VR128:$src),
           (MOVDQUmr addr:$dst, VR128:$src)>;
 
+// Aliases to help the assembler pick two byte VEX encodings by swapping the
+// operands relative to the normal instructions to use VEX.R instead of VEX.B.
+def : InstAlias<"vmovdqa\t{$src, $dst|$dst, $src}",
+                (VMOVDQArr_REV VR128L:$dst, VR128H:$src), 0>;
+def : InstAlias<"vmovdqa\t{$src, $dst|$dst, $src}",
+                (VMOVDQAYrr_REV VR256L:$dst, VR256H:$src), 0>;
+def : InstAlias<"vmovdqu\t{$src, $dst|$dst, $src}",
+                (VMOVDQUrr_REV VR128L:$dst, VR128H:$src), 0>;
+def : InstAlias<"vmovdqu\t{$src, $dst|$dst, $src}",
+                (VMOVDQUYrr_REV VR256L:$dst, VR256H:$src), 0>;
+
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Integer Arithmetic Instructions
 //===---------------------------------------------------------------------===//
@@ -4976,6 +5013,11 @@ def VMOVPQI2QIrr : VS2I<0xD6, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
 def MOVPQI2QIrr : S2I<0xD6, MRMDestReg, (outs VR128:$dst), (ins VR128:$src),
                       "movq\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVQ_RR>;
 }
+
+// Aliases to help the assembler pick two byte VEX encodings by swapping the
+// operands relative to the normal instructions to use VEX.R instead of VEX.B.
+def : InstAlias<"vmovq\t{$src, $dst|$dst, $src}",
+                (VMOVPQI2QIrr VR128L:$dst, VR128H:$src), 0>;
 
 //===---------------------------------------------------------------------===//
 // Store / copy lower 64-bits of a XMM register.

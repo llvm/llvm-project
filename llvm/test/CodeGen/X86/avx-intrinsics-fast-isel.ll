@@ -3736,13 +3736,11 @@ define void @test_mm256_zeroall() nounwind {
 ; X32-LABEL: test_mm256_zeroall:
 ; X32:       # BB#0:
 ; X32-NEXT:    vzeroall
-; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_zeroall:
 ; X64:       # BB#0:
 ; X64-NEXT:    vzeroall
-; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   call void @llvm.x86.avx.vzeroall()
   ret void
@@ -3753,12 +3751,10 @@ define void @test_mm256_zeroupper() nounwind {
 ; X32-LABEL: test_mm256_zeroupper:
 ; X32:       # BB#0:
 ; X32-NEXT:    vzeroupper
-; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_zeroupper:
 ; X64:       # BB#0:
-; X64-NEXT:    vzeroupper
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   call void @llvm.x86.avx.vzeroupper()

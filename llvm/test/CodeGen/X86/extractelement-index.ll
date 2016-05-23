@@ -28,6 +28,26 @@ define i8 @extractelement_v16i8_1(<16 x i8> %a) nounwind {
   ret i8 %b
 }
 
+define i8 @extractelement_v16i8_11(<16 x i8> %a) nounwind {
+; SSE2-LABEL: extractelement_v16i8_11:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movb -{{[0-9]+}}(%rsp), %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: extractelement_v16i8_11:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    pextrb $11, %xmm0, %eax
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: extractelement_v16i8_11:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpextrb $11, %xmm0, %eax
+; AVX-NEXT:    retq
+  %b = extractelement <16 x i8> %a, i256 11
+  ret i8 %b
+}
+
 define i8 @extractelement_v16i8_14(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v16i8_14:
 ; SSE2:       # BB#0:

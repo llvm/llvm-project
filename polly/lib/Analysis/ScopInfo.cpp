@@ -2836,6 +2836,37 @@ bool Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
   return true;
 }
 
+MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
+  auto *BaseAddr = SE->getSCEV(MA->getBaseAddr());
+  auto *PointerBase = dyn_cast<SCEVUnknown>(SE->getPointerBase(BaseAddr));
+  if (!PointerBase)
+    return nullptr;
+
+  auto *PointerBaseInst = dyn_cast<Instruction>(PointerBase->getValue());
+  if (!PointerBaseInst)
+    return nullptr;
+
+  auto *BasePtrStmt = getStmtFor(PointerBaseInst);
+  if (!BasePtrStmt)
+    return nullptr;
+
+  return BasePtrStmt->getArrayAccessOrNULLFor(PointerBaseInst);
+}
+
+bool Scop::hasNonHoistableBasePtrInScop(MemoryAccess *MA,
+                                        __isl_keep isl_union_map *Writes) {
+  if (auto *BasePtrMA = lookupBasePtrAccess(MA))
+    return !isHoistableAccess(BasePtrMA, Writes);
+
+  auto *BaseAddr = SE->getSCEV(MA->getBaseAddr());
+  auto *PointerBase = dyn_cast<SCEVUnknown>(SE->getPointerBase(BaseAddr));
+  if (auto *BasePtrInst = dyn_cast<Instruction>(PointerBase->getValue()))
+    if (!isa<LoadInst>(BasePtrInst))
+      return R.contains(BasePtrInst);
+
+  return false;
+}
+
 void Scop::buildAliasChecks(AliasAnalysis &AA) {
   if (!PollyUseRuntimeAliasChecks)
     return;
@@ -2978,17 +3009,25 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
 
     // Check if we have non-affine accesses left, if so bail out as we cannot
     // generate a good access range yet.
-    for (auto *MA : AG)
+    for (auto *MA : AG) {
       if (!MA->isAffine()) {
         invalidate(ALIASING, MA->getAccessInstruction()->getDebugLoc());
         return false;
       }
+      if (auto *BasePtrMA = lookupBasePtrAccess(MA))
+        addRequiredInvariantLoad(
+            cast<LoadInst>(BasePtrMA->getAccessInstruction()));
+    }
     for (auto &ReadOnlyPair : ReadOnlyPairs)
-      for (auto *MA : ReadOnlyPair.second)
+      for (auto *MA : ReadOnlyPair.second) {
         if (!MA->isAffine()) {
           invalidate(ALIASING, MA->getAccessInstruction()->getDebugLoc());
           return false;
         }
+        if (auto *BasePtrMA = lookupBasePtrAccess(MA))
+          addRequiredInvariantLoad(
+              cast<LoadInst>(BasePtrMA->getAccessInstruction()));
+      }
 
     // Calculate minimal and maximal accesses for non read only accesses.
     MinMaxAliasGroups.emplace_back();
@@ -3052,7 +3091,7 @@ static Loop *getLoopSurroundingRegion(Region &R, LoopInfo &LI) {
 }
 
 Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
-           const ScopDetection::DetectionContext &DC)
+           ScopDetection::DetectionContext &DC)
     : SE(&ScalarEvolution), R(R), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
       MaxLoopDepth(0), DC(DC), IslCtx(isl_ctx_alloc(), isl_ctx_free),
@@ -3402,23 +3441,13 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
   // that it is invariant, thus it will be hoisted too. However, if there is
   // no base pointer origin we check that the base pointer is defined
   // outside the region.
-  const ScopArrayInfo *SAI = Access->getScopArrayInfo();
-  auto *BasePtrInst = dyn_cast<Instruction>(SAI->getBasePtr());
-  if (SAI->getBasePtrOriginSAI()) {
-    assert(BasePtrInst && R.contains(BasePtrInst));
-    if (!isa<LoadInst>(BasePtrInst))
-      return false;
-    auto *BasePtrStmt = getStmtFor(BasePtrInst);
-    assert(BasePtrStmt);
-    auto *BasePtrMA = BasePtrStmt->getArrayAccessOrNULLFor(BasePtrInst);
-    if (BasePtrMA && !isHoistableAccess(BasePtrMA, Writes))
-      return false;
-  } else if (BasePtrInst && R.contains(BasePtrInst))
+  if (hasNonHoistableBasePtrInScop(Access, Writes))
     return false;
 
   // Skip accesses in non-affine subregions as they might not be executed
   // under the same condition as the entry of the non-affine subregion.
-  if (BB != Access->getAccessInstruction()->getParent())
+  auto *LI = cast<LoadInst>(Access->getAccessInstruction());
+  if (BB != LI->getParent())
     return false;
 
   isl_map *AccessRelation = Access->getAccessRelation();
@@ -3438,10 +3467,7 @@ bool Scop::isHoistableAccess(MemoryAccess *Access,
   bool IsWritten = !isl_union_map_is_empty(Written);
   isl_union_map_free(Written);
 
-  if (IsWritten)
-    return false;
-
-  return true;
+  return !IsWritten;
 }
 
 void Scop::verifyInvariantLoads() {
