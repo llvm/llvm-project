@@ -713,100 +713,47 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 EhFrameHeader<ELFT>::EhFrameHeader()
-    : OutputSectionBase<ELFT>(".eh_frame_hdr", llvm::ELF::SHT_PROGBITS,
-                              SHF_ALLOC) {
-  // It's a 4 bytes of header + pointer to the contents of the .eh_frame section
-  // + the number of FDE pointers in the table.
-  this->Header.sh_size = 12;
-}
+    : OutputSectionBase<ELFT>(".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC) {}
 
-// We have to get PC values of FDEs. They depend on relocations
-// which are target specific, so we run this code after performing
-// all relocations. We read the values from ouput buffer according to the
-// encoding given for FDEs. Return value is an offset to the initial PC value
-// for the FDE.
-template <class ELFT>
-typename EhFrameHeader<ELFT>::uintX_t
-EhFrameHeader<ELFT>::getFdePc(uintX_t EhVA, const FdeData &F) {
-  const endianness E = ELFT::TargetEndianness;
-  uint8_t Size = F.Enc & 0x7;
-  if (Size == DW_EH_PE_absptr)
-    Size = sizeof(uintX_t) == 8 ? DW_EH_PE_udata8 : DW_EH_PE_udata4;
-  uint64_t PC;
-  switch (Size) {
-  case DW_EH_PE_udata2:
-    PC = read16<E>(F.PCRel);
-    break;
-  case DW_EH_PE_udata4:
-    PC = read32<E>(F.PCRel);
-    break;
-  case DW_EH_PE_udata8:
-    PC = read64<E>(F.PCRel);
-    break;
-  default:
-    fatal("unknown FDE size encoding");
-  }
-  switch (F.Enc & 0x70) {
-  case DW_EH_PE_absptr:
-    return PC;
-  case DW_EH_PE_pcrel:
-    return PC + EhVA + F.Off + 8;
-  default:
-    fatal("unknown FDE size relative encoding");
-  }
-}
-
+// .eh_frame_hdr contains a binary search table of pointers to FDEs.
+// Each entry of the search table consists of two values,
+// the starting PC from where FDEs covers, and the FDE's address.
+// It is sorted by PC.
 template <class ELFT> void EhFrameHeader<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
 
-  uintX_t EhVA = Sec->getVA();
-  uintX_t VA = this->getVA();
+  // Sort the FDE list by their PC and uniqueify. Usually there is only
+  // one FDE for a PC (i.e. function), but if ICF merges two functions
+  // into one, there can be more than one FDEs pointing to the address.
+  auto Less = [](const FdeData &A, const FdeData &B) { return A.Pc < B.Pc; };
+  std::stable_sort(Fdes.begin(), Fdes.end(), Less);
+  auto Eq = [](const FdeData &A, const FdeData &B) { return A.Pc == B.Pc; };
+  Fdes.erase(std::unique(Fdes.begin(), Fdes.end(), Eq), Fdes.end());
 
-  // InitialPC -> Offset in .eh_frame, sorted by InitialPC, and deduplicate PCs.
-  // FIXME: Deduplication leaves unneeded null bytes at the end of the section.
-  std::map<uintX_t, size_t> PcToOffset;
-  for (const FdeData &F : FdeList)
-    PcToOffset[getFdePc(EhVA, F)] = F.Off;
-
-  const uint8_t Header[] = {1, DW_EH_PE_pcrel | DW_EH_PE_sdata4,
-                            DW_EH_PE_udata4,
-                            DW_EH_PE_datarel | DW_EH_PE_sdata4};
-  memcpy(Buf, Header, sizeof(Header));
-
-  uintX_t EhOff = EhVA - VA - 4;
-  write32<E>(Buf + 4, EhOff);
-  write32<E>(Buf + 8, PcToOffset.size());
+  Buf[0] = 1;
+  Buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
+  Buf[2] = DW_EH_PE_udata4;
+  Buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
+  write32<E>(Buf + 4, Out<ELFT>::EhFrame->getVA() - this->getVA() - 4);
+  write32<E>(Buf + 8, Fdes.size());
   Buf += 12;
 
-  for (auto &I : PcToOffset) {
-    // The first four bytes are an offset to the initial PC value for the FDE.
-    write32<E>(Buf, I.first - VA);
-    // The last four bytes are an offset to the FDE data itself.
-    write32<E>(Buf + 4, EhVA + I.second - VA);
+  uintX_t VA = this->getVA();
+  for (FdeData &Fde : Fdes) {
+    write32<E>(Buf, Fde.Pc - VA);
+    write32<E>(Buf + 4, Fde.FdeVA - VA);
     Buf += 8;
   }
 }
 
-template <class ELFT>
-void EhFrameHeader<ELFT>::assignEhFrame(EHOutputSection<ELFT> *Sec) {
-  assert((!this->Sec || this->Sec == Sec) &&
-         "multiple .eh_frame sections not supported for .eh_frame_hdr");
-  Live = Config->EhFrameHdr;
-  this->Sec = Sec;
+template <class ELFT> void EhFrameHeader<ELFT>::finalize() {
+  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
+  this->Header.sh_size = 12 + Out<ELFT>::EhFrame->NumFdes * 8;
 }
 
 template <class ELFT>
-void EhFrameHeader<ELFT>::addFde(uint8_t Enc, size_t Off, uint8_t *PCRel) {
-  if (Live && (Enc & 0xF0) == DW_EH_PE_datarel)
-    fatal("DW_EH_PE_datarel encoding unsupported for FDEs by .eh_frame_hdr");
-  FdeList.push_back(FdeData{Enc, Off, PCRel});
-}
-
-template <class ELFT> void EhFrameHeader<ELFT>::reserveFde() {
-  // Each FDE entry is 8 bytes long:
-  // The first four bytes are an offset to the initial PC value for the FDE. The
-  // last four byte are an offset to the FDE data itself.
-  this->Header.sh_size += 8;
+void EhFrameHeader<ELFT>::addFde(uint32_t Pc, uint32_t FdeVA) {
+  Fdes.push_back({Pc, FdeVA});
 }
 
 template <class ELFT>
@@ -959,30 +906,15 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-EHOutputSection<ELFT>::EHOutputSection(StringRef Name, uint32_t Type,
-                                       uintX_t Flags)
-    : OutputSectionBase<ELFT>(Name, Type, Flags) {
-  Out<ELFT>::EhFrameHdr->assignEhFrame(this);
-}
+EhOutputSection<ELFT>::EhOutputSection()
+    : OutputSectionBase<ELFT>(".eh_frame", SHT_PROGBITS, SHF_ALLOC) {}
 
 template <class ELFT>
-void EHOutputSection<ELFT>::forEachInputSection(
+void EhOutputSection<ELFT>::forEachInputSection(
     std::function<void(InputSectionBase<ELFT> *)> F) {
   for (EHInputSection<ELFT> *S : Sections)
     F(S);
 }
-
-template <class ELFT>
-EHRegion<ELFT>::EHRegion(EHInputSection<ELFT> *Sec, unsigned Index)
-    : Sec(Sec), Index(Index) {}
-
-template <class ELFT> ArrayRef<uint8_t> EHRegion<ELFT>::data() const {
-  return Sec->Pieces[Index].Data;
-}
-
-template <class ELFT>
-CieRecord<ELFT>::CieRecord(EHInputSection<ELFT> *Sec, unsigned Index)
-    : EHRegion<ELFT>(Sec, Index) {}
 
 // Read a byte and advance D by one byte.
 static uint8_t readByte(ArrayRef<uint8_t> &D) {
@@ -1032,7 +964,7 @@ template <class ELFT> static void skipAugP(ArrayRef<uint8_t> &D) {
 }
 
 template <class ELFT>
-uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
+uint8_t EhOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
   if (D.size() < 8)
     fatal("CIE too small");
   D = D.slice(8);
@@ -1084,31 +1016,6 @@ uint8_t EHOutputSection<ELFT>::getFdeEncoding(ArrayRef<uint8_t> D) {
   return DW_EH_PE_absptr;
 }
 
-template <class ELFT>
-static typename ELFT::uint readEntryLength(ArrayRef<uint8_t> D) {
-  const endianness E = ELFT::TargetEndianness;
-  if (D.size() < 4)
-    fatal("CIE/FDE too small");
-
-  // First 4 bytes of CIE/FDE is the size of the record.
-  // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead.
-  uint64_t V = read32<E>(D.data());
-  if (V < UINT32_MAX) {
-    uint64_t Len = V + 4;
-    if (Len > D.size())
-      fatal("CIE/FIE ends past the end of the section");
-    return Len;
-  }
-
-  if (D.size() < 12)
-    fatal("CIE/FDE too small");
-  V = read64<E>(D.data() + 4);
-  uint64_t Len = V + 12;
-  if (Len < V || D.size() < Len)
-    fatal("CIE/FIE ends past the end of the section");
-  return Len;
-}
-
 // Returns the first relocation that points to a region
 // between Begin and Begin+Size.
 template <class IntTy, class RelTy>
@@ -1122,88 +1029,105 @@ static const RelTy *getReloc(IntTy Begin, IntTy Size, ArrayRef<RelTy> Rels) {
   return &Rels[I];
 }
 
+// Search for an existing CIE record or create a new one.
+// CIE records from input object files are uniquified by their contents
+// and where their relocations point to.
 template <class ELFT>
 template <class RelTy>
-void EHOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *Sec,
-                                          ArrayRef<RelTy> Rels) {
+CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
+                                         EHInputSection<ELFT> *Sec,
+                                         ArrayRef<RelTy> Rels) {
   const endianness E = ELFT::TargetEndianness;
+  if (read32<E>(Piece.Data.data() + 4) != 0)
+    fatal("CIE expected at beginning of .eh_frame: " + Sec->getSectionName());
 
-  Sec->OutSec = this;
-  this->updateAlign(Sec->Align);
-  Sections.push_back(Sec);
+  SymbolBody *Personality = nullptr;
+  if (const RelTy *Rel = getReloc(Piece.InputOff, Piece.size(), Rels))
+    Personality = &Sec->getFile()->getRelocTargetSym(*Rel);
 
-  ArrayRef<uint8_t> D = Sec->getSectionData();
-  uintX_t Offset = 0;
+  // Search for an existing CIE by CIE contents/relocation target pair.
+  CieRecord *Cie = &CieMap[{Piece.Data, Personality}];
 
-  DenseMap<uintX_t, uintX_t> OffsetToIndex;
-  while (!D.empty()) {
-    uintX_t Length = readEntryLength<ELFT>(D);
-    // If CIE/FDE data length is zero then Length is 4, this
-    // shall be considered a terminator and processing shall end.
-    if (Length == 4)
-      break;
-    StringRef Entry((const char *)D.data(), Length);
+  // If not found, create a new one.
+  if (Cie->Piece == nullptr) {
+    Cie->Piece = &Piece;
+    if (Config->EhFrameHdr)
+      Cie->FdeEncoding = getFdeEncoding(Piece.Data);
+    Cies.push_back(Cie);
+  }
+  return Cie;
+}
 
-    unsigned Index = Sec->Pieces.size();
-    Sec->Pieces.emplace_back(Offset, D.slice(0, Length));
+template <class ELFT> static void validateFde(SectionPiece &Piece) {
+  // We assume that all FDEs refer the first CIE in the same object file.
+  const endianness E = ELFT::TargetEndianness;
+  uint32_t ID = read32<E>(Piece.Data.data() + 4);
+  if (Piece.InputOff + 4 - ID != 0)
+    fatal("invalid CIE reference");
+}
 
-    uint32_t ID = read32<E>(D.data() + 4);
-    if (ID == 0) {
-      // CIE
-      CieRecord<ELFT> Cie(Sec, Index);
-      if (Config->EhFrameHdr)
-        Cie.FdeEncoding = getFdeEncoding(D);
+// There is one FDE per function. Returns true if a given FDE
+// points to a live function.
+template <class ELFT>
+template <class RelTy>
+bool EhOutputSection<ELFT>::isFdeLive(SectionPiece &Piece,
+                                      EHInputSection<ELFT> *Sec,
+                                      ArrayRef<RelTy> Rels) {
+  const RelTy *Rel = getReloc(Piece.InputOff, Piece.size(), Rels);
+  if (!Rel)
+    fatal("FDE doesn't reference another section");
+  SymbolBody &B = Sec->getFile()->getRelocTargetSym(*Rel);
+  auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
+  if (!D || !D->Section)
+    return false;
+  InputSectionBase<ELFT> *Target = D->Section->Repl;
+  return Target && Target->Live;
+}
 
-      SymbolBody *Personality = nullptr;
-      if (const RelTy *Rel = getReloc(Offset, Length, Rels))
-        Personality = &Sec->getFile()->getRelocTargetSym(*Rel);
+// .eh_frame is a sequence of CIE or FDE records. In general, there
+// is one CIE record per input object file which is followed by
+// a list of FDEs. This function searches an existing CIE or create a new
+// one and associates FDEs to the CIE.
+template <class ELFT>
+template <class RelTy>
+void EhOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *Sec,
+                                          ArrayRef<RelTy> Rels) {
+  SectionPiece &CiePiece = Sec->Pieces[0];
+  CieRecord *Cie = addCie(CiePiece, Sec, Rels);
 
-      std::pair<StringRef, SymbolBody *> CieInfo(Entry, Personality);
-      auto P = CieMap.insert(std::make_pair(CieInfo, Cies.size()));
-      if (P.second) {
-        Cies.push_back(Cie);
-        this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
-      }
-      OffsetToIndex[Offset] = P.first->second;
-    } else {
-      const RelTy *Rel = getReloc(Offset, Length, Rels);
-      if (!Rel)
-        fatal("FDE doesn't reference another section");
-      SymbolBody &B = Sec->getFile()->getRelocTargetSym(*Rel);
-
-      auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
-      if (D && D->Section) {
-        InputSectionBase<ELFT> *Target = D->Section->Repl;
-        if (Target && Target->Live) {
-          uint32_t CieOffset = Offset + 4 - ID;
-          auto I = OffsetToIndex.find(CieOffset);
-          if (I == OffsetToIndex.end())
-            fatal("invalid CIE reference");
-          Cies[I->second].Fdes.push_back(EHRegion<ELFT>(Sec, Index));
-          Out<ELFT>::EhFrameHdr->reserveFde();
-          this->Header.sh_size += alignTo(Length, sizeof(uintX_t));
-        }
-      }
-    }
-
-    Offset += Length;
-    D = D.slice(Length);
+  for (size_t I = 1, End = Sec->Pieces.size(); I != End; ++I) {
+    SectionPiece &FdePiece = Sec->Pieces[I];
+    validateFde<ELFT>(FdePiece);
+    if (!isFdeLive(FdePiece, Sec, Rels))
+      continue;
+    Cie->FdePieces.push_back(&FdePiece);
+    NumFdes++;
   }
 }
 
 template <class ELFT>
-void EHOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
+void EhOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *Sec = cast<EHInputSection<ELFT>>(C);
-  const Elf_Shdr *RelSec = Sec->RelocSection;
-  if (!RelSec) {
-    addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
+  Sec->OutSec = this;
+  this->updateAlign(Sec->Align);
+  Sections.push_back(Sec);
+
+  // .eh_frame is a sequence of CIE or FDE records. This function
+  // splits it into pieces so that we can call
+  // SplitInputSection::getSectionPiece on the section.
+  Sec->split();
+  if (Sec->Pieces.empty())
+    return;
+
+  if (const Elf_Shdr *RelSec = Sec->RelocSection) {
+    ELFFile<ELFT> &Obj = Sec->getFile()->getObj();
+    if (RelSec->sh_type == SHT_RELA)
+      addSectionAux(Sec, Obj.relas(RelSec));
+    else
+      addSectionAux(Sec, Obj.rels(RelSec));
     return;
   }
-  ELFFile<ELFT> &Obj = Sec->getFile()->getObj();
-  if (RelSec->sh_type == SHT_RELA)
-    addSectionAux(Sec, Obj.relas(RelSec));
-  else
-    addSectionAux(Sec, Obj.rels(RelSec));
+  addSectionAux(Sec, makeArrayRef<Elf_Rela>(nullptr, nullptr));
 }
 
 template <class ELFT>
@@ -1215,40 +1139,88 @@ static void writeCieFde(uint8_t *Buf, ArrayRef<uint8_t> D) {
   write32<E>(Buf, alignTo(D.size(), sizeof(typename ELFT::uint)) - 4);
 }
 
-template <class ELFT> void EHOutputSection<ELFT>::finalize() {
+template <class ELFT> void EhOutputSection<ELFT>::finalize() {
   if (Finalized)
     return;
   Finalized = true;
 
-  size_t Offset = 0;
-  for (const CieRecord<ELFT> &Cie : Cies) {
-    Cie.Sec->Pieces[Cie.Index].OutputOff = Offset;
-    Offset += alignTo(Cie.data().size(), sizeof(uintX_t));
+  size_t Off = 0;
+  for (CieRecord *Cie : Cies) {
+    Cie->Piece->OutputOff = Off;
+    Off += alignTo(Cie->Piece->size(), sizeof(uintX_t));
 
-    for (const EHRegion<ELFT> &Fde : Cie.Fdes) {
-      Fde.Sec->Pieces[Fde.Index].OutputOff = Offset;
-      Offset += alignTo(Fde.data().size(), sizeof(uintX_t));
+    for (SectionPiece *Fde : Cie->FdePieces) {
+      Fde->OutputOff = Off;
+      Off += alignTo(Fde->size(), sizeof(uintX_t));
     }
   }
+  this->Header.sh_size = Off;
 }
 
-template <class ELFT> void EHOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+template <class ELFT> static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
   const endianness E = ELFT::TargetEndianness;
-  for (const CieRecord<ELFT> &Cie : Cies) {
-    size_t CieOffset = Cie.Sec->Pieces[Cie.Index].OutputOff;
-    writeCieFde<ELFT>(Buf + CieOffset, Cie.data());
+  switch (Size) {
+  case DW_EH_PE_udata2:
+    return read16<E>(Buf);
+  case DW_EH_PE_udata4:
+    return read32<E>(Buf);
+  case DW_EH_PE_udata8:
+    return read64<E>(Buf);
+  case DW_EH_PE_absptr:
+    if (ELFT::Is64Bits)
+      return read64<E>(Buf);
+    return read32<E>(Buf);
+  }
+  fatal("unknown FDE size encoding");
+}
 
-    for (const EHRegion<ELFT> &Fde : Cie.Fdes) {
-      size_t Offset = Fde.Sec->Pieces[Fde.Index].OutputOff;
-      writeCieFde<ELFT>(Buf + Offset, Fde.data());
-      write32<E>(Buf + Offset + 4, Offset + 4 - CieOffset); // Pointer
+// Returns the VA to which a given FDE (on a mmap'ed buffer) is applied to.
+// We need it to create .eh_frame_hdr section.
+template <class ELFT>
+typename ELFT::uint EhOutputSection<ELFT>::getFdePc(uint8_t *Buf, size_t FdeOff,
+                                                    uint8_t Enc) {
+  // The starting address to which this FDE applies is
+  // stored at FDE + 8 byte.
+  size_t Off = FdeOff + 8;
+  uint64_t Addr = readFdeAddr<ELFT>(Buf + Off, Enc & 0x7);
+  if ((Enc & 0x70) == DW_EH_PE_absptr)
+    return Addr;
+  if ((Enc & 0x70) == DW_EH_PE_pcrel)
+    return Addr + this->getVA() + Off;
+  fatal("unknown FDE size relative encoding");
+}
 
-      Out<ELFT>::EhFrameHdr->addFde(Cie.FdeEncoding, Offset, Buf + Offset + 8);
+template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
+  const endianness E = ELFT::TargetEndianness;
+  for (CieRecord *Cie : Cies) {
+    size_t CieOffset = Cie->Piece->OutputOff;
+    writeCieFde<ELFT>(Buf + CieOffset, Cie->Piece->Data);
+
+    for (SectionPiece *Fde : Cie->FdePieces) {
+      size_t Off = Fde->OutputOff;
+      writeCieFde<ELFT>(Buf + Off, Fde->Data);
+
+      // FDE's second word should have the offset to an associated CIE.
+      // Write it.
+      write32<E>(Buf + Off + 4, Off + 4 - CieOffset);
     }
   }
 
   for (EHInputSection<ELFT> *S : Sections)
     S->relocate(Buf, nullptr);
+
+  // Construct .eh_frame_hdr. .eh_frame_hdr is a binary search table
+  // to get a FDE from an address to which FDE is applied. So here
+  // we obtain two addresses and pass them to EhFrameHdr object.
+  if (Out<ELFT>::EhFrameHdr) {
+    for (CieRecord *Cie : Cies) {
+      for (SectionPiece *Fde : Cie->FdePieces) {
+        uintX_t Pc = getFdePc(Buf, Fde->OutputOff, Cie->FdeEncoding);
+        uintX_t FdeVA = this->getVA() + Fde->OutputOff;
+        Out<ELFT>::EhFrameHdr->addFde(Pc, FdeVA);
+      }
+    }
+  }
 }
 
 template <class ELFT>
@@ -1786,10 +1758,10 @@ template class OutputSection<ELF32BE>;
 template class OutputSection<ELF64LE>;
 template class OutputSection<ELF64BE>;
 
-template class EHOutputSection<ELF32LE>;
-template class EHOutputSection<ELF32BE>;
-template class EHOutputSection<ELF64LE>;
-template class EHOutputSection<ELF64BE>;
+template class EhOutputSection<ELF32LE>;
+template class EhOutputSection<ELF32BE>;
+template class EhOutputSection<ELF64LE>;
+template class EhOutputSection<ELF64BE>;
 
 template class MipsReginfoOutputSection<ELF32LE>;
 template class MipsReginfoOutputSection<ELF32BE>;

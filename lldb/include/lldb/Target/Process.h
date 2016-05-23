@@ -2232,11 +2232,11 @@ public:
     ///     order.
     //------------------------------------------------------------------
     uint64_t
-    ReadUnsignedIntegerFromMemory (lldb::addr_t load_addr, 
-                                   size_t byte_size,
-                                   uint64_t fail_value, 
-                                   Error &error);
-    
+    ReadUnsignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size, uint64_t fail_value, Error &error);
+
+    int64_t
+    ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size, int64_t fail_value, Error &error);
+
     lldb::addr_t
     ReadPointerFromMemory (lldb::addr_t vm_addr, 
                            Error &error);

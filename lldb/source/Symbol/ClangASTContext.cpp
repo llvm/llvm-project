@@ -9595,24 +9595,6 @@ ClangASTContext::LayoutRecordType(void *baton,
 //----------------------------------------------------------------------
 // CompilerDecl override functions
 //----------------------------------------------------------------------
-lldb::VariableSP
-ClangASTContext::DeclGetVariable (void *opaque_decl)
-{
-    if (llvm::dyn_cast<clang::VarDecl>((clang::Decl *)opaque_decl))
-    {
-        auto decl_search_it = m_decl_objects.find(opaque_decl);
-        if (decl_search_it != m_decl_objects.end())
-            return std::static_pointer_cast<Variable>(decl_search_it->second);
-    }
-    return VariableSP();
-}
-
-void
-ClangASTContext::DeclLinkToObject (void *opaque_decl, std::shared_ptr<void> object)
-{
-    if (m_decl_objects.find(opaque_decl) == m_decl_objects.end())
-        m_decl_objects.insert(std::make_pair(opaque_decl, object));
-}
 
 ConstString
 ClangASTContext::DeclGetName (void *opaque_decl)

@@ -141,10 +141,13 @@ template <class ELFT> void elf::markLive() {
   auto Enqueue = [&](ResolvedReloc<ELFT> R) {
     if (!R.Sec)
       return;
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec)) {
-      SectionPiece *Piece = MS->getSectionPiece(R.Offset);
-      Piece->Live = true;
-    }
+
+    // Usually, a whole section is marked as live or dead, but in mergeable
+    // (splittable) sections, each piece of data has independent liveness bit.
+    // So we explicitly tell it which offset is in use.
+    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec))
+      MS->markLiveAt(R.Offset);
+
     if (R.Sec->Live)
       return;
     R.Sec->Live = true;

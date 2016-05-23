@@ -127,12 +127,6 @@ public:
     virtual ConstString
     DeclGetMangledName (void *opaque_decl);
 
-    virtual lldb::VariableSP
-    DeclGetVariable (void *opaque_decl) = 0;
-
-    virtual void
-    DeclLinkToObject (void *opaque_decl, std::shared_ptr<void> object) = 0;
-
     virtual CompilerDeclContext
     DeclGetDeclContext (void *opaque_decl);
 

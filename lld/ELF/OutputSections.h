@@ -23,6 +23,7 @@ namespace lld {
 namespace elf {
 
 class SymbolBody;
+struct SectionPiece;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
@@ -324,47 +325,54 @@ private:
   llvm::StringTableBuilder Builder;
 };
 
-// FDE or CIE
-template <class ELFT> struct EHRegion {
-  typedef typename ELFT::uint uintX_t;
-  EHRegion(EHInputSection<ELFT> *Sec, unsigned Index);
-  ArrayRef<uint8_t> data() const;
-  EHInputSection<ELFT> *Sec;
-  unsigned Index;
+struct CieRecord {
+  SectionPiece *Piece = nullptr;
+  std::vector<SectionPiece *> FdePieces;
+  uint8_t FdeEncoding = 0;
 };
 
-template <class ELFT> struct CieRecord : public EHRegion<ELFT> {
-  CieRecord(EHInputSection<ELFT> *S, unsigned Index);
-  std::vector<EHRegion<ELFT>> Fdes;
-  uint8_t FdeEncoding;
-};
-
+// Output section for .eh_frame.
 template <class ELFT>
-class EHOutputSection final : public OutputSectionBase<ELFT> {
-public:
+class EhOutputSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
-  EHOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
+
+public:
+  EhOutputSection();
   void writeTo(uint8_t *Buf) override;
   void finalize() override;
+  bool empty() const { return Sections.empty(); }
   void
   forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) override;
 
+  void addSection(InputSectionBase<ELFT> *S) override;
+
+  size_t NumFdes = 0;
+
+private:
   template <class RelTy>
   void addSectionAux(EHInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
 
-  void addSection(InputSectionBase<ELFT> *S) override;
+  template <class RelTy>
+  CieRecord *addCie(SectionPiece &Piece, EHInputSection<ELFT> *Sec,
+                    ArrayRef<RelTy> Rels);
 
-private:
+  template <class RelTy>
+  bool isFdeLive(SectionPiece &Piece, EHInputSection<ELFT> *Sec,
+                 ArrayRef<RelTy> Rels);
+
   uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
 
-  std::vector<EHInputSection<ELFT> *> Sections;
-  std::vector<CieRecord<ELFT>> Cies;
+  uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
-  // Maps CIE content + personality to a index in Cies.
-  llvm::DenseMap<std::pair<StringRef, SymbolBody *>, uintX_t> CieMap;
+  std::vector<EHInputSection<ELFT> *> Sections;
+  std::vector<CieRecord *> Cies;
+
+  // CIE records are uniquified by their contents and personality functions.
+  llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;
+
   bool Finalized = false;
 };
 
@@ -530,26 +538,17 @@ class EhFrameHeader final : public OutputSectionBase<ELFT> {
 
 public:
   EhFrameHeader();
+  void finalize() override;
   void writeTo(uint8_t *Buf) override;
-
-  void addFde(uint8_t Enc, size_t Off, uint8_t *PCRel);
-  void assignEhFrame(EHOutputSection<ELFT> *Sec);
-  void reserveFde();
-
-  bool Live = false;
-
-  EHOutputSection<ELFT> *Sec = nullptr;
+  void addFde(uint32_t Pc, uint32_t FdeVA);
 
 private:
   struct FdeData {
-    uint8_t Enc;
-    size_t Off;
-    uint8_t *PCRel;
+    uint32_t Pc;
+    uint32_t FdeVA;
   };
 
-  uintX_t getFdePc(uintX_t EhVA, const FdeData &F);
-
-  std::vector<FdeData> FdeList;
+  std::vector<FdeData> Fdes;
 };
 
 template <class ELFT> class BuildIdSection : public OutputSectionBase<ELFT> {
@@ -597,6 +596,7 @@ template <class ELFT> struct Out {
   static BuildIdSection<ELFT> *BuildId;
   static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
+  static EhOutputSection<ELFT> *EhFrame;
   static GnuHashTableSection<ELFT> *GnuHashTab;
   static GotPltSection<ELFT> *GotPlt;
   static GotSection<ELFT> *Got;
@@ -624,6 +624,7 @@ template <class ELFT> struct Out {
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
+template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
 template <class ELFT> GotPltSection<ELFT> *Out<ELFT>::GotPlt;
 template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;

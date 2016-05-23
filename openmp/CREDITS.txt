@@ -51,3 +51,7 @@ D: Making build work for FreeBSD.
 
 N: Cheng Wang
 D: Contributor to testsuite from OpenUH
+
+N: Diego Caballero
+E: diego.l.caballero@gmail.com
+D: Fork performance improvements

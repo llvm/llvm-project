@@ -12,6 +12,7 @@
 #include "Error.h"
 #include "ICF.h"
 #include "InputFiles.h"
+#include "InputSection.h"
 #include "LinkerScript.h"
 #include "SymbolListFile.h"
 #include "SymbolTable.h"
@@ -507,5 +508,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     markLive<ELFT>();
   if (Config->ICF)
     doIcf<ELFT>();
+
+  // MergeInputSection::splitIntoPieces needs to be called before
+  // any call of MergeInputSection::getOffset. Do that.
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab.getObjectFiles())
+    for (InputSectionBase<ELFT> *S : F->getSections())
+      if (S && S != &InputSection<ELFT>::Discarded && S->Live)
+        if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+          MS->splitIntoPieces();
+
   writeResult<ELFT>(&Symtab);
 }

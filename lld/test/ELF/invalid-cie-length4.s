@@ -7,4 +7,4 @@
  .long 0xFFFFFFFF
  .byte 0
 
-// CHECK: CIE/FDE too small
+// CHECK: CIE/FDE too large

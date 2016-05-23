@@ -407,6 +407,38 @@ bool EHInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::EHFrame;
 }
 
+template <class ELFT> static size_t readRecordSize(ArrayRef<uint8_t> D) {
+  const endianness E = ELFT::TargetEndianness;
+  if (D.size() < 4)
+    fatal("CIE/FDE too small");
+
+  // First 4 bytes of CIE/FDE is the size of the record.
+  // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,
+  // but we do not support that format yet.
+  uint64_t V = read32<E>(D.data());
+  if (V == UINT32_MAX)
+    fatal("CIE/FDE too large");
+  uint64_t Size = V + 4;
+  if (Size > D.size())
+    fatal("CIE/FIE ends past the end of the section");
+  return Size;
+}
+
+// .eh_frame is a sequence of CIE or FDE records.
+// This function splits an input section into records and returns them.
+template <class ELFT>
+void EHInputSection<ELFT>::split() {
+  ArrayRef<uint8_t> Data = this->getSectionData();
+  for (size_t Off = 0, End = Data.size(); Off != End;) {
+    size_t Size = readRecordSize<ELFT>(Data.slice(Off));
+    // The empty record is the end marker.
+    if (Size == 4)
+      break;
+    this->Pieces.emplace_back(Off, Data.slice(Off, Size));
+    Off += Size;
+  }
+}
+
 template <class ELFT>
 typename ELFT::uint EHInputSection<ELFT>::getOffset(uintX_t Offset) {
   // The file crtbeginT.o has relocations pointing to the start of an empty
@@ -436,32 +468,52 @@ static size_t findNull(ArrayRef<uint8_t> A, size_t EntSize) {
   return StringRef::npos;
 }
 
-template <class ELFT>
-MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
-                                           const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {
-  uintX_t EntSize = Header->sh_entsize;
-  ArrayRef<uint8_t> Data = this->getSectionData();
-
-  if (Header->sh_flags & SHF_STRINGS) {
-    uintX_t Offset = 0;
-    while (!Data.empty()) {
-      size_t End = findNull(Data, EntSize);
-      if (End == StringRef::npos)
-        fatal("string is not null terminated");
-      uintX_t Size = End + EntSize;
-      this->Pieces.emplace_back(Offset, Data.slice(0, Size));
-      Data = Data.slice(Size);
-      Offset += Size;
-    }
-    return;
+// Split SHF_STRINGS section. Such section is a sequence of
+// null-terminated strings.
+static std::vector<SectionPiece> splitStrings(ArrayRef<uint8_t> Data,
+                                              size_t EntSize) {
+  std::vector<SectionPiece> V;
+  size_t Off = 0;
+  while (!Data.empty()) {
+    size_t End = findNull(Data, EntSize);
+    if (End == StringRef::npos)
+      fatal("string is not null terminated");
+    size_t Size = End + EntSize;
+    V.emplace_back(Off, Data.slice(0, Size));
+    Data = Data.slice(Size);
+    Off += Size;
   }
+  return V;
+}
 
-  // If this is not of type string, every entry has the same size.
+// Split non-SHF_STRINGS section. Such section is a sequence of
+// fixed size records.
+static std::vector<SectionPiece> splitNonStrings(ArrayRef<uint8_t> Data,
+                                                 size_t EntSize) {
+  std::vector<SectionPiece> V;
   size_t Size = Data.size();
   assert((Size % EntSize) == 0);
   for (unsigned I = 0, N = Size; I != N; I += EntSize)
-    this->Pieces.emplace_back(I, Data.slice(I, EntSize));
+    V.emplace_back(I, Data.slice(I, EntSize));
+  return V;
+}
+
+template <class ELFT>
+MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
+                                           const Elf_Shdr *Header)
+    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
+
+template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
+  ArrayRef<uint8_t> Data = this->getSectionData();
+  uintX_t EntSize = this->Header->sh_entsize;
+  if (this->Header->sh_flags & SHF_STRINGS)
+    this->Pieces = splitStrings(Data, EntSize);
+  else
+    this->Pieces = splitNonStrings(Data, EntSize);
+
+  if (Config->GcSections)
+    for (uintX_t Off : LiveOffsets)
+      this->getSectionPiece(Off)->Live = true;
 }
 
 template <class ELFT>
