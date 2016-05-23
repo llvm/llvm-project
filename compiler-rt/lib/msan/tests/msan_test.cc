@@ -1214,17 +1214,21 @@ TEST(MemorySanitizer, shmctl) {
 }
 
 TEST(MemorySanitizer, shmat) {
-  void *p = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  ASSERT_NE(MAP_FAILED, p);
+  const int kShmSize = 4096;
+  void *mapping_start = mmap(NULL, kShmSize + SHMLBA, PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ASSERT_NE(MAP_FAILED, mapping_start);
+
+  void *p = (void *)(((unsigned long)mapping_start + SHMLBA - 1) / SHMLBA * SHMLBA);
+  // p is now SHMLBA-aligned;
 
   ((char *)p)[10] = *GetPoisoned<U1>();
-  ((char *)p)[4095] = *GetPoisoned<U1>();
+  ((char *)p)[kShmSize - 1] = *GetPoisoned<U1>();
 
-  int res = munmap(p, 4096);
+  int res = munmap(mapping_start, kShmSize + SHMLBA);
   ASSERT_EQ(0, res);
 
-  int id = shmget(IPC_PRIVATE, 4096, 0644 | IPC_CREAT);
+  int id = shmget(IPC_PRIVATE, kShmSize, 0644 | IPC_CREAT);
   ASSERT_GT(id, -1);
 
   void *q = shmat(id, p, 0);
@@ -1232,7 +1236,7 @@ TEST(MemorySanitizer, shmat) {
 
   EXPECT_NOT_POISONED(((char *)q)[0]);
   EXPECT_NOT_POISONED(((char *)q)[10]);
-  EXPECT_NOT_POISONED(((char *)q)[4095]);
+  EXPECT_NOT_POISONED(((char *)q)[kShmSize - 1]);
 
   res = shmdt(q);
   ASSERT_EQ(0, res);
