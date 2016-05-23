@@ -363,14 +363,14 @@ Value *BlockGenerator::getOrCreatePHIAlloca(Value *ScalarBase) {
   return getOrCreateAlloca(ScalarBase, PHIOpMap, ".phiops");
 }
 
-void BlockGenerator::handleOutsideUsers(const Region &R, Instruction *Inst,
-                                        Value *Address) {
+void BlockGenerator::handleOutsideUsers(const Scop &S, Instruction *Inst) {
   // If there are escape users we get the alloca for this instruction and put it
   // in the EscapeMap for later finalization. Lastly, if the instruction was
   // copied multiple times we already did this and can exit.
   if (EscapeMap.count(Inst))
     return;
 
+  const auto &R = S.getRegion();
   EscapeUserVectorTy EscapeUsers;
   for (User *U : Inst->users()) {
 
@@ -390,7 +390,7 @@ void BlockGenerator::handleOutsideUsers(const Region &R, Instruction *Inst,
     return;
 
   // Get or create an escape alloca for this instruction.
-  auto *ScalarAddr = Address ? Address : getOrCreateScalarAlloca(Inst);
+  auto *ScalarAddr = getOrCreateScalarAlloca(Inst);
 
   // Remember that this instruction has escape uses and the escape alloca.
   EscapeMap[Inst] = std::make_pair(ScalarAddr, std::move(EscapeUsers));
@@ -578,7 +578,7 @@ void BlockGenerator::findOutsideUsers(Scop &S) {
     if (!R.contains(Inst))
       continue;
 
-    handleOutsideUsers(R, Inst, nullptr);
+    handleOutsideUsers(S, Inst);
   }
 }
 

@@ -960,6 +960,11 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
 
+  // TODO: This is only a hot fix for SCoP sequences that use the same load
+  //       instruction contained and hoisted by one of the SCoPs.
+  if (SE.isSCEVable(Ty))
+    SE.forgetValue(AccInst);
+
   return PreloadVal;
 }
 

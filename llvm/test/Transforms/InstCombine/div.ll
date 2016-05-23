@@ -374,7 +374,7 @@ define i32 @test36(i32 %A) {
 define <2 x i32> @test36vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test36vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <2 x i32> <i32 1, i32 1>, %A
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw <2 x i32> <i32 1, i32 1>, %A
 ; CHECK-NEXT:    [[MUL:%.*]] = sdiv exact <2 x i32> [[AND]], [[SHL]]
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;

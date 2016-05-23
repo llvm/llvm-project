@@ -60,7 +60,6 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 }
 
 /// Create an ILP32 architecture model
-///
 SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,

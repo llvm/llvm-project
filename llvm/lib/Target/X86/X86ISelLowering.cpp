@@ -1132,19 +1132,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (MVT VT : MVT::fp_vector_valuetypes())
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v8f32, Legal);
 
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v16i32, MVT::v16i8, Legal);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v16i32, MVT::v16i8, Legal);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v16i32, MVT::v16i16, Legal);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v16i32, MVT::v16i16, Legal);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v32i16, MVT::v32i8, Legal);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v32i16, MVT::v32i8, Legal);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v8i64,  MVT::v8i8,  Legal);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v8i64,  MVT::v8i8,  Legal);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v8i64,  MVT::v8i16,  Legal);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v8i64,  MVT::v8i16,  Legal);
-    setLoadExtAction(ISD::ZEXTLOAD, MVT::v8i64,  MVT::v8i32,  Legal);
-    setLoadExtAction(ISD::SEXTLOAD, MVT::v8i64,  MVT::v8i32,  Legal);
-
+    for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD, ISD::EXTLOAD}) {
+      setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i8,  Legal);
+      setLoadExtAction(ExtType, MVT::v16i32, MVT::v16i16, Legal);
+      setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8,  Legal);
+      setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i8,   Legal);
+      setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i16,  Legal);
+      setLoadExtAction(ExtType, MVT::v8i64,  MVT::v8i32,  Legal);
+    }
     setOperationAction(ISD::BR_CC,              MVT::i1,    Expand);
     setOperationAction(ISD::SETCC,              MVT::i1,    Custom);
     setOperationAction(ISD::SETCCE,             MVT::i1,    Custom);
@@ -1246,7 +1241,20 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT,       MVT::v4i32, Legal);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v4i32, Custom);
       setOperationAction(ISD::ZERO_EXTEND,      MVT::v2i64, Custom);
+
+      // FIXME. This commands are available on SSE/AVX2, add relevant patterns.
+      setLoadExtAction(ISD::EXTLOAD, MVT::v8i32, MVT::v8i8,  Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v8i32, MVT::v8i16, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i8,  Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v4i32, MVT::v4i16, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v4i64, MVT::v4i8,  Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v4i64, MVT::v4i16, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v4i64, MVT::v4i32, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i8,  Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i16, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::v2i64, MVT::v2i32, Legal);
     }
+
     setOperationAction(ISD::TRUNCATE,           MVT::v8i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v16i1, Custom);
     setOperationAction(ISD::TRUNCATE,           MVT::v16i16, Custom);
@@ -1433,6 +1441,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i8, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v32i16, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i16, Custom);
+    setOperationAction(ISD::ANY_EXTEND,         MVT::v32i16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v32i16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE,     MVT::v64i8, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        MVT::v64i8, Custom);
@@ -1492,6 +1501,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(ISD::AND,  VT, MVT::v8i64);
       setOperationPromotedToType(ISD::OR,   VT, MVT::v8i64);
       setOperationPromotedToType(ISD::XOR,  VT, MVT::v8i64);
+    }
+
+    for (auto ExtType : {ISD::ZEXTLOAD, ISD::SEXTLOAD, ISD::EXTLOAD}) {
+      setLoadExtAction(ExtType, MVT::v32i16, MVT::v32i8, Legal);
+      if (Subtarget.hasVLX()) {
+        // FIXME. This commands are available on SSE/AVX2, add relevant patterns.
+        setLoadExtAction(ExtType, MVT::v16i16, MVT::v16i8, Legal);
+        setLoadExtAction(ExtType, MVT::v8i16,  MVT::v8i8,  Legal);
+      }
     }
   }
 

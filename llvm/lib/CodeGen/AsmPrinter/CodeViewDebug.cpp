@@ -261,30 +261,55 @@ void CodeViewDebug::emitTypeInformation() {
   // This type info currently only holds function ids for use with inline call
   // frame info. All functions are assigned a simple 'void ()' type. Emit that
   // type here.
-  ArrayRef<TypeIndex> NoArgs;
-  ArgListRecord ArgListRec(TypeRecordKind::ArgList, NoArgs);
-  TypeIndex ArgListIndex = TypeTable.writeArgList(ArgListRec);
+  unsigned ArgListIndex = getNextTypeIndex();
+  OS.AddComment("Type record length");
+  OS.EmitIntValue(ArgListRecord::getLayoutSize(), 2);
+  OS.AddComment("Leaf type: LF_ARGLIST");
+  OS.EmitIntValue(LF_ARGLIST, 2);
+  OS.AddComment("Number of arguments");
+  OS.EmitIntValue(0, 4);
 
-  ProcedureRecord Procedure(TypeIndex::Void(), CallingConvention::NearC,
-                            FunctionOptions::None, 0, ArgListIndex);
-  TypeIndex VoidFnTyIdx = TypeTable.writeProcedure(Procedure);
+  unsigned VoidFnTyIdx = getNextTypeIndex();
+  OS.AddComment("Type record length");
+  OS.EmitIntValue(ProcedureRecord::getLayoutSize(), 2);
+  OS.AddComment("Leaf type: LF_PROCEDURE");
+  OS.EmitIntValue(LF_PROCEDURE, 2);
+  OS.AddComment("Return type index");
+  OS.EmitIntValue(TypeIndex::Void().getIndex(), 4);
+  OS.AddComment("Calling convention");
+  OS.EmitIntValue(char(CallingConvention::NearC), 1);
+  OS.AddComment("Function options");
+  OS.EmitIntValue(char(FunctionOptions::None), 1);
+  OS.AddComment("# of parameters");
+  OS.EmitIntValue(0, 2);
+  OS.AddComment("Argument list type index");
+  OS.EmitIntValue(ArgListIndex, 4);
 
   // Emit LF_FUNC_ID records for all inlined subprograms to the type stream.
   // Allocate one type index for each func id.
+  unsigned NextIdx = getNextTypeIndex(InlinedSubprograms.size());
+  (void)NextIdx;
+  assert(NextIdx == FuncIdTypeIndexStart && "func id type indices broken");
   for (auto *SP : InlinedSubprograms) {
-    TypeIndex ParentScope = TypeIndex(0);
     StringRef DisplayName = SP->getDisplayName();
-    FuncIdRecord FuncId(ParentScope, VoidFnTyIdx, DisplayName);
-    TypeTable.writeFuncId(FuncId);
-  }
+    OS.AddComment("Type record length");
+    MCSymbol *FuncBegin = MMI->getContext().createTempSymbol(),
+             *FuncEnd = MMI->getContext().createTempSymbol();
+    OS.emitAbsoluteSymbolDiff(FuncEnd, FuncBegin, 2);
+    OS.EmitLabel(FuncBegin);
+    OS.AddComment("Leaf type: LF_FUNC_ID");
+    OS.EmitIntValue(LF_FUNC_ID, 2);
 
-  TypeTable.ForEachRecord(
-      [&](TypeIndex Index, const MemoryTypeTableBuilder::Record *R) {
-        OS.AddComment("Type record length");
-        OS.EmitIntValue(R->size(), 2);
-        OS.AddComment("Type record data");
-        OS.EmitBytes(StringRef(R->data(), R->size()));
-      });
+    OS.AddComment("Scope type index");
+    OS.EmitIntValue(0, 4);
+    OS.AddComment("Function type");
+    OS.EmitIntValue(VoidFnTyIdx, 4);
+    {
+      OS.AddComment("Function name");
+      emitNullTerminatedSymbolName(OS, DisplayName);
+    }
+    OS.EmitLabel(FuncEnd);
+  }
 }
 
 void CodeViewDebug::emitInlineeFuncIdsAndLines() {

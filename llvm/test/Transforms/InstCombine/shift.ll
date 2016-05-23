@@ -700,11 +700,9 @@ define i32 @test42(i32 %a, i32 %b) nounwind {
   ret i32 %div2
 }
 
-; FIXME: Vector lshr should be treated the same as scalar. 
-
 define <2 x i32> @test42vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @test42vec(
-; CHECK-NEXT:    [[DIV:%.*]] = lshr <2 x i32> <i32 4096, i32 4096>, %b
+; CHECK-NEXT:    [[DIV:%.*]] = lshr exact <2 x i32> <i32 4096, i32 4096>, %b
 ; CHECK-NEXT:    [[DIV2:%.*]] = udiv <2 x i32> %a, [[DIV]]
 ; CHECK-NEXT:    ret <2 x i32> [[DIV2]]
 ;

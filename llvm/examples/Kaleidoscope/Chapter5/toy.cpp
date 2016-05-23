@@ -522,9 +522,9 @@ static std::unique_ptr<PrototypeAST> ParseExtern() {
 // Code Generation
 //===----------------------------------------------------------------------===//
 
-static std::unique_ptr<Module> TheModule;
 static LLVMContext TheContext;
 static IRBuilder<> Builder(TheContext);
+static std::unique_ptr<Module> TheModule;
 static std::map<std::string, Value *> NamedValues;
 static std::unique_ptr<legacy::FunctionPassManager> TheFPM;
 static std::unique_ptr<KaleidoscopeJIT> TheJIT;

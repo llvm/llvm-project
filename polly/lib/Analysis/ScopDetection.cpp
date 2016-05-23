@@ -1500,7 +1500,7 @@ bool ScopDetection::runOnFunction(llvm::Function &F) {
   return false;
 }
 
-const ScopDetection::DetectionContext *
+ScopDetection::DetectionContext *
 ScopDetection::getDetectionContext(const Region *R) const {
   auto DCMIt = DetectionContextMap.find(getBBPairForRegion(R));
   if (DCMIt == DetectionContextMap.end())
