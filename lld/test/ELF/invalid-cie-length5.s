@@ -7,4 +7,4 @@
  .long 0xFFFFFFFF
  .quad 0xFFFFFFFFFFFFFFF4
 
-// CHECK: CIE/FIE ends past the end of the section
+// CHECK: CIE/FDE too large

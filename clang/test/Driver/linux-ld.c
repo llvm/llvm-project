@@ -474,7 +474,7 @@
 // RUN:     --sysroot=%S/Inputs/x86-64_ubuntu_13.10 \
 // RUN:   | FileCheck --check-prefix=CHECK-X86-64-UBUNTU-13-10-ARM-HF %s
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-dynamic-linker" "/lib/ld-linux-armhf.so.3"
+// CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-dynamic-linker" "{{(/usr/arm--linux-gnueabihf)?}}/lib/ld-linux-armhf.so.3"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib/../lib{{/|\\\\}}crt1.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib/../lib{{/|\\\\}}crti.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8{{/|\\\\}}crtbegin.o"
@@ -493,7 +493,7 @@
 // RUN:     --sysroot=%S/Inputs/x86-64_ubuntu_13.10 \
 // RUN:   | FileCheck --check-prefix=CHECK-X86-64-UBUNTU-13-10-ARM %s
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-X86-64-UBUNTU-13-10-ARM: "-dynamic-linker" "/lib/ld-linux.so.3"
+// CHECK-X86-64-UBUNTU-13-10-ARM: "-dynamic-linker" "{{(/usr/arm--linux-gnueabi)?}}/lib/ld-linux.so.3"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib/../lib{{/|\\\\}}crt1.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib/../lib{{/|\\\\}}crti.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7{{/|\\\\}}crtbegin.o"
@@ -636,7 +636,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64 %s
 // CHECK-PPC64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64: "-m" "elf64ppc"
-// CHECK-PPC64: "-dynamic-linker" "{{.*}}/lib64/ld64.so.1"
+// CHECK-PPC64: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.1"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu -mabi=elfv1 \
@@ -646,35 +646,35 @@
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64-ELFv1 %s
 // CHECK-PPC64-ELFv1: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64-ELFv1: "-m" "elf64ppc"
-// CHECK-PPC64-ELFv1: "-dynamic-linker" "{{.*}}/lib64/ld64.so.1"
+// CHECK-PPC64-ELFv1: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.1"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=powerpc64-linux-gnu -mabi=elfv2 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64-ELFv2 %s
 // CHECK-PPC64-ELFv2: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64-ELFv2: "-m" "elf64ppc"
-// CHECK-PPC64-ELFv2: "-dynamic-linker" "{{.*}}/lib64/ld64.so.2"
+// CHECK-PPC64-ELFv2: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.2"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=powerpc64le-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LE %s
 // CHECK-PPC64LE: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64LE: "-m" "elf64lppc"
-// CHECK-PPC64LE: "-dynamic-linker" "{{.*}}/lib64/ld64.so.2"
+// CHECK-PPC64LE: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.2"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=powerpc64le-linux-gnu -mabi=elfv1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LE-ELFv1 %s
 // CHECK-PPC64LE-ELFv1: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64LE-ELFv1: "-m" "elf64lppc"
-// CHECK-PPC64LE-ELFv1: "-dynamic-linker" "{{.*}}/lib64/ld64.so.1"
+// CHECK-PPC64LE-ELFv1: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.1"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=powerpc64le-linux-gnu -mabi=elfv2 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LE-ELFv2 %s
 // CHECK-PPC64LE-ELFv2: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PPC64LE-ELFv2: "-m" "elf64lppc"
-// CHECK-PPC64LE-ELFv2: "-dynamic-linker" "{{.*}}/lib64/ld64.so.2"
+// CHECK-PPC64LE-ELFv2: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld64.so.2"
 //
 // Check that we do not pass --hash-style=gnu and --hash-style=both to linker
 // and provide correct path to the dynamic linker and emulation mode when build
@@ -714,7 +714,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64 %s
 // CHECK-MIPS64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64: "-m" "elf64btsmip"
-// CHECK-MIPS64: "-dynamic-linker" "{{.*}}/lib64/ld.so.1"
+// CHECK-MIPS64: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld.so.1"
 // CHECK-MIPS64-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
@@ -722,21 +722,21 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL %s
 // CHECK-MIPS64EL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL: "-m" "elf64ltsmip"
-// CHECK-MIPS64EL: "-dynamic-linker" "{{.*}}/lib64/ld.so.1"
+// CHECK-MIPS64EL: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld.so.1"
 // CHECK-MIPS64EL-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 --target=mips64el-linux-gnu -mnan=2008 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-NAN2008 %s
 // CHECK-MIPS64EL-NAN2008: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL-NAN2008: "-m" "elf64ltsmip"
-// CHECK-MIPS64EL-NAN2008: "-dynamic-linker" "{{.*}}/lib64/ld-linux-mipsn8.so.1"
+// CHECK-MIPS64EL-NAN2008: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-linux-mipsn8.so.1"
 // CHECK-MIPS64EL-NAN2008-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 --target=mips64el-linux-gnu -mcpu=mips64r6 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64R6EL %s
 // CHECK-MIPS64R6EL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64R6EL: "-m" "elf64ltsmip"
-// CHECK-MIPS64R6EL: "-dynamic-linker" "{{.*}}/lib64/ld-linux-mipsn8.so.1"
+// CHECK-MIPS64R6EL: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-linux-mipsn8.so.1"
 // CHECK-MIPS64R6EL-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
@@ -744,7 +744,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64-N32 %s
 // CHECK-MIPS64-N32: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64-N32: "-m" "elf32btsmipn32"
-// CHECK-MIPS64-N32: "-dynamic-linker" "{{.*}}/lib32/ld.so.1"
+// CHECK-MIPS64-N32: "-dynamic-linker" "{{.*}}/lib{{(32)?}}/ld.so.1"
 // CHECK-MIPS64-N32-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
@@ -752,22 +752,22 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-N32 %s
 // CHECK-MIPS64EL-N32: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL-N32: "-m" "elf32ltsmipn32"
-// CHECK-MIPS64EL-N32: "-dynamic-linker" "{{.*}}/lib32/ld.so.1"
+// CHECK-MIPS64EL-N32: "-dynamic-linker" "{{.*}}/lib{{(32)?}}/ld.so.1"
 // CHECK-MIPS64EL-N32-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 --target=mips64el-linux-gnu -mabi=n32 \
 // RUN:   -mnan=2008 | FileCheck --check-prefix=CHECK-MIPS64EL-N32-NAN2008 %s
 // CHECK-MIPS64EL-N32-NAN2008: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL-N32-NAN2008: "-m" "elf32ltsmipn32"
-// CHECK-MIPS64EL-N32-NAN2008: "-dynamic-linker" "{{.*}}/lib32/ld-linux-mipsn8.so.1"
+// CHECK-MIPS64EL-N32-NAN2008: "-dynamic-linker" "{{.*}}/lib{{(32)?}}/ld-linux-mipsn8.so.1"
 // CHECK-MIPS64EL-N32-NAN2008-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 --target=mips64el-redhat-linux \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-REDHAT %s
 // CHECK-MIPS64EL-REDHAT: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MIPS64EL-REDHAT: "-m" "elf64ltsmip"
-// CHECK-MIPS64EL-REDHAT: "-dynamic-linker" "{{.*}}/lib64/ld.so.1"
-// CHECK-MIPS64EL-REDHAT-NOT: "-dynamic-linker" "{{.*}}/lib64/ld-musl-mipsel.so.1"
+// CHECK-MIPS64EL-REDHAT: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld.so.1"
+// CHECK-MIPS64EL-REDHAT-NOT: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-musl-mipsel.so.1"
 // CHECK-MIPS64EL-REDHAT-NOT: "--hash-style={{gnu|both}}"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
@@ -775,21 +775,21 @@
 // RUN:   | FileCheck --check-prefix=CHECK-SPARCV8 %s
 // CHECK-SPARCV8: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV8: "-m" "elf32_sparc"
-// CHECK-SPARCV8: "-dynamic-linker" "/lib/ld-linux.so.2"
+// CHECK-SPARCV8: "-dynamic-linker" "{{(/usr/sparc-unknown-linux-gnu)?}}/lib/ld-linux.so.2"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=sparcel-unknown-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARCV8EL %s
 // CHECK-SPARCV8EL: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV8EL: "-m" "elf32_sparc"
-// CHECK-SPARCV8EL: "-dynamic-linker" "/lib/ld-linux.so.2"
+// CHECK-SPARCV8EL: "-dynamic-linker" "{{(/usr/sparcel-unknown-linux-gnu)?}}/lib/ld-linux.so.2"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=sparcv9-unknown-linux-gnu \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARCV9 %s
 // CHECK-SPARCV9: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV9: "-m" "elf64_sparc"
-// CHECK-SPARCV9: "-dynamic-linker" "/lib64/ld-linux.so.2"
+// CHECK-SPARCV9: "-dynamic-linker" "{{(/usr/sparcv9-unknown-linux-gnu)?}}/lib{{(64)?}}/ld-linux.so.2"
 //
 // Thoroughly exercise the Debian multiarch environment.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \

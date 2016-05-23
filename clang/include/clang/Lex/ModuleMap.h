@@ -59,7 +59,7 @@ public:
   /// \brief Called when an umbrella header is added during module map parsing.
   ///
   /// \param FileMgr FileManager instance
-  /// \param Header The umbreall header to collect.
+  /// \param Header The umbrella header to collect.
   virtual void moduleMapAddUmbrellaHeader(FileManager *FileMgr,
                                           const FileEntry *Header) {}
 };
