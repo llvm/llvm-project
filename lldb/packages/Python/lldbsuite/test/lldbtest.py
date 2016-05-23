@@ -973,12 +973,11 @@ class Base(unittest2.TestCase):
                 components.append(self.__class__.__name__)
             elif c == 'c':
                 compiler = self.getCompiler()
-
-                if compiler[1] == ':':
-                    compiler = compiler[2:]
-                if os.path.altsep is not None:
-                    compiler = compiler.replace(os.path.altsep, os.path.sep)
-                components.extend([x for x in compiler.split(os.path.sep) if x != ""])
+                if compiler is not None:
+                    # Only use the basename of the compiler.  The older
+                    # directory encoding of the compiler was creating filenames
+                    # that were too long on our CI, and provided minimal benefit.
+                    components.append(os.path.basename(compiler))
             elif c == 'a':
                 components.append(self.getArchitecture())
             elif c == 'm':
