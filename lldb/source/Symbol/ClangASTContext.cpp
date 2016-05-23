@@ -9690,9 +9690,14 @@ ClangASTContext::GetDWARFParser()
 PDBASTParser *
 ClangASTContext::GetPDBParser()
 {
+    // TODO add this back in once swift-llvm catches up to llvm and lldb.
+#if 0
     if (!m_pdb_ast_parser_ap)
         m_pdb_ast_parser_ap.reset(new PDBASTParser(*this));
     return m_pdb_ast_parser_ap.get();
+#else
+    return nullptr;
+#endif
 }
 
 bool
