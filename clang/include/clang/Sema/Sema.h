@@ -1368,6 +1368,24 @@ public:
     }
   };
 
+  /// Do a check to make sure \p Name looks like a legal swift_name
+  /// attribute for the decl \p D. Raise a diagnostic if the name is invalid
+  /// for the given declaration.
+  ///
+  /// For a function, this will validate a compound Swift name,
+  /// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
+  /// and the function will output the number of parameter names, and whether
+  /// this is a single-arg initializer.
+  ///
+  /// For a type, enum constant, property, or variable declaration, this will
+  /// validate either a simple identifier, or a qualified
+  /// <code>context.identifier</code> name.
+  ///
+  /// \returns true if the name is a valid swift name for \p D, false otherwise.
+  bool DiagnoseSwiftName(Decl *D, StringRef Name,
+                         SourceLocation ArgLoc,
+                         IdentifierInfo *AttrName);
+
 private:
   bool RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                TypeDiagnoser *Diagnoser);
