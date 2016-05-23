@@ -31,12 +31,6 @@ CompilerDecl::GetMangledName () const
     return m_type_system->DeclGetMangledName(m_opaque_decl);
 }
 
-lldb::VariableSP
-CompilerDecl::GetAsVariable ()
-{
-    return m_type_system->DeclGetVariable(m_opaque_decl);
-}
-
 CompilerDeclContext
 CompilerDecl::GetDeclContext() const
 {

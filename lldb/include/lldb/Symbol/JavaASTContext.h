@@ -70,12 +70,6 @@ public:
     ConstString
     DeclGetName(void *opaque_decl) override;
 
-    lldb::VariableSP
-    DeclGetVariable(void *opaque_decl) override;
-
-    void
-    DeclLinkToObject(void *opaque_decl, std::shared_ptr<void> object) override;
-
     //----------------------------------------------------------------------
     // CompilerDeclContext functions
     //----------------------------------------------------------------------

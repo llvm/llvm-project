@@ -85,17 +85,6 @@ class GoASTContext : public TypeSystem
         return ConstString();
     }
 
-    lldb::VariableSP
-    DeclGetVariable (void *opaque_decl) override
-    {
-        return lldb::VariableSP();
-    }
-
-    void
-    DeclLinkToObject (void *opaque_decl, std::shared_ptr<void> object) override
-    {
-    }
-
     //----------------------------------------------------------------------
     // CompilerDeclContext functions
     //----------------------------------------------------------------------

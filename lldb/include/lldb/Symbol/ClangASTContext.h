@@ -567,12 +567,6 @@ public:
     //----------------------------------------------------------------------
     // CompilerDecl override functions
     //----------------------------------------------------------------------
-    lldb::VariableSP
-    DeclGetVariable (void *opaque_decl) override;
-
-    void
-    DeclLinkToObject (void *opaque_decl, std::shared_ptr<void> object) override;
-    
     ConstString
     DeclGetName (void *opaque_decl) override;
 
@@ -1241,7 +1235,6 @@ protected:
     uint32_t                                        m_pointer_byte_size;
     bool                                            m_ast_owned;
     bool                                            m_can_evaluate_expressions;
-    std::map<void *, std::shared_ptr<void>>         m_decl_objects;
     // clang-format on
 private:
     //------------------------------------------------------------------
