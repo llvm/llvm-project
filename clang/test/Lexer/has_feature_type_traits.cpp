@@ -45,6 +45,11 @@ int is_abstract();
 #endif
 // CHECK: int is_abstract();
 
+#if __has_feature(is_assignable)
+int is_assignable();
+#endif
+// CHECK: int is_assignable();
+
 #if __has_feature(is_base_of)
 int is_base_of();
 #endif

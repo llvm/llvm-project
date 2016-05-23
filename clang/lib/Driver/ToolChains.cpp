@@ -4502,6 +4502,10 @@ CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                          options::OPT_fno_cuda_flush_denormals_to_zero, false))
     CC1Args.push_back("-fcuda-flush-denormals-to-zero");
 
+  if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
+                         options::OPT_fno_cuda_approx_transcendentals, false))
+    CC1Args.push_back("-fcuda-approx-transcendentals");
+
   if (DriverArgs.hasArg(options::OPT_nocudalib))
     return;
 

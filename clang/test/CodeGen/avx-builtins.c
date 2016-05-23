@@ -250,7 +250,7 @@ __m128 test_mm_cmp_ss(__m128 A, __m128 B) {
 
 __m256d test_mm256_cvtepi32_pd(__m128i A) {
   // CHECK-LABEL: test_mm256_cvtepi32_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.cvtdq2.pd.256(<4 x i32> %{{.*}})
+  // CHECK: sitofp <4 x i32> %{{.*}} to <4 x double>
   return _mm256_cvtepi32_pd(A);
 }
 
@@ -280,7 +280,7 @@ __m256i test_mm256_cvtps_epi32(__m256 A) {
 
 __m256d test_mm256_cvtps_pd(__m128 A) {
   // CHECK-LABEL: test_mm256_cvtps_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float> %{{.*}})
+  // CHECK: fpext <4 x float> %{{.*}} to <4 x double>
   return _mm256_cvtps_pd(A);
 }
 

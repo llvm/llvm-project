@@ -363,3 +363,17 @@ void g_pr6954() {
   f_pr6954(5); // expected-error{{undeclared identifier 'f_pr6954'}}
 }
 
+namespace tag_redecl {
+  namespace N {
+    struct X *p;
+    namespace {
+      class K {
+        friend struct X;
+      };
+    }
+  }
+  namespace N {
+    struct X;
+    X *q = p;
+  }
+}

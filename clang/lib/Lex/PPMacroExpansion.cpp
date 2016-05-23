@@ -1198,6 +1198,7 @@ static bool HasFeature(const Preprocessor &PP, StringRef Feature) {
       .Case("has_trivial_destructor", LangOpts.CPlusPlus)
       .Case("has_virtual_destructor", LangOpts.CPlusPlus)
       .Case("is_abstract", LangOpts.CPlusPlus)
+      .Case("is_assignable", LangOpts.CPlusPlus)
       .Case("is_base_of", LangOpts.CPlusPlus)
       .Case("is_class", LangOpts.CPlusPlus)
       .Case("is_constructible", LangOpts.CPlusPlus)

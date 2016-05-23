@@ -938,6 +938,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__CUDA_ARCH__");
   }
 
+  // We need to communicate this to our CUDA header wrapper, which in turn
+  // informs the proper CUDA headers of this choice.
+  if (LangOpts.CUDADeviceApproxTranscendentals || LangOpts.FastMath) {
+    Builder.defineMacro("__CLANG_CUDA_APPROX_TRANSCENDENTALS__");
+  }
+
   // OpenCL definitions.
   if (LangOpts.OpenCL) {
 #define OPENCLEXT(Ext) \

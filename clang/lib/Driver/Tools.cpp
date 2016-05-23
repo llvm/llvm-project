@@ -1661,6 +1661,7 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
     D.Diag(diag::err_drv_unsupported_opt_for_target) << "-msoft-float"
                                                      << Triple;
   }
+
 }
 
 void Clang::AddSystemZTargetArgs(const ArgList &Args,
