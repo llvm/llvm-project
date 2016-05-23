@@ -221,11 +221,7 @@ void DescribeMemoryRange(const void *x, uptr size) {
     } else {
       unsigned char v = *(unsigned char *)s;
       if (v) last_quad_poisoned = true;
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-      Printf("%x%x", v & 0xf, v >> 4);
-#else
       Printf("%x%x", v >> 4, v & 0xf);
-#endif
     }
     // Group end.
     if (pos % 4 == 3 && with_origins) {

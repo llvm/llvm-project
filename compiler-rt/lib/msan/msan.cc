@@ -462,13 +462,8 @@ void __msan_dump_shadow(const void *x, uptr size) {
   }
 
   unsigned char *s = (unsigned char*)MEM_TO_SHADOW(x);
-  for (uptr i = 0; i < size; i++) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    Printf("%x%x ", s[i] & 0xf, s[i] >> 4);
-#else
+  for (uptr i = 0; i < size; i++)
     Printf("%x%x ", s[i] >> 4, s[i] & 0xf);
-#endif
-  }
   Printf("\n");
 }
 
