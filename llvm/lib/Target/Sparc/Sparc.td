@@ -107,12 +107,12 @@ def : Processor<"leon2", LEON2Itineraries,
 // LEON 2 FT (AT697E)
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"at697e", LEON2Itineraries,
-                [FeatureLeon]>;
+                [FeatureLeon, InsertNOPLoad]>;
 
 // LEON 2 FT (AT697F)
 // TO DO: Place-holder: Processor specific features will be added *very* soon here.
 def : Processor<"at697f", LEON2Itineraries,
-                [FeatureLeon]>;
+                [FeatureLeon, InsertNOPLoad]>;
 
 
 // LEON 3 FT generic
@@ -122,12 +122,12 @@ def : Processor<"leon3", LEON3Itineraries,
 // LEON 3 FT (UT699). Provides features for the UT699 processor
 // - covers all the erratum fixes for LEON3, but does not support the CASA instruction.
 def : Processor<"ut699", LEON3Itineraries, 
-                [FeatureLeon, UMACSMACSupport]>;
+                [FeatureLeon, InsertNOPLoad]>;
 
 // LEON3 FT (GR712RC). Provides features for the GR712RC processor.
 // - covers all the erratum fixed for LEON3 and support for the CASA instruction. 
 def : Processor<"gr712rc", LEON3Itineraries,
-                [FeatureLeon, UMACSMACSupport, LeonCASA]>;
+                [FeatureLeon, LeonCASA]>;
 
 // LEON 4 FT generic
 def : Processor<"leon4", LEON4Itineraries,

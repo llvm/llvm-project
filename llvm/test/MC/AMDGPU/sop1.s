@@ -43,7 +43,7 @@ s_mov_b64 s[0:1], 0x80000000
 
 s_mov_b64 s[102:103], -1
 // SICI: s_mov_b64 s[102:103], -1 ; encoding: [0xc1,0x04,0xe6,0xbe]
-// NOVI: error: invalid operand for instruction
+// NOVI: error: not a valid operand
 
 s_cmov_b32 s1, 200
 // SICI: s_cmov_b32 s1, 0xc8 ; encoding: [0xff,0x05,0x81,0xbe,0xc8,0x00,0x00,0x00]

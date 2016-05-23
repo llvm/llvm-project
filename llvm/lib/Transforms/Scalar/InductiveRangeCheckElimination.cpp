@@ -118,7 +118,7 @@ class InductiveRangeCheck {
   const SCEV *Offset;
   const SCEV *Scale;
   Value *Length;
-  BranchInst *Branch;
+  Use *CheckUse;
   RangeCheckKind Kind;
 
   static RangeCheckKind parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
@@ -129,8 +129,9 @@ class InductiveRangeCheck {
   parseRangeCheck(Loop *L, ScalarEvolution &SE, Value *Condition,
                   const SCEV *&Index, Value *&UpperLimit);
 
-  InductiveRangeCheck() :
-    Offset(nullptr), Scale(nullptr), Length(nullptr), Branch(nullptr) { }
+  InductiveRangeCheck()
+      : Offset(nullptr), Scale(nullptr), Length(nullptr),
+        CheckUse(nullptr) {}
 
 public:
   const SCEV *getOffset() const { return Offset; }
@@ -149,9 +150,9 @@ public:
       Length->print(OS);
     else
       OS << "(null)";
-    OS << "\n  Branch: ";
-    getBranch()->print(OS);
-    OS << "\n";
+    OS << "\n  CheckUse: ";
+    getCheckUse()->getUser()->print(OS);
+    OS << " Operand: " << getCheckUse()->getOperandNo() << "\n";
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -160,7 +161,7 @@ public:
   }
 #endif
 
-  BranchInst *getBranch() const { return Branch; }
+  Use *getCheckUse() const { return CheckUse; }
 
   /// Represents an signed integer range [Range.getBegin(), Range.getEnd()).  If
   /// R.getEnd() sle R.getBegin(), then R denotes the empty range.
@@ -407,7 +408,7 @@ InductiveRangeCheck::create(BranchInst *BI, Loop *L, ScalarEvolution &SE,
   IRC.Length = Length;
   IRC.Offset = IndexAddRec->getStart();
   IRC.Scale = IndexAddRec->getStepRecurrence(SE);
-  IRC.Branch = BI;
+  IRC.CheckUse = &BI->getOperandUse(0);
   IRC.Kind = RCKind;
   return IRC;
 }
@@ -1474,7 +1475,7 @@ bool InductiveRangeCheckElimination::runOnLoop(Loop *L, LPPassManager &LPM) {
       ConstantInt *FoldedRangeCheck = IRC.getPassingDirection()
                                           ? ConstantInt::getTrue(Context)
                                           : ConstantInt::getFalse(Context);
-      IRC.getBranch()->setCondition(FoldedRangeCheck);
+      IRC.getCheckUse()->set(FoldedRangeCheck);
     }
   }
 

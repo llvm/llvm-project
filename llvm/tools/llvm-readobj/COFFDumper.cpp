@@ -98,8 +98,8 @@ private:
   }
   void printLocalVariableAddrRange(const LocalVariableAddrRange &Range,
                                    const coff_section *Sec,
-                                   StringRef SectionContents);
-  void printLocalVariableAddrGap(StringRef &SymData);
+                                   uint32_t RelocationOffset);
+  void printLocalVariableAddrGap(ArrayRef<LocalVariableAddrGap> Gaps);
 
   void printCodeViewSymbolsSubsection(StringRef Subsection,
                                       const SectionRef &Section,
@@ -108,6 +108,10 @@ private:
   void printCodeViewFileChecksums(StringRef Subsection);
 
   void printCodeViewInlineeLines(StringRef Subsection);
+
+  void printRelocatedField(StringRef Label, const coff_section *Sec,
+                           uint32_t RelocOffset, uint32_t Offset,
+                           StringRef *RelocSym = nullptr);
 
   void printRelocatedField(StringRef Label, const coff_section *Sec,
                            StringRef SectionContents, const ulittle32_t *Field,
@@ -205,6 +209,17 @@ std::error_code COFFDumper::resolveSymbolName(const coff_section *Section,
   uint64_t Offset = ptrdiff_t(reinterpret_cast<const char *>(RelocPtr) -
                               SectionContents.data());
   return resolveSymbolName(Section, Offset, Name);
+}
+
+void COFFDumper::printRelocatedField(StringRef Label, const coff_section *Sec,
+                                     uint32_t RelocOffset, uint32_t Offset,
+                                     StringRef *RelocSym) {
+  StringRef SymStorage;
+  StringRef &Symbol = RelocSym ? *RelocSym : SymStorage;
+  if (!resolveSymbolName(Sec, RelocOffset, Symbol))
+    W.printSymbolOffset(Label, Symbol, Offset);
+  else
+    W.printHex(Label, RelocOffset);
 }
 
 void COFFDumper::printRelocatedField(StringRef Label, const coff_section *Sec,
@@ -1011,6 +1026,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
     StringRef OrigSymData = SymData;
 
     Data = Data.drop_front(Rec->RecordLen - 2);
+    uint32_t RecordOffset = SymData.data() - SectionContents.data();
 
     SymbolKind Kind = static_cast<SymbolKind>(uint16_t(Rec->RecordKind));
     switch (Kind) {
@@ -1021,26 +1037,31 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
     case S_LPROC32_DPC:
     case S_LPROC32_DPC_ID: {
       DictScope S(W, "ProcStart");
-      const ProcSym *Proc;
-      error(consumeObject(SymData, Proc));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto ProcOrError = ProcSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!ProcOrError)
+        error(ProcOrError.getError());
+      auto &Proc = ProcOrError.get();
+
       if (InFunctionScope)
         return error(object_error::parse_failed);
       InFunctionScope = true;
 
       StringRef LinkageName;
-      StringRef DisplayName = SymData.split('\0').first;
-      W.printHex("PtrParent", Proc->PtrParent);
-      W.printHex("PtrEnd", Proc->PtrEnd);
-      W.printHex("PtrNext", Proc->PtrNext);
-      W.printHex("CodeSize", Proc->CodeSize);
-      W.printHex("DbgStart", Proc->DbgStart);
-      W.printHex("DbgEnd", Proc->DbgEnd);
-      printTypeIndex("FunctionType", Proc->FunctionType);
-      printRelocatedField("CodeOffset", Sec, SectionContents, &Proc->CodeOffset,
-                          &LinkageName);
-      W.printHex("Segment", Proc->Segment);
-      W.printFlags("Flags", Proc->Flags, makeArrayRef(ProcSymFlagNames));
-      W.printString("DisplayName", DisplayName);
+      W.printHex("PtrParent", Proc.Header.PtrParent);
+      W.printHex("PtrEnd", Proc.Header.PtrEnd);
+      W.printHex("PtrNext", Proc.Header.PtrNext);
+      W.printHex("CodeSize", Proc.Header.CodeSize);
+      W.printHex("DbgStart", Proc.Header.DbgStart);
+      W.printHex("DbgEnd", Proc.Header.DbgEnd);
+      printTypeIndex("FunctionType", Proc.Header.FunctionType);
+      printRelocatedField("CodeOffset", Sec, Proc.getRelocationOffset(),
+                          Proc.Header.CodeOffset, &LinkageName);
+      W.printHex("Segment", Proc.Header.Segment);
+      W.printFlags("Flags", static_cast<uint8_t>(Proc.Header.Flags),
+                   makeArrayRef(ProcSymFlagNames));
+      W.printString("DisplayName", Proc.Name);
       W.printString("LinkageName", LinkageName);
       break;
     }
@@ -1053,18 +1074,21 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 
     case S_BLOCK32: {
       DictScope S(W, "BlockStart");
-      const BlockSym *Block;
-      error(consumeObject(SymData, Block));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto BlockOrError = BlockSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!BlockOrError)
+        error(BlockOrError.getError());
+      auto &Block = BlockOrError.get();
 
-      StringRef BlockName = SymData.split('\0').first;
       StringRef LinkageName;
-      W.printHex("PtrParent", Block->PtrParent);
-      W.printHex("PtrEnd", Block->PtrEnd);
-      W.printHex("CodeSize", Block->CodeSize);
-      printRelocatedField("CodeOffset", Sec, SectionContents,
-                          &Block->CodeOffset, &LinkageName);
-      W.printHex("Segment", Block->Segment);
-      W.printString("BlockName", BlockName);
+      W.printHex("PtrParent", Block.Header.PtrParent);
+      W.printHex("PtrEnd", Block.Header.PtrEnd);
+      W.printHex("CodeSize", Block.Header.CodeSize);
+      printRelocatedField("CodeOffset", Sec, Block.getRelocationOffset(),
+                          Block.Header.CodeOffset, &LinkageName);
+      W.printHex("Segment", Block.Header.Segment);
+      W.printString("BlockName", Block.Name);
       W.printString("LinkageName", LinkageName);
       break;
     }
@@ -1077,131 +1101,73 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 
     case S_LABEL32: {
       DictScope S(W, "Label");
-      const LabelSym *Label;
-      error(consumeObject(SymData, Label));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto LabelOrError = LabelSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!LabelOrError)
+        error(LabelOrError.getError());
+      auto &Label = LabelOrError.get();
 
-      StringRef DisplayName = SymData.split('\0').first;
       StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec, SectionContents,
-                          &Label->CodeOffset, &LinkageName);
-      W.printHex("Segment", Label->Segment);
-      W.printHex("Flags", Label->Flags);
-      W.printFlags("Flags", Label->Flags, makeArrayRef(ProcSymFlagNames));
-      W.printString("DisplayName", DisplayName);
+      printRelocatedField("CodeOffset", Sec, Label.getRelocationOffset(),
+                          Label.Header.CodeOffset, &LinkageName);
+      W.printHex("Segment", Label.Header.Segment);
+      W.printHex("Flags", Label.Header.Flags);
+      W.printFlags("Flags", Label.Header.Flags, makeArrayRef(ProcSymFlagNames));
+      W.printString("DisplayName", Label.Name);
       W.printString("LinkageName", LinkageName);
       break;
     }
 
     case S_INLINESITE: {
       DictScope S(W, "InlineSite");
-      const InlineSiteSym *InlineSite;
-      error(consumeObject(SymData, InlineSite));
-      W.printHex("PtrParent", InlineSite->PtrParent);
-      W.printHex("PtrEnd", InlineSite->PtrEnd);
-      printTypeIndex("Inlinee", InlineSite->Inlinee);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto InlineSiteOrError = InlineSiteSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!InlineSiteOrError)
+        error(InlineSiteOrError.getError());
+      auto &InlineSite = InlineSiteOrError.get();
 
-      auto GetCompressedAnnotation = [&]() -> uint32_t {
-        if (SymData.empty())
-          return -1;
-
-        uint8_t FirstByte = SymData.front();
-        SymData = SymData.drop_front();
-
-        if ((FirstByte & 0x80) == 0x00)
-          return FirstByte;
-
-        if (SymData.empty())
-          return -1;
-
-        uint8_t SecondByte = SymData.front();
-        SymData = SymData.drop_front();
-
-        if ((FirstByte & 0xC0) == 0x80)
-          return ((FirstByte & 0x3F) << 8) | SecondByte;
-
-        if (SymData.empty())
-          return -1;
-
-        uint8_t ThirdByte = SymData.front();
-        SymData = SymData.drop_front();
-
-        if (SymData.empty())
-          return -1;
-
-        uint8_t FourthByte = SymData.front();
-        SymData = SymData.drop_front();
-
-        if ((FirstByte & 0xE0) == 0xC0)
-          return ((FirstByte & 0x1F) << 24) | (SecondByte << 16) |
-                 (ThirdByte << 8) | FourthByte;
-
-        return -1;
-      };
-      auto DecodeSignedOperand = [](uint32_t Operand) -> int32_t {
-        if (Operand & 1)
-          return -(Operand >> 1);
-        return Operand >> 1;
-      };
+      W.printHex("PtrParent", InlineSite.Header.PtrParent);
+      W.printHex("PtrEnd", InlineSite.Header.PtrEnd);
+      printTypeIndex("Inlinee", InlineSite.Header.Inlinee);
 
       ListScope BinaryAnnotations(W, "BinaryAnnotations");
-      while (!SymData.empty()) {
-        auto OpCode =
-            static_cast<BinaryAnnotationsOpCode>(GetCompressedAnnotation());
-        switch (OpCode) {
+      for (auto &Annotation : InlineSite.annotations()) {
+        switch (Annotation.OpCode) {
         case BinaryAnnotationsOpCode::Invalid:
           return error(object_error::parse_failed);
         case BinaryAnnotationsOpCode::CodeOffset:
-          W.printHex("CodeOffset", GetCompressedAnnotation());
+        case BinaryAnnotationsOpCode::ChangeCodeOffset:
+        case BinaryAnnotationsOpCode::ChangeCodeLength:
+          W.printHex(Annotation.Name, Annotation.U1);
           break;
         case BinaryAnnotationsOpCode::ChangeCodeOffsetBase:
-          W.printNumber("ChangeCodeOffsetBase", GetCompressedAnnotation());
-          break;
-        case BinaryAnnotationsOpCode::ChangeCodeOffset:
-          W.printHex("ChangeCodeOffset", GetCompressedAnnotation());
-          break;
-        case BinaryAnnotationsOpCode::ChangeCodeLength:
-          W.printHex("ChangeCodeLength", GetCompressedAnnotation());
-          break;
-        case BinaryAnnotationsOpCode::ChangeFile:
-          printFileNameForOffset("ChangeFile", GetCompressedAnnotation());
+        case BinaryAnnotationsOpCode::ChangeLineEndDelta:
+        case BinaryAnnotationsOpCode::ChangeRangeKind:
+        case BinaryAnnotationsOpCode::ChangeColumnStart:
+        case BinaryAnnotationsOpCode::ChangeColumnEnd:
+          W.printNumber(Annotation.Name, Annotation.U1);
           break;
         case BinaryAnnotationsOpCode::ChangeLineOffset:
-          W.printNumber("ChangeLineOffset",
-                        DecodeSignedOperand(GetCompressedAnnotation()));
-          break;
-        case BinaryAnnotationsOpCode::ChangeLineEndDelta:
-          W.printNumber("ChangeLineEndDelta", GetCompressedAnnotation());
-          break;
-        case BinaryAnnotationsOpCode::ChangeRangeKind:
-          W.printNumber("ChangeRangeKind", GetCompressedAnnotation());
-          break;
-        case BinaryAnnotationsOpCode::ChangeColumnStart:
-          W.printNumber("ChangeColumnStart", GetCompressedAnnotation());
-          break;
         case BinaryAnnotationsOpCode::ChangeColumnEndDelta:
-          W.printNumber("ChangeColumnEndDelta",
-                        DecodeSignedOperand(GetCompressedAnnotation()));
+          W.printNumber(Annotation.Name, Annotation.S1);
+          break;
+        case BinaryAnnotationsOpCode::ChangeFile:
+          printFileNameForOffset("ChangeFile", Annotation.U1);
           break;
         case BinaryAnnotationsOpCode::ChangeCodeOffsetAndLineOffset: {
-          uint32_t Annotation = GetCompressedAnnotation();
-          int32_t LineOffset = DecodeSignedOperand(Annotation >> 4);
-          uint32_t CodeOffset = Annotation & 0xf;
           W.startLine() << "ChangeCodeOffsetAndLineOffset: {CodeOffset: "
-                        << W.hex(CodeOffset) << ", LineOffset: " << LineOffset
-                        << "}\n";
+                        << W.hex(Annotation.U1)
+                        << ", LineOffset: " << Annotation.S1 << "}\n";
           break;
         }
         case BinaryAnnotationsOpCode::ChangeCodeLengthAndCodeOffset: {
-          uint32_t Length = GetCompressedAnnotation();
-          uint32_t CodeOffset = GetCompressedAnnotation();
           W.startLine() << "ChangeCodeLengthAndCodeOffset: {CodeOffset: "
-                        << W.hex(CodeOffset) << ", Length: " << W.hex(Length)
-                        << "}\n";
+                        << W.hex(Annotation.U2)
+                        << ", Length: " << W.hex(Annotation.U1) << "}\n";
           break;
         }
-        case BinaryAnnotationsOpCode::ChangeColumnEnd:
-          W.printNumber("ChangeColumnEnd", GetCompressedAnnotation());
-          break;
         }
       }
       break;
@@ -1227,140 +1193,192 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
 
     case S_LOCAL: {
       DictScope S(W, "Local");
-      const LocalSym *Local;
-      error(consumeObject(SymData, Local));
-      printTypeIndex("Type", Local->Type);
-      W.printFlags("Flags", uint16_t(Local->Flags), makeArrayRef(LocalFlags));
-      StringRef VarName = SymData.split('\0').first;
-      W.printString("VarName", VarName);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto LocalOrError = LocalSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!LocalOrError)
+        error(LocalOrError.getError());
+      auto &Local = LocalOrError.get();
+
+      printTypeIndex("Type", Local.Header.Type);
+      W.printFlags("Flags", uint16_t(Local.Header.Flags),
+                   makeArrayRef(LocalFlags));
+      W.printString("VarName", Local.Name);
       break;
     }
 
     case S_DEFRANGE: {
       DictScope S(W, "DefRange");
-      const DefRangeSym *DefRange;
-      error(consumeObject(SymData, DefRange));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto DefRangeOrError = DefRangeSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!DefRangeOrError)
+        error(DefRangeOrError.getError());
+      auto &DefRange = DefRangeOrError.get();
+
       W.printString(
           "Program",
-          CVStringTable.drop_front(DefRange->Program).split('\0').first);
-      printLocalVariableAddrRange(DefRange->Range, Sec, SectionContents);
-      printLocalVariableAddrGap(SymData);
+          CVStringTable.drop_front(DefRange.Header.Program).split('\0').first);
+      printLocalVariableAddrRange(DefRange.Header.Range, Sec,
+                                  DefRange.getRelocationOffset());
+      printLocalVariableAddrGap(DefRange.Gaps);
       break;
     }
     case S_DEFRANGE_SUBFIELD: {
       DictScope S(W, "DefRangeSubfield");
-      const DefRangeSubfieldSym *DefRangeSubfield;
-      error(consumeObject(SymData, DefRangeSubfield));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto DefRangeOrError = DefRangeSubfieldSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!DefRangeOrError)
+        error(DefRangeOrError.getError());
+      auto &DefRangeSubfield = DefRangeOrError.get();
+
       W.printString("Program",
-                    CVStringTable.drop_front(DefRangeSubfield->Program)
+                    CVStringTable.drop_front(DefRangeSubfield.Header.Program)
                         .split('\0')
                         .first);
-      W.printNumber("OffsetInParent", DefRangeSubfield->OffsetInParent);
-      printLocalVariableAddrRange(DefRangeSubfield->Range, Sec,
-                                  SectionContents);
-      printLocalVariableAddrGap(SymData);
+      W.printNumber("OffsetInParent", DefRangeSubfield.Header.OffsetInParent);
+      printLocalVariableAddrRange(DefRangeSubfield.Header.Range, Sec,
+                                  DefRangeSubfield.getRelocationOffset());
+      printLocalVariableAddrGap(DefRangeSubfield.Gaps);
       break;
     }
     case S_DEFRANGE_REGISTER: {
       DictScope S(W, "DefRangeRegister");
-      const DefRangeRegisterSym *DefRangeRegister;
-      error(consumeObject(SymData, DefRangeRegister));
-      W.printNumber("Register", DefRangeRegister->Register);
-      W.printNumber("MayHaveNoName", DefRangeRegister->MayHaveNoName);
-      printLocalVariableAddrRange(DefRangeRegister->Range, Sec,
-                                  SectionContents);
-      printLocalVariableAddrGap(SymData);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto DefRangeOrError = DefRangeRegisterSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!DefRangeOrError)
+        error(DefRangeOrError.getError());
+      auto &DefRangeRegisterSym = DefRangeOrError.get();
+
+      W.printNumber("Register", DefRangeRegisterSym.Header.Register);
+      W.printNumber("MayHaveNoName", DefRangeRegisterSym.Header.MayHaveNoName);
+      printLocalVariableAddrRange(DefRangeRegisterSym.Header.Range, Sec,
+                                  DefRangeRegisterSym.getRelocationOffset());
+      printLocalVariableAddrGap(DefRangeRegisterSym.Gaps);
       break;
     }
     case S_DEFRANGE_SUBFIELD_REGISTER: {
       DictScope S(W, "DefRangeSubfieldRegister");
-      const DefRangeSubfieldRegisterSym *DefRangeSubfieldRegisterSym;
-      error(consumeObject(SymData, DefRangeSubfieldRegisterSym));
-      W.printNumber("Register", DefRangeSubfieldRegisterSym->Register);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto DefRangeOrError = DefRangeSubfieldRegisterSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!DefRangeOrError)
+        error(DefRangeOrError.getError());
+      auto &DefRangeSubfieldRegister = DefRangeOrError.get();
+      W.printNumber("Register", DefRangeSubfieldRegister.Header.Register);
       W.printNumber("MayHaveNoName",
-                    DefRangeSubfieldRegisterSym->MayHaveNoName);
+                    DefRangeSubfieldRegister.Header.MayHaveNoName);
       W.printNumber("OffsetInParent",
-                    DefRangeSubfieldRegisterSym->OffsetInParent);
-      printLocalVariableAddrRange(DefRangeSubfieldRegisterSym->Range, Sec,
-                                  SectionContents);
-      printLocalVariableAddrGap(SymData);
+                    DefRangeSubfieldRegister.Header.OffsetInParent);
+      printLocalVariableAddrRange(
+          DefRangeSubfieldRegister.Header.Range, Sec,
+          DefRangeSubfieldRegister.getRelocationOffset());
+      printLocalVariableAddrGap(DefRangeSubfieldRegister.Gaps);
       break;
     }
     case S_DEFRANGE_FRAMEPOINTER_REL: {
       DictScope S(W, "DefRangeFramePointerRel");
-      const DefRangeFramePointerRelSym *DefRangeFramePointerRel;
-      error(consumeObject(SymData, DefRangeFramePointerRel));
-      W.printNumber("Offset", DefRangeFramePointerRel->Offset);
-      printLocalVariableAddrRange(DefRangeFramePointerRel->Range, Sec,
-                                  SectionContents);
-      printLocalVariableAddrGap(SymData);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto DefRangeOrError = DefRangeFramePointerRelSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!DefRangeOrError)
+        error(DefRangeOrError.getError());
+      auto &DefRangeFramePointerRel = DefRangeOrError.get();
+      W.printNumber("Offset", DefRangeFramePointerRel.Header.Offset);
+      printLocalVariableAddrRange(
+          DefRangeFramePointerRel.Header.Range, Sec,
+          DefRangeFramePointerRel.getRelocationOffset());
+      printLocalVariableAddrGap(DefRangeFramePointerRel.Gaps);
       break;
     }
     case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE: {
       DictScope S(W, "DefRangeFramePointerRelFullScope");
-      const DefRangeFramePointerRelFullScopeSym
-          *DefRangeFramePointerRelFullScope;
-      error(consumeObject(SymData, DefRangeFramePointerRelFullScope));
-      W.printNumber("Offset", DefRangeFramePointerRelFullScope->Offset);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto DefRangeOrError = DefRangeFramePointerRelFullScopeSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!DefRangeOrError)
+        error(DefRangeOrError.getError());
+      auto &DefRangeFramePointerRelFullScope = DefRangeOrError.get();
+      W.printNumber("Offset", DefRangeFramePointerRelFullScope.Header.Offset);
       break;
     }
     case S_DEFRANGE_REGISTER_REL: {
       DictScope S(W, "DefRangeRegisterRel");
-      const DefRangeRegisterRelSym *DefRangeRegisterRel;
-      error(consumeObject(SymData, DefRangeRegisterRel));
-      W.printNumber("BaseRegister", DefRangeRegisterRel->BaseRegister);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto DefRangeOrError = DefRangeRegisterRelSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!DefRangeOrError)
+        error(DefRangeOrError.getError());
+      auto &DefRangeRegisterRel = DefRangeOrError.get();
+
+      W.printNumber("BaseRegister", DefRangeRegisterRel.Header.BaseRegister);
       W.printBoolean("HasSpilledUDTMember",
-                     DefRangeRegisterRel->hasSpilledUDTMember());
-      W.printNumber("OffsetInParent", DefRangeRegisterRel->offsetInParent());
+                     DefRangeRegisterRel.hasSpilledUDTMember());
+      W.printNumber("OffsetInParent", DefRangeRegisterRel.offsetInParent());
       W.printNumber("BasePointerOffset",
-                    DefRangeRegisterRel->BasePointerOffset);
-      printLocalVariableAddrRange(DefRangeRegisterRel->Range, Sec,
-                                  SectionContents);
-      printLocalVariableAddrGap(SymData);
+                    DefRangeRegisterRel.Header.BasePointerOffset);
+      printLocalVariableAddrRange(DefRangeRegisterRel.Header.Range, Sec,
+                                  DefRangeRegisterRel.getRelocationOffset());
+      printLocalVariableAddrGap(DefRangeRegisterRel.Gaps);
       break;
     }
 
     case S_CALLSITEINFO: {
       DictScope S(W, "CallSiteInfo");
-      const CallSiteInfoSym *CallSiteInfo;
-      error(consumeObject(SymData, CallSiteInfo));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto CallSiteOrError = CallSiteInfoSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!CallSiteOrError)
+        error(CallSiteOrError.getError());
+      auto &CallSiteInfo = CallSiteOrError.get();
 
       StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec, SectionContents,
-                          &CallSiteInfo->CodeOffset, &LinkageName);
-      W.printHex("Segment", CallSiteInfo->Segment);
-      W.printHex("Reserved", CallSiteInfo->Reserved);
-      printTypeIndex("Type", CallSiteInfo->Type);
+      printRelocatedField("CodeOffset", Sec, CallSiteInfo.getRelocationOffset(),
+                          CallSiteInfo.Header.CodeOffset, &LinkageName);
+      W.printHex("Segment", CallSiteInfo.Header.Segment);
+      W.printHex("Reserved", CallSiteInfo.Header.Reserved);
+      printTypeIndex("Type", CallSiteInfo.Header.Type);
       W.printString("LinkageName", LinkageName);
       break;
     }
 
     case S_HEAPALLOCSITE: {
       DictScope S(W, "HeapAllocationSite");
-      const HeapAllocationSiteSym *HeapAllocationSite;
-      error(consumeObject(SymData, HeapAllocationSite));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto HeapAllocSiteOrError = HeapAllocationSiteSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!HeapAllocSiteOrError)
+        error(HeapAllocSiteOrError.getError());
+      auto &HeapAllocSite = HeapAllocSiteOrError.get();
 
       StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec, SectionContents,
-                          &HeapAllocationSite->CodeOffset, &LinkageName);
-      W.printHex("Segment", HeapAllocationSite->Segment);
+      printRelocatedField("CodeOffset", Sec,
+                          HeapAllocSite.getRelocationOffset(),
+                          HeapAllocSite.Header.CodeOffset, &LinkageName);
+      W.printHex("Segment", HeapAllocSite.Header.Segment);
       W.printHex("CallInstructionSize",
-                 HeapAllocationSite->CallInstructionSize);
-      printTypeIndex("Type", HeapAllocationSite->Type);
+                 HeapAllocSite.Header.CallInstructionSize);
+      printTypeIndex("Type", HeapAllocSite.Header.Type);
       W.printString("LinkageName", LinkageName);
       break;
     }
 
     case S_FRAMECOOKIE: {
       DictScope S(W, "FrameCookie");
-      const FrameCookieSym *FrameCookie;
-      error(consumeObject(SymData, FrameCookie));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto FrameCookieOrError = FrameCookieSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!FrameCookieOrError)
+        error(FrameCookieOrError.getError());
+      auto &FrameCookie = FrameCookieOrError.get();
 
       StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec, SectionContents,
-                          &FrameCookie->CodeOffset, &LinkageName);
-      W.printHex("Register", FrameCookie->Register);
-      W.printEnum("CookieKind", uint16_t(FrameCookie->CookieKind),
+      printRelocatedField("CodeOffset", Sec, FrameCookie.getRelocationOffset(),
+                          FrameCookie.Header.CodeOffset, &LinkageName);
+      W.printHex("Register", FrameCookie.Header.Register);
+      W.printEnum("CookieKind", uint16_t(FrameCookie.Header.CookieKind),
                   makeArrayRef(FrameCookieKinds));
       break;
     }
@@ -1370,15 +1388,18 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
     case S_LMANDATA:
     case S_GMANDATA: {
       DictScope S(W, "DataSym");
-      const DataSym *Data;
-      error(consumeObject(SymData, Data));
+      ArrayRef<uint8_t> SymBytes(SymData.bytes_begin(), SymData.bytes_end());
+      auto DataOrError = DataSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, SymBytes);
+      if (!DataOrError)
+        error(DataOrError.getError());
+      auto &Data = DataOrError.get();
 
-      StringRef DisplayName = SymData.split('\0').first;
       StringRef LinkageName;
-      printRelocatedField("DataOffset", Sec, SectionContents, &Data->DataOffset,
-                          &LinkageName);
-      printTypeIndex("Type", Data->Type);
-      W.printString("DisplayName", DisplayName);
+      printRelocatedField("DataOffset", Sec, Data.getRelocationOffset(),
+                          Data.Header.DataOffset, &LinkageName);
+      printTypeIndex("Type", Data.Header.Type);
+      W.printString("DisplayName", Data.Name);
       W.printString("LinkageName", LinkageName);
       break;
     }
@@ -1386,130 +1407,161 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
     case S_LTHREAD32:
     case S_GTHREAD32: {
       DictScope S(W, "ThreadLocalDataSym");
-      const ThreadLocalDataSym *Data;
-      error(consumeObject(SymData, Data));
+      ArrayRef<uint8_t> SymBytes(SymData.bytes_begin(), SymData.bytes_end());
+      auto ThreadLocalDataOrError = ThreadLocalDataSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, SymBytes);
+      if (!ThreadLocalDataOrError)
+        error(ThreadLocalDataOrError.getError());
+      auto &Data = ThreadLocalDataOrError.get();
 
-      StringRef DisplayName = SymData.split('\0').first;
       StringRef LinkageName;
-      printRelocatedField("DataOffset", Sec, SectionContents, &Data->DataOffset,
-                          &LinkageName);
-      printTypeIndex("Type", Data->Type);
-      W.printString("DisplayName", DisplayName);
+      printRelocatedField("DataOffset", Sec, Data.getRelocationOffset(),
+                          Data.Header.DataOffset, &LinkageName);
+      printTypeIndex("Type", Data.Header.Type);
+      W.printString("DisplayName", Data.Name);
       W.printString("LinkageName", LinkageName);
       break;
     }
 
     case S_OBJNAME: {
       DictScope S(W, "ObjectName");
-      const ObjNameSym *ObjName;
-      error(consumeObject(SymData, ObjName));
-      W.printHex("Signature", ObjName->Signature);
-      StringRef ObjectName = SymData.split('\0').first;
-      W.printString("ObjectName", ObjectName);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto ObjNameOrError = ObjNameSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!ObjNameOrError)
+        error(ObjNameOrError.getError());
+      auto &ObjName = ObjNameOrError.get();
+      W.printHex("Signature", ObjName.Header.Signature);
+      W.printString("ObjectName", ObjName.Name);
       break;
     }
 
     case S_COMPILE3: {
       DictScope S(W, "CompilerFlags");
-      const CompileSym3 *CompFlags;
-      error(consumeObject(SymData, CompFlags));
-      W.printEnum("Language", CompFlags->getLanguage(),
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto Compile3OrError = CompileSym3::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!Compile3OrError)
+        error(Compile3OrError.getError());
+      auto &Compile3 = Compile3OrError.get();
+
+      W.printEnum("Language", Compile3.Header.getLanguage(),
                   makeArrayRef(SourceLanguages));
-      W.printFlags("Flags", CompFlags->flags & ~0xff,
+      W.printFlags("Flags", Compile3.Header.flags & ~0xff,
                    makeArrayRef(CompileSym3FlagNames));
-      W.printEnum("Machine", unsigned(CompFlags->Machine),
+      W.printEnum("Machine", unsigned(Compile3.Header.Machine),
                   makeArrayRef(CPUTypeNames));
       std::string FrontendVersion;
       {
         raw_string_ostream Out(FrontendVersion);
-        Out << CompFlags->VersionFrontendMajor << '.'
-            << CompFlags->VersionFrontendMinor << '.'
-            << CompFlags->VersionFrontendBuild << '.'
-            << CompFlags->VersionFrontendQFE;
+        Out << Compile3.Header.VersionFrontendMajor << '.'
+            << Compile3.Header.VersionFrontendMinor << '.'
+            << Compile3.Header.VersionFrontendBuild << '.'
+            << Compile3.Header.VersionFrontendQFE;
       }
       std::string BackendVersion;
       {
         raw_string_ostream Out(BackendVersion);
-        Out << CompFlags->VersionBackendMajor << '.'
-            << CompFlags->VersionBackendMinor << '.'
-            << CompFlags->VersionBackendBuild << '.'
-            << CompFlags->VersionBackendQFE;
+        Out << Compile3.Header.VersionBackendMajor << '.'
+            << Compile3.Header.VersionBackendMinor << '.'
+            << Compile3.Header.VersionBackendBuild << '.'
+            << Compile3.Header.VersionBackendQFE;
       }
       W.printString("FrontendVersion", FrontendVersion);
       W.printString("BackendVersion", BackendVersion);
-      StringRef VersionName = SymData.split('\0').first;
-      W.printString("VersionName", VersionName);
+      W.printString("VersionName", Compile3.Version);
       break;
     }
 
     case S_FRAMEPROC: {
       DictScope S(W, "FrameProc");
-      const FrameProcSym *FrameProc;
-      error(consumeObject(SymData, FrameProc));
-      W.printHex("TotalFrameBytes", FrameProc->TotalFrameBytes);
-      W.printHex("PaddingFrameBytes", FrameProc->PaddingFrameBytes);
-      W.printHex("OffsetToPadding", FrameProc->OffsetToPadding);
-      W.printHex("BytesOfCalleeSavedRegisters", FrameProc->BytesOfCalleeSavedRegisters);
-      W.printHex("OffsetOfExceptionHandler", FrameProc->OffsetOfExceptionHandler);
-      W.printHex("SectionIdOfExceptionHandler", FrameProc->SectionIdOfExceptionHandler);
-      W.printFlags("Flags", FrameProc->Flags, makeArrayRef(FrameProcSymFlags));
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto FrameProcOrError = FrameProcSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!FrameProcOrError)
+        error(FrameProcOrError.getError());
+      auto &FrameProc = FrameProcOrError.get();
+      W.printHex("TotalFrameBytes", FrameProc.Header.TotalFrameBytes);
+      W.printHex("PaddingFrameBytes", FrameProc.Header.PaddingFrameBytes);
+      W.printHex("OffsetToPadding", FrameProc.Header.OffsetToPadding);
+      W.printHex("BytesOfCalleeSavedRegisters",
+                 FrameProc.Header.BytesOfCalleeSavedRegisters);
+      W.printHex("OffsetOfExceptionHandler",
+                 FrameProc.Header.OffsetOfExceptionHandler);
+      W.printHex("SectionIdOfExceptionHandler",
+                 FrameProc.Header.SectionIdOfExceptionHandler);
+      W.printFlags("Flags", FrameProc.Header.Flags,
+                   makeArrayRef(FrameProcSymFlags));
       break;
     }
 
     case S_UDT:
     case S_COBOLUDT: {
       DictScope S(W, "UDT");
-      const UDTSym *UDT;
-      error(consumeObject(SymData, UDT));
-      printTypeIndex("Type", UDT->Type);
-      StringRef UDTName = SymData.split('\0').first;
-      W.printString("UDTName", UDTName);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto UdtOrError = UDTSym::deserialize(static_cast<SymbolRecordKind>(Kind),
+                                            RecordOffset, Data);
+      if (!UdtOrError)
+        error(UdtOrError.getError());
+      auto &UDT = UdtOrError.get();
+      printTypeIndex("Type", UDT.Header.Type);
+      W.printString("UDTName", UDT.Name);
       break;
     }
 
     case S_BPREL32: {
       DictScope S(W, "BPRelativeSym");
-      const BPRelativeSym *BPRel;
-      error(consumeObject(SymData, BPRel));
-      W.printNumber("Offset", BPRel->Offset);
-      printTypeIndex("Type", BPRel->Type);
-      StringRef VarName = SymData.split('\0').first;
-      W.printString("VarName", VarName);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto BPRelOrError = BPRelativeSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!BPRelOrError)
+        error(BPRelOrError.getError());
+      auto &BPRel = BPRelOrError.get();
+      W.printNumber("Offset", BPRel.Header.Offset);
+      printTypeIndex("Type", BPRel.Header.Type);
+      W.printString("VarName", BPRel.Name);
       break;
     }
 
     case S_REGREL32: {
       DictScope S(W, "RegRelativeSym");
-      const RegRelativeSym *RegRel;
-      error(consumeObject(SymData, RegRel));
-      W.printHex("Offset", RegRel->Offset);
-      printTypeIndex("Type", RegRel->Type);
-      W.printHex("Register", RegRel->Register);
-      StringRef VarName = SymData.split('\0').first;
-      W.printString("VarName", VarName);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto RegRelOrError = RegRelativeSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!RegRelOrError)
+        error(RegRelOrError.getError());
+      auto &RegRel = RegRelOrError.get();
+      W.printHex("Offset", RegRel.Header.Offset);
+      printTypeIndex("Type", RegRel.Header.Type);
+      W.printHex("Register", RegRel.Header.Register);
+      W.printString("VarName", RegRel.Name);
       break;
     }
 
     case S_BUILDINFO: {
       DictScope S(W, "BuildInfo");
-      const BuildInfoSym *BuildInfo;
-      error(consumeObject(SymData, BuildInfo));
-      W.printNumber("BuildId", BuildInfo->BuildId);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto BuildInfoOrError = BuildInfoSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!BuildInfoOrError)
+        error(BuildInfoOrError.getError());
+      auto &BuildInfo = BuildInfoOrError.get();
+      W.printNumber("BuildId", BuildInfo.Header.BuildId);
       break;
     }
 
     case S_CONSTANT:
     case S_MANCONSTANT: {
       DictScope S(W, "Constant");
-      const ConstantSym *Constant;
-      error(consumeObject(SymData, Constant));
-      printTypeIndex("Type", Constant->Type);
-      APSInt Value;
-      if (consume(SymData, Value))
-        error(object_error::parse_failed);
-      W.printNumber("Value", Value);
-      StringRef Name = SymData.split('\0').first;
-      W.printString("Name", Name);
+      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
+      auto ConstantOrError = ConstantSym::deserialize(
+          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
+      if (!ConstantOrError)
+        error(ConstantOrError.getError());
+      auto &Constant = ConstantOrError.get();
+      printTypeIndex("Type", Constant.Header.Type);
+      W.printNumber("Value", Constant.Value);
+      W.printString("Name", Constant.Name);
       break;
     }
 
@@ -1583,20 +1635,19 @@ void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
 
 void COFFDumper::printLocalVariableAddrRange(
     const LocalVariableAddrRange &Range, const coff_section *Sec,
-    StringRef SectionContents) {
+    uint32_t RelocationOffset) {
   DictScope S(W, "LocalVariableAddrRange");
-  printRelocatedField("OffsetStart", Sec, SectionContents, &Range.OffsetStart);
+  printRelocatedField("OffsetStart", Sec, RelocationOffset, Range.OffsetStart);
   W.printHex("ISectStart", Range.ISectStart);
   W.printHex("Range", Range.Range);
 }
 
-void COFFDumper::printLocalVariableAddrGap(StringRef &SymData) {
-  while (!SymData.empty()) {
-    const LocalVariableAddrGap *Gap;
-    error(consumeObject(SymData, Gap));
+void COFFDumper::printLocalVariableAddrGap(
+    ArrayRef<LocalVariableAddrGap> Gaps) {
+  for (auto &Gap : Gaps) {
     ListScope S(W, "LocalVariableAddrGap");
-    W.printHex("GapStartOffset", Gap->GapStartOffset);
-    W.printHex("Range", Gap->Range);
+    W.printHex("GapStartOffset", Gap.GapStartOffset);
+    W.printHex("Range", Gap.Range);
   }
 }
 

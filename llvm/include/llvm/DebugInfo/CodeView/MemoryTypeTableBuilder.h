@@ -46,6 +46,8 @@ private:
 public:
   MemoryTypeTableBuilder() {}
 
+  bool empty() const { return Records.empty(); }
+
   template <typename TFunc> void ForEachRecord(TFunc Func) {
     uint32_t Index = TypeIndex::FirstNonSimpleIndex;
 

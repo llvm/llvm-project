@@ -48,6 +48,7 @@ endif()
 
 
 add_llvm_library(LLVMLTO
+  LTO.cpp
   LTOModule.cpp
   LTOCodeGenerator.cpp
   UpdateCompilerUsed.cpp

@@ -2527,9 +2527,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
-  switch (Inst.getOpcode()) {
-  default: return false;
-  }
+  return false;
 }
 
 static const char *getSubtargetFeatureName(uint64_t Val);

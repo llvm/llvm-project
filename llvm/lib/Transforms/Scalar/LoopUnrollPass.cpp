@@ -45,18 +45,18 @@ static cl::opt<unsigned>
                     cl::desc("The baseline cost threshold for loop unrolling"));
 
 static cl::opt<unsigned> UnrollPercentDynamicCostSavedThreshold(
-    "unroll-percent-dynamic-cost-saved-threshold", cl::Hidden,
+    "unroll-percent-dynamic-cost-saved-threshold", cl::init(50), cl::Hidden,
     cl::desc("The percentage of estimated dynamic cost which must be saved by "
              "unrolling to allow unrolling up to the max threshold."));
 
 static cl::opt<unsigned> UnrollDynamicCostSavingsDiscount(
-    "unroll-dynamic-cost-savings-discount", cl::Hidden,
+    "unroll-dynamic-cost-savings-discount", cl::init(100), cl::Hidden,
     cl::desc("This is the amount discounted from the total unroll cost when "
              "the unrolled form has a high dynamic cost savings (triggered by "
              "the '-unroll-perecent-dynamic-cost-saved-threshold' flag)."));
 
 static cl::opt<unsigned> UnrollMaxIterationsCountToAnalyze(
-    "unroll-max-iteration-count-to-analyze", cl::init(0), cl::Hidden,
+    "unroll-max-iteration-count-to-analyze", cl::init(10), cl::Hidden,
     cl::desc("Don't allow loop unrolling to simulate more than this number of"
              "iterations when checking full unroll profitability"));
 

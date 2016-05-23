@@ -1922,6 +1922,13 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
       if (Instruction *V = PromoteCastOfAllocation(CI, *AI))
         return V;
 
+    // When the type pointed to is not sized the cast cannot be
+    // turned into a gep.
+    Type *PointeeType =
+        cast<PointerType>(Src->getType()->getScalarType())->getElementType();
+    if (!PointeeType->isSized())
+      return nullptr;
+
     // If the source and destination are pointers, and this cast is equivalent
     // to a getelementptr X, 0, 0, 0...  turn it into the appropriate gep.
     // This can enhance SROA and other transforms that want type-safe pointers.

@@ -45,6 +45,9 @@ public:
     initializeAlwaysInlinerPass(*PassRegistry::getPassRegistry());
   }
 
+  /// Main run interface method.  We override here to avoid calling skipSCC().
+  bool runOnSCC(CallGraphSCC &SCC) override { return inlineCalls(SCC); }
+
   static char ID; // Pass identification, replacement for typeid
 
   InlineCost getInlineCost(CallSite CS) override;

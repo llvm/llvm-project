@@ -1,6 +1,10 @@
+#ifndef TOOLS_LLVM_DWP_DWPERROR
+#define TOOLS_LLVM_DWP_DWPERROR
+
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <string>
+
 namespace llvm {
 class DWPError : public ErrorInfo<DWPError> {
 public:
@@ -15,3 +19,5 @@ private:
   std::string Info;
 };
 }
+
+#endif

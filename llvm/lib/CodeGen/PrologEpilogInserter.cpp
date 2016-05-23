@@ -654,9 +654,9 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
       DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << -Offset << "]\n");
       MFI->setObjectOffset(i, -Offset);        // Set the computed offset
     }
-  } else {
-    unsigned MaxCSFI = MaxCSFrameIndex, MinCSFI = MinCSFrameIndex;
-    for (unsigned i = MaxCSFI; i >= MinCSFI; --i) {
+  } else if (MaxCSFrameIndex >= MinCSFrameIndex) {
+    // Be careful about underflow in comparisons agains MinCSFrameIndex.
+    for (unsigned i = MaxCSFrameIndex; i != MinCSFrameIndex - 1; --i) {
       unsigned Align = MFI->getObjectAlignment(i);
       // Adjust to alignment boundary
       Offset = alignTo(Offset, Align, Skew);

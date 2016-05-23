@@ -126,7 +126,9 @@ static void Query(const MachineInstr *MI, AliasAnalysis &AA,
                   bool &Read, bool &Write, bool &Effects, bool &StackPointer) {
   assert(!MI->isPosition());
   assert(!MI->isTerminator());
-  assert(!MI->isDebugValue());
+
+  if (MI->isDebugValue())
+    return;
 
   // Check for loads.
   if (MI->mayLoad() && !MI->isInvariantLoad(&AA))
@@ -255,7 +257,7 @@ static bool HasOneUse(unsigned Reg, MachineInstr *Def,
   const VNInfo *DefVNI = LI.getVNInfoAt(
       LIS.getInstructionIndex(*Def).getRegSlot());
   assert(DefVNI);
-  for (auto I : MRI.use_operands(Reg)) {
+  for (auto I : MRI.use_nodbg_operands(Reg)) {
     const auto &Result = LI.Query(LIS.getInstructionIndex(*I.getParent()));
     if (Result.valueIn() == DefVNI) {
       if (!Result.isKill())
@@ -458,8 +460,9 @@ static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand& Op,
 
     // Tell LiveIntervals about the changes to the old register.
     LiveInterval &LI = LIS.getInterval(Reg);
-    LIS.removeVRegDefAt(LI, LIS.getInstructionIndex(*Def).getRegSlot());
-    ShrinkToUses(LI, LIS);
+    LI.removeSegment(LIS.getInstructionIndex(*Def).getRegSlot(),
+                     LIS.getInstructionIndex(*Op.getParent()).getRegSlot(),
+                     /*RemoveDeadValNo=*/true);
 
     MFI.stackifyVReg(NewReg);
 
@@ -528,8 +531,8 @@ RematerializeCheapDef(unsigned Reg, MachineOperand &Op, MachineInstr *Def,
 ///    DefReg = INST ...     // Def (to become the new Insert)
 ///    TeeReg, Reg = TEE_LOCAL_... DefReg
 ///    INST ..., TeeReg, ... // Insert
-///    INST ..., NewReg, ...
-///    INST ..., NewReg, ...
+///    INST ..., Reg, ...
+///    INST ..., Reg, ...
 ///
 /// with DefReg and TeeReg stackified. This eliminates a get_local from the
 /// resulting code.

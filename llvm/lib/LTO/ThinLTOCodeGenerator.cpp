@@ -32,6 +32,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -41,7 +42,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Target/TargetMachine.h"
@@ -72,28 +72,6 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
   DiagnosticPrinterRawOStream DP(errs());
   DI.print(DP);
   errs() << '\n';
-}
-
-// Simple helper to load a module from bitcode
-static std::unique_ptr<Module>
-loadModuleFromBuffer(const MemoryBufferRef &Buffer, LLVMContext &Context,
-                     bool Lazy) {
-  SMDiagnostic Err;
-  ErrorOr<std::unique_ptr<Module>> ModuleOrErr(nullptr);
-  if (Lazy) {
-    ModuleOrErr =
-        getLazyBitcodeModule(MemoryBuffer::getMemBuffer(Buffer, false), Context,
-                             /* ShouldLazyLoadMetadata */ Lazy);
-  } else {
-    ModuleOrErr = parseBitcodeFile(Buffer, Context);
-  }
-  if (std::error_code EC = ModuleOrErr.getError()) {
-    Err = SMDiagnostic(Buffer.getBufferIdentifier(), SourceMgr::DK_Error,
-                       EC.message());
-    Err.print("ThinLTO", errs());
-    report_fatal_error("Can't load module, abort.");
-  }
-  return std::move(ModuleOrErr.get());
 }
 
 // Simple helper to save temporary files for debug.
@@ -259,26 +237,6 @@ generateModuleMap(const std::vector<MemoryBufferRef> &Modules) {
   }
   return ModuleMap;
 }
-
-/// Provide a "loader" for the FunctionImporter to access function from other
-/// modules.
-class ModuleLoader {
-  /// The context that will be used for importing.
-  LLVMContext &Context;
-
-  /// Map from Module identifier to MemoryBuffer. Used by clients like the
-  /// FunctionImported to request loading a Module.
-  StringMap<MemoryBufferRef> &ModuleMap;
-
-public:
-  ModuleLoader(LLVMContext &Context, StringMap<MemoryBufferRef> &ModuleMap)
-      : Context(Context), ModuleMap(ModuleMap) {}
-
-  /// Load a module on demand.
-  std::unique_ptr<Module> operator()(StringRef Identifier) {
-    return loadModuleFromBuffer(ModuleMap[Identifier], Context, /*Lazy*/ true);
-  }
-};
 
 static void promoteModule(Module &TheModule, const ModuleSummaryIndex &Index) {
   if (renameModuleForThinLTO(TheModule, Index))

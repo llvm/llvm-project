@@ -1079,7 +1079,8 @@ bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr *Spill,
 bool HoistSpillHelper::isSpillCandBB(unsigned OrigReg, VNInfo &OrigVNI,
                                      MachineBasicBlock &BB, unsigned &LiveReg) {
   SlotIndex Idx;
-  MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(BB);
+  LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+  MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(OrigLI, BB);
   if (MI != BB.end())
     Idx = LIS.getInstructionIndex(*MI);
   else
@@ -1381,7 +1382,6 @@ void HoistSpillHelper::hoistAllSpills() {
     int Slot = Ent.first.first;
     unsigned OrigReg = SlotToOrigReg[Slot];
     LiveInterval &OrigLI = LIS.getInterval(OrigReg);
-    IPA.setInterval(&OrigLI);
     VNInfo *OrigVNI = Ent.first.second;
     SmallPtrSet<MachineInstr *, 16> &EqValSpills = Ent.second;
     if (Ent.second.empty())
@@ -1422,7 +1422,7 @@ void HoistSpillHelper::hoistAllSpills() {
     for (auto const Insert : SpillsToIns) {
       MachineBasicBlock *BB = Insert.first;
       unsigned LiveReg = Insert.second;
-      MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(*BB);
+      MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(OrigLI, *BB);
       TII.storeRegToStackSlot(*BB, MI, LiveReg, false, Slot,
                               MRI.getRegClass(LiveReg), &TRI);
       LIS.InsertMachineInstrRangeInMaps(std::prev(MI), MI);

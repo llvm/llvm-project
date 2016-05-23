@@ -1,5 +1,37 @@
 ; RUN: llc < %s -march=sparcv9 -verify-machineinstrs | FileCheck %s
 
+; CHECK-LABEL: test_atomic_i8
+; CHECK:       ldub [%o0]
+; CHECK:       membar
+; CHECK:       ldub [%o1]
+; CHECK:       membar
+; CHECK:       membar
+; CHECK:       stb {{.+}}, [%o2]
+define i8 @test_atomic_i8(i8* %ptr1, i8* %ptr2, i8* %ptr3) {
+entry:
+  %0 = load atomic i8, i8* %ptr1 acquire, align 1
+  %1 = load atomic i8, i8* %ptr2 acquire, align 1
+  %2 = add i8 %0, %1
+  store atomic i8 %2, i8* %ptr3 release, align 1
+  ret i8 %2
+}
+
+; CHECK-LABEL: test_atomic_i16
+; CHECK:       lduh [%o0]
+; CHECK:       membar
+; CHECK:       lduh [%o1]
+; CHECK:       membar
+; CHECK:       membar
+; CHECK:       sth {{.+}}, [%o2]
+define i16 @test_atomic_i16(i16* %ptr1, i16* %ptr2, i16* %ptr3) {
+entry:
+  %0 = load atomic i16, i16* %ptr1 acquire, align 2
+  %1 = load atomic i16, i16* %ptr2 acquire, align 2
+  %2 = add i16 %0, %1
+  store atomic i16 %2, i16* %ptr3 release, align 2
+  ret i16 %2
+}
+
 ; CHECK-LABEL: test_atomic_i32
 ; CHECK:       ld [%o0]
 ; CHECK:       membar
@@ -9,10 +41,10 @@
 ; CHECK:       st {{.+}}, [%o2]
 define i32 @test_atomic_i32(i32* %ptr1, i32* %ptr2, i32* %ptr3) {
 entry:
-  %0 = load atomic i32, i32* %ptr1 acquire, align 8
-  %1 = load atomic i32, i32* %ptr2 acquire, align 8
+  %0 = load atomic i32, i32* %ptr1 acquire, align 4
+  %1 = load atomic i32, i32* %ptr2 acquire, align 4
   %2 = add i32 %0, %1
-  store atomic i32 %2, i32* %ptr3 release, align 8
+  store atomic i32 %2, i32* %ptr3 release, align 4
   ret i32 %2
 }
 

@@ -4,7 +4,7 @@
 ; CHECK-NEXT:InductiveRangeCheck:
 ; CHECK-NEXT:  Kind: RANGE_CHECK_UPPER
 ; CHECK-NEXT:  Offset: %offset  Scale: 1  Length:   %len = load i32, i32* %a_len_ptr, !range !0
-; CHECK-NEXT:  Branch:   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
+; CHECK-NEXT:  CheckUse:   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1 Operand: 0
 ; CHECK-NEXT: irce: in function incrementing: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
 define void @incrementing(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 %offset) {

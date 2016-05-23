@@ -114,8 +114,8 @@ template <typename T, typename U> struct serialize_array_impl {
   U Func;
 };
 
-template <typename T> struct serialize_array_tail_impl {
-  serialize_array_tail_impl(std::vector<T> &Item) : Item(Item) {}
+template <typename T> struct serialize_vector_tail_impl {
+  serialize_vector_tail_impl(std::vector<T> &Item) : Item(Item) {}
 
   std::error_code deserialize(ArrayRef<uint8_t> &Data) const {
     T Field;
@@ -129,6 +129,18 @@ template <typename T> struct serialize_array_tail_impl {
   }
 
   std::vector<T> &Item;
+};
+
+template <typename T> struct serialize_arrayref_tail_impl {
+  serialize_arrayref_tail_impl(ArrayRef<T> &Item) : Item(Item) {}
+
+  std::error_code deserialize(ArrayRef<uint8_t> &Data) const {
+    uint32_t Count = Data.size() / sizeof(T);
+    Item = ArrayRef<T>(reinterpret_cast<const T *>(Data.begin()), Count);
+    return std::error_code();
+  }
+
+  ArrayRef<T> &Item;
 };
 
 template <typename T> struct serialize_numeric_impl {
@@ -147,8 +159,13 @@ serialize_array_impl<T, U> serialize_array(ArrayRef<T> &Item, U Func) {
 }
 
 template <typename T>
-serialize_array_tail_impl<T> serialize_array_tail(std::vector<T> &Item) {
-  return serialize_array_tail_impl<T>(Item);
+serialize_vector_tail_impl<T> serialize_array_tail(std::vector<T> &Item) {
+  return serialize_vector_tail_impl<T>(Item);
+}
+
+template <typename T>
+serialize_arrayref_tail_impl<T> serialize_array_tail(ArrayRef<T> &Item) {
+  return serialize_arrayref_tail_impl<T>(Item);
 }
 
 template <typename T> serialize_numeric_impl<T> serialize_numeric(T &Item) {
@@ -185,7 +202,13 @@ std::error_code consume(ArrayRef<uint8_t> &Data,
 
 template <typename T>
 std::error_code consume(ArrayRef<uint8_t> &Data,
-                        const serialize_array_tail_impl<T> &Item) {
+                        const serialize_vector_tail_impl<T> &Item) {
+  return Item.deserialize(Data);
+}
+
+template <typename T>
+std::error_code consume(ArrayRef<uint8_t> &Data,
+                        const serialize_arrayref_tail_impl<T> &Item) {
   return Item.deserialize(Data);
 }
 
