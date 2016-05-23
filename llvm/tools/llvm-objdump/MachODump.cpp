@@ -43,6 +43,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
@@ -50,6 +51,12 @@
 
 #if HAVE_CXXABI_H
 #include <cxxabi.h>
+#endif
+
+#ifdef HAVE_LIBXAR
+extern "C" {
+#include <xar/xar.h>
+}
 #endif
 
 using namespace llvm;
@@ -996,6 +1003,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName);
 static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
                                 uint32_t size, uint32_t addr);
+#ifdef HAVE_LIBXAR
+static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
+                                uint32_t size, bool verbose,
+                                bool PrintXarHeader, bool PrintXarFileHeaders,
+                                std::string XarMemberName);
+#endif // defined(HAVE_LIBXAR)
 
 static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
                                 bool verbose) {
@@ -1057,6 +1070,13 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
             DumpProtocolSection(O, sect, sect_size, sect_addr);
             continue;
           }
+#ifdef HAVE_LIBXAR
+          if (SegName == "__LLVM" && SectName == "__bundle") {
+            DumpBitcodeSection(O, sect, sect_size, verbose, !NoSymbolicOperands,
+                               ArchiveHeaders, "");
+            continue;
+          }
+#endif // defined(HAVE_LIBXAR)
           switch (section_type) {
           case MachO::S_REGULAR:
             DumpRawSectionContents(O, sect, sect_size, sect_addr);
@@ -5545,6 +5565,369 @@ static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
       outs() << "(not in an __OBJC section)\n";
   }
 }
+
+#ifdef HAVE_LIBXAR
+inline void swapStruct(struct xar_header &xar) {
+  sys::swapByteOrder(xar.magic);
+  sys::swapByteOrder(xar.size);
+  sys::swapByteOrder(xar.version);
+  sys::swapByteOrder(xar.toc_length_compressed);
+  sys::swapByteOrder(xar.toc_length_uncompressed);
+  sys::swapByteOrder(xar.cksum_alg);
+}
+
+static void PrintModeVerbose(uint32_t mode) {
+  switch(mode & S_IFMT){
+  case S_IFDIR:
+    outs() << "d";
+    break;
+  case S_IFCHR:
+    outs() << "c";
+    break;
+  case S_IFBLK:
+    outs() << "b";
+    break;
+  case S_IFREG:
+    outs() << "-";
+    break;
+  case S_IFLNK:
+    outs() << "l";
+    break;
+  case S_IFSOCK:
+    outs() << "s";
+    break;
+  default:
+    outs() << "?";
+    break;
+  }
+
+  /* owner permissions */
+  if(mode & S_IREAD)
+    outs() << "r";
+  else
+    outs() << "-";
+  if(mode & S_IWRITE)
+    outs() << "w";
+  else
+    outs() << "-";
+  if(mode & S_ISUID)
+    outs() << "s";
+  else if(mode & S_IEXEC)
+    outs() << "x";
+  else
+    outs() << "-";
+
+  /* group permissions */
+  if(mode & (S_IREAD >> 3))
+    outs() << "r";
+  else
+    outs() << "-";
+  if(mode & (S_IWRITE >> 3))
+    outs() << "w";
+  else
+    outs() << "-";
+  if(mode & S_ISGID)
+    outs() << "s";
+  else if(mode & (S_IEXEC >> 3))
+    outs() << "x";
+  else
+    outs() << "-";
+
+  /* other permissions */
+  if(mode & (S_IREAD >> 6))
+    outs() << "r";
+  else
+    outs() << "-";
+  if(mode & (S_IWRITE >> 6))
+    outs() << "w";
+  else
+    outs() << "-";
+  if(mode & S_ISVTX)
+    outs() << "t";
+  else if(mode & (S_IEXEC >> 6))
+    outs() << "x";
+  else
+    outs() << "-";
+}
+
+static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
+  xar_iter_t xi;
+  xar_file_t xf;
+  xar_iter_t xp;
+  const char *key, *type, *mode, *user, *group, *size, *mtime, *name, *m;
+  char *endp;
+  uint32_t mode_value;
+
+  xi = xar_iter_new();
+  if (!xi) {
+    errs() << "Can't obtain an xar iterator for xar archive "
+           << XarFilename << "\n";
+    return;
+  }
+
+  // Go through the xar's files.
+  for (xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)) {
+    xp = xar_iter_new();
+    if(!xp){
+      errs() << "Can't obtain an xar iterator for xar archive "
+             << XarFilename << "\n";
+      return;
+    }
+    type = nullptr;
+    mode = nullptr;
+    user = nullptr;
+    group = nullptr;
+    size = nullptr;
+    mtime = nullptr;
+    name = nullptr;
+    for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
+      const char *val = nullptr; 
+      xar_prop_get(xf, key, &val);
+#if 0 // Useful for debugging.
+      outs() << "key: " << key << " value: " << val << "\n";
+#endif
+      if(strcmp(key, "type") == 0)
+        type = val;
+      if(strcmp(key, "mode") == 0)
+        mode = val;
+      if(strcmp(key, "user") == 0)
+        user = val;
+      if(strcmp(key, "group") == 0)
+        group = val;
+      if(strcmp(key, "data/size") == 0)
+        size = val;
+      if(strcmp(key, "mtime") == 0)
+        mtime = val;
+      if(strcmp(key, "name") == 0)
+        name = val;
+    }
+    if(mode != nullptr){
+      mode_value = strtoul(mode, &endp, 8);
+      if(*endp != '\0')
+        outs() << "(mode: \"" << mode << "\" contains non-octal chars) ";
+      if(strcmp(type, "file") == 0)
+        mode_value |= S_IFREG;
+      PrintModeVerbose(mode_value);
+      outs() << " ";
+    }
+    if(user != nullptr)
+      outs() << format("%10s/", user);
+    if(group != nullptr)
+      outs() << format("%-10s ", group);
+    if(size != nullptr)
+      outs() << format("%7s ", size);
+    if(mtime != nullptr){
+      for(m = mtime; *m != 'T' && *m != '\0'; m++)
+        outs() << *m;
+      if(*m == 'T')
+        m++;
+      outs() << " ";
+      for( ; *m != 'Z' && *m != '\0'; m++)
+        outs() << *m;
+      outs() << " ";
+    }
+    if(name != nullptr)
+      outs() << name;
+    outs() << "\n";
+  }
+}
+
+static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
+                                uint32_t size, bool verbose,
+                                bool PrintXarHeader, bool PrintXarFileHeaders,
+                                std::string XarMemberName) {
+  if(size < sizeof(struct xar_header)) {
+    outs() << "size of (__LLVM,__bundle) section too small (smaller than size "
+              "of struct xar_header)\n";
+    return;
+  }
+  struct xar_header XarHeader;
+  memcpy(&XarHeader, sect, sizeof(struct xar_header));
+  if (sys::IsLittleEndianHost)
+    swapStruct(XarHeader);
+  if (PrintXarHeader) {
+    if (!XarMemberName.empty())
+      outs() << "In xar member " << XarMemberName << ": ";
+    else
+      outs() << "For (__LLVM,__bundle) section: ";
+    outs() << "xar header\n";
+    if (XarHeader.magic == XAR_HEADER_MAGIC)
+      outs() << "                  magic XAR_HEADER_MAGIC\n";
+    else
+      outs() << "                  magic "
+             << format_hex(XarHeader.magic, 10, true)
+             << " (not XAR_HEADER_MAGIC)\n";
+    outs() << "                   size " << XarHeader.size << "\n";
+    outs() << "                version " << XarHeader.version << "\n";
+    outs() << "  toc_length_compressed " << XarHeader.toc_length_compressed
+           << "\n";
+    outs() << "toc_length_uncompressed " << XarHeader.toc_length_uncompressed
+           << "\n";
+    outs() << "              cksum_alg ";
+    switch (XarHeader.cksum_alg) {
+      case XAR_CKSUM_NONE:
+        outs() << "XAR_CKSUM_NONE\n";
+        break;
+      case XAR_CKSUM_SHA1:
+        outs() << "XAR_CKSUM_SHA1\n";
+        break;
+      case XAR_CKSUM_MD5:
+        outs() << "XAR_CKSUM_MD5\n";
+        break;
+      case XAR_CKSUM_SHA256:
+        outs() << "XAR_CKSUM_SHA256\n";
+        break;
+      case XAR_CKSUM_SHA512:
+        outs() << "XAR_CKSUM_SHA512\n";
+        break;
+      default:
+        outs() << XarHeader.cksum_alg << "\n";
+    }
+  }
+
+  SmallString<128> XarFilename;
+  int FD;
+  std::error_code XarEC =
+      sys::fs::createTemporaryFile("llvm-objdump", "xar", FD, XarFilename);
+  if (XarEC) {
+    errs() << XarEC.message() << "\n";
+    return;
+  }
+  tool_output_file XarFile(XarFilename, FD);
+  raw_fd_ostream &XarOut = XarFile.os();
+  StringRef XarContents(sect, size);
+  XarOut << XarContents;
+  XarOut.close();
+  if (XarOut.has_error())
+    return;
+
+  xar_t xar = xar_open(XarFilename.c_str(), READ);
+  if (!xar) {
+    errs() << "Can't create temporary xar archive " << XarFilename << "\n";
+    return;
+  }
+
+  SmallString<128> TocFilename;
+  std::error_code TocEC =
+      sys::fs::createTemporaryFile("llvm-objdump", "toc", TocFilename);
+  if (TocEC) {
+    errs() << TocEC.message() << "\n";
+    return;
+  }
+  xar_serialize(xar, TocFilename.c_str());
+
+  if (PrintXarFileHeaders) {
+    if (!XarMemberName.empty())
+      outs() << "In xar member " << XarMemberName << ": ";
+    else
+      outs() << "For (__LLVM,__bundle) section: ";
+    outs() << "xar archive files:\n";
+    PrintXarFilesSummary(XarFilename.c_str(), xar);
+  }
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+    MemoryBuffer::getFileOrSTDIN(TocFilename.c_str());
+  if (std::error_code EC = FileOrErr.getError()) {
+    errs() << EC.message() << "\n";
+    return;
+  }
+  std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
+
+  if (!XarMemberName.empty())
+    outs() << "In xar member " << XarMemberName << ": ";
+  else
+    outs() << "For (__LLVM,__bundle) section: ";
+  outs() << "xar table of contents:\n";
+  outs() << Buffer->getBuffer() << "\n";
+
+  // TODO: Go through the xar's files.
+  xar_iter_t xi = xar_iter_new();
+  if(!xi){
+    errs() << "Can't obtain an xar iterator for xar archive "
+           << XarFilename.c_str() << "\n";
+    xar_close(xar);
+    return;
+  }
+  for(xar_file_t xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)){
+    const char *key;
+    xar_iter_t xp;
+    const char *member_name, *member_type, *member_size_string;
+    size_t member_size;
+
+    xp = xar_iter_new();
+    if(!xp){
+      errs() << "Can't obtain an xar iterator for xar archive "
+	     << XarFilename.c_str() << "\n";
+      xar_close(xar);
+      return;
+    }
+    member_name = NULL;
+    member_type = NULL;
+    member_size_string = NULL;
+    for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
+      const char *val = nullptr; 
+      xar_prop_get(xf, key, &val);
+#if 0 // Useful for debugging.
+      outs() << "key: " << key << " value: " << val << "\n";
+#endif
+      if(strcmp(key, "name") == 0)
+	member_name = val;
+      if(strcmp(key, "type") == 0)
+	member_type = val;
+      if(strcmp(key, "data/size") == 0)
+	member_size_string = val;
+    }
+    /*
+     * If we find a file with a name, date/size and type properties
+     * and with the type being "file" see if that is a xar file.
+     */
+    if (member_name != NULL && member_type != NULL &&
+        strcmp(member_type, "file") == 0 &&
+        member_size_string != NULL){
+      // Extract the file into a buffer.
+      char *endptr;
+      member_size = strtoul(member_size_string, &endptr, 10);
+      if (*endptr == '\0' && member_size != 0) {
+	char *buffer = (char *) ::operator new (member_size);
+	if (xar_extract_tobuffersz(xar, xf, &buffer, &member_size) == 0) {
+#if 0 // Useful for debugging.
+	  outs() << "xar member: " << member_name << " extracted\n";
+#endif
+          // Set the XarMemberName we want to see printed in the header.
+	  std::string OldXarMemberName;
+	  // If XarMemberName is already set this is nested. So
+	  // save the old name and create the nested name.
+	  if (!XarMemberName.empty()) {
+	    OldXarMemberName = XarMemberName;
+            XarMemberName =
+             (Twine("[") + XarMemberName + "]" + member_name).str();
+	  } else {
+	    OldXarMemberName = "";
+	    XarMemberName = member_name;
+	  }
+	  // See if this is could be a xar file (nested).
+	  if (member_size >= sizeof(struct xar_header)) {
+#if 0 // Useful for debugging.
+	    outs() << "could be a xar file: " << member_name << "\n";
+#endif
+	    memcpy((char *)&XarHeader, buffer, sizeof(struct xar_header));
+            if (sys::IsLittleEndianHost)
+	      swapStruct(XarHeader);
+	    if(XarHeader.magic == XAR_HEADER_MAGIC)
+	      DumpBitcodeSection(O, buffer, member_size, verbose,
+                                 PrintXarHeader, PrintXarFileHeaders,
+		                 XarMemberName);
+	  }
+	  XarMemberName = OldXarMemberName;
+	}
+        delete buffer;
+      }
+    }
+    xar_iter_free(xp);
+  }
+  xar_close(xar);
+}
+#endif // defined(HAVE_LIBXAR)
 
 static void printObjcMetaData(MachOObjectFile *O, bool verbose) {
   if (O->is64Bit())
