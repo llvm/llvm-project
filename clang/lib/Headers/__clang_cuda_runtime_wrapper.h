@@ -142,7 +142,20 @@
 #pragma push_macro("__forceinline__")
 #define __forceinline__ __device__ __inline__ __attribute__((always_inline))
 #include "device_functions.hpp"
+
+// math_function.hpp uses the __USE_FAST_MATH__ macro to determine whether we
+// get the slow-but-accurate or fast-but-inaccurate versions of functions like
+// sin and exp.  This is controlled in clang by -fcuda-approx-transcendentals.
+//
+// device_functions.hpp uses __USE_FAST_MATH__ for a different purpose (fast vs.
+// slow divides), so we need to scope our define carefully here.
+#pragma push_macro("__USE_FAST_MATH__")
+#if defined(__CLANG_CUDA_APPROX_TRANSCENDENTALS__)
+#define __USE_FAST_MATH__
+#endif
 #include "math_functions.hpp"
+#pragma pop_macro("__USE_FAST_MATH__")
+
 #include "math_functions_dbl_ptx3.hpp"
 #pragma pop_macro("__forceinline__")
 
@@ -296,6 +309,7 @@ __device__ inline __cuda_builtin_gridDim_t::operator dim3() const {
 #include "curand_mtgp32_kernel.h"
 #pragma pop_macro("dim3")
 #pragma pop_macro("uint3")
+#pragma pop_macro("__USE_FAST_MATH__")
 
 #endif // __CUDA__
 #endif // __CLANG_CUDA_RUNTIME_WRAPPER_H__

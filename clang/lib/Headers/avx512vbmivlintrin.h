@@ -29,7 +29,7 @@
 #define __VBMIVLINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__(( __nodebug__, __target__("avx512vbmi,avx512vl")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512vbmi,avx512vl")))
 
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -182,6 +182,65 @@ _mm256_mask_permutexvar_epi8 (__m256i __W, __mmask32 __M, __m256i __A,
                  (__v32qi) __W,
                  (__mmask32) __M);
 }
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_mask_multishift_epi64_epi8 (__m128i __W, __mmask16 __M, __m128i __X, __m128i __Y)
+{
+  return (__m128i) __builtin_ia32_vpmultishiftqb128_mask ((__v16qi) __X,
+                (__v16qi) __Y,
+                (__v16qi) __W,
+                (__mmask16) __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_maskz_multishift_epi64_epi8 (__mmask16 __M, __m128i __X, __m128i __Y)
+{
+  return (__m128i) __builtin_ia32_vpmultishiftqb128_mask ((__v16qi) __X,
+                (__v16qi) __Y,
+                (__v16qi)
+                _mm_setzero_si128 (),
+                (__mmask16) __M);
+}
+
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_multishift_epi64_epi8 (__m128i __X, __m128i __Y)
+{
+  return (__m128i) __builtin_ia32_vpmultishiftqb128_mask ((__v16qi) __X,
+                (__v16qi) __Y,
+                (__v16qi)
+                _mm_undefined_si128 (),
+                (__mmask16) -1);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_mask_multishift_epi64_epi8 (__m256i __W, __mmask32 __M, __m256i __X, __m256i __Y)
+{
+  return (__m256i) __builtin_ia32_vpmultishiftqb256_mask ((__v32qi) __X,
+                (__v32qi) __Y,
+                (__v32qi) __W,
+                (__mmask32) __M);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_maskz_multishift_epi64_epi8 (__mmask32 __M, __m256i __X, __m256i __Y)
+{
+  return (__m256i) __builtin_ia32_vpmultishiftqb256_mask ((__v32qi) __X,
+                (__v32qi) __Y,
+                (__v32qi)
+                _mm256_setzero_si256 (),
+                (__mmask32) __M);
+}
+
+static __inline__ __m256i __DEFAULT_FN_ATTRS
+_mm256_multishift_epi64_epi8 (__m256i __X, __m256i __Y)
+{
+  return (__m256i) __builtin_ia32_vpmultishiftqb256_mask ((__v32qi) __X,
+                (__v32qi) __Y,
+                (__v32qi)
+                _mm256_undefined_si256 (),
+                (__mmask32) -1);
+}
+
 
 #undef __DEFAULT_FN_ATTRS
 

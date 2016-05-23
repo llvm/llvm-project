@@ -1022,6 +1022,7 @@ The following type trait primitives are supported by Clang:
 * ``__is_nothrow_assignable`` (MSVC 2013, clang)
 * ``__is_constructible`` (MSVC 2013, clang)
 * ``__is_nothrow_constructible`` (MSVC 2013, clang)
+* ``__is_assignable`` (MSVC 2015, clang)
 
 Blocks
 ======

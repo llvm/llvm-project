@@ -231,9 +231,14 @@ For later versions of Visual Studio, no setup is required-->
   </Type>
   <Type Name="clang::TemplateArgument">
     <DisplayString IncludeView="cpp">{*(clang::QualType *)&amp;TypeOrValue.V,view(cpp)}</DisplayString>
-    <DisplayString>{(clang::TemplateArgument::ArgKind)TypeOrValue.Kind,en} template parameter: {*(clang::QualType *)&amp;TypeOrValue.V}</DisplayString>
+    <DisplayString Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">{(clang::TemplateArgument::ArgKind)TypeOrValue.Kind,en} template parameter: {*(clang::QualType *)&amp;TypeOrValue.V}</DisplayString>
+    <DisplayString>{(clang::TemplateArgument::ArgKind)TypeOrValue.Kind,en}</DisplayString>
     <Expand>
       <Item Name="QualType" Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">*(clang::QualType *)&amp;TypeOrValue.V</Item>
+      <ArrayItems Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Pack">
+        <Size>Args.NumArgs</Size>
+        <ValuePointer>Args.Args</ValuePointer>
+      </ArrayItems>
       <!-- TODO: Other kinds-->
     </Expand>
   </Type>

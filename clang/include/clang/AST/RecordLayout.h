@@ -104,10 +104,10 @@ private:
     /// a primary base class.
     bool HasExtendableVFPtr : 1;
 
-    /// HasZeroSizedSubObject - True if this class contains a zero sized member
-    /// or base or a base with a zero sized member or base.  Only used for
-    /// MS-ABI.
-    bool HasZeroSizedSubObject : 1;
+    /// EndsWithZeroSizedObject - True if this class contains a zero sized
+    /// member or base or a base with a zero sized member or base.
+    /// Only used for MS-ABI.
+    bool EndsWithZeroSizedObject : 1;
 
     /// \brief True if this class is zero sized or first base is zero sized or
     /// has this property.  Only used for MS-ABI.
@@ -154,7 +154,7 @@ private:
                   const CXXRecordDecl *PrimaryBase,
                   bool IsPrimaryBaseVirtual,
                   const CXXRecordDecl *BaseSharingVBPtr,
-                  bool HasZeroSizedSubObject,
+                  bool EndsWithZeroSizedObject,
                   bool LeadsWithZeroSizedBase,
                   const BaseOffsetsMapTy& BaseOffsets,
                   const VBaseOffsetsMapTy& VBaseOffsets);
@@ -283,8 +283,8 @@ public:
     return RequiredAlignment;
   }
 
-  bool hasZeroSizedSubObject() const {
-    return CXXInfo && CXXInfo->HasZeroSizedSubObject;
+  bool endsWithZeroSizedObject() const {
+    return CXXInfo && CXXInfo->EndsWithZeroSizedObject;
   }
 
   bool leadsWithZeroSizedBase() const {

@@ -415,7 +415,8 @@ int test_mm_comineq_sd(__m128d A, __m128d B) {
 
 __m128d test_mm_cvtepi32_pd(__m128i A) {
   // CHECK-LABEL: test_mm_cvtepi32_pd
-  // CHECK: call <2 x double> @llvm.x86.sse2.cvtdq2pd(<4 x i32> %{{.*}})
+  // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: sitofp <2 x i32> %{{.*}} to <2 x double>
   return _mm_cvtepi32_pd(A);
 }
 
@@ -445,7 +446,8 @@ __m128i test_mm_cvtps_epi32(__m128 A) {
 
 __m128d test_mm_cvtps_pd(__m128 A) {
   // CHECK-LABEL: test_mm_cvtps_pd
-  // CHECK: call <2 x double> @llvm.x86.sse2.cvtps2pd(<4 x float> %{{.*}})
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: fpext <2 x float> %{{.*}} to <2 x double>
   return _mm_cvtps_pd(A);
 }
 

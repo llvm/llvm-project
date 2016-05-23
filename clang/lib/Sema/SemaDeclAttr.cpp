@@ -5466,6 +5466,24 @@ static void handleX86ForceAlignArgPointerAttr(Sema &S, Decl *D,
                                         Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleLayoutVersion(Sema &S, Decl *D, const AttributeList &Attr) {
+  uint32_t Version;
+  Expr *VersionExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
+  if (!checkUInt32Argument(S, Attr, Attr.getArgAsExpr(0), Version))
+    return;
+
+  // TODO: Investigate what happens with the next major version of MSVC.
+  if (Version != LangOptions::MSVC2015) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_argument_out_of_bounds)
+        << Attr.getName() << Version << VersionExpr->getSourceRange();
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+                 LayoutVersionAttr(Attr.getRange(), S.Context, Version,
+                                   Attr.getAttributeSpellingListIndex()));
+}
+
 DLLImportAttr *Sema::mergeDLLImportAttr(Decl *D, SourceRange Range,
                                         unsigned AttrSpellingListIndex) {
   if (D->hasAttr<DLLExportAttr>()) {
@@ -6259,6 +6277,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
 
   // Microsoft attributes:
+  case AttributeList::AT_EmptyBases:
+    handleSimpleAttribute<EmptyBasesAttr>(S, D, Attr);
+    break;
+  case AttributeList::AT_LayoutVersion:
+    handleLayoutVersion(S, D, Attr);
+    break;
   case AttributeList::AT_MSNoVTable:
     handleSimpleAttribute<MSNoVTableAttr>(S, D, Attr);
     break;
@@ -6277,6 +6301,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_Thread:
     handleDeclspecThreadAttr(S, D, Attr);
     break;
+
   case AttributeList::AT_AbiTag:
     handleAbiTagAttr(S, D, Attr);
     break;

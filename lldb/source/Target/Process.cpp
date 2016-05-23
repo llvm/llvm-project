@@ -2524,11 +2524,21 @@ Process::ReadMemoryFromInferior (addr_t addr, void *buf, size_t size, Error &err
 }
 
 uint64_t
-Process::ReadUnsignedIntegerFromMemory (lldb::addr_t vm_addr, size_t integer_byte_size, uint64_t fail_value, Error &error)
+Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr, size_t integer_byte_size, uint64_t fail_value,
+                                       Error &error)
 {
     Scalar scalar;
     if (ReadScalarIntegerFromMemory(vm_addr, integer_byte_size, false, scalar, error))
         return scalar.ULongLong(fail_value);
+    return fail_value;
+}
+
+int64_t
+Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr, size_t integer_byte_size, int64_t fail_value, Error &error)
+{
+    Scalar scalar;
+    if (ReadScalarIntegerFromMemory(vm_addr, integer_byte_size, true, scalar, error))
+        return scalar.SLongLong(fail_value);
     return fail_value;
 }
 

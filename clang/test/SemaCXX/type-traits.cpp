@@ -1514,6 +1514,9 @@ void has_nothrow_move_assign() {
 
   { int arr[T(__is_nothrow_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign))]; }
   { int arr[F(__is_nothrow_assignable(HasThrowMoveAssign, HasThrowMoveAssign))]; }
+
+  { int arr[T(__is_assignable(HasNoThrowMoveAssign, HasNoThrowMoveAssign))]; }
+  { int arr[T(__is_assignable(HasThrowMoveAssign, HasThrowMoveAssign))]; }
 }
 
 void has_trivial_move_assign() {
@@ -1974,6 +1977,46 @@ void trivial_checks()
                                          TrivialMoveButNotCopy)))]; }
   { int arr[T((__is_trivially_assignable(TrivialMoveButNotCopy&,
                                          TrivialMoveButNotCopy&&)))]; }
+  { int arr[T((__is_trivially_assignable(int&, int)))]; }
+  { int arr[T((__is_trivially_assignable(int&, int&)))]; }
+  { int arr[T((__is_trivially_assignable(int&, int&&)))]; }
+  { int arr[T((__is_trivially_assignable(int&, const int&)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, POD)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, POD&)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, POD&&)))]; }
+  { int arr[T((__is_trivially_assignable(POD&, const POD&)))]; }
+  { int arr[T((__is_trivially_assignable(int*&, int*)))]; }
+  { int arr[T((__is_trivially_assignable(AllDefaulted,
+                                         const AllDefaulted &)))]; }
+  { int arr[T((__is_trivially_assignable(AllDefaulted,
+                                         AllDefaulted &&)))]; }
+
+  { int arr[F((__is_assignable(int *&, float *)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, HasCopyAssign)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, HasCopyAssign &)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, const HasCopyAssign &)))]; }
+  { int arr[T((__is_assignable(HasCopyAssign &, HasCopyAssign &&)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               TrivialMoveButNotCopy &)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               const TrivialMoveButNotCopy &)))]; }
+  { int arr[F((__is_assignable(AllDeleted,
+                               const AllDeleted &)))]; }
+  { int arr[F((__is_assignable(AllDeleted,
+                               AllDeleted &&)))]; }
+  { int arr[T((__is_assignable(ExtDefaulted,
+                               const ExtDefaulted &)))]; }
+  { int arr[T((__is_assignable(ExtDefaulted,
+                               ExtDefaulted &&)))]; }
+
+  { int arr[T((__is_assignable(HasDefaultTrivialCopyAssign &,
+                               HasDefaultTrivialCopyAssign &)))]; }
+  { int arr[T((__is_assignable(HasDefaultTrivialCopyAssign &,
+                               const HasDefaultTrivialCopyAssign &)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               TrivialMoveButNotCopy)))]; }
+  { int arr[T((__is_assignable(TrivialMoveButNotCopy &,
+                               TrivialMoveButNotCopy &&)))]; }
 }
 
 void constructible_checks() {
