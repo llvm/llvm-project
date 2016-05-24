@@ -207,7 +207,7 @@ void __llvm_profile_initialize_file(void) {
 
 /* This API is directly called by the user application code. It has the
  * highest precedence compared with LLVM_PROFILE_FILE environment variable
- * and command line option -fprofile-istr-generate=<profile_name>.
+ * and command line option -fprofile-instr-generate=<profile_name>.
  */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_set_filename(const char *Filename) {

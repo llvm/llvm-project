@@ -328,7 +328,6 @@ private:
 struct CieRecord {
   SectionPiece *Piece = nullptr;
   std::vector<SectionPiece *> FdePieces;
-  uint8_t FdeEncoding = 0;
 };
 
 // Output section for .eh_frame.
@@ -362,8 +361,6 @@ private:
   template <class RelTy>
   bool isFdeLive(SectionPiece &Piece, EHInputSection<ELFT> *Sec,
                  ArrayRef<RelTy> Rels);
-
-  uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
