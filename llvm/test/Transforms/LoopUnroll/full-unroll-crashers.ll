@@ -1,5 +1,5 @@
 ; Check that we don't crash on corner cases.
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10 -unroll-percent-dynamic-cost-saved-threshold=20 -o /dev/null
+; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=1 -unroll-percent-dynamic-cost-saved-threshold=20 -o /dev/null
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @known_constant = internal unnamed_addr constant [10 x i32] [i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1], align 16
@@ -99,4 +99,23 @@ for.body:
 
 for.exit:
   ret <4 x i32> %r
+}
+
+define void @ptrtoint_cast() optsize {
+entry:
+  br label %for.body
+
+for.body:
+  br i1 true, label %for.inc, label %if.then
+
+if.then:
+  %arraydecay = getelementptr inbounds [1 x i32], [1 x i32]* null, i64 0, i64 0
+  %x = ptrtoint i32* %arraydecay to i64
+  br label %for.inc
+
+for.inc:
+  br i1 false, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
 }

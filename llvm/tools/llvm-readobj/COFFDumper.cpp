@@ -24,8 +24,10 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
-#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
+#include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -58,6 +60,7 @@ namespace {
 
 class COFFDumper : public ObjDumper {
 public:
+  friend class COFFObjectDumpDelegate;
   COFFDumper(const llvm::object::COFFObjectFile *Obj, ScopedPrinter &Writer)
       : ObjDumper(Writer), Obj(Obj),
         CVTD(Writer, opts::CodeViewSubsectionBytes) {}
@@ -96,10 +99,6 @@ private:
     // Forward to CVTypeDumper for simplicity.
     CVTD.printTypeIndex(FieldName, TI);
   }
-  void printLocalVariableAddrRange(const LocalVariableAddrRange &Range,
-                                   const coff_section *Sec,
-                                   uint32_t RelocationOffset);
-  void printLocalVariableAddrGap(ArrayRef<LocalVariableAddrGap> Gaps);
 
   void printCodeViewSymbolsSubsection(StringRef Subsection,
                                       const SectionRef &Section,
@@ -146,6 +145,45 @@ private:
   StringRef CVStringTable;
 
   CVTypeDumper CVTD;
+};
+
+class COFFObjectDumpDelegate : public SymbolDumpDelegate {
+public:
+  COFFObjectDumpDelegate(COFFDumper &CD, const SectionRef &SR,
+                         const COFFObjectFile *Obj, StringRef SectionContents)
+      : CD(CD), SR(SR), Obj(Obj), SectionContents(SectionContents) {
+    Sec = Obj->getCOFFSection(SR);
+  }
+
+  uint32_t getRecordOffset(ArrayRef<uint8_t> Record) override {
+    return Record.data() - SectionContents.bytes_begin();
+  }
+
+  void printRelocatedField(StringRef Label, uint32_t RelocOffset,
+                           uint32_t Offset, StringRef *RelocSym) override {
+    CD.printRelocatedField(Label, Sec, RelocOffset, Offset, RelocSym);
+  }
+
+  void printBinaryBlockWithRelocs(StringRef Label,
+                                  ArrayRef<uint8_t> Block) override {
+    StringRef SBlock(reinterpret_cast<const char *>(Block.data()),
+                     Block.size());
+    if (opts::CodeViewSubsectionBytes)
+      CD.printBinaryBlockWithRelocs(Label, SR, SectionContents, SBlock);
+  }
+
+  StringRef getFileNameForFileOffset(uint32_t FileOffset) override {
+    return CD.getFileNameForFileOffset(FileOffset);
+  }
+
+  StringRef getStringTable() override { return CD.CVStringTable; }
+
+private:
+  COFFDumper &CD;
+  const SectionRef &SR;
+  const COFFObjectFile *Obj;
+  const coff_section *Sec;
+  StringRef SectionContents;
 };
 
 } // end namespace
@@ -246,6 +284,7 @@ void COFFDumper::printBinaryBlockWithRelocs(StringRef Label,
   uint64_t OffsetStart = Block.data() - SectionContents.data();
   uint64_t OffsetEnd = OffsetStart + Block.size();
 
+  W.flush();
   cacheRelocations();
   ListScope D(W, "BlockRelocations");
   const coff_section *Section = Obj->getCOFFSection(Sec);
@@ -440,41 +479,6 @@ WeakExternalCharacteristics[] = {
   { "Alias"    , COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS     }
 };
 
-static const EnumEntry<uint32_t> CompileSym3FlagNames[] = {
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, EC),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, NoDbgInfo),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, LTCG),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, NoDataAlign),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, ManagedPresent),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, SecurityChecks),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, HotPatch),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, CVTCIL),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, MSILModule),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, Sdl),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, PGO),
-    LLVM_READOBJ_ENUM_CLASS_ENT(CompileSym3Flags, Exp),
-};
-
-static const EnumEntry<codeview::SourceLanguage> SourceLanguages[] = {
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, C),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Cpp),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Fortran),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Masm),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Pascal),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Basic),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Cobol),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Link),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Cvtres),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Cvtpgd),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, CSharp),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, VB),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, ILAsm),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, Java),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, JScript),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, MSIL),
-    LLVM_READOBJ_ENUM_ENT(SourceLanguage, HLSL),
-};
-
 static const EnumEntry<uint32_t> SubSectionTypes[] = {
   LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, Symbols),
   LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, Lines),
@@ -491,68 +495,6 @@ static const EnumEntry<uint32_t> SubSectionTypes[] = {
   LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, CoffSymbolRVA),
 };
 
-static const EnumEntry<unsigned> CPUTypeNames[] = {
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Intel8080),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Intel8086),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Intel80286),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Intel80386),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Intel80486),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Pentium),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, PentiumPro),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Pentium3),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPS),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPS16),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPS32),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPS64),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPSI),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPSII),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPSIII),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPSIV),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, MIPSV),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, M68000),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, M68010),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, M68020),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, M68030),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, M68040),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Alpha),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Alpha21164),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Alpha21164A),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Alpha21264),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Alpha21364),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, PPC601),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, PPC603),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, PPC604),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, PPC620),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, PPCFP),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, PPCBE),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, SH3),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, SH3E),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, SH3DSP),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, SH4),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, SHMedia),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM3),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM4),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM4T),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM5),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM5T),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM6),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM_XMAC),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM_WMMX),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARM7),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Omni),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Ia64),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Ia64_2),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, CEE),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, AM33),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, M32R),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, TriCore),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, X64),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, EBC),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, Thumb),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, ARMNT),
-  LLVM_READOBJ_ENUM_CLASS_ENT(CPUType, D3D11_Shader),
-};
-
 static const EnumEntry<uint8_t> ProcSymFlagNames[] = {
     LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasFP),
     LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasIRET),
@@ -564,57 +506,10 @@ static const EnumEntry<uint8_t> ProcSymFlagNames[] = {
     LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasOptimizedDebugInfo),
 };
 
-static const EnumEntry<uint32_t> FrameProcSymFlags[] = {
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, HasAlloca),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, HasSetJmp),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, HasLongJmp),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, HasInlineAssembly),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, HasExceptionHandling),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, MarkedInline),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions,
-                                HasStructuredExceptionHandling),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, Naked),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, SecurityChecks),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions,
-                                AsynchronousExceptionHandling),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions,
-                                NoStackOrderingForSecurityChecks),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, Inlined),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, StrictSecurityChecks),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, SafeBuffers),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions,
-                                ProfileGuidedOptimization),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, ValidProfileCounts),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, OptimizedForSpeed),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, GuardCfg),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameProcedureOptions, GuardCfw),
-};
-
 static const EnumEntry<uint32_t> FrameDataFlags[] = {
     LLVM_READOBJ_ENUM_ENT(FrameData, HasSEH),
     LLVM_READOBJ_ENUM_ENT(FrameData, HasEH),
     LLVM_READOBJ_ENUM_ENT(FrameData, IsFunctionStart),
-};
-
-static const EnumEntry<uint16_t> LocalFlags[] = {
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsParameter),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsAddressTaken),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsCompilerGenerated),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsAggregate),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsAggregated),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsAliased),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsAlias),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsReturnValue),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsOptimizedOut),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsEnregisteredGlobal),
-    LLVM_READOBJ_ENUM_CLASS_ENT(LocalSymFlags, IsEnregisteredStatic),
-};
-
-static const EnumEntry<uint32_t> FrameCookieKinds[] = {
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameCookieKind, Copy),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameCookieKind, XorStackPointer),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameCookieKind, XorFramePointer),
-    LLVM_READOBJ_ENUM_CLASS_ENT(FrameCookieKind, XorR13),
 };
 
 static const EnumEntry<uint8_t> FileChecksumKindNames[] = {
@@ -1009,574 +904,16 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
 void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
                                                 const SectionRef &Section,
                                                 StringRef SectionContents) {
-  if (Subsection.size() < sizeof(RecordPrefix))
-    return error(object_error::parse_failed);
+  ArrayRef<uint8_t> BinaryData(Subsection.bytes_begin(),
+                               Subsection.bytes_end());
+  auto CODD = llvm::make_unique<COFFObjectDumpDelegate>(*this, Section, Obj,
+                                                        SectionContents);
 
-  const coff_section *Sec = Obj->getCOFFSection(Section);
+  CVSymbolDumper CVSD(W, CVTD, std::move(CODD), opts::CodeViewSubsectionBytes);
 
-  // This holds the remaining data to parse.
-  StringRef Data = Subsection;
-
-  bool InFunctionScope = false;
-  while (!Data.empty()) {
-    const RecordPrefix *Rec;
-    error(consumeObject(Data, Rec));
-
-    StringRef SymData = Data.substr(0, Rec->RecordLen - 2);
-    StringRef OrigSymData = SymData;
-
-    Data = Data.drop_front(Rec->RecordLen - 2);
-    uint32_t RecordOffset = SymData.data() - SectionContents.data();
-
-    SymbolKind Kind = static_cast<SymbolKind>(uint16_t(Rec->RecordKind));
-    switch (Kind) {
-    case S_LPROC32:
-    case S_GPROC32:
-    case S_GPROC32_ID:
-    case S_LPROC32_ID:
-    case S_LPROC32_DPC:
-    case S_LPROC32_DPC_ID: {
-      DictScope S(W, "ProcStart");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto ProcOrError = ProcSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!ProcOrError)
-        error(ProcOrError.getError());
-      auto &Proc = ProcOrError.get();
-
-      if (InFunctionScope)
-        return error(object_error::parse_failed);
-      InFunctionScope = true;
-
-      StringRef LinkageName;
-      W.printHex("PtrParent", Proc.Header.PtrParent);
-      W.printHex("PtrEnd", Proc.Header.PtrEnd);
-      W.printHex("PtrNext", Proc.Header.PtrNext);
-      W.printHex("CodeSize", Proc.Header.CodeSize);
-      W.printHex("DbgStart", Proc.Header.DbgStart);
-      W.printHex("DbgEnd", Proc.Header.DbgEnd);
-      printTypeIndex("FunctionType", Proc.Header.FunctionType);
-      printRelocatedField("CodeOffset", Sec, Proc.getRelocationOffset(),
-                          Proc.Header.CodeOffset, &LinkageName);
-      W.printHex("Segment", Proc.Header.Segment);
-      W.printFlags("Flags", static_cast<uint8_t>(Proc.Header.Flags),
-                   makeArrayRef(ProcSymFlagNames));
-      W.printString("DisplayName", Proc.Name);
-      W.printString("LinkageName", LinkageName);
-      break;
-    }
-
-    case S_PROC_ID_END: {
-      W.startLine() << "ProcEnd\n";
-      InFunctionScope = false;
-      break;
-    }
-
-    case S_BLOCK32: {
-      DictScope S(W, "BlockStart");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto BlockOrError = BlockSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!BlockOrError)
-        error(BlockOrError.getError());
-      auto &Block = BlockOrError.get();
-
-      StringRef LinkageName;
-      W.printHex("PtrParent", Block.Header.PtrParent);
-      W.printHex("PtrEnd", Block.Header.PtrEnd);
-      W.printHex("CodeSize", Block.Header.CodeSize);
-      printRelocatedField("CodeOffset", Sec, Block.getRelocationOffset(),
-                          Block.Header.CodeOffset, &LinkageName);
-      W.printHex("Segment", Block.Header.Segment);
-      W.printString("BlockName", Block.Name);
-      W.printString("LinkageName", LinkageName);
-      break;
-    }
-
-    case S_END: {
-      W.startLine() << "BlockEnd\n";
-      InFunctionScope = false;
-      break;
-    }
-
-    case S_LABEL32: {
-      DictScope S(W, "Label");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto LabelOrError = LabelSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!LabelOrError)
-        error(LabelOrError.getError());
-      auto &Label = LabelOrError.get();
-
-      StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec, Label.getRelocationOffset(),
-                          Label.Header.CodeOffset, &LinkageName);
-      W.printHex("Segment", Label.Header.Segment);
-      W.printHex("Flags", Label.Header.Flags);
-      W.printFlags("Flags", Label.Header.Flags, makeArrayRef(ProcSymFlagNames));
-      W.printString("DisplayName", Label.Name);
-      W.printString("LinkageName", LinkageName);
-      break;
-    }
-
-    case S_INLINESITE: {
-      DictScope S(W, "InlineSite");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto InlineSiteOrError = InlineSiteSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!InlineSiteOrError)
-        error(InlineSiteOrError.getError());
-      auto &InlineSite = InlineSiteOrError.get();
-
-      W.printHex("PtrParent", InlineSite.Header.PtrParent);
-      W.printHex("PtrEnd", InlineSite.Header.PtrEnd);
-      printTypeIndex("Inlinee", InlineSite.Header.Inlinee);
-
-      ListScope BinaryAnnotations(W, "BinaryAnnotations");
-      for (auto &Annotation : InlineSite.annotations()) {
-        switch (Annotation.OpCode) {
-        case BinaryAnnotationsOpCode::Invalid:
-          return error(object_error::parse_failed);
-        case BinaryAnnotationsOpCode::CodeOffset:
-        case BinaryAnnotationsOpCode::ChangeCodeOffset:
-        case BinaryAnnotationsOpCode::ChangeCodeLength:
-          W.printHex(Annotation.Name, Annotation.U1);
-          break;
-        case BinaryAnnotationsOpCode::ChangeCodeOffsetBase:
-        case BinaryAnnotationsOpCode::ChangeLineEndDelta:
-        case BinaryAnnotationsOpCode::ChangeRangeKind:
-        case BinaryAnnotationsOpCode::ChangeColumnStart:
-        case BinaryAnnotationsOpCode::ChangeColumnEnd:
-          W.printNumber(Annotation.Name, Annotation.U1);
-          break;
-        case BinaryAnnotationsOpCode::ChangeLineOffset:
-        case BinaryAnnotationsOpCode::ChangeColumnEndDelta:
-          W.printNumber(Annotation.Name, Annotation.S1);
-          break;
-        case BinaryAnnotationsOpCode::ChangeFile:
-          printFileNameForOffset("ChangeFile", Annotation.U1);
-          break;
-        case BinaryAnnotationsOpCode::ChangeCodeOffsetAndLineOffset: {
-          W.startLine() << "ChangeCodeOffsetAndLineOffset: {CodeOffset: "
-                        << W.hex(Annotation.U1)
-                        << ", LineOffset: " << Annotation.S1 << "}\n";
-          break;
-        }
-        case BinaryAnnotationsOpCode::ChangeCodeLengthAndCodeOffset: {
-          W.startLine() << "ChangeCodeLengthAndCodeOffset: {CodeOffset: "
-                        << W.hex(Annotation.U2)
-                        << ", Length: " << W.hex(Annotation.U1) << "}\n";
-          break;
-        }
-        }
-      }
-      break;
-    }
-
-    case S_INLINESITE_END: {
-      DictScope S(W, "InlineSiteEnd");
-      break;
-    }
-
-    case S_CALLERS:
-    case S_CALLEES: {
-      ListScope S(W, Kind == S_CALLEES ? "Callees" : "Callers");
-      uint32_t Count;
-      error(consume(SymData, Count));
-      for (uint32_t I = 0; I < Count; ++I) {
-        const TypeIndex *FuncID;
-        error(consumeObject(SymData, FuncID));
-        printTypeIndex("FuncID", *FuncID);
-      }
-      break;
-    }
-
-    case S_LOCAL: {
-      DictScope S(W, "Local");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto LocalOrError = LocalSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!LocalOrError)
-        error(LocalOrError.getError());
-      auto &Local = LocalOrError.get();
-
-      printTypeIndex("Type", Local.Header.Type);
-      W.printFlags("Flags", uint16_t(Local.Header.Flags),
-                   makeArrayRef(LocalFlags));
-      W.printString("VarName", Local.Name);
-      break;
-    }
-
-    case S_DEFRANGE: {
-      DictScope S(W, "DefRange");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto DefRangeOrError = DefRangeSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!DefRangeOrError)
-        error(DefRangeOrError.getError());
-      auto &DefRange = DefRangeOrError.get();
-
-      W.printString(
-          "Program",
-          CVStringTable.drop_front(DefRange.Header.Program).split('\0').first);
-      printLocalVariableAddrRange(DefRange.Header.Range, Sec,
-                                  DefRange.getRelocationOffset());
-      printLocalVariableAddrGap(DefRange.Gaps);
-      break;
-    }
-    case S_DEFRANGE_SUBFIELD: {
-      DictScope S(W, "DefRangeSubfield");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto DefRangeOrError = DefRangeSubfieldSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!DefRangeOrError)
-        error(DefRangeOrError.getError());
-      auto &DefRangeSubfield = DefRangeOrError.get();
-
-      W.printString("Program",
-                    CVStringTable.drop_front(DefRangeSubfield.Header.Program)
-                        .split('\0')
-                        .first);
-      W.printNumber("OffsetInParent", DefRangeSubfield.Header.OffsetInParent);
-      printLocalVariableAddrRange(DefRangeSubfield.Header.Range, Sec,
-                                  DefRangeSubfield.getRelocationOffset());
-      printLocalVariableAddrGap(DefRangeSubfield.Gaps);
-      break;
-    }
-    case S_DEFRANGE_REGISTER: {
-      DictScope S(W, "DefRangeRegister");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto DefRangeOrError = DefRangeRegisterSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!DefRangeOrError)
-        error(DefRangeOrError.getError());
-      auto &DefRangeRegisterSym = DefRangeOrError.get();
-
-      W.printNumber("Register", DefRangeRegisterSym.Header.Register);
-      W.printNumber("MayHaveNoName", DefRangeRegisterSym.Header.MayHaveNoName);
-      printLocalVariableAddrRange(DefRangeRegisterSym.Header.Range, Sec,
-                                  DefRangeRegisterSym.getRelocationOffset());
-      printLocalVariableAddrGap(DefRangeRegisterSym.Gaps);
-      break;
-    }
-    case S_DEFRANGE_SUBFIELD_REGISTER: {
-      DictScope S(W, "DefRangeSubfieldRegister");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto DefRangeOrError = DefRangeSubfieldRegisterSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!DefRangeOrError)
-        error(DefRangeOrError.getError());
-      auto &DefRangeSubfieldRegister = DefRangeOrError.get();
-      W.printNumber("Register", DefRangeSubfieldRegister.Header.Register);
-      W.printNumber("MayHaveNoName",
-                    DefRangeSubfieldRegister.Header.MayHaveNoName);
-      W.printNumber("OffsetInParent",
-                    DefRangeSubfieldRegister.Header.OffsetInParent);
-      printLocalVariableAddrRange(
-          DefRangeSubfieldRegister.Header.Range, Sec,
-          DefRangeSubfieldRegister.getRelocationOffset());
-      printLocalVariableAddrGap(DefRangeSubfieldRegister.Gaps);
-      break;
-    }
-    case S_DEFRANGE_FRAMEPOINTER_REL: {
-      DictScope S(W, "DefRangeFramePointerRel");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto DefRangeOrError = DefRangeFramePointerRelSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!DefRangeOrError)
-        error(DefRangeOrError.getError());
-      auto &DefRangeFramePointerRel = DefRangeOrError.get();
-      W.printNumber("Offset", DefRangeFramePointerRel.Header.Offset);
-      printLocalVariableAddrRange(
-          DefRangeFramePointerRel.Header.Range, Sec,
-          DefRangeFramePointerRel.getRelocationOffset());
-      printLocalVariableAddrGap(DefRangeFramePointerRel.Gaps);
-      break;
-    }
-    case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE: {
-      DictScope S(W, "DefRangeFramePointerRelFullScope");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto DefRangeOrError = DefRangeFramePointerRelFullScopeSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!DefRangeOrError)
-        error(DefRangeOrError.getError());
-      auto &DefRangeFramePointerRelFullScope = DefRangeOrError.get();
-      W.printNumber("Offset", DefRangeFramePointerRelFullScope.Header.Offset);
-      break;
-    }
-    case S_DEFRANGE_REGISTER_REL: {
-      DictScope S(W, "DefRangeRegisterRel");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto DefRangeOrError = DefRangeRegisterRelSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!DefRangeOrError)
-        error(DefRangeOrError.getError());
-      auto &DefRangeRegisterRel = DefRangeOrError.get();
-
-      W.printNumber("BaseRegister", DefRangeRegisterRel.Header.BaseRegister);
-      W.printBoolean("HasSpilledUDTMember",
-                     DefRangeRegisterRel.hasSpilledUDTMember());
-      W.printNumber("OffsetInParent", DefRangeRegisterRel.offsetInParent());
-      W.printNumber("BasePointerOffset",
-                    DefRangeRegisterRel.Header.BasePointerOffset);
-      printLocalVariableAddrRange(DefRangeRegisterRel.Header.Range, Sec,
-                                  DefRangeRegisterRel.getRelocationOffset());
-      printLocalVariableAddrGap(DefRangeRegisterRel.Gaps);
-      break;
-    }
-
-    case S_CALLSITEINFO: {
-      DictScope S(W, "CallSiteInfo");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto CallSiteOrError = CallSiteInfoSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!CallSiteOrError)
-        error(CallSiteOrError.getError());
-      auto &CallSiteInfo = CallSiteOrError.get();
-
-      StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec, CallSiteInfo.getRelocationOffset(),
-                          CallSiteInfo.Header.CodeOffset, &LinkageName);
-      W.printHex("Segment", CallSiteInfo.Header.Segment);
-      W.printHex("Reserved", CallSiteInfo.Header.Reserved);
-      printTypeIndex("Type", CallSiteInfo.Header.Type);
-      W.printString("LinkageName", LinkageName);
-      break;
-    }
-
-    case S_HEAPALLOCSITE: {
-      DictScope S(W, "HeapAllocationSite");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto HeapAllocSiteOrError = HeapAllocationSiteSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!HeapAllocSiteOrError)
-        error(HeapAllocSiteOrError.getError());
-      auto &HeapAllocSite = HeapAllocSiteOrError.get();
-
-      StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec,
-                          HeapAllocSite.getRelocationOffset(),
-                          HeapAllocSite.Header.CodeOffset, &LinkageName);
-      W.printHex("Segment", HeapAllocSite.Header.Segment);
-      W.printHex("CallInstructionSize",
-                 HeapAllocSite.Header.CallInstructionSize);
-      printTypeIndex("Type", HeapAllocSite.Header.Type);
-      W.printString("LinkageName", LinkageName);
-      break;
-    }
-
-    case S_FRAMECOOKIE: {
-      DictScope S(W, "FrameCookie");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto FrameCookieOrError = FrameCookieSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!FrameCookieOrError)
-        error(FrameCookieOrError.getError());
-      auto &FrameCookie = FrameCookieOrError.get();
-
-      StringRef LinkageName;
-      printRelocatedField("CodeOffset", Sec, FrameCookie.getRelocationOffset(),
-                          FrameCookie.Header.CodeOffset, &LinkageName);
-      W.printHex("Register", FrameCookie.Header.Register);
-      W.printEnum("CookieKind", uint16_t(FrameCookie.Header.CookieKind),
-                  makeArrayRef(FrameCookieKinds));
-      break;
-    }
-
-    case S_LDATA32:
-    case S_GDATA32:
-    case S_LMANDATA:
-    case S_GMANDATA: {
-      DictScope S(W, "DataSym");
-      ArrayRef<uint8_t> SymBytes(SymData.bytes_begin(), SymData.bytes_end());
-      auto DataOrError = DataSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, SymBytes);
-      if (!DataOrError)
-        error(DataOrError.getError());
-      auto &Data = DataOrError.get();
-
-      StringRef LinkageName;
-      printRelocatedField("DataOffset", Sec, Data.getRelocationOffset(),
-                          Data.Header.DataOffset, &LinkageName);
-      printTypeIndex("Type", Data.Header.Type);
-      W.printString("DisplayName", Data.Name);
-      W.printString("LinkageName", LinkageName);
-      break;
-    }
-
-    case S_LTHREAD32:
-    case S_GTHREAD32: {
-      DictScope S(W, "ThreadLocalDataSym");
-      ArrayRef<uint8_t> SymBytes(SymData.bytes_begin(), SymData.bytes_end());
-      auto ThreadLocalDataOrError = ThreadLocalDataSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, SymBytes);
-      if (!ThreadLocalDataOrError)
-        error(ThreadLocalDataOrError.getError());
-      auto &Data = ThreadLocalDataOrError.get();
-
-      StringRef LinkageName;
-      printRelocatedField("DataOffset", Sec, Data.getRelocationOffset(),
-                          Data.Header.DataOffset, &LinkageName);
-      printTypeIndex("Type", Data.Header.Type);
-      W.printString("DisplayName", Data.Name);
-      W.printString("LinkageName", LinkageName);
-      break;
-    }
-
-    case S_OBJNAME: {
-      DictScope S(W, "ObjectName");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto ObjNameOrError = ObjNameSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!ObjNameOrError)
-        error(ObjNameOrError.getError());
-      auto &ObjName = ObjNameOrError.get();
-      W.printHex("Signature", ObjName.Header.Signature);
-      W.printString("ObjectName", ObjName.Name);
-      break;
-    }
-
-    case S_COMPILE3: {
-      DictScope S(W, "CompilerFlags");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto Compile3OrError = CompileSym3::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!Compile3OrError)
-        error(Compile3OrError.getError());
-      auto &Compile3 = Compile3OrError.get();
-
-      W.printEnum("Language", Compile3.Header.getLanguage(),
-                  makeArrayRef(SourceLanguages));
-      W.printFlags("Flags", Compile3.Header.flags & ~0xff,
-                   makeArrayRef(CompileSym3FlagNames));
-      W.printEnum("Machine", unsigned(Compile3.Header.Machine),
-                  makeArrayRef(CPUTypeNames));
-      std::string FrontendVersion;
-      {
-        raw_string_ostream Out(FrontendVersion);
-        Out << Compile3.Header.VersionFrontendMajor << '.'
-            << Compile3.Header.VersionFrontendMinor << '.'
-            << Compile3.Header.VersionFrontendBuild << '.'
-            << Compile3.Header.VersionFrontendQFE;
-      }
-      std::string BackendVersion;
-      {
-        raw_string_ostream Out(BackendVersion);
-        Out << Compile3.Header.VersionBackendMajor << '.'
-            << Compile3.Header.VersionBackendMinor << '.'
-            << Compile3.Header.VersionBackendBuild << '.'
-            << Compile3.Header.VersionBackendQFE;
-      }
-      W.printString("FrontendVersion", FrontendVersion);
-      W.printString("BackendVersion", BackendVersion);
-      W.printString("VersionName", Compile3.Version);
-      break;
-    }
-
-    case S_FRAMEPROC: {
-      DictScope S(W, "FrameProc");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto FrameProcOrError = FrameProcSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!FrameProcOrError)
-        error(FrameProcOrError.getError());
-      auto &FrameProc = FrameProcOrError.get();
-      W.printHex("TotalFrameBytes", FrameProc.Header.TotalFrameBytes);
-      W.printHex("PaddingFrameBytes", FrameProc.Header.PaddingFrameBytes);
-      W.printHex("OffsetToPadding", FrameProc.Header.OffsetToPadding);
-      W.printHex("BytesOfCalleeSavedRegisters",
-                 FrameProc.Header.BytesOfCalleeSavedRegisters);
-      W.printHex("OffsetOfExceptionHandler",
-                 FrameProc.Header.OffsetOfExceptionHandler);
-      W.printHex("SectionIdOfExceptionHandler",
-                 FrameProc.Header.SectionIdOfExceptionHandler);
-      W.printFlags("Flags", FrameProc.Header.Flags,
-                   makeArrayRef(FrameProcSymFlags));
-      break;
-    }
-
-    case S_UDT:
-    case S_COBOLUDT: {
-      DictScope S(W, "UDT");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto UdtOrError = UDTSym::deserialize(static_cast<SymbolRecordKind>(Kind),
-                                            RecordOffset, Data);
-      if (!UdtOrError)
-        error(UdtOrError.getError());
-      auto &UDT = UdtOrError.get();
-      printTypeIndex("Type", UDT.Header.Type);
-      W.printString("UDTName", UDT.Name);
-      break;
-    }
-
-    case S_BPREL32: {
-      DictScope S(W, "BPRelativeSym");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto BPRelOrError = BPRelativeSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!BPRelOrError)
-        error(BPRelOrError.getError());
-      auto &BPRel = BPRelOrError.get();
-      W.printNumber("Offset", BPRel.Header.Offset);
-      printTypeIndex("Type", BPRel.Header.Type);
-      W.printString("VarName", BPRel.Name);
-      break;
-    }
-
-    case S_REGREL32: {
-      DictScope S(W, "RegRelativeSym");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto RegRelOrError = RegRelativeSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!RegRelOrError)
-        error(RegRelOrError.getError());
-      auto &RegRel = RegRelOrError.get();
-      W.printHex("Offset", RegRel.Header.Offset);
-      printTypeIndex("Type", RegRel.Header.Type);
-      W.printHex("Register", RegRel.Header.Register);
-      W.printString("VarName", RegRel.Name);
-      break;
-    }
-
-    case S_BUILDINFO: {
-      DictScope S(W, "BuildInfo");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto BuildInfoOrError = BuildInfoSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!BuildInfoOrError)
-        error(BuildInfoOrError.getError());
-      auto &BuildInfo = BuildInfoOrError.get();
-      W.printNumber("BuildId", BuildInfo.Header.BuildId);
-      break;
-    }
-
-    case S_CONSTANT:
-    case S_MANCONSTANT: {
-      DictScope S(W, "Constant");
-      ArrayRef<uint8_t> Data(SymData.bytes_begin(), SymData.bytes_end());
-      auto ConstantOrError = ConstantSym::deserialize(
-          static_cast<SymbolRecordKind>(Kind), RecordOffset, Data);
-      if (!ConstantOrError)
-        error(ConstantOrError.getError());
-      auto &Constant = ConstantOrError.get();
-      printTypeIndex("Type", Constant.Header.Type);
-      W.printNumber("Value", Constant.Value);
-      W.printString("Name", Constant.Name);
-      break;
-    }
-
-    default: {
-      DictScope S(W, "UnknownSym");
-      W.printHex("Kind", unsigned(Kind));
-      W.printHex("Size", Rec->RecordLen);
-      break;
-    }
-    }
-
-    if (opts::CodeViewSubsectionBytes)
-      printBinaryBlockWithRelocs("SymData", Section, SectionContents,
-                                 OrigSymData);
+  if (!CVSD.dump(BinaryData)) {
     W.flush();
+    error(object_error::parse_failed);
   }
   W.flush();
 }
@@ -1630,24 +967,6 @@ void COFFDumper::printCodeViewInlineeLines(StringRef Subsection) {
         printFileNameForOffset("FileID", FileID);
       }
     }
-  }
-}
-
-void COFFDumper::printLocalVariableAddrRange(
-    const LocalVariableAddrRange &Range, const coff_section *Sec,
-    uint32_t RelocationOffset) {
-  DictScope S(W, "LocalVariableAddrRange");
-  printRelocatedField("OffsetStart", Sec, RelocationOffset, Range.OffsetStart);
-  W.printHex("ISectStart", Range.ISectStart);
-  W.printHex("Range", Range.Range);
-}
-
-void COFFDumper::printLocalVariableAddrGap(
-    ArrayRef<LocalVariableAddrGap> Gaps) {
-  for (auto &Gap : Gaps) {
-    ListScope S(W, "LocalVariableAddrGap");
-    W.printHex("GapStartOffset", Gap.GapStartOffset);
-    W.printHex("Range", Gap.Range);
   }
 }
 

@@ -79,6 +79,46 @@ public:
   StringRef Name;
 };
 
+class ScopeEndSym : public SymbolRecord {
+public:
+  ScopeEndSym(SymbolRecordKind Kind, uint32_t RecordOffset)
+      : SymbolRecord(Kind), RecordOffset(RecordOffset) {}
+
+  static ErrorOr<ScopeEndSym> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    return ScopeEndSym(Kind, RecordOffset);
+  }
+  uint32_t RecordOffset;
+};
+
+class CallerSym : public SymbolRecord {
+public:
+  struct Hdr {
+    uint32_t Count;
+  };
+
+  CallerSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *Header,
+            ArrayRef<TypeIndex> Indices)
+      : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*Header),
+        Indices(Indices) {}
+
+  static ErrorOr<CallerSym> deserialize(SymbolRecordKind Kind,
+                                        uint32_t RecordOffset,
+                                        ArrayRef<uint8_t> &Data) {
+    const Hdr *Header;
+    ArrayRef<TypeIndex> Indices;
+
+    CV_DESERIALIZE(Data, Header, CV_ARRAY_FIELD_N(Indices, Header->Count));
+
+    return CallerSym(Kind, RecordOffset, Header, Indices);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  ArrayRef<TypeIndex> Indices;
+};
+
 struct BinaryAnnotationIterator {
   struct AnnotationData {
     BinaryAnnotationsOpCode OpCode;
@@ -697,7 +737,7 @@ public:
 };
 
 // S_COMPILE3
-class CompileSym3 : public SymbolRecord {
+class Compile3Sym : public SymbolRecord {
 public:
   struct Hdr {
     ulittle32_t flags; // CompileSym3Flags enum
@@ -714,18 +754,18 @@ public:
     // VersionString: The null-terminated version string follows.
   };
 
-  CompileSym3(uint32_t RecordOffset, const Hdr *H, StringRef Version)
+  Compile3Sym(uint32_t RecordOffset, const Hdr *H, StringRef Version)
       : SymbolRecord(SymbolRecordKind::Compile3Sym), RecordOffset(RecordOffset),
         Header(*H), Version(Version) {}
 
-  static ErrorOr<CompileSym3> deserialize(SymbolRecordKind Kind,
+  static ErrorOr<Compile3Sym> deserialize(SymbolRecordKind Kind,
                                           uint32_t RecordOffset,
                                           ArrayRef<uint8_t> &Data) {
     const Hdr *H = nullptr;
     StringRef Version;
     CV_DESERIALIZE(Data, H, Version);
 
-    return CompileSym3(RecordOffset, H, Version);
+    return Compile3Sym(RecordOffset, H, Version);
   }
 
   uint32_t RecordOffset;
@@ -1060,10 +1100,11 @@ public:
   StringRef Name;
 };
 
-typedef RecordIterator<SymbolRecordKind> SymbolIterator;
+typedef RecordIterator<SymbolKind> SymbolIterator;
 
-inline iterator_range<SymbolIterator> makeSymbolRange(ArrayRef<uint8_t> Data) {
-  return make_range(SymbolIterator(Data, nullptr), SymbolIterator());
+inline iterator_range<SymbolIterator> makeSymbolRange(ArrayRef<uint8_t> Data,
+                                                      bool *HadError) {
+  return make_range(SymbolIterator(Data, HadError), SymbolIterator());
 }
 
 } // namespace codeview
