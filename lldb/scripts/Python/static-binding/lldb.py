@@ -8825,6 +8825,8 @@ class SBTarget(_object):
         BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpec source_file, str module_name = None) -> SBBreakpoint
         BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpec source_file) -> SBBreakpoint
         BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpecList module_list, SBFileSpecList file_list) -> SBBreakpoint
+        BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpecList module_list, SBFileSpecList source_file, 
+            SBStringList func_names) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateBySourceRegex(self, *args)
 
