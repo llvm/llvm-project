@@ -386,9 +386,11 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
     dict->AddIntegerItem("report_count", main_value->GetValueForExpressionPath(".report_count")->GetValueAsUnsigned(0));
     dict->AddItem("sleep_trace", StructuredData::ObjectSP(CreateStackTrace(main_value, ".sleep_trace")));
     
-    StructuredData::Array *stacks = ConvertToStructuredArray(main_value, ".stacks", ".stack_count", [] (ValueObjectSP o, StructuredData::Dictionary *dict) {
+    StructuredData::Array *stacks = ConvertToStructuredArray(main_value, ".stacks", ".stack_count", [thread_sp] (ValueObjectSP o, StructuredData::Dictionary *dict) {
         dict->AddIntegerItem("index", o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
         dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
+        // "stacks" happen on the current thread
+        dict->AddIntegerItem("thread_id", thread_sp->GetIndexID());
     });
     dict->AddItem("stacks", StructuredData::ObjectSP(stacks));
     
@@ -823,7 +825,8 @@ GenerateThreadName(std::string path, StructuredData::Object *o, StructuredData::
     }
     
     if (path == "stacks") {
-        result = "happened at";
+        int thread_id = o->GetObjectForDotSeparatedPath("thread_id")->GetIntegerValue();
+        result = Sprintf("Thread %d", thread_id);
     }
     
     result[0] = toupper(result[0]);
