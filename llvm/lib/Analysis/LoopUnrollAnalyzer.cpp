@@ -141,12 +141,17 @@ bool UnrolledInstAnalyzer::visitCastInst(CastInst &I) {
   Constant *COp = dyn_cast<Constant>(I.getOperand(0));
   if (!COp)
     COp = SimplifiedValues.lookup(I.getOperand(0));
-  if (COp)
+  if (COp) {
+    if (COp->getType() == I.getType()) {
+      SimplifiedValues[&I] = cast<Constant>(COp);
+      return true;
+    }
     if (Constant *C =
             ConstantExpr::getCast(I.getOpcode(), COp, I.getType())) {
       SimplifiedValues[&I] = C;
       return true;
     }
+  }
 
   return Base::visitCastInst(I);
 }

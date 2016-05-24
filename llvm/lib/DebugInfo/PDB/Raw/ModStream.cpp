@@ -51,5 +51,5 @@ Error ModStream::reload() {
 }
 
 iterator_range<codeview::SymbolIterator> ModStream::symbols() const {
-  return codeview::makeSymbolRange(SymbolsSubstream.data().slice(4));
+  return codeview::makeSymbolRange(SymbolsSubstream.data().slice(4), nullptr);
 }

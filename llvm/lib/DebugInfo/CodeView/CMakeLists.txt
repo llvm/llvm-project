@@ -5,6 +5,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   MemoryTypeTableBuilder.cpp
   MethodListRecordBuilder.cpp
   RecordSerialization.cpp
+  SymbolDumper.cpp
   TypeDumper.cpp
   TypeRecord.cpp
   TypeRecordBuilder.cpp
