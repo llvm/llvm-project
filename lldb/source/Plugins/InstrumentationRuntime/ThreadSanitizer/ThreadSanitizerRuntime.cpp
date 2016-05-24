@@ -583,7 +583,12 @@ ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report)
             addr = loc->GetAsDictionary()->GetValueForKey("start")->GetAsInteger()->GetValue();
         
         if (addr != 0) {
-            summary = summary + " at " + Sprintf("0x%llx", addr);
+            std::string global_name = GetSymbolNameFromAddress(process_sp, addr);
+            if (!global_name.empty()) {
+                summary = summary + " at " + global_name;
+            } else {
+                summary = summary + " at " + Sprintf("0x%llx", addr);
+            }
         } else {
             int fd = loc->GetAsDictionary()->GetValueForKey("file_descriptor")->GetAsInteger()->GetValue();
             if (fd != 0) {
@@ -610,7 +615,7 @@ ThreadSanitizerRuntime::GetMainRacyAddress(StructuredData::ObjectSP report)
 }
 
 std::string
-ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report, std::string &filename, uint32_t &line)
+ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report, addr_t &global_addr, std::string &global_name, std::string &filename, uint32_t &line)
 {
     std::string result = "";
     
@@ -620,12 +625,16 @@ ThreadSanitizerRuntime::GetLocationDescription(StructuredData::ObjectSP report, 
         StructuredData::ObjectSP loc = report->GetAsDictionary()->GetValueForKey("locs")->GetAsArray()->GetItemAtIndex(0);
         std::string type = loc->GetAsDictionary()->GetValueForKey("type")->GetStringValue();
         if (type == "global") {
-            addr_t addr = loc->GetAsDictionary()->GetValueForKey("address")->GetAsInteger()->GetValue();
-            std::string global_name = GetSymbolNameFromAddress(process_sp, addr);
-            result = Sprintf("Location is a global '%s'", global_name.c_str());
+            global_addr = loc->GetAsDictionary()->GetValueForKey("address")->GetAsInteger()->GetValue();
+            global_name = GetSymbolNameFromAddress(process_sp, global_addr);
+            if (!global_name.empty()) {
+                result = Sprintf("'%s' is a global variable (0x%llx)", global_name.c_str(), global_addr);
+            } else {
+                result = Sprintf("0x%llx is a global variable", global_addr);
+            }
             
             Declaration decl;
-            GetSymbolDeclarationFromAddress(process_sp, addr, decl);
+            GetSymbolDeclarationFromAddress(process_sp, global_addr, decl);
             if (decl.GetFile()) {
                 filename = decl.GetFile().GetPath();
                 line = decl.GetLine();
@@ -670,14 +679,30 @@ ThreadSanitizerRuntime::NotifyBreakpointHit(void *baton, StoppointCallbackContex
         addr_t main_address = instance->GetMainRacyAddress(report);
         report->GetAsDictionary()->AddIntegerItem("memory_address", main_address);
         
+        addr_t global_addr = 0;
+        std::string global_name = "";
         std::string location_filename = "";
         uint32_t location_line = 0;
-        std::string location_description = instance->GetLocationDescription(report, location_filename, location_line);
+        std::string location_description = instance->GetLocationDescription(report, global_addr, global_name, location_filename, location_line);
         report->GetAsDictionary()->AddStringItem("location_description", location_description);
+        if (global_addr != 0) {
+            report->GetAsDictionary()->AddIntegerItem("global_address", global_addr);
+        }
+        if (!global_name.empty()) {
+            report->GetAsDictionary()->AddStringItem("global_name", global_name);
+        }
         if (location_filename != "") {
             report->GetAsDictionary()->AddStringItem("location_filename", location_filename);
             report->GetAsDictionary()->AddIntegerItem("location_line", location_line);
         }
+        
+        bool all_addresses_are_same = true;
+        report->GetObjectForDotSeparatedPath("mops")->GetAsArray()->ForEach([&all_addresses_are_same, main_address] (StructuredData::Object *o) -> bool {
+            addr_t addr = o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
+            if (main_address != addr) all_addresses_are_same = false;
+            return true;
+        });
+        report->GetAsDictionary()->AddBooleanItem("all_addresses_are_same", all_addresses_are_same);
     }
     
     ProcessSP process_sp = instance->GetProcessSP();
@@ -756,7 +781,7 @@ ThreadSanitizerRuntime::Deactivate()
 }
 
 static std::string
-GenerateThreadName(std::string path, StructuredData::Object *o) {
+GenerateThreadName(std::string path, StructuredData::Object *o, StructuredData::ObjectSP main_info) {
     std::string result = "additional information";
     
     if (path == "mops") {
@@ -766,7 +791,13 @@ GenerateThreadName(std::string path, StructuredData::Object *o) {
         bool is_atomic = o->GetObjectForDotSeparatedPath("is_atomic")->GetBooleanValue();
         addr_t addr = o->GetObjectForDotSeparatedPath("address")->GetIntegerValue();
         
-        result = Sprintf("%s%s of size %d at 0x%llx by thread %d", is_atomic ? "atomic " : "", is_write ? "write" : "read", size, addr, thread_id);
+        std::string addr_string = Sprintf(" at 0x%llx", addr);
+        
+        if (main_info->GetObjectForDotSeparatedPath("all_addresses_are_same")->GetBooleanValue()){
+            addr_string = "";
+        }
+        
+        result = Sprintf("%s%s of size %d%s by thread %d", is_atomic ? "atomic " : "", is_write ? "write" : "read", size, addr_string.c_str(), thread_id);
     }
     
     if (path == "threads") {
@@ -803,7 +834,7 @@ GenerateThreadName(std::string path, StructuredData::Object *o) {
 static void
 AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP process_sp, StructuredData::ObjectSP info)
 {
-    info->GetObjectForDotSeparatedPath(path)->GetAsArray()->ForEach([process_sp, threads, path] (StructuredData::Object *o) -> bool {
+    info->GetObjectForDotSeparatedPath(path)->GetAsArray()->ForEach([process_sp, threads, path, info] (StructuredData::Object *o) -> bool {
         std::vector<lldb::addr_t> pcs;
         o->GetObjectForDotSeparatedPath("trace")->GetAsArray()->ForEach([&pcs] (StructuredData::Object *pc) -> bool {
             pcs.push_back(pc->GetAsInteger()->GetValue());
@@ -820,7 +851,7 @@ AddThreadsForPath(std::string path, ThreadCollectionSP threads, ProcessSP proces
         bool stop_id_is_valid = false;
         HistoryThread *history_thread = new HistoryThread(*process_sp, tid, pcs, stop_id, stop_id_is_valid);
         ThreadSP new_thread_sp(history_thread);
-        new_thread_sp->SetName(GenerateThreadName(path, o).c_str());
+        new_thread_sp->SetName(GenerateThreadName(path, o, info).c_str());
         
         // Save this in the Process' ExtendedThreadList so a strong pointer retains the object
         process_sp->GetExtendedThreadList().AddThread(new_thread_sp);
