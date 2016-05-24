@@ -2767,7 +2767,7 @@ ObjectFileMachO::ParseSymtab ()
         // kext bundles don't have LC_FUNCTION_STARTS / eh_frame sections, but we can assume that we have
         // accurate symbol boundaries for them, they're a special case.
 
-        if (function_starts_count == 0 && header.filetype != MH_KEXT_BUNDLE)
+        if (function_starts_count == 0 && m_header.filetype != llvm::MachO::MH_KEXT_BUNDLE)
         {
             // No LC_FUNCTION_STARTS/eh_frame section in this binary, we're going to assume the binary 
             // has been stripped.  Don't allow assembly language instruction emulation because we don't
