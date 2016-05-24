@@ -131,7 +131,6 @@ macro(clang_opencl_code dir name)
   set_target_properties(${name}_code PROPERTIES COMPILE_FLAGS "${CLANG_OCL_FLAGS} ${CLANG_OCL_LINK_FLAGS} ${mlink_flags}")
   set_target_properties(${name}_code PROPERTIES LINK_FLAGS "${CLANG_OCL_LINK_FLAGS}")
   set_target_properties(${name}_code PROPERTIES PREFIX "" SUFFIX ".co")
-  install (TARGETS ${name}_code DESTINATION test COMPONENT OpenCL-Lib-test)
 endmacro(clang_opencl_code)
 
 enable_testing()
