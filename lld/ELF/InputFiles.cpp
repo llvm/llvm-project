@@ -236,7 +236,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
         S->RelocSections.push_back(&Sec);
         break;
       }
-      if (auto *S = dyn_cast<EHInputSection<ELFT>>(Target)) {
+      if (auto *S = dyn_cast<EhInputSection<ELFT>>(Target)) {
         if (S->RelocSection)
           fatal("multiple relocation sections to .eh_frame are not supported");
         S->RelocSection = &Sec;
@@ -305,7 +305,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // We dont need special handling of .eh_frame sections if relocatable
   // output was choosen. Proccess them as usual input sections.
   if (!Config->Relocatable && Name == ".eh_frame")
-    return new (EHAlloc.Allocate()) EHInputSection<ELFT>(this, &Sec);
+    return new (EHAlloc.Allocate()) EhInputSection<ELFT>(this, &Sec);
   if (shouldMerge<ELFT>(Sec))
     return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);
   return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
@@ -755,14 +755,10 @@ template void ArchiveFile::parse<ELF32BE>();
 template void ArchiveFile::parse<ELF64LE>();
 template void ArchiveFile::parse<ELF64BE>();
 
-template void
-BitcodeFile::parse<ELF32LE>(llvm::DenseSet<StringRef> &ComdatGroups);
-template void
-BitcodeFile::parse<ELF32BE>(llvm::DenseSet<StringRef> &ComdatGroups);
-template void
-BitcodeFile::parse<ELF64LE>(llvm::DenseSet<StringRef> &ComdatGroups);
-template void
-BitcodeFile::parse<ELF64BE>(llvm::DenseSet<StringRef> &ComdatGroups);
+template void BitcodeFile::parse<ELF32LE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32BE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64LE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64BE>(llvm::DenseSet<StringRef> &);
 
 template void LazyObjectFile::parse<ELF32LE>();
 template void LazyObjectFile::parse<ELF32BE>();

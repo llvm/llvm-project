@@ -27,7 +27,7 @@ struct SectionPiece;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
-template <class ELFT> class EHInputSection;
+template <class ELFT> class EhInputSection;
 template <class ELFT> class InputSection;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class MergeInputSection;
@@ -134,6 +134,10 @@ public:
   uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
   uint32_t getTlsIndexOff() { return TlsIndexOff; }
 
+  // Flag to force GOT to be in output if we have relocations
+  // that relies on its address.
+  bool HasGotOffRel = false;
+
 private:
   std::vector<const SymbolBody *> Entries;
   uint32_t TlsIndexOff = -1;
@@ -197,8 +201,7 @@ public:
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::SymRange Elf_Sym_Range;
   typedef typename ELFT::uint uintX_t;
-  SymbolTableSection(SymbolTable<ELFT> &Table,
-                     StringTableSection<ELFT> &StrTabSec);
+  SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
 
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
@@ -218,8 +221,6 @@ private:
   void writeGlobalSymbols(uint8_t *Buf);
 
   const OutputSectionBase<ELFT> *getOutputSection(SymbolBody *Sym);
-
-  SymbolTable<ELFT> &Table;
 
   // A vector of symbols and their string table offsets.
   std::vector<std::pair<SymbolBody *, size_t>> Symbols;
@@ -328,7 +329,6 @@ private:
 struct CieRecord {
   SectionPiece *Piece = nullptr;
   std::vector<SectionPiece *> FdePieces;
-  uint8_t FdeEncoding = 0;
 };
 
 // Output section for .eh_frame.
@@ -353,21 +353,19 @@ public:
 
 private:
   template <class RelTy>
-  void addSectionAux(EHInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
+  void addSectionAux(EhInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
 
   template <class RelTy>
-  CieRecord *addCie(SectionPiece &Piece, EHInputSection<ELFT> *Sec,
-                    ArrayRef<RelTy> Rels);
+  CieRecord *addCie(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
+                    ArrayRef<RelTy> &Rels);
 
   template <class RelTy>
-  bool isFdeLive(SectionPiece &Piece, EHInputSection<ELFT> *Sec,
-                 ArrayRef<RelTy> Rels);
-
-  uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
+  bool isFdeLive(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
+                 ArrayRef<RelTy> &Rels);
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 
-  std::vector<EHInputSection<ELFT> *> Sections;
+  std::vector<EhInputSection<ELFT> *> Sections;
   std::vector<CieRecord *> Cies;
 
   // CIE records are uniquified by their contents and personality functions.
@@ -484,16 +482,13 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   std::vector<Entry> Entries;
 
 public:
-  explicit DynamicSection(SymbolTable<ELFT> &SymTab);
+  explicit DynamicSection();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
 
   OutputSectionBase<ELFT> *PreInitArraySec = nullptr;
   OutputSectionBase<ELFT> *InitArraySec = nullptr;
   OutputSectionBase<ELFT> *FiniArraySec = nullptr;
-
-private:
-  SymbolTable<ELFT> &SymTab;
 };
 
 template <class ELFT>

@@ -103,7 +103,7 @@ private:
     GetMainRacyAddress(StructuredData::ObjectSP report);
     
     std::string
-    GetLocationDescription(StructuredData::ObjectSP report, std::string &filename, uint32_t &line);
+    GetLocationDescription(StructuredData::ObjectSP report, lldb::addr_t &global_addr, std::string &global_name, std::string &filename, uint32_t &line);
     
     lldb::addr_t
     GetFirstNonInternalFramePc(StructuredData::ObjectSP trace);

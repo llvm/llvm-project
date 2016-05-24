@@ -94,7 +94,9 @@ public:
 
     checkNestedNameSpecifierLoc(Expr->getQualifierLoc());
     if (getUSRForDecl(Decl) == USR) {
-      LocationsFound.push_back(Expr->getLocation());
+      const SourceManager &Manager = Decl->getASTContext().getSourceManager();
+      SourceLocation Location = Manager.getSpellingLoc(Expr->getLocation());
+      LocationsFound.push_back(Location);
     }
 
     return true;

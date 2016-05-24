@@ -181,6 +181,11 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (!paramReferredExactlyOnce(Ctor, ParamDecl))
     return;
 
+  // If the parameter is trivial to copy, don't move it. Moving a trivivally
+  // copyable type will cause a problem with misc-move-const-arg
+  if (ParamDecl->getType().isTriviallyCopyableType(*Result.Context)) 
+    return;
+
   auto Diag = diag(ParamDecl->getLocStart(), "pass by value and use std::move");
 
   // Iterate over all declarations of the constructor.
