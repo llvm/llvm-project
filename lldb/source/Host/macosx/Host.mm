@@ -1473,9 +1473,11 @@ Host::StartMonitoringChildProcess(Host::MonitorChildProcessCallback callback, vo
 
     if (source)
     {
+#ifndef __clang_analyzer__
         ::dispatch_source_set_cancel_handler (source, ^{
             ::dispatch_release (source);
         });
+#endif
         ::dispatch_source_set_event_handler (source, ^{
 
             int status= 0;
