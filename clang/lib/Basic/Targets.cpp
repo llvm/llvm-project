@@ -6333,12 +6333,10 @@ public:
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
-    // The backend doesn't actually handle soft float yet, but in case someone
-    // is using the support for the front end continue to support it.
+    // Check if software floating point is enabled
     auto Feature = std::find(Features.begin(), Features.end(), "+soft-float");
     if (Feature != Features.end()) {
       SoftFloat = true;
-      Features.erase(Feature);
     }
     return true;
   }

@@ -43,8 +43,6 @@ struct Symbol;
 
 // The base class for real symbol classes.
 class SymbolBody {
-  void init();
-
 public:
   enum Kind {
     DefinedFirst,

@@ -4811,10 +4811,16 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         // MSVC versions before 2015 don't export the move assignment operators
         // and move constructor, so don't attempt to import/export them if
         // we have a definition.
-        auto *CXXC = dyn_cast<CXXConstructorDecl>(MD);
+        auto *Ctor = dyn_cast<CXXConstructorDecl>(MD);
         if ((MD->isMoveAssignmentOperator() ||
-             (CXXC && CXXC->isMoveConstructor())) &&
+             (Ctor && Ctor->isMoveConstructor())) &&
             !getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015))
+          continue;
+
+        // MSVC2015 doesn't export trivial defaulted x-tor but copy assign
+        // operator is exported anyway.
+        if (getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015) &&
+            (Ctor || isa<CXXDestructorDecl>(MD)) && MD->isTrivial())
           continue;
       }
     }
@@ -4886,6 +4892,33 @@ void Sema::propagateDLLAttrToBaseClassTemplate(
     Diag(BaseTemplateSpec->getPointOfInstantiation(),
            diag::note_template_class_instantiation_was_here)
         << BaseTemplateSpec;
+  }
+}
+
+static void DefineImplicitSpecialMember(Sema &S, CXXMethodDecl *MD,
+                                        SourceLocation DefaultLoc) {
+  switch (S.getSpecialMember(MD)) {
+  case Sema::CXXDefaultConstructor:
+    S.DefineImplicitDefaultConstructor(DefaultLoc,
+                                       cast<CXXConstructorDecl>(MD));
+    break;
+  case Sema::CXXCopyConstructor:
+    S.DefineImplicitCopyConstructor(DefaultLoc, cast<CXXConstructorDecl>(MD));
+    break;
+  case Sema::CXXCopyAssignment:
+    S.DefineImplicitCopyAssignment(DefaultLoc, MD);
+    break;
+  case Sema::CXXDestructor:
+    S.DefineImplicitDestructor(DefaultLoc, cast<CXXDestructorDecl>(MD));
+    break;
+  case Sema::CXXMoveConstructor:
+    S.DefineImplicitMoveConstructor(DefaultLoc, cast<CXXConstructorDecl>(MD));
+    break;
+  case Sema::CXXMoveAssignment:
+    S.DefineImplicitMoveAssignment(DefaultLoc, MD);
+    break;
+  case Sema::CXXInvalid:
+    llvm_unreachable("Invalid special member.");
   }
 }
 
@@ -4984,13 +5017,27 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
 
       // For an explicitly defaulted or deleted special member, we defer
       // determining triviality until the class is complete. That time is now!
+      CXXSpecialMember CSM = getSpecialMember(M);
       if (!M->isImplicit() && !M->isUserProvided()) {
-        CXXSpecialMember CSM = getSpecialMember(M);
         if (CSM != CXXInvalid) {
           M->setTrivial(SpecialMemberIsTrivial(M, CSM));
 
           // Inform the class that we've finished declaring this member.
           Record->finishedDefaultedOrDeletedMember(M);
+        }
+      }
+
+      if (!M->isInvalidDecl() && M->isExplicitlyDefaulted() &&
+          M->hasAttr<DLLExportAttr>()) {
+        if (getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015) &&
+            M->isTrivial() &&
+            (CSM == CXXDefaultConstructor || CSM == CXXCopyConstructor ||
+             CSM == CXXDestructor))
+          M->dropAttr<DLLExportAttr>();
+
+        if (M->hasAttr<DLLExportAttr>()) {
+          DefineImplicitSpecialMember(*this, M, M->getLocation());
+          ActOnFinishInlineFunctionDef(M);
         }
       }
     }
@@ -13066,32 +13113,8 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
 
     CheckExplicitlyDefaultedSpecialMember(MD);
 
-    if (MD->isInvalidDecl())
-      return;
-
-    switch (Member) {
-    case CXXDefaultConstructor:
-      DefineImplicitDefaultConstructor(DefaultLoc,
-                                       cast<CXXConstructorDecl>(MD));
-      break;
-    case CXXCopyConstructor:
-      DefineImplicitCopyConstructor(DefaultLoc, cast<CXXConstructorDecl>(MD));
-      break;
-    case CXXCopyAssignment:
-      DefineImplicitCopyAssignment(DefaultLoc, MD);
-      break;
-    case CXXDestructor:
-      DefineImplicitDestructor(DefaultLoc, cast<CXXDestructorDecl>(MD));
-      break;
-    case CXXMoveConstructor:
-      DefineImplicitMoveConstructor(DefaultLoc, cast<CXXConstructorDecl>(MD));
-      break;
-    case CXXMoveAssignment:
-      DefineImplicitMoveAssignment(DefaultLoc, MD);
-      break;
-    case CXXInvalid:
-      llvm_unreachable("Invalid special member.");
-    }
+    if (!MD->isInvalidDecl())
+      DefineImplicitSpecialMember(*this, MD, DefaultLoc);
   } else {
     Diag(DefaultLoc, diag::err_default_special_members);
   }

@@ -9,6 +9,7 @@
 
 #include "OutputSections.h"
 #include "Config.h"
+#include "EhFrame.h"
 #include "LinkerScript.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -565,9 +566,8 @@ void GnuHashTableSection<ELFT>::addSymbols(
 }
 
 template <class ELFT>
-DynamicSection<ELFT>::DynamicSection(SymbolTable<ELFT> &SymTab)
-    : OutputSectionBase<ELFT>(".dynamic", SHT_DYNAMIC, SHF_ALLOC | SHF_WRITE),
-      SymTab(SymTab) {
+DynamicSection<ELFT>::DynamicSection()
+    : OutputSectionBase<ELFT>(".dynamic", SHT_DYNAMIC, SHF_ALLOC | SHF_WRITE) {
   Elf_Shdr &Header = this->Header;
   Header.sh_addralign = sizeof(uintX_t);
   Header.sh_entsize = ELFT::Is64Bits ? 16 : 8;
@@ -593,7 +593,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (!Config->RPath.empty())
     Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
          Out<ELFT>::DynStrTab->addString(Config->RPath)});
-  for (const std::unique_ptr<SharedFile<ELFT>> &F : SymTab.getSharedFiles())
+  for (const std::unique_ptr<SharedFile<ELFT>> &F :
+       Symtab<ELFT>::X->getSharedFiles())
     if (F->isNeeded())
       Add({DT_NEEDED, Out<ELFT>::DynStrTab->addString(F->getSoName())});
   if (!Config->SoName.empty())
@@ -638,9 +639,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({DT_FINI_ARRAYSZ, (uintX_t)FiniArraySec->getSize()});
   }
 
-  if (SymbolBody *B = SymTab.find(Config->Init))
+  if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Init))
     Add({DT_INIT, B});
-  if (SymbolBody *B = SymTab.find(Config->Fini))
+  if (SymbolBody *B = Symtab<ELFT>::X->find(Config->Fini))
     Add({DT_FINI, B});
 
   uint32_t DtFlags = 0;
@@ -912,107 +913,8 @@ EhOutputSection<ELFT>::EhOutputSection()
 template <class ELFT>
 void EhOutputSection<ELFT>::forEachInputSection(
     std::function<void(InputSectionBase<ELFT> *)> F) {
-  for (EHInputSection<ELFT> *S : Sections)
+  for (EhInputSection<ELFT> *S : Sections)
     F(S);
-}
-
-// Read a byte and advance D by one byte.
-static uint8_t readByte(ArrayRef<uint8_t> &D) {
-  if (D.empty())
-    fatal("corrupted or unsupported CIE information");
-  uint8_t B = D.front();
-  D = D.slice(1);
-  return B;
-}
-
-static void skipLeb128(ArrayRef<uint8_t> &D) {
-  while (!D.empty()) {
-    uint8_t Val = D.front();
-    D = D.slice(1);
-    if ((Val & 0x80) == 0)
-      return;
-  }
-  fatal("corrupted or unsupported CIE information");
-}
-
-template <class ELFT> static size_t getAugPSize(unsigned Enc) {
-  switch (Enc & 0x0f) {
-  case DW_EH_PE_absptr:
-  case DW_EH_PE_signed:
-    return ELFT::Is64Bits ? 8 : 4;
-  case DW_EH_PE_udata2:
-  case DW_EH_PE_sdata2:
-    return 2;
-  case DW_EH_PE_udata4:
-  case DW_EH_PE_sdata4:
-    return 4;
-  case DW_EH_PE_udata8:
-  case DW_EH_PE_sdata8:
-    return 8;
-  }
-  fatal("unknown FDE encoding");
-}
-
-template <class ELFT> static void skipAugP(ArrayRef<uint8_t> &D) {
-  uint8_t Enc = readByte(D);
-  if ((Enc & 0xf0) == DW_EH_PE_aligned)
-    fatal("DW_EH_PE_aligned encoding is not supported");
-  size_t Size = getAugPSize<ELFT>(Enc);
-  if (Size >= D.size())
-    fatal("corrupted CIE");
-  D = D.slice(Size);
-}
-
-template <class ELFT> static uint8_t getFdeEncoding(ArrayRef<uint8_t> D) {
-  if (D.size() < 8)
-    fatal("CIE too small");
-  D = D.slice(8);
-
-  uint8_t Version = readByte(D);
-  if (Version != 1 && Version != 3)
-    fatal("FDE version 1 or 3 expected, but got " + Twine((unsigned)Version));
-
-  const unsigned char *AugEnd = std::find(D.begin() + 1, D.end(), '\0');
-  if (AugEnd == D.end())
-    fatal("corrupted CIE");
-  StringRef Aug(reinterpret_cast<const char *>(D.begin()), AugEnd - D.begin());
-  D = D.slice(Aug.size() + 1);
-
-  // Code alignment factor should always be 1 for .eh_frame.
-  if (readByte(D) != 1)
-    fatal("CIE code alignment must be 1");
-
-  // Skip data alignment factor.
-  skipLeb128(D);
-
-  // Skip the return address register. In CIE version 1 this is a single
-  // byte. In CIE version 3 this is an unsigned LEB128.
-  if (Version == 1)
-    readByte(D);
-  else
-    skipLeb128(D);
-
-  // We only care about an 'R' value, but other records may precede an 'R'
-  // record. Records are not in TLV (type-length-value) format, so we need
-  // to teach the linker how to skip records for each type.
-  for (char C : Aug) {
-    if (C == 'R')
-      return readByte(D);
-    if (C == 'z') {
-      skipLeb128(D);
-      continue;
-    }
-    if (C == 'P') {
-      skipAugP<ELFT>(D);
-      continue;
-    }
-    if (C == 'L') {
-      readByte(D);
-      continue;
-    }
-    fatal("unknown .eh_frame augmentation string: " + Aug);
-  }
-  return DW_EH_PE_absptr;
 }
 
 // Returns the first relocation that points to a region
@@ -1034,7 +936,7 @@ static const RelTy *getReloc(IntTy Begin, IntTy Size, ArrayRef<RelTy> Rels) {
 template <class ELFT>
 template <class RelTy>
 CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
-                                         EHInputSection<ELFT> *Sec,
+                                         EhInputSection<ELFT> *Sec,
                                          ArrayRef<RelTy> Rels) {
   const endianness E = ELFT::TargetEndianness;
   if (read32<E>(Piece.Data.data() + 4) != 0)
@@ -1068,7 +970,7 @@ template <class ELFT> static void validateFde(SectionPiece &Piece) {
 template <class ELFT>
 template <class RelTy>
 bool EhOutputSection<ELFT>::isFdeLive(SectionPiece &Piece,
-                                      EHInputSection<ELFT> *Sec,
+                                      EhInputSection<ELFT> *Sec,
                                       ArrayRef<RelTy> Rels) {
   const RelTy *Rel = getReloc(Piece.InputOff, Piece.size(), Rels);
   if (!Rel)
@@ -1087,7 +989,7 @@ bool EhOutputSection<ELFT>::isFdeLive(SectionPiece &Piece,
 // one and associates FDEs to the CIE.
 template <class ELFT>
 template <class RelTy>
-void EhOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *Sec,
+void EhOutputSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
                                           ArrayRef<RelTy> Rels) {
   SectionPiece &CiePiece = Sec->Pieces[0];
   CieRecord *Cie = addCie(CiePiece, Sec, Rels);
@@ -1104,7 +1006,7 @@ void EhOutputSection<ELFT>::addSectionAux(EHInputSection<ELFT> *Sec,
 
 template <class ELFT>
 void EhOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
-  auto *Sec = cast<EHInputSection<ELFT>>(C);
+  auto *Sec = cast<EhInputSection<ELFT>>(C);
   Sec->OutSec = this;
   this->updateAlign(Sec->Align);
   Sections.push_back(Sec);
@@ -1203,7 +1105,7 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
     }
   }
 
-  for (EHInputSection<ELFT> *S : Sections)
+  for (EhInputSection<ELFT> *S : Sections)
     S->relocate(Buf, nullptr);
 
   // Construct .eh_frame_hdr. .eh_frame_hdr is a binary search table
@@ -1312,11 +1214,11 @@ template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 SymbolTableSection<ELFT>::SymbolTableSection(
-    SymbolTable<ELFT> &Table, StringTableSection<ELFT> &StrTabSec)
+    StringTableSection<ELFT> &StrTabSec)
     : OutputSectionBase<ELFT>(StrTabSec.isDynamic() ? ".dynsym" : ".symtab",
                               StrTabSec.isDynamic() ? SHT_DYNSYM : SHT_SYMTAB,
                               StrTabSec.isDynamic() ? (uintX_t)SHF_ALLOC : 0),
-      StrTabSec(StrTabSec), Table(Table) {
+      StrTabSec(StrTabSec) {
   this->Header.sh_entsize = sizeof(Elf_Sym);
   this->Header.sh_addralign = sizeof(uintX_t);
 }
@@ -1401,7 +1303,8 @@ template <class ELFT>
 void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   // Iterate over all input object files to copy their local symbols
   // to the output symbol table pointed by Buf.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &File : Table.getObjectFiles()) {
+  for (const std::unique_ptr<ObjectFile<ELFT>> &File :
+       Symtab<ELFT>::X->getObjectFiles()) {
     for (const std::pair<const DefinedRegular<ELFT> *, size_t> &P :
          File->KeptLocalSyms) {
       const DefinedRegular<ELFT> &Body = *P.first;

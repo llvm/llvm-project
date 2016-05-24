@@ -1640,28 +1640,67 @@ static std::string getLanaiTargetCPU(const ArgList &Args) {
   return "";
 }
 
+sparc::FloatABI sparc::getSparcFloatABI(const Driver &D,
+                                        const ArgList &Args) {
+  sparc::FloatABI ABI = sparc::FloatABI::Invalid;
+  if (Arg *A =
+          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
+                          options::OPT_mfloat_abi_EQ)) {
+    if (A->getOption().matches(options::OPT_msoft_float))
+      ABI = sparc::FloatABI::Soft;
+    else if (A->getOption().matches(options::OPT_mhard_float))
+      ABI = sparc::FloatABI::Hard;
+    else {
+      ABI = llvm::StringSwitch<sparc::FloatABI>(A->getValue())
+                .Case("soft", sparc::FloatABI::Soft)
+                .Case("hard", sparc::FloatABI::Hard)
+                .Default(sparc::FloatABI::Invalid);
+      if (ABI == sparc::FloatABI::Invalid &&
+          !StringRef(A->getValue()).empty()) {
+        D.Diag(diag::err_drv_invalid_mfloat_abi) << A->getAsString(Args);
+        ABI = sparc::FloatABI::Hard;
+      }
+    }
+  }
+
+  // If unspecified, choose the default based on the platform.
+  // Only the hard-float ABI on Sparc is standardized, and it is the
+  // default. GCC also supports a nonstandard soft-float ABI mode, also
+  // implemented in LLVM. However as this is not standard we set the default
+  // to be hard-float.
+  if (ABI == sparc::FloatABI::Invalid) {
+    ABI = sparc::FloatABI::Hard;
+  }
+
+  return ABI;
+}
+
+static void getSparcTargetFeatures(const Driver &D, const ArgList &Args,
+                                 std::vector<const char *> &Features) {
+  sparc::FloatABI FloatABI = sparc::getSparcFloatABI(D, Args);
+  if (FloatABI == sparc::FloatABI::Soft)
+    Features.push_back("+soft-float");
+}
+
 void Clang::AddSparcTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
-  const Driver &D = getToolChain().getDriver();
+  //const Driver &D = getToolChain().getDriver();
   std::string Triple = getToolChain().ComputeEffectiveClangTriple(Args);
 
-  bool SoftFloatABI = false;
-  if (Arg *A =
-          Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float)) {
-    if (A->getOption().matches(options::OPT_msoft_float))
-      SoftFloatABI = true;
-  }
+  sparc::FloatABI FloatABI =
+      sparc::getSparcFloatABI(getToolChain().getDriver(), Args);
 
-  // Only the hard-float ABI on Sparc is standardized, and it is the
-  // default. GCC also supports a nonstandard soft-float ABI mode, and
-  // perhaps LLVM should implement that, too. However, since llvm
-  // currently does not support Sparc soft-float, at all, display an
-  // error if it's requested.
-  if (SoftFloatABI) {
-    D.Diag(diag::err_drv_unsupported_opt_for_target) << "-msoft-float"
-                                                     << Triple;
+  if (FloatABI == sparc::FloatABI::Soft) {
+    // Floating point operations and argument passing are soft.
+    CmdArgs.push_back("-msoft-float");
+    CmdArgs.push_back("-mfloat-abi");
+    CmdArgs.push_back("soft");
+  } else {
+    // Floating point operations and argument passing are hard.
+    assert(FloatABI == sparc::FloatABI::Hard && "Invalid float abi!");
+    CmdArgs.push_back("-mfloat-abi");
+    CmdArgs.push_back("hard");
   }
-
 }
 
 void Clang::AddSystemZTargetArgs(const ArgList &Args,
@@ -2478,6 +2517,11 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
     getWebAssemblyTargetFeatures(Args, Features);
+    break; 
+  case llvm::Triple::sparc:
+  case llvm::Triple::sparcel:
+  case llvm::Triple::sparcv9:
+    getSparcTargetFeatures(D, Args, Features);
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
