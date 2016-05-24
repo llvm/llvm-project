@@ -777,6 +777,16 @@ enum class FloatABI {
 FloatABI getPPCFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
 } // end namespace ppc
 
+namespace sparc {
+enum class FloatABI {
+  Invalid,
+  Soft,
+  Hard,
+};
+
+FloatABI getSparcFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
+} // end namespace sparc
+
 namespace XCore {
 // For XCore, we do not need to instantiate tools for PreProcess, PreCompile and
 // Compile.

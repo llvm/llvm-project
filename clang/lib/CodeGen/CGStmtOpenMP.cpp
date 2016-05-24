@@ -571,6 +571,7 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
           cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
   }
   llvm::DenseSet<const VarDecl *> EmittedAsFirstprivate;
+  CGCapturedStmtInfo CapturesInfo(cast<CapturedStmt>(*D.getAssociatedStmt()));
   for (const auto *C : D.getClausesOfKind<OMPFirstprivateClause>()) {
     auto IRef = C->varlist_begin();
     auto InitsRef = C->inits().begin();
@@ -578,8 +579,9 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
       auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
       bool ThisFirstprivateIsLastprivate =
           Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
+      auto *CapFD = CapturesInfo.lookup(OrigVD);
       auto *FD = CapturedStmtInfo->lookup(OrigVD);
-      if (!ThisFirstprivateIsLastprivate && FD &&
+      if (!ThisFirstprivateIsLastprivate && FD && (FD == CapFD) &&
           !FD->getType()->isReferenceType()) {
         EmittedAsFirstprivate.insert(OrigVD->getCanonicalDecl());
         ++IRef;

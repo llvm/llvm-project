@@ -186,11 +186,11 @@ private:
 };
 
 // This corresponds to a .eh_frame section of an input file.
-template <class ELFT> class EHInputSection : public SplitInputSection<ELFT> {
+template <class ELFT> class EhInputSection : public SplitInputSection<ELFT> {
 public:
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::uint uintX_t;
-  EHInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
+  EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
   void split();
 

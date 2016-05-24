@@ -228,6 +228,7 @@ int main() {
 // CHECK: ret
 //
 // CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32 {{.*}}%{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(8) %{{.+}}, [[S_INT_TY]]* dereferenceable(4) %{{.+}})
+// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_INT_TY]]],
@@ -244,7 +245,8 @@ int main() {
 // CHECK: call i32 @__kmpc_single(
 
 // firstprivate t_var(t_var)
-// CHECK-NOT: load i{{[0-9]+}}, i{{[0-9]+}}*
+// CHECK: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}*
+// CHECK: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
 
 // firstprivate vec(vec)
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*

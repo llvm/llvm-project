@@ -95,7 +95,7 @@ static void forEachSuccessor(InputSection<ELFT> *Sec,
 }
 
 template <class ELFT>
-static void scanEhFrameSection(EHInputSection<ELFT> &EH,
+static void scanEhFrameSection(EhInputSection<ELFT> &EH,
                                std::function<void(ResolvedReloc<ELFT>)> Fn) {
   if (!EH.RelocSection)
     return;
@@ -183,7 +183,7 @@ template <class ELFT> void elf::markLive() {
         // .eh_frame is always marked as live now, but also it can reference to
         // sections that contain personality. We preserve all non-text sections
         // referred by .eh_frame here.
-        if (auto *EH = dyn_cast_or_null<EHInputSection<ELFT>>(Sec))
+        if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
           scanEhFrameSection<ELFT>(*EH, Enqueue);
         if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
           Enqueue({Sec, 0});

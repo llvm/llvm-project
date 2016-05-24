@@ -216,6 +216,7 @@ int main() {
 // firstprivate t_var(t_var)
 // CHECK: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR]],
 // CHECK: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
+
 // firstprivate vec(vec)
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
 // CHECK: call void @llvm.memcpy.{{.+}}(i8* [[VEC_DEST]], i8* bitcast ([2 x i{{[0-9]+}}]* [[VEC]] to i8*),
@@ -262,11 +263,13 @@ int main() {
 //
 // CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}},
 // Skip temp vars for loop
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
-// CHECK: alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_INT_TY]]],
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_INT_TY]],
@@ -278,7 +281,8 @@ int main() {
 // CHECK: [[VAR_REF:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** %
 
 // firstprivate t_var(t_var)
-// CHECK-NOT: load i{{[0-9]+}}, i{{[0-9]+}}*
+// CHECK: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}*
+// CHECK: store i{{[0-9]+}} [[T_VAR_VAL]], i{{[0-9]+}}* [[T_VAR_PRIV]],
 
 // firstprivate vec(vec)
 // CHECK: [[VEC_DEST:%.+]] = bitcast [2 x i{{[0-9]+}}]* [[VEC_PRIV]] to i8*
