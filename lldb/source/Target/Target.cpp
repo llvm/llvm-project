@@ -32,6 +32,7 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTSource.h"
@@ -2071,16 +2072,49 @@ Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType langua
         }
     }
 
+    if (m_cant_make_scratch_type_system.find(language) != m_cant_make_scratch_type_system.end())
+    {
+        return nullptr;
+    }
 
     TypeSystem *type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(language, this, create_on_demand, compiler_options);
     if (language == eLanguageTypeSwift)
     {
         if (SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(type_system))
         {
-            if (swift_ast_ctx->CheckProcessChanged())
+            if (swift_ast_ctx->CheckProcessChanged() || swift_ast_ctx->HasFatalErrors())
             {
+                if (swift_ast_ctx->HasFatalErrors())
+                {
+                    if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream())
+                    {
+                        error_stream_sp->PutCString("Shared Swift state for %s has developed fatal errors and is being discarded.\n");
+                        error_stream_sp->PutCString("REPL definitions and persistent names/types will be lost.\n");
+                        error_stream_sp->Flush();
+                    }
+                }
                 m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
                 type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(language, this, create_on_demand, compiler_options);
+                
+                if (SwiftASTContext *new_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(type_system))
+                {
+                    if (new_swift_ast_ctx->HasFatalErrors())
+                    {
+                        if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream())
+                        {
+                            error_stream_sp->PutCString("Can't construct shared Swift state for this process after repeated attempts.\n");
+                            error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
+                            DiagnosticManager diag_mgr;
+                            new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
+                            error_stream_sp->PutCString(diag_mgr.GetString().c_str());
+                            error_stream_sp->Flush();
+                        }
+                        
+                        m_cant_make_scratch_type_system[language] = true;
+                        m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+                        type_system = nullptr;
+                    }
+                }
             }
         }
     }
@@ -2210,10 +2244,7 @@ Target::GetClangASTImporter()
 SwiftASTContext *
 Target::GetScratchSwiftASTContext(Error &error, bool create_on_demand, const char *extra_options)
 {
-    SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
-    if (swift_ast_ctx && !swift_ast_ctx->HasFatalErrors())
-        return swift_ast_ctx;
-    return nullptr;
+    return llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
 }
 
 void

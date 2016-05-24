@@ -1675,6 +1675,7 @@ protected:
     lldb::SearchFilterSP  m_search_filter_sp;
     PathMappingList m_image_search_paths;
     TypeSystemMap m_scratch_type_system_map;
+    std::map<lldb::LanguageType, bool> m_cant_make_scratch_type_system;
     
     typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
     REPLMap m_repl_map;
