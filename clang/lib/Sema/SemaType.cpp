@@ -5847,10 +5847,11 @@ bool Sema::checkObjCKindOfType(QualType &type, SourceLocation loc) {
 
   // Rebuild the "equivalent" type, which pushes __kindof down into
   // the object type.
-  QualType equivType = Context.getObjCObjectType(objType->getBaseType(),
-                                                 objType->getTypeArgsAsWritten(),
-                                                 objType->getProtocols(),
-                                                 /*isKindOf=*/true);
+  // There is no need to apply kindof on an unqualified id type.
+  QualType equivType = Context.getObjCObjectType(
+      objType->getBaseType(), objType->getTypeArgsAsWritten(),
+      objType->getProtocols(),
+      /*isKindOf=*/objType->isObjCUnqualifiedId() ? false : true);
 
   // If we started with an object pointer type, rebuild it.
   if (ptrType) {
