@@ -181,42 +181,50 @@ static int setFilenamePossiblyWithPid(const char *Filename) {
   return 0;
 }
 
-static int setFilenameFromEnvironment(void) {
+static const char *getFilenameFromEnv(void) {
   const char *Filename = getenv("LLVM_PROFILE_FILE");
-
   if (!Filename || !Filename[0])
-    return -1;
-
-  return setFilenamePossiblyWithPid(Filename);
+    return 0;
+  return Filename;
 }
 
-static void setFilenameAutomatically(void) {
-  if (!setFilenameFromEnvironment())
-    return;
-
-  resetFilenameToDefault();
-}
-
+/* This method is invoked by the runtime initialization hook
+ * InstrProfilingRuntime.o if it is linked in. Both user specified
+ * profile path via -fprofile-instr-generate= and LLVM_PROFILE_FILE
+ * environment variable can override this default value. */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_initialize_file(void) {
+  const char *Filename;
   /* Check if the filename has been initialized. */
   if (__llvm_profile_CurrentFilename)
     return;
 
   /* Detect the filename and truncate. */
-  setFilenameAutomatically();
+  Filename = getFilenameFromEnv();
+  if (!Filename || setFilenamePossiblyWithPid(Filename))
+    resetFilenameToDefault();
 }
 
+/* This API is directly called by the user application code. It has the
+ * highest precedence compared with LLVM_PROFILE_FILE environment variable
+ * and command line option -fprofile-istr-generate=<profile_name>.
+ */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_set_filename(const char *Filename) {
   setFilenamePossiblyWithPid(Filename);
 }
 
+/* 
+ * This API is invoked by the global initializers emitted by Clang/LLVM when
+ * -fprofile-instr-generate=<..> is specified (vs -fprofile-instr-generate
+ *  without an argument). This option has lower precedence than the
+ *  LLVM_PROFILE_FILE environment variable.
+ */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_override_default_filename(const char *Filename) {
   /* If the env var is set, skip setting filename from argument. */
-  const char *Env_Filename = getenv("LLVM_PROFILE_FILE");
-  if (Env_Filename && Env_Filename[0])
+  const char *Env_Filename = getFilenameFromEnv();
+  if (Env_Filename)
     return;
   setFilenamePossiblyWithPid(Filename);
 }
