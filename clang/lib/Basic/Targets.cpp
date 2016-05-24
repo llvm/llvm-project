@@ -5845,6 +5845,12 @@ public:
   SparcTargetInfo(const llvm::Triple &Triple)
       : TargetInfo(Triple), SoftFloat(false) {}
 
+  int getEHDataRegisterNumber(unsigned RegNo) const override {
+    if (RegNo == 0) return 24;
+    if (RegNo == 1) return 25;
+    return -1;
+  }
+
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
     // The backend doesn't actually handle soft float yet, but in case someone
