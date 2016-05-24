@@ -78,3 +78,20 @@ add_subdirectory(ocml)
 add_subdirectory(opencl)
 add_subdirectory(test/opencl)
 add_subdirectory(test/opencl_conformance)
+
+## CPack standard variables
+set ( CPACK_PACKAGE_NAME "ocml-bc" )
+set ( CPACK_PACKAGE_VERSION_MAJOR "0" )
+set ( CPACK_PACKAGE_VERSION_MINOR "0" )
+set ( CPACK_PACKAGE_VERSION_PATCH "1" )
+set ( CPACK_PACKAGE_CONTACT "" )
+set ( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Radeon Open Compute Runtime - OCML LLVM bitcode libraries" )
+set ( CPACK_PACKAGE_DESCRIPTION "This package includes OCML bitcode libraries." )
+
+## Debian package values
+set ( CPACK_GENERATOR "DEB" )
+set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "AMD" )
+set ( CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
+set ( CPACK_DEBIAN_PACKAGE_DEPENDS "" )
+
+include ( CPack )
