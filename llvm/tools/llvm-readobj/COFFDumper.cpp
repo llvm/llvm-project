@@ -151,7 +151,7 @@ class COFFObjectDumpDelegate : public SymbolDumpDelegate {
 public:
   COFFObjectDumpDelegate(COFFDumper &CD, const SectionRef &SR,
                          const COFFObjectFile *Obj, StringRef SectionContents)
-      : CD(CD), SR(SR), Obj(Obj), SectionContents(SectionContents) {
+      : CD(CD), SR(SR), SectionContents(SectionContents) {
     Sec = Obj->getCOFFSection(SR);
   }
 
@@ -181,7 +181,6 @@ public:
 private:
   COFFDumper &CD;
   const SectionRef &SR;
-  const COFFObjectFile *Obj;
   const coff_section *Sec;
   StringRef SectionContents;
 };

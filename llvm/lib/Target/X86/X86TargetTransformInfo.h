@@ -80,6 +80,11 @@ public:
                              bool VariableMask, unsigned Alignment);
   int getAddressComputationCost(Type *PtrTy, bool IsComplex);
 
+  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
+                            ArrayRef<Type *> Tys, FastMathFlags FMF);
+  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
+                            ArrayRef<Value *> Args, FastMathFlags FMF);
+
   int getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwiseForm);
 
   int getIntImmCost(int64_t);
