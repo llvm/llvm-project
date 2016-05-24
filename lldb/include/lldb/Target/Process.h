@@ -3426,6 +3426,7 @@ protected:
     std::map<lldb::addr_t,lldb::addr_t> m_resolved_indirect_addresses;
     bool m_can_interpret_function_calls; // Some targets, e.g the OSX kernel, don't support the ability to modify the stack.
     WarningsCollection          m_warnings_issued;  // A set of object pointers which have already had warnings printed
+    std::mutex                  m_run_thread_plan_lock;
     
     enum {
         eCanJITDontKnow= 0,
