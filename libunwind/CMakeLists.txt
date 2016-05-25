@@ -103,6 +103,7 @@ option(LIBUNWIND_ENABLE_ASSERTIONS "Enable assertions independent of build mode.
 option(LIBUNWIND_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBUNWIND_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBUNWIND_ENABLE_SHARED "Build libunwind as a shared library." ON)
+option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." ON)
 
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE STRING "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE STRING "Sysroot for cross compiling.")
@@ -200,6 +201,11 @@ else()
   if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
     list(APPEND LIBUNWIND_COMPILE_FLAGS -DNDEBUG)
   endif ()
+endif ()
+
+# Cross-unwinding
+if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
+  list(APPEND LIBUNWIND_COMPILE_FLAGS -D_LIBUNWIND_IS_NATIVE_ONLY)
 endif ()
 
 # This is the _ONLY_ place where add_definitions is called.

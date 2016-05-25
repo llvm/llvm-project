@@ -2,6 +2,7 @@
 // RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %deflake %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
+#import <xpc/xpc.h>
 
 #import "../test.h"
 
@@ -73,8 +74,8 @@ int main(int argc, const char *argv[]) {
 // CHECK: Hello world.
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   Write of size 8
-// CHECK:     #0 {{.*}}xpc-race.mm:33
+// CHECK:     #0 {{.*}}xpc-race.mm:34
 // CHECK:   Previous write of size 8
-// CHECK:     #0 {{.*}}xpc-race.mm:33
+// CHECK:     #0 {{.*}}xpc-race.mm:34
 // CHECK: Location is global 'global'
 // CHECK: Done.

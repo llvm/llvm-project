@@ -16,6 +16,7 @@
 #include "esan_flags.h"
 #include "esan_interface_internal.h"
 #include "esan_shadow.h"
+#include "cache_frag.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -175,7 +176,7 @@ void initializeLibrary(ToolType Tool) {
   initializeInterceptors();
 
   if (WhichTool == ESAN_CacheFrag) {
-    // FIXME: add runtime code for this tool
+    initializeCacheFrag();
   } else if (WhichTool == ESAN_WorkingSet) {
     initializeWorkingSet();
   }
@@ -186,10 +187,7 @@ void initializeLibrary(ToolType Tool) {
 int finalizeLibrary() {
   VPrintf(1, "in esan::%s\n", __FUNCTION__);
   if (WhichTool == ESAN_CacheFrag) {
-    // FIXME NYI: we need to add sampling + callstack gathering and have a
-    // strategy for how to generate a final report.
-    // We'll move this to cache_frag.cpp once we have something.
-    Report("%s is not finished: nothing yet to report\n", SanitizerToolName);
+    return finalizeCacheFrag();
   } else if (WhichTool == ESAN_WorkingSet) {
     return finalizeWorkingSet();
   }
@@ -198,12 +196,18 @@ int finalizeLibrary() {
 
 void processCompilationUnitInit(void *Ptr) {
   VPrintf(2, "in esan::%s\n", __FUNCTION__);
+  if (WhichTool == ESAN_CacheFrag) {
+    processCacheFragCompilationUnitInit(Ptr);
+  }
 }
 
 // This is called when the containing module is unloaded.
 // For the main executable module, this is called after finalizeLibrary.
 void processCompilationUnitExit(void *Ptr) {
   VPrintf(2, "in esan::%s\n", __FUNCTION__);
+  if (WhichTool == ESAN_CacheFrag) {
+    processCacheFragCompilationUnitExit(Ptr);
+  }
 }
 
 } // namespace __esan

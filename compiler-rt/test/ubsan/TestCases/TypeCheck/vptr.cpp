@@ -109,7 +109,7 @@ int access_p(T *p, char type) {
     for (int i = 0; i < 2; i++) {
       // Check that the first iteration ("S") succeeds, while the second ("V") fails.
       p = reinterpret_cast<T*>((i == 0) ? new S : new V);
-      // CHECK-LOC-SUPPRESS: vptr.cpp:[[@LINE+5]]:7: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+      // CHECK-LOC-SUPPRESS: vptr.cpp:[[@LINE+5]]:10: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
       // CHECK-LOC-SUPPRESS-NEXT: [[PTR]]: note: object is of type 'V'
       // CHECK-LOC-SUPPRESS-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
       // CHECK-LOC-SUPPRESS-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
@@ -135,7 +135,7 @@ int access_p(T *p, char type) {
     // CHECK-Linux-NULL-MEMBER: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE-7]]
 
   case 'f':
-    // CHECK-MEMFUN: vptr.cpp:[[@LINE+6]]:12: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
+    // CHECK-MEMFUN: vptr.cpp:[[@LINE+6]]:15: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-MEMFUN-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
     // CHECK-MEMFUN-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
     // CHECK-MEMFUN-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
@@ -144,7 +144,7 @@ int access_p(T *p, char type) {
     return p->g();
 
   case 'o':
-    // CHECK-OFFSET: vptr.cpp:[[@LINE+6]]:12: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'U'
+    // CHECK-OFFSET: vptr.cpp:[[@LINE+6]]:37: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'U'
     // CHECK-OFFSET-NEXT: 0x{{[0-9a-f]*}}: note: object is base class subobject at offset {{8|16}} within object of type [[DYN_TYPE:'U']]
     // CHECK-OFFSET-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  }}
     // CHECK-OFFSET-NEXT: {{^              \^                        (                         ~~~~~~~~~~~~)?~~~~~~~~~~~ *$}}

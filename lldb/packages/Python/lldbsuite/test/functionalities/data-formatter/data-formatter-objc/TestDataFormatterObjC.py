@@ -271,16 +271,18 @@ class ObjCDataFormatterTestCase(TestBase):
         # this test might fail if we hit the breakpoint late on December 31st of some given year
         # and midnight comes between hitting the breakpoint and running this line of code
         # hopefully the output will be revealing enough in that case :-)
-        now_year = str(datetime.datetime.now().year)
+        now_year = '%s-' % str(datetime.datetime.now().year)
 
-        self.expect('frame variable date3 date4',
-                    substrs = [now_year,'1970'])
+        self.expect('frame variable date3', substrs = [now_year])
+        self.expect('frame variable date4', substrs = ['1970'])
+        self.expect('frame variable date5', substrs = [now_year])
 
         self.expect('frame variable date1_abs date2_abs',
                     substrs = ['1985-04','2011-01'])
 
-        self.expect('frame variable date3_abs date4_abs',
-                    substrs = [now_year,'1970'])
+        self.expect('frame variable date3_abs', substrs = [now_year])
+        self.expect('frame variable date4_abs', substrs = ['1970'])
+        self.expect('frame variable date5_abs', substrs = [now_year])
 
         self.expect('frame variable cupertino home europe',
                     substrs = ['@"America/Los_Angeles"',
@@ -358,7 +360,6 @@ class ObjCDataFormatterTestCase(TestBase):
             self.runCmd('type format clear', check=False)
             self.runCmd('type summary clear', check=False)
             self.runCmd('type synth clear', check=False)
-            self.runCmd('log timers disable', check=False)
 
 
         # Execute the cleanup function during test case tear down.

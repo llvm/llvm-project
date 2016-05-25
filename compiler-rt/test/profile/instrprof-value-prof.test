@@ -11,6 +11,9 @@
 // RUN: llvm-profdata merge -text  %t.ir.profdata -o %t.ir.proftxt 
 // RUN: FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=IR < %t.ir.proftxt
 
+// RUN: %clang_profgen -O2 -mllvm -disable-vp=false -Xclang -fprofile-instrument=llvm -mllvm -vp-static-alloc=true -o %t.ir.warn  %S/Inputs/instrprof-value-prof-real.c
+// RUN: env LLVM_PROFILE_FILE=%t.ir.profraw %run %t.ir.warn 2>&1 |FileCheck --check-prefix=WARNING %s
+
 // IR level instrumentation with dynamic memory allocation
 // RUN: %clang_profgen -O2 -mllvm -disable-vp=false -Xclang -fprofile-instrument=llvm -mllvm -vp-static-alloc=false -mllvm -vp-counters-per-site=256 -o %t.ir.dyn  %S/Inputs/instrprof-value-prof-real.c
 // RUN: env LLVM_PROFILE_FILE=%t.ir.dyn.profraw %run %t.ir.dyn
@@ -18,3 +21,5 @@
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.dyn.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c
 // RUN: llvm-profdata merge -text  %t.ir.dyn.profdata -o %t.ir.dyn.proftxt 
 // RUN: FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=IR < %t.ir.dyn.proftxt
+
+// WARNING: LLVM Profile Warning:

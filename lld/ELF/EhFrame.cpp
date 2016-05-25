@@ -111,7 +111,7 @@ template <class ELFT> uint8_t getFdeEncoding(ArrayRef<uint8_t> D) {
   if (Version != 1 && Version != 3)
     fatal("FDE version 1 or 3 expected, but got " + Twine((unsigned)Version));
 
-  const unsigned char *AugEnd = std::find(D.begin() + 1, D.end(), '\0');
+  const unsigned char *AugEnd = std::find(D.begin(), D.end(), '\0');
   if (AugEnd == D.end())
     fatal("corrupted CIE");
   StringRef Aug(reinterpret_cast<const char *>(D.begin()), AugEnd - D.begin());

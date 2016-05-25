@@ -125,10 +125,13 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtInde
         return lldb::ValueObjectSP();
     const bool thread_and_frame_only_if_stopped = true;
     ExecutionContext exe_ctx = val_hash.first->GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped);
-    return val_hash.first->CreateValueObjectFromData(stream.GetData(),
-                                                     data,
-                                                     exe_ctx,
-                                                     val_hash.first->GetCompilerType());
+    ValueObjectSP child_sp(val_hash.first->CreateValueObjectFromData(stream.GetData(),
+                                                                     data,
+                                                                     exe_ctx,
+                                                                     val_hash.first->GetCompilerType()));
+    if (child_sp)
+        m_children.emplace(idx, child_sp);
+    return child_sp;
 }
 
 bool

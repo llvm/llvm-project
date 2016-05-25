@@ -113,6 +113,7 @@ option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
+option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE STRING "GCC toolchain for cross compiling.")
 set(LIBCXXABI_SYSROOT "" CACHE STRING "Sysroot for cross compiling.")
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE STRING "The path to libc++ library.")
@@ -272,7 +273,16 @@ if (NOT LIBCXXABI_ENABLE_SHARED)
 endif()
 
 if (NOT LIBCXXABI_ENABLE_THREADS)
+  if (LIBCXXABI_HAS_PTHREAD_API)
+    message(FATAL_ERROR "LIBCXXABI_HAS_PTHREAD_API can only"
+                        " be set to ON when LIBCXXABI_ENABLE_THREADS"
+                        " is also set to ON.")
+  endif()
   add_definitions(-DLIBCXXABI_HAS_NO_THREADS=1)
+endif()
+
+if (LIBCXXABI_HAS_PTHREAD_API)
+  add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
 endif()
 
 # This is the _ONLY_ place where add_definitions is called.

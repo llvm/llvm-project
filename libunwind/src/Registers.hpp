@@ -25,6 +25,7 @@ namespace libunwind {
 struct v128 { uint32_t vec[4]; };
 
 
+#if defined(_LIBUNWIND_TARGET_I386)
 /// Registers_x86 holds the register state of a thread in a 32-bit intel
 /// process.
 class _LIBUNWIND_HIDDEN Registers_x86 {
@@ -86,8 +87,8 @@ private:
 };
 
 inline Registers_x86::Registers_x86(const void *registers) {
-  static_assert(sizeof(Registers_x86) < sizeof(unw_context_t),
-                    "x86 registers do not fit into unw_context_t");
+  static_assert(check_fit<Registers_x86, unw_context_t>::does_fit,
+                "x86 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
 }
 
@@ -211,8 +212,10 @@ inline v128 Registers_x86::getVectorRegister(int) const {
 inline void Registers_x86::setVectorRegister(int, v128) {
   _LIBUNWIND_ABORT("no x86 vector registers");
 }
+#endif // _LIBUNWIND_TARGET_I386
 
 
+#if defined(_LIBUNWIND_TARGET_X86_64)
 /// Registers_x86_64  holds the register state of a thread in a 64-bit intel
 /// process.
 class _LIBUNWIND_HIDDEN Registers_x86_64 {
@@ -278,8 +281,8 @@ private:
 };
 
 inline Registers_x86_64::Registers_x86_64(const void *registers) {
-  static_assert(sizeof(Registers_x86_64) < sizeof(unw_context_t),
-                    "x86_64 registers do not fit into unw_context_t");
+  static_assert(check_fit<Registers_x86_64, unw_context_t>::does_fit,
+                "x86_64 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
 }
 
@@ -459,8 +462,10 @@ inline v128 Registers_x86_64::getVectorRegister(int) const {
 inline void Registers_x86_64::setVectorRegister(int, v128) {
   _LIBUNWIND_ABORT("no x86_64 vector registers");
 }
+#endif // _LIBUNWIND_TARGET_X86_64
 
 
+#if defined(_LIBUNWIND_TARGET_PPC)
 /// Registers_ppc holds the register state of a thread in a 32-bit PowerPC
 /// process.
 class _LIBUNWIND_HIDDEN Registers_ppc {
@@ -543,8 +548,8 @@ private:
 };
 
 inline Registers_ppc::Registers_ppc(const void *registers) {
-  static_assert(sizeof(Registers_ppc) < sizeof(unw_context_t),
-                    "ppc registers do not fit into unw_context_t");
+  static_assert(check_fit<Registers_ppc, unw_context_t>::does_fit,
+                "ppc registers do not fit into unw_context_t");
   memcpy(&_registers, static_cast<const uint8_t *>(registers),
          sizeof(_registers));
   static_assert(sizeof(ppc_thread_state_t) == 160,
@@ -1023,8 +1028,10 @@ inline const char *Registers_ppc::getRegisterName(int regNum) {
   }
 
 }
+#endif // _LIBUNWIND_TARGET_PPC
 
 
+#if defined(_LIBUNWIND_TARGET_AARCH64)
 /// Registers_arm64  holds the register state of a thread in a 64-bit arm
 /// process.
 class _LIBUNWIND_HIDDEN Registers_arm64 {
@@ -1071,8 +1078,8 @@ private:
 };
 
 inline Registers_arm64::Registers_arm64(const void *registers) {
-  static_assert(sizeof(Registers_arm64) < sizeof(unw_context_t),
-                    "arm64 registers do not fit into unw_context_t");
+  static_assert(check_fit<Registers_arm64, unw_context_t>::does_fit,
+                "arm64 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
   static_assert(sizeof(GPRs) == 0x110,
                 "expected VFP registers to be at offset 272");
@@ -1289,7 +1296,9 @@ inline v128 Registers_arm64::getVectorRegister(int) const {
 inline void Registers_arm64::setVectorRegister(int, v128) {
   _LIBUNWIND_ABORT("no arm64 vector register support yet");
 }
+#endif // _LIBUNWIND_TARGET_AARCH64
 
+#if defined(_LIBUNWIND_TARGET_ARM)
 /// Registers_arm holds the register state of a thread in a 32-bit arm
 /// process.
 ///
@@ -1395,8 +1404,8 @@ inline Registers_arm::Registers_arm(const void *registers)
     _saved_vfp_d16_d31(false),
     _saved_iwmmx(false),
     _saved_iwmmx_control(false) {
-  static_assert(sizeof(Registers_arm) < sizeof(unw_context_t),
-                    "arm registers do not fit into unw_context_t");
+  static_assert(check_fit<Registers_arm, unw_context_t>::does_fit,
+                "arm registers do not fit into unw_context_t");
   // See unw_getcontext() note about data.
   memcpy(&_registers, registers, sizeof(_registers));
   memset(&_vfp_d0_d15_pad, 0, sizeof(_vfp_d0_d15_pad));
@@ -1711,6 +1720,10 @@ inline v128 Registers_arm::getVectorRegister(int) const {
 inline void Registers_arm::setVectorRegister(int, v128) {
   _LIBUNWIND_ABORT("ARM vector support not implemented");
 }
+#endif // _LIBUNWIND_TARGET_ARM
+
+
+#if defined(_LIBUNWIND_TARGET_OR1K)
 /// Registers_or1k holds the register state of a thread in an OpenRISC1000
 /// process.
 class _LIBUNWIND_HIDDEN Registers_or1k {
@@ -1745,8 +1758,8 @@ private:
 };
 
 inline Registers_or1k::Registers_or1k(const void *registers) {
-  static_assert(sizeof(Registers_or1k) < sizeof(unw_context_t),
-                    "or1k registers do not fit into unw_context_t");
+  static_assert(check_fit<Registers_or1k, unw_context_t>::does_fit,
+                "or1k registers do not fit into unw_context_t");
   memcpy(&_registers, static_cast<const uint8_t *>(registers),
          sizeof(_registers));
 }
@@ -1893,6 +1906,7 @@ inline const char *Registers_or1k::getRegisterName(int regNum) {
   }
 
 }
+#endif // _LIBUNWIND_TARGET_OR1K
 } // namespace libunwind
 
 #endif // __REGISTERS_HPP__

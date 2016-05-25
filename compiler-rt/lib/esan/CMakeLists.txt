@@ -12,6 +12,7 @@ set(ESAN_SOURCES
   esan_flags.cpp
   esan_interface.cpp
   esan_interceptors.cpp
+  cache_frag.cpp
   working_set.cpp)
 
 foreach (arch ${ESAN_SUPPORTED_ARCH})
