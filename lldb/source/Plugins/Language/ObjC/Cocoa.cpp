@@ -545,7 +545,8 @@ lldb_private::formatters::NSNumberSummaryProvider (ValueObject& valobj, Stream& 
                     uint32_t flt_as_int = process_sp->ReadUnsignedIntegerFromMemory(data_location, 4, 0, error);
                     if (error.Fail())
                         return false;
-                    float flt_value = *((float*)&flt_as_int);
+                    float flt_value = 0.0f;
+                    memcpy(&flt_value, &flt_as_int, sizeof(flt_as_int));
                     NSNumber_FormatFloat(valobj, stream, flt_value, options.GetLanguage());
                     break;
                 }
@@ -554,7 +555,8 @@ lldb_private::formatters::NSNumberSummaryProvider (ValueObject& valobj, Stream& 
                     uint64_t dbl_as_lng = process_sp->ReadUnsignedIntegerFromMemory(data_location, 8, 0, error);
                     if (error.Fail())
                         return false;
-                    double dbl_value = *((double*)&dbl_as_lng);
+                    double dbl_value = 0.0;
+                    memcpy(&dbl_value, &dbl_as_lng, sizeof(dbl_as_lng));
                     NSNumber_FormatDouble(valobj, stream, dbl_value, options.GetLanguage());
                     break;
                 }
@@ -675,7 +677,7 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
         if (descriptor->GetTaggedPointerInfo(&info_bits,&value_bits))
         {
             date_value_bits = ((value_bits << 8) | (info_bits << 4));
-            date_value = *((double*)&date_value_bits);
+            memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
         }
         else
         {
@@ -683,7 +685,7 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
             uint32_t delta = (triple.isWatchOS() && triple.isWatchABI()) ? 8 : ptr_size;
             Error error;
             date_value_bits = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr+delta, 8, 0, error);
-            date_value = *((double*)&date_value_bits);
+            memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
             if (error.Fail())
                 return false;
         }
@@ -692,7 +694,7 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
     {
         Error error;
         date_value_bits = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr+2*ptr_size, 8, 0, error);
-        date_value = *((double*)&date_value_bits);
+        memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
         if (error.Fail())
             return false;
     }
@@ -949,7 +951,7 @@ lldb_private::formatters::GetOSXEpoch ()
         tm_epoch.tm_min = 0;
         tm_epoch.tm_mon = 0;
         tm_epoch.tm_mday = 1;
-        tm_epoch.tm_year = 2001-1900; // for some reason, we need to subtract 1900 from this field. not sure why.
+        tm_epoch.tm_year = 2001-1900;
         tm_epoch.tm_isdst = -1;
         tm_epoch.tm_gmtoff = 0;
         tm_epoch.tm_zone = nullptr;
