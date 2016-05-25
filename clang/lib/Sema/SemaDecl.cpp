@@ -473,17 +473,53 @@ synthesizeCurrentNestedNameSpecifier(ASTContext &Context, DeclContext *DC) {
   llvm_unreachable("something isn't in TU scope?");
 }
 
-ParsedType Sema::ActOnDelayedDefaultTemplateArg(const IdentifierInfo &II,
-                                                SourceLocation NameLoc) {
-  // Accepting an undeclared identifier as a default argument for a template
-  // type parameter is a Microsoft extension.
-  Diag(NameLoc, diag::ext_ms_delayed_template_argument) << &II;
+/// Find the parent class with dependent bases of the innermost enclosing method
+/// context. Do not look for enclosing CXXRecordDecls directly, or we will end
+/// up allowing unqualified dependent type names at class-level, which MSVC
+/// correctly rejects.
+static const CXXRecordDecl *
+findRecordWithDependentBasesOfEnclosingMethod(const DeclContext *DC) {
+  for (; DC && DC->isDependentContext(); DC = DC->getLookupParent()) {
+    DC = DC->getPrimaryContext();
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(DC))
+      if (MD->getParent()->hasAnyDependentBases())
+        return MD->getParent();
+  }
+  return nullptr;
+}
 
-  // Build a fake DependentNameType that will perform lookup into CurContext at
-  // instantiation time.  The name specifier isn't dependent, so template
-  // instantiation won't transform it.  It will retry the lookup, however.
-  NestedNameSpecifier *NNS =
-      synthesizeCurrentNestedNameSpecifier(Context, CurContext);
+ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
+                                          SourceLocation NameLoc,
+                                          bool IsTemplateTypeArg) {
+  assert(getLangOpts().MSVCCompat && "shouldn't be called in non-MSVC mode");
+
+  NestedNameSpecifier *NNS = nullptr;
+  if (IsTemplateTypeArg && getCurScope()->isTemplateParamScope()) {
+    // If we weren't able to parse a default template argument, delay lookup
+    // until instantiation time by making a non-dependent DependentTypeName. We
+    // pretend we saw a NestedNameSpecifier referring to the current scope, and
+    // lookup is retried.
+    // FIXME: This hurts our diagnostic quality, since we get errors like "no
+    // type named 'Foo' in 'current_namespace'" when the user didn't write any
+    // name specifiers.
+    NNS = synthesizeCurrentNestedNameSpecifier(Context, CurContext);
+    Diag(NameLoc, diag::ext_ms_delayed_template_argument) << &II;
+  } else if (const CXXRecordDecl *RD =
+                 findRecordWithDependentBasesOfEnclosingMethod(CurContext)) {
+    // Build a DependentNameType that will perform lookup into RD at
+    // instantiation time.
+    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->isTemplateDecl(),
+                                      RD->getTypeForDecl());
+
+    // Diagnose that this identifier was undeclared, and retry the lookup during
+    // template instantiation.
+    Diag(NameLoc, diag::ext_undeclared_unqual_id_with_dependent_base) << &II
+                                                                      << RD;
+  } else {
+    // This is not a situation that we should recover from.
+    return ParsedType();
+  }
+
   QualType T = Context.getDependentNameType(ETK_None, NNS, &II);
 
   // Build type location information.  We synthesized the qualifier, so we have

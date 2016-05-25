@@ -1549,12 +1549,13 @@ public:
                                ParsedType &SuggestedType,
                                bool AllowClassTemplates = false);
 
-  /// \brief For compatibility with MSVC, we delay parsing of some default
-  /// template type arguments until instantiation time.  Emits a warning and
-  /// returns a synthesized DependentNameType that isn't really dependent on any
-  /// other template arguments.
-  ParsedType ActOnDelayedDefaultTemplateArg(const IdentifierInfo &II,
-                                            SourceLocation NameLoc);
+  /// Attempt to behave like MSVC in situations where lookup of an unqualified
+  /// type name has failed in a dependent context. In these situations, we
+  /// automatically form a DependentTypeName that will retry lookup in a related
+  /// scope during instantiation.
+  ParsedType ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
+                                      SourceLocation NameLoc,
+                                      bool IsTemplateTypeArg);
 
   /// \brief Describes the result of the name lookup and resolution performed
   /// by \c ClassifyName().

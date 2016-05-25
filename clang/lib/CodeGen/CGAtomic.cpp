@@ -1274,31 +1274,11 @@ bool CodeGenFunction::LValueIsSuitableForInlineAtomic(LValue LV) {
   bool IsVolatile = LV.isVolatile() || hasVolatileMember(LV.getType());
   // An atomic is inline if we don't need to use a libcall.
   bool AtomicIsInline = !AI.shouldUseLibcall();
-  return IsVolatile && AtomicIsInline;
-}
-
-/// An type is a candidate for having its loads and stores be made atomic if
-/// we are operating under /volatile:ms *and* we know the access is volatile and
-/// performing such an operation can be performed without a libcall.
-bool CodeGenFunction::typeIsSuitableForInlineAtomic(QualType Ty,
-                                                    bool IsVolatile) const {
-  // The operation must be volatile for us to make it atomic.
-  if (!IsVolatile)
-    return false;
-  // The -fms-volatile flag must be passed for us to adopt this behavior.
-  if (!CGM.getCodeGenOpts().MSVolatile)
-    return false;
-
-  // An atomic is inline if we don't need to use a libcall (e.g. it is builtin).
-  if (!getContext().getTargetInfo().hasBuiltinAtomic(
-          getContext().getTypeSize(Ty), getContext().getTypeAlign(Ty)))
-    return false;
-
   // MSVC doesn't seem to do this for types wider than a pointer.
-  if (getContext().getTypeSize(Ty) >
+  if (getContext().getTypeSize(LV.getType()) >
       getContext().getTypeSize(getContext().getIntPtrType()))
     return false;
-  return true;
+  return IsVolatile && AtomicIsInline;
 }
 
 RValue CodeGenFunction::EmitAtomicLoad(LValue LV, SourceLocation SL,

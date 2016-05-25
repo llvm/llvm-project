@@ -683,8 +683,8 @@ void X86_64TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
   }
 
   const uint8_t Inst[] = {
-      0x66, 0x66,                                          //.word 0x6666
-      0x66,                                                //.byte 0x66
+      0x66, 0x66,                                          // .word 0x6666
+      0x66,                                                // .byte 0x66
       0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00 // mov %fs:0,%rax
   };
   memcpy(Loc - 3, Inst, sizeof(Inst));
@@ -700,15 +700,6 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_32S:
   case R_X86_64_TPOFF32:
   case R_X86_64_GOT32:
-    checkInt<32>(Val, Type);
-    write32le(Loc, Val);
-    break;
-  case R_X86_64_64:
-  case R_X86_64_DTPOFF64:
-  case R_X86_64_SIZE64:
-  case R_X86_64_PC64:
-    write64le(Loc, Val);
-    break;
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
@@ -721,6 +712,12 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_X86_64_SIZE32:
     checkInt<32>(Val, Type);
     write32le(Loc, Val);
+    break;
+  case R_X86_64_64:
+  case R_X86_64_DTPOFF64:
+  case R_X86_64_SIZE64:
+  case R_X86_64_PC64:
+    write64le(Loc, Val);
     break;
   default:
     fatal("unrecognized reloc " + Twine(Type));
@@ -1075,14 +1072,17 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                     uint64_t Val) const {
   switch (Type) {
   case R_AARCH64_ABS16:
+  case R_AARCH64_PREL16:
     checkIntUInt<16>(Val, Type);
     write16le(Loc, Val);
     break;
   case R_AARCH64_ABS32:
+  case R_AARCH64_PREL32:
     checkIntUInt<32>(Val, Type);
     write32le(Loc, Val);
     break;
   case R_AARCH64_ABS64:
+  case R_AARCH64_PREL64:
     write64le(Loc, Val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
@@ -1093,17 +1093,14 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     or32le(Loc, (Val & 0xFFF) << 10);
     break;
   case R_AARCH64_ADR_GOT_PAGE:
+  case R_AARCH64_ADR_PREL_PG_HI21:
+  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     checkInt<33>(Val, Type);
     updateAArch64Addr(Loc, (Val >> 12) & 0x1FFFFF); // X[32:12]
     break;
   case R_AARCH64_ADR_PREL_LO21:
     checkInt<21>(Val, Type);
     updateAArch64Addr(Loc, Val & 0x1FFFFF);
-    break;
-  case R_AARCH64_ADR_PREL_PG_HI21:
-  case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    checkInt<33>(Val, Type);
-    updateAArch64Addr(Loc, (Val >> 12) & 0x1FFFFF); // X[32:12]
     break;
   case R_AARCH64_CALL26:
   case R_AARCH64_JUMP26:
@@ -1133,17 +1130,6 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_AARCH64_LDST64_ABS_LO12_NC:
     or32le(Loc, (Val & 0xFF8) << 7);
-    break;
-  case R_AARCH64_PREL16:
-    checkIntUInt<16>(Val, Type);
-    write16le(Loc, Val);
-    break;
-  case R_AARCH64_PREL32:
-    checkIntUInt<32>(Val, Type);
-    write32le(Loc, Val);
-    break;
-  case R_AARCH64_PREL64:
-    write64le(Loc, Val);
     break;
   case R_AARCH64_TSTBR14:
     checkInt<16>(Val, Type);

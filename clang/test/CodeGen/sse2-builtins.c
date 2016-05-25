@@ -1256,13 +1256,13 @@ void test_mm_storer_pd(__m128d A, double* B) {
 
 void test_mm_storeu_pd(double* A, __m128d B) {
   // CHECK-LABEL: test_mm_storeu_pd
-  // CHECK: store <2 x double> %{{.*}}, <2 x double>* %{{.*}}, align 1
+  // CHECK: call void @llvm.x86.sse2.storeu.pd(i8* %{{.*}}, <2 x double> %{{.*}})
   _mm_storeu_pd(A, B);
 }
 
 void test_mm_storeu_si128(__m128i* A, __m128i B) {
   // CHECK-LABEL: test_mm_storeu_si128
-  // CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1
+  // CHECK: call void @llvm.x86.sse2.storeu.dq(i8* %{{.*}}, <16 x i8> %{{.*}})
   _mm_storeu_si128(A, B);
 }
 

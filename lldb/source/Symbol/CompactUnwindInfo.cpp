@@ -101,6 +101,27 @@ namespace lldb_private {
         UNWIND_X86_64_REG_R15        = 5,
         UNWIND_X86_64_REG_RBP        = 6,
     };
+
+    FLAGS_ANONYMOUS_ENUM()
+    {
+    	UNWIND_ARM64_MODE_MASK                     = 0x0F000000,
+    	UNWIND_ARM64_MODE_FRAMELESS                = 0x02000000,
+    	UNWIND_ARM64_MODE_DWARF                    = 0x03000000,
+    	UNWIND_ARM64_MODE_FRAME                    = 0x04000000,
+
+    	UNWIND_ARM64_FRAME_X19_X20_PAIR            = 0x00000001,
+    	UNWIND_ARM64_FRAME_X21_X22_PAIR            = 0x00000002,
+    	UNWIND_ARM64_FRAME_X23_X24_PAIR            = 0x00000004,
+    	UNWIND_ARM64_FRAME_X25_X26_PAIR            = 0x00000008,
+    	UNWIND_ARM64_FRAME_X27_X28_PAIR            = 0x00000010,
+    	UNWIND_ARM64_FRAME_D8_D9_PAIR              = 0x00000100,
+    	UNWIND_ARM64_FRAME_D10_D11_PAIR            = 0x00000200,
+    	UNWIND_ARM64_FRAME_D12_D13_PAIR            = 0x00000400,
+    	UNWIND_ARM64_FRAME_D14_D15_PAIR            = 0x00000800,
+
+    	UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK     = 0x00FFF000,
+    	UNWIND_ARM64_DWARF_SECTION_OFFSET          = 0x00FFFFFF,
+    };
 }
 
 
@@ -194,6 +215,10 @@ CompactUnwindInfo::GetUnwindPlan (Target &target, Address addr, UnwindPlan& unwi
             if (arch.GetTriple().getArch() == llvm::Triple::x86_64)
             {
                 return CreateUnwindPlan_x86_64 (target, function_info, unwind_plan, addr);
+            }
+            if (arch.GetTriple().getArch() == llvm::Triple::aarch64)
+            {
+                return CreateUnwindPlan_arm64 (target, function_info, unwind_plan, addr);
             }
             if (arch.GetTriple().getArch() == llvm::Triple::x86)
             {
@@ -1229,3 +1254,166 @@ CompactUnwindInfo::CreateUnwindPlan_i386 (Target &target, FunctionInfo &function
     }
     return false;
 }
+
+
+
+// DWARF register numbers from "DWARF for the ARM 64-bit Architecture (AArch64)" doc by ARM
+
+enum arm64_eh_regnum {
+    x19 = 19,
+    x20 = 20,
+    x21 = 21,
+    x22 = 22,
+    x23 = 23,
+    x24 = 24,
+    x25 = 25,
+    x26 = 26,
+    x27 = 27,
+    x28 = 28,
+
+    fp = 29,
+    ra = 30,
+    sp = 31,
+    pc = 32,
+
+    // Compact unwind encodes d8-d15 but we don't have eh_frame / dwarf reg #'s for the 64-bit
+    // fp regs.  Normally in DWARF it's context sensitive - so it knows it is fetching a 
+    // 32- or 64-bit quantity from reg v8 to indicate s0 or d0 - but the unwinder is operating
+    // at a lower level and we'd try to fetch 128 bits if we were told that v8 were stored on
+    // the stack...
+	v8  = 72,  
+	v9  = 73,  
+	v10 = 74,
+	v11 = 75,
+	v12 = 76,
+	v13 = 77,
+	v14 = 78,
+	v15 = 79,
+};
+
+bool
+CompactUnwindInfo::CreateUnwindPlan_arm64 (Target &target, FunctionInfo &function_info, UnwindPlan &unwind_plan, Address pc_or_function_start)
+{
+    unwind_plan.SetSourceName ("compact unwind info");
+    unwind_plan.SetSourcedFromCompiler (eLazyBoolYes);
+    unwind_plan.SetUnwindPlanValidAtAllInstructions (eLazyBoolNo);
+    unwind_plan.SetRegisterKind (eRegisterKindEHFrame);
+
+    unwind_plan.SetLSDAAddress (function_info.lsda_address);
+    unwind_plan.SetPersonalityFunctionPtr (function_info.personality_ptr_address);
+
+    UnwindPlan::RowSP row (new UnwindPlan::Row);
+
+    const int wordsize = 8;
+    int mode = function_info.encoding & UNWIND_ARM64_MODE_MASK;
+
+    if (mode == UNWIND_ARM64_MODE_DWARF)
+        return false;
+
+    if (mode == UNWIND_ARM64_MODE_FRAMELESS)
+    {
+        row->SetOffset (0);
+
+        uint32_t stack_size = (EXTRACT_BITS (function_info.encoding, UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK)) * 16;
+
+        // Our previous Call Frame Address is the stack pointer plus the stack size
+        row->GetCFAValue().SetIsRegisterPlusOffset (arm64_eh_regnum::sp, stack_size);
+
+        // Our previous PC is in the LR
+        row->SetRegisterLocationToRegister(arm64_eh_regnum::pc, arm64_eh_regnum::ra, true);
+
+        unwind_plan.AppendRow (row);
+        return true;
+    }
+
+    // Should not be possible
+    if (mode != UNWIND_ARM64_MODE_FRAME)
+        return false;
+
+
+    // mode == UNWIND_ARM64_MODE_FRAME
+
+    row->GetCFAValue().SetIsRegisterPlusOffset (arm64_eh_regnum::fp , 2 * wordsize);
+    row->SetOffset (0);
+    row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::fp, wordsize * -2, true);
+    row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::pc, wordsize * -1, true);
+    row->SetRegisterLocationToIsCFAPlusOffset (arm64_eh_regnum::sp, 0, true);
+
+    int reg_pairs_saved_count = 1;
+    
+    uint32_t saved_register_bits = function_info.encoding & 0xfff;
+
+    if (saved_register_bits & UNWIND_ARM64_FRAME_X19_X20_PAIR)
+    {
+        int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x19, cfa_offset, true);
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x20, cfa_offset, true);
+        reg_pairs_saved_count++;
+    }
+
+    if (saved_register_bits & UNWIND_ARM64_FRAME_X21_X22_PAIR)
+    {
+        int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x21, cfa_offset, true);
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x22, cfa_offset, true);
+        reg_pairs_saved_count++;
+    }
+
+    if (saved_register_bits & UNWIND_ARM64_FRAME_X23_X24_PAIR)
+    {
+        int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x23, cfa_offset, true);
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x24, cfa_offset, true);
+        reg_pairs_saved_count++;
+    }
+
+    if (saved_register_bits & UNWIND_ARM64_FRAME_X25_X26_PAIR)
+    {
+        int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x25, cfa_offset, true);
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x26, cfa_offset, true);
+        reg_pairs_saved_count++;
+    }
+
+    if (saved_register_bits & UNWIND_ARM64_FRAME_X27_X28_PAIR)
+    {
+        int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x27, cfa_offset, true);
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm64_eh_regnum::x28, cfa_offset, true);
+        reg_pairs_saved_count++;
+    }
+
+    // If we use the v8-v15 regnums here, the unwinder will try to grab 128 bits off the stack;
+    // not sure if we have a good way to represent the 64-bitness of these saves.
+
+    if (saved_register_bits & UNWIND_ARM64_FRAME_D8_D9_PAIR)
+    {
+        reg_pairs_saved_count++;
+    }
+    if (saved_register_bits & UNWIND_ARM64_FRAME_D10_D11_PAIR)
+    {
+        reg_pairs_saved_count++;
+    }
+    if (saved_register_bits & UNWIND_ARM64_FRAME_D12_D13_PAIR)
+    {
+        reg_pairs_saved_count++;
+    }
+    if (saved_register_bits & UNWIND_ARM64_FRAME_D14_D15_PAIR)
+    {
+        reg_pairs_saved_count++;
+    }
+
+    unwind_plan.AppendRow (row);
+    return true;
+}
+

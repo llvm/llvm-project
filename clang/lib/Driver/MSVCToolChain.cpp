@@ -722,8 +722,20 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
       }
       break;
     case 'b':
-      if (I + 1 != E && isdigit(OptStr[I + 1]))
+      if (I + 1 != E && isdigit(OptStr[I + 1])) {
+        switch (OptStr[I + 1]) {
+        case '0':
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_inline));
+          break;
+        case '1':
+          // TODO: Inline calls to 'inline functions' only.
+          break;
+        case '2':
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_functions));
+          break;
+        }
         ++I;
+      }
       break;
     case 'g':
       break;
@@ -807,7 +819,12 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
       continue;
     StringRef OptStr = A->getValue();
     for (size_t I = 0, E = OptStr.size(); I != E; ++I) {
-      const char &OptChar = *(OptStr.data() + I);
+      char OptChar = OptStr[I];
+      char PrevChar = I > 0 ? OptStr[I - 1] : '0';
+      if (PrevChar == 'b') {
+        // OptChar does not expand; it's an argument to the previous char.
+        continue;
+      }
       if (OptChar == '1' || OptChar == '2' || OptChar == 'x' || OptChar == 'd')
         ExpandChar = OptStr.data() + I;
     }
