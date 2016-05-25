@@ -17,8 +17,14 @@
 
 using namespace __esan; // NOLINT
 
-void __esan_init(ToolType Tool) {
+void __esan_init(ToolType Tool, void *Ptr) {
+  WhichTool = Tool;
   initializeLibrary(Tool);
+  processCompilationUnitInit(Ptr);
+}
+
+void __esan_exit(void *Ptr) {
+  processCompilationUnitExit(Ptr);
 }
 
 void __esan_aligned_load1(void *Addr) {

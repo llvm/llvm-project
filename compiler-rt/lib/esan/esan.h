@@ -37,6 +37,10 @@ extern ToolType WhichTool;
 
 void initializeLibrary(ToolType Tool);
 int finalizeLibrary();
+// Esan creates the variable per tool per compilation unit at compile time
+// and passes its pointer Ptr to the runtime library.
+void processCompilationUnitInit(void *Ptr);
+void processCompilationUnitExit(void *Ptr);
 void processRangeAccess(uptr PC, uptr Addr, int Size, bool IsWrite);
 void initializeInterceptors();
 

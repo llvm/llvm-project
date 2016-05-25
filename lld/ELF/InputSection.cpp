@@ -317,12 +317,6 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
     uint64_t SymVA = SignExtend64<Bits>(
         getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, BufLoc, *File, Expr));
 
-    if (Expr == R_PPC_PLT_OPD) {
-      uint32_t Nop = 0x60000000;
-      if (BufLoc + 8 <= BufEnd && read32be(BufLoc + 4) == Nop)
-        write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
-    }
-
     switch (Expr) {
     case R_RELAX_TLS_IE_TO_LE:
       Target->relaxTlsIeToLe(BufLoc, Type, SymVA);
@@ -336,6 +330,11 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
     case R_RELAX_TLS_GD_TO_IE:
       Target->relaxTlsGdToIe(BufLoc, Type, SymVA);
       break;
+    case R_PPC_PLT_OPD:
+      // Patch a nop (0x60000000) to a ld.
+      if (BufLoc + 8 <= BufEnd && read32be(BufLoc + 4) == 0x60000000)
+        write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
+      // fallthrough
     default:
       Target->relocateOne(BufLoc, Type, SymVA);
       break;
@@ -415,10 +414,10 @@ void EhInputSection<ELFT>::split() {
   ArrayRef<uint8_t> Data = this->getSectionData();
   for (size_t Off = 0, End = Data.size(); Off != End;) {
     size_t Size = readEhRecordSize<ELFT>(Data.slice(Off));
+    this->Pieces.emplace_back(Off, Data.slice(Off, Size));
     // The empty record is the end marker.
     if (Size == 4)
       break;
-    this->Pieces.emplace_back(Off, Data.slice(Off, Size));
     Off += Size;
   }
 }
