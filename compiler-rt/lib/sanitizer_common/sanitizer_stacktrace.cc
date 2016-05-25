@@ -40,11 +40,6 @@ void BufferedStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
   top_frame_bp = 0;
 }
 
-// Check if given pointer points into allocated stack area.
-static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
-  return frame > stack_bottom && frame < stack_top - 2 * sizeof (uhwptr);
-}
-
 // In GCC on ARM bp points to saved lr, not fp, so we should check the next
 // cell in stack to be a saved frame pointer. GetCanonicFrame returns the
 // pointer to saved frame pointer in any case.
