@@ -679,8 +679,6 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc::atol:
   case LibFunc::atoll:
   case LibFunc::ferror:
-  case LibFunc::fseeko64:
-  case LibFunc::ftello64:
   case LibFunc::getenv:
   case LibFunc::getpwnam:
   case LibFunc::pclose:
@@ -706,9 +704,11 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc::flockfile:
   case LibFunc::free:
   case LibFunc::fseek:
+  case LibFunc::fseeko64:
   case LibFunc::fseeko:
   case LibFunc::fsetpos:
   case LibFunc::ftell:
+  case LibFunc::ftello64:
   case LibFunc::ftello:
   case LibFunc::ftrylockfile:
   case LibFunc::funlockfile:

@@ -1,3 +1,4 @@
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -inferattrs -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck %s
 
 ; Check that we don't modify libc functions with invalid prototypes.
@@ -323,20 +324,32 @@ declare void @fseek(...)
 ; CHECK: declare void @fseeko(...)
 declare void @fseeko(...)
 
+; CHECK: declare void @fseeko64(...)
+declare void @fseeko64(...)
+
 ; CHECK: declare void @fsetpos(...)
 declare void @fsetpos(...)
 
 ; CHECK: declare void @fstat(...)
 declare void @fstat(...)
 
+; CHECK: declare void @fstat64(...)
+declare void @fstat64(...)
+
 ; CHECK: declare void @fstatvfs(...)
 declare void @fstatvfs(...)
+
+; CHECK: declare void @fstatvfs64(...)
+declare void @fstatvfs64(...)
 
 ; CHECK: declare void @ftell(...)
 declare void @ftell(...)
 
 ; CHECK: declare void @ftello(...)
 declare void @ftello(...)
+
+; CHECK: declare void @ftello64(...)
+declare void @ftello64(...)
 
 ; CHECK: declare void @ftrylockfile(...)
 declare void @ftrylockfile(...)
@@ -446,8 +459,14 @@ declare void @logl(...)
 ; CHECK: declare void @lstat(...)
 declare void @lstat(...)
 
+; CHECK: declare void @lstat64(...)
+declare void @lstat64(...)
+
 ; CHECK: declare void @malloc(...)
 declare void @malloc(...)
+
+; CHECK: declare void @memalign(...)
+declare void @memalign(...)
 
 ; CHECK: declare void @memccpy(...)
 declare void @memccpy(...)
@@ -496,6 +515,9 @@ declare void @nearbyintl(...)
 
 ; CHECK: declare void @open(...)
 declare void @open(...)
+
+; CHECK: declare void @open64(...)
+declare void @open64(...)
 
 ; CHECK: declare void @opendir(...)
 declare void @opendir(...)
@@ -638,8 +660,14 @@ declare void @sscanf(...)
 ; CHECK: declare void @stat(...)
 declare void @stat(...)
 
+; CHECK: declare void @stat64(...)
+declare void @stat64(...)
+
 ; CHECK: declare void @statvfs(...)
 declare void @statvfs(...)
+
+; CHECK: declare void @statvfs64(...)
+declare void @statvfs64(...)
 
 ; CHECK: declare void @stpcpy(...)
 declare void @stpcpy(...)
@@ -760,6 +788,9 @@ declare void @times(...)
 
 ; CHECK: declare void @tmpfile(...)
 declare void @tmpfile(...)
+
+; CHECK: declare void @tmpfile64(...)
+declare void @tmpfile64(...)
 
 ; CHECK: declare void @toascii(...)
 declare void @toascii(...)
