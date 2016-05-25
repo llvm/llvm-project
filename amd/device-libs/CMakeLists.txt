@@ -67,7 +67,7 @@ list(APPEND CMAKE_OCL_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_C_SOURCE_FILE_EXTENSIONS .cl)
 list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS .cl)
 
-set (CLANG_OCL_FLAGS "-x cl -Xclang -cl-std=CL2.0 -fblocks -target amdgcn--amdhsa -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200 -Dcl_khr_fp64 -Dcl_khr_fp16 -include opencl.h ${CLANG_OPTIONS_APPEND}")
+set (CLANG_OCL_FLAGS "-x cl -Xclang -cl-std=CL2.0 -fblocks -target amdgcn--amdhsa -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200 -Dcl_khr_fp64 -Dcl_khr_fp16 -include opencl-c.h ${CLANG_OPTIONS_APPEND}")
 set (CLANG_OCL_LINK_FLAGS "-target amdgcn--amdhsa -mcpu=fiji")
 
 include(OCL.cmake)
