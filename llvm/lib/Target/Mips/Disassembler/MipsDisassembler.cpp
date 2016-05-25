@@ -563,7 +563,7 @@ static DecodeStatus DecodeAddiGroupBranch(MCInst &MI, InsnType insn,
 
   InsnType Rs = fieldFromInstruction(insn, 21, 5);
   InsnType Rt = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4;
+  int64_t Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   bool HasRs = false;
 
   if (Rs >= Rt) {
@@ -602,7 +602,7 @@ static DecodeStatus DecodeDaddiGroupBranch(MCInst &MI, InsnType insn,
 
   InsnType Rs = fieldFromInstruction(insn, 21, 5);
   InsnType Rt = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4;
+  int64_t  Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   bool HasRs = false;
 
   if (Rs >= Rt) {
@@ -642,7 +642,7 @@ static DecodeStatus DecodeBlezlGroupBranch(MCInst &MI, InsnType insn,
 
   InsnType Rs = fieldFromInstruction(insn, 21, 5);
   InsnType Rt = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4;
+  int64_t Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   bool HasRs = false;
 
   if (Rt == 0)
@@ -687,7 +687,7 @@ static DecodeStatus DecodeBgtzlGroupBranch(MCInst &MI, InsnType insn,
 
   InsnType Rs = fieldFromInstruction(insn, 21, 5);
   InsnType Rt = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4;
+  int64_t Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
 
   if (Rt == 0)
     return MCDisassembler::Fail;
@@ -729,7 +729,7 @@ static DecodeStatus DecodeBgtzGroupBranch(MCInst &MI, InsnType insn,
 
   InsnType Rs = fieldFromInstruction(insn, 21, 5);
   InsnType Rt = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4;
+  int64_t Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   bool HasRs = false;
   bool HasRt = false;
 
@@ -778,7 +778,7 @@ static DecodeStatus DecodeBlezGroupBranch(MCInst &MI, InsnType insn,
 
   InsnType Rs = fieldFromInstruction(insn, 21, 5);
   InsnType Rt = fieldFromInstruction(insn, 16, 5);
-  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4;
+  int64_t Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 4 + 4;
   bool HasRs = false;
 
   if (Rt == 0)
@@ -1822,7 +1822,7 @@ static DecodeStatus DecodeBranchTarget21(MCInst &Inst,
                                          unsigned Offset,
                                          uint64_t Address,
                                          const void *Decoder) {
-  int32_t BranchOffset = SignExtend32<21>(Offset) * 4;
+  int32_t BranchOffset = SignExtend32<21>(Offset) * 4 + 4;
 
   Inst.addOperand(MCOperand::createImm(BranchOffset));
   return MCDisassembler::Success;
@@ -1832,7 +1832,7 @@ static DecodeStatus DecodeBranchTarget26(MCInst &Inst,
                                          unsigned Offset,
                                          uint64_t Address,
                                          const void *Decoder) {
-  int32_t BranchOffset = SignExtend32<26>(Offset) * 4;
+  int32_t BranchOffset = SignExtend32<26>(Offset) * 4 + 4;
 
   Inst.addOperand(MCOperand::createImm(BranchOffset));
   return MCDisassembler::Success;
