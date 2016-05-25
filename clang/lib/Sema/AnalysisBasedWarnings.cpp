@@ -1322,21 +1322,27 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
       Ivar
     } ObjectKind;
 
-    const NamedDecl *D = Key.getProperty();
-    if (isa<VarDecl>(D))
+    const NamedDecl *KeyProp = Key.getProperty();
+    if (isa<VarDecl>(KeyProp))
       ObjectKind = Variable;
-    else if (isa<ObjCPropertyDecl>(D))
+    else if (isa<ObjCPropertyDecl>(KeyProp))
       ObjectKind = Property;
-    else if (isa<ObjCMethodDecl>(D))
+    else if (isa<ObjCMethodDecl>(KeyProp))
       ObjectKind = ImplicitProperty;
-    else if (isa<ObjCIvarDecl>(D))
+    else if (isa<ObjCIvarDecl>(KeyProp))
       ObjectKind = Ivar;
     else
       llvm_unreachable("Unexpected weak object kind!");
 
+    // Do not warn about IBOutlet weak property receivers being set to null
+    // since they are typically only used from the main thread.
+    if (const ObjCPropertyDecl *Prop = dyn_cast<ObjCPropertyDecl>(KeyProp))
+      if (Prop->hasAttr<IBOutletAttr>())
+        continue;
+
     // Show the first time the object was read.
     S.Diag(FirstRead->getLocStart(), DiagKind)
-      << int(ObjectKind) << D << int(FunctionKind)
+      << int(ObjectKind) << KeyProp << int(FunctionKind)
       << FirstRead->getSourceRange();
 
     // Print all the other accesses as notes.

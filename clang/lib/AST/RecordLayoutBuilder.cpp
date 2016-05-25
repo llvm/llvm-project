@@ -2949,8 +2949,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.RequiredAlignment,
           Builder.HasOwnVFPtr, Builder.HasOwnVFPtr || Builder.PrimaryBase,
-          Builder.VBPtrOffset, Builder.DataSize,
-          Builder.FieldOffsets.data(), Builder.FieldOffsets.size(),
+          Builder.VBPtrOffset, Builder.DataSize, Builder.FieldOffsets,
           Builder.NonVirtualSize, Builder.Alignment, CharUnits::Zero(),
           Builder.PrimaryBase, false, Builder.SharedVBPtrBase,
           Builder.EndsWithZeroSizedObject, Builder.LeadsWithZeroSizedBase,
@@ -2959,8 +2958,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       Builder.layout(D);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.RequiredAlignment,
-          Builder.Size, Builder.FieldOffsets.data(),
-          Builder.FieldOffsets.size());
+          Builder.Size, Builder.FieldOffsets);
     }
   } else {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
@@ -2983,9 +2981,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           *this, Builder.getSize(), Builder.Alignment,
           /*RequiredAlignment : used by MS-ABI)*/
           Builder.Alignment, Builder.HasOwnVFPtr, RD->isDynamicClass(),
-          CharUnits::fromQuantity(-1), DataSize, Builder.FieldOffsets.data(),
-          Builder.FieldOffsets.size(), NonVirtualSize,
-          Builder.NonVirtualAlignment,
+          CharUnits::fromQuantity(-1), DataSize, Builder.FieldOffsets,
+          NonVirtualSize, Builder.NonVirtualAlignment,
           EmptySubobjects.SizeOfLargestEmptySubobject, Builder.PrimaryBase,
           Builder.PrimaryBaseIsVirtual, nullptr, false, false, Builder.Bases,
           Builder.VBases);
@@ -2996,8 +2993,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.getSize(), Builder.Alignment,
           /*RequiredAlignment : used by MS-ABI)*/
-          Builder.Alignment, Builder.getSize(), Builder.FieldOffsets.data(),
-          Builder.FieldOffsets.size());
+          Builder.Alignment, Builder.getSize(), Builder.FieldOffsets);
     }
   }
 
@@ -3112,13 +3108,12 @@ ASTContext::getObjCLayout(const ObjCInterfaceDecl *D,
   Builder.Layout(D);
 
   const ASTRecordLayout *NewEntry =
-    new (*this) ASTRecordLayout(*this, Builder.getSize(), 
+    new (*this) ASTRecordLayout(*this, Builder.getSize(),
                                 Builder.Alignment,
                                 /*RequiredAlignment : used by MS-ABI)*/
                                 Builder.Alignment,
                                 Builder.getDataSize(),
-                                Builder.FieldOffsets.data(),
-                                Builder.FieldOffsets.size());
+                                Builder.FieldOffsets);
 
   ObjCLayouts[Key] = NewEntry;
 

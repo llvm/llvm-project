@@ -5361,8 +5361,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fno_inline))
     CmdArgs.push_back("-fno-inline");
 
-  if (Args.hasArg(options::OPT_fno_inline_functions))
-    CmdArgs.push_back("-fno-inline-functions");
+  if (Arg* InlineArg = Args.getLastArg(options::OPT_finline_functions,
+                                       options::OPT_fno_inline_functions))
+    InlineArg->render(Args, CmdArgs);
 
   ObjCRuntime objcRuntime = AddObjCRuntimeArgs(Args, CmdArgs, rewriteKind);
 

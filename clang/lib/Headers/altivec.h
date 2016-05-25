@@ -2102,32 +2102,24 @@ static __inline__ void __attribute__((__always_inline__)) vec_dssall(void) {
 }
 
 /* vec_dst */
-
-static __inline__ void __attribute__((__always_inline__))
-vec_dst(const void *__a, int __b, int __c) {
-  __builtin_altivec_dst(__a, __b, __c);
-}
+#define vec_dst(__PTR, __CW, __STR) \
+  __extension__(                    \
+      { __builtin_altivec_dst((const void *)(__PTR), (__CW), (__STR)); })
 
 /* vec_dstst */
-
-static __inline__ void __attribute__((__always_inline__))
-vec_dstst(const void *__a, int __b, int __c) {
-  __builtin_altivec_dstst(__a, __b, __c);
-}
+#define vec_dstst(__PTR, __CW, __STR) \
+  __extension__(                      \
+      { __builtin_altivec_dstst((const void *)(__PTR), (__CW), (__STR)); })
 
 /* vec_dststt */
-
-static __inline__ void __attribute__((__always_inline__))
-vec_dststt(const void *__a, int __b, int __c) {
-  __builtin_altivec_dststt(__a, __b, __c);
-}
+#define vec_dststt(__PTR, __CW, __STR) \
+  __extension__(                       \
+      { __builtin_altivec_dststt((const void *)(__PTR), (__CW), (__STR)); })
 
 /* vec_dstt */
-
-static __inline__ void __attribute__((__always_inline__))
-vec_dstt(const void *__a, int __b, int __c) {
-  __builtin_altivec_dstt(__a, __b, __c);
-}
+#define vec_dstt(__PTR, __CW, __STR) \
+  __extension__(                     \
+      { __builtin_altivec_dstt((const void *)(__PTR), (__CW), (__STR)); })
 
 /* vec_eqv */
 

@@ -1273,10 +1273,10 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   }
 
   // Atomic operations have to be done on integral types.
-  if (Ty->isAtomicType() || typeIsSuitableForInlineAtomic(Ty, Volatile)) {
-    LValue lvalue =
+  LValue AtomicLValue =
       LValue::MakeAddr(Addr, Ty, getContext(), AlignSource, TBAAInfo);
-    return EmitAtomicLoad(lvalue, Loc).getScalarVal();
+  if (Ty->isAtomicType() || LValueIsSuitableForInlineAtomic(AtomicLValue)) {
+    return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
 
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
@@ -1384,12 +1384,11 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
 
   Value = EmitToMemory(Value, Ty);
 
+  LValue AtomicLValue =
+      LValue::MakeAddr(Addr, Ty, getContext(), AlignSource, TBAAInfo);
   if (Ty->isAtomicType() ||
-      (!isInit && typeIsSuitableForInlineAtomic(Ty, Volatile))) {
-    EmitAtomicStore(RValue::get(Value),
-                    LValue::MakeAddr(Addr, Ty, getContext(),
-                                     AlignSource, TBAAInfo),
-                    isInit);
+      (!isInit && LValueIsSuitableForInlineAtomic(AtomicLValue))) {
+    EmitAtomicStore(RValue::get(Value), AtomicLValue, isInit);
     return;
   }
 

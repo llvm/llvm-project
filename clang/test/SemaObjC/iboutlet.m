@@ -41,6 +41,7 @@ IBInspectable @property (readonly) IBOutlet NSView *myView1; // expected-warning
 
 // rdar://15885642
 @interface WeakOutlet 
+@property int Number;
 @property IBOutlet __weak WeakOutlet* WeakProp;
 @end
 
@@ -49,4 +50,10 @@ WeakOutlet* func() {
   pwi.WeakProp = (WeakOutlet*)0;
   pwi.WeakProp = pwi.WeakProp;
   return pwi.WeakProp;
+}
+
+WeakOutlet* func2(WeakOutlet* pwi) {
+  [[pwi WeakProp] setNumber:0];
+  [[pwi WeakProp] setNumber:1];
+  return [pwi WeakProp];
 }

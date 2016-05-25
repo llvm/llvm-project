@@ -190,6 +190,8 @@ def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: Joined<["--", "-"], "dynamic-list=">, Alias<dynamic_list>;
 def alias_entry_e : JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
+def alias_export_dynamic_symbol : Joined<["--", "-"], "export-dynamic-symbol=">,
+    Alias<export_dynamic_symbol>;
 def alias_fini_fini : Joined<["-"], "fini=">, Alias<fini>;
 def alias_hash_style_hash_style : Joined<["--", "-"], "hash-style=">, Alias<hash_style>;
 def alias_init_init : Joined<["-"], "init=">, Alias<init>;
@@ -236,8 +238,10 @@ def fatal_warnings : Flag<["--"], "fatal-warnings">;
 def no_add_needed : Flag<["--"], "no-add-needed">;
 def no_copy_dt_needed_entries : Flag<["--"], "no-copy-dt-needed-entries">,
                                 Alias<no_add_needed>;
+def no_ctors_in_init_array : Flag<["--"], "no-ctors-in-init-array">;
 def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
+def no_mmap_output_file : Flag<["--"], "no-mmap-output-file">;
 def no_undefined_version : Flag<["--", "-"], "no-undefined-version">;
 def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;

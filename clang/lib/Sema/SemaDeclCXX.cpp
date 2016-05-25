@@ -13101,14 +13101,14 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
     // the record is complete.
     const FunctionDecl *Primary = MD;
     if (const FunctionDecl *Pattern = MD->getTemplateInstantiationPattern())
-      // Find the uninstantiated declaration that actually had the '= default'
-      // on it.
-      Pattern->isDefined(Primary);
+      // Ask the template instantiation pattern that actually had the
+      // '= default' on it.
+      Primary = Pattern;
 
     // If the method was defaulted on its first declaration, we will have
     // already performed the checking in CheckCompletedCXXClass. Such a
     // declaration doesn't trigger an implicit definition.
-    if (Primary == Primary->getCanonicalDecl())
+    if (Primary->getCanonicalDecl()->isDefaulted())
       return;
 
     CheckExplicitlyDefaultedSpecialMember(MD);

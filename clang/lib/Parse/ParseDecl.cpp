@@ -2315,6 +2315,24 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
     return false;
   }
 
+  if (getLangOpts().CPlusPlus && (!SS || SS->isEmpty()) &&
+      getLangOpts().MSVCCompat) {
+    // Lookup of an unqualified type name has failed in MSVC compatibility mode.
+    // Give Sema a chance to recover if we are in a template with dependent base
+    // classes.
+    if (ParsedType T = Actions.ActOnMSVCUnknownTypeName(
+            *Tok.getIdentifierInfo(), Tok.getLocation(),
+            DSC == DSC_template_type_arg)) {
+      const char *PrevSpec;
+      unsigned DiagID;
+      DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec, DiagID, T,
+                         Actions.getASTContext().getPrintingPolicy());
+      DS.SetRangeEnd(Tok.getLocation());
+      ConsumeToken();
+      return false;
+    }
+  }
+
   // Otherwise, if we don't consume this token, we are going to emit an
   // error anyway.  Try to recover from various common problems.  Check
   // to see if this was a reference to a tag name without a tag specified.
@@ -3021,16 +3039,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ParsedType TypeRep =
         Actions.getTypeName(*Tok.getIdentifierInfo(),
                             Tok.getLocation(), getCurScope());
-
-      // MSVC: If we weren't able to parse a default template argument, and it's
-      // just a simple identifier, create a DependentNameType.  This will allow
-      // us to defer the name lookup to template instantiation time, as long we
-      // forge a NestedNameSpecifier for the current context.
-      if (!TypeRep && DSContext == DSC_template_type_arg &&
-          getLangOpts().MSVCCompat && getCurScope()->isTemplateParamScope()) {
-        TypeRep = Actions.ActOnDelayedDefaultTemplateArg(
-            *Tok.getIdentifierInfo(), Tok.getLocation());
-      }
 
       // If this is not a typedef name, don't parse it as part of the declspec,
       // it must be an implicit int or an error.

@@ -258,6 +258,8 @@ static void addEfficiencySanitizerPass(const PassManagerBuilder &Builder,
   EfficiencySanitizerOptions Opts;
   if (LangOpts.Sanitize.has(SanitizerKind::EfficiencyCacheFrag))
     Opts.ToolType = EfficiencySanitizerOptions::ESAN_CacheFrag;
+  else if (LangOpts.Sanitize.has(SanitizerKind::EfficiencyWorkingSet))
+    Opts.ToolType = EfficiencySanitizerOptions::ESAN_WorkingSet;
   PM.add(createEfficiencySanitizerPass(Opts));
 }
 
