@@ -44,4 +44,4 @@ file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/*.ll
 )
 
-clang_opencl_bc_builtins_lib(llvm ${sources})
+clang_opencl_bc_builtins_lib(llvm ${CMAKE_CURRENT_SOURCE_DIR} ${sources})
