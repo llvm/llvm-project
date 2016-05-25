@@ -1,6 +1,7 @@
 ; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck %s
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck -check-prefix=CHECK-DARWIN %s
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-DARWIN %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LINUX %s
 
 ; operator new routines
 declare i8* @_Znwj(i64)
@@ -337,20 +338,32 @@ declare i32 @fseek(%opaque*, i64, i32)
 ; CHECK: declare i32 @fseeko(%opaque* nocapture, i64, i32) [[G0]]
 declare i32 @fseeko(%opaque*, i64, i32)
 
+; CHECK-LINUX: declare i32 @fseeko64(%opaque* nocapture, i64, i32) [[G0]]
+declare i32 @fseeko64(%opaque*, i64, i32)
+
 ; CHECK: declare i32 @fsetpos(%opaque* nocapture, i64*) [[G0]]
 declare i32 @fsetpos(%opaque*, i64*)
 
 ; CHECK: declare i32 @fstat(i32, %opaque* nocapture) [[G0]]
 declare i32 @fstat(i32, %opaque*)
 
+; CHECK-LINUX: declare i32 @fstat64(i32, %opaque* nocapture) [[G0]]
+declare i32 @fstat64(i32, %opaque*)
+
 ; CHECK: declare i32 @fstatvfs(i32, %opaque* nocapture) [[G0]]
 declare i32 @fstatvfs(i32, %opaque*)
+
+; CHECK-LINUX: declare i32 @fstatvfs64(i32, %opaque* nocapture) [[G0]]
+declare i32 @fstatvfs64(i32, %opaque*)
 
 ; CHECK: declare i64 @ftell(%opaque* nocapture) [[G0]]
 declare i64 @ftell(%opaque*)
 
 ; CHECK: declare i64 @ftello(%opaque* nocapture) [[G0]]
 declare i64 @ftello(%opaque*)
+
+; CHECK-LINUX: declare i64 @ftello64(%opaque* nocapture) [[G0]]
+declare i64 @ftello64(%opaque*)
 
 ; CHECK: declare i32 @ftrylockfile(%opaque* nocapture) [[G0]]
 declare i32 @ftrylockfile(%opaque*)
@@ -460,8 +473,14 @@ declare x86_fp80 @logl(x86_fp80)
 ; CHECK: declare i32 @lstat(i8* nocapture readonly, %opaque* nocapture) [[G0]]
 declare i32 @lstat(i8*, %opaque*)
 
+; CHECK-LINUX: declare i32 @lstat64(i8* nocapture readonly, %opaque* nocapture) [[G0]]
+declare i32 @lstat64(i8*, %opaque*)
+
 ; CHECK: declare noalias i8* @malloc(i64) [[G0]]
 declare i8* @malloc(i64)
+
+; CHECK-LINUX: declare noalias i8* @memalign(i64, i64)
+declare i8* @memalign(i64, i64)
 
 ; CHECK: declare i8* @memccpy(i8*, i8* nocapture readonly, i32, i64) [[G0]]
 declare i8* @memccpy(i8*, i8*, i32, i64)
@@ -507,6 +526,9 @@ declare x86_fp80 @nearbyintl(x86_fp80)
 
 ; CHECK: declare i32 @open(i8* nocapture readonly, i32, ...)
 declare i32 @open(i8*, i32, ...)
+
+; CHECK-LINUX: declare i32 @open64(i8* nocapture readonly, i32, ...)
+declare i32 @open64(i8*, i32, ...)
 
 ; CHECK: declare noalias %opaque* @opendir(i8* nocapture readonly) [[G0]]
 declare %opaque* @opendir(i8*)
@@ -649,8 +671,14 @@ declare i32 @sscanf(i8*, i8*, ...)
 ; CHECK: declare i32 @stat(i8* nocapture readonly, %opaque* nocapture) [[G0]]
 declare i32 @stat(i8*, %opaque*)
 
+; CHECK-LINUX: declare i32 @stat64(i8* nocapture readonly, %opaque* nocapture) [[G0]]
+declare i32 @stat64(i8*, %opaque*)
+
 ; CHECK: declare i32 @statvfs(i8* nocapture readonly, %opaque* nocapture) [[G0]]
 declare i32 @statvfs(i8*, %opaque*)
+
+; CHECK-LINUX: declare i32 @statvfs64(i8* nocapture readonly, %opaque* nocapture) [[G0]]
+declare i32 @statvfs64(i8*, %opaque*)
 
 ; CHECK: declare i8* @stpcpy(i8*, i8* nocapture readonly) [[G0]]
 declare i8* @stpcpy(i8*, i8*)
@@ -771,6 +799,9 @@ declare i64 @times(%opaque*)
 
 ; CHECK: declare noalias %opaque* @tmpfile() [[G0]]
 declare %opaque* @tmpfile()
+
+; CHECK-LINUX: declare noalias %opaque* @tmpfile64() [[G0]]
+declare %opaque* @tmpfile64()
 
 ; CHECK: declare i32 @toascii(i32)
 declare i32 @toascii(i32)
