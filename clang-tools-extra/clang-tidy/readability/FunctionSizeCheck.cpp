@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FunctionSizeCheck.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -15,6 +16,57 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace readability {
+
+class FunctionASTVisitor : public RecursiveASTVisitor<FunctionASTVisitor> {
+  using Base = RecursiveASTVisitor<FunctionASTVisitor>;
+
+public:
+  bool TraverseStmt(Stmt *Node) {
+    if (!Node)
+      return Base::TraverseStmt(Node);
+
+    if (TrackedParent.back() && !isa<CompoundStmt>(Node))
+      ++Info.Statements;
+
+    switch (Node->getStmtClass()) {
+    case Stmt::IfStmtClass:
+    case Stmt::WhileStmtClass:
+    case Stmt::DoStmtClass:
+    case Stmt::CXXForRangeStmtClass:
+    case Stmt::ForStmtClass:
+    case Stmt::SwitchStmtClass:
+      ++Info.Branches;
+    // fallthrough
+    case Stmt::CompoundStmtClass:
+      TrackedParent.push_back(true);
+      break;
+    default:
+      TrackedParent.push_back(false);
+      break;
+    }
+
+    Base::TraverseStmt(Node);
+
+    TrackedParent.pop_back();
+    return true;
+  }
+
+  bool TraverseDecl(Decl *Node) {
+    TrackedParent.push_back(false);
+    Base::TraverseDecl(Node);
+    TrackedParent.pop_back();
+    return true;
+  }
+
+  struct FunctionInfo {
+    FunctionInfo() : Lines(0), Statements(0), Branches(0) {}
+    unsigned Lines;
+    unsigned Statements;
+    unsigned Branches;
+  };
+  FunctionInfo Info;
+  std::vector<bool> TrackedParent;
+};
 
 FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -29,76 +81,52 @@ void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void FunctionSizeCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      functionDecl(
-          unless(isInstantiated()),
-          forEachDescendant(
-              stmt(unless(compoundStmt()),
-                   hasParent(stmt(anyOf(compoundStmt(), ifStmt(),
-                                        anyOf(whileStmt(), doStmt(),
-                                              cxxForRangeStmt(), forStmt())))))
-                  .bind("stmt"))).bind("func"),
-      this);
+  Finder->addMatcher(functionDecl(unless(isInstantiated())).bind("func"), this);
 }
 
 void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
-  FunctionInfo &FI = FunctionInfos[Func];
+  FunctionASTVisitor Visitor;
+  Visitor.TraverseDecl(const_cast<FunctionDecl *>(Func));
+  auto &FI = Visitor.Info;
+
+  if (FI.Statements == 0)
+    return;
 
   // Count the lines including whitespace and comments. Really simple.
-  if (!FI.Lines) {
-    if (const Stmt *Body = Func->getBody()) {
-      SourceManager *SM = Result.SourceManager;
-      if (SM->isWrittenInSameFile(Body->getLocStart(), Body->getLocEnd())) {
-        FI.Lines = SM->getSpellingLineNumber(Body->getLocEnd()) -
-                   SM->getSpellingLineNumber(Body->getLocStart());
-      }
+  if (const Stmt *Body = Func->getBody()) {
+    SourceManager *SM = Result.SourceManager;
+    if (SM->isWrittenInSameFile(Body->getLocStart(), Body->getLocEnd())) {
+      FI.Lines = SM->getSpellingLineNumber(Body->getLocEnd()) -
+                 SM->getSpellingLineNumber(Body->getLocStart());
     }
   }
 
-  const auto *Statement = Result.Nodes.getNodeAs<Stmt>("stmt");
-  ++FI.Statements;
-
-  // TODO: switch cases, gotos
-  if (isa<IfStmt>(Statement) || isa<WhileStmt>(Statement) ||
-      isa<ForStmt>(Statement) || isa<SwitchStmt>(Statement) ||
-      isa<DoStmt>(Statement) || isa<CXXForRangeStmt>(Statement))
-    ++FI.Branches;
-}
-
-void FunctionSizeCheck::onEndOfTranslationUnit() {
-  // If we're above the limit emit a warning.
-  for (const auto &P : FunctionInfos) {
-    const FunctionInfo &FI = P.second;
-    if (FI.Lines > LineThreshold || FI.Statements > StatementThreshold ||
-        FI.Branches > BranchThreshold) {
-      diag(P.first->getLocation(),
-           "function %0 exceeds recommended size/complexity thresholds")
-          << P.first;
-    }
-
-    if (FI.Lines > LineThreshold) {
-      diag(P.first->getLocation(),
-           "%0 lines including whitespace and comments (threshold %1)",
-           DiagnosticIDs::Note)
-          << FI.Lines << LineThreshold;
-    }
-
-    if (FI.Statements > StatementThreshold) {
-      diag(P.first->getLocation(), "%0 statements (threshold %1)",
-           DiagnosticIDs::Note)
-          << FI.Statements << StatementThreshold;
-    }
-
-    if (FI.Branches > BranchThreshold) {
-      diag(P.first->getLocation(), "%0 branches (threshold %1)",
-           DiagnosticIDs::Note)
-          << FI.Branches << BranchThreshold;
-    }
+  if (FI.Lines > LineThreshold || FI.Statements > StatementThreshold ||
+      FI.Branches > BranchThreshold) {
+    diag(Func->getLocation(),
+         "function %0 exceeds recommended size/complexity thresholds")
+        << Func;
   }
 
-  FunctionInfos.clear();
+  if (FI.Lines > LineThreshold) {
+    diag(Func->getLocation(),
+         "%0 lines including whitespace and comments (threshold %1)",
+         DiagnosticIDs::Note)
+        << FI.Lines << LineThreshold;
+  }
+
+  if (FI.Statements > StatementThreshold) {
+    diag(Func->getLocation(), "%0 statements (threshold %1)",
+         DiagnosticIDs::Note)
+        << FI.Statements << StatementThreshold;
+  }
+
+  if (FI.Branches > BranchThreshold) {
+    diag(Func->getLocation(), "%0 branches (threshold %1)", DiagnosticIDs::Note)
+        << FI.Branches << BranchThreshold;
+  }
 }
 
 } // namespace readability

@@ -30,7 +30,7 @@ typedef struct lprofFilename {
   unsigned NumHosts;
 } lprofFilename;
 
-lprofFilename lprofCurFilename = {0};
+lprofFilename lprofCurFilename = {0, {0}, {0}, 0, 0};
 
 int getpid(void);
 static int getCurFilenameLength();
@@ -110,41 +110,20 @@ static void truncateCurrentFile(void) {
   fclose(File);
 }
 
-/* Set the result of the file name parsing. If \p FilenamePat pattern is seen
- * the first time, also truncate the file associated with that name.
- */
-static void setFilename(const char *FilenamePat, const char *PidStr,
-                        unsigned NumPids, const char *HostStr,
-                        unsigned NumHosts) {
-  /* Check if this is a new filename and therefore needs truncation. */
-  int NewFile =
-      !lprofCurFilename.FilenamePat ||
-      (FilenamePat && strcmp(FilenamePat, lprofCurFilename.FilenamePat));
-
-  lprofCurFilename.FilenamePat = FilenamePat;
-  lprofCurFilename.NumPids = NumPids;
-  if (NumPids)
-    strncpy(lprofCurFilename.PidChars, PidStr, MAX_PID_SIZE);
-  lprofCurFilename.NumHosts = NumHosts;
-  if (NumHosts)
-    strncpy(lprofCurFilename.Hostname, HostStr, COMPILER_RT_MAX_HOSTLEN);
-
-  /* If not a new file, append to support profiling multiple shared objects. */
-  if (NewFile)
-    truncateCurrentFile();
-}
-
 static void resetFilenameToDefault(void) {
-  setFilename("default.profraw", 0, 0, 0, 0);
+  memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
+  lprofCurFilename.FilenamePat = "default.profraw";
 }
 
 /* Parses the pattern string \p FilenamePat and store the result to
  * lprofcurFilename structure. */
+
 static int parseFilenamePattern(const char *FilenamePat) {
   int NumPids = 0, NumHosts = 0, I;
-  char PidChars[MAX_PID_SIZE];
-  char Hostname[COMPILER_RT_MAX_HOSTLEN];
+  char *PidChars = &lprofCurFilename.PidChars[0];
+  char *Hostname = &lprofCurFilename.Hostname[0];
 
+  lprofCurFilename.FilenamePat = FilenamePat;
   /* Check the filename for "%p", which indicates a pid-substitution. */
   for (I = 0; FilenamePat[I]; ++I)
     if (FilenamePat[I] == '%') {
@@ -168,8 +147,23 @@ static int parseFilenamePattern(const char *FilenamePat) {
       }
     }
 
-  setFilename(FilenamePat, PidChars, NumPids, Hostname, NumHosts);
+  lprofCurFilename.NumPids = NumPids;
+  lprofCurFilename.NumHosts = NumHosts;
   return 0;
+}
+
+static void parseAndSetFilename(const char *FilenamePat) {
+  int NewFile;
+  const char *OldFilenamePat = lprofCurFilename.FilenamePat;
+
+  if (!FilenamePat || parseFilenamePattern(FilenamePat))
+    resetFilenameToDefault();
+
+  NewFile =
+      !OldFilenamePat || (strcmp(OldFilenamePat, lprofCurFilename.FilenamePat));
+
+  if (NewFile)
+    truncateCurrentFile();
 }
 
 /* Return buffer length that is required to store the current profile
@@ -242,8 +236,7 @@ void __llvm_profile_initialize_file(void) {
 
   /* Detect the filename and truncate. */
   FilenamePat = getFilenamePatFromEnv();
-  if (!FilenamePat || parseFilenamePattern(FilenamePat))
-    resetFilenameToDefault();
+  parseAndSetFilename(FilenamePat);
 }
 
 /* This API is directly called by the user application code. It has the
@@ -252,8 +245,7 @@ void __llvm_profile_initialize_file(void) {
  */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_set_filename(const char *FilenamePat) {
-  if (!FilenamePat || parseFilenamePattern(FilenamePat))
-    resetFilenameToDefault();
+  parseAndSetFilename(FilenamePat);
 }
 
 /*
@@ -268,8 +260,8 @@ void __llvm_profile_override_default_filename(const char *FilenamePat) {
   const char *Env_Filename = getFilenamePatFromEnv();
   if (Env_Filename)
     return;
-  if (!FilenamePat || parseFilenamePattern(FilenamePat))
-    resetFilenameToDefault();
+
+  parseAndSetFilename(FilenamePat);
 }
 
 /* The public API for writing profile data into the file with name

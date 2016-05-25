@@ -282,10 +282,11 @@ public:
                clang::HeaderSearch &HeaderSearch,
                std::set<std::string> &Headers,
                std::vector<clang::tooling::Replacement> &Replacements) {
-    if (Untried.empty())
+    if (SymbolQueryResults.empty())
       return false;
 
-    const auto &ToTry = UntriedList.front();
+    // FIXME: Rank the results and pick the best one instead of the first one.
+    const auto &ToTry = SymbolQueryResults.front();
     Headers.insert(minimizeInclude(ToTry, SourceManager, HeaderSearch));
 
     StringRef Code = SourceManager.getBufferData(SourceManager.getMainFileID());
@@ -294,51 +295,32 @@ public:
     // We currently abort after the first inserted include. The more
     // includes we have the less safe this becomes due to error recovery
     // changing the results.
-    // FIXME: Handle multiple includes at once.
     return true;
   }
 
   /// Sets the location at the very top of the file.
   void setFileBegin(clang::SourceLocation Location) { FileBegin = Location; }
 
-  /// Add an include to the set of includes to try.
-  /// \param include_path The include path to try.
-  void TryInclude(const std::string &query, const std::string &include_path) {
-    if (Untried.insert(include_path).second)
-      UntriedList.push_back(include_path);
-  }
-
 private:
   /// Query the database for a given identifier.
   bool query(StringRef Query, SourceLocation Loc) {
     assert(!Query.empty() && "Empty query!");
 
-    // Save database lookups by not looking up identifiers multiple times.
-    if (!SeenQueries.insert(Query).second)
-      return true;
+    // Skip other identifers once we have discovered an identfier successfully.
+    if (!SymbolQueryResults.empty())
+      return false;
 
     DEBUG(llvm::dbgs() << "Looking up '" << Query << "' at ");
     DEBUG(Loc.print(llvm::dbgs(), getCompilerInstance().getSourceManager()));
     DEBUG(llvm::dbgs() << " ...");
 
-    std::string error_text;
-    auto SearchReply = SymbolIndexMgr.search(Query);
-    DEBUG(llvm::dbgs() << SearchReply.size() << " replies\n");
-    if (SearchReply.empty())
-      return false;
-
-    // Add those files to the set of includes to try out.
-    // FIXME: Rank the results and pick the best one instead of the first one.
-    TryInclude(Query, SearchReply[0]);
-
-    return true;
+    SymbolQueryResults = SymbolIndexMgr.search(Query);
+    DEBUG(llvm::dbgs() << SymbolQueryResults.size() << " replies\n");
+    return !SymbolQueryResults.empty();
   }
 
   /// The client to use to find cross-references.
   SymbolIndexManager &SymbolIndexMgr;
-
-  // Remeber things we looked up to avoid querying things twice.
-  llvm::StringSet<> SeenQueries;
 
   /// The absolute path to the file being processed.
   std::string Filename;
@@ -354,11 +336,9 @@ private:
   /// clang-format config file found.
   std::string FallbackStyle;
 
-  /// Includes we have left to try. A set to unique them and a list to keep
-  /// track of the order. We prefer includes that were discovered early to avoid
-  /// getting caught in results from error recovery.
-  std::set<std::string> Untried;
-  std::vector<std::string> UntriedList;
+  /// The query results of an identifier. We only include the first discovered
+  /// identifier to avoid getting caught in results from error recovery.
+  std::vector<std::string> SymbolQueryResults;
 
   /// Whether we should use the smallest possible include path.
   bool MinimizeIncludePaths = true;

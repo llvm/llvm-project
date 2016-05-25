@@ -26,13 +26,19 @@ void part()
 #ifdef MAIN
 int main(int argc, char **argv) {
   // CHECK:      in esan::initializeLibrary
-  // CHECK:      in esan::processCompilationUnitInit
-  // CHECK:      in esan::processCompilationUnitInit
+  // CHECK:      in esan::initializeCacheFrag
+  // CHECK-NEXT: in esan::processCompilationUnitInit
+  // CHECK-NEXT: in esan::processCacheFragCompilationUnitInit
+  // CHECK-NEXT: in esan::processCompilationUnitInit
+  // CHECK-NEXT: in esan::processCacheFragCompilationUnitInit
   part();
   return 0;
-  // CHECK-NEXT: in esan::finalizeLibrary
+  // CHECK:      in esan::finalizeLibrary
+  // CHECK-NEXT: in esan::finalizeCacheFrag
   // CHECK-NEXT: {{.*}}EfficiencySanitizer is not finished: nothing yet to report
-  // CHECK:      in esan::processCompilationUnitExit
-  // CHECK:      in esan::processCompilationUnitExit
+  // CHECK-NEXT: in esan::processCompilationUnitExit
+  // CHECK-NEXT: in esan::processCacheFragCompilationUnitExit
+  // CHECK-NEXT: in esan::processCompilationUnitExit
+  // CHECK-NEXT: in esan::processCacheFragCompilationUnitExit
 }
 #endif // MAIN

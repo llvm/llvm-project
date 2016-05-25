@@ -481,30 +481,39 @@ private:
     return stepWithCompactEncoding(dummy);
   }
 
+#if defined(_LIBUNWIND_TARGET_X86_64)
   int stepWithCompactEncoding(Registers_x86_64 &) {
     return CompactUnwinder_x86_64<A>::stepWithCompactEncoding(
         _info.format, _info.start_ip, _addressSpace, _registers);
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_I386)
   int stepWithCompactEncoding(Registers_x86 &) {
     return CompactUnwinder_x86<A>::stepWithCompactEncoding(
         _info.format, (uint32_t)_info.start_ip, _addressSpace, _registers);
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_PPC)
   int stepWithCompactEncoding(Registers_ppc &) {
     return UNW_EINVAL;
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_AARCH64)
   int stepWithCompactEncoding(Registers_arm64 &) {
     return CompactUnwinder_arm64<A>::stepWithCompactEncoding(
         _info.format, _info.start_ip, _addressSpace, _registers);
   }
+#endif
 
   bool compactSaysUseDwarf(uint32_t *offset=NULL) const {
     R dummy;
     return compactSaysUseDwarf(dummy, offset);
   }
 
+#if defined(_LIBUNWIND_TARGET_X86_64)
   bool compactSaysUseDwarf(Registers_x86_64 &, uint32_t *offset) const {
     if ((_info.format & UNWIND_X86_64_MODE_MASK) == UNWIND_X86_64_MODE_DWARF) {
       if (offset)
@@ -513,7 +522,9 @@ private:
     }
     return false;
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_I386)
   bool compactSaysUseDwarf(Registers_x86 &, uint32_t *offset) const {
     if ((_info.format & UNWIND_X86_MODE_MASK) == UNWIND_X86_MODE_DWARF) {
       if (offset)
@@ -522,11 +533,15 @@ private:
     }
     return false;
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_PPC)
   bool compactSaysUseDwarf(Registers_ppc &, uint32_t *) const {
     return true;
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_AARCH64)
   bool compactSaysUseDwarf(Registers_arm64 &, uint32_t *offset) const {
     if ((_info.format & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_DWARF) {
       if (offset)
@@ -535,6 +550,7 @@ private:
     }
     return false;
   }
+#endif
 #endif // _LIBUNWIND_SUPPORT_COMPACT_UNWIND
 
 #if _LIBUNWIND_SUPPORT_DWARF_UNWIND
@@ -543,25 +559,35 @@ private:
     return dwarfEncoding(dummy);
   }
 
+#if defined(_LIBUNWIND_TARGET_X86_64)
   compact_unwind_encoding_t dwarfEncoding(Registers_x86_64 &) const {
     return UNWIND_X86_64_MODE_DWARF;
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_I386)
   compact_unwind_encoding_t dwarfEncoding(Registers_x86 &) const {
     return UNWIND_X86_MODE_DWARF;
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_PPC)
   compact_unwind_encoding_t dwarfEncoding(Registers_ppc &) const {
     return 0;
   }
+#endif
 
+#if defined(_LIBUNWIND_TARGET_AARCH64)
   compact_unwind_encoding_t dwarfEncoding(Registers_arm64 &) const {
     return UNWIND_ARM64_MODE_DWARF;
   }
+#endif
 
+#if defined (_LIBUNWIND_TARGET_OR1K)
   compact_unwind_encoding_t dwarfEncoding(Registers_or1k &) const {
     return 0;
   }
+#endif
 #endif // _LIBUNWIND_SUPPORT_DWARF_UNWIND
 
 
@@ -577,7 +603,7 @@ template <typename A, typename R>
 UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
     : _addressSpace(as), _registers(context), _unwindInfoMissing(false),
       _isSignalFrame(false) {
-  static_assert(sizeof(UnwindCursor<A, R>) < sizeof(unw_cursor_t),
+  static_assert(check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit,
                 "UnwindCursor<> does not fit in unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
 }

@@ -813,19 +813,23 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 // Thread API
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 # if defined(__FreeBSD__) || \
     defined(__NetBSD__) || \
     defined(__linux__) || \
     defined(__APPLE__) || \
     defined(__CloudABI__) || \
     defined(__sun__)
-#  define _LIBCPP_THREAD_API_PTHREAD
+#  define _LIBCPP_HAS_THREAD_API_PTHREAD
 # else
 #  error "No thread API"
-# endif // _LIBCPP_THREAD_API
+# endif // _LIBCPP_HAS_THREAD_API
 #endif // _LIBCPP_HAS_NO_THREADS
 
+#if defined(_LIBCPP_HAS_NO_THREADS) && defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+#  error _LIBCPP_HAS_THREAD_API_PTHREAD may only be defined when \
+         _LIBCPP_HAS_NO_THREADS is not defined.
+#endif
 
 #if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK) && !defined(_LIBCPP_HAS_NO_THREADS)
 #  error _LIBCPP_HAS_NO_MONOTONIC_CLOCK may only be defined when \

@@ -69,7 +69,7 @@ ompt_get_thread_gtid(int gtid)
 inline ompt_thread_t *
 ompt_get_thread()
 {
-    int gtid = __kmp_gtid_get_specific();
+    int gtid = __kmp_get_gtid();
     return ompt_get_thread_gtid(gtid);
 }
 
