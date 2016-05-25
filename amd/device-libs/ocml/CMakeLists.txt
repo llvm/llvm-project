@@ -46,4 +46,4 @@ file(GLOB sources
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-clang_opencl_bc_builtins_lib(ocml ${sources})
+clang_opencl_bc_builtins_lib(ocml ${CMAKE_CURRENT_SOURCE_DIR} ${sources})
