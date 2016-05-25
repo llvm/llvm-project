@@ -45,6 +45,7 @@
 #include "swift/AST/Types.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
 #include "swift/Basic/Demangle.h"
+#include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Platform.h"
 #include "swift/Basic/SourceManager.h"
@@ -1304,6 +1305,11 @@ SwiftASTContext::SwiftASTContext (const char *triple, Target *target) :
     swift::IRGenOptions &ir_gen_opts = m_compiler_invocation_ap->getIRGenOptions();
     ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
     ir_gen_opts.UseJIT = true;
+#if defined(__CYGWIN__)
+    ir_gen_opts.DWARFVersion = swift::CygwinDWARFVersion;
+#else
+    ir_gen_opts.DWARFVersion = swift::GenericDWARFVersion;
+#endif
 }
 
 SwiftASTContext::SwiftASTContext (const SwiftASTContext &rhs) :
