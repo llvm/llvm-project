@@ -96,7 +96,7 @@ private:
   unsigned IsaVersion;
   bool EnableSIScheduler;
   bool DebuggerInsertNops;
-  bool DebuggerReserveTrapVGPRs;
+  bool DebuggerReserveRegs;
 
   std::unique_ptr<AMDGPUFrameLowering> FrameLowering;
   std::unique_ptr<AMDGPUTargetLowering> TLInfo;
@@ -319,8 +319,8 @@ public:
     return DebuggerInsertNops;
   }
 
-  bool debuggerReserveTrapVGPRs() const {
-    return DebuggerReserveTrapVGPRs;
+  bool debuggerReserveRegs() const {
+    return DebuggerReserveRegs;
   }
 
   bool dumpCode() const {

@@ -234,6 +234,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   else
     HasDwarfAccelTables = DwarfAccelTables == Enable;
 
+  HasAppleExtensionAttributes = tuneForLLDB();
+
   // Handle split DWARF. Off by default for now.
   if (SplitDwarf == Default)
     HasSplitDwarf = false;
@@ -419,16 +421,18 @@ DwarfDebug::constructDwarfCompileUnit(const DICompileUnit *DIUnit) {
     addGnuPubAttributes(NewCU, Die);
   }
 
-  if (DIUnit->isOptimized())
-    NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
+  if (useAppleExtensionAttributes()) {
+    if (DIUnit->isOptimized())
+      NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
 
-  StringRef Flags = DIUnit->getFlags();
-  if (!Flags.empty())
-    NewCU.addString(Die, dwarf::DW_AT_APPLE_flags, Flags);
+    StringRef Flags = DIUnit->getFlags();
+    if (!Flags.empty())
+      NewCU.addString(Die, dwarf::DW_AT_APPLE_flags, Flags);
 
-  if (unsigned RVer = DIUnit->getRuntimeVersion())
-    NewCU.addUInt(Die, dwarf::DW_AT_APPLE_major_runtime_vers,
-                  dwarf::DW_FORM_data1, RVer);
+    if (unsigned RVer = DIUnit->getRuntimeVersion())
+      NewCU.addUInt(Die, dwarf::DW_AT_APPLE_major_runtime_vers,
+                    dwarf::DW_FORM_data1, RVer);
+  }
 
   if (useSplitDwarf())
     NewCU.initSection(Asm->getObjFileLowering().getDwarfInfoDWOSection());

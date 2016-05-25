@@ -15,8 +15,12 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 MappedBlockStream::MappedBlockStream(uint32_t StreamIdx, const PDBFile &File) : Pdb(File) {
-  StreamLength = Pdb.getStreamByteSize(StreamIdx);
-  BlockList = Pdb.getStreamBlockList(StreamIdx);
+  if (StreamIdx >= Pdb.getNumStreams()) {
+    StreamLength = 0;
+  } else {
+    StreamLength = Pdb.getStreamByteSize(StreamIdx);
+    BlockList = Pdb.getStreamBlockList(StreamIdx);
+  }
 }
 
 Error MappedBlockStream::readBytes(uint32_t Offset,
@@ -54,5 +58,23 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
 
 Error MappedBlockStream::getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
                                      uint32_t Length) const {
-  return make_error<RawError>(raw_error_code::feature_unsupported);
+  uint32_t BlockNum = Offset / Pdb.getBlockSize();
+  uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
+  uint32_t BytesAvailableInBlock = Pdb.getBlockSize() - OffsetInBlock;
+
+  // If this is the last block in the stream, not all of the data is valid.
+  if (BlockNum == BlockList.size() - 1) {
+    uint32_t AllocatedBytesInBlock = StreamLength % Pdb.getBlockSize();
+    if (AllocatedBytesInBlock < BytesAvailableInBlock)
+      BytesAvailableInBlock = AllocatedBytesInBlock;
+  }
+  if (BytesAvailableInBlock < Length)
+    return make_error<RawError>(raw_error_code::feature_unsupported);
+
+  uint32_t StreamBlockAddr = BlockList[BlockNum];
+  StringRef Data = Pdb.getBlockData(StreamBlockAddr, Pdb.getBlockSize());
+  Data = Data.substr(OffsetInBlock, Length);
+
+  Buffer = ArrayRef<uint8_t>(Data.bytes_begin(), Data.bytes_end());
+  return Error::success();
 }

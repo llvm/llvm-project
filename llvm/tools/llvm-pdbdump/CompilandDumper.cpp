@@ -158,9 +158,9 @@ void CompilandDumper::dump(const PDBSymbolThunk &Symbol) {
 
   Printer.NewLine();
   Printer << "thunk ";
-  PDB_ThunkOrdinal Ordinal = Symbol.getThunkOrdinal();
+  codeview::ThunkOrdinal Ordinal = Symbol.getThunkOrdinal();
   uint64_t VA = Symbol.getVirtualAddress();
-  if (Ordinal == PDB_ThunkOrdinal::TrampIncremental) {
+  if (Ordinal == codeview::ThunkOrdinal::TrampIncremental) {
     uint64_t Target = Symbol.getTargetVirtualAddress();
     WithColor(Printer, PDB_ColorItem::Address).get() << format_hex(VA, 10);
     Printer << " -> ";

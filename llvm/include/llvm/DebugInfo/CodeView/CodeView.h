@@ -23,7 +23,6 @@ enum class TypeRecordKind : uint16_t {
 #include "TypeRecords.def"
   // FIXME: Add serialization support
   FieldList = 0x1203,
-  BitField = 0x1205,
 };
 
 /// Duplicate copy of the above enum, but using the official CV names. Useful
@@ -405,8 +404,22 @@ enum class ProcSymFlags : uint8_t {
 };
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ProcSymFlags)
 
+/// Corresponds to COMPILESYM2::Flags bitfield.
+enum class CompileSym2Flags : uint32_t {
+  EC = 1 << 8,
+  NoDbgInfo = 1 << 9,
+  LTCG = 1 << 10,
+  NoDataAlign = 1 << 11,
+  ManagedPresent = 1 << 12,
+  SecurityChecks = 1 << 13,
+  HotPatch = 1 << 14,
+  CVTCIL = 1 << 15,
+  MSILModule = 1 << 16,
+};
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(CompileSym2Flags)
+
 /// Corresponds to COMPILESYM3::Flags bitfield.
-enum CompileSym3Flags : uint32_t {
+enum class CompileSym3Flags : uint32_t {
   EC = 1 << 8,
   NoDbgInfo = 1 << 9,
   LTCG = 1 << 10,
@@ -420,6 +433,17 @@ enum CompileSym3Flags : uint32_t {
   PGO = 1 << 18,
   Exp = 1 << 19,
 };
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(CompileSym3Flags)
+
+enum class ExportFlags : uint16_t {
+  IsConstant = 1 << 0,
+  IsData = 1 << 1,
+  IsPrivate = 1 << 2,
+  HasNoName = 1 << 3,
+  HasExplicitOrdinal = 1 << 4,
+  IsForwarder = 1 << 5
+};
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ExportFlags)
 
 // Corresponds to BinaryAnnotationOpcode enum.
 enum class BinaryAnnotationsOpCode : uint32_t {
@@ -446,6 +470,72 @@ enum class FrameCookieKind : uint32_t {
   XorFramePointer,
   XorR13,
 };
+
+// Corresponds to CV_HREG_e enum.
+enum class RegisterId : uint16_t {
+  Unknown = 0,
+  VFrame = 30006,
+  AL = 1,
+  CL = 2,
+  DL = 3,
+  BL = 4,
+  AH = 5,
+  CH = 6,
+  DH = 7,
+  BH = 8,
+  AX = 9,
+  CX = 10,
+  DX = 11,
+  BX = 12,
+  SP = 13,
+  BP = 14,
+  SI = 15,
+  DI = 16,
+  EAX = 17,
+  ECX = 18,
+  EDX = 19,
+  EBX = 20,
+  ESP = 21,
+  EBP = 22,
+  ESI = 23,
+  EDI = 24,
+  ES = 25,
+  CS = 26,
+  SS = 27,
+  DS = 28,
+  FS = 29,
+  GS = 30,
+  IP = 31,
+  RAX = 328,
+  RBX = 329,
+  RCX = 330,
+  RDX = 331,
+  RSI = 332,
+  RDI = 333,
+  RBP = 334,
+  RSP = 335,
+  R8 = 336,
+  R9 = 337,
+  R10 = 338,
+  R11 = 339,
+  R12 = 340,
+  R13 = 341,
+  R14 = 342,
+  R15 = 343,
+};
+
+/// These values correspond to the THUNK_ORDINAL enumeration.
+enum class ThunkOrdinal {
+  Standard,
+  ThisAdjustor,
+  Vcall,
+  Pcode,
+  UnknownLoad,
+  TrampIncremental,
+  BranchIsland
+};
+
+enum class TrampolineType { TrampIncremental, BranchIsland };
 }
 }
 

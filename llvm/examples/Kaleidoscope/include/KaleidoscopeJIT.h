@@ -14,14 +14,27 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/JITSymbolFlags.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -70,7 +83,6 @@ public:
   }
 
 private:
-
   std::string mangle(const std::string &Name) {
     std::string MangledName;
     {
@@ -108,7 +120,7 @@ private:
   std::vector<ModuleHandleT> ModuleHandles;
 };
 
-} // End namespace orc.
-} // End namespace llvm
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H

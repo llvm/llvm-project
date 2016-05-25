@@ -32,7 +32,7 @@ using namespace llvm;
 /// ScalarOpts library.
 void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeADCELegacyPassPass(Registry);
-  initializeBDCEPass(Registry);
+  initializeBDCELegacyPassPass(Registry);
   initializeAlignmentFromAssumptionsPass(Registry);
   initializeConstantHoistingPass(Registry);
   initializeConstantPropagationPass(Registry);

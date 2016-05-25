@@ -2347,8 +2347,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case llvm::Intrinsic::x86_sse_cvttss2si:
       handleVectorConvertIntrinsic(I, 1);
       break;
-    case llvm::Intrinsic::x86_sse2_cvtdq2pd:
-    case llvm::Intrinsic::x86_sse2_cvtps2pd:
     case llvm::Intrinsic::x86_sse_cvtps2pi:
     case llvm::Intrinsic::x86_sse_cvttps2pi:
       handleVectorConvertIntrinsic(I, 2);

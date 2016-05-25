@@ -49,7 +49,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     PSInputAddr(0),
     ReturnsVoid(true),
     MaximumWorkGroupSize(0),
-    DebuggerReserveTrapVGPRCount(0),
+    DebuggerReservedVGPRCount(0),
     LDSWaveSpillSize(0),
     PSInputEna(0),
     NumUserSGPRs(0),
@@ -134,8 +134,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   else
     MaximumWorkGroupSize = ST.getWavefrontSize();
 
-  if (ST.debuggerReserveTrapVGPRs())
-    DebuggerReserveTrapVGPRCount = 4;
+  if (ST.debuggerReserveRegs())
+    DebuggerReservedVGPRCount = 4;
 }
 
 unsigned SIMachineFunctionInfo::addPrivateSegmentBuffer(

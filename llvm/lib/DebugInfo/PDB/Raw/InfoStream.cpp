@@ -53,6 +53,11 @@ uint32_t InfoStream::getNamedStreamIndex(llvm::StringRef Name) const {
   return Result;
 }
 
+iterator_range<StringMapConstIterator<uint32_t>>
+InfoStream::named_streams() const {
+  return NamedStreams.entries();
+}
+
 PdbRaw_ImplVer InfoStream::getVersion() const {
   return static_cast<PdbRaw_ImplVer>(Version);
 }

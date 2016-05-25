@@ -1257,20 +1257,16 @@ private:
           // value.
           LiveRange::iterator NewSegment = NewIdxIn;
           LiveRange::iterator Next = std::next(NewSegment);
-          NewSegment->valno = OldIdxVNI;
           if (SlotIndex::isEarlierInstr(Next->start, NewIdx)) {
             // There is no gap between NewSegment and its predecessor.
             *NewSegment = LiveRange::Segment(Next->start, SplitPos,
-                                             NewSegment->valno);
-            NewSegment->valno->def = Next->start;
-
-            *Next = LiveRange::Segment(SplitPos, Next->end, Next->valno);
+                                             Next->valno);
+            *Next = LiveRange::Segment(SplitPos, Next->end, OldIdxVNI);
             Next->valno->def = SplitPos;
           } else {
             // There is a gap between NewSegment and its predecessor
             // Value becomes live in.
-            *NewSegment = LiveRange::Segment(SplitPos, Next->start,
-                                             NewSegment->valno);
+            *NewSegment = LiveRange::Segment(SplitPos, Next->start, OldIdxVNI);
             NewSegment->valno->def = SplitPos;
           }
         } else {

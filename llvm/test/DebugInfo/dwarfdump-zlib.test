@@ -1,6 +1,12 @@
 REQUIRES: zlib
 
 RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-zlib.elf-x86-64 | FileCheck %s
+RUN: llvm-dwarfdump %p/Inputs/dwarfdump-test-zlibgnu.elf-x86-64 | FileCheck %s
 
 CHECK: .debug_abbrev contents
+
+// Dump content of a little section to check that both zlib and zlib gnu styles do
+// the decompression correctly and result is the same. This and above also checks
+// that sections names are properly shown in zlib-gnu style (without additional 'z' prefix).
 CHECK: .debug_info contents
+CHECK: 0x00000000: Compile Unit: length = 0x00000144 version = 0x0004 abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x00000148)

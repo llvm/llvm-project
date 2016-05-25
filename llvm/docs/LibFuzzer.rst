@@ -689,6 +689,18 @@ If your target has massive leaks and the leak detection is disabled
 you will eventually run out of RAM (see the ``-rss_limit_mb`` flag).
 
 
+Developing libFuzzer
+====================
+
+Building libFuzzer as a part of LLVM project and running its test requires 
+special CMake configuration:
+
+.. code-block:: console
+
+    cmake -GNinja  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=YES -DCMAKE_BUILD_TYPE=Release /path/to/llvm
+    ninja check-fuzzer
+
+
 Fuzzing components of LLVM
 ==========================
 .. contents::

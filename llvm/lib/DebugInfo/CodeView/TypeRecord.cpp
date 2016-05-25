@@ -105,6 +105,10 @@ bool EnumRecord::remapTypeIndices(ArrayRef<TypeIndex> IndexMap) {
   return Success;
 }
 
+bool BitFieldRecord::remapTypeIndices(ArrayRef<TypeIndex> IndexMap) {
+  return remapIndex(IndexMap, Type);
+}
+
 bool VFTableShapeRecord::remapTypeIndices(ArrayRef<TypeIndex> IndexMap) {
   return true;
 }

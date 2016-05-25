@@ -119,3 +119,21 @@ for.inc:
 for.cond.cleanup:
   ret void
 }
+
+define void @ptrtoint_cast2() {
+entry:
+  br i1 false, label %for.body.lr.ph, label %exit
+
+for.body.lr.ph:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
+  %offset = getelementptr inbounds float, float* null, i32 3
+  %bc = bitcast float* %offset to i64*
+  %inc = add nuw nsw i32 %iv, 1
+  br i1 false, label %for.body, label %exit
+
+exit:
+  ret void
+}

@@ -193,12 +193,12 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     assert(!isSubRegister(ScratchRSrcReg, ScratchWaveOffsetReg));
   }
 
-  // Reserve VGPRs for trap handler usage if "amdgpu-debugger-reserve-trap-regs"
+  // Reserve registers for debugger usage if "amdgpu-debugger-reserve-trap-regs"
   // attribute was specified.
   const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
-  if (ST.debuggerReserveTrapVGPRs()) {
+  if (ST.debuggerReserveRegs()) {
     unsigned ReservedVGPRFirst =
-      MaxWorkGroupVGPRCount - MFI->getDebuggerReserveTrapVGPRCount();
+      MaxWorkGroupVGPRCount - MFI->getDebuggerReservedVGPRCount();
     for (unsigned i = ReservedVGPRFirst; i < MaxWorkGroupVGPRCount; ++i) {
       unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
       reserveRegisterTuples(Reserved, Reg);

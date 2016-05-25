@@ -59,6 +59,7 @@ __attribute__((weak)) int __lsan_do_recoverable_leak_check();
 
 namespace fuzzer {
 static const size_t kMaxUnitSizeToPrint = 256;
+static const size_t TruncateMaxRuns = 1000;
 
 static void MissingWeakApiFunction(const char *FnName) {
   Printf("ERROR: %s is not defined. Exiting.\n"
@@ -176,9 +177,10 @@ void Fuzzer::DumpCurrentUnit(const char *Prefix) {
 
 NO_SANITIZE_MEMORY
 void Fuzzer::DeathCallback() {
-  if (!CurrentUnitSize) return;
-  Printf("DEATH:\n");
-  DumpCurrentUnit("crash-");
+  if (CurrentUnitSize) {
+    Printf("DEATH:\n");
+    DumpCurrentUnit("crash-");
+  }
   PrintFinalStats();
 }
 
@@ -353,11 +355,53 @@ void Fuzzer::ShuffleCorpus(UnitVector *V) {
     });
 }
 
+// Tries random prefixes of corpus items.
+// Prefix length is chosen according to exponential distribution
+// to sample short lengths much more heavily.
+void Fuzzer::TruncateUnits(std::vector<Unit> *NewCorpus) {
+  size_t MaxCorpusLen = 0;
+  for (const auto &U : Corpus)
+    MaxCorpusLen = std::max(MaxCorpusLen, U.size());
+
+  if (MaxCorpusLen <= 1)
+    return;
+
+  // 50% of exponential distribution is Log[2]/lambda.
+  // Choose lambda so that median is MaxCorpusLen / 2.
+  double Lambda = 2.0 * log(2.0) / static_cast<double>(MaxCorpusLen);
+  std::exponential_distribution<> Dist(Lambda);
+  std::vector<double> Sizes;
+  size_t TruncatePoints = std::max(1ul, TruncateMaxRuns / Corpus.size());
+  Sizes.reserve(TruncatePoints);
+  for (size_t I = 0; I < TruncatePoints; ++I) {
+    Sizes.push_back(Dist(MD.GetRand().Get_mt19937()) + 1);
+  }
+  std::sort(Sizes.begin(), Sizes.end());
+
+  for (size_t S : Sizes) {
+    for (const auto &U : Corpus) {
+      if (S < U.size() && RunOne(U.data(), S)) {
+        Unit U1(U.begin(), U.begin() + S);
+        NewCorpus->push_back(U1);
+        WriteToOutputCorpus(U1);
+        PrintStatusForNewUnit(U1);
+      }
+    }
+  }
+  PrintStats("TRUNC  ");
+}
+
 void Fuzzer::ShuffleAndMinimize() {
   PrintStats("READ  ");
   std::vector<Unit> NewCorpus;
   if (Options.ShuffleAtStartUp)
     ShuffleCorpus(&Corpus);
+
+  if (Options.TruncateUnits) {
+    ResetCoverage();
+    TruncateUnits(&NewCorpus);
+    ResetCoverage();
+  }
 
   for (const auto &U : Corpus) {
     if (RunOne(U)) {

@@ -245,3 +245,83 @@ define <2 x i64> @test_x86_sse41_pmovsxwq(<8 x i16> %a0) {
   ret <2 x i64> %res
 }
 declare <2 x i64> @llvm.x86.sse41.pmovsxwq(<8 x i16>) nounwind readnone
+
+
+define <2 x double> @test_x86_sse2_cvtdq2pd(<4 x i32> %a0) {
+; AVX-LABEL: test_x86_sse2_cvtdq2pd:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX-NEXT:    retl
+;
+; AVX512VL-LABEL: test_x86_sse2_cvtdq2pd:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX512VL-NEXT:    retl
+; CHECK-LABEL: test_x86_sse2_cvtdq2pd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <2 x double> @llvm.x86.sse2.cvtdq2pd(<4 x i32> %a0) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
+declare <2 x double> @llvm.x86.sse2.cvtdq2pd(<4 x i32>) nounwind readnone
+
+
+define <4 x double> @test_x86_avx_cvtdq2_pd_256(<4 x i32> %a0) {
+; AVX-LABEL: test_x86_avx_cvtdq2_pd_256:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX-NEXT:    retl
+;
+; AVX512VL-LABEL: test_x86_avx_cvtdq2_pd_256:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; AVX512VL-NEXT:    retl
+; CHECK-LABEL: test_x86_avx_cvtdq2_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtdq2pd %xmm0, %ymm0
+; CHECK-NEXT:    retl
+  %res = call <4 x double> @llvm.x86.avx.cvtdq2.pd.256(<4 x i32> %a0) ; <<4 x double>> [#uses=1]
+  ret <4 x double> %res
+}
+declare <4 x double> @llvm.x86.avx.cvtdq2.pd.256(<4 x i32>) nounwind readnone
+
+
+define <2 x double> @test_x86_sse2_cvtps2pd(<4 x float> %a0) {
+; AVX-LABEL: test_x86_sse2_cvtps2pd:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vcvtps2pd %xmm0, %xmm0
+; AVX-NEXT:    retl
+;
+; AVX512VL-LABEL: test_x86_sse2_cvtps2pd:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vcvtps2pd %xmm0, %xmm0
+; AVX512VL-NEXT:    retl
+; CHECK-LABEL: test_x86_sse2_cvtps2pd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtps2pd %xmm0, %xmm0
+; CHECK-NEXT:    retl
+  %res = call <2 x double> @llvm.x86.sse2.cvtps2pd(<4 x float> %a0) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
+declare <2 x double> @llvm.x86.sse2.cvtps2pd(<4 x float>) nounwind readnone
+
+
+define <4 x double> @test_x86_avx_cvt_ps2_pd_256(<4 x float> %a0) {
+; AVX-LABEL: test_x86_avx_cvt_ps2_pd_256:
+; AVX:       ## BB#0:
+; AVX-NEXT:    vcvtps2pd %xmm0, %ymm0
+; AVX-NEXT:    retl
+;
+; AVX512VL-LABEL: test_x86_avx_cvt_ps2_pd_256:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vcvtps2pd %xmm0, %ymm0
+; AVX512VL-NEXT:    retl
+; CHECK-LABEL: test_x86_avx_cvt_ps2_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vcvtps2pd %xmm0, %ymm0
+; CHECK-NEXT:    retl
+  %res = call <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float> %a0) ; <<4 x double>> [#uses=1]
+  ret <4 x double> %res
+}
+declare <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float>) nounwind readnone

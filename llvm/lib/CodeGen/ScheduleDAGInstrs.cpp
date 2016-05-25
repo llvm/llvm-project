@@ -511,10 +511,10 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
     // VReg2SUnit for the non-overlapping part.
     LaneBitmask OverlapMask = V2SU.LaneMask & LaneMask;
     LaneBitmask NonOverlapMask = V2SU.LaneMask & ~LaneMask;
-    if (NonOverlapMask != 0)
-      CurrentVRegDefs.insert(VReg2SUnit(Reg, NonOverlapMask, V2SU.SU));
     V2SU.SU = SU;
     V2SU.LaneMask = OverlapMask;
+    if (NonOverlapMask != 0)
+      CurrentVRegDefs.insert(VReg2SUnit(Reg, NonOverlapMask, DefSU));
   }
   // If there was no CurrentVRegDefs entry for some lanes yet, create one.
   if (LaneMask != 0)

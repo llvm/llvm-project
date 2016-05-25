@@ -97,6 +97,29 @@ namespace SIOutMods {
 
 namespace llvm {
 namespace AMDGPU {
+namespace EncValues { // Encoding values of enum9/8/7 operands
+
+enum {
+  SGPR_MIN = 0,
+  SGPR_MAX = 101,
+  TTMP_MIN = 112,
+  TTMP_MAX = 123,
+  INLINE_INTEGER_C_MIN = 128,
+  INLINE_INTEGER_C_POSITIVE_MAX = 192, // 64
+  INLINE_INTEGER_C_MAX = 208,
+  INLINE_FLOATING_C_MIN = 240,
+  INLINE_FLOATING_C_MAX = 248,
+  LITERAL_CONST = 255,
+  VGPR_MIN = 256,
+  VGPR_MAX = 511
+};
+
+} // namespace EncValues
+} // namespace AMDGPU
+} // namespace llvm
+
+namespace llvm {
+namespace AMDGPU {
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
 enum Id { // Message ID, width(3) [3:0].

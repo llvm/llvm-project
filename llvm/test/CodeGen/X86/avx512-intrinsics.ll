@@ -7035,9 +7035,9 @@ define <8 x double>@test_int_x86_avx512_mask_permvar_df_512(<8 x double> %x0, <8
 ; CHECK-LABEL: test_int_x86_avx512_mask_permvar_df_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermpd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpermpd %zmm1, %zmm0, %zmm3 {%k1} {z}
-; CHECK-NEXT:    vpermpd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm3 {%k1} {z}
+; CHECK-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm3, %zmm2, %zmm1
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -7055,9 +7055,9 @@ define <8 x i64>@test_int_x86_avx512_mask_permvar_di_512(<8 x i64> %x0, <8 x i64
 ; CHECK-LABEL: test_int_x86_avx512_mask_permvar_di_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermq %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpermq %zmm1, %zmm0, %zmm3 {%k1} {z}
-; CHECK-NEXT:    vpermq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpermq %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpermq %zmm0, %zmm1, %zmm3 {%k1} {z}
+; CHECK-NEXT:    vpermq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm3, %zmm2, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -7075,9 +7075,9 @@ define <16 x float>@test_int_x86_avx512_mask_permvar_sf_512(<16 x float> %x0, <1
 ; CHECK-LABEL: test_int_x86_avx512_mask_permvar_sf_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermps %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpermps %zmm1, %zmm0, %zmm3 {%k1} {z}
-; CHECK-NEXT:    vpermps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm3 {%k1} {z}
+; CHECK-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddps %zmm3, %zmm2, %zmm1
 ; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -7095,9 +7095,9 @@ define <16 x i32>@test_int_x86_avx512_mask_permvar_si_512(<16 x i32> %x0, <16 x 
 ; CHECK-LABEL: test_int_x86_avx512_mask_permvar_si_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermd %zmm1, %zmm0, %zmm2 {%k1}
-; CHECK-NEXT:    vpermd %zmm1, %zmm0, %zmm3 {%k1} {z}
-; CHECK-NEXT:    vpermd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm2 {%k1}
+; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm3 {%k1} {z}
+; CHECK-NEXT:    vpermd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    vpaddd %zmm3, %zmm2, %zmm1
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq

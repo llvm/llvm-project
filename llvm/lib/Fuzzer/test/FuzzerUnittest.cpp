@@ -13,6 +13,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   abort();
 }
 
+static int EmptyLLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+  return 0;
+}
+
 TEST(Fuzzer, CrossOver) {
   Random Rand(0);
   MutationDispatcher MD(Rand);
@@ -422,4 +426,22 @@ TEST(Corpus, Distribution) {
     // A weak sanity check that every unit gets invoked.
     EXPECT_GT(Hist[i], TriesPerUnit / N / 3);
   }
+}
+
+TEST(Corpus, TruncateUnits) {
+  Random Rand(0);
+  MutationDispatcher MD(Rand);
+  Fuzzer::FuzzingOptions Options;
+  Options.OutputCorpus = ""; // stops from writing new units.
+  Fuzzer Fuzz(EmptyLLVMFuzzerTestOneInput, MD, Options);
+
+  Fuzz.AddToCorpus(Unit(1024, static_cast<uint8_t>(1)));
+  Fuzz.ResetCoverage();
+
+  std::vector<Unit> NewCorpus;
+  Fuzz.TruncateUnits(&NewCorpus);
+
+  // New corpus should have a shorter unit.
+  EXPECT_EQ(1ul, NewCorpus.size());
+  EXPECT_EQ(1ul, NewCorpus[0].size());
 }

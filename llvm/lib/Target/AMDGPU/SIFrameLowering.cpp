@@ -184,8 +184,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
         // Pick the first unallocated SGPR. Be careful not to pick an alias of the
         // scratch descriptor, since we haven’t added its uses yet.
         if (!MRI.isPhysRegUsed(Reg)) {
-          assert(MRI.isAllocatable(Reg) &&
-                !TRI->isSubRegisterEq(ScratchRsrcReg, Reg));
+          if (!MRI.isAllocatable(Reg) ||
+              TRI->isSubRegisterEq(ScratchRsrcReg, Reg))
+            continue;
 
           MRI.replaceRegWith(ScratchWaveOffsetReg, Reg);
           ScratchWaveOffsetReg = Reg;

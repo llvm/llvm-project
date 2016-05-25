@@ -653,6 +653,10 @@ uint64_t MachOObjectFile::getSectionAlignment(DataRefImpl Sec) const {
   return uint64_t(1) << Align;
 }
 
+bool MachOObjectFile::isSectionCompressed(DataRefImpl Sec) const {
+  return false;
+}
+
 bool MachOObjectFile::isSectionText(DataRefImpl Sec) const {
   uint32_t Flags = getSectionFlags(this, Sec);
   return Flags & MachO::S_ATTR_PURE_INSTRUCTIONS;

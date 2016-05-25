@@ -69,13 +69,22 @@ namespace llvm {
     MCOperand decodeOperand_SReg_256(unsigned Val) const;
     MCOperand decodeOperand_SReg_512(unsigned Val) const;
 
-    enum { OP32 = true, OP64 = false };
+    enum OpWidthTy {
+      OPW32,
+      OPW64,
+      OPW128,
+      OPW_LAST_,
+      OPW_FIRST_ = OPW32
+    };
+    unsigned getVgprClassId(const OpWidthTy Width) const;
+    unsigned getSgprClassId(const OpWidthTy Width) const;
+    unsigned getTtmpClassId(const OpWidthTy Width) const;
 
     static MCOperand decodeIntImmed(unsigned Imm);
     static MCOperand decodeFPImmed(bool Is32, unsigned Imm);
     MCOperand decodeLiteralConstant() const;
 
-    MCOperand decodeSrcOp(bool Is32, unsigned Val) const;
+    MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val) const;
     MCOperand decodeSpecialReg32(unsigned Val) const;
     MCOperand decodeSpecialReg64(unsigned Val) const;
   };

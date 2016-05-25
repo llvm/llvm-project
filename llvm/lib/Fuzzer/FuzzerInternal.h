@@ -317,6 +317,7 @@ public:
     bool PrintNewCovPcs = false;
     bool PrintFinalStats = false;
     bool DetectLeaks = true;
+    bool TruncateUnits = false;
   };
 
   // Aggregates all available coverage measurements.
@@ -354,6 +355,7 @@ public:
   }
   size_t ChooseUnitIdxToMutate();
   const Unit &ChooseUnitToMutate() { return Corpus[ChooseUnitIdxToMutate()]; };
+  void TruncateUnits(std::vector<Unit> *NewCorpus);
   void Loop();
   void Drill();
   void ShuffleAndMinimize();
@@ -396,6 +398,9 @@ public:
   void SetMaxLen(size_t MaxLen);
   void RssLimitCallback();
 
+  // Public for tests.
+  void ResetCoverage();
+
 private:
   void AlarmCallback();
   void CrashCallback();
@@ -416,7 +421,6 @@ private:
   // Must be called whenever the corpus or unit weights are changed.
   void UpdateCorpusDistribution();
 
-  void ResetCoverage();
   bool UpdateMaxCoverage();
 
   // Trace-based fuzzing: we run a unit with some kind of tracing

@@ -168,6 +168,12 @@ public:
     return static_cast<GlobalValue::LinkageTypes>(Flags.Linkage);
   }
 
+  /// Sets the linkage to the value determined by global summary-based
+  /// optimization. Will be applied in the ThinLTO backends.
+  void setLinkage(GlobalValue::LinkageTypes Linkage) {
+    Flags.Linkage = Linkage;
+  }
+
   /// Return true if this summary is for a GlobalValue that needs promotion
   /// to be referenced from another module.
   bool needsRenaming() const { return GlobalValue::isLocalLinkage(linkage()); }
@@ -444,6 +450,13 @@ public:
     NewName += ".llvm.";
     NewName += utohexstr(ModHash[0]); // Take the first 32 bits
     return NewName.str();
+  }
+
+  /// Helper to obtain the unpromoted name for a global value (or the original
+  /// name if not promoted).
+  static StringRef getOriginalNameBeforePromote(StringRef Name) {
+    std::pair<StringRef, StringRef> Pair = Name.split(".llvm.");
+    return Pair.first;
   }
 
   /// Add a new module path with the given \p Hash, mapped to the given \p

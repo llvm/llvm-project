@@ -377,7 +377,6 @@ namespace COFF {
     uint8_t  unused[10];
   };
 
-  /// These are not documented in the spec, but are located in WinNT.h.
   enum WeakExternalCharacteristics {
     IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
     IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   = 2,

@@ -34,6 +34,58 @@ namespace {
 #define CV_ENUM_ENT(ns, enum)                                                  \
   { #enum, ns::enum }
 
+static const EnumEntry<uint16_t> RegisterNames[] = {
+    CV_ENUM_CLASS_ENT(RegisterId, Unknown),
+    CV_ENUM_CLASS_ENT(RegisterId, VFrame),
+    CV_ENUM_CLASS_ENT(RegisterId, AL),
+    CV_ENUM_CLASS_ENT(RegisterId, CL),
+    CV_ENUM_CLASS_ENT(RegisterId, DL),
+    CV_ENUM_CLASS_ENT(RegisterId, BL),
+    CV_ENUM_CLASS_ENT(RegisterId, AH),
+    CV_ENUM_CLASS_ENT(RegisterId, CH),
+    CV_ENUM_CLASS_ENT(RegisterId, DH),
+    CV_ENUM_CLASS_ENT(RegisterId, BH),
+    CV_ENUM_CLASS_ENT(RegisterId, AX),
+    CV_ENUM_CLASS_ENT(RegisterId, CX),
+    CV_ENUM_CLASS_ENT(RegisterId, DX),
+    CV_ENUM_CLASS_ENT(RegisterId, BX),
+    CV_ENUM_CLASS_ENT(RegisterId, SP),
+    CV_ENUM_CLASS_ENT(RegisterId, BP),
+    CV_ENUM_CLASS_ENT(RegisterId, SI),
+    CV_ENUM_CLASS_ENT(RegisterId, DI),
+    CV_ENUM_CLASS_ENT(RegisterId, EAX),
+    CV_ENUM_CLASS_ENT(RegisterId, ECX),
+    CV_ENUM_CLASS_ENT(RegisterId, EDX),
+    CV_ENUM_CLASS_ENT(RegisterId, EBX),
+    CV_ENUM_CLASS_ENT(RegisterId, ESP),
+    CV_ENUM_CLASS_ENT(RegisterId, EBP),
+    CV_ENUM_CLASS_ENT(RegisterId, ESI),
+    CV_ENUM_CLASS_ENT(RegisterId, EDI),
+    CV_ENUM_CLASS_ENT(RegisterId, ES),
+    CV_ENUM_CLASS_ENT(RegisterId, CS),
+    CV_ENUM_CLASS_ENT(RegisterId, SS),
+    CV_ENUM_CLASS_ENT(RegisterId, DS),
+    CV_ENUM_CLASS_ENT(RegisterId, FS),
+    CV_ENUM_CLASS_ENT(RegisterId, GS),
+    CV_ENUM_CLASS_ENT(RegisterId, IP),
+    CV_ENUM_CLASS_ENT(RegisterId, RAX),
+    CV_ENUM_CLASS_ENT(RegisterId, RBX),
+    CV_ENUM_CLASS_ENT(RegisterId, RCX),
+    CV_ENUM_CLASS_ENT(RegisterId, RDX),
+    CV_ENUM_CLASS_ENT(RegisterId, RSI),
+    CV_ENUM_CLASS_ENT(RegisterId, RDI),
+    CV_ENUM_CLASS_ENT(RegisterId, RBP),
+    CV_ENUM_CLASS_ENT(RegisterId, RSP),
+    CV_ENUM_CLASS_ENT(RegisterId, R8),
+    CV_ENUM_CLASS_ENT(RegisterId, R9),
+    CV_ENUM_CLASS_ENT(RegisterId, R10),
+    CV_ENUM_CLASS_ENT(RegisterId, R11),
+    CV_ENUM_CLASS_ENT(RegisterId, R12),
+    CV_ENUM_CLASS_ENT(RegisterId, R13),
+    CV_ENUM_CLASS_ENT(RegisterId, R14),
+    CV_ENUM_CLASS_ENT(RegisterId, R15),
+};
+
 static const EnumEntry<uint8_t> ProcSymFlagNames[] = {
     CV_ENUM_CLASS_ENT(ProcSymFlags, HasFP),
     CV_ENUM_CLASS_ENT(ProcSymFlags, HasIRET),
@@ -76,6 +128,18 @@ static const EnumEntry<codeview::SourceLanguage> SourceLanguages[] = {
     CV_ENUM_ENT(SourceLanguage, ILAsm),   CV_ENUM_ENT(SourceLanguage, Java),
     CV_ENUM_ENT(SourceLanguage, JScript), CV_ENUM_ENT(SourceLanguage, MSIL),
     CV_ENUM_ENT(SourceLanguage, HLSL),
+};
+
+static const EnumEntry<uint32_t> CompileSym2FlagNames[] = {
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, EC),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, NoDbgInfo),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, LTCG),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, NoDataAlign),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, ManagedPresent),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, SecurityChecks),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, HotPatch),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, CVTCIL),
+    CV_ENUM_CLASS_ENT(CompileSym2Flags, MSILModule),
 };
 
 static const EnumEntry<uint32_t> CompileSym3FlagNames[] = {
@@ -177,6 +241,30 @@ static const EnumEntry<uint32_t> FrameProcSymFlags[] = {
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, GuardCfw),
 };
 
+static const EnumEntry<uint16_t> ExportSymFlags[] = {
+    CV_ENUM_CLASS_ENT(ExportFlags, IsConstant),
+    CV_ENUM_CLASS_ENT(ExportFlags, IsData),
+    CV_ENUM_CLASS_ENT(ExportFlags, IsPrivate),
+    CV_ENUM_CLASS_ENT(ExportFlags, HasNoName),
+    CV_ENUM_CLASS_ENT(ExportFlags, HasExplicitOrdinal),
+    CV_ENUM_CLASS_ENT(ExportFlags, IsForwarder),
+};
+
+static const EnumEntry<uint8_t> ThunkOrdinalNames[] = {
+    CV_ENUM_CLASS_ENT(ThunkOrdinal, Standard),
+    CV_ENUM_CLASS_ENT(ThunkOrdinal, ThisAdjustor),
+    CV_ENUM_CLASS_ENT(ThunkOrdinal, Vcall),
+    CV_ENUM_CLASS_ENT(ThunkOrdinal, Pcode),
+    CV_ENUM_CLASS_ENT(ThunkOrdinal, UnknownLoad),
+    CV_ENUM_CLASS_ENT(ThunkOrdinal, TrampIncremental),
+    CV_ENUM_CLASS_ENT(ThunkOrdinal, BranchIsland),
+};
+
+static const EnumEntry<uint16_t> TrampolineNames[] = {
+    CV_ENUM_CLASS_ENT(TrampolineType, TrampIncremental),
+    CV_ENUM_CLASS_ENT(TrampolineType, BranchIsland),
+};
+
 /// Use this private dumper implementation to keep implementation details about
 /// the visitor out of SymbolDumper.h.
 class CVSymbolDumperImpl : public CVSymbolVisitor<CVSymbolDumperImpl> {
@@ -254,6 +342,49 @@ void CVSymbolDumperImpl::visitBlockSym(SymbolKind Kind, BlockSym &Block) {
   W.printString("LinkageName", LinkageName);
 }
 
+void CVSymbolDumperImpl::visitThunk32Sym(SymbolKind Kind, Thunk32Sym &Thunk) {
+  DictScope S(W, "Thunk32");
+  W.printNumber("Parent", Thunk.Header.Parent);
+  W.printNumber("End", Thunk.Header.End);
+  W.printNumber("Next", Thunk.Header.Next);
+  W.printNumber("Off", Thunk.Header.Off);
+  W.printNumber("Seg", Thunk.Header.Seg);
+  W.printNumber("Len", Thunk.Header.Len);
+  W.printEnum("Ordinal", Thunk.Header.Ord, makeArrayRef(ThunkOrdinalNames));
+}
+
+void CVSymbolDumperImpl::visitTrampolineSym(SymbolKind Kind,
+                                            TrampolineSym &Tramp) {
+  DictScope S(W, "Trampoline");
+  W.printEnum("Type", Tramp.Header.Type, makeArrayRef(TrampolineNames));
+  W.printNumber("Size", Tramp.Header.Size);
+  W.printNumber("ThunkOff", Tramp.Header.ThunkOff);
+  W.printNumber("TargetOff", Tramp.Header.TargetOff);
+  W.printNumber("ThunkSection", Tramp.Header.ThunkSection);
+  W.printNumber("TargetSection", Tramp.Header.TargetSection);
+}
+
+void CVSymbolDumperImpl::visitSectionSym(SymbolKind Kind, SectionSym &Section) {
+  DictScope S(W, "Section");
+  W.printNumber("SectionNumber", Section.Header.SectionNumber);
+  W.printNumber("Alignment", Section.Header.Alignment);
+  W.printNumber("Reserved", Section.Header.Reserved);
+  W.printNumber("Rva", Section.Header.Rva);
+  W.printNumber("Length", Section.Header.Length);
+  W.printHex("Characteristics", Section.Header.Characteristics);
+  W.printString("Name", Section.Name);
+}
+
+void CVSymbolDumperImpl::visitCoffGroupSym(SymbolKind Kind,
+                                           CoffGroupSym &CoffGroup) {
+  DictScope S(W, "COFF Group");
+  W.printNumber("Size", CoffGroup.Header.Size);
+  W.printHex("Characteristics", CoffGroup.Header.Characteristics);
+  W.printNumber("Offset", CoffGroup.Header.Offset);
+  W.printNumber("Segment", CoffGroup.Header.Segment);
+  W.printString("Name", CoffGroup.Name);
+}
+
 void CVSymbolDumperImpl::visitBPRelativeSym(SymbolKind Kind,
                                             BPRelativeSym &BPRel) {
   DictScope S(W, "BPRelativeSym");
@@ -287,9 +418,66 @@ void CVSymbolDumperImpl::visitCallSiteInfoSym(SymbolKind Kind,
     W.printString("LinkageName", LinkageName);
 }
 
+void CVSymbolDumperImpl::visitEnvBlockSym(SymbolKind Kind,
+                                          EnvBlockSym &EnvBlock) {
+  DictScope S(W, "EnvBlock");
+
+  W.printNumber("Reserved", EnvBlock.Header.Reserved);
+  ListScope L(W, "Entries");
+  for (auto Entry : EnvBlock.Fields) {
+    W.printString(Entry);
+  }
+}
+
+void CVSymbolDumperImpl::visitFileStaticSym(SymbolKind Kind,
+                                            FileStaticSym &FileStatic) {
+  DictScope S(W, "FileStatic");
+  W.printNumber("Index", FileStatic.Header.Index);
+  W.printNumber("ModFilenameOffset", FileStatic.Header.ModFilenameOffset);
+  W.printFlags("Flags", uint16_t(FileStatic.Header.Flags),
+               makeArrayRef(LocalFlags));
+  W.printString("Name", FileStatic.Name);
+}
+
+void CVSymbolDumperImpl::visitExportSym(SymbolKind Kind, ExportSym &Export) {
+  DictScope S(W, "Export");
+  W.printNumber("Ordinal", Export.Header.Ordinal);
+  W.printFlags("Flags", Export.Header.Flags, makeArrayRef(ExportSymFlags));
+  W.printString("Name", Export.Name);
+}
+
+void CVSymbolDumperImpl::visitCompile2Sym(SymbolKind Kind,
+                                          Compile2Sym &Compile2) {
+  DictScope S(W, "CompilerFlags2");
+
+  W.printEnum("Language", Compile2.Header.getLanguage(),
+              makeArrayRef(SourceLanguages));
+  W.printFlags("Flags", Compile2.Header.flags & ~0xff,
+               makeArrayRef(CompileSym2FlagNames));
+  W.printEnum("Machine", unsigned(Compile2.Header.Machine),
+              makeArrayRef(CPUTypeNames));
+  std::string FrontendVersion;
+  {
+    raw_string_ostream Out(FrontendVersion);
+    Out << Compile2.Header.VersionFrontendMajor << '.'
+        << Compile2.Header.VersionFrontendMinor << '.'
+        << Compile2.Header.VersionFrontendBuild;
+  }
+  std::string BackendVersion;
+  {
+    raw_string_ostream Out(BackendVersion);
+    Out << Compile2.Header.VersionBackendMajor << '.'
+        << Compile2.Header.VersionBackendMinor << '.'
+        << Compile2.Header.VersionBackendBuild;
+  }
+  W.printString("FrontendVersion", FrontendVersion);
+  W.printString("BackendVersion", BackendVersion);
+  W.printString("VersionName", Compile2.Version);
+}
+
 void CVSymbolDumperImpl::visitCompile3Sym(SymbolKind Kind,
                                           Compile3Sym &Compile3) {
-  DictScope S(W, "CompilerFlags");
+  DictScope S(W, "CompilerFlags3");
 
   W.printEnum("Language", Compile3.Header.getLanguage(),
               makeArrayRef(SourceLanguages));
@@ -537,6 +725,32 @@ void CVSymbolDumperImpl::visitInlineSiteSym(SymbolKind Kind,
   }
 }
 
+void CVSymbolDumperImpl::visitRegisterSym(SymbolKind Kind,
+                                          RegisterSym &Register) {
+  DictScope S(W, "RegisterSym");
+  W.printNumber("Type", Register.Header.Index);
+  W.printEnum("Seg", uint16_t(Register.Header.Register),
+              makeArrayRef(RegisterNames));
+  W.printString("Name", Register.Name);
+}
+
+void CVSymbolDumperImpl::visitPublicSym32(SymbolKind Kind,
+                                          PublicSym32 &Public) {
+  DictScope S(W, "PublicSym");
+  W.printNumber("Type", Public.Header.Index);
+  W.printNumber("Seg", Public.Header.Seg);
+  W.printNumber("Off", Public.Header.Off);
+  W.printString("Name", Public.Name);
+}
+
+void CVSymbolDumperImpl::visitProcRefSym(SymbolKind Kind, ProcRefSym &ProcRef) {
+  DictScope S(W, "ProcRef");
+  W.printNumber("SumName", ProcRef.Header.SumName);
+  W.printNumber("SymOffset", ProcRef.Header.SymOffset);
+  W.printNumber("Mod", ProcRef.Header.Mod);
+  W.printString("Name", ProcRef.Name);
+}
+
 void CVSymbolDumperImpl::visitLabelSym(SymbolKind Kind, LabelSym &Label) {
   DictScope S(W, "Label");
 
@@ -599,9 +813,9 @@ void CVSymbolDumperImpl::visitProcSym(SymbolKind Kind, ProcSym &Proc) {
 void CVSymbolDumperImpl::visitScopeEndSym(SymbolKind Kind,
                                           ScopeEndSym &ScopeEnd) {
   if (Kind == SymbolKind::S_END)
-    W.startLine() << "BlockEnd\n";
+    DictScope S(W, "BlockEnd");
   else if (Kind == SymbolKind::S_PROC_ID_END)
-    W.startLine() << "ProcEnd\n";
+    DictScope S(W, "ProcEnd");
   else if (Kind == SymbolKind::S_INLINESITE_END)
     DictScope S(W, "InlineSiteEnd");
 
@@ -648,8 +862,8 @@ void CVSymbolDumperImpl::visitUDTSym(SymbolKind Kind, UDTSym &UDT) {
 void CVSymbolDumperImpl::visitUnknownSymbol(SymbolKind Kind,
                                             ArrayRef<uint8_t> Data) {
   DictScope S(W, "UnknownSym");
-  W.printHex("Kind", unsigned(Kind));
-  W.printHex("Size", Data.size());
+  W.printEnum("Kind", uint16_t(Kind), makeArrayRef(SymbolTypeNames));
+  W.printNumber("Length", uint32_t(Data.size()));
 }
 
 bool CVSymbolDumper::dump(const SymbolIterator::Record &Record) {

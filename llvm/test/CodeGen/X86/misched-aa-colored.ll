@@ -155,6 +155,7 @@ entry:
   %ref.tmp.i = alloca %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199", align 8
   %Op.i = alloca %"class.llvm::SDValue.3.603.963.1923.2043.2283.4083", align 8
   %0 = bitcast %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* %ref.tmp.i to i8*
+  call void @llvm.lifetime.start(i64 24, i8* %0) #1
   %retval.sroa.0.0.idx.i36 = getelementptr inbounds %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199", %"struct.std::pair.112.119.719.1079.2039.2159.2399.4199"* %ref.tmp.i, i64 0, i32 1, i32 0, i32 0
   %retval.sroa.0.0.copyload.i37 = load i32, i32* %retval.sroa.0.0.idx.i36, align 8
   call void @llvm.lifetime.end(i64 24, i8* %0) #1

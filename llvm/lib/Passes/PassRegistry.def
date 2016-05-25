@@ -110,6 +110,7 @@ FUNCTION_ALIAS_ANALYSIS("type-based-aa", TypeBasedAA())
 #endif
 FUNCTION_PASS("aa-eval", AAEvaluator())
 FUNCTION_PASS("adce", ADCEPass())
+FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("dce", DCEPass())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("early-cse", EarlyCSEPass())

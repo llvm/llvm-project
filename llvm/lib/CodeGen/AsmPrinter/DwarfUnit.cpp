@@ -1252,11 +1252,13 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SP->isLocalToUnit())
     addFlag(SPDie, dwarf::DW_AT_external);
 
-  if (SP->isOptimized())
-    addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
+  if (DD->useAppleExtensionAttributes()) {
+    if (SP->isOptimized())
+      addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
 
-  if (unsigned isa = Asm->getISAEncoding())
-    addUInt(SPDie, dwarf::DW_AT_APPLE_isa, dwarf::DW_FORM_flag, isa);
+    if (unsigned isa = Asm->getISAEncoding())
+      addUInt(SPDie, dwarf::DW_AT_APPLE_isa, dwarf::DW_FORM_flag, isa);
+  }
 
   if (SP->isLValueReference())
     addFlag(SPDie, dwarf::DW_AT_reference);

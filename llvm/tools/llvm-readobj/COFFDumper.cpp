@@ -494,17 +494,6 @@ static const EnumEntry<uint32_t> SubSectionTypes[] = {
   LLVM_READOBJ_ENUM_CLASS_ENT(ModuleSubstreamKind, CoffSymbolRVA),
 };
 
-static const EnumEntry<uint8_t> ProcSymFlagNames[] = {
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasFP),
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasIRET),
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasFRET),
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, IsNoReturn),
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, IsUnreachable),
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasCustomCallingConv),
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, IsNoInline),
-    LLVM_READOBJ_ENUM_CLASS_ENT(ProcSymFlags, HasOptimizedDebugInfo),
-};
-
 static const EnumEntry<uint32_t> FrameDataFlags[] = {
     LLVM_READOBJ_ENUM_ENT(FrameData, HasSEH),
     LLVM_READOBJ_ENUM_ENT(FrameData, HasEH),

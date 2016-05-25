@@ -1920,10 +1920,11 @@ define void @test_mm_storeu_ps(float *%a0, <4 x float> %a1) {
 ; X64:       # BB#0:
 ; X64-NEXT:    movups %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to <4 x float>*
-  store <4 x float> %a1, <4 x float>* %arg0, align 1
+  %arg0 = bitcast float* %a0 to i8*
+  call void @llvm.x86.sse.storeu.ps(i8* %arg0, <4 x float> %a1)
   ret void
 }
+declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
 
 define void @test_mm_stream_ps(float *%a0, <4 x float> %a1) {
 ; X32-LABEL: test_mm_stream_ps:

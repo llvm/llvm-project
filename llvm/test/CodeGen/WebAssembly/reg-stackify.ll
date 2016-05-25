@@ -449,8 +449,8 @@ bb10:                                             ; preds = %bb9, %bb
 
 ; CHECK-LABEL: stackpointer_dependency:
 ; CHECK:      call {{.+}}, stackpointer_callee@FUNCTION,
-; CHECK:      i32.const $push[[L0:.+]]=, __stack_pointer
-; CHECK-NEXT: i32.store $drop=, 0($pop[[L0]]),
+; CHECK:      i32.const $push[[L0:.+]]=, 0
+; CHECK-NEXT: i32.store $drop=, __stack_pointer($pop[[L0]]),
 declare i32 @stackpointer_callee(i8* readnone, i8* readnone)
 declare i8* @llvm.frameaddress(i32)
 define i32 @stackpointer_dependency(i8* readnone) {

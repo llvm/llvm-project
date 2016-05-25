@@ -147,6 +147,4 @@ uint32_t NameHashTable::getIDForString(StringRef Str) const {
   return IDs[0];
 }
 
-ArrayRef<uint32_t> NameHashTable::name_ids() const {
-  return ArrayRef<uint32_t>(IDs).slice(1, NameCount);
-}
+ArrayRef<uint32_t> NameHashTable::name_ids() const { return IDs; }

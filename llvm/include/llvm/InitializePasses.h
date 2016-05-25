@@ -65,7 +65,7 @@ void initializeTarget(PassRegistry&);
 void initializeAAEvalLegacyPassPass(PassRegistry&);
 void initializeAddDiscriminatorsPass(PassRegistry&);
 void initializeADCELegacyPassPass(PassRegistry&);
-void initializeBDCEPass(PassRegistry&);
+void initializeBDCELegacyPassPass(PassRegistry &);
 void initializeAliasSetPrinterPass(PassRegistry&);
 void initializeAlwaysInlinerPass(PassRegistry&);
 void initializeArgPromotionPass(PassRegistry&);

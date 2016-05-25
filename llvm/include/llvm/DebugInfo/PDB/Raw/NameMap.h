@@ -28,6 +28,8 @@ public:
 
   bool tryGetValue(StringRef Name, uint32_t &Value) const;
 
+  iterator_range<StringMapConstIterator<uint32_t>> entries() const;
+
 private:
   StringMap<uint32_t> Mapping;
 };

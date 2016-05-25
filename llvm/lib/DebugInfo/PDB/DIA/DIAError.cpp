@@ -5,6 +5,9 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+// FIXME: This class is only here to support the transition to llvm::Error. It
+// will be removed once this transition is complete. Clients should prefer to
+// deal with the Error value directly, rather than converting to error_code.
 class DIAErrorCategory : public std::error_category {
 public:
   const char *name() const LLVM_NOEXCEPT override { return "llvm.pdb.dia"; }

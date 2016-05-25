@@ -17249,6 +17249,16 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
                                               Src1, Src2, Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
+    case VPERM_2OP_MASK : {
+      SDValue Src1 = Op.getOperand(1);
+      SDValue Src2 = Op.getOperand(2);
+      SDValue PassThru = Op.getOperand(3);
+      SDValue Mask = Op.getOperand(4);
+
+      // Swap Src1 and Src2 in the node creation
+      return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,Src2, Src1),
+                                  Mask, PassThru, Subtarget, DAG);
+    }
     case VPERM_3OP_MASKZ:
     case VPERM_3OP_MASK:{
       // Src2 is the PassThru

@@ -131,6 +131,25 @@ template <typename T> struct serialize_vector_tail_impl {
   std::vector<T> &Item;
 };
 
+struct serialize_null_term_string_array_impl {
+  serialize_null_term_string_array_impl(std::vector<StringRef> &Item)
+      : Item(Item) {}
+
+  std::error_code deserialize(ArrayRef<uint8_t> &Data) const {
+    StringRef Field;
+    // Stop when we run out of bytes or we hit record padding bytes.
+    while (Data.front() != 0) {
+      if (auto EC = consume(Data, Field))
+        return EC;
+      Item.push_back(Field);
+    }
+    Data = Data.drop_front(1);
+    return std::error_code();
+  }
+
+  std::vector<StringRef> &Item;
+};
+
 template <typename T> struct serialize_arrayref_tail_impl {
   serialize_arrayref_tail_impl(ArrayRef<T> &Item) : Item(Item) {}
 
@@ -156,6 +175,11 @@ template <typename T> struct serialize_numeric_impl {
 template <typename T, typename U>
 serialize_array_impl<T, U> serialize_array(ArrayRef<T> &Item, U Func) {
   return serialize_array_impl<T, U>(Item, Func);
+}
+
+inline serialize_null_term_string_array_impl
+serialize_null_term_string_array(std::vector<StringRef> &Item) {
+  return serialize_null_term_string_array_impl(Item);
 }
 
 template <typename T>
@@ -186,6 +210,10 @@ template <typename T> serialize_numeric_impl<T> serialize_numeric(T &Item) {
 // This is an array that exhausts the remainder of the input buffer.
 #define CV_ARRAY_FIELD_TAIL(I) serialize_array_tail(I)
 
+// This is an array that consumes null terminated strings until a double null
+// is encountered.
+#define CV_STRING_ARRAY_NULL_TERM(I) serialize_null_term_string_array(I)
+
 #define CV_NUMERIC_FIELD(I) serialize_numeric(I)
 
 template <typename T, typename U>
@@ -197,6 +225,12 @@ std::error_code consume(ArrayRef<uint8_t> &Data,
 template <typename T, typename U>
 std::error_code consume(ArrayRef<uint8_t> &Data,
                         const serialize_array_impl<T, U> &Item) {
+  return Item.deserialize(Data);
+}
+
+inline std::error_code
+consume(ArrayRef<uint8_t> &Data,
+        const serialize_null_term_string_array_impl &Item) {
   return Item.deserialize(Data);
 }
 

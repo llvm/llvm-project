@@ -51,6 +51,21 @@ enum SpecialStream : uint32_t {
   StreamIPI = 4,
 };
 
+enum class DbgHeaderType : uint16_t {
+  FPO,
+  Exception,
+  Fixup,
+  OmapToSrc,
+  OmapFromSrc,
+  SectionHdr,
+  TokenRidMap,
+  Xdata,
+  Pdata,
+  NewFPO,
+  SectionHdrOrig,
+  Max
+};
+
 } // end namespace pdb
 } // end namespace llvm
 

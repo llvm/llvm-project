@@ -127,7 +127,7 @@ class InductiveRangeCheck {
 
   static InductiveRangeCheck::RangeCheckKind
   parseRangeCheck(Loop *L, ScalarEvolution &SE, Value *Condition,
-                  const SCEV *&Index, Value *&UpperLimit);
+                  Value *&Index, Value *&UpperLimit);
 
   InductiveRangeCheck()
       : Offset(nullptr), Scale(nullptr), Length(nullptr),
@@ -317,7 +317,7 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
 /// the range check is recognized to be `RANGE_CHECK_UPPER` or stronger.
 InductiveRangeCheck::RangeCheckKind
 InductiveRangeCheck::parseRangeCheck(Loop *L, ScalarEvolution &SE,
-                                     Value *Condition, const SCEV *&Index,
+                                     Value *Condition, Value *&Index,
                                      Value *&Length) {
   using namespace llvm::PatternMatch;
 
@@ -345,29 +345,14 @@ InductiveRangeCheck::parseRangeCheck(Loop *L, ScalarEvolution &SE,
     if (LengthA != nullptr && LengthB != nullptr && LengthA != LengthB)
       return InductiveRangeCheck::RANGE_CHECK_UNKNOWN;
 
-    Index = SE.getSCEV(IndexA);
-    if (isa<SCEVCouldNotCompute>(Index))
-      return InductiveRangeCheck::RANGE_CHECK_UNKNOWN;
-
+    Index = IndexA;
     Length = LengthA == nullptr ? LengthB : LengthA;
 
     return (InductiveRangeCheck::RangeCheckKind)(RCKindA | RCKindB);
   }
 
-  if (ICmpInst *ICI = dyn_cast<ICmpInst>(Condition)) {
-    Value *IndexVal = nullptr;
-
-    auto RCKind = parseRangeCheckICmp(L, ICI, SE, IndexVal, Length);
-
-    if (RCKind == InductiveRangeCheck::RANGE_CHECK_UNKNOWN)
-      return InductiveRangeCheck::RANGE_CHECK_UNKNOWN;
-
-    Index = SE.getSCEV(IndexVal);
-    if (isa<SCEVCouldNotCompute>(Index))
-      return InductiveRangeCheck::RANGE_CHECK_UNKNOWN;
-
-    return RCKind;
-  }
+  if (ICmpInst *ICI = dyn_cast<ICmpInst>(Condition))
+    return parseRangeCheckICmp(L, ICI, SE, Index, Length);
 
   return InductiveRangeCheck::RANGE_CHECK_UNKNOWN;
 }
@@ -384,20 +369,19 @@ InductiveRangeCheck::create(BranchInst *BI, Loop *L, ScalarEvolution &SE,
   if (BPI.getEdgeProbability(BI->getParent(), (unsigned) 0) < LikelyTaken)
     return None;
 
-  Value *Length = nullptr;
-  const SCEV *IndexSCEV = nullptr;
+  Value *Length = nullptr, *Index = nullptr;
 
   auto RCKind = InductiveRangeCheck::parseRangeCheck(L, SE, BI->getCondition(),
-                                                     IndexSCEV, Length);
+                                                     Index, Length);
 
   if (RCKind == InductiveRangeCheck::RANGE_CHECK_UNKNOWN)
     return None;
 
-  assert(IndexSCEV && "contract with SplitRangeCheckCondition!");
+  assert(Index && "contract with parseRangeCheck!");
   assert((!(RCKind & InductiveRangeCheck::RANGE_CHECK_UPPER) || Length) &&
-         "contract with SplitRangeCheckCondition!");
+         "contract with parseRangeCheck!");
 
-  const SCEVAddRecExpr *IndexAddRec = dyn_cast<SCEVAddRecExpr>(IndexSCEV);
+  const auto *IndexAddRec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Index));
   bool IsAffineIndex =
       IndexAddRec && (IndexAddRec->getLoop() == L) && IndexAddRec->isAffine();
 

@@ -222,6 +222,7 @@ public:
   std::error_code getSectionContents(DataRefImpl Sec,
                                      StringRef &Res) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;
+  bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
   bool isSectionData(DataRefImpl Sec) const override;
   bool isSectionBSS(DataRefImpl Sec) const override;
