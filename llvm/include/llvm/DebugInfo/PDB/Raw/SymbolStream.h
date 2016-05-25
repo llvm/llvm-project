@@ -10,11 +10,9 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBSYMBOLSTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBSYMBOLSTREAM_H
 
-#include "llvm/DebugInfo/CodeView/TypeStream.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
 #include "llvm/Support/Error.h"
 
@@ -28,10 +26,11 @@ public:
   ~SymbolStream();
   Error reload();
 
-  Expected<std::string> getSymbolName(uint32_t Offset) const;
+  iterator_range<codeview::SymbolIterator> getSymbols() const;
 
 private:
-  MappedBlockStream Stream;
+  ByteStream Stream;
+  MappedBlockStream MappedStream;
 };
 }
 }

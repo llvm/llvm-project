@@ -134,17 +134,25 @@ class GuardWideningImpl {
   /// with the constraint that \c Length is not negative.  \c CheckInst is the
   /// pre-existing instruction in the IR that computes the result of this range
   /// check.
-  struct RangeCheck {
+  class RangeCheck {
     Value *Base;
     ConstantInt *Offset;
     Value *Length;
     ICmpInst *CheckInst;
 
-    RangeCheck() {}
-
+  public:
     explicit RangeCheck(Value *Base, ConstantInt *Offset, Value *Length,
                         ICmpInst *CheckInst)
         : Base(Base), Offset(Offset), Length(Length), CheckInst(CheckInst) {}
+
+    void setBase(Value *NewBase) { Base = NewBase; }
+    void setOffset(ConstantInt *NewOffset) { Offset = NewOffset; }
+
+    Value *getBase() const { return Base; }
+    ConstantInt *getOffset() const { return Offset; }
+    const APInt &getOffsetValue() const { return getOffset()->getValue(); }
+    Value *getLength() const { return Length; };
+    ICmpInst *getCheckInst() const { return CheckInst; }
 
     void print(raw_ostream &OS, bool PrintTypes = false) {
       OS << "Base: ";
@@ -442,12 +450,12 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
       if (InsertPt) {
         Result = nullptr;
         for (auto &RC : CombinedChecks) {
-          makeAvailableAt(RC.CheckInst, InsertPt);
+          makeAvailableAt(RC.getCheckInst(), InsertPt);
           if (Result)
-            Result =
-                BinaryOperator::CreateAnd(RC.CheckInst, Result, "", InsertPt);
+            Result = BinaryOperator::CreateAnd(RC.getCheckInst(), Result, "",
+                                               InsertPt);
           else
-            Result = RC.CheckInst;
+            Result = RC.getCheckInst();
         }
 
         Result->setName("wide.chk");
@@ -496,20 +504,18 @@ bool GuardWideningImpl::parseRangeChecks(
 
   auto &DL = IC->getModule()->getDataLayout();
 
-  GuardWideningImpl::RangeCheck Check;
-  Check.Base = CmpLHS;
-  Check.Offset =
-      cast<ConstantInt>(ConstantInt::getNullValue(CmpRHS->getType()));
-  Check.Length = CmpRHS;
-  Check.CheckInst = IC;
+  GuardWideningImpl::RangeCheck Check(
+      CmpLHS, cast<ConstantInt>(ConstantInt::getNullValue(CmpRHS->getType())),
+      CmpRHS, IC);
 
-  if (!isKnownNonNegative(Check.Length, DL))
+  if (!isKnownNonNegative(Check.getLength(), DL))
     return false;
 
   // What we have in \c Check now is a correct interpretation of \p CheckCond.
   // Try to see if we can move some constant offsets into the \c Offset field.
 
   bool Changed;
+  auto &Ctx = CheckCond->getContext();
 
   do {
     Value *OpLHS;
@@ -517,26 +523,25 @@ bool GuardWideningImpl::parseRangeChecks(
     Changed = false;
 
 #ifndef NDEBUG
-    auto *BaseInst = dyn_cast<Instruction>(Check.Base);
+    auto *BaseInst = dyn_cast<Instruction>(Check.getBase());
     assert((!BaseInst || DT.isReachableFromEntry(BaseInst->getParent())) &&
            "Unreachable instruction?");
 #endif
 
-    if (match(Check.Base, m_Add(m_Value(OpLHS), m_ConstantInt(OpRHS)))) {
-      Check.Base = OpLHS;
-      Check.Offset =
-          ConstantInt::get(Check.Offset->getContext(),
-                           Check.Offset->getValue() + OpRHS->getValue());
+    if (match(Check.getBase(), m_Add(m_Value(OpLHS), m_ConstantInt(OpRHS)))) {
+      Check.setBase(OpLHS);
+      APInt NewOffset = Check.getOffsetValue() + OpRHS->getValue();
+      Check.setOffset(ConstantInt::get(Ctx, NewOffset));
       Changed = true;
-    } else if (match(Check.Base, m_Or(m_Value(OpLHS), m_ConstantInt(OpRHS)))) {
+    } else if (match(Check.getBase(),
+                     m_Or(m_Value(OpLHS), m_ConstantInt(OpRHS)))) {
       unsigned BitWidth = OpLHS->getType()->getScalarSizeInBits();
       APInt KnownZero(BitWidth, 0), KnownOne(BitWidth, 0);
       computeKnownBits(OpLHS, KnownZero, KnownOne, DL);
       if ((OpRHS->getValue() & KnownZero) == OpRHS->getValue()) {
-        Check.Base = OpLHS;
-        Check.Offset =
-            ConstantInt::get(Check.Offset->getContext(),
-                             Check.Offset->getValue() + OpRHS->getValue());
+        Check.setBase(OpLHS);
+        APInt NewOffset = Check.getOffsetValue() + OpRHS->getValue();
+        Check.setOffset(ConstantInt::get(Ctx, NewOffset));
         Changed = true;
       }
     }
@@ -553,13 +558,13 @@ bool GuardWideningImpl::combineRangeChecks(
   while (!Checks.empty()) {
     // Pick all of the range checks with a specific base and length, and try to
     // merge them.
-    Value *CurrentBase = Checks.front().Base;
-    Value *CurrentLength = Checks.front().Length;
+    Value *CurrentBase = Checks.front().getBase();
+    Value *CurrentLength = Checks.front().getLength();
 
     SmallVector<GuardWideningImpl::RangeCheck, 3> CurrentChecks;
 
     auto IsCurrentCheck = [&](GuardWideningImpl::RangeCheck &RC) {
-      return RC.Base == CurrentBase && RC.Length == CurrentLength;
+      return RC.getBase() == CurrentBase && RC.getLength() == CurrentLength;
     };
 
     std::copy_if(Checks.begin(), Checks.end(),
@@ -580,13 +585,13 @@ bool GuardWideningImpl::combineRangeChecks(
     std::sort(CurrentChecks.begin(), CurrentChecks.end(),
               [&](const GuardWideningImpl::RangeCheck &LHS,
                   const GuardWideningImpl::RangeCheck &RHS) {
-      return LHS.Offset->getValue().slt(RHS.Offset->getValue());
+      return LHS.getOffsetValue().slt(RHS.getOffsetValue());
     });
 
     // Note: std::sort should not invalidate the ChecksStart iterator.
 
-    ConstantInt *MinOffset = CurrentChecks.front().Offset,
-                *MaxOffset = CurrentChecks.back().Offset;
+    ConstantInt *MinOffset = CurrentChecks.front().getOffset(),
+                *MaxOffset = CurrentChecks.back().getOffset();
 
     unsigned BitWidth = MaxOffset->getValue().getBitWidth();
     if ((MaxOffset->getValue() - MinOffset->getValue())
@@ -596,7 +601,7 @@ bool GuardWideningImpl::combineRangeChecks(
     APInt MaxDiff = MaxOffset->getValue() - MinOffset->getValue();
     APInt HighOffset = MaxOffset->getValue();
     auto OffsetOK = [&](const GuardWideningImpl::RangeCheck &RC) {
-      return (HighOffset - RC.Offset->getValue()).ult(MaxDiff);
+      return (HighOffset - RC.getOffsetValue()).ult(MaxDiff);
     };
 
     if (MaxDiff.isMinValue() ||

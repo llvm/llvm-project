@@ -13,6 +13,7 @@
 #include "PDBTypes.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include <memory>
 
 namespace llvm {
@@ -67,7 +68,7 @@ public:
   virtual uint32_t getLiveRangeStartAddressOffset() const = 0;
   virtual uint32_t getLiveRangeStartAddressSection() const = 0;
   virtual uint32_t getLiveRangeStartRelativeVirtualAddress() const = 0;
-  virtual PDB_RegisterId getLocalBasePointerRegisterId() const = 0;
+  virtual codeview::RegisterId getLocalBasePointerRegisterId() const = 0;
   virtual uint32_t getLowerBoundId() const = 0;
   virtual uint32_t getMemorySpaceKind() const = 0;
   virtual std::string getName() const = 0;
@@ -82,7 +83,7 @@ public:
   virtual uint32_t getOffsetInUdt() const = 0;
   virtual PDB_Cpu getPlatform() const = 0;
   virtual uint32_t getRank() const = 0;
-  virtual PDB_RegisterId getRegisterId() const = 0;
+  virtual codeview::RegisterId getRegisterId() const = 0;
   virtual uint32_t getRegisterType() const = 0;
   virtual uint32_t getRelativeVirtualAddress() const = 0;
   virtual uint32_t getSamplerSlot() const = 0;
@@ -118,7 +119,7 @@ public:
   virtual int32_t getVirtualBasePointerOffset() const = 0;
   virtual PDB_LocType getLocationType() const = 0;
   virtual PDB_Machine getMachineType() const = 0;
-  virtual PDB_ThunkOrdinal getThunkOrdinal() const = 0;
+  virtual codeview::ThunkOrdinal getThunkOrdinal() const = 0;
   virtual uint64_t getLength() const = 0;
   virtual uint64_t getLiveRangeLength() const = 0;
   virtual uint64_t getVirtualAddress() const = 0;

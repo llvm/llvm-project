@@ -705,17 +705,36 @@ private:
   TypeIndex UnderlyingType;
 };
 
+// LF_BITFIELD
 class BitFieldRecord : public TypeRecord {
 public:
   BitFieldRecord(TypeIndex Type, uint8_t BitSize, uint8_t BitOffset)
       : TypeRecord(TypeRecordKind::BitField), Type(Type), BitSize(BitSize),
         BitOffset(BitOffset) {}
 
+  /// Rewrite member type indices with IndexMap. Returns false if a type index
+  /// is not in the map.
+  bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
+
+  static ErrorOr<BitFieldRecord> deserialize(TypeRecordKind Kind,
+                                             ArrayRef<uint8_t> &Data) {
+    const Layout *L = nullptr;
+    CV_DESERIALIZE(Data, L);
+
+    return BitFieldRecord(L->Type, L->BitSize, L->BitOffset);
+  }
+
   TypeIndex getType() const { return Type; }
   uint8_t getBitOffset() const { return BitOffset; }
   uint8_t getBitSize() const { return BitSize; }
 
 private:
+  struct Layout {
+    TypeIndex Type;
+    uint8_t BitSize;
+    uint8_t BitOffset;
+  };
+
   TypeIndex Type;
   uint8_t BitSize;
   uint8_t BitOffset;

@@ -486,7 +486,7 @@ include "VIInstrFormats.td"
 class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
   let Name = "Imm"#CName;
   let PredicateMethod = "is"#CName;
-  let ParserMethod = "parse"#CName;
+  let ParserMethod = !if(Optional, "parseOptionalOperand", "parse"#CName);
   let RenderMethod = "addImmOperands";
   let IsOptional = Optional;
   let DefaultMethod = "default"#CName;
@@ -552,7 +552,7 @@ def src0_sel : NamedOperandU32<"SDWASrc0Sel", sdwa_sel>;
 def src1_sel : NamedOperandU32<"SDWASrc1Sel", sdwa_sel>;
 def dst_unused : NamedOperandU32<"SDWADstUnused", NamedMatchClass<"SDWADstUnused">>;
 
-def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg">>;
+def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 

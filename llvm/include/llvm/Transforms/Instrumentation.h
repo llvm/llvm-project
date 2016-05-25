@@ -123,6 +123,7 @@ struct EfficiencySanitizerOptions {
   enum Type {
     ESAN_None = 0,
     ESAN_CacheFrag,
+    ESAN_WorkingSet,
   } ToolType;
 };
 

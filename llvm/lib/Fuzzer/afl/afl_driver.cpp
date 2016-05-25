@@ -1,3 +1,11 @@
+//===- afl_driver.cpp - a glue between AFL and libFuzzer --------*- C++ -* ===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//===----------------------------------------------------------------------===//
+
 /* This file allows to fuzz libFuzzer-style target functions
  (LLVMFuzzerTestOneInput) with AFL using AFL's persistent (in-process) mode.
 

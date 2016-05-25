@@ -157,7 +157,8 @@
 ; OBJ32:          DisplayName: x
 ; OBJ32:          LinkageName: _x
 ; OBJ32:        }
-; OBJ32:        ProcEnd
+; OBJ32:        ProcEnd {
+; OBJ32:        }
 ; OBJ32-NEXT: ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Lines (0xF2)
@@ -170,7 +171,8 @@
 ; OBJ32:          DisplayName: y
 ; OBJ32:          LinkageName: _y
 ; OBJ32:        }
-; OBJ32:        ProcEnd
+; OBJ32:        ProcEnd {
+; OBJ32:        }
 ; OBJ32-NEXT: ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Lines (0xF2)
@@ -183,7 +185,8 @@
 ; OBJ32:          DisplayName: f
 ; OBJ32:          LinkageName: _f
 ; OBJ32:        }
-; OBJ32:        ProcEnd
+; OBJ32:        ProcEnd {
+; OBJ32:        }
 ; OBJ32-NEXT: ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Lines (0xF2)
@@ -419,7 +422,8 @@
 ; OBJ64:          DisplayName: x
 ; OBJ64:          LinkageName: x
 ; OBJ64:        }
-; OBJ64:        ProcEnd
+; OBJ64:        ProcEnd {
+; OBJ64:        }
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Lines (0xF2)
@@ -432,7 +436,8 @@
 ; OBJ64:          DisplayName: y
 ; OBJ64:          LinkageName: y
 ; OBJ64:        }
-; OBJ64:        ProcEnd
+; OBJ64:        ProcEnd {
+; OBJ64:        }
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Lines (0xF2)
@@ -445,7 +450,8 @@
 ; OBJ64:          DisplayName: f
 ; OBJ64:          LinkageName: f
 ; OBJ64:        }
-; OBJ64:        ProcEnd
+; OBJ64:        ProcEnd {
+; OBJ64:        }
 ; OBJ64-NEXT: ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Lines (0xF2)

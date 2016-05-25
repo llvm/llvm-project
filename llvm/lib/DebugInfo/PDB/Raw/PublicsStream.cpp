@@ -181,19 +181,13 @@ Error PublicsStream::reload() {
   return Error::success();
 }
 
-std::vector<std::string> PublicsStream::getSymbols() const {
+iterator_range<codeview::SymbolIterator> PublicsStream::getSymbols() const {
+  using codeview::SymbolIterator;
   auto SymbolS = Pdb.getPDBSymbolStream();
-  if (SymbolS.takeError())
-    return {};
+  if (SymbolS.takeError()) {
+    return llvm::make_range<SymbolIterator>(SymbolIterator(), SymbolIterator());
+  }
   SymbolStream &SS = SymbolS.get();
 
-  std::vector<std::string> Ret;
-  for (const HashRecord &HR : HashRecords) {
-    // For some reason, symbol offset is biased by one.
-    Expected<std::string> Name = SS.getSymbolName(HR.Off - 1);
-    if (Name.takeError())
-      return Ret;
-    Ret.push_back(std::move(Name.get()));
-  }
-  return Ret;
+  return SS.getSymbols();
 }

@@ -6399,6 +6399,9 @@ std::error_code ModuleSummaryIndexBitcodeReader::initLazyStream(
 }
 
 namespace {
+// FIXME: This class is only here to support the transition to llvm::Error. It
+// will be removed once this transition is complete. Clients should prefer to
+// deal with the Error value directly, rather than converting to error_code.
 class BitcodeErrorCategoryType : public std::error_category {
   const char *name() const LLVM_NOEXCEPT override {
     return "llvm.bitcode";

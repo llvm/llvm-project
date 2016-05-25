@@ -109,8 +109,8 @@ private:
  * update affected liveness intervals with LiveIntervalAnalysis::handleMove().
  */
 static void testHandleMove(MachineFunction &MF, LiveIntervals &LIS,
-                           unsigned From, unsigned To) {
-  MachineBasicBlock &MBB = MF.front();
+                           unsigned From, unsigned To, unsigned BlockNum = 0) {
+  MachineBasicBlock &MBB = *MF.getBlockNumbered(BlockNum);
 
   unsigned I = 0;
   MachineInstr *FromInstr = nullptr;
@@ -304,6 +304,28 @@ TEST(LiveIntervalTest, MoveUndefUse) {
 "    NOOP\n",
   [](MachineFunction &MF, LiveIntervals &LIS) {
     testHandleMove(MF, LIS, 1, 3);
+  });
+}
+
+TEST(LiveIntervalTest, MoveUpValNos) {
+  // handleMoveUp() had a bug where it would reuse the value number of the
+  // destination segment, even though we have no guarntee that this valno wasn't
+  // used in other segments.
+  liveIntervalTest(
+"    successors: %bb.1, %bb.2\n"
+"    %0 = IMPLICIT_DEF\n"
+"    JG_1 %bb.2, implicit %eflags\n"
+"    JMP_1 %bb.1\n"
+"  bb.2:\n"
+"    NOOP implicit %0\n"
+"  bb.1:\n"
+"    successors: %bb.2\n"
+"    %0 = IMPLICIT_DEF implicit %0(tied-def 0)\n"
+"    %0 = IMPLICIT_DEF implicit %0(tied-def 0)\n"
+"    %0 = IMPLICIT_DEF implicit %0(tied-def 0)\n"
+"    JMP_1 %bb.2\n",
+  [](MachineFunction &MF, LiveIntervals &LIS) {
+    testHandleMove(MF, LIS, 2, 0, 2);
   });
 }
 

@@ -336,7 +336,7 @@ public:
   }
 
   // Return true if any runtime check is added.
-  bool IsSafetyChecksAdded() { return AddedSafetyChecks; }
+  bool areSafetyChecksAdded() { return AddedSafetyChecks; }
 
   virtual ~InnerLoopVectorizer() {}
 
@@ -586,7 +586,7 @@ protected:
   MapVector<Instruction *, uint64_t> MinBWs;
   LoopVectorizationLegality *Legal;
 
-  // Record whether runtime check is added.
+  // Record whether runtime checks are added.
   bool AddedSafetyChecks;
 };
 
@@ -1314,7 +1314,7 @@ public:
   /// to be vectorized.
   bool blockNeedsPredication(BasicBlock *BB);
 
-  /// Check if this  pointer is consecutive when vectorizing. This happens
+  /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
   /// pointer itself is an induction variable.
   /// This check allows us to vectorize A[idx] into a wide load/store.
@@ -2013,7 +2013,7 @@ struct LoopVectorize : public FunctionPass {
 
     if (!VectorizeLoop) {
       assert(IC > 1 && "interleave count should not be 1 or 0");
-      // If we decided that it is not legal to vectorize the loop then
+      // If we decided that it is not legal to vectorize the loop, then
       // interleave it.
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, IC);
       Unroller.vectorize(&LVL, CM.MinBWs);
@@ -2022,15 +2022,15 @@ struct LoopVectorize : public FunctionPass {
                              Twine("interleaved loop (interleaved count: ") +
                                  Twine(IC) + ")");
     } else {
-      // If we decided that it is *legal* to vectorize the loop then do it.
+      // If we decided that it is *legal* to vectorize the loop, then do it.
       InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, VF.Width, IC);
       LB.vectorize(&LVL, CM.MinBWs);
       ++LoopsVectorized;
 
-      // Add metadata to disable runtime unrolling scalar loop when there's no
-      // runtime check about strides and memory. Because at this situation,
-      // scalar loop is rarely used not worthy to be unrolled.
-      if (!LB.IsSafetyChecksAdded())
+      // Add metadata to disable runtime unrolling a scalar loop when there are
+      // no runtime checks about strides and memory. A scalar loop that is
+      // rarely used is not worth unrolling.
+      if (!LB.areSafetyChecksAdded())
         AddRuntimeUnrollDisableMetaData(L);
 
       // Report the vectorization decision.
@@ -2134,7 +2134,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
   if (Ptr->getType()->getPointerElementType()->isAggregateType())
     return 0;
 
-  // If this value is a pointer induction variable we know it is consecutive.
+  // If this value is a pointer induction variable, we know it is consecutive.
   PHINode *Phi = dyn_cast_or_null<PHINode>(Ptr);
   if (Phi && Inductions.count(Phi)) {
     InductionDescriptor II = Inductions[Phi];
@@ -2148,7 +2148,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
   unsigned NumOperands = Gep->getNumOperands();
   Value *GpPtr = Gep->getPointerOperand();
   // If this GEP value is a consecutive pointer induction variable and all of
-  // the indices are constant then we know it is consecutive. We can
+  // the indices are constant, then we know it is consecutive.
   Phi = dyn_cast<PHINode>(GpPtr);
   if (Phi && Inductions.count(Phi)) {
 

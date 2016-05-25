@@ -62,8 +62,8 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
   unsigned MaximumWorkGroupSize;
 
-  // Number of reserved VGPRs for trap handler usage.
-  unsigned DebuggerReserveTrapVGPRCount;
+  // Number of reserved VGPRs for debugger usage.
+  unsigned DebuggerReservedVGPRCount;
 
 public:
   // FIXME: Make private
@@ -329,8 +329,9 @@ public:
     ReturnsVoid = Value;
   }
 
-  unsigned getDebuggerReserveTrapVGPRCount() const {
-    return DebuggerReserveTrapVGPRCount;
+  /// \returns Number of reserved VGPRs for debugger usage.
+  unsigned getDebuggerReservedVGPRCount() const {
+    return DebuggerReservedVGPRCount;
   }
 
   unsigned getMaximumWorkGroupSize(const MachineFunction &MF) const;

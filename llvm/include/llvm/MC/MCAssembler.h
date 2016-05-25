@@ -246,8 +246,8 @@ public:
   // concrete and require clients to pass in a target like object. The other
   // option is to make this abstract, and have targets provide concrete
   // implementations as we do with AsmParser.
-  MCAssembler(MCContext &Context_, MCAsmBackend &Backend_,
-              MCCodeEmitter &Emitter_, MCObjectWriter &Writer_);
+  MCAssembler(MCContext &Context, MCAsmBackend &Backend,
+              MCCodeEmitter &Emitter, MCObjectWriter &Writer);
   ~MCAssembler();
 
   /// Reuse an assembler instance

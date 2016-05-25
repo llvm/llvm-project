@@ -127,6 +127,11 @@ Error NameMap::load(StreamReader &Stream) {
   return Error::success();
 }
 
+iterator_range<StringMapConstIterator<uint32_t>> NameMap::entries() const {
+  return llvm::make_range<StringMapConstIterator<uint32_t>>(Mapping.begin(),
+                                                            Mapping.end());
+}
+
 bool NameMap::tryGetValue(StringRef Name, uint32_t &Value) const {
   auto Iter = Mapping.find(Name);
   if (Iter == Mapping.end())

@@ -32,12 +32,12 @@ R_MIPS_PC19_S2:
 	lwpc $6,foo
 
 # Test R_MIPS_PC21_S2 relocation.
-# rtdyld-check:  decode_operand(R_MIPS_PC21_S2, 1)[22:0] = (foo - next_pc(R_MIPS_PC21_S2))[22:0]
+# rtdyld-check:  decode_operand(R_MIPS_PC21_S2, 1)[22:0] = (foo - next_pc(R_MIPS_PC21_S2) + 0x04)[22:0]
 R_MIPS_PC21_S2:
 	bnezc	$5,foo
 
 # Test R_MIPS_PC26_S2 relocation.
-# rtdyld-check:  decode_operand(R_MIPS_PC26_S2, 0)[27:0] = (foo - next_pc(R_MIPS_PC26_S2))[27:0]
+# rtdyld-check:  decode_operand(R_MIPS_PC26_S2, 0)[27:0] = (foo - next_pc(R_MIPS_PC26_S2) + 0x04)[27:0]
 R_MIPS_PC26_S2:
 	balc	foo
 

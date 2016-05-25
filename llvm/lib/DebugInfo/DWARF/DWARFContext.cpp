@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -590,8 +591,8 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
   return InliningInfo;
 }
 
-static bool consumeCompressedDebugSectionHeader(StringRef &data,
-                                                uint64_t &OriginalSize) {
+static bool consumeCompressedGnuHeader(StringRef &data,
+                                       uint64_t &OriginalSize) {
   // Consume "ZLIB" prefix.
   if (!data.startswith("ZLIB"))
     return false;
@@ -603,6 +604,50 @@ static bool consumeCompressedDebugSectionHeader(StringRef &data,
   if (Offset == 0)
     return false;
   data = data.substr(Offset);
+  return true;
+}
+
+static bool consumeCompressedZLibHeader(StringRef &Data, uint64_t &OriginalSize,
+                                        bool IsLE, bool Is64Bit) {
+  using namespace ELF;
+  uint64_t HdrSize = Is64Bit ? sizeof(Elf64_Chdr) : sizeof(Elf32_Chdr);
+  if (Data.size() < HdrSize)
+    return false;
+
+  DataExtractor Extractor(Data, IsLE, 0);
+  uint32_t Offset = 0;
+  if (Extractor.getUnsigned(&Offset, Is64Bit ? sizeof(Elf64_Word)
+                                             : sizeof(Elf32_Word)) !=
+      ELFCOMPRESS_ZLIB)
+    return false;
+
+  // Skip Elf64_Chdr::ch_reserved field.
+  if (Is64Bit)
+    Offset += sizeof(Elf64_Word);
+
+  OriginalSize = Extractor.getUnsigned(&Offset, Is64Bit ? sizeof(Elf64_Xword)
+                                                        : sizeof(Elf32_Word));
+  Data = Data.substr(HdrSize);
+  return true;
+}
+
+static bool tryDecompress(StringRef &Name, StringRef &Data,
+                          SmallString<32> &Out, bool ZLibStyle, bool IsLE,
+                          bool Is64Bit) {
+  if (!zlib::isAvailable())
+    return false;
+
+  uint64_t OriginalSize;
+  bool Result =
+      ZLibStyle ? consumeCompressedZLibHeader(Data, OriginalSize, IsLE, Is64Bit)
+                : consumeCompressedGnuHeader(Data, OriginalSize);
+
+  if (!Result || zlib::uncompress(Data, Out, OriginalSize) != zlib::StatusOK)
+    return false;
+
+  // gnu-style names are started from "z", consume that.
+  if (!ZLibStyle)
+    Name = Name.substr(1);
   return true;
 }
 
@@ -631,20 +676,13 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
 
     name = name.substr(name.find_first_not_of("._")); // Skip . and _ prefixes.
 
-    // Check if debug info section is compressed with zlib.
-    if (name.startswith("zdebug_")) {
-      uint64_t OriginalSize;
-      if (!zlib::isAvailable() ||
-          !consumeCompressedDebugSectionHeader(data, OriginalSize))
+    bool ZLibStyleCompressed = Section.isCompressed();
+    if (ZLibStyleCompressed || name.startswith("zdebug_")) {
+      SmallString<32> Out;
+      if (!tryDecompress(name, data, Out, ZLibStyleCompressed, IsLittleEndian,
+                         AddressSize == 8))
         continue;
-      UncompressedSections.resize(UncompressedSections.size() + 1);
-      if (zlib::uncompress(data, UncompressedSections.back(), OriginalSize) !=
-          zlib::StatusOK) {
-        UncompressedSections.pop_back();
-        continue;
-      }
-      // Make data point to uncompressed section contents and save its contents.
-      name = name.substr(1);
+      UncompressedSections.emplace_back(std::move(Out));
       data = UncompressedSections.back();
     }
 

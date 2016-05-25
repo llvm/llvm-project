@@ -687,7 +687,6 @@ static bool isAddressUse(Instruction *Inst, Value *OperandVal) {
       case Intrinsic::x86_sse_storeu_ps:
       case Intrinsic::x86_sse2_storeu_pd:
       case Intrinsic::x86_sse2_storeu_dq:
-      case Intrinsic::x86_sse2_storel_dq:
         if (II->getArgOperand(0) == OperandVal)
           isAddress = true;
         break;
@@ -712,7 +711,6 @@ static MemAccessTy getAccessType(const Instruction *Inst) {
     case Intrinsic::x86_sse_storeu_ps:
     case Intrinsic::x86_sse2_storeu_pd:
     case Intrinsic::x86_sse2_storeu_dq:
-    case Intrinsic::x86_sse2_storel_dq:
       AccessTy.MemTy = II->getArgOperand(0)->getType();
       break;
     }

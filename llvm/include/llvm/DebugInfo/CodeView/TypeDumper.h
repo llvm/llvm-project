@@ -25,7 +25,7 @@ namespace codeview {
 class CVTypeDumper {
 public:
   CVTypeDumper(ScopedPrinter &W, bool PrintRecordBytes)
-      : W(W), PrintRecordBytes(PrintRecordBytes) {}
+      : W(&W), PrintRecordBytes(PrintRecordBytes) {}
 
   StringRef getTypeName(TypeIndex TI);
   void printTypeIndex(StringRef FieldName, TypeIndex TI);
@@ -53,8 +53,11 @@ public:
     return TypeNames.insert(TypeName).first->getKey();
   }
 
+  void setPrinter(ScopedPrinter *P);
+  ScopedPrinter *getPrinter() { return W; }
+
 private:
-  ScopedPrinter &W;
+  ScopedPrinter *W;
 
   bool PrintRecordBytes = false;
 

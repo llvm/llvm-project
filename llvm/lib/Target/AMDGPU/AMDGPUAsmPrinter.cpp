@@ -435,12 +435,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   MaxSGPR += ExtraSGPRs;
 
-  // Update necessary Reserved* fields and max VGPRs used if
-  // "amdgpu-debugger-reserve-trap-regs" attribute was specified.
-  if (STM.debuggerReserveTrapVGPRs()) {
+  // Record first reserved register and reserved register count fields, and
+  // update max register counts if "amdgpu-debugger-reserve-regs" attribute was
+  // specified.
+  if (STM.debuggerReserveRegs()) {
     ProgInfo.ReservedVGPRFirst = MaxVGPR + 1;
-    ProgInfo.ReservedVGPRCount = MFI->getDebuggerReserveTrapVGPRCount();
-    MaxVGPR += MFI->getDebuggerReserveTrapVGPRCount();
+    ProgInfo.ReservedVGPRCount = MFI->getDebuggerReservedVGPRCount();
+    MaxVGPR += MFI->getDebuggerReservedVGPRCount();
   }
 
   // We found the maximum register index. They start at 0, so add one to get the

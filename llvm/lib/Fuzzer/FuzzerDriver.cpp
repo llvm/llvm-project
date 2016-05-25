@@ -330,6 +330,7 @@ static int FuzzerDriver(const std::vector<std::string> &Args,
   Options.SaveArtifacts = !DoPlainRun;
   Options.PrintNewCovPcs = Flags.print_new_cov_pcs;
   Options.PrintFinalStats = Flags.print_final_stats;
+  Options.TruncateUnits = Flags.truncate_units;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.

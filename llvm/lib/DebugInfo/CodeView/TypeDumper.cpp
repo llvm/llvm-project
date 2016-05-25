@@ -209,6 +209,7 @@ public:
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
   void visitUnknownMember(TypeLeafKind Leaf);
+  void visitUnknownType(TypeLeafKind Leaf, ArrayRef<uint8_t> LeafData);
 
   void visitTypeBegin(TypeLeafKind Leaf, ArrayRef<uint8_t> LeafData);
   void visitTypeEnd(TypeLeafKind Leaf, ArrayRef<uint8_t> LeafData);
@@ -493,6 +494,13 @@ void CVTypeDumperImpl::visitModifier(TypeLeafKind Leaf, ModifierRecord &Mod) {
   Name = CVTD.saveName(TypeName);
 }
 
+void CVTypeDumperImpl::visitBitField(TypeLeafKind Leaf,
+                                     BitFieldRecord &BitField) {
+  printTypeIndex("Type", BitField.getType());
+  W.printNumber("BitSize", BitField.getBitSize());
+  W.printNumber("BitOffset", BitField.getBitOffset());
+}
+
 void CVTypeDumperImpl::visitVFTableShape(TypeLeafKind Leaf,
                                          VFTableShapeRecord &Shape) {
   W.printNumber("VFEntryCount", Shape.getEntryCount());
@@ -536,6 +544,13 @@ void CVTypeDumperImpl::printMemberAttributes(MemberAccess Access,
 
 void CVTypeDumperImpl::visitUnknownMember(TypeLeafKind Leaf) {
   W.printHex("UnknownMember", unsigned(Leaf));
+}
+
+void CVTypeDumperImpl::visitUnknownType(TypeLeafKind Leaf,
+                                        ArrayRef<uint8_t> RecordData) {
+  DictScope S(W, "UnknownType");
+  W.printEnum("Kind", uint16_t(Leaf), makeArrayRef(LeafTypeNames));
+  W.printNumber("Length", uint32_t(RecordData.size()));
 }
 
 void CVTypeDumperImpl::visitNestedType(TypeLeafKind Leaf,
@@ -656,19 +671,26 @@ void CVTypeDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
   if (!TI.isNoType())
     TypeName = getTypeName(TI);
   if (!TypeName.empty())
-    W.printHex(FieldName, TypeName, TI.getIndex());
+    W->printHex(FieldName, TypeName, TI.getIndex());
   else
-    W.printHex(FieldName, TI.getIndex());
+    W->printHex(FieldName, TI.getIndex());
 }
 
 bool CVTypeDumper::dump(const TypeIterator::Record &Record) {
-  CVTypeDumperImpl Dumper(*this, W, PrintRecordBytes);
+  assert(W && "printer should not be null");
+  CVTypeDumperImpl Dumper(*this, *W, PrintRecordBytes);
   Dumper.visitTypeRecord(Record);
   return !Dumper.hadError();
 }
 
 bool CVTypeDumper::dump(ArrayRef<uint8_t> Data) {
-  CVTypeDumperImpl Dumper(*this, W, PrintRecordBytes);
+  assert(W && "printer should not be null");
+  CVTypeDumperImpl Dumper(*this, *W, PrintRecordBytes);
   Dumper.visitTypeStream(Data);
   return !Dumper.hadError();
+}
+
+void CVTypeDumper::setPrinter(ScopedPrinter *P) {
+  static ScopedPrinter NullP(llvm::nulls());
+  W = P ? P : &NullP;
 }

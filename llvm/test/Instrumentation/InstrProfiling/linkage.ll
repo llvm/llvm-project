@@ -4,6 +4,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s --check-prefix=OTHER --check-prefix=COMMON
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
+; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -instrprof -S | FileCheck %s --check-prefix=COFF
+; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefix=COFF
 
 @__profn_foo = hidden constant [3 x i8] c"foo"
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
@@ -57,5 +59,6 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ; OTHER:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
 ; OTHER:   ret i32 %[[REG]]
 ; OTHER: }
+; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
 ; LINUX-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; LINUX-NOT:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime

@@ -33,6 +33,7 @@ public:
   PDB_UniqueId getGuid() const;
 
   uint32_t getNamedStreamIndex(llvm::StringRef Name) const;
+  iterator_range<StringMapConstIterator<uint32_t>> named_streams() const;
 
   PDBFile &getFile() { return Pdb; }
 

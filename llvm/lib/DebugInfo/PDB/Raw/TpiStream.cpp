@@ -56,8 +56,8 @@ struct TpiStream::HeaderInfo {
   EmbeddedBuf HashAdjBuffer;
 };
 
-TpiStream::TpiStream(PDBFile &File)
-    : Pdb(File), Stream(StreamTPI, File), HashFunction(nullptr) {}
+TpiStream::TpiStream(PDBFile &File, uint32_t StreamIdx)
+    : Pdb(File), Stream(StreamIdx, File), HashFunction(nullptr) {}
 
 TpiStream::~TpiStream() {}
 
@@ -127,6 +127,14 @@ uint32_t TpiStream::TypeIndexEnd() const { return Header->TypeIndexEnd; }
 
 uint32_t TpiStream::NumTypeRecords() const {
   return TypeIndexEnd() - TypeIndexBegin();
+}
+
+uint16_t TpiStream::getTypeHashStreamIndex() const {
+  return Header->HashStreamIndex;
+}
+
+uint16_t TpiStream::getTypeHashStreamAuxIndex() const {
+  return Header->HashAuxStreamIndex;
 }
 
 iterator_range<codeview::TypeIterator> TpiStream::types(bool *HadError) const {

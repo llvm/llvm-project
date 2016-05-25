@@ -305,6 +305,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
   void rotateLoopWithProfile(BlockChain &LoopChain, MachineLoop &L,
                              const BlockFilterSet &LoopBlockSet);
   void buildCFGChains(MachineFunction &F);
+  void optimizeBranches(MachineFunction &F);
   void alignBlocks(MachineFunction &F);
 
 public:
@@ -1315,48 +1316,30 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
     // boiler plate.
     Cond.clear();
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
-    if (!TII->AnalyzeBranch(*PrevBB, TBB, FBB, Cond)) {
-      // The "PrevBB" is not yet updated to reflect current code layout, so,
-      //   o. it may fall-through to a block without explict "goto" instruction
-      //      before layout, and no longer fall-through it after layout; or
-      //   o. just opposite.
-      //
-      // AnalyzeBranch() may return erroneous value for FBB when these two
-      // situations take place. For the first scenario FBB is mistakenly set
-      // NULL; for the 2nd scenario, the FBB, which is expected to be NULL,
-      // is mistakenly pointing to "*BI".
-      //
-      bool needUpdateBr = true;
-      if (!Cond.empty() && (!FBB || FBB == ChainBB)) {
-        PrevBB->updateTerminator();
-        needUpdateBr = false;
-        Cond.clear();
-        TBB = FBB = nullptr;
-        if (TII->AnalyzeBranch(*PrevBB, TBB, FBB, Cond)) {
-          // FIXME: This should never take place.
-          TBB = FBB = nullptr;
-        }
-      }
 
-      // If PrevBB has a two-way branch, try to re-order the branches
-      // such that we branch to the successor with higher probability first.
-      if (TBB && !Cond.empty() && FBB &&
-          MBPI->getEdgeProbability(PrevBB, FBB) >
-              MBPI->getEdgeProbability(PrevBB, TBB) &&
-          !TII->ReverseBranchCondition(Cond)) {
-        DEBUG(dbgs() << "Reverse order of the two branches: "
-                     << getBlockName(PrevBB) << "\n");
-        DEBUG(dbgs() << "    Edge probability: "
-                     << MBPI->getEdgeProbability(PrevBB, FBB) << " vs "
-                     << MBPI->getEdgeProbability(PrevBB, TBB) << "\n");
-        DebugLoc dl; // FIXME: this is nowhere
-        TII->RemoveBranch(*PrevBB);
-        TII->InsertBranch(*PrevBB, FBB, TBB, Cond, dl);
-        needUpdateBr = true;
-      }
-      if (needUpdateBr)
-        PrevBB->updateTerminator();
-    }
+    // The "PrevBB" is not yet updated to reflect current code layout, so,
+    //   o. it may fall-through to a block without explict "goto" instruction
+    //      before layout, and no longer fall-through it after layout; or
+    //   o. just opposite.
+    //
+    // AnalyzeBranch() may return erroneous value for FBB when these two
+    // situations take place. For the first scenario FBB is mistakenly set NULL;
+    // for the 2nd scenario, the FBB, which is expected to be NULL, is
+    // mistakenly pointing to "*BI".
+    // Thus, if the future change needs to use FBB before the layout is set, it
+    // has to correct FBB first by using the code similar to the following:
+    //
+    // if (!Cond.empty() && (!FBB || FBB == ChainBB)) {
+    //   PrevBB->updateTerminator();
+    //   Cond.clear();
+    //   TBB = FBB = nullptr;
+    //   if (TII->AnalyzeBranch(*PrevBB, TBB, FBB, Cond)) {
+    //     // FIXME: This should never take place.
+    //     TBB = FBB = nullptr;
+    //   }
+    // }
+    if (!TII->AnalyzeBranch(*PrevBB, TBB, FBB, Cond)) 
+      PrevBB->updateTerminator();
   }
 
   // Fixup the last block.
@@ -1364,6 +1347,11 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
   if (!TII->AnalyzeBranch(F.back(), TBB, FBB, Cond))
     F.back().updateTerminator();
+}
+
+void MachineBlockPlacement::optimizeBranches(MachineFunction &F) {
+  BlockChain &FunctionChain = *BlockToChain[&F.front()];
+  SmallVector<MachineOperand, 4> Cond; // For AnalyzeBranch.
 
   // Now that all the basic blocks in the chain have the proper layout,
   // make a final call to AnalyzeBranch with AllowModify set.
@@ -1373,9 +1361,25 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
   // a fallthrough when it occurs after predicated terminators.
   for (MachineBasicBlock *ChainBB : FunctionChain) {
     Cond.clear();
-    TBB = nullptr;
-    FBB = nullptr; // For AnalyzeBranch.
-    (void)TII->AnalyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true);
+    MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
+    if (!TII->AnalyzeBranch(*ChainBB, TBB, FBB, Cond, /*AllowModify*/ true)) {
+      // If PrevBB has a two-way branch, try to re-order the branches
+      // such that we branch to the successor with higher probability first.
+      if (TBB && !Cond.empty() && FBB &&
+          MBPI->getEdgeProbability(ChainBB, FBB) >
+              MBPI->getEdgeProbability(ChainBB, TBB) &&
+          !TII->ReverseBranchCondition(Cond)) {
+        DEBUG(dbgs() << "Reverse order of the two branches: "
+                     << getBlockName(ChainBB) << "\n");
+        DEBUG(dbgs() << "    Edge probability: "
+                     << MBPI->getEdgeProbability(ChainBB, FBB) << " vs "
+                     << MBPI->getEdgeProbability(ChainBB, TBB) << "\n");
+        DebugLoc dl; // FIXME: this is nowhere
+        TII->RemoveBranch(*ChainBB);
+        TII->InsertBranch(*ChainBB, FBB, TBB, Cond, dl);
+        ChainBB->updateTerminator();
+      }
+    }
   }
 }
 
@@ -1464,6 +1468,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &F) {
   assert(BlockToChain.empty());
 
   buildCFGChains(F);
+  optimizeBranches(F);
   alignBlocks(F);
 
   BlockToChain.clear();

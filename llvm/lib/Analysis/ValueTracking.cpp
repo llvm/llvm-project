@@ -1678,7 +1678,20 @@ bool isKnownNonZero(Value *V, unsigned Depth, const Query &Q) {
     if (isa<ConstantInt>(C))
       // Must be non-zero due to null test above.
       return true;
-    // TODO: Handle vectors
+
+    // For constant vectors, check that all elements are undefined or known
+    // non-zero to determine that the whole vector is known non-zero.
+    if (auto *VecTy = dyn_cast<VectorType>(C->getType())) {
+      for (unsigned i = 0, e = VecTy->getNumElements(); i != e; ++i) {
+        Constant *Elt = C->getAggregateElement(i);
+        if (!Elt || Elt->isNullValue())
+          return false;
+        if (!isa<UndefValue>(Elt) && !isa<ConstantInt>(Elt))
+          return false;
+      }
+      return true;
+    }
+
     return false;
   }
 

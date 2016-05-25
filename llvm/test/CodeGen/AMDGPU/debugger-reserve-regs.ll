@@ -1,8 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-reserve-trap-regs -verify-machineinstrs < %s | FileCheck %s
-
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-reserve-regs -verify-machineinstrs < %s | FileCheck %s
 ; CHECK: reserved_vgpr_first = {{[0-9]+}}
 ; CHECK-NEXT: reserved_vgpr_count = 4
-
 ; CHECK: ReservedVGPRFirst: {{[0-9]+}}
 ; CHECK-NEXT: ReservedVGPRCount: 4
 

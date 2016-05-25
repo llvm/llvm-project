@@ -79,6 +79,139 @@ public:
   StringRef Name;
 };
 
+// S_THUNK32
+class Thunk32Sym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Parent;
+    ulittle32_t End;
+    ulittle32_t Next;
+    ulittle32_t Off;
+    ulittle16_t Seg;
+    ulittle16_t Len;
+    uint8_t Ord; // ThunkOrdinal enumeration
+                 // Name: The null-terminated name follows.
+                 // Variant portion of thunk
+  };
+
+  Thunk32Sym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
+             StringRef Name, ArrayRef<uint8_t> VariantData)
+      : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name),
+        VariantData(VariantData) {}
+
+  static ErrorOr<Thunk32Sym> deserialize(SymbolRecordKind Kind,
+                                         uint32_t RecordOffset,
+                                         ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    ArrayRef<uint8_t> VariantData;
+
+    CV_DESERIALIZE(Data, H, Name, CV_ARRAY_FIELD_TAIL(VariantData));
+
+    return Thunk32Sym(Kind, RecordOffset, H, Name, VariantData);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+  ArrayRef<uint8_t> VariantData;
+};
+
+// S_TRAMPOLINE
+class TrampolineSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle16_t Type; // TrampolineType enum
+    ulittle16_t Size;
+    ulittle32_t ThunkOff;
+    ulittle32_t TargetOff;
+    ulittle16_t ThunkSection;
+    ulittle16_t TargetSection;
+  };
+
+  TrampolineSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H)
+      : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H) {}
+
+  static ErrorOr<TrampolineSym> deserialize(SymbolRecordKind Kind,
+                                            uint32_t RecordOffset,
+                                            ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+
+    CV_DESERIALIZE(Data, H);
+
+    return TrampolineSym(Kind, RecordOffset, H);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+};
+
+// S_SECTION
+class SectionSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle16_t SectionNumber;
+    uint8_t Alignment;
+    uint8_t Reserved; // Must be 0
+    ulittle32_t Rva;
+    ulittle32_t Length;
+    ulittle32_t Characteristics;
+    // Name: The null-terminated name follows.
+  };
+
+  SectionSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
+             StringRef Name)
+      : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name) {
+  }
+
+  static ErrorOr<SectionSym> deserialize(SymbolRecordKind Kind,
+                                         uint32_t RecordOffset,
+                                         ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+
+    CV_DESERIALIZE(Data, H, Name);
+
+    return SectionSym(Kind, RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+};
+
+// S_COFFGROUP
+class CoffGroupSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Size;
+    ulittle32_t Characteristics;
+    ulittle32_t Offset;
+    ulittle16_t Segment;
+    // Name: The null-terminated name follows.
+  };
+
+  CoffGroupSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *H,
+               StringRef Name)
+      : SymbolRecord(Kind), RecordOffset(RecordOffset), Header(*H), Name(Name) {
+  }
+
+  static ErrorOr<CoffGroupSym> deserialize(SymbolRecordKind Kind,
+                                           uint32_t RecordOffset,
+                                           ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+
+    CV_DESERIALIZE(Data, H, Name);
+
+    return CoffGroupSym(Kind, RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+};
+
 class ScopeEndSym : public SymbolRecord {
 public:
   ScopeEndSym(SymbolRecordKind Kind, uint32_t RecordOffset)
@@ -95,7 +228,7 @@ public:
 class CallerSym : public SymbolRecord {
 public:
   struct Hdr {
-    uint32_t Count;
+    ulittle32_t Count;
   };
 
   CallerSym(SymbolRecordKind Kind, uint32_t RecordOffset, const Hdr *Header,
@@ -332,6 +465,92 @@ public:
 
 private:
   ArrayRef<uint8_t> Annotations;
+};
+
+// S_PUB32
+class PublicSym32 : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Index; // Type index, or Metadata token if a managed symbol
+    ulittle32_t Off;
+    ulittle16_t Seg;
+    // Name: The null-terminated name follows.
+  };
+
+  PublicSym32(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::PublicSym32), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<PublicSym32> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return PublicSym32(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+};
+
+// S_REGISTER
+class RegisterSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Index;    // Type index or Metadata token
+    ulittle16_t Register; // RegisterId enumeration
+    // Name: The null-terminated name follows.
+  };
+
+  RegisterSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::RegisterSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<RegisterSym> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return RegisterSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+};
+
+// S_PROCREF, S_LPROCREF
+class ProcRefSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t SumName;   // SUC of the name (?)
+    ulittle32_t SymOffset; // Offset of actual symbol in $$Symbols
+    ulittle16_t Mod;       // Module containing the actual symbol
+                           // Name:  The null-terminated name follows.
+  };
+
+  ProcRefSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::ProcRefSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<ProcRefSym> deserialize(SymbolRecordKind Kind,
+                                         uint32_t RecordOffset,
+                                         ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return ProcRefSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
 };
 
 // S_LOCAL
@@ -736,13 +955,134 @@ public:
   StringRef Name;
 };
 
+// S_ENVBLOCK
+class EnvBlockSym : public SymbolRecord {
+public:
+  struct Hdr {
+    uint8_t Reserved;
+    // Sequence of zero terminated strings.
+  };
+
+  EnvBlockSym(uint32_t RecordOffset, const Hdr *H,
+              const std::vector<StringRef> &Fields)
+      : SymbolRecord(SymbolRecordKind::EnvBlockSym), RecordOffset(RecordOffset),
+        Header(*H), Fields(Fields) {}
+
+  static ErrorOr<EnvBlockSym> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    std::vector<StringRef> Fields;
+    CV_DESERIALIZE(Data, H, CV_STRING_ARRAY_NULL_TERM(Fields));
+
+    return EnvBlockSym(RecordOffset, H, Fields);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  std::vector<StringRef> Fields;
+};
+
+// S_EXPORT
+class ExportSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle16_t Ordinal;
+    ulittle16_t Flags; // ExportFlags
+                       // Name: The null-terminated name follows.
+  };
+
+  ExportSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::ExportSym), RecordOffset(RecordOffset),
+        Header(*H), Name(Name) {}
+
+  static ErrorOr<ExportSym> deserialize(SymbolRecordKind Kind,
+                                        uint32_t RecordOffset,
+                                        ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return ExportSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+};
+
+// S_FILESTATIC
+class FileStaticSym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t Index;             // Type Index
+    ulittle32_t ModFilenameOffset; // Index of mod filename in string table
+    ulittle16_t Flags;             // LocalSymFlags enum
+                                   // Name: The null-terminated name follows.
+  };
+
+  FileStaticSym(uint32_t RecordOffset, const Hdr *H, StringRef Name)
+      : SymbolRecord(SymbolRecordKind::FileStaticSym),
+        RecordOffset(RecordOffset), Header(*H), Name(Name) {}
+
+  static ErrorOr<FileStaticSym> deserialize(SymbolRecordKind Kind,
+                                            uint32_t RecordOffset,
+                                            ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Name;
+    CV_DESERIALIZE(Data, H, Name);
+
+    return FileStaticSym(RecordOffset, H, Name);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Name;
+};
+
+// S_COMPILE2
+class Compile2Sym : public SymbolRecord {
+public:
+  struct Hdr {
+    ulittle32_t flags; // CompileSym2Flags enum
+    uint8_t getLanguage() const { return flags & 0xFF; }
+    unsigned short Machine; // CPUType enum
+    unsigned short VersionFrontendMajor;
+    unsigned short VersionFrontendMinor;
+    unsigned short VersionFrontendBuild;
+    unsigned short VersionBackendMajor;
+    unsigned short VersionBackendMinor;
+    unsigned short VersionBackendBuild;
+    // Version: The null-terminated version string follows.
+    // Optional block of zero terminated strings terminated with a double zero.
+  };
+
+  Compile2Sym(uint32_t RecordOffset, const Hdr *H, StringRef Version)
+      : SymbolRecord(SymbolRecordKind::Compile2Sym), RecordOffset(RecordOffset),
+        Header(*H), Version(Version) {}
+
+  static ErrorOr<Compile2Sym> deserialize(SymbolRecordKind Kind,
+                                          uint32_t RecordOffset,
+                                          ArrayRef<uint8_t> &Data) {
+    const Hdr *H = nullptr;
+    StringRef Version;
+    CV_DESERIALIZE(Data, H, Version);
+
+    return Compile2Sym(RecordOffset, H, Version);
+  }
+
+  uint32_t RecordOffset;
+  Hdr Header;
+  StringRef Version;
+};
+
 // S_COMPILE3
 class Compile3Sym : public SymbolRecord {
 public:
   struct Hdr {
     ulittle32_t flags; // CompileSym3Flags enum
     uint8_t getLanguage() const { return flags & 0xff; }
-    ulittle16_t Machine; // CPUType
+    ulittle16_t Machine; // CPUType enum
     ulittle16_t VersionFrontendMajor;
     ulittle16_t VersionFrontendMinor;
     ulittle16_t VersionFrontendBuild;

@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
 
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
@@ -37,7 +38,7 @@ public:
   uint32_t getSymHash() const;
   uint32_t getAddrMap() const;
   uint32_t getNumBuckets() const { return NumBuckets; }
-  std::vector<std::string> getSymbols() const;
+  iterator_range<codeview::SymbolIterator> getSymbols() const;
   ArrayRef<uint32_t> getHashBuckets() const { return HashBuckets; }
   ArrayRef<uint32_t> getAddressMap() const { return AddressMap; }
   ArrayRef<uint32_t> getThunkMap() const { return ThunkMap; }

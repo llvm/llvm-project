@@ -58,7 +58,7 @@ public:
     DerivedThis->visitTypeBegin(Record.Type, RecordData);
     switch (Record.Type) {
     default:
-      DerivedThis->visitUnknownType(Record.Type);
+      DerivedThis->visitUnknownType(Record.Type, RecordData);
       break;
     case LF_FIELDLIST:
       DerivedThis->visitFieldList(Record.Type, LeafData);
@@ -90,7 +90,7 @@ public:
   }
 
   /// Action to take on unknown types. By default, they are ignored.
-  void visitUnknownType(TypeLeafKind Leaf) {}
+  void visitUnknownType(TypeLeafKind Leaf, ArrayRef<uint8_t> RecordData) {}
 
   /// Paired begin/end actions for all types. Receives all record data,
   /// including the fixed-length record prefix.

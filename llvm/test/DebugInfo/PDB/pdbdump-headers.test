@@ -1,7 +1,10 @@
-; RUN: llvm-pdbdump --dump-headers -dump-tpi-records -dump-tpi-record-bytes -dump-module-syms \
-; RUN:              --dump-publics %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
-; RUN: llvm-pdbdump --dump-headers %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
-; RUN: llvm-pdbdump --dump-headers %p/Inputs/bad-block-size.pdb | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
+; RUN: llvm-pdbdump -raw-headers -raw-tpi-records -raw-tpi-record-bytes -raw-module-syms \
+; RUN:              -raw-sym-record-bytes -raw-publics -raw-module-files -raw-stream-name=/names \
+; RUN:              -raw-stream-summary -raw-ipi-records -raw-ipi-record-bytes %p/Inputs/empty.pdb \
+; RUN:              | FileCheck -check-prefix=EMPTY %s
+; RUN: llvm-pdbdump -raw-headers -raw-stream-name=/names -raw-modules -raw-module-files \
+; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
+; RUN: llvm-pdbdump -raw-headers %p/Inputs/bad-block-size.pdb | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
 ; EMPTY:      FileHeaders {
 ; EMPTY-NEXT:   BlockSize: 4096
@@ -15,6 +18,25 @@
 ; EMPTY-NEXT:   DirectoryBlocks: [23]
 ; EMPTY-NEXT:   NumStreams: 17
 ; EMPTY-NEXT: }
+; EMPTY-NEXT: Streams [
+; EMPTY-NEXT:   Stream 0: [???] (40 bytes)
+; EMPTY-NEXT:   Stream 1: [PDB Stream] (118 bytes)
+; EMPTY-NEXT:   Stream 2: [TPI Stream] (5392 bytes)
+; EMPTY-NEXT:   Stream 3: [DBI Stream] (739 bytes)
+; EMPTY-NEXT:   Stream 4: [IPI Stream] (784 bytes)
+; EMPTY-NEXT:   Stream 5: [Named Stream "/LinkInfo"] (0 bytes)
+; EMPTY-NEXT:   Stream 6: [Global Symbol Hash] (556 bytes)
+; EMPTY-NEXT:   Stream 7: [Public Symbol Hash] (604 bytes)
+; EMPTY-NEXT:   Stream 8: [Public Symbol Records] (104 bytes)
+; EMPTY-NEXT:   Stream 9: [Named Stream "/src/headerblock"] (0 bytes)
+; EMPTY-NEXT:   Stream 10: [Section Header Data] (160 bytes)
+; EMPTY-NEXT:   Stream 11: [New FPO Data] (32 bytes)
+; EMPTY-NEXT:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
+; EMPTY-NEXT:   Stream 13: [Named Stream "/names"] (239 bytes)
+; EMPTY-NEXT:   Stream 14: [Module "* Linker *"] (520 bytes)
+; EMPTY-NEXT:   Stream 15: [TPI Hash] (308 bytes)
+; EMPTY-NEXT:   Stream 16: [IPI Hash] (68 bytes)
+; EMPTY-NEXT: ]
 ; EMPTY-NEXT: PDB Stream {
 ; EMPTY-NEXT:   Version: 20000404
 ; EMPTY-NEXT:   Signature: 0x54E507E2
@@ -29,219 +51,10 @@
 ; EMPTY-NEXT:   Names [
 ; EMPTY-NEXT:     d:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)
 ; EMPTY-NEXT:     d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =
 ; EMPTY-NEXT:   ]
 ; EMPTY-NEXT: }
-; EMPTY-NEXT: DBI Stream {
-; EMPTY-NEXT:   Dbi Version: 19990903
-; EMPTY-NEXT:   Age: 1
-; EMPTY-NEXT:   Incremental Linking: Yes
-; EMPTY-NEXT:   Has CTypes: No
-; EMPTY-NEXT:   Is Stripped: No
-; EMPTY-NEXT:   Machine Type: x86
-; EMPTY-NEXT:   Symbol Record Stream Index: 8
-; EMPTY-NEXT:   Toolchain Version: 12.0
-; EMPTY-NEXT:   mspdb120.dll version: 12.0.31101
-; EMPTY-NEXT:   Modules [
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:       Debug Stream Index: 12
-; EMPTY-NEXT:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:       Num Files: 1
-; EMPTY-NEXT:       Source File Name Idx: 0
-; EMPTY-NEXT:       Pdb File Name Idx: 0
-; EMPTY-NEXT:       Line Info Byte Size: 0
-; EMPTY-NEXT:       C13 Line Info Byte Size: 88
-; EMPTY-NEXT:       Symbol Byte Size: 208
-; EMPTY-NEXT:       Type Server Index: 0
-; EMPTY-NEXT:       Has EC Info: No
-; EMPTY-NEXT:       1 Contributing Source Files [
-; EMPTY-NEXT:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:       Symbols [
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1101
-; EMPTY-NEXT:           Length: 54
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
-; EMPTY-NEXT:             0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
-; EMPTY-NEXT:             0020: 44425C49 6E707574 735C656D 7074792E  |DB\Inputs\empty.|
-; EMPTY-NEXT:             0030: 6F626A00                             |obj.|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x113C
-; EMPTY-NEXT:           Length: 58
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 01200000 07001200 00007D79 00001200  |. ........}y....|
-; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
-; EMPTY-NEXT:             0020: 28522920 4F707469 6D697A69 6E672043  |(R) Optimizing C|
-; EMPTY-NEXT:             0030: 6F6D7069 6C657200                    |ompiler.|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1110
-; EMPTY-NEXT:           Length: 42
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 C4000000 00000000 0A000000  |................|
-; EMPTY-NEXT:             0010: 03000000 08000000 01100000 10000000  |................|
-; EMPTY-NEXT:             0020: 0100016D 61696E00                    |...main.|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1012
-; EMPTY-NEXT:           Length: 30
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 00000000 00000000 00000000  |................|
-; EMPTY-NEXT:             0010: 00000000 00000082 12000000           |............|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x6
-; EMPTY-NEXT:           Length: 2
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x114C
-; EMPTY-NEXT:           Length: 6
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 0E100000                             |....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       Name: * Linker *
-; EMPTY-NEXT:       Debug Stream Index: 14
-; EMPTY-NEXT:       Object File Name:
-; EMPTY-NEXT:       Num Files: 0
-; EMPTY-NEXT:       Source File Name Idx: 0
-; EMPTY-NEXT:       Pdb File Name Idx: 1
-; EMPTY-NEXT:       Line Info Byte Size: 0
-; EMPTY-NEXT:       C13 Line Info Byte Size: 0
-; EMPTY-NEXT:       Symbol Byte Size: 516
-; EMPTY-NEXT:       Type Server Index: 0
-; EMPTY-NEXT:       Has EC Info: No
-; EMPTY-NEXT:       0 Contributing Source Files [
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:       Symbols [
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1101
-; EMPTY-NEXT:           Length: 18
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 2A204C69 6E6B6572 202A0000  |....* Linker *..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x113C
-; EMPTY-NEXT:           Length: 46
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 07000000 03000000 00000000 00000C00  |................|
-; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
-; EMPTY-NEXT:             0020: 28522920 4C494E4B 00000000           |(R) LINK....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x113D
-; EMPTY-NEXT:           Length: 170
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00637764 00643A5C 7372635C 6C6C766D  |.cwd.d:\src\llvm|
-; EMPTY-NEXT:             0010: 5C746573 745C4465 62756749 6E666F5C  |\test\DebugInfo\|
-; EMPTY-NEXT:             0020: 5044425C 496E7075 74730065 78650043  |PDB\Inputs.exe.C|
-; EMPTY-NEXT:             0030: 3A5C5072 6F677261 6D204669 6C657320  |:\Program Files |
-; EMPTY-NEXT:             0040: 28783836 295C4D69 63726F73 6F667420  |(x86)\Microsoft |
-; EMPTY-NEXT:             0050: 56697375 616C2053 74756469 6F203132  |Visual Studio 12|
-; EMPTY-NEXT:             0060: 2E305C56 435C4249 4E5C6C69 6E6B2E65  |.0\VC\BIN\link.e|
-; EMPTY-NEXT:             0070: 78650070 64620064 3A5C7372 635C6C6C  |xe.pdb.d:\src\ll|
-; EMPTY-NEXT:             0080: 766D5C74 6573745C 44656275 67496E66  |vm\test\DebugInf|
-; EMPTY-NEXT:             0090: 6F5C5044 425C496E 70757473 5C656D70  |o\PDB\Inputs\emp|
-; EMPTY-NEXT:             00A0: 74792E70 64620000                    |ty.pdb..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x112C
-; EMPTY-NEXT:           Length: 18
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000500 05000000 10000000 01000100  |................|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1136
-; EMPTY-NEXT:           Length: 26
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 01000C00 00100000 1A100000 20000060  |............ ..`|
-; EMPTY-NEXT:             0010: 2E746578 74000000                    |.text...|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1137
-; EMPTY-NEXT:           Length: 26
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 1A100000 20000060 00000000 01002E74  |.... ..`.......t|
-; EMPTY-NEXT:             0010: 65787424 6D6E0000                    |ext$mn..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1136
-; EMPTY-NEXT:           Length: 26
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 02000C00 00300000 B2020000 40000040  |.....0......@..@|
-; EMPTY-NEXT:             0010: 2E726461 74610000                    |.rdata..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1137
-; EMPTY-NEXT:           Length: 26
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 43010000 40000040 00000000 02002E72  |C...@..@.......r|
-; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1137
-; EMPTY-NEXT:           Length: 26
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 40000040 43010000 02002E65  |....@..@C......e|
-; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1137
-; EMPTY-NEXT:           Length: 30
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 6E010000 40000040 44010000 02002E72  |n...@..@D......r|
-; EMPTY-NEXT:             0010: 64617461 24646562 75670000           |data$debug..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1136
-; EMPTY-NEXT:           Length: 26
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 03000C00 00400000 04000000 400000C0  |.....@......@...|
-; EMPTY-NEXT:             0010: 2E646174 61000000                    |.data...|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1137
-; EMPTY-NEXT:           Length: 22
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 04000000 800000C0 00000000 03002E62  |...............b|
-; EMPTY-NEXT:             0010: 73730000                             |ss..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Kind: 0x1136
-; EMPTY-NEXT:           Length: 26
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 04000C00 00500000 08000000 40000042  |.....P......@..B|
-; EMPTY-NEXT:             0010: 2E72656C 6F630000                    |.reloc..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:   ]
-; EMPTY-NEXT: }
-; EMPTY-NEXT: Type Info Stream {
+; EMPTY-NEXT: Type Info Stream (TPI) {
 ; EMPTY-NEXT:   TPI Version: 20040203
 ; EMPTY-NEXT:   Record count: 75
 ; EMPTY-NEXT:   Records [
@@ -307,7 +120,404 @@
 ; EMPTY-NEXT:         0040: 0500626F 746800F1                    |..both..|
 ; EMPTY-NEXT:       )
 ; EMPTY-NEXT:     }
-
+; EMPTY:        Type Info Stream (IPI) {
+; EMPTY-NEXT:     IPI Version: 20040203
+; EMPTY-NEXT:     Record count: 15
+; EMPTY-NEXT:     Records [
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UnknownLeaf (0x104B) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UnknownType {
+; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:             Length: 16
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 0B100000 01000000 E1010000 0100F2F1  |................|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UnknownLeaf (0x104C) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UnknownType {
+; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:             Length: 16
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 17100000 01000000 C2000000 0100F2F1  |................|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UnknownLeaf (0x104D) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UnknownType {
+; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:             Length: 16
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 21100000 01000000 5B020000 0100F2F1  |!.......[.......|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UnknownLeaf (0x104E) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UnknownType {
+; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:             Length: 16
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 2C100000 01000000 B0040000 0100F2F1  |,...............|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UnknownLeaf (0x104F) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UnknownType {
+; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:             Length: 16
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 3A100000 01000000 1C020000 0100F2F1  |:...............|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UnknownLeaf (0x1050) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UnknownType {
+; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:             Length: 16
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 42100000 01000000 6C000000 0100F2F1  |B.......l.......|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY:      DBI Stream {
+; EMPTY-NEXT:   Dbi Version: 19990903
+; EMPTY-NEXT:   Age: 1
+; EMPTY-NEXT:   Incremental Linking: Yes
+; EMPTY-NEXT:   Has CTypes: No
+; EMPTY-NEXT:   Is Stripped: No
+; EMPTY-NEXT:   Machine Type: x86
+; EMPTY-NEXT:   Symbol Record Stream Index: 8
+; EMPTY-NEXT:   Public Symbol Stream Index: 7
+; EMPTY-NEXT:   Global Symbol Stream Index: 6
+; EMPTY-NEXT:   Toolchain Version: 12.0
+; EMPTY-NEXT:   mspdb120.dll version: 12.0.31101
+; EMPTY-NEXT:   Modules [
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:       Debug Stream Index: 12
+; EMPTY-NEXT:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:       Num Files: 1
+; EMPTY-NEXT:       Source File Name Idx: 0
+; EMPTY-NEXT:       Pdb File Name Idx: 0
+; EMPTY-NEXT:       Line Info Byte Size: 0
+; EMPTY-NEXT:       C13 Line Info Byte Size: 88
+; EMPTY-NEXT:       Symbol Byte Size: 208
+; EMPTY-NEXT:       Type Server Index: 0
+; EMPTY-NEXT:       Has EC Info: No
+; EMPTY-NEXT:       1 Contributing Source Files [
+; EMPTY-NEXT:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       Symbols [
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           ObjectName {
+; EMPTY-NEXT:             Signature: 0x0
+; EMPTY-NEXT:             ObjectName: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
+; EMPTY-NEXT:             0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
+; EMPTY-NEXT:             0020: 44425C49 6E707574 735C656D 7074792E  |DB\Inputs\empty.|
+; EMPTY-NEXT:             0030: 6F626A00                             |obj.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           CompilerFlags3 {
+; EMPTY-NEXT:             Language: Cpp (0x1)
+; EMPTY-NEXT:             Flags [ (0x2000)
+; EMPTY-NEXT:               SecurityChecks (0x2000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Machine: Pentium3 (0x7)
+; EMPTY-NEXT:             FrontendVersion: 18.0.31101.0
+; EMPTY-NEXT:             BackendVersion: 18.0.31101.0
+; EMPTY-NEXT:             VersionName: Microsoft (R) Optimizing Compiler
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 01200000 07001200 00007D79 00001200  |. ........}y....|
+; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
+; EMPTY-NEXT:             0020: 28522920 4F707469 6D697A69 6E672043  |(R) Optimizing C|
+; EMPTY-NEXT:             0030: 6F6D7069 6C657200                    |ompiler.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           ProcStart {
+; EMPTY-NEXT:             PtrParent: 0x0
+; EMPTY-NEXT:             PtrEnd: 0xC4
+; EMPTY-NEXT:             PtrNext: 0x0
+; EMPTY-NEXT:             CodeSize: 0xA
+; EMPTY-NEXT:             DbgStart: 0x3
+; EMPTY-NEXT:             DbgEnd: 0x8
+; EMPTY-NEXT:             FunctionType: int () (0x1001)
+; EMPTY-NEXT:             Segment: 0x1
+; EMPTY-NEXT:             Flags [ (0x1)
+; EMPTY-NEXT:               HasFP (0x1)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             DisplayName: main
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 C4000000 00000000 0A000000  |................|
+; EMPTY-NEXT:             0010: 03000000 08000000 01100000 10000000  |................|
+; EMPTY-NEXT:             0020: 0100016D 61696E00                    |...main.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           FrameProc {
+; EMPTY-NEXT:             TotalFrameBytes: 0x0
+; EMPTY-NEXT:             PaddingFrameBytes: 0x0
+; EMPTY-NEXT:             OffsetToPadding: 0x0
+; EMPTY-NEXT:             BytesOfCalleeSavedRegisters: 0x0
+; EMPTY-NEXT:             OffsetOfExceptionHandler: 0x0
+; EMPTY-NEXT:             SectionIdOfExceptionHandler: 0x0
+; EMPTY-NEXT:             Flags [ (0x128200)
+; EMPTY-NEXT:               AsynchronousExceptionHandling (0x200)
+; EMPTY-NEXT:               OptimizedForSpeed (0x100000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 00000000 00000000 00000000  |................|
+; EMPTY-NEXT:             0010: 00000000 00000082 12000000           |............|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           BlockEnd {
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           BuildInfo {
+; EMPTY-NEXT:             BuildId: 4110
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 0E100000                             |....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:       Debug Stream Index: 14
+; EMPTY-NEXT:       Object File Name:
+; EMPTY-NEXT:       Num Files: 0
+; EMPTY-NEXT:       Source File Name Idx: 0
+; EMPTY-NEXT:       Pdb File Name Idx: 1
+; EMPTY-NEXT:       Line Info Byte Size: 0
+; EMPTY-NEXT:       C13 Line Info Byte Size: 0
+; EMPTY-NEXT:       Symbol Byte Size: 516
+; EMPTY-NEXT:       Type Server Index: 0
+; EMPTY-NEXT:       Has EC Info: No
+; EMPTY-NEXT:       0 Contributing Source Files [
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       Symbols [
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           ObjectName {
+; EMPTY-NEXT:             Signature: 0x0
+; EMPTY-NEXT:             ObjectName: * Linker *
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 2A204C69 6E6B6572 202A0000  |....* Linker *..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           CompilerFlags3 {
+; EMPTY-NEXT:             Language: Link (0x7)
+; EMPTY-NEXT:             Flags [ (0x0)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Machine: Intel80386 (0x3)
+; EMPTY-NEXT:             FrontendVersion: 0.0.0.0
+; EMPTY-NEXT:             BackendVersion: 12.0.31101.0
+; EMPTY-NEXT:             VersionName: Microsoft (R) LINK
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 07000000 03000000 00000000 00000C00  |................|
+; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
+; EMPTY-NEXT:             0020: 28522920 4C494E4B 00000000           |(R) LINK....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           EnvBlock {
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Entries [
+; EMPTY-NEXT:               cwd
+; EMPTY-NEXT:               d:\src\llvm\test\DebugInfo\PDB\Inputs
+; EMPTY-NEXT:               exe
+; EMPTY-NEXT:               C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+; EMPTY-NEXT:               pdb
+; EMPTY-NEXT:               d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00637764 00643A5C 7372635C 6C6C766D  |.cwd.d:\src\llvm|
+; EMPTY-NEXT:             0010: 5C746573 745C4465 62756749 6E666F5C  |\test\DebugInfo\|
+; EMPTY-NEXT:             0020: 5044425C 496E7075 74730065 78650043  |PDB\Inputs.exe.C|
+; EMPTY-NEXT:             0030: 3A5C5072 6F677261 6D204669 6C657320  |:\Program Files |
+; EMPTY-NEXT:             0040: 28783836 295C4D69 63726F73 6F667420  |(x86)\Microsoft |
+; EMPTY-NEXT:             0050: 56697375 616C2053 74756469 6F203132  |Visual Studio 12|
+; EMPTY-NEXT:             0060: 2E305C56 435C4249 4E5C6C69 6E6B2E65  |.0\VC\BIN\link.e|
+; EMPTY-NEXT:             0070: 78650070 64620064 3A5C7372 635C6C6C  |xe.pdb.d:\src\ll|
+; EMPTY-NEXT:             0080: 766D5C74 6573745C 44656275 67496E66  |vm\test\DebugInf|
+; EMPTY-NEXT:             0090: 6F5C5044 425C496E 70757473 5C656D70  |o\PDB\Inputs\emp|
+; EMPTY-NEXT:             00A0: 74792E70 64620000                    |ty.pdb..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Trampoline {
+; EMPTY-NEXT:             Type: TrampIncremental (0x0)
+; EMPTY-NEXT:             Size: 5
+; EMPTY-NEXT:             ThunkOff: 5
+; EMPTY-NEXT:             TargetOff: 16
+; EMPTY-NEXT:             ThunkSection: 1
+; EMPTY-NEXT:             TargetSection: 1
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000500 05000000 10000000 01000100  |................|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 1
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 4096
+; EMPTY-NEXT:             Length: 4122
+; EMPTY-NEXT:             Characteristics: 0x60000020
+; EMPTY-NEXT:             Name: .text
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 01000C00 00100000 1A100000 20000060  |............ ..`|
+; EMPTY-NEXT:             0010: 2E746578 74000000                    |.text...|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 4122
+; EMPTY-NEXT:             Characteristics: 0x60000020
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             Segment: 1
+; EMPTY-NEXT:             Name: .text$mn
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 1A100000 20000060 00000000 01002E74  |.... ..`.......t|
+; EMPTY-NEXT:             0010: 65787424 6D6E0000                    |ext$mn..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 2
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 12288
+; EMPTY-NEXT:             Length: 690
+; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Name: .rdata
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 02000C00 00300000 B2020000 40000040  |.....0......@..@|
+; EMPTY-NEXT:             0010: 2E726461 74610000                    |.rdata..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 323
+; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             Segment: 2
+; EMPTY-NEXT:             Name: .rdata
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 43010000 40000040 00000000 02002E72  |C...@..@.......r|
+; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 0
+; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Offset: 323
+; EMPTY-NEXT:             Segment: 2
+; EMPTY-NEXT:             Name: .edata
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 40000040 43010000 02002E65  |....@..@C......e|
+; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 366
+; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Offset: 324
+; EMPTY-NEXT:             Segment: 2
+; EMPTY-NEXT:             Name: .rdata$debug
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 6E010000 40000040 44010000 02002E72  |n...@..@D......r|
+; EMPTY-NEXT:             0010: 64617461 24646562 75670000           |data$debug..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 3
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 16384
+; EMPTY-NEXT:             Length: 4
+; EMPTY-NEXT:             Characteristics: 0xC0000040
+; EMPTY-NEXT:             Name: .data
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 03000C00 00400000 04000000 400000C0  |.....@......@...|
+; EMPTY-NEXT:             0010: 2E646174 61000000                    |.data...|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 4
+; EMPTY-NEXT:             Characteristics: 0xC0000080
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             Segment: 3
+; EMPTY-NEXT:             Name: .bss
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 04000000 800000C0 00000000 03002E62  |...............b|
+; EMPTY-NEXT:             0010: 73730000                             |ss..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 4
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 20480
+; EMPTY-NEXT:             Length: 8
+; EMPTY-NEXT:             Characteristics: 0x42000040
+; EMPTY-NEXT:             Name: .reloc
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 04000C00 00500000 08000000 40000042  |.....P......@..B|
+; EMPTY-NEXT:             0010: 2E72656C 6F630000                    |.reloc..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:   ]
+; EMPTY-NEXT: }
 ; EMPTY:      Publics Stream {
 ; EMPTY-NEXT:   Stream number: 7
 ; EMPTY-NEXT:   SymHash: 556
@@ -317,7 +527,52 @@
 ; EMPTY-NEXT:   Address Map: [36, 0]
 ; EMPTY-NEXT:   Thunk Map: [4112]
 ; EMPTY-NEXT:   Section Offsets: [4096, 1]
-; EMPTY-NEXT:   Symbols: [?__purecall@@3PAXA, _main]
+; EMPTY-NEXT:   Symbols [
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       PublicSym {
+; EMPTY-NEXT:         Type: 0
+; EMPTY-NEXT:         Seg: 3
+; EMPTY-NEXT:         Off: 0
+; EMPTY-NEXT:         Name: ?__purecall@@3PAXA
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 00000000 00000000 03003F5F 5F707572  |..........?__pur|
+; EMPTY-NEXT:         0010: 6563616C 6C404033 50415841 00000000  |ecall@@3PAXA....|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       PublicSym {
+; EMPTY-NEXT:         Type: 2
+; EMPTY-NEXT:         Seg: 1
+; EMPTY-NEXT:         Off: 16
+; EMPTY-NEXT:         Name: _main
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 02000000 10000000 01005F6D 61696E00  |.........._main.|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       ProcRef {
+; EMPTY-NEXT:         SumName: 0
+; EMPTY-NEXT:         SymOffset: 120
+; EMPTY-NEXT:         Mod: 1
+; EMPTY-NEXT:         Name: main
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 00000000 78000000 01006D61 696E0000  |....x.....main..|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       DataSym {
+; EMPTY-NEXT:         Type: void* (0x403)
+; EMPTY-NEXT:         DisplayName: __purecall
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 03040000 00000000 03005F5F 70757265  |..........__pure|
+; EMPTY-NEXT:         0010: 63616C6C 00000000                    |call....|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:   ]
 ; EMPTY-NEXT: }
 
 ; BIG:      FileHeaders {
@@ -347,24 +602,24 @@
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vcruntime_startup.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
 ; BIG-NEXT:     f:\dd\vctools\langapi\include\isa_availability.h
-; BIG-NEXT:     $T0 $ebp = $T2 $esp = $T1 .raSearchStart = $eip $T1 ^ = $ebp $T0 = $esp $T1 4 + = 
+; BIG-NEXT:     $T0 $ebp = $T2 $esp = $T1 .raSearchStart = $eip $T1 ^ = $ebp $T0 = $esp $T1 4 + =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 40 - ^ =  $23 $T0 44 - ^ =  $24 $T0 48 - ^ = 
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =  $24 $T0 20 - ^ = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 40 - ^ =  $23 $T0 44 - ^ =  $24 $T0 48 - ^ =
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =  $24 $T0 20 - ^ =
 ; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\wingdi.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\predefined c++ types (compiler internal)
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ =
 ; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
 ; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
-; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $23 $T0 4 - ^ = 
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $23 $T0 4 - ^ =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
 ; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\string.h
 ; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ = 
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ =
 ; BIG-NEXT:     d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
 ; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
@@ -379,9 +634,9 @@
 ; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
 ; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = 
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
-; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ =  $24 $T0 12 - ^ = 
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ =  $24 $T0 12 - ^ =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
 ; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
@@ -389,10 +644,10 @@
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
 ; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ =  $24 $T0 28 - ^ = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ =  $24 $T0 28 - ^ =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\eh.h
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 808 - ^ =  $23 $T0 812 - ^ = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 808 - ^ =  $23 $T0 812 - ^ =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\predefined c++ attributes (compiler internal)
 ; BIG-NEXT:     d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\predefined c++ attributes (compiler internal)
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
@@ -403,10 +658,38 @@
 ; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\i386\mmintrin.h
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 4 - ^ = 
-; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 28 - ^ =  $23 $T0 32 - ^ =  $24 $T0 36 - ^ = 
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 4 - ^ =
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 28 - ^ =  $23 $T0 32 - ^ =  $24 $T0 36 - ^ =
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
 ; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\rtcapi.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\minwindef.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+; BIG-NEXT:     _TP_CALLBACK_ENVIRON_V3
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $23 $T0 4 - ^ =  $24 $T0 8 - ^ =
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
+; BIG-NEXT:     f:\dd\vctools\langapi\include\ehdata.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 48 - ^ =  $23 $T0 52 - ^ =
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 48 - ^ =  $23 $T0 52 - ^ =  $24 $T0 56 - ^ =
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:     f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:     f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:     $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 48 - ^ =
+; BIG-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =
+; BIG-NEXT:     f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
 ; BIG-NEXT:   ]
 ; BIG-NEXT: }
 ; BIG-NEXT: DBI Stream {
@@ -417,6 +700,8 @@
 ; BIG-NEXT:   Is Stripped: No
 ; BIG-NEXT:   Machine Type: x86
 ; BIG-NEXT:   Symbol Record Stream Index: 9
+; BIG-NEXT:   Public Symbol Stream Index: 8
+; BIG-NEXT:   Global Symbol Stream Index: 7
 ; BIG-NEXT:   Toolchain Version: 14.0
 ; BIG-NEXT:   mspdb140.dll version: 14.0.23918
 ; BIG-NEXT:   Modules [
@@ -1442,7 +1727,7 @@
 ; BIG-NEXT:     {
 ; BIG-NEXT:       Name: * Linker *
 ; BIG-NEXT:       Debug Stream Index: 60
-; BIG-NEXT:       Object File Name: 
+; BIG-NEXT:       Object File Name:
 ; BIG-NEXT:       Num Files: 0
 ; BIG-NEXT:       Source File Name Idx: 0
 ; BIG-NEXT:       Pdb File Name Idx: 55

@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_PDBEXTRAS_H
 
 #include "PDBTypes.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_map>
 
@@ -22,9 +23,9 @@ typedef std::unordered_map<PDB_SymType, int> TagStats;
 raw_ostream &operator<<(raw_ostream &OS, const PDB_VariantType &Value);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_CallingConv &Conv);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_DataKind &Data);
-raw_ostream &operator<<(raw_ostream &OS, const PDB_RegisterId &Reg);
+raw_ostream &operator<<(raw_ostream &OS, const codeview::RegisterId &Reg);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_LocType &Loc);
-raw_ostream &operator<<(raw_ostream &OS, const PDB_ThunkOrdinal &Thunk);
+raw_ostream &operator<<(raw_ostream &OS, const codeview::ThunkOrdinal &Thunk);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Checksum &Checksum);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Lang &Lang);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_SymType &Tag);

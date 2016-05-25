@@ -463,6 +463,11 @@ determinePointerReadAttrs(Argument *A,
     }
 
     case Instruction::Load:
+      // A volatile load has side effects beyond what readonly can be relied
+      // upon.
+      if (cast<LoadInst>(I)->isVolatile())
+        return Attribute::None;
+
       IsRead = true;
       break;
 

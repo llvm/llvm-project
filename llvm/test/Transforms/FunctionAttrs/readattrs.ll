@@ -104,3 +104,11 @@ define <4 x i32> @test12_2(<4 x i32*> %ptrs) {
   %res = call <4 x i32> @test12_1(<4 x i32*> %ptrs)
   ret <4 x i32> %res
 }
+
+; CHECK: define i32 @volatile_load(
+; CHECK-NOT: readonly
+; CHECK: ret
+define i32 @volatile_load(i32* %p) {
+  %load = load volatile i32, i32* %p
+  ret i32 %load
+}

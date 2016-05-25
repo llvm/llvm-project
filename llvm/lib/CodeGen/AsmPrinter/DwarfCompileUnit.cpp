@@ -287,7 +287,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
   DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
 
   attachLowHighPC(*SPDie, Asm->getFunctionBegin(), Asm->getFunctionEnd());
-  if (!DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
+  if (DD->useAppleExtensionAttributes() &&
+      !DD->getCurrentFunction()->getTarget().Options.DisableFramePointerElim(
           *DD->getCurrentFunction()))
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
 
