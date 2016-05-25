@@ -670,8 +670,10 @@ lldb_private::formatters::NSDateSummaryProvider (ValueObject& valobj, Stream& st
         }
         else
         {
+            llvm::Triple triple(process_sp->GetTarget().GetArchitecture().GetTriple());
+            uint32_t delta = (triple.isWatchOS() && triple.isWatchABI()) ? 8 : ptr_size;
             Error error;
-            date_value_bits = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr+ptr_size, 8, 0, error);
+            date_value_bits = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr+delta, 8, 0, error);
             date_value = *((double*)&date_value_bits);
             if (error.Fail())
                 return false;

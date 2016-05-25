@@ -28,11 +28,14 @@ extern "C" {
 typedef enum Type : u32 {
   ESAN_None = 0,
   ESAN_CacheFrag,
+  ESAN_WorkingSet,
+  ESAN_Max,
 } ToolType;
 
 // This function should be called at the very beginning of the process,
 // before any instrumented code is executed and before any call to malloc.
-SANITIZER_INTERFACE_ATTRIBUTE void __esan_init(ToolType Tool);
+SANITIZER_INTERFACE_ATTRIBUTE void __esan_init(ToolType Tool, void *Ptr);
+SANITIZER_INTERFACE_ATTRIBUTE void __esan_exit(void *Ptr);
 
 // The instrumentation module will insert a call to one of these routines prior
 // to each load and store instruction for which we do not have "fastpath"

@@ -11,7 +11,8 @@ set(ESAN_SOURCES
   esan.cpp
   esan_flags.cpp
   esan_interface.cpp
-  esan_interceptors.cpp)
+  esan_interceptors.cpp
+  working_set.cpp)
 
 foreach (arch ${ESAN_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.esan

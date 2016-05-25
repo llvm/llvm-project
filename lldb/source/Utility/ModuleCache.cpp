@@ -33,6 +33,21 @@ const char* kLockDirName = ".lock";
 const char* kTempFileName = ".temp";
 const char* kTempSymFileName = ".symtemp";
 const char* kSymFileExtension = ".sym";
+const char* kFSIllegalChars = "\\/:*?\"<>|";
+
+std::string
+GetEscapedHostname(const char* hostname)
+{
+    std::string result(hostname);
+    size_t size = result.size();
+    for (size_t i = 0; i < size; ++i)
+    {
+        if ((result[i] >=1 && result[i] <= 31) ||
+            strchr(kFSIllegalChars, result[i]) != nullptr)
+            result[i] = '_';
+    }
+    return result;
+}
 
 class ModuleLock
 {
@@ -280,8 +295,9 @@ ModuleCache::GetAndPut (const FileSpec &root_dir_spec,
     if (error.Fail ())
         return Error("Failed to lock module %s: %s", module_spec.GetUUID ().GetAsString().c_str(), error.AsCString ());
 
+    const auto escaped_hostname(GetEscapedHostname(hostname));
     // Check local cache for a module.
-    error = Get (root_dir_spec, hostname, module_spec, cached_module_sp, did_create_ptr);
+    error = Get (root_dir_spec, escaped_hostname.c_str(), module_spec, cached_module_sp, did_create_ptr);
     if (error.Success ())
         return error;
 
@@ -292,12 +308,12 @@ ModuleCache::GetAndPut (const FileSpec &root_dir_spec,
         return Error("Failed to download module: %s", error.AsCString ());
 
     // Put downloaded file into local module cache.
-    error = Put (root_dir_spec, hostname, module_spec, tmp_download_file_spec, module_spec.GetFileSpec ());
+    error = Put (root_dir_spec, escaped_hostname.c_str(), module_spec, tmp_download_file_spec, module_spec.GetFileSpec ());
     if (error.Fail ())
         return Error ("Failed to put module into cache: %s", error.AsCString ());
 
     tmp_file_remover.releaseFile ();
-    error = Get (root_dir_spec, hostname, module_spec, cached_module_sp, did_create_ptr);
+    error = Get (root_dir_spec, escaped_hostname.c_str(), module_spec, cached_module_sp, did_create_ptr);
     if (error.Fail ())
         return error;
 
@@ -310,7 +326,7 @@ ModuleCache::GetAndPut (const FileSpec &root_dir_spec,
         // contain the neccessary symbols and the debugging is also possible without a symfile.
         return Error ();
 
-    error = Put (root_dir_spec, hostname, module_spec, tmp_download_sym_file_spec, GetSymbolFileSpec(module_spec.GetFileSpec ()));
+    error = Put (root_dir_spec, escaped_hostname.c_str(), module_spec, tmp_download_sym_file_spec, GetSymbolFileSpec(module_spec.GetFileSpec ()));
     if (error.Fail ())
         return Error ("Failed to put symbol file into cache: %s", error.AsCString ());
     

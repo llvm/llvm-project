@@ -357,11 +357,11 @@ private:
 
   template <class RelTy>
   CieRecord *addCie(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
-                    ArrayRef<RelTy> Rels);
+                    ArrayRef<RelTy> &Rels);
 
   template <class RelTy>
   bool isFdeLive(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
-                 ArrayRef<RelTy> Rels);
+                 ArrayRef<RelTy> &Rels);
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 

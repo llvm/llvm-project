@@ -166,13 +166,7 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
  * affect runtime initialization decision of the main program.
  */
 COMPILER_RT_VISIBILITY extern int __llvm_profile_runtime;
-/*!
- * This variable is defined in InstrProfilingFile.c. Its visibility is
- * not hidden so that instrumented shared libraries and the main program
- * can share the raw data file with the same name.
- */
-extern int __llvm_profile_OwnsFilename;
-extern const char *__llvm_profile_CurrentFilename;
+
 /*!
  * This variable is defined in InstrProfiling.c. Its main purpose is to
  * encode the raw profile version value and other format related information

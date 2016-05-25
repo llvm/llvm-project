@@ -372,9 +372,11 @@ ABISysV_mips64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
         return return_valobj_sp;
 
     Target *target = exe_ctx.GetTargetPtr();
-    ByteOrder target_byte_order = target->GetArchitecture().GetByteOrder();
+    const ArchSpec target_arch = target->GetArchitecture();
+    ByteOrder target_byte_order = target_arch.GetByteOrder();
     const size_t byte_size = return_compiler_type.GetByteSize(nullptr);
     const uint32_t type_flags = return_compiler_type.GetTypeInfo(nullptr);
+    uint32_t fp_flag = target_arch.GetFlags () & lldb_private::ArchSpec::eMIPS_ABI_FP_mask;
     
     const RegisterInfo *r2_info = reg_ctx->GetRegisterInfoByName("r2", 0);
     const RegisterInfo *r3_info = reg_ctx->GetRegisterInfoByName("r3", 0);
@@ -438,20 +440,52 @@ ABISysV_mips64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
             {
                 // Don't handle complex yet.
             }
+            else if (IsSoftFloat(fp_flag))
+            {
+                uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_info, 0);
+                switch (byte_size)
+                {
+                    case 4:
+                        value.GetScalar() = *((float *)(&raw_value));
+                        success = true;
+                        break;
+                    case 8:
+                        value.GetScalar() = *((double *)(&raw_value));
+                        success = true;
+                        break;
+                    case 16:
+                        uint64_t result[2];
+                        if (target_byte_order == eByteOrderLittle)
+                        {
+                            result[0] = raw_value;
+                            result[1] = reg_ctx->ReadRegisterAsUnsigned(r3_info, 0);
+                            value.GetScalar() = *((long double *)(result)); 
+                        }
+                        else
+                        {
+                            result[0] = reg_ctx->ReadRegisterAsUnsigned(r3_info, 0);
+                            result[1] = raw_value;
+                            value.GetScalar() = *((long double *)(result));
+                        }
+                        success = true;
+                        break;
+                }
+
+            }
             else
             {
                 if (byte_size <= sizeof(long double))
                 {
                     const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
-                    const RegisterInfo *f2_info = reg_ctx->GetRegisterInfoByName("f2", 0);
-                    RegisterValue f0_value, f2_value;
-                    DataExtractor f0_data, f2_data;
+                    
+                    RegisterValue f0_value;
+                    DataExtractor f0_data;
                     
                     reg_ctx->ReadRegister (f0_info, f0_value);
-                    reg_ctx->ReadRegister (f2_info, f2_value);
+                    
                     
                     f0_value.GetData(f0_data);
-                    f2_value.GetData(f2_data);
+                    
 
                     lldb::offset_t offset = 0;
                     if (byte_size == sizeof(float))
@@ -466,6 +500,10 @@ ABISysV_mips64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
                     }
                     else if (byte_size == sizeof(long double))
                     {
+                        const RegisterInfo *f2_info = reg_ctx->GetRegisterInfoByName("f2", 0);
+                        RegisterValue  f2_value;
+                        DataExtractor f2_data;
+                        reg_ctx->ReadRegister (f2_info, f2_value);
                         DataExtractor *copy_from_extractor = nullptr;
                         DataBufferSP data_sp (new DataBufferHeap(16, 0));
                         DataExtractor return_ext (data_sp, 
@@ -474,20 +512,36 @@ ABISysV_mips64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
 
                         if (target_byte_order == eByteOrderLittle)
                         {
-                             f0_data.Append(f2_data);
                              copy_from_extractor = &f0_data;
+                             copy_from_extractor->CopyByteOrderedData (0,
+                                                                       8,
+                                                                       data_sp->GetBytes(),
+                                                                       byte_size - 8,
+                                                                       target_byte_order);
+                             f2_value.GetData(f2_data);
+                             copy_from_extractor = &f2_data;
+                             copy_from_extractor->CopyByteOrderedData (0,
+                                                                       8,
+                                                                       data_sp->GetBytes() + 8,
+                                                                       byte_size - 8,
+                                                                       target_byte_order);
                         }
                         else
                         {
-                            f2_data.Append(f0_data);
-                            copy_from_extractor = &f2_data;
+                            copy_from_extractor = &f0_data;
+                            copy_from_extractor->CopyByteOrderedData (0,
+                                                                      8,
+                                                                      data_sp->GetBytes() + 8,
+                                                                      byte_size - 8,
+                                                                      target_byte_order);
+                           f2_value.GetData(f2_data);
+                           copy_from_extractor = &f2_data;
+                           copy_from_extractor->CopyByteOrderedData (0,
+                                                                     8,
+                                                                     data_sp->GetBytes(),
+                                                                     byte_size - 8,
+                                                                     target_byte_order);
                         }
-
-                        copy_from_extractor->CopyByteOrderedData (0,
-                                                                  byte_size, 
-                                                                  data_sp->GetBytes(),
-                                                                  byte_size, 
-                                                                  target_byte_order);
 
                         return_valobj_sp = ValueObjectConstResult::Create (&thread, 
                                                                            return_compiler_type,
@@ -777,6 +831,12 @@ bool
 ABISysV_mips64::RegisterIsVolatile (const RegisterInfo *reg_info)
 {
     return !RegisterIsCalleeSaved (reg_info);
+}
+
+bool
+ABISysV_mips64::IsSoftFloat (uint32_t fp_flag) const
+{
+    return (fp_flag == lldb_private::ArchSpec::eMIPS_ABI_FP_SOFT);
 }
 
 bool

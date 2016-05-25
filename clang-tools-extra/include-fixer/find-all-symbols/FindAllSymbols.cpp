@@ -97,11 +97,7 @@ CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
     return llvm::None;
 
   // If Collector is not nullptr, check pragma remapping header.
-  if (Collector) {
-    auto Iter = Collector->getHeaderMappingTable().find(FilePath);
-    if (Iter != Collector->getHeaderMappingTable().end())
-      FilePath = Iter->second;
-  }
+  FilePath = Collector ? Collector->getMappedHeader(FilePath) : FilePath;
 
   return SymbolInfo(ND->getNameAsString(), Type, FilePath.str(),
                     SM.getExpansionLineNumber(Loc), GetContexts(ND));

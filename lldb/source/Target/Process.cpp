@@ -771,6 +771,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp, const UnixSig
       m_destroy_in_process(false),
       m_can_interpret_function_calls(false),
       m_warnings_issued(),
+      m_run_thread_plan_lock(),
       m_can_jit(eCanJITDontKnow)
 {
     CheckInWithManager();
@@ -5195,6 +5196,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_pla
                        const EvaluateExpressionOptions &options, DiagnosticManager &diagnostic_manager)
 {
     ExpressionResults return_value = eExpressionSetupError;
+    
+    std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock);
 
     if (!thread_plan_sp)
     {
@@ -5223,7 +5226,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_pla
 
     // We need to change some of the thread plan attributes for the thread plan runner.  This will restore them
     // when we are done:
-    
+        
     RestorePlanState thread_plan_restorer(thread_plan_sp);
     
     // We rely on the thread plan we are running returning "PlanCompleted" if when it successfully completes.
