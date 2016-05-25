@@ -9,775 +9,778 @@
 
 #define ATTR __attribute__((always_inline,overloadable,const))
 
-char ATTR as_char(char x){ return __builtin_astype(x, char); }
-char ATTR as_char(uchar x){ return __builtin_astype(x, char); }
+#define GEN(TO,TI) \
+TO ATTR as_##TO(TI x) { return __builtin_astype(x, TO); }
 
-char2 ATTR as_char2(char2 x){ return __builtin_astype(x, char2); }
-char2 ATTR as_char2(uchar2 x){ return __builtin_astype(x, char2); }
-char2 ATTR as_char2(short x){ return __builtin_astype(x, char2); }
-char2 ATTR as_char2(ushort x){ return __builtin_astype(x, char2); }
+GEN(char,char)
+GEN(char,uchar)
 
-char3 ATTR as_char3(char3 x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(char4 x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(uchar3 x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(uchar4 x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(short2 x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(ushort2 x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(int x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(uint x){ return __builtin_astype(x, char3); }
-char3 ATTR as_char3(float x){ return __builtin_astype(x, char3); }
+GEN(char2,char2)
+GEN(char2,uchar2)
+GEN(char2,short)
+GEN(char2,ushort)
 
-char4 ATTR as_char4(char3 x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(char4 x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(uchar3 x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(uchar4 x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(short2 x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(ushort2 x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(int x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(uint x){ return __builtin_astype(x, char4); }
-char4 ATTR as_char4(float x){ return __builtin_astype(x, char4); }
+GEN(char3,char3)
+GEN(char3,char4)
+GEN(char3,uchar3)
+GEN(char3,uchar4)
+GEN(char3,short2)
+GEN(char3,ushort2)
+GEN(char3,int)
+GEN(char3,uint)
+GEN(char3,float)
 
-char8 ATTR as_char8(char8 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(uchar8 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(short3 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(short4 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(ushort3 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(ushort4 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(int2 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(uint2 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(long x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(ulong x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(float2 x){ return __builtin_astype(x, char8); }
+GEN(char4,char3)
+GEN(char4,char4)
+GEN(char4,uchar3)
+GEN(char4,uchar4)
+GEN(char4,short2)
+GEN(char4,ushort2)
+GEN(char4,int)
+GEN(char4,uint)
+GEN(char4,float)
 
-char16 ATTR as_char16(char16 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(uchar16 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(short8 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(ushort8 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(int3 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(int4 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(uint3 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(uint4 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(long2 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(ulong2 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(float3 x){ return __builtin_astype(x, char16); }
-char16 ATTR as_char16(float4 x){ return __builtin_astype(x, char16); }
+GEN(char8,char8)
+GEN(char8,uchar8)
+GEN(char8,short3)
+GEN(char8,short4)
+GEN(char8,ushort3)
+GEN(char8,ushort4)
+GEN(char8,int2)
+GEN(char8,uint2)
+GEN(char8,long)
+GEN(char8,ulong)
+GEN(char8,float2)
 
-uchar ATTR as_uchar(char x){ return __builtin_astype(x, uchar); }
-uchar ATTR as_uchar(uchar x){ return __builtin_astype(x, uchar); }
+GEN(char16,char16)
+GEN(char16,uchar16)
+GEN(char16,short8)
+GEN(char16,ushort8)
+GEN(char16,int3)
+GEN(char16,int4)
+GEN(char16,uint3)
+GEN(char16,uint4)
+GEN(char16,long2)
+GEN(char16,ulong2)
+GEN(char16,float3)
+GEN(char16,float4)
 
-uchar2 ATTR as_uchar2(char2 x){ return __builtin_astype(x, uchar2); }
-uchar2 ATTR as_uchar2(uchar2 x){ return __builtin_astype(x, uchar2); }
-uchar2 ATTR as_uchar2(short x){ return __builtin_astype(x, uchar2); }
-uchar2 ATTR as_uchar2(ushort x){ return __builtin_astype(x, uchar2); }
+GEN(uchar,char)
+GEN(uchar,uchar)
 
-uchar3 ATTR as_uchar3(char3 x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(char4 x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(uchar3 x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(uchar4 x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(short2 x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(ushort2 x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(int x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(uint x){ return __builtin_astype(x, uchar3); }
-uchar3 ATTR as_uchar3(float x){ return __builtin_astype(x, uchar3); }
+GEN(uchar2,char2)
+GEN(uchar2,uchar2)
+GEN(uchar2,short)
+GEN(uchar2,ushort)
 
-uchar4 ATTR as_uchar4(char3 x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(char4 x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(uchar3 x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(uchar4 x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(short2 x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(ushort2 x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(int x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(uint x){ return __builtin_astype(x, uchar4); }
-uchar4 ATTR as_uchar4(float x){ return __builtin_astype(x, uchar4); }
+GEN(uchar3,char3)
+GEN(uchar3,char4)
+GEN(uchar3,uchar3)
+GEN(uchar3,uchar4)
+GEN(uchar3,short2)
+GEN(uchar3,ushort2)
+GEN(uchar3,int)
+GEN(uchar3,uint)
+GEN(uchar3,float)
 
-uchar8 ATTR as_uchar8(char8 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(uchar8 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(short3 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(short4 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(ushort3 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(ushort4 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(int2 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(uint2 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(long x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(ulong x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(float2 x){ return __builtin_astype(x, uchar8); }
+GEN(uchar4,char3)
+GEN(uchar4,char4)
+GEN(uchar4,uchar3)
+GEN(uchar4,uchar4)
+GEN(uchar4,short2)
+GEN(uchar4,ushort2)
+GEN(uchar4,int)
+GEN(uchar4,uint)
+GEN(uchar4,float)
 
-uchar16 ATTR as_uchar16(char16 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(uchar16 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(short8 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(ushort8 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(int3 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(int4 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(uint3 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(uint4 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(long2 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(ulong2 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(float3 x){ return __builtin_astype(x, uchar16); }
-uchar16 ATTR as_uchar16(float4 x){ return __builtin_astype(x, uchar16); }
+GEN(uchar8,char8)
+GEN(uchar8,uchar8)
+GEN(uchar8,short3)
+GEN(uchar8,short4)
+GEN(uchar8,ushort3)
+GEN(uchar8,ushort4)
+GEN(uchar8,int2)
+GEN(uchar8,uint2)
+GEN(uchar8,long)
+GEN(uchar8,ulong)
+GEN(uchar8,float2)
 
-short ATTR as_short(char2 x){ return __builtin_astype(x, short); }
-short ATTR as_short(uchar2 x){ return __builtin_astype(x, short); }
-short ATTR as_short(short x){ return __builtin_astype(x, short); }
-short ATTR as_short(ushort x){ return __builtin_astype(x, short); }
+GEN(uchar16,char16)
+GEN(uchar16,uchar16)
+GEN(uchar16,short8)
+GEN(uchar16,ushort8)
+GEN(uchar16,int3)
+GEN(uchar16,int4)
+GEN(uchar16,uint3)
+GEN(uchar16,uint4)
+GEN(uchar16,long2)
+GEN(uchar16,ulong2)
+GEN(uchar16,float3)
+GEN(uchar16,float4)
 
-short2 ATTR as_short2(char3 x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(char4 x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(uchar3 x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(uchar4 x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(short2 x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(ushort2 x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(int x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(uint x){ return __builtin_astype(x, short2); }
-short2 ATTR as_short2(float x){ return __builtin_astype(x, short2); }
+GEN(short,char2)
+GEN(short,uchar2)
+GEN(short,short)
+GEN(short,ushort)
 
-short3 ATTR as_short3(char8 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(uchar8 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(short3 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(short4 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(ushort3 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(ushort4 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(int2 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(uint2 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(long x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(ulong x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(float2 x){ return __builtin_astype(x, short3); }
+GEN(short2,char3)
+GEN(short2,char4)
+GEN(short2,uchar3)
+GEN(short2,uchar4)
+GEN(short2,short2)
+GEN(short2,ushort2)
+GEN(short2,int)
+GEN(short2,uint)
+GEN(short2,float)
 
-short4 ATTR as_short4(char8 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(uchar8 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(short3 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(short4 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(ushort3 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(ushort4 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(int2 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(uint2 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(long x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(ulong x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(float2 x){ return __builtin_astype(x, short4); }
+GEN(short3,char8)
+GEN(short3,uchar8)
+GEN(short3,short3)
+GEN(short3,short4)
+GEN(short3,ushort3)
+GEN(short3,ushort4)
+GEN(short3,int2)
+GEN(short3,uint2)
+GEN(short3,long)
+GEN(short3,ulong)
+GEN(short3,float2)
 
-short8 ATTR as_short8(char16 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(uchar16 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(short8 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(ushort8 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(int3 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(int4 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(uint3 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(uint4 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(long2 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(ulong2 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(float3 x){ return __builtin_astype(x, short8); }
-short8 ATTR as_short8(float4 x){ return __builtin_astype(x, short8); }
+GEN(short4,char8)
+GEN(short4,uchar8)
+GEN(short4,short3)
+GEN(short4,short4)
+GEN(short4,ushort3)
+GEN(short4,ushort4)
+GEN(short4,int2)
+GEN(short4,uint2)
+GEN(short4,long)
+GEN(short4,ulong)
+GEN(short4,float2)
 
-short16 ATTR as_short16(short16 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(ushort16 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(int8 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(uint8 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(long3 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(long4 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(ulong3 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(ulong4 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(float8 x){ return __builtin_astype(x, short16); }
+GEN(short8,char16)
+GEN(short8,uchar16)
+GEN(short8,short8)
+GEN(short8,ushort8)
+GEN(short8,int3)
+GEN(short8,int4)
+GEN(short8,uint3)
+GEN(short8,uint4)
+GEN(short8,long2)
+GEN(short8,ulong2)
+GEN(short8,float3)
+GEN(short8,float4)
 
-ushort ATTR as_ushort(char2 x){ return __builtin_astype(x, ushort); }
-ushort ATTR as_ushort(uchar2 x){ return __builtin_astype(x, ushort); }
-ushort ATTR as_ushort(short x){ return __builtin_astype(x, ushort); }
-ushort ATTR as_ushort(ushort x){ return __builtin_astype(x, ushort); }
+GEN(short16,short16)
+GEN(short16,ushort16)
+GEN(short16,int8)
+GEN(short16,uint8)
+GEN(short16,long3)
+GEN(short16,long4)
+GEN(short16,ulong3)
+GEN(short16,ulong4)
+GEN(short16,float8)
 
-ushort2 ATTR as_ushort2(char3 x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(char4 x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(uchar3 x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(uchar4 x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(short2 x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(ushort2 x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(int x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(uint x){ return __builtin_astype(x, ushort2); }
-ushort2 ATTR as_ushort2(float x){ return __builtin_astype(x, ushort2); }
+GEN(ushort,char2)
+GEN(ushort,uchar2)
+GEN(ushort,short)
+GEN(ushort,ushort)
 
-ushort3 ATTR as_ushort3(char8 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(uchar8 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(short3 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(short4 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(ushort3 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(ushort4 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(int2 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(uint2 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(long x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(ulong x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(float2 x){ return __builtin_astype(x, ushort3); }
+GEN(ushort2,char3)
+GEN(ushort2,char4)
+GEN(ushort2,uchar3)
+GEN(ushort2,uchar4)
+GEN(ushort2,short2)
+GEN(ushort2,ushort2)
+GEN(ushort2,int)
+GEN(ushort2,uint)
+GEN(ushort2,float)
 
-ushort4 ATTR as_ushort4(char8 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(uchar8 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(short3 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(short4 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(ushort3 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(ushort4 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(int2 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(uint2 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(long x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(ulong x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(float2 x){ return __builtin_astype(x, ushort4); }
+GEN(ushort3,char8)
+GEN(ushort3,uchar8)
+GEN(ushort3,short3)
+GEN(ushort3,short4)
+GEN(ushort3,ushort3)
+GEN(ushort3,ushort4)
+GEN(ushort3,int2)
+GEN(ushort3,uint2)
+GEN(ushort3,long)
+GEN(ushort3,ulong)
+GEN(ushort3,float2)
 
-ushort8 ATTR as_ushort8(char16 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(uchar16 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(short8 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(ushort8 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(int3 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(int4 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(uint3 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(uint4 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(long2 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(ulong2 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(float3 x){ return __builtin_astype(x, ushort8); }
-ushort8 ATTR as_ushort8(float4 x){ return __builtin_astype(x, ushort8); }
+GEN(ushort4,char8)
+GEN(ushort4,uchar8)
+GEN(ushort4,short3)
+GEN(ushort4,short4)
+GEN(ushort4,ushort3)
+GEN(ushort4,ushort4)
+GEN(ushort4,int2)
+GEN(ushort4,uint2)
+GEN(ushort4,long)
+GEN(ushort4,ulong)
+GEN(ushort4,float2)
 
-ushort16 ATTR as_ushort16(short16 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(ushort16 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(int8 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(uint8 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(long3 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(long4 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(ulong3 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(ulong4 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(float8 x){ return __builtin_astype(x, ushort16); }
+GEN(ushort8,char16)
+GEN(ushort8,uchar16)
+GEN(ushort8,short8)
+GEN(ushort8,ushort8)
+GEN(ushort8,int3)
+GEN(ushort8,int4)
+GEN(ushort8,uint3)
+GEN(ushort8,uint4)
+GEN(ushort8,long2)
+GEN(ushort8,ulong2)
+GEN(ushort8,float3)
+GEN(ushort8,float4)
 
-int ATTR as_int(char3 x){ return __builtin_astype(x, int); }
-int ATTR as_int(char4 x){ return __builtin_astype(x, int); }
-int ATTR as_int(uchar3 x){ return __builtin_astype(x, int); }
-int ATTR as_int(uchar4 x){ return __builtin_astype(x, int); }
-int ATTR as_int(short2 x){ return __builtin_astype(x, int); }
-int ATTR as_int(ushort2 x){ return __builtin_astype(x, int); }
-int ATTR as_int(int x){ return __builtin_astype(x, int); }
-int ATTR as_int(uint x){ return __builtin_astype(x, int); }
-int ATTR as_int(float x){ return __builtin_astype(x, int); }
+GEN(ushort16,short16)
+GEN(ushort16,ushort16)
+GEN(ushort16,int8)
+GEN(ushort16,uint8)
+GEN(ushort16,long3)
+GEN(ushort16,long4)
+GEN(ushort16,ulong3)
+GEN(ushort16,ulong4)
+GEN(ushort16,float8)
 
-int2 ATTR as_int2(char8 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(uchar8 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(short3 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(short4 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(ushort3 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(ushort4 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(int2 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(uint2 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(long x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(ulong x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(float2 x){ return __builtin_astype(x, int2); }
+GEN(int,char3)
+GEN(int,char4)
+GEN(int,uchar3)
+GEN(int,uchar4)
+GEN(int,short2)
+GEN(int,ushort2)
+GEN(int,int)
+GEN(int,uint)
+GEN(int,float)
 
-int3 ATTR as_int3(char16 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(uchar16 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(short8 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(ushort8 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(int3 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(int4 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(uint3 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(uint4 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(long2 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(ulong2 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(float3 x){ return __builtin_astype(x, int3); }
-int3 ATTR as_int3(float4 x){ return __builtin_astype(x, int3); }
+GEN(int2,char8)
+GEN(int2,uchar8)
+GEN(int2,short3)
+GEN(int2,short4)
+GEN(int2,ushort3)
+GEN(int2,ushort4)
+GEN(int2,int2)
+GEN(int2,uint2)
+GEN(int2,long)
+GEN(int2,ulong)
+GEN(int2,float2)
 
-int4 ATTR as_int4(char16 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(uchar16 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(short8 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(ushort8 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(int3 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(int4 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(uint3 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(uint4 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(long2 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(ulong2 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(float3 x){ return __builtin_astype(x, int4); }
-int4 ATTR as_int4(float4 x){ return __builtin_astype(x, int4); }
+GEN(int3,char16)
+GEN(int3,uchar16)
+GEN(int3,short8)
+GEN(int3,ushort8)
+GEN(int3,int3)
+GEN(int3,int4)
+GEN(int3,uint3)
+GEN(int3,uint4)
+GEN(int3,long2)
+GEN(int3,ulong2)
+GEN(int3,float3)
+GEN(int3,float4)
 
-int8 ATTR as_int8(short16 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(ushort16 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(int8 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(uint8 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(long3 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(long4 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(ulong3 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(ulong4 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(float8 x){ return __builtin_astype(x, int8); }
+GEN(int4,char16)
+GEN(int4,uchar16)
+GEN(int4,short8)
+GEN(int4,ushort8)
+GEN(int4,int3)
+GEN(int4,int4)
+GEN(int4,uint3)
+GEN(int4,uint4)
+GEN(int4,long2)
+GEN(int4,ulong2)
+GEN(int4,float3)
+GEN(int4,float4)
 
-int16 ATTR as_int16(int16 x){ return __builtin_astype(x, int16); }
-int16 ATTR as_int16(uint16 x){ return __builtin_astype(x, int16); }
-int16 ATTR as_int16(long8 x){ return __builtin_astype(x, int16); }
-int16 ATTR as_int16(ulong8 x){ return __builtin_astype(x, int16); }
-int16 ATTR as_int16(float16 x){ return __builtin_astype(x, int16); }
+GEN(int8,short16)
+GEN(int8,ushort16)
+GEN(int8,int8)
+GEN(int8,uint8)
+GEN(int8,long3)
+GEN(int8,long4)
+GEN(int8,ulong3)
+GEN(int8,ulong4)
+GEN(int8,float8)
 
-uint ATTR as_uint(char3 x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(char4 x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(uchar3 x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(uchar4 x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(short2 x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(ushort2 x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(int x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(uint x){ return __builtin_astype(x, uint); }
-uint ATTR as_uint(float x){ return __builtin_astype(x, uint); }
+GEN(int16,int16)
+GEN(int16,uint16)
+GEN(int16,long8)
+GEN(int16,ulong8)
+GEN(int16,float16)
 
-uint2 ATTR as_uint2(char8 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(uchar8 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(short3 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(short4 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(ushort3 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(ushort4 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(int2 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(uint2 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(long x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(ulong x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(float2 x){ return __builtin_astype(x, uint2); }
+GEN(uint,char3)
+GEN(uint,char4)
+GEN(uint,uchar3)
+GEN(uint,uchar4)
+GEN(uint,short2)
+GEN(uint,ushort2)
+GEN(uint,int)
+GEN(uint,uint)
+GEN(uint,float)
 
-uint3 ATTR as_uint3(char16 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(uchar16 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(short8 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(ushort8 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(int3 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(int4 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(uint3 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(uint4 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(long2 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(ulong2 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(float3 x){ return __builtin_astype(x, uint3); }
-uint3 ATTR as_uint3(float4 x){ return __builtin_astype(x, uint3); }
+GEN(uint2,char8)
+GEN(uint2,uchar8)
+GEN(uint2,short3)
+GEN(uint2,short4)
+GEN(uint2,ushort3)
+GEN(uint2,ushort4)
+GEN(uint2,int2)
+GEN(uint2,uint2)
+GEN(uint2,long)
+GEN(uint2,ulong)
+GEN(uint2,float2)
 
-uint4 ATTR as_uint4(char16 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(uchar16 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(short8 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(ushort8 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(int3 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(int4 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(uint3 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(uint4 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(long2 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(ulong2 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(float3 x){ return __builtin_astype(x, uint4); }
-uint4 ATTR as_uint4(float4 x){ return __builtin_astype(x, uint4); }
+GEN(uint3,char16)
+GEN(uint3,uchar16)
+GEN(uint3,short8)
+GEN(uint3,ushort8)
+GEN(uint3,int3)
+GEN(uint3,int4)
+GEN(uint3,uint3)
+GEN(uint3,uint4)
+GEN(uint3,long2)
+GEN(uint3,ulong2)
+GEN(uint3,float3)
+GEN(uint3,float4)
 
-uint8 ATTR as_uint8(short16 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(ushort16 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(int8 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(uint8 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(long3 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(long4 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(ulong3 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(ulong4 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(float8 x){ return __builtin_astype(x, uint8); }
+GEN(uint4,char16)
+GEN(uint4,uchar16)
+GEN(uint4,short8)
+GEN(uint4,ushort8)
+GEN(uint4,int3)
+GEN(uint4,int4)
+GEN(uint4,uint3)
+GEN(uint4,uint4)
+GEN(uint4,long2)
+GEN(uint4,ulong2)
+GEN(uint4,float3)
+GEN(uint4,float4)
 
-uint16 ATTR as_uint16(int16 x){ return __builtin_astype(x, uint16); }
-uint16 ATTR as_uint16(uint16 x){ return __builtin_astype(x, uint16); }
-uint16 ATTR as_uint16(long8 x){ return __builtin_astype(x, uint16); }
-uint16 ATTR as_uint16(ulong8 x){ return __builtin_astype(x, uint16); }
-uint16 ATTR as_uint16(float16 x){ return __builtin_astype(x, uint16); }
+GEN(uint8,short16)
+GEN(uint8,ushort16)
+GEN(uint8,int8)
+GEN(uint8,uint8)
+GEN(uint8,long3)
+GEN(uint8,long4)
+GEN(uint8,ulong3)
+GEN(uint8,ulong4)
+GEN(uint8,float8)
 
-long ATTR as_long(char8 x){ return __builtin_astype(x, long); }
-long ATTR as_long(uchar8 x){ return __builtin_astype(x, long); }
-long ATTR as_long(short3 x){ return __builtin_astype(x, long); }
-long ATTR as_long(short4 x){ return __builtin_astype(x, long); }
-long ATTR as_long(ushort3 x){ return __builtin_astype(x, long); }
-long ATTR as_long(ushort4 x){ return __builtin_astype(x, long); }
-long ATTR as_long(int2 x){ return __builtin_astype(x, long); }
-long ATTR as_long(uint2 x){ return __builtin_astype(x, long); }
-long ATTR as_long(long x){ return __builtin_astype(x, long); }
-long ATTR as_long(ulong x){ return __builtin_astype(x, long); }
-long ATTR as_long(float2 x){ return __builtin_astype(x, long); }
+GEN(uint16,int16)
+GEN(uint16,uint16)
+GEN(uint16,long8)
+GEN(uint16,ulong8)
+GEN(uint16,float16)
 
-long2 ATTR as_long2(char16 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(uchar16 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(short8 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(ushort8 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(int3 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(int4 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(uint3 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(uint4 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(long2 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(ulong2 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(float3 x){ return __builtin_astype(x, long2); }
-long2 ATTR as_long2(float4 x){ return __builtin_astype(x, long2); }
+GEN(long,char8)
+GEN(long,uchar8)
+GEN(long,short3)
+GEN(long,short4)
+GEN(long,ushort3)
+GEN(long,ushort4)
+GEN(long,int2)
+GEN(long,uint2)
+GEN(long,long)
+GEN(long,ulong)
+GEN(long,float2)
 
-long3 ATTR as_long3(short16 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(ushort16 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(int8 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(uint8 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(long3 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(long4 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(ulong3 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(ulong4 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(float8 x){ return __builtin_astype(x, long3); }
+GEN(long2,char16)
+GEN(long2,uchar16)
+GEN(long2,short8)
+GEN(long2,ushort8)
+GEN(long2,int3)
+GEN(long2,int4)
+GEN(long2,uint3)
+GEN(long2,uint4)
+GEN(long2,long2)
+GEN(long2,ulong2)
+GEN(long2,float3)
+GEN(long2,float4)
 
-long4 ATTR as_long4(short16 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(ushort16 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(int8 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(uint8 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(long3 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(long4 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(ulong3 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(ulong4 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(float8 x){ return __builtin_astype(x, long4); }
+GEN(long3,short16)
+GEN(long3,ushort16)
+GEN(long3,int8)
+GEN(long3,uint8)
+GEN(long3,long3)
+GEN(long3,long4)
+GEN(long3,ulong3)
+GEN(long3,ulong4)
+GEN(long3,float8)
 
-long8 ATTR as_long8(int16 x){ return __builtin_astype(x, long8); }
-long8 ATTR as_long8(uint16 x){ return __builtin_astype(x, long8); }
-long8 ATTR as_long8(long8 x){ return __builtin_astype(x, long8); }
-long8 ATTR as_long8(ulong8 x){ return __builtin_astype(x, long8); }
-long8 ATTR as_long8(float16 x){ return __builtin_astype(x, long8); }
+GEN(long4,short16)
+GEN(long4,ushort16)
+GEN(long4,int8)
+GEN(long4,uint8)
+GEN(long4,long3)
+GEN(long4,long4)
+GEN(long4,ulong3)
+GEN(long4,ulong4)
+GEN(long4,float8)
 
-long16 ATTR as_long16(long16 x){ return __builtin_astype(x, long16); }
-long16 ATTR as_long16(ulong16 x){ return __builtin_astype(x, long16); }
+GEN(long8,int16)
+GEN(long8,uint16)
+GEN(long8,long8)
+GEN(long8,ulong8)
+GEN(long8,float16)
 
-ulong ATTR as_ulong(char8 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(uchar8 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(short3 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(short4 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(ushort3 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(ushort4 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(int2 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(uint2 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(long x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(ulong x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(float2 x){ return __builtin_astype(x, ulong); }
+GEN(long16,long16)
+GEN(long16,ulong16)
 
-ulong2 ATTR as_ulong2(char16 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(uchar16 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(short8 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(ushort8 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(int3 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(int4 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(uint3 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(uint4 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(long2 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(ulong2 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(float3 x){ return __builtin_astype(x, ulong2); }
-ulong2 ATTR as_ulong2(float4 x){ return __builtin_astype(x, ulong2); }
+GEN(ulong,char8)
+GEN(ulong,uchar8)
+GEN(ulong,short3)
+GEN(ulong,short4)
+GEN(ulong,ushort3)
+GEN(ulong,ushort4)
+GEN(ulong,int2)
+GEN(ulong,uint2)
+GEN(ulong,long)
+GEN(ulong,ulong)
+GEN(ulong,float2)
 
-ulong3 ATTR as_ulong3(short16 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(ushort16 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(int8 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(uint8 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(long3 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(long4 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(ulong3 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(ulong4 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(float8 x){ return __builtin_astype(x, ulong3); }
+GEN(ulong2,char16)
+GEN(ulong2,uchar16)
+GEN(ulong2,short8)
+GEN(ulong2,ushort8)
+GEN(ulong2,int3)
+GEN(ulong2,int4)
+GEN(ulong2,uint3)
+GEN(ulong2,uint4)
+GEN(ulong2,long2)
+GEN(ulong2,ulong2)
+GEN(ulong2,float3)
+GEN(ulong2,float4)
 
-ulong4 ATTR as_ulong4(short16 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(ushort16 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(int8 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(uint8 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(long3 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(long4 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(ulong3 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(ulong4 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(float8 x){ return __builtin_astype(x, ulong4); }
+GEN(ulong3,short16)
+GEN(ulong3,ushort16)
+GEN(ulong3,int8)
+GEN(ulong3,uint8)
+GEN(ulong3,long3)
+GEN(ulong3,long4)
+GEN(ulong3,ulong3)
+GEN(ulong3,ulong4)
+GEN(ulong3,float8)
 
-ulong8 ATTR as_ulong8(int16 x){ return __builtin_astype(x, ulong8); }
-ulong8 ATTR as_ulong8(uint16 x){ return __builtin_astype(x, ulong8); }
-ulong8 ATTR as_ulong8(long8 x){ return __builtin_astype(x, ulong8); }
-ulong8 ATTR as_ulong8(ulong8 x){ return __builtin_astype(x, ulong8); }
-ulong8 ATTR as_ulong8(float16 x){ return __builtin_astype(x, ulong8); }
+GEN(ulong4,short16)
+GEN(ulong4,ushort16)
+GEN(ulong4,int8)
+GEN(ulong4,uint8)
+GEN(ulong4,long3)
+GEN(ulong4,long4)
+GEN(ulong4,ulong3)
+GEN(ulong4,ulong4)
+GEN(ulong4,float8)
 
-ulong16 ATTR as_ulong16(long16 x){ return __builtin_astype(x, ulong16); }
-ulong16 ATTR as_ulong16(ulong16 x){ return __builtin_astype(x, ulong16); }
+GEN(ulong8,int16)
+GEN(ulong8,uint16)
+GEN(ulong8,long8)
+GEN(ulong8,ulong8)
+GEN(ulong8,float16)
 
-float ATTR as_float(char3 x){ return __builtin_astype(x, float); }
-float ATTR as_float(char4 x){ return __builtin_astype(x, float); }
-float ATTR as_float(uchar3 x){ return __builtin_astype(x, float); }
-float ATTR as_float(uchar4 x){ return __builtin_astype(x, float); }
-float ATTR as_float(short2 x){ return __builtin_astype(x, float); }
-float ATTR as_float(ushort2 x){ return __builtin_astype(x, float); }
-float ATTR as_float(int x){ return __builtin_astype(x, float); }
-float ATTR as_float(uint x){ return __builtin_astype(x, float); }
-float ATTR as_float(float x){ return __builtin_astype(x, float); }
+GEN(ulong16,long16)
+GEN(ulong16,ulong16)
 
-float2 ATTR as_float2(char8 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(uchar8 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(short3 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(short4 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(ushort3 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(ushort4 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(int2 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(uint2 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(long x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(ulong x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(float2 x){ return __builtin_astype(x, float2); }
+GEN(float,char3)
+GEN(float,char4)
+GEN(float,uchar3)
+GEN(float,uchar4)
+GEN(float,short2)
+GEN(float,ushort2)
+GEN(float,int)
+GEN(float,uint)
+GEN(float,float)
 
-float3 ATTR as_float3(char16 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(uchar16 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(short8 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(ushort8 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(int3 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(int4 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(uint3 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(uint4 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(long2 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(ulong2 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(float3 x){ return __builtin_astype(x, float3); }
-float3 ATTR as_float3(float4 x){ return __builtin_astype(x, float3); }
+GEN(float2,char8)
+GEN(float2,uchar8)
+GEN(float2,short3)
+GEN(float2,short4)
+GEN(float2,ushort3)
+GEN(float2,ushort4)
+GEN(float2,int2)
+GEN(float2,uint2)
+GEN(float2,long)
+GEN(float2,ulong)
+GEN(float2,float2)
 
-float4 ATTR as_float4(char16 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(uchar16 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(short8 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(ushort8 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(int3 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(int4 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(uint3 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(uint4 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(long2 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(ulong2 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(float3 x){ return __builtin_astype(x, float4); }
-float4 ATTR as_float4(float4 x){ return __builtin_astype(x, float4); }
+GEN(float3,char16)
+GEN(float3,uchar16)
+GEN(float3,short8)
+GEN(float3,ushort8)
+GEN(float3,int3)
+GEN(float3,int4)
+GEN(float3,uint3)
+GEN(float3,uint4)
+GEN(float3,long2)
+GEN(float3,ulong2)
+GEN(float3,float3)
+GEN(float3,float4)
 
-float8 ATTR as_float8(short16 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(ushort16 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(int8 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(uint8 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(long3 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(long4 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(ulong3 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(ulong4 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(float8 x){ return __builtin_astype(x, float8); }
+GEN(float4,char16)
+GEN(float4,uchar16)
+GEN(float4,short8)
+GEN(float4,ushort8)
+GEN(float4,int3)
+GEN(float4,int4)
+GEN(float4,uint3)
+GEN(float4,uint4)
+GEN(float4,long2)
+GEN(float4,ulong2)
+GEN(float4,float3)
+GEN(float4,float4)
 
-float16 ATTR as_float16(int16 x){ return __builtin_astype(x, float16); }
-float16 ATTR as_float16(uint16 x){ return __builtin_astype(x, float16); }
-float16 ATTR as_float16(long8 x){ return __builtin_astype(x, float16); }
-float16 ATTR as_float16(ulong8 x){ return __builtin_astype(x, float16); }
-float16 ATTR as_float16(float16 x){ return __builtin_astype(x, float16); }
+GEN(float8,short16)
+GEN(float8,ushort16)
+GEN(float8,int8)
+GEN(float8,uint8)
+GEN(float8,long3)
+GEN(float8,long4)
+GEN(float8,ulong3)
+GEN(float8,ulong4)
+GEN(float8,float8)
+
+GEN(float16,int16)
+GEN(float16,uint16)
+GEN(float16,long8)
+GEN(float16,ulong8)
+GEN(float16,float16)
 
 #ifdef cl_khr_fp64
-char8 ATTR as_char8(double x){ return __builtin_astype(x, char8); }
-char16 ATTR as_char16(double2 x){ return __builtin_astype(x, char16); }
-uchar8 ATTR as_uchar8(double x){ return __builtin_astype(x, uchar8); }
-uchar16 ATTR as_uchar16(double2 x){ return __builtin_astype(x, uchar16); }
-short3 ATTR as_short3(double x){ return __builtin_astype(x, short3); }
-short4 ATTR as_short4(double x){ return __builtin_astype(x, short4); }
-short8 ATTR as_short8(double2 x){ return __builtin_astype(x, short8); }
-short16 ATTR as_short16(double3 x){ return __builtin_astype(x, short16); }
-short16 ATTR as_short16(double4 x){ return __builtin_astype(x, short16); }
-ushort3 ATTR as_ushort3(double x){ return __builtin_astype(x, ushort3); }
-ushort4 ATTR as_ushort4(double x){ return __builtin_astype(x, ushort4); }
-ushort8 ATTR as_ushort8(double2 x){ return __builtin_astype(x, ushort8); }
-ushort16 ATTR as_ushort16(double3 x){ return __builtin_astype(x, ushort16); }
-ushort16 ATTR as_ushort16(double4 x){ return __builtin_astype(x, ushort16); }
-int2 ATTR as_int2(double x){ return __builtin_astype(x, int2); }
-int3 ATTR as_int3(double2 x){ return __builtin_astype(x, int3); }
-int4 ATTR as_int4(double2 x){ return __builtin_astype(x, int4); }
-int8 ATTR as_int8(double3 x){ return __builtin_astype(x, int8); }
-int8 ATTR as_int8(double4 x){ return __builtin_astype(x, int8); }
-int16 ATTR as_int16(double8 x){ return __builtin_astype(x, int16); }
-uint2 ATTR as_uint2(double x){ return __builtin_astype(x, uint2); }
-uint3 ATTR as_uint3(double2 x){ return __builtin_astype(x, uint3); }
-uint4 ATTR as_uint4(double2 x){ return __builtin_astype(x, uint4); }
-uint8 ATTR as_uint8(double3 x){ return __builtin_astype(x, uint8); }
-uint8 ATTR as_uint8(double4 x){ return __builtin_astype(x, uint8); }
-uint16 ATTR as_uint16(double8 x){ return __builtin_astype(x, uint16); }
-long ATTR as_long(double x){ return __builtin_astype(x, long); }
-long2 ATTR as_long2(double2 x){ return __builtin_astype(x, long2); }
-long3 ATTR as_long3(double3 x){ return __builtin_astype(x, long3); }
-long3 ATTR as_long3(double4 x){ return __builtin_astype(x, long3); }
-long4 ATTR as_long4(double3 x){ return __builtin_astype(x, long4); }
-long4 ATTR as_long4(double4 x){ return __builtin_astype(x, long4); }
-long8 ATTR as_long8(double8 x){ return __builtin_astype(x, long8); }
-long16 ATTR as_long16(double16 x){ return __builtin_astype(x, long16); }
-ulong ATTR as_ulong(double x){ return __builtin_astype(x, ulong); }
-ulong2 ATTR as_ulong2(double2 x){ return __builtin_astype(x, ulong2); }
-ulong3 ATTR as_ulong3(double3 x){ return __builtin_astype(x, ulong3); }
-ulong3 ATTR as_ulong3(double4 x){ return __builtin_astype(x, ulong3); }
-ulong4 ATTR as_ulong4(double3 x){ return __builtin_astype(x, ulong4); }
-ulong4 ATTR as_ulong4(double4 x){ return __builtin_astype(x, ulong4); }
-ulong8 ATTR as_ulong8(double8 x){ return __builtin_astype(x, ulong8); }
-ulong16 ATTR as_ulong16(double16 x){ return __builtin_astype(x, ulong16); }
-float2 ATTR as_float2(double x){ return __builtin_astype(x, float2); }
-float3 ATTR as_float3(double2 x){ return __builtin_astype(x, float3); }
-float4 ATTR as_float4(double2 x){ return __builtin_astype(x, float4); }
-float8 ATTR as_float8(double3 x){ return __builtin_astype(x, float8); }
-float8 ATTR as_float8(double4 x){ return __builtin_astype(x, float8); }
-float16 ATTR as_float16(double8 x){ return __builtin_astype(x, float16); }
-double ATTR as_double(char8 x){ return __builtin_astype(x, double); }
-double ATTR as_double(uchar8 x){ return __builtin_astype(x, double); }
-double ATTR as_double(short3 x){ return __builtin_astype(x, double); }
-double ATTR as_double(short4 x){ return __builtin_astype(x, double); }
-double ATTR as_double(ushort3 x){ return __builtin_astype(x, double); }
-double ATTR as_double(ushort4 x){ return __builtin_astype(x, double); }
-double ATTR as_double(int2 x){ return __builtin_astype(x, double); }
-double ATTR as_double(uint2 x){ return __builtin_astype(x, double); }
-double ATTR as_double(long x){ return __builtin_astype(x, double); }
-double ATTR as_double(ulong x){ return __builtin_astype(x, double); }
-double ATTR as_double(float2 x){ return __builtin_astype(x, double); }
-double ATTR as_double(double x){ return __builtin_astype(x, double); }
-double2 ATTR as_double2(char16 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(uchar16 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(short8 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(ushort8 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(int3 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(int4 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(uint3 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(uint4 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(long2 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(ulong2 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(float3 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(float4 x){ return __builtin_astype(x, double2); }
-double2 ATTR as_double2(double2 x){ return __builtin_astype(x, double2); }
-double3 ATTR as_double3(short16 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(ushort16 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(int8 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(uint8 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(long3 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(long4 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(ulong3 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(ulong4 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(float8 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(double3 x){ return __builtin_astype(x, double3); }
-double3 ATTR as_double3(double4 x){ return __builtin_astype(x, double3); }
-double4 ATTR as_double4(short16 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(ushort16 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(int8 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(uint8 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(long3 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(long4 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(ulong3 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(ulong4 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(float8 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(double3 x){ return __builtin_astype(x, double4); }
-double4 ATTR as_double4(double4 x){ return __builtin_astype(x, double4); }
-double8 ATTR as_double8(int16 x){ return __builtin_astype(x, double8); }
-double8 ATTR as_double8(uint16 x){ return __builtin_astype(x, double8); }
-double8 ATTR as_double8(long8 x){ return __builtin_astype(x, double8); }
-double8 ATTR as_double8(ulong8 x){ return __builtin_astype(x, double8); }
-double8 ATTR as_double8(float16 x){ return __builtin_astype(x, double8); }
-double8 ATTR as_double8(double8 x){ return __builtin_astype(x, double8); }
-double16 ATTR as_double16(long16 x){ return __builtin_astype(x, double16); }
-double16 ATTR as_double16(ulong16 x){ return __builtin_astype(x, double16); }
-double16 ATTR as_double16(double16 x){ return __builtin_astype(x, double16); }
+GEN(char8,double)
+GEN(char16,double2)
+GEN(uchar8,double)
+GEN(uchar16,double2)
+GEN(short3,double)
+GEN(short4,double)
+GEN(short8,double2)
+GEN(short16,double3)
+GEN(short16,double4)
+GEN(ushort3,double)
+GEN(ushort4,double)
+GEN(ushort8,double2)
+GEN(ushort16,double3)
+GEN(ushort16,double4)
+GEN(int2,double)
+GEN(int3,double2)
+GEN(int4,double2)
+GEN(int8,double3)
+GEN(int8,double4)
+GEN(int16,double8)
+GEN(uint2,double)
+GEN(uint3,double2)
+GEN(uint4,double2)
+GEN(uint8,double3)
+GEN(uint8,double4)
+GEN(uint16,double8)
+GEN(long,double)
+GEN(long2,double2)
+GEN(long3,double3)
+GEN(long3,double4)
+GEN(long4,double3)
+GEN(long4,double4)
+GEN(long8,double8)
+GEN(long16,double16)
+GEN(ulong,double)
+GEN(ulong2,double2)
+GEN(ulong3,double3)
+GEN(ulong3,double4)
+GEN(ulong4,double3)
+GEN(ulong4,double4)
+GEN(ulong8,double8)
+GEN(ulong16,double16)
+GEN(float2,double)
+GEN(float3,double2)
+GEN(float4,double2)
+GEN(float8,double3)
+GEN(float8,double4)
+GEN(float16,double8)
+GEN(double,char8)
+GEN(double,uchar8)
+GEN(double,short3)
+GEN(double,short4)
+GEN(double,ushort3)
+GEN(double,ushort4)
+GEN(double,int2)
+GEN(double,uint2)
+GEN(double,long)
+GEN(double,ulong)
+GEN(double,float2)
+GEN(double,double)
+GEN(double2,char16)
+GEN(double2,uchar16)
+GEN(double2,short8)
+GEN(double2,ushort8)
+GEN(double2,int3)
+GEN(double2,int4)
+GEN(double2,uint3)
+GEN(double2,uint4)
+GEN(double2,long2)
+GEN(double2,ulong2)
+GEN(double2,float3)
+GEN(double2,float4)
+GEN(double2,double2)
+GEN(double3,short16)
+GEN(double3,ushort16)
+GEN(double3,int8)
+GEN(double3,uint8)
+GEN(double3,long3)
+GEN(double3,long4)
+GEN(double3,ulong3)
+GEN(double3,ulong4)
+GEN(double3,float8)
+GEN(double3,double3)
+GEN(double3,double4)
+GEN(double4,short16)
+GEN(double4,ushort16)
+GEN(double4,int8)
+GEN(double4,uint8)
+GEN(double4,long3)
+GEN(double4,long4)
+GEN(double4,ulong3)
+GEN(double4,ulong4)
+GEN(double4,float8)
+GEN(double4,double3)
+GEN(double4,double4)
+GEN(double8,int16)
+GEN(double8,uint16)
+GEN(double8,long8)
+GEN(double8,ulong8)
+GEN(double8,float16)
+GEN(double8,double8)
+GEN(double16,long16)
+GEN(double16,ulong16)
+GEN(double16,double16)
 #endif //cl_khr_fp64
 
 #ifdef cl_khr_fp16
-char2 ATTR as_char2(half x){ return __builtin_astype(x, char2); }
-char3 ATTR as_char3(half2 x){ return __builtin_astype(x, char3); }
-char4 ATTR as_char4(half2 x){ return __builtin_astype(x, char4); }
-char8 ATTR as_char8(half3 x){ return __builtin_astype(x, char8); }
-char8 ATTR as_char8(half4 x){ return __builtin_astype(x, char8); }
-char16 ATTR as_char16(half8 x){ return __builtin_astype(x, char16); }
-uchar2 ATTR as_uchar2(half x){ return __builtin_astype(x, uchar2); }
-uchar3 ATTR as_uchar3(half2 x){ return __builtin_astype(x, uchar3); }
-uchar4 ATTR as_uchar4(half2 x){ return __builtin_astype(x, uchar4); }
-uchar8 ATTR as_uchar8(half3 x){ return __builtin_astype(x, uchar8); }
-uchar8 ATTR as_uchar8(half4 x){ return __builtin_astype(x, uchar8); }
-uchar16 ATTR as_uchar16(half8 x){ return __builtin_astype(x, uchar16); }
-short ATTR as_short(half x){ return __builtin_astype(x, short); }
-short2 ATTR as_short2(half2 x){ return __builtin_astype(x, short2); }
-short3 ATTR as_short3(half3 x){ return __builtin_astype(x, short3); }
-short3 ATTR as_short3(half4 x){ return __builtin_astype(x, short3); }
-short4 ATTR as_short4(half3 x){ return __builtin_astype(x, short4); }
-short4 ATTR as_short4(half4 x){ return __builtin_astype(x, short4); }
-short8 ATTR as_short8(half8 x){ return __builtin_astype(x, short8); }
-short16 ATTR as_short16(half16 x){ return __builtin_astype(x, short16); }
-ushort ATTR as_ushort(half x){ return __builtin_astype(x, ushort); }
-ushort2 ATTR as_ushort2(half2 x){ return __builtin_astype(x, ushort2); }
-ushort3 ATTR as_ushort3(half3 x){ return __builtin_astype(x, ushort3); }
-ushort3 ATTR as_ushort3(half4 x){ return __builtin_astype(x, ushort3); }
-ushort4 ATTR as_ushort4(half3 x){ return __builtin_astype(x, ushort4); }
-ushort4 ATTR as_ushort4(half4 x){ return __builtin_astype(x, ushort4); }
-ushort8 ATTR as_ushort8(half8 x){ return __builtin_astype(x, ushort8); }
-ushort16 ATTR as_ushort16(half16 x){ return __builtin_astype(x, ushort16); }
-int ATTR as_int(half2 x){ return __builtin_astype(x, int); }
-int2 ATTR as_int2(half3 x){ return __builtin_astype(x, int2); }
-int2 ATTR as_int2(half4 x){ return __builtin_astype(x, int2); }
-int3 ATTR as_int3(half8 x){ return __builtin_astype(x, int3); }
-int4 ATTR as_int4(half8 x){ return __builtin_astype(x, int4); }
-int8 ATTR as_int8(half16 x){ return __builtin_astype(x, int8); }
-uint ATTR as_uint(half2 x){ return __builtin_astype(x, uint); }
-uint2 ATTR as_uint2(half3 x){ return __builtin_astype(x, uint2); }
-uint2 ATTR as_uint2(half4 x){ return __builtin_astype(x, uint2); }
-uint3 ATTR as_uint3(half8 x){ return __builtin_astype(x, uint3); }
-uint4 ATTR as_uint4(half8 x){ return __builtin_astype(x, uint4); }
-uint8 ATTR as_uint8(half16 x){ return __builtin_astype(x, uint8); }
-long ATTR as_long(half3 x){ return __builtin_astype(x, long); }
-long ATTR as_long(half4 x){ return __builtin_astype(x, long); }
-long2 ATTR as_long2(half8 x){ return __builtin_astype(x, long2); }
-long3 ATTR as_long3(half16 x){ return __builtin_astype(x, long3); }
-long4 ATTR as_long4(half16 x){ return __builtin_astype(x, long4); }
-ulong ATTR as_ulong(half3 x){ return __builtin_astype(x, ulong); }
-ulong ATTR as_ulong(half4 x){ return __builtin_astype(x, ulong); }
-ulong2 ATTR as_ulong2(half8 x){ return __builtin_astype(x, ulong2); }
-ulong3 ATTR as_ulong3(half16 x){ return __builtin_astype(x, ulong3); }
-ulong4 ATTR as_ulong4(half16 x){ return __builtin_astype(x, ulong4); }
-half ATTR as_half(char2 x){ return __builtin_astype(x, half); }
-half ATTR as_half(uchar2 x){ return __builtin_astype(x, half); }
-half ATTR as_half(short x){ return __builtin_astype(x, half); }
-half ATTR as_half(ushort x){ return __builtin_astype(x, half); }
-half ATTR as_half(half x){ return __builtin_astype(x, half); }
-half2 ATTR as_half2(char3 x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(char4 x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(uchar3 x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(uchar4 x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(short2 x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(ushort2 x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(int x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(uint x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(half2 x){ return __builtin_astype(x, half2); }
-half2 ATTR as_half2(float x){ return __builtin_astype(x, half2); }
-half3 ATTR as_half3(char8 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(uchar8 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(short3 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(short4 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(ushort3 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(ushort4 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(int2 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(uint2 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(long x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(ulong x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(half3 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(half4 x){ return __builtin_astype(x, half3); }
-half3 ATTR as_half3(float2 x){ return __builtin_astype(x, half3); }
-half4 ATTR as_half4(char8 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(uchar8 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(short3 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(short4 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(ushort3 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(ushort4 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(int2 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(uint2 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(long x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(ulong x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(half3 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(half4 x){ return __builtin_astype(x, half4); }
-half4 ATTR as_half4(float2 x){ return __builtin_astype(x, half4); }
-half8 ATTR as_half8(char16 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(uchar16 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(short8 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(ushort8 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(int3 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(int4 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(uint3 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(uint4 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(long2 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(ulong2 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(half8 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(float3 x){ return __builtin_astype(x, half8); }
-half8 ATTR as_half8(float4 x){ return __builtin_astype(x, half8); }
-half16 ATTR as_half16(short16 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(ushort16 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(int8 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(uint8 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(long3 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(long4 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(ulong3 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(ulong4 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(half16 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(float8 x){ return __builtin_astype(x, half16); }
-float ATTR as_float(half2 x){ return __builtin_astype(x, float); }
-float2 ATTR as_float2(half3 x){ return __builtin_astype(x, float2); }
-float2 ATTR as_float2(half4 x){ return __builtin_astype(x, float2); }
-float3 ATTR as_float3(half8 x){ return __builtin_astype(x, float3); }
-float4 ATTR as_float4(half8 x){ return __builtin_astype(x, float4); }
-float8 ATTR as_float8(half16 x){ return __builtin_astype(x, float8); }
+GEN(char2,half)
+GEN(char3,half2)
+GEN(char4,half2)
+GEN(char8,half3)
+GEN(char8,half4)
+GEN(char16,half8)
+GEN(uchar2,half)
+GEN(uchar3,half2)
+GEN(uchar4,half2)
+GEN(uchar8,half3)
+GEN(uchar8,half4)
+GEN(uchar16,half8)
+GEN(short,half)
+GEN(short2,half2)
+GEN(short3,half3)
+GEN(short3,half4)
+GEN(short4,half3)
+GEN(short4,half4)
+GEN(short8,half8)
+GEN(short16,half16)
+GEN(ushort,half)
+GEN(ushort2,half2)
+GEN(ushort3,half3)
+GEN(ushort3,half4)
+GEN(ushort4,half3)
+GEN(ushort4,half4)
+GEN(ushort8,half8)
+GEN(ushort16,half16)
+GEN(int,half2)
+GEN(int2,half3)
+GEN(int2,half4)
+GEN(int3,half8)
+GEN(int4,half8)
+GEN(int8,half16)
+GEN(uint,half2)
+GEN(uint2,half3)
+GEN(uint2,half4)
+GEN(uint3,half8)
+GEN(uint4,half8)
+GEN(uint8,half16)
+GEN(long,half3)
+GEN(long,half4)
+GEN(long2,half8)
+GEN(long3,half16)
+GEN(long4,half16)
+GEN(ulong,half3)
+GEN(ulong,half4)
+GEN(ulong2,half8)
+GEN(ulong3,half16)
+GEN(ulong4,half16)
+GEN(half,char2)
+GEN(half,uchar2)
+GEN(half,short)
+GEN(half,ushort)
+GEN(half,half)
+GEN(half2,char3)
+GEN(half2,char4)
+GEN(half2,uchar3)
+GEN(half2,uchar4)
+GEN(half2,short2)
+GEN(half2,ushort2)
+GEN(half2,int)
+GEN(half2,uint)
+GEN(half2,half2)
+GEN(half2,float)
+GEN(half3,char8)
+GEN(half3,uchar8)
+GEN(half3,short3)
+GEN(half3,short4)
+GEN(half3,ushort3)
+GEN(half3,ushort4)
+GEN(half3,int2)
+GEN(half3,uint2)
+GEN(half3,long)
+GEN(half3,ulong)
+GEN(half3,half3)
+GEN(half3,half4)
+GEN(half3,float2)
+GEN(half4,char8)
+GEN(half4,uchar8)
+GEN(half4,short3)
+GEN(half4,short4)
+GEN(half4,ushort3)
+GEN(half4,ushort4)
+GEN(half4,int2)
+GEN(half4,uint2)
+GEN(half4,long)
+GEN(half4,ulong)
+GEN(half4,half3)
+GEN(half4,half4)
+GEN(half4,float2)
+GEN(half8,char16)
+GEN(half8,uchar16)
+GEN(half8,short8)
+GEN(half8,ushort8)
+GEN(half8,int3)
+GEN(half8,int4)
+GEN(half8,uint3)
+GEN(half8,uint4)
+GEN(half8,long2)
+GEN(half8,ulong2)
+GEN(half8,half8)
+GEN(half8,float3)
+GEN(half8,float4)
+GEN(half16,short16)
+GEN(half16,ushort16)
+GEN(half16,int8)
+GEN(half16,uint8)
+GEN(half16,long3)
+GEN(half16,long4)
+GEN(half16,ulong3)
+GEN(half16,ulong4)
+GEN(half16,half16)
+GEN(half16,float8)
+GEN(float,half2)
+GEN(float2,half3)
+GEN(float2,half4)
+GEN(float3,half8)
+GEN(float4,half8)
+GEN(float8,half16)
 
 #ifdef cl_khr_fp64
-half3 ATTR as_half3(double x){ return __builtin_astype(x, half3); }
-half4 ATTR as_half4(double x){ return __builtin_astype(x, half4); }
-half8 ATTR as_half8(double2 x){ return __builtin_astype(x, half8); }
-half16 ATTR as_half16(double3 x){ return __builtin_astype(x, half16); }
-half16 ATTR as_half16(double4 x){ return __builtin_astype(x, half16); }
-double ATTR as_double(half3 x){ return __builtin_astype(x, double); }
-double ATTR as_double(half4 x){ return __builtin_astype(x, double); }
-double2 ATTR as_double2(half8 x){ return __builtin_astype(x, double2); }
-double3 ATTR as_double3(half16 x){ return __builtin_astype(x, double3); }
-double4 ATTR as_double4(half16 x){ return __builtin_astype(x, double4); }
+GEN(half3,double)
+GEN(half4,double)
+GEN(half8,double2)
+GEN(half16,double3)
+GEN(half16,double4)
+GEN(double,half3)
+GEN(double,half4)
+GEN(double2,half8)
+GEN(double3,half16)
+GEN(double4,half16)
 #endif //cl_khr_fp64
 #endif //cl_khr_fp16
