@@ -133,6 +133,9 @@ private:
     bool
     CreateUnwindPlan_i386 (Target &target, FunctionInfo &function_info, UnwindPlan &unwind_plan, Address pc_or_function_start);
 
+    bool
+    CreateUnwindPlan_arm64 (Target &target, FunctionInfo &function_info, UnwindPlan &unwind_plan, Address pc_or_function_start);
+
     ObjectFile                  &m_objfile;
     lldb::SectionSP             m_section_sp;
     lldb::DataBufferSP          m_section_contents_if_encrypted; // if the binary is encrypted, read the sect contents

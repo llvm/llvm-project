@@ -452,7 +452,7 @@ static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
 // complicates things for the dynamic linker and means we would have to reserve
 // space for the extra PT_LOAD even if we end up not using it.
 template <class ELFT, class RelTy>
-void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
+static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   typedef typename ELFT::uint uintX_t;
 
   uintX_t Flags = C.getSectionHdr()->sh_flags;
