@@ -557,6 +557,17 @@ void IRLinker::materializeInitFor(GlobalValue *New, GlobalValue *Old,
       return;
   }
 
+  // When linking a global for an alias, it will always be linked. However we
+  // need to check if it was not already scheduled to satify a reference from a
+  // regular global value initializer. We know if it has been schedule if the
+  // "New" GlobalValue that is mapped here for the alias is the same as the one
+  // already mapped. If there is an entry in the ValueMap but the value is
+  // different, it means that the value already had a definition in the
+  // destination module (linkonce for instance), but we need a new definition
+  // for the alias ("New" will be different.
+  if (ForAlias && ValueMap.lookup(Old) == New)
+    return;
+
   if (ForAlias || shouldLink(New, *Old))
     linkGlobalValueBody(*New, *Old);
 }
