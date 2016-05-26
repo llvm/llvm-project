@@ -2215,6 +2215,7 @@ void OMPClauseReader::VisitOMPDependClause(OMPDependClause *C) {
   for (unsigned i = 0; i != NumVars; ++i)
     Vars.push_back(Reader->Reader.ReadSubExpr());
   C->setVarRefs(Vars);
+  C->setCounterValue(Reader->Reader.ReadSubExpr());
 }
 
 void OMPClauseReader::VisitOMPDeviceClause(OMPDeviceClause *C) {
@@ -2360,6 +2361,7 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
     D->setEnsureUpperBound(Reader.ReadSubExpr());
     D->setNextLowerBound(Reader.ReadSubExpr());
     D->setNextUpperBound(Reader.ReadSubExpr());
+    D->setNumIterations(Reader.ReadSubExpr());
   }
   SmallVector<Expr *, 4> Sub;
   unsigned CollapsedNum = D->getCollapsedNumber();

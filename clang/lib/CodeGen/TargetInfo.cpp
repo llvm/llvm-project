@@ -7818,7 +7818,7 @@ const llvm::Triple &CodeGenModule::getTriple() const {
 }
 
 bool CodeGenModule::supportsCOMDAT() const {
-  return !getTriple().isOSBinFormatMachO();
+  return getTriple().supportsCOMDAT();
 }
 
 const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {

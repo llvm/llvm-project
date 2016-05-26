@@ -928,7 +928,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     //   macro name is defined to have the decimal value yyyymm where
     //   yyyy and mm are the year and the month designations of the
     //   version of the OpenMP API that the implementation support.
-    Builder.defineMacro("_OPENMP", "201307");
+    Builder.defineMacro("_OPENMP", "201511");
   }
 
   // CUDA device path compilaton

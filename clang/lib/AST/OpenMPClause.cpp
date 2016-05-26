@@ -498,7 +498,7 @@ OMPFlushClause *OMPFlushClause::Create(const ASTContext &C,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc,
                                        ArrayRef<Expr *> VL) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPFlushClause *Clause =
       new (Mem) OMPFlushClause(StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
@@ -510,24 +510,44 @@ OMPFlushClause *OMPFlushClause::CreateEmpty(const ASTContext &C, unsigned N) {
   return new (Mem) OMPFlushClause(N);
 }
 
-OMPDependClause *
-OMPDependClause::Create(const ASTContext &C, SourceLocation StartLoc,
-                        SourceLocation LParenLoc, SourceLocation EndLoc,
-                        OpenMPDependClauseKind DepKind, SourceLocation DepLoc,
-                        SourceLocation ColonLoc, ArrayRef<Expr *> VL) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+OMPDependClause *OMPDependClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, OpenMPDependClauseKind DepKind,
+    SourceLocation DepLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VL) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPDependClause *Clause =
       new (Mem) OMPDependClause(StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
   Clause->setDependencyKind(DepKind);
   Clause->setDependencyLoc(DepLoc);
   Clause->setColonLoc(ColonLoc);
+  Clause->setCounterValue(nullptr);
   return Clause;
 }
 
 OMPDependClause *OMPDependClause::CreateEmpty(const ASTContext &C, unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPDependClause(N);
+}
+
+void OMPDependClause::setCounterValue(Expr *V) {
+  assert(getDependencyKind() == OMPC_DEPEND_sink ||
+         getDependencyKind() == OMPC_DEPEND_source || V == nullptr);
+  *getVarRefs().end() = V;
+}
+
+const Expr *OMPDependClause::getCounterValue() const {
+  auto *V = *getVarRefs().end();
+  assert(getDependencyKind() == OMPC_DEPEND_sink ||
+         getDependencyKind() == OMPC_DEPEND_source || V == nullptr);
+  return V;
+}
+
+Expr *OMPDependClause::getCounterValue() {
+  auto *V = *getVarRefs().end();
+  assert(getDependencyKind() == OMPC_DEPEND_sink ||
+         getDependencyKind() == OMPC_DEPEND_source || V == nullptr);
+  return V;
 }
 
 unsigned OMPClauseMappableExprCommon::getComponentsTotalNumber(

@@ -2145,19 +2145,19 @@ _mm512_mask_permutexvar_epi16 (__m512i __W, __mmask32 __M, __m512i __A,
 
 #define _mm512_alignr_epi8(A, B, N) __extension__ ({\
   (__m512i)__builtin_ia32_palignr512_mask((__v64qi)(__m512i)(A), \
-                                          (__v64qi)(__m512i)(B), (int)(N) * 8, \
+                                          (__v64qi)(__m512i)(B), (int)(N), \
                                           (__v64qi)_mm512_undefined_pd(), \
                                           (__mmask64)-1); })
 
 #define _mm512_mask_alignr_epi8(W, U, A, B, N) __extension__({\
   (__m512i)__builtin_ia32_palignr512_mask((__v64qi)(__m512i)(A), \
-                                          (__v64qi)(__m512i)(B), (int)(N) * 8, \
+                                          (__v64qi)(__m512i)(B), (int)(N), \
                                           (__v64qi)(__m512i)(W), \
                                           (__mmask64)(U)); })
 
 #define _mm512_maskz_alignr_epi8(U, A, B, N) __extension__({\
   (__m512i)__builtin_ia32_palignr512_mask((__v64qi)(__m512i)(A), \
-                                          (__v64qi)(__m512i)(B), (int)(N) * 8, \
+                                          (__v64qi)(__m512i)(B), (int)(N), \
                                           (__v64qi)_mm512_setzero_si512(), \
                                           (__mmask64)(U)); })
 

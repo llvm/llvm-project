@@ -325,9 +325,10 @@ class OMPLoopDirective : public OMPExecutableDirective {
     EnsureUpperBoundOffset = 13,
     NextLowerBoundOffset = 14,
     NextUpperBoundOffset = 15,
+    NumIterationsOffset = 16,
     // Offset to the end (and start of the following counters/updates/finals
     // arrays) for worksharing loop directives.
-    WorksharingEnd = 16,
+    WorksharingEnd = 17,
   };
 
   /// \brief Get the counters storage.
@@ -475,6 +476,13 @@ protected:
            "expected worksharing loop directive");
     *std::next(child_begin(), NextUpperBoundOffset) = NUB;
   }
+  void setNumIterations(Expr *NI) {
+    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
+            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
+            isOpenMPDistributeDirective(getDirectiveKind())) &&
+           "expected worksharing loop directive");
+    *std::next(child_begin(), NumIterationsOffset) = NI;
+  }
   void setCounters(ArrayRef<Expr *> A);
   void setPrivateCounters(ArrayRef<Expr *> A);
   void setInits(ArrayRef<Expr *> A);
@@ -553,6 +561,7 @@ public:
       EUB = nullptr;
       NLB = nullptr;
       NUB = nullptr;
+      NumIterations = nullptr;
       Counters.resize(Size);
       PrivateCounters.resize(Size);
       Inits.resize(Size);
@@ -659,6 +668,14 @@ public:
            "expected worksharing loop directive");
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), NextUpperBoundOffset)));
+  }
+  Expr *getNumIterations() const {
+    assert((isOpenMPWorksharingDirective(getDirectiveKind()) ||
+            isOpenMPTaskLoopDirective(getDirectiveKind()) ||
+            isOpenMPDistributeDirective(getDirectiveKind())) &&
+           "expected worksharing loop directive");
+    return const_cast<Expr *>(reinterpret_cast<const Expr *>(
+        *std::next(child_begin(), NumIterationsOffset)));
   }
   const Stmt *getBody() const {
     // This relies on the loop form is already checked by Sema.

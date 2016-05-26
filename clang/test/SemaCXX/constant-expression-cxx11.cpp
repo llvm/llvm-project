@@ -1181,6 +1181,20 @@ namespace ExternConstexpr {
     constexpr int j = 0;
     constexpr int k; // expected-error {{default initialization of an object of const type}}
   }
+
+  extern const int q;
+  constexpr int g() { return q; }
+  constexpr int q = g();
+  static_assert(q == 0, "zero-initialization should precede static initialization");
+
+  extern int r; // expected-note {{here}}
+  constexpr int h() { return r; } // expected-error {{never produces a constant}} expected-note {{read of non-const}}
+
+  struct S { int n; };
+  extern const S s;
+  constexpr int x() { return s.n; }
+  constexpr S s = {x()};
+  static_assert(s.n == 0, "zero-initialization should precede static initialization");
 }
 
 namespace ComplexConstexpr {

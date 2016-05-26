@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -triple %itanium_abi_triple -emit-llvm -fblocks -o - %s | FileCheck %s
 
 // CHECK-LABEL: define {{.*}}void @_Z1fPU8__strongP11objc_object(i8**)
 void f(__strong id *) {}
@@ -18,10 +18,14 @@ void f(const __autoreleasing id *) {}
 void f(const __unsafe_unretained id *) {}
 // CHECK-LABEL: define {{.*}}void @_Z1fPFU19ns_returns_retainedP11objc_objectvE
 void f(__attribute__((ns_returns_retained)) id (*fn)()) {}
+// CHECK-LABEL: define {{.*}}void @_Z1fP11objc_object
+void f(__attribute__((ns_consumed)) id) {}
 // CHECK-LABEL: define {{.*}}void @_Z1fPFP11objc_objectU11ns_consumedS0_S0_E
 void f(id (*fn)(__attribute__((ns_consumed)) id, id)) {}
 // CHECK-LABEL: define {{.*}}void @_Z1fPFP11objc_objectS0_U11ns_consumedS0_E
 void f(__strong id (*fn)(id, __attribute__((ns_consumed)) id)) {}
+// CHECK-LABEL: define {{.*}}void @_Z1fU13block_pointerFvU11ns_consumedP11objc_objectE
+void f(void (^)(__attribute__((ns_consumed)) id)) {}
 
 template<unsigned N> struct unsigned_c { };
 

@@ -143,6 +143,14 @@ public:
   /// FIXME: Returns 0 for member pointer call exprs.
   CXXRecordDecl *getRecordDecl() const;
 
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    SourceLocation CLoc = getCallee()->getExprLoc();
+    if (CLoc.isValid())
+      return CLoc;
+
+    return getLocStart();
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXMemberCallExprClass;
   }

@@ -629,7 +629,8 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   JumpDest LoopHeader = getJumpDestInCurrentScope("while.cond");
   EmitBlock(LoopHeader.getBlock());
 
-  LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), WhileAttrs);
+  LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), WhileAttrs,
+                 Builder.getCurrentDebugLocation());
 
   // Create an exit block for when the condition fails, which will
   // also become the break target.
@@ -720,7 +721,8 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
 
-  LoopStack.push(LoopBody, CGM.getContext(), DoAttrs);
+  LoopStack.push(LoopBody, CGM.getContext(), DoAttrs,
+                 Builder.getCurrentDebugLocation());
 
   EmitBlockWithFallThrough(LoopBody, &S);
   {
@@ -772,6 +774,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   LexicalScope ForScope(*this, S.getSourceRange());
 
+  llvm::DebugLoc DL = Builder.getCurrentDebugLocation();
+
   // Evaluate the first part before the loop.
   if (S.getInit())
     EmitStmt(S.getInit());
@@ -783,7 +787,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   llvm::BasicBlock *CondBlock = Continue.getBlock();
   EmitBlock(CondBlock);
 
-  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs);
+  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs, DL);
 
   // If the for loop doesn't have an increment we can just use the
   // condition as the continue block.  Otherwise we'll need to create
@@ -868,6 +872,8 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   LexicalScope ForScope(*this, S.getSourceRange());
 
+  llvm::DebugLoc DL = Builder.getCurrentDebugLocation();
+
   // Evaluate the first pieces before the loop.
   EmitStmt(S.getRangeStmt());
   EmitStmt(S.getBeginStmt());
@@ -879,7 +885,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   llvm::BasicBlock *CondBlock = createBasicBlock("for.cond");
   EmitBlock(CondBlock);
 
-  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs);
+  LoopStack.push(CondBlock, CGM.getContext(), ForAttrs, DL);
 
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.

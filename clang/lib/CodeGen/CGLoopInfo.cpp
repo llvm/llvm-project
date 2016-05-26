@@ -19,18 +19,24 @@
 using namespace clang::CodeGen;
 using namespace llvm;
 
-static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs) {
+static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
+                              llvm::DebugLoc Location) {
 
   if (!Attrs.IsParallel && Attrs.VectorizeWidth == 0 &&
       Attrs.InterleaveCount == 0 && Attrs.UnrollCount == 0 &&
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
-      Attrs.UnrollEnable == LoopAttributes::Unspecified)
+      Attrs.UnrollEnable == LoopAttributes::Unspecified &&
+      !Location)
     return nullptr;
 
   SmallVector<Metadata *, 4> Args;
   // Reserve operand 0 for loop id self reference.
   auto TempNode = MDNode::getTemporary(Ctx, None);
   Args.push_back(TempNode.get());
+
+  // If we have a valid debug location for the loop, add it.
+  if (Location)
+    Args.push_back(Location.getAsMDNode());
 
   // Setting vectorize.width
   if (Attrs.VectorizeWidth > 0) {
@@ -98,19 +104,21 @@ void LoopAttributes::clear() {
   UnrollEnable = LoopAttributes::Unspecified;
 }
 
-LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs)
+LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
+                   llvm::DebugLoc Location)
     : LoopID(nullptr), Header(Header), Attrs(Attrs) {
-  LoopID = createMetadata(Header->getContext(), Attrs);
+  LoopID = createMetadata(Header->getContext(), Attrs, Location);
 }
 
-void LoopInfoStack::push(BasicBlock *Header) {
-  Active.push_back(LoopInfo(Header, StagedAttrs));
+void LoopInfoStack::push(BasicBlock *Header, llvm::DebugLoc Location) {
+  Active.push_back(LoopInfo(Header, StagedAttrs, Location));
   // Clear the attributes so nested loops do not inherit them.
   StagedAttrs.clear();
 }
 
 void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
-                         ArrayRef<const clang::Attr *> Attrs) {
+                         ArrayRef<const clang::Attr *> Attrs,
+                         llvm::DebugLoc Location) {
 
   // Identify loop hint attributes from Attrs.
   for (const auto *Attr : Attrs) {
@@ -239,7 +247,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
   }
 
   /// Stage the attributes.
-  push(Header);
+  push(Header, Location);
 }
 
 void LoopInfoStack::pop() {

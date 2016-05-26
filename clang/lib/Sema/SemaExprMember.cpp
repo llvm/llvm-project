@@ -1792,6 +1792,7 @@ BuildFieldReferenceExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
   // Build a reference to a private copy for non-static data members in
   // non-static member functions, privatized by OpenMP constructs.
   if (S.getLangOpts().OpenMP && IsArrow &&
+      !S.CurContext->isDependentContext() &&
       isa<CXXThisExpr>(Base.get()->IgnoreParenImpCasts())) {
     if (auto *PrivateCopy = S.IsOpenMPCapturedDecl(Field))
       return S.getOpenMPCapturedExpr(PrivateCopy, VK, OK, OpLoc);

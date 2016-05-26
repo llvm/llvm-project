@@ -1271,7 +1271,7 @@ void CodeGenFunction::EmitOMPInnerLoop(
   // Start the loop with a block that tests the condition.
   auto CondBlock = createBasicBlock("omp.inner.for.cond");
   EmitBlock(CondBlock);
-  LoopStack.push(CondBlock);
+  LoopStack.push(CondBlock, Builder.getCurrentDebugLocation());
 
   // If there are any cleanups between here and the loop-exit scope,
   // create a block to stage a loop exit along.
@@ -1672,7 +1672,7 @@ void CodeGenFunction::EmitOMPOuterLoop(bool DynamicOrOrdered, bool IsMonotonic,
   // Start the loop with a block that tests the condition.
   auto CondBlock = createBasicBlock("omp.dispatch.cond");
   EmitBlock(CondBlock);
-  LoopStack.push(CondBlock);
+  LoopStack.push(CondBlock, Builder.getCurrentDebugLocation());
 
   llvm::Value *BoolCondVal = nullptr;
   if (!DynamicOrOrdered) {
@@ -1913,6 +1913,14 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(const OMPLoopDirective &S) {
       incrementProfileCounter(&S);
     }
 
+    bool Ordered = false;
+    if (auto *OrderedClause = S.getSingleClause<OMPOrderedClause>()) {
+      if (OrderedClause->getNumForLoops())
+        RT.emitDoacrossInit(*this, S);
+      else
+        Ordered = true;
+    }
+
     llvm::DenseSet<const Expr *> EmittedFinals;
     emitAlignedClause(*this, S);
     EmitOMPLinearClauseInit(S);
@@ -1960,7 +1968,6 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(const OMPLoopDirective &S) {
       }
       const unsigned IVSize = getContext().getTypeSize(IVExpr->getType());
       const bool IVSigned = IVExpr->getType()->hasSignedIntegerRepresentation();
-      const bool Ordered = S.getSingleClause<OMPOrderedClause>() != nullptr;
       // OpenMP 4.5, 2.7.1 Loop Construct, Description.
       // If the static schedule kind is specified or if the ordered clause is
       // specified, and if no monotonic modifier is specified, the effect will
@@ -2685,8 +2692,11 @@ static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
 }
 
 void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
-  if (!S.getAssociatedStmt())
+  if (!S.getAssociatedStmt()) {
+    for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
+      CGM.getOpenMPRuntime().emitDoacrossOrdered(*this, DC);
     return;
+  }
   auto *C = S.getSingleClause<OMPSIMDClause>();
   auto &&CodeGen = [&S, C, this](CodeGenFunction &CGF,
                                  PrePostActionTy &Action) {

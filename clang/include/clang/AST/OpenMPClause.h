@@ -2629,7 +2629,6 @@ public:
   /// \param DepLoc Location of the dependency type.
   /// \param ColonLoc Colon location.
   /// \param VL List of references to the variables.
-  ///
   static OMPDependClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation EndLoc, OpenMPDependClauseKind DepKind,
@@ -2647,6 +2646,14 @@ public:
   SourceLocation getDependencyLoc() const { return DepLoc; }
   /// \brief Get colon location.
   SourceLocation getColonLoc() const { return ColonLoc; }
+
+  /// Set the loop counter value for the depend clauses with 'sink|source' kind
+  /// of dependency. Required for codegen.
+  void setCounterValue(Expr *V);
+  /// Get the loop counter value.
+  Expr *getCounterValue();
+  /// Get the loop counter value.
+  const Expr *getCounterValue() const;
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
