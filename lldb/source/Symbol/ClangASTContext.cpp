@@ -2064,10 +2064,33 @@ ClangASTContext::CreateFunctionType (ASTContext *ast,
                                      bool is_variadic, 
                                      unsigned type_quals)
 {
-    assert (ast != nullptr);
+    if (ast == nullptr)
+        return CompilerType(); // invalid AST
+
+    if (!result_type || !ClangUtil::IsClangType(result_type))
+        return CompilerType(); // invalid return type
+
     std::vector<QualType> qual_type_args;
+    if (num_args > 0 && args == nullptr)
+        return CompilerType(); // invalid argument array passed in
+
+    // Verify that all arguments are valid and the right type
     for (unsigned i=0; i<num_args; ++i)
-        qual_type_args.push_back(ClangUtil::GetQualType(args[i]));
+    {
+        if (args[i])
+        {
+            // Make sure we have a clang type in args[i] and not a type from another
+            // language whose name might match
+            const bool is_clang_type = ClangUtil::IsClangType(args[i]);
+            lldbassert(is_clang_type);
+            if (is_clang_type)
+                qual_type_args.push_back(ClangUtil::GetQualType(args[i]));
+            else
+                return CompilerType(); //  invalid argument type (must be a clang type)
+        }
+        else
+            return CompilerType(); // invalid argument type (empty)
+    }
 
     // TODO: Detect calling convention in DWARF?
     FunctionProtoType::ExtProtoInfo proto_info;
