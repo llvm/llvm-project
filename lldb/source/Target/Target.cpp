@@ -2036,8 +2036,14 @@ Target::ImageSearchPathsChanged(const PathMappingList &path_list,
         target->SetExecutableModule (exe_module_sp, true);
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+TypeSystem *
+Target::GetScratchTypeSystemForLanguageImpl (Error *error, lldb::LanguageType language, bool create_on_demand, const char *compiler_options)
+#else
 TypeSystem *
 Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType language, bool create_on_demand, const char *compiler_options)
+#endif
 {
     if (!m_valid)
         return nullptr;
@@ -2216,8 +2222,14 @@ Target::GetUtilityFunctionForLanguage (const char *text,
     return utility_fn;
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+ClangASTContext *
+Target::GetScratchClangASTContextImpl(bool create_on_demand)
+#else
 ClangASTContext *
 Target::GetScratchClangASTContext(bool create_on_demand)
+#endif
 {
     if (m_valid)
     {
@@ -2241,8 +2253,14 @@ Target::GetClangASTImporter()
     return ClangASTImporterSP();
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+SwiftASTContext *
+Target::GetScratchSwiftASTContextImpl(Error &error, bool create_on_demand, const char *extra_options)
+#else
 SwiftASTContext *
 Target::GetScratchSwiftASTContext(Error &error, bool create_on_demand, const char *extra_options)
+#endif
 {
     return llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
 }

@@ -1337,11 +1337,32 @@ public:
     PathMappingList &
     GetImageSearchPathList ();
     
+#ifdef __clang_analyzer__
+    // This enables an analyzer warning for unchecked use of the TypeSystem * returned by this call.
+    // It tells the analyzer that the return value is something that has been null-checked once.
+    // The analyzer will then assume that it must be null-checked at every use, which is what we want.
+    TypeSystem *
+    GetScratchTypeSystemForLanguage (Error *error,
+                                     lldb::LanguageType language,
+                                     bool create_on_demand = true,
+                                     const char *compiler_options = nullptr) __attribute__ ((always_inline))
+    {
+        TypeSystem *ret = GetScratchTypeSystemForLanguageImpl(error, language, create_on_demand, compiler_options);
+        return ret ? ret : nullptr;
+    }
+        
+    TypeSystem *
+    GetScratchTypeSystemForLanguageImpl (Error *error,
+                                         lldb::LanguageType language,
+                                         bool create_on_demand = true,
+                                         const char *compiler_options = nullptr);
+#else
     TypeSystem *
     GetScratchTypeSystemForLanguage (Error *error,
                                      lldb::LanguageType language,
                                      bool create_on_demand = true,
                                      const char *compiler_options = nullptr);
+#endif
     
     PersistentExpressionState *
     GetPersistentExpressionStateForLanguage (lldb::LanguageType language);
@@ -1385,14 +1406,43 @@ public:
                                    const char *name,
                                    Error &error);
 
+#ifdef __clang_analyzer__
+    // See GetScratchTypeSystemForLanguage()
+    ClangASTContext *
+    GetScratchClangASTContext(bool create_on_demand=true) __attribute__ ((always_inline))
+    {
+        ClangASTContext *ret = GetScratchClangASTContextImpl(create_on_demand);
+        
+        return ret ? ret : nullptr;
+    }
+    
+    ClangASTContext *
+    GetScratchClangASTContextImpl(bool create_on_demand=true);
+#else
     ClangASTContext *
     GetScratchClangASTContext(bool create_on_demand=true);
+#endif
     
     lldb::ClangASTImporterSP
     GetClangASTImporter();
     
+#ifdef __clang_analyzer__
+    // See GetScratchTypeSystemForLanguage()
+    SwiftASTContext *
+    GetScratchSwiftASTContext(Error &error, bool create_on_demand=true, const char *extra_options = nullptr) __attribute__ ((always_inline))
+    {
+        SwiftASTContext *ret = GetScratchSwiftASTContextImpl(error, create_on_demand, extra_options);
+        
+        return ret ? ret : nullptr;
+    }
+    
+    SwiftASTContext *
+    GetScratchSwiftASTContextImpl(Error &error, bool create_on_demand=true, const char *extra_options = nullptr);
+#else
     SwiftASTContext *
     GetScratchSwiftASTContext(Error &error, bool create_on_demand=true, const char *extra_options = nullptr);
+#endif
+
 
     //----------------------------------------------------------------------
     // Install any files through the platform that need be to installed
