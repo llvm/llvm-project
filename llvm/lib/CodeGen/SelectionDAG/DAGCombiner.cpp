@@ -13068,9 +13068,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   auto IsBuildVectorOrUndef = [](const SDValue &Op) {
     return ISD::UNDEF == Op.getOpcode() || ISD::BUILD_VECTOR == Op.getOpcode();
   };
-  bool AllBuildVectorsOrUndefs =
-      std::all_of(N->op_begin(), N->op_end(), IsBuildVectorOrUndef);
-  if (AllBuildVectorsOrUndefs) {
+  if (llvm::all_of(N->ops(), IsBuildVectorOrUndef)) {
     SmallVector<SDValue, 8> Opnds;
     EVT SVT = VT.getScalarType();
 

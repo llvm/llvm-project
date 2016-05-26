@@ -10,17 +10,17 @@ declare void @llvm.amdgcn.s.barrier() #1
 ; CHECK: BB0_1:
 ; CHECK: v_add_i32_e32 [[VADDR:v[0-9]+]],
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR]]
-; SI-DAG: v_add_i32_e32 [[VADDR4:v[0-9]+]], vcc, 4, [[VADDR]]
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR4]]
+; SI-DAG: v_add_i32_e32 [[VADDR8:v[0-9]+]], vcc, 8, [[VADDR]]
+; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR8]]
 ; SI-DAG: v_add_i32_e32 [[VADDR0x80:v[0-9]+]], vcc, 0x80, [[VADDR]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR0x80]]
-; SI-DAG: v_add_i32_e32 [[VADDR0x84:v[0-9]+]], vcc, 0x84, [[VADDR]]
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR0x84]]
+; SI-DAG: v_add_i32_e32 [[VADDR0x88:v[0-9]+]], vcc, 0x88, [[VADDR]]
+; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR0x88]]
 ; SI-DAG: v_add_i32_e32 [[VADDR0x100:v[0-9]+]], vcc, 0x100, [[VADDR]]
 ; SI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR0x100]]
 
-; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDR]] offset1:1
-; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDR]] offset0:32 offset1:33
+; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDR]] offset1:2
+; CI-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, [[VADDR]] offset0:32 offset1:34
 ; CI-DAG: ds_read_b32 v{{[0-9]+}}, [[VADDR]] offset:256
 ; CHECK: s_endpgm
 define void @signed_ds_offset_addressing_loop(float addrspace(1)* noalias nocapture %out, float addrspace(3)* noalias nocapture readonly %lptr, i32 %n) #2 {
@@ -36,13 +36,13 @@ for.body:                                         ; preds = %for.body, %entry
   tail call void @llvm.amdgcn.s.barrier() #1
   %arrayidx = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %offset.02
   %tmp = load float, float addrspace(3)* %arrayidx, align 4
-  %add1 = add nsw i32 %offset.02, 1
+  %add1 = add nsw i32 %offset.02, 2
   %arrayidx2 = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %add1
   %tmp1 = load float, float addrspace(3)* %arrayidx2, align 4
   %add3 = add nsw i32 %offset.02, 32
   %arrayidx4 = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %add3
   %tmp2 = load float, float addrspace(3)* %arrayidx4, align 4
-  %add5 = add nsw i32 %offset.02, 33
+  %add5 = add nsw i32 %offset.02, 34
   %arrayidx6 = getelementptr inbounds float, float addrspace(3)* %lptr, i32 %add5
   %tmp3 = load float, float addrspace(3)* %arrayidx6, align 4
   %add7 = add nsw i32 %offset.02, 64

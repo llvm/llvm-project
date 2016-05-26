@@ -121,7 +121,7 @@ class OrcMCJITReplacement : public ExecutionEngine {
 
     RuntimeDyld::SymbolInfo
     findSymbolInLogicalDylib(const std::string &Name) override {
-      return M.ClientResolver->findSymbolInLogicalDylib(Name);
+      return M.ClientResolver->findSymbol(Name);
     }
 
   private:

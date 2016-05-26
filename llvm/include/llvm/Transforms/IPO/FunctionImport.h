@@ -107,6 +107,16 @@ void gatherImportedSummariesForModule(
 std::error_code
 EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
                  const StringMap<FunctionImporter::ImportMapTy> &ImportLists);
+
+/// Resolve WeakForLinker values in \p TheModule based on the information
+/// recorded in the summaries during global summary-based analysis.
+void thinLTOResolveWeakForLinkerModule(Module &TheModule,
+                                       const GVSummaryMapTy &DefinedGlobals);
+
+/// Internalize \p TheModule based on the information recorded in the summaries
+/// during global summary-based analysis.
+void thinLTOInternalizeModule(Module &TheModule,
+                              const GVSummaryMapTy &DefinedGlobals);
 }
 
 #endif // LLVM_FUNCTIONIMPORT_H

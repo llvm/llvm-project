@@ -66,7 +66,7 @@ for.body.i.i:                                     ; preds = %for.body.i.i, %for.
   store i32 0, i32* %__first.addr.02.i.i, align 4
   %ptrincdec.i.i = getelementptr inbounds i32, i32* %__first.addr.02.i.i, i64 1
 ; CHECK: %ptrincdec.i.i
-; CHECK-NEXT: -->  {(4 + %begin),+,4}<nuw><%for.body.i.i>
+; CHECK-NEXT: -->  {(4 + %begin)<nsw>,+,4}<nuw><%for.body.i.i>
   %cmp.i.i = icmp eq i32* %ptrincdec.i.i, %end
   br i1 %cmp.i.i, label %for.cond.for.end_crit_edge.i.i, label %for.body.i.i
 
@@ -92,7 +92,7 @@ for.body.i.i:                                     ; preds = %entry, %for.body.i.
 ; CHECK: {1,+,1}<nuw><nsw><%for.body.i.i>
   %ptrincdec.i.i = getelementptr inbounds i32, i32* %begin, i64 %tmp
 ; CHECK: %ptrincdec.i.i =
-; CHECK: {(4 + %begin),+,4}<nsw><%for.body.i.i>
+; CHECK: {(4 + %begin)<nsw>,+,4}<nsw><%for.body.i.i>
   %__first.addr.08.i.i = getelementptr inbounds i32, i32* %begin, i64 %indvar.i.i
 ; CHECK: %__first.addr.08.i.i
 ; CHECK: {%begin,+,4}<nsw><%for.body.i.i>
@@ -124,7 +124,7 @@ exit:
 }
 
 ; CHECK-LABEL: PR12375
-; CHECK: -->  {(4 + %arg),+,4}<nuw><%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (8 + %arg)<nsw>
+; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (8 + %arg)<nsw>
 define i32 @PR12375(i32* readnone %arg) {
 bb:
   %tmp = getelementptr inbounds i32, i32* %arg, i64 2
@@ -143,7 +143,7 @@ bb7:                                              ; preds = %bb1
 }
 
 ; CHECK-LABEL: PR12376
-; CHECK: -->  {(4 + %arg),+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((3 + (-1 * %arg) + (%arg umax %arg1)) /u 4)) + %arg)
+; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((3 + (-1 * %arg) + (%arg umax %arg1)) /u 4)) + %arg)
 define void @PR12376(i32* nocapture %arg, i32* nocapture %arg1)  {
 bb:
   br label %bb2
@@ -173,6 +173,29 @@ for.body:
   tail call void @f(i32 %i.04)
   %cmp = icmp slt i32 %i.04, %add
   br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; This test checks if no-wrap flags are propagated when folding {S,+,X}+T ==> {S+T,+,X}
+; CHECK-LABEL: test4
+; CHECK: %idxprom
+; CHECK-NEXT: -->  {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body>
+define void @test4(i32 %arg) {
+entry:
+  %array = alloca [10 x i32], align 4
+  br label %for.body
+
+for.body:
+  %index = phi i32 [ %inc5, %for.body ], [ %arg, %entry ]
+  %sub = add nsw i32 %index, -2
+  %idxprom = sext i32 %sub to i64
+  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %array, i64 0, i64 %idxprom
+  %data = load i32, i32* %arrayidx, align 4
+  %inc5 = add nsw i32 %index, 1
+  %cmp2 = icmp slt i32 %inc5, 10
+  br i1 %cmp2, label %for.body, label %for.end
 
 for.end:
   ret void

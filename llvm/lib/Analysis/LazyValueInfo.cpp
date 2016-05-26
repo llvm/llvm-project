@@ -287,7 +287,7 @@ raw_ostream &operator<<(raw_ostream &OS, const LVILatticeVal &Val) {
 
   if (Val.isNotConstant())
     return OS << "notconstant<" << *Val.getNotConstant() << '>';
-  else if (Val.isConstantRange())
+  if (Val.isConstantRange())
     return OS << "constantrange<" << Val.getConstantRange().getLower() << ", "
               << Val.getConstantRange().getUpper() << '>';
   return OS << "constant<" << *Val.getConstant() << '>';
@@ -678,7 +678,7 @@ bool LazyValueInfoCache::solveBlockValue(Value *Val, BasicBlock *BB) {
     insertResult(Val, BB, Res);
     return true;
   }
-  else if (BBI->getType()->isIntegerTy()) {
+  if (BBI->getType()->isIntegerTy()) {
     if (isa<CastInst>(BBI)) {
       if (!solveBlockValueCast(Res, BBI, BB))
         return false;
@@ -1497,8 +1497,7 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
     return ConstantRange(Width, /*isFullSet=*/false);
   if (Result.isConstantRange())
     return Result.getConstantRange();
-  else
-    return ConstantRange(Width, /*isFullSet=*/true);
+  return ConstantRange(Width, /*isFullSet=*/true);
 }
 
 /// Determine whether the specified value is known to be a

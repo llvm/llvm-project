@@ -93,7 +93,20 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   }
   IO.mapRequired("FileHeader", Object.Header);
   IO.mapOptional("LoadCommands", Object.LoadCommands);
+  IO.mapOptional("LinkEditData", Object.LinkEdit);
   IO.setContext(nullptr);
+}
+
+void MappingTraits<MachOYAML::LinkEditData>::mapping(IO &IO,
+                                               MachOYAML::LinkEditData &LinkEditData) {
+  IO.mapOptional("RebaseOpcodes", LinkEditData.RebaseOpcodes);
+}
+
+void MappingTraits<MachOYAML::RebaseOpcode>::mapping(IO &IO,
+                                               MachOYAML::RebaseOpcode &RebaseOpcode) {
+  IO.mapRequired("Opcode", RebaseOpcode.Opcode);
+  IO.mapRequired("Imm", RebaseOpcode.Imm);
+  IO.mapOptional("ExtraData", RebaseOpcode.ExtraData);
 }
 
 template <typename StructType>

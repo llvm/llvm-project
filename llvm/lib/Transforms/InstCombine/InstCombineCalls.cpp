@@ -1428,6 +1428,19 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
 
+  case Intrinsic::x86_avx_storeu_ps_256:
+  case Intrinsic::x86_avx_storeu_pd_256:
+  case Intrinsic::x86_avx_storeu_dq_256:
+    // Turn X86 storeu -> store if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(II->getArgOperand(0), 32, DL, II, AC, DT) >=
+        32) {
+      Type *OpPtrTy =
+        PointerType::getUnqual(II->getArgOperand(1)->getType());
+      Value *Ptr = Builder->CreateBitCast(II->getArgOperand(0), OpPtrTy);
+      return new StoreInst(II->getArgOperand(1), Ptr);
+    }
+    break;
+
   case Intrinsic::x86_vcvtph2ps_128:
   case Intrinsic::x86_vcvtph2ps_256: {
     auto Arg = II->getArgOperand(0);

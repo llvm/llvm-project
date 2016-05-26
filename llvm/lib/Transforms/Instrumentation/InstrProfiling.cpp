@@ -550,7 +550,7 @@ void InstrProfiling::emitRuntimeHook() {
   User->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone) User->addFnAttr(Attribute::NoRedZone);
   User->setVisibility(GlobalValue::HiddenVisibility);
-  if (Triple(M->getTargetTriple()).isOSBinFormatCOFF())
+  if (Triple(M->getTargetTriple()).supportsCOMDAT())
     User->setComdat(M->getOrInsertComdat(User->getName()));
 
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", User));

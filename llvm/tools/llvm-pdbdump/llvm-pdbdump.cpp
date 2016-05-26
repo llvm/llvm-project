@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
@@ -48,7 +49,6 @@
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -343,15 +343,16 @@ static Error dumpStreamData(ScopedPrinter &P, PDBFile &File) {
     return Error::success();
 
   MappedBlockStream S(DumpStreamNum, File);
-  StreamReader R(S);
+  codeview::StreamReader R(S);
   while (R.bytesRemaining() > 0) {
     ArrayRef<uint8_t> Data;
     uint32_t BytesToReadInBlock = std::min(
         R.bytesRemaining(), static_cast<uint32_t>(File.getBlockSize()));
     if (auto EC = R.getArrayRef(Data, BytesToReadInBlock))
       return EC;
-    outs() << StringRef(reinterpret_cast<const char *>(Data.begin()),
-                        Data.size());
+    P.printBinaryBlock(
+        "Data",
+        StringRef(reinterpret_cast<const char *>(Data.begin()), Data.size()));
   }
   return Error::success();
 }
@@ -392,7 +393,7 @@ static Error dumpNamedStream(ScopedPrinter &P, PDBFile &File) {
     P.printNumber("Index", NameStreamIndex);
 
     MappedBlockStream NameStream(NameStreamIndex, File);
-    StreamReader Reader(NameStream);
+    codeview::StreamReader Reader(NameStream);
 
     NameHashTable NameTable;
     if (auto EC = NameTable.load(Reader))

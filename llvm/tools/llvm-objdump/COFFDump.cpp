@@ -653,6 +653,13 @@ void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
 
         SI = SI + Symbol->getNumberOfAuxSymbols();
         break;
+      } else if (Symbol->isWeakExternal()) {
+        const coff_aux_weak_external *awe;
+        error(coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe));
+
+        outs() << "AUX " << format("indx %d srch %d\n",
+                                   static_cast<uint32_t>(awe->TagIndex),
+                                   static_cast<uint32_t>(awe->Characteristics));
       } else {
         outs() << "AUX Unknown\n";
       }

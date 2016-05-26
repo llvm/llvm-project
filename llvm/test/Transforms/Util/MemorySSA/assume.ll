@@ -8,6 +8,7 @@ define i32 @foo(i32* %a, i32* %b, i1 %c) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 4
   store i32 4, i32* %a, align 4
+; CHECK-NOT: MemoryDef
 ; CHECK: call void @llvm.assume
   call void @llvm.assume(i1 %c)
 ; CHECK: MemoryUse(1)

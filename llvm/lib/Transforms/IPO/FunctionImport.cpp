@@ -16,16 +16,19 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ModuleSummaryIndexObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
 #define DEBUG_TYPE "function-import"
@@ -458,6 +461,80 @@ std::error_code llvm::EmitImportsFiles(
     for (auto &ILI : ModuleImports->second)
       ImportsOS << ILI.first() << "\n";
   return std::error_code();
+}
+
+/// Fixup WeakForLinker linkages in \p TheModule based on summary analysis.
+void llvm::thinLTOResolveWeakForLinkerModule(
+    Module &TheModule, const GVSummaryMapTy &DefinedGlobals) {
+  auto updateLinkage = [&](GlobalValue &GV) {
+    if (!GlobalValue::isWeakForLinker(GV.getLinkage()))
+      return;
+    // See if the global summary analysis computed a new resolved linkage.
+    const auto &GS = DefinedGlobals.find(GV.getGUID());
+    if (GS == DefinedGlobals.end())
+      return;
+    auto NewLinkage = GS->second->linkage();
+    if (NewLinkage == GV.getLinkage())
+      return;
+    DEBUG(dbgs() << "ODR fixing up linkage for `" << GV.getName() << "` from "
+                 << GV.getLinkage() << " to " << NewLinkage << "\n");
+    GV.setLinkage(NewLinkage);
+  };
+
+  // Process functions and global now
+  for (auto &GV : TheModule)
+    updateLinkage(GV);
+  for (auto &GV : TheModule.globals())
+    updateLinkage(GV);
+  for (auto &GV : TheModule.aliases())
+    updateLinkage(GV);
+}
+
+/// Run internalization on \p TheModule based on symmary analysis.
+void llvm::thinLTOInternalizeModule(Module &TheModule,
+                                    const GVSummaryMapTy &DefinedGlobals) {
+  // Parse inline ASM and collect the list of symbols that are not defined in
+  // the current module.
+  StringSet<> AsmUndefinedRefs;
+  object::IRObjectFile::CollectAsmUndefinedRefs(
+      Triple(TheModule.getTargetTriple()), TheModule.getModuleInlineAsm(),
+      [&AsmUndefinedRefs](StringRef Name, object::BasicSymbolRef::Flags Flags) {
+        if (Flags & object::BasicSymbolRef::SF_Undefined)
+          AsmUndefinedRefs.insert(Name);
+      });
+
+  // Declare a callback for the internalize pass that will ask for every
+  // candidate GlobalValue if it can be internalized or not.
+  auto MustPreserveGV = [&](const GlobalValue &GV) -> bool {
+    // Can't be internalized if referenced in inline asm.
+    if (AsmUndefinedRefs.count(GV.getName()))
+      return true;
+
+    // Lookup the linkage recorded in the summaries during global analysis.
+    const auto &GS = DefinedGlobals.find(GV.getGUID());
+    GlobalValue::LinkageTypes Linkage;
+    if (GS == DefinedGlobals.end()) {
+      // Must have been promoted (possibly conservatively). Find original
+      // name so that we can access the correct summary and see if it can
+      // be internalized again.
+      // FIXME: Eventually we should control promotion instead of promoting
+      // and internalizing again.
+      StringRef OrigName =
+          ModuleSummaryIndex::getOriginalNameBeforePromote(GV.getName());
+      std::string OrigId = GlobalValue::getGlobalIdentifier(
+          OrigName, GlobalValue::InternalLinkage,
+          TheModule.getSourceFileName());
+      const auto &GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
+      assert(GS != DefinedGlobals.end());
+      Linkage = GS->second->linkage();
+    } else
+      Linkage = GS->second->linkage();
+    return !GlobalValue::isLocalLinkage(Linkage);
+  };
+
+  // FIXME: See if we can just internalize directly here via linkage changes
+  // based on the index, rather than invoking internalizeModule.
+  llvm::internalizeModule(TheModule, MustPreserveGV);
 }
 
 // Automatically import functions in Module \p DestModule based on the summaries

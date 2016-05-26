@@ -15,9 +15,12 @@
 #include "yaml2obj.h"
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "llvm/Support/Format.h"
 
 using namespace llvm;
 
@@ -42,6 +45,9 @@ private:
   Error writeHeader(raw_ostream &OS);
   Error writeLoadCommands(raw_ostream &OS);
   Error writeSectionData(raw_ostream &OS);
+  Error writeLinkEditData(raw_ostream &OS);
+
+  void ZeroToOffset(raw_ostream &OS, size_t offset);
 
   MachOYAML::Object &Obj;
   bool is64Bit;
@@ -165,6 +171,12 @@ void Fill(raw_ostream &OS, size_t Size, uint32_t Data) {
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
+void MachOWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
+  auto currOffset = OS.tell() - fileStart;
+  if (currOffset < Offset)
+    ZeroFillBytes(OS, Offset - currOffset);
+}
+
 Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
   for (auto &LC : Obj.LoadCommands) {
     size_t BytesWritten = 0;
@@ -212,39 +224,74 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SEGMENT:
     case MachO::LC_SEGMENT_64:
+      auto currOffset = OS.tell() - fileStart;
+      auto segname = LC.Data.segment_command_data.segname;
       uint64_t segOff = is64Bit ? LC.Data.segment_command_64_data.fileoff
                                 : LC.Data.segment_command_data.fileoff;
 
-      // Zero Fill any data between the end of the last thing we wrote and the
-      // start of this section.
-      auto currOffset = OS.tell() - fileStart;
-      if (currOffset < segOff) {
-        ZeroFillBytes(OS, segOff - currOffset);
-      }
-
-      for (auto &Sec : LC.Sections) {
+      if (0 == strncmp(&segname[0], "__LINKEDIT", 16)) {
+        if (auto Err = writeLinkEditData(OS))
+          return Err;
+      } else {
         // Zero Fill any data between the end of the last thing we wrote and the
         // start of this section.
-        assert(OS.tell() - fileStart <= Sec.offset &&
-               "Wrote too much data somewhere, section offsets don't line up.");
-        currOffset = OS.tell() - fileStart;
-        if (currOffset < Sec.offset) {
-          ZeroFillBytes(OS, Sec.offset - currOffset);
+        if (currOffset < segOff) {
+          ZeroFillBytes(OS, segOff - currOffset);
         }
 
-        // Fills section data with 0xDEADBEEF
-        Fill(OS, Sec.size, 0xDEADBEEFu);
+        for (auto &Sec : LC.Sections) {
+          // Zero Fill any data between the end of the last thing we wrote and
+          // the
+          // start of this section.
+          assert(
+              OS.tell() - fileStart <= Sec.offset &&
+              "Wrote too much data somewhere, section offsets don't line up.");
+          currOffset = OS.tell() - fileStart;
+          if (currOffset < Sec.offset) {
+            ZeroFillBytes(OS, Sec.offset - currOffset);
+          }
+
+          // Fills section data with 0xDEADBEEF
+          Fill(OS, Sec.size, 0xDEADBEEFu);
+        }
       }
       uint64_t segSize = is64Bit ? LC.Data.segment_command_64_data.filesize
                                  : LC.Data.segment_command_data.filesize;
-      currOffset = OS.tell() - fileStart;
-      if (currOffset < segOff + segSize) {
-        // Fills segment data not covered by a section with 0xBAADDA7A
-        Fill(OS, (segOff + segSize) - currOffset, 0xBAADDA7Au);
-      }
+      ZeroToOffset(OS, segOff + segSize);
       break;
     }
   }
+  return Error::success();
+}
+
+Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
+  MachOYAML::LinkEditData &LinkEdit = Obj.LinkEdit;
+  MachO::dyld_info_command *DyldInfoOnlyCmd = 0;
+  MachO::symtab_command *SymtabCmd = 0;
+  for (auto &LC : Obj.LoadCommands) {
+    switch (LC.Data.load_command_data.cmd) {
+    case MachO::LC_SYMTAB:
+      SymtabCmd = &LC.Data.symtab_command_data;
+      break;
+    case MachO::LC_DYLD_INFO_ONLY:
+      DyldInfoOnlyCmd = &LC.Data.dyld_info_command_data;
+      break;
+    }
+  }
+
+  ZeroToOffset(OS, DyldInfoOnlyCmd->rebase_off);
+
+  for (auto Opcode : LinkEdit.RebaseOpcodes) {
+    uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
+    OS.write(reinterpret_cast<char *>(&OpByte), 1);
+    for (auto Data : Opcode.ExtraData) {
+      encodeULEB128(Data, OS);
+    }
+  }
+
+  // Fill to the end of the string table
+  ZeroToOffset(OS, SymtabCmd->stroff + SymtabCmd->strsize);
+
   return Error::success();
 }
 

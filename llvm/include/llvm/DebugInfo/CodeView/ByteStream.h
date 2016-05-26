@@ -7,19 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_BYTESTREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_BYTESTREAM_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_BYTESTREAM_H
+#define LLVM_DEBUGINFO_CODEVIEW_BYTESTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamInterface.h"
+#include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
-namespace pdb {
-
+namespace codeview {
 class StreamReader;
 
 class ByteStream : public StreamInterface {
@@ -53,4 +52,4 @@ private:
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_BYTESTREAM_H
+#endif // LLVM_DEBUGINFO_CODEVIEW_BYTESTREAM_H

@@ -24,15 +24,18 @@
 #if defined(_LIBCXXABI_DLL)
  #if defined(cxxabi_EXPORTS)
   #define _LIBCXXABI_HIDDEN
+  #define _LIBCXXABI_DATA_VIS __declspec(dllexport)
   #define _LIBCXXABI_FUNC_VIS __declspec(dllexport)
   #define _LIBCXXABI_TYPE_VIS __declspec(dllexport)
  #else
   #define _LIBCXXABI_HIDDEN
+  #define _LIBCXXABI_DATA_VIS __declspec(dllimport)
   #define _LIBCXXABI_FUNC_VIS __declspec(dllimport)
   #define _LIBCXXABI_TYPE_VIS __declspec(dllimport)
  #endif
 #else
  #define _LIBCXXABI_HIDDEN __attribute__((__visibility__("hidden")))
+ #define _LIBCXXABI_DATA_VIS __attribute__((__visibility__("default")))
  #define _LIBCXXABI_FUNC_VIS __attribute__((__visibility__("default")))
  #if __has_attribute(__type_visibility__)
   #define _LIBCXXABI_TYPE_VIS __attribute__((__type_visibility__("default")))

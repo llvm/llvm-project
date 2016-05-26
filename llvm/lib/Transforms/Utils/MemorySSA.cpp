@@ -255,7 +255,7 @@ MemorySSAWalker *MemorySSA::buildMemorySSA(AliasAnalysis *AA,
     bool InsertIntoDef = false;
     AccessListType *Accesses = nullptr;
     for (Instruction &I : B) {
-      MemoryUseOrDef *MUD = createNewAccess(&I, true);
+      MemoryUseOrDef *MUD = createNewAccess(&I);
       if (!MUD)
         continue;
       InsertIntoDef |= isa<MemoryDef>(MUD);
@@ -353,8 +353,15 @@ MemorySSAWalker *MemorySSA::buildMemorySSA(AliasAnalysis *AA,
 }
 
 /// \brief Helper function to create new memory accesses
-MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
-                                           bool IgnoreNonMemory) {
+MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
+  // The assume intrinsic has a control dependency which we model by claiming
+  // that it writes arbitrarily. Ignore that fake memory dependency here.
+  // FIXME: Replace this special casing with a more accurate modelling of
+  // assume's control dependency.
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    if (II->getIntrinsicID() == Intrinsic::assume)
+      return nullptr;
+
   // Find out what affect this instruction has on memory.
   ModRefInfo ModRef = AA->getModRefInfo(I);
   bool Def = bool(ModRef & MRI_Mod);
@@ -362,7 +369,7 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
 
   // It's possible for an instruction to not modify memory at all. During
   // construction, we ignore them.
-  if (IgnoreNonMemory && !Def && !Use)
+  if (!Def && !Use)
     return nullptr;
 
   assert((Def || Use) &&

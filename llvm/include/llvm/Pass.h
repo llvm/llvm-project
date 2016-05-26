@@ -29,7 +29,6 @@
 #ifndef LLVM_PASS_H
 #define LLVM_PASS_H
 
-#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

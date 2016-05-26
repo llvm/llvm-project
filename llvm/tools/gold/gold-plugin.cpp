@@ -28,6 +28,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -73,7 +74,10 @@ static ld_plugin_message message = discard_message;
 namespace {
 struct claimed_file {
   void *handle;
+  void *leader_handle;
   std::vector<ld_plugin_symbol> syms;
+  off_t filesize;
+  std::string name;
 };
 
 /// RAII wrapper to manage opening and releasing of a ld_plugin_input_file.
@@ -113,9 +117,6 @@ struct ResolutionInfo {
 /// Class to own information used by a task or during its cleanup for a
 /// ThinLTO backend instantiation.
 class ThinLTOTaskInfo {
-  /// The input file holding the module bitcode read by the ThinLTO task.
-  PluginInputFile InputFile;
-
   /// The output stream the task will codegen into.
   std::unique_ptr<raw_fd_ostream> OS;
 
@@ -127,10 +128,9 @@ class ThinLTOTaskInfo {
   bool TempOutFile;
 
 public:
-  ThinLTOTaskInfo(PluginInputFile InputFile, std::unique_ptr<raw_fd_ostream> OS,
-                  std::string Filename, bool TempOutFile)
-      : InputFile(std::move(InputFile)), OS(std::move(OS)), Filename(Filename),
-        TempOutFile(TempOutFile) {}
+  ThinLTOTaskInfo(std::unique_ptr<raw_fd_ostream> OS, std::string Filename,
+                  bool TempOutFile)
+      : OS(std::move(OS)), Filename(Filename), TempOutFile(TempOutFile) {}
 
   /// Performs task related cleanup activities that must be done
   /// single-threaded (i.e. call backs to gold).
@@ -146,6 +146,7 @@ static ld_plugin_get_view get_view = nullptr;
 static Optional<Reloc::Model> RelocationModel;
 static std::string output_name = "";
 static std::list<claimed_file> Modules;
+static DenseMap<int, void *> FDToLeaderHandle;
 static StringMap<ResolutionInfo> ResInfo;
 static std::vector<std::string> Cleanup;
 static llvm::TargetOptions TargetOpts;
@@ -503,6 +504,23 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
   claimed_file &cf = Modules.back();
 
   cf.handle = file->handle;
+  // Keep track of the first handle for each file descriptor, since there are
+  // multiple in the case of an archive. This is used later in the case of
+  // ThinLTO parallel backends to ensure that each file is only opened and
+  // released once.
+  auto LeaderHandle =
+      FDToLeaderHandle.insert(std::make_pair(file->fd, file->handle)).first;
+  cf.leader_handle = LeaderHandle->second;
+  // Save the filesize since for parallel ThinLTO backends we can only
+  // invoke get_input_file once per archive (only for the leader handle).
+  cf.filesize = file->filesize;
+  // In the case of an archive library, all but the first member must have a
+  // non-zero offset, which we can append to the file name to obtain a
+  // unique name.
+  cf.name = file->name;
+  if (file->offset)
+    cf.name += ".llvm." + std::to_string(file->offset) + "." +
+               sys::path::filename(Obj->getModule().getSourceFileName()).str();
 
   // If we are doing ThinLTO compilation, don't need to process the symbols.
   // Later we simply build a combined index file after all files are claimed.
@@ -643,13 +661,12 @@ static const void *getSymbolsAndView(claimed_file &F) {
 }
 
 static std::unique_ptr<ModuleSummaryIndex>
-getModuleSummaryIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
+getModuleSummaryIndexForFile(claimed_file &F) {
   const void *View = getSymbolsAndView(F);
   if (!View)
     return nullptr;
 
-  MemoryBufferRef BufferRef(StringRef((const char *)View, Info.filesize),
-                            Info.name);
+  MemoryBufferRef BufferRef(StringRef((const char *)View, F.filesize), F.name);
 
   // Don't bother trying to build an index if there is no summary information
   // in this bitcode file.
@@ -671,14 +688,11 @@ getModuleSummaryIndexForFile(claimed_file &F, ld_plugin_input_file &Info) {
   return Obj.takeIndex();
 }
 
-static std::unique_ptr<Module>
-getModuleForFile(LLVMContext &Context, claimed_file &F, const void *View,
-                 ld_plugin_input_file &Info, raw_fd_ostream *ApiFile,
-                 StringSet<> &Internalize, StringSet<> &Maybe,
-                 std::vector<GlobalValue *> &Keep,
-                 StringMap<unsigned> &Realign) {
-  MemoryBufferRef BufferRef(StringRef((const char *)View, Info.filesize),
-                            Info.name);
+static std::unique_ptr<Module> getModuleForFile(
+    LLVMContext &Context, claimed_file &F, const void *View, StringRef Name,
+    raw_fd_ostream *ApiFile, StringSet<> &Internalize, StringSet<> &Maybe,
+    std::vector<GlobalValue *> &Keep, StringMap<unsigned> &Realign) {
+  MemoryBufferRef BufferRef(StringRef((const char *)View, F.filesize), Name);
   ErrorOr<std::unique_ptr<object::IRObjectFile>> ObjOrErr =
       object::IRObjectFile::create(BufferRef, Context);
 
@@ -874,17 +888,23 @@ class CodeGen {
   /// a unique and identifiable save-temps output file for each ThinLTO backend.
   std::string SaveTempsFilename;
 
+  /// Map from a module name to the corresponding buffer holding a view of the
+  /// bitcode provided via the get_view gold callback.
+  StringMap<MemoryBufferRef> *ModuleMap;
+
 public:
   /// Constructor used by full LTO.
   CodeGen(std::unique_ptr<llvm::Module> M)
-      : M(std::move(M)), OS(nullptr), TaskID(-1), CombinedIndex(nullptr) {
+      : M(std::move(M)), OS(nullptr), TaskID(-1), CombinedIndex(nullptr),
+        ModuleMap(nullptr) {
     initTargetMachine();
   }
   /// Constructor used by ThinLTO.
   CodeGen(std::unique_ptr<llvm::Module> M, raw_fd_ostream *OS, int TaskID,
-          const ModuleSummaryIndex *CombinedIndex, std::string Filename)
+          const ModuleSummaryIndex *CombinedIndex, std::string Filename,
+          StringMap<MemoryBufferRef> *ModuleMap)
       : M(std::move(M)), OS(OS), TaskID(TaskID), CombinedIndex(CombinedIndex),
-        SaveTempsFilename(Filename) {
+        SaveTempsFilename(Filename), ModuleMap(ModuleMap) {
     assert(options::thinlto == !!CombinedIndex &&
            "Expected module summary index iff performing ThinLTO");
     initTargetMachine();
@@ -968,6 +988,21 @@ std::unique_ptr<TargetMachine> CodeGen::createTargetMachine() {
 void CodeGen::runLTOPasses() {
   M->setDataLayout(TM->createDataLayout());
 
+  if (CombinedIndex) {
+    // First collect the import list.
+    FunctionImporter::ImportMapTy ImportList;
+    ComputeCrossModuleImportForModule(M->getModuleIdentifier(), *CombinedIndex,
+                                      ImportList);
+
+    // Create a loader that will parse the bitcode from the buffers
+    // in the ModuleMap.
+    ModuleLoader Loader(M->getContext(), *ModuleMap);
+
+    // Perform function importing.
+    FunctionImporter Importer(*CombinedIndex, Loader);
+    Importer.importFunctions(*M, ImportList);
+  }
+
   legacy::PassManager passes;
   passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
 
@@ -981,7 +1016,6 @@ void CodeGen::runLTOPasses() {
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
   PMB.OptLevel = options::OptLevel;
-  PMB.ModuleSummary = CombinedIndex;
   if (options::thinlto)
     PMB.populateThinLTOPassManager(passes);
   else
@@ -1099,13 +1133,13 @@ void CodeGen::runAll() {
 /// Links the module in \p View from file \p F into the combined module
 /// saved in the IRMover \p L. Returns true on error, false on success.
 static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
-                         const void *View, ld_plugin_input_file &File,
+                         const void *View, StringRef Name,
                          raw_fd_ostream *ApiFile, StringSet<> &Internalize,
                          StringSet<> &Maybe) {
   std::vector<GlobalValue *> Keep;
   StringMap<unsigned> Realign;
   std::unique_ptr<Module> M = getModuleForFile(
-      Context, F, View, File, ApiFile, Internalize, Maybe, Keep, Realign);
+      Context, F, View, Name, ApiFile, Internalize, Maybe, Keep, Realign);
   if (!M.get())
     return false;
   if (!options::triple.empty())
@@ -1130,10 +1164,10 @@ static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
 /// Perform the ThinLTO backend on a single module, invoking the LTO and codegen
 /// pipelines.
 static void thinLTOBackendTask(claimed_file &F, const void *View,
-                               ld_plugin_input_file &File,
-                               raw_fd_ostream *ApiFile,
+                               StringRef Name, raw_fd_ostream *ApiFile,
                                const ModuleSummaryIndex &CombinedIndex,
-                               raw_fd_ostream *OS, unsigned TaskID) {
+                               raw_fd_ostream *OS, unsigned TaskID,
+                               StringMap<MemoryBufferRef> &ModuleMap) {
   // Need to use a separate context for each task
   LLVMContext Context;
   Context.setDiscardValueNames(options::TheOutputType !=
@@ -1141,22 +1175,24 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
   Context.enableDebugTypeODRUniquing(); // Merge debug info types.
   Context.setDiagnosticHandler(diagnosticHandlerForContext, nullptr, true);
 
-  std::unique_ptr<llvm::Module> NewModule(new llvm::Module(File.name, Context));
+  std::unique_ptr<llvm::Module> NewModule(new llvm::Module(Name, Context));
   IRMover L(*NewModule.get());
 
   StringSet<> Dummy;
-  if (linkInModule(Context, L, F, View, File, ApiFile, Dummy, Dummy))
+  if (linkInModule(Context, L, F, View, Name, ApiFile, Dummy, Dummy))
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
   if (renameModuleForThinLTO(*NewModule, CombinedIndex))
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
 
-  CodeGen codeGen(std::move(NewModule), OS, TaskID, &CombinedIndex, File.name);
+  CodeGen codeGen(std::move(NewModule), OS, TaskID, &CombinedIndex, Name,
+                  &ModuleMap);
   codeGen.runAll();
 }
 
 /// Launch each module's backend pipeline in a separate task in a thread pool.
 static void thinLTOBackends(raw_fd_ostream *ApiFile,
-                            const ModuleSummaryIndex &CombinedIndex) {
+                            const ModuleSummaryIndex &CombinedIndex,
+                            StringMap<MemoryBufferRef> &ModuleMap) {
   unsigned TaskCount = 0;
   std::vector<ThinLTOTaskInfo> Tasks;
   Tasks.reserve(Modules.size());
@@ -1171,7 +1207,6 @@ static void thinLTOBackends(raw_fd_ostream *ApiFile,
     for (claimed_file &F : Modules) {
       // Do all the gold callbacks in the main thread, since gold is not thread
       // safe by default.
-      PluginInputFile InputFile(F.handle);
       const void *View = getSymbolsAndView(F);
       if (!View)
         continue;
@@ -1183,7 +1218,7 @@ static void thinLTOBackends(raw_fd_ostream *ApiFile,
       else if (options::TheOutputType == options::OT_SAVE_TEMPS) {
         // Use the input file name so that we get a unique and identifiable
         // output file for each ThinLTO backend task.
-        Filename = InputFile.file().name;
+        Filename = F.name;
         Filename += ".thinlto.o";
       }
       bool TempOutFile = Filename.empty();
@@ -1198,15 +1233,14 @@ static void thinLTOBackends(raw_fd_ostream *ApiFile,
           llvm::make_unique<raw_fd_ostream>(FD, true);
 
       // Enqueue the task
-      ThinLTOThreadPool.async(thinLTOBackendTask, std::ref(F), View,
-                              std::ref(InputFile.file()), ApiFile,
-                              std::ref(CombinedIndex), OS.get(), TaskCount);
+      ThinLTOThreadPool.async(thinLTOBackendTask, std::ref(F), View, F.name,
+                              ApiFile, std::ref(CombinedIndex), OS.get(),
+                              TaskCount, std::ref(ModuleMap));
 
       // Record the information needed by the task or during its cleanup
       // to a ThinLTOTaskInfo instance. For information needed by the task
       // the unique_ptr ownership is transferred to the ThinLTOTaskInfo.
-      Tasks.emplace_back(std::move(InputFile), std::move(OS),
-                         NewFilename.c_str(), TempOutFile);
+      Tasks.emplace_back(std::move(OS), NewFilename.c_str(), TempOutFile);
     }
   }
 
@@ -1249,13 +1283,32 @@ static std::string getThinLTOOutputFile(const std::string &Path,
 /// Also, either launch backend threads or (under thinlto-index-only)
 /// emit individual index files for distributed backends and exit.
 static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
+  // Map from a module name to the corresponding buffer holding a view of the
+  // bitcode provided via the get_view gold callback.
+  StringMap<MemoryBufferRef> ModuleMap;
+  // Map to own RAII objects that manage the file opening and releasing
+  // interfaces with gold.
+  DenseMap<void *, std::unique_ptr<PluginInputFile>> HandleToInputFile;
+
   ModuleSummaryIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (claimed_file &F : Modules) {
-    PluginInputFile InputFile(F.handle);
+    if (!HandleToInputFile.count(F.leader_handle))
+      HandleToInputFile.insert(std::make_pair(
+          F.leader_handle, llvm::make_unique<PluginInputFile>(F.handle)));
+    // Pass this into getModuleSummaryIndexForFile
+    const void *View = getSymbolsAndView(F);
+    if (!View)
+      continue;
 
-    std::unique_ptr<ModuleSummaryIndex> Index =
-        getModuleSummaryIndexForFile(F, InputFile.file());
+    MemoryBufferRef ModuleBuffer(StringRef((const char *)View, F.filesize),
+                                 F.name);
+    assert(ModuleMap.find(ModuleBuffer.getBufferIdentifier()) ==
+               ModuleMap.end() &&
+           "Expect unique Buffer Identifier");
+    ModuleMap[ModuleBuffer.getBufferIdentifier()] = ModuleBuffer;
+
+    std::unique_ptr<ModuleSummaryIndex> Index = getModuleSummaryIndexForFile(F);
 
     // Skip files without a module summary.
     if (Index)
@@ -1292,11 +1345,10 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     // contains summaries only for its own global values, and for any that
     // should be imported.
     for (claimed_file &F : Modules) {
-      PluginInputFile InputFile(F.handle);
       std::error_code EC;
 
       std::string NewModulePath =
-          getThinLTOOutputFile(InputFile.file().name, OldPrefix, NewPrefix);
+          getThinLTOOutputFile(F.name, OldPrefix, NewPrefix);
       raw_fd_ostream OS((Twine(NewModulePath) + ".thinlto.bc").str(), EC,
                         sys::fs::OpenFlags::F_None);
       if (EC)
@@ -1305,16 +1357,14 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
       // Build a map of module to the GUIDs and summary objects that should
       // be written to its index.
       std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
-      gatherImportedSummariesForModule(InputFile.file().name,
-                                       ModuleToDefinedGVSummaries, ImportLists,
-                                       ModuleToSummariesForIndex);
+      gatherImportedSummariesForModule(F.name, ModuleToDefinedGVSummaries,
+                                       ImportLists, ModuleToSummariesForIndex);
       WriteIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
 
       if (options::thinlto_emit_imports_files) {
-        if ((EC = EmitImportsFiles(
-                 InputFile.file().name,
-                 (Twine(NewModulePath) + ".imports").str(),
-                 ImportLists)))
+        if ((EC = EmitImportsFiles(F.name,
+                                   (Twine(NewModulePath) + ".imports").str(),
+                                   ImportLists)))
           message(LDPL_FATAL, "Unable to open %s.imports",
                   NewModulePath.c_str(), EC.message().c_str());
       }
@@ -1335,7 +1385,7 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     WriteIndexToFile(CombinedIndex, OS);
   }
 
-  thinLTOBackends(ApiFile, CombinedIndex);
+  thinLTOBackends(ApiFile, CombinedIndex, ModuleMap);
   return LDPS_OK;
 }
 
@@ -1364,12 +1414,13 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
   StringSet<> Internalize;
   StringSet<> Maybe;
   for (claimed_file &F : Modules) {
+    // RAII object to manage the file opening and releasing interfaces with
+    // gold.
     PluginInputFile InputFile(F.handle);
     const void *View = getSymbolsAndView(F);
     if (!View)
       continue;
-    if (linkInModule(Context, L, F, View, InputFile.file(), ApiFile,
-                     Internalize, Maybe))
+    if (linkInModule(Context, L, F, View, F.name, ApiFile, Internalize, Maybe))
       message(LDPL_FATAL, "Failed to link module");
   }
 

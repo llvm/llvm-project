@@ -25,12 +25,12 @@
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
 
 #include "llvm/ADT/BitVector.h"
@@ -99,7 +99,7 @@ uint32_t PublicsStream::getAddrMap() const { return Header->AddrMap; }
 // we skip over the hash table which we believe contains information about
 // public symbols.
 Error PublicsStream::reload() {
-  StreamReader Reader(Stream);
+  codeview::StreamReader Reader(Stream);
 
   // Check stream size.
   if (Reader.bytesRemaining() < sizeof(HeaderInfo) + sizeof(GSIHashHeader))

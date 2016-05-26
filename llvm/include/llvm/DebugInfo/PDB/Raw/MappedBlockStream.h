@@ -11,7 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MAPPEDBLOCKSTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamInterface.h"
+#include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -21,7 +21,7 @@ namespace pdb {
 
 class PDBFile;
 
-class MappedBlockStream : public StreamInterface {
+class MappedBlockStream : public codeview::StreamInterface {
 public:
   MappedBlockStream(uint32_t StreamIdx, const PDBFile &File);
 

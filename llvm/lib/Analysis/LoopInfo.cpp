@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -296,6 +297,26 @@ bool Loop::isAnnotatedParallel() const {
     }
   }
   return true;
+}
+
+DebugLoc Loop::getStartLoc() const {
+  // If we have a debug location in the loop ID, then use it.
+  if (MDNode *LoopID = getLoopID())
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i)
+      if (DILocation *L = dyn_cast<DILocation>(LoopID->getOperand(i)))
+        return DebugLoc(L);
+
+  // Try the pre-header first.
+  if (BasicBlock *PHeadBB = getLoopPreheader())
+    if (DebugLoc DL = PHeadBB->getTerminator()->getDebugLoc())
+      return DL;
+
+  // If we have no pre-header or there are no instructions with debug
+  // info in it, try the header.
+  if (BasicBlock *HeadBB = getHeader())
+    return HeadBB->getTerminator()->getDebugLoc();
+
+  return DebugLoc();
 }
 
 bool Loop::hasDedicatedExits() const {

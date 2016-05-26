@@ -18,6 +18,7 @@ set(Tests
   CallerCalleeTest
   CounterTest
   CustomMutatorTest
+  EmptyTest
   FourIndependentBranchesTest
   FullCoverageSetTest
   InitializeTest

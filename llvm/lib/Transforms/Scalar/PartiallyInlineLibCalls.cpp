@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -23,35 +24,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "partially-inline-libcalls"
 
-namespace {
-  class PartiallyInlineLibCalls : public FunctionPass {
-  public:
-    static char ID;
-
-    PartiallyInlineLibCalls() :
-      FunctionPass(ID) {
-      initializePartiallyInlineLibCallsPass(*PassRegistry::getPassRegistry());
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<TargetLibraryInfoWrapperPass>();
-      AU.addRequired<TargetTransformInfoWrapperPass>();
-      FunctionPass::getAnalysisUsage(AU);
-    }
-
-    bool runOnFunction(Function &F) override;
-  };
-
-  char PartiallyInlineLibCalls::ID = 0;
-}
-
-INITIALIZE_PASS_BEGIN(PartiallyInlineLibCalls, "partially-inline-libcalls",
-                      "Partially inline calls to library functions", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(PartiallyInlineLibCalls, "partially-inline-libcalls",
-                    "Partially inline calls to library functions", false, false)
 
 static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
                          BasicBlock &CurrBB, Function::iterator &BB) {
@@ -108,16 +80,11 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   return true;
 }
 
-bool PartiallyInlineLibCalls::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
+static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
+                                       const TargetTransformInfo *TTI) {
   bool Changed = false;
+
   Function::iterator CurrBB;
-  TargetLibraryInfo *TLI =
-      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-  const TargetTransformInfo *TTI =
-      &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE;) {
     CurrBB = BB++;
 
@@ -155,6 +122,55 @@ bool PartiallyInlineLibCalls::runOnFunction(Function &F) {
   return Changed;
 }
 
+PreservedAnalyses
+PartiallyInlineLibCallsPass::run(Function &F, AnalysisManager<Function> &AM) {
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  if (!runPartiallyInlineLibCalls(F, &TLI, &TTI))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
+}
+
+namespace {
+class PartiallyInlineLibCallsLegacyPass : public FunctionPass {
+public:
+  static char ID;
+
+  PartiallyInlineLibCallsLegacyPass() : FunctionPass(ID) {
+    initializePartiallyInlineLibCallsLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
+    FunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
+    TargetLibraryInfo *TLI =
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    const TargetTransformInfo *TTI =
+        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    return runPartiallyInlineLibCalls(F, TLI, TTI);
+  }
+};
+}
+
+char PartiallyInlineLibCallsLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(PartiallyInlineLibCallsLegacyPass,
+                      "partially-inline-libcalls",
+                      "Partially inline calls to library functions", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_END(PartiallyInlineLibCallsLegacyPass,
+                    "partially-inline-libcalls",
+                    "Partially inline calls to library functions", false, false)
+
 FunctionPass *llvm::createPartiallyInlineLibCallsPass() {
-  return new PartiallyInlineLibCalls();
+  return new PartiallyInlineLibCallsLegacyPass();
 }

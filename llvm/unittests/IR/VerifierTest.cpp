@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -16,7 +15,9 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -197,6 +198,27 @@ TEST(VerifierTest, StripInvalidDebugInfo) {
   EXPECT_FALSE(verifyModule(M));
 }
 #endif
+
+TEST(VerifierTest, StripInvalidDebugInfoLegacy) {
+  LLVMContext C;
+  Module M("M", C);
+  DIBuilder DIB(M);
+  DIB.createCompileUnit(dwarf::DW_LANG_C89, "broken.c", "/",
+                        "unittest", false, "", 0);
+  DIB.finalize();
+  EXPECT_FALSE(verifyModule(M));
+
+  // Now break it.
+  auto *File = DIB.createFile("not-a-CU.f", ".");
+  NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
+  NMD->addOperand(File);
+  EXPECT_TRUE(verifyModule(M));
+
+  legacy::PassManager Passes;
+  Passes.add(createVerifierPass(false));
+  Passes.run(M);
+  EXPECT_FALSE(verifyModule(M));
+}
 
 } // end anonymous namespace
 } // end namespace llvm

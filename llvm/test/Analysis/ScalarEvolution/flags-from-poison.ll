@@ -420,7 +420,7 @@ loop:
 
   %j = add nsw i32 %i, 1
 ; CHECK: %index32 =
-; CHECK: --> {(1 + %offset),+,1}<nsw>
+; CHECK: --> {(1 + %offset)<nsw>,+,1}<nsw>
   %index32 = add nsw i32 %j, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32
@@ -562,7 +562,7 @@ loop:
   %i = phi i32 [ %nexti, %loop ], [ %start, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {((-1 * %halfsub)<nsw> + %start),+,1}<nsw>
+; CHECK: --> {((-1 * %halfsub)<nsw> + %start)<nsw>,+,1}<nsw>
   %index32 = sub nsw i32 %i, %halfsub
   %index64 = sext i32 %index32 to i64
 
@@ -621,7 +621,7 @@ loop:
 
   %j = add nsw i32 %i, 1
 ; CHECK: %index32 =
-; CHECK: --> {(1 + (-1 * %offset)),+,1}<nsw>
+; CHECK: --> {(1 + (-1 * %offset))<nsw>,+,1}<nsw>
   %index32 = sub nsw i32 %j, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32

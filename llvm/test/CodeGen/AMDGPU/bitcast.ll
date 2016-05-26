@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; This test just checks that the compiler doesn't crash.
@@ -73,5 +73,37 @@ define void @bitcast_f64_to_v2i32(<2 x i32> addrspace(1)* %out, double addrspace
   %add = fadd double %val, 4.0
   %bc = bitcast double %add to <2 x i32>
   store <2 x i32> %bc, <2 x i32> addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v2i64_to_v2f64:
+define void @bitcast_v2i64_to_v2f64(i32 %cond, <2 x double> addrspace(1)* %out, <2 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x i64> %value to <2 x double>
+  br label %end
+
+end:
+  %phi = phi <2 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x double> %phi, <2 x double> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v2f64_to_v2i64:
+define void @bitcast_v2f64_to_v2i64(i32 %cond, <2 x i64> addrspace(1)* %out, <2 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x double> %value to <2 x i64>
+  br label %end
+
+end:
+  %phi = phi <2 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x i64> %phi, <2 x i64> addrspace(1)* %out
   ret void
 }

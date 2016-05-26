@@ -137,10 +137,10 @@ public:
     return mapError(IndirectStubsMgr->updatePointer(Name, Addr));
   }
 
-  std::shared_ptr<RuntimeDyld::SymbolResolver>
+  std::unique_ptr<RuntimeDyld::SymbolResolver>
   createResolver(LLVMOrcSymbolResolverFn ExternalResolver,
                  void *ExternalResolverCtx) {
-    auto Resolver = orc::createLambdaResolver(
+    return orc::createLambdaResolver(
         [this, ExternalResolver, ExternalResolverCtx](const std::string &Name) {
           // Search order:
           // 1. JIT'd symbols.
@@ -162,8 +162,6 @@ public:
         [](const std::string &Name) {
           return RuntimeDyld::SymbolInfo(nullptr);
         });
-
-    return std::shared_ptr<RuntimeDyld::SymbolResolver>(std::move(Resolver));
   }
 
   template <typename LayerT>

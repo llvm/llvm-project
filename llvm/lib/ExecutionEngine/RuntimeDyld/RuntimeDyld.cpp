@@ -916,7 +916,11 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
       if (Loc == GlobalSymbolTable.end()) {
         // This is an external symbol, try to get its address from the symbol
         // resolver.
-        Addr = Resolver.findSymbol(Name.data()).getAddress();
+        // First search for the symbol in this logical dylib.
+        Addr = Resolver.findSymbolInLogicalDylib(Name.data()).getAddress();
+        // If that fails, try searching for an external symbol.
+        if (!Addr)
+          Addr = Resolver.findSymbol(Name.data()).getAddress();
         // The call to getSymbolAddress may have caused additional modules to
         // be loaded, which may have added new entries to the
         // ExternalSymbolRelocations map.  Consquently, we need to update our

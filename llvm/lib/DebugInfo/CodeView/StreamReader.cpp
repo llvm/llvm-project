@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
+
+#include "llvm/DebugInfo/CodeView/CodeViewError.h"
 
 using namespace llvm;
-using namespace llvm::pdb;
+using namespace llvm::codeview;
 
 StreamReader::StreamReader(const StreamInterface &S) : Stream(S), Offset(0) {}
 

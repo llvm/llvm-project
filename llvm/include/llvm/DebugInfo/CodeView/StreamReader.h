@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_STREAMREADER_H
-#define LLVM_DEBUGINFO_PDB_RAW_STREAMREADER_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_STREAMREADER_H
+#define LLVM_DEBUGINFO_CODEVIEW_STREAMREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamInterface.h"
+#include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 #include <string>
 
 namespace llvm {
-namespace pdb {
-class StreamInterface;
+namespace codeview {
+
 class StreamReader {
 public:
   StreamReader(const StreamInterface &S);
@@ -35,7 +35,8 @@ public:
   }
 
   template <typename T> Error readArray(MutableArrayRef<T> Array) {
-    MutableArrayRef<uint8_t> Casted(reinterpret_cast<uint8_t*>(Array.data()), Array.size() * sizeof(T));
+    MutableArrayRef<uint8_t> Casted(reinterpret_cast<uint8_t *>(Array.data()),
+                                    Array.size() * sizeof(T));
     return readBytes(Casted);
   }
 
@@ -50,7 +51,7 @@ private:
   const StreamInterface &Stream;
   uint32_t Offset;
 };
-}
-}
+} // namespace codeview
+} // namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_CODEVIEW_STREAMREADER_H

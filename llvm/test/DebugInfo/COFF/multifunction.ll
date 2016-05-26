@@ -52,6 +52,7 @@
 ; X86:      [[END_OF_F:.?Lfunc_end.*]]:
 ;
 ; X86-LABEL: .section        .debug$S,"dr"
+; X86-NEXT: .p2align 2
 ; X86-NEXT: .long   4
 ; Symbol subsection for x
 ; X86-NEXT: .long   241
@@ -315,6 +316,7 @@
 ; X64:      [[END_OF_F:.?Lfunc_end.*]]:
 ;
 ; X64-LABEL: .section        .debug$S,"dr"
+; X64-NEXT: .p2align 2
 ; X64-NEXT: .long   4
 ; Symbol subsection for x
 ; X64-NEXT: .long   241

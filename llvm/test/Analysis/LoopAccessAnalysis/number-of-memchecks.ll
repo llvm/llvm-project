@@ -96,11 +96,11 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:    Group {{.*}}[[ZERO]]:
 ; CHECK-NEXT:       (Low: %c High: (78 + %c))
-; CHECK-NEXT:         Member: {(2 + %c),+,4}
+; CHECK-NEXT:         Member: {(2 + %c)<nsw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (40 + %a))
-; CHECK-NEXT:         Member: {(2 + %a),+,2}
+; CHECK-NEXT:         Member: {(2 + %a)<nsw>,+,2}
 ; CHECK-NEXT:         Member: {%a,+,2}
 ; CHECK-NEXT:     Group {{.*}}[[TWO]]:
 ; CHECK-NEXT:       (Low: %b High: (38 + %b))
@@ -168,7 +168,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
 ; CHECK-NEXT:       (Low: %c High: (78 + %c))
-; CHECK-NEXT:         Member: {(2 + %c),+,4}
+; CHECK-NEXT:         Member: {(2 + %c)<nsw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (40 + %a))
@@ -246,8 +246,8 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:       %arrayidxA2 = getelementptr i16, i16* %a, i64 %ind2
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
-; CHECK-NEXT:       (Low: ((2 * %offset) + %a) High: (9998 + (2 * %offset) + %a))
-; CHECK-NEXT:         Member: {((2 * %offset) + %a),+,2}<nsw><%for.body>
+; CHECK-NEXT:       (Low: ((2 * %offset) + %a)<nsw> High: (9998 + (2 * %offset) + %a))
+; CHECK-NEXT:         Member: {((2 * %offset) + %a)<nsw>,+,2}<nsw><%for.body>
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (9998 + %a))
 ; CHECK-NEXT:         Member: {%a,+,2}<%for.body>

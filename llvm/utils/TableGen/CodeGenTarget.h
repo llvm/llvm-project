@@ -52,8 +52,8 @@ enum SDNP {
 /// record corresponds to.
 MVT::SimpleValueType getValueType(Record *Rec);
 
-std::string getName(MVT::SimpleValueType T);
-std::string getEnumName(MVT::SimpleValueType T);
+StringRef getName(MVT::SimpleValueType T);
+StringRef getEnumName(MVT::SimpleValueType T);
 
 /// getQualifiedName - Return the name of the specified record, with a
 /// namespace qualifier if the record contains one.

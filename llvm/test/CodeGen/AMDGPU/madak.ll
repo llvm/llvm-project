@@ -47,17 +47,17 @@ define void @madak_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1
   %out.gep.0 = getelementptr float, float addrspace(1)* %out, i32 %tid
   %out.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %in.gep.0, align 4
-  %b = load float, float addrspace(1)* %in.gep.1, align 4
-  %c = load float, float addrspace(1)* %in.gep.2, align 4
+  %a = load volatile float, float addrspace(1)* %in.gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %in.gep.1, align 4
+  %c = load volatile float, float addrspace(1)* %in.gep.2, align 4
 
   %mul0 = fmul float %a, %b
   %mul1 = fmul float %a, %c
   %madak0 = fadd float %mul0, 10.0
   %madak1 = fadd float %mul1, 10.0
 
-  store float %madak0, float addrspace(1)* %out.gep.0, align 4
-  store float %madak1, float addrspace(1)* %out.gep.1, align 4
+  store volatile float %madak0, float addrspace(1)* %out.gep.0, align 4
+  store volatile float %madak1, float addrspace(1)* %out.gep.1, align 4
   ret void
 }
 

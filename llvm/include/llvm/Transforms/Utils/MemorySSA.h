@@ -45,9 +45,9 @@
 //   store i32 5, i32* %2, align 4
 //   ; 4 = MemoryDef(3)
 //   store i32 7, i32* %4, align 4
-//   ; MemoryUse(4)
-//   %7 = load i32* %2, align 4
 //   ; MemoryUse(3)
+//   %7 = load i32* %2, align 4
+//   ; MemoryUse(4)
 //   %8 = load i32* %4, align 4
 //   %add = add nsw i32 %7, %8
 //   ret i32 %add
@@ -59,7 +59,7 @@
 //
 // Each def also has a list of users associated with it, so you can walk from
 // both def to users, and users to defs. Note that we disambiguate MemoryUses,
-// but not the RHS of MemoryDefs. You can see this above at %8, which would
+// but not the RHS of MemoryDefs. You can see this above at %7, which would
 // otherwise be a MemoryUse(4). Being disambiguated means that for a given
 // store, all the MemoryUses on its use lists are may-aliases of that store (but
 // the MemoryDefs on its use list may not be).
@@ -575,7 +575,7 @@ private:
   void computeDomLevels(DenseMap<DomTreeNode *, unsigned> &DomLevels);
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   bool dominatesUse(const MemoryAccess *, const MemoryAccess *) const;
-  MemoryUseOrDef *createNewAccess(Instruction *, bool ignoreNonMemory = false);
+  MemoryUseOrDef *createNewAccess(Instruction *);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
   void removeFromLookups(MemoryAccess *);
 

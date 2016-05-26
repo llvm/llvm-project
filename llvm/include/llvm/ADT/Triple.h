@@ -569,6 +569,9 @@ public:
     return getArch() == Triple::nvptx || getArch() == Triple::nvptx64;
   }
 
+  /// Tests wether the target supports comdat
+  bool supportsCOMDAT() const { return !isOSBinFormatMachO(); }
+
   /// @}
   /// @name Mutators
   /// @{

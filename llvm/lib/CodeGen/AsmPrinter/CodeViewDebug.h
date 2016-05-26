@@ -101,6 +101,18 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   };
   FunctionInfo *CurFn;
 
+  /// The set of comdat .debug$S sections that we've seen so far. Each section
+  /// must start with a magic version number that must only be emitted once.
+  /// This set tracks which sections we've already opened.
+  DenseSet<MCSectionCOFF *> ComdatDebugSections;
+
+  /// Switch to the appropriate .debug$S section for GVSym. If GVSym, the symbol
+  /// of an emitted global value, is in a comdat COFF section, this will switch
+  /// to a new .debug$S section in that comdat. This method ensures that the
+  /// section starts with the magic version number on first use. If GVSym is
+  /// null, uses the main .debug$S section.
+  void switchToDebugSectionForSymbol(const MCSymbol *GVSym);
+
   /// The next available function index for use with our .cv_* directives. Not
   /// to be confused with type indices for LF_FUNC_ID records.
   unsigned NextFuncId = 0;
@@ -148,9 +160,13 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     FileToFilepathMap.clear();
   }
 
+  /// Emit the magic version number at the start of a CodeView type or symbol
+  /// section. Appears at the front of every .debug$S or .debug$T section.
+  void emitCodeViewMagicVersion();
+
   void emitTypeInformation();
 
-  void emitInlineeFuncIdsAndLines();
+  void emitInlineeLinesSubsection();
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 

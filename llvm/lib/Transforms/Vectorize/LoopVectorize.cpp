@@ -5971,7 +5971,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                           VectorTy->getVectorNumElements() * InterleaveFactor);
 
       // Holds the indices of existing members in an interleaved load group.
-      // An interleaved store group doesn't need this as it dones't allow gaps.
+      // An interleaved store group doesn't need this as it doesn't allow gaps.
       SmallVector<unsigned, 4> Indices;
       if (LI) {
         for (unsigned i = 0; i < InterleaveFactor; i++)

@@ -343,16 +343,16 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
 /// GetUnderlyingObject and DecomposeGEPExpression must use the same search
 /// depth (MaxLookupSearchDepth). When DataLayout not is around, it just looks
 /// through pointer casts.
-/*static*/ const Value *BasicAAResult::DecomposeGEPExpression(
-    const Value *V, int64_t &BaseOffs,
-    SmallVectorImpl<VariableGEPIndex> &VarIndices, bool &MaxLookupReached,
-    const DataLayout &DL, AssumptionCache *AC, DominatorTree *DT) {
+bool BasicAAResult::DecomposeGEPExpression(const Value *V,
+       DecomposedGEP &Decomposed, const DataLayout &DL, AssumptionCache *AC,
+       DominatorTree *DT) {
   // Limit recursion depth to limit compile time in crazy cases.
   unsigned MaxLookup = MaxLookupSearchDepth;
-  MaxLookupReached = false;
   SearchTimes++;
 
-  BaseOffs = 0;
+  Decomposed.StructOffset = 0;
+  Decomposed.OtherOffset = 0;
+  Decomposed.VarIndices.clear();
   do {
     // See if this is a bitcast or GEP.
     const Operator *Op = dyn_cast<Operator>(V);
@@ -364,7 +364,8 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
           continue;
         }
       }
-      return V;
+      Decomposed.Base = V;
+      return false;
     }
 
     if (Op->getOpcode() == Instruction::BitCast ||
@@ -388,12 +389,15 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
           continue;
         }
 
-      return V;
+      Decomposed.Base = V;
+      return false;
     }
 
     // Don't attempt to analyze GEPs over unsized objects.
-    if (!GEPOp->getSourceElementType()->isSized())
-      return V;
+    if (!GEPOp->getSourceElementType()->isSized()) {
+      Decomposed.Base = V;
+      return false;
+    }
 
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
@@ -409,7 +413,8 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
         if (FieldNo == 0)
           continue;
 
-        BaseOffs += DL.getStructLayout(STy)->getElementOffset(FieldNo);
+        Decomposed.StructOffset +=
+          DL.getStructLayout(STy)->getElementOffset(FieldNo);
         continue;
       }
 
@@ -417,7 +422,8 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
-        BaseOffs += DL.getTypeAllocSize(*GTI) * CIdx->getSExtValue();
+        Decomposed.OtherOffset +=
+          DL.getTypeAllocSize(*GTI) * CIdx->getSExtValue();
         continue;
       }
 
@@ -438,18 +444,19 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
 
       // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
       // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
-      BaseOffs += IndexOffset.getSExtValue() * Scale;
+      Decomposed.OtherOffset += IndexOffset.getSExtValue() * Scale;
       Scale *= IndexScale.getSExtValue();
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:
       //   A[x][x] -> x*16 + x*4 -> x*20
       // This also ensures that 'x' only appears in the index list once.
-      for (unsigned i = 0, e = VarIndices.size(); i != e; ++i) {
-        if (VarIndices[i].V == Index && VarIndices[i].ZExtBits == ZExtBits &&
-            VarIndices[i].SExtBits == SExtBits) {
-          Scale += VarIndices[i].Scale;
-          VarIndices.erase(VarIndices.begin() + i);
+      for (unsigned i = 0, e = Decomposed.VarIndices.size(); i != e; ++i) {
+        if (Decomposed.VarIndices[i].V == Index && 
+            Decomposed.VarIndices[i].ZExtBits == ZExtBits &&
+            Decomposed.VarIndices[i].SExtBits == SExtBits) {
+          Scale += Decomposed.VarIndices[i].Scale;
+          Decomposed.VarIndices.erase(Decomposed.VarIndices.begin() + i);
           break;
         }
       }
@@ -461,21 +468,24 @@ static int64_t adjustToPointerSize(int64_t Offset, unsigned PointerSize) {
       if (Scale) {
         VariableGEPIndex Entry = {Index, ZExtBits, SExtBits,
                                   static_cast<int64_t>(Scale)};
-        VarIndices.push_back(Entry);
+        Decomposed.VarIndices.push_back(Entry);
       }
     }
 
     // Take care of wrap-arounds
-    BaseOffs = adjustToPointerSize(BaseOffs, PointerSize);
+    Decomposed.StructOffset =
+      adjustToPointerSize(Decomposed.StructOffset, PointerSize);
+    Decomposed.OtherOffset =
+      adjustToPointerSize(Decomposed.OtherOffset, PointerSize);
 
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);
   } while (--MaxLookup);
 
   // If the chain of expressions is too deep, just return early.
-  MaxLookupReached = true;
+  Decomposed.Base = V;
   SearchLimitReached++;
-  return V;
+  return true;
 }
 
 /// Returns whether the given pointer value points to memory that is local to
@@ -570,18 +580,9 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(ImmutableCallSite CS) {
 
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
-/// NOTE: Because of the special case handling of llvm.assume below, the result
-/// of this function may not match similar results derived from function
-/// attributes (e.g. "readnone").
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   // If the function declares it doesn't access memory, we can't do better.
   if (F->doesNotAccessMemory())
-    return FMRB_DoesNotAccessMemory;
-
-  // While the assume intrinsic is marked as arbitrarily writing so that
-  // proper control dependencies will be maintained, it never aliases any
-  // actual memory locations.
-  if (F->getIntrinsicID() == Intrinsic::assume)
     return FMRB_DoesNotAccessMemory;
 
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
@@ -949,6 +950,59 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
   return MayAlias;
 }
 
+// If a we have (a) a GEP and (b) a pointer based on an alloca, and the
+// beginning of the object the GEP points would have a negative offset with
+// repsect to the alloca, that means the GEP can not alias pointer (b).
+// Note that the pointer based on the alloca may not be a GEP. For
+// example, it may be the alloca itself.
+//
+// For example, consider:
+//
+//   struct { int f0, int f1, ...} foo;
+//   foo alloca;
+//   foo* random = bar(alloca);
+//   int *f0 = &alloca.f0
+//   int *f1 = &random->f1;
+//
+// Which is lowered, approximately, to:
+//
+//  %alloca = alloca %struct.foo
+//  %random = call %struct.foo* @random(%struct.foo* %alloca)
+//  %f0 = getelementptr inbounds %struct, %struct.foo* %alloca, i32 0, i32 0
+//  %f1 = getelementptr inbounds %struct, %struct.foo* %random, i32 0, i32 1
+//
+// Assume %f1 and %f0 alias. Then %f1 would point into the object allocated
+// by %alloca. Since the %f1 GEP is inbounds, that means %random must also
+// point into the same object. But since %f0 points to the beginning of %alloca,
+// the highest %f1 can be is (%alloca + 3). This means %random can not be higher
+// than (%alloca - 1), and so is not inbounds, a contradiction.
+bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
+      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompAlloca, 
+      uint64_t AllocaAccessSize) {
+  // If the alloca access size is unknown, or the GEP isn't inbounds, bail.
+  if (AllocaAccessSize == MemoryLocation::UnknownSize || !GEPOp->isInBounds())
+    return false;
+
+  // We need an alloca, and want to know the offset of the pointer
+  // from the alloca precisely, so no variable indices are allowed.
+  if (!isa<AllocaInst>(DecompAlloca.Base) || !DecompAlloca.VarIndices.empty())
+    return false;
+
+  int64_t AllocaBaseOffset = DecompAlloca.StructOffset +
+                             DecompAlloca.OtherOffset;
+
+  // If the GEP has no variable indices, we know the precise offset
+  // from the base, then use it. If the GEP has variable indices, we're in
+  // a bit more trouble: we can't count on the constant offsets that come
+  // from non-struct sources, since these can be "rewound" by a negative
+  // variable offset. So use only offsets that came from structs.
+  int64_t GEPBaseOffset = DecompGEP.StructOffset;
+  if (DecompGEP.VarIndices.empty())
+    GEPBaseOffset += DecompGEP.OtherOffset;
+
+  return (GEPBaseOffset >= AllocaBaseOffset + (int64_t)AllocaAccessSize);
+}
+
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against
 /// another pointer.
 ///
@@ -960,14 +1014,34 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
                                     uint64_t V2Size, const AAMDNodes &V2AAInfo,
                                     const Value *UnderlyingV1,
                                     const Value *UnderlyingV2) {
-  int64_t GEP1BaseOffset;
-  bool GEP1MaxLookupReached;
-  SmallVector<VariableGEPIndex, 4> GEP1VariableIndices;
+  DecomposedGEP DecompGEP1, DecompGEP2;
+  bool GEP1MaxLookupReached =
+    DecomposeGEPExpression(GEP1, DecompGEP1, DL, &AC, DT);
+  bool GEP2MaxLookupReached =
+    DecomposeGEPExpression(V2, DecompGEP2, DL, &AC, DT);
 
+  int64_t GEP1BaseOffset = DecompGEP1.StructOffset + DecompGEP1.OtherOffset;
+  int64_t GEP2BaseOffset = DecompGEP2.StructOffset + DecompGEP2.OtherOffset;
+
+  assert(DecompGEP1.Base == UnderlyingV1 && DecompGEP2.Base == UnderlyingV2 &&
+         "DecomposeGEPExpression returned a result different from "
+         "GetUnderlyingObject");
+
+  // If the GEP's offset relative to its base is such that the base would
+  // fall below the start of the object underlying V2, then the GEP and V2
+  // cannot alias.
+  if (!GEP1MaxLookupReached && !GEP2MaxLookupReached &&
+      isGEPBaseAtNegativeOffset(GEP1, DecompGEP1, DecompGEP2, V2Size))
+    return NoAlias;
   // If we have two gep instructions with must-alias or not-alias'ing base
   // pointers, figure out if the indexes to the GEP tell us anything about the
   // derived pointer.
   if (const GEPOperator *GEP2 = dyn_cast<GEPOperator>(V2)) {
+    // Check for the GEP base being at a negative offset, this time in the other
+    // direction.
+    if (!GEP1MaxLookupReached && !GEP2MaxLookupReached &&
+        isGEPBaseAtNegativeOffset(GEP2, DecompGEP2, DecompGEP1, V1Size))
+      return NoAlias;
     // Do the base pointers alias?
     AliasResult BaseAlias =
         aliasCheck(UnderlyingV1, MemoryLocation::UnknownSize, AAMDNodes(),
@@ -982,31 +1056,14 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
       if (PreciseBaseAlias == NoAlias) {
         // See if the computed offset from the common pointer tells us about the
         // relation of the resulting pointer.
-        int64_t GEP2BaseOffset;
-        bool GEP2MaxLookupReached;
-        SmallVector<VariableGEPIndex, 4> GEP2VariableIndices;
-        const Value *GEP2BasePtr =
-            DecomposeGEPExpression(GEP2, GEP2BaseOffset, GEP2VariableIndices,
-                                   GEP2MaxLookupReached, DL, &AC, DT);
-        const Value *GEP1BasePtr =
-            DecomposeGEPExpression(GEP1, GEP1BaseOffset, GEP1VariableIndices,
-                                   GEP1MaxLookupReached, DL, &AC, DT);
-        // DecomposeGEPExpression and GetUnderlyingObject should return the
-        // same result except when DecomposeGEPExpression has no DataLayout.
-        // FIXME: They always have a DataLayout, so this should become an
-        // assert.
-        if (GEP1BasePtr != UnderlyingV1 || GEP2BasePtr != UnderlyingV2) {
-          return MayAlias;
-        }
         // If the max search depth is reached the result is undefined
         if (GEP2MaxLookupReached || GEP1MaxLookupReached)
           return MayAlias;
 
         // Same offsets.
         if (GEP1BaseOffset == GEP2BaseOffset &&
-            GEP1VariableIndices == GEP2VariableIndices)
+            DecompGEP1.VarIndices == DecompGEP2.VarIndices)
           return NoAlias;
-        GEP1VariableIndices.clear();
       }
     }
 
@@ -1018,24 +1075,6 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     // Otherwise, we have a MustAlias.  Since the base pointers alias each other
     // exactly, see if the computed offset from the common pointer tells us
     // about the relation of the resulting pointer.
-    const Value *GEP1BasePtr =
-        DecomposeGEPExpression(GEP1, GEP1BaseOffset, GEP1VariableIndices,
-                               GEP1MaxLookupReached, DL, &AC, DT);
-
-    int64_t GEP2BaseOffset;
-    bool GEP2MaxLookupReached;
-    SmallVector<VariableGEPIndex, 4> GEP2VariableIndices;
-    const Value *GEP2BasePtr =
-        DecomposeGEPExpression(GEP2, GEP2BaseOffset, GEP2VariableIndices,
-                               GEP2MaxLookupReached, DL, &AC, DT);
-
-    // DecomposeGEPExpression and GetUnderlyingObject should return the
-    // same result except when DecomposeGEPExpression has no DataLayout.
-    // FIXME: They always have a DataLayout, so this should become an assert.
-    if (GEP1BasePtr != UnderlyingV1 || GEP2BasePtr != UnderlyingV2) {
-      return MayAlias;
-    }
-
     // If we know the two GEPs are based off of the exact same pointer (and not
     // just the same underlying object), see if that tells us anything about
     // the resulting pointers.
@@ -1053,7 +1092,7 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     // Subtract the GEP2 pointer from the GEP1 pointer to find out their
     // symbolic difference.
     GEP1BaseOffset -= GEP2BaseOffset;
-    GetIndexDifference(GEP1VariableIndices, GEP2VariableIndices);
+    GetIndexDifference(DecompGEP1.VarIndices, DecompGEP2.VarIndices);
 
   } else {
     // Check to see if these two pointers are related by the getelementptr
@@ -1075,16 +1114,6 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
       // with the first operand of the getelementptr".
       return R;
 
-    const Value *GEP1BasePtr =
-        DecomposeGEPExpression(GEP1, GEP1BaseOffset, GEP1VariableIndices,
-                               GEP1MaxLookupReached, DL, &AC, DT);
-
-    // DecomposeGEPExpression and GetUnderlyingObject should return the
-    // same result except when DecomposeGEPExpression has no DataLayout.
-    // FIXME: They always have a DataLayout, so this should become an assert.
-    if (GEP1BasePtr != UnderlyingV1) {
-      return MayAlias;
-    }
     // If the max search depth is reached the result is undefined
     if (GEP1MaxLookupReached)
       return MayAlias;
@@ -1096,14 +1125,14 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
   //
   // In the other case, if we have getelementptr <ptr>, 0, 0, 0, 0, ... and V2
   // must aliases the GEP, the end result is a must alias also.
-  if (GEP1BaseOffset == 0 && GEP1VariableIndices.empty())
+  if (GEP1BaseOffset == 0 && DecompGEP1.VarIndices.empty())
     return MustAlias;
 
   // If there is a constant difference between the pointers, but the difference
   // is less than the size of the associated memory object, then we know
   // that the objects are partially overlapping.  If the difference is
   // greater, we know they do not overlap.
-  if (GEP1BaseOffset != 0 && GEP1VariableIndices.empty()) {
+  if (GEP1BaseOffset != 0 && DecompGEP1.VarIndices.empty()) {
     if (GEP1BaseOffset >= 0) {
       if (V2Size != MemoryLocation::UnknownSize) {
         if ((uint64_t)GEP1BaseOffset < V2Size)
@@ -1128,22 +1157,22 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     }
   }
 
-  if (!GEP1VariableIndices.empty()) {
+  if (!DecompGEP1.VarIndices.empty()) {
     uint64_t Modulo = 0;
     bool AllPositive = true;
-    for (unsigned i = 0, e = GEP1VariableIndices.size(); i != e; ++i) {
+    for (unsigned i = 0, e = DecompGEP1.VarIndices.size(); i != e; ++i) {
 
       // Try to distinguish something like &A[i][1] against &A[42][0].
       // Grab the least significant bit set in any of the scales. We
       // don't need std::abs here (even if the scale's negative) as we'll
       // be ^'ing Modulo with itself later.
-      Modulo |= (uint64_t)GEP1VariableIndices[i].Scale;
+      Modulo |= (uint64_t)DecompGEP1.VarIndices[i].Scale;
 
       if (AllPositive) {
         // If the Value could change between cycles, then any reasoning about
         // the Value this cycle may not hold in the next cycle. We'll just
         // give up if we can't determine conditions that hold for every cycle:
-        const Value *V = GEP1VariableIndices[i].V;
+        const Value *V = DecompGEP1.VarIndices[i].V;
 
         bool SignKnownZero, SignKnownOne;
         ComputeSignBit(const_cast<Value *>(V), SignKnownZero, SignKnownOne, DL,
@@ -1151,14 +1180,14 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
 
         // Zero-extension widens the variable, and so forces the sign
         // bit to zero.
-        bool IsZExt = GEP1VariableIndices[i].ZExtBits > 0 || isa<ZExtInst>(V);
+        bool IsZExt = DecompGEP1.VarIndices[i].ZExtBits > 0 || isa<ZExtInst>(V);
         SignKnownZero |= IsZExt;
         SignKnownOne &= !IsZExt;
 
         // If the variable begins with a zero then we know it's
         // positive, regardless of whether the value is signed or
         // unsigned.
-        int64_t Scale = GEP1VariableIndices[i].Scale;
+        int64_t Scale = DecompGEP1.VarIndices[i].Scale;
         AllPositive =
             (SignKnownZero && Scale >= 0) || (SignKnownOne && Scale < 0);
       }
@@ -1181,7 +1210,7 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     if (AllPositive && GEP1BaseOffset > 0 && V2Size <= (uint64_t)GEP1BaseOffset)
       return NoAlias;
 
-    if (constantOffsetHeuristic(GEP1VariableIndices, V1Size, V2Size,
+    if (constantOffsetHeuristic(DecompGEP1.VarIndices, V1Size, V2Size,
                                 GEP1BaseOffset, &AC, DT))
       return NoAlias;
   }

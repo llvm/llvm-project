@@ -47,6 +47,10 @@ namespace llvm {
   /// if it requires upgrading.
   bool UpgradeGlobalVariable(GlobalVariable *GV);
 
+  /// This checks for module flags which should be upgraded. It returns true if
+  /// module is modified.
+  bool UpgradeModuleFlags(Module &M);
+
   /// If the TBAA tag for the given instruction uses the scalar TBAA format,
   /// we upgrade it to the struct-path aware TBAA format.
   void UpgradeInstWithTBAATag(Instruction *I);

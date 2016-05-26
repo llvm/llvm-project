@@ -28,7 +28,6 @@ if(HAVE_DIA_SDK)
 endif()
 
 add_pdb_impl_folder(Raw
-  Raw/ByteStream.cpp
   Raw/DbiStream.cpp
   Raw/InfoStream.cpp
   Raw/MappedBlockStream.cpp
@@ -40,7 +39,6 @@ add_pdb_impl_folder(Raw
   Raw/PublicsStream.cpp
   Raw/RawError.cpp
   Raw/RawSession.cpp
-  Raw/StreamReader.cpp
   Raw/SymbolStream.cpp
   Raw/TpiStream.cpp)
 

@@ -331,7 +331,7 @@ bool callsGCLeafFunction(ImmutableCallSite CS);
 //  Intrinsic pattern matching
 //
 
-/// Try and match a bitreverse or bswap idiom.
+/// Try and match a bswap or bitreverse idiom.
 ///
 /// If an idiom is matched, an intrinsic call is inserted before \c I. Any added
 /// instructions are returned in \c InsertedInsts. They will all have been added
@@ -342,7 +342,7 @@ bool callsGCLeafFunction(ImmutableCallSite CS);
 /// to BW / 4 nodes to be searched, so is significantly faster.
 ///
 /// This function returns true on a successful match or false otherwise.
-bool recognizeBitReverseOrBSwapIdiom(
+bool recognizeBSwapOrBitReverseIdiom(
     Instruction *I, bool MatchBSwaps, bool MatchBitReversals,
     SmallVectorImpl<Instruction *> &InsertedInsts);
 

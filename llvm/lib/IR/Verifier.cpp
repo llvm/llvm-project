@@ -4460,17 +4460,16 @@ struct VerifierLegacyPass : public FunctionPass {
   static char ID;
 
   Verifier V;
-  bool FatalErrors;
+  bool FatalErrors = true;
 
   VerifierLegacyPass()
       : FunctionPass(ID),
-        V(&dbgs(), /*ShouldTreatBrokenDebugInfoAsError=*/true),
-        FatalErrors(true) {
+        V(&dbgs(), /*ShouldTreatBrokenDebugInfoAsError=*/false) {
     initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
   }
   explicit VerifierLegacyPass(bool FatalErrors)
       : FunctionPass(ID),
-        V(&dbgs(), /*ShouldTreatBrokenDebugInfoAsError=*/true),
+        V(&dbgs(), /*ShouldTreatBrokenDebugInfoAsError=*/false),
         FatalErrors(FatalErrors) {
     initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -4483,9 +4482,20 @@ struct VerifierLegacyPass : public FunctionPass {
   }
 
   bool doFinalization(Module &M) override {
-    if (!V.verify(M) && FatalErrors)
-      report_fatal_error("Broken module found, compilation aborted!");
+    bool HasErrors = !V.verify(M);
+    if (FatalErrors) {
+      if (HasErrors)
+        report_fatal_error("Broken module found, compilation aborted!");
+      assert(!V.hasBrokenDebugInfo() && "Module contains invalid debug info");
+    }
 
+    // Strip broken debug info.
+    if (V.hasBrokenDebugInfo()) {
+      DiagnosticInfoIgnoringInvalidDebugMetadata DiagInvalid(M);
+      M.getContext().diagnose(DiagInvalid);
+      if (!StripDebugInfo(M))
+        report_fatal_error("Failed to strip malformed debug info");
+    }
     return false;
   }
 

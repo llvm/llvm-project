@@ -17,6 +17,7 @@
 #define LLVM_LTO_LTO_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 
 namespace llvm {
 
@@ -47,6 +48,29 @@ public:
     return loadModuleFromBuffer(ModuleMap[Identifier], Context, /*Lazy*/ true);
   }
 };
+
+
+/// Resolve Weak and LinkOnce values in the \p Index. Linkage changes recorded
+/// in the index and the ThinLTO backends must apply the changes to the Module
+/// via thinLTOResolveWeakForLinkerModule.
+///
+/// This is done for correctness (if value exported, ensure we always
+/// emit a copy), and compile-time optimization (allow drop of duplicates).
+void thinLTOResolveWeakForLinkerInIndex(
+    ModuleSummaryIndex &Index,
+    std::function<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+        isPrevailing,
+    std::function<bool(StringRef, GlobalValue::GUID)> isExported,
+    std::function<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
+        recordNewLinkage);
+
+/// Update the linkages in the given \p Index to mark exported values
+/// as external and non-exported values as internal. The ThinLTO backends
+/// must apply the changes to the Module via thinLTOInternalizeModule.
+void thinLTOInternalizeAndPromoteInIndex(
+    ModuleSummaryIndex &Index,
+    std::function<bool(StringRef, GlobalValue::GUID)> isExported);
+
 }
 
 #endif

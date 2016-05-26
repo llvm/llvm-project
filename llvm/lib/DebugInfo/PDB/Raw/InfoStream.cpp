@@ -10,9 +10,9 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -20,7 +20,7 @@ using namespace llvm::pdb;
 InfoStream::InfoStream(PDBFile &File) : Pdb(File), Stream(StreamPDB, File) {}
 
 Error InfoStream::reload() {
-  StreamReader Reader(Stream);
+  codeview::StreamReader Reader(Stream);
 
   struct Header {
     support::ulittle32_t Version;
