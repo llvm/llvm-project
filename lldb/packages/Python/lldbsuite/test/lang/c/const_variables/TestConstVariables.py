@@ -25,6 +25,7 @@ class ConstVariableTestCase(TestBase):
         compiler="clang", compiler_version=[">=", "3.8"])
     @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
     @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
+    @expectedFailureAll(oslist=["linux"], archs=['arm', 'aarch64'], bugnumber="llvm.org/pr27883")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_and_run_command(self):
         """Test interpreted and JITted expressions on constant values."""

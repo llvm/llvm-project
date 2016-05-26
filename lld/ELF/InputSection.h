@@ -87,13 +87,24 @@ template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;
 // SectionPiece represents a piece of splittable section contents.
 struct SectionPiece {
   SectionPiece(size_t Off, ArrayRef<uint8_t> Data)
-      : InputOff(Off), Data(Data), Live(!Config->GcSections) {}
-  size_t size() const { return Data.size(); }
+      : InputOff(Off), Data((uint8_t *)Data.data()), Size(Data.size()),
+        Live(!Config->GcSections) {}
+
+  ArrayRef<uint8_t> data() { return {Data, Size}; }
+  size_t size() const { return Size; }
 
   size_t InputOff;
   size_t OutputOff = -1;
-  ArrayRef<uint8_t> Data; // slice of the input section
-  bool Live;
+
+private:
+  // We use bitfields because SplitInputSection is accessed by
+  // std::upper_bound very often.
+  // We want to save bits to make it cache friendly.
+  uint8_t *Data;
+  uint32_t Size : 31;
+
+public:
+  uint32_t Live : 1;
 };
 
 // Usually sections are copied to the output as atomic chunks of data,

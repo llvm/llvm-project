@@ -119,5 +119,25 @@
   #define _LIBUNWIND_TRACING_UNWINDING logUnwinding()
 #endif
 
+#ifdef __cplusplus
+// Used to fit UnwindCursor and Registers_xxx types against unw_context_t /
+// unw_cursor_t sized memory blocks.
+#if defined(_LIBUNWIND_IS_NATIVE_ONLY)
+# define COMP_OP ==
+#else
+# define COMP_OP <
+#endif
+template <typename _Type, typename _Mem>
+struct check_fit {
+  template <typename T>
+  struct blk_count {
+    static const uint32_t count =
+      (sizeof(T) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+  };
+  static const bool does_fit =
+    (blk_count<_Type>::count COMP_OP blk_count<_Mem>::count);
+};
+#undef COMP_OP
+#endif // __cplusplus
 
 #endif // LIBUNWIND_CONFIG_H

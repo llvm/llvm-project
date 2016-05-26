@@ -227,7 +227,8 @@ static bool needsPlt(RelExpr Expr) {
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
-  return Expr == R_PC || Expr == R_GOTREL || Expr == R_PAGE_PC;
+  return Expr == R_PC || Expr == R_GOTREL || Expr == R_PAGE_PC ||
+         Expr == R_RELAX_GOT_PC;
 }
 
 template <class ELFT>
@@ -343,14 +344,19 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
 
 template <class ELFT>
 static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
-                          bool IsWrite, RelExpr Expr, uint32_t Type) {
+                          bool IsWrite, RelExpr Expr, uint32_t Type,
+                          const uint8_t *Data, typename ELFT::uint Offset) {
   if (Target->needsThunk(Type, File, Body))
     return R_THUNK;
   bool Preemptible = Body.isPreemptible();
-  if (Body.isGnuIFunc())
+  if (Body.isGnuIFunc()) {
     Expr = toPlt(Expr);
-  else if (needsPlt(Expr) && !Preemptible)
-    Expr = fromPlt(Expr);
+  } else if (!Preemptible) {
+    if (needsPlt(Expr))
+      Expr = fromPlt(Expr);
+    if (Expr == R_GOT_PC && Target->canRelaxGot(Type, Data, Offset))
+      Expr = R_RELAX_GOT_PC;
+  }
 
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body))
     return Expr;
@@ -480,7 +486,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
 
     bool Preemptible = Body.isPreemptible();
-    Expr = adjustExpr(File, Body, IsWrite, Expr, Type);
+    Expr = adjustExpr(File, Body, IsWrite, Expr, Type, Buf, Offset);
     if (HasError)
       continue;
 

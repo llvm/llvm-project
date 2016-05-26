@@ -10,12 +10,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_FIND_ALL_SYMBOLS_TOOL_STL_POSTFIX_HEADER_MAP_H
 #define LLVM_CLANG_TOOLS_EXTRA_FIND_ALL_SYMBOLS_TOOL_STL_POSTFIX_HEADER_MAP_H
 
-#include <HeaderMapCollector.h>
+#include "HeaderMapCollector.h"
 
 namespace clang {
 namespace find_all_symbols {
 
-extern const HeaderMapCollector::HeaderMap STLPostfixHeaderMap;
+const HeaderMapCollector::HeaderMap* getSTLPostfixHeaderMap();
 
 } // namespace find_all_symbols
 } // namespace clang

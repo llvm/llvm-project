@@ -489,11 +489,13 @@ int main (int argc, const char * argv[])
 		NSDate *date2 = [NSDate dateWithNaturalLanguageString:@"12am January 1, 2011"];
 		NSDate *date3 = [NSDate date];
 		NSDate *date4 = [NSDate dateWithTimeIntervalSince1970:24*60*60];
+    NSDate *date5 = [NSDate dateWithTimeIntervalSinceReferenceDate: floor([[NSDate date] timeIntervalSinceReferenceDate])];
 
 		CFAbsoluteTime date1_abs = CFDateGetAbsoluteTime(date1);
 		CFAbsoluteTime date2_abs = CFDateGetAbsoluteTime(date2);
 		CFAbsoluteTime date3_abs = CFDateGetAbsoluteTime(date3);
 		CFAbsoluteTime date4_abs = CFDateGetAbsoluteTime(date4);
+		CFAbsoluteTime date5_abs = CFDateGetAbsoluteTime(date5);
 
 	    NSIndexSet *iset1 = [[NSIndexSet alloc] initWithIndexesInRange:NSMakeRange(1, 4)];
 	    NSIndexSet *iset2 = [[NSIndexSet alloc] initWithIndexesInRange:NSMakeRange(1, 512)];

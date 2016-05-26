@@ -946,7 +946,7 @@ CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
                                          EhInputSection<ELFT> *Sec,
                                          ArrayRef<RelTy> &Rels) {
   const endianness E = ELFT::TargetEndianness;
-  if (read32<E>(Piece.Data.data() + 4) != 0)
+  if (read32<E>(Piece.data().data() + 4) != 0)
     fatal("CIE expected at beginning of .eh_frame: " + Sec->getSectionName());
 
   SymbolBody *Personality = nullptr;
@@ -954,7 +954,7 @@ CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
     Personality = &Sec->getFile()->getRelocTargetSym(*Rel);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
-  CieRecord *Cie = &CieMap[{Piece.Data, Personality}];
+  CieRecord *Cie = &CieMap[{Piece.data(), Personality}];
 
   // If not found, create a new one.
   if (Cie->Piece == nullptr) {
@@ -995,11 +995,11 @@ void EhOutputSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
   DenseMap<size_t, CieRecord *> OffsetToCie;
   for (SectionPiece &Piece : Sec->Pieces) {
     // The empty record is the end marker.
-    if (Piece.Data.size() == 4)
+    if (Piece.size() == 4)
       return;
 
     size_t Offset = Piece.InputOff;
-    uint32_t ID = read32<E>(Piece.Data.data() + 4);
+    uint32_t ID = read32<E>(Piece.data().data() + 4);
     if (ID == 0) {
       OffsetToCie[Offset] = addCie(Piece, Sec, Rels);
       continue;
@@ -1106,11 +1106,11 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   const endianness E = ELFT::TargetEndianness;
   for (CieRecord *Cie : Cies) {
     size_t CieOffset = Cie->Piece->OutputOff;
-    writeCieFde<ELFT>(Buf + CieOffset, Cie->Piece->Data);
+    writeCieFde<ELFT>(Buf + CieOffset, Cie->Piece->data());
 
     for (SectionPiece *Fde : Cie->FdePieces) {
       size_t Off = Fde->OutputOff;
-      writeCieFde<ELFT>(Buf + Off, Fde->Data);
+      writeCieFde<ELFT>(Buf + Off, Fde->data());
 
       // FDE's second word should have the offset to an associated CIE.
       // Write it.
@@ -1126,7 +1126,7 @@ template <class ELFT> void EhOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   // we obtain two addresses and pass them to EhFrameHdr object.
   if (Out<ELFT>::EhFrameHdr) {
     for (CieRecord *Cie : Cies) {
-      uint8_t Enc = getFdeEncoding<ELFT>(Cie->Piece->Data);
+      uint8_t Enc = getFdeEncoding<ELFT>(Cie->Piece->data());
       for (SectionPiece *Fde : Cie->FdePieces) {
         uintX_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
         uintX_t FdeVA = this->getVA() + Fde->OutputOff;
@@ -1170,7 +1170,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   for (SectionPiece &Piece : Sec->Pieces) {
     if (!Piece.Live)
       continue;
-    uintX_t OutputOffset = Builder.add(toStringRef(Piece.Data));
+    uintX_t OutputOffset = Builder.add(toStringRef(Piece.data()));
     if (!IsString || !shouldTailMerge())
       Piece.OutputOff = OutputOffset;
   }

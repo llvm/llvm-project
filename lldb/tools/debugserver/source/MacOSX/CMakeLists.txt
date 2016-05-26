@@ -59,29 +59,31 @@ set_source_files_properties(
 
 target_link_libraries(debugserver ${DEBUGSERVER_USED_LIBS})
 
-# Sign the debugserver binary
-set (CODESIGN_IDENTITY lldb_codesign)
-execute_process(
-  COMMAND xcrun -f codesign_allocate
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  OUTPUT_VARIABLE CODESIGN_ALLOCATE
-  )
-# Older cmake versions don't support "-E env".
-if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} LESS 3.2)
-  add_custom_command(TARGET debugserver
-    POST_BUILD
-    # Note: --entitlements option removed, as it causes errors when debugging.
-    # was: COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/../debugserver-entitlements.plist --force --sign ${CODESIGN_IDENTITY} debugserver
-    COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${CODESIGN_IDENTITY} debugserver
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-  )
-else()
-  add_custom_command(TARGET debugserver
-    POST_BUILD
-    # Note: --entitlements option removed (see comment above).
-    COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${CODESIGN_IDENTITY} debugserver
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-  )
+set(LLDB_CODESIGN_IDENTITY "lldb_codesign"
+  CACHE STRING "Identity used for code signing. Set to empty string to skip the signing step.")
+if (NOT ("${LLDB_CODESIGN_IDENTITY}" STREQUAL ""))
+  execute_process(
+    COMMAND xcrun -f codesign_allocate
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE CODESIGN_ALLOCATE
+    )
+  # Older cmake versions don't support "-E env".
+  if (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} LESS 3.2)
+    add_custom_command(TARGET debugserver
+      POST_BUILD
+      # Note: --entitlements option removed, as it causes errors when debugging.
+      # was: COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --entitlements ${CMAKE_CURRENT_SOURCE_DIR}/../debugserver-entitlements.plist --force --sign ${LLDB_CODESIGN_IDENTITY} debugserver
+      COMMAND CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${LLDB_CODESIGN_IDENTITY} debugserver
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+  else()
+    add_custom_command(TARGET debugserver
+      POST_BUILD
+      # Note: --entitlements option removed (see comment above).
+      COMMAND ${CMAKE_COMMAND} -E env CODESIGN_ALLOCATE=${CODESIGN_ALLOCATE} codesign --force --sign ${LLDB_CODESIGN_IDENTITY} debugserver
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+  endif()
 endif()
 
 install(TARGETS debugserver

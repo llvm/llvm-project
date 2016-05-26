@@ -73,4 +73,5 @@ class LibcxxUnorderedDataFormatterTestCase(TestBase):
 
     def look_for_content_and_continue(self, var_name, patterns):
         self.expect( ("frame variable %s" % var_name), patterns=patterns)
+        self.expect( ("frame variable %s" % var_name), patterns=patterns)
         self.runCmd("continue")
