@@ -1080,6 +1080,9 @@ public:
   /// Strip Objective-C "__kindof" types from the given type.
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
+  /// Remove all qualifiers including _Atomic.
+  QualType getAtomicUnqualifiedType() const;
+
 private:
   // These methods are implemented in a separate translation unit;
   // "static"-ize them to avoid creating temporary QualTypes in the

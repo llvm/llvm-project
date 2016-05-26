@@ -2012,6 +2012,7 @@ void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
   Record.AddSourceLocation(C->getColonLoc());
   for (auto *VE : C->varlists())
     Record.AddStmt(VE);
+  Record.AddStmt(C->getCounterValue());
 }
 
 void OMPClauseWriter::VisitOMPDeviceClause(OMPDeviceClause *C) {
@@ -2127,6 +2128,7 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
     Record.AddStmt(D->getEnsureUpperBound());
     Record.AddStmt(D->getNextLowerBound());
     Record.AddStmt(D->getNextUpperBound());
+    Record.AddStmt(D->getNumIterations());
   }
   for (auto I : D->counters()) {
     Record.AddStmt(I);

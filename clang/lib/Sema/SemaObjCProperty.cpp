@@ -1493,24 +1493,26 @@ bool Sema::DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *property,
   if (!GetterMethod)
     return false;
   QualType GetterType = GetterMethod->getReturnType().getNonReferenceType();
-  QualType PropertyIvarType = property->getType().getNonReferenceType();
-  bool compat = Context.hasSameType(PropertyIvarType, GetterType);
+  QualType PropertyRValueType =
+      property->getType().getNonReferenceType().getAtomicUnqualifiedType();
+  bool compat = Context.hasSameType(PropertyRValueType, GetterType);
   if (!compat) {
     const ObjCObjectPointerType *propertyObjCPtr = nullptr;
     const ObjCObjectPointerType *getterObjCPtr = nullptr;
-    if ((propertyObjCPtr = PropertyIvarType->getAs<ObjCObjectPointerType>()) && 
+    if ((propertyObjCPtr =
+             PropertyRValueType->getAs<ObjCObjectPointerType>()) &&
         (getterObjCPtr = GetterType->getAs<ObjCObjectPointerType>()))
       compat = Context.canAssignObjCInterfaces(getterObjCPtr, propertyObjCPtr);
-    else if (CheckAssignmentConstraints(Loc, GetterType, PropertyIvarType) 
+    else if (CheckAssignmentConstraints(Loc, GetterType, PropertyRValueType)
               != Compatible) {
           Diag(Loc, diag::error_property_accessor_type)
-            << property->getDeclName() << PropertyIvarType
+            << property->getDeclName() << PropertyRValueType
             << GetterMethod->getSelector() << GetterType;
           Diag(GetterMethod->getLocation(), diag::note_declared_at);
           return true;
     } else {
       compat = true;
-      QualType lhsType =Context.getCanonicalType(PropertyIvarType).getUnqualifiedType();
+      QualType lhsType = Context.getCanonicalType(PropertyRValueType);
       QualType rhsType =Context.getCanonicalType(GetterType).getUnqualifiedType();
       if (lhsType != rhsType && lhsType->isArithmeticType())
         compat = false;
@@ -2204,8 +2206,11 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
     // for this class.
     SourceLocation Loc = property->getLocation();
 
+    // The getter returns the declared property type with all qualifiers
+    // removed.
+    QualType resultTy = property->getType().getAtomicUnqualifiedType();
+
     // If the property is null_resettable, the getter returns nonnull.
-    QualType resultTy = property->getType();
     if (property->getPropertyAttributes() &
         ObjCPropertyDecl::OBJC_PR_null_resettable) {
       QualType modifiedTy = resultTy;
@@ -2274,9 +2279,12 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
                                 ObjCMethodDecl::Optional :
                                 ObjCMethodDecl::Required);
 
+      // Remove all qualifiers from the setter's parameter type.
+      QualType paramTy =
+          property->getType().getUnqualifiedType().getAtomicUnqualifiedType();
+
       // If the property is null_resettable, the setter accepts a
       // nullable value.
-      QualType paramTy = property->getType().getUnqualifiedType();
       if (property->getPropertyAttributes() &
           ObjCPropertyDecl::OBJC_PR_null_resettable) {
         QualType modifiedTy = paramTy;

@@ -2243,7 +2243,7 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionProtoType *Proto,
     FunctionTypeDepth.enterResultType();
 
     // Mangle ns_returns_retained as an order-sensitive qualifier here.
-    if (Proto->getExtInfo().getProducesResult())
+    if (Proto->getExtInfo().getProducesResult() && FD == nullptr)
       mangleVendorQualifier("ns_returns_retained");
 
     // Mangle the return type without any direct ARC ownership qualifiers.
@@ -2269,7 +2269,7 @@ void CXXNameMangler::mangleBareFunctionType(const FunctionProtoType *Proto,
   assert(!FD || FD->getNumParams() == Proto->getNumParams());
   for (unsigned I = 0, E = Proto->getNumParams(); I != E; ++I) {
     // Mangle extended parameter info as order-sensitive qualifiers here.
-    if (Proto->hasExtParameterInfos()) {
+    if (Proto->hasExtParameterInfos() && FD == nullptr) {
       mangleExtParameterInfo(Proto->getExtParameterInfo(I));
     }
 
@@ -3819,7 +3819,7 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A) {
 
     Out << 'L';
     // References to external entities use the mangled name; if the name would
-    // not normally be manged then mangle it as unqualified.
+    // not normally be mangled then mangle it as unqualified.
     mangle(D);
     Out << 'E';
 

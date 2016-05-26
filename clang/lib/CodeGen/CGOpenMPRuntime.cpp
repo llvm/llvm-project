@@ -627,6 +627,17 @@ enum OpenMPRTLFunction {
   // if_val, kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st, int nogroup, int
   // sched, kmp_uint64 grainsize, void *task_dup);
   OMPRTL__kmpc_taskloop,
+  // Call to void __kmpc_doacross_init(ident_t *loc, kmp_int32 gtid, kmp_int32
+  // num_dims, struct kmp_dim *dims);
+  OMPRTL__kmpc_doacross_init,
+  // Call to void __kmpc_doacross_fini(ident_t *loc, kmp_int32 gtid);
+  OMPRTL__kmpc_doacross_fini,
+  // Call to void __kmpc_doacross_post(ident_t *loc, kmp_int32 gtid, kmp_int64
+  // *vec);
+  OMPRTL__kmpc_doacross_post,
+  // Call to void __kmpc_doacross_wait(ident_t *loc, kmp_int32 gtid, kmp_int64
+  // *vec);
+  OMPRTL__kmpc_doacross_wait,
 
   //
   // Offloading related calls
@@ -1474,6 +1485,46 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     llvm::FunctionType *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_taskloop");
+    break;
+  }
+  case OMPRTL__kmpc_doacross_init: {
+    // Build void __kmpc_doacross_init(ident_t *loc, kmp_int32 gtid, kmp_int32
+    // num_dims, struct kmp_dim *dims);
+    llvm::Type *TypeParams[] = {getIdentTyPointerTy(),
+                                CGM.Int32Ty,
+                                CGM.Int32Ty,
+                                CGM.VoidPtrTy};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_doacross_init");
+    break;
+  }
+  case OMPRTL__kmpc_doacross_fini: {
+    // Build void __kmpc_doacross_fini(ident_t *loc, kmp_int32 gtid);
+    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_doacross_fini");
+    break;
+  }
+  case OMPRTL__kmpc_doacross_post: {
+    // Build void __kmpc_doacross_post(ident_t *loc, kmp_int32 gtid, kmp_int64
+    // *vec);
+    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty,
+                                CGM.Int64Ty->getPointerTo()};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_doacross_post");
+    break;
+  }
+  case OMPRTL__kmpc_doacross_wait: {
+    // Build void __kmpc_doacross_wait(ident_t *loc, kmp_int32 gtid, kmp_int64
+    // *vec);
+    llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty,
+                                CGM.Int64Ty->getPointerTo()};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name=*/"__kmpc_doacross_wait");
     break;
   }
   case OMPRTL__tgt_target: {
@@ -6316,3 +6367,111 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
       emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
   }
 }
+
+namespace {
+/// Cleanup action for doacross support.
+class DoacrossCleanupTy final : public EHScopeStack::Cleanup {
+public:
+  static const int DoacrossFinArgs = 2;
+
+private:
+  llvm::Value *RTLFn;
+  llvm::Value *Args[DoacrossFinArgs];
+
+public:
+  DoacrossCleanupTy(llvm::Value *RTLFn, ArrayRef<llvm::Value *> CallArgs)
+      : RTLFn(RTLFn) {
+    assert(CallArgs.size() == DoacrossFinArgs);
+    std::copy(CallArgs.begin(), CallArgs.end(), std::begin(Args));
+  }
+  void Emit(CodeGenFunction &CGF, Flags /*flags*/) override {
+    if (!CGF.HaveInsertPoint())
+      return;
+    CGF.EmitRuntimeCall(RTLFn, Args);
+  }
+};
+} // namespace
+
+void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
+                                       const OMPLoopDirective &D) {
+  if (!CGF.HaveInsertPoint())
+    return;
+
+  ASTContext &C = CGM.getContext();
+  QualType Int64Ty = C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/true);
+  RecordDecl *RD;
+  if (KmpDimTy.isNull()) {
+    // Build struct kmp_dim {  // loop bounds info casted to kmp_int64
+    //  kmp_int64 lo; // lower
+    //  kmp_int64 up; // upper
+    //  kmp_int64 st; // stride
+    // };
+    RD = C.buildImplicitRecord("kmp_dim");
+    RD->startDefinition();
+    addFieldToRecordDecl(C, RD, Int64Ty);
+    addFieldToRecordDecl(C, RD, Int64Ty);
+    addFieldToRecordDecl(C, RD, Int64Ty);
+    RD->completeDefinition();
+    KmpDimTy = C.getRecordType(RD);
+  } else
+    RD = cast<RecordDecl>(KmpDimTy->getAsTagDecl());
+
+  Address DimsAddr = CGF.CreateMemTemp(KmpDimTy, "dims");
+  CGF.EmitNullInitialization(DimsAddr, KmpDimTy);
+  enum { LowerFD = 0, UpperFD, StrideFD };
+  // Fill dims with data.
+  LValue DimsLVal = CGF.MakeAddrLValue(DimsAddr, KmpDimTy);
+  // dims.upper = num_iterations;
+  LValue UpperLVal =
+      CGF.EmitLValueForField(DimsLVal, *std::next(RD->field_begin(), UpperFD));
+  llvm::Value *NumIterVal = CGF.EmitScalarConversion(
+      CGF.EmitScalarExpr(D.getNumIterations()), D.getNumIterations()->getType(),
+      Int64Ty, D.getNumIterations()->getExprLoc());
+  CGF.EmitStoreOfScalar(NumIterVal, UpperLVal);
+  // dims.stride = 1;
+  LValue StrideLVal =
+      CGF.EmitLValueForField(DimsLVal, *std::next(RD->field_begin(), StrideFD));
+  CGF.EmitStoreOfScalar(llvm::ConstantInt::getSigned(CGM.Int64Ty, /*V=*/1),
+                        StrideLVal);
+
+  // Build call void __kmpc_doacross_init(ident_t *loc, kmp_int32 gtid,
+  // kmp_int32 num_dims, struct kmp_dim * dims);
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, D.getLocStart()),
+                         getThreadID(CGF, D.getLocStart()),
+                         llvm::ConstantInt::getSigned(CGM.Int32Ty, 1),
+                         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                             DimsAddr.getPointer(), CGM.VoidPtrTy)};
+
+  llvm::Value *RTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_init);
+  CGF.EmitRuntimeCall(RTLFn, Args);
+  llvm::Value *FiniArgs[DoacrossCleanupTy::DoacrossFinArgs] = {
+      emitUpdateLocation(CGF, D.getLocEnd()), getThreadID(CGF, D.getLocEnd())};
+  llvm::Value *FiniRTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_fini);
+  CGF.EHStack.pushCleanup<DoacrossCleanupTy>(NormalAndEHCleanup, FiniRTLFn,
+                                             llvm::makeArrayRef(FiniArgs));
+}
+
+void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
+                                          const OMPDependClause *C) {
+  QualType Int64Ty =
+      CGM.getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
+  const Expr *CounterVal = C->getCounterValue();
+  assert(CounterVal);
+  llvm::Value *CntVal = CGF.EmitScalarConversion(CGF.EmitScalarExpr(CounterVal),
+                                                 CounterVal->getType(), Int64Ty,
+                                                 CounterVal->getExprLoc());
+  Address CntAddr = CGF.CreateMemTemp(Int64Ty, ".cnt.addr");
+  CGF.EmitStoreOfScalar(CntVal, CntAddr, /*Volatile=*/false, Int64Ty);
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, C->getLocStart()),
+                         getThreadID(CGF, C->getLocStart()),
+                         CntAddr.getPointer()};
+  llvm::Value *RTLFn;
+  if (C->getDependencyKind() == OMPC_DEPEND_source)
+    RTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_post);
+  else {
+    assert(C->getDependencyKind() == OMPC_DEPEND_sink);
+    RTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_wait);
+  }
+  CGF.EmitRuntimeCall(RTLFn, Args);
+}
+

@@ -5565,9 +5565,13 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
 
 static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
                                            NamedDecl *NewDecl,
-                                           bool IsSpecialization) {
-  if (TemplateDecl *OldTD = dyn_cast<TemplateDecl>(OldDecl))
+                                           bool IsSpecialization,
+                                           bool IsDefinition) {
+  if (TemplateDecl *OldTD = dyn_cast<TemplateDecl>(OldDecl)) {
     OldDecl = OldTD->getTemplatedDecl();
+    if (!IsSpecialization)
+      IsDefinition = false;
+  }
   if (TemplateDecl *NewTD = dyn_cast<TemplateDecl>(NewDecl))
     NewDecl = NewTD->getTemplatedDecl();
 
@@ -5623,14 +5627,17 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
 
   // A redeclaration is not allowed to drop a dllimport attribute, the only
   // exceptions being inline function definitions, local extern declarations,
-  // and qualified friend declarations.
-  // NB: MSVC converts such a declaration to dllexport.
+  // qualified friend declarations or special MSVC extension: in the last case,
+  // the declaration is treated as if it were marked dllexport.
   bool IsInline = false, IsStaticDataMember = false, IsQualifiedFriend = false;
-  if (const auto *VD = dyn_cast<VarDecl>(NewDecl))
+  bool IsMicrosoft = S.Context.getTargetInfo().getCXXABI().isMicrosoft();
+  if (const auto *VD = dyn_cast<VarDecl>(NewDecl)) {
     // Ignore static data because out-of-line definitions are diagnosed
     // separately.
     IsStaticDataMember = VD->isStaticDataMember();
-  else if (const auto *FD = dyn_cast<FunctionDecl>(NewDecl)) {
+    IsDefinition = VD->isThisDeclarationADefinition(S.Context) !=
+                   VarDecl::DeclarationOnly;
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(NewDecl)) {
     IsInline = FD->isInlined();
     IsQualifiedFriend = FD->getQualifier() &&
                         FD->getFriendObjectKind() == Decl::FOK_Declared;
@@ -5638,15 +5645,25 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
 
   if (OldImportAttr && !HasNewAttr && !IsInline && !IsStaticDataMember &&
       !NewDecl->isLocalExternDecl() && !IsQualifiedFriend) {
-    S.Diag(NewDecl->getLocation(),
-           diag::warn_redeclaration_without_attribute_prev_attribute_ignored)
-      << NewDecl << OldImportAttr;
-    S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
-    S.Diag(OldImportAttr->getLocation(), diag::note_previous_attribute);
-    OldDecl->dropAttr<DLLImportAttr>();
-    NewDecl->dropAttr<DLLImportAttr>();
-  } else if (IsInline && OldImportAttr &&
-             !S.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+    if (IsMicrosoft && IsDefinition) {
+      S.Diag(NewDecl->getLocation(),
+             diag::warn_redeclaration_without_import_attribute)
+          << NewDecl;
+      S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
+      NewDecl->dropAttr<DLLImportAttr>();
+      NewDecl->addAttr(::new (S.Context) DLLExportAttr(
+          NewImportAttr->getRange(), S.Context,
+          NewImportAttr->getSpellingListIndex()));
+    } else {
+      S.Diag(NewDecl->getLocation(),
+             diag::warn_redeclaration_without_attribute_prev_attribute_ignored)
+          << NewDecl << OldImportAttr;
+      S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
+      S.Diag(OldImportAttr->getLocation(), diag::note_previous_attribute);
+      OldDecl->dropAttr<DLLImportAttr>();
+      NewDecl->dropAttr<DLLImportAttr>();
+    }
+  } else if (IsInline && OldImportAttr && !IsMicrosoft) {
     // In MinGW, seeing a function declared inline drops the dllimport attribute.
     OldDecl->dropAttr<DLLImportAttr>();
     NewDecl->dropAttr<DLLImportAttr>();
@@ -6430,7 +6447,7 @@ Sema::ActOnVariableDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (D.isRedeclaration() && !Previous.empty()) {
     checkDLLAttributeRedeclaration(
         *this, dyn_cast<NamedDecl>(Previous.getRepresentativeDecl()), NewVD,
-        IsExplicitSpecialization);
+        IsExplicitSpecialization, D.isFunctionDefinition());
   }
 
   if (NewTemplate) {
@@ -8461,7 +8478,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (D.isRedeclaration() && !Previous.empty()) {
     checkDLLAttributeRedeclaration(
         *this, dyn_cast<NamedDecl>(Previous.getRepresentativeDecl()), NewFD,
-        isExplicitSpecialization || isFunctionTemplateSpecialization);
+        isExplicitSpecialization || isFunctionTemplateSpecialization,
+        D.isFunctionDefinition());
   }
 
   if (getLangOpts().CUDA) {

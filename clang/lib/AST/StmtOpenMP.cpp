@@ -149,6 +149,7 @@ OMPForDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -199,6 +200,7 @@ OMPForSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -365,6 +367,7 @@ OMPParallelForDirective *OMPParallelForDirective::Create(
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -413,6 +416,7 @@ OMPParallelForSimdDirective *OMPParallelForSimdDirective::Create(
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -750,6 +754,7 @@ OMPTargetParallelForDirective *OMPTargetParallelForDirective::Create(
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -890,6 +895,7 @@ OMPTaskLoopDirective *OMPTaskLoopDirective::Create(
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -938,6 +944,7 @@ OMPTaskLoopSimdDirective *OMPTaskLoopSimdDirective::Create(
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);
@@ -985,6 +992,7 @@ OMPDistributeDirective *OMPDistributeDirective::Create(
   Dir->setEnsureUpperBound(Exprs.EUB);
   Dir->setNextLowerBound(Exprs.NLB);
   Dir->setNextUpperBound(Exprs.NUB);
+  Dir->setNumIterations(Exprs.NumIterations);
   Dir->setCounters(Exprs.Counters);
   Dir->setPrivateCounters(Exprs.PrivateCounters);
   Dir->setInits(Exprs.Inits);

@@ -27,6 +27,8 @@
 #ifndef __AVX512FINTRIN_H
 #define __AVX512FINTRIN_H
 
+typedef char __v64qi __attribute__((__vector_size__(64)));
+typedef short __v32hi __attribute__((__vector_size__(64)));
 typedef double __v8df __attribute__((__vector_size__(64)));
 typedef float __v16sf __attribute__((__vector_size__(64)));
 typedef long long __v8di __attribute__((__vector_size__(64)));
@@ -286,6 +288,28 @@ _mm512_set1_pd(double __w)
 }
 
 static __inline __m512i __DEFAULT_FN_ATTRS
+_mm512_set1_epi8(char __w)
+{
+  return (__m512i)(__v64qi){ __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w  };
+}
+
+static __inline __m512i __DEFAULT_FN_ATTRS
+_mm512_set1_epi16(short __w)
+{
+  return (__m512i)(__v32hi){ __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w,
+                             __w, __w, __w, __w, __w, __w, __w, __w };
+}
+
+static __inline __m512i __DEFAULT_FN_ATTRS
 _mm512_set1_epi32(int __s)
 {
   return (__m512i)(__v16si){ __s, __s, __s, __s, __s, __s, __s, __s,
@@ -337,17 +361,52 @@ _mm512_castpd512_pd128(__m512d __a)
   return __builtin_shufflevector(__a, __a, 0, 1);
 }
 
+static __inline __m256d __DEFAULT_FN_ATTRS
+_mm512_castpd512_pd256 (__m512d __A)
+{
+  return __builtin_shufflevector(__A, __A, 0, 1, 2, 3);
+}
+
 static __inline __m128 __DEFAULT_FN_ATTRS
 _mm512_castps512_ps128(__m512 __a)
 {
   return __builtin_shufflevector(__a, __a, 0, 1, 2, 3);
 }
 
+static __inline __m256 __DEFAULT_FN_ATTRS
+_mm512_castps512_ps256 (__m512 __A)
+{
+  return __builtin_shufflevector(__A, __A, 0, 1, 2, 3, 4, 5, 6, 7);
+}
+
+static __inline __m512 __DEFAULT_FN_ATTRS
+_mm512_castpd_ps (__m512d __A)
+{
+  return (__m512) (__A);
+}
+
+static __inline __m512i __DEFAULT_FN_ATTRS
+_mm512_castpd_si512 (__m512d __A)
+{
+  return (__m512i) (__A);
+}
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_castpd128_pd512 (__m128d __A)
 {
   return __builtin_shufflevector( __A, __A, 0, 1, -1, -1, -1, -1, -1, -1);
+}
+
+static __inline __m512d __DEFAULT_FN_ATTRS
+_mm512_castps_pd (__m512 __A)
+{
+  return (__m512d) (__A);
+}
+
+static __inline __m512i __DEFAULT_FN_ATTRS
+_mm512_castps_si512 (__m512 __A)
+{
+  return (__m512i) (__A);
 }
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS
@@ -366,6 +425,24 @@ static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_castsi256_si512 (__m256i __A)
 {
    return  __builtin_shufflevector( __A, __A, 0, 1, 2, 3, -1, -1, -1, -1);
+}
+
+static __inline __m512 __DEFAULT_FN_ATTRS
+_mm512_castsi512_ps (__m512i __A)
+{
+  return (__m512) (__A);
+}
+
+static __inline __m512d __DEFAULT_FN_ATTRS
+_mm512_castsi512_pd (__m512i __A)
+{
+  return (__m512d) (__A);
+}
+
+static __inline __m128i __DEFAULT_FN_ATTRS
+_mm512_castsi512_si128 (__m512i __A)
+{
+  return (__m128i)__builtin_shufflevector(__A, __A , 0, 1);
 }
 
 /* Bitwise operators */

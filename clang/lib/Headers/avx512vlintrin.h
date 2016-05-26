@@ -1302,22 +1302,22 @@ _mm_maskz_xor_epi64 (__mmask8 __U, __m128i __A, __m128i __B)
                                          (__v4df)(__m256d)(b), (int)(p), \
                                          (__mmask8)(m)); })
 
-#define _mm128_cmp_ps_mask(a, b, p)  __extension__ ({ \
+#define _mm_cmp_ps_mask(a, b, p)  __extension__ ({ \
   (__mmask8)__builtin_ia32_cmpps128_mask((__v4sf)(__m128)(a), \
                                          (__v4sf)(__m128)(b), (int)(p), \
                                          (__mmask8)-1); })
 
-#define _mm128_mask_cmp_ps_mask(m, a, b, p)  __extension__ ({ \
+#define _mm_mask_cmp_ps_mask(m, a, b, p)  __extension__ ({ \
   (__mmask8)__builtin_ia32_cmpps128_mask((__v4sf)(__m128)(a), \
                                          (__v4sf)(__m128)(b), (int)(p), \
                                          (__mmask8)(m)); })
 
-#define _mm128_cmp_pd_mask(a, b, p)  __extension__ ({ \
+#define _mm_cmp_pd_mask(a, b, p)  __extension__ ({ \
   (__mmask8)__builtin_ia32_cmppd128_mask((__v2df)(__m128d)(a), \
                                          (__v2df)(__m128d)(b), (int)(p), \
                                          (__mmask8)-1); })
 
-#define _mm128_mask_cmp_pd_mask(m, a, b, p)  __extension__ ({ \
+#define _mm_mask_cmp_pd_mask(m, a, b, p)  __extension__ ({ \
   (__mmask8)__builtin_ia32_cmppd128_mask((__v2df)(__m128d)(a), \
                                          (__v2df)(__m128d)(b), (int)(p), \
                                          (__mmask8)(m)); })

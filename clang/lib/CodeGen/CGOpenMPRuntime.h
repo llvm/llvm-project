@@ -37,6 +37,7 @@ class Value;
 namespace clang {
 class Expr;
 class GlobalDecl;
+class OMPDependClause;
 class OMPExecutableDirective;
 class OMPLoopDirective;
 class VarDecl;
@@ -201,6 +202,12 @@ private:
   ///    } flags;
   /// } kmp_depend_info_t;
   QualType KmpDependInfoTy;
+  /// struct kmp_dim {  // loop bounds info casted to kmp_int64
+  ///  kmp_int64 lo; // lower
+  ///  kmp_int64 up; // upper
+  ///  kmp_int64 st; // stride
+  /// };
+  QualType KmpDimTy;
   /// \brief Type struct __tgt_offload_entry{
   ///   void      *addr;       // Pointer to the offload entry info.
   ///                          // (function or global)
@@ -1020,6 +1027,16 @@ public:
   /// attributes.
   virtual void emitDeclareSimdFunction(const FunctionDecl *FD,
                                        llvm::Function *Fn);
+
+  /// Emit initialization for doacross loop nesting support.
+  /// \param D Loop-based construct used in doacross nesting construct.
+  virtual void emitDoacrossInit(CodeGenFunction &CGF,
+                                const OMPLoopDirective &D);
+
+  /// Emit code for doacross ordered directive with 'depend' clause.
+  /// \param C 'depend' clause with 'sink|source' dependency kind.
+  virtual void emitDoacrossOrdered(CodeGenFunction &CGF,
+                                   const OMPDependClause *C);
 };
 
 } // namespace CodeGen

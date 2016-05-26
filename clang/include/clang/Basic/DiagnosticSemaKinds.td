@@ -2361,7 +2361,10 @@ def err_attribute_aligned_too_great : Error<
   "requested alignment must be %0 bytes or smaller">;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,
-  InGroup<DiagGroup<"inconsistent-dllimport">>;
+  InGroup<MicrosoftInconsistentDllImport>;
+def warn_redeclaration_without_import_attribute : Warning<
+  "%q0 redeclared without 'dllimport' attribute: 'dllexport' attribute added">,
+  InGroup<MicrosoftInconsistentDllImport>;
 def warn_dllimport_dropped_from_inline_function : Warning<
   "%q0 redeclared inline; %1 attribute ignored">,
   InGroup<IgnoredAttributes>;
@@ -8314,8 +8317,6 @@ def err_omp_firstprivate_distribute_in_teams_reduction : Error<
   "reduction variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'">;
 def err_omp_depend_clause_thread_simd : Error<
   "'depend' clauses cannot be mixed with '%0' clause">;
-def err_omp_depend_sink_wrong_expr : Error<
-  "expected expression form x[+-d], where x is the loop iteration variable and d is a constant non-negative integer">;
 def err_omp_depend_sink_expected_loop_iteration : Error<
   "expected %0 loop iteration variable">;
 def err_omp_depend_sink_unexpected_expr : Error<

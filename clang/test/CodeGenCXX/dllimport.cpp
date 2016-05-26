@@ -264,7 +264,7 @@ __declspec(dllimport) void redecl2();
                       void redecl2();
 USE(redecl2)
 
-// MSC-DAG: define void @"\01?redecl3@@YAXXZ"()
+// MSC-DAG: define dllexport void @"\01?redecl3@@YAXXZ"()
 // GNU-DAG: define void @_Z7redecl3v()
 __declspec(dllimport) void redecl3();
                       void redecl3() {} // dllimport ignored
@@ -276,7 +276,7 @@ USE(redecl3)
 // GNU-DAG: declare dllimport void @_Z7friend1v()
 // MSC-DAG: declare           void @"\01?friend2@@YAXXZ"()
 // GNU-DAG: declare           void @_Z7friend2v()
-// MSC-DAG: define            void @"\01?friend3@@YAXXZ"()
+// MSC-DAG: define  dllexport void @"\01?friend3@@YAXXZ"()
 // GNU-DAG: define            void @_Z7friend3v()
 // MSC-DAG: declare           void @"\01?friend4@@YAXXZ"()
 // GNU-DAG: declare           void @_Z7friend4v()
