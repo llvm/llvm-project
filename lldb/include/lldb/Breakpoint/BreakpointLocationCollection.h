@@ -13,6 +13,8 @@
 // C Includes
 // C++ Includes
 #include <vector>
+#include <mutex>
+
 // Other libraries and framework includes
 // Project includes
 #include "lldb/lldb-private.h"
@@ -201,7 +203,8 @@ private:
     collection::const_iterator
     GetIDPairConstIterator(lldb::break_id_t break_id, lldb::break_id_t break_loc_id) const;
 
-    collection m_break_loc_collection;
+    collection     m_break_loc_collection;
+    mutable std::mutex  m_collection_mutex;
 
 public:
     typedef AdaptedIterable<collection, lldb::BreakpointLocationSP, vector_adapter> BreakpointLocationCollectionIterable;
