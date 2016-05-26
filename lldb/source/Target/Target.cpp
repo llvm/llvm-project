@@ -2133,8 +2133,14 @@ Target::GetTypeSystemMap ()
     return m_scratch_type_system_map;
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+PersistentExpressionState *
+Target::GetPersistentExpressionStateForLanguageImpl (lldb::LanguageType language)
+#else
 PersistentExpressionState *
 Target::GetPersistentExpressionStateForLanguage (lldb::LanguageType language)
+#endif
 {
     TypeSystem *type_system = GetScratchTypeSystemForLanguage(nullptr, language, true);
     

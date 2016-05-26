@@ -957,9 +957,22 @@ public:
     void
     SetTypeSystemForLanguage (lldb::LanguageType language, const lldb::TypeSystemSP &type_system_sp);
 
+#ifdef __clang_analyzer__
+    // See GetScratchTypeSystemForLanguage() in Target.h for what this block does
+    TypeSystem *
+    GetTypeSystemForLanguage (lldb::LanguageType language) __attribute__ ((always_inline))
+    {
+        TypeSystem *ret = GetTypeSystemForLanguageImpl(language);
+        return ret ? ret : nullptr;
+    }
+    
+    TypeSystem *
+    GetTypeSystemForLanguageImpl (lldb::LanguageType language);
+#else
     TypeSystem *
     GetTypeSystemForLanguage (lldb::LanguageType language);
-
+#endif
+    
     // Special error functions that can do printf style formatting that will prepend the message with
     // something appropriate for this module (like the architecture, path and object name (if any)). 
     // This centralizes code so that everyone doesn't need to format their error and log messages on

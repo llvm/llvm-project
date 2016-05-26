@@ -427,8 +427,14 @@ Module::GetUUID()
     return m_uuid;
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h for what this block does
+TypeSystem *
+Module::GetTypeSystemForLanguageImpl (LanguageType language)
+#else
 TypeSystem *
 Module::GetTypeSystemForLanguage (LanguageType language)
+#endif
 {                      
     return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
 }

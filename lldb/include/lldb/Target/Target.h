@@ -1364,8 +1364,21 @@ public:
                                      const char *compiler_options = nullptr);
 #endif
     
+#ifdef __clang_analyzer__
+    // See GetScratchTypeSystemForLanguage
+    PersistentExpressionState *
+    GetPersistentExpressionStateForLanguage (lldb::LanguageType language) __attribute__ ((always_inline))
+    {
+        PersistentExpressionState *ret = GetPersistentExpressionStateForLanguageImpl(language);
+        return ret ? ret : nullptr;
+    }
+    
+    PersistentExpressionState *
+    GetPersistentExpressionStateForLanguageImpl (lldb::LanguageType language);
+#else
     PersistentExpressionState *
     GetPersistentExpressionStateForLanguage (lldb::LanguageType language);
+#endif
     
     const TypeSystemMap &
     GetTypeSystemMap ();
