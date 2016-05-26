@@ -3,8 +3,10 @@
 // RUN: %clang_tsan %s -o %t -framework Foundation
 // RUN: %run %t 2>&1 | FileCheck %s
 
-#import <Foundation/Foundation.h>
 #include <malloc/malloc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
 
 int some_global;
 
