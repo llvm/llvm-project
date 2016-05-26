@@ -1,5 +1,5 @@
 =======================================================
-Kaleidoscope: Building an ORC-based JIT in LLVM
+Building a JIT: Starting out with KaleidoscopeJIT
 =======================================================
 
 .. contents::
@@ -76,13 +76,13 @@ will look like:
 
 .. code-block:: c++
 
-    std::unique_ptr<Module> M = buildModule();
-    JIT J;
-    Handle H = J.addModule(*M);
-    int (*Main)(int, char*[]) =
-      (int(*)(int, char*[])J.findSymbol("main").getAddress();
-    int Result = Main();
-    J.removeModule(H);
+  std::unique_ptr<Module> M = buildModule();
+  JIT J;
+  Handle H = J.addModule(*M);
+  int (*Main)(int, char*[]) =
+    (int(*)(int, char*[])J.findSymbol("main").getAddress();
+  int Result = Main();
+  J.removeModule(H);
 
 The APIs that we build in these tutorials will all be variations on this simple
 theme. Behind the API we will refine the implementation of the JIT to add
@@ -112,32 +112,32 @@ usual include guards and #includes [2]_, we get to the definition of our class:
 
 .. code-block:: c++
 
-    #ifndef LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
-    #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
+  #ifndef LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
+  #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 
-    #include "llvm/ExecutionEngine/ExecutionEngine.h"
-    #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-    #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-    #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-    #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
-    #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-    #include "llvm/IR/Mangler.h"
-    #include "llvm/Support/DynamicLibrary.h"
+  #include "llvm/ExecutionEngine/ExecutionEngine.h"
+  #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+  #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+  #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+  #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+  #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+  #include "llvm/IR/Mangler.h"
+  #include "llvm/Support/DynamicLibrary.h"
 
-    namespace llvm {
-    namespace orc {
+  namespace llvm {
+  namespace orc {
 
-    class KaleidoscopeJIT {
-    private:
+  class KaleidoscopeJIT {
+  private:
 
-      std::unique_ptr<TargetMachine> TM;
-      const DataLayout DL;
-      ObjectLinkingLayer<> ObjectLayer;
-      IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
+    std::unique_ptr<TargetMachine> TM;
+    const DataLayout DL;
+    ObjectLinkingLayer<> ObjectLayer;
+    IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
 
-    public:
+  public:
 
-      typedef decltype(CompileLayer)::ModuleSetHandleT ModuleHandleT;
+    typedef decltype(CompileLayer)::ModuleSetHandleT ModuleHandleT;
 
 Our class begins with four members: A TargetMachine, TM, which will be used
 to build our LLVM compiler instance; A DataLayout, DL, which will be used for
@@ -162,13 +162,13 @@ this.
 
 .. code-block:: c++
 
-      KaleidoscopeJIT()
-          : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-            CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
-        llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
-      }
+  KaleidoscopeJIT()
+      : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+    CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+  }
 
-      TargetMachine &getTargetMachine() { return *TM; }
+  TargetMachine &getTargetMachine() { return *TM; }
 
 Next up we have our class constructor. We begin by initializing TM using the
 EngineBuilder::selectTarget helper method, which constructs a TargetMachine for
@@ -186,26 +186,102 @@ available for execution.
 
 .. code-block:: c++
 
-    ModuleHandleT addModule(std::unique_ptr<Module> M) {
-      // We need a memory manager to allocate memory and resolve symbols for this
-      // new module. Create one that resolves symbols by looking back into the
-      // JIT.
-      auto Resolver = createLambdaResolver(
-          [&](const std::string &Name) {
-            if (auto Sym = CompileLayer.findSymbol(Name, false))
-              return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
-            return RuntimeDyld::SymbolInfo(nullptr);
-          },
-          [](const std::string &S) { return nullptr; });
-      std::vector<std::unique_ptr<Module>> Ms;
-      Ms.push_back(std::move(M));
-      return CompileLayer.addModuleSet(singletonSet(std::move(M)),
-                                       make_unique<SectionMemoryManager>(),
-                                       std::move(Resolver));
-    }
+  ModuleHandle addModule(std::unique_ptr<Module> M) {
+    // Build our symbol resolver:
+    // Lambda 1: Look back into the JIT itself to find symbols that are part of
+    //           the same "logical dylib".
+    // Lambda 2: Search for external symbols in the host process.
+    auto Resolver = createLambdaResolver(
+        [&](const std::string &Name) {
+          if (auto Sym = CompileLayer.findSymbol(Name, false))
+            return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+          return RuntimeDyld::SymbolInfo(nullptr);
+        },
+        [](const std::string &S) {
+          if (auto SymAddr =
+                RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+            return RuntimeDyld::SymbolInfo(SymAddr, JITSymbolFlags::Exported);
+          return RuntimeDyld::SymbolInfo(nullptr);
+        });
 
-*To be done: describe addModule -- createLambdaResolver, resolvers, memory
-managers, why 'module set' rather than a single module...*
+    // Build a singlton module set to hold our module.
+    std::vector<std::unique_ptr<Module>> Ms;
+    Ms.push_back(std::move(M));
+
+    // Add the set to the JIT with the resolver we created above and a newly
+    // created SectionMemoryManager.
+    return CompileLayer.addModuleSet(std::move(Ms),
+                                     make_unique<SectionMemoryManager>(),
+                                     std::move(Resolver));
+  }
+
+Now we come to the first of our central JIT API methods: addModule. This method
+is responsible for adding IR to the JIT and making it available for execution.
+In this initial implementation of our JIT we will make our modules "available
+for execution" by compiling them immediately as they are added to the JIT. In
+later chapters we will teach our JIT to be lazier and instead add the Modules
+to a "pending" list to be compiled if and when they are first executed.
+
+To add our module to the IRCompileLayer we need to supply two auxiliary
+objects: a memory manager and a symbol resolver. The memory manager will be
+responsible for managing the memory allocated to JIT'd machine code, applying
+memory protection permissions, and registering JIT'd exception handling tables
+(if the JIT'd code uses exceptions). In our simple use-case we can just supply
+an off-the-shelf SectionMemoryManager instance. The memory, exception handling
+tables, etc. will be released when we remove the module from the JIT again
+(using removeModule) or, if removeModule is never called, when the JIT class
+itself is destructed.
+
+The second auxiliary class, the symbol resolver, is more interesting for us. It
+exists to tell the JIT where to look when it encounters an *external symbol* in
+the module we are adding. External symbols are any symbol not defined within the
+module itself, including calls to functions outside the JIT and calls to
+functions defined in other modules that have already been added to the JIT. It
+may seem as though modules added to the JIT should "know about one another" by
+default, but since we would still have to supply a symbol resolver for
+references to code outside the JIT it turns out to re-use this one mechanism
+for all symbol resolution. This has the added benefit that the user has full
+control over the symbol resolution process. Should we search for definitions
+within the JIT first, then fall back on external definitions? Or should we
+prefer external definitions where available and only JIT code if we don't
+already have an available implementation? By using a single symbol resolution
+scheme we are free to choose whatever makes the most sense for any given use
+case.
+
+Building a symbol resolver is made especially easy by the
+*createLambdaResolver* function. This function takes two lambdas (actually
+they don't have to be lambdas, any object with a call operator will do) and
+returns a RuntimeDyld::SymbolResolver instance. The first lambda is used as
+the implementation of the resolver's findSymbolInLogicalDylib method. This
+method searches for symbol definitions that should be thought of as being part
+of the same "logical" dynamic library as this Module. If you are familiar with
+static linking: this means that findSymbolInLogicalDylib should expose symbols
+with common linkage and hidden visibility. If all this sounds foreign you can
+ignore the details and just remember that this is the first method that the
+linker will use to try to find a symbol definition. If the
+findSymbolInLogicalDylib method returns a null result then the linker will
+call the second symbol resolver method, called findSymbol. This searches for
+symbols that should be thought of as external to (but visibile from) the module
+and its logical dylib.
+
+In this tutorial we will use the following simple breakdown: All modules added
+to the JIT will behave as if they were linked into a single, ever-growing
+logical dylib. To implement this our first lambda (the one defining
+findSymbolInLogicalDylib) will just search for JIT'd code by calling the
+CompileLayer's findSymbol method. If we don't find a symbol in the JIT itself
+we'll fall back to our second lambda, which implements findSymbol. This will
+use the RTDyldMemoyrManager::getSymbolAddressInProcess method to search for
+the symbol within the program itself. If we can't find a symbol definition
+via either of these paths the JIT will refuse to accept our moudle, returning
+a "symbol not found" error.
+
+Now that we've built our symbol resolver we're ready to add our module to the
+JIT. We do this by calling the CompileLayer's addModuleSet method [3]_. Since
+we only have a single Module and addModuleSet expects a collection, we will
+create a vector of modules and add our module as the only member. Since we
+have already typedef'd our ModuleHandle type to be the same as the
+CompileLayer's handle type, we can return the handle from addModuleSet
+directly from our addModule method.
 
 .. code-block:: c++
 
@@ -229,8 +305,8 @@ like a mini-LLI), feed to next chapter.*
 Full Code Listing
 =================
 
-Here is the complete code listing for our running example, enhanced with
-mutable variables and var/in support. To build this example, use:
+Here is the complete code listing for our running example. To build this
+example, use:
 
 .. code-block:: bash
 
@@ -279,3 +355,7 @@ Here is the code:
        |   DynamicLibrary.h    | Provides the DynamicLibrary class, which      |
        |                       | makes symbols in the host process searchable. |
        +-----------------------+-----------------------------------------------+
+
+.. [3] ORC layers accept sets of Modules, rather than individual ones, so that
+       all Modules in the set could be co-located by the memory manager, though
+       this feature is not yet implemented.

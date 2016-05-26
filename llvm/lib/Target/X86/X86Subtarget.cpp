@@ -66,7 +66,7 @@ static bool shouldAssumeDSOLocal(Reloc::Model RM, const Triple &TT,
   if (RM == Reloc::Static)
     return true;
 
-  if (GV && (GV->hasInternalLinkage() || !GV->hasDefaultVisibility()))
+  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))
     return true;
 
   if (TT.isOSBinFormatELF()) {

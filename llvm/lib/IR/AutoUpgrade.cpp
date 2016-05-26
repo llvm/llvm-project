@@ -958,6 +958,37 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   return RetCode;
 }
 
+bool llvm::UpgradeModuleFlags(Module &M) {
+  const NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
+  if (!ModFlags)
+    return false;
+
+  bool HasObjCFlag = false, HasClassProperties = false;
+  for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
+    MDNode *Op = ModFlags->getOperand(I);
+    if (Op->getNumOperands() < 2)
+      continue;
+    MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
+    if (!ID)
+      continue;
+    if (ID->getString() == "Objective-C Image Info Version")
+      HasObjCFlag = true;
+    if (ID->getString() == "Objective-C Class Properties")
+      HasClassProperties = true;
+  }
+  // "Objective-C Class Properties" is recently added for Objective-C. We
+  // upgrade ObjC bitcodes to contain a "Objective-C Class Properties" module
+  // flag of value 0, so we can correclty report error when trying to link
+  // an ObjC bitcode without this module flag with an ObjC bitcode with this
+  // module flag.
+  if (HasObjCFlag && !HasClassProperties) {
+    M.addModuleFlag(llvm::Module::Error, "Objective-C Class Properties",
+                    (uint32_t)0);
+    return true;
+  }
+  return false;
+}
+
 static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)

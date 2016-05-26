@@ -1,4 +1,4 @@
-//===- StreamInterface.h - Base interface for a PDB stream ------*- C++ -*-===//
+//===- StreamInterface.h - Base interface for a stream of data --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_STREAMINTERFACE_H
-#define LLVM_DEBUGINFO_PDB_RAW_STREAMINTERFACE_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_STREAMINTERFACE_H
+#define LLVM_DEBUGINFO_CODEVIEW_STREAMINTERFACE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
-namespace pdb {
+namespace codeview {
 
 class StreamInterface {
 public:
@@ -29,7 +29,7 @@ public:
   virtual uint32_t getLength() const = 0;
 };
 
-} // end namespace pdb
+} // end namespace codeview
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_STREAMINTERFACE_H
+#endif // LLVM_DEBUGINFO_CODEVIEW_STREAMINTERFACE_H

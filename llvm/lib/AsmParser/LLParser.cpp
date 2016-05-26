@@ -212,6 +212,8 @@ bool LLParser::ValidateEndOfModule() {
 
   UpgradeDebugInfo(*M);
 
+  UpgradeModuleFlags(*M);
+
   if (!Slots)
     return false;
   // Initialize the slot mapping.

@@ -662,12 +662,12 @@ int main(int argc, char **argv, char * const *envp) {
     // Forward MCJIT's symbol resolution calls to the remote.
     static_cast<ForwardingMemoryManager*>(RTDyldMM)->setResolver(
       orc::createLambdaResolver(
+        [](const std::string &Name) { return nullptr; },
         [&](const std::string &Name) {
           if (auto Addr = ExitOnErr(R.getSymbolAddress(Name)))
 	    return RuntimeDyld::SymbolInfo(Addr, JITSymbolFlags::Exported);
           return RuntimeDyld::SymbolInfo(nullptr);
-        },
-        [](const std::string &Name) { return nullptr; }
+        }
       ));
 
     // Grab the target address of the JIT'd main function on the remote and call

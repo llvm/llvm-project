@@ -28,7 +28,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm> 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -55,18 +55,29 @@ public:
   TargetMachine &getTargetMachine() { return *TM; }
 
   ModuleHandle addModule(std::unique_ptr<Module> M) {
-    // We need a memory manager to allocate memory and resolve symbols for this
-    // new module. Create one that resolves symbols by looking back into the
-    // JIT.
+    // Build our symbol resolver:
+    // Lambda 1: Look back into the JIT itself to find symbols that are part of
+    //           the same "logical dylib".
+    // Lambda 2: Search for external symbols in the host process.
     auto Resolver = createLambdaResolver(
         [&](const std::string &Name) {
           if (auto Sym = CompileLayer.findSymbol(Name, false))
             return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
           return RuntimeDyld::SymbolInfo(nullptr);
         },
-        [](const std::string &S) { return nullptr; });
+        [](const std::string &Name) {
+          if (auto SymAddr =
+                RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+            return RuntimeDyld::SymbolInfo(SymAddr, JITSymbolFlags::Exported);
+          return RuntimeDyld::SymbolInfo(nullptr);
+        });
+
+    // Build a singlton module set to hold our module.
     std::vector<std::unique_ptr<Module>> Ms;
     Ms.push_back(std::move(M));
+
+    // Add the set to the JIT with the resolver we created above and a newly
+    // created SectionMemoryManager.
     return CompileLayer.addModuleSet(std::move(Ms),
                                      make_unique<SectionMemoryManager>(),
                                      std::move(Resolver));

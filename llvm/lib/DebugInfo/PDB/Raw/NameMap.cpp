@@ -9,15 +9,15 @@
 
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
 NameMap::NameMap() {}
 
-Error NameMap::load(StreamReader &Stream) {
+Error NameMap::load(codeview::StreamReader &Stream) {
 
   // This is some sort of weird string-set/hash table encoded in the stream.
   // It starts with the number of bytes in the table.

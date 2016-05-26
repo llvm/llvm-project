@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include <cstring>
 
 using namespace llvm;
-using namespace llvm::pdb;
+using namespace llvm::codeview;
 
 ByteStream::ByteStream() {}
 
@@ -51,7 +51,7 @@ Error ByteStream::initialize(StreamReader &Reader, uint32_t Length) {
 Error ByteStream::readBytes(uint32_t Offset,
                             MutableArrayRef<uint8_t> Buffer) const {
   if (Data.size() < Buffer.size() + Offset)
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
   ::memcpy(Buffer.data(), Data.data() + Offset, Buffer.size());
   return Error::success();
 }
@@ -59,7 +59,7 @@ Error ByteStream::readBytes(uint32_t Offset,
 Error ByteStream::getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
                               uint32_t Length) const {
   if (Data.size() < Length + Offset)
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
   Buffer = Data.slice(Offset, Length);
   return Error::success();
 }

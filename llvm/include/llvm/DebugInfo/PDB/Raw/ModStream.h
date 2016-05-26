@@ -11,8 +11,8 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MODSTREAM_H
 
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/Support/Error.h"
 
@@ -35,10 +35,10 @@ private:
 
   MappedBlockStream Stream;
 
-  ByteStream SymbolsSubstream;
-  ByteStream LinesSubstream;
-  ByteStream C13LinesSubstream;
-  ByteStream GlobalRefsSubstream;
+  codeview::ByteStream SymbolsSubstream;
+  codeview::ByteStream LinesSubstream;
+  codeview::ByteStream C13LinesSubstream;
+  codeview::ByteStream GlobalRefsSubstream;
 };
 }
 }

@@ -600,6 +600,35 @@ It will later use those recorded inputs during mutations.
 
 This mode can be combined with DataFlowSanitizer_ to achieve better sensitivity.
 
+Fuzzer-friendly build mode
+---------------------------
+Sometimes the code under test is not fuzzing-friendly. Examples:
+
+  - The target code uses a PRNG seeded e.g. by system time and
+    thus two consequent invocations may potentially execute different code paths
+    even if the end result will be the same. This will cause a fuzzer to treat
+    two similar inputs as significantly different and it will blow up the test corpus.
+    E.g. libxml uses ``rand()`` inside its hash table.
+  - The target code uses checksums to protect from invalid inputs.
+    E.g. png checks CRC for every chunk.
+
+In many cases it makes sense to build a special fuzzing-friendly build
+with certain fuzzing-unfriendly features disabled. We propose to use a common build macro
+for all such cases for consistency: ``FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION``.
+
+.. code-block:: c++
+
+  void MyInitPRNG() {
+  #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    // In fuzzing mode the behavior of the code should be deterministic.
+    srand(0);
+  #else
+    srand(time(0));
+  #endif
+  }
+
+
+
 AFL compatibility
 -----------------
 LibFuzzer can be used together with AFL_ on the same test corpus.

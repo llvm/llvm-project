@@ -457,22 +457,7 @@ public:
   /// location by looking at the preheader and header blocks. If it
   /// cannot find a terminating instruction with location information,
   /// it returns an unknown location.
-  DebugLoc getStartLoc() const {
-    BasicBlock *HeadBB;
-
-    // Try the pre-header first.
-    if ((HeadBB = getLoopPreheader()) != nullptr)
-      if (DebugLoc DL = HeadBB->getTerminator()->getDebugLoc())
-        return DL;
-
-    // If we have no pre-header or there are no instructions with debug
-    // info in it, try the header.
-    HeadBB = getHeader();
-    if (HeadBB)
-      return HeadBB->getTerminator()->getDebugLoc();
-
-    return DebugLoc();
-  }
+  DebugLoc getStartLoc() const;
 
   StringRef getName() const {
     if (BasicBlock *Header = getHeader())

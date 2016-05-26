@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -217,19 +218,19 @@ void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
                         /*IsStmt=*/false, DL->getFilename());
 }
 
+void CodeViewDebug::emitCodeViewMagicVersion() {
+  OS.EmitValueToAlignment(4);
+  OS.AddComment("Debug section magic");
+  OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
+}
+
 void CodeViewDebug::endModule() {
   if (FnDebugInfo.empty())
     return;
 
   emitTypeInformation();
 
-  // FIXME: For functions that are comdat, we should emit separate .debug$S
-  // sections that are comdat associative with the main function instead of
-  // having one big .debug$S section.
   assert(Asm != nullptr);
-  OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugSymbolsSection());
-  OS.AddComment("Debug section magic");
-  OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
 
   // The COFF .debug$S section consists of several subsections, each starting
   // with a 4-byte control code (e.g. 0xF1, 0xF2, etc) and then a 4-byte length
@@ -237,11 +238,15 @@ void CodeViewDebug::endModule() {
   // aligned.
 
   // Make a subsection for all the inlined subprograms.
-  emitInlineeFuncIdsAndLines();
+  emitInlineeLinesSubsection();
 
   // Emit per-function debug information.
   for (auto &P : FnDebugInfo)
     emitDebugInfoForFunction(P.first, P.second);
+
+  // Switch back to the generic .debug$S section after potentially processing
+  // comdat symbol sections.
+  switchToDebugSectionForSymbol(nullptr);
 
   // This subsection holds a file index to offset in string table table.
   OS.AddComment("File index to string table offset subsection");
@@ -275,9 +280,7 @@ void CodeViewDebug::emitTypeInformation() {
 
   // Start the .debug$T section with 0x4.
   OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
-  OS.AddComment("Debug section magic");
-  OS.EmitValueToAlignment(4);
-  OS.EmitIntValue(COFF::DEBUG_SECTION_MAGIC, 4);
+  emitCodeViewMagicVersion();
 
   TypeTable.ForEachRecord(
       [&](TypeIndex Index, const MemoryTypeTableBuilder::Record *R) {
@@ -298,9 +301,12 @@ void CodeViewDebug::emitTypeInformation() {
       });
 }
 
-void CodeViewDebug::emitInlineeFuncIdsAndLines() {
+void CodeViewDebug::emitInlineeLinesSubsection() {
   if (InlinedSubprograms.empty())
     return;
+
+  // Use the generic .debug$S section.
+  switchToDebugSectionForSymbol(nullptr);
 
   MCSymbol *InlineBegin = MMI->getContext().createTempSymbol(),
            *InlineEnd = MMI->getContext().createTempSymbol();
@@ -401,12 +407,35 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
   OS.EmitIntValue(SymbolKind::S_INLINESITE_END, 2); // RecordKind
 }
 
+void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
+  // If we have a symbol, it may be in a section that is COMDAT. If so, find the
+  // comdat key. A section may be comdat because of -ffunction-sections or
+  // because it is comdat in the IR.
+  MCSectionCOFF *GVSec =
+      GVSym ? dyn_cast<MCSectionCOFF>(&GVSym->getSection()) : nullptr;
+  const MCSymbol *KeySym = GVSec ? GVSec->getCOMDATSymbol() : nullptr;
+
+  MCSectionCOFF *DebugSec = cast<MCSectionCOFF>(
+      Asm->getObjFileLowering().getCOFFDebugSymbolsSection());
+  DebugSec = OS.getContext().getAssociativeCOFFSection(DebugSec, KeySym);
+
+  OS.SwitchSection(DebugSec);
+
+  // Emit the magic version number if this is the first time we've switched to
+  // this section.
+  if (ComdatDebugSections.insert(DebugSec).second)
+    emitCodeViewMagicVersion();
+}
+
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
                                              FunctionInfo &FI) {
   // For each function there is a separate subsection
   // which holds the PC to file:line table.
   const MCSymbol *Fn = Asm->getSymbol(GV);
   assert(Fn);
+
+  // Switch to the to a comdat section, if appropriate.
+  switchToDebugSectionForSymbol(Fn);
 
   StringRef FuncName;
   if (auto *SP = GV->getSubprogram())

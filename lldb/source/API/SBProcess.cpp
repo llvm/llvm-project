@@ -549,9 +549,11 @@ SBProcess::GetNumQueues ()
     if (process_sp)
     {
         Process::StopLocker stop_locker;
-
-        std::lock_guard<std::recursive_mutex> guard(process_sp->GetTarget().GetAPIMutex());
-        num_queues = process_sp->GetQueueList().GetSize();
+        if (stop_locker.TryLock(&process_sp->GetRunLock()))
+        {
+            std::lock_guard<std::recursive_mutex> guard(process_sp->GetTarget().GetAPIMutex());
+            num_queues = process_sp->GetQueueList().GetSize();
+        }
     }
 
     if (log)
@@ -572,9 +574,12 @@ SBProcess::GetQueueAtIndex (size_t index)
     if (process_sp)
     {
         Process::StopLocker stop_locker;
-        std::lock_guard<std::recursive_mutex> guard(process_sp->GetTarget().GetAPIMutex());
-        queue_sp = process_sp->GetQueueList().GetQueueAtIndex(index);
-        sb_queue.SetQueue (queue_sp);
+        if (stop_locker.TryLock(&process_sp->GetRunLock()))
+        {
+            std::lock_guard<std::recursive_mutex> guard(process_sp->GetTarget().GetAPIMutex());
+            queue_sp = process_sp->GetQueueList().GetQueueAtIndex(index);
+            sb_queue.SetQueue (queue_sp);
+        }
     }
 
     if (log)

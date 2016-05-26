@@ -2193,46 +2193,45 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
   for (unsigned i = 1, e = Idxs.size(); i != e;
        Prev = Ty, Ty = cast<CompositeType>(Ty)->getTypeAtIndex(Idxs[i]), ++i) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Idxs[i])) {
-      if (isa<ArrayType>(Ty) || isa<VectorType>(Ty))
-        if (CI->getSExtValue() > 0 &&
-            !isIndexInRangeOfSequentialType(cast<SequentialType>(Ty), CI)) {
-          if (isa<SequentialType>(Prev)) {
-            // It's out of range, but we can factor it into the prior
-            // dimension.
-            NewIdxs.resize(Idxs.size());
-            uint64_t NumElements = 0;
-            if (auto *ATy = dyn_cast<ArrayType>(Ty))
-              NumElements = ATy->getNumElements();
-            else
-              NumElements = cast<VectorType>(Ty)->getNumElements();
+      if (isa<ArrayType>(Ty) && CI->getSExtValue() > 0 &&
+          !isIndexInRangeOfSequentialType(cast<ArrayType>(Ty), CI)) {
+        if (isa<SequentialType>(Prev)) {
+          // It's out of range, but we can factor it into the prior
+          // dimension.
+          NewIdxs.resize(Idxs.size());
+          uint64_t NumElements = 0;
+          if (auto *ATy = dyn_cast<ArrayType>(Ty))
+            NumElements = ATy->getNumElements();
+          else
+            NumElements = cast<VectorType>(Ty)->getNumElements();
 
-            ConstantInt *Factor = ConstantInt::get(CI->getType(), NumElements);
-            NewIdxs[i] = ConstantExpr::getSRem(CI, Factor);
+          ConstantInt *Factor = ConstantInt::get(CI->getType(), NumElements);
+          NewIdxs[i] = ConstantExpr::getSRem(CI, Factor);
 
-            Constant *PrevIdx = cast<Constant>(Idxs[i-1]);
-            Constant *Div = ConstantExpr::getSDiv(CI, Factor);
+          Constant *PrevIdx = cast<Constant>(Idxs[i - 1]);
+          Constant *Div = ConstantExpr::getSDiv(CI, Factor);
 
-            unsigned CommonExtendedWidth =
-                std::max(PrevIdx->getType()->getIntegerBitWidth(),
-                         Div->getType()->getIntegerBitWidth());
-            CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
+          unsigned CommonExtendedWidth =
+              std::max(PrevIdx->getType()->getIntegerBitWidth(),
+                       Div->getType()->getIntegerBitWidth());
+          CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
 
-            // Before adding, extend both operands to i64 to avoid
-            // overflow trouble.
-            if (!PrevIdx->getType()->isIntegerTy(CommonExtendedWidth))
-              PrevIdx = ConstantExpr::getSExt(
-                  PrevIdx,
-                  Type::getIntNTy(Div->getContext(), CommonExtendedWidth));
-            if (!Div->getType()->isIntegerTy(CommonExtendedWidth))
-              Div = ConstantExpr::getSExt(
-                  Div, Type::getIntNTy(Div->getContext(), CommonExtendedWidth));
+          // Before adding, extend both operands to i64 to avoid
+          // overflow trouble.
+          if (!PrevIdx->getType()->isIntegerTy(CommonExtendedWidth))
+            PrevIdx = ConstantExpr::getSExt(
+                PrevIdx,
+                Type::getIntNTy(Div->getContext(), CommonExtendedWidth));
+          if (!Div->getType()->isIntegerTy(CommonExtendedWidth))
+            Div = ConstantExpr::getSExt(
+                Div, Type::getIntNTy(Div->getContext(), CommonExtendedWidth));
 
-            NewIdxs[i-1] = ConstantExpr::getAdd(PrevIdx, Div);
-          } else {
-            // It's out of range, but the prior dimension is a struct
-            // so we can't do anything about it.
-            Unknown = true;
-          }
+          NewIdxs[i - 1] = ConstantExpr::getAdd(PrevIdx, Div);
+        } else {
+          // It's out of range, but the prior dimension is a struct
+          // so we can't do anything about it.
+          Unknown = true;
+        }
         }
     } else {
       // We don't know if it's in range or not.

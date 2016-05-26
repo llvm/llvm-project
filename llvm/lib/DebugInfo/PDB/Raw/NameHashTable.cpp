@@ -10,9 +10,8 @@
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -78,7 +77,7 @@ static inline uint32_t HashStringV2(StringRef Str) {
 
 NameHashTable::NameHashTable() : Signature(0), HashVersion(0), NameCount(0) {}
 
-Error NameHashTable::load(StreamReader &Stream) {
+Error NameHashTable::load(codeview::StreamReader &Stream) {
   struct Header {
     support::ulittle32_t Signature;
     support::ulittle32_t HashVersion;

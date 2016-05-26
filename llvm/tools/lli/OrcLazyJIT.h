@@ -82,7 +82,7 @@ public:
     //   1) Search the JIT symbols.
     //   2) Check for C++ runtime overrides.
     //   3) Search the host process (LLI)'s symbol table.
-    std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver =
+    auto Resolver =
       orc::createLambdaResolver(
         [this](const std::string &Name) {
           if (auto Sym = CODLayer.findSymbol(Name, true))

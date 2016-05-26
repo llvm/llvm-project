@@ -38,10 +38,10 @@
 ; ASM:         testl   %esi, %esi
 ; ASM:         je      .LBB0_2
 ; ASM: # BB#1:                                 # %if.then
-; ASM:         #DEBUG_VALUE: c <- %EAX
-; ASM:         #DEBUG_VALUE: inlineinc:a <- %EAX
-; ASM:         #DEBUG_VALUE: a <- %EAX
-; ASM:         #DEBUG_VALUE: f:p <- %ESI
+; ASM-DAG:     #DEBUG_VALUE: c <- %EAX
+; ASM-DAG:     #DEBUG_VALUE: inlineinc:a <- %EAX
+; ASM-DAG:     #DEBUG_VALUE: a <- %EAX
+; ASM-DAG:     #DEBUG_VALUE: f:p <- %ESI
 ; ASM:         incl    %eax
 ; ASM: [[after_inc_eax:\.Ltmp.*]]:
 ; ASM:         #DEBUG_VALUE: inlineinc:b <- %EAX

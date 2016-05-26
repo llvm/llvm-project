@@ -39,6 +39,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <deque>
 #include <iostream>
 #include <memory>
 
@@ -360,7 +361,7 @@ std::string buildDWODescription(StringRef Name, StringRef DWPName, StringRef DWO
 }
 
 static Error handleCompressedSection(
-    SmallVector<SmallString<32>, 4> &UncompressedSections, StringRef &Name,
+    std::deque<SmallString<32>> &UncompressedSections, StringRef &Name,
     StringRef &Contents) {
   if (!Name.startswith("zdebug_"))
     return Error();
@@ -384,7 +385,7 @@ static Error handleSection(
     const MCSection *StrSection, const MCSection *StrOffsetSection,
     const MCSection *TypesSection, const MCSection *CUIndexSection,
     const MCSection *TUIndexSection, const SectionRef &Section, MCStreamer &Out,
-    SmallVector<SmallString<32>, 4> &UncompressedSections,
+    std::deque<SmallString<32>> &UncompressedSections,
     uint32_t (&ContributionOffsets)[8], UnitIndexEntry &CurEntry,
     StringRef &CurStrSection, StringRef &CurStrOffsetSection,
     std::vector<StringRef> &CurTypesSection, StringRef &InfoSection,
@@ -489,7 +490,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   SmallVector<OwningBinary<object::ObjectFile>, 128> Objects;
   Objects.reserve(Inputs.size());
 
-  SmallVector<SmallString<32>, 4> UncompressedSections;
+  std::deque<SmallString<32>> UncompressedSections;
 
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);

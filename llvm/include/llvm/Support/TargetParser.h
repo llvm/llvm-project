@@ -140,6 +140,60 @@ unsigned parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
 
 } // namespace ARM
+
+// FIXME:This should be made into class design,to avoid dupplication. 
+namespace AArch64 {
+
+// Arch extension modifiers for CPUs.
+enum ArchExtKind : unsigned {
+  AEK_INVALID = 0x0,
+  AEK_NONE = 0x1,
+  AEK_CRC = 0x2,
+  AEK_CRYPTO = 0x4,
+  AEK_FP = 0x8,
+  AEK_SIMD = 0x10,
+  AEK_FP16 = 0x20,
+  AEK_PROFILE = 0x40
+};
+
+StringRef getCanonicalArchName(StringRef Arch);
+
+// Information by ID
+StringRef getFPUName(unsigned FPUKind);
+unsigned getFPUVersion(unsigned FPUKind);
+unsigned getFPUNeonSupportLevel(unsigned FPUKind);
+unsigned getFPURestriction(unsigned FPUKind);
+
+// FIXME: These should be moved to TargetTuple once it exists
+bool getFPUFeatures(unsigned FPUKind, std::vector<const char *> &Features);
+bool getExtensionFeatures(unsigned Extensions,
+                                   std::vector<const char*> &Features);
+bool getArchFeatures(unsigned ArchKind, std::vector<const char *> &Features);
+
+StringRef getArchName(unsigned ArchKind);
+unsigned getArchAttr(unsigned ArchKind);
+StringRef getCPUAttr(unsigned ArchKind);
+StringRef getSubArch(unsigned ArchKind);
+StringRef getArchExtName(unsigned ArchExtKind);
+const char *getArchExtFeature(StringRef ArchExt);
+unsigned checkArchVersion(StringRef Arch);
+
+// Information by Name
+unsigned  getDefaultFPU(StringRef CPU, unsigned ArchKind);
+unsigned  getDefaultExtensions(StringRef CPU, unsigned ArchKind);
+StringRef getDefaultCPU(StringRef Arch);
+
+// Parser
+unsigned parseFPU(StringRef FPU);
+unsigned parseArch(StringRef Arch);
+unsigned parseArchExt(StringRef ArchExt);
+unsigned parseCPUArch(StringRef CPU);
+unsigned parseArchISA(StringRef Arch);
+unsigned parseArchEndian(StringRef Arch);
+unsigned parseArchProfile(StringRef Arch);
+unsigned parseArchVersion(StringRef Arch);
+
+} // namespace AArch64
 } // namespace llvm
 
 #endif

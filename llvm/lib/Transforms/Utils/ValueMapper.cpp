@@ -29,8 +29,6 @@ using namespace llvm;
 // Out of line method to get vtable etc for class.
 void ValueMapTypeRemapper::anchor() {}
 void ValueMaterializer::anchor() {}
-void ValueMaterializer::materializeInitFor(GlobalValue *New, GlobalValue *Old) {
-}
 
 namespace {
 
@@ -363,12 +361,8 @@ Value *Mapper::mapValue(const Value *V) {
 
   // If we have a materializer and it can materialize a value, use that.
   if (auto *Materializer = getMaterializer()) {
-    if (Value *NewV =
-            Materializer->materializeDeclFor(const_cast<Value *>(V))) {
+    if (Value *NewV = Materializer->materialize(const_cast<Value *>(V))) {
       getVM()[V] = NewV;
-      if (auto *NewGV = dyn_cast<GlobalValue>(NewV))
-        Materializer->materializeInitFor(
-            NewGV, cast<GlobalValue>(const_cast<Value *>(V)));
       return NewV;
     }
   }

@@ -5651,6 +5651,8 @@ std::error_code BitcodeReader::materializeModule() {
   UpgradedIntrinsics.clear();
 
   UpgradeDebugInfo(*TheModule);
+
+  UpgradeModuleFlags(*TheModule);
   return std::error_code();
 }
 

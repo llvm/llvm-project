@@ -62,9 +62,6 @@ public:
     setVarMap();
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
   bool runOnFunction(Function &) override;
 
 private:

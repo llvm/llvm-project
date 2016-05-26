@@ -12,21 +12,22 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
 
 namespace llvm {
-namespace pdb {
-
+namespace codeview {
 class StreamReader;
+}
+namespace pdb {
 
 class NameHashTable {
 public:
   NameHashTable();
 
-  Error load(StreamReader &Stream);
+  Error load(codeview::StreamReader &Stream);
 
   uint32_t getNameCount() const { return NameCount; }
   uint32_t getHashVersion() const { return HashVersion; }
@@ -38,7 +39,7 @@ public:
   ArrayRef<uint32_t> name_ids() const;
 
 private:
-  ByteStream NamesBuffer;
+  codeview::ByteStream NamesBuffer;
   std::vector<uint32_t> IDs;
   uint32_t Signature;
   uint32_t HashVersion;

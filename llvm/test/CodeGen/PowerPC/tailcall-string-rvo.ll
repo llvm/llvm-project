@@ -1,5 +1,13 @@
 ; RUN: llc -O2 < %s | FileCheck %s
 
+; The call to function TestBar should be a tail call, when in C++ the string
+; `ret` is RVO returned.
+; string TestFoo() {
+;   string ret = undef;
+;   TestBar(&ret);  // tail call optimized
+;   return ret;
+; }
+
 target triple = "powerpc64le-linux-gnu"
 
 %class.basic_string.11.42.73 = type { %"class.__gnu_cxx::__versa_string.10.41.72" }
@@ -16,11 +24,6 @@ bb:
   ret void
 }
 
-; string TestFoo() {
-;   string ret = undef;
-;   TestBar(&ret);  // tail call optimized
-;   return ret;
-; }
 define void @TestFoo(%class.basic_string.11.42.73* noalias sret %arg) {
 ; CHECK-LABEL: TestFoo:
 ; CHECK: #TC_RETURNd8 TestBar 0

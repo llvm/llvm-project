@@ -963,6 +963,8 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
 int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
+  Type *ScalarType = Val->getScalarType();
+
   if (Index != -1U) {
     // Legalize the type.
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Val);
@@ -976,11 +978,17 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     Index = Index % Width;
 
     // Floating point scalars are already located in index #0.
-    if (Val->getScalarType()->isFloatingPointTy() && Index == 0)
+    if (ScalarType->isFloatingPointTy() && Index == 0)
       return 0;
   }
 
-  return BaseT::getVectorInstrCost(Opcode, Val, Index);
+  // Add to the base cost if we know that the extracted element of a vector is
+  // destined to be moved to and used in the integer register file.
+  int RegisterFileMoveCost = 0;
+  if (Opcode == Instruction::ExtractElement && ScalarType->isPointerTy())
+    RegisterFileMoveCost = 1;
+
+  return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
 
 int X86TTIImpl::getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {

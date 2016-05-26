@@ -148,6 +148,46 @@ compilation, in host and device modes:
 Both clang and nvcc define ``__CUDACC__`` during CUDA compilation.  You can
 detect NVCC specifically by looking for ``__NVCC__``.
 
+Flags that control numerical code
+=================================
+
+If you're using GPUs, you probably care about making numerical code run fast.
+GPU hardware allows for more control over numerical operations than most CPUs,
+but this results in more compiler options for you to juggle.
+
+Flags you may wish to tweak include:
+
+* ``-ffp-contract={on,off,fast}`` (defaults to ``fast`` on host and device when
+  compiling CUDA) Controls whether the compiler emits fused multiply-add
+  operations.
+
+  * ``off``: never emit fma operations, and prevent ptxas from fusing multiply
+    and add instructions.
+  * ``on``: fuse multiplies and adds within a single statement, but never
+    across statements (C11 semantics).  Prevent ptxas from fusing other
+    multiplies and adds.
+  * ``fast``: fuse multiplies and adds wherever profitable, even across
+    statements.  Doesn't prevent ptxas from fusing additional multiplies and
+    adds.
+
+  Fused multiply-add instructions can be much faster than the unfused
+  equivalents, but because the intermediate result in an fma is not rounded,
+  this flag can affect numerical code.
+
+* ``-fcuda-flush-denormals-to-zero`` (default: off) When this is enabled,
+  floating point operations may flush `denormal
+  <https://en.wikipedia.org/wiki/Denormal_number>`_ inputs and/or outputs to 0.
+  Operations on denormal numbers are often much slower than the same operations
+  on normal numbers.
+
+* ``-fcuda-approx-transcendentals`` (default: off) When this is enabled, the
+  compiler may emit calls to faster, approximate versions of transcendental
+  functions, instead of using the slower, fully IEEE-compliant versions.  For
+  example, this flag allows clang to emit the ptx ``sin.approx.f32``
+  instruction.
+
+  This is implied by ``-ffast-math``.
+
 Optimizations
 =============
 

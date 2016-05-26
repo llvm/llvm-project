@@ -193,17 +193,9 @@ public:
   public:
     virtual ~SymbolResolver() {}
 
-    /// This method returns the address of the specified function or variable.
-    /// It is used to resolve symbols during module linking.
-    ///
-    /// If the returned symbol's address is equal to ~0ULL then RuntimeDyld will
-    /// skip all relocations for that symbol, and the client will be responsible
-    /// for handling them manually.
-    virtual SymbolInfo findSymbol(const std::string &Name) = 0;
-
     /// This method returns the address of the specified symbol if it exists
     /// within the logical dynamic library represented by this
-    /// RTDyldMemoryManager. Unlike getSymbolAddress, queries through this
+    /// RTDyldMemoryManager. Unlike findSymbol, queries through this
     /// interface should return addresses for hidden symbols.
     ///
     /// This is of particular importance for the Orc JIT APIs, which support lazy
@@ -212,13 +204,17 @@ public:
     /// writing memory managers for MCJIT can usually ignore this method.
     ///
     /// This method will be queried by RuntimeDyld when checking for previous
-    /// definitions of common symbols. It will *not* be queried by default when
-    /// resolving external symbols (this minimises the link-time overhead for
-    /// MCJIT clients who don't care about Orc features). If you are writing a
-    /// RTDyldMemoryManager for Orc and want "external" symbol resolution to
-    /// search the logical dylib, you should override your getSymbolAddress
-    /// method call this method directly.
+    /// definitions of common symbols.
     virtual SymbolInfo findSymbolInLogicalDylib(const std::string &Name) = 0;
+
+    /// This method returns the address of the specified function or variable.
+    /// It is used to resolve symbols during module linking.
+    ///
+    /// If the returned symbol's address is equal to ~0ULL then RuntimeDyld will
+    /// skip all relocations for that symbol, and the client will be responsible
+    /// for handling them manually.
+    virtual SymbolInfo findSymbol(const std::string &Name) = 0;
+
   private:
     virtual void anchor();
   };

@@ -10,12 +10,11 @@
 #include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/PDB/Raw/ByteStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
-#include "llvm/DebugInfo/PDB/Raw/StreamReader.h"
 
 #include "llvm/Support/Endian.h"
 
@@ -29,7 +28,7 @@ SymbolStream::SymbolStream(PDBFile &File, uint32_t StreamNum)
 SymbolStream::~SymbolStream() {}
 
 Error SymbolStream::reload() {
-  StreamReader Reader(MappedStream);
+  codeview::StreamReader Reader(MappedStream);
 
   if (Stream.initialize(Reader, MappedStream.getLength()))
     return make_error<RawError>(raw_error_code::corrupt_file,

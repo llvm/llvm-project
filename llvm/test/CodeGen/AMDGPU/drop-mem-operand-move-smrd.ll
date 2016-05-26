@@ -25,7 +25,7 @@ for.body:                                         ; preds = %for.body, %entry
   %gptr0.phi = phi i32 addrspace(1)* [ %gep0, %entry ], [ %gep0.inc, %for.body ]
   %gptr1.phi = phi i32 addrspace(1)* [ %gep1, %entry ], [ %gep1.inc, %for.body ]
   %lptr0.phi = phi i32 addrspace(3)* [ %gep2, %entry ], [ %gep2.inc, %for.body ]
-  %lptr1 = getelementptr i32, i32 addrspace(3)* %lptr0.phi, i32 1
+  %lptr1 = getelementptr i32, i32 addrspace(3)* %lptr0.phi, i32 2
   %val0 = load i32, i32 addrspace(1)* %gep0
   store i32 %val0, i32 addrspace(3)* %lptr0.phi
   %val1 = load i32, i32 addrspace(1)* %gep1

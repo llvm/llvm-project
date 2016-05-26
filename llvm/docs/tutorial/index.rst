@@ -22,7 +22,7 @@ Kaleidoscope: Implementing a Language with LLVM in Objective Caml
 
    OCamlLangImpl*
 
-Kaleidoscope: Building an ORC-based JIT in LLVM
+Building a JIT in LLVM
 ===============================================
 
 .. toctree::

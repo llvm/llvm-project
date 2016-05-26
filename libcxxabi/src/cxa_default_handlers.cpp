@@ -88,7 +88,10 @@ static void default_unexpected_handler()
 //
 // Global variables that hold the pointers to the current handler
 //
-std::terminate_handler  __cxa_terminate_handler = default_terminate_handler;
+_LIBCXXABI_DATA_VIS
+std::terminate_handler __cxa_terminate_handler = default_terminate_handler;
+
+_LIBCXXABI_DATA_VIS
 std::unexpected_handler __cxa_unexpected_handler = default_unexpected_handler;
 
 // In the future these will become:

@@ -109,6 +109,20 @@ private:
     }
   };
 
+  // Represents the internal structure of a GEP, decomposed into a base pointer,
+  // constant offsets, and variable scaled indices.
+  struct DecomposedGEP {
+    // Base pointer of the GEP
+    const Value *Base;
+    // Total constant offset w.r.t the base from indexing into structs
+    int64_t StructOffset;
+    // Total constant offset w.r.t the base from indexing through
+    // pointers/arrays/vectors
+    int64_t OtherOffset;
+    // Scaled variable (non-constant) indices.
+    SmallVector<VariableGEPIndex, 4> VarIndices;
+  };
+
   /// Track alias queries to guard against recursion.
   typedef std::pair<MemoryLocation, MemoryLocation> LocPair;
   typedef SmallDenseMap<LocPair, AliasResult, 8> AliasCacheTy;
@@ -139,11 +153,13 @@ private:
                       const DataLayout &DL, unsigned Depth, AssumptionCache *AC,
                       DominatorTree *DT, bool &NSW, bool &NUW);
 
-  static const Value *
-  DecomposeGEPExpression(const Value *V, int64_t &BaseOffs,
-                         SmallVectorImpl<VariableGEPIndex> &VarIndices,
-                         bool &MaxLookupReached, const DataLayout &DL,
-                         AssumptionCache *AC, DominatorTree *DT);
+  static bool DecomposeGEPExpression(const Value *V, DecomposedGEP &Decomposed,
+      const DataLayout &DL, AssumptionCache *AC, DominatorTree *DT);
+
+  static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
+      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompAlloca,
+      uint64_t AllocaAccessSize);
+
   /// \brief A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
   ///
