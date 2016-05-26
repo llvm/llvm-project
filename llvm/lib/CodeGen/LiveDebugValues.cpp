@@ -297,11 +297,9 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   if (OpenRanges.empty())
     return false;
 
-  DEBUG(for (unsigned ID
-             : OpenRanges) {
+  DEBUG(for (unsigned ID : OpenRanges) {
     // Copy OpenRanges to OutLocs, if not already present.
-    dbgs() << "Add to OutLocs: ";
-    VarLocIDs[ID].dump();
+    dbgs() << "Add to OutLocs: "; VarLocIDs[ID].dump();
   });
   VarLocSet &VLS = OutLocs[CurMBB];
   Changed = VLS |= OpenRanges;
