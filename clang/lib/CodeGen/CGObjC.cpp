@@ -897,9 +897,8 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
 
     // Currently, all atomic accesses have to be through integer
     // types, so there's no point in trying to pick a prettier type.
-    llvm::Type *bitcastType =
-      llvm::Type::getIntNTy(getLLVMContext(),
-                            getContext().toBits(strategy.getIvarSize()));
+    uint64_t ivarSize = getContext().toBits(strategy.getIvarSize());
+    llvm::Type *bitcastType = llvm::Type::getIntNTy(getLLVMContext(), ivarSize);
     bitcastType = bitcastType->getPointerTo(); // addrspace 0 okay
 
     // Perform an atomic load.  This does not impose ordering constraints.
@@ -911,7 +910,16 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     // Store that value into the return address.  Doing this with a
     // bitcast is likely to produce some pretty ugly IR, but it's not
     // the *most* terrible thing in the world.
-    Builder.CreateStore(load, Builder.CreateBitCast(ReturnValue, bitcastType));
+    llvm::Type *retTy = ConvertType(getterMethod->getReturnType());
+    uint64_t retTySize = CGM.getDataLayout().getTypeSizeInBits(retTy);
+    llvm::Value *ivarVal = load;
+    if (ivarSize > retTySize) {
+      llvm::Type *newTy = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
+      ivarVal = Builder.CreateTrunc(load, newTy);
+      bitcastType = newTy->getPointerTo();
+    }
+    Builder.CreateStore(ivarVal,
+                        Builder.CreateBitCast(ReturnValue, bitcastType));
 
     // Make sure we don't do an autorelease.
     AutoreleaseResult = false;
@@ -1010,7 +1018,6 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
           AutoreleaseResult = false;
         }
 
-        value = Builder.CreateBitCast(value, ConvertType(propType));
         value = Builder.CreateBitCast(
             value, ConvertType(GetterMethodDecl->getReturnType()));
       }
