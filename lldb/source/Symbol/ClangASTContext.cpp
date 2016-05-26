@@ -8635,18 +8635,28 @@ ClangASTContext::CompleteTagDeclarationDefinition (const CompilerType& type)
     clang::QualType qual_type(ClangUtil::GetQualType(type));
     if (!qual_type.isNull())
     {
-        clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-        
-        if (cxx_record_decl)
+        // Make sure we use the same methodology as ClangASTContext::StartTagDeclarationDefinition()
+        // as to how we start/end the definition. Previously we were calling 
+        const clang::TagType *tag_type = qual_type->getAs<clang::TagType>();
+        if (tag_type)
         {
-            if (!cxx_record_decl->isCompleteDefinition())
-                cxx_record_decl->completeDefinition();
-            cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
-            cxx_record_decl->setHasExternalLexicalStorage (false);
-            cxx_record_decl->setHasExternalVisibleStorage (false);
-            return true;
+            clang::TagDecl *tag_decl = tag_type->getDecl();
+            if (tag_decl)
+            {
+                clang::CXXRecordDecl *cxx_record_decl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tag_decl);
+                
+                if (cxx_record_decl)
+                {
+                    if (!cxx_record_decl->isCompleteDefinition())
+                        cxx_record_decl->completeDefinition();
+                    cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
+                    cxx_record_decl->setHasExternalLexicalStorage (false);
+                    cxx_record_decl->setHasExternalVisibleStorage (false);
+                    return true;
+                }
+            }
         }
-        
+
         const clang::EnumType *enutype = qual_type->getAs<clang::EnumType>();
         
         if (enutype)
