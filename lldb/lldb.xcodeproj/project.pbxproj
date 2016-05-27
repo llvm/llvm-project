@@ -861,6 +861,7 @@
 		9475C18E14E5F834001BFC6D /* SBTypeNameSpecifier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9475C18D14E5F834001BFC6D /* SBTypeNameSpecifier.cpp */; };
 		9475C18F14E5F858001BFC6D /* SBTypeNameSpecifier.h in Headers */ = {isa = PBXBuildFile; fileRef = 9475C18C14E5F826001BFC6D /* SBTypeNameSpecifier.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		947A1D641616476B0017C8D1 /* CommandObjectPlugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 947A1D621616476A0017C8D1 /* CommandObjectPlugin.cpp */; };
+		948B68F11CF9041D002D9401 /* FoundationValueTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948B68F01CF9041D002D9401 /* FoundationValueTypes.cpp */; };
 		948C86D11B97764D00F3CAC3 /* SwiftArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948C86BD1B97763200F3CAC3 /* SwiftArray.cpp */; };
 		948C86D21B97764D00F3CAC3 /* SwiftBasicTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948C86BF1B97763200F3CAC3 /* SwiftBasicTypes.cpp */; };
 		948C86D31B97764D00F3CAC3 /* SwiftDictionary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948C86C11B97763200F3CAC3 /* SwiftDictionary.cpp */; };
@@ -2787,6 +2788,8 @@
 		947A1D621616476A0017C8D1 /* CommandObjectPlugin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectPlugin.cpp; path = source/Commands/CommandObjectPlugin.cpp; sourceTree = "<group>"; };
 		947A1D631616476A0017C8D1 /* CommandObjectPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectPlugin.h; path = source/Commands/CommandObjectPlugin.h; sourceTree = "<group>"; };
 		9481FE6B1B5F2D9200DED357 /* Either.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Either.h; path = include/lldb/Utility/Either.h; sourceTree = "<group>"; };
+		948B68EF1CF90410002D9401 /* FoundationValueTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FoundationValueTypes.h; path = Language/Swift/FoundationValueTypes.h; sourceTree = "<group>"; };
+		948B68F01CF9041D002D9401 /* FoundationValueTypes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FoundationValueTypes.cpp; path = Language/Swift/FoundationValueTypes.cpp; sourceTree = "<group>"; };
 		948C86BD1B97763200F3CAC3 /* SwiftArray.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftArray.cpp; path = Language/Swift/SwiftArray.cpp; sourceTree = "<group>"; };
 		948C86BE1B97763200F3CAC3 /* SwiftArray.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftArray.h; path = Language/Swift/SwiftArray.h; sourceTree = "<group>"; };
 		948C86BF1B97763200F3CAC3 /* SwiftBasicTypes.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftBasicTypes.cpp; path = Language/Swift/SwiftBasicTypes.cpp; sourceTree = "<group>"; };
@@ -5924,6 +5927,8 @@
 		948C86BC1B97762700F3CAC3 /* Formatters */ = {
 			isa = PBXGroup;
 			children = (
+				948B68EF1CF90410002D9401 /* FoundationValueTypes.h */,
+				948B68F01CF9041D002D9401 /* FoundationValueTypes.cpp */,
 				940B80161BA9EECE008A39CB /* ObjCRuntimeSyntheticProvider.cpp */,
 				940B80171BA9EECE008A39CB /* ObjCRuntimeSyntheticProvider.h */,
 				948C86BD1B97763200F3CAC3 /* SwiftArray.cpp */,
@@ -6353,7 +6358,6 @@
 				6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
 				267F684B1CC02DED0086832B /* ABISysV_s390x.h in Headers */,
-				AF8AD6311BEC28A400150209 /* PlatformAppleWatchSimulator.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -7466,6 +7470,7 @@
 				26F006561B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp in Sources */,
 				26DB3E1C1379E7AD0080DC73 /* ABIMacOSX_i386.cpp in Sources */,
 				4C848E0818D2892900EC6DD0 /* SwiftASTContext.cpp in Sources */,
+				948B68F11CF9041D002D9401 /* FoundationValueTypes.cpp in Sources */,
 				942F52251BC44E780004C182 /* NSException.cpp in Sources */,
 				26DB3E1F1379E7AD0080DC73 /* ABISysV_x86_64.cpp in Sources */,
 				232CB61D191E00CD00EF39FC /* SoftwareBreakpoint.cpp in Sources */,

@@ -21,6 +21,7 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Target/Target.h"
 
+#include "FoundationValueTypes.h"
 #include "SwiftArray.h"
 #include "SwiftBasicTypes.h"
 #include "SwiftDictionary.h"

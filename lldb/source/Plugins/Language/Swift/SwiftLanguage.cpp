@@ -329,6 +329,23 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
 #endif // LLDB_DISABLE_PYTHON
 }
 
+static void
+LoadFoundationValueTypesFormatters (lldb::TypeCategoryImplSP swift_category_sp)
+{
+    if (!swift_category_sp)
+        return;
+    
+    TypeSummaryImpl::Flags summary_flags;
+    summary_flags.SetCascades(true)
+    .SetDontShowChildren(false)
+    .SetSkipPointers(true)
+    .SetSkipReferences(false)
+    .SetHideItemNames(false)
+    .SetShowMembersOneLiner(false);
+    
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Date_SummaryProvider, "Foundation.Date summary provider", ConstString("Foundation.Date"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+}
+
 lldb::TypeCategoryImplSP
 SwiftLanguage::GetFormatters ()
 {
@@ -338,7 +355,10 @@ SwiftLanguage::GetFormatters ()
     std::call_once(g_initialize, [this] () -> void {
         DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
         if (g_category)
+        {
             LoadSwiftFormatters(g_category);
+            LoadFoundationValueTypesFormatters(g_category);
+        }
     });
     return g_category;
 }
