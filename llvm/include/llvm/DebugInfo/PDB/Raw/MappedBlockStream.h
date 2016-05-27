@@ -11,7 +11,9 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MAPPEDBLOCKSTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -27,14 +29,19 @@ public:
 
   Error readBytes(uint32_t Offset,
                   MutableArrayRef<uint8_t> Buffer) const override;
-  Error getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
-                    uint32_t Length) const override;
+  Error readBytes(uint32_t Offset, uint32_t Size,
+                  ArrayRef<uint8_t> &Buffer) const override;
 
   uint32_t getLength() const override { return StreamLength; }
 
 private:
+  bool tryReadContiguously(uint32_t Offset, uint32_t Size,
+                           ArrayRef<uint8_t> &Buffer) const;
+
   uint32_t StreamLength;
   std::vector<uint32_t> BlockList;
+  mutable llvm::BumpPtrAllocator Pool;
+  mutable DenseMap<uint32_t, uint8_t *> CacheMap;
   const PDBFile &Pdb;
 };
 

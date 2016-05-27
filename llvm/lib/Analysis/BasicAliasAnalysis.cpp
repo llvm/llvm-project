@@ -955,6 +955,11 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 // repsect to the alloca, that means the GEP can not alias pointer (b).
 // Note that the pointer based on the alloca may not be a GEP. For
 // example, it may be the alloca itself.
+// The same applies if (b) is based on a GlobalVariable. Note that just being
+// based on isIdentifiedObject() is not enough - we need an identified object
+// that does not permit access to negative offsets. For example, a negative
+// offset from a noalias argument or call can be inbounds w.r.t the actual
+// underlying object.
 //
 // For example, consider:
 //
@@ -977,19 +982,22 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
 // the highest %f1 can be is (%alloca + 3). This means %random can not be higher
 // than (%alloca - 1), and so is not inbounds, a contradiction.
 bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
-      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompAlloca, 
-      uint64_t AllocaAccessSize) {
-  // If the alloca access size is unknown, or the GEP isn't inbounds, bail.
-  if (AllocaAccessSize == MemoryLocation::UnknownSize || !GEPOp->isInBounds())
+      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject, 
+      uint64_t ObjectAccessSize) {
+  // If the object access size is unknown, or the GEP isn't inbounds, bail.
+  if (ObjectAccessSize == MemoryLocation::UnknownSize || !GEPOp->isInBounds())
     return false;
 
-  // We need an alloca, and want to know the offset of the pointer
-  // from the alloca precisely, so no variable indices are allowed.
-  if (!isa<AllocaInst>(DecompAlloca.Base) || !DecompAlloca.VarIndices.empty())
+  // We need the object to be an alloca or a globalvariable, and want to know
+  // the offset of the pointer from the object precisely, so no variable
+  // indices are allowed.
+  if (!(isa<AllocaInst>(DecompObject.Base) ||
+        isa<GlobalVariable>(DecompObject.Base)) ||
+      !DecompObject.VarIndices.empty())
     return false;
 
-  int64_t AllocaBaseOffset = DecompAlloca.StructOffset +
-                             DecompAlloca.OtherOffset;
+  int64_t ObjectBaseOffset = DecompObject.StructOffset +
+                             DecompObject.OtherOffset;
 
   // If the GEP has no variable indices, we know the precise offset
   // from the base, then use it. If the GEP has variable indices, we're in
@@ -1000,7 +1008,7 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
   if (DecompGEP.VarIndices.empty())
     GEPBaseOffset += DecompGEP.OtherOffset;
 
-  return (GEPBaseOffset >= AllocaBaseOffset + (int64_t)AllocaAccessSize);
+  return (GEPBaseOffset >= ObjectBaseOffset + (int64_t)ObjectAccessSize);
 }
 
 /// Provides a bunch of ad-hoc rules to disambiguate a GEP instruction against

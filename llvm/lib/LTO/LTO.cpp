@@ -60,23 +60,14 @@ static void thinLTOResolveWeakForLinkerGUID(
     // but turned into a weak, while the others will drop it when possible.
     if (!HasMultipleCopies) {
       // Exported Linkonce needs to be promoted to not be discarded.
-      // FIXME: This should handle LinkOnceAny as well, but that should be a
-      // follow-on to the NFC restructuring:
-      // if (GlobalValue::isLinkOnceLinkage(OriginalLinkage) &&
-      //     isExported(S->modulePath(), GUID))
-      //   S->setLinkage(GlobalValue::getWeakLinkage(
-      //       GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
-      if (GlobalValue::isLinkOnceODRLinkage(OriginalLinkage) &&
+      if (GlobalValue::isLinkOnceLinkage(OriginalLinkage) &&
           isExported(S->modulePath(), GUID))
-        S->setLinkage(GlobalValue::WeakODRLinkage);
+        S->setLinkage(GlobalValue::getWeakLinkage(
+            GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
     } else if (isPrevailing(GUID, S.get())) {
-      // FIXME: This should handle LinkOnceAny as well, but that should be a
-      // follow-on to the NFC restructuring:
-      // if (GlobalValue::isLinkOnceLinkage(OriginalLinkage))
-      //   S->setLinkage(GlobalValue::getWeakLinkage(
-      //       GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
-      if (GlobalValue::isLinkOnceODRLinkage(OriginalLinkage))
-        S->setLinkage(GlobalValue::WeakODRLinkage);
+      if (GlobalValue::isLinkOnceLinkage(OriginalLinkage))
+        S->setLinkage(GlobalValue::getWeakLinkage(
+            GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
     }
     // Alias can't be turned into available_externally.
     else if (!isa<AliasSummary>(S.get()) &&

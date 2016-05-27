@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/Support/Error.h"
@@ -36,9 +37,9 @@ private:
   MappedBlockStream Stream;
 
   codeview::ByteStream SymbolsSubstream;
-  codeview::ByteStream LinesSubstream;
-  codeview::ByteStream C13LinesSubstream;
-  codeview::ByteStream GlobalRefsSubstream;
+  codeview::StreamRef LinesSubstream;
+  codeview::StreamRef C13LinesSubstream;
+  codeview::StreamRef GlobalRefsSubstream;
 };
 }
 }

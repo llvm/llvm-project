@@ -787,6 +787,8 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
   DEBUG(dbgs() << '\n');
 #endif
 
+  BitVector RegAliases(TRI->getNumRegs());
+
   // Attempt to break anti-dependence edges. Walk the instructions
   // from the bottom up, tracking information about liveness as we go
   // to help determine which registers are available.
@@ -895,6 +897,29 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
               AntiDepReg = 0;
               break;
             }
+          }
+
+          if (AntiDepReg == 0) continue;
+
+          // If the definition of the anti-dependency register does not start
+          // a new live range, bail out. This can happen if the anti-dep
+          // register is a sub-register of another register whose live range
+          // spans over PathSU. In such case, PathSU defines only a part of
+          // the larger register.
+          RegAliases.reset();
+          for (MCRegAliasIterator AI(AntiDepReg, TRI, true); AI.isValid(); ++AI)
+            RegAliases.set(*AI);
+          for (SDep S : PathSU->Succs) {
+            SDep::Kind K = S.getKind();
+            if (K != SDep::Data && K != SDep::Output && K != SDep::Anti)
+              continue;
+            unsigned R = S.getReg();
+            if (!RegAliases[R])
+              continue;
+            if (R == AntiDepReg || TRI->isSubRegister(AntiDepReg, R))
+              continue;
+            AntiDepReg = 0;
+            break;
           }
 
           if (AntiDepReg == 0) continue;

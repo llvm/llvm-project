@@ -24,9 +24,6 @@ elseif( CMAKE_HOST_UNIX )
   if( UNIX AND NOT (BEOS OR HAIKU) )
     set(system_libs ${system_libs} m)
   endif()
-  if(HAVE_LIBXAR)
-    list(APPEND system_libs ${XAR_LIB})
-  endif()
 endif( MSVC OR MINGW )
 
 add_llvm_library(LLVMSupport

@@ -886,9 +886,16 @@ namespace {
       Type *DestTy = C->getDestTy();
       if (!DestTy->isSingleValueType())
         return false;
-    } else if (isa<SelectInst>(I)) {
+    } else if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
       if (!Config.VectorizeSelect)
         return false;
+      // We can vectorize a select if either all operands are scalars,
+      // or all operands are vectors. Trying to "widen" a select between
+      // vectors that has a scalar condition results in a malformed select.
+      // FIXME: We could probably be smarter about this by rewriting the select
+      // with different types instead.
+      return (SI->getCondition()->getType()->isVectorTy() == 
+              SI->getTrueValue()->getType()->isVectorTy());
     } else if (isa<CmpInst>(I)) {
       if (!Config.VectorizeCmp)
         return false;

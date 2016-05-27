@@ -359,7 +359,8 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val) c
   if (VGPR_MIN <= Val && Val <= VGPR_MAX) {
     return createRegOperand(getVgprClassId(Width), Val - VGPR_MIN);
   }
-  if (SGPR_MIN <= Val && Val <= SGPR_MAX) {
+  if (Val <= SGPR_MAX) {
+    assert(SGPR_MIN == 0); // "SGPR_MIN <= Val" is always true and causes compilation warning.
     return createSRegOperand(getSgprClassId(Width), Val - SGPR_MIN);
   }
   if (TTMP_MIN <= Val && Val <= TTMP_MAX) {

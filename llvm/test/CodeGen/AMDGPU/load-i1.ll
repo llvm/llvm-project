@@ -85,8 +85,8 @@ define void @global_sextload_i1_to_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}global_zextload_i1_to_i64:
-; SI: buffer_load_ubyte
-; SI: v_mov_b32_e32 {{v[0-9]+}}, 0
+; SI-DAG: buffer_load_ubyte
+; SI-DAG: v_mov_b32_e32 {{v[0-9]+}}, 0
 ; SI: buffer_store_dwordx2
 ; SI: s_endpgm
 define void @global_zextload_i1_to_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %in) nounwind {

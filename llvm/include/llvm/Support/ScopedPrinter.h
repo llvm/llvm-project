@@ -211,6 +211,19 @@ public:
     OS << "]\n";
   }
 
+  template <typename T, typename U>
+  void printList(StringRef Label, const T &List, const U &Printer) {
+    startLine() << Label << ": [";
+    bool Comma = false;
+    for (const auto &Item : List) {
+      if (Comma)
+        OS << ", ";
+      Printer(OS, Item);
+      Comma = true;
+    }
+    OS << "]\n";
+  }
+
   template <typename T> void printHexList(StringRef Label, const T &List) {
     startLine() << Label << ": [";
     bool Comma = false;

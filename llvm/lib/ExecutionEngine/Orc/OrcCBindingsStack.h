@@ -79,9 +79,6 @@ public:
 
   typedef unsigned ModuleHandleT;
 
-  static std::unique_ptr<CompileCallbackMgr> createCompileCallbackMgr(Triple T);
-  static IndirectStubsManagerBuilder createIndirectStubsMgrBuilder(Triple T);
-
   OrcCBindingsStack(TargetMachine &TM,
                     std::unique_ptr<CompileCallbackMgr> CCMgr,
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)

@@ -378,3 +378,88 @@ entry:
   %or = or i32 %and, %and1
   ret i32 %or
 }
+
+; CHECK-LABEL: @test1
+; CHECK: movz [[REG:w[0-9]+]], #5
+; CHECK: bfxil w0, [[REG]], #0, #4
+define i32 @test1(i32 %a) {
+  %1 = and i32 %a, -16 ; 0xfffffff0
+  %2 = or i32 %1, 5    ; 0x00000005
+  ret i32 %2
+}
+
+; CHECK-LABEL: @test2
+; CHECK: movz [[REG:w[0-9]+]], #10
+; CHECK: bfi w0, [[REG]], #22, #4
+define i32 @test2(i32 %a) {
+  %1 = and i32 %a, -62914561 ; 0xfc3fffff
+  %2 = or i32 %1, 41943040   ; 0x06400000
+  ret i32 %2
+}
+
+; CHECK-LABEL: @test3
+; CHECK: movz [[REG:x[0-9]+]], #5
+; CHECK: bfxil x0, [[REG]], #0, #3
+define i64 @test3(i64 %a) {
+  %1 = and i64 %a, -8 ; 0xfffffffffffffff8
+  %2 = or i64 %1, 5   ; 0x0000000000000005
+  ret i64 %2
+}
+
+; CHECK-LABEL: @test4
+; CHECK: movz [[REG:x[0-9]+]], #9
+; CHECK: bfi x0, [[REG]], #1, #7
+define i64 @test4(i64 %a) {
+  %1 = and i64 %a, -255 ; 0xffffffffffffff01
+  %2 = or i64 %1,  18   ; 0x0000000000000012
+  ret i64 %2
+}
+
+; Don't generate BFI/BFXIL if the immediate can be encoded in the ORR.
+; CHECK-LABEL: @test5
+; CHECK: and [[REG:w[0-9]+]], w0, #0xfffffff0
+; CHECK: orr w0, [[REG]], #0x6
+define i32 @test5(i32 %a) {
+  %1 = and i32 %a, 4294967280 ; 0xfffffff0
+  %2 = or i32 %1, 6           ; 0x00000006
+  ret i32 %2
+}
+
+; BFXIL will use the same constant as the ORR, so we don't care how the constant
+; is materialized (it's an equal cost either way).
+; CHECK-LABEL: @test6
+; CHECK: movz [[REG:w[0-9]+]], #11, lsl #16
+; CHECK: movk [[REG]], #23250
+; CHECK: bfxil w0, [[REG]], #0, #20
+define i32 @test6(i32 %a) {
+  %1 = and i32 %a, 4293918720 ; 0xfff00000
+  %2 = or i32 %1, 744146      ; 0x000b5ad2
+  ret i32 %2
+}
+
+; BFIs that require the same number of instruction to materialize the constant
+; as the original ORR are okay.
+; CHECK-LABEL: @test7
+; CHECK: movz [[REG:w[0-9]+]], #5, lsl #16
+; CHECK: movk [[REG]], #44393
+; CHECK: bfi w0, [[REG]], #1, #19
+define i32 @test7(i32 %a) {
+  %1 = and i32 %a, 4293918721 ; 0xfff00001
+  %2 = or i32 %1, 744146      ; 0x000b5ad2
+  ret i32 %2
+}
+
+; BFIs that require more instructions to materialize the constant as compared
+; to the original ORR are not okay.  In this case we would be replacing the
+; 'and' with a 'movk', which would decrease ILP while using the same number of
+; instructions.
+; CHECK: @test8
+; CHECK: movz [[REG2:x[0-9]+]], #36694, lsl #32
+; CHECK: and [[REG1:x[0-9]+]], x0, #0xff000000000000ff
+; CHECK: movk [[REG2]], #31059, lsl #16
+; CHECK: orr x0, [[REG1]], [[REG2]]
+define i64 @test8(i64 %a) {
+  %1 = and i64 %a, -72057594037927681 ; 0xff000000000000ff
+  %2 = or i64 %1, 157601565442048     ; 0x00008f5679530000
+  ret i64 %2
+}

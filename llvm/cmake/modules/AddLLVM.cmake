@@ -328,11 +328,13 @@ endfunction(set_windows_version_resource_properties)
 #     May specify header files for IDE generators.
 #   SONAME
 #     Should set SONAME link flags and create symlinks
+#   PLUGIN_TOOL
+#     The tool (i.e. cmake target) that this plugin will link against
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
     "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME"
-    "OUTPUT_NAME"
+    "OUTPUT_NAME;PLUGIN_TOOL"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
@@ -350,11 +352,15 @@ function(llvm_add_library name)
     if(ARG_SHARED OR ARG_STATIC)
       message(WARNING "MODULE with SHARED|STATIC doesn't make sense.")
     endif()
-    if(NOT LLVM_ENABLE_PLUGINS)
+    # Plugins that link against a tool are allowed even when plugins in general are not
+    if(NOT LLVM_ENABLE_PLUGINS AND NOT (ARG_PLUGIN_TOOL AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS))
       message(STATUS "${name} ignored -- Loadable modules not supported on this platform.")
       return()
     endif()
   else()
+    if(ARG_PLUGIN_TOOL)
+      message(WARNING "PLUGIN_TOOL without MODULE doesn't make sense.")
+    endif()
     if(BUILD_SHARED_LIBS AND NOT ARG_STATIC)
       set(ARG_SHARED TRUE)
     endif()
@@ -468,7 +474,10 @@ function(llvm_add_library name)
     endif()
   endif()
 
-  if (DEFINED LLVM_LINK_COMPONENTS OR DEFINED ARG_LINK_COMPONENTS)
+  if(ARG_MODULE AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS AND ARG_PLUGIN_TOOL AND (WIN32 OR CYGWIN))
+    # On DLL platforms symbols are imported from the tool by linking against it.
+    set(llvm_libs ${ARG_PLUGIN_TOOL})
+  elseif (DEFINED LLVM_LINK_COMPONENTS OR DEFINED ARG_LINK_COMPONENTS)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
@@ -673,7 +682,67 @@ macro(add_llvm_executable name)
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
-  if (NOT MSVC) # MSVC's linker doesn't support exporting all symbols.
+  if (LLVM_EXPORTED_SYMBOL_FILE)
+    # The symbol file should contain the symbols we want the executable to
+    # export
+    set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
+  elseif (LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
+    # Extract the symbols to export from the static libraries that the
+    # executable links against.
+    set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
+    set(exported_symbol_file ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${target}.symbols)
+    # We need to consider not just the direct link dependencies, but also the
+    # transitive link dependencies. Do this by starting with the set of direct
+    # dependencies, then the dependencies of those dependencies, and so on.
+    get_target_property(new_libs ${target} LINK_LIBRARIES)
+    set(link_libs ${new_libs})
+    while(NOT "${new_libs}" STREQUAL "")
+      foreach(lib ${new_libs})
+        get_target_property(lib_type ${lib} TYPE)
+        if("${lib_type}" STREQUAL "STATIC_LIBRARY")
+          list(APPEND static_libs ${lib})
+        else()
+          list(APPEND other_libs ${lib})
+        endif()
+        get_target_property(transitive_libs ${lib} INTERFACE_LINK_LIBRARIES)
+        foreach(transitive_lib ${transitive_libs})
+          list(FIND link_libs ${transitive_lib} idx)
+          if(TARGET ${transitive_lib} AND idx EQUAL -1)
+            list(APPEND newer_libs ${transitive_lib})
+            list(APPEND link_libs ${transitive_lib})
+          endif()
+        endforeach(transitive_lib)
+      endforeach(lib)
+      set(new_libs ${newer_libs})
+      set(newer_libs "")
+    endwhile()
+    if (MSVC)
+      set(mangling microsoft)
+    else()
+      set(mangling itanium)
+    endif()
+    add_custom_command(OUTPUT ${exported_symbol_file}
+                       COMMAND ${PYTHON_EXECUTABLE} ${LLVM_MAIN_SRC_DIR}/utils/extract_symbols.py --mangling=${mangling} ${static_libs} -o ${exported_symbol_file}
+                       WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
+                       DEPENDS ${LLVM_MAIN_SRC_DIR}/utils/extract_symbols.py ${static_libs}
+                       VERBATIM
+                       COMMENT "Generating export list for ${target}")
+    add_llvm_symbol_exports( ${target} ${exported_symbol_file} )
+    # If something links against this executable then we want a
+    # transitive link against only the libraries whose symbols
+    # we aren't exporting.
+    set_target_properties(${target} PROPERTIES INTERFACE_LINK_LIBRARIES "${other_libs}")
+    # The default import library suffix that cmake uses for cygwin/mingw is
+    # ".dll.a", but for clang.exe that causes a collision with libclang.dll,
+    # where the import libraries of both get named libclang.dll.a. Use a suffix
+    # of ".exe.a" to avoid this.
+    if(CYGWIN OR MINGW)
+      set_target_properties(${target} PROPERTIES IMPORT_SUFFIX ".exe.a")
+    endif()
+  elseif(NOT (WIN32 OR CYGWIN))
+    # On Windows auto-exporting everything doesn't work because of the limit on
+    # the size of the exported symbol table, but on other platforms we can do
+    # it without any trouble.
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS 1)
     if (APPLE)
       set_property(TARGET ${target} APPEND_STRING PROPERTY

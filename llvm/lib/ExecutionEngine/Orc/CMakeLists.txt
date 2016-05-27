@@ -4,7 +4,6 @@ add_llvm_library(LLVMOrcJIT
   NullResolver.cpp
   OrcABISupport.cpp
   OrcCBindings.cpp
-  OrcCBindingsStack.cpp
   OrcError.cpp
   OrcMCJITReplacement.cpp
   OrcRemoteTargetRPCAPI.cpp

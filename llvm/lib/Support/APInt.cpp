@@ -480,12 +480,30 @@ APInt APInt::operator+(const APInt& RHS) const {
   return Result;
 }
 
+APInt APInt::operator+(uint64_t RHS) const {
+  if (isSingleWord())
+    return APInt(BitWidth, VAL + RHS);
+  APInt Result(*this);
+  add_1(Result.pVal, Result.pVal, getNumWords(), RHS);
+  Result.clearUnusedBits();
+  return Result;
+}
+
 APInt APInt::operator-(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord())
     return APInt(BitWidth, VAL - RHS.VAL);
   APInt Result(BitWidth, 0);
   sub(Result.pVal, this->pVal, RHS.pVal, getNumWords());
+  Result.clearUnusedBits();
+  return Result;
+}
+
+APInt APInt::operator-(uint64_t RHS) const {
+  if (isSingleWord())
+    return APInt(BitWidth, VAL - RHS);
+  APInt Result(*this);
+  sub_1(Result.pVal, getNumWords(), RHS);
   Result.clearUnusedBits();
   return Result;
 }
@@ -542,32 +560,16 @@ bool APInt::slt(const APInt& RHS) const {
     return lhsSext < rhsSext;
   }
 
-  APInt lhs(*this);
-  APInt rhs(RHS);
   bool lhsNeg = isNegative();
-  bool rhsNeg = rhs.isNegative();
-  if (lhsNeg) {
-    // Sign bit is set so perform two's complement to make it positive
-    lhs.flipAllBits();
-    ++lhs;
-  }
-  if (rhsNeg) {
-    // Sign bit is set so perform two's complement to make it positive
-    rhs.flipAllBits();
-    ++rhs;
-  }
+  bool rhsNeg = RHS.isNegative();
 
-  // Now we have unsigned values to compare so do the comparison if necessary
-  // based on the negativeness of the values.
-  if (lhsNeg)
-    if (rhsNeg)
-      return lhs.ugt(rhs);
-    else
-      return true;
-  else if (rhsNeg)
-    return false;
-  else
-    return lhs.ult(rhs);
+  // If the sign bits don't match, then (LHS < RHS) if LHS is negative
+  if (lhsNeg != rhsNeg)
+    return lhsNeg;
+
+  // Otherwise we can just use an unsigned comparision, because even negative
+  // numbers compare correctly this way if both have the same signed-ness.
+  return ult(RHS);
 }
 
 void APInt::setBit(unsigned bitPosition) {

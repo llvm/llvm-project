@@ -388,6 +388,34 @@ TEST(APIntTest, compareWithHalfInt64Max) {
   EXPECT_TRUE( a.sge(edgeM1));
 }
 
+TEST(APIntTest, compareLargeIntegers) {
+  // Make sure all the combinations of signed comparisons work with big ints.
+  auto One = APInt{128, static_cast<uint64_t>(1), true};
+  auto Two = APInt{128, static_cast<uint64_t>(2), true};
+  auto MinusOne = APInt{128, static_cast<uint64_t>(-1), true};
+  auto MinusTwo = APInt{128, static_cast<uint64_t>(-2), true};
+
+  EXPECT_TRUE(!One.slt(One));
+  EXPECT_TRUE(!Two.slt(One));
+  EXPECT_TRUE(MinusOne.slt(One));
+  EXPECT_TRUE(MinusTwo.slt(One));
+
+  EXPECT_TRUE(One.slt(Two));
+  EXPECT_TRUE(!Two.slt(Two));
+  EXPECT_TRUE(MinusOne.slt(Two));
+  EXPECT_TRUE(MinusTwo.slt(Two));
+
+  EXPECT_TRUE(!One.slt(MinusOne));
+  EXPECT_TRUE(!Two.slt(MinusOne));
+  EXPECT_TRUE(!MinusOne.slt(MinusOne));
+  EXPECT_TRUE(MinusTwo.slt(MinusOne));
+
+  EXPECT_TRUE(!One.slt(MinusTwo));
+  EXPECT_TRUE(!Two.slt(MinusTwo));
+  EXPECT_TRUE(!MinusOne.slt(MinusTwo));
+  EXPECT_TRUE(!MinusTwo.slt(MinusTwo));
+}
+
 
 // Tests different div/rem varaints using scheme (a * b + c) / a
 void testDiv(APInt a, APInt b, APInt c) {

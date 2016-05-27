@@ -135,14 +135,13 @@ First, you should create a subdirectory under ``lib/Target`` to hold all the
 files related to your target.  If your target is called "Dummy", create the
 directory ``lib/Target/Dummy``.
 
-In this new directory, create a ``Makefile``.  It is easiest to copy a
-``Makefile`` of another target and modify it.  It should at least contain the
-``LEVEL``, ``LIBRARYNAME`` and ``TARGET`` variables, and then include
-``$(LEVEL)/Makefile.common``.  The library can be named ``LLVMDummy`` (for
-example, see the MIPS target).  Alternatively, you can split the library into
-``LLVMDummyCodeGen`` and ``LLVMDummyAsmPrinter``, the latter of which should be
-implemented in a subdirectory below ``lib/Target/Dummy`` (for example, see the
-PowerPC target).
+In this new directory, create a ``CMakeLists.txt``.  It is easiest to copy a
+``CMakeLists.txt`` of another target and modify it.  It should at least contain
+the ``LLVM_TARGET_DEFINITIONS`` variable. The library can be named ``LLVMDummy``
+(for example, see the MIPS target).  Alternatively, you can split the library
+into ``LLVMDummyCodeGen`` and ``LLVMDummyAsmPrinter``, the latter of which
+should be implemented in a subdirectory below ``lib/Target/Dummy`` (for example,
+see the PowerPC target).
 
 Note that these two naming schemes are hardcoded into ``llvm-config``.  Using
 any other naming scheme will confuse ``llvm-config`` and produce a lot of
@@ -156,13 +155,12 @@ generator, you should do what all current machine backends do: create a
 subclass of ``LLVMTargetMachine``.  (To create a target from scratch, create a
 subclass of ``TargetMachine``.)
 
-To get LLVM to actually build and link your target, you need to add it to the
-``TARGETS_TO_BUILD`` variable.  To do this, you modify the configure script to
-know about your target when parsing the ``--enable-targets`` option.  Search
-the configure script for ``TARGETS_TO_BUILD``, add your target to the lists
-there (some creativity required), and then reconfigure.  Alternatively, you can
-change ``autoconf/configure.ac`` and regenerate configure by running
-``./autoconf/AutoRegen.sh``.
+To get LLVM to actually build and link your target, you need to run ``cmake``
+with ``-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=Dummy``. This will build your
+target without needing to add it to the list of all the targets.
+
+Once your target is stable, you can add it to the ``LLVM_ALL_TARGETS`` variable
+located in the main ``CMakeLists.txt``.
 
 Target Machine
 ==============

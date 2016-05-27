@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -20,6 +21,54 @@ namespace orc {
 
 void JITCompileCallbackManager::anchor() {}
 void IndirectStubsManager::anchor() {}
+
+std::unique_ptr<JITCompileCallbackManager>
+createLocalCompileCallbackManager(Triple T, TargetAddress ErrorHandlerAddress) {
+  switch (T.getArch()) {
+    default: return nullptr;
+
+    case Triple::x86: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
+      return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+    }
+
+    case Triple::x86_64: {
+      if ( T.getOS() == Triple::OSType::Win32 ) {
+        typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
+        return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+      } else {
+        typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
+        return llvm::make_unique<CCMgrT>(ErrorHandlerAddress);
+      }
+    }
+  }
+}
+
+std::function<std::unique_ptr<IndirectStubsManager>()>
+createLocalIndirectStubsManagerBuilder(Triple T) {
+  switch (T.getArch()) {
+    default: return nullptr;
+
+    case Triple::x86:
+      return [](){
+        return llvm::make_unique<
+                       orc::LocalIndirectStubsManager<orc::OrcI386>>();
+      };
+
+    case Triple::x86_64:
+      if (T.getOS() == Triple::OSType::Win32) {
+        return [](){
+          return llvm::make_unique<
+                     orc::LocalIndirectStubsManager<orc::OrcX86_64_Win32>>();
+        };
+      } else {
+        return [](){
+          return llvm::make_unique<
+                     orc::LocalIndirectStubsManager<orc::OrcX86_64_SysV>>();
+        };
+      }
+  }
+}
 
 Constant* createIRTypedAddress(FunctionType &FT, TargetAddress Addr) {
   Constant *AddrIntVal =

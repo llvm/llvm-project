@@ -1,7 +1,13 @@
-set(LIBFUZZER_FLAGS_BASE "${CMAKE_CXX_FLAGS_RELEASE}")
+set(LIBFUZZER_FLAGS_BASE "${CMAKE_CXX_FLAGS}")
 # Disable the coverage and sanitizer instrumentation for the fuzzer itself.
-set(CMAKE_CXX_FLAGS_RELEASE "${LIBFUZZER_FLAGS_BASE} -O2 -fno-sanitize=all -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters -Werror")
+set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fno-sanitize=all -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters -Werror")
 if( LLVM_USE_SANITIZE_COVERAGE )
+  if(NOT "${LLVM_USE_SANITIZER}" STREQUAL "Address")
+    message(FATAL_ERROR
+      "LibFuzzer and its tests require LLVM_USE_SANITIZER=Address and "
+      "LLVM_USE_SANITIZE_COVERAGE=YES to be set."
+      )
+  endif()
   add_library(LLVMFuzzerNoMainObjects OBJECT
     FuzzerCrossOver.cpp
     FuzzerTraceState.cpp

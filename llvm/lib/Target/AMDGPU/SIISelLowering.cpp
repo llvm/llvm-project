@@ -581,7 +581,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     DiagnosticInfoUnsupported NoGraphicsHSA(
         *Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
     DAG.getContext()->diagnose(NoGraphicsHSA);
-    return SDValue();
+    return DAG.getEntryNode();
   }
 
   SmallVector<ISD::InputArg, 16> Splits;

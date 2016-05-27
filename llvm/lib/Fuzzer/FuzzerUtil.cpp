@@ -164,9 +164,11 @@ bool ToASCII(uint8_t *Data, size_t Size) {
   return Changed;
 }
 
-bool IsASCII(const Unit &U) {
-  for (auto X : U)
-    if (!(isprint(X) || isspace(X))) return false;
+bool IsASCII(const Unit &U) { return IsASCII(U.data(), U.size()); }
+
+bool IsASCII(const uint8_t *Data, size_t Size) {
+  for (size_t i = 0; i < Size; i++)
+    if (!(isprint(Data[i]) || isspace(Data[i]))) return false;
   return true;
 }
 
@@ -248,13 +250,6 @@ void SleepSeconds(int Seconds) {
 }
 
 int GetPid() { return getpid(); }
-int SignalToMainThread() {
-#ifdef __linux__
-  return syscall(SYS_tgkill, GetPid(), GetPid(), SIGALRM);
-#else
-  return 0;
-#endif
-}
 
 std::string Base64(const Unit &U) {
   static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

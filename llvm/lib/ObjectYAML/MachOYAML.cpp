@@ -97,16 +97,28 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   IO.setContext(nullptr);
 }
 
-void MappingTraits<MachOYAML::LinkEditData>::mapping(IO &IO,
-                                               MachOYAML::LinkEditData &LinkEditData) {
+void MappingTraits<MachOYAML::LinkEditData>::mapping(
+    IO &IO, MachOYAML::LinkEditData &LinkEditData) {
   IO.mapOptional("RebaseOpcodes", LinkEditData.RebaseOpcodes);
+  IO.mapOptional("BindOpcodes", LinkEditData.BindOpcodes);
+  IO.mapOptional("WeakBindOpcodes", LinkEditData.WeakBindOpcodes);
+  IO.mapOptional("LazyBindOpcodes", LinkEditData.LazyBindOpcodes);
 }
 
-void MappingTraits<MachOYAML::RebaseOpcode>::mapping(IO &IO,
-                                               MachOYAML::RebaseOpcode &RebaseOpcode) {
+void MappingTraits<MachOYAML::RebaseOpcode>::mapping(
+    IO &IO, MachOYAML::RebaseOpcode &RebaseOpcode) {
   IO.mapRequired("Opcode", RebaseOpcode.Opcode);
   IO.mapRequired("Imm", RebaseOpcode.Imm);
   IO.mapOptional("ExtraData", RebaseOpcode.ExtraData);
+}
+
+void MappingTraits<MachOYAML::BindOpcode>::mapping(
+    IO &IO, MachOYAML::BindOpcode &BindOpcode) {
+  IO.mapRequired("Opcode", BindOpcode.Opcode);
+  IO.mapRequired("Imm", BindOpcode.Imm);
+  IO.mapOptional("ULEBExtraData", BindOpcode.ULEBExtraData);
+  IO.mapOptional("SLEBExtraData", BindOpcode.SLEBExtraData);
+  IO.mapOptional("Symbol", BindOpcode.Symbol);
 }
 
 template <typename StructType>

@@ -13,6 +13,7 @@
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
+#include "Utils/AMDGPUAsmUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -36,54 +37,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-
-// FIXME ODR: Move this to some common place for AsmParser and InstPrinter
-namespace llvm {
-namespace AMDGPU {
-namespace SendMsg {
-
-// This must be in sync with llvm::AMDGPU::SendMsg::Id enum members.
-static
-const char* const IdSymbolic[] = {
-  nullptr,
-  "MSG_INTERRUPT",
-  "MSG_GS",
-  "MSG_GS_DONE",
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  "MSG_SYSMSG"
-};
-
-// These two must be in sync with llvm::AMDGPU::SendMsg::Op enum members.
-static
-const char* const OpSysSymbolic[] = {
-  nullptr,
-  "SYSMSG_OP_ECC_ERR_INTERRUPT",
-  "SYSMSG_OP_REG_RD",
-  "SYSMSG_OP_HOST_TRAP_ACK",
-  "SYSMSG_OP_TTRACE_PC"
-};
-
-static
-const char* const OpGsSymbolic[] = {
-  "GS_OP_NOP",
-  "GS_OP_CUT",
-  "GS_OP_EMIT",
-  "GS_OP_EMIT_CUT"
-};
-
-} // namespace SendMsg
-} // namespace AMDGPU
-} // namespace llvm
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -637,7 +591,6 @@ public:
 
   bool parseCnt(int64_t &IntVal);
   OperandMatchResultTy parseSWaitCntOps(OperandVector &Operands);
-  bool parseHwregOperand(int64_t &HwRegCode, int64_t &Offset, int64_t &Width, bool &IsIdentifier);
   OperandMatchResultTy parseHwreg(OperandVector &Operands);
 
 private:
@@ -647,8 +600,8 @@ private:
     OperandInfoTy(int64_t Id_) : Id(Id_), IsSymbolic(false) { }
   };
 
-  bool parseSendMsg(OperandInfoTy &Msg, OperandInfoTy &Operation, int64_t &StreamId);
-
+  bool parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &Operation, int64_t &StreamId);
+  bool parseHwregConstruct(OperandInfoTy &HwReg, int64_t &Offset, int64_t &Width);
 public:
   OperandMatchResultTy parseOptionalOperand(OperandVector &Operands);
 
@@ -1669,7 +1622,9 @@ AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
-bool AMDGPUAsmParser::parseHwregOperand(int64_t &HwRegCode, int64_t &Offset, int64_t &Width, bool &IsIdentifier) {
+bool AMDGPUAsmParser::parseHwregConstruct(OperandInfoTy &HwReg, int64_t &Offset, int64_t &Width) {
+  using namespace llvm::AMDGPU::Hwreg;
+
   if (Parser.getTok().getString() != "hwreg")
     return true;
   Parser.Lex();
@@ -1679,22 +1634,21 @@ bool AMDGPUAsmParser::parseHwregOperand(int64_t &HwRegCode, int64_t &Offset, int
   Parser.Lex();
 
   if (getLexer().is(AsmToken::Identifier)) {
-    IsIdentifier = true;
-    HwRegCode = StringSwitch<unsigned>(Parser.getTok().getString())
-      .Case("HW_REG_MODE"     , 1)
-      .Case("HW_REG_STATUS"   , 2)
-      .Case("HW_REG_TRAPSTS"  , 3)
-      .Case("HW_REG_HW_ID"    , 4)
-      .Case("HW_REG_GPR_ALLOC", 5)
-      .Case("HW_REG_LDS_ALLOC", 6)
-      .Case("HW_REG_IB_STS"   , 7)
-      .Default(-1);
+    HwReg.IsSymbolic = true;
+    HwReg.Id = ID_UNKNOWN_;
+    const StringRef tok = Parser.getTok().getString();
+    for (int i = ID_SYMBOLIC_FIRST_; i < ID_SYMBOLIC_LAST_; ++i) {
+      if (tok == IdSymbolic[i]) {
+        HwReg.Id = i;
+        break;
+      }
+    }
     Parser.Lex();
   } else {
-    IsIdentifier = false;
+    HwReg.IsSymbolic = false;
     if (getLexer().isNot(AsmToken::Integer))
       return true;
-    if (getParser().parseAbsoluteExpression(HwRegCode))
+    if (getParser().parseAbsoluteExpression(HwReg.Id))
       return true;
   }
 
@@ -1731,6 +1685,8 @@ bool AMDGPUAsmParser::parseHwregOperand(int64_t &HwRegCode, int64_t &Offset, int
 
 AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
+  using namespace llvm::AMDGPU::Hwreg;
+
   int64_t Imm16Val = 0;
   SMLoc S = Parser.getTok().getLoc();
 
@@ -1739,8 +1695,8 @@ AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
     case AsmToken::Integer:
       // The operand can be an integer value.
       if (getParser().parseAbsoluteExpression(Imm16Val))
-        return MatchOperand_ParseFail;
-      if (!isInt<16>(Imm16Val) && !isUInt<16>(Imm16Val)) {
+        return MatchOperand_NoMatch;
+      if (Imm16Val < 0 || !isUInt<16>(Imm16Val)) {
         Error(S, "invalid immediate: only 16-bit values are legal");
         // Do not return error code, but create an imm operand anyway and proceed
         // to the next operand, if any. That avoids unneccessary error messages.
@@ -1748,26 +1704,22 @@ AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
       break;
 
     case AsmToken::Identifier: {
-        bool IsIdentifier = false;
-        int64_t HwRegCode = -1;
-        int64_t Offset = 0; // default
-        int64_t Width = 32; // default
-        if (parseHwregOperand(HwRegCode, Offset, Width, IsIdentifier))
+        OperandInfoTy HwReg(ID_UNKNOWN_);
+        int64_t Offset = OFFSET_DEFAULT_;
+        int64_t Width = WIDTH_M1_DEFAULT_ + 1;
+        if (parseHwregConstruct(HwReg, Offset, Width))
           return MatchOperand_ParseFail;
-        // HwRegCode (6) [5:0]
-        // Offset (5) [10:6]
-        // WidthMinusOne (5) [15:11]
-        if (HwRegCode < 0 || HwRegCode > 63) {
-          if (IsIdentifier)
+        if (HwReg.Id < 0 || !isUInt<ID_WIDTH_>(HwReg.Id)) {
+          if (HwReg.IsSymbolic)
             Error(S, "invalid symbolic name of hardware register");
           else
             Error(S, "invalid code of hardware register: only 6-bit values are legal");
         }
-        if (Offset < 0 || Offset > 31)
+        if (Offset < 0 || !isUInt<OFFSET_WIDTH_>(Offset))
           Error(S, "invalid bit offset: only 5-bit values are legal");
-        if (Width < 1 || Width > 32)
+        if ((Width-1) < 0 || !isUInt<WIDTH_M1_WIDTH_>(Width-1))
           Error(S, "invalid bitfield width: only values from 1 to 32 are legal");
-        Imm16Val = HwRegCode | (Offset << 6) | ((Width-1) << 11);
+        Imm16Val = (HwReg.Id << ID_SHIFT_) | (Offset << OFFSET_SHIFT_) | ((Width-1) << WIDTH_M1_SHIFT_);
       }
       break;
   }
@@ -1787,7 +1739,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultHwreg() const {
   return AMDGPUOperand::CreateImm(0, SMLoc(), AMDGPUOperand::ImmTyHwreg);
 }
 
-bool AMDGPUAsmParser::parseSendMsg(OperandInfoTy &Msg, OperandInfoTy &Operation, int64_t &StreamId) {
+bool AMDGPUAsmParser::parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &Operation, int64_t &StreamId) {
   using namespace llvm::AMDGPU::SendMsg;
 
   if (Parser.getTok().getString() != "sendmsg")
@@ -1844,7 +1796,7 @@ bool AMDGPUAsmParser::parseSendMsg(OperandInfoTy &Msg, OperandInfoTy &Operation,
     const char* const *S = (Msg.Id == ID_SYSMSG) ? OpSysSymbolic : OpGsSymbolic;
     const int F = (Msg.Id == ID_SYSMSG) ? OP_SYS_FIRST_ : OP_GS_FIRST_;
     const int L = (Msg.Id == ID_SYSMSG) ? OP_SYS_LAST_ : OP_GS_LAST_;
-    const std::string Tok = Parser.getTok().getString();
+    const StringRef Tok = Parser.getTok().getString();
     for (int i = F; i < L; ++i) {
       if (Tok == S[i]) {
         Operation.Id = i;
@@ -1897,7 +1849,7 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
     // The operand can be an integer value.
     if (getParser().parseAbsoluteExpression(Imm16Val))
       return MatchOperand_NoMatch;
-    if (!isInt<16>(Imm16Val) && !isUInt<16>(Imm16Val)) {
+    if (Imm16Val < 0 || !isUInt<16>(Imm16Val)) {
       Error(S, "invalid immediate: only 16-bit values are legal");
       // Do not return error code, but create an imm operand anyway and proceed
       // to the next operand, if any. That avoids unneccessary error messages.
@@ -1906,9 +1858,9 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
   case AsmToken::Identifier: {
       OperandInfoTy Msg(ID_UNKNOWN_);
       OperandInfoTy Operation(OP_UNKNOWN_);
-      int64_t StreamId = STREAM_ID_DEFAULT;
-      if (parseSendMsg(Msg, Operation, StreamId))
-        return MatchOperand_NoMatch;
+      int64_t StreamId = STREAM_ID_DEFAULT_;
+      if (parseSendMsgConstruct(Msg, Operation, StreamId))
+        return MatchOperand_ParseFail;
       do {
         // Validate and encode message ID.
         if (! ((ID_INTERRUPT <= Msg.Id && Msg.Id <= ID_GS_DONE)
@@ -1919,7 +1871,7 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
             Error(S, "invalid/unsupported code of message");
           break;
         }
-        Imm16Val = Msg.Id;
+        Imm16Val = (Msg.Id << ID_SHIFT_);
         // Validate and encode operation ID.
         if (Msg.Id == ID_GS || Msg.Id == ID_GS_DONE) {
           if (! (OP_GS_FIRST_ <= Operation.Id && Operation.Id < OP_GS_LAST_)) {

@@ -71,7 +71,7 @@ public:
     // Lambda 2: Search for external symbols in the host process.
     auto Resolver = createLambdaResolver(
         [&](const std::string &Name) {
-          if (auto Sym = CompileLayer.findSymbol(Name, false))
+          if (auto Sym = OptimizeLayer.findSymbol(Name, false))
             return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
           return RuntimeDyld::SymbolInfo(nullptr);
         },

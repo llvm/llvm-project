@@ -157,8 +157,8 @@ private:
       const DataLayout &DL, AssumptionCache *AC, DominatorTree *DT);
 
   static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
-      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompAlloca,
-      uint64_t AllocaAccessSize);
+      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
+      uint64_t ObjectAccessSize);
 
   /// \brief A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.

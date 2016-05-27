@@ -28,7 +28,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 ; USE: br i1 %cmp, label %if.then, label %if.end
 ; USE-SAME: !prof ![[BW_ENTRY:[0-9]+]]
-; USE: ![[BW_ENTRY]] = !{!"branch_weights", i32 2, i32 1}
+; USE-DAG: ![[BW_ENTRY]] = !{!"branch_weights", i32 2, i32 1}
 
 if.then:
 ; GEN: if.then:
@@ -42,3 +42,5 @@ if.end:
   %retv = phi i32 [ %add, %if.then ], [ %i, %entry ]
   ret i32 %retv
 }
+; USE-DAG: {{![0-9]+}} = !{i32 1, !"ProfileSummary", {{![0-9]+}}}
+; USE-DAG: {{![0-9]+}} = !{!"DetailedSummary", {{![0-9]+}}}

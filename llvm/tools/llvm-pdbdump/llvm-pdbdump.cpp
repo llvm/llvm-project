@@ -83,7 +83,7 @@ cl::list<std::string> InputFilenames(cl::Positional,
 cl::OptionCategory TypeCategory("Symbol Type Options");
 cl::OptionCategory FilterCategory("Filtering Options");
 cl::OptionCategory OtherOptions("Other Options");
-cl::OptionCategory NativeOtions("Native Options");
+cl::OptionCategory NativeOptions("Native Options");
 
 cl::opt<bool> Compilands("compilands", cl::desc("Display compilands"),
                          cl::cat(TypeCategory));
@@ -105,48 +105,52 @@ cl::opt<uint64_t> LoadAddress(
     cl::cat(OtherOptions));
 
 cl::opt<bool> DumpHeaders("raw-headers", cl::desc("dump PDB headers"),
-                          cl::cat(NativeOtions));
+                          cl::cat(NativeOptions));
 cl::opt<bool> DumpStreamBlocks("raw-stream-blocks",
                                cl::desc("dump PDB stream blocks"),
-                               cl::cat(NativeOtions));
+                               cl::cat(NativeOptions));
 cl::opt<bool> DumpStreamSummary("raw-stream-summary",
                                 cl::desc("dump summary of the PDB streams"),
-                                cl::cat(NativeOtions));
+                                cl::cat(NativeOptions));
 cl::opt<bool>
     DumpTpiRecords("raw-tpi-records",
                    cl::desc("dump CodeView type records from TPI stream"),
-                   cl::cat(NativeOtions));
+                   cl::cat(NativeOptions));
 cl::opt<bool> DumpTpiRecordBytes(
     "raw-tpi-record-bytes",
     cl::desc("dump CodeView type record raw bytes from TPI stream"),
-    cl::cat(NativeOtions));
+    cl::cat(NativeOptions));
 cl::opt<bool>
     DumpIpiRecords("raw-ipi-records",
                    cl::desc("dump CodeView type records from IPI stream"),
-                   cl::cat(NativeOtions));
+                   cl::cat(NativeOptions));
 cl::opt<bool> DumpIpiRecordBytes(
     "raw-ipi-record-bytes",
     cl::desc("dump CodeView type record raw bytes from IPI stream"),
-    cl::cat(NativeOtions));
+    cl::cat(NativeOptions));
 cl::opt<std::string> DumpStreamDataIdx("raw-stream",
                                        cl::desc("dump stream data"),
-                                       cl::cat(NativeOtions));
+                                       cl::cat(NativeOptions));
 cl::opt<std::string> DumpStreamDataName("raw-stream-name",
                                         cl::desc("dump stream data"),
-                                        cl::cat(NativeOtions));
+                                        cl::cat(NativeOptions));
 cl::opt<bool> DumpModules("raw-modules", cl::desc("dump compiland information"),
-                          cl::cat(NativeOtions));
+                          cl::cat(NativeOptions));
 cl::opt<bool> DumpModuleFiles("raw-module-files",
                               cl::desc("dump file information"),
-                              cl::cat(NativeOtions));
+                              cl::cat(NativeOptions));
 cl::opt<bool> DumpModuleSyms("raw-module-syms", cl::desc("dump module symbols"),
-                             cl::cat(NativeOtions));
+                             cl::cat(NativeOptions));
 cl::opt<bool> DumpPublics("raw-publics", cl::desc("dump Publics stream data"),
-                          cl::cat(NativeOtions));
+                          cl::cat(NativeOptions));
 cl::opt<bool>
     DumpSymRecordBytes("raw-sym-record-bytes",
                        cl::desc("dump CodeView symbol record raw bytes"),
-                       cl::cat(NativeOtions));
+                       cl::cat(NativeOptions));
+cl::opt<bool>
+    RawAll("raw-all",
+           cl::desc("Implies most other options in 'Native Options' category"),
+           cl::cat(NativeOptions));
 
 cl::list<std::string>
     ExcludeTypes("exclude-types",
@@ -250,7 +254,9 @@ static Error dumpStreamSummary(ScopedPrinter &P, PDBFile &File) {
     std::string Label("Stream ");
     Label += to_string(StreamIdx);
     std::string Value;
-    if (StreamIdx == StreamPDB)
+    if (StreamIdx == OldMSFDirectory)
+      Value = "Old MSF Directory";
+    else if (StreamIdx == StreamPDB)
       Value = "PDB Stream";
     else if (StreamIdx == StreamDBI)
       Value = "DBI Stream";
@@ -299,7 +305,7 @@ static Error dumpStreamSummary(ScopedPrinter &P, PDBFile &File) {
       auto NSIter = NamedStreams.find(StreamIdx);
       if (ModIter != ModStreams.end()) {
         Value = "Module \"";
-        Value += ModIter->second->Info.getModuleName();
+        Value += ModIter->second->Info.getModuleName().str();
         Value += "\"";
       } else if (NSIter != NamedStreams.end()) {
         Value = "Named Stream \"";
@@ -348,7 +354,7 @@ static Error dumpStreamData(ScopedPrinter &P, PDBFile &File) {
     ArrayRef<uint8_t> Data;
     uint32_t BytesToReadInBlock = std::min(
         R.bytesRemaining(), static_cast<uint32_t>(File.getBlockSize()));
-    if (auto EC = R.getArrayRef(Data, BytesToReadInBlock))
+    if (auto EC = R.readBytes(BytesToReadInBlock, Data))
       return EC;
     P.printBinaryBlock(
         "Data",
@@ -449,9 +455,9 @@ static Error dumpDbiStream(ScopedPrinter &P, PDBFile &File,
     ListScope L(P, "Modules");
     for (auto &Modi : DS.modules()) {
       DictScope DD(P);
-      P.printString("Name", Modi.Info.getModuleName());
+      P.printString("Name", Modi.Info.getModuleName().str());
       P.printNumber("Debug Stream Index", Modi.Info.getModuleStreamIndex());
-      P.printString("Object File Name", Modi.Info.getObjFileName());
+      P.printString("Object File Name", Modi.Info.getObjFileName().str());
       P.printNumber("Num Files", Modi.Info.getNumberOfFiles());
       P.printNumber("Source File Name Idx", Modi.Info.getSourceFileNameIndex());
       P.printNumber("Pdb File Name Idx", Modi.Info.getPdbFilePathNameIndex());
@@ -466,7 +472,7 @@ static Error dumpDbiStream(ScopedPrinter &P, PDBFile &File,
             to_string(Modi.SourceFiles.size()) + " Contributing Source Files";
         ListScope LL(P, FileListName);
         for (auto File : Modi.SourceFiles)
-          P.printString(File);
+          P.printString(File.str());
       }
       bool HasModuleDI =
           (Modi.Info.getModuleStreamIndex() < File.getNumStreams());
@@ -563,6 +569,11 @@ static Error dumpTpiStream(ScopedPrinter &P, PDBFile &File,
   return Error::success();
 }
 
+static void printSectionOffset(llvm::raw_ostream &OS,
+                               const SectionOffset &Off) {
+  OS << Off.Off << ", " << Off.Isect;
+}
+
 static Error dumpPublicsStream(ScopedPrinter &P, PDBFile &File,
                                codeview::CVTypeDumper &TD) {
   if (!opts::DumpPublics)
@@ -580,7 +591,8 @@ static Error dumpPublicsStream(ScopedPrinter &P, PDBFile &File,
   P.printList("Hash Buckets", Publics.getHashBuckets());
   P.printList("Address Map", Publics.getAddressMap());
   P.printList("Thunk Map", Publics.getThunkMap());
-  P.printList("Section Offsets", Publics.getSectionOffsets());
+  P.printList("Section Offsets", Publics.getSectionOffsets(),
+              printSectionOffset);
   ListScope L(P, "Symbols");
   codeview::CVSymbolDumper SD(P, TD, nullptr, false);
   for (auto S : Publics.getSymbols()) {
@@ -821,6 +833,18 @@ int main(int argc_, const char *argv_[]) {
     opts::Types = true;
     opts::Externals = true;
     opts::Lines = true;
+  }
+
+  if (opts::RawAll) {
+    opts::DumpHeaders = true;
+    opts::DumpModules = true;
+    opts::DumpModuleFiles = true;
+    opts::DumpModuleSyms = true;
+    opts::DumpPublics = true;
+    opts::DumpStreamSummary = true;
+    opts::DumpStreamBlocks = true;
+    opts::DumpTpiRecords = true;
+    opts::DumpIpiRecords = true;
   }
 
   // When adding filters for excluded compilands and types, we need to remember

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv60 -O2  < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv60 -O2 -disable-post-ra  < %s | FileCheck %s
 
 ; CHECK: q{{[0-3]}} = vand(v{{[0-9]*}},r{{[0-9]*}})
 ; CHECK: q{{[0-3]}} = vsetq(r{{[0-9]*}})

@@ -105,6 +105,9 @@ public:
   // compiler time and will be removed eventually anyway.
   bool enableMachineSchedDefaultSched() const override { return false; }
 
+  AntiDepBreakMode getAntiDepBreakMode() const override { return ANTIDEP_ALL; }
+  bool enablePostRAScheduler() const override { return true; }
+
   const std::string &getCPUString () const { return CPUString; }
 
   // Threshold for small data section

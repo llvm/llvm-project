@@ -11,6 +11,8 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 
 #include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
+#include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
@@ -62,15 +64,16 @@ private:
   std::vector<ModuleInfoEx> ModuleInfos;
   NameHashTable ECNames;
 
-  codeview::ByteStream ModInfoSubstream;
-  codeview::ByteStream SecContrSubstream;
-  codeview::ByteStream SecMapSubstream;
-  codeview::ByteStream FileInfoSubstream;
-  codeview::ByteStream TypeServerMapSubstream;
-  codeview::ByteStream ECSubstream;
-  codeview::ByteStream DbgHeader;
+  codeview::StreamRef ModInfoSubstream;
+  codeview::StreamRef SecContrSubstream;
+  codeview::StreamRef SecMapSubstream;
+  codeview::StreamRef FileInfoSubstream;
+  codeview::StreamRef TypeServerMapSubstream;
+  codeview::StreamRef ECSubstream;
 
-  std::unique_ptr<HeaderInfo> Header;
+  codeview::FixedStreamArray<support::ulittle16_t> DbgStreams;
+
+  const HeaderInfo *Header;
 };
 }
 }

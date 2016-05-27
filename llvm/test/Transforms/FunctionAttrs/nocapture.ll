@@ -210,3 +210,11 @@ define void @test_atomicrmw(i32* %p) {
   atomicrmw add i32* %p, i32 1 seq_cst
   ret void
 }
+
+; CHECK: define void @test_volatile(i32* %x)
+define void @test_volatile(i32* %x) {
+entry:
+  %gep = getelementptr i32, i32* %x, i64 1
+  store volatile i32 0, i32* %gep, align 4
+  ret void
+}

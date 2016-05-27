@@ -46,54 +46,6 @@ namespace {
                                cl::init(true), cl::Hidden);
 }
 
-std::unique_ptr<OrcLazyJIT::CompileCallbackMgr>
-OrcLazyJIT::createCompileCallbackMgr(Triple T) {
-  switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::x86: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
-      return llvm::make_unique<CCMgrT>(0);
-    }
-
-    case Triple::x86_64: {
-      if ( T.getOS() == Triple::OSType::Win32 ) {
-        typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
-        return llvm::make_unique<CCMgrT>(0);
-      } else {
-        typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
-        return llvm::make_unique<CCMgrT>(0);
-      }
-    }
-  }
-}
-
-OrcLazyJIT::IndirectStubsManagerBuilder
-OrcLazyJIT::createIndirectStubsMgrBuilder(Triple T) {
-  switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::x86:
-      return [](){
-        return llvm::make_unique<
-                       orc::LocalIndirectStubsManager<orc::OrcI386>>();
-      };
-
-    case Triple::x86_64:
-      if (T.getOS() == Triple::OSType::Win32) {
-        return [](){
-          return llvm::make_unique<
-                     orc::LocalIndirectStubsManager<orc::OrcX86_64_Win32>>();
-        };
-      } else {
-        return [](){
-          return llvm::make_unique<
-                     orc::LocalIndirectStubsManager<orc::OrcX86_64_SysV>>();
-        };
-      }
-  }
-}
-
 OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
 
   switch (OrcDumpKind) {
@@ -165,8 +117,8 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
   EngineBuilder EB;
   EB.setOptLevel(getOptLevel());
   auto TM = std::unique_ptr<TargetMachine>(EB.selectTarget());
-  auto CompileCallbackMgr =
-    OrcLazyJIT::createCompileCallbackMgr(Triple(TM->getTargetTriple()));
+  Triple T(TM->getTargetTriple());
+  auto CompileCallbackMgr = orc::createLocalCompileCallbackManager(T, 0);
 
   // If we couldn't build the factory function then there must not be a callback
   // manager for this target. Bail out.
@@ -176,8 +128,7 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
     return 1;
   }
 
-  auto IndirectStubsMgrBuilder =
-    OrcLazyJIT::createIndirectStubsMgrBuilder(Triple(TM->getTargetTriple()));
+  auto IndirectStubsMgrBuilder = orc::createLocalIndirectStubsManagerBuilder(T);
 
   // If we couldn't build a stubs-manager-builder for this target then bail out.
   if (!IndirectStubsMgrBuilder) {

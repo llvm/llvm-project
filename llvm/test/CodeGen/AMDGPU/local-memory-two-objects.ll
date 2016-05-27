@@ -32,9 +32,7 @@
 ; EG-NOT: LDS_READ_RET {{[*]*}} OQAP, T[[ADDRR]]
 ; SI: v_add_i32_e32 [[SIPTR:v[0-9]+]], vcc, 16, v{{[0-9]+}}
 ; SI: ds_read_b32 {{v[0-9]+}}, [[SIPTR]]
-; CI-DAG: ds_read_b32 {{v[0-9]+}}, [[ADDRR:v[0-9]+]] offset:16
-; CI-DAG: ds_read_b32 {{v[0-9]+}}, [[ADDRR]]
-
+; CI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset1:4
 define void @local_memory_two_objects(i32 addrspace(1)* %out) {
 entry:
   %x.i = call i32 @llvm.r600.read.tidig.x() #0

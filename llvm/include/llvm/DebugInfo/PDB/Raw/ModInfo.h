@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include <cstdint>
 #include <vector>
 
@@ -22,7 +23,8 @@ private:
   struct FileLayout;
 
 public:
-  ModInfo(const uint8_t *Bytes);
+  ModInfo(codeview::StreamRef Stream);
+  ModInfo(const ModInfo &Info);
   ~ModInfo();
 
   bool hasECInfo() const;
@@ -38,32 +40,26 @@ public:
   StringRef getModuleName() const;
   StringRef getObjFileName() const;
 
+  uint32_t getRecordLength() const;
+
 private:
+  StringRef ModuleName;
+  StringRef ObjFileName;
   const FileLayout *Layout;
 };
 
 struct ModuleInfoEx {
-  ModuleInfoEx(ModInfo Module) : Info(Module) {}
+  ModuleInfoEx(codeview::StreamRef Stream) : Info(Stream) {}
+  ModuleInfoEx(const ModuleInfoEx &Ex)
+      : Info(Ex.Info), SourceFiles(Ex.SourceFiles) {}
 
   ModInfo Info;
   std::vector<StringRef> SourceFiles;
 };
 
-class ModInfoIterator {
-public:
-  ModInfoIterator(const uint8_t *Stream);
-  ModInfoIterator(const ModInfoIterator &Other);
-
-  ModInfo operator*();
-  ModInfoIterator &operator++();
-  ModInfoIterator operator++(int);
-  bool operator==(const ModInfoIterator &Other);
-  bool operator!=(const ModInfoIterator &Other);
-  ModInfoIterator &operator=(const ModInfoIterator &Other);
-
-private:
-  const uint8_t *Bytes;
-};
+inline uint32_t ModInfoRecordLength(const codeview::StreamInterface &Stream) {
+  return ModInfo(Stream).getRecordLength();
+}
 
 } // end namespace pdb
 } // end namespace llvm

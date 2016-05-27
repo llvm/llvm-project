@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
+
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/Support/Endian.h"
 
@@ -16,6 +18,7 @@ using namespace llvm::pdb;
 using namespace llvm::support;
 
 namespace {
+
 struct SCBytes {
   ulittle16_t Section;
   char Padding1[2];
@@ -60,17 +63,29 @@ struct ModInfo::FileLayout {
                              // for now since it is unused.
   ulittle32_t SrcFileNameNI; // Name Index for src file name
   ulittle32_t PdbFilePathNI; // Name Index for path to compiler PDB
-  char VarInfo[1];           // Module name followed by Obj File Name
-
-  StringRef getModuleName() const { return StringRef(VarInfo); }
-
-  StringRef getObjectFileName() const {
-    return StringRef(getModuleName().end() + 1);
-  }
+                             // Null terminated Module name
+                             // Null terminated Obj File Name
 };
 
-ModInfo::ModInfo(const uint8_t *Bytes)
-    : Layout(reinterpret_cast<const FileLayout *>(Bytes)) {}
+ModInfo::ModInfo(codeview::StreamRef Stream) : Layout(nullptr) {
+  codeview::StreamReader Reader(Stream);
+  if (auto EC = Reader.readObject(Layout)) {
+    consumeError(std::move(EC));
+    return;
+  }
+  if (auto EC = Reader.readZeroString(ModuleName)) {
+    consumeError(std::move(EC));
+    return;
+  }
+  if (auto EC = Reader.readZeroString(ObjFileName)) {
+    consumeError(std::move(EC));
+    return;
+  }
+}
+
+ModInfo::ModInfo(const ModInfo &Info)
+    : ModuleName(Info.ModuleName), ObjFileName(Info.ObjFileName),
+      Layout(Info.Layout) {}
 
 ModInfo::~ModInfo() {}
 
@@ -100,44 +115,14 @@ uint32_t ModInfo::getPdbFilePathNameIndex() const {
   return Layout->PdbFilePathNI;
 }
 
-llvm::StringRef ModInfo::getModuleName() const {
-  return Layout->getModuleName();
-}
+StringRef ModInfo::getModuleName() const { return ModuleName; }
 
-llvm::StringRef ModInfo::getObjFileName() const {
-  return Layout->getObjectFileName();
-}
+StringRef ModInfo::getObjFileName() const { return ObjFileName; }
 
-ModInfoIterator::ModInfoIterator(const uint8_t *Stream) : Bytes(Stream) {}
-
-ModInfoIterator::ModInfoIterator(const ModInfoIterator &Other)
-    : Bytes(Other.Bytes) {}
-
-ModInfo ModInfoIterator::operator*() { return ModInfo(Bytes); }
-
-ModInfoIterator &ModInfoIterator::operator++() {
-  StringRef Obj = ModInfo(Bytes).getObjFileName();
-  Bytes = Obj.bytes_end() + 1;
-  Bytes = reinterpret_cast<const uint8_t *>(llvm::alignAddr(Bytes, 4));
-
-  return *this;
-}
-
-ModInfoIterator ModInfoIterator::operator++(int) {
-  ModInfoIterator Copy(*this);
-  ++(*this);
-  return Copy;
-}
-
-bool ModInfoIterator::operator==(const ModInfoIterator &Other) {
-  return Bytes == Other.Bytes;
-}
-
-bool ModInfoIterator::operator!=(const ModInfoIterator &Other) {
-  return !(*this == Other);
-}
-
-ModInfoIterator &ModInfoIterator::operator=(const ModInfoIterator &Other) {
-  Bytes = Other.Bytes;
-  return *this;
+uint32_t ModInfo::getRecordLength() const {
+  uint32_t M = ModuleName.str().size() + 1;
+  uint32_t O = ObjFileName.str().size() + 1;
+  uint32_t Size = sizeof(FileLayout) + M + O;
+  Size = llvm::alignTo(Size, 4);
+  return Size;
 }

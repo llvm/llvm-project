@@ -62,9 +62,6 @@ public:
       DtorRunner.runViaLayer(CODLayer);
   }
 
-  static std::unique_ptr<CompileCallbackMgr> createCompileCallbackMgr(Triple T);
-  static IndirectStubsManagerBuilder createIndirectStubsMgrBuilder(Triple T);
-
   ModuleHandleT addModule(std::unique_ptr<Module> M) {
     // Attach a data-layout if one isn't already present.
     if (M->getDataLayout().isDefault())

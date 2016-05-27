@@ -7,8 +7,8 @@
 
 ; FUNC-LABEL: {{^}}missing_store_reduced:
 ; SI: ds_read_b64
-; SI: buffer_store_dword
-; SI: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
+; SI-DAG: buffer_store_dword
+; SI-DAG: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
 ; SI: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
 ; SI: s_load_dword
 ; SI: s_nop 2

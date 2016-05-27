@@ -97,3 +97,41 @@ define i32 @test7(i32 %x) {
   %or6 = or i32 %shl3, %shr5
   ret i32 %or6
 }
+
+; CHECK-LABEL: @test8
+; CHECK: call i16 @llvm.bswap.i16(i16 %a)
+define i16 @test8(i16 %a) {
+entry:
+  %conv = zext i16 %a to i32
+  %shr = lshr i16 %a, 8
+  %shl = shl i32 %conv, 8
+  %conv1 = zext i16 %shr to i32
+  %or = or i32 %conv1, %shl
+  %conv2 = trunc i32 %or to i16
+  ret i16 %conv2
+}
+
+; CHECK-LABEL: @test9
+; CHECK: call i16 @llvm.bswap.i16(i16 %a)
+define i16 @test9(i16 %a) {
+entry:
+  %conv = zext i16 %a to i32
+  %shr = lshr i32 %conv, 8
+  %shl = shl i32 %conv, 8
+  %or = or i32 %shr, %shl
+  %conv2 = trunc i32 %or to i16
+  ret i16 %conv2
+}
+
+; CHECK-LABEL: @test10
+; CHECK: trunc i32 %a to i16
+; CHECK: call i16 @llvm.bswap.i16(i16 %trunc)
+define i16 @test10(i32 %a) {
+  %shr1 = lshr i32 %a, 8
+  %and1 = and i32 %shr1, 255
+  %and2 = shl i32 %a, 8
+  %shl1 = and i32 %and2, 65280
+  %or = or i32 %and1, %shl1
+  %conv = trunc i32 %or to i16
+  ret i16 %conv
+}

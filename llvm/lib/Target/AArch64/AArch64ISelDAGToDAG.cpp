@@ -1981,6 +1981,97 @@ static bool isShiftedMask(uint64_t Mask, EVT VT) {
   return isShiftedMask_64(Mask);
 }
 
+// Generate a BFI/BFXIL from 'or (and X, MaskImm), OrImm' iff the value being
+// inserted only sets known zero bits.
+static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
+  assert(N->getOpcode() == ISD::OR && "Expect a OR operation");
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return false;
+
+  unsigned BitWidth = VT.getSizeInBits();
+
+  uint64_t OrImm;
+  if (!isOpcWithIntImmediate(N, ISD::OR, OrImm))
+    return false;
+
+  // Skip this transformation if the ORR immediate can be encoded in the ORR.
+  // Otherwise, we'll trade an AND+ORR for ORR+BFI/BFXIL, which is most likely
+  // performance neutral.
+  if (AArch64_AM::isLogicalImmediate(OrImm, BitWidth))
+    return false;
+
+  uint64_t MaskImm;
+  SDValue And = N->getOperand(0);
+  // Must be a single use AND with an immediate operand.
+  if (!And.hasOneUse() ||
+      !isOpcWithIntImmediate(And.getNode(), ISD::AND, MaskImm))
+    return false;
+
+  // Compute the Known Zero for the AND as this allows us to catch more general
+  // cases than just looking for AND with imm.
+  APInt KnownZero, KnownOne;
+  CurDAG->computeKnownBits(And, KnownZero, KnownOne);
+
+  // Non-zero in the sense that they're not provably zero, which is the key
+  // point if we want to use this value.
+  uint64_t NotKnownZero = (~KnownZero).getZExtValue();
+
+  // The KnownZero mask must be a shifted mask (e.g., 1110..011, 11100..00).
+  if (!isShiftedMask(KnownZero.getZExtValue(), VT))
+    return false;
+
+  // The bits being inserted must only set those bits that are known to be zero.
+  if ((OrImm & NotKnownZero) != 0) {
+    // FIXME:  It's okay if the OrImm sets NotKnownZero bits to 1, but we don't
+    // currently handle this case.
+    return false;
+  }
+
+  // BFI/BFXIL dst, src, #lsb, #width.
+  int LSB = countTrailingOnes(NotKnownZero);
+  int Width = BitWidth - APInt(BitWidth, NotKnownZero).countPopulation();
+
+  // BFI/BFXIL is an alias of BFM, so translate to BFM operands.
+  unsigned ImmR = (BitWidth - LSB) % BitWidth;
+  unsigned ImmS = Width - 1;
+
+  // If we're creating a BFI instruction avoid cases where we need more
+  // instructions to materialize the BFI constant as compared to the original
+  // ORR.  A BFXIL will use the same constant as the original ORR, so the code
+  // should be no worse in this case.
+  bool IsBFI = LSB != 0;
+  uint64_t BFIImm = OrImm >> LSB;
+  if (IsBFI && !AArch64_AM::isLogicalImmediate(BFIImm, BitWidth)) {
+    // We have a BFI instruction and we know the constant can't be materialized
+    // with a ORR-immediate with the zero register.
+    unsigned OrChunks = 0, BFIChunks = 0;
+    for (unsigned Shift = 0; Shift < BitWidth; Shift += 16) {
+      if (((OrImm >> Shift) & 0xFFFF) != 0)
+        ++OrChunks;
+      if (((BFIImm >> Shift) & 0xFFFF) != 0)
+        ++BFIChunks;
+    }
+    if (BFIChunks > OrChunks)
+      return false;
+  }
+
+  // Materialize the constant to be inserted.
+  SDLoc DL(N);
+  unsigned MOVIOpc = VT == MVT::i32 ? AArch64::MOVi32imm : AArch64::MOVi64imm;
+  SDNode *MOVI = CurDAG->getMachineNode(
+      MOVIOpc, DL, VT, CurDAG->getTargetConstant(BFIImm, DL, VT));
+
+  // Create the BFI/BFXIL instruction.
+  SDValue Ops[] = {And.getOperand(0), SDValue(MOVI, 0),
+                   CurDAG->getTargetConstant(ImmR, DL, VT),
+                   CurDAG->getTargetConstant(ImmS, DL, VT)};
+  unsigned Opc = (VT == MVT::i32) ? AArch64::BFMWri : AArch64::BFMXri;
+  CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+  return true;
+}
+
 static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
                                       SelectionDAG *CurDAG) {
   assert(N->getOpcode() == ISD::OR && "Expect a OR operation");
@@ -2159,7 +2250,10 @@ bool AArch64DAGToDAGISel::tryBitfieldInsertOp(SDNode *N) {
     return true;
   }
 
-  return tryBitfieldInsertOpFromOr(N, NUsefulBits, CurDAG);
+  if (tryBitfieldInsertOpFromOr(N, NUsefulBits, CurDAG))
+    return true;
+
+  return tryBitfieldInsertOpFromOrAndImm(N, CurDAG);
 }
 
 /// SelectBitfieldInsertInZeroOp - Match a UBFIZ instruction that is the

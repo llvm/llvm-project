@@ -55,6 +55,7 @@ static cl::opt<bool> UseInferAddressSpaces(
              "NVPTXFavorNonGenericAddrSpaces"));
 
 namespace llvm {
+void initializeNVVMIntrRangePass(PassRegistry&);
 void initializeNVVMReflectPass(PassRegistry&);
 void initializeGenericToNVVMPass(PassRegistry&);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
@@ -75,6 +76,7 @@ extern "C" void LLVMInitializeNVPTXTarget() {
   // but it's very NVPTX-specific.
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeNVVMReflectPass(PR);
+  initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
@@ -176,6 +178,7 @@ TargetPassConfig *NVPTXTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void NVPTXTargetMachine::addEarlyAsPossiblePasses(PassManagerBase &PM) {
   PM.add(createNVVMReflectPass());
+  PM.add(createNVVMIntrRangePass(Subtarget.getSmVersion()));
 }
 
 TargetIRAnalysis NVPTXTargetMachine::getTargetIRAnalysis() {

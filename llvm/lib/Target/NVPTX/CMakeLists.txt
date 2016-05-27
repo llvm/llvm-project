@@ -32,6 +32,7 @@ set(NVPTXCodeGen_sources
   NVPTXTargetMachine.cpp
   NVPTXTargetTransformInfo.cpp
   NVPTXUtilities.cpp
+  NVVMIntrRange.cpp
   NVVMReflect.cpp
   )
 

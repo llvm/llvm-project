@@ -6,9 +6,9 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
@@ -73,7 +73,8 @@ struct DbiStream::HeaderInfo {
   ulittle32_t Reserved; // Pad to 64 bytes
 };
 
-DbiStream::DbiStream(PDBFile &File) : Pdb(File), Stream(StreamDBI, File) {
+DbiStream::DbiStream(PDBFile &File)
+    : Pdb(File), Stream(StreamDBI, File), Header(nullptr) {
   static_assert(sizeof(HeaderInfo) == 64, "Invalid HeaderInfo size!");
 }
 
@@ -82,12 +83,10 @@ DbiStream::~DbiStream() {}
 Error DbiStream::reload() {
   codeview::StreamReader Reader(Stream);
 
-  Header.reset(new HeaderInfo());
-
   if (Stream.getLength() < sizeof(HeaderInfo))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "DBI Stream does not contain a header.");
-  if (auto EC = Reader.readObject(Header.get()))
+  if (auto EC = Reader.readObject(Header))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "DBI Stream does not contain a header.");
 
@@ -137,30 +136,31 @@ Error DbiStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "DBI type server substream not aligned.");
 
-  if (auto EC = ModInfoSubstream.initialize(Reader, Header->ModiSubstreamSize))
+  if (auto EC =
+          Reader.readStreamRef(ModInfoSubstream, Header->ModiSubstreamSize))
     return EC;
 
   // Since each ModInfo in the stream is a variable length, we have to iterate
   // them to know how many there actually are.
-  auto Range =
-      llvm::make_range(ModInfoIterator(&ModInfoSubstream.data().front()),
-                       ModInfoIterator(&ModInfoSubstream.data().back() + 1));
-  for (auto Info : Range)
-    ModuleInfos.push_back(ModuleInfoEx(Info));
+  codeview::VarStreamArray ModInfoArray(ModInfoSubstream, ModInfoRecordLength);
+  for (auto Info : ModInfoArray) {
+    ModuleInfos.emplace_back(Info);
+  }
 
+  if (auto EC = Reader.readStreamRef(SecContrSubstream,
+                                     Header->SecContrSubstreamSize))
+    return EC;
+  if (auto EC = Reader.readStreamRef(SecMapSubstream, Header->SectionMapSize))
+    return EC;
+  if (auto EC = Reader.readStreamRef(FileInfoSubstream, Header->FileInfoSize))
+    return EC;
   if (auto EC =
-          SecContrSubstream.initialize(Reader, Header->SecContrSubstreamSize))
+          Reader.readStreamRef(TypeServerMapSubstream, Header->TypeServerSize))
     return EC;
-  if (auto EC = SecMapSubstream.initialize(Reader, Header->SectionMapSize))
+  if (auto EC = Reader.readStreamRef(ECSubstream, Header->ECSubstreamSize))
     return EC;
-  if (auto EC = FileInfoSubstream.initialize(Reader, Header->FileInfoSize))
-    return EC;
-  if (auto EC =
-          TypeServerMapSubstream.initialize(Reader, Header->TypeServerSize))
-    return EC;
-  if (auto EC = ECSubstream.initialize(Reader, Header->ECSubstreamSize))
-    return EC;
-  if (auto EC = DbgHeader.initialize(Reader, Header->OptionalDbgHdrSize))
+  if (auto EC = Reader.readArray(DbgStreams, Header->OptionalDbgHdrSize /
+                                                 sizeof(ulittle16_t)))
     return EC;
 
   if (auto EC = initializeFileInfo())
@@ -247,25 +247,30 @@ Error DbiStream::initializeFileInfo() {
   // with the caveat that `NumSourceFiles` cannot be trusted, so
   // it is computed by summing `ModFileCounts`.
   //
-  const uint8_t *Buf = &FileInfoSubstream.data().front();
-  auto FI = reinterpret_cast<const FileInfoSubstreamHeader *>(Buf);
-  Buf += sizeof(FileInfoSubstreamHeader);
+  const FileInfoSubstreamHeader *FH;
+  codeview::StreamReader FISR(FileInfoSubstream);
+  if (auto EC = FISR.readObject(FH))
+    return EC;
+
   // The number of modules in the stream should be the same as reported by
   // the FileInfoSubstreamHeader.
-  if (FI->NumModules != ModuleInfos.size())
+  if (FH->NumModules != ModuleInfos.size())
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "FileInfo substream count doesn't match DBI.");
+
+  codeview::FixedStreamArray<ulittle16_t> ModIndexArray;
+  codeview::FixedStreamArray<ulittle16_t> ModFileCountArray;
+  codeview::FixedStreamArray<little32_t> FileNameOffsets;
 
   // First is an array of `NumModules` module indices.  This is not used for the
   // same reason that `NumSourceFiles` is not used.  It's an array of uint16's,
   // but it's possible there are more than 64k source files, which would imply
   // more than 64k modules (e.g. object files) as well.  So we ignore this
   // field.
-  llvm::ArrayRef<ulittle16_t> ModIndexArray(
-      reinterpret_cast<const ulittle16_t *>(Buf), ModuleInfos.size());
-
-  llvm::ArrayRef<ulittle16_t> ModFileCountArray(ModIndexArray.end(),
-                                                ModuleInfos.size());
+  if (auto EC = FISR.readArray(ModIndexArray, ModuleInfos.size()))
+    return EC;
+  if (auto EC = FISR.readArray(ModFileCountArray, ModuleInfos.size()))
+    return EC;
 
   // Compute the real number of source files.
   uint32_t NumSourceFiles = 0;
@@ -280,11 +285,13 @@ Error DbiStream::initializeFileInfo() {
   // them in `ModuleInfoEx`.  The value written to and read from the file is
   // not used anyway, it is only there as a way to store the offsets for the
   // purposes of later accessing the names at runtime.
-  llvm::ArrayRef<little32_t> FileNameOffsets(
-      reinterpret_cast<const little32_t *>(ModFileCountArray.end()),
-      NumSourceFiles);
+  if (auto EC = FISR.readArray(FileNameOffsets, NumSourceFiles))
+    return EC;
 
-  const char *Names = reinterpret_cast<const char *>(FileNameOffsets.end());
+  codeview::StreamRef NamesBufferRef;
+  if (auto EC = FISR.readStreamRef(NamesBufferRef))
+    return EC;
+  codeview::StreamReader Names(NamesBufferRef);
 
   // We go through each ModuleInfo, determine the number N of source files for
   // that module, and then get the next N offsets from the Offsets array, using
@@ -295,8 +302,10 @@ Error DbiStream::initializeFileInfo() {
     uint32_t NumFiles = ModFileCountArray[I];
     ModuleInfos[I].SourceFiles.resize(NumFiles);
     for (size_t J = 0; J < NumFiles; ++J, ++NextFileIndex) {
-      uint32_t FileIndex = FileNameOffsets[NextFileIndex];
-      ModuleInfos[I].SourceFiles[J] = StringRef(Names + FileIndex);
+      uint32_t FileOffset = FileNameOffsets[NextFileIndex];
+      Names.setOffset(FileOffset);
+      if (auto EC = Names.readZeroString(ModuleInfos[I].SourceFiles[J]))
+        return EC;
     }
   }
 
@@ -304,13 +313,5 @@ Error DbiStream::initializeFileInfo() {
 }
 
 uint32_t DbiStream::getDebugStreamIndex(DbgHeaderType Type) const {
-  ArrayRef<uint8_t> DbgData;
-  if (auto EC = DbgHeader.getArrayRef(0, DbgData, DbgHeader.getLength())) {
-    consumeError(std::move(EC));
-    return uint32_t(-1);
-  }
-  ArrayRef<ulittle16_t> DebugStreams(
-      reinterpret_cast<const ulittle16_t *>(DbgData.data()),
-      DbgData.size() / sizeof(ulittle16_t));
-  return DebugStreams[static_cast<uint16_t>(Type)];
+  return DbgStreams[static_cast<uint16_t>(Type)];
 }

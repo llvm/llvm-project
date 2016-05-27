@@ -17,6 +17,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/TypeFinder.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 using namespace llvm;
 
@@ -399,7 +400,19 @@ class IRLinker {
   /// references.
   bool DoneLinkingBodies = false;
 
-  bool HasError = false;
+  /// The Error encountered during materialization. We use an Optional here to
+  /// avoid needing to manage an unconsumed success value.
+  Optional<Error> FoundError;
+  void setError(Error E) {
+    if (E)
+      FoundError = std::move(E);
+  }
+
+  /// Most of the errors produced by this module are inconvertible StringErrors.
+  /// This convenience function lets us return one of those more easily.
+  Error stringErr(const Twine &T) {
+    return make_error<StringError>(T, inconvertibleErrorCode());
+  }
 
   /// Entry point for mapping values and alternate context for mapping aliases.
   ValueMapper Mapper;
@@ -408,13 +421,6 @@ class IRLinker {
   /// Handles cloning of a global values from the source module into
   /// the destination module, including setting the attributes and visibility.
   GlobalValue *copyGlobalValueProto(const GlobalValue *SGV, bool ForDefinition);
-
-  /// Helper method for setting a message and returning an error code.
-  bool emitError(const Twine &Message) {
-    SrcM->getContext().diagnose(LinkDiagnosticInfo(DS_Error, Message));
-    HasError = true;
-    return true;
-  }
 
   void emitWarning(const Twine &Message) {
     SrcM->getContext().diagnose(LinkDiagnosticInfo(DS_Warning, Message));
@@ -444,8 +450,8 @@ class IRLinker {
 
   void computeTypeMapping();
 
-  Constant *linkAppendingVarProto(GlobalVariable *DstGV,
-                                  const GlobalVariable *SrcGV);
+  Expected<Constant *> linkAppendingVarProto(GlobalVariable *DstGV,
+                                             const GlobalVariable *SrcGV);
 
   /// Given the GlobaValue \p SGV in the source module, and the matching
   /// GlobalValue \p DGV (if any), return true if the linker will pull \p SGV
@@ -453,14 +459,14 @@ class IRLinker {
   ///
   /// Note this code may call the client-provided \p AddLazyFor.
   bool shouldLink(GlobalValue *DGV, GlobalValue &SGV);
-  Constant *linkGlobalValueProto(GlobalValue *GV, bool ForAlias);
+  Expected<Constant *> linkGlobalValueProto(GlobalValue *GV, bool ForAlias);
 
-  bool linkModuleFlagsMetadata();
+  Error linkModuleFlagsMetadata();
 
   void linkGlobalInit(GlobalVariable &Dst, GlobalVariable &Src);
-  bool linkFunctionBody(Function &Dst, Function &Src);
+  Error linkFunctionBody(Function &Dst, Function &Src);
   void linkAliasBody(GlobalAlias &Dst, GlobalAlias &Src);
-  bool linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src);
+  Error linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src);
 
   /// Functions that take care of cloning a specific global value type
   /// into the destination module.
@@ -487,7 +493,7 @@ public:
   }
   ~IRLinker() { SharedMDs = std::move(*ValueMap.getMDMap()); }
 
-  bool run();
+  Error run();
   Value *materialize(Value *V, bool ForAlias);
 };
 }
@@ -526,13 +532,17 @@ Value *IRLinker::materialize(Value *V, bool ForAlias) {
   if (!SGV)
     return nullptr;
 
-  Constant *NewProto = linkGlobalValueProto(SGV, ForAlias);
-  if (!NewProto)
-    return NewProto;
+  Expected<Constant *> NewProto = linkGlobalValueProto(SGV, ForAlias);
+  if (!NewProto) {
+    setError(NewProto.takeError());
+    return nullptr;
+  }
+  if (!*NewProto)
+    return nullptr;
 
-  GlobalValue *New = dyn_cast<GlobalValue>(NewProto);
+  GlobalValue *New = dyn_cast<GlobalValue>(*NewProto);
   if (!New)
-    return NewProto;
+    return *NewProto;
 
   // If we already created the body, just return.
   if (auto *F = dyn_cast<Function>(New)) {
@@ -559,7 +569,7 @@ Value *IRLinker::materialize(Value *V, bool ForAlias) {
     return New;
 
   if (ForAlias || shouldLink(New, *SGV))
-    linkGlobalValueBody(*New, *SGV);
+    setError(linkGlobalValueBody(*New, *SGV));
 
   return New;
 }
@@ -727,9 +737,9 @@ static void getArrayElements(const Constant *C,
 }
 
 /// If there were any appending global variables, link them together now.
-/// Return true on error.
-Constant *IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
-                                          const GlobalVariable *SrcGV) {
+Expected<Constant *>
+IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
+                                const GlobalVariable *SrcGV) {
   Type *EltTy = cast<ArrayType>(TypeMap.get(SrcGV->getValueType()))
                     ->getElementType();
 
@@ -759,46 +769,33 @@ Constant *IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     ArrayType *DstTy = cast<ArrayType>(DstGV->getValueType());
     DstNumElements = DstTy->getNumElements();
 
-    if (!SrcGV->hasAppendingLinkage() || !DstGV->hasAppendingLinkage()) {
-      emitError(
+    if (!SrcGV->hasAppendingLinkage() || !DstGV->hasAppendingLinkage())
+      return stringErr(
           "Linking globals named '" + SrcGV->getName() +
-          "': can only link appending global with another appending global!");
-      return nullptr;
-    }
+          "': can only link appending global with another appending "
+          "global!");
 
     // Check to see that they two arrays agree on type.
-    if (EltTy != DstTy->getElementType()) {
-      emitError("Appending variables with different element types!");
-      return nullptr;
-    }
-    if (DstGV->isConstant() != SrcGV->isConstant()) {
-      emitError("Appending variables linked with different const'ness!");
-      return nullptr;
-    }
+    if (EltTy != DstTy->getElementType())
+      return stringErr("Appending variables with different element types!");
+    if (DstGV->isConstant() != SrcGV->isConstant())
+      return stringErr("Appending variables linked with different const'ness!");
 
-    if (DstGV->getAlignment() != SrcGV->getAlignment()) {
-      emitError(
+    if (DstGV->getAlignment() != SrcGV->getAlignment())
+      return stringErr(
           "Appending variables with different alignment need to be linked!");
-      return nullptr;
-    }
 
-    if (DstGV->getVisibility() != SrcGV->getVisibility()) {
-      emitError(
+    if (DstGV->getVisibility() != SrcGV->getVisibility())
+      return stringErr(
           "Appending variables with different visibility need to be linked!");
-      return nullptr;
-    }
 
-    if (DstGV->hasUnnamedAddr() != SrcGV->hasUnnamedAddr()) {
-      emitError(
+    if (DstGV->hasUnnamedAddr() != SrcGV->hasUnnamedAddr())
+      return stringErr(
           "Appending variables with different unnamed_addr need to be linked!");
-      return nullptr;
-    }
 
-    if (DstGV->getSection() != SrcGV->getSection()) {
-      emitError(
+    if (DstGV->getSection() != SrcGV->getSection())
+      return stringErr(
           "Appending variables with different section name need to be linked!");
-      return nullptr;
-    }
   }
 
   SmallVector<Constant *, 16> SrcElements;
@@ -873,7 +870,8 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   return LazilyAdded;
 }
 
-Constant *IRLinker::linkGlobalValueProto(GlobalValue *SGV, bool ForAlias) {
+Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
+                                                    bool ForAlias) {
   GlobalValue *DGV = getLinkedToGlobal(SGV);
 
   bool ShouldLink = shouldLink(DGV, *SGV);
@@ -947,12 +945,12 @@ void IRLinker::linkGlobalInit(GlobalVariable &Dst, GlobalVariable &Src) {
 /// Copy the source function over into the dest function and fix up references
 /// to values. At this point we know that Dest is an external function, and
 /// that Src is not.
-bool IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
+Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
   assert(Dst.isDeclaration() && !Src.isDeclaration());
 
   // Materialize if needed.
   if (std::error_code EC = Src.materialize())
-    return emitError(EC.message());
+    return errorCodeToError(EC);
 
   // Link in the operands without remapping.
   if (Src.hasPrefixData())
@@ -974,22 +972,22 @@ bool IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
 
   // Everything has been moved over.  Remap it.
   Mapper.scheduleRemapFunction(Dst);
-  return false;
+  return Error::success();
 }
 
 void IRLinker::linkAliasBody(GlobalAlias &Dst, GlobalAlias &Src) {
   Mapper.scheduleMapGlobalAliasee(Dst, *Src.getAliasee(), AliasMCID);
 }
 
-bool IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
+Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   if (auto *F = dyn_cast<Function>(&Src))
     return linkFunctionBody(cast<Function>(Dst), *F);
   if (auto *GVar = dyn_cast<GlobalVariable>(&Src)) {
     linkGlobalInit(cast<GlobalVariable>(Dst), *GVar);
-    return false;
+    return Error::success();
   }
   linkAliasBody(cast<GlobalAlias>(Dst), cast<GlobalAlias>(Src));
-  return false;
+  return Error::success();
 }
 
 /// Insert all of the named MDNodes in Src into the Dest module.
@@ -1007,11 +1005,11 @@ void IRLinker::linkNamedMDNodes() {
 }
 
 /// Merge the linker flags in Src into the Dest module.
-bool IRLinker::linkModuleFlagsMetadata() {
+Error IRLinker::linkModuleFlagsMetadata() {
   // If the source module has no module flags, we are done.
   const NamedMDNode *SrcModFlags = SrcM->getModuleFlagsMetadata();
   if (!SrcModFlags)
-    return false;
+    return Error::success();
 
   // If the destination module doesn't have module flags yet, then just copy
   // over the source module's flags.
@@ -1020,7 +1018,7 @@ bool IRLinker::linkModuleFlagsMetadata() {
     for (unsigned I = 0, E = SrcModFlags->getNumOperands(); I != E; ++I)
       DstModFlags->addOperand(SrcModFlags->getOperand(I));
 
-    return false;
+    return Error::success();
   }
 
   // First build a map of the existing module flags and requirements.
@@ -1076,10 +1074,9 @@ bool IRLinker::linkModuleFlagsMetadata() {
     if (DstBehaviorValue == Module::Override) {
       // Diagnose inconsistent flags which both have override behavior.
       if (SrcBehaviorValue == Module::Override &&
-          SrcOp->getOperand(2) != DstOp->getOperand(2)) {
-        emitError("linking module flags '" + ID->getString() +
-                  "': IDs have conflicting override values");
-      }
+          SrcOp->getOperand(2) != DstOp->getOperand(2))
+        return stringErr("linking module flags '" + ID->getString() +
+                         "': IDs have conflicting override values");
       continue;
     } else if (SrcBehaviorValue == Module::Override) {
       // Update the destination flag to that of the source.
@@ -1089,11 +1086,9 @@ bool IRLinker::linkModuleFlagsMetadata() {
     }
 
     // Diagnose inconsistent merge behavior types.
-    if (SrcBehaviorValue != DstBehaviorValue) {
-      emitError("linking module flags '" + ID->getString() +
-                "': IDs have conflicting behaviors");
-      continue;
-    }
+    if (SrcBehaviorValue != DstBehaviorValue)
+      return stringErr("linking module flags '" + ID->getString() +
+                       "': IDs have conflicting behaviors");
 
     auto replaceDstValue = [&](MDNode *New) {
       Metadata *FlagOps[] = {DstOp->getOperand(0), ID, New};
@@ -1109,10 +1104,9 @@ bool IRLinker::linkModuleFlagsMetadata() {
       llvm_unreachable("not possible");
     case Module::Error: {
       // Emit an error if the values differ.
-      if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
-        emitError("linking module flags '" + ID->getString() +
-                  "': IDs have conflicting values");
-      }
+      if (SrcOp->getOperand(2) != DstOp->getOperand(2))
+        return stringErr("linking module flags '" + ID->getString() +
+                         "': IDs have conflicting values");
       continue;
     }
     case Module::Warning: {
@@ -1155,14 +1149,11 @@ bool IRLinker::linkModuleFlagsMetadata() {
     Metadata *ReqValue = Requirement->getOperand(1);
 
     MDNode *Op = Flags[Flag].first;
-    if (!Op || Op->getOperand(2) != ReqValue) {
-      emitError("linking module flags '" + Flag->getString() +
-                "': does not have the required value");
-      continue;
-    }
+    if (!Op || Op->getOperand(2) != ReqValue)
+      return stringErr("linking module flags '" + Flag->getString() +
+                       "': does not have the required value");
   }
-
-  return HasError;
+  return Error::success();
 }
 
 // This function returns true if the triples match.
@@ -1186,10 +1177,11 @@ static std::string mergeTriples(const Triple &SrcTriple,
   return DstTriple.str();
 }
 
-bool IRLinker::run() {
+Error IRLinker::run() {
   // Ensure metadata materialized before value mapping.
-  if (SrcM->getMaterializer() && SrcM->getMaterializer()->materializeMetadata())
-      return true;
+  if (SrcM->getMaterializer())
+    if (std::error_code EC = SrcM->getMaterializer()->materializeMetadata())
+      return errorCodeToError(EC);
 
   // Inherit the target data from the source module if the destination module
   // doesn't have one already.
@@ -1243,8 +1235,8 @@ bool IRLinker::run() {
 
     assert(!GV->isDeclaration());
     Mapper.mapValue(*GV);
-    if (HasError)
-      return true;
+    if (FoundError)
+      return std::move(*FoundError);
   }
 
   // Note that we are done linking global value bodies. This prevents
@@ -1258,10 +1250,7 @@ bool IRLinker::run() {
   linkNamedMDNodes();
 
   // Merge the module flags into the DstM module.
-  if (linkModuleFlagsMetadata())
-    return true;
-
-  return false;
+  return linkModuleFlagsMetadata();
 }
 
 IRMover::StructTypeKeyInfo::KeyTy::KeyTy(ArrayRef<Type *> E, bool P)
@@ -1365,12 +1354,12 @@ IRMover::IRMover(Module &M) : Composite(M) {
   }
 }
 
-bool IRMover::move(
+Error IRMover::move(
     std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
     std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, AddLazyFor);
-  bool RetCode = TheIRLinker.run();
+  Error E = TheIRLinker.run();
   Composite.dropTriviallyDeadConstantArrays();
-  return RetCode;
+  return E;
 }

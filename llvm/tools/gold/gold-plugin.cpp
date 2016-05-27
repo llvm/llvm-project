@@ -1131,8 +1131,8 @@ void CodeGen::runAll() {
 }
 
 /// Links the module in \p View from file \p F into the combined module
-/// saved in the IRMover \p L. Returns true on error, false on success.
-static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
+/// saved in the IRMover \p L.
+static void linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
                          const void *View, StringRef Name,
                          raw_fd_ostream *ApiFile, StringSet<> &Internalize,
                          StringSet<> &Maybe) {
@@ -1141,15 +1141,20 @@ static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
   std::unique_ptr<Module> M = getModuleForFile(
       Context, F, View, Name, ApiFile, Internalize, Maybe, Keep, Realign);
   if (!M.get())
-    return false;
+    return;
   if (!options::triple.empty())
     M->setTargetTriple(options::triple.c_str());
   else if (M->getTargetTriple().empty()) {
     M->setTargetTriple(DefaultTriple);
   }
 
-  if (L.move(std::move(M), Keep, [](GlobalValue &, IRMover::ValueAdder) {}))
-    return true;
+  if (Error E = L.move(std::move(M), Keep,
+                       [](GlobalValue &, IRMover::ValueAdder) {})) {
+    handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+      message(LDPL_FATAL, "Failed to link module %s: %s", Name.str().c_str(),
+              EIB.message().c_str());
+    });
+  }
 
   for (const auto &I : Realign) {
     GlobalValue *Dst = L.getModule().getNamedValue(I.first());
@@ -1157,8 +1162,6 @@ static bool linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
       continue;
     cast<GlobalVariable>(Dst)->setAlignment(I.second);
   }
-
-  return false;
 }
 
 /// Perform the ThinLTO backend on a single module, invoking the LTO and codegen
@@ -1179,8 +1182,7 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
   IRMover L(*NewModule.get());
 
   StringSet<> Dummy;
-  if (linkInModule(Context, L, F, View, Name, ApiFile, Dummy, Dummy))
-    message(LDPL_FATAL, "Failed to rename module for ThinLTO");
+  linkInModule(Context, L, F, View, Name, ApiFile, Dummy, Dummy);
   if (renameModuleForThinLTO(*NewModule, CombinedIndex))
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
 
@@ -1420,8 +1422,7 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     const void *View = getSymbolsAndView(F);
     if (!View)
       continue;
-    if (linkInModule(Context, L, F, View, F.name, ApiFile, Internalize, Maybe))
-      message(LDPL_FATAL, "Failed to link module");
+    linkInModule(Context, L, F, View, F.name, ApiFile, Internalize, Maybe);
   }
 
   for (const auto &Name : Internalize) {
