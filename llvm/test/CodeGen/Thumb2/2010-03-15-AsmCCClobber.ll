@@ -14,7 +14,7 @@ target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-
 %s5 = type { i32 }
 
 ; Make sure the cmp is not scheduled before the InlineAsm that clobbers cc.
-; CHECK: blx _f2
+; CHECK: bl _f2
 ; CHECK: cmp r0, #0
 ; CHECK-NOT: cmp
 ; CHECK: InlineAsm Start
