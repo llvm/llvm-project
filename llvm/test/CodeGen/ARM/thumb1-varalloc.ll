@@ -52,7 +52,7 @@ define void @test_simple_var() {
 
 ; CHECK: mov r0, sp
 ; CHECK-NOT: adds r0
-; CHECK: blx
+; CHECK: bl
   call void @take_ptr(i8* %addr8)
   ret void
 }
@@ -67,12 +67,12 @@ define void @test_local_var_addr_aligned() {
   %addr2 = bitcast i32* %addr2.32 to i8*
 
 ; CHECK: add r0, sp, #{{[0-9]+}}
-; CHECK: blx
+; CHECK: bl
   call void @take_ptr(i8* %addr1)
 
 ; CHECK: mov r0, sp
 ; CHECK-NOT: add r0
-; CHECK: blx
+; CHECK: bl
   call void @take_ptr(i8* %addr2)
 
   ret void
@@ -87,7 +87,7 @@ define void @test_local_var_big_offset() {
 
 ; CHECK: add [[RTMP:r[0-9]+]], sp, #1020
 ; CHECK: adds [[RTMP]], #8
-; CHECK: blx
+; CHECK: bl
   call void @take_ptr(i8* %addr1)
 
   ret void
@@ -100,7 +100,7 @@ define void @test_local_var_offset_1020() {
   %addr2 = alloca i8, i32 1020
 
 ; CHECK: add r0, sp, #1020
-; CHECK-NEXT: blx
+; CHECK-NEXT: bl
   call void @take_ptr(i8* %addr1)
 
   ret void
@@ -116,7 +116,7 @@ define void @test_local_var_offset_1268() {
 
 ; CHECK: add r0, sp, #1020
 ; CHECK: adds r0, #248
-; CHECK-NEXT: blx
+; CHECK-NEXT: bl
   call void @take_ptr(i8* %addr1)
 
   ret void

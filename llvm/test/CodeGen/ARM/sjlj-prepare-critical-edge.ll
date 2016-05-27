@@ -74,7 +74,7 @@ declare void @terminatev()
 ; %do.body.i.i.i.
 
 ; CHECK-LABEL: __Z4foo1c:
-; CHECK: blx __Znwm
+; CHECK: bl __Znwm
 ; CHECK: {{.*}}@ %entry.do.body.i.i.i_crit_edge
 ; CHECK: str r0, [sp, [[OFFSET:#[0-9]+]]]
 ; CHECK: {{.*}}@ %do.body.i.i.i

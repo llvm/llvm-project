@@ -30,7 +30,7 @@ for.end:                                          ; preds = %cond.end
   %call85 = tail call double @exp(double %mul84) nounwind
   %mul86 = fmul double %conv78, %call85
   %add88 = fadd double 0.000000e+00, %mul86
-; CHECK: blx _exp
+; CHECK: bl _exp
   %call100 = tail call double @exp(double %mul84) nounwind
   %mul101 = fmul double undef, %call100
   %add103 = fadd double %add46, %mul101
