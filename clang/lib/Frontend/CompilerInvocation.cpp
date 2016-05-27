@@ -774,8 +774,51 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
                         ModuleFiles.end());
 }
 
+static bool parseShowColorsArgs(const ArgList &Args, bool DefaultColor) {
+  // Color diagnostics default to auto ("on" if terminal supports) in the driver
+  // but default to off in cc1, needing an explicit OPT_fdiagnostics_color.
+  // Support both clang's -f[no-]color-diagnostics and gcc's
+  // -f[no-]diagnostics-colors[=never|always|auto].
+  enum {
+    Colors_On,
+    Colors_Off,
+    Colors_Auto
+  } ShowColors = DefaultColor ? Colors_Auto : Colors_Off;
+  for (Arg *A : Args) {
+    const Option &O = A->getOption();
+    if (!O.matches(options::OPT_fcolor_diagnostics) &&
+        !O.matches(options::OPT_fdiagnostics_color) &&
+        !O.matches(options::OPT_fno_color_diagnostics) &&
+        !O.matches(options::OPT_fno_diagnostics_color) &&
+        !O.matches(options::OPT_fdiagnostics_color_EQ))
+      continue;
+
+    if (O.matches(options::OPT_fcolor_diagnostics) ||
+        O.matches(options::OPT_fdiagnostics_color)) {
+      ShowColors = Colors_On;
+    } else if (O.matches(options::OPT_fno_color_diagnostics) ||
+               O.matches(options::OPT_fno_diagnostics_color)) {
+      ShowColors = Colors_Off;
+    } else {
+      assert(O.matches(options::OPT_fdiagnostics_color_EQ));
+      StringRef Value(A->getValue());
+      if (Value == "always")
+        ShowColors = Colors_On;
+      else if (Value == "never")
+        ShowColors = Colors_Off;
+      else if (Value == "auto")
+        ShowColors = Colors_Auto;
+    }
+  }
+  if (ShowColors == Colors_On ||
+      (ShowColors == Colors_Auto && llvm::sys::Process::StandardErrHasColors()))
+    return true;
+  return false;
+}
+
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
-                                DiagnosticsEngine *Diags) {
+                                DiagnosticsEngine *Diags,
+                                bool DefaultDiagColor) {
   using namespace options;
   bool Success = true;
 
@@ -788,7 +831,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.Pedantic = Args.hasArg(OPT_pedantic);
   Opts.PedanticErrors = Args.hasArg(OPT_pedantic_errors);
   Opts.ShowCarets = !Args.hasArg(OPT_fno_caret_diagnostics);
-  Opts.ShowColors = Args.hasArg(OPT_fcolor_diagnostics);
+  Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
   Opts.ShowColumn = Args.hasFlag(OPT_fshow_column,
                                  OPT_fno_show_column,
                                  /*Default=*/true);
@@ -2075,7 +2118,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   Success &= ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
   Success &= ParseMigratorArgs(Res.getMigratorOpts(), Args);
   ParseDependencyOutputArgs(Res.getDependencyOutputOpts(), Args);
-  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags);
+  Success &= ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
+                                 false /*DefaultDiagColor*/);
   ParseCommentArgs(Res.getLangOpts()->CommentOpts, Args);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args);
   // FIXME: We shouldn't have to pass the DashX option around here
