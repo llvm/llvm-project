@@ -150,6 +150,7 @@ lldb_private::DisableLog (const char **categories, Stream *feedback_strm)
                 else if (0 == ::strcasecmp(arg, "jit"))         flag_bits &= ~LIBLLDB_LOG_JIT_LOADER;
                 else if (0 == ::strcasecmp(arg, "language"))    flag_bits &= ~LIBLLDB_LOG_LANGUAGE;
                 else if (0 == ::strncasecmp(arg, "formatters", 10))   flag_bits &= ~LIBLLDB_LOG_DATAFORMATTERS;
+                else if (0 == ::strncasecmp(arg, "demangle", 8))      flag_bits &= ~LIBLLDB_LOG_DEMANGLE;
                 else
                 {
                     feedback_strm->Printf ("error:  unrecognized log category '%s'\n", arg);
@@ -225,6 +226,7 @@ lldb_private::EnableLog (StreamSP &log_stream_sp, uint32_t log_options, const ch
             else if (0 == ::strcasecmp(arg, "jit"))         flag_bits |= LIBLLDB_LOG_JIT_LOADER;
             else if (0 == ::strcasecmp(arg, "language"))    flag_bits |= LIBLLDB_LOG_LANGUAGE;
             else if (0 == ::strncasecmp(arg, "formatters", 10))   flag_bits |= LIBLLDB_LOG_DATAFORMATTERS;
+            else if (0 == ::strncasecmp(arg, "demangle", 8))      flag_bits |= LIBLLDB_LOG_DEMANGLE;
             else
             {
                 feedback_strm->Printf("error: unrecognized log category '%s'\n", arg);
@@ -251,6 +253,7 @@ lldb_private::ListLogCategories (Stream *strm)
                  "  communication - log communication activities\n"
                  "  connection - log connection details\n"
                  "  default - enable the default set of logging categories for liblldb\n"
+                 "  demangle - log mangled names to catch demangler crashes\n"
                  "  dyld - log shared library related activities\n"
                  "  events - log broadcaster, listener and event queue activities\n"
                  "  expr - log expressions\n"
