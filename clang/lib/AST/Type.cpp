@@ -1274,6 +1274,12 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
            });
 }
 
+QualType QualType::getAtomicUnqualifiedType() const {
+  if (auto AT = getTypePtr()->getAs<AtomicType>())
+    return AT->getValueType().getUnqualifiedType();
+  return getUnqualifiedType();
+}
+
 Optional<ArrayRef<QualType>> Type::getObjCSubstitutions(
                                const DeclContext *dc) const {
   // Look through method scopes.
