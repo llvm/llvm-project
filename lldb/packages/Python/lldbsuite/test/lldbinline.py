@@ -9,6 +9,7 @@ import os
 # LLDB modules
 import lldb
 from .lldbtest import *
+from . import configuration
 from . import lldbutil
 from .decorators import *
 
@@ -141,6 +142,12 @@ class InlineTest(TestBase):
         self.buildDwo()
         self.do_test()
 
+    def __test_with_gmodules(self):
+        self.using_dsym = False
+        self.BuildMakefile()
+        self.buildGModules()
+        self.do_test()
+
     def execute_user_command(self, __command):
         exec(__command, globals(), locals())
 
@@ -205,12 +212,14 @@ def MakeInlineTest(__file, __globals, decorators=None):
     test.name = test_name
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-    if test_categories.is_supported_on_platform("dsym", target_platform):
+    if test_categories.is_supported_on_platform("dsym", target_platform, configuration.compilers):
         test.test_with_dsym = ApplyDecoratorsToFunction(test._InlineTest__test_with_dsym, decorators)
-    if test_categories.is_supported_on_platform("dwarf", target_platform):
+    if test_categories.is_supported_on_platform("dwarf", target_platform, configuration.compilers):
         test.test_with_dwarf = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwarf, decorators)
-    if test_categories.is_supported_on_platform("dwo", target_platform):
+    if test_categories.is_supported_on_platform("dwo", target_platform, configuration.compilers):
         test.test_with_dwo = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwo, decorators)
+    if test_categories.is_supported_on_platform("gmodules", target_platform, configuration.compilers):
+        test.test_with_gmodules = ApplyDecoratorsToFunction(test._InlineTest__test_with_gmodules, decorators)
 
     # Add the test case to the globals, and hide InlineTest
     __globals.update({test_name : test})

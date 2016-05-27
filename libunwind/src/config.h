@@ -131,7 +131,7 @@ template <typename _Type, typename _Mem>
 struct check_fit {
   template <typename T>
   struct blk_count {
-    static const uint32_t count =
+    static const size_t count =
       (sizeof(T) + sizeof(uint64_t) - 1) / sizeof(uint64_t);
   };
   static const bool does_fit =

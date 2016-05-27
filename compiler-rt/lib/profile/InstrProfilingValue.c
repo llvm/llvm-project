@@ -18,31 +18,38 @@
 #define INSTR_PROF_COMMON_API_IMPL
 #include "InstrProfData.inc"
 
+static int hasStaticCounters = 1;
+static int OutOfNodesWarnings = 0;
+static int hasNonDefaultValsPerSite = 0;
+#define INSTR_PROF_MAX_VP_WARNS 10
+#define INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE 8
+#define INSTR_PROF_VNODE_POOL_SIZE 1024
+
+#ifndef _MSC_VER
+/* A shared static pool in addition to the vnodes statically
+ * allocated by the compiler.  */
+COMPILER_RT_VISIBILITY ValueProfNode
+    lprofValueProfNodes[INSTR_PROF_VNODE_POOL_SIZE] COMPILER_RT_SECTION(
+       COMPILER_RT_SEG INSTR_PROF_VNODES_SECT_NAME_STR);
+#endif
+
 COMPILER_RT_VISIBILITY uint32_t VPMaxNumValsPerSite =
-    INSTR_PROF_MAX_NUM_VAL_PER_SITE;
+    INSTR_PROF_DEFAULT_NUM_VAL_PER_SITE;
 
 COMPILER_RT_VISIBILITY void lprofSetupValueProfiler() {
   const char *Str = 0;
   Str = getenv("LLVM_VP_MAX_NUM_VALS_PER_SITE");
-  if (Str && Str[0])
+  if (Str && Str[0]) {
     VPMaxNumValsPerSite = atoi(Str);
+    hasNonDefaultValsPerSite = 1;
+  }
   if (VPMaxNumValsPerSite > INSTR_PROF_MAX_NUM_VAL_PER_SITE)
     VPMaxNumValsPerSite = INSTR_PROF_MAX_NUM_VAL_PER_SITE;
-
-  if (!(EndVNode > CurrentVNode)) {
-    CurrentVNode = 0;
-    EndVNode = 0;
-  }
-  /* Adjust max vals per site to a smaller value
-   * when static allocation is in use. */
-  else {
-    if (!Str || !Str[0])
-      VPMaxNumValsPerSite = 8;
-  }
 }
 
 COMPILER_RT_VISIBILITY void lprofSetMaxValsPerSite(uint32_t MaxVals) {
   VPMaxNumValsPerSite = MaxVals;
+  hasNonDefaultValsPerSite = 1;
 }
 
 /* This method is only used in value profiler mock testing.  */
@@ -70,10 +77,6 @@ __llvm_get_function_addr(const __llvm_profile_data *Data) {
  * 0 if allocation fails.
  */
 
-static int hasStaticCounters = 1;
-static int OutOfNodesWarnings = 0;
-#define MAX_VP_WARNS 10
-
 static int allocateValueProfileCounters(__llvm_profile_data *Data) {
   uint64_t NumVSites = 0;
   uint32_t VKI;
@@ -81,6 +84,10 @@ static int allocateValueProfileCounters(__llvm_profile_data *Data) {
   /* This function will never be called when value site array is allocated
      statically at compile time.  */
   hasStaticCounters = 0;
+  /* When dynamic allocation is enabled, allow tracking the max number of
+   * values allowd.  */
+  if (!hasNonDefaultValsPerSite)
+    VPMaxNumValsPerSite = INSTR_PROF_MAX_NUM_VAL_PER_SITE;
 
   for (VKI = IPVK_First; VKI <= IPVK_Last; ++VKI)
     NumVSites += Data->NumValueSites[VKI];
@@ -105,7 +112,7 @@ static ValueProfNode *allocateOneNode(__llvm_profile_data *Data, uint32_t Index,
 
   /* Early check to avoid value wrapping around.  */
   if (CurrentVNode >= EndVNode) {
-    if (OutOfNodesWarnings++ < MAX_VP_WARNS) {
+    if (OutOfNodesWarnings++ < INSTR_PROF_MAX_VP_WARNS) {
       PROF_WARN("Unable to track new values: %s. "
                 " Consider using option -mllvm -vp-counters-per-site=<n> to "
                 "allocate more"

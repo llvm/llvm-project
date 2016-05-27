@@ -1582,6 +1582,7 @@ void MipsReginfoOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   // Copy input object file's .reginfo gprmask to output.
   auto *S = cast<MipsReginfoInputSection<ELFT>>(C);
   GprMask |= S->Reginfo->ri_gprmask;
+  S->OutSec = this;
 }
 
 template <class ELFT>
@@ -1610,6 +1611,7 @@ void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<MipsOptionsInputSection<ELFT>>(C);
   if (S->Reginfo)
     GprMask |= S->Reginfo->ri_gprmask;
+  S->OutSec = this;
 }
 
 namespace lld {

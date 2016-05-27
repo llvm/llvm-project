@@ -143,6 +143,17 @@ def buildDwo(sender=None, architecture=None, compiler=None, dictionary=None, cle
     # True signifies that we can handle building dwo.
     return True
 
+def buildGModules(sender=None, architecture=None, compiler=None, dictionary=None, clean=True):
+    """Build the binaries with dwarf debug info."""
+    commands = []
+    if clean:
+        commands.append([getMake(), "clean", getCmdLine(dictionary)])
+    commands.append([getMake(), "MAKE_DSYM=NO", "MAKE_GMODULES=YES", getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
+
+    lldbtest.system(commands, sender=sender)
+    # True signifies that we can handle building with gmodules.
+    return True
+
 def cleanup(sender=None, dictionary=None):
     """Perform a platform-specific cleanup after the test."""
     #import traceback

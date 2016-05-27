@@ -34,6 +34,8 @@
 #include "llvm/ADT/DenseMap.h"
 
 #include "lldb/Core/ConstString.h"
+#include "lldb/Core/Log.h"
+#include "lldb/Core/Logging.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/RegularExpression.h"
 #include "lldb/Core/Stream.h"
@@ -271,6 +273,8 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
                             "Mangled::GetDemangledName (m_mangled = %s)",
                             m_mangled.GetCString());
 
+        Log *log = lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_DEMANGLE);
+
         // Don't bother running anything that isn't mangled
         const char *mangled_name = m_mangled.GetCString();
         ManglingScheme mangling_scheme{cstring_mangling_scheme(mangled_name)};
@@ -285,6 +289,8 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
                 case eManglingSchemeMSVC:
                 {
 #if defined(_MSC_VER)
+                    if (log)
+                        log->Printf("demangle msvc: %s", mangled_name);
                     const size_t demangled_length = 2048;
                     demangled_name = static_cast<char *>(::malloc(demangled_length));
                     ::ZeroMemory(demangled_name, demangled_length);
@@ -295,6 +301,14 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
                             UNDNAME_NO_MEMBER_TYPE         | // Strip virtual, static, etc specifiers
                             UNDNAME_NO_MS_KEYWORDS           // Strip all MS extension keywords
                         );
+                    if (log)
+                    {
+                        if (demangled_name && demangled_name[0])
+                            log->Printf("demangled msvc: %s -> \"%s\"", mangled_name, demangled_name);
+                        else
+                            log->Printf("demangled msvc: %s -> error: 0x%" PRIx64, mangled_name, result);
+                    }
+
                     if (result == 0)
                     {
                         free(demangled_name);
@@ -306,6 +320,8 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
                 case eManglingSchemeItanium:
                 {
 #ifdef LLDB_USE_BUILTIN_DEMANGLER
+                    if (log)
+                        log->Printf("demangle itanium: %s", mangled_name);
                     // Try to use the fast-path demangler first for the
                     // performance win, falling back to the full demangler only
                     // when necessary
@@ -315,6 +331,13 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
 #else
                     demangled_name = abi::__cxa_demangle(mangled_name, NULL, NULL, NULL);
 #endif
+                    if (log)
+                    {
+                        if (demangled_name)
+                            log->Printf("demangled itanium: %s -> \"%s\"", mangled_name, demangled_name);
+                        else
+                            log->Printf("demangled itanium: %s -> error: failed to demangle", mangled_name);
+                    }
                     break;
                 }
                 case eManglingSchemeNone:

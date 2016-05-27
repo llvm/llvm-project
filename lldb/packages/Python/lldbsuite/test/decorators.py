@@ -522,15 +522,3 @@ def skipUnlessThreadSanitizer(func):
             return "Compiler cannot compile with -fsanitize=thread"
         return None
     return skipTestIfFn(is_compiler_clang_with_thread_sanitizer)(func)
-
-def skipUnlessClangModules():
-    """Decorate the item to skip test unless Clang -gmodules flag is supported."""
-    def is_compiler_clang_with_gmodules(self):
-        compiler_path = self.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        if compiler != "clang":
-            return "Test requires clang as compiler"
-        clang_help = os.popen("%s --help" % (compiler_path)).read()
-        match = re.match(".* -gmodules ", clang_help, re.DOTALL)
-        return "Clang version doesn't support -gmodules flag" if not match else None
-    return skipTestIfFn(is_compiler_clang_with_gmodules)

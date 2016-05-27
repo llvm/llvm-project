@@ -65,7 +65,6 @@ public:
 
 private:
     static const char *g_lookup_implementation_function_name;
-    static const char *g_lookup_implementation_function_code;
     static const char *g_lookup_implementation_with_stret_function_code;
     static const char *g_lookup_implementation_no_stret_function_code;
 
@@ -195,6 +194,7 @@ private:
     MsgsendMap m_msgSend_map;
     lldb::ProcessWP m_process_wp;
     lldb::ModuleSP m_objc_module_sp;
+    const char *m_lookup_implementation_function_code;
     std::unique_ptr<UtilityFunction> m_impl_code;
     std::mutex m_impl_function_mutex;
     lldb::addr_t m_impl_fn_addr;

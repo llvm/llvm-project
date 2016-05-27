@@ -338,18 +338,22 @@ void SymbolTable::addCombinedLTOObject(ObjectFile *Obj) {
     // diagnose them later in reportRemainingUndefines().
     StringRef Name = Body->getName();
     Symbol *Sym = insert(Body);
+    SymbolBody *Existing = Sym->Body;
 
-    if (isa<DefinedBitcode>(Sym->Body)) {
+    if (Existing == Body)
+      continue;
+
+    if (isa<DefinedBitcode>(Existing)) {
       Sym->Body = Body;
       continue;
     }
-    if (auto *L = dyn_cast<Lazy>(Sym->Body)) {
+    if (auto *L = dyn_cast<Lazy>(Existing)) {
       // We may see new references to runtime library symbols such as __chkstk
       // here. These symbols must be wholly defined in non-bitcode files.
       addMemberFile(L);
       continue;
     }
-    SymbolBody *Existing = Sym->Body;
+
     int Comp = Existing->compare(Body);
     if (Comp == 0)
       error(Twine("LTO: unexpected duplicate symbol: ") + Name);

@@ -1,3 +1,5 @@
+include(CheckCXXSymbolExists)
+
 set(LLDB_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLDB_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/source")
 set(LLDB_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -336,28 +338,6 @@ if (HAVE_LIBDL)
   list(APPEND system_libs ${CMAKE_DL_LIBS})
 endif()
 
-if(LLDB_REQUIRES_EH)
-  set(LLDB_REQUIRES_RTTI ON)
-else()
-  if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    set(LLDB_COMPILE_FLAGS "${LLDB_COMPILE_FLAGS} -fno-exceptions")
-  elseif(MSVC)
-    add_definitions( -D_HAS_EXCEPTIONS=0 )
-    set(LLDB_COMPILE_FLAGS "${LLDB_COMPILE_FLAGS} /EHs-c-")
-  endif()
-endif()
-
-# Disable RTTI by default
-if(NOT LLDB_REQUIRES_RTTI)
-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-    set(LLDB_COMPILE_FLAGS "${LLDB_COMPILE_FLAGS} -fno-rtti")
-  elseif(MSVC)
-    set(LLDB_COMPILE_FLAGS "${LLDB_COMPILE_FLAGS} /GR-")
-  endif()
-endif()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LLDB_COMPILE_FLAGS}")
-
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
     # Check for syscall used by lldb-server on linux.
     # If these are not found, it will fall back to ptrace (slow) for memory reads.
@@ -415,3 +395,25 @@ if (NOT LLDB_DISABLE_CURSES)
     list(APPEND system_libs ${CURSES_LIBRARIES})
     include_directories(${CURSES_INCLUDE_DIR})
 endif ()
+
+check_cxx_symbol_exists("__GLIBCXX__" "string" LLDB_USING_LIBSTDCXX)
+if(LLDB_USING_LIBSTDCXX)
+    # There doesn't seem to be an easy way to check the library version. Instead, we rely on the
+    # fact that std::set did not have the allocator constructor available until version 4.9
+    check_cxx_source_compiles("
+            #include <set>
+            std::set<int> s = std::set<int>(std::allocator<int>());
+            int main() { return 0; }"
+            LLDB_USING_LIBSTDCXX_4_9)
+    if (NOT LLDB_USING_LIBSTDCXX_4_9 AND NOT LLVM_ENABLE_EH)
+        message(WARNING
+            "You appear to be linking to libstdc++ version lesser than 4.9 without exceptions "
+            "enabled. These versions of the library have an issue, which causes occasional "
+            "lldb crashes. See <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59656> for "
+            "details. Possible courses of action are:\n"
+            "- use libstdc++ version 4.9 or newer\n"
+            "- use libc++ (via LLVM_ENABLE_LIBCXX)\n"
+            "- enable exceptions (via LLVM_ENABLE_EH)\n"
+            "- ignore this warning and accept occasional instability")
+    endif()
+endif()
