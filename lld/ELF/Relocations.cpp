@@ -354,7 +354,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   } else if (!Preemptible) {
     if (needsPlt(Expr))
       Expr = fromPlt(Expr);
-    if (Expr == R_GOT_PC && Target->canRelaxGot(Type, Data, Offset))
+    if (Expr == R_GOT_PC && Target->canRelaxGot(Type, Data + Offset))
       Expr = R_RELAX_GOT_PC;
   }
 

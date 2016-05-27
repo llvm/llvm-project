@@ -113,8 +113,7 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
-  bool canRelaxGot(uint32_t Type, const uint8_t *Data,
-                   uint64_t Offset) const override;
+  bool canRelaxGot(uint32_t Type, const uint8_t *Data) const override;
   void relaxGot(uint8_t *Loc, uint64_t Val) const override;
   void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -235,8 +234,7 @@ bool TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
   return false;
 }
 
-bool TargetInfo::canRelaxGot(uint32_t Type, const uint8_t *Data,
-                             uint64_t Offset) const {
+bool TargetInfo::canRelaxGot(uint32_t Type, const uint8_t *Data) const {
   return false;
 }
 
@@ -736,12 +734,11 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   }
 }
 
-bool X86_64TargetInfo::canRelaxGot(uint32_t Type, const uint8_t *Data,
-                                   uint64_t Offset) const {
+bool X86_64TargetInfo::canRelaxGot(uint32_t Type, const uint8_t *Data) const {
   if (Type != R_X86_64_GOTPCRELX && Type != R_X86_64_REX_GOTPCRELX)
     return false;
-  const uint8_t Op = Data[Offset - 2];
-  const uint8_t ModRm = Data[Offset - 1];
+  const uint8_t Op = Data[-2];
+  const uint8_t ModRm = Data[-1];
   // Relax mov.
   if (Op == 0x8b)
     return true;

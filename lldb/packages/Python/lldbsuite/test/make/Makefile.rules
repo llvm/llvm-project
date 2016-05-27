@@ -212,8 +212,13 @@ ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
 endif
 
+ifeq "$(MAKE_GMODULES)" "YES"
+	CFLAGS += -fmodules -gmodules
+endif
+
 CXXFLAGS += -std=c++11
-CXXFLAGS += $(CFLAGS)
+# FIXME: C++ modules aren't supported on all platforms.
+CXXFLAGS += $(subst -fmodules,, $(CFLAGS))
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS)
@@ -519,7 +524,7 @@ endif
 $(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
 	$(CXX) $(CXXFLAGS) -x c++-header -o $(PCH_OUTPUT) $(PCH_CXX_SOURCE)
 %.o : %.cpp $(PCH_OUTPUT)
-	$(CXX) $(PCHFLAGS) $(CXXFLAGS) $(CFLAGS) -c -o $@ $<
+	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -c -o $@ $<
 #endif
 
 #----------------------------------------------------------------------

@@ -7,15 +7,9 @@ class TestWithGmodulesDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @add_test_categories(["gmodules"])
     @expectedFailureAll(bugnumber="llvm.org/pr27412")
-    @skipUnlessClangModules()
     def test_specialized_typedef_from_pch(self):
-        clang_help = os.popen("clang --help").read()
-        match = re.match(".* -gmodules ", clang_help, re.DOTALL)
-        if not match:
-            self.skipTest("Clang version doesn't support -gmodules flag")
-            return
-
         self.build()
         cwd = os.getcwd()
 

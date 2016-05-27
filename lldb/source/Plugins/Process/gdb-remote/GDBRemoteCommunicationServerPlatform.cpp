@@ -132,7 +132,10 @@ GDBRemoteCommunicationServerPlatform::LaunchGDBServer(const lldb_private::Args& 
     assert(ok);
 
     std::ostringstream url;
+    // debugserver does not accept the URL scheme prefix.
+#if !defined(__APPLE__)
     url << m_socket_scheme << "://";
+#endif
     uint16_t* port_ptr = &port;
     if (m_socket_protocol == Socket::ProtocolTcp)
         url << platform_ip << ":" << port;

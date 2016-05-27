@@ -1329,6 +1329,12 @@ class Base(unittest2.TestCase):
         if not module.buildDwo(self, architecture, compiler, dictionary, clean):
             raise Exception("Don't know how to build binary with dwo")
 
+    def buildGModules(self, architecture=None, compiler=None, dictionary=None, clean=True):
+        """Platform specific way to build binaries with gmodules info."""
+        module = builder_module()
+        if not module.buildGModules(self, architecture, compiler, dictionary, clean):
+            raise Exception("Don't know how to build binary with gmodules")
+
     def buildGo(self):
         """Build the default go binary.
         """
@@ -1447,8 +1453,9 @@ class LLDBTestCaseFactory(type):
                 if not categories:
                     categories = all_dbginfo_categories
 
-                supported_categories = [x for x in categories 
-                                        if test_categories.is_supported_on_platform(x, target_platform)]
+                supported_categories = [x for x in categories
+                                        if test_categories.is_supported_on_platform(
+                                            x, target_platform, configuration.compilers)]
                 if "dsym" in supported_categories:
                     @decorators.add_test_categories(["dsym"])
                     @wraps(attrvalue)
@@ -1478,6 +1485,17 @@ class LLDBTestCaseFactory(type):
                     dwo_method_name = attrname + "_dwo"
                     dwo_test_method.__name__ = dwo_method_name
                     newattrs[dwo_method_name] = dwo_test_method
+
+                if "gmodules" in supported_categories:
+                    @decorators.add_test_categories(["gmodules"])
+                    @wraps(attrvalue)
+                    def gmodules_test_method(self, attrvalue=attrvalue):
+                        self.debug_info = "gmodules"
+                        return attrvalue(self)
+                    gmodules_method_name = attrname + "_gmodules"
+                    gmodules_test_method.__name__ = gmodules_method_name
+                    newattrs[gmodules_method_name] = gmodules_test_method
+
             else:
                 newattrs[attrname] = attrvalue
         return super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
@@ -1947,6 +1965,8 @@ class TestBase(Base):
             return self.buildDwarf(architecture, compiler, dictionary, clean)
         elif self.debug_info == "dwo":
             return self.buildDwo(architecture, compiler, dictionary, clean)
+        elif self.debug_info == "gmodules":
+            return self.buildGModules(architecture, compiler, dictionary, clean)
         else:
             self.fail("Can't build for debug info: %s" % self.debug_info)
 
