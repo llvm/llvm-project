@@ -126,7 +126,7 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(e, g)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for map(h) // expected-error {{threadprivate variables are not allowed in map clause}}
+#pragma omp target parallel for map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(k), map(k) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
   for (i = 0; i < argc; ++i) foo();
@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(e, g)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for map(h) // expected-error {{threadprivate variables are not allowed in map clause}}
+#pragma omp target parallel for map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(k), map(k) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
   for (i = 0; i < argc; ++i) foo();

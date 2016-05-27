@@ -309,3 +309,12 @@ void unaligned_foo7() { unaligned_foo6<int *>(0); unaligned_foo6<int __unaligned
 // CHECK-DAG: @"\01?unaligned_foo5@@YAXPIFAH@Z"
 // CHECK-DAG: @"\01??$unaligned_foo6@PAH@@YAPAHPAH@Z"
 // CHECK-DAG: @"\01??$unaligned_foo6@PFAH@@YAPFAHPFAH@Z"
+
+// __unaligned qualifier for function types
+struct unaligned_foo8_S {
+    void unaligned_foo8() volatile __unaligned;
+};
+void unaligned_foo8_S::unaligned_foo8() volatile __unaligned {}
+
+// CHECK-DAG: @"\01?unaligned_foo8@unaligned_foo8_S@@QFCEXXZ"
+

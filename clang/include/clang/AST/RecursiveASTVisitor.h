@@ -2502,6 +2502,9 @@ DEF_TRAVERSE_STMT(OMPTargetParallelForDirective,
 DEF_TRAVERSE_STMT(OMPTeamsDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPTargetUpdateDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPTaskLoopDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -2878,6 +2881,18 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDistScheduleClause(
 template <typename Derived>
 bool
 RecursiveASTVisitor<Derived>::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPToClause(OMPToClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPFromClause(OMPFromClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 

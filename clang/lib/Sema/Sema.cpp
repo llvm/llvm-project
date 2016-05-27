@@ -1266,10 +1266,10 @@ void PrettyDeclStackTraceEntry::print(raw_ostream &OS) const {
   }
   OS << Message;
 
-  if (TheDecl && isa<NamedDecl>(TheDecl)) {
-    std::string Name = cast<NamedDecl>(TheDecl)->getNameAsString();
-    if (!Name.empty())
-      OS << " '" << Name << '\'';
+  if (auto *ND = dyn_cast_or_null<NamedDecl>(TheDecl)) {
+    OS << " '";
+    ND->getNameForDiagnostic(OS, ND->getASTContext().getPrintingPolicy(), true);
+    OS << "'";
   }
 
   OS << '\n';

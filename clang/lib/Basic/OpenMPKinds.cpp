@@ -162,6 +162,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_num_tasks:
   case OMPC_hint:
   case OMPC_uniform:
+  case OMPC_to:
+  case OMPC_from:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -297,6 +299,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_num_tasks:
   case OMPC_hint:
   case OMPC_uniform:
+  case OMPC_to:
+  case OMPC_from:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -480,6 +484,16 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
       break;
     }
     break;
+  case OMPD_target_update:
+    switch (CKind) {
+#define OPENMP_TARGET_UPDATE_CLAUSE(Name)                                      \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    break;
   case OMPD_teams:
     switch (CKind) {
 #define OPENMP_TEAMS_CLAUSE(Name)                                              \
@@ -605,7 +619,7 @@ bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
 bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
   // TODO add target update directive check.
   return DKind == OMPD_target_data || DKind == OMPD_target_enter_data ||
-         DKind == OMPD_target_exit_data;
+         DKind == OMPD_target_exit_data || DKind == OMPD_target_update;
 }
 
 bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {

@@ -4,6 +4,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EB -mips32r6 -mhard-float -mabi=32 \
 // RUN:   | FileCheck --check-prefix=EB-HARD-O32 %s
 // EB-HARD-O32: "-internal-isystem"
@@ -31,6 +32,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EB -mips64r6 -mhard-float -mabi=n32 \
 // RUN:   | FileCheck --check-prefix=EB-HARD-N32 %s
 // EB-HARD-N32: "-internal-isystem"
@@ -58,6 +60,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips64-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EB -mips64r6 -mhard-float -mabi=64 \
 // RUN:   | FileCheck --check-prefix=EB-HARD-N64 %s
 // EB-HARD-N64: "-internal-isystem"
@@ -85,6 +88,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EL -mips32r6 -mhard-float -mabi=32 \
 // RUN:   | FileCheck --check-prefix=EL-HARD-O32 %s
 // EL-HARD-O32: "-internal-isystem"
@@ -112,6 +116,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EL -mips64r6 -mhard-float -mabi=n32 \
 // RUN:   | FileCheck --check-prefix=EL-HARD-N32 %s
 // EL-HARD-N32: "-internal-isystem"
@@ -139,6 +144,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips64-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EL -mips64r6 -mhard-float -mabi=64 \
 // RUN:   | FileCheck --check-prefix=EL-HARD-N64 %s
 // EL-HARD-N64: "-internal-isystem"
@@ -166,6 +172,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EB -mips32r6 -msoft-float \
 // RUN:   | FileCheck --check-prefix=EB-SOFT %s
 // EB-SOFT: "-internal-isystem"
@@ -193,6 +200,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EL -mips32r6 -msoft-float \
 // RUN:   | FileCheck --check-prefix=EL-SOFT %s
 // EL-SOFT: "-internal-isystem"
@@ -220,6 +228,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EB -mips32r6 -mhard-float -mmicromips \
 // RUN:   | FileCheck --check-prefix=EB-HARD-MICRO %s
 // EB-HARD-MICRO: "-internal-isystem"
@@ -247,6 +256,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EB -mips32r6 -msoft-float -mmicromips \
 // RUN:   | FileCheck --check-prefix=EB-SOFT-MICRO %s
 // EB-SOFT-MICRO: "-internal-isystem"
@@ -274,6 +284,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EL -mips32r6 -mhard-float -mmicromips \
 // RUN:   | FileCheck --check-prefix=EL-HARD-MICRO %s
 // EL-HARD-MICRO: "-internal-isystem"
@@ -301,6 +312,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:        --target=mips-img-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_img_v2_tree \
+// RUN:        -stdlib=libstdc++ \
 // RUN:        -EL -mips32r6 -msoft-float -mmicromips \
 // RUN:   | FileCheck --check-prefix=EL-SOFT-MICRO %s
 // EL-SOFT-MICRO: "-internal-isystem"

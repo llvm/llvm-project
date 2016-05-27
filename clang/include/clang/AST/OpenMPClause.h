@@ -4010,6 +4010,213 @@ public:
     return child_range(child_iterator(), child_iterator());
   }
 };
+
+/// \brief This represents clause 'to' in the '#pragma omp ...'
+/// directives.
+///
+/// \code
+/// #pragma omp target update to(a,b)
+/// \endcode
+/// In this example directive '#pragma omp target update' has clause 'to'
+/// with the variables 'a' and 'b'.
+///
+class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
+                          private llvm::TrailingObjects<
+                              OMPToClause, Expr *, ValueDecl *, unsigned,
+                              OMPClauseMappableExprCommon::MappableComponent> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
+  friend OMPMappableExprListClause;
+  friend class OMPClauseReader;
+
+  /// Define the sizes of each trailing object array except the last one. This
+  /// is required for TrailingObjects to work properly.
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size();
+  }
+  size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
+    return getUniqueDeclarationsNum();
+  }
+  size_t numTrailingObjects(OverloadToken<unsigned>) const {
+    return getUniqueDeclarationsNum() + getTotalComponentListNum();
+  }
+
+  /// \brief Build clause with number of variables \a NumVars.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumVars Number of expressions listed in this clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of component lists in this clause.
+  /// \param NumComponents Total number of expression components in the clause.
+  ///
+  explicit OMPToClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                       SourceLocation EndLoc, unsigned NumVars,
+                       unsigned NumUniqueDeclarations,
+                       unsigned NumComponentLists, unsigned NumComponents)
+      : OMPMappableExprListClause(OMPC_to, StartLoc, LParenLoc, EndLoc, NumVars,
+                                  NumUniqueDeclarations, NumComponentLists,
+                                  NumComponents) {}
+
+  /// \brief Build an empty clause.
+  ///
+  /// \param NumVars Number of expressions listed in this clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of component lists in this clause.
+  /// \param NumComponents Total number of expression components in the clause.
+  ///
+  explicit OMPToClause(unsigned NumVars, unsigned NumUniqueDeclarations,
+                       unsigned NumComponentLists, unsigned NumComponents)
+      : OMPMappableExprListClause(
+            OMPC_to, SourceLocation(), SourceLocation(), SourceLocation(),
+            NumVars, NumUniqueDeclarations, NumComponentLists, NumComponents) {}
+
+public:
+  /// \brief Creates clause with a list of variables \a Vars.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Vars The original expression used in the clause.
+  /// \param Declarations Declarations used in the clause.
+  /// \param ComponentLists Component lists used in the clause.
+  ///
+  static OMPToClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                             SourceLocation LParenLoc, SourceLocation EndLoc,
+                             ArrayRef<Expr *> Vars,
+                             ArrayRef<ValueDecl *> Declarations,
+                             MappableExprComponentListsRef ComponentLists);
+
+  /// \brief Creates an empty clause with the place for \a NumVars variables.
+  ///
+  /// \param C AST context.
+  /// \param NumVars Number of expressions listed in the clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponents Total number of expression components in the clause.
+  ///
+  static OMPToClause *CreateEmpty(const ASTContext &C, unsigned NumVars,
+                                  unsigned NumUniqueDeclarations,
+                                  unsigned NumComponentLists,
+                                  unsigned NumComponents);
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_to;
+  }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+};
+
+/// \brief This represents clause 'from' in the '#pragma omp ...'
+/// directives.
+///
+/// \code
+/// #pragma omp target update from(a,b)
+/// \endcode
+/// In this example directive '#pragma omp target update' has clause 'from'
+/// with the variables 'a' and 'b'.
+///
+class OMPFromClause final
+    : public OMPMappableExprListClause<OMPFromClause>,
+      private llvm::TrailingObjects<
+          OMPFromClause, Expr *, ValueDecl *, unsigned,
+          OMPClauseMappableExprCommon::MappableComponent> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
+  friend OMPMappableExprListClause;
+  friend class OMPClauseReader;
+
+  /// Define the sizes of each trailing object array except the last one. This
+  /// is required for TrailingObjects to work properly.
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size();
+  }
+  size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
+    return getUniqueDeclarationsNum();
+  }
+  size_t numTrailingObjects(OverloadToken<unsigned>) const {
+    return getUniqueDeclarationsNum() + getTotalComponentListNum();
+  }
+
+  /// \brief Build clause with number of variables \a NumVars.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  /// \param NumVars Number of expressions listed in this clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of component lists in this clause.
+  /// \param NumComponents Total number of expression components in the clause.
+  ///
+  explicit OMPFromClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                         SourceLocation EndLoc, unsigned NumVars,
+                         unsigned NumUniqueDeclarations,
+                         unsigned NumComponentLists, unsigned NumComponents)
+      : OMPMappableExprListClause(OMPC_from, StartLoc, LParenLoc, EndLoc,
+                                  NumVars, NumUniqueDeclarations,
+                                  NumComponentLists, NumComponents) {}
+
+  /// \brief Build an empty clause.
+  ///
+  /// \param NumVars Number of expressions listed in this clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of component lists in this clause.
+  /// \param NumComponents Total number of expression components in the clause.
+  ///
+  explicit OMPFromClause(unsigned NumVars, unsigned NumUniqueDeclarations,
+                         unsigned NumComponentLists, unsigned NumComponents)
+      : OMPMappableExprListClause(
+            OMPC_from, SourceLocation(), SourceLocation(), SourceLocation(),
+            NumVars, NumUniqueDeclarations, NumComponentLists, NumComponents) {}
+
+public:
+  /// \brief Creates clause with a list of variables \a Vars.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Vars The original expression used in the clause.
+  /// \param Declarations Declarations used in the clause.
+  /// \param ComponentLists Component lists used in the clause.
+  ///
+  static OMPFromClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                               SourceLocation LParenLoc, SourceLocation EndLoc,
+                               ArrayRef<Expr *> Vars,
+                               ArrayRef<ValueDecl *> Declarations,
+                               MappableExprComponentListsRef ComponentLists);
+
+  /// \brief Creates an empty clause with the place for \a NumVars variables.
+  ///
+  /// \param C AST context.
+  /// \param NumVars Number of expressions listed in the clause.
+  /// \param NumUniqueDeclarations Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponentLists Number of unique base declarations in this
+  /// clause.
+  /// \param NumComponents Total number of expression components in the clause.
+  ///
+  static OMPFromClause *CreateEmpty(const ASTContext &C, unsigned NumVars,
+                                    unsigned NumUniqueDeclarations,
+                                    unsigned NumComponentLists,
+                                    unsigned NumComponents);
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_from;
+  }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+};
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

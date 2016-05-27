@@ -467,6 +467,7 @@ __m256i test_mm256_mask_i32gather_epi64(__m256i a, long long const *b, __m128i c
 
 __m128d test_mm_i32gather_pd(double const *b, __m128i c) {
   // CHECK-LABEL: test_mm_i32gather_pd
+  // CHECK: call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 0)
   // CHECK: call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> undef, i8* %{{.*}}, <4 x i32> %{{.*}}, <2 x double> %{{.*}}, i8 2)
   return _mm_i32gather_pd(b, c, 2);
 }
@@ -479,6 +480,7 @@ __m128d test_mm_mask_i32gather_pd(__m128d a, double const *b, __m128i c, __m128d
 
 __m256d test_mm256_i32gather_pd(double const *b, __m128i c) {
   // CHECK-LABEL: test_mm256_i32gather_pd
+  // CHECK: call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, i8 0)
   // CHECK: call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x double> %{{.*}}, i8 2)
   return _mm256_i32gather_pd(b, c, 2);
 }
@@ -491,6 +493,7 @@ __m256d test_mm256_mask_i32gather_pd(__m256d a, double const *b, __m128i c, __m2
 
 __m128 test_mm_i32gather_ps(float const *b, __m128i c) {
   // CHECK-LABEL: test_mm_i32gather_ps
+  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 0)
   // CHECK: call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> undef, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   return _mm_i32gather_ps(b, c, 2);
 }
@@ -503,6 +506,7 @@ __m128 test_mm_mask_i32gather_ps(__m128 a, float const *b, __m128i c, __m128 d) 
 
 __m256 test_mm256_i32gather_ps(float const *b, __m256i c) {
   // CHECK-LABEL: test_mm256_i32gather_ps
+  // CHECK: call <8 x float> @llvm.x86.avx.cmp.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, i8 0)
   // CHECK: call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, i8* %{{.*}}, <8 x i32> %{{.*}}, <8 x float> %{{.*}}, i8 2)
   return _mm256_i32gather_ps(b, c, 2);
 }
@@ -563,6 +567,7 @@ __m256i test_mm256_mask_i64gather_epi64(__m256i a, long long const *b, __m256i c
 
 __m128d test_mm_i64gather_pd(double const *b, __m128i c) {
   // CHECK-LABEL: test_mm_i64gather_pd
+  // CHECK: call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i8 0)
   // CHECK: call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> undef, i8* %{{.*}}, <2 x i64> %{{.*}}, <2 x double> %{{.*}}, i8 2)
   return _mm_i64gather_pd(b, c, 2);
 }
@@ -575,6 +580,7 @@ __m128d test_mm_mask_i64gather_pd(__m128d a, double const *b, __m128i c, __m128d
 
 __m256d test_mm256_i64gather_pd(double const *b, __m256i c) {
   // CHECK-LABEL: test_mm256_i64gather_pd
+  // CHECK: call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, i8 0)
   // CHECK: call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x double> %{{.*}}, i8 2)
   return _mm256_i64gather_pd(b, c, 2);
 }
@@ -587,6 +593,7 @@ __m256d test_mm256_mask_i64gather_pd(__m256d a, double const *b, __m256i c, __m2
 
 __m128 test_mm_i64gather_ps(float const *b, __m128i c) {
   // CHECK-LABEL: test_mm_i64gather_ps
+  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 0)
   // CHECK: call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> undef, i8* %{{.*}}, <2 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   return _mm_i64gather_ps(b, c, 2);
 }
@@ -599,6 +606,7 @@ __m128 test_mm_mask_i64gather_ps(__m128 a, float const *b, __m128i c, __m128 d) 
 
 __m128 test_mm256_i64gather_ps(float const *b, __m256i c) {
   // CHECK-LABEL: test_mm256_i64gather_ps
+  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ps(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 0)
   // CHECK: call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> undef, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x float> %{{.*}}, i8 2)
   return _mm256_i64gather_ps(b, c, 2);
 }

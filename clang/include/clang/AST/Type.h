@@ -215,6 +215,12 @@ public:
     return Qs;
   }
 
+  static Qualifiers fromCVRUMask(unsigned CVRU) {
+    Qualifiers Qs;
+    Qs.addCVRUQualifiers(CVRU);
+    return Qs;
+  }
+
   // Deserialize qualifiers from an opaque representation.
   static Qualifiers fromOpaqueValue(unsigned opaque) {
     Qualifiers Qs;
@@ -263,6 +269,10 @@ public:
   }
   void addCVRQualifiers(unsigned mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
+    Mask |= mask;
+  }
+  void addCVRUQualifiers(unsigned mask) {
+    assert(!(mask & ~CVRMask & ~UMask) && "bitmask contains non-CVRU bits");
     Mask |= mask;
   }
 
@@ -1375,7 +1385,7 @@ protected:
     ///
     /// C++ 8.3.5p4: The return type, the parameter type list and the
     /// cv-qualifier-seq, [...], are part of the function type.
-    unsigned TypeQuals : 3;
+    unsigned TypeQuals : 4;
 
     /// \brief The ref-qualifier associated with a \c FunctionProtoType.
     ///

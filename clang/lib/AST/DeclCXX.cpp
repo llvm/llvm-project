@@ -1646,7 +1646,7 @@ QualType CXXMethodDecl::getThisType(ASTContext &C) const {
 
   QualType ClassTy = C.getTypeDeclType(getParent());
   ClassTy = C.getQualifiedType(ClassTy,
-                               Qualifiers::fromCVRMask(getTypeQualifiers()));
+                               Qualifiers::fromCVRUMask(getTypeQualifiers()));
   return C.getPointerType(ClassTy);
 }
 

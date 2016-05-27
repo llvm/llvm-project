@@ -934,6 +934,8 @@ Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
   else
     Record = cast<CXXRecordDecl>(ContextDecl);
     
+  // We care only for CVR qualifiers here, so cut everything else.
+  CXXThisTypeQuals &= Qualifiers::FastMask;
   S.CXXThisTypeOverride
     = S.Context.getPointerType(
         S.Context.getRecordType(Record).withCVRQualifiers(CXXThisTypeQuals));

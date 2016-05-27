@@ -806,19 +806,23 @@ static __inline__ unsigned char __DEFAULT_FN_ATTRS
 __readfsbyte(unsigned long __offset) {
   return *__ptr_to_addr_space(257, unsigned char, __offset);
 }
-static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
-__readfsqword(unsigned long __offset) {
-  return *__ptr_to_addr_space(257, unsigned __int64, __offset);
-}
 static __inline__ unsigned short __DEFAULT_FN_ATTRS
 __readfsword(unsigned long __offset) {
   return *__ptr_to_addr_space(257, unsigned short, __offset);
+}
+static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
+__readfsqword(unsigned long __offset) {
+  return *__ptr_to_addr_space(257, unsigned __int64, __offset);
 }
 #endif
 #ifdef __x86_64__
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 __readgsbyte(unsigned long __offset) {
   return *__ptr_to_addr_space(256, unsigned char, __offset);
+}
+static __inline__ unsigned short __DEFAULT_FN_ATTRS
+__readgsword(unsigned long __offset) {
+  return *__ptr_to_addr_space(256, unsigned short, __offset);
 }
 static __inline__ unsigned long __DEFAULT_FN_ATTRS
 __readgsdword(unsigned long __offset) {
@@ -827,10 +831,6 @@ __readgsdword(unsigned long __offset) {
 static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
 __readgsqword(unsigned long __offset) {
   return *__ptr_to_addr_space(256, unsigned __int64, __offset);
-}
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
-__readgsword(unsigned long __offset) {
-  return *__ptr_to_addr_space(256, unsigned short, __offset);
 }
 #endif
 #undef __ptr_to_addr_space

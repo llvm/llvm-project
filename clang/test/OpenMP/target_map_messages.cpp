@@ -40,7 +40,7 @@ struct SA {
     #pragma omp target map(arg,a,d[:2]) // expected-error {{subscripted value is not an array or pointer}}
     {}
 
-    #pragma omp target map(to:ss) // expected-error {{threadprivate variables are not allowed in map clause}}
+    #pragma omp target map(to:ss) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
     {}
 
     #pragma omp target map(to:b,e)
@@ -239,7 +239,7 @@ void SAclient(int arg) {
   {}
   #pragma omp target map(r.C, t.C)
   {}
-  #pragma omp target map(r.A)   // expected-error {{bit fields cannot be used to specify storage in a map clause}}
+  #pragma omp target map(r.A)   // expected-error {{bit fields cannot be used to specify storage in a 'map' clause}}
   {}
   #pragma omp target map(r.Arr)
   {}
@@ -407,7 +407,7 @@ T tmain(T argc) {
 #pragma omp target data map(S2::S2s)
 #pragma omp target data map(S2::S2sc)
 #pragma omp target data map(e, g)
-#pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in map clause}}
+#pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
 #pragma omp target data map(k) map(k) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
 #pragma omp target map(k), map(k[:5]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}} expected-note 2 {{used here}}
   foo();
@@ -476,7 +476,7 @@ int main(int argc, char **argv) {
 #pragma omp target data map(S2::S2s)
 #pragma omp target data map(S2::S2sc)
 #pragma omp target data map(e, g)
-#pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in map clause}}
+#pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
 #pragma omp target data map(k), map(k) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
 #pragma omp target map(k), map(k[:5]) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
   foo();

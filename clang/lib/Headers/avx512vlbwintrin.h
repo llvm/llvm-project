@@ -3338,25 +3338,25 @@ _mm256_mask_permutexvar_epi16 (__m256i __W, __mmask16 __M, __m256i __A,
 
 #define _mm_mask_alignr_epi8(W, U, A, B, N) __extension__ ({ \
   (__m128i)__builtin_ia32_palignr128_mask((__v16qi)(__m128i)(A), \
-                                          (__v16qi)(__m128i)(B), (int)(N) * 8, \
+                                          (__v16qi)(__m128i)(B), (int)(N), \
                                           (__v16qi)(__m128i)(W), \
                                           (__mmask16)(U)); })
 
 #define _mm_maskz_alignr_epi8(U, A, B, N) __extension__ ({ \
   (__m128i)__builtin_ia32_palignr128_mask((__v16qi)(__m128i)(A), \
-                                          (__v16qi)(__m128i)(B), (int)(N) * 8, \
+                                          (__v16qi)(__m128i)(B), (int)(N), \
                                           (__v16qi)_mm_setzero_si128(), \
                                           (__mmask16)(U)); })
 
 #define _mm256_mask_alignr_epi8(W, U, A, B, N) __extension__ ({ \
   (__m256i)__builtin_ia32_palignr256_mask((__v32qi)(__m256i)(A), \
-                                          (__v32qi)(__m256i)(B), (int)(N) * 8, \
+                                          (__v32qi)(__m256i)(B), (int)(N), \
                                           (__v32qi)(__m256i)(W), \
                                           (__mmask32)(U)); })
 
 #define _mm256_maskz_alignr_epi8(U, A, B, N) __extension__ ({ \
   (__m256i)__builtin_ia32_palignr256_mask((__v32qi)(__m256i)(A), \
-                                          (__v32qi)(__m256i)(B), (int)(N) * 8, \
+                                          (__v32qi)(__m256i)(B), (int)(N), \
                                           (__v32qi)_mm256_setzero_si256(), \
                                           (__mmask32)(U)); })
 

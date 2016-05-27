@@ -1143,6 +1143,8 @@ TEST_F(FormatTest, UnderstandsBlockComments) {
              "                      aaaaaaaaaaaaaaaaaa  ,\n"
              "    aaaaaaaaaaaaaaaaaa) {   /*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*/\n"
              "}"));
+  verifyFormat("f(/* aaaaaaaaaaaaaaaaaa = */\n"
+               "  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 
   FormatStyle NoBinPacking = getLLVMStyle();
   NoBinPacking.BinPackParameters = false;
@@ -11535,35 +11537,6 @@ TEST_F(ReplacementTest, FormatCodeAfterReplacements) {
   Style.ColumnLimit = 20; // Set column limit to 20 to increase readibility.
   EXPECT_EQ(Expected, applyAllReplacements(
                           Code, formatReplacements(Code, Replaces, Style)));
-}
-
-TEST_F(ReplacementTest, FixOnlyAffectedCodeAfterReplacements) {
-  std::string Code = "namespace A {\n"
-                     "namespace B {\n"
-                     "  int x;\n"
-                     "} // namespace B\n"
-                     "} // namespace A\n"
-                     "\n"
-                     "namespace C {\n"
-                     "namespace D { int i; }\n"
-                     "inline namespace E { namespace { int y; } }\n"
-                     "int x=     0;"
-                     "}";
-  std::string Expected = "\n\nnamespace C {\n"
-                         "namespace D { int i; }\n\n"
-                         "int x=     0;"
-                         "}";
-  FileID ID = Context.createInMemoryFile("fix.cpp", Code);
-  tooling::Replacements Replaces;
-  Replaces.insert(tooling::Replacement(
-      Context.Sources, Context.getLocation(ID, 3, 3), 6, ""));
-  Replaces.insert(tooling::Replacement(
-      Context.Sources, Context.getLocation(ID, 9, 34), 6, ""));
-
-  format::FormatStyle Style = format::getLLVMStyle();
-  auto FinalReplaces = formatReplacements(
-      Code, cleanupAroundReplacements(Code, Replaces, Style), Style);
-  EXPECT_EQ(Expected, applyAllReplacements(Code, FinalReplaces));
 }
 
 TEST_F(ReplacementTest, SortIncludesAfterReplacement) {

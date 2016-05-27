@@ -1825,6 +1825,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_declare_simd:
   case OMPD_declare_target:
   case OMPD_end_declare_target:
+  case OMPD_target_update:
     llvm_unreachable("OpenMP Directive is not allowed");
   case OMPD_unknown:
     llvm_unreachable("Unknown OpenMP directive");
@@ -3273,6 +3274,12 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_distribute:
     Res = ActOnOpenMPDistributeDirective(ClausesWithImplicit, AStmt, StartLoc,
                                          EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_update:
+    assert(!AStmt && "Statement is not allowed for target update");
+    Res =
+        ActOnOpenMPTargetUpdateDirective(ClausesWithImplicit, StartLoc, EndLoc);
+    AllowedNameModifiers.push_back(OMPD_target_update);
     break;
   case OMPD_declare_target:
   case OMPD_end_declare_target:
@@ -6511,6 +6518,21 @@ Sema::ActOnOpenMPTargetExitDataDirective(ArrayRef<OMPClause *> Clauses,
   return OMPTargetExitDataDirective::Create(Context, StartLoc, EndLoc, Clauses);
 }
 
+StmtResult Sema::ActOnOpenMPTargetUpdateDirective(ArrayRef<OMPClause *> Clauses,
+                                                  SourceLocation StartLoc,
+                                                  SourceLocation EndLoc) {
+  bool seenMotionClause = false;
+  for (auto *C : Clauses) {
+    if (C->getClauseKind() == OMPC_to || C->getClauseKind() == OMPC_from)
+      seenMotionClause = true;
+  }
+  if (!seenMotionClause) {
+    Diag(StartLoc, diag::err_omp_at_least_one_motion_clause_required);
+    return StmtError();
+  }
+  return OMPTargetUpdateDirective::Create(Context, StartLoc, EndLoc, Clauses);
+}
+
 StmtResult Sema::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
                                            Stmt *AStmt, SourceLocation StartLoc,
                                            SourceLocation EndLoc) {
@@ -6777,6 +6799,8 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_defaultmap:
   case OMPC_unknown:
   case OMPC_uniform:
+  case OMPC_to:
+  case OMPC_from:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -7063,6 +7087,8 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_defaultmap:
   case OMPC_unknown:
   case OMPC_uniform:
+  case OMPC_to:
+  case OMPC_from:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -7214,6 +7240,8 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_hint:
   case OMPC_unknown:
   case OMPC_uniform:
+  case OMPC_to:
+  case OMPC_from:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -7398,6 +7426,8 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_defaultmap:
   case OMPC_unknown:
   case OMPC_uniform:
+  case OMPC_to:
+  case OMPC_from:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -7510,6 +7540,12 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     Res = ActOnOpenMPMapClause(MapTypeModifier, MapType, IsMapTypeImplicit,
                                DepLinMapLoc, ColonLoc, VarList, StartLoc,
                                LParenLoc, EndLoc);
+    break;
+  case OMPC_to:
+    Res = ActOnOpenMPToClause(VarList, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_from:
+    Res = ActOnOpenMPFromClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_if:
   case OMPC_final:
@@ -9853,13 +9889,14 @@ static bool CheckArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
   return ConstLength.getSExtValue() != 1;
 }
 
-// Return the expression of the base of the map clause or null if it cannot
-// be determined and do all the necessary checks to see if the expression is
-// valid as a standalone map clause expression. In the process, record all the
+// Return the expression of the base of the mappable expression or null if it
+// cannot be determined and do all the necessary checks to see if the expression
+// is valid as a standalone mappable expression. In the process, record all the
 // components of the expression.
 static Expr *CheckMapClauseExpressionBase(
     Sema &SemaRef, Expr *E,
-    OMPClauseMappableExprCommon::MappableExprComponentList &CurComponents) {
+    OMPClauseMappableExprCommon::MappableExprComponentList &CurComponents,
+    OpenMPClauseKind CKind) {
   SourceLocation ELoc = E->getExprLoc();
   SourceRange ERange = E->getSourceRange();
 
@@ -9945,8 +9982,8 @@ static Expr *CheckMapClauseExpressionBase(
       //  A bit-field cannot appear in a map clause.
       //
       if (FD->isBitField()) {
-        SemaRef.Diag(ELoc, diag::err_omp_bit_fields_forbidden_in_map_clause)
-            << CurE->getSourceRange();
+        SemaRef.Diag(ELoc, diag::err_omp_bit_fields_forbidden_in_clause)
+            << CurE->getSourceRange() << getOpenMPClauseName(CKind);
         break;
       }
 
@@ -10068,7 +10105,8 @@ static Expr *CheckMapClauseExpressionBase(
 static bool CheckMapConflicts(
     Sema &SemaRef, DSAStackTy *DSAS, ValueDecl *VD, Expr *E,
     bool CurrentRegionOnly,
-    OMPClauseMappableExprCommon::MappableExprComponentListRef CurComponents) {
+    OMPClauseMappableExprCommon::MappableExprComponentListRef CurComponents,
+    OpenMPClauseKind CKind) {
   assert(VD && E);
   SourceLocation ELoc = E->getExprLoc();
   SourceRange ERange = E->getSourceRange();
@@ -10143,7 +10181,13 @@ static bool CheckMapConflicts(
         // other, it means they are sharing storage.
         if (CI == CE && SI == SE) {
           if (CurrentRegionOnly) {
-            SemaRef.Diag(ELoc, diag::err_omp_map_shared_storage) << ERange;
+            if (CKind == OMPC_map)
+              SemaRef.Diag(ELoc, diag::err_omp_map_shared_storage) << ERange;
+            else {
+              assert(CKind == OMPC_to || CKind == OMPC_from);
+              SemaRef.Diag(ELoc, diag::err_omp_once_referenced_in_target_update)
+                  << ERange;
+            }
             SemaRef.Diag(RE->getExprLoc(), diag::note_used_here)
                 << RE->getSourceRange();
             return true;
@@ -10198,7 +10242,13 @@ static bool CheckMapConflicts(
         //
         // An expression is a subset of the other.
         if (CurrentRegionOnly && (CI == CE || SI == SE)) {
-          SemaRef.Diag(ELoc, diag::err_omp_map_shared_storage) << ERange;
+          if (CKind == OMPC_map)
+            SemaRef.Diag(ELoc, diag::err_omp_map_shared_storage) << ERange;
+          else {
+            assert(CKind == OMPC_to || CKind == OMPC_from);
+            SemaRef.Diag(ELoc, diag::err_omp_once_referenced_in_target_update)
+                << ERange;
+          }
           SemaRef.Diag(RE->getExprLoc(), diag::note_used_here)
               << RE->getSourceRange();
           return true;
@@ -10243,32 +10293,51 @@ static bool CheckMapConflicts(
   return FoundError;
 }
 
-OMPClause *
-Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
-                           OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
-                           SourceLocation MapLoc, SourceLocation ColonLoc,
-                           ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-                           SourceLocation LParenLoc, SourceLocation EndLoc) {
-  SmallVector<Expr *, 4> Vars;
+namespace {
+// Utility struct that gathers all the related lists associated with a mappable
+// expression.
+struct MappableVarListInfo final {
+  // The list of expressions.
+  ArrayRef<Expr *> VarList;
+  // The list of processed expressions.
+  SmallVector<Expr *, 16> ProcessedVarList;
+  // The mappble components for each expression.
+  OMPClauseMappableExprCommon::MappableExprComponentLists VarComponents;
+  // The base declaration of the variable.
+  SmallVector<ValueDecl *, 16> VarBaseDeclarations;
+
+  MappableVarListInfo(ArrayRef<Expr *> VarList) : VarList(VarList) {
+    // We have a list of components and base declarations for each entry in the
+    // variable list.
+    VarComponents.reserve(VarList.size());
+    VarBaseDeclarations.reserve(VarList.size());
+  }
+};
+}
+
+// Check the validity of the provided variable list for the provided clause kind
+// \a CKind. In the check process the valid expressions, and mappable expression
+// components and variables are extracted and used to fill \a Vars,
+// \a ClauseComponents, and \a ClauseBaseDeclarations. \a MapType and
+// \a IsMapTypeImplicit are expected to be valid if the clause kind is 'map'.
+static void
+checkMappableExpressionList(Sema &SemaRef, DSAStackTy *DSAS,
+                            OpenMPClauseKind CKind, MappableVarListInfo &MVLI,
+                            SourceLocation StartLoc,
+                            OpenMPMapClauseKind MapType = OMPC_MAP_unknown,
+                            bool IsMapTypeImplicit = false) {
+  // We only expect mappable expressions in 'to', 'from', and 'map' clauses.
+  assert((CKind == OMPC_map || CKind == OMPC_to || CKind == OMPC_from) &&
+         "Unexpected clause kind with mappable expressions!");
 
   // Keep track of the mappable components and base declarations in this clause.
   // Each entry in the list is going to have a list of components associated. We
   // record each set of the components so that we can build the clause later on.
   // In the end we should have the same amount of declarations and component
   // lists.
-  OMPClauseMappableExprCommon::MappableExprComponentLists ClauseComponents;
-  SmallVector<ValueDecl *, 16> ClauseBaseDeclarations;
 
-  ClauseComponents.reserve(VarList.size());
-  ClauseBaseDeclarations.reserve(VarList.size());
-
-  for (auto &RE : VarList) {
-    assert(RE && "Null expr in omp map");
-    if (isa<DependentScopeDeclRefExpr>(RE)) {
-      // It will be analyzed later.
-      Vars.push_back(RE);
-      continue;
-    }
+  for (auto &RE : MVLI.VarList) {
+    assert(RE && "Null expr in omp to/from/map clause");
     SourceLocation ELoc = RE->getExprLoc();
 
     auto *VE = RE->IgnoreParenLValueCasts();
@@ -10278,14 +10347,15 @@ Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
         VE->containsUnexpandedParameterPack()) {
       // We can only analyze this information once the missing information is
       // resolved.
-      Vars.push_back(RE);
+      MVLI.ProcessedVarList.push_back(RE);
       continue;
     }
 
     auto *SimpleExpr = RE->IgnoreParenCasts();
 
     if (!RE->IgnoreParenImpCasts()->isLValue()) {
-      Diag(ELoc, diag::err_omp_expected_named_var_member_or_array_expression)
+      SemaRef.Diag(ELoc,
+                   diag::err_omp_expected_named_var_member_or_array_expression)
           << RE->getSourceRange();
       continue;
     }
@@ -10295,7 +10365,8 @@ Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
 
     // Obtain the array or member expression bases if required. Also, fill the
     // components array with all the components identified in the process.
-    auto *BE = CheckMapClauseExpressionBase(*this, SimpleExpr, CurComponents);
+    auto *BE =
+        CheckMapClauseExpressionBase(SemaRef, SimpleExpr, CurComponents, CKind);
     if (!BE)
       continue;
 
@@ -10318,107 +10389,125 @@ Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
     (void)FD;
 
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.10]
-    //  threadprivate variables cannot appear in a map clause.
-    if (VD && DSAStack->isThreadPrivate(VD)) {
-      auto DVar = DSAStack->getTopDSA(VD, false);
-      Diag(ELoc, diag::err_omp_threadprivate_in_map);
-      ReportOriginalDSA(*this, DSAStack, VD, DVar);
+    // threadprivate variables cannot appear in a map clause.
+    // OpenMP 4.5 [2.10.5, target update Construct]
+    // threadprivate variables cannot appear in a from clause.
+    if (VD && DSAS->isThreadPrivate(VD)) {
+      auto DVar = DSAS->getTopDSA(VD, false);
+      SemaRef.Diag(ELoc, diag::err_omp_threadprivate_in_clause)
+          << getOpenMPClauseName(CKind);
+      ReportOriginalDSA(SemaRef, DSAS, VD, DVar);
       continue;
     }
 
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.9]
     //  A list item cannot appear in both a map clause and a data-sharing
     //  attribute clause on the same construct.
-    //
-    // TODO: Implement this check - it cannot currently be tested because of
-    // missing implementation of the other data sharing clauses in target
-    // directives.
 
     // Check conflicts with other map clause expressions. We check the conflicts
     // with the current construct separately from the enclosing data
-    // environment, because the restrictions are different.
-    if (CheckMapConflicts(*this, DSAStack, CurDeclaration, SimpleExpr,
-                          /*CurrentRegionOnly=*/true, CurComponents))
+    // environment, because the restrictions are different. We only have to
+    // check conflicts across regions for the map clauses.
+    if (CheckMapConflicts(SemaRef, DSAS, CurDeclaration, SimpleExpr,
+                          /*CurrentRegionOnly=*/true, CurComponents, CKind))
       break;
-    if (CheckMapConflicts(*this, DSAStack, CurDeclaration, SimpleExpr,
-                          /*CurrentRegionOnly=*/false, CurComponents))
+    if (CKind == OMPC_map &&
+        CheckMapConflicts(SemaRef, DSAS, CurDeclaration, SimpleExpr,
+                          /*CurrentRegionOnly=*/false, CurComponents, CKind))
       break;
 
+    // OpenMP 4.5 [2.10.5, target update Construct]
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
     //  If the type of a list item is a reference to a type T then the type will
     //  be considered to be T for all purposes of this clause.
     QualType Type = CurDeclaration->getType().getNonReferenceType();
 
+    // OpenMP 4.5 [2.10.5, target update Construct, Restrictions, p.4]
+    // A list item in a to or from clause must have a mappable type.
     // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, p.9]
     //  A list item must have a mappable type.
-    if (!CheckTypeMappable(VE->getExprLoc(), VE->getSourceRange(), *this,
-                           DSAStack, Type))
+    if (!CheckTypeMappable(VE->getExprLoc(), VE->getSourceRange(), SemaRef,
+                           DSAS, Type))
       continue;
 
-    // target enter data
-    // OpenMP [2.10.2, Restrictions, p. 99]
-    // A map-type must be specified in all map clauses and must be either
-    // to or alloc.
-    OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
-    if (DKind == OMPD_target_enter_data &&
-        !(MapType == OMPC_MAP_to || MapType == OMPC_MAP_alloc)) {
-      Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
-          << (IsMapTypeImplicit ? 1 : 0)
-          << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
-          << getOpenMPDirectiveName(DKind);
-      continue;
-    }
-
-    // target exit_data
-    // OpenMP [2.10.3, Restrictions, p. 102]
-    // A map-type must be specified in all map clauses and must be either
-    // from, release, or delete.
-    DKind = DSAStack->getCurrentDirective();
-    if (DKind == OMPD_target_exit_data &&
-        !(MapType == OMPC_MAP_from || MapType == OMPC_MAP_release ||
-          MapType == OMPC_MAP_delete)) {
-      Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
-          << (IsMapTypeImplicit ? 1 : 0)
-          << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
-          << getOpenMPDirectiveName(DKind);
-      continue;
-    }
-
-    // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
-    // A list item cannot appear in both a map clause and a data-sharing
-    // attribute clause on the same construct
-    if (DKind == OMPD_target && VD) {
-      auto DVar = DSAStack->getTopDSA(VD, false);
-      if (isOpenMPPrivate(DVar.CKind)) {
-        Diag(ELoc, diag::err_omp_variable_in_map_and_dsa)
-            << getOpenMPClauseName(DVar.CKind)
-            << getOpenMPDirectiveName(DSAStack->getCurrentDirective());
-        ReportOriginalDSA(*this, DSAStack, CurDeclaration, DVar);
+    if (CKind == OMPC_map) {
+      // target enter data
+      // OpenMP [2.10.2, Restrictions, p. 99]
+      // A map-type must be specified in all map clauses and must be either
+      // to or alloc.
+      OpenMPDirectiveKind DKind = DSAS->getCurrentDirective();
+      if (DKind == OMPD_target_enter_data &&
+          !(MapType == OMPC_MAP_to || MapType == OMPC_MAP_alloc)) {
+        SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
+            << (IsMapTypeImplicit ? 1 : 0)
+            << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
+            << getOpenMPDirectiveName(DKind);
         continue;
+      }
+
+      // target exit_data
+      // OpenMP [2.10.3, Restrictions, p. 102]
+      // A map-type must be specified in all map clauses and must be either
+      // from, release, or delete.
+      if (DKind == OMPD_target_exit_data &&
+          !(MapType == OMPC_MAP_from || MapType == OMPC_MAP_release ||
+            MapType == OMPC_MAP_delete)) {
+        SemaRef.Diag(StartLoc, diag::err_omp_invalid_map_type_for_directive)
+            << (IsMapTypeImplicit ? 1 : 0)
+            << getOpenMPSimpleClauseTypeName(OMPC_map, MapType)
+            << getOpenMPDirectiveName(DKind);
+        continue;
+      }
+
+      // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
+      // A list item cannot appear in both a map clause and a data-sharing
+      // attribute clause on the same construct
+      if (DKind == OMPD_target && VD) {
+        auto DVar = DSAS->getTopDSA(VD, false);
+        if (isOpenMPPrivate(DVar.CKind)) {
+          SemaRef.Diag(ELoc, diag::err_omp_variable_in_map_and_dsa)
+              << getOpenMPClauseName(DVar.CKind)
+              << getOpenMPDirectiveName(DSAS->getCurrentDirective());
+          ReportOriginalDSA(SemaRef, DSAS, CurDeclaration, DVar);
+          continue;
+        }
       }
     }
 
     // Save the current expression.
-    Vars.push_back(RE);
+    MVLI.ProcessedVarList.push_back(RE);
 
     // Store the components in the stack so that they can be used to check
     // against other clauses later on.
-    DSAStack->addMappableExpressionComponents(CurDeclaration, CurComponents);
+    DSAS->addMappableExpressionComponents(CurDeclaration, CurComponents);
 
     // Save the components and declaration to create the clause. For purposes of
     // the clause creation, any component list that has has base 'this' uses
-    // null has
-    ClauseComponents.resize(ClauseComponents.size() + 1);
-    ClauseComponents.back().append(CurComponents.begin(), CurComponents.end());
-    ClauseBaseDeclarations.push_back(isa<MemberExpr>(BE) ? nullptr
-                                                         : CurDeclaration);
+    // null as base declaration.
+    MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);
+    MVLI.VarComponents.back().append(CurComponents.begin(),
+                                     CurComponents.end());
+    MVLI.VarBaseDeclarations.push_back(isa<MemberExpr>(BE) ? nullptr
+                                                           : CurDeclaration);
   }
+}
+
+OMPClause *
+Sema::ActOnOpenMPMapClause(OpenMPMapClauseKind MapTypeModifier,
+                           OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
+                           SourceLocation MapLoc, SourceLocation ColonLoc,
+                           ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation EndLoc) {
+  MappableVarListInfo MVLI(VarList);
+  checkMappableExpressionList(*this, DSAStack, OMPC_map, MVLI, StartLoc,
+                              MapType, IsMapTypeImplicit);
 
   // We need to produce a map clause even if we don't have variables so that
   // other diagnostics related with non-existing map clauses are accurate.
-  return OMPMapClause::Create(
-      Context, StartLoc, LParenLoc, EndLoc, Vars, ClauseBaseDeclarations,
-      ClauseComponents, MapTypeModifier, MapType, IsMapTypeImplicit, MapLoc);
+  return OMPMapClause::Create(Context, StartLoc, LParenLoc, EndLoc,
+                              MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
+                              MVLI.VarComponents, MapTypeModifier, MapType,
+                              IsMapTypeImplicit, MapLoc);
 }
 
 QualType Sema::ActOnOpenMPDeclareReductionType(SourceLocation TyLoc,
@@ -11020,4 +11109,32 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D) {
     return;
   }
   checkDeclInTargetContext(E->getExprLoc(), E->getSourceRange(), *this, D);
+}
+
+OMPClause *Sema::ActOnOpenMPToClause(ArrayRef<Expr *> VarList,
+                                     SourceLocation StartLoc,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation EndLoc) {
+  MappableVarListInfo MVLI(VarList);
+  checkMappableExpressionList(*this, DSAStack, OMPC_to, MVLI, StartLoc);
+  if (MVLI.ProcessedVarList.empty())
+    return nullptr;
+
+  return OMPToClause::Create(Context, StartLoc, LParenLoc, EndLoc,
+                             MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
+                             MVLI.VarComponents);
+}
+
+OMPClause *Sema::ActOnOpenMPFromClause(ArrayRef<Expr *> VarList,
+                                       SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc) {
+  MappableVarListInfo MVLI(VarList);
+  checkMappableExpressionList(*this, DSAStack, OMPC_from, MVLI, StartLoc);
+  if (MVLI.ProcessedVarList.empty())
+    return nullptr;
+
+  return OMPFromClause::Create(Context, StartLoc, LParenLoc, EndLoc,
+                               MVLI.ProcessedVarList, MVLI.VarBaseDeclarations,
+                               MVLI.VarComponents);
 }

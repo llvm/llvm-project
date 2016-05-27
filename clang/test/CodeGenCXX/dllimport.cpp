@@ -656,7 +656,7 @@ namespace DontUseDtorAlias {
 
 namespace Vtordisp {
   // Don't dllimport the vtordisp.
-  // MO1-DAG: define linkonce_odr x86_thiscallcc void @"\01?f@?$C@D@Vtordisp@@$4PPPPPPPM@A@AEXXZ"
+  // MO1-DAG: define linkonce_odr x86_thiscallcc void @"\01?f@?$C@H@Vtordisp@@$4PPPPPPPM@A@AEXXZ"
 
   class Base {
     virtual void f() {}
@@ -667,7 +667,7 @@ namespace Vtordisp {
     C() {}
     virtual void f() {}
   };
-  template class C<char>;
+  USECLASS(C<int>);
 }
 
 namespace ClassTemplateStaticDef {
@@ -698,26 +698,31 @@ namespace PR19933 {
   template <typename T> struct A { static NonPOD x; };
   template <typename T> NonPOD A<T>::x;
   template struct __declspec(dllimport) A<int>;
-  // MSC-DAG: @"\01?x@?$A@H@PR19933@@2UNonPOD@2@A" = available_externally dllimport global %"struct.PR19933::NonPOD" zeroinitializer
+  USEVARTYPE(NonPOD, A<int>::x);
+  // MSC-DAG: @"\01?x@?$A@H@PR19933@@2UNonPOD@2@A" = external dllimport global %"struct.PR19933::NonPOD"
 
   int f();
   template <typename T> struct B { static int x; };
   template <typename T> int B<T>::x = f();
   template struct __declspec(dllimport) B<int>;
-  // MSC-DAG: @"\01?x@?$B@H@PR19933@@2HA" = available_externally dllimport global i32 0
+  USEVAR(B<int>::x);
+  // MSC-DAG: @"\01?x@?$B@H@PR19933@@2HA" = external dllimport global i32
 
   constexpr int g() { return 42; }
   template <typename T> struct C { static int x; };
   template <typename T> int C<T>::x = g();
   template struct __declspec(dllimport) C<int>;
-  // MSC-DAG: @"\01?x@?$C@H@PR19933@@2HA" = available_externally dllimport global i32 42
+  USEVAR(C<int>::x);
+  // MSC-DAG: @"\01?x@?$C@H@PR19933@@2HA" = external dllimport global i32
 
   template <int I> struct D { static int x, y; };
   template <int I> int D<I>::x = I + 1;
   template <int I> int D<I>::y = I + f();
   template struct __declspec(dllimport) D<42>;
-  // MSC-DAG: @"\01?x@?$D@$0CK@@PR19933@@2HA" = available_externally dllimport global i32 43
-  // MSC-DAG: @"\01?y@?$D@$0CK@@PR19933@@2HA" = available_externally dllimport global i32 0
+  USEVAR(D<42>::x);
+  USEVAR(D<42>::y);
+  // MSC-DAG: @"\01?x@?$D@$0CK@@PR19933@@2HA" = external dllimport global i32
+  // MSC-DAG: @"\01?y@?$D@$0CK@@PR19933@@2HA" = external dllimport global i32
 }
 
 namespace PR21355 {
@@ -804,6 +809,36 @@ extern template struct PR23770DerivedTemplate<int>;
 template struct __declspec(dllimport) PR23770DerivedTemplate<int>;
 USEMEMFUNC(PR23770BaseTemplate<int>, f);
 // M32-DAG: declare dllimport x86_thiscallcc void @"\01?f@?$PR23770BaseTemplate@H@@QAEXXZ"
+
+namespace PR27810 {
+  template <class T>
+  struct basic_ostream {
+    struct sentry {
+      sentry() { }
+      void foo() { }
+    };
+  };
+  template class __declspec(dllimport) basic_ostream<char>;
+  // The explicit instantiation definition acts as an explicit instantiation
+  // *declaration*, dllimport is not inherited by the inner class, and no
+  // functions are emitted unless they are used.
+
+  USEMEMFUNC(basic_ostream<char>::sentry, foo);
+  // M32-DAG: define linkonce_odr x86_thiscallcc void @"\01?foo@sentry@?$basic_ostream@D@PR27810@@QAEXXZ"
+  // M32-NOT: ??0sentry@?$basic_ostream@D@PR27810@@QAE@XZ
+}
+
+namespace PR27811 {
+  template <class T> struct codecvt {
+    virtual ~codecvt() { }
+  };
+  template class __declspec(dllimport) codecvt<char>;
+
+  // dllimport means this explicit instantiation definition gets treated as a
+  // declaration. Thus, the vtable should not be marked used, and in fact
+  // nothing for this class should be emitted at all since it's not used.
+  // M32-NOT: codecvt
+}
 
 //===----------------------------------------------------------------------===//
 // Classes with template base classes

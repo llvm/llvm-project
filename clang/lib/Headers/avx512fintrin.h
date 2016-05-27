@@ -445,6 +445,12 @@ _mm512_castsi512_si128 (__m512i __A)
   return (__m128i)__builtin_shufflevector(__A, __A , 0, 1);
 }
 
+static __inline __m256i __DEFAULT_FN_ATTRS
+_mm512_castsi512_si256 (__m512i __A)
+{
+  return (__m256i)__builtin_shufflevector(__A, __A , 0, 1, 2, 3);
+}
+
 /* Bitwise operators */
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_and_epi32(__m512i __a, __m512i __b)
