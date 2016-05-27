@@ -1884,22 +1884,24 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       return RValue::get(Builder.CreateExtractValue(CXI, 0));
   }
   case Builtin::BI_InterlockedIncrement: {
+    llvm::Type *IntTy = ConvertType(E->getType());
     AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Add,
       EmitScalarExpr(E->getArg(0)),
-      ConstantInt::get(Int32Ty, 1),
+      ConstantInt::get(IntTy, 1),
       llvm::AtomicOrdering::SequentiallyConsistent);
     RMWI->setVolatile(true);
-    return RValue::get(Builder.CreateAdd(RMWI, ConstantInt::get(Int32Ty, 1)));
+    return RValue::get(Builder.CreateAdd(RMWI, ConstantInt::get(IntTy, 1)));
   }
   case Builtin::BI_InterlockedDecrement: {
+    llvm::Type *IntTy = ConvertType(E->getType());
     AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Sub,
       EmitScalarExpr(E->getArg(0)),
-      ConstantInt::get(Int32Ty, 1),
+      ConstantInt::get(IntTy, 1),
       llvm::AtomicOrdering::SequentiallyConsistent);
     RMWI->setVolatile(true);
-    return RValue::get(Builder.CreateSub(RMWI, ConstantInt::get(Int32Ty, 1)));
+    return RValue::get(Builder.CreateSub(RMWI, ConstantInt::get(IntTy, 1)));
   }
   case Builtin::BI_InterlockedExchangeAdd: {
     AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
@@ -1911,11 +1913,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(RMWI);
   }
   case Builtin::BI__readfsdword: {
+    llvm::Type *IntTy = ConvertType(E->getType());
     Value *IntToPtr =
       Builder.CreateIntToPtr(EmitScalarExpr(E->getArg(0)),
-                             llvm::PointerType::get(CGM.Int32Ty, 257));
+                             llvm::PointerType::get(IntTy, 257));
     LoadInst *Load =
-        Builder.CreateAlignedLoad(IntToPtr, /*Align=*/4, /*isVolatile=*/true);
+        Builder.CreateDefaultAlignedLoad(IntToPtr, /*isVolatile=*/true);
     return RValue::get(Load);
   }
 

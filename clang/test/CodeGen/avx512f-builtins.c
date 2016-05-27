@@ -6041,6 +6041,13 @@ __m128i test_mm512_castsi512_si128 (__m512i __A)
   return _mm512_castsi512_si128 (__A);
 }
 
+__m256i test_mm512_castsi512_si256 (__m512i __A)
+{
+  // CHECK-LABEL: @test_mm512_castsi512_si256 
+  // CHECK: shufflevector <8 x i64> %{{.}}, <8 x i64> %{{.}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  return _mm512_castsi512_si256 (__A);
+}
+
 __m128 test_mm_cvt_roundsd_ss(__m128 __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_cvt_roundsd_ss
   // CHECK: @llvm.x86.avx512.mask.cvtsd2ss.round

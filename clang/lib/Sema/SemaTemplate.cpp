@@ -7369,6 +7369,29 @@ Sema::ActOnExplicitInstantiation(Scope *S,
     }
   }
 
+  // In MSVC mode, dllimported explicit instantiation definitions are treated as
+  // instantiation declarations for most purposes.
+  bool DLLImportExplicitInstantiationDef = false;
+  if (TSK == TSK_ExplicitInstantiationDefinition &&
+      Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+    // Check for dllimport class template instantiation definitions.
+    bool DLLImport =
+        ClassTemplate->getTemplatedDecl()->getAttr<DLLImportAttr>();
+    for (AttributeList *A = Attr; A; A = A->getNext()) {
+      if (A->getKind() == AttributeList::AT_DLLImport)
+        DLLImport = true;
+      if (A->getKind() == AttributeList::AT_DLLExport) {
+        // dllexport trumps dllimport here.
+        DLLImport = false;
+        break;
+      }
+    }
+    if (DLLImport) {
+      TSK = TSK_ExplicitInstantiationDeclaration;
+      DLLImportExplicitInstantiationDef = true;
+    }
+  }
+
   // Translate the parser's template argument list in our AST format.
   TemplateArgumentListInfo TemplateArgs(LAngleLoc, RAngleLoc);
   translateTemplateArguments(TemplateArgsIn, TemplateArgs);
@@ -7421,6 +7444,12 @@ Sema::ActOnExplicitInstantiation(Scope *S,
       Specialization = PrevDecl;
       Specialization->setLocation(TemplateNameLoc);
       PrevDecl = nullptr;
+    }
+
+    if (PrevDecl_TSK == TSK_ExplicitInstantiationDeclaration &&
+        DLLImportExplicitInstantiationDef) {
+      // The new specialization might add a dllimport attribute.
+      HasNoEffect = false;
     }
   }
 
@@ -7500,11 +7529,11 @@ Sema::ActOnExplicitInstantiation(Scope *S,
                                        Specialization->getDefinition());
   if (Def) {
     TemplateSpecializationKind Old_TSK = Def->getTemplateSpecializationKind();
-
     // Fix a TSK_ExplicitInstantiationDeclaration followed by a
     // TSK_ExplicitInstantiationDefinition
     if (Old_TSK == TSK_ExplicitInstantiationDeclaration &&
-        TSK == TSK_ExplicitInstantiationDefinition) {
+        (TSK == TSK_ExplicitInstantiationDefinition ||
+         DLLImportExplicitInstantiationDef)) {
       // FIXME: Need to notify the ASTMutationListener that we did this.
       Def->setTemplateSpecializationKind(TSK);
 

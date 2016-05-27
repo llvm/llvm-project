@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -triple i686-pc-linux-gnu -std=c++1y -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NO-OPT
 // RUN: %clang_cc1 -emit-llvm -triple i686-pc-linux-gnu -std=c++1y -O3 -disable-llvm-optzns -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
+// RUN: %clang_cc1 -emit-llvm -triple i686-pc-win32 -std=c++1y -o - %s | FileCheck %s --check-prefix=CHECK-MS
 
 // This check logically is attached to 'template int S<int>::i;' below.
 // CHECK: @_ZN1SIiE1iE = weak_odr global i32
@@ -101,6 +102,28 @@ struct S {
 };
 int g() { return S<int>().f(); }
 template struct S<int>;
+}
+
+namespace NestedClasses {
+  // Check how explicit instantiation of an outer class affects the inner class.
+  template <typename T> struct Outer {
+    struct Inner {
+      void f() {}
+    };
+  };
+
+  // Explicit instantiation definition of Outer causes explicit instantiation
+  // definition of Inner.
+  template struct Outer<int>;
+  // CHECK: define weak_odr void @_ZN13NestedClasses5OuterIiE5Inner1fEv
+  // CHECK-MS: define weak_odr x86_thiscallcc void @"\01?f@Inner@?$Outer@H@NestedClasses@@QAEXXZ"
+
+  // Explicit instantiation declaration of Outer causes explicit instantiation
+  // declaration of Inner, but not in MSVC mode.
+  extern template struct Outer<char>;
+  auto use = &Outer<char>::Inner::f;
+  // CHECK: {{declare|define available_externally}} void @_ZN13NestedClasses5OuterIcE5Inner1fEv
+  // CHECK-MS: define linkonce_odr x86_thiscallcc void @"\01?f@Inner@?$Outer@D@NestedClasses@@QAEXXZ"
 }
 
 // Check that we emit definitions from explicit instantiations even when they

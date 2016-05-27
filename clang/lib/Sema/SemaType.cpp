@@ -2668,8 +2668,8 @@ void Sema::diagnoseIgnoredQualifiers(unsigned DiagID, unsigned Quals,
     { "const", DeclSpec::TQ_const, ConstQualLoc },
     { "volatile", DeclSpec::TQ_volatile, VolatileQualLoc },
     { "restrict", DeclSpec::TQ_restrict, RestrictQualLoc },
-    { "_Atomic", DeclSpec::TQ_atomic, AtomicQualLoc },
-    { "__unaligned", DeclSpec::TQ_unaligned, UnalignedQualLoc }
+    { "__unaligned", DeclSpec::TQ_unaligned, UnalignedQualLoc },
+    { "_Atomic", DeclSpec::TQ_atomic, AtomicQualLoc }
   };
 
   SmallString<32> QualStr;

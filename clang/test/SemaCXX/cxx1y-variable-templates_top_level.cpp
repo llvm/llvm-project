@@ -458,3 +458,9 @@ namespace PR19169 {
   template<> int g<double>; // expected-error {{no variable template matches specialization; did you mean to use 'g' as function template instead?}}
 }
 
+#ifndef PRECXX11
+template <typename... Args> struct Variadic_t { };
+template <typename... Args> Variadic_t<Args...> Variadic;
+auto variadic1 = Variadic<>;
+auto variadic2 = Variadic<int, int>;
+#endif

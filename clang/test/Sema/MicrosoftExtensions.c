@@ -178,3 +178,5 @@ void test_unaligned() {
   __unaligned int *p3 = p2;
 }
 
+void test_unaligned2(int x[__unaligned 4]) {}
+

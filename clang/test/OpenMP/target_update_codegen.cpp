@@ -25,12 +25,12 @@ double gc[100];
 // CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i32] [i32 34]
 
 // CK1: [[SIZE02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] 4]
-// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i32] [i32 32]
+// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i32] [i32 33]
 
-// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i32] [i32 38]
+// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i32] [i32 34]
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i[[sz]]] [i[[sz]] {{8|4}}, i[[sz]] 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i32] [i32 32, i32 16]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i32] [i32 33, i32 17]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
@@ -38,8 +38,7 @@ void foo(int arg) {
   float lb[arg];
 
   // Region 00
-  // CK1-NOT: __tgt_target_data_begin
-  // CK1-DAG: call void @__tgt_target_data_end(i32 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
+  // CK1-DAG: call void @__tgt_target_data_update(i32 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
   // CK1-DAG: [[DEV]] = load i32, i32* %{{[^,]+}},
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -50,19 +49,18 @@ void foo(int arg) {
   // CK1-DAG: store i8* bitcast ([100 x double]* @gc to i8*), i8** [[P0]]
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
-  #pragma omp target exit data if(1+3-5) device(arg) map(from: gc)
+  #pragma omp target update if(1+3-5) device(arg) from(gc)
   {++arg;}
 
   // Region 01
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
-  #pragma omp target exit data map(release: la) if(1+3-4)
+  #pragma omp target update to(la) if(1+3-4)
   {++arg;}
 
   // Region 02
-  // CK1-NOT: __tgt_target_data_begin
   // CK1: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
   // CK1: [[IFTHEN]]
-  // CK1-DAG: call void @__tgt_target_data_end(i32 4, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}})
+  // CK1-DAG: call void @__tgt_target_data_update(i32 4, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}})
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -78,15 +76,14 @@ void foo(int arg) {
   // CK1: br label %[[IFEND]]
   // CK1: [[IFEND]]
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
-  #pragma omp target exit data map(release: arg) if(arg) device(4)
+  #pragma omp target update to(arg) if(arg) device(4)
   {++arg;}
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   {++arg;}
 
   // Region 03
-  // CK1-NOT: __tgt_target_data_begin
-  // CK1-DAG: call void @__tgt_target_data_end(i32 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}})
+  // CK1-DAG: call void @__tgt_target_data_update(i32 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}})
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
   // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
@@ -101,15 +98,15 @@ void foo(int arg) {
   // CK1-DAG: [[CPVAL0]] = bitcast float* [[VAR0]] to i8*
   // CK1-DAG: [[CSVAL0]] = mul nuw i[[sz]] %{{[^,]+}}, 4
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
-  #pragma omp target exit data map(always, from: lb)
+  // CK1-NOT: __tgt_target_data_end
+  #pragma omp target update from(lb)
   {++arg;}
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   {++arg;}
 
   // Region 04
-  // CK1-NOT: __tgt_target_data_begin
-  // CK1-DAG: call void @__tgt_target_data_end(i32 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE04]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE04]]{{.+}})
+  // CK1-DAG: call void @__tgt_target_data_update(i32 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE04]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE04]]{{.+}})
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -128,7 +125,8 @@ void foo(int arg) {
   // CK1-DAG: [[SEC11]] = load double*, double** getelementptr inbounds ([[ST]], [[ST]]* @gb, i32 0, i32 1),
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
-  #pragma omp target exit data map(release: gb.b[:3])
+  // CK1-NOT: __tgt_target_data_end
+  #pragma omp target update to(gb.b[:3])
   {++arg;}
 }
 #endif
@@ -149,14 +147,14 @@ struct ST {
 
   T foo(T arg) {
     // Region 00
-    #pragma omp target exit data map(always, release: b[1:3]) if(a>123) device(arg)
+    #pragma omp target update from(b[1:3]) if(a>123) device(arg)
     {arg++;}
     return arg;
   }
 };
 
 // CK2: [[SIZE00:@.+]] = {{.+}}constant [2 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}, i{{64|32}} 24]
-// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i32] [i32 36, i32 20]
+// CK2: [[MTYPE00:@.+]] = {{.+}}constant [2 x i32] [i32 34, i32 18]
 
 // CK2-LABEL: _Z3bari
 int bar(int arg){
@@ -165,10 +163,9 @@ int bar(int arg){
 }
 
 // Region 00
-// CK2-NOT: __tgt_target_data_begin
 // CK2: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK2: [[IFTHEN]]
-// CK2-DAG: call void @__tgt_target_data_end(i32 [[DEV:%[^,]+]], i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}})
+// CK2-DAG: call void @__tgt_target_data_update(i32 [[DEV:%[^,]+]], i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE00]]{{.+}})
 // CK2-DAG: [[DEV]] = load i32, i32* %{{[^,]+}},
 // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -210,11 +207,38 @@ int bar(int arg){
 
 // CK3-LABEL: no_target_devices
 void no_target_devices(int arg) {
-  // CK3-NOT: tgt_target_data_begin
+  // CK3-NOT: tgt_target_data_update
   // CK3: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
-  // CK3-NOT: tgt_target_data_end
   // CK3: ret
-  #pragma omp target exit data map(from: arg) if(arg) device(4)
+  #pragma omp target update to(arg) if(arg) device(4)
+  {++arg;}
+}
+#endif
+///==========================================================================///
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fomptargets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK4 --check-prefix CK4-64
+// RUN: %clang_cc1 -DCK4 -fopenmp -fomptargets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fomptargets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK4 --check-prefix CK4-64
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -fomptargets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK4 --check-prefix CK4-32
+// RUN: %clang_cc1 -DCK4 -fopenmp -fomptargets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fomptargets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK4 --check-prefix CK4-32
+
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fomp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-64
+// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fomp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fomptargets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fomp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-64
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -DCK4 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fomp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-32
+// RUN: %clang_cc1 -DCK4 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fomp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fomptargets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fomp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix TCK4 --check-prefix TCK4-32
+#ifdef CK4
+
+// CK4-LABEL: device_side_scan
+void device_side_scan(int arg) {
+  // CK4: tgt_target_data_update
+  // CK4: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
+  // CK4: ret
+  // TCK4-NOT: tgt_target_data_update
+  #pragma omp target update from(arg) if(arg) device(4)
   {++arg;}
 }
 #endif

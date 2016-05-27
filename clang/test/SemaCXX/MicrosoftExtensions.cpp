@@ -91,6 +91,7 @@ struct aligned_type4 {
 __unaligned int aligned_type4::*p1_aligned_type4 = &aligned_type4::i;
 int aligned_type4::* __unaligned p2_aligned_type4 = &aligned_type4::i;
 __unaligned int aligned_type4::* __unaligned p3_aligned_type4 = &aligned_type4::i;
+void (aligned_type4::*__unaligned p4_aligned_type4)();
 
 // Check that __unaligned qualifier can be used for overloading
 void foo_unaligned(int *arg) {}
@@ -119,6 +120,9 @@ void test_unaligned() {
   p1_aligned_type4 = p2_aligned_type4;
   p2_aligned_type4 = p1_aligned_type4; // expected-error {{assigning to 'int aligned_type4::*' from incompatible type '__unaligned int aligned_type4::*'}}
   p3_aligned_type4 = p1_aligned_type4;
+
+  __unaligned int a[10];
+  int *b = a; // expected-error {{cannot initialize a variable of type 'int *' with an lvalue of type '__unaligned int [10]'}}
 }
 
 // Test from PR27367

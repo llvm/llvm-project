@@ -1012,3 +1012,25 @@ OMPDistributeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
                              numLoopChildren(CollapsedNum, OMPD_distribute));
   return new (Mem) OMPDistributeDirective(CollapsedNum, NumClauses);
 }
+
+OMPTargetUpdateDirective *
+OMPTargetUpdateDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                                 SourceLocation EndLoc,
+                                 ArrayRef<OMPClause *> Clauses) {
+  unsigned Size = llvm::alignTo(sizeof(OMPTargetUpdateDirective),
+                                llvm::alignOf<OMPClause *>());
+  void *Mem = C.Allocate(Size + sizeof(OMPClause *) * Clauses.size());
+  OMPTargetUpdateDirective *Dir =
+      new (Mem) OMPTargetUpdateDirective(StartLoc, EndLoc, Clauses.size());
+  Dir->setClauses(Clauses);
+  return Dir;
+}
+
+OMPTargetUpdateDirective *
+OMPTargetUpdateDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
+                                      EmptyShell) {
+  unsigned Size = llvm::alignTo(sizeof(OMPTargetUpdateDirective),
+                                llvm::alignOf<OMPClause *>());
+  void *Mem = C.Allocate(Size + sizeof(OMPClause *) * NumClauses);
+  return new (Mem) OMPTargetUpdateDirective(NumClauses);
+}

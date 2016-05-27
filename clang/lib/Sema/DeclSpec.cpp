@@ -796,8 +796,8 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
   case TQ_const:    TQ_constLoc = Loc; return false;
   case TQ_restrict: TQ_restrictLoc = Loc; return false;
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
-  case TQ_atomic:   TQ_atomicLoc = Loc; return false;
   case TQ_unaligned: TQ_unalignedLoc = Loc; return false;
+  case TQ_atomic:   TQ_atomicLoc = Loc; return false;
   }
 
   llvm_unreachable("Unknown type qualifier!");

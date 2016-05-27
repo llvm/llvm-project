@@ -844,6 +844,11 @@ struct __declspec(dllexport) B {
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01??_FB@pr26490@@QAEXXZ"
 }
 
+// dllexport trumps dllexport on an explicit instantiation.
+template <typename T> struct ExplicitInstantiationTwoAttributes { void f() {} };
+template struct __declspec(dllexport) __declspec(dllimport) ExplicitInstantiationTwoAttributes<int>;
+// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?f@?$ExplicitInstantiationTwoAttributes@H@@QAEXXZ"
+
 
 //===----------------------------------------------------------------------===//
 // Classes with template base classes
@@ -957,14 +962,6 @@ struct __declspec(dllexport) DerivedFromExplicitInstantiationDeclTemplateBase : 
 template struct ExplicitInstantiationDeclTemplateBase<int>;
 // M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?func@?$ExplicitInstantiationDeclTemplateBase@H@@QAEXXZ"
 // G32-DAG: define weak_odr x86_thiscallcc void @_ZN37ExplicitInstantiationDeclTemplateBaseIiE4funcEv
-
-template <typename T> struct ExplicitInstantiationDeclTemplateBase2 { void func() {} };
-extern template struct ExplicitInstantiationDeclTemplateBase2<int>;
-struct __declspec(dllexport) DerivedFromExplicitInstantiationDeclTemplateBase2 : public ExplicitInstantiationDeclTemplateBase2<int> {};
-template struct __declspec(dllimport) ExplicitInstantiationDeclTemplateBase2<int>;
-USEMEMFUNC(ExplicitInstantiationDeclTemplateBase2<int>, func)
-// M32-DAG: define weak_odr dllexport x86_thiscallcc void @"\01?func@?$ExplicitInstantiationDeclTemplateBase2@H@@QAEXXZ"
-// G32-DAG: define weak_odr x86_thiscallcc void @_ZN38ExplicitInstantiationDeclTemplateBase2IiE4funcEv
 
 // PR26076
 struct LayerSelectionBound;

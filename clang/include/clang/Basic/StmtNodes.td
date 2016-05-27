@@ -220,6 +220,7 @@ def OMPTargetEnterDataDirective : DStmt<OMPExecutableDirective>;
 def OMPTargetExitDataDirective : DStmt<OMPExecutableDirective>;
 def OMPTargetParallelDirective : DStmt<OMPExecutableDirective>;
 def OMPTargetParallelForDirective : DStmt<OMPExecutableDirective>;
+def OMPTargetUpdateDirective : DStmt<OMPExecutableDirective>;
 def OMPTeamsDirective : DStmt<OMPExecutableDirective>;
 def OMPCancellationPointDirective : DStmt<OMPExecutableDirective>;
 def OMPCancelDirective : DStmt<OMPExecutableDirective>;

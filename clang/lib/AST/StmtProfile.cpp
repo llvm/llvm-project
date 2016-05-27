@@ -491,6 +491,12 @@ void OMPClauseProfiler::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
 void OMPClauseProfiler::VisitOMPHintClause(const OMPHintClause *C) {
   Profiler->VisitStmt(C->getHint());
 }
+void OMPClauseProfiler::VisitOMPToClause(const OMPToClause *C) {
+  VisitOMPClauseList(C);
+}
+void OMPClauseProfiler::VisitOMPFromClause(const OMPFromClause *C) {
+  VisitOMPClauseList(C);
+}
 }
 
 void
@@ -655,6 +661,11 @@ void OMPClauseProfiler::VisitOMPDistScheduleClause(
 }
 
 void OMPClauseProfiler::VisitOMPDefaultmapClause(const OMPDefaultmapClause *) {}
+
+void StmtProfiler::VisitOMPTargetUpdateDirective(
+    const OMPTargetUpdateDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
 
 void StmtProfiler::VisitExpr(const Expr *S) {
   VisitStmt(S);

@@ -8012,8 +8012,8 @@ def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
-def err_omp_bit_fields_forbidden_in_map_clause : Error<
-  "bit fields cannot be used to specify storage in a map clause">;
+def err_omp_bit_fields_forbidden_in_clause : Error<
+  "bit fields cannot be used to specify storage in a '%0' clause">;
 def err_array_section_does_not_specify_contiguous_storage : Error<
   "array section does not specify contiguous storage">;
 def err_omp_union_type_not_allowed : Error<
@@ -8154,6 +8154,8 @@ def err_omp_clause_floating_type_arg : Error<
   "arguments of OpenMP clause 'reduction' with bitwise operators cannot be of floating type">;
 def err_omp_once_referenced : Error<
   "variable can appear only once in OpenMP '%0' clause">;
+def err_omp_once_referenced_in_target_update : Error<
+  "variable can appear only once in OpenMP 'target update' construct">;
 def note_omp_referenced : Note<
   "previously referenced here">;
 def err_omp_reduction_in_task : Error<
@@ -8291,8 +8293,8 @@ def note_omp_polymorphic_in_target : Note<
   "mappable type cannot be polymorphic">;
 def note_omp_static_member_in_target : Note<
   "mappable type cannot contain static members">;
-def err_omp_threadprivate_in_map : Error<
-  "threadprivate variables are not allowed in map clause">;
+def err_omp_threadprivate_in_clause : Error<
+  "threadprivate variables are not allowed in '%0' clause">;
 def err_omp_wrong_ordered_loop_count : Error<
   "the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause">;
 def note_collapse_loop_count : Note<
@@ -8343,6 +8345,8 @@ def err_omp_expected_uniform_param : Error<
   "expected a reference to a parameter specified in a 'uniform' clause">;
 def err_omp_expected_int_param : Error<
   "expected a reference to an integer-typed parameter">;
+def err_omp_at_least_one_motion_clause_required : Error<
+  "expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
