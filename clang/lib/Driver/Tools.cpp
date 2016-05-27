@@ -5378,43 +5378,27 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fno-diagnostics-show-note-include-stack");
   }
 
-  // Color diagnostics are the default, unless the terminal doesn't support
-  // them.
-  // Support both clang's -f[no-]color-diagnostics and gcc's
-  // -f[no-]diagnostics-colors[=never|always|auto].
-  enum { Colors_On, Colors_Off, Colors_Auto } ShowColors = Colors_Auto;
-  for (const auto &Arg : Args) {
-    const Option &O = Arg->getOption();
+  // Color diagnostics are parsed by the driver directly from argv
+  // and later re-parsed to construct this job; claim any possible
+  // color diagnostic here to avoid warn_drv_unused_argument and
+  // diagnose bad OPT_fdiagnostics_color_EQ values.
+  for (Arg *A : Args) {
+    const Option &O = A->getOption();
     if (!O.matches(options::OPT_fcolor_diagnostics) &&
         !O.matches(options::OPT_fdiagnostics_color) &&
         !O.matches(options::OPT_fno_color_diagnostics) &&
         !O.matches(options::OPT_fno_diagnostics_color) &&
         !O.matches(options::OPT_fdiagnostics_color_EQ))
       continue;
-
-    Arg->claim();
-    if (O.matches(options::OPT_fcolor_diagnostics) ||
-        O.matches(options::OPT_fdiagnostics_color)) {
-      ShowColors = Colors_On;
-    } else if (O.matches(options::OPT_fno_color_diagnostics) ||
-               O.matches(options::OPT_fno_diagnostics_color)) {
-      ShowColors = Colors_Off;
-    } else {
-      assert(O.matches(options::OPT_fdiagnostics_color_EQ));
-      StringRef value(Arg->getValue());
-      if (value == "always")
-        ShowColors = Colors_On;
-      else if (value == "never")
-        ShowColors = Colors_Off;
-      else if (value == "auto")
-        ShowColors = Colors_Auto;
-      else
+    if (O.matches(options::OPT_fdiagnostics_color_EQ)) {
+      StringRef Value(A->getValue());
+      if (Value != "always" && Value != "never" && Value != "auto")
         getToolChain().getDriver().Diag(diag::err_drv_clang_unsupported)
-            << ("-fdiagnostics-color=" + value).str();
+              << ("-fdiagnostics-color=" + Value).str();
     }
+    A->claim();
   }
-  if (ShowColors == Colors_On ||
-      (ShowColors == Colors_Auto && llvm::sys::Process::StandardErrHasColors()))
+  if (D.getDiags().getDiagnosticOptions().ShowColors)
     CmdArgs.push_back("-fcolor-diagnostics");
 
   if (Args.hasArg(options::OPT_fansi_escape_codes))
