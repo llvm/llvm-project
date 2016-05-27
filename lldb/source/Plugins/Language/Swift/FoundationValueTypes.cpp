@@ -77,3 +77,21 @@ lldb_private::formatters::swift::NotificationName_SummaryProvider (ValueObject& 
     stream.Printf("%s", summary.c_str());
     return true;
 }
+
+bool
+lldb_private::formatters::swift::URL_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    static ConstString g__url("_url");
+    
+    ValueObjectSP underlying_url_sp(valobj.GetChildAtNamePath( {g__url} ));
+    
+    if (!underlying_url_sp)
+        return false;
+    
+    std::string summary;
+    if (!underlying_url_sp->GetSummaryAsCString(summary, options))
+        return false;
+    
+    stream.Printf("%s", summary.c_str());
+    return true;
+}
