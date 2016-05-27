@@ -25,24 +25,25 @@ append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
 set(TSAN_SOURCES
   rtl/tsan_clock.cc
   rtl/tsan_debugging.cc
-  rtl/tsan_flags.cc
   rtl/tsan_fd.cc
+  rtl/tsan_flags.cc
   rtl/tsan_ignoreset.cc
   rtl/tsan_interceptors.cc
+  rtl/tsan_interface.cc
   rtl/tsan_interface_ann.cc
   rtl/tsan_interface_atomic.cc
-  rtl/tsan_interface.cc
   rtl/tsan_interface_java.cc
   rtl/tsan_malloc_mac.cc
   rtl/tsan_md5.cc
   rtl/tsan_mman.cc
   rtl/tsan_mutex.cc
   rtl/tsan_mutexset.cc
+  rtl/tsan_preinit.cc
   rtl/tsan_report.cc
   rtl/tsan_rtl.cc
   rtl/tsan_rtl_mutex.cc
-  rtl/tsan_rtl_report.cc
   rtl/tsan_rtl_proc.cc
+  rtl/tsan_rtl_report.cc
   rtl/tsan_rtl_thread.cc
   rtl/tsan_stack_trace.cc
   rtl/tsan_stat.cc
@@ -117,7 +118,7 @@ if(APPLE)
                 RTUbsan
     CFLAGS ${TSAN_RTL_CFLAGS}
     PARENT_TARGET tsan)
-  add_compiler_rt_object_libraries(RTTsan_dynamic 
+  add_compiler_rt_object_libraries(RTTsan_dynamic
     OS ${TSAN_SUPPORTED_OS}
     ARCHS ${TSAN_SUPPORTED_ARCH}
     SOURCES ${TSAN_SOURCES} ${TSAN_CXX_SOURCES} ${TSAN_ASM_SOURCES}
@@ -197,7 +198,7 @@ add_dependencies(compiler-rt tsan)
 # FreeBSD does not install a number of Clang-provided headers for the compiler
 # in the base system due to incompatibilities between FreeBSD's and Clang's
 # versions. As a workaround do not use --sysroot=. on FreeBSD until this is
-# addressed.                                                        
+# addressed.
 if(COMPILER_RT_HAS_SYSROOT_FLAG AND NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   file(GLOB _tsan_generic_sources rtl/tsan*)
   file(GLOB _tsan_platform_sources rtl/tsan*posix* rtl/tsan*mac*

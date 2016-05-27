@@ -46,6 +46,23 @@ int main() {
     Fp = getFunc(511 - I);
     for (J = 0; J < 2000 - I; J++)
       Fp();
+#ifdef STRESS
+    Fp = getFunc(I);
+    for (J = 0; J < 2000 - I; J++)
+      Fp();
+
+    Fp = getFunc(I);
+    for (J = 0; J < 2000 - I; J++)
+      Fp();
+
+    Fp = getFunc(I);
+    for (J = 0; J < 2000 - I; J++)
+      Fp();
+
+    Fp = getFunc(I);
+    for (J = 0; J < 2000 - I; J++)
+      Fp();
+#endif
   }
 #ifdef CALL_SHARED
   shared_entry();

@@ -67,8 +67,13 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
   case MipsReginfo:
   case MipsOptions:
     // MIPS .reginfo and .MIPS.options sections are consumed by the linker,
-    // so they should never be copied to output.
-    llvm_unreachable("MIPS reginfo/options section reached writeTo().");
+    // and the linker produces a single output section. It is possible that
+    // input files contain section symbol points to the corresponding input
+    // section. Redirect it to the produced output section.
+    if (Offset != 0)
+      fatal("Unsupported reference to the middle of '" + getSectionName() +
+            "' section");
+    return this->OutSec->getVA();
   }
   llvm_unreachable("invalid section kind");
 }

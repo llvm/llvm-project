@@ -87,7 +87,7 @@ private:
 };
 
 inline Registers_x86::Registers_x86(const void *registers) {
-  static_assert(check_fit<Registers_x86, unw_context_t>::does_fit,
+  static_assert((check_fit<Registers_x86, unw_context_t>::does_fit),
                 "x86 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
 }
@@ -281,7 +281,7 @@ private:
 };
 
 inline Registers_x86_64::Registers_x86_64(const void *registers) {
-  static_assert(check_fit<Registers_x86_64, unw_context_t>::does_fit,
+  static_assert((check_fit<Registers_x86_64, unw_context_t>::does_fit),
                 "x86_64 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
 }
@@ -548,7 +548,7 @@ private:
 };
 
 inline Registers_ppc::Registers_ppc(const void *registers) {
-  static_assert(check_fit<Registers_ppc, unw_context_t>::does_fit,
+  static_assert((check_fit<Registers_ppc, unw_context_t>::does_fit),
                 "ppc registers do not fit into unw_context_t");
   memcpy(&_registers, static_cast<const uint8_t *>(registers),
          sizeof(_registers));
@@ -1078,7 +1078,7 @@ private:
 };
 
 inline Registers_arm64::Registers_arm64(const void *registers) {
-  static_assert(check_fit<Registers_arm64, unw_context_t>::does_fit,
+  static_assert((check_fit<Registers_arm64, unw_context_t>::does_fit),
                 "arm64 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
   static_assert(sizeof(GPRs) == 0x110,
@@ -1404,7 +1404,7 @@ inline Registers_arm::Registers_arm(const void *registers)
     _saved_vfp_d16_d31(false),
     _saved_iwmmx(false),
     _saved_iwmmx_control(false) {
-  static_assert(check_fit<Registers_arm, unw_context_t>::does_fit,
+  static_assert((check_fit<Registers_arm, unw_context_t>::does_fit),
                 "arm registers do not fit into unw_context_t");
   // See unw_getcontext() note about data.
   memcpy(&_registers, registers, sizeof(_registers));
@@ -1758,7 +1758,7 @@ private:
 };
 
 inline Registers_or1k::Registers_or1k(const void *registers) {
-  static_assert(check_fit<Registers_or1k, unw_context_t>::does_fit,
+  static_assert((check_fit<Registers_or1k, unw_context_t>::does_fit),
                 "or1k registers do not fit into unw_context_t");
   memcpy(&_registers, static_cast<const uint8_t *>(registers),
          sizeof(_registers));

@@ -507,7 +507,7 @@ __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid)
 
    // we need to wait for the proxy tasks before finishing the thread
    if ( task_team != NULL && task_team->tt.tt_found_proxy_tasks )
-        __kmp_task_team_wait(this_thr, serial_team, NULL ); // is an ITT object needed here?
+        __kmp_task_team_wait(this_thr, serial_team USE_ITT_BUILD_ARG(NULL) ); // is an ITT object needed here?
    #endif
 
     KMP_MB();
