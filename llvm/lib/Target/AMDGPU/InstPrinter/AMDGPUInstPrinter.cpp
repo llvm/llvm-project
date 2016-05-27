@@ -11,6 +11,7 @@
 #include "AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
+#include "Utils/AMDGPUAsmUtils.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -19,54 +20,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
-
-// FIXME ODR: Move this to some common place for AsmParser and InstPrinter
-namespace llvm {
-namespace AMDGPU {
-namespace SendMsg {
-
-// This must be in sync with llvm::AMDGPU::SendMsg::Id enum members.
-static
-const char* const IdSymbolic[] = {
-  nullptr,
-  "MSG_INTERRUPT",
-  "MSG_GS",
-  "MSG_GS_DONE",
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  "MSG_SYSMSG"
-};
-
-// These two must be in sync with llvm::AMDGPU::SendMsg::Op enum members.
-static
-const char* const OpSysSymbolic[] = {
-  nullptr,
-  "SYSMSG_OP_ECC_ERR_INTERRUPT",
-  "SYSMSG_OP_REG_RD",
-  "SYSMSG_OP_HOST_TRAP_ACK",
-  "SYSMSG_OP_TTRACE_PC"
-};
-
-static
-const char* const OpGsSymbolic[] = {
-  "GS_OP_NOP",
-  "GS_OP_CUT",
-  "GS_OP_EMIT",
-  "GS_OP_EMIT_CUT"
-};
-
-} // namespace SendMsg
-} // namespace AMDGPU
-} // namespace llvm
 
 using namespace llvm;
 
@@ -886,23 +839,20 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
                                    raw_ostream &O) {
+  using namespace llvm::AMDGPU::Hwreg;
+
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
-  const unsigned HwRegCode = SImm16 & 0x3F;
-  const unsigned Offset = (SImm16 >> 6) & 0x1f;
-  const unsigned Width = ((SImm16 >> 11) & 0x1F) + 1;
+  const unsigned Id = (SImm16 & ID_MASK_) >> ID_SHIFT_;
+  const unsigned Offset = (SImm16 & OFFSET_MASK_) >> OFFSET_SHIFT_;
+  const unsigned Width = ((SImm16 & WIDTH_M1_MASK_) >> WIDTH_M1_SHIFT_) + 1;
 
   O << "hwreg(";
-  switch(HwRegCode) {
-    case 1: O << "HW_REG_MODE"      ; break;
-    case 2: O << "HW_REG_STATUS"    ; break;
-    case 3: O << "HW_REG_TRAPSTS"   ; break;
-    case 4: O << "HW_REG_HW_ID"     ; break;
-    case 5: O << "HW_REG_GPR_ALLOC" ; break;
-    case 6: O << "HW_REG_LDS_ALLOC" ; break;
-    case 7: O << "HW_REG_IB_STS"    ; break;
-    default: O << HwRegCode; break;
+  if (ID_SYMBOLIC_FIRST_ <= Id && Id < ID_SYMBOLIC_LAST_) {
+    O << IdSymbolic[Id];
+  } else {
+    O << Id;
   }
-  if (! (Width == 32 && Offset == 0)) {
+  if (Width != WIDTH_M1_DEFAULT_ + 1 || Offset != OFFSET_DEFAULT_) {
     O << ", " << Offset << ", " << Width;
   }
   O << ')';

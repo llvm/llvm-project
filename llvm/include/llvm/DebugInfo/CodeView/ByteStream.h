@@ -24,20 +24,18 @@ class StreamReader;
 class ByteStream : public StreamInterface {
 public:
   ByteStream();
-  explicit ByteStream(MutableArrayRef<uint8_t> Bytes);
-  explicit ByteStream(uint32_t Length);
+  explicit ByteStream(MutableArrayRef<uint8_t> Data);
   ~ByteStream() override;
 
   void reset();
-  void initialize(MutableArrayRef<uint8_t> Bytes);
-  void initialize(uint32_t Length);
-  Error initialize(StreamReader &Reader, uint32_t Length);
+
+  void load(uint32_t Length);
+  Error load(StreamReader &Reader, uint32_t Length);
 
   Error readBytes(uint32_t Offset,
                   MutableArrayRef<uint8_t> Buffer) const override;
-
-  Error getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
-                    uint32_t Length) const override;
+  Error readBytes(uint32_t Offset, uint32_t Size,
+                  ArrayRef<uint8_t> &Buffer) const override;
 
   uint32_t getLength() const override;
 

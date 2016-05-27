@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAM_H
 
 #include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
@@ -48,11 +49,11 @@ private:
   HashFunctionType HashFunction;
 
   codeview::ByteStream RecordsBuffer;
-  codeview::ByteStream TypeIndexOffsetBuffer;
-  codeview::ByteStream HashValuesBuffer;
-  codeview::ByteStream HashAdjBuffer;
+  codeview::StreamRef TypeIndexOffsetBuffer;
+  codeview::StreamRef HashValuesBuffer;
+  codeview::StreamRef HashAdjBuffer;
 
-  std::unique_ptr<HeaderInfo> Header;
+  const HeaderInfo *Header;
 };
 }
 }

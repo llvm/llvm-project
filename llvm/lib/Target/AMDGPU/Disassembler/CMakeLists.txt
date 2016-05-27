@@ -4,4 +4,4 @@ add_llvm_library(LLVMAMDGPUDisassembler
   AMDGPUDisassembler.cpp
   )
 
-add_dependencies(LLVMAMDGPUDisassembler AMDGPUCommonTableGen)
+add_dependencies(LLVMAMDGPUDisassembler AMDGPUCommonTableGen LLVMAMDGPUUtils)

@@ -18,6 +18,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 using namespace llvm;
 
@@ -574,11 +575,21 @@ bool ModuleLinker::run() {
       Internalize.insert(GV->getName());
   }
 
-  if (Mover.move(std::move(SrcM), ValuesToLink.getArrayRef(),
-                 [this](GlobalValue &GV, IRMover::ValueAdder Add) {
-                   addLazyFor(GV, Add);
-                 }))
+  // FIXME: Propagate Errors through to the caller instead of emitting
+  // diagnostics.
+  bool HasErrors = false;
+  if (Error E = Mover.move(std::move(SrcM), ValuesToLink.getArrayRef(),
+                           [this](GlobalValue &GV, IRMover::ValueAdder Add) {
+                             addLazyFor(GV, Add);
+                           })) {
+    handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
+      DstM.getContext().diagnose(LinkDiagnosticInfo(DS_Error, EIB.message()));
+      HasErrors = true;
+    });
+  }
+  if (HasErrors)
     return true;
+
   for (auto &P : Internalize) {
     GlobalValue *GV = DstM.getNamedValue(P.first());
     GV->setLinkage(GlobalValue::InternalLinkage);

@@ -61,25 +61,21 @@ private:
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
 
+  /// Based on std::pair so it can be used as an index into a DenseMap.
   typedef std::pair<const DILocalVariable *, const DILocation *>
-      InlinedVariable;
-
+      DebugVariableBase;
   /// A potentially inlined instance of a variable.
-  struct DebugVariable {
-    const DILocalVariable *Var;
-    const DILocation *InlinedAt;
+  struct DebugVariable : public DebugVariableBase {
+    DebugVariable(const DILocalVariable *Var, const DILocation *InlinedAt)
+        : DebugVariableBase(Var, InlinedAt) {}
 
-    DebugVariable(const DILocalVariable *_var, const DILocation *_inlinedAt)
-        : Var(_var), InlinedAt(_inlinedAt) {}
+    const DILocalVariable *getVar() const { return this->first; };
+    const DILocation *getInlinedAt() const { return this->second; };
 
     bool operator<(const DebugVariable &DV) const {
-      if (Var == DV.Var)
-        return InlinedAt < DV.InlinedAt;
-      return Var < DV.Var;
-    }
-
-    bool operator==(const DebugVariable &DV) const {
-      return (Var == DV.Var) && (InlinedAt == DV.InlinedAt);
+      if (getVar() == DV.getVar())
+        return getInlinedAt() < DV.getInlinedAt();
+      return getVar() < DV.getVar();
     }
   };
 
@@ -135,6 +131,7 @@ private:
       return Var == Other.Var && Loc.Hash == Other.Loc.Hash;
     }
 
+    /// This operator guarantees that VarLocs are sorted by Variable first.
     bool operator<(const VarLoc &Other) const {
       if (Var == Other.Var)
         return Loc.Hash < Other.Loc.Hash;
@@ -143,18 +140,65 @@ private:
   };
 
   typedef UniqueVector<VarLoc> VarLocMap;
-  typedef SparseBitVector<> VarLocList;
   typedef SparseBitVector<> VarLocSet;
   typedef SmallDenseMap<const MachineBasicBlock *, VarLocSet> VarLocInMBB;
 
-  void transferDebugValue(const MachineInstr &MI, VarLocList &OpenRanges,
+  /// This holds the working set of currently open ranges. For fast
+  /// access, this is done both as a set of VarLocIDs, and a map of
+  /// DebugVariable to recent VarLocID. Note that a DBG_VALUE ends all
+  /// previous open ranges for the same variable.
+  class OpenRangesSet {
+    VarLocSet VarLocs;
+    SmallDenseMap<DebugVariableBase, unsigned, 8> Vars;
+
+  public:
+    const VarLocSet &getVarLocs() const { return VarLocs; }
+
+    /// Terminate all open ranges for Var by removing it from the set.
+    void erase(DebugVariable Var) {
+      auto It = Vars.find(Var);
+      if (It != Vars.end()) {
+        unsigned ID = It->second;
+        VarLocs.reset(ID);
+        Vars.erase(It);
+      }
+    }
+
+    /// Terminate all open ranges listed in \c KillSet by removing
+    /// them from the set.
+    void erase(const VarLocSet &KillSet, const VarLocMap &VarLocIDs) {
+      VarLocs.intersectWithComplement(KillSet);
+      for (unsigned ID : KillSet)
+        Vars.erase(VarLocIDs[ID].Var);
+    }
+
+    /// Insert a new range into the set.
+    void insert(unsigned VarLocID, DebugVariableBase Var) {
+      VarLocs.set(VarLocID);
+      Vars.insert({Var, VarLocID});
+    }
+
+    /// Empty the set.
+    void clear() {
+      VarLocs.clear();
+      Vars.clear();
+    }
+
+    /// Return whether the set is empty or not.
+    bool empty() const {
+      assert(Vars.empty() == VarLocs.empty() && "open ranges are inconsistent");
+      return VarLocs.empty();
+    }
+  };
+
+  void transferDebugValue(const MachineInstr &MI, OpenRangesSet &OpenRanges,
                           VarLocMap &VarLocIDs);
-  void transferRegisterDef(MachineInstr &MI, VarLocList &OpenRanges,
+  void transferRegisterDef(MachineInstr &MI, OpenRangesSet &OpenRanges,
                            const VarLocMap &VarLocIDs);
-  bool transferTerminatorInst(MachineInstr &MI, VarLocList &OpenRanges,
+  bool transferTerminatorInst(MachineInstr &MI, OpenRangesSet &OpenRanges,
                               VarLocInMBB &OutLocs, const VarLocMap &VarLocIDs);
-  bool transfer(MachineInstr &MI, VarLocList &OpenRanges, VarLocInMBB &OutLocs,
-                VarLocMap &VarLocIDs);
+  bool transfer(MachineInstr &MI, OpenRangesSet &OpenRanges,
+                VarLocInMBB &OutLocs, VarLocMap &VarLocIDs);
 
   bool join(MachineBasicBlock &MBB, VarLocInMBB &OutLocs, VarLocInMBB &InLocs,
             const VarLocMap &VarLocIDs);
@@ -220,7 +264,7 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
     Out << "MBB: " << BB.getName() << ":\n";
     for (unsigned VLL : L) {
       const VarLoc &VL = VarLocIDs[VLL];
-      Out << " Var: " << VL.Var.Var->getName();
+      Out << " Var: " << VL.Var.getVar()->getName();
       Out << " MI: ";
       VL.dump();
       Out << "\n";
@@ -232,7 +276,7 @@ void LiveDebugValues::printVarLocInMBB(const MachineFunction &MF,
 /// End all previous ranges related to @MI and start a new range from @MI
 /// if it is a DBG_VALUE instr.
 void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
-                                         VarLocList &OpenRanges,
+                                         OpenRangesSet &OpenRanges,
                                          VarLocMap &VarLocIDs) {
   if (!MI.isDebugValue())
     return;
@@ -243,23 +287,21 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
          "Expected inlined-at fields to agree");
 
   // End all previous ranges of Var.
-  SparseBitVector<> KillSet;
-  for (unsigned ID : OpenRanges) {
-    auto &ORVar = VarLocIDs[ID].Var;
-    if (ORVar.Var == Var && ORVar.InlinedAt == InlinedAt)
-      KillSet.set(ID);
-  }
-  OpenRanges.intersectWithComplement(KillSet);
+  DebugVariable V(Var, InlinedAt);
+  OpenRanges.erase(V);
 
   // Add the VarLoc to OpenRanges from this DBG_VALUE.
   // TODO: Currently handles DBG_VALUE which has only reg as location.
-  if (isDbgValueDescribedByReg(MI))
-    OpenRanges.set(VarLocIDs.insert(MI));
+  if (isDbgValueDescribedByReg(MI)) {
+    VarLoc VL(MI);
+    unsigned ID = VarLocIDs.insert(VL);
+    OpenRanges.insert(ID, VL.Var);
+  }
 }
 
 /// A definition of a register may mark the end of a range.
 void LiveDebugValues::transferRegisterDef(MachineInstr &MI,
-                                          VarLocList &OpenRanges,
+                                          OpenRangesSet &OpenRanges,
                                           const VarLocMap &VarLocIDs) {
   MachineFunction *MF = MI.getParent()->getParent();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
@@ -270,7 +312,7 @@ void LiveDebugValues::transferRegisterDef(MachineInstr &MI,
         TRI->isPhysicalRegister(MO.getReg())) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
-        for (unsigned ID : OpenRanges)
+        for (unsigned ID : OpenRanges.getVarLocs())
           if (VarLocIDs[ID].isDescribedByReg() == *RAI)
             KillSet.set(ID);
     } else if (MO.isRegMask()) {
@@ -278,19 +320,19 @@ void LiveDebugValues::transferRegisterDef(MachineInstr &MI,
       // list SP as preserved.  While the debug info may be off for an
       // instruction or two around callee-cleanup calls, transferring the
       // DEBUG_VALUE across the call is still a better user experience.
-      for (unsigned ID : OpenRanges) {
+      for (unsigned ID : OpenRanges.getVarLocs()) {
         unsigned Reg = VarLocIDs[ID].isDescribedByReg();
         if (Reg && Reg != SP && MO.clobbersPhysReg(Reg))
           KillSet.set(ID);
       }
     }
   }
-  OpenRanges.intersectWithComplement(KillSet);
+  OpenRanges.erase(KillSet, VarLocIDs);
 }
 
 /// Terminate all open ranges at the end of the current basic block.
 bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
-                                             VarLocList &OpenRanges,
+                                             OpenRangesSet &OpenRanges,
                                              VarLocInMBB &OutLocs,
                                              const VarLocMap &VarLocIDs) {
   bool Changed = false;
@@ -301,20 +343,18 @@ bool LiveDebugValues::transferTerminatorInst(MachineInstr &MI,
   if (OpenRanges.empty())
     return false;
 
-  DEBUG(for (unsigned ID
-             : OpenRanges) {
-    // Copy OpenRanges to OutLocs, if not already present.
-    dbgs() << "Add to OutLocs: ";
-    VarLocIDs[ID].dump();
-  });
+  DEBUG(for (unsigned ID : OpenRanges.getVarLocs()) {
+          // Copy OpenRanges to OutLocs, if not already present.
+          dbgs() << "Add to OutLocs: "; VarLocIDs[ID].dump();
+        });
   VarLocSet &VLS = OutLocs[CurMBB];
-  Changed = VLS |= OpenRanges;
+  Changed = VLS |= OpenRanges.getVarLocs();
   OpenRanges.clear();
   return Changed;
 }
 
 /// This routine creates OpenRanges and OutLocs.
-bool LiveDebugValues::transfer(MachineInstr &MI, VarLocList &OpenRanges,
+bool LiveDebugValues::transfer(MachineInstr &MI, OpenRangesSet &OpenRanges,
                                VarLocInMBB &OutLocs, VarLocMap &VarLocIDs) {
   bool Changed = false;
   transferDebugValue(MI, OpenRanges, VarLocIDs);
@@ -389,7 +429,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   bool MBBJoined = false;
 
   VarLocMap VarLocIDs;   // Map VarLoc<>unique ID for use in bitvectors.
-  VarLocList OpenRanges; // Ranges that are open until end of bb.
+  OpenRangesSet OpenRanges; // Ranges that are open until end of bb.
   VarLocInMBB OutLocs;   // Ranges that exist beyond bb.
   VarLocInMBB InLocs;    // Ranges that are incoming after joining.
 

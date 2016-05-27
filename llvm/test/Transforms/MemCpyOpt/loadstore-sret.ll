@@ -22,4 +22,4 @@ _ZNSt8auto_ptrIiED1Ev.exit:
   ret void
 }
 
-declare void @_Z3barv(%"class.std::auto_ptr"* nocapture sret)
+declare void @_Z3barv(%"class.std::auto_ptr"* nocapture sret) nounwind

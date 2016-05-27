@@ -63,8 +63,19 @@ struct RebaseOpcode {
   std::vector<yaml::Hex64> ExtraData;
 };
 
+struct BindOpcode {
+  MachO::BindOpcode Opcode;
+  uint8_t Imm;
+  std::vector<yaml::Hex64> ULEBExtraData;
+  std::vector<int64_t> SLEBExtraData;
+  StringRef Symbol;
+};
+
 struct LinkEditData {
   std::vector<MachOYAML::RebaseOpcode> RebaseOpcodes;
+  std::vector<MachOYAML::BindOpcode> BindOpcodes;
+  std::vector<MachOYAML::BindOpcode> WeakBindOpcodes;
+  std::vector<MachOYAML::BindOpcode> LazyBindOpcodes;
 };
 
 struct Object {
@@ -81,7 +92,9 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::LoadCommand)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::Section)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex8)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex64)
+LLVM_YAML_IS_SEQUENCE_VECTOR(int64_t)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::RebaseOpcode)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::BindOpcode)
 
 namespace llvm {
 namespace yaml {
@@ -106,6 +119,10 @@ template <> struct MappingTraits<MachOYAML::RebaseOpcode> {
   static void mapping(IO &IO, MachOYAML::RebaseOpcode &RebaseOpcode);
 };
 
+template <> struct MappingTraits<MachOYAML::BindOpcode> {
+  static void mapping(IO &IO, MachOYAML::BindOpcode &BindOpcode);
+};
+
 template <> struct MappingTraits<MachOYAML::Section> {
   static void mapping(IO &IO, MachOYAML::Section &Section);
 };
@@ -116,25 +133,43 @@ template <> struct MappingTraits<MachOYAML::Section> {
 template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
   static void enumeration(IO &io, MachO::LoadCommandType &value) {
 #include "llvm/Support/MachO.def"
-  io.enumFallback<Hex32>(value);
+    io.enumFallback<Hex32>(value);
   }
 };
 
-#define ENUM_CASE(Enum)                                                 \
-  io.enumCase(value, #Enum, MachO::Enum);
+#define ENUM_CASE(Enum) io.enumCase(value, #Enum, MachO::Enum);
 
 template <> struct ScalarEnumerationTraits<MachO::RebaseOpcode> {
   static void enumeration(IO &io, MachO::RebaseOpcode &value) {
-  ENUM_CASE(REBASE_OPCODE_DONE)
-  ENUM_CASE(REBASE_OPCODE_SET_TYPE_IMM)
-  ENUM_CASE(REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB)
-  ENUM_CASE(REBASE_OPCODE_ADD_ADDR_ULEB)
-  ENUM_CASE(REBASE_OPCODE_ADD_ADDR_IMM_SCALED)
-  ENUM_CASE(REBASE_OPCODE_DO_REBASE_IMM_TIMES)
-  ENUM_CASE(REBASE_OPCODE_DO_REBASE_ULEB_TIMES)
-  ENUM_CASE(REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB)
-  ENUM_CASE(REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB)
-  io.enumFallback<Hex8>(value);
+    ENUM_CASE(REBASE_OPCODE_DONE)
+    ENUM_CASE(REBASE_OPCODE_SET_TYPE_IMM)
+    ENUM_CASE(REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB)
+    ENUM_CASE(REBASE_OPCODE_ADD_ADDR_ULEB)
+    ENUM_CASE(REBASE_OPCODE_ADD_ADDR_IMM_SCALED)
+    ENUM_CASE(REBASE_OPCODE_DO_REBASE_IMM_TIMES)
+    ENUM_CASE(REBASE_OPCODE_DO_REBASE_ULEB_TIMES)
+    ENUM_CASE(REBASE_OPCODE_DO_REBASE_ADD_ADDR_ULEB)
+    ENUM_CASE(REBASE_OPCODE_DO_REBASE_ULEB_TIMES_SKIPPING_ULEB)
+    io.enumFallback<Hex8>(value);
+  }
+};
+
+template <> struct ScalarEnumerationTraits<MachO::BindOpcode> {
+  static void enumeration(IO &io, MachO::BindOpcode &value) {
+    ENUM_CASE(BIND_OPCODE_DONE)
+    ENUM_CASE(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM)
+    ENUM_CASE(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB)
+    ENUM_CASE(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM)
+    ENUM_CASE(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
+    ENUM_CASE(BIND_OPCODE_SET_TYPE_IMM)
+    ENUM_CASE(BIND_OPCODE_SET_ADDEND_SLEB)
+    ENUM_CASE(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB)
+    ENUM_CASE(BIND_OPCODE_ADD_ADDR_ULEB)
+    ENUM_CASE(BIND_OPCODE_DO_BIND)
+    ENUM_CASE(BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB)
+    ENUM_CASE(BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED)
+    ENUM_CASE(BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB)
+    io.enumFallback<Hex8>(value);
   }
 };
 

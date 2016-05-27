@@ -253,14 +253,8 @@ private:
 
     Module &SrcM = LMResources.SourceModule->getResource();
 
-    // Create the GlobalValues module.
+    // Create stub functions.
     const DataLayout &DL = SrcM.getDataLayout();
-    auto GVsM = llvm::make_unique<Module>((SrcM.getName() + ".globals").str(),
-                                          SrcM.getContext());
-    GVsM->setDataLayout(DL);
-
-    // Create function stubs.
-    ValueToValueMapTy VMap;
     {
       typename IndirectStubsMgrT::StubInitsMap StubInits;
       for (auto &F : SrcM) {
@@ -291,6 +285,19 @@ private:
       //        fail for remote JITs.
       assert(!EC && "Error generating stubs");
     }
+
+    // If this module doesn't contain any globals or aliases we can bail out
+    // early and avoid the overhead of creating and managing an empty globals
+    // module.
+    if (SrcM.global_empty() && SrcM.alias_empty())
+      return;
+
+    // Create the GlobalValues module.
+    auto GVsM = llvm::make_unique<Module>((SrcM.getName() + ".globals").str(),
+                                          SrcM.getContext());
+    GVsM->setDataLayout(DL);
+
+    ValueToValueMapTy VMap;
 
     // Clone global variable decls.
     for (auto &GV : SrcM.globals())

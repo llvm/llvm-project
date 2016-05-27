@@ -1,6 +1,5 @@
 CHECK: BINGO
 Done1000000: Done 1000000 runs in
-Done10000000: Done 10000000 runs in
 
 RUN: not LLVMFuzzer-SimpleCmpTest -use_traces=1 -seed=1 -runs=10000001  2>&1 | FileCheck %s
 
@@ -16,8 +15,8 @@ RUN:     LLVMFuzzer-StrcmpTest -use_memcmp=0 -seed=5 -runs=1000000  2>&1 | FileC
 RUN: not LLVMFuzzer-SwitchTest -use_traces=1 -seed=6 -runs=1000002  2>&1 | FileCheck %s
 RUN:     LLVMFuzzer-SwitchTest               -seed=7 -runs=1000000  2>&1 | FileCheck %s --check-prefix=Done1000000
 
-RUN: not LLVMFuzzer-SimpleHashTest -use_traces=1 -seed=8 -runs=10000000  2>&1 | FileCheck %s
-RUN:     LLVMFuzzer-SimpleHashTest               -seed=9 -runs=10000000 2>&1 | FileCheck %s --check-prefix=Done10000000
+RUN: not LLVMFuzzer-SimpleHashTest -use_traces=1 -seed=8 -runs=1000000 -max_len=16  2>&1 | FileCheck %s
+RUN:     LLVMFuzzer-SimpleHashTest               -seed=9 -runs=1000000 -max_len=16 2>&1 | FileCheck %s --check-prefix=Done1000000
 
 RUN: LLVMFuzzer-RepeatedMemcmp -seed=10 -runs=100000 2>&1 | FileCheck %s --check-prefix=RECOMMENDED_DICT
 RECOMMENDED_DICT:###### Recommended dictionary. ######

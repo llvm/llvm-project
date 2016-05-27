@@ -35,6 +35,16 @@ LBB0_2:                                 # %return
 // CHECK: Symbols [
 
 // CHECK:      Symbol {
+// CHECK:        Name: _main
+// CHECK-NEXT:   Value: 0
+// CHECK-NEXT:   Section: .text
+// CHECK-NEXT:   BaseType: Null
+// CHECK-NEXT:   ComplexType: Function
+// CHECK-NEXT:   StorageClass: External
+// CHECK-NEXT:   AuxSymbolCount: 0
+// CHECK-NEXT: }
+
+// CHECK:      Symbol {
 // CHECK:        Name:           _test_weak
 // CHECK-NEXT:   Value:          0
 // CHECK-NEXT:   Section:        IMAGE_SYM_UNDEFINED (0)
@@ -67,7 +77,17 @@ LBB0_2:                                 # %return
 // CHECK-NEXT:   StorageClass:   WeakExternal
 // CHECK-NEXT:   AuxSymbolCount: 1
 // CHECK-NEXT:   AuxWeakExternal {
-// CHECK-NEXT:     Linked: _main
+// CHECK-NEXT:     Linked: .weak._test_weak_alias.default
 // CHECK-NEXT:      Search: Library
 // CHECK-NEXT:   }
+// CHECK-NEXT: }
+
+// CHECK:      Symbol {
+// CHECK:        Name: .weak._test_weak_alias.default
+// CHECK-NEXT:   Value: 0
+// CHECK-NEXT:   Section: .text
+// CHECK-NEXT:   BaseType: Null
+// CHECK-NEXT:   ComplexType: Null
+// CHECK-NEXT:   StorageClass: External
+// CHECK-NEXT:   AuxSymbolCount: 0
 // CHECK-NEXT: }

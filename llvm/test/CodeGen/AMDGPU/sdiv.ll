@@ -34,8 +34,8 @@ define void @sdiv_i32_4(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 ; working.
 
 ; FUNC-LABEL: {{^}}slow_sdiv_i32_3435:
-; SI: buffer_load_dword [[VAL:v[0-9]+]],
-; SI: v_mov_b32_e32 [[MAGIC:v[0-9]+]], 0x98a1930b
+; SI-DAG: buffer_load_dword [[VAL:v[0-9]+]],
+; SI-DAG: v_mov_b32_e32 [[MAGIC:v[0-9]+]], 0x98a1930b
 ; SI: v_mul_hi_i32 [[TMP:v[0-9]+]], [[MAGIC]], [[VAL]]
 ; SI: v_add_i32
 ; SI: v_lshrrev_b32

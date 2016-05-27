@@ -46,6 +46,8 @@ private:
   Error writeLoadCommands(raw_ostream &OS);
   Error writeSectionData(raw_ostream &OS);
   Error writeLinkEditData(raw_ostream &OS);
+  void writeBindOpcodes(raw_ostream &OS, uint64_t offset,
+                        std::vector<MachOYAML::BindOpcode> &BindOpcodes);
 
   void ZeroToOffset(raw_ostream &OS, size_t offset);
 
@@ -264,6 +266,27 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
   return Error::success();
 }
 
+void MachOWriter::writeBindOpcodes(
+    raw_ostream &OS, uint64_t offset,
+    std::vector<MachOYAML::BindOpcode> &BindOpcodes) {
+  ZeroToOffset(OS, offset);
+
+  for (auto Opcode : BindOpcodes) {
+    uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
+    OS.write(reinterpret_cast<char *>(&OpByte), 1);
+    for (auto Data : Opcode.ULEBExtraData) {
+      encodeULEB128(Data, OS);
+    }
+    for (auto Data : Opcode.SLEBExtraData) {
+      encodeSLEB128(Data, OS);
+    }
+    if (!Opcode.Symbol.empty()) {
+      OS.write(Opcode.Symbol.data(), Opcode.Symbol.size());
+      OS.write("\0", 1);
+    }
+  }
+}
+
 Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
   MachOYAML::LinkEditData &LinkEdit = Obj.LinkEdit;
   MachO::dyld_info_command *DyldInfoOnlyCmd = 0;
@@ -288,6 +311,12 @@ Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
       encodeULEB128(Data, OS);
     }
   }
+
+  writeBindOpcodes(OS, DyldInfoOnlyCmd->bind_off, LinkEdit.BindOpcodes);
+  writeBindOpcodes(OS, DyldInfoOnlyCmd->weak_bind_off,
+                   LinkEdit.WeakBindOpcodes);
+  writeBindOpcodes(OS, DyldInfoOnlyCmd->lazy_bind_off,
+                   LinkEdit.LazyBindOpcodes);
 
   // Fill to the end of the string table
   ZeroToOffset(OS, SymtabCmd->stroff + SymtabCmd->strsize);

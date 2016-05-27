@@ -119,8 +119,8 @@ bool UnrolledInstAnalyzer::visitLoad(LoadInst &I) {
     return false;
 
   int ElemSize = CDS->getElementType()->getPrimitiveSizeInBits() / 8U;
-  assert(SimplifiedAddrOp->getValue().getActiveBits() < 64 &&
-         "Unexpectedly large index value.");
+  if (SimplifiedAddrOp->getValue().getActiveBits() >= 64)
+    return false;
   int64_t Index = SimplifiedAddrOp->getSExtValue() / ElemSize;
   if (Index >= CDS->getNumElements()) {
     // FIXME: For now we conservatively ignore out of bound accesses, but

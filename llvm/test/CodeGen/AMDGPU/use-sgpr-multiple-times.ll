@@ -42,12 +42,12 @@ define void @test_sgpr_use_twice_ternary_op_a_a_b(float addrspace(1)* %out, floa
 }
 
 ; GCN-LABEL: {{^}}test_use_s_v_s:
+; GCN-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+
 ; GCN: buffer_load_dword [[VA0:v[0-9]+]]
 ; GCN-NOT: v_mov_b32
 ; GCN: buffer_load_dword [[VA1:v[0-9]+]]
-
-; GCN-DAG: s_load_dword [[SA:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
-; GCN-DAG: s_load_dword [[SB:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
 
 ; GCN-NOT: v_mov_b32
 ; GCN: v_mov_b32_e32 [[VB:v[0-9]+]], [[SB]]

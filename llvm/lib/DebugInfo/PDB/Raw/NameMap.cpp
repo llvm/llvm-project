@@ -113,7 +113,7 @@ Error NameMap::load(codeview::StreamReader &Stream) {
     uint32_t StringOffset = StringsOffset + NameOffset;
     uint32_t OldOffset = Stream.getOffset();
     // Pump out our c-string from the stream.
-    std::string Str;
+    StringRef Str;
     Stream.setOffset(StringOffset);
     if (Stream.readZeroString(Str))
       return make_error<RawError>(raw_error_code::corrupt_file,

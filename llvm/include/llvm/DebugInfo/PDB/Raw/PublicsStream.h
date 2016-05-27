@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
 
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -25,7 +26,6 @@ class PDBFile;
 
 class PublicsStream {
   struct GSIHashHeader;
-  struct HashRecord;
   struct HeaderInfo;
 
 public:
@@ -38,10 +38,18 @@ public:
   uint32_t getAddrMap() const;
   uint32_t getNumBuckets() const { return NumBuckets; }
   iterator_range<codeview::SymbolIterator> getSymbols() const;
-  ArrayRef<uint32_t> getHashBuckets() const { return HashBuckets; }
-  ArrayRef<uint32_t> getAddressMap() const { return AddressMap; }
-  ArrayRef<uint32_t> getThunkMap() const { return ThunkMap; }
-  ArrayRef<uint32_t> getSectionOffsets() const { return SectionOffsets; }
+  codeview::FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
+    return HashBuckets;
+  }
+  codeview::FixedStreamArray<support::ulittle32_t> getAddressMap() const {
+    return AddressMap;
+  }
+  codeview::FixedStreamArray<support::ulittle32_t> getThunkMap() const {
+    return ThunkMap;
+  }
+  codeview::FixedStreamArray<SectionOffset> getSectionOffsets() const {
+    return SectionOffsets;
+  }
 
 private:
   Error readSymbols();
@@ -51,14 +59,15 @@ private:
   uint32_t StreamNum;
   MappedBlockStream Stream;
   uint32_t NumBuckets = 0;
-  std::vector<HashRecord> HashRecords;
-  std::vector<uint32_t> HashBuckets;
-  std::vector<uint32_t> AddressMap;
-  std::vector<uint32_t> ThunkMap;
-  std::vector<uint32_t> SectionOffsets;
+  ArrayRef<uint8_t> Bitmap;
+  codeview::FixedStreamArray<PSHashRecord> HashRecords;
+  codeview::FixedStreamArray<support::ulittle32_t> HashBuckets;
+  codeview::FixedStreamArray<support::ulittle32_t> AddressMap;
+  codeview::FixedStreamArray<support::ulittle32_t> ThunkMap;
+  codeview::FixedStreamArray<SectionOffset> SectionOffsets;
 
-  std::unique_ptr<HeaderInfo> Header;
-  std::unique_ptr<GSIHashHeader> HashHdr;
+  const HeaderInfo *Header;
+  const GSIHashHeader *HashHdr;
 };
 }
 }

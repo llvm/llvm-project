@@ -1,7 +1,9 @@
 ; RUN: llvm-pdbdump -raw-headers -raw-tpi-records -raw-tpi-record-bytes -raw-module-syms \
 ; RUN:              -raw-sym-record-bytes -raw-publics -raw-module-files -raw-stream-name=/names \
-; RUN:              -raw-stream-summary -raw-ipi-records -raw-ipi-record-bytes %p/Inputs/empty.pdb \
+; RUN:              -raw-stream-summary -raw-stream-blocks -raw-ipi-records -raw-ipi-record-bytes \
+; RUN:              %p/Inputs/empty.pdb \
 ; RUN:              | FileCheck -check-prefix=EMPTY %s
+; RUN: llvm-pdbdump -raw-all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
 ; RUN: llvm-pdbdump -raw-headers -raw-stream-name=/names -raw-modules -raw-module-files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
 ; RUN: llvm-pdbdump -raw-headers %p/Inputs/bad-block-size.pdb | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
@@ -19,7 +21,7 @@
 ; EMPTY-NEXT:   NumStreams: 17
 ; EMPTY-NEXT: }
 ; EMPTY-NEXT: Streams [
-; EMPTY-NEXT:   Stream 0: [???] (40 bytes)
+; EMPTY-NEXT:   Stream 0: [Old MSF Directory] (40 bytes)
 ; EMPTY-NEXT:   Stream 1: [PDB Stream] (118 bytes)
 ; EMPTY-NEXT:   Stream 2: [TPI Stream] (5392 bytes)
 ; EMPTY-NEXT:   Stream 3: [DBI Stream] (739 bytes)
@@ -36,6 +38,25 @@
 ; EMPTY-NEXT:   Stream 14: [Module "* Linker *"] (520 bytes)
 ; EMPTY-NEXT:   Stream 15: [TPI Hash] (308 bytes)
 ; EMPTY-NEXT:   Stream 16: [IPI Hash] (68 bytes)
+; EMPTY-NEXT: ]
+; EMPTY-NEXT: StreamBlocks [
+; EMPTY-NEXT:   Stream 0: [8]
+; EMPTY-NEXT:   Stream 1: [19]
+; EMPTY-NEXT:   Stream 2: [18, 17]
+; EMPTY-NEXT:   Stream 3: [14]
+; EMPTY-NEXT:   Stream 4: [20]
+; EMPTY-NEXT:   Stream 5: []
+; EMPTY-NEXT:   Stream 6: [11]
+; EMPTY-NEXT:   Stream 7: [13]
+; EMPTY-NEXT:   Stream 8: [12]
+; EMPTY-NEXT:   Stream 9: []
+; EMPTY-NEXT:   Stream 10: [10]
+; EMPTY-NEXT:   Stream 11: [15]
+; EMPTY-NEXT:   Stream 12: [6]
+; EMPTY-NEXT:   Stream 13: [16]
+; EMPTY-NEXT:   Stream 14: [7]
+; EMPTY-NEXT:   Stream 15: [21]
+; EMPTY-NEXT:   Stream 16: [22]
 ; EMPTY-NEXT: ]
 ; EMPTY-NEXT: PDB Stream {
 ; EMPTY-NEXT:   Version: 20000404
@@ -574,6 +595,474 @@
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:   ]
 ; EMPTY-NEXT: }
+
+; ALL: FileHeaders {
+; ALL:   BlockSize: 4096
+; ALL:   Unknown0: 2
+; ALL:   NumBlocks: 25
+; ALL:   NumDirectoryBytes: 136
+; ALL:   Unknown1: 0
+; ALL:   BlockMapAddr: 24
+; ALL:   NumDirectoryBlocks: 1
+; ALL:   BlockMapOffset: 98304
+; ALL:   DirectoryBlocks: [23]
+; ALL:   NumStreams: 17
+; ALL: }
+; ALL: Streams [
+; ALL:   Stream 0: [Old MSF Directory] (40 bytes)
+; ALL:   Stream 1: [PDB Stream] (118 bytes)
+; ALL:   Stream 2: [TPI Stream] (5392 bytes)
+; ALL:   Stream 3: [DBI Stream] (739 bytes)
+; ALL:   Stream 4: [IPI Stream] (784 bytes)
+; ALL:   Stream 5: [Named Stream "/LinkInfo"] (0 bytes)
+; ALL:   Stream 6: [Global Symbol Hash] (556 bytes)
+; ALL:   Stream 7: [Public Symbol Hash] (604 bytes)
+; ALL:   Stream 8: [Public Symbol Records] (104 bytes)
+; ALL:   Stream 9: [Named Stream "/src/headerblock"] (0 bytes)
+; ALL:   Stream 10: [Section Header Data] (160 bytes)
+; ALL:   Stream 11: [New FPO Data] (32 bytes)
+; ALL:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
+; ALL:   Stream 13: [Named Stream "/names"] (239 bytes)
+; ALL:   Stream 14: [Module "* Linker *"] (520 bytes)
+; ALL:   Stream 15: [TPI Hash] (308 bytes)
+; ALL:   Stream 16: [IPI Hash] (68 bytes)
+; ALL: ]
+; ALL: StreamBlocks [
+; ALL:   Stream 0: [8]
+; ALL:   Stream 1: [19]
+; ALL:   Stream 2: [18, 17]
+; ALL:   Stream 3: [14]
+; ALL:   Stream 4: [20]
+; ALL:   Stream 5: []
+; ALL:   Stream 6: [11]
+; ALL:   Stream 7: [13]
+; ALL:   Stream 8: [12]
+; ALL:   Stream 9: []
+; ALL:   Stream 10: [10]
+; ALL:   Stream 11: [15]
+; ALL:   Stream 12: [6]
+; ALL:   Stream 13: [16]
+; ALL:   Stream 14: [7]
+; ALL:   Stream 15: [21]
+; ALL:   Stream 16: [22]
+; ALL: ]
+; ALL: PDB Stream {
+; ALL:   Version: 20000404
+; ALL:   Signature: 0x54E507E2
+; ALL:   Age: 1
+; ALL:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; ALL: }
+; ALL: Type Info Stream (IPI) {
+; ALL:   IPI Version: 20040203
+; ALL:   Record count: 15
+; ALL:   Records [
+; ALL:     {
+; ALL:       UnknownLeaf (0x104B) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UnknownType {
+; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:           Length: 16
+; ALL:         }
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UnknownLeaf (0x104C) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UnknownType {
+; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:           Length: 16
+; ALL:         }
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UnknownLeaf (0x104D) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UnknownType {
+; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:           Length: 16
+; ALL:         }
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UnknownLeaf (0x104E) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UnknownType {
+; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:           Length: 16
+; ALL:         }
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UnknownLeaf (0x104F) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UnknownType {
+; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:           Length: 16
+; ALL:         }
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UnknownLeaf (0x1050) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UnknownType {
+; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:           Length: 16
+; ALL:         }
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UnknownLeaf (0x1051) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UnknownType {
+; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:           Length: 16
+; ALL:         }
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1052) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1053) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1054) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: empty.cpp
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1055) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1056) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringList (0x1057) {
+; ALL:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
+; ALL:         NumArgs: 1
+; ALL:         Arguments [
+; ALL:           ArgType: __vc_attributes::threadingAttribute (0x100B)
+; ALL:         ]
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1058) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: managed (0x100C)
+; ALL:         StringData:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       BuildInfo (0x1059) {
+; ALL:         TypeLeafKind: LF_BUILDINFO (0x1603)
+; ALL:         NumArgs: 5
+; ALL:         Arguments [
+; ALL:           ArgType: void __vc_attributes::threadingAttribute::(__vc_attributes::threadingAttribute::threading_e) (0x1007)
+; ALL:           ArgType: void __vc_attributes::threadingAttribute::() (0x1008)
+; ALL:           ArgType: 0x1009
+; ALL:           ArgType: value (0x100A)
+; ALL:           ArgType: __vc_attributes::event_receiverAttribute::type_e (0x100D)
+; ALL:         ]
+; ALL:       }
+; ALL:     }
+; ALL:   ]
+; ALL: }
+; ALL: DBI Stream {
+; ALL:   Dbi Version: 19990903
+; ALL:   Age: 1
+; ALL:   Incremental Linking: Yes
+; ALL:   Has CTypes: No
+; ALL:   Is Stripped: No
+; ALL:   Machine Type: x86
+; ALL:   Symbol Record Stream Index: 8
+; ALL:   Public Symbol Stream Index: 7
+; ALL:   Global Symbol Stream Index: 6
+; ALL:   Toolchain Version: 12.0
+; ALL:   mspdb120.dll version: 12.0.31101
+; ALL:   Modules [
+; ALL:     {
+; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:       Debug Stream Index: 12
+; ALL:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:       Num Files: 1
+; ALL:       Source File Name Idx: 0
+; ALL:       Pdb File Name Idx: 0
+; ALL:       Line Info Byte Size: 0
+; ALL:       C13 Line Info Byte Size: 88
+; ALL:       Symbol Byte Size: 208
+; ALL:       Type Server Index: 0
+; ALL:       Has EC Info: No
+; ALL:       1 Contributing Source Files [
+; ALL:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; ALL:       ]
+; ALL:       Symbols [
+; ALL:         {
+; ALL:           ObjectName {
+; ALL:             Signature: 0x0
+; ALL:             ObjectName: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           CompilerFlags3 {
+; ALL:             Language: Cpp (0x1)
+; ALL:             Flags [ (0x2000)
+; ALL:               SecurityChecks (0x2000)
+; ALL:             ]
+; ALL:             Machine: Pentium3 (0x7)
+; ALL:             FrontendVersion: 18.0.31101.0
+; ALL:             BackendVersion: 18.0.31101.0
+; ALL:             VersionName: Microsoft (R) Optimizing Compiler
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           ProcStart {
+; ALL:             PtrParent: 0x0
+; ALL:             PtrEnd: 0xC4
+; ALL:             PtrNext: 0x0
+; ALL:             CodeSize: 0xA
+; ALL:             DbgStart: 0x3
+; ALL:             DbgEnd: 0x8
+; ALL:             FunctionType: int () (0x1001)
+; ALL:             Segment: 0x1
+; ALL:             Flags [ (0x1)
+; ALL:               HasFP (0x1)
+; ALL:             ]
+; ALL:             DisplayName: main
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           FrameProc {
+; ALL:             TotalFrameBytes: 0x0
+; ALL:             PaddingFrameBytes: 0x0
+; ALL:             OffsetToPadding: 0x0
+; ALL:             BytesOfCalleeSavedRegisters: 0x0
+; ALL:             OffsetOfExceptionHandler: 0x0
+; ALL:             SectionIdOfExceptionHandler: 0x0
+; ALL:             Flags [ (0x128200)
+; ALL:               AsynchronousExceptionHandling (0x200)
+; ALL:               OptimizedForSpeed (0x100000)
+; ALL:             ]
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           BlockEnd {
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           BuildInfo {
+; ALL:             BuildId: 4110
+; ALL:           }
+; ALL:         }
+; ALL:       ]
+; ALL:     }
+; ALL:     {
+; ALL:       Name: * Linker *
+; ALL:       Debug Stream Index: 14
+; ALL:       Object File Name: 
+; ALL:       Num Files: 0
+; ALL:       Source File Name Idx: 0
+; ALL:       Pdb File Name Idx: 1
+; ALL:       Line Info Byte Size: 0
+; ALL:       C13 Line Info Byte Size: 0
+; ALL:       Symbol Byte Size: 516
+; ALL:       Type Server Index: 0
+; ALL:       Has EC Info: No
+; ALL:       0 Contributing Source Files [
+; ALL:       ]
+; ALL:       Symbols [
+; ALL:         {
+; ALL:           ObjectName {
+; ALL:             Signature: 0x0
+; ALL:             ObjectName: * Linker *
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           CompilerFlags3 {
+; ALL:             Language: Link (0x7)
+; ALL:             Flags [ (0x0)
+; ALL:             ]
+; ALL:             Machine: Intel80386 (0x3)
+; ALL:             FrontendVersion: 0.0.0.0
+; ALL:             BackendVersion: 12.0.31101.0
+; ALL:             VersionName: Microsoft (R) LINK
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           EnvBlock {
+; ALL:             Reserved: 0
+; ALL:             Entries [
+; ALL:               cwd
+; ALL:               d:\src\llvm\test\DebugInfo\PDB\Inputs
+; ALL:               exe
+; ALL:               C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+; ALL:               pdb
+; ALL:               d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+; ALL:             ]
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Trampoline {
+; ALL:             Type: TrampIncremental (0x0)
+; ALL:             Size: 5
+; ALL:             ThunkOff: 5
+; ALL:             TargetOff: 16
+; ALL:             ThunkSection: 1
+; ALL:             TargetSection: 1
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 1
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 4096
+; ALL:             Length: 4122
+; ALL:             Characteristics: 0x60000020
+; ALL:             Name: .text
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 4122
+; ALL:             Characteristics: 0x60000020
+; ALL:             Offset: 0
+; ALL:             Segment: 1
+; ALL:             Name: .text$mn
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 2
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 12288
+; ALL:             Length: 690
+; ALL:             Characteristics: 0x40000040
+; ALL:             Name: .rdata
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 323
+; ALL:             Characteristics: 0x40000040
+; ALL:             Offset: 0
+; ALL:             Segment: 2
+; ALL:             Name: .rdata
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 0
+; ALL:             Characteristics: 0x40000040
+; ALL:             Offset: 323
+; ALL:             Segment: 2
+; ALL:             Name: .edata
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 366
+; ALL:             Characteristics: 0x40000040
+; ALL:             Offset: 324
+; ALL:             Segment: 2
+; ALL:             Name: .rdata$debug
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 3
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 16384
+; ALL:             Length: 4
+; ALL:             Characteristics: 0xC0000040
+; ALL:             Name: .data
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 4
+; ALL:             Characteristics: 0xC0000080
+; ALL:             Offset: 0
+; ALL:             Segment: 3
+; ALL:             Name: .bss
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 4
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 20480
+; ALL:             Length: 8
+; ALL:             Characteristics: 0x42000040
+; ALL:             Name: .reloc
+; ALL:           }
+; ALL:         }
+; ALL:       ]
+; ALL:     }
+; ALL:   ]
+; ALL: }
+; ALL: Publics Stream {
+; ALL:   Stream number: 7
+; ALL:   SymHash: 556
+; ALL:   AddrMap: 8
+; ALL:   Number of buckets: 2
+; ALL:   Hash Buckets: [0, 12]
+; ALL:   Address Map: [36, 0]
+; ALL:   Thunk Map: [4112]
+; ALL:   Section Offsets: [4096, 1]
+; ALL:   Symbols [
+; ALL:     {
+; ALL:       PublicSym {
+; ALL:         Type: 0
+; ALL:         Seg: 3
+; ALL:         Off: 0
+; ALL:         Name: ?__purecall@@3PAXA
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       PublicSym {
+; ALL:         Type: 2
+; ALL:         Seg: 1
+; ALL:         Off: 16
+; ALL:         Name: _main
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       ProcRef {
+; ALL:         SumName: 0
+; ALL:         SymOffset: 120
+; ALL:         Mod: 1
+; ALL:         Name: main
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       DataSym {
+; ALL:         Type: void* (0x403)
+; ALL:         DisplayName: __purecall
+; ALL:       }
+; ALL:     }
+; ALL:   ]
+; ALL: }
 
 ; BIG:      FileHeaders {
 ; BIG-NEXT:   BlockSize: 4096

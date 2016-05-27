@@ -835,13 +835,13 @@ public:
   ///
   /// Adds RHS to this APInt and returns the result.
   APInt operator+(const APInt &RHS) const;
-  APInt operator+(uint64_t RHS) const { return (*this) + APInt(BitWidth, RHS); }
+  APInt operator+(uint64_t RHS) const;
 
   /// \brief Subtraction operator.
   ///
   /// Subtracts RHS from this APInt and returns the result.
   APInt operator-(const APInt &RHS) const;
-  APInt operator-(uint64_t RHS) const { return (*this) - APInt(BitWidth, RHS); }
+  APInt operator-(uint64_t RHS) const;
 
   /// \brief Left logical shift operator.
   ///

@@ -353,19 +353,6 @@ if( MSVC )
   append("/Zc:rvalueCast" CMAKE_CXX_FLAGS)
 
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # Find and run MSVC (not clang-cl) and get its version. This will tell
-    # clang-cl what version of MSVC to pretend to be so that the STL works.
-    execute_process(COMMAND "$ENV{VSINSTALLDIR}/VC/bin/cl.exe"
-      OUTPUT_QUIET
-      ERROR_VARIABLE MSVC_COMPAT_VERSION
-      )
-    string(REGEX REPLACE "^.*Compiler Version ([0-9.]+) for .*$" "\\1"
-      MSVC_COMPAT_VERSION "${MSVC_COMPAT_VERSION}")
-    append("-fms-compatibility-version=${MSVC_COMPAT_VERSION}"
-      CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  endif()
-
-  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # clang-cl and cl by default produce non-deterministic binaries because
     # link.exe /incremental requires a timestamp in the .obj file.  clang-cl
     # has the flag /Brepro to force deterministic binaries. We want to pass that
@@ -594,15 +581,6 @@ if(NOT CYGWIN AND NOT WIN32)
   endif()
 endif()
 
-if(CYGWIN OR MINGW)
-  # Prune --out-implib from executables. It doesn't make sense even
-  # with --export-all-symbols.
-  string(REGEX REPLACE "-Wl,--out-implib,[^ ]+ " " "
-    CMAKE_C_LINK_EXECUTABLE "${CMAKE_C_LINK_EXECUTABLE}")
-  string(REGEX REPLACE "-Wl,--out-implib,[^ ]+ " " "
-    CMAKE_CXX_LINK_EXECUTABLE "${CMAKE_CXX_LINK_EXECUTABLE}")
-endif()
-
 if(MSVC)
   # Remove flags here, for exceptions and RTTI.
   # Each target property or source property should be responsible to control
@@ -638,6 +616,19 @@ elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")
 elseif(LLVM_ENABLE_LTO)
   append("-flto" CMAKE_CXX_FLAGS CMAKE_C_FLAGS
                  CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+endif()
+
+# This option makes utils/extract_symbols.py be used to determine the list of
+# symbols to export from LLVM tools. This is necessary when using MSVC if you
+# want to allow plugins, though note that the plugin has to explicitly link
+# against (exactly one) tool so we can't unilaterally turn on
+# LLVM_ENABLE_PLUGINS when it's enabled.
+option(LLVM_EXPORT_SYMBOLS_FOR_PLUGINS "Export symbols from LLVM tools so that plugins can import them" OFF)
+if(BUILD_SHARED_LIBS AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
+  message(FATAL_ERROR "BUILD_SHARED_LIBS not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
+endif()
+if(LLVM_LINK_LLVM_DYLIB AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
+  message(FATAL_ERROR "LLVM_LINK_LLVM_DYLIB not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
 endif()
 
 # Plugin support

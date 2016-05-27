@@ -8,7 +8,8 @@
 
 ; NOTPROMOTED: @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc{{.*}} to void (...)*)
 ; NOTPROMOTED: @linkonceODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc{{.*}} to void (...)*)
-; NOTPROMOTED: @linkonceODRfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @linkonceODRfunc{{.*}} to void (...)*)
+; PROMOTE_MOD1: @linkonceODRfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc{{.*}} to void (...)*)
+; PROMOTE_MOD2: @linkonceODRfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @linkonceODRfunc{{.*}} to void (...)*)
 ; PROMOTE_MOD1: @linkonceODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc.mod1 to void (...)*)
 ; PROMOTE_MOD2: @linkonceODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
 ; PROMOTE_MOD1: @linkonceODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc.mod1 to void (...)*)
@@ -16,7 +17,8 @@
 
 ; NOTPROMOTED: @weakODRfuncAlias = alias void (...), bitcast (void ()* @weakODRfunc{{.*}} to void (...)*)
 ; NOTPROMOTED: @weakODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @weakODRfunc{{.*}} to void (...)*)
-; NOTPROMOTED: @weakODRfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @weakODRfunc{{.*}} to void (...)*)
+; PROMOTE_MOD1: @weakODRfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @weakODRfunc{{.*}} to void (...)*)
+; PROMOTE_MOD2: @weakODRfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @weakODRfunc{{.*}} to void (...)*)
 ; PROMOTE_MOD1: @weakODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc.mod1 to void (...)*)
 ; PROMOTE_MOD2: @weakODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
 ; PROMOTE_MOD1: @weakODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc.mod1 to void (...)*)
@@ -24,7 +26,8 @@
 
 ; NOTPROMOTED: @linkoncefuncAlias = alias void (...), bitcast (void ()* @linkoncefunc{{.*}} to void (...)*)
 ; NOTPROMOTED: @linkoncefuncWeakAlias = weak alias void (...), bitcast (void ()* @linkoncefunc{{.*}} to void (...)*)
-; NOTPROMOTED: @linkoncefuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @linkoncefunc{{.*}} to void (...)*)
+; PROMOTE_MOD1: @linkoncefuncLinkonceAlias = weak alias void (...), bitcast (void ()* @linkoncefunc{{.*}} to void (...)*)
+; PROMOTE_MOD2: @linkoncefuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @linkoncefunc{{.*}} to void (...)*)
 ; PROMOTE_MOD1: @linkoncefuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkoncefunc.mod1 to void (...)*)
 ; PROMOTE_MOD2: @linkoncefuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
 ; PROMOTE_MOD1: @linkoncefuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @linkoncefunc.mod1 to void (...)*)
@@ -32,7 +35,8 @@
 
 ; NOTPROMOTED: @weakfuncAlias = alias void (...), bitcast (void ()* @weakfunc{{.*}} to void (...)*)
 ; NOTPROMOTED: @weakfuncWeakAlias = weak alias void (...), bitcast (void ()* @weakfunc{{.*}} to void (...)*)
-; NOTPROMOTED: @weakfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @weakfunc{{.*}} to void (...)*)
+; PROMOTE_MOD1: @weakfuncLinkonceAlias = weak alias void (...), bitcast (void ()* @weakfunc{{.*}} to void (...)*)
+; PROMOTE_MOD2: @weakfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @weakfunc{{.*}} to void (...)*)
 ; FIXME: The "resolution" should turn one of these to linkonce_odr
 ; PROMOTE_MOD1: @weakfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakfunc.mod1 to void (...)*)
 ; PROMOTE_MOD2: @weakfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakfunc to void (...)*)

@@ -17,14 +17,21 @@
 namespace llvm {
 namespace codeview {
 
+/// StreamInterface abstracts the notion of a data stream.  This way, an
+/// implementation could implement trivial reading from a contiguous memory
+/// buffer or, as in the case of PDB files, reading from a set of possibly
+/// discontiguous blocks.  The implementation is required to return references
+/// to stable memory, so if this is not possible (for example in the case of
+/// a PDB file with discontiguous blocks, it must keep its own pool of temp
+/// storage.
 class StreamInterface {
 public:
   virtual ~StreamInterface() {}
 
   virtual Error readBytes(uint32_t Offset,
                           MutableArrayRef<uint8_t> Buffer) const = 0;
-  virtual Error getArrayRef(uint32_t Offset, ArrayRef<uint8_t> &Buffer,
-                            uint32_t Length) const = 0;
+  virtual Error readBytes(uint32_t Offset, uint32_t Size,
+                          ArrayRef<uint8_t> &Buffer) const = 0;
 
   virtual uint32_t getLength() const = 0;
 };

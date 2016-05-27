@@ -16,10 +16,8 @@ define void @no_reorder_v2f64_global_load_store(<2 x double> addrspace(1)* nocap
 }
 
 ; SI-LABEL: {{^}}no_reorder_scalarized_v2f64_local_load_store:
-; SI: ds_read_b64
-; SI: ds_read_b64
-; SI: ds_write_b64
-; SI: ds_write_b64
+; SI: ds_read2_b64
+; SI: ds_write2_b64
 ; SI: s_endpgm
 define void @no_reorder_scalarized_v2f64_local_load_store(<2 x double> addrspace(3)* nocapture %x, <2 x double> addrspace(3)* nocapture %y) nounwind {
   %tmp1 = load <2 x double>, <2 x double> addrspace(3)* %x, align 16

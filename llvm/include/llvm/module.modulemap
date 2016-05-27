@@ -195,6 +195,7 @@ module LLVM_Utils {
 
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"
+    textual header "Support/AArch64TargetParser.def"
     textual header "Support/Dwarf.def"
     textual header "Support/MachO.def"
     textual header "Support/ELFRelocs/AArch64.def"

@@ -17,10 +17,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 class GlobalValue;
@@ -117,6 +119,9 @@ bool returnTypeIsEligibleForTailCall(const Function *F,
 // analysis makes sense when the information can be passed down to the linker
 // or we are in LTO.
 bool canBeOmittedFromSymbolTable(const GlobalValue *GV);
+
+bool shouldAssumeDSOLocal(Reloc::Model RM, const Triple &TT, const Module &M,
+                          const GlobalValue *GV);
 
 DenseMap<const MachineBasicBlock *, int>
 getFuncletMembership(const MachineFunction &MF);

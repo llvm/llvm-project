@@ -13,6 +13,7 @@
 #define LLVM_FUZZER_INTERNAL_H
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <climits>
@@ -122,10 +123,10 @@ void ComputeSHA1(const uint8_t *Data, size_t Len, uint8_t *Out);
 // Returns true iff U has been changed.
 bool ToASCII(uint8_t *Data, size_t Size);
 bool IsASCII(const Unit &U);
+bool IsASCII(const uint8_t *Data, size_t Size);
 
 int NumberOfCpuCores();
 int GetPid();
-int SignalToMainThread();
 void SleepSeconds(int Seconds);
 
 class Random {
@@ -401,6 +402,9 @@ public:
   // Public for tests.
   void ResetCoverage();
 
+  bool InFuzzingThread() const { return IsMyThread; }
+  size_t GetCurrentUnitInFuzzingThead(const uint8_t **Data) const;
+
 private:
   void AlarmCallback();
   void CrashCallback();
@@ -408,14 +412,14 @@ private:
   void MutateAndTestOne();
   void ReportNewCoverage(const Unit &U);
   bool RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
-  void RunOneAndUpdateCorpus(uint8_t *Data, size_t Size);
+  void RunOneAndUpdateCorpus(const uint8_t *Data, size_t Size);
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n");
   void PrintStatusForNewUnit(const Unit &U);
   void ShuffleCorpus(UnitVector *V);
-  void TryDetectingAMemoryLeak(uint8_t *Data, size_t Size);
-  void CheckForMemoryLeaks();
+  void TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
+                               bool DuringInitialCorpusExecution);
 
   // Updates the probability distribution for the units in the corpus.
   // Must be called whenever the corpus or unit weights are changed.
@@ -437,9 +441,9 @@ private:
   void DumpCurrentUnit(const char *Prefix);
   void DeathCallback();
 
+  void LazyAllocateCurrentUnitData();
   uint8_t *CurrentUnitData = nullptr;
-  size_t CurrentUnitSize = 0;
-  bool InOOMState = false;
+  std::atomic<size_t> CurrentUnitSize;
 
   size_t TotalNumberOfRuns = 0;
   size_t NumberOfNewUnitsAdded = 0;
@@ -449,7 +453,6 @@ private:
 
   std::vector<Unit> Corpus;
   std::unordered_set<std::string> UnitHashesAddedToCorpus;
-  std::vector<uint8_t> MutateInPlaceHere;
 
   std::piecewise_constant_distribution<double> CorpusDistribution;
   UserCallback CB;
@@ -462,6 +465,9 @@ private:
 
   // Maximum recorded coverage.
   Coverage MaxCoverage;
+
+  // Need to know our own thread.
+  static thread_local bool IsMyThread;
 };
 
 }; // namespace fuzzer

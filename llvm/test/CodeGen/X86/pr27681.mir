@@ -1,0 +1,87 @@
+# RUN: llc -mtriple=i386-unknown-linux-gnu -mcpu=slm -run-pass post-RA-sched -o /dev/null %s 2>&1 | FileCheck %s
+#
+# Verify that the critical antidependence breaker does not consider
+# a high byte register as available as a replacement register
+# in a certain context.
+--- |
+
+  define void @main() { ret void }
+
+...
+---
+# CHECK-LABEL: main
+name:            main
+allVRegsAllocated: true
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       52
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -20, size: 4, alignment: 4, callee-saved-register: '%esi' }
+  - { id: 1, type: spill-slot, offset: -16, size: 4, alignment: 4, callee-saved-register: '%edi' }
+  - { id: 2, type: spill-slot, offset: -12, size: 4, alignment: 4, callee-saved-register: '%ebx' }
+  - { id: 3, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '%ebp' }
+stack:
+  - { id: 0, type: spill-slot, offset: -53, size: 1, alignment: 1 }
+  - { id: 1, type: spill-slot, offset: -48, size: 4, alignment: 4 }
+  - { id: 2, type: spill-slot, offset: -32, size: 4, alignment: 4 }
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: %ebp, %ebx, %edi, %esi
+
+    frame-setup PUSH32r killed %ebp, implicit-def %esp, implicit %esp
+    frame-setup PUSH32r killed %ebx, implicit-def %esp, implicit %esp
+    frame-setup PUSH32r killed %edi, implicit-def %esp, implicit %esp
+    frame-setup PUSH32r killed %esi, implicit-def %esp, implicit %esp
+    %esp = frame-setup SUB32ri8 %esp, 36, implicit-def dead %eflags
+    %eax = MOV32ri 1
+    %ebp = MOV32ri 2
+    %ebx = MOV32ri 3
+    %ecx = MOV32ri 4
+    %edi = MOV32ri 5
+    %edx = MOV32ri 6
+
+  bb.1:
+    successors: %bb.3, %bb.2
+    liveins: %eax, %ebp, %ebx, %ecx, %edi, %edx
+
+    %ebp = SHR32rCL killed %ebp, implicit-def dead %eflags, implicit %cl
+    %ebp = XOR32rr killed %ebp, killed %ebx, implicit-def dead %eflags
+    TEST32rr %edx, %edx, implicit-def %eflags
+    %cl = SETNEr implicit %eflags
+    ; This %bl def is antidependent on the above use of %ebx
+    %bl = MOV8rm %esp, 1, _, 3, _ ; :: (load 1 from %stack.0)
+    %cl = OR8rr killed %cl, %bl, implicit-def dead %eflags
+    %esi = MOVZX32rr8 killed %cl
+    %esi = ADD32rr killed %esi, killed %edi, implicit-def dead %eflags
+    %ecx = MOV32rm %esp, 1, _, 24, _ ; :: (load 4 from %stack.2)
+    %edx = SAR32rCL killed %edx, implicit-def dead %eflags, implicit %cl
+    TEST32rr killed %edx, %edx, implicit-def %eflags
+    %cl = SETNEr implicit %eflags
+    ; Verify that removal of the %bl antidependence does not use %ch
+    ; as a replacement register.
+    ; CHECK: %cl = AND8rr %cl, killed %b
+    %cl = AND8rr killed %cl, killed %bl, implicit-def dead %eflags
+    CMP32ri8 %ebp, -1, implicit-def %eflags
+    %edx = MOV32ri 0
+    JE_1 %bb.3, implicit %eflags
+
+  bb.2:
+    successors: %bb.3
+    liveins: %cl, %eax, %ebp, %esi
+
+    OR32mr %esp, 1, _, 8, _, killed %eax, implicit-def %eflags ; :: (store 4 into %stack.1)
+    %dl = SETNEr implicit %eflags, implicit-def %edx
+
+  bb.3:
+    liveins: %cl, %ebp, %edx, %esi
+
+    %eax = XOR32rr undef %eax, undef %eax, implicit-def dead %eflags
+    %esp = ADD32ri8 %esp, 36, implicit-def dead %eflags
+    %esi = POP32r implicit-def %esp, implicit %esp
+    %edi = POP32r implicit-def %esp, implicit %esp
+    %ebx = POP32r implicit-def %esp, implicit %esp
+    %ebp = POP32r implicit-def %esp, implicit %esp
+    RET 0, %eax
+
+...

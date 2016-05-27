@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Error.h"
+
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "gtest/gtest.h"
@@ -374,6 +376,20 @@ TEST(Error, CatchErrorFromHandler) {
 
   EXPECT_EQ(ErrorInfo, 7)
       << "Failed to handle Error returned from handleErrors.";
+}
+
+TEST(Error, StringError) {
+  std::string Msg;
+  raw_string_ostream S(Msg);
+  logAllUnhandledErrors(make_error<StringError>("foo" + Twine(42),
+                                                inconvertibleErrorCode()),
+                        S, "");
+  EXPECT_EQ(S.str(), "foo42\n") << "Unexpected StringError log result";
+
+  auto EC =
+    errorToErrorCode(make_error<StringError>("", errc::invalid_argument));
+  EXPECT_EQ(EC, errc::invalid_argument)
+    << "Failed to convert StringError to error_code.";
 }
 
 // Test that the ExitOnError utility works as expected.

@@ -56,7 +56,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // for SI has the unhelpful behavior that it unsets everything else if you
   // disable it.
 
-  SmallString<256> FullFS("+promote-alloca,+fp64-denormals,");
+  SmallString<256> FullFS("+promote-alloca,+fp64-denormals,+load-store-opt,");
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,";
   FullFS += FS;

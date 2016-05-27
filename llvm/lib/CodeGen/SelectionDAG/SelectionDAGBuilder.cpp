@@ -128,7 +128,7 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
                                 const SDValue *Parts,
                                 unsigned NumParts, MVT PartVT, EVT ValueVT,
                                 const Value *V,
-                                ISD::NodeType AssertOp = ISD::DELETED_NODE) {
+                                Optional<ISD::NodeType> AssertOp = None) {
   if (ValueVT.isVector())
     return getCopyFromPartsVector(DAG, DL, Parts, NumParts,
                                   PartVT, ValueVT, V);
@@ -233,8 +233,8 @@ static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
       // For a truncate, see if we have any information to
       // indicate whether the truncated bits will always be
       // zero or sign-extension.
-      if (AssertOp != ISD::DELETED_NODE)
-        Val = DAG.getNode(AssertOp, DL, PartEVT, Val,
+      if (AssertOp.hasValue())
+        Val = DAG.getNode(*AssertOp, DL, PartEVT, Val,
                           DAG.getValueType(ValueVT));
       return DAG.getNode(ISD::TRUNCATE, DL, ValueVT, Val);
     }
@@ -7710,7 +7710,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   } else {
     // Collect the legal value parts into potentially illegal values
     // that correspond to the original function's return values.
-    ISD::NodeType AssertOp = ISD::DELETED_NODE;
+    Optional<ISD::NodeType> AssertOp;
     if (CLI.RetSExt)
       AssertOp = ISD::AssertSext;
     else if (CLI.RetZExt)
@@ -7933,7 +7933,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
                     PointerType::getUnqual(F.getReturnType()), ValueVTs);
     MVT VT = ValueVTs[0].getSimpleVT();
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
-    ISD::NodeType AssertOp = ISD::DELETED_NODE;
+    Optional<ISD::NodeType> AssertOp = None;
     SDValue ArgValue = getCopyFromParts(DAG, dl, &InVals[0], 1,
                                         RegVT, VT, nullptr, AssertOp);
 
@@ -7974,7 +7974,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       unsigned NumParts = TLI->getNumRegisters(*CurDAG->getContext(), VT);
 
       if (!I->use_empty()) {
-        ISD::NodeType AssertOp = ISD::DELETED_NODE;
+        Optional<ISD::NodeType> AssertOp;
         if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
           AssertOp = ISD::AssertSext;
         else if (F.getAttributes().hasAttribute(Idx, Attribute::ZExt))

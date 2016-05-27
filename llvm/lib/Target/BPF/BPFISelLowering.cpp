@@ -199,6 +199,7 @@ SDValue BPFTargetLowering::LowerFormalArguments(
       }
     } else {
       fail(DL, DAG, "defined with too many args");
+      InVals.push_back(DAG.getConstant(0, DL, VA.getLocVT()));
     }
   }
 

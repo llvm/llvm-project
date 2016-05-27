@@ -16,6 +16,33 @@ entry:
   ret i64 %0
 }
 
+; Canonicalize (srl (bswap x), 16) to (rotr (bswap x), 16) if the high 16-bits
+; of %a are zero. This optimizes rev + lsr 16 to rev16.
+define i32 @test_rev_w_srl16(i16 %a) {
+entry:
+; CHECK-LABEL: test_rev_w_srl16:
+; CHECK: and [[REG:w[0-9]+]], w0, #0xffff
+; CHECK: rev16 w0, [[REG]]
+; CHECK-NOT: lsr
+  %0 = zext i16 %a to i32
+  %1 = tail call i32 @llvm.bswap.i32(i32 %0)
+  %2 = lshr i32 %1, 16
+  ret i32 %2
+}
+
+; Canonicalize (srl (bswap x), 32) to (rotr (bswap x), 32) if the high 32-bits
+; of %a are zero. This optimizes rev + lsr 32 to rev32.
+define i64 @test_rev_x_srl32(i32 %a) {
+entry:
+; CHECK-LABEL: test_rev_x_srl32:
+; CHECK: rev32 x0, {{x[0-9]+}}
+; CHECK-NOT: lsr
+  %0 = zext i32 %a to i64
+  %1 = tail call i64 @llvm.bswap.i64(i64 %0)
+  %2 = lshr i64 %1, 32
+  ret i64 %2
+}
+
 declare i32 @llvm.bswap.i32(i32) nounwind readnone
 declare i64 @llvm.bswap.i64(i64) nounwind readnone
 

@@ -26,6 +26,17 @@ define void @arg(i32* %arg) {
   ret void
 }
 
+@gv = global i32 1
+; CHECK-LABEL: Function: global:
+; CHECK-DAG: MayAlias: i32* %p0, i32* @gv
+; CHECK-DAG: NoAlias:  i32* %p1, i32* @gv
+define void @global() {
+  %random = call i32* @random.i32(i32* @gv)
+  %p0 = getelementptr inbounds i32, i32* %random, i32 0
+  %p1 = getelementptr inbounds i32, i32* %random, i32 1
+  ret void
+}
+
 ; CHECK-LABEL: Function: struct:
 ; CHECK-DAG:  MayAlias: i32* %f0, i32* %p0
 ; CHECK-DAG:  MayAlias: i32* %f1, i32* %p0

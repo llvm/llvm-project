@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <string>
 #include <tuple>
 #include <vector>
 

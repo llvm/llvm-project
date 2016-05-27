@@ -260,12 +260,13 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
       if (Reg == 0) continue;
       if (!MO.isDef()) continue;
 
-      // If we've already marked this reg as unchangeable, carry on.
-      if (KeepRegs.test(Reg)) continue;
-      
       // Ignore two-addr defs.
       if (MI.isRegTiedToUseOperand(i))
         continue;
+
+      // If we've already marked this reg as unchangeable, don't remove
+      // it or any of its subregs from KeepRegs.
+      bool Keep = KeepRegs.test(Reg);
 
       // For the reg itself and all subregs: update the def to current;
       // reset the kill state, any restrictions, and references.
@@ -273,9 +274,10 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
         unsigned SubregReg = *SRI;
         DefIndices[SubregReg] = Count;
         KillIndices[SubregReg] = ~0u;
-        KeepRegs.reset(SubregReg);
         Classes[SubregReg] = nullptr;
         RegRefs.erase(SubregReg);
+        if (!Keep)
+          KeepRegs.reset(SubregReg);
       }
       // Conservatively mark super-registers as unusable.
       for (MCSuperRegIterator SR(Reg, TRI); SR.isValid(); ++SR)

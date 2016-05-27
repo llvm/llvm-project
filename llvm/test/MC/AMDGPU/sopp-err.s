@@ -9,16 +9,16 @@ s_sendmsg sendmsg(MSG_INTERRUPTX)
 // GCN: error: invalid/unsupported symbolic name of message
 
 s_sendmsg sendmsg(MSG_INTERRUPT, 0)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(MSG_GS)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_NOP)
 // GCN: error: invalid GS_OP: NOP is for GS_DONE only
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0, 0)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
 // GCN: error: invalid/unsupported symbolic name of message
@@ -30,13 +30,13 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 4)
 // GCN: error: invalid stream id: only 2-bit values are legal
 
 s_sendmsg sendmsg(2)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(2, 0)
 // GCN: error: invalid GS_OP: NOP is for GS_DONE only
 
 s_sendmsg sendmsg(2, 3, 0, 0)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(2, 4, 1)
 // GCN: error: invalid code of GS_OP: only 2-bit values are legal
@@ -45,16 +45,16 @@ s_sendmsg sendmsg(2, 2, 4)
 // GCN: error: invalid stream id: only 2-bit values are legal
 
 s_sendmsg sendmsg(2, 2, 0, 0)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(15)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(15, 1, 0)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(15, 0)
 // GCN: error: invalid/unsupported code of SYSMSG_OP
@@ -63,10 +63,10 @@ s_sendmsg sendmsg(15, 5)
 // GCN: error: invalid/unsupported code of SYSMSG_OP
 
 s_sendmsg sendmsg(MSG_SYSMSG)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_ECC_ERR_INTERRUPT, 0)
-// GCN: error: not a valid operand
+// GCN: error: failed parsing operand
 
 s_sendmsg sendmsg(MSG_SYSMSG, 0)
 // GCN: error: invalid/unsupported code of SYSMSG_OP

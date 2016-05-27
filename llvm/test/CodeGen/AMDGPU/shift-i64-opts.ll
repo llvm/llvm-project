@@ -40,8 +40,8 @@ define void @lshr_i64_33(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 }
 
 ; GCN-LABEL: {{^}}lshr_i64_32:
-; GCN: buffer_load_dword v[[LO:[0-9]+]]
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
+; GCN-DAG: buffer_load_dword v[[LO:[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @lshr_i64_32(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in
@@ -81,8 +81,8 @@ define void @shl_i64_const_35(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 }
 
 ; GCN-LABEL: {{^}}shl_i64_const_32:
-; GCN: buffer_load_dword v[[HI:[0-9]+]]
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GCN-DAG: buffer_load_dword v[[HI:[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 define void @shl_i64_const_32(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %val = load i64, i64 addrspace(1)* %in

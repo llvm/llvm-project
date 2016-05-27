@@ -328,6 +328,20 @@ private:
   StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
 };
 
+/// @brief Create a local compile callback manager.
+///
+/// The given target triple will determine the ABI, and the given
+/// ErrorHandlerAddress will be used by the resulting compile callback
+/// manager if a compile callback fails.
+std::unique_ptr<JITCompileCallbackManager>
+createLocalCompileCallbackManager(Triple T, TargetAddress ErrorHandlerAddress);
+
+/// @brief Create a local indriect stubs manager builder.
+///
+/// The given target triple will determine the ABI.
+std::function<std::unique_ptr<IndirectStubsManager>()>
+createLocalIndirectStubsManagerBuilder(Triple T);
+
 /// @brief Build a function pointer of FunctionType with the given constant
 ///        address.
 ///

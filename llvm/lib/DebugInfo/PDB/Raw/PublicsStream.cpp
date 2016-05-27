@@ -70,21 +70,6 @@ struct PublicsStream::GSIHashHeader {
   ulittle32_t NumBuckets;
 };
 
-// This is HRFile.
-struct PublicsStream::HashRecord {
-  ulittle32_t Off; // Offset in the symbol record stream
-  ulittle32_t CRef;
-};
-
-// This struct is defined as "SO" in langapi/include/pdb.h.
-namespace {
-struct SectionOffset {
-  ulittle32_t Off;
-  ulittle16_t Isect;
-  char Padding[2];
-};
-}
-
 PublicsStream::PublicsStream(PDBFile &File, uint32_t StreamNum)
     : Pdb(File), StreamNum(StreamNum), Stream(StreamNum, File) {}
 
@@ -107,28 +92,27 @@ Error PublicsStream::reload() {
                                 "Publics Stream does not contain a header.");
 
   // Read PSGSIHDR and GSIHashHdr structs.
-  Header.reset(new HeaderInfo());
-  if (Reader.readObject(Header.get()))
+  if (Reader.readObject(Header))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Publics Stream does not contain a header.");
-  HashHdr.reset(new GSIHashHeader());
-  if (Reader.readObject(HashHdr.get()))
+
+  if (Reader.readObject(HashHdr))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Publics Stream does not contain a header.");
 
   // An array of HashRecord follows. Read them.
-  if (HashHdr->HrSize % sizeof(HashRecord))
+  if (HashHdr->HrSize % sizeof(PSHashRecord))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid HR array size.");
-  HashRecords.resize(HashHdr->HrSize / sizeof(HashRecord));
-  if (auto EC = Reader.readArray<HashRecord>(HashRecords))
+  uint32_t NumHashRecords = HashHdr->HrSize / sizeof(PSHashRecord);
+  if (auto EC = Reader.readArray(HashRecords, NumHashRecords))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read an HR array");
 
   // A bitmap of a fixed length follows.
   size_t BitmapSizeInBits = alignTo(IPHR_HASH + 1, 32);
-  std::vector<uint8_t> Bitmap(BitmapSizeInBits / 8);
-  if (auto EC = Reader.readArray<uint8_t>(Bitmap))
+  uint32_t NumBitmapEntries = BitmapSizeInBits / 8;
+  if (auto EC = Reader.readBytes(NumBitmapEntries, Bitmap))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read a bitmap.");
   for (uint8_t B : Bitmap)
@@ -140,40 +124,25 @@ Error PublicsStream::reload() {
   // corrupted streams.
 
   // Hash buckets follow.
-  std::vector<ulittle32_t> TempHashBuckets(NumBuckets);
-  if (auto EC = Reader.readArray<ulittle32_t>(TempHashBuckets))
+  if (auto EC = Reader.readArray(HashBuckets, NumBuckets))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Hash buckets corrupted.");
-  HashBuckets.resize(NumBuckets);
-  std::copy(TempHashBuckets.begin(), TempHashBuckets.end(),
-            HashBuckets.begin());
 
   // Something called "address map" follows.
-  std::vector<ulittle32_t> TempAddressMap(Header->AddrMap / sizeof(uint32_t));
-  if (auto EC = Reader.readArray<ulittle32_t>(TempAddressMap))
+  uint32_t NumAddressMapEntries = Header->AddrMap / sizeof(uint32_t);
+  if (auto EC = Reader.readArray(AddressMap, NumAddressMapEntries))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read an address map.");
-  AddressMap.resize(Header->AddrMap / sizeof(uint32_t));
-  std::copy(TempAddressMap.begin(), TempAddressMap.end(), AddressMap.begin());
 
   // Something called "thunk map" follows.
-  std::vector<ulittle32_t> TempThunkMap(Header->NumThunks);
-  ThunkMap.resize(Header->NumThunks);
-  if (auto EC = Reader.readArray<ulittle32_t>(TempThunkMap))
+  if (auto EC = Reader.readArray(ThunkMap, Header->NumThunks))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read a thunk map.");
-  ThunkMap.resize(Header->NumThunks);
-  std::copy(TempThunkMap.begin(), TempThunkMap.end(), ThunkMap.begin());
 
   // Something called "section map" follows.
-  std::vector<SectionOffset> Offsets(Header->NumSections);
-  if (auto EC = Reader.readArray<SectionOffset>(Offsets))
+  if (auto EC = Reader.readArray(SectionOffsets, Header->NumSections))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Could not read a section map.");
-  for (auto &SO : Offsets) {
-    SectionOffsets.push_back(SO.Off);
-    SectionOffsets.push_back(SO.Isect);
-  }
 
   if (Reader.bytesRemaining() > 0)
     return make_error<RawError>(raw_error_code::corrupt_file,

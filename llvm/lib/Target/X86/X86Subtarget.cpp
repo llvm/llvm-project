@@ -14,6 +14,7 @@
 #include "X86Subtarget.h"
 #include "X86InstrInfo.h"
 #include "X86TargetMachine.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -48,49 +49,6 @@ X86EarlyIfConv("x86-early-ifcvt", cl::Hidden,
 /// we should reference it in a non-pcrel context.
 unsigned char X86Subtarget::classifyBlockAddressReference() const {
   return classifyLocalReference(nullptr);
-}
-
-// FIXME: make this a proper option
-static bool CanUseCopyRelocWithPIE = false;
-
-static bool shouldAssumeDSOLocal(Reloc::Model RM, const Triple &TT,
-                                 const Module &M, const GlobalValue *GV) {
-  // DLLImport explicitly marks the GV as external.
-  if (GV && GV->hasDLLImportStorageClass())
-    return false;
-
-  // Every other GV is local on COFF
-  if (TT.isOSBinFormatCOFF())
-    return true;
-
-  if (RM == Reloc::Static)
-    return true;
-
-  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))
-    return true;
-
-  if (TT.isOSBinFormatELF()) {
-    assert(RM != Reloc::DynamicNoPIC);
-    // Some linkers can use copy relocations with pie executables.
-    if (M.getPIELevel() != PIELevel::Default) {
-      if (CanUseCopyRelocWithPIE)
-        return true;
-
-      // If the symbol is defined, it cannot be preempted.
-      if (GV && !GV->isDeclarationForLinker())
-        return true;
-      return false;
-    }
-
-    // ELF supports preemption of other symbols.
-    return false;
-  }
-
-  assert(TT.isOSBinFormatMachO());
-  if (GV && GV->isStrongDefinitionForLinker())
-    return true;
-
-  return false;
 }
 
 /// Classify a global variable reference for the current subtarget according to

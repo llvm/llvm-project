@@ -436,7 +436,8 @@ Value *Mapper::mapValue(const Value *V) {
   for (; OpNo != NumOperands; ++OpNo) {
     Value *Op = C->getOperand(OpNo);
     Mapped = mapValue(Op);
-    if (Mapped != C) break;
+    if (Mapped != Op)
+      break;
   }
 
   // See if the type mapper wants to remap the type as well.

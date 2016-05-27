@@ -8,8 +8,7 @@
 ; CHECK-LABEL: {{^}}do_as_ptr_calcs:
 ; CHECK: s_load_dword [[SREG1:s[0-9]+]],
 ; CHECK: v_mov_b32_e32 [[VREG1:v[0-9]+]], [[SREG1]]
-; CHECK-DAG: ds_read_b32 v{{[0-9]+}}, [[VREG1]] offset:12
-; CHECK-DAG: ds_read_b32 v{{[0-9]+}}, [[VREG1]] offset:20
+; CHECK-DAG: ds_read2_b32 v[{{[0-9+:[0-9]+}}], [[VREG1]] offset0:3 offset1:5
 define void @do_as_ptr_calcs(%struct.foo addrspace(3)* nocapture %ptr) nounwind {
 entry:
   %x = getelementptr inbounds %struct.foo, %struct.foo addrspace(3)* %ptr, i32 0, i32 1, i32 0

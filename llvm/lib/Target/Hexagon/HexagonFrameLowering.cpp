@@ -292,6 +292,26 @@ namespace {
     return false;
   }
 
+  /// Returns the "return" instruction from this block, or nullptr if there
+  /// isn't any.
+  MachineInstr *getReturn(MachineBasicBlock &MBB) {
+    for (auto &I : MBB)
+      if (I.isReturn())
+        return &I;
+    return nullptr;
+  }
+
+  bool isRestoreCall(unsigned Opc) {
+    switch (Opc) {
+      case Hexagon::RESTORE_DEALLOC_RET_JMP_V4:
+      case Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC:
+      case Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4:
+      case Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC:
+        return true;
+    }
+    return false;
+  }
+
   inline bool isOptNone(const MachineFunction &MF) {
     return MF.getFunction()->hasFnAttribute(Attribute::OptimizeNone) ||
            MF.getTarget().getOptLevel() == CodeGenOpt::None;
@@ -445,6 +465,28 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
     for (auto &B : MF)
       if (B.isReturnBlock())
         insertEpilogueInBlock(B);
+
+    for (auto &B : MF) {
+      if (B.empty())
+        continue;
+      MachineInstr *RetI = getReturn(B);
+      if (!RetI || isRestoreCall(RetI->getOpcode()))
+        continue;
+      for (auto &R : CSI)
+        RetI->addOperand(MachineOperand::CreateReg(R.getReg(), false, true));
+    }
+  }
+
+  if (EpilogB) {
+    // If there is an epilog block, it may not have a return instruction.
+    // In such case, we need to add the callee-saved registers as live-ins
+    // in all blocks on all paths from the epilog to any return block.
+    unsigned MaxBN = 0;
+    for (auto &B : MF)
+      if (B.getNumber() >= 0)
+        MaxBN = std::max(MaxBN, unsigned(B.getNumber()));
+    BitVector DoneT(MaxBN+1), DoneF(MaxBN+1), Path(MaxBN+1);
+    updateExitPaths(*EpilogB, EpilogB, DoneT, DoneF, Path);
   }
 }
 
@@ -544,13 +586,7 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   auto &HRI = *HST.getRegisterInfo();
   unsigned SP = HRI.getStackRegister();
 
-  MachineInstr *RetI = nullptr;
-  for (auto &I : MBB) {
-    if (!I.isReturn())
-      continue;
-    RetI = &I;
-    break;
-  }
+  MachineInstr *RetI = getReturn(MBB);
   unsigned RetOpc = RetI ? RetI->getOpcode() : 0;
 
   MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
@@ -611,6 +647,51 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   // Transfer the function live-out registers.
   NewI->copyImplicitOps(MF, *RetI);
   MBB.erase(RetI);
+}
+
+
+bool HexagonFrameLowering::updateExitPaths(MachineBasicBlock &MBB,
+      MachineBasicBlock *RestoreB, BitVector &DoneT, BitVector &DoneF,
+      BitVector &Path) const {
+  assert(MBB.getNumber() >= 0);
+  unsigned BN = MBB.getNumber();
+  if (Path[BN] || DoneF[BN])
+    return false;
+  if (DoneT[BN])
+    return true;
+
+  auto &CSI = MBB.getParent()->getFrameInfo()->getCalleeSavedInfo();
+
+  Path[BN] = true;
+  bool ReachedExit = false;
+  for (auto &SB : MBB.successors())
+    ReachedExit |= updateExitPaths(*SB, RestoreB, DoneT, DoneF, Path);
+
+  if (!MBB.empty() && MBB.back().isReturn()) {
+    // Add implicit uses of all callee-saved registers to the reached
+    // return instructions. This is to prevent the anti-dependency breaker
+    // from renaming these registers.
+    MachineInstr &RetI = MBB.back();
+    if (!isRestoreCall(RetI.getOpcode()))
+      for (auto &R : CSI)
+        RetI.addOperand(MachineOperand::CreateReg(R.getReg(), false, true));
+    ReachedExit = true;
+  }
+
+  // We don't want to add unnecessary live-ins to the restore block: since
+  // the callee-saved registers are being defined in it, the entry of the
+  // restore block cannot be on the path from the definitions to any exit.
+  if (ReachedExit && &MBB != RestoreB) {
+    for (auto &R : CSI)
+      if (!MBB.isLiveIn(R.getReg()))
+        MBB.addLiveIn(R.getReg());
+    DoneT[BN] = true;
+  }
+  if (!ReachedExit)
+    DoneF[BN] = true;
+
+  Path[BN] = false;
+  return ReachedExit;
 }
 
 

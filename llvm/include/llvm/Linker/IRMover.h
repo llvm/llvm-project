@@ -15,6 +15,7 @@
 #include <functional>
 
 namespace llvm {
+class Error;
 class GlobalValue;
 class Metadata;
 class Module;
@@ -70,10 +71,8 @@ public:
   ///   not present in ValuesToLink. The GlobalValue and a ValueAdder callback
   ///   are passed as an argument, and the callback is expected to be called
   ///   if the GlobalValue needs to be added to the \p ValuesToLink and linked.
-  ///
-  /// Returns true on error.
-  bool move(std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
-            std::function<void(GlobalValue &GV, ValueAdder Add)> AddLazyFor);
+  Error move(std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
+             std::function<void(GlobalValue &GV, ValueAdder Add)> AddLazyFor);
   Module &getModule() { return Composite; }
 
 private:

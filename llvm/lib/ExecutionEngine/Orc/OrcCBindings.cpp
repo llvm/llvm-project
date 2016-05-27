@@ -17,9 +17,9 @@ LLVMOrcJITStackRef LLVMOrcCreateInstance(LLVMTargetMachineRef TM) {
 
   Triple T(TM2->getTargetTriple());
 
-  auto CompileCallbackMgr = OrcCBindingsStack::createCompileCallbackMgr(T);
+  auto CompileCallbackMgr = orc::createLocalCompileCallbackManager(T, 0);
   auto IndirectStubsMgrBuilder =
-      OrcCBindingsStack::createIndirectStubsMgrBuilder(T);
+      orc::createLocalIndirectStubsManagerBuilder(T);
 
   OrcCBindingsStack *JITStack = new OrcCBindingsStack(
       *TM2, std::move(CompileCallbackMgr), IndirectStubsMgrBuilder);

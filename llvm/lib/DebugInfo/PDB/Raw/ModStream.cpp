@@ -32,17 +32,17 @@ Error ModStream::reload() {
     return llvm::make_error<RawError>(raw_error_code::corrupt_file,
                                       "Module has both C11 and C13 line info");
 
-  if (auto EC = SymbolsSubstream.initialize(Reader, SymbolSize))
+  if (auto EC = SymbolsSubstream.load(Reader, SymbolSize))
     return EC;
-  if (auto EC = LinesSubstream.initialize(Reader, C11Size))
+  if (auto EC = Reader.readStreamRef(LinesSubstream, C11Size))
     return EC;
-  if (auto EC = C13LinesSubstream.initialize(Reader, C13Size))
+  if (auto EC = Reader.readStreamRef(C13LinesSubstream, C13Size))
     return EC;
 
   uint32_t GlobalRefsSize;
   if (auto EC = Reader.readInteger(GlobalRefsSize))
     return EC;
-  if (auto EC = GlobalRefsSubstream.initialize(Reader, GlobalRefsSize))
+  if (auto EC = Reader.readStreamRef(GlobalRefsSubstream, GlobalRefsSize))
     return EC;
   if (Reader.bytesRemaining() > 0)
     return llvm::make_error<RawError>(raw_error_code::corrupt_file,

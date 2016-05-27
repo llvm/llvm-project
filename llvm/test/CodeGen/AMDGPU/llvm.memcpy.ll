@@ -153,15 +153,11 @@ define void @test_small_memcpy_i64_lds_to_lds_align4(i64 addrspace(3)* noalias %
 ; FIXME: Use 64-bit ops
 ; FUNC-LABEL: {{^}}test_small_memcpy_i64_lds_to_lds_align8:
 
-; SI: ds_read_b64
-; SI: ds_read_b64
-; SI: ds_read_b64
-; SI: ds_read_b64
+; SI: ds_read2_b64
+; SI: ds_read2_b64
 
-; SI: ds_write_b64
-; SI: ds_write_b64
-; SI: ds_write_b64
-; SI: ds_write_b64
+; SI: ds_write2_b64
+; SI: ds_write2_b64
 
 ; SI-DAG: s_endpgm
 define void @test_small_memcpy_i64_lds_to_lds_align8(i64 addrspace(3)* noalias %out, i64 addrspace(3)* noalias %in) nounwind {
