@@ -30,6 +30,9 @@ namespace lldb_private
         {
             bool
             Date_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+            
+            bool
+            NotificationName_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
         }
     }
 }

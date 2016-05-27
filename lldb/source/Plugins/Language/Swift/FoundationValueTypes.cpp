@@ -59,3 +59,21 @@ lldb_private::formatters::swift::Date_SummaryProvider (ValueObject& valobj, Stre
     stream.Printf("%04d-%02d-%02d %02d:%02d:%02d %s", tm_date->tm_year+1900, tm_date->tm_mon+1, tm_date->tm_mday, tm_date->tm_hour, tm_date->tm_min, tm_date->tm_sec, buffer.c_str());
     return true;
 }
+
+bool
+lldb_private::formatters::swift::NotificationName_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    static ConstString g__rawValue("_rawValue");
+    
+    ValueObjectSP underlying_name_sp(valobj.GetChildAtNamePath( {g__rawValue} ));
+    
+    if (!underlying_name_sp)
+        return false;
+    
+    std::string summary;
+    if (!underlying_name_sp->GetSummaryAsCString(summary, options))
+        return false;
+    
+    stream.Printf("%s", summary.c_str());
+    return true;
+}
