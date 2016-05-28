@@ -117,7 +117,7 @@ void NVPTXAsmPrinter::emitLineNumberAsDotLoc(const MachineInstr &MI) {
   if (ignoreLoc(MI))
     return;
 
-  DebugLoc curLoc = MI.getDebugLoc();
+  const DebugLoc &curLoc = MI.getDebugLoc();
 
   if (!prevDebugLoc && !curLoc)
     return;

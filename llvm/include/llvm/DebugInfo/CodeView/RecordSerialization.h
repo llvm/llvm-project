@@ -102,6 +102,10 @@ template <typename T, typename U> struct serialize_array_impl {
       return std::error_code();
 
     uint32_t Size = sizeof(T) * N;
+
+    if (Size / sizeof(T) != N)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+
     if (Data.size() < Size)
       return std::make_error_code(std::errc::illegal_byte_sequence);
 
@@ -136,12 +140,17 @@ struct serialize_null_term_string_array_impl {
       : Item(Item) {}
 
   std::error_code deserialize(ArrayRef<uint8_t> &Data) const {
+    if (Data.empty())
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+
     StringRef Field;
     // Stop when we run out of bytes or we hit record padding bytes.
     while (Data.front() != 0) {
       if (auto EC = consume(Data, Field))
         return EC;
       Item.push_back(Field);
+      if (Data.empty())
+        return std::make_error_code(std::errc::illegal_byte_sequence);
     }
     Data = Data.drop_front(1);
     return std::error_code();

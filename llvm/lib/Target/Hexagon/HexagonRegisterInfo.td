@@ -132,6 +132,11 @@ let Namespace = "Hexagon" in {
   // on the entire USR.
   def USR_OVF : Rc<?, "usr.ovf">;
 
+  def USR  : Rc<8,  "usr",       ["c8"]>,   DwarfRegNum<[75]> {
+    let SubRegIndices = [subreg_overflow];
+    let SubRegs = [USR_OVF];
+  }
+
   // Control registers.
   def SA0  : Rc<0,  "sa0",       ["c0"]>,   DwarfRegNum<[67]>;
   def LC0  : Rc<1,  "lc0",       ["c1"]>,   DwarfRegNum<[68]>;
@@ -142,11 +147,12 @@ let Namespace = "Hexagon" in {
   def C5   : Rc<5,  "c5",        ["c5"]>,   DwarfRegNum<[72]>; // future use
   def C6   : Rc<6,  "c6",        [], [M0]>, DwarfRegNum<[73]>;
   def C7   : Rc<7,  "c7",        [], [M1]>, DwarfRegNum<[74]>;
-
-  def USR  : Rc<8,  "usr",       ["c8"]>,   DwarfRegNum<[75]> {
-    let SubRegIndices = [subreg_overflow];
-    let SubRegs = [USR_OVF];
-  }
+  // Define C8 separately and make it aliased with USR.
+  // The problem is that USR has subregisters (e.g. overflow). If USR was
+  // specified as a subregister of C9_8, it would imply that subreg_overflow
+  // and subreg_loreg can be composed, which leads to all kinds of issues
+  // with lane masks.
+  def C8   : Rc<8,  "c8",       [], [USR]>, DwarfRegNum<[75]>;
   def PC   : Rc<9,  "pc">,                  DwarfRegNum<[76]>;
   def UGP  : Rc<10, "ugp",       ["c10"]>,  DwarfRegNum<[77]>;
   def GP   : Rc<11, "gp">,                  DwarfRegNum<[78]>;
@@ -161,7 +167,8 @@ let Namespace = "Hexagon" in {
     def C1_0   : Rcc<0,   "c1:0",  [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
     def C3_2   : Rcc<2,   "c3:2",  [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
     def C7_6   : Rcc<6,   "c7:6",  [C6, C7],   ["m1:0"]>,    DwarfRegNum<[72]>;
-    def C9_8   : Rcc<8,   "c9:8",  [USR, PC]>,               DwarfRegNum<[74]>;
+    // Use C8 instead of USR as a subregister of C9_8.
+    def C9_8   : Rcc<8,   "c9:8",  [C8, PC]>,                DwarfRegNum<[74]>;
     def C11_10 : Rcc<10, "c11:10", [UGP, GP]>,               DwarfRegNum<[76]>;
     def CS     : Rcc<12, "c13:12", [CS0, CS1], ["cs1:0"]>,   DwarfRegNum<[78]>;
     def UPC    : Rcc<14, "c15:14", [UPCL, UPCH]>,            DwarfRegNum<[80]>;

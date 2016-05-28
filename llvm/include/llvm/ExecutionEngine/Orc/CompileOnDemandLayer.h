@@ -19,12 +19,12 @@
 #include "LambdaResolver.h"
 #include "LogicalDylib.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <list>
 #include <memory>
 #include <set>
-
-#include "llvm/Support/Debug.h"
+#include <utility>
 
 namespace llvm {
 namespace orc {
@@ -173,7 +173,7 @@ public:
                        CompileCallbackMgrT &CallbackMgr,
                        IndirectStubsManagerBuilderT CreateIndirectStubsManager,
                        bool CloneStubsIntoPartitions = true)
-      : BaseLayer(BaseLayer),  Partition(Partition),
+      : BaseLayer(BaseLayer), Partition(std::move(Partition)),
         CompileCallbackMgr(CallbackMgr),
         CreateIndirectStubsManager(std::move(CreateIndirectStubsManager)),
         CloneStubsIntoPartitions(CloneStubsIntoPartitions) {}

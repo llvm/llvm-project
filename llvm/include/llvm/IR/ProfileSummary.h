@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_PROFILE_SUMMARY_H
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include "llvm/Support/Casting.h"
@@ -62,10 +63,10 @@ public:
                  uint64_t TotalCount, uint64_t MaxCount,
                  uint64_t MaxInternalCount, uint64_t MaxFunctionCount,
                  uint32_t NumCounts, uint32_t NumFunctions)
-      : PSK(K), DetailedSummary(DetailedSummary), TotalCount(TotalCount),
-        MaxCount(MaxCount), MaxInternalCount(MaxInternalCount),
-        MaxFunctionCount(MaxFunctionCount), NumCounts(NumCounts),
-        NumFunctions(NumFunctions) {}
+      : PSK(K), DetailedSummary(std::move(DetailedSummary)),
+        TotalCount(TotalCount), MaxCount(MaxCount),
+        MaxInternalCount(MaxInternalCount), MaxFunctionCount(MaxFunctionCount),
+        NumCounts(NumCounts), NumFunctions(NumFunctions) {}
   Kind getKind() const { return PSK; }
   /// \brief Return summary information as metadata.
   Metadata *getMD(LLVMContext &Context);

@@ -77,15 +77,15 @@ static SetVector<BasicBlock *> buildExtractionBlockSet(IteratorT BBBegin,
 
   // Loop over the blocks, adding them to our set-vector, and aborting with an
   // empty set if we encounter invalid blocks.
-  for (IteratorT I = BBBegin, E = BBEnd; I != E; ++I) {
-    if (!Result.insert(*I))
+  do {
+    if (!Result.insert(*BBBegin))
       llvm_unreachable("Repeated basic blocks in extraction input");
 
-    if (!isBlockValidForExtraction(**I)) {
+    if (!isBlockValidForExtraction(**BBBegin)) {
       Result.clear();
       return Result;
     }
-  }
+  } while (++BBBegin != BBEnd);
 
 #ifndef NDEBUG
   for (SetVector<BasicBlock *>::iterator I = std::next(Result.begin()),

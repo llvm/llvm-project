@@ -354,7 +354,7 @@ static Error dumpStreamData(ScopedPrinter &P, PDBFile &File) {
     ArrayRef<uint8_t> Data;
     uint32_t BytesToReadInBlock = std::min(
         R.bytesRemaining(), static_cast<uint32_t>(File.getBlockSize()));
-    if (auto EC = R.readBytes(BytesToReadInBlock, Data))
+    if (auto EC = R.readBytes(Data, BytesToReadInBlock))
       return EC;
     P.printBinaryBlock(
         "Data",
@@ -485,7 +485,8 @@ static Error dumpDbiStream(ScopedPrinter &P, PDBFile &File,
           return EC;
 
         codeview::CVSymbolDumper SD(P, TD, nullptr, false);
-        for (auto &S : ModS.symbols()) {
+        bool HadError = false;
+        for (auto &S : ModS.symbols(&HadError)) {
           DictScope DD(P, "");
 
           if (opts::DumpModuleSyms)
@@ -493,6 +494,9 @@ static Error dumpDbiStream(ScopedPrinter &P, PDBFile &File,
           if (opts::DumpSymRecordBytes)
             P.printBinaryBlock("Bytes", S.Data);
         }
+        if (HadError)
+          return make_error<RawError>(raw_error_code::corrupt_file,
+                                      "DBI stream contained corrupt record");
       }
     }
   }
@@ -509,7 +513,7 @@ static Error dumpTpiStream(ScopedPrinter &P, PDBFile &File,
   StringRef VerLabel;
   if (StreamIdx == StreamTPI) {
     DumpRecordBytes = opts::DumpTpiRecordBytes;
-    DumpRecords = opts::DumpTpiRecordBytes;
+    DumpRecords = opts::DumpTpiRecords;
     Label = "Type Info Stream (TPI)";
     VerLabel = "TPI Version";
   } else if (StreamIdx == StreamIPI) {
@@ -595,13 +599,19 @@ static Error dumpPublicsStream(ScopedPrinter &P, PDBFile &File,
               printSectionOffset);
   ListScope L(P, "Symbols");
   codeview::CVSymbolDumper SD(P, TD, nullptr, false);
-  for (auto S : Publics.getSymbols()) {
+  bool HadError = false;
+  for (auto S : Publics.getSymbols(&HadError)) {
     DictScope DD(P, "");
 
     SD.dump(S);
     if (opts::DumpSymRecordBytes)
       P.printBinaryBlock("Bytes", S.Data);
   }
+  if (HadError)
+    return make_error<RawError>(
+        raw_error_code::corrupt_file,
+        "Public symbol stream contained corrupt record");
+
   return Error::success();
 }
 

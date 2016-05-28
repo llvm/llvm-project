@@ -92,7 +92,7 @@ Error TpiStream::reload() {
   HashFunction = HashBufferV8;
 
   // The actual type records themselves come from this stream
-  if (auto EC = RecordsBuffer.load(Reader, Header->TypeRecordBytes))
+  if (auto EC = Reader.readArray(TypeRecords, Header->TypeRecordBytes))
     return EC;
 
   // Hash indices, hash values, etc come from the hash stream.
@@ -136,6 +136,7 @@ uint16_t TpiStream::getTypeHashStreamAuxIndex() const {
   return Header->HashAuxStreamIndex;
 }
 
-iterator_range<codeview::TypeIterator> TpiStream::types(bool *HadError) const {
-  return codeview::makeTypeRange(RecordsBuffer.data(), /*HadError=*/HadError);
+iterator_range<codeview::CVTypeArray::Iterator>
+TpiStream::types(bool *HadError) const {
+  return llvm::make_range(TypeRecords.begin(HadError), TypeRecords.end());
 }

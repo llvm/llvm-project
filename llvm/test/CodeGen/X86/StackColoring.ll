@@ -1,3 +1,4 @@
+; RUN: llc -mcpu=corei7 -no-stack-coloring=false -stackcoloring-lifetime-start-on-first-use=true < %s | FileCheck %s --check-prefix=FIRSTUSE --check-prefix=CHECK
 ; RUN: llc -mcpu=corei7 -no-stack-coloring=false < %s | FileCheck %s --check-prefix=YESCOLOR --check-prefix=CHECK
 ; RUN: llc -mcpu=corei7 -no-stack-coloring=true  < %s | FileCheck %s --check-prefix=NOCOLOR --check-prefix=CHECK
 
@@ -87,7 +88,8 @@ bb3:
 }
 
 ;CHECK-LABEL: myCall_w4:
-;YESCOLOR: subq  $120, %rsp
+;FIRSTUSE: subq  $120, %rsp
+;YESCOLOR: subq  $200, %rsp
 ;NOCOLOR: subq  $408, %rsp
 
 define i32 @myCall_w4(i32 %in) {
@@ -431,7 +433,8 @@ define i32 @shady_range(i32 %argc, i8** nocapture %argv) uwtable {
 ; start. See llvm bug 25776.
 
 ;CHECK-LABEL: ifthen_twoslots:
-;YESCOLOR: subq  $536, %rsp
+;FIRSTUSE: subq  $536, %rsp
+;YESCOLOR: subq $1048, %rsp
 ;NOCOLOR: subq  $1048, %rsp
 
 define i32 @ifthen_twoslots(i32 %x) #0 {
@@ -486,7 +489,8 @@ cleanup:                                          ; preds = %if.else, %if.then
 ; markers only.
 
 ;CHECK-LABEL: while_loop:
-;YESCOLOR: subq  $1032, %rsp
+;FIRSTUSE: subq  $1032, %rsp
+;YESCOLOR: subq  $1544, %rsp
 ;NOCOLOR: subq  $1544, %rsp
 
 define i32 @while_loop(i32 %x) #0 {
@@ -535,6 +539,52 @@ if.end:                                           ; preds = %if.end.loopexit, %i
   call void @llvm.lifetime.end(i64 512, i8* %tmp1) #3
   call void @llvm.lifetime.end(i64 512, i8* %tmp) #3
   ret i32 0
+}
+
+; Test case motivated by PR27903. Same routine inlined multiple times
+; into a caller results in a multi-segment lifetime, but the second
+; lifetime has no explicit references to the stack slot.
+;
+; FIXME: the "FIRSTUSE" stack size (56) below represents buggy/incorrect
+; behavior not currently exposed on trunk, due to the fact that
+; the "stackcoloring-lifetime-start-on-first-use" now defaults to
+; false. When a better fix for PR27903 is checked in, this result
+; will change to 96.
+
+;CHECK-LABEL: twobod_b27903:
+;FIRSTUSE: subq  $56, %rsp
+;YESCOLOR: subq  $96, %rsp
+;NOCOLOR: subq  $96, %rsp
+
+define i32 @twobod_b27903(i32 %y, i32 %x) {
+entry:
+  %buffer.i = alloca [12 x i32], align 16
+  %abc = alloca [12 x i32], align 16
+  %tmp = bitcast [12 x i32]* %buffer.i to i8*
+  call void @llvm.lifetime.start(i64 48, i8* %tmp)
+  %idxprom.i = sext i32 %y to i64
+  %arrayidx.i = getelementptr inbounds [12 x i32], [12 x i32]* %buffer.i, i64 0, i64 %idxprom.i
+  call void @inita(i32* %arrayidx.i)
+  %add.i = add nsw i32 %x, %y
+  call void @llvm.lifetime.end(i64 48, i8* %tmp)
+  %tobool = icmp eq i32 %y, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %tmp1 = bitcast [12 x i32]* %abc to i8*
+  call void @llvm.lifetime.start(i64 48, i8* %tmp1)
+  %arrayidx = getelementptr inbounds [12 x i32], [12 x i32]* %abc, i64 0, i64 %idxprom.i
+  call void @inita(i32* %arrayidx)
+  call void @llvm.lifetime.start(i64 48, i8* %tmp)
+  call void @inita(i32* %arrayidx.i)
+  %add.i9 = add nsw i32 %add.i, %y
+  call void @llvm.lifetime.end(i64 48, i8* %tmp)
+  call void @llvm.lifetime.end(i64 48, i8* %tmp1)
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  %x.addr.0 = phi i32 [ %add.i9, %if.then ], [ %add.i, %entry ]
+  ret i32 %x.addr.0
 }
 
 declare void @inita(i32*) #2

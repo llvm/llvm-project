@@ -18,7 +18,6 @@ namespace llvm {
   class MachineBasicBlock;
   class MachineDominatorTree;
   class MachineInstr;
-}
 
 namespace rdf {
   struct CopyPropagation {
@@ -49,6 +48,7 @@ namespace rdf {
     void updateMap(NodeAddr<InstrNode*> IA);
     bool scanBlock(MachineBasicBlock *B);
   };
-}
+} // namespace rdf
+} // namespace llvm
 
 #endif

@@ -108,6 +108,8 @@ public:
   AntiDepBreakMode getAntiDepBreakMode() const override { return ANTIDEP_ALL; }
   bool enablePostRAScheduler() const override { return true; }
 
+  bool enableSubRegLiveness() const override;
+
   const std::string &getCPUString () const { return CPUString; }
 
   // Threshold for small data section

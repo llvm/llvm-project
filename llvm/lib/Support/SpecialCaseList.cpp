@@ -50,7 +50,7 @@ std::unique_ptr<SpecialCaseList>
 SpecialCaseList::create(const std::vector<std::string> &Paths,
                         std::string &Error) {
   std::unique_ptr<SpecialCaseList> SCL(new SpecialCaseList());
-  for (auto Path : Paths) {
+  for (const auto &Path : Paths) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
         MemoryBuffer::getFile(Path);
     if (std::error_code EC = FileOrErr.getError()) {

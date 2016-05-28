@@ -13,11 +13,14 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/ErrorOr.h"
 #include <cinttypes>
+#include <utility>
 
 namespace llvm {
 namespace codeview {
@@ -746,7 +749,7 @@ public:
   explicit VFTableShapeRecord(ArrayRef<VFTableSlotKind> Slots)
       : TypeRecord(TypeRecordKind::VFTableShape), SlotsRef(Slots) {}
   explicit VFTableShapeRecord(std::vector<VFTableSlotKind> Slots)
-      : TypeRecord(TypeRecordKind::VFTableShape), Slots(Slots) {}
+      : TypeRecord(TypeRecordKind::VFTableShape), Slots(std::move(Slots)) {}
 
   /// Rewrite member type indices with IndexMap. Returns false if a type index
   /// is not in the map.
@@ -1256,8 +1259,8 @@ private:
 class EnumeratorRecord : public TypeRecord {
 public:
   EnumeratorRecord(MemberAccess Access, APSInt Value, StringRef Name)
-      : TypeRecord(TypeRecordKind::Enumerator), Access(Access), Value(Value),
-        Name(Name) {}
+      : TypeRecord(TypeRecordKind::Enumerator), Access(Access),
+        Value(std::move(Value)), Name(Name) {}
 
   /// Rewrite member type indices with IndexMap. Returns false if a type index
   /// is not in the map.
@@ -1397,6 +1400,9 @@ private:
   uint64_t VBPtrOffset;
   uint64_t VTableIndex;
 };
+
+typedef CVRecord<TypeLeafKind> CVType;
+typedef VarStreamArray<CVType> CVTypeArray;
 }
 }
 

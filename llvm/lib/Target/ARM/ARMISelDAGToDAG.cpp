@@ -1936,8 +1936,9 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
 
   // Extract out the subregisters.
   SDValue SuperReg = SDValue(VLd, 0);
-  assert(ARM::dsub_7 == ARM::dsub_0+7 &&
-         ARM::qsub_3 == ARM::qsub_0+3 && "Unexpected subreg numbering");
+  static_assert(ARM::dsub_7 == ARM::dsub_0 + 7 &&
+                    ARM::qsub_3 == ARM::qsub_0 + 3,
+                "Unexpected subreg numbering");
   unsigned Sub0 = (is64BitVector ? ARM::dsub_0 : ARM::qsub_0);
   for (unsigned Vec = 0; Vec < NumVecs; ++Vec)
     ReplaceUses(SDValue(N, Vec),
@@ -2205,8 +2206,9 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
 
   // Extract the subregisters.
   SuperReg = SDValue(VLdLn, 0);
-  assert(ARM::dsub_7 == ARM::dsub_0+7 &&
-         ARM::qsub_3 == ARM::qsub_0+3 && "Unexpected subreg numbering");
+  static_assert(ARM::dsub_7 == ARM::dsub_0 + 7 &&
+                    ARM::qsub_3 == ARM::qsub_0 + 3,
+                "Unexpected subreg numbering");
   unsigned Sub0 = is64BitVector ? ARM::dsub_0 : ARM::qsub_0;
   for (unsigned Vec = 0; Vec < NumVecs; ++Vec)
     ReplaceUses(SDValue(N, Vec),
@@ -2288,7 +2290,7 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool isUpdating, unsigned NumVecs,
   SuperReg = SDValue(VLdDup, 0);
 
   // Extract the subregisters.
-  assert(ARM::dsub_7 == ARM::dsub_0+7 && "Unexpected subreg numbering");
+  static_assert(ARM::dsub_7 == ARM::dsub_0 + 7, "Unexpected subreg numbering");
   unsigned SubIdx = ARM::dsub_0;
   for (unsigned Vec = 0; Vec < NumVecs; ++Vec)
     ReplaceUses(SDValue(N, Vec),

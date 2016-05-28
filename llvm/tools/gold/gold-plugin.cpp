@@ -51,6 +51,7 @@
 #include <list>
 #include <plugin-api.h>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 // FIXME: remove this declaration when we stop maintaining Ubuntu Quantal and
@@ -130,7 +131,8 @@ class ThinLTOTaskInfo {
 public:
   ThinLTOTaskInfo(std::unique_ptr<raw_fd_ostream> OS, std::string Filename,
                   bool TempOutFile)
-      : OS(std::move(OS)), Filename(Filename), TempOutFile(TempOutFile) {}
+      : OS(std::move(OS)), Filename(std::move(Filename)),
+        TempOutFile(TempOutFile) {}
 
   /// Performs task related cleanup activities that must be done
   /// single-threaded (i.e. call backs to gold).
@@ -904,7 +906,7 @@ public:
           const ModuleSummaryIndex *CombinedIndex, std::string Filename,
           StringMap<MemoryBufferRef> *ModuleMap)
       : M(std::move(M)), OS(OS), TaskID(TaskID), CombinedIndex(CombinedIndex),
-        SaveTempsFilename(Filename), ModuleMap(ModuleMap) {
+        SaveTempsFilename(std::move(Filename)), ModuleMap(ModuleMap) {
     assert(options::thinlto == !!CombinedIndex &&
            "Expected module summary index iff performing ThinLTO");
     initTargetMachine();

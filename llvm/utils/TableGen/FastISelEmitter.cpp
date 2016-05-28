@@ -24,6 +24,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <utility>
 using namespace llvm;
 
 
@@ -416,9 +417,7 @@ static std::string getLegalCName(std::string OpName) {
   return OpName;
 }
 
-FastISelMap::FastISelMap(std::string instns)
-  : InstNS(instns) {
-}
+FastISelMap::FastISelMap(std::string instns) : InstNS(std::move(instns)) {}
 
 static std::string PhyRegForNode(TreePatternNode *Op,
                                  const CodeGenTarget &Target) {

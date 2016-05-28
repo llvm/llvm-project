@@ -16,6 +16,7 @@
 
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/Format.h"
+#include <utility>
 
 namespace llvm {
 namespace object {
@@ -58,7 +59,7 @@ class content_iterator
   content_type Current;
 
 public:
-  content_iterator(content_type symb) : Current(symb) {}
+  content_iterator(content_type symb) : Current(std::move(symb)) {}
 
   const content_type *operator->() const { return &Current; }
 

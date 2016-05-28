@@ -498,7 +498,7 @@ class NamedOperandBit<string Name, AsmOperandClass MatchClass> : Operand<i1> {
   let PrintMethod = "print"#Name;
   let ParserMatchClass = MatchClass;
 }
- 
+
 class NamedOperandU8<string Name, AsmOperandClass MatchClass> : Operand<i8> {
   let PrintMethod = "print"#Name;
   let ParserMatchClass = MatchClass;
@@ -1386,14 +1386,14 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src0SDWA = getVregSrcForVT<Src0VT>.ret;
   field RegisterClass Src1SDWA = getVregSrcForVT<Src1VT>.ret;
-  
+
   field bit HasDst = !if(!eq(DstVT.Value, untyped.Value), 0, 1);
   field bit HasDst32 = HasDst;
   field int NumSrcArgs = getNumSrcArgs<Src0VT, Src1VT, Src2VT>.ret;
   field bit HasModifiers = hasModifiers<Src0VT>.ret;
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
-  
+
   field dag Outs = !if(HasDst,(outs DstRC:$vdst),(outs));
 
   // VOP3b instructions are a special case with a second explicit
@@ -1672,10 +1672,10 @@ class SDWADisableFields <VOPProfile p> {
   bits<8> src0 = !if(!eq(p.NumSrcArgs, 0), 0, ?);
   bits<3> src0_sel = !if(!eq(p.NumSrcArgs, 0), 6, ?);
   bits<3> src0_modifiers = !if(p.HasModifiers, ?, 0);
-  bits<3> src1_sel = !if(!eq(p.NumSrcArgs, 0), 6, 
+  bits<3> src1_sel = !if(!eq(p.NumSrcArgs, 0), 6,
                          !if(!eq(p.NumSrcArgs, 1), 6,
                              ?));
-  bits<3> src1_modifiers = !if(!eq(p.NumSrcArgs, 0), 0, 
+  bits<3> src1_modifiers = !if(!eq(p.NumSrcArgs, 0), 0,
                                !if(!eq(p.NumSrcArgs, 1), 0,
                                    !if(p.HasModifiers, ?, 0)));
   bits<3> dst_sel = !if(p.HasDst, ?, 6);

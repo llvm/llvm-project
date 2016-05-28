@@ -208,3 +208,27 @@ a:
         xor       $2, 4                # CHECK: xori $2, $2, 4         # encoding: [0x38,0x42,0x00,0x04]
 
 1:
+
+        # Check that we accept traditional %relocation(symbol) offsets for stores
+        # and loads, not just a sign 16 bit offset.
+
+        lui       $2, %hi(g_8)            # CHECK:  encoding: [0x3c,0x02,A,A]
+        lb        $3, %lo(g_8)($2)        # CHECK:  encoding: [0x80,0x43,A,A]
+        lh        $3, %lo(g_8)($2)        # CHECK:  encoding: [0x84,0x43,A,A]
+        lhu       $3, %lo(g_8)($2)        # CHECK:  encoding: [0x94,0x43,A,A]
+        lw        $3, %lo(g_8)($2)        # CHECK:  encoding: [0x8c,0x43,A,A]
+        sb        $3, %lo(g_8)($2)        # CHECK:  encoding: [0xa0,0x43,A,A]
+        sh        $3, %lo(g_8)($2)        # CHECK:  encoding: [0xa4,0x43,A,A]
+        sw        $3, %lo(g_8)($2)        # CHECK:  encoding: [0xac,0x43,A,A]
+
+        lwl       $3, %lo(g_8)($2)        # CHECK:  encoding: [0x88,0x43,A,A]
+        lwr       $3, %lo(g_8)($2)        # CHECK:  encoding: [0x98,0x43,A,A]
+        swl       $3, %lo(g_8)($2)        # CHECK:  encoding: [0xa8,0x43,A,A]
+        swr       $3, %lo(g_8)($2)        # CHECK:  encoding: [0xb8,0x43,A,A]
+
+        lwc1      $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xc4,0x40,A,A]
+        ldc1      $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xd4,0x40,A,A]
+        swc1      $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xe4,0x40,A,A]
+        sdc1      $f0, %lo(g_8)($2)       # CHECK:  encoding: [0xf4,0x40,A,A]
+        .type     g_8,@object
+        .comm     g_8,16,16

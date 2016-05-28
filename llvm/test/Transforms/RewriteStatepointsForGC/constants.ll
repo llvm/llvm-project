@@ -117,3 +117,147 @@ entry:
   call void @foo() [ "deopt"() ]
   ret i8 addrspace(1)* %load_addr
 }
+
+define i8 @test8(i8 addrspace(1)* %p) gc "statepoint-example" {
+; Checks that base( phi(gep null, oop) ) = phi(null, base(oop)) and that we
+; correctly relocate this value
+; CHECK-LABEL: @test8
+entry:
+  %is_null = icmp eq i8 addrspace(1)* %p, null
+  br i1 %is_null, label %null.crit-edge, label %not-null
+
+not-null:
+  %load_addr = getelementptr inbounds i8, i8 addrspace(1)* %p, i64 8
+  br label %join
+
+null.crit-edge:
+  %load_addr.const = getelementptr inbounds i8, i8 addrspace(1)* null, i64 8
+  br label %join
+
+join:
+  %addr = phi i8 addrspace(1)* [ %load_addr, %not-null ], [%load_addr.const, %null.crit-edge]
+  ; CHECK: %addr.base = phi i8 addrspace(1)*
+  ; CHECK-DAG: [ %p, %not-null ]
+  ; CHECK-DAG: [ null, %null.crit-edge ]
+  ; CHECK: gc.statepoint
+  call void @foo() [ "deopt"() ]
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%addr.base, %addr.base)
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%addr.base, %addr)
+  br i1 %is_null, label %early-exit, label %use
+
+early-exit:
+  ret i8 0
+
+use:
+  %res = load i8, i8 addrspace(1)* %addr, align 1
+  ret i8 %res
+}
+
+define i8 @test9(i8 addrspace(1)* %p) gc "statepoint-example" {
+; Checks that base( phi(inttoptr, oop) ) = phi(null, base(oop)) and that we
+; correctly relocate this value
+; CHECK-LABEL: @test9
+entry:
+  %is_null = icmp eq i8 addrspace(1)* %p, null
+  br i1 %is_null, label %null.crit-edge, label %not-null
+
+not-null:
+  %load_addr = getelementptr inbounds i8, i8 addrspace(1)* %p, i64 8
+  br label %join
+
+null.crit-edge:
+  br label %join
+
+join:
+  %addr = phi i8 addrspace(1)* [ %load_addr, %not-null ], [inttoptr (i64 8 to i8 addrspace(1)*), %null.crit-edge]
+  ; CHECK: %addr.base = phi i8 addrspace(1)*
+  ; CHECK-DAG: [ %p, %not-null ]
+  ; CHECK-DAG: [ null, %null.crit-edge ]
+  ; CHECK: gc.statepoint
+  call void @foo() [ "deopt"() ]
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%addr.base, %addr.base)
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%addr.base, %addr)
+  br i1 %is_null, label %early-exit, label %use
+
+early-exit:
+  ret i8 0
+
+use:
+  %res = load i8, i8 addrspace(1)* %addr, align 1
+  ret i8 %res
+}
+
+define i8 @test10(i8 addrspace(1)* %p) gc "statepoint-example" {
+; Checks that base( phi(const gep, oop) ) = phi(null, base(oop)) and that we
+; correctly relocate this value
+; CHECK-LABEL: @test10
+entry:
+  %is_null = icmp eq i8 addrspace(1)* %p, null
+  br i1 %is_null, label %null.crit-edge, label %not-null
+
+not-null:
+  %load_addr = getelementptr inbounds i8, i8 addrspace(1)* %p, i64 8
+  br label %join
+
+null.crit-edge:
+  br label %join
+
+join:
+  %addr = phi i8 addrspace(1)* [ %load_addr, %not-null ], [getelementptr (i8, i8 addrspace(1)* null, i64 8), %null.crit-edge]
+  ; CHECK: %addr.base = phi i8 addrspace(1)*
+  ; CHECK-DAG: [ %p, %not-null ]
+  ; CHECK-DAG: [ null, %null.crit-edge ]
+  ; CHECK: gc.statepoint
+  call void @foo() [ "deopt"() ]
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%addr.base, %addr.base)
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%addr.base, %addr)
+  br i1 %is_null, label %early-exit, label %use
+
+early-exit:
+  ret i8 0
+
+use:
+  %res = load i8, i8 addrspace(1)* %addr, align 1
+  ret i8 %res
+}
+
+define i32 addrspace(1)* @test11(i1 %c) gc "statepoint-example" {
+; CHECK-LABEL: @test11
+; Checks that base( select(const1, const2) ) == null and that we don't record
+; such value in the oop map
+entry:
+  %val = select i1 %c, i32 addrspace(1)* inttoptr (i64 8 to i32 addrspace(1)*), i32 addrspace(1)* inttoptr (i64 15 to i32 addrspace(1)*)
+  ; CHECK: gc.statepoint
+  ; CHECK-NOT: call {{.*}}gc.relocate
+  call void @foo() [ "deopt"() ]
+  ret i32 addrspace(1)* %val
+}
+
+
+define <2 x i32 addrspace(1)*> @test12(i1 %c) gc "statepoint-example" {
+; CHECK-LABEL: @test12
+; Same as test11 but with vectors
+entry:
+  %val = select i1 %c, <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 5 to i32 addrspace(1)*), 
+                                                i32 addrspace(1)* inttoptr (i64 15 to i32 addrspace(1)*)>, 
+                       <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 30 to i32 addrspace(1)*), 
+                                                i32 addrspace(1)* inttoptr (i64 60 to i32 addrspace(1)*)>
+  ; CHECK: gc.statepoint
+  ; CHECK-NOT: call {{.*}}gc.relocate
+  call void @foo() [ "deopt"() ]
+  ret <2 x i32 addrspace(1)*> %val
+}
+
+define <2 x i32 addrspace(1)*> @test13(i1 %c, <2 x i32 addrspace(1)*> %ptr) gc "statepoint-example" {
+; CHECK-LABEL: @test13
+; Similar to test8, test9 and test10 but with vectors
+entry:
+  %val = select i1 %c, <2 x i32 addrspace(1)*> %ptr, 
+                       <2 x i32 addrspace(1)*> <i32 addrspace(1)* inttoptr (i64 30 to i32 addrspace(1)*), i32 addrspace(1)* inttoptr (i64 60 to i32 addrspace(1)*)>
+  ; CHECK: %val.base = select i1 %c, <2 x i32 addrspace(1)*> %ptr, <2 x i32 addrspace(1)*> zeroinitializer, !is_base_value !0
+  ; CHECK: gc.statepoint
+  call void @foo() [ "deopt"() ]
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%val.base, %val.base)
+  ; CHECK-DAG: call {{.*}}gc.relocate{{.*}}(%val.base, %val)
+  ret <2 x i32 addrspace(1)*> %val
+}

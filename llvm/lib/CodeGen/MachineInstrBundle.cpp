@@ -17,6 +17,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <utility>
 using namespace llvm;
 
 namespace {
@@ -24,7 +25,7 @@ namespace {
   public:
     static char ID; // Pass identification
     UnpackMachineBundles(std::function<bool(const Function &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(Ftor) {
+        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
       initializeUnpackMachineBundlesPass(*PassRegistry::getPassRegistry());
     }
 

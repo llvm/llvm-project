@@ -894,7 +894,7 @@ public:
     OS << "<table>\n";
     OS << "<tr><th>File</th><th>Coverage %</th>";
     OS << "<th>Hit (Total) Fns</th></tr>\n";
-    for (auto FileName : Files) {
+    for (const auto &FileName : Files) {
       std::pair<size_t, size_t> FC = FileCoverage[FileName];
       if (FC.first == 0) {
         NotCoveredFilesCount++;
@@ -915,7 +915,7 @@ public:
     if (NotCoveredFilesCount) {
       OS << "<details><summary>Not Touched Files</summary>\n";
       OS << "<table>\n";
-      for (auto FileName : Files) {
+      for (const auto &FileName : Files) {
         std::pair<size_t, size_t> FC = FileCoverage[FileName];
         if (FC.first == 0)
           OS << "<tr><td>" << stripPathPrefix(FileName) << "</td>\n";
@@ -927,7 +927,7 @@ public:
     }
 
     // Source
-    for (auto FileName : Files) {
+    for (const auto &FileName : Files) {
       std::pair<size_t, size_t> FC = FileCoverage[FileName];
       if (FC.first == 0)
         continue;
@@ -969,7 +969,7 @@ public:
           FileLoc Loc = FileLoc{FileName, Line};
           auto It = AllFnsByLoc.find(Loc);
           if (It != AllFnsByLoc.end()) {
-            for (std::string Fn : It->second) {
+            for (const std::string &Fn : It->second) {
               OS << "<a name=\"" << anchorName(FileName + "::" + Fn)
                  << "\"></a>";
             };
@@ -1069,7 +1069,7 @@ public:
     std::vector<std::unique_ptr<CoverageDataWithObjectFile>> MergedCoverage;
     for (const auto &Pair : CoverageByObjFile) {
       if (findSanitizerCovFunctions(Pair.first).empty()) {
-        for (auto FileName : Pair.second) {
+        for (const auto &FileName : Pair.second) {
           CovFiles.erase(FileName);
         }
 
@@ -1159,7 +1159,7 @@ public:
     // About
     OS << "<details><summary>About</summary>\n";
     OS << "Coverage files:<ul>";
-    for (auto InputFile : CoverageFiles) {
+    for (const auto &InputFile : CoverageFiles) {
       llvm::sys::fs::file_status Status;
       llvm::sys::fs::status(InputFile, Status);
       OS << "<li>" << stripPathPrefix(InputFile) << " ("
@@ -1209,7 +1209,7 @@ int main(int argc, char **argv) {
     return 0;
   } else if (Action == PrintCovPointsAction) {
     // -print-coverage-points doesn't need coverage files.
-    for (std::string ObjFile : ClInputFiles) {
+    for (const std::string &ObjFile : ClInputFiles) {
       printCovPoints(ObjFile, outs());
     }
     return 0;

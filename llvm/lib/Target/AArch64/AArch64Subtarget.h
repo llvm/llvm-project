@@ -45,27 +45,27 @@ protected:
   };
 
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
-  ARMProcFamilyEnum ARMProcFamily;
+  ARMProcFamilyEnum ARMProcFamily = Others;
 
-  bool HasV8_1aOps;
-  bool HasV8_2aOps;
+  bool HasV8_1aOps = false;
+  bool HasV8_2aOps = false;
 
-  bool HasFPARMv8;
-  bool HasNEON;
-  bool HasCrypto;
-  bool HasCRC;
-  bool HasPerfMon;
-  bool HasFullFP16;
-  bool HasSPE;
+  bool HasFPARMv8 = false;
+  bool HasNEON = false;
+  bool HasCrypto = false;
+  bool HasCRC = false;
+  bool HasPerfMon = false;
+  bool HasFullFP16 = false;
+  bool HasSPE = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
-  bool HasZeroCycleRegMove;
+  bool HasZeroCycleRegMove = false;
 
   // HasZeroCycleZeroing - Has zero-cycle zeroing instructions.
-  bool HasZeroCycleZeroing;
+  bool HasZeroCycleZeroing = false;
 
   // StrictAlign - Disallow unaligned memory accesses.
-  bool StrictAlign;
+  bool StrictAlign = false;
 
   // ReserveX18 - X18 is not available as a general purpose register.
   bool ReserveX18;

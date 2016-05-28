@@ -24,16 +24,9 @@ class StreamReader;
 class ByteStream : public StreamInterface {
 public:
   ByteStream();
-  explicit ByteStream(MutableArrayRef<uint8_t> Data);
+  explicit ByteStream(ArrayRef<uint8_t> Data);
   ~ByteStream() override;
 
-  void reset();
-
-  void load(uint32_t Length);
-  Error load(StreamReader &Reader, uint32_t Length);
-
-  Error readBytes(uint32_t Offset,
-                  MutableArrayRef<uint8_t> Buffer) const override;
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override;
 
@@ -43,8 +36,7 @@ public:
   StringRef str() const;
 
 private:
-  MutableArrayRef<uint8_t> Data;
-  std::unique_ptr<uint8_t[]> Ownership;
+  ArrayRef<uint8_t> Data;
 };
 
 } // end namespace pdb

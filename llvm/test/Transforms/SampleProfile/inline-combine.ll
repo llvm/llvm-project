@@ -1,4 +1,5 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-combine.prof -S | FileCheck %s
+; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/inline-combine.prof -S | FileCheck %s
+; RUN: opt < %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/inline-combine.prof -S | FileCheck %s
 
 %"class.llvm::FoldingSetNodeID" = type { %"class.llvm::SmallVector" }
 %"class.llvm::SmallVector" = type { %"class.llvm::SmallVectorImpl.base", %"struct.llvm::SmallVectorStorage" }

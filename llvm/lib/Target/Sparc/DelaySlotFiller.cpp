@@ -38,14 +38,10 @@ static cl::opt<bool> DisableDelaySlotFiller(
 
 namespace {
   struct Filler : public MachineFunctionPass {
-    /// Target machine description which we query for reg. names, data
-    /// layout, etc.
-    ///
-    TargetMachine &TM;
     const SparcSubtarget *Subtarget;
 
     static char ID;
-    Filler(TargetMachine &tm) : MachineFunctionPass(ID), TM(tm) {}
+    Filler() : MachineFunctionPass(ID) {}
 
     const char *getPassName() const override {
       return "SPARC Delay Slot Filler";
@@ -103,7 +99,7 @@ namespace {
 /// slots in Sparc MachineFunctions
 ///
 FunctionPass *llvm::createSparcDelaySlotFillerPass(TargetMachine &tm) {
-  return new Filler(tm);
+  return new Filler;
 }
 
 

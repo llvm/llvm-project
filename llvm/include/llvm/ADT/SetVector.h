@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include <algorithm>
 #include <cassert>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -262,7 +263,8 @@ private:
     set_type &set_;
 
   public:
-    TestAndEraseFromSet(UnaryPredicate P, set_type &set_) : P(P), set_(set_) {}
+    TestAndEraseFromSet(UnaryPredicate P, set_type &set_)
+        : P(std::move(P)), set_(set_) {}
 
     template <typename ArgumentT>
     bool operator()(const ArgumentT &Arg) {

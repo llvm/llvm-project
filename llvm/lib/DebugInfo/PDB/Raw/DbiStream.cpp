@@ -136,14 +136,12 @@ Error DbiStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "DBI type server substream not aligned.");
 
-  if (auto EC =
-          Reader.readStreamRef(ModInfoSubstream, Header->ModiSubstreamSize))
-    return EC;
-
   // Since each ModInfo in the stream is a variable length, we have to iterate
   // them to know how many there actually are.
-  codeview::VarStreamArray ModInfoArray(ModInfoSubstream, ModInfoRecordLength);
-  for (auto Info : ModInfoArray) {
+  codeview::VarStreamArray<ModInfo> ModInfoArray;
+  if (auto EC = Reader.readArray(ModInfoArray, Header->ModiSubstreamSize))
+    return EC;
+  for (auto &Info : ModInfoArray) {
     ModuleInfos.emplace_back(Info);
   }
 

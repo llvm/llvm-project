@@ -18,8 +18,7 @@ namespace llvm {
 namespace codeview {
 
 /// Merges one type stream into another. Returns true on success.
-bool mergeTypeStreams(TypeTableBuilder &DestStream,
-                      ArrayRef<uint8_t> SrcStream);
+bool mergeTypeStreams(TypeTableBuilder &DestStream, const CVTypeArray &Types);
 
 } // end namespace codeview
 } // end namespace llvm

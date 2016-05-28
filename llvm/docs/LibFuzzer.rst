@@ -273,9 +273,8 @@ The most important command line options are:
   If 1 (default) and if LeakSanitizer is enabled
   try to detect memory leaks during fuzzing (i.e. not only at shut down).
 ``-close_fd_mask``
-  Indicate output streams to close at startup. Be careful, this will also
-  remove diagnostic output from the tools in use; for example the messages
-  AddressSanitizer_ sends to ``stderr``/``stdout`` will also be lost.
+  Indicate output streams to close at startup. Be careful, this will
+  remove diagnostic output from target code (e.g. messages on assert failure).
 
    - 0 (default): close neither ``stdout`` nor ``stderr``
    - 1 : close ``stdout``

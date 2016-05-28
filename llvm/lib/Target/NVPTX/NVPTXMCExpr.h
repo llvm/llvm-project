@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/MC/MCExpr.h"
+#include <utility>
 
 namespace llvm {
 
@@ -30,7 +31,7 @@ private:
   const APFloat Flt;
 
   explicit NVPTXFloatMCExpr(VariantKind Kind, APFloat Flt)
-      : Kind(Kind), Flt(Flt) {}
+      : Kind(Kind), Flt(std::move(Flt)) {}
 
 public:
   /// @name Construction

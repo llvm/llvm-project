@@ -25,6 +25,7 @@ using namespace rdf;
 
 // Printing functions. Have them here first, so that the rest of the code
 // can use them.
+namespace llvm {
 namespace rdf {
 
 template<>
@@ -298,6 +299,7 @@ raw_ostream &operator<< (raw_ostream &OS,
 }
 
 } // namespace rdf
+} // namespace llvm
 
 // Node allocation functions.
 //

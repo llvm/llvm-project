@@ -116,7 +116,7 @@ template <>
 size_t writeLoadCommandData<MachO::segment_command>(MachOYAML::LoadCommand &LC,
                                                     raw_ostream &OS) {
   size_t BytesWritten = 0;
-  for (auto Sec : LC.Sections) {
+  for (const auto &Sec : LC.Sections) {
     auto TempSec = constructSection<MachO::section>(Sec);
     OS.write(reinterpret_cast<const char *>(&(TempSec)),
              sizeof(MachO::section));
@@ -130,7 +130,7 @@ size_t
 writeLoadCommandData<MachO::segment_command_64>(MachOYAML::LoadCommand &LC,
                                                 raw_ostream &OS) {
   size_t BytesWritten = 0;
-  for (auto Sec : LC.Sections) {
+  for (const auto &Sec : LC.Sections) {
     auto TempSec = constructSection<MachO::section_64>(Sec);
     TempSec.reserved3 = Sec.reserved3;
     OS.write(reinterpret_cast<const char *>(&(TempSec)),

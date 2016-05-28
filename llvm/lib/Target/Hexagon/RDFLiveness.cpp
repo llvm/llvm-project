@@ -36,6 +36,7 @@
 using namespace llvm;
 using namespace rdf;
 
+namespace llvm {
 namespace rdf {
   template<>
   raw_ostream &operator<< (raw_ostream &OS, const Print<Liveness::RefMap> &P) {
@@ -52,7 +53,8 @@ namespace rdf {
     OS << " }";
     return OS;
   }
-}
+} // namespace rdf
+} // namespace llvm
 
 // The order in the returned sequence is the order of reaching defs in the
 // upward traversal: the first def is the closest to the given reference RefA,

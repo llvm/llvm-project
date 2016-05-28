@@ -1,4 +1,5 @@
 ; RUN: opt %s -sample-profile -sample-profile-file=%S/Inputs/inline-hint.prof -pass-remarks=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-hint.prof -pass-remarks=sample-profile -o /dev/null 2>&1 | FileCheck %s
 ;
 ; CHECK: Applied cold hint to globally cold function '_Z7cold_fnRxi' with 0.1
 define void @_Z7cold_fnRxi() !dbg !4 {

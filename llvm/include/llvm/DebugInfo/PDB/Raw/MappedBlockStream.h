@@ -27,14 +27,13 @@ class MappedBlockStream : public codeview::StreamInterface {
 public:
   MappedBlockStream(uint32_t StreamIdx, const PDBFile &File);
 
-  Error readBytes(uint32_t Offset,
-                  MutableArrayRef<uint8_t> Buffer) const override;
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override;
 
   uint32_t getLength() const override { return StreamLength; }
 
 private:
+  Error readBytes(uint32_t Offset, MutableArrayRef<uint8_t> Buffer) const;
   bool tryReadContiguously(uint32_t Offset, uint32_t Size,
                            ArrayRef<uint8_t> &Buffer) const;
 

@@ -31,8 +31,10 @@ Error InfoStream::reload() {
 
   const Header *H;
   if (auto EC = Reader.readObject(H))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "PDB Stream does not contain a header.");
+    return joinErrors(
+        std::move(EC),
+        make_error<RawError>(raw_error_code::corrupt_file,
+                             "PDB Stream does not contain a header."));
 
   if (H->Version < PdbRaw_ImplVer::PdbImplVC70)
     return make_error<RawError>(raw_error_code::corrupt_file,

@@ -18,6 +18,10 @@
 #include <cstdarg>
 #include <cstdio>
 
+extern "C" {
+__attribute__((weak)) void __sanitizer_set_report_fd(void *);
+}
+
 namespace fuzzer {
 
 static FILE *OutputFile = stderr;
@@ -122,6 +126,8 @@ void DupAndCloseStderr() {
     FILE *NewOutputFile = fdopen(OutputFd, "w");
     if (NewOutputFile) {
       OutputFile = NewOutputFile;
+      if (__sanitizer_set_report_fd)
+        __sanitizer_set_report_fd(reinterpret_cast<void*>(OutputFd));
       close(2);
     }
   }

@@ -188,6 +188,13 @@ namespace {
 
 char HexagonExpandCondsets::ID = 0;
 
+INITIALIZE_PASS_BEGIN(HexagonExpandCondsets, "expand-condsets",
+  "Hexagon Expand Condsets", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_END(HexagonExpandCondsets, "expand-condsets",
+  "Hexagon Expand Condsets", false, false)
 
 unsigned HexagonExpandCondsets::getMaskForSub(unsigned Sub) {
   switch (Sub) {
@@ -1348,18 +1355,6 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
-
-static void initializePassOnce(PassRegistry &Registry) {
-  const char *Name = "Hexagon Expand Condsets";
-  PassInfo *PI = new PassInfo(Name, "expand-condsets",
-        &HexagonExpandCondsets::ID, 0, false, false);
-  Registry.registerPass(*PI, true);
-}
-
-void llvm::initializeHexagonExpandCondsetsPass(PassRegistry &Registry) {
-  CALL_ONCE_INITIALIZATION(initializePassOnce)
-}
-
 
 FunctionPass *llvm::createHexagonExpandCondsets() {
   return new HexagonExpandCondsets();

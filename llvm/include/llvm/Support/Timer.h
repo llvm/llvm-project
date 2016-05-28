@@ -104,6 +104,9 @@ public:
   const std::string &getName() const { return Name; }
   bool isInitialized() const { return TG != nullptr; }
 
+  /// Check if the timer is currently running.
+  bool isRunning() const { return Running; }
+
   /// Check if startTimer() has ever been called on this timer.
   bool hasTriggered() const { return Triggered; }
 

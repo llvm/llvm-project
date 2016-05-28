@@ -185,7 +185,8 @@ static bool CC_Sparc64_Half(unsigned &ValNo, MVT &ValVT,
 // callee's register window. This function translates registers to the
 // corresponding caller window %o register.
 static unsigned toCallerWindow(unsigned Reg) {
-  assert(SP::I0 + 7 == SP::I7 && SP::O0 + 7 == SP::O7 && "Unexpected enum");
+  static_assert(SP::I0 + 7 == SP::I7 && SP::O0 + 7 == SP::O7,
+                "Unexpected enum");
   if (Reg >= SP::I0 && Reg <= SP::I7)
     return Reg - SP::I0 + SP::O0;
   return Reg;

@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
@@ -32,7 +33,6 @@
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
@@ -898,8 +898,16 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
                                                         SectionContents);
 
   CVSymbolDumper CVSD(W, CVTD, std::move(CODD), opts::CodeViewSubsectionBytes);
+  ByteStream Stream(BinaryData);
+  CVSymbolArray Symbols;
+  StreamReader Reader(Stream);
+  if (auto EC = Reader.readArray(Symbols, Reader.getLength())) {
+    consumeError(std::move(EC));
+    W.flush();
+    error(object_error::parse_failed);
+  }
 
-  if (!CVSD.dump(BinaryData)) {
+  if (!CVSD.dump(Symbols)) {
     W.flush();
     error(object_error::parse_failed);
   }
@@ -996,7 +1004,16 @@ void COFFDumper::mergeCodeViewTypes(MemoryTypeTableBuilder &CVTypes) {
       Data = Data.drop_front(4);
       ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Data.data()),
                               Data.size());
-      if (!mergeTypeStreams(CVTypes, Bytes))
+      ByteStream Stream(Bytes);
+      CVTypeArray Types;
+      StreamReader Reader(Stream);
+      if (auto EC = Reader.readArray(Types, Reader.getLength())) {
+        consumeError(std::move(EC));
+        W.flush();
+        error(object_error::parse_failed);
+      }
+
+      if (!mergeTypeStreams(CVTypes, Types))
         return error(object_error::parse_failed);
     }
   }
@@ -1020,7 +1037,16 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
 
   ArrayRef<uint8_t> BinaryData(reinterpret_cast<const uint8_t *>(Data.data()),
                                Data.size());
-  if (!CVTD.dump(BinaryData)) {
+  ByteStream Stream(BinaryData);
+  CVTypeArray Types;
+  StreamReader Reader(Stream);
+  if (auto EC = Reader.readArray(Types, Reader.getLength())) {
+    consumeError(std::move(EC));
+    W.flush();
+    error(object_error::parse_failed);
+  }
+
+  if (!CVTD.dump(Types)) {
     W.flush();
     error(object_error::parse_failed);
   }
@@ -1472,7 +1498,16 @@ void llvm::dumpCodeViewMergedTypes(
   CVTypeDumper CVTD(Writer, opts::CodeViewSubsectionBytes);
   ArrayRef<uint8_t> BinaryData(reinterpret_cast<const uint8_t *>(Buf.data()),
                                Buf.size());
-  if (!CVTD.dump(BinaryData)) {
+  ByteStream Stream(BinaryData);
+  CVTypeArray Types;
+  StreamReader Reader(Stream);
+  if (auto EC = Reader.readArray(Types, Reader.getLength())) {
+    consumeError(std::move(EC));
+    Writer.flush();
+    error(object_error::parse_failed);
+  }
+
+  if (!CVTD.dump(Types)) {
     Writer.flush();
     error(object_error::parse_failed);
   }

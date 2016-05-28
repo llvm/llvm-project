@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_PBQP_GRAPH_H
 
 #include "llvm/Support/Debug.h"
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -67,7 +68,7 @@ namespace PBQP {
         return std::numeric_limits<AdjEdgeIdx>::max();
       }
 
-      NodeEntry(VectorPtr Costs) : Costs(Costs) {}
+      NodeEntry(VectorPtr Costs) : Costs(std::move(Costs)) {}
 
       AdjEdgeIdx addAdjEdgeId(EdgeId EId) {
         AdjEdgeIdx Idx = AdjEdgeIds.size();
@@ -98,7 +99,7 @@ namespace PBQP {
     class EdgeEntry {
     public:
       EdgeEntry(NodeId N1Id, NodeId N2Id, MatrixPtr Costs)
-        : Costs(Costs) {
+          : Costs(std::move(Costs)) {
         NIds[0] = N1Id;
         NIds[1] = N2Id;
         ThisEdgeAdjIdxs[0] = NodeEntry::getInvalidAdjEdgeIdx();
@@ -343,7 +344,8 @@ namespace PBQP {
     Graph() : Solver(nullptr) {}
 
     /// @brief Construct an empty PBQP graph with the given graph metadata.
-    Graph(GraphMetadata Metadata) : Metadata(Metadata), Solver(nullptr) {}
+    Graph(GraphMetadata Metadata)
+        : Metadata(std::move(Metadata)), Solver(nullptr) {}
 
     /// @brief Get a reference to the graph metadata.
     GraphMetadata& getMetadata() { return Metadata; }

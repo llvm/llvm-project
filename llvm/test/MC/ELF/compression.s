@@ -1,27 +1,35 @@
-// RUN: llvm-mc -filetype=obj -compress-debug-sections -triple x86_64-pc-linux-gnu < %s -o %t
-// RUN: llvm-objdump -s %t | FileCheck %s
+// Check zlib-gnu style
+// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib-gnu -triple x86_64-pc-linux-gnu < %s -o %t
+// RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-GNU-STYLE %s
 // RUN: llvm-dwarfdump -debug-dump=str %t | FileCheck --check-prefix=STR %s
-// RUN: llvm-mc -filetype=obj -compress-debug-sections -triple i386-pc-linux-gnu < %s \
-// RUN:     | llvm-readobj -symbols - | FileCheck --check-prefix=386-SYMBOLS %s
+// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib-gnu -triple i386-pc-linux-gnu < %s \
+// RUN:     | llvm-readobj -symbols - | FileCheck --check-prefix=386-SYMBOLS-GNU %s
+
+// Check zlib style
+// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple x86_64-pc-linux-gnu < %s -o %t
+// RUN: llvm-objdump -s %t | FileCheck --check-prefix=CHECK-ZLIB-STYLE %s
+// RUN: llvm-dwarfdump -debug-dump=str %t | FileCheck --check-prefix=STR %s
+// RUN: llvm-mc -filetype=obj -compress-debug-sections=zlib -triple i386-pc-linux-gnu < %s \
+// RUN:     | llvm-readobj -symbols - | FileCheck --check-prefix=386-SYMBOLS-ZLIB %s
+// RUN: llvm-readobj -sections %t | FileCheck --check-prefix=ZLIB-STYLE-FLAGS %s
 
 // REQUIRES: zlib
 
 // Don't compress small sections, such as this simple debug_abbrev example
-// CHECK: Contents of section .debug_abbrev:
-// CHECK-NOT: ZLIB
-// CHECK-NOT: Contents of
+// CHECK-GNU-STYLE: Contents of section .debug_abbrev:
+// CHECK-GNU-STYLE-NOT: ZLIB
+// CHECK-GNU-STYLE-NOT: Contents of
 
-// CHECK: Contents of section .debug_info:
+// CHECK-GNU-STYLE: Contents of section .debug_info:
 
-// CHECK: Contents of section .zdebug_str:
+// CHECK-GNU-STYLE: Contents of section .zdebug_str:
 // Check for the 'ZLIB' file magic at the start of the section only
-// CHECK-NEXT: ZLIB
-// CHECK-NOT: ZLIB
-
+// CHECK-GNU-STYLE-NEXT: ZLIB
+// CHECK-GNU-STYLE-NOT: ZLIB
 // FIXME: Handle compressing alignment fragments to support compressing debug_frame
-// CHECK: Contents of section .debug_frame:
-// CHECK-NOT: ZLIB
-// CHECK: Contents of
+// CHECK-GNU-STYLE: Contents of section .debug_frame:
+// CHECK-GNU-STYLE-NOT: ZLIB
+// CHECK-GNU-STYLE: Contents of
 
 // Decompress one valid dwarf section just to check that this roundtrips,
 // we use .zdebug_str section for that
@@ -29,9 +37,34 @@
 
 // In x86 32 bit named symbols are used for temporary symbols in merge
 // sections, so make sure we handle symbols inside compressed sections
-// 386-SYMBOLS: Name: .Linfo_string0
-// 386-SYMBOLS-NOT: }
-// 386-SYMBOLS: Section: .zdebug_str
+// 386-SYMBOLS-GNU: Name: .Linfo_string0
+// 386-SYMBOLS-GNU-NOT: }
+// 386-SYMBOLS-GNU: Section: .zdebug_str
+
+// Now check the zlib style output:
+
+// Don't compress small sections, such as this simple debug_abbrev example
+// CHECK-ZLIB-STYLE: Contents of section .debug_abbrev:
+// CHECK-ZLIB-STYLE-NOT: ZLIB
+// CHECK-ZLIB-STYLE-NOT: Contents of
+// CHECK-ZLIB-STYLE: Contents of section .debug_info:
+// FIXME: Handle compressing alignment fragments to support compressing debug_frame
+// CHECK-ZLIB-STYLE: Contents of section .debug_frame:
+// CHECK-ZLIB-STYLE-NOT: ZLIB
+// CHECK-ZLIB-STYLE: Contents of
+
+// Check that debug_line section was not renamed, so it is
+// zlib-style, not zlib-gnu one. Check that SHF_COMPRESSED was set.
+// ZLIB-STYLE-FLAGS:      Section {
+// ZLIB-STYLE-FLAGS:        Index:
+// ZLIB-STYLE-FLAGS:        Name: .debug_str
+// ZLIB-STYLE-FLAGS-NEXT:   Type: SHT_PROGBITS
+// ZLIB-STYLE-FLAGS-NEXT:   Flags [
+// ZLIB-STYLE-FLAGS-NEXT:     SHF_COMPRESSED
+
+// 386-SYMBOLS-ZLIB: Name: .Linfo_string0
+// 386-SYMBOLS-ZLIB-NOT: }
+// 386-SYMBOLS-ZLIB: Section: .debug_str
 
 	.section	.debug_line,"",@progbits
 

@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -137,7 +138,7 @@ private:
 
   template <typename T>
   struct ListCompleterModel : ListCompleterConcept {
-    ListCompleterModel(T Value) : Value(Value) {}
+    ListCompleterModel(T Value) : Value(std::move(Value)) {}
     std::vector<Completion> getCompletions(StringRef Buffer,
                                            size_t Pos) const override {
       return Value(Buffer, Pos);

@@ -2738,8 +2738,9 @@ bool AsmParser::parseDirectiveRealValue(const fltSemantics &Semantics) {
 bool AsmParser::parseDirectiveZero() {
   checkForValidSection();
 
-  int64_t NumBytes;
-  if (parseAbsoluteExpression(NumBytes))
+  SMLoc NumBytesLoc = Lexer.getLoc();
+  const MCExpr *NumBytes;
+  if (parseExpression(NumBytes))
     return true;
 
   int64_t Val = 0;
@@ -2754,7 +2755,7 @@ bool AsmParser::parseDirectiveZero() {
 
   Lex();
 
-  getStreamer().EmitFill(NumBytes, Val);
+  getStreamer().emitFill(*NumBytes, Val, NumBytesLoc);
 
   return false;
 }
@@ -2764,16 +2765,10 @@ bool AsmParser::parseDirectiveZero() {
 bool AsmParser::parseDirectiveFill() {
   checkForValidSection();
 
-  SMLoc RepeatLoc = getLexer().getLoc();
-  int64_t NumValues;
-  if (parseAbsoluteExpression(NumValues))
+  SMLoc NumValuesLoc = Lexer.getLoc();
+  const MCExpr *NumValues;
+  if (parseExpression(NumValues))
     return true;
-
-  if (NumValues < 0) {
-    Warning(RepeatLoc,
-            "'.fill' directive with negative repeat count has no effect");
-    NumValues = 0;
-  }
 
   int64_t FillSize = 1;
   int64_t FillExpr = 0;
@@ -2806,7 +2801,7 @@ bool AsmParser::parseDirectiveFill() {
 
   if (FillSize < 0) {
     Warning(SizeLoc, "'.fill' directive with negative size has no effect");
-    NumValues = 0;
+    return false;
   }
   if (FillSize > 8) {
     Warning(SizeLoc, "'.fill' directive with size greater than 8 has been truncated to 8");
@@ -2816,15 +2811,7 @@ bool AsmParser::parseDirectiveFill() {
   if (!isUInt<32>(FillExpr) && FillSize > 4)
     Warning(ExprLoc, "'.fill' directive pattern has been truncated to 32-bits");
 
-  if (NumValues > 0) {
-    int64_t NonZeroFillSize = FillSize > 4 ? 4 : FillSize;
-    FillExpr &= ~0ULL >> (64 - NonZeroFillSize * 8);
-    for (uint64_t i = 0, e = NumValues; i != e; ++i) {
-      getStreamer().EmitIntValue(FillExpr, NonZeroFillSize);
-      if (NonZeroFillSize < FillSize)
-        getStreamer().EmitIntValue(0, FillSize - NonZeroFillSize);
-    }
-  }
+  getStreamer().emitFill(*NumValues, FillSize, FillExpr, NumValuesLoc);
 
   return false;
 }
@@ -4057,8 +4044,9 @@ bool AsmParser::parseDirectiveBundleUnlock() {
 bool AsmParser::parseDirectiveSpace(StringRef IDVal) {
   checkForValidSection();
 
-  int64_t NumBytes;
-  if (parseAbsoluteExpression(NumBytes))
+  SMLoc NumBytesLoc = Lexer.getLoc();
+  const MCExpr *NumBytes;
+  if (parseExpression(NumBytes))
     return true;
 
   int64_t FillExpr = 0;
@@ -4076,12 +4064,8 @@ bool AsmParser::parseDirectiveSpace(StringRef IDVal) {
 
   Lex();
 
-  if (NumBytes <= 0)
-    return TokError("invalid number of bytes in '" + Twine(IDVal) +
-                    "' directive");
-
   // FIXME: Sometimes the fill expr is 'nop' if it isn't supplied, instead of 0.
-  getStreamer().EmitFill(NumBytes, FillExpr);
+  getStreamer().emitFill(*NumBytes, FillExpr, NumBytesLoc);
 
   return false;
 }

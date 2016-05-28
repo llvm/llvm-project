@@ -12,9 +12,9 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/FieldListRecordBuilder.h"
+#include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -71,7 +71,7 @@ public:
 
   void visitFieldList(TypeLeafKind Leaf, ArrayRef<uint8_t> FieldData);
 
-  bool mergeStream(ArrayRef<uint8_t> SrcStream);
+  bool mergeStream(const CVTypeArray &Types);
 
 private:
   bool hadError() { return FoundBadTypeIndex || CVTypeVisitor::hadError(); }
@@ -131,14 +131,14 @@ void TypeStreamMerger::visitUnknownMember(TypeLeafKind LF) {
   parseError();
 }
 
-bool TypeStreamMerger::mergeStream(ArrayRef<uint8_t> SrcStream) {
+bool TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
   assert(IndexMap.empty());
-  visitTypeStream(SrcStream);
+  visitTypeStream(Types);
   IndexMap.clear();
   return !hadError();
 }
 
 bool llvm::codeview::mergeTypeStreams(TypeTableBuilder &DestStream,
-                                      ArrayRef<uint8_t> SrcStream) {
-  return TypeStreamMerger(DestStream).mergeStream(SrcStream);
+                                      const CVTypeArray &Types) {
+  return TypeStreamMerger(DestStream).mergeStream(Types);
 }

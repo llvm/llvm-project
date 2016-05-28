@@ -81,3 +81,32 @@ s_buffer_load_dword ttmp1, [ttmp4,ttmp5,ttmp6,ttmp7], ttmp4
 s_buffer_load_dwordx4 [ttmp8,ttmp9,ttmp10,ttmp11], [ttmp4,ttmp5,ttmp6,ttmp7], ttmp4
 // SICI: s_buffer_load_dwordx4 ttmp[8:11], ttmp[4:7], ttmp4 ; encoding: [0x74,0x74,0xbc,0xc2]
 // VI:   s_buffer_load_dwordx4 ttmp[8:11], ttmp[4:7], ttmp4 ; encoding: [0x3a,0x1e,0x28,0xc0,0x74,0x00,0x00,0x00]
+
+s_buffer_load_dwordx4 [ttmp[8],ttmp[8+1],ttmp[5*2],ttmp[(3+2)*2+1]], ttmp[45/11:(33+45)/11], ttmp4
+// SICI: s_buffer_load_dwordx4 ttmp[8:11], ttmp[4:7], ttmp4 ; encoding: [0x74,0x74,0xbc,0xc2]
+// VI:   s_buffer_load_dwordx4 ttmp[8:11], ttmp[4:7], ttmp4 ; encoding: [0x3a,0x1e,0x28,0xc0,0x74,0x00,0x00,0x00]
+
+s_buffer_load_dwordx4 ttmp[7+1:(3+2)*2+1], [ttmp[45/11],ttmp[5],ttmp6,ttmp[(33+45)/11]], ttmp4
+// SICI: s_buffer_load_dwordx4 ttmp[8:11], ttmp[4:7], ttmp4 ; encoding: [0x74,0x74,0xbc,0xc2]
+// VI:   s_buffer_load_dwordx4 ttmp[8:11], ttmp[4:7], ttmp4 ; encoding: [0x3a,0x1e,0x28,0xc0,0x74,0x00,0x00,0x00]
+
+flat_load_dword v[8:8], v[2:3]
+// VI:   flat_load_dword v8, v[2:3]      ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
+
+flat_load_dword v[63/8+1:65/8], v[2:3]
+// VI:   flat_load_dword v8, v[2:3]      ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
+
+flat_load_dword v8, v[2*2-2:(3+7)/3]
+// VI:   flat_load_dword v8, v[2:3]      ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
+
+flat_load_dword v[63/8+1], v[2:3]
+// VI:   flat_load_dword v8, v[2:3]      ; encoding: [0x00,0x00,0x50,0xdc,0x02,0x00,0x00,0x08]
+
+flat_load_dwordx4 v[8:11], v[2*2-2:(3*3-6)]
+// VI:   flat_load_dwordx4 v[8:11], v[2:3] ; encoding: [0x00,0x00,0x5c,0xdc,0x02,0x00,0x00,0x08]
+
+flat_load_dwordx4 v[8/2+4:11/2+6], v[2:3]
+// VI:   flat_load_dwordx4 v[8:11], v[2:3] ; encoding: [0x00,0x00,0x5c,0xdc,0x02,0x00,0x00,0x08]
+
+flat_load_dwordx4   [v[8/2+4],v9,v[10],v[11/2+6]], v[2:3]
+// VI:   flat_load_dwordx4 v[8:11], v[2:3] ; encoding: [0x00,0x00,0x5c,0xdc,0x02,0x00,0x00,0x08]

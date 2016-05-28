@@ -522,12 +522,9 @@ void SIScheduleBlock::addPred(SIScheduleBlock *Pred) {
   }
   Preds.push_back(Pred);
 
-#ifndef NDEBUG
-  for (SIScheduleBlock* S : Succs) {
-    if (PredID == S->getID())
-      assert(!"Loop in the Block Graph!\n");
-  }
-#endif
+  assert(none_of(Succs,
+                 [=](SIScheduleBlock *S) { return PredID == S->getID(); }) &&
+         "Loop in the Block Graph!");
 }
 
 void SIScheduleBlock::addSucc(SIScheduleBlock *Succ) {
@@ -541,12 +538,9 @@ void SIScheduleBlock::addSucc(SIScheduleBlock *Succ) {
   if (Succ->isHighLatencyBlock())
     ++NumHighLatencySuccessors;
   Succs.push_back(Succ);
-#ifndef NDEBUG
-  for (SIScheduleBlock* P : Preds) {
-    if (SuccID == P->getID())
-      assert(!"Loop in the Block Graph!\n");
-  }
-#endif
+  assert(none_of(Preds,
+                 [=](SIScheduleBlock *P) { return SuccID == P->getID(); }) &&
+         "Loop in the Block Graph!");
 }
 
 #ifndef NDEBUG

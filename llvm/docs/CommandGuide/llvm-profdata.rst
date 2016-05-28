@@ -59,10 +59,11 @@ OPTIONS
 
 .. option:: -weighted-input=weight,filename
 
- Specify an input file name along with a weight. The profile counts of the input
- file will be scaled (multiplied) by the supplied ``weight``, where where ``weight``
- is a decimal integer >= 1. Input files specified without using this option are
- assigned a default weight of 1. Examples are shown below.
+ Specify an input file name along with a weight. The profile counts of the
+ supplied ``filename`` will be scaled (multiplied) by the supplied
+ ``weight``, where where ``weight`` is a decimal integer >= 1.
+ Input files specified without using this option are assigned a default
+ weight of 1. Examples are shown below.
 
 .. option:: -instr (default)
 

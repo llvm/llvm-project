@@ -20,6 +20,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -205,15 +206,14 @@ public:
       SmallString<8> AugmentationData, uint32_t FDEPointerEncoding,
       uint32_t LSDAPointerEncoding)
       : FrameEntry(FK_CIE, Offset, Length), Version(Version),
-        Augmentation(std::move(Augmentation)),
-        AddressSize(AddressSize),
+        Augmentation(std::move(Augmentation)), AddressSize(AddressSize),
         SegmentDescriptorSize(SegmentDescriptorSize),
         CodeAlignmentFactor(CodeAlignmentFactor),
         DataAlignmentFactor(DataAlignmentFactor),
         ReturnAddressRegister(ReturnAddressRegister),
-        AugmentationData(AugmentationData),
+        AugmentationData(std::move(AugmentationData)),
         FDEPointerEncoding(FDEPointerEncoding),
-        LSDAPointerEncoding(LSDAPointerEncoding) { }
+        LSDAPointerEncoding(LSDAPointerEncoding) {}
 
   ~CIE() override {}
 

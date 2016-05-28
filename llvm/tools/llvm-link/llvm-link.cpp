@@ -36,6 +36,7 @@
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
 #include <memory>
+#include <utility>
 using namespace llvm;
 
 static cl::list<std::string>
@@ -146,7 +147,7 @@ public:
   ModuleLazyLoaderCache(std::function<std::unique_ptr<Module>(
                             const char *argv0, const std::string &FileName)>
                             createLazyModule)
-      : createLazyModule(createLazyModule) {}
+      : createLazyModule(std::move(createLazyModule)) {}
 
   /// Retrieve a Module from the cache or lazily load it on demand.
   Module &operator()(const char *argv0, const std::string &FileName);

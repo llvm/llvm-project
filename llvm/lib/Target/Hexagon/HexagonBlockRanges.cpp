@@ -437,8 +437,8 @@ HexagonBlockRanges::RegToRangeMap HexagonBlockRanges::computeDeadMap(
   return DeadMap;
 }
 
-
-raw_ostream &operator<< (raw_ostream &OS, HexagonBlockRanges::IndexType Idx) {
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              HexagonBlockRanges::IndexType Idx) {
   if (Idx == HexagonBlockRanges::IndexType::None)
     return OS << '-';
   if (Idx == HexagonBlockRanges::IndexType::Entry)
@@ -449,23 +449,23 @@ raw_ostream &operator<< (raw_ostream &OS, HexagonBlockRanges::IndexType Idx) {
 }
 
 // A mapping to translate between instructions and their indices.
-raw_ostream &operator<< (raw_ostream &OS,
-      const HexagonBlockRanges::IndexRange &IR) {
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const HexagonBlockRanges::IndexRange &IR) {
   OS << '[' << IR.start() << ':' << IR.end() << (IR.TiedEnd ? '}' : ']');
   if (IR.Fixed)
     OS << '!';
   return OS;
 }
 
-raw_ostream &operator<< (raw_ostream &OS,
-      const HexagonBlockRanges::RangeList &RL) {
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const HexagonBlockRanges::RangeList &RL) {
   for (auto &R : RL)
     OS << R << " ";
   return OS;
 }
 
-raw_ostream &operator<< (raw_ostream &OS,
-      const HexagonBlockRanges::InstrIndexMap &M) {
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const HexagonBlockRanges::InstrIndexMap &M) {
   for (auto &In : M.Block) {
     HexagonBlockRanges::IndexType Idx = M.getIndex(&In);
     OS << Idx << (Idx == M.Last ? ". " : "  ") << In;
@@ -473,8 +473,8 @@ raw_ostream &operator<< (raw_ostream &OS,
   return OS;
 }
 
-raw_ostream &operator<< (raw_ostream &OS,
-      const HexagonBlockRanges::PrintRangeMap &P) {
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const HexagonBlockRanges::PrintRangeMap &P) {
   for (auto &I : P.Map) {
     const HexagonBlockRanges::RangeList &RL = I.second;
     OS << PrintReg(I.first.Reg, &P.TRI, I.first.Sub) << " -> " << RL << "\n";

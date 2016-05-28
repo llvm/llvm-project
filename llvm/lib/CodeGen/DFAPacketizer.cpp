@@ -60,10 +60,12 @@ DFAPacketizer::DFAPacketizer(const InstrItineraryData *I,
   InstrItins(I), CurrentState(0), DFAStateInputTable(SIT),
   DFAStateEntryTable(SET) {
   // Make sure DFA types are large enough for the number of terms & resources.
-  assert((DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <= (8 * sizeof(DFAInput))
-        && "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAInput");
-  assert((DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <= (8 * sizeof(DFAStateInput))
-        && "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAStateInput");
+  static_assert((DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <=
+                    (8 * sizeof(DFAInput)),
+                "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAInput");
+  static_assert(
+      (DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <= (8 * sizeof(DFAStateInput)),
+      "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAStateInput");
 }
 
 

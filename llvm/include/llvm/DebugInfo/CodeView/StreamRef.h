@@ -26,11 +26,6 @@ public:
       : Stream(Other.Stream), ViewOffset(Other.ViewOffset),
         Length(Other.Length) {}
 
-  Error readBytes(uint32_t Offset,
-                  MutableArrayRef<uint8_t> Buffer) const override {
-    return Stream->readBytes(ViewOffset + Offset, Buffer);
-  }
-
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
     return Stream->readBytes(ViewOffset + Offset, Size, Buffer);

@@ -175,7 +175,7 @@ static bool RecordingMemcmp = false;
 class TraceState {
  public:
   TraceState(MutationDispatcher &MD, const Fuzzer::FuzzingOptions &Options,
-             const Fuzzer::Fuzzer *F)
+             const Fuzzer *F)
       : MD(MD), Options(Options), F(F) {}
 
   LabelRange GetLabelRange(dfsan_label L);

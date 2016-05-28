@@ -53,6 +53,12 @@ namespace LCOMM {
 enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
 }
 
+enum class DebugCompressionType {
+  DCT_None,    // no compression
+  DCT_Zlib,    // zlib style complession
+  DCT_ZlibGnu  // zlib-gnu style compression
+};
+
 /// This class is intended to be used as a base class for asm
 /// properties and features specific to the target.
 class MCAsmInfo {
@@ -356,8 +362,8 @@ protected:
   /// construction (see LLVMTargetMachine::initAsmInfo()).
   bool UseIntegratedAssembler;
 
-  /// Compress DWARF debug sections. Defaults to false.
-  bool CompressDebugSections;
+  /// Compress DWARF debug sections. Defaults to no compression.
+  DebugCompressionType CompressDebugSections;
 
   /// True if the integrated assembler should interpret 'a >> b' constant
   /// expressions as logical rather than arithmetic.
@@ -565,9 +571,11 @@ public:
     UseIntegratedAssembler = Value;
   }
 
-  bool compressDebugSections() const { return CompressDebugSections; }
+  DebugCompressionType compressDebugSections() const {
+    return CompressDebugSections;
+  }
 
-  void setCompressDebugSections(bool CompressDebugSections) {
+  void setCompressDebugSections(DebugCompressionType CompressDebugSections) {
     this->CompressDebugSections = CompressDebugSections;
   }
 

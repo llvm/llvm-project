@@ -18,14 +18,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+using namespace llvm;
+using namespace rdf;
 
 #ifndef NDEBUG
 static cl::opt<unsigned> CpLimit("rdf-cp-limit", cl::init(0), cl::Hidden);
 static unsigned CpCount = 0;
 #endif
-
-using namespace llvm;
-using namespace rdf;
 
 bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
   unsigned Opc = MI->getOpcode();

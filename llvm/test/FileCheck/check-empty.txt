@@ -7,5 +7,6 @@
 ; NOFOO-NOT: foo
 
 ; EMPTY-ERR: FileCheck error: '-' is empty.
+; EMPTY-ERR-NEXT: FileCheck command line: {{.*}}FileCheck{{.*}}-check-prefix={{.*}}FOO {{.*}}check-empty.txt
 ; NO-EMPTY-ERR-NOT: FileCheck error: '-' is empty.
 ; NOT-FOUND: error: expected string not found in input

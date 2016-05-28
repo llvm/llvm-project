@@ -25,11 +25,13 @@ using namespace llvm;
 
 // A set of cutoff values. Each value, when divided by ProfileSummary::Scale
 // (which is 1000000) is a desired percentile of total counts.
-const std::vector<uint32_t> ProfileSummaryBuilder::DefaultCutoffs(
-    {10000,  /*  1% */
-     100000, /* 10% */
-     200000, 300000, 400000, 500000, 600000, 500000, 600000, 700000, 800000,
-     900000, 950000, 990000, 999000, 999900, 999990, 999999});
+static const uint32_t DefaultCutoffsData[] = {
+    10000,  /*  1% */
+    100000, /* 10% */
+    200000, 300000, 400000, 500000, 600000, 500000, 600000, 700000,
+    800000, 900000, 950000, 990000, 999000, 999900, 999990, 999999};
+const ArrayRef<uint32_t> ProfileSummaryBuilder::DefaultCutoffs =
+    DefaultCutoffsData;
 
 void InstrProfSummaryBuilder::addRecord(const InstrProfRecord &R) {
   // The first counter is not necessarily an entry count for IR

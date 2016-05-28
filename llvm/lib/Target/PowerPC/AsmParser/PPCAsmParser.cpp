@@ -292,7 +292,7 @@ public:
                const MCInstrInfo &MII, const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, STI), MII(MII) {
     // Check for 64-bit vs. 32-bit pointer mode.
-    Triple TheTriple(STI.getTargetTriple());
+    const Triple &TheTriple = STI.getTargetTriple();
     IsPPC64 = (TheTriple.getArch() == Triple::ppc64 ||
                TheTriple.getArch() == Triple::ppc64le);
     IsDarwin = TheTriple.isMacOSX();

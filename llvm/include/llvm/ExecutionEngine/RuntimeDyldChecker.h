@@ -10,7 +10,10 @@
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 
+#include <cstdint>
 #include <memory>
+#include <string>
+#include <utility>
 
 namespace llvm {
 

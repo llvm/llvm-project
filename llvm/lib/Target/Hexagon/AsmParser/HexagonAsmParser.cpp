@@ -1401,7 +1401,6 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
       AsmToken const &Token = Parser.getTok();
       if (Token.is(AsmToken::Identifier)) {
         StringRef String = Token.getString();
-        AsmToken IDToken = Token;
         if (String.lower() == "hi") {
           HiOnly = true;
         } else if (String.lower() == "lo") {
