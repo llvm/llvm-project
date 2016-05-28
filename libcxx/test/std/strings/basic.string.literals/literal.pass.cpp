@@ -7,12 +7,14 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++98, c++03, c++11
+
 #include <string>
 #include <cassert>
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11 
     using namespace std::literals::string_literals;
 
     static_assert ( std::is_same<decltype(   "Hi"s), std::string>::value, "" );
@@ -43,5 +45,4 @@ int main()
     Lfoo =  L"ABC"s;     assert(Lfoo ==  L"ABC");   assert(Lfoo == std::wstring  ( L"ABC"));
     ufoo =  u"ABC"s;     assert(ufoo ==  u"ABC");   assert(ufoo == std::u16string( u"ABC"));
     Ufoo =  U"ABC"s;     assert(Ufoo ==  U"ABC");   assert(Ufoo == std::u32string( U"ABC"));
-#endif
 }

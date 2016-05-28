@@ -21,6 +21,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <utility>
 using namespace clang;
 using namespace arcmt;
 
@@ -508,8 +509,8 @@ MigrationProcess::MigrationProcess(
     const CompilerInvocation &CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *diagClient, StringRef outputDir)
-    : OrigCI(CI), PCHContainerOps(PCHContainerOps), DiagClient(diagClient),
-      HadARCErrors(false) {
+    : OrigCI(CI), PCHContainerOps(std::move(PCHContainerOps)),
+      DiagClient(diagClient), HadARCErrors(false) {
   if (!outputDir.empty()) {
     IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(

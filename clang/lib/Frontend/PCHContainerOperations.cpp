@@ -13,9 +13,10 @@
 
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Lex/ModuleLoader.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Support/raw_ostream.h"
-#include "clang/Lex/ModuleLoader.h"
+#include <utility>
 
 using namespace clang;
 
@@ -32,7 +33,7 @@ class RawPCHContainerGenerator : public ASTConsumer {
 public:
   RawPCHContainerGenerator(llvm::raw_pwrite_stream *OS,
                            std::shared_ptr<PCHBuffer> Buffer)
-      : Buffer(Buffer), OS(OS) {}
+      : Buffer(std::move(Buffer)), OS(OS) {}
 
   ~RawPCHContainerGenerator() override = default;
 

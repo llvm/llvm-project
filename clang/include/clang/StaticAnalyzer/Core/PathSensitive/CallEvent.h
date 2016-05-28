@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include <utility>
 
 namespace clang {
 class ProgramPoint;
@@ -165,10 +166,10 @@ protected:
   friend class CallEventManager;
 
   CallEvent(const Expr *E, ProgramStateRef state, const LocationContext *lctx)
-    : State(state), LCtx(lctx), Origin(E), RefCount(0) {}
+      : State(std::move(state)), LCtx(lctx), Origin(E), RefCount(0) {}
 
   CallEvent(const Decl *D, ProgramStateRef state, const LocationContext *lctx)
-    : State(state), LCtx(lctx), Origin(D), RefCount(0) {}
+      : State(std::move(state)), LCtx(lctx), Origin(D), RefCount(0) {}
 
   // DO NOT MAKE PUBLIC
   CallEvent(const CallEvent &Original)

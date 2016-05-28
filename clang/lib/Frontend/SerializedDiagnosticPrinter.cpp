@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 #include <vector>
 
 using namespace clang;
@@ -147,7 +148,7 @@ class SDiagsWriter : public DiagnosticConsumer {
 
   explicit SDiagsWriter(IntrusiveRefCntPtr<SharedState> State)
       : LangOpts(nullptr), OriginalInstance(false), MergeChildRecords(false),
-        State(State) {}
+        State(std::move(State)) {}
 
 public:
   SDiagsWriter(StringRef File, DiagnosticOptions *Diags, bool MergeChildRecords)

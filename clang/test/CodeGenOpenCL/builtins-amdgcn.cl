@@ -178,6 +178,20 @@ void test_frexp_exp_f64(global int* out, double a)
   *out = __builtin_amdgcn_frexp_exp(a);
 }
 
+// CHECK-LABEL: @test_fract_f32
+// CHECK: call float @llvm.amdgcn.fract.f32
+void test_fract_f32(global int* out, float a)
+{
+  *out = __builtin_amdgcn_fractf(a);
+}
+
+// CHECK-LABEL: @test_fract_f64
+// CHECK: call double @llvm.amdgcn.fract.f64
+void test_fract_f64(global int* out, double a)
+{
+  *out = __builtin_amdgcn_fract(a);
+}
+
 // CHECK-LABEL: @test_class_f32
 // CHECK: call i1 @llvm.amdgcn.class.f32
 void test_class_f32(global float* out, float a, int b)

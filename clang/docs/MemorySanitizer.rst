@@ -171,6 +171,8 @@ Handling external code
 MemorySanitizer requires that all program code is instrumented. This
 also includes any libraries that the program depends on, even libc.
 Failing to achieve this may result in false reports.
+For the same reason you may need to replace all inline assembly code that writes to memory
+with a pure C/C++ code.
 
 Full MemorySanitizer instrumentation is very difficult to achieve. To
 make it easier, MemorySanitizer runtime library includes 70+

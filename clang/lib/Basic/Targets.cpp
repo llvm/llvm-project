@@ -7006,8 +7006,29 @@ public:
   }
 };
 
-class MipsTargetInfoBase : public TargetInfo {
-  virtual void setDataLayout() = 0;
+class MipsTargetInfo : public TargetInfo {
+  void setDataLayout() {
+    if (BigEndian) {
+      if (ABI == "o32")
+        resetDataLayout("E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64");
+      else if (ABI == "n32")
+        resetDataLayout("E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128");
+      else if (ABI == "n64")
+        resetDataLayout("E-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128");
+      else
+        llvm_unreachable("Invalid ABI");
+    } else {
+      if (ABI == "o32")
+        resetDataLayout("e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64");
+      else if (ABI == "n32")
+        resetDataLayout("e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128");
+      else if (ABI == "n64")
+        resetDataLayout("e-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128");
+      else
+        llvm_unreachable("Invalid ABI");
+    }
+  }
+
 
   static const Builtin::Info BuiltinInfo[];
   std::string CPU;
@@ -7028,12 +7049,39 @@ protected:
   std::string ABI;
 
 public:
-  MipsTargetInfoBase(const llvm::Triple &Triple, const TargetOptions &,
-                     const std::string &ABIStr, const std::string &CPUStr)
-      : TargetInfo(Triple), CPU(CPUStr), IsMips16(false), IsMicromips(false),
-        IsNan2008(false), IsSingleFloat(false), FloatABI(HardFloat),
-        DspRev(NoDSP), HasMSA(false), HasFP64(false), ABI(ABIStr) {
+  MipsTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
+      : TargetInfo(Triple), CPU((getTriple().getArch() == llvm::Triple::mips ||
+                                 getTriple().getArch() == llvm::Triple::mipsel)
+                                    ? "mips32r2"
+                                    : "mips64r2"),
+        IsMips16(false), IsMicromips(false), IsNan2008(false),
+        IsSingleFloat(false), FloatABI(HardFloat), DspRev(NoDSP), HasMSA(false),
+        HasFP64(false), ABI((getTriple().getArch() == llvm::Triple::mips ||
+                             getTriple().getArch() == llvm::Triple::mipsel)
+                                ? "o32"
+                                : "n64") {
     TheCXXABI.set(TargetCXXABI::GenericMIPS);
+    BigEndian = getTriple().getArch() == llvm::Triple::mips ||
+                getTriple().getArch() == llvm::Triple::mips64;
+
+    if (getTriple().getArch() == llvm::Triple::mips ||
+        getTriple().getArch() == llvm::Triple::mipsel) {
+      SizeType = UnsignedInt;
+      PtrDiffType = SignedInt;
+      Int64Type = SignedLongLong;
+      IntMaxType = Int64Type;
+      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
+    } else {
+      LongDoubleWidth = LongDoubleAlign = 128;
+      LongDoubleFormat = &llvm::APFloat::IEEEquad;
+      if (getTriple().getOS() == llvm::Triple::FreeBSD) {
+        LongDoubleWidth = LongDoubleAlign = 64;
+        LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+      }
+      setN64ABITypes();
+      SuitableAlign = 128;
+      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    }
   }
 
   bool isNaN2008Default() const {
@@ -7049,6 +7097,48 @@ public:
   }
 
   StringRef getABI() const override { return ABI; }
+  bool setABI(const std::string &Name) override {
+    if (getTriple().getArch() == llvm::Triple::mips ||
+        getTriple().getArch() == llvm::Triple::mipsel) {
+      if (Name == "o32") {
+        ABI = Name;
+        return true;
+      }
+    }
+    if (getTriple().getArch() == llvm::Triple::mips64 ||
+        getTriple().getArch() == llvm::Triple::mips64el) {
+      if (Name == "n32") {
+        setN32ABITypes();
+        ABI = Name;
+        return true;
+      }
+      if (Name == "n64") {
+        setN64ABITypes();
+        ABI = Name;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void setN64ABITypes() {
+    LongWidth = LongAlign = 64;
+    PointerWidth = PointerAlign = 64;
+    SizeType = UnsignedLong;
+    PtrDiffType = SignedLong;
+    Int64Type = SignedLong;
+    IntMaxType = Int64Type;
+  }
+
+  void setN32ABITypes() {
+    LongWidth = LongAlign = 32;
+    PointerWidth = PointerAlign = 32;
+    SizeType = UnsignedInt;
+    PtrDiffType = SignedInt;
+    Int64Type = SignedLongLong;
+    IntMaxType = Int64Type;
+  }
+
   bool setCPU(const std::string &Name) override {
     bool IsMips32 = getTriple().getArch() == llvm::Triple::mips ||
                     getTriple().getArch() == llvm::Triple::mipsel;
@@ -7089,10 +7179,54 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
+    if (BigEndian) {
+      DefineStd(Builder, "MIPSEB", Opts);
+      Builder.defineMacro("_MIPSEB");
+    } else {
+      DefineStd(Builder, "MIPSEL", Opts);
+      Builder.defineMacro("_MIPSEL");
+    }
+
     Builder.defineMacro("__mips__");
     Builder.defineMacro("_mips");
     if (Opts.GNUMode)
       Builder.defineMacro("mips");
+
+    if (getTriple().getArch() == llvm::Triple::mips ||
+        getTriple().getArch() == llvm::Triple::mipsel) {
+      Builder.defineMacro("__mips", "32");
+      Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS32");
+    } else {
+      Builder.defineMacro("__mips", "64");
+      Builder.defineMacro("__mips64");
+      Builder.defineMacro("__mips64__");
+      Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS64");
+    }
+
+    const std::string ISARev = llvm::StringSwitch<std::string>(getCPU())
+                                   .Cases("mips32", "mips64", "1")
+                                   .Cases("mips32r2", "mips64r2", "2")
+                                   .Cases("mips32r3", "mips64r3", "3")
+                                   .Cases("mips32r5", "mips64r5", "5")
+                                   .Cases("mips32r6", "mips64r6", "6")
+                                   .Default("");
+    if (!ISARev.empty())
+      Builder.defineMacro("__mips_isa_rev", ISARev);
+
+    if (ABI == "o32") {
+      Builder.defineMacro("__mips_o32");
+      Builder.defineMacro("_ABIO32", "1");
+      Builder.defineMacro("_MIPS_SIM", "_ABIO32");
+    } else if (ABI == "n32") {
+      Builder.defineMacro("__mips_n32");
+      Builder.defineMacro("_ABIN32", "2");
+      Builder.defineMacro("_MIPS_SIM", "_ABIN32");
+    } else if (ABI == "n64") {
+      Builder.defineMacro("__mips_n64");
+      Builder.defineMacro("_ABI64", "3");
+      Builder.defineMacro("_MIPS_SIM", "_ABI64");
+    } else
+      llvm_unreachable("Invalid ABI.");
 
     Builder.defineMacro("__REGISTER_PREFIX__", "");
 
@@ -7150,6 +7284,9 @@ public:
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+    if (getTriple().getArch() == llvm::Triple::mips64 ||
+        getTriple().getArch() == llvm::Triple::mips64el)
+      Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
@@ -7193,7 +7330,6 @@ public:
     };
     return llvm::makeArrayRef(GCCRegNames);
   }
-  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override = 0;
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
     switch (*Name) {
@@ -7316,296 +7452,50 @@ public:
   }
 
   bool isCLZForZeroUndef() const override { return false; }
+
+  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
+    static const TargetInfo::GCCRegAlias O32RegAliases[] = {
+        {{"at"}, "$1"},  {{"v0"}, "$2"},         {{"v1"}, "$3"},
+        {{"a0"}, "$4"},  {{"a1"}, "$5"},         {{"a2"}, "$6"},
+        {{"a3"}, "$7"},  {{"t0"}, "$8"},         {{"t1"}, "$9"},
+        {{"t2"}, "$10"}, {{"t3"}, "$11"},        {{"t4"}, "$12"},
+        {{"t5"}, "$13"}, {{"t6"}, "$14"},        {{"t7"}, "$15"},
+        {{"s0"}, "$16"}, {{"s1"}, "$17"},        {{"s2"}, "$18"},
+        {{"s3"}, "$19"}, {{"s4"}, "$20"},        {{"s5"}, "$21"},
+        {{"s6"}, "$22"}, {{"s7"}, "$23"},        {{"t8"}, "$24"},
+        {{"t9"}, "$25"}, {{"k0"}, "$26"},        {{"k1"}, "$27"},
+        {{"gp"}, "$28"}, {{"sp", "$sp"}, "$29"}, {{"fp", "$fp"}, "$30"},
+        {{"ra"}, "$31"}};
+    static const TargetInfo::GCCRegAlias NewABIRegAliases[] = {
+        {{"at"}, "$1"},  {{"v0"}, "$2"},         {{"v1"}, "$3"},
+        {{"a0"}, "$4"},  {{"a1"}, "$5"},         {{"a2"}, "$6"},
+        {{"a3"}, "$7"},  {{"a4"}, "$8"},         {{"a5"}, "$9"},
+        {{"a6"}, "$10"}, {{"a7"}, "$11"},        {{"t0"}, "$12"},
+        {{"t1"}, "$13"}, {{"t2"}, "$14"},        {{"t3"}, "$15"},
+        {{"s0"}, "$16"}, {{"s1"}, "$17"},        {{"s2"}, "$18"},
+        {{"s3"}, "$19"}, {{"s4"}, "$20"},        {{"s5"}, "$21"},
+        {{"s6"}, "$22"}, {{"s7"}, "$23"},        {{"t8"}, "$24"},
+        {{"t9"}, "$25"}, {{"k0"}, "$26"},        {{"k1"}, "$27"},
+        {{"gp"}, "$28"}, {{"sp", "$sp"}, "$29"}, {{"fp", "$fp"}, "$30"},
+        {{"ra"}, "$31"}};
+    if (getTriple().getArch() == llvm::Triple::mips ||
+        getTriple().getArch() == llvm::Triple::mipsel)
+      return llvm::makeArrayRef(O32RegAliases);
+    return llvm::makeArrayRef(NewABIRegAliases);
+  }
+
+  bool hasInt128Type() const override {
+    return getTriple().getArch() == llvm::Triple::mips64 ||
+           getTriple().getArch() == llvm::Triple::mips64el;
+  }
 };
 
-const Builtin::Info MipsTargetInfoBase::BuiltinInfo[] = {
+const Builtin::Info MipsTargetInfo::BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS) \
   { #ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr },
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER) \
   { #ID, TYPE, ATTRS, HEADER, ALL_LANGUAGES, nullptr },
 #include "clang/Basic/BuiltinsMips.def"
-};
-
-class Mips32TargetInfoBase : public MipsTargetInfoBase {
-public:
-  Mips32TargetInfoBase(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : MipsTargetInfoBase(Triple, Opts, "o32", "mips32r2") {
-    SizeType = UnsignedInt;
-    PtrDiffType = SignedInt;
-    Int64Type = SignedLongLong;
-    IntMaxType = Int64Type;
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
-  }
-  bool setABI(const std::string &Name) override {
-    if (Name == "o32" || Name == "eabi") {
-      ABI = Name;
-      return true;
-    }
-    return false;
-  }
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    MipsTargetInfoBase::getTargetDefines(Opts, Builder);
-
-    Builder.defineMacro("__mips", "32");
-    Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS32");
-
-    const std::string& CPUStr = getCPU();
-    if (CPUStr == "mips32")
-      Builder.defineMacro("__mips_isa_rev", "1");
-    else if (CPUStr == "mips32r2")
-      Builder.defineMacro("__mips_isa_rev", "2");
-    else if (CPUStr == "mips32r3")
-      Builder.defineMacro("__mips_isa_rev", "3");
-    else if (CPUStr == "mips32r5")
-      Builder.defineMacro("__mips_isa_rev", "5");
-    else if (CPUStr == "mips32r6")
-      Builder.defineMacro("__mips_isa_rev", "6");
-
-    if (ABI == "o32") {
-      Builder.defineMacro("__mips_o32");
-      Builder.defineMacro("_ABIO32", "1");
-      Builder.defineMacro("_MIPS_SIM", "_ABIO32");
-    }
-    else if (ABI == "eabi")
-      Builder.defineMacro("__mips_eabi");
-    else
-      llvm_unreachable("Invalid ABI for Mips32.");
-  }
-  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    static const TargetInfo::GCCRegAlias GCCRegAliases[] = {
-      { { "at" },  "$1" },
-      { { "v0" },  "$2" },
-      { { "v1" },  "$3" },
-      { { "a0" },  "$4" },
-      { { "a1" },  "$5" },
-      { { "a2" },  "$6" },
-      { { "a3" },  "$7" },
-      { { "t0" },  "$8" },
-      { { "t1" },  "$9" },
-      { { "t2" }, "$10" },
-      { { "t3" }, "$11" },
-      { { "t4" }, "$12" },
-      { { "t5" }, "$13" },
-      { { "t6" }, "$14" },
-      { { "t7" }, "$15" },
-      { { "s0" }, "$16" },
-      { { "s1" }, "$17" },
-      { { "s2" }, "$18" },
-      { { "s3" }, "$19" },
-      { { "s4" }, "$20" },
-      { { "s5" }, "$21" },
-      { { "s6" }, "$22" },
-      { { "s7" }, "$23" },
-      { { "t8" }, "$24" },
-      { { "t9" }, "$25" },
-      { { "k0" }, "$26" },
-      { { "k1" }, "$27" },
-      { { "gp" }, "$28" },
-      { { "sp","$sp" }, "$29" },
-      { { "fp","$fp" }, "$30" },
-      { { "ra" }, "$31" }
-    };
-    return llvm::makeArrayRef(GCCRegAliases);
-  }
-};
-
-class Mips32EBTargetInfo : public Mips32TargetInfoBase {
-  void setDataLayout() override {
-    resetDataLayout("E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64");
-  }
-
-public:
-  Mips32EBTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : Mips32TargetInfoBase(Triple, Opts) {
-  }
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    DefineStd(Builder, "MIPSEB", Opts);
-    Builder.defineMacro("_MIPSEB");
-    Mips32TargetInfoBase::getTargetDefines(Opts, Builder);
-  }
-};
-
-class Mips32ELTargetInfo : public Mips32TargetInfoBase {
-  void setDataLayout() override {
-    resetDataLayout("e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64");
-  }
-
-public:
-  Mips32ELTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : Mips32TargetInfoBase(Triple, Opts) {
-    BigEndian = false;
-  }
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    DefineStd(Builder, "MIPSEL", Opts);
-    Builder.defineMacro("_MIPSEL");
-    Mips32TargetInfoBase::getTargetDefines(Opts, Builder);
-  }
-};
-
-class Mips64TargetInfoBase : public MipsTargetInfoBase {
-public:
-  Mips64TargetInfoBase(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : MipsTargetInfoBase(Triple, Opts, "n64", "mips64r2") {
-    LongDoubleWidth = LongDoubleAlign = 128;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad;
-    if (getTriple().getOS() == llvm::Triple::FreeBSD) {
-      LongDoubleWidth = LongDoubleAlign = 64;
-      LongDoubleFormat = &llvm::APFloat::IEEEdouble;
-    }
-    setN64ABITypes();
-    SuitableAlign = 128;
-    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-  }
-
-  void setN64ABITypes() {
-    LongWidth = LongAlign = 64;
-    PointerWidth = PointerAlign = 64;
-    SizeType = UnsignedLong;
-    PtrDiffType = SignedLong;
-    Int64Type = SignedLong;
-    IntMaxType = Int64Type;
-  }
-
-  void setN32ABITypes() {
-    LongWidth = LongAlign = 32;
-    PointerWidth = PointerAlign = 32;
-    SizeType = UnsignedInt;
-    PtrDiffType = SignedInt;
-    Int64Type = SignedLongLong;
-    IntMaxType = Int64Type;
-  }
-
-  bool setABI(const std::string &Name) override {
-    if (Name == "n32") {
-      setN32ABITypes();
-      ABI = Name;
-      return true;
-    }
-    if (Name == "n64") {
-      setN64ABITypes();
-      ABI = Name;
-      return true;
-    }
-    return false;
-  }
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    MipsTargetInfoBase::getTargetDefines(Opts, Builder);
-
-    Builder.defineMacro("__mips", "64");
-    Builder.defineMacro("__mips64");
-    Builder.defineMacro("__mips64__");
-    Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS64");
-
-    const std::string& CPUStr = getCPU();
-    if (CPUStr == "mips64")
-      Builder.defineMacro("__mips_isa_rev", "1");
-    else if (CPUStr == "mips64r2")
-      Builder.defineMacro("__mips_isa_rev", "2");
-    else if (CPUStr == "mips64r3")
-      Builder.defineMacro("__mips_isa_rev", "3");
-    else if (CPUStr == "mips64r5")
-      Builder.defineMacro("__mips_isa_rev", "5");
-    else if (CPUStr == "mips64r6")
-      Builder.defineMacro("__mips_isa_rev", "6");
-
-    if (ABI == "n32") {
-      Builder.defineMacro("__mips_n32");
-      Builder.defineMacro("_ABIN32", "2");
-      Builder.defineMacro("_MIPS_SIM", "_ABIN32");
-    }
-    else if (ABI == "n64") {
-      Builder.defineMacro("__mips_n64");
-      Builder.defineMacro("_ABI64", "3");
-      Builder.defineMacro("_MIPS_SIM", "_ABI64");
-    }
-    else
-      llvm_unreachable("Invalid ABI for Mips64.");
-
-    Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
-  }
-  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    static const TargetInfo::GCCRegAlias GCCRegAliases[] = {
-      { { "at" },  "$1" },
-      { { "v0" },  "$2" },
-      { { "v1" },  "$3" },
-      { { "a0" },  "$4" },
-      { { "a1" },  "$5" },
-      { { "a2" },  "$6" },
-      { { "a3" },  "$7" },
-      { { "a4" },  "$8" },
-      { { "a5" },  "$9" },
-      { { "a6" }, "$10" },
-      { { "a7" }, "$11" },
-      { { "t0" }, "$12" },
-      { { "t1" }, "$13" },
-      { { "t2" }, "$14" },
-      { { "t3" }, "$15" },
-      { { "s0" }, "$16" },
-      { { "s1" }, "$17" },
-      { { "s2" }, "$18" },
-      { { "s3" }, "$19" },
-      { { "s4" }, "$20" },
-      { { "s5" }, "$21" },
-      { { "s6" }, "$22" },
-      { { "s7" }, "$23" },
-      { { "t8" }, "$24" },
-      { { "t9" }, "$25" },
-      { { "k0" }, "$26" },
-      { { "k1" }, "$27" },
-      { { "gp" }, "$28" },
-      { { "sp","$sp" }, "$29" },
-      { { "fp","$fp" }, "$30" },
-      { { "ra" }, "$31" }
-    };
-    return llvm::makeArrayRef(GCCRegAliases);
-  }
-
-  bool hasInt128Type() const override { return true; }
-};
-
-class Mips64EBTargetInfo : public Mips64TargetInfoBase {
-  void setDataLayout() override {
-    if (ABI == "n32")
-      resetDataLayout("E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-    else
-      resetDataLayout("E-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-  }
-
-public:
-  Mips64EBTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : Mips64TargetInfoBase(Triple, Opts) {}
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    DefineStd(Builder, "MIPSEB", Opts);
-    Builder.defineMacro("_MIPSEB");
-    Mips64TargetInfoBase::getTargetDefines(Opts, Builder);
-  }
-};
-
-class Mips64ELTargetInfo : public Mips64TargetInfoBase {
-  void setDataLayout() override {
-    if (ABI == "n32")
-      resetDataLayout("e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-    else
-      resetDataLayout("e-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-  }
-public:
-  Mips64ELTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : Mips64TargetInfoBase(Triple, Opts) {
-    // Default ABI is n64.
-    BigEndian = false;
-  }
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    DefineStd(Builder, "MIPSEL", Opts);
-    Builder.defineMacro("_MIPSEL");
-    Mips64TargetInfoBase::getTargetDefines(Opts, Builder);
-  }
 };
 
 class PNaClTargetInfo : public TargetInfo {
@@ -7664,10 +7554,10 @@ ArrayRef<TargetInfo::GCCRegAlias> PNaClTargetInfo::getGCCRegAliases() const {
 }
 
 // We attempt to use PNaCl (le32) frontend and Mips32EL backend.
-class NaClMips32ELTargetInfo : public Mips32ELTargetInfo {
+class NaClMips32TargetInfo : public MipsTargetInfo {
 public:
-  NaClMips32ELTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : Mips32ELTargetInfo(Triple, Opts) {}
+  NaClMips32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : MipsTargetInfo(Triple, Opts) {}
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::PNaClABIBuiltinVaList;
@@ -8175,63 +8065,63 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::mips:
     switch (os) {
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<Mips32EBTargetInfo>(Triple, Opts);
+      return new LinuxTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
-      return new RTEMSTargetInfo<Mips32EBTargetInfo>(Triple, Opts);
+      return new RTEMSTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
-      return new FreeBSDTargetInfo<Mips32EBTargetInfo>(Triple, Opts);
+      return new FreeBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
-      return new NetBSDTargetInfo<Mips32EBTargetInfo>(Triple, Opts);
+      return new NetBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     default:
-      return new Mips32EBTargetInfo(Triple, Opts);
+      return new MipsTargetInfo(Triple, Opts);
     }
 
   case llvm::Triple::mipsel:
     switch (os) {
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<Mips32ELTargetInfo>(Triple, Opts);
+      return new LinuxTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
-      return new RTEMSTargetInfo<Mips32ELTargetInfo>(Triple, Opts);
+      return new RTEMSTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
-      return new FreeBSDTargetInfo<Mips32ELTargetInfo>(Triple, Opts);
+      return new FreeBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
-      return new NetBSDTargetInfo<Mips32ELTargetInfo>(Triple, Opts);
+      return new NetBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::NaCl:
-      return new NaClTargetInfo<NaClMips32ELTargetInfo>(Triple, Opts);
+      return new NaClTargetInfo<NaClMips32TargetInfo>(Triple, Opts);
     default:
-      return new Mips32ELTargetInfo(Triple, Opts);
+      return new MipsTargetInfo(Triple, Opts);
     }
 
   case llvm::Triple::mips64:
     switch (os) {
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<Mips64EBTargetInfo>(Triple, Opts);
+      return new LinuxTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
-      return new RTEMSTargetInfo<Mips64EBTargetInfo>(Triple, Opts);
+      return new RTEMSTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
-      return new FreeBSDTargetInfo<Mips64EBTargetInfo>(Triple, Opts);
+      return new FreeBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
-      return new NetBSDTargetInfo<Mips64EBTargetInfo>(Triple, Opts);
+      return new NetBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::OpenBSD:
-      return new OpenBSDTargetInfo<Mips64EBTargetInfo>(Triple, Opts);
+      return new OpenBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     default:
-      return new Mips64EBTargetInfo(Triple, Opts);
+      return new MipsTargetInfo(Triple, Opts);
     }
 
   case llvm::Triple::mips64el:
     switch (os) {
     case llvm::Triple::Linux:
-      return new LinuxTargetInfo<Mips64ELTargetInfo>(Triple, Opts);
+      return new LinuxTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
-      return new RTEMSTargetInfo<Mips64ELTargetInfo>(Triple, Opts);
+      return new RTEMSTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::FreeBSD:
-      return new FreeBSDTargetInfo<Mips64ELTargetInfo>(Triple, Opts);
+      return new FreeBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
-      return new NetBSDTargetInfo<Mips64ELTargetInfo>(Triple, Opts);
+      return new NetBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     case llvm::Triple::OpenBSD:
-      return new OpenBSDTargetInfo<Mips64ELTargetInfo>(Triple, Opts);
+      return new OpenBSDTargetInfo<MipsTargetInfo>(Triple, Opts);
     default:
-      return new Mips64ELTargetInfo(Triple, Opts);
+      return new MipsTargetInfo(Triple, Opts);
     }
 
   case llvm::Triple::le32:

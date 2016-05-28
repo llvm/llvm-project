@@ -45,11 +45,6 @@
 // RUN:   | FileCheck -check-prefix=MIPS64-DEF-EL-AS %s
 // MIPS64-DEF-EL-AS: as{{(.exe)?}}" "-march" "mips64r2" "-mabi" "64" "-EL"
 //
-// RUN: %clang -target mips-unknown-freebsd -mabi=eabi -### \
-// RUN:   -no-integrated-as -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS-EABI %s
-// MIPS-EABI: as{{(.exe)?}}" "-march" "mips32r2" "-mabi" "eabi" "-EB"
-//
 // RUN: %clang -target mips64-unknown-freebsd -mabi=n32 -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-N32 %s

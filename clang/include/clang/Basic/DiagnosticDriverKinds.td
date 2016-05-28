@@ -238,6 +238,9 @@ def warn_target_unsupported_nan2008 : Warning<
 def warn_target_unsupported_nanlegacy : Warning<
   "ignoring '-mnan=legacy' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;
+def warn_target_unsupported_compact_branches : Warning<
+  "ignoring '-mcompact-branches=' option because the '%0' architecture does not"
+  " support it">, InGroup<UnsupportedCB>;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,

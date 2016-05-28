@@ -7,14 +7,15 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++98, c++03, c++11
+
 #include <string>
 #include <cassert>
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11 
     using namespace std::literals::string_literals;
 
     std::string foo  =   ""s;
-#endif
 }

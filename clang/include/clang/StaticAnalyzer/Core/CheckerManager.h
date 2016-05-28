@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -105,10 +106,8 @@ class CheckerManager {
   CheckName CurrentCheckName;
 
 public:
-  CheckerManager(const LangOptions &langOpts,
-                 AnalyzerOptionsRef AOptions)
-    : LangOpts(langOpts),
-      AOptions(AOptions) {}
+  CheckerManager(const LangOptions &langOpts, AnalyzerOptionsRef AOptions)
+      : LangOpts(langOpts), AOptions(std::move(AOptions)) {}
 
   ~CheckerManager();
 

@@ -42,6 +42,6 @@ _mm_mwaitx(unsigned __extensions, unsigned __hints, unsigned __clock)
   __builtin_ia32_mwaitx(__extensions, __hints, __clock);
 }
 
-#undef __DEFAULT_FN_ATTRS 
+#undef __DEFAULT_FN_ATTRS
 
 #endif /* _MWAITXINTRIN_H */

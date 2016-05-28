@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include <string>
+#include <utility>
 
 namespace clang {
 
@@ -517,8 +518,8 @@ class CodeCompletionTUInfo {
 
 public:
   explicit CodeCompletionTUInfo(
-                    IntrusiveRefCntPtr<GlobalCodeCompletionAllocator> Allocator)
-    : AllocatorRef(Allocator) { }
+      IntrusiveRefCntPtr<GlobalCodeCompletionAllocator> Allocator)
+      : AllocatorRef(std::move(Allocator)) {}
 
   IntrusiveRefCntPtr<GlobalCodeCompletionAllocator> getAllocatorRef() const {
     return AllocatorRef;

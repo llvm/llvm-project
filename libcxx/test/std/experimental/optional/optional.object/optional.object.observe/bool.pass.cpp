@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <optional>
 
 // constexpr explicit optional<T>::operator bool() const noexcept;
@@ -17,7 +18,6 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     using std::experimental::optional;
 
     {
@@ -28,5 +28,4 @@ int main()
         constexpr optional<int> opt(0);
         static_assert(opt, "");
     }
-#endif  // _LIBCPP_STD_VER > 11
 }

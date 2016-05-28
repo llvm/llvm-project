@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <chrono>
 
 #include <complex>
@@ -15,7 +16,6 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11 
     using namespace std::literals::complex_literals;
 
 //  Make sure the types are right
@@ -46,6 +46,4 @@ int main()
     auto c2 = 3if;
     assert ( c1 == c2 );
     }
-
-#endif
 }

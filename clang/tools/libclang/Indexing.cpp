@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CXIndexDataConsumer.h"
 #include "CIndexDiagnostic.h"
 #include "CIndexer.h"
 #include "CLog.h"
 #include "CXCursor.h"
+#include "CXIndexDataConsumer.h"
 #include "CXSourceLocation.h"
 #include "CXString.h"
 #include "CXTranslationUnit.h"
@@ -32,6 +32,7 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/MutexGuard.h"
 #include <cstdio>
+#include <utility>
 
 using namespace clang;
 using namespace clang::index;
@@ -356,7 +357,7 @@ class IndexingFrontendAction : public ASTFrontendAction {
 public:
   IndexingFrontendAction(std::shared_ptr<CXIndexDataConsumer> dataConsumer,
                          SessionSkipBodyData *skData)
-    : DataConsumer(dataConsumer), SKData(skData) { }
+      : DataConsumer(std::move(dataConsumer)), SKData(skData) {}
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <utility>
 
 // template<class T, T... I>
@@ -24,8 +25,6 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
-
 //  Make a few of sequences
     using int3    = std::integer_sequence<int, 3, 2, 1>;
     using size1   = std::integer_sequence<std::size_t, 7>;
@@ -44,6 +43,4 @@ int main()
     
     static_assert ( std::is_same<bool0::value_type, bool>::value, "bool0 type wrong" );
     static_assert ( bool0::size() == 0, "bool0 size wrong" );
-    
-#endif  // _LIBCPP_STD_VER > 11
 }
