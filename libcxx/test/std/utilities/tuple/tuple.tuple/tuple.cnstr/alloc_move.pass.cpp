@@ -53,6 +53,8 @@ int main()
         assert(alloc_last::allocator_constructed);
         assert(std::get<0>(t) == 1);
     }
+// testing extensions
+#ifdef _LIBCPP_VERSION
     {
         typedef std::tuple<MoveOnly, alloc_first> T;
         T t0(0 ,1);
@@ -74,4 +76,5 @@ int main()
         assert(std::get<1>(t) == 2);
         assert(std::get<2>(t) == 3);
     }
+#endif
 }

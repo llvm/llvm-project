@@ -497,6 +497,11 @@ kmp_set_warnings_off                        780
     omp_get_cancellation                    867
     kmp_get_cancellation_status             868
     omp_is_initial_device                   869
+    %ifdef stub
+        omp_set_default_device              879
+        omp_get_default_device              880
+        omp_get_num_devices                 881
+    %endif
 %endif # OMP_40
 
 # OpenMP 41
@@ -511,6 +516,16 @@ kmp_set_warnings_off                        780
     omp_get_place_num                       876
     omp_get_partition_num_places            877
     omp_get_partition_place_nums            878
+    %ifdef stub
+        omp_get_initial_device              882
+        omp_target_alloc                    883
+        omp_target_free                     884
+        omp_target_is_present               885
+        omp_target_memcpy                   886
+        omp_target_memcpy_rect              887
+        omp_target_associate_ptr            888
+        omp_target_disassociate_ptr         889
+    %endif
 %endif # OMP_41
 
 %ifndef stub

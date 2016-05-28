@@ -105,72 +105,6 @@ uptr stoptheworld_tracer_pid = 0;
 // writing to the same log file.
 uptr stoptheworld_tracer_ppid = 0;
 
-static const int kMaxNumOfInternalDieCallbacks = 5;
-static DieCallbackType InternalDieCallbacks[kMaxNumOfInternalDieCallbacks];
-
-bool AddDieCallback(DieCallbackType callback) {
-  for (int i = 0; i < kMaxNumOfInternalDieCallbacks; i++) {
-    if (InternalDieCallbacks[i] == nullptr) {
-      InternalDieCallbacks[i] = callback;
-      return true;
-    }
-  }
-  return false;
-}
-
-bool RemoveDieCallback(DieCallbackType callback) {
-  for (int i = 0; i < kMaxNumOfInternalDieCallbacks; i++) {
-    if (InternalDieCallbacks[i] == callback) {
-      internal_memmove(&InternalDieCallbacks[i], &InternalDieCallbacks[i + 1],
-                       sizeof(InternalDieCallbacks[0]) *
-                           (kMaxNumOfInternalDieCallbacks - i - 1));
-      InternalDieCallbacks[kMaxNumOfInternalDieCallbacks - 1] = nullptr;
-      return true;
-    }
-  }
-  return false;
-}
-
-static DieCallbackType UserDieCallback;
-void SetUserDieCallback(DieCallbackType callback) {
-  UserDieCallback = callback;
-}
-
-void NORETURN Die() {
-  if (UserDieCallback)
-    UserDieCallback();
-  for (int i = kMaxNumOfInternalDieCallbacks - 1; i >= 0; i--) {
-    if (InternalDieCallbacks[i])
-      InternalDieCallbacks[i]();
-  }
-  if (common_flags()->abort_on_error)
-    Abort();
-  internal__exit(common_flags()->exitcode);
-}
-
-static CheckFailedCallbackType CheckFailedCallback;
-void SetCheckFailedCallback(CheckFailedCallbackType callback) {
-  CheckFailedCallback = callback;
-}
-
-const int kSecondsToSleepWhenRecursiveCheckFailed = 2;
-
-void NORETURN CheckFailed(const char *file, int line, const char *cond,
-                          u64 v1, u64 v2) {
-  static atomic_uint32_t num_calls;
-  if (atomic_fetch_add(&num_calls, 1, memory_order_relaxed) > 10) {
-    SleepForSeconds(kSecondsToSleepWhenRecursiveCheckFailed);
-    Trap();
-  }
-
-  if (CheckFailedCallback) {
-    CheckFailedCallback(file, line, cond, v1, v2);
-  }
-  Report("Sanitizer CHECK failed: %s:%d %s (%lld, %lld)\n", file, line, cond,
-                                                            v1, v2);
-  Die();
-}
-
 void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report) {
@@ -494,6 +428,11 @@ using namespace __sanitizer;  // NOLINT
 extern "C" {
 void __sanitizer_set_report_path(const char *path) {
   report_file.SetReportPath(path);
+}
+
+void __sanitizer_set_report_fd(void *fd) {
+  report_file.fd = (fd_t)reinterpret_cast<uptr>(fd);
+  report_file.fd_pid = internal_getpid();
 }
 
 void __sanitizer_report_error_summary(const char *error_summary) {

@@ -513,6 +513,7 @@ bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::Merge;
 }
 
+// Do binary search to get a section piece at a given input offset.
 template <class ELFT>
 SectionPiece *SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
   ArrayRef<uint8_t> D = this->getSectionData();
@@ -529,23 +530,40 @@ SectionPiece *SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
   return &*I;
 }
 
+// Returns the offset in an output section for a given input offset.
+// Because contents of a mergeable section is not contiguous in output,
+// it is not just an addition to a base output offset.
 template <class ELFT>
 typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
+  auto It = OffsetMap.find(Offset);
+  if (It != OffsetMap.end())
+    return It->second;
+
+  // If Offset is not at beginning of a section piece, it is not in the map.
+  // In that case we need to search from the original section piece vector.
   SectionPiece &Piece = *this->getSectionPiece(Offset);
   assert(Piece.Live);
-
-  // Compute the Addend and if the Base is cached, return.
   uintX_t Addend = Offset - Piece.InputOff;
-  if (Piece.OutputOff != size_t(-1))
-    return Piece.OutputOff + Addend;
+  uintX_t Ret = Piece.OutputOff + Addend;
+  return Ret;
+}
 
-  // Map the base to the offset in the output section and cache it.
-  ArrayRef<uint8_t> D = this->getSectionData();
-  StringRef Data((const char *)D.data(), D.size());
-  StringRef Entry = Data.substr(Piece.InputOff, Piece.size());
-  auto *MOS = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
-  Piece.OutputOff = MOS->getOffset(Entry);
-  return Piece.OutputOff + Addend;
+// Create a map from input offsets to output offsets for all section pieces.
+// It is called after finalize().
+template <class ELFT> void  MergeInputSection<ELFT>::finalizePieces() {
+  OffsetMap.grow(this->Pieces.size());
+  for (SectionPiece &Piece : this->Pieces) {
+    if (!Piece.Live)
+      continue;
+    if (Piece.OutputOff == size_t(-1)) {
+      // Offsets of tail-merged strings are computed lazily.
+      auto *OutSec = static_cast<MergeOutputSection<ELFT> *>(this->OutSec);
+      ArrayRef<uint8_t> D = Piece.data();
+      StringRef S((const char *)D.data(), D.size());
+      Piece.OutputOff = OutSec->getOffset(S);
+    }
+    OffsetMap[Piece.InputOff] = Piece.OutputOff;
+  }
 }
 
 template <class ELFT>

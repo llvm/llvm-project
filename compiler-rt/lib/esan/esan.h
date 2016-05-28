@@ -26,6 +26,7 @@
 #ifndef ESAN_H
 #define ESAN_H
 
+#include "interception/interception.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "esan_interface_internal.h"
 
@@ -43,6 +44,11 @@ void processCompilationUnitInit(void *Ptr);
 void processCompilationUnitExit(void *Ptr);
 void processRangeAccess(uptr PC, uptr Addr, int Size, bool IsWrite);
 void initializeInterceptors();
+
+// Platform-dependent routines.
+void verifyAddressSpace();
+bool fixMmapAddr(void **Addr, SIZE_T Size, int Flags);
+uptr checkMmapResult(uptr Addr, SIZE_T Size);
 
 } // namespace __esan
 

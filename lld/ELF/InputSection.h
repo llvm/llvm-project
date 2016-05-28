@@ -145,7 +145,10 @@ public:
   // in the output section.
   uintX_t getOffset(uintX_t Offset);
 
+  void finalizePieces();
+
 private:
+  llvm::DenseMap<uintX_t, uintX_t> OffsetMap;
   llvm::DenseSet<uintX_t> LiveOffsets;
 };
 

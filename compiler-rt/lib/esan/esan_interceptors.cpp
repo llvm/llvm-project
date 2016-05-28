@@ -21,19 +21,6 @@
 
 using namespace __esan; // NOLINT
 
-// FIXME: if this gets more complex as more platforms are added we may
-// want to split pieces into separate platform-specific files.
-#if SANITIZER_LINUX
-// Sanitizer runtimes in general want to avoid including system headers.
-// We define the few constants we need here:
-const int EINVAL = 22; // from /usr/include/asm-generic/errno-base.h
-const int MAP_FIXED = 0x10; // from /usr/include/sys/mman.h
-extern "C" int *__errno_location();
-#define errno (*__errno_location())
-#else
-#error Other platforms are not yet supported.
-#endif
-
 #define CUR_PC() (StackTrace::GetCurrentPc())
 
 //===----------------------------------------------------------------------===//
@@ -343,35 +330,12 @@ INTERCEPTOR(int, rmdir, char *path) {
 // These are candidates for sharing with all sanitizers if shadow memory
 // support is also standardized.
 
-static bool fixMmapAddr(void **addr, SIZE_T sz, int flags) {
-  if (*addr) {
-    uptr AppStart, AppEnd;
-    bool SingleApp = false;
-    for (int i = 0; getAppRegion(i, &AppStart, &AppEnd); ++i) {
-      if ((uptr)*addr >= AppStart && (uptr)*addr + sz - 1 <= AppEnd) {
-        SingleApp = true;
-        break;
-      }
-    }
-    if (!SingleApp) {
-      VPrintf(1, "mmap conflict: [%p-%p) is not in an app region\n",
-              *addr, (uptr)*addr + sz);
-      if (flags & MAP_FIXED) {
-        errno = EINVAL;
-        return false;
-      } else {
-        *addr = 0;
-      }
-    }
-  }
-  return true;
-}
-
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
                  int fd, OFF_T off) {
   if (!fixMmapAddr(&addr, sz, flags))
     return (void *)-1;
-  return REAL(mmap)(addr, sz, prot, flags, fd, off);
+  void *result = REAL(mmap)(addr, sz, prot, flags, fd, off);
+  return (void *)checkMmapResult((uptr)result, sz);
 }
 
 #if SANITIZER_LINUX
@@ -379,7 +343,8 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
                  int fd, OFF64_T off) {
   if (!fixMmapAddr(&addr, sz, flags))
     return (void *)-1;
-  return REAL(mmap64)(addr, sz, prot, flags, fd, off);
+  void *result = REAL(mmap64)(addr, sz, prot, flags, fd, off);
+  return (void *)checkMmapResult((uptr)result, sz);
 }
 #define ESAN_MAYBE_INTERCEPT_MMAP64 INTERCEPT_FUNCTION(mmap64)
 #else

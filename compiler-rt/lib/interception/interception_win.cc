@@ -36,7 +36,7 @@ static void _memcpy(void *dst, void *src, size_t sz) {
 }
 
 static void WriteJumpInstruction(char *jmp_from, char *to) {
-  // jmp XXYYZZWW = E9 WW ZZ YY XX, where XXYYZZWW is an offset fromt jmp_from
+  // jmp XXYYZZWW = E9 WW ZZ YY XX, where XXYYZZWW is an offset from jmp_from
   // to the next instruction to the destination.
   ptrdiff_t offset = to - jmp_from - 5;
   *jmp_from = '\xE9';
@@ -68,6 +68,12 @@ static char *GetMemoryForTrampoline(size_t size) {
 
 // Returns 0 on error.
 static size_t RoundUpToInstrBoundary(size_t size, char *code) {
+#ifdef _WIN64
+  // TODO(wwchrome): Implement similar logic for x64 instructions.
+  // Win64 RoundUpToInstrBoundary is not supported yet.
+  __debugbreak();
+  return 0;
+#else
   size_t cursor = 0;
   while (cursor < size) {
     switch (code[cursor]) {
@@ -140,12 +146,16 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
   }
 
   return cursor;
+#endif
 }
 
 bool OverrideFunction(uptr old_func, uptr new_func, uptr *orig_old_func) {
 #ifdef _WIN64
-#error OverrideFunction is not yet supported on x64
-#endif
+  // TODO(wwchrome): Implement using x64 jmp.
+  // OverrideFunction is not yet supported on x64.
+  __debugbreak();
+  return false;
+#else
   // Function overriding works basically like this:
   // We write "jmp <new_func>" (5 bytes) at the beginning of the 'old_func'
   // to override it.
@@ -190,6 +200,7 @@ bool OverrideFunction(uptr old_func, uptr new_func, uptr *orig_old_func) {
     return false;  // not clear if this failure bothers us.
 
   return true;
+#endif
 }
 
 static void **InterestingDLLsAvailable() {
