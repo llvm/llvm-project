@@ -53,7 +53,7 @@ STATISTIC(NumLCSSA, "Number of live out of a loop variables");
 /// Return true if the specified block is in the list.
 static bool isExitBlock(BasicBlock *BB,
                         const SmallVectorImpl<BasicBlock *> &ExitBlocks) {
-  return llvm::any_of(ExitBlocks, [&](BasicBlock *EB) { return EB == BB; });
+  return find(ExitBlocks, BB) != ExitBlocks.end();
 }
 
 /// Given an instruction in the loop, check to see if it has any uses that are

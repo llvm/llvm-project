@@ -22,6 +22,7 @@
 #include "Thumb1FrameLowering.h"
 #include "Thumb1InstrInfo.h"
 #include "Thumb2InstrInfo.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -273,40 +274,19 @@ bool ARMSubtarget::isAAPCS16_ABI() const {
   return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
 }
 
-
-/// GVIsIndirectSymbol - true if the GV will be accessed via an indirect symbol.
+/// true if the GV will be accessed via an indirect symbol.
 bool
 ARMSubtarget::GVIsIndirectSymbol(const GlobalValue *GV,
                                  Reloc::Model RelocM) const {
-  if (RelocM == Reloc::Static)
-    return false;
-
-  bool isDef = GV->isStrongDefinitionForLinker();
-
-  if (!isTargetMachO()) {
-    // Extra load is needed for all externally visible.
-    if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
-      return false;
+  if (!shouldAssumeDSOLocal(RelocM, TargetTriple, *GV->getParent(), GV))
     return true;
-  } else {
-    // If this is a strong reference to a definition, it is definitely not
-    // through a stub.
-    if (isDef)
-      return false;
 
-    // Unless we have a symbol with hidden visibility, we have to go through a
-    // normal $non_lazy_ptr stub because this symbol might be resolved late.
-    if (!GV->hasHiddenVisibility())  // Non-hidden $non_lazy_ptr reference.
-      return true;
-
-    if (RelocM == Reloc::PIC_) {
-      // If symbol visibility is hidden, we have a stub for common symbol
-      // references and external declarations.
-      if (GV->isDeclarationForLinker() || GV->hasCommonLinkage())
-        // Hidden $non_lazy_ptr reference.
-        return true;
-    }
-  }
+  // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
+  // the section that is being relocated. This means we have to use o load even
+  // for GVs that are known to be local to the dso.
+  if (isTargetDarwin() && RelocM == Reloc::PIC_ &&
+      (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
+    return true;
 
   return false;
 }

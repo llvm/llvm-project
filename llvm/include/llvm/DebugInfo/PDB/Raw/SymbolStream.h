@@ -10,7 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBSYMBOLSTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBSYMBOLSTREAM_H
 
-#include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 
@@ -26,10 +26,11 @@ public:
   ~SymbolStream();
   Error reload();
 
-  iterator_range<codeview::SymbolIterator> getSymbols() const;
+  iterator_range<codeview::CVSymbolArray::Iterator>
+  getSymbols(bool *HadError) const;
 
 private:
-  codeview::ByteStream Stream;
+  codeview::CVSymbolArray SymbolRecords;
   MappedBlockStream MappedStream;
 };
 }

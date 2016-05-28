@@ -98,16 +98,18 @@ Error NameHashTable::load(codeview::StreamReader &Stream) {
   Signature = H->Signature;
   HashVersion = H->HashVersion;
   if (auto EC = Stream.readStreamRef(NamesBuffer, H->ByteSize))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Invalid hash table byte length");
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Invalid hash table byte length"));
 
   const support::ulittle32_t *HashCount;
   if (auto EC = Stream.readObject(HashCount))
     return EC;
 
   if (auto EC = Stream.readArray(IDs, *HashCount))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Could not read bucket array");
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Could not read bucket array"));
 
   if (Stream.bytesRemaining() < sizeof(support::ulittle32_t))
     return make_error<RawError>(raw_error_code::corrupt_file,

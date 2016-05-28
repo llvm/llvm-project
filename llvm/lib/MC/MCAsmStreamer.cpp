@@ -31,6 +31,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include <cctype>
 
 using namespace llvm;
@@ -177,6 +178,14 @@ public:
 
 
   void EmitFill(uint64_t NumBytes, uint8_t FillValue) override;
+
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                SMLoc Loc = SMLoc()) override;
+
+  void emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) override;
+
+  void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
+                SMLoc Loc = SMLoc()) override;
 
   void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
@@ -799,16 +808,41 @@ void MCAsmStreamer::EmitGPRel32Value(const MCExpr *Value) {
 void MCAsmStreamer::EmitFill(uint64_t NumBytes, uint8_t FillValue) {
   if (NumBytes == 0) return;
 
+  const MCExpr *E = MCConstantExpr::create(NumBytes, getContext());
+  emitFill(*E, FillValue);
+}
+
+void MCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                             SMLoc Loc) {
   if (const char *ZeroDirective = MAI->getZeroDirective()) {
-    OS << ZeroDirective << NumBytes;
+    // FIXME: Emit location directives
+    OS << ZeroDirective;
+    NumBytes.print(OS, MAI);
     if (FillValue != 0)
       OS << ',' << (int)FillValue;
     EmitEOL();
     return;
   }
 
-  // Emit a byte at a time.
-  MCStreamer::EmitFill(NumBytes, FillValue);
+  MCStreamer::emitFill(NumBytes, FillValue);
+}
+
+void MCAsmStreamer::emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) {
+  if (NumValues == 0)
+    return;
+
+  const MCExpr *E = MCConstantExpr::create(NumValues, getContext());
+  emitFill(*E, Size, Expr);
+}
+
+void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
+                             int64_t Expr, SMLoc Loc) {
+  // FIXME: Emit location directives
+  OS << "\t.fill\t";
+  NumValues.print(OS, MAI);
+  OS << ", " << Size << ", 0x";
+  OS.write_hex(truncateToSize(Expr, 4));
+  EmitEOL();
 }
 
 void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,

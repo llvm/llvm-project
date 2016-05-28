@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -676,17 +675,17 @@ void CVTypeDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
     W->printHex(FieldName, TI.getIndex());
 }
 
-bool CVTypeDumper::dump(const TypeIterator::Record &Record) {
+bool CVTypeDumper::dump(const CVRecord<TypeLeafKind> &Record) {
   assert(W && "printer should not be null");
   CVTypeDumperImpl Dumper(*this, *W, PrintRecordBytes);
   Dumper.visitTypeRecord(Record);
   return !Dumper.hadError();
 }
 
-bool CVTypeDumper::dump(ArrayRef<uint8_t> Data) {
+bool CVTypeDumper::dump(const CVTypeArray &Types) {
   assert(W && "printer should not be null");
   CVTypeDumperImpl Dumper(*this, *W, PrintRecordBytes);
-  Dumper.visitTypeStream(Data);
+  Dumper.visitTypeStream(Types);
   return !Dumper.hadError();
 }
 

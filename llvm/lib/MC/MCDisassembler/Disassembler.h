@@ -28,6 +28,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
+#include <utility>
 
 namespace llvm {
 class Target;
@@ -86,15 +87,12 @@ public:
                     LLVMOpInfoCallback getOpInfo,
                     LLVMSymbolLookupCallback symbolLookUp,
                     const Target *theTarget, const MCAsmInfo *mAI,
-                    const MCRegisterInfo *mRI,
-                    const MCSubtargetInfo *mSI,
-                    const MCInstrInfo *mII,
-                    llvm::MCContext *ctx, const MCDisassembler *disAsm,
-                    MCInstPrinter *iP) : TripleName(tripleName),
-                    DisInfo(disInfo), TagType(tagType), GetOpInfo(getOpInfo),
-                    SymbolLookUp(symbolLookUp), TheTarget(theTarget),
-                    Options(0),
-                    CommentStream(CommentsToEmit) {
+                    const MCRegisterInfo *mRI, const MCSubtargetInfo *mSI,
+                    const MCInstrInfo *mII, llvm::MCContext *ctx,
+                    const MCDisassembler *disAsm, MCInstPrinter *iP)
+      : TripleName(std::move(tripleName)), DisInfo(disInfo), TagType(tagType),
+        GetOpInfo(getOpInfo), SymbolLookUp(symbolLookUp), TheTarget(theTarget),
+        Options(0), CommentStream(CommentsToEmit) {
     MAI.reset(mAI);
     MRI.reset(mRI);
     MSI.reset(mSI);

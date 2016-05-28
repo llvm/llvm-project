@@ -316,7 +316,8 @@ template <typename T> class ArrayRef;
         K_Reg
       } Kind;
 
-      ResultOperand(std::string N, Record *r) : Name(N), R(r), Kind(K_Record) {}
+      ResultOperand(std::string N, Record *r)
+          : Name(std::move(N)), R(r), Kind(K_Record) {}
       ResultOperand(int64_t I) : Imm(I), Kind(K_Imm) {}
       ResultOperand(Record *r) : R(r), Kind(K_Reg) {}
 

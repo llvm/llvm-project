@@ -713,6 +713,13 @@ ConstantRange::multiply(const ConstantRange &Other) const {
                                             this_max * Other_max + 1);
   ConstantRange UR = Result_zext.truncate(getBitWidth());
 
+  // If the unsigned range doesn't wrap, and isn't negative then it's a range
+  // from one positive number to another which is as good as we can generate.
+  // In this case, skip the extra work of generating signed ranges which aren't
+  // going to be better than this range.
+  if (!UR.isWrappedSet() && UR.getLower().isNonNegative())
+    return UR;
+
   // Now the signed range. Because we could be dealing with negative numbers
   // here, the lower bound is the smallest of the cartesian product of the
   // lower and upper ranges; for example:

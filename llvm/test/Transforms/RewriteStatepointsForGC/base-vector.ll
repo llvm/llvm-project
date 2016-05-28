@@ -106,7 +106,7 @@ entry:
 define void @test6(i1 %cnd, i64 addrspace(1)* %obj, i64 %idx) gc "statepoint-example" {
 ; CHECK-LABEL: @test6
 ; CHECK: %gep = getelementptr i64, i64 addrspace(1)* %obj, i64 1
-; CHECK: %vec.base = insertelement <2 x i64 addrspace(1)*> undef, i64 addrspace(1)* %obj, i32 0, !is_base_value !0
+; CHECK: %vec.base = insertelement <2 x i64 addrspace(1)*> zeroinitializer, i64 addrspace(1)* %obj, i32 0, !is_base_value !0
 ; CHECK: %vec = insertelement <2 x i64 addrspace(1)*> undef, i64 addrspace(1)* %gep, i32 0
 ; CHECK: %bdv.base = extractelement <2 x i64 addrspace(1)*> %vec.base, i64 %idx, !is_base_value !0
 ; CHECK:  %bdv = extractelement <2 x i64 addrspace(1)*> %vec, i64 %idx

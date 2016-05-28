@@ -435,9 +435,11 @@ static size_t RedzoneSizeForScale(int MappingScale) {
 
 /// AddressSanitizer: instrument the code in module to find memory bugs.
 struct AddressSanitizer : public FunctionPass {
-  explicit AddressSanitizer(bool CompileKernel = false, bool Recover = false)
+  explicit AddressSanitizer(bool CompileKernel = false, bool Recover = false,
+                            bool UseAfterScope = false)
       : FunctionPass(ID), CompileKernel(CompileKernel || ClEnableKasan),
-        Recover(Recover || ClRecover) {
+        Recover(Recover || ClRecover),
+        UseAfterScope(UseAfterScope || ClUseAfterScope) {
     initializeAddressSanitizerPass(*PassRegistry::getPassRegistry());
   }
   const char *getPassName() const override {
@@ -514,6 +516,7 @@ struct AddressSanitizer : public FunctionPass {
   int LongSize;
   bool CompileKernel;
   bool Recover;
+  bool UseAfterScope;
   Type *IntptrTy;
   ShadowMapping Mapping;
   DominatorTree *DT;
@@ -726,7 +729,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     Intrinsic::ID ID = II.getIntrinsicID();
     if (ID == Intrinsic::stackrestore) StackRestoreVec.push_back(&II);
     if (ID == Intrinsic::localescape) LocalEscapeCall = &II;
-    if (!ClUseAfterScope) return;
+    if (!ASan.UseAfterScope)
+      return;
     if (ID != Intrinsic::lifetime_start && ID != Intrinsic::lifetime_end)
       return;
     // Found lifetime intrinsic, add ASan instrumentation if necessary.
@@ -794,9 +798,10 @@ INITIALIZE_PASS_END(
     "AddressSanitizer: detects use-after-free and out-of-bounds bugs.", false,
     false)
 FunctionPass *llvm::createAddressSanitizerFunctionPass(bool CompileKernel,
-                                                       bool Recover) {
+                                                       bool Recover,
+                                                       bool UseAfterScope) {
   assert(!CompileKernel || Recover);
-  return new AddressSanitizer(CompileKernel, Recover);
+  return new AddressSanitizer(CompileKernel, Recover, UseAfterScope);
 }
 
 char AddressSanitizerModule::ID = 0;
@@ -848,9 +853,9 @@ static GlobalVariable *createPrivateGlobalForSourceLoc(Module &M,
 }
 
 static bool GlobalWasGeneratedByAsan(GlobalVariable *G) {
-  return G->getName().find(kAsanGenPrefix) == 0 ||
-         G->getName().find(kSanCovGenPrefix) == 0 ||
-         G->getName().find(kODRGenPrefix) == 0;
+  return G->getName().startswith(kAsanGenPrefix) ||
+         G->getName().startswith(kSanCovGenPrefix) ||
+         G->getName().startswith(kODRGenPrefix);
 }
 
 Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {

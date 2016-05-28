@@ -75,10 +75,10 @@ ProtectFromEscapedAllocas("protect-from-escaped-allocas",
 /// Enable enhanced dataflow scheme for lifetime analysis (treat first
 /// use of stack slot as start of slot lifetime, as opposed to looking
 /// for LIFETIME_START marker). See "Implementation notes" below for
-/// more info.
+/// more info. FIXME: set to false for the moment due to PR27903.
 static cl::opt<bool>
 LifetimeStartOnFirstUse("stackcoloring-lifetime-start-on-first-use",
-        cl::init(true), cl::Hidden,
+        cl::init(false), cl::Hidden,
         cl::desc("Treat stack lifetimes as starting on first use, not on START marker."));
 
 
@@ -963,9 +963,6 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
-  if (skipFunction(*Func.getFunction()))
-    return false;
-
   DEBUG(dbgs() << "********** Stack Coloring **********\n"
                << "********** Function: "
                << ((const Value*)Func.getFunction())->getName() << '\n');
@@ -1005,7 +1002,8 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
 
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring) {
+  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
+      skipFunction(*Func.getFunction())) {
     DEBUG(dbgs()<<"Will not try to merge slots.\n");
     return removeAllMarkers();
   }

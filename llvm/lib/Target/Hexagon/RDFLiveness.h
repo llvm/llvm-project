@@ -26,7 +26,6 @@ namespace llvm {
   class TargetRegisterInfo;
   class MachineDominatorTree;
   class MachineDominanceFrontier;
-}
 
 namespace rdf {
   struct Liveness {
@@ -105,6 +104,7 @@ namespace rdf {
     void traverse(MachineBasicBlock *B, RefMap &LiveIn);
     void emptify(RefMap &M);
   };
-}
+} // namespace rdf
+} // namespace llvm
 
 #endif // RDF_LIVENESS_H

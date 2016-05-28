@@ -28,6 +28,7 @@
 #include "llvm/TableGen/Record.h"
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -47,7 +48,7 @@ struct OperandInfo {
   bool HasCompleteDecoder;
 
   OperandInfo(std::string D, bool HCD)
-    : Decoder(D), HasCompleteDecoder(HCD) { }
+      : Decoder(std::move(D)), HasCompleteDecoder(HCD) {}
 
   void addField(unsigned Base, unsigned Width, unsigned Offset) {
     Fields.push_back(EncodingField(Base, Width, Offset));
@@ -83,17 +84,16 @@ public:
 
   // Defaults preserved here for documentation, even though they aren't
   // strictly necessary given the way that this is currently being called.
-  FixedLenDecoderEmitter(RecordKeeper &R,
-                         std::string PredicateNamespace,
-                         std::string GPrefix  = "if (",
+  FixedLenDecoderEmitter(RecordKeeper &R, std::string PredicateNamespace,
+                         std::string GPrefix = "if (",
                          std::string GPostfix = " == MCDisassembler::Fail)",
-                         std::string ROK      = "MCDisassembler::Success",
-                         std::string RFail    = "MCDisassembler::Fail",
-                         std::string L        = "") :
-    Target(R),
-    PredicateNamespace(PredicateNamespace),
-    GuardPrefix(GPrefix), GuardPostfix(GPostfix),
-    ReturnOK(ROK), ReturnFail(RFail), Locals(L) {}
+                         std::string ROK = "MCDisassembler::Success",
+                         std::string RFail = "MCDisassembler::Fail",
+                         std::string L = "")
+      : Target(R), PredicateNamespace(std::move(PredicateNamespace)),
+        GuardPrefix(std::move(GPrefix)), GuardPostfix(std::move(GPostfix)),
+        ReturnOK(std::move(ROK)), ReturnFail(std::move(RFail)),
+        Locals(std::move(L)) {}
 
   // Emit the decoder state machine table.
   void emitTable(formatted_raw_ostream &o, DecoderTable &Table,

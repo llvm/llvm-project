@@ -71,7 +71,7 @@ void LLVMTargetMachine::initAsmInfo() {
     TmpAsmInfo->setUseIntegratedAssembler(false);
 
   if (Options.CompressDebugSections)
-    TmpAsmInfo->setCompressDebugSections(true);
+    TmpAsmInfo->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
 
   AsmInfo = TmpAsmInfo;
 }

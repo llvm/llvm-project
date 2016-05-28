@@ -258,25 +258,6 @@ defm FLAT_ATOMIC_FMAX_X2 : FLAT_ATOMIC <
 
 } // End SubtargetPredicate = isCI, VIAssemblerPredicate = DisableInst, DisableVIDecoder = 1
 
-let Predicates = [isCI] in {
-
-// Convert (x - floor(x)) to fract(x)
-def : Pat <
-  (f32 (fsub (f32 (VOP3Mods f32:$x, i32:$mods)),
-             (f32 (ffloor (f32 (VOP3Mods f32:$x, i32:$mods)))))),
-  (V_FRACT_F32_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE)
->;
-
-// Convert (x + (-floor(x))) to fract(x)
-def : Pat <
-  (f64 (fadd (f64 (VOP3Mods f64:$x, i32:$mods)),
-             (f64 (fneg (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))))))),
-  (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE)
->;
-
-} // End Predicates = [isCI]
-
-
 //===----------------------------------------------------------------------===//
 // Flat Patterns
 //===----------------------------------------------------------------------===//

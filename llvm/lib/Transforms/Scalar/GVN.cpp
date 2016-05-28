@@ -1567,6 +1567,8 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
       NewLoad->setMetadata(LLVMContext::MD_invariant_load, MD);
     if (auto *InvGroupMD = LI->getMetadata(LLVMContext::MD_invariant_group))
       NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
+    if (auto *RangeMD = LI->getMetadata(LLVMContext::MD_range))
+      NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
 
     // Transfer DebugLoc.
     NewLoad->setDebugLoc(LI->getDebugLoc());

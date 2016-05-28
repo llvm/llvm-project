@@ -21,6 +21,7 @@
 #include "llvm/Support/Memory.h"
 #include <map>
 #include <memory>
+#include <utility>
 
 namespace llvm {
 
@@ -78,7 +79,7 @@ public:
     typedef std::map<object::SectionRef, unsigned> ObjSectionToIDMap;
 
     LoadedObjectInfo(RuntimeDyldImpl &RTDyld, ObjSectionToIDMap ObjSecToIDMap)
-      : RTDyld(RTDyld), ObjSecToIDMap(ObjSecToIDMap) { }
+        : RTDyld(RTDyld), ObjSecToIDMap(std::move(ObjSecToIDMap)) {}
 
     virtual object::OwningBinary<object::ObjectFile>
     getObjectForDebug(const object::ObjectFile &Obj) const = 0;

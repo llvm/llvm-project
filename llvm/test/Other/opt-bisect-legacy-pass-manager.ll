@@ -154,3 +154,25 @@ bb.true:
 bb.false:
   ret i32 0
 }
+
+; This function is here to verify that opt-bisect can skip all passes for
+; functions that contain lifetime intrinsics.
+define void @f4() {
+entry:
+  %i = alloca i32, align 4
+  %tmp = bitcast i32* %i to i8*
+  call void @llvm.lifetime.start(i64 4, i8* %tmp)
+  br label %for.cond
+
+for.cond:
+  br i1 undef, label %for.body, label %for.end
+
+for.body:
+  br label %for.cond
+
+for.end:
+  ret void
+}
+
+declare void @llvm.lifetime.start(i64, i8* nocapture)
+

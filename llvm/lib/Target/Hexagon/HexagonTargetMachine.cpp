@@ -195,15 +195,7 @@ namespace {
 class HexagonPassConfig : public TargetPassConfig {
 public:
   HexagonPassConfig(HexagonTargetMachine *TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {
-    bool NoOpt = (TM->getOptLevel() == CodeGenOpt::None);
-    if (!NoOpt) {
-      if (EnableExpandCondsets) {
-        Pass *Exp = createHexagonExpandCondsets();
-        insertPass(&RegisterCoalescerID, IdentifyingPassPtr(Exp));
-      }
-    }
-  }
+    : TargetPassConfig(TM, PM) {}
 
   HexagonTargetMachine &getHexagonTargetMachine() const {
     return getTM<HexagonTargetMachine>();
@@ -276,6 +268,10 @@ bool HexagonPassConfig::addInstSelector() {
 
 void HexagonPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOpt::None) {
+    if (EnableExpandCondsets) {
+      Pass *Exp = createHexagonExpandCondsets();
+      insertPass(&RegisterCoalescerID, IdentifyingPassPtr(Exp));
+    }
     if (!DisableStoreWidening)
       addPass(createHexagonStoreWidening(), false);
     if (!DisableHardwareLoops)

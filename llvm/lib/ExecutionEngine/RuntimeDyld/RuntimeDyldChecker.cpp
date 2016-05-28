@@ -7,16 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "RuntimeDyldCheckerImpl.h"
 #include "RuntimeDyldImpl.h"
-#include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Path.h"
 #include <cctype>
 #include <memory>
+#include <utility>
 
 #define DEBUG_TYPE "rtdyld"
 
@@ -97,7 +98,8 @@ private:
   public:
     EvalResult() : Value(0), ErrorMsg("") {}
     EvalResult(uint64_t Value) : Value(Value), ErrorMsg("") {}
-    EvalResult(std::string ErrorMsg) : Value(0), ErrorMsg(ErrorMsg) {}
+    EvalResult(std::string ErrorMsg)
+        : Value(0), ErrorMsg(std::move(ErrorMsg)) {}
     uint64_t getValue() const { return Value; }
     bool hasError() const { return ErrorMsg != ""; }
     const std::string &getErrorMsg() const { return ErrorMsg; }

@@ -102,7 +102,8 @@ ModulePass *createInstrProfilingLegacyPass(
 
 // Insert AddressSanitizer (address sanity checking) instrumentation
 FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false,
-                                                 bool Recover = false);
+                                                 bool Recover = false,
+                                                 bool UseAfterScope = false);
 ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
                                              bool Recover = false);
 

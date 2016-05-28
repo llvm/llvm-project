@@ -343,8 +343,10 @@ findBaseDefiningValueOfVector(Value *I) {
     return BaseDefiningValueResult(I, true);
 
   if (isa<Constant>(I))
-    // Constant vectors consist only of constant pointers.
-    return BaseDefiningValueResult(I, true);
+    // Base of constant vector consists only of constant null pointers. 
+    // For reasoning see similar case inside 'findBaseDefiningValue' function.
+    return BaseDefiningValueResult(ConstantAggregateZero::get(I->getType()),
+                                   true);
 
   if (isa<LoadInst>(I))
     return BaseDefiningValueResult(I, true);
@@ -386,14 +388,20 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
     // We should have never reached here if this argument isn't an gc value
     return BaseDefiningValueResult(I, true);
 
-  if (isa<Constant>(I))
+  if (isa<Constant>(I)) {
     // We assume that objects with a constant base (e.g. a global) can't move
     // and don't need to be reported to the collector because they are always
-    // live.  All constants have constant bases.  Besides global references, all
-    // kinds of constants (e.g. undef, constant expressions, null pointers) can
-    // be introduced by the inliner or the optimizer, especially on dynamically
-    // dead paths.  See e.g. test4 in constants.ll.
-    return BaseDefiningValueResult(I, true);
+    // live. Besides global references, all kinds of constants (e.g. undef, 
+    // constant expressions, null pointers) can be introduced by the inliner or
+    // the optimizer, especially on dynamically dead paths.
+    // Here we treat all of them as having single null base. By doing this we
+    // trying to avoid problems reporting various conflicts in a form of 
+    // "phi (const1, const2)" or "phi (const, regular gc ptr)".
+    // See constant.ll file for relevant test cases.
+
+    return BaseDefiningValueResult(
+        ConstantPointerNull::get(cast<PointerType>(I->getType())), true);
+  }
 
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Def = CI->stripPointerCasts();

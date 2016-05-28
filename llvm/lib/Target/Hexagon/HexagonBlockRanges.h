@@ -28,9 +28,6 @@ namespace llvm {
   class TargetRegisterClass;
   class TargetRegisterInfo;
   class Type;
-}
-
-using namespace llvm;
 
 struct HexagonBlockRanges {
   HexagonBlockRanges(MachineFunction &MF);
@@ -236,5 +233,7 @@ raw_ostream &operator<< (raw_ostream &OS,
       const HexagonBlockRanges::InstrIndexMap &M);
 raw_ostream &operator<< (raw_ostream &OS,
       const HexagonBlockRanges::PrintRangeMap &P);
+
+} // namespace llvm
 
 #endif

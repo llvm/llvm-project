@@ -2396,7 +2396,8 @@ const char *GenericSchedulerBase::getReasonStr(
   GenericSchedulerBase::CandReason Reason) {
   switch (Reason) {
   case NoCand:         return "NOCAND    ";
-  case PhysRegCopy:    return "PREG-COPY";
+  case Only1:          return "ONLY1     ";
+  case PhysRegCopy:    return "PREG-COPY ";
   case RegExcess:      return "REG-EXCESS";
   case RegCritical:    return "REG-CRIT  ";
   case Stall:          return "STALL     ";
@@ -2528,10 +2529,14 @@ static bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
   return false;
 }
 
+static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop) {
+  DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
+        << GenericSchedulerBase::getReasonStr(Reason) << '\n');
+}
+
 static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand,
                       bool IsTop) {
-  DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
-        << GenericSchedulerBase::getReasonStr(Cand.Reason) << '\n');
+  tracePick(Cand.Reason, IsTop);
 }
 
 void GenericScheduler::initialize(ScheduleDAGMI *dag) {
@@ -2917,12 +2922,12 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    DEBUG(dbgs() << "Pick Bot ONLY1\n");
+    tracePick(Only1, false);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    DEBUG(dbgs() << "Pick Top ONLY1\n");
+    tracePick(Only1, true);
     return SU;
   }
   CandPolicy NoPolicy;
@@ -3187,7 +3192,9 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   SUnit *SU;
   do {
     SU = Top.pickOnlyChoice();
-    if (!SU) {
+    if (SU) {
+      tracePick(Only1, true);
+    } else {
       CandPolicy NoPolicy;
       SchedCandidate TopCand(NoPolicy);
       // Set the top-down policy based on the state of the current top zone and

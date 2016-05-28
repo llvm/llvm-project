@@ -37,6 +37,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
+#include <utility>
 
 using namespace llvm;
 
@@ -5730,13 +5731,13 @@ std::error_code ModuleSummaryIndexBitcodeReader::error(BitcodeError E) {
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
     bool CheckGlobalValSummaryPresenceOnly)
-    : DiagnosticHandler(DiagnosticHandler), Buffer(Buffer),
+    : DiagnosticHandler(std::move(DiagnosticHandler)), Buffer(Buffer),
       CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     DiagnosticHandlerFunction DiagnosticHandler,
     bool CheckGlobalValSummaryPresenceOnly)
-    : DiagnosticHandler(DiagnosticHandler), Buffer(nullptr),
+    : DiagnosticHandler(std::move(DiagnosticHandler)), Buffer(nullptr),
       CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
 
 void ModuleSummaryIndexBitcodeReader::freeState() { Buffer = nullptr; }

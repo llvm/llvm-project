@@ -1367,7 +1367,7 @@ defm V_FREXP_MANT_F64 : VOP1Inst <vop1<0x3d, 0x31>, "v_frexp_mant_f64",
 >;
 
 defm V_FRACT_F64 : VOP1Inst <vop1<0x3e, 0x32>, "v_fract_f64",
-  VOP_F64_F64
+  VOP_F64_F64, AMDGPUfract
 >;
 } // End SchedRW = [WriteDoubleAdd]
 
@@ -2469,7 +2469,22 @@ let Predicates = [UnsafeFPMath] in {
 
 def : RsqPat<V_RSQ_F32_e32, f32>;
 def : RsqPat<V_RSQ_F64_e32, f64>;
-}
+
+// Convert (x - floor(x)) to fract(x)
+def : Pat <
+  (f32 (fsub (f32 (VOP3Mods f32:$x, i32:$mods)),
+             (f32 (ffloor (f32 (VOP3Mods f32:$x, i32:$mods)))))),
+  (V_FRACT_F32_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+// Convert (x + (-floor(x))) to fract(x)
+def : Pat <
+  (f64 (fadd (f64 (VOP3Mods f64:$x, i32:$mods)),
+             (f64 (fneg (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))))))),
+  (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+} // End Predicates = [UnsafeFPMath]
 
 //===----------------------------------------------------------------------===//
 // VOP2 Patterns
@@ -3548,21 +3563,6 @@ let Predicates = [isSI] in {
 // way to implement it is using V_FRACT_F64.
 // The workaround for the V_FRACT bug is:
 //    fract(x) = isnan(x) ? x : min(V_FRACT(x), 0.99999999999999999)
-
-// Convert (x + (-floor(x)) to fract(x)
-def : Pat <
-  (f64 (fadd (f64 (VOP3Mods f64:$x, i32:$mods)),
-             (f64 (fneg (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))))))),
-  (V_CNDMASK_B64_PSEUDO
-      (V_MIN_F64
-          SRCMODS.NONE,
-          (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE),
-          SRCMODS.NONE,
-          (V_MOV_B64_PSEUDO 0x3fefffffffffffff),
-          DSTCLAMP.NONE, DSTOMOD.NONE),
-      $x,
-      (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, 3/*NaN*/))
->;
 
 // Convert floor(x) to (x - fract(x))
 def : Pat <

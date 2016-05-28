@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cassert>
 #include <map>
+#include <utility>
 #include <vector>
 using namespace llvm;
 
@@ -605,7 +606,8 @@ class IAPrinter {
   std::string Result;
   std::string AsmString;
 public:
-  IAPrinter(std::string R, std::string AS) : Result(R), AsmString(AS) {}
+  IAPrinter(std::string R, std::string AS)
+      : Result(std::move(R)), AsmString(std::move(AS)) {}
 
   void addCond(const std::string &C) { Conds.push_back(C); }
 

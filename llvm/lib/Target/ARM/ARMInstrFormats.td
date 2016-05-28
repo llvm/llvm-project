@@ -1388,11 +1388,6 @@ class T2Ipostldst<bit signed, bits<2> opcod, bit load, bit pre,
   let DecoderMethod = "DecodeT2LdStPre";
 }
 
-// Tv5Pat - Same as Pat<>, but requires V5T Thumb mode.
-class Tv5Pat<dag pattern, dag result> : Pat<pattern, result> {
-  list<Predicate> Predicates = [IsThumb, IsThumb1Only, HasV5T];
-}
-
 // T1Pat - Same as Pat<>, but requires that the compiler be in Thumb1 mode.
 class T1Pat<dag pattern, dag result> : Pat<pattern, result> {
   list<Predicate> Predicates = [IsThumb, IsThumb1Only];

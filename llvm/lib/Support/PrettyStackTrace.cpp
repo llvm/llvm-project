@@ -178,7 +178,8 @@ const void *llvm::SavePrettyStackState() {
 
 void llvm::RestorePrettyStackState(const void *Top) {
 #if defined(HAVE_BACKTRACE) && defined(ENABLE_BACKTRACES)
-  PrettyStackTraceHead = (PrettyStackTraceEntry*)Top;
+  PrettyStackTraceHead =
+      static_cast<PrettyStackTraceEntry *>(const_cast<void *>(Top));
 #endif
 }
 

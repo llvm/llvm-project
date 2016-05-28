@@ -34,6 +34,7 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
+#include <utility>
 
 using namespace llvm;
 
@@ -177,7 +178,7 @@ namespace {
   public:
     static char ID;
     IfConverter(std::function<bool(const Function &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), FnNum(-1), PredicateFtor(Ftor) {
+        : MachineFunctionPass(ID), FnNum(-1), PredicateFtor(std::move(Ftor)) {
       initializeIfConverterPass(*PassRegistry::getPassRegistry());
     }
 

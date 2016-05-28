@@ -762,7 +762,7 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, 
         Parser.Lex();
         RegWidth = 1;
       } else {
-        // Range of registers: v[XX:YY].
+        // Range of registers: v[XX:YY]. ":YY" is optional.
         Parser.Lex();
         int64_t RegLo, RegHi;
         if (getLexer().isNot(AsmToken::LBrac)) { return false; }
@@ -770,14 +770,18 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind& RegKind, unsigned& Reg, 
 
         if (getParser().parseAbsoluteExpression(RegLo)) { return false; }
 
-        if (getLexer().isNot(AsmToken::Colon)) { return false; }
+        const bool isRBrace = getLexer().is(AsmToken::RBrac);
+        if (!isRBrace && getLexer().isNot(AsmToken::Colon)) { return false; }
         Parser.Lex();
 
-        if (getParser().parseAbsoluteExpression(RegHi)) { return false; }
+        if (isRBrace) {
+          RegHi = RegLo;
+        } else {
+          if (getParser().parseAbsoluteExpression(RegHi)) { return false; }
 
-        if (getLexer().isNot(AsmToken::RBrac)) { return false; }
-        Parser.Lex();
-
+          if (getLexer().isNot(AsmToken::RBrac)) { return false; }
+          Parser.Lex();
+        }
         RegNum = (unsigned) RegLo;
         RegWidth = (RegHi - RegLo) + 1;
       }

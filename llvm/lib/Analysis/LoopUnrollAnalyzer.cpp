@@ -141,6 +141,12 @@ bool UnrolledInstAnalyzer::visitCastInst(CastInst &I) {
   Constant *COp = dyn_cast<Constant>(I.getOperand(0));
   if (!COp)
     COp = SimplifiedValues.lookup(I.getOperand(0));
+
+  // If we know a simplified value for this operand and cast is valid, save the
+  // result to SimplifiedValues.
+  // The cast can be invalid, because SimplifiedValues contains results of SCEV
+  // analysis, which operates on integers (and, e.g., might convert i8* null to
+  // i32 0).
   if (COp && CastInst::castIsValid(I.getOpcode(), COp, I.getType())) {
     if (Constant *C =
             ConstantExpr::getCast(I.getOpcode(), COp, I.getType())) {

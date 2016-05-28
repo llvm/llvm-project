@@ -212,8 +212,6 @@
 #include <set>
 #include <vector>
 
-using namespace llvm;
-
 namespace llvm {
   class MachineBasicBlock;
   class MachineFunction;
@@ -223,7 +221,6 @@ namespace llvm {
   class MachineDominatorTree;
   class TargetInstrInfo;
   class TargetRegisterInfo;
-}
 
 namespace rdf {
   typedef uint32_t NodeId;
@@ -858,5 +855,6 @@ namespace rdf {
       : Print<NodeAddr<T>>(x, g) {}
   };
 } // namespace rdf
+} // namespace llvm
 
 #endif // RDF_GRAPH_H

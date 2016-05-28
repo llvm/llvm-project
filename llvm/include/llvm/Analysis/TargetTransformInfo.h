@@ -280,9 +280,14 @@ public:
     /// loop body even when the number of loop iterations is not known at
     /// compile time).
     bool Runtime;
+    /// Allow generation of a loop remainder (extra iterations after unroll).
+    bool AllowRemainder;
     /// Allow emitting expensive instructions (such as divisions) when computing
     /// the trip count of a loop for runtime unrolling.
     bool AllowExpensiveTripCount;
+    /// Apply loop unroll on any kind of loop
+    /// (mainly to loops that fail runtime unrolling).
+    bool Force;
   };
 
   /// \brief Get target-customized preferences for the generic loop unrolling

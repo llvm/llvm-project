@@ -17,17 +17,10 @@ using namespace llvm::codeview;
 
 StreamReader::StreamReader(const StreamInterface &S) : Stream(S), Offset(0) {}
 
-Error StreamReader::readBytes(uint32_t Size, ArrayRef<uint8_t> &Buffer) {
+Error StreamReader::readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size) {
   if (auto EC = Stream.readBytes(Offset, Size, Buffer))
     return EC;
   Offset += Size;
-  return Error::success();
-}
-
-Error StreamReader::readBytes(MutableArrayRef<uint8_t> Buffer) {
-  if (auto EC = Stream.readBytes(Offset, Buffer))
-    return EC;
-  Offset += Buffer.size();
   return Error::success();
 }
 
@@ -63,7 +56,7 @@ Error StreamReader::readZeroString(StringRef &Dest) {
   setOffset(OriginalOffset);
 
   ArrayRef<uint8_t> Data;
-  if (auto EC = readBytes(Length, Data))
+  if (auto EC = readBytes(Data, Length))
     return EC;
   Dest = StringRef(reinterpret_cast<const char *>(Data.begin()), Data.size());
 
@@ -74,7 +67,7 @@ Error StreamReader::readZeroString(StringRef &Dest) {
 
 Error StreamReader::readFixedString(StringRef &Dest, uint32_t Length) {
   ArrayRef<uint8_t> Bytes;
-  if (auto EC = readBytes(Length, Bytes))
+  if (auto EC = readBytes(Bytes, Length))
     return EC;
   Dest = StringRef(reinterpret_cast<const char *>(Bytes.begin()), Bytes.size());
   return Error::success();

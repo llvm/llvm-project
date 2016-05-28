@@ -1,6 +1,6 @@
 ; RUN: opt < %s -rewrite-statepoints-for-gc -spp-print-base-pointers -S 2>&1 | FileCheck %s
 
-; CHECK: derived %select base @global
+; CHECK: derived %select base null
 
 @global = external addrspace(1) global i8
 

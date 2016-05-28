@@ -5,6 +5,9 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/fnptr.prof | opt -analyze -branch-prob | FileCheck %s
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/fnptr.binprof | opt -analyze -branch-prob | FileCheck %s
 
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/fnptr.binprof | opt -analyze -branch-prob | FileCheck %s
+
 ; CHECK:   edge for.body3 -> if.then probability is 0x1a4f3959 / 0x80000000 = 20.55%
 ; CHECK:   edge for.body3 -> if.else probability is 0x65b0c6a7 / 0x80000000 = 79.45%
 ; CHECK:   edge for.inc -> for.inc12 probability is 0x33d4a4c1 / 0x80000000 = 40.49%

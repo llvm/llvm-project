@@ -1404,11 +1404,6 @@ def : T1Pat<(ARMWrapperJT tjumptable:$dst),
 def : T1Pat<(ARMcall texternalsym:$func), (tBL texternalsym:$func)>,
       Requires<[IsThumb]>;
 
-
-// Indirect calls to ARM routines
-def : Tv5Pat<(ARMcall GPR:$dst), (tBLXr GPR:$dst)>,
-      Requires<[IsThumb, HasV5T]>;
-
 // zextload i1 -> zextload i8
 def : T1Pat<(zextloadi1 t_addrmode_is1:$addr),
             (tLDRBi t_addrmode_is1:$addr)>;

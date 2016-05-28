@@ -53,7 +53,6 @@ namespace {
     void printOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
     void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &OS,
                          const char *Modifier = nullptr);
-    void printCCOperand(const MachineInstr *MI, int opNum, raw_ostream &OS);
 
     void EmitFunctionBodyStart() override;
     void EmitInstruction(const MachineInstr *MI) override;

@@ -22,6 +22,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/SampleProfile.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -34,8 +35,8 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -48,7 +49,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <cctype>
 
@@ -102,29 +102,16 @@ typedef DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>
 /// This pass reads profile data from the file specified by
 /// -sample-profile-file and annotates every affected function with the
 /// profile information found in that file.
-class SampleProfileLoader : public ModulePass {
+class SampleProfileLoader {
 public:
-  // Class identification, replacement for typeinfo
-  static char ID;
-
   SampleProfileLoader(StringRef Name = SampleProfileFile)
-      : ModulePass(ID), DT(nullptr), PDT(nullptr), LI(nullptr), Reader(),
-        Samples(nullptr), Filename(Name), ProfileIsValid(false),
-        TotalCollectedSamples(0) {
-    initializeSampleProfileLoaderPass(*PassRegistry::getPassRegistry());
-  }
+      : DT(nullptr), PDT(nullptr), LI(nullptr), Reader(), Samples(nullptr),
+        Filename(Name), ProfileIsValid(false), TotalCollectedSamples(0) {}
 
-  bool doInitialization(Module &M) override;
+  bool doInitialization(Module &M);
+  bool runOnModule(Module &M);
 
   void dump() { Reader->dump(); }
-
-  const char *getPassName() const override { return "Sample profile pass"; }
-
-  bool runOnModule(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<InstructionCombiningPass>();
-  }
 
 protected:
   bool runOnFunction(Function &F);
@@ -205,6 +192,29 @@ protected:
   /// This is the sum of all the samples collected in all the functions executed
   /// at runtime.
   uint64_t TotalCollectedSamples;
+};
+
+class SampleProfileLoaderLegacyPass : public ModulePass {
+public:
+  // Class identification, replacement for typeinfo
+  static char ID;
+
+  SampleProfileLoaderLegacyPass(StringRef Name = SampleProfileFile)
+      : ModulePass(ID), SampleLoader(Name) {
+    initializeSampleProfileLoaderLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  void dump() { SampleLoader.dump(); }
+
+  bool doInitialization(Module &M) override {
+    return SampleLoader.doInitialization(M);
+  }
+  const char *getPassName() const override { return "Sample profile pass"; }
+  bool runOnModule(Module &M) override;
+
+private:
+  SampleProfileLoader SampleLoader;
 };
 
 class SampleCoverageTracker {
@@ -445,7 +455,7 @@ void SampleProfileLoader::printBlockWeight(raw_ostream &OS,
 /// \returns the weight of \p Inst.
 ErrorOr<uint64_t>
 SampleProfileLoader::getInstWeight(const Instruction &Inst) const {
-  DebugLoc DLoc = Inst.getDebugLoc();
+  const DebugLoc &DLoc = Inst.getDebugLoc();
   if (!DLoc)
     return std::error_code();
 
@@ -1215,13 +1225,9 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
   return Changed;
 }
 
-char SampleProfileLoader::ID = 0;
-INITIALIZE_PASS_BEGIN(SampleProfileLoader, "sample-profile",
-                      "Sample Profile loader", false, false)
-INITIALIZE_PASS_DEPENDENCY(AddDiscriminators)
-INITIALIZE_PASS_DEPENDENCY(InstructionCombiningPass)
-INITIALIZE_PASS_END(SampleProfileLoader, "sample-profile",
-                    "Sample Profile loader", false, false)
+char SampleProfileLoaderLegacyPass::ID = 0;
+INITIALIZE_PASS(SampleProfileLoaderLegacyPass, "sample-profile",
+                "Sample Profile loader", false, false)
 
 bool SampleProfileLoader::doInitialization(Module &M) {
   auto &Ctx = M.getContext();
@@ -1237,11 +1243,11 @@ bool SampleProfileLoader::doInitialization(Module &M) {
 }
 
 ModulePass *llvm::createSampleProfileLoaderPass() {
-  return new SampleProfileLoader(SampleProfileFile);
+  return new SampleProfileLoaderLegacyPass(SampleProfileFile);
 }
 
 ModulePass *llvm::createSampleProfileLoaderPass(StringRef Name) {
-  return new SampleProfileLoader(Name);
+  return new SampleProfileLoaderLegacyPass(Name);
 }
 
 bool SampleProfileLoader::runOnModule(Module &M) {
@@ -1261,11 +1267,27 @@ bool SampleProfileLoader::runOnModule(Module &M) {
   return retval;
 }
 
+bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
+  return SampleLoader.runOnModule(M);
+}
+
 bool SampleProfileLoader::runOnFunction(Function &F) {
   F.setEntryCount(0);
-  getAnalysis<InstructionCombiningPass>(F);
   Samples = Reader->getSamplesFor(F);
   if (!Samples->empty())
     return emitAnnotations(F);
   return false;
+}
+
+PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
+                                               AnalysisManager<Module> &AM) {
+
+  SampleProfileLoader SampleLoader(SampleProfileFile);
+
+  SampleLoader.doInitialization(M);
+
+  if (!SampleLoader.runOnModule(M))
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
 }

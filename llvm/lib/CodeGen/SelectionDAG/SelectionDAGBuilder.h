@@ -22,10 +22,11 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLowering.h"
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -101,8 +102,8 @@ class SelectionDAGBuilder {
     unsigned SDNodeOrder;
   public:
     DanglingDebugInfo() : DI(nullptr), dl(DebugLoc()), SDNodeOrder(0) { }
-    DanglingDebugInfo(const DbgValueInst *di, DebugLoc DL, unsigned SDNO) :
-      DI(di), dl(DL), SDNodeOrder(SDNO) { }
+    DanglingDebugInfo(const DbgValueInst *di, DebugLoc DL, unsigned SDNO)
+        : DI(di), dl(std::move(DL)), SDNodeOrder(SDNO) {}
     const DbgValueInst* getDI() { return DI; }
     DebugLoc getdl() { return dl; }
     unsigned getSDNodeOrder() { return SDNodeOrder; }
@@ -260,8 +261,9 @@ private:
   };
   struct JumpTableHeader {
     JumpTableHeader(APInt F, APInt L, const Value *SV, MachineBasicBlock *H,
-                    bool E = false):
-      First(F), Last(L), SValue(SV), HeaderBB(H), Emitted(E) {}
+                    bool E = false)
+        : First(std::move(F)), Last(std::move(L)), SValue(SV), HeaderBB(H),
+          Emitted(E) {}
     APInt First;
     APInt Last;
     const Value *SValue;
@@ -286,9 +288,9 @@ private:
     BitTestBlock(APInt F, APInt R, const Value *SV, unsigned Rg, MVT RgVT,
                  bool E, bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
                  BitTestInfo C, BranchProbability Pr)
-        : First(F), Range(R), SValue(SV), Reg(Rg), RegVT(RgVT), Emitted(E),
-          ContiguousRange(CR), Parent(P), Default(D), Cases(std::move(C)),
-          Prob(Pr) {}
+        : First(std::move(F)), Range(std::move(R)), SValue(SV), Reg(Rg),
+          RegVT(RgVT), Emitted(E), ContiguousRange(CR), Parent(P), Default(D),
+          Cases(std::move(C)), Prob(Pr) {}
     APInt First;
     APInt Range;
     const Value *SValue;

@@ -1607,8 +1607,8 @@ unsigned AArch64FastISel::emitLogicalOp(unsigned ISDOpc, MVT RetVT,
 unsigned AArch64FastISel::emitLogicalOp_ri(unsigned ISDOpc, MVT RetVT,
                                            unsigned LHSReg, bool LHSIsKill,
                                            uint64_t Imm) {
-  assert((ISD::AND + 1 == ISD::OR) && (ISD::AND + 2 == ISD::XOR) &&
-         "ISD nodes are not consecutive!");
+  static_assert((ISD::AND + 1 == ISD::OR) && (ISD::AND + 2 == ISD::XOR),
+                "ISD nodes are not consecutive!");
   static const unsigned OpcTable[3][2] = {
     { AArch64::ANDWri, AArch64::ANDXri },
     { AArch64::ORRWri, AArch64::ORRXri },
@@ -1654,8 +1654,8 @@ unsigned AArch64FastISel::emitLogicalOp_rs(unsigned ISDOpc, MVT RetVT,
                                            unsigned LHSReg, bool LHSIsKill,
                                            unsigned RHSReg, bool RHSIsKill,
                                            uint64_t ShiftImm) {
-  assert((ISD::AND + 1 == ISD::OR) && (ISD::AND + 2 == ISD::XOR) &&
-         "ISD nodes are not consecutive!");
+  static_assert((ISD::AND + 1 == ISD::OR) && (ISD::AND + 2 == ISD::XOR),
+                "ISD nodes are not consecutive!");
   static const unsigned OpcTable[3][2] = {
     { AArch64::ANDWrs, AArch64::ANDXrs },
     { AArch64::ORRWrs, AArch64::ORRXrs },

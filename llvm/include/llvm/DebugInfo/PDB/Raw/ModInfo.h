@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include <cstdint>
 #include <vector>
@@ -23,9 +24,11 @@ private:
   struct FileLayout;
 
 public:
-  ModInfo(codeview::StreamRef Stream);
+  ModInfo();
   ModInfo(const ModInfo &Info);
   ~ModInfo();
+
+  static Error initialize(codeview::StreamRef Stream, ModInfo &Info);
 
   bool hasECInfo() const;
   uint16_t getTypeServerIndex() const;
@@ -49,7 +52,7 @@ private:
 };
 
 struct ModuleInfoEx {
-  ModuleInfoEx(codeview::StreamRef Stream) : Info(Stream) {}
+  ModuleInfoEx(const ModInfo &Info) : Info(Info) {}
   ModuleInfoEx(const ModuleInfoEx &Ex)
       : Info(Ex.Info), SourceFiles(Ex.SourceFiles) {}
 
@@ -57,11 +60,20 @@ struct ModuleInfoEx {
   std::vector<StringRef> SourceFiles;
 };
 
-inline uint32_t ModInfoRecordLength(const codeview::StreamInterface &Stream) {
-  return ModInfo(Stream).getRecordLength();
+} // end namespace pdb
+
+namespace codeview {
+template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
+  Error operator()(const StreamInterface &Stream, uint32_t &Length,
+                   pdb::ModInfo &Info) const {
+    if (auto EC = pdb::ModInfo::initialize(Stream, Info))
+      return EC;
+    Length = Info.getRecordLength();
+    return Error::success();
+  }
+};
 }
 
-} // end namespace pdb
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_PDB_RAW_MODINFO_H

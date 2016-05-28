@@ -26,9 +26,9 @@ MappedBlockStream::MappedBlockStream(uint32_t StreamIdx, const PDBFile &File) : 
 Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
                                    ArrayRef<uint8_t> &Buffer) const {
   // Make sure we aren't trying to read beyond the end of the stream.
-  if (Buffer.size() > StreamLength)
+  if (Size > StreamLength)
     return make_error<RawError>(raw_error_code::insufficient_buffer);
-  if (Offset > StreamLength - Buffer.size())
+  if (Offset > StreamLength - Size)
     return make_error<RawError>(raw_error_code::insufficient_buffer);
 
   if (tryReadContiguously(Offset, Size, Buffer))

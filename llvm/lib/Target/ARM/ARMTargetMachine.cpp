@@ -177,6 +177,11 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   if (!RM.hasValue())
     // Default relocation model on Darwin is PIC, not DynamicNoPIC.
     return TT.isOSDarwin() ? Reloc::PIC_ : Reloc::DynamicNoPIC;
+
+  // DynamicNoPIC is only used on darwin.
+  if (*RM == Reloc::DynamicNoPIC && !TT.isOSDarwin())
+    return Reloc::Static;
+
   return *RM;
 }
 

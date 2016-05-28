@@ -1,4 +1,5 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/remarks.prof -S -pass-remarks=sample-profile 2>&1 | FileCheck %s
 ;
 ; Original test case.
 ;

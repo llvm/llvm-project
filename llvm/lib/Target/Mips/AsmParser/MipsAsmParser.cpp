@@ -438,7 +438,7 @@ public:
     IsCpRestoreSet = false;
     CpRestoreOffset = -1;
 
-    Triple TheTriple(sti.getTargetTriple());
+    const Triple &TheTriple = sti.getTargetTriple();
     if ((TheTriple.getArch() == Triple::mips) ||
         (TheTriple.getArch() == Triple::mips64))
       IsLittleEndian = false;
@@ -1073,11 +1073,15 @@ public:
   bool isConstantMemOff() const {
     return isMem() && isa<MCConstantExpr>(getMemOff());
   }
+  // Allow relocation operators.
+  // FIXME: This predicate and others need to look through binary expressions
+  //        and determine whether a Value is a constant or not.
   template <unsigned Bits, unsigned ShiftAmount = 0>
   bool isMemWithSimmOffset() const {
-    return isMem() && isConstantMemOff() &&
-           isShiftedInt<Bits, ShiftAmount>(getConstantMemOff()) &&
-           getMemBase()->isGPRAsmReg();
+    return isMem() && getMemBase()->isGPRAsmReg() &&
+           (isa<MCTargetExpr>(getMemOff()) ||
+            (isConstantMemOff() &&
+             isShiftedInt<Bits, ShiftAmount>(getConstantMemOff())));
   }
   bool isMemWithGRPMM16Base() const {
     return isMem() && getMemBase()->isMM16AsmReg();

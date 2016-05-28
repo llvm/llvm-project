@@ -20,9 +20,9 @@
 #include "Sparc.h"
 #include "SparcSubtarget.h"
 
-using namespace llvm;
-
-class LEONMachineFunctionPass : public MachineFunctionPass {
+namespace llvm {
+class LLVM_LIBRARY_VISIBILITY LEONMachineFunctionPass
+    : public MachineFunctionPass {
 protected:
   const SparcSubtarget *Subtarget;
 
@@ -31,7 +31,7 @@ protected:
   LEONMachineFunctionPass(char& ID);
 };
 
-class InsertNOPLoad : public LEONMachineFunctionPass {
+class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
 public:
   static char ID;
 
@@ -42,5 +42,6 @@ public:
     return "InsertNOPLoad: Erratum Fix LBR35: insert a NOP instruction after every single-cycle load instruction when the next instruction is another load/store instruction";
   }
 };
+} // namespace llvm
 
 #endif

@@ -106,15 +106,17 @@ Error PublicsStream::reload() {
                                 "Invalid HR array size.");
   uint32_t NumHashRecords = HashHdr->HrSize / sizeof(PSHashRecord);
   if (auto EC = Reader.readArray(HashRecords, NumHashRecords))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Could not read an HR array");
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Could not read an HR array"));
 
   // A bitmap of a fixed length follows.
   size_t BitmapSizeInBits = alignTo(IPHR_HASH + 1, 32);
   uint32_t NumBitmapEntries = BitmapSizeInBits / 8;
-  if (auto EC = Reader.readBytes(NumBitmapEntries, Bitmap))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Could not read a bitmap.");
+  if (auto EC = Reader.readBytes(Bitmap, NumBitmapEntries))
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Could not read a bitmap."));
   for (uint8_t B : Bitmap)
     NumBuckets += countPopulation(B);
 
@@ -125,24 +127,28 @@ Error PublicsStream::reload() {
 
   // Hash buckets follow.
   if (auto EC = Reader.readArray(HashBuckets, NumBuckets))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Hash buckets corrupted.");
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Hash buckets corrupted."));
 
   // Something called "address map" follows.
   uint32_t NumAddressMapEntries = Header->AddrMap / sizeof(uint32_t);
   if (auto EC = Reader.readArray(AddressMap, NumAddressMapEntries))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Could not read an address map.");
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Could not read an address map."));
 
   // Something called "thunk map" follows.
   if (auto EC = Reader.readArray(ThunkMap, Header->NumThunks))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Could not read a thunk map.");
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Could not read a thunk map."));
 
   // Something called "section map" follows.
   if (auto EC = Reader.readArray(SectionOffsets, Header->NumSections))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Could not read a section map.");
+    return joinErrors(std::move(EC),
+                      make_error<RawError>(raw_error_code::corrupt_file,
+                                           "Could not read a section map."));
 
   if (Reader.bytesRemaining() > 0)
     return make_error<RawError>(raw_error_code::corrupt_file,
@@ -150,13 +156,14 @@ Error PublicsStream::reload() {
   return Error::success();
 }
 
-iterator_range<codeview::SymbolIterator> PublicsStream::getSymbols() const {
-  using codeview::SymbolIterator;
+iterator_range<codeview::CVSymbolArray::Iterator>
+PublicsStream::getSymbols(bool *HadError) const {
   auto SymbolS = Pdb.getPDBSymbolStream();
   if (SymbolS.takeError()) {
-    return llvm::make_range<SymbolIterator>(SymbolIterator(), SymbolIterator());
+    codeview::CVSymbolArray::Iterator Iter;
+    return llvm::make_range(Iter, Iter);
   }
   SymbolStream &SS = SymbolS.get();
 
-  return SS.getSymbols();
+  return SS.getSymbols(HadError);
 }

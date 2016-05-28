@@ -28,8 +28,6 @@ class StreamInterface {
 public:
   virtual ~StreamInterface() {}
 
-  virtual Error readBytes(uint32_t Offset,
-                          MutableArrayRef<uint8_t> Buffer) const = 0;
   virtual Error readBytes(uint32_t Offset, uint32_t Size,
                           ArrayRef<uint8_t> &Buffer) const = 0;
 

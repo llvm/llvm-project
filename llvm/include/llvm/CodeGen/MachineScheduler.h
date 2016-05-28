@@ -764,8 +764,8 @@ public:
   /// Represent the type of SchedCandidate found within a single queue.
   /// pickNodeBidirectional depends on these listed by decreasing priority.
   enum CandReason {
-    NoCand, PhysRegCopy, RegExcess, RegCritical, Stall, Cluster, Weak, RegMax,
-    ResourceReduce, ResourceDemand, BotHeightReduce, BotPathReduce,
+    NoCand, Only1, PhysRegCopy, RegExcess, RegCritical, Stall, Cluster, Weak,
+    RegMax, ResourceReduce, ResourceDemand, BotHeightReduce, BotPathReduce,
     TopDepthReduce, TopPathReduce, NextDefUse, NodeOrder};
 
 #ifndef NDEBUG

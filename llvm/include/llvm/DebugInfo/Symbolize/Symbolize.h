@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace llvm {
 namespace symbolize {
@@ -40,7 +41,7 @@ public:
             bool RelativeAddresses = false, std::string DefaultArch = "")
         : PrintFunctions(PrintFunctions), UseSymbolTable(UseSymbolTable),
           Demangle(Demangle), RelativeAddresses(RelativeAddresses),
-          DefaultArch(DefaultArch) {}
+          DefaultArch(std::move(DefaultArch)) {}
   };
 
   LLVMSymbolizer(const Options &Opts = Options()) : Opts(Opts) {}

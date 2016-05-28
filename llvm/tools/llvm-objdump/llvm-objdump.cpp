@@ -59,6 +59,7 @@
 #include <cctype>
 #include <cstring>
 #include <system_error>
+#include <utility>
 
 using namespace llvm;
 using namespace object;
@@ -197,7 +198,7 @@ public:
   SectionFilterIterator(FilterPredicate P,
                         llvm::object::section_iterator const &I,
                         llvm::object::section_iterator const &E)
-      : Predicate(P), Iterator(I), End(E) {
+      : Predicate(std::move(P)), Iterator(I), End(E) {
     ScanPredicate();
   }
   const llvm::object::SectionRef &operator*() const { return *Iterator; }
@@ -224,7 +225,7 @@ private:
 class SectionFilter {
 public:
   SectionFilter(FilterPredicate P, llvm::object::ObjectFile const &O)
-      : Predicate(P), Object(O) {}
+      : Predicate(std::move(P)), Object(O) {}
   SectionFilterIterator begin() {
     return SectionFilterIterator(Predicate, Object.section_begin(),
                                  Object.section_end());

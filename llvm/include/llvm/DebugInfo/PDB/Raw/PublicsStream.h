@@ -12,7 +12,6 @@
 
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -37,7 +36,8 @@ public:
   uint32_t getSymHash() const;
   uint32_t getAddrMap() const;
   uint32_t getNumBuckets() const { return NumBuckets; }
-  iterator_range<codeview::SymbolIterator> getSymbols() const;
+  iterator_range<codeview::CVSymbolArray::Iterator>
+  getSymbols(bool *HadError) const;
   codeview::FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
     return HashBuckets;
   }
@@ -52,8 +52,6 @@ public:
   }
 
 private:
-  Error readSymbols();
-
   PDBFile &Pdb;
 
   uint32_t StreamNum;

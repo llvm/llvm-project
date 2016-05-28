@@ -17,6 +17,7 @@
 #include <functional>
 #include <map>
 #include <unordered_set>
+#include <utility>
 
 namespace llvm {
 class LLVMContext;
@@ -45,7 +46,7 @@ public:
   FunctionImporter(
       const ModuleSummaryIndex &Index,
       std::function<std::unique_ptr<Module>(StringRef Identifier)> ModuleLoader)
-      : Index(Index), ModuleLoader(ModuleLoader) {}
+      : Index(Index), ModuleLoader(std::move(ModuleLoader)) {}
 
   /// Import functions in Module \p M based on the supplied import list.
   /// \p ForceImportReferencedDiscardableSymbols will set the ModuleLinker in

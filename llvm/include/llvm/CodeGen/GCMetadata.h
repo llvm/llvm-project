@@ -40,6 +40,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include <memory>
+#include <utility>
 
 namespace llvm {
 class AsmPrinter;
@@ -54,7 +55,7 @@ struct GCPoint {
   DebugLoc Loc;
 
   GCPoint(GC::PointKind K, MCSymbol *L, DebugLoc DL)
-      : Kind(K), Label(L), Loc(DL) {}
+      : Kind(K), Label(L), Loc(std::move(DL)) {}
 };
 
 /// GCRoot - Metadata for a pointer to an object managed by the garbage

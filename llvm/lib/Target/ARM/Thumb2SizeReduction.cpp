@@ -18,11 +18,12 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/IR/Function.h"        // To access Function attributes
+#include "llvm/IR/Function.h" // To access Function attributes
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <utility>
 using namespace llvm;
 
 #define DEBUG_TYPE "t2-reduce-size"
@@ -213,7 +214,7 @@ namespace {
 }
 
 Thumb2SizeReduce::Thumb2SizeReduce(std::function<bool(const Function &)> Ftor)
-    : MachineFunctionPass(ID), PredicateFtor(Ftor) {
+    : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
   OptimizeSize = MinimizeSize = false;
   for (unsigned i = 0, e = array_lengthof(ReduceTable); i != e; ++i) {
     unsigned FromOpc = ReduceTable[i].WideOpc;

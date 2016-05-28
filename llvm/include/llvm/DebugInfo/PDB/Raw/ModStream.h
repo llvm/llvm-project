@@ -11,7 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MODSTREAM_H
 
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
@@ -29,14 +29,15 @@ public:
 
   Error reload();
 
-  iterator_range<codeview::SymbolIterator> symbols() const;
+  iterator_range<codeview::CVSymbolArray::Iterator>
+  symbols(bool *HadError) const;
 
 private:
   const ModInfo &Mod;
 
   MappedBlockStream Stream;
 
-  codeview::ByteStream SymbolsSubstream;
+  codeview::CVSymbolArray SymbolsSubstream;
   codeview::StreamRef LinesSubstream;
   codeview::StreamRef C13LinesSubstream;
   codeview::StreamRef GlobalRefsSubstream;

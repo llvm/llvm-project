@@ -29,10 +29,10 @@ class MDNode;
 class Pass;
 class ScalarEvolution;
 
-bool UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool AllowRuntime,
-                bool AllowExpensiveTripCount, unsigned TripMultiple,
-                LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-                AssumptionCache *AC, bool PreserveLCSSA);
+bool UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
+                bool AllowRuntime, bool AllowExpensiveTripCount,
+                unsigned TripMultiple, LoopInfo *LI, ScalarEvolution *SE,
+                DominatorTree *DT, AssumptionCache *AC, bool PreserveLCSSA);
 
 bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                 bool AllowExpensiveTripCount,

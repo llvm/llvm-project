@@ -1,4 +1,5 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/entry_counts.prof -S | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/entry_counts.prof -S | FileCheck %s
 
 ; According to the profile, function empty() was called 13,293 times.
 ; CHECK: {{.*}} = !{!"function_entry_count", i64 13293}

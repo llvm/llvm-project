@@ -175,6 +175,7 @@ void Fuzzer::StaticDeathCallback() {
 }
 
 void Fuzzer::DumpCurrentUnit(const char *Prefix) {
+  if (!CurrentUnitData) return;  // Happens when running individual inputs.
   size_t UnitSize = CurrentUnitSize;
   if (UnitSize <= kMaxUnitSizeToPrint) {
     PrintHexArray(CurrentUnitData, UnitSize, "\n");

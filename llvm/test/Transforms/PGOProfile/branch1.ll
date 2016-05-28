@@ -21,6 +21,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; GEN: @__profn_test_br_1 = private constant [9 x i8] c"test_br_1"
 
 define i32 @test_br_1(i32 %i) {
+; USE-LABEL: @test_br_1
+; USE-SAME: !prof ![[FUNC_ENTRY_COUNT:[0-9]+]]
 entry:
 ; GEN: entry:
 ; GEN-NOT: llvm.instrprof.increment
@@ -44,3 +46,4 @@ if.end:
 }
 ; USE-DAG: {{![0-9]+}} = !{i32 1, !"ProfileSummary", {{![0-9]+}}}
 ; USE-DAG: {{![0-9]+}} = !{!"DetailedSummary", {{![0-9]+}}}
+; USE-DAG: ![[FUNC_ENTRY_COUNT]] = !{!"function_entry_count", i64 3}

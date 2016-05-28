@@ -1,4 +1,5 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/calls.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/calls.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/calls.prof | opt -analyze -branch-prob | FileCheck %s
 
 ; Original C++ test case
 ;

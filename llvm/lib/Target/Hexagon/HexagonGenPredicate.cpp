@@ -155,7 +155,7 @@ unsigned HexagonGenPredicate::getPredForm(unsigned Opc) {
   // The opcode corresponding to 0 is TargetOpcode::PHI. We can use 0 here
   // to denote "none", but we need to make sure that none of the valid opcodes
   // that we return will ever be 0.
-  assert(PHI == 0 && "Use different value for <none>");
+  static_assert(PHI == 0, "Use different value for <none>");
   return 0;
 }
 

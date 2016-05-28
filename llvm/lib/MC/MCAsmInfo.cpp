@@ -108,7 +108,7 @@ MCAsmInfo::MCAsmInfo() {
   //   - The target subclasses for AArch64, ARM, and X86 handle these cases
   UseIntegratedAssembler = false;
 
-  CompressDebugSections = false;
+  CompressDebugSections = DebugCompressionType::DCT_None;
 }
 
 MCAsmInfo::~MCAsmInfo() {

@@ -70,7 +70,7 @@ void initializeAliasSetPrinterPass(PassRegistry&);
 void initializeAlwaysInlinerPass(PassRegistry&);
 void initializeArgPromotionPass(PassRegistry&);
 void initializeAtomicExpandPass(PassRegistry&);
-void initializeSampleProfileLoaderPass(PassRegistry&);
+void initializeSampleProfileLoaderLegacyPassPass(PassRegistry&);
 void initializeAlignmentFromAssumptionsPass(PassRegistry&);
 void initializeBarrierNoopPass(PassRegistry&);
 void initializeBasicAAWrapperPassPass(PassRegistry&);

@@ -129,6 +129,13 @@ def int_amdgcn_frexp_exp : Intrinsic<
   [llvm_i32_ty], [llvm_anyfloat_ty], [IntrNoMem]
 >;
 
+// v_fract is buggy on SI/CI. It mishandles infinities, may return 1.0
+// and always uses rtz, so is not suitable for implementing the OpenCL
+// fract function. It should be ok on VI.
+def int_amdgcn_fract : Intrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
+>;
+
 def int_amdgcn_class : Intrinsic<
   [llvm_i1_ty], [llvm_anyfloat_ty, llvm_i32_ty], [IntrNoMem]
 >;

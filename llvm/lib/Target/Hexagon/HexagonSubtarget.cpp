@@ -53,6 +53,10 @@ static cl::opt<bool> DisableHexagonMISched("disable-hexagon-misched",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("Disable Hexagon MI Scheduling"));
 
+static cl::opt<bool> EnableSubregLiveness("hexagon-subreg-liveness",
+  cl::Hidden, cl::ZeroOrMore, cl::init(false),
+  cl::desc("Enable subregister liveness tracking for Hexagon"));
+
 void HexagonSubtarget::initializeEnvironment() {
   UseMemOps = false;
   ModeIEEERndNear = false;
@@ -123,3 +127,8 @@ bool HexagonSubtarget::enableMachineScheduler() const {
     return !DisableHexagonMISched;
   return true;
 }
+
+bool HexagonSubtarget::enableSubRegLiveness() const {
+  return EnableSubregLiveness;
+}
+

@@ -20,6 +20,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
@@ -494,6 +495,43 @@ void MCObjectStreamer::EmitFill(uint64_t NumBytes, uint8_t FillValue) {
   (void)Sec;
   assert(Sec && "need a section");
   insert(new MCFillFragment(FillValue, NumBytes));
+}
+
+void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                                SMLoc Loc) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+
+  int64_t IntNumBytes;
+  if (!NumBytes.evaluateAsAbsolute(IntNumBytes, getAssembler())) {
+    getContext().reportError(Loc, "expected absolute expression");
+    return;
+  }
+
+  if (IntNumBytes <= 0) {
+    getContext().reportError(Loc, "invalid number of bytes");
+    return;
+  }
+
+  EmitFill(IntNumBytes, FillValue);
+}
+
+void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
+                                int64_t Expr, SMLoc Loc) {
+  int64_t IntNumValues;
+  if (!NumValues.evaluateAsAbsolute(IntNumValues, getAssembler())) {
+    getContext().reportError(Loc, "expected absolute expression");
+    return;
+  }
+
+  if (IntNumValues < 0) {
+    getContext().getSourceManager()->PrintMessage(
+        Loc, SourceMgr::DK_Warning,
+        "'.fill' directive with negative repeat count has no effect");
+    return;
+  }
+
+  MCStreamer::emitFill(IntNumValues, Size, Expr);
 }
 
 void MCObjectStreamer::FinishImpl() {

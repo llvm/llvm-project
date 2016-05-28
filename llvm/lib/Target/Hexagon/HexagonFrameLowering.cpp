@@ -222,8 +222,8 @@ namespace {
   /// Returns the callee saved register with the largest id in the vector.
   unsigned getMaxCalleeSavedReg(const std::vector<CalleeSavedInfo> &CSI,
                                 const TargetRegisterInfo &TRI) {
-    assert(Hexagon::R1 > 0 &&
-           "Assume physical registers are encoded as positive integers");
+    static_assert(Hexagon::R1 > 0,
+                  "Assume physical registers are encoded as positive integers");
     if (CSI.empty())
       return 0;
 

@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 
   // Expand any .dSYM bundles to the individual object files contained therein.
   std::vector<std::string> Objects;
-  for (auto F : InputFilenames) {
+  for (const auto &F : InputFilenames) {
     auto Objs = expandBundle(F);
     Objects.insert(Objects.end(), Objs.begin(), Objs.end());
   }

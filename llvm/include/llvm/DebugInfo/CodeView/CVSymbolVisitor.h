@@ -10,8 +10,8 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_CVSYMBOLVISITOR_H
 #define LLVM_DEBUGINFO_CODEVIEW_CVSYMBOLVISITOR_H
 
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/RecordIterator.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorDelegate.h"
 #include "llvm/Support/ErrorOr.h"
@@ -46,7 +46,7 @@ public:
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "CVSymbolTypes.def"
 
-  void visitSymbolRecord(const SymbolIterator::Record &Record) {
+  void visitSymbolRecord(const CVRecord<SymbolKind> &Record) {
     ArrayRef<uint8_t> Data = Record.Data;
     auto *DerivedThis = static_cast<Derived *>(this);
     DerivedThis->visitSymbolBegin(Record.Type, Data);
@@ -72,8 +72,8 @@ public:
   }
 
   /// Visits the symbol records in Data. Sets the error flag on parse failures.
-  void visitSymbolStream(ArrayRef<uint8_t> Data) {
-    for (const auto &I : makeSymbolRange(Data, &HadError)) {
+  void visitSymbolStream(const CVSymbolArray &Symbols) {
+    for (const auto &I : Symbols) {
       visitSymbolRecord(I);
       if (hadError())
         break;

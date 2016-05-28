@@ -45,6 +45,8 @@ std::error_code llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
   }
   switch (Short) {
   case LF_CHAR:
+    if (Data.size() < 1)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     Num = APSInt(APInt(/*numBits=*/8,
                        *reinterpret_cast<const int8_t *>(Data.data()),
                        /*isSigned=*/true),
@@ -52,6 +54,8 @@ std::error_code llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
     Data = Data.drop_front(1);
     return std::error_code();
   case LF_SHORT:
+    if (Data.size() < 2)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     Num = APSInt(APInt(/*numBits=*/16,
                        *reinterpret_cast<const little16_t *>(Data.data()),
                        /*isSigned=*/true),
@@ -59,6 +63,8 @@ std::error_code llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
     Data = Data.drop_front(2);
     return std::error_code();
   case LF_USHORT:
+    if (Data.size() < 2)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     Num = APSInt(APInt(/*numBits=*/16,
                        *reinterpret_cast<const ulittle16_t *>(Data.data()),
                        /*isSigned=*/false),
@@ -66,6 +72,8 @@ std::error_code llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
     Data = Data.drop_front(2);
     return std::error_code();
   case LF_LONG:
+    if (Data.size() < 4)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     Num = APSInt(APInt(/*numBits=*/32,
                        *reinterpret_cast<const little32_t *>(Data.data()),
                        /*isSigned=*/true),
@@ -73,6 +81,8 @@ std::error_code llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
     Data = Data.drop_front(4);
     return std::error_code();
   case LF_ULONG:
+    if (Data.size() < 4)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     Num = APSInt(APInt(/*numBits=*/32,
                        *reinterpret_cast<const ulittle32_t *>(Data.data()),
                        /*isSigned=*/FalseVal),
@@ -80,6 +90,8 @@ std::error_code llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
     Data = Data.drop_front(4);
     return std::error_code();
   case LF_QUADWORD:
+    if (Data.size() < 8)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     Num = APSInt(APInt(/*numBits=*/64,
                        *reinterpret_cast<const little64_t *>(Data.data()),
                        /*isSigned=*/true),
@@ -87,6 +99,8 @@ std::error_code llvm::codeview::consume(ArrayRef<uint8_t> &Data, APSInt &Num) {
     Data = Data.drop_front(8);
     return std::error_code();
   case LF_UQUADWORD:
+    if (Data.size() < 8)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
     Num = APSInt(APInt(/*numBits=*/64,
                        *reinterpret_cast<const ulittle64_t *>(Data.data()),
                        /*isSigned=*/false),

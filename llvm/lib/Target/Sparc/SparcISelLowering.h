@@ -222,10 +222,6 @@ namespace llvm {
 
     MachineBasicBlock *expandSelectCC(MachineInstr *MI, MachineBasicBlock *BB,
                                       unsigned BROpcode) const;
-    MachineBasicBlock *expandAtomicRMW(MachineInstr *MI,
-                                       MachineBasicBlock *BB,
-                                       unsigned Opcode,
-                                       unsigned CondCode = 0) const;
     MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr *MI,
                                         MachineBasicBlock *MBB) const;
     MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr *MI,

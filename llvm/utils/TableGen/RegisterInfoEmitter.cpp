@@ -990,7 +990,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     ArrayRef<Record*> Order = RC.getOrder();
 
     // Give the register class a legal C name if it's anonymous.
-    std::string Name = RC.getName();
+    const std::string &Name = RC.getName();
 
     RegClassStrings.add(Name);
 

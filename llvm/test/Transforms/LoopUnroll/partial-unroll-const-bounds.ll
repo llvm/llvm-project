@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -unroll-threshold=20 -loop-unroll -unroll-allow-partial -unroll-runtime -unroll-dynamic-cost-savings-discount=0 | FileCheck %s
+; RUN: opt < %s -S -unroll-threshold=20 -loop-unroll -unroll-allow-partial -unroll-runtime -unroll-allow-remainder -unroll-dynamic-cost-savings-discount=0 | FileCheck %s
 
 ; The Loop TripCount is 9. However unroll factors 3 or 9 exceed given threshold.
 ; The test checks that we choose a smaller, power-of-two, unroll count and do not give up on unrolling.
