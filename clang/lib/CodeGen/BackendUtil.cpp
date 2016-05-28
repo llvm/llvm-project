@@ -178,6 +178,11 @@ static void addAddDiscriminatorsPass(const PassManagerBuilder &Builder,
   PM.add(createAddDiscriminatorsPass());
 }
 
+static void addInstructionCombiningPass(const PassManagerBuilder &Builder,
+                                        legacy::PassManagerBase &PM) {
+  PM.add(createInstructionCombiningPass());
+}
+
 static void addBoundsCheckingPass(const PassManagerBuilder &Builder,
                                     legacy::PassManagerBase &PM) {
   PM.add(createBoundsCheckingPass());
@@ -441,7 +446,6 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
   legacy::FunctionPassManager *FPM = getPerFunctionPasses();
   if (CodeGenOpts.VerifyModule)
     FPM->add(createVerifierPass());
-  PMBuilder.populateFunctionPassManager(*FPM);
 
   // Set up the per-module pass manager.
   if (!CodeGenOpts.RewriteMapFiles.empty())
@@ -480,9 +484,13 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
   if (CodeGenOpts.hasProfileIRUse())
     PMBuilder.PGOInstrUse = CodeGenOpts.ProfileInstrumentUsePath;
 
-  if (!CodeGenOpts.SampleProfileFile.empty())
+  if (!CodeGenOpts.SampleProfileFile.empty()) {
     MPM->add(createSampleProfileLoaderPass(CodeGenOpts.SampleProfileFile));
+    PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
+                           addInstructionCombiningPass);
+  }
 
+  PMBuilder.populateFunctionPassManager(*FPM);
   PMBuilder.populateModulePassManager(*MPM);
 }
 

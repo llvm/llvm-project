@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <utility>
 
 using namespace clang;
 
@@ -60,8 +61,8 @@ class FixItActionSuffixInserter : public FixItOptions {
 
 public:
   FixItActionSuffixInserter(std::string NewSuffix, bool FixWhatYouCan)
-    : NewSuffix(NewSuffix) {
-      this->FixWhatYouCan = FixWhatYouCan;
+      : NewSuffix(std::move(NewSuffix)) {
+    this->FixWhatYouCan = FixWhatYouCan;
   }
 
   std::string RewriteFilename(const std::string &Filename, int &fd) override {

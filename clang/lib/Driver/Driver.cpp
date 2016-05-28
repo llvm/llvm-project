@@ -41,6 +41,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <memory>
+#include <utility>
 
 using namespace clang::driver;
 using namespace clang;
@@ -49,9 +50,9 @@ using namespace llvm::opt;
 Driver::Driver(StringRef ClangExecutable, StringRef DefaultTargetTriple,
                DiagnosticsEngine &Diags,
                IntrusiveRefCntPtr<vfs::FileSystem> VFS)
-    : Opts(createDriverOptTable()), Diags(Diags), VFS(VFS), Mode(GCCMode),
-      SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone), LTOMode(LTOK_None),
-      ClangExecutable(ClangExecutable),
+    : Opts(createDriverOptTable()), Diags(Diags), VFS(std::move(VFS)),
+      Mode(GCCMode), SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
+      LTOMode(LTOK_None), ClangExecutable(ClangExecutable),
       SysRoot(DEFAULT_SYSROOT), UseStdLib(true),
       DefaultTargetTriple(DefaultTargetTriple),
       DriverTitle("clang LLVM compiler"), CCPrintOptionsFilename(nullptr),

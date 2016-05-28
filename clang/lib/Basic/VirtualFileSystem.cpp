@@ -16,15 +16,16 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
-#include "llvm/Config/llvm-config.h"
 #include <atomic>
 #include <memory>
+#include <utility>
 
 // For chdir.
 #ifdef LLVM_ON_WIN32
@@ -867,7 +868,7 @@ class RedirectingFileSystem : public vfs::FileSystem {
 
 private:
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS)
-      : ExternalFS(ExternalFS) {}
+      : ExternalFS(std::move(ExternalFS)) {}
 
   /// \brief Looks up \p Path in \c Roots.
   ErrorOr<Entry *> lookupPath(const Twine &Path);
@@ -1530,7 +1531,7 @@ class FileWithFixedStatus : public File {
 
 public:
   FileWithFixedStatus(std::unique_ptr<File> InnerFile, Status S)
-      : InnerFile(std::move(InnerFile)), S(S) {}
+      : InnerFile(std::move(InnerFile)), S(std::move(S)) {}
 
   ErrorOr<Status> status() override { return S; }
   ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>

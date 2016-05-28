@@ -17,11 +17,7 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     typedef std::complex<float> cf;
     auto t1 = std::make_tuple<int, int, std::string, cf> ( 42, 21, "Hi", { 1,2 } );
     assert ( std::get<int>(t1) == 42 ); // two ints here
-#else
-#error
-#endif
 }

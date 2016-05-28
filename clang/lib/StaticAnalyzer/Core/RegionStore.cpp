@@ -14,6 +14,7 @@
 // parameters are created lazily.
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
@@ -29,6 +30,7 @@
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 using namespace clang;
 using namespace ento;
@@ -665,10 +667,9 @@ protected:
 
 public:
   ClusterAnalysis(RegionStoreManager &rm, ProgramStateManager &StateMgr,
-                  RegionBindingsRef b )
-    : RM(rm), Ctx(StateMgr.getContext()),
-      svalBuilder(StateMgr.getSValBuilder()),
-      B(b) {}
+                  RegionBindingsRef b)
+      : RM(rm), Ctx(StateMgr.getContext()),
+        svalBuilder(StateMgr.getSValBuilder()), B(std::move(b)) {}
 
   RegionBindingsRef getRegionBindings() const { return B; }
 

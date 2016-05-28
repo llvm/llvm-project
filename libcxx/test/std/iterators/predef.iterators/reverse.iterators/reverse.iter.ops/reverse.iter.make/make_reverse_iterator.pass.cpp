@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <iterator>
 
 // reverse_iterator
@@ -18,8 +19,6 @@
 #include <cassert>
 
 #include "test_iterators.h"
-
-#if _LIBCPP_STD_VER > 11
 
 template <class It>
 void
@@ -37,6 +36,4 @@ int main()
     while ( b != e )
         test ( b++ );
 }
-#else
-int main () {}
-#endif
+

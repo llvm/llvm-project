@@ -45,12 +45,6 @@
 // RUN:   | FileCheck -check-prefix=MIPS-ABI-O64 %s
 // MIPS-ABI-O64: error: unknown target ABI 'o64'
 //
-// RUN: %clang -target mips-linux-gnu -### -c %s \
-// RUN:        -mabi=eabi 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS-ABI-EABI %s
-// MIPS-ABI-EABI: "-target-cpu" "mips32r2"
-// MIPS-ABI-EABI: "-target-abi" "eabi"
-//
 // RUN: not %clang -target mips-linux-gnu -c %s \
 // RUN:        -mabi=unknown 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ABI-UNKNOWN %s

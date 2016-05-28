@@ -23,14 +23,16 @@ control flow integrity features can only be applied to classes with hidden LTO
 visibility. A class's LTO visibility is treated as an ODR-relevant property
 of its definition, so it must be consistent between translation units.
 
-In translation units built with LTO, LTO visibility is based on symbol
-visibility or, on the Windows platform, the dllimport and dllexport
-attributes. When targeting non-Windows platforms, classes with a visibility
-other than hidden visibility receive public LTO visibility. When targeting
-Windows, classes with dllimport or dllexport attributes receive public LTO
-visibility. All other classes receive hidden LTO visibility. Classes with
-internal linkage (e.g. classes declared in unnamed namespaces) also receive
-hidden LTO visibility.
+In translation units built with LTO, LTO visibility is based on the
+class's symbol visibility as expressed at the source level (i.e. the
+``__attribute__((visibility("...")))`` attribute, or the ``-fvisibility=``
+flag) or, on the Windows platform, the dllimport and dllexport attributes. When
+targeting non-Windows platforms, classes with a visibility other than hidden
+visibility receive public LTO visibility. When targeting Windows, classes
+with dllimport or dllexport attributes receive public LTO visibility. All
+other classes receive hidden LTO visibility. Classes with internal linkage
+(e.g. classes declared in unnamed namespaces) also receive hidden LTO
+visibility.
 
 A class defined in a translation unit built without LTO receives public
 LTO visibility regardless of its object file visibility, linkage or other

@@ -313,7 +313,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
   // may be created with a combination of default and explicit settings.
   if (Opts.CompressDebugSections)
-    MAI->setCompressDebugSections(true);
+    MAI->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
 
   bool IsBinary = Opts.OutputType == AssemblerInvocation::FT_Obj;
   std::unique_ptr<raw_fd_ostream> FDOS = getOutputStream(Opts, Diags, IsBinary);

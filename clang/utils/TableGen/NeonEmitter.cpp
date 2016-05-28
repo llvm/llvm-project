@@ -40,6 +40,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 using namespace llvm;
 
@@ -146,9 +147,10 @@ public:
         NoManglingQ(false), Bitwidth(0), ElementBitwidth(0), NumVectors(0) {}
 
   Type(TypeSpec TS, char CharMod)
-      : TS(TS), Float(false), Signed(false), Immediate(false), Void(false),
-        Poly(false), Constant(false), Pointer(false), ScalarForMangling(false),
-        NoManglingQ(false), Bitwidth(0), ElementBitwidth(0), NumVectors(0) {
+      : TS(std::move(TS)), Float(false), Signed(false), Immediate(false),
+        Void(false), Poly(false), Constant(false), Pointer(false),
+        ScalarForMangling(false), NoManglingQ(false), Bitwidth(0),
+        ElementBitwidth(0), NumVectors(0) {
     applyModifier(CharMod);
   }
 
@@ -257,7 +259,7 @@ class Variable {
 
 public:
   Variable() : T(Type::getVoid()), N("") {}
-  Variable(Type T, std::string N) : T(T), N(N) {}
+  Variable(Type T, std::string N) : T(std::move(T)), N(std::move(N)) {}
 
   Type getType() const { return T; }
   std::string getName() const { return "__" + N; }

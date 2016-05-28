@@ -1066,7 +1066,7 @@ static __inline__ __m256d __DEFAULT_FN_ATTRS
 _mm256_mask_broadcast_f64x2 (__m256d __O, __mmask8 __M, __m128d __A)
 {
   return (__m256d) __builtin_ia32_broadcastf64x2_256_mask ((__v2df) __A,
-                 (__v4df) __O, 
+                 (__v4df) __O,
                  __M);
 }
 
@@ -1138,7 +1138,7 @@ static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_mask_broadcast_i64x2 (__m256i __O, __mmask8 __M, __m128i __A)
 {
   return (__m256i) __builtin_ia32_broadcasti64x2_256_mask ((__v2di) __A,
-                 (__v4di) __O, 
+                 (__v4di) __O,
                  __M);
 }
 

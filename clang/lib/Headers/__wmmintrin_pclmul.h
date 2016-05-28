@@ -24,15 +24,15 @@
 #define _WMMINTRIN_PCLMUL_H
 
 /// \brief Multiplies two 64-bit integer values, which are selected from source
-///    operands using the immediate-value operand. The multiplication is a 
+///    operands using the immediate-value operand. The multiplication is a
 ///    carry-less multiplication, and the 128-bit integer product is stored in
 ///    the destination.
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// \code 
+/// \code
 /// __m128i _mm_clmulepi64_si128(__m128i __X, __m128i __Y, const int __I);
-/// \endcode 
+/// \endcode
 ///
 /// This intrinsic corresponds to the \c VPCLMULQDQ instruction.
 ///

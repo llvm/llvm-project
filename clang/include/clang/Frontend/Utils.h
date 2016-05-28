@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Option/OptSpecifier.h"
+#include <utility>
 
 namespace llvm {
 class raw_fd_ostream;
@@ -141,7 +142,8 @@ public:
 
   void writeFileMap();
   bool hasErrors() { return HasErrors; }
-  ModuleDependencyCollector(std::string DestDir) : DestDir(DestDir) {}
+  ModuleDependencyCollector(std::string DestDir)
+      : DestDir(std::move(DestDir)) {}
   ~ModuleDependencyCollector() { writeFileMap(); }
 };
 

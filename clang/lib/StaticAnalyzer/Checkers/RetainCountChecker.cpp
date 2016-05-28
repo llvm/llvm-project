@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
 #include "AllocationDiagnostics.h"
+#include "ClangSACheckers.h"
 #include "SelectorExtras.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include <cstdarg>
+#include <utility>
 
 using namespace clang;
 using namespace ento;
@@ -2683,7 +2684,7 @@ namespace {
 class StopTrackingCallback final : public SymbolVisitor {
   ProgramStateRef state;
 public:
-  StopTrackingCallback(ProgramStateRef st) : state(st) {}
+  StopTrackingCallback(ProgramStateRef st) : state(std::move(st)) {}
   ProgramStateRef getState() const { return state; }
 
   bool VisitSymbol(SymbolRef sym) override {

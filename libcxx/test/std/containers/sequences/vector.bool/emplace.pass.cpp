@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <vector>
 //  vector<bool>
 
@@ -18,7 +19,6 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     {
         typedef std::vector<bool> C;
         C c;
@@ -64,5 +64,4 @@ int main()
         assert(c[1] == true);
         assert(c.back() == true);
     }
-#endif
 }

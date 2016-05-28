@@ -7,16 +7,14 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++98, c++03, c++11
 #include <chrono>
 #include <cassert>
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11 
     using std::chrono::hours;
 
     hours foo  =  4h;  // should fail w/conversion operator not found
-#else
-#error
-#endif
 }

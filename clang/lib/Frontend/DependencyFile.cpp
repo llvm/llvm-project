@@ -177,7 +177,7 @@ public:
       SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
       OutputFormat(Opts.OutputFormat) {
-    for (auto ExtraDep : Opts.ExtraDeps) {
+    for (const auto &ExtraDep : Opts.ExtraDeps) {
       AddFilename(ExtraDep);
     }
   }

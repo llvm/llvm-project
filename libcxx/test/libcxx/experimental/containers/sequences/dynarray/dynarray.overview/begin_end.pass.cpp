@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // dynarray.overview
 
 
@@ -26,8 +27,6 @@
 
   
 #include <__config>
-
-#if _LIBCPP_STD_VER > 11
 
 #include <experimental/dynarray>
 #include <cassert>
@@ -103,6 +102,4 @@ int main()
     test<std::complex<double>> ( std::complex<double> ( 14, 0 ));
     test<std::string> ( "fourteen" );
 }
-#else
-int main() {}
-#endif
+

@@ -818,6 +818,9 @@ bool DSAStackTy::hasDirective(
                                   const DeclarationNameInfo &, SourceLocation)>
         &DPred,
     bool FromParent) {
+  // We look only in the enclosing region.
+  if (Stack.size() < 2)
+    return false;
   auto StartI = std::next(Stack.rbegin());
   auto EndI = std::prev(Stack.rend());
   if (FromParent && StartI != EndI) {
@@ -990,8 +993,7 @@ VarDecl *Sema::IsOpenMPCapturedDecl(ValueDecl *D) {
     if (DSAStack->getCurrentDirective() == OMPD_target &&
         !DSAStack->isClauseParsingMode())
       return VD;
-    if (DSAStack->getCurScope() &&
-        DSAStack->hasDirective(
+    if (DSAStack->hasDirective(
             [](OpenMPDirectiveKind K, const DeclarationNameInfo &,
                SourceLocation) -> bool {
               return isOpenMPTargetExecutionDirective(K);

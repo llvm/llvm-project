@@ -1140,6 +1140,16 @@ are listed below.
    This option restricts the generated code to use general registers
    only. This only applies to the AArch64 architecture.
 
+.. option:: -mcompact-branches=[values]
+
+   Control the usage of compact branches for MIPSR6.
+
+   Valid values are: ``never``, ``optimal`` and ``always``.
+   The default value is ``optimal`` which generates compact branches
+   when a delay slot cannot be filled. ``never`` disables the usage of
+   compact branches and ``always`` generates compact branches whenever
+   possible.
+
 **-f[no-]max-type-align=[number]**
    Instruct the code generator to not enforce a higher alignment than the given
    number (of bytes) when accessing memory via an opaque pointer or reference.

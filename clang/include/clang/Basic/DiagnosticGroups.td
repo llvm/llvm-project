@@ -56,6 +56,7 @@ def FloatConversion :
 def DoublePromotion : DiagGroup<"double-promotion">;
 def EnumTooLarge : DiagGroup<"enum-too-large">;
 def UnsupportedNan : DiagGroup<"unsupported-nan">;
+def UnsupportedCB : DiagGroup<"unsupported-cb">;
 def NonLiteralNullConversion : DiagGroup<"non-literal-null-conversion">;
 def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :

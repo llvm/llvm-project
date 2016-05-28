@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <utility>
 
 // class make_integer_sequence
@@ -16,19 +17,13 @@
 #include <type_traits>
 #include <cassert>
 
-#if _LIBCPP_STD_VER > 11
-
 template <typename AtContainer, typename T, T... I>
 auto extract ( const AtContainer &t, const std::integer_sequence<T, I...> )
 -> decltype ( std::make_tuple ( std::get<I>(t)... ))
 {     return  std::make_tuple ( std::get<I>(t)... ); }
 
-#endif  // _LIBCPP_STD_VER > 11
-
 int main()
 {
-#if _LIBCPP_STD_VER > 11
-
 //  Make a couple of sequences
     using int3    = std::make_integer_sequence<int, 3>;     // generates int:    0,1,2
     using size7   = std::make_integer_sequence<size_t, 7>;  // generates size_t: 0,1,2,3,4,5,6
@@ -82,5 +77,4 @@ int main()
     auto tsizemix = extract ( tup, sizemix ());
     static_assert ( std::tuple_size<decltype(tsizemix)>::value == sizemix::size (), "tsizemix size wrong");
     assert ( tsizemix == std::make_tuple ( 11, 11, 12, 13, 15 ));
-#endif  // _LIBCPP_STD_VER > 11
 }

@@ -292,73 +292,79 @@ __m256i test_mm256_cmpgt_epi64(__m256i a, __m256i b) {
 
 __m256i test_mm256_cvtepi8_epi16(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi8_epi16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.pmovsxbw(<16 x i8> %{{.*}})
+  // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
   return _mm256_cvtepi8_epi16(a);
 }
 
 __m256i test_mm256_cvtepi8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi8_epi32
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pmovsxbd(<16 x i8> %{{.*}})
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: sext <8 x i8> %{{.*}} to <8 x i32>
   return _mm256_cvtepi8_epi32(a);
 }
 
 __m256i test_mm256_cvtepi8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi8_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pmovsxbq(<16 x i8> %{{.*}})
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: sext <4 x i8> %{{.*}} to <4 x i64>
   return _mm256_cvtepi8_epi64(a);
 }
 
 __m256i test_mm256_cvtepi16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi16_epi32
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pmovsxwd(<8 x i16> %{{.*}})
+  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
   return _mm256_cvtepi16_epi32(a);
 }
 
 __m256i test_mm256_cvtepi16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi16_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pmovsxwq(<8 x i16> %{{.*}})
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: sext <4 x i16> %{{.*}} to <4 x i64>
   return _mm256_cvtepi16_epi64(a);
 }
 
 __m256i test_mm256_cvtepi32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi32_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pmovsxdq(<4 x i32> %{{.*}})
+  // CHECK: sext <4 x i32> %{{.*}} to <4 x i64>
   return _mm256_cvtepi32_epi64(a);
 }
 
 __m256i test_mm256_cvtepu8_epi16(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi16
-  // CHECK: call <16 x i16> @llvm.x86.avx2.pmovzxbw(<16 x i8> %{{.*}})
+  // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
   return _mm256_cvtepu8_epi16(a);
 }
 
 __m256i test_mm256_cvtepu8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi32
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pmovzxbd(<16 x i8> %{{.*}})
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: zext <8 x i8> %{{.*}} to <8 x i32>
   return _mm256_cvtepu8_epi32(a);
 }
 
 __m256i test_mm256_cvtepu8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pmovzxbq(<16 x i8> %{{.*}})
+  // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: zext <4 x i8> %{{.*}} to <4 x i64>
   return _mm256_cvtepu8_epi64(a);
 }
 
 __m256i test_mm256_cvtepu16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu16_epi32
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pmovzxwd(<8 x i16> %{{.*}})
+  // CHECK: zext <8 x i16> {{.*}} to <8 x i32>
   return _mm256_cvtepu16_epi32(a);
 }
 
 __m256i test_mm256_cvtepu16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu16_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pmovzxwq(<8 x i16> %{{.*}})
+  // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: zext <4 x i16> %{{.*}} to <4 x i64>
   return _mm256_cvtepu16_epi64(a);
 }
 
 __m256i test_mm256_cvtepu32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu32_epi64
-  // CHECK: call <4 x i64> @llvm.x86.avx2.pmovzxdq(<4 x i32> %{{.*}})
+  // CHECK: zext <4 x i32> %{{.*}} to <4 x i64>
   return _mm256_cvtepu32_epi64(a);
 }
 

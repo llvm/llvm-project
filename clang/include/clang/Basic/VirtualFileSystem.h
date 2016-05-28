@@ -20,6 +20,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 namespace llvm {
 class MemoryBuffer;
@@ -116,7 +117,8 @@ class directory_iterator {
   std::shared_ptr<detail::DirIterImpl> Impl; // Input iterator semantics on copy
 
 public:
-  directory_iterator(std::shared_ptr<detail::DirIterImpl> I) : Impl(I) {
+  directory_iterator(std::shared_ptr<detail::DirIterImpl> I)
+      : Impl(std::move(I)) {
     assert(Impl.get() != nullptr && "requires non-null implementation");
     if (!Impl->CurrentEntry.isStatusKnown())
       Impl.reset(); // Normalize the end iterator to Impl == nullptr.

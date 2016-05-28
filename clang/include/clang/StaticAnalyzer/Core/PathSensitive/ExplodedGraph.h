@@ -32,6 +32,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -121,10 +122,9 @@ class ExplodedNode : public llvm::FoldingSetNode {
   NodeGroup Succs;
 
 public:
-
   explicit ExplodedNode(const ProgramPoint &loc, ProgramStateRef state,
                         bool IsSink)
-    : Location(loc), State(state), Succs(IsSink) {
+      : Location(loc), State(std::move(state)), Succs(IsSink) {
     assert(isSink() == IsSink);
   }
 
