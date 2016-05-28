@@ -36,8 +36,9 @@ namespace __asan {
 void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   ScopedDeadlySignal signal_scope(GetCurrentThread());
   int code = (int)((siginfo_t*)siginfo)->si_code;
-  // Write the first message using the bullet-proof write.
-  if (18 != internal_write(2, "ASAN:DEADLYSIGNAL\n", 18)) Die();
+  // Write the first message using fd=2, just in case.
+  // It may actually fail to write in case stderr is closed.
+  internal_write(2, "ASAN:DEADLYSIGNAL\n", 18);
   SignalContext sig = SignalContext::Create(siginfo, context);
 
   // Access at a reasonable offset above SP, or slightly below it (to account

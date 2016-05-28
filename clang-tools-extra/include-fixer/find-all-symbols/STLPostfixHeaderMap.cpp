@@ -59,7 +59,7 @@ const HeaderMapCollector::HeaderMap *getSTLPostfixHeaderMap() {
       {"include/rdseedintrin.h", "<x86intrin.h>"},
       {"include/rtmintrin.h", "<immintrin.h>"},
       {"include/shaintrin.h", "<immintrin.h>"},
-      {"include/smmintrin.h", "<smmintrin>"},
+      {"include/smmintrin.h", "<smmintrin.h>"},
       {"include/stdalign.h", "<cstdalign>"},
       {"include/stdarg.h", "<cstdarg>"},
       {"include/stdbool.h", "<cstdbool>"},

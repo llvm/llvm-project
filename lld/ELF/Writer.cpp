@@ -873,6 +873,11 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 
   if (isOutputDynamic())
     Out<ELFT>::Dynamic->finalize();
+
+  // Now that all output offsets are fixed. Finalize mergeable sections
+  // to fix their maps from input offsets to output offsets.
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+    Sec->finalizePieces();
 }
 
 template <class ELFT> bool Writer<ELFT>::needsGot() {

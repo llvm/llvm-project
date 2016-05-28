@@ -33,6 +33,7 @@ SRCS="
 	../../sanitizer_common/sanitizer_stackdepot.cc
 	../../sanitizer_common/sanitizer_stacktrace.cc
 	../../sanitizer_common/sanitizer_symbolizer.cc
+	../../sanitizer_common/sanitizer_termination.cc
 "
 
 if [ "`uname -a | grep Linux`" != "" ]; then

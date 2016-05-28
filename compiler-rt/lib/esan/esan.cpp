@@ -124,6 +124,8 @@ static bool verifyShadowScheme() {
 #endif
 
 static void initializeShadow() {
+  verifyAddressSpace();
+
   DCHECK(verifyShadowScheme());
 
   Mapping.initialize(ShadowScale[WhichTool]);

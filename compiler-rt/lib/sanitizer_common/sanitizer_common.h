@@ -298,6 +298,7 @@ void ReExec();
 char **GetArgv();
 void PrintCmdline();
 bool StackSizeIsUnlimited();
+uptr GetStackSizeLimitInBytes();
 void SetStackSizeLimitInBytes(uptr limit);
 bool AddressSpaceIsUnlimited();
 void SetAddressSpaceUnlimited();

@@ -25,6 +25,8 @@ void StackTrace::Print() const {
     return;
   }
   InternalScopedString frame_desc(GetPageSizeCached() * 2);
+  InternalScopedString dedup_token(GetPageSizeCached());
+  int dedup_frames = common_flags()->dedup_token_length;
   uptr frame_num = 0;
   for (uptr i = 0; i < size && trace[i]; i++) {
     // PCs in stack traces are actually the return addresses, that is,
@@ -38,11 +40,18 @@ void StackTrace::Print() const {
                   cur->info, common_flags()->symbolize_vs_style,
                   common_flags()->strip_path_prefix);
       Printf("%s\n", frame_desc.data());
+      if (dedup_frames-- > 0) {
+        if (dedup_token.length())
+          dedup_token.append("--");
+        dedup_token.append(cur->info.function);
+      }
     }
     frames->ClearAll();
   }
   // Always print a trailing empty line after stack trace.
   Printf("\n");
+  if (dedup_token.length())
+    Printf("DEDUP_TOKEN: %s\n", dedup_token.data());
 }
 
 void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,

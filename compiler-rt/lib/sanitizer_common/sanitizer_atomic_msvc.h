@@ -171,12 +171,16 @@ INLINE u32 atomic_exchange(volatile atomic_uint32_t *a,
   return (u32)_InterlockedExchange((volatile long*)&a->val_dont_use, v);
 }
 
-#ifndef _WIN64
-
 INLINE bool atomic_compare_exchange_strong(volatile atomic_uint8_t *a,
                                            u8 *cmp,
                                            u8 xchgv,
                                            memory_order mo) {
+#ifdef _WIN64
+  // TODO(wwchrome): Implement same functionality without inline asm.
+  // Inline asm not supported in Win64.
+  __debugbreak();
+  return false;
+#else
   (void)mo;
   DCHECK(!((uptr)a % sizeof(*a)));
   u8 cmpv = *cmp;
@@ -192,9 +196,8 @@ INLINE bool atomic_compare_exchange_strong(volatile atomic_uint8_t *a,
     return true;
   *cmp = prev;
   return false;
-}
-
 #endif
+}
 
 INLINE bool atomic_compare_exchange_strong(volatile atomic_uintptr_t *a,
                                            uptr *cmp,

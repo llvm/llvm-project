@@ -9,9 +9,6 @@
 
 // <cmath>
 
-// NOTE: isinf and isnan are tested separately because they are expected to fail
-// on linux. We don't want their expected failure to hide other failures in this file.
-
 #include <cmath>
 #include <type_traits>
 #include <cassert>
@@ -632,6 +629,29 @@ void test_isgreaterequal()
     assert(std::isgreaterequal(-1.0, 0.F) == false);
 }
 
+void test_isinf()
+{
+#ifdef isinf
+#error isinf defined
+#endif
+    static_assert((std::is_same<decltype(std::isinf((float)0)), bool>::value), "");
+
+    typedef decltype(std::isinf((double)0)) DoubleRetType;
+#ifndef __linux__
+    static_assert((std::is_same<DoubleRetType, bool>::value), "");
+#else
+    // GLIBC < 2.26 defines 'isinf(double)' with a return type of 'int' in
+    // all C++ dialects. The test should tolerate this.
+    // See: https://sourceware.org/bugzilla/show_bug.cgi?id=19439
+    static_assert((std::is_same<DoubleRetType, bool>::value
+                || std::is_same<DoubleRetType, int>::value), "");
+#endif
+
+    static_assert((std::is_same<decltype(std::isinf(0)), bool>::value), "");
+    static_assert((std::is_same<decltype(std::isinf((long double)0)), bool>::value), "");
+    assert(std::isinf(-1.0) == false);
+}
+
 void test_isless()
 {
 #ifdef isless
@@ -687,6 +707,29 @@ void test_islessgreater()
     static_assert((std::is_same<decltype(std::islessgreater((long double)0, (long double)0)), bool>::value), "");
     static_assert((std::is_same<decltype(islessgreater(Ambiguous(), Ambiguous())), Ambiguous>::value), "");
     assert(std::islessgreater(-1.0, 0.F) == true);
+}
+
+void test_isnan()
+{
+#ifdef isnan
+#error isnan defined
+#endif
+    static_assert((std::is_same<decltype(std::isnan((float)0)), bool>::value), "");
+
+    typedef decltype(std::isnan((double)0)) DoubleRetType;
+#ifndef __linux__
+    static_assert((std::is_same<DoubleRetType, bool>::value), "");
+#else
+    // GLIBC < 2.26 defines 'isnan(double)' with a return type of 'int' in
+    // all C++ dialects. The test should tolerate this.
+    // See: https://sourceware.org/bugzilla/show_bug.cgi?id=19439
+    static_assert((std::is_same<DoubleRetType, bool>::value
+                || std::is_same<DoubleRetType, int>::value), "");
+#endif
+
+    static_assert((std::is_same<decltype(std::isnan(0)), bool>::value), "");
+    static_assert((std::is_same<decltype(std::isnan((long double)0)), bool>::value), "");
+    assert(std::isnan(-1.0) == false);
 }
 
 void test_isunordered()
@@ -1466,9 +1509,11 @@ int main()
     test_isnormal();
     test_isgreater();
     test_isgreaterequal();
+    test_isinf();
     test_isless();
     test_islessequal();
     test_islessgreater();
+    test_isnan();
     test_isunordered();
     test_acosh();
     test_asinh();

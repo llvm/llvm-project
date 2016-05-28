@@ -12,6 +12,7 @@
 
 #include <iterator>
 #include <stdexcept>
+#include <cstddef>
 #include <cassert>
 
 #include "test_macros.h"

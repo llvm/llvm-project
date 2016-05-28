@@ -136,7 +136,8 @@ int main()
         assert(std::get<2>(t) == 2);
         assert(std::get<3>(t) == 3);
     }
-    // extensions
+// extensions
+#ifdef _LIBCPP_VERSION
     {
         std::tuple<int, char*, std::string> t(2);
         assert(std::get<0>(t) == 2);
@@ -156,4 +157,5 @@ int main()
         assert(std::get<2>(t) == "text");
         assert(std::get<3>(t) == 0.0);
     }
+#endif
 }

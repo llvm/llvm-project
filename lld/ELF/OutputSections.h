@@ -93,6 +93,7 @@ public:
   bool PageAlign = false;
 
   virtual void finalize() {}
+  virtual void finalizePieces() {}
   virtual void
   forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) {}
   virtual void writeTo(uint8_t *Buf) {}
@@ -320,10 +321,12 @@ public:
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
   void finalize() override;
+  void finalizePieces() override;
   bool shouldTailMerge() const;
 
 private:
   llvm::StringTableBuilder Builder;
+  std::vector<MergeInputSection<ELFT> *> Sections;
 };
 
 struct CieRecord {

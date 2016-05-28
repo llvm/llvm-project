@@ -40,6 +40,10 @@ namespace __esan {
 // library region to distinguish the vsyscall's shadow, considering this gap to
 // be an invalid app region.
 // We disallow application memory outside of those 5 regions.
+// Our regions assume that the stack rlimit is less than a terabyte (otherwise
+// the Linux kernel's default mmap region drops below 0x7e00'), which we enforce
+// at init time (we can support larger and unlimited sizes for shadow
+// scaledowns, but it is difficult for 1:1 mappings).
 //
 // Our shadow memory is scaled from a 1:1 mapping and supports a scale
 // specified at library initialization time that can be any power-of-2
@@ -102,6 +106,10 @@ static const struct ApplicationRegion AppRegions[] = {
   {0xffffffffff600000u,   0xffffffffff601000u, true},
 };
 static const u32 NumAppRegions = sizeof(AppRegions)/sizeof(AppRegions[0]);
+
+// See the comment above: we do not currently support a stack size rlimit
+// equal to or larger than 1TB.
+static const uptr MaxStackSize = (1ULL << 40) - 4096;
 
 class ShadowMapping {
 public:
