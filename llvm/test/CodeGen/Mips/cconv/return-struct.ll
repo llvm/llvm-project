@@ -158,9 +158,6 @@ entry:
 ; sret pointer is already in $4
 ; N32-DAG:        lui [[PTR_HI:\$[0-9]+]], %hi(struct_128xi16)
 ; N32-DAG:        addiu [[PTR:\$[0-9]+]], [[PTR_HI]], %lo(struct_128xi16)
-; FIXME: This signext isn't necessary. Like integers, pointers are
-;        but unlike integers, pointers cannot have the signext attribute.
-; N32-DAG:        sll $5, [[PTR]], 0
 ; N32:            jal memcpy
 
 ; sret pointer is already in $4
