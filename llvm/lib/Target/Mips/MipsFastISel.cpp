@@ -1208,7 +1208,7 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
 bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
                               unsigned NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
-  emitInst(Mips::ADJCALLSTACKUP).addImm(16);
+  emitInst(Mips::ADJCALLSTACKUP).addImm(16).addImm(0);
   if (RetVT != MVT::isVoid) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
