@@ -95,3 +95,24 @@ lldb_private::formatters::swift::URL_SummaryProvider (ValueObject& valobj, Strea
     stream.Printf("%s", summary.c_str());
     return true;
 }
+
+bool
+lldb_private::formatters::swift::IndexPath_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    static ConstString g__indexes("_indexes");
+    
+    ValueObjectSP underlying_array_sp(valobj.GetChildAtNamePath( {g__indexes} ));
+    
+    if (!underlying_array_sp)
+        return false;
+    
+    underlying_array_sp = underlying_array_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
+    
+    size_t num_children = underlying_array_sp->GetNumChildren();
+    
+    if (num_children == 1)
+        stream.Printf("%s", "1 index");
+    else
+        stream.Printf("%zu indices", num_children);
+    return true;
+}

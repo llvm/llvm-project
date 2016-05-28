@@ -36,6 +36,9 @@ namespace lldb_private
             
             bool
             URL_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+            
+            bool
+            IndexPath_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
         }
     }
 }
