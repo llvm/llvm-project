@@ -7,6 +7,8 @@
 
 ; RUN: llc -march=mips -mcpu=mips32r6 -O0 -relocation-model=pic \
 ; RUN:     -fast-isel-verbose <%s 2>&1 | FileCheck %s
+; RUN: llc -march=mips -mcpu=mips32r2 -mattr=+micromips -O0 -relocation-model=pic \
+; RUN:     -fast-isel-verbose <%s 2>&1 | FileCheck %s
 
 ; RUN: llc -march=mips -mcpu=mips64 -O0 -relocation-model=pic \
 ; RUN:     -fast-isel-verbose <%s 2>&1 | FileCheck %s

@@ -192,7 +192,8 @@ public:
         TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()) {
     MFI = funcInfo.MF->getInfo<MipsFunctionInfo>();
     Context = &funcInfo.Fn->getContext();
-    bool ISASupported = !Subtarget->hasMips32r6() && Subtarget->hasMips32();
+    bool ISASupported = !Subtarget->hasMips32r6() &&
+                        !Subtarget->inMicroMipsMode() && Subtarget->hasMips32();
     TargetSupported =
         ISASupported && (TM.getRelocationModel() == Reloc::PIC_) &&
         (static_cast<const MipsTargetMachine &>(TM).getABI().IsO32());
