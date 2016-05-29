@@ -122,11 +122,9 @@ public:
     EmitByte(ModRMByte(SS, Index, Base), CurByte, OS);
   }
 
-
-  void EmitMemModRMByte(const MCInst &MI, unsigned Op,
-                        unsigned RegOpcodeField,
-                        uint64_t TSFlags, unsigned &CurByte, raw_ostream &OS,
-                        SmallVectorImpl<MCFixup> &Fixups,
+  void emitMemModRMByte(const MCInst &MI, unsigned Op, unsigned RegOpcodeField,
+                        uint64_t TSFlags, bool Rex, unsigned &CurByte,
+                        raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
@@ -140,10 +138,9 @@ public:
   void EmitSegmentOverridePrefix(unsigned &CurByte, unsigned SegOperand,
                                  const MCInst &MI, raw_ostream &OS) const;
 
-  void EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte, int MemOperand,
+  bool emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte, int MemOperand,
                         const MCInst &MI, const MCInstrDesc &Desc,
-                        const MCSubtargetInfo &STI,
-                        raw_ostream &OS) const;
+                        const MCSubtargetInfo &STI, raw_ostream &OS) const;
 
   uint8_t DetermineREXPrefix(const MCInst &MI, uint64_t TSFlags,
                              int MemOperand, const MCInstrDesc &Desc) const;
@@ -330,7 +327,9 @@ EmitImmediate(const MCOperand &DispOp, SMLoc Loc, unsigned Size,
   // the start of the field, not the end of the field.
   if (FixupKind == FK_PCRel_4 ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte) ||
-      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load))
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex))
     ImmOffset -= 4;
   if (FixupKind == FK_PCRel_2)
     ImmOffset -= 2;
@@ -346,12 +345,12 @@ EmitImmediate(const MCOperand &DispOp, SMLoc Loc, unsigned Size,
   EmitConstant(0, Size, CurByte, OS);
 }
 
-void X86MCCodeEmitter::EmitMemModRMByte(const MCInst &MI, unsigned Op,
+void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
                                         unsigned RegOpcodeField,
-                                        uint64_t TSFlags, unsigned &CurByte,
-                                        raw_ostream &OS,
+                                        uint64_t TSFlags, bool Rex,
+                                        unsigned &CurByte, raw_ostream &OS,
                                         SmallVectorImpl<MCFixup> &Fixups,
-                                        const MCSubtargetInfo &STI) const{
+                                        const MCSubtargetInfo &STI) const {
   const MCOperand &Disp     = MI.getOperand(Op+X86::AddrDisp);
   const MCOperand &Base     = MI.getOperand(Op+X86::AddrBaseReg);
   const MCOperand &Scale    = MI.getOperand(Op+X86::AddrScaleAmt);
@@ -366,13 +365,32 @@ void X86MCCodeEmitter::EmitMemModRMByte(const MCInst &MI, unsigned Op,
     assert(IndexReg.getReg() == 0 && "Invalid rip-relative address");
     EmitByte(ModRMByte(0, RegOpcodeField, 5), CurByte, OS);
 
-    unsigned FixupKind = X86::reloc_riprel_4byte;
-
+    unsigned Opcode = MI.getOpcode();
     // movq loads are handled with a special relocation form which allows the
     // linker to eliminate some loads for GOT references which end up in the
     // same linkage unit.
-    if (MI.getOpcode() == X86::MOV64rm)
-      FixupKind = X86::reloc_riprel_4byte_movq_load;
+    unsigned FixupKind = [=]() {
+      switch (Opcode) {
+      default:
+        return X86::reloc_riprel_4byte;
+      case X86::MOV64rm:
+        assert(Rex);
+        return X86::reloc_riprel_4byte_movq_load;
+      case X86::CALL64m:
+      case X86::JMP64m:
+      case X86::TEST64rm:
+      case X86::ADC64rm:
+      case X86::ADD64rm:
+      case X86::AND64rm:
+      case X86::CMP64rm:
+      case X86::OR64rm:
+      case X86::SBB64rm:
+      case X86::SUB64rm:
+      case X86::XOR64rm:
+        return Rex ? X86::reloc_riprel_4byte_relax_rex
+                   : X86::reloc_riprel_4byte_relax;
+      }
+    }();
 
     // rip-relative addressing is actually relative to the *next* instruction.
     // Since an immediate can follow the mod/rm byte for an instruction, this
@@ -1027,16 +1045,18 @@ void X86MCCodeEmitter::EmitSegmentOverridePrefix(unsigned &CurByte,
   }
 }
 
-/// EmitOpcodePrefix - Emit all instruction prefixes prior to the opcode.
+/// Emit all instruction prefixes prior to the opcode.
 ///
 /// MemOperand is the operand # of the start of a memory operand if present.  If
 /// Not present, it is -1.
-void X86MCCodeEmitter::EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
+///
+/// Returns true if a REX prefix was used.
+bool X86MCCodeEmitter::emitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
                                         int MemOperand, const MCInst &MI,
                                         const MCInstrDesc &Desc,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &OS) const {
-
+  bool Ret = false;
   // Emit the operand size opcode prefix as needed.
   if ((TSFlags & X86II::OpSizeMask) == (is16BitMode(STI) ? X86II::OpSize32
                                                          : X86II::OpSize16))
@@ -1061,8 +1081,10 @@ void X86MCCodeEmitter::EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
   // Handle REX prefix.
   // FIXME: Can this come before F2 etc to simplify emission?
   if (is64BitMode(STI)) {
-    if (uint8_t REX = DetermineREXPrefix(MI, TSFlags, MemOperand, Desc))
+    if (uint8_t REX = DetermineREXPrefix(MI, TSFlags, MemOperand, Desc)) {
       EmitByte(0x40 | REX, CurByte, OS);
+      Ret = true;
+    }
   }
 
   // 0x0F escape code must be emitted just before the opcode.
@@ -1082,6 +1104,7 @@ void X86MCCodeEmitter::EmitOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
     EmitByte(0x3A, CurByte, OS);
     break;
   }
+  return Ret;
 }
 
 void X86MCCodeEmitter::
@@ -1156,8 +1179,9 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   if (need_address_override)
     EmitByte(0x67, CurByte, OS);
 
+  bool Rex = false;
   if (Encoding == 0)
-    EmitOpcodePrefix(TSFlags, CurByte, MemoryOperand, MI, Desc, STI, OS);
+    Rex = emitOpcodePrefix(TSFlags, CurByte, MemoryOperand, MI, Desc, STI, OS);
   else
     EmitVEXOpcodePrefix(TSFlags, CurByte, MemoryOperand, MI, Desc, OS);
 
@@ -1270,9 +1294,8 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
     if (HasVEX_4V) // Skip 1st src (which is encoded in VEX_VVVV)
       ++SrcRegNum;
 
-    EmitMemModRMByte(MI, CurOp,
-                     GetX86RegNum(MI.getOperand(SrcRegNum)),
-                     TSFlags, CurByte, OS, Fixups, STI);
+    emitMemModRMByte(MI, CurOp, GetX86RegNum(MI.getOperand(SrcRegNum)), TSFlags,
+                     Rex, CurByte, OS, Fixups, STI);
     CurOp = SrcRegNum + 1;
     break;
   }
@@ -1315,8 +1338,8 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
 
     EmitByte(BaseOpcode, CurByte, OS);
 
-    EmitMemModRMByte(MI, FirstMemOp, GetX86RegNum(MI.getOperand(CurOp)),
-                     TSFlags, CurByte, OS, Fixups, STI);
+    emitMemModRMByte(MI, FirstMemOp, GetX86RegNum(MI.getOperand(CurOp)),
+                     TSFlags, Rex, CurByte, OS, Fixups, STI);
     CurOp = FirstMemOp + X86::AddrNumOperands;
     if (HasVEX_4VOp3)
       ++CurOp;
@@ -1351,8 +1374,9 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
     if (HasEVEX_K) // Skip writemask
       ++CurOp;
     EmitByte(BaseOpcode, CurByte, OS);
-    EmitMemModRMByte(MI, CurOp, (Form == X86II::MRMXm) ? 0 : Form-X86II::MRM0m,
-                     TSFlags, CurByte, OS, Fixups, STI);
+    emitMemModRMByte(MI, CurOp,
+                     (Form == X86II::MRMXm) ? 0 : Form - X86II::MRM0m, TSFlags,
+                     Rex, CurByte, OS, Fixups, STI);
     CurOp += X86::AddrNumOperands;
     break;
   }

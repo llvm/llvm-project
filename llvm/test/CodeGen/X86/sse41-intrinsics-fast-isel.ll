@@ -301,11 +301,11 @@ define <2 x i64> @test_mm_cvtepu8_epi16(<2 x i64> %a0) {
 ; X64-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %zext = call <8 x i16> @llvm.x86.sse41.pmovzxbw(<16 x i8> %arg0)
-  %res = bitcast <8 x i16> %zext to <2 x i64>
+  %ext0 = shufflevector <16 x i8> %arg0, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %sext = zext <8 x i8> %ext0 to <8 x i16>
+  %res = bitcast <8 x i16> %sext to <2 x i64>
   ret <2 x i64> %res
 }
-declare <8 x i16> @llvm.x86.sse41.pmovzxbw(<16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_cvtepu8_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_cvtepu8_epi32:
@@ -318,11 +318,11 @@ define <2 x i64> @test_mm_cvtepu8_epi32(<2 x i64> %a0) {
 ; X64-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %zext = call <4 x i32> @llvm.x86.sse41.pmovzxbd(<16 x i8> %arg0)
-  %res = bitcast <4 x i32> %zext to <2 x i64>
+  %ext0 = shufflevector <16 x i8> %arg0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %sext = zext <4 x i8> %ext0 to <4 x i32>
+  %res = bitcast <4 x i32> %sext to <2 x i64>
   ret <2 x i64> %res
 }
-declare <4 x i32> @llvm.x86.sse41.pmovzxbd(<16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_cvtepu8_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_cvtepu8_epi64:
@@ -335,10 +335,10 @@ define <2 x i64> @test_mm_cvtepu8_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    pmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %zext = call <2 x i64> @llvm.x86.sse41.pmovzxbq(<16 x i8> %arg0)
-  ret <2 x i64> %zext
+  %ext0 = shufflevector <16 x i8> %arg0, <16 x i8> undef, <2 x i32> <i32 0, i32 1>
+  %sext = zext <2 x i8> %ext0 to <2 x i64>
+  ret <2 x i64> %sext
 }
-declare <2 x i64> @llvm.x86.sse41.pmovzxbq(<16 x i8>) nounwind readnone
 
 define <2 x i64> @test_mm_cvtepu16_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_cvtepu16_epi32:
@@ -351,11 +351,11 @@ define <2 x i64> @test_mm_cvtepu16_epi32(<2 x i64> %a0) {
 ; X64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %zext = call <4 x i32> @llvm.x86.sse41.pmovzxwd(<8 x i16> %arg0)
-  %res = bitcast <4 x i32> %zext to <2 x i64>
+  %ext0 = shufflevector <8 x i16> %arg0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %sext = zext <4 x i16> %ext0 to <4 x i32>
+  %res = bitcast <4 x i32> %sext to <2 x i64>
   ret <2 x i64> %res
 }
-declare <4 x i32> @llvm.x86.sse41.pmovzxwd(<8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_cvtepu16_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_cvtepu16_epi64:
@@ -368,10 +368,10 @@ define <2 x i64> @test_mm_cvtepu16_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %zext = call <2 x i64> @llvm.x86.sse41.pmovzxwq(<8 x i16> %arg0)
-  ret <2 x i64> %zext
+  %ext0 = shufflevector <8 x i16> %arg0, <8 x i16> undef, <2 x i32> <i32 0, i32 1>
+  %sext = zext <2 x i16> %ext0 to <2 x i64>
+  ret <2 x i64> %sext
 }
-declare <2 x i64> @llvm.x86.sse41.pmovzxwq(<8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_cvtepu32_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm_cvtepu32_epi64:
@@ -384,10 +384,10 @@ define <2 x i64> @test_mm_cvtepu32_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %zext = call <2 x i64> @llvm.x86.sse41.pmovzxdq(<4 x i32> %arg0)
-  ret <2 x i64> %zext
+  %ext0 = shufflevector <4 x i32> %arg0, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %sext = zext <2 x i32> %ext0 to <2 x i64>
+  ret <2 x i64> %sext
 }
-declare <2 x i64> @llvm.x86.sse41.pmovzxdq(<4 x i32>) nounwind readnone
 
 define <2 x double> @test_mm_dp_pd(<2 x double> %a0, <2 x double> %a1) {
 ; X32-LABEL: test_mm_dp_pd:

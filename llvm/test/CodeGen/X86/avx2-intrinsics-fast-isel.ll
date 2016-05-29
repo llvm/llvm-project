@@ -740,11 +740,10 @@ define <4 x i64> @test_mm256_cvtepi8_epi16(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovsxbw %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %call = call <16 x i16> @llvm.x86.avx2.pmovsxbw(<16 x i8> %arg0)
-  %res = bitcast <16 x i16> %call to <4 x i64>
+  %ext = sext <16 x i8> %arg0 to <16 x i16>
+  %res = bitcast <16 x i16> %ext to <4 x i64>
   ret <4 x i64> %res
 }
-declare <16 x i16> @llvm.x86.avx2.pmovsxbw(<16 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepi8_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepi8_epi32:
@@ -757,11 +756,11 @@ define <4 x i64> @test_mm256_cvtepi8_epi32(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovsxbd %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %call = call <8 x i32> @llvm.x86.avx2.pmovsxbd(<16 x i8> %arg0)
-  %res = bitcast <8 x i32> %call to <4 x i64>
+  %shuf = shufflevector <16 x i8> %arg0, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %ext = sext <8 x i8> %shuf to <8 x i32>
+  %res = bitcast <8 x i32> %ext to <4 x i64>
   ret <4 x i64> %res
 }
-declare <8 x i32> @llvm.x86.avx2.pmovsxbd(<16 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepi8_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepi8_epi64:
@@ -774,10 +773,10 @@ define <4 x i64> @test_mm256_cvtepi8_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovsxbq %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %call = call <4 x i64> @llvm.x86.avx2.pmovsxbq(<16 x i8> %arg0)
-  ret <4 x i64> %call
+  %shuf = shufflevector <16 x i8> %arg0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %ext = sext <4 x i8> %shuf to <4 x i64>
+  ret <4 x i64> %ext
 }
-declare <4 x i64> @llvm.x86.avx2.pmovsxbq(<16 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepi16_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepi16_epi32:
@@ -790,11 +789,10 @@ define <4 x i64> @test_mm256_cvtepi16_epi32(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %call = call <8 x i32> @llvm.x86.avx2.pmovsxwd(<8 x i16> %arg0)
-  %res = bitcast <8 x i32> %call to <4 x i64>
+  %ext = sext <8 x i16> %arg0 to <8 x i32>
+  %res = bitcast <8 x i32> %ext to <4 x i64>
   ret <4 x i64> %res
 }
-declare <8 x i32> @llvm.x86.avx2.pmovsxwd(<8 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepi16_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepi16_epi64:
@@ -807,10 +805,10 @@ define <4 x i64> @test_mm256_cvtepi16_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovsxwq %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %call = call <4 x i64> @llvm.x86.avx2.pmovsxwq(<8 x i16> %arg0)
-  ret <4 x i64> %call
+  %shuf = shufflevector <8 x i16> %arg0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %ext = sext <4 x i16> %shuf to <4 x i64>
+  ret <4 x i64> %ext
 }
-declare <4 x i64> @llvm.x86.avx2.pmovsxwq(<8 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepi32_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepi32_epi64:
@@ -823,10 +821,9 @@ define <4 x i64> @test_mm256_cvtepi32_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %res = call <4 x i64> @llvm.x86.avx2.pmovsxdq(<4 x i32> %arg0)
-  ret <4 x i64> %res
+  %ext = sext <4 x i32> %arg0 to <4 x i64>
+  ret <4 x i64> %ext
 }
-declare <4 x i64> @llvm.x86.avx2.pmovsxdq(<4 x i32>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepu8_epi16(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepu8_epi16:
@@ -839,11 +836,10 @@ define <4 x i64> @test_mm256_cvtepu8_epi16(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %call = call <16 x i16> @llvm.x86.avx2.pmovzxbw(<16 x i8> %arg0)
-  %res = bitcast <16 x i16> %call to <4 x i64>
+  %ext = zext <16 x i8> %arg0 to <16 x i16>
+  %res = bitcast <16 x i16> %ext to <4 x i64>
   ret <4 x i64> %res
 }
-declare <16 x i16> @llvm.x86.avx2.pmovzxbw(<16 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepu8_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepu8_epi32:
@@ -856,11 +852,11 @@ define <4 x i64> @test_mm256_cvtepu8_epi32(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %call = call <8 x i32> @llvm.x86.avx2.pmovzxbd(<16 x i8> %arg0)
-  %res = bitcast <8 x i32> %call to <4 x i64>
+  %shuf = shufflevector <16 x i8> %arg0, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %ext = zext <8 x i8> %shuf to <8 x i32>
+  %res = bitcast <8 x i32> %ext to <4 x i64>
   ret <4 x i64> %res
 }
-declare <8 x i32> @llvm.x86.avx2.pmovzxbd(<16 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepu8_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepu8_epi64:
@@ -873,10 +869,10 @@ define <4 x i64> @test_mm256_cvtepu8_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
-  %call = call <4 x i64> @llvm.x86.avx2.pmovzxbq(<16 x i8> %arg0)
-  ret <4 x i64> %call
+  %shuf = shufflevector <16 x i8> %arg0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %ext = zext <4 x i8> %shuf to <4 x i64>
+  ret <4 x i64> %ext
 }
-declare <4 x i64> @llvm.x86.avx2.pmovzxbq(<16 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepu16_epi32(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepu16_epi32:
@@ -889,11 +885,10 @@ define <4 x i64> @test_mm256_cvtepu16_epi32(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %call = call <8 x i32> @llvm.x86.avx2.pmovzxwd(<8 x i16> %arg0)
-  %res = bitcast <8 x i32> %call to <4 x i64>
+  %ext = zext <8 x i16> %arg0 to <8 x i32>
+  %res = bitcast <8 x i32> %ext to <4 x i64>
   ret <4 x i64> %res
 }
-declare <8 x i32> @llvm.x86.avx2.pmovzxwd(<8 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepu16_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepu16_epi64:
@@ -906,10 +901,10 @@ define <4 x i64> @test_mm256_cvtepu16_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %call = call <4 x i64> @llvm.x86.avx2.pmovzxwq(<8 x i16> %arg0)
-  ret <4 x i64> %call
+  %shuf = shufflevector <8 x i16> %arg0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %ext = zext <4 x i16> %shuf to <4 x i64>
+  ret <4 x i64> %ext
 }
-declare <4 x i64> @llvm.x86.avx2.pmovzxwq(<8 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_cvtepu32_epi64(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_cvtepu32_epi64:
@@ -922,10 +917,9 @@ define <4 x i64> @test_mm256_cvtepu32_epi64(<2 x i64> %a0) {
 ; X64-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %res = call <4 x i64> @llvm.x86.avx2.pmovzxdq(<4 x i32> %arg0)
-  ret <4 x i64> %res
+  %ext = zext <4 x i32> %arg0 to <4 x i64>
+  ret <4 x i64> %ext
 }
-declare <4 x i64> @llvm.x86.avx2.pmovzxdq(<4 x i32>) nounwind readnone
 
 define <2 x i64> @test_mm256_extracti128_si256(<4 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm256_extracti128_si256:

@@ -178,6 +178,9 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name.startswith("x86.avx2.pbroadcast") ||
         Name.startswith("x86.avx.vpermil.") ||
         Name.startswith("x86.sse41.pmovsx") ||
+        Name.startswith("x86.sse41.pmovzx") ||
+        Name.startswith("x86.avx2.pmovsx") ||
+        Name.startswith("x86.avx2.pmovzx") ||
         Name == "x86.sse2.cvtdq2pd" ||
         Name == "x86.sse2.cvtps2pd" ||
         Name == "x86.avx.cvtdq2.pd.256" ||
@@ -301,75 +304,70 @@ bool llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
 // Handles upgrading SSE2 and AVX2 PSLLDQ intrinsics by converting them
 // to byte shuffles.
 static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
-                                         Value *Op, unsigned NumLanes,
-                                         unsigned Shift) {
-  // Each lane is 16 bytes.
-  unsigned NumElts = NumLanes * 16;
+                                         Value *Op, unsigned Shift) {
+  Type *ResultTy = Op->getType();
+  unsigned NumElts = ResultTy->getVectorNumElements() * 8;
 
   // Bitcast from a 64-bit element type to a byte element type.
-  Op = Builder.CreateBitCast(Op,
-                             VectorType::get(Type::getInt8Ty(C), NumElts),
-                             "cast");
+  Type *VecTy = VectorType::get(Type::getInt8Ty(C), NumElts);
+  Op = Builder.CreateBitCast(Op, VecTy, "cast");
+
   // We'll be shuffling in zeroes.
-  Value *Res = ConstantVector::getSplat(NumElts, Builder.getInt8(0));
+  Value *Res = Constant::getNullValue(VecTy);
 
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
   if (Shift < 16) {
-    SmallVector<Constant*, 32> Idxs;
+    int Idxs[32];
     // 256-bit version is split into two 16-byte lanes.
     for (unsigned l = 0; l != NumElts; l += 16)
       for (unsigned i = 0; i != 16; ++i) {
         unsigned Idx = NumElts + i - Shift;
         if (Idx < NumElts)
           Idx -= NumElts - 16; // end of lane, switch operand.
-        Idxs.push_back(Builder.getInt32(Idx + l));
+        Idxs[l + i] = Idx + l;
       }
 
-    Res = Builder.CreateShuffleVector(Res, Op, ConstantVector::get(Idxs));
+    Res = Builder.CreateShuffleVector(Res, Op, makeArrayRef(Idxs, NumElts));
   }
 
   // Bitcast back to a 64-bit element type.
-  return Builder.CreateBitCast(Res,
-                               VectorType::get(Type::getInt64Ty(C), 2*NumLanes),
-                               "cast");
+  return Builder.CreateBitCast(Res, ResultTy, "cast");
 }
 
 // Handles upgrading SSE2 and AVX2 PSRLDQ intrinsics by converting them
 // to byte shuffles.
 static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
-                                         Value *Op, unsigned NumLanes,
+                                         Value *Op,
                                          unsigned Shift) {
-  // Each lane is 16 bytes.
-  unsigned NumElts = NumLanes * 16;
+  Type *ResultTy = Op->getType();
+  unsigned NumElts = ResultTy->getVectorNumElements() * 8;
 
   // Bitcast from a 64-bit element type to a byte element type.
-  Op = Builder.CreateBitCast(Op,
-                             VectorType::get(Type::getInt8Ty(C), NumElts),
-                             "cast");
+  Type *VecTy = VectorType::get(Type::getInt8Ty(C), NumElts);
+  Op = Builder.CreateBitCast(Op, VecTy, "cast");
+
   // We'll be shuffling in zeroes.
-  Value *Res = ConstantVector::getSplat(NumElts, Builder.getInt8(0));
+  Value *Res = Constant::getNullValue(VecTy);
 
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
   if (Shift < 16) {
-    SmallVector<Constant*, 32> Idxs;
+    int Idxs[32];
     // 256-bit version is split into two 16-byte lanes.
     for (unsigned l = 0; l != NumElts; l += 16)
       for (unsigned i = 0; i != 16; ++i) {
         unsigned Idx = i + Shift;
         if (Idx >= 16)
           Idx += NumElts - 16; // end of lane, switch operand.
-        Idxs.push_back(Builder.getInt32(Idx + l));
+        Idxs[l + i] = Idx + l;
       }
 
-    Res = Builder.CreateShuffleVector(Op, Res, ConstantVector::get(Idxs));
+    Res = Builder.CreateShuffleVector(Op, Res, makeArrayRef(Idxs, NumElts));
   }
 
   // Bitcast back to a 64-bit element type.
-  return Builder.CreateBitCast(Res,
-                               VectorType::get(Type::getInt64Ty(C), 2*NumLanes),
-                               "cast");
+  return Builder.CreateBitCast(Res, ResultTy, "cast");
 }
 
 // UpgradeIntrinsicCall - Upgrade a call to an old intrinsic to be a call the
@@ -544,19 +542,25 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       for (unsigned I = 0; I < EltNum; ++I)
         Rep = Builder.CreateInsertElement(Rep, Load,
                                           ConstantInt::get(I32Ty, I));
-    } else if (Name.startswith("llvm.x86.sse41.pmovsx")) {
+    } else if (Name.startswith("llvm.x86.sse41.pmovsx") ||
+               Name.startswith("llvm.x86.sse41.pmovzx") ||
+               Name.startswith("llvm.x86.avx2.pmovsx") ||
+               Name.startswith("llvm.x86.avx2.pmovzx")) {
       VectorType *SrcTy = cast<VectorType>(CI->getArgOperand(0)->getType());
       VectorType *DstTy = cast<VectorType>(CI->getType());
       unsigned NumDstElts = DstTy->getNumElements();
 
-      // Extract a subvector of the first NumDstElts lanes and sign extend.
+      // Extract a subvector of the first NumDstElts lanes and sign/zero extend.
       SmallVector<int, 8> ShuffleMask;
       for (int i = 0; i != (int)NumDstElts; ++i)
         ShuffleMask.push_back(i);
 
       Value *SV = Builder.CreateShuffleVector(
           CI->getArgOperand(0), UndefValue::get(SrcTy), ShuffleMask);
-      Rep = Builder.CreateSExt(SV, DstTy);
+
+      bool DoSext = (StringRef::npos != Name.find("pmovsx"));
+      Rep = DoSext ? Builder.CreateSExt(SV, DstTy)
+                   : Builder.CreateZExt(SV, DstTy);
     } else if (Name == "llvm.x86.avx2.vbroadcasti128") {
       // Replace vbroadcasts with a vector shuffle.
       Type *VT = VectorType::get(Type::getInt64Ty(C), 2);
@@ -574,46 +578,28 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Type *MaskTy = VectorType::get(Type::getInt32Ty(C), NumElts);
       Rep = Builder.CreateShuffleVector(Op, UndefValue::get(Op->getType()),
                                         Constant::getNullValue(MaskTy));
-    } else if (Name == "llvm.x86.sse2.psll.dq") {
-      // 128-bit shift left specified in bits.
+    } else if (Name == "llvm.x86.sse2.psll.dq" ||
+               Name == "llvm.x86.avx2.psll.dq") {
+      // 128/256-bit shift left specified in bits.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSLLDQIntrinsics(Builder, C, CI->getArgOperand(0), 1,
+      Rep = UpgradeX86PSLLDQIntrinsics(Builder, C, CI->getArgOperand(0),
                                        Shift / 8); // Shift is in bits.
-    } else if (Name == "llvm.x86.sse2.psrl.dq") {
-      // 128-bit shift right specified in bits.
+    } else if (Name == "llvm.x86.sse2.psrl.dq" ||
+               Name == "llvm.x86.avx2.psrl.dq") {
+      // 128/256-bit shift right specified in bits.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0), 1,
+      Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0),
                                        Shift / 8); // Shift is in bits.
-    } else if (Name == "llvm.x86.avx2.psll.dq") {
-      // 256-bit shift left specified in bits.
+    } else if (Name == "llvm.x86.sse2.psll.dq.bs" ||
+               Name == "llvm.x86.avx2.psll.dq.bs") {
+      // 128/256-bit shift left specified in bytes.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSLLDQIntrinsics(Builder, C, CI->getArgOperand(0), 2,
-                                       Shift / 8); // Shift is in bits.
-    } else if (Name == "llvm.x86.avx2.psrl.dq") {
-      // 256-bit shift right specified in bits.
+      Rep = UpgradeX86PSLLDQIntrinsics(Builder, C, CI->getArgOperand(0), Shift);
+    } else if (Name == "llvm.x86.sse2.psrl.dq.bs" ||
+               Name == "llvm.x86.avx2.psrl.dq.bs") {
+      // 128/256-bit shift right specified in bytes.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0), 2,
-                                       Shift / 8); // Shift is in bits.
-    } else if (Name == "llvm.x86.sse2.psll.dq.bs") {
-      // 128-bit shift left specified in bytes.
-      unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSLLDQIntrinsics(Builder, C, CI->getArgOperand(0), 1,
-                                       Shift);
-    } else if (Name == "llvm.x86.sse2.psrl.dq.bs") {
-      // 128-bit shift right specified in bytes.
-      unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0), 1,
-                                       Shift);
-    } else if (Name == "llvm.x86.avx2.psll.dq.bs") {
-      // 256-bit shift left specified in bytes.
-      unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSLLDQIntrinsics(Builder, C, CI->getArgOperand(0), 2,
-                                       Shift);
-    } else if (Name == "llvm.x86.avx2.psrl.dq.bs") {
-      // 256-bit shift right specified in bytes.
-      unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0), 2,
-                                       Shift);
+      Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0), Shift);
     } else if (Name == "llvm.x86.sse41.pblendw" ||
                Name == "llvm.x86.sse41.blendpd" ||
                Name == "llvm.x86.sse41.blendps" ||

@@ -1629,7 +1629,10 @@ PreservedAnalyses SCCPPass::run(Function &F, AnalysisManager<Function> &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   if (!runSCCP(F, DL, &TLI))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+
+  auto PA = PreservedAnalyses();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 
 namespace {

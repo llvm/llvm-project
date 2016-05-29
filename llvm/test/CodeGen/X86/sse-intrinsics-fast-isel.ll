@@ -1411,7 +1411,7 @@ define void @test_MM_SET_EXCEPTION_MASK(i32 %a0) nounwind {
 ; X32-NEXT:    leal (%esp), %ecx
 ; X32-NEXT:    stmxcsr (%ecx)
 ; X32-NEXT:    movl (%esp), %edx
-; X32-NEXT:    andl $-8065, %edx # imm = 0xFFFFFFFFFFFFE07F
+; X32-NEXT:    andl $-8065, %edx # imm = 0xE07F
 ; X32-NEXT:    orl %eax, %edx
 ; X32-NEXT:    movl %edx, (%esp)
 ; X32-NEXT:    ldmxcsr (%ecx)
@@ -1423,7 +1423,7 @@ define void @test_MM_SET_EXCEPTION_MASK(i32 %a0) nounwind {
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    andl $-8065, %ecx # imm = 0xFFFFFFFFFFFFE07F
+; X64-NEXT:    andl $-8065, %ecx # imm = 0xE07F
 ; X64-NEXT:    orl %edi, %ecx
 ; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    ldmxcsr (%rax)
@@ -1484,7 +1484,7 @@ define void @test_MM_SET_FLUSH_ZERO_MODE(i32 %a0) nounwind {
 ; X32-NEXT:    leal (%esp), %ecx
 ; X32-NEXT:    stmxcsr (%ecx)
 ; X32-NEXT:    movl (%esp), %edx
-; X32-NEXT:    andl $-32769, %edx # imm = 0xFFFFFFFFFFFF7FFF
+; X32-NEXT:    andl $-32769, %edx # imm = 0xFFFF7FFF
 ; X32-NEXT:    orl %eax, %edx
 ; X32-NEXT:    movl %edx, (%esp)
 ; X32-NEXT:    ldmxcsr (%ecx)
@@ -1496,7 +1496,7 @@ define void @test_MM_SET_FLUSH_ZERO_MODE(i32 %a0) nounwind {
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    andl $-32769, %ecx # imm = 0xFFFFFFFFFFFF7FFF
+; X64-NEXT:    andl $-32769, %ecx # imm = 0xFFFF7FFF
 ; X64-NEXT:    orl %edi, %ecx
 ; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    ldmxcsr (%rax)
@@ -1564,7 +1564,7 @@ define void @test_MM_SET_ROUNDING_MODE(i32 %a0) nounwind {
 ; X32-NEXT:    leal (%esp), %ecx
 ; X32-NEXT:    stmxcsr (%ecx)
 ; X32-NEXT:    movl (%esp), %edx
-; X32-NEXT:    andl $-24577, %edx # imm = 0xFFFFFFFFFFFF9FFF
+; X32-NEXT:    andl $-24577, %edx # imm = 0x9FFF
 ; X32-NEXT:    orl %eax, %edx
 ; X32-NEXT:    movl %edx, (%esp)
 ; X32-NEXT:    ldmxcsr (%ecx)
@@ -1576,7 +1576,7 @@ define void @test_MM_SET_ROUNDING_MODE(i32 %a0) nounwind {
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    stmxcsr (%rax)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    andl $-24577, %ecx # imm = 0xFFFFFFFFFFFF9FFF
+; X64-NEXT:    andl $-24577, %ecx # imm = 0x9FFF
 ; X64-NEXT:    orl %edi, %ecx
 ; X64-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    ldmxcsr (%rax)

@@ -615,7 +615,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; SSE-NEXT:    orq %rcx, %rdx
 ; SSE-NEXT:    movq %rdi, %rcx
 ; SSE-NEXT:    shrq %rcx
-; SSE-NEXT:    andl $-2147483648, %ecx # imm = 0xFFFFFFFF80000000
+; SSE-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
 ; SSE-NEXT:    orq %rdx, %rcx
 ; SSE-NEXT:    movq %rdi, %rdx
 ; SSE-NEXT:    shrq $3, %rdx
@@ -871,7 +871,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; AVX-NEXT:    orq %rcx, %rdx
 ; AVX-NEXT:    movq %rdi, %rcx
 ; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    andl $-2147483648, %ecx # imm = 0xFFFFFFFF80000000
+; AVX-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
 ; AVX-NEXT:    orq %rdx, %rcx
 ; AVX-NEXT:    movq %rdi, %rdx
 ; AVX-NEXT:    shrq $3, %rdx

@@ -122,7 +122,7 @@ define i32 @test8(i32 %a1, i32 %a2, i32 %a3) {
 ; ALL-NEXT:    testl %edx, %edx
 ; ALL-NEXT:    movl $1, %eax
 ; ALL-NEXT:    cmovel %eax, %edx
-; ALL-NEXT:    cmpl $-2147483648, %esi ## imm = 0xFFFFFFFF80000000
+; ALL-NEXT:    cmpl $-2147483648, %esi ## imm = 0x80000000
 ; ALL-NEXT:    cmovnel %edx, %eax
 ; ALL-NEXT:    cmpl $-1, %edi
 ; ALL-NEXT:    cmovnel %edx, %eax

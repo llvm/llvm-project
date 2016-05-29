@@ -10,8 +10,6 @@ declare <8 x i32> @llvm.x86.avx2.psllv.d.256(<8 x i32>, <8 x i32>)
 declare <4 x i32> @llvm.x86.avx2.psllv.d(<4 x i32>, <4 x i32>)
 declare <8 x i16> @llvm.x86.sse2.psrl.w(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16>, i32)
-declare <2 x i64> @llvm.x86.sse2.psll.dq(<2 x i64>, i32)
-declare <2 x i64> @llvm.x86.sse2.psll.dq.bs(<2 x i64>, i32)
 
 define i64 @test_mmx(i64 %x.coerce, i64 %y.coerce) sanitize_memory {
 entry:

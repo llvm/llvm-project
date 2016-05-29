@@ -60,6 +60,8 @@ public:
       return Error::success();
     }
     uint32_t Length = NumItems * sizeof(T);
+    if (Length / sizeof(T) != NumItems)
+      return make_error<CodeViewError>(cv_error_code::corrupt_record);
     if (Offset + Length > Stream.getLength())
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
     StreamRef View(Stream, Offset, Length);

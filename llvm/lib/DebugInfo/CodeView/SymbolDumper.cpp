@@ -591,12 +591,12 @@ void CVSymbolDumperImpl::visitDefRangeSubfieldSym(
 
   if (ObjDelegate) {
     StringRef StringTable = ObjDelegate->getStringTable();
-    if (!StringTable.empty()) {
-      W.printString("Program",
-                    StringTable.drop_front(DefRangeSubfield.Header.Program)
-                        .split('\0')
-                        .first);
-    }
+    auto ProgramStringTableOffset = DefRangeSubfield.Header.Program;
+    if (ProgramStringTableOffset >= StringTable.size())
+      return parseError();
+    StringRef Program =
+        StringTable.drop_front(ProgramStringTableOffset).split('\0').first;
+    W.printString("Program", Program);
   }
   W.printNumber("OffsetInParent", DefRangeSubfield.Header.OffsetInParent);
   printLocalVariableAddrRange(DefRangeSubfield.Header.Range,
@@ -610,11 +610,12 @@ void CVSymbolDumperImpl::visitDefRangeSym(SymbolKind Kind,
 
   if (ObjDelegate) {
     StringRef StringTable = ObjDelegate->getStringTable();
-    if (!StringTable.empty()) {
-      W.printString(
-          "Program",
-          StringTable.drop_front(DefRange.Header.Program).split('\0').first);
-    }
+    auto ProgramStringTableOffset = DefRange.Header.Program;
+    if (ProgramStringTableOffset >= StringTable.size())
+      return parseError();
+    StringRef Program =
+        StringTable.drop_front(ProgramStringTableOffset).split('\0').first;
+    W.printString("Program", Program);
   }
   printLocalVariableAddrRange(DefRange.Header.Range,
                               DefRange.getRelocationOffset());

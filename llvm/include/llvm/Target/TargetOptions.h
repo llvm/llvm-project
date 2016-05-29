@@ -98,9 +98,9 @@ namespace llvm {
           GuaranteedTailCallOpt(false), StackAlignmentOverride(0),
           StackSymbolOrdering(true), EnableFastISel(false), UseInitArray(false),
           DisableIntegratedAS(false), CompressDebugSections(false),
-          FunctionSections(false), DataSections(false),
-          UniqueSectionNames(true), TrapUnreachable(false), EmulatedTLS(false),
-          FloatABIType(FloatABI::Default),
+          RelaxELFRelocations(false), FunctionSections(false),
+          DataSections(false), UniqueSectionNames(true), TrapUnreachable(false),
+          EmulatedTLS(false), FloatABIType(FloatABI::Default),
           AllowFPOpFusion(FPOpFusion::Standard), Reciprocals(TargetRecip()),
           JTType(JumpTable::Single), ThreadModel(ThreadModel::POSIX),
           EABIVersion(EABI::Default), DebuggerTuning(DebuggerKind::Default),
@@ -189,6 +189,8 @@ namespace llvm {
 
     /// Compress DWARF debug sections.
     unsigned CompressDebugSections : 1;
+
+    unsigned RelaxELFRelocations : 1;
 
     /// Emit functions into separate sections.
     unsigned FunctionSections : 1;

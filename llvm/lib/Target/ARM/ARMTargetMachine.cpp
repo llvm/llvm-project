@@ -175,8 +175,8 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
   if (!RM.hasValue())
-    // Default relocation model on Darwin is PIC, not DynamicNoPIC.
-    return TT.isOSDarwin() ? Reloc::PIC_ : Reloc::DynamicNoPIC;
+    // Default relocation model on Darwin is PIC.
+    return TT.isOSBinFormatMachO() ? Reloc::PIC_ : Reloc::Static;
 
   // DynamicNoPIC is only used on darwin.
   if (*RM == Reloc::DynamicNoPIC && !TT.isOSDarwin())

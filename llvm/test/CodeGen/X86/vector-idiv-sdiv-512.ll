@@ -87,7 +87,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
 ; AVX-NEXT:    vpextrd $1, %xmm1, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -96,7 +96,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    vmovd %xmm1, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %edx, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -107,7 +107,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; AVX-NEXT:    vpextrd $2, %xmm1, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -117,7 +117,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
 ; AVX-NEXT:    vpextrd $3, %xmm1, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -128,7 +128,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -137,7 +137,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    vmovd %xmm2, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %edx, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -148,7 +148,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $2, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -158,7 +158,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $3, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -170,7 +170,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -179,7 +179,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    vmovd %xmm2, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %edx, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -190,7 +190,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $2, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -200,7 +200,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $3, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -210,7 +210,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -219,7 +219,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    vmovd %xmm0, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %edx, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -230,7 +230,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $2, %xmm0, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -240,7 +240,7 @@ define <16 x i32> @test_div7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $3, %xmm0, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %ecx, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -1162,7 +1162,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
 ; AVX-NEXT:    vpextrd $1, %xmm1, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1174,7 +1174,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    subl %edx, %eax
 ; AVX-NEXT:    vmovd %xmm1, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %ecx, %edx
 ; AVX-NEXT:    movl %edx, %esi
@@ -1188,7 +1188,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm2, %xmm2
 ; AVX-NEXT:    vpextrd $2, %xmm1, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1201,7 +1201,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
 ; AVX-NEXT:    vpextrd $3, %xmm1, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1215,7 +1215,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1227,7 +1227,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    subl %edx, %eax
 ; AVX-NEXT:    vmovd %xmm2, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %ecx, %edx
 ; AVX-NEXT:    movl %edx, %esi
@@ -1241,7 +1241,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $2, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1254,7 +1254,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $3, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1269,7 +1269,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vextracti32x4 $1, %zmm0, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1281,7 +1281,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    subl %edx, %eax
 ; AVX-NEXT:    vmovd %xmm2, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %ecx, %edx
 ; AVX-NEXT:    movl %edx, %esi
@@ -1295,7 +1295,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $2, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1308,7 +1308,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $3, %xmm2, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1321,7 +1321,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm2
 ; AVX-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1333,7 +1333,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    subl %edx, %eax
 ; AVX-NEXT:    vmovd %xmm0, %ecx
 ; AVX-NEXT:    movslq %ecx, %rcx
-; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rcx, %rdx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rdx
 ; AVX-NEXT:    addl %ecx, %edx
 ; AVX-NEXT:    movl %edx, %esi
@@ -1347,7 +1347,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $2, %xmm0, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx
@@ -1360,7 +1360,7 @@ define <16 x i32> @test_rem7_16i32(<16 x i32> %a) nounwind {
 ; AVX-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
 ; AVX-NEXT:    vpextrd $3, %xmm0, %eax
 ; AVX-NEXT:    cltq
-; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0xFFFFFFFF92492493
+; AVX-NEXT:    imulq $-1840700269, %rax, %rcx # imm = 0x92492493
 ; AVX-NEXT:    shrq $32, %rcx
 ; AVX-NEXT:    addl %eax, %ecx
 ; AVX-NEXT:    movl %ecx, %edx

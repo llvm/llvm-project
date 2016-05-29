@@ -18,10 +18,10 @@ movabsq	$-9223372036854775808, %rax
 # CHECK:  movb  $-128, %al
 
 # CHECK:  movw  $32767, %ax             # imm = 0x7FFF
-# CHECK:  movw  $-32768, %ax            # imm = 0xFFFFFFFFFFFF8000
+# CHECK:  movw  $-32768, %ax            # imm = 0x8000
 
 # CHECK:  movl  $2147483647, %eax       # imm = 0x7FFFFFFF
-# CHECK:  movl  $-2147483648, %eax      # imm = 0xFFFFFFFF80000000
+# CHECK:  movl  $-2147483648, %eax      # imm = 0x80000000
 
 # CHECK:  movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
 # CHECK:  movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
