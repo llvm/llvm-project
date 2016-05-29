@@ -73,6 +73,8 @@ void LLVMTargetMachine::initAsmInfo() {
   if (Options.CompressDebugSections)
     TmpAsmInfo->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
 
+  TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
+
   AsmInfo = TmpAsmInfo;
 }
 

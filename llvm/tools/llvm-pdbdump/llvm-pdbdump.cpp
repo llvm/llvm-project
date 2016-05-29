@@ -194,6 +194,8 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
                          cl::cat(FilterCategory));
 }
 
+static ExitOnError ExitOnErr;
+
 static Error dumpFileHeaders(ScopedPrinter &P, PDBFile &File) {
   if (!opts::DumpHeaders)
     return Error::success();
@@ -686,23 +688,14 @@ bool isRawDumpEnabled() {
 static void dumpInput(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   if (isRawDumpEnabled()) {
-    auto E = loadDataForPDB(PDB_ReaderType::Raw, Path, Session);
-    if (!E) {
-      RawSession *RS = static_cast<RawSession *>(Session.get());
-      E = dumpStructure(*RS);
-    }
+    ExitOnErr(loadDataForPDB(PDB_ReaderType::Raw, Path, Session));
 
-    if (E)
-      logAllUnhandledErrors(std::move(E), outs(), "");
-
+    RawSession *RS = static_cast<RawSession *>(Session.get());
+    ExitOnErr(dumpStructure(*RS));
     return;
   }
 
-  Error E = loadDataForPDB(PDB_ReaderType::DIA, Path, Session);
-  if (E) {
-    logAllUnhandledErrors(std::move(E), outs(), "");
-    return;
-  }
+  ExitOnErr(loadDataForPDB(PDB_ReaderType::DIA, Path, Session));
 
   if (opts::LoadAddress)
     Session->setLoadAddress(opts::LoadAddress);
@@ -821,14 +814,12 @@ int main(int argc_, const char *argv_[]) {
   sys::PrintStackTraceOnErrorSignal();
   PrettyStackTraceProgram X(argc_, argv_);
 
+  ExitOnErr.setBanner("llvm-pdbdump: ");
+
   SmallVector<const char *, 256> argv;
   SpecificBumpPtrAllocator<char> ArgAllocator;
-  std::error_code EC = sys::Process::GetArgumentVector(
-      argv, makeArrayRef(argv_, argc_), ArgAllocator);
-  if (EC) {
-    errs() << "error: couldn't get arguments: " << EC.message() << '\n';
-    return 1;
-  }
+  ExitOnErr(errorCodeToError(sys::Process::GetArgumentVector(
+      argv, makeArrayRef(argv_, argc_), ArgAllocator)));
 
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 

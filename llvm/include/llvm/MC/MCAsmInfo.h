@@ -371,7 +371,7 @@ protected:
 
   // If true, emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL, on
   // X86_64 ELF.
-  bool RelaxELFRelocations;
+  bool RelaxELFRelocations = false;
 
 public:
   explicit MCAsmInfo();
@@ -582,6 +582,7 @@ public:
   bool shouldUseLogicalShr() const { return UseLogicalShr; }
 
   bool canRelaxRelocations() const { return RelaxELFRelocations; }
+  void setRelaxELFRelocations(bool V) { RelaxELFRelocations = V; }
 };
 }
 

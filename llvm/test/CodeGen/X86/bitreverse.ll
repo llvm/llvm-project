@@ -26,7 +26,7 @@ define i8 @g(i8 %a) {
 define <2 x i16> @fold_v2i16() {
 ; CHECK-LABEL: fold_v2i16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movw $-4096, %ax # imm = 0xFFFFFFFFFFFFF000
+; CHECK-NEXT:    movw $-4096, %ax # imm = 0xF000
 ; CHECK-NEXT:    movw $240, %dx
 ; CHECK-NEXT:    retl
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> <i16 15, i16 3840>)

@@ -17,6 +17,10 @@ namespace X86 {
 enum Fixups {
   reloc_riprel_4byte = FirstTargetFixupKind, // 32-bit rip-relative
   reloc_riprel_4byte_movq_load,              // 32-bit rip-relative in movq
+  reloc_riprel_4byte_relax,                  // 32-bit rip-relative in relaxable
+                                             // instruction
+  reloc_riprel_4byte_relax_rex,              // 32-bit rip-relative in relaxable
+                                             // instruction with rex prefix
   reloc_signed_4byte,                        // 32-bit signed. Unlike FK_Data_4
                                              // this will be sign extended at
                                              // runtime.

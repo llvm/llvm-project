@@ -1,20 +1,13 @@
-// RUN: llvm-mc -filetype=obj -relax-relocations -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -r -t | FileCheck %s
+// RUN: llvm-mc -filetype=obj -relax-relocations -triple x86_64-pc-linux %s -o - | llvm-readobj -r | FileCheck %s
 
-// Test that this produces the correct relaxed relocations.
+// these should produce R_X86_64_GOTPCRELX
 
-        movl	foo@GOT, %eax
-        movl	foo@GOTPCREL(%rip), %eax
-        movq  foo@GOTPCREL(%rip), %rax
-        .long zed@GOTPCREL
+        call *call@GOTPCREL(%rip)
+        jmp *jmp@GOTPCREL(%rip)
 
 // CHECK:      Relocations [
-// CHECK:        Section ({{[^ ]+}}) .rela.text {
-// CHECK-NEXT:       0x{{[^ ]+}} R_X86_64_GOT32 foo 0x{{[^ ]+}}
-// CHECK-NEXT:       0x{{[^ ]+}} R_X86_64_GOTPCRELX foo 0x{{[^ ]+}}
-// CHECK-NEXT:       0x{{[^ ]+}} R_X86_64_REX_GOTPCRELX foo 0x{{[^ ]+}}
-// CHECK-NEXT:       0x{{[^ ]+}} R_X86_64_GOTPCREL zed 0x{{[^ ]+}}
+// CHECK-NEXT:   Section ({{.*}}) .rela.text {
+// CHECK-NEXT:     R_X86_64_GOTPCRELX call
+// CHECK-NEXT:     R_X86_64_GOTPCRELX jmp
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-
-// CHECK:        Symbols [
-// CHECK-NOT:          _GLOBAL_OFFSET_TABLE_

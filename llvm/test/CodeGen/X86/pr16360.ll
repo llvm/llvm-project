@@ -6,7 +6,7 @@ define i64 @foo(i32 %sum) {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    shrl $2, %eax
-; CHECK-NEXT:    orl $-67108864, %eax # imm = 0xFFFFFFFFFC000000
+; CHECK-NEXT:    orl $-67108864, %eax # imm = 0xFC000000
 ; CHECK-NEXT:    movl $1073741823, %edx # imm = 0x3FFFFFFF
 ; CHECK-NEXT:    retl
 entry:

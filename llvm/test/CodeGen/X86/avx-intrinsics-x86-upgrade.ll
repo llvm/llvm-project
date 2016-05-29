@@ -247,6 +247,72 @@ define <2 x i64> @test_x86_sse41_pmovsxwq(<8 x i16> %a0) {
 declare <2 x i64> @llvm.x86.sse41.pmovsxwq(<8 x i16>) nounwind readnone
 
 
+define <4 x i32> @test_x86_sse41_pmovzxbd(<16 x i8> %a0) {
+; CHECK-LABEL: test_x86_sse41_pmovzxbd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    retl
+  %res = call <4 x i32> @llvm.x86.sse41.pmovzxbd(<16 x i8> %a0) ; <<4 x i32>> [#uses=1]
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.x86.sse41.pmovzxbd(<16 x i8>) nounwind readnone
+
+
+define <2 x i64> @test_x86_sse41_pmovzxbq(<16 x i8> %a0) {
+; CHECK-LABEL: test_x86_sse41_pmovzxbq:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    retl
+  %res = call <2 x i64> @llvm.x86.sse41.pmovzxbq(<16 x i8> %a0) ; <<2 x i64>> [#uses=1]
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.sse41.pmovzxbq(<16 x i8>) nounwind readnone
+
+
+define <8 x i16> @test_x86_sse41_pmovzxbw(<16 x i8> %a0) {
+; CHECK-LABEL: test_x86_sse41_pmovzxbw:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; CHECK-NEXT:    retl
+  %res = call <8 x i16> @llvm.x86.sse41.pmovzxbw(<16 x i8> %a0) ; <<8 x i16>> [#uses=1]
+  ret <8 x i16> %res
+}
+declare <8 x i16> @llvm.x86.sse41.pmovzxbw(<16 x i8>) nounwind readnone
+
+
+define <2 x i64> @test_x86_sse41_pmovzxdq(<4 x i32> %a0) {
+; CHECK-LABEL: test_x86_sse41_pmovzxdq:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; CHECK-NEXT:    retl
+  %res = call <2 x i64> @llvm.x86.sse41.pmovzxdq(<4 x i32> %a0) ; <<2 x i64>> [#uses=1]
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.sse41.pmovzxdq(<4 x i32>) nounwind readnone
+
+
+define <4 x i32> @test_x86_sse41_pmovzxwd(<8 x i16> %a0) {
+; CHECK-LABEL: test_x86_sse41_pmovzxwd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK-NEXT:    retl
+  %res = call <4 x i32> @llvm.x86.sse41.pmovzxwd(<8 x i16> %a0) ; <<4 x i32>> [#uses=1]
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.x86.sse41.pmovzxwd(<8 x i16>) nounwind readnone
+
+
+define <2 x i64> @test_x86_sse41_pmovzxwq(<8 x i16> %a0) {
+; CHECK-LABEL: test_x86_sse41_pmovzxwq:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; CHECK-NEXT:    retl
+  %res = call <2 x i64> @llvm.x86.sse41.pmovzxwq(<8 x i16> %a0) ; <<2 x i64>> [#uses=1]
+  ret <2 x i64> %res
+}
+declare <2 x i64> @llvm.x86.sse41.pmovzxwq(<8 x i16>) nounwind readnone
+
+
 define <2 x double> @test_x86_sse2_cvtdq2pd(<4 x i32> %a0) {
 ; CHECK-LABEL: test_x86_sse2_cvtdq2pd:
 ; CHECK:       ## BB#0:

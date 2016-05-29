@@ -77,6 +77,7 @@ public:
     auto EC = Extract(IterRef, ThisLen, ThisValue);
     if (EC) {
       consumeError(std::move(EC));
+      this->Array = nullptr;
       HasError = true;
       if (HadError)
         *HadError = true;

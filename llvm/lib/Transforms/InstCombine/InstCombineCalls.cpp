@@ -325,24 +325,6 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   return Builder.CreateAShr(Vec, ShiftVec);
 }
 
-static Value *simplifyX86extend(const IntrinsicInst &II,
-                                InstCombiner::BuilderTy &Builder,
-                                bool SignExtend) {
-  VectorType *SrcTy = cast<VectorType>(II.getArgOperand(0)->getType());
-  VectorType *DstTy = cast<VectorType>(II.getType());
-  unsigned NumDstElts = DstTy->getNumElements();
-
-  // Extract a subvector of the first NumDstElts lanes and sign/zero extend.
-  SmallVector<int, 8> ShuffleMask;
-  for (int i = 0; i != (int)NumDstElts; ++i)
-    ShuffleMask.push_back(i);
-
-  Value *SV = Builder.CreateShuffleVector(II.getArgOperand(0),
-                                          UndefValue::get(SrcTy), ShuffleMask);
-  return SignExtend ? Builder.CreateSExt(SV, DstTy)
-                    : Builder.CreateZExt(SV, DstTy);
-}
-
 static Value *simplifyX86insertps(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
@@ -1648,32 +1630,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
   }
-
-  case Intrinsic::x86_avx2_pmovsxbd:
-  case Intrinsic::x86_avx2_pmovsxbq:
-  case Intrinsic::x86_avx2_pmovsxbw:
-  case Intrinsic::x86_avx2_pmovsxdq:
-  case Intrinsic::x86_avx2_pmovsxwd:
-  case Intrinsic::x86_avx2_pmovsxwq:
-    if (Value *V = simplifyX86extend(*II, *Builder, true))
-      return replaceInstUsesWith(*II, V);
-    break;
-
-  case Intrinsic::x86_sse41_pmovzxbd:
-  case Intrinsic::x86_sse41_pmovzxbq:
-  case Intrinsic::x86_sse41_pmovzxbw:
-  case Intrinsic::x86_sse41_pmovzxdq:
-  case Intrinsic::x86_sse41_pmovzxwd:
-  case Intrinsic::x86_sse41_pmovzxwq:
-  case Intrinsic::x86_avx2_pmovzxbd:
-  case Intrinsic::x86_avx2_pmovzxbq:
-  case Intrinsic::x86_avx2_pmovzxbw:
-  case Intrinsic::x86_avx2_pmovzxdq:
-  case Intrinsic::x86_avx2_pmovzxwd:
-  case Intrinsic::x86_avx2_pmovzxwq:
-    if (Value *V = simplifyX86extend(*II, *Builder, false))
-      return replaceInstUsesWith(*II, V);
-    break;
 
   case Intrinsic::x86_sse41_insertps:
     if (Value *V = simplifyX86insertps(*II, *Builder))

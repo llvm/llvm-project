@@ -57,6 +57,30 @@ exit:
   ret void
 }
 
+define void @test-add-nuw-from-icmp(float* %input, i32 %offset,
+                                    i32 %numIterations) {
+; CHECK-LABEL: @test-add-nuw-from-icmp
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nuw>
+  %index32 = add nuw i32 %i, %offset
+  %cmp = icmp sgt i32 %index32, 0
+  %cmp.idx = sext i1 %cmp to i32
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %cmp.idx
+  %nexti = add nuw i32 %i, 1
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; With no load to trigger UB from poison, we cannot infer nsw.
 define void @test-add-no-load(float* %input, i32 %offset, i32 %numIterations) {
 ; CHECK-LABEL: @test-add-no-load

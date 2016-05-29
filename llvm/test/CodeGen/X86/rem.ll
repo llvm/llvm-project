@@ -5,7 +5,7 @@ define i32 @test1(i32 %X) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl $-2139062143, %edx # imm = 0xFFFFFFFF80808081
+; CHECK-NEXT:    movl $-2139062143, %edx # imm = 0x80808081
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    imull %edx
 ; CHECK-NEXT:    addl %ecx, %edx
@@ -44,7 +44,7 @@ define i32 @test3(i32 %X) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl $-2139062143, %edx # imm = 0xFFFFFFFF80808081
+; CHECK-NEXT:    movl $-2139062143, %edx # imm = 0x80808081
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    mull %edx
 ; CHECK-NEXT:    shrl $7, %edx

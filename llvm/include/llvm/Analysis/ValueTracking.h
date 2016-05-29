@@ -18,6 +18,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
@@ -348,6 +349,11 @@ template <typename T> class ArrayRef;
                                              AssumptionCache *AC = nullptr,
                                              const Instruction *CxtI = nullptr,
                                              const DominatorTree *DT = nullptr);
+
+  /// Returns true if the arithmetic part of the \p II 's result is
+  /// used only along the paths control dependent on the computation
+  /// not overflowing, \p II being an <op>.with.overflow intrinsic.
+  bool isOverflowIntrinsicNoWrap(IntrinsicInst *II, DominatorTree &DT);
 
   /// Return true if this function can prove that the instruction I will
   /// always transfer execution to one of its successors (including the next

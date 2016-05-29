@@ -58,7 +58,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ; X32-SSE1-NEXT:    movl %esp, %ebp
 ; X32-SSE1-NEXT:    andl $-16, %esp
 ; X32-SSE1-NEXT:    subl $32, %esp
-; X32-SSE1-NEXT:    movl $-2147483648, %eax # imm = 0xFFFFFFFF80000000
+; X32-SSE1-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X32-SSE1-NEXT:    movl 12(%ebp), %ecx
 ; X32-SSE1-NEXT:    xorl %eax, %ecx
 ; X32-SSE1-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
@@ -71,7 +71,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 ;
 ; X32-SSE2-LABEL: fneg_bitcast:
 ; X32-SSE2:       # BB#0:
-; X32-SSE2-NEXT:    movl $-2147483648, %eax # imm = 0xFFFFFFFF80000000
+; X32-SSE2-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-SSE2-NEXT:    xorl %eax, %ecx
 ; X32-SSE2-NEXT:    xorl {{[0-9]+}}(%esp), %eax

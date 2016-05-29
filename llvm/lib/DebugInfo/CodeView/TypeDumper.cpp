@@ -472,7 +472,8 @@ void CVTypeDumperImpl::visitPointer(TypeLeafKind Leaf, PointerRecord &Ptr) {
     else if (Ptr.getMode() == PointerMode::Pointer)
       TypeName.append("*");
 
-    Name = CVTD.saveName(TypeName);
+    if (!TypeName.empty())
+      Name = CVTD.saveName(TypeName);
   }
 }
 

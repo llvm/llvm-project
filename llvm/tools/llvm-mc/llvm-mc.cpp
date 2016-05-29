@@ -52,6 +52,10 @@ OutputFilename("o", cl::desc("Output filename"),
 static cl::opt<bool>
 ShowEncoding("show-encoding", cl::desc("Show instruction encodings"));
 
+static cl::opt<bool>
+RelaxELFRel("relax-relocations", cl::init(false),
+  cl::desc("Emit R_X86_64_GOTPCRELX instead of R_X86_64_GOTPCREL"));
+
 static cl::opt<DebugCompressionType>
 CompressDebugSections("compress-debug-sections", cl::ValueOptional,
   cl::init(DebugCompressionType::DCT_None),
@@ -415,6 +419,8 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
   assert(MAI && "Unable to create target asm info!");
+
+  MAI->setRelaxELFRelocations(RelaxELFRel);
 
   if (CompressDebugSections != DebugCompressionType::DCT_None) {
     if (!zlib::isAvailable()) {

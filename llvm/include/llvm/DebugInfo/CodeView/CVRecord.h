@@ -34,6 +34,8 @@ template <typename Kind> struct VarStreamArrayExtractor<CVRecord<Kind>> {
     if (auto EC = Reader.readObject(Prefix))
       return EC;
     Item.Length = Prefix->RecordLen;
+    if (Item.Length < 2)
+      return make_error<CodeViewError>(cv_error_code::corrupt_record);
     Item.Type = static_cast<Kind>(uint16_t(Prefix->RecordKind));
     if (auto EC = Reader.readBytes(Item.Data, Item.Length - 2))
       return EC;

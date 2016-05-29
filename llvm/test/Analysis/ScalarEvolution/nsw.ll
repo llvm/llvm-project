@@ -30,15 +30,17 @@ bb:		; preds = %bb1, %bb.nph
 	%tmp8 = add nsw i32 %i.01, 1		; <i32> [#uses=2]
 ; CHECK: %tmp8
 ; CHECK-NEXT: -->  {1,+,1}<nuw><nsw><%bb>
+	%p.gep = getelementptr double, double* %p, i32 %tmp8
+	%p.val = load double, double* %p.gep
 	br label %bb1
 
 bb1:		; preds = %bb
 	%phitmp = sext i32 %tmp8 to i64		; <i64> [#uses=1]
 ; CHECK: %phitmp
 ; CHECK-NEXT: -->  {1,+,1}<nuw><nsw><%bb>
-	%tmp9 = getelementptr double, double* %p, i64 %phitmp		; <double*> [#uses=1]
+	%tmp9 = getelementptr inbounds double, double* %p, i64 %phitmp		; <double*> [#uses=1]
 ; CHECK: %tmp9
-; CHECK-NEXT:  -->  {(8 + %p),+,8}<%bb>
+; CHECK-NEXT:  -->  {(8 + %p)<nsw>,+,8}<nsw><%bb>
 	%tmp10 = load double, double* %tmp9, align 8		; <double> [#uses=1]
 	%tmp11 = fcmp ogt double %tmp10, 2.000000e+00		; <i1> [#uses=1]
 	br i1 %tmp11, label %bb, label %bb1.return_crit_edge
@@ -143,15 +145,15 @@ bb7:                                              ; preds = %bb1
 }
 
 ; CHECK-LABEL: PR12376
-; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((3 + (-1 * %arg) + (%arg umax %arg1)) /u 4)) + %arg)
+; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nsw> umax %arg1)) /u 4)) + %arg)
 define void @PR12376(i32* nocapture %arg, i32* nocapture %arg1)  {
 bb:
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
   %tmp = phi i32* [ %arg, %bb ], [ %tmp4, %bb2 ]
-  %tmp3 = icmp ult i32* %tmp, %arg1
   %tmp4 = getelementptr inbounds i32, i32* %tmp, i64 1
+  %tmp3 = icmp ult i32* %tmp4, %arg1
   br i1 %tmp3, label %bb2, label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -161,8 +163,8 @@ bb5:                                              ; preds = %bb2
 declare void @f(i32)
 
 ; CHECK-LABEL: nswnowrap
-; CHECK: --> {(1 + %v),+,1}<nsw><%for.body>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (2 + %v)
-define void @nswnowrap(i32 %v) {
+; CHECK: --> {(1 + %v)<nsw>,+,1}<nsw><%for.body>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (2 + %v)
+define void @nswnowrap(i32 %v, i32* %buf) {
 entry:
   %add = add nsw i32 %v, 1
   br label %for.body
@@ -170,8 +172,10 @@ entry:
 for.body:
   %i.04 = phi i32 [ %v, %entry ], [ %inc, %for.body ]
   %inc = add nsw i32 %i.04, 1
-  tail call void @f(i32 %i.04)
+  %buf.gep = getelementptr inbounds i32, i32* %buf, i32 %inc
+  %buf.val = load i32, i32* %buf.gep
   %cmp = icmp slt i32 %i.04, %add
+  tail call void @f(i32 %i.04)
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:
