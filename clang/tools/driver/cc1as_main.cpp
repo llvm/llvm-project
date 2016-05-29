@@ -88,6 +88,7 @@ struct AssemblerInvocation {
   unsigned SaveTemporaryLabels : 1;
   unsigned GenDwarfForAssembly : 1;
   unsigned CompressDebugSections : 1;
+  unsigned RelaxELFRelocations : 1;
   unsigned DwarfVersion;
   std::string DwarfDebugFlags;
   std::string DwarfDebugProducer;
@@ -200,6 +201,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Any DebugInfoKind implies GenDwarfForAssembly.
   Opts.GenDwarfForAssembly = Args.hasArg(OPT_debug_info_kind_EQ);
   Opts.CompressDebugSections = Args.hasArg(OPT_compress_debug_sections);
+  Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
   Opts.DwarfDebugFlags = Args.getLastArgValue(OPT_dwarf_debug_flags);
   Opts.DwarfDebugProducer = Args.getLastArgValue(OPT_dwarf_debug_producer);
@@ -314,6 +316,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   // may be created with a combination of default and explicit settings.
   if (Opts.CompressDebugSections)
     MAI->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
+
+  MAI->setRelaxELFRelocations(Opts.RelaxELFRelocations);
 
   bool IsBinary = Opts.OutputType == AssemblerInvocation::FT_Obj;
   std::unique_ptr<raw_fd_ostream> FDOS = getOutputStream(Opts, Diags, IsBinary);

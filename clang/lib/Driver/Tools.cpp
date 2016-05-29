@@ -2797,6 +2797,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   // When using an integrated assembler, translate -Wa, and -Xassembler
   // options.
   bool CompressDebugSections = false;
+
+  bool UseRelaxRelocations = false;
   const char *MipsTargetFeature = nullptr;
   for (const Arg *A :
        Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler)) {
@@ -2872,6 +2874,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value == "-nocompress-debug-sections" ||
                  Value == "--nocompress-debug-sections") {
         CompressDebugSections = false;
+      } else if (Value == "-mrelax-relocations=yes" ||
+                 Value == "--mrelax-relocations=yes") {
+        UseRelaxRelocations = true;
+      } else if (Value == "-mrelax-relocations=no" ||
+                 Value == "--mrelax-relocations=no") {
+        UseRelaxRelocations = false;
       } else if (Value.startswith("-I")) {
         CmdArgs.push_back(Value.data());
         // We need to consume the next argument if the current arg is a plain
@@ -2903,6 +2911,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     else
       D.Diag(diag::warn_debug_compression_unavailable);
   }
+  if (UseRelaxRelocations)
+    CmdArgs.push_back("--mrelax-relocations");
   if (MipsTargetFeature != nullptr) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(MipsTargetFeature);

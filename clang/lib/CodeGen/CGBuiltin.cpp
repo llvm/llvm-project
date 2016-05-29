@@ -3268,14 +3268,13 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vext_v:
   case NEON::BI__builtin_neon_vextq_v: {
     int CV = cast<ConstantInt>(Ops[2])->getSExtValue();
-    SmallVector<Constant*, 16> Indices;
+    SmallVector<int, 16> Indices;
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
-      Indices.push_back(ConstantInt::get(Int32Ty, i+CV));
+      Indices.push_back(i+CV);
 
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
     Ops[1] = Builder.CreateBitCast(Ops[1], Ty);
-    Value *SV = llvm::ConstantVector::get(Indices);
-    return Builder.CreateShuffleVector(Ops[0], Ops[1], SV, "vext");
+    return Builder.CreateShuffleVector(Ops[0], Ops[1], Indices, "vext");
   }
   case NEON::BI__builtin_neon_vfma_v:
   case NEON::BI__builtin_neon_vfmaq_v: {
@@ -3473,14 +3472,13 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     Value *SV = nullptr;
 
     for (unsigned vi = 0; vi != 2; ++vi) {
-      SmallVector<Constant*, 16> Indices;
+      SmallVector<int, 16> Indices;
       for (unsigned i = 0, e = VTy->getNumElements(); i != e; i += 2) {
-        Indices.push_back(Builder.getInt32(i+vi));
-        Indices.push_back(Builder.getInt32(i+e+vi));
+        Indices.push_back(i+vi);
+        Indices.push_back(i+e+vi);
       }
       Value *Addr = Builder.CreateConstInBoundsGEP1_32(Ty, Ops[0], vi);
-      SV = llvm::ConstantVector::get(Indices);
-      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], SV, "vtrn");
+      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], Indices, "vtrn");
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
@@ -3502,13 +3500,12 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     Value *SV = nullptr;
 
     for (unsigned vi = 0; vi != 2; ++vi) {
-      SmallVector<Constant*, 16> Indices;
+      SmallVector<int, 16> Indices;
       for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
-        Indices.push_back(ConstantInt::get(Int32Ty, 2*i+vi));
+        Indices.push_back(2*i+vi);
 
       Value *Addr = Builder.CreateConstInBoundsGEP1_32(Ty, Ops[0], vi);
-      SV = llvm::ConstantVector::get(Indices);
-      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], SV, "vuzp");
+      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], Indices, "vuzp");
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
@@ -3521,14 +3518,13 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     Value *SV = nullptr;
 
     for (unsigned vi = 0; vi != 2; ++vi) {
-      SmallVector<Constant*, 16> Indices;
+      SmallVector<int, 16> Indices;
       for (unsigned i = 0, e = VTy->getNumElements(); i != e; i += 2) {
-        Indices.push_back(ConstantInt::get(Int32Ty, (i + vi*e) >> 1));
-        Indices.push_back(ConstantInt::get(Int32Ty, ((i + vi*e) >> 1)+e));
+        Indices.push_back((i + vi*e) >> 1);
+        Indices.push_back(((i + vi*e) >> 1)+e);
       }
       Value *Addr = Builder.CreateConstInBoundsGEP1_32(Ty, Ops[0], vi);
-      SV = llvm::ConstantVector::get(Indices);
-      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], SV, "vzip");
+      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], Indices, "vzip");
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
@@ -3577,18 +3573,18 @@ static Value *packTBLDVectorList(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
     TblOps.push_back(ExtOp);
 
   // Build a vector containing sequential number like (0, 1, 2, ..., 15)  
-  SmallVector<Constant*, 16> Indices;
+  SmallVector<int, 16> Indices;
   llvm::VectorType *TblTy = cast<llvm::VectorType>(Ops[0]->getType());
   for (unsigned i = 0, e = TblTy->getNumElements(); i != e; ++i) {
-    Indices.push_back(ConstantInt::get(CGF.Int32Ty, 2*i));
-    Indices.push_back(ConstantInt::get(CGF.Int32Ty, 2*i+1));
+    Indices.push_back(2*i);
+    Indices.push_back(2*i+1);
   }
-  Value *SV = llvm::ConstantVector::get(Indices);
 
   int PairPos = 0, End = Ops.size() - 1;
   while (PairPos < End) {
     TblOps.push_back(CGF.Builder.CreateShuffleVector(Ops[PairPos],
-                                                     Ops[PairPos+1], SV, Name));
+                                                     Ops[PairPos+1], Indices,
+                                                     Name));
     PairPos += 2;
   }
 
@@ -3597,7 +3593,7 @@ static Value *packTBLDVectorList(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
   if (PairPos == End) {
     Value *ZeroTbl = ConstantAggregateZero::get(TblTy);
     TblOps.push_back(CGF.Builder.CreateShuffleVector(Ops[PairPos],
-                                                     ZeroTbl, SV, Name));
+                                                     ZeroTbl, Indices, Name));
   }
 
   Function *TblF;
@@ -6162,14 +6158,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *SV = nullptr;
 
     for (unsigned vi = 0; vi != 2; ++vi) {
-      SmallVector<Constant*, 16> Indices;
+      SmallVector<int, 16> Indices;
       for (unsigned i = 0, e = VTy->getNumElements(); i != e; i += 2) {
-        Indices.push_back(ConstantInt::get(Int32Ty, i+vi));
-        Indices.push_back(ConstantInt::get(Int32Ty, i+e+vi));
+        Indices.push_back(i+vi);
+        Indices.push_back(i+e+vi);
       }
       Value *Addr = Builder.CreateConstInBoundsGEP1_32(Ty, Ops[0], vi);
-      SV = llvm::ConstantVector::get(Indices);
-      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], SV, "vtrn");
+      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], Indices, "vtrn");
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
@@ -6182,13 +6177,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *SV = nullptr;
 
     for (unsigned vi = 0; vi != 2; ++vi) {
-      SmallVector<Constant*, 16> Indices;
+      SmallVector<int, 16> Indices;
       for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
-        Indices.push_back(ConstantInt::get(Int32Ty, 2*i+vi));
+        Indices.push_back(2*i+vi);
 
       Value *Addr = Builder.CreateConstInBoundsGEP1_32(Ty, Ops[0], vi);
-      SV = llvm::ConstantVector::get(Indices);
-      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], SV, "vuzp");
+      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], Indices, "vuzp");
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
@@ -6201,14 +6195,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *SV = nullptr;
 
     for (unsigned vi = 0; vi != 2; ++vi) {
-      SmallVector<Constant*, 16> Indices;
+      SmallVector<int, 16> Indices;
       for (unsigned i = 0, e = VTy->getNumElements(); i != e; i += 2) {
-        Indices.push_back(ConstantInt::get(Int32Ty, (i + vi*e) >> 1));
-        Indices.push_back(ConstantInt::get(Int32Ty, ((i + vi*e) >> 1)+e));
+        Indices.push_back((i + vi*e) >> 1);
+        Indices.push_back(((i + vi*e) >> 1)+e);
       }
       Value *Addr = Builder.CreateConstInBoundsGEP1_32(Ty, Ops[0], vi);
-      SV = llvm::ConstantVector::get(Indices);
-      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], SV, "vzip");
+      SV = Builder.CreateShuffleVector(Ops[1], Ops[2], Indices, "vzip");
       SV = Builder.CreateDefaultAlignedStore(SV, Addr);
     }
     return SV;
@@ -6531,36 +6524,34 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     unsigned NumElts =
       cast<llvm::VectorType>(Ops[0]->getType())->getNumElements();
     assert(NumElts % 16 == 0);
-    unsigned NumLanes = NumElts / 16;
-    unsigned NumLaneElts = NumElts / NumLanes;
 
     // If palignr is shifting the pair of vectors more than the size of two
     // lanes, emit zero.
-    if (ShiftVal >= (2 * NumLaneElts))
+    if (ShiftVal >= 32)
       return llvm::Constant::getNullValue(ConvertType(E->getType()));
 
     // If palignr is shifting the pair of input vectors more than one lane,
     // but less than two lanes, convert to shifting in zeroes.
-    if (ShiftVal > NumLaneElts) {
-      ShiftVal -= NumLaneElts;
+    if (ShiftVal > 16) {
+      ShiftVal -= 16;
       Ops[1] = Ops[0];
       Ops[0] = llvm::Constant::getNullValue(Ops[0]->getType());
     }
 
-    uint32_t Indices[32];
+    int Indices[32];
     // 256-bit palignr operates on 128-bit lanes so we need to handle that
-    for (unsigned l = 0; l != NumElts; l += NumLaneElts) {
-      for (unsigned i = 0; i != NumLaneElts; ++i) {
+    for (unsigned l = 0; l != NumElts; l += 16) {
+      for (unsigned i = 0; i != 16; ++i) {
         unsigned Idx = ShiftVal + i;
-        if (Idx >= NumLaneElts)
-          Idx += NumElts - NumLaneElts; // End of lane, switch operand.
+        if (Idx >= 16)
+          Idx += NumElts - 16; // End of lane, switch operand.
         Indices[l + i] = Idx + l;
       }
     }
 
-    Value *SV = llvm::ConstantDataVector::get(getLLVMContext(),
-                                              makeArrayRef(Indices, NumElts));
-    return Builder.CreateShuffleVector(Ops[1], Ops[0], SV, "palignr");
+    return Builder.CreateShuffleVector(Ops[1], Ops[0],
+                                       makeArrayRef(Indices, NumElts),
+                                       "palignr");
   }
   case X86::BI__builtin_ia32_pslldqi256: {
     // Shift value is in bits so divide by 8.
@@ -6570,7 +6561,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     if (shiftVal >= 16)
       return llvm::Constant::getNullValue(ConvertType(E->getType()));
 
-    uint32_t Indices[32];
+    int Indices[32];
     // 256-bit pslldq operates on 128-bit lanes so we need to handle that
     for (unsigned l = 0; l != 32; l += 16) {
       for (unsigned i = 0; i != 16; ++i) {
@@ -6584,8 +6575,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Ops[0] = Builder.CreateBitCast(Ops[0], VecTy, "cast");
     Value *Zero = llvm::Constant::getNullValue(VecTy);
 
-    Value *SV = llvm::ConstantDataVector::get(getLLVMContext(), Indices);
-    SV = Builder.CreateShuffleVector(Zero, Ops[0], SV, "pslldq");
+    Value *SV = Builder.CreateShuffleVector(Zero, Ops[0], Indices, "pslldq");
     llvm::Type *ResultType = ConvertType(E->getType());
     return Builder.CreateBitCast(SV, ResultType, "cast");
   }
@@ -6597,7 +6587,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     if (shiftVal >= 16)
       return llvm::Constant::getNullValue(ConvertType(E->getType()));
 
-    uint32_t Indices[32];
+    int Indices[32];
     // 256-bit psrldq operates on 128-bit lanes so we need to handle that
     for (unsigned l = 0; l != 32; l += 16) {
       for (unsigned i = 0; i != 16; ++i) {
@@ -6611,8 +6601,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Ops[0] = Builder.CreateBitCast(Ops[0], VecTy, "cast");
     Value *Zero = llvm::Constant::getNullValue(VecTy);
 
-    Value *SV = llvm::ConstantDataVector::get(getLLVMContext(), Indices);
-    SV = Builder.CreateShuffleVector(Ops[0], Zero, SV, "psrldq");
+    Value *SV = Builder.CreateShuffleVector(Ops[0], Zero, Indices, "psrldq");
     llvm::Type *ResultType = ConvertType(E->getType());
     return Builder.CreateBitCast(SV, ResultType, "cast");
   }
