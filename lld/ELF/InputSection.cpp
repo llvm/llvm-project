@@ -544,8 +544,7 @@ typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
   SectionPiece &Piece = *this->getSectionPiece(Offset);
   assert(Piece.Live);
   uintX_t Addend = Offset - Piece.InputOff;
-  uintX_t Ret = Piece.OutputOff + Addend;
-  return Ret;
+  return Piece.OutputOff + Addend;
 }
 
 // Create a map from input offsets to output offsets for all section pieces.

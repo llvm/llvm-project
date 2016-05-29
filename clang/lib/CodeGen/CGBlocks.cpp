@@ -2287,9 +2287,35 @@ void CodeGenFunction::enterByrefCleanup(const AutoVarEmission &emission) {
 /// Adjust the declaration of something from the blocks API.
 static void configureBlocksRuntimeObject(CodeGenModule &CGM,
                                          llvm::Constant *C) {
-  if (!CGM.getLangOpts().BlocksRuntimeOptional) return;
-
   auto *GV = cast<llvm::GlobalValue>(C->stripPointerCasts());
+
+  if (CGM.getTarget().getTriple().isOSBinFormatCOFF()) {
+    IdentifierInfo &II = CGM.getContext().Idents.get(C->getName());
+    TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
+    DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
+
+    assert((isa<llvm::Function>(C) || isa<llvm::GlobalValue>(C)) &&
+           "expected Function or GlobalValue");
+
+    const NamedDecl *ND = nullptr;
+    for (const auto &Result : DC->lookup(&II))
+      if ((ND = dyn_cast<FunctionDecl>(Result)) ||
+          (ND = dyn_cast<VarDecl>(Result)))
+        break;
+
+    // TODO: support static blocks runtime
+    if (GV->isDeclaration() && (!ND || !ND->hasAttr<DLLExportAttr>())) {
+      GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+      GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    } else {
+      GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+      GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    }
+  }
+
+  if (!CGM.getLangOpts().BlocksRuntimeOptional)
+    return;
+
   if (GV->isDeclaration() && GV->hasExternalLinkage())
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
@@ -2337,5 +2363,5 @@ llvm::Constant *CodeGenModule::getNSConcreteStackBlock() {
                                                Int8PtrTy->getPointerTo(),
                                                nullptr);
   configureBlocksRuntimeObject(*this, NSConcreteStackBlock);
-  return NSConcreteStackBlock;  
+  return NSConcreteStackBlock;
 }
