@@ -105,7 +105,7 @@ public:
 
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
-  static Expected<std::unique_ptr<InstrProfReader>> create(std::string Path);
+  static Expected<std::unique_ptr<InstrProfReader>> create(const Twine &Path);
 
   static Expected<std::unique_ptr<InstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);
@@ -403,7 +403,7 @@ public:
 
   /// Factory method to create an indexed reader.
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
-  create(std::string Path);
+  create(const Twine &Path);
 
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer);

@@ -33,7 +33,7 @@ class Obj2YamlError : public ErrorInfo<Obj2YamlError> {
 public:
   static char ID;
   Obj2YamlError(obj2yaml_error C) : Code(C) {}
-  Obj2YamlError(const std::string &ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
+  Obj2YamlError(std::string ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
   Obj2YamlError(obj2yaml_error C, std::string ErrMsg)
       : ErrMsg(std::move(ErrMsg)), Code(C) {}
   void log(raw_ostream &OS) const override;

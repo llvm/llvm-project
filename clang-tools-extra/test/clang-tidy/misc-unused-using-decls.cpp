@@ -33,6 +33,7 @@ template <typename T> int UnusedTemplateFunc() { return 1; }
 template <typename T> int UsedInTemplateFunc() { return 1; }
 void OverloadFunc(int);
 void OverloadFunc(double);
+int FuncUsedByUsingDeclInMacro() { return 1; }
 
 class ostream {
 public:
@@ -92,6 +93,11 @@ using n::OverloadFunc; // OverloadFunc
   using INT::_##name
 DEFINE_INT(test);
 #undef DEFIND_INT
+
+#define USING_FUNC \
+  using n::FuncUsedByUsingDeclInMacro;
+USING_FUNC
+#undef USING_FUNC
 
 // ----- Usages -----
 void f(B b);

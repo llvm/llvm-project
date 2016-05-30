@@ -655,7 +655,7 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   // Run the target once again, but with lsan disabled so that if there is
   // a real leak we do not report it twice.
   __lsan_disable();
-  RunOneAndUpdateCorpus(Data, Size);
+  RunOne(Data, Size);
   __lsan_enable();
   if (!HasMoreMallocsThanFrees) return;  // a leak is unlikely.
   if (NumberOfLeakDetectionAttempts++ > 1000) {

@@ -35,6 +35,10 @@ while [ $# -gt 0 ]; do
             shift
             proj=$1
             ;;
+        --srcdir | -srcdir | -s)
+            shift
+            srcdir=$1
+            ;;
         -h | -help | --help )
             usage
             ;;
@@ -50,6 +54,10 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+if [ -z "$srcdir" ]; then
+    srcdir="$proj.src"
+fi
 
 if [ "x$rev" = "x" -o "x$proj" = "x" ]; then
     echo "error: need to specify project and revision"
@@ -72,7 +80,7 @@ else
 fi
 svn log -c $rev http://llvm.org/svn/llvm-project/$proj/trunk >> $tempfile 2>&1
 
-cd $proj.src
+cd "$srcdir"
 echo "# Updating tree"
 svn up
 

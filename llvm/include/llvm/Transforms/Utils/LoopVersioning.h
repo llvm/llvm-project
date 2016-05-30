@@ -73,7 +73,7 @@ public:
 
   /// \brief Sets the runtime alias checks for versioning the loop.
   void setAliasChecks(
-      const SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks);
+      SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks);
 
   /// \brief Sets the runtime SCEV checks for versioning the loop.
   void setSCEVChecks(SCEVUnionPredicate Check);
