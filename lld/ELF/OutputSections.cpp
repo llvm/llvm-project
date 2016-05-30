@@ -1164,6 +1164,7 @@ void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   Sec->OutSec = this;
   this->updateAlign(Sec->Align);
   this->Header.sh_entsize = Sec->getSectionHdr()->sh_entsize;
+  Sections.push_back(Sec);
 
   bool IsString = this->Header.sh_flags & SHF_STRINGS;
 
@@ -1189,6 +1190,11 @@ template <class ELFT> void MergeOutputSection<ELFT>::finalize() {
   if (shouldTailMerge())
     Builder.finalize();
   this->Header.sh_size = Builder.getSize();
+}
+
+template <class ELFT> void MergeOutputSection<ELFT>::finalizePieces() {
+  for (MergeInputSection<ELFT> *Sec : Sections)
+    Sec->finalizePieces();
 }
 
 template <class ELFT>

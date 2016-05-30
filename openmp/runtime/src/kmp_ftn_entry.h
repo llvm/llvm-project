@@ -887,20 +887,17 @@ xexpand(FTN_GET_TEAM_NUM)( void )
     #endif
 }
 
-#if KMP_MIC || KMP_OS_DARWIN
-
-static int __kmp_default_device = 0;
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 
 int FTN_STDCALL
 FTN_GET_DEFAULT_DEVICE( void )
 {
-    return __kmp_default_device;
+    return 0;
 }
 
 void FTN_STDCALL
 FTN_SET_DEFAULT_DEVICE( int KMP_DEREF arg )
 {
-    __kmp_default_device = KMP_DEREF arg;
 }
 
 int FTN_STDCALL
@@ -909,7 +906,7 @@ FTN_GET_NUM_DEVICES( void )
     return 0;
 }
 
-#endif // KMP_MIC || KMP_OS_DARWIN
+#endif // KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 
 #if ! KMP_OS_LINUX
 
@@ -938,6 +935,63 @@ xexpand(FTN_IS_INITIAL_DEVICE)( void )
 #endif // ! KMP_OS_LINUX
 
 #endif // OMP_40_ENABLED
+
+#if OMP_41_ENABLED && defined(KMP_STUB)
+// OpenMP 4.5 entries for stubs library
+
+int FTN_STDCALL
+FTN_GET_INITIAL_DEVICE(void)
+{
+   return -1;
+}
+
+// As all *target* functions are C-only parameters always passed by value
+void * FTN_STDCALL
+FTN_TARGET_ALLOC(size_t size, int device_num)
+{
+    return 0;
+}
+
+void FTN_STDCALL
+FTN_TARGET_FREE(void * device_ptr, int device_num)
+{
+}
+
+int FTN_STDCALL
+FTN_TARGET_IS_PRESENT(void * ptr, int device_num)
+{
+   return 0;
+}
+
+int FTN_STDCALL
+FTN_TARGET_MEMCPY(void *dst, void *src, size_t length, size_t  dst_offset,
+                  size_t src_offset, int dst_device, int src_device)
+{
+    return -1;
+}
+
+int FTN_STDCALL
+FTN_TARGET_MEMCPY_RECT(void *dst, void *src, size_t element_size, int num_dims,
+                       const size_t *volume, const size_t *dst_offsets,
+                       const size_t *src_offsets, const size_t *dst_dimensions,
+                       const size_t *src_dimensions, int dst_device, int src_device)
+{
+    return -1;
+}
+
+int FTN_STDCALL
+FTN_TARGET_ASSOCIATE_PTR(void *host_ptr, void *device_ptr, size_t  size,
+                         size_t  device_offset, int device_num)
+{
+    return -1;
+}
+
+int FTN_STDCALL
+FTN_TARGET_DISASSOCIATE_PTR(void *host_ptr, int device_num)
+{
+    return -1;
+}
+#endif // OMP_41_ENABLED && defined(KMP_STUB)
 
 #ifdef KMP_STUB
 typedef enum { UNINIT = -1, UNLOCKED, LOCKED } kmp_stub_lock_t;

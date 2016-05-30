@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <list>
 
 // Operations on "NULL" iterators
@@ -25,7 +26,6 @@ struct S { int val; };
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     {
     unsigned lib_asserts;
 
@@ -55,7 +55,6 @@ int main()
     try { (void) ci->val; } catch (int) { ++lib_asserts; }
     assert(lib_asserts == 4);
     }
-#endif
 }
 
 #else

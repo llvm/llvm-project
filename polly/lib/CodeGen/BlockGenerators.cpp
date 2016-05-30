@@ -73,7 +73,7 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
   if (isa<SCEVCouldNotCompute>(Scev))
     return nullptr;
 
-  const SCEV *NewScev = apply(Scev, LTS, SE);
+  const SCEV *NewScev = SCEVLoopAddRecRewriter::rewrite(Scev, LTS, SE);
   ValueMapT VTV;
   VTV.insert(BBMap.begin(), BBMap.end());
   VTV.insert(GlobalMap.begin(), GlobalMap.end());

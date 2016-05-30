@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 #include <functional>
 #include <string>
 
@@ -22,9 +23,8 @@ public:
 };
 
 
-int main () {
-#if _LIBCPP_STD_VER > 11
-
+int main ()
+{
     static_assert ( !is_transparent<std::less<int>>::value, "" );
     static_assert ( !is_transparent<std::less<std::string>>::value, "" );
     static_assert (  is_transparent<std::less<void>>::value, "" );
@@ -55,7 +55,5 @@ int main () {
     static_assert (  is_transparent<std::greater_equal<void>>::value, "" );
     static_assert (  is_transparent<std::greater_equal<>>::value, "" );
 
-#endif
-
     return 0;
-    }
+}

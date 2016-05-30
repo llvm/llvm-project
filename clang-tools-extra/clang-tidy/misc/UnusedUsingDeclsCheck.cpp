@@ -18,20 +18,10 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
-// A function that helps to tell whether a TargetDecl will be checked.
-// We only check a TargetDecl if :
-//   * The corresponding UsingDecl is not defined in macros or in class
-//     definitions.
-//   * Only variable, function and class types are considered.
+// A function that helps to tell whether a TargetDecl in a UsingDecl will be
+// checked. Only variable, function, function template, class template and class
+// are considered.
 static bool ShouldCheckDecl(const Decl *TargetDecl) {
-  // Ignores using-declarations defined in macros.
-  if (TargetDecl->getLocation().isMacroID())
-    return false;
-
-  // Ignores using-declarations defined in class definition.
-  if (isa<CXXRecordDecl>(TargetDecl->getDeclContext()))
-    return false;
-
   return isa<RecordDecl>(TargetDecl) || isa<ClassTemplateDecl>(TargetDecl) ||
          isa<FunctionDecl>(TargetDecl) || isa<VarDecl>(TargetDecl) ||
          isa<FunctionTemplateDecl>(TargetDecl);
@@ -49,6 +39,14 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Using = Result.Nodes.getNodeAs<UsingDecl>("using")) {
+    // Ignores using-declarations defined in macros.
+    if (Using->getLocation().isMacroID())
+      return ;
+
+    // Ignores using-declarations defined in class definition.
+    if (isa<CXXRecordDecl>(Using->getDeclContext()))
+      return ;
+
     UsingDeclContext Context(Using);
     Context.UsingDeclRange = CharSourceRange::getCharRange(
         Using->getLocStart(),

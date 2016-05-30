@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // dynarray.cons
 
 // template <class Alloc>
@@ -22,8 +23,6 @@
 
   
 #include <__config>
-
-#if _LIBCPP_STD_VER > 11
 
 #include <experimental/dynarray>
 #include <cassert>
@@ -81,6 +80,4 @@ int main()
 //     test ( nstr("fourteen"), Alloc(3), Alloc(4) );
 //     test ( { nstr("1"), nstr("1"), nstr("2"), nstr("3"), nstr("5"), nstr("8")}, Alloc(6));
 }
-#else
-int main() {}
-#endif
+

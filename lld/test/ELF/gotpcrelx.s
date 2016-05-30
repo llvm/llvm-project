@@ -5,12 +5,12 @@
 // RUN: llvm-readobj -s -r %t.so | FileCheck %s
 
 movq foo@GOTPCREL(%rip), %rax
-movl bar@GOTPCREL(%rip), %eax
+movq bar@GOTPCREL(%rip), %rax
 
 // RELS: Relocations [
 // RELS-NEXT:   Section ({{.*}}) .rela.text {
-// RELS-NEXT:     0x3 R_X86_64_REX_GOTPCRELX foo 0xFFFFFFFFFFFFFFFC
-// RELS-NEXT:     0x9 R_X86_64_GOTPCRELX bar 0xFFFFFFFFFFFFFFFC
+// RELS-NEXT:     R_X86_64_REX_GOTPCRELX foo 0xFFFFFFFFFFFFFFFC
+// RELS-NEXT:     R_X86_64_REX_GOTPCRELX bar 0xFFFFFFFFFFFFFFFC
 // RELS-NEXT:   }
 // RELS-NEXT: ]
 

@@ -18,7 +18,7 @@ def build_id : Flag<["--", "-"], "build-id">,
 def build_id_eq : Joined<["--", "-"], "build-id=">;
 
 def L : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
-  HelpText<"Directory to search for libraries">;
+  HelpText<"Add a directory to the library search path">;
 
 def O : Joined<["-"], "O">, HelpText<"Optimize">;
 
@@ -54,7 +54,7 @@ def enable_new_dtags : Flag<["--"], "enable-new-dtags">,
   HelpText<"Enable new dynamic tags">;
 
 def end_lib : Flag<["--"], "end-lib">,
-  HelpText<"End a library">;
+  HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
 
 def entry : Separate<["--", "-"], "entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
@@ -139,7 +139,7 @@ def soname : Joined<["-"], "soname=">,
   HelpText<"Set DT_SONAME">;
 
 def start_lib : Flag<["--"], "start-lib">,
-  HelpText<"Start a library">;
+  HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 
 def strip_all : Flag<["--"], "strip-all">,
   HelpText<"Strip all symbols">;
@@ -150,7 +150,8 @@ def strip_debug : Flag<["--"], "strip-debug">,
 def sysroot : Joined<["--"], "sysroot=">,
   HelpText<"Set the system root">;
 
-def threads : Joined<["--"], "threads">;
+def threads : Flag<["--"], "threads">,
+  HelpText<"Enable use of threads">;
 
 def trace: Flag<["--"], "trace">,
   HelpText<"Print the names of the input files">;

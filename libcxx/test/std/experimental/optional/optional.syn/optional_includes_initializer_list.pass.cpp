@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <optional>
 
 // #include <initializer_list>
@@ -15,9 +16,7 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     using std::experimental::optional;
 
     std::initializer_list<int> list;
-#endif  // _LIBCPP_STD_VER > 11
 }

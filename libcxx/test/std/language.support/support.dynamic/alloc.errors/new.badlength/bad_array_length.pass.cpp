@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // test bad_array_length
 
 #include <new>
@@ -15,7 +16,6 @@
 
 int main()
 {
-#if __LIBCPP_STD_VER > 11
     static_assert((std::is_base_of<std::bad_alloc, std::bad_array_length>::value),
                   "std::is_base_of<std::bad_alloc, std::bad_array_length>::value");
     static_assert(std::is_polymorphic<std::bad_array_length>::value,
@@ -25,5 +25,4 @@ int main()
     b2 = b;
     const char* w = b2.what();
     assert(w);
-#endif
 }

@@ -65,6 +65,22 @@ static bool refersToGotEntry(RelExpr Expr) {
          Expr == R_TLSGD_PC;
 }
 
+static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
+  // In case of MIPS GP-relative relocations always resolve to a definition
+  // in a regular input file, ignoring the one-definition rule. So we,
+  // for example, should not attempt to create a dynamic relocation even
+  // if the target symbol is preemptible. There are two two MIPS GP-relative
+  // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
+  // can be against a preemptible symbol.
+  // To get MIPS relocation type we apply 0xf mask. In case of O32 ABI all
+  // relocation types occupy eight bit. In case of N64 ABI we extract first
+  // relocation from 3-in-1 packet because only the first relocation can
+  // be against a real symbol.
+  if (Config->EMachine == EM_MIPS && (Type & 0xf) == R_MIPS_GPREL16)
+    return false;
+  return Body.isPreemptible();
+}
+
 // Returns the number of relocations processed.
 template <class ELFT>
 static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
@@ -116,7 +132,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 
     // Global-Dynamic relocs can be relaxed to Initial-Exec or Local-Exec
     // depending on the symbol being locally defined or not.
-    if (Body.isPreemptible()) {
+    if (isPreemptible(Body, Type)) {
       C.Relocations.push_back(
           {R_RELAX_TLS_GD_TO_IE, Type, Offset, Addend, &Body});
       if (!Body.isInGot()) {
@@ -135,7 +151,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
   if (Target->isTlsInitialExecRel(Type) && !Config->Shared &&
-      !Body.isPreemptible()) {
+      !isPreemptible(Body, Type)) {
     C.Relocations.push_back(
         {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
     return 1;
@@ -246,7 +262,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (E == R_GOT || E == R_PLT)
     return Target->usesOnlyLowPageBits(Type) || !Config->Pic;
 
-  if (Body.isPreemptible())
+  if (isPreemptible(Body, Type))
     return false;
 
   if (!Config->Pic)
@@ -348,7 +364,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
                           const uint8_t *Data, typename ELFT::uint Offset) {
   if (Target->needsThunk(Type, File, Body))
     return R_THUNK;
-  bool Preemptible = Body.isPreemptible();
+  bool Preemptible = isPreemptible(Body, Type);
   if (Body.isGnuIFunc()) {
     Expr = toPlt(Expr);
   } else if (!Preemptible) {
@@ -485,7 +501,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     if (Offset == (uintX_t)-1)
       continue;
 
-    bool Preemptible = Body.isPreemptible();
+    bool Preemptible = isPreemptible(Body, Type);
     Expr = adjustExpr(File, Body, IsWrite, Expr, Type, Buf, Offset);
     if (HasError)
       continue;
@@ -504,7 +520,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     }
 
     if (needsPlt(Expr) || Expr == R_THUNK || refersToGotEntry(Expr) ||
-        !Body.isPreemptible()) {
+        !isPreemptible(Body, Type)) {
       // If the relocation points to something in the file, we can process it.
       bool Constant = isStaticLinkTimeConstant<ELFT>(Expr, Type, Body);
 

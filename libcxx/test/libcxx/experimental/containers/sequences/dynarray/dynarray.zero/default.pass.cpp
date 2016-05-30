@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // dynarray.zero
 
 // dynarray shall provide support for the special case of construction with a size of zero.
@@ -17,8 +18,6 @@
 
   
 #include <__config>
-
-#if _LIBCPP_STD_VER > 11
 
 #include <experimental/dynarray>
 #include <cassert>
@@ -45,6 +44,4 @@ int main()
     test<std::complex<double>> ();
     test<std::string> ();
 }
-#else
-int main() {}
-#endif
+

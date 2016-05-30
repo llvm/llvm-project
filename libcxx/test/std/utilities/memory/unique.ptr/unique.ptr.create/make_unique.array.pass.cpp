@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 #include <memory>
 #include <string>
 #include <cassert>
@@ -23,7 +24,6 @@ private:
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     {
     auto p1 = std::make_unique<int[]>(5);
     for ( int i = 0; i < 5; ++i )
@@ -41,5 +41,4 @@ int main()
     for ( int i = 0; i < 7; ++i )
         assert ( p3[i].get () == 3 );
     }
-#endif  // _LIBCPP_STD_VER > 11
 }

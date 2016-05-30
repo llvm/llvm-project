@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <string>
 
 // template<class charT, class traits, class Allocator>
@@ -16,8 +17,6 @@
 
 #include <experimental/string_view>
 #include <cassert>
-
-#if _LIBCPP_STD_VER > 11
 
 template <class S>
 void
@@ -49,6 +48,4 @@ int main()
     test("abcdefghijklmnopqrst", S("abcdefghijklmnopqrst"), true);
     }
 }
-#else
-int main () {}
-#endif
+

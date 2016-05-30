@@ -218,8 +218,12 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     Keep.push_back(GV);
   }
 
-  Mover.move(Obj->takeModule(), Keep,
-             [](GlobalValue &, IRMover::ValueAdder) {});
+  if (Error E = Mover.move(Obj->takeModule(), Keep,
+                           [](GlobalValue &, IRMover::ValueAdder) {})) {
+    handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+      fatal("failed to link module " + F.getName() + ": " + EIB.message());
+    });
+  }
 }
 
 static void internalize(GlobalValue &GV) {

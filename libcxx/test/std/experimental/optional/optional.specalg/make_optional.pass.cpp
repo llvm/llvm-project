@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <optional>
 
 // template <class T>
@@ -21,7 +22,6 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     using std::experimental::optional;
     using std::experimental::make_optional;
 
@@ -46,5 +46,4 @@ int main()
         assert(**opt == 3);
         assert(s == nullptr);
     }
-#endif  // _LIBCPP_STD_VER > 11
 }

@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <optional>
 
 // template <class T> constexpr bool operator<(const optional<T>& x, const T& v);
 // template <class T> constexpr bool operator<(const T& v, const optional<T>& x);
 
 #include <experimental/optional>
-
-#if _LIBCPP_STD_VER > 11
 
 using std::experimental::optional;
 
@@ -28,12 +27,8 @@ struct X
 constexpr bool operator < ( const X &lhs, const X &rhs )
     { return lhs.i_ < rhs.i_ ; }
     
-#endif
-
 int main()
 {
-#if _LIBCPP_STD_VER > 11
-
     {
     typedef X T;
     typedef optional<T> O;
@@ -57,5 +52,4 @@ int main()
     static_assert (  !(val  < o3), "" ); // equal
     static_assert (  !(T(3) < o3), "" );
     }
-#endif
 }

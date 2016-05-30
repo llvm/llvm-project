@@ -82,6 +82,8 @@ void test_default_constructible_extension_sfinae()
             MoveOnly, Tuple, MoveOnly, MoveOnly
         >::value, "");
     }
+    // testing extensions
+#ifdef _LIBCPP_VERSION
     {
         typedef std::tuple<MoveOnly, int> Tuple;
         typedef std::tuple<MoveOnly, Tuple, MoveOnly, MoveOnly> NestedTuple;
@@ -96,6 +98,7 @@ void test_default_constructible_extension_sfinae()
             MoveOnly, Tuple, MoveOnly, MoveOnly
         >::value, "");
     }
+#endif
 }
 
 int main()
@@ -118,6 +121,7 @@ int main()
         assert(std::get<2>(t) == 2);
     }
     // extensions
+#ifdef _LIBCPP_VERSION
     {
         std::tuple<MoveOnly, MoveOnly, MoveOnly> t(MoveOnly(0),
                                                    MoveOnly(1));
@@ -131,7 +135,8 @@ int main()
         assert(std::get<1>(t) == MoveOnly());
         assert(std::get<2>(t) == MoveOnly());
     }
-#if _LIBCPP_STD_VER > 11
+#endif
+#if TEST_STD_VER > 11
     {
         constexpr std::tuple<Empty> t0{Empty()};
     }

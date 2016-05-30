@@ -41,6 +41,7 @@ if (LIBCXX_INSTALL_HEADERS)
     # Add a target that executes the generation commands.
     add_custom_target(generate_config_header ALL
       DEPENDS ${LIBCXX_BINARY_DIR}/__generated_config)
+    set(generated_config_deps generate_config_header)
     # Install the generated header as __config.
     install(FILES ${LIBCXX_BINARY_DIR}/__generated_config
       DESTINATION include/c++/v1
@@ -53,7 +54,7 @@ if (LIBCXX_INSTALL_HEADERS)
     # this target is just needed as a placeholder for the distribution target
     add_custom_target(libcxx-headers)
     add_custom_target(install-libcxx-headers
-                      DEPENDS libcxx-headers
+                      DEPENDS libcxx-headers ${generated_config_deps}
                       COMMAND "${CMAKE_COMMAND}"
                               -DCMAKE_INSTALL_COMPONENT=libcxx-headers
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
