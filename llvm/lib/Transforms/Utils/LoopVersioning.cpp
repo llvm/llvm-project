@@ -44,7 +44,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
 }
 
 void LoopVersioning::setAliasChecks(
-    const SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks) {
+    SmallVector<RuntimePointerChecking::PointerCheck, 4> Checks) {
   AliasChecks = std::move(Checks);
 }
 

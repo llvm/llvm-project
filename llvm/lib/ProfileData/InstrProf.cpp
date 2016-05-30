@@ -241,8 +241,7 @@ Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
   unsigned EncLen = encodeULEB128(UncompressedNameStrings.length(), P);
   P += EncLen;
 
-  auto WriteStringToResult = [&](size_t CompressedLen,
-                                 const std::string &InputStr) {
+  auto WriteStringToResult = [&](size_t CompressedLen, StringRef InputStr) {
     EncLen = encodeULEB128(CompressedLen, P);
     P += EncLen;
     char *HeaderStr = reinterpret_cast<char *>(&Header[0]);
@@ -256,7 +255,7 @@ Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
     return WriteStringToResult(0, UncompressedNameStrings);
   }
 
-  SmallVector<char, 128> CompressedNameStrings;
+  SmallString<128> CompressedNameStrings;
   zlib::Status Success =
       zlib::compress(StringRef(UncompressedNameStrings), CompressedNameStrings,
                      zlib::BestSizeCompression);
@@ -264,9 +263,8 @@ Error collectPGOFuncNameStrings(const std::vector<std::string> &NameStrs,
   if (Success != zlib::StatusOK)
     return make_error<InstrProfError>(instrprof_error::compress_failed);
 
-  return WriteStringToResult(
-      CompressedNameStrings.size(),
-      std::string(CompressedNameStrings.data(), CompressedNameStrings.size()));
+  return WriteStringToResult(CompressedNameStrings.size(),
+                             CompressedNameStrings);
 }
 
 StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar) {
@@ -761,7 +759,7 @@ MDNode *getPGOFuncNameMetadata(const Function &F) {
   return F.getMetadata(getPGOFuncNameMetadataName());
 }
 
-void createPGOFuncNameMetadata(Function &F, const std::string &PGOFuncName) {
+void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   // Only for internal linkage functions.
   if (PGOFuncName == F.getName())
       return;
@@ -769,7 +767,7 @@ void createPGOFuncNameMetadata(Function &F, const std::string &PGOFuncName) {
   if (getPGOFuncNameMetadata(F))
     return;
   LLVMContext &C = F.getContext();
-  MDNode *N = MDNode::get(C, MDString::get(C, PGOFuncName.c_str()));
+  MDNode *N = MDNode::get(C, MDString::get(C, PGOFuncName));
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 

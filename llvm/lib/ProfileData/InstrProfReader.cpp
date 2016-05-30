@@ -19,7 +19,7 @@
 using namespace llvm;
 
 static Expected<std::unique_ptr<MemoryBuffer>>
-setupMemoryBuffer(std::string Path) {
+setupMemoryBuffer(const Twine &Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(Path);
   if (std::error_code EC = BufferOrErr.getError())
@@ -32,7 +32,7 @@ static Error initializeReader(InstrProfReader &Reader) {
 }
 
 Expected<std::unique_ptr<InstrProfReader>>
-InstrProfReader::create(std::string Path) {
+InstrProfReader::create(const Twine &Path) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path);
   if (Error E = BufferOrError.takeError())
@@ -67,7 +67,7 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
 }
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
-IndexedInstrProfReader::create(std::string Path) {
+IndexedInstrProfReader::create(const Twine &Path) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path);
   if (Error E = BufferOrError.takeError())

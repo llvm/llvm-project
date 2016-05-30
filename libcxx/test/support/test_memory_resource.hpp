@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 #include <cassert>
 #include "test_macros.h"
 
@@ -274,18 +275,18 @@ private:
         std::size_t bytes = (s + BlockSize - 1) & ~(BlockSize - 1);
         bytes += BlockSize;
         assert(bytes % BlockSize == 0);
-        return bytes / BlockSize;
+        return bytes;
     }
 
     static bool is_max_aligned(void* p) {
-        return reinterpret_cast<std::size_t>(p) % BlockSize == 0;
+        return reinterpret_cast<std::uintptr_t>(p) % BlockSize == 0;
     }
 
     static bool is_min_aligned(void* p) {
         if (alignof(T) == BlockSize) {
             return is_max_aligned(p);
         } else {
-            return reinterpret_cast<std::size_t>(p) % BlockSize == alignof(T);
+            return reinterpret_cast<std::uintptr_t>(p) % BlockSize == alignof(T);
         }
     }
 

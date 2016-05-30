@@ -405,7 +405,7 @@ const std::string &Function::getGC() const {
   return getContext().getGC(*this);
 }
 
-void Function::setGC(const std::string Str) {
+void Function::setGC(std::string Str) {
   setValueSubclassDataBit(14, !Str.empty());
   getContext().setGC(*this, std::move(Str));
 }

@@ -152,7 +152,7 @@ void initializeIPSCCPLegacyPassPass(PassRegistry &);
 void initializeIVUsersPass(PassRegistry&);
 void initializeIfConverterPass(PassRegistry&);
 void initializeInductiveRangeCheckEliminationPass(PassRegistry&);
-void initializeIndVarSimplifyPass(PassRegistry&);
+void initializeIndVarSimplifyLegacyPassPass(PassRegistry&);
 void initializeInferFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeInlineCostAnalysisPass(PassRegistry&);
 void initializeInstructionCombiningPassPass(PassRegistry&);

@@ -733,7 +733,7 @@ bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
 ///
 /// \returns an error code indicating the status of the buffer.
 static ErrorOr<std::unique_ptr<MemoryBuffer>>
-setupMemoryBuffer(std::string Filename) {
+setupMemoryBuffer(const Twine &Filename) {
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = BufferOrErr.getError())
     return EC;
@@ -756,7 +756,7 @@ setupMemoryBuffer(std::string Filename) {
 ///
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReader>>
-SampleProfileReader::create(StringRef Filename, LLVMContext &C) {
+SampleProfileReader::create(const Twine &Filename, LLVMContext &C) {
   auto BufferOrError = setupMemoryBuffer(Filename);
   if (std::error_code EC = BufferOrError.getError())
     return EC;

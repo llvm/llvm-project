@@ -34,7 +34,7 @@ void check_allocate_deallocate()
     typedef ex::resource_adaptor<Alloc> R1;
     const std::size_t max_align = alignof(std::max_align_t);
 
-    for (std::size_t s = 0; s < 5012; ++s)
+    for (std::size_t s = 1; s < 5012; ++s)
     {
         for(std::size_t align_req = 1; align_req <= (max_align * 2); align_req *= 2)
         {

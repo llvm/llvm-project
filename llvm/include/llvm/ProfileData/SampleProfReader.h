@@ -289,7 +289,7 @@ public:
 
   /// \brief Create a sample profile reader appropriate to the file format.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(StringRef Filename, LLVMContext &C);
+  create(const Twine &Filename, LLVMContext &C);
 
   /// \brief Create a sample profile reader from the supplied memory buffer.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
