@@ -48,6 +48,7 @@ set(files
   module.modulemap
   mwaitxintrin.h
   nmmintrin.h
+  opencl-c.h
   pkuintrin.h
   pmmintrin.h
   popcntintrin.h

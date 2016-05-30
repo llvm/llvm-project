@@ -1013,7 +1013,9 @@ void UnwrappedLineParser::parseStructuralElement() {
       // Parse function literal unless 'function' is the first token in a line
       // in which case this should be treated as a free-standing function.
       if (Style.Language == FormatStyle::LK_JavaScript &&
-          FormatTok->isOneOf(Keywords.kw_async, Keywords.kw_function) &&
+          (FormatTok->is(Keywords.kw_function) ||
+           FormatTok->startsSequence(Keywords.kw_async,
+                                     Keywords.kw_function)) &&
           Line->Tokens.size() > 0) {
         tryToParseJSFunction();
         break;
@@ -1200,7 +1202,8 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
 }
 
 void UnwrappedLineParser::tryToParseJSFunction() {
-  assert(FormatTok->isOneOf(Keywords.kw_async, Keywords.kw_function));
+  assert(FormatTok->is(Keywords.kw_function) ||
+         FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function));
   if (FormatTok->is(Keywords.kw_async))
     nextToken();
   // Consume "function".
@@ -1254,7 +1257,8 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons) {
   // replace this by using parseAssigmentExpression() inside.
   do {
     if (Style.Language == FormatStyle::LK_JavaScript) {
-      if (FormatTok->isOneOf(Keywords.kw_async, Keywords.kw_function)) {
+      if (FormatTok->is(Keywords.kw_function) ||
+          FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)) {
         tryToParseJSFunction();
         continue;
       }
@@ -1352,7 +1356,8 @@ void UnwrappedLineParser::parseParens() {
       break;
     case tok::identifier:
       if (Style.Language == FormatStyle::LK_JavaScript &&
-          FormatTok->isOneOf(Keywords.kw_async, Keywords.kw_function))
+          (FormatTok->is(Keywords.kw_function) ||
+           FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)))
         tryToParseJSFunction();
       else
         nextToken();

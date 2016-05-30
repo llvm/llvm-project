@@ -2371,6 +2371,10 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
     // TODO: Add codegen for priority clause arg when runtime lib support it.
     auto *Prio = Clause->getPriority();
     Data.Priority.setInt(Prio);
+    Data.Priority.setPointer(EmitScalarConversion(
+        EmitScalarExpr(Prio), Prio->getType(),
+        getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1),
+        Prio->getExprLoc()));
   }
   // The first function argument for tasks is a thread id, the second one is a
   // part id (0 for tied tasks, >=0 for untied task).
