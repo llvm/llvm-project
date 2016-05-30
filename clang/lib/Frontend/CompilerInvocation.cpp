@@ -400,7 +400,7 @@ static void setPGOInstrumentor(CodeGenOptions &Opts, ArgList &Args,
 
 // Set the profile kind using fprofile-instrument-use-path.
 static void setPGOUseInstrumentor(CodeGenOptions &Opts,
-                                  const std::string ProfileName) {
+                                  const Twine &ProfileName) {
   auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName);
   // In error, return silently and let Clang PGOUse report the error message.
   if (auto E = ReaderOrErr.takeError()) {

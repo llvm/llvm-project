@@ -690,10 +690,24 @@ private:
   }
 
   LineType parsePreprocessorDirective() {
+    bool IsFirstToken = CurrentToken->IsFirst;
     LineType Type = LT_PreprocessorDirective;
     next();
     if (!CurrentToken)
       return Type;
+
+    if (Style.Language == FormatStyle::LK_JavaScript && IsFirstToken) {
+      // JavaScript files can contain shebang lines of the form:
+      // #!/usr/bin/env node
+      // Treat these like C++ #include directives.
+      while (CurrentToken) {
+        // Tokens cannot be comments here.
+        CurrentToken->Type = TT_ImplicitStringLiteral;
+        next();
+      }
+      return LT_ImportStatement;
+    }
+
     if (CurrentToken->Tok.is(tok::numeric_constant)) {
       CurrentToken->SpacesRequiredBefore = 1;
       return Type;

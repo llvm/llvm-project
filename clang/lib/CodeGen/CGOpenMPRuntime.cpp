@@ -2653,8 +2653,10 @@ enum KmpTaskTFields {
   KmpTaskTRoutine,
   /// \brief Partition id for the untied tasks.
   KmpTaskTPartId,
-  /// \brief Function with call of destructors for private variables.
-  KmpTaskTDestructors,
+  /// Function with call of destructors for private variables.
+  Data1,
+  /// Task priority.
+  Data2,
   /// (Taskloops only) Lower bound.
   KmpTaskTLowerBound,
   /// (Taskloops only) Upper bound.
@@ -3178,19 +3180,27 @@ createKmpTaskTRecordDecl(CodeGenModule &CGM, OpenMPDirectiveKind Kind,
   //         void *              shareds;
   //         kmp_routine_entry_t routine;
   //         kmp_int32           part_id;
-  //         kmp_routine_entry_t destructors;
+  //         kmp_cmplrdata_t data1;
+  //         kmp_cmplrdata_t data2;
   // For taskloops additional fields:
   //         kmp_uint64          lb;
   //         kmp_uint64          ub;
   //         kmp_int64           st;
   //         kmp_int32           liter;
   //       };
+  auto *UD = C.buildImplicitRecord("kmp_cmplrdata_t", TTK_Union);
+  UD->startDefinition();
+  addFieldToRecordDecl(C, UD, KmpInt32Ty);
+  addFieldToRecordDecl(C, UD, KmpRoutineEntryPointerQTy);
+  UD->completeDefinition();
+  QualType KmpCmplrdataTy = C.getRecordType(UD);
   auto *RD = C.buildImplicitRecord("kmp_task_t");
   RD->startDefinition();
   addFieldToRecordDecl(C, RD, C.VoidPtrTy);
   addFieldToRecordDecl(C, RD, KmpRoutineEntryPointerQTy);
   addFieldToRecordDecl(C, RD, KmpInt32Ty);
-  addFieldToRecordDecl(C, RD, KmpRoutineEntryPointerQTy);
+  addFieldToRecordDecl(C, RD, KmpCmplrdataTy);
+  addFieldToRecordDecl(C, RD, KmpCmplrdataTy);
   if (isOpenMPTaskLoopDirective(Kind)) {
     QualType KmpUInt64Ty =
         CGM.getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0);
@@ -3805,18 +3815,30 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
           /*WithLastIter=*/!Data.LastprivateVars.empty());
     }
   }
+  // Fields of union "kmp_cmplrdata_t" for destructors and priority.
+  enum { Priority = 0, Destructors = 1 };
   // Provide pointer to function with destructors for privates.
-  llvm::Value *DestructorFn =
-      NeedsCleanup ? emitDestructorsFunction(CGM, Loc, KmpInt32Ty,
-                                             KmpTaskTWithPrivatesPtrQTy,
-                                             KmpTaskTWithPrivatesQTy)
-                   : llvm::ConstantPointerNull::get(
-                         cast<llvm::PointerType>(KmpRoutineEntryPtrTy));
-  LValue Destructor = CGF.EmitLValueForField(
-      TDBase, *std::next(KmpTaskTQTyRD->field_begin(), KmpTaskTDestructors));
-  CGF.EmitStoreOfScalar(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                            DestructorFn, KmpRoutineEntryPtrTy),
-                        Destructor);
+  auto FI = std::next(KmpTaskTQTyRD->field_begin(), Data1);
+  auto *KmpCmplrdataUD = (*FI)->getType()->getAsUnionType()->getDecl();
+  if (NeedsCleanup) {
+    llvm::Value *DestructorFn = emitDestructorsFunction(
+        CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,
+        KmpTaskTWithPrivatesQTy);
+    LValue Data1LV = CGF.EmitLValueForField(TDBase, *FI);
+    LValue DestructorsLV = CGF.EmitLValueForField(
+        Data1LV, *std::next(KmpCmplrdataUD->field_begin(), Destructors));
+    CGF.EmitStoreOfScalar(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                              DestructorFn, KmpRoutineEntryPtrTy),
+                          DestructorsLV);
+  }
+  // Set priority.
+  if (Data.Priority.getInt()) {
+    LValue Data2LV = CGF.EmitLValueForField(
+        TDBase, *std::next(KmpTaskTQTyRD->field_begin(), Data2));
+    LValue PriorityLV = CGF.EmitLValueForField(
+        Data2LV, *std::next(KmpCmplrdataUD->field_begin(), Priority));
+    CGF.EmitStoreOfScalar(Data.Priority.getPointer(), PriorityLV);
+  }
   Result.NewTask = NewTask;
   Result.TaskEntry = TaskEntry;
   Result.NewTaskNewTaskTTy = NewTaskNewTaskTTy;

@@ -478,7 +478,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   //
   // is common and should be formatted like a free-standing function.
   if (Style.Language != FormatStyle::LK_JavaScript ||
-      Current.NestingLevel != 0 || !PreviousNonComment->is(tok::equal) ||
+      Current.NestingLevel != 0 || !PreviousNonComment ||
+      !PreviousNonComment->is(tok::equal) ||
       !Current.isOneOf(Keywords.kw_async, Keywords.kw_function))
     State.Stack.back().NestedBlockIndent = State.Column;
 

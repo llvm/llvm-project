@@ -70,8 +70,8 @@ bool formatAndApplyAllReplacements(const Replacements &Replaces,
   auto FileToReplaces = groupReplacementsByFile(Replaces);
 
   bool Result = true;
-  for (auto &FileAndReplaces : FileToReplaces) {
-    const std::string FilePath = FileAndReplaces.first;
+  for (const auto &FileAndReplaces : FileToReplaces) {
+    const std::string &FilePath = FileAndReplaces.first;
     auto &CurReplaces = FileAndReplaces.second;
 
     const FileEntry *Entry = Files.getFile(FilePath);
