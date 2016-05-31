@@ -172,3 +172,66 @@ lldb_private::formatters::swift::Measurement_SummaryProvider (ValueObject& valob
     stream.Printf("%g %s", measurement_value, unit.c_str());
     return true;
 }
+
+bool
+lldb_private::formatters::swift::UUID_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    static ConstString g_uuid("uuid");
+    
+    ValueObjectSP uuid_sp(valobj.GetChildAtNamePath( {g_uuid} ));
+    if (!uuid_sp)
+        return false;
+    
+    if (uuid_sp->GetNumChildren() < 16)
+        return false;
+    
+    ValueObjectSP children[] = {uuid_sp->GetChildAtIndex(0, true),
+                                uuid_sp->GetChildAtIndex(1, true),
+                                uuid_sp->GetChildAtIndex(2, true),
+                                uuid_sp->GetChildAtIndex(3, true),
+                                uuid_sp->GetChildAtIndex(4, true),
+                                uuid_sp->GetChildAtIndex(5, true),
+                                uuid_sp->GetChildAtIndex(6, true),
+                                uuid_sp->GetChildAtIndex(7, true),
+                                uuid_sp->GetChildAtIndex(8, true),
+                                uuid_sp->GetChildAtIndex(9, true),
+                                uuid_sp->GetChildAtIndex(10, true),
+                                uuid_sp->GetChildAtIndex(11, true),
+                                uuid_sp->GetChildAtIndex(12, true),
+                                uuid_sp->GetChildAtIndex(13, true),
+                                uuid_sp->GetChildAtIndex(14, true),
+                                uuid_sp->GetChildAtIndex(15, true)};
+    
+    for (ValueObjectSP &child : children)
+    {
+        if (!child)
+            return false;
+        child = child->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
+    }
+    
+    const char *separator = "-";
+    stream.Printf("%2.2X%2.2X%2.2X%2.2X%s%2.2X%2.2X%s%2.2X%2.2X%s%2.2X%2.2X%s%2.2X%2.2X%2.2X%2.2X%2.2X%2.2X",
+                  (uint8_t)children[0]->GetValueAsUnsigned(0),
+                  (uint8_t)children[1]->GetValueAsUnsigned(0),
+                  (uint8_t)children[2]->GetValueAsUnsigned(0),
+                  (uint8_t)children[3]->GetValueAsUnsigned(0),
+                  separator,
+                  (uint8_t)children[4]->GetValueAsUnsigned(0),
+                  (uint8_t)children[5]->GetValueAsUnsigned(0),
+                  separator,
+                  (uint8_t)children[6]->GetValueAsUnsigned(0),
+                  (uint8_t)children[7]->GetValueAsUnsigned(0),
+                  separator,
+                  (uint8_t)children[8]->GetValueAsUnsigned(0),
+                  (uint8_t)children[9]->GetValueAsUnsigned(0),
+                  separator,
+                  (uint8_t)children[10]->GetValueAsUnsigned(0),
+                  (uint8_t)children[11]->GetValueAsUnsigned(0),
+                  (uint8_t)children[12]->GetValueAsUnsigned(0),
+                  (uint8_t)children[13]->GetValueAsUnsigned(0),
+                  (uint8_t)children[14]->GetValueAsUnsigned(0),
+                  (uint8_t)children[15]->GetValueAsUnsigned(0));
+
+    return true;
+}
+

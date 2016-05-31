@@ -42,6 +42,9 @@ namespace lldb_private
             
             bool
             Measurement_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+            
+            bool
+            UUID_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
         }
     }
 }
