@@ -90,6 +90,7 @@ class FoundationTestCase2(TestBase):
             patterns = ["\(int\) \$.* = 3"])
         self.runCmd("process continue")
 
+    @expectedFailureAll(oslist=["macosx"], debug_info="gmodules", bugnumber="llvm.org/pr27861")
     def test_NSString_expr_commands(self):
         """Test expression commands for NSString."""
         self.build()
@@ -136,6 +137,7 @@ class FoundationTestCase2(TestBase):
         self.runCmd("process continue")
 
     @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailureAll(oslist=["macosx"], debug_info="gmodules", bugnumber="rdar://26557987")
     def test_NSError_po(self):
         """Test that po of the result of an unknown method doesn't require a cast."""
         self.build()
