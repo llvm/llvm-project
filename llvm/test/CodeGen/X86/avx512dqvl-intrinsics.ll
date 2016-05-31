@@ -2226,17 +2226,20 @@ define <8 x float>@test_int_x86_avx512_mask_broadcastf32x2_256(<4 x float> %x0, 
 
 declare <8 x i32> @llvm.x86.avx512.mask.broadcasti32x2.256(<4 x i32>, <8 x i32>, i8)
 
-define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x2_256(<4 x i32> %x0, <8 x i32> %x2, i8 %x3) {
+define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x2_256(<4 x i32> %x0, <8 x i32> %x2, i8 %x3, i64 * %y_ptr) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x2_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %edi, %k1 ## encoding: [0xc5,0xf9,0x92,0xcf]
-; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %ymm1 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x59,0xc8]
+; CHECK-NEXT:    vbroadcasti32x2 (%rsi), %ymm1 {%k1} ## encoding: [0x62,0xf2,0x7d,0x29,0x59,0x0e]
 ; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %ymm2 {%k1} {z} ## encoding: [0x62,0xf2,0x7d,0xa9,0x59,0xd0]
 ; CHECK-NEXT:    vbroadcasti32x2 %xmm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x59,0xc0]
 ; CHECK-NEXT:    vpaddd %ymm2, %ymm1, %ymm1 ## encoding: [0x62,0xf1,0x75,0x28,0xfe,0xca]
 ; CHECK-NEXT:    vpaddd %ymm0, %ymm1, %ymm0 ## encoding: [0x62,0xf1,0x75,0x28,0xfe,0xc0]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x i32> @llvm.x86.avx512.mask.broadcasti32x2.256(<4 x i32>  %x0, <8 x i32> %x2, i8 %x3)
+  %y_64  = load i64, i64 * %y_ptr
+  %y_v2i64 = insertelement <2 x i64> undef, i64 %y_64, i32 0
+  %y = bitcast <2 x i64> %y_v2i64 to <4 x i32>
+  %res = call <8 x i32> @llvm.x86.avx512.mask.broadcasti32x2.256(<4 x i32>  %y, <8 x i32> %x2, i8 %x3)
   %res1 = call <8 x i32> @llvm.x86.avx512.mask.broadcasti32x2.256(<4 x i32> %x0, <8 x i32> zeroinitializer, i8 %x3)
   %res2 = call <8 x i32> @llvm.x86.avx512.mask.broadcasti32x2.256(<4 x i32> %x0, <8 x i32> %x2, i8 -1)
   %res3 = add <8 x i32> %res, %res1

@@ -75,6 +75,9 @@ void LLVMTargetMachine::initAsmInfo() {
 
   TmpAsmInfo->setRelaxELFRelocations(Options.RelaxELFRelocations);
 
+  if (Options.ExceptionModel != ExceptionHandling::None)
+    TmpAsmInfo->setExceptionsType(Options.ExceptionModel);
+
   AsmInfo = TmpAsmInfo;
 }
 

@@ -474,24 +474,6 @@ define void @test_x86_sse_stmxcsr(i8* %a0) {
 declare void @llvm.x86.sse.stmxcsr(i8*) nounwind
 
 
-define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
-; SSE-LABEL: test_x86_sse_storeu_ps:
-; SSE:       ## BB#0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    movups %xmm0, (%eax)
-; SSE-NEXT:    retl
-;
-; KNL-LABEL: test_x86_sse_storeu_ps:
-; KNL:       ## BB#0:
-; KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL-NEXT:    vmovups %xmm0, (%eax)
-; KNL-NEXT:    retl
-  call void @llvm.x86.sse.storeu.ps(i8* %a0, <4 x float> %a1)
-  ret void
-}
-declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
-
-
 define <4 x float> @test_x86_sse_sub_ss(<4 x float> %a0, <4 x float> %a1) {
 ; SSE-LABEL: test_x86_sse_sub_ss:
 ; SSE:       ## BB#0:

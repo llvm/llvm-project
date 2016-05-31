@@ -1475,29 +1475,6 @@ define <8 x i32> @test_x86_avx2_psrav_d_256(<8 x i32> %a0, <8 x i32> %a1) {
 }
 declare <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32>, <8 x i32>) nounwind readnone
 
-; This is checked here because the execution dependency fix pass makes it hard to test in AVX mode since we don't have 256-bit integer instructions
-define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
-  ; add operation forces the execution domain.
-; AVX2-LABEL: test_x86_avx_storeu_dq_256:
-; AVX2:       ## BB#0:
-; AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX2-NEXT:    vpaddb LCPI91_0, %ymm0, %ymm0
-; AVX2-NEXT:    vmovdqu %ymm0, (%eax)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retl
-;
-; AVX512VL-LABEL: test_x86_avx_storeu_dq_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512VL-NEXT:    vpaddb LCPI91_0, %ymm0, %ymm0
-; AVX512VL-NEXT:    vmovdqu %ymm0, (%eax)
-; AVX512VL-NEXT:    retl
-  %a2 = add <32 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  call void @llvm.x86.avx.storeu.dq.256(i8* %a0, <32 x i8> %a2)
-  ret void
-}
-declare void @llvm.x86.avx.storeu.dq.256(i8*, <32 x i8>) nounwind
-
 define <2 x double> @test_x86_avx2_gather_d_pd(<2 x double> %a0, i8* %a1, <4 x i32> %idx, <2 x double> %mask) {
 ; AVX2-LABEL: test_x86_avx2_gather_d_pd:
 ; AVX2:       ## BB#0:

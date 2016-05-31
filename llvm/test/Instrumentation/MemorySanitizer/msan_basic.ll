@@ -631,7 +631,7 @@ declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
 ; CHECK-NOT: br
 ; CHECK-NOT: = or
 ; CHECK: store <4 x i32> {{.*}} align 1
-; CHECK: call void @llvm.x86.sse.storeu.ps
+; CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 1{{$}}
 ; CHECK: ret void
 
 
