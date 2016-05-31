@@ -56,8 +56,8 @@ void UnconventionalAssignOperatorCheck::registerMatchers(ast_matchers::MatchFind
       cxxMethodDecl(IsSelfAssign, anyOf(isConst(), isVirtual())).bind("cv"),
       this);
 
-  const auto IsBadReturnStatement = returnStmt(unless(has(
-      unaryOperator(hasOperatorName("*"), hasUnaryOperand(cxxThisExpr())))));
+  const auto IsBadReturnStatement = returnStmt(unless(has(ignoringParenImpCasts(
+      unaryOperator(hasOperatorName("*"), hasUnaryOperand(cxxThisExpr()))))));
   const auto IsGoodAssign = cxxMethodDecl(IsAssign, HasGoodReturnType);
 
   Finder->addMatcher(returnStmt(IsBadReturnStatement, forFunction(IsGoodAssign))

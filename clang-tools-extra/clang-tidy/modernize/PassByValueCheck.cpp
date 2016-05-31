@@ -141,14 +141,14 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
                   // ParenListExpr is generated instead of a CXXConstructExpr,
                   // filtering out templates automatically for us.
                   withInitializer(cxxConstructExpr(
-                      has(declRefExpr(to(
+                      has(ignoringParenImpCasts(declRefExpr(to(
                           parmVarDecl(
                               hasType(qualType(
                                   // Match only const-ref or a non-const value
                                   // parameters. Rvalues and const-values
                                   // shouldn't be modified.
                                   anyOf(constRefType(), nonConstValueType()))))
-                              .bind("Param")))),
+                              .bind("Param"))))),
                       hasDeclaration(cxxConstructorDecl(
                           isCopyConstructor(), unless(isDeleted()),
                           hasDeclContext(

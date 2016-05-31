@@ -26,50 +26,18 @@ namespace clang {
 namespace include_fixer {
 namespace {
 
-class Action;
-
-class PreprocessorHooks : public clang::PPCallbacks {
-public:
-  explicit PreprocessorHooks(Action *EnclosingPass)
-      : EnclosingPass(EnclosingPass), TrackedFile(nullptr) {}
-
-  void FileChanged(clang::SourceLocation loc,
-                   clang::PPCallbacks::FileChangeReason reason,
-                   clang::SrcMgr::CharacteristicKind file_type,
-                   clang::FileID prev_fid) override;
-
-  void InclusionDirective(clang::SourceLocation HashLocation,
-                          const clang::Token &IncludeToken,
-                          llvm::StringRef FileName, bool IsAngled,
-                          clang::CharSourceRange FileNameRange,
-                          const clang::FileEntry *IncludeFile,
-                          llvm::StringRef SearchPath,
-                          llvm::StringRef relative_path,
-                          const clang::Module *imported) override;
-
-private:
-  /// The current Action.
-  Action *EnclosingPass;
-
-  /// The current FileEntry.
-  const clang::FileEntry *TrackedFile;
-};
-
 /// Manages the parse, gathers include suggestions.
 class Action : public clang::ASTFrontendAction,
                public clang::ExternalSemaSource {
 public:
-  explicit Action(SymbolIndexManager &SymbolIndexMgr, StringRef StyleName,
-                  bool MinimizeIncludePaths)
-      : SymbolIndexMgr(SymbolIndexMgr), FallbackStyle(StyleName),
+  explicit Action(SymbolIndexManager &SymbolIndexMgr, bool MinimizeIncludePaths)
+      : SymbolIndexMgr(SymbolIndexMgr),
         MinimizeIncludePaths(MinimizeIncludePaths) {}
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
     Filename = InFile;
-    Compiler.getPreprocessor().addPPCallbacks(
-        llvm::make_unique<PreprocessorHooks>(this));
     return llvm::make_unique<clang::ASTConsumer>();
   }
 
@@ -196,25 +164,9 @@ public:
 
   StringRef filename() const { return Filename; }
 
-  /// Called for each include file we discover is in the file.
-  /// \param SourceManager the active SourceManager
-  /// \param canonical_path the canonical path to the include file
-  /// \param uttered_path the path as it appeared in the program
-  /// \param IsAngled whether angle brackets were used
-  /// \param HashLocation the source location of the include's \#
-  /// \param EndLocation the source location following the include
-  void NextInclude(clang::SourceManager *SourceManager,
-                   llvm::StringRef canonical_path, llvm::StringRef uttered_path,
-                   bool IsAngled, clang::SourceLocation HashLocation,
-                   clang::SourceLocation EndLocation) {
-    unsigned Offset = SourceManager->getFileOffset(HashLocation);
-    if (FirstIncludeOffset == -1U)
-      FirstIncludeOffset = Offset;
-  }
-
   /// Get the minimal include for a given path.
   std::string minimizeInclude(StringRef Include,
-                              clang::SourceManager &SourceManager,
+                              const clang::SourceManager &SourceManager,
                               clang::HeaderSearch &HeaderSearch) {
     if (!MinimizeIncludePaths)
       return Include;
@@ -236,70 +188,21 @@ public:
     return IsSystem ? '<' + Suggestion + '>' : '"' + Suggestion + '"';
   }
 
-  /// Insert all headers before the first #include in \p Code and run
-  /// clang-format to sort all headers.
-  /// \return Replacements for inserting and sorting headers.
-  std::vector<clang::tooling::Replacement>
-  CreateReplacementsForHeaders(StringRef Code,
-                               const std::set<std::string> &Headers) {
-    // Create replacements for new headers.
-    clang::tooling::Replacements Insertions;
-    if (FirstIncludeOffset == -1U) {
-      // FIXME: skip header guards.
-      FirstIncludeOffset = 0;
-      // If there is no existing #include, then insert an empty line after new
-      // header block.
-      if (Code.front() != '\n')
-        Insertions.insert(
-            clang::tooling::Replacement(Filename, FirstIncludeOffset, 0, "\n"));
-    }
-    // Keep inserting new headers before the first header.
-    for (StringRef Header : Headers) {
-      std::string Text = "#include " + Header.str() + "\n";
-      Insertions.insert(
-          clang::tooling::Replacement(Filename, FirstIncludeOffset, 0, Text));
-    }
-    DEBUG({
-      llvm::dbgs() << "Header insertions:\n";
-      for (const auto &R : Insertions)
-        llvm::dbgs() << R.toString() << '\n';
-    });
-
-    clang::format::FormatStyle Style =
-        clang::format::getStyle("file", Filename, FallbackStyle);
-    clang::tooling::Replacements Replaces =
-        formatReplacements(Code, Insertions, Style);
-    // FIXME: remove this when `clang::tooling::Replacements` is implemented as
-    // `std::vector<clang::tooling::Replacement>`.
-    std::vector<clang::tooling::Replacement> Results;
-    std::copy(Replaces.begin(), Replaces.end(), std::back_inserter(Results));
-    return Results;
-  }
-
-  /// Generate replacements for the suggested includes.
-  /// \return true if changes will be made, false otherwise.
-  bool Rewrite(clang::SourceManager &SourceManager,
-               clang::HeaderSearch &HeaderSearch,
-               std::set<std::string> &Headers,
-               std::vector<clang::tooling::Replacement> &Replacements) {
+  /// Get the include fixer context for the queried symbol.
+  IncludeFixerContext
+  getIncludeFixerContext(const clang::SourceManager &SourceManager,
+                         clang::HeaderSearch &HeaderSearch) {
+    IncludeFixerContext FixerContext;
     if (SymbolQueryResults.empty())
-      return false;
+      return FixerContext;
 
-    // FIXME: Rank the results and pick the best one instead of the first one.
-    const auto &ToTry = SymbolQueryResults.front();
-    Headers.insert(minimizeInclude(ToTry, SourceManager, HeaderSearch));
+    FixerContext.SymbolIdentifer = QuerySymbol;
+    for (const auto &Header : SymbolQueryResults)
+      FixerContext.Headers.push_back(
+          minimizeInclude(Header, SourceManager, HeaderSearch));
 
-    StringRef Code = SourceManager.getBufferData(SourceManager.getMainFileID());
-    Replacements = CreateReplacementsForHeaders(Code, Headers);
-
-    // We currently abort after the first inserted include. The more
-    // includes we have the less safe this becomes due to error recovery
-    // changing the results.
-    return true;
+    return FixerContext;
   }
-
-  /// Sets the location at the very top of the file.
-  void setFileBegin(clang::SourceLocation Location) { FileBegin = Location; }
 
 private:
   /// Query the database for a given identifier.
@@ -314,6 +217,7 @@ private:
     DEBUG(Loc.print(llvm::dbgs(), getCompilerInstance().getSourceManager()));
     DEBUG(llvm::dbgs() << " ...");
 
+    QuerySymbol = Query.str();
     SymbolQueryResults = SymbolIndexMgr.search(Query);
     DEBUG(llvm::dbgs() << SymbolQueryResults.size() << " replies\n");
     return !SymbolQueryResults.empty();
@@ -325,16 +229,8 @@ private:
   /// The absolute path to the file being processed.
   std::string Filename;
 
-  /// The location of the beginning of the tracked file.
-  clang::SourceLocation FileBegin;
-
-  /// The offset of the last include in the original source file. This will
-  /// be used as the insertion point for new include directives.
-  unsigned FirstIncludeOffset = -1U;
-
-  /// The fallback format style for formatting after insertion if there is no
-  /// clang-format config file found.
-  std::string FallbackStyle;
+  /// The symbol being queried.
+  std::string QuerySymbol;
 
   /// The query results of an identifier. We only include the first discovered
   /// identifier to avoid getting caught in results from error recovery.
@@ -344,53 +240,13 @@ private:
   bool MinimizeIncludePaths = true;
 };
 
-void PreprocessorHooks::FileChanged(clang::SourceLocation Loc,
-                                    clang::PPCallbacks::FileChangeReason Reason,
-                                    clang::SrcMgr::CharacteristicKind FileType,
-                                    clang::FileID PrevFID) {
-  // Remember where the main file starts.
-  if (Reason == clang::PPCallbacks::EnterFile) {
-    clang::SourceManager *SourceManager =
-        &EnclosingPass->getCompilerInstance().getSourceManager();
-    clang::FileID loc_id = SourceManager->getFileID(Loc);
-    if (const clang::FileEntry *FileEntry =
-            SourceManager->getFileEntryForID(loc_id)) {
-      if (FileEntry->getName() == EnclosingPass->filename()) {
-        EnclosingPass->setFileBegin(Loc);
-        TrackedFile = FileEntry;
-      }
-    }
-  }
-}
-
-void PreprocessorHooks::InclusionDirective(
-    clang::SourceLocation HashLocation, const clang::Token &IncludeToken,
-    llvm::StringRef FileName, bool IsAngled,
-    clang::CharSourceRange FileNameRange, const clang::FileEntry *IncludeFile,
-    llvm::StringRef SearchPath, llvm::StringRef relative_path,
-    const clang::Module *imported) {
-  // Remember include locations so we can insert our new include at the end of
-  // the include block.
-  clang::SourceManager *SourceManager =
-      &EnclosingPass->getCompilerInstance().getSourceManager();
-  auto IDPosition = SourceManager->getDecomposedExpansionLoc(HashLocation);
-  const FileEntry *SourceFile =
-      SourceManager->getFileEntryForID(IDPosition.first);
-  if (!IncludeFile || TrackedFile != SourceFile)
-    return;
-  EnclosingPass->NextInclude(SourceManager, IncludeFile->getName(), FileName,
-                             IsAngled, HashLocation, FileNameRange.getEnd());
-}
-
 } // namespace
 
 IncludeFixerActionFactory::IncludeFixerActionFactory(
-    SymbolIndexManager &SymbolIndexMgr, std::set<std::string> &Headers,
-    std::vector<clang::tooling::Replacement> &Replacements, StringRef StyleName,
-    bool MinimizeIncludePaths)
-    : SymbolIndexMgr(SymbolIndexMgr), Headers(Headers),
-      Replacements(Replacements), MinimizeIncludePaths(MinimizeIncludePaths),
-      FallbackStyle(StyleName) {}
+    SymbolIndexManager &SymbolIndexMgr, IncludeFixerContext &Context,
+    StringRef StyleName, bool MinimizeIncludePaths)
+    : SymbolIndexMgr(SymbolIndexMgr), Context(Context),
+      MinimizeIncludePaths(MinimizeIncludePaths) {}
 
 IncludeFixerActionFactory::~IncludeFixerActionFactory() = default;
 
@@ -416,19 +272,33 @@ bool IncludeFixerActionFactory::runInvocation(
   Compiler.getDiagnostics().setErrorLimit(0);
 
   // Run the parser, gather missing includes.
-  auto ScopedToolAction = llvm::make_unique<Action>(
-      SymbolIndexMgr, FallbackStyle, MinimizeIncludePaths);
+  auto ScopedToolAction =
+      llvm::make_unique<Action>(SymbolIndexMgr, MinimizeIncludePaths);
   Compiler.ExecuteAction(*ScopedToolAction);
 
-  // Generate replacements.
-  ScopedToolAction->Rewrite(Compiler.getSourceManager(),
-                            Compiler.getPreprocessor().getHeaderSearchInfo(),
-                            Headers, Replacements);
+  Context = ScopedToolAction->getIncludeFixerContext(
+      Compiler.getSourceManager(),
+      Compiler.getPreprocessor().getHeaderSearchInfo());
 
   // Technically this should only return true if we're sure that we have a
   // parseable file. We don't know that though. Only inform users of fatal
   // errors.
   return !Compiler.getDiagnostics().hasFatalErrorOccurred();
+}
+
+tooling::Replacements
+createInsertHeaderReplacements(StringRef Code, StringRef FilePath,
+                               StringRef Header,
+                               const clang::format::FormatStyle &Style) {
+  if (Header.empty())
+    return tooling::Replacements();
+  std::string IncludeName = "#include " + Header.str() + "\n";
+  // Create replacements for the new header.
+  clang::tooling::Replacements Insertions = {
+      tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName)};
+
+  return formatReplacements(
+      Code, cleanupAroundReplacements(Code, Insertions, Style), Style);
 }
 
 } // namespace include_fixer

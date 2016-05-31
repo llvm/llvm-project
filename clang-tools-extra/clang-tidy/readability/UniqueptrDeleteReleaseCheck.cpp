@@ -28,11 +28,11 @@ void UniqueptrDeleteReleaseCheck::registerMatchers(MatchFinder *Finder) {
                                  hasName("std::default_delete")))))));
 
   Finder->addMatcher(
-      cxxDeleteExpr(
-          has(cxxMemberCallExpr(on(expr(hasType(UniquePtrWithDefaultDelete),
-                                        unless(hasType(IsSusbstituted)))
-                                       .bind("uptr")),
-                                callee(cxxMethodDecl(hasName("release"))))))
+      cxxDeleteExpr(has(ignoringParenImpCasts(cxxMemberCallExpr(
+                        on(expr(hasType(UniquePtrWithDefaultDelete),
+                                unless(hasType(IsSusbstituted)))
+                               .bind("uptr")),
+                        callee(cxxMethodDecl(hasName("release")))))))
           .bind("delete"),
       this);
 }

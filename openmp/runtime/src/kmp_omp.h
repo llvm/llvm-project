@@ -218,6 +218,7 @@ typedef struct {
     /* kmp_thread_data_t */
     kmp_int32          hd_sizeof_struct;
     offset_and_size_t  hd_deque;
+    offset_and_size_t  hd_deque_size;
     offset_and_size_t  hd_deque_head;
     offset_and_size_t  hd_deque_tail;
     offset_and_size_t  hd_deque_ntasks;

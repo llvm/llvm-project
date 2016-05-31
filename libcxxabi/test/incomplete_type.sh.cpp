@@ -14,6 +14,8 @@
 // incomplete flags set, equality can be tested by comparing the type_info
 // addresses.
 
+// UNSUPPORTED: libcxxabi-no-exceptions
+
 // RUN: %cxx %flags %compile_flags -c %s -o %t.one.o
 // RUN: %cxx %flags %compile_flags -c %s -o %t.two.o -DTU_ONE
 // RUN: %cxx %flags %t.one.o %t.two.o %link_flags -o %t.exe

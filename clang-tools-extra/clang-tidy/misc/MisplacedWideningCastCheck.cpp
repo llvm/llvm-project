@@ -37,10 +37,11 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
            hasType(isInteger()))
           .bind("Calc");
 
-  const auto ExplicitCast =
-      explicitCastExpr(hasDestinationType(isInteger()), has(Calc));
+  const auto ExplicitCast = explicitCastExpr(hasDestinationType(isInteger()),
+                                             has(ignoringParenImpCasts(Calc)));
   const auto ImplicitCast =
-      implicitCastExpr(hasImplicitDestinationType(isInteger()), has(Calc));
+      implicitCastExpr(hasImplicitDestinationType(isInteger()),
+                       has(ignoringParenImpCasts(Calc)));
   const auto Cast = expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast");
 
   Finder->addMatcher(varDecl(hasInitializer(Cast)), this);

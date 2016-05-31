@@ -171,7 +171,7 @@ bool JSONExporter::runOnScop(Scop &S) {
 
 void JSONExporter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<ScopInfo>();
+  AU.addRequired<ScopInfoRegionPass>();
 }
 
 Pass *polly::createJSONExporterPass() { return new JSONExporter(); }

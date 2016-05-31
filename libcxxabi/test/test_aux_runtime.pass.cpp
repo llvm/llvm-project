@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcxxabi-no-exceptions
+
 #include <typeinfo>
 #include <iostream>
 

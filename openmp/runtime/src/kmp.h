@@ -35,10 +35,6 @@
 #define TASK_CURRENT_NOT_QUEUED  0
 #define TASK_CURRENT_QUEUED      1
 
-#define TASK_DEQUE_BITS          8  // Used solely to define TASK_DEQUE_SIZE and TASK_DEQUE_MASK.
-#define TASK_DEQUE_SIZE          ( 1 << TASK_DEQUE_BITS )
-#define TASK_DEQUE_MASK          ( TASK_DEQUE_SIZE - 1 )
-
 #ifdef BUILD_TIED_TASK_STACK
 #define TASK_STACK_EMPTY         0  // entries when the stack is empty
 
@@ -317,8 +313,12 @@ enum sched_type {
 
     kmp_sch_static_steal              = 44,   /**< accessible only through KMP_SCHEDULE environment variable */
 
+#if OMP_41_ENABLED
+    kmp_sch_static_balanced_chunked   = 45,   /**< static with chunk adjustment (e.g., simd) */
+#endif
+
     /* accessible only through KMP_SCHEDULE environment variable */
-    kmp_sch_upper                     = 45,   /**< upper bound for unordered values */
+    kmp_sch_upper                     = 46,   /**< upper bound for unordered values */
 
     kmp_ord_lower                     = 64,   /**< lower bound for ordered values, must be power of 2 */
     kmp_ord_static_chunked            = 65,
@@ -1050,8 +1050,7 @@ extern int __kmp_place_num_threads_per_core;
 #define KMP_MAX_NEXT_WAIT       (INT_MAX/2)
 #define KMP_DEFAULT_NEXT_WAIT   1024U
 
-// max possible dynamic loops in concurrent execution per team
-#define KMP_MAX_DISP_BUF        7
+#define KMP_DFLT_DISP_NUM_BUFF  7
 #define KMP_MAX_ORDERED         8
 
 #define KMP_MAX_FIELDS          32
@@ -2224,6 +2223,7 @@ typedef struct kmp_base_thread_data {
                                                    // Used only in __kmp_execute_tasks_template, maybe not avail until task is queued?
     kmp_bootstrap_lock_t    td_deque_lock;         // Lock for accessing deque
     kmp_taskdata_t **       td_deque;              // Deque of tasks encountered by td_thr, dynamically allocated
+    kmp_int32               td_deque_size;         // Size of deck
     kmp_uint32              td_deque_head;         // Head of deque (will wrap)
     kmp_uint32              td_deque_tail;         // Tail of deque (will wrap)
     kmp_int32               td_deque_ntasks;       // Number of tasks in deque
@@ -2233,6 +2233,12 @@ typedef struct kmp_base_thread_data {
     kmp_task_stack_t        td_susp_tied_tasks;    // Stack of suspended tied tasks for task scheduling constraint
 #endif // BUILD_TIED_TASK_STACK
 } kmp_base_thread_data_t;
+
+#define TASK_DEQUE_BITS          8  // Used solely to define INITIAL_TASK_DEQUE_SIZE
+#define INITIAL_TASK_DEQUE_SIZE  ( 1 << TASK_DEQUE_BITS )
+
+#define TASK_DEQUE_SIZE(td)     ((td).td_deque_size)
+#define TASK_DEQUE_MASK(td)     ((td).td_deque_size - 1)
 
 typedef union KMP_ALIGN_CACHE kmp_thread_data {
     kmp_base_thread_data_t  td;
@@ -2806,6 +2812,7 @@ extern kmp_uint32 __kmp_init_mxcsr;      /* init thread's mxscr */
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
 extern int        __kmp_dflt_max_active_levels; /* max_active_levels for nested parallelism enabled by default a la OMP_MAX_ACTIVE_LEVELS */
+extern int        __kmp_dispatch_num_buffers; /* max possible dynamic loops in concurrent execution per team */
 #if KMP_NESTED_HOT_TEAMS
 extern int        __kmp_hot_teams_mode;
 extern int        __kmp_hot_teams_max_level;
@@ -3068,6 +3075,7 @@ extern kmp_uint32 __kmp_lt_4(  kmp_uint32 value, kmp_uint32 checker );
 extern kmp_uint32 __kmp_ge_4(  kmp_uint32 value, kmp_uint32 checker );
 extern kmp_uint32 __kmp_le_4(  kmp_uint32 value, kmp_uint32 checker );
 extern kmp_uint32 __kmp_wait_yield_4( kmp_uint32 volatile * spinner, kmp_uint32 checker, kmp_uint32 (*pred) (kmp_uint32, kmp_uint32), void * obj );
+extern void __kmp_wait_yield_4_ptr( void * spinner, kmp_uint32 checker, kmp_uint32 (* pred)( void *, kmp_uint32 ), void * obj );
 
 class kmp_flag_32;
 class kmp_flag_64;
@@ -3623,6 +3631,7 @@ KMP_EXPORT void KMPC_CONVENTION kmpc_set_stacksize(int);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_stacksize_s(size_t);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_library(int);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_defaults(char const *);
+KMP_EXPORT void KMPC_CONVENTION kmpc_set_disp_num_buffers(int);
 
 #ifdef __cplusplus
 }

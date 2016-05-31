@@ -23,6 +23,8 @@
 #include "kmp_debug.h"
 
 #ifdef __cplusplus
+#include <atomic>
+
 extern "C" {
 #endif // __cplusplus
 
@@ -233,16 +235,25 @@ extern void __kmp_destroy_nested_futex_lock( kmp_futex_lock_t *lck );
 // Ticket locks.
 // ----------------------------------------------------------------------------
 
+#ifdef __cplusplus
+
 struct kmp_base_ticket_lock {
     // `initialized' must be the first entry in the lock data structure!
-    volatile union kmp_ticket_lock * initialized;  // points to the lock union if in initialized state
-    ident_t const *     location;     // Source code location of omp_init_lock().
-    volatile kmp_uint32 next_ticket;  // ticket number to give to next thread which acquires
-    volatile kmp_uint32 now_serving;  // ticket number for thread which holds the lock
-    volatile kmp_int32  owner_id;     // (gtid+1) of owning thread, 0 if unlocked
-    kmp_int32           depth_locked; // depth locked, for nested locks only
-    kmp_lock_flags_t    flags;        // lock specifics, e.g. critical section lock
+    std::atomic<bool>     initialized;
+    volatile union kmp_ticket_lock *self; // points to the lock union
+    ident_t const *       location;       // Source code location of omp_init_lock().
+    std::atomic<unsigned> next_ticket;    // ticket number to give to next thread which acquires
+    std::atomic<unsigned> now_serving;    // ticket number for thread which holds the lock
+    std::atomic<int>      owner_id;       // (gtid+1) of owning thread, 0 if unlocked
+    std::atomic<int>      depth_locked;   // depth locked, for nested locks only
+    kmp_lock_flags_t      flags;          // lock specifics, e.g. critical section lock
 };
+
+#else // __cplusplus
+
+struct kmp_base_ticket_lock;
+
+#endif // !__cplusplus
 
 typedef struct kmp_base_ticket_lock kmp_base_ticket_lock_t;
 
@@ -260,7 +271,13 @@ typedef union kmp_ticket_lock kmp_ticket_lock_t;
 //    kmp_ticket_lock_t xlock = KMP_TICKET_LOCK_INITIALIZER( xlock );
 // Note the macro argument. It is important to make var properly initialized.
 //
-#define KMP_TICKET_LOCK_INITIALIZER( lock ) { { (kmp_ticket_lock_t *) & (lock), NULL, 0, 0, 0, -1 } }
+#define KMP_TICKET_LOCK_INITIALIZER( lock ) { { ATOMIC_VAR_INIT(true), \
+                                                              &(lock), \
+                                                                 NULL, \
+                                                  ATOMIC_VAR_INIT(0U), \
+                                                  ATOMIC_VAR_INIT(0U), \
+                                                   ATOMIC_VAR_INIT(0), \
+                                                  ATOMIC_VAR_INIT(-1)    } }
 
 extern int __kmp_acquire_ticket_lock( kmp_ticket_lock_t *lck, kmp_int32 gtid );
 extern int __kmp_test_ticket_lock( kmp_ticket_lock_t *lck, kmp_int32 gtid );

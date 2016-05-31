@@ -15,16 +15,7 @@ else()
   set(COMPILER_RT_STANDALONE_BUILD FALSE)
 endif()
 
-# The CompilerRT build system requires CMake version 2.8.8 or higher in order
-# to use its support for building convenience "libraries" as a collection of
-# .o files. This is particularly useful in producing larger, more complex
-# runtime libraries.
-if (NOT MSVC)
-  cmake_minimum_required(VERSION 2.8.8)
-else()
-  # Version 2.8.12.1 is required to build with Visual Studio 2013.
-  cmake_minimum_required(VERSION 2.8.12.1)
-endif()
+cmake_minimum_required(VERSION 3.4.3)
 
 # FIXME: It may be removed when we use 2.8.12.
 if(CMAKE_VERSION VERSION_LESS 2.8.12)

@@ -215,6 +215,19 @@ FTN_GET_LIBRARY (void)
     #endif
 }
 
+void FTN_STDCALL
+FTN_SET_DISP_NUM_BUFFERS( int KMP_DEREF arg )
+{
+    #ifdef KMP_STUB
+        ; // empty routine
+    #else
+        // ignore after initialization because some teams have already
+        // allocated dispatch buffers
+        if( __kmp_init_serial == 0 && (KMP_DEREF arg) > 0 )
+            __kmp_dispatch_num_buffers = KMP_DEREF arg;
+    #endif
+}
+
 int FTN_STDCALL
 FTN_SET_AFFINITY( void **mask )
 {

@@ -16,14 +16,34 @@
 
 namespace __esan {
 
+// This should be kept consistent with LLVM's EfficiencySanitizer StructInfo.
+struct StructInfo {
+  const char *StructName;
+  u32 NumOfFields;
+  u64 *FieldCounters;
+  const char **FieldTypeNames;
+};
+
+// This should be kept consistent with LLVM's EfficiencySanitizer CacheFragInfo.
+// The tool-specific information per compilation unit (module).
+struct CacheFragInfo {
+  const char *UnitName;
+  u32 NumOfStructs;
+  StructInfo *Structs;
+};
+
 //===-- Init/exit functions -----------------------------------------------===//
 
 void processCacheFragCompilationUnitInit(void *Ptr) {
-  VPrintf(2, "in esan::%s\n", __FUNCTION__);
+  CacheFragInfo *CacheFrag = (CacheFragInfo *)Ptr;
+  VPrintf(2, "in esan::%s: %s with %u class(es)/struct(s)\n",
+          __FUNCTION__, CacheFrag->UnitName, CacheFrag->NumOfStructs);
 }
 
 void processCacheFragCompilationUnitExit(void *Ptr) {
-  VPrintf(2, "in esan::%s\n", __FUNCTION__);
+  CacheFragInfo *CacheFrag = (CacheFragInfo *)Ptr;
+  VPrintf(2, "in esan::%s: %s with %u class(es)/struct(s)\n",
+          __FUNCTION__, CacheFrag->UnitName, CacheFrag->NumOfStructs);
 }
 
 void initializeCacheFrag() {

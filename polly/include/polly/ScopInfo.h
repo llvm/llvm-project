@@ -2247,28 +2247,28 @@ static inline raw_ostream &operator<<(raw_ostream &O, const Scop &scop) {
 }
 
 /// @brief Build the Polly IR (Scop and ScopStmt) on a Region.
-class ScopInfo : public RegionPass {
+class ScopInfo {
   //===-------------------------------------------------------------------===//
   ScopInfo(const ScopInfo &) = delete;
   const ScopInfo &operator=(const ScopInfo &) = delete;
 
   /// @brief The AliasAnalysis to build AliasSetTracker.
-  AliasAnalysis *AA;
+  AliasAnalysis &AA;
 
   /// @brief Target data for element size computing.
-  const DataLayout *DL;
+  const DataLayout &DL;
 
   /// @brief DominatorTree to reason about guaranteed execution.
-  DominatorTree *DT;
+  DominatorTree &DT;
 
   /// @brief LoopInfo for information about loops
-  LoopInfo *LI;
+  LoopInfo &LI;
 
   /// @biref Valid Regions for Scop
-  ScopDetection *SD;
+  ScopDetection &SD;
 
   /// @brief The ScalarEvolution to help building Scop.
-  ScalarEvolution *SE;
+  ScalarEvolution &SE;
 
   /// @brief Set of instructions that might read any memory location.
   SmallVector<Instruction *, 16> GlobalReads;
@@ -2468,9 +2468,10 @@ class ScopInfo : public RegionPass {
   void addPHIReadAccess(PHINode *PHI);
 
 public:
-  static char ID;
-  explicit ScopInfo();
-  ~ScopInfo();
+  explicit ScopInfo(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
+                    const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
+                    ScopDetection &SD, ScalarEvolution &SE);
+  ~ScopInfo() {}
 
   /// @brief Try to build the Polly IR of static control part on the current
   ///        SESE-Region.
@@ -2480,21 +2481,52 @@ public:
   ///         return null otherwise.
   Scop *getScop() { return scop.get(); }
   const Scop *getScop() const { return scop.get(); }
+};
 
-  /// @name RegionPass interface
-  //@{
-  virtual bool runOnRegion(Region *R, RGPassManager &RGM);
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
-  virtual void releaseMemory() { clear(); }
-  virtual void print(raw_ostream &OS, const Module *) const;
-  //@}
+/// @brief The legacy pass manager's analysis pass to compute scop information
+///        for a region.
+class ScopInfoRegionPass : public RegionPass {
+  /// @brief The ScopInfo pointer which is used to construct a Scop.
+  std::unique_ptr<ScopInfo> SI;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  ScopInfoRegionPass() : RegionPass(ID) {}
+  ~ScopInfoRegionPass() {}
+
+  /// @brief Build ScopInfo object, which constructs Polly IR of static control
+  ///        part for the current SESE-Region.
+  ///
+  /// @return Return Scop for the current Region.
+  Scop *getScop() {
+    if (SI)
+      return SI.get()->getScop();
+    else
+      return nullptr;
+  }
+  const Scop *getScop() const {
+    if (SI)
+      return SI.get()->getScop();
+    else
+      return nullptr;
+  }
+
+  /// @brief Calculate the polyhedral scop information for a given Region.
+  bool runOnRegion(Region *R, RGPassManager &RGM) override;
+
+  void releaseMemory() override { SI.reset(); }
+
+  void print(raw_ostream &O, const Module *M = nullptr) const override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
 } // end namespace polly
 
 namespace llvm {
 class PassRegistry;
-void initializeScopInfoPass(llvm::PassRegistry &);
+void initializeScopInfoRegionPassPass(llvm::PassRegistry &);
 }
 
 #endif

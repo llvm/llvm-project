@@ -791,7 +791,7 @@ void polly::DependenceInfo::printScop(raw_ostream &OS, Scop &S) const {
 }
 
 void DependenceInfo::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequiredTransitive<ScopInfo>();
+  AU.addRequiredTransitive<ScopInfoRegionPass>();
   AU.setPreservesAll();
 }
 
@@ -801,6 +801,6 @@ Pass *polly::createDependenceInfoPass() { return new DependenceInfo(); }
 
 INITIALIZE_PASS_BEGIN(DependenceInfo, "polly-dependences",
                       "Polly - Calculate dependences", false, false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfo);
+INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_END(DependenceInfo, "polly-dependences",
                     "Polly - Calculate dependences", false, false)

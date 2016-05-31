@@ -30,13 +30,13 @@ void UniqueptrResetReleaseCheck::registerMatchers(MatchFinder *Finder) {
               cxxMethodDecl(hasName("reset"),
                             ofClass(cxxRecordDecl(hasName("::std::unique_ptr"),
                                                   decl().bind("left_class"))))),
-          has(cxxMemberCallExpr(
+          has(ignoringParenImpCasts(cxxMemberCallExpr(
               on(expr().bind("right")),
               callee(memberExpr().bind("release_member")),
               callee(cxxMethodDecl(
                   hasName("release"),
                   ofClass(cxxRecordDecl(hasName("::std::unique_ptr"),
-                                        decl().bind("right_class"))))))))
+                                        decl().bind("right_class")))))))))
           .bind("reset_call"),
       this);
 }

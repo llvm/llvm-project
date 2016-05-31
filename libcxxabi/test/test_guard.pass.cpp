@@ -41,6 +41,7 @@ namespace test1 {
 // When initialization fails, ensure that we try to initialize it again next
 // time.
 namespace test2 {
+#ifndef LIBCXXABI_HAS_NO_EXCEPTIONS
     static int run_count = 0;
     int increment() {
         ++run_count;
@@ -58,6 +59,9 @@ namespace test2 {
         helper();
         assert(run_count == 2);
     }
+#else
+   void test() {}
+#endif
 }
 
 // Check that we can initialize a second value while initializing a first.

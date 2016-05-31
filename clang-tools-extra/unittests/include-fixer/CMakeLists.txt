@@ -17,6 +17,7 @@ add_extra_unittest(IncludeFixerTests
 
 target_link_libraries(IncludeFixerTests
   clangBasic
+  clangFormat
   clangFrontend
   clangIncludeFixer
   clangRewrite

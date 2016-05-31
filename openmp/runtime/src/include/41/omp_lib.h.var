@@ -391,6 +391,11 @@
           integer (kind=omp_integer_kind) kmp_get_library
         end function kmp_get_library
 
+        subroutine kmp_set_disp_num_buffers(num) bind(c)
+          import
+          integer (kind=omp_integer_kind), value :: num
+        end subroutine kmp_set_disp_num_buffers
+
         function kmp_set_affinity(mask) bind(c)
           import
           integer (kind=omp_integer_kind) kmp_set_affinity
@@ -544,6 +549,7 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_get_stacksize_s
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_get_blocktime
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_get_library
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_disp_num_buffers
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_affinity
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_get_affinity
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_get_affinity_max_proc
@@ -615,6 +621,7 @@
 !$omp declare target(kmp_get_stacksize_s )
 !$omp declare target(kmp_get_blocktime )
 !$omp declare target(kmp_get_library )
+!$omp declare target(kmp_set_disp_num_buffers )
 !$omp declare target(kmp_set_affinity )
 !$omp declare target(kmp_get_affinity )
 !$omp declare target(kmp_get_affinity_max_proc )

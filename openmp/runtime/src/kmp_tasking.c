@@ -305,7 +305,7 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
     }
 
     // Check if deque is full
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
+    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
     {
         KA_TRACE(20, ( "__kmp_push_task: T#%d deque is full; returning TASK_NOT_PUSHED for task %p\n",
                        gtid, taskdata ) );
@@ -317,7 +317,7 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
 
 #if OMP_41_ENABLED
     // Need to recheck as we can get a proxy task from a thread outside of OpenMP
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
+    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
     {
         __kmp_release_bootstrap_lock( & thread_data -> td.td_deque_lock );
         KA_TRACE(20, ( "__kmp_push_task: T#%d deque is full on 2nd check; returning TASK_NOT_PUSHED for task %p\n",
@@ -326,12 +326,12 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
     }
 #else
     // Must have room since no thread can add tasks but calling thread
-    KMP_DEBUG_ASSERT( TCR_4(thread_data -> td.td_deque_ntasks) < TASK_DEQUE_SIZE );
+    KMP_DEBUG_ASSERT( TCR_4(thread_data -> td.td_deque_ntasks) < TASK_DEQUE_SIZE(thread_data->td) );
 #endif
 
     thread_data -> td.td_deque[ thread_data -> td.td_deque_tail ] = taskdata;  // Push taskdata
     // Wrap index.
-    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK;
+    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK(thread_data->td);
     TCW_4(thread_data -> td.td_deque_ntasks, TCR_4(thread_data -> td.td_deque_ntasks) + 1);             // Adjust task count
 
     __kmp_release_bootstrap_lock( & thread_data -> td.td_deque_lock );
@@ -1641,7 +1641,7 @@ __kmp_remove_my_task( kmp_info_t * thread, kmp_int32 gtid, kmp_task_team_t *task
         return NULL;
     }
 
-    tail = ( thread_data -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK;  // Wrap index.
+    tail = ( thread_data -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK(thread_data->td);  // Wrap index.
     taskdata = thread_data -> td.td_deque[ tail ];
 
     if (is_constrained) {
@@ -1734,12 +1734,14 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
 
     if ( !is_constrained ) {
         taskdata = victim_td -> td.td_deque[ victim_td -> td.td_deque_head ];
+        KMP_ASSERT(taskdata);
         // Bump head pointer and Wrap.
-        victim_td -> td.td_deque_head = ( victim_td -> td.td_deque_head + 1 ) & TASK_DEQUE_MASK;
+        victim_td -> td.td_deque_head = ( victim_td -> td.td_deque_head + 1 ) & TASK_DEQUE_MASK(victim_td->td);
     } else {
         // While we have postponed tasks let's steal from tail of the deque (smaller tasks)
-        kmp_int32 tail = ( victim_td -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK;  // Wrap index.
+        kmp_int32 tail = ( victim_td -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK(victim_td->td);  // Wrap index.
         taskdata = victim_td -> td.td_deque[ tail ];
+        KMP_ASSERT(taskdata);
         // we need to check if the candidate obeys task scheduling constraint:
         // only child of current task can be scheduled
         kmp_taskdata_t * current = __kmp_threads[ gtid ]->th.th_current_task;
@@ -2267,14 +2269,42 @@ __kmp_alloc_task_deque( kmp_info_t *thread, kmp_thread_data_t *thread_data )
     KMP_DEBUG_ASSERT( thread_data -> td.td_deque_tail == 0 );
 
     KE_TRACE( 10, ( "__kmp_alloc_task_deque: T#%d allocating deque[%d] for thread_data %p\n",
-                   __kmp_gtid_from_thread( thread ), TASK_DEQUE_SIZE, thread_data ) );
+                   __kmp_gtid_from_thread( thread ), INITIAL_TASK_DEQUE_SIZE, thread_data ) );
     // Allocate space for task deque, and zero the deque
     // Cannot use __kmp_thread_calloc() because threads not around for
     // kmp_reap_task_team( ).
     thread_data -> td.td_deque = (kmp_taskdata_t **)
-            __kmp_allocate( TASK_DEQUE_SIZE * sizeof(kmp_taskdata_t *));
+            __kmp_allocate( INITIAL_TASK_DEQUE_SIZE * sizeof(kmp_taskdata_t *));
+	thread_data -> td.td_deque_size = INITIAL_TASK_DEQUE_SIZE;
 }
 
+//------------------------------------------------------------------------------
+// __kmp_realloc_task_deque:
+// Re-allocates a task deque for a particular thread, copies the content from the old deque
+// and adjusts the necessary data structures relating to the deque.
+// This operation must be done with a the deque_lock being held
+
+static void __kmp_realloc_task_deque ( kmp_info_t *thread, kmp_thread_data_t *thread_data )
+{
+    kmp_int32 size = TASK_DEQUE_SIZE(thread_data->td);
+    kmp_int32 new_size = 2 * size;
+
+    KE_TRACE( 10, ( "__kmp_realloc_task_deque: T#%d reallocating deque[from %d to %d] for thread_data %p\n",
+                  __kmp_gtid_from_thread( thread ), size, new_size, thread_data ) );
+
+    kmp_taskdata_t ** new_deque = (kmp_taskdata_t **) __kmp_allocate( new_size * sizeof(kmp_taskdata_t *));
+
+    int i,j;
+    for ( i = thread_data->td.td_deque_head, j = 0; j < size; i = (i+1) & TASK_DEQUE_MASK(thread_data->td), j++ )
+       new_deque[j] = thread_data->td.td_deque[i];
+
+    __kmp_free(thread_data->td.td_deque);
+
+    thread_data -> td.td_deque_head = 0;
+    thread_data -> td.td_deque_tail = size;
+    thread_data -> td.td_deque = new_deque;
+    thread_data -> td.td_deque_size = new_size;
+}
 
 //------------------------------------------------------------------------------
 // __kmp_free_task_deque:
@@ -2769,7 +2799,7 @@ __kmp_tasking_barrier( kmp_team_t *team, kmp_info_t *thread, int gtid )
 
     Because of this, __kmp_push_task needs to check if there's space after getting the lock
  */
-static bool __kmp_give_task ( kmp_info_t *thread, kmp_int32 tid, kmp_task_t * task )
+static bool __kmp_give_task ( kmp_info_t *thread, kmp_int32 tid, kmp_task_t * task, kmp_int32 pass )
 {
     kmp_taskdata_t *    taskdata = KMP_TASK_TO_TASKDATA(task);
     kmp_task_team_t *	task_team = taskdata->td_task_team;
@@ -2789,23 +2819,37 @@ static bool __kmp_give_task ( kmp_info_t *thread, kmp_int32 tid, kmp_task_t * ta
         return result;
     }
 
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
+    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
     {
         KA_TRACE(30, ("__kmp_give_task: queue is full while giving task %p to thread %d.\n", taskdata, tid ) );
-        return result;
+
+        // if this deque is bigger than the pass ratio give a chance to another thread
+        if ( TASK_DEQUE_SIZE(thread_data->td)/INITIAL_TASK_DEQUE_SIZE >= pass ) return result;
+
+        __kmp_acquire_bootstrap_lock( & thread_data-> td.td_deque_lock );
+        __kmp_realloc_task_deque(thread,thread_data);
+
+    } else {
+
+       __kmp_acquire_bootstrap_lock( & thread_data-> td.td_deque_lock );
+
+       if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
+       {
+           KA_TRACE(30, ("__kmp_give_task: queue is full while giving task %p to thread %d.\n", taskdata, tid ) );
+
+           // if this deque is bigger than the pass ratio give a chance to another thread
+           if ( TASK_DEQUE_SIZE(thread_data->td)/INITIAL_TASK_DEQUE_SIZE >= pass )
+              goto release_and_exit;
+
+           __kmp_realloc_task_deque(thread,thread_data);
+       }
     }
 
-    __kmp_acquire_bootstrap_lock( & thread_data-> td.td_deque_lock );
-
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
-    {
-        KA_TRACE(30, ("__kmp_give_task: queue is full while giving task %p to thread %d.\n", taskdata, tid ) );
-        goto release_and_exit;
-    }
+    // lock is held here, and there is space in the deque
 
     thread_data -> td.td_deque[ thread_data -> td.td_deque_tail ] = taskdata;
     // Wrap index.
-    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK;
+    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK(thread_data->td);
     TCW_4(thread_data -> td.td_deque_ntasks, TCR_4(thread_data -> td.td_deque_ntasks) + 1);
 
     result = true;
@@ -2919,14 +2963,21 @@ void __kmpc_proxy_task_completed_ooo ( kmp_task_t *ptask )
     kmp_team_t * team = taskdata->td_team;
     kmp_int32 nthreads = team->t.t_nproc;
     kmp_info_t *thread;
-    kmp_int32 k = 0;
+
+    //This should be similar to start_k = __kmp_get_random( thread ) % nthreads but we cannot use __kmp_get_random here
+    kmp_int32 start_k = 0;
+    kmp_int32 pass = 1;
+    kmp_int32 k = start_k;
 
     do {
-        //This should be similar to k = __kmp_get_random( thread ) % nthreads but we cannot use __kmp_get_random here
         //For now we're just linearly trying to find a thread
-        k = (k+1) % nthreads;
         thread = team->t.t_threads[k];
-    } while ( !__kmp_give_task( thread, k,  ptask ) );
+        k = (k+1) % nthreads;
+
+        // we did a full pass through all the threads
+        if ( k == start_k ) pass = pass << 1;
+
+    } while ( !__kmp_give_task( thread, k,  ptask, pass ) );
 
     __kmp_second_top_half_finish_proxy(taskdata);
 

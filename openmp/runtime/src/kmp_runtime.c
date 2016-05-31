@@ -489,7 +489,7 @@ __kmp_print_thread_storage_map( kmp_info_t *thr, int gtid )
 static void
 __kmp_print_team_storage_map( const char *header, kmp_team_t *team, int team_id, int num_thr )
 {
-    int num_disp_buff = team->t.t_max_nproc > 1 ? KMP_MAX_DISP_BUF : 2;
+    int num_disp_buff = team->t.t_max_nproc > 1 ? __kmp_dispatch_num_buffers : 2;
     __kmp_print_storage_map_gtid( -1, team, team + 1, sizeof(kmp_team_t), "%s_%d",
                              header, team_id );
 
@@ -2967,7 +2967,7 @@ static void
 __kmp_allocate_team_arrays(kmp_team_t *team, int max_nth)
 {
     int i;
-    int num_disp_buff = max_nth > 1 ? KMP_MAX_DISP_BUF : 2;
+    int num_disp_buff = max_nth > 1 ? __kmp_dispatch_num_buffers : 2;
     team->t.t_threads = (kmp_info_t**) __kmp_allocate( sizeof(kmp_info_t*) * max_nth );
     team->t.t_disp_buffer = (dispatch_shared_info_t*)
         __kmp_allocate( sizeof(dispatch_shared_info_t) * num_disp_buff );
@@ -4040,7 +4040,7 @@ __kmp_initialize_info( kmp_info_t *this_thr, kmp_team_t *team, int tid, int gtid
          * Use team max_nproc since this will never change for the team.
          */
         size_t disp_size = sizeof( dispatch_private_info_t ) *
-            ( team->t.t_max_nproc == 1 ? 1 : KMP_MAX_DISP_BUF );
+            ( team->t.t_max_nproc == 1 ? 1 : __kmp_dispatch_num_buffers );
         KD_TRACE( 10, ("__kmp_initialize_info: T#%d max_nproc: %d\n", gtid, team->t.t_max_nproc ) );
         KMP_ASSERT( dispatch );
         KMP_DEBUG_ASSERT( team->t.t_dispatch );
@@ -4055,7 +4055,7 @@ __kmp_initialize_info( kmp_info_t *this_thr, kmp_team_t *team, int tid, int gtid
 
             if ( __kmp_storage_map ) {
                 __kmp_print_storage_map_gtid( gtid, &dispatch->th_disp_buffer[ 0 ],
-                                         &dispatch->th_disp_buffer[ team->t.t_max_nproc == 1 ? 1 : KMP_MAX_DISP_BUF ],
+                                         &dispatch->th_disp_buffer[ team->t.t_max_nproc == 1 ? 1 : __kmp_dispatch_num_buffers ],
                                          disp_size, "th_%d.th_dispatch.th_disp_buffer "
                                          "(team_%d.t_dispatch[%d].th_disp_buffer)",
                                          gtid, team->t.t_id, gtid );
@@ -6997,7 +6997,7 @@ __kmp_internal_fork( ident_t *id, int gtid, kmp_team_t *team )
     KMP_DEBUG_ASSERT( team->t.t_disp_buffer );
     if ( team->t.t_max_nproc > 1 ) {
         int i;
-        for (i = 0; i <  KMP_MAX_DISP_BUF; ++i) {
+        for (i = 0; i <  __kmp_dispatch_num_buffers; ++i) {
             team->t.t_disp_buffer[ i ].buffer_index = i;
 #if OMP_41_ENABLED
             team->t.t_disp_buffer[i].doacross_buf_idx = i;

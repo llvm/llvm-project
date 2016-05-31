@@ -128,6 +128,7 @@ int      __kmp_dflt_team_nth_ub = 0;
 int           __kmp_tp_capacity = 0;
 int             __kmp_tp_cached = 0;
 int           __kmp_dflt_nested = FALSE;
+int  __kmp_dispatch_num_buffers = KMP_DFLT_DISP_NUM_BUFF;
 int __kmp_dflt_max_active_levels = KMP_MAX_ACTIVE_LEVELS_LIMIT; /* max_active_levels limit */
 #if KMP_NESTED_HOT_TEAMS
 int __kmp_hot_teams_mode         = 0; /* 0 - free extra threads when reduced */
