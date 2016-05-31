@@ -642,6 +642,40 @@ define void @test_maxnum(half* %p, half* %q) #0 {
   ret void
 }
 
+; CHECK-ALL-LABEL: test_minnan:
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-VFP: vmin.f32
+; CHECK-NOVFP: bl __aeabi_fcmpge
+; CHECK-FP16: vcvtb.f16.f32
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_minnan(half* %p) #0 {
+  %a = load half, half* %p, align 2
+  %c = fcmp ult half %a, 1.0
+  %r = select i1 %c, half %a, half 1.0
+  store half %r, half* %p
+  ret void
+}
+
+; CHECK-ALL-LABEL: test_maxnan:
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-VFP: vmax.f32
+; CHECK-NOVFP: bl __aeabi_fcmple
+; CHECK-FP16: vcvtb.f16.f32
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_maxnan(half* %p) #0 {
+  %a = load half, half* %p, align 2
+  %c = fcmp ugt half %a, 1.0
+  %r = select i1 %c, half %a, half 1.0
+  store half %r, half* %p
+  ret void
+}
+
 ; CHECK-FP16-LABEL: test_copysign:
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-FP16: vcvtb.f32.f16

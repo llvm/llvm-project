@@ -1868,6 +1868,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     // Binary FP Operations
     case ISD::FADD:
     case ISD::FDIV:
+    case ISD::FMAXNAN:
+    case ISD::FMINNAN:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMUL:
