@@ -99,7 +99,10 @@ CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
   // If Collector is not nullptr, check pragma remapping header.
   FilePath = Collector ? Collector->getMappedHeader(FilePath) : FilePath;
 
-  return SymbolInfo(ND->getNameAsString(), Type, FilePath.str(),
+  SmallString<256> CleanedFilePath = FilePath;
+  llvm::sys::path::remove_dots(CleanedFilePath, /*remove_dot_dot=*/true);
+
+  return SymbolInfo(ND->getNameAsString(), Type, CleanedFilePath,
                     SM.getExpansionLineNumber(Loc), GetContexts(ND));
 }
 

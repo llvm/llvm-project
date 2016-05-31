@@ -42,7 +42,8 @@ void IncorrectRoundings::registerMatchers(MatchFinder *MatchFinder) {
   // Match a floating literal of 0.5 or a floating literal of 0.5 implicitly.
   // cast to floating type.
   auto FloatOrCastHalf =
-      anyOf(FloatHalf, implicitCastExpr(FloatType, has(FloatHalf)));
+      anyOf(FloatHalf,
+            implicitCastExpr(FloatType, has(ignoringParenImpCasts(FloatHalf))));
 
   // Match if either the LHS or RHS is a floating literal of 0.5 or a floating
   // literal of 0.5 and the other is of type double or vice versa.

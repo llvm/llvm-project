@@ -137,7 +137,7 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
   if (MatchedDecl->getName().startswith("awesome_"))
     return;
-  diag(MatchedDecl->getLocation(), "function '%%0' is insufficiently awesome")
+  diag(MatchedDecl->getLocation(), "function %%0 is insufficiently awesome")
       << MatchedDecl
       << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
 }

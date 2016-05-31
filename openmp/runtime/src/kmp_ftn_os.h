@@ -35,6 +35,7 @@
     #define FTN_SET_LIBRARY                      kmp_set_library
     #define FTN_GET_LIBRARY                      kmp_get_library
     #define FTN_SET_DEFAULTS                     kmp_set_defaults
+    #define FTN_SET_DISP_NUM_BUFFERS             kmp_set_disp_num_buffers
     #define FTN_SET_AFFINITY                     kmp_set_affinity
     #define FTN_GET_AFFINITY                     kmp_get_affinity
     #define FTN_GET_AFFINITY_MAX_PROC            kmp_get_affinity_max_proc
@@ -152,6 +153,7 @@
     #define FTN_SET_LIBRARY                      kmp_set_library_
     #define FTN_GET_LIBRARY                      kmp_get_library_
     #define FTN_SET_DEFAULTS                     kmp_set_defaults_
+    #define FTN_SET_DISP_NUM_BUFFERS             kmp_set_disp_num_buffers_
     #define FTN_SET_AFFINITY                     kmp_set_affinity_
     #define FTN_GET_AFFINITY                     kmp_get_affinity_
     #define FTN_GET_AFFINITY_MAX_PROC            kmp_get_affinity_max_proc_
@@ -270,6 +272,7 @@
     #define FTN_SET_LIBRARY                      KMP_SET_LIBRARY
     #define FTN_GET_LIBRARY                      KMP_GET_LIBRARY
     #define FTN_SET_DEFAULTS                     KMP_SET_DEFAULTS
+    #define FTN_SET_DISP_NUM_BUFFERS             KMP_SET_DISP_NUM_BUFFERS
     #define FTN_SET_AFFINITY                     KMP_SET_AFFINITY
     #define FTN_GET_AFFINITY                     KMP_GET_AFFINITY
     #define FTN_GET_AFFINITY_MAX_PROC            KMP_GET_AFFINITY_MAX_PROC
@@ -388,6 +391,7 @@
     #define FTN_SET_LIBRARY                      KMP_SET_LIBRARY_
     #define FTN_GET_LIBRARY                      KMP_GET_LIBRARY_
     #define FTN_SET_DEFAULTS                     KMP_SET_DEFAULTS_
+    #define FTN_SET_DISP_NUM_BUFFERS             KMP_SET_DISP_NUM_BUFFERS_
     #define FTN_SET_AFFINITY                     KMP_SET_AFFINITY_
     #define FTN_GET_AFFINITY                     KMP_GET_AFFINITY_
     #define FTN_GET_AFFINITY_MAX_PROC            KMP_GET_AFFINITY_MAX_PROC_

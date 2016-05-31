@@ -324,6 +324,29 @@ __kmp_for_static_init(
                 *plastiter = (tid == ((trip_count - 1)/( UT )chunk) % nth);
             break;
         }
+#if OMP_41_ENABLED
+    case kmp_sch_static_balanced_chunked:
+        {
+            register T old_upper = *pupper;
+            // round up to make sure the chunk is enough to cover all iterations
+            register UT span = (trip_count+nth-1) / nth;
+
+            // perform chunk adjustment
+            chunk = (span + chunk - 1) & ~(chunk-1);
+
+            span = chunk * incr;
+            *plower = *plower + (span * tid);
+            *pupper = *plower + span - incr;
+            if ( incr > 0 ) {
+              if ( *pupper > old_upper ) *pupper = old_upper;
+            } else
+              if ( *pupper < old_upper ) *pupper = old_upper;
+
+            if( plastiter != NULL )
+                *plastiter = ( tid == ((trip_count - 1)/( UT )chunk) );
+            break;
+        }
+#endif
     default:
         KMP_ASSERT2( 0, "__kmpc_for_static_init: unknown scheduling type" );
         break;

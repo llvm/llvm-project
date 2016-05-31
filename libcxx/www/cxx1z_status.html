@@ -203,20 +203,20 @@
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2495">2495</a></td><td>There is no such thing as an Exception Safety element</td><td>Kona</td><td>Complete</td></tr>
  	<tr><td></td><td></td><td></td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2192">2192</a></td><td>Validity and return type of <tt>std::abs(0u)</tt> is unclear</td><td>Jacksonville</td><td></td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2276">2276</a></td><td>Missing requirement on <tt>std::promise::set_exception</tt></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2276">2276</a></td><td>Missing requirement on <tt>std::promise::set_exception</tt></td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2296">2296</a></td><td><tt>std::addressof</tt> should be <tt>constexpr</td><td>Jacksonville</td><td>Complete (Clang Only)</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2450">2450</a></td><td><tt>(greater|less|greater_equal|less_equal)&lt;void&gt;</tt> do not yield a total order for pointers</td><td>Jacksonville</td><td></td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2520">2520</a></td><td>N4089 broke initializing <tt>unique_ptr&lt;T[]&gt;</tt> from a <tt>nullptr</tt></td><td>Jacksonville</td><td></td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2522">2522</a></td><td>[fund.ts.v2] Contradiction in <tt>set_default_resource</tt> specification</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2520">2520</a></td><td>N4089 broke initializing <tt>unique_ptr&lt;T[]&gt;</tt> from a <tt>nullptr</tt></td><td>Jacksonville</td><td>Complete</td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2522">2522</a></td><td>[fund.ts.v2] Contradiction in <tt>set_default_resource</tt> specification</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2523">2523</a></td><td><tt>std::promise</tt> synopsis shows two <tt>set_value_at_thread_exit()</tt>'s for no apparent reason</td><td>Jacksonville</td><td>Complete</td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2537">2537</a></td><td>Constructors for <code>priority_queue</code> taking allocators should call <code>make_heap</code></td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2537">2537</a></td><td>Constructors for <code>priority_queue</code> taking allocators should call <code>make_heap</code></td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2539">2539</a></td><td>[fund.ts.v2] <tt>invocation_trait</tt> definition definition doesn't work for surrogate call functions</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2545">2545</a></td><td>Simplify wording for <tt>bind</tt> without explicitly specified return type</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2557">2557</a></td><td>Logical operator traits are broken in the zero-argument case</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2558">2558</a></td><td>[fund.ts.v2] Logical operator traits are broken in the zero-argument case</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2559">2559</a></td><td>Error in LWG 2234's resolution</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2560">2560</a></td><td><tt>is_constructible</tt> underspecified when applied to a function type</td><td>Jacksonville</td><td>Broken in 3.6; See r261653.</td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2565">2565</a></td><td><tt>std::function</tt>'s move constructor should guarantee nothrow for <tt>reference_wrapper</tt>s and function pointers</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2565">2565</a></td><td><tt>std::function</tt>'s move constructor should guarantee nothrow for <tt>reference_wrapper</tt>s and function pointers</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2566">2566</a></td><td>Requirements on the first template parameter of container adaptors</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2571">2571</a></td><td>&sect;[map.modifiers]/2 imposes nonsensical requirement on <tt>insert(InputIterator, InputIterator)</tt></td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2572">2572</a></td><td>The remarks for <tt>shared_ptr::operator*</tt> should apply to <i>cv</i>-qualified <tt>void</tt> as well</td><td>Jacksonville</td><td>Complete</td></tr>
@@ -228,7 +228,7 @@
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2581">2581</a></td><td>Specialization of <tt>&lt;type_traits&gt;</tt> variable templates should be prohibited</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2582">2582</a></td><td>&sect;[res.on.functions]/2's prohibition against incomplete types shouldn't apply to type traits</td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2583">2583</a></td><td>There is no way to supply an allocator for <tt>basic_string(str, pos)</tt></td><td>Jacksonville</td><td>Complete</td></tr>
-	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2585">2585</a></td><td><tt>forward_list::resize(size_type, const value_type&amp;)</tt> effects incorrect</td><td>Jacksonville</td><td></td></tr>
+	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2585">2585</a></td><td><tt>forward_list::resize(size_type, const value_type&amp;)</tt> effects incorrect</td><td>Jacksonville</td><td>Complete</td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2586">2586</a></td><td>Wrong value category used in <tt>scoped_allocator_adaptor::construct()</tt></td><td>Jacksonville</td><td></td></tr>
 	<tr><td><a href="http://cplusplus.github.io/LWG/lwg-defects.html#2590">2590</a></td><td>Aggregate initialization for <tt>std::array</tt></td><td>Jacksonville</td><td>Complete</td></tr>
 

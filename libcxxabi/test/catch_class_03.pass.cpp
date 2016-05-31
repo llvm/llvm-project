@@ -13,6 +13,8 @@
     check against.
 */
 
+// UNSUPPORTED: libcxxabi-no-exceptions
+
 #include <exception>
 #include <stdlib.h>
 #include <assert.h>

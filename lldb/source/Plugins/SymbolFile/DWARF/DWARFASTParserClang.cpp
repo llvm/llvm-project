@@ -99,9 +99,9 @@ struct BitfieldInfo
     uint64_t bit_size;
     uint64_t bit_offset;
 
-    BitfieldInfo () :
-    bit_size (LLDB_INVALID_ADDRESS),
-    bit_offset (LLDB_INVALID_ADDRESS)
+    BitfieldInfo() :
+        bit_size(LLDB_INVALID_ADDRESS),
+        bit_offset(LLDB_INVALID_ADDRESS)
     {
     }
 
@@ -112,10 +112,28 @@ struct BitfieldInfo
         bit_offset = LLDB_INVALID_ADDRESS;
     }
 
-    bool IsValid ()
+    bool
+    IsValid() const
     {
         return (bit_size != LLDB_INVALID_ADDRESS) &&
-        (bit_offset != LLDB_INVALID_ADDRESS);
+               (bit_offset != LLDB_INVALID_ADDRESS);
+    }
+
+    bool
+    NextBitfieldOffsetIsValid(const uint64_t next_bit_offset) const
+    {
+        if (IsValid())
+        {
+            // This bitfield info is valid, so any subsequent bitfields
+            // must not overlap and must be at a higher bit offset than
+            // any previous bitfield + size.
+            return (bit_size + bit_offset) <= next_bit_offset;
+        }
+        else
+        {
+            // If the this BitfieldInfo is not valid, then any offset isOK
+            return true;
+        }
     }
 };
 
@@ -2965,22 +2983,22 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                     {
                                         this_field_info.bit_offset += byte_size * 8;
                                         this_field_info.bit_offset -= (bit_offset + bit_size);
-
-                                        if (this_field_info.bit_offset >= parent_bit_size)
-                                        {
-                                            objfile->GetModule()->ReportWarning("0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid bit offset (0x%8.8" PRIx64 ") member will be ignored. Please file a bug against the compiler and include the preprocessed output for %s\n",
-                                                                                die.GetID(),
-                                                                                DW_TAG_value_to_name(tag),
-                                                                                name,
-                                                                                this_field_info.bit_offset,
-                                                                                sc.comp_unit ? sc.comp_unit->GetPath().c_str() : "the source file");
-                                            this_field_info.Clear();
-                                            continue;
-                                        }
                                     }
                                     else
                                     {
                                         this_field_info.bit_offset += bit_offset;
+                                    }
+
+                                    if ((this_field_info.bit_offset >= parent_bit_size) || !last_field_info.NextBitfieldOffsetIsValid(this_field_info.bit_offset))
+                                    {
+                                        objfile->GetModule()->ReportWarning("0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid bit offset (0x%8.8" PRIx64 ") member will be ignored. Please file a bug against the compiler and include the preprocessed output for %s\n",
+                                                                            die.GetID(),
+                                                                            DW_TAG_value_to_name(tag),
+                                                                            name,
+                                                                            this_field_info.bit_offset,
+                                                                            sc.comp_unit ? sc.comp_unit->GetPath().c_str() : "the source file");
+                                        this_field_info.Clear();
+                                        continue;
                                     }
 
                                     // Update the field bit offset we will report for layout

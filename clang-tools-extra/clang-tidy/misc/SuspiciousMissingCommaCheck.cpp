@@ -88,7 +88,7 @@ void SuspiciousMissingCommaCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto StringsInitializerList =
       initListExpr(hasType(constantArrayType()),
-                   has(expr(ignoringImpCasts(ConcatenatedStringLiteral))));
+                   has(ignoringParenImpCasts(expr(ConcatenatedStringLiteral))));
 
   Finder->addMatcher(StringsInitializerList.bind("list"), this);
 }

@@ -154,7 +154,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeIslScheduleOptimizerPass(Registry);
   initializePollyCanonicalizePass(Registry);
   initializeScopDetectionPass(Registry);
-  initializeScopInfoPass(Registry);
+  initializeScopInfoRegionPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
 }
 
@@ -199,7 +199,7 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   if (PollyOnlyPrinter)
     PM.add(polly::createDOTOnlyPrinterPass());
 
-  PM.add(polly::createScopInfoPass());
+  PM.add(polly::createScopInfoRegionPassPass());
 
   if (ImportJScop)
     PM.add(polly::createJSONImporterPass());

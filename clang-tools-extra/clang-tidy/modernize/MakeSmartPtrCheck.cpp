@@ -30,14 +30,14 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
     return;
 
   Finder->addMatcher(
-      cxxBindTemporaryExpr(
-          has(cxxConstructExpr(
-                  hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
-                  hasArgument(
-                      0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
-                                        equalsBoundNode(PointerType))))))
-                             .bind(NewExpression)))
-                  .bind(ConstructorCall))),
+      cxxBindTemporaryExpr(has(ignoringParenImpCasts(
+          cxxConstructExpr(
+              hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
+              hasArgument(0,
+                          cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
+                                         equalsBoundNode(PointerType))))))
+                              .bind(NewExpression)))
+              .bind(ConstructorCall)))),
       this);
 }
 

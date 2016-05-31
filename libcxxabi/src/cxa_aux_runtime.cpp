@@ -17,16 +17,28 @@
 namespace __cxxabiv1 {
 extern "C" {
 _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_bad_cast(void) {
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
   throw std::bad_cast();
+#else
+  std::terminate();
+#endif
 }
 
 _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void __cxa_bad_typeid(void) {
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
   throw std::bad_typeid();
+#else
+  std::terminate();
+#endif
 }
 
 _LIBCXXABI_FUNC_VIS LIBCXXABI_NORETURN void
 __cxa_throw_bad_array_new_length(void) {
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
   throw std::bad_array_new_length();
+#else
+  std::terminate();
+#endif
 }
 } // extern "C"
 } // abi

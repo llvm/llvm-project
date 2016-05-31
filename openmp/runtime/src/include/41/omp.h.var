@@ -140,6 +140,7 @@
     extern void   __KAI_KMPC_CONVENTION  kmp_set_library_turnaround (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_library_throughput (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_defaults           (char const *);
+    extern void   __KAI_KMPC_CONVENTION  kmp_set_disp_num_buffers   (int);
 
     /* Intel affinity API */
     typedef void * kmp_affinity_mask_t;

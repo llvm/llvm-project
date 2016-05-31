@@ -410,6 +410,11 @@
             integer (kind=omp_integer_kind) kmp_get_library
           end function kmp_get_library
 
+          subroutine kmp_set_disp_num_buffers(num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: num
+          end subroutine kmp_set_disp_num_buffers
+
           function kmp_set_affinity(mask) bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) kmp_set_affinity

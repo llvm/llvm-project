@@ -461,7 +461,8 @@ void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
       compoundStmt(allOf(hasAnySubstatement(ifStmt(hasThen(returnsBool(Value)),
                                                    unless(hasElse(stmt())))),
                          hasAnySubstatement(
-                             returnStmt(has(cxxBoolLiteral(equals(!Value))))
+                             returnStmt(has(ignoringParenImpCasts(
+                                            cxxBoolLiteral(equals(!Value)))))
                                  .bind(CompoundReturnId))))
           .bind(Id),
       this);

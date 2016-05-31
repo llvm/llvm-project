@@ -87,12 +87,13 @@ private:
 
 bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
   std::error_code EC;
-  std::set<SymbolInfo> UniqueSymbols;
+  std::map<SymbolInfo, int> SymbolToNumOccurrences;
   std::mutex SymbolMutex;
   auto AddSymbols = [&](ArrayRef<SymbolInfo> Symbols) {
     // Synchronize set accesses.
     std::unique_lock<std::mutex> LockGuard(SymbolMutex);
-    UniqueSymbols.insert(Symbols.begin(), Symbols.end());
+    for (const auto &Symbol : Symbols)
+      ++SymbolToNumOccurrences[Symbol];
   };
 
   // Load all symbol files in MergeDir.
@@ -123,7 +124,14 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
                  << '\n';
     return false;
   }
-  WriteSymbolInfosToStream(OS, UniqueSymbols);
+  std::set<SymbolInfo> Result;
+  for (const auto &Entry : SymbolToNumOccurrences) {
+    const auto &Symbol = Entry.first;
+    Result.insert(SymbolInfo(Symbol.getName(), Symbol.getSymbolKind(),
+                             Symbol.getFilePath(), Symbol.getLineNumber(),
+                             Symbol.getContexts(), Entry.second));
+  }
+  WriteSymbolInfosToStream(OS, Result);
   return true;
 }
 

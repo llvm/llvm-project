@@ -24,7 +24,7 @@ void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       implicitCastExpr(
-          has(integerLiteral().bind("literal")),
+          has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
           hasImplicitDestinationType(qualType(booleanType())),
           unless(isInTemplateInstantiation()),
           anyOf(hasParent(explicitCastExpr().bind("cast")), anything())),

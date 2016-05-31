@@ -1,6 +1,22 @@
 ; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true -debug < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
+;
+;    /* C := alpha*A*B + beta*C */
+;    for (i = 0; i < _PB_NI; i++)
+;      for (j = 0; j < _PB_NJ; j += 2)
+;        {
+;	   C[i][j] *= beta;
+;	   for (k = 0; k < _PB_NK; ++k)
+;	     C[i][j] += alpha * A[i][k] * B[k][j];
+;        }
+;
+; Check that we won’t detect the matrix multiplication pattern,
+; if, for example, there are memory accesses that have stride 2
+; after the interchanging of loops.
+;
 ; CHECK-NOT: The matrix multiplication pattern was detected
+;
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define internal void @kernel_gemm(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %arg4, [1056 x double]* %arg5, [1024 x double]* %arg6, [1056 x double]* %arg7) {
 bb:

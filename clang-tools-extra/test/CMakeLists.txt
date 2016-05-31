@@ -46,6 +46,7 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-query
   clang-rename
   clang-tidy
+  find-all-symbols
   modularize
   pp-trace
 

@@ -4,12 +4,10 @@ set(LIBCXXABI_SOURCES
   cxa_aux_runtime.cpp
   cxa_default_handlers.cpp
   cxa_demangle.cpp
-  cxa_exception.cpp
   cxa_exception_storage.cpp
   cxa_guard.cpp
   cxa_handlers.cpp
   cxa_new_delete.cpp
-  cxa_personality.cpp
   cxa_unexpected.cpp
   cxa_vector.cpp
   cxa_virtual.cpp
@@ -18,6 +16,13 @@ set(LIBCXXABI_SOURCES
   stdexcept.cpp
   typeinfo.cpp
 )
+
+if (LIBCXXABI_ENABLE_EXCEPTIONS)
+  list(APPEND LIBCXXABI_SOURCES cxa_exception.cpp)
+  list(APPEND LIBCXXABI_SOURCES cxa_personality.cpp)
+else()
+  list(APPEND LIBCXXABI_SOURCES cxa_noexception.cpp)
+endif()
 
 if (UNIX AND NOT (APPLE OR CYGWIN))
   list(APPEND LIBCXXABI_SOURCES cxa_thread_atexit.cpp)

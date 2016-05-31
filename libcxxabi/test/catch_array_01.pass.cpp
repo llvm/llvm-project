@@ -9,10 +9,10 @@
 
 // Can you have a catch clause of array type that catches anything?
 
-
 // GCC incorrectly allows array types to be caught by reference.
 // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69372
 // XFAIL: gcc
+// UNSUPPORTED: libcxxabi-no-exceptions
 
 #include <cassert>
 

@@ -656,9 +656,9 @@ __kmp_dispatch_init(
 
         /* What happens when number of threads changes, need to resize buffer? */
         pr = reinterpret_cast< dispatch_private_info_template< T >  * >
-            ( &th -> th.th_dispatch -> th_disp_buffer[ my_buffer_index % KMP_MAX_DISP_BUF ] );
+            ( &th -> th.th_dispatch -> th_disp_buffer[ my_buffer_index % __kmp_dispatch_num_buffers ] );
         sh = reinterpret_cast< dispatch_shared_info_template< UT > volatile * >
-            ( &team -> t.t_disp_buffer[ my_buffer_index % KMP_MAX_DISP_BUF ] );
+            ( &team -> t.t_disp_buffer[ my_buffer_index % __kmp_dispatch_num_buffers ] );
     }
 
     /* Currently just ignore the monotonic and non-monotonic modifiers (the compiler isn't producing them
@@ -2150,7 +2150,7 @@ __kmp_dispatch_next(
 
                 KMP_MB();       /* Flush all pending memory write invalidates.  */
 
-                sh -> buffer_index += KMP_MAX_DISP_BUF;
+                sh -> buffer_index += __kmp_dispatch_num_buffers;
                 KD_TRACE(100, ("__kmp_dispatch_next: T#%d change buffer_index:%d\n",
                                 gtid, sh->buffer_index) );
 
@@ -2568,6 +2568,32 @@ __kmp_wait_yield_4(volatile kmp_uint32 * spinner,
     }
     KMP_FSYNC_SPIN_ACQUIRED( obj );
     return r;
+}
+
+void
+__kmp_wait_yield_4_ptr(void *spinner,
+                   kmp_uint32 checker,
+                   kmp_uint32 (*pred)( void *, kmp_uint32 ),
+                   void        *obj    // Higher-level synchronization object, or NULL.
+                   )
+{
+    // note: we may not belong to a team at this point
+    register void                *spin          = spinner;
+    register kmp_uint32           check         = checker;
+    register kmp_uint32           spins;
+    register kmp_uint32 (*f) ( void *, kmp_uint32 ) = pred;
+
+    KMP_FSYNC_SPIN_INIT( obj, spin );
+    KMP_INIT_YIELD( spins );
+    // main wait spin loop
+    while ( !f( spin, check ) ) {
+        KMP_FSYNC_SPIN_PREPARE( obj );
+        /* if we have waited a bit, or are oversubscribed, yield */
+        /* pause is in the following code */
+        KMP_YIELD( TCR_4( __kmp_nth ) > __kmp_avail_proc );
+        KMP_YIELD_SPIN( spins );
+    }
+    KMP_FSYNC_SPIN_ACQUIRED( obj );
 }
 
 } // extern "C"

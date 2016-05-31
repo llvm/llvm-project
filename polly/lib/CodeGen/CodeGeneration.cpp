@@ -227,7 +227,7 @@ public:
     AU.addRequired<RegionInfoPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<ScopDetection>();
-    AU.addRequired<ScopInfo>();
+    AU.addRequired<ScopInfoRegionPass>();
     AU.addRequired<LoopInfoWrapperPass>();
 
     AU.addPreserved<DependenceInfo>();
@@ -246,7 +246,7 @@ public:
     // FIXME: We do not yet add regions for the newly generated code to the
     //        region tree.
     AU.addPreserved<RegionInfoPass>();
-    AU.addPreserved<ScopInfo>();
+    AU.addPreserved<ScopInfoRegionPass>();
   }
 };
 }
