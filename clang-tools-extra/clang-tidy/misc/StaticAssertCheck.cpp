@@ -33,12 +33,13 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
   if (!(getLangOpts().CPlusPlus11 || getLangOpts().C11))
     return;
 
-  auto IsAlwaysFalse = expr(ignoringParenImpCasts(
+  auto IsAlwaysFalse =
       expr(anyOf(cxxBoolLiteral(equals(false)), integerLiteral(equals(0)),
                  cxxNullPtrLiteralExpr(), gnuNullExpr()))
-          .bind("isAlwaysFalse")));
+          .bind("isAlwaysFalse");
   auto IsAlwaysFalseWithCast = ignoringParenImpCasts(anyOf(
-      IsAlwaysFalse, cStyleCastExpr(has(IsAlwaysFalse)).bind("castExpr")));
+      IsAlwaysFalse, cStyleCastExpr(has(ignoringParenImpCasts(IsAlwaysFalse)))
+                         .bind("castExpr")));
   auto AssertExprRoot = anyOf(
       binaryOperator(
           anyOf(hasOperatorName("&&"), hasOperatorName("==")),

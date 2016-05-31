@@ -26,24 +26,26 @@ void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
       memberExpr(member(valueDecl().bind("ContainerDecl")));
   const auto ShrinkableAsDecl =
       declRefExpr(hasDeclaration(valueDecl().bind("ContainerDecl")));
-  const auto CopyCtorCall = cxxConstructExpr(
-      hasArgument(0, anyOf(ShrinkableAsMember, ShrinkableAsDecl,
-                           unaryOperator(has(ShrinkableAsMember)),
-                           unaryOperator(has(ShrinkableAsDecl)))));
-  const auto SwapParam = expr(anyOf(
-      memberExpr(member(equalsBoundNode("ContainerDecl"))),
-      declRefExpr(hasDeclaration(equalsBoundNode("ContainerDecl"))),
-      unaryOperator(has(memberExpr(member(equalsBoundNode("ContainerDecl"))))),
-      unaryOperator(
-          has(declRefExpr(hasDeclaration(equalsBoundNode("ContainerDecl")))))));
+  const auto CopyCtorCall = cxxConstructExpr(hasArgument(
+      0, anyOf(ShrinkableAsMember, ShrinkableAsDecl,
+               unaryOperator(has(ignoringParenImpCasts(ShrinkableAsMember))),
+               unaryOperator(has(ignoringParenImpCasts(ShrinkableAsDecl))))));
+  const auto SwapParam =
+      expr(anyOf(memberExpr(member(equalsBoundNode("ContainerDecl"))),
+                 declRefExpr(hasDeclaration(equalsBoundNode("ContainerDecl"))),
+                 unaryOperator(has(ignoringParenImpCasts(
+                     memberExpr(member(equalsBoundNode("ContainerDecl")))))),
+                 unaryOperator(has(ignoringParenImpCasts(declRefExpr(
+                     hasDeclaration(equalsBoundNode("ContainerDecl"))))))));
 
   Finder->addMatcher(
-      cxxMemberCallExpr(on(hasType(namedDecl(
-            hasAnyName("std::basic_string", "std::deque", "std::vector")))),
-                        callee(cxxMethodDecl(hasName("swap"))),
-                        has(memberExpr(hasDescendant(CopyCtorCall))),
-                        hasArgument(0, SwapParam.bind("ContainerToShrink")),
-                        unless(isInTemplateInstantiation()))
+      cxxMemberCallExpr(
+          on(hasType(namedDecl(
+              hasAnyName("std::basic_string", "std::deque", "std::vector")))),
+          callee(cxxMethodDecl(hasName("swap"))),
+          has(ignoringParenImpCasts(memberExpr(hasDescendant(CopyCtorCall)))),
+          hasArgument(0, SwapParam.bind("ContainerToShrink")),
+          unless(isInTemplateInstantiation()))
           .bind("CopyAndSwapTrick"),
       this);
 }

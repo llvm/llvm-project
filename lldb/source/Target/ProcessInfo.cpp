@@ -15,6 +15,8 @@
 // Project includes
 #include "lldb/Target/ProcessInfo.h"
 
+#include "lldb/Core/Stream.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -62,6 +64,21 @@ size_t
 ProcessInfo::GetNameLength() const
 {
     return m_executable.GetFilename().GetLength();
+}
+
+void
+ProcessInfo::Dump (Stream &s, Platform *platform) const
+{
+    s << "Executable: " << GetName() << "\n";
+    s << "Triple: ";
+    m_arch.DumpTriple(s);
+    s << "\n";
+
+    s << "Arguments:\n";
+    m_arguments.Dump(s);
+
+    s << "Environment:\n";
+    m_environment.Dump(s, "env");
 }
 
 void

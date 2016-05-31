@@ -49,6 +49,9 @@ void initializeInterceptors();
 void verifyAddressSpace();
 bool fixMmapAddr(void **Addr, SIZE_T Size, int Flags);
 uptr checkMmapResult(uptr Addr, SIZE_T Size);
+// The return value indicates whether to call the real version or not.
+bool processSignal(int SigNum, void (*Handler)(int), void (**Result)(int));
+bool processSigaction(int SigNum, const void *Act, void *OldAct);
 
 } // namespace __esan
 

@@ -16,6 +16,7 @@
 #include "esan.h"
 #include "esan_flags.h"
 #include "esan_shadow.h"
+#include "sanitizer_common/sanitizer_procmaps.h"
 
 // We shadow every cache line of app memory with one shadow byte.
 // - The highest bit of each shadow byte indicates whether the corresponding
@@ -29,6 +30,9 @@
 typedef unsigned char byte;
 
 namespace __esan {
+
+// Our shadow memory assumes that the line size is 64.
+static const u32 CacheLineSize = 64;
 
 // See the shadow byte layout description above.
 static const u32 TotalWorkingSetBitIdx = 7;
@@ -75,15 +79,80 @@ void processRangeAccessWorkingSet(uptr PC, uptr Addr, SIZE_T Size,
   }
 }
 
+// This routine will word-align ShadowStart and ShadowEnd prior to scanning.
+static u32 countAndClearShadowValues(u32 BitIdx, uptr ShadowStart,
+                                     uptr ShadowEnd) {
+  u32 WorkingSetSize = 0;
+  u32 ByteValue = 0x1 << BitIdx;
+  u32 WordValue = ByteValue | ByteValue << 8 | ByteValue << 16 |
+    ByteValue << 24;
+  // Get word aligned start.
+  ShadowStart = RoundDownTo(ShadowStart, sizeof(u32));
+  for (u32 *Ptr = (u32 *)ShadowStart; Ptr < (u32 *)ShadowEnd; ++Ptr) {
+    if ((*Ptr & WordValue) != 0) {
+      byte *BytePtr = (byte *)Ptr;
+      for (u32 j = 0; j < sizeof(u32); ++j) {
+        if (BytePtr[j] & ByteValue) {
+          ++WorkingSetSize;
+          // TODO: Accumulate to the lower-frequency bit to the left.
+        }
+      }
+      // Clear this bit from every shadow byte.
+      *Ptr &= ~WordValue;
+    }
+  }
+  return WorkingSetSize;
+}
+
+// Scan shadow memory to calculate the number of cache lines being accessed,
+// i.e., the number of non-zero bits indexed by BitIdx in each shadow byte.
+// We also clear the lowest bits (most recent working set snapshot).
+static u32 computeWorkingSizeAndReset(u32 BitIdx) {
+  u32 WorkingSetSize = 0;
+  MemoryMappingLayout MemIter(true/*cache*/);
+  uptr Start, End, Prot;
+  while (MemIter.Next(&Start, &End, nullptr/*offs*/, nullptr/*file*/,
+                      0/*file size*/, &Prot)) {
+    VPrintf(4, "%s: considering %p-%p app=%d shadow=%d prot=%u\n",
+            __FUNCTION__, Start, End, Prot, isAppMem(Start),
+            isShadowMem(Start));
+    if (isShadowMem(Start) && (Prot & MemoryMappingLayout::kProtectionWrite)) {
+      VPrintf(3, "%s: walking %p-%p\n", __FUNCTION__, Start, End);
+      WorkingSetSize += countAndClearShadowValues(BitIdx, Start, End);
+    }
+  }
+  return WorkingSetSize;
+}
+
 void initializeWorkingSet() {
-  // The shadow mapping assumes 64 so this cannot be changed.
-  CHECK(getFlags()->cache_line_size == 64);
+  CHECK(getFlags()->cache_line_size == CacheLineSize);
+  registerMemoryFaultHandler();
+}
+
+static u32 getSizeForPrinting(u32 NumOfCachelines, const char *&Unit) {
+  // We need a constant to avoid software divide support:
+  static const u32 KilobyteCachelines = (0x1 << 10) / CacheLineSize;
+  static const u32 MegabyteCachelines = KilobyteCachelines << 10;
+
+  if (NumOfCachelines > 10 * MegabyteCachelines) {
+    Unit = "MB";
+    return NumOfCachelines / MegabyteCachelines;
+  } else if (NumOfCachelines > 10 * KilobyteCachelines) {
+    Unit = "KB";
+    return NumOfCachelines / KilobyteCachelines;
+  } else {
+    Unit = "Bytes";
+    return NumOfCachelines * CacheLineSize;
+  }
 }
 
 int finalizeWorkingSet() {
-  // FIXME NYI: we need to add memory scanning to report the total lines
-  // touched, and later add sampling to get intermediate values.
-  Report("%s is not finished: nothing yet to report\n", SanitizerToolName);
+  // Get the working set size for the entire execution.
+  u32 NumOfCachelines = computeWorkingSizeAndReset(TotalWorkingSetBitIdx);
+  const char *Unit;
+  u32 Size = getSizeForPrinting(NumOfCachelines, Unit);
+  Report(" %s: the total working set size: %u %s (%u cache lines)\n",
+         SanitizerToolName, Size, Unit, NumOfCachelines);
   return 0;
 }
 

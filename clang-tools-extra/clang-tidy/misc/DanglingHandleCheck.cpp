@@ -103,15 +103,17 @@ void DanglingHandleCheck::registerMatchersForVariables(MatchFinder *Finder) {
   Finder->addMatcher(
       varDecl(hasType(cxxRecordDecl(IsAHandle)),
               hasInitializer(
-                  exprWithCleanups(has(ConvertedHandle)).bind("bad_stmt"))),
+                  exprWithCleanups(has(ignoringParenImpCasts(ConvertedHandle)))
+                      .bind("bad_stmt"))),
       this);
 
   // Find 'Handle foo = ReturnsAValue();'
   Finder->addMatcher(
-      varDecl(hasType(cxxRecordDecl(IsAHandle)), unless(parmVarDecl()),
-              hasInitializer(
-                  exprWithCleanups(has(handleFrom(IsAHandle, ConvertedHandle)))
-                      .bind("bad_stmt"))),
+      varDecl(
+          hasType(cxxRecordDecl(IsAHandle)), unless(parmVarDecl()),
+          hasInitializer(exprWithCleanups(has(ignoringParenImpCasts(handleFrom(
+                                              IsAHandle, ConvertedHandle))))
+                             .bind("bad_stmt"))),
       this);
   // Find 'foo = ReturnsAValue();  // foo is Handle'
   Finder->addMatcher(
@@ -133,7 +135,7 @@ void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
           //   1. Value to Handle conversion.
           //   2. Handle copy construction.
           // We have to match both.
-          has(handleFrom(
+          has(ignoringParenImpCasts(handleFrom(
               IsAHandle,
               handleFrom(IsAHandle, declRefExpr(to(varDecl(
                                         // Is function scope ...
@@ -141,7 +143,7 @@ void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
                                         // ... and it is a local array or Value.
                                         anyOf(hasType(arrayType()),
                                               hasType(recordDecl(
-                                                  unless(IsAHandle)))))))))),
+                                                  unless(IsAHandle))))))))))),
           // Temporary fix for false positives inside lambdas.
           unless(hasAncestor(lambdaExpr())))
           .bind("bad_stmt"),
@@ -149,8 +151,9 @@ void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
 
   // Return a temporary.
   Finder->addMatcher(
-      returnStmt(has(exprWithCleanups(has(handleFrom(
-                     IsAHandle, handleFromTemporaryValue(IsAHandle))))))
+      returnStmt(
+          has(ignoringParenImpCasts(exprWithCleanups(has(ignoringParenImpCasts(
+              handleFrom(IsAHandle, handleFromTemporaryValue(IsAHandle))))))))
           .bind("bad_stmt"),
       this);
 }

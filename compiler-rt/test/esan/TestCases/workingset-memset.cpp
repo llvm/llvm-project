@@ -16,6 +16,5 @@ int main(int argc, char **argv) {
     memset((char *)p + 63*i, i, 63*i);
   munmap(p, size);
   return 0;
-  // FIXME: once the memory scan and size report is in place add it here.
-  // CHECK: {{.*}}EfficiencySanitizer is not finished: nothing yet to report
+  // CHECK: {{.*}} EfficiencySanitizer: the total working set size: 77 KB (12{{[0-9]+}} cache lines)
 }

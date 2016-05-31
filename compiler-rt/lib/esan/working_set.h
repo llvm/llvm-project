@@ -25,6 +25,12 @@ int finalizeWorkingSet();
 void processRangeAccessWorkingSet(uptr PC, uptr Addr, SIZE_T Size,
                                   bool IsWrite);
 
+// Platform-dependent.
+void registerMemoryFaultHandler();
+bool processWorkingSetSignal(int SigNum, void (*Handler)(int),
+                             void (**Result)(int));
+bool processWorkingSetSigaction(int SigNum, const void *Act, void *OldAct);
+
 } // namespace __esan
 
 #endif // WORKING_SET_H

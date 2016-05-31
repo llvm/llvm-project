@@ -1,0 +1,34 @@
+# REQUIRES: shell
+# RUN: find-all-symbols -merge-dir=%S/Inputs/merge %t.merged
+# RUN: sed '/^#/d' %s > %t.golden
+# RUN: diff -u %t.golden %t.merged
+---
+Name:            bar
+Contexts:        
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        ../include/bar.h
+LineNumber:      1
+Type:            Class
+NumOccurrences:  1
+...
+---
+Name:            bar
+Contexts:        
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        ../include/barbar.h
+LineNumber:      1
+Type:            Class
+NumOccurrences:  1
+...
+---
+Name:            foo
+Contexts:        
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        foo.h
+LineNumber:      1
+Type:            Class
+NumOccurrences:  2
+...

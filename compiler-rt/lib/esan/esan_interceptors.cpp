@@ -351,6 +351,43 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
 #define ESAN_MAYBE_INTERCEPT_MMAP64
 #endif
 
+//===----------------------------------------------------------------------===//
+// Signal-related interceptors
+//===----------------------------------------------------------------------===//
+
+#if SANITIZER_LINUX
+typedef void (*signal_handler_t)(int);
+INTERCEPTOR(signal_handler_t, signal, int signum, signal_handler_t handler) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, signal, signum, handler);
+  signal_handler_t result;
+  if (!processSignal(signum, handler, &result))
+    return result;
+  else
+    return REAL(signal)(signum, handler);
+}
+#define ESAN_MAYBE_INTERCEPT_SIGNAL INTERCEPT_FUNCTION(signal)
+#else
+#error Platform not supported
+#define ESAN_MAYBE_INTERCEPT_SIGNAL
+#endif
+
+#if SANITIZER_LINUX
+INTERCEPTOR(int, sigaction, int signum, const struct sigaction *act,
+            struct sigaction *oldact) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sigaction, signum, act, oldact);
+  if (!processSigaction(signum, act, oldact))
+    return 0;
+  else
+    return REAL(sigaction)(signum, act, oldact);
+}
+#define ESAN_MAYBE_INTERCEPT_SIGACTION INTERCEPT_FUNCTION(sigaction)
+#else
+#error Platform not supported
+#define ESAN_MAYBE_INTERCEPT_SIGACTION
+#endif
+
 namespace __esan {
 
 void initializeInterceptors() {
@@ -371,6 +408,9 @@ void initializeInterceptors() {
 
   INTERCEPT_FUNCTION(mmap);
   ESAN_MAYBE_INTERCEPT_MMAP64;
+
+  ESAN_MAYBE_INTERCEPT_SIGNAL;
+  ESAN_MAYBE_INTERCEPT_SIGACTION;
 
   // TODO(bruening): we should intercept calloc() and other memory allocation
   // routines that zero memory and update our shadow memory appropriately.

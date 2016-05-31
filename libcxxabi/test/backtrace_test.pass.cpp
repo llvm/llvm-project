@@ -6,6 +6,9 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: libcxxabi-no-exceptions
+
 #include <assert.h>
 #include <stddef.h>
 #include <unwind.h>

@@ -47,7 +47,11 @@ operator new(std::size_t size)
         if (nh)
             nh();
         else
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
             throw std::bad_alloc();
+#else
+            break;
+#endif
     }
     return p;
 }
@@ -74,13 +78,17 @@ operator new(size_t size, const std::nothrow_t&)
 #endif
 {
     void* p = 0;
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
     try
     {
+#endif
         p = ::operator new(size);
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
+#endif
     return p;
 }
 
@@ -115,13 +123,17 @@ operator new[](size_t size, const std::nothrow_t&)
 #endif
 {
     void* p = 0;
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
     try
     {
+#endif
         p = ::operator new[](size);
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
     }
     catch (...)
     {
     }
+#endif
     return p;
 }
 

@@ -233,7 +233,7 @@ static __isl_give isl_set *addExtentConstraints(__isl_take isl_set *Set,
 /// 2. Extend it to a set, which has exactly VectorWidth iterations for
 ///    any prefix from the set that was built on the previous step.
 /// 3. Subtract loop domain from it, project out the vector loop dimension and
-///    get a set of prefixes, which don’t have exactly VectorWidth iterations.
+///    get a set of prefixes, which don't have exactly VectorWidth iterations.
 /// 4. Subtract it from all prefixes of the vector loop and get the desired
 ///    set.
 ///
@@ -431,7 +431,7 @@ static bool isInputDimUsed(__isl_take isl_map *IslMap, unsigned DimNum) {
 ///    loop to the outer loop).
 /// 2. all memory accesses of the statement except from the last one, are
 ///    read memory access and the last one is write memory access.
-/// 3. all subscripts of the last memory access of the statement don’t contain
+/// 3. all subscripts of the last memory access of the statement don't contain
 ///    the variable used in the inner loop.
 ///
 /// @param PartialSchedule The PartialSchedule that contains a SCoP statement
@@ -445,14 +445,14 @@ static bool containsMatrMult(__isl_keep isl_map *PartialSchedule) {
   auto MemA = ScpStmt->begin();
   for (unsigned i = 0; i < ScpStmt->size() - 2 && MemA != ScpStmt->end();
        i++, MemA++)
-    if (!(*MemA)->isRead() or
-        ((*MemA)->isArrayKind() and
-         !((*MemA)->isStrideOne(isl_map_copy(PartialSchedule)) or
+    if (!(*MemA)->isRead() ||
+        ((*MemA)->isArrayKind() &&
+         !((*MemA)->isStrideOne(isl_map_copy(PartialSchedule)) ||
            (*MemA)->isStrideZero(isl_map_copy(PartialSchedule)))))
       return false;
   MemA++;
-  if (!(*MemA)->isWrite() or !(*MemA)->isArrayKind() or
-      !((*MemA)->isStrideOne(isl_map_copy(PartialSchedule)) or
+  if (!(*MemA)->isWrite() || !(*MemA)->isArrayKind() ||
+      !((*MemA)->isStrideOne(isl_map_copy(PartialSchedule)) ||
         (*MemA)->isStrideZero(isl_map_copy(PartialSchedule))))
     return false;
   auto DimNum = isl_map_dim(PartialSchedule, isl_dim_in);
@@ -750,6 +750,6 @@ Pass *polly::createIslScheduleOptimizerPass() {
 INITIALIZE_PASS_BEGIN(IslScheduleOptimizer, "polly-opt-isl",
                       "Polly - Optimize schedule of SCoP", false, false);
 INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
-INITIALIZE_PASS_DEPENDENCY(ScopInfo);
+INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_END(IslScheduleOptimizer, "polly-opt-isl",
                     "Polly - Optimize schedule of SCoP", false, false)

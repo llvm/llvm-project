@@ -397,6 +397,7 @@ kmpc_set_defaults                           224
     %endif
 %endif
 kmpc_aligned_malloc                         265
+kmpc_set_disp_num_buffers                   267
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
 # Number for lowercase version is indicated.  Number for uppercase is obtained by adding 1000.
@@ -527,6 +528,8 @@ kmp_set_warnings_off                        780
         omp_target_disassociate_ptr         889
     %endif
 %endif # OMP_41
+
+kmp_set_disp_num_buffers                    890
 
 %ifndef stub
     # Ordinals between 900 and 999 are reserved

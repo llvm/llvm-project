@@ -179,7 +179,7 @@ private:
   ///    the outer loop).
   /// 4. all memory accesses of the statement except from the last one, are
   ///    read memory access and the last one is write memory access.
-  /// 5. all subscripts of the last memory access of the statement don’t
+  /// 5. all subscripts of the last memory access of the statement don't
   ///    contain the variable used in the inner loop.
   /// If this is the case, we could try to use an approach that is similar to
   /// the one used to get close-to-peak performance of matrix multiplications.

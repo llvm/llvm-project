@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: c++98, c++03, libcxxabi-no-exceptions
 
 #include <cassert>
 #include <cstdlib>

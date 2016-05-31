@@ -47,15 +47,18 @@ void BoolPointerImplicitConversionCheck::check(
   auto DeclRef = ignoringParenImpCasts(declRefExpr(to(equalsNode(D))));
   if (!match(findAll(
                  unaryOperator(hasOperatorName("*"), hasUnaryOperand(DeclRef))),
-             *If, *Result.Context).empty() ||
+             *If, *Result.Context)
+           .empty() ||
       !match(findAll(arraySubscriptExpr(hasBase(DeclRef))), *If,
-             *Result.Context).empty() ||
+             *Result.Context)
+           .empty() ||
       // FIXME: We should still warn if the paremater is implicitly converted to
       // bool.
       !match(findAll(callExpr(hasAnyArgument(ignoringParenImpCasts(DeclRef)))),
              *If, *Result.Context)
            .empty() ||
-      !match(findAll(cxxDeleteExpr(has(expr(DeclRef)))), *If, *Result.Context)
+      !match(findAll(cxxDeleteExpr(has(ignoringParenImpCasts(expr(DeclRef))))),
+             *If, *Result.Context)
            .empty())
     return;
 

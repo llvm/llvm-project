@@ -156,8 +156,9 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
   // Detect comparison to invalid constant: 'strcmp() == -1'.
   const auto InvalidLiteral = ignoringParenImpCasts(
       anyOf(integerLiteral(unless(equals(0))),
-            unaryOperator(hasOperatorName("-"),
-                          has(integerLiteral(unless(equals(0))))),
+            unaryOperator(
+                hasOperatorName("-"),
+                has(ignoringParenImpCasts(integerLiteral(unless(equals(0)))))),
             characterLiteral(), cxxBoolLiteral()));
 
   Finder->addMatcher(binaryOperator(matchers::isComparisonOperator(),
