@@ -16,6 +16,8 @@
 #include "lldb/Core/Error.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -114,5 +116,59 @@ lldb_private::formatters::swift::IndexPath_SummaryProvider (ValueObject& valobj,
         stream.Printf("%s", "1 index");
     else
         stream.Printf("%zu indices", num_children);
+    return true;
+}
+
+bool
+lldb_private::formatters::swift::Measurement_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
+{
+    static ConstString g_value("value");
+    static ConstString g_unit("unit");
+    static ConstString g__symbol("_symbol");
+    
+    ValueObjectSP value_sp(valobj.GetChildAtNamePath( {g_value} ));
+    ValueObjectSP unit_sp(valobj.GetChildAtNamePath( {g_unit} ));
+    if (!unit_sp)
+        return false;
+    
+    ProcessSP process_sp(valobj.GetProcessSP());
+    if (!process_sp)
+        return false;
+
+    auto descriptor_sp(process_sp->GetObjCLanguageRuntime()->GetClassDescriptor(*unit_sp));
+    if (!descriptor_sp)
+        return false;
+    
+    auto ivar = descriptor_sp->GetIVarAtIndex(0);
+    if (!ivar.m_type.IsValid())
+        return false;
+    
+    ValueObjectSP symbol_sp(unit_sp->GetSyntheticChildAtOffset(ivar.m_offset, ivar.m_type, true));
+    if (!value_sp || !symbol_sp)
+        return false;
+    
+    symbol_sp = symbol_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
+    
+    DataExtractor data_extractor;
+    Error error;
+    if (!value_sp->GetData(data_extractor, error))
+        return false;
+    
+    offset_t offset_ptr = 0;
+    double measurement_value = data_extractor.GetDouble(&offset_ptr);
+
+    std::string unit;
+    if (!symbol_sp->GetSummaryAsCString(unit, options))
+        return false;
+    
+    if (unit.size() > 2)
+    {
+        if (unit.size() > 1 && unit[0] == '"')
+            unit = unit.substr(1);
+        if (unit.back() == '"')
+            unit.pop_back();
+    }
+
+    stream.Printf("%g %s", measurement_value, unit.c_str());
     return true;
 }

@@ -5927,8 +5927,8 @@
 		948C86BC1B97762700F3CAC3 /* Formatters */ = {
 			isa = PBXGroup;
 			children = (
-				948B68EF1CF90410002D9401 /* FoundationValueTypes.h */,
 				948B68F01CF9041D002D9401 /* FoundationValueTypes.cpp */,
+				948B68EF1CF90410002D9401 /* FoundationValueTypes.h */,
 				940B80161BA9EECE008A39CB /* ObjCRuntimeSyntheticProvider.cpp */,
 				940B80171BA9EECE008A39CB /* ObjCRuntimeSyntheticProvider.h */,
 				948C86BD1B97763200F3CAC3 /* SwiftArray.cpp */,

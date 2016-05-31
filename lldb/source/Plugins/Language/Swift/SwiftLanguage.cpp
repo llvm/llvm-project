@@ -350,6 +350,8 @@ LoadFoundationValueTypesFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::URL_SummaryProvider, "URL summary provider", ConstString("Foundation.URL"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
     
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::IndexPath_SummaryProvider, "IndexPath summary provider", ConstString("Foundation.IndexPath"), summary_flags);
+
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Measurement_SummaryProvider, "Measurement summary provider", ConstString("Foundation.Measurement<Foundation.Unit>"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
 }
 
 lldb::TypeCategoryImplSP
@@ -493,8 +495,15 @@ SwiftLanguage::GetHardcodedSynthetics ()
                 ObjCLanguageRuntime *objc_runtime = process_sp->GetObjCLanguageRuntime();
                 ObjCLanguageRuntime::ClassDescriptorSP valobj_descriptor_sp = objc_runtime->GetClassDescriptor(valobj);
                 if (valobj_descriptor_sp)
-                    return SyntheticChildrenSP(new ObjCRuntimeSyntheticProvider(SyntheticChildren::Flags().SetCascades(true).SetSkipPointers(true).SetSkipReferences(true).SetNonCacheable(true),
-                                                                                valobj_descriptor_sp));
+                {
+                    SyntheticChildrenSP retval_sp = SyntheticChildrenSP(new ObjCRuntimeSyntheticProvider(SyntheticChildren::Flags()
+                                                                                                         .SetCascades(true)
+                                                                                                         .SetSkipPointers(true)
+                                                                                                         .SetSkipReferences(true)
+                                                                                                         .SetNonCacheable(true),
+                                                                                                         valobj_descriptor_sp));
+                    return retval_sp;
+                }
             }
             return nullptr;
         });
