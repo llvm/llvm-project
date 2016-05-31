@@ -338,3 +338,26 @@ struct B : A {
   enum { X = sizeof(field) };
 };
 }
+
+namespace tag_vs_var {
+  namespace N {
+    struct X {};
+
+    struct Y {};
+    int Y;
+
+    int Z;
+  }
+  using N::X;
+  using N::Y;
+  using N::Z;
+
+  namespace N {
+    int X;
+
+    struct Z {};
+  }
+  using N::X;
+  using N::Y;
+  using N::Z;
+}
