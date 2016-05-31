@@ -958,6 +958,28 @@ TEST(Matcher, VisitsTemplateInstantiations) {
       callee(cxxMethodDecl(hasName("x"))))))));
 }
 
+TEST(Matcher, HasCondition) {
+  StatementMatcher IfStmt =
+    ifStmt(hasCondition(cxxBoolLiteral(equals(true))));
+  EXPECT_TRUE(matches("void x() { if (true) {} }", IfStmt));
+  EXPECT_TRUE(notMatches("void x() { if (false) {} }", IfStmt));
+
+  StatementMatcher ForStmt =
+    forStmt(hasCondition(cxxBoolLiteral(equals(true))));
+  EXPECT_TRUE(matches("void x() { for (;true;) {} }", ForStmt));
+  EXPECT_TRUE(notMatches("void x() { for (;false;) {} }", ForStmt));
+
+  StatementMatcher WhileStmt =
+    whileStmt(hasCondition(cxxBoolLiteral(equals(true))));
+  EXPECT_TRUE(matches("void x() { while (true) {} }", WhileStmt));
+  EXPECT_TRUE(notMatches("void x() { while (false) {} }", WhileStmt));
+
+  StatementMatcher SwitchStmt =
+    switchStmt(hasCondition(integerLiteral(equals(42))));
+  EXPECT_TRUE(matches("void x() { switch (42) {case 42:;} }", SwitchStmt));
+  EXPECT_TRUE(notMatches("void x() { switch (43) {case 43:;} }", SwitchStmt));
+}
+
 TEST(For, ForLoopInternals) {
   EXPECT_TRUE(matches("void f(){ int i; for (; i < 3 ; ); }",
                       forStmt(hasCondition(anything()))));

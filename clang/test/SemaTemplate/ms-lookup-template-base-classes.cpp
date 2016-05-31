@@ -603,3 +603,32 @@ struct Base {
 template struct UseUnqualifiedTypeNames<Base>;
 struct BadBase { };
 template struct UseUnqualifiedTypeNames<BadBase>; // expected-note-re 2 {{in instantiation {{.*}} requested here}}
+
+namespace partial_template_lookup {
+
+class Bar;
+class Spare;
+
+template <class T, class X = Bar>
+class FooTemplated;
+
+class FooBase {
+public:
+  typedef int BaseTypedef;
+};
+
+// Partial template spec (unused)
+template <class T>
+class FooTemplated<T, Spare> {};
+
+// Partial template spec (used)
+template <class T>
+class FooTemplated<T, Bar> : public FooBase {};
+
+// Full template spec
+template <class T, class X>
+class FooTemplated : public FooTemplated<T, Bar> {
+public:
+  BaseTypedef Member; // expected-warning {{unqualified lookup}}
+};
+}

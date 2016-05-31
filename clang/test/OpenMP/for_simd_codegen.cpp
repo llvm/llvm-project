@@ -362,7 +362,7 @@ template <class T, unsigned K> T tfoo(T a) { return a + K; }
 
 template <typename T, unsigned N>
 int templ1(T a, T *z) {
-  #pragma omp for simd collapse(N)
+  #pragma omp for simd collapse(N) schedule(simd: static, N)
   for (int i = 0; i < N * 2; i++) {
     for (long long j = 0; j < (N + N + N + N); j += 2) {
       z[i + j] = a + tfoo<T, N>(i + j);
@@ -373,7 +373,7 @@ int templ1(T a, T *z) {
 
 // Instatiation templ1<float,2>
 // CHECK-LABEL: define {{.*i32}} @{{.*}}templ1{{.*}}(float {{.+}}, float* {{.+}})
-// CHECK: call void @__kmpc_for_static_init_8(%ident_t* {{[^,]+}}, i32 %{{[^,]+}}, i32 34, i32* %{{[^,]+}}, i64* [[LB:%[^,]+]], i64* [[UB:%[^,]+]], i64* [[STRIDE:%[^,]+]], i64 1, i64 1)
+// CHECK: call void @__kmpc_for_static_init_8(%ident_t* {{[^,]+}}, i32 %{{[^,]+}}, i32 45, i32* %{{[^,]+}}, i64* [[LB:%[^,]+]], i64* [[UB:%[^,]+]], i64* [[STRIDE:%[^,]+]], i64 1, i64 2)
 // CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],
 // CHECK: [[CMP:%.+]] = icmp sgt i64 [[UB_VAL]], 15
 // CHECK: br i1 [[CMP]], label %[[TRUE:.+]], label %[[FALSE:[^,]+]]
@@ -389,6 +389,7 @@ int templ1(T a, T *z) {
 // CHECK: store i64 [[LB_VAL]], i64* [[T1_OMP_IV:%[^,]+]],
 
 // ...
+// CHECK: icmp sle i64
 // CHECK: [[IV:%.+]] = load i64, i64* [[T1_OMP_IV]]
 // CHECK-NEXT: [[UB_VAL:%.+]] = load i64, i64* [[UB]]
 // CHECK-NEXT: [[CMP1:%.+]] = icmp sle i64 [[IV]], [[UB_VAL]]

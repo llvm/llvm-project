@@ -1586,26 +1586,29 @@ _mm_store_ss(float *__p, __m128 __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storeu_ps(float *__p, __m128 __a)
 {
-  __builtin_ia32_storeups(__p, (__v4sf)__a);
+  struct __storeu_ps {
+    __m128 __v;
+  } __attribute__((__packed__, __may_alias__));
+  ((struct __storeu_ps*)__p)->__v = __a;
+}
+
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_store_ps(float *__p, __m128 __a)
+{
+  *(__m128*)__p = __a;
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_store1_ps(float *__p, __m128 __a)
 {
   __a = __builtin_shufflevector((__v4sf)__a, (__v4sf)__a, 0, 0, 0, 0);
-  _mm_storeu_ps(__p, __a);
+  _mm_store_ps(__p, __a);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_store_ps1(float *__p, __m128 __a)
 {
-    return _mm_store1_ps(__p, __a);
-}
-
-static __inline__ void __DEFAULT_FN_ATTRS
-_mm_store_ps(float *__p, __m128 __a)
-{
-  *(__m128 *)__p = __a;
+  return _mm_store1_ps(__p, __a);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS

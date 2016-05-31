@@ -36,65 +36,65 @@ void PositiveFunctionCall() {
   // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const auto& AutoAssigned = ExpensiveTypeReference();
   const auto AutoCopyConstructed(ExpensiveTypeReference());
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
   // CHECK-FIXES: const auto& AutoCopyConstructed(ExpensiveTypeReference());
   const ExpensiveToCopyType VarAssigned = ExpensiveTypeReference();
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
   // CHECK-FIXES:   const ExpensiveToCopyType& VarAssigned = ExpensiveTypeReference();
   const ExpensiveToCopyType VarCopyConstructed(ExpensiveTypeReference());
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(ExpensiveTypeReference());
 }
 
 void PositiveMethodCallConstReferenceParam(const ExpensiveToCopyType &Obj) {
   const auto AutoAssigned = Obj.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
   // CHECK-FIXES: const auto& AutoAssigned = Obj.reference();
   const auto AutoCopyConstructed(Obj.reference());
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
   // CHECK-FIXES: const auto& AutoCopyConstructed(Obj.reference());
   const ExpensiveToCopyType VarAssigned = Obj.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
   // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = Obj.reference();
   const ExpensiveToCopyType VarCopyConstructed(Obj.reference());
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(Obj.reference());
 }
 
 void PositiveMethodCallConstParam(const ExpensiveToCopyType Obj) {
   const auto AutoAssigned = Obj.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
   // CHECK-FIXES: const auto& AutoAssigned = Obj.reference();
   const auto AutoCopyConstructed(Obj.reference());
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
   // CHECK-FIXES: const auto& AutoCopyConstructed(Obj.reference());
   const ExpensiveToCopyType VarAssigned = Obj.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
   // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = Obj.reference();
   const ExpensiveToCopyType VarCopyConstructed(Obj.reference());
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(Obj.reference());
 }
 
 void PositiveMethodCallConstPointerParam(const ExpensiveToCopyType *const Obj) {
   const auto AutoAssigned = Obj->reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
   // CHECK-FIXES: const auto& AutoAssigned = Obj->reference();
   const auto AutoCopyConstructed(Obj->reference());
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
   // CHECK-FIXES: const auto& AutoCopyConstructed(Obj->reference());
   const ExpensiveToCopyType VarAssigned = Obj->reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
   // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = Obj->reference();
   const ExpensiveToCopyType VarCopyConstructed(Obj->reference());
-  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(Obj->reference());
 }
 
 void PositiveLocalConstValue() {
   const ExpensiveToCopyType Obj;
   const auto UnnecessaryCopy = Obj.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'UnnecessaryCopy'
   // CHECK-FIXES: const auto& UnnecessaryCopy = Obj.reference();
 }
 
@@ -102,7 +102,7 @@ void PositiveLocalConstRef() {
   const ExpensiveToCopyType Obj;
   const ExpensiveToCopyType &ConstReference = Obj.reference();
   const auto UnnecessaryCopy = ConstReference.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'UnnecessaryCopy'
   // CHECK-FIXES: const auto& UnnecessaryCopy = ConstReference.reference();
 }
 
@@ -110,7 +110,7 @@ void PositiveLocalConstPointer() {
   const ExpensiveToCopyType Obj;
   const ExpensiveToCopyType *const ConstPointer = &Obj;
   const auto UnnecessaryCopy = ConstPointer->reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'UnnecessaryCopy'
   // CHECK-FIXES: const auto& UnnecessaryCopy = ConstPointer->reference();
 }
 
@@ -130,20 +130,20 @@ void PositiveFunctionCallExpensiveTypeNonConstVariable() {
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'AutoAssigned' is copy-constructed from a const reference but is only used as const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const auto& AutoAssigned = ExpensiveTypeReference();
   auto AutoCopyConstructed(ExpensiveTypeReference());
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'AutoCopyConstructed'
   // CHECK-FIXES: const auto& AutoCopyConstructed(ExpensiveTypeReference());
   ExpensiveToCopyType VarAssigned = ExpensiveTypeReference();
-  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: the variable
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: the variable 'VarAssigned'
   // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = ExpensiveTypeReference();
   ExpensiveToCopyType VarCopyConstructed(ExpensiveTypeReference());
-  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: the variable
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: the variable 'VarCopyConstructed'
   // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(ExpensiveTypeReference());
 }
 
 void positiveNonConstVarInCodeBlock(const ExpensiveToCopyType &Obj) {
   {
     auto Assigned = Obj.reference();
-    // CHECK-MESSAGES: [[@LINE-1]]:10: warning: the variable
+    // CHECK-MESSAGES: [[@LINE-1]]:10: warning: the variable 'Assigned'
     // CHECK-FIXES: const auto& Assigned = Obj.reference();
     Assigned.reference();
     useAsConstReference(Assigned);
@@ -174,33 +174,57 @@ void negativeNonConstVarWithNonConstUse(const ExpensiveToCopyType &Obj) {
   }
 }
 
-void NegativeMethodCallNonConstRef(ExpensiveToCopyType &Obj) {
+void PositiveMethodCallNonConstRefNotModified(ExpensiveToCopyType &Obj) {
+  const auto AutoAssigned = Obj.reference();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = Obj.reference();
+}
+
+void NegativeMethodCallNonConstRefIsModified(ExpensiveToCopyType &Obj) {
   const auto AutoAssigned = Obj.reference();
   const auto AutoCopyConstructed(Obj.reference());
   const ExpensiveToCopyType VarAssigned = Obj.reference();
   const ExpensiveToCopyType VarCopyConstructed(Obj.reference());
+  mutate(&Obj);
 }
 
-void NegativeMethodCallNonConst(ExpensiveToCopyType Obj) {
+void PositiveMethodCallNonConstNotModified(ExpensiveToCopyType Obj) {
   const auto AutoAssigned = Obj.reference();
-  const auto AutoCopyConstructed(Obj.reference());
-  const ExpensiveToCopyType VarAssigned = Obj.reference();
-  const ExpensiveToCopyType VarCopyConstructed(Obj.reference());
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = Obj.reference();
 }
 
-void NegativeMethodCallNonConstPointer(ExpensiveToCopyType *const Obj) {
+void NegativeMethodCallNonConstValueArgumentIsModified(ExpensiveToCopyType Obj) {
+  Obj.nonConstMethod();
+  const auto AutoAssigned = Obj.reference();
+}
+
+void PositiveMethodCallNonConstPointerNotModified(ExpensiveToCopyType *const Obj) {
+  const auto AutoAssigned = Obj->reference();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = Obj->reference();
+  Obj->constMethod();
+}
+
+void NegativeMethodCallNonConstPointerIsModified(ExpensiveToCopyType *const Obj) {
   const auto AutoAssigned = Obj->reference();
   const auto AutoCopyConstructed(Obj->reference());
   const ExpensiveToCopyType VarAssigned = Obj->reference();
   const ExpensiveToCopyType VarCopyConstructed(Obj->reference());
+  mutate(Obj);
 }
 
-void NegativeObjIsNotParam() {
+void PositiveLocalVarIsNotModified() {
+  ExpensiveToCopyType LocalVar;
+  const auto AutoAssigned = LocalVar.reference();
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = LocalVar.reference();
+}
+
+void NegativeLocalVarIsModified() {
   ExpensiveToCopyType Obj;
   const auto AutoAssigned = Obj.reference();
-  const auto AutoCopyConstructed(Obj.reference());
-  ExpensiveToCopyType VarAssigned = Obj.reference();
-  ExpensiveToCopyType VarCopyConstructed(Obj.reference());
+  Obj = AutoAssigned;
 }
 
 struct NegativeConstructor {
@@ -338,7 +362,6 @@ void NegativeLocalCopyWeirdNonCopy() {
   WeirdCopyCtorType neg_weird_1(orig, false);
   WeirdCopyCtorType neg_weird_2(orig, true);
 }
-
 void WarningOnlyMultiDeclStmt() {
   ExpensiveToCopyType orig;
   ExpensiveToCopyType copy = orig, copy2;

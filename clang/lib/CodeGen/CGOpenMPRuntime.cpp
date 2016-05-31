@@ -488,6 +488,8 @@ enum OpenMPSchedType {
   OMP_sch_guided_chunked = 36,
   OMP_sch_runtime = 37,
   OMP_sch_auto = 38,
+  /// static with chunk adjustment (e.g., simd)
+  OMP_sch_static_balanced_chunked   = 45,
   /// \brief Lower bound for 'ordered' versions.
   OMP_ord_lower = 64,
   OMP_ord_static_chunked = 65,
@@ -2409,27 +2411,38 @@ bool CGOpenMPRuntime::isDynamic(OpenMPScheduleClauseKind ScheduleKind) const {
 static int addMonoNonMonoModifier(OpenMPSchedType Schedule,
                                   OpenMPScheduleClauseModifier M1,
                                   OpenMPScheduleClauseModifier M2) {
+  int Modifier = 0;
   switch (M1) {
   case OMPC_SCHEDULE_MODIFIER_monotonic:
-    return Schedule | OMP_sch_modifier_monotonic;
+    Modifier = OMP_sch_modifier_monotonic;
+    break;
   case OMPC_SCHEDULE_MODIFIER_nonmonotonic:
-    return Schedule | OMP_sch_modifier_nonmonotonic;
+    Modifier = OMP_sch_modifier_nonmonotonic;
+    break;
   case OMPC_SCHEDULE_MODIFIER_simd:
+    if (Schedule == OMP_sch_static_chunked)
+      Schedule = OMP_sch_static_balanced_chunked;
+    break;
   case OMPC_SCHEDULE_MODIFIER_last:
   case OMPC_SCHEDULE_MODIFIER_unknown:
     break;
   }
   switch (M2) {
   case OMPC_SCHEDULE_MODIFIER_monotonic:
-    return Schedule | OMP_sch_modifier_monotonic;
+    Modifier = OMP_sch_modifier_monotonic;
+    break;
   case OMPC_SCHEDULE_MODIFIER_nonmonotonic:
-    return Schedule | OMP_sch_modifier_nonmonotonic;
+    Modifier = OMP_sch_modifier_nonmonotonic;
+    break;
   case OMPC_SCHEDULE_MODIFIER_simd:
+    if (Schedule == OMP_sch_static_chunked)
+      Schedule = OMP_sch_static_balanced_chunked;
+    break;
   case OMPC_SCHEDULE_MODIFIER_last:
   case OMPC_SCHEDULE_MODIFIER_unknown:
     break;
   }
-  return Schedule;
+  return Schedule | Modifier;
 }
 
 void CGOpenMPRuntime::emitForDispatchInit(CodeGenFunction &CGF,
@@ -2444,7 +2457,8 @@ void CGOpenMPRuntime::emitForDispatchInit(CodeGenFunction &CGF,
       getRuntimeSchedule(ScheduleKind.Schedule, Chunk != nullptr, Ordered);
   assert(Ordered ||
          (Schedule != OMP_sch_static && Schedule != OMP_sch_static_chunked &&
-          Schedule != OMP_ord_static && Schedule != OMP_ord_static_chunked));
+          Schedule != OMP_ord_static && Schedule != OMP_ord_static_chunked &&
+          Schedule != OMP_sch_static_balanced_chunked));
   // Call __kmpc_dispatch_init(
   //          ident_t *loc, kmp_int32 tid, kmp_int32 schedule,
   //          kmp_int[32|64] lower, kmp_int[32|64] upper,
@@ -2476,6 +2490,7 @@ static void emitForStaticInitCall(
 
    assert(!Ordered);
    assert(Schedule == OMP_sch_static || Schedule == OMP_sch_static_chunked ||
+          Schedule == OMP_sch_static_balanced_chunked ||
           Schedule == OMP_ord_static || Schedule == OMP_ord_static_chunked ||
           Schedule == OMP_dist_sch_static ||
           Schedule == OMP_dist_sch_static_chunked);
@@ -2493,6 +2508,7 @@ static void emitForStaticInitCall(
        Chunk = CGF.Builder.getIntN(IVSize, 1);
    } else {
      assert((Schedule == OMP_sch_static_chunked ||
+             Schedule == OMP_sch_static_balanced_chunked ||
              Schedule == OMP_ord_static_chunked ||
              Schedule == OMP_dist_sch_static_chunked) &&
             "expected static chunked schedule");

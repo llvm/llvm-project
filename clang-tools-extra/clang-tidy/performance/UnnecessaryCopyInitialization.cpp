@@ -38,14 +38,15 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
             unless(allOf(pointerType(), unless(pointerType(pointee(
                                             qualType(isConstQualified())))))));
 
-  // Match method call expressions where the this argument is a const
-  // type or const reference. This returned const reference is highly likely to
-  // outlive the local const reference of the variable being declared.
-  // The assumption is that the const reference being returned either points
-  // to a global static variable or to a member of the called object.
-  auto ConstRefReturningMethodCallOfConstParam = cxxMemberCallExpr(
+  // Match method call expressions where the `this` argument is only used as
+  // const, this will be checked in `check()` part. This returned const
+  // reference is highly likely to outlive the local const reference of the
+  // variable being declared. The assumption is that the const reference being
+  // returned either points to a global static variable or to a member of the
+  // called object.
+  auto ConstRefReturningMethodCall = cxxMemberCallExpr(
       callee(cxxMethodDecl(returns(ConstReference))),
-      on(declRefExpr(to(varDecl(hasType(qualType(ConstOrConstReference)))))));
+      on(declRefExpr(to(varDecl().bind("objectArg")))));
   auto ConstRefReturningFunctionCall =
       callExpr(callee(functionDecl(returns(ConstReference))),
                unless(callee(cxxMethodDecl())));
@@ -68,7 +69,7 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       localVarCopiedFrom(anyOf(ConstRefReturningFunctionCall,
-                               ConstRefReturningMethodCallOfConstParam)),
+                               ConstRefReturningMethodCall)),
       this);
 
   Finder->addMatcher(localVarCopiedFrom(declRefExpr(
@@ -80,6 +81,7 @@ void UnnecessaryCopyInitialization::check(
     const MatchFinder::MatchResult &Result) {
   const auto *NewVar = Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>("oldVarDecl");
+  const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>("objectArg");
   const auto *BlockStmt = Result.Nodes.getNodeAs<Stmt>("blockStmt");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
   // Do not propose fixes if the DeclStmt has multiple VarDecls or in macros
@@ -96,7 +98,8 @@ void UnnecessaryCopyInitialization::check(
       return;
 
   if (OldVar == nullptr) {
-    handleCopyFromMethodReturn(*NewVar, *BlockStmt, IssueFix, *Result.Context);
+    handleCopyFromMethodReturn(*NewVar, *BlockStmt, IssueFix, ObjectArg,
+                               *Result.Context);
   } else {
     handleCopyFromLocalVar(*NewVar, *OldVar, *BlockStmt, IssueFix,
                            *Result.Context);
@@ -105,9 +108,12 @@ void UnnecessaryCopyInitialization::check(
 
 void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
     const VarDecl &Var, const Stmt &BlockStmt, bool IssueFix,
-    ASTContext &Context) {
+    const VarDecl *ObjectArg, ASTContext &Context) {
   bool IsConstQualified = Var.getType().isConstQualified();
   if (!IsConstQualified && !isOnlyUsedAsConst(Var, BlockStmt, Context))
+    return;
+  if (ObjectArg != nullptr &&
+      !isOnlyUsedAsConst(*ObjectArg, BlockStmt, Context))
     return;
 
   auto Diagnostic =

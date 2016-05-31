@@ -6277,6 +6277,69 @@ BuildVector(ArrayRef<llvm::Value*> Ops) {
   return Result;
 }
 
+static Value *EmitX86MaskedStore(CodeGenFunction &CGF,
+                                 SmallVectorImpl<Value *> &Ops,
+                                 unsigned Align) {
+  // Cast the pointer to right type.
+  Ops[0] = CGF.Builder.CreateBitCast(Ops[0],
+                               llvm::PointerType::getUnqual(Ops[1]->getType()));
+
+  // If the mask is all ones just emit a regular store.
+  if (const auto *C = dyn_cast<Constant>(Ops[2]))
+    if (C->isAllOnesValue())
+      return CGF.Builder.CreateAlignedStore(Ops[1], Ops[0], Align);
+
+  // Convert the mask from an integer type to a vector of i1.
+  unsigned NumElts = Ops[1]->getType()->getVectorNumElements();
+  llvm::VectorType *MaskTy = llvm::VectorType::get(CGF.Builder.getInt1Ty(),
+                         cast<IntegerType>(Ops[2]->getType())->getBitWidth());
+  Ops[2] = CGF.Builder.CreateBitCast(Ops[2], MaskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (NumElts < 8) {
+    int Indices[4];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i;
+    Ops[2] = CGF.Builder.CreateShuffleVector(Ops[2], Ops[2],
+                                             makeArrayRef(Indices, NumElts),
+                                             "extract");
+  }
+
+  return CGF.Builder.CreateMaskedStore(Ops[1], Ops[0], Align, Ops[2]);
+}
+
+static Value *EmitX86MaskedLoad(CodeGenFunction &CGF,
+                                SmallVectorImpl<Value *> &Ops, unsigned Align) {
+  // Cast the pointer to right type.
+  Ops[0] = CGF.Builder.CreateBitCast(Ops[0],
+                               llvm::PointerType::getUnqual(Ops[1]->getType()));
+
+  // If the mask is all ones just emit a regular store.
+  if (const auto *C = dyn_cast<Constant>(Ops[2]))
+    if (C->isAllOnesValue())
+      return CGF.Builder.CreateAlignedLoad(Ops[0], Align);
+
+  // Convert the mask from an integer type to a vector of i1.
+  unsigned NumElts = Ops[1]->getType()->getVectorNumElements();
+  llvm::VectorType *MaskTy = llvm::VectorType::get(CGF.Builder.getInt1Ty(),
+                         cast<IntegerType>(Ops[2]->getType())->getBitWidth());
+  Ops[2] = CGF.Builder.CreateBitCast(Ops[2], MaskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (NumElts < 8) {
+    int Indices[4];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i;
+    Ops[2] = CGF.Builder.CreateShuffleVector(Ops[2], Ops[2],
+                                             makeArrayRef(Indices, NumElts),
+                                             "extract");
+  }
+
+  return CGF.Builder.CreateMaskedLoad(Ops[0], Align, Ops[2], Ops[1]);
+}
+
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
   if (BuiltinID == X86::BI__builtin_ms_va_start ||
@@ -6499,6 +6562,78 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Ops[1] = Mhi;
     Ops.push_back(Mlo);
     return Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
+  }
+  case X86::BI__builtin_ia32_storedqudi128_mask:
+  case X86::BI__builtin_ia32_storedqusi128_mask:
+  case X86::BI__builtin_ia32_storedquhi128_mask:
+  case X86::BI__builtin_ia32_storedquqi128_mask:
+  case X86::BI__builtin_ia32_storeupd128_mask:
+  case X86::BI__builtin_ia32_storeups128_mask:
+  case X86::BI__builtin_ia32_storedqudi256_mask:
+  case X86::BI__builtin_ia32_storedqusi256_mask:
+  case X86::BI__builtin_ia32_storedquhi256_mask:
+  case X86::BI__builtin_ia32_storedquqi256_mask:
+  case X86::BI__builtin_ia32_storeupd256_mask:
+  case X86::BI__builtin_ia32_storeups256_mask:
+  case X86::BI__builtin_ia32_storedqudi512_mask:
+  case X86::BI__builtin_ia32_storedqusi512_mask:
+  case X86::BI__builtin_ia32_storedquhi512_mask:
+  case X86::BI__builtin_ia32_storedquqi512_mask:
+  case X86::BI__builtin_ia32_storeupd512_mask:
+  case X86::BI__builtin_ia32_storeups512_mask:
+    return EmitX86MaskedStore(*this, Ops, 1);
+
+  case X86::BI__builtin_ia32_movdqa32store128_mask:
+  case X86::BI__builtin_ia32_movdqa64store128_mask:
+  case X86::BI__builtin_ia32_storeaps128_mask:
+  case X86::BI__builtin_ia32_storeapd128_mask:
+  case X86::BI__builtin_ia32_movdqa32store256_mask:
+  case X86::BI__builtin_ia32_movdqa64store256_mask:
+  case X86::BI__builtin_ia32_storeaps256_mask:
+  case X86::BI__builtin_ia32_storeapd256_mask:
+  case X86::BI__builtin_ia32_movdqa32store512_mask:
+  case X86::BI__builtin_ia32_movdqa64store512_mask:
+  case X86::BI__builtin_ia32_storeaps512_mask:
+  case X86::BI__builtin_ia32_storeapd512_mask: {
+    unsigned Align =
+      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
+    return EmitX86MaskedStore(*this, Ops, Align);
+  }
+  case X86::BI__builtin_ia32_loadups128_mask:
+  case X86::BI__builtin_ia32_loadups256_mask:
+  case X86::BI__builtin_ia32_loadups512_mask:
+  case X86::BI__builtin_ia32_loadupd128_mask:
+  case X86::BI__builtin_ia32_loadupd256_mask:
+  case X86::BI__builtin_ia32_loadupd512_mask:
+  case X86::BI__builtin_ia32_loaddquqi128_mask:
+  case X86::BI__builtin_ia32_loaddquqi256_mask:
+  case X86::BI__builtin_ia32_loaddquqi512_mask:
+  case X86::BI__builtin_ia32_loaddquhi128_mask:
+  case X86::BI__builtin_ia32_loaddquhi256_mask:
+  case X86::BI__builtin_ia32_loaddquhi512_mask:
+  case X86::BI__builtin_ia32_loaddqusi128_mask:
+  case X86::BI__builtin_ia32_loaddqusi256_mask:
+  case X86::BI__builtin_ia32_loaddqusi512_mask:
+  case X86::BI__builtin_ia32_loaddqudi128_mask:
+  case X86::BI__builtin_ia32_loaddqudi256_mask:
+  case X86::BI__builtin_ia32_loaddqudi512_mask:
+    return EmitX86MaskedLoad(*this, Ops, 1);
+
+  case X86::BI__builtin_ia32_loadaps128_mask:
+  case X86::BI__builtin_ia32_loadaps256_mask:
+  case X86::BI__builtin_ia32_loadaps512_mask:
+  case X86::BI__builtin_ia32_loadapd128_mask:
+  case X86::BI__builtin_ia32_loadapd256_mask:
+  case X86::BI__builtin_ia32_loadapd512_mask:
+  case X86::BI__builtin_ia32_movdqa32load128_mask:
+  case X86::BI__builtin_ia32_movdqa32load256_mask:
+  case X86::BI__builtin_ia32_movdqa32load512_mask:
+  case X86::BI__builtin_ia32_movdqa64load128_mask:
+  case X86::BI__builtin_ia32_movdqa64load256_mask:
+  case X86::BI__builtin_ia32_movdqa64load512_mask: {
+    unsigned Align =
+      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
+    return EmitX86MaskedLoad(*this, Ops, Align);
   }
   case X86::BI__builtin_ia32_storehps:
   case X86::BI__builtin_ia32_storelps: {

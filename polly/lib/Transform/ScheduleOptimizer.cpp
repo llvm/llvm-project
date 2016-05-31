@@ -65,6 +65,7 @@
 #include "isl/space.h"
 #include "isl/union_map.h"
 #include "isl/union_set.h"
+#include <ciso646>
 
 using namespace llvm;
 using namespace polly;

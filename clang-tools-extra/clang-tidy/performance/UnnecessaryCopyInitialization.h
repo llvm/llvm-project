@@ -33,7 +33,8 @@ public:
 
 private:
   void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
-                                  bool IssueFix, ASTContext &Context);
+                                  bool IssueFix, const VarDecl *ObjectArg,
+                                  ASTContext &Context);
   void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
                               const Stmt &BlockStmt, bool IssueFix,
                               ASTContext &Context);

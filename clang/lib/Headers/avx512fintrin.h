@@ -3792,6 +3792,16 @@ _mm512_mask_cvtps_epu32 (__m512i __W, __mmask16 __U, __m512 __A)
                   _MM_FROUND_CUR_DIRECTION);
 }
 
+static __inline__ __m512i __DEFAULT_FN_ATTRS
+_mm512_maskz_cvtps_epu32 ( __mmask16 __U, __m512 __A)
+{
+  return (__m512i) __builtin_ia32_cvtps2udq512_mask ((__v16sf) __A,
+                  (__v16si) 
+                  _mm512_setzero_si512 (),
+                  (__mmask16) __U ,
+                  _MM_FROUND_CUR_DIRECTION);
+}
+
 #define _mm512_cvt_roundpd_epu32(A, R) __extension__ ({ \
   (__m256i)__builtin_ia32_cvtpd2udq512_mask((__v8df)(__m512d)(A), \
                                             (__v8si)_mm256_setzero_si256(), \

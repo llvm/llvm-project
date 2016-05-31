@@ -74,10 +74,10 @@ inline __device__ char4 __ldg(const char4 *ptr) {
   typedef char c4 __attribute__((ext_vector_type(4)));
   c4 rv = __nvvm_ldg_c4(reinterpret_cast<const c4 *>(ptr));
   char4 ret;
-  ret.w = rv[0];
-  ret.x = rv[1];
-  ret.y = rv[2];
-  ret.z = rv[3];
+  ret.x = rv[0];
+  ret.y = rv[1];
+  ret.z = rv[2];
+  ret.w = rv[3];
   return ret;
 }
 inline __device__ short2 __ldg(const short2 *ptr) {
@@ -92,10 +92,10 @@ inline __device__ short4 __ldg(const short4 *ptr) {
   typedef short s4 __attribute__((ext_vector_type(4)));
   s4 rv = __nvvm_ldg_s4(reinterpret_cast<const s4 *>(ptr));
   short4 ret;
-  ret.w = rv[0];
-  ret.x = rv[1];
-  ret.y = rv[2];
-  ret.z = rv[3];
+  ret.x = rv[0];
+  ret.y = rv[1];
+  ret.z = rv[2];
+  ret.w = rv[3];
   return ret;
 }
 inline __device__ int2 __ldg(const int2 *ptr) {
@@ -110,10 +110,10 @@ inline __device__ int4 __ldg(const int4 *ptr) {
   typedef int i4 __attribute__((ext_vector_type(4)));
   i4 rv = __nvvm_ldg_i4(reinterpret_cast<const i4 *>(ptr));
   int4 ret;
-  ret.w = rv[0];
-  ret.x = rv[1];
-  ret.y = rv[2];
-  ret.z = rv[3];
+  ret.x = rv[0];
+  ret.y = rv[1];
+  ret.z = rv[2];
+  ret.w = rv[3];
   return ret;
 }
 inline __device__ longlong2 __ldg(const longlong2 *ptr) {
@@ -137,10 +137,10 @@ inline __device__ uchar4 __ldg(const uchar4 *ptr) {
   typedef unsigned char uc4 __attribute__((ext_vector_type(4)));
   uc4 rv = __nvvm_ldg_uc4(reinterpret_cast<const uc4 *>(ptr));
   uchar4 ret;
-  ret.w = rv[0];
-  ret.x = rv[1];
-  ret.y = rv[2];
-  ret.z = rv[3];
+  ret.x = rv[0];
+  ret.y = rv[1];
+  ret.z = rv[2];
+  ret.w = rv[3];
   return ret;
 }
 inline __device__ ushort2 __ldg(const ushort2 *ptr) {
@@ -155,10 +155,10 @@ inline __device__ ushort4 __ldg(const ushort4 *ptr) {
   typedef unsigned short us4 __attribute__((ext_vector_type(4)));
   us4 rv = __nvvm_ldg_us4(reinterpret_cast<const us4 *>(ptr));
   ushort4 ret;
-  ret.w = rv[0];
-  ret.x = rv[1];
-  ret.y = rv[2];
-  ret.z = rv[3];
+  ret.x = rv[0];
+  ret.y = rv[1];
+  ret.z = rv[2];
+  ret.w = rv[3];
   return ret;
 }
 inline __device__ uint2 __ldg(const uint2 *ptr) {
@@ -173,10 +173,10 @@ inline __device__ uint4 __ldg(const uint4 *ptr) {
   typedef unsigned int ui4 __attribute__((ext_vector_type(4)));
   ui4 rv = __nvvm_ldg_ui4(reinterpret_cast<const ui4 *>(ptr));
   uint4 ret;
-  ret.w = rv[0];
-  ret.x = rv[1];
-  ret.y = rv[2];
-  ret.z = rv[3];
+  ret.x = rv[0];
+  ret.y = rv[1];
+  ret.z = rv[2];
+  ret.w = rv[3];
   return ret;
 }
 inline __device__ ulonglong2 __ldg(const ulonglong2 *ptr) {
@@ -200,10 +200,10 @@ inline __device__ float4 __ldg(const float4 *ptr) {
   typedef float f4 __attribute__((ext_vector_type(4)));
   f4 rv = __nvvm_ldg_f4(reinterpret_cast<const f4 *>(ptr));
   float4 ret;
-  ret.w = rv[0];
-  ret.x = rv[1];
-  ret.y = rv[2];
-  ret.z = rv[3];
+  ret.x = rv[0];
+  ret.y = rv[1];
+  ret.z = rv[2];
+  ret.w = rv[3];
   return ret;
 }
 inline __device__ double2 __ldg(const double2 *ptr) {
