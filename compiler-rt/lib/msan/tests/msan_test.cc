@@ -4263,7 +4263,7 @@ TEST(MemorySanitizerOrigins, StoreIntrinsic) {
   U4 origin = __LINE__;
   __msan_set_origin(&x, sizeof(x), origin);
   __msan_poison(&x, sizeof(x));
-  __builtin_ia32_storeups((float*)&y, x);
+  _mm_storeu_ps((float*)&y, x);
   EXPECT_POISONED_O(y, origin);
 }
 #endif
