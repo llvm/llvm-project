@@ -905,11 +905,6 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
                             IIC_SSE_MOVU_P_RR>, VEX, VEX_L;
 }
 
-def : Pat<(int_x86_avx_storeu_ps_256 addr:$dst, VR256:$src),
-          (VMOVUPSYmr addr:$dst, VR256:$src)>;
-def : Pat<(int_x86_avx_storeu_pd_256 addr:$dst, VR256:$src),
-          (VMOVUPDYmr addr:$dst, VR256:$src)>;
-
 // Aliases to help the assembler pick two byte VEX encodings by swapping the
 // operands relative to the normal instructions to use VEX.R instead of VEX.B.
 def : InstAlias<"vmovaps\t{$src, $dst|$dst, $src}",
@@ -964,20 +959,6 @@ let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0,
                          "movupd\t{$src, $dst|$dst, $src}", [],
                          IIC_SSE_MOVU_P_RR>;
 }
-
-let Predicates = [HasAVX] in {
-  def : Pat<(int_x86_sse_storeu_ps addr:$dst, VR128:$src),
-            (VMOVUPSmr addr:$dst, VR128:$src)>;
-  def : Pat<(int_x86_sse2_storeu_pd addr:$dst, VR128:$src),
-            (VMOVUPDmr addr:$dst, VR128:$src)>;
-}
-
-let Predicates = [UseSSE1] in
-  def : Pat<(int_x86_sse_storeu_ps addr:$dst, VR128:$src),
-            (MOVUPSmr addr:$dst, VR128:$src)>;
-let Predicates = [UseSSE2] in
-  def : Pat<(int_x86_sse2_storeu_pd addr:$dst, VR128:$src),
-            (MOVUPDmr addr:$dst, VR128:$src)>;
 
 // Use vmovaps/vmovups for AVX integer load/store.
 let Predicates = [HasAVX, NoVLX] in {
@@ -3886,16 +3867,6 @@ def MOVDQUmr :   I<0x7F, MRMDestMem, (outs), (ins i128mem:$dst, VR128:$src),
 }
 
 } // ExeDomain = SSEPackedInt
-
-let Predicates = [HasAVX] in {
-  def : Pat<(int_x86_sse2_storeu_dq addr:$dst, VR128:$src),
-            (VMOVDQUmr addr:$dst, VR128:$src)>;
-  def : Pat<(int_x86_avx_storeu_dq_256 addr:$dst, VR256:$src),
-            (VMOVDQUYmr addr:$dst, VR256:$src)>;
-}
-let Predicates = [UseSSE2] in
-def : Pat<(int_x86_sse2_storeu_dq addr:$dst, VR128:$src),
-          (MOVDQUmr addr:$dst, VR128:$src)>;
 
 // Aliases to help the assembler pick two byte VEX encodings by swapping the
 // operands relative to the normal instructions to use VEX.R instead of VEX.B.

@@ -355,3 +355,98 @@ define <4 x double> @test_x86_avx_cvt_ps2_pd_256(<4 x float> %a0) {
   ret <4 x double> %res
 }
 declare <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float>) nounwind readnone
+
+
+define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
+  ; add operation forces the execution domain.
+; CHECK-LABEL: test_x86_sse2_storeu_dq:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vpaddb LCPI32_0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqu %xmm0, (%eax)
+; CHECK-NEXT:    retl
+  %a2 = add <16 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  call void @llvm.x86.sse2.storeu.dq(i8* %a0, <16 x i8> %a2)
+  ret void
+}
+declare void @llvm.x86.sse2.storeu.dq(i8*, <16 x i8>) nounwind
+
+
+define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
+  ; fadd operation forces the execution domain.
+; CHECK-LABEL: test_x86_sse2_storeu_pd:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmovupd %xmm0, (%eax)
+; CHECK-NEXT:    retl
+  %a2 = fadd <2 x double> %a1, <double 0x0, double 0x4200000000000000>
+  call void @llvm.x86.sse2.storeu.pd(i8* %a0, <2 x double> %a2)
+  ret void
+}
+declare void @llvm.x86.sse2.storeu.pd(i8*, <2 x double>) nounwind
+
+
+define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
+; CHECK-LABEL: test_x86_sse_storeu_ps:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vmovups %xmm0, (%eax)
+; CHECK-NEXT:    retl
+  call void @llvm.x86.sse.storeu.ps(i8* %a0, <4 x float> %a1)
+  ret void
+}
+declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
+
+
+define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
+  ; FIXME: unfortunately the execution domain fix pass changes this to vmovups and its hard to force with no 256-bit integer instructions
+  ; add operation forces the execution domain.
+; CHECK-LABEL: test_x86_avx_storeu_dq_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovups %ymm0, (%eax)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retl
+  %a2 = add <32 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  call void @llvm.x86.avx.storeu.dq.256(i8* %a0, <32 x i8> %a2)
+  ret void
+}
+declare void @llvm.x86.avx.storeu.dq.256(i8*, <32 x i8>) nounwind
+
+
+define void @test_x86_avx_storeu_pd_256(i8* %a0, <4 x double> %a1) {
+  ; add operation forces the execution domain.
+; CHECK-LABEL: test_x86_avx_storeu_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vmovupd %ymm0, (%eax)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retl
+  %a2 = fadd <4 x double> %a1, <double 0x0, double 0x0, double 0x0, double 0x0>
+  call void @llvm.x86.avx.storeu.pd.256(i8* %a0, <4 x double> %a2)
+  ret void
+}
+declare void @llvm.x86.avx.storeu.pd.256(i8*, <4 x double>) nounwind
+
+
+define void @test_x86_avx_storeu_ps_256(i8* %a0, <8 x float> %a1) {
+; CHECK-LABEL: test_x86_avx_storeu_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vmovups %ymm0, (%eax)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retl
+  call void @llvm.x86.avx.storeu.ps.256(i8* %a0, <8 x float> %a1)
+  ret void
+}
+declare void @llvm.x86.avx.storeu.ps.256(i8*, <8 x float>) nounwind

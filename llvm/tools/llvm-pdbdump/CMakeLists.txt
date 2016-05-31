@@ -18,3 +18,7 @@ add_llvm_tool(llvm-pdbdump
   TypedefDumper.cpp
   VariableDumper.cpp
   )
+
+if(LLVM_USE_SANITIZE_COVERAGE)
+  add_subdirectory(fuzzer)
+endif()

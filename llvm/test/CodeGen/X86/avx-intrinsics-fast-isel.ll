@@ -3144,15 +3144,14 @@ define void @test_mm256_storeu2_m128(float* %a0, float* %a1, <8 x float> %a2) no
 ; X64-NEXT:    vmovups %xmm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast float* %a0 to i8*
+  %arg0 = bitcast float* %a0 to <4 x float>*
   %lo = shufflevector <8 x float> %a2, <8 x float> %a2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  call void @llvm.x86.sse.storeu.ps(i8* %arg0, <4 x float> %lo)
-  %arg1 = bitcast float* %a1 to i8*
+  store <4 x float> %lo, <4 x float>* %arg0, align 1
+  %arg1 = bitcast float* %a1 to <4 x float>*
   %hi = shufflevector <8 x float> %a2, <8 x float> %a2, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  call void @llvm.x86.sse.storeu.ps(i8* %arg1, <4 x float> %hi)
+  store <4 x float> %hi, <4 x float>* %arg1, align 1
   ret void
 }
-declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind readnone
 
 define void @test_mm256_storeu2_m128d(double* %a0, double* %a1, <4 x double> %a2) nounwind {
 ; X32-LABEL: test_mm256_storeu2_m128d:
@@ -3172,15 +3171,14 @@ define void @test_mm256_storeu2_m128d(double* %a0, double* %a1, <4 x double> %a2
 ; X64-NEXT:    vmovups %xmm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast double* %a0 to i8*
+  %arg0 = bitcast double* %a0 to <2 x double>*
   %lo = shufflevector <4 x double> %a2, <4 x double> %a2, <2 x i32> <i32 0, i32 1>
-  call void @llvm.x86.sse2.storeu.pd(i8* %arg0, <2 x double> %lo)
-  %arg1 = bitcast double* %a1 to i8*
+  store <2 x double> %lo, <2 x double>* %arg0, align 1
+  %arg1 = bitcast double* %a1 to <2 x double>*
   %hi = shufflevector <4 x double> %a2, <4 x double> %a2, <2 x i32> <i32 2, i32 3>
-  call void @llvm.x86.sse2.storeu.pd(i8* %arg1, <2 x double> %hi)
+  store <2 x double> %hi, <2 x double>* %arg1, align 1
   ret void
 }
-declare void @llvm.x86.sse2.storeu.pd(i8*, <2 x double>) nounwind readnone
 
 define void @test_mm256_storeu2_m128i(<2 x i64>* %a0, <2 x i64>* %a1, <4 x i64> %a2) nounwind {
 ; X32-LABEL: test_mm256_storeu2_m128i:
@@ -3200,17 +3198,14 @@ define void @test_mm256_storeu2_m128i(<2 x i64>* %a0, <2 x i64>* %a1, <4 x i64> 
 ; X64-NEXT:    vmovups %xmm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
-  %arg0 = bitcast <2 x i64>* %a0 to i8*
-  %lo2 = shufflevector <4 x i64> %a2, <4 x i64> %a2, <2 x i32> <i32 0, i32 1>
-  %lo = bitcast <2 x i64> %lo2 to <16 x i8>
-  call void @llvm.x86.sse2.storeu.dq(i8* %arg0, <16 x i8> %lo)
-  %arg1 = bitcast <2 x i64>* %a1 to i8*
-  %hi2 = shufflevector <4 x i64> %a2, <4 x i64> %a2, <2 x i32> <i32 2, i32 3>
-  %hi = bitcast <2 x i64> %hi2 to <16 x i8>
-  call void @llvm.x86.sse2.storeu.dq(i8* %arg1, <16 x i8> %hi)
+  %arg0 = bitcast <2 x i64>* %a0 to <2 x i64>*
+  %lo = shufflevector <4 x i64> %a2, <4 x i64> %a2, <2 x i32> <i32 0, i32 1>
+  store <2 x i64> %lo, <2 x i64>* %arg0, align 1
+  %arg1 = bitcast <2 x i64>* %a1 to <2 x i64>*
+  %hi = shufflevector <4 x i64> %a2, <4 x i64> %a2, <2 x i32> <i32 2, i32 3>
+  store <2 x i64> %hi, <2 x i64>* %arg1, align 1
   ret void
 }
-declare void @llvm.x86.sse2.storeu.dq(i8*, <16 x i8>) nounwind readnone
 
 define void @test_mm256_stream_pd(double *%a0, <4 x double> %a1) nounwind {
 ; X32-LABEL: test_mm256_stream_pd:

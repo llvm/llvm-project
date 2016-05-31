@@ -272,6 +272,9 @@ namespace llvm {
       // SjLj exception handling longjmp.
       EH_SJLJ_LONGJMP,
 
+      // SjLj exception handling dispatch.
+      EH_SJLJ_SETUP_DISPATCH,
+
       /// Tail call return. See X86TargetLowering::LowerCall for
       /// the list of operands.
       TC_RETURN,
@@ -1093,6 +1096,7 @@ namespace llvm {
     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerEH_SJLJ_SETUP_DISPATCH(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFLT_ROUNDS_(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const;
@@ -1148,6 +1152,9 @@ namespace llvm {
 
     bool needsCmpXchgNb(Type *MemType) const;
 
+    void SetupEntryBlockForSjLj(MachineInstr *MI, MachineBasicBlock *MBB,
+                                MachineBasicBlock *DispatchBB, int FI) const;
+
     // Utility function to emit the low-level va_arg code for X86-64.
     MachineBasicBlock *EmitVAARG64WithCustomInserter(
                        MachineInstr *MI,
@@ -1187,6 +1194,9 @@ namespace llvm {
 
     MachineBasicBlock *emitFMA3Instr(MachineInstr *MI,
                                      MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr *MI,
+                                             MachineBasicBlock *MBB) const;
 
     /// Emit nodes that will be selected as "test Op0,Op0", or something
     /// equivalent, for use with the given x86 condition code.

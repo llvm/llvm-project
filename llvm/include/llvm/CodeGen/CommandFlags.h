@@ -90,6 +90,22 @@ CMModel("code-model",
                               "Large code model"),
                    clEnumValEnd));
 
+cl::opt<llvm::ExceptionHandling>
+ExceptionModel("exception-model",
+               cl::desc("exception model"),
+               cl::init(ExceptionHandling::None),
+               cl::values(clEnumValN(ExceptionHandling::None, "default",
+                                     "default exception handling model"),
+                          clEnumValN(ExceptionHandling::DwarfCFI, "dwarf",
+                                     "DWARF-like CFI based exception handling"),
+                          clEnumValN(ExceptionHandling::SjLj, "sjlj",
+                                     "SjLj exception handling"),
+                          clEnumValN(ExceptionHandling::ARM, "arm",
+                                     "ARM EHABI exceptions"),
+                          clEnumValN(ExceptionHandling::WinEH, "wineh",
+                                     "Windows exception model"),
+                          clEnumValEnd));
+
 cl::opt<TargetMachine::CodeGenFileType>
 FileType("filetype", cl::init(TargetMachine::CGFT_AssemblyFile),
   cl::desc("Choose a file type (not all types are supported by all targets):"),
@@ -293,6 +309,7 @@ static inline TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.FunctionSections = FunctionSections;
   Options.UniqueSectionNames = UniqueSectionNames;
   Options.EmulatedTLS = EmulatedTLS;
+  Options.ExceptionModel = ExceptionModel;
 
   Options.MCOptions = InitMCTargetOptionsFromFlags();
   Options.JTType = JTableType;

@@ -1125,54 +1125,6 @@ define <2 x double> @test_x86_sse2_sqrt_sd(<2 x double> %a0) {
 declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
 
 
-define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
-  ; add operation forces the execution domain.
-; SSE-LABEL: test_x86_sse2_storeu_dq:
-; SSE:       ## BB#0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    paddb LCPI68_0, %xmm0
-; SSE-NEXT:    movdqu %xmm0, (%eax)
-; SSE-NEXT:    retl
-;
-; KNL-LABEL: test_x86_sse2_storeu_dq:
-; KNL:       ## BB#0:
-; KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL-NEXT:    vpaddb LCPI68_0, %xmm0, %xmm0
-; KNL-NEXT:    vmovdqu %xmm0, (%eax)
-; KNL-NEXT:    retl
-  %a2 = add <16 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-  call void @llvm.x86.sse2.storeu.dq(i8* %a0, <16 x i8> %a2)
-  ret void
-}
-declare void @llvm.x86.sse2.storeu.dq(i8*, <16 x i8>) nounwind
-
-
-define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
-  ; fadd operation forces the execution domain.
-; SSE-LABEL: test_x86_sse2_storeu_pd:
-; SSE:       ## BB#0:
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
-; SSE-NEXT:    addpd %xmm0, %xmm1
-; SSE-NEXT:    movupd %xmm1, (%eax)
-; SSE-NEXT:    retl
-;
-; KNL-LABEL: test_x86_sse2_storeu_pd:
-; KNL:       ## BB#0:
-; KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; KNL-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
-; KNL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vmovupd %xmm0, (%eax)
-; KNL-NEXT:    retl
-  %a2 = fadd <2 x double> %a1, <double 0x0, double 0x4200000000000000>
-  call void @llvm.x86.sse2.storeu.pd(i8* %a0, <2 x double> %a2)
-  ret void
-}
-declare void @llvm.x86.sse2.storeu.pd(i8*, <2 x double>) nounwind
-
-
 define <2 x double> @test_x86_sse2_sub_sd(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-LABEL: test_x86_sse2_sub_sd:
 ; SSE:       ## BB#0:

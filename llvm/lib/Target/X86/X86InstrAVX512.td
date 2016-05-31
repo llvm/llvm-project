@@ -248,12 +248,12 @@ multiclass AVX512_maskable<bits<8> O, Format F, X86VectorVTInfo _,
                            string AttSrcAsm, string IntelSrcAsm,
                            dag RHS,
                            InstrItinClass itin = NoItinerary,
-                           bit IsCommutable = 0> :
+                           bit IsCommutable = 0, SDNode Select = vselect> :
    AVX512_maskable_common<O, F, _, Outs, Ins,
                           !con((ins _.RC:$src0, _.KRCWM:$mask), Ins),
                           !con((ins _.KRCWM:$mask), Ins),
                           OpcodeStr, AttSrcAsm, IntelSrcAsm, RHS,
-                          (vselect _.KRCWM:$mask, RHS, _.RC:$src0), vselect,
+                          (Select _.KRCWM:$mask, RHS, _.RC:$src0), Select,
                           "$src0 = $dst", itin, IsCommutable>;
 
 // This multiclass generates the unconditional/non-masking, the masking and
@@ -898,12 +898,22 @@ multiclass avx512_broadcast_rm<bits<8> opc, string OpcodeStr,
                    (ins SrcInfo.RC:$src), OpcodeStr, "$src", "$src",
                    (DestInfo.VT (X86VBroadcast (SrcInfo.VT SrcInfo.RC:$src)))>,
                    T8PD, EVEX;
-  let mayLoad = 1 in
+  let mayLoad = 1 in {
     defm m : AVX512_maskable<opc, MRMSrcMem, DestInfo, (outs DestInfo.RC:$dst),
                      (ins SrcInfo.ScalarMemOp:$src), OpcodeStr, "$src", "$src",
                      (DestInfo.VT (X86VBroadcast
                                      (SrcInfo.ScalarLdFrag addr:$src)))>,
                      T8PD, EVEX, EVEX_CD8<SrcInfo.EltSize, CD8VT1>;
+
+    let isCodeGenOnly = 1 in
+    defm m_Int : AVX512_maskable<opc, MRMSrcMem, DestInfo, (outs DestInfo.RC:$dst),
+                   (ins SrcInfo.ScalarMemOp:$src), OpcodeStr, "$src", "$src",
+                   (DestInfo.VT 
+                     (X86VBroadcast 
+                       (SrcInfo.VT (scalar_to_vector 
+                                     (SrcInfo.ScalarLdFrag addr:$src)))))>,
+                     T8PD, EVEX, EVEX_CD8<SrcInfo.EltSize, CD8VT1>;
+  } //mayLoad = 1  
 }
 
 multiclass avx512_fp_broadcast_vl<bits<8> opc, string OpcodeStr,
@@ -1070,45 +1080,29 @@ defm VBROADCASTF32X8 : avx512_subvec_broadcast_rm<0x1b, "vbroadcastf32x8",
                        EVEX_V512, EVEX_CD8<32, CD8VT8>;
 }
 
-multiclass avx512_broadcast_32x2<bits<8> opc, string OpcodeStr,
-                                 X86VectorVTInfo _Dst, X86VectorVTInfo _Src,
-                                 SDNode OpNode = X86SubVBroadcast> {
-
-  defm r : AVX512_maskable<opc, MRMSrcReg, _Dst, (outs _Dst.RC:$dst),
-                   (ins _Src.RC:$src), OpcodeStr, "$src", "$src",
-                   (_Dst.VT (OpNode (_Src.VT _Src.RC:$src)))>,
-                   T8PD, EVEX;
-  let mayLoad = 1 in
-    defm m : AVX512_maskable<opc, MRMSrcMem, _Dst, (outs _Dst.RC:$dst),
-                   (ins _Src.ScalarMemOp:$src), OpcodeStr, "$src", "$src",
-                   (_Dst.VT (OpNode
-                              (_Src.VT (scalar_to_vector(loadi64 addr:$src)))))>,
-                   T8PD, EVEX, EVEX_CD8<_Src.EltSize, CD8VT2>;
-}
-
 multiclass avx512_common_broadcast_32x2<bits<8> opc, string OpcodeStr,
-                             AVX512VLVectorVTInfo _> {
+                         AVX512VLVectorVTInfo _Dst, AVX512VLVectorVTInfo _Src> {
   let Predicates = [HasDQI] in
-    defm Z :    avx512_broadcast_32x2<opc, OpcodeStr, _.info512, _.info128>,
+    defm Z :    avx512_broadcast_rm<opc, OpcodeStr, _Dst.info512, _Src.info128>,
                                   EVEX_V512;
   let Predicates = [HasDQI, HasVLX] in
-    defm Z256 : avx512_broadcast_32x2<opc, OpcodeStr, _.info256, _.info128>,
+    defm Z256 : avx512_broadcast_rm<opc, OpcodeStr, _Dst.info256, _Src.info128>,
                                   EVEX_V256;
 }
 
 multiclass avx512_common_broadcast_i32x2<bits<8> opc, string OpcodeStr,
-                                                       AVX512VLVectorVTInfo _> :
-  avx512_common_broadcast_32x2<opc, OpcodeStr, _> {
+                         AVX512VLVectorVTInfo _Dst, AVX512VLVectorVTInfo _Src> :
+  avx512_common_broadcast_32x2<opc, OpcodeStr, _Dst, _Src> {
 
   let Predicates = [HasDQI, HasVLX] in
-    defm Z128 : avx512_broadcast_32x2<opc, OpcodeStr, _.info128, _.info128,
-                                      X86SubV32x2Broadcast>, EVEX_V128;
+    defm Z128 : avx512_broadcast_rm<opc, OpcodeStr, _Dst.info128, _Src.info128>,
+                                      EVEX_V128;
 }
 
 defm VPBROADCASTI32X2  : avx512_common_broadcast_i32x2<0x59, "vbroadcasti32x2",
-                                           avx512vl_i32_info>;
+                                           avx512vl_i32_info, avx512vl_i64_info>;
 defm VPBROADCASTF32X2  : avx512_common_broadcast_32x2<0x19, "vbroadcastf32x2",
-                                           avx512vl_f32_info>;
+                                           avx512vl_f32_info, avx512vl_f64_info>;
 
 def : Pat<(v16f32 (X86VBroadcast (v16f32 VR512:$src))),
           (VBROADCASTSSZr (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm))>;
@@ -5807,11 +5801,12 @@ let Predicates = [HasAVX512] in {
 multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                            X86MemOperand x86memop> {
   defm rr : AVX512_maskable<0x1D, MRMDestReg, _dest ,(outs _dest.RC:$dst),
-               (ins _src.RC:$src1, i32u8imm:$src2),
-                    "vcvtps2ph", "$src2, $src1", "$src1, $src2",
+                   (ins _src.RC:$src1, i32u8imm:$src2),
+                   "vcvtps2ph", "$src2, $src1", "$src1, $src2",
                    (X86cvtps2ph (_src.VT _src.RC:$src1),
                                 (i32 imm:$src2),
-                                (i32 FROUND_CURRENT))>, AVX512AIi8Base;
+                                (i32 FROUND_CURRENT)),
+                   NoItinerary, 0, X86select>, AVX512AIi8Base;
   let hasSideEffects = 0, mayStore = 1 in {
     def mr : AVX512AIi8<0x1D, MRMDestMem, (outs),
                (ins x86memop:$dst, _src.RC:$src1, i32u8imm:$src2),
@@ -5827,11 +5822,12 @@ multiclass avx512_cvtps2ph<X86VectorVTInfo _dest, X86VectorVTInfo _src,
 }
 multiclass avx512_cvtps2ph_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src> {
   defm rb : AVX512_maskable<0x1D, MRMDestReg, _dest ,(outs _dest.RC:$dst),
-               (ins _src.RC:$src1, i32u8imm:$src2),
-                    "vcvtps2ph", "$src2, {sae}, $src1", "$src1, {sae}, $src2",
+                   (ins _src.RC:$src1, i32u8imm:$src2),
+                   "vcvtps2ph", "$src2, {sae}, $src1", "$src1, {sae}, $src2",
                    (X86cvtps2ph (_src.VT _src.RC:$src1),
                                 (i32 imm:$src2),
-                                (i32 FROUND_NO_EXC))>, EVEX_B, AVX512AIi8Base;
+                                (i32 FROUND_NO_EXC)),
+                   NoItinerary, 0, X86select>, EVEX_B, AVX512AIi8Base;
 }
 let Predicates = [HasAVX512] in {
   defm VCVTPS2PHZ : avx512_cvtps2ph<v16i16x_info, v16f32_info, f256mem>,
