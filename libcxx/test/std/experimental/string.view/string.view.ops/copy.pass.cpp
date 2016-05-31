@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-// XFAIL: libcpp-no-exceptions
 // <string_view>
 
 // size_type copy(charT* s, size_type n, size_type pos = 0) const;
@@ -23,21 +21,31 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename CharT>
 void test1 ( std::experimental::basic_string_view<CharT> sv, size_t n, size_t pos ) {
     const size_t rlen = std::min ( n, sv.size() - pos );
 
     CharT *dest1 = new CharT [rlen + 1];    dest1[rlen] = 0;
     CharT *dest2 = new CharT [rlen + 1];    dest2[rlen] = 0;
-    
-    try {
+
+    if (pos > sv.size()) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try {
+            sv.copy(dest1, n, pos);
+            assert(false);
+        } catch (const std::out_of_range&) {
+        } catch (...) {
+            assert(false);
+        }
+#endif
+    } else {
         sv.copy(dest1, n, pos);
         std::copy_n(sv.begin() + pos, rlen, dest2);
-
         for ( size_t i = 0; i <= rlen; ++i )
             assert ( dest1[i] == dest2[i] );
-        }
-    catch ( const std::out_of_range & ) { assert ( pos > sv.size()); }
+    }
     delete [] dest1;
     delete [] dest2;    
 }
@@ -79,7 +87,7 @@ int main () {
     test ( L"a" );
     test ( L"" );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test ( u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE" );
     test ( u"ABCDE" );
     test ( u"a" );

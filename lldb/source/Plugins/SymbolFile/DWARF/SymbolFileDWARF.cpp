@@ -2162,6 +2162,9 @@ SymbolFileDWARF::Index ()
     if (debug_info)
     {
         const uint32_t num_compile_units = GetNumCompileUnits();
+        if (num_compile_units == 0)
+            return;
+
         std::vector<NameToDIE> function_basename_index(num_compile_units);
         std::vector<NameToDIE> function_fullname_index(num_compile_units);
         std::vector<NameToDIE> function_method_index(num_compile_units);
@@ -2170,7 +2173,8 @@ SymbolFileDWARF::Index ()
         std::vector<NameToDIE> global_index(num_compile_units);
         std::vector<NameToDIE> type_index(num_compile_units);
         std::vector<NameToDIE> namespace_index(num_compile_units);
-        
+
+        std::vector<bool> clear_cu_dies(num_compile_units, false);
         auto parser_fn = [this,
                           debug_info,
                           &function_basename_index,
@@ -2183,24 +2187,61 @@ SymbolFileDWARF::Index ()
                           &namespace_index](uint32_t cu_idx)
         {
             DWARFCompileUnit* dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
-            bool clear_dies = dwarf_cu->ExtractDIEsIfNeeded(false) > 1;
-
-            dwarf_cu->Index(function_basename_index[cu_idx],
-                            function_fullname_index[cu_idx],
-                            function_method_index[cu_idx],
-                            function_selector_index[cu_idx],
-                            objc_class_selectors_index[cu_idx],
-                            global_index[cu_idx],
-                            type_index[cu_idx],
-                            namespace_index[cu_idx]);
-
-            // Keep memory down by clearing DIEs if this generate function
-            // caused them to be parsed
-            if (clear_dies)
-                dwarf_cu->ClearDIEs(true);
-
+            if (dwarf_cu)
+            {
+                dwarf_cu->Index(function_basename_index[cu_idx],
+                                function_fullname_index[cu_idx],
+                                function_method_index[cu_idx],
+                                function_selector_index[cu_idx],
+                                objc_class_selectors_index[cu_idx],
+                                global_index[cu_idx],
+                                type_index[cu_idx],
+                                namespace_index[cu_idx]);
+            }
             return cu_idx;
         };
+
+        auto extract_fn = [this,
+                           debug_info,
+                           num_compile_units](uint32_t cu_idx)
+        {
+            DWARFCompileUnit* dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
+            if (dwarf_cu)
+            {
+                // dwarf_cu->ExtractDIEsIfNeeded(false) will return zero if the
+                // DIEs for a compile unit have already been parsed.
+                return std::make_pair(cu_idx, dwarf_cu->ExtractDIEsIfNeeded(false) > 1);
+            }
+            return std::make_pair(cu_idx, false);
+        };
+
+        // Create a task runner that extracts dies for each DWARF compile unit in a separate thread
+        TaskRunner<std::pair<uint32_t, bool>> task_runner_extract;
+        for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
+            task_runner_extract.AddTask(extract_fn, cu_idx);
+
+        //----------------------------------------------------------------------
+        // First figure out which compile units didn't have their DIEs already
+        // parsed and remember this.  If no DIEs were parsed prior to this index
+        // function call, we are going to want to clear the CU dies after we
+        // are done indexing to make sure we don't pull in all DWARF dies, but
+        // we need to wait until all compile units have been indexed in case
+        // a DIE in one compile unit refers to another and the indexes accesses
+        // those DIEs.
+        //----------------------------------------------------------------------
+        while (true)
+        {
+            auto f = task_runner_extract.WaitForNextCompletedTask();
+            if (!f.valid())
+                break;
+            unsigned cu_idx;
+            bool clear;
+            std::tie(cu_idx, clear) = f.get();
+            clear_cu_dies[cu_idx] = clear;
+        }
+
+        // Now create a task runner that can index each DWARF compile unit in a separate
+        // thread so we can index quickly.
 
         TaskRunner<uint32_t> task_runner;
         for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
@@ -2232,6 +2273,16 @@ SymbolFileDWARF::Index ()
             [&]() { m_global_index.Finalize(); },
             [&]() { m_type_index.Finalize(); },
             [&]() { m_namespace_index.Finalize(); });
+
+        //----------------------------------------------------------------------
+        // Keep memory down by clearing DIEs for any compile units if indexing
+        // caused us to load the compile unit's DIEs.
+        //----------------------------------------------------------------------
+        for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
+        {
+            if (clear_cu_dies[cu_idx])
+                debug_info->GetCompileUnitAtIndex(cu_idx)->ClearDIEs(true);
+        }
 
 #if defined (ENABLE_DEBUG_PRINTF)
         StreamFile s(stdout, false);

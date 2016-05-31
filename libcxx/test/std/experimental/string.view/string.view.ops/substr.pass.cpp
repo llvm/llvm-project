@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-// XFAIL: libcpp-no-exceptions
 // <string_view>
 
 // constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const;
@@ -20,16 +18,28 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename CharT>
 void test1 ( std::experimental::basic_string_view<CharT> sv, size_t n, size_t pos ) {
-    try {
+    if (pos > sv.size()) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try {
+            std::experimental::basic_string_view<CharT> sv1 = sv.substr(pos, n);
+            assert(false);
+        } catch (const std::out_of_range&) {
+            return;
+        } catch (...) {
+            assert(false);
+        }
+#endif
+    } else {
         std::experimental::basic_string_view<CharT> sv1 = sv.substr(pos, n);
         const size_t rlen = std::min ( n, sv.size() - pos );
         assert ( sv1.size() == rlen );
         for ( size_t i = 0; i <= rlen; ++i )
             assert ( sv[pos+i] == sv1[i] );
-        }
-    catch ( const std::out_of_range & ) { assert ( pos > sv.size()); }
+    }
 }
 
 
@@ -68,7 +78,7 @@ int main () {
     test ( L"a" );
     test ( L"" );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test ( u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE" );
     test ( u"ABCDE" );
     test ( u"a" );
@@ -80,7 +90,7 @@ int main () {
     test ( U"" );
 #endif
     
-#if _LIBCPP_STD_VER > 11
+#if TEST_STD_VER > 11
     {
     constexpr std::experimental::string_view sv1 { "ABCDE", 5 };
 

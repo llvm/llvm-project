@@ -3299,7 +3299,7 @@ AST_POLYMORPHIC_MATCHER(isConstexpr,
 }
 
 /// \brief Matches the condition expression of an if statement, for loop,
-/// or conditional operator.
+/// switch statement or conditional operator.
 ///
 /// Example matches true (matcher = hasCondition(cxxBoolLiteral(equals(true))))
 /// \code
@@ -3308,7 +3308,7 @@ AST_POLYMORPHIC_MATCHER(isConstexpr,
 AST_POLYMORPHIC_MATCHER_P(
     hasCondition,
     AST_POLYMORPHIC_SUPPORTED_TYPES(IfStmt, ForStmt, WhileStmt, DoStmt,
-                                    AbstractConditionalOperator),
+                                    SwitchStmt, AbstractConditionalOperator),
     internal::Matcher<Expr>, InnerMatcher) {
   const Expr *const Condition = Node.getCond();
   return (Condition != nullptr &&

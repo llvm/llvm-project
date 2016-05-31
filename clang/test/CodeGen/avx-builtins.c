@@ -473,27 +473,27 @@ __m256i test_mm256_load_si256(__m256i* A) {
 
 __m256d test_mm256_loadu_pd(double* A) {
   // CHECK-LABEL: test_mm256_loadu_pd
-  // CHECK: load <4 x double>, <4 x double>* %{{.*}}, align 1
+  // CHECK: load <4 x double>, <4 x double>* %{{.*}}, align 1{{$}}
   return _mm256_loadu_pd(A);
 }
 
 __m256 test_mm256_loadu_ps(float* A) {
   // CHECK-LABEL: test_mm256_loadu_ps
-  // CHECK: load <8 x float>, <8 x float>* %{{.*}}, align 1
+  // CHECK: load <8 x float>, <8 x float>* %{{.*}}, align 1{{$}}
   return _mm256_loadu_ps(A);
 }
 
 __m256i test_mm256_loadu_si256(__m256i* A) {
   // CHECK-LABEL: test_mm256_loadu_si256
-  // CHECK: load <4 x i64>, <4 x i64>* %{{.+}}, align 1
+  // CHECK: load <4 x i64>, <4 x i64>* %{{.+}}, align 1{{$}}
   return _mm256_loadu_si256(A);
 }
 
 __m256 test_mm256_loadu2_m128(float* A, float* B) {
   // CHECK-LABEL: test_mm256_loadu2_m128
-  // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1
+  // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-  // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1
+  // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   return _mm256_loadu2_m128(A, B);
@@ -501,9 +501,9 @@ __m256 test_mm256_loadu2_m128(float* A, float* B) {
 
 __m256d test_mm256_loadu2_m128d(double* A, double* B) {
   // CHECK-LABEL: test_mm256_loadu2_m128d
-  // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1
+  // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1
+  // CHECK: load <2 x double>, <2 x double>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   return _mm256_loadu2_m128d(A, B);
@@ -511,9 +511,9 @@ __m256d test_mm256_loadu2_m128d(double* A, double* B) {
 
 __m256i test_mm256_loadu2_m128i(__m128i* A, __m128i* B) {
   // CHECK-LABEL: test_mm256_loadu2_m128i
-  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1
+  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1
+  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   return _mm256_loadu2_m128i(A, B);
@@ -1154,46 +1154,49 @@ void test_mm256_store_si256(__m256i* A, __m256i B) {
 
 void test_mm256_storeu_pd(double* A, __m256d B) {
   // CHECK-LABEL: test_mm256_storeu_pd
-  // CHECK: call void @llvm.x86.avx.storeu.pd.256(i8* %{{.*}}, <4 x double> %{{.*}})
+  // CHECK:   store <4 x double> %{{.*}}, <4 x double>* %{{.*}}, align 1{{$}}
+  // CHECK-NEXT: ret void
   _mm256_storeu_pd(A, B);
 }
 
 void test_mm256_storeu_ps(float* A, __m256 B) {
   // CHECK-LABEL: test_mm256_storeu_ps
-  // CHECK: call void @llvm.x86.avx.storeu.ps.256(i8* %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: store <8 x float> %{{.*}}, <8 x float>* %{{.*}}, align 1{{$}}
+  // CHECk-NEXT: ret void
   _mm256_storeu_ps(A, B);
 }
 
 void test_mm256_storeu_si256(__m256i* A, __m256i B) {
   // CHECK-LABEL: test_mm256_storeu_si256
-  // CHECK: call void @llvm.x86.avx.storeu.dq.256(i8* %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK: store <4 x i64> %{{.*}}, <4 x i64>* %{{.*}}, align 1{{$}}
+  // CHECk-NEXT: ret void
   _mm256_storeu_si256(A, B);
 }
 
 void test_mm256_storeu2_m128(float* A, float* B, __m256 C) {
   // CHECK-LABEL: test_mm256_storeu2_m128
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  // CHECK: call void @llvm.x86.sse.storeu.ps(i8* %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  // CHECK: call void @llvm.x86.sse.storeu.ps(i8* %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 1{{$}}
   _mm256_storeu2_m128(A, B, C);
 }
 
 void test_mm256_storeu2_m128d(double* A, double* B, __m256d C) {
   // CHECK-LABEL: test_mm256_storeu2_m128d
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <2 x i32> <i32 0, i32 1>
-  // CHECK: call void @llvm.x86.sse2.storeu.pd(i8* %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: store <2 x double> %{{.*}}, <2 x double>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <2 x i32> <i32 2, i32 3>
-  // CHECK: call void @llvm.x86.sse2.storeu.pd(i8* %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: store <2 x double> %{{.*}}, <2 x double>* %{{.*}}, align 1{{$}}
   _mm256_storeu2_m128d(A, B, C);
 }
 
 void test_mm256_storeu2_m128i(__m128i* A, __m128i* B, __m256i C) {
   // CHECK-LABEL: test_mm256_storeu2_m128i
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <2 x i32> <i32 0, i32 1>
-  // CHECK: call void @llvm.x86.sse2.storeu.dq(i8* %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> %{{.*}}, <2 x i32> <i32 2, i32 3>
-  // CHECK: call void @llvm.x86.sse2.storeu.dq(i8* %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
   _mm256_storeu2_m128i(A, B, C);
 }
 

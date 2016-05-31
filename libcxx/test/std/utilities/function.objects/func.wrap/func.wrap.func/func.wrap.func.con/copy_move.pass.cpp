@@ -14,9 +14,11 @@
 // function(const function& f);
 
 #include <functional>
+#include <memory>
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
 #include "count_new.hpp"
 
 class A
@@ -98,21 +100,53 @@ int main()
     assert(g.target<A>() == 0);
     assert(!g);
     }
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+#if TEST_STD_VER >= 11
+    assert(globalMemCounter.checkOutstandingNewEq(0));
+    { // Test rvalue references
+        std::function<int(int)> f = A();
+        assert(A::count == 1);
+        assert(globalMemCounter.checkOutstandingNewEq(1));
+        assert(f.target<A>());
+        assert(f.target<int(*)(int)>() == 0);
+        std::function<int(int)> f2 = std::move(f);
+        assert(A::count == 1);
+        assert(globalMemCounter.checkOutstandingNewEq(1));
+        assert(f2.target<A>());
+        assert(f2.target<int(*)(int)>() == 0);
+        assert(f.target<A>() == 0);
+        assert(f.target<int(*)(int)>() == 0);
+    }
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
-    std::function<int(int)> f = A();
-    assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
-    assert(f.target<A>());
-    assert(f.target<int(*)(int)>() == 0);
-    std::function<int(int)> f2 = std::move(f);
-    assert(A::count == 1);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
-    assert(f2.target<A>());
-    assert(f2.target<int(*)(int)>() == 0);
-    assert(f.target<A>() == 0);
-    assert(f.target<int(*)(int)>() == 0);
+        // Test that moving a function constructed from a reference wrapper
+        // is done without allocating.
+        DisableAllocationGuard g;
+        using Ref = std::reference_wrapper<A>;
+        A a;
+        Ref aref(a);
+        std::function<int(int)> f(aref);
+        assert(A::count == 1);
+        assert(f.target<A>() == nullptr);
+        assert(f.target<Ref>());
+        std::function<int(int)> f2(std::move(f));
+        assert(A::count == 1);
+        assert(f2.target<A>() == nullptr);
+        assert(f2.target<Ref>());
+        assert(f.target<Ref>()); // f is unchanged because the target is small
     }
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    {
+        // Test that moving a function constructed from a function pointer
+        // is done without allocating
+        DisableAllocationGuard guard;
+        using Ptr = int(*)(int);
+        Ptr p = g;
+        std::function<int(int)> f(p);
+        assert(f.target<A>() == nullptr);
+        assert(f.target<Ptr>());
+        std::function<int(int)> f2(std::move(f));
+        assert(f2.target<A>() == nullptr);
+        assert(f2.target<Ptr>());
+        assert(f.target<Ptr>()); // f is unchanged because the target is small
+    }
+#endif  // TEST_STD_VER >= 11
 }

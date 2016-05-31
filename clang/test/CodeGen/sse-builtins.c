@@ -346,7 +346,7 @@ __m128 test_mm_load_ps1(float* y) {
 
 __m128 test_mm_load_ss(float* y) {
   // CHECK-LABEL: test_mm_load_ss
-  // CHECK: load float, float* {{.*}}, align 1
+  // CHECK: load float, float* {{.*}}, align 1{{$}}
   // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
   // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i32 1
   // CHECK: insertelement <4 x float> %{{.*}}, float 0.000000e+00, i32 2
@@ -389,7 +389,7 @@ __m128 test_mm_loadr_ps(float* A) {
 
 __m128 test_mm_loadu_ps(float* A) {
   // CHECK-LABEL: test_mm_loadu_ps
-  // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1
+  // CHECK: load <4 x float>, <4 x float>* %{{.*}}, align 1{{$}}
   return _mm_loadu_ps(A);
 }
 
@@ -651,7 +651,7 @@ void test_mm_store_ps(float* x, __m128 y) {
 void test_mm_store_ps1(float* x, __m128 y) {
   // CHECK-LABEL: test_mm_store_ps1
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> zeroinitializer
-  // CHECK: call void @llvm.x86.sse.storeu.ps(i8* %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 16
   _mm_store_ps1(x, y);
 }
 
@@ -665,7 +665,7 @@ void test_mm_store_ss(float* x, __m128 y) {
 void test_mm_store1_ps(float* x, __m128 y) {
   // CHECK-LABEL: test_mm_store1_ps
   // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> zeroinitializer
-  // CHECK: call void @llvm.x86.sse.storeu.ps(i8* %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 16
   _mm_store1_ps(x, y);
 }
 
@@ -694,7 +694,8 @@ void test_mm_storer_ps(float* x,  __m128 y) {
 
 void test_mm_storeu_ps(float* x,  __m128 y) {
   // CHECK-LABEL: test_mm_storeu_ps
-  // CHECK: call void @llvm.x86.sse.storeu.ps(i8* %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 1{{$}}
+  // CHECK-NEXT: ret void
   _mm_storeu_ps(x, y);
 }
 
