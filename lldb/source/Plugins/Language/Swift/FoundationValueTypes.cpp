@@ -76,7 +76,7 @@ lldb_private::formatters::swift::NotificationName_SummaryProvider (ValueObject& 
     if (!underlying_name_sp->GetSummaryAsCString(summary, options))
         return false;
     
-    stream.Printf("%s", summary.c_str());
+    stream.PutCString(summary.c_str());
     return true;
 }
 
@@ -94,7 +94,7 @@ lldb_private::formatters::swift::URL_SummaryProvider (ValueObject& valobj, Strea
     if (!underlying_url_sp->GetSummaryAsCString(summary, options))
         return false;
     
-    stream.Printf("%s", summary.c_str());
+    stream.PutCString(summary.c_str());
     return true;
 }
 
@@ -113,7 +113,7 @@ lldb_private::formatters::swift::IndexPath_SummaryProvider (ValueObject& valobj,
     size_t num_children = underlying_array_sp->GetNumChildren();
     
     if (num_children == 1)
-        stream.Printf("%s", "1 index");
+        stream.PutCString("1 index");
     else
         stream.Printf("%zu indices", num_children);
     return true;
@@ -127,6 +127,9 @@ lldb_private::formatters::swift::Measurement_SummaryProvider (ValueObject& valob
     static ConstString g__symbol("_symbol");
     
     ValueObjectSP value_sp(valobj.GetChildAtNamePath( {g_value} ));
+    if (!value_sp)
+        return false;
+
     ValueObjectSP unit_sp(valobj.GetChildAtNamePath( {g_unit} ));
     if (!unit_sp)
         return false;
@@ -139,12 +142,15 @@ lldb_private::formatters::swift::Measurement_SummaryProvider (ValueObject& valob
     if (!descriptor_sp)
         return false;
     
+    if (descriptor_sp->GetNumIVars() == 0)
+        return false;
+
     auto ivar = descriptor_sp->GetIVarAtIndex(0);
     if (!ivar.m_type.IsValid())
         return false;
     
     ValueObjectSP symbol_sp(unit_sp->GetSyntheticChildAtOffset(ivar.m_offset, ivar.m_type, true));
-    if (!value_sp || !symbol_sp)
+    if (!symbol_sp)
         return false;
     
     symbol_sp = symbol_sp->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget, true);
@@ -161,10 +167,9 @@ lldb_private::formatters::swift::Measurement_SummaryProvider (ValueObject& valob
     if (!symbol_sp->GetSummaryAsCString(unit, options))
         return false;
     
-    if (unit.size() > 2)
+    if (unit.size() > 2 && unit[0] == '"')
     {
-        if (unit.size() > 1 && unit[0] == '"')
-            unit = unit.substr(1);
+        unit = unit.substr(1);
         if (unit.back() == '"')
             unit.pop_back();
     }
