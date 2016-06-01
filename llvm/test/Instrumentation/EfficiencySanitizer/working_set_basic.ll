@@ -161,4 +161,6 @@ entry:
 ; Top-level:
 
 ; CHECK: define internal void @esan.module_ctor()
-; CHECK: call void @__esan_init(i32 2, i64 ptrtoint (i64* @0 to i64))
+; CHECK: call void @__esan_init(i32 2, i8* null)
+; CHECK: define internal void @esan.module_dtor()
+; CHECK: call void @__esan_exit(i8* null)

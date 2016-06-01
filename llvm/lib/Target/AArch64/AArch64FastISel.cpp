@@ -438,9 +438,6 @@ unsigned AArch64FastISel::materializeGV(const GlobalValue *GV) {
       .addReg(ADRPReg)
       .addGlobalAddress(GV, 0, AArch64II::MO_GOT | AArch64II::MO_PAGEOFF |
                         AArch64II::MO_NC);
-  } else if (OpFlags & AArch64II::MO_CONSTPOOL) {
-    // We can't handle addresses loaded from a constant pool quickly yet.
-    return 0;
   } else {
     // ADRP + ADDX
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::ADRP),

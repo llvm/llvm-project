@@ -405,11 +405,6 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
     void splitSeparateComponents(LiveInterval &LI,
                                  SmallVectorImpl<LiveInterval*> &SplitLIs);
 
-    /// Assure dead subregister definitions have their own vreg assigned.
-    /// This calls ConnectedSubRegClasses::splitSeparateSubRegComponent()
-    /// on each virtual register.
-    void renameDisconnectedComponents();
-
     /// For live interval \p LI with correct SubRanges construct matching
     /// information for the main live range. Expects the main live range to not
     /// have any segments or value numbers.

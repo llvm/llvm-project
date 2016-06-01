@@ -86,15 +86,20 @@ void printRawClangAST(const object::ObjectFile *o);
 void PrintRelocations(const object::ObjectFile *o);
 void PrintSectionHeaders(const object::ObjectFile *o);
 void PrintSectionContents(const object::ObjectFile *o);
-void PrintSymbolTable(const object::ObjectFile *o, StringRef ArchiveName);
+void PrintSymbolTable(const object::ObjectFile *o, StringRef ArchiveName,
+                      StringRef ArchitectureName = StringRef());
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, std::error_code EC);
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef File, llvm::Error E);
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef FileName,
                                           StringRef ArchiveName,
-                                          llvm::Error E);
+                                          llvm::Error E,
+                                          StringRef ArchitectureName
+                                                    = StringRef());
 LLVM_ATTRIBUTE_NORETURN void report_error(StringRef ArchiveName,
                                           const object::Archive::Child &C,
-                                          llvm::Error E);
+                                          llvm::Error E,
+                                          StringRef ArchitectureName
+                                                    = StringRef());
 
 } // end namespace llvm
 

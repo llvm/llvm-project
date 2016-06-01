@@ -360,7 +360,7 @@ private:
         [&LD, LMH](const std::string &Name) {
           auto &LMResources = LD.getLogicalModuleResources(LMH);
           if (auto Sym = LMResources.StubsMgr->findStub(Name, false))
-            return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+            return Sym.toRuntimeDyldSymbol();
           auto &LDResolver = LD.getDylibResources().ExternalSymbolResolver;
           return LDResolver->findSymbolInLogicalDylib(Name);
         },
@@ -487,9 +487,8 @@ private:
     // Create memory manager and symbol resolver.
     auto Resolver = createLambdaResolver(
         [this, &LD, LMH](const std::string &Name) {
-          if (auto Symbol = LD.findSymbolInternally(LMH, Name))
-            return RuntimeDyld::SymbolInfo(Symbol.getAddress(),
-                                           Symbol.getFlags());
+          if (auto Sym = LD.findSymbolInternally(LMH, Name))
+            return Sym.toRuntimeDyldSymbol();
           auto &LDResolver = LD.getDylibResources().ExternalSymbolResolver;
           return LDResolver->findSymbolInLogicalDylib(Name);
         },

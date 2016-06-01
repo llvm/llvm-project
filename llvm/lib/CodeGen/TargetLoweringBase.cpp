@@ -925,8 +925,6 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::FEXP ,      VT, Expand);
     setOperationAction(ISD::FEXP2,      VT, Expand);
     setOperationAction(ISD::FFLOOR,     VT, Expand);
-    setOperationAction(ISD::FMINNUM,    VT, Expand);
-    setOperationAction(ISD::FMAXNUM,    VT, Expand);
     setOperationAction(ISD::FNEARBYINT, VT, Expand);
     setOperationAction(ISD::FCEIL,      VT, Expand);
     setOperationAction(ISD::FRINT,      VT, Expand);

@@ -792,7 +792,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
     Asm->EmitInt8(AddressSize);                // Address size
     Asm->EmitInt8(0);                          // Segment size
 
-    Asm->OutStreamer->EmitFill(Padding, 0x0);
+    Asm->OutStreamer->emitFill(Padding, 0x0);
 
     for (auto Range = Ranges.begin(), End = Ranges.end(); Range != End;
          ++Range) {

@@ -39,10 +39,10 @@ public:
 
   uint32_t getBlockSize() const override;
   uint32_t getBlockCount() const override;
-  uint32_t getNumDirectoryBytes() const override;
-  uint32_t getBlockMapIndex() const override;
-  uint32_t getNumDirectoryBlocks() const override;
-  uint64_t getBlockMapOffset() const override;
+  uint32_t getNumDirectoryBytes() const;
+  uint32_t getBlockMapIndex() const;
+  uint32_t getNumDirectoryBlocks() const;
+  uint64_t getBlockMapOffset() const;
 
   uint32_t getNumStreams() const override;
   uint32_t getStreamByteSize(uint32_t StreamIndex) const override;
@@ -50,7 +50,7 @@ public:
 
   StringRef getBlockData(uint32_t BlockIndex, uint32_t NumBytes) const override;
 
-  ArrayRef<support::ulittle32_t> getDirectoryBlockArray() override;
+  ArrayRef<support::ulittle32_t> getDirectoryBlockArray();
 
   Error parseFileHeaders();
   Error parseStreamData();

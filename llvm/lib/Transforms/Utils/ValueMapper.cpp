@@ -950,8 +950,9 @@ void Mapper::remapFunction(Function &F) {
   // Remap the metadata attachments.
   SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
   F.getAllMetadata(MDs);
+  F.clearMetadata();
   for (const auto &I : MDs)
-    F.setMetadata(I.first, cast_or_null<MDNode>(mapMetadata(I.second)));
+    F.addMetadata(I.first, *cast<MDNode>(mapMetadata(I.second)));
 
   // Remap the argument types.
   if (TypeMapper)

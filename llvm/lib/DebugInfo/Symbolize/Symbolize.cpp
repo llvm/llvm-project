@@ -319,9 +319,10 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
         return EC;
       return I->second->get();
     }
-    ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr =
+    Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
         UB->getObjectForArch(ArchName);
-    if (auto EC = ObjOrErr.getError()) {
+    if (!ObjOrErr) {
+      auto EC = errorToErrorCode(ObjOrErr.takeError());
       ObjectForUBPathAndArch.insert(
           std::make_pair(std::make_pair(Path, ArchName), EC));
       return EC;

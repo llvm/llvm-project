@@ -442,13 +442,18 @@ static void dumpArchive(const Archive *Arc) {
 /// @brief Dumps each object file in \a MachO Universal Binary;
 static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary) {
   for (const MachOUniversalBinary::ObjectForArch &Obj : UBinary->objects()) {
-    ErrorOr<std::unique_ptr<MachOObjectFile>> ObjOrErr = Obj.getAsObjectFile();
+    Expected<std::unique_ptr<MachOObjectFile>> ObjOrErr = Obj.getAsObjectFile();
     if (ObjOrErr)
       dumpObject(&*ObjOrErr.get());
+    else if (auto E = isNotObjectErrorInvalidFileType(ObjOrErr.takeError())) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(ObjOrErr.takeError(), OS, "");
+      OS.flush();
+      reportError(UBinary->getFileName(), Buf);
+    }
     else if (ErrorOr<std::unique_ptr<Archive>> AOrErr = Obj.getAsArchive())
       dumpArchive(&*AOrErr.get());
-    else
-      reportError(UBinary->getFileName(), ObjOrErr.getError().message());
   }
 }
 

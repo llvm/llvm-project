@@ -23,8 +23,8 @@ namespace codeview {
 /// Dumper for CodeView type streams found in COFF object files and PDB files.
 class CVTypeDumper {
 public:
-  CVTypeDumper(ScopedPrinter &W, bool PrintRecordBytes)
-      : W(&W), PrintRecordBytes(PrintRecordBytes) {}
+  CVTypeDumper(ScopedPrinter *W, bool PrintRecordBytes)
+      : W(W), PrintRecordBytes(PrintRecordBytes) {}
 
   StringRef getTypeName(TypeIndex TI);
   void printTypeIndex(StringRef FieldName, TypeIndex TI);
@@ -35,9 +35,15 @@ public:
   /// type references.
   bool dump(const CVRecord<TypeLeafKind> &Record);
 
-  /// Dumps the type records in Data. Returns false if there was a type stream
+  /// Dumps the type records in Types. Returns false if there was a type stream
   /// parse error, and true otherwise.
   bool dump(const CVTypeArray &Types);
+
+  /// Dumps the type records in Data. Returns false if there was a type stream
+  /// parse error, and true otherwise. Use this method instead of the
+  /// CVTypeArray overload when type records are laid out contiguously in
+  /// memory.
+  bool dump(ArrayRef<uint8_t> Data);
 
   /// Gets the type index for the next type record.
   unsigned getNextTypeIndex() const {

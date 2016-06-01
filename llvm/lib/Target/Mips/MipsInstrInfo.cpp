@@ -301,13 +301,15 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::BEQ:
       if (canUseShortMicroMipsCTI)
         return Mips::BEQZC_MM;
-      else
-        return Mips::BEQC;
+      else if (I->getOperand(0).getReg() == I->getOperand(1).getReg())
+        return 0;
+      return Mips::BEQC;
     case Mips::BNE:
       if (canUseShortMicroMipsCTI)
         return Mips::BNEZC_MM;
-      else
-        return Mips::BNEC;
+      else if (I->getOperand(0).getReg() == I->getOperand(1).getReg())
+        return 0;
+      return Mips::BNEC;
     case Mips::BGE:
       if (I->getOperand(0).getReg() == I->getOperand(1).getReg())
         return 0;

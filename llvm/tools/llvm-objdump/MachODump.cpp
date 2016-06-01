@@ -1266,7 +1266,7 @@ static void ProcessMachO(StringRef Filename, MachOObjectFile *MachOOF,
     PrintDylibs(MachOOF, true);
   if (SymbolTable) {
     StringRef ArchiveName = ArchiveMemberName == StringRef() ? "" : Filename;
-    PrintSymbolTable(MachOOF, ArchiveName);
+    PrintSymbolTable(MachOOF, ArchiveName, ArchitectureName);
   }
   if (UnwindInfo)
     printMachOUnwindInfo(MachOOF);
@@ -1604,7 +1604,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
              I != E; ++I) {
           if (ArchFlags[i] == I->getArchTypeName()) {
             ArchFound = true;
-            ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr =
+            Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
                 I->getAsObjectFile();
             std::string ArchitectureName = "";
             if (ArchFlags.size() > 1)
@@ -1613,6 +1613,11 @@ void llvm::ParseInputMachO(StringRef Filename) {
               ObjectFile &O = *ObjOrErr.get();
               if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
                 ProcessMachO(Filename, MachOOF, "", ArchitectureName);
+            } else if (auto E = isNotObjectErrorInvalidFileType(
+                       ObjOrErr.takeError())) {
+              report_error(Filename, StringRef(), std::move(E),
+                           ArchitectureName);
+              continue;
             } else if (ErrorOr<std::unique_ptr<Archive>> AOrErr =
                            I->getAsArchive()) {
               std::unique_ptr<Archive> &A = *AOrErr;
@@ -1631,7 +1636,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
                 Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
                 if (!ChildOrErr) {
                   if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-                    report_error(Filename, C, std::move(E));
+                    report_error(Filename, C, std::move(E), ArchitectureName);
                   continue;
                 }
                 if (MachOObjectFile *O =
@@ -1657,13 +1662,17 @@ void llvm::ParseInputMachO(StringRef Filename) {
            I != E; ++I) {
         if (MachOObjectFile::getHostArch().getArchName() ==
             I->getArchTypeName()) {
-          ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
+          Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
           std::string ArchiveName;
           ArchiveName.clear();
           if (ObjOrErr) {
             ObjectFile &O = *ObjOrErr.get();
             if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&O))
               ProcessMachO(Filename, MachOOF);
+          } else if (auto E = isNotObjectErrorInvalidFileType(
+                     ObjOrErr.takeError())) {
+            report_error(Filename, std::move(E));
+            continue;
           } else if (ErrorOr<std::unique_ptr<Archive>> AOrErr =
                          I->getAsArchive()) {
             std::unique_ptr<Archive> &A = *AOrErr;
@@ -1697,7 +1706,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
     for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                E = UB->end_objects();
          I != E; ++I) {
-      ErrorOr<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
+      Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
       std::string ArchitectureName = "";
       if (moreThanOneArch)
         ArchitectureName = I->getArchTypeName();
@@ -1705,6 +1714,10 @@ void llvm::ParseInputMachO(StringRef Filename) {
         ObjectFile &Obj = *ObjOrErr.get();
         if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&Obj))
           ProcessMachO(Filename, MachOOF, "", ArchitectureName);
+      } else if (auto E = isNotObjectErrorInvalidFileType(
+                 ObjOrErr.takeError())) {
+        report_error(StringRef(), Filename, std::move(E), ArchitectureName);
+        continue;
       } else if (ErrorOr<std::unique_ptr<Archive>> AOrErr = I->getAsArchive()) {
         std::unique_ptr<Archive> &A = *AOrErr;
         outs() << "Archive : " << Filename;
@@ -1721,7 +1734,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
           Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
           if (!ChildOrErr) {
             if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
-              report_error(Filename, C, std::move(E));
+              report_error(Filename, C, std::move(E), ArchitectureName);
             continue;
           }
           if (MachOObjectFile *O =

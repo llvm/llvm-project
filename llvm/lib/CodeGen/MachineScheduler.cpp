@@ -882,16 +882,8 @@ void ScheduleDAGMILive::enterRegion(MachineBasicBlock *bb,
   ShouldTrackPressure = SchedImpl->shouldTrackPressure();
   ShouldTrackLaneMasks = SchedImpl->shouldTrackLaneMasks();
 
-  if (ShouldTrackLaneMasks) {
-    if (!ShouldTrackPressure)
-      report_fatal_error("ShouldTrackLaneMasks requires ShouldTrackPressure");
-    // Dead subregister defs have no users and therefore no dependencies,
-    // moving them around may cause liveintervals to degrade into multiple
-    // components. Change independent components to have their own vreg to avoid
-    // this.
-    if (!DisconnectedComponentsRenamed)
-      LIS->renameDisconnectedComponents();
-  }
+  assert((!ShouldTrackLaneMasks || ShouldTrackPressure) &&
+         "ShouldTrackLaneMasks requires ShouldTrackPressure");
 }
 
 // Setup the register pressure trackers for the top scheduled top and bottom

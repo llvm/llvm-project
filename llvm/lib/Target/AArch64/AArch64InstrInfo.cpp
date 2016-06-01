@@ -3992,7 +3992,6 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_GOT, "aarch64-got"},
       {MO_NC, "aarch64-nc"},
-      {MO_TLS, "aarch64-tls"},
-      {MO_CONSTPOOL, "aarch64-constant-pool"}};
+      {MO_TLS, "aarch64-tls"}};
   return makeArrayRef(TargetFlags);
 }

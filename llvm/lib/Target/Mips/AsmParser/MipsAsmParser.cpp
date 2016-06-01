@@ -401,6 +401,8 @@ class MipsAsmParser : public MCTargetAsmParser {
 public:
   enum MipsMatchResultTy {
     Match_RequiresDifferentSrcAndDst = FIRST_TARGET_MATCH_RESULT_TY,
+    Match_RequiresDifferentOperands,
+    Match_RequiresNoZeroRegister,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "MipsGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -3643,20 +3645,58 @@ void MipsAsmParser::createCpRestoreMemOp(bool IsLoad, int StackOffset,
 }
 
 unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
+  switch (Inst.getOpcode()) {
   // As described by the Mips32r2 spec, the registers Rd and Rs for
   // jalr.hb must be different.
   // It also applies for registers Rt and Rs of microMIPSr6 jalrc.hb instruction
   // and registers Rd and Base for microMIPS lwp instruction
-  unsigned Opcode = Inst.getOpcode();
-
-  if ((Opcode == Mips::JALR_HB || Opcode == Mips::JALRC_HB_MMR6) &&
-      (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg()))
-    return Match_RequiresDifferentSrcAndDst;
-  else if ((Opcode == Mips::LWP_MM || Opcode == Mips::LWP_MMR6) &&
-           (Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg()))
-    return Match_RequiresDifferentSrcAndDst;
-
-  return Match_Success;
+  case Mips::JALR_HB:
+  case Mips::JALRC_HB_MMR6:
+    if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
+      return Match_RequiresDifferentSrcAndDst;
+    return Match_Success;
+  case Mips::LWP_MM:
+  case Mips::LWP_MMR6:
+    if (Inst.getOperand(0).getReg() == Inst.getOperand(2).getReg())
+      return Match_RequiresDifferentSrcAndDst;
+    return Match_Success;
+  // As described the MIPSR6 spec, the compact branches that compare registers
+  // must:
+  // a) Not use the zero register.
+  // b) Not use the same register twice.
+  // c) rs < rt for bnec, beqc.
+  //    NB: For this case, the encoding will swap the operands as their
+  //    ordering doesn't matter. GAS performs this transformation  too.
+  //    Hence, that constraint does not have to be enforced.
+  //
+  // The compact branches that branch iff the signed addition of two registers
+  // would overflow must have rs >= rt. That can be handled like beqc/bnec with
+  // operand swapping. They do not have restriction of using the zero register.
+  case Mips::BLEZC:
+  case Mips::BGEZC:
+  case Mips::BGTZC:
+  case Mips::BLTZC:
+  case Mips::BEQZC:
+  case Mips::BNEZC:
+    if (Inst.getOperand(0).getReg() == Mips::ZERO)
+      return Match_RequiresNoZeroRegister;
+    return Match_Success;
+  case Mips::BGEC:
+  case Mips::BLTC:
+  case Mips::BGEUC:
+  case Mips::BLTUC:
+  case Mips::BEQC:
+  case Mips::BNEC:
+    if (Inst.getOperand(0).getReg() == Mips::ZERO)
+      return Match_RequiresNoZeroRegister;
+    if (Inst.getOperand(1).getReg() == Mips::ZERO)
+      return Match_RequiresNoZeroRegister;
+    if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
+      return Match_RequiresDifferentOperands;
+    return Match_Success;
+  default:
+    return Match_Success;
+  }
 }
 
 static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
@@ -3706,6 +3746,10 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, "invalid instruction");
   case Match_RequiresDifferentSrcAndDst:
     return Error(IDLoc, "source and destination must be different");
+  case Match_RequiresDifferentOperands:
+    return Error(IDLoc, "registers must be different");
+  case Match_RequiresNoZeroRegister:
+    return Error(IDLoc, "invalid operand ($zero) for instruction");
   case Match_Immz:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo), "expected '0'");
   case Match_UImm1_0:

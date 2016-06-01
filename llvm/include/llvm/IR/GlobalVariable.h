@@ -159,6 +159,10 @@ public:
   ///
   void eraseFromParent() override;
 
+  /// Drop all references in preparation to destroy the GlobalVariable. This
+  /// drops not only the reference to the initializer but also to any metadata.
+  void dropAllReferences();
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalVariableVal;

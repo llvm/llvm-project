@@ -33,12 +33,10 @@ a:
         bc2eqz  $31,8            # CHECK: bc2eqz $31, 8       # encoding: [0x49,0x3f,0x00,0x02]
         bc2nez  $0,8             # CHECK: bc2nez $0, 8        # encoding: [0x49,0xa0,0x00,0x02]
         bc2nez  $31,8            # CHECK: bc2nez $31, 8       # encoding: [0x49,0xbf,0x00,0x02]
-        # beqc requires rs < rt && rs != 0 but we also accept when this is not true. See also bovc
-        # FIXME: Testcases are in valid-xfail.s at the moment
-        beqc $5, $6, 256         # CHECK: beqc $5, $6, 256    # encoding: [0x20,0xa6,0x00,0x40]
+        # beqc requires rs < rt && rs != 0 but we accept this and fix it. See also bovc.
+        beqc    $5, $6, 256      # CHECK: beqc $5, $6, 256    # encoding: [0x20,0xa6,0x00,0x40]
+        beqc    $6, $5, 256      # CHECK: beqc $6, $5, 256    # encoding: [0x20,0xa6,0x00,0x40]
         beqzalc $2, 1332         # CHECK: beqzalc $2, 1332    # encoding: [0x20,0x02,0x01,0x4d]
-        # bnec requires rs < rt && rs != 0 but we accept when this is not true. See also bnvc
-        # FIXME: Testcases are in valid-xfail.s at the moment
         beqzc $5, 72256          # CHECK: beqzc $5, 72256     # encoding: [0xd8,0xa0,0x46,0x90]
         bgec $2, $3, 256         # CHECK: bgec $2, $3, 256    # encoding: [0x58,0x43,0x00,0x40]
         bgeuc $2, $3, 256        # CHECK: bgeuc $2, $3, 256   # encoding: [0x18,0x43,0x00,0x40]
@@ -53,17 +51,19 @@ a:
         bltuc $5, $6, 256        # CHECK: bltuc $5, $6, 256   # encoding: [0x1c,0xa6,0x00,0x40]
         bltzalc $2, 1332         # CHECK: bltzalc $2, 1332    # encoding: [0x1c,0x42,0x01,0x4d]
         bltzc $5, 256            # CHECK: bltzc $5, 256       # encoding: [0x5c,0xa5,0x00,0x40]
+        # bnec requires rs < rt && rs != 0 but we accept this and fix it. See also bnvc.
         bnec $5, $6, 256         # CHECK: bnec $5, $6, 256    # encoding: [0x60,0xa6,0x00,0x40]
+        bnec $6, $5, 256         # CHECK: bnec $6, $5, 256    # encoding: [0x60,0xa6,0x00,0x40]
         bnezalc $2, 1332         # CHECK: bnezalc $2, 1332    # encoding: [0x60,0x02,0x01,0x4d]
         bnezc $5, 72256          # CHECK: bnezc $5, 72256     # encoding: [0xf8,0xa0,0x46,0x90]
-        # bnvc requires that rs >= rt but we accept both. See also bnec
+        # bnvc requires that rs >= rt but we accept both and fix this. See also bnec.
         bnvc     $0, $0, 4       # CHECK: bnvc $zero, $zero, 4 # encoding: [0x60,0x00,0x00,0x01]
         bnvc     $2, $0, 4       # CHECK: bnvc $2, $zero, 4    # encoding: [0x60,0x40,0x00,0x01]
-        bnvc     $4, $2, 4       # CHECK: bnvc $4, $2, 4      # encoding: [0x60,0x82,0x00,0x01]
-        # bovc requires that rs >= rt but we accept both. See also beqc
+        bnvc     $2, $4, 4       # CHECK: bnvc $2, $4, 4      # encoding: [0x60,0x82,0x00,0x01]
+        # bovc requires that rs >= rt but we accept both and fix this. See also beqc.
         bovc     $0, $0, 4       # CHECK: bovc $zero, $zero, 4 # encoding: [0x20,0x00,0x00,0x01]
         bovc     $2, $0, 4       # CHECK: bovc $2, $zero, 4    # encoding: [0x20,0x40,0x00,0x01]
-        bovc     $4, $2, 4       # CHECK: bovc $4, $2, 4      # encoding: [0x20,0x82,0x00,0x01]
+        bovc     $2, $4, 4       # CHECK: bovc $2, $4, 4      # encoding: [0x20,0x82,0x00,0x01]
         cache    1, 8($5)        # CHECK: cache 1, 8($5)         # encoding: [0x7c,0xa1,0x04,0x25]
         class.d $f2, $f4         # CHECK: class.d $f2, $f4       # encoding: [0x46,0x20,0x20,0x9b]
         class.s $f2, $f4         # CHECK: class.s $f2, $f4       # encoding: [0x46,0x00,0x20,0x9b]

@@ -39,6 +39,50 @@
 ; ASM: addl    $7, "?x@@3HC"
 ; ASM: .cv_loc 0 1 17 1                # t.cpp:17:1
 
+; ASM: .section .debug$T,"dr"
+; ASM: .long 4 # Debug section magic
+; ASM: # ArgList (0x1000) {
+; ASM: #   TypeLeafKind: LF_ARGLIST (0x1201)
+; ASM: #   NumArgs: 0
+; ASM: #   Arguments [
+; ASM: #   ]
+; ASM: # }
+; ASM: .byte   0x06, 0x00, 0x01, 0x12
+; ASM: .byte   0x00, 0x00, 0x00, 0x00
+; ASM: # Procedure (0x1001) {
+; ASM: #   TypeLeafKind: LF_PROCEDURE (0x1008)
+; ASM: #   ReturnType: void (0x3)
+; ASM: #   CallingConvention: NearC (0x0)
+; ASM: #   FunctionOptions [ (0x0)
+; ASM: #   ]
+; ASM: #   NumParameters: 0
+; ASM: #   ArgListType: () (0x1000)
+; ASM: # }
+; ASM: .byte   0x0e, 0x00, 0x08, 0x10
+; ASM: .byte   0x03, 0x00, 0x00, 0x00
+; ASM: .byte   0x00, 0x00, 0x00, 0x00
+; ASM: .byte   0x00, 0x10, 0x00, 0x00
+; ASM: # FuncId (0x1002) {
+; ASM: #   TypeLeafKind: LF_FUNC_ID (0x1601)
+; ASM: #   ParentScope: 0x0
+; ASM: #   FunctionType: void () (0x1001)
+; ASM: #   Name: bar
+; ASM: # }
+; ASM: .byte   0x0e, 0x00, 0x01, 0x16
+; ASM: .byte   0x00, 0x00, 0x00, 0x00
+; ASM: .byte   0x01, 0x10, 0x00, 0x00
+; ASM: .byte   0x62, 0x61, 0x72, 0x00
+; ASM: # FuncId (0x1003) {
+; ASM: #   TypeLeafKind: LF_FUNC_ID (0x1601)
+; ASM: #   ParentScope: 0x0
+; ASM: #   FunctionType: void () (0x1001)
+; ASM: #   Name: foo
+; ASM: # }
+; ASM: .byte   0x0e, 0x00, 0x01, 0x16
+; ASM: .byte   0x00, 0x00, 0x00, 0x00
+; ASM: .byte   0x01, 0x10, 0x00, 0x00
+; ASM: .byte   0x66, 0x6f, 0x6f, 0x00
+
 ; ASM: .section .debug$S,"dr"
 ; ASM: .long   246                     # Inlinee lines subsection
 ; ASM: .long   [[inline_end:.*]]-[[inline_beg:.*]] #

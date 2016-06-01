@@ -83,9 +83,11 @@ Here's the short story for getting up and running quickly with LLVM:
    before trying to configure with cmake.  cmake does not pickup newly
    added source directories in incremental builds. 
 
-   The build uses `CMake <CMake.html>`_.
-   Although the build is known to work with CMake >= 2.8.8, we recommend CMake
-   >= v3.2, especially if you're generating Ninja build files.
+   The build uses `CMake <CMake.html>`_. LLVM requires CMake 3.4.3 to build. It
+   is generally recommended to use a recent CMake, especially if you're
+   generating Ninja build files. This is because the CMake project is constantly
+   improving the quality of the generators, and the Ninja generator gets a lot
+   of attention.
 
    * ``cd where you want to build llvm``
    * ``mkdir build``

@@ -443,6 +443,9 @@ private:
                                        unsigned &NextMetadataNo);
   std::error_code parseMetadataKinds();
   std::error_code parseMetadataKindRecord(SmallVectorImpl<uint64_t> &Record);
+  std::error_code
+  parseGlobalObjectAttachment(GlobalObject &GO,
+                              ArrayRef<uint64_t> Record);
   std::error_code parseMetadataAttachment(Function &F);
   ErrorOr<std::string> parseModuleTriple();
   std::error_code parseUseLists();
@@ -3837,6 +3840,16 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       }
       break;
     }
+    case bitc::MODULE_CODE_GLOBALVAR_ATTACHMENT: {
+      if (Record.size() % 2 == 0)
+        return error("Invalid record");
+      unsigned ValueID = Record[0];
+      if (ValueID >= ValueList.size())
+        return error("Invalid record");
+      if (auto *GV = dyn_cast<GlobalVariable>(ValueList[ValueID]))
+        parseGlobalObjectAttachment(*GV, ArrayRef<uint64_t>(Record).slice(1));
+      break;
+    }
     // FUNCTION:  [type, callingconv, isproto, linkage, paramattr,
     //             alignment, section, visibility, gc, unnamed_addr,
     //             prologuedata, dllstorageclass, comdat, prefixdata]
@@ -4161,6 +4174,21 @@ ErrorOr<std::string> BitcodeReader::parseIdentificationBlock() {
   }
 }
 
+std::error_code BitcodeReader::parseGlobalObjectAttachment(
+    GlobalObject &GO, ArrayRef<uint64_t> Record) {
+  assert(Record.size() % 2 == 0);
+  for (unsigned I = 0, E = Record.size(); I != E; I += 2) {
+    auto K = MDKindMap.find(Record[I]);
+    if (K == MDKindMap.end())
+      return error("Invalid ID");
+    MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[I + 1]);
+    if (!MD)
+      return error("Invalid metadata attachment");
+    GO.addMetadata(K->second, *MD);
+  }
+  return std::error_code();
+}
+
 /// Parse metadata attachments.
 std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
   if (Stream.EnterSubBlock(bitc::METADATA_ATTACHMENT_ID))
@@ -4192,15 +4220,8 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
         return error("Invalid record");
       if (RecordLength % 2 == 0) {
         // A function attachment.
-        for (unsigned I = 0; I != RecordLength; I += 2) {
-          auto K = MDKindMap.find(Record[I]);
-          if (K == MDKindMap.end())
-            return error("Invalid ID");
-          MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[I + 1]);
-          if (!MD)
-            return error("Invalid metadata attachment");
-          F.setMetadata(K->second, MD);
-        }
+        if (std::error_code EC = parseGlobalObjectAttachment(F, Record))
+          return EC;
         continue;
       }
 

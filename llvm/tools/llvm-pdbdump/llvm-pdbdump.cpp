@@ -639,7 +639,7 @@ static Error dumpStructure(RawSession &RS) {
   if (auto EC = dumpNamedStream(P, File))
     return EC;
 
-  codeview::CVTypeDumper TD(P, false);
+  codeview::CVTypeDumper TD(&P, false);
   if (auto EC = dumpTpiStream(P, File, TD, StreamTPI))
     return EC;
   if (auto EC = dumpTpiStream(P, File, TD, StreamIPI))

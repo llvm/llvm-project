@@ -1379,12 +1379,7 @@ namespace AArch64II {
     /// thread-local symbol. On Darwin, only one type of thread-local access
     /// exists (pre linker-relaxation), but on ELF the TLSModel used for the
     /// referee will affect interpretation.
-    MO_TLS = 0x40,
-
-    /// MO_CONSTPOOL - This flag indicates that a symbol operand represents
-    /// the address of a constant pool entry for the symbol, rather than the
-    /// address of the symbol itself.
-    MO_CONSTPOOL = 0x80
+    MO_TLS = 0x40
   };
 } // end namespace AArch64II
 

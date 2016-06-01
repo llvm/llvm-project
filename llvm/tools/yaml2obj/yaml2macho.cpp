@@ -48,7 +48,9 @@ private:
   Error writeLinkEditData(raw_ostream &OS);
   void writeBindOpcodes(raw_ostream &OS, uint64_t offset,
                         std::vector<MachOYAML::BindOpcode> &BindOpcodes);
+  Error writeExportTrie(raw_ostream &OS);
 
+  void dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry);
   void ZeroToOffset(raw_ostream &OS, size_t offset);
 
   MachOYAML::Object &Obj;
@@ -157,6 +159,12 @@ size_t writeLoadCommandData<MachO::dylib_command>(MachOYAML::LoadCommand &LC,
 
 template <>
 size_t writeLoadCommandData<MachO::dylinker_command>(MachOYAML::LoadCommand &LC,
+                                                     raw_ostream &OS) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::rpath_command>(MachOYAML::LoadCommand &LC,
                                                      raw_ostream &OS) {
   return writePayloadString(LC, OS);
 }
@@ -282,9 +290,39 @@ void MachOWriter::writeBindOpcodes(
     }
     if (!Opcode.Symbol.empty()) {
       OS.write(Opcode.Symbol.data(), Opcode.Symbol.size());
-      OS.write("\0", 1);
+      OS.write('\0');
     }
   }
+}
+
+void MachOWriter::dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry) {
+  encodeSLEB128(Entry.TerminalSize, OS);
+  if (Entry.TerminalSize > 0) {
+    encodeSLEB128(Entry.Flags, OS);
+    if ( Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT ) {
+      encodeSLEB128(Entry.Other, OS);
+      OS << Entry.ImportName;
+      OS.write('\0');
+    }
+    else {
+      encodeSLEB128(Entry.Address, OS);
+      if (Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER)
+        encodeSLEB128(Entry.Other, OS);
+    }
+  }
+  OS.write(static_cast<uint8_t>(Entry.Children.size()));
+  for (auto EE : Entry.Children){
+    OS << EE.Name;
+    OS.write('\0');
+    encodeSLEB128(EE.NodeOffset, OS);
+  }
+  for (auto EE : Entry.Children)
+    dumpExportEntry(OS, EE);
+}
+
+Error MachOWriter::writeExportTrie(raw_ostream &OS) {
+  dumpExportEntry(OS, Obj.LinkEdit.ExportTrie);
+  return Error::success();
 }
 
 Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
@@ -317,6 +355,10 @@ Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
                    LinkEdit.WeakBindOpcodes);
   writeBindOpcodes(OS, DyldInfoOnlyCmd->lazy_bind_off,
                    LinkEdit.LazyBindOpcodes);
+
+  ZeroToOffset(OS, DyldInfoOnlyCmd->export_off);
+  if(auto Err = writeExportTrie(OS))
+    return Err;
 
   // Fill to the end of the string table
   ZeroToOffset(OS, SymtabCmd->stroff + SymtabCmd->strsize);

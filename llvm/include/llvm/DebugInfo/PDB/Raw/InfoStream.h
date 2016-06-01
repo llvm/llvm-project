@@ -21,6 +21,7 @@
 
 namespace llvm {
 namespace pdb {
+class PDBFile;
 class InfoStream {
 public:
   InfoStream(PDBFile &File);

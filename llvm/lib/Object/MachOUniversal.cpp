@@ -67,16 +67,16 @@ MachOUniversalBinary::ObjectForArch::ObjectForArch(
   }
 }
 
-ErrorOr<std::unique_ptr<MachOObjectFile>>
+Expected<std::unique_ptr<MachOObjectFile>>
 MachOUniversalBinary::ObjectForArch::getAsObjectFile() const {
   if (!Parent)
-    return object_error::parse_failed;
+    return errorCodeToError(object_error::parse_failed);
 
   StringRef ParentData = Parent->getData();
   StringRef ObjectData = ParentData.substr(Header.offset, Header.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
-  return expectedToErrorOr(ObjectFile::createMachOObjectFile(ObjBuffer));
+  return ObjectFile::createMachOObjectFile(ObjBuffer);
 }
 
 ErrorOr<std::unique_ptr<Archive>>
@@ -123,14 +123,14 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source,
   ec = std::error_code();
 }
 
-ErrorOr<std::unique_ptr<MachOObjectFile>>
+Expected<std::unique_ptr<MachOObjectFile>>
 MachOUniversalBinary::getObjectForArch(StringRef ArchName) const {
   if (Triple(ArchName).getArch() == Triple::ArchType::UnknownArch)
-    return object_error::arch_not_found;
+    return errorCodeToError(object_error::arch_not_found);
 
   for (object_iterator I = begin_objects(), E = end_objects(); I != E; ++I) {
     if (I->getArchTypeName() == ArchName)
       return I->getAsObjectFile();
   }
-  return object_error::arch_not_found;
+  return errorCodeToError(object_error::arch_not_found);
 }

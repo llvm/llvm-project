@@ -13,23 +13,34 @@
 using namespace llvm;
 using namespace codeview;
 
-MemoryTypeTableBuilder::Record::Record(StringRef RData)
-    : Size(RData.size()), Data(new char[RData.size()]) {
-  memcpy(Data.get(), RData.data(), RData.size());
-}
-
 TypeIndex MemoryTypeTableBuilder::writeRecord(StringRef Data) {
+  assert(Data.size() <= UINT16_MAX);
   auto I = HashedRecords.find(Data);
   if (I != HashedRecords.end()) {
     return I->second;
   }
 
-  std::unique_ptr<Record> R(new Record(Data));
+  // The record provided by the user lacks the 2 byte size field prefix and is
+  // not padded to 4 bytes. Ultimately, that is what gets emitted in the object
+  // file, so pad it out now.
+  const int SizeOfRecLen = 2;
+  const int Align = 4;
+  int TotalSize = alignTo(Data.size() + SizeOfRecLen, Align);
+  assert(TotalSize - SizeOfRecLen <= UINT16_MAX);
+  char *Mem =
+      reinterpret_cast<char *>(RecordStorage.Allocate(TotalSize, Align));
+  *reinterpret_cast<ulittle16_t *>(Mem) = uint16_t(TotalSize - SizeOfRecLen);
+  memcpy(Mem + SizeOfRecLen, Data.data(), Data.size());
+  for (int I = Data.size() + SizeOfRecLen; I < TotalSize; ++I)
+    Mem[I] = LF_PAD0 + (TotalSize - I);
 
   TypeIndex TI(static_cast<uint32_t>(Records.size()) +
                TypeIndex::FirstNonSimpleIndex);
-  HashedRecords.insert(std::make_pair(StringRef(R->data(), R->size()), TI));
-  Records.push_back(std::move(R));
+
+  // Use only the data supplied by the user as a key to the hash table, so that
+  // future lookups will succeed.
+  HashedRecords.insert(std::make_pair(StringRef(Mem + SizeOfRecLen, Data.size()), TI));
+  Records.push_back(StringRef(Mem, TotalSize));
 
   return TI;
 }

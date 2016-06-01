@@ -71,9 +71,14 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
 
 PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
-  if (bitTrackingDCE(F, DB))
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+  if (!bitTrackingDCE(F, DB))
+    return PreservedAnalyses::all();
+
+  // FIXME: BDCE should also 'preserve the CFG'.
+  // The new pass manager has currently no way to do it.
+  auto PA = PreservedAnalyses();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 
 namespace {

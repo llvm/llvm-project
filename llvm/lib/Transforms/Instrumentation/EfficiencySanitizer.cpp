@@ -102,6 +102,21 @@ OverrideOptionsFromCL(EfficiencySanitizerOptions Options) {
   return Options;
 }
 
+// Create a constant for Str so that we can pass it to the run-time lib.
+static GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
+                                                    bool AllowMerging) {
+  Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
+  // We use private linkage for module-local strings. If they can be merged
+  // with another one, we set the unnamed_addr attribute.
+  GlobalVariable *GV =
+    new GlobalVariable(M, StrConst->getType(), true,
+                       GlobalValue::PrivateLinkage, StrConst, "");
+  if (AllowMerging)
+    GV->setUnnamedAddr(true);
+  GV->setAlignment(1);  // Strings may not be merged w/o setting align 1.
+  return GV;
+}
+
 /// EfficiencySanitizer: instrument each module to find performance issues.
 class EfficiencySanitizer : public ModulePass {
 public:
@@ -115,8 +130,9 @@ public:
 private:
   bool initOnModule(Module &M);
   void initializeCallbacks(Module &M);
-  GlobalVariable *createEsanInitToolGV(Module &M);
-  void createDestructor(Module &M, GlobalVariable *GV);
+  GlobalVariable *createCacheFragInfoGV(Module &M, Constant *UnitName);
+  Constant *createEsanInitToolInfoArg(Module &M);
+  void createDestructor(Module &M, Constant *ToolInfoArg);
   bool runOnFunction(Function &F, Module &M);
   bool instrumentLoadOrStore(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(MemIntrinsic *MI);
@@ -204,18 +220,73 @@ void EfficiencySanitizer::initializeCallbacks(Module &M) {
                             IRB.getInt32Ty(), IntptrTy, nullptr));
 }
 
-// Create the tool-specific global variable passed to EsanInit and EsanExit.
-GlobalVariable *EfficiencySanitizer::createEsanInitToolGV(Module &M) {
-  GlobalVariable *GV = nullptr;
-  // FIXME: create the tool specific global variable.
-  if (GV == nullptr) {
-    GV = new GlobalVariable(M, IntptrTy, true, GlobalVariable::InternalLinkage,
-                            Constant::getNullValue(IntptrTy));
-  }
-  return GV;
+// Create the global variable for the cache-fragmentation tool.
+GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
+    Module &M, Constant *UnitName) {
+  assert(Options.ToolType == EfficiencySanitizerOptions::ESAN_CacheFrag);
+
+  auto *Int8PtrTy = Type::getInt8PtrTy(*Ctx);
+  auto *Int8PtrPtrTy = Int8PtrTy->getPointerTo();
+  auto *Int32Ty = Type::getInt32Ty(*Ctx);
+  auto *Int64PtrTy = Type::getInt64PtrTy(*Ctx);
+  // This structure should be kept consistent with the StructInfo struct
+  // in the runtime library.
+  // struct StructInfo {
+  //   const char *StructName;
+  //   u32 NumOfFields;
+  //   u64 *FieldCounters;
+  //   const char **FieldTypeNames;
+  // };
+  auto *StructInfoTy =
+    StructType::get(Int8PtrTy, Int32Ty, Int64PtrTy, Int8PtrPtrTy, nullptr);
+  auto *StructInfoPtrTy = StructInfoTy->getPointerTo();
+  // This structure should be kept consistent with the CacheFragInfo struct
+  // in the runtime library.
+  // struct CacheFragInfo {
+  //   const char *UnitName;
+  //   u32 NumOfStructs;
+  //   StructInfo *Structs;
+  // };
+  auto *CacheFragInfoTy =
+    StructType::get(Int8PtrTy, Int32Ty, StructInfoPtrTy, nullptr);
+
+  std::vector<StructType *> Vec = M.getIdentifiedStructTypes();
+  // FIXME: iterate over Vec and create the StructInfo array.
+  auto *CacheFragInfoGV = new GlobalVariable(
+      M, CacheFragInfoTy, true, GlobalVariable::InternalLinkage,
+      ConstantStruct::get(CacheFragInfoTy,
+                          UnitName,
+                          ConstantInt::get(Int32Ty, Vec.size()),
+                          ConstantPointerNull::get(StructInfoPtrTy),
+                          nullptr));
+  return CacheFragInfoGV;
 }
 
-void EfficiencySanitizer::createDestructor(Module &M, GlobalVariable *GV) {
+// Create the tool-specific argument passed to EsanInit and EsanExit.
+Constant *EfficiencySanitizer::createEsanInitToolInfoArg(Module &M) {
+  // This structure contains tool-specific information about each compilation
+  // unit (module) and is passed to the runtime library.
+  GlobalVariable *ToolInfoGV = nullptr;
+
+  auto *Int8PtrTy = Type::getInt8PtrTy(*Ctx);
+  // Compilation unit name.
+  auto *UnitName = ConstantExpr::getPointerCast(
+      createPrivateGlobalForString(M, M.getModuleIdentifier(), true),
+      Int8PtrTy);
+
+  // Create the tool-specific variable.
+  if (Options.ToolType == EfficiencySanitizerOptions::ESAN_CacheFrag)
+    ToolInfoGV = createCacheFragInfoGV(M, UnitName);
+
+  if (ToolInfoGV != nullptr)
+    return ConstantExpr::getPointerCast(ToolInfoGV, Int8PtrTy);
+
+  // Create the null pointer if no tool-specific variable created.
+  return ConstantPointerNull::get(Int8PtrTy);
+}
+
+void EfficiencySanitizer::createDestructor(Module &M, Constant *ToolInfoArg) {
+  PointerType *Int8PtrTy = Type::getInt8PtrTy(*Ctx);
   EsanDtorFunction = Function::Create(FunctionType::get(Type::getVoidTy(*Ctx),
                                                         false),
                                       GlobalValue::InternalLinkage,
@@ -224,10 +295,9 @@ void EfficiencySanitizer::createDestructor(Module &M, GlobalVariable *GV) {
   IRBuilder<> IRB_Dtor(EsanDtorFunction->getEntryBlock().getTerminator());
   Function *EsanExit = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction(EsanExitName, IRB_Dtor.getVoidTy(),
-                            IntptrTy, nullptr));
+                            Int8PtrTy, nullptr));
   EsanExit->setLinkage(Function::ExternalLinkage);
-  IRB_Dtor.CreateCall(EsanExit,
-                      {IRB_Dtor.CreatePointerCast(GV, IntptrTy)});
+  IRB_Dtor.CreateCall(EsanExit, {ToolInfoArg});
   appendToGlobalDtors(M, EsanDtorFunction, EsanCtorAndDtorPriority);
 }
 
@@ -236,18 +306,19 @@ bool EfficiencySanitizer::initOnModule(Module &M) {
   const DataLayout &DL = M.getDataLayout();
   IRBuilder<> IRB(M.getContext());
   IntegerType *OrdTy = IRB.getInt32Ty();
+  PointerType *Int8PtrTy = Type::getInt8PtrTy(*Ctx);
   IntptrTy = DL.getIntPtrType(M.getContext());
   // Create the variable passed to EsanInit and EsanExit.
-  GlobalVariable *GV = createEsanInitToolGV(M);
+  Constant *ToolInfoArg = createEsanInitToolInfoArg(M);
   // Constructor
   std::tie(EsanCtorFunction, std::ignore) = createSanitizerCtorAndInitFunctions(
-      M, EsanModuleCtorName, EsanInitName, /*InitArgTypes=*/{OrdTy, IntptrTy},
+      M, EsanModuleCtorName, EsanInitName, /*InitArgTypes=*/{OrdTy, Int8PtrTy},
       /*InitArgs=*/{
         ConstantInt::get(OrdTy, static_cast<int>(Options.ToolType)),
-        ConstantExpr::getPointerCast(GV, IntptrTy)});
+        ToolInfoArg});
   appendToGlobalCtors(M, EsanCtorFunction, EsanCtorAndDtorPriority);
 
-  createDestructor(M, GV);
+  createDestructor(M, ToolInfoArg);
   return true;
 }
 

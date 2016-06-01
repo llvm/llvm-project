@@ -356,6 +356,11 @@ namespace llvm {
   /// This pass splits the stack into a safe stack and an unsafe stack to
   /// protect against stack-based overflow vulnerabilities.
   FunctionPass *createSafeStackPass(const TargetMachine *TM = nullptr);
+
+  /// This pass detects subregister lanes in a virtual register that are used
+  /// independently of other lanes and splits them into separate virtual
+  /// registers.
+  extern char &RenameIndependentSubregsID;
 } // End llvm namespace
 
 /// Target machine pass initializer for passes with dependencies. Use with

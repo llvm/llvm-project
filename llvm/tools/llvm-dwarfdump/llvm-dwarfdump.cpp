@@ -105,7 +105,7 @@ static void DumpInput(StringRef Filename) {
   else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
       auto MachOOrErr = ObjForArch.getAsObjectFile();
-      error(Filename, MachOOrErr.getError());
+      error(Filename, errorToErrorCode(MachOOrErr.takeError()));
       DumpObjectFile(**MachOOrErr,
                      Filename + " (" + ObjForArch.getArchTypeName() + ")");
     }

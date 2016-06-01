@@ -32,6 +32,7 @@ class MachODumper {
   void dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpBindOpcodes(std::vector<MachOYAML::BindOpcode> &BindOpcodes,
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
+  void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
 
 public:
   MachODumper(const object::MachOObjectFile &O) : Obj(O) {}
@@ -149,6 +150,13 @@ const char *MachODumper::processLoadCommandData<MachO::dylinker_command>(
   return readString<MachO::dylinker_command>(LC, LoadCmd);
 }
 
+template <>
+const char *MachODumper::processLoadCommandData<MachO::rpath_command>(
+    MachOYAML::LoadCommand &LC,
+    const llvm::object::MachOObjectFile::LoadCommandInfo &LoadCmd) {
+  return readString<MachO::rpath_command>(LC, LoadCmd);
+}
+
 Expected<std::unique_ptr<MachOYAML::Object>> MachODumper::dump() {
   auto Y = make_unique<MachOYAML::Object>();
   dumpHeader(Y);
@@ -199,8 +207,9 @@ void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
   dumpBindOpcodes(Y->LinkEdit.BindOpcodes, Obj.getDyldInfoBindOpcodes());
   dumpBindOpcodes(Y->LinkEdit.WeakBindOpcodes,
                   Obj.getDyldInfoWeakBindOpcodes());
-  dumpBindOpcodes(Y->LinkEdit.LazyBindOpcodes,
-                  Obj.getDyldInfoLazyBindOpcodes(), true);
+  dumpBindOpcodes(Y->LinkEdit.LazyBindOpcodes, Obj.getDyldInfoLazyBindOpcodes(),
+                  true);
+  dumpExportTrie(Y);
 }
 
 void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
@@ -244,6 +253,13 @@ void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
   }
 }
 
+StringRef ReadStringRef(const uint8_t *Start) {
+  const uint8_t *Itr = Start;
+  for (; *Itr; ++Itr)
+    ;
+  return StringRef(reinterpret_cast<const char *>(Start), Itr - Start);
+}
+
 void MachODumper::dumpBindOpcodes(
     std::vector<MachOYAML::BindOpcode> &BindOpcodes,
     ArrayRef<uint8_t> OpcodeBuffer, bool Lazy) {
@@ -257,7 +273,6 @@ void MachODumper::dumpBindOpcodes(
     unsigned Count;
     uint64_t ULEB = 0;
     int64_t SLEB = 0;
-    const uint8_t *SymStart;
 
     switch (BindOp.Opcode) {
     case MachO::BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB:
@@ -282,12 +297,8 @@ void MachODumper::dumpBindOpcodes(
       break;
 
     case MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM:
-      SymStart = ++OpCode;
-      while (*OpCode) {
-        ++OpCode;
-      }
-      BindOp.Symbol = StringRef(reinterpret_cast<const char *>(SymStart),
-                                OpCode - SymStart);
+      BindOp.Symbol = ReadStringRef(OpCode + 1);
+      OpCode += BindOp.Symbol.size() + 1;
       break;
     default:
       break;
@@ -300,6 +311,117 @@ void MachODumper::dumpBindOpcodes(
     if (!Lazy && BindOp.Opcode == MachO::BIND_OPCODE_DONE)
       break;
   }
+}
+
+/*!
+ * /brief processes a node from the export trie, and its children.
+ *
+ * To my knowledge there is no documentation of the encoded format of this data
+ * other than in the heads of the Apple linker engineers. To that end hopefully
+ * this comment and the implementation below can serve to light the way for
+ * anyone crazy enough to come down this path in the future.
+ *
+ * This function reads and preserves the trie structure of the export trie. To
+ * my knowledge there is no code anywhere else that reads the data and preserves
+ * the Trie. LD64 (sources available at opensource.apple.com) has a similar
+ * implementation that parses the export trie into a vector. That code as well
+ * as LLVM's libObject MachO implementation were the basis for this.
+ *
+ * The export trie is an encoded trie. The node serialization is a bit awkward.
+ * The below pseudo-code is the best description I've come up with for it.
+ *
+ * struct SerializedNode {
+ *   ULEB128 TerminalSize;
+ *   struct TerminalData { <-- This is only present if TerminalSize > 0
+ *     ULEB128 Flags;
+ *     ULEB128 Address; <-- Present if (! Flags & REEXPORT )
+ *     ULEB128 Other; <-- Present if ( Flags & REEXPORT ||
+ *                                     Flags & STUB_AND_RESOLVER )
+ *     char[] ImportName; <-- Present if ( Flags & REEXPORT )
+ *   }
+ *   uint8_t ChildrenCount;
+ *   Pair<char[], ULEB128> ChildNameOffsetPair[ChildrenCount];
+ *   SerializedNode Children[ChildrenCount]
+ * }
+ *
+ * Terminal nodes are nodes that represent actual exports. They can appear
+ * anywhere in the tree other than at the root; they do not need to be leaf
+ * nodes. When reading the data out of the trie this routine reads it in-order,
+ * but it puts the child names and offsets directly into the child nodes. This
+ * results in looping over the children twice during serialization and
+ * de-serialization, but it makes the YAML representation more human readable.
+ *
+ * Below is an example of the graph from a "Hello World" executable:
+ *
+ * -------
+ * | ''  |
+ * -------
+ *    |
+ * -------
+ * | '_' |
+ * -------
+ *    |
+ *    |----------------------------------------|
+ *    |                                        |
+ *  ------------------------      ---------------------
+ *  | '_mh_execute_header' |      | 'main'            |
+ *  | Flags: 0x00000000    |      | Flags: 0x00000000 |
+ *  | Addr:  0x00000000    |      | Addr:  0x00001160 |
+ *  ------------------------      ---------------------
+ *
+ * This graph represents the trie for the exports "__mh_execute_header" and
+ * "_main". In the graph only the "_main" and "__mh_execute_header" nodes are
+ * terminal.
+*/
+
+const uint8_t *processExportNode(const uint8_t *CurrPtr,
+                                 const uint8_t *const End,
+                                 MachOYAML::ExportEntry &Entry) {
+  if (CurrPtr >= End)
+    return CurrPtr;
+  unsigned Count = 0;
+  Entry.TerminalSize = decodeULEB128(CurrPtr, &Count);
+  CurrPtr += Count;
+  if (Entry.TerminalSize != 0) {
+    Entry.Flags = decodeULEB128(CurrPtr, &Count);
+    CurrPtr += Count;
+    if (Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT) {
+      Entry.Address = 0;
+      Entry.Other = decodeULEB128(CurrPtr, &Count);
+      CurrPtr += Count;
+      Entry.ImportName = std::string(reinterpret_cast<const char *>(CurrPtr));
+    } else {
+      Entry.Address = decodeULEB128(CurrPtr, &Count);
+      CurrPtr += Count;
+      if (Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
+        Entry.Other = decodeULEB128(CurrPtr, &Count);
+        CurrPtr += Count;
+      } else
+        Entry.Other = 0;
+    }
+  }
+  uint8_t childrenCount = *CurrPtr++;
+  if (childrenCount == 0)
+    return CurrPtr;
+
+  Entry.Children.insert(Entry.Children.begin(), (size_t)childrenCount,
+                        MachOYAML::ExportEntry());
+  for (auto &Child : Entry.Children) {
+    Child.Name = std::string(reinterpret_cast<const char *>(CurrPtr));
+    CurrPtr += Child.Name.length() + 1;
+    Child.NodeOffset = decodeULEB128(CurrPtr, &Count);
+    CurrPtr += Count;
+  }
+  for (auto &Child : Entry.Children) {
+    CurrPtr = processExportNode(CurrPtr, End, Child);
+  }
+  return CurrPtr;
+}
+
+void MachODumper::dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y) {
+  MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+  auto ExportsTrie = Obj.getDyldInfoExportsTrie();
+  processExportNode(ExportsTrie.begin(), ExportsTrie.end(), LEData.ExportTrie);
 }
 
 Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj) {

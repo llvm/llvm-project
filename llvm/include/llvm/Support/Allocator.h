@@ -278,6 +278,8 @@ public:
     return TotalMemory;
   }
 
+  size_t getBytesAllocated() const { return BytesAllocated; }
+
   void PrintStats() const {
     detail::printBumpPtrAllocatorStats(Slabs.size(), BytesAllocated,
                                        getTotalMemory());
