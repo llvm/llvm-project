@@ -25,6 +25,11 @@ __host__ __device__ void baz();
 __host__ __device__ void bar() {
   // DEVICE: call void @_Z3bazv() [[CALL_ATTR:#[0-9]+]]
   baz();
+  // DEVICE: call i32 asm "trap;", "=l"() [[ASM_ATTR:#[0-9]+]]
+  int x;
+  asm ("trap;" : "=l"(x));
+  // DEVICE: call void asm sideeffect "trap;", ""() [[ASM_ATTR:#[0-9]+]]
+  asm volatile ("trap;");
 }
 
 // DEVICE: declare void @_Z3bazv() [[BAZ_ATTR:#[0-9]+]]
@@ -32,6 +37,7 @@ __host__ __device__ void bar() {
 // DEVICE-SAME: convergent
 // DEVICE-SAME: }
 // DEVICE: attributes [[CALL_ATTR]] = { convergent }
+// DEVICE: attributes [[ASM_ATTR]] = { convergent
 
 // HOST: declare void @_Z3bazv() [[BAZ_ATTR:#[0-9]+]]
 // HOST: attributes [[BAZ_ATTR]] = {

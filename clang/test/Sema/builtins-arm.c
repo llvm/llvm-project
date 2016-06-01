@@ -48,6 +48,38 @@ void test5() {
 }
 
 void test6(int a, int b, int c) {
+  __builtin_arm_ldc(1, 2, &a);
+  __builtin_arm_ldc(a, 2, &a); // expected-error {{argument to '__builtin_arm_ldc' must be a constant integer}}
+  __builtin_arm_ldc(1, a, &a); // expected-error {{argument to '__builtin_arm_ldc' must be a constant integer}}
+
+  __builtin_arm_ldcl(1, 2, &a);
+  __builtin_arm_ldcl(a, 2, &a); // expected-error {{argument to '__builtin_arm_ldcl' must be a constant integer}}
+  __builtin_arm_ldcl(1, a, &a); // expected-error {{argument to '__builtin_arm_ldcl' must be a constant integer}}
+
+  __builtin_arm_ldc2(1, 2, &a);
+  __builtin_arm_ldc2(a, 2, &a); // expected-error {{argument to '__builtin_arm_ldc2' must be a constant integer}}
+  __builtin_arm_ldc2(1, a, &a); // expected-error {{argument to '__builtin_arm_ldc2' must be a constant integer}}
+
+  __builtin_arm_ldc2l(1, 2, &a);
+  __builtin_arm_ldc2l(a, 2, &a); // expected-error {{argument to '__builtin_arm_ldc2l' must be a constant integer}}
+  __builtin_arm_ldc2l(1, a, &a); // expected-error {{argument to '__builtin_arm_ldc2l' must be a constant integer}}
+
+  __builtin_arm_stc(1, 2, &a);
+  __builtin_arm_stc(a, 2, &a); // expected-error {{argument to '__builtin_arm_stc' must be a constant integer}}
+  __builtin_arm_stc(1, a, &a); // expected-error {{argument to '__builtin_arm_stc' must be a constant integer}}
+
+  __builtin_arm_stcl(1, 2, &a);
+  __builtin_arm_stcl(a, 2, &a); // expected-error {{argument to '__builtin_arm_stcl' must be a constant integer}}
+  __builtin_arm_stcl(1, a, &a); // expected-error {{argument to '__builtin_arm_stcl' must be a constant integer}}
+
+  __builtin_arm_stc2(1, 2, &a);
+  __builtin_arm_stc2(a, 2, &a); // expected-error {{argument to '__builtin_arm_stc2' must be a constant integer}}
+  __builtin_arm_stc2(1, a, &a); // expected-error {{argument to '__builtin_arm_stc2' must be a constant integer}}
+
+  __builtin_arm_stc2l(1, 2, &a);
+  __builtin_arm_stc2l(a, 2, &a); // expected-error {{argument to '__builtin_arm_stc2l' must be a constant integer}}
+  __builtin_arm_stc2l(1, a, &a); // expected-error {{argument to '__builtin_arm_stc2l' must be a constant integer}}
+
   __builtin_arm_cdp(a, 2, 3, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}
   __builtin_arm_cdp(1, a, 3, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}
   __builtin_arm_cdp(1, 2, a, 4, 5, 6); // expected-error {{argument to '__builtin_arm_cdp' must be a constant integer}}

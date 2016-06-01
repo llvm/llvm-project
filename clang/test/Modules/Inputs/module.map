@@ -414,3 +414,7 @@ module MethodPoolString2 {
 }
 
 module Empty {}
+
+module MacroFabs1 {
+  header "MacroFabs1.h"
+}

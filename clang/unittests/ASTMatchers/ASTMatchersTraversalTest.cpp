@@ -122,8 +122,8 @@ TEST(Has, MatchesChildTypes) {
 
 TEST(StatementMatcher, Has) {
   StatementMatcher HasVariableI =
-    expr(hasType(pointsTo(recordDecl(hasName("X")))),
-         has(declRefExpr(to(varDecl(hasName("i"))))));
+      expr(hasType(pointsTo(recordDecl(hasName("X")))),
+           has(ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("i")))))));
 
   EXPECT_TRUE(matches(
     "class X; X *x(int); void c() { int i; x(i); }", HasVariableI));

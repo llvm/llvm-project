@@ -84,6 +84,62 @@ void prefetch(int i) {
 // CHECK: call {{.*}} @llvm.prefetch(i8* %{{.*}}, i32 1, i32 3, i32 0)
 }
 
+void ldc(const void *i) {
+  // CHECK: define void @ldc(i8* %i)
+  // CHECK: call void @llvm.arm.ldc(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_ldc(1, 2, i);
+}
+
+void ldcl(const void *i) {
+  // CHECK: define void @ldcl(i8* %i)
+  // CHECK: call void @llvm.arm.ldcl(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_ldcl(1, 2, i);
+}
+
+void ldc2(const void *i) {
+  // CHECK: define void @ldc2(i8* %i)
+  // CHECK: call void @llvm.arm.ldc2(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_ldc2(1, 2, i);
+}
+
+void ldc2l(const void *i) {
+  // CHECK: define void @ldc2l(i8* %i)
+  // CHECK: call void @llvm.arm.ldc2l(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_ldc2l(1, 2, i);
+}
+
+void stc(void *i) {
+  // CHECK: define void @stc(i8* %i)
+  // CHECK: call void @llvm.arm.stc(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_stc(1, 2, i);
+}
+
+void stcl(void *i) {
+  // CHECK: define void @stcl(i8* %i)
+  // CHECK: call void @llvm.arm.stcl(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_stcl(1, 2, i);
+}
+
+void stc2(void *i) {
+  // CHECK: define void @stc2(i8* %i)
+  // CHECK: call void @llvm.arm.stc2(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_stc2(1, 2, i);
+}
+
+void stc2l(void *i) {
+  // CHECK: define void @stc2l(i8* %i)
+  // CHECK: call void @llvm.arm.stc2l(i32 1, i32 2, i8* %i)
+  // CHECK-NEXT: ret void
+  __builtin_arm_stc2l(1, 2, i);
+}
+
 void cdp() {
   // CHECK: define void @cdp()
   // CHECK: call void @llvm.arm.cdp(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6)

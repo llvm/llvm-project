@@ -32,6 +32,14 @@ default: ;
   END
 }
 
+// PR27948 - Crash when handling a switch partially covered by a macro
+// CHECK: baz
+#define START2 switch (0) default:
+void baz() {
+  for (;;)
+    START2 return; // CHECK: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:11 = #1 (Expanded file = 1)
+}
+
 int main(int argc, const char *argv[]) {
   foo(3);
   return 0;

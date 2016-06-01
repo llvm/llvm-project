@@ -1165,8 +1165,6 @@ public:
 /// ChildT must be an AST base type.
 template <typename T, typename ChildT>
 class HasMatcher : public WrapperMatcherInterface<T> {
-  static_assert(IsBaseType<ChildT>::value,
-                "has only accepts base type matcher");
 
 public:
   explicit HasMatcher(const Matcher<ChildT> &ChildMatcher)
@@ -1174,10 +1172,9 @@ public:
 
   bool matches(const T &Node, ASTMatchFinder *Finder,
                BoundNodesTreeBuilder *Builder) const override {
-    return Finder->matchesChildOf(
-        Node, this->InnerMatcher, Builder,
-        ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses,
-        ASTMatchFinder::BK_First);
+    return Finder->matchesChildOf(Node, this->InnerMatcher, Builder,
+                                  ASTMatchFinder::TK_AsIs,
+                                  ASTMatchFinder::BK_First);
   }
 };
 
