@@ -175,14 +175,21 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
 
+    ArchSpec target_arch;
+    if (target_sp)
+        target_arch = target_sp->GetArchitecture();
+
+    const auto target_machine = target_arch.GetMachine();
+
     // TODO: figure out what to really do when we don't have a valid target.
     // Sometimes this will be ok to just use the host target triple (when we
     // evaluate say "2+3", but other expressions like breakpoint conditions
     // and other things that _are_ target specific really shouldn't just be
     // using the host triple. This needs to be fixed in a better way.
-    if (target_sp && target_sp->GetArchitecture().IsValid())
+
+    if (target_sp && target_arch.IsValid())
     {
-        std::string triple = target_sp->GetArchitecture().GetTriple().str();
+        std::string triple = target_arch.GetTriple().str();
         m_compiler->getTargetOpts().Triple = triple;
     }
     else
@@ -190,8 +197,8 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
         m_compiler->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
     }
 
-    if (target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86 ||
-        target_sp->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
+    if (target_machine == llvm::Triple::x86 ||
+        target_machine == llvm::Triple::x86_64)
     {
         m_compiler->getTargetOpts().Features.push_back("+sse");
         m_compiler->getTargetOpts().Features.push_back("+sse2");
@@ -206,6 +213,10 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     }
 
     m_compiler->createDiagnostics();
+
+    // Set the target CPU to generate code for.
+    // This will be empty for any CPU that doesn't really need to make a special CPU string.
+    m_compiler->getTargetOpts().CPU = target_arch.GetClangTargetCPU();
 
     // Create the target instance.
     m_compiler->setTarget(TargetInfo::CreateTargetInfo(
