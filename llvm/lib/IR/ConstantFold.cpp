@@ -2195,7 +2195,7 @@ static Constant *ConstantFoldGetElementPtrImpl(Type *PointeeTy, Constant *C,
   for (unsigned i = 1, e = Idxs.size(); i != e;
        Prev = Ty, Ty = cast<CompositeType>(Ty)->getTypeAtIndex(Idxs[i]), ++i) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Idxs[i])) {
-      if (isa<ArrayType>(Ty) || isa<VectorType>(Ty))
+      if (isa<ArrayType>(Ty))
         if (CI->getSExtValue() > 0 &&
             !isIndexInRangeOfSequentialType(cast<SequentialType>(Ty), CI)) {
           if (isa<SequentialType>(Prev)) {
