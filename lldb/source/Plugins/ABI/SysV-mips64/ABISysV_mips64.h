@@ -53,6 +53,9 @@ public:
     bool
     RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
+    bool
+    IsSoftFloat(uint32_t fp_flag) const;
+
     // The SysV mips ABI requires that stack frames be 16 byte aligned.
     // When there is a trap handler on the stack, e.g. _sigtramp in userland
     // code, we've seen that the stack pointer is often not aligned properly
