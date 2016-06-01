@@ -29,8 +29,9 @@
 # RUN: echo "{ local: *; };" >  ver
 # RUN: echo > dyn
 # RUN: echo > file
+# RUN: echo > file2
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o 'foo bar'
-# RUN: ld.lld --reproduce repro2 'foo bar' -L"foo bar" -Lfile \
+# RUN: ld.lld --reproduce repro2 'foo bar' -L"foo bar" -Lfile -Tfile2 \
 # RUN:   --dynamic-list dyn -rpath file --script file --version-script ver \
 # RUN:   --dynamic-linker "some unusual/path" -soname 'foo bar' -soname='foo bar'
 # RUN: cpio -id < repro2.cpio
@@ -38,6 +39,7 @@
 # RSP2:      "{{.*}}foo bar"
 # RSP2-NEXT: -L "{{.*}}foo bar"
 # RSP2-NEXT: -L {{.+}}file
+# RSP2-NEXT: --script {{.+}}file2
 # RSP2-NEXT: --dynamic-list {{.+}}dyn
 # RSP2-NEXT: -rpath {{.+}}file
 # RSP2-NEXT: --script {{.+}}file

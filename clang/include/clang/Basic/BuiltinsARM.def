@@ -48,6 +48,16 @@ BUILTIN(__builtin_arm_vcvtr_f, "ffi", "nc")
 BUILTIN(__builtin_arm_vcvtr_d, "fdi", "nc")
 
 // Coprocessor
+BUILTIN(__builtin_arm_ldc, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldcl, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldc2, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldc2l, "vUIiUIivC*", "")
+
+BUILTIN(__builtin_arm_stc, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stcl, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stc2, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stc2l, "vUIiUIiv*", "")
+
 BUILTIN(__builtin_arm_mcr, "vUIiUIiUiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mcr2, "vUIiUIiUiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mrc, "UiUIiUIiUIiUIiUIi", "")

@@ -422,6 +422,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     case OPT_l:
       addLibrary(Arg->getValue());
       break;
+    case OPT_alias_script_T:
     case OPT_INPUT:
     case OPT_script:
       addFile(Arg->getValue());

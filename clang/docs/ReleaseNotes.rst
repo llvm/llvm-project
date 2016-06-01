@@ -158,6 +158,21 @@ OpenCL C Language Changes in Clang
 
 ...
 
+OpenMP Support in Clang
+----------------------------------
+
+Added support for all non-offloading features from OpenMP 4.5, including using
+data members in private clauses of non-static member functions. Additionally,
+data members can be used as loop control variables in loop-based directives.
+
+Currently Clang supports OpenMP 3.1 and all non-offloading features of
+OpenMP 4.0/4.5. Offloading features are under development. Clang defines macro
+_OPENMP and sets it to OpenMP 3.1 (in accordance with OpenMP standard) by
+default. User may change this value using ``-fopenmp-version=[31|40|45]`` option.
+
+The codegen for OpenMP constructs was significantly improved to produce much
+more stable and faster code.
+
 Internal API Changes
 --------------------
 
@@ -170,11 +185,13 @@ this section should help get you past the largest hurdles of upgrading.
 AST Matchers
 ------------
 
-- hasAnyArgument: Matcher no longer ignores parentheses and implicit casts on
-  the argument before applying the inner matcher. The fix was done to allow for
-  greater control by the user. In all existing checkers that use this matcher
-  all instances of code ``hasAnyArgument(<inner matcher>)`` must be changed to
-  ``hasAnyArgument(ignoringParenImpCasts(<inner matcher>))``.
+- has and hasAnyArgument: Matchers no longer ignores parentheses and implicit
+  casts on the argument before applying the inner matcher. The fix was done to
+  allow for greater control by the user. In all existing checkers that use this
+  matcher all instances of code ``hasAnyArgument(<inner matcher>)`` or
+  ``has(<inner matcher>)`` must be changed to
+  ``hasAnyArgument(ignoringParenImpCasts(<inner matcher>))`` or
+  ``has(ignoringParenImpCasts(<inner matcher>))``.
 
 ...
 

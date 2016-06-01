@@ -2054,6 +2054,14 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
                                           llvm::ConstantAsMetadata::get(Loc)));
   }
 
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
+    // Conservatively, mark all inline asm blocks in CUDA as convergent
+    // (meaning, they may call an intrinsically convergent op, such as bar.sync,
+    // and so can't have certain optimizations applied around them).
+    Result->addAttribute(llvm::AttributeSet::FunctionIndex,
+                         llvm::Attribute::Convergent);
+  }
+
   // Extract all of the register value results from the asm.
   std::vector<llvm::Value*> RegResults;
   if (ResultRegTypes.size() == 1) {

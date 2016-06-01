@@ -773,6 +773,8 @@ tooling::Replacements formatReplacements(StringRef Code,
 
 /// \brief Returns the replacements corresponding to applying \p Replaces and
 /// cleaning up the code after that.
+/// This also inserts a C++ #include directive into the correct block if the
+/// replacement corresponding to the header insertion has offset UINT_MAX.
 tooling::Replacements
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);

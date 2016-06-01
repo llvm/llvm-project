@@ -1,6 +1,6 @@
 project(exec C)
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.4.3)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag("-std=c99" C99_SUPPORTED)

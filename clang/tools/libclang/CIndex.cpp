@@ -6720,6 +6720,7 @@ static void clang_annotateTokensImpl(CXTranslationUnit TU, ASTUnit *CXXUnit,
               .Case("setter", true)
               .Case("strong", true)
               .Case("weak", true)
+              .Case("class", true)
               .Default(false))
             Tokens[I].int_data[0] = CXToken_Keyword;
         }
@@ -7166,6 +7167,7 @@ unsigned clang_Cursor_getObjCPropertyAttributes(CXCursor C, unsigned reserved) {
   SET_CXOBJCPROP_ATTR(weak);
   SET_CXOBJCPROP_ATTR(strong);
   SET_CXOBJCPROP_ATTR(unsafe_unretained);
+  SET_CXOBJCPROP_ATTR(class);
 #undef SET_CXOBJCPROP_ATTR
 
   return Result;
