@@ -88,7 +88,8 @@ public:
 
   uint32_t ThunkSize = 0;
 
-  virtual bool canRelaxGot(uint32_t Type, const uint8_t *Data) const;
+  virtual RelExpr adjustRelaxGotExpr(uint32_t Type, const uint8_t *Data,
+                                     RelExpr Expr) const;
   virtual void relaxGot(uint8_t *Loc, uint64_t Val) const;
   virtual void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
   virtual void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;

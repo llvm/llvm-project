@@ -19,7 +19,7 @@ namespace include_fixer {
 /// \brief A context for the symbol being queried.
 struct IncludeFixerContext {
   /// \brief The symbol name.
-  std::string SymbolIdentifer;
+  std::string SymbolIdentifier;
   /// \brief The headers which have SymbolIdentifier definitions.
   std::vector<std::string> Headers;
 };

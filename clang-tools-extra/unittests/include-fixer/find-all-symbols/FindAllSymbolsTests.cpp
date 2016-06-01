@@ -68,13 +68,23 @@ public:
 
     const std::string InternalHeader = "internal/internal.h";
     const std::string TopHeader = "<top>";
+    // Test .inc header path. The header for `IncHeaderClass` should be
+    // internal.h, which will eventually be mapped to <top>.
+    std::string IncHeader = "internal/private.inc";
+    std::string IncHeaderCode = "class IncHeaderClass {};";
+
     HeaderMapCollector::HeaderMap PostfixMap = {
         {"internal.h", TopHeader},
     };
 
-    std::string InternalCode = "class Internal {};";
+    std::string InternalCode =
+        "#include \"private.inc\"\nclass Internal {};";
     SymbolInfo InternalSymbol("Internal", SymbolInfo::SymbolKind::Class,
-                              TopHeader, 1, {});
+                              TopHeader, 2, {});
+    SymbolInfo IncSymbol("IncHeaderClass", SymbolInfo::SymbolKind::Class,
+                         TopHeader, 1, {});
+    InMemoryFileSystem->addFile(
+        IncHeader, 0, llvm::MemoryBuffer::getMemBuffer(IncHeaderCode));
     InMemoryFileSystem->addFile(InternalHeader, 0,
                                 llvm::MemoryBuffer::getMemBuffer(InternalCode));
 
@@ -111,6 +121,7 @@ public:
                                 llvm::MemoryBuffer::getMemBuffer(Content));
     Invocation.run();
     EXPECT_TRUE(hasSymbol(InternalSymbol));
+    EXPECT_TRUE(hasSymbol(IncSymbol));
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
     EXPECT_TRUE(hasSymbol(DirtySymbol));
     EXPECT_TRUE(hasSymbol(DirtyMacro));

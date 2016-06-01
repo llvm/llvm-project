@@ -115,9 +115,9 @@ option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
 option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
-set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE STRING "GCC toolchain for cross compiling.")
-set(LIBCXXABI_SYSROOT "" CACHE STRING "Sysroot for cross compiling.")
-set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE STRING "The path to libc++ library.")
+set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
+set(LIBCXXABI_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
+set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 
 # Default to building a shared library so that the default options still test
 # the libc++abi that is being built. There are two problems with testing a
@@ -183,6 +183,13 @@ set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
+
+# By default, for non-standalone builds, libcxx and libcxxabi share a library
+# directory.
+if (NOT LIBCXXABI_LIBCXX_LIBRARY_PATH)
+  set(LIBCXXABI_LIBCXX_LIBRARY_PATH "${LIBCXXABI_LIBRARY_DIR}" CACHE PATH
+      "The path to libc++ library.")
+endif ()
 
 #===============================================================================
 # Setup Compiler Flags
@@ -358,14 +365,16 @@ endif ()
 # soname, etc...
 add_subdirectory(src)
 
-if(NOT LIBCXXABI_ENABLE_SHARED)
-  # TODO: Fix the libc++ cmake files so that libc++abi can be statically linked.
-  # As it is now, libc++ will prefer linking against a dynamic libc++abi in the
-  # system library paths over a static libc++abi in the out directory. This
-  # would test the system library rather than the one we just built, which isn't
-  # very helpful.
-  message(WARNING "The libc++abi tests are currently only valid when "
-                  "LIBCXXABI_ENABLE_SHARED is on, no check target will be "
+if (LIBCXXABI_BUILT_STANDALONE AND NOT LIBCXXABI_ENABLE_SHARED)
+  # We can't reasonably test the system C++ library with a static libc++abi.
+  # We either need to be able to replace libc++abi at run time (with a shared
+  # libc++abi), or we need to be able to replace the C++ runtime (with a non-
+  # standalone build).
+  message(WARNING "The libc++abi tests aren't valid when libc++abi is built "
+                  "standalone (i.e. outside of llvm/projects/libcxxabi ) and "
+                  "is built without a shared library.  Either build a shared "
+                  "library, build libc++abi at the same time as you build "
+                  "libc++, or do without testing.  No check target will be "
                   "available!")
 else()
   add_subdirectory(test)

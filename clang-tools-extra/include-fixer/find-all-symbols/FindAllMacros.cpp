@@ -9,6 +9,7 @@
 
 #include "FindAllMacros.h"
 #include "HeaderMapCollector.h"
+#include "PathConfig.h"
 #include "SymbolInfo.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
@@ -21,21 +22,11 @@ namespace find_all_symbols {
 void FindAllMacros::MacroDefined(const Token &MacroNameTok,
                                  const MacroDirective *MD) {
   SourceLocation Loc = SM->getExpansionLoc(MacroNameTok.getLocation());
-  if (Loc.isInvalid() || SM->isInMainFile(Loc))
-    return;
-
-  llvm::StringRef FilePath = SM->getFilename(Loc);
-  if (FilePath.empty())
-    return;
-
-  // If Collector is not nullptr, check pragma remapping header.
-  FilePath = Collector ? Collector->getMappedHeader(FilePath) : FilePath;
-
-  SmallString<256> CleanedFilePath = FilePath;
-  llvm::sys::path::remove_dots(CleanedFilePath, /*remove_dot_dot=*/true);
+  std::string FilePath = getIncludePath(*SM, Loc, Collector);
+  if (FilePath.empty()) return;
 
   SymbolInfo Symbol(MacroNameTok.getIdentifierInfo()->getName(),
-                    SymbolInfo::SymbolKind::Macro, CleanedFilePath,
+                    SymbolInfo::SymbolKind::Macro, FilePath,
                     SM->getSpellingLineNumber(Loc), {});
 
   Reporter->reportSymbol(SM->getFileEntryForID(SM->getMainFileID())->getName(),

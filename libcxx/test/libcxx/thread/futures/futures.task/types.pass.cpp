@@ -16,7 +16,9 @@
 //     class packaged_task<R(ArgTypes...)>
 // {
 // public:
-//     typedef R result_type;
+//     typedef R result_type; // extension
+
+// This is a libc++ extension.
 
 #include <future>
 #include <type_traits>

@@ -193,10 +193,7 @@ public:
   getIncludeFixerContext(const clang::SourceManager &SourceManager,
                          clang::HeaderSearch &HeaderSearch) {
     IncludeFixerContext FixerContext;
-    if (SymbolQueryResults.empty())
-      return FixerContext;
-
-    FixerContext.SymbolIdentifer = QuerySymbol;
+    FixerContext.SymbolIdentifier = QuerySymbol;
     for (const auto &Header : SymbolQueryResults)
       FixerContext.Headers.push_back(
           minimizeInclude(Header, SourceManager, HeaderSearch));
