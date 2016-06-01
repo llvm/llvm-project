@@ -175,6 +175,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
 
+    std::string abi;
     ArchSpec target_arch;
     if (target_sp)
         target_arch = target_sp->GetArchitecture();
@@ -217,6 +218,11 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     // Set the target CPU to generate code for.
     // This will be empty for any CPU that doesn't really need to make a special CPU string.
     m_compiler->getTargetOpts().CPU = target_arch.GetClangTargetCPU();
+
+    // Set the target ABI
+    abi = GetClangTargetABI(target_arch);
+    if (!abi.empty())
+        m_compiler->getTargetOpts().ABI = abi;
 
     // Create the target instance.
     m_compiler->setTarget(TargetInfo::CreateTargetInfo(
@@ -512,6 +518,29 @@ ClangExpressionParser::Parse (Stream &stream)
     }
 
     return num_errors;
+}
+
+std::string
+ClangExpressionParser::GetClangTargetABI (const ArchSpec &target_arch)
+{
+  std::string abi;
+  const llvm::Triple::ArchType machine = target_arch.GetMachine();
+    
+  if(target_arch.IsMIPS())
+    {
+      switch (target_arch.GetFlags () & ArchSpec::eMIPSABI_mask)
+        {
+        case ArchSpec::eMIPSABI_N64:
+          abi = "n64"; break;
+        case ArchSpec::eMIPSABI_N32:
+          abi = "n32"; break;
+        case ArchSpec::eMIPSABI_O32:
+          abi = "o32"; break;
+        default:
+          break;
+        }
+    }
+  return abi;
 }
 
 static bool FindFunctionInModule (ConstString &mangled_name,
