@@ -2437,8 +2437,10 @@ MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
 
   // Otherwise, no replacement happened because the node already exists. Replace
   // Uses of the old node with the new one.
-  if (Res != Node)
+  if (Res != Node) {
     CurDAG->ReplaceAllUsesWith(Node, Res);
+    CurDAG->RemoveDeadNode(Node);
+  }
 
   return Res;
 }
@@ -3436,11 +3438,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // If this was a MorphNodeTo then we're completely done!
       if (IsMorphNodeTo) {
         // Update chain uses.
-        UpdateChains(NodeToMatch, InputChain, ChainNodesMatched, true);
-        if (Res != NodeToMatch) {
-          ReplaceUses(NodeToMatch, Res);
-          CurDAG->RemoveDeadNode(NodeToMatch);
-        }
+        UpdateChains(Res, InputChain, ChainNodesMatched, true);
         return;
       }
       continue;

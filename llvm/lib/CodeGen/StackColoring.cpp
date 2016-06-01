@@ -75,10 +75,10 @@ ProtectFromEscapedAllocas("protect-from-escaped-allocas",
 /// Enable enhanced dataflow scheme for lifetime analysis (treat first
 /// use of stack slot as start of slot lifetime, as opposed to looking
 /// for LIFETIME_START marker). See "Implementation notes" below for
-/// more info. FIXME: set to false for the moment due to PR27903.
+/// more info.
 static cl::opt<bool>
 LifetimeStartOnFirstUse("stackcoloring-lifetime-start-on-first-use",
-        cl::init(false), cl::Hidden,
+        cl::init(true), cl::Hidden,
         cl::desc("Treat stack lifetimes as starting on first use, not on START marker."));
 
 
@@ -289,9 +289,9 @@ class StackColoring : public MachineFunctionPass {
   /// lifetime marker (either start or end).
   BitVector InterestingSlots;
 
-  /// Degenerate slots -- first use appears outside of start/end
-  /// lifetime markers.
-  BitVector DegenerateSlots;
+  /// FI slots that need to be handled conservatively (for these
+  /// slots lifetime-start-on-first-use is disabled).
+  BitVector ConservativeSlots;
 
   /// Number of iterations taken during data flow analysis.
   unsigned NumIterations;
@@ -331,7 +331,7 @@ private:
   bool applyFirstUse(int Slot) {
     if (!LifetimeStartOnFirstUse || ProtectFromEscapedAllocas)
       return false;
-    if (DegenerateSlots.test(Slot))
+    if (ConservativeSlots.test(Slot))
       return false;
     return true;
   }
@@ -490,11 +490,15 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
   BlockBitVecMap SeenStartMap;
   InterestingSlots.clear();
   InterestingSlots.resize(NumSlot);
-  DegenerateSlots.clear();
-  DegenerateSlots.resize(NumSlot);
+  ConservativeSlots.clear();
+  ConservativeSlots.resize(NumSlot);
+
+  // number of start and end lifetime ops for each slot
+  SmallVector<int, 8> NumStartLifetimes(NumSlot, 0);
+  SmallVector<int, 8> NumEndLifetimes(NumSlot, 0);
 
   // Step 1: collect markers and populate the "InterestingSlots"
-  // and "DegenerateSlots" sets.
+  // and "ConservativeSlots" sets.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
 
     // Compute the set of slots for which we've seen a START marker but have
@@ -518,10 +522,13 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
         if (Slot < 0)
           continue;
         InterestingSlots.set(Slot);
-        if (MI.getOpcode() == TargetOpcode::LIFETIME_START)
+        if (MI.getOpcode() == TargetOpcode::LIFETIME_START) {
           BetweenStartEnd.set(Slot);
-        else
+          NumStartLifetimes[Slot] += 1;
+        } else {
           BetweenStartEnd.reset(Slot);
+          NumEndLifetimes[Slot] += 1;
+        }
         const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
         if (Allocation) {
           DEBUG(dbgs() << "Found a lifetime ");
@@ -542,7 +549,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
           if (Slot < 0)
             continue;
           if (! BetweenStartEnd.test(Slot)) {
-            DegenerateSlots.set(Slot);
+            ConservativeSlots.set(Slot);
           }
         }
       }
@@ -553,7 +560,13 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot)
   if (!MarkersFound) {
     return 0;
   }
-  DEBUG(dumpBV("Degenerate slots", DegenerateSlots));
+
+  // PR27903: slots with multiple start or end lifetime ops are not
+  // safe to enable for "lifetime-start-on-first-use".
+  for (unsigned slot = 0; slot < NumSlot; ++slot)
+    if (NumStartLifetimes[slot] > 1 || NumEndLifetimes[slot] > 1)
+      ConservativeSlots.set(slot);
+  DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
   // Step 2: compute begin/end sets for each block
 

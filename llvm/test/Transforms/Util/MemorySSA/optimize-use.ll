@@ -1,4 +1,5 @@
-; RUN: opt -basicaa -print-memoryssa -analyze -verify-memoryssa < %s 2>&1 | FileCheck %s
+; RUN: opt -basicaa -memoryssa -analyze < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; Function Attrs: ssp uwtable
 define i32 @main() {

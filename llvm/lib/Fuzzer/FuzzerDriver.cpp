@@ -163,8 +163,9 @@ static bool ParseOneFlag(const char *Param) {
       }
     }
   }
-  PrintHelp();
-  exit(1);
+  Printf("\n\nWARNING: unrecognized flag '%s'; "
+         "use -help=1 to list all flags\n\n", Param);
+  return true;
 }
 
 // We don't use any library to minimize dependencies.

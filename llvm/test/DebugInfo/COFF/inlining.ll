@@ -39,6 +39,36 @@
 ; ASM: addl    $7, "?x@@3HC"
 ; ASM: .cv_loc 0 1 17 1                # t.cpp:17:1
 
+; ASM: .section .debug$S,"dr"
+; ASM: .long   246                     # Inlinee lines subsection
+; ASM: .long   [[inline_end:.*]]-[[inline_beg:.*]] #
+; ASM: [[inline_beg]]:
+; ASM: .long   0
+; ASM: # Inlined function bar starts at t.cpp:8
+; ASM: .long   4098                    # Type index of inlined function
+; ASM: .long   0                       # Offset into filechecksum table
+; ASM: .long   8                       # Starting line number
+; ASM: # Inlined function foo starts at t.cpp:2
+; ASM: .long   4099
+; ASM: .long   0
+; ASM: .long   2
+; ASM: [[inline_end]]:
+
+; ASM: .long   241                     # Symbol subsection for baz
+; ASM: .long   {{.*}} # Subsection size
+; ASM: .short 4429
+; ASM: .long
+; ASM: .long
+; ASM: .long
+; ASM: .cv_inline_linetable 1 1 8 Lfunc_begin0 Lfunc_end0 contains 2
+; ASM: .short 4429
+; ASM: .long
+; ASM: .long
+; ASM: .long
+; ASM: .cv_inline_linetable 2 1 2 Lfunc_begin0 Lfunc_end0
+; ASM: .short  4430
+; ASM: .short  4430
+
 ; ASM: .section .debug$T,"dr"
 ; ASM: .long 4 # Debug section magic
 ; ASM: # ArgList (0x1000) {
@@ -83,39 +113,9 @@
 ; ASM: .byte   0x01, 0x10, 0x00, 0x00
 ; ASM: .byte   0x66, 0x6f, 0x6f, 0x00
 
-; ASM: .section .debug$S,"dr"
-; ASM: .long   246                     # Inlinee lines subsection
-; ASM: .long   [[inline_end:.*]]-[[inline_beg:.*]] #
-; ASM: [[inline_beg]]:
-; ASM: .long   0
-; ASM: # Inlined function bar starts at t.cpp:8
-; ASM: .long   4098                    # Type index of inlined function
-; ASM: .long   0                       # Offset into filechecksum table
-; ASM: .long   8                       # Starting line number
-; ASM: # Inlined function foo starts at t.cpp:2
-; ASM: .long   4099
-; ASM: .long   0
-; ASM: .long   2
-; ASM: [[inline_end]]:
-
-; ASM: .long   241                     # Symbol subsection for baz
-; ASM: .long   {{.*}} # Subsection size
-; ASM: .short 4429
-; ASM: .long
-; ASM: .long
-; ASM: .long
-; ASM: .cv_inline_linetable 1 1 8 Lfunc_begin0 Lfunc_end0 contains 2
-; ASM: .short 4429
-; ASM: .long
-; ASM: .long
-; ASM: .long
-; ASM: .cv_inline_linetable 2 1 2 Lfunc_begin0 Lfunc_end0
-; ASM: .short  4430
-; ASM: .short  4430
-
 ; We should only the LF_FUNC_ID records that we needed to reference.
 ; OBJ: CodeViewTypes [
-; OBJ:   Section: .debug$T (4)
+; OBJ:   Section: .debug$T
 ; OBJ:   ArgList (0x1000) {
 ; OBJ:     TypeLeafKind: LF_ARGLIST (0x1201)
 ; OBJ:     NumArgs: 0

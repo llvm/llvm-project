@@ -38,6 +38,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstVisitor.h"
@@ -56,8 +58,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cfl-aa"
 
-CFLAAResult::CFLAAResult() : AAResultBase() {}
-CFLAAResult::CFLAAResult(CFLAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
+CFLAAResult::CFLAAResult(const TargetLibraryInfo &TLI)
+    : AAResultBase(), TLI(TLI) {}
+CFLAAResult::CFLAAResult(CFLAAResult &&Arg)
+    : AAResultBase(std::move(Arg)), TLI(Arg.TLI) {}
 CFLAAResult::~CFLAAResult() {}
 
 /// Information we have about a function and would like to keep around.
@@ -158,10 +162,12 @@ struct Edge {
 class GetEdgesVisitor : public InstVisitor<GetEdgesVisitor, void> {
   CFLAAResult &AA;
   SmallVectorImpl<Edge> &Output;
+  const TargetLibraryInfo &TLI;
 
 public:
-  GetEdgesVisitor(CFLAAResult &AA, SmallVectorImpl<Edge> &Output)
-      : AA(AA), Output(Output) {}
+  GetEdgesVisitor(CFLAAResult &AA, SmallVectorImpl<Edge> &Output,
+                  const TargetLibraryInfo &TLI)
+      : AA(AA), Output(Output), TLI(TLI) {}
 
   void visitInstruction(Instruction &) {
     llvm_unreachable("Unsupported instruction encountered");
@@ -374,6 +380,20 @@ public:
   }
 
   template <typename InstT> void visitCallLikeInst(InstT &Inst) {
+    // Check if Inst is a call to a library function that allocates/deallocates
+    // on the heap. Those kinds of functions do not introduce any aliases.
+    // TODO: address other common library functions such as realloc(), strdup(),
+    // etc.
+    if (isMallocLikeFn(&Inst, &TLI) || isCallocLikeFn(&Inst, &TLI)) {
+      Output.push_back(Edge(&Inst, &Inst, EdgeType::Assign, AttrNone));
+      return;
+    } else if (isFreeCall(&Inst, &TLI)) {
+      assert(Inst.getNumArgOperands() == 1);
+      auto argVal = Inst.arg_begin()->get();
+      Output.push_back(Edge(argVal, argVal, EdgeType::Assign, AttrNone));
+      return;
+    }
+
     // TODO: Add support for noalias args/all the other fun function attributes
     // that we can tack on.
     SmallVector<Function *, 4> Targets;
@@ -642,10 +662,12 @@ static Optional<StratifiedAttr> valueToAttrIndex(Value *Val);
 static EdgeType flipWeight(EdgeType Initial);
 
 /// Gets edges of the given Instruction*, writing them to the SmallVector*.
-static void argsToEdges(CFLAAResult &, Instruction *, SmallVectorImpl<Edge> &);
+static void argsToEdges(CFLAAResult &, Instruction *, SmallVectorImpl<Edge> &,
+                        const TargetLibraryInfo &);
 
 /// Gets edges of the given ConstantExpr*, writing them to the SmallVector*.
-static void argsToEdges(CFLAAResult &, ConstantExpr *, SmallVectorImpl<Edge> &);
+static void argsToEdges(CFLAAResult &, ConstantExpr *, SmallVectorImpl<Edge> &,
+                        const TargetLibraryInfo &);
 
 /// Gets the "Level" that one should travel in StratifiedSets
 /// given an EdgeType.
@@ -654,13 +676,15 @@ static Level directionOfEdgeType(EdgeType);
 /// Builds the graph needed for constructing the StratifiedSets for the
 /// given function
 static void buildGraphFrom(CFLAAResult &, Function *,
-                           SmallVectorImpl<Value *> &, NodeMapT &, GraphT &);
+                           SmallVectorImpl<Value *> &, NodeMapT &, GraphT &,
+                           const TargetLibraryInfo &);
 
 /// Gets the edges of a ConstantExpr as if it was an Instruction. This function
 /// also acts on any nested ConstantExprs, adding the edges of those to the
 /// given SmallVector as well.
 static void constexprToEdges(CFLAAResult &, ConstantExpr &,
-                             SmallVectorImpl<Edge> &);
+                             SmallVectorImpl<Edge> &,
+                             const TargetLibraryInfo &);
 
 /// Given an Instruction, this will add it to the graph, along with any
 /// Instructions that are potentially only available from said Instruction
@@ -670,7 +694,7 @@ static void constexprToEdges(CFLAAResult &, ConstantExpr &,
 /// instructions to the graph appropriately.
 static void addInstructionToGraph(CFLAAResult &, Instruction &,
                                   SmallVectorImpl<Value *> &, NodeMapT &,
-                                  GraphT &);
+                                  GraphT &, const TargetLibraryInfo &);
 
 /// Determines whether it would be pointless to add the given Value to our sets.
 static bool canSkipAddingToSets(Value *Val);
@@ -749,17 +773,19 @@ static EdgeType flipWeight(EdgeType Initial) {
 }
 
 static void argsToEdges(CFLAAResult &Analysis, Instruction *Inst,
-                        SmallVectorImpl<Edge> &Output) {
+                        SmallVectorImpl<Edge> &Output,
+                        const TargetLibraryInfo &TLI) {
   assert(hasUsefulEdges(Inst) &&
          "Expected instructions to have 'useful' edges");
-  GetEdgesVisitor v(Analysis, Output);
+  GetEdgesVisitor v(Analysis, Output, TLI);
   v.visit(Inst);
 }
 
 static void argsToEdges(CFLAAResult &Analysis, ConstantExpr *CE,
-                        SmallVectorImpl<Edge> &Output) {
+                        SmallVectorImpl<Edge> &Output,
+                        const TargetLibraryInfo &TLI) {
   assert(hasUsefulEdges(CE) && "Expected constant expr to have 'useful' edges");
-  GetEdgesVisitor v(Analysis, Output);
+  GetEdgesVisitor v(Analysis, Output, TLI);
   v.visitConstantExpr(CE);
 }
 
@@ -777,7 +803,8 @@ static Level directionOfEdgeType(EdgeType Weight) {
 
 static void constexprToEdges(CFLAAResult &Analysis,
                              ConstantExpr &CExprToCollapse,
-                             SmallVectorImpl<Edge> &Results) {
+                             SmallVectorImpl<Edge> &Results,
+                             const TargetLibraryInfo &TLI) {
   SmallVector<ConstantExpr *, 4> Worklist;
   Worklist.push_back(&CExprToCollapse);
 
@@ -790,7 +817,7 @@ static void constexprToEdges(CFLAAResult &Analysis,
       continue;
 
     ConstexprEdges.clear();
-    argsToEdges(Analysis, CExpr, ConstexprEdges);
+    argsToEdges(Analysis, CExpr, ConstexprEdges, TLI);
     for (auto &Edge : ConstexprEdges) {
       if (auto *Nested = dyn_cast<ConstantExpr>(Edge.From))
         if (Visited.insert(Nested).second)
@@ -807,7 +834,8 @@ static void constexprToEdges(CFLAAResult &Analysis,
 
 static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
                                   SmallVectorImpl<Value *> &ReturnedValues,
-                                  NodeMapT &Map, GraphT &Graph) {
+                                  NodeMapT &Map, GraphT &Graph,
+                                  const TargetLibraryInfo &TLI) {
   const auto findOrInsertNode = [&Map, &Graph](Value *Val) {
     auto Pair = Map.insert(std::make_pair(Val, GraphT::Node()));
     auto &Iter = Pair.first;
@@ -827,7 +855,7 @@ static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
     return;
 
   SmallVector<Edge, 8> Edges;
-  argsToEdges(Analysis, &Inst, Edges);
+  argsToEdges(Analysis, &Inst, Edges, TLI);
 
   // In the case of an unused alloca (or similar), edges may be empty. Note
   // that it exists so we can potentially answer NoAlias.
@@ -859,19 +887,20 @@ static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
 
   for (ConstantExpr *CE : ConstantExprs) {
     Edges.clear();
-    constexprToEdges(Analysis, *CE, Edges);
+    constexprToEdges(Analysis, *CE, Edges, TLI);
     std::for_each(Edges.begin(), Edges.end(), addEdgeToGraph);
   }
 }
 
 static void buildGraphFrom(CFLAAResult &Analysis, Function *Fn,
                            SmallVectorImpl<Value *> &ReturnedValues,
-                           NodeMapT &Map, GraphT &Graph) {
+                           NodeMapT &Map, GraphT &Graph,
+                           const TargetLibraryInfo &TLI) {
   // (N.B. We may remove graph construction entirely, because it doesn't really
   // buy us much.)
   for (auto &Bb : Fn->getBasicBlockList())
     for (auto &Inst : Bb.getInstList())
-      addInstructionToGraph(Analysis, Inst, ReturnedValues, Map, Graph);
+      addInstructionToGraph(Analysis, Inst, ReturnedValues, Map, Graph, TLI);
 }
 
 static bool canSkipAddingToSets(Value *Val) {
@@ -901,7 +930,7 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
   GraphT Graph;
   SmallVector<Value *, 4> ReturnedValues;
 
-  buildGraphFrom(*this, Fn, ReturnedValues, Map, Graph);
+  buildGraphFrom(*this, Fn, ReturnedValues, Map, Graph, TLI);
 
   DenseMap<GraphT::Node, Value *> NodeValueMap;
   NodeValueMap.reserve(Map.size());
@@ -1082,7 +1111,7 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
 char CFLAA::PassID;
 
 CFLAAResult CFLAA::run(Function &F, AnalysisManager<Function> &AM) {
-  return CFLAAResult();
+  return CFLAAResult(AM.getResult<TargetLibraryAnalysis>(F));
 }
 
 char CFLAAWrapperPass::ID = 0;
@@ -1095,16 +1124,12 @@ CFLAAWrapperPass::CFLAAWrapperPass() : ImmutablePass(ID) {
   initializeCFLAAWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
-bool CFLAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new CFLAAResult());
-  return false;
-}
-
-bool CFLAAWrapperPass::doFinalization(Module &M) {
-  Result.reset();
-  return false;
+void CFLAAWrapperPass::initializePass() {
+  auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
+  Result.reset(new CFLAAResult(TLIWP.getTLI()));
 }
 
 void CFLAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }

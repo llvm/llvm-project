@@ -51,3 +51,19 @@ entry:
   %add7 = add i32 %add, %2
   ret i32 %add7
 }
+
+define i32 @ubfx3(i32 %a) {
+; CHECK: ubfx3
+; CHECK: ubfx r0, r0, #11, #1
+	%t1 = and i32 %a, 2048
+	%t2 = lshr i32 %t1, 11
+	ret i32 %t2
+}
+
+define i32 @ubfx4(i32 %a) {
+; CHECK: ubfx4
+; CHECK: ubfx r0, r0, #7, #3
+	%t1 = and i32 %a, 896
+	%t2 = lshr i32 %t1, 7
+	ret i32 %t2
+}

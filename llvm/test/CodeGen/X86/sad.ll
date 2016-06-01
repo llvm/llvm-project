@@ -11,52 +11,31 @@
 define i32 @sad_16i8() nounwind {
 ; SSE2-LABEL: sad_16i8:
 ; SSE2:       # BB#0: # %entry
-; SSE2-NEXT:    pushq %rbp
-; SSE2-NEXT:    movq %rsp, %rbp
-; SSE2-NEXT:    andq $-64, %rsp
-; SSE2-NEXT:    subq $128, %rsp
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  .LBB0_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    movdqu a+1024(%rax), %xmm5
-; SSE2-NEXT:    movdqu b+1024(%rax), %xmm0
-; SSE2-NEXT:    movdqa %xmm4, (%rsp)
-; SSE2-NEXT:    movdqa %xmm1, {{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movdqa %xmm3, {{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movdqa %xmm2, {{[0-9]+}}(%rsp)
-; SSE2-NEXT:    psadbw %xmm5, %xmm0
-; SSE2-NEXT:    paddd %xmm4, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, (%rsp)
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm2
+; SSE2-NEXT:    movdqu a+1024(%rax), %xmm2
+; SSE2-NEXT:    movdqu b+1024(%rax), %xmm3
+; SSE2-NEXT:    psadbw %xmm2, %xmm3
+; SSE2-NEXT:    paddd %xmm3, %xmm1
 ; SSE2-NEXT:    addq $4, %rax
 ; SSE2-NEXT:    jne .LBB0_1
 ; SSE2-NEXT:  # BB#2: # %middle.block
-; SSE2-NEXT:    paddd %xmm3, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm1
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm0, %xmm0
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movq %rbp, %rsp
-; SSE2-NEXT:    popq %rbp
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: sad_16i8:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    andq $-64, %rsp
-; AVX2-NEXT:    subq $128, %rsp
 ; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
@@ -64,25 +43,19 @@ define i32 @sad_16i8() nounwind {
 ; AVX2-NEXT:  .LBB0_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqu a+1024(%rax), %xmm2
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsp)
-; AVX2-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpsadbw b+1024(%rax), %xmm2, %xmm1
-; AVX2-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsp)
-; AVX2-NEXT:    vmovdqa (%rsp), %ymm0
-; AVX2-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %ymm1
+; AVX2-NEXT:    vpsadbw b+1024(%rax), %xmm2, %xmm2
+; AVX2-NEXT:    vpaddd %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    addq $4, %rax
 ; AVX2-NEXT:    jne .LBB0_1
 ; AVX2-NEXT:  # BB#2: # %middle.block
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    movq %rbp, %rsp
-; AVX2-NEXT:    popq %rbp
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -311,52 +284,32 @@ define i32 @sad_32i8() nounwind {
 ;
 ; AVX2-LABEL: sad_32i8:
 ; AVX2:       # BB#0: # %entry
-; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    andq $-128, %rsp
-; AVX2-NEXT:    subq $256, %rsp # imm = 0x100
 ; AVX2-NEXT:    vpxor %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX2-NEXT:    vpxor %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vpxor %ymm3, %ymm3, %ymm3
 ; AVX2-NEXT:    .p2align 4, 0x90
 ; AVX2-NEXT:  .LBB1_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vmovdqa a+1024(%rax), %ymm4
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsp)
-; AVX2-NEXT:    vmovdqa %ymm1, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovdqa %ymm2, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vmovdqa %ymm3, {{[0-9]+}}(%rsp)
-; AVX2-NEXT:    vpsadbw b+1024(%rax), %ymm4, %ymm1
-; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rsp)
-; AVX2-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %ymm1
-; AVX2-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %ymm2
-; AVX2-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %ymm3
+; AVX2-NEXT:    vmovdqa a+1024(%rax), %ymm2
+; AVX2-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm2
+; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    addq $4, %rax
 ; AVX2-NEXT:    jne .LBB1_1
 ; AVX2-NEXT:  # BB#2: # %middle.block
-; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    movq %rbp, %rsp
-; AVX2-NEXT:    popq %rbp
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: sad_32i8:
 ; AVX512F:       # BB#0: # %entry
-; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:    andq $-128, %rsp
-; AVX512F-NEXT:    subq $256, %rsp # imm = 0x100
 ; AVX512F-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; AVX512F-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512F-NEXT:    vpxord %zmm1, %zmm1, %zmm1
@@ -364,17 +317,13 @@ define i32 @sad_32i8() nounwind {
 ; AVX512F-NEXT:  .LBB1_1: # %vector.body
 ; AVX512F-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512F-NEXT:    vmovdqa a+1024(%rax), %ymm2
-; AVX512F-NEXT:    vmovdqa32 %zmm0, (%rsp)
-; AVX512F-NEXT:    vmovdqa32 %zmm1, {{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm1
-; AVX512F-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; AVX512F-NEXT:    vmovdqa %ymm0, (%rsp)
-; AVX512F-NEXT:    vmovdqa32 {{[0-9]+}}(%rsp), %zmm1
-; AVX512F-NEXT:    vmovdqa32 (%rsp), %zmm0
+; AVX512F-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm2
+; AVX512F-NEXT:    vpaddd %ymm1, %ymm2, %ymm2
+; AVX512F-NEXT:    vinserti64x4 $0, %ymm2, %zmm1, %zmm1
 ; AVX512F-NEXT:    addq $4, %rax
 ; AVX512F-NEXT:    jne .LBB1_1
 ; AVX512F-NEXT:  # BB#2: # %middle.block
-; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[4,5,6,7,0,1,0,1]
 ; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[2,3,0,1,0,1,0,1]
@@ -386,16 +335,10 @@ define i32 @sad_32i8() nounwind {
 ; AVX512F-NEXT:    vpermd %zmm0, %zmm1, %zmm1
 ; AVX512F-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    movq %rbp, %rsp
-; AVX512F-NEXT:    popq %rbp
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: sad_32i8:
 ; AVX512BW:       # BB#0: # %entry
-; AVX512BW-NEXT:    pushq %rbp
-; AVX512BW-NEXT:    movq %rsp, %rbp
-; AVX512BW-NEXT:    andq $-128, %rsp
-; AVX512BW-NEXT:    subq $256, %rsp # imm = 0x100
 ; AVX512BW-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; AVX512BW-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX512BW-NEXT:    vpxord %zmm1, %zmm1, %zmm1
@@ -403,17 +346,13 @@ define i32 @sad_32i8() nounwind {
 ; AVX512BW-NEXT:  .LBB1_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512BW-NEXT:    vmovdqa a+1024(%rax), %ymm2
-; AVX512BW-NEXT:    vmovdqa32 %zmm0, (%rsp)
-; AVX512BW-NEXT:    vmovdqa32 %zmm1, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm1
-; AVX512BW-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; AVX512BW-NEXT:    vmovdqa %ymm0, (%rsp)
-; AVX512BW-NEXT:    vmovdqa32 {{[0-9]+}}(%rsp), %zmm1
-; AVX512BW-NEXT:    vmovdqa32 (%rsp), %zmm0
+; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %ymm2, %ymm2
+; AVX512BW-NEXT:    vpaddd %ymm1, %ymm2, %ymm2
+; AVX512BW-NEXT:    vinserti64x4 $0, %ymm2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    addq $4, %rax
 ; AVX512BW-NEXT:    jne .LBB1_1
 ; AVX512BW-NEXT:  # BB#2: # %middle.block
-; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[4,5,6,7,0,1,0,1]
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[2,3,0,1,0,1,0,1]
@@ -425,8 +364,6 @@ define i32 @sad_32i8() nounwind {
 ; AVX512BW-NEXT:    vpermd %zmm0, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
-; AVX512BW-NEXT:    movq %rbp, %rsp
-; AVX512BW-NEXT:    popq %rbp
 ; AVX512BW-NEXT:    retq
 entry:
   br label %vector.body
@@ -888,35 +825,21 @@ define i32 @sad_avx64i8() nounwind {
 ;
 ; AVX512BW-LABEL: sad_avx64i8:
 ; AVX512BW:       # BB#0: # %entry
-; AVX512BW-NEXT:    pushq %rbp
-; AVX512BW-NEXT:    movq %rsp, %rbp
-; AVX512BW-NEXT:    andq $-256, %rsp
-; AVX512BW-NEXT:    subq $512, %rsp # imm = 0x200
 ; AVX512BW-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; AVX512BW-NEXT:    movq $-1024, %rax # imm = 0xFC00
-; AVX512BW-NEXT:    vpxord %zmm2, %zmm2, %zmm2
-; AVX512BW-NEXT:    vpxord %zmm3, %zmm3, %zmm3
 ; AVX512BW-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; AVX512BW-NEXT:    .p2align 4, 0x90
 ; AVX512BW-NEXT:  .LBB2_1: # %vector.body
 ; AVX512BW-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX512BW-NEXT:    vmovdqu8 a+1024(%rax), %zmm4
-; AVX512BW-NEXT:    vmovdqa32 %zmm0, (%rsp)
-; AVX512BW-NEXT:    vmovdqa32 %zmm2, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovdqa32 %zmm3, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vmovdqa32 %zmm1, {{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %zmm4, %zmm1
-; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
-; AVX512BW-NEXT:    vmovdqa32 %zmm0, (%rsp)
-; AVX512BW-NEXT:    vmovdqa32 {{[0-9]+}}(%rsp), %zmm1
-; AVX512BW-NEXT:    vmovdqa32 {{[0-9]+}}(%rsp), %zmm3
-; AVX512BW-NEXT:    vmovdqa32 {{[0-9]+}}(%rsp), %zmm2
+; AVX512BW-NEXT:    vmovdqu8 a+1024(%rax), %zmm2
+; AVX512BW-NEXT:    vpsadbw b+1024(%rax), %zmm2, %zmm2
+; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512BW-NEXT:    addq $4, %rax
 ; AVX512BW-NEXT:    jne .LBB2_1
 ; AVX512BW-NEXT:  # BB#2: # %middle.block
-; AVX512BW-NEXT:    vpaddd %zmm3, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[4,5,6,7,0,1,0,1]
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[2,3,0,1,0,1,0,1]
@@ -928,8 +851,6 @@ define i32 @sad_avx64i8() nounwind {
 ; AVX512BW-NEXT:    vpermd %zmm0, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovd %xmm0, %eax
-; AVX512BW-NEXT:    movq %rbp, %rsp
-; AVX512BW-NEXT:    popq %rbp
 ; AVX512BW-NEXT:    retq
 entry:
   br label %vector.body

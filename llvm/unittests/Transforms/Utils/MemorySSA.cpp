@@ -43,13 +43,13 @@ protected:
     AAResults AA;
     BasicAAResult BAA;
     MemorySSA MSSA;
-    std::unique_ptr<MemorySSAWalker> Walker;
+    MemorySSAWalker *Walker;
 
     TestAnalyses(MemorySSATest &Test)
         : DT(*Test.F), AC(*Test.F), AA(Test.TLI),
-          BAA(Test.DL, Test.TLI, AC, &DT), MSSA(*Test.F) {
+          BAA(Test.DL, Test.TLI, AC, &DT), MSSA(*Test.F, &AA, &DT) {
       AA.addAAResult(BAA);
-      Walker.reset(MSSA.buildMemorySSA(&AA, &DT));
+      Walker = MSSA.getWalker();
     }
   };
 

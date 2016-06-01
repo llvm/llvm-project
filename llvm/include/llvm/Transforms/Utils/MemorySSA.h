@@ -495,15 +495,11 @@ class MemorySSAWalker;
 /// accesses.
 class MemorySSA {
 public:
-  MemorySSA(Function &);
+  MemorySSA(Function &, AliasAnalysis *, DominatorTree *);
+  MemorySSA(MemorySSA &&);
   ~MemorySSA();
 
-  /// \brief Build Memory SSA, and return the walker we used during building,
-  /// for later reuse. If MemorySSA is already built, just return the walker.
-  MemorySSAWalker *buildMemorySSA(AliasAnalysis *, DominatorTree *);
-
-  /// \brief Returns false if you need to call buildMemorySSA.
-  bool isFinishedBuilding() const { return Walker; }
+  MemorySSAWalker *getWalker();
 
   /// \brief Given a memory Mod/Ref'ing instruction, get the MemorySSA
   /// access associated with it. If passed a basic block gets the memory phi
@@ -561,7 +557,7 @@ public:
 protected:
   // Used by Memory SSA annotater, dumpers, and wrapper pass
   friend class MemorySSAAnnotatedWriter;
-  friend class MemorySSAPrinterPass;
+  friend class MemorySSAPrinterLegacyPass;
   void verifyDefUses(Function &F) const;
   void verifyDomination(Function &F) const;
 
@@ -593,49 +589,51 @@ private:
   std::unique_ptr<MemoryAccess> LiveOnEntryDef;
 
   // Memory SSA building info
-  MemorySSAWalker *Walker;
+  std::unique_ptr<MemorySSAWalker> Walker;
   unsigned NextID;
 };
 
-// This pass does eager building and then printing of MemorySSA. It is used by
-// the tests to be able to build, dump, and verify Memory SSA.
-class MemorySSAPrinterPass : public FunctionPass {
+/// An analysis that produces \c MemorySSA for a function.
+///
+class MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {
+  friend AnalysisInfoMixin<MemorySSAAnalysis>;
+  static char PassID;
+
 public:
-  MemorySSAPrinterPass();
+  typedef MemorySSA Result;
 
-  static char ID;
-  bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &) override;
-  void releaseMemory() override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void print(raw_ostream &OS, const Module *M) const override;
-  static void registerOptions();
-  MemorySSA &getMSSA() { return *MSSA; }
-
-private:
-  bool VerifyMemorySSA;
-
-  std::unique_ptr<MemorySSA> MSSA;
-  // FIXME(gbiv): It seems that MemorySSA doesn't own the walker it returns?
-  std::unique_ptr<MemorySSAWalker> Walker;
-  Function *F;
+  MemorySSA run(Function &F, AnalysisManager<Function> &AM);
 };
 
-class MemorySSALazy : public FunctionPass {
+/// \brief Printer pass for \c MemorySSA.
+class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
+  raw_ostream &OS;
+
 public:
-  MemorySSALazy();
+  explicit MemorySSAPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+};
+
+/// \brief Verifier pass for \c MemorySSA.
+struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+};
+
+/// \brief Legacy analysis pass which computes \c MemorySSA.
+class MemorySSAWrapperPass : public FunctionPass {
+public:
+  MemorySSAWrapperPass();
 
   static char ID;
   bool runOnFunction(Function &) override;
   void releaseMemory() override;
-  MemorySSA &getMSSA() {
-    assert(MSSA);
-    return *MSSA;
-  }
+  MemorySSA &getMSSA() { return *MSSA; }
+  const MemorySSA &getMSSA() const { return *MSSA; }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  void verifyAnalysis() const override;
+  void print(raw_ostream &OS, const Module *M = nullptr) const override;
 
 private:
   std::unique_ptr<MemorySSA> MSSA;
@@ -705,6 +703,8 @@ public:
   virtual void invalidateInfo(MemoryAccess *) {}
 
 protected:
+  friend class MemorySSA; // For updating MSSA pointer in MemorySSA move
+                          // constructor.
   MemorySSA *MSSA;
 };
 

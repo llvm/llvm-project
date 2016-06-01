@@ -422,6 +422,14 @@ protected:
   /// from SCEV or creates a new using SCEVExpander.
   virtual Value *getStepVector(Value *Val, int StartIdx, const SCEV *Step);
 
+  /// Create a vector induction variable based on an existing scalar one.
+  /// Currently only works for integer primary induction variables with
+  /// a constant step.
+  /// If TruncType is provided, instead of widening the original IV, we
+  /// widen a version of the IV truncated to TruncType.
+  void widenInductionVariable(const InductionDescriptor &II, VectorParts &Entry,
+                              IntegerType *TruncType = nullptr);
+
   /// When we go over instructions in the basic block we rely on previous
   /// values within the current basic block or on loop invariant values.
   /// When we widen (vectorize) values we place them in the map. If the values
@@ -2097,6 +2105,40 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
   Value *StepValue = Exp.expandCodeFor(StepSCEV, StepSCEV->getType(),
                                        &*Builder.GetInsertPoint());
   return getStepVector(Val, StartIdx, StepValue);
+}
+
+void InnerLoopVectorizer::widenInductionVariable(const InductionDescriptor &II,
+                                                 VectorParts &Entry,
+                                                 IntegerType *TruncType) {
+  Value *Start = II.getStartValue();
+  ConstantInt *Step = II.getConstIntStepValue();
+  assert(Step && "Can not widen an IV with a non-constant step");
+
+  // Construct the initial value of the vector IV in the vector loop preheader
+  auto CurrIP = Builder.saveIP();
+  Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
+  if (TruncType) {
+    Step = ConstantInt::getSigned(TruncType, Step->getSExtValue());
+    Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
+  }
+  Value *SplatStart = Builder.CreateVectorSplat(VF, Start);
+  Value *SteppedStart = getStepVector(SplatStart, 0, Step);
+  Builder.restoreIP(CurrIP);
+
+  Value *SplatVF =
+      ConstantVector::getSplat(VF, ConstantInt::get(Start->getType(), VF));
+  // We may need to add the step a number of times, depending on the unroll
+  // factor. The last of those goes into the PHI.
+  PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind",
+                                    &*LoopVectorBody->getFirstInsertionPt());
+  Value *LastInduction = VecInd;
+  for (unsigned Part = 0; Part < UF; ++Part) {
+    Entry[Part] = LastInduction;
+    LastInduction = Builder.CreateAdd(LastInduction, SplatVF, "step.add");
+  }
+
+  VecInd->addIncoming(SteppedStart, LoopVectorPreHeader);
+  VecInd->addIncoming(LastInduction, LoopVectorBody);
 }
 
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
@@ -4056,19 +4098,25 @@ void InnerLoopVectorizer::widenPHIInstruction(
     llvm_unreachable("Unknown induction");
   case InductionDescriptor::IK_IntInduction: {
     assert(P->getType() == II.getStartValue()->getType() && "Types must match");
-    // Handle other induction variables that are now based on the
-    // canonical one.
-    Value *V = Induction;
-    if (P != OldInduction) {
-      V = Builder.CreateSExtOrTrunc(Induction, P->getType());
-      V = II.transform(Builder, V, PSE.getSE(), DL);
-      V->setName("offset.idx");
+    if (P != OldInduction || VF == 1) {
+      Value *V = Induction;
+      // Handle other induction variables that are now based on the
+      // canonical one.
+      if (P != OldInduction) {
+        V = Builder.CreateSExtOrTrunc(Induction, P->getType());
+        V = II.transform(Builder, V, PSE.getSE(), DL);
+        V->setName("offset.idx");
+      }
+      Value *Broadcasted = getBroadcastInstrs(V);
+      // After broadcasting the induction variable we need to make the vector
+      // consecutive by adding 0, 1, 2, etc.
+      for (unsigned part = 0; part < UF; ++part)
+        Entry[part] = getStepVector(Broadcasted, VF * part, II.getStep());
+    } else {
+      // Instead of re-creating the vector IV by splatting the scalar IV
+      // in each iteration, we can make a new independent vector IV.
+      widenInductionVariable(II, Entry);
     }
-    Value *Broadcasted = getBroadcastInstrs(V);
-    // After broadcasting the induction variable we need to make the vector
-    // consecutive by adding 0, 1, 2, etc.
-    for (unsigned part = 0; part < UF; ++part)
-      Entry[part] = getStepVector(Broadcasted, VF * part, II.getStep());
     return;
   }
   case InductionDescriptor::IK_PtrInduction:
@@ -4239,15 +4287,23 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
       if (CI->getOperand(0) == OldInduction &&
           it->getOpcode() == Instruction::Trunc) {
         InductionDescriptor II =
-          Legal->getInductionVars()->lookup(OldInduction);
+            Legal->getInductionVars()->lookup(OldInduction);
         if (auto StepValue = II.getConstIntStepValue()) {
-          StepValue = ConstantInt::getSigned(cast<IntegerType>(CI->getType()),
-                                             StepValue->getSExtValue());
-          Value *ScalarCast = Builder.CreateCast(CI->getOpcode(), Induction,
-                                                 CI->getType());
-          Value *Broadcasted = getBroadcastInstrs(ScalarCast);
-          for (unsigned Part = 0; Part < UF; ++Part)
-            Entry[Part] = getStepVector(Broadcasted, VF * Part, StepValue);
+          IntegerType *TruncType = cast<IntegerType>(CI->getType());
+          if (VF == 1) {
+            StepValue =
+                ConstantInt::getSigned(TruncType, StepValue->getSExtValue());
+            Value *ScalarCast =
+                Builder.CreateCast(CI->getOpcode(), Induction, CI->getType());
+            Value *Broadcasted = getBroadcastInstrs(ScalarCast);
+            for (unsigned Part = 0; Part < UF; ++Part)
+              Entry[Part] = getStepVector(Broadcasted, VF * Part, StepValue);
+          } else {
+            // Truncating a vector induction variable on each iteration
+            // may be expensive. Instead, truncate the initial value, and create
+            // a new, truncated, vector IV based on that.
+            widenInductionVariable(II, Entry, TruncType);
+          }
           addMetadata(Entry, &*it);
           break;
         }

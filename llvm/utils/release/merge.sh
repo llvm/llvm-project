@@ -17,12 +17,14 @@ set -e
 rev=""
 proj=""
 revert="no"
+srcdir=""
 
 usage() {
     echo "usage: `basename $0` [OPTIONS]"
     echo "  -proj PROJECT  The project to merge the result into"
     echo "  -rev NUM       The revision to merge into the project"
     echo "  -revert        Revert rather than merge the commit"
+    echo "  -srcdir        The root of the project checkout"
 }
 
 while [ $# -gt 0 ]; do

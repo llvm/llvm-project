@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=corei7 -no-stack-coloring=false -stackcoloring-lifetime-start-on-first-use=true < %s | FileCheck %s --check-prefix=FIRSTUSE --check-prefix=CHECK
 ; RUN: llc -mcpu=corei7 -no-stack-coloring=false < %s | FileCheck %s --check-prefix=YESCOLOR --check-prefix=CHECK
+; RUN: llc -mcpu=corei7 -no-stack-coloring=false -stackcoloring-lifetime-start-on-first-use=false < %s | FileCheck %s --check-prefix=NOFIRSTUSE --check-prefix=CHECK
 ; RUN: llc -mcpu=corei7 -no-stack-coloring=true  < %s | FileCheck %s --check-prefix=NOCOLOR --check-prefix=CHECK
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -88,8 +88,8 @@ bb3:
 }
 
 ;CHECK-LABEL: myCall_w4:
-;FIRSTUSE: subq  $120, %rsp
-;YESCOLOR: subq  $200, %rsp
+;YESCOLOR: subq  $120, %rsp
+;NOFIRSTUSE: subq  $200, %rsp
 ;NOCOLOR: subq  $408, %rsp
 
 define i32 @myCall_w4(i32 %in) {
@@ -308,6 +308,9 @@ bb3:
 
 
 ;CHECK-LABEL: multi_region_bb:
+;YESCOLOR: subq  $272, %rsp
+;NOCOLOR: subq  $272, %rsp
+
 define void @multi_region_bb() nounwind ssp {
 entry:
   %A.i1 = alloca [100 x i32], align 4
@@ -332,8 +335,6 @@ entry:
   call void @llvm.lifetime.end(i64 -1, i8* %3) nounwind
   ret void
 }
-;YESCOLOR: subq  $272, %rsp
-;NOCOLOR: subq  $272, %rsp
 
 define i32 @myCall_end_before_begin(i32 %in, i1 %d) {
 entry:
@@ -362,7 +363,7 @@ bb3:
 ; Regression test for PR15707.  %buf1 and %buf2 should not be merged
 ; in this test case.
 ;CHECK-LABEL: myCall_pr15707:
-;YESCOLOR: subq $200008, %rsp
+;NOFIRSTUSE: subq $200008, %rsp
 ;NOCOLOR: subq $200008, %rsp
 define void @myCall_pr15707() {
   %buf1 = alloca i8, i32 100000, align 16
@@ -433,53 +434,52 @@ define i32 @shady_range(i32 %argc, i8** nocapture %argv) uwtable {
 ; start. See llvm bug 25776.
 
 ;CHECK-LABEL: ifthen_twoslots:
-;FIRSTUSE: subq  $536, %rsp
-;YESCOLOR: subq $1048, %rsp
-;NOCOLOR: subq  $1048, %rsp
+;YESCOLOR: subq  $1544, %rsp
+;NOFIRSTUSE: subq $2056, %rsp
+;NOCOLOR: subq  $2568, %rsp
 
 define i32 @ifthen_twoslots(i32 %x) #0 {
 entry:
-  %retval = alloca i32, align 4
-  %x.addr = alloca i32, align 4
-  %itar1 = alloca [128 x i32], align 16
-  %itar2 = alloca [128 x i32], align 16
-  %cleanup.dest.slot = alloca i32
-  store i32 %x, i32* %x.addr, align 4
-  %itar1_start_8 = bitcast [128 x i32]* %itar1 to i8*
-  call void @llvm.lifetime.start(i64 512, i8* %itar1_start_8) #3
-  %itar2_start_8 = bitcast [128 x i32]* %itar2 to i8*
-  call void @llvm.lifetime.start(i64 512, i8* %itar2_start_8) #3
-  %xval = load i32, i32* %x.addr, align 4
-  %and = and i32 %xval, 1
-  %tobool = icmp ne i32 %and, 0
-  br i1 %tobool, label %if.then, label %if.else
+  %b1 = alloca [128 x i32], align 16
+  %b2 = alloca [128 x i32], align 16
+  %b3 = alloca [128 x i32], align 16
+  %b4 = alloca [128 x i32], align 16
+  %b5 = alloca [128 x i32], align 16
+  %tmp = bitcast [128 x i32]* %b1 to i8*
+  call void @llvm.lifetime.start(i64 512, i8* %tmp)
+  %tmp1 = bitcast [128 x i32]* %b2 to i8*
+  call void @llvm.lifetime.start(i64 512, i8* %tmp1)
+  %and = and i32 %x, 1
+  %tobool = icmp eq i32 %and, 0
+  br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %arraydecay = getelementptr inbounds [128 x i32], [128 x i32]* %itar1, i32 0, i32 0
-  call void @inita(i32* %arraydecay)
-  store i32 1, i32* %retval, align 4
-  store i32 1, i32* %cleanup.dest.slot, align 4
-  %itar2_end_8 = bitcast [128 x i32]* %itar2 to i8*
-  call void @llvm.lifetime.end(i64 512, i8* %itar2_end_8) #3
-  %itar1_end_8 = bitcast [128 x i32]* %itar1 to i8*
-  call void @llvm.lifetime.end(i64 512, i8* %itar1_end_8) #3
-  br label %cleanup
+  %tmp2 = bitcast [128 x i32]* %b3 to i8*
+  call void @llvm.lifetime.start(i64 512, i8* %tmp2)
+  %a1 = getelementptr inbounds [128 x i32], [128 x i32]* %b1, i64 0, i64 0
+  %a2 = getelementptr inbounds [128 x i32], [128 x i32]* %b3, i64 0, i64 0
+  call void @initb(i32* %a1, i32* %a2, i32* null)
+  call void @llvm.lifetime.end(i64 512, i8* %tmp2)
+  br label %if.end
 
 if.else:                                          ; preds = %entry
-  %arraydecay1 = getelementptr inbounds [128 x i32], [128 x i32]* %itar2, i32 0, i32 0
-  call void @inita(i32* %arraydecay1)
-  store i32 0, i32* %retval, align 4
-  store i32 1, i32* %cleanup.dest.slot, align 4
-  %itar2_end2_8 = bitcast [128 x i32]* %itar2 to i8*
-  call void @llvm.lifetime.end(i64 512, i8* %itar2_end2_8) #3
-  %itar1_end2_8 = bitcast [128 x i32]* %itar1 to i8*
-  call void @llvm.lifetime.end(i64 512, i8* %itar1_end2_8) #3
-  br label %cleanup
+  %tmp3 = bitcast [128 x i32]* %b4 to i8*
+  call void @llvm.lifetime.start(i64 512, i8* %tmp3)
+  %tmp4 = bitcast [128 x i32]* %b5 to i8*
+  call void @llvm.lifetime.start(i64 512, i8* %tmp4)
+  %a3 = getelementptr inbounds [128 x i32], [128 x i32]* %b2, i64 0, i64 0
+  %a4 = getelementptr inbounds [128 x i32], [128 x i32]* %b4, i64 0, i64 0
+  %a5 = getelementptr inbounds [128 x i32], [128 x i32]* %b5, i64 0, i64 0
+  call void @initb(i32* %a3, i32* %a4, i32* %a5) #3
+  call void @llvm.lifetime.end(i64 512, i8* %tmp4)
+  call void @llvm.lifetime.end(i64 512, i8* %tmp3)
+  br label %if.end
 
-cleanup:                                          ; preds = %if.else, %if.then
-  %final_retval = load i32,
- i32* %retval, align 4
-  ret i32 %final_retval
+if.end:                                           ; preds = %if.else, %if.then
+  call void @llvm.lifetime.end(i64 512, i8* %tmp1)
+  call void @llvm.lifetime.end(i64 512, i8* %tmp)
+  ret i32 0
+
 }
 
 ; This function is intended to test the case where you
@@ -489,8 +489,8 @@ cleanup:                                          ; preds = %if.else, %if.then
 ; markers only.
 
 ;CHECK-LABEL: while_loop:
-;FIRSTUSE: subq  $1032, %rsp
-;YESCOLOR: subq  $1544, %rsp
+;YESCOLOR: subq  $1032, %rsp
+;NOFIRSTUSE: subq  $1544, %rsp
 ;NOCOLOR: subq  $1544, %rsp
 
 define i32 @while_loop(i32 %x) #0 {
@@ -543,17 +543,12 @@ if.end:                                           ; preds = %if.end.loopexit, %i
 
 ; Test case motivated by PR27903. Same routine inlined multiple times
 ; into a caller results in a multi-segment lifetime, but the second
-; lifetime has no explicit references to the stack slot.
-;
-; FIXME: the "FIRSTUSE" stack size (56) below represents buggy/incorrect
-; behavior not currently exposed on trunk, due to the fact that
-; the "stackcoloring-lifetime-start-on-first-use" now defaults to
-; false. When a better fix for PR27903 is checked in, this result
-; will change to 96.
+; lifetime has no explicit references to the stack slot. Such slots
+; have to be treated conservatively.
 
 ;CHECK-LABEL: twobod_b27903:
-;FIRSTUSE: subq  $56, %rsp
 ;YESCOLOR: subq  $96, %rsp
+;NOFIRSTUSE: subq  $96, %rsp
 ;NOCOLOR: subq  $96, %rsp
 
 define i32 @twobod_b27903(i32 %y, i32 %x) {
@@ -587,7 +582,9 @@ if.end:                                           ; preds = %if.then, %entry
   ret i32 %x.addr.0
 }
 
-declare void @inita(i32*) #2
+declare void @inita(i32*)
+
+declare void @initb(i32*,i32*,i32*)
 
 declare void @bar([100 x i32]* , [100 x i32]*) nounwind
 

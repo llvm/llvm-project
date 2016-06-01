@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_STREAMREF_H
 #define LLVM_DEBUGINFO_CODEVIEW_STREAMREF_H
 
+#include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
 
 namespace llvm {
@@ -28,6 +29,8 @@ public:
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
+    if (Size > Length)
+      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
     return Stream->readBytes(ViewOffset + Offset, Size, Buffer);
   }
 

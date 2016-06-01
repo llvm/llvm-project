@@ -12,7 +12,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @PA = external global i32*
 
 
-;; === First, the tests that should always vectorize, wither statically or by adding run-time checks ===
+;; === First, the tests that should always vectorize, whether statically or by adding run-time checks ===
 
 
 ; /// Different objects, positive induction, constant distance
@@ -387,7 +387,7 @@ for.end:                                          ; preds = %for.cond
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @noAlias08(
-; CHECK: sub <4 x i32>
+; CHECK: sub nuw nsw <4 x i32>
 ; CHECK: ret
 
 define i32 @noAlias08(i32 %a) #0 {
@@ -439,7 +439,7 @@ for.end:                                          ; preds = %for.cond
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @noAlias09(
-; CHECK: sub <4 x i32>
+; CHECK: sub nuw nsw <4 x i32>
 ; CHECK: ret
 
 define i32 @noAlias09(i32 %a) #0 {
@@ -721,7 +721,7 @@ for.end:                                          ; preds = %for.cond
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @noAlias14(
-; CHECK: sub <4 x i32>
+; CHECK: sub nuw nsw <4 x i32>
 ; CHECK: ret
 
 define i32 @noAlias14(i32 %a) #0 {

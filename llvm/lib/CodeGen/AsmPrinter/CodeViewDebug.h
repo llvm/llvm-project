@@ -185,6 +185,16 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitLocalVariable(const LocalVariable &Var);
 
+  /// Translates the DIType to codeview if necessary and returns a type index
+  /// for it.
+  codeview::TypeIndex getTypeIndex(DITypeRef Ty);
+
+  codeview::TypeIndex lowerType(const DIType *Ty);
+  codeview::TypeIndex lowerTypeBasic(const DIBasicType *Ty);
+  codeview::TypeIndex lowerTypePointer(const DIDerivedType *Ty);
+  codeview::TypeIndex lowerTypeMemberPointer(const DIDerivedType *Ty);
+  codeview::TypeIndex lowerTypeModifier(const DIDerivedType *Ty);
+
 public:
   CodeViewDebug(AsmPrinter *Asm);
 

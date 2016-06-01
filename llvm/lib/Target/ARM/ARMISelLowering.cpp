@@ -1844,8 +1844,13 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const GlobalValue *GV = G->getGlobal();
     isDirect = true;
     bool isDef = GV->isStrongDefinitionForLinker();
-    bool isStub = (!isDef && Subtarget->isTargetMachO()) &&
-                   getTargetMachine().getRelocationModel() != Reloc::Static;
+    const TargetMachine &TM = getTargetMachine();
+    Reloc::Model RM = TM.getRelocationModel();
+    const Triple &TargetTriple = TM.getTargetTriple();
+    bool isStub =
+        !shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV) &&
+        Subtarget->isTargetMachO();
+
     isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
     // ARM call to a local ARM function is predicable.
     isLocalARMFunc = !Subtarget->isThumb() && (isDef || !ARMInterworking);
