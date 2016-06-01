@@ -38,6 +38,9 @@
 #  include <asm/ptrace.h>
 # endif
 # include <sys/user.h>  // for user_regs_struct
+# if SANITIZER_ANDROID && SANITIZER_MIPS
+#   include <asm/reg.h>  // for mips SP register in sys/user.h
+# endif
 #endif
 #include <sys/wait.h> // for signal-related stuff
 
@@ -467,7 +470,11 @@ typedef pt_regs regs_struct;
 
 #elif defined(__mips__)
 typedef struct user regs_struct;
-#define REG_SP regs[EF_REG29]
+# if SANITIZER_ANDROID
+#  define REG_SP regs[EF_R29]
+# else
+#  define REG_SP regs[EF_REG29]
+# endif
 
 #elif defined(__aarch64__)
 typedef struct user_pt_regs regs_struct;
