@@ -49,14 +49,14 @@ int main()
         const C c = {1, 2, 3.5};
         C::const_reference r1 = c.at(0);
         assert(r1 == 1);
-        
+
         C::const_reference r2 = c.at(2);
         assert(r2 == 3.5);
 
         try { (void) c.at(3); }
         catch (const std::out_of_range &) {}
     }
-    
+
 #if TEST_STD_VER > 11
     {
         typedef double T;

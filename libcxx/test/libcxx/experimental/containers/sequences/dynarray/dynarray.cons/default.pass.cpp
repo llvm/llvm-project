@@ -35,7 +35,7 @@ using std::experimental::dynarray;
 template <class T>
 void testInitList( const std::initializer_list<T> &vals ) {
     typedef dynarray<T> dynA;
-    
+
     dynA d1 ( vals );
     assert ( d1.size () == vals.size() );
     assert ( std::equal ( vals.begin (), vals.end (), d1.begin (), d1.end ()));
@@ -45,7 +45,7 @@ void testInitList( const std::initializer_list<T> &vals ) {
 template <class T>
 void test ( const T &val, bool DefaultValueIsIndeterminate = false) {
     typedef dynarray<T> dynA;
-    
+
     dynA d1 ( 4 );
     assert ( d1.size () == 4 );
     if (!DefaultValueIsIndeterminate) {
@@ -58,7 +58,7 @@ void test ( const T &val, bool DefaultValueIsIndeterminate = false) {
 
     dynA d3 ( d2 );
     assert ( d3.size () == 7 );
-    assert ( std::all_of ( d3.begin (), d3.end (), [&val]( const T &item ){ return item == val; } ));   
+    assert ( std::all_of ( d3.begin (), d3.end (), [&val]( const T &item ){ return item == val; } ));
     }
 
 void test_bad_length () {
@@ -76,12 +76,12 @@ int main()
     test<double> ( 14.0, true );
     test<std::complex<double>> ( std::complex<double> ( 14, 0 ));
     test<std::string> ( "fourteen" );
-    
+
     testInitList( { 1, 1, 2, 3, 5, 8 } );
     testInitList( { 1., 1., 2., 3., 5., 8. } );
     testInitList( { std::string("1"), std::string("1"), std::string("2"), std::string("3"),
                   std::string("5"), std::string("8")} );
-    
+
 //  Make sure we don't pick up the Allocator version here
     dynarray<long> d1 ( 20, 3 );
     assert ( d1.size() == 20 );

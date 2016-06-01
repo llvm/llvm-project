@@ -15,7 +15,7 @@
 // class packaged_task<R(ArgTypes...)>
 // template <class F>
 //   packaged_task(F&& f);
-// These constructors shall not participate in overload resolution if 
+// These constructors shall not participate in overload resolution if
 //    decay<F>::type is the same type as std::packaged_task<R(ArgTypes...)>.
 
 #include <future>

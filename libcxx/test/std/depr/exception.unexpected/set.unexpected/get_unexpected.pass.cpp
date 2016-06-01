@@ -23,7 +23,7 @@ void f3()
 
 int main()
 {
-    
+
     std::unexpected_handler old = std::get_unexpected();
     // verify there is a previous unexpected handler
     assert(old);

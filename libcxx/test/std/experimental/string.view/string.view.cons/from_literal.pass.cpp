@@ -40,7 +40,7 @@ int main () {
     test ( "QBCDE" );
     test ( "A" );
     test ( "" );
-    
+
     test ( L"QBCDE" );
     test ( L"A" );
     test ( L"" );

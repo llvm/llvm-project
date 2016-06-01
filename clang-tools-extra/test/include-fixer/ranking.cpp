@@ -1,6 +1,5 @@
-// RUN: clang-include-fixer -db=yaml -input=%S/Inputs/fake_yaml_db.yaml -output-headers %s -- | FileCheck %s -implicit-check-not=.h
+// RUN: clang-include-fixer -db=yaml -input=%S/Inputs/fake_yaml_db.yaml -output-headers %s -- | FileCheck %s
 
-// CHECK: "../include/bar.h"
-// CHECK-NEXT: "../include/zbar.h"
+// CHECK: "Headers": [ "\"../include/bar.h\"", "\"../include/zbar.h\"" ]
 
 bar b;

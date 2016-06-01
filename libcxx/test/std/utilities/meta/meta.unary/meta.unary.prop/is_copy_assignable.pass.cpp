@@ -79,7 +79,7 @@ int main()
     test_is_not_copy_assignable<int[]> ();
     test_is_not_copy_assignable<int[3]> ();
 #endif
-#if __has_feature(cxx_access_control_sfinae) 
+#if __has_feature(cxx_access_control_sfinae)
     test_is_not_copy_assignable<B> ();
 #endif
     test_is_not_copy_assignable<void> ();

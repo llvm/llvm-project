@@ -30,7 +30,7 @@ test(S s)
         assert(&*cb1 == &s[0]);
         assert( *cb2 ==  s[0]);
         assert(&*cb2 == &s[0]);
-        
+
     }
     assert(  b == cb1);
     assert(  b == cb2);
@@ -62,7 +62,7 @@ int main()
     constexpr u16string_view u16sv {u"123", 3 };
     constexpr u32string_view u32sv {U"123", 3 };
     constexpr wstring_view     wsv {L"123", 3 };
-    
+
     static_assert (    *sv.begin() ==    sv[0], "" );
     static_assert ( *u16sv.begin() == u16sv[0], "" );
     static_assert ( *u32sv.begin() == u32sv[0], "" );

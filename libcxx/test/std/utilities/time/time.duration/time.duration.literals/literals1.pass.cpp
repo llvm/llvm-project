@@ -20,7 +20,7 @@ int main()
     assert ( h == hours(4));
     auto h2 = 4.0h;
     assert ( h == h2 );
-    
+
     minutes min = 36min;
     assert ( min == minutes(36));
     auto min2 = 36.0min;

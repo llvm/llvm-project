@@ -32,27 +32,27 @@ int main () {
 	const int eleven = 11;
 
 //	Narrow streams w/rvalues
-	{ exp::ostream_joiner<char>         oj(std::cout, '8'); } 
-	{ exp::ostream_joiner<std::string>  oj(std::cout, std::string("9")); } 
-	{ exp::ostream_joiner<std::wstring> oj(std::cout, std::wstring(L"10")); } 
-	{ exp::ostream_joiner<int>          oj(std::cout, 11); } 
+	{ exp::ostream_joiner<char>         oj(std::cout, '8'); }
+	{ exp::ostream_joiner<std::string>  oj(std::cout, std::string("9")); }
+	{ exp::ostream_joiner<std::wstring> oj(std::cout, std::wstring(L"10")); }
+	{ exp::ostream_joiner<int>          oj(std::cout, 11); }
 
 //	Narrow streams w/lvalues
-	{ exp::ostream_joiner<char>         oj(std::cout, eight); } 
-	{ exp::ostream_joiner<std::string>  oj(std::cout, nine); } 
-	{ exp::ostream_joiner<std::wstring> oj(std::cout, ten); } 
-	{ exp::ostream_joiner<int>          oj(std::cout, eleven); } 
+	{ exp::ostream_joiner<char>         oj(std::cout, eight); }
+	{ exp::ostream_joiner<std::string>  oj(std::cout, nine); }
+	{ exp::ostream_joiner<std::wstring> oj(std::cout, ten); }
+	{ exp::ostream_joiner<int>          oj(std::cout, eleven); }
 
 //	Wide streams w/rvalues
-	{ exp::ostream_joiner<char, wchar_t>         oj(std::wcout, '8'); } 
-	{ exp::ostream_joiner<std::string, wchar_t>  oj(std::wcout, std::string("9")); } 
-	{ exp::ostream_joiner<std::wstring, wchar_t> oj(std::wcout, std::wstring(L"10")); } 
-	{ exp::ostream_joiner<int, wchar_t>          oj(std::wcout, 11); } 
+	{ exp::ostream_joiner<char, wchar_t>         oj(std::wcout, '8'); }
+	{ exp::ostream_joiner<std::string, wchar_t>  oj(std::wcout, std::string("9")); }
+	{ exp::ostream_joiner<std::wstring, wchar_t> oj(std::wcout, std::wstring(L"10")); }
+	{ exp::ostream_joiner<int, wchar_t>          oj(std::wcout, 11); }
 
 //	Wide streams w/lvalues
-	{ exp::ostream_joiner<char, wchar_t>         oj(std::wcout, eight); } 
-	{ exp::ostream_joiner<std::string, wchar_t>  oj(std::wcout, nine); } 
-	{ exp::ostream_joiner<std::wstring, wchar_t> oj(std::wcout, ten); } 
-	{ exp::ostream_joiner<int, wchar_t>          oj(std::wcout, eleven); } 
+	{ exp::ostream_joiner<char, wchar_t>         oj(std::wcout, eight); }
+	{ exp::ostream_joiner<std::string, wchar_t>  oj(std::wcout, nine); }
+	{ exp::ostream_joiner<std::wstring, wchar_t> oj(std::wcout, ten); }
+	{ exp::ostream_joiner<int, wchar_t>          oj(std::wcout, eleven); }
 
 	}

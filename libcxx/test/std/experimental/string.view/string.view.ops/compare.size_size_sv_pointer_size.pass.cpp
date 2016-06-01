@@ -43,8 +43,8 @@ void test1 ( std::experimental::basic_string_view<CharT> sv1, size_t pos1, size_
 
 
 template<typename CharT>
-void test ( const CharT *s1, size_t pos1, size_t n1, 
-            const CharT *s2, size_t n2, 
+void test ( const CharT *s1, size_t pos1, size_t n1,
+            const CharT *s2, size_t n2,
             int expected ) {
     typedef std::experimental::basic_string_view<CharT> string_view_t;
     string_view_t sv1 ( s1 );
@@ -1308,7 +1308,7 @@ int main () {
     test9();
     test10();
     test11();
-    
+
     {
     test("", 0, 0, "abcde", 0, 0);
     test("", 0, 0, "abcde", 1, -1);

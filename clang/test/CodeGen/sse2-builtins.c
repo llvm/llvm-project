@@ -533,7 +533,7 @@ __m128i test_mm_cvttpd_epi32(__m128d A) {
 
 __m128i test_mm_cvttps_epi32(__m128 A) {
   // CHECK-LABEL: test_mm_cvttps_epi32
-  // CHECK: call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %{{.*}})
+  // CHECK: fptosi <4 x float> %{{.*}} to <4 x i32>
   return _mm_cvttps_epi32(A);
 }
 

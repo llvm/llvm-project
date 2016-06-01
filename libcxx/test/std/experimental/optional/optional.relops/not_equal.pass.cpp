@@ -27,13 +27,13 @@ struct X
 
 constexpr bool operator == ( const X &lhs, const X &rhs )
     { return lhs.i_ == rhs.i_ ; }
-    
+
 int main()
 {
     {
     typedef X T;
     typedef optional<T> O;
-    
+
     constexpr O o1;     // disengaged
     constexpr O o2;     // disengaged
     constexpr O o3{1};  // engaged

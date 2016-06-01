@@ -33,7 +33,7 @@ int main()
         assert(r1 == 1);
         r1 = 5.5;
         assert(c.front() == 5.5);
-        
+
         C::reference r2 = c[2];
         assert(r2 == 3.5);
         r2 = 7.5;

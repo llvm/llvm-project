@@ -13,7 +13,7 @@
 //
 // istreambuf_iterator() throw();
 //
-// All specializations of istreambuf_iterator shall have a trivial copy constructor, 
+// All specializations of istreambuf_iterator shall have a trivial copy constructor,
 //    a constexpr default constructor and a trivial destructor.
 
 #include <iterator>

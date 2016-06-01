@@ -13,7 +13,7 @@
 #include <functional> // for std::hash
 
 struct Counter_base { static int gConstructed; };
-    
+
 template <typename T>
 class Counter : public Counter_base
 {
@@ -27,7 +27,7 @@ public:
     Counter& operator=(Counter&& rhs) { ++gConstructed; data_ = std::move(rhs.data_); return *this; }
 #endif
     ~Counter() { --gConstructed; }
-    
+
     const T& get() const {return data_;}
 
     bool operator==(const Counter& x) const {return data_ == x.data_;}

@@ -2948,19 +2948,19 @@ __m512 test_mm512_maskz_unpacklo_ps(__mmask16 __U, __m512 __A, __m512 __B) {
 int test_mm_cvt_roundsd_si32(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvt_roundsd_si32
   // CHECK: @llvm.x86.avx512.vcvtsd2si32
-  return _mm_cvt_roundsd_si32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundsd_si32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 int test_mm_cvt_roundsd_i32(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvt_roundsd_i32
   // CHECK: @llvm.x86.avx512.vcvtsd2si32
-  return _mm_cvt_roundsd_i32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundsd_i32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned test_mm_cvt_roundsd_u32(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvt_roundsd_u32
   // CHECK: @llvm.x86.avx512.vcvtsd2usi32
-  return _mm_cvt_roundsd_u32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundsd_u32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned test_mm_cvtsd_u32(__m128d __A) {
@@ -2972,7 +2972,7 @@ unsigned test_mm_cvtsd_u32(__m128d __A) {
 unsigned long long test_mm_cvt_roundsd_u64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvt_roundsd_u64
   // CHECK: @llvm.x86.avx512.vcvtsd2usi64
-  return _mm_cvt_roundsd_u64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundsd_u64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned long long test_mm_cvtsd_u64(__m128d __A) {
@@ -2984,31 +2984,31 @@ unsigned long long test_mm_cvtsd_u64(__m128d __A) {
 int test_mm_cvt_roundss_si32(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvt_roundss_si32
   // CHECK: @llvm.x86.avx512.vcvtss2si32
-  return _mm_cvt_roundss_si32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundss_si32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 int test_mm_cvt_roundss_i32(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvt_roundss_i32
   // CHECK: @llvm.x86.avx512.vcvtss2si32
-  return _mm_cvt_roundss_i32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundss_i32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 int test_mm_cvt_roundss_si64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvt_roundss_si64
   // CHECK: @llvm.x86.avx512.vcvtss2si64
-  return _mm_cvt_roundss_si64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundss_si64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 long long test_mm_cvt_roundss_i64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvt_roundss_i64
   // CHECK: @llvm.x86.avx512.vcvtss2si64
-  return _mm_cvt_roundss_i64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundss_i64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned test_mm_cvt_roundss_u32(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvt_roundss_u32
   // CHECK: @llvm.x86.avx512.vcvtss2usi32
-  return _mm_cvt_roundss_u32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundss_u32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned test_mm_cvtss_u32(__m128 __A) {
@@ -3020,7 +3020,7 @@ unsigned test_mm_cvtss_u32(__m128 __A) {
 unsigned long long test_mm_cvt_roundss_u64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvt_roundss_u64
   // CHECK: @llvm.x86.avx512.vcvtss2usi64
-  return _mm_cvt_roundss_u64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvt_roundss_u64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned long long test_mm_cvtss_u64(__m128 __A) {
@@ -3032,13 +3032,13 @@ unsigned long long test_mm_cvtss_u64(__m128 __A) {
 int test_mm_cvtt_roundsd_i32(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundsd_i32
   // CHECK: @llvm.x86.avx512.cvttsd2si
-  return _mm_cvtt_roundsd_i32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundsd_i32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 int test_mm_cvtt_roundsd_si32(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundsd_si32
   // CHECK: @llvm.x86.avx512.cvttsd2si
-  return _mm_cvtt_roundsd_si32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundsd_si32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 int test_mm_cvttsd_i32(__m128d __A) {
@@ -3050,13 +3050,13 @@ int test_mm_cvttsd_i32(__m128d __A) {
 unsigned long long test_mm_cvtt_roundsd_si64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundsd_si64
   // CHECK: @llvm.x86.avx512.cvttsd2si64
-  return _mm_cvtt_roundsd_si64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundsd_si64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 long long test_mm_cvtt_roundsd_i64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundsd_i64
   // CHECK: @llvm.x86.avx512.cvttsd2si64
-  return _mm_cvtt_roundsd_i64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundsd_i64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 long long test_mm_cvttsd_i64(__m128d __A) {
@@ -3068,7 +3068,7 @@ long long test_mm_cvttsd_i64(__m128d __A) {
 unsigned test_mm_cvtt_roundsd_u32(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundsd_u32
   // CHECK: @llvm.x86.avx512.cvttsd2usi
-  return _mm_cvtt_roundsd_u32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundsd_u32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned test_mm_cvttsd_u32(__m128d __A) {
@@ -3080,7 +3080,7 @@ unsigned test_mm_cvttsd_u32(__m128d __A) {
 unsigned long long test_mm_cvtt_roundsd_u64(__m128d __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundsd_u64
   // CHECK: @llvm.x86.avx512.cvttsd2usi64
-  return _mm_cvtt_roundsd_u64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundsd_u64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned long long test_mm_cvttsd_u64(__m128d __A) {
@@ -3092,13 +3092,13 @@ unsigned long long test_mm_cvttsd_u64(__m128d __A) {
 int test_mm_cvtt_roundss_i32(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundss_i32
   // CHECK: @llvm.x86.avx512.cvttss2si
-  return _mm_cvtt_roundss_i32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundss_i32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 int test_mm_cvtt_roundss_si32(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundss_si32
   // CHECK: @llvm.x86.avx512.cvttss2si
-  return _mm_cvtt_roundss_si32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundss_si32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 int test_mm_cvttss_i32(__m128 __A) {
@@ -3110,13 +3110,13 @@ int test_mm_cvttss_i32(__m128 __A) {
 float test_mm_cvtt_roundss_i64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundss_i64
   // CHECK: @llvm.x86.avx512.cvttss2si64
-  return _mm_cvtt_roundss_i64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundss_i64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 long long test_mm_cvtt_roundss_si64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundss_si64
   // CHECK: @llvm.x86.avx512.cvttss2si64
-  return _mm_cvtt_roundss_si64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundss_si64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 long long test_mm_cvttss_i64(__m128 __A) {
@@ -3128,7 +3128,7 @@ long long test_mm_cvttss_i64(__m128 __A) {
 unsigned test_mm_cvtt_roundss_u32(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundss_u32
   // CHECK: @llvm.x86.avx512.cvttss2usi
-  return _mm_cvtt_roundss_u32(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundss_u32(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned test_mm_cvttss_u32(__m128 __A) {
@@ -3140,13 +3140,77 @@ unsigned test_mm_cvttss_u32(__m128 __A) {
 unsigned long long test_mm_cvtt_roundss_u64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtt_roundss_u64
   // CHECK: @llvm.x86.avx512.cvttss2usi64
-  return _mm_cvtt_roundss_u64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm_cvtt_roundss_u64(__A, _MM_FROUND_CUR_DIRECTION);
 }
 
 unsigned long long test_mm_cvttss_u64(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvttss_u64
   // CHECK: @llvm.x86.avx512.cvttss2usi64
   return _mm_cvttss_u64(__A); 
+}
+
+__m512i test_mm512_cvtt_roundps_epu32(__m512 __A) 
+{
+    // CHECK-LABEL: @test_mm512_cvtt_roundps_epu32
+    // CHECK: @llvm.x86.avx512.mask.cvttps2udq.512
+    return _mm512_cvtt_roundps_epu32(__A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m512i test_mm512_mask_cvtt_roundps_epu32(__m512i __W, __mmask16 __U, __m512 __A)
+{
+    // CHECK-LABEL: @test_mm512_mask_cvtt_roundps_epu32
+    // CHECK: @llvm.x86.avx512.mask.cvttps2udq.512
+    return _mm512_mask_cvtt_roundps_epu32(__W, __U, __A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m512i test_mm512_maskz_cvtt_roundps_epu32( __mmask16 __U, __m512 __A)
+{
+    // CHECK-LABEL: @test_mm512_maskz_cvtt_roundps_epu32
+    // CHECK: @llvm.x86.avx512.mask.cvttps2udq.512
+
+    return _mm512_maskz_cvtt_roundps_epu32(__U, __A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m256i test_mm512_cvt_roundps_ph(__m512  __A)
+{
+    // CHECK-LABEL: @test_mm512_cvt_roundps_ph
+    // CHECK: @llvm.x86.avx512.mask.vcvtps2ph.512
+    return _mm512_cvt_roundps_ph(__A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m256i test_mm512_mask_cvt_roundps_ph(__m256i __W , __mmask16 __U, __m512  __A)
+{
+    // CHECK-LABEL: @test_mm512_mask_cvt_roundps_ph
+    // CHECK: @llvm.x86.avx512.mask.vcvtps2ph.512
+    return _mm512_mask_cvt_roundps_ph(__W, __U, __A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m256i test_mm512_maskz_cvt_roundps_ph(__mmask16 __U, __m512  __A)
+{
+    // CHECK-LABEL: @test_mm512_maskz_cvt_roundps_ph
+    // CHECK: @llvm.x86.avx512.mask.vcvtps2ph.512
+    return _mm512_maskz_cvt_roundps_ph(__U, __A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m512 test_mm512_cvt_roundph_ps(__m256i __A)
+{
+    // CHECK-LABEL: @test_mm512_cvt_roundph_ps
+    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+    return _mm512_cvt_roundph_ps(__A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m512 test_mm512_mask_cvt_roundph_ps(__m512 __W, __mmask16 __U, __m256i __A)
+{
+    // CHECK-LABEL: @test_mm512_mask_cvt_roundph_ps
+    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+    return _mm512_mask_cvt_roundph_ps(__W, __U, __A, _MM_FROUND_CUR_DIRECTION);
+}
+
+__m512 test_mm512_maskz_cvt_roundph_ps(__mmask16 __U, __m256i __A)
+{
+    // CHECK-LABEL: @test_mm512_maskz_cvt_roundph_ps
+    // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+    return _mm512_maskz_cvt_roundph_ps(__U, __A, _MM_FROUND_CUR_DIRECTION);
 }
 
 __m512 test_mm512_mask_cvt_roundepi32_ps(__m512 __W, __mmask16 __U, __m512i __A)

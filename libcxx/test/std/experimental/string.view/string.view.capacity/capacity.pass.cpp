@@ -30,7 +30,7 @@ void test1 () {
     static_assert ( sv1.max_size() > sv1.size(), "");
     }
 #endif
-    
+
     {
     SV sv1;
     assert ( sv1.size() == 0 );

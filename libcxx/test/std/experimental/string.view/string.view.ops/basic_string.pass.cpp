@@ -20,7 +20,7 @@ template<typename CharT>
 void test ( const CharT *s ) {
     typedef std::experimental::basic_string_view<CharT> string_view_t;
     typedef std::basic_string<CharT> string_t;
-    
+
     {
     string_view_t sv1 ( s );
     string_t      str = (string_t) sv1;

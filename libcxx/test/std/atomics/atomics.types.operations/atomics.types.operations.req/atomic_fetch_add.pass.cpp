@@ -15,15 +15,15 @@
 // template <class Integral>
 //     Integral
 //     atomic_fetch_add(volatile atomic<Integral>* obj, Integral op);
-// 
+//
 // template <class Integral>
 //     Integral
 //     atomic_fetch_add(atomic<Integral>* obj, Integral op);
-// 
+//
 // template <class T>
 //     T*
 //     atomic_fetch_add(volatile atomic<T*>* obj, ptrdiff_t op);
-// 
+//
 // template <class T>
 //     T*
 //     atomic_fetch_add(atomic<T*>* obj, ptrdiff_t op);

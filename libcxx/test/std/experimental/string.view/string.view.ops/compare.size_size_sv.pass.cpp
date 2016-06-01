@@ -360,7 +360,7 @@ int main () {
     test0();
     test1();
     test2();
-    
+
     {
     test("abcde", 5, 1, "", 0);
     test("abcde", 2, 4, "", 3);

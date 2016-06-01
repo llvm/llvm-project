@@ -15,7 +15,7 @@
 // template <class T>
 //     T
 //     atomic_exchange(volatile atomic<T>* obj, T desr);
-// 
+//
 // template <class T>
 //     T
 //     atomic_exchange(atomic<T>* obj, T desr);

@@ -19,11 +19,11 @@
 // public:
 //   boyer_moore_searcher(RandomAccessIterator1 pat_first, RandomAccessIterator1 pat_last,
 //                        Hash hf = Hash(), BinaryPredicate pred = BinaryPredicate());
-// 
+//
 //   template<class RandomAccessIterator2>
 //   pair<RandomAccessIterator2, RandomAccessIterator2>
 //   operator()(RandomAccessIterator2 first, RandomAccessIterator2 last) const;
-// 
+//
 // private:
 //   RandomAccessIterator1 pat_first_; // exposition only
 //   RandomAccessIterator1 pat_last_;  // exposition only
@@ -44,7 +44,7 @@ template <typename T> struct MyHash {
 
 template <typename Iter1, typename Iter2>
 void do_search(Iter1 b1, Iter1 e1, Iter2 b2, Iter2 e2, Iter1 result, unsigned max_count) {
-    std::experimental::boyer_moore_searcher<Iter2, 
+    std::experimental::boyer_moore_searcher<Iter2,
                  MyHash<typename std::remove_cv<typename std::iterator_traits<Iter2>::value_type>::type>>
           s{b2, e2};
     assert(result == std::experimental::search(b1, e1, s));

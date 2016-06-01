@@ -322,7 +322,7 @@ template <class R, class... ArgTypes>
 class packaged_task<R(ArgTypes...)>
 {
 public:
-    typedef R result_type;
+    typedef R result_type; // extension
 
     // construction and destruction
     packaged_task() noexcept;
@@ -1998,7 +1998,7 @@ template<class _Rp, class ..._ArgTypes>
 class _LIBCPP_TYPE_VIS_ONLY packaged_task<_Rp(_ArgTypes...)>
 {
 public:
-    typedef _Rp result_type;
+    typedef _Rp result_type; // extension
 
 private:
     __packaged_task_function<result_type(_ArgTypes...)> __f_;
@@ -2127,7 +2127,7 @@ template<class ..._ArgTypes>
 class _LIBCPP_TYPE_VIS_ONLY packaged_task<void(_ArgTypes...)>
 {
 public:
-    typedef void result_type;
+    typedef void result_type; // extension
 
 private:
     __packaged_task_function<result_type(_ArgTypes...)> __f_;

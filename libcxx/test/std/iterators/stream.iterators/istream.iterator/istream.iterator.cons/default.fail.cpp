@@ -16,7 +16,7 @@
 #include <iterator>
 #include <cassert>
 
-struct S { S(); }; // not constexpr 
+struct S { S(); }; // not constexpr
 
 int main()
 {

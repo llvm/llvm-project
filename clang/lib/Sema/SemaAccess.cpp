@@ -1766,9 +1766,9 @@ Sema::AccessResult Sema::CheckFriendAccess(NamedDecl *target) {
   // while the ParsingDeclarator is active.
   EffectiveContext EC(CurContext);
   switch (CheckEffectiveAccess(*this, EC, target->getLocation(), entity)) {
-  case AR_accessible: return Sema::AR_accessible;
-  case AR_inaccessible: return Sema::AR_inaccessible;
-  case AR_dependent: return Sema::AR_dependent;
+  case ::AR_accessible: return Sema::AR_accessible;
+  case ::AR_inaccessible: return Sema::AR_inaccessible;
+  case ::AR_dependent: return Sema::AR_dependent;
   }
   llvm_unreachable("invalid access result");
 }

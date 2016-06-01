@@ -400,7 +400,7 @@ struct ThrowingIterator {
     ++current_;
     return *this;
     }
-    
+
     ThrowingIterator operator++(int)
     {
         ThrowingIterator temp = *this;
@@ -466,7 +466,7 @@ bool operator== (const ThrowingIterator<T>& a, const ThrowingIterator<T>& b)
 template <typename T>
 bool operator!= (const ThrowingIterator<T>& a, const ThrowingIterator<T>& b)
 {   return !a.operator==(b); }
-    
+
 template <typename T>
 struct NonThrowingIterator {
     typedef std::bidirectional_iterator_tag iterator_category;
@@ -501,7 +501,7 @@ struct NonThrowingIterator {
     ++current_;
     return *this;
     }
-    
+
     NonThrowingIterator operator++(int) TEST_NOEXCEPT
     {
         NonThrowingIterator temp = *this;

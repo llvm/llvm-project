@@ -20,7 +20,7 @@
 int sign ( int x ) { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
 template<typename CharT>
-void test1 ( std::experimental::basic_string_view<CharT> sv1, 
+void test1 ( std::experimental::basic_string_view<CharT> sv1,
              size_t pos1, size_t n1, const CharT *s, int expected ) {
     if (pos1 > sv1.size()) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -418,7 +418,7 @@ int main()
     test(U"abcdefghijklmnopqrst", 0, 12, U"abcdefghij", 10);
     test(U"abcdefghijklmnopqrst", 0, -1, U"abcdefghijklmnopqrst", 0);
     }
- 
+
     {
     test(u"", 0, 0, u"", 0);
     test(u"", 0, 0, u"abcde", -5);

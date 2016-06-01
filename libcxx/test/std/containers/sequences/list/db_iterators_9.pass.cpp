@@ -33,7 +33,7 @@ int main()
     typedef std::list<T> C;
     C::iterator i{};
     C::const_iterator ci{};
-    
+
     lib_asserts = 0;
     try { ++i; }  catch (int) { ++lib_asserts; }
     try { i++; }  catch (int) { ++lib_asserts; }

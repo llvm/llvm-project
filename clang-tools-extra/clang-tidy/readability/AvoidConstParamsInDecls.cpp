@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidConstParamsInDecls.h"
+#include "llvm/ADT/Optional.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
@@ -38,8 +39,8 @@ void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
 }
 
 // Re-lex the tokens to get precise location of last 'const'
-static Token ConstTok(CharSourceRange Range,
-                      const MatchFinder::MatchResult &Result) {
+static llvm::Optional<Token> ConstTok(CharSourceRange Range,
+                                      const MatchFinder::MatchResult &Result) {
   const SourceManager &Sources = *Result.SourceManager;
   std::pair<FileID, unsigned> LocInfo =
       Sources.getDecomposedLoc(Range.getBegin());
@@ -49,7 +50,7 @@ static Token ConstTok(CharSourceRange Range,
                  Result.Context->getLangOpts(), File.begin(), TokenBegin,
                  File.end());
   Token Tok;
-  Token ConstTok;
+  llvm::Optional<Token> ConstTok;
   while (!RawLexer.LexFromRawLexer(Tok)) {
     if (Sources.isBeforeInTranslationUnit(Range.getEnd(), Tok.getLocation()))
       break;
@@ -94,9 +95,11 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
   if (!FileRange.isValid())
     return;
 
-  Token Tok = ConstTok(FileRange, Result);
+  auto Tok = ConstTok(FileRange, Result);
+  if (!Tok)
+    return;
   Diag << FixItHint::CreateRemoval(
-      CharSourceRange::getTokenRange(Tok.getLocation(), Tok.getLocation()));
+      CharSourceRange::getTokenRange(Tok->getLocation(), Tok->getLocation()));
 }
 
 } // namespace readability

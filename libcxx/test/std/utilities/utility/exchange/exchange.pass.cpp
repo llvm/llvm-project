@@ -27,7 +27,7 @@ int main()
 
     assert ((std::exchange<int, float> ( v, {} )) == 67 );
     assert ( v == 0 );
-    
+
     }
 
     {
@@ -48,7 +48,7 @@ int main()
     s3 = s2; // Dad
     assert ( std::exchange ( s3, {} ) == s2 );
     assert ( s3.size () == 0 );
-    
+
     s3 = s2; // Dad
     assert ( std::exchange ( s3, "" ) == s2 );
     assert ( s3.size () == 0 );

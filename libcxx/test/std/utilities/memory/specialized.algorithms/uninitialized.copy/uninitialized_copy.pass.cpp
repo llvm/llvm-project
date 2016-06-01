@@ -36,7 +36,7 @@ struct Nasty
     Nasty() : i_ ( counter_++ ) {}
     Nasty * operator &() const { return NULL; }
     int i_;
-    static int counter_; 
+    static int counter_;
 };
 
 int Nasty::counter_ = 0;
@@ -76,5 +76,5 @@ int main()
         assert(  p[i].i_ == i);
         }
     }
-    
+
 }

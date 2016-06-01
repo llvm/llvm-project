@@ -24,7 +24,7 @@ int main()
     auto c2 = 3il;
     assert ( c1 == c2 );
     }
-    
+
     {
     std::complex<double> c1 = 3.0i;
     assert ( c1 == std::complex<double>(0, 3.0));

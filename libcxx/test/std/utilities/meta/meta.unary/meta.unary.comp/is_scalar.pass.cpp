@@ -73,9 +73,9 @@ typedef void (*FunctionPtr)();
 
 int main()
 {
-//  Arithmetic types (3.9.1), enumeration types, pointer types, pointer to member types (3.9.2), 
-//    std::nullptr_t, and cv-qualified versions of these types (3.9.3) 
-//    are collectively called scalar types. 
+//  Arithmetic types (3.9.1), enumeration types, pointer types, pointer to member types (3.9.2),
+//    std::nullptr_t, and cv-qualified versions of these types (3.9.3)
+//    are collectively called scalar types.
 
     test_is_scalar<std::nullptr_t>();
     test_is_scalar<short>();

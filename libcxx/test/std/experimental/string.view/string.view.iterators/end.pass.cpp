@@ -35,7 +35,7 @@ test(S s)
         assert(ce1 != cs.begin());
         assert(ce2 !=  s.begin());
     }
-    
+
     assert(  e -  s.begin() == s.size());
     assert(ce1 - cs.begin() == cs.size());
     assert(ce2 - s.cbegin() == s.size());
@@ -70,7 +70,7 @@ int main()
     constexpr u16string_view u16sv {u"123", 3 };
     constexpr u32string_view u32sv {U"123", 3 };
     constexpr wstring_view     wsv {L"123", 3 };
-    
+
     static_assert (    sv.begin() !=    sv.end(), "" );
     static_assert ( u16sv.begin() != u16sv.end(), "" );
     static_assert ( u32sv.begin() != u32sv.end(), "" );

@@ -18,9 +18,25 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/YAMLTraits.h"
 
 using namespace clang;
 using namespace llvm;
+using clang::include_fixer::IncludeFixerContext;
+
+LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(IncludeFixerContext)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<IncludeFixerContext> {
+  static void mapping(IO &io, IncludeFixerContext &Context) {
+    io.mapRequired("SymbolIdentifier", Context.SymbolIdentifier);
+    io.mapRequired("Headers", Context.Headers);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 namespace {
 cl::OptionCategory IncludeFixerCategory("Tool options");
@@ -60,19 +76,21 @@ cl::opt<bool>
 
 cl::opt<bool> OutputHeaders(
     "output-headers",
-    cl::desc("Output the symbol being quired and all its relevant headers.\n"
-             "The first line is the symbol name; The other lines\n"
-             "are the headers: \n"
-             "   b::foo\n"
-             "   path/to/foo_a.h\n"
-             "   path/to/foo_b.h\n"),
+    cl::desc("Print the symbol being queried and all its relevant headers in\n"
+             "JSON format to stdout:\n"
+             "  {\n"
+             "    \"SymbolIdentifier\": \"foo\",\n"
+             "    \"Headers\": [\"\\\"foo_a.h\\\"\"]\n"
+             "  }"),
     cl::init(false), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string> InsertHeader(
     "insert-header",
     cl::desc("Insert a specific header. This should run with STDIN mode.\n"
              "The result is written to stdout. It is currently used for\n"
-             "editor integration."),
+             "editor integration. Support YAML/JSON format:\n"
+             "  -insert-header=\"{SymbolIdentifier: foo,\n"
+             "                   Headers: ['\\\"foo_a.h\\\"']}\""),
     cl::init(""), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string>
@@ -134,6 +152,19 @@ createSymbolIndexManager(StringRef FilePath) {
   return SymbolIndexMgr;
 }
 
+void writeToJson(llvm::raw_ostream &OS, const IncludeFixerContext& Context) {
+  OS << "{\n"
+        "  \"SymbolIdentifier\": \"" << Context.SymbolIdentifier << "\",\n"
+        "  \"Headers\": [ ";
+  for (const auto &Header : Context.Headers) {
+    OS << " \"" << llvm::yaml::escape(Header) << "\"";
+    if (Header != Context.Headers.back())
+      OS << ", ";
+  }
+  OS << " ]\n"
+        "}\n";
+}
+
 int includeFixerMain(int argc, const char **argv) {
   tooling::CommonOptionsParser options(argc, argv, IncludeFixerCategory);
   tooling::ClangTool tool(options.getCompilations(),
@@ -168,9 +199,18 @@ int includeFixerMain(int argc, const char **argv) {
       return 1;
     }
 
+    llvm::yaml::Input yin(InsertHeader);
+    IncludeFixerContext Context;
+    yin >> Context;
+
+    if (Context.Headers.size() != 1) {
+      errs() << "Expect exactly one inserted header.\n";
+      return 1;
+    }
+
     tooling::Replacements Replacements =
         clang::include_fixer::createInsertHeaderReplacements(
-            Code->getBuffer(), FilePath, InsertHeader, InsertStyle);
+            Code->getBuffer(), FilePath, Context.Headers[0], InsertStyle);
     tooling::Replacements Replaces(Replacements.begin(), Replacements.end());
     std::string ChangedCode =
         tooling::applyAllReplacements(Code->getBuffer(), Replaces);
@@ -196,10 +236,7 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   if (OutputHeaders) {
-    // FIXME: Output IncludeFixerContext as YAML.
-    llvm::outs() << Context.SymbolIdentifer << "\n";
-    for (const auto &Header : Context.Headers)
-      llvm::outs() << Header << "\n";
+    writeToJson(llvm::outs(), Context);
     return 0;
   }
 

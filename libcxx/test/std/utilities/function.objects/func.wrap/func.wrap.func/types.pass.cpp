@@ -14,7 +14,7 @@
 // public:
 //   typedef R result_type;
 //   typedef T1 argument_type;          // iff sizeof...(ArgTypes) == 1 and
-//                                      // the type in ArgTypes is T1 
+//                                      // the type in ArgTypes is T1
 //   typedef T1 first_argument_type;    // iff sizeof...(ArgTypes) == 2 and
 //                                      // ArgTypes contains T1 and T2
 //   typedef T2 second_argument_type;   // iff sizeof...(ArgTypes) == 2 and

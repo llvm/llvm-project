@@ -31,6 +31,6 @@ int main()
 {
     static_assert((std::is_class<in_place_t>::value), "");
     static_assert((std::is_empty<in_place_t>::value), "");
-    
+
     static_assert(test(in_place) == 3, "");
 }

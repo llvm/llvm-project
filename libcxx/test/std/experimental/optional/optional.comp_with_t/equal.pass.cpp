@@ -26,13 +26,13 @@ struct X
 
 constexpr bool operator == ( const X &lhs, const X &rhs )
     { return lhs.i_ == rhs.i_ ; }
-    
+
 int main()
 {
     {
     typedef X T;
     typedef optional<T> O;
-    
+
     constexpr T val(2);
     constexpr O o1;       // disengaged
     constexpr O o2{1};    // engaged
@@ -43,7 +43,7 @@ int main()
     static_assert ( !(o3 == T(1)), "" );
     static_assert (  (o3 == T(2)), "" );
     static_assert (  (o3 == val),  "" );
-        
+
     static_assert ( !(T(1) == o1), "" );
     static_assert (  (T(1) == o2), "" );
     static_assert ( !(T(1) == o3), "" );

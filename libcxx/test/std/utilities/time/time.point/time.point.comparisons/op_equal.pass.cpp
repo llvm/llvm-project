@@ -54,7 +54,7 @@ int main()
     assert(!(t1 == t2));
     assert( (t1 != t2));
     }
-    
+
 #if _LIBCPP_STD_VER > 11
     {
     constexpr T1 t1(Duration1(3));

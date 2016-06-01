@@ -1832,7 +1832,7 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
 #else
     KMP_DEBUG_ASSERT( nthreads > 1 );
 #endif
-    KMP_DEBUG_ASSERT( TCR_4((int)*unfinished_threads) >= 0 );
+    KMP_DEBUG_ASSERT( (int)(TCR_4(*unfinished_threads)) >= 0 );
 
     // Choose tasks from our own work queue.
     start:

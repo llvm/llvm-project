@@ -38,7 +38,7 @@ template <class T>
 struct some_alloc2
 {
     typedef T value_type;
-    
+
     some_alloc2() {}
     some_alloc2(const some_alloc2&);
     void deallocate(void*, unsigned) {}
@@ -51,7 +51,7 @@ template <class T>
 struct some_alloc3
 {
     typedef T value_type;
-    
+
     some_alloc3() {}
     some_alloc3(const some_alloc3&);
     void deallocate(void*, unsigned) {}

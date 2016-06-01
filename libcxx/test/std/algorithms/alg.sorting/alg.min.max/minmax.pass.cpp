@@ -47,7 +47,7 @@ int main()
     }
 #if _LIBCPP_STD_VER > 11
     {
-//  Note that you can't take a reference to a local var, since 
+//  Note that you can't take a reference to a local var, since
 //  its address is not a compile-time constant.
     constexpr static int x = 1;
     constexpr static int y = 0;

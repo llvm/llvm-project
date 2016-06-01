@@ -7,6 +7,7 @@ add_clang_library(findAllSymbols
   FindAllSymbolsAction.cpp
   FindAllMacros.cpp
   HeaderMapCollector.cpp
+  PathConfig.cpp
   PragmaCommentHandler.cpp
   STLPostfixHeaderMap.cpp
   SymbolInfo.cpp

@@ -59,7 +59,7 @@ int main()
         assert ( c.cend()    == std::cend(c));
         assert ( c.rend()    == std::rend(c));
         assert ( c.crend()   == std::crend(c));
-        
+
         assert ( std::begin(c)   != std::end(c));
         assert ( std::rbegin(c)  != std::rend(c));
         assert ( std::cbegin(c)  != std::cend(c));

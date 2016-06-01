@@ -19,7 +19,7 @@
 //     typedef Alloc                        allocator_type;
 //     typedef typename allocator_type::value_type
 //                                          value_type;
-// 
+//
 //     typedef Alloc::pointer | value_type* pointer;
 //     typedef Alloc::const_pointer
 //           | pointer_traits<pointer>::rebind<const value_type>
@@ -111,11 +111,11 @@ int main()
 {
     test_pointer<std::allocator<char>> ();
     test_pointer<std::allocator<int>> ();
-    test_pointer<std::allocator<Foo>> ();   
+    test_pointer<std::allocator<Foo>> ();
 
     test_void_pointer<std::allocator<char>> ();
     test_void_pointer<std::allocator<int>> ();
-    test_void_pointer<std::allocator<Foo>> ();  
+    test_void_pointer<std::allocator<Foo>> ();
 }
 #else
 int main() {}

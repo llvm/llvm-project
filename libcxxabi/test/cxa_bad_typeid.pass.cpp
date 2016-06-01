@@ -24,7 +24,7 @@ class Base {
 class Derived : public Base {};
 
 std::string test_bad_typeid(Derived *p) {
-    typeid(*p).name();
+    return typeid(*p).name();
 }
 
 void my_terminate() { std::cout << "A" << std::endl; exit(0); }

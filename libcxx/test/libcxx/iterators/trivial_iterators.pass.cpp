@@ -13,7 +13,7 @@
 // __libcpp_is_trivial_iterator<Tp>
 
 // __libcpp_is_trivial_iterator determines if an iterator is a "trivial" one,
-// that can be used w/o worrying about its operations throwing exceptions. 
+// that can be used w/o worrying about its operations throwing exceptions.
 // Pointers are trivial iterators. Libc++ has three "iterator wrappers":
 // reverse_iterator, move_iterator, and __wrap_iter. If the underlying iterator
 // is trivial, then those are as well.
@@ -113,16 +113,16 @@ int main()
     static_assert(( std::__libcpp_is_trivial_iterator<std::__wrap_iter<int *> >       ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::__wrap_iter<T *> >         ::value), "");
 
-    static_assert(( std::__libcpp_is_trivial_iterator<std::reverse_iterator<std::__wrap_iter<char *> > > ::value), ""); 
-    
+    static_assert(( std::__libcpp_is_trivial_iterator<std::reverse_iterator<std::__wrap_iter<char *> > > ::value), "");
+
 //  iterators in the libc++ test suite
-    static_assert((!std::__libcpp_is_trivial_iterator<output_iterator       <char *> >::value), "");    
-    static_assert((!std::__libcpp_is_trivial_iterator<input_iterator        <char *> >::value), "");    
-    static_assert((!std::__libcpp_is_trivial_iterator<forward_iterator      <char *> >::value), "");    
-    static_assert((!std::__libcpp_is_trivial_iterator<bidirectional_iterator<char *> >::value), "");    
-    static_assert((!std::__libcpp_is_trivial_iterator<random_access_iterator<char *> >::value), "");    
-    static_assert((!std::__libcpp_is_trivial_iterator<ThrowingIterator      <char *> >::value), "");    
-    static_assert((!std::__libcpp_is_trivial_iterator<NonThrowingIterator   <char *> >::value), "");    
+    static_assert((!std::__libcpp_is_trivial_iterator<output_iterator       <char *> >::value), "");
+    static_assert((!std::__libcpp_is_trivial_iterator<input_iterator        <char *> >::value), "");
+    static_assert((!std::__libcpp_is_trivial_iterator<forward_iterator      <char *> >::value), "");
+    static_assert((!std::__libcpp_is_trivial_iterator<bidirectional_iterator<char *> >::value), "");
+    static_assert((!std::__libcpp_is_trivial_iterator<random_access_iterator<char *> >::value), "");
+    static_assert((!std::__libcpp_is_trivial_iterator<ThrowingIterator      <char *> >::value), "");
+    static_assert((!std::__libcpp_is_trivial_iterator<NonThrowingIterator   <char *> >::value), "");
 
 
 //	Iterator classification
@@ -137,7 +137,7 @@ int main()
 	static_assert((!std::__is_bidirectional_iterator<input_iterator<char *> >::value), "" );
 	static_assert((!std::__is_random_access_iterator<input_iterator<char *> >::value), "" );
 	static_assert(( std::__is_exactly_input_iterator<input_iterator<char *> >::value), "" );
-	
+
 	static_assert(( std::__is_input_iterator        <forward_iterator<char *> >::value), "" );
 	static_assert(( std::__is_forward_iterator      <forward_iterator<char *> >::value), "" );
 	static_assert((!std::__is_bidirectional_iterator<forward_iterator<char *> >::value), "" );
@@ -171,7 +171,7 @@ int main()
     static_assert(( std::__libcpp_is_trivial_iterator<std::vector<char>::const_iterator>        ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::vector<char>::reverse_iterator>      ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::vector<char>::const_reverse_iterator>::value), "");
-    
+
 //  vector
     static_assert(( std::__libcpp_is_trivial_iterator<std::basic_string<char>::iterator>              ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::basic_string<char>::const_iterator>        ::value), "");

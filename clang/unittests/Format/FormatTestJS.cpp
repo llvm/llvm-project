@@ -1010,6 +1010,9 @@ TEST_F(FormatTestJS, Modules) {
                "} from 'some/module.js';");
   verifyFormat("import {X, Y,} from 'some/module.js';");
   verifyFormat("import {X as myLocalX, Y as myLocalY} from 'some/module.js';");
+  // Ensure Automatic Semicolon Insertion does not break on "as\n".
+  verifyFormat("import {X as myX} from 'm';", "import {X as\n"
+                                              " myX} from 'm';");
   verifyFormat("import * as lib from 'some/module.js';");
   verifyFormat("var x = {import: 1};\nx.import = 2;");
 

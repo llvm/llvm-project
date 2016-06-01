@@ -47,14 +47,14 @@ void test1 ( std::experimental::basic_string_view<CharT> sv, size_t n, size_t po
             assert ( dest1[i] == dest2[i] );
     }
     delete [] dest1;
-    delete [] dest2;    
+    delete [] dest2;
 }
 
 
 template<typename CharT>
 void test ( const CharT *s ) {
     typedef std::experimental::basic_string_view<CharT> string_view_t;
-    
+
     string_view_t sv1 ( s );
 
     test1(sv1,  0, 0);
@@ -62,7 +62,7 @@ void test ( const CharT *s ) {
     test1(sv1, 20, 0);
     test1(sv1, sv1.size(), 0);
     test1(sv1, 20, string_view_t::npos);
-    
+
     test1(sv1,   0, 3);
     test1(sv1,   2, 3);
     test1(sv1, 100, 3);
