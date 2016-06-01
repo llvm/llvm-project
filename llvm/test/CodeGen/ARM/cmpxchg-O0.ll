@@ -100,3 +100,14 @@ define { i64, i1 } @test_nontrivial_args(i64* %addr, i64 %desired, i64 %new) {
   %res = cmpxchg i64* %addr, i64 %desired1, i64 %new1 seq_cst seq_cst
   ret { i64, i1 } %res
 }
+
+; The following used to trigger an assertion when creating a spill on thumb2
+; for a physreg with RC==GPRPairRegClass.
+; CHECK-LABEL: test_cmpxchg_spillbug:
+; CHECK: ldrexd
+; CHECK: strexd
+; CHECK: bne
+define void @test_cmpxchg_spillbug() {
+  %v = cmpxchg i64* undef, i64 undef, i64 undef seq_cst seq_cst
+  ret void
+}
