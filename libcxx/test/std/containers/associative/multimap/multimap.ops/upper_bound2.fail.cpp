@@ -13,9 +13,9 @@
 
 //       iterator upper_bound(const key_type& k);
 // const_iterator upper_bound(const key_type& k) const;
-// 
-//   The member function templates find, count, lower_bound, upper_bound, and 
-// equal_range shall not participate in overload resolution unless the 
+//
+//   The member function templates find, count, lower_bound, upper_bound, and
+// equal_range shall not participate in overload resolution unless the
 // qualified-id Compare::is_transparent is valid and denotes a type
 
 

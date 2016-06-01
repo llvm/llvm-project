@@ -41,7 +41,7 @@
 //                                 memory_order m = memory_order_seq_cst) volatile;
 //     bool compare_exchange_strong(integral& expc, integral desr,
 //                                  memory_order m = memory_order_seq_cst);
-// 
+//
 //     integral
 //         fetch_add(integral op, memory_order m = memory_order_seq_cst) volatile;
 //     integral fetch_add(integral op, memory_order m = memory_order_seq_cst);
@@ -57,7 +57,7 @@
 //     integral
 //         fetch_xor(integral op, memory_order m = memory_order_seq_cst) volatile;
 //     integral fetch_xor(integral op, memory_order m = memory_order_seq_cst);
-// 
+//
 //     atomic() = default;
 //     constexpr atomic(integral desr);
 //     atomic(const atomic&) = delete;
@@ -65,7 +65,7 @@
 //     atomic& operator=(const atomic&) volatile = delete;
 //     integral operator=(integral desr) volatile;
 //     integral operator=(integral desr);
-// 
+//
 //     integral operator++(int) volatile;
 //     integral operator++(int);
 //     integral operator--(int) volatile;
@@ -152,7 +152,7 @@ do_test()
 
     {
         _ALIGNAS_TYPE(A) char storage[sizeof(A)] = {23};
-        A& zero = *new (storage) A();    
+        A& zero = *new (storage) A();
         assert(zero == 0);
         zero.~A();
     }

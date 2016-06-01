@@ -13,7 +13,7 @@
 
 // const_reference at(size_type n) const;
 //       reference at(size_type n);
-  
+
 #include <__config>
 
 #include <experimental/dynarray>
@@ -72,7 +72,7 @@ void dyn_test ( dynarray<T> &dyn, const std::initializer_list<T> &vals ) {
 template <class T>
 void test ( std::initializer_list<T> vals ) {
     typedef dynarray<T> dynA;
-    
+
     dynA d1 ( vals );
     dyn_test ( d1, vals );
     dyn_test_const ( d1, vals );
@@ -82,7 +82,7 @@ int main()
 {
     test ( { 1, 1, 2, 3, 5, 8 } );
     test ( { 1., 1., 2., 3., 5., 8. } );
-    test ( { std::string("1"), std::string("1"), std::string("2"), std::string("3"), 
+    test ( { std::string("1"), std::string("1"), std::string("2"), std::string("3"),
                 std::string("5"), std::string("8")} );
 
     test<int> ( {} );

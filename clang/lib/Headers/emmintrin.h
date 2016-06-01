@@ -1744,7 +1744,7 @@ _mm_cvtps_epi32(__m128 __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvttps_epi32(__m128 __a)
 {
-  return (__m128i)__builtin_ia32_cvttps2dq((__v4sf)__a);
+  return (__m128i)__builtin_convertvector((__v4sf)__a, __v4si);
 }
 
 /// \brief Returns a vector of [4 x i32] where the lowest element is the input

@@ -36,7 +36,7 @@ void test ( const CharT *s, size_t len ) {
     assert ( false );
 #endif
 }
-    
+
 int main () {
     test ( "ABCDE", 5 );
     test ( "a", 1 );

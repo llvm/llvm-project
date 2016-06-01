@@ -29,13 +29,13 @@ int main()
     for ( int i = 0; i < 5; ++i )
         assert ( p1[i] == 0 );
     }
-    
+
     {
     auto p2 = std::make_unique<std::string[]>(5);
     for ( int i = 0; i < 5; ++i )
         assert ( p2[i].size () == 0 );
     }
-    
+
     {
     auto p3 = std::make_unique<foo[]>(7);
     for ( int i = 0; i < 7; ++i )

@@ -63,13 +63,13 @@ int main()
 {
     A a;
     test(&a+1, A());
-    
+
     {
     std::list<B> l;
     l.push_back(B(0));
     l.push_back(B(1));
     l.push_back(B(2));
-    
+
     {
     std::list<B>::const_iterator i = l.begin();
     assert ( i->get() == 0 );  ++i;
@@ -77,7 +77,7 @@ int main()
     assert ( i->get() == 2 );  ++i;
     assert ( i == l.end ());
     }
-    
+
     {
     std::list<B>::const_reverse_iterator ri = l.rbegin();
     assert ( ri->get() == 2 );  ++ri;

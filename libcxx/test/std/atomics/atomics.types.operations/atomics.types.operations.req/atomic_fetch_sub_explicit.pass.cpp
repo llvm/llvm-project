@@ -20,7 +20,7 @@
 //     Integral
 //     atomic_fetch_sub_explicit(atomic<Integral>* obj, Integral op,
 //                               memory_order m);
-// 
+//
 // template <class T>
 //     T*
 //     atomic_fetch_sub_explicit(volatile atomic<T*>* obj, ptrdiff_t op,

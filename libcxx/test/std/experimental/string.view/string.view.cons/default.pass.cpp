@@ -24,7 +24,7 @@ void test () {
     static_assert ( sv1.empty(), "");
     }
 #endif
-    
+
     {
     T sv1;
     assert ( sv1.size() == 0 );

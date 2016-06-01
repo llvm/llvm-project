@@ -39,7 +39,7 @@ void test_container( C& c)
 {
     assert ( std::size(c)   == c.size());
 }
-    
+
 template<typename T>
 void test_container( std::initializer_list<T>& c )
 {
@@ -58,7 +58,7 @@ int main()
     std::list<int>   l; l.push_back(2);
     std::array<int, 1> a; a[0] = 3;
     std::initializer_list<int> il = { 4 };
-    
+
     test_container ( v );
     test_container ( l );
     test_container ( a );
@@ -68,7 +68,7 @@ int main()
     test_const_container ( l );
     test_const_container ( a );
     test_const_container ( il );
-    
+
     static constexpr int arrA [] { 1, 2, 3 };
     test_const_array ( arrA );
 }

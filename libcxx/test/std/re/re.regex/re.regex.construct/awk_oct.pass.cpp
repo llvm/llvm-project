@@ -18,7 +18,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main() 
+int main()
 {
     using std::regex_constants::awk;
 

@@ -26,7 +26,7 @@ template <typename Unordered>
 bool only_deletions ( const Unordered &whole, const Unordered &part ) {
     typename Unordered::const_iterator w = whole.begin();
     typename Unordered::const_iterator p = part.begin();
-    
+
     while ( w != whole.end () && p != part.end()) {
         if ( *w == *p )
             p++;
@@ -372,7 +372,7 @@ int main()
             m2.insert(std::make_pair(i,j));
             }
         }
-    
+
     C::iterator i = m2.begin();
     int ctr = 0;
     while (i != m2.end()) {

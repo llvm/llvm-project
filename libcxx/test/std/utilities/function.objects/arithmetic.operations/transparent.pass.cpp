@@ -54,6 +54,6 @@ int main ()
     static_assert ( !is_transparent<std::negate<std::string>>::value, "" );
     static_assert (  is_transparent<std::negate<void>>::value, "" );
     static_assert (  is_transparent<std::negate<>>::value, "" );
-    
+
     return 0;
 }

@@ -14,7 +14,7 @@
 // template <class T>
 //     bool
 //     atomic_is_lock_free(const volatile atomic<T>* obj);
-// 
+//
 // template <class T>
 //     bool
 //     atomic_is_lock_free(const atomic<T>* obj);

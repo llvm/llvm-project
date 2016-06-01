@@ -25,14 +25,14 @@ int main()
     static_assert ( std::is_same<decltype( 3i    ), std::complex<double>>::value, "" );
     static_assert ( std::is_same<decltype( 3.0if ), std::complex<float>>::value, "" );
     static_assert ( std::is_same<decltype( 3if   ), std::complex<float>>::value, "" );
-    
+
     {
     std::complex<long double> c1 = 3.0il;
     assert ( c1 == std::complex<long double>(0, 3.0));
     auto c2 = 3il;
     assert ( c1 == c2 );
     }
-    
+
     {
     std::complex<double> c1 = 3.0i;
     assert ( c1 == std::complex<double>(0, 3.0));

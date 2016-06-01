@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include <algorithm>
 #include <string>
 
 #define DEBUG_TYPE "format-formatter"
@@ -40,6 +41,13 @@ using clang::format::FormatStyle;
 struct JsImportedSymbol {
   StringRef Symbol;
   StringRef Alias;
+  SourceRange Range;
+
+  bool operator==(const JsImportedSymbol &RHS) const {
+    // Ignore Range for comparison, it is only used to stitch code together,
+    // but imports at different code locations are still conceptually the same.
+    return Symbol == RHS.Symbol && Alias == RHS.Alias;
+  }
 };
 
 // An ES6 module reference.
@@ -139,23 +147,14 @@ public:
                      [&](unsigned LHSI, unsigned RHSI) {
                        return References[LHSI] < References[RHSI];
                      });
-    // FIXME: Pull this into a common function.
-    bool OutOfOrder = false;
-    for (unsigned i = 0, e = Indices.size(); i != e; ++i) {
-      if (i != Indices[i]) {
-        OutOfOrder = true;
-        break;
-      }
-    }
-    if (!OutOfOrder)
-      return Result;
+    bool ReferencesInOrder = std::is_sorted(Indices.begin(), Indices.end());
 
-    // Replace all existing import/export statements.
     std::string ReferencesText;
+    bool SymbolsInOrder = true;
     for (unsigned i = 0, e = Indices.size(); i != e; ++i) {
       JsModuleReference Reference = References[Indices[i]];
-      StringRef ReferenceStmt = getSourceText(Reference.Range);
-      ReferencesText += ReferenceStmt;
+      if (appendReference(ReferencesText, Reference))
+        SymbolsInOrder = false;
       if (i + 1 < e) {
         // Insert breaks between imports and exports.
         ReferencesText += "\n";
@@ -167,6 +166,10 @@ public:
           ReferencesText += "\n";
       }
     }
+
+    if (ReferencesInOrder && SymbolsInOrder)
+      return Result;
+
     // Separate references from the main code body of the file.
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2)
       ReferencesText += "\n";
@@ -211,10 +214,45 @@ private:
   }
 
   StringRef getSourceText(SourceRange Range) {
+    return getSourceText(Range.getBegin(), Range.getEnd());
+  }
+
+  StringRef getSourceText(SourceLocation Begin, SourceLocation End) {
     const SourceManager &SM = Env.getSourceManager();
-    return FileContents.substr(SM.getFileOffset(Range.getBegin()),
-                               SM.getFileOffset(Range.getEnd()) -
-                                   SM.getFileOffset(Range.getBegin()));
+    return FileContents.substr(SM.getFileOffset(Begin),
+                               SM.getFileOffset(End) - SM.getFileOffset(Begin));
+  }
+
+  // Appends ``Reference`` to ``Buffer``, returning true if text within the
+  // ``Reference`` changed (e.g. symbol order).
+  bool appendReference(std::string &Buffer, JsModuleReference &Reference) {
+    // Sort the individual symbols within the import.
+    // E.g. `import {b, a} from 'x';` -> `import {a, b} from 'x';`
+    SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;
+    std::stable_sort(
+        Symbols.begin(), Symbols.end(),
+        [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
+          return LHS.Symbol < RHS.Symbol;
+        });
+    if (Symbols == Reference.Symbols) {
+      // No change in symbol order.
+      StringRef ReferenceStmt = getSourceText(Reference.Range);
+      Buffer += ReferenceStmt;
+      return false;
+    }
+    // Stitch together the module reference start...
+    SourceLocation SymbolsStart = Reference.Symbols.front().Range.getBegin();
+    SourceLocation SymbolsEnd = Reference.Symbols.back().Range.getEnd();
+    Buffer += getSourceText(Reference.Range.getBegin(), SymbolsStart);
+    // ... then the references in order ...
+    for (auto I = Symbols.begin(), E = Symbols.end(); I != E; ++I) {
+      if (I != Symbols.begin())
+        Buffer += ",";
+      Buffer += getSourceText(I->Range);
+    }
+    // ... followed by the module reference end.
+    Buffer += getSourceText(SymbolsEnd, Reference.Range.getEnd());
+    return true;
   }
 
   // Parses module references in the given lines. Returns the module references,
@@ -350,6 +388,9 @@ private:
 
       JsImportedSymbol Symbol;
       Symbol.Symbol = Current->TokenText;
+      // Make sure to include any preceding comments.
+      Symbol.Range.setBegin(
+          Current->getPreviousNonComment()->Next->WhitespaceRange.getBegin());
       nextToken();
 
       if (Current->is(Keywords.kw_as)) {
@@ -359,6 +400,7 @@ private:
         Symbol.Alias = Current->TokenText;
         nextToken();
       }
+      Symbol.Range.setEnd(Current->Tok.getLocation());
       Reference.Symbols.push_back(Symbol);
 
       if (Current->is(tok::r_brace))

@@ -286,13 +286,13 @@ __m256d test_mm256_cvtps_pd(__m128 A) {
 
 __m128i test_mm256_cvttpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvttpd_epi32
-  // CHECK: call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %{{.*}})
+  // CHECK: fptosi <4 x double> %{{.*}} to <4 x i32>
   return _mm256_cvttpd_epi32(A);
 }
 
 __m256i test_mm256_cvttps_epi32(__m256 A) {
   // CHECK-LABEL: test_mm256_cvttps_epi32
-  // CHECK: call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %{{.*}})
+  // CHECK: fptosi <8 x float> %{{.*}} to <8 x i32>
   return _mm256_cvttps_epi32(A);
 }
 
@@ -1384,4 +1384,25 @@ void test_mm256_zeroupper() {
   // CHECK-LABEL: test_mm256_zeroupper
   // CHECK: call void @llvm.x86.avx.vzeroupper()
   return _mm256_zeroupper();
+}
+
+double test_mm256_cvtsd_f64(__m256d __a)
+{
+ // CHECK-LABEL: @test_mm256_cvtsd_f64
+ // CHECK: extractelement <4 x double> %{{.*}}, i32 0
+ return _mm256_cvtsd_f64(__a);
+}
+
+int test_mm256_cvtsi256_si32(__m256i __a)
+{
+ // CHECK-LABEL: @test_mm256_cvtsi256_si32
+ // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
+ return _mm256_cvtsi256_si32(__a);
+}
+
+float test_mm256_cvtss_f32(__m256 __a)
+{
+ // CHECK-LABEL: @test_mm256_cvtss_f32
+ // CHECK: extractelement <8 x float> %{{.*}}, i32 0
+ return _mm256_cvtss_f32(__a);
 }

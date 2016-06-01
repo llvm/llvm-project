@@ -57,7 +57,7 @@ int main()
     test1<Class>();
     test1<Class[]>();
     test1<Class[5]>();
-    
+
     test2<void, int>();
     test2<double, int>();
     test2<int&, int>();

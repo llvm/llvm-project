@@ -370,8 +370,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   } else if (!Preemptible) {
     if (needsPlt(Expr))
       Expr = fromPlt(Expr);
-    if (Expr == R_GOT_PC && Target->canRelaxGot(Type, Data + Offset))
-      Expr = R_RELAX_GOT_PC;
+    if (Expr == R_GOT_PC)
+      Expr = Target->adjustRelaxGotExpr(Type, Data + Offset, Expr);
   }
 
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body))

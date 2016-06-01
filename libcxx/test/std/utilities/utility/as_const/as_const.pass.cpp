@@ -27,7 +27,7 @@ void test(T& t)
     static_assert(std::is_const<typename std::remove_reference<decltype(std::as_const<const          T>(t))>::type>::value, "");
     static_assert(std::is_const<typename std::remove_reference<decltype(std::as_const<volatile       T>(t))>::type>::value, "");
     static_assert(std::is_const<typename std::remove_reference<decltype(std::as_const<const volatile T>(t))>::type>::value, "");
-    
+
     assert(std::as_const(t) == t);
     assert(std::as_const<               T>(t) == t);
     assert(std::as_const<const          T>(t) == t);

@@ -41,7 +41,7 @@ int main()
         C::iterator ii4 = ii1;
         C::const_iterator cii{};
         assert ( ii1 == ii2 );
-        assert ( ii1 == ii4 );        
+        assert ( ii1 == ii4 );
         assert ( ii1 == cii );
         assert ( !(ii1 != ii2 ));
         assert ( !(ii1 != cii ));

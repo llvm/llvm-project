@@ -33,7 +33,7 @@ void round_trip ( const char *p ) {
 
 int main()
 {
-    round_trip ( "Hi Mom" );   
+    round_trip ( "Hi Mom" );
 }
 #else
 #error

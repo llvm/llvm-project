@@ -317,7 +317,7 @@ int main()
     r = m.lower_bound(C2Int(20));
     assert(r == next(m.begin(), 8));
     }
-    
+
     {
     typedef PrivateConstructor PC;
     typedef std::map<PC, double, std::less<>> M;

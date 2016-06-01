@@ -11,7 +11,7 @@
 // type_traits
 
 // template<class... B> struct conjunction;                           // C++17
-// template<class... B> 
+// template<class... B>
 //   constexpr bool conjunction_v = conjunction<B...>::value;         // C++17
 
 #include <type_traits>
@@ -34,7 +34,7 @@ int main()
     static_assert (!std::conjunction<std::true_type,  std::false_type>::value, "" );
     static_assert (!std::conjunction<std::false_type, std::true_type >::value, "" );
     static_assert (!std::conjunction<std::false_type, std::false_type>::value, "" );
-    
+
     static_assert ( std::conjunction_v<std::true_type,  std::true_type >, "" );
     static_assert (!std::conjunction_v<std::true_type,  std::false_type>, "" );
     static_assert (!std::conjunction_v<std::false_type, std::true_type >, "" );

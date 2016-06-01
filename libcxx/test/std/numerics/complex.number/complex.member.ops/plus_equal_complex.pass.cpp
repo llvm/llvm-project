@@ -36,7 +36,7 @@ test()
     c3 += ic;
     assert(c3.real() == 4);
     assert(c3.imag() == 6);
-    
+
     c3 = c;
     std::complex<float> fc (1,1);
     c3 += fc;

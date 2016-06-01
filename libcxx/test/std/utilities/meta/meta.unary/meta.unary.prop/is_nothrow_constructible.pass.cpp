@@ -107,7 +107,7 @@ int main()
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     test_is_nothrow_constructible<Tuple &&, Empty> (); // See bug #19616.
 #endif
-    
+
     test_is_not_nothrow_constructible<A, int> ();
     test_is_not_nothrow_constructible<A, int, double> ();
     test_is_not_nothrow_constructible<A> ();

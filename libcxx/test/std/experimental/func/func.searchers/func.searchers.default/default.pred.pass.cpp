@@ -15,16 +15,16 @@
 // template<class _ForwardIterator, class _BinaryPredicate = equal_to<>>
 // class default_searcher {
 // public:
-//     default_searcher(_ForwardIterator __f, _ForwardIterator __l, 
+//     default_searcher(_ForwardIterator __f, _ForwardIterator __l,
 //                             _BinaryPredicate __p = _BinaryPredicate())
 //         : __first_(__f), __last_(__l), __pred_(__p) {}
-// 
+//
 //     template <typename _ForwardIterator2>
 //     pair<_ForwardIterator2, _ForwardIterator2>
 //     operator () (_ForwardIterator2 __f, _ForwardIterator2 __l) const {
 //         return std::search(__f, __l, __first_, __last_, __pred_);
 //         }
-// 
+//
 // private:
 //     _ForwardIterator __first_;
 //     _ForwardIterator __last_;

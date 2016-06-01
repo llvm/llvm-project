@@ -14,7 +14,7 @@
 // template <class Integral>
 //     Integral
 //     atomic_fetch_and_explicit(volatile atomic<Integral>* obj, Integral op);
-// 
+//
 // template <class Integral>
 //     Integral
 //     atomic_fetch_and_explicit(atomic<Integral>* obj, Integral op);

@@ -31,20 +31,20 @@ int main()
     using size2   = std::index_sequence_for<int, size_t>;   // generates size_t: 0,1
     using intmix  = std::integer_sequence<int, 9, 8, 7, 2>; // generates int:    9,8,7,2
     using sizemix = std::index_sequence<1, 1, 2, 3, 5>;     // generates size_t: 1,1,2,3,5
-    
+
 //  Make sure they're what we expect
     static_assert ( std::is_same<int3::value_type, int>::value, "int3 type wrong" );
     static_assert ( int3::size () == 3, "int3 size wrong" );
-    
+
     static_assert ( std::is_same<size7::value_type, size_t>::value, "size7 type wrong" );
     static_assert ( size7::size () == 7, "size7 size wrong" );
-    
+
     static_assert ( std::is_same<size4::value_type, size_t>::value, "size4 type wrong" );
     static_assert ( size4::size () == 4, "size4 size wrong" );
-    
+
     static_assert ( std::is_same<size2::value_type, size_t>::value, "size2 type wrong" );
     static_assert ( size2::size () == 2, "size2 size wrong" );
-    
+
     static_assert ( std::is_same<intmix::value_type, int>::value, "intmix type wrong" );
     static_assert ( intmix::size () == 4, "intmix size wrong" );
 
@@ -52,7 +52,7 @@ int main()
     static_assert ( sizemix::size () == 5, "sizemix size wrong" );
 
     auto tup = std::make_tuple ( 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 );
-    
+
 //  Use them
     auto t3 = extract ( tup, int3() );
     static_assert ( std::tuple_size<decltype(t3)>::value == int3::size (), "t3 size wrong");

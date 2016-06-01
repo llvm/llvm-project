@@ -28,7 +28,7 @@ int main()
         v.resize(200, 1);
         assert(v.size() == 200);
         assert(v.capacity() >= 200);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         for (unsigned i = 0; i < 50; ++i)
             assert(v[i] == 0);
         for (unsigned i = 50; i < 200; ++i)
@@ -42,7 +42,7 @@ int main()
         v.resize(200, 1);
         assert(v.size() == 200);
         assert(v.capacity() >= 200);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
 #if __cplusplus >= 201103L
     {
@@ -50,12 +50,12 @@ int main()
         v.resize(50, 1);
         assert(v.size() == 50);
         assert(v.capacity() == 100);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         assert((v == std::vector<int, min_allocator<int>>(50)));
         v.resize(200, 1);
         assert(v.size() == 200);
         assert(v.capacity() >= 200);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         for (unsigned i = 0; i < 50; ++i)
             assert(v[i] == 0);
         for (unsigned i = 50; i < 200; ++i)
@@ -66,11 +66,11 @@ int main()
         v.resize(50, 1);
         assert(v.size() == 50);
         assert(v.capacity() == 100);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         v.resize(200, 1);
         assert(v.size() == 200);
         assert(v.capacity() >= 200);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
 #endif
 }

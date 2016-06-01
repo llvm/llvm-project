@@ -69,7 +69,7 @@ int main()
         struct test_constexpr_ctor
             : public optional<int>
         {
-            constexpr test_constexpr_ctor(in_place_t, int i) 
+            constexpr test_constexpr_ctor(in_place_t, int i)
                 : optional<int>(in_place, i) {}
         };
 
@@ -97,7 +97,7 @@ int main()
         struct test_constexpr_ctor
             : public optional<Y>
         {
-            constexpr test_constexpr_ctor(in_place_t) 
+            constexpr test_constexpr_ctor(in_place_t)
                 : optional<Y>(in_place) {}
         };
 
@@ -110,7 +110,7 @@ int main()
         struct test_constexpr_ctor
             : public optional<Y>
         {
-            constexpr test_constexpr_ctor(in_place_t, int i) 
+            constexpr test_constexpr_ctor(in_place_t, int i)
                 : optional<Y>(in_place, i) {}
         };
 
@@ -123,7 +123,7 @@ int main()
         struct test_constexpr_ctor
             : public optional<Y>
         {
-            constexpr test_constexpr_ctor(in_place_t, int i, int j) 
+            constexpr test_constexpr_ctor(in_place_t, int i, int j)
                 : optional<Y>(in_place, i, j) {}
         };
 

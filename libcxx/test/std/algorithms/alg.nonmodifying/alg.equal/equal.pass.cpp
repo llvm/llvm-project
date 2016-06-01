@@ -61,6 +61,6 @@ int main()
                        random_access_iterator<const int*>(ia+s),
                        random_access_iterator<const int*>(ia),
                        random_access_iterator<const int*>(ia+s-1)));
-    
+
 #endif
 }

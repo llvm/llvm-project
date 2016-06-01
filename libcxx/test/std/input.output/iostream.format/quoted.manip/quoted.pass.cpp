@@ -114,7 +114,7 @@ void test_padding () {
     ss << std::left << std::setw(10) << std::setfill('!') << std::quoted("abc", '`');
     assert ( ss.str() == "`abc`!!!!!" );
     }
-    
+
     {
     std::stringstream ss;
     ss << std::right << std::setw(10) << std::setfill('!') << std::quoted("abc", '`');
@@ -131,31 +131,31 @@ int main()
     round_trip_ws (  "" );
     round_trip_d  (  "", 'q' );
     round_trip_e  (  "", 'q' );
-    
+
     round_trip    ( L"" );
     round_trip_ws ( L"" );
     round_trip_d  ( L"", 'q' );
     round_trip_e  ( L"", 'q' );
-    
+
     round_trip    (  "Hi" );
     round_trip_ws (  "Hi" );
     round_trip_d  (  "Hi", '!' );
     round_trip_e  (  "Hi", '!' );
     assert ( quote ( "Hi", '!' ) == "!Hi!" );
     assert ( quote ( "Hi!", '!' ) == R"(!Hi\!!)" );
-    
+
     round_trip    ( L"Hi" );
     round_trip_ws ( L"Hi" );
     round_trip_d  ( L"Hi", '!' );
     round_trip_e  ( L"Hi", '!' );
     assert ( quote ( L"Hi", '!' )  == L"!Hi!" );
     assert ( quote ( L"Hi!", '!' ) == LR"(!Hi\!!)" );
-    
+
     round_trip    (  "Hi Mom" );
     round_trip_ws (  "Hi Mom" );
     round_trip    ( L"Hi Mom" );
     round_trip_ws ( L"Hi Mom" );
-    
+
     assert ( quote (  "" )  ==  "\"\"" );
     assert ( quote ( L"" )  == L"\"\"" );
     assert ( quote (  "a" ) ==  "\"a\"" );
@@ -164,7 +164,7 @@ int main()
 //  missing end quote - must not hang
     assert ( unquote (  "\"abc" ) ==  "abc" );
     assert ( unquote ( L"\"abc" ) == L"abc" );
-    
+
     assert ( unquote (  "abc" ) == "abc" ); // no delimiter
     assert ( unquote ( L"abc" ) == L"abc" ); // no delimiter
     assert ( unquote (  "abc def" ) ==  "abc" ); // no delimiter

@@ -34,6 +34,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 #include <memory>
 #include <queue>
 #include <string>
@@ -1225,14 +1226,7 @@ static void sortCppIncludes(const FormatStyle &Style,
 
   // If the #includes are out of order, we generate a single replacement fixing
   // the entire block. Otherwise, no replacement is generated.
-  bool OutOfOrder = false;
-  for (unsigned i = 1, e = Indices.size(); i != e; ++i) {
-    if (Indices[i] != i) {
-      OutOfOrder = true;
-      break;
-    }
-  }
-  if (!OutOfOrder)
+  if (std::is_sorted(Indices.begin(), Indices.end()))
     return;
 
   std::string result;

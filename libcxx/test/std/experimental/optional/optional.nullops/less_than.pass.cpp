@@ -24,7 +24,7 @@ int main()
     {
     typedef int T;
     typedef optional<T> O;
-    
+
     constexpr O o1;     // disengaged
     constexpr O o2{1};  // engaged
 

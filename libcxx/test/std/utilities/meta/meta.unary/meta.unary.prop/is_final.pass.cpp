@@ -53,10 +53,10 @@ int main ()
 {
     test_is_not_final<int>();
     test_is_not_final<int*>();
-    test_is_final    <P>(); 
-    test_is_not_final<P*>();    
+    test_is_final    <P>();
+    test_is_not_final<P*>();
     test_is_not_final<U1>();
     test_is_not_final<U1*>();
-    test_is_final    <U2>();    
-    test_is_not_final<U2*>();   
+    test_is_final    <U2>();
+    test_is_not_final<U2*>();
 }

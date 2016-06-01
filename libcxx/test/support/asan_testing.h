@@ -32,6 +32,6 @@ bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &)
     return true;
 }
 #endif
- 
+
 
 #endif  // ASAN_TESTING_H

@@ -43,6 +43,6 @@ int main () {
     static_assert ( !is_transparent<std::bit_not<std::string>>::value, "" );
     static_assert (  is_transparent<std::bit_not<void>>::value, "" );
     static_assert (  is_transparent<std::bit_not<>>::value, "" );
-    
+
     return 0;
 }

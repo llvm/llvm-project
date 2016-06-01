@@ -26,7 +26,7 @@
 //     typedef basic_istream<charT,traits>   istream_type;
 //     ...
 //
-// All specializations of istreambuf_iterator shall have a trivial copy constructor, 
+// All specializations of istreambuf_iterator shall have a trivial copy constructor,
 //    a constexpr default constructor and a trivial destructor.
 
 #include <iterator>

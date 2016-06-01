@@ -3585,6 +3585,27 @@ _mm512_mask_blend_epi32(__mmask16 __U, __m512i __A, __m512i __W)
 
 /* Conversion */
 
+#define _mm512_cvtt_roundps_epu32( __A, __R) __extension__ ({ \
+__builtin_ia32_cvttps2udq512_mask ((__v16sf)( __A),\
+                 (__v16si)\
+                 _mm512_undefined_epi32 (),\
+                 (__mmask16) -1,( __R));\
+})
+
+#define _mm512_mask_cvtt_roundps_epu32( __W, __U, __A, __R) __extension__ ({ \
+__builtin_ia32_cvttps2udq512_mask ((__v16sf)( __A),\
+                 (__v16si)( __W),\
+                 (__mmask16)( __U),( __R));\
+})
+
+#define _mm512_maskz_cvtt_roundps_epu32( __U, __A, __R) __extension__ ({ \
+__builtin_ia32_cvttps2udq512_mask ((__v16sf)( __A),\
+                 (__v16si)\
+                 _mm512_setzero_si512 (),\
+                 (__mmask16)( __U),( __R));\
+})
+
+
 static __inline __m512i __DEFAULT_FN_ATTRS
 _mm512_cvttps_epu32(__m512 __A)
 {
@@ -3795,6 +3816,28 @@ _mm512_maskz_cvtpd_ps (__mmask8 __U, __m512d __A)
                 _MM_FROUND_CUR_DIRECTION);
 }
 
+#define _mm512_cvt_roundps_ph( __A, __I) __extension__ ({ \
+  (__m256i)__builtin_ia32_vcvtps2ph512_mask ((__v16sf)( __A),\
+                                             (__I),\
+                                             (__v16hi)_mm256_undefined_si256 (),\
+                                             (__mmask16) -1);\
+})
+
+#define _mm512_mask_cvt_roundps_ph( __U, __W, __A, __I) __extension__ ({ \
+  (__m256i)__builtin_ia32_vcvtps2ph512_mask ((__v16sf)( __A),\
+                                             (__I),\
+                                             (__v16hi)( __U),\
+                                             (__mmask16)( __W));\
+})
+
+#define _mm512_maskz_cvt_roundps_ph( __W, __A, __I) __extension__ ({ \
+  (__m256i)__builtin_ia32_vcvtps2ph512_mask ((__v16sf)( __A),\
+                                             (__I),\
+                                             (__v16hi)\
+                                             _mm256_setzero_si256 (),\
+                                             (__mmask16)( __W));\
+})
+
 #define _mm512_cvtps_ph(A, I) __extension__ ({ \
   (__m256i)__builtin_ia32_vcvtps2ph512_mask((__v16sf)(__m512)(A), (int)(I), \
                                             (__v16hi)_mm256_setzero_si256(), \
@@ -3809,7 +3852,28 @@ _mm512_maskz_cvtpd_ps (__mmask8 __U, __m512d __A)
   (__m256i)__builtin_ia32_vcvtps2ph512_mask((__v16sf)(__m512)(A), (int)(I), \
                                             (__v16hi)_mm256_setzero_si256(), \
                                             (__mmask16)(W)); })
-                   
+
+#define _mm512_cvt_roundph_ps( __A, __R) __extension__ ({ \
+__builtin_ia32_vcvtph2ps512_mask ((__v16hi)( __A),\
+               (__v16sf)\
+               _mm512_undefined_ps (),\
+               (__mmask16) -1,( __R));\
+})
+
+#define _mm512_mask_cvt_roundph_ps( __W, __U, __A, __R) __extension__ ({ \
+__builtin_ia32_vcvtph2ps512_mask ((__v16hi)( __A),\
+               (__v16sf)( __W),\
+               (__mmask16)( __U),( __R));\
+})
+
+#define _mm512_maskz_cvt_roundph_ps( __U, __A, __R) __extension__ ({ \
+__builtin_ia32_vcvtph2ps512_mask ((__v16hi)( __A),\
+               (__v16sf)\
+               _mm512_setzero_ps (),\
+               (__mmask16)( __U),( __R));\
+})
+                     
+                     
 static  __inline __m512 __DEFAULT_FN_ATTRS
 _mm512_cvtph_ps(__m256i __A)
 {

@@ -14,7 +14,7 @@
 // template <class T>
 //     void
 //     atomic_store(volatile atomic<T>* obj, T desr);
-// 
+//
 // template <class T>
 //     void
 //     atomic_store(atomic<T>* obj, T desr);

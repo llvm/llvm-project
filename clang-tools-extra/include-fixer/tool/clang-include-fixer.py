@@ -19,6 +19,7 @@ import argparse
 import difflib
 import subprocess
 import vim
+import json
 
 # set g:clang_include_fixer_path to the path to clang-include-fixer if it is not
 # on the path.
@@ -49,7 +50,7 @@ def execute(command, text):
 
 
 def InsertHeaderToVimBuffer(header, text):
-  command = [binary, "-stdin", "-insert-header="+header,
+  command = [binary, "-stdin", "-insert-header="+json.dumps(header),
              vim.current.buffer.name]
   stdout, stderr = execute(command, text)
   if stdout:
@@ -77,30 +78,42 @@ def main():
   command = [binary, "-stdin", "-output-headers", "-db="+args.db,
              "-input="+args.input, vim.current.buffer.name]
   stdout, stderr = execute(command, text)
-  lines = stdout.splitlines()
-  if len(lines) < 2:
-    print "No header is included.\n"
+  if stderr:
+    print >> sys.stderr, "Error while running clang-include-fixer: " + stderr
+    return
+
+  include_fixer_context = json.loads(stdout)
+  symbol = include_fixer_context["SymbolIdentifier"]
+  headers = include_fixer_context["Headers"]
+
+  if not symbol:
+    print "The file is fine, no need to add a header.\n"
+    return;
+
+  if not headers:
+    print "Couldn't find a header for {0}.\n".format(symbol)
     return
 
   # The first line is the symbol name.
-  symbol = lines[0]
   # If there is only one suggested header, insert it directly.
-  if len(lines) == 2 or maximum_suggested_headers == 1:
-    InsertHeaderToVimBuffer(lines[1], text)
-    print "Added #include {0} for {1}.\n".format(lines[1], symbol)
+  if len(headers) == 1 or maximum_suggested_headers == 1:
+    InsertHeaderToVimBuffer({"SymbolIdentifier": symbol,
+                             "Headers":[headers[0]]}, text)
+    print "Added #include {0} for {1}.\n".format(headers[0], symbol)
     return
 
   choices_message = ""
   index = 1;
-  for header in lines[1:1+maximum_suggested_headers]:
+  for header in headers[0:maximum_suggested_headers]:
     choices_message += "&{0} {1}\n".format(index, header)
     index += 1
 
   select = ShowDialog("choose a header file for {0}.".format(symbol),
                       choices_message)
   # Insert a selected header.
-  InsertHeaderToVimBuffer(lines[select], text)
-  print "Added #include {0} for {1}.\n".format(lines[select], symbol)
+  InsertHeaderToVimBuffer({"SymbolIdentifier": symbol,
+                           "Headers":[headers[select-1]]}, text)
+  print "Added #include {0} for {1}.\n".format(headers[select-1], symbol)
   return;
 
 

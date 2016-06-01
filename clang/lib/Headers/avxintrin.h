@@ -2108,7 +2108,7 @@ _mm256_cvtps_pd(__m128 __a)
 static __inline __m128i __DEFAULT_FN_ATTRS
 _mm256_cvttpd_epi32(__m256d __a)
 {
-  return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df) __a);
+  return (__m128i)__builtin_convertvector((__v4df) __a, __v4si);
 }
 
 static __inline __m128i __DEFAULT_FN_ATTRS
@@ -2120,7 +2120,26 @@ _mm256_cvtpd_epi32(__m256d __a)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_cvttps_epi32(__m256 __a)
 {
-  return (__m256i)__builtin_ia32_cvttps2dq256((__v8sf) __a);
+  return (__m256i)__builtin_convertvector((__v8sf) __a, __v8si);
+}
+
+static __inline double __DEFAULT_FN_ATTRS
+_mm256_cvtsd_f64(__m256d __a)
+{
+ return __a[0];
+}
+
+static __inline int __DEFAULT_FN_ATTRS
+_mm256_cvtsi256_si32(__m256i __a)
+{
+ __v8si __b = (__v8si)__a;
+ return __b[0];
+}
+
+static __inline float __DEFAULT_FN_ATTRS
+_mm256_cvtss_f32(__m256 __a)
+{
+ return __a[0];
 }
 
 /* Vector replicate */

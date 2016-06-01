@@ -25,7 +25,7 @@ int main()
     std::vector<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
     assert(d.get_allocator() == test_allocator<int>(3));
     assert(d.size() == 4);
-    assert(is_contiguous_container_asan_correct(d)); 
+    assert(is_contiguous_container_asan_correct(d));
     assert(d[0] == 3);
     assert(d[1] == 4);
     assert(d[2] == 5);
@@ -36,7 +36,7 @@ int main()
     std::vector<int, min_allocator<int>> d({3, 4, 5, 6}, min_allocator<int>());
     assert(d.get_allocator() == min_allocator<int>());
     assert(d.size() == 4);
-    assert(is_contiguous_container_asan_correct(d)); 
+    assert(is_contiguous_container_asan_correct(d));
     assert(d[0] == 3);
     assert(d[1] == 4);
     assert(d[2] == 5);

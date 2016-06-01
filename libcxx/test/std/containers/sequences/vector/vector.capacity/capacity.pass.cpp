@@ -22,27 +22,27 @@ int main()
     {
         std::vector<int> v;
         assert(v.capacity() == 0);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
     {
         std::vector<int> v(100);
         assert(v.capacity() == 100);
         v.push_back(0);
         assert(v.capacity() > 101);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
 #if __cplusplus >= 201103L
     {
         std::vector<int, min_allocator<int>> v;
         assert(v.capacity() == 0);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
     {
         std::vector<int, min_allocator<int>> v(100);
         assert(v.capacity() == 100);
         v.push_back(0);
         assert(v.capacity() > 101);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
 #endif
 }

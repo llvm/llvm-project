@@ -11,7 +11,7 @@
 
 // <optional>
 
-// class bad_optional_access : public logic_error 
+// class bad_optional_access : public logic_error
 
 #include <experimental/optional>
 #include <type_traits>

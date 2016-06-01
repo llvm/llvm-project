@@ -36,7 +36,7 @@ unsigned count_equal::count = 0;
 template <typename Iter1, typename Iter2>
 void do_search(Iter1 b1, Iter1 e1, Iter2 b2, Iter2 e2, Iter1 result, unsigned max_count) {
     count_equal::count = 0;
-    assert(result == std::experimental::search(b1, e1, 
+    assert(result == std::experimental::search(b1, e1,
         std::experimental::make_default_searcher(b2, e2)));
     assert(count_equal::count <= max_count);
 }

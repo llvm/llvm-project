@@ -147,7 +147,7 @@ BitcodeCompiler::BitcodeCompiler()
       Mover(*Combined) {}
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, 0);
+  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {

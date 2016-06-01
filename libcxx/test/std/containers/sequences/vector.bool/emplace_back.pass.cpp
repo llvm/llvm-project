@@ -39,7 +39,7 @@ int main()
     {
         typedef std::vector<bool, min_allocator<bool>> C;
         C c;
-        
+
         c.emplace_back();
         assert(c.size() == 1);
         assert(c.front() == false);

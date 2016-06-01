@@ -20,7 +20,7 @@ int main()
     p1 = std::make_unique<int> ();
     assert ( *p1 == 0 );
     }
-    
+
     {
     std::unique_ptr<std::string> p2 = std::make_unique<std::string> ( "Meow!" );
     assert ( *p2 == "Meow!" );

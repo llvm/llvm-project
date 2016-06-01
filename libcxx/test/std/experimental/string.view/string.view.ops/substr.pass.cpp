@@ -46,14 +46,14 @@ void test1 ( std::experimental::basic_string_view<CharT> sv, size_t n, size_t po
 template<typename CharT>
 void test ( const CharT *s ) {
     typedef std::experimental::basic_string_view<CharT> string_view_t;
-    
+
     string_view_t sv1 ( s );
 
     test1(sv1,  0, 0);
     test1(sv1,  1, 0);
     test1(sv1, 20, 0);
     test1(sv1, sv1.size(), 0);
-    
+
     test1(sv1,   0, 3);
     test1(sv1,   2, 3);
     test1(sv1, 100, 3);
@@ -89,7 +89,7 @@ int main () {
     test ( U"a" );
     test ( U"" );
 #endif
-    
+
 #if TEST_STD_VER > 11
     {
     constexpr std::experimental::string_view sv1 { "ABCDE", 5 };
@@ -101,7 +101,7 @@ int main () {
     static_assert ( sv2[1] == 'B', "" );
     static_assert ( sv2[2] == 'C', "" );
     }
-    
+
     {
     constexpr std::experimental::string_view sv2 = sv1.substr ( 3, 0 );
     static_assert ( sv2.size() == 0, "" );

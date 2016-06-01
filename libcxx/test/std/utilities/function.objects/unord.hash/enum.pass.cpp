@@ -35,7 +35,7 @@ test()
     static_assert((std::is_same<typename H::argument_type, T>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
     typedef typename std::underlying_type<T>::type under_type;
-    
+
     H h1;
     std::hash<under_type> h2;
     for (int i = 0; i <= 5; ++i)

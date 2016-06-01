@@ -22,7 +22,7 @@ bool test ( const CharT *s, size_t len ) {
     assert ( sv.front() == s[0] );
     return &sv.front() == s;
     }
-    
+
 int main () {
     assert ( test ( "ABCDE", 5 ));
     assert ( test ( "a", 1 ));

@@ -13,7 +13,7 @@
 // template <class Type, class Alloc>
 //   struct uses_allocator<dynarray<Type>, Alloc> : true_type { };
 
-  
+
 #include <__config>
 
 #include <experimental/dynarray>

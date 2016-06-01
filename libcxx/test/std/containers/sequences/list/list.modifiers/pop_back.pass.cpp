@@ -34,7 +34,7 @@ int main()
 #if _LIBCPP_DEBUG >= 1
         c.pop_back();
         assert(false);
-#endif        
+#endif
     }
 #if __cplusplus >= 201103L
     {
@@ -49,7 +49,7 @@ int main()
 #if _LIBCPP_DEBUG >= 1
         c.pop_back();
         assert(false);
-#endif        
+#endif
     }
 #endif
 }

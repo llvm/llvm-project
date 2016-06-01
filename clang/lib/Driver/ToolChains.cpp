@@ -1790,6 +1790,10 @@ static void addMultilibFlag(bool Enabled, const char *const Flag,
     Flags.push_back(std::string("-") + Flag);
 }
 
+static bool isArmOrThumbArch(llvm::Triple::ArchType Arch) {
+  return Arch == llvm::Triple::arm || Arch == llvm::Triple::thumb;
+}
+
 static bool isMipsArch(llvm::Triple::ArchType Arch) {
   return Arch == llvm::Triple::mips || Arch == llvm::Triple::mipsel ||
          Arch == llvm::Triple::mips64 || Arch == llvm::Triple::mips64el;
@@ -2313,6 +2317,48 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
   return false;
 }
 
+static void findAndroidArmMultilibs(const Driver &D,
+                                    const llvm::Triple &TargetTriple,
+                                    StringRef Path, const ArgList &Args,
+                                    DetectedMultilibs &Result) {
+  // Find multilibs with subdirectories like armv7-a, thumb, armv7-a/thumb.
+  FilterNonExistent NonExistent(Path, D.getVFS());
+  Multilib ArmV7Multilib = makeMultilib("/armv7-a")
+                               .flag("+armv7")
+                               .flag("-thumb");
+  Multilib ThumbMultilib = makeMultilib("/thumb")
+                               .flag("-armv7")
+                               .flag("+thumb");
+  Multilib ArmV7ThumbMultilib = makeMultilib("/armv7-a/thumb")
+                               .flag("+armv7")
+                               .flag("+thumb");
+  Multilib DefaultMultilib = makeMultilib("")
+                               .flag("-armv7")
+                               .flag("-thumb");
+  MultilibSet AndroidArmMultilibs =
+      MultilibSet()
+          .Either(ThumbMultilib, ArmV7Multilib,
+                  ArmV7ThumbMultilib, DefaultMultilib)
+          .FilterOut(NonExistent);
+
+  Multilib::flags_list Flags;
+  llvm::StringRef Arch = Args.getLastArgValue(options::OPT_march_EQ);
+  bool IsArmArch = TargetTriple.getArch() == llvm::Triple::arm;
+  bool IsThumbArch = TargetTriple.getArch() == llvm::Triple::thumb;
+  bool IsV7SubArch = TargetTriple.getSubArch() == llvm::Triple::ARMSubArch_v7;
+  bool IsThumbMode = IsThumbArch ||
+      Args.hasFlag(options::OPT_mthumb, options::OPT_mno_thumb, false) ||
+      (IsArmArch && llvm::ARM::parseArchISA(Arch) == llvm::ARM::IK_THUMB);
+  bool IsArmV7Mode = (IsArmArch || IsThumbArch) &&
+      (llvm::ARM::parseArchVersion(Arch) == 7 ||
+       (IsArmArch && Arch == "" && IsV7SubArch));
+  addMultilibFlag(IsArmV7Mode, "armv7", Flags);
+  addMultilibFlag(IsThumbMode, "thumb", Flags);
+
+  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilib))
+    Result.Multilibs = AndroidArmMultilibs;
+}
+
 static bool findBiarchMultilibs(const Driver &D,
                                 const llvm::Triple &TargetTriple,
                                 StringRef Path, const ArgList &Args,
@@ -2504,9 +2550,13 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
 
       DetectedMultilibs Detected;
 
+      // Android standalone toolchain could have multilibs for ARM and Thumb.
       // Debian mips multilibs behave more like the rest of the biarch ones,
       // so handle them there
-      if (isMipsArch(TargetArch)) {
+      if (isArmOrThumbArch(TargetArch) && TargetTriple.isAndroid()) {
+        // It should also work without multilibs in a simplified toolchain.
+        findAndroidArmMultilibs(D, TargetTriple, LI->getName(), Args, Detected);
+      } else if (isMipsArch(TargetArch)) {
         if (!findMIPSMultilibs(D, TargetTriple, LI->getName(), Args, Detected))
           continue;
       } else if (!findBiarchMultilibs(D, TargetTriple, LI->getName(), Args,
