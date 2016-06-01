@@ -783,8 +783,10 @@ struct CounterCoverageMappingBuilder
           Visit(Child);
         popRegions(Index);
       }
-    } else
+    } else {
+      handleFileExit(getStart(Body));
       propagateCounts(Counter::getZero(), Body);
+    }
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
     if (!BreakContinueStack.empty())
@@ -792,7 +794,9 @@ struct CounterCoverageMappingBuilder
           BreakContinueStack.back().ContinueCount, BC.ContinueCount);
 
     Counter ExitCount = getRegionCounter(S);
-    pushRegion(ExitCount, getStart(S), getEnd(S));
+    SourceLocation ExitLoc = getEnd(S);
+    pushRegion(ExitCount, getStart(S), ExitLoc);
+    handleFileExit(ExitLoc);
   }
 
   void VisitSwitchCase(const SwitchCase *S) {
