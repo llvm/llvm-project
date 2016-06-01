@@ -14,7 +14,8 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-MappedBlockStream::MappedBlockStream(uint32_t StreamIdx, const PDBFile &File) : Pdb(File) {
+MappedBlockStream::MappedBlockStream(uint32_t StreamIdx, const IPDBFile &File)
+    : Pdb(File) {
   if (StreamIdx >= Pdb.getNumStreams()) {
     StreamLength = 0;
   } else {
@@ -118,4 +119,8 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
 
   return Error::success();
 
+}
+
+uint32_t MappedBlockStream::getNumBytesCopied() const {
+  return static_cast<uint32_t>(Pool.getBytesAllocated());
 }

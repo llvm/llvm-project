@@ -344,6 +344,12 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   EnumerateNamedMetadata(M);
 
   SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+  for (const GlobalVariable &GV : M.globals()) {
+    MDs.clear();
+    GV.getAllMetadata(MDs);
+    for (const auto &I : MDs)
+      EnumerateMetadata(&GV, I.second);
+  }
 
   // Enumerate types used by function bodies and argument lists.
   for (const Function &F : M) {
@@ -351,6 +357,7 @@ ValueEnumerator::ValueEnumerator(const Module &M,
       EnumerateType(A.getType());
 
     // Enumerate metadata attached to this function.
+    MDs.clear();
     F.getAllMetadata(MDs);
     for (const auto &I : MDs)
       EnumerateMetadata(&F, I.second);
@@ -523,17 +530,18 @@ void ValueEnumerator::EnumerateNamedMDNode(const NamedMDNode *MD) {
     EnumerateMetadata(nullptr, MD->getOperand(i));
 }
 
-unsigned ValueEnumerator::getMetadataFunctionID(const Function *F) const {
-  return F ? getValueID(F) + 1 : 0;
+unsigned ValueEnumerator::getMetadataGlobalID(const GlobalObject *GO) const {
+  return GO ? getValueID(GO) + 1 : 0;
 }
 
-void ValueEnumerator::EnumerateMetadata(const Function *F, const Metadata *MD) {
-  EnumerateMetadata(getMetadataFunctionID(F), MD);
+void ValueEnumerator::EnumerateMetadata(const GlobalObject *GO,
+                                        const Metadata *MD) {
+  EnumerateMetadata(getMetadataGlobalID(GO), MD);
 }
 
 void ValueEnumerator::EnumerateFunctionLocalMetadata(
     const Function &F, const LocalAsMetadata *Local) {
-  EnumerateFunctionLocalMetadata(getMetadataFunctionID(&F), Local);
+  EnumerateFunctionLocalMetadata(getMetadataGlobalID(&F), Local);
 }
 
 void ValueEnumerator::dropFunctionFromMetadata(

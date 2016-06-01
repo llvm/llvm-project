@@ -820,7 +820,7 @@ static void EmitGenDwarfRanges(MCStreamer *MCOS) {
     // Emit a base address selection entry for the start of this section
     const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
       StartSymbol, MCSymbolRefExpr::VK_None, context);
-    MCOS->EmitFill(AddrSize, 0xFF);
+    MCOS->emitFill(AddrSize, 0xFF);
     MCOS->EmitValue(SectionStartAddr, AddrSize);
 
     // Emit a range list entry spanning this section

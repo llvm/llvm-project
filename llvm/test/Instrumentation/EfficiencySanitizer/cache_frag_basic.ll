@@ -254,6 +254,6 @@ entry:
 ; Top-level:
 
 ; CHECK: define internal void @esan.module_ctor()
-; CHECK: call void @__esan_init(i32 1, i64 ptrtoint (i64* @0 to i64))
+; CHECK: call void @__esan_init(i32 1, i8* bitcast ({ i8*, i32, { i8*, i32, i64*, i8** }* }* @1 to i8*))
 ; CHECK: define internal void @esan.module_dtor()
-; CHECK: call void @__esan_exit(i64 ptrtoint (i64* @0 to i64))
+; CHECK: call void @__esan_exit(i8* bitcast ({ i8*, i32, { i8*, i32, i64*, i8** }* }* @1 to i8*))

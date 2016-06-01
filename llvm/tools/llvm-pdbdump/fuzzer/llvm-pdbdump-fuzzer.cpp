@@ -23,42 +23,42 @@
 
 using namespace llvm;
 
-extern "C" void LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
+extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   std::unique_ptr<MemoryBuffer> Buff = MemoryBuffer::getMemBuffer(
       StringRef((const char *)data, size), "", false);
 
   ScopedPrinter P(nulls());
-  codeview::CVTypeDumper TD(P, false);
+  codeview::CVTypeDumper TD(&P, false);
 
   std::unique_ptr<pdb::PDBFile> File(new pdb::PDBFile(std::move(Buff)));
   if (auto E = File->parseFileHeaders()) {
     consumeError(std::move(E));
-    return;
+    return 0;
   }
   if (auto E = File->parseStreamData()) {
     consumeError(std::move(E));
-    return;
+    return 0;
   }
 
   auto DbiS = File->getPDBDbiStream();
   if (auto E = DbiS.takeError()) {
     consumeError(std::move(E));
-    return;
+    return 0;
   }
   auto TpiS = File->getPDBTpiStream();
   if (auto E = TpiS.takeError()) {
     consumeError(std::move(E));
-    return;
+    return 0;
   }
   auto IpiS = File->getPDBIpiStream();
   if (auto E = IpiS.takeError()) {
     consumeError(std::move(E));
-    return;
+    return 0;
   }
   auto InfoS = File->getPDBInfoStream();
   if (auto E = InfoS.takeError()) {
     consumeError(std::move(E));
-    return;
+    return 0;
   }
   pdb::DbiStream &DS = DbiS.get();
 
@@ -66,7 +66,7 @@ extern "C" void LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
     pdb::ModStream ModS(*File, Modi.Info);
     if (auto E = ModS.reload()) {
       consumeError(std::move(E));
-      return;
+      return 0;
     }
     codeview::CVSymbolDumper SD(P, TD, nullptr, false);
     bool HadError = false;
@@ -74,4 +74,5 @@ extern "C" void LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
       SD.dump(S);
     }
   }
+  return 0;
 }

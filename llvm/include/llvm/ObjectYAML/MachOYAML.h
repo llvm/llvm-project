@@ -71,11 +71,26 @@ struct BindOpcode {
   StringRef Symbol;
 };
 
+struct ExportEntry {
+  ExportEntry()
+      : TerminalSize(0), NodeOffset(0), Name(), Flags(0), Address(0), Other(0),
+        ImportName(), Children() {}
+  uint64_t TerminalSize;
+  uint64_t NodeOffset;
+  std::string Name;
+  llvm::yaml::Hex64 Flags;
+  llvm::yaml::Hex64 Address;
+  llvm::yaml::Hex64 Other;
+  std::string ImportName;
+  std::vector<MachOYAML::ExportEntry> Children;
+};
+
 struct LinkEditData {
   std::vector<MachOYAML::RebaseOpcode> RebaseOpcodes;
   std::vector<MachOYAML::BindOpcode> BindOpcodes;
   std::vector<MachOYAML::BindOpcode> WeakBindOpcodes;
   std::vector<MachOYAML::BindOpcode> LazyBindOpcodes;
+  MachOYAML::ExportEntry ExportTrie;
 };
 
 struct Object {
@@ -95,6 +110,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex64)
 LLVM_YAML_IS_SEQUENCE_VECTOR(int64_t)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::RebaseOpcode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::BindOpcode)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::ExportEntry)
 
 namespace llvm {
 namespace yaml {
@@ -121,6 +137,10 @@ template <> struct MappingTraits<MachOYAML::RebaseOpcode> {
 
 template <> struct MappingTraits<MachOYAML::BindOpcode> {
   static void mapping(IO &IO, MachOYAML::BindOpcode &BindOpcode);
+};
+
+template <> struct MappingTraits<MachOYAML::ExportEntry> {
+  static void mapping(IO &IO, MachOYAML::ExportEntry &ExportEntry);
 };
 
 template <> struct MappingTraits<MachOYAML::Section> {

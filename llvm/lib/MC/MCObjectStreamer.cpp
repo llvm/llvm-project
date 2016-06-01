@@ -490,7 +490,7 @@ bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
   return false;
 }
 
-void MCObjectStreamer::EmitFill(uint64_t NumBytes, uint8_t FillValue) {
+void MCObjectStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
   const MCSection *Sec = getCurrentSection().first;
   (void)Sec;
   assert(Sec && "need a section");
@@ -513,7 +513,7 @@ void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
     return;
   }
 
-  EmitFill(IntNumBytes, FillValue);
+  emitFill(IntNumBytes, FillValue);
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,

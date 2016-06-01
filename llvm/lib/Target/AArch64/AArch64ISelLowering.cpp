@@ -3418,26 +3418,6 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
     return DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, GotAddr);
   }
 
-  if ((OpFlags & AArch64II::MO_CONSTPOOL) != 0) {
-    assert(getTargetMachine().getCodeModel() == CodeModel::Small &&
-           "use of MO_CONSTPOOL only supported on small model");
-    SDValue Hi = DAG.getTargetConstantPool(GV, PtrVT, 0, 0, AArch64II::MO_PAGE);
-    SDValue ADRP = DAG.getNode(AArch64ISD::ADRP, DL, PtrVT, Hi);
-    unsigned char LoFlags = AArch64II::MO_PAGEOFF | AArch64II::MO_NC;
-    SDValue Lo = DAG.getTargetConstantPool(GV, PtrVT, 0, 0, LoFlags);
-    SDValue PoolAddr = DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ADRP, Lo);
-    SDValue GlobalAddr = DAG.getLoad(
-        PtrVT, DL, DAG.getEntryNode(), PoolAddr,
-        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-        /*isVolatile=*/false,
-        /*isNonTemporal=*/true,
-        /*isInvariant=*/true, 8);
-    if (GN->getOffset() != 0)
-      return DAG.getNode(ISD::ADD, DL, PtrVT, GlobalAddr,
-                         DAG.getConstant(GN->getOffset(), DL, PtrVT));
-    return GlobalAddr;
-  }
-
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
     const unsigned char MO_NC = AArch64II::MO_NC;
     return DAG.getNode(

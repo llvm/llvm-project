@@ -1,6 +1,11 @@
 ; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
-define void @foo() !dbg !4 !dbg !4 {
+define void @foo() !dbg !4 {
+  unreachable
+}
+
+; CHECK:      function must have a single !dbg attachment
+define void @foo2() !dbg !4 !dbg !4 {
   unreachable
 }
 

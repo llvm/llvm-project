@@ -19,16 +19,12 @@
 namespace llvm {
 namespace pdb {
 
-struct IPDBFile {
+class IPDBFile {
 public:
   virtual ~IPDBFile() {}
 
   virtual uint32_t getBlockSize() const = 0;
   virtual uint32_t getBlockCount() const = 0;
-  virtual uint32_t getNumDirectoryBytes() const = 0;
-  virtual uint32_t getBlockMapIndex() const = 0;
-  virtual uint32_t getNumDirectoryBlocks() const = 0;
-  virtual uint64_t getBlockMapOffset() const = 0;
 
   virtual uint32_t getNumStreams() const = 0;
   virtual uint32_t getStreamByteSize(uint32_t StreamIndex) const = 0;
@@ -36,8 +32,6 @@ public:
 
   virtual StringRef getBlockData(uint32_t BlockIndex,
                                  uint32_t NumBytes) const = 0;
-
-  virtual ArrayRef<support::ulittle32_t> getDirectoryBlockArray() = 0;
 };
 }
 }

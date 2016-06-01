@@ -245,11 +245,11 @@ private:
 
   RuntimeDyld::SymbolInfo findMangledSymbol(StringRef Name) {
     if (auto Sym = LazyEmitLayer.findSymbol(Name, false))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym.toRuntimeDyldSymbol();
     if (auto Sym = ClientResolver->findSymbol(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
     if (auto Sym = scanArchives(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym.toRuntimeDyldSymbol();
 
     return nullptr;
   }

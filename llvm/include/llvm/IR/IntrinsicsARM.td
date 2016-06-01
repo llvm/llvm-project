@@ -78,6 +78,24 @@ def int_arm_vcvtru    : Intrinsic<[llvm_float_ty], [llvm_anyfloat_ty],
 //===----------------------------------------------------------------------===//
 // Coprocessor
 
+def int_arm_ldc : GCCBuiltin<"__builtin_arm_ldc">,
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+def int_arm_ldcl : GCCBuiltin<"__builtin_arm_ldcl">,
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+def int_arm_ldc2 : GCCBuiltin<"__builtin_arm_ldc2">,
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+def int_arm_ldc2l : GCCBuiltin<"__builtin_arm_ldc2l">,
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+
+def int_arm_stc : GCCBuiltin<"__builtin_arm_stc">,
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+def int_arm_stcl : GCCBuiltin<"__builtin_arm_stcl">,
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+def int_arm_stc2 : GCCBuiltin<"__builtin_arm_stc2">, 
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+def int_arm_stc2l : GCCBuiltin<"__builtin_arm_stc2l">,
+   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
+
 // Move to coprocessor
 def int_arm_mcr : GCCBuiltin<"__builtin_arm_mcr">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,

@@ -1577,28 +1577,12 @@ bool MergeFunctions::runOnModule(Module &M) {
     DEBUG(dbgs() << "size of module: " << M.size() << '\n');
     DEBUG(dbgs() << "size of worklist: " << Worklist.size() << '\n');
 
-    // Insert only strong functions and merge them. Strong function merging
-    // always deletes one of them.
+    // Insert functions and merge them.
     for (std::vector<WeakVH>::iterator I = Worklist.begin(),
            E = Worklist.end(); I != E; ++I) {
       if (!*I) continue;
       Function *F = cast<Function>(*I);
-      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
-          !F->isInterposable()) {
-        Changed |= insert(F);
-      }
-    }
-
-    // Insert only weak functions and merge them. By doing these second we
-    // create thunks to the strong function when possible. When two weak
-    // functions are identical, we create a new strong function with two weak
-    // weak thunks to it which are identical but not mergable.
-    for (std::vector<WeakVH>::iterator I = Worklist.begin(),
-           E = Worklist.end(); I != E; ++I) {
-      if (!*I) continue;
-      Function *F = cast<Function>(*I);
-      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
-          F->isInterposable()) {
+      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage()) {
         Changed |= insert(F);
       }
     }
@@ -1838,20 +1822,16 @@ bool MergeFunctions::insert(Function *NewFunction) {
   // important when operating on more than one module independently to prevent
   // cycles of thunks calling each other when the modules are linked together.
   //
-  // When one function is weak and the other is strong there is an order imposed
-  // already. We process strong functions before weak functions.
-  if ((OldF.getFunc()->isInterposable() && NewFunction->isInterposable()) ||
-      (!OldF.getFunc()->isInterposable() && !NewFunction->isInterposable()))
-    if (OldF.getFunc()->getName() > NewFunction->getName()) {
-      // Swap the two functions.
-      Function *F = OldF.getFunc();
-      replaceFunctionInTree(*Result.first, NewFunction);
-      NewFunction = F;
-      assert(OldF.getFunc() != F && "Must have swapped the functions.");
-    }
-
-  // Never thunk a strong function to a weak function.
-  assert(!OldF.getFunc()->isInterposable() || NewFunction->isInterposable());
+  // First of all, we process strong functions before weak functions.
+  if ((OldF.getFunc()->isInterposable() && !NewFunction->isInterposable()) ||
+     (OldF.getFunc()->isInterposable() == NewFunction->isInterposable() &&
+       OldF.getFunc()->getName() > NewFunction->getName())) {
+    // Swap the two functions.
+    Function *F = OldF.getFunc();
+    replaceFunctionInTree(*Result.first, NewFunction);
+    NewFunction = F;
+    assert(OldF.getFunc() != F && "Must have swapped the functions.");
+  }
 
   DEBUG(dbgs() << "  " << OldF.getFunc()->getName()
                << " == " << NewFunction->getName() << '\n');

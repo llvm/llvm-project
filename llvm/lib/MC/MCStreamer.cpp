@@ -132,9 +132,9 @@ void MCStreamer::EmitGPRel32Value(const MCExpr *Value) {
   report_fatal_error("unsupported directive in streamer");
 }
 
-/// EmitFill - Emit NumBytes bytes worth of the value specified by
-/// FillValue.  This implements directives such as '.space'.
-void MCStreamer::EmitFill(uint64_t NumBytes, uint8_t FillValue) {
+/// Emit NumBytes bytes worth of the value specified by FillValue.
+/// This implements directives such as '.space'.
+void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
   for (uint64_t i = 0, e = NumBytes; i != e; ++i)
     EmitIntValue(FillValue, 1);
 }
@@ -149,9 +149,9 @@ void MCStreamer::emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) {
   }
 }
 
-/// The implementation in this class just redirects to EmitFill.
+/// The implementation in this class just redirects to emitFill.
 void MCStreamer::EmitZeros(uint64_t NumBytes) {
-  EmitFill(NumBytes, 0);
+  emitFill(NumBytes, 0);
 }
 
 unsigned MCStreamer::EmitDwarfFileDirective(unsigned FileNo,
@@ -761,6 +761,7 @@ void MCStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 void MCStreamer::ChangeSection(MCSection *, const MCExpr *) {}
 void MCStreamer::EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::EmitBytes(StringRef Data) {}
+void MCStreamer::EmitBinaryData(StringRef Data) { EmitBytes(Data); }
 void MCStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) {
   visitUsedExpr(*Value);
 }

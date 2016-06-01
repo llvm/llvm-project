@@ -63,7 +63,7 @@ public:
   friend class COFFObjectDumpDelegate;
   COFFDumper(const llvm::object::COFFObjectFile *Obj, ScopedPrinter &Writer)
       : ObjDumper(Writer), Obj(Obj),
-        CVTD(Writer, opts::CodeViewSubsectionBytes) {}
+        CVTD(&Writer, opts::CodeViewSubsectionBytes) {}
 
   void printFileHeaders() override;
   void printSections() override;
@@ -1052,18 +1052,7 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
 
-  ArrayRef<uint8_t> BinaryData(reinterpret_cast<const uint8_t *>(Data.data()),
-                               Data.size());
-  ByteStream Stream(BinaryData);
-  CVTypeArray Types;
-  StreamReader Reader(Stream);
-  if (auto EC = Reader.readArray(Types, Reader.getLength())) {
-    consumeError(std::move(EC));
-    W.flush();
-    error(object_error::parse_failed);
-  }
-
-  if (!CVTD.dump(Types)) {
+  if (!CVTD.dump({Data.bytes_begin(), Data.bytes_end()})) {
     W.flush();
     error(object_error::parse_failed);
   }
@@ -1506,25 +1495,11 @@ void llvm::dumpCodeViewMergedTypes(
   // Flatten it first, then run our dumper on it.
   ListScope S(Writer, "MergedTypeStream");
   SmallString<0> Buf;
-  CVTypes.ForEachRecord([&](TypeIndex TI, MemoryTypeTableBuilder::Record *R) {
-    // The record data doesn't include the 16 bit size.
-    Buf.push_back(R->size() & 0xff);
-    Buf.push_back((R->size() >> 8) & 0xff);
-    Buf.append(R->data(), R->data() + R->size());
+  CVTypes.ForEachRecord([&](TypeIndex TI, StringRef Record) {
+    Buf.append(Record.begin(), Record.end());
   });
-  CVTypeDumper CVTD(Writer, opts::CodeViewSubsectionBytes);
-  ArrayRef<uint8_t> BinaryData(reinterpret_cast<const uint8_t *>(Buf.data()),
-                               Buf.size());
-  ByteStream Stream(BinaryData);
-  CVTypeArray Types;
-  StreamReader Reader(Stream);
-  if (auto EC = Reader.readArray(Types, Reader.getLength())) {
-    consumeError(std::move(EC));
-    Writer.flush();
-    error(object_error::parse_failed);
-  }
-
-  if (!CVTD.dump(Types)) {
+  CVTypeDumper CVTD(&Writer, opts::CodeViewSubsectionBytes);
+  if (!CVTD.dump({Buf.str().bytes_begin(), Buf.str().bytes_end()})) {
     Writer.flush();
     error(object_error::parse_failed);
   }

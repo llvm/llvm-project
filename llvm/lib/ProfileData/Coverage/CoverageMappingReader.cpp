@@ -597,8 +597,8 @@ static Error loadBinaryFormat(MemoryBufferRef ObjectBuffer,
     // If we have a universal binary, try to look up the object for the
     // appropriate architecture.
     auto ObjectFileOrErr = Universal->getObjectForArch(Arch);
-    if (auto EC = ObjectFileOrErr.getError())
-      return errorCodeToError(EC);
+    if (!ObjectFileOrErr)
+      return ObjectFileOrErr.takeError();
     OF = std::move(ObjectFileOrErr.get());
   } else if (isa<object::ObjectFile>(Bin.get())) {
     // For any other object file, upcast and take ownership.

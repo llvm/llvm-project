@@ -113,6 +113,9 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
+
+  // GLOBALVAR_ATTACHMENT: [valueid, n x [id, mdnode]]
+  MODULE_CODE_GLOBALVAR_ATTACHMENT = 19,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.

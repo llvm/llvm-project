@@ -15,12 +15,14 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetFrameLowering.h"
@@ -282,22 +284,34 @@ void CodeViewDebug::emitTypeInformation() {
   OS.SwitchSection(Asm->getObjFileLowering().getCOFFDebugTypesSection());
   emitCodeViewMagicVersion();
 
+  SmallString<8> CommentPrefix;
+  if (OS.isVerboseAsm()) {
+    CommentPrefix += '\t';
+    CommentPrefix += Asm->MAI->getCommentString();
+    CommentPrefix += ' ';
+  }
+
+  CVTypeDumper CVTD(nullptr, /*PrintRecordBytes=*/false);
   TypeTable.ForEachRecord(
-      [&](TypeIndex Index, const MemoryTypeTableBuilder::Record *R) {
-        // Each record should be 4 byte aligned. We achieve that by emitting
-        // LF_PAD padding bytes. The on-disk record size includes the padding
-        // bytes so that consumers don't have to skip past them.
-        uint64_t RecordSize = R->size() + 2;
-        uint64_t AlignedSize = alignTo(RecordSize, 4);
-        uint64_t AlignedRecordSize = AlignedSize - 2;
-        assert(AlignedRecordSize < (1 << 16) && "type record size overflow");
-        OS.AddComment("Type record length");
-        OS.EmitIntValue(AlignedRecordSize, 2);
-        OS.AddComment("Type record data");
-        OS.EmitBytes(StringRef(R->data(), R->size()));
-        // Pad the record with LF_PAD bytes.
-        for (unsigned I = AlignedSize - RecordSize; I > 0; --I)
-          OS.EmitIntValue(LF_PAD0 + I, 1);
+      [&](TypeIndex Index, StringRef Record) {
+        if (OS.isVerboseAsm()) {
+          // Emit a block comment describing the type record for readability.
+          SmallString<512> CommentBlock;
+          raw_svector_ostream CommentOS(CommentBlock);
+          ScopedPrinter SP(CommentOS);
+          SP.setPrefix(CommentPrefix);
+          CVTD.setPrinter(&SP);
+          bool DumpSuccess =
+              CVTD.dump({Record.bytes_begin(), Record.bytes_end()});
+          (void)DumpSuccess;
+          assert(DumpSuccess && "produced malformed type record");
+          // emitRawComment will insert its own tab and comment string before
+          // the first line, so strip off our first one. It also prints its own
+          // newline.
+          OS.emitRawComment(
+              CommentOS.str().drop_front(CommentPrefix.size() - 1).rtrim());
+        }
+        OS.EmitBinaryData(Record);
       });
 }
 

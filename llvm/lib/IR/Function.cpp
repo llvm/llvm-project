@@ -218,11 +218,13 @@ bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
 //===----------------------------------------------------------------------===//
 
 bool Function::isMaterializable() const {
-  return getGlobalObjectSubClassData() & IsMaterializableBit;
+  return getGlobalObjectSubClassData() & (1 << IsMaterializableBit);
 }
 
 void Function::setIsMaterializable(bool V) {
-  setGlobalObjectBit(IsMaterializableBit, V);
+  unsigned Mask = 1 << IsMaterializableBit;
+  setGlobalObjectSubClassData((~Mask & getGlobalObjectSubClassData()) |
+                              (V ? Mask : 0u));
 }
 
 LLVMContext &Function::getContext() const {

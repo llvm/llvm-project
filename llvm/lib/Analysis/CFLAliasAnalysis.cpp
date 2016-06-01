@@ -209,8 +209,6 @@ public:
   void visitGetElementPtrInst(GetElementPtrInst &Inst) {
     auto *Op = Inst.getPointerOperand();
     Output.push_back(Edge(&Inst, Op, EdgeType::Assign, AttrNone));
-    for (auto I = Inst.idx_begin(), E = Inst.idx_end(); I != E; ++I)
-      Output.push_back(Edge(&Inst, *I, EdgeType::Assign, AttrNone));
   }
 
   void visitSelectInst(SelectInst &Inst) {

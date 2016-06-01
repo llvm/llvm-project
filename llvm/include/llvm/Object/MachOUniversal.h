@@ -63,7 +63,7 @@ public:
       return T.getArchName();
     }
 
-    ErrorOr<std::unique_ptr<MachOObjectFile>> getAsObjectFile() const;
+    Expected<std::unique_ptr<MachOObjectFile>> getAsObjectFile() const;
 
     ErrorOr<std::unique_ptr<Archive>> getAsArchive() const;
   };
@@ -110,7 +110,7 @@ public:
     return V->isMachOUniversalBinary();
   }
 
-  ErrorOr<std::unique_ptr<MachOObjectFile>>
+  Expected<std::unique_ptr<MachOObjectFile>>
   getObjectForArch(StringRef ArchName) const;
 };
 

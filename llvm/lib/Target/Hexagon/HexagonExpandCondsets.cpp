@@ -991,6 +991,11 @@ bool HexagonExpandCondsets::predicate(MachineInstr *TfrI, bool Cond) {
   // some registers, which would complicate the transformation considerably.
   if (!MS.isKill())
     return false;
+  // Avoid predicating instructions that define a subregister. The code
+  // does not handle correctly cases where both subregisters of a register
+  // are defined by a condset.
+  if (MD.getSubReg())
+    return false;
 
   RegisterRef RT(MS);
   unsigned PredR = MP.getReg();

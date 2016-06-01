@@ -891,6 +891,9 @@ bool LLParser::ParseGlobal(const std::string &Name, LocTy NameLoc,
       unsigned Alignment;
       if (ParseOptionalAlignment(Alignment)) return true;
       GV->setAlignment(Alignment);
+    } else if (Lex.getKind() == lltok::MetadataVar) {
+      if (ParseGlobalObjectMetadataAttachment(*GV))
+        return true;
     } else {
       Comdat *C;
       if (parseOptionalComdat(Name, C))
@@ -1708,17 +1711,24 @@ bool LLParser::ParseInstructionMetadata(Instruction &Inst) {
   return false;
 }
 
+/// ParseGlobalObjectMetadataAttachment
+///   ::= !dbg !57
+bool LLParser::ParseGlobalObjectMetadataAttachment(GlobalObject &GO) {
+  unsigned MDK;
+  MDNode *N;
+  if (ParseMetadataAttachment(MDK, N))
+    return true;
+
+  GO.addMetadata(MDK, *N);
+  return false;
+}
+
 /// ParseOptionalFunctionMetadata
 ///   ::= (!dbg !57)*
 bool LLParser::ParseOptionalFunctionMetadata(Function &F) {
-  while (Lex.getKind() == lltok::MetadataVar) {
-    unsigned MDK;
-    MDNode *N;
-    if (ParseMetadataAttachment(MDK, N))
+  while (Lex.getKind() == lltok::MetadataVar)
+    if (ParseGlobalObjectMetadataAttachment(F))
       return true;
-
-    F.setMetadata(MDK, N);
-  }
   return false;
 }
 

@@ -223,7 +223,10 @@ private:
                             SmallVectorImpl<uint64_t> &Record);
   void writeModuleMetadata();
   void writeFunctionMetadata(const Function &F);
-  void writeMetadataAttachment(const Function &F);
+  void writeFunctionMetadataAttachment(const Function &F);
+  void writeGlobalVariableMetadataAttachment(const GlobalVariable &GV);
+  void pushGlobalMetadataAttachment(SmallVectorImpl<uint64_t> &Record,
+                                    const GlobalObject &GO);
   void writeModuleMetadataStore();
   void writeOperandBundleTags();
   void writeConstants(unsigned FirstVal, unsigned LastVal, bool isGlobal);
@@ -1831,24 +1834,31 @@ void ModuleBitcodeWriter::writeFunctionMetadata(const Function &F) {
   Stream.ExitBlock();
 }
 
-void ModuleBitcodeWriter::writeMetadataAttachment(const Function &F) {
+void ModuleBitcodeWriter::pushGlobalMetadataAttachment(
+    SmallVectorImpl<uint64_t> &Record, const GlobalObject &GO) {
+  // [n x [id, mdnode]]
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  GO.getAllMetadata(MDs);
+  for (const auto &I : MDs) {
+    Record.push_back(I.first);
+    Record.push_back(VE.getMetadataID(I.second));
+  }
+}
+
+void ModuleBitcodeWriter::writeFunctionMetadataAttachment(const Function &F) {
   Stream.EnterSubblock(bitc::METADATA_ATTACHMENT_ID, 3);
 
   SmallVector<uint64_t, 64> Record;
 
-  // Write metadata attachments
-  // METADATA_ATTACHMENT - [m x [value, [n x [id, mdnode]]]
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  F.getAllMetadata(MDs);
-  if (!MDs.empty()) {
-    for (const auto &I : MDs) {
-      Record.push_back(I.first);
-      Record.push_back(VE.getMetadataID(I.second));
-    }
+  if (F.hasMetadata()) {
+    pushGlobalMetadataAttachment(Record, F);
     Stream.EmitRecord(bitc::METADATA_ATTACHMENT, Record, 0);
     Record.clear();
   }
 
+  // Write metadata attachments
+  // METADATA_ATTACHMENT - [m x [value, [n x [id, mdnode]]]
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   for (const BasicBlock &BB : F)
     for (const Instruction &I : BB) {
       MDs.clear();
@@ -2894,7 +2904,7 @@ void ModuleBitcodeWriter::writeFunction(
   writeValueSymbolTable(F.getValueSymbolTable());
 
   if (NeedsMetadataAttachment)
-    writeMetadataAttachment(F);
+    writeFunctionMetadataAttachment(F);
   if (VE.shouldPreserveUseListOrder())
     writeUseListBlock(&F);
   VE.purgeFunction();
@@ -3596,6 +3606,14 @@ void ModuleBitcodeWriter::writeModule() {
 
   writeValueSymbolTable(M.getValueSymbolTable(),
                         /* IsModuleLevel */ true, &FunctionToBitcodeIndex);
+
+  for (const GlobalVariable &GV : M.globals())
+    if (GV.hasMetadata()) {
+      SmallVector<uint64_t, 4> Record;
+      Record.push_back(VE.getValueID(&GV));
+      pushGlobalMetadataAttachment(Record, GV);
+      Stream.EmitRecord(bitc::MODULE_CODE_GLOBALVAR_ATTACHMENT, Record);
+    }
 
   if (GenerateHash) {
     writeModuleHash(BlockStartPos);

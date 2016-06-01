@@ -681,6 +681,9 @@ private:
   /// Add all of the functions arguments, basic blocks, and instructions.
   void processFunction();
 
+  /// Add the metadata directly attached to a GlobalObject.
+  void processGlobalObjectMetadata(const GlobalObject &GO);
+
   /// Add all of the metadata from a function.
   void processFunctionMetadata(const Function &F);
 
@@ -799,6 +802,7 @@ void SlotTracker::processModule() {
   for (const GlobalVariable &Var : TheModule->globals()) {
     if (!Var.hasName())
       CreateModuleSlot(&Var);
+    processGlobalObjectMetadata(Var);
   }
 
   for (const GlobalAlias &A : TheModule->aliases()) {
@@ -882,12 +886,15 @@ void SlotTracker::processFunction() {
   ST_DEBUG("end processFunction!\n");
 }
 
-void SlotTracker::processFunctionMetadata(const Function &F) {
+void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  F.getAllMetadata(MDs);
+  GO.getAllMetadata(MDs);
   for (auto &MD : MDs)
     CreateMetadataSlot(MD.second);
+}
 
+void SlotTracker::processFunctionMetadata(const Function &F) {
+  processGlobalObjectMetadata(F);
   for (auto &BB : F) {
     for (auto &I : BB)
       processInstructionMetadata(I);
@@ -2472,6 +2479,10 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   maybePrintComdat(Out, *GV);
   if (GV->getAlignment())
     Out << ", align " << GV->getAlignment();
+
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  GV->getAllMetadata(MDs);
+  printMetadataAttachments(MDs, ", ");
 
   printInfoComment(*GV);
 }

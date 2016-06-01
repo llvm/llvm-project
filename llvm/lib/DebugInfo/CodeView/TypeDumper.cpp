@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -688,6 +689,18 @@ bool CVTypeDumper::dump(const CVTypeArray &Types) {
   CVTypeDumperImpl Dumper(*this, *W, PrintRecordBytes);
   Dumper.visitTypeStream(Types);
   return !Dumper.hadError();
+}
+
+bool CVTypeDumper::dump(ArrayRef<uint8_t> Data) {
+  ByteStream Stream(Data);
+  CVTypeArray Types;
+  StreamReader Reader(Stream);
+  if (auto EC = Reader.readArray(Types, Reader.getLength())) {
+    consumeError(std::move(EC));
+    return false;
+  }
+
+  return dump(Types);
 }
 
 void CVTypeDumper::setPrinter(ScopedPrinter *P) {

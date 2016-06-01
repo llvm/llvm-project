@@ -83,8 +83,7 @@ public:
       orc::createLambdaResolver(
         [this](const std::string &Name) {
           if (auto Sym = CODLayer.findSymbol(Name, true))
-            return RuntimeDyld::SymbolInfo(Sym.getAddress(),
-                                           Sym.getFlags());
+            return Sym.toRuntimeDyldSymbol();
           if (auto Sym = CXXRuntimeOverrides.searchOverrides(Name))
             return Sym;
 

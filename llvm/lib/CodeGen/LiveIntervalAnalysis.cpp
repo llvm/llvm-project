@@ -1566,22 +1566,6 @@ void LiveIntervals::splitSeparateComponents(LiveInterval &LI,
   ConEQ.Distribute(LI, SplitLIs.data(), *MRI);
 }
 
-void LiveIntervals::renameDisconnectedComponents() {
-  ConnectedSubRegClasses SubRegClasses(*this, *MRI, *TII);
-
-  // Iterate over all vregs. Note that we query getNumVirtRegs() the newly
-  // created vregs end up with higher numbers but do not need to be visited as
-  // there can't be any further splitting.
-  for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
-    LiveInterval *LI = VirtRegIntervals[Reg];
-    if (LI == nullptr || !LI->hasSubRanges())
-      continue;
-
-    SubRegClasses.renameComponents(*LI);
-  }
-}
-
 void LiveIntervals::constructMainRangeFromSubranges(LiveInterval &LI) {
   assert(LRCalc && "LRCalc not initialized.");
   LRCalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());

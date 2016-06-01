@@ -57,8 +57,7 @@ protected:
       if (!Finalized)
         return JITSymbol(getSymbolMaterializer(Name),
                          SymEntry->second.getFlags());
-      return JITSymbol(SymEntry->second.getAddress(),
-                       SymEntry->second.getFlags());
+      return JITSymbol(SymEntry->second);
     }
   protected:
     StringMap<RuntimeDyld::SymbolInfo> SymbolTable;

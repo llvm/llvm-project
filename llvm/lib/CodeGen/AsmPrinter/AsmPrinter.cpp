@@ -1955,7 +1955,7 @@ static void emitGlobalConstantDataSequential(const DataLayout &DL,
     uint64_t Bytes = DL.getTypeAllocSize(CDS->getType());
     // Don't emit a 1-byte object as a .fill.
     if (Bytes > 1)
-      return AP.OutStreamer->EmitFill(Bytes, Value);
+      return AP.OutStreamer->emitFill(Bytes, Value);
   }
 
   // If this can be emitted with .ascii/.asciz, emit it as such.
@@ -1994,7 +1994,7 @@ static void emitGlobalConstantArray(const DataLayout &DL,
 
   if (Value != -1) {
     uint64_t Bytes = DL.getTypeAllocSize(CA->getType());
-    AP.OutStreamer->EmitFill(Bytes, Value);
+    AP.OutStreamer->emitFill(Bytes, Value);
   }
   else {
     for (unsigned i = 0, e = CA->getNumOperands(); i != e; ++i) {

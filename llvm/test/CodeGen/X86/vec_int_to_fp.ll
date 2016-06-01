@@ -1836,14 +1836,12 @@ define <2 x double> @sitofp_load_2i64_to_2f64(<2 x i64> *%a) {
 define <2 x double> @sitofp_load_2i32_to_2f64(<2 x i32> *%a) {
 ; SSE-LABEL: sitofp_load_2i32_to_2f64:
 ; SSE:       # BB#0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
+; SSE-NEXT:    cvtdq2pd (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sitofp_load_2i32_to_2f64:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
+; AVX-NEXT:    vcvtdq2pd (%rdi), %xmm0
 ; AVX-NEXT:    retq
   %ld = load <2 x i32>, <2 x i32> *%a
   %cvt = sitofp <2 x i32> %ld to <2 x double>

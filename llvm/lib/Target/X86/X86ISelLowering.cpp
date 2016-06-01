@@ -23841,8 +23841,12 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
       Subtarget.getRegisterInfo()->getCalleeSavedRegs(MF);
   for (MachineBasicBlock *MBB : InvokeBBs) {
     // Remove the landing pad successor from the invoke block and replace it
-    // with the new dispatch block
-    for (auto MBBS : make_range(MBB->succ_rbegin(), MBB->succ_rend())) {
+    // with the new dispatch block.
+    // Keep a copy of Successors since it's modified inside the loop.
+    SmallVector<MachineBasicBlock *, 8> Successors(MBB->succ_rbegin(),
+                                                   MBB->succ_rend());
+    // FIXME: Avoid quadratic complexity.
+    for (auto MBBS : Successors) {
       if (MBBS->isEHPad()) {
         MBB->removeSuccessor(MBBS);
         MBBLPads.push_back(MBBS);

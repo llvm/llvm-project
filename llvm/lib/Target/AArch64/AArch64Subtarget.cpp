@@ -81,13 +81,8 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
 
   // The small code mode's direct accesses use ADRP, which cannot necessarily
   // produce the value 0 (if the code is above 4GB).
-  if (TM.getCodeModel() == CodeModel::Small && GV->hasExternalWeakLinkage()) {
-    // In PIC mode use the GOT, but in absolute mode use a constant pool load.
-    if (RM == Reloc::Static)
-      return AArch64II::MO_CONSTPOOL;
-    else
-      return AArch64II::MO_GOT;
-  }
+  if (TM.getCodeModel() == CodeModel::Small && GV->hasExternalWeakLinkage())
+    return AArch64II::MO_GOT;
 
   return AArch64II::MO_NO_FLAG;
 }

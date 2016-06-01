@@ -21,16 +21,18 @@
 namespace llvm {
 namespace pdb {
 
-class PDBFile;
+class IPDBFile;
 
 class MappedBlockStream : public codeview::StreamInterface {
 public:
-  MappedBlockStream(uint32_t StreamIdx, const PDBFile &File);
+  MappedBlockStream(uint32_t StreamIdx, const IPDBFile &File);
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override;
 
   uint32_t getLength() const override { return StreamLength; }
+
+  uint32_t getNumBytesCopied() const;
 
 private:
   Error readBytes(uint32_t Offset, MutableArrayRef<uint8_t> Buffer) const;
@@ -41,7 +43,7 @@ private:
   std::vector<uint32_t> BlockList;
   mutable llvm::BumpPtrAllocator Pool;
   mutable DenseMap<uint32_t, uint8_t *> CacheMap;
-  const PDBFile &Pdb;
+  const IPDBFile &Pdb;
 };
 
 } // end namespace pdb

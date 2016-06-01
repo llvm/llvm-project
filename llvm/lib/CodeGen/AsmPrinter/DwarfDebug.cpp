@@ -470,12 +470,8 @@ void DwarfDebug::beginModule() {
 
   const Module *M = MMI->getModule();
 
-  unsigned NumDebugCUs = 0;
-  for (DICompileUnit *CUNode : M->debug_compile_units()) {
-    (void)CUNode;
-    ++NumDebugCUs;
-  }
-
+  unsigned NumDebugCUs = std::distance(M->debug_compile_units_begin(),
+                                       M->debug_compile_units_end());
   // Tell MMI whether we have debug info.
   MMI->setDebugInfoAvailability(NumDebugCUs > 0);
   SingleCU = NumDebugCUs == 1;
@@ -1666,7 +1662,7 @@ void DwarfDebug::emitDebugARanges() {
     Asm->OutStreamer->AddComment("Segment Size (in bytes)");
     Asm->EmitInt8(0);
 
-    Asm->OutStreamer->EmitFill(Padding, 0xff);
+    Asm->OutStreamer->emitFill(Padding, 0xff);
 
     for (const ArangeSpan &Span : List) {
       Asm->EmitLabelReference(Span.Start, PtrSize);

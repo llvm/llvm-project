@@ -619,7 +619,8 @@ assume that the globals are densely packed in their section and try to
 iterate over them as an array, alignment padding would break this
 iteration. The maximum alignment is ``1 << 29``.
 
-Globals can also have a :ref:`DLL storage class <dllstorageclass>`.
+Globals can also have a :ref:`DLL storage class <dllstorageclass>` and
+an optional list of attached :ref:`metadata <metadata>`,
 
 Variables and aliases can have a
 :ref:`Thread Local Storage Model <tls_model>`.
@@ -630,7 +631,7 @@ Syntax::
                          [unnamed_addr] [AddrSpace] [ExternallyInitialized]
                          <global | constant> <Type> [<InitializerConstant>]
                          [, section "name"] [, comdat [($name)]]
-                         [, align <Alignment>]
+                         [, align <Alignment>] (, !name !N)*
 
 For example, the following defines a global in a numbered address space
 with an initializer, section, and alignment:
@@ -8238,9 +8239,6 @@ Example:
       <result> = icmp ule i16 -4, 5        ; yields: result=false
       <result> = icmp sge i16  4, 5        ; yields: result=false
 
-Note that the code generator does not yet support vector types with the
-``icmp`` instruction.
-
 .. _i_fcmp:
 
 '``fcmp``' Instruction
@@ -8352,9 +8350,6 @@ Example:
       <result> = fcmp one float 4.0, 5.0    ; yields: result=true
       <result> = fcmp olt float 4.0, 5.0    ; yields: result=true
       <result> = fcmp ueq double 1.0, 2.0   ; yields: result=false
-
-Note that the code generator does not yet support vector types with the
-``fcmp`` instruction.
 
 .. _i_phi:
 

@@ -62,7 +62,7 @@ public:
     auto Resolver = createLambdaResolver(
         [&](const std::string &Name) {
           if (auto Sym = CompileLayer.findSymbol(Name, false))
-            return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+            return Sym.toRuntimeDyldSymbol();
           return RuntimeDyld::SymbolInfo(nullptr);
         },
         [](const std::string &Name) {
