@@ -783,10 +783,8 @@ struct CounterCoverageMappingBuilder
           Visit(Child);
         popRegions(Index);
       }
-    } else {
-      handleFileExit(getStart(Body));
+    } else
       propagateCounts(Counter::getZero(), Body);
-    }
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
     if (!BreakContinueStack.empty())
