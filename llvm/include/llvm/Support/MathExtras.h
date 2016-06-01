@@ -312,22 +312,22 @@ inline bool isShiftedUInt(uint64_t x) {
 }
 
 /// Gets the maximum value for a N-bit unsigned integer.
-inline uint64_t maxUIntN(uint64_t N) { return UINT64_C(1) << N; }
+inline uint64_t maxUIntN(uint64_t N) { return (UINT64_C(1) << N) - 1; }
 /// Gets the minimum value for a N-bit signed integer.
 inline int64_t minIntN(int64_t N) { return -(INT64_C(1)<<(N-1)); }
 /// Gets the maximum value for a N-bit signed integer.
-inline int64_t maxIntN(int64_t N) { return INT64_C(1)<<(N-1); }
+inline int64_t maxIntN(int64_t N) { return (INT64_C(1)<<(N-1)) - 1; }
 
 /// isUIntN - Checks if an unsigned integer fits into the given (dynamic)
 /// bit width.
 inline bool isUIntN(unsigned N, uint64_t x) {
-  return N >= 64 || x < maxUIntN(N);
+  return N >= 64 || x <= maxUIntN(N);
 }
 
 /// isIntN - Checks if an signed integer fits into the given (dynamic)
 /// bit width.
 inline bool isIntN(unsigned N, int64_t x) {
-  return N >= 64 || (minIntN(N) <= x && x < maxIntN(N));
+  return N >= 64 || (minIntN(N) <= x && x <= maxIntN(N));
 }
 
 /// isMask_32 - This function returns true if the argument is a non-empty

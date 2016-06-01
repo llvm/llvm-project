@@ -2963,6 +2963,7 @@ void Verifier::visitLoadInst(LoadInst &LI) {
   Type *ElTy = LI.getType();
   Assert(LI.getAlignment() <= Value::MaximumAlignment,
          "huge alignment values are unsupported", &LI);
+  Assert(ElTy->isSized(), "loading unsized types is not allowed", &LI);
   if (LI.isAtomic()) {
     Assert(LI.getOrdering() != AtomicOrdering::Release &&
                LI.getOrdering() != AtomicOrdering::AcquireRelease,
@@ -2991,6 +2992,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
          "Stored value type does not match pointer operand type!", &SI, ElTy);
   Assert(SI.getAlignment() <= Value::MaximumAlignment,
          "huge alignment values are unsupported", &SI);
+  Assert(ElTy->isSized(), "storing unsized types is not allowed", &SI);
   if (SI.isAtomic()) {
     Assert(SI.getOrdering() != AtomicOrdering::Acquire &&
                SI.getOrdering() != AtomicOrdering::AcquireRelease,

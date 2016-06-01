@@ -23,7 +23,7 @@ namespace {
 
 #define EXPECT_NO_ERROR(Err)                                                   \
   {                                                                            \
-    auto E = std::move(Err);                                                   \
+    auto E = Err;                                                              \
     EXPECT_FALSE(static_cast<bool>(E));                                        \
     if (E)                                                                     \
       consumeError(std::move(E));                                              \
@@ -31,17 +31,21 @@ namespace {
 
 #define EXPECT_ERROR(Err)                                                      \
   {                                                                            \
-    auto E = std::move(Err);                                                   \
+    auto E = Err;                                                              \
     EXPECT_TRUE(static_cast<bool>(E));                                         \
     if (E)                                                                     \
       consumeError(std::move(E));                                              \
   }
 
+static const uint32_t BlocksAry[] = {0, 1, 2, 5, 4, 3, 6, 7, 8, 9};
+static const char DataAry[] = {'A', 'B', 'C', 'F', 'E',
+                               'D', 'G', 'H', 'I', 'J'};
+
 class DiscontiguousFile : public IPDBFile {
 public:
   DiscontiguousFile()
-      : Blocks{0, 1, 2, 5, 4, 3, 6, 7, 8, 9},
-        Data{'A', 'B', 'C', 'F', 'E', 'D', 'G', 'H', 'I', 'J'} {}
+      : Blocks(&BlocksAry[0], &BlocksAry[10]), Data(&DataAry[0], &DataAry[10]) {
+  }
 
   virtual uint32_t getBlockSize() const override { return 1; }
   virtual uint32_t getBlockCount() const override { return 10; }
@@ -67,14 +71,14 @@ private:
 
 // Tests that a read which is entirely contained within a single block works
 // and does not allocate.
-TEST(MappedBlockStreamTest, ZeroCopyReadNoBreak) {
+TEST(MappedBlockStreamTest, ReadBeyondEndOfStreamRef) {
   DiscontiguousFile F;
   MappedBlockStream S(0, F);
   StreamReader R(S);
-  StringRef Str;
-  EXPECT_NO_ERROR(R.readFixedString(Str, 1));
-  EXPECT_EQ(Str, StringRef("A"));
-  EXPECT_EQ(0, S.getNumBytesCopied());
+  StreamRef SR;
+  EXPECT_NO_ERROR(R.readStreamRef(SR, 0U));
+  ArrayRef<uint8_t> Buffer;
+  EXPECT_ERROR(SR.readBytes(0U, 1U, Buffer));
 }
 
 // Tests that a read which outputs into a full destination buffer works and
@@ -86,7 +90,7 @@ TEST(MappedBlockStreamTest, ReadOntoNonEmptyBuffer) {
   StringRef Str = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
   EXPECT_NO_ERROR(R.readFixedString(Str, 1));
   EXPECT_EQ(Str, StringRef("A"));
-  EXPECT_EQ(0, S.getNumBytesCopied());
+  EXPECT_EQ(0U, S.getNumBytesCopied());
 }
 
 // Tests that a read which crosses a block boundary, but where the subsequent
@@ -99,12 +103,12 @@ TEST(MappedBlockStreamTest, ZeroCopyReadContiguousBreak) {
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 2));
   EXPECT_EQ(Str, StringRef("AB"));
-  EXPECT_EQ(0, S.getNumBytesCopied());
+  EXPECT_EQ(0U, S.getNumBytesCopied());
 
   R.setOffset(6);
   EXPECT_NO_ERROR(R.readFixedString(Str, 4));
   EXPECT_EQ(Str, StringRef("GHIJ"));
-  EXPECT_EQ(0, S.getNumBytesCopied());
+  EXPECT_EQ(0U, S.getNumBytesCopied());
 }
 
 // Tests that a read which crosses a block boundary and cannot be referenced
@@ -117,7 +121,7 @@ TEST(MappedBlockStreamTest, CopyReadNonContiguousBreak) {
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 10));
   EXPECT_EQ(Str, StringRef("ABCDEFGHIJ"));
-  EXPECT_EQ(10, S.getNumBytesCopied());
+  EXPECT_EQ(10U, S.getNumBytesCopied());
 }
 
 // Test that an out of bounds read which doesn't cross a block boundary
@@ -130,7 +134,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNoBreak) {
 
   R.setOffset(10);
   EXPECT_ERROR(R.readFixedString(Str, 1));
-  EXPECT_EQ(0, S.getNumBytesCopied());
+  EXPECT_EQ(0U, S.getNumBytesCopied());
 }
 
 // Test that an out of bounds read which crosses a contiguous block boundary
@@ -143,7 +147,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeContiguousBreak) {
 
   R.setOffset(6);
   EXPECT_ERROR(R.readFixedString(Str, 5));
-  EXPECT_EQ(0, S.getNumBytesCopied());
+  EXPECT_EQ(0U, S.getNumBytesCopied());
 }
 
 // Test that an out of bounds read which crosses a discontiguous block
@@ -155,7 +159,19 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNonContiguousBreak) {
   StringRef Str;
 
   EXPECT_ERROR(R.readFixedString(Str, 11));
-  EXPECT_EQ(0, S.getNumBytesCopied());
+  EXPECT_EQ(0U, S.getNumBytesCopied());
+}
+
+// Tests that a read which is entirely contained within a single block but
+// beyond the end of a StreamRef fails.
+TEST(MappedBlockStreamTest, ZeroCopyReadNoBreak) {
+  DiscontiguousFile F;
+  MappedBlockStream S(0, F);
+  StreamReader R(S);
+  StringRef Str;
+  EXPECT_NO_ERROR(R.readFixedString(Str, 1));
+  EXPECT_EQ(Str, StringRef("A"));
+  EXPECT_EQ(0U, S.getNumBytesCopied());
 }
 
 } // end anonymous namespace

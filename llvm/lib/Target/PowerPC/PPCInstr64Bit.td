@@ -514,11 +514,11 @@ let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
                      "subfic $rD, $rA, $imm", IIC_IntGeneral,
                      [(set i64:$rD, (subc imm64SExt16:$imm, i64:$rA))]>;
-defm SUBFC8 : XOForm_1r<31, 8, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+}
+defm SUBFC8 : XOForm_1rc<31, 8, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "subfc", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i64:$rT, (subc i64:$rB, i64:$rA))]>,
                         PPC970_DGroup_Cracked;
-}
 defm SUBF8 : XOForm_1r<31, 40, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                        "subf", "$rT, $rA, $rB", IIC_IntGeneral,
                        [(set i64:$rT, (sub i64:$rB, i64:$rA))]>;

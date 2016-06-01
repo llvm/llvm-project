@@ -6978,12 +6978,12 @@ The '``load``' instruction is used to read from memory.
 Arguments:
 """"""""""
 
-The argument to the ``load`` instruction specifies the memory address
-from which to load. The type specified must be a :ref:`first
-class <t_firstclass>` type. If the ``load`` is marked as ``volatile``,
-then the optimizer is not allowed to modify the number or order of
-execution of this ``load`` with other :ref:`volatile
-operations <volatile>`.
+The argument to the ``load`` instruction specifies the memory address from which
+to load. The type specified must be a :ref:`first class <t_firstclass>` type of
+known size (i.e. not containing an :ref:`opaque structural type <t_opaque>`). If
+the ``load`` is marked as ``volatile``, then the optimizer is not allowed to
+modify the number or order of execution of this ``load`` with other
+:ref:`volatile operations <volatile>`.
 
 If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
 <ordering>` and optional ``singlethread`` argument. The ``release`` and
@@ -7101,13 +7101,14 @@ The '``store``' instruction is used to write to memory.
 Arguments:
 """"""""""
 
-There are two arguments to the ``store`` instruction: a value to store
-and an address at which to store it. The type of the ``<pointer>``
-operand must be a pointer to the :ref:`first class <t_firstclass>` type of
-the ``<value>`` operand. If the ``store`` is marked as ``volatile``,
-then the optimizer is not allowed to modify the number or order of
-execution of this ``store`` with other :ref:`volatile
-operations <volatile>`.
+There are two arguments to the ``store`` instruction: a value to store and an
+address at which to store it. The type of the ``<pointer>`` operand must be a
+pointer to the :ref:`first class <t_firstclass>` type of the ``<value>``
+operand. If the ``store`` is marked as ``volatile``, then the optimizer is not
+allowed to modify the number or order of execution of this ``store`` with other
+:ref:`volatile operations <volatile>`.  Only values of :ref:`first class
+<t_firstclass>` types of known size (i.e. not containing an :ref:`opaque
+structural type <t_opaque>`) can be stored.
 
 If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
 <ordering>` and optional ``singlethread`` argument. The ``acquire`` and

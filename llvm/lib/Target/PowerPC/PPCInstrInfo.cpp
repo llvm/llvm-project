@@ -1795,6 +1795,8 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr *CmpInstr,
           MI->addOperand(*MI->getParent()->getParent(),
                          MachineOperand::CreateReg(*ImpUses, false, true));
   }
+  assert(MI->definesRegister(PPC::CR0) &&
+         "Record-form instruction does not define cr0?");
 
   // Modify the condition code of operands in OperandsToUpdate.
   // Since we have SUB(r1, r2) and CMP(r2, r1), the condition code needs to

@@ -2418,6 +2418,27 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
     }
   }
 
+  // Or we are looking for a shift of an and, with a mask operand
+  if (isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::AND, And_imm) &&
+      isShiftedMask_32(And_imm)) {
+    unsigned Srl_imm = 0;
+    unsigned LSB = countTrailingZeros(And_imm);
+    // Shift must be the same as the ands lsb
+    if (isInt32Immediate(N->getOperand(1), Srl_imm) && Srl_imm == LSB) {
+      assert(Srl_imm > 0 && Srl_imm < 32 && "bad amount in shift node!");
+      unsigned MSB = 31 - countLeadingZeros(And_imm);
+      // Note: The width operand is encoded as width-1.
+      unsigned Width = MSB - LSB;
+      SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
+      SDValue Ops[] = { N->getOperand(0).getOperand(0),
+                        CurDAG->getTargetConstant(Srl_imm, dl, MVT::i32),
+                        CurDAG->getTargetConstant(Width, dl, MVT::i32),
+                        getAL(CurDAG, dl), Reg0 };
+      CurDAG->SelectNodeTo(N, Opc, MVT::i32, Ops);
+      return true;
+    }
+  }
+
   if (N->getOpcode() == ISD::SIGN_EXTEND_INREG) {
     unsigned Width = cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits();
     unsigned LSB = 0;

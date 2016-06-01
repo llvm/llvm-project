@@ -80,6 +80,7 @@
 #include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/Sink.h"
+#include "llvm/Transforms/Utils/MemorySSA.h"
 #include <type_traits>
 
 using namespace llvm;

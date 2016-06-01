@@ -230,8 +230,6 @@ void CodeViewDebug::endModule() {
   if (FnDebugInfo.empty())
     return;
 
-  emitTypeInformation();
-
   assert(Asm != nullptr);
 
   // The COFF .debug$S section consists of several subsections, each starting
@@ -257,6 +255,10 @@ void CodeViewDebug::endModule() {
   // This subsection holds the string table.
   OS.AddComment("String table");
   OS.EmitCVStringTableDirective();
+
+  // Emit type information last, so that any types we translate while emitting
+  // function info are included.
+  emitTypeInformation();
 
   clear();
 }
@@ -726,6 +728,215 @@ void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   }
 }
 
+TypeIndex CodeViewDebug::lowerType(const DIType *Ty) {
+  // Generic dispatch for lowering an unknown type.
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_base_type:
+    return lowerTypeBasic(cast<DIBasicType>(Ty));
+  case dwarf::DW_TAG_pointer_type:
+  case dwarf::DW_TAG_reference_type:
+  case dwarf::DW_TAG_rvalue_reference_type:
+    return lowerTypePointer(cast<DIDerivedType>(Ty));
+  case dwarf::DW_TAG_ptr_to_member_type:
+    return lowerTypeMemberPointer(cast<DIDerivedType>(Ty));
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_volatile_type:
+    return lowerTypeModifier(cast<DIDerivedType>(Ty));
+  default:
+    // Use the null type index.
+    return TypeIndex();
+  }
+}
+
+TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
+  TypeIndex Index;
+  dwarf::TypeKind Kind;
+  uint32_t ByteSize;
+
+  Kind = static_cast<dwarf::TypeKind>(Ty->getEncoding());
+  ByteSize = Ty->getSizeInBits() >> 3;
+
+  SimpleTypeKind STK = SimpleTypeKind::None;
+  switch (Kind) {
+  case dwarf::DW_ATE_address:
+    // FIXME: Translate
+    break;
+  case dwarf::DW_ATE_boolean:
+    switch (ByteSize) {
+    case 1: STK = SimpleTypeKind::Boolean8;  break;
+    case 2: STK = SimpleTypeKind::Boolean16; break;
+    case 4: STK = SimpleTypeKind::Boolean32; break;
+    case 8: STK = SimpleTypeKind::Boolean64; break;
+    }
+    break;
+  case dwarf::DW_ATE_complex_float:
+    switch (ByteSize) {
+    case 4:  STK = SimpleTypeKind::Complex32;  break;
+    case 8:  STK = SimpleTypeKind::Complex64;  break;
+    case 10: STK = SimpleTypeKind::Complex80;  break;
+    case 16: STK = SimpleTypeKind::Complex128; break;
+    }
+    break;
+  case dwarf::DW_ATE_float:
+    switch (ByteSize) {
+    case 4:  STK = SimpleTypeKind::Float32;  break;
+    case 6:  STK = SimpleTypeKind::Float48;  break;
+    case 8:  STK = SimpleTypeKind::Float64;  break;
+    case 10: STK = SimpleTypeKind::Float80;  break;
+    case 16: STK = SimpleTypeKind::Float128; break;
+    }
+    break;
+  case dwarf::DW_ATE_signed:
+    switch (ByteSize) {
+    case 1: STK = SimpleTypeKind::SByte;      break;
+    case 2: STK = SimpleTypeKind::Int16Short; break;
+    case 4: STK = SimpleTypeKind::Int32;      break;
+    case 8: STK = SimpleTypeKind::Int64;      break;
+    }
+    break;
+  case dwarf::DW_ATE_unsigned:
+    switch (ByteSize) {
+    case 1: STK = SimpleTypeKind::Byte;        break;
+    case 2: STK = SimpleTypeKind::UInt16Short; break;
+    case 4: STK = SimpleTypeKind::UInt32;      break;
+    case 8: STK = SimpleTypeKind::UInt64;      break;
+    }
+    break;
+  case dwarf::DW_ATE_UTF:
+    switch (ByteSize) {
+    case 2: STK = SimpleTypeKind::Character16; break;
+    case 4: STK = SimpleTypeKind::Character32; break;
+    }
+    break;
+  case dwarf::DW_ATE_signed_char:
+    if (ByteSize == 1)
+      STK = SimpleTypeKind::SignedCharacter;
+    break;
+  case dwarf::DW_ATE_unsigned_char:
+    if (ByteSize == 1)
+      STK = SimpleTypeKind::UnsignedCharacter;
+    break;
+  default:
+    break;
+  }
+
+  // Apply some fixups based on the source-level type name.
+  if (STK == SimpleTypeKind::Int32 && Ty->getName() == "long int")
+    STK = SimpleTypeKind::Int32Long;
+  if (STK == SimpleTypeKind::UInt32 && Ty->getName() == "long unsigned int")
+    STK = SimpleTypeKind::UInt32Long;
+  if ((STK == SimpleTypeKind::Int16Short ||
+       STK == SimpleTypeKind::UInt16Short) &&
+      Ty->getName() == "wchar_t")
+    STK = SimpleTypeKind::WideCharacter;
+  if ((STK == SimpleTypeKind::SignedCharacter ||
+       STK == SimpleTypeKind::UnsignedCharacter) &&
+      Ty->getName() == "char")
+    STK = SimpleTypeKind::NarrowCharacter;
+
+  return TypeIndex(STK);
+}
+
+TypeIndex CodeViewDebug::lowerTypePointer(const DIDerivedType *Ty) {
+  TypeIndex PointeeTI = getTypeIndex(Ty->getBaseType());
+
+  // Pointers to simple types can use SimpleTypeMode, rather than having a
+  // dedicated pointer type record.
+  if (PointeeTI.isSimple() &&
+      PointeeTI.getSimpleMode() == SimpleTypeMode::Direct &&
+      Ty->getTag() == dwarf::DW_TAG_pointer_type) {
+    SimpleTypeMode Mode = Ty->getSizeInBits() == 64
+                              ? SimpleTypeMode::NearPointer64
+                              : SimpleTypeMode::NearPointer32;
+    return TypeIndex(PointeeTI.getSimpleKind(), Mode);
+  }
+
+  PointerKind PK =
+      Ty->getSizeInBits() == 64 ? PointerKind::Near64 : PointerKind::Near32;
+  PointerMode PM = PointerMode::Pointer;
+  switch (Ty->getTag()) {
+  default: llvm_unreachable("not a pointer tag type");
+  case dwarf::DW_TAG_pointer_type:
+    PM = PointerMode::Pointer;
+    break;
+  case dwarf::DW_TAG_reference_type:
+    PM = PointerMode::LValueReference;
+    break;
+  case dwarf::DW_TAG_rvalue_reference_type:
+    PM = PointerMode::RValueReference;
+    break;
+  }
+  // FIXME: MSVC folds qualifiers into PointerOptions in the context of a method
+  // 'this' pointer, but not normal contexts. Figure out what we're supposed to
+  // do.
+  PointerOptions PO = PointerOptions::None;
+  PointerRecord PR(PointeeTI, PK, PM, PO, Ty->getSizeInBits() / 8);
+  return TypeTable.writePointer(PR);
+}
+
+TypeIndex CodeViewDebug::lowerTypeMemberPointer(const DIDerivedType *Ty) {
+  assert(Ty->getTag() == dwarf::DW_TAG_ptr_to_member_type);
+  TypeIndex ClassTI = getTypeIndex(Ty->getClassType());
+  TypeIndex PointeeTI = getTypeIndex(Ty->getBaseType());
+  PointerKind PK = Asm->MAI->getPointerSize() == 8 ? PointerKind::Near64
+                                                   : PointerKind::Near32;
+  PointerMode PM = isa<DISubroutineType>(Ty->getBaseType())
+                       ? PointerMode::PointerToMemberFunction
+                       : PointerMode::PointerToDataMember;
+  PointerOptions PO = PointerOptions::None; // FIXME
+  // FIXME: Thread this ABI info through metadata.
+  PointerToMemberRepresentation PMR = PointerToMemberRepresentation::Unknown;
+  MemberPointerInfo MPI(ClassTI, PMR);
+  PointerRecord PR(PointeeTI, PK, PM, PO, Ty->getSizeInBits() / 8, MPI);
+  return TypeTable.writePointer(PR);
+}
+
+TypeIndex CodeViewDebug::lowerTypeModifier(const DIDerivedType *Ty) {
+  ModifierOptions Mods = ModifierOptions::None;
+  bool IsModifier = true;
+  const DIType *BaseTy = Ty;
+  while (IsModifier) {
+    assert(BaseTy);
+    // FIXME: Need to add DWARF tag for __unaligned.
+    switch (BaseTy->getTag()) {
+    case dwarf::DW_TAG_const_type:
+      Mods |= ModifierOptions::Const;
+      break;
+    case dwarf::DW_TAG_volatile_type:
+      Mods |= ModifierOptions::Volatile;
+      break;
+    default:
+      IsModifier = false;
+      break;
+    }
+    if (IsModifier)
+      BaseTy = cast<DIDerivedType>(BaseTy)->getBaseType().resolve();
+  }
+  TypeIndex ModifiedTI = getTypeIndex(BaseTy);
+  ModifierRecord MR(ModifiedTI, Mods);
+  return TypeTable.writeModifier(MR);
+}
+
+TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef) {
+  const DIType *Ty = TypeRef.resolve();
+
+  // The null DIType is the void type. Don't try to hash it.
+  if (!Ty)
+    return TypeIndex::Void();
+
+  // Check if we've already translated this type.
+  auto I = TypeIndices.find(Ty);
+  if (I != TypeIndices.end())
+    return I->second;
+
+  TypeIndex TI = lowerType(Ty);
+
+  auto InsertResult = TypeIndices.insert({Ty, TI});
+  (void)InsertResult;
+  assert(InsertResult.second && "DIType lowered twice");
+  return TI;
+}
+
 void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
   // LocalSym record, see SymbolRecord.h for more info.
   MCSymbol *LocalBegin = MMI->getContext().createTempSymbol(),
@@ -744,7 +955,8 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
     Flags |= LocalSymFlags::IsOptimizedOut;
 
   OS.AddComment("TypeIndex");
-  OS.EmitIntValue(TypeIndex::Int32().getIndex(), 4);
+  TypeIndex TI = getTypeIndex(Var.DIVar->getType());
+  OS.EmitIntValue(TI.getIndex(), 4);
   OS.AddComment("Flags");
   OS.EmitIntValue(static_cast<uint16_t>(Flags), 2);
   // Truncate the name so we won't overflow the record length field.

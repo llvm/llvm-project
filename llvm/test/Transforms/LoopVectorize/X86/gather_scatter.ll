@@ -95,7 +95,7 @@ for.end:                                          ; preds = %for.cond
 %struct.In = type { float, float }
 
 ;AVX512-LABEL: @foo2
-;AVX512: getelementptr %struct.In, %struct.In* %in, <16 x i64> %induction, i32 1
+;AVX512: getelementptr %struct.In, %struct.In* %in, <16 x i64> %{{.*}}, i32 1
 ;AVX512: llvm.masked.gather.v16f32
 ;AVX512: llvm.masked.store.v16f32
 ;AVX512: ret void
@@ -170,10 +170,10 @@ for.end:                                          ; preds = %for.cond
 ;}
 
 ;AVX512-LABEL: @foo3
-;AVX512: getelementptr %struct.In, %struct.In* %in, <16 x i64> %induction, i32 1
+;AVX512: getelementptr %struct.In, %struct.In* %in, <16 x i64> %{{.*}}, i32 1
 ;AVX512: llvm.masked.gather.v16f32
 ;AVX512: fadd <16 x float>
-;AVX512: getelementptr %struct.Out, %struct.Out* %out, <16 x i64> %induction, i32 1
+;AVX512: getelementptr %struct.Out, %struct.Out* %out, <16 x i64> %{{.*}}, i32 1
 ;AVX512: llvm.masked.scatter.v16f32
 ;AVX512: ret void
 
