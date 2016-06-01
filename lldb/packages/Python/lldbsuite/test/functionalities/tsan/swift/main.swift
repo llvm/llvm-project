@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 import Foundation
 
-var my_global: Int = 0
+var my_global: Int = 0  // global variable
 
 func main() {
   let q = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
