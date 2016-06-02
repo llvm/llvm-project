@@ -218,7 +218,7 @@ GetNameFromModule (swift::Module *module, std::string &result)
 bool
 SwiftExpressionParser::PerformAutoImport (swift::SourceFile &source_file, bool user_imports, Error &error)
 {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_EXPRESSIONS|LIBLLDB_LOG_TEMPORARY));
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
     const std::vector<ConstString> *cu_modules = nullptr;
     
