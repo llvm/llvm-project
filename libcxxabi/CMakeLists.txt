@@ -115,6 +115,8 @@ option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
 option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
+option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
+set(LIBCXXABI_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBCXXABI_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
 set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
@@ -173,9 +175,6 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-# Configure compiler.
-include(config-ix)
-
 set(LIBCXXABI_COMPILER    ${CMAKE_CXX_COMPILER})
 set(LIBCXXABI_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXXABI_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
@@ -191,6 +190,16 @@ if (NOT LIBCXXABI_LIBCXX_LIBRARY_PATH)
       "The path to libc++ library.")
 endif ()
 
+
+# Check that we can build with 32 bits if requested.
+if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
+  if (LIBCXXABI_BUILD_32_BITS AND NOT LLVM_BUILD_32_BITS) # Don't duplicate the output from LLVM
+    message(STATUS "Building 32 bits executables and libraries.")
+  endif()
+elseif(LIBCXXABI_BUILD_32_BITS)
+  message(FATAL_ERROR "LIBCXXABI_BUILD_32_BITS=ON is not supported on this platform.")
+endif()
+
 #===============================================================================
 # Setup Compiler Flags
 #===============================================================================
@@ -202,11 +211,30 @@ macro(append_if list condition var)
   endif()
 endmacro()
 
+macro(add_target_flags_if condition var)
+  if (${condition})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
+    list(APPEND LIBCXXABI_LINK_FLAGS ${var})
+  endif()
+endmacro()
+
 set(LIBCXXABI_C_FLAGS "")
 set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 
+# Configure target flags
+add_target_flags_if(LIBCXXABI_BUILD_32_BITS "-m32")
+add_target_flags_if(LIBCXXABI_TARGET_TRIPLE
+          "-target ${LIBCXXABI_TARGET_TRIPLE}")
+add_target_flags_if(LIBCXXABI_GCC_TOOLCHAIN
+         "-gcc-toolchain ${LIBCXXABI_GCC_TOOLCHAIN}")
+add_target_flags_if(LIBCXXABI_SYSROOT
+          "--sysroot=${LIBCXXABI_SYSROOT}")
+
+# Configure compiler. Must happen after setting the target flags.
+include(config-ix)
 
 if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
@@ -312,12 +340,6 @@ if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
   add_definitions(-DLIBCXXABI_USE_LLVM_UNWINDER=1)
 endif()
 
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_TARGET_TRIPLE
-          "-target ${LIBCXXABI_TARGET_TRIPLE}")
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_GCC_TOOLCHAIN
-         "-gcc-toolchain ${LIBCXXABI_GCC_TOOLCHAIN}")
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_SYSROOT
-          "--sysroot ${LIBCXXABI_SYSROOT}")
 string(REPLACE ";" " " LIBCXXABI_CXX_FLAGS "${LIBCXXABI_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBCXXABI_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")

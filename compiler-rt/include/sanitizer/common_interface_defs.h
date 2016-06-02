@@ -133,6 +133,12 @@ extern "C" {
                                     const char *s2, size_t n, int result);
   void __sanitizer_weak_hook_strcmp(void *called_pc, const char *s1,
                                     const char *s2, int result);
+
+  // Prints stack traces for all live heap allocations ordered by total
+  // allocation size until `top_percent` of total live heap is shown.
+  // `top_percent` should be between 1 and 100.
+  // Experimental feature currently available only with asan on Linux/x86_64.
+  void __sanitizer_print_memory_profile(size_t top_percent);
 #ifdef __cplusplus
 }  // extern "C"
 #endif

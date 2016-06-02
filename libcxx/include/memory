@@ -4120,7 +4120,7 @@ private:
         void
         __enable_weak_this(const enable_shared_from_this<_Yp>* __e) _NOEXCEPT
         {
-            if (__e)
+            if (__e && __e->__weak_this_.expired())
             {
                 __e->__weak_this_.__ptr_ = const_cast<_Yp*>(static_cast<const _Yp*>(__e));
                 __e->__weak_this_.__cntrl_ = __cntrl_;
@@ -5431,6 +5431,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     shared_ptr<_Tp const> shared_from_this() const
         {return shared_ptr<const _Tp>(__weak_this_);}
+
+#if _LIBCPP_STD_VER > 14
+    _LIBCPP_INLINE_VISIBILITY
+    weak_ptr<_Tp> weak_from_this() _NOEXCEPT
+       { return __weak_this_; }
+
+    _LIBCPP_INLINE_VISIBILITY
+    weak_ptr<const _Tp> weak_from_this() const _NOEXCEPT
+        { return __weak_this_; }
+#endif // _LIBCPP_STD_VER > 14
 
     template <class _Up> friend class shared_ptr;
 };

@@ -58,6 +58,8 @@ class AsanChunkView {
   uptr AllocTid();
   uptr FreeTid();
   bool Eq(const AsanChunkView &c) const { return chunk_ == c.chunk_; }
+  u32 GetAllocStackId();
+  u32 GetFreeStackId();
   StackTrace GetAllocStack();
   StackTrace GetFreeStack();
   bool AddrIsInside(uptr addr, uptr access_size, sptr *offset) {

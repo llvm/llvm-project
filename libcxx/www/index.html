@@ -166,96 +166,18 @@
   <p>First please review our
      <a href="http://llvm.org/docs/DeveloperPolicy.html">Developer's Policy</a>.
 
-  <p>
-     On Mac OS 10.7 (Lion) and later, the easiest way to get this library is to install
-     Xcode 4.2 or later.  However if you want to install tip-of-trunk from here
-     (getting the bleeding edge), read on.  However, be warned that Mac OS
-     10.7 will not boot without a valid copy of <code>libc++.1.dylib</code> in
-     <code>/usr/lib</code>.
-  </p>
-
-  <p>To check out the code, use:</p>
-
-  <ul>
-  <li><code>svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx</code></li>
-  </ul>
-
-  <p>
-    Note that for an in-tree build, you should check out libcxx to
-    llvm/projects.
-  </p>
-
-  <p>
-    The following instructions are for building libc++ on FreeBSD, Linux, or Mac
-    using <a href="http://libcxxabi.llvm.org/">libc++abi</a> as the C++ ABI
-    library. On Linux, it is also possible to use
-    <a href="#libsupcxx">libsupc++</a> or <a href="#libcxxrt">libcxxrt</a>.
-  </p>
-
-  <p>In-tree build:</p>
-  <ul>
-    <li><code>cd where-you-want-to-live</code></li>
-    <li>Check out libcxx and <a href="http://libcxxabi.llvm.org/">libcxxabi</a>
-      into llvm/projects</li>
-    <li><code>cd where-you-want-to-build</code></li>
-    <li><code>mkdir build &amp;&amp; cd build</code></li>
-    <li><code>cmake path/to/llvm # Linux may require -DCMAKE_C_COMPILER=clang
-        -DCMAKE_CXX_COMPILER=clang++</code></li>
-    <li><code>make cxx</code></li>
-  </ul>
-
-  <p>Out-of-tree buildc:</p>
-  <ul>
-    <li><code>cd where-you-want-to-live</code></li>
-    <li>Check out libcxx and llvm</li>
-    <li>If not on a Mac, also check out
-      <a href="http://libcxxabi.llvm.org/">libcxxabi</a></li>
-    <li><code>cd where-you-want-to-build</code></li>
-    <li><code>mkdir build &amp;&amp; cd build</code></li>
-    <li><code>cmake -DLLVM_PATH=path/to/llvm
-        -DLIBCXX_CXX_ABI=libcxxabi
-        -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxabi/include
-        -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-        path/to/libcxx
-    </code></li>
-    <li><code>make</code></li>
-  </ul>
-
-  <p>To run the tests:</p>
-  <ul>
-  <li><code>make check-libcxx</code></li>
-  </ul>
-
-  <p>If you wish to run a subset of the test suite:</p>
-  <ul>
-    <li><code>cd path/to/libcxx/libcxx</code></li>
-    <li><code>alias lit='python path/to/llvm/utils/lit/lit.py'</code></li>
-    <li><code>export
-        LIBCXX_SITE_CONFIG=path/to/build/dir/projects/libcxx/test/lit.site.cfg
-        </code></li>
-    <li><code>lit -sv test/re/ # or whichever subset of tests you're interested
-        in</code></li>
-  </ul>
-  <p>The above is currently quite inconvenient. Sorry! We're working on it!</p>
-
-  <p>More information on using LIT can be found
-    <a href="http://llvm.org/docs/CommandGuide/lit.html">here</a>. For more
-    general information about the LLVM testing infrastructure, see the
-    <a href="http://llvm.org/docs/TestingGuide.html">LLVM Testing Infrastructure
-      Guide</a>
-  </p>
-
-  <p>
-    Shared libraries for libc++ should now be present in llvm/build/lib. Note
-    that it is safest to use this from its current location rather than
-    replacing your system's libc++ (if it has one, if not, go right ahead).
-  </p>
-
-  <p>
-    Mac users, remember to be careful when replacing the system's libc++.
-    <strong>Your system will not be able to boot without a functioning
-    libc++.</strong>
-  </p>
+    The documentation for building and using libc++ can be found below.
+    <ul>
+      <li><a href="http://libcxx.llvm.org/docs/UsingLibcxx.html">
+        <b>Using libc++</b></a>
+          Documentation on using the library in your programs</li>
+      <li><a href="http://libcxx.llvm.org/docs/BuildingLibcxx.html">
+        <b>Building libc++</b></a>
+          Documentation on building the library using CMake</li>
+      <li><a href="http://libcxx.llvm.org/docs/TestingLibcxx.html">
+        <b>Testing libc++</b></a>
+          Documentation for developers wishing to test the library</li>
+    </ul>
 
   <!--=====================================================================-->
   <h3>Notes and Known Issues</h3>
@@ -279,65 +201,6 @@
     <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">clang mailing list</a>.</p>
 
   <!--=====================================================================-->
-  <h2>Using libc++ in your programs</h2>
-  <!--=====================================================================-->
-
-  <!--=====================================================================-->
-  <h3>FreeBSD and Mac OS X</h3>
-  <!--=====================================================================-->
-
-  <p>
-    To use your system-installed libc++ with clang you can:
-  </p>
-
-  <ul>
-    <li><code>clang++ -stdlib=libc++ test.cpp</code></li>
-    <li><code>clang++ -std=c++11 -stdlib=libc++ test.cpp</code></li>
-  </ul>
-
-  <p>
-    To use your tip-of-trunk libc++ on Mac OS with clang you can:
-  </p>
-
-  <ul>
-    <li><code>export DYLD_LIBRARY_PATH=path/to/build/lib</code>
-    <li><code>clang++ -std=c++11 -stdlib=libc++ -nostdinc++
-         -I&lt;path-to-libcxx&gt;/include -L&lt;path-to-libcxx&gt;/lib
-         test.cpp</code></li>
-  </ul>
-
-  <!--=====================================================================-->
-  <h3>Linux</h3>
-  <!--=====================================================================-->
-
-  <p>
-    You will need to keep the source tree of
-    <a href="http://libcxxabi.llvm.org">libc++abi</a> available on your build
-    machine and your copy of the libc++abi shared library must be placed where
-    your linker will find it.
-  </p>
-
-  <p>
-    Unfortunately you can't simply run clang with "-stdlib=libc++" at this
-    point, as clang is set up to link for libc++ linked to libsupc++.  To get
-    around this you'll have to set up your linker yourself (or patch clang).
-    For example:
-  </p>
-
-  <ul>
-    <li><code>clang++ -stdlib=libc++ helloworld.cpp -nodefaultlibs -lc++ -lc++abi -lm -lc -lgcc_s -lgcc</code></li>
-  </ul>
-
-  <p>
-    Alternately, you could just add libc++abi to your libraries list, which in
-    most situations will give the same result:
-  </p>
-
-  <ul>
-    <li><code>clang++ -stdlib=libc++ helloworld.cpp -lc++abi</code></li>
-  </ul>
-
-  <!--=====================================================================-->
   <h2>Bug reports and patches</h2>
   <!--=====================================================================-->
 
@@ -355,136 +218,6 @@
   </p>
 
   <!--=====================================================================-->
-  <h2 id="libsupcxx">Build on Linux using CMake and libsupc++.</h2>
-  <!--=====================================================================-->
-
-  <p>
-     You will need libstdc++ in order to provide libsupc++.
-  </p>
-
-  <p>
-     Figure out where the libsupc++ headers are on your system. On Ubuntu this
-     is <code>/usr/include/c++/&lt;version&gt;</code> and
-     <code>/usr/include/c++/&lt;version&gt;/&lt;target-triple&gt;</code>
-  </p>
-
-  <p>
-     You can also figure this out by running
-     <pre>
-$ echo | g++ -Wp,-v -x c++ - -fsyntax-only
-ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
-ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/4.7/../../../../x86_64-linux-gnu/include"
-#include "..." search starts here:
-#include &lt;...&gt; search starts here:
- /usr/include/c++/4.7
- /usr/include/c++/4.7/x86_64-linux-gnu
- /usr/include/c++/4.7/backward
- /usr/lib/gcc/x86_64-linux-gnu/4.7/include
- /usr/local/include
- /usr/lib/gcc/x86_64-linux-gnu/4.7/include-fixed
- /usr/include/x86_64-linux-gnu
- /usr/include
-End of search list.
-     </pre>
-
-      Note the first two entries happen to be what we are looking for. This
-      may not be correct on other platforms.
-  </p>
-
-  <p>
-     We can now run CMake:
-     <ul>
-       <li><code>CC=clang CXX=clang++ cmake -G "Unix Makefiles"
-                -DLIBCXX_CXX_ABI=libstdc++
-                -DLIBCXX_CXX_ABI_INCLUDE_PATHS="/usr/include/c++/4.7/;/usr/include/c++/4.7/x86_64-linux-gnu/"
-                -DCMAKE_BUILD_TYPE=Release
-                -DCMAKE_INSTALL_PREFIX=/usr
-                &lt;libc++-source-dir&gt;</code></li>
-       <li>You can also substitute <code>-DLIBCXX_CXX_ABI=libsupc++</code>
-       above, which will cause the library to be linked to libsupc++ instead
-       of libstdc++, but this is only recommended if you know that you will
-       never need to link against libstdc++ in the same executable as libc++.
-       GCC ships libsupc++ separately but only as a static library.  If a
-       program also needs to link against libstdc++, it will provide its
-       own copy of libsupc++ and this can lead to subtle problems.
-       <li><code>make</code></li>
-       <li><code>sudo make install</code></li>
-     </ul>
-     <p>
-        You can now run clang with -stdlib=libc++.
-     </p>
-  </p>
-
-  <!--=====================================================================-->
-  <h2 id="libcxxrt">Build on Linux using CMake and libcxxrt.</h2>
-  <!--=====================================================================-->
-
-  <p>
-     You will need to keep the source tree of
-     <a href="https://github.com/pathscale/libcxxrt/">libcxxrt</a> available
-     on your build machine and your copy of the libcxxrt shared library must
-     be placed where your linker will find it.
-  </p>
-
-  <p>
-     We can now run CMake:
-     <ul>
-       <li><code>CC=clang CXX=clang++ cmake -G "Unix Makefiles"
-                -DLIBCXX_CXX_ABI=libcxxrt
-                -DLIBCXX_CXX_ABI_INCLUDE_PATHS="&lt;libcxxrt-source-dir&gt;/src"
-                -DCMAKE_BUILD_TYPE=Release
-                -DCMAKE_INSTALL_PREFIX=/usr
-                &lt;libc++-source-dir&gt;</code></li>
-       <li><code>make</code></li>
-       <li><code>sudo make install</code></li>
-     </ul>
-     <p>
-        Unfortunately you can't simply run clang with "-stdlib=libc++" at this point, as
-        clang is set up to link for libc++ linked to libsupc++.  To get around this
-        you'll have to set up your linker yourself (or patch clang).  For example,
-        <ul>
-          <li><code>clang++ -stdlib=libc++ helloworld.cpp -nodefaultlibs -lc++ -lcxxrt -lm -lc -lgcc_s -lgcc</code></li>
-        </ul>
-        Alternately, you could just add libcxxrt to your libraries list, which in most
-        situations will give the same result:
-        <ul>
-          <li><code>clang++ -stdlib=libc++ helloworld.cpp -lcxxrt</code></li>
-        </ul>
-     </p>
-  </p>
-
-  <!--=====================================================================-->
-  <h2 id="local-abi">Using a local ABI library</h2>
-  <!--=====================================================================-->
-  <p>
-    <strong>Note: This is not recommended in almost all cases.</strong><br>
-    Generally these instructions should only be used when you can't install
-    your ABI library.
-  </p>
-  <p>
-    Normally you must link libc++ against a ABI shared library that the
-    linker can find.  If you want to build and test libc++ against an ABI
-    library not in the linker's path you need to set
-    <code>-DLIBCXX_CXX_ABI_LIBRARY_PATH=/path/to/abi/lib</code> when
-    configuring CMake.
-  </p>
-  <p>
-    An example build using libc++abi would look like:
-    <ul>
-    <li><code>CC=clang CXX=clang++ cmake
-              -DLIBCXX_CXX_ABI=libc++abi
-              -DLIBCXX_CXX_ABI_INCLUDE_PATHS="/path/to/libcxxabi/include"
-              -DLIBCXX_CXX_ABI_LIBRARY_PATH="/path/to/libcxxabi-build/lib"
-              path/to/libcxx</code></li>
-    <li><code>make</code></li>
-    </ul>
-  </p>
-  <p>
-    When testing libc++ LIT will automatically link against the proper ABI
-    library.
-  </p>
-
-  <!--=====================================================================-->
   <h2>Design Documents</h2>
   <!--=====================================================================-->
 
@@ -493,7 +226,6 @@ End of search list.
 <li><a href="type_traits_design.html"><tt>&lt;type_traits&gt;</tt></a></li>
 <li><a href="http://cplusplusmusings.wordpress.com/2012/07/05/clang-and-standard-libraries-on-mac-os-x/">Excellent notes by Marshall Clow</a></li>
 <li><a href="debug_mode.html">Status of debug mode</a></li>
-<li><a href="lit_usage.html">LIT usage guide</a></li>
 </ul>
 
 </div>
