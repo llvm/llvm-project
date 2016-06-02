@@ -23,6 +23,7 @@ corpus of input data in order to maximize the code coverage.  The code coverage
 information for libFuzzer is provided by LLVM's SanitizerCoverage_
 instrumentation.
 
+Contact: libfuzzer(#)googlegroups.com
 
 Versions
 ========
@@ -849,10 +850,7 @@ Trophies
 ========
 * GLIBC: https://sourceware.org/glibc/wiki/FuzzingLibc
 
-* MUSL LIBC:
-
-  * http://git.musl-libc.org/cgit/musl/commit/?id=39dfd58417ef642307d90306e1c7e50aaec5a35c
-  * http://www.openwall.com/lists/oss-security/2015/03/30/3
+* MUSL LIBC: `[1] <http://git.musl-libc.org/cgit/musl/commit/?id=39dfd58417ef642307d90306e1c7e50aaec5a35c>`__ `[2] <http://www.openwall.com/lists/oss-security/2015/03/30/3>`__
 
 * `pugixml <https://github.com/zeux/pugixml/issues/39>`_
 
@@ -877,6 +875,8 @@ Trophies
 * `Linux Kernel's BPF verifier <https://github.com/iovisor/bpf-fuzzer>`_
 
 * Capstone: `[1] <https://github.com/aquynh/capstone/issues/600>`__ `[2] <https://github.com/aquynh/capstone/commit/6b88d1d51eadf7175a8f8a11b690684443b11359>`__
+
+* file:`[1] <http://bugs.gw.com/view.php?id=550>`__  `[2] <http://bugs.gw.com/view.php?id=551>`__  `[3] <http://bugs.gw.com/view.php?id=553>`__  `[4] <http://bugs.gw.com/view.php?id=554>`__
 
 * Radare2: `[1] <https://github.com/revskills?tab=contributions&from=2016-04-09>`__
 

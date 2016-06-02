@@ -116,7 +116,7 @@ static const char *const kAsanUnpoisonStackMemoryName =
 static const char *const kAsanGlobalsRegisteredFlagName =
     "__asan_globals_registered";
 
-static const char *const kAsanOptionDetectUAR =
+static const char *const kAsanOptionDetectUseAfterReturn =
     "__asan_option_detect_stack_use_after_return";
 
 static const char *const kAsanAllocaPoison = "__asan_alloca_poison";
@@ -2060,13 +2060,13 @@ void FunctionStackPoisoner::poisonStack() {
     //     ? __asan_stack_malloc_N(LocalStackSize)
     //     : nullptr;
     // void *LocalStackBase = (FakeStack) ? FakeStack : alloca(LocalStackSize);
-    Constant *OptionDetectUAR = F.getParent()->getOrInsertGlobal(
-        kAsanOptionDetectUAR, IRB.getInt32Ty());
-    Value *UARIsEnabled =
-        IRB.CreateICmpNE(IRB.CreateLoad(OptionDetectUAR),
+    Constant *OptionDetectUseAfterReturn = F.getParent()->getOrInsertGlobal(
+        kAsanOptionDetectUseAfterReturn, IRB.getInt32Ty());
+    Value *UseAfterReturnIsEnabled =
+        IRB.CreateICmpNE(IRB.CreateLoad(OptionDetectUseAfterReturn),
                          Constant::getNullValue(IRB.getInt32Ty()));
     Instruction *Term =
-        SplitBlockAndInsertIfThen(UARIsEnabled, InsBefore, false);
+        SplitBlockAndInsertIfThen(UseAfterReturnIsEnabled, InsBefore, false);
     IRBuilder<> IRBIf(Term);
     IRBIf.SetCurrentDebugLocation(EntryDebugLocation);
     StackMallocIdx = StackMallocSizeClass(LocalStackSize);
@@ -2076,7 +2076,7 @@ void FunctionStackPoisoner::poisonStack() {
                          ConstantInt::get(IntptrTy, LocalStackSize));
     IRB.SetInsertPoint(InsBefore);
     IRB.SetCurrentDebugLocation(EntryDebugLocation);
-    FakeStack = createPHI(IRB, UARIsEnabled, FakeStackValue, Term,
+    FakeStack = createPHI(IRB, UseAfterReturnIsEnabled, FakeStackValue, Term,
                           ConstantInt::get(IntptrTy, 0));
 
     Value *NoFakeStack =

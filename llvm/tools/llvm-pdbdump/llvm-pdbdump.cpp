@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
@@ -40,6 +41,8 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/EnumTables.h"
+#include "llvm/DebugInfo/PDB/Raw/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
@@ -50,6 +53,7 @@
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 #include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
+#include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
@@ -61,13 +65,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-
-#if defined(HAVE_DIA_SDK)
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <Windows.h>
-#endif
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -143,6 +140,11 @@ cl::opt<bool> DumpModuleSyms("raw-module-syms", cl::desc("dump module symbols"),
                              cl::cat(NativeOptions));
 cl::opt<bool> DumpPublics("raw-publics", cl::desc("dump Publics stream data"),
                           cl::cat(NativeOptions));
+cl::opt<bool> DumpSectionContribs("raw-section-contribs",
+                                  cl::desc("dump section contributions"),
+                                  cl::cat(NativeOptions));
+cl::opt<bool> DumpSectionMap("raw-section-map", cl::desc("dump section map"),
+                             cl::cat(NativeOptions));
 cl::opt<bool>
     DumpSymRecordBytes("raw-sym-record-bytes",
                        cl::desc("dump CodeView symbol record raw bytes"),
@@ -505,6 +507,78 @@ static Error dumpDbiStream(ScopedPrinter &P, PDBFile &File,
   return Error::success();
 }
 
+static Error dumpSectionContribs(ScopedPrinter &P, PDBFile &File) {
+  if (!opts::DumpSectionContribs)
+    return Error::success();
+
+  auto DbiS = File.getPDBDbiStream();
+  if (auto EC = DbiS.takeError())
+    return EC;
+  DbiStream &DS = DbiS.get();
+  ListScope L(P, "Section Contributions");
+  class Visitor : public ISectionContribVisitor {
+  public:
+    Visitor(ScopedPrinter &P, DbiStream &DS) : P(P), DS(DS) {}
+    void visit(const SectionContrib &SC) override {
+      DictScope D(P, "Contribution");
+      P.printNumber("ISect", SC.ISect);
+      P.printNumber("Off", SC.Off);
+      P.printNumber("Size", SC.Size);
+      P.printFlags("Characteristics", SC.Characteristics,
+                   codeview::getImageSectionCharacteristicNames(),
+                   COFF::SectionCharacteristics(0x00F00000));
+      {
+        DictScope DD(P, "Module");
+        P.printNumber("Index", SC.Imod);
+        auto M = DS.modules();
+        if (M.size() > SC.Imod) {
+          P.printString("Name", M[SC.Imod].Info.getModuleName());
+        }
+      }
+      P.printNumber("Data CRC", SC.DataCrc);
+      P.printNumber("Reloc CRC", SC.RelocCrc);
+      P.flush();
+    }
+    void visit(const SectionContrib2 &SC) override {
+      visit(SC.Base);
+      P.printNumber("ISect Coff", SC.ISectCoff);
+      P.flush();
+    }
+
+  private:
+    ScopedPrinter &P;
+    DbiStream &DS;
+  };
+  Visitor V(P, DS);
+  DS.visitSectionContributions(V);
+  return Error::success();
+}
+
+static Error dumpSectionMap(ScopedPrinter &P, PDBFile &File) {
+  if (!opts::DumpSectionMap)
+    return Error::success();
+
+  auto DbiS = File.getPDBDbiStream();
+  if (auto EC = DbiS.takeError())
+    return EC;
+  DbiStream &DS = DbiS.get();
+  ListScope L(P, "Section Map");
+  for (auto &M : DS.getSectionMap()) {
+    DictScope D(P, "Entry");
+    P.printFlags("Flags", M.Flags, getOMFSegMapDescFlagNames());
+    P.printNumber("Flags", M.Flags);
+    P.printNumber("Ovl", M.Ovl);
+    P.printNumber("Group", M.Group);
+    P.printNumber("Frame", M.Frame);
+    P.printNumber("SecName", M.SecName);
+    P.printNumber("ClassName", M.ClassName);
+    P.printNumber("Offset", M.Offset);
+    P.printNumber("SecByteLength", M.SecByteLength);
+    P.flush();
+  }
+  return Error::success();
+}
+
 static Error dumpTpiStream(ScopedPrinter &P, PDBFile &File,
                            codeview::CVTypeDumper &TD, uint32_t StreamIdx) {
   assert(StreamIdx == StreamTPI || StreamIdx == StreamIPI);
@@ -648,8 +722,15 @@ static Error dumpStructure(RawSession &RS) {
   if (auto EC = dumpDbiStream(P, File, TD))
     return EC;
 
+  if (auto EC = dumpSectionContribs(P, File))
+    return EC;
+
+  if (auto EC = dumpSectionMap(P, File))
+    return EC;
+
   if (auto EC = dumpPublicsStream(P, File, TD))
     return EC;
+
   return Error::success();
 }
 
@@ -681,6 +762,10 @@ bool isRawDumpEnabled() {
   if (opts::DumpIpiRecords)
     return true;
   if (opts::DumpIpiRecordBytes)
+    return true;
+  if (opts::DumpSectionContribs)
+    return true;
+  if (opts::DumpSectionMap)
     return true;
   return false;
 }
@@ -846,6 +931,8 @@ int main(int argc_, const char *argv_[]) {
     opts::DumpStreamBlocks = true;
     opts::DumpTpiRecords = true;
     opts::DumpIpiRecords = true;
+    opts::DumpSectionMap = true;
+    opts::DumpSectionContribs = true;
   }
 
   // When adding filters for excluded compilands and types, we need to remember
@@ -864,16 +951,11 @@ int main(int argc_, const char *argv_[]) {
     opts::ExcludeCompilands.push_back("d:\\\\th.obj.x86fre\\\\minkernel");
   }
 
-#if defined(HAVE_DIA_SDK)
-  CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-#endif
+  llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
 
   std::for_each(opts::InputFilenames.begin(), opts::InputFilenames.end(),
                 dumpInput);
 
-#if defined(HAVE_DIA_SDK)
-  CoUninitialize();
-#endif
   outs().flush();
   return 0;
 }

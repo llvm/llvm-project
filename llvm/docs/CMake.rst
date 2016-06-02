@@ -339,6 +339,14 @@ LLVM-specific variables
   will not be used.  If the variable for an external project does not point
   to a valid path, then that project will not be built.
 
+**LLVM_EXTERNAL_PROJECTS**:STRING
+  Semicolon-separated list of additional external projects to build as part of
+  llvm. For each project LLVM_EXTERNAL_<NAME>_SOURCE_DIR have to be specified
+  with the path for the source code of the project. Example:
+  ``-DLLVM_EXTERNAL_PROJECTS="Foo;Bar"
+  -DLLVM_EXTERNAL_FOO_SOURCE_DIR=/src/foo
+  -DLLVM_EXTERNAL_BAR_SOURCE_DIR=/src/bar``.
+
 **LLVM_USE_OPROFILE**:BOOL
   Enable building OProfile JIT support. Defaults to OFF.
 

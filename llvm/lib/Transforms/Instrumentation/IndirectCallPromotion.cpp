@@ -39,7 +39,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "icall-promotion"
+#define DEBUG_TYPE "pgo-icall-prom"
 
 STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
@@ -333,7 +333,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       const char *Reason = StatusToString(Status);
       DEBUG(dbgs() << " Not promote: " << Reason << "\n");
       emitOptimizationRemarkMissed(
-          F.getContext(), "PGOIndirectCallPromotion", F, Inst->getDebugLoc(),
+          F.getContext(), "pgo-icall-prom", F, Inst->getDebugLoc(),
           Twine("Cannot promote indirect call to ") +
               (TargetFuncName.empty() ? Twine(Target) : Twine(TargetFuncName)) +
               Twine(" with count of ") + Twine(Count) + ": " + Reason);
@@ -607,7 +607,7 @@ void ICallPromotionFunc::promote(Instruction *Inst, Function *DirectCallee,
   DEBUG(dbgs() << *BB << *DirectCallBB << *IndirectCallBB << *MergeBB << "\n");
 
   emitOptimizationRemark(
-      F.getContext(), "PGOIndirectCallPromotion", F, Inst->getDebugLoc(),
+      F.getContext(), "pgo-icall-prom", F, Inst->getDebugLoc(),
       Twine("Promote indirect call to ") + DirectCallee->getName() +
           " with count " + Twine(Count) + " out of " + Twine(TotalCount));
 }

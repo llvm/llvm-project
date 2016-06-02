@@ -487,7 +487,7 @@ SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Builder.addReg(RI.getSubReg(SrcReg, SubIdx));
 
     if (Idx == SubIndices.size() - 1)
-      Builder.addReg(SrcReg, RegState::Kill | RegState::Implicit);
+      Builder.addReg(SrcReg, getKillRegState(KillSrc) | RegState::Implicit);
 
     if (Idx == 0)
       Builder.addReg(DestReg, RegState::Define | RegState::Implicit);

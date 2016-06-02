@@ -106,6 +106,35 @@ TEST(MathExtras, findLastSet) {
   EXPECT_EQ(5u, findLastSet(NZ64));
 }
 
+TEST(MathExtras, isIntN) {
+  EXPECT_TRUE(isIntN(16, 32767));
+  EXPECT_FALSE(isIntN(16, 32768));
+}
+
+TEST(MathExtras, isUIntN) {
+  EXPECT_TRUE(isUIntN(16, 65535));
+  EXPECT_FALSE(isUIntN(16, 65536));
+  EXPECT_TRUE(isUIntN(1, 0));
+  EXPECT_TRUE(isUIntN(6, 63));
+}
+
+TEST(MathExtras, maxIntN) {
+  EXPECT_EQ(32767, maxIntN(16));
+  EXPECT_EQ(2147483647, maxIntN(32));
+}
+
+TEST(MathExtras, minIntN) {
+  EXPECT_EQ(-32768LL, minIntN(16));
+  EXPECT_EQ(-64LL, minIntN(7));
+}
+
+TEST(MathExtras, maxUIntN) {
+  EXPECT_EQ(0xffffULL, maxUIntN(16));
+  EXPECT_EQ(0xffffffffULL, maxUIntN(32));
+  EXPECT_EQ(1ULL, maxUIntN(1));
+  EXPECT_EQ(0x0fULL, maxUIntN(4));
+}
+
 TEST(MathExtras, reverseBits) {
   uint8_t NZ8 = 42;
   uint16_t NZ16 = 42;

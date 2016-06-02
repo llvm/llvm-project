@@ -12,6 +12,8 @@ if( LLVM_USE_SANITIZE_COVERAGE )
     FuzzerCrossOver.cpp
     FuzzerTraceState.cpp
     FuzzerDriver.cpp
+    FuzzerExtFunctionsDlsym.cpp
+    FuzzerExtFunctionsWeak.cpp
     FuzzerIO.cpp
     FuzzerLoop.cpp
     FuzzerMutate.cpp

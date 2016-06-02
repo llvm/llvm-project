@@ -47,6 +47,11 @@ namespace {
       initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
     }
 
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
+
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {

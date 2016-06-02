@@ -348,6 +348,7 @@ bool X86FastISel::isTypeLegal(Type *Ty, MVT &VT, bool AllowI1) {
 bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
                                   MachineMemOperand *MMO, unsigned &ResultReg,
                                   unsigned Alignment) {
+  bool HasAVX = Subtarget->hasAVX();
   // Get opcode and regclass of the output for the given load instruction.
   unsigned Opc = 0;
   const TargetRegisterClass *RC = nullptr;
@@ -373,7 +374,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     break;
   case MVT::f32:
     if (X86ScalarSSEf32) {
-      Opc = Subtarget->hasAVX() ? X86::VMOVSSrm : X86::MOVSSrm;
+      Opc = HasAVX ? X86::VMOVSSrm : X86::MOVSSrm;
       RC  = &X86::FR32RegClass;
     } else {
       Opc = X86::LD_Fp32m;
@@ -382,7 +383,7 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     break;
   case MVT::f64:
     if (X86ScalarSSEf64) {
-      Opc = Subtarget->hasAVX() ? X86::VMOVSDrm : X86::MOVSDrm;
+      Opc = HasAVX ? X86::VMOVSDrm : X86::MOVSDrm;
       RC  = &X86::FR64RegClass;
     } else {
       Opc = X86::LD_Fp64m;
@@ -394,16 +395,16 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     return false;
   case MVT::v4f32:
     if (Alignment >= 16)
-      Opc = Subtarget->hasAVX() ? X86::VMOVAPSrm : X86::MOVAPSrm;
+      Opc = HasAVX ? X86::VMOVAPSrm : X86::MOVAPSrm;
     else
-      Opc = Subtarget->hasAVX() ? X86::VMOVUPSrm : X86::MOVUPSrm;
+      Opc = HasAVX ? X86::VMOVUPSrm : X86::MOVUPSrm;
     RC  = &X86::VR128RegClass;
     break;
   case MVT::v2f64:
     if (Alignment >= 16)
-      Opc = Subtarget->hasAVX() ? X86::VMOVAPDrm : X86::MOVAPDrm;
+      Opc = HasAVX ? X86::VMOVAPDrm : X86::MOVAPDrm;
     else
-      Opc = Subtarget->hasAVX() ? X86::VMOVUPDrm : X86::MOVUPDrm;
+      Opc = HasAVX ? X86::VMOVUPDrm : X86::MOVUPDrm;
     RC  = &X86::VR128RegClass;
     break;
   case MVT::v4i32:
@@ -411,10 +412,48 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   case MVT::v8i16:
   case MVT::v16i8:
     if (Alignment >= 16)
-      Opc = Subtarget->hasAVX() ? X86::VMOVDQArm : X86::MOVDQArm;
+      Opc = HasAVX ? X86::VMOVDQArm : X86::MOVDQArm;
     else
-      Opc = Subtarget->hasAVX() ? X86::VMOVDQUrm : X86::MOVDQUrm;
+      Opc = HasAVX ? X86::VMOVDQUrm : X86::MOVDQUrm;
     RC  = &X86::VR128RegClass;
+    break;
+  case MVT::v8f32:
+    assert(HasAVX);
+    Opc = (Alignment >= 32) ? X86::VMOVAPSYrm : X86::VMOVUPSYrm;
+    RC  = &X86::VR256RegClass;
+    break;
+  case MVT::v4f64:
+    assert(HasAVX);
+    Opc = (Alignment >= 32) ? X86::VMOVAPDYrm : X86::VMOVUPDYrm;
+    RC  = &X86::VR256RegClass;
+    break;
+  case MVT::v8i32:
+  case MVT::v4i64:
+  case MVT::v16i16:
+  case MVT::v32i8:
+    assert(HasAVX);
+    Opc = (Alignment >= 32) ? X86::VMOVDQAYrm : X86::VMOVDQUYrm;
+    RC  = &X86::VR256RegClass;
+    break;
+  case MVT::v16f32:
+    assert(Subtarget->hasAVX512());
+    Opc = (Alignment >= 64) ? X86::VMOVAPSZrm : X86::VMOVUPSZrm;
+    RC  = &X86::VR512RegClass;
+    break;
+  case MVT::v8f64:
+    assert(Subtarget->hasAVX512());
+    Opc = (Alignment >= 64) ? X86::VMOVAPDZrm : X86::VMOVUPDZrm;
+    RC  = &X86::VR512RegClass;
+    break;
+  case MVT::v8i64:
+  case MVT::v16i32:
+  case MVT::v32i16:
+  case MVT::v64i8:
+    assert(Subtarget->hasAVX512());
+    // Note: There are a lot more choices based on type with AVX-512, but
+    // there's really no advantage when the load isn't masked.
+    Opc = (Alignment >= 64) ? X86::VMOVDQA64Zmr : X86::VMOVDQU64Zmr;
+    RC  = &X86::VR512RegClass;
     break;
   }
 
@@ -508,7 +547,57 @@ bool X86FastISel::X86FastEmitStore(EVT VT, unsigned ValReg, bool ValIsKill,
       else
         Opc = HasAVX ? X86::VMOVDQAmr : X86::MOVDQAmr;
     } else
-      Opc = Subtarget->hasAVX() ? X86::VMOVDQUmr : X86::MOVDQUmr;
+      Opc = HasAVX ? X86::VMOVDQUmr : X86::MOVDQUmr;
+    break;
+  case MVT::v8f32:
+    assert(HasAVX);
+    if (Aligned)
+      Opc = IsNonTemporal ? X86::VMOVNTPSYmr : X86::VMOVAPSYmr;
+    else
+      Opc = X86::VMOVUPSYmr;
+    break;
+  case MVT::v4f64:
+    assert(HasAVX);
+    if (Aligned) {
+      Opc = IsNonTemporal ? X86::VMOVNTPDYmr : X86::VMOVAPDYmr;
+    } else
+      Opc = X86::VMOVUPDYmr;
+    break;
+  case MVT::v8i32:
+  case MVT::v4i64:
+  case MVT::v16i16:
+  case MVT::v32i8:
+    assert(HasAVX);
+    if (Aligned)
+      Opc = IsNonTemporal ? X86::VMOVNTDQYmr : X86::VMOVDQAYmr;
+    else
+      Opc = X86::VMOVDQUYmr;
+    break;
+  case MVT::v16f32:
+    assert(Subtarget->hasAVX512());
+    if (Aligned)
+      Opc = IsNonTemporal ? X86::VMOVNTPSZmr : X86::VMOVAPSZmr;
+    else
+      Opc = X86::VMOVUPSZmr;
+    break;
+  case MVT::v8f64:
+    assert(Subtarget->hasAVX512());
+    if (Aligned) {
+      Opc = IsNonTemporal ? X86::VMOVNTPDZmr : X86::VMOVAPDZmr;
+    } else
+      Opc = X86::VMOVUPDZmr;
+    break;
+  case MVT::v8i64:
+  case MVT::v16i32:
+  case MVT::v32i16:
+  case MVT::v64i8:
+    assert(Subtarget->hasAVX512());
+    // Note: There are a lot more choices based on type with AVX-512, but
+    // there's really no advantage when the store isn't masked.
+    if (Aligned)
+      Opc = IsNonTemporal ? X86::VMOVNTDQZmr : X86::VMOVDQA64Zmr;
+    else
+      Opc = X86::VMOVDQU64Zmr;
     break;
   }
 
@@ -2623,7 +2712,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     unsigned ResultReg = 0;
     // Check if we have an immediate version.
     if (const auto *CI = dyn_cast<ConstantInt>(RHS)) {
-      static const unsigned Opc[2][4] = {
+      static const uint16_t Opc[2][4] = {
         { X86::INC8r, X86::INC16r, X86::INC32r, X86::INC64r },
         { X86::DEC8r, X86::DEC16r, X86::DEC32r, X86::DEC64r }
       };
@@ -2717,7 +2806,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (!isTypeLegal(RetTy, VT))
       return false;
 
-    static const unsigned CvtOpc[2][2][2] = {
+    static const uint16_t CvtOpc[2][2][2] = {
       { { X86::CVTTSS2SIrr,   X86::VCVTTSS2SIrr   },
         { X86::CVTTSS2SI64rr, X86::VCVTTSS2SI64rr }  },
       { { X86::CVTTSD2SIrr,   X86::VCVTTSD2SIrr   },

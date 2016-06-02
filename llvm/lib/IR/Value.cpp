@@ -525,13 +525,18 @@ Value *Value::stripInBoundsOffsets() {
   return stripPointerCastsAndOffsets<PSK_InBounds>(this);
 }
 
-unsigned Value::getPointerDereferenceableBytes(bool &CanBeNull) const {
+unsigned Value::getPointerDereferenceableBytes(const DataLayout &DL,
+                                               bool &CanBeNull) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
   unsigned DerefBytes = 0;
   CanBeNull = false;
   if (const Argument *A = dyn_cast<Argument>(this)) {
     DerefBytes = A->getDereferenceableBytes();
+    if (DerefBytes == 0 && A->hasByValAttr() && A->getType()->isSized()) {
+      DerefBytes = DL.getTypeStoreSize(A->getType());
+      CanBeNull = false;
+    }
     if (DerefBytes == 0) {
       DerefBytes = A->getDereferenceableOrNullBytes();
       CanBeNull = true;
@@ -555,31 +560,20 @@ unsigned Value::getPointerDereferenceableBytes(bool &CanBeNull) const {
       }
       CanBeNull = true;
     }
+  } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
+    if (AI->getAllocatedType()->isSized()) {
+      DerefBytes = DL.getTypeStoreSize(AI->getAllocatedType());
+      CanBeNull = false;
+    }
+  } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {
+    if (GV->getValueType()->isSized() && !GV->hasExternalWeakLinkage()) {
+      // TODO: Don't outright reject hasExternalWeakLinkage but set the
+      // CanBeNull flag.
+      DerefBytes = DL.getTypeStoreSize(GV->getValueType());
+      CanBeNull = false;
+    }
   }
   return DerefBytes;
-}
-
-bool Value::isPointerDereferenceable(bool &CanBeNull) const {
-  assert(getType()->isPointerTy() && "must be pointer");
-
-  CanBeNull = false;
-
-  // These are obviously ok.
-  if (isa<AllocaInst>(this))
-    return true;
-
-  // Global variables which can't collapse to null are ok.
-  // TODO: return true for those but set CanBeNull flag
-  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
-    if (!GV->hasExternalWeakLinkage())
-      return true;
-
-  // byval arguments are okay.
-  if (const Argument *A = dyn_cast<Argument>(this))
-    if (A->hasByValAttr())
-      return true;
-
-  return false;
 }
 
 unsigned Value::getPointerAlignment(const DataLayout &DL) const {

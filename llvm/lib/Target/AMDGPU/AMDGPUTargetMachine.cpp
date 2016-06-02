@@ -59,6 +59,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertWaitsPass(*PR);
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
+  initializeSIDebuggerInsertNopsPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {

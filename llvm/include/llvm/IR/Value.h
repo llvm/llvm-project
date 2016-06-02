@@ -509,13 +509,8 @@ public:
   ///
   /// If CanBeNull is set by this function the pointer can either be null or be
   /// dereferenceable up to the returned number of bytes.
-  unsigned getPointerDereferenceableBytes(bool &CanBeNull) const;
-
-  /// \brief Returns true if the pointer value is fully dereferenceable.
-  ///
-  /// Sets CanBeNull to true if the pointer is either null or can be fully
-  /// dereferenceable.
-  bool isPointerDereferenceable(bool &CanBeNull) const;
+  unsigned getPointerDereferenceableBytes(const DataLayout &DL,
+                                          bool &CanBeNull) const;
 
   /// \brief Returns an alignment of the pointer value.
   ///
