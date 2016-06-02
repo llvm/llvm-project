@@ -40,16 +40,22 @@ s_nop 0xffff  // CHECK: s_nop 0xffff ; encoding: [0xff,0xff,0x80,0xbf]
   // CHECK: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 
   s_waitcnt vmcnt(1)
-  // CHECK: s_waitcnt vmcnt(1) ; encoding: [0x71,0x07,0x8c,0xbf]
+  // CHECK: s_waitcnt vmcnt(1) ; encoding: [0x71,0x0f,0x8c,0xbf]
+
+  s_waitcnt vmcnt(9)
+  // CHECK: s_waitcnt vmcnt(9) ; encoding: [0x79,0x0f,0x8c,0xbf]
 
   s_waitcnt expcnt(2)
-  // CHECK: s_waitcnt expcnt(2) ; encoding: [0x2f,0x07,0x8c,0xbf]
+  // CHECK: s_waitcnt expcnt(2) ; encoding: [0x2f,0x0f,0x8c,0xbf]
 
   s_waitcnt lgkmcnt(3)
   // CHECK: s_waitcnt lgkmcnt(3) ; encoding: [0x7f,0x03,0x8c,0xbf]
 
+  s_waitcnt lgkmcnt(9)
+  // CHECK: s_waitcnt lgkmcnt(9) ; encoding: [0x7f,0x09,0x8c,0xbf]
+
   s_waitcnt vmcnt(0), expcnt(0)
-  // CHECK: s_waitcnt vmcnt(0) expcnt(0) ; encoding: [0x00,0x07,0x8c,0xbf]
+  // CHECK: s_waitcnt vmcnt(0) expcnt(0) ; encoding: [0x00,0x0f,0x8c,0xbf]
 
 
   s_sethalt 9        // CHECK: s_sethalt 9 ; encoding: [0x09,0x00,0x8d,0xbf]
