@@ -268,12 +268,14 @@ static bool isCallPromotable(CallInst *CI) {
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::memcpy:
+  case Intrinsic::memmove:
   case Intrinsic::memset:
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end:
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::invariant_group_barrier:
+  case Intrinsic::objectsize:
     return true;
   default:
     return false;
@@ -450,6 +452,14 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
       Intr->eraseFromParent();
       continue;
     }
+    case Intrinsic::memmove: {
+      MemMoveInst *MemMove = cast<MemMoveInst>(Intr);
+      Builder.CreateMemMove(MemMove->getRawDest(), MemMove->getRawSource(),
+                            MemMove->getLength(), MemMove->getAlignment(),
+                            MemMove->isVolatile());
+      Intr->eraseFromParent();
+      continue;
+    }
     case Intrinsic::memset: {
       MemSetInst *MemSet = cast<MemSetInst>(Intr);
       Builder.CreateMemSet(MemSet->getRawDest(), MemSet->getValue(),
@@ -466,6 +476,20 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
       // but the intrinsics need to be changed to accept pointers with any
       // address space.
       continue;
+    case Intrinsic::objectsize: {
+      Value *Src = Intr->getOperand(0);
+      Type *SrcTy = Src->getType()->getPointerElementType();
+      Function *ObjectSize = Intrinsic::getDeclaration(Mod,
+        Intrinsic::objectsize,
+        { Intr->getType(), PointerType::get(SrcTy, AMDGPUAS::LOCAL_ADDRESS) }
+      );
+
+      CallInst *NewCall
+        = Builder.CreateCall(ObjectSize, { Src, Intr->getOperand(1) });
+      Intr->replaceAllUsesWith(NewCall);
+      Intr->eraseFromParent();
+      continue;
+    }
     default:
       Intr->dump();
       llvm_unreachable("Don't know how to promote alloca intrinsic use.");
