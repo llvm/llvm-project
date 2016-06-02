@@ -48,7 +48,7 @@ namespace {
 
 // \brief If @MI is a DBG_VALUE with debug value described by a defined
 // register, returns the number of this register. In the other case, returns 0.
-static unsigned isDescribedByReg(const MachineInstr &MI) {
+static unsigned isDbgValueDescribedByReg(const MachineInstr &MI) {
   assert(MI.isDebugValue() && "expected a DBG_VALUE");
   assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
   // If location of variable is described using a register (directly
@@ -108,7 +108,7 @@ private:
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
-      if (int RegNo = ::isDescribedByReg(MI)) {
+      if (int RegNo = isDbgValueDescribedByReg(MI)) {
         Kind = RegisterKind;
         Loc.RegisterLoc.RegNo = RegNo;
         uint64_t Offset =
@@ -249,7 +249,7 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
 
   // Add the VarLoc to OpenRanges from this DBG_VALUE.
   // TODO: Currently handles DBG_VALUE which has only reg as location.
-  if (isDescribedByReg(MI))
+  if (isDbgValueDescribedByReg(MI))
     OpenRanges.set(VarLocIDs.insert(MI));
 }
 
