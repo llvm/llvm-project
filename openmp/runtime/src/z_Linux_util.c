@@ -2615,7 +2615,7 @@ __kmp_get_load_balance( int max )
 
 #endif // USE_LOAD_BALANCE
 
-#if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC)
+#if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC || KMP_ARCH_PPC64)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function
