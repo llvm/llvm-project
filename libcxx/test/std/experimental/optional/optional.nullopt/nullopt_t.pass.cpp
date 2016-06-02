@@ -33,6 +33,6 @@ int main()
     static_assert((std::is_empty<nullopt_t>::value), "");
     static_assert((std::is_literal_type<nullopt_t>::value), "");
     static_assert((!std::is_default_constructible<nullopt_t>::value), "");
-    
+
     static_assert(test(nullopt) == 3, "");
 }

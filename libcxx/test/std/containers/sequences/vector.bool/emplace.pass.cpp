@@ -22,7 +22,7 @@ int main()
     {
         typedef std::vector<bool> C;
         C c;
-        
+
         C::iterator i = c.emplace(c.cbegin());
         assert(i == c.begin());
         assert(c.size() == 1);

@@ -14,7 +14,7 @@
 // template <class T>
 //     void
 //     atomic_store_explicit(volatile atomic<T>* obj, T desr, memory_order m);
-// 
+//
 // template <class T>
 //     void
 //     atomic_store_explicit(atomic<T>* obj, T desr, memory_order m);

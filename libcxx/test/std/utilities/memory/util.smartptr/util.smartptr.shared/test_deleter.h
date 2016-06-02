@@ -52,7 +52,7 @@ public:
     void set_state(int i) {state_ = i;}
 
     void operator()(T* p) {assert(state_ >= 0); ++dealloc_count; delete p;}
-   
+
     test_deleter* operator&() const DELETE_FUNCTION;
 };
 

@@ -21,7 +21,7 @@ struct A
 {
     explicit A(int);
     A(int, double);
-#if __has_feature(cxx_access_control_sfinae) 
+#if __has_feature(cxx_access_control_sfinae)
 private:
 #endif
     A(char);
@@ -91,7 +91,7 @@ int main()
     test_is_constructible<int&, int&> ();
 
     test_is_not_constructible<A> ();
-#if __has_feature(cxx_access_control_sfinae) 
+#if __has_feature(cxx_access_control_sfinae)
     test_is_not_constructible<A, char> ();
 #else
     test_is_constructible<A, char> ();

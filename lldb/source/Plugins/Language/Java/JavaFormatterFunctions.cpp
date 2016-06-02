@@ -99,7 +99,7 @@ private:
     GetDereferencedValueObject()
     {
         if (!m_backend.IsPointerOrReferenceType())
-            m_backend.GetSP();
+            return m_backend.GetSP();
 
         Error error;
         return m_backend.Dereference(error);

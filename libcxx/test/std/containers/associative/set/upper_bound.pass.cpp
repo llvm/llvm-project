@@ -281,7 +281,7 @@ int main()
     r = m.upper_bound(20);
     assert(r == next(m.begin(), 8));
     }
-    
+
     {
     typedef PrivateConstructor V;
     typedef std::set<V, std::less<>> M;

@@ -37,7 +37,7 @@
 //                                 memory_order m = memory_order_seq_cst) volatile noexcept;
 //     bool compare_exchange_strong(T& expc, T desr,
 //                                  memory_order m = memory_order_seq_cst) noexcept;
-// 
+//
 //     atomic() noexcept = default;
 //     constexpr atomic(T desr) noexcept;
 //     atomic(const atomic&) = delete;

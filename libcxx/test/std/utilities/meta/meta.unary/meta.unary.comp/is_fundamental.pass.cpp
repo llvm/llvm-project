@@ -94,7 +94,7 @@ int main()
 	test_is_fundamental<long double>();
 	test_is_fundamental<char16_t>();
 	test_is_fundamental<char32_t>();
-	
+
     test_is_not_fundamental<char[3]>();
     test_is_not_fundamental<char[]>();
     test_is_not_fundamental<void *>();

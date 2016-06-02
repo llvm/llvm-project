@@ -99,6 +99,6 @@ int main()
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
-    
+
     constexpr_test();
 }

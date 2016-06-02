@@ -17,7 +17,7 @@
 // iterator       end()          noexcept;
 // const_iterator end()    const noexcept;
 // const_iterator cend()   const noexcept;
-// 
+//
 // reverse_iterator       rbegin()        noexcept;
 // const_reverse_iterator rbegin()  const noexcept;
 // const_reverse_iterator crbegin() const noexcept;
@@ -25,7 +25,7 @@
 // const_reverse_iterator rend()    const noexcept;
 // const_reverse_iterator crend()   const noexcept;
 
-  
+
 #include <__config>
 
 #include <experimental/dynarray>
@@ -85,11 +85,11 @@ void dyn_test ( dynarray<T> &dyn ) {
 template <class T>
 void test ( const T &val ) {
     typedef dynarray<T> dynA;
-    
+
     dynA d1 ( 4 );
     dyn_test ( d1 );
     dyn_test_const ( d1 );
-    
+
     dynA d2 ( 7, val );
     dyn_test ( d2 );
     dyn_test_const ( d2 );

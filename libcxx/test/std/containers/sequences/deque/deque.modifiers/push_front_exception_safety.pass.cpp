@@ -30,7 +30,7 @@ class CMyClass {
     private:
         int fMagicValue;
         int fTag;
-        
+
     private: static int kStartedConstructionMagicValue;
     private: static int kFinishedConstructionMagicValue;
 };
@@ -84,7 +84,7 @@ int main()
         assert(vec==vec2);
     }
 	}
-	
+
 	{
 	typedef std::deque<CMyClass, test_allocator<CMyClass> > C;
     C vec;

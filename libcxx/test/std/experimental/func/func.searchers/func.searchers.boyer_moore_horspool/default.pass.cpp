@@ -19,11 +19,11 @@
 // public:
 //   boyer_moore_horspool_searcher(RandomAccessIterator1 pat_first, RandomAccessIterator1 pat_last,
 //                                 Hash hf = Hash(), BinaryPredicate pred = BinaryPredicate());
-// 
+//
 //   template<class RandomAccessIterator2>
 //   pair<RandomAccessIterator2, RandomAccessIterator2>
 //   operator()(RandomAccessIterator2 first, RandomAccessIterator2 last) const;
-// 
+//
 // private:
 //   RandomAccessIterator1 pat_first_; // exposition only
 //   RandomAccessIterator1 pat_last_;  // exposition only

@@ -60,9 +60,9 @@ test()
 
     static_assert((std::is_signed<typename C::difference_type>::value), "");
     static_assert((std::is_unsigned<typename C::size_type>::value), "");
-//     static_assert((std::is_same<typename C::difference_type, 
+//     static_assert((std::is_same<typename C::difference_type,
 //         typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
-//     static_assert((std::is_same<typename C::difference_type, 
+//     static_assert((std::is_same<typename C::difference_type,
 //         typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
 
     static_assert((std::is_same<
@@ -87,7 +87,7 @@ int main()
     static_assert((std::is_same<std::vector<char>::allocator_type,
                                 std::allocator<char> >::value), "");
 #if __cplusplus >= 201103L
-    { 
+    {
 
     typedef std::vector<int, min_allocator<int> > C;
     static_assert((std::is_same<C::value_type, int>::value), "");
@@ -99,9 +99,9 @@ int main()
 
     static_assert((std::is_signed<typename C::difference_type>::value), "");
     static_assert((std::is_unsigned<typename C::size_type>::value), "");
-//     static_assert((std::is_same<typename C::difference_type, 
+//     static_assert((std::is_same<typename C::difference_type,
 //         typename std::iterator_traits<typename C::iterator>::difference_type>::value), "");
-//     static_assert((std::is_same<typename C::difference_type, 
+//     static_assert((std::is_same<typename C::difference_type,
 //         typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
 #endif

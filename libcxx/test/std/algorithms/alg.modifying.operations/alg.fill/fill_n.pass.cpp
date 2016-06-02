@@ -62,7 +62,7 @@ test_int_array()
 
 struct source {
     source() : i(0) { }
-    
+
     operator int() const { return i++; }
     mutable int i;
 };

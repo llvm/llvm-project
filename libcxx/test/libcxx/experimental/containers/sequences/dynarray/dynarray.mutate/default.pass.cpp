@@ -13,7 +13,7 @@
 // void fill(const T& v);
 // const T* data() const noexcept;
 
-  
+
 #include <__config>
 
 #include <experimental/dynarray>
@@ -28,11 +28,11 @@ using std::experimental::dynarray;
 template <class T>
 void test ( const T &val ) {
     typedef dynarray<T> dynA;
-    
+
     dynA d1 ( 4 );
     d1.fill ( val );
-    assert ( std::all_of ( d1.begin (), d1.end (), 
-                    [&val]( const T &item ){ return item == val; } ));  
+    assert ( std::all_of ( d1.begin (), d1.end (),
+                    [&val]( const T &item ){ return item == val; } ));
     }
 
 int main()

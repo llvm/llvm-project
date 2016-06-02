@@ -93,7 +93,7 @@ int main()
         struct test_constexpr_ctor
             : public optional<Y>
         {
-            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i) 
+            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i)
                 : optional<Y>(in_place, i) {}
         };
 
@@ -113,7 +113,7 @@ int main()
         struct test_constexpr_ctor
             : public optional<Z>
         {
-            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i) 
+            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i)
                 : optional<Z>(in_place, i) {}
         };
 

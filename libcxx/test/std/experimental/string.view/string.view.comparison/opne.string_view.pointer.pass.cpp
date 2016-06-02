@@ -59,7 +59,7 @@ int main()
     static_assert (!(""      != sv1), "" );
     static_assert (  sv1     != "abcde", "" );
     static_assert (  "abcde" != sv1, "" );
-    
+
     static_assert (!(sv2      != "abcde"), "" );
     static_assert (!("abcde"  != sv2), "" );
     static_assert (  sv2      != "abcde0",   "" );

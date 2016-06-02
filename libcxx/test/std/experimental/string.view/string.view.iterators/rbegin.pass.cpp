@@ -31,7 +31,7 @@ test(S s)
         assert(&*cb1 == &s[last]);
         assert( *cb2 ==  s[last]);
         assert(&*cb2 == &s[last]);
-        
+
     }
     assert(  b == cb1);
     assert(  b == cb2);

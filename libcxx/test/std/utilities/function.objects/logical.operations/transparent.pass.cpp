@@ -39,6 +39,6 @@ int main ()
     static_assert ( !is_transparent<std::logical_not<std::string>>::value, "" );
     static_assert (  is_transparent<std::logical_not<void>>::value, "" );
     static_assert (  is_transparent<std::logical_not<>>::value, "" );
-    
+
     return 0;
 }

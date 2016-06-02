@@ -100,7 +100,7 @@ int main()
         assert(r.first->second.get() == -1); // value
     }
 
-    {  // pair<iterator, bool> try_emplace(key_type&& k, Args&&... args); 
+    {  // pair<iterator, bool> try_emplace(key_type&& k, Args&&... args);
         typedef std::map<Moveable, Moveable> M;
         typedef std::pair<M::iterator, bool> R;
         M m;
@@ -136,7 +136,7 @@ int main()
             m.try_emplace ( i, Moveable(i, (double) i));
         assert(m.size() == 10);
         M::const_iterator it = m.find(2);
-        
+
         Moveable mv1(3, 3.0);
         for (int i=0; i < 20; i += 2)
         {

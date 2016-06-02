@@ -163,7 +163,7 @@ int main()
 
             M m1(I(a1), I(a1+num), C(), A());
             assert(Counter_base::gConstructed == 2*num);
-        
+
             M m2(m1);
             assert(m2 == m1);
             assert(Counter_base::gConstructed == 3*num);
@@ -181,7 +181,7 @@ int main()
             }
             assert(Counter_base::gConstructed == 2*num);
         }
-        assert(Counter_base::gConstructed == 0);            
+        assert(Counter_base::gConstructed == 0);
     }
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

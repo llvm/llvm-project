@@ -100,7 +100,7 @@ public:
     { return v_.emplace(pos, std::forward<Args>(args)...); }
 #endif
 #endif
-    
+
     iterator insert(const_iterator pos, const value_type& x) { return v_.insert(pos, x); }
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     iterator insert(const_iterator pos, value_type&& x)      { return v_.insert(pos, std::forward<value_type>(x)); }
@@ -124,10 +124,10 @@ public:
 
     void swap(nasty_vector &nv) _NOEXCEPT_(std::__is_nothrow_swappable<nested_container>::value)
     { v_.swap(nv.v_); }
-    
+
     nasty_vector *operator &()             { assert(false); return nullptr; }  // nasty
     const nasty_vector *operator &() const { assert(false); return nullptr; }  // nasty
-    
+
     nested_container v_;
 };
 
@@ -221,7 +221,7 @@ public:
     { return l_.emplace(pos, std::forward<Args>(args)...); }
 #endif
 #endif
-    
+
     iterator insert(const_iterator pos, const value_type& x) { return l_.insert(pos, x); }
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     iterator insert(const_iterator pos, value_type&& x)      { return l_.insert(pos, std::forward<value_type>(x)); }
@@ -243,7 +243,7 @@ public:
 
     void swap(nasty_list &nl) _NOEXCEPT_(std::__is_nothrow_swappable<nested_container>::value)
     { l_.swap(nl.l_); }
-    
+
     void clear() _NOEXCEPT { l_.clear(); }
 
 //     void splice(const_iterator position, list& x);
@@ -254,7 +254,7 @@ public:
 //                                                   const_iterator last);
 //     void splice(const_iterator position, list&& x, const_iterator first,
 //                                                   const_iterator last);
-// 
+//
 //     void remove(const value_type& value);
 //     template <class Pred> void remove_if(Pred pred);
 //     void unique();

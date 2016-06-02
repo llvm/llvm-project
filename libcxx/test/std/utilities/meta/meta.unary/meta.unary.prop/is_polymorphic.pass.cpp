@@ -65,7 +65,7 @@ class Abstract
     virtual ~Abstract() = 0;
 };
 
-#if __has_feature(cxx_attributes) 
+#if __has_feature(cxx_attributes)
 class Final final {
 };
 #else

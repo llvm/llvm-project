@@ -16,7 +16,7 @@
 //                  const basic_regex<charT, traits>& e,
 //                  regex_constants::match_flag_type flags = regex_constants::match_default);
 
-// std::regex in ECMAScript mode should not ignore capture groups inside lookahead assertions. 
+// std::regex in ECMAScript mode should not ignore capture groups inside lookahead assertions.
 // For example, matching /(?=(a))(a)/ to "a" should yield two captures: \1 = "a", \2 = "a"
 
 #include <regex>

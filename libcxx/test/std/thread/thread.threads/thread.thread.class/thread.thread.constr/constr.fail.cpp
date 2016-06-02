@@ -12,7 +12,7 @@
 // class thread
 //     template <class _Fp, class ..._Args,
 //         explicit thread(_Fp&& __f, _Args&&... __args);
-//  This constructor shall not participate in overload resolution 
+//  This constructor shall not participate in overload resolution
 //       if decay<F>::type is the same type as std::thread.
 
 

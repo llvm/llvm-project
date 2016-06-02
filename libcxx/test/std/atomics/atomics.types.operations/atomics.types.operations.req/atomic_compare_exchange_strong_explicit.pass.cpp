@@ -17,7 +17,7 @@
 //     atomic_compare_exchange_strong_explicit(volatile atomic<T>* obj, T* expc,
 //                                           T desr,
 //                                           memory_order s, memory_order f);
-// 
+//
 // template <class T>
 //     bool
 //     atomic_compare_exchange_strong_explicit(atomic<T>* obj, T* expc, T desr,

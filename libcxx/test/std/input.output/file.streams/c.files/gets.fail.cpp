@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++98, c++03, c++11
 // test <cstdio>
 
-// gets 
+// gets
 
 #include <cstdio>
 

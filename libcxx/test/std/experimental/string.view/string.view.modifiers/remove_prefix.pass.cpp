@@ -30,10 +30,10 @@ void test ( const CharT *s, size_t len ) {
         assert ( sv1.data() == (s + 1));
         sv1.remove_prefix ( len - 1 );
     }
-    
+
     assert ( sv1.size() == 0 );
     sv1.remove_prefix ( 0 );
-    assert ( sv1.size() == 0 ); 
+    assert ( sv1.size() == 0 );
     }
 }
 

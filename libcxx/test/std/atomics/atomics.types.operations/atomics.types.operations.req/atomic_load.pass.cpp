@@ -15,7 +15,7 @@
 // template <class T>
 //     T
 //     atomic_load(const volatile atomic<T>* obj);
-// 
+//
 // template <class T>
 //     T
 //     atomic_load(const atomic<T>* obj);

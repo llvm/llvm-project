@@ -1054,7 +1054,7 @@ void test_hypot()
     static_assert((std::is_same<decltype(std::hypot((int)0, (int)0)), double>::value), "");
     static_assert((std::is_same<decltype(hypot(Ambiguous(), Ambiguous())), Ambiguous>::value), "");
     assert(std::hypot(3,4) == 5);
-    
+
 #if TEST_STD_VER > 14
     static_assert((std::is_same<decltype(std::hypot((float)0, (float)0, (float)0)), float>::value), "");
     static_assert((std::is_same<decltype(std::hypot((float)0, (bool)0, (float)0)), double>::value), "");

@@ -11,7 +11,7 @@
 // type_traits
 
 // template<class B> struct negation;                        // C++17
-// template<class B> 
+// template<class B>
 //   constexpr bool negation_v = negation<B>::value;         // C++17
 
 #include <type_traits>

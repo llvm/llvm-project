@@ -23,7 +23,7 @@ int main()
         std::vector<int> v;
         v.reserve(10);
         assert(v.capacity() >= 10);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
     {
         std::vector<int> v(100);
@@ -34,7 +34,7 @@ int main()
         v.reserve(150);
         assert(v.size() == 100);
         assert(v.capacity() == 150);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
     {
         std::vector<int, stack_allocator<int, 250> > v(100);
@@ -45,14 +45,14 @@ int main()
         v.reserve(150);
         assert(v.size() == 100);
         assert(v.capacity() == 150);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
 #if __cplusplus >= 201103L
     {
         std::vector<int, min_allocator<int>> v;
         v.reserve(10);
         assert(v.capacity() >= 10);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
     {
         std::vector<int, min_allocator<int>> v(100);
@@ -63,7 +63,7 @@ int main()
         v.reserve(150);
         assert(v.size() == 100);
         assert(v.capacity() == 150);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
     }
 #endif
 }

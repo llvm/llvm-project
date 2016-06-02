@@ -26,5 +26,5 @@ int main()
     constexpr T it2;
 #endif
     }
-    
+
 }

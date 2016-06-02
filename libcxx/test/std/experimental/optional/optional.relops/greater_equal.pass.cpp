@@ -30,13 +30,13 @@ int main()
 {
     {
     typedef optional<X> O;
-    
+
     constexpr O o1;     // disengaged
     constexpr O o2;     // disengaged
     constexpr O o3{1};  // engaged
     constexpr O o4{2};  // engaged
     constexpr O o5{1};  // engaged
-    
+
     static_assert (  (o1 >= o1), "" );
     static_assert (  (o1 >= o2), "" );
     static_assert ( !(o1 >= o3), "" );

@@ -15,7 +15,7 @@
 //   class tuple_size<tuple<Types...>>
 //     : public integral_constant<size_t, sizeof...(Types)> { };
 //
-//  LWG #2212 says that tuple_size and tuple_element must be 
+//  LWG #2212 says that tuple_size and tuple_element must be
 //     available after including <utility>
 
 #include <cstddef>

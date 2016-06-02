@@ -31,7 +31,7 @@ class CMyClass {
     private:
         int fMagicValue;
         int fTag;
-        
+
     private: static int kStartedConstructionMagicValue;
     private: static int kFinishedConstructionMagicValue;
 };
@@ -73,8 +73,8 @@ int main()
 
     vec.push_back(instance);
     std::vector<CMyClass> vec2(vec);
-    assert(is_contiguous_container_asan_correct(vec)); 
-    assert(is_contiguous_container_asan_correct(vec2)); 
+    assert(is_contiguous_container_asan_correct(vec));
+    assert(is_contiguous_container_asan_correct(vec2));
 
     gCopyConstructorShouldThow = true;
     try {
@@ -82,6 +82,6 @@ int main()
     }
     catch (...) {
         assert(vec==vec2);
-        assert(is_contiguous_container_asan_correct(vec)); 
+        assert(is_contiguous_container_asan_correct(vec));
     }
 }

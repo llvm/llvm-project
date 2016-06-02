@@ -56,7 +56,7 @@ test2a(const Tuple& t)
 
 #if _LIBCPP_STD_VER > 11
 template <class Tuple>
-constexpr int 
+constexpr int
 test3(const Tuple&)
 {
     return std::tuple_size<Tuple>::value;

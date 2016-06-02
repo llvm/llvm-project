@@ -72,7 +72,7 @@ int main()
         typedef test_hash<std::hash<T>> HF;
         typedef test_compare<std::equal_to<T>> Comp;
         typedef std::unordered_map<T, T, HF, Comp, A> C;
-        
+
         A a(10);
         C c(2, a);
         assert(c.bucket_count() == 2);

@@ -12,7 +12,7 @@
 
 // size_type size()     const noexcept;
 // size_type max_size() const noexcept;
-// bool      empty()    const noexcept;  
+// bool      empty()    const noexcept;
 
 #include <__config>
 
@@ -35,7 +35,7 @@ void dyn_test ( const dynarray<T> &dyn, size_t sz ) {
 template <class T>
 void test ( std::initializer_list<T> vals ) {
     typedef dynarray<T> dynA;
-    
+
     dynA d1 ( vals );
     dyn_test ( d1, vals.size ());
     }
@@ -44,7 +44,7 @@ int main()
 {
     test ( { 1, 1, 2, 3, 5, 8 } );
     test ( { 1., 1., 2., 3., 5., 8. } );
-    test ( { std::string("1"), std::string("1"), std::string("2"), std::string("3"), 
+    test ( { std::string("1"), std::string("1"), std::string("2"), std::string("3"),
                 std::string("5"), std::string("8")} );
 
     test<int> ( {} );
