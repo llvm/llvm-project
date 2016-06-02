@@ -256,15 +256,37 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
   return true;
 }
 
+static bool isCallPromotable(CallInst *CI) {
+  // TODO: We might be able to handle some cases where the callee is a
+  // constantexpr bitcast of a function.
+  if (!CI->getCalledFunction())
+    return false;
+
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::memcpy:
+  case Intrinsic::memset:
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+  case Intrinsic::invariant_start:
+  case Intrinsic::invariant_end:
+  case Intrinsic::invariant_group_barrier:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
-  bool Success = true;
   for (User *User : Val->users()) {
-    if(std::find(WorkList.begin(), WorkList.end(), User) != WorkList.end())
+    if (std::find(WorkList.begin(), WorkList.end(), User) != WorkList.end())
       continue;
+
     if (CallInst *CI = dyn_cast<CallInst>(User)) {
-      // TODO: We might be able to handle some cases where the callee is a
-      // constantexpr bitcast of a function.
-      if (!CI->getCalledFunction())
+      if (!isCallPromotable(CI))
         return false;
 
       WorkList.push_back(User);
@@ -286,10 +308,11 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
       continue;
 
     WorkList.push_back(User);
-
-    Success &= collectUsesWithPtrTypes(User, WorkList);
+    if (!collectUsesWithPtrTypes(User, WorkList))
+      return false;
   }
-  return Success;
+
+  return true;
 }
 
 void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
@@ -392,6 +415,11 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
 
     IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(Call);
     if (!Intr) {
+      // FIXME: What is this for? It doesn't make sense to promote arbitrary
+      // function calls. If the call is to a defined function that can also be
+      // promoted, we should be able to do this once that function is also
+      // rewritten.
+
       std::vector<Type*> ArgTypes;
       for (unsigned ArgIdx = 0, ArgEnd = Call->getNumArgOperands();
                                 ArgIdx != ArgEnd; ++ArgIdx) {
