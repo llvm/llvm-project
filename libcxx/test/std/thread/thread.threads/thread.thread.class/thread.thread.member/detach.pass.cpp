@@ -17,7 +17,10 @@
 
 #include <thread>
 #include <atomic>
+#include <system_error>
 #include <cassert>
+
+#include "test_macros.h"
 
 std::atomic_bool done(false);
 
@@ -57,6 +60,8 @@ public:
 int G::n_alive = 0;
 bool G::op_run = false;
 
+void foo() {}
+
 int main()
 {
     {
@@ -70,4 +75,16 @@ int main()
         assert(G::n_alive == 1);
     }
     assert(G::n_alive == 0);
+#ifndef TEST_HAS_NO_EXCEPTION
+    {
+        std::thread t0(foo);
+        assert(t0.joinable());
+        t0.detach();
+        assert(!t0.joinable());
+        try {
+            t0.detach();
+        } catch (std::system_error const& ec) {
+        }
+    }
+#endif
 }

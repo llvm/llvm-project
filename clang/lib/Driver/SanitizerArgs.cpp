@@ -559,6 +559,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
   }
 
+  AsanUseAfterScope =
+      Args.hasArg(options::OPT_fsanitize_address_use_after_scope);
+  if (AsanUseAfterScope && !(AllAddedKinds & Address)) {
+    D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+        << "-fsanitize-address-use-after-scope"
+        << "-fsanitize=address";
+  }
+
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes =
       Args.hasArg(options::OPT_fsanitize_link_cxx_runtime) || D.CCCIsCXX();
@@ -654,6 +662,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanFieldPadding)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-field-padding=" +
                                          llvm::utostr(AsanFieldPadding)));
+
+  if (AsanUseAfterScope)
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-use-after-scope"));
 
   // MSan: Workaround for PR16386.
   // ASan: This is mainly to help LSan with cases such as

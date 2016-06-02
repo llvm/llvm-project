@@ -26,6 +26,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "count_new.hpp"
 
 struct T
     : public std::enable_shared_from_this<T>
@@ -62,7 +63,7 @@ int main()
     // * Using 'weak_from_this().expired()' in C++17.
     // * Using 'shared_from_this()' in all dialects.
     {
-
+        assert(globalMemCounter.checkOutstandingNewEq(0));
         T* ptr = new T;
         std::shared_ptr<T> s(ptr);
         {
@@ -87,6 +88,37 @@ int main()
             }
         }
 #endif
+        s.reset();
+        assert(globalMemCounter.checkOutstandingNewEq(0));
+    }
+    // Test LWG issue 2529 again. This time check that an expired pointer
+    // is replaced.
+    {
+        assert(globalMemCounter.checkOutstandingNewEq(0));
+        T* ptr = new T;
+        std::weak_ptr<T> weak;
+        {
+            std::shared_ptr<T> s(ptr, &nullDeleter);
+            assert(ptr->shared_from_this() == s);
+            weak = s;
+            assert(!weak.expired());
+        }
+        assert(weak.expired());
+        weak.reset();
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try {
+            ptr->shared_from_this();
+            assert(false);
+        } catch (std::bad_weak_ptr const&) {
+        } catch (...) { assert(false); }
+#endif
+        {
+            std::shared_ptr<T> s2(ptr, &nullDeleter);
+            assert(ptr->shared_from_this() == s2);
+        }
+        delete ptr;
+        assert(globalMemCounter.checkOutstandingNewEq(0));
     }
     // Test weak_from_this_methods
 #if TEST_STD_VER > 14

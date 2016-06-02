@@ -33,6 +33,7 @@ Using Clang as a Compiler
    ControlFlowIntegrity
    LTOVisibility
    SafeStack
+   SourceBasedCodeCoverage
    Modules
    MSVCCompatibility
    CommandGuide/index

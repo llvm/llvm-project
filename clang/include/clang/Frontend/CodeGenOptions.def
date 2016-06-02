@@ -58,7 +58,7 @@ CODEGENOPT(DisableLLVMPasses , 1, 0) ///< Don't run any LLVM IR passes to get
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
 CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what
-                                     ///< Decl* various IR entities came from. 
+                                     ///< Decl* various IR entities came from.
                                      ///< Only useful when running CodeGen as a
                                      ///< subroutine.
 CODEGENOPT(EmitGcovArcs      , 1, 0) ///< Emit coverage data files, aka. GCDA.
@@ -103,7 +103,7 @@ CODEGENOPT(NoInline          , 1, 0) ///< Set when -fno-inline is enabled.
 CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 /// \brief Method of Objective-C dispatch to use.
-ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy) 
+ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
 CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer is
                                         ///< enabled.
 VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
@@ -125,8 +125,8 @@ CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
 CODEGENOPT(StructPathTBAA    , 1, 0) ///< Whether or not to use struct-path TBAA.
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
-CODEGENOPT(SanitizeAddressZeroBaseShadow , 1, 0) ///< Map shadow memory at zero
-                                                 ///< offset in AddressSanitizer.
+CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
+                                                ///< in AddressSanitizer
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
                                              ///< MemorySanitizer
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
@@ -172,7 +172,7 @@ CODEGENOPT(StackRealignment  , 1, 0) ///< Control whether to force stack
                                      ///< realignment.
 CODEGENOPT(UseInitArray      , 1, 0) ///< Control whether to use .init_array or
                                      ///< .ctors.
-VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack 
+VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack
                                             ///< alignment, if not 0.
 VALUE_CODEGENOPT(StackProbeSize    , 32, 4096) ///< Overrides default stack
                                                ///< probe size, even if 0.
@@ -182,8 +182,8 @@ CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
 CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
                                    ///< external references to a PCH or module.
 
-CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should 
-                                       ///< contain explicit imports for 
+CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
+                                       ///< contain explicit imports for
                                        ///< anonymous namespaces
 
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
