@@ -4842,13 +4842,19 @@ SwiftLanguageRuntime::GetErrorBackstopName ()
 }
 
 ConstString
-SwiftLanguageRuntime::GetStandardLibraryName ()
+SwiftLanguageRuntime::GetStandardLibraryBaseName()
 {
     static ConstString g_swiftCore("swiftCore");
+    return g_swiftCore;
+}
+
+ConstString
+SwiftLanguageRuntime::GetStandardLibraryName ()
+{
     PlatformSP platform_sp(m_process->GetTarget().GetPlatform());
     if (platform_sp)
-        return platform_sp->GetFullNameForDylib(g_swiftCore);
-    return g_swiftCore;
+        return platform_sp->GetFullNameForDylib(GetStandardLibraryBaseName());
+    return GetStandardLibraryBaseName();
 }
 
 bool

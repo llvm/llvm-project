@@ -432,6 +432,9 @@ public:
     ConstString
     GetStandardLibraryName();
     
+    ConstString
+    GetStandardLibraryBaseName();
+    
     virtual bool
     GetReferenceCounts (ValueObject& valobj, size_t &strong, size_t &weak);
 

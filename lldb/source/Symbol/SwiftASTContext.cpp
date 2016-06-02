@@ -3738,7 +3738,7 @@ SwiftASTContext::LoadModule (swift::ModuleDecl *swift_module, Process &process, 
 
         swift::LibraryKind library_kind = link_lib.getKind();
 
-        Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES|LIBLLDB_LOG_TEMPORARY));
+        Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES));
         if (log)
             log->Printf ("\nLoading link library \"%s\" of kind: %d.", library_name, library_kind);
 
@@ -3905,6 +3905,25 @@ SwiftASTContext::LoadLibraryUsingPaths (Process &process,
 
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES|LIBLLDB_LOG_TEMPORARY));
     
+    SwiftLanguageRuntime *runtime = process.GetSwiftLanguageRuntime();
+    if (!runtime)
+    {
+        all_dlopen_errors.PutCString("Can't load Swift libraries without a language runtime.");
+        return false;
+    }
+    
+    if (ConstString::Equals(runtime->GetStandardLibraryBaseName(), ConstString(library_name)))
+    {
+        // Never dlopen the standard library.  Some binaries statically link to the Swift standard library
+        // and dlopening it here will cause ObjC runtime conflicts.
+        // If you want to run Swift expressions you have to arrange to load the swift standard library 
+        // by hand before doing so.
+        if (log)
+            log->Printf("Skipping swift standard library \"%s\" - we don't hand load that one.",
+                        runtime->GetStandardLibraryBaseName().AsCString());
+        return true;
+    }
+
     PlatformSP platform_sp(process.GetTarget().GetPlatform());
     
     std::string library_fullname;
@@ -3923,7 +3942,7 @@ SwiftASTContext::LoadLibraryUsingPaths (Process &process,
         return false;
 #endif
     }
-    
+        
     ModuleSpec module_spec;
     module_spec.GetFileSpec().GetFilename().SetCString(library_fullname.c_str());
     lldb_private::ModuleList matching_module_list;
