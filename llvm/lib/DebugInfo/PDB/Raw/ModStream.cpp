@@ -45,6 +45,10 @@ Error ModStream::reload() {
     return EC;
   if (auto EC = Reader.readStreamRef(C13LinesSubstream, C13Size))
     return EC;
+  ArrayRef<uint8_t> LineBytes;
+  codeview::StreamReader LinesReader(C13LinesSubstream);
+  if (auto EC = LinesReader.readBytes(LineBytes, C13LinesSubstream.getLength()))
+    return EC;
 
   uint32_t GlobalRefsSize;
   if (auto EC = Reader.readInteger(GlobalRefsSize))

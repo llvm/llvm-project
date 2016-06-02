@@ -44,6 +44,8 @@ enum class SimpleTypeKind : uint32_t {
   UInt64Quad = 0x0023,  // 64 bit unsigned
   Int64 = 0x0076,       // 64 bit signed int
   UInt64 = 0x0077,      // 64 bit unsigned int
+  Int128Oct = 0x0014,   // 128 bit signed int
+  UInt128Oct = 0x0024,  // 128 bit unsigned int
   Int128 = 0x0078,      // 128 bit signed int
   UInt128 = 0x0079,     // 128 bit unsigned int
 
@@ -55,15 +57,19 @@ enum class SimpleTypeKind : uint32_t {
   Float80 = 0x0042,                 // 80 bit real
   Float128 = 0x0043,                // 128 bit real
 
-  Complex32 = 0x0050,  // 32 bit complex
-  Complex64 = 0x0051,  // 64 bit complex
-  Complex80 = 0x0052,  // 80 bit complex
-  Complex128 = 0x0053, // 128 bit complex
+  Complex16 = 0x0056,                 // 16 bit complex
+  Complex32 = 0x0050,                 // 32 bit complex
+  Complex32PartialPrecision = 0x0055, // 32 bit PP complex
+  Complex48 = 0x0054,                 // 48 bit complex
+  Complex64 = 0x0051,                 // 64 bit complex
+  Complex80 = 0x0052,                 // 80 bit complex
+  Complex128 = 0x0053,                // 128 bit complex
 
-  Boolean8 = 0x0030,  // 8 bit boolean
-  Boolean16 = 0x0031, // 16 bit boolean
-  Boolean32 = 0x0032, // 32 bit boolean
-  Boolean64 = 0x0033  // 64 bit boolean
+  Boolean8 = 0x0030,   // 8 bit boolean
+  Boolean16 = 0x0031,  // 16 bit boolean
+  Boolean32 = 0x0032,  // 32 bit boolean
+  Boolean64 = 0x0033,  // 64 bit boolean
+  Boolean128 = 0x0034, // 128 bit boolean
 };
 
 enum class SimpleTypeMode : uint32_t {

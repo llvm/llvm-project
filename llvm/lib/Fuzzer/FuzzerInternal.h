@@ -25,6 +25,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "FuzzerExtFunctions.h"
 #include "FuzzerInterface.h"
 #include "FuzzerTracePC.h"
 
@@ -42,7 +43,7 @@
 namespace fuzzer {
 
 typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
-int FuzzerDriver(int argc, char **argv, UserCallback Callback);
+int FuzzerDriver(int *argc, char ***argv, UserCallback Callback);
 
 using namespace std::chrono;
 typedef std::vector<uint8_t> Unit;
@@ -468,6 +469,9 @@ private:
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;
+
+  // Interface to functions that may or may not be available.
+  ExternalFunctions EF;
 };
 
 }; // namespace fuzzer

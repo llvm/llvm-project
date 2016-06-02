@@ -47,6 +47,8 @@
 
 # CHECK: UNRESOLVED: shtest-format :: no-test-line.txt
 # CHECK: PASS: shtest-format :: pass.txt
+# CHECK: UNSUPPORTED: shtest-format :: requires-any-missing.txt
+# CHECK: PASS: shtest-format :: requires-any-present.txt
 # CHECK: UNSUPPORTED: shtest-format :: requires-missing.txt
 # CHECK: PASS: shtest-format :: requires-present.txt
 # CHECK: UNSUPPORTED: shtest-format :: unsupported_dir/some-test.txt
@@ -69,9 +71,9 @@
 # CHECK: shtest-format :: external_shell/fail_with_bad_encoding.txt
 # CHECK: shtest-format :: fail.txt
 
-# CHECK: Expected Passes    : 4
+# CHECK: Expected Passes    : 5
 # CHECK: Expected Failures  : 3
-# CHECK: Unsupported Tests  : 2
+# CHECK: Unsupported Tests  : 3
 # CHECK: Unresolved Tests   : 1
 # CHECK: Unexpected Passes  : 1
 # CHECK: Unexpected Failures: 3

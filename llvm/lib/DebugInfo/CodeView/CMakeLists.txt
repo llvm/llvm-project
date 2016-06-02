@@ -1,6 +1,7 @@
 add_llvm_library(LLVMDebugInfoCodeView
   ByteStream.cpp
   CodeViewError.cpp
+  EnumTables.cpp
   FieldListRecordBuilder.cpp
   Line.cpp
   ListRecordBuilder.cpp

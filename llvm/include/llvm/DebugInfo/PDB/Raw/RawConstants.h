@@ -1,4 +1,4 @@
-//===- PDBRawConstants.h ----------------------------------------*- C++ -*-===//
+//===- RawConstants.h -------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,7 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBRAWCONSTANTS_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBRAWCONSTANTS_H
 
-#include "llvm/Support/Endian.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 
 #include <cstdint>
 
@@ -46,6 +46,11 @@ enum PdbRaw_TpiVer : uint32_t {
   PdbTpiV80 = 20040203,
 };
 
+enum PdbRaw_DbiSecContribVer : uint32_t {
+  DbiSecContribVer60 = 0xeffe0000 + 19970605,
+  DbiSecContribV2 = 0xeffe0000 + 20140516
+};
+
 enum SpecialStream : uint32_t {
   // Stream 0 contains the copy of previous version of the MSF directory.
   // We are not currently using it, but technically if we find the main
@@ -73,17 +78,14 @@ enum class DbgHeaderType : uint16_t {
   Max
 };
 
-// This struct is defined as "SO" in langapi/include/pdb.h.
-struct SectionOffset {
-  support::ulittle32_t Off;
-  support::ulittle16_t Isect;
-  char Padding[2];
-};
-
-// This is HRFile.
-struct PSHashRecord {
-  support::ulittle32_t Off; // Offset in the symbol record stream
-  support::ulittle32_t CRef;
+enum class OMFSegDescFlags : uint16_t {
+  Read = 1 << 0,              // Segment is readable.
+  Write = 1 << 1,             // Segment is writable.
+  Execute = 1 << 2,           // Segment is executable.
+  AddressIs32Bit = 1 << 3,    // Descriptor describes a 32-bit linear address.
+  IsSelector = 1 << 8,        // Frame represents a selector.
+  IsAbsoluteAddress = 1 << 9, // Frame represents an absolute address.
+  IsGroup = 1 << 10           // If set, descriptor represents a group.
 };
 
 } // end namespace pdb

@@ -519,6 +519,14 @@ void call_operator_noexcept_test()
         static_assert(noexcept(cret()), "call should be noexcept");
     }
     {
+        using T = NoExceptCallable<NoExceptEvilBool>;
+        T value(true);
+        auto ret = std::not_fn(value);
+        static_assert(noexcept(ret()), "call should not be noexcept");
+        auto const& cret = ret;
+        static_assert(noexcept(cret()), "call should not be noexcept");
+    }
+    {
         using T = NoExceptCallable<EvilBool>;
         T value(true);
         auto ret = std::not_fn(value);

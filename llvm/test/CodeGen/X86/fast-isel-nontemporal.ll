@@ -260,7 +260,7 @@ define void @test_nt32xi8(<32 x i8>* nocapture %ptr, <32 x i8> %X) {
 ;
 ; AVX-LABEL: test_nt32xi8:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -282,7 +282,7 @@ define void @test_nt16xi16(<16 x i16>* nocapture %ptr, <16 x i16> %X) {
 ;
 ; AVX-LABEL: test_nt16xi16:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -304,7 +304,7 @@ define void @test_nt8xi32(<8 x i32>* nocapture %ptr, <8 x i32> %X) {
 ;
 ; AVX-LABEL: test_nt8xi32:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -404,8 +404,8 @@ define void @test_nt64xi8(<64 x i8>* nocapture %ptr, <64 x i8> %X) {
 ;
 ; AVX-LABEL: test_nt64xi8:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovntps %ymm0, (%rdi)
-; AVX-NEXT:    vmovntps %ymm1, 32(%rdi)
+; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
+; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -435,8 +435,8 @@ define void @test_nt32xi16(<32 x i16>* nocapture %ptr, <32 x i16> %X) {
 ;
 ; AVX-LABEL: test_nt32xi16:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovntps %ymm0, (%rdi)
-; AVX-NEXT:    vmovntps %ymm1, 32(%rdi)
+; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
+; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -466,8 +466,8 @@ define void @test_nt16xi32(<16 x i32>* nocapture %ptr, <16 x i32> %X) {
 ;
 ; AVX-LABEL: test_nt16xi32:
 ; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vmovntps %ymm0, (%rdi)
-; AVX-NEXT:    vmovntps %ymm1, 32(%rdi)
+; AVX-NEXT:    vmovntdq %ymm0, (%rdi)
+; AVX-NEXT:    vmovntdq %ymm1, 32(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;

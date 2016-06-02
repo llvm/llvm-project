@@ -92,7 +92,7 @@
 ; CHECK:       LinkageName: ?f@@YAXMN_J@Z
 ; CHECK:     }
 ; CHECK:     Local {
-; CHECK:       Type: __int64 (0x76)
+; CHECK:       Type: __int64 (0x13)
 ; CHECK:       Flags [ (0x1)
 ; CHECK:         IsParameter (0x1)
 ; CHECK:       ]

@@ -75,7 +75,7 @@ int main()
         assert(G::n_alive == 1);
     }
     assert(G::n_alive == 0);
-#ifndef TEST_HAS_NO_EXCEPTION
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::thread t0(foo);
         assert(t0.joinable());

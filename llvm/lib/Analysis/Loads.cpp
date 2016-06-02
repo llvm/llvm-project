@@ -25,23 +25,6 @@
 
 using namespace llvm;
 
-static bool isDereferenceableFromAttribute(const Value *BV, APInt Size,
-                                           const DataLayout &DL,
-                                           const Instruction *CtxI,
-                                           const DominatorTree *DT,
-                                           const TargetLibraryInfo *TLI) {
-  bool CheckForNonNull = false;
-  APInt DerefBytes(Size.getBitWidth(),
-                   BV->getPointerDereferenceableBytes(CheckForNonNull));
-
-  if (DerefBytes.getBoolValue())
-    if (DerefBytes.uge(Size))
-      if (!CheckForNonNull || isKnownNonNullAt(BV, CtxI, DT, TLI))
-        return true;
-
-  return false;
-}
-
 static bool isAligned(const Value *Base, APInt Offset, unsigned Align,
                       const DataLayout &DL) {
   APInt BaseAlign(Offset.getBitWidth(), Base->getPointerAlignment(DL));
@@ -75,23 +58,19 @@ static bool isDereferenceableAndAlignedPointer(
   // Note that it is not safe to speculate into a malloc'd region because
   // malloc may return null.
 
-  bool CheckForNonNull;
-  if (V->isPointerDereferenceable(CheckForNonNull)) {
-    Type *ETy = V->getType()->getPointerElementType();
-    if (ETy->isSized() && Size.ule(DL.getTypeStoreSize(ETy))) {
-      if (CheckForNonNull && !isKnownNonNullAt(V, CtxI, DT, TLI))
-        return false;
-      return isAligned(V, Align, DL);
-    }
-  }
-
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
   if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V))
     return isDereferenceableAndAlignedPointer(BC->getOperand(0), Align, Size,
                                               DL, CtxI, DT, TLI, Visited);
 
-  if (isDereferenceableFromAttribute(V, Size, DL, CtxI, DT, TLI))
-    return isAligned(V, Align, DL);
+  bool CheckForNonNull = false;
+  APInt KnownDerefBytes(Size.getBitWidth(),
+                        V->getPointerDereferenceableBytes(DL, CheckForNonNull));
+  if (KnownDerefBytes.getBoolValue()) {
+    if (KnownDerefBytes.uge(Size))
+      if (!CheckForNonNull || isKnownNonNullAt(V, CtxI, DT, TLI))
+        return isAligned(V, Align, DL);
+  }
 
   // For GEPs, determine if the indexing lands within the allocated object.
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {

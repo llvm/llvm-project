@@ -44,8 +44,8 @@ static const char DataAry[] = {'A', 'B', 'C', 'F', 'E',
 class DiscontiguousFile : public IPDBFile {
 public:
   DiscontiguousFile()
-      : Blocks(&BlocksAry[0], &BlocksAry[10]), Data(&DataAry[0], &DataAry[10]) {
-  }
+      : Blocks(std::begin(BlocksAry), std::end(BlocksAry)),
+        Data(std::begin(DataAry), std::end(DataAry)) {}
 
   virtual uint32_t getBlockSize() const override { return 1; }
   virtual uint32_t getBlockCount() const override { return 10; }
@@ -79,6 +79,8 @@ TEST(MappedBlockStreamTest, ReadBeyondEndOfStreamRef) {
   EXPECT_NO_ERROR(R.readStreamRef(SR, 0U));
   ArrayRef<uint8_t> Buffer;
   EXPECT_ERROR(SR.readBytes(0U, 1U, Buffer));
+  EXPECT_NO_ERROR(R.readStreamRef(SR, 1U));
+  EXPECT_ERROR(SR.readBytes(1U, 1U, Buffer));
 }
 
 // Tests that a read which outputs into a full destination buffer works and

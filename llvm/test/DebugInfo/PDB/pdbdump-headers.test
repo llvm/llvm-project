@@ -1,7 +1,7 @@
 ; RUN: llvm-pdbdump -raw-headers -raw-tpi-records -raw-tpi-record-bytes -raw-module-syms \
 ; RUN:              -raw-sym-record-bytes -raw-publics -raw-module-files -raw-stream-name=/names \
 ; RUN:              -raw-stream-summary -raw-stream-blocks -raw-ipi-records -raw-ipi-record-bytes \
-; RUN:              %p/Inputs/empty.pdb \
+; RUN:              -raw-section-contribs -raw-section-map %p/Inputs/empty.pdb \
 ; RUN:              | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbdump -raw-all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
 ; RUN: llvm-pdbdump -raw-headers -raw-stream-name=/names -raw-modules -raw-module-files \
@@ -417,7 +417,11 @@
 ; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 4096
 ; EMPTY-NEXT:             Length: 4122
-; EMPTY-NEXT:             Characteristics: 0x60000020
+; EMPTY-NEXT:             Characteristics [ (0x60000020)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Name: .text
 ; EMPTY-NEXT:           }
 ; EMPTY-NEXT:           Bytes (
@@ -428,7 +432,11 @@
 ; EMPTY-NEXT:         {
 ; EMPTY-NEXT:           COFF Group {
 ; EMPTY-NEXT:             Size: 4122
-; EMPTY-NEXT:             Characteristics: 0x60000020
+; EMPTY-NEXT:             Characteristics [ (0x60000020)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Offset: 0
 ; EMPTY-NEXT:             Segment: 1
 ; EMPTY-NEXT:             Name: .text$mn
@@ -445,7 +453,10 @@
 ; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 12288
 ; EMPTY-NEXT:             Length: 690
-; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Name: .rdata
 ; EMPTY-NEXT:           }
 ; EMPTY-NEXT:           Bytes (
@@ -456,7 +467,10 @@
 ; EMPTY-NEXT:         {
 ; EMPTY-NEXT:           COFF Group {
 ; EMPTY-NEXT:             Size: 323
-; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Offset: 0
 ; EMPTY-NEXT:             Segment: 2
 ; EMPTY-NEXT:             Name: .rdata
@@ -469,7 +483,10 @@
 ; EMPTY-NEXT:         {
 ; EMPTY-NEXT:           COFF Group {
 ; EMPTY-NEXT:             Size: 0
-; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Offset: 323
 ; EMPTY-NEXT:             Segment: 2
 ; EMPTY-NEXT:             Name: .edata
@@ -482,7 +499,10 @@
 ; EMPTY-NEXT:         {
 ; EMPTY-NEXT:           COFF Group {
 ; EMPTY-NEXT:             Size: 366
-; EMPTY-NEXT:             Characteristics: 0x40000040
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Offset: 324
 ; EMPTY-NEXT:             Segment: 2
 ; EMPTY-NEXT:             Name: .rdata$debug
@@ -499,7 +519,11 @@
 ; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 16384
 ; EMPTY-NEXT:             Length: 4
-; EMPTY-NEXT:             Characteristics: 0xC0000040
+; EMPTY-NEXT:             Characteristics [ (0xC0000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Name: .data
 ; EMPTY-NEXT:           }
 ; EMPTY-NEXT:           Bytes (
@@ -510,7 +534,11 @@
 ; EMPTY-NEXT:         {
 ; EMPTY-NEXT:           COFF Group {
 ; EMPTY-NEXT:             Size: 4
-; EMPTY-NEXT:             Characteristics: 0xC0000080
+; EMPTY-NEXT:             Characteristics [ (0xC0000080)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Offset: 0
 ; EMPTY-NEXT:             Segment: 3
 ; EMPTY-NEXT:             Name: .bss
@@ -527,7 +555,11 @@
 ; EMPTY-NEXT:             Reserved: 0
 ; EMPTY-NEXT:             Rva: 20480
 ; EMPTY-NEXT:             Length: 8
-; EMPTY-NEXT:             Characteristics: 0x42000040
+; EMPTY-NEXT:             Characteristics [ (0x42000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
 ; EMPTY-NEXT:             Name: .reloc
 ; EMPTY-NEXT:           }
 ; EMPTY-NEXT:           Bytes (
@@ -539,6 +571,183 @@
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:   ]
 ; EMPTY-NEXT: }
+; EMPTY-NEXT: Section Contributions [
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 1
+; EMPTY-NEXT:     Off: 0
+; EMPTY-NEXT:     Size: 10
+; EMPTY-NEXT:     Characteristics [ (0x60000020)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 1
+; EMPTY-NEXT:     Off: 16
+; EMPTY-NEXT:     Size: 10
+; EMPTY-NEXT:     Characteristics [ (0x60500020)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 0
+; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 3617027124
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 2
+; EMPTY-NEXT:     Off: 0
+; EMPTY-NEXT:     Size: 56
+; EMPTY-NEXT:     Characteristics [ (0x40000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 2
+; EMPTY-NEXT:     Off: 324
+; EMPTY-NEXT:     Size: 72
+; EMPTY-NEXT:     Characteristics [ (0x40300040)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 2
+; EMPTY-NEXT:     Off: 396
+; EMPTY-NEXT:     Size: 20
+; EMPTY-NEXT:     Characteristics [ (0x40300040)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 3
+; EMPTY-NEXT:     Off: 0
+; EMPTY-NEXT:     Size: 4
+; EMPTY-NEXT:     Characteristics [ (0xC0300080)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 0
+; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
+; EMPTY-NEXT: Section Map [
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x10D)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       Execute (0x4)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 269
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 1
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 4122
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x109)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 265
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 2
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 690
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x10B)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:       Write (0x2)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 267
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 3
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 4
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x109)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 265
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 4
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 8
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x208)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsAbsoluteAddress (0x200)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 520
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 0
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 4294967295
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
 ; EMPTY:      Publics Stream {
 ; EMPTY-NEXT:   Stream number: 7
 ; EMPTY-NEXT:   SymHash: 556
@@ -935,14 +1144,22 @@
 ; ALL:             Reserved: 0
 ; ALL:             Rva: 4096
 ; ALL:             Length: 4122
-; ALL:             Characteristics: 0x60000020
+; ALL:             Characteristics [ (0x60000020)
+; ALL:               IMAGE_SCN_CNT_CODE (0x20)
+; ALL:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
 ; ALL:             Name: .text
 ; ALL:           }
 ; ALL:         }
 ; ALL:         {
 ; ALL:           COFF Group {
 ; ALL:             Size: 4122
-; ALL:             Characteristics: 0x60000020
+; ALL:             Characteristics [ (0x60000020)
+; ALL:               IMAGE_SCN_CNT_CODE (0x20)
+; ALL:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
 ; ALL:             Offset: 0
 ; ALL:             Segment: 1
 ; ALL:             Name: .text$mn
@@ -955,14 +1172,20 @@
 ; ALL:             Reserved: 0
 ; ALL:             Rva: 12288
 ; ALL:             Length: 690
-; ALL:             Characteristics: 0x40000040
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
 ; ALL:             Name: .rdata
 ; ALL:           }
 ; ALL:         }
 ; ALL:         {
 ; ALL:           COFF Group {
 ; ALL:             Size: 323
-; ALL:             Characteristics: 0x40000040
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
 ; ALL:             Offset: 0
 ; ALL:             Segment: 2
 ; ALL:             Name: .rdata
@@ -971,7 +1194,10 @@
 ; ALL:         {
 ; ALL:           COFF Group {
 ; ALL:             Size: 0
-; ALL:             Characteristics: 0x40000040
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
 ; ALL:             Offset: 323
 ; ALL:             Segment: 2
 ; ALL:             Name: .edata
@@ -980,7 +1206,10 @@
 ; ALL:         {
 ; ALL:           COFF Group {
 ; ALL:             Size: 366
-; ALL:             Characteristics: 0x40000040
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
 ; ALL:             Offset: 324
 ; ALL:             Segment: 2
 ; ALL:             Name: .rdata$debug
@@ -993,14 +1222,22 @@
 ; ALL:             Reserved: 0
 ; ALL:             Rva: 16384
 ; ALL:             Length: 4
-; ALL:             Characteristics: 0xC0000040
+; ALL:             Characteristics [ (0xC0000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:             ]
 ; ALL:             Name: .data
 ; ALL:           }
 ; ALL:         }
 ; ALL:         {
 ; ALL:           COFF Group {
 ; ALL:             Size: 4
-; ALL:             Characteristics: 0xC0000080
+; ALL:             Characteristics [ (0xC0000080)
+; ALL:               IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:             ]
 ; ALL:             Offset: 0
 ; ALL:             Segment: 3
 ; ALL:             Name: .bss
@@ -1013,7 +1250,11 @@
 ; ALL:             Reserved: 0
 ; ALL:             Rva: 20480
 ; ALL:             Length: 8
-; ALL:             Characteristics: 0x42000040
+; ALL:             Characteristics [ (0x42000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
 ; ALL:             Name: .reloc
 ; ALL:           }
 ; ALL:         }
@@ -1021,6 +1262,157 @@
 ; ALL:     }
 ; ALL:   ]
 ; ALL: }
+; ALL: Section Contributions [
+; ALL:   Contribution {
+; ALL:     ISect: 1
+; ALL:     Off: 0
+; ALL:     Size: 10
+; ALL:     Characteristics [ (0x60000020)
+; ALL:       IMAGE_SCN_CNT_CODE (0x20)
+; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 1
+; ALL:     Off: 16
+; ALL:     Size: 10
+; ALL:     Characteristics [ (0x60500020)
+; ALL:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+; ALL:       IMAGE_SCN_CNT_CODE (0x20)
+; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 0
+; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:     }
+; ALL:     Data CRC: 3617027124
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 2
+; ALL:     Off: 0
+; ALL:     Size: 56
+; ALL:     Characteristics [ (0x40000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 2
+; ALL:     Off: 324
+; ALL:     Size: 72
+; ALL:     Characteristics [ (0x40300040)
+; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 2
+; ALL:     Off: 396
+; ALL:     Size: 20
+; ALL:     Characteristics [ (0x40300040)
+; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 3
+; ALL:     Off: 0
+; ALL:     Size: 4
+; ALL:     Characteristics [ (0xC0300080)
+; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; ALL:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 0
+; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL: ]
+; ALL: Section Map [
+; ALL:   Entry {
+; ALL:     Flags: 269
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 1
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 4122
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 265
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 2
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 690
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 267
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 3
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 4
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 265
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 4
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 8
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 520
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 0
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 4294967295
+; ALL:   }
+; ALL: ]
 ; ALL: Publics Stream {
 ; ALL:   Stream number: 7
 ; ALL:   SymHash: 556

@@ -36,6 +36,14 @@ public:
   Error readStreamRef(StreamRef &Ref);
   Error readStreamRef(StreamRef &Ref, uint32_t Length);
 
+  template <typename T> Error readEnum(T &Dest) {
+    typename std::underlying_type<T>::type N;
+    if (auto EC = readInteger(N))
+      return EC;
+    Dest = static_cast<T>(N);
+    return Error::success();
+  }
+
   template <typename T> Error readObject(const T *&Dest) {
     ArrayRef<uint8_t> Buffer;
     if (auto EC = readBytes(Buffer, sizeof(T)))

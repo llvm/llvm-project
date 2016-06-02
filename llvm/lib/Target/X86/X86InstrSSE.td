@@ -3631,28 +3631,14 @@ def MOVNTI_64mr : RI<0xC3, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
                   PS, Requires<[HasSSE2]>;
 } // SchedRW = [WriteStore]
 
-let Predicates = [HasAVX2, NoVLX] in {
-  def : Pat<(alignednontemporalstore (v8i32 VR256:$src), addr:$dst),
-            (VMOVNTDQYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignednontemporalstore (v16i16 VR256:$src), addr:$dst),
-            (VMOVNTDQYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignednontemporalstore (v32i8 VR256:$src), addr:$dst),
-            (VMOVNTDQYmr addr:$dst, VR256:$src)>;
-}
-
-// If integer type isn't available, use the floating point type.
-let Predicates = [HasAVX1Only] in {
-  def : Pat<(alignednontemporalstore (v4i64 VR256:$src), addr:$dst),
-            (VMOVNTPSYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignednontemporalstore (v8i32 VR256:$src), addr:$dst),
-            (VMOVNTPSYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignednontemporalstore (v16i16 VR256:$src), addr:$dst),
-            (VMOVNTPSYmr addr:$dst, VR256:$src)>;
-  def : Pat<(alignednontemporalstore (v32i8 VR256:$src), addr:$dst),
-            (VMOVNTPSYmr addr:$dst, VR256:$src)>;
-}
-
 let Predicates = [HasAVX, NoVLX] in {
+  def : Pat<(alignednontemporalstore (v8i32 VR256:$src), addr:$dst),
+            (VMOVNTDQYmr addr:$dst, VR256:$src)>;
+  def : Pat<(alignednontemporalstore (v16i16 VR256:$src), addr:$dst),
+            (VMOVNTDQYmr addr:$dst, VR256:$src)>;
+  def : Pat<(alignednontemporalstore (v32i8 VR256:$src), addr:$dst),
+            (VMOVNTDQYmr addr:$dst, VR256:$src)>;
+
   def : Pat<(alignednontemporalstore (v4i32 VR128:$src), addr:$dst),
             (VMOVNTDQmr addr:$dst, VR128:$src)>;
   def : Pat<(alignednontemporalstore (v8i16 VR128:$src), addr:$dst),

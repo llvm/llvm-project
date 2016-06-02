@@ -50,4 +50,9 @@ add_llvm_external_project(lldb)
 # file as external projects.
 add_llvm_implicit_projects()
 
+# Add subprojects specified using LLVM_EXTERNAL_PROJECTS
+foreach(p ${LLVM_EXTERNAL_PROJECTS})
+  add_llvm_external_project(${p})
+endforeach(p)
+
 set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)

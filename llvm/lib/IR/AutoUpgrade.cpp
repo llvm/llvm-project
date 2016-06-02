@@ -204,6 +204,16 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name.startswith("x86.avx512.mask.store.w.") ||
         Name.startswith("x86.avx512.mask.store.d.") ||
         Name.startswith("x86.avx512.mask.store.q.") ||
+        Name.startswith("x86.avx512.mask.loadu.p") ||
+        Name.startswith("x86.avx512.mask.loadu.b.") ||
+        Name.startswith("x86.avx512.mask.loadu.w.") ||
+        Name.startswith("x86.avx512.mask.loadu.d.") ||
+        Name.startswith("x86.avx512.mask.loadu.q.") ||
+        Name.startswith("x86.avx512.mask.load.p") ||
+        Name.startswith("x86.avx512.mask.load.b.") ||
+        Name.startswith("x86.avx512.mask.load.w.") ||
+        Name.startswith("x86.avx512.mask.load.d.") ||
+        Name.startswith("x86.avx512.mask.load.q.") ||
         Name == "x86.sse42.crc32.64.8" ||
         Name.startswith("x86.avx.vbroadcast.s") ||
         Name.startswith("x86.sse2.psll.dq") ||
@@ -395,11 +405,45 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder, LLVMContext &C,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i;
     Mask = Builder.CreateShuffleVector(Mask, Mask,
-                                           makeArrayRef(Indices, NumElts),
-                                           "extract");
+                                       makeArrayRef(Indices, NumElts),
+                                       "extract");
   }
 
   return Builder.CreateMaskedStore(Data, Ptr, Align, Mask);
+}
+
+static Value *UpgradeMaskedLoad(IRBuilder<> &Builder, LLVMContext &C,
+                                Value *Ptr, Value *Passthru, Value *Mask,
+                                bool Aligned) {
+  // Cast the pointer to the right type.
+  Ptr = Builder.CreateBitCast(Ptr,
+                             llvm::PointerType::getUnqual(Passthru->getType()));
+  unsigned Align =
+    Aligned ? cast<VectorType>(Passthru->getType())->getBitWidth() / 8 : 1;
+
+  // If the mask is all ones just emit a regular store.
+  if (const auto *C = dyn_cast<Constant>(Mask))
+    if (C->isAllOnesValue())
+      return Builder.CreateAlignedLoad(Ptr, Align);
+
+  // Convert the mask from an integer type to a vector of i1.
+  unsigned NumElts = Passthru->getType()->getVectorNumElements();
+  llvm::VectorType *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(),
+                             cast<IntegerType>(Mask->getType())->getBitWidth());
+  Mask = Builder.CreateBitCast(Mask, MaskTy);
+
+  // If we have less than 8 elements, then the starting mask was an i8 and
+  // we need to extract down to the right number of elements.
+  if (NumElts < 8) {
+    int Indices[4];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i;
+    Mask = Builder.CreateShuffleVector(Mask, Mask,
+                                       makeArrayRef(Indices, NumElts),
+                                       "extract");
+  }
+
+  return Builder.CreateMaskedLoad(Ptr, Align, Mask, Passthru);
 }
 
 // UpgradeIntrinsicCall - Upgrade a call to an old intrinsic to be a call the
@@ -525,6 +569,22 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Remove intrinsic.
       CI->eraseFromParent();
       return;
+    } else if (Name.startswith("llvm.x86.avx512.mask.loadu.p") ||
+               Name.startswith("llvm.x86.avx512.mask.loadu.b.") ||
+               Name.startswith("llvm.x86.avx512.mask.loadu.w.") ||
+               Name.startswith("llvm.x86.avx512.mask.loadu.d.") ||
+               Name.startswith("llvm.x86.avx512.mask.loadu.q.")) {
+      Rep = UpgradeMaskedLoad(Builder, C, CI->getArgOperand(0),
+                              CI->getArgOperand(1), CI->getArgOperand(2),
+                              /*Aligned*/false);
+    } else if (Name.startswith("llvm.x86.avx512.mask.load.p") ||
+               Name.startswith("llvm.x86.avx512.mask.load.b.") ||
+               Name.startswith("llvm.x86.avx512.mask.load.w.") ||
+               Name.startswith("llvm.x86.avx512.mask.load.d.") ||
+               Name.startswith("llvm.x86.avx512.mask.load.q.")) {
+      Rep = UpgradeMaskedLoad(Builder, C, CI->getArgOperand(0),
+                              CI->getArgOperand(1),CI->getArgOperand(2),
+                              /*Aligned*/true);
     } else if (Name.startswith("llvm.x86.xop.vpcom")) {
       Intrinsic::ID intID;
       if (Name.endswith("ub"))

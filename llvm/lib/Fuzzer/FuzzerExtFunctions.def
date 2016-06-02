@@ -1,0 +1,23 @@
+//===- FuzzerExtFunctions.def - External functions --------------*- C++ -* ===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+// This defines the external function pointers that
+// ``fuzzer::ExternalFunctions`` should contain and try to initialize.  The
+// EXT_FUNC macro must be defined at the point of inclusion. The signature of
+// the macro is:
+//
+// EXT_FUNC(<name>, <return_type>, <function_signature>, <warn_if_missing>)
+//===----------------------------------------------------------------------===//
+
+// Optional user functions
+EXT_FUNC(LLVMFuzzerInitialize, int, (int *argc, char ***argv), false);
+EXT_FUNC(LLVMFuzzerCustomMutator, size_t,
+         (uint8_t * Data, size_t Size, size_t MaxSize, unsigned int Seed),
+         false);
+
+// TODO: Sanitizer functions
