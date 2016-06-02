@@ -304,8 +304,46 @@ void bullet_five_tests() {
     }
 }
 
+struct CopyThrows {
+  CopyThrows() {}
+  CopyThrows(CopyThrows const&) {}
+  CopyThrows(CopyThrows&&) noexcept {}
+};
+
+struct NoThrowCallable {
+  void operator()() noexcept {}
+  void operator()(CopyThrows) noexcept {}
+};
+
+struct ThrowsCallable {
+  void operator()() {}
+};
+
+struct MemberObj {
+  int x;
+};
+
+void noexcept_test() {
+    {
+        NoThrowCallable obj;
+        CopyThrows arg;
+        static_assert(noexcept(std::invoke(obj)));
+        static_assert(!noexcept(std::invoke(obj, arg)));
+        static_assert(noexcept(std::invoke(obj, std::move(arg))));
+    }
+    {
+        ThrowsCallable obj;
+        static_assert(!noexcept(std::invoke(obj)));
+    }
+    {
+        MemberObj obj{42};
+        static_assert(noexcept(std::invoke(&MemberObj::x, obj)));
+    }
+}
+
 int main() {
     bullet_one_two_tests();
     bullet_three_four_tests();
     bullet_five_tests();
+    noexcept_test();
 }

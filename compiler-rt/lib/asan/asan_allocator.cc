@@ -681,12 +681,15 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
+u32 AsanChunkView::GetAllocStackId() { return chunk_->alloc_context_id; }
+u32 AsanChunkView::GetFreeStackId() { return chunk_->free_context_id; }
+
 StackTrace AsanChunkView::GetAllocStack() {
-  return GetStackTraceFromId(chunk_->alloc_context_id);
+  return GetStackTraceFromId(GetAllocStackId());
 }
 
 StackTrace AsanChunkView::GetFreeStack() {
-  return GetStackTraceFromId(chunk_->free_context_id);
+  return GetStackTraceFromId(GetFreeStackId());
 }
 
 void InitializeAllocator(const AllocatorOptions &options) {

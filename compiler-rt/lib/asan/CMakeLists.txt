@@ -13,6 +13,7 @@ set(ASAN_SOURCES
   asan_malloc_linux.cc
   asan_malloc_mac.cc
   asan_malloc_win.cc
+  asan_memory_profile.cc
   asan_poisoning.cc
   asan_posix.cc
   asan_report.cc

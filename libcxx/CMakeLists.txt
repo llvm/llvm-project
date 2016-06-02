@@ -247,6 +247,18 @@ set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
 
+# Include macros for adding and removing libc++ flags.
+include(HandleLibcxxFlags)
+
+# Target flags ================================================================
+# These flags get added to CMAKE_CXX_FLAGS and CMAKE_C_FLAGS so that
+# 'config-ix' use them during feature checks. It also adds them to both
+# 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
+add_target_flags_if(LIBCXX_BUILD_32_BITS "-m32")
+add_target_flags_if(LIBCXX_TARGET_TRIPLE "-target ${LIBCXX_TARGET_TRIPLE}")
+add_target_flags_if(LIBCXX_SYSROOT "--sysroot=${LIBCXX_SYSROOT}")
+add_target_flags_if(LIBCXX_GCC_TOOLCHAIN "-gcc-toolchain ${LIBCXX_GCC_TOOLCHAIN}")
+
 # Configure compiler.
 include(config-ix)
 
@@ -263,9 +275,6 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 #===============================================================================
 
 include(HandleLibCXXABI) # Setup the ABI library flags
-
-# Include macros for adding and removing libc++ flags.
-include(HandleLibcxxFlags)
 
 # Remove flags that may have snuck in.
 remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
@@ -288,11 +297,6 @@ endif()
 # headers
 add_compile_flags_if_supported(-nostdinc++)
 
-# Target flags ================================================================
-add_flags_if(LIBCXX_BUILD_32_BITS -m32)
-add_flags_if(LIBCXX_TARGET_TRIPLE "-target ${LIBCXX_TARGET_TRIPLE}")
-add_flags_if(LIBCXX_SYSROOT "--sysroot ${LIBCXX_SYSROOT}")
-add_flags_if(LIBCXX_GCC_TOOLCHAIN "-gcc-toolchain ${LIBCXX_GCC_TOOLCHAIN}")
 
 # Warning flags ===============================================================
 add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -15,6 +15,9 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+#include "pointer_comparison_test_helper.hpp"
+
 int main()
 {
     typedef std::greater<int> F;
@@ -25,7 +28,12 @@ int main()
     assert(!f(36, 36));
     assert(f(36, 6));
     assert(!f(6, 36));
-#if _LIBCPP_STD_VER > 11
+    {
+        // test total ordering of int* for greater<int*> and
+        // greater<void>.
+        do_pointer_comparison_test<int, std::greater>();
+    }
+#if TEST_STD_VER > 11
     typedef std::greater<> F2;
     const F2 f2 = F2();
     assert(!f2(36, 36));
