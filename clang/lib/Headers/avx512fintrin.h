@@ -9331,6 +9331,33 @@ _mm512_mask_compressstoreu_epi32 (void *__P, __mmask16 __U, __m512i __A)
                                              (__v4sf)_mm_setzero_ps(), \
                                              (__mmask8)(U), (int)(R)); })
 
+static __inline__ __m128 __DEFAULT_FN_ATTRS
+_mm_mask_cvtsd_ss (__m128 W, __mmask8 U, __m128 A, __m128d B)
+{
+  return __builtin_ia32_cvtsd2ss_round_mask ((__v4sf)(A),
+                                             (__v2df)(B),
+                                             (__v4sf)(W), 
+                                             (__mmask8)(U), _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline__ __m128 __DEFAULT_FN_ATTRS
+_mm_maskz_cvtsd_ss (__mmask8 U, __m128 A, __m128d B)
+{
+  return __builtin_ia32_cvtsd2ss_round_mask ((__v4sf)(A),
+                                             (__v2df)(B),
+                                             (__v4sf)_mm_setzero_ps(), 
+                                             (__mmask8)(U), _MM_FROUND_CUR_DIRECTION);
+}
+
+#define _mm_cvtss_i32 _mm_cvtss_si32
+#define _mm_cvtss_i64 _mm_cvtss_si64
+#define _mm_cvtsd_i32 _mm_cvtsd_si32
+#define _mm_cvtsd_i64 _mm_cvtsd_si64
+#define _mm_cvti32_sd _mm_cvtsi32_sd
+#define _mm_cvti64_sd _mm_cvtsi64_sd
+#define _mm_cvti32_ss _mm_cvtsi32_ss
+#define _mm_cvti64_ss _mm_cvtsi64_ss
+
 #define _mm_cvt_roundi64_sd(A, B, R) __extension__ ({ \
   (__m128d)__builtin_ia32_cvtsi2sd64((__v2df)(__m128d)(A), (long long)(B), \
                                      (int)(R)); })
@@ -9370,6 +9397,24 @@ _mm512_mask_compressstoreu_epi32 (void *__P, __mmask16 __U, __m512i __A)
                                               (__v4sf)(__m128)(B), \
                                               (__v2df)_mm_setzero_pd(), \
                                               (__mmask8)(U), (int)(R)); })
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_mask_cvtss_sd (__m128d W, __mmask8 U, __m128d A, __m128 B)
+{
+  return __builtin_ia32_cvtss2sd_round_mask((__v2df)(A),
+                                              (__v4sf)(B),
+                                              (__v2df)(W),
+                                              (__mmask8)(U), _MM_FROUND_CUR_DIRECTION); 
+}
+
+static __inline__ __m128d __DEFAULT_FN_ATTRS
+_mm_maskz_cvtss_sd (__mmask8 U, __m128d A, __m128 B)
+{
+  return __builtin_ia32_cvtss2sd_round_mask((__v2df)(A),
+                                              (__v4sf)(B),
+                                              (__v2df)_mm_setzero_pd(), 
+                                              (__mmask8)(U), _MM_FROUND_CUR_DIRECTION); 
+}
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_cvtu32_sd (__m128d __A, unsigned __B)

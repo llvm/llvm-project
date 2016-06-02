@@ -7266,3 +7266,80 @@ __m512 test_mm512_setr_ps (float __A, float __B, float __C, float __D,
     return _mm512_setr_ps( __A, __B, __C, __D, __E, __F, __G, __H,
                           __I, __J, __K, __L, __M, __N, __O, __P);
 }
+
+int test_mm_cvtss_i32(__m128 A) {
+  // CHECK-LABEL: test_mm_cvtss_i32
+  // CHECK: call i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
+  return _mm_cvtss_i32(A);
+}
+
+long long test_mm_cvtss_i64(__m128 A) {
+  // CHECK-LABEL: test_mm_cvtss_i64
+  // CHECK: call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %{{.*}})
+  return _mm_cvtss_i64(A);
+}
+
+__m128d test_mm_cvti32_sd(__m128d A, int B) {
+  // CHECK-LABEL: test_mm_cvti32_sd
+  // CHECK: sitofp i32 %{{.*}} to double
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
+  return _mm_cvti32_sd(A, B);
+}
+
+__m128d test_mm_cvti64_sd(__m128d A, long long B) {
+  // CHECK-LABEL: test_mm_cvti64_sd
+  // CHECK: sitofp i64 %{{.*}} to double
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
+  return _mm_cvti64_sd(A, B);
+}
+
+__m128 test_mm_cvti32_ss(__m128 A, int B) {
+  // CHECK-LABEL: test_mm_cvti32_ss
+  // CHECK: sitofp i32 %{{.*}} to float
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
+  return _mm_cvti32_ss(A, B);
+}
+
+__m128 test_mm_cvti64_ss(__m128 A, long long B) {
+  // CHECK-LABEL: test_mm_cvti64_ss
+  // CHECK: sitofp i64 %{{.*}} to float
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
+  return _mm_cvti64_ss(A, B);
+}
+
+int test_mm_cvtsd_i32(__m128d A) {
+  // CHECK-LABEL: test_mm_cvtsd_i32
+  // CHECK: call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> %{{.*}})
+  return _mm_cvtsd_i32(A);
+}
+
+long long test_mm_cvtsd_i64(__m128d A) {
+  // CHECK-LABEL: test_mm_cvtsd_i64
+  // CHECK: call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> %{{.*}})
+  return _mm_cvtsd_i64(A);
+}
+
+__m128d test_mm_mask_cvtss_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm_mask_cvtss_sd
+  // CHECK: @llvm.x86.avx512.mask.cvtss2sd.round
+  return _mm_mask_cvtss_sd(__W, __U, __A, __B); 
+}
+
+__m128d test_mm_maskz_cvtss_sd( __mmask8 __U, __m128d __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm_maskz_cvtss_sd
+  // CHECK: @llvm.x86.avx512.mask.cvtss2sd.round
+  return _mm_maskz_cvtss_sd( __U, __A, __B); 
+}
+
+__m128 test_mm_mask_cvtsd_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128d __B) {
+  // CHECK-LABEL: @test_mm_mask_cvtsd_ss
+  // CHECK: @llvm.x86.avx512.mask.cvtsd2ss.round
+  return _mm_mask_cvtsd_ss(__W, __U, __A, __B); 
+}
+
+__m128 test_mm_maskz_cvtsd_ss(__mmask8 __U, __m128 __A, __m128d __B) {
+  // CHECK-LABEL: @test_mm_maskz_cvtsd_ss
+  // CHECK: @llvm.x86.avx512.mask.cvtsd2ss.round
+  return _mm_maskz_cvtsd_ss(__U, __A, __B); 
+}
+

@@ -4122,9 +4122,11 @@ private:
         {
             if (__e && __e->__weak_this_.expired())
             {
-                __e->__weak_this_.__ptr_ = const_cast<_Yp*>(static_cast<const _Yp*>(__e));
-                __e->__weak_this_.__cntrl_ = __cntrl_;
+                weak_ptr<_Yp> __tmp;
+                __tmp.__ptr_ = const_cast<_Yp*>(static_cast<const _Yp*>(__e));
+                __tmp.__cntrl_ = __cntrl_;
                 __cntrl_->__add_weak();
+                __e->__weak_this_.swap(__tmp);
             }
         }
 
