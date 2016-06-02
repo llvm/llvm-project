@@ -44,8 +44,6 @@ static const char *const EndCfIntrinsic = "llvm.SI.end.cf";
 
 class SIAnnotateControlFlow : public FunctionPass {
 
-  static char ID;
-
   Type *Boolean;
   Type *Void;
   Type *Int64;
@@ -90,6 +88,8 @@ class SIAnnotateControlFlow : public FunctionPass {
   void closeControlFlow(BasicBlock *BB);
 
 public:
+  static char ID;
+
   SIAnnotateControlFlow():
     FunctionPass(ID) { }
 
@@ -111,6 +111,11 @@ public:
 };
 
 } // end anonymous namespace
+
+INITIALIZE_PASS_BEGIN(SIAnnotateControlFlow, DEBUG_TYPE,
+                      "Annotate SI Control Flow", false, false)
+INITIALIZE_PASS_END(SIAnnotateControlFlow, DEBUG_TYPE,
+                    "Annotate SI Control Flow", false, false)
 
 char SIAnnotateControlFlow::ID = 0;
 

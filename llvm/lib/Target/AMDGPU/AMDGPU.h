@@ -86,6 +86,9 @@ extern char &SIFixSGPRLiveRangesID;
 void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
 extern char &AMDGPUAnnotateUniformValuesPassID;
 
+void initializeSIAnnotateControlFlowPass(PassRegistry&);
+extern char &SIAnnotateControlFlowPassID;
+
 extern Target TheAMDGPUTarget;
 extern Target TheGCNTarget;
 

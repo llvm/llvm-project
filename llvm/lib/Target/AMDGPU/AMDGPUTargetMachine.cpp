@@ -52,6 +52,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
   initializeAMDGPUAnnotateUniformValuesPass(*PR);
+  initializeSIAnnotateControlFlowPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
