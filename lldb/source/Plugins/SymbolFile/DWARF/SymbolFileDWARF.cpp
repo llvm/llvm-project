@@ -1881,6 +1881,12 @@ SymbolFileDWARF::GetDIE (const DIERef &die_ref)
 std::unique_ptr<SymbolFileDWARFDwo>
 SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die)
 {
+    // If we are using a dSYM file, we never want the standard DWO files since
+    // the -gmodule support uses the same DWO machanism to specify full debug
+    // info files for modules.
+    if (GetDebugMapSymfile())
+        return nullptr;
+
     const char *dwo_name = cu_die.GetAttributeValueAsString(this, &dwarf_cu, DW_AT_GNU_dwo_name, nullptr);
     if (!dwo_name)
         return nullptr;
