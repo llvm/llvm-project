@@ -27,16 +27,21 @@ using namespace llvm;
 namespace {
 
 class AMDGPUPromoteAlloca : public FunctionPass,
-                       public InstVisitor<AMDGPUPromoteAlloca> {
-
-  static char ID;
+                            public InstVisitor<AMDGPUPromoteAlloca> {
+private:
+  const TargetMachine *TM;
   Module *Mod;
-  const AMDGPUSubtarget &ST;
   int LocalMemAvailable;
 
 public:
-  AMDGPUPromoteAlloca(const AMDGPUSubtarget &st) : FunctionPass(ID), ST(st),
-                                                   LocalMemAvailable(0) { }
+  static char ID;
+
+  AMDGPUPromoteAlloca(const TargetMachine *TM_ = nullptr) :
+    FunctionPass(ID),
+    TM (TM_),
+    Mod(nullptr),
+    LocalMemAvailable(0) { }
+
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
   const char *getPassName() const override { return "AMDGPU Promote Alloca"; }
@@ -47,12 +52,24 @@ public:
 
 char AMDGPUPromoteAlloca::ID = 0;
 
+INITIALIZE_TM_PASS(AMDGPUPromoteAlloca, DEBUG_TYPE,
+                   "AMDGPU promote alloca to vector or LDS", false, false)
+
+char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
+
 bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
+  if (!TM)
+    return false;
+
   Mod = &M;
   return false;
 }
 
 bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
+  if (!TM)
+    return false;
+
+  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
 
   FunctionType *FTy = F.getFunctionType();
 
@@ -428,6 +445,6 @@ void AMDGPUPromoteAlloca::visitAlloca(AllocaInst &I) {
   }
 }
 
-FunctionPass *llvm::createAMDGPUPromoteAlloca(const AMDGPUSubtarget &ST) {
-  return new AMDGPUPromoteAlloca(ST);
+FunctionPass *llvm::createAMDGPUPromoteAlloca(const TargetMachine *TM) {
+  return new AMDGPUPromoteAlloca(TM);
 }
