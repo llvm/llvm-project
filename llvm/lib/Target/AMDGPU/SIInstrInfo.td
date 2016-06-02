@@ -1788,7 +1788,8 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
                    list<SchedReadWrite> sched,
                    string revOpName = "", string asm = opName#"_e32 "#op_asm,
                    string alias_asm = opName#" "#op_asm> {
-  def "" : VOPC_Pseudo <ins, pattern, opName> {
+  def "" : VOPC_Pseudo <ins, pattern, opName>,
+           VOP2_REV<revOpName#"_e32", !eq(revOpName, opName)> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = sched;
   }
@@ -1819,7 +1820,8 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
 multiclass VOPC_Helper <vopc op, string opName, list<dag> pat32,
                         list<dag> pat64, bit DefExec, string revOp,
                         VOPProfile p, list<SchedReadWrite> sched> {
-  defm _e32 : VOPC_m <op, p.Ins32, p.Asm32, pat32, opName, DefExec, p, sched>;
+  defm _e32 : VOPC_m <op, p.Ins32, p.Asm32, pat32, opName, DefExec, p, sched,
+                      revOp>;
 
   defm _e64 : VOP3_C_m <op, (outs VOPDstS64:$dst), p.Ins64, opName#p.Asm64, pat64,
                         opName, p.HasModifiers, DefExec, revOp, sched>;
