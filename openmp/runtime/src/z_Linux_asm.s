@@ -1520,6 +1520,7 @@ __kmp_invoke_microtask:
 # if OMPT_SUPPORT
 	.cfi_offset r30, -16
 	std 30, -16(31)
+	std 1, 0(8)
 	mr 30, 8
 # endif
 
