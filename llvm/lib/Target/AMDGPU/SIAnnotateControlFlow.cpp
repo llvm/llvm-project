@@ -81,7 +81,8 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   void insertElse(BranchInst *Term);
 
-  Value *handleLoopCondition(Value *Cond, PHINode *Broken, llvm::Loop *L);
+  Value *handleLoopCondition(Value *Cond, PHINode *Broken,
+                             llvm::Loop *L, BranchInst *Term);
 
   void handleLoop(BranchInst *Term);
 
@@ -213,7 +214,7 @@ void SIAnnotateControlFlow::insertElse(BranchInst *Term) {
 
 /// \brief Recursively handle the condition leading to a loop
 Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
-                                                  llvm::Loop *L) {
+                                             llvm::Loop *L, BranchInst *Term) {
 
   // Only search through PHI nodes which are inside the loop.  If we try this
   // with PHI nodes that are outside of the loop, we end up inserting new PHI
@@ -237,7 +238,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
       }
 
       Phi->setIncomingValue(i, BoolFalse);
-      Value *PhiArg = handleLoopCondition(Incoming, Broken, L);
+      Value *PhiArg = handleLoopCondition(Incoming, Broken, L, Term);
       NewPhi->addIncoming(PhiArg, From);
     }
 
@@ -276,6 +277,11 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
     Value *Args[] = { Cond, Broken };
     return CallInst::Create(IfBreak, Args, "", Insert);
 
+  // Insert IfBreak before TERM for constant COND.
+  } else if (isa<ConstantInt>(Cond)) {
+    Value *Args[] = { Cond, Broken };
+    return CallInst::Create(IfBreak, Args, "", Term);
+
   } else {
     llvm_unreachable("Unhandled loop condition!");
   }
@@ -291,7 +297,7 @@ void SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 
   Value *Cond = Term->getCondition();
   Term->setCondition(BoolTrue);
-  Value *Arg = handleLoopCondition(Cond, Broken, L);
+  Value *Arg = handleLoopCondition(Cond, Broken, L, Term);
 
   for (pred_iterator PI = pred_begin(Target), PE = pred_end(Target);
        PI != PE; ++PI) {
