@@ -474,7 +474,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI =
       static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
-
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
   MRI = &MF.getRegInfo();
 
   WaitedOn = ZeroCounts;
@@ -492,6 +492,12 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock &MBB = *BI;
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
          I != E; ++I) {
+
+      // Insert required wait states for SMRD reading an SGPR written by a VALU
+      // instruction.
+      if (ST.getGeneration() <= AMDGPUSubtarget::SOUTHERN_ISLANDS &&
+          I->getOpcode() == AMDGPU::V_READFIRSTLANE_B32)
+        TII->insertWaitStates(std::next(I), 4);
 
       // Wait for everything before a barrier.
       if (I->getOpcode() == AMDGPU::S_BARRIER)
