@@ -4990,8 +4990,17 @@ ClangASTContext::GetEncoding (lldb::opaque_compiler_type_t type, uint64_t &count
             case clang::BuiltinType::Kind::OCLImage1dArray:
             case clang::BuiltinType::Kind::OCLImage1dBuffer:
             case clang::BuiltinType::Kind::OCLImage2d:
+            case clang::BuiltinType::Kind::OCLImage2dDepth:
             case clang::BuiltinType::Kind::OCLImage2dArray:
+            case clang::BuiltinType::Kind::OCLImage2dArrayDepth:
+            case clang::BuiltinType::Kind::OCLImage2dMSAA:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAA:
+            case clang::BuiltinType::Kind::OCLImage2dMSAADepth:
+            case clang::BuiltinType::Kind::OCLImage2dArrayMSAADepth:
             case clang::BuiltinType::Kind::OCLImage3d:
+            case clang::BuiltinType::Kind::OCLNDRange:
+            case clang::BuiltinType::Kind::OCLQueue:
+            case clang::BuiltinType::Kind::OCLReserveID:
             case clang::BuiltinType::Kind::OCLSampler:
             case clang::BuiltinType::Kind::OMPArraySection:
             case clang::BuiltinType::Kind::Overload:
