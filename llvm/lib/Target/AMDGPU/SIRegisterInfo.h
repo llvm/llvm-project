@@ -89,6 +89,10 @@ public:
   const TargetRegisterClass *getEquivalentVGPRClass(
                                           const TargetRegisterClass *SRC) const;
 
+  /// \returns A SGPR reg class with the same width as \p SRC
+  const TargetRegisterClass *getEquivalentSGPRClass(
+                                           const TargetRegisterClass *VRC) const;
+
   /// \returns The register class that is used for a sub-register of \p RC for
   /// the given \p SubIdx.  If \p SubIdx equals NoSubRegister, \p RC will
   /// be returned.

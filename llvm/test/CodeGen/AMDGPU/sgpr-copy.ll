@@ -375,5 +375,39 @@ bb71:                                             ; preds = %bb80, %bb38
   ret void
 }
 
+; Check the the resource descriptor is stored in an sgpr.
+; CHECK-LABEL: {{^}}mimg_srsrc_sgpr:
+; CHECK: image_sample v{{[0-9]+}}, 1, 0, 0, 0, 0, 0, 0, 0, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+define void @mimg_srsrc_sgpr([34 x <8 x i32>] addrspace(2)* byval %arg) #0 {
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp7 = getelementptr [34 x <8 x i32>], [34 x <8 x i32>] addrspace(2)* %arg, i32 0, i32 %tid
+  %tmp8 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp7, align 32, !tbaa !0
+  %tmp_bit = bitcast <8 x i32> %tmp8 to <32 x i8>
+  %tmp9 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> <i32 1061158912, i32 1048576000>, <32 x i8> %tmp_bit, <16 x i8> undef, i32 15)
+  %tmp10 = extractelement <4 x float> %tmp9, i32 0
+  %tmp12 = call i32 @llvm.SI.packf16(float undef, float %tmp10)
+  %tmp13 = bitcast i32 %tmp12 to float
+  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %tmp13, float undef, float undef, float undef)
+  ret void
+}
+
+; Check the the sampler is stored in an sgpr.
+; CHECK-LABEL: {{^}}mimg_ssamp_sgpr:
+; CHECK: image_sample v{{[0-9]+}}, 1, 0, 0, 0, 0, 0, 0, 0, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+define void @mimg_ssamp_sgpr([17 x <4 x i32>] addrspace(2)* byval %arg) #0 {
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp7 = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(2)* %arg, i32 0, i32 %tid
+  %tmp8 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp7, align 16, !tbaa !0
+  %tmp_bit = bitcast <4 x i32> %tmp8 to <16 x i8>
+  %tmp9 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> <i32 1061158912, i32 1048576000>, <32 x i8> undef, <16 x i8> %tmp_bit, i32 15)
+  %tmp10 = extractelement <4 x float> %tmp9, i32 0
+  %tmp12 = call i32 @llvm.SI.packf16(float %tmp10, float undef)
+  %tmp13 = bitcast i32 %tmp12 to float
+  call void @llvm.SI.export(i32 15, i32 1, i32 1, i32 0, i32 1, float %tmp13, float undef, float undef, float undef)
+  ret void
+}
+
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
+
 attributes #0 = { "ShaderType"="0" "unsafe-fp-math"="true" }
 attributes #1 = { nounwind readnone }
