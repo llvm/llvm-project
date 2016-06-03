@@ -8,6 +8,10 @@
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
+; HSAOPT: @mova_same_clause.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] undef, align 4
+; HSAOPT: @high_alignment.stack = internal unnamed_addr addrspace(3) global [256 x [8 x i32]] undef, align 16
+
+
 ; FUNC-LABEL: {{^}}mova_same_clause:
 
 ; R600: LDS_WRITE
@@ -46,6 +50,28 @@ entry:
   %2 = load i32, i32* %arrayidx10, align 4
   store i32 %2, i32 addrspace(1)* %out, align 4
   %arrayidx12 = getelementptr inbounds [5 x i32], [5 x i32]* %stack, i32 0, i32 1
+  %3 = load i32, i32* %arrayidx12
+  %arrayidx13 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 1
+  store i32 %3, i32 addrspace(1)* %arrayidx13
+  ret void
+}
+
+; OPT-LABEL: @high_alignment(
+; OPT: getelementptr inbounds [256 x [8 x i32]], [256 x [8 x i32]] addrspace(3)* @high_alignment.stack, i32 0, i32 %{{[0-9]+}}
+define void @high_alignment(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
+entry:
+  %stack = alloca [8 x i32], align 16
+  %0 = load i32, i32 addrspace(1)* %in, align 4
+  %arrayidx1 = getelementptr inbounds [8 x i32], [8 x i32]* %stack, i32 0, i32 %0
+  store i32 4, i32* %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, i32 addrspace(1)* %in, i32 1
+  %1 = load i32, i32 addrspace(1)* %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [8 x i32], [8 x i32]* %stack, i32 0, i32 %1
+  store i32 5, i32* %arrayidx3, align 4
+  %arrayidx10 = getelementptr inbounds [8 x i32], [8 x i32]* %stack, i32 0, i32 0
+  %2 = load i32, i32* %arrayidx10, align 4
+  store i32 %2, i32 addrspace(1)* %out, align 4
+  %arrayidx12 = getelementptr inbounds [8 x i32], [8 x i32]* %stack, i32 0, i32 1
   %3 = load i32, i32* %arrayidx12
   %arrayidx13 = getelementptr inbounds i32, i32 addrspace(1)* %out, i32 1
   store i32 %3, i32 addrspace(1)* %arrayidx13
