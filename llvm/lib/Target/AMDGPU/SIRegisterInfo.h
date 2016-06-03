@@ -49,6 +49,8 @@ public:
 
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
+  bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
+
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
@@ -162,7 +164,7 @@ private:
   void buildScratchLoadStore(MachineBasicBlock::iterator MI,
                              unsigned LoadStoreOp, unsigned Value,
                              unsigned ScratchRsrcReg, unsigned ScratchOffset,
-                             int64_t Offset, RegScavenger *RS) const;
+                             int64_t Offset) const;
 };
 
 } // End namespace llvm
