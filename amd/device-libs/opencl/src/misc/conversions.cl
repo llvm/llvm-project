@@ -1,18 +1,13 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-extern __attribute__((const)) float __cvt_f32_f16(uint);
-
-extern __attribute__((const)) uint __cvt_f16_rte_f32(float);
-extern __attribute__((const)) uint __cvt_f16_rtp_f32(float);
 extern __attribute__((const)) uint __cvt_f16_rtn_f32(float);
+extern __attribute__((const)) uint __cvt_f16_rtp_f32(float);
 extern __attribute__((const)) uint __cvt_f16_rtz_f32(float);
 
-extern __attribute__((const)) uint __cvt_f16_rte_f64(double);
-extern __attribute__((const)) uint __cvt_f16_rtp_f64(double);
 extern __attribute__((const)) uint __cvt_f16_rtn_f64(double);
+extern __attribute__((const)) uint __cvt_f16_rtp_f64(double);
 extern __attribute__((const)) uint __cvt_f16_rtz_f64(double);
-
 
 #define ATTR __attribute__((always_inline, overloadable, const))
 #define IATTR __attribute__((always_inline, const))

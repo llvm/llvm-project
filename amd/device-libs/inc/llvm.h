@@ -174,5 +174,9 @@ extern ulong __llvm_amdgcn_s_memrealtime(void) __asm("llvm.amdgcn.s.memrealtime"
 
 extern uint __attribute__((pure)) __llvm_amdgcn_ds_bpermute(uint, uint) __asm("llvm.amdgcn.ds.bpermute");
 
+// Operand bits: [0..3]=VM_CNT, [4..6]=EXP_CNT (Export), [8..11]=LGKM_CNT (LDS, GDS, Konstant, Message)
+extern void __llvm_amdgcn_s_waitcount(int) __asm("llvm.amdgcn.s.waitcount");
+
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // LLVM_H

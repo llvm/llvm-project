@@ -59,6 +59,10 @@ EXPU(half_exp10)
 EXPU(half_log2)
 EXPU(half_log)
 EXPU(half_log10)
+EXPU(half_recip)
+EXPU(half_rsqrt)
+EXPU(half_sin)
+EXPU(half_sqrt)
 EXPU(half_tan)
 
 CATTR float

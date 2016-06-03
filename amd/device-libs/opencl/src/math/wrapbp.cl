@@ -69,8 +69,11 @@ WRAPTAP(lgamma_r,float,,int)
 WRAPTAP(lgamma_r,double,,int)
 WRAPTAP(lgamma_r,half,,int)
 
+WRAPTAP(modf,float,,float)
+WRAPTAP(modf,double,,double)
+WRAPTAP(modf,half,,half)
+
 WRAPTAP(sincos,float,,float)
 WRAPTAP(sincos,double,,double)
 WRAPTAP(sincos,half,,half)
-
 
