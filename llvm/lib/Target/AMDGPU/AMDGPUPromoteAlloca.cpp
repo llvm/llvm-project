@@ -301,8 +301,21 @@ static bool collectUsesWithPtrTypes(Value *Val, std::vector<Value*> &WorkList) {
       return false;
 
     if (StoreInst *SI = dyn_cast_or_null<StoreInst>(UseInst)) {
+      if (SI->isVolatile())
+        return false;
+
       // Reject if the stored value is not the pointer operand.
       if (SI->getPointerOperand() != Val)
+        return false;
+    } else if (LoadInst *LI = dyn_cast_or_null<LoadInst>(UseInst)) {
+      if (LI->isVolatile())
+        return false;
+    } else if (AtomicRMWInst *RMW = dyn_cast_or_null<AtomicRMWInst>(UseInst)) {
+      if (RMW->isVolatile())
+        return false;
+    } else if (AtomicCmpXchgInst *CAS
+               = dyn_cast_or_null<AtomicCmpXchgInst>(UseInst)) {
+      if (CAS->isVolatile())
         return false;
     }
 
