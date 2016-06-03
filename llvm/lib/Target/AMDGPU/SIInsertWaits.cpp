@@ -505,14 +505,6 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
 
     // Wait for everything at the end of the MBB
     Changes |= insertWait(MBB, MBB.getFirstTerminator(), LastIssued);
-
-    // Functions returning something shouldn't contain S_ENDPGM, because other
-    // bytecode will be appended after it.
-    if (!ReturnsVoid) {
-      MachineBasicBlock::iterator I = MBB.getFirstTerminator();
-      if (I != MBB.end() && I->getOpcode() == AMDGPU::S_ENDPGM)
-        I->eraseFromParent();
-    }
   }
 
   return Changes;
