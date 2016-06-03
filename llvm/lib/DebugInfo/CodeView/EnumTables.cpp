@@ -147,6 +147,13 @@ static const EnumEntry<uint32_t> CompileSym3FlagNames[] = {
     CV_ENUM_CLASS_ENT(CompileSym3Flags, Exp),
 };
 
+static const EnumEntry<uint32_t> FileChecksumNames[] = {
+    CV_ENUM_CLASS_ENT(FileChecksumKind, None),
+    CV_ENUM_CLASS_ENT(FileChecksumKind, MD5),
+    CV_ENUM_CLASS_ENT(FileChecksumKind, SHA1),
+    CV_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
+};
+
 static const EnumEntry<unsigned> CPUTypeNames[] = {
     CV_ENUM_CLASS_ENT(CPUType, Intel8080),
     CV_ENUM_CLASS_ENT(CPUType, Intel8086),
@@ -229,6 +236,23 @@ static const EnumEntry<uint32_t> FrameProcSymFlagNames[] = {
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, OptimizedForSpeed),
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, GuardCfg),
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, GuardCfw),
+};
+
+static const EnumEntry<uint32_t> ModuleSubstreamKindNames[] = {
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, None),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, Symbols),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, Lines),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, StringTable),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, FileChecksums),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, FrameData),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, InlineeLines),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, CrossScopeImports),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, CrossScopeExports),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, ILLines),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, FuncMDTokenMap),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, TypeMDTokenMap),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, MergedAssemblyInput),
+    CV_ENUM_CLASS_ENT(ModuleSubstreamKind, CoffSymbolRVA),
 };
 
 static const EnumEntry<uint16_t> ExportSymFlagNames[] = {
@@ -322,6 +346,9 @@ ArrayRef<EnumEntry<uint32_t>> getCompileSym2FlagNames() {
 ArrayRef<EnumEntry<uint32_t>> getCompileSym3FlagNames() {
   return makeArrayRef(CompileSym3FlagNames);
 }
+ArrayRef<EnumEntry<uint32_t>> getFileChecksumNames() {
+  return makeArrayRef(FileChecksumNames);
+}
 ArrayRef<EnumEntry<unsigned>> getCPUTypeNames() {
   return makeArrayRef(CPUTypeNames);
 }
@@ -330,6 +357,9 @@ ArrayRef<EnumEntry<uint32_t>> getFrameProcSymFlagNames() {
 }
 ArrayRef<EnumEntry<uint16_t>> getExportSymFlagNames() {
   return makeArrayRef(ExportSymFlagNames);
+}
+ArrayRef<EnumEntry<uint32_t>> getModuleSubstreamKindNames() {
+  return makeArrayRef(ModuleSubstreamKindNames);
 }
 ArrayRef<EnumEntry<uint8_t>> getThunkOrdinalNames() {
   return makeArrayRef(ThunkOrdinalNames);

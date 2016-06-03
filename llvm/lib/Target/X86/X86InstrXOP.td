@@ -342,27 +342,34 @@ let Predicates = [HasXOP] in {
             (VPCMOVrrrY VR256:$src1, VR256:$src2, VR256:$src3)>;
 }
 
-multiclass xop5op<bits<8> opc, string OpcodeStr, Intrinsic Int128,
-                  Intrinsic Int256, PatFrag ld_128, PatFrag ld_256> {
+multiclass xop5op<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                  ValueType vt128, ValueType vt256,
+                  ValueType id128, ValueType id256,
+                  PatFrag ld_128, PatFrag ld_256> {
   def rr : IXOP5<opc, MRMSrcReg, (outs VR128:$dst),
         (ins VR128:$src1, VR128:$src2, VR128:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR128:$dst,
-           (Int128 VR128:$src1, VR128:$src2, VR128:$src3, imm:$src4))]>;
+           (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
+                          (id128 VR128:$src3), (i8 imm:$src4))))]>;
   def rm : IXOP5<opc, MRMSrcMem, (outs VR128:$dst),
-        (ins VR128:$src1, VR128:$src2, f128mem:$src3, u8imm:$src4),
+        (ins VR128:$src1, VR128:$src2, i128mem:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR128:$dst,
-           (Int128 VR128:$src1, VR128:$src2, (ld_128 addr:$src3), imm:$src4))]>,
+           (vt128 (OpNode (vt128 VR128:$src1), (vt128 VR128:$src2),
+                          (id128 (bitconvert (loadv2i64 addr:$src3))),
+                          (i8 imm:$src4))))]>,
         VEX_W, MemOp4;
   def mr : IXOP5<opc, MRMSrcMem, (outs VR128:$dst),
         (ins VR128:$src1, f128mem:$src2, VR128:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR128:$dst,
-           (Int128 VR128:$src1, (ld_128 addr:$src2), VR128:$src3, imm:$src4))]>;
+           (vt128 (OpNode (vt128 VR128:$src1),
+                          (vt128 (bitconvert (ld_128 addr:$src2))),
+                          (id128 VR128:$src3), (i8 imm:$src4))))]>;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def rr_REV : IXOP5<opc, MRMSrcReg, (outs VR128:$dst),
@@ -376,21 +383,24 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, Intrinsic Int128,
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR256:$dst,
-          (Int256 VR256:$src1, VR256:$src2, VR256:$src3, imm:$src4))]>, VEX_L;
+           (vt256 (OpNode (vt256 VR256:$src1), (vt256 VR256:$src2),
+                          (id256 VR256:$src3), (i8 imm:$src4))))]>, VEX_L;
   def rmY : IXOP5<opc, MRMSrcMem, (outs VR256:$dst),
-        (ins VR256:$src1, VR256:$src2, f256mem:$src3, u8imm:$src4),
+        (ins VR256:$src1, VR256:$src2, i256mem:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR256:$dst,
-          (Int256 VR256:$src1, VR256:$src2, (ld_256 addr:$src3), imm:$src4))]>,
-        VEX_W, MemOp4, VEX_L;
+           (vt256 (OpNode (vt256 VR256:$src1), (vt256 VR256:$src2),
+                          (id256 (bitconvert (loadv4i64 addr:$src3))),
+                          (i8 imm:$src4))))]>, VEX_W, MemOp4, VEX_L;
   def mrY : IXOP5<opc, MRMSrcMem, (outs VR256:$dst),
         (ins VR256:$src1, f256mem:$src2, VR256:$src3, u8imm:$src4),
         !strconcat(OpcodeStr,
         "\t{$src4, $src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3, $src4}"),
         [(set VR256:$dst,
-           (Int256 VR256:$src1, (ld_256 addr:$src2), VR256:$src3, imm:$src4))]>,
-        VEX_L;
+           (vt256 (OpNode (vt256 VR256:$src1),
+                          (vt256 (bitconvert (ld_256 addr:$src2))),
+                          (id256 VR256:$src3), (i8 imm:$src4))))]>, VEX_L;
   // For disassembler
   let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0 in
   def rrY_REV : IXOP5<opc, MRMSrcReg, (outs VR256:$dst),
@@ -401,10 +411,10 @@ multiclass xop5op<bits<8> opc, string OpcodeStr, Intrinsic Int128,
 }
 
 let ExeDomain = SSEPackedDouble in
-  defm VPERMIL2PD : xop5op<0x49, "vpermil2pd", int_x86_xop_vpermil2pd,
-                           int_x86_xop_vpermil2pd_256, loadv2f64, loadv4f64>;
+  defm VPERMIL2PD : xop5op<0x49, "vpermil2pd", X86vpermil2, v2f64, v4f64,
+                           v2i64, v4i64, loadv2f64, loadv4f64>;
 
 let ExeDomain = SSEPackedSingle in
-  defm VPERMIL2PS : xop5op<0x48, "vpermil2ps", int_x86_xop_vpermil2ps,
-                           int_x86_xop_vpermil2ps_256, loadv4f32, loadv8f32>;
+  defm VPERMIL2PS : xop5op<0x48, "vpermil2ps", X86vpermil2, v4f32, v8f32,
+                           v4i32, v8i32, loadv4f32, loadv8f32>;
 

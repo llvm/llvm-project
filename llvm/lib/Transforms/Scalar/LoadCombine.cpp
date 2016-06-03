@@ -65,7 +65,11 @@ public:
   using llvm::Pass::doInitialization;
   bool doInitialization(Function &) override;
   bool runOnBasicBlock(BasicBlock &BB) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
 
   const char *getPassName() const override { return LDCOMBINE_NAME; }
   static char ID;
@@ -262,13 +266,6 @@ bool LoadCombine::runOnBasicBlock(BasicBlock &BB) {
   return Combined;
 }
 
-void LoadCombine::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-
-  AU.addRequired<AAResultsWrapperPass>();
-  AU.addPreserved<GlobalsAAWrapperPass>();
-}
-
 char LoadCombine::ID = 0;
 
 BasicBlockPass *llvm::createLoadCombinePass() {
@@ -277,5 +274,4 @@ BasicBlockPass *llvm::createLoadCombinePass() {
 
 INITIALIZE_PASS_BEGIN(LoadCombine, "load-combine", LDCOMBINE_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_END(LoadCombine, "load-combine", LDCOMBINE_NAME, false, false)

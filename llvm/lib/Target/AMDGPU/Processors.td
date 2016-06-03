@@ -13,11 +13,8 @@ class Proc<string Name, ProcessorItineraries itin, list<SubtargetFeature> Featur
 //===----------------------------------------------------------------------===//
 // R600
 //===----------------------------------------------------------------------===//
-def : Proc<"",           R600_VLIW5_Itin,
-    [FeatureR600, FeatureVertexCache]>;
-
 def : Proc<"r600",       R600_VLIW5_Itin,
-    [FeatureR600 , FeatureVertexCache, FeatureWavefrontSize64]>;
+    [FeatureR600, FeatureVertexCache, FeatureWavefrontSize64]>;
 
 def : Proc<"r630",       R600_VLIW5_Itin,
     [FeatureR600, FeatureVertexCache, FeatureWavefrontSize32]>;

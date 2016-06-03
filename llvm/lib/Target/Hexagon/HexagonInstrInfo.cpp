@@ -685,13 +685,8 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned KillFlag = getKillRegState(KillSrc);
 
   if (Hexagon::IntRegsRegClass.contains(SrcReg, DestReg)) {
-    auto MIB = BuildMI(MBB, I, DL, get(Hexagon::A2_tfr), DestReg)
+    BuildMI(MBB, I, DL, get(Hexagon::A2_tfr), DestReg)
       .addReg(SrcReg, KillFlag);
-    // We could have a R12 = COPY R2, D1<imp-use, kill> instruction.
-    // Transfer the kill flags.
-    for (auto &Op : I->operands())
-      if (Op.isReg() && Op.isKill() && Op.isImplicit() && Op.isUse())
-        MIB.addReg(Op.getReg(), RegState::Kill | RegState::Implicit);
     return;
   }
   if (Hexagon::DoubleRegsRegClass.contains(SrcReg, DestReg)) {
@@ -920,6 +915,16 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI)
   bool Is128B = false;
 
   switch (Opc) {
+    case TargetOpcode::COPY: {
+      MachineOperand &MD = MI->getOperand(0);
+      MachineOperand &MS = MI->getOperand(1);
+      if (MD.getReg() != MS.getReg() && !MS.isUndef()) {
+        copyPhysReg(MBB, MI, DL, MD.getReg(), MS.getReg(), MS.isKill());
+        std::prev(MI)->copyImplicitOps(*MBB.getParent(), *MI);
+      }
+      MBB.erase(MI);
+      return true;
+    }
     case Hexagon::ALIGNA:
       BuildMI(MBB, MI, DL, get(Hexagon::A2_andir), MI->getOperand(0).getReg())
           .addReg(HRI.getFrameRegister())

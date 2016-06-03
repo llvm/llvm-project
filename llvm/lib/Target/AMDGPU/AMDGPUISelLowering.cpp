@@ -2192,6 +2192,8 @@ SDValue AMDGPUTargetLowering::performStoreCombine(SDNode *N,
     return SDValue();
 
   EVT MemVT = LoadVal->getMemoryVT();
+  if (!MemVT.isRound())
+    return SDValue();
 
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;

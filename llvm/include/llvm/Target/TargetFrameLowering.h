@@ -151,6 +151,13 @@ public:
     return false;
   }
 
+  /// Returns true if the stack slot holes in the fixed and callee-save stack
+  /// area should be used when allocating other stack locations to reduce stack
+  /// size.
+  virtual bool enableStackSlotScavenging(const MachineFunction &MF) const {
+    return false;
+  }
+
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
   virtual void emitPrologue(MachineFunction &MF,

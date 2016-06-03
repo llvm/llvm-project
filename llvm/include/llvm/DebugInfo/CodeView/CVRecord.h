@@ -27,7 +27,7 @@ template <typename Kind> struct CVRecord {
 };
 
 template <typename Kind> struct VarStreamArrayExtractor<CVRecord<Kind>> {
-  Error operator()(const StreamInterface &Stream, uint32_t &Len,
+  Error operator()(StreamRef Stream, uint32_t &Len,
                    CVRecord<Kind> &Item) const {
     const RecordPrefix *Prefix = nullptr;
     StreamReader Reader(Stream);

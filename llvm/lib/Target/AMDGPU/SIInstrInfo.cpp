@@ -287,6 +287,13 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
     return true;
   }
 
+  if (isFLAT(*LdSt)) {
+    const MachineOperand *AddrReg = getNamedOperand(*LdSt, AMDGPU::OpName::addr);
+    BaseReg = AddrReg->getReg();
+    Offset = 0;
+    return true;
+  }
+
   return false;
 }
 

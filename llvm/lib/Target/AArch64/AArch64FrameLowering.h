@@ -67,6 +67,8 @@ public:
     return true;
   }
 
+  bool enableStackSlotScavenging(const MachineFunction &MF) const override;
+
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       unsigned StackBumpBytes) const;

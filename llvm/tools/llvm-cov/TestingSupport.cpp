@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -58,9 +59,9 @@ int convertForTestingMain(int argc, const char *argv[]) {
     StringRef Name;
     if (Section.getName(Name))
       return 1;
-    if (Name == "__llvm_prf_names") {
+    if (Name == llvm::getInstrProfNameSectionName(false)) {
       ProfileNames = Section;
-    } else if (Name == "__llvm_covmap") {
+    } else if (Name == llvm::getInstrProfCoverageSectionName(false)) {
       CoverageMapping = Section;
     } else
       continue;

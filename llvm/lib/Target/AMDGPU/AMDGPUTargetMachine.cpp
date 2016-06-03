@@ -101,7 +101,7 @@ static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
   if (TT.getArch() == Triple::amdgcn)
     return (TT.getOS() == Triple::AMDHSA) ? "kaveri" : "tahiti";
 
-  return "";
+  return "r600";
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {

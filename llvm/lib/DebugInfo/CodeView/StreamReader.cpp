@@ -15,7 +15,7 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-StreamReader::StreamReader(const StreamInterface &S) : Stream(S), Offset(0) {}
+StreamReader::StreamReader(StreamRef S) : Stream(S), Offset(0) {}
 
 Error StreamReader::readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size) {
   if (auto EC = Stream.readBytes(Offset, Size, Buffer))
@@ -80,7 +80,7 @@ Error StreamReader::readStreamRef(StreamRef &Ref) {
 Error StreamReader::readStreamRef(StreamRef &Ref, uint32_t Length) {
   if (bytesRemaining() < Length)
     return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
-  Ref = StreamRef(Stream, Offset, Length);
+  Ref = Stream.slice(Offset, Length);
   Offset += Length;
   return Error::success();
 }

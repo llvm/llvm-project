@@ -18,6 +18,7 @@
 ;   long int l2 = 0;
 ;   unsigned long l3 = 0;
 ;   unsigned long int l4 = 0;
+;   const void *v6 = &v1;
 ;   usevars(v1, v2, v3, l1, l2, l3, l4);
 ; }
 ; void CharTypes() {
@@ -32,16 +33,40 @@
 ; $ clang t.cpp -S -emit-llvm -g -gcodeview -o t.ll
 
 ; CHECK: CodeViewTypes [
-; CHECK:   Modifier (0x1000) {
+; CHECK:   ArgList (0x1000) {
+; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
+; CHECK:     NumArgs: 3
+; CHECK:     Arguments [
+; CHECK:       ArgType: float (0x40)
+; CHECK:       ArgType: double (0x41)
+; CHECK:       ArgType: __int64 (0x13)
+; CHECK:     ]
+; CHECK:   }
+; CHECK:   Procedure (0x1001) {
+; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
+; CHECK:     ReturnType: void (0x3)
+; CHECK:     CallingConvention: NearC (0x0)
+; CHECK:     FunctionOptions [ (0x0)
+; CHECK:     ]
+; CHECK:     NumParameters: 3
+; CHECK:     ArgListType: (float, double, __int64) (0x1000)
+; CHECK:   }
+; CHECK:   FuncId (0x1002) {
+; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
+; CHECK:     ParentScope: 0x0
+; CHECK:     FunctionType: void (float, double, __int64) (0x1001)
+; CHECK:     Name: f
+; CHECK:   }
+; CHECK:   Modifier (0x1003) {
 ; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
 ; CHECK:     ModifiedType: int (0x74)
 ; CHECK:     Modifiers [ (0x1)
 ; CHECK:       Const (0x1)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   Pointer (0x1001) {
+; CHECK:   Pointer (0x1004) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: const int (0x1000)
+; CHECK:     PointeeType: const int (0x1003)
 ; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
@@ -50,7 +75,7 @@
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:   }
-; CHECK:   Pointer (0x1002) {
+; CHECK:   Pointer (0x1005) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
 ; CHECK:     PointerAttributes: 0x804C
@@ -63,9 +88,25 @@
 ; CHECK:     ClassType: 0x0
 ; CHECK:     Representation: Unknown (0x0)
 ; CHECK:   }
-; CHECK:   Pointer (0x1003) {
+; CHECK:   ArgList (0x1006) {
+; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
+; CHECK:     NumArgs: 1
+; CHECK:     Arguments [
+; CHECK:       ArgType: <unknown simple type> (0x600)
+; CHECK:     ]
+; CHECK:   }
+; CHECK:   Procedure (0x1007) {
+; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
+; CHECK:     ReturnType: void (0x3)
+; CHECK:     CallingConvention: NearC (0x0)
+; CHECK:     FunctionOptions [ (0x0)
+; CHECK:     ]
+; CHECK:     NumParameters: 1
+; CHECK:     ArgListType: (<unknown simple type>) (0x1006)
+; CHECK:   }
+; CHECK:   Pointer (0x1008) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: 0x0
+; CHECK:     PointeeType: void (<unknown simple type>) (0x1007)
 ; CHECK:     PointerAttributes: 0x1006C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
@@ -76,6 +117,24 @@
 ; CHECK:     ClassType: 0x0
 ; CHECK:     Representation: Unknown (0x0)
 ; CHECK:   }
+; CHECK:   Modifier (0x1009) {
+; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
+; CHECK:     ModifiedType: void (0x3)
+; CHECK:     Modifiers [ (0x1)
+; CHECK:       Const (0x1)
+; CHECK:     ]
+; CHECK:   }
+; CHECK:   Pointer (0x100A) {
+; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
+; CHECK:     PointeeType: const void (0x1009)
+; CHECK:     PointerAttributes: 0x1000C
+; CHECK:     PtrType: Near64 (0xC)
+; CHECK:     PtrMode: Pointer (0x0)
+; CHECK:     IsFlat: 0
+; CHECK:     IsConst: 0
+; CHECK:     IsVolatile: 0
+; CHECK:     IsUnaligned: 0
+; CHECK:   }
 ; CHECK: ]
 ; CHECK: CodeViewDebugInfo [
 ; CHECK:   Subsection [
@@ -83,7 +142,7 @@
 ; CHECK:     ProcStart {
 ; CHECK:       DbgStart: 0x0
 ; CHECK:       DbgEnd: 0x0
-; CHECK:       FunctionType: 0x0
+; CHECK:       FunctionType: f (0x1002)
 ; CHECK:       CodeOffset: ?f@@YAXMN_J@Z+0x0
 ; CHECK:       Segment: 0x0
 ; CHECK:       Flags [ (0x0)
@@ -121,7 +180,7 @@
 ; CHECK:       VarName: v2
 ; CHECK:     }
 ; CHECK:     Local {
-; CHECK:       Type: const int* (0x1001)
+; CHECK:       Type: const int* (0x1004)
 ; CHECK:       VarName: v21
 ; CHECK:     }
 ; CHECK:     Local {
@@ -129,11 +188,11 @@
 ; CHECK:       VarName: v3
 ; CHECK:     }
 ; CHECK:     Local {
-; CHECK:       Type: int <no type>::* (0x1002)
+; CHECK:       Type: int <no type>::* (0x1005)
 ; CHECK:       VarName: v4
 ; CHECK:     }
 ; CHECK:     Local {
-; CHECK:       Type: <no type> <no type>::* (0x1003)
+; CHECK:       Type: void (<unknown simple type>) <no type>::* (0x1008)
 ; CHECK:       VarName: v5
 ; CHECK:     }
 ; CHECK:     Local {
@@ -151,6 +210,10 @@
 ; CHECK:     Local {
 ; CHECK:       Type: unsigned long (0x22)
 ; CHECK:       VarName: l4
+; CHECK:     }
+; CHECK:     Local {
+; CHECK:       Type: const void* (0x100A)
+; CHECK:       VarName: v6
 ; CHECK:     }
 ; CHECK:     ProcEnd {
 ; CHECK:     }
@@ -230,6 +293,7 @@ entry:
   %l2 = alloca i32, align 4
   %l3 = alloca i32, align 4
   %l4 = alloca i32, align 4
+  %v6 = alloca i8*, align 8
   store i64 %p3, i64* %p3.addr, align 8
   call void @llvm.dbg.declare(metadata i64* %p3.addr, metadata !13, metadata !14), !dbg !15
   store double %p2, double* %p2.addr, align 8
@@ -259,15 +323,18 @@ entry:
   store i32 0, i32* %l3, align 4, !dbg !55
   call void @llvm.dbg.declare(metadata i32* %l4, metadata !56, metadata !14), !dbg !57
   store i32 0, i32* %l4, align 4, !dbg !57
-  %2 = load i32, i32* %l4, align 4, !dbg !58
-  %3 = load i32, i32* %l3, align 4, !dbg !59
-  %4 = load i32, i32* %l2, align 4, !dbg !60
-  %5 = load i32, i32* %l1, align 4, !dbg !61
-  %6 = load i8*, i8** %v3, align 8, !dbg !62
-  %7 = load i32*, i32** %v2, align 8, !dbg !63
-  %8 = load i32, i32* %v1, align 4, !dbg !64
-  call void (i32, ...) @"\01?usevars@@YAXHZZ"(i32 %8, i32* %7, i8* %6, i32 %5, i32 %4, i32 %3, i32 %2), !dbg !65
-  ret void, !dbg !66
+  call void @llvm.dbg.declare(metadata i8** %v6, metadata !58, metadata !14), !dbg !61
+  %2 = bitcast i32* %v1 to i8*, !dbg !62
+  store i8* %2, i8** %v6, align 8, !dbg !61
+  %3 = load i32, i32* %l4, align 4, !dbg !63
+  %4 = load i32, i32* %l3, align 4, !dbg !64
+  %5 = load i32, i32* %l2, align 4, !dbg !65
+  %6 = load i32, i32* %l1, align 4, !dbg !66
+  %7 = load i8*, i8** %v3, align 8, !dbg !67
+  %8 = load i32*, i32** %v2, align 8, !dbg !68
+  %9 = load i32, i32* %v1, align 4, !dbg !69
+  call void (i32, ...) @"\01?usevars@@YAXHZZ"(i32 %9, i32* %8, i8* %7, i32 %6, i32 %5, i32 %4, i32 %3), !dbg !70
+  ret void, !dbg !71
 }
 
 ; Function Attrs: nounwind readnone
@@ -278,7 +345,7 @@ declare void @"\01?f@A@@QEAAXXZ"(%struct.A*) #2
 declare void @"\01?usevars@@YAXHZZ"(i32, ...) #2
 
 ; Function Attrs: nounwind uwtable
-define void @"\01?CharTypes@@YAXXZ"() #3 !dbg !67 {
+define void @"\01?CharTypes@@YAXXZ"() #3 !dbg !72 {
 entry:
   %w = alloca i16, align 2
   %us = alloca i16, align 2
@@ -287,14 +354,14 @@ entry:
   %sc = alloca i8, align 1
   %c16 = alloca i16, align 2
   %c32 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i16* %w, metadata !70, metadata !14), !dbg !72
-  call void @llvm.dbg.declare(metadata i16* %us, metadata !73, metadata !14), !dbg !75
-  call void @llvm.dbg.declare(metadata i8* %c, metadata !76, metadata !14), !dbg !78
-  call void @llvm.dbg.declare(metadata i8* %uc, metadata !79, metadata !14), !dbg !81
-  call void @llvm.dbg.declare(metadata i8* %sc, metadata !82, metadata !14), !dbg !84
-  call void @llvm.dbg.declare(metadata i16* %c16, metadata !85, metadata !14), !dbg !87
-  call void @llvm.dbg.declare(metadata i32* %c32, metadata !88, metadata !14), !dbg !90
-  ret void, !dbg !91
+  call void @llvm.dbg.declare(metadata i16* %w, metadata !75, metadata !14), !dbg !77
+  call void @llvm.dbg.declare(metadata i16* %us, metadata !78, metadata !14), !dbg !80
+  call void @llvm.dbg.declare(metadata i8* %c, metadata !81, metadata !14), !dbg !83
+  call void @llvm.dbg.declare(metadata i8* %uc, metadata !84, metadata !14), !dbg !86
+  call void @llvm.dbg.declare(metadata i8* %sc, metadata !87, metadata !14), !dbg !89
+  call void @llvm.dbg.declare(metadata i16* %c16, metadata !90, metadata !14), !dbg !92
+  call void @llvm.dbg.declare(metadata i32* %c32, metadata !93, metadata !14), !dbg !95
+  ret void, !dbg !96
 }
 
 attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -306,13 +373,13 @@ attributes #3 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 271336) (llvm/trunk 271339)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
-!6 = !{!"clang version 3.9.0 (trunk 271336) (llvm/trunk 271339)"}
+!6 = !{!"clang version 3.9.0 "}
 !7 = distinct !DISubprogram(name: "f", linkageName: "\01?f@@YAXMN_J@Z", scope: !1, file: !1, line: 6, type: !8, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10, !11, !12}
@@ -364,37 +431,42 @@ attributes #3 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !55 = !DILocation(line: 15, column: 17, scope: !7)
 !56 = !DILocalVariable(name: "l4", scope: !7, file: !1, line: 16, type: !54)
 !57 = !DILocation(line: 16, column: 21, scope: !7)
-!58 = !DILocation(line: 17, column: 35, scope: !7)
-!59 = !DILocation(line: 17, column: 31, scope: !7)
-!60 = !DILocation(line: 17, column: 27, scope: !7)
-!61 = !DILocation(line: 17, column: 23, scope: !7)
-!62 = !DILocation(line: 17, column: 19, scope: !7)
-!63 = !DILocation(line: 17, column: 15, scope: !7)
-!64 = !DILocation(line: 17, column: 11, scope: !7)
-!65 = !DILocation(line: 17, column: 3, scope: !7)
-!66 = !DILocation(line: 18, column: 1, scope: !7)
-!67 = distinct !DISubprogram(name: "CharTypes", linkageName: "\01?CharTypes@@YAXXZ", scope: !1, file: !1, line: 19, type: !68, isLocal: false, isDefinition: true, scopeLine: 19, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
-!68 = !DISubroutineType(types: !69)
-!69 = !{null}
-!70 = !DILocalVariable(name: "w", scope: !67, file: !1, line: 20, type: !71)
-!71 = !DIBasicType(name: "wchar_t", size: 16, align: 16, encoding: DW_ATE_unsigned)
-!72 = !DILocation(line: 20, column: 18, scope: !67)
-!73 = !DILocalVariable(name: "us", scope: !67, file: !1, line: 21, type: !74)
-!74 = !DIBasicType(name: "unsigned short", size: 16, align: 16, encoding: DW_ATE_unsigned)
-!75 = !DILocation(line: 21, column: 18, scope: !67)
-!76 = !DILocalVariable(name: "c", scope: !67, file: !1, line: 22, type: !77)
-!77 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
-!78 = !DILocation(line: 22, column: 8, scope: !67)
-!79 = !DILocalVariable(name: "uc", scope: !67, file: !1, line: 23, type: !80)
-!80 = !DIBasicType(name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
-!81 = !DILocation(line: 23, column: 17, scope: !67)
-!82 = !DILocalVariable(name: "sc", scope: !67, file: !1, line: 24, type: !83)
-!83 = !DIBasicType(name: "signed char", size: 8, align: 8, encoding: DW_ATE_signed_char)
-!84 = !DILocation(line: 24, column: 15, scope: !67)
-!85 = !DILocalVariable(name: "c16", scope: !67, file: !1, line: 25, type: !86)
-!86 = !DIBasicType(name: "char16_t", size: 16, align: 16, encoding: DW_ATE_UTF)
-!87 = !DILocation(line: 25, column: 12, scope: !67)
-!88 = !DILocalVariable(name: "c32", scope: !67, file: !1, line: 26, type: !89)
-!89 = !DIBasicType(name: "char32_t", size: 32, align: 32, encoding: DW_ATE_UTF)
-!90 = !DILocation(line: 26, column: 12, scope: !67)
-!91 = !DILocation(line: 27, column: 1, scope: !67)
+!58 = !DILocalVariable(name: "v6", scope: !7, file: !1, line: 17, type: !59)
+!59 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !60, size: 64, align: 64)
+!60 = !DIDerivedType(tag: DW_TAG_const_type, baseType: null)
+!61 = !DILocation(line: 17, column: 15, scope: !7)
+!62 = !DILocation(line: 17, column: 20, scope: !7)
+!63 = !DILocation(line: 18, column: 35, scope: !7)
+!64 = !DILocation(line: 18, column: 31, scope: !7)
+!65 = !DILocation(line: 18, column: 27, scope: !7)
+!66 = !DILocation(line: 18, column: 23, scope: !7)
+!67 = !DILocation(line: 18, column: 19, scope: !7)
+!68 = !DILocation(line: 18, column: 15, scope: !7)
+!69 = !DILocation(line: 18, column: 11, scope: !7)
+!70 = !DILocation(line: 18, column: 3, scope: !7)
+!71 = !DILocation(line: 19, column: 1, scope: !7)
+!72 = distinct !DISubprogram(name: "CharTypes", linkageName: "\01?CharTypes@@YAXXZ", scope: !1, file: !1, line: 20, type: !73, isLocal: false, isDefinition: true, scopeLine: 20, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!73 = !DISubroutineType(types: !74)
+!74 = !{null}
+!75 = !DILocalVariable(name: "w", scope: !72, file: !1, line: 21, type: !76)
+!76 = !DIBasicType(name: "wchar_t", size: 16, align: 16, encoding: DW_ATE_unsigned)
+!77 = !DILocation(line: 21, column: 18, scope: !72)
+!78 = !DILocalVariable(name: "us", scope: !72, file: !1, line: 22, type: !79)
+!79 = !DIBasicType(name: "unsigned short", size: 16, align: 16, encoding: DW_ATE_unsigned)
+!80 = !DILocation(line: 22, column: 18, scope: !72)
+!81 = !DILocalVariable(name: "c", scope: !72, file: !1, line: 23, type: !82)
+!82 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+!83 = !DILocation(line: 23, column: 8, scope: !72)
+!84 = !DILocalVariable(name: "uc", scope: !72, file: !1, line: 24, type: !85)
+!85 = !DIBasicType(name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
+!86 = !DILocation(line: 24, column: 17, scope: !72)
+!87 = !DILocalVariable(name: "sc", scope: !72, file: !1, line: 25, type: !88)
+!88 = !DIBasicType(name: "signed char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+!89 = !DILocation(line: 25, column: 15, scope: !72)
+!90 = !DILocalVariable(name: "c16", scope: !72, file: !1, line: 26, type: !91)
+!91 = !DIBasicType(name: "char16_t", size: 16, align: 16, encoding: DW_ATE_UTF)
+!92 = !DILocation(line: 26, column: 12, scope: !72)
+!93 = !DILocalVariable(name: "c32", scope: !72, file: !1, line: 27, type: !94)
+!94 = !DIBasicType(name: "char32_t", size: 32, align: 32, encoding: DW_ATE_UTF)
+!95 = !DILocation(line: 27, column: 12, scope: !72)
+!96 = !DILocation(line: 28, column: 1, scope: !72)

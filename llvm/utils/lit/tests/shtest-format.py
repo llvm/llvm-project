@@ -39,9 +39,8 @@
 #
 # CHECK: Command Output (stdout):
 # CHECK-NEXT: --
-# CHECK-NEXT: Command 0: "printf"
-# CHECK-NEXT: Command 0 Result: 0
-# CHECK-NEXT: Command 0 Output:
+# CHECK-NEXT: $ "printf"
+# CHECK-NEXT: # command output:
 # CHECK-NEXT: line 1: failed test output on stdout
 # CHECK-NEXT: line 2: failed test output on stdout
 

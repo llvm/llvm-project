@@ -64,7 +64,7 @@ struct ModuleInfoEx {
 
 namespace codeview {
 template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
-  Error operator()(const StreamInterface &Stream, uint32_t &Length,
+  Error operator()(StreamRef Stream, uint32_t &Length,
                    pdb::ModInfo &Info) const {
     if (auto EC = pdb::ModInfo::initialize(Stream, Info))
       return EC;

@@ -641,7 +641,7 @@ void CVTypeDumperImpl::visitVirtualBaseClass(TypeLeafKind Leaf,
 }
 
 StringRef CVTypeDumper::getTypeName(TypeIndex TI) {
-  if (TI.isNoType())
+  if (TI.isNoneType())
     return "<no type>";
 
   if (TI.isSimple()) {
@@ -669,7 +669,7 @@ StringRef CVTypeDumper::getTypeName(TypeIndex TI) {
 
 void CVTypeDumper::printTypeIndex(StringRef FieldName, TypeIndex TI) {
   StringRef TypeName;
-  if (!TI.isNoType())
+  if (!TI.isNoneType())
     TypeName = getTypeName(TI);
   if (!TypeName.empty())
     W->printHex(FieldName, TypeName, TI.getIndex());

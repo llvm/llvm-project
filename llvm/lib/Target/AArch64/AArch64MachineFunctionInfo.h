@@ -83,18 +83,24 @@ class AArch64FunctionInfo : public MachineFunctionInfo {
   /// frame is unknown at compile time. e.g., in case of VLAs.
   bool StackRealigned;
 
+  /// True when the callee-save stack area has unused gaps that may be used for
+  /// other stack allocations.
+  bool CalleeSaveStackHasFreeSpace;
+
 public:
   AArch64FunctionInfo()
       : BytesInStackArgArea(0), ArgumentStackToRestore(0), HasStackFrame(false),
         NumLocalDynamicTLSAccesses(0), VarArgsStackIndex(0), VarArgsGPRIndex(0),
         VarArgsGPRSize(0), VarArgsFPRIndex(0), VarArgsFPRSize(0),
-        IsSplitCSR(false), StackRealigned(false) {}
+        IsSplitCSR(false), StackRealigned(false),
+        CalleeSaveStackHasFreeSpace(false) {}
 
   explicit AArch64FunctionInfo(MachineFunction &MF)
       : BytesInStackArgArea(0), ArgumentStackToRestore(0), HasStackFrame(false),
         NumLocalDynamicTLSAccesses(0), VarArgsStackIndex(0), VarArgsGPRIndex(0),
         VarArgsGPRSize(0), VarArgsFPRIndex(0), VarArgsFPRSize(0),
-        IsSplitCSR(false), StackRealigned(false) {
+        IsSplitCSR(false), StackRealigned(false),
+        CalleeSaveStackHasFreeSpace(false) {
     (void)MF;
   }
 
@@ -111,6 +117,13 @@ public:
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
+
+  bool hasCalleeSaveStackFreeSpace() const {
+    return CalleeSaveStackHasFreeSpace;
+  }
+  void setCalleeSaveStackHasFreeSpace(bool s) {
+    CalleeSaveStackHasFreeSpace = s;
+  }
 
   bool isSplitCSR() const { return IsSplitCSR; }
   void setIsSplitCSR(bool s) { IsSplitCSR = s; }

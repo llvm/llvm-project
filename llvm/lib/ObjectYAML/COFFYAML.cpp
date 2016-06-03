@@ -397,7 +397,7 @@ void MappingTraits<COFFYAML::PEHeader>::mapping(IO &IO,
   IO.mapOptional("CertificateTable", PH.DataDirectories[COFF::CERTIFICATE_TABLE]);
   IO.mapOptional("BaseRelocationTable",
                  PH.DataDirectories[COFF::BASE_RELOCATION_TABLE]);
-  IO.mapOptional("Debug", PH.DataDirectories[COFF::DEBUG]);
+  IO.mapOptional("Debug", PH.DataDirectories[COFF::DEBUG_DIRECTORY]);
   IO.mapOptional("Architecture", PH.DataDirectories[COFF::ARCHITECTURE]);
   IO.mapOptional("GlobalPtr", PH.DataDirectories[COFF::GLOBAL_PTR]);
   IO.mapOptional("TlsTable", PH.DataDirectories[COFF::TLS_TABLE]);

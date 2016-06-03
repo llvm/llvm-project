@@ -11,6 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/SymbolStream.h"
@@ -358,4 +359,25 @@ Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
       return std::move(EC);
   }
   return *Symbols;
+}
+
+Expected<NameHashTable &> PDBFile::getStringTable() {
+  if (!StringTable || !StringTableStream) {
+    auto InfoS = getPDBInfoStream();
+    if (auto EC = InfoS.takeError())
+      return std::move(EC);
+    auto &IS = InfoS.get();
+    uint32_t NameStreamIndex = IS.getNamedStreamIndex("/names");
+
+    if (NameStreamIndex == 0)
+      return make_error<RawError>(raw_error_code::no_stream);
+    auto S = llvm::make_unique<MappedBlockStream>(NameStreamIndex, *this);
+    codeview::StreamReader Reader(*S);
+    auto N = llvm::make_unique<NameHashTable>();
+    if (auto EC = N->load(Reader))
+      return std::move(EC);
+    StringTable = std::move(N);
+    StringTableStream = std::move(S);
+  }
+  return *StringTable;
 }

@@ -44,7 +44,34 @@ AArch64Subtarget::initializeSubtargetDependencies(StringRef FS) {
     CPUString = "generic";
 
   ParseSubtargetFeatures(CPUString, FS);
+  initializeProperties();
+
   return *this;
+}
+
+void AArch64Subtarget::initializeProperties() {
+  // Initialize CPU specific properties. We should add a tablegen feature for
+  // this in the future so we can specify it together with the subtarget
+  // features.
+  switch (ARMProcFamily) {
+  case Cyclone:
+    CacheLineSize = 64;
+    PrefetchDistance = 280;
+    MinPrefetchStride = 2048;
+    MaxPrefetchIterationsAhead = 3;
+    break;
+  case CortexA57:
+    MaxInterleaveFactor = 4;
+    break;
+  case Kryo:
+    MaxInterleaveFactor = 4;
+    VectorInsertExtractBaseCost = 2;
+    break;
+  case Others: break;
+  case CortexA35: break;
+  case CortexA53: break;
+  case ExynosM1: break;
+  }
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
@@ -110,8 +137,7 @@ void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Enabling or Disabling the latency heuristic is a close call: It seems to
   // help nearly no benchmark on out-of-order architectures, on the other hand
   // it regresses register pressure on a few benchmarking.
-  if (isCyclone())
-    Policy.DisableLatencyHeuristic = true;
+  Policy.DisableLatencyHeuristic = DisableLatencySchedHeuristic;
 }
 
 bool AArch64Subtarget::enableEarlyIfConversion() const {
@@ -133,8 +159,5 @@ bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
 
 std::unique_ptr<PBQPRAConstraint>
 AArch64Subtarget::getCustomPBQPConstraints() const {
-  if (!isCortexA57())
-    return nullptr;
-
-  return llvm::make_unique<A57ChainingConstraint>();
+  return balanceFPOps() ? llvm::make_unique<A57ChainingConstraint>() : nullptr;
 }

@@ -103,7 +103,7 @@ public:
   uint32_t getIndex() const { return Index; }
   bool isSimple() const { return Index < FirstNonSimpleIndex; }
 
-  bool isNoType() const { return Index == 0; }
+  bool isNoneType() const { return *this == None(); }
 
   SimpleTypeKind getSimpleKind() const {
     assert(isSimple());
@@ -115,6 +115,7 @@ public:
     return static_cast<SimpleTypeMode>(Index & SimpleModeMask);
   }
 
+  static TypeIndex None() { return TypeIndex(SimpleTypeKind::None); }
   static TypeIndex Void() { return TypeIndex(SimpleTypeKind::Void); }
   static TypeIndex VoidPointer32() {
     return TypeIndex(SimpleTypeKind::Void, SimpleTypeMode::NearPointer32);
@@ -157,33 +158,34 @@ public:
   static TypeIndex Float32() { return TypeIndex(SimpleTypeKind::Float32); }
   static TypeIndex Float64() { return TypeIndex(SimpleTypeKind::Float64); }
 
+  friend inline bool operator==(const TypeIndex &A, const TypeIndex &B) {
+    return A.getIndex() == B.getIndex();
+  }
+
+  friend inline bool operator!=(const TypeIndex &A, const TypeIndex &B) {
+    return A.getIndex() != B.getIndex();
+  }
+
+  friend inline bool operator<(const TypeIndex &A, const TypeIndex &B) {
+    return A.getIndex() < B.getIndex();
+  }
+
+  friend inline bool operator<=(const TypeIndex &A, const TypeIndex &B) {
+    return A.getIndex() <= B.getIndex();
+  }
+
+  friend inline bool operator>(const TypeIndex &A, const TypeIndex &B) {
+    return A.getIndex() > B.getIndex();
+  }
+
+  friend inline bool operator>=(const TypeIndex &A, const TypeIndex &B) {
+    return A.getIndex() >= B.getIndex();
+  }
+
 private:
   support::ulittle32_t Index;
 };
 
-inline bool operator==(const TypeIndex &A, const TypeIndex &B) {
-  return A.getIndex() == B.getIndex();
-}
-
-inline bool operator!=(const TypeIndex &A, const TypeIndex &B) {
-  return A.getIndex() != B.getIndex();
-}
-
-inline bool operator<(const TypeIndex &A, const TypeIndex &B) {
-  return A.getIndex() < B.getIndex();
-}
-
-inline bool operator<=(const TypeIndex &A, const TypeIndex &B) {
-  return A.getIndex() <= B.getIndex();
-}
-
-inline bool operator>(const TypeIndex &A, const TypeIndex &B) {
-  return A.getIndex() > B.getIndex();
-}
-
-inline bool operator>=(const TypeIndex &A, const TypeIndex &B) {
-  return A.getIndex() >= B.getIndex();
-}
 }
 }
 

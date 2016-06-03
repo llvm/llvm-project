@@ -33,6 +33,7 @@ class MachODumper {
   void dumpBindOpcodes(std::vector<MachOYAML::BindOpcode> &BindOpcodes,
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
 
 public:
   MachODumper(const object::MachOObjectFile &O) : Obj(O) {}
@@ -210,6 +211,7 @@ void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
   dumpBindOpcodes(Y->LinkEdit.LazyBindOpcodes, Obj.getDyldInfoLazyBindOpcodes(),
                   true);
   dumpExportTrie(Y);
+  dumpSymbols(Y);
 }
 
 void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
@@ -422,6 +424,41 @@ void MachODumper::dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y) {
   MachOYAML::LinkEditData &LEData = Y->LinkEdit;
   auto ExportsTrie = Obj.getDyldInfoExportsTrie();
   processExportNode(ExportsTrie.begin(), ExportsTrie.end(), LEData.ExportTrie);
+}
+
+template <typename nlist_t>
+MachOYAML::NListEntry constructNameList(const nlist_t &nlist) {
+  MachOYAML::NListEntry NL;
+  NL.n_strx = nlist.n_strx;
+  NL.n_type = nlist.n_type;
+  NL.n_sect = nlist.n_sect;
+  NL.n_desc = nlist.n_desc;
+  NL.n_value = nlist.n_value;
+  return NL;
+}
+
+void MachODumper::dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
+  MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+
+  for (auto Symbol : Obj.symbols()) {
+    MachOYAML::NListEntry NLE =
+        Obj.is64Bit() ? constructNameList<MachO::nlist_64>(
+                            *reinterpret_cast<const MachO::nlist_64 *>(
+                                Symbol.getRawDataRefImpl().p))
+                      : constructNameList<MachO::nlist>(
+                            *reinterpret_cast<const MachO::nlist *>(
+                                Symbol.getRawDataRefImpl().p));
+    LEData.NameList.push_back(NLE);
+  }
+
+  StringRef RemainingTable = Obj.getStringTableData();
+  while (RemainingTable.size() > 0) {
+    auto SymbolPair = RemainingTable.split('\0');
+    RemainingTable = SymbolPair.second;
+    if (SymbolPair.first.empty())
+      break;
+    LEData.StringTable.push_back(SymbolPair.first);
+  }
 }
 
 Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj) {

@@ -147,8 +147,7 @@ static void initReciprocals(AArch64TargetMachine& TM, AArch64Subtarget& ST)
   // (52 mantissa bits) are 2 and 3, respectively.
   unsigned ExtraStepsF = 2,
            ExtraStepsD = ExtraStepsF + 1;
-  // FIXME: Enable x^-1/2 only for Exynos M1 at the moment.
-  bool UseRsqrt = ST.isExynosM1();
+  bool UseRsqrt = ST.useRSqrt();
 
   TM.Options.Reciprocals.setDefaults("sqrtf", UseRsqrt, ExtraStepsF);
   TM.Options.Reciprocals.setDefaults("sqrtd", UseRsqrt, ExtraStepsD);

@@ -322,22 +322,6 @@ define <4 x i32> @test_x86_sse2_cvttpd2dq(<2 x double> %a0) {
 declare <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double>) nounwind readnone
 
 
-define <4 x i32> @test_x86_sse2_cvttps2dq(<4 x float> %a0) {
-; SSE-LABEL: test_x86_sse2_cvttps2dq:
-; SSE:       ## BB#0:
-; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-NEXT:    retl
-;
-; KNL-LABEL: test_x86_sse2_cvttps2dq:
-; KNL:       ## BB#0:
-; KNL-NEXT:    vcvttps2dq %xmm0, %xmm0
-; KNL-NEXT:    retl
-  %res = call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %a0) ; <<4 x i32>> [#uses=1]
-  ret <4 x i32> %res
-}
-declare <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float>) nounwind readnone
-
-
 define i32 @test_x86_sse2_cvttsd2si(<2 x double> %a0) {
 ; SSE-LABEL: test_x86_sse2_cvttsd2si:
 ; SSE:       ## BB#0:

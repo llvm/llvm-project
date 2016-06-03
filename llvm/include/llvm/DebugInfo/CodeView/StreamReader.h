@@ -26,7 +26,7 @@ class StreamRef;
 
 class StreamReader {
 public:
-  StreamReader(const StreamInterface &S);
+  StreamReader(StreamRef Stream);
 
   Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
   Error readInteger(uint16_t &Dest);
@@ -52,12 +52,12 @@ public:
     return Error::success();
   }
 
-  template <typename T>
-  Error readArray(VarStreamArray<T> &Array, uint32_t Size) {
+  template <typename T, typename U>
+  Error readArray(VarStreamArray<T, U> &Array, uint32_t Size) {
     StreamRef S;
     if (auto EC = readStreamRef(S, Size))
       return EC;
-    Array = VarStreamArray<T>(S);
+    Array = VarStreamArray<T, U>(S, Array.getExtractor());
     return Error::success();
   }
 
@@ -72,7 +72,7 @@ public:
       return make_error<CodeViewError>(cv_error_code::corrupt_record);
     if (Offset + Length > Stream.getLength())
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
-    StreamRef View(Stream, Offset, Length);
+    StreamRef View = Stream.slice(Offset, Length);
     Array = FixedStreamArray<T>(View);
     Offset += Length;
     return Error::success();
@@ -84,7 +84,7 @@ public:
   uint32_t bytesRemaining() const { return getLength() - getOffset(); }
 
 private:
-  const StreamInterface &Stream;
+  StreamRef Stream;
   uint32_t Offset;
 };
 } // namespace codeview

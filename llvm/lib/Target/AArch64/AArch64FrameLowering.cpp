@@ -942,7 +942,8 @@ static void computeCalleeSaveRegisterPairs(
       // callee-save area to ensure 16-byte alignment.
       Offset -= 16;
       assert(MFI->getObjectAlignment(RPI.FrameIdx) <= 16);
-      MFI->setObjectSize(RPI.FrameIdx, 16);
+      MFI->setObjectAlignment(RPI.FrameIdx, 16);
+      AFI->setCalleeSaveStackHasFreeSpace(true);
     } else
       Offset -= RPI.isPaired() ? 16 : 8;
     assert(Offset % 8 == 0);
@@ -1189,4 +1190,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Round up to register pair alignment to avoid additional SP adjustment
   // instructions.
   AFI->setCalleeSavedStackSize(alignTo(8 * NumRegsSpilled, 16));
+}
+
+bool AArch64FrameLowering::enableStackSlotScavenging(
+    const MachineFunction &MF) const {
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return AFI->hasCalleeSaveStackFreeSpace();
 }

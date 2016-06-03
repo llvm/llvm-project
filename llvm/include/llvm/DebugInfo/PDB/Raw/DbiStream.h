@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 
+#include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -22,6 +23,10 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+namespace object {
+struct coff_section;
+}
+
 namespace pdb {
 class PDBFile;
 class ISectionContribVisitor;
@@ -56,11 +61,16 @@ public:
 
   ArrayRef<ModuleInfoEx> modules() const;
 
+  Expected<StringRef> getFileNameForIndex(uint32_t Index) const;
+
+  codeview::FixedStreamArray<object::coff_section> getSectionHeaders();
+
   codeview::FixedStreamArray<SecMapEntry> getSectionMap() const;
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
 private:
   Error initializeSectionContributionData();
+  Error initializeSectionHeadersData();
   Error initializeSectionMapData();
   Error initializeFileInfo();
 
@@ -77,12 +87,18 @@ private:
   codeview::StreamRef TypeServerMapSubstream;
   codeview::StreamRef ECSubstream;
 
+  codeview::StreamRef NamesBuffer;
+
   codeview::FixedStreamArray<support::ulittle16_t> DbgStreams;
 
   PdbRaw_DbiSecContribVer SectionContribVersion;
   codeview::FixedStreamArray<SectionContrib> SectionContribs;
   codeview::FixedStreamArray<SectionContrib2> SectionContribs2;
   codeview::FixedStreamArray<SecMapEntry> SectionMap;
+  codeview::FixedStreamArray<support::little32_t> FileNameOffsets;
+
+  std::unique_ptr<MappedBlockStream> SectionHeaderStream;
+  codeview::FixedStreamArray<object::coff_section> SectionHeaders;
 
   const HeaderInfo *Header;
 };

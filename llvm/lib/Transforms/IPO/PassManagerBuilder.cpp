@@ -542,6 +542,9 @@ void PassManagerBuilder::populateModulePassManager(
     // outer loop. LICM pass can help to promote the runtime check out if the
     // checked value is loop invariant.
     MPM.add(createLICMPass());
+
+    // Get rid of LCSSA nodes.
+    MPM.add(createInstructionSimplifierPass());
   }
 
   // After vectorization and unrolling, assume intrinsics may tell us more

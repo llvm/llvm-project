@@ -689,7 +689,11 @@ void Liveness::resetKills(MachineBasicBlock *B) {
 
     MI->clearKillInfo();
     for (auto &Op : MI->operands()) {
-      if (!Op.isReg() || !Op.isDef())
+      // An implicit def of a super-register may not necessarily start a
+      // live range of it, since an implicit use could be used to keep parts
+      // of it live. Instead of analyzing the implicit operands, ignore
+      // implicit defs.
+      if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
         continue;
       unsigned R = Op.getReg();
       if (!TargetRegisterInfo::isPhysicalRegister(R))

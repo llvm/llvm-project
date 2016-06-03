@@ -35,6 +35,7 @@ static uint32_t HashBufferV8(uint8_t *buffer, uint32_t NumBuckets) {
   return 0;
 }
 
+// This corresponds to `HDR` in PDB/dbi/tpi.h.
 struct TpiStream::HeaderInfo {
   struct EmbeddedBuf {
     little32_t Off;
@@ -47,6 +48,7 @@ struct TpiStream::HeaderInfo {
   ulittle32_t TypeIndexEnd;
   ulittle32_t TypeRecordBytes;
 
+  // The following members correspond to `TpiHash` in PDB/dbi/tpi.h.
   ulittle16_t HashStreamIndex;
   ulittle16_t HashAuxStreamIndex;
   ulittle32_t HashKeySize;

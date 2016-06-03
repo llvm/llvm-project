@@ -1,7 +1,11 @@
 ; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
+; RUN: opt < %s -passes=pgo-instr-gen,instrprof -S | FileCheck %s --check-prefix=LOWER
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
+
+$foo3 = comdat any
 
 @bar = external global void ()*, align 8
 ; GEN: @__profn_foo = private constant [3 x i8] c"foo"
@@ -47,6 +51,13 @@ bb10:                                             ; preds = %bb7, %bb
 
 bb11:                                             ; preds = %bb2
   resume { i8*, i32 } %tmp3
+}
+
+; Test that comdat function's address is recorded.
+; LOWER: @__profd_foo3 = linkonce_odr{{.*}}@foo3
+; Function Attrs: nounwind uwtable
+define linkonce_odr i32 @foo3()  comdat  {
+  ret i32 1
 }
 
 declare i32 @__gxx_personality_v0(...)

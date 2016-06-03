@@ -3407,39 +3407,6 @@ define <8 x float> @test_x86_avx_cvtdq2_ps_256(<8 x i32> %a0) {
 declare <8 x float> @llvm.x86.avx.cvtdq2.ps.256(<8 x i32>) nounwind readnone
 
 
-define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) {
-; AVX-LABEL: test_x86_avx_cvtt_pd2dq_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vcvttpd2dqy %ymm0, %xmm0
-; AVX-NEXT:    vzeroupper
-; AVX-NEXT:    retl
-;
-; AVX512VL-LABEL: test_x86_avx_cvtt_pd2dq_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vcvttpd2dqy %ymm0, %xmm0
-; AVX512VL-NEXT:    retl
-  %res = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %a0) ; <<4 x i32>> [#uses=1]
-  ret <4 x i32> %res
-}
-declare <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double>) nounwind readnone
-
-
-define <8 x i32> @test_x86_avx_cvtt_ps2dq_256(<8 x float> %a0) {
-; AVX-LABEL: test_x86_avx_cvtt_ps2dq_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX-NEXT:    retl
-;
-; AVX512VL-LABEL: test_x86_avx_cvtt_ps2dq_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512VL-NEXT:    retl
-  %res = call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %a0) ; <<8 x i32>> [#uses=1]
-  ret <8 x i32> %res
-}
-declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>) nounwind readnone
-
-
 define <8 x float> @test_x86_avx_dp_ps_256(<8 x float> %a0, <8 x float> %a1) {
 ; AVX-LABEL: test_x86_avx_dp_ps_256:
 ; AVX:       ## BB#0:
@@ -4133,7 +4100,7 @@ define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx_vpermilvar_pd_256_2:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermilpd LCPI233_0, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpermilpd LCPI231_0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retl
   %res = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 0, i64 2>) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
@@ -4625,7 +4592,7 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX-LABEL: movnt_dq:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    vpaddq LCPI260_0, %xmm0, %xmm0
+; AVX-NEXT:    vpaddq LCPI258_0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntdq %ymm0, (%eax)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
@@ -4633,7 +4600,7 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX512VL-LABEL: movnt_dq:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512VL-NEXT:    vpaddq LCPI260_0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpaddq LCPI258_0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovntdq %ymm0, (%eax)
 ; AVX512VL-NEXT:    retl
   %a2 = add <2 x i64> %a1, <i64 1, i64 1>

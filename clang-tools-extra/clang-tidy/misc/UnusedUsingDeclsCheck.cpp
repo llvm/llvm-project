@@ -41,11 +41,17 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Using = Result.Nodes.getNodeAs<UsingDecl>("using")) {
     // Ignores using-declarations defined in macros.
     if (Using->getLocation().isMacroID())
-      return ;
+      return;
 
     // Ignores using-declarations defined in class definition.
     if (isa<CXXRecordDecl>(Using->getDeclContext()))
-      return ;
+      return;
+
+    // FIXME: We ignore using-decls defined in function definitions at the
+    // moment because of false positives caused by ADL and different function
+    // scopes.
+    if (isa<FunctionDecl>(Using->getDeclContext()))
+      return;
 
     UsingDeclContext Context(Using);
     Context.UsingDeclRange = CharSourceRange::getCharRange(
@@ -97,11 +103,14 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
+  // FIXME: Currently, we don't handle the using-decls being used in different
+  // scopes (such as different namespaces, different functions). Instead of
+  // giving an incorrect message, we mark all of them as used.
+  //
+  // FIXME: Use a more efficient way to find a matching context.
   for (auto &Context : Contexts) {
-    if (Context.UsingTargetDecls.count(D->getCanonicalDecl()) > 0) {
+    if (Context.UsingTargetDecls.count(D->getCanonicalDecl()) > 0)
       Context.IsUsed = true;
-      break;
-    }
   }
 }
 
