@@ -114,13 +114,19 @@ public:
   /// @return The llvm::Value* containing the result of the computation.
   llvm::Value *create(__isl_take isl_ast_expr *Expr);
 
-  /// @brief Return the largest of two types.
+  /// @brief Unify the types of @p V0 and @p V1 in-place.
   ///
-  /// @param T1 The first type.
-  /// @param T2 The second type.
+  /// The values @p V0 and @p V1 will be updated in place such that
+  ///   type(V0) == type(V1) == MaxType
+  /// where MaxType is the larger type of the initial @p V0 and @p V1.
+  void unifyTypes(llvm::Value *&V0, llvm::Value *&V1) {
+    unifyTypes(V0, V1, V1);
+  }
+
+  /// @brief Unify the types of @p V0, @p V1 and @p V2 in-place.
   ///
-  /// @return The largest of the two types.
-  llvm::Type *getWidestType(llvm::Type *T1, llvm::Type *T2);
+  /// The same as unifyTypes above but for three values instead of two.
+  void unifyTypes(llvm::Value *&V0, llvm::Value *&V1, llvm::Value *&V2);
 
   /// @brief Return the type with which this expression should be computed.
   ///

@@ -294,6 +294,10 @@ private:
                                    const std::vector<SearchSpec> &C_specs,
                                    const SymbolContext &sc);
     
+    void
+    CollectFallbackNames(std::vector<SearchSpec> &fallback_specs,
+                         const std::vector<SearchSpec> &C_specs);
+    
     lldb::addr_t
     FindInSymbols(const std::vector<SearchSpec> &specs,
                   const lldb_private::SymbolContext &sc);

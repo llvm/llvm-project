@@ -19,6 +19,7 @@
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
+#include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "interception/interception.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
@@ -853,6 +854,7 @@ void DestroyThreadState() {
     thr->signal_ctx = 0;
     UnmapOrDie(sctx, sizeof(*sctx));
   }
+  DTLS_Destroy();
   cur_thread_finalize();
 }
 }  // namespace __tsan
@@ -2183,17 +2185,7 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #undef SANITIZER_INTERCEPT_FGETPWENT
 #undef SANITIZER_INTERCEPT_GETPWNAM_AND_FRIENDS
 #undef SANITIZER_INTERCEPT_GETPWNAM_R_AND_FRIENDS
-// __tls_get_addr can be called with mis-aligned stack due to:
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58066
-// There are two potential issues:
-// 1. Sanitizer code contains a MOVDQA spill (it does not seem to be the case
-// right now). or 2. ProcessPendingSignal calls user handler which contains
-// MOVDQA spill (this happens right now).
-// Since the interceptor only initializes memory for msan, the simplest solution
-// is to disable the interceptor in tsan (other sanitizers do not call
-// signal handlers from COMMON_INTERCEPTOR_ENTER).
-// As __tls_get_addr has been intercepted in the past, to avoid breaking
-// libtsan ABI, keep it around, but just call the real function.
+// We define our own.
 #if SANITIZER_INTERCEPT_TLS_GET_ADDR
 #define NEED_TLS_GET_ADDR
 #endif
@@ -2429,8 +2421,27 @@ static void syscall_post_fork(uptr pc, int pid) {
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
 
 #ifdef NEED_TLS_GET_ADDR
+// Define own interceptor instead of sanitizer_common's for three reasons:
+// 1. It must not process pending signals.
+//    Signal handlers may contain MOVDQA instruction (see below).
+// 2. It must be as simple as possible to not contain MOVDQA.
+// 3. Sanitizer_common version uses COMMON_INTERCEPTOR_INITIALIZE_RANGE which
+//    is empty for tsan (meant only for msan).
+// Note: __tls_get_addr can be called with mis-aligned stack due to:
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58066
+// So the interceptor must work with mis-aligned stack, in particular, does not
+// execute MOVDQA with stack addresses.
 TSAN_INTERCEPTOR(void *, __tls_get_addr, void *arg) {
-  return REAL(__tls_get_addr)(arg);
+  void *res = REAL(__tls_get_addr)(arg);
+  ThreadState *thr = cur_thread();
+  if (!thr)
+    return res;
+  DTLS::DTV *dtv = DTLS_on_tls_get_addr(arg, res, thr->tls_addr, thr->tls_size);
+  if (!dtv)
+    return res;
+  // New DTLS block has been allocated.
+  MemoryResetRange(thr, 0, dtv->beg, dtv->size);
+  return res;
 }
 #endif
 

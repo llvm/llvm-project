@@ -18,14 +18,14 @@
 ; IR-NEXT:   store i32* %polly.preload.tmp1.merge, i32** %tmp1.preload.s2a
 ; IR-NEXT:   %12 = sext i32 %N to i64
 ; IR-NEXT:   %13 = icmp sge i64 %12, 1
-; IR-NEXT:   %14 = sext i32 %q to i64
-; IR-NEXT:   %15 = sext i32 %p to i64
-; IR-NEXT:   %16 = add nsw i64 %15, %14
+; IR-NEXT:   %14 = sext i32 %p to i64
+; IR-NEXT:   %15 = sext i32 %q to i64
+; IR-NEXT:   %16 = add nsw i64 %14, %15
 ; IR-NEXT:   %17 = icmp sle i64 %16, 2147483647
 ; IR-NEXT:   %18 = and i1 %13, %17
-; IR-NEXT:   %19 = sext i32 %q to i64
-; IR-NEXT:   %20 = sext i32 %p to i64
-; IR-NEXT:   %21 = add nsw i64 %20, %19
+; IR-NEXT:   %19 = sext i32 %p to i64
+; IR-NEXT:   %20 = sext i32 %q to i64
+; IR-NEXT:   %21 = add nsw i64 %19, %20
 ; IR-NEXT:   %22 = icmp sge i64 %21, -2147483648
 ; IR-NEXT:   %23 = and i1 %18, %22
 ; IR-NEXT:   br label %polly.preload.cond1

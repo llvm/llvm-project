@@ -55,11 +55,17 @@ static bool HandleDynamicTypeCacheMiss(
     << TypeCheckKinds[Data->TypeCheckKind] << (void*)Pointer << Data->Type;
 
   // If possible, say what type it actually points to.
-  if (!DTI.isValid())
-    Diag(Pointer, DL_Note, "object has invalid vptr")
-        << TypeName(DTI.getMostDerivedTypeName())
-        << Range(Pointer, Pointer + sizeof(uptr), "invalid vptr");
-  else if (!DTI.getOffset())
+  if (!DTI.isValid()) {
+    if (DTI.getOffset() < -VptrMaxOffsetToTop || DTI.getOffset() > VptrMaxOffsetToTop) {
+      Diag(Pointer, DL_Note, "object has a possibly invalid vptr: abs(offset to top) too big")
+          << TypeName(DTI.getMostDerivedTypeName())
+          << Range(Pointer, Pointer + sizeof(uptr), "possibly invalid vptr");
+    } else {
+      Diag(Pointer, DL_Note, "object has invalid vptr")
+          << TypeName(DTI.getMostDerivedTypeName())
+          << Range(Pointer, Pointer + sizeof(uptr), "invalid vptr");
+    }
+  } else if (!DTI.getOffset())
     Diag(Pointer, DL_Note, "object is of type %0")
         << TypeName(DTI.getMostDerivedTypeName())
         << Range(Pointer, Pointer + sizeof(uptr), "vptr for %0");

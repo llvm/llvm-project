@@ -64,7 +64,7 @@ namespace polly {
 class MemoryAccess;
 class Scop;
 class ScopStmt;
-class ScopInfo;
+class ScopBuilder;
 
 //===---------------------------------------------------------------------===//
 
@@ -482,7 +482,7 @@ private:
   ///        sum[i+j] = sum[i] + 3;
   ///
   /// Here not all iterations access the same memory location, but iterations
-  /// for which j = 0 holds do. After lifting the equality check in ScopInfo,
+  /// for which j = 0 holds do. After lifting the equality check in ScopBuilder,
   /// subsequent transformations do not only need check if a statement is
   /// reduction like, but they also need to verify that that the reduction
   /// property is only exploited for statement instances that load from and
@@ -1503,7 +1503,7 @@ private:
   /// @brief List of invariant accesses.
   InvariantEquivClassesTy InvariantEquivClasses;
 
-  /// @brief Scop constructor; invoked from ScopInfo::buildScop.
+  /// @brief Scop constructor; invoked from ScopBuilder::buildScop.
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
        ScopDetection::DetectionContext &DC);
 
@@ -1513,7 +1513,7 @@ private:
   }
   //@}
 
-  /// @brief Initialize this ScopInfo .
+  /// @brief Initialize this ScopBuilder.
   void init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
             LoopInfo &LI);
 
@@ -1814,7 +1814,7 @@ private:
   void printAliasAssumptions(raw_ostream &OS) const;
   //@}
 
-  friend class ScopInfo;
+  friend class ScopBuilder;
 
 public:
   ~Scop();
@@ -2020,7 +2020,7 @@ public:
   }
 
   /// @brief Build the alias checks for this SCoP.
-  void buildAliasChecks(AliasAnalysis &AA);
+  bool buildAliasChecks(AliasAnalysis &AA);
 
   /// @brief Build all alias groups for this SCoP.
   ///
@@ -2247,10 +2247,10 @@ static inline raw_ostream &operator<<(raw_ostream &O, const Scop &scop) {
 }
 
 /// @brief Build the Polly IR (Scop and ScopStmt) on a Region.
-class ScopInfo {
+class ScopBuilder {
   //===-------------------------------------------------------------------===//
-  ScopInfo(const ScopInfo &) = delete;
-  const ScopInfo &operator=(const ScopInfo &) = delete;
+  ScopBuilder(const ScopBuilder &) = delete;
+  const ScopBuilder &operator=(const ScopBuilder &) = delete;
 
   /// @brief The AliasAnalysis to build AliasSetTracker.
   AliasAnalysis &AA;
@@ -2468,10 +2468,10 @@ class ScopInfo {
   void addPHIReadAccess(PHINode *PHI);
 
 public:
-  explicit ScopInfo(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
-                    const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
-                    ScopDetection &SD, ScalarEvolution &SE);
-  ~ScopInfo() {}
+  explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
+                       const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
+                       ScopDetection &SD, ScalarEvolution &SE);
+  ~ScopBuilder() {}
 
   /// @brief Try to build the Polly IR of static control part on the current
   ///        SESE-Region.
@@ -2486,8 +2486,8 @@ public:
 /// @brief The legacy pass manager's analysis pass to compute scop information
 ///        for a region.
 class ScopInfoRegionPass : public RegionPass {
-  /// @brief The ScopInfo pointer which is used to construct a Scop.
-  std::unique_ptr<ScopInfo> SI;
+  /// @brief The ScopBuilder pointer which is used to construct a Scop.
+  std::unique_ptr<ScopBuilder> SI;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -2495,8 +2495,8 @@ public:
   ScopInfoRegionPass() : RegionPass(ID) {}
   ~ScopInfoRegionPass() {}
 
-  /// @brief Build ScopInfo object, which constructs Polly IR of static control
-  ///        part for the current SESE-Region.
+  /// @brief Build ScopBuilder object, which constructs Polly IR of static
+  ///        control part for the current SESE-Region.
   ///
   /// @return Return Scop for the current Region.
   Scop *getScop() {

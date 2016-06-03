@@ -44,6 +44,7 @@ struct Configuration {
   llvm::StringRef Emulation;
   llvm::StringRef Fini;
   llvm::StringRef Init;
+  llvm::StringRef LtoAAPipeline;
   llvm::StringRef LtoNewPmPasses;
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;

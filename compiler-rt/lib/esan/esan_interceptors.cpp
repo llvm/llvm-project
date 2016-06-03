@@ -373,6 +373,8 @@ INTERCEPTOR(signal_handler_t, signal, int signum, signal_handler_t handler) {
 #endif
 
 #if SANITIZER_LINUX
+DECLARE_REAL(int, sigaction, int signum, const struct sigaction *act,
+             struct sigaction *oldact)
 INTERCEPTOR(int, sigaction, int signum, const struct sigaction *act,
             struct sigaction *oldact) {
   void *ctx;
@@ -382,6 +384,15 @@ INTERCEPTOR(int, sigaction, int signum, const struct sigaction *act,
   else
     return REAL(sigaction)(signum, act, oldact);
 }
+
+// This is required to properly use internal_sigaction.
+namespace __sanitizer {
+int real_sigaction(int signum, const void *act, void *oldact) {
+  return REAL(sigaction)(signum, (const struct sigaction *)act,
+                         (struct sigaction *)oldact);
+}
+} // namespace __sanitizer
+
 #define ESAN_MAYBE_INTERCEPT_SIGACTION INTERCEPT_FUNCTION(sigaction)
 #else
 #error Platform not supported

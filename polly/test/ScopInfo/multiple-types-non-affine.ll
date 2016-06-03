@@ -24,15 +24,15 @@
 ; CHECK-NEXT: Schedule :=
 ; CHECK-NEXT:     { Stmt_bb2[i0] -> [i0] };
 ; CHECK-NEXT: ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Short[o0] : -1 + o0 + 8*floor((i0)/8) <= 16*floor((8 + i0)/16) <= o0 + 8*floor((i0)/8) }
+; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Short[o0] : 0 <= o0 <= 9 and ((o0 >= 8 and 16*floor((8 + i0)/16) > i0) or (o0 <= 1 and 16*floor((8 + i0)/16) <= i0)) };
 ; CHECK-NEXT: MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Short[i0] };
 ; CHECK-NEXT: ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Float[o0] : -1 + o0 + 8*floor((i0)/8) <= 16*floor((8 + i0)/16) <= o0 + 8*floor((i0)/8) }
+; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Float[o0] : 0 <= o0 <= 9 and ((o0 >= 8 and 16*floor((8 + i0)/16) > i0) or (o0 <= 1 and 16*floor((8 + i0)/16) <= i0)) };
 ; CHECK-NEXT: MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Float[i0] };
 ; CHECK-NEXT: ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Double[o0] : -7 + o0 + 8*floor((i0)/8) <= 16*floor((8 + i0)/16) <= o0 + 8*floor((i0)/8) }
+; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Double[o0] : 0 <= o0 <= 15 and ((o0 >= 8 and 16*floor((8 + i0)/16) > i0) or (o0 <= 7 and 16*floor((8 + i0)/16) <= i0)) };
 ; CHECK-NEXT: MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:     { Stmt_bb2[i0] -> MemRef_Double[i0] };
 ; CHECK-NEXT: }
