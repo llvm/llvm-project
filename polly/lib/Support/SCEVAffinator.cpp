@@ -265,7 +265,8 @@ __isl_give PWACtx SCEVAffinator::visit(const SCEV *Expr) {
     PWAC = checkForWrapping(Expr, PWAC);
   }
 
-  combine(PWAC, visitConstant(Factor), isl_pw_aff_mul);
+  if (!Factor->getType()->isIntegerTy(1))
+    combine(PWAC, visitConstant(Factor), isl_pw_aff_mul);
 
   // For compile time reasons we need to simplify the PWAC before we cache and
   // return it.

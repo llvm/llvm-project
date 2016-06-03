@@ -193,6 +193,11 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
            Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
   case R_TLSGD_PC:
     return Out<ELFT>::Got->getGlobalDynAddr(Body) + A - P;
+  case R_TLSDESC:
+    return Out<ELFT>::Got->getGlobalDynAddr(Body) + A;
+  case R_TLSDESC_PAGE:
+    return getAArch64Page(Out<ELFT>::Got->getGlobalDynAddr(Body) + A) -
+           getAArch64Page(P);
   case R_PLT:
     return Body.getPltVA<ELFT>() + A;
   case R_PLT_PC:

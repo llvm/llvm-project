@@ -94,17 +94,20 @@ endif ()
 
 string(REPLACE ";" " " LIBUNWIND_COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")
 string(REPLACE ";" " " LIBUNWIND_CXX_FLAGS "${LIBUNWIND_CXX_FLAGS}")
+string(REPLACE ";" " " LIBUNWIND_C_FLAGS "${LIBUNWIND_C_FLAGS}")
 string(REPLACE ";" " " LIBUNWIND_LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}")
 
 set_target_properties(unwind
                       PROPERTIES
-                        COMPILE_FLAGS "${CMAKE_COMPILE_FLAGS} ${LIBUNWIND_COMPILE_FLAGS}"
-                        LINK_FLAGS    "${CMAKE_LINK_FLAGS} ${LIBUNWIND_LINK_FLAGS}"
+                        COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}"
+                        LINK_FLAGS    "${LIBUNWIND_LINK_FLAGS}"
                         OUTPUT_NAME   "unwind"
                         VERSION       "1.0"
                         SOVERSION     "1")
 set_property(SOURCE ${LIBUNWIND_CXX_SOURCES}
-             APPEND_STRING PROPERTY COMPILE_FLAGS "${LIBUNWIND_CXX_FLAGS}")
+             APPEND_STRING PROPERTY COMPILE_FLAGS " ${CMAKE_CXX_FLAGS} ${LIBUNWIND_CXX_FLAGS}")
+set_property(SOURCE ${LIBUNWIND_C_SOURCES}
+             APPEND_STRING PROPERTY COMPILE_FLAGS " ${CMAKE_C_FLAGS} ${LIBUNWIND_C_FLAGS}")
 
 install(TARGETS unwind
         LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}

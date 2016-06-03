@@ -1769,6 +1769,12 @@ SymbolFileDWARF::GetDIE (const DIERef &die_ref)
 std::unique_ptr<SymbolFileDWARFDwo>
 SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die)
 {
+    // If we are using a dSYM file, we never want the standard DWO files since
+    // the -gmodule support uses the same DWO machanism to specify full debug
+    // info files for modules.
+    if (GetDebugMapSymfile())
+        return nullptr;
+
     const char *dwo_name = cu_die.GetAttributeValueAsString(this, &dwarf_cu, DW_AT_GNU_dwo_name, nullptr);
     if (!dwo_name)
         return nullptr;
@@ -1828,9 +1834,25 @@ SymbolFileDWARF::UpdateExternalModuleListIfNeeded()
                     {
                         ModuleSpec dwo_module_spec;
                         dwo_module_spec.GetFileSpec().SetFile(dwo_path, false);
+                        if (dwo_module_spec.GetFileSpec().IsRelative())
+                        {
+                            const char *comp_dir = die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr);
+                            if (comp_dir)
+                            {
+                                dwo_module_spec.GetFileSpec().SetFile(comp_dir, true);
+                                dwo_module_spec.GetFileSpec().AppendPathComponent(dwo_path);
+                            }
+                        }
                         dwo_module_spec.GetArchitecture() = m_obj_file->GetModule()->GetArchitecture();
                         //printf ("Loading dwo = '%s'\n", dwo_path);
                         Error error = ModuleList::GetSharedModule (dwo_module_spec, module_sp, NULL, NULL, NULL);
+                        if (!module_sp)
+                        {
+                            GetObjectFile()->GetModule()->ReportWarning ("0x%8.8x: unable to locate module needed for external types: %s\nerror: %s\nDebugging will be degraded due to missing types. Rebuilding your project will regenerate the needed module files.",
+                                                                         die.GetOffset(),
+                                                                         dwo_module_spec.GetFileSpec().GetPath().c_str(),
+                                                                         error.AsCString("unknown error"));
+                        }
                     }
                     m_external_type_modules[const_name] = module_sp;
                 }

@@ -207,6 +207,8 @@ public:
 
 template <class Predicate> binary_negate<Predicate> not2(const Predicate& pred);
 
+template <class F> unspecified not_fn(F&& f); // C++17
+
 template<class T> struct is_bind_expression;
 template<class T> struct is_placeholder;
 
@@ -2585,11 +2587,54 @@ struct _LIBCPP_TYPE_VIS_ONLY hash
 
 
 #if _LIBCPP_STD_VER > 14
+
 template <class _Fn, class ..._Args>
 result_of_t<_Fn&&(_Args&&...)>
-invoke(_Fn&& __f, _Args&&... __args) {
-    return __invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...);
+invoke(_Fn&& __f, _Args&&... __args)
+    noexcept(noexcept(_VSTD::__invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...)))
+{
+    return _VSTD::__invoke(_VSTD::forward<_Fn>(__f), _VSTD::forward<_Args>(__args)...);
 }
+
+template <class _DecayFunc>
+class _LIBCPP_TYPE_VIS_ONLY __not_fn_imp {
+  _DecayFunc __fd;
+
+public:
+    __not_fn_imp() = delete;
+
+    template <class ..._Args>
+    _LIBCPP_INLINE_VISIBILITY
+    auto operator()(_Args&& ...__args)
+            noexcept(noexcept(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...)))
+        -> decltype(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
+        { return !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
+
+    template <class ..._Args>
+    _LIBCPP_INLINE_VISIBILITY
+    auto operator()(_Args&& ...__args) const
+            noexcept(noexcept(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...)))
+        -> decltype(!_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...))
+        { return !_VSTD::invoke(__fd, _VSTD::forward<_Args>(__args)...); }
+
+private:
+    template <class _RawFunc,
+              class = enable_if_t<!is_same<decay_t<_RawFunc>, __not_fn_imp>::value>>
+    _LIBCPP_INLINE_VISIBILITY
+    explicit __not_fn_imp(_RawFunc&& __rf)
+        : __fd(_VSTD::forward<_RawFunc>(__rf)) {}
+
+    template <class _RawFunc>
+    friend inline _LIBCPP_INLINE_VISIBILITY
+    __not_fn_imp<decay_t<_RawFunc>> not_fn(_RawFunc&&);
+};
+
+template <class _RawFunc>
+inline _LIBCPP_INLINE_VISIBILITY
+__not_fn_imp<decay_t<_RawFunc>> not_fn(_RawFunc&& __fn) {
+    return __not_fn_imp<decay_t<_RawFunc>>(_VSTD::forward<_RawFunc>(__fn));
+}
+
 #endif
 
 // struct hash<T*> in <memory>

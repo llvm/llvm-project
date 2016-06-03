@@ -99,14 +99,26 @@ endif()
 #===============================================================================
 
 # Define options.
+option(LIBUNWIND_BUILD_32_BITS "Build 32 bit libunwind" ${LLVM_BUILD_32_BITS})
 option(LIBUNWIND_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBUNWIND_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBUNWIND_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBUNWIND_ENABLE_SHARED "Build libunwind as a shared library." ON)
 option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." OFF)
 
-set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE STRING "GCC toolchain for cross compiling.")
-set(LIBUNWIND_SYSROOT "" CACHE STRING "Sysroot for cross compiling.")
+set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
+set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
+set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
+
+
+# Check that we can build with 32 bits if requested.
+if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
+  if (LIBUNWIND_BUILD_32_BITS AND NOT LLVM_BUILD_32_BITS) # Don't duplicate the output from LLVM
+    message(STATUS "Building 32 bits executables and libraries.")
+  endif()
+elseif(LIBUNWIND_BUILD_32_BITS)
+  message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS=ON is not supported on this platform.")
+endif()
 
 #===============================================================================
 # Configure System
@@ -117,17 +129,15 @@ set(CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
     ${CMAKE_MODULE_PATH})
 
-# Configure compiler.
-include(config-ix)
-
 set(LIBUNWIND_COMPILER    ${CMAKE_CXX_COMPILER})
 set(LIBUNWIND_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBUNWIND_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBUNWIND_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 
-#===============================================================================
-# Setup Compiler Flags
-#===============================================================================
+set(LIBUNWIND_C_FLAGS "")
+set(LIBUNWIND_CXX_FLAGS "")
+set(LIBUNWIND_COMPILE_FLAGS "")
+set(LIBUNWIND_LINK_FLAGS "")
 
 # Get required flags.
 macro(append_if list condition var)
@@ -136,10 +146,29 @@ macro(append_if list condition var)
   endif()
 endmacro()
 
-set(LIBUNWIND_C_FLAGS "")
-set(LIBUNWIND_CXX_FLAGS "")
-set(LIBUNWIND_COMPILE_FLAGS "")
-set(LIBUNWIND_LINK_FLAGS "")
+macro(add_target_flags_if condition var)
+  if (${condition})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
+    list(APPEND LINUNWIND_COMPILE_FLAGS ${var})
+    list(APPEND LIBUNWIND_LINK_FLAGS ${var})
+  endif()
+endmacro()
+
+add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
+add_target_flags_if(LIBUNWIND_TARGET_TRIPLE
+          "-target ${LIBUNWIND_TARGET_TRIPLE}")
+add_target_flags_if(LIBUNWIND_GCC_TOOLCHAIN
+          "-gcc-toolchain ${LIBUNWIND_GCC_TOOLCHAIN}")
+add_target_flags_if(LIBUNWIND_SYSROOT
+          "--sysroot=${LIBUNWIND_SYSROOT}")
+
+# Configure compiler.
+include(config-ix)
+
+#===============================================================================
+# Setup Compiler Flags
+#===============================================================================
 
 append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WERROR_FLAG -Werror=return-type)
 
@@ -212,13 +241,6 @@ endif ()
 if (MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif ()
-
-append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_TARGET_TRIPLE
-          "-target ${LIBUNWIND_TARGET_TRIPLE}")
-append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_GCC_TOOLCHAIN
-          "-gcc-toolchain ${LIBUNWIND_GCC_TOOLCHAIN}")
-append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_SYSROOT
-          "--sysroot=${LIBUNWIND_SYSROOT}")
 
 #===============================================================================
 # Setup Source Code

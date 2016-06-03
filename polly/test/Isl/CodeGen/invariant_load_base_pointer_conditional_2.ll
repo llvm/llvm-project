@@ -19,17 +19,17 @@
 ; IR-NEXT:   store i32* %polly.preload.tmp1.merge, i32** %tmp1.preload.s2a
 ; IR-NEXT:   %12 = sext i32 %N to i64
 ; IR-NEXT:   %13 = icmp sge i64 %12, 1
-; IR-NEXT:   %14 = sext i32 %q to i64
-; IR-NEXT:   %15 = sext i32 %p to i64
-; IR-NEXT:   %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %15, i64 %14)
+; IR-NEXT:   %14 = sext i32 %p to i64
+; IR-NEXT:   %15 = sext i32 %q to i64
+; IR-NEXT:   %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %14, i64 %15)
 ; IR-NEXT:   %.obit4 = extractvalue { i64, i1 } %16, 1
 ; IR-NEXT:   %polly.overflow.state5 = or i1 false, %.obit4
 ; IR-NEXT:   %.res6 = extractvalue { i64, i1 } %16, 0
 ; IR-NEXT:   %17 = icmp sle i64 %.res6, 2147483647
 ; IR-NEXT:   %18 = and i1 %13, %17
-; IR-NEXT:   %19 = sext i32 %q to i64
-; IR-NEXT:   %20 = sext i32 %p to i64
-; IR-NEXT:   %21 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %20, i64 %19)
+; IR-NEXT:   %19 = sext i32 %p to i64
+; IR-NEXT:   %20 = sext i32 %q to i64
+; IR-NEXT:   %21 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %19, i64 %20)
 ; IR-NEXT:   %.obit7 = extractvalue { i64, i1 } %21, 1
 ; IR-NEXT:   %polly.overflow.state8 = or i1 %polly.overflow.state5, %.obit7
 ; IR-NEXT:   %.res9 = extractvalue { i64, i1 } %21, 0
@@ -51,16 +51,16 @@
 ; IRA-NEXT:   store i32* %polly.preload.tmp1.merge, i32** %tmp1.preload.s2a
 ; IRA-NEXT:   %12 = sext i32 %N to i64
 ; IRA-NEXT:   %13 = icmp sge i64 %12, 1
-; IRA-NEXT:   %14 = sext i32 %q to i64
-; IRA-NEXT:   %15 = sext i32 %p to i64
-; IRA-NEXT:   %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %15, i64 %14)
+; IRA-NEXT:   %14 = sext i32 %p to i64
+; IRA-NEXT:   %15 = sext i32 %q to i64
+; IRA-NEXT:   %16 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %14, i64 %15)
 ; IRA-NEXT:   %.obit5 = extractvalue { i64, i1 } %16, 1
 ; IRA-NEXT:   %.res6 = extractvalue { i64, i1 } %16, 0
 ; IRA-NEXT:   %17 = icmp sle i64 %.res6, 2147483647
 ; IRA-NEXT:   %18 = and i1 %13, %17
-; IRA-NEXT:   %19 = sext i32 %q to i64
-; IRA-NEXT:   %20 = sext i32 %p to i64
-; IRA-NEXT:   %21 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %20, i64 %19)
+; IRA-NEXT:   %19 = sext i32 %p to i64
+; IRA-NEXT:   %20 = sext i32 %q to i64
+; IRA-NEXT:   %21 = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %19, i64 %20)
 ; IRA-NEXT:   %.obit7 = extractvalue { i64, i1 } %21, 1
 ; IRA-NEXT:   %.res8 = extractvalue { i64, i1 } %21, 0
 ; IRA-NEXT:   %22 = icmp sge i64 %.res8, -2147483648

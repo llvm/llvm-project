@@ -260,6 +260,8 @@ def alias_version_script_version_script : Joined<["--"], "version-script=">, Ali
 // LTO-related options.
 def lto_jobs : Joined<["--"], "lto-jobs=">,
   HelpText<"Number of threads to run codegen">;
+def lto_aa_pipeline : Joined<["--"], "lto-aa-pipeline=">,
+  HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
 def lto_newpm_passes : Joined<["--"], "lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def disable_verify : Flag<["-"], "disable-verify">;
