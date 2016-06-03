@@ -399,7 +399,7 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
             {
                 m_demangled.SetCString(demangled.c_str());
                 if (log)
-                    log->Printf("demangle swift: %s -> \"%s\"", demangled.c_str());
+                    log->Printf("demangle swift: %s -> \"%s\"", mangled_name, demangled.c_str());
             }
             else
             {
