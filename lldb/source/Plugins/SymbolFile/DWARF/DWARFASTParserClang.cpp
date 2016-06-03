@@ -1777,8 +1777,7 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                                 else
                                 {
                                     module_sp->ReportError ("DWARF DIE at 0x%8.8x was not able to start its definition.\nPlease file a bug and attach the file at the start of this error message",
-                                                            type_die_ref.die_offset,
-                                                            type_name_cstr);
+                                                            type_die_ref.die_offset);
                                 }
                             }
 
