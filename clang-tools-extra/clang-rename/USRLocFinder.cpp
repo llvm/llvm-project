@@ -112,6 +112,17 @@ public:
     return true;
   }
 
+  bool VisitCXXConstructExpr(const CXXConstructExpr *Expr) {
+    CXXConstructorDecl *Decl = Expr->getConstructor();
+
+    if (getUSRForDecl(Decl) == USR) {
+      // This takes care of 'new <name>' expressions.
+      LocationsFound.push_back(Expr->getLocation());
+    }
+
+    return true;
+  }
+
   // Non-visitors:
 
   // \brief Returns a list of unique locations. Duplicate or overlapping

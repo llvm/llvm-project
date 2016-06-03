@@ -181,6 +181,7 @@ void initializeLibrary(ToolType Tool) {
   }
   WhichTool = Tool;
   SanitizerToolName = "EfficiencySanitizer";
+  CacheBinaryName();
   initializeFlags();
 
   // Intercepting libc _exit or exit via COMMON_INTERCEPTOR_ON_EXIT only

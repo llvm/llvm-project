@@ -1,10 +1,5 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
 ;
-; XFAIL: *
-;
-; This failed after rL271151 as SCEV does not any more derive a NSW flag here.
-; TODO: We need to understand what we want to test after this change.
-;
 ;    void f(long *A, long N, long p) {
 ;      for (long i = 0; i < N; i++)
 ;        A[i + 1] = 0;
@@ -32,46 +27,54 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @wrap(i64* %A, i64 %N, i64 %p) {
 bb:
-  br label %bb2
+  %tmp31 = icmp slt i64 0, %N
+  br i1 %tmp31, label %bb4.lr.ph, label %bb8
 
-bb2:                                              ; preds = %bb7, %bb
-  %indvars.iv = phi i64 [ %indvars.iv.next, %bb7 ], [ 0, %bb ]
-  %tmp3 = icmp slt i64 %indvars.iv, %N
-  br i1 %tmp3, label %bb4, label %bb8
+bb4.lr.ph:                                        ; preds = %bb
+  br label %bb4
 
-bb4:                                              ; preds = %bb2
-  %tmp5 = add nsw nuw i64 %indvars.iv, 1
+bb4:                                              ; preds = %bb4.lr.ph, %bb7
+  %indvars.iv2 = phi i64 [ 0, %bb4.lr.ph ], [ %indvars.iv.next, %bb7 ]
+  %tmp5 = add nuw nsw i64 %indvars.iv2, 1
   %tmp6 = getelementptr i64, i64* %A, i64 %tmp5
   store i64 0, i64* %tmp6, align 4
   br label %bb7
 
 bb7:                                              ; preds = %bb4
-  %indvars.iv.next = add nsw nuw i64 %indvars.iv, 1
-  br label %bb2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv2, 1
+  %tmp3 = icmp slt i64 %indvars.iv.next, %N
+  br i1 %tmp3, label %bb4, label %bb2.bb8_crit_edge
 
-bb8:                                              ; preds = %bb2
+bb2.bb8_crit_edge:                                ; preds = %bb7
+  br label %bb8
+
+bb8:                                              ; preds = %bb2.bb8_crit_edge, %bb
   ret void
 }
 
 define void @nowrap(i64* %A, i64 %N, i64 %p) {
 bb:
-  br label %bb2
+  %tmp31 = icmp slt i64 0, %N
+  br i1 %tmp31, label %bb4.lr.ph, label %bb8
 
-bb2:                                              ; preds = %bb7, %bb
-  %indvars.iv = phi i64 [ %indvars.iv.next, %bb7 ], [ 0, %bb ]
-  %tmp3 = icmp slt i64 %indvars.iv, %N
-  br i1 %tmp3, label %bb4, label %bb8
+bb4.lr.ph:                                        ; preds = %bb
+  br label %bb4
 
-bb4:                                              ; preds = %bb2
-  %tmp5 = add nsw nuw i64 %indvars.iv, 1
+bb4:                                              ; preds = %bb4.lr.ph, %bb7
+  %indvars.iv2 = phi i64 [ 0, %bb4.lr.ph ], [ %indvars.iv.next, %bb7 ]
+  %tmp5 = add nuw nsw i64 %indvars.iv2, 1
   %tmp6 = getelementptr inbounds i64, i64* %A, i64 %tmp5
   store i64 0, i64* %tmp6, align 4
   br label %bb7
 
 bb7:                                              ; preds = %bb4
-  %indvars.iv.next = add nsw nuw i64 %indvars.iv, 1
-  br label %bb2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv2, 1
+  %tmp3 = icmp slt i64 %indvars.iv.next, %N
+  br i1 %tmp3, label %bb4, label %bb2.bb8_crit_edge
 
-bb8:                                              ; preds = %bb2
+bb2.bb8_crit_edge:                                ; preds = %bb7
+  br label %bb8
+
+bb8:                                              ; preds = %bb2.bb8_crit_edge, %bb
   ret void
 }

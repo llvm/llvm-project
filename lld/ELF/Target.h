@@ -73,6 +73,7 @@ public:
   uint32_t PltRel;
   uint32_t RelativeRel;
   uint32_t IRelativeRel;
+  uint32_t TlsDescRel;
   uint32_t TlsGotRel = 0;
   uint32_t TlsModuleIndexRel;
   uint32_t TlsOffsetRel;

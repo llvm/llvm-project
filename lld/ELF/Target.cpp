@@ -120,6 +120,10 @@ public:
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+
+private:
+  void relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
+                     uint8_t ModRm) const;
 };
 
 class PPCTargetInfo final : public TargetInfo {
@@ -143,7 +147,6 @@ public:
   AArch64TargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   uint32_t getDynRel(uint32_t Type) const override;
-  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
   void writePltZero(uint8_t *Buf) const override;
@@ -760,47 +763,13 @@ RelExpr X86_64TargetInfo::adjustRelaxGotExpr(uint32_t Type, const uint8_t *Data,
   return Config->Pic ? RelExpr : R_RELAX_GOT_PC_NOPIC;
 }
 
-void X86_64TargetInfo::relaxGot(uint8_t *Loc, uint64_t Val) const {
-  const uint8_t Op = Loc[-2];
-  const uint8_t ModRm = Loc[-1];
-
-  // Convert mov foo@GOTPCREL(%rip), %reg to lea foo(%rip), %reg.
-  if (Op == 0x8b) {
-    *(Loc - 2) = 0x8d;
-    relocateOne(Loc, R_X86_64_PC32, Val);
-    return;
-  }
-
-  // Convert call/jmp instructions.
-  if (Op == 0xff) {
-    if (ModRm == 0x15) {
-      // ABI says we can convert call *foo@GOTPCREL(%rip) to nop call foo.
-      // Instead we convert to addr32 call foo, where addr32 is instruction
-      // prefix. That makes result expression to be a single instruction.
-      *(Loc - 2) = 0x67; // addr32 prefix
-      *(Loc - 1) = 0xe8; // call
-    } else {
-      assert(ModRm == 0x25);
-      // Convert jmp *foo@GOTPCREL(%rip) to jmp foo nop.
-      // jmp doesn't return, so it is fine to use nop here, it is just a stub.
-      *(Loc - 2) = 0xe9; // jmp
-      *(Loc + 3) = 0x90; // nop
-      Loc -= 1;
-      Val += 1;
-    }
-    relocateOne(Loc, R_X86_64_PC32, Val);
-    return;
-  }
-
-  assert(!Config->Pic);
-  // We are relaxing a rip relative to an absolute, so compensate for the old
-  // -4 addend.
-  Val += 4;
-  // "Intel 64 and IA-32 Architectures Software Developer's Manual V2"
-  // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
-  //    64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
-  // can be used as reference.
-
+// A subset of relaxations can only be applied for no-PIC. This method
+// handles such relaxations. Instructions encoding information was taken from:
+// "Intel 64 and IA-32 Architectures Software Developer's Manual V2"
+// (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
+//    64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
+void X86_64TargetInfo::relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
+                                     uint8_t ModRm) const {
   const uint8_t Rex = Loc[-3];
   // Convert "test %reg, foo@GOTPCREL(%rip)" to "test $foo, %reg".
   if (Op == 0x85) {
@@ -860,6 +829,44 @@ void X86_64TargetInfo::relaxGot(uint8_t *Loc, uint64_t Val) const {
   *(Loc - 2) = 0x81;
   *(Loc - 3) = (Rex & ~0x4) | (Rex & 0x4) >> 2;
   relocateOne(Loc, R_X86_64_PC32, Val);
+}
+
+void X86_64TargetInfo::relaxGot(uint8_t *Loc, uint64_t Val) const {
+  const uint8_t Op = Loc[-2];
+  const uint8_t ModRm = Loc[-1];
+
+  // Convert mov foo@GOTPCREL(%rip), %reg to lea foo(%rip), %reg.
+  if (Op == 0x8b) {
+    *(Loc - 2) = 0x8d;
+    relocateOne(Loc, R_X86_64_PC32, Val);
+    return;
+  }
+
+  // Convert call/jmp instructions.
+  if (Op == 0xff) {
+    if (ModRm == 0x15) {
+      // ABI says we can convert call *foo@GOTPCREL(%rip) to nop call foo.
+      // Instead we convert to addr32 call foo, where addr32 is instruction
+      // prefix. That makes result expression to be a single instruction.
+      *(Loc - 2) = 0x67; // addr32 prefix
+      *(Loc - 1) = 0xe8; // call
+    } else {
+      assert(ModRm == 0x25);
+      // Convert jmp *foo@GOTPCREL(%rip) to jmp foo nop.
+      // jmp doesn't return, so it is fine to use nop here, it is just a stub.
+      *(Loc - 2) = 0xe9; // jmp
+      *(Loc + 3) = 0x90; // nop
+      Loc -= 1;
+      Val += 1;
+    }
+    relocateOne(Loc, R_X86_64_PC32, Val);
+    return;
+  }
+
+  assert(!Config->Pic);
+  // We are relaxing a rip relative to an absolute, so compensate
+  // for the old -4 addend.
+  relaxGotNoPic(Loc, Val + 4, Op, ModRm);
 }
 
 // Relocation masks following the #lo(value), #hi(value), #ha(value),
@@ -1068,9 +1075,8 @@ AArch64TargetInfo::AArch64TargetInfo() {
   IRelativeRel = R_AARCH64_IRELATIVE;
   GotRel = R_AARCH64_GLOB_DAT;
   PltRel = R_AARCH64_JUMP_SLOT;
+  TlsDescRel = R_AARCH64_TLSDESC;
   TlsGotRel = R_AARCH64_TLS_TPREL64;
-  TlsModuleIndexRel = R_AARCH64_TLS_DTPMOD64;
-  TlsOffsetRel = R_AARCH64_TLS_DTPREL64;
   PltEntrySize = 16;
   PltZeroSize = 32;
 
@@ -1084,6 +1090,16 @@ RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
   switch (Type) {
   default:
     return R_ABS;
+
+  case R_AARCH64_TLSDESC_ADR_PAGE21:
+    return R_TLSDESC_PAGE;
+
+  case R_AARCH64_TLSDESC_LD64_LO12_NC:
+  case R_AARCH64_TLSDESC_ADD_LO12_NC:
+    return R_TLSDESC;
+
+  case R_AARCH64_TLSDESC_CALL:
+    return R_HINT;
 
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
@@ -1116,22 +1132,17 @@ bool AArch64TargetInfo::usesOnlyLowPageBits(uint32_t Type) const {
   default:
     return false;
   case R_AARCH64_ADD_ABS_LO12_NC:
-  case R_AARCH64_LDST8_ABS_LO12_NC:
+  case R_AARCH64_LD64_GOT_LO12_NC:
+  case R_AARCH64_LDST128_ABS_LO12_NC:
   case R_AARCH64_LDST16_ABS_LO12_NC:
   case R_AARCH64_LDST32_ABS_LO12_NC:
   case R_AARCH64_LDST64_ABS_LO12_NC:
-  case R_AARCH64_LDST128_ABS_LO12_NC:
-  case R_AARCH64_LD64_GOT_LO12_NC:
+  case R_AARCH64_LDST8_ABS_LO12_NC:
+  case R_AARCH64_TLSDESC_ADD_LO12_NC:
+  case R_AARCH64_TLSDESC_LD64_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     return true;
   }
-}
-
-bool AArch64TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
-  return Type == R_AARCH64_TLSDESC_ADR_PAGE21 ||
-         Type == R_AARCH64_TLSDESC_LD64_LO12_NC ||
-         Type == R_AARCH64_TLSDESC_ADD_LO12_NC ||
-         Type == R_AARCH64_TLSDESC_CALL;
 }
 
 bool AArch64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
@@ -1197,8 +1208,8 @@ void AArch64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 
 static void updateAArch64Addr(uint8_t *L, uint64_t Imm) {
   uint32_t ImmLo = (Imm & 0x3) << 29;
-  uint32_t ImmHi = ((Imm & 0x1FFFFC) >> 2) << 5;
-  uint64_t Mask = (0x3 << 29) | (0x7FFFF << 5);
+  uint32_t ImmHi = (Imm & 0x1FFFFC) << 3;
+  uint64_t Mask = (0x3 << 29) | (0x1FFFFC << 3);
   write32le(L, (read32le(L) & ~Mask) | ImmLo | ImmHi);
 }
 
@@ -1233,12 +1244,13 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+  case R_AARCH64_TLSDESC_ADR_PAGE21:
     checkInt<33>(Val, Type);
-    updateAArch64Addr(Loc, (Val >> 12) & 0x1FFFFF); // X[32:12]
+    updateAArch64Addr(Loc, Val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
     checkInt<21>(Val, Type);
-    updateAArch64Addr(Loc, Val & 0x1FFFFF);
+    updateAArch64Addr(Loc, Val);
     break;
   case R_AARCH64_CALL26:
   case R_AARCH64_JUMP26:
@@ -1251,6 +1263,7 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+  case R_AARCH64_TLSDESC_LD64_LO12_NC:
     checkAlignment<8>(Val, Type);
     or32le(Loc, (Val & 0xFF8) << 7);
     break;
@@ -1275,10 +1288,11 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkInt<24>(Val, Type);
-    updateAArch64Add(Loc, (Val & 0xFFF000) >> 12);
+    updateAArch64Add(Loc, Val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-    updateAArch64Add(Loc, Val & 0xFFF);
+  case R_AARCH64_TLSDESC_ADD_LO12_NC:
+    updateAArch64Add(Loc, Val);
     break;
   default:
     fatal("unrecognized reloc " + Twine(Type));

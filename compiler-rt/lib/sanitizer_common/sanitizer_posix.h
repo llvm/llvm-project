@@ -78,6 +78,8 @@ int real_pthread_join(void *th, void **ret);
 
 int my_pthread_attr_getstack(void *attr, void **addr, uptr *size);
 
+// A routine named real_sigaction() must be implemented by each sanitizer in
+// order for internal_sigaction() to bypass interceptors.
 int internal_sigaction(int signum, const void *act, void *oldact);
 void internal_sigfillset(__sanitizer_sigset_t *set);
 

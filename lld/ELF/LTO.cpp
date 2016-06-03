@@ -66,6 +66,13 @@ static void runNewCustomLtoPasses(Module &M, TargetMachine &TM) {
   PassBuilder PB(&TM);
 
   AAManager AA;
+
+  // Parse a custom AA pipeline if asked to.
+  if (!PB.parseAAPipeline(AA, Config->LtoAAPipeline)) {
+    error("Unable to parse AA pipeline description: " + Config->LtoAAPipeline);
+    return;
+  }
+
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
