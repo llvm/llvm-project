@@ -190,8 +190,6 @@ done:
 }
 
 ; GCN-LABEL: {{^}}test_sink_global_vreg_sreg_i32:
-; VI-DAG: s_movk_i32 flat_scratch_lo, 0x0
-; VI-DAG: s_movk_i32 flat_scratch_hi, 0x0
 ; GCN: s_and_saveexec_b64
 ; CI: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; VI: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]

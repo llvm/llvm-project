@@ -572,43 +572,11 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
             AMDGPU::EXEC).addReg(AMDGPU::EXEC);
   }
 
-  // FIXME: This seems inappropriate to do here.
   if (NeedFlat && MFI->IsKernel) {
-    // Insert the prologue initializing the SGPRs pointing to the scratch space
-    // for flat accesses.
-    const MachineFrameInfo *FrameInfo = MF.getFrameInfo();
-
     // TODO: What to use with function calls?
-
-    // FIXME: This is reporting stack size that is used in a scratch buffer
-    // rather than registers as well.
-    uint64_t StackSizeBytes = FrameInfo->getStackSize();
-
-    int IndirectBegin
-      = static_cast<const AMDGPUInstrInfo*>(TII)->getIndirectIndexBegin(MF);
-    // Convert register index to 256-byte unit.
-    uint64_t StackOffset = IndirectBegin < 0 ? 0 : (4 * IndirectBegin / 256);
-
-    assert((StackSizeBytes < 0xffff) && StackOffset < 0xffff &&
-           "Stack limits should be smaller than 16-bits");
-
-    // Initialize the flat scratch register pair.
-    // TODO: Can we use one s_mov_b64 here?
-
-    // Offset is in units of 256-bytes.
-    MachineBasicBlock &MBB = MF.front();
-    DebugLoc NoDL;
-    MachineBasicBlock::iterator Start = MBB.getFirstNonPHI();
-    const MCInstrDesc &SMovK = TII->get(AMDGPU::S_MOVK_I32);
-
-    assert(isInt<16>(StackOffset) && isInt<16>(StackSizeBytes));
-
-    BuildMI(MBB, Start, NoDL, SMovK, AMDGPU::FLAT_SCR_LO)
-      .addImm(StackOffset);
-
-    // Documentation says size is "per-thread scratch size in bytes"
-    BuildMI(MBB, Start, NoDL, SMovK, AMDGPU::FLAT_SCR_HI)
-      .addImm(StackSizeBytes);
+    // We will need to Initialize the flat scratch register pair.
+    if (NeedFlat)
+      MFI->setHasFlatInstructions(true);
   }
 
   return true;

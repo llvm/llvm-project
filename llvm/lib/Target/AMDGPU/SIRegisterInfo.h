@@ -121,10 +121,12 @@ public:
 
   enum PreloadedValue {
     // SGPRS:
-    PRIVATE_SEGMENT_BUFFER =  0,
+    PRIVATE_SEGMENT_BUFFER = 0,
     DISPATCH_PTR        =  1,
     QUEUE_PTR           =  2,
     KERNARG_SEGMENT_PTR =  3,
+    DISPATCH_ID         =  4,
+    FLAT_SCRATCH_INIT   =  5,
     WORKGROUP_ID_X      = 10,
     WORKGROUP_ID_Y      = 11,
     WORKGROUP_ID_Z      = 12,
