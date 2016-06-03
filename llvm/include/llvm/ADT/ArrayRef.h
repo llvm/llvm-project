@@ -161,26 +161,26 @@ namespace llvm {
     }
 
     /// slice(n) - Chop off the first N elements of the array.
-    ArrayRef<T> slice(unsigned N) const {
+    ArrayRef<T> slice(size_t N) const {
       assert(N <= size() && "Invalid specifier");
       return ArrayRef<T>(data()+N, size()-N);
     }
 
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
-    ArrayRef<T> slice(unsigned N, unsigned M) const {
+    ArrayRef<T> slice(size_t N, size_t M) const {
       assert(N+M <= size() && "Invalid specifier");
       return ArrayRef<T>(data()+N, M);
     }
 
     /// \brief Drop the first \p N elements of the array.
-    ArrayRef<T> drop_front(unsigned N = 1) const {
+    ArrayRef<T> drop_front(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return slice(N, size() - N);
     }
 
     /// \brief Drop the last \p N elements of the array.
-    ArrayRef<T> drop_back(unsigned N = 1) const {
+    ArrayRef<T> drop_back(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return slice(0, size() - N);
     }
@@ -279,25 +279,25 @@ namespace llvm {
     }
 
     /// slice(n) - Chop off the first N elements of the array.
-    MutableArrayRef<T> slice(unsigned N) const {
+    MutableArrayRef<T> slice(size_t N) const {
       assert(N <= this->size() && "Invalid specifier");
       return MutableArrayRef<T>(data()+N, this->size()-N);
     }
 
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
-    MutableArrayRef<T> slice(unsigned N, unsigned M) const {
+    MutableArrayRef<T> slice(size_t N, size_t M) const {
       assert(N+M <= this->size() && "Invalid specifier");
       return MutableArrayRef<T>(data()+N, M);
     }
 
     /// \brief Drop the first \p N elements of the array.
-    MutableArrayRef<T> drop_front(unsigned N = 1) const {
+    MutableArrayRef<T> drop_front(size_t N = 1) const {
       assert(this->size() >= N && "Dropping more elements than exist");
       return slice(N, this->size() - N);
     }
 
-    MutableArrayRef<T> drop_back(unsigned N = 1) const {
+    MutableArrayRef<T> drop_back(size_t N = 1) const {
       assert(this->size() >= N && "Dropping more elements than exist");
       return slice(0, this->size() - N);
     }

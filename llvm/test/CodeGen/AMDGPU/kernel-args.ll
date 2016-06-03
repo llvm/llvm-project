@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=GCN --check-prefix=FUNC
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=GCN --check-prefix=FUNC
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=GCN --check-prefix=FUNC
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
@@ -475,3 +475,55 @@ entry:
 ;   store <1 x i64> %a, <1 x i64> addrspace(1)* %out, align 8
 ;   ret void
 ; }
+
+; FUNC-LABEL: {{^}}i1_arg:
+; SI: buffer_load_ubyte
+; SI: v_and_b32_e32
+; SI: buffer_store_byte
+; SI: s_endpgm
+define void @i1_arg(i1 addrspace(1)* %out, i1 %x) nounwind {
+  store i1 %x, i1 addrspace(1)* %out, align 1
+  ret void
+}
+
+; FUNC-LABEL: {{^}}i1_arg_zext_i32:
+; SI: buffer_load_ubyte
+; SI: buffer_store_dword
+; SI: s_endpgm
+define void @i1_arg_zext_i32(i32 addrspace(1)* %out, i1 %x) nounwind {
+  %ext = zext i1 %x to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}i1_arg_zext_i64:
+; SI: buffer_load_ubyte
+; SI: buffer_store_dwordx2
+; SI: s_endpgm
+define void @i1_arg_zext_i64(i64 addrspace(1)* %out, i1 %x) nounwind {
+  %ext = zext i1 %x to i64
+  store i64 %ext, i64 addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}i1_arg_sext_i32:
+; SI: buffer_load_ubyte
+; SI: buffer_store_dword
+; SI: s_endpgm
+define void @i1_arg_sext_i32(i32 addrspace(1)* %out, i1 %x) nounwind {
+  %ext = sext i1 %x to i32
+  store i32 %ext, i32addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}i1_arg_sext_i64:
+; SI: buffer_load_ubyte
+; SI: v_bfe_i32
+; SI: v_ashrrev_i32
+; SI: buffer_store_dwordx2
+; SI: s_endpgm
+define void @i1_arg_sext_i64(i64 addrspace(1)* %out, i1 %x) nounwind {
+  %ext = sext i1 %x to i64
+  store i64 %ext, i64 addrspace(1)* %out, align 8
+  ret void
+}

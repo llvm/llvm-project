@@ -110,6 +110,16 @@ class TimeoutHelper(object):
             self._procs = [] # Python2 doesn't have list.clear()
             self._doneKillPass = True
 
+class ShellCommandResult(object):
+    """Captures the result of an individual command."""
+
+    def __init__(self, command, stdout, stderr, exitCode, timeoutReached):
+        self.command = command
+        self.stdout = stdout
+        self.stderr = stderr
+        self.exitCode = exitCode
+        self.timeoutReached = timeoutReached
+               
 def executeShCmd(cmd, shenv, results, timeout=0):
     """
         Wrapper around _executeShCmd that handles
@@ -369,15 +379,22 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Ensure the resulting output is always of string type.
         try:
-            out = to_string(out.decode('utf-8'))
+            if out is None:
+                out = ''
+            else:
+                out = to_string(out.decode('utf-8', errors='replace'))
         except:
             out = str(out)
         try:
-            err = to_string(err.decode('utf-8'))
+            if err is None:
+                err = ''
+            else:
+                err = to_string(err.decode('utf-8', errors='replace'))
         except:
             err = str(err)
 
-        results.append((cmd.commands[i], out, err, res, timeoutHelper.timeoutReached()))
+        results.append(ShellCommandResult(
+            cmd.commands[i], out, err, res, timeoutHelper.timeoutReached()))
         if cmd.pipe_err:
             # Python treats the exit code as a signed char.
             if exitCode is None:
@@ -422,16 +439,36 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
     except InternalShellError:
         e = sys.exc_info()[1]
         exitCode = 127
-        results.append((e.command, '', e.message, exitCode, False))
+        results.append(
+            ShellCommandResult(e.command, '', e.message, exitCode, False))
 
     out = err = ''
-    for i,(cmd, cmd_out, cmd_err, res, timeoutReached) in enumerate(results):
-        out += 'Command %d: %s\n' % (i, ' '.join('"%s"' % s for s in cmd.args))
-        out += 'Command %d Result: %r\n' % (i, res)
+    for i,result in enumerate(results):
+        # Write the command line run.
+        out += '$ %s\n' % (' '.join('"%s"' % s
+                                    for s in result.command.args),)
+
+        # If nothing interesting happened, move on.
+        if litConfig.maxIndividualTestTime == 0 and \
+               result.exitCode == 0 and \
+               not result.stdout.strip() and not result.stderr.strip():
+            continue
+
+        # Otherwise, something failed or was printed, show it.
+        if result.stdout.strip():
+            out += '# command output:\n%s\n' % (result.stdout,)
+        if result.stderr.strip():
+            out += '# command stderr:\n%s\n' % (result.stderr,)
+        if not result.stdout.strip() and not result.stderr.strip():
+            out += "note: command had no output on stdout or stderr\n"
+
+        # Show the error conditions:
+        if result.exitCode != 0:
+            out += "error: command failed with exit status: %d\n" % (
+                result.exitCode,)
         if litConfig.maxIndividualTestTime > 0:
-            out += 'Command %d Reached Timeout: %s\n\n' % (i, str(timeoutReached))
-        out += 'Command %d Output:\n%s\n\n' % (i, cmd_out)
-        out += 'Command %d Stderr:\n%s\n\n' % (i, cmd_err)
+            out += 'error: command reached timeout: %s\n' % (
+                i, str(result.timeoutReached))
 
     return out, err, exitCode, timeoutInfo
 

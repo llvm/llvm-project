@@ -287,6 +287,7 @@ enum class ModifierOptions : uint16_t {
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(ModifierOptions)
 
 enum class ModuleSubstreamKind : uint32_t {
+  None = 0,
   Symbols = 0xf1,
   Lines = 0xf2,
   StringTable = 0xf3,
@@ -536,6 +537,13 @@ enum class ThunkOrdinal {
 };
 
 enum class TrampolineType { TrampIncremental, BranchIsland };
+
+// These values correspond to the CV_SourceChksum_t enumeration.
+enum class FileChecksumKind : uint8_t { None, MD5, SHA1, SHA256 };
+
+enum LineFlags : uint32_t {
+  HaveColumns = 1, // CV_LINES_HAVE_COLUMNS
+};
 }
 }
 

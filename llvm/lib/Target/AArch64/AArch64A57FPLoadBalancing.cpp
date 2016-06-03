@@ -314,9 +314,7 @@ bool AArch64A57FPLoadBalancing::runOnMachineFunction(MachineFunction &F) {
   if (skipFunction(*F.getFunction()))
     return false;
 
-  // Don't do anything if this isn't an A53 or A57.
-  if (!(F.getSubtarget<AArch64Subtarget>().isCortexA53() ||
-        F.getSubtarget<AArch64Subtarget>().isCortexA57()))
+  if (!F.getSubtarget<AArch64Subtarget>().balanceFPOps())
     return false;
 
   bool Changed = false;

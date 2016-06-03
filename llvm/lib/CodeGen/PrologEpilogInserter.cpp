@@ -577,6 +577,108 @@ AdjustStackOffset(MachineFrameInfo *MFI, int FrameIdx,
   }
 }
 
+/// Compute which bytes of fixed and callee-save stack area are unused and keep
+/// track of them in StackBytesFree.
+///
+static inline void
+computeFreeStackSlots(MachineFrameInfo *MFI, bool StackGrowsDown,
+                      unsigned MinCSFrameIndex, unsigned MaxCSFrameIndex,
+                      int64_t FixedCSEnd, BitVector &StackBytesFree) {
+  // Avoid undefined int64_t -> int conversion below in extreme case.
+  if (FixedCSEnd > std::numeric_limits<int>::max())
+    return;
+
+  StackBytesFree.resize(FixedCSEnd, true);
+
+  SmallVector<int, 16> AllocatedFrameSlots;
+  // Add fixed objects.
+  for (int i = MFI->getObjectIndexBegin(); i != 0; ++i)
+    AllocatedFrameSlots.push_back(i);
+  // Add callee-save objects.
+  for (int i = MinCSFrameIndex; i <= (int)MaxCSFrameIndex; ++i)
+    AllocatedFrameSlots.push_back(i);
+
+  for (int i : AllocatedFrameSlots) {
+    // These are converted from int64_t, but they should always fit in int
+    // because of the FixedCSEnd check above.
+    int ObjOffset = MFI->getObjectOffset(i);
+    int ObjSize = MFI->getObjectSize(i);
+    int ObjStart, ObjEnd;
+    if (StackGrowsDown) {
+      // ObjOffset is negative when StackGrowsDown is true.
+      ObjStart = -ObjOffset - ObjSize;
+      ObjEnd = -ObjOffset;
+    } else {
+      ObjStart = ObjOffset;
+      ObjEnd = ObjOffset + ObjSize;
+    }
+    // Ignore fixed holes that are in the previous stack frame.
+    if (ObjEnd > 0)
+      StackBytesFree.reset(ObjStart, ObjEnd);
+  }
+}
+
+/// Assign frame object to an unused portion of the stack in the fixed stack
+/// object range.  Return true if the allocation was successful.
+///
+static inline bool scavengeStackSlot(MachineFrameInfo *MFI, int FrameIdx,
+                                     bool StackGrowsDown, unsigned MaxAlign,
+                                     BitVector &StackBytesFree) {
+  if (MFI->isVariableSizedObjectIndex(FrameIdx))
+    return false;
+
+  if (StackBytesFree.none()) {
+    // clear it to speed up later scavengeStackSlot calls to
+    // StackBytesFree.none()
+    StackBytesFree.clear();
+    return false;
+  }
+
+  unsigned ObjAlign = MFI->getObjectAlignment(FrameIdx);
+  if (ObjAlign > MaxAlign)
+    return false;
+
+  int64_t ObjSize = MFI->getObjectSize(FrameIdx);
+  int FreeStart;
+  for (FreeStart = StackBytesFree.find_first(); FreeStart != -1;
+       FreeStart = StackBytesFree.find_next(FreeStart)) {
+
+    // Check that free space has suitable alignment.
+    unsigned ObjStart = StackGrowsDown ? FreeStart + ObjSize : FreeStart;
+    if (alignTo(ObjStart, ObjAlign) != ObjStart)
+      continue;
+
+    if (FreeStart + ObjSize > StackBytesFree.size())
+      return false;
+
+    bool AllBytesFree = true;
+    for (unsigned Byte = 0; Byte < ObjSize; ++Byte)
+      if (!StackBytesFree.test(FreeStart + Byte)) {
+        AllBytesFree = false;
+        break;
+      }
+    if (AllBytesFree)
+      break;
+  }
+
+  if (FreeStart == -1)
+    return false;
+
+  if (StackGrowsDown) {
+    int ObjStart = -(FreeStart + ObjSize);
+    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") scavenged at SP[" << ObjStart
+                 << "]\n");
+    MFI->setObjectOffset(FrameIdx, ObjStart);
+  } else {
+    DEBUG(dbgs() << "alloc FI(" << FrameIdx << ") scavenged at SP[" << FreeStart
+                 << "]\n");
+    MFI->setObjectOffset(FrameIdx, FreeStart);
+  }
+
+  StackBytesFree.reset(FreeStart, FreeStart + ObjSize);
+  return true;
+}
+
 /// AssignProtectedObjSet - Helper function to assign large stack objects (i.e.,
 /// those required to be close to the Stack Protector) to stack offsets.
 static void
@@ -621,9 +723,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
   // If there are fixed sized objects that are preallocated in the local area,
   // non-fixed objects can't be allocated right at the start of local area.
-  // We currently don't support filling in holes in between fixed sized
-  // objects, so we adjust 'Offset' to point to the end of last fixed sized
-  // preallocated object.
+  // Adjust 'Offset' to point to the end of last fixed sized preallocated
+  // object.
   for (int i = MFI->getObjectIndexBegin(); i != 0; ++i) {
     int64_t FixedOff;
     if (StackGrowsDown) {
@@ -667,6 +768,9 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
     }
   }
 
+  // FixedCSEnd is the stack offset to the end of the fixed and callee-save
+  // stack area.
+  int64_t FixedCSEnd = Offset;
   unsigned MaxAlign = MFI->getMaxAlignment();
 
   // Make sure the special register scavenging spill slot is closest to the
@@ -798,10 +902,23 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
   if (Fn.getTarget().getOptLevel() != CodeGenOpt::None &&
       Fn.getTarget().Options.StackSymbolOrdering)
     TFI.orderFrameObjects(Fn, ObjectsToAllocate);
-  
+
+  // Keep track of which bytes in the fixed and callee-save range are used so we
+  // can use the holes when allocating later stack objects.  Only do this if
+  // stack protector isn't being used and the target requests it and we're
+  // optimizing.
+  BitVector StackBytesFree;
+  if (!ObjectsToAllocate.empty() &&
+      Fn.getTarget().getOptLevel() != CodeGenOpt::None &&
+      MFI->getStackProtectorIndex() < 0 && TFI.enableStackSlotScavenging(Fn))
+    computeFreeStackSlots(MFI, StackGrowsDown, MinCSFrameIndex, MaxCSFrameIndex,
+                          FixedCSEnd, StackBytesFree);
+
   // Now walk the objects and actually assign base offsets to them.
   for (auto &Object : ObjectsToAllocate)
-    AdjustStackOffset(MFI, Object, StackGrowsDown, Offset, MaxAlign, Skew);
+    if (!scavengeStackSlot(MFI, Object, StackGrowsDown, MaxAlign,
+                           StackBytesFree))
+      AdjustStackOffset(MFI, Object, StackGrowsDown, Offset, MaxAlign, Skew);
 
   // Make sure the special register scavenging spill slot is closest to the
   // stack pointer.

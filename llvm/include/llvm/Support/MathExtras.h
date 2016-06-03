@@ -312,11 +312,25 @@ inline bool isShiftedUInt(uint64_t x) {
 }
 
 /// Gets the maximum value for a N-bit unsigned integer.
-inline uint64_t maxUIntN(uint64_t N) { return (UINT64_C(1) << N) - 1; }
+inline uint64_t maxUIntN(uint64_t N) {
+  assert(N > 0 && N <= 64 && "integer width out of range");
+
+  return (UINT64_C(1) << N) - 1;
+}
+
 /// Gets the minimum value for a N-bit signed integer.
-inline int64_t minIntN(int64_t N) { return -(INT64_C(1)<<(N-1)); }
+inline int64_t minIntN(int64_t N) {
+  assert(N > 0 && N <= 64 && "integer width out of range");
+
+  return -(INT64_C(1)<<(N-1));
+}
+
 /// Gets the maximum value for a N-bit signed integer.
-inline int64_t maxIntN(int64_t N) { return (INT64_C(1)<<(N-1)) - 1; }
+inline int64_t maxIntN(int64_t N) {
+  assert(N > 0 && N <= 64 && "integer width out of range");
+
+  return (INT64_C(1)<<(N-1)) - 1;
+}
 
 /// isUIntN - Checks if an unsigned integer fits into the given (dynamic)
 /// bit width.

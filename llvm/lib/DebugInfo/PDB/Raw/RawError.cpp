@@ -24,6 +24,10 @@ public:
     case raw_error_code::insufficient_buffer:
       return "The buffer is not large enough to read the requested number of "
              "bytes.";
+    case raw_error_code::no_stream:
+      return "The specified stream could not be loaded.";
+    case raw_error_code::index_out_of_bounds:
+      return "The specified item does not exist in the array.";
     }
     llvm_unreachable("Unrecognized raw_error_code");
   }

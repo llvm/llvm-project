@@ -395,6 +395,12 @@ public:
   bool isCheapToSpeculateCtlz() const override {
     return true;
   }
+
+  bool hasBitPreservingFPLogic(EVT VT) const override {
+    // FIXME: Is this always true? It should be true for vectors at least.
+    return VT == MVT::f32 || VT == MVT::f64;
+  }
+
   bool supportSplitCSR(MachineFunction *MF) const override {
     return MF->getFunction()->getCallingConv() == CallingConv::CXX_FAST_TLS &&
            MF->getFunction()->hasFnAttribute(Attribute::NoUnwind);

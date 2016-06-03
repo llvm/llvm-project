@@ -14,14 +14,12 @@
 ; CHECK-NEXT:	ret
 
 ; CHECK-LINUX-LABEL: main:
-; CHECK-LINUX:	sub	sp, sp, #32
-; CHECK-LINUX-NEXT:	str	x30, [sp, #16]
+; CHECK-LINUX:	str	x30, [sp, #-16]!
 ; CHECK-LINUX-NEXT:	str	wzr, [sp, #12]
 ; CHECK-LINUX:	adrp	x0, .L.str
 ; CHECK-LINUX:	add	x0, x0, :lo12:.L.str
 ; CHECK-LINUX-NEXT:	bl	puts
-; CHECK-LINUX-NEXT:	ldr	x30, [sp, #16]
-; CHECK-LINUX-NEXT:	add	sp, sp, #32
+; CHECK-LINUX-NEXT:	ldr	x30, [sp], #16
 ; CHECK-LINUX-NEXT:	ret
 
 @.str = private unnamed_addr constant [7 x i8] c"hello\0A\00"

@@ -13,7 +13,7 @@
 using namespace llvm;
 
 MCAsmLexer::MCAsmLexer() : TokStart(nullptr), SkipSpace(true) {
-  CurTok.emplace_back(AsmToken::Error, StringRef());
+  CurTok.emplace_back(AsmToken::Space, StringRef());
 }
 
 MCAsmLexer::~MCAsmLexer() {

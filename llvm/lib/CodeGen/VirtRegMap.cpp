@@ -82,7 +82,7 @@ unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
 bool VirtRegMap::hasPreferredPhys(unsigned VirtReg) {
   unsigned Hint = MRI->getSimpleHint(VirtReg);
   if (!Hint)
-    return 0;
+    return false;
   if (TargetRegisterInfo::isVirtualRegister(Hint))
     Hint = getPhys(Hint);
   return getPhys(VirtReg) == Hint;

@@ -33,8 +33,8 @@ class StringRef;
 class Triple;
 
 class AArch64Subtarget : public AArch64GenSubtargetInfo {
-protected:
-  enum ARMProcFamilyEnum {
+public:
+  enum ARMProcFamilyEnum : uint8_t {
     Others,
     CortexA35,
     CortexA53,
@@ -44,6 +44,7 @@ protected:
     Kryo
   };
 
+protected:
   /// ARMProcFamily - ARM processor family: Cortex-A53, Cortex-A57, and others.
   ARMProcFamilyEnum ARMProcFamily = Others;
 
@@ -66,6 +67,24 @@ protected:
 
   // StrictAlign - Disallow unaligned memory accesses.
   bool StrictAlign = false;
+  bool MergeNarrowLoads = false;
+  bool UseAA = false;
+  bool PredictableSelectIsExpensive = false;
+  bool BalanceFPOps = false;
+  bool CustomAsCheapAsMove = false;
+  bool UsePostRAScheduler = false;
+  bool Misaligned128StoreIsSlow = false;
+  bool AvoidQuadLdStPairs = false;
+  bool UseAlternateSExtLoadCVTF32Pattern = false;
+  bool HasMacroOpFusion = false;
+  bool DisableLatencySchedHeuristic = false;
+  bool UseRSqrt = false;
+  uint8_t MaxInterleaveFactor = 2;
+  uint8_t VectorInsertExtractBaseCost = 3;
+  uint16_t CacheLineSize = 0;
+  uint16_t PrefetchDistance = 0;
+  uint16_t MinPrefetchStride = 1;
+  unsigned MaxPrefetchIterationsAhead = UINT_MAX;
 
   // ReserveX18 - X18 is not available as a general purpose register.
   bool ReserveX18;
@@ -92,6 +111,9 @@ private:
   /// passed in feature string so that we can use initializer lists for
   /// subtarget initialization.
   AArch64Subtarget &initializeSubtargetDependencies(StringRef FS);
+
+  /// Initialize properties based on the selected processor family.
+  void initializeProperties();
 
 public:
   /// This constructor initializes the data members to match that
@@ -123,7 +145,15 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override {
-    return isGeneric() || isCortexA53() || isCortexA57() || isKryo();
+    return UsePostRAScheduler;
+  }
+
+  /// Returns ARM processor family.
+  /// Avoid this function! CPU specifics should be kept local to this class
+  /// and preferably modeled with SubtargetFeatures or properties in
+  /// initializeProperties().
+  ARMProcFamilyEnum getProcFamily() const {
+    return ARMProcFamily;
   }
 
   bool hasV8_1aOps() const { return HasV8_1aOps; }
@@ -140,6 +170,30 @@ public:
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }
   bool hasCRC() const { return HasCRC; }
+  bool mergeNarrowLoads() const { return MergeNarrowLoads; }
+  bool balanceFPOps() const { return BalanceFPOps; }
+  bool predictableSelectIsExpensive() const {
+    return PredictableSelectIsExpensive;
+  }
+  bool hasCustomCheapAsMoveHandling() const { return CustomAsCheapAsMove; }
+  bool isMisaligned128StoreSlow() const { return Misaligned128StoreIsSlow; }
+  bool avoidQuadLdStPairs() const { return AvoidQuadLdStPairs; }
+  bool useAlternateSExtLoadCVTF32Pattern() const {
+    return UseAlternateSExtLoadCVTF32Pattern;
+  }
+  bool hasMacroOpFusion() const { return HasMacroOpFusion; }
+  bool useRSqrt() const { return UseRSqrt; }
+  unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
+  unsigned getVectorInsertExtractBaseCost() const {
+    return VectorInsertExtractBaseCost;
+  }
+  unsigned getCacheLineSize() const { return CacheLineSize; }
+  unsigned getPrefetchDistance() const { return PrefetchDistance; }
+  unsigned getMinPrefetchStride() const { return MinPrefetchStride; }
+  unsigned getMaxPrefetchIterationsAhead() const {
+    return MaxPrefetchIterationsAhead;
+  }
+
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
   bool supportsAddressTopByteIgnored() const;
@@ -160,14 +214,7 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  bool isGeneric() const { return CPUString == "generic"; }
-  bool isCyclone() const { return CPUString == "cyclone"; }
-  bool isCortexA57() const { return CPUString == "cortex-a57"; }
-  bool isCortexA53() const { return CPUString == "cortex-a53"; }
-  bool isExynosM1() const { return CPUString == "exynos-m1"; }
-  bool isKryo() const { return CPUString == "kryo"; }
-
-  bool useAA() const override { return isCortexA53(); }
+  bool useAA() const override { return UseAA; }
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.

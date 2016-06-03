@@ -624,6 +624,9 @@ void AsmParser::jumpToLoc(SMLoc Loc, unsigned InBuffer) {
 }
 
 const AsmToken &AsmParser::Lex() {
+  if (Lexer.getTok().is(AsmToken::Error))
+    Error(Lexer.getErrLoc(), Lexer.getErr());
+
   const AsmToken *tok = &Lexer.Lex();
 
   if (tok->is(AsmToken::Eof)) {
@@ -636,8 +639,6 @@ const AsmToken &AsmParser::Lex() {
     }
   }
 
-  if (tok->is(AsmToken::Error))
-    Error(Lexer.getErrLoc(), Lexer.getErr());
 
   return *tok;
 }
@@ -674,6 +675,12 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     ParseStatementInfo Info;
     if (!parseStatement(Info, nullptr))
       continue;
+
+    // If we've failed, but on a Error Token, but did not consume it in
+    // favor of a better message, emit it now.
+    if (Lexer.getTok().is(AsmToken::Error)) {
+      Lex();
+    }
 
     // We had an error, validate that one was emitted and recover by skipping to
     // the next line.
@@ -748,11 +755,11 @@ void AsmParser::checkForValidSection() {
 /// \brief Throw away the rest of the line for testing purposes.
 void AsmParser::eatToEndOfStatement() {
   while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.isNot(AsmToken::Eof))
-    Lex();
+    Lexer.Lex();
 
   // Eat EOL.
   if (Lexer.is(AsmToken::EndOfStatement))
-    Lex();
+    Lexer.Lex();
 }
 
 StringRef AsmParser::parseStringToEndOfStatement() {
@@ -2164,7 +2171,7 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
 
       if (Lexer.is(AsmToken::Space)) {
         SpaceEaten = true;
-        Lex(); // Eat spaces
+        Lexer.Lex(); // Eat spaces
       }
 
       // Spaces can delimit parameters, but could also be part an expression.
@@ -2173,11 +2180,11 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
       if (!IsDarwin) {
         if (isOperator(Lexer.getKind())) {
           MA.push_back(getTok());
-          Lex();
+          Lexer.Lex();
 
           // Whitespace after an operator can be ignored.
           if (Lexer.is(AsmToken::Space))
-            Lex();
+            Lexer.Lex();
 
           continue;
         }
@@ -2199,7 +2206,7 @@ bool AsmParser::parseMacroArgument(MCAsmMacroArgument &MA, bool Vararg) {
 
     // Append the token to the current argument list.
     MA.push_back(getTok());
-    Lex();
+    Lexer.Lex();
   }
 
   if (ParenLevel != 0)
@@ -2408,7 +2415,7 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
     SMLoc PrefixLoc = getLexer().getLoc();
 
     // Consume the prefix character, and check for a following identifier.
-    Lex();
+    Lexer.Lex(); // Lexer's Lex guarantees consecutive token.
     if (Lexer.isNot(AsmToken::Identifier))
       return true;
 
@@ -2419,7 +2426,7 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
     // Construct the joined identifier and consume the token.
     Res =
         StringRef(PrefixLoc.getPointer(), getTok().getIdentifier().size() + 1);
-    Lex();
+    Lexer.Lex(); // Lexer's Lex guarantees consecutive token
     return false;
   }
 
@@ -2686,14 +2693,15 @@ bool AsmParser::parseDirectiveRealValue(const fltSemantics &Semantics) {
       // have to manually parse unary prefixes.
       bool IsNeg = false;
       if (getLexer().is(AsmToken::Minus)) {
-        Lex();
+        Lexer.Lex();
         IsNeg = true;
       } else if (getLexer().is(AsmToken::Plus))
-        Lex();
+        Lexer.Lex();
 
-      if (getLexer().isNot(AsmToken::Integer) &&
-          getLexer().isNot(AsmToken::Real) &&
-          getLexer().isNot(AsmToken::Identifier))
+      if (Lexer.is(AsmToken::Error))
+        return TokError(Lexer.getErr());
+      if (Lexer.isNot(AsmToken::Integer) && Lexer.isNot(AsmToken::Real) &&
+          Lexer.isNot(AsmToken::Identifier))
         return TokError("unexpected token in directive");
 
       // Convert to an APFloat.
@@ -2720,10 +2728,10 @@ bool AsmParser::parseDirectiveRealValue(const fltSemantics &Semantics) {
       getStreamer().EmitIntValue(AsInt.getLimitedValue(),
                                  AsInt.getBitWidth() / 8);
 
-      if (getLexer().is(AsmToken::EndOfStatement))
+      if (Lexer.is(AsmToken::EndOfStatement))
         break;
 
-      if (getLexer().isNot(AsmToken::Comma))
+      if (Lexer.isNot(AsmToken::Comma))
         return TokError("unexpected token in directive");
       Lex();
     }
@@ -3762,14 +3770,19 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
       Lex();
   }
 
-  // Eat the end of statement.
-  Lex();
+  // Eat just the end of statement.
+  Lexer.Lex();
 
+  // Consuming deferred text, so use Lexer.Lex to ignore Lexing Errors
   AsmToken EndToken, StartToken = getTok();
   unsigned MacroDepth = 0;
-
   // Lex the macro definition.
   for (;;) {
+    // Ignore Lexing errors in macros.
+    while (Lexer.is(AsmToken::Error)) {
+      Lexer.Lex();
+    }
+
     // Check whether we have reached the end of the file.
     if (getLexer().is(AsmToken::Eof))
       return Error(DirectiveLoc, "no matching '.endmacro' in definition");
@@ -3780,7 +3793,7 @@ bool AsmParser::parseDirectiveMacro(SMLoc DirectiveLoc) {
           getTok().getIdentifier() == ".endmacro") {
         if (MacroDepth == 0) { // Outermost macro.
           EndToken = getTok();
-          Lex();
+          Lexer.Lex();
           if (getLexer().isNot(AsmToken::EndOfStatement))
             return TokError("unexpected token in '" + EndToken.getIdentifier() +
                             "' directive");

@@ -104,6 +104,8 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
   IO.mapOptional("WeakBindOpcodes", LinkEditData.WeakBindOpcodes);
   IO.mapOptional("LazyBindOpcodes", LinkEditData.LazyBindOpcodes);
   IO.mapOptional("ExportTrie", LinkEditData.ExportTrie);
+  IO.mapOptional("NameList", LinkEditData.NameList);
+  IO.mapOptional("StringTable", LinkEditData.StringTable);
 }
 
 void MappingTraits<MachOYAML::RebaseOpcode>::mapping(
@@ -132,6 +134,15 @@ void MappingTraits<MachOYAML::ExportEntry>::mapping(
   IO.mapOptional("Other", ExportEntry.Other);
   IO.mapOptional("ImportName", ExportEntry.ImportName);
   IO.mapOptional("Children", ExportEntry.Children);
+}
+
+void MappingTraits<MachOYAML::NListEntry>::mapping(
+    IO &IO, MachOYAML::NListEntry &NListEntry) {
+  IO.mapRequired("n_strx", NListEntry.n_strx);
+  IO.mapRequired("n_type", NListEntry.n_type);
+  IO.mapRequired("n_sect", NListEntry.n_sect);
+  IO.mapRequired("n_desc", NListEntry.n_desc);
+  IO.mapRequired("n_value", NListEntry.n_value);
 }
 
 template <typename StructType>

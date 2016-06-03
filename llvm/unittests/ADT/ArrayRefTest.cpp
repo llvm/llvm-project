@@ -65,6 +65,10 @@ TEST(ArrayRefTest, DropBack) {
   ArrayRef<int> AR1(TheNumbers);
   ArrayRef<int> AR2(TheNumbers, AR1.size() - 1);
   EXPECT_TRUE(AR1.drop_back().equals(AR2));
+
+  // Check that drop_back accepts size_t-sized numbers.
+  ArrayRef<char> AR3((const char *)0x10000, SIZE_MAX - 0x10000);
+  EXPECT_EQ(1U, AR3.drop_back(AR3.size() - 1).size());
 }
 
 TEST(ArrayRefTest, DropFront) {
@@ -72,6 +76,10 @@ TEST(ArrayRefTest, DropFront) {
   ArrayRef<int> AR1(TheNumbers);
   ArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
   EXPECT_TRUE(AR1.drop_front(2).equals(AR2));
+
+  // Check that drop_front accepts size_t-sized numbers.
+  ArrayRef<char> AR3((const char *)0x10000, SIZE_MAX - 0x10000);
+  EXPECT_EQ(1U, AR3.drop_front(AR3.size() - 1).size());
 }
 
 TEST(ArrayRefTest, Equals) {
@@ -99,6 +107,13 @@ TEST(ArrayRefTest, Equals) {
 
 TEST(ArrayRefTest, EmptyEquals) {
   EXPECT_TRUE(ArrayRef<unsigned>() == ArrayRef<unsigned>());
+}
+
+TEST(ArrayRefTest, Slice) {
+  // Check that slice accepts size_t-sized numbers.
+  ArrayRef<char> AR((const char *)0x10000, SIZE_MAX - 0x10000);
+  EXPECT_EQ(1U, AR.slice(AR.size() - 1).size());
+  EXPECT_EQ(AR.size() - 1, AR.slice(1, AR.size() - 1).size());
 }
 
 TEST(ArrayRefTest, ConstConvert) {

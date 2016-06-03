@@ -117,15 +117,10 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// to be confused with type indices for LF_FUNC_ID records.
   unsigned NextFuncId = 0;
 
-  codeview::TypeIndex VoidFnTyIdx;
-
-  /// Get a type index for a generic void function type.
-  codeview::TypeIndex getGenericFunctionTypeIndex();
-
   InlineSite &getInlineSite(const DILocation *InlinedAt,
                             const DISubprogram *Inlinee);
 
-  void recordFuncIdForSubprogram(const DISubprogram *SP);
+  codeview::TypeIndex getFuncIdForSubprogram(const DISubprogram *SP);
 
   static void collectInlineSiteChildren(SmallVectorImpl<unsigned> &Children,
                                         const FunctionInfo &FI,
@@ -195,6 +190,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex lowerTypePointer(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeMemberPointer(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeModifier(const DIDerivedType *Ty);
+  codeview::TypeIndex lowerTypeFunction(const DISubroutineType *Ty);
 
 public:
   CodeViewDebug(AsmPrinter *Asm);

@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
@@ -18,6 +19,7 @@
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
+#include "llvm/Object/COFF.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -180,7 +182,8 @@ Error DbiStream::reload() {
 
   if (auto EC = initializeSectionContributionData())
     return EC;
-
+  if (auto EC = initializeSectionHeadersData())
+    return EC;
   if (auto EC = initializeSectionMapData())
     return EC;
 
@@ -244,6 +247,11 @@ PDB_Machine DbiStream::getMachineType() const {
   return static_cast<PDB_Machine>(Machine);
 }
 
+codeview::FixedStreamArray<object::coff_section>
+DbiStream::getSectionHeaders() {
+  return SectionHeaders;
+}
+
 ArrayRef<ModuleInfoEx> DbiStream::modules() const { return ModuleInfos; }
 codeview::FixedStreamArray<SecMapEntry> DbiStream::getSectionMap() const {
   return SectionMap;
@@ -272,6 +280,24 @@ Error DbiStream::initializeSectionContributionData() {
 
   return make_error<RawError>(raw_error_code::feature_unsupported,
                               "Unsupported DBI Section Contribution version");
+}
+
+// Initializes this->SectionHeaders.
+Error DbiStream::initializeSectionHeadersData() {
+  uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::SectionHdr);
+  SectionHeaderStream.reset(new MappedBlockStream(StreamNum, Pdb));
+
+  size_t StreamLen = SectionHeaderStream->getLength();
+  if (StreamLen % sizeof(object::coff_section))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Corrupted section header stream.");
+
+  size_t NumSections = StreamLen / sizeof(object::coff_section);
+  codeview::StreamReader Reader(*SectionHeaderStream);
+  if (auto EC = Reader.readArray(SectionHeaders, NumSections))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Could not read a bitmap.");
+  return Error::success();
 }
 
 Error DbiStream::initializeSectionMapData() {
@@ -319,7 +345,6 @@ Error DbiStream::initializeFileInfo() {
 
   FixedStreamArray<ulittle16_t> ModIndexArray;
   FixedStreamArray<ulittle16_t> ModFileCountArray;
-  FixedStreamArray<little32_t> FileNameOffsets;
 
   // First is an array of `NumModules` module indices.  This is not used for the
   // same reason that `NumSourceFiles` is not used.  It's an array of uint16's,
@@ -347,10 +372,8 @@ Error DbiStream::initializeFileInfo() {
   if (auto EC = FISR.readArray(FileNameOffsets, NumSourceFiles))
     return EC;
 
-  StreamRef NamesBufferRef;
-  if (auto EC = FISR.readStreamRef(NamesBufferRef))
+  if (auto EC = FISR.readStreamRef(NamesBuffer))
     return EC;
-  StreamReader Names(NamesBufferRef);
 
   // We go through each ModuleInfo, determine the number N of source files for
   // that module, and then get the next N offsets from the Offsets array, using
@@ -361,10 +384,10 @@ Error DbiStream::initializeFileInfo() {
     uint32_t NumFiles = ModFileCountArray[I];
     ModuleInfos[I].SourceFiles.resize(NumFiles);
     for (size_t J = 0; J < NumFiles; ++J, ++NextFileIndex) {
-      uint32_t FileOffset = FileNameOffsets[NextFileIndex];
-      Names.setOffset(FileOffset);
-      if (auto EC = Names.readZeroString(ModuleInfos[I].SourceFiles[J]))
-        return EC;
+      if (auto Name = getFileNameForIndex(NextFileIndex))
+        ModuleInfos[I].SourceFiles[J] = Name.get();
+      else
+        return Name.takeError();
     }
   }
 
@@ -373,4 +396,17 @@ Error DbiStream::initializeFileInfo() {
 
 uint32_t DbiStream::getDebugStreamIndex(DbgHeaderType Type) const {
   return DbgStreams[static_cast<uint16_t>(Type)];
+}
+
+Expected<StringRef> DbiStream::getFileNameForIndex(uint32_t Index) const {
+  StreamReader Names(NamesBuffer);
+  if (Index >= FileNameOffsets.size())
+    return make_error<RawError>(raw_error_code::index_out_of_bounds);
+
+  uint32_t FileOffset = FileNameOffsets[Index];
+  Names.setOffset(FileOffset);
+  StringRef Name;
+  if (auto EC = Names.readZeroString(Name))
+    return std::move(EC);
+  return Name;
 }

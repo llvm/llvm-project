@@ -138,6 +138,12 @@
 ; OBJ:     FunctionType: void () (0x1001)
 ; OBJ:     Name: foo
 ; OBJ:   }
+; OBJ:   FuncId (0x1004) {
+; OBJ:     TypeLeafKind: LF_FUNC_ID (0x1601)
+; OBJ:     ParentScope: 0x0
+; OBJ:     FunctionType: void () (0x1001)
+; OBJ:     Name: baz
+; OBJ:   }
 ; OBJ-NOT: TypeLeafKind: LF_FUNC_ID
 ; OBJ: ]
 
@@ -164,7 +170,7 @@
 ; OBJ:     CodeSize: 0x3D
 ; OBJ:     DbgStart: 0x0
 ; OBJ:     DbgEnd: 0x0
-; OBJ:     FunctionType: 0x0
+; OBJ:     FunctionType: baz (0x1004)
 ; OBJ:     CodeOffset: ?baz@@YAXXZ+0x0
 ; OBJ:     Segment: 0x0
 ; OBJ:     Flags [ (0x0)

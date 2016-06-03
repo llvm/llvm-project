@@ -451,6 +451,8 @@ namespace llvm {
       VPCOM, VPCOMU,
       // XOP packed permute bytes.
       VPPERM,
+      // XOP two source permutation.
+      VPERMIL2,
 
       // Vector multiply packed unsigned doubleword integers.
       PMULUDQ,

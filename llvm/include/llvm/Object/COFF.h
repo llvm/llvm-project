@@ -169,6 +169,26 @@ struct import_directory_table_entry {
   support::ulittle32_t ImportAddressTableRVA;
 };
 
+struct debug_directory {
+  support::ulittle32_t Characteristics;
+  support::ulittle32_t TimeDateStamp;
+  support::ulittle16_t MajorVersion;
+  support::ulittle16_t MinorVersion;
+  support::ulittle32_t Type;
+  support::ulittle32_t SizeOfData;
+  support::ulittle32_t AddressOfRawData;
+  support::ulittle32_t PointerToRawData;
+};
+
+/// Information that is resent in debug_directory::AddressOfRawData if Type is
+/// IMAGE_DEBUG_TYPE_CODEVIEW.
+struct debug_pdb_info {
+  support::ulittle32_t Signature;
+  uint8_t Guid[16];
+  support::ulittle32_t Age;
+  // PDBFileName: The null-terminated PDB file name follows.
+};
+
 template <typename IntTy>
 struct import_lookup_table_entry {
   IntTy Data;
@@ -620,6 +640,8 @@ private:
   const export_directory_table_entry *ExportDirectory;
   const coff_base_reloc_block_header *BaseRelocHeader;
   const coff_base_reloc_block_header *BaseRelocEnd;
+  const debug_directory *DebugDirectoryBegin;
+  const debug_directory *DebugDirectoryEnd;
 
   std::error_code getString(uint32_t offset, StringRef &Res) const;
 
@@ -633,6 +655,7 @@ private:
   std::error_code initDelayImportTablePtr();
   std::error_code initExportTablePtr();
   std::error_code initBaseRelocPtr();
+  std::error_code initDebugDirectoryPtr();
 
 public:
   uintptr_t getSymbolTable() const {
@@ -754,12 +777,21 @@ public:
   export_directory_iterator export_directory_end() const;
   base_reloc_iterator base_reloc_begin() const;
   base_reloc_iterator base_reloc_end() const;
+  const debug_directory *debug_directory_begin() const {
+    return DebugDirectoryBegin;
+  }
+  const debug_directory *debug_directory_end() const {
+    return DebugDirectoryEnd;
+  }
 
   iterator_range<import_directory_iterator> import_directories() const;
   iterator_range<delay_import_directory_iterator>
       delay_import_directories() const;
   iterator_range<export_directory_iterator> export_directories() const;
   iterator_range<base_reloc_iterator> base_relocs() const;
+  iterator_range<const debug_directory *> debug_directories() const {
+    return make_range(debug_directory_begin(), debug_directory_end());
+  }
 
   const dos_header *getDOSHeader() const {
     if (!PE32Header && !PE32PlusHeader)
@@ -828,8 +860,19 @@ public:
   uint64_t getImageBase() const;
   std::error_code getVaPtr(uint64_t VA, uintptr_t &Res) const;
   std::error_code getRvaPtr(uint32_t Rva, uintptr_t &Res) const;
+
+  /// Given an RVA base and size, returns a valid array of bytes or an error
+  /// code if the RVA and size is not contained completely within a valid
+  /// section.
+  std::error_code getRvaAndSizeAsBytes(uint32_t RVA, uint32_t Size,
+                                       ArrayRef<uint8_t> &Contents) const;
+
   std::error_code getHintName(uint32_t Rva, uint16_t &Hint,
                               StringRef &Name) const;
+
+  std::error_code getDebugPDBInfo(const debug_directory *DebugDir,
+                                  const debug_pdb_info *&Info,
+                                  StringRef &PDBFileName) const;
 
   bool isRelocatableObject() const override;
   bool is64() const { return PE32PlusHeader; }

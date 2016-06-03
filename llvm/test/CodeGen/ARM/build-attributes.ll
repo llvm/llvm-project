@@ -123,6 +123,7 @@
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a72 | FileCheck %s --check-prefix=CORTEX-A72
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a72  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=CORTEX-A72-FAST
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a72 -enable-sign-dependent-rounding-fp-math | FileCheck %s --check-prefix=DYN-ROUNDING
+; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=cortex-a73 | FileCheck %s --check-prefix=CORTEX-A73
 ; RUN: llc < %s -mtriple=armv8.1a-linux-gnueabi | FileCheck %s --check-prefix=GENERIC-ARMV8_1-A
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m1 | FileCheck %s --check-prefix=EXYNOS-M1
 ; RUN: llc < %s -mtriple=armv8-linux-gnueabi -mcpu=exynos-m1  -enable-unsafe-fp-math -disable-fp-elim -enable-no-infs-fp-math -enable-no-nans-fp-math -fp-contract=fast | FileCheck %s --check-prefix=EXYNOS-M1-FAST
@@ -1399,6 +1400,30 @@
 ; CORTEX-A72-FAST-NOT:  .eabi_attribute 21
 ; CORTEX-A72-FAST-NOT:  .eabi_attribute 22
 ; CORTEX-A72-FAST:  .eabi_attribute 23, 1
+
+; CORTEX-A73:  .cpu cortex-a73
+; CORTEX-A73:  .eabi_attribute 6, 14
+; CORTEX-A73:  .eabi_attribute 7, 65
+; CORTEX-A73:  .eabi_attribute 8, 1
+; CORTEX-A73:  .eabi_attribute 9, 2
+; CORTEX-A73:  .fpu  crypto-neon-fp-armv8
+; CORTEX-A73:  .eabi_attribute 12, 3
+; CORTEX-A73-NOT: .eabi_attribute 19
+;; We default to IEEE 754 compliance
+; CORTEX-A73:  .eabi_attribute 20, 1
+; CORTEX-A73:  .eabi_attribute 21, 1
+; CORTEX-A73-NOT:  .eabi_attribute 22
+; CORTEX-A73:  .eabi_attribute 23, 3
+; CORTEX-A73:  .eabi_attribute 24, 1
+; CORTEX-A73:  .eabi_attribute 25, 1
+; CORTEX-A73-NOT: .eabi_attribute 27
+; CORTEX-A73-NOT: .eabi_attribute 28
+; CORTEX-A73:  .eabi_attribute 36, 1
+; CORTEX-A73:  .eabi_attribute 38, 1
+; CORTEX-A73:  .eabi_attribute 42, 1
+; CORTEX-A73-NOT: .eabi_attribute 44
+; CORTEX-A73:  .eabi_attribute 14, 0
+; CORTEX-A73:  .eabi_attribute 68, 3
 
 ; EXYNOS-M1:  .cpu exynos-m1
 ; EXYNOS-M1:  .eabi_attribute 6, 14

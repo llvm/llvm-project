@@ -674,7 +674,7 @@ bb1:
 
 define void @realign_conditional2(i1 %b) {
 entry:
-  %tmp = alloca i8, i32 4
+  %tmp = alloca i8, i32 16
   br i1 %b, label %bb0, label %bb1
 
 bb0:

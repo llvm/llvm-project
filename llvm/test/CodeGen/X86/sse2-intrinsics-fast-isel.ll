@@ -1280,11 +1280,10 @@ define <2 x i64> @test_mm_cvttps_epi32(<4 x float> %a0) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    cvttps2dq %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %a0)
+  %res = fptosi <4 x float> %a0 to <4 x i32>
   %bc = bitcast <4 x i32> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float>) nounwind readnone
 
 define i32 @test_mm_cvttsd_si32(<2 x double> %a0) nounwind {
 ; X32-LABEL: test_mm_cvttsd_si32:

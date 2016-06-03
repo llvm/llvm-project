@@ -1,8 +1,8 @@
 ; RUN: llvm-pdbdump -raw-headers -raw-tpi-records -raw-tpi-record-bytes -raw-module-syms \
 ; RUN:              -raw-sym-record-bytes -raw-publics -raw-module-files -raw-stream-name=/names \
 ; RUN:              -raw-stream-summary -raw-stream-blocks -raw-ipi-records -raw-ipi-record-bytes \
-; RUN:              -raw-section-contribs -raw-section-map %p/Inputs/empty.pdb \
-; RUN:              | FileCheck -check-prefix=EMPTY %s
+; RUN:              -raw-section-contribs -raw-section-map -raw-section-headers -raw-line-info \
+; RUN:              %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbdump -raw-all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
 ; RUN: llvm-pdbdump -raw-headers -raw-stream-name=/names -raw-modules -raw-module-files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
@@ -70,9 +70,9 @@
 ; EMPTY-NEXT:   Version: 1
 ; EMPTY-NEXT:   Name Count: 4
 ; EMPTY-NEXT:   Names [
-; EMPTY-NEXT:     d:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)
-; EMPTY-NEXT:     d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT:     $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =
+; EMPTY-NEXT:     1: d:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)
+; EMPTY-NEXT:     86: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:     134: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =
 ; EMPTY-NEXT:   ]
 ; EMPTY-NEXT: }
 ; EMPTY-NEXT: Type Info Stream (TPI) {
@@ -330,6 +330,38 @@
 ; EMPTY-NEXT:           )
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       LineInfo [
+; EMPTY-NEXT:         Lines {
+; EMPTY-NEXT:           FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:           Line {
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             LineNumberStart: 5
+; EMPTY-NEXT:             EndDelta: 0
+; EMPTY-NEXT:             IsStatement: Yes
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Line {
+; EMPTY-NEXT:             Offset: 3
+; EMPTY-NEXT:             LineNumberStart: 6
+; EMPTY-NEXT:             EndDelta: 0
+; EMPTY-NEXT:             IsStatement: Yes
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Line {
+; EMPTY-NEXT:             Offset: 8
+; EMPTY-NEXT:             LineNumberStart: 7
+; EMPTY-NEXT:             EndDelta: 0
+; EMPTY-NEXT:             IsStatement: Yes
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         FileChecksums {
+; EMPTY-NEXT:           Checksum {
+; EMPTY-NEXT:             FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:             Kind: MD5 (0x1)
+; EMPTY-NEXT:             Checksum (
+; EMPTY-NEXT:               0000: A0A5BD0D 3ECD93FC 29D19DE8 26FBF4BC  |....>...)...&...|
+; EMPTY-NEXT:             )
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       ]
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:     {
 ; EMPTY-NEXT:       Name: * Linker *
@@ -568,6 +600,8 @@
 ; EMPTY-NEXT:           )
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       LineInfo [
+; EMPTY-NEXT:       ]
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:   ]
 ; EMPTY-NEXT: }
@@ -804,6 +838,56 @@
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:   ]
 ; EMPTY-NEXT: }
+; EMPTY-NEXT: Section Headers [
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .text
+; EMPTY-NEXT:     Virtual Size: 4122
+; EMPTY-NEXT:     Virtual Address: 4096
+; EMPTY-NEXT:     Size of Raw Data: 4608
+; EMPTY-NEXT:     File Pointer to Raw Data: 1024
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics: 1610612768
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .rdata
+; EMPTY-NEXT:     Virtual Size: 690
+; EMPTY-NEXT:     Virtual Address: 12288
+; EMPTY-NEXT:     Size of Raw Data: 1024
+; EMPTY-NEXT:     File Pointer to Raw Data: 5632
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics: 1073741888
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .data
+; EMPTY-NEXT:     Virtual Size: 4
+; EMPTY-NEXT:     Virtual Address: 16384
+; EMPTY-NEXT:     Size of Raw Data: 0
+; EMPTY-NEXT:     File Pointer to Raw Data: 0
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics: 3221225536
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .reloc
+; EMPTY-NEXT:     Virtual Size: 8
+; EMPTY-NEXT:     Virtual Address: 20480
+; EMPTY-NEXT:     Size of Raw Data: 512
+; EMPTY-NEXT:     File Pointer to Raw Data: 6656
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics: 1107296320
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
 
 ; ALL: FileHeaders {
 ; ALL:   BlockSize: 4096
@@ -1085,7 +1169,7 @@
 ; ALL:     {
 ; ALL:       Name: * Linker *
 ; ALL:       Debug Stream Index: 14
-; ALL:       Object File Name: 
+; ALL:       Object File Name:
 ; ALL:       Num Files: 0
 ; ALL:       Source File Name Idx: 0
 ; ALL:       Pdb File Name Idx: 1
@@ -1455,6 +1539,56 @@
 ; ALL:     }
 ; ALL:   ]
 ; ALL: }
+; ALL: Section Headers [
+; ALL:   {
+; ALL:     Name: .text
+; ALL:     Virtual Size: 4122
+; ALL:     Virtual Address: 4096
+; ALL:     Size of Raw Data: 4608
+; ALL:     File Pointer to Raw Data: 1024
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics: 1610612768
+; ALL:   }
+; ALL:   {
+; ALL:     Name: .rdata
+; ALL:     Virtual Size: 690
+; ALL:     Virtual Address: 12288
+; ALL:     Size of Raw Data: 1024
+; ALL:     File Pointer to Raw Data: 5632
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics: 1073741888
+; ALL:   }
+; ALL:   {
+; ALL:     Name: .data
+; ALL:     Virtual Size: 4
+; ALL:     Virtual Address: 16384
+; ALL:     Size of Raw Data: 0
+; ALL:     File Pointer to Raw Data: 0
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics: 3221225536
+; ALL:   }
+; ALL:   {
+; ALL:     Name: .reloc
+; ALL:     Virtual Size: 8
+; ALL:     Virtual Address: 20480
+; ALL:     Size of Raw Data: 512
+; ALL:     File Pointer to Raw Data: 6656
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics: 1107296320
+; ALL:   }
+; ALL: ]
 
 ; BIG:      FileHeaders {
 ; BIG-NEXT:   BlockSize: 4096

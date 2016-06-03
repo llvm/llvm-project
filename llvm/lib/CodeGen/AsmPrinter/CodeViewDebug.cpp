@@ -117,31 +117,31 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
     Site->SiteFuncId = NextFuncId++;
     Site->Inlinee = Inlinee;
     InlinedSubprograms.insert(Inlinee);
-    recordFuncIdForSubprogram(Inlinee);
+    getFuncIdForSubprogram(Inlinee);
   }
   return *Site;
 }
 
-TypeIndex CodeViewDebug::getGenericFunctionTypeIndex() {
-  if (VoidFnTyIdx.getIndex() != 0)
-    return VoidFnTyIdx;
+TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
+  // It's possible to ask for the FuncId of a function which doesn't have a
+  // subprogram: inlining a function with debug info into a function with none.
+  if (!SP)
+    return TypeIndex::None();
 
-  ArrayRef<TypeIndex> NoArgs;
-  ArgListRecord ArgListRec(TypeRecordKind::ArgList, NoArgs);
-  TypeIndex ArgListIndex = TypeTable.writeArgList(ArgListRec);
+  // Check if we've already translated this subprogram.
+  auto I = TypeIndices.find(SP);
+  if (I != TypeIndices.end())
+    return I->second;
 
-  ProcedureRecord Procedure(TypeIndex::Void(), CallingConvention::NearC,
-                            FunctionOptions::None, 0, ArgListIndex);
-  VoidFnTyIdx = TypeTable.writeProcedure(Procedure);
-  return VoidFnTyIdx;
-}
-
-void CodeViewDebug::recordFuncIdForSubprogram(const DISubprogram *SP) {
   TypeIndex ParentScope = TypeIndex(0);
   StringRef DisplayName = SP->getDisplayName();
-  FuncIdRecord FuncId(ParentScope, getGenericFunctionTypeIndex(), DisplayName);
+  FuncIdRecord FuncId(ParentScope, getTypeIndex(SP->getType()), DisplayName);
   TypeIndex TI = TypeTable.writeFuncId(FuncId);
-  TypeIndices[SP] = TI;
+
+  auto InsertResult = TypeIndices.insert({SP, TI});
+  (void)InsertResult;
+  assert(InsertResult.second && "DISubprogram lowered twice");
+  return TI;
 }
 
 void CodeViewDebug::recordLocalVariable(LocalVariable &&Var,
@@ -495,7 +495,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Offset before epilogue");
     OS.EmitIntValue(0, 4);
     OS.AddComment("Function type index");
-    OS.EmitIntValue(0, 4);
+    OS.EmitIntValue(getFuncIdForSubprogram(GV->getSubprogram()).getIndex(), 4);
     OS.AddComment("Function section relative address");
     OS.EmitCOFFSecRel32(Fn);
     OS.AddComment("Function section index");
@@ -744,6 +744,8 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty) {
   case dwarf::DW_TAG_const_type:
   case dwarf::DW_TAG_volatile_type:
     return lowerTypeModifier(cast<DIDerivedType>(Ty));
+  case dwarf::DW_TAG_subroutine_type:
+    return lowerTypeFunction(cast<DISubroutineType>(Ty));
   default:
     // Use the null type index.
     return TypeIndex();
@@ -912,8 +914,7 @@ TypeIndex CodeViewDebug::lowerTypeModifier(const DIDerivedType *Ty) {
   ModifierOptions Mods = ModifierOptions::None;
   bool IsModifier = true;
   const DIType *BaseTy = Ty;
-  while (IsModifier) {
-    assert(BaseTy);
+  while (IsModifier && BaseTy) {
     // FIXME: Need to add DWARF tag for __unaligned.
     switch (BaseTy->getTag()) {
     case dwarf::DW_TAG_const_type:
@@ -932,6 +933,32 @@ TypeIndex CodeViewDebug::lowerTypeModifier(const DIDerivedType *Ty) {
   TypeIndex ModifiedTI = getTypeIndex(BaseTy);
   ModifierRecord MR(ModifiedTI, Mods);
   return TypeTable.writeModifier(MR);
+}
+
+TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
+  SmallVector<TypeIndex, 8> ReturnAndArgTypeIndices;
+  for (DITypeRef ArgTypeRef : Ty->getTypeArray())
+    ReturnAndArgTypeIndices.push_back(getTypeIndex(ArgTypeRef));
+
+  TypeIndex ReturnTypeIndex = TypeIndex::Void();
+  ArrayRef<TypeIndex> ArgTypeIndices = None;
+  if (!ReturnAndArgTypeIndices.empty()) {
+    auto ReturnAndArgTypesRef = makeArrayRef(ReturnAndArgTypeIndices);
+    ReturnTypeIndex = ReturnAndArgTypesRef.front();
+    ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
+  }
+
+  ArgListRecord ArgListRec(TypeRecordKind::ArgList, ArgTypeIndices);
+  TypeIndex ArgListIndex = TypeTable.writeArgList(ArgListRec);
+
+  // TODO: We should use DW_AT_calling_convention to determine what CC this
+  // procedure record should have.
+  // TODO: Some functions are member functions, we should use a more appropriate
+  // record for those.
+  ProcedureRecord Procedure(ReturnTypeIndex, CallingConvention::NearC,
+                            FunctionOptions::None, ArgTypeIndices.size(),
+                            ArgListIndex);
+  return TypeTable.writeProcedure(Procedure);
 }
 
 TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef) {

@@ -368,9 +368,7 @@ int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   }
 
   // All other insert/extracts cost this much.
-  if (ST->isKryo())
-    return 2;
-  return 3;
+  return ST->getVectorInsertExtractBaseCost();
 }
 
 int AArch64TTIImpl::getArithmeticInstrCost(
@@ -529,9 +527,7 @@ int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(unsigned VF) {
-  if (ST->isCortexA57() || ST->isKryo())
-    return 4;
-  return 2;
+  return ST->getMaxInterleaveFactor();
 }
 
 void AArch64TTIImpl::getUnrollingPreferences(Loop *L,
@@ -630,28 +626,17 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 }
 
 unsigned AArch64TTIImpl::getCacheLineSize() {
-  if (ST->isCyclone())
-    return 64;
-  return BaseT::getCacheLineSize();
+  return ST->getCacheLineSize();
 }
 
 unsigned AArch64TTIImpl::getPrefetchDistance() {
-  if (ST->isCyclone())
-    return 280;
-  return BaseT::getPrefetchDistance();
+  return ST->getPrefetchDistance();
 }
 
 unsigned AArch64TTIImpl::getMinPrefetchStride() {
-  if (ST->isCyclone())
-    // The HW prefetcher handles accesses with strides up to 2KB.
-    return 2048;
-  return BaseT::getMinPrefetchStride();
+  return ST->getMinPrefetchStride();
 }
 
 unsigned AArch64TTIImpl::getMaxPrefetchIterationsAhead() {
-  if (ST->isCyclone())
-    // Be conservative for now and don't prefetch ahead too much since the loop
-    // may terminate early.
-    return 3;
-  return BaseT::getMaxPrefetchIterationsAhead();
+  return ST->getMaxPrefetchIterationsAhead();
 }

@@ -336,6 +336,9 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
   // DFA state table should not be empty.
   assert(Packetizer.getResourceTracker() && "Empty DFA table!");
 
+  if (Packetizer.getResourceTracker()->getInstrItins()->isEmpty())
+    return false;
+
   //
   // Loop over all basic blocks and remove KILL pseudo-instructions
   // These instructions confuse the dependence analysis. Consider:
