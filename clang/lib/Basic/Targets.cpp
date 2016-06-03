@@ -5669,6 +5669,7 @@ public:
                         .Case("generic", true)
                         .Cases("cortex-a53", "cortex-a57", "cortex-a72",
                                "cortex-a35", "exynos-m1", true)
+                        .Case("cortex-a73", true)
                         .Case("cyclone", true)
                         .Case("kryo", true)
                         .Default(false);
