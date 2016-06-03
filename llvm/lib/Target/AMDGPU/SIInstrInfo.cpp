@@ -2430,6 +2430,7 @@ void SIInstrInfo::moveSMRDToVALU(MachineInstr *MI,
     }
     case 32: {
       MachineInstr *Lo, *Hi;
+      addUsersToMoveToVALUWorklist(MI->getOperand(0).getReg(), MRI, Worklist);
       splitSMRD(MI, &AMDGPU::SReg_128RegClass, AMDGPU::S_LOAD_DWORDX4_IMM,
                 AMDGPU::S_LOAD_DWORDX4_SGPR, Lo, Hi);
       MI->eraseFromParent();
@@ -2440,6 +2441,7 @@ void SIInstrInfo::moveSMRDToVALU(MachineInstr *MI,
 
     case 64: {
       MachineInstr *Lo, *Hi;
+      addUsersToMoveToVALUWorklist(MI->getOperand(0).getReg(), MRI, Worklist);
       splitSMRD(MI, &AMDGPU::SReg_256RegClass, AMDGPU::S_LOAD_DWORDX8_IMM,
                 AMDGPU::S_LOAD_DWORDX8_SGPR, Lo, Hi);
       MI->eraseFromParent();
