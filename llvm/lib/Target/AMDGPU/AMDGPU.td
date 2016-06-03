@@ -206,6 +206,17 @@ def FeatureCIInsts : SubtargetFeature<"ci-insts",
         "true",
         "Additional intstructions for CI+">;
 
+class FeatureMaxPrivateElementSize<int size> : SubtargetFeature<
+  "max-private-element-size-"#size,
+  "MaxPrivateElementSize",
+  !cast<string>(size),
+  "Maximum private access size may be "#size
+>;
+
+def FeatureMaxPrivateElementSize4 : FeatureMaxPrivateElementSize<4>;
+def FeatureMaxPrivateElementSize8 : FeatureMaxPrivateElementSize<8>;
+def FeatureMaxPrivateElementSize16 : FeatureMaxPrivateElementSize<16>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
                                       "FeatureDisable","true",

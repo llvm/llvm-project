@@ -44,6 +44,15 @@ enum amd_code_version_t {
   AMD_CODE_VERSION_MINOR = 1
 };
 
+// Sets val bits for specified mask in specified dst packed instance.
+#define AMD_HSA_BITS_SET(dst, mask, val)                                       \
+  dst &= (~(1 << mask ## _SHIFT) & ~mask);                                     \
+  dst |= (((val) << mask ## _SHIFT) & mask)
+
+// Gets bits for specified mask from specified src packed instance.
+#define AMD_HSA_BITS_GET(src, mask)                                            \
+  ((src & mask) >> mask ## _SHIFT)                                             \
+
 /// The values used to define the number of bytes to use for the
 /// swizzle element size.
 enum amd_element_byte_size_t {

@@ -14,8 +14,8 @@
 ; GCN: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GCN-NEXT: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; GCN-NEXT: s_mov_b32 s14, -1
-; SI-NEXT: s_mov_b32 s15, 0x80f000
-; VI-NEXT: s_mov_b32 s15, 0x800000
+; SI-NEXT: s_mov_b32 s15, 0x98f000
+; VI-NEXT: s_mov_b32 s15, 0x980000
 
 ; s12 is offset user SGPR
 ; GCN: buffer_store_dword {{v[0-9]+}}, s[12:15], s11 offset:{{[0-9]+}} ; 4-byte Folded Spill
