@@ -165,10 +165,22 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     if (ScratchWaveOffsetReg == TRI->reservedPrivateSegmentWaveByteOffsetReg(MF)) {
       MachineRegisterInfo &MRI = MF.getRegInfo();
-      // Skip the last 2 elements because the last one is reserved for VCC, and
-      // this is the 2nd to last element already.
       unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
-      for (MCPhysReg Reg : getAllSGPRs().drop_back(6).slice(NumPreloaded)) {
+
+      // We need to drop register from the end of the list that we cannot use
+      // for the scratch wave offset.
+      // + 2 s102 and s103 do not exist on VI.
+      // + 2 for vcc
+      // + 2 for xnack_mask
+      // + 2 for flat_scratch
+      // + 4 for registers reserved for scratch resource register
+      // + 1 for register reserved for scratch wave offset.  (By exluding this
+      //     register from the list to consider, it means that when this
+      //     register is being used for the scratch wave offset and there
+      //     are no other free SGPRs, then the value will stay in this register.
+      // ----
+      //  13
+      for (MCPhysReg Reg : getAllSGPRs().drop_back(13).slice(NumPreloaded)) {
         // Pick the first unallocated SGPR. Be careful not to pick an alias of the
         // scratch descriptor, since we haven’t added its uses yet.
         if (!MRI.isPhysRegUsed(Reg)) {
