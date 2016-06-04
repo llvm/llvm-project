@@ -84,21 +84,14 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr,
 void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexDestroy %zx\n", thr->tid, addr);
   StatInc(thr, StatMutexDestroy);
-#ifndef SANITIZER_GO
-  // Global mutexes not marked as LINKER_INITIALIZED
-  // cause tons of not interesting reports, so just ignore it.
-  if (IsGlobalVar(addr))
-    return;
-#endif
-  if (IsAppMem(addr)) {
-    CHECK(!thr->is_freeing);
-    thr->is_freeing = true;
-    MemoryWrite(thr, pc, addr, kSizeLog1);
-    thr->is_freeing = false;
-  }
   SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
   if (s == 0)
     return;
+  if (s->is_linker_init) {
+    // Destroy is no-op for linker-initialized mutexes.
+    s->mtx.Unlock();
+    return;
+  }
   if (common_flags()->detect_deadlocks) {
     Callback cb(thr, pc);
     ctx->dd->MutexDestroy(&cb, &s->dd);
@@ -128,8 +121,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
     rep.AddStack(trace, true);
     rep.AddLocation(addr, 1);
     OutputReport(thr, rep);
-  }
-  if (unlock_locked) {
+
     SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
     if (s != 0) {
       s->Reset(thr->proc());
@@ -137,6 +129,15 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
     }
   }
   thr->mset.Remove(mid);
+  // Imitate a memory write to catch unlock-destroy races.
+  // Do this outside of sync mutex, because it can report a race which locks
+  // sync mutexes.
+  if (IsAppMem(addr)) {
+    CHECK(!thr->is_freeing);
+    thr->is_freeing = true;
+    MemoryWrite(thr, pc, addr, kSizeLog1);
+    thr->is_freeing = false;
+  }
   // s will be destroyed and freed in MetaMap::FreeBlock.
 }
 

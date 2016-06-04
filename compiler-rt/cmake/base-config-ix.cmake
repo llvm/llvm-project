@@ -9,7 +9,13 @@ check_include_file(unwind.h HAVE_UNWIND_H)
 # Top level target used to build all compiler-rt libraries.
 add_custom_target(compiler-rt ALL)
 
-if (NOT COMPILER_RT_STANDALONE_BUILD)
+# Setting these variables from an LLVM build is sufficient that compiler-rt can
+# construct the output paths, so it can behave as if it were in-tree here.
+if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSION)
+  set(LLVM_TREE_AVAILABLE On)
+endif()
+
+if (LLVM_TREE_AVAILABLE)
   # Compute the Clang version from the LLVM version.
   # FIXME: We should be able to reuse CLANG_VERSION variable calculated
   #        in Clang cmake files, instead of copying the rules here.

@@ -18,7 +18,10 @@
 using namespace __esan; // NOLINT
 
 void __esan_init(ToolType Tool, void *Ptr) {
-  WhichTool = Tool;
+  if (Tool != __esan_which_tool) {
+    Printf("ERROR: tool mismatch: %d vs %d\n", Tool, __esan_which_tool);
+    Die();
+  }
   initializeLibrary(Tool);
   processCompilationUnitInit(Ptr);
 }

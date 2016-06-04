@@ -1,5 +1,5 @@
 // RUN: %clangxx_unit -O0 %s -o %t 2>&1
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %env_esan_opts="record_snapshots=0" %run %t 2>&1 | FileCheck %s
 
 #include "esan/esan_circular_buffer.h"
 #include "sanitizer_common/sanitizer_placement_new.h"

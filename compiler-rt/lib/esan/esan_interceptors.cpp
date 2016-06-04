@@ -47,10 +47,15 @@ using namespace __esan; // NOLINT
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
   INTERCEPT_FUNCTION_VER(name, ver)
 
+// We must initialize during early interceptors, to support tcmalloc.
+// This means that for some apps we fully initialize prior to
+// __esan_init() being called.
 // We currently do not use ctx.
 #define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                               \
   do {                                                                         \
     if (UNLIKELY(COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)) {                 \
+      if (!UNLIKELY(EsanDuringInit))                                           \
+        initializeLibrary(__esan_which_tool);                                  \
       return REAL(func)(__VA_ARGS__);                                          \
     }                                                                          \
     ctx = nullptr;                                                             \
@@ -332,6 +337,8 @@ INTERCEPTOR(int, rmdir, char *path) {
 
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
                  int fd, OFF_T off) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, mmap, addr, sz, prot, flags, fd, off);
   if (!fixMmapAddr(&addr, sz, flags))
     return (void *)-1;
   void *result = REAL(mmap)(addr, sz, prot, flags, fd, off);
@@ -341,6 +348,8 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
 #if SANITIZER_LINUX
 INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags,
                  int fd, OFF64_T off) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, mmap64, addr, sz, prot, flags, fd, off);
   if (!fixMmapAddr(&addr, sz, flags))
     return (void *)-1;
   void *result = REAL(mmap64)(addr, sz, prot, flags, fd, off);

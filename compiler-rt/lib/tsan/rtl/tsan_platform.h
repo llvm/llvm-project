@@ -757,10 +757,6 @@ void CheckAndProtect();
 void InitializeShadowMemoryPlatform();
 void FlushShadowMemory();
 void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive);
-
-// Says whether the addr relates to a global var.
-// Guesses with high probability, may yield both false positives and negatives.
-bool IsGlobalVar(uptr addr);
 int ExtractResolvFDs(void *state, int *fds, int nfd);
 int ExtractRecvmsgFDs(void *msg, int *fds, int nfd);
 

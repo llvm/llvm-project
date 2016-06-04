@@ -10,7 +10,7 @@ RUN: %clangxx_profgen -O2 -Xclang -fprofile-instrument=llvm %t.1.o %t.2.o -o %t.
 RUN: LLVM_PROFILE_FILE=%t-icall2.profraw %t.gen.2
 RUN: llvm-profdata merge -o %t-icall2.profdata %t-icall2.profraw
 # The following test will be re-enabled once a compiler bug is fixed.
-#: %clangxx -O2 -Rpass=pgo-icall-prom  -fprofile-instr-use=%t-icall2.profdata -c -o %t.2.use.o  %S/Inputs/instrprof-icall-promo_2.cc  2>&1 | FileCheck %s
+RUN: %clangxx -O2 -Rpass=pgo-icall-prom  -fprofile-instr-use=%t-icall2.profdata -c -o %t.2.use.o  %S/Inputs/instrprof-icall-promo_2.cc  2>&1 | FileCheck %s
 
 
 # CHECK: Promote indirect call to
