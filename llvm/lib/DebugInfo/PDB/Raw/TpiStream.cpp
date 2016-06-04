@@ -11,11 +11,13 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 
 #include "llvm/Support/Endian.h"
 
@@ -99,20 +101,23 @@ Error TpiStream::reload() {
     return EC;
 
   // Hash indices, hash values, etc come from the hash stream.
-  MappedBlockStream HS(Header->HashStreamIndex, Pdb);
-  codeview::StreamReader HSR(HS);
+  HashStream.reset(new MappedBlockStream(Header->HashStreamIndex, Pdb));
+  codeview::StreamReader HSR(*HashStream);
+  uint32_t NumHashValues = Header->HashValueBuffer.Length / sizeof(ulittle32_t);
   HSR.setOffset(Header->HashValueBuffer.Off);
-  if (auto EC =
-          HSR.readStreamRef(HashValuesBuffer, Header->HashValueBuffer.Length))
-    return EC;
-
-  HSR.setOffset(Header->HashAdjBuffer.Off);
-  if (auto EC = HSR.readStreamRef(HashAdjBuffer, Header->HashAdjBuffer.Length))
+  if (auto EC = HSR.readArray(HashValues, NumHashValues))
     return EC;
 
   HSR.setOffset(Header->IndexOffsetBuffer.Off);
-  if (auto EC = HSR.readStreamRef(TypeIndexOffsetBuffer,
-                                  Header->IndexOffsetBuffer.Length))
+  uint32_t NumTypeIndexOffsets =
+      Header->IndexOffsetBuffer.Length / sizeof(TypeIndexOffset);
+  if (auto EC = HSR.readArray(TypeIndexOffsets, NumTypeIndexOffsets))
+    return EC;
+
+  HSR.setOffset(Header->HashAdjBuffer.Off);
+  uint32_t NumHashAdjustments =
+      Header->HashAdjBuffer.Length / sizeof(TypeIndexOffset);
+  if (auto EC = HSR.readArray(HashAdjustments, NumHashAdjustments))
     return EC;
 
   return Error::success();
@@ -137,6 +142,21 @@ uint16_t TpiStream::getTypeHashStreamIndex() const {
 
 uint16_t TpiStream::getTypeHashStreamAuxIndex() const {
   return Header->HashAuxStreamIndex;
+}
+
+codeview::FixedStreamArray<support::ulittle32_t>
+TpiStream::getHashValues() const {
+  return HashValues;
+}
+
+codeview::FixedStreamArray<TypeIndexOffset>
+TpiStream::getTypeIndexOffsets() const {
+  return TypeIndexOffsets;
+}
+
+codeview::FixedStreamArray<TypeIndexOffset>
+TpiStream::getHashAdjustments() const {
+  return HashAdjustments;
 }
 
 iterator_range<codeview::CVTypeArray::Iterator>

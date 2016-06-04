@@ -14,6 +14,7 @@ add_llvm_tool(llvm-pdbdump
   ExternalSymbolDumper.cpp
   FunctionDumper.cpp
   LinePrinter.cpp
+  LLVMOutputStyle.cpp
   TypeDumper.cpp
   TypedefDumper.cpp
   VariableDumper.cpp

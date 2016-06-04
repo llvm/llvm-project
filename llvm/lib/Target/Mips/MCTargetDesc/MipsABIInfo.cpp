@@ -42,7 +42,7 @@ ArrayRef<MCPhysReg> MipsABIInfo::GetVarArgRegs() const {
 unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
   if (IsO32())
     return CC != CallingConv::Fast ? 16 : 0;
-  if (IsN32() || IsN64() || IsEABI())
+  if (IsN32() || IsN64())
     return 0;
   llvm_unreachable("Unhandled ABI");
 }
@@ -55,8 +55,6 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef CPU,
     return MipsABIInfo::N32();
   else if (Options.getABIName().startswith("n64"))
     return MipsABIInfo::N64();
-  else if (Options.getABIName().startswith("eabi"))
-    return MipsABIInfo::EABI();
   else if (!Options.getABIName().empty())
     llvm_unreachable("Unknown ABI option for MIPS");
 
@@ -100,6 +98,10 @@ unsigned MipsABIInfo::GetFramePtr() const {
 
 unsigned MipsABIInfo::GetBasePtr() const {
   return ArePtrs64bit() ? Mips::S7_64 : Mips::S7;
+}
+
+unsigned MipsABIInfo::GetGlobalPtr() const {
+  return ArePtrs64bit() ? Mips::GP_64 : Mips::GP;
 }
 
 unsigned MipsABIInfo::GetNullPtr() const {

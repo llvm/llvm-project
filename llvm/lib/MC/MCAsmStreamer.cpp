@@ -314,7 +314,7 @@ void MCAsmStreamer::EmitCommentsAndEOL() {
 }
 
 static inline int64_t truncateToSize(int64_t Value, unsigned Bytes) {
-  assert(Bytes && "Invalid size!");
+  assert(Bytes > 0 && Bytes <= 8 && "Invalid size!");
   return Value & ((uint64_t) (int64_t) -1 >> (64 - Bytes * 8));
 }
 

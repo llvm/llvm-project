@@ -221,7 +221,7 @@ public:
     return FixedStreamArrayIterator<T>(*this, 0);
   }
   FixedStreamArrayIterator<T> end() const {
-    return FixedStreamArrayIterator<T>(*this);
+    return FixedStreamArrayIterator<T>(*this, size());
   }
 
 private:
@@ -230,13 +230,8 @@ private:
 
 template <typename T> class FixedStreamArrayIterator {
 public:
-  FixedStreamArrayIterator(const FixedStreamArray<T> &Array)
-      : Array(Array), Index(uint32_t(-1)) {}
-  FixedStreamArrayIterator(const FixedStreamArray<T> &Array, uint32_t ArrayIndex)
-      : Array(Array), Index(ArrayIndex) {
-    if (Array.size() <= Index)
-      Index = uint32_t(-1);
-  }
+  FixedStreamArrayIterator(const FixedStreamArray<T> &Array, uint32_t Index)
+      : Array(Array), Index(Index) {}
 
   bool operator==(const FixedStreamArrayIterator<T> &R) {
     assert(&Array == &R.Array);
@@ -250,10 +245,8 @@ public:
   const T &operator*() const { return Array[Index]; }
 
   FixedStreamArrayIterator<T> &operator++() {
-    if (Index == uint32_t(-1))
-      return *this;
-    if (++Index >= Array.size())
-      Index = uint32_t(-1);
+    assert(Index < Array.size());
+    ++Index;
     return *this;
   }
 

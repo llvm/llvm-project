@@ -2670,7 +2670,6 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       DAG.getCopyFromReg(Chain, DL, ABI.IsN64() ? Mips::SP_64 : Mips::SP,
                          getPointerTy(DAG.getDataLayout()));
 
-  // With EABI is it possible to have 16 args on registers.
   std::deque< std::pair<unsigned, SDValue> > RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 

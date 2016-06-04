@@ -140,6 +140,10 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// DIType* and DISubprogram*.
   DenseMap<const DINode *, codeview::TypeIndex> TypeIndices;
 
+  /// Map from DICompositeType* to complete type index. Non-record types are
+  /// always looked up in the normal TypeIndices map.
+  DenseMap<const DICompositeType *, codeview::TypeIndex> CompleteTypeIndices;
+
   typedef std::map<const DIFile *, std::string> FileToFilepathMapTy;
   FileToFilepathMapTy FileToFilepathMap;
   StringRef getFullFilepath(const DIFile *S);
@@ -182,7 +186,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   /// Translates the DIType to codeview if necessary and returns a type index
   /// for it.
-  codeview::TypeIndex getTypeIndex(DITypeRef Ty);
+  codeview::TypeIndex getTypeIndex(DITypeRef TypeRef);
 
   codeview::TypeIndex lowerType(const DIType *Ty);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);
@@ -191,6 +195,27 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex lowerTypeMemberPointer(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeModifier(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeFunction(const DISubroutineType *Ty);
+  codeview::TypeIndex lowerTypeClass(const DICompositeType *Ty);
+  codeview::TypeIndex lowerTypeUnion(const DICompositeType *Ty);
+
+  /// Symbol records should point to complete types, but type records should
+  /// always point to incomplete types to avoid cycles in the type graph. Only
+  /// use this entry point when generating symbol records. The complete and
+  /// incomplete type indices only differ for record types. All other types use
+  /// the same index.
+  codeview::TypeIndex getCompleteTypeIndex(DITypeRef TypeRef);
+
+  codeview::TypeIndex lowerCompleteTypeClass(const DICompositeType *Ty);
+  codeview::TypeIndex lowerCompleteTypeUnion(const DICompositeType *Ty);
+
+  /// Common record member lowering functionality for record types, which are
+  /// structs, classes, and unions. Returns the field list index and the member
+  /// count.
+  std::pair<codeview::TypeIndex, unsigned>
+  lowerRecordFieldList(const DICompositeType *Ty);
+
+  /// Inserts {Node, TI} into TypeIndices and checks for duplicates.
+  void recordTypeIndexForDINode(const DINode *Node, codeview::TypeIndex TI);
 
 public:
   CodeViewDebug(AsmPrinter *Asm);

@@ -59,10 +59,6 @@ static cl::opt<bool> EnableBranchHint(
     cl::desc("Enable static hinting of branches on ppc"),
     cl::Hidden);
 
-namespace llvm {
-  void initializePPCDAGToDAGISelPass(PassRegistry&);
-}
-
 namespace {
   //===--------------------------------------------------------------------===//
   /// PPCDAGToDAGISel - PPC specific code to select PPC machine
@@ -75,9 +71,7 @@ namespace {
     unsigned GlobalBaseReg;
   public:
     explicit PPCDAGToDAGISel(PPCTargetMachine &tm)
-        : SelectionDAGISel(tm), TM(tm) {
-      initializePPCDAGToDAGISelPass(*PassRegistry::getPassRegistry());
-    }
+        : SelectionDAGISel(tm), TM(tm) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Make sure we re-emit a set of the global base reg if necessary
@@ -4430,15 +4424,4 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 ///
 FunctionPass *llvm::createPPCISelDag(PPCTargetMachine &TM) {
   return new PPCDAGToDAGISel(TM);
-}
-
-static void initializePassOnce(PassRegistry &Registry) {
-  const char *Name = "PowerPC DAG->DAG Pattern Instruction Selection";
-  PassInfo *PI = new PassInfo(Name, "ppc-codegen", &SelectionDAGISel::ID,
-                              nullptr, false, false);
-  Registry.registerPass(*PI, true);
-}
-
-void llvm::initializePPCDAGToDAGISelPass(PassRegistry &Registry) {
-  CALL_ONCE_INITIALIZATION(initializePassOnce);
 }

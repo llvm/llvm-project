@@ -1778,14 +1778,16 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     return true;
   lex();
 
-  const char *Word = Flags & MachineMemOperand::MOLoad ? "from" : "into";
-  if (Token.isNot(MIToken::Identifier) || Token.stringValue() != Word)
-    return error(Twine("expected '") + Word + "'");
-  lex();
-
   MachinePointerInfo Ptr = MachinePointerInfo();
-  if (parseMachinePointerInfo(Ptr))
-    return true;
+  if (Token.is(MIToken::Identifier)) {
+    const char *Word = Flags & MachineMemOperand::MOLoad ? "from" : "into";
+    if (Token.stringValue() != Word)
+      return error(Twine("expected '") + Word + "'");
+    lex();
+
+    if (parseMachinePointerInfo(Ptr))
+      return true;
+  }
   unsigned BaseAlignment = Size;
   AAMDNodes AAInfo;
   MDNode *Range = nullptr;

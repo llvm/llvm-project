@@ -55,6 +55,7 @@ protected:
   bool HasNEON = false;
   bool HasCrypto = false;
   bool HasCRC = false;
+  bool HasRAS = false;
   bool HasPerfMon = false;
   bool HasFullFP16 = false;
   bool HasSPE = false;
@@ -170,6 +171,7 @@ public:
   bool hasNEON() const { return HasNEON; }
   bool hasCrypto() const { return HasCrypto; }
   bool hasCRC() const { return HasCRC; }
+  bool hasRAS() const { return HasRAS; }
   bool mergeNarrowLoads() const { return MergeNarrowLoads; }
   bool balanceFPOps() const { return BalanceFPOps; }
   bool predictableSelectIsExpensive() const {

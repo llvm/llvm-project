@@ -313,7 +313,6 @@ const char *MipsAsmPrinter::getCurrentABIString() const {
   case MipsABIInfo::ABI::O32:  return "abi32";
   case MipsABIInfo::ABI::N32:  return "abiN32";
   case MipsABIInfo::ABI::N64:  return "abi64";
-  case MipsABIInfo::ABI::EABI: return "eabi32"; // TODO: handle eabi64
   default: llvm_unreachable("Unknown Mips ABI");
   }
 }
@@ -712,15 +711,6 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
                   : TS.emitDirectiveNaNLegacy();
 
   // TODO: handle O64 ABI
-
-  if (ABI.IsEABI()) {
-    if (STI.isGP32bit())
-      OutStreamer->SwitchSection(OutContext.getELFSection(".gcc_compiled_long32",
-                                                          ELF::SHT_PROGBITS, 0));
-    else
-      OutStreamer->SwitchSection(OutContext.getELFSection(".gcc_compiled_long64",
-                                                          ELF::SHT_PROGBITS, 0));
-  }
 
   TS.updateABIInfo(STI);
 

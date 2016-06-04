@@ -1641,24 +1641,55 @@ Instruction *InstCombiner::MatchBSwap(BinaryOperator &I) {
 /// We have an expression of the form (A&C)|(B&D).  Check if A is (cond?-1:0)
 /// and either B or D is ~(cond?-1,0) or (cond?0,-1), then we can simplify this
 /// expression to "cond ? C : D or B".
-static Instruction *matchSelectFromAndOr(Value *A, Value *B,
-                                         Value *C, Value *D) {
+static Instruction *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
+                                         InstCombiner::BuilderTy &Builder) {
   // If A is not a select of -1/0, this cannot match.
   Value *Cond = nullptr;
-  if (!match(A, m_SExt(m_Value(Cond))) || !Cond->getType()->isIntegerTy(1))
-    return nullptr;
+  if (match(A, m_SExt(m_Value(Cond))) &&
+      Cond->getType()->getScalarType()->isIntegerTy(1)) {
 
-  // ((cond?-1:0)&C) | (B&(cond?0:-1)) -> cond ? C : B.
-  if (match(D, m_Not(m_SExt(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, B);
-  if (match(D, m_SExt(m_Not(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, B);
+    // ((cond ? -1:0) & C) | (B & (cond ? 0:-1)) -> cond ? C : B.
+    if (match(D, m_Not(m_SExt(m_Specific(Cond)))))
+      return SelectInst::Create(Cond, C, B);
+    if (match(D, m_SExt(m_Not(m_Specific(Cond)))))
+      return SelectInst::Create(Cond, C, B);
 
-  // ((cond?-1:0)&C) | ((cond?0:-1)&D) -> cond ? C : D.
-  if (match(B, m_Not(m_SExt(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, D);
-  if (match(B, m_SExt(m_Not(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, D);
+    // ((cond ? -1:0) & C) | ((cond ? 0:-1) & D) -> cond ? C : D.
+    if (match(B, m_Not(m_SExt(m_Specific(Cond)))))
+      return SelectInst::Create(Cond, C, D);
+    if (match(B, m_SExt(m_Not(m_Specific(Cond)))))
+      return SelectInst::Create(Cond, C, D);
+  }
+
+  // TODO: Refactor the pattern matching above and below so there's less code.
+
+  // The sign-extended boolean condition may be hiding behind a bitcast. In that
+  // case, look for the same patterns as above. However, we need to bitcast the
+  // input operands to the select and bitcast the output of the select to match
+  // the expected types.
+  if (match(A, m_BitCast(m_SExt(m_Value(Cond)))) &&
+      Cond->getType()->getScalarType()->isIntegerTy(1)) {
+
+    Type *SrcType = cast<BitCastInst>(A)->getSrcTy();
+
+    // ((bc Cond) & C) | (B & (bc ~Cond)) --> bc (select Cond, (bc C), (bc B))
+    if (match(D, m_CombineOr(m_BitCast(m_Not(m_SExt(m_Specific(Cond)))),
+                             m_BitCast(m_SExt(m_Not(m_Specific(Cond))))))) {
+      Value *BitcastC = Builder.CreateBitCast(C, SrcType);
+      Value *BitcastB = Builder.CreateBitCast(B, SrcType);
+      Value *Select = Builder.CreateSelect(Cond, BitcastC, BitcastB);
+      return CastInst::Create(Instruction::BitCast, Select, A->getType());
+    }
+
+    // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
+    if (match(B, m_CombineOr(m_BitCast(m_Not(m_SExt(m_Specific(Cond)))),
+                             m_BitCast(m_SExt(m_Not(m_Specific(Cond))))))) {
+      Value *BitcastC = Builder.CreateBitCast(C, SrcType);
+      Value *BitcastD = Builder.CreateBitCast(D, SrcType);
+      Value *Select = Builder.CreateSelect(Cond, BitcastC, BitcastD);
+      return CastInst::Create(Instruction::BitCast, Select, A->getType());
+    }
+  }
 
   return nullptr;
 }
@@ -2256,13 +2287,13 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     }
 
     // (A & (C0?-1:0)) | (B & ~(C0?-1:0)) ->  C0 ? A : B, and commuted variants.
-    if (Instruction *Match = matchSelectFromAndOr(A, B, C, D))
+    if (Instruction *Match = matchSelectFromAndOr(A, B, C, D, *Builder))
       return Match;
-    if (Instruction *Match = matchSelectFromAndOr(B, A, D, C))
+    if (Instruction *Match = matchSelectFromAndOr(B, A, D, C, *Builder))
       return Match;
-    if (Instruction *Match = matchSelectFromAndOr(C, B, A, D))
+    if (Instruction *Match = matchSelectFromAndOr(C, B, A, D, *Builder))
       return Match;
-    if (Instruction *Match = matchSelectFromAndOr(D, A, B, C))
+    if (Instruction *Match = matchSelectFromAndOr(D, A, B, C, *Builder))
       return Match;
 
     // ((A&~B)|(~A&B)) -> A^B

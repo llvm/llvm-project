@@ -14,11 +14,35 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace opts {
+
+enum OutputStyleTy { LLVM, YAML };
+
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
 extern llvm::cl::opt<bool> Globals;
 extern llvm::cl::opt<bool> Types;
 extern llvm::cl::opt<bool> All;
+
+extern llvm::cl::opt<OutputStyleTy> RawOutputStyle;
+extern llvm::cl::opt<bool> DumpHeaders;
+extern llvm::cl::opt<bool> DumpStreamBlocks;
+extern llvm::cl::opt<bool> DumpStreamSummary;
+extern llvm::cl::opt<bool> DumpTpiHash;
+extern llvm::cl::opt<bool> DumpTpiRecordBytes;
+extern llvm::cl::opt<bool> DumpTpiRecords;
+extern llvm::cl::opt<bool> DumpIpiRecords;
+extern llvm::cl::opt<bool> DumpIpiRecordBytes;
+extern llvm::cl::opt<std::string> DumpStreamDataIdx;
+extern llvm::cl::opt<std::string> DumpStreamDataName;
+extern llvm::cl::opt<bool> DumpModules;
+extern llvm::cl::opt<bool> DumpModuleFiles;
+extern llvm::cl::opt<bool> DumpModuleSyms;
+extern llvm::cl::opt<bool> DumpPublics;
+extern llvm::cl::opt<bool> DumpSectionContribs;
+extern llvm::cl::opt<bool> DumpLineInfo;
+extern llvm::cl::opt<bool> DumpSectionMap;
+extern llvm::cl::opt<bool> DumpSymRecordBytes;
+extern llvm::cl::opt<bool> DumpSectionHeaders;
 
 extern llvm::cl::opt<bool> ExcludeCompilerGenerated;
 

@@ -894,6 +894,9 @@ class CodeGen {
   /// bitcode provided via the get_view gold callback.
   StringMap<MemoryBufferRef> *ModuleMap;
 
+  // Functions to import into this module.
+  FunctionImporter::ImportMapTy *ImportList;
+
 public:
   /// Constructor used by full LTO.
   CodeGen(std::unique_ptr<llvm::Module> M)
@@ -904,9 +907,11 @@ public:
   /// Constructor used by ThinLTO.
   CodeGen(std::unique_ptr<llvm::Module> M, raw_fd_ostream *OS, int TaskID,
           const ModuleSummaryIndex *CombinedIndex, std::string Filename,
-          StringMap<MemoryBufferRef> *ModuleMap)
+          StringMap<MemoryBufferRef> *ModuleMap,
+          FunctionImporter::ImportMapTy *ImportList)
       : M(std::move(M)), OS(OS), TaskID(TaskID), CombinedIndex(CombinedIndex),
-        SaveTempsFilename(std::move(Filename)), ModuleMap(ModuleMap) {
+        SaveTempsFilename(std::move(Filename)), ModuleMap(ModuleMap),
+        ImportList(ImportList) {
     assert(options::thinlto == !!CombinedIndex &&
            "Expected module summary index iff performing ThinLTO");
     initTargetMachine();
@@ -991,18 +996,13 @@ void CodeGen::runLTOPasses() {
   M->setDataLayout(TM->createDataLayout());
 
   if (CombinedIndex) {
-    // First collect the import list.
-    FunctionImporter::ImportMapTy ImportList;
-    ComputeCrossModuleImportForModule(M->getModuleIdentifier(), *CombinedIndex,
-                                      ImportList);
-
     // Create a loader that will parse the bitcode from the buffers
     // in the ModuleMap.
     ModuleLoader Loader(M->getContext(), *ModuleMap);
 
     // Perform function importing.
     FunctionImporter Importer(*CombinedIndex, Loader);
-    Importer.importFunctions(*M, ImportList);
+    Importer.importFunctions(*M, *ImportList);
   }
 
   legacy::PassManager passes;
@@ -1172,7 +1172,8 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
                                StringRef Name, raw_fd_ostream *ApiFile,
                                const ModuleSummaryIndex &CombinedIndex,
                                raw_fd_ostream *OS, unsigned TaskID,
-                               StringMap<MemoryBufferRef> &ModuleMap) {
+                               StringMap<MemoryBufferRef> &ModuleMap,
+                               FunctionImporter::ImportMapTy &ImportList) {
   // Need to use a separate context for each task
   LLVMContext Context;
   Context.setDiscardValueNames(options::TheOutputType !=
@@ -1189,14 +1190,16 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
 
   CodeGen codeGen(std::move(NewModule), OS, TaskID, &CombinedIndex, Name,
-                  &ModuleMap);
+                  &ModuleMap, &ImportList);
   codeGen.runAll();
 }
 
 /// Launch each module's backend pipeline in a separate task in a thread pool.
-static void thinLTOBackends(raw_fd_ostream *ApiFile,
-                            const ModuleSummaryIndex &CombinedIndex,
-                            StringMap<MemoryBufferRef> &ModuleMap) {
+static void
+thinLTOBackends(raw_fd_ostream *ApiFile,
+                const ModuleSummaryIndex &CombinedIndex,
+                StringMap<MemoryBufferRef> &ModuleMap,
+                StringMap<FunctionImporter::ImportMapTy> &ImportLists) {
   unsigned TaskCount = 0;
   std::vector<ThinLTOTaskInfo> Tasks;
   Tasks.reserve(Modules.size());
@@ -1239,7 +1242,8 @@ static void thinLTOBackends(raw_fd_ostream *ApiFile,
       // Enqueue the task
       ThinLTOThreadPool.async(thinLTOBackendTask, std::ref(F), View, F.name,
                               ApiFile, std::ref(CombinedIndex), OS.get(),
-                              TaskCount, std::ref(ModuleMap));
+                              TaskCount, std::ref(ModuleMap),
+                              std::ref(ImportLists[F.name]));
 
       // Record the information needed by the task or during its cleanup
       // to a ThinLTOTaskInfo instance. For information needed by the task
@@ -1323,23 +1327,18 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     message(LDPL_WARNING,
             "thinlto-emit-imports-files ignored unless thinlto-index-only");
 
+  // Collect for each module the list of function it defines (GUID ->
+  // Summary).
+  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
+      ModuleToDefinedGVSummaries(NextModuleId);
+  CombinedIndex.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
+
+  StringMap<FunctionImporter::ImportMapTy> ImportLists(NextModuleId);
+  StringMap<FunctionImporter::ExportSetTy> ExportLists(NextModuleId);
+  ComputeCrossModuleImport(CombinedIndex, ModuleToDefinedGVSummaries,
+                           ImportLists, ExportLists);
+
   if (options::thinlto_index_only) {
-    // Collect for each module the list of function it defines (GUID ->
-    // Summary).
-    StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
-        ModuleToDefinedGVSummaries(NextModuleId);
-    CombinedIndex.collectDefinedGVSummariesPerModule(
-        ModuleToDefinedGVSummaries);
-
-    // FIXME: We want to do this for the case where the threads are launched
-    // from gold as well, in which case this will be moved out of the
-    // thinlto_index_only handling, and the function importer will be invoked
-    // directly using the Lists.
-    StringMap<FunctionImporter::ImportMapTy> ImportLists(NextModuleId);
-    StringMap<FunctionImporter::ExportSetTy> ExportLists(NextModuleId);
-    ComputeCrossModuleImport(CombinedIndex, ModuleToDefinedGVSummaries,
-                             ImportLists, ExportLists);
-
     // If the thinlto-prefix-replace option was specified, parse it and
     // extract the old and new prefixes.
     std::string OldPrefix, NewPrefix;
@@ -1389,7 +1388,7 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     WriteIndexToFile(CombinedIndex, OS);
   }
 
-  thinLTOBackends(ApiFile, CombinedIndex, ModuleMap);
+  thinLTOBackends(ApiFile, CombinedIndex, ModuleMap, ImportLists);
   return LDPS_OK;
 }
 

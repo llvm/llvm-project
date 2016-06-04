@@ -205,7 +205,7 @@ private:
 
 class MutationDispatcher {
 public:
-  MutationDispatcher(Random &Rand) : Rand(Rand) {}
+  MutationDispatcher(Random &Rand);
   ~MutationDispatcher() {}
   /// Indicate that we are about to start a new sequence of mutations.
   void StartMutationSequence();
@@ -213,6 +213,8 @@ public:
   void PrintMutationSequence();
   /// Indicate that the current sequence of mutations was successfull.
   void RecordSuccessfulMutationSequence();
+  /// Mutates data by invoking user-provided mutator.
+  size_t Mutate_Custom(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by shuffling bytes.
   size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by erasing a byte.
@@ -242,9 +244,12 @@ public:
   /// CrossOver Data with some other element of the corpus.
   size_t Mutate_CrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
 
-  /// Applies one of the above mutations.
+  /// Applies one of the configured mutations.
   /// Returns the new size of data which could be up to MaxSize.
   size_t Mutate(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Applies one of the default mutations. Provided as a service
+  /// to mutation authors.
+  size_t DefaultMutate(uint8_t *Data, size_t Size, size_t MaxSize);
 
   /// Creates a cross-over of two pieces of Data, returns its size.
   size_t CrossOver(const uint8_t *Data1, size_t Size1, const uint8_t *Data2,
@@ -269,6 +274,11 @@ private:
 
   size_t AddWordFromDictionary(Dictionary &D, uint8_t *Data, size_t Size,
                                size_t MaxSize);
+  size_t MutateImpl(uint8_t *Data, size_t Size, size_t MaxSize,
+                    const std::vector<Mutator> &Mutators);
+
+  // Interface to functions that may or may not be available.
+  const ExternalFunctions EF;
 
   Random &Rand;
   // Dictionary provided by the user via -dict=DICT_FILE.
@@ -284,7 +294,8 @@ private:
   const std::vector<Unit> *Corpus = nullptr;
   std::vector<uint8_t> MutateInPlaceHere;
 
-  static Mutator Mutators[];
+  std::vector<Mutator> Mutators;
+  std::vector<Mutator> DefaultMutators;
 };
 
 class Fuzzer {
@@ -471,7 +482,8 @@ private:
   static thread_local bool IsMyThread;
 
   // Interface to functions that may or may not be available.
-  ExternalFunctions EF;
+  // For future use, currently not used.
+  const ExternalFunctions EF;
 };
 
 }; // namespace fuzzer

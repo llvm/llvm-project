@@ -143,7 +143,7 @@ void ARMSubtarget::initializeEnvironment() {
   Pref32BitThumb = false;
   AvoidCPSRPartialUpdate = false;
   AvoidMOVsShifterOperand = false;
-  HasRAS = false;
+  HasRetAddrStack = false;
   HasMPExtension = false;
   HasVirtualization = false;
   FPOnlySP = false;
@@ -152,6 +152,7 @@ void ARMSubtarget::initializeEnvironment() {
   Has8MSecExt = false;
   HasCrypto = false;
   HasCRC = false;
+  HasRAS = false;
   HasZeroCycleZeroing = false;
   StrictAlign = false;
   HasDSP = false;

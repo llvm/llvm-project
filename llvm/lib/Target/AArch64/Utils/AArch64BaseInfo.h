@@ -672,7 +672,11 @@ namespace AArch64SysReg {
     ICC_RPR_EL1       = 0xc65b, // 11  000  1100  1011  011
     ICH_VTR_EL2       = 0xe659, // 11  100  1100  1011  001
     ICH_EISR_EL2      = 0xe65b, // 11  100  1100  1011  011
-    ICH_ELSR_EL2      = 0xe65d  // 11  100  1100  1011  101
+    ICH_ELSR_EL2      = 0xe65d, // 11  100  1100  1011  101
+
+    // RAS extension registers
+    ERRIDR_EL1        = 0xc298, // 11  000  0101  0011  000
+    ERXFR_EL1         = 0xc2a0  // 11  000  0101  0100  000
   };
 
   enum SysRegWOValues {
@@ -1210,6 +1214,17 @@ namespace AArch64SysReg {
     CNTV_CVAL_EL02    = 0xef1a, // 11  101  1110  0011  010
     SPSR_EL12         = 0xea00, // 11  101  0100  0000  000
     ELR_EL12          = 0xea01, // 11  101  0100  0000  001
+
+    // RAS extension registers
+    ERRSELR_EL1       = 0xc299, // 11  000  0101  0011  001
+    ERXCTLR_EL1       = 0xc2a1, // 11  000  0101  0100  001
+    ERXSTATUS_EL1     = 0xc2a2, // 11  000  0101  0100  010
+    ERXADDR_EL1       = 0xc2a3, // 11  000  0101  0100  011
+    ERXMISC0_EL1      = 0xc2a8, // 11  000  0101  0101  000
+    ERXMISC1_EL1      = 0xc2a9, // 11  000  0101  0101  001
+    DISR_EL1          = 0xc609, // 11  000  1100  0001  001
+    VDISR_EL2         = 0xe609, // 11  100  1100  0001  001
+    VSESR_EL2         = 0xe293, // 11  100  0101  0010  011
 
     // v8.2a registers
     UAO               = 0xc214, // 11  000  0100  0010  100

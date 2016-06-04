@@ -5355,38 +5355,36 @@ let Constraints = "$src1 = $dst" in {
 
 
 /// SS3I_unop_rm_int - Simple SSSE3 unary op whose type can be v*{i8,i16,i32}.
-multiclass SS3I_unop_rm_int<bits<8> opc, string OpcodeStr, Intrinsic IntId128,
-                            PatFrag ld_frag> {
+multiclass SS3I_unop_rm<bits<8> opc, string OpcodeStr, ValueType vt,
+                        SDNode OpNode, PatFrag ld_frag> {
   def rr128 : SS38I<opc, MRMSrcReg, (outs VR128:$dst),
                     (ins VR128:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                    [(set VR128:$dst, (IntId128 VR128:$src))], IIC_SSE_PABS_RR>,
-                    Sched<[WriteVecALU]>;
+                    [(set VR128:$dst, (vt (OpNode VR128:$src)))],
+                    IIC_SSE_PABS_RR>, Sched<[WriteVecALU]>;
 
   def rm128 : SS38I<opc, MRMSrcMem, (outs VR128:$dst),
                     (ins i128mem:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                     [(set VR128:$dst,
-                      (IntId128
-                       (bitconvert (ld_frag addr:$src))))], IIC_SSE_PABS_RM>,
-                    Sched<[WriteVecALULd]>;
+                      (vt (OpNode (bitconvert (ld_frag addr:$src)))))],
+                    IIC_SSE_PABS_RM>, Sched<[WriteVecALULd]>;
 }
 
 /// SS3I_unop_rm_int_y - Simple SSSE3 unary op whose type can be v*{i8,i16,i32}.
-multiclass SS3I_unop_rm_int_y<bits<8> opc, string OpcodeStr,
-                              Intrinsic IntId256> {
+multiclass SS3I_unop_rm_y<bits<8> opc, string OpcodeStr, ValueType vt,
+                          SDNode OpNode> {
   def rr256 : SS38I<opc, MRMSrcReg, (outs VR256:$dst),
                     (ins VR256:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-                    [(set VR256:$dst, (IntId256 VR256:$src))]>,
+                    [(set VR256:$dst, (vt (OpNode VR256:$src)))]>,
                     Sched<[WriteVecALU]>;
 
   def rm256 : SS38I<opc, MRMSrcMem, (outs VR256:$dst),
                     (ins i256mem:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                     [(set VR256:$dst,
-                      (IntId256
-                       (bitconvert (loadv4i64 addr:$src))))]>,
+                      (vt (OpNode (bitconvert (loadv4i64 addr:$src)))))]>,
                     Sched<[WriteVecALULd]>;
 }
 
@@ -5400,14 +5398,15 @@ def v32i1sextv32i8 : PatLeaf<(v32i8 (X86pcmpgt (bc_v32i8 (v8i32 immAllZerosV)),
 def v16i1sextv16i16: PatLeaf<(v16i16 (X86vsrai VR256:$src, (i8 15)))>;
 def v8i1sextv8i32  : PatLeaf<(v8i32 (X86vsrai VR256:$src, (i8 31)))>;
 
-let Predicates = [HasAVX] in {
-  defm VPABSB  : SS3I_unop_rm_int<0x1C, "vpabsb", int_x86_ssse3_pabs_b_128,
-                                  loadv2i64>, VEX;
-  defm VPABSW  : SS3I_unop_rm_int<0x1D, "vpabsw", int_x86_ssse3_pabs_w_128,
-                                  loadv2i64>, VEX;
-  defm VPABSD  : SS3I_unop_rm_int<0x1E, "vpabsd", int_x86_ssse3_pabs_d_128,
-                                  loadv2i64>, VEX;
+let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
+  defm VPABSB  : SS3I_unop_rm<0x1C, "vpabsb", v16i8, X86Abs, loadv2i64>, VEX;
+  defm VPABSW  : SS3I_unop_rm<0x1D, "vpabsw", v8i16, X86Abs, loadv2i64>, VEX;
+}
+let Predicates = [HasAVX, NoVLX] in {
+  defm VPABSD  : SS3I_unop_rm<0x1E, "vpabsd", v4i32, X86Abs, loadv2i64>, VEX;
+}
 
+let Predicates = [HasAVX] in {
   def : Pat<(xor
             (bc_v2i64 (v16i1sextv16i8)),
             (bc_v2i64 (add (v16i8 VR128:$src), (v16i1sextv16i8)))),
@@ -5422,14 +5421,15 @@ let Predicates = [HasAVX] in {
             (VPABSDrr128 VR128:$src)>;
 }
 
-let Predicates = [HasAVX2] in {
-  defm VPABSB  : SS3I_unop_rm_int_y<0x1C, "vpabsb",
-                                    int_x86_avx2_pabs_b>, VEX, VEX_L;
-  defm VPABSW  : SS3I_unop_rm_int_y<0x1D, "vpabsw",
-                                    int_x86_avx2_pabs_w>, VEX, VEX_L;
-  defm VPABSD  : SS3I_unop_rm_int_y<0x1E, "vpabsd",
-                                    int_x86_avx2_pabs_d>, VEX, VEX_L;
+let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
+  defm VPABSB  : SS3I_unop_rm_y<0x1C, "vpabsb", v32i8, X86Abs>, VEX, VEX_L;
+  defm VPABSW  : SS3I_unop_rm_y<0x1D, "vpabsw", v16i16, X86Abs>, VEX, VEX_L;
+}
+let Predicates = [HasAVX2, NoVLX] in {
+  defm VPABSD  : SS3I_unop_rm_y<0x1E, "vpabsd", v8i32, X86Abs>, VEX, VEX_L;
+}
 
+let Predicates = [HasAVX2] in {
   def : Pat<(xor
             (bc_v4i64 (v32i1sextv32i8)),
             (bc_v4i64 (add (v32i8 VR256:$src), (v32i1sextv32i8)))),
@@ -5444,14 +5444,11 @@ let Predicates = [HasAVX2] in {
             (VPABSDrr256 VR256:$src)>;
 }
 
-defm PABSB : SS3I_unop_rm_int<0x1C, "pabsb", int_x86_ssse3_pabs_b_128,
-                              memopv2i64>;
-defm PABSW : SS3I_unop_rm_int<0x1D, "pabsw", int_x86_ssse3_pabs_w_128,
-                              memopv2i64>;
-defm PABSD : SS3I_unop_rm_int<0x1E, "pabsd", int_x86_ssse3_pabs_d_128,
-                              memopv2i64>;
+defm PABSB : SS3I_unop_rm<0x1C, "pabsb", v16i8, X86Abs, memopv2i64>;
+defm PABSW : SS3I_unop_rm<0x1D, "pabsw", v8i16, X86Abs, memopv2i64>;
+defm PABSD : SS3I_unop_rm<0x1E, "pabsd", v4i32, X86Abs, memopv2i64>;
 
-let Predicates = [HasSSSE3] in {
+let Predicates = [UseSSSE3] in {
   def : Pat<(xor
             (bc_v2i64 (v16i1sextv16i8)),
             (bc_v2i64 (add (v16i8 VR128:$src), (v16i1sextv16i8)))),

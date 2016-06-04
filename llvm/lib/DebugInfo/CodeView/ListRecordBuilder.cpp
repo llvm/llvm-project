@@ -15,6 +15,8 @@ using namespace codeview;
 ListRecordBuilder::ListRecordBuilder(TypeRecordKind Kind) : Builder(Kind) {}
 
 void ListRecordBuilder::finishSubRecord() {
+  SubrecordCount++;
+
   // The builder starts at offset 2 in the actual CodeView buffer, so add an
   // additional offset of 2 before computing the alignment.
   uint32_t Remainder = (Builder.size() + 2) % 4;

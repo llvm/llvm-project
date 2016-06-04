@@ -186,6 +186,10 @@
     %0 = load i8*, i8** undef, align 8
     ret i8* %0
   }
+
+  define void @dummy() {
+    ret void
+  }
 ...
 ---
 name:            test
@@ -504,5 +508,16 @@ body: |
   ; CHECK-LABEL: name: undef_value
   ; CHECK: %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8 from `i8** undef`)
     %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8 from `i8** undef`)
+    RETQ %rax
+...
+---
+# Test memory operand without associated value.
+# CHECK-LABEL: name: dummy
+# CHECK: %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8)
+name: dummy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8)
     RETQ %rax
 ...

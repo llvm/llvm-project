@@ -18,21 +18,30 @@ namespace fuzzer {
 
 const size_t Dictionary::kMaxDictSize;
 
-MutationDispatcher::Mutator MutationDispatcher::Mutators[] = {
-  {&MutationDispatcher::Mutate_EraseByte, "EraseByte"},
-  {&MutationDispatcher::Mutate_InsertByte, "InsertByte"},
-  {&MutationDispatcher::Mutate_ChangeByte, "ChangeByte"},
-  {&MutationDispatcher::Mutate_ChangeBit, "ChangeBit"},
-  {&MutationDispatcher::Mutate_ShuffleBytes, "ShuffleBytes"},
-  {&MutationDispatcher::Mutate_ChangeASCIIInteger, "ChangeASCIIInt"},
-  {&MutationDispatcher::Mutate_CrossOver, "CrossOver"},
-  {&MutationDispatcher::Mutate_AddWordFromManualDictionary,
-    "AddFromManualDict"},
-  {&MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary,
-    "AddFromTempAutoDict"},
-  {&MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary,
-    "AddFromPersAutoDict"},
-};
+MutationDispatcher::MutationDispatcher(Random &Rand) : Rand(Rand) {
+  DefaultMutators.insert(
+      DefaultMutators.begin(),
+      {
+          {&MutationDispatcher::Mutate_EraseByte, "EraseByte"},
+          {&MutationDispatcher::Mutate_InsertByte, "InsertByte"},
+          {&MutationDispatcher::Mutate_ChangeByte, "ChangeByte"},
+          {&MutationDispatcher::Mutate_ChangeBit, "ChangeBit"},
+          {&MutationDispatcher::Mutate_ShuffleBytes, "ShuffleBytes"},
+          {&MutationDispatcher::Mutate_ChangeASCIIInteger, "ChangeASCIIInt"},
+          {&MutationDispatcher::Mutate_CrossOver, "CrossOver"},
+          {&MutationDispatcher::Mutate_AddWordFromManualDictionary,
+           "AddFromManualDict"},
+          {&MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary,
+           "AddFromTempAutoDict"},
+          {&MutationDispatcher::Mutate_AddWordFromPersistentAutoDictionary,
+           "AddFromPersAutoDict"},
+      });
+
+  if (EF.LLVMFuzzerCustomMutator)
+    Mutators.push_back({&MutationDispatcher::Mutate_Custom, "Custom"});
+  else
+    Mutators = DefaultMutators;
+}
 
 static char FlipRandomBit(char X, Random &Rand) {
   int Bit = Rand(8);
@@ -50,6 +59,11 @@ static char RandCh(Random &Rand) {
   if (Rand.RandBool()) return Rand(256);
   const char *Special = "!*'();:@&=+$,/?%#[]123ABCxyz-`~.";
   return Special[Rand(sizeof(Special) - 1)];
+}
+
+size_t MutationDispatcher::Mutate_Custom(uint8_t *Data, size_t Size,
+                                         size_t MaxSize) {
+  return EF.LLVMFuzzerCustomMutator(Data, Size, MaxSize, Rand.Rand());
 }
 
 size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,
@@ -230,8 +244,19 @@ void MutationDispatcher::PrintMutationSequence() {
   }
 }
 
-// Mutates Data in place, returns new size.
 size_t MutationDispatcher::Mutate(uint8_t *Data, size_t Size, size_t MaxSize) {
+  return MutateImpl(Data, Size, MaxSize, Mutators);
+}
+
+size_t MutationDispatcher::DefaultMutate(uint8_t *Data, size_t Size,
+                                         size_t MaxSize) {
+  return MutateImpl(Data, Size, MaxSize, DefaultMutators);
+}
+
+// Mutates Data in place, returns new size.
+size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
+                                      size_t MaxSize,
+                                      const std::vector<Mutator> &Mutators) {
   assert(MaxSize > 0);
   assert(Size <= MaxSize);
   if (Size == 0) {
@@ -244,9 +269,7 @@ size_t MutationDispatcher::Mutate(uint8_t *Data, size_t Size, size_t MaxSize) {
   // in which case they will return 0.
   // Try several times before returning un-mutated data.
   for (int Iter = 0; Iter < 10; Iter++) {
-    size_t NumMutators = sizeof(Mutators) / sizeof(Mutators[0]);
-    size_t MutatorIdx = Rand(NumMutators);
-    auto M = Mutators[MutatorIdx];
+    auto M = Mutators[Rand(Mutators.size())];
     size_t NewSize = (this->*(M.Fn))(Data, Size, MaxSize);
     if (NewSize) {
       CurrentMutatorSequence.push_back(M);
