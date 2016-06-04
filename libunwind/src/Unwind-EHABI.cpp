@@ -450,23 +450,6 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   // Walk each frame looking for a place to stop.
   for (bool handlerNotFound = true; handlerNotFound;) {
 
-#if !_LIBUNWIND_ARM_EHABI
-    // Ask libuwind to get next frame (skip over first which is
-    // _Unwind_RaiseException).
-    int stepResult = unw_step(cursor);
-    if (stepResult == 0) {
-      _LIBUNWIND_TRACE_UNWINDING("unwind_phase1(ex_ojb=%p): unw_step() reached "
-                                 "bottom => _URC_END_OF_STACK\n",
-                                 static_cast<void *>(exception_object));
-      return _URC_END_OF_STACK;
-    } else if (stepResult < 0) {
-      _LIBUNWIND_TRACE_UNWINDING("unwind_phase1(ex_ojb=%p): unw_step failed => "
-                                 "_URC_FATAL_PHASE1_ERROR\n",
-                                 static_cast<void *>(exception_object));
-      return _URC_FATAL_PHASE1_ERROR;
-    }
-#endif
-
     // See if frame has code to run (has personality routine).
     unw_proc_info_t frameInfo;
     if (unw_get_proc_info(cursor, &frameInfo) != UNW_ESUCCESS) {
@@ -582,21 +565,6 @@ static _Unwind_Reason_Code unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor
                   exception_object->unwinder_cache.reserved2);
       resume = false;
     }
-
-#if !_LIBUNWIND_ARM_EHABI
-    int stepResult = unw_step(cursor);
-    if (stepResult == 0) {
-      _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): unw_step() reached "
-                                 "bottom => _URC_END_OF_STACK\n",
-                                 static_cast<void *>(exception_object));
-      return _URC_END_OF_STACK;
-    } else if (stepResult < 0) {
-      _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_ojb=%p): unw_step failed => "
-                                 "_URC_FATAL_PHASE1_ERROR\n",
-                                 static_cast<void *>(exception_object));
-      return _URC_FATAL_PHASE2_ERROR;
-    }
-#endif
 
     // Get info about this frame.
     unw_word_t sp;

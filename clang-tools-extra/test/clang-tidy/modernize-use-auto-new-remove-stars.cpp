@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s modernize-use-auto %t
+// RUN: %check_clang_tidy %s modernize-use-auto %t -- \
+// RUN:   -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: '1'}]}" \
+// RUN:   -- -std=c++11
 
 class MyType {};
 
@@ -9,11 +11,11 @@ class MyDerivedType : public MyType {};
 void auto_new() {
   MyType *a_new = new MyType();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing with new
-  // CHECK-FIXES: auto *a_new = new MyType();
+  // CHECK-FIXES: auto a_new = new MyType();
 
   static MyType *a_static = new MyType();
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use auto when initializing with new
-  // CHECK-FIXES: static auto *a_static = new MyType();
+  // CHECK-FIXES: static auto a_static = new MyType();
 
   MyType *derived = new MyDerivedType();
 
@@ -27,15 +29,15 @@ void auto_new() {
   // not "MyType * const".
   static MyType * const d_static = new MyType();
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use auto when initializing with new
-  // CHECK-FIXES: static auto * const d_static = new MyType();
+  // CHECK-FIXES: static auto  const d_static = new MyType();
 
   MyType * const a_const = new MyType();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing with new
-  // CHECK-FIXES: auto * const a_const = new MyType();
+  // CHECK-FIXES: auto  const a_const = new MyType();
 
   MyType * volatile vol = new MyType();
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing with new
-  // CHECK-FIXES: auto * volatile vol = new MyType();
+  // CHECK-FIXES: auto  volatile vol = new MyType();
 
   struct SType {} *stype = new SType;
 
@@ -43,11 +45,11 @@ void auto_new() {
 
   int *array = new int[5];
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing with new
-  // CHECK-FIXES: auto *array = new int[5];
+  // CHECK-FIXES: auto array = new int[5];
 
   MyType *ptr(new MyType);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing with new
-  // CHECK-FIXES: auto *ptr(new MyType);
+  // CHECK-FIXES: auto ptr(new MyType);
 
   MyType *ptr2{new MyType};
 
@@ -55,14 +57,14 @@ void auto_new() {
     // Test for declaration lists.
     MyType *a = new MyType(), *b = new MyType(), *c = new MyType();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use auto when initializing with new
-    // CHECK-FIXES: auto *a = new MyType(), *b = new MyType(), *c = new MyType();
+    // CHECK-FIXES: auto a = new MyType(), b = new MyType(), c = new MyType();
 
     // Non-initialized declaration should not be transformed.
     MyType *d = new MyType(), *e;
 
     MyType **f = new MyType*(), **g = new MyType*();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use auto when initializing with new
-    // CHECK-FIXES: auto **f = new MyType*(), **g = new MyType*();
+    // CHECK-FIXES: auto f = new MyType*(), g = new MyType*();
 
     // Mismatching types in declaration lists should not be transformed.
     MyType *h = new MyType(), **i = new MyType*();
@@ -79,22 +81,22 @@ void auto_new() {
 
     int_p a = new int;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use auto when initializing with new
-    // CHECK-FIXES: auto a = new int;
+    // CHECK-FIXES: auto  a = new int;
     int_p *b = new int*;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use auto when initializing with new
-    // CHECK-FIXES: auto *b = new int*;
+    // CHECK-FIXES: auto b = new int*;
 
     // Test for typedefs in declarations lists.
     int_p c = new int, d = new int;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use auto when initializing with new
-    // CHECK-FIXES: auto c = new int, d = new int;
+    // CHECK-FIXES: auto  c = new int, d = new int;
 
     // Different types should not be transformed.
     int_p e = new int, *f = new int_p;
 
     int_p *g = new int*, *h = new int_p;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use auto when initializing with new
-    // CHECK-FIXES: auto *g = new int*, *h = new int_p;
+    // CHECK-FIXES: auto g = new int*, h = new int_p;
   }
 
   // Don't warn when 'auto' is already being used.

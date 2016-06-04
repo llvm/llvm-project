@@ -352,7 +352,7 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
     break;
 
   case isl_ast_op_zdiv_r: // Result only compared against zero
-    Res = Builder.CreateURem(LHS, RHS, "pexp.zdiv_r");
+    Res = Builder.CreateSRem(LHS, RHS, "pexp.zdiv_r");
     break;
   }
 

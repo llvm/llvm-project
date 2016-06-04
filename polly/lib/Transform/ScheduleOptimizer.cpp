@@ -463,8 +463,10 @@ static bool containsMatrMult(__isl_keep isl_map *PartialSchedule) {
 ///
 /// @param IslMap The isl map to be modified.
 static __isl_give isl_map *circularShiftOutputDims(__isl_take isl_map *IslMap) {
-  auto InputDimsId = isl_map_get_tuple_id(IslMap, isl_dim_in);
   auto DimNum = isl_map_dim(IslMap, isl_dim_out);
+  if (DimNum == 0)
+    return IslMap;
+  auto InputDimsId = isl_map_get_tuple_id(IslMap, isl_dim_in);
   IslMap = isl_map_move_dims(IslMap, isl_dim_in, 0, isl_dim_out, DimNum - 1, 1);
   IslMap = isl_map_move_dims(IslMap, isl_dim_out, 0, isl_dim_in, 0, 1);
   return isl_map_set_tuple_id(IslMap, isl_dim_in, InputDimsId);
