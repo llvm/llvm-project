@@ -9,6 +9,6 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: Shadow #1: [124000000000-12c000000000) (512GB)
   // CHECK-NEXT: Shadow #2: [148000000000-150000000000) (512GB)
   // CHECK-NEXT: in esan::finalizeLibrary
-  // CHECK-NEXT: ==verbose-simple{{.*}}EfficiencySanitizer is not finished: nothing yet to report
+  // CHECK-NEXT: ==verbose-simple{{.*}}EfficiencySanitizer: total struct field access count = 0
   return 0;
 }

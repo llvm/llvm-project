@@ -69,9 +69,6 @@ void *__libc_stack_end = 0;
 
 namespace __tsan {
 
-static uptr g_data_start;
-static uptr g_data_end;
-
 #ifdef TSAN_RUNTIME_VMA
 // Runtime detected VMA size.
 uptr vmaSize;
@@ -204,46 +201,6 @@ void InitializeShadowMemoryPlatform() {
   MapRodata();
 }
 
-static void InitDataSeg() {
-  MemoryMappingLayout proc_maps(true);
-  uptr start, end, offset;
-  char name[128];
-#if SANITIZER_FREEBSD
-  // On FreeBSD BSS is usually the last block allocated within the
-  // low range and heap is the last block allocated within the range
-  // 0x800000000-0x8ffffffff.
-  while (proc_maps.Next(&start, &end, &offset, name, ARRAY_SIZE(name),
-                        /*protection*/ 0)) {
-    DPrintf("%p-%p %p %s\n", start, end, offset, name);
-    if ((start & 0xffff00000000ULL) == 0 && (end & 0xffff00000000ULL) == 0 &&
-        name[0] == '\0') {
-      g_data_start = start;
-      g_data_end = end;
-    }
-  }
-#else
-  bool prev_is_data = false;
-  while (proc_maps.Next(&start, &end, &offset, name, ARRAY_SIZE(name),
-                        /*protection*/ 0)) {
-    DPrintf("%p-%p %p %s\n", start, end, offset, name);
-    bool is_data = offset != 0 && name[0] != 0;
-    // BSS may get merged with [heap] in /proc/self/maps. This is not very
-    // reliable.
-    bool is_bss = offset == 0 &&
-      (name[0] == 0 || internal_strcmp(name, "[heap]") == 0) && prev_is_data;
-    if (g_data_start == 0 && is_data)
-      g_data_start = start;
-    if (is_bss)
-      g_data_end = end;
-    prev_is_data = is_data;
-  }
-#endif
-  DPrintf("guessed data_start=%p data_end=%p\n",  g_data_start, g_data_end);
-  CHECK_LT(g_data_start, g_data_end);
-  CHECK_GE((uptr)&g_data_start, g_data_start);
-  CHECK_LT((uptr)&g_data_start, g_data_end);
-}
-
 #endif  // #ifndef SANITIZER_GO
 
 void InitializePlatformEarly() {
@@ -315,12 +272,7 @@ void InitializePlatform() {
 #ifndef SANITIZER_GO
   CheckAndProtect();
   InitTlsSize();
-  InitDataSeg();
 #endif
-}
-
-bool IsGlobalVar(uptr addr) {
-  return g_data_start && addr >= g_data_start && addr < g_data_end;
 }
 
 #ifndef SANITIZER_GO

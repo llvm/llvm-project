@@ -30,7 +30,7 @@ extern void __cxa_atexit(void (*function)(void));
 namespace __esan {
 
 bool EsanIsInitialized;
-ToolType WhichTool;
+bool EsanDuringInit;
 ShadowMapping Mapping;
 
 // Different tools use different scales within the same shadow mapping scheme.
@@ -65,22 +65,22 @@ static const uptr ShadowScale[] = {
 void processRangeAccess(uptr PC, uptr Addr, int Size, bool IsWrite) {
   VPrintf(3, "in esan::%s %p: %c %p %d\n", __FUNCTION__, PC,
           IsWrite ? 'w' : 'r', Addr, Size);
-  if (WhichTool == ESAN_CacheFrag) {
+  if (__esan_which_tool == ESAN_CacheFrag) {
     // TODO(bruening): add shadow mapping and update shadow bits here.
     // We'll move this to cache_frag.cpp once we have something.
-  } else if (WhichTool == ESAN_WorkingSet) {
+  } else if (__esan_which_tool == ESAN_WorkingSet) {
     processRangeAccessWorkingSet(PC, Addr, Size, IsWrite);
   }
 }
 
 bool processSignal(int SigNum, void (*Handler)(int), void (**Result)(int)) {
-  if (WhichTool == ESAN_WorkingSet)
+  if (__esan_which_tool == ESAN_WorkingSet)
     return processWorkingSetSignal(SigNum, Handler, Result);
   return true;
 }
 
 bool processSigaction(int SigNum, const void *Act, void *OldAct) {
-  if (WhichTool == ESAN_WorkingSet)
+  if (__esan_which_tool == ESAN_WorkingSet)
     return processWorkingSetSigaction(SigNum, Act, OldAct);
   return true;
 }
@@ -140,7 +140,7 @@ static void initializeShadow() {
 
   DCHECK(verifyShadowScheme());
 
-  Mapping.initialize(ShadowScale[WhichTool]);
+  Mapping.initialize(ShadowScale[__esan_which_tool]);
 
   VPrintf(1, "Shadow scale=%d offset=%p\n", Mapping.Scale, Mapping.Offset);
 
@@ -150,7 +150,7 @@ static void initializeShadow() {
             (ShadowEnd - ShadowStart) >> 30);
 
     uptr Map;
-    if (WhichTool == ESAN_WorkingSet) {
+    if (__esan_which_tool == ESAN_WorkingSet) {
       // We want to identify all shadow pages that are touched so we start
       // out inaccessible.
       Map = (uptr)MmapFixedNoAccess(ShadowStart, ShadowEnd- ShadowStart,
@@ -174,12 +174,13 @@ static void initializeShadow() {
 }
 
 void initializeLibrary(ToolType Tool) {
-  // We assume there is only one thread during init.
-  if (EsanIsInitialized) {
-    CHECK(Tool == WhichTool);
+  // We assume there is only one thread during init, but we need to
+  // guard against double-init when we're (re-)called from an
+  // early interceptor.
+  if (EsanIsInitialized || EsanDuringInit)
     return;
-  }
-  WhichTool = Tool;
+  EsanDuringInit = true;
+  CHECK(Tool == __esan_which_tool);
   SanitizerToolName = "EfficiencySanitizer";
   CacheBinaryName();
   initializeFlags();
@@ -190,28 +191,29 @@ void initializeLibrary(ToolType Tool) {
   ::__cxa_atexit((void (*)())finalizeLibrary);
 
   VPrintf(1, "in esan::%s\n", __FUNCTION__);
-  if (WhichTool <= ESAN_None || WhichTool >= ESAN_Max) {
-    Printf("ERROR: unknown tool %d requested\n", WhichTool);
+  if (__esan_which_tool <= ESAN_None || __esan_which_tool >= ESAN_Max) {
+    Printf("ERROR: unknown tool %d requested\n", __esan_which_tool);
     Die();
   }
 
   initializeShadow();
   initializeInterceptors();
 
-  if (WhichTool == ESAN_CacheFrag) {
+  if (__esan_which_tool == ESAN_CacheFrag) {
     initializeCacheFrag();
-  } else if (WhichTool == ESAN_WorkingSet) {
+  } else if (__esan_which_tool == ESAN_WorkingSet) {
     initializeWorkingSet();
   }
 
   EsanIsInitialized = true;
+  EsanDuringInit = false;
 }
 
 int finalizeLibrary() {
   VPrintf(1, "in esan::%s\n", __FUNCTION__);
-  if (WhichTool == ESAN_CacheFrag) {
+  if (__esan_which_tool == ESAN_CacheFrag) {
     return finalizeCacheFrag();
-  } else if (WhichTool == ESAN_WorkingSet) {
+  } else if (__esan_which_tool == ESAN_WorkingSet) {
     return finalizeWorkingSet();
   }
   return 0;
@@ -219,7 +221,7 @@ int finalizeLibrary() {
 
 void processCompilationUnitInit(void *Ptr) {
   VPrintf(2, "in esan::%s\n", __FUNCTION__);
-  if (WhichTool == ESAN_CacheFrag) {
+  if (__esan_which_tool == ESAN_CacheFrag) {
     DCHECK(Ptr != nullptr);
     processCacheFragCompilationUnitInit(Ptr);
   } else {
@@ -231,7 +233,7 @@ void processCompilationUnitInit(void *Ptr) {
 // For the main executable module, this is called after finalizeLibrary.
 void processCompilationUnitExit(void *Ptr) {
   VPrintf(2, "in esan::%s\n", __FUNCTION__);
-  if (WhichTool == ESAN_CacheFrag) {
+  if (__esan_which_tool == ESAN_CacheFrag) {
     DCHECK(Ptr != nullptr);
     processCacheFragCompilationUnitExit(Ptr);
   } else {

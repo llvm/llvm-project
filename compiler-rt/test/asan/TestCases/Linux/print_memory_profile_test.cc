@@ -1,5 +1,9 @@
+// Printing memory profiling only works in the configuration where we can
+// detect leaks.
+// REQUIRES: leak-detection
+//
 // RUN: %clangxx_asan %s -o %t
-// RUN: %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s
 #include <sanitizer/common_interface_defs.h>
 
 #include <stdio.h>

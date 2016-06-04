@@ -28,9 +28,11 @@ class CircularBuffer {
   explicit CircularBuffer() {}
   CircularBuffer(uptr BufferCapacity) {
     initialize(BufferCapacity);
+    WasConstructed = true;
   }
   ~CircularBuffer() {
-    free();
+    if (WasConstructed) // Else caller will call free() explicitly.
+      free();
   }
   void initialize(uptr BufferCapacity) {
     Capacity = BufferCapacity;
@@ -38,6 +40,7 @@ class CircularBuffer {
     Data = (T *)MmapOrDie(Capacity * sizeof(T), "CircularBuffer");
     StartIdx = 0;
     Count = 0;
+    WasConstructed = false;
   }
   void free() {
     UnmapOrDie(Data, Capacity * sizeof(T));
@@ -83,6 +86,7 @@ class CircularBuffer {
   CircularBuffer(const CircularBuffer&);
   void operator=(const CircularBuffer&);
 
+  bool WasConstructed;
   T *Data;
   uptr Capacity;
   uptr StartIdx;

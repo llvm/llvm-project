@@ -33,8 +33,7 @@
 namespace __esan {
 
 extern bool EsanIsInitialized;
-
-extern ToolType WhichTool;
+extern bool EsanDuringInit;
 
 void initializeLibrary(ToolType Tool);
 int finalizeLibrary();
