@@ -465,13 +465,13 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleIncludesGoogleStyle) {
 
 TEST_F(CleanUpReplacementsTest, InsertMultipleNewHeadersAndSortLLVM) {
   std::string Code = "\nint x;";
-  std::string Expected = "#include \"fix.h\"\n"
+  std::string Expected = "\n#include \"fix.h\"\n"
                          "#include \"a.h\"\n"
                          "#include \"b.h\"\n"
                          "#include \"c.h\"\n"
                          "#include <list>\n"
                          "#include <vector>\n"
-                         "\nint x;";
+                         "int x;";
   tooling::Replacements Replaces = {createInsertion("#include \"a.h\""),
                                     createInsertion("#include \"c.h\""),
                                     createInsertion("#include \"b.h\""),
@@ -483,13 +483,13 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleNewHeadersAndSortLLVM) {
 
 TEST_F(CleanUpReplacementsTest, InsertMultipleNewHeadersAndSortGoogle) {
   std::string Code = "\nint x;";
-  std::string Expected = "#include \"fix.h\"\n"
+  std::string Expected = "\n#include \"fix.h\"\n"
                          "#include <list>\n"
                          "#include <vector>\n"
                          "#include \"a.h\"\n"
                          "#include \"b.h\"\n"
                          "#include \"c.h\"\n"
-                         "\nint x;";
+                         "int x;";
   tooling::Replacements Replaces = {createInsertion("#include \"a.h\""),
                                     createInsertion("#include \"c.h\""),
                                     createInsertion("#include \"b.h\""),
@@ -502,21 +502,22 @@ TEST_F(CleanUpReplacementsTest, InsertMultipleNewHeadersAndSortGoogle) {
 
 TEST_F(CleanUpReplacementsTest, FormatCorrectLineWhenHeadersAreInserted) {
   std::string Code = "\n"
+                     "int x;\n"
                      "int    a;\n"
                      "int    a;\n"
                      "int    a;";
 
-  std::string Expected = "#include \"x.h\"\n"
+  std::string Expected = "\n#include \"x.h\"\n"
                          "#include \"y.h\"\n"
                          "#include \"clang/x/x.h\"\n"
                          "#include <list>\n"
                          "#include <vector>\n"
-                         "\n"
+                         "int x;\n"
                          "int    a;\n"
                          "int b;\n"
                          "int    a;";
   tooling::Replacements Replaces = {
-      createReplacement(getOffset(Code, 3, 8), 1, "b"),
+      createReplacement(getOffset(Code, 4, 8), 1, "b"),
       createInsertion("#include <vector>"),
       createInsertion("#include <list>"),
       createInsertion("#include \"clang/x/x.h\""),
@@ -535,6 +536,76 @@ TEST_F(CleanUpReplacementsTest, NotConfusedByDefine) {
                          "  int i;";
   tooling::Replacements Replaces = {createInsertion("#include <vector>")};
   EXPECT_EQ(Expected, formatAndApply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, SkippedTopComment) {
+  std::string Code = "// comment\n"
+                     "\n"
+                     "   // comment\n";
+  std::string Expected = "// comment\n"
+                         "\n"
+                         "   // comment\n"
+                         "#include <vector>\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, SkippedMixedComments) {
+  std::string Code = "// comment\n"
+                     "// comment \\\n"
+                     " comment continued\n"
+                     "/*\n"
+                     "* comment\n"
+                     "*/\n";
+  std::string Expected = "// comment\n"
+                         "// comment \\\n"
+                         " comment continued\n"
+                         "/*\n"
+                         "* comment\n"
+                         "*/\n"
+                         "#include <vector>\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, MultipleBlockCommentsInOneLine) {
+  std::string Code = "/*\n"
+                     "* comment\n"
+                     "*/ /* comment\n"
+                     "*/\n"
+                     "\n\n"
+                     "/* c1 */ /*c2 */\n";
+  std::string Expected = "/*\n"
+                         "* comment\n"
+                         "*/ /* comment\n"
+                         "*/\n"
+                         "\n\n"
+                         "/* c1 */ /*c2 */\n"
+                         "#include <vector>\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, CodeAfterComments) {
+  std::string Code = "/*\n"
+                     "* comment\n"
+                     "*/ /* comment\n"
+                     "*/\n"
+                     "\n\n"
+                     "/* c1 */ /*c2 */\n"
+                     "\n"
+                     "int x;\n";
+  std::string Expected = "/*\n"
+                         "* comment\n"
+                         "*/ /* comment\n"
+                         "*/\n"
+                         "\n\n"
+                         "/* c1 */ /*c2 */\n"
+                         "\n"
+                         "#include <vector>\n"
+                         "int x;\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
 } // end namespace

@@ -3978,10 +3978,9 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   if (IsRedhat(Distro) && Distro != RHEL5 && Distro != RHEL6)
     ExtraOpts.push_back("--no-add-needed");
 
-  if ((IsDebian(Distro) && Distro >= DebianSqueeze) || IsOpenSUSE(Distro) ||
-      (IsRedhat(Distro) && Distro != RHEL5) ||
-      (IsUbuntu(Distro) && Distro >= UbuntuKarmic))
-    ExtraOpts.push_back("--build-id");
+#ifdef ENABLE_LINKER_BUILD_ID
+  ExtraOpts.push_back("--build-id");
+#endif
 
   if (IsOpenSUSE(Distro))
     ExtraOpts.push_back("--enable-new-dtags");

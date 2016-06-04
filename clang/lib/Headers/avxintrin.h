@@ -35,6 +35,12 @@ typedef int __v8si __attribute__ ((__vector_size__ (32)));
 typedef short __v16hi __attribute__ ((__vector_size__ (32)));
 typedef char __v32qi __attribute__ ((__vector_size__ (32)));
 
+/* Unsigned types */
+typedef unsigned long long __v4du __attribute__ ((__vector_size__ (32)));
+typedef unsigned int __v8su __attribute__ ((__vector_size__ (32)));
+typedef unsigned short __v16hu __attribute__ ((__vector_size__ (32)));
+typedef unsigned char __v32qu __attribute__ ((__vector_size__ (32)));
+
 /* We need an explicitly signed variant for char. Note that this shouldn't
  * appear in the interface though. */
 typedef signed char __v32qs __attribute__((__vector_size__(32)));
@@ -522,7 +528,7 @@ _mm256_rcp_ps(__m256 __a)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_and_pd(__m256d __a, __m256d __b)
 {
-  return (__m256d)((__v4di)__a & (__v4di)__b);
+  return (__m256d)((__v4du)__a & (__v4du)__b);
 }
 
 /// \brief Performs a bitwise AND of two 256-bit vectors of [8 x float].
@@ -540,7 +546,7 @@ _mm256_and_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_and_ps(__m256 __a, __m256 __b)
 {
-  return (__m256)((__v8si)__a & (__v8si)__b);
+  return (__m256)((__v8su)__a & (__v8su)__b);
 }
 
 /// \brief Performs a bitwise AND of two 256-bit vectors of [4 x double], using
@@ -561,7 +567,7 @@ _mm256_and_ps(__m256 __a, __m256 __b)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_andnot_pd(__m256d __a, __m256d __b)
 {
-  return (__m256d)(~(__v4di)__a & (__v4di)__b);
+  return (__m256d)(~(__v4du)__a & (__v4du)__b);
 }
 
 /// \brief Performs a bitwise AND of two 256-bit vectors of [8 x float], using
@@ -582,7 +588,7 @@ _mm256_andnot_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_andnot_ps(__m256 __a, __m256 __b)
 {
-  return (__m256)(~(__v8si)__a & (__v8si)__b);
+  return (__m256)(~(__v8su)__a & (__v8su)__b);
 }
 
 /// \brief Performs a bitwise OR of two 256-bit vectors of [4 x double].
@@ -600,7 +606,7 @@ _mm256_andnot_ps(__m256 __a, __m256 __b)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_or_pd(__m256d __a, __m256d __b)
 {
-  return (__m256d)((__v4di)__a | (__v4di)__b);
+  return (__m256d)((__v4du)__a | (__v4du)__b);
 }
 
 /// \brief Performs a bitwise OR of two 256-bit vectors of [8 x float].
@@ -618,7 +624,7 @@ _mm256_or_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_or_ps(__m256 __a, __m256 __b)
 {
-  return (__m256)((__v8si)__a | (__v8si)__b);
+  return (__m256)((__v8su)__a | (__v8su)__b);
 }
 
 /// \brief Performs a bitwise XOR of two 256-bit vectors of [4 x double].
@@ -636,7 +642,7 @@ _mm256_or_ps(__m256 __a, __m256 __b)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_xor_pd(__m256d __a, __m256d __b)
 {
-  return (__m256d)((__v4di)__a ^ (__v4di)__b);
+  return (__m256d)((__v4du)__a ^ (__v4du)__b);
 }
 
 /// \brief Performs a bitwise XOR of two 256-bit vectors of [8 x float].
@@ -654,7 +660,7 @@ _mm256_xor_pd(__m256d __a, __m256d __b)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_xor_ps(__m256 __a, __m256 __b)
 {
-  return (__m256)((__v8si)__a ^ (__v8si)__b);
+  return (__m256)((__v8su)__a ^ (__v8su)__b);
 }
 
 /* Horizontal arithmetic */

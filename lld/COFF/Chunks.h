@@ -18,6 +18,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/COFF.h"
 #include <atomic>
+#include <utility>
 #include <vector>
 
 namespace lld {
@@ -294,7 +295,7 @@ private:
 // functions. x86-only.
 class SEHTableChunk : public Chunk {
 public:
-  explicit SEHTableChunk(std::set<Defined *> S) : Syms(S) {}
+  explicit SEHTableChunk(std::set<Defined *> S) : Syms(std::move(S)) {}
   size_t getSize() const override { return Syms.size() * 4; }
   void writeTo(uint8_t *Buf) const override;
 

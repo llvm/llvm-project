@@ -44,6 +44,8 @@ static bool runOnCode(tooling::ToolAction *ToolAction, StringRef Code,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   InMemoryFileSystem->addFile("dir/otherdir/qux.h", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
+  InMemoryFileSystem->addFile("header.h", 0,
+                              llvm::MemoryBuffer::getMemBuffer("bar b;"));
   return Invocation.run();
 }
 
@@ -184,6 +186,11 @@ TEST(IncludeFixer, ScopedNamespaceSymbols) {
 TEST(IncludeFixer, EnumConstantSymbols) {
   EXPECT_EQ("#include \"color.h\"\nint test = a::b::Green;\n",
             runIncludeFixer("int test = a::b::Green;\n"));
+}
+
+TEST(IncludeFixer, IgnoreSymbolFromHeader) {
+  std::string Code = "#include \"header.h\"";
+  EXPECT_EQ(Code, runIncludeFixer(Code));
 }
 
 // FIXME: add test cases for inserting and sorting multiple headers when

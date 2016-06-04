@@ -7009,25 +7009,21 @@ public:
 
 class MipsTargetInfo : public TargetInfo {
   void setDataLayout() {
-    if (BigEndian) {
-      if (ABI == "o32")
-        resetDataLayout("E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64");
-      else if (ABI == "n32")
-        resetDataLayout("E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-      else if (ABI == "n64")
-        resetDataLayout("E-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-      else
-        llvm_unreachable("Invalid ABI");
-    } else {
-      if (ABI == "o32")
-        resetDataLayout("e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64");
-      else if (ABI == "n32")
-        resetDataLayout("e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-      else if (ABI == "n64")
-        resetDataLayout("e-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128");
-      else
-        llvm_unreachable("Invalid ABI");
-    }
+    StringRef Layout;
+
+    if (ABI == "o32")
+      Layout = "m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64";
+    else if (ABI == "n32")
+      Layout = "m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32:64-S128";
+    else if (ABI == "n64")
+      Layout = "m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128";
+    else
+      llvm_unreachable("Invalid ABI");
+
+    if (BigEndian)
+      resetDataLayout(("E-" + Layout).str());
+    else
+      resetDataLayout(("e-" + Layout).str());
   }
 
 

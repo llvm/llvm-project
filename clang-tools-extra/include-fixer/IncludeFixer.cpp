@@ -86,6 +86,29 @@ public:
     if (getCompilerInstance().getSema().isSFINAEContext())
       return clang::TypoCorrection();
 
+    // We currently ignore the unidentified symbol which is not from the
+    // main file.
+    //
+    // However, this is not always true due to templates in a non-self contained
+    // header, consider the case:
+    //
+    //   // header.h
+    //   template <typename T>
+    //   class Foo {
+    //     T t;
+    //   };
+    //
+    //   // test.cc
+    //   // We need to add <bar.h> in test.cc instead of header.h.
+    //   class Bar;
+    //   Foo<Bar> foo;
+    //
+    // FIXME: Add the missing header to the header file where the symbol comes
+    // from.
+    if (!getCompilerInstance().getSourceManager().isWrittenInMainFile(
+            Typo.getLoc()))
+      return clang::TypoCorrection();
+
     std::string TypoScopeString;
     if (S) {
       // FIXME: Currently we only use namespace contexts. Use other context

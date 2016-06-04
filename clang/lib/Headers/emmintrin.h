@@ -37,7 +37,6 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
 
 /* Unsigned types */
 typedef unsigned long long __v2du __attribute__ ((__vector_size__ (16)));
-typedef unsigned int __v4su __attribute__((__vector_size__(16)));
 typedef unsigned short __v8hu __attribute__((__vector_size__(16)));
 typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
 
@@ -142,25 +141,25 @@ _mm_max_pd(__m128d __a, __m128d __b)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_and_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)((__v4si)__a & (__v4si)__b);
+  return (__m128d)((__v4su)__a & (__v4su)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_andnot_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)(~(__v4si)__a & (__v4si)__b);
+  return (__m128d)(~(__v4su)__a & (__v4su)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_or_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)((__v4si)__a | (__v4si)__b);
+  return (__m128d)((__v4su)__a | (__v4su)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_xor_pd(__m128d __a, __m128d __b)
 {
-  return (__m128d)((__v4si)__a ^ (__v4si)__b);
+  return (__m128d)((__v4su)__a ^ (__v4su)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -643,19 +642,19 @@ _mm_storel_pd(double *__dp, __m128d __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_add_epi8(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v16qi)__a + (__v16qi)__b);
+  return (__m128i)((__v16qu)__a + (__v16qu)__b);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_add_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v8hi)__a + (__v8hi)__b);
+  return (__m128i)((__v8hu)__a + (__v8hu)__b);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_add_epi32(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v4si)__a + (__v4si)__b);
+  return (__m128i)((__v4su)__a + (__v4su)__b);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
@@ -667,7 +666,7 @@ _mm_add_si64(__m64 __a, __m64 __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_add_epi64(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v2di)__a + (__v2di)__b);
+  return (__m128i)((__v2du)__a + (__v2du)__b);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -764,7 +763,7 @@ _mm_mulhi_epu16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_mullo_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v8hi)__a * (__v8hi)__b);
+  return (__m128i)((__v8hu)__a * (__v8hu)__b);
 }
 
 /// \brief Multiplies 32-bit unsigned integer values contained in the lower bits
@@ -842,7 +841,7 @@ _mm_sad_epu8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sub_epi8(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v16qi)__a - (__v16qi)__b);
+  return (__m128i)((__v16qu)__a - (__v16qu)__b);
 }
 
 /// \brief Subtracts the corresponding 16-bit integer values in the operands.
@@ -860,7 +859,7 @@ _mm_sub_epi8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sub_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v8hi)__a - (__v8hi)__b);
+  return (__m128i)((__v8hu)__a - (__v8hu)__b);
 }
 
 /// \brief Subtracts the corresponding 32-bit integer values in the operands.
@@ -878,7 +877,7 @@ _mm_sub_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sub_epi32(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v4si)__a - (__v4si)__b);
+  return (__m128i)((__v4su)__a - (__v4su)__b);
 }
 
 /// \brief Subtracts signed or unsigned 64-bit integer values and writes the
@@ -915,7 +914,7 @@ _mm_sub_si64(__m64 __a, __m64 __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_sub_epi64(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v2di)__a - (__v2di)__b);
+  return (__m128i)((__v2du)__a - (__v2du)__b);
 }
 
 /// \brief Subtracts corresponding 8-bit signed integer values in the input and
@@ -1015,7 +1014,7 @@ _mm_subs_epu16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_and_si128(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v2di)__a & (__v2di)__b);
+  return (__m128i)((__v2du)__a & (__v2du)__b);
 }
 
 /// \brief Performs a bitwise AND of two 128-bit integer vectors, using the
@@ -1035,7 +1034,7 @@ _mm_and_si128(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_andnot_si128(__m128i __a, __m128i __b)
 {
-  return (__m128i)(~(__v2di)__a & (__v2di)__b);
+  return (__m128i)(~(__v2du)__a & (__v2du)__b);
 }
 /// \brief Performs a bitwise OR of two 128-bit integer vectors.
 ///
@@ -1052,7 +1051,7 @@ _mm_andnot_si128(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_or_si128(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v2di)__a | (__v2di)__b);
+  return (__m128i)((__v2du)__a | (__v2du)__b);
 }
 
 /// \brief Performs a bitwise exclusive OR of two 128-bit integer vectors.
@@ -1070,7 +1069,7 @@ _mm_or_si128(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_xor_si128(__m128i __a, __m128i __b)
 {
-  return (__m128i)((__v2di)__a ^ (__v2di)__b);
+  return (__m128i)((__v2du)__a ^ (__v2du)__b);
 }
 
 /// \brief Left-shifts the 128-bit integer vector operand by the specified

@@ -7701,7 +7701,7 @@ _mm256_broadcast_f32x4 (__m128 __A)
 {
   return (__m256) __builtin_ia32_broadcastf32x4_256_mask ((__v4sf) __A,
                 (__v8sf)_mm256_undefined_pd (),
-                (__mmask8) - 1);
+                (__mmask8) -1);
 }
 
 static __inline__ __m256 __DEFAULT_FN_ATTRS
@@ -7725,7 +7725,7 @@ _mm256_broadcast_i32x4 (__m128i __A)
 {
   return (__m256i) __builtin_ia32_broadcasti32x4_256_mask ((__v4si) __A,
                  (__v8si)_mm256_undefined_si256 (),
-                 (__mmask8) - 1);
+                 (__mmask8) -1);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
