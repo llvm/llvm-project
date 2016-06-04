@@ -50,12 +50,18 @@
 namespace llvm {
 namespace symbolize {
 
-ErrorOr<DILineInfo> LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
+Expected<DILineInfo> LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
                                                   uint64_t ModuleOffset) {
-  auto InfoOrErr = getOrCreateModuleInfo(ModuleName);
-  if (auto EC = InfoOrErr.getError())
-    return EC;
-  SymbolizableModule *Info = InfoOrErr.get();
+  SymbolizableModule *Info;
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
+    Info = InfoOrErr.get();
+  else
+    return InfoOrErr.takeError();
+
+  // A null module means an error has already been reported. Return an empty
+  // result.
+  if (!Info)
+    return DILineInfo();
 
   // If the user is giving us relative addresses, add the preferred base of the
   // object to the offset before we do the query. It's what DIContext expects.
@@ -69,13 +75,19 @@ ErrorOr<DILineInfo> LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
   return LineInfo;
 }
 
-ErrorOr<DIInliningInfo>
+Expected<DIInliningInfo>
 LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
                                      uint64_t ModuleOffset) {
-  auto InfoOrErr = getOrCreateModuleInfo(ModuleName);
-  if (auto EC = InfoOrErr.getError())
-    return EC;
-  SymbolizableModule *Info = InfoOrErr.get();
+  SymbolizableModule *Info;
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
+    Info = InfoOrErr.get();
+  else
+    return InfoOrErr.takeError();
+
+  // A null module means an error has already been reported. Return an empty
+  // result.
+  if (!Info)
+    return DIInliningInfo();
 
   // If the user is giving us relative addresses, add the preferred base of the
   // object to the offset before we do the query. It's what DIContext expects.
@@ -93,12 +105,18 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
   return InlinedContext;
 }
 
-ErrorOr<DIGlobal> LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
-                                                uint64_t ModuleOffset) {
-  auto InfoOrErr = getOrCreateModuleInfo(ModuleName);
-  if (auto EC = InfoOrErr.getError())
-    return EC;
-  SymbolizableModule *Info = InfoOrErr.get();
+Expected<DIGlobal> LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
+                                                 uint64_t ModuleOffset) {
+  SymbolizableModule *Info;
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
+    Info = InfoOrErr.get();
+  else
+    return InfoOrErr.takeError();
+
+  // A null module means an error has already been reported. Return an empty
+  // result.
+  if (!Info)
+    return DIGlobal();
 
   // If the user is giving us relative addresses, add the preferred base of
   // the object to the offset before we do the query. It's what DIContext
@@ -232,9 +250,14 @@ ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
   }
   for (const auto &Path : DsymPaths) {
     auto DbgObjOrErr = getOrCreateObject(Path, ArchName);
-    if (!DbgObjOrErr)
+    if (!DbgObjOrErr) {
+      // Ignore errors, the file might not exist.
+      consumeError(DbgObjOrErr.takeError());
       continue;
+    }
     ObjectFile *DbgObj = DbgObjOrErr.get();
+    if (!DbgObj)
+      continue;
     const MachOObjectFile *MachDbgObj = dyn_cast<const MachOObjectFile>(DbgObj);
     if (!MachDbgObj)
       continue;
@@ -255,23 +278,27 @@ ObjectFile *LLVMSymbolizer::lookUpDebuglinkObject(const std::string &Path,
   if (!findDebugBinary(Path, DebuglinkName, CRCHash, DebugBinaryPath))
     return nullptr;
   auto DbgObjOrErr = getOrCreateObject(DebugBinaryPath, ArchName);
-  if (!DbgObjOrErr)
+  if (!DbgObjOrErr) {
+    // Ignore errors, the file might not exist.
+    consumeError(DbgObjOrErr.takeError());
     return nullptr;
+  }
   return DbgObjOrErr.get();
 }
 
-ErrorOr<LLVMSymbolizer::ObjectPair>
+Expected<LLVMSymbolizer::ObjectPair>
 LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
                                       const std::string &ArchName) {
   const auto &I = ObjectPairForPathArch.find(std::make_pair(Path, ArchName));
-  if (I != ObjectPairForPathArch.end())
+  if (I != ObjectPairForPathArch.end()) {
     return I->second;
+  }
 
   auto ObjOrErr = getOrCreateObject(Path, ArchName);
-  if (auto EC = ObjOrErr.getError()) {
-    ObjectPairForPathArch.insert(
-        std::make_pair(std::make_pair(Path, ArchName), EC));
-    return EC;
+  if (!ObjOrErr) {
+    ObjectPairForPathArch.insert(std::make_pair(std::make_pair(Path, ArchName),
+                                                ObjectPair(nullptr, nullptr)));
+    return ObjOrErr.takeError();
   }
 
   ObjectFile *Obj = ObjOrErr.get();
@@ -290,7 +317,7 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   return Res;
 }
 
-ErrorOr<ObjectFile *>
+Expected<ObjectFile *>
 LLVMSymbolizer::getOrCreateObject(const std::string &Path,
                                   const std::string &ArchName) {
   const auto &I = BinaryForPath.find(Path);
@@ -298,34 +325,29 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
   if (I == BinaryForPath.end()) {
     Expected<OwningBinary<Binary>> BinOrErr = createBinary(Path);
     if (!BinOrErr) {
-      auto EC = errorToErrorCode(BinOrErr.takeError());
-      BinaryForPath.insert(std::make_pair(Path, EC));
-      return EC;
+      BinaryForPath.emplace(Path, OwningBinary<Binary>());
+      return BinOrErr.takeError();
     }
     Bin = BinOrErr->getBinary();
     BinaryForPath.insert(std::make_pair(Path, std::move(BinOrErr.get())));
-  } else if (auto EC = I->second.getError()) {
-    return EC;
   } else {
-    Bin = I->second->getBinary();
+    Bin = I->second.getBinary();
   }
 
-  assert(Bin != nullptr);
+  if (!Bin)
+    return static_cast<ObjectFile *>(nullptr);
 
-  if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(Bin)) {
+  if (MachOUniversalBinary *UB = dyn_cast_or_null<MachOUniversalBinary>(Bin)) {
     const auto &I = ObjectForUBPathAndArch.find(std::make_pair(Path, ArchName));
     if (I != ObjectForUBPathAndArch.end()) {
-      if (auto EC = I->second.getError())
-        return EC;
-      return I->second->get();
+      return I->second.get();
     }
     Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
         UB->getObjectForArch(ArchName);
     if (!ObjOrErr) {
-      auto EC = errorToErrorCode(ObjOrErr.takeError());
-      ObjectForUBPathAndArch.insert(
-          std::make_pair(std::make_pair(Path, ArchName), EC));
-      return EC;
+      ObjectForUBPathAndArch.insert(std::make_pair(
+          std::make_pair(Path, ArchName), std::unique_ptr<ObjectFile>()));
+      return ObjOrErr.takeError();
     }
     ObjectFile *Res = ObjOrErr->get();
     ObjectForUBPathAndArch.insert(std::make_pair(std::make_pair(Path, ArchName),
@@ -335,17 +357,14 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
   if (Bin->isObject()) {
     return cast<ObjectFile>(Bin);
   }
-  return object_error::arch_not_found;
+  return errorCodeToError(object_error::arch_not_found);
 }
 
-ErrorOr<SymbolizableModule *>
+Expected<SymbolizableModule *>
 LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   const auto &I = Modules.find(ModuleName);
   if (I != Modules.end()) {
-    auto &InfoOrErr = I->second;
-    if (auto EC = InfoOrErr.getError())
-      return EC;
-    return InfoOrErr->get();
+    return I->second.get();
   }
   std::string BinaryName = ModuleName;
   std::string ArchName = Opts.DefaultArch;
@@ -359,27 +378,31 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     }
   }
   auto ObjectsOrErr = getOrCreateObjectPair(BinaryName, ArchName);
-  if (auto EC = ObjectsOrErr.getError()) {
+  if (!ObjectsOrErr) {
     // Failed to find valid object file.
-    Modules.insert(std::make_pair(ModuleName, EC));
-    return EC;
+    Modules.insert(
+        std::make_pair(ModuleName, std::unique_ptr<SymbolizableModule>()));
+    return ObjectsOrErr.takeError();
   }
   ObjectPair Objects = ObjectsOrErr.get();
 
   std::unique_ptr<DIContext> Context;
+  // If this is a COFF object containing PDB info, use a PDBContext to
+  // symbolize. Otherwise, use DWARF.
   if (auto CoffObject = dyn_cast<COFFObjectFile>(Objects.first)) {
-    using namespace pdb;
-    // If this is a COFF object, assume it contains PDB debug information.  If
-    // we don't find any we will fall back to the DWARF case.
-    std::unique_ptr<IPDBSession> Session;
-    auto Error = loadDataForEXE(
-        PDB_ReaderType::DIA, Objects.first->getFileName(), Session);
-    if (!Error) {
+    const debug_pdb_info *PDBInfo;
+    StringRef PDBFileName;
+    auto EC = CoffObject->getDebugPDBInfo(PDBInfo, PDBFileName);
+    if (!EC && PDBInfo != nullptr) {
+      using namespace pdb;
+      std::unique_ptr<IPDBSession> Session;
+      if (auto Err = loadDataForEXE(PDB_ReaderType::DIA,
+                                    Objects.first->getFileName(), Session)) {
+        Modules.insert(
+            std::make_pair(ModuleName, std::unique_ptr<SymbolizableModule>()));
+        return std::move(Err);
+      }
       Context.reset(new PDBContext(*CoffObject, std::move(Session)));
-    } else {
-      // Drop error
-      handleAllErrors(std::move(Error),
-                      [](const ErrorInfoBase &) { return Error::success(); });
     }
   }
   if (!Context)
@@ -387,12 +410,15 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   assert(Context);
   auto InfoOrErr =
       SymbolizableObjectFile::create(Objects.first, std::move(Context));
+  std::unique_ptr<SymbolizableModule> SymMod;
+  if (InfoOrErr)
+    SymMod = std::move(InfoOrErr.get());
   auto InsertResult =
-      Modules.insert(std::make_pair(ModuleName, std::move(InfoOrErr)));
+      Modules.insert(std::make_pair(ModuleName, std::move(SymMod)));
   assert(InsertResult.second);
-  if (auto EC = InsertResult.first->second.getError())
-    return EC;
-  return InsertResult.first->second->get();
+  if (auto EC = InfoOrErr.getError())
+    return errorCodeToError(EC);
+  return InsertResult.first->second.get();
 }
 
 namespace {

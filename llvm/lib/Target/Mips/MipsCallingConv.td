@@ -212,48 +212,6 @@ def RetCC_MipsN : CallingConv<[
 ]>;
 
 //===----------------------------------------------------------------------===//
-// Mips EABI Calling Convention
-//===----------------------------------------------------------------------===//
-
-def CC_MipsEABI : CallingConv<[
-  // Promote i8/i16 arguments to i32.
-  CCIfType<[i8, i16], CCPromoteToType<i32>>,
-
-  // Integer arguments are passed in integer registers.
-  CCIfType<[i32], CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3]>>,
-
-  // Single fp arguments are passed in pairs within 32-bit mode
-  CCIfType<[f32], CCIfSubtarget<"isSingleFloat()",
-                  CCAssignToReg<[F12, F13, F14, F15, F16, F17, F18, F19]>>>,
-
-  CCIfType<[f32], CCIfSubtargetNot<"isSingleFloat()",
-                  CCAssignToReg<[F12, F14, F16, F18]>>>,
-
-  // The first 4 double fp arguments are passed in single fp registers.
-  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()",
-                  CCAssignToReg<[D6, D7, D8, D9]>>>,
-
-  // Integer values get stored in stack slots that are 4 bytes in
-  // size and 4-byte aligned.
-  CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
-
-  // Integer values get stored in stack slots that are 8 bytes in
-  // size and 8-byte aligned.
-  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()", CCAssignToStack<8, 8>>>
-]>;
-
-def RetCC_MipsEABI : CallingConv<[
-  // i32 are returned in registers V0, V1
-  CCIfType<[i32], CCAssignToReg<[V0, V1]>>,
-
-  // f32 are returned in registers F0, F1
-  CCIfType<[f32], CCAssignToReg<[F0, F1]>>,
-
-  // f64 are returned in register D0
-  CCIfType<[f64], CCIfSubtargetNot<"isSingleFloat()", CCAssignToReg<[D0]>>>
-]>;
-
-//===----------------------------------------------------------------------===//
 // Mips FastCC Calling Convention
 //===----------------------------------------------------------------------===//
 def CC_MipsO32_FastCC : CallingConv<[
@@ -325,7 +283,6 @@ def CC_Mips_FastCC : CallingConv<[
   // Stack parameter slots for i32 and f32 are 32-bit words and 4-byte aligned.
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
 
-  CCIfSubtarget<"isABI_EABI()", CCDelegateTo<CC_MipsEABI>>,
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FastCC>>,
   CCDelegateTo<CC_MipsN_FastCC>
 ]>;
@@ -335,7 +292,6 @@ def CC_Mips_FastCC : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def RetCC_Mips : CallingConv<[
-  CCIfSubtarget<"isABI_EABI()", CCDelegateTo<RetCC_MipsEABI>>,
   CCIfSubtarget<"isABI_N32()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_N64()", CCDelegateTo<RetCC_MipsN>>,
   CCDelegateTo<RetCC_MipsO32>
@@ -377,8 +333,6 @@ def CC_Mips_FixedArg : CallingConv<[
 
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
-  // FIXME: There wasn't an EABI case in the original code and it seems unlikely
-  //        that it's the same as CC_MipsN
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
   CCDelegateTo<CC_MipsN>
 ]>;
@@ -386,8 +340,6 @@ def CC_Mips_FixedArg : CallingConv<[
 def CC_Mips_VarArg : CallingConv<[
   CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
 
-  // FIXME: There wasn't an EABI case in the original code and it seems unlikely
-  //        that it's the same as CC_MipsN_VarArg
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
   CCDelegateTo<CC_MipsN_VarArg>
 ]>;

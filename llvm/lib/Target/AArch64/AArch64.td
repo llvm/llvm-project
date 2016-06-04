@@ -32,6 +32,9 @@ def FeatureCrypto : SubtargetFeature<"crypto", "HasCrypto", "true",
 def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
   "Enable ARMv8 CRC-32 checksum instructions">;
 
+def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
+  "Enable ARMv8 Reliability, Availability and Serviceability Extensions">;
+
 def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
   "Enable ARMv8 PMUv3 Performance Monitors extension">;
 
@@ -110,7 +113,7 @@ def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
   "Support ARM v8.1a instructions", [FeatureCRC]>;
 
 def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
-  "Support ARM v8.2a instructions", [HasV8_1aOps]>;
+  "Support ARM v8.2a instructions", [HasV8_1aOps, FeatureRAS]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

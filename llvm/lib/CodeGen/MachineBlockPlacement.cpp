@@ -116,6 +116,8 @@ static cl::opt<unsigned> JumpInstCost("jump-inst-cost",
                                       cl::desc("Cost of jump instructions."),
                                       cl::init(1), cl::Hidden);
 
+extern cl::opt<unsigned> StaticLikelyProb;
+
 namespace {
 class BlockChain;
 /// \brief Type for our function-wide basic block -> block chain mapping.
@@ -405,7 +407,7 @@ MachineBasicBlock *
 MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
                                            BlockChain &Chain,
                                            const BlockFilterSet *BlockFilter) {
-  const BranchProbability HotProb(4, 5); // 80%
+  const BranchProbability HotProb(StaticLikelyProb, 100);
 
   MachineBasicBlock *BestSucc = nullptr;
   auto BestProb = BranchProbability::getZero();

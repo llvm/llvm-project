@@ -122,33 +122,6 @@ void MipsInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
   }
 }
 
-static void printExpr(const MCExpr *Expr, const MCAsmInfo *MAI,
-                      raw_ostream &OS) {
-  int Offset = 0;
-  const MCSymbolRefExpr *SRE;
-
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr)) {
-    SRE = dyn_cast<MCSymbolRefExpr>(BE->getLHS());
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(BE->getRHS());
-    assert(SRE && CE && "Binary expression must be sym+const.");
-    Offset = CE->getValue();
-  } else if (const MipsMCExpr *ME = dyn_cast<MipsMCExpr>(Expr)) {
-    ME->print(OS, MAI);
-    return;
-  } else
-    SRE = cast<MCSymbolRefExpr>(Expr);
-
-  assert(SRE->getKind() == MCSymbolRefExpr::VK_None && "Invalid kind!");
-
-  SRE->getSymbol().print(OS, MAI);
-
-  if (Offset) {
-    if (Offset > 0)
-      OS << '+';
-    OS << Offset;
-  }
-}
-
 void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                    raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
@@ -163,7 +136,7 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(Op.isExpr() && "unknown operand kind in printOperand");
-  printExpr(Op.getExpr(), &MAI, O);
+  Op.getExpr()->print(O, &MAI, true);
 }
 
 template <unsigned Bits, unsigned Offset>

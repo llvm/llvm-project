@@ -249,6 +249,14 @@ public:
     virtual void NodeUpdated(SDNode *N);
   };
 
+  struct DAGNodeDeletedListener : public DAGUpdateListener {
+    std::function<void(SDNode *, SDNode *)> Callback;
+    DAGNodeDeletedListener(SelectionDAG &DAG,
+                           std::function<void(SDNode *, SDNode *)> Callback)
+        : DAGUpdateListener(DAG), Callback(Callback) {}
+    void NodeDeleted(SDNode *N, SDNode *E) override { Callback(N, E); }
+  };
+
   /// When true, additional steps are taken to
   /// ensure that getConstant() and similar functions return DAG nodes that
   /// have legal types. This is important after type legalization since

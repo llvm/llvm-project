@@ -24,9 +24,14 @@ INITIALIZE_PASS_BEGIN(MachineBranchProbabilityInfo, "machine-branch-prob",
 INITIALIZE_PASS_END(MachineBranchProbabilityInfo, "machine-branch-prob",
                     "Machine Branch Probability Analysis", false, true)
 
+cl::opt<unsigned> StaticLikelyProb(
+    "static-likely-prob",
+    cl::desc("branch probability threshold to be considered very likely"),
+    cl::init(80), cl::Hidden);
+
 char MachineBranchProbabilityInfo::ID = 0;
 
-void MachineBranchProbabilityInfo::anchor() { }
+void MachineBranchProbabilityInfo::anchor() {}
 
 BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
     const MachineBasicBlock *Src,
@@ -42,11 +47,9 @@ BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
                             std::find(Src->succ_begin(), Src->succ_end(), Dst));
 }
 
-bool
-MachineBranchProbabilityInfo::isEdgeHot(const MachineBasicBlock *Src,
-                                        const MachineBasicBlock *Dst) const {
-  // Hot probability is at least 4/5 = 80%
-  static BranchProbability HotProb(4, 5);
+bool MachineBranchProbabilityInfo::isEdgeHot(
+    const MachineBasicBlock *Src, const MachineBasicBlock *Dst) const {
+  BranchProbability HotProb(StaticLikelyProb, 100);
   return getEdgeProbability(Src, Dst) > HotProb;
 }
 
@@ -63,7 +66,7 @@ MachineBranchProbabilityInfo::getHotSucc(MachineBasicBlock *MBB) const {
     }
   }
 
-  static BranchProbability HotProb(4, 5);
+  BranchProbability HotProb(StaticLikelyProb, 100);
   if (getEdgeProbability(MBB, MaxSucc) >= HotProb)
     return MaxSucc;
 

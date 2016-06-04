@@ -135,6 +135,12 @@ template <typename T> static void FailIfError(const ErrorOr<T> &E) {
   FailIfError(E.getError());
 }
 
+template <typename T> static void FailIfError(Expected<T> &E) {
+  if (E)
+    return;
+  logAllUnhandledErrors(E.takeError(), errs(), "Error: ");
+}
+
 static void FailIfNotEmpty(const llvm::Twine &E) {
   if (E.str().empty())
     return;

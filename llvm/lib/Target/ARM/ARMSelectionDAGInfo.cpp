@@ -176,6 +176,12 @@ ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl,
   // emit.
   unsigned NumMEMCPYs = (NumMemOps + MaxLoadsInLDM - 1) / MaxLoadsInLDM;
 
+  // Code size optimisation: do not inline memcpy if expansion results in
+  // more instructions than the libary call.
+  if (NumMEMCPYs > 1 && DAG.getMachineFunction().getFunction()->optForMinSize()) {
+    return SDValue();
+  }
+
   SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other, MVT::Glue);
 
   for (unsigned I = 0; I != NumMEMCPYs; ++I) {

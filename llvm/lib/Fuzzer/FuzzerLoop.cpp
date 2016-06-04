@@ -692,11 +692,7 @@ void Fuzzer::MutateAndTestOne() {
 
   for (int i = 0; i < Options.MutateDepth; i++) {
     size_t NewSize = 0;
-    if (EF.LLVMFuzzerCustomMutator)
-      NewSize = EF.LLVMFuzzerCustomMutator(CurrentUnitData, Size,
-                                           Options.MaxLen, MD.GetRand().Rand());
-    else
-      NewSize = MD.Mutate(CurrentUnitData, Size, Options.MaxLen);
+    NewSize = MD.Mutate(CurrentUnitData, Size, Options.MaxLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
     assert(NewSize <= Options.MaxLen &&
            "Mutator return overisized unit");
@@ -816,6 +812,6 @@ extern "C" {
 
 size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) {
   assert(fuzzer::F);
-  return fuzzer::F->GetMD().Mutate(Data, Size, MaxSize);
+  return fuzzer::F->GetMD().DefaultMutate(Data, Size, MaxSize);
 }
 }  // extern "C"

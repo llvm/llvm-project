@@ -46,8 +46,15 @@ private:
   Error writeLoadCommands(raw_ostream &OS);
   Error writeSectionData(raw_ostream &OS);
   Error writeLinkEditData(raw_ostream &OS);
-  void writeBindOpcodes(raw_ostream &OS, uint64_t offset,
+  void writeBindOpcodes(raw_ostream &OS,
                         std::vector<MachOYAML::BindOpcode> &BindOpcodes);
+  // LinkEdit writers
+  Error writeRebaseOpcodes(raw_ostream &OS);
+  Error writeBasicBindOpcodes(raw_ostream &OS);
+  Error writeWeakBindOpcodes(raw_ostream &OS);
+  Error writeLazyBindOpcodes(raw_ostream &OS);
+  Error writeNameList(raw_ostream &OS);
+  Error writeStringTable(raw_ostream &OS);
   Error writeExportTrie(raw_ostream &OS);
 
   void dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry);
@@ -275,9 +282,7 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
 }
 
 void MachOWriter::writeBindOpcodes(
-    raw_ostream &OS, uint64_t offset,
-    std::vector<MachOYAML::BindOpcode> &BindOpcodes) {
-  ZeroToOffset(OS, offset);
+    raw_ostream &OS, std::vector<MachOYAML::BindOpcode> &BindOpcodes) {
 
   for (auto Opcode : BindOpcodes) {
     uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
@@ -337,21 +342,53 @@ void writeNListEntry(MachOYAML::NListEntry &NLE, raw_ostream &OS) {
 }
 
 Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
-  MachOYAML::LinkEditData &LinkEdit = Obj.LinkEdit;
+  typedef Error (MachOWriter::*writeHandler)(raw_ostream &);
+  typedef std::pair<uint64_t, writeHandler> writeOperation;
+  std::vector<writeOperation> WriteQueue;
+
   MachO::dyld_info_command *DyldInfoOnlyCmd = 0;
   MachO::symtab_command *SymtabCmd = 0;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SYMTAB:
       SymtabCmd = &LC.Data.symtab_command_data;
+      WriteQueue.push_back(
+          std::make_pair(SymtabCmd->symoff, &MachOWriter::writeNameList));
+      WriteQueue.push_back(
+          std::make_pair(SymtabCmd->stroff, &MachOWriter::writeStringTable));
       break;
     case MachO::LC_DYLD_INFO_ONLY:
       DyldInfoOnlyCmd = &LC.Data.dyld_info_command_data;
+      WriteQueue.push_back(std::make_pair(DyldInfoOnlyCmd->rebase_off,
+                                          &MachOWriter::writeRebaseOpcodes));
+      WriteQueue.push_back(std::make_pair(DyldInfoOnlyCmd->bind_off,
+                                          &MachOWriter::writeBasicBindOpcodes));
+      WriteQueue.push_back(std::make_pair(DyldInfoOnlyCmd->weak_bind_off,
+                                          &MachOWriter::writeWeakBindOpcodes));
+      WriteQueue.push_back(std::make_pair(DyldInfoOnlyCmd->lazy_bind_off,
+                                          &MachOWriter::writeLazyBindOpcodes));
+      WriteQueue.push_back(std::make_pair(DyldInfoOnlyCmd->export_off,
+                                          &MachOWriter::writeExportTrie));
       break;
     }
   }
 
-  ZeroToOffset(OS, DyldInfoOnlyCmd->rebase_off);
+  std::sort(WriteQueue.begin(), WriteQueue.end(),
+            [](const writeOperation &a, const writeOperation &b) {
+              return a.first < b.first;
+            });
+
+  for (auto writeOp : WriteQueue) {
+    ZeroToOffset(OS, writeOp.first);
+    if (auto Err = (this->*writeOp.second)(OS))
+      return Err;
+  }
+
+  return Error::success();
+}
+
+Error MachOWriter::writeRebaseOpcodes(raw_ostream &OS) {
+  MachOYAML::LinkEditData &LinkEdit = Obj.LinkEdit;
 
   for (auto Opcode : LinkEdit.RebaseOpcodes) {
     uint8_t OpByte = Opcode.Opcode | Opcode.Imm;
@@ -360,38 +397,39 @@ Error MachOWriter::writeLinkEditData(raw_ostream &OS) {
       encodeULEB128(Data, OS);
     }
   }
+  return Error::success();
+}
 
-  writeBindOpcodes(OS, DyldInfoOnlyCmd->bind_off, LinkEdit.BindOpcodes);
-  writeBindOpcodes(OS, DyldInfoOnlyCmd->weak_bind_off,
-                   LinkEdit.WeakBindOpcodes);
-  writeBindOpcodes(OS, DyldInfoOnlyCmd->lazy_bind_off,
-                   LinkEdit.LazyBindOpcodes);
+Error MachOWriter::writeBasicBindOpcodes(raw_ostream &OS) {
+  writeBindOpcodes(OS, Obj.LinkEdit.BindOpcodes);
+  return Error::success();
+}
 
-  ZeroToOffset(OS, DyldInfoOnlyCmd->export_off);
-  if (auto Err = writeExportTrie(OS))
-    return Err;
+Error MachOWriter::writeWeakBindOpcodes(raw_ostream &OS) {
+  writeBindOpcodes(OS, Obj.LinkEdit.WeakBindOpcodes);
+  return Error::success();
+}
 
-  ZeroToOffset(OS, SymtabCmd->symoff);
-  
-  for (auto NLE : LinkEdit.NameList) {
+Error MachOWriter::writeLazyBindOpcodes(raw_ostream &OS) {
+  writeBindOpcodes(OS, Obj.LinkEdit.LazyBindOpcodes);
+  return Error::success();
+}
+
+Error MachOWriter::writeNameList(raw_ostream &OS) {
+  for (auto NLE : Obj.LinkEdit.NameList) {
     if (is64Bit)
       writeNListEntry<MachO::nlist_64>(NLE, OS);
     else
       writeNListEntry<MachO::nlist>(NLE, OS);
   }
+  return Error::success();
+}
 
-  auto currOffset = OS.tell() - fileStart;
-  if (currOffset < SymtabCmd->stroff)
-    Fill(OS, SymtabCmd->stroff - currOffset, 0xDEADBEEFu);
-
-  for (auto Str : LinkEdit.StringTable) {
+Error MachOWriter::writeStringTable(raw_ostream &OS) {
+  for (auto Str : Obj.LinkEdit.StringTable) {
     OS.write(Str.data(), Str.size());
     OS.write('\0');
   }
-
-  // Fill to the end of the string table
-  ZeroToOffset(OS, SymtabCmd->stroff + SymtabCmd->strsize);
-
   return Error::success();
 }
 

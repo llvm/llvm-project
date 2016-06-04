@@ -274,16 +274,17 @@ def tHINT : T1pI<(outs), (ins imm0_15:$imm), NoItinerary, "hint", "\t$imm",
   let Inst{7-4} = imm;
 }
 
-class tHintAlias<string Asm, dag Result> : tInstAlias<Asm, Result> {
+// Note: When EmitPriority == 1, the alias will be used for printing
+class tHintAlias<string Asm, dag Result, bit EmitPriority = 0> : tInstAlias<Asm, Result, EmitPriority> {
   let Predicates = [IsThumb, HasV6M];
 }
 
-def : tHintAlias<"nop$p", (tHINT 0, pred:$p)>; // A8.6.110
-def : tHintAlias<"yield$p", (tHINT 1, pred:$p)>; // A8.6.410
-def : tHintAlias<"wfe$p", (tHINT 2, pred:$p)>; // A8.6.408
-def : tHintAlias<"wfi$p", (tHINT 3, pred:$p)>; // A8.6.409
-def : tHintAlias<"sev$p", (tHINT 4, pred:$p)>; // A8.6.157
-def : tInstAlias<"sevl$p", (tHINT 5, pred:$p)> {
+def : tHintAlias<"nop$p", (tHINT 0, pred:$p), 1>; // A8.6.110
+def : tHintAlias<"yield$p", (tHINT 1, pred:$p), 1>; // A8.6.410
+def : tHintAlias<"wfe$p", (tHINT 2, pred:$p), 1>; // A8.6.408
+def : tHintAlias<"wfi$p", (tHINT 3, pred:$p), 1>; // A8.6.409
+def : tHintAlias<"sev$p", (tHINT 4, pred:$p), 1>; // A8.6.157
+def : tInstAlias<"sevl$p", (tHINT 5, pred:$p), 1> {
   let Predicates = [IsThumb2, HasV8];
 }
 
@@ -298,7 +299,7 @@ def tBKPT : T1I<(outs), (ins imm0_255:$val), NoItinerary, "bkpt\t$val",
   let Inst{7-0} = val;
 }
 // default immediate for breakpoint mnemonic
-def : InstAlias<"bkpt", (tBKPT 0)>, Requires<[IsThumb]>;
+def : InstAlias<"bkpt", (tBKPT 0), 0>, Requires<[IsThumb]>;
 
 def tHLT : T1I<(outs), (ins imm0_63:$val), NoItinerary, "hlt\t$val",
                 []>, T1Encoding<0b101110>, Requires<[IsThumb, HasV8]> {
@@ -784,7 +785,7 @@ def tSTMIA_UPD : Thumb1I<(outs GPR:$wb),
 } // hasSideEffects
 
 def : InstAlias<"ldm${p} $Rn!, $regs",
-                (tLDMIA tGPR:$Rn, pred:$p, reglist:$regs)>,
+                (tLDMIA tGPR:$Rn, pred:$p, reglist:$regs), 0>,
         Requires<[IsThumb, IsThumb1Only]>;
 
 let mayLoad = 1, Uses = [SP], Defs = [SP], hasExtraDefRegAllocReq = 1 in
@@ -1516,7 +1517,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 // In Thumb1, "nop" is encoded as a "mov r8, r8". Technically, the bf00
 // encoding is available on ARMv6K, but we don't differentiate that finely.
-def : InstAlias<"nop", (tMOVr R8, R8, 14, 0)>,Requires<[IsThumb, IsThumb1Only]>;
+def : InstAlias<"nop", (tMOVr R8, R8, 14, 0), 0>, Requires<[IsThumb, IsThumb1Only]>;
 
 
 // For round-trip assembly/disassembly, we have to handle a CPS instruction

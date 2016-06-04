@@ -274,13 +274,13 @@ def : VFP2MnemonicAlias<"fstmdbd", "vstmdb">;
 def : VFP2MnemonicAlias<"fstmead", "vstmia">;
 def : VFP2MnemonicAlias<"fstmfdd", "vstmdb">;
 
-def : InstAlias<"vpush${p} $r", (VSTMDDB_UPD SP, pred:$p, dpr_reglist:$r)>,
+def : InstAlias<"vpush${p} $r", (VSTMDDB_UPD SP, pred:$p, dpr_reglist:$r), 0>,
                 Requires<[HasVFP2]>;
-def : InstAlias<"vpush${p} $r", (VSTMSDB_UPD SP, pred:$p, spr_reglist:$r)>,
+def : InstAlias<"vpush${p} $r", (VSTMSDB_UPD SP, pred:$p, spr_reglist:$r), 0>,
                 Requires<[HasVFP2]>;
-def : InstAlias<"vpop${p} $r",  (VLDMDIA_UPD SP, pred:$p, dpr_reglist:$r)>,
+def : InstAlias<"vpop${p} $r",  (VLDMDIA_UPD SP, pred:$p, dpr_reglist:$r), 0>,
                 Requires<[HasVFP2]>;
-def : InstAlias<"vpop${p} $r",  (VLDMSIA_UPD SP, pred:$p, spr_reglist:$r)>,
+def : InstAlias<"vpop${p} $r",  (VLDMSIA_UPD SP, pred:$p, spr_reglist:$r), 0>,
                 Requires<[HasVFP2]>;
 defm : VFPDTAnyInstAlias<"vpush${p}", "$r",
                          (VSTMSDB_UPD SP, pred:$p, spr_reglist:$r)>;
@@ -890,13 +890,13 @@ multiclass vrint_inst_zrx<string opc, bit op, bit op2, SDPatternOperator node> {
   }
 
   def : InstAlias<!strconcat("vrint", opc, "$p.f16.f16\t$Sd, $Sm"),
-                  (!cast<Instruction>(NAME#"H") SPR:$Sd, SPR:$Sm, pred:$p)>,
+                  (!cast<Instruction>(NAME#"H") SPR:$Sd, SPR:$Sm, pred:$p), 0>,
         Requires<[HasFullFP16]>;
   def : InstAlias<!strconcat("vrint", opc, "$p.f32.f32\t$Sd, $Sm"),
-                  (!cast<Instruction>(NAME#"S") SPR:$Sd, SPR:$Sm, pred:$p)>,
+                  (!cast<Instruction>(NAME#"S") SPR:$Sd, SPR:$Sm, pred:$p), 0>,
         Requires<[HasFPARMv8]>;
   def : InstAlias<!strconcat("vrint", opc, "$p.f64.f64\t$Dd, $Dm"),
-                  (!cast<Instruction>(NAME#"D") DPR:$Dd, DPR:$Dm, pred:$p)>,
+                  (!cast<Instruction>(NAME#"D") DPR:$Dd, DPR:$Dm, pred:$p), 0>,
         Requires<[HasFPARMv8,HasDPVFP]>;
 }
 
@@ -931,10 +931,10 @@ multiclass vrint_inst_anpm<string opc, bits<2> rm,
   }
 
   def : InstAlias<!strconcat("vrint", opc, ".f32.f32\t$Sd, $Sm"),
-                  (!cast<Instruction>(NAME#"S") SPR:$Sd, SPR:$Sm)>,
+                  (!cast<Instruction>(NAME#"S") SPR:$Sd, SPR:$Sm), 0>,
         Requires<[HasFPARMv8]>;
   def : InstAlias<!strconcat("vrint", opc, ".f64.f64\t$Dd, $Dm"),
-                  (!cast<Instruction>(NAME#"D") DPR:$Dd, DPR:$Dm)>,
+                  (!cast<Instruction>(NAME#"D") DPR:$Dd, DPR:$Dm), 0>,
         Requires<[HasFPARMv8,HasDPVFP]>;
 }
 

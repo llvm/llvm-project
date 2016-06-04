@@ -234,9 +234,11 @@ class VOP_SDWA <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods = 
 class VOP_SDWAe : Enc64 {
   bits<8> src0;
   bits<3> src0_sel;
-  bits<3> src0_modifiers; // {abs,neg,sext}
+  bits<2> src0_fmodifiers; // {abs,neg}
+  bits<1> src0_imodifiers; // sext
   bits<3> src1_sel;
-  bits<3> src1_modifiers;
+  bits<2> src1_fmodifiers;
+  bits<1> src1_imodifiers;
   bits<3> dst_sel;
   bits<2> dst_unused;
   bits<1> clamp;
@@ -246,9 +248,11 @@ class VOP_SDWAe : Enc64 {
   let Inst{44-43} = dst_unused;
   let Inst{45} = clamp;
   let Inst{50-48} = src0_sel;
-  let Inst{53-51} = src0_modifiers;
+  let Inst{53-52} = src0_fmodifiers;
+  let Inst{51} = src0_imodifiers;
   let Inst{58-56} = src1_sel;
-  let Inst{61-59} = src1_modifiers;
+  let Inst{61-60} = src1_fmodifiers;
+  let Inst{59} = src1_imodifiers;
 }
 
 class VOP1_SDWAe <bits<8> op> : VOP_SDWAe {

@@ -2163,10 +2163,8 @@ void SelectionDAGISel::UpdateChains(
     // Replace all the chain results with the final chain we ended up with.
     for (unsigned i = 0, e = ChainNodesMatched.size(); i != e; ++i) {
       SDNode *ChainNode = ChainNodesMatched[i];
-
-      // If this node was already deleted, don't look at it.
-      if (ChainNode->getOpcode() == ISD::DELETED_NODE)
-        continue;
+      assert(ChainNode->getOpcode() != ISD::DELETED_NODE &&
+             "Deleted node left in chain");
 
       // Don't replace the results of the root node if we're doing a
       // MorphNodeTo.
@@ -3365,13 +3363,17 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                                                              nullptr));
         }
 
-      } else if (NodeToMatch->getOpcode() != ISD::DELETED_NODE) {
-        Res = MorphNode(NodeToMatch, TargetOpc, VTList, Ops, EmitNodeInfo);
       } else {
-        // NodeToMatch was eliminated by CSE when the target changed the DAG.
-        // We will visit the equivalent node later.
-        DEBUG(dbgs() << "Node was eliminated by CSE\n");
-        return;
+        assert(NodeToMatch->getOpcode() != ISD::DELETED_NODE &&
+               "NodeToMatch was removed partway through selection");
+        SelectionDAG::DAGNodeDeletedListener NDL(*CurDAG, [&](SDNode *N,
+                                                              SDNode *E) {
+          auto &Chain = ChainNodesMatched;
+          assert((!E || llvm::find(Chain, N) == Chain.end()) &&
+                 "Chain node replaced during MorphNode");
+          Chain.erase(std::remove(Chain.begin(), Chain.end(), N), Chain.end());
+        });
+        Res = MorphNode(NodeToMatch, TargetOpc, VTList, Ops, EmitNodeInfo);
       }
 
       // If the node had chain/glue results, update our notion of the current

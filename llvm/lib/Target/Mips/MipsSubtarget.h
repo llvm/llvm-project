@@ -163,8 +163,6 @@ public:
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;
   CodeGenOpt::Level getOptLevelToEnablePostRAScheduler() const override;
 
-  /// Only O32 and EABI supported right now.
-  bool isABI_EABI() const;
   bool isABI_N64() const;
   bool isABI_N32() const;
   bool isABI_O32() const;

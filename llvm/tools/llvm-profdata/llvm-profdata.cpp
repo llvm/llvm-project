@@ -237,7 +237,6 @@ static int merge_main(int argc, const char *argv[]) {
       cl::desc("Profile kind:"), cl::init(instr),
       cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
                  clEnumVal(sample, "Sample profile"), clEnumValEnd));
-
   cl::opt<ProfileFormat> OutputFormat(
       cl::desc("Format of output profile"), cl::init(PF_Binary),
       cl::values(clEnumValN(PF_Binary, "binary", "Binary encoding (default)"),
@@ -245,7 +244,6 @@ static int merge_main(int argc, const char *argv[]) {
                  clEnumValN(PF_GCC, "gcc",
                             "GCC encoding (only meaningful for -sample)"),
                  clEnumValEnd));
-
   cl::opt<bool> OutputSparse("sparse", cl::init(false),
       cl::desc("Generate a sparse profile (only meaningful for -instr)"));
 

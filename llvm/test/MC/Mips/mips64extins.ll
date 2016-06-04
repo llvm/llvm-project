@@ -1,6 +1,5 @@
 ; RUN: llc -march=mips64el -filetype=obj -mcpu=mips64r2 -target-abi=n64 %s -o - \
-; RUN: | llvm-objdump -disassemble -triple mips64el -mattr +mips64r2 - \
-; RUN: | FileCheck %s
+; RUN:   | llvm-objdump -disassemble -mattr +mips64r2 - | FileCheck %s
 
 define i64 @dext(i64 %i) nounwind readnone {
 entry:

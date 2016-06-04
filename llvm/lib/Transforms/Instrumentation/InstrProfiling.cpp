@@ -261,10 +261,10 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   // Inline virtual functions have linkeOnceODR linkage. When a key method
   // exists, the vtable will only be emitted in the TU where the key method
   // is defined. In a TU where vtable is not available, the function won't
-  // be 'addresstaken'. If its address is not recorded here, the profile counter
-  // comdat group with missing address may be picked by the linker leading
-  // to missing indirect call target info.
-  return F->hasAddressTaken() || (F->hasLinkOnceLinkage() && F->hasComdat());
+  // be 'addresstaken'. If its address is not recorded here, the profile data
+  // with missing address may be picked by the linker leading  to missing 
+  // indirect call target info.
+  return F->hasAddressTaken() || F->hasLinkOnceLinkage();
 }
 
 static inline bool needsComdatForCounter(Function &F, Module &M) {

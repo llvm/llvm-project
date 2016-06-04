@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_RAWTYPES_H
 #define LLVM_DEBUGINFO_PDB_RAW_RAWTYPES_H
 
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
@@ -70,6 +71,13 @@ struct SecMapEntry {
                                       // If group is set in flags, offset is the
                                       // offset of the group.
   support::ulittle32_t SecByteLength; // Byte count of the segment or group.
+};
+
+// Used for serialized hash table in TPI stream.
+// In the reference, it is an array of TI and cbOff pair.
+struct TypeIndexOffset {
+  codeview::TypeIndex Type;
+  support::ulittle32_t Offset;
 };
 
 } // namespace pdb

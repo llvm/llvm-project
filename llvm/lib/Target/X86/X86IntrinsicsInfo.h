@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-enum IntrinsicType {
+enum IntrinsicType : uint16_t {
   INTR_NO_TYPE,
   GATHER, SCATTER, PREFETCH, RDSEED, RDRAND, RDPMC, RDTSC, XTEST, ADX, FPCLASS, FPCLASSS,
   INTR_TYPE_1OP, INTR_TYPE_2OP, INTR_TYPE_2OP_IMM8, INTR_TYPE_3OP, INTR_TYPE_4OP,
@@ -40,10 +40,10 @@ enum IntrinsicType {
 
 struct IntrinsicData {
 
-  unsigned      Id;
+  uint16_t      Id;
   IntrinsicType Type;
-  unsigned      Opc0;
-  unsigned      Opc1;
+  uint16_t      Opc0;
+  uint16_t      Opc1;
 
   bool operator<(const IntrinsicData &RHS) const {
     return Id < RHS.Id;
@@ -237,7 +237,7 @@ static const IntrinsicData IntrinsicsWithChain[] = {
 /*
  * Find Intrinsic data by intrinsic ID
  */
-static const IntrinsicData* getIntrinsicWithChain(unsigned IntNo) {
+static const IntrinsicData* getIntrinsicWithChain(uint16_t IntNo) {
 
   IntrinsicData IntrinsicToFind = {IntNo, INTR_NO_TYPE, 0, 0 };
   const IntrinsicData *Data =  std::lower_bound(std::begin(IntrinsicsWithChain),
@@ -274,6 +274,9 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(avx_vpermilvar_pd_256, INTR_TYPE_2OP, X86ISD::VPERMILPV, 0),
   X86_INTRINSIC_DATA(avx_vpermilvar_ps,     INTR_TYPE_2OP, X86ISD::VPERMILPV, 0),
   X86_INTRINSIC_DATA(avx_vpermilvar_ps_256, INTR_TYPE_2OP, X86ISD::VPERMILPV, 0),
+  X86_INTRINSIC_DATA(avx2_pabs_b, INTR_TYPE_1OP, X86ISD::ABS, 0),
+  X86_INTRINSIC_DATA(avx2_pabs_d, INTR_TYPE_1OP, X86ISD::ABS, 0),
+  X86_INTRINSIC_DATA(avx2_pabs_w, INTR_TYPE_1OP, X86ISD::ABS, 0),
   X86_INTRINSIC_DATA(avx2_packssdw, INTR_TYPE_2OP, X86ISD::PACKSS, 0),
   X86_INTRINSIC_DATA(avx2_packsswb, INTR_TYPE_2OP, X86ISD::PACKSS, 0),
   X86_INTRINSIC_DATA(avx2_packusdw, INTR_TYPE_2OP, X86ISD::PACKUS, 0),
@@ -2221,6 +2224,9 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(sse41_pmuldq,      INTR_TYPE_2OP, X86ISD::PMULDQ, 0),
   X86_INTRINSIC_DATA(sse4a_extrqi,      INTR_TYPE_3OP, X86ISD::EXTRQI, 0),
   X86_INTRINSIC_DATA(sse4a_insertqi,    INTR_TYPE_4OP, X86ISD::INSERTQI, 0),
+  X86_INTRINSIC_DATA(ssse3_pabs_b_128,  INTR_TYPE_1OP, X86ISD::ABS, 0),
+  X86_INTRINSIC_DATA(ssse3_pabs_d_128,  INTR_TYPE_1OP, X86ISD::ABS, 0),
+  X86_INTRINSIC_DATA(ssse3_pabs_w_128,  INTR_TYPE_1OP, X86ISD::ABS, 0),
   X86_INTRINSIC_DATA(ssse3_phadd_d_128, INTR_TYPE_2OP, X86ISD::HADD, 0),
   X86_INTRINSIC_DATA(ssse3_phadd_w_128, INTR_TYPE_2OP, X86ISD::HADD, 0),
   X86_INTRINSIC_DATA(ssse3_phsub_d_128, INTR_TYPE_2OP, X86ISD::HSUB, 0),
@@ -2261,7 +2267,7 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
  * Retrieve data for Intrinsic without chain.
  * Return nullptr if intrinsic is not defined in the table.
  */
-static const IntrinsicData* getIntrinsicWithoutChain(unsigned IntNo) {
+static const IntrinsicData* getIntrinsicWithoutChain(uint16_t IntNo) {
   IntrinsicData IntrinsicToFind = { IntNo, INTR_NO_TYPE, 0, 0 };
   const IntrinsicData *Data = std::lower_bound(std::begin(IntrinsicsWithoutChain),
                                                std::end(IntrinsicsWithoutChain),

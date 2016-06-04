@@ -210,6 +210,8 @@ static DecodeStatus DecodeArmMOVTWInstruction(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSMLAInstruction(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeHINTInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCPSInstruction(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeTSTInstruction(MCInst &Inst, unsigned Insn,
@@ -592,6 +594,8 @@ MCDisassembler::DecodeStatus
 ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
   MCDisassembler::DecodeStatus S = Success;
 
+  const FeatureBitset &FeatureBits = getSubtargetInfo().getFeatureBits();
+
   // A few instructions actually have predicates encoded in them.  Don't
   // try to overwrite it if we're seeing one of those.
   switch (MI.getOpcode()) {
@@ -611,6 +615,10 @@ ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
         S = SoftFail;
       else
         return Success;
+      break;
+    case ARM::t2HINT:
+      if (MI.getOperand(0).getImm() == 0x10 && (FeatureBits[ARM::FeatureRAS]) != 0)
+        S = SoftFail;
       break;
     case ARM::tB:
     case ARM::t2B:
@@ -1939,6 +1947,29 @@ static DecodeStatus DecodeMemMultipleWritebackInstruction(MCInst &Inst,
     return MCDisassembler::Fail;
   if (!Check(S, DecodeRegListOperand(Inst, reglist, Address, Decoder)))
     return MCDisassembler::Fail;
+
+  return S;
+}
+
+// Check for UNPREDICTABLE predicated ESB instruction
+static DecodeStatus DecodeHINTInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned imm8 = fieldFromInstruction(Insn, 0, 8);
+  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
+  const FeatureBitset &FeatureBits = Dis->getSubtargetInfo().getFeatureBits();
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  Inst.addOperand(MCOperand::createImm(imm8));
+
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  // ESB is unpredictable if pred != AL. Without the RAS extension, it is a NOP,
+  // so all predicates should be allowed.
+  if (imm8 == 0x10 && pred != 0xe && ((FeatureBits[ARM::FeatureRAS]) != 0))
+    S = MCDisassembler::SoftFail;
 
   return S;
 }

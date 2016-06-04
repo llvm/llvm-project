@@ -505,6 +505,17 @@ std::error_code COFFObjectFile::getDebugPDBInfo(const debug_directory *DebugDir,
   return std::error_code();
 }
 
+std::error_code COFFObjectFile::getDebugPDBInfo(const debug_pdb_info *&PDBInfo,
+                                                StringRef &PDBFileName) const {
+  for (const debug_directory &D : debug_directories())
+    if (D.Type == COFF::IMAGE_DEBUG_TYPE_CODEVIEW)
+      return getDebugPDBInfo(&D, PDBInfo, PDBFileName);
+  // If we get here, there is no PDB info to return.
+  PDBInfo = nullptr;
+  PDBFileName = StringRef();
+  return std::error_code();
+}
+
 // Find the import table.
 std::error_code COFFObjectFile::initImportTablePtr() {
   // First, we get the RVA of the import table. If the file lacks a pointer to

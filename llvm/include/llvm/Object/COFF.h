@@ -870,8 +870,16 @@ public:
   std::error_code getHintName(uint32_t Rva, uint16_t &Hint,
                               StringRef &Name) const;
 
+  /// Get PDB information out of a codeview debug directory entry.
   std::error_code getDebugPDBInfo(const debug_directory *DebugDir,
                                   const debug_pdb_info *&Info,
+                                  StringRef &PDBFileName) const;
+
+  /// Get PDB information from an executable. If the information is not present,
+  /// Info will be set to nullptr and PDBFileName will be empty. An error is
+  /// returned only on corrupt object files. Convenience accessor that can be
+  /// used if the debug directory is not already handy.
+  std::error_code getDebugPDBInfo(const debug_pdb_info *&Info,
                                   StringRef &PDBFileName) const;
 
   bool isRelocatableObject() const override;

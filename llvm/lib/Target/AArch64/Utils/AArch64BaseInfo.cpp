@@ -263,6 +263,10 @@ const AArch64NamedImmMapper::Mapping AArch64SysReg::MRSMapper::MRSMappings[] = {
 
   // v8.1a "Limited Ordering Regions" extension-specific system registers
   {"lorid_el1", LORID_EL1, {AArch64::HasV8_1aOps}},
+
+  // v8.2a "Reliability, Availability and Serviceability" extensions registers
+  {"erridr_el1", ERRIDR_EL1, {AArch64::FeatureRAS}},
+  {"erxfr_el1", ERXFR_EL1, {AArch64::FeatureRAS}}
 };
 
 AArch64SysReg::MRSMapper::MRSMapper() {
@@ -815,6 +819,17 @@ const AArch64NamedImmMapper::Mapping AArch64SysReg::SysRegMapper::SysRegMappings
 
   // v8.2a registers
   {"uao",           UAO,           {AArch64::HasV8_2aOps}},
+
+  // v8.2a "Reliability, Availability and Serviceability" extensions registers
+  {"errselr_el1",   ERRSELR_EL1,   {AArch64::FeatureRAS}},
+  {"erxctlr_el1",   ERXCTLR_EL1,   {AArch64::FeatureRAS}},
+  {"erxstatus_el1", ERXSTATUS_EL1, {AArch64::FeatureRAS}},
+  {"erxaddr_el1",   ERXADDR_EL1,   {AArch64::FeatureRAS}},
+  {"erxmisc0_el1",  ERXMISC0_EL1,  {AArch64::FeatureRAS}},
+  {"erxmisc1_el1",  ERXMISC1_EL1,  {AArch64::FeatureRAS}},
+  {"disr_el1",      DISR_EL1,      {AArch64::FeatureRAS}},
+  {"vdisr_el2",     VDISR_EL2,     {AArch64::FeatureRAS}},
+  {"vsesr_el2",     VSESR_EL2,     {AArch64::FeatureRAS}},
 
   // v8.2a "Statistical Profiling extension" registers
   {"pmblimitr_el1", PMBLIMITR_EL1, {AArch64::FeatureSPE}},

@@ -239,15 +239,8 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
 
-static void initializePassOnce(PassRegistry &Registry) {
-  PassInfo *PI = new PassInfo("Hexagon CFG Optimizer", "hexagon-cfg",
-                              &HexagonCFGOptimizer::ID, nullptr, false, false);
-  Registry.registerPass(*PI, true);
-}
-
-void llvm::initializeHexagonCFGOptimizerPass(PassRegistry &Registry) {
-  CALL_ONCE_INITIALIZATION(initializePassOnce)
-}
+INITIALIZE_PASS(HexagonCFGOptimizer, "hexagon-cfg", "Hexagon CFG Optimizer",
+                false, false)
 
 FunctionPass *llvm::createHexagonCFGOptimizer() {
   return new HexagonCFGOptimizer();

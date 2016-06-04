@@ -13,6 +13,7 @@
 
 #include "CodeViewDebug.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/FieldListRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
@@ -138,10 +139,14 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
   FuncIdRecord FuncId(ParentScope, getTypeIndex(SP->getType()), DisplayName);
   TypeIndex TI = TypeTable.writeFuncId(FuncId);
 
-  auto InsertResult = TypeIndices.insert({SP, TI});
-  (void)InsertResult;
-  assert(InsertResult.second && "DISubprogram lowered twice");
+  recordTypeIndexForDINode(SP, TI);
   return TI;
+}
+
+void CodeViewDebug::recordTypeIndexForDINode(const DINode *Node, TypeIndex TI) {
+  auto InsertResult = TypeIndices.insert({Node, TI});
+  (void)InsertResult;
+  assert(InsertResult.second && "DINode was already assigned a type index");
 }
 
 void CodeViewDebug::recordLocalVariable(LocalVariable &&Var,
@@ -746,6 +751,11 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty) {
     return lowerTypeModifier(cast<DIDerivedType>(Ty));
   case dwarf::DW_TAG_subroutine_type:
     return lowerTypeFunction(cast<DISubroutineType>(Ty));
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_structure_type:
+    return lowerTypeClass(cast<DICompositeType>(Ty));
+  case dwarf::DW_TAG_union_type:
+    return lowerTypeUnion(cast<DICompositeType>(Ty));
   default:
     // Use the null type index.
     return TypeIndex();
@@ -961,6 +971,135 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
   return TypeTable.writeProcedure(Procedure);
 }
 
+static MemberAccess translateAccessFlags(unsigned RecordTag,
+                                         const DIType *Member) {
+  switch (Member->getFlags() & DINode::FlagAccessibility) {
+  case DINode::FlagPrivate:   return MemberAccess::Private;
+  case DINode::FlagPublic:    return MemberAccess::Public;
+  case DINode::FlagProtected: return MemberAccess::Protected;
+  case 0:
+    // If there was no explicit access control, provide the default for the tag.
+    return RecordTag == dwarf::DW_TAG_class_type ? MemberAccess::Private
+                                                 : MemberAccess::Public;
+  }
+  llvm_unreachable("access flags are exclusive");
+}
+
+static TypeRecordKind getRecordKind(const DICompositeType *Ty) {
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_class_type:     return TypeRecordKind::Class;
+  case dwarf::DW_TAG_structure_type: return TypeRecordKind::Struct;
+  }
+  llvm_unreachable("unexpected tag");
+}
+
+/// Return the HasUniqueName option if it should be present in ClassOptions, or
+/// None otherwise.
+static ClassOptions getRecordUniqueNameOption(const DICompositeType *Ty) {
+  // MSVC always sets this flag now, even for local types. Clang doesn't always
+  // appear to give every type a linkage name, which may be problematic for us.
+  // FIXME: Investigate the consequences of not following them here.
+  return !Ty->getIdentifier().empty() ? ClassOptions::HasUniqueName
+                                      : ClassOptions::None;
+}
+
+TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
+  // First, construct the forward decl.  Don't look into Ty to compute the
+  // forward decl options, since it might not be available in all TUs.
+  TypeRecordKind Kind = getRecordKind(Ty);
+  ClassOptions CO =
+      ClassOptions::ForwardReference | getRecordUniqueNameOption(Ty);
+  TypeIndex FwdDeclTI = TypeTable.writeClass(ClassRecord(
+      Kind, 0, CO, HfaKind::None, WindowsRTClassKind::None, TypeIndex(),
+      TypeIndex(), TypeIndex(), 0, Ty->getName(), Ty->getIdentifier()));
+  return FwdDeclTI;
+}
+
+TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
+  // Construct the field list and complete type record.
+  TypeRecordKind Kind = getRecordKind(Ty);
+  // FIXME: Other ClassOptions, like ContainsNestedClass and NestedClass.
+  ClassOptions CO = ClassOptions::None | getRecordUniqueNameOption(Ty);
+  TypeIndex FTI;
+  unsigned FieldCount;
+  std::tie(FTI, FieldCount) = lowerRecordFieldList(Ty);
+
+  uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
+  return TypeTable.writeClass(ClassRecord(Kind, FieldCount, CO, HfaKind::None,
+                                          WindowsRTClassKind::None, FTI,
+                                          TypeIndex(), TypeIndex(), SizeInBytes,
+                                          Ty->getName(), Ty->getIdentifier()));
+  // FIXME: Make an LF_UDT_SRC_LINE record.
+}
+
+TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
+  ClassOptions CO =
+      ClassOptions::ForwardReference | getRecordUniqueNameOption(Ty);
+  TypeIndex FwdDeclTI =
+      TypeTable.writeUnion(UnionRecord(0, CO, HfaKind::None, TypeIndex(), 0,
+                                       Ty->getName(), Ty->getIdentifier()));
+  return FwdDeclTI;
+}
+
+TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
+  ClassOptions CO = ClassOptions::None | getRecordUniqueNameOption(Ty);
+  TypeIndex FTI;
+  unsigned FieldCount;
+  std::tie(FTI, FieldCount) = lowerRecordFieldList(Ty);
+  uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
+  return TypeTable.writeUnion(UnionRecord(FieldCount, CO, HfaKind::None, FTI,
+                                          SizeInBytes, Ty->getName(),
+                                          Ty->getIdentifier()));
+  // FIXME: Make an LF_UDT_SRC_LINE record.
+}
+
+std::pair<TypeIndex, unsigned>
+CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
+  // Manually count members. MSVC appears to count everything that generates a
+  // field list record. Each individual overload in a method overload group
+  // contributes to this count, even though the overload group is a single field
+  // list record.
+  unsigned MemberCount = 0;
+  FieldListRecordBuilder Fields;
+  for (const DINode *Element : Ty->getElements()) {
+    // We assume that the frontend provides all members in source declaration
+    // order, which is what MSVC does.
+    if (!Element)
+      continue;
+    if (auto *SP = dyn_cast<DISubprogram>(Element)) {
+      // C++ method.
+      // FIXME: Overloaded methods are grouped together, so we'll need two
+      // passes to group them.
+      (void)SP;
+    } else if (auto *Member = dyn_cast<DIDerivedType>(Element)) {
+      if (Member->getTag() == dwarf::DW_TAG_member) {
+        if (Member->isStaticMember()) {
+          // Static data member.
+          Fields.writeStaticDataMember(StaticDataMemberRecord(
+              translateAccessFlags(Ty->getTag(), Member),
+              getTypeIndex(Member->getBaseType()), Member->getName()));
+          MemberCount++;
+        } else {
+          // Data member.
+          // FIXME: Make a BitFieldRecord for bitfields.
+          Fields.writeDataMember(DataMemberRecord(
+              translateAccessFlags(Ty->getTag(), Member),
+              getTypeIndex(Member->getBaseType()),
+              Member->getOffsetInBits() / 8, Member->getName()));
+          MemberCount++;
+        }
+      } else if (Member->getTag() == dwarf::DW_TAG_friend) {
+        // Ignore friend members. It appears that MSVC emitted info about
+        // friends in the past, but modern versions do not.
+      }
+      // FIXME: Get clang to emit nested types here and do something with
+      // them.
+    }
+    // Skip other unrecognized kinds of elements.
+  }
+  return {TypeTable.writeFieldList(Fields), MemberCount};
+}
+
 TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef) {
   const DIType *Ty = TypeRef.resolve();
 
@@ -968,16 +1107,70 @@ TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef) {
   if (!Ty)
     return TypeIndex::Void();
 
-  // Check if we've already translated this type.
+  // Check if we've already translated this type. Don't try to do a
+  // get-or-create style insertion that caches the hash lookup across the
+  // lowerType call. It will update the TypeIndices map.
   auto I = TypeIndices.find(Ty);
   if (I != TypeIndices.end())
     return I->second;
 
   TypeIndex TI = lowerType(Ty);
 
-  auto InsertResult = TypeIndices.insert({Ty, TI});
-  (void)InsertResult;
-  assert(InsertResult.second && "DIType lowered twice");
+  recordTypeIndexForDINode(Ty, TI);
+  return TI;
+}
+
+TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
+  const DIType *Ty = TypeRef.resolve();
+
+  // The null DIType is the void type. Don't try to hash it.
+  if (!Ty)
+    return TypeIndex::Void();
+
+  // If this is a non-record type, the complete type index is the same as the
+  // normal type index. Just call getTypeIndex.
+  switch (Ty->getTag()) {
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+    break;
+  default:
+    return getTypeIndex(Ty);
+  }
+
+  // Check if we've already translated the complete record type.  Lowering a
+  // complete type should never trigger lowering another complete type, so we
+  // can reuse the hash table lookup result.
+  const auto *CTy = cast<DICompositeType>(Ty);
+  auto InsertResult = CompleteTypeIndices.insert({CTy, TypeIndex()});
+  if (!InsertResult.second)
+    return InsertResult.first->second;
+
+  // Make sure the forward declaration is emitted first. It's unclear if this
+  // is necessary, but MSVC does it, and we should follow suit until we can show
+  // otherwise.
+  TypeIndex FwdDeclTI = getTypeIndex(CTy);
+
+  // Just use the forward decl if we don't have complete type info. This might
+  // happen if the frontend is using modules and expects the complete definition
+  // to be emitted elsewhere.
+  if (CTy->isForwardDecl())
+    return FwdDeclTI;
+
+  TypeIndex TI;
+  switch (CTy->getTag()) {
+  case dwarf::DW_TAG_class_type:
+  case dwarf::DW_TAG_structure_type:
+    TI = lowerCompleteTypeClass(CTy);
+    break;
+  case dwarf::DW_TAG_union_type:
+    TI = lowerCompleteTypeUnion(CTy);
+    break;
+  default:
+    llvm_unreachable("not a record");
+  }
+
+  InsertResult.first->second = TI;
   return TI;
 }
 
@@ -999,7 +1192,7 @@ void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {
     Flags |= LocalSymFlags::IsOptimizedOut;
 
   OS.AddComment("TypeIndex");
-  TypeIndex TI = getTypeIndex(Var.DIVar->getType());
+  TypeIndex TI = getCompleteTypeIndex(Var.DIVar->getType());
   OS.EmitIntValue(TI.getIndex(), 4);
   OS.AddComment("Flags");
   OS.EmitIntValue(static_cast<uint16_t>(Flags), 2);

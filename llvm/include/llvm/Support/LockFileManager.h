@@ -57,6 +57,7 @@ private:
 
   Optional<std::pair<std::string, int> > Owner;
   Optional<std::error_code> Error;
+  std::string ErrorDiagMsg;
 
   LockFileManager(const LockFileManager &) = delete;
   LockFileManager &operator=(const LockFileManager &) = delete;
@@ -82,6 +83,15 @@ public:
   /// \brief Remove the lock file.  This may delete a different lock file than
   /// the one previously read if there is a race.
   std::error_code unsafeRemoveLockFile();
+
+  /// \brief Get error message, or "" if there is no error.
+  std::string getErrorMessage() const;
+
+  /// \brief Set error and error message
+  void setError(std::error_code &EC, StringRef ErrorMsg = "") {
+    Error = EC;
+    ErrorDiagMsg = ErrorMsg.str();
+  }
 };
 
 } // end namespace llvm

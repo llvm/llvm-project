@@ -1,0 +1,5 @@
+RUN: LLVMFuzzer-SimpleTest -print_new_cov_pcs=1 2>&1 | FileCheck %s --check-prefix=PCS
+PCS:{{^0x[a-f0-9]+}}
+PCS:NEW
+PCS:BINGO
+

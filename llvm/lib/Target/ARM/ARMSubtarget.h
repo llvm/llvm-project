@@ -178,9 +178,9 @@ protected:
   /// movs with shifter operand (i.e. asr, lsl, lsr).
   bool AvoidMOVsShifterOperand;
 
-  /// HasRAS - Some processors perform return stack prediction. CodeGen should
+  /// HasRetAddrStack - Some processors perform return stack prediction. CodeGen should
   /// avoid issue "normal" call instructions to callees which do not return.
-  bool HasRAS;
+  bool HasRetAddrStack;
 
   /// HasMPExtension - True if the subtarget supports Multiprocessing
   /// extension (ARMv7 only).
@@ -210,6 +210,9 @@ protected:
 
   /// HasCRC - if true, processor supports CRC instructions
   bool HasCRC;
+
+  /// HasRAS - if true, the processor supports RAS extensions
+  bool HasRAS;
 
   /// If true, the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
   /// particularly effective at zeroing a VFP register.
@@ -349,6 +352,7 @@ public:
   bool hasNEON() const { return HasNEON;  }
   bool hasCrypto() const { return HasCrypto; }
   bool hasCRC() const { return HasCRC; }
+  bool hasRAS() const { return HasRAS; }
   bool hasVirtualization() const { return HasVirtualization; }
   bool useNEONForSinglePrecisionFP() const {
     return hasNEON() && UseNEONForSinglePrecisionFP;
@@ -375,7 +379,7 @@ public:
   bool prefers32BitThumb() const { return Pref32BitThumb; }
   bool avoidCPSRPartialUpdate() const { return AvoidCPSRPartialUpdate; }
   bool avoidMOVsShifterOperand() const { return AvoidMOVsShifterOperand; }
-  bool hasRAS() const { return HasRAS; }
+  bool hasRetAddrStack() const { return HasRetAddrStack; }
   bool hasMPExtension() const { return HasMPExtension; }
   bool hasDSP() const { return HasDSP; }
   bool useNaClTrap() const { return UseNaClTrap; }

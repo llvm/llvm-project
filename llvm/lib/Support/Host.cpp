@@ -73,9 +73,9 @@ static ssize_t LLVM_ATTRIBUTE_UNUSED readCpuInfo(void *Buf, size_t Size) {
     defined(_M_IX86) || defined(__x86_64__) || defined(_M_AMD64) ||            \
     defined(_M_X64)
 
-/// GetX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
+/// getX86CpuIDAndInfo - Execute the specified cpuid and return the 4 values in
 /// the specified arguments.  If we can't run cpuid on the host, return true.
-static bool GetX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
+static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                                unsigned *rECX, unsigned *rEDX) {
 #if defined(__GNUC__) || defined(__clang__)
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
@@ -112,11 +112,10 @@ static bool GetX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
 #endif
 }
 
-/// GetX86CpuIDAndInfoEx - Execute the specified cpuid with subleaf and return
-/// the
-/// 4 values in the specified arguments.  If we can't run cpuid on the host,
+/// getX86CpuIDAndInfoEx - Execute the specified cpuid with subleaf and return
+/// the 4 values in the specified arguments.  If we can't run cpuid on the host,
 /// return true.
-static bool GetX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
+static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
                                  unsigned *rEAX, unsigned *rEBX, unsigned *rECX,
                                  unsigned *rEDX) {
 #if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
@@ -170,7 +169,7 @@ static bool GetX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 #endif
 }
 
-static bool GetX86XCR0(unsigned *rEAX, unsigned *rEDX) {
+static bool getX86XCR0(unsigned *rEAX, unsigned *rEDX) {
 #if defined(__GNUC__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
   // directly because older assemblers do not include support for xgetbv and
@@ -187,26 +186,26 @@ static bool GetX86XCR0(unsigned *rEAX, unsigned *rEDX) {
 #endif
 }
 
-static void DetectX86FamilyModel(unsigned EAX, unsigned &Family,
-                                 unsigned &Model) {
-  Family = (EAX >> 8) & 0xf; // Bits 8 - 11
-  Model = (EAX >> 4) & 0xf;  // Bits 4 - 7
-  if (Family == 6 || Family == 0xf) {
-    if (Family == 0xf)
+static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
+                                 unsigned *Model) {
+  *Family = (EAX >> 8) & 0xf; // Bits 8 - 11
+  *Model = (EAX >> 4) & 0xf;  // Bits 4 - 7
+  if (*Family == 6 || *Family == 0xf) {
+    if (*Family == 0xf)
       // Examine extended family ID if family ID is F.
-      Family += (EAX >> 20) & 0xff; // Bits 20 - 27
+      *Family += (EAX >> 20) & 0xff; // Bits 20 - 27
     // Examine extended model ID if family ID is 6 or F.
-    Model += ((EAX >> 16) & 0xf) << 4; // Bits 16 - 19
+    *Model += ((EAX >> 16) & 0xf) << 4; // Bits 16 - 19
   }
 }
 
 StringRef sys::getHostCPUName() {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
-  if (GetX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX))
+  if (getX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX))
     return "generic";
   unsigned Family = 0;
   unsigned Model = 0;
-  DetectX86FamilyModel(EAX, Family, Model);
+  detectX86FamilyModel(EAX, &Family, &Model);
 
   union {
     unsigned u[3];
@@ -214,7 +213,7 @@ StringRef sys::getHostCPUName() {
   } text;
 
   unsigned MaxLeaf;
-  GetX86CpuIDAndInfo(0, &MaxLeaf, text.u + 0, text.u + 2, text.u + 1);
+  getX86CpuIDAndInfo(0, &MaxLeaf, text.u + 0, text.u + 2, text.u + 1);
 
   bool HasMMX = (EDX >> 23) & 1;
   bool HasSSE = (EDX >> 25) & 1;
@@ -228,16 +227,16 @@ StringRef sys::getHostCPUName() {
   // indicates that the AVX registers will be saved and restored on context
   // switch, then we have full AVX support.
   const unsigned AVXBits = (1 << 27) | (1 << 28);
-  bool HasAVX = ((ECX & AVXBits) == AVXBits) && !GetX86XCR0(&EAX, &EDX) &&
+  bool HasAVX = ((ECX & AVXBits) == AVXBits) && !getX86XCR0(&EAX, &EDX) &&
                 ((EAX & 0x6) == 0x6);
   bool HasAVX512Save = HasAVX && ((EAX & 0xe0) == 0xe0);
   bool HasLeaf7 =
-      MaxLeaf >= 0x7 && !GetX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
+      MaxLeaf >= 0x7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
   bool HasADX = HasLeaf7 && ((EBX >> 19) & 1);
   bool HasAVX2 = HasAVX && HasLeaf7 && (EBX & 0x20);
   bool HasAVX512 = HasLeaf7 && HasAVX512Save && ((EBX >> 16) & 1);
 
-  GetX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
+  getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
   bool Em64T = (EDX >> 29) & 0x1;
   bool HasTBM = (ECX >> 21) & 0x1;
 
@@ -775,11 +774,11 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
     char c[12];
   } text;
 
-  if (GetX86CpuIDAndInfo(0, &MaxLevel, text.u + 0, text.u + 2, text.u + 1) ||
+  if (getX86CpuIDAndInfo(0, &MaxLevel, text.u + 0, text.u + 2, text.u + 1) ||
       MaxLevel < 1)
     return false;
 
-  GetX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
+  getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
 
   Features["cmov"] = (EDX >> 15) & 1;
   Features["mmx"] = (EDX >> 23) & 1;
@@ -801,7 +800,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   // indicates that the AVX registers will be saved and restored on context
   // switch, then we have full AVX support.
   bool HasAVXSave = ((ECX >> 27) & 1) && ((ECX >> 28) & 1) &&
-                    !GetX86XCR0(&EAX, &EDX) && ((EAX & 0x6) == 0x6);
+                    !getX86XCR0(&EAX, &EDX) && ((EAX & 0x6) == 0x6);
   Features["avx"] = HasAVXSave;
   Features["fma"] = HasAVXSave && (ECX >> 12) & 1;
   Features["f16c"] = HasAVXSave && (ECX >> 29) & 1;
@@ -813,10 +812,10 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   bool HasAVX512Save = HasAVXSave && ((EAX & 0xe0) == 0xe0);
 
   unsigned MaxExtLevel;
-  GetX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
+  getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
-                     !GetX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
+                     !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
   Features["lzcnt"] = HasExtLeaf1 && ((ECX >> 5) & 1);
   Features["sse4a"] = HasExtLeaf1 && ((ECX >> 6) & 1);
   Features["prfchw"] = HasExtLeaf1 && ((ECX >> 8) & 1);
@@ -826,7 +825,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["mwaitx"] = HasExtLeaf1 && ((ECX >> 29) & 1);
 
   bool HasLeaf7 =
-      MaxLevel >= 7 && !GetX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
+      MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
   // AVX2 is only supported if we have the OS save support from AVX.
   Features["avx2"] = HasAVXSave && HasLeaf7 && ((EBX >> 5) & 1);
@@ -862,7 +861,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["pku"] = HasLeaf7 && ((ECX >> 4) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
-                  !GetX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
+                  !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
 
   // Only enable XSAVE if OS has enabled support for saving YMM state.
   Features["xsaveopt"] = HasAVXSave && HasLeafD && ((EAX >> 0) & 1);

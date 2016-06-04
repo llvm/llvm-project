@@ -76,12 +76,12 @@ const char *ReadModule(char SizeofPtr, const char *Begin, const char *End) {
     if (Begin == End)
       return nullptr;
 
-    ErrorOr<DILineInfo> LineInfo = Symbolizer.symbolizeCode(Filename, Addr);
-    if (LineInfo) {
+    if (Expected<DILineInfo> LineInfo =
+            Symbolizer.symbolizeCode(Filename, Addr)) {
       llvm::outs() << LineInfo->FileName << ':' << LineInfo->Line << ' '
                    << LineInfo->FunctionName << ' ';
     } else {
-      llvm::outs() << "<error> ";
+      logAllUnhandledErrors(LineInfo.takeError(), llvm::outs(), "<error> ");
     }
 
     switch (KindFromData(Data, SizeofPtr)) {

@@ -77,19 +77,16 @@ define i32 @par(i32 %a, i32 %b, i32 %c, i32 %d) {
   ret i32 %t3
 }
 
-; FIXME: In the following tests, verify that a bitcast doesn't get in the way
+; In the following tests, verify that a bitcast doesn't get in the way
 ; of a select transform. These bitcasts are common in SSE/AVX and possibly
 ; other vector code because of canonicalization to i64 elements for vectors.
 
 define <2 x i64> @bitcast_select(<4 x i1> %cmp, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcast_select(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> %cmp to <4 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[T2]], %a
-; CHECK-NEXT:    [[NEG:%.*]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[NEG2:%.*]] = bitcast <4 x i32> [[NEG]] to <2 x i64>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[NEG2]], %b
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %a to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> %b to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> %cmp, <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -104,13 +101,10 @@ define <2 x i64> @bitcast_select(<4 x i1> %cmp, <2 x i64> %a, <2 x i64> %b) {
 
 define <2 x i64> @bitcast_select_swap_or_ops(<4 x i1> %cmp, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcast_select_swap_or_ops(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> %cmp to <4 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[T2]], %a
-; CHECK-NEXT:    [[NEG:%.*]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[NEG2:%.*]] = bitcast <4 x i32> [[NEG]] to <2 x i64>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[NEG2]], %b
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND2]], [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %a to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> %b to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> %cmp, <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -125,13 +119,10 @@ define <2 x i64> @bitcast_select_swap_or_ops(<4 x i1> %cmp, <2 x i64> %a, <2 x i
 
 define <2 x i64> @bitcast_select_swap_and_ops(<4 x i1> %cmp, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcast_select_swap_and_ops(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> %cmp to <4 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[T2]], %a
-; CHECK-NEXT:    [[NEG:%.*]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[NEG2:%.*]] = bitcast <4 x i32> [[NEG]] to <2 x i64>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[NEG2]], %b
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %a to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> %b to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> %cmp, <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sext = sext <4 x i1> %cmp to <4 x i32>
@@ -146,13 +137,10 @@ define <2 x i64> @bitcast_select_swap_and_ops(<4 x i1> %cmp, <2 x i64> %a, <2 x 
 
 define <2 x i64> @bitcast_select_swap_and_ops2(<4 x i1> %cmp, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @bitcast_select_swap_and_ops2(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> %cmp to <4 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[T2]], %a
-; CHECK-NEXT:    [[NEG:%.*]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[NEG2:%.*]] = bitcast <4 x i32> [[NEG]] to <2 x i64>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[NEG2]], %b
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND]], [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> %a to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> %b to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> %cmp, <4 x i32> [[TMP1]], <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[OR:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[OR]]
 ;
   %sext = sext <4 x i1> %cmp to <4 x i32>

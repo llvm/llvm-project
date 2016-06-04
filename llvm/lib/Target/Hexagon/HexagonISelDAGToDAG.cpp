@@ -36,10 +36,6 @@ MaxNumOfUsesForConstExtenders("ga-max-num-uses-for-constant-extenders",
 // Instruction Selector Implementation
 //===----------------------------------------------------------------------===//
 
-namespace llvm {
-  void initializeHexagonDAGToDAGISelPass(PassRegistry&);
-}
-
 //===--------------------------------------------------------------------===//
 /// HexagonDAGToDAGISel - Hexagon specific code to select Hexagon machine
 /// instructions for SelectionDAG operations.
@@ -54,9 +50,7 @@ public:
   explicit HexagonDAGToDAGISel(HexagonTargetMachine &tm,
                                CodeGenOpt::Level OptLevel)
       : SelectionDAGISel(tm, OptLevel), HTM(tm), HST(nullptr), HII(nullptr),
-        HRI(nullptr) {
-    initializeHexagonDAGToDAGISelPass(*PassRegistry::getPassRegistry());
-  }
+        HRI(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -199,18 +193,6 @@ FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
   return new HexagonDAGToDAGISel(TM, OptLevel);
 }
 }
-
-static void initializePassOnce(PassRegistry &Registry) {
-  const char *Name = "Hexagon DAG->DAG Pattern Instruction Selection";
-  PassInfo *PI = new PassInfo(Name, "hexagon-isel",
-                              &SelectionDAGISel::ID, nullptr, false, false);
-  Registry.registerPass(*PI, true);
-}
-
-void llvm::initializeHexagonDAGToDAGISelPass(PassRegistry &Registry) {
-  CALL_ONCE_INITIALIZATION(initializePassOnce)
-}
-
 
 // Intrinsics that return a a predicate.
 static bool doesIntrinsicReturnPredicate(unsigned ID) {

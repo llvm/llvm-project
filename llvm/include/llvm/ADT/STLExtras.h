@@ -412,6 +412,13 @@ auto remove_if(R &&Range, UnaryPredicate &&P) -> decltype(Range.begin()) {
   return std::remove_if(Range.begin(), Range.end(), P);
 }
 
+/// Wrapper function around std::find to detect if an element exists
+/// in a container.
+template <typename R, typename E>
+bool is_contained(R &&Range, const E &Element) {
+  return std::find(Range.begin(), Range.end(), Element) != Range.end();
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//

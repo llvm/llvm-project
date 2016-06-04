@@ -601,7 +601,6 @@ namespace {
 class IAPrinter {
   std::vector<std::string> Conds;
   std::map<StringRef, std::pair<int, int>> OpMap;
-  SmallVector<Record*, 4> ReqFeatures;
 
   std::string Result;
   std::string AsmString;
@@ -648,7 +647,7 @@ public:
   }
 
   void print(raw_ostream &O) {
-    if (Conds.empty() && ReqFeatures.empty()) {
+    if (Conds.empty()) {
       O.indent(6) << "return true;\n";
       return;
     }
@@ -798,6 +797,18 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
       IAPrinter IAP(CGA.Result->getAsString(), CGA.AsmString);
 
+      std::string Namespace = Target.getName();
+      std::vector<Record *> ReqFeatures;
+      if (PassSubtarget) {
+        // We only consider ReqFeatures predicates if PassSubtarget
+        std::vector<Record *> RF =
+            CGA.TheDef->getValueAsListOfDefs("Predicates");
+        std::copy_if(RF.begin(), RF.end(), std::back_inserter(ReqFeatures),
+                     [](Record *R) {
+                       return R->getValueAsBit("AssemblerMatcherPredicate");
+                     });
+      }
+
       unsigned NumMIOps = 0;
       for (auto &Operand : CGA.ResultOperands)
         NumMIOps += Operand.getMINumOperands();
@@ -902,6 +913,27 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       }
 
       if (CantHandle) continue;
+
+      for (auto I = ReqFeatures.cbegin(); I != ReqFeatures.cend(); I++) {
+        Record *R = *I;
+        std::string AsmCondString = R->getValueAsString("AssemblerCondString");
+
+        // AsmCondString has syntax [!]F(,[!]F)*
+        SmallVector<StringRef, 4> Ops;
+        SplitString(AsmCondString, Ops, ",");
+        assert(!Ops.empty() && "AssemblerCondString cannot be empty");
+
+        for (auto &Op : Ops) {
+          assert(!Op.empty() && "Empty operator");
+          if (Op[0] == '!')
+            Cond = "!STI.getFeatureBits()[" + Namespace + "::" +
+                   Op.substr(1).str() + "]";
+          else
+            Cond = "STI.getFeatureBits()[" + Namespace + "::" + Op.str() + "]";
+          IAP.addCond(Cond);
+        }
+      }
+
       IAPrinterMap[Aliases.first].push_back(std::move(IAP));
     }
   }
@@ -975,13 +1007,14 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   // Code that prints the alias, replacing the operands with the ones from the
   // MCInst.
   O << "  unsigned I = 0;\n";
-  O << "  while (AsmString[I] != ' ' && AsmString[I] != '\t' &&\n";
-  O << "         AsmString[I] != '\\0')\n";
+  O << "  while (AsmString[I] != ' ' && AsmString[I] != '\\t' &&\n";
+  O << "         AsmString[I] != '$' && AsmString[I] != '\\0')\n";
   O << "    ++I;\n";
   O << "  OS << '\\t' << StringRef(AsmString, I);\n";
 
   O << "  if (AsmString[I] != '\\0') {\n";
-  O << "    OS << '\\t';\n";
+  O << "    if (AsmString[I] == ' ' || AsmString[I] == '\\t')";
+  O << "      OS << '\\t';\n";
   O << "    do {\n";
   O << "      if (AsmString[I] == '$') {\n";
   O << "        ++I;\n";
