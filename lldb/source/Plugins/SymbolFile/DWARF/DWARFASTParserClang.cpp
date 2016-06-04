@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <stdlib.h>
+
 #include "DWARFASTParserClang.h"
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
@@ -1776,8 +1778,7 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                                 else
                                 {
                                     module_sp->ReportError ("DWARF DIE at 0x%8.8x was not able to start its definition.\nPlease file a bug and attach the file at the start of this error message",
-                                                            type_die_ref.die_offset,
-                                                            type_name_cstr);
+                                                            type_die_ref.die_offset);
                                 }
                             }
 
@@ -2119,6 +2120,44 @@ DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Ty
 
     if (!die)
         return false;
+
+#if defined LLDB_CONFIGURATION_DEBUG
+    //----------------------------------------------------------------------
+    // For debugging purposes, the LLDB_DWARF_DONT_COMPLETE_TYPENAMES
+    // environment variable can be set with one or more typenames separated
+    // by ';' characters. This will cause this function to not complete any
+    // types whose names match.
+    //
+    // Examples of setting this environment variable:
+    //
+    // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo
+    // LLDB_DWARF_DONT_COMPLETE_TYPENAMES=Foo;Bar;Baz
+    //----------------------------------------------------------------------
+    const char *dont_complete_typenames_cstr = getenv("LLDB_DWARF_DONT_COMPLETE_TYPENAMES");
+    if (dont_complete_typenames_cstr && dont_complete_typenames_cstr[0])
+    {
+        const char *die_name = die.GetName();
+        if (die_name && die_name[0])
+        {
+            const char *match = strstr(dont_complete_typenames_cstr, die_name);
+            if (match)
+            {
+                size_t die_name_length = strlen(die_name);
+                while (match)
+                {
+                    const char separator_char = ';';
+                    const char next_char = match[die_name_length];
+                    if (next_char == '\0' || next_char == separator_char)
+                    {
+                        if (match == dont_complete_typenames_cstr || match[-1] == separator_char)
+                            return false;
+                    }
+                    match = strstr(match+1, die_name);
+                }
+            }
+        }
+    }
+#endif
 
     const dw_tag_t tag = die.Tag();
 

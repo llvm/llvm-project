@@ -17,6 +17,7 @@
 #include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <set>
+#include <utility>
 
 using namespace lld;
 
@@ -260,7 +261,7 @@ static bool compareAtoms(const LayoutPass::SortKey &lc,
 }
 
 LayoutPass::LayoutPass(const Registry &registry, SortOverride sorter)
-  : _registry(registry), _customSorter(sorter) {}
+    : _registry(registry), _customSorter(std::move(sorter)) {}
 
 // Returns the atom immediately followed by the given atom in the followon
 // chain.

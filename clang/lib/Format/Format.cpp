@@ -1469,6 +1469,20 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   StringRef FileName = Replaces.begin()->getFilePath();
   IncludeCategoryManager Categories(Style, FileName);
 
+  std::unique_ptr<Environment> Env =
+      Environment::CreateVirtualEnvironment(Code, FileName, /*Ranges=*/{});
+  const SourceManager &SourceMgr = Env->getSourceManager();
+  Lexer Lex(Env->getFileID(), SourceMgr.getBuffer(Env->getFileID()), SourceMgr,
+            getFormattingLangOpts(Style));
+  Token Tok;
+  // All new headers should be inserted after this offset.
+  int MinInsertOffset = Code.size();
+  while (!Lex.LexFromRawLexer(Tok)) {
+    if (Tok.isNot(tok::comment)) {
+      MinInsertOffset = SourceMgr.getFileOffset(Tok.getLocation());
+      break;
+    }
+  }
   // Record the offset of the end of the last include in each category.
   std::map<int, int> CategoryEndOffsets;
   // All possible priorities.
@@ -1477,10 +1491,11 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   for (const auto &Category : Style.IncludeCategories)
     Priorities.insert(Category.Priority);
   int FirstIncludeOffset = -1;
-  int Offset = 0;
-  int AfterHeaderGuard = 0;
+  bool HeaderGuardFound = false;
+  StringRef TrimmedCode = Code.drop_front(MinInsertOffset);
   SmallVector<StringRef, 32> Lines;
-  Code.split(Lines, '\n');
+  TrimmedCode.split(Lines, '\n');
+  int Offset = MinInsertOffset;
   for (auto Line : Lines) {
     if (IncludeRegex.match(Line, &Matches)) {
       StringRef IncludeName = Matches[2];
@@ -1492,22 +1507,22 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     }
     Offset += Line.size() + 1;
     // FIXME: make header guard matching stricter, e.g. consider #ifndef.
-    if (AfterHeaderGuard == 0 && DefineRegex.match(Line))
-      AfterHeaderGuard = Offset;
+    if (!HeaderGuardFound && DefineRegex.match(Line)) {
+      HeaderGuardFound = true;
+      MinInsertOffset = Offset;
+    }
   }
 
   // Populate CategoryEndOfssets:
   // - Ensure that CategoryEndOffset[Highest] is always populated.
   // - If CategoryEndOffset[Priority] isn't set, use the next higher value that
   //   is set, up to CategoryEndOffset[Highest].
-  // FIXME: skip comment section in the beginning of the code if there is no
-  // existing #include and #define.
   auto Highest = Priorities.begin();
   if (CategoryEndOffsets.find(*Highest) == CategoryEndOffsets.end()) {
     if (FirstIncludeOffset >= 0)
       CategoryEndOffsets[*Highest] = FirstIncludeOffset;
     else
-      CategoryEndOffsets[*Highest] = AfterHeaderGuard;
+      CategoryEndOffsets[*Highest] = MinInsertOffset;
   }
   // By this point, CategoryEndOffset[Highest] is always set appropriately:
   //  - to an appropriate location before/after existing #includes, or

@@ -124,7 +124,7 @@ pointee type has to be written twice: in the declaration type and in the
 
   // becomes
 
-  auto my_pointer = new TypeName(my_param);
+  auto *my_pointer = new TypeName(my_param);
 
 The check will also replace the declaration type in multiple declarations, if
 the following conditions are satisfied:
@@ -141,7 +141,7 @@ the following conditions are satisfied:
 
   // becomes
 
-  auto my_first_pointer = new TypeName, my_second_pointer = new TypeName;
+  auto *my_first_pointer = new TypeName, *my_second_pointer = new TypeName;
 
 Known Limitations
 -----------------
@@ -150,3 +150,20 @@ Known Limitations
 
 * User-defined iterators are not handled at this time.
 
+RemoveStars option
+------------------
+If the option is set to non-zero (default is `0`), the check will remove stars
+from the non-typedef pointer types when replacing type names with ``auto``.
+Otherwise, the check will leave stars. For example:
+
+.. code-block:: c++
+
+  TypeName *my_first_pointer = new TypeName, *my_second_pointer = new TypeName;
+
+  // RemoveStars = 0
+
+  auto *my_first_pointer = new TypeName, *my_second_pointer = new TypeName;
+
+  // RemoveStars = 1
+
+  auto my_first_pointer = new TypeName, my_second_pointer = new TypeName;

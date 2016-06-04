@@ -66,6 +66,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
   // This is to support nested classes which aren't recorded in the database.
   // Eventually we will either hit a class (namespaces aren't in the database
   // either) and can report that result.
+  bool TookPrefix = false;
   std::vector<std::string> Results;
   while (Results.empty() && !Names.empty()) {
     std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
@@ -109,6 +110,16 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
         // FIXME: Support full match. At this point, we only find symbols in
         // database which end with the same contexts with the identifier.
         if (IsMatched && IdentiferContext == Names.rend()) {
+          // If we're in a situation where we took a prefix but the thing we
+          // found couldn't possibly have a nested member ignore it.
+          if (TookPrefix &&
+              (Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Function ||
+               Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Variable ||
+               Symbol.getSymbolKind() ==
+                   SymbolInfo::SymbolKind::EnumConstantDecl ||
+               Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Macro))
+            continue;
+
           // FIXME: file path should never be in the form of <...> or "...", but
           // the unit test with fixed database use <...> file path, which might
           // need to be changed.
@@ -122,6 +133,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
       }
     }
     Names.pop_back();
+    TookPrefix = true;
   }
 
   return Results;

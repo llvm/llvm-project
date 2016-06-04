@@ -43,3 +43,11 @@ FilePath:        ../include/zbar.h
 LineNumber:      1
 Type:            Class
 NumOccurrences:  3
+---
+Name:           b
+Contexts:
+FilePath:        var.h
+LineNumber:      1
+Type:            Variable
+NumOccurrences:  1
+...

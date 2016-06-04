@@ -2282,12 +2282,14 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
                              .Case("crypto", "+crypto")
                              .Case("fp16", "+fullfp16")
                              .Case("profile", "+spe")
+                             .Case("ras", "+ras")
                              .Case("nofp", "-fp-armv8")
                              .Case("nosimd", "-neon")
                              .Case("nocrc", "-crc")
                              .Case("nocrypto", "-crypto")
                              .Case("nofp16", "-fullfp16")
                              .Case("noprofile", "-spe")
+                             .Case("noras", "-ras")
                              .Default(nullptr);
     if (result)
       Features.push_back(result);

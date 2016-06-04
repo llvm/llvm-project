@@ -121,7 +121,7 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
 static __inline__  __m128i __DEFAULT_FN_ATTRS
 _mm_mullo_epi32 (__m128i __V1, __m128i __V2)
 {
-  return (__m128i) ((__v4si)__V1 * (__v4si)__V2);
+  return (__m128i) ((__v4su)__V1 * (__v4su)__V2);
 }
 
 static __inline__  __m128i __DEFAULT_FN_ATTRS

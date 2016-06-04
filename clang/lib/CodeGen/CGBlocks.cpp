@@ -2294,8 +2294,9 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
     TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
     DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 
-    assert((isa<llvm::Function>(C) || isa<llvm::GlobalValue>(C)) &&
-           "expected Function or GlobalValue");
+    assert((isa<llvm::Function>(C->stripPointerCasts()) ||
+            isa<llvm::GlobalVariable>(C->stripPointerCasts())) &&
+           "expected Function or GlobalVariable");
 
     const NamedDecl *ND = nullptr;
     for (const auto &Result : DC->lookup(&II))

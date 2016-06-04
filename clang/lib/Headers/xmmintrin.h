@@ -30,6 +30,9 @@ typedef int __v4si __attribute__((__vector_size__(16)));
 typedef float __v4sf __attribute__((__vector_size__(16)));
 typedef float __m128 __attribute__((__vector_size__(16)));
 
+/* Unsigned types */
+typedef unsigned int __v4su __attribute__((__vector_size__(16)));
+
 /* This header should only be included in a hosted environment as it depends on
  * a standard library to provide allocation routines. */
 #if __STDC_HOSTED__
@@ -414,7 +417,7 @@ _mm_max_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_and_ps(__m128 __a, __m128 __b)
 {
-  return (__m128)((__v4si)__a & (__v4si)__b);
+  return (__m128)((__v4su)__a & (__v4su)__b);
 }
 
 /// \brief Performs a bitwise AND of two 128-bit vectors of [4 x float], using
@@ -436,7 +439,7 @@ _mm_and_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_andnot_ps(__m128 __a, __m128 __b)
 {
-  return (__m128)(~(__v4si)__a & (__v4si)__b);
+  return (__m128)(~(__v4su)__a & (__v4su)__b);
 }
 
 /// \brief Performs a bitwise OR of two 128-bit vectors of [4 x float].
@@ -454,7 +457,7 @@ _mm_andnot_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_or_ps(__m128 __a, __m128 __b)
 {
-  return (__m128)((__v4si)__a | (__v4si)__b);
+  return (__m128)((__v4su)__a | (__v4su)__b);
 }
 
 /// \brief Performs a bitwise exclusive OR of two 128-bit vectors of
@@ -473,7 +476,7 @@ _mm_or_ps(__m128 __a, __m128 __b)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_xor_ps(__m128 __a, __m128 __b)
 {
-  return (__m128)((__v4si)__a ^ (__v4si)__b);
+  return (__m128)((__v4su)__a ^ (__v4su)__b);
 }
 
 /// \brief Compares two 32-bit float values in the low-order bits of both

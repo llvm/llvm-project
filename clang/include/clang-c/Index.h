@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 34
+#define CINDEX_VERSION_MINOR 35
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -3912,7 +3912,7 @@ typedef enum {
   CXObjCPropertyAttr_weak      = 0x200,
   CXObjCPropertyAttr_strong    = 0x400,
   CXObjCPropertyAttr_unsafe_unretained = 0x800,
-  CXObjCPropertyAttr_class = 0x4000
+  CXObjCPropertyAttr_class = 0x1000
 } CXObjCPropertyAttrKind;
 
 /**

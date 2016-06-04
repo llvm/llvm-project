@@ -37,7 +37,7 @@ _mm512_madd52hi_epu64 (__m512i __X, __m512i __Y, __m512i __Z)
   return (__m512i) __builtin_ia32_vpmadd52huq512_mask ((__v8di) __X,
                    (__v8di) __Y,
                    (__v8di) __Z,
-                   (__mmask8) - 1);
+                   (__mmask8) -1);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -65,7 +65,7 @@ _mm512_madd52lo_epu64 (__m512i __X, __m512i __Y, __m512i __Z)
   return (__m512i) __builtin_ia32_vpmadd52luq512_mask ((__v8di) __X,
                    (__v8di) __Y,
                    (__v8di) __Z,
-                   (__mmask8) - 1);
+                   (__mmask8) -1);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS

@@ -243,6 +243,14 @@ StatementMatcher makeDeclWithNewMatcher() {
 
 } // namespace
 
+UseAutoCheck::UseAutoCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      RemoveStars(Options.get("RemoveStars", 0)) {}
+
+void UseAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "RemoveStars", RemoveStars ? 1 : 0);
+}
+
 void UseAutoCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
@@ -311,7 +319,7 @@ void UseAutoCheck::replaceNew(const DeclStmt *D, ASTContext *Context) {
 
   const QualType FirstDeclType = FirstDecl->getType().getCanonicalType();
 
-  std::vector<SourceLocation> StarLocations;
+  std::vector<FixItHint> StarRemovals;
   for (const auto *Dec : D->decls()) {
     const auto *V = cast<VarDecl>(Dec);
     // Ensure that every DeclStmt child is a VarDecl.
@@ -327,19 +335,23 @@ void UseAutoCheck::replaceNew(const DeclStmt *D, ASTContext *Context) {
     if (!Context->hasSameUnqualifiedType(V->getType(), NewExpr->getType()))
       return;
 
-    // Remove explicitly written '*' from declarations where there's more than
-    // one declaration in the declaration list.
-    if (Dec == *D->decl_begin())
-      continue;
-
-    // All subsequent declarations should match the same non-decorated type.
+    // All subsequent variables in this declaration should have the same
+    // canonical type.  For example, we don't want to use `auto` in
+    // `T *p = new T, **pp = new T*;`.
     if (FirstDeclType != V->getType().getCanonicalType())
       return;
 
-    auto Q = V->getTypeSourceInfo()->getTypeLoc().getAs<PointerTypeLoc>();
-    while (!Q.isNull()) {
-      StarLocations.push_back(Q.getStarLoc());
-      Q = Q.getNextTypeLoc().getAs<PointerTypeLoc>();
+    if (RemoveStars) {
+      // Remove explicitly written '*' from declarations where there's more than
+      // one declaration in the declaration list.
+      if (Dec == *D->decl_begin())
+        continue;
+
+      auto Q = V->getTypeSourceInfo()->getTypeLoc().getAs<PointerTypeLoc>();
+      while (!Q.isNull()) {
+        StarRemovals.push_back(FixItHint::CreateRemoval(Q.getStarLoc()));
+        Q = Q.getNextTypeLoc().getAs<PointerTypeLoc>();
+      }
     }
   }
 
@@ -347,19 +359,20 @@ void UseAutoCheck::replaceNew(const DeclStmt *D, ASTContext *Context) {
   // is the same as the initializer, just more CV-qualified. However, TypeLoc
   // information is not reliable where CV qualifiers are concerned so we can't
   // do anything about this case for now.
-  SourceRange Range(
-      FirstDecl->getTypeSourceInfo()->getTypeLoc().getSourceRange());
+  TypeLoc Loc = FirstDecl->getTypeSourceInfo()->getTypeLoc();
+  if (!RemoveStars) {
+    while (Loc.getTypeLocClass() == TypeLoc::Pointer ||
+           Loc.getTypeLocClass() == TypeLoc::Qualified)
+      Loc = Loc.getNextTypeLoc();
+  }
+  SourceRange Range(Loc.getSourceRange());
   auto Diag = diag(Range.getBegin(), "use auto when initializing with new"
                                      " to avoid duplicating the type name");
 
   // Space after 'auto' to handle cases where the '*' in the pointer type is
   // next to the identifier. This avoids changing 'int *p' into 'autop'.
-  Diag << FixItHint::CreateReplacement(Range, "auto ");
-
-  // Remove '*' from declarations using the saved star locations.
-  for (const auto &Loc : StarLocations) {
-    Diag << FixItHint::CreateReplacement(Loc, "");
-  }
+  Diag << FixItHint::CreateReplacement(Range, RemoveStars ? "auto " : "auto")
+       << StarRemovals;
 }
 
 void UseAutoCheck::check(const MatchFinder::MatchResult &Result) {

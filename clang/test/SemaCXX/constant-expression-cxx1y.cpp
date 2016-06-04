@@ -949,3 +949,11 @@ namespace SpeculativeEvalWrites {
 
   static_assert(!f(), "");
 }
+
+namespace PR27989 {
+  constexpr int f(int n) {
+    int a = (n = 1, 0);
+    return n;
+  }
+  static_assert(f(0) == 1, "");
+}

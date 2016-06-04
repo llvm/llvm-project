@@ -33,7 +33,7 @@
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
 _mm256_mullo_epi64 (__m256i __A, __m256i __B) {
-  return (__m256i) ((__v4di) __A * (__v4di) __B);
+  return (__m256i) ((__v4du) __A * (__v4du) __B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
@@ -55,7 +55,7 @@ _mm256_maskz_mullo_epi64 (__mmask8 __U, __m256i __A, __m256i __B) {
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_mullo_epi64 (__m128i __A, __m128i __B) {
-  return (__m128i) ((__v2di) __A * (__v2di) __B);
+  return (__m128i) ((__v2du) __A * (__v2du) __B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
@@ -1107,7 +1107,7 @@ _mm256_broadcast_i32x2 (__m128i __A)
 {
   return (__m256i) __builtin_ia32_broadcasti32x2_256_mask ((__v4si) __A,
                  (__v8si)_mm256_undefined_si256(),
-                 (__mmask8) - 1);
+                 (__mmask8) -1);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
@@ -1131,7 +1131,7 @@ _mm256_broadcast_i64x2 (__m128i __A)
 {
   return (__m256i) __builtin_ia32_broadcasti64x2_256_mask ((__v2di) __A,
                  (__v4di)_mm256_undefined_si256(),
-                 (__mmask8) - 1);
+                 (__mmask8) -1);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
