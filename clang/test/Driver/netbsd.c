@@ -1,5 +1,15 @@
 // RUN: %clang -no-canonical-prefixes -target x86_64--netbsd \
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=STATIC %s
+// RUN: %clang -no-canonical-prefixes -target x86_64--netbsd \
+// RUN: -pie --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=PIE %s
+// RUN: %clang -no-canonical-prefixes -target x86_64--netbsd \
+// RUN: -shared --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=SHARED %s
+
+// RUN: %clang -no-canonical-prefixes -target x86_64--netbsd \
+// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=X86_64 %s
 // RUN: %clang -no-canonical-prefixes -target x86_64--netbsd7.0.0 \
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
@@ -104,6 +114,32 @@
 // RUN: %clang -no-canonical-prefixes -target powerpc64--netbsd -static \
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-POWERPC64 %s
+
+// STATIC: ld{{.*}}"
+// STATIC-NOT: "-pie"
+// STATIC-NOT: "-Bshareable"
+// STATIC: "-dynamic-linker" "/libexec/ld.elf_so"
+// STATIC-NOT: "-pie"
+// STATIC-NOT: "-Bshareable"
+// STATIC: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
+// STATIC: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o"
+// STATIC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// SHARED: ld{{.*}}"
+// SHARED-NOT: "-pie"
+// SHARED-NOT: "-dynamic-linker"
+// SHARED-NOT: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
+// SHARED: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
+// SHARED: "{{.*}}/usr/lib{{/|\\\\}}crtendS.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// PIE: ld{{.*}}"
+// PIE-NOT: "-Bshareable"
+// PIE "-pie" "-dynamic-linker" "/libexec/ld.elf_so"
+// PIE-NOT: "-Bshareable"
+// PIE: "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// PIE: "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
+// PIE: "{{.*}}/usr/lib{{/|\\\\}}crtendS.o"
+// PIE: "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // X86_64: clang{{.*}}" "-cc1" "-triple" "x86_64--netbsd"
 // X86_64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"

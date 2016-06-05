@@ -78,10 +78,6 @@ if( NOT CLANG_BUILT_STANDALONE )
   if(TARGET llvm-lto)
     list(APPEND CLANG_TEST_DEPS llvm-lto)
   endif()
-
-  if(TARGET LTO)
-    list(APPEND CLANG_TEST_DEPS LTO)
-  endif()
 endif()
 
 add_custom_target(clang-test-depends DEPENDS ${CLANG_TEST_DEPS})

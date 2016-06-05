@@ -606,7 +606,9 @@ basic_filebuf<_CharT, _Traits>::underflow()
         }
         else
         {
-            memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
+            _LIBCPP_ASSERT ( !(__extbufnext_ == NULL && (__extbufend_ != __extbufnext_)), "underflow moving from NULL" );
+            if (__extbufend_ != __extbufnext_)
+                memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
             __extbufnext_ = __extbuf_ + (__extbufend_ - __extbufnext_);
             __extbufend_ = __extbuf_ + (__extbuf_ == __extbuf_min_ ? sizeof(__extbuf_min_) : __ebs_);
             size_t __nmemb = _VSTD::min(static_cast<size_t>(__ibs_ - __unget_sz),
