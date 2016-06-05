@@ -209,9 +209,29 @@ define i1 @test19(i32 %X) {
 ; CHECK-NEXT:    [[Z:%.*]] = icmp slt i32 %X, 12345
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
-  %c = sext i32 %X to i64         ; <i64> [#uses=1]
-  %Z = icmp slt i64 %c, 12345             ; <i1> [#uses=1]
+  %c = sext i32 %X to i64
+  %Z = icmp slt i64 %c, 12345
   ret i1 %Z
+}
+
+define <2 x i1> @test19vec(<2 x i32> %X) {
+; CHECK-LABEL: @test19vec(
+; CHECK-NEXT:    [[Z:%.*]] = icmp slt <2 x i32> %X, <i32 12345, i32 2147483647>
+; CHECK-NEXT:    ret <2 x i1> [[Z]]
+;
+  %c = sext <2 x i32> %X to <2 x i64>
+  %Z = icmp slt <2 x i64> %c, <i64 12345, i64 2147483647>
+  ret <2 x i1> %Z
+}
+
+define <3 x i1> @test19vec2(<3 x i1> %X) {
+; CHECK-LABEL: @test19vec2(
+; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq <3 x i1> %X, zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[CMPEQ]]
+;
+  %sext = sext <3 x i1> %X to <3 x i32>
+  %cmpeq = icmp eq <3 x i32> %sext, zeroinitializer
+  ret <3 x i1> %cmpeq
 }
 
 define i1 @test20(i1 %B) {

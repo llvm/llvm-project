@@ -64,7 +64,7 @@ public:
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
-  void visitUnknownMember(TypeLeafKind Leaf);
+  void visitUnknownType(TypeLeafKind Leaf, ArrayRef<uint8_t> RecordData);
 
   void visitTypeBegin(TypeLeafKind Leaf, ArrayRef<uint8_t> RecordData);
   void visitTypeEnd(TypeLeafKind Leaf, ArrayRef<uint8_t> RecordData);
@@ -124,7 +124,8 @@ void TypeStreamMerger::visitFieldList(TypeLeafKind Leaf,
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
-void TypeStreamMerger::visitUnknownMember(TypeLeafKind LF) {
+void TypeStreamMerger::visitUnknownType(TypeLeafKind Leaf,
+                                        ArrayRef<uint8_t> RecordData) {
   // We failed to translate a type. Translate this index as "not translated".
   IndexMap.push_back(
       TypeIndex(SimpleTypeKind::NotTranslated, SimpleTypeMode::Direct));

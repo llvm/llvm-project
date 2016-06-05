@@ -153,6 +153,77 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
   // TODO: Handle funny-looking vectors too.
 }
 
+void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
+                         SmallVectorImpl<int> &ShuffleMask) {
+  Type *MaskTy = C->getType();
+
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  if (MaskTySize != 128 && MaskTySize != 256)
+    return;
+
+  // Only support vector types.
+  if (!MaskTy->isVectorTy())
+    return;
+
+  // Make sure its an integer type.
+  Type *VecEltTy = MaskTy->getVectorElementType();
+  if (!VecEltTy->isIntegerTy())
+    return;
+
+  // Support any element type from byte up to element size.
+  // This is necessary primarily because 64-bit elements get split to 32-bit
+  // in the constant pool on 32-bit target.
+  unsigned EltTySize = VecEltTy->getIntegerBitWidth();
+  if (EltTySize < 8 || EltTySize > ElSize)
+    return;
+
+  unsigned NumElements = MaskTySize / ElSize;
+  assert((NumElements == 2 || NumElements == 4 || NumElements == 8) &&
+         "Unexpected number of vector elements.");
+  ShuffleMask.reserve(NumElements);
+  unsigned NumElementsPerLane = 128 / ElSize;
+  unsigned Factor = ElSize / EltTySize;
+
+  for (unsigned i = 0; i < NumElements; ++i) {
+    Constant *COp = C->getAggregateElement(i * Factor);
+    if (!COp) {
+      ShuffleMask.clear();
+      return;
+    } else if (isa<UndefValue>(COp)) {
+      ShuffleMask.push_back(SM_SentinelUndef);
+      continue;
+    }
+
+    // VPERMIL2 Operation.
+    // Bits[3] - Match Bit.
+    // Bits[2:1] - (Per Lane) PD Shuffle Mask.
+    // Bits[2:0] - (Per Lane) PS Shuffle Mask.
+    uint64_t Selector = cast<ConstantInt>(COp)->getZExtValue();
+    int MatchBit = (Selector >> 3) & 0x1;
+
+    // M2Z[0:1]     MatchBit
+    //   0Xb           X        Source selected by Selector index.
+    //   10b           0        Source selected by Selector index.
+    //   10b           1        Zero.
+    //   11b           0        Zero.
+    //   11b           1        Source selected by Selector index.
+    if ((M2Z & 0x2) != 0 && MatchBit != (M2Z & 0x1)) {
+      ShuffleMask.push_back(SM_SentinelZero);
+      continue;
+    }
+
+    int Index = Selector & 0x3;
+    Index >>= (ElSize == 64 ? 1 : 0);
+    Index += (i / NumElementsPerLane) * NumElementsPerLane;
+
+    int Src = (Selector >> 2) & 0x1;
+    Index += Src * NumElements;
+    ShuffleMask.push_back(Index);
+  }
+
+  // TODO: Handle funny-looking vectors too.
+}
+
 void DecodeVPPERMMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask) {
   Type *MaskTy = C->getType();
   assert(MaskTy->getPrimitiveSizeInBits() == 128);

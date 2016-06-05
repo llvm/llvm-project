@@ -95,10 +95,94 @@ define <16 x i8> @vpperm_shuffle_general(<16 x i8> %a0, <16 x i8> %a1) {
 ; VPERMIL2
 ;
 
-declare <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
-declare <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double>, <4 x double>, <4 x double>, i8) nounwind readnone
+define <2 x double> @vpermil2pd_21(<2 x double> %a0, <2 x double> %a1) {
+; X32-LABEL: vpermil2pd_21:
+; X32:       # BB#0:
+; X32-NEXT:    vpermil2pd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X32-NEXT:    retl
+;
+; X64-LABEL: vpermil2pd_21:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2pd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X64-NEXT:    retq
+  %1 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x i64> <i64 4, i64 2>, i8 0)
+  ret <2 x double> %1
+}
 
-declare <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
-declare <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float>, <8 x float>, <8 x float>, i8) nounwind readnone
+define <4 x double> @vpermil2pd256_0062(<4 x double> %a0, <4 x double> %a1) {
+; X32-LABEL: vpermil2pd256_0062:
+; X32:       # BB#0:
+; X32-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm0[0,0],ymm1[2],ymm0[2]
+; X32-NEXT:    retl
+;
+; X64-LABEL: vpermil2pd256_0062:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm0[0,0],ymm1[2],ymm0[2]
+; X64-NEXT:    retq
+  %1 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> <i64 0, i64 0, i64 4, i64 0>, i8 0)
+  ret <4 x double> %1
+}
+
+define <4 x double> @vpermil2pd256_zz73(<4 x double> %a0, <4 x double> %a1) {
+; X32-LABEL: vpermil2pd256_zz73:
+; X32:       # BB#0:
+; X32-NEXT:    vpermil2pd {{.*#+}} ymm0 = zero,zero,ymm1[3],ymm0[3]
+; X32-NEXT:    retl
+;
+; X64-LABEL: vpermil2pd256_zz73:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2pd {{.*#+}} ymm0 = zero,zero,ymm1[3],ymm0[3]
+; X64-NEXT:    retq
+  %1 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> <i64 0, i64 0, i64 14, i64 10>, i8 3)
+  ret <4 x double> %1
+}
+
+define <4 x float> @vpermil2ps_0561(<4 x float> %a0, <4 x float> %a1) {
+; X32-LABEL: vpermil2ps_0561:
+; X32:       # BB#0:
+; X32-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[1]
+; X32-NEXT:    retl
+;
+; X64-LABEL: vpermil2ps_0561:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2ps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[1]
+; X64-NEXT:    retq
+  %1 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 5, i32 6, i32 1>, i8 0)
+  ret <4 x float> %1
+}
+
+define <8 x float> @vpermil2ps256_098144FE(<8 x float> %a0, <8 x float> %a1) {
+; X32-LABEL: vpermil2ps256_098144FE:
+; X32:       # BB#0:
+; X32-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm0[0],ymm1[1,0],ymm0[1,4,4],ymm1[7,6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: vpermil2ps256_098144FE:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm0[0],ymm1[1,0],ymm0[1,4,4],ymm1[7,6]
+; X64-NEXT:    retq
+  %1 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 5, i32 4, i32 1, i32 0, i32 0, i32 7, i32 6>, i8 0)
+  ret <8 x float> %1
+}
+
+define <8 x float> @vpermil2ps256_0zz8BzzA(<8 x float> %a0, <8 x float> %a1) {
+; X32-LABEL: vpermil2ps256_0zz8BzzA:
+; X32:       # BB#0:
+; X32-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm0[0],zero,zero,ymm1[0,7],zero,zero,ymm1[6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: vpermil2ps256_0zz8BzzA:
+; X64:       # BB#0:
+; X64-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm0[0],zero,zero,ymm1[0,7],zero,zero,ymm1[6]
+; X64-NEXT:    retq
+  %1 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 8, i32 8, i32 4, i32 7, i32 8, i32 8, i32 6>, i8 2)
+  ret <8 x float> %1
+}
+
+declare <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double>, <2 x double>, <2 x i64>, i8) nounwind readnone
+declare <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double>, <4 x double>, <4 x i64>, i8) nounwind readnone
+
+declare <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float>, <4 x float>, <4 x i32>, i8) nounwind readnone
+declare <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float>, <8 x float>, <8 x i32>, i8) nounwind readnone
 
 declare <16 x i8> @llvm.x86.xop.vpperm(<16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone

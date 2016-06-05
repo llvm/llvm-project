@@ -4,6 +4,10 @@
 ; RUN: not grep '_GLOBAL__sub_I_global-ctor' %T/global-ctor.gcno
 ; RUN: rm %T/global-ctor.gcno
 
+; RUN: opt -passes=insert-gcov-profiling -disable-output < %t2
+; RUN: not grep '_GLOBAL__sub_I_global-ctor' %T/global-ctor.gcno
+; RUN: rm %T/global-ctor.gcno
+
 @x = global i32 0, align 4
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_global-ctor.ll, i8* null }]
 

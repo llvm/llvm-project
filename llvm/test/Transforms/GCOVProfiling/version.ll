@@ -8,6 +8,14 @@
 ; RUN: head -c8 %T/version.gcno | grep '^oncg.704'
 ; RUN: rm %T/version.gcno
 
+; RUN: opt -passes=insert-gcov-profiling -disable-output < %t2
+; RUN: head -c8 %T/version.gcno | grep '^oncg.204'
+; RUN: rm %T/version.gcno
+; RUN: not opt -passes=insert-gcov-profiling -default-gcov-version=asdfasdf -disable-output < %t2
+; RUN: opt -passes=insert-gcov-profiling -default-gcov-version=407* -disable-output < %t2
+; RUN: head -c8 %T/version.gcno | grep '^oncg.704'
+; RUN: rm %T/version.gcno
+
 define void @test() !dbg !5 {
   ret void, !dbg !8
 }

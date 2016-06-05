@@ -4,6 +4,10 @@
 ; RUN: grep _Z3foov %T/linkagename.gcno
 ; RUN: rm %T/linkagename.gcno
 
+; RUN: opt -passes=insert-gcov-profiling -disable-output < %t2
+; RUN: grep _Z3foov %T/linkagename.gcno
+; RUN: rm %T/linkagename.gcno
+
 define void @_Z3foov() !dbg !5 {
 entry:
   ret void, !dbg !8

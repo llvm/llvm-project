@@ -104,7 +104,7 @@ TypeIndex TypeTableBuilder::writeArray(const ArrayRecord &Record) {
 TypeIndex TypeTableBuilder::writeClass(const ClassRecord &Record) {
   assert((Record.getKind() == TypeRecordKind::Struct) ||
          (Record.getKind() == TypeRecordKind::Class) ||
-         (Record.getKind() == TypeRecordKind::Union));
+         (Record.getKind() == TypeRecordKind::Interface));
 
   TypeRecordBuilder Builder(Record.getKind());
 

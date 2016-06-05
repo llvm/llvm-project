@@ -62,7 +62,7 @@ define <8 x float> @combine_vpermil2ps256_identity(<8 x float> %a0, <8 x float> 
 define <4 x float> @combine_vpermil2ps_blend_with_zero(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: combine_vpermil2ps_blend_with_zero:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpermil2ps $2, {{.*}}(%rip), %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpermil2ps {{.*#+}} xmm0 = zero,xmm0[1,2,3]
 ; CHECK-NEXT:    retq
   %res0 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 8, i32 1, i32 2, i32 3>, i8 2)
   ret <4 x float> %res0

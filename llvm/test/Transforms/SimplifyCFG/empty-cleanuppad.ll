@@ -434,6 +434,30 @@ try.cont:
   ret i32 0
 }
 
+; CHECK-LABEL: define void @f10(
+define void @f10(i32 %V) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  invoke void @g()
+          to label %unreachable unwind label %cleanup
+; CHECK:       call void @g()
+; CHECK-NEXT:  unreachable
+
+unreachable:
+  unreachable
+
+cleanup:
+  %cp = cleanuppad within none []
+  switch i32 %V, label %cleanupret1 [
+    i32 0, label %cleanupret2
+  ]
+
+cleanupret1:
+  cleanupret from %cp unwind to caller
+
+cleanupret2:
+  cleanupret from %cp unwind to caller
+}
+
 %struct.S = type { i8 }
 %struct.S2 = type { i8 }
 declare void @"\01??1S2@@QEAA@XZ"(%struct.S2*)

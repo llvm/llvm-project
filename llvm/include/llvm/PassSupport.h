@@ -26,30 +26,12 @@
 #include "llvm/PassInfo.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Atomic.h"
+#include "llvm/Support/Threading.h"
+#include <functional>
 
 namespace llvm {
 
 class TargetMachine;
-
-#define CALL_ONCE_INITIALIZATION(function)                                     \
-  static volatile sys::cas_flag initialized = 0;                               \
-  sys::cas_flag old_val = sys::CompareAndSwap(&initialized, 1, 0);             \
-  if (old_val == 0) {                                                          \
-    function(Registry);                                                        \
-    sys::MemoryFence();                                                        \
-    TsanIgnoreWritesBegin();                                                   \
-    TsanHappensBefore(&initialized);                                           \
-    initialized = 2;                                                           \
-    TsanIgnoreWritesEnd();                                                     \
-  } else {                                                                     \
-    sys::cas_flag tmp = initialized;                                           \
-    sys::MemoryFence();                                                        \
-    while (tmp != 2) {                                                         \
-      tmp = initialized;                                                       \
-      sys::MemoryFence();                                                      \
-    }                                                                          \
-  }                                                                            \
-  TsanHappensAfter(&initialized);
 
 #define INITIALIZE_PASS(passName, arg, name, cfg, analysis)                    \
   static void *initialize##passName##PassOnce(PassRegistry &Registry) {        \
@@ -59,8 +41,10 @@ class TargetMachine;
     Registry.registerPass(*PI, true);                                          \
     return PI;                                                                 \
   }                                                                            \
+  LLVM_DEFINE_ONCE_FLAG(Initialize##passName##PassFlag);                       \
   void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    CALL_ONCE_INITIALIZATION(initialize##passName##PassOnce)                   \
+    llvm::call_once(Initialize##passName##PassFlag,                            \
+                    initialize##passName##PassOnce, std::ref(Registry));       \
   }
 
 #define INITIALIZE_PASS_BEGIN(passName, arg, name, cfg, analysis)              \
@@ -77,8 +61,10 @@ class TargetMachine;
   Registry.registerPass(*PI, true);                                            \
   return PI;                                                                   \
   }                                                                            \
+  LLVM_DEFINE_ONCE_FLAG(Initialize##passName##PassFlag);                       \
   void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    CALL_ONCE_INITIALIZATION(initialize##passName##PassOnce)                   \
+    llvm::call_once(Initialize##passName##PassFlag,                            \
+                    initialize##passName##PassOnce, std::ref(Registry));       \
   }
 
 #define INITIALIZE_PASS_WITH_OPTIONS(PassName, Arg, Name, Cfg, Analysis)       \
@@ -166,8 +152,11 @@ struct RegisterAnalysisGroup : public RegisterAGBase {
     Registry.registerAnalysisGroup(&agName::ID, 0, *AI, false, true);          \
     return AI;                                                                 \
   }                                                                            \
+  LLVM_DEFINE_ONCE_FLAG(Initialize##agName##AnalysisGroupFlag);                \
   void llvm::initialize##agName##AnalysisGroup(PassRegistry &Registry) {       \
-    CALL_ONCE_INITIALIZATION(initialize##agName##AnalysisGroupOnce)            \
+    llvm::call_once(Initialize##agName##AnalysisGroupFlag,                     \
+                    initialize##agName##AnalysisGroupOnce,                     \
+                    std::ref(Registry));                                       \
   }
 
 #define INITIALIZE_AG_PASS(passName, agName, arg, name, cfg, analysis, def)    \
@@ -184,8 +173,10 @@ struct RegisterAnalysisGroup : public RegisterAGBase {
                                    true);                                      \
     return AI;                                                                 \
   }                                                                            \
+  LLVM_DEFINE_ONCE_FLAG(Initialize##passName##PassFlag);                       \
   void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    CALL_ONCE_INITIALIZATION(initialize##passName##PassOnce)                   \
+    llvm::call_once(Initialize##passName##PassFlag,                            \
+                    initialize##passName##PassOnce, std::ref(Registry));       \
   }
 
 #define INITIALIZE_AG_PASS_BEGIN(passName, agName, arg, n, cfg, analysis, def) \
@@ -203,8 +194,10 @@ struct RegisterAnalysisGroup : public RegisterAGBase {
   Registry.registerAnalysisGroup(&agName::ID, &passName::ID, *AI, def, true);  \
   return AI;                                                                   \
   }                                                                            \
+  LLVM_DEFINE_ONCE_FLAG(Initialize##passName##PassFlag);                       \
   void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    CALL_ONCE_INITIALIZATION(initialize##passName##PassOnce)                   \
+    llvm::call_once(Initialize##passName##PassFlag,                            \
+                    initialize##passName##PassOnce, std::ref(Registry));       \
   }
 
 //===---------------------------------------------------------------------------

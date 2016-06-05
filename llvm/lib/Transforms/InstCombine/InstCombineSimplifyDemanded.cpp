@@ -768,6 +768,7 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         // TODO: Could compute known zero/one bits based on the input.
         break;
       }
+      case Intrinsic::x86_mmx_pmovmskb:
       case Intrinsic::x86_sse_movmsk_ps:
       case Intrinsic::x86_sse2_movmsk_pd:
       case Intrinsic::x86_sse2_pmovmskb_128:
@@ -776,9 +777,14 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       case Intrinsic::x86_avx2_pmovmskb: {
         // MOVMSK copies the vector elements' sign bits to the low bits
         // and zeros the high bits.
-        auto Arg = II->getArgOperand(0);
-        auto ArgType = cast<VectorType>(Arg->getType());
-        unsigned ArgWidth = ArgType->getNumElements();
+        unsigned ArgWidth;
+        if (II->getIntrinsicID() == Intrinsic::x86_mmx_pmovmskb) {
+          ArgWidth = 8; // Arg is x86_mmx, but treated as <8 x i8>.
+        } else {
+          auto Arg = II->getArgOperand(0);
+          auto ArgType = cast<VectorType>(Arg->getType());
+          ArgWidth = ArgType->getNumElements();
+        }
 
         // If we don't need any of low bits then return zero,
         // we know that DemandedMask is non-zero already.
