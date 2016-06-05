@@ -2374,11 +2374,10 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
   return nullptr;
 }
 
-/// visitICmpInstWithCastAndCast - Handle icmp (cast x to y), (cast/cst).
-/// We only handle extending casts so far.
-///
-Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICI) {
-  const CastInst *LHSCI = cast<CastInst>(ICI.getOperand(0));
+/// Handle icmp (cast x to y), (cast/cst). We only handle extending casts so
+/// far.
+Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICmp) {
+  const CastInst *LHSCI = cast<CastInst>(ICmp.getOperand(0));
   Value *LHSCIOp        = LHSCI->getOperand(0);
   Type *SrcTy     = LHSCIOp->getType();
   Type *DestTy    = LHSCI->getType();
@@ -2389,7 +2388,7 @@ Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICI) {
   if (LHSCI->getOpcode() == Instruction::PtrToInt &&
       DL.getPointerTypeSizeInBits(SrcTy) == DestTy->getIntegerBitWidth()) {
     Value *RHSOp = nullptr;
-    if (PtrToIntOperator *RHSC = dyn_cast<PtrToIntOperator>(ICI.getOperand(1))) {
+    if (auto *RHSC = dyn_cast<PtrToIntOperator>(ICmp.getOperand(1))) {
       Value *RHSCIOp = RHSC->getOperand(0);
       if (RHSCIOp->getType()->getPointerAddressSpace() ==
           LHSCIOp->getType()->getPointerAddressSpace()) {
@@ -2398,11 +2397,12 @@ Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICI) {
         if (LHSCIOp->getType() != RHSOp->getType())
           RHSOp = Builder->CreateBitCast(RHSOp, LHSCIOp->getType());
       }
-    } else if (Constant *RHSC = dyn_cast<Constant>(ICI.getOperand(1)))
+    } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
       RHSOp = ConstantExpr::getIntToPtr(RHSC, SrcTy);
+    }
 
     if (RHSOp)
-      return new ICmpInst(ICI.getPredicate(), LHSCIOp, RHSOp);
+      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, RHSOp);
   }
 
   // The code below only handles extension cast instructions, so far.
@@ -2412,9 +2412,9 @@ Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICI) {
     return nullptr;
 
   bool isSignedExt = LHSCI->getOpcode() == Instruction::SExt;
-  bool isSignedCmp = ICI.isSigned();
+  bool isSignedCmp = ICmp.isSigned();
 
-  if (CastInst *CI = dyn_cast<CastInst>(ICI.getOperand(1))) {
+  if (auto *CI = dyn_cast<CastInst>(ICmp.getOperand(1))) {
     // Not an extension from the same type?
     RHSCIOp = CI->getOperand(0);
     if (RHSCIOp->getType() != LHSCIOp->getType())
@@ -2426,42 +2426,41 @@ Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICI) {
       return nullptr;
 
     // Deal with equality cases early.
-    if (ICI.isEquality())
-      return new ICmpInst(ICI.getPredicate(), LHSCIOp, RHSCIOp);
+    if (ICmp.isEquality())
+      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, RHSCIOp);
 
     // A signed comparison of sign extended values simplifies into a
     // signed comparison.
     if (isSignedCmp && isSignedExt)
-      return new ICmpInst(ICI.getPredicate(), LHSCIOp, RHSCIOp);
+      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, RHSCIOp);
 
     // The other three cases all fold into an unsigned comparison.
-    return new ICmpInst(ICI.getUnsignedPredicate(), LHSCIOp, RHSCIOp);
+    return new ICmpInst(ICmp.getUnsignedPredicate(), LHSCIOp, RHSCIOp);
   }
 
-  // If we aren't dealing with a constant on the RHS, exit early
-  ConstantInt *CI = dyn_cast<ConstantInt>(ICI.getOperand(1));
-  if (!CI)
+  // If we aren't dealing with a constant on the RHS, exit early.
+  auto *C = dyn_cast<Constant>(ICmp.getOperand(1));
+  if (!C)
     return nullptr;
 
   // Compute the constant that would happen if we truncated to SrcTy then
-  // reextended to DestTy.
-  Constant *Res1 = ConstantExpr::getTrunc(CI, SrcTy);
-  Constant *Res2 = ConstantExpr::getCast(LHSCI->getOpcode(),
-                                                Res1, DestTy);
+  // re-extended to DestTy.
+  Constant *Res1 = ConstantExpr::getTrunc(C, SrcTy);
+  Constant *Res2 = ConstantExpr::getCast(LHSCI->getOpcode(), Res1, DestTy);
 
   // If the re-extended constant didn't change...
-  if (Res2 == CI) {
+  if (Res2 == C) {
     // Deal with equality cases early.
-    if (ICI.isEquality())
-      return new ICmpInst(ICI.getPredicate(), LHSCIOp, Res1);
+    if (ICmp.isEquality())
+      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, Res1);
 
     // A signed comparison of sign extended values simplifies into a
     // signed comparison.
     if (isSignedExt && isSignedCmp)
-      return new ICmpInst(ICI.getPredicate(), LHSCIOp, Res1);
+      return new ICmpInst(ICmp.getPredicate(), LHSCIOp, Res1);
 
     // The other three cases all fold into an unsigned comparison.
-    return new ICmpInst(ICI.getUnsignedPredicate(), LHSCIOp, Res1);
+    return new ICmpInst(ICmp.getUnsignedPredicate(), LHSCIOp, Res1);
   }
 
   // The re-extended constant changed so the constant cannot be represented
@@ -2478,13 +2477,13 @@ Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICI) {
   // We're performing an unsigned comp with a sign extended value.
   // This is true if the input is >= 0. [aka >s -1]
   Constant *NegOne = Constant::getAllOnesValue(SrcTy);
-  Value *Result = Builder->CreateICmpSGT(LHSCIOp, NegOne, ICI.getName());
+  Value *Result = Builder->CreateICmpSGT(LHSCIOp, NegOne, ICmp.getName());
 
   // Finally, return the value computed.
-  if (ICI.getPredicate() == ICmpInst::ICMP_ULT)
-    return replaceInstUsesWith(ICI, Result);
+  if (ICmp.getPredicate() == ICmpInst::ICMP_ULT)
+    return replaceInstUsesWith(ICmp, Result);
 
-  assert(ICI.getPredicate() == ICmpInst::ICMP_UGT && "ICmp should be folded!");
+  assert(ICmp.getPredicate() == ICmpInst::ICMP_UGT && "ICmp should be folded!");
   return BinaryOperator::CreateNot(Result);
 }
 
@@ -3166,8 +3165,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   /// complex to least complex.  This puts constants before unary operators,
   /// before binary operators.
   if (Op0Cplxity < Op1Cplxity ||
-        (Op0Cplxity == Op1Cplxity &&
-         swapMayExposeCSEOpportunities(Op0, Op1))) {
+      (Op0Cplxity == Op1Cplxity && swapMayExposeCSEOpportunities(Op0, Op1))) {
     I.swapOperands();
     std::swap(Op0, Op1);
     Changed = true;
@@ -3179,8 +3177,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
 
   // comparing -val or val with non-zero is the same as just comparing val
   // ie, abs(val) != 0 -> val != 0
-  if (I.getPredicate() == ICmpInst::ICMP_NE && match(Op1, m_Zero()))
-  {
+  if (I.getPredicate() == ICmpInst::ICMP_NE && match(Op1, m_Zero())) {
     Value *Cond, *SelectTrue, *SelectFalse;
     if (match(Op0, m_Select(m_Value(Cond), m_Value(SelectTrue),
                             m_Value(SelectFalse)))) {

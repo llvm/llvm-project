@@ -1,6 +1,9 @@
 ; RUN: sed -e 's|PATTERN|%/T|g' %s | opt -insert-gcov-profiling -disable-output
 ; RUN: rm %T/linezero.gcno
 
+; RUN: sed -e 's|PATTERN|%/T|g' %s | opt -passes=insert-gcov-profiling -disable-output
+; RUN: rm %T/linezero.gcno
+
 ; This is a crash test.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

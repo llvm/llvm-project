@@ -7,6 +7,16 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; DemandedBits - MOVMSK zeros the upper bits of the result.
 ;
 
+define i32 @test_upper_x86_mmx_pmovmskb(x86_mmx %a0) {
+; CHECK-LABEL: @test_upper_x86_mmx_pmovmskb(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %a0)
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %1 = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %a0)
+  %2 = and i32 %1, 255
+  ret i32 %2
+}
+
 define i32 @test_upper_x86_sse_movmsk_ps(<4 x float> %a0) {
 ; CHECK-LABEL: @test_upper_x86_sse_movmsk_ps(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
@@ -63,6 +73,15 @@ define i32 @test_upper_x86_avx_movmsk_pd_256(<4 x double> %a0) {
 ; DemandedBits - If we don't use the lower bits then we just return zero.
 ;
 
+define i32 @test_lower_x86_mmx_pmovmskb(x86_mmx %a0) {
+; CHECK-LABEL: @test_lower_x86_mmx_pmovmskb(
+; CHECK-NEXT:    ret i32 0
+;
+  %1 = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %a0)
+  %2 = and i32 %1, -256
+  ret i32 %2
+}
+
 define i32 @test_lower_x86_sse_movmsk_ps(<4 x float> %a0) {
 ; CHECK-LABEL: @test_lower_x86_sse_movmsk_ps(
 ; CHECK-NEXT:    ret i32 0
@@ -110,6 +129,7 @@ define i32 @test_lower_x86_avx_movmsk_pd_256(<4 x double> %a0) {
 
 ; llvm.x86.avx2.pmovmskb uses the whole of the 32-bit register.
 
+declare i32 @llvm.x86.mmx.pmovmskb(x86_mmx)
 
 declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>)
 declare i32 @llvm.x86.sse2.movmsk.pd(<2 x double>)

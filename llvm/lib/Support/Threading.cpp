@@ -116,30 +116,3 @@ void llvm::llvm_execute_on_thread(void (*Fn)(void*), void *UserData,
 }
 
 #endif
-
-void llvm::call_once(once_flag &flag, void (*fptr)(void)) {
-#if LLVM_THREADING_USE_STD_CALL_ONCE
-  std::call_once(flag, fptr);
-#else
-  // For other platforms we use a generic (if brittle) version based on our
-  // atomics.
-  sys::cas_flag old_val = sys::CompareAndSwap(&flag, Wait, Uninitialized);
-  if (old_val == Uninitialized) {
-    fptr();
-    sys::MemoryFence();
-    TsanIgnoreWritesBegin();
-    TsanHappensBefore(&flag);
-    flag = Done;
-    TsanIgnoreWritesEnd();
-  } else {
-    // Wait until any thread doing the call has finished.
-    sys::cas_flag tmp = flag;
-    sys::MemoryFence();
-    while (tmp != Done) {
-      tmp = flag;
-      sys::MemoryFence();
-    }
-  }
-  TsanHappensAfter(&flag);
-#endif
-}

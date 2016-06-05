@@ -32,6 +32,10 @@ void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask);
 void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
                         SmallVectorImpl<int> &ShuffleMask);
 
+/// Decode a VPERMILP2 variable mask from an IR-level vector constant.
+void DecodeVPERMIL2PMask(const Constant *C, unsigned MatchImm, unsigned ElSize,
+                         SmallVectorImpl<int> &ShuffleMask);
+
 /// Decode a VPPERM variable mask from an IR-level vector constant.
 void DecodeVPPERMMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask);
 

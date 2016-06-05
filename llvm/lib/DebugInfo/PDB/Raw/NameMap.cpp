@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
-#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
@@ -68,16 +68,16 @@ Error NameMap::load(codeview::StreamReader &Stream) {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Number of present words is too large");
 
-  // Store all the 'present' bits in a vector for later processing.
-  SmallVector<uint32_t, 1> PresentWords;
+  SparseBitVector<> Present;
   for (uint32_t I = 0; I != NumPresentWords; ++I) {
     uint32_t Word;
     if (auto EC = Stream.readInteger(Word))
       return joinErrors(std::move(EC),
                         make_error<RawError>(raw_error_code::corrupt_file,
                                              "Expected name map word"));
-
-    PresentWords.push_back(Word);
+    for (unsigned Idx = 0; Idx < 32; ++Idx)
+      if (Word & (1U << Idx))
+        Present.set((I * 32) + Idx);
   }
 
   // This appears to be a hash table which uses bitfields to determine whether
@@ -93,30 +93,21 @@ Error NameMap::load(codeview::StreamReader &Stream) {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Number of deleted words is too large");
 
-  // Store all the 'deleted' bits in a vector for later processing.
-  SmallVector<uint32_t, 1> DeletedWords;
+  SparseBitVector<> Deleted;
   for (uint32_t I = 0; I != NumDeletedWords; ++I) {
     uint32_t Word;
     if (auto EC = Stream.readInteger(Word))
       return joinErrors(std::move(EC),
                         make_error<RawError>(raw_error_code::corrupt_file,
-                                             "Expected name map deleted word"));
-
-    DeletedWords.push_back(Word);
+                                             "Expected name map word"));
+    for (unsigned Idx = 0; Idx < 32; ++Idx)
+      if (Word & (1U << Idx))
+        Deleted.set((I * 32) + Idx);
   }
 
-  BitVector Present(MaxNumberOfStrings, false);
-  if (!PresentWords.empty())
-    Present.setBitsInMask(PresentWords.data(), PresentWords.size());
-  BitVector Deleted(MaxNumberOfStrings, false);
-  if (!DeletedWords.empty())
-    Deleted.setBitsInMask(DeletedWords.data(), DeletedWords.size());
-
-  for (uint32_t I = 0; I < MaxNumberOfStrings; ++I) {
-    if (!Present.test(I))
-      continue;
-
+  for (unsigned I : Present) {
     // For all present entries, dump out their mapping.
+    (void)I;
 
     // This appears to be an offset relative to the start of the strings.
     // It tells us where the null-terminated string begins.

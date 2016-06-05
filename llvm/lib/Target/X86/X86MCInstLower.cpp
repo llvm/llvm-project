@@ -1422,6 +1422,40 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
     break;
   }
+
+  case X86::VPERMIL2PDrm:
+  case X86::VPERMIL2PSrm:
+  case X86::VPERMIL2PDrmY:
+  case X86::VPERMIL2PSrmY: {
+    if (!OutStreamer->isVerboseAsm())
+      break;
+    assert(MI->getNumOperands() > 7 &&
+      "We should always have at least 7 operands!");
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp1 = MI->getOperand(1);
+    const MachineOperand &SrcOp2 = MI->getOperand(2);
+    const MachineOperand &MaskOp = MI->getOperand(6);
+    const MachineOperand &CtrlOp = MI->getOperand(MI->getNumOperands() - 1);
+
+    if (!CtrlOp.isImm())
+      break;
+
+    unsigned ElSize;
+    switch (MI->getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::VPERMIL2PSrm: case X86::VPERMIL2PSrmY: ElSize = 32; break;
+    case X86::VPERMIL2PDrm: case X86::VPERMIL2PDrmY: ElSize = 64; break;
+    }
+
+    if (auto *C = getConstantFromPool(*MI, MaskOp)) {
+      SmallVector<int, 16> Mask;
+      DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Mask);
+      if (!Mask.empty())
+        OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp1, SrcOp2, Mask));
+    }
+    break;
+  }
+
   case X86::VPPERMrrm: {
     if (!OutStreamer->isVerboseAsm())
       break;

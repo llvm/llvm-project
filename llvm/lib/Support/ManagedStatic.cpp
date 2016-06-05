@@ -32,7 +32,7 @@ static sys::Mutex* getManagedStaticMutex() {
   // We need to use a function local static here, since this can get called
   // during a static constructor and we need to guarantee that it's initialized
   // correctly.
-  call_once(mutex_init_flag, initializeMutex);
+  llvm::call_once(mutex_init_flag, initializeMutex);
   return ManagedStaticMutex;
 }
 

@@ -123,7 +123,7 @@ void initializeEarlyIfConverterPass(PassRegistry&);
 void initializeEdgeBundlesPass(PassRegistry&);
 void initializeExpandPostRAPass(PassRegistry&);
 void initializeAAResultsWrapperPassPass(PassRegistry &);
-void initializeGCOVProfilerPass(PassRegistry&);
+void initializeGCOVProfilerLegacyPassPass(PassRegistry&);
 void initializePGOInstrumentationGenLegacyPassPass(PassRegistry&);
 void initializePGOInstrumentationUseLegacyPassPass(PassRegistry&);
 void initializePGOIndirectCallPromotionLegacyPassPass(PassRegistry&);

@@ -3424,6 +3424,11 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI) {
     // This isn't an empty cleanup.
     return false;
 
+  // We cannot kill the pad if it has multiple uses.  This typically arises
+  // from unreachable basic blocks.
+  if (!CPInst->hasOneUse())
+    return false;
+
   // Check that there are no other instructions except for benign intrinsics.
   BasicBlock::iterator I = CPInst->getIterator(), E = RI->getIterator();
   while (++I != E) {

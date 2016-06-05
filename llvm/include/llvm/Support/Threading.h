@@ -16,12 +16,15 @@
 #define LLVM_SUPPORT_THREADING_H
 
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/Support/Compiler.h"
 #include <ciso646> // So we can check the C++ standard lib macros.
+#include <functional>
 
 // We use std::call_once on all Unix platforms except for NetBSD with
 // libstdc++. That platform has a bug they are working to fix, and they'll
 // remove the NetBSD checks once fixed.
-#if defined(LLVM_ON_UNIX) && !(defined(__NetBSD__) && !defined(_LIBCPP_VERSION))
+#if defined(LLVM_ON_UNIX) &&                                                   \
+    !(defined(__NetBSD__) && !defined(_LIBCPP_VERSION)) && !defined(__ppc__)
 #define LLVM_THREADING_USE_STD_CALL_ONCE 1
 #else
 #define LLVM_THREADING_USE_STD_CALL_ONCE 0
@@ -83,8 +86,35 @@ namespace llvm {
   /// \endcode
   ///
   /// \param flag Flag used for tracking whether or not this has run.
-  /// \param UserFn Function to call once.
-  void call_once(once_flag &flag, void (*UserFn)(void));
+  /// \param F Function to call once.
+  template <typename Function, typename... Args>
+  void call_once(once_flag &flag, Function &&F, Args &&... ArgList) {
+#if LLVM_THREADING_USE_STD_CALL_ONCE
+    std::call_once(flag, std::forward<Function>(F),
+                   std::forward<Args>(ArgList)...);
+#else
+    // For other platforms we use a generic (if brittle) version based on our
+    // atomics.
+    sys::cas_flag old_val = sys::CompareAndSwap(&flag, Wait, Uninitialized);
+    if (old_val == Uninitialized) {
+      std::forward<Function>(F)(std::forward<Args>(ArgList)...);
+      sys::MemoryFence();
+      TsanIgnoreWritesBegin();
+      TsanHappensBefore(&flag);
+      flag = Done;
+      TsanIgnoreWritesEnd();
+    } else {
+      // Wait until any thread doing the call has finished.
+      sys::cas_flag tmp = flag;
+      sys::MemoryFence();
+      while (tmp != Done) {
+        tmp = flag;
+        sys::MemoryFence();
+      }
+    }
+    TsanHappensAfter(&flag);
+#endif
+  }
 }
 
 #endif

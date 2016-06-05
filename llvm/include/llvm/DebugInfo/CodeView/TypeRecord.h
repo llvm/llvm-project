@@ -1061,8 +1061,12 @@ public:
     MethodOptions Options = L->Attrs.getFlags();
     MethodKind MethKind = L->Attrs.getMethodKind();
     MemberAccess Access = L->Attrs.getAccess();
-    return OneMethodRecord(L->Type, MethKind, Options, Access, VFTableOffset,
+    OneMethodRecord Method(L->Type, MethKind, Options, Access, VFTableOffset,
                            Name);
+    // Validate the vftable offset.
+    if (Method.isIntroducingVirtual() && Method.getVFTableOffset() < 0)
+      return std::make_error_code(std::errc::illegal_byte_sequence);
+    return Method;
   }
 
   TypeIndex getType() const { return Type; }
@@ -1122,6 +1126,11 @@ public:
 
       Methods.emplace_back(L->Type, MethKind, Options, Access, VFTableOffset,
                            StringRef());
+
+      // Validate the vftable offset.
+      auto &Method = Methods.back();
+      if (Method.isIntroducingVirtual() && Method.getVFTableOffset() < 0)
+        return std::make_error_code(std::errc::illegal_byte_sequence);
     }
     return MethodOverloadListRecord(Methods);
   }

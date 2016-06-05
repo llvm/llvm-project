@@ -769,6 +769,9 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
   if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::Int32Long) &&
       Ty->getName() == "HRESULT")
     return TypeIndex(SimpleTypeKind::HResult);
+  if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::UInt16Short) &&
+      Ty->getName() == "wchar_t")
+    return TypeIndex(SimpleTypeKind::WideCharacter);
   return UnderlyingTypeIndex;
 }
 
@@ -854,9 +857,8 @@ TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
     STK = SimpleTypeKind::Int32Long;
   if (STK == SimpleTypeKind::UInt32 && Ty->getName() == "long unsigned int")
     STK = SimpleTypeKind::UInt32Long;
-  if ((STK == SimpleTypeKind::Int16Short ||
-       STK == SimpleTypeKind::UInt16Short) &&
-      Ty->getName() == "wchar_t")
+  if (STK == SimpleTypeKind::UInt16Short &&
+      (Ty->getName() == "wchar_t" || Ty->getName() == "__wchar_t"))
     STK = SimpleTypeKind::WideCharacter;
   if ((STK == SimpleTypeKind::SignedCharacter ||
        STK == SimpleTypeKind::UnsignedCharacter) &&

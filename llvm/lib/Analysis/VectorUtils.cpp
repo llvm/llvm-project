@@ -52,6 +52,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::nearbyint:
   case Intrinsic::round:
   case Intrinsic::bswap:
+  case Intrinsic::bitreverse:
   case Intrinsic::ctpop:
   case Intrinsic::pow:
   case Intrinsic::fma:
