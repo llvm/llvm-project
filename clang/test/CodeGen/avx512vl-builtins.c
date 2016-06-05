@@ -557,42 +557,6 @@ __mmask8 test_mm256_mask_cmp_epu64_mask(__mmask8 __u, __m256i __a, __m256i __b) 
   return (__mmask8)_mm256_mask_cmp_epu64_mask(__u, __a, __b, 7);
 }
 
-__m512i test_mm512_maskz_andnot_epi32 (__mmask16 __k,__m512i __A, __m512i __B) {
-  //CHECK-LABEL: @test_mm512_maskz_andnot_epi32
-  //CHECK: @llvm.x86.avx512.mask.pandn.d.512
-  return _mm512_maskz_andnot_epi32(__k,__A,__B);
-}
-
-__m512i test_mm512_mask_andnot_epi32 (__mmask16 __k,__m512i __A, __m512i __B, __m512i __src) {
-  //CHECK-LABEL: @test_mm512_mask_andnot_epi32
-  //CHECK: @llvm.x86.avx512.mask.pandn.d.512
-  return _mm512_mask_andnot_epi32(__src,__k,__A,__B);
-}
-
-__m512i test_mm512_andnot_epi32(__m512i __A, __m512i __B) {
-  //CHECK-LABEL: @test_mm512_andnot_epi32
-  //CHECK: @llvm.x86.avx512.mask.pandn.d.512
-  return _mm512_andnot_epi32(__A,__B);
-}
-
-__m512i test_mm512_maskz_andnot_epi64 (__mmask8 __k,__m512i __A, __m512i __B) {
-  //CHECK-LABEL: @test_mm512_maskz_andnot_epi64
-  //CHECK: @llvm.x86.avx512.mask.pandn.q.512
-  return _mm512_maskz_andnot_epi64(__k,__A,__B);
-}
-
-__m512i test_mm512_mask_andnot_epi64 (__mmask8 __k,__m512i __A, __m512i __B, __m512i __src) {
-  //CHECK-LABEL: @test_mm512_mask_andnot_epi64
-  //CHECK: @llvm.x86.avx512.mask.pandn.q.512
-  return _mm512_mask_andnot_epi64(__src,__k,__A,__B);
-}
-
-__m512i test_mm512_andnot_epi64(__m512i __A, __m512i __B) {
-  //CHECK-LABEL: @test_mm512_andnot_epi64
-  //CHECK: @llvm.x86.avx512.mask.pandn.q.512
-  return _mm512_andnot_epi64(__A,__B);
-}
-
 __m256i test_mm256_mask_add_epi32 (__m256i __W, __mmask8 __U, __m256i __A,
            __m256i __B) {
   //CHECK-LABEL: @test_mm256_mask_add_epi32
