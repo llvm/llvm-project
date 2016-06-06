@@ -7255,19 +7255,16 @@ let TargetPrefix = "x86" in {
                    llvm_i8_ty], [IntrNoMem]>;
 
   def int_x86_avx512_mask_palignr_128 :
-        GCCBuiltin<"__builtin_ia32_palignr128_mask">,
         Intrinsic<[llvm_v16i8_ty],
                   [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty, llvm_v16i8_ty,
                    llvm_i16_ty], [IntrNoMem]>;
 
   def int_x86_avx512_mask_palignr_256 :
-        GCCBuiltin<"__builtin_ia32_palignr256_mask">,
         Intrinsic<[llvm_v32i8_ty],
                   [llvm_v32i8_ty, llvm_v32i8_ty, llvm_i32_ty, llvm_v32i8_ty,
                    llvm_i32_ty], [IntrNoMem]>;
 
   def int_x86_avx512_mask_palignr_512 :
-        GCCBuiltin<"__builtin_ia32_palignr512_mask">,
         Intrinsic<[llvm_v64i8_ty],
                   [llvm_v64i8_ty, llvm_v64i8_ty, llvm_i32_ty, llvm_v64i8_ty,
                    llvm_i64_ty], [IntrNoMem]>;

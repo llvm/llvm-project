@@ -369,9 +369,8 @@ private:
           return LDResolver->findSymbol(Name);
         });
 
-    auto GVsH =
-      LD.getDylibResources().ModuleAdder(BaseLayer, std::move(GVsM),
-				         std::move(GVsResolver));
+    auto GVsH = LD.getDylibResources().ModuleAdder(BaseLayer, std::move(GVsM),
+                                                   std::move(GVsResolver));
     LD.addToLogicalModule(LMH, GVsH);
   }
 
@@ -498,7 +497,7 @@ private:
         });
 
     return LD.getDylibResources().ModuleAdder(BaseLayer, std::move(M),
-					      std::move(Resolver));
+                                              std::move(Resolver));
   }
 
   BaseLayerT &BaseLayer;

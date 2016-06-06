@@ -105,3 +105,33 @@ define <64 x i8>@test_int_x86_avx512_mask_loadu_b_512(i8* %ptr, i8* %ptr2, <64 x
   %res2 = add <64 x i8> %res, %res1
   ret <64 x i8> %res2
 }
+
+declare <64 x i8> @llvm.x86.avx512.mask.palignr.512(<64 x i8>, <64 x i8>, i32, <64 x i8>, i64)
+
+define <64 x i8>@test_int_x86_avx512_mask_palignr_512(<64 x i8> %x0, <64 x i8> %x1, <64 x i8> %x3, i64 %x4) {
+; AVX512BW-LABEL: test_int_x86_avx512_mask_palignr_512:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpalignr $2, %zmm1, %zmm0, %zmm3
+; AVX512BW-NEXT:    kmovq %rdi, %k1
+; AVX512BW-NEXT:    vpalignr $2, %zmm1, %zmm0, %zmm2 {%k1}
+; AVX512BW-NEXT:    vpalignr $2, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vpaddb %zmm3, %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512F-32-LABEL: test_int_x86_avx512_mask_palignr_512:
+; AVX512F-32:       # BB#0:
+; AVX512F-32-NEXT:    vpalignr $2, %zmm1, %zmm0, %zmm3
+; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; AVX512F-32-NEXT:    vpalignr $2, %zmm1, %zmm0, %zmm2 {%k1}
+; AVX512F-32-NEXT:    vpalignr $2, %zmm1, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-32-NEXT:    vpaddb %zmm0, %zmm2, %zmm0
+; AVX512F-32-NEXT:    vpaddb %zmm3, %zmm0, %zmm0
+; AVX512F-32-NEXT:    retl
+  %res = call <64 x i8> @llvm.x86.avx512.mask.palignr.512(<64 x i8> %x0, <64 x i8> %x1, i32 2, <64 x i8> %x3, i64 %x4)
+  %res1 = call <64 x i8> @llvm.x86.avx512.mask.palignr.512(<64 x i8> %x0, <64 x i8> %x1, i32 2, <64 x i8> zeroinitializer, i64 %x4)
+  %res2 = call <64 x i8> @llvm.x86.avx512.mask.palignr.512(<64 x i8> %x0, <64 x i8> %x1, i32 2, <64 x i8> %x3, i64 -1)
+  %res3 = add <64 x i8> %res, %res1
+  %res4 = add <64 x i8> %res3, %res2
+  ret <64 x i8> %res4
+}

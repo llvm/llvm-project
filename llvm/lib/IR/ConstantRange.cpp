@@ -590,7 +590,7 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   // We use the non-wrapped set code to analyze the [Lower, MaxValue) part, and
   // then we do the union with [MaxValue, Upper)
   if (isWrappedSet()) {
-    // if Upper is greater than Max Value, it covers the whole truncated range.
+    // If Upper is greater than Max Value, it covers the whole truncated range.
     if (Upper.uge(MaxValue))
       return ConstantRange(DstTySize, /*isFullSet=*/true);
 
@@ -614,7 +614,7 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
     return ConstantRange(LowerDiv.trunc(DstTySize),
                          UpperDiv.trunc(DstTySize)).unionWith(Union);
 
-  // The truncated value wrapps around. Check if we can do better than fullset.
+  // The truncated value wraps around. Check if we can do better than fullset.
   APInt UpperModulo = UpperDiv - MaxBitValue;
   if (UpperModulo.ult(LowerDiv))
     return ConstantRange(LowerDiv.trunc(DstTySize),

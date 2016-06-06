@@ -2885,6 +2885,7 @@ std::error_code BitcodeReader::parseConstants() {
 
     // Read a record.
     Record.clear();
+    Type *VoidType = Type::getVoidTy(Context);
     Value *V = nullptr;
     unsigned BitCode = Stream.readRecord(Entry.ID, Record);
     switch (BitCode) {
@@ -2897,6 +2898,8 @@ std::error_code BitcodeReader::parseConstants() {
         return error("Invalid record");
       if (Record[0] >= TypeList.size() || !TypeList[Record[0]])
         return error("Invalid record");
+      if (TypeList[Record[0]] == VoidType)
+        return error("Invalid constant type");
       CurTy = TypeList[Record[0]];
       continue;  // Skip the ValueList manipulation.
     case bitc::CST_CODE_NULL:      // NULL
@@ -3103,6 +3106,9 @@ std::error_code BitcodeReader::parseConstants() {
                   ->getElementType())
         return error("Explicit gep operator type does not match pointee type "
                      "of pointer operand");
+
+      if (Elts.size() < 1)
+        return error("Invalid gep with no operands");
 
       ArrayRef<Constant *> Indices(Elts.begin() + 1, Elts.end());
       V = ConstantExpr::getGetElementPtr(PointeeType, Elts[0], Indices,
@@ -5270,6 +5276,7 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       unsigned OpNum = 0;
       Value *Val, *Ptr;
       if (getValueTypePair(Record, OpNum, NextValueNo, Ptr) ||
+          !isa<PointerType>(Ptr->getType()) ||
           (BitCode == bitc::FUNC_CODE_INST_STOREATOMIC
                ? getValueTypePair(Record, OpNum, NextValueNo, Val)
                : popValue(Record, OpNum, NextValueNo,
@@ -5350,6 +5357,7 @@ std::error_code BitcodeReader::parseFunctionBody(Function *F) {
       unsigned OpNum = 0;
       Value *Ptr, *Val;
       if (getValueTypePair(Record, OpNum, NextValueNo, Ptr) ||
+          !isa<PointerType>(Ptr->getType()) ||
           popValue(Record, OpNum, NextValueNo,
                     cast<PointerType>(Ptr->getType())->getElementType(), Val) ||
           OpNum+4 != Record.size())

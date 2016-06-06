@@ -928,6 +928,16 @@ bool llvm::promoteLoopAccessesToScalars(
 
   const DataLayout &MDL = Preheader->getModule()->getDataLayout();
 
+  if (SafetyInfo->MayThrow) {
+    // If a loop can throw, we have to insert a store along each unwind edge.
+    // That said, we can't actually make the unwind edge explicit. Therefore,
+    // we have to prove that the store is dead along the unwind edge.
+    //
+    // Currently, this code just special-cases alloca instructions.
+    if (!isa<AllocaInst>(GetUnderlyingObject(SomePtr, MDL)))
+      return false;
+  }
+
   // Check that all of the pointers in the alias set have the same type.  We
   // cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
