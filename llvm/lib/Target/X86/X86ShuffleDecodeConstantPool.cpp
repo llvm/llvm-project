@@ -212,9 +212,11 @@ void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
       continue;
     }
 
-    int Index = Selector & 0x3;
-    Index >>= (ElSize == 64 ? 1 : 0);
-    Index += (i / NumElementsPerLane) * NumElementsPerLane;
+    int Index = i & ~(NumElementsPerLane - 1);
+    if (ElSize == 64)
+      Index += (Selector >> 1) & 0x1;
+    else
+      Index += Selector & 0x3;
 
     int Src = (Selector >> 2) & 0x1;
     Index += Src * NumElements;

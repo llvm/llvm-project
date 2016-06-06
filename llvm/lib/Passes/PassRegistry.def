@@ -164,4 +164,5 @@ LOOP_PASS("rotate", LoopRotatePass())
 LOOP_PASS("no-op-loop", NoOpLoopPass())
 LOOP_PASS("print", PrintLoopPass(dbgs()))
 LOOP_PASS("simplify-cfg", LoopSimplifyCFGPass())
+LOOP_PASS("indvars", IndVarSimplifyPass())
 #undef LOOP_PASS

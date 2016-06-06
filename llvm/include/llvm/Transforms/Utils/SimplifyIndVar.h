@@ -33,24 +33,14 @@ class ScalarEvolution;
 class IVVisitor {
 protected:
   const DominatorTree *DT;
-  bool ShouldSplitOverflowIntrinsics;
 
   virtual void anchor();
 
 public:
-  IVVisitor(): DT(nullptr), ShouldSplitOverflowIntrinsics(false) {}
+  IVVisitor() : DT(nullptr) {}
   virtual ~IVVisitor() {}
 
   const DominatorTree *getDomTree() const { return DT; }
-
-  bool shouldSplitOverflowInstrinsics() const {
-    return ShouldSplitOverflowIntrinsics;
-  }
-  void setSplitOverflowIntrinsics() {
-    ShouldSplitOverflowIntrinsics = true;
-    assert(DT && "Splitting overflow intrinsics requires a DomTree.");
-  }
-
   virtual void visitCast(CastInst *Cast) = 0;
 };
 

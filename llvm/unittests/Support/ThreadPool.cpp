@@ -135,7 +135,7 @@ TEST_F(ThreadPoolTest, Async) {
 
 TEST_F(ThreadPoolTest, GetFuture) {
   CHECK_UNSUPPORTED();
-  ThreadPool Pool;
+  ThreadPool Pool{2};
   std::atomic_int i{0};
   Pool.async([this, &i] {
     waitForMainThread();

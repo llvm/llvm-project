@@ -138,6 +138,10 @@ void DecodeINSERTQIMask(int Len, int Idx,
 void DecodeVPERMILPMask(MVT VT, ArrayRef<uint64_t> RawMask,
                         SmallVectorImpl<int> &ShuffleMask);
 
+/// Decode a VPERMIL2PD/VPERMIL2PS variable mask from a raw array of constants.
+void DecodeVPERMIL2PMask(MVT VT, unsigned M2Z, ArrayRef<uint64_t> RawMask,
+                         SmallVectorImpl<int> &ShuffleMask);
+
 /// Decode a VPERM W/D/Q/PS/PD mask from a raw array of constants.
 void DecodeVPERMVMask(ArrayRef<uint64_t> RawMask,
                       SmallVectorImpl<int> &ShuffleMask);

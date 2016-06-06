@@ -226,7 +226,7 @@ define <2 x i1> @test19vec(<2 x i32> %X) {
 
 define <3 x i1> @test19vec2(<3 x i1> %X) {
 ; CHECK-LABEL: @test19vec2(
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq <3 x i1> %X, zeroinitializer
+; CHECK-NEXT:    [[CMPEQ:%.*]] = xor <3 x i1> %X, <i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    ret <3 x i1> [[CMPEQ]]
 ;
   %sext = sext <3 x i1> %X to <3 x i32>

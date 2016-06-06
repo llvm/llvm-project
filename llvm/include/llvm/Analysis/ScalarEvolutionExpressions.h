@@ -512,8 +512,8 @@ namespace llvm {
         case scSMaxExpr:
         case scUMaxExpr:
         case scAddRecExpr:
-	  for (const auto *Op : cast<SCEVNAryExpr>(S)->operands())
-	    push(Op);
+          for (const auto *Op : cast<SCEVNAryExpr>(S)->operands())
+            push(Op);
           break;
         case scUDivExpr: {
           const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);

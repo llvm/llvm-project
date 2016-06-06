@@ -21,7 +21,17 @@ For later versions of Visual Studio, no setup is required.
       </ArrayItems>
     </Expand>
   </Type>
-
+  <Type Name="llvm::ArrayRef&lt;*&gt;">
+    <DisplayString Condition="Length == 0">empty</DisplayString>
+    <DisplayString Condition="Length != 0">{{ size={Length} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]">Length</Item>
+      <ArrayItems>
+        <Size>Length</Size>
+        <ValuePointer>Data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
   <Type Name="llvm::SmallString&lt;*&gt;">
     <DisplayString>{BeginX,s}</DisplayString>
     <StringView>BeginX,s</StringView>
@@ -168,6 +178,7 @@ For later versions of Visual Studio, no setup is required.
       <Item Name="[underlying]" Condition="hasVal">*(($T1 *)(unsigned char *)storage.buffer)</Item>
     </Expand>
   </Type>
+
 
   <!-- Since we're in MSVC, we can assume that the system is little endian.  Therefore
        the little and native cases just require a cast.  Handle this easy case first. Use

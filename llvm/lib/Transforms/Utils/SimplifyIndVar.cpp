@@ -76,9 +76,6 @@ namespace {
     void eliminateIVRemainder(BinaryOperator *Rem, Value *IVOperand,
                               bool IsSigned);
     bool strengthenOverflowingOperation(BinaryOperator *OBO, Value *IVOperand);
-
-    Instruction *splitOverflowIntrinsic(Instruction *IVUser,
-                                        const DominatorTree *DT);
   };
 }
 
@@ -552,69 +549,6 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
   return Changed;
 }
 
-/// \brief Split sadd.with.overflow into add + sadd.with.overflow to allow
-/// analysis and optimization.
-///
-/// \return A new value representing the non-overflowing add if possible,
-/// otherwise return the original value.
-Instruction *SimplifyIndvar::splitOverflowIntrinsic(Instruction *IVUser,
-                                                    const DominatorTree *DT) {
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(IVUser);
-  if (!II || II->getIntrinsicID() != Intrinsic::sadd_with_overflow)
-    return IVUser;
-
-  // Find a branch guarded by the overflow check.
-  BranchInst *Branch = nullptr;
-  Instruction *AddVal = nullptr;
-  for (User *U : II->users()) {
-    if (ExtractValueInst *ExtractInst = dyn_cast<ExtractValueInst>(U)) {
-      if (ExtractInst->getNumIndices() != 1)
-        continue;
-      if (ExtractInst->getIndices()[0] == 0)
-        AddVal = ExtractInst;
-      else if (ExtractInst->getIndices()[0] == 1 && ExtractInst->hasOneUse())
-        Branch = dyn_cast<BranchInst>(ExtractInst->user_back());
-    }
-  }
-  if (!AddVal || !Branch)
-    return IVUser;
-
-  BasicBlock *ContinueBB = Branch->getSuccessor(1);
-  if (std::next(pred_begin(ContinueBB)) != pred_end(ContinueBB))
-    return IVUser;
-
-  // Check if all users of the add are provably NSW.
-  bool AllNSW = true;
-  for (Use &U : AddVal->uses()) {
-    if (Instruction *UseInst = dyn_cast<Instruction>(U.getUser())) {
-      BasicBlock *UseBB = UseInst->getParent();
-      if (PHINode *PHI = dyn_cast<PHINode>(UseInst))
-        UseBB = PHI->getIncomingBlock(U);
-      if (!DT->dominates(ContinueBB, UseBB)) {
-        AllNSW = false;
-        break;
-      }
-    }
-  }
-  if (!AllNSW)
-    return IVUser;
-
-  // Go for it...
-  IRBuilder<> Builder(IVUser);
-  Instruction *AddInst = dyn_cast<Instruction>(
-    Builder.CreateNSWAdd(II->getOperand(0), II->getOperand(1)));
-
-  // The caller expects the new add to have the same form as the intrinsic. The
-  // IV operand position must be the same.
-  assert((AddInst->getOpcode() == Instruction::Add &&
-          AddInst->getOperand(0) == II->getOperand(0)) &&
-         "Bad add instruction created from overflow intrinsic.");
-
-  AddVal->replaceAllUsesWith(AddInst);
-  DeadInsts.emplace_back(AddVal);
-  return AddInst;
-}
-
 /// Add all uses of Def to the current IV's worklist.
 static void pushIVUsers(
   Instruction *Def,
@@ -688,12 +622,6 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
 
     // Bypass back edges to avoid extra work.
     if (UseInst == CurrIV) continue;
-
-    if (V && V->shouldSplitOverflowInstrinsics()) {
-      UseInst = splitOverflowIntrinsic(UseInst, V->getDomTree());
-      if (!UseInst)
-        continue;
-    }
 
     Instruction *IVOperand = UseOper.second;
     for (unsigned N = 0; IVOperand; ++N) {
