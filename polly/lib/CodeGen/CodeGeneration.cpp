@@ -191,7 +191,12 @@ public:
     } else {
 
       NodeBuilder.addParameters(S.getContext());
+      SplitBlock = Builder.GetInsertBlock();
 
+      Builder.SetInsertPoint(&StartBlock->front());
+      NodeBuilder.create(AstRoot);
+
+      Builder.SetInsertPoint(SplitBlock->getTerminator());
       ExprBuilder.setTrackOverflow(true);
       Value *RTC = buildRTC(Builder, ExprBuilder);
       Value *OverflowHappened = Builder.CreateNot(
@@ -199,22 +204,19 @@ public:
       RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");
       ExprBuilder.setTrackOverflow(false);
 
-      Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
-      Builder.SetInsertPoint(&StartBlock->front());
-
-      NodeBuilder.create(AstRoot);
+      SplitBlock->getTerminator()->setOperand(0, RTC);
 
       NodeBuilder.finalizeSCoP(S);
       fixRegionInfo(EnteringBB->getParent(), R->getParent());
     }
 
-    verifyGeneratedFunction(S, *EnteringBB->getParent());
+    Function *F = EnteringBB->getParent();
+    verifyGeneratedFunction(S, *F);
     for (auto *SubF : NodeBuilder.getParallelSubfunctions())
       verifyGeneratedFunction(S, *SubF);
 
     // Mark the function such that we run additional cleanup passes on this
     // function (e.g. mem2reg to rediscover phi nodes).
-    Function *F = EnteringBB->getParent();
     F->addFnAttr("polly-optimized");
 
     return true;

@@ -307,7 +307,7 @@ public:
     // First check if we might be able to model the division, thus if the
     // divisor is constant. If so, check the dividend, otherwise check if
     // the whole division can be seen as a parameter.
-    if (isa<SCEVConstant>(Divisor))
+    if (isa<SCEVConstant>(Divisor) && !Divisor->isZero())
       return visit(Dividend);
 
     // For signed divisions use the SDiv instruction to check for a parameter
@@ -345,7 +345,7 @@ public:
 
     auto *Divisor = SRem->getOperand(1);
     auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI)
+    if (!CI || CI->isZeroValue())
       return visitGenericInst(SRem, S);
 
     auto *Dividend = SRem->getOperand(0);
@@ -368,6 +368,10 @@ public:
 
     if (Instruction *I = dyn_cast<Instruction>(Expr->getValue())) {
       switch (I->getOpcode()) {
+      case Instruction::IntToPtr:
+        return visit(SE.getSCEVAtScope(I->getOperand(0), Scope));
+      case Instruction::PtrToInt:
+        return visit(SE.getSCEVAtScope(I->getOperand(0), Scope));
       case Instruction::Load:
         return visitLoadInstruction(I, Expr);
       case Instruction::SDiv:

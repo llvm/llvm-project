@@ -5,7 +5,7 @@ set(ASAN_DYNAMIC_TESTSUITES)
 
 # TODO(wwchrome): Re-enable Win64 asan tests when ready.
 # Disable tests for asan Win64 temporarily.
-if(NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 8)
+if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(EXCLUDE_FROM_ALL TRUE)
 endif()
 
@@ -124,6 +124,6 @@ if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
 endif()
 
 # TODO(wwchrome): Re-enable the tests for asan Win64 when ready.
-if(NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 8)
+if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(EXCLUDE_FROM_ALL FALSE)
 endif()

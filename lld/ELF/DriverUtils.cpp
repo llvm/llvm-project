@@ -80,12 +80,12 @@ void elf::printHelp(const char *Argv0) {
   Table.PrintHelp(outs(), Argv0, "lld", false);
 }
 
-void elf::printVersion() {
-  outs() << "LLD " << getLLDVersion();
-  std::string S = getLLDRepositoryVersion();
-  if (!S.empty())
-    outs() << " " << S;
-  outs() << "\n";
+std::string elf::getVersionString() {
+  std::string Version = getLLDVersion();
+  std::string Repo = getLLDRepositoryVersion();
+  if (Repo.empty())
+    return "LLD " + Version + "\n";
+  return "LLD " + Version + " " + Repo + "\n";
 }
 
 // Converts a hex string (e.g. "0x123456") to a vector.

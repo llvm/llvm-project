@@ -3,11 +3,14 @@
 ; Check that we create alias scopes that indicate the accesses to A, B and C cannot alias in any way.
 ;
 ; SCOPES-LABEL: polly.stmt.for.body:
-; SCOPES:      %[[BIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} i32* %B, i64 %polly.indvar
+; SCOPES:      %[[R0:[0-9]*]] = zext i11 %polly.indvar to i64
+; SCOPES:      %[[BIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} i32* %B, i64 %[[R0]]
 ; SCOPES:      load i32, i32* %[[BIdx]], align 4, !alias.scope ![[AliasScopeB:[0-9]*]], !noalias ![[NoAliasB:[0-9]*]]
-; SCOPES:      %[[CIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} float* %C, i64 %polly.indvar
+; SCOPES:      %[[R1:[0-9]*]] = zext i11 %polly.indvar to i64
+; SCOPES:      %[[CIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} float* %C, i64 %[[R1]]
 ; SCOPES:      load float, float* %[[CIdx]], align 4, !alias.scope ![[AliasScopeC:[0-9]*]], !noalias ![[NoAliasC:[0-9]*]]
-; SCOPES:      %[[AIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} i32* %A, i64 %polly.indvar
+; SCOPES:      %[[R2:[0-9]*]] = zext i11 %polly.indvar to i64
+; SCOPES:      %[[AIdx:[._a-zA-Z0-9]*]] = getelementptr{{.*}} i32* %A, i64 %[[R2]]
 ; SCOPES:      store i32 %{{[._a-zA-Z0-9]*}}, i32* %[[AIdx]], align 4, !alias.scope ![[AliasScopeA:[0-9]*]], !noalias ![[NoAliasA:[0-9]*]]
 ;
 ; SCOPES:      ![[AliasScopeB]] = distinct !{![[AliasScopeB]], !{{[0-9]*}}, !"polly.alias.scope.B"}

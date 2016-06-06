@@ -69,23 +69,16 @@ namespace polly {
 /// When lowering to LLVM-IR we need to chose both the size of the data type and
 /// the sign of the operations we use.
 ///
-/// At the moment, we hardcode i64 bit signed computations. Our experience has
-/// shown that 64 bit are generally large enough for the loop bounds that appear
-/// in the wild. Signed computations are needed, as loop bounds may become
-/// negative.
+/// We use the minimal necessary bit width for the generated code and always
+/// interpret values as signed. If operations might overflow (add/sub/mul) we
+/// will try to adjust the types in order to ensure a non-wrapping computation.
+/// If the type adjustment is not possible (e.g., the necessary type is bigger
+/// than the type value of --polly-max-expr-bit-width) we will use assumptions
+/// to verify the computation will not wrap. However, for run-time checks we
+/// cannot build assumptions but instead utilize overflow tracking intrinsics.
 ///
 /// It is possible to track overflows that occured in the generated IR. See the
 /// description of @see OverflowState for more information.
-///
-/// FIXME: Hardcoding sizes can cause issues:
-///
-///   -  On embedded systems and especially for high-level-synthesis 64 bit
-///      computations are very costly.
-///
-///   The right approach is to compute the minimal necessary bitwidth and
-///   signedness for each subexpression during in the isl AST generation and
-///   to use this information in our IslAstGenerator. Preliminary patches are
-///   available, but have not been committed yet.
 ///
 class IslExprBuilder {
 public:
@@ -127,6 +120,26 @@ public:
   ///
   /// The same as unifyTypes above but for three values instead of two.
   void unifyTypes(llvm::Value *&V0, llvm::Value *&V1, llvm::Value *&V2);
+
+  /// @brief Adjust the types of @p V0 and @p V1 in-place.
+  ///
+  /// @param V0               One operand of an operation.
+  /// @param V1               Another operand of an operation.
+  /// @param RequiredBitWidth The bit with required for a safe operation.
+  ///
+  /// @return True if the new type has at least @p RequiredBitWidth bits.
+  bool adjustTypesForSafeComputation(llvm::Value *&V0, llvm::Value *&V1,
+                                     unsigned RequiredBitWidth);
+
+  /// @brief Unify the types of @p LHS and @p RHS in-place for an add/sub op.
+  ///
+  /// @return False if an additive operation of @p LHS and @p RHS can overflow.
+  bool adjustTypesForSafeAddition(llvm::Value *&LHS, llvm::Value *&RHS);
+
+  /// @brief Unify the types of @p LHS and @p RHS in-place for a mul op.
+  ///
+  /// @return False if a multiplication of @p LHS and @p RHS can overflow.
+  bool adjustTypesForSafeMultiplication(llvm::Value *&LHS, llvm::Value *&RHS);
 
   /// @brief Return the type with which this expression should be computed.
   ///
@@ -191,6 +204,9 @@ private:
   llvm::Value *createOpAddressOf(__isl_take isl_ast_expr *Expr);
   llvm::Value *createAccessAddress(__isl_take isl_ast_expr *Expr);
 
+  /// @brief Supported kinds of division.
+  enum DivisionMode { DM_SIGNED, DM_UNSIGNED, DM_FLOORED };
+
   /// @brief Create a binary operation @p Opc and track overflows if requested.
   ///
   /// @param OpC  The binary operation that should be performed [Add/Sub/Mul].
@@ -202,6 +218,15 @@ private:
   llvm::Value *createBinOp(llvm::BinaryOperator::BinaryOps Opc,
                            llvm::Value *LHS, llvm::Value *RHS,
                            const llvm::Twine &Name);
+
+  /// @brief Create a division and adjust the result type if possible.
+  ///
+  /// @param LHS The left operand.
+  /// @param RHS The right operand.
+  /// @param DM  The requested division mode.
+  ///
+  /// @return A value that represents the result of the division.
+  llvm::Value *createDiv(llvm::Value *LHS, llvm::Value *RHS, DivisionMode DM);
 
   /// @brief Create an addition and track overflows if requested.
   ///

@@ -1,11 +1,12 @@
 ; RUN: opt %loadPolly  -polly-codegen -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
-; CHECK:    %polly.access.B = getelementptr i32, i32* %B, i64 0
+; CHECK:    %polly.access.B = getelementptr i32, i32* %B, i1 false
 ; CHECK:    %polly.access.B.load = load i32, i32* %polly.access.B
 ;
 ; CHECK-LABEL: polly.stmt.bb2.split:
-; CHECK:    %scevgep = getelementptr i32, i32* %A, i64 %polly.indvar
+; CHECK:    %[[R:[0-9]*]] = zext i11 %polly.indvar to i64
+; CHECK:    %scevgep = getelementptr i32, i32* %A, i64 %[[R]]
 ; CHECK:    store i32 %polly.access.B.load, i32* %scevgep, align 4
 ;
 ;    void f(int *restrict A, int *restrict B) {

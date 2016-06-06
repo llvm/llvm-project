@@ -39,6 +39,12 @@ static cl::opt<OverflowTrackingChoice> OTMode(
                clEnumValEnd),
     cl::Hidden, cl::init(OT_REQUEST), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+// @TODO This should actually be derived from the DataLayout.
+static cl::opt<unsigned> PollyMaxAllowedBitWidth(
+    "polly-max-expr-bit-width",
+    cl::desc("The maximal bit with for generated expressions."), cl::Hidden,
+    cl::ZeroOrMore, cl::init(64), cl::cat(PollyCategory));
+
 IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,
                                IDToValueTy &IDToValue, ValueMapT &GlobalMap,
                                const DataLayout &DL, ScalarEvolution &SE,
@@ -74,13 +80,23 @@ Value *IslExprBuilder::getOverflowState() const {
 
 Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
                                    Value *RHS, const Twine &Name) {
-  // @TODO Temporarily promote types of potentially overflowing binary
-  //       operations to at least i64.
-  Value *I64C = Builder.getInt64(0);
-  unifyTypes(LHS, RHS, I64C);
+  // Flag that is true if the computation cannot overflow.
+  bool IsSafeToCompute = false;
+  switch (Opc) {
+  case Instruction::Add:
+  case Instruction::Sub:
+    IsSafeToCompute = adjustTypesForSafeAddition(LHS, RHS);
+    break;
+  case Instruction::Mul:
+    IsSafeToCompute = adjustTypesForSafeMultiplication(LHS, RHS);
+    break;
+  default:
+    llvm_unreachable("Unknown binary operator!");
+  }
 
-  // Handle the plain operation (without overflow tracking) first.
-  if (!OverflowState) {
+  // Handle the plain operation (without overflow tracking or a safe
+  // computation) first.
+  if (!OverflowState || (IsSafeToCompute && (OTMode != OT_ALWAYS))) {
     switch (Opc) {
     case Instruction::Add:
       return Builder.CreateNSWAdd(LHS, RHS, Name);
@@ -164,6 +180,40 @@ void IslExprBuilder::unifyTypes(Value *&V0, Value *&V1, Value *&V2) {
   V2 = Builder.CreateSExt(V2, MaxT);
 }
 
+bool IslExprBuilder::adjustTypesForSafeComputation(Value *&LHS, Value *&RHS,
+                                                   unsigned RequiredBitWidth) {
+  unsigned LBitWidth = LHS->getType()->getPrimitiveSizeInBits();
+  unsigned RBitWidth = RHS->getType()->getPrimitiveSizeInBits();
+  unsigned MaxUsedBitWidth = std::max(LBitWidth, RBitWidth);
+
+  // @TODO For now use the maximal bit width if the required one is to large but
+  //       note that this is not sound.
+  unsigned MaxAllowedBitWidth = PollyMaxAllowedBitWidth;
+  unsigned NewBitWidth =
+      std::max(MaxUsedBitWidth, std::min(MaxAllowedBitWidth, RequiredBitWidth));
+
+  Type *Ty = Builder.getIntNTy(NewBitWidth);
+  LHS = Builder.CreateSExt(LHS, Ty);
+  RHS = Builder.CreateSExt(RHS, Ty);
+
+  // If the new bit width is not large enough the computation is not sound.
+  return NewBitWidth == RequiredBitWidth;
+}
+
+bool IslExprBuilder::adjustTypesForSafeAddition(Value *&LHS, Value *&RHS) {
+  unsigned LBitWidth = LHS->getType()->getPrimitiveSizeInBits();
+  unsigned RBitWidth = RHS->getType()->getPrimitiveSizeInBits();
+  return adjustTypesForSafeComputation(LHS, RHS,
+                                       std::max(LBitWidth, RBitWidth) + 1);
+}
+
+bool IslExprBuilder::adjustTypesForSafeMultiplication(Value *&LHS,
+                                                      Value *&RHS) {
+  unsigned LBitWidth = LHS->getType()->getPrimitiveSizeInBits();
+  unsigned RBitWidth = RHS->getType()->getPrimitiveSizeInBits();
+  return adjustTypesForSafeComputation(LHS, RHS, LBitWidth + RBitWidth);
+}
+
 Value *IslExprBuilder::createOpUnary(__isl_take isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_minus &&
          "Unsupported unary operation");
@@ -195,10 +245,6 @@ Value *IslExprBuilder::createOpNAry(__isl_take isl_ast_expr *Expr) {
     V = Builder.CreateSelect(Builder.CreateICmp(Pred, V, OpV), V, OpV);
   }
 
-  // TODO: We can truncate the result, if it fits into a smaller type. This can
-  // help in cases where we have larger operands (e.g. i67) but the result is
-  // known to fit into i64. Without the truncation, the larger i67 type may
-  // force all subsequent operations to be performed on a non-native type.
   isl_ast_expr_free(Expr);
   return V;
 }
@@ -272,6 +318,48 @@ Value *IslExprBuilder::createOpAccess(isl_ast_expr *Expr) {
   return Builder.CreateLoad(Addr, Addr->getName() + ".load");
 }
 
+Value *IslExprBuilder::createDiv(Value *LHS, Value *RHS, DivisionMode DM) {
+  auto *ConstRHS = dyn_cast<ConstantInt>(RHS);
+  unsigned UnusedBits = 0;
+  Value *Res = nullptr;
+
+  if (ConstRHS)
+    UnusedBits = ConstRHS->getValue().logBase2();
+
+  if (ConstRHS && ConstRHS->getValue().isPowerOf2() &&
+      ConstRHS->getValue().isNonNegative())
+    Res = Builder.CreateAShr(LHS, UnusedBits, "polly.div.shr");
+  else if (DM == DM_SIGNED)
+    Res = Builder.CreateSDiv(LHS, RHS, "pexp.div", true);
+  else if (DM == DM_UNSIGNED)
+    Res = Builder.CreateUDiv(LHS, RHS, "pexp.p_div_q");
+  else {
+    assert(DM == DM_FLOORED);
+    // TODO: Review code and check that this calculation does not yield
+    //       incorrect overflow in some bordercases.
+    //
+    // floord(n,d) ((n < 0) ? (n - d + 1) : n) / d
+    Value *Sum1 = createSub(LHS, RHS, "pexp.fdiv_q.0");
+    Value *One = ConstantInt::get(Sum1->getType(), 1);
+    Value *Sum2 = createAdd(Sum1, One, "pexp.fdiv_q.1");
+    Value *Zero = ConstantInt::get(LHS->getType(), 0);
+    Value *isNegative = Builder.CreateICmpSLT(LHS, Zero, "pexp.fdiv_q.2");
+    unifyTypes(LHS, Sum2);
+    Value *Dividend =
+        Builder.CreateSelect(isNegative, Sum2, LHS, "pexp.fdiv_q.3");
+    unifyTypes(Dividend, RHS);
+    Res = Builder.CreateSDiv(Dividend, RHS, "pexp.fdiv_q.4");
+  }
+
+  if (UnusedBits) {
+    auto RequiredBits = Res->getType()->getPrimitiveSizeInBits() - UnusedBits;
+    Res = Builder.CreateTrunc(Res, Builder.getIntNTy(RequiredBits),
+                              "polly.div.trunc");
+  }
+
+  return Res;
+}
+
 Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
   Value *LHS, *RHS, *Res;
   isl_ast_op_type OpType;
@@ -318,48 +406,22 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
     Res = createMul(LHS, RHS);
     break;
   case isl_ast_op_div:
-    Res = Builder.CreateSDiv(LHS, RHS, "pexp.div", true);
+    Res = createDiv(LHS, RHS, DM_SIGNED);
     break;
   case isl_ast_op_pdiv_q: // Dividend is non-negative
-    Res = Builder.CreateUDiv(LHS, RHS, "pexp.p_div_q");
+    Res = createDiv(LHS, RHS, DM_UNSIGNED);
     break;
-  case isl_ast_op_fdiv_q: { // Round towards -infty
-    if (auto *Const = dyn_cast<ConstantInt>(RHS)) {
-      auto &Val = Const->getValue();
-      if (Val.isPowerOf2() && Val.isNonNegative()) {
-        Res = Builder.CreateAShr(LHS, Val.ceilLogBase2(), "polly.fdiv_q.shr");
-        break;
-      }
-    }
-    // TODO: Review code and check that this calculation does not yield
-    //       incorrect overflow in some bordercases.
-    //
-    // floord(n,d) ((n < 0) ? (n - d + 1) : n) / d
-    Value *Sum1 = createSub(LHS, RHS, "pexp.fdiv_q.0");
-    Value *One = ConstantInt::get(Sum1->getType(), 1);
-    Value *Sum2 = createAdd(Sum1, One, "pexp.fdiv_q.1");
-    Value *Zero = ConstantInt::get(LHS->getType(), 0);
-    Value *isNegative = Builder.CreateICmpSLT(LHS, Zero, "pexp.fdiv_q.2");
-    unifyTypes(LHS, Sum2);
-    Value *Dividend =
-        Builder.CreateSelect(isNegative, Sum2, LHS, "pexp.fdiv_q.3");
-    unifyTypes(Dividend, RHS);
-    Res = Builder.CreateSDiv(Dividend, RHS, "pexp.fdiv_q.4");
+  case isl_ast_op_fdiv_q: // Round towards -infty
+    Res = createDiv(LHS, RHS, DM_FLOORED);
     break;
-  }
   case isl_ast_op_pdiv_r: // Dividend is non-negative
     Res = Builder.CreateURem(LHS, RHS, "pexp.pdiv_r");
     break;
-
   case isl_ast_op_zdiv_r: // Result only compared against zero
     Res = Builder.CreateSRem(LHS, RHS, "pexp.zdiv_r");
     break;
   }
 
-  // TODO: We can truncate the result, if it fits into a smaller type. This can
-  // help in cases where we have larger operands (e.g. i67) but the result is
-  // known to fit into i64. Without the truncation, the larger i67 type may
-  // force all subsequent operations to be performed on a non-native type.
   isl_ast_expr_free(Expr);
   return Res;
 }
@@ -615,7 +677,7 @@ Value *IslExprBuilder::createId(__isl_take isl_ast_expr *Expr) {
 
   V = IDToValue[Id];
   if (!V)
-    V = UndefValue::get(getType(Expr));
+    V = UndefValue::get(Builder.getInt1Ty());
 
   if (V->getType()->isPointerTy())
     V = Builder.CreatePtrToInt(V, Builder.getIntNTy(DL.getPointerSizeInBits()));
@@ -628,33 +690,12 @@ Value *IslExprBuilder::createId(__isl_take isl_ast_expr *Expr) {
   return V;
 }
 
-IntegerType *IslExprBuilder::getType(__isl_keep isl_ast_expr *Expr) {
-  // XXX: We assume i64 is large enough. This is often true, but in general
-  //      incorrect. Also, on 32bit architectures, it would be beneficial to
-  //      use a smaller type. We can and should directly derive this information
-  //      during code generation.
-  return IntegerType::get(Builder.getContext(), 64);
-}
-
 Value *IslExprBuilder::createInt(__isl_take isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_int &&
          "Expression not of type isl_ast_expr_int");
-  isl_val *Val;
-  Value *V;
-  APInt APValue;
-  IntegerType *T;
 
-  Val = isl_ast_expr_get_val(Expr);
-  APValue = APIntFromVal(Val);
-
-  auto BitWidth = APValue.getBitWidth();
-  if (BitWidth <= 64)
-    T = getType(Expr);
-  else
-    T = Builder.getIntNTy(BitWidth);
-
-  APValue = APValue.sextOrSelf(T->getBitWidth());
-  V = ConstantInt::get(T, APValue);
+  auto *Val = isl_ast_expr_get_val(Expr);
+  auto *V = ConstantInt::get(Builder.getContext(), APIntFromVal(Val));
 
   isl_ast_expr_free(Expr);
   return V;

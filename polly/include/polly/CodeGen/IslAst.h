@@ -53,22 +53,15 @@ public:
 
   __isl_give isl_ast_node *getAst();
 
-  /// @brief Get the run-time conditions for the Scop.
-  __isl_give isl_ast_expr *getRunCondition();
-
-  /// @brief Build run-time condition for scop.
-  ///
-  /// @param S     The scop to build the condition for.
-  /// @param Build The isl_build object to use to build the condition.
+  /// @brief Build the run-time condition for the current scop.
   ///
   /// @returns An ast expression that describes the necessary run-time check.
-  static isl_ast_expr *buildRunCondition(Scop *S,
-                                         __isl_keep isl_ast_build *Build);
+  __isl_give isl_ast_expr *buildRunCondition();
 
 private:
   Scop *S;
   isl_ast_node *Root;
-  isl_ast_expr *RunCondition;
+  isl_ast_build *Build;
   std::shared_ptr<isl_ctx> Ctx;
 
   IslAst(Scop *Scop);

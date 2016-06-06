@@ -46,11 +46,11 @@ test()
 
 void test_edges()
 {
-    const unsigned N = sizeof(x) / sizeof(x[0]);
+    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
     for (unsigned i = 0; i < N; ++i)
     {
-        double r = real(x[i]);
-        double theta = imag(x[i]);
+        double r = real(testcases[i]);
+        double theta = imag(testcases[i]);
         std::complex<double> z = std::polar(r, theta);
         switch (classify(r))
         {

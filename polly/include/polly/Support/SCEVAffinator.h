@@ -90,6 +90,9 @@ private:
   /// @brief Target data for element size computing.
   const llvm::DataLayout &TD;
 
+  /// @brief Return the loop for the current block if any.
+  llvm::Loop *getScope();
+
   /// @brief Return a PWACtx for @p PWA that is always valid.
   __isl_give PWACtx getPWACtxFromPWA(__isl_take isl_pw_aff *PWA);
 

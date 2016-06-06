@@ -3,7 +3,7 @@
 ; We have to cast %B to "short *" before we create RTCs.
 ;
 ; CHECK:   %polly.access.cast.B = bitcast i32* %B to i16*
-; CHECK-NEXT:   %polly.access.B = getelementptr i16, i16* %polly.access.cast.B, i64 1024
+; CHECK-NEXT:   %polly.access.B = getelementptr i16, i16* %polly.access.cast.B, i12 1024
 ;
 ; We should never access %B as an i32 pointer:
 ;

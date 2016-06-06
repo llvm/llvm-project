@@ -17,7 +17,7 @@
 #include <complex>
 #include <cassert>
 
-std::complex<double> x[] =
+const std::complex<double> testcases[] =
 {
     std::complex<double>( 1.e-6,  1.e-6),
     std::complex<double>(-1.e-6,  1.e-6),

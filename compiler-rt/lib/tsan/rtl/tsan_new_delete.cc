@@ -23,14 +23,10 @@ struct nothrow_t {};
 
 DECLARE_REAL(void *, malloc, uptr size)
 DECLARE_REAL(void, free, void *ptr)
-#if SANITIZER_MAC || SANITIZER_ANDROID
-#define __libc_malloc REAL(malloc)
-#define __libc_free REAL(free)
-#endif
 
 #define OPERATOR_NEW_BODY(mangled_name) \
   if (cur_thread()->in_symbolizer) \
-    return __libc_malloc(size); \
+    return InternalAlloc(size); \
   void *p = 0; \
   {  \
     SCOPED_INTERCEPTOR_RAW(mangled_name, size); \
@@ -66,7 +62,7 @@ void *operator new[](__sanitizer::uptr size, std::nothrow_t const&) {
 #define OPERATOR_DELETE_BODY(mangled_name) \
   if (ptr == 0) return;  \
   if (cur_thread()->in_symbolizer) \
-    return __libc_free(ptr); \
+    return InternalFree(ptr); \
   invoke_free_hook(ptr);  \
   SCOPED_INTERCEPTOR_RAW(mangled_name, ptr);  \
   user_free(thr, pc, ptr);
