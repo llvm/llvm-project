@@ -424,6 +424,6 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::Expr">
-    <DisplayString>Expression of type {TR,view(cpp)}</DisplayString>
+    <DisplayString>Expression of class {(clang::Stmt::StmtClass)StmtBits.sClass,en} and type {TR,view(cpp)}</DisplayString>
   </Type>
 </AutoVisualizer>

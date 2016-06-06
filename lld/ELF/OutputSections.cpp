@@ -1418,6 +1418,9 @@ template <class ELFT> void VersionTableSection<ELFT>::finalize() {
   this->Header.sh_size =
       sizeof(Elf_Versym) * (Out<ELFT>::DynSymTab->getSymbols().size() + 1);
   this->Header.sh_entsize = sizeof(Elf_Versym);
+  // At the moment of june 2016 GNU docs does not mention that sh_link field
+  // should be set, but Sun docs do. Also readelf relies on this field.
+  this->Header.sh_link = Out<ELFT>::DynSymTab->SectionIndex;
 }
 
 template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {

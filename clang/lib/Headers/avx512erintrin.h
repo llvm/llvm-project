@@ -177,7 +177,7 @@
   _mm_mask_rsqrt28_round_sd((S), (M), (A), (B), _MM_FROUND_CUR_DIRECTION)
 
 #define _mm_maskz_rsqrt28_sd(M, A, B) \
-  _mm_mask_rsqrt28_round_sd((M), (A), (B), _MM_FROUND_CUR_DIRECTION)
+  _mm_maskz_rsqrt28_round_sd((M), (A), (B), _MM_FROUND_CUR_DIRECTION)
 
 // rcp28
 #define _mm512_rcp28_round_pd(A, R) __extension__ ({ \
