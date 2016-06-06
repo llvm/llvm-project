@@ -1,0 +1,16 @@
+RUN: mkdir -p %t.d
+RUN: %clang_profgen -fprofile-instr-generate %S/../Inputs/instrprof-file_ex.c -o %t
+RUN: %run %t %t.d/run.dump
+RUN: sort %t.d/run.dump | FileCheck %s
+
+CHECK: Dump from Child 11
+CHECK-NEXT: Dump from Child 12
+CHECK-NEXT: Dump from Child 13
+CHECK-NEXT: Dump from Child 14
+CHECK-NEXT: Dump from Child 15
+CHECK-NEXT: Dump from Child 16
+CHECK-NEXT: Dump from Child 17
+CHECK-NEXT: Dump from Child 18
+CHECK-NEXT: Dump from Child 19
+CHECK-NEXT: Dump from Child 20
+CHECK-NEXT: Dump from parent 21

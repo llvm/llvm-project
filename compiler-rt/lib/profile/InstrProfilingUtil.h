@@ -11,10 +11,15 @@
 #define PROFILE_INSTRPROFILINGUTIL_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 /*! \brief Create a directory tree. */
 void __llvm_profile_recursive_mkdir(char *Pathname);
 
+/*! Open file \c Filename for read+write with write
+ * lock for exclusive access. The caller will block
+ * if the lock is already held by another process. */
+FILE *lprofOpenFileEx(const char *Filename);
 /* PS4 doesn't have getenv. Define a shim. */
 #if __ORBIS__
 static inline char *getenv(const char *name) { return NULL; }

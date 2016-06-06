@@ -43,10 +43,18 @@
 # RSP2-NEXT: --dynamic-list {{.+}}dyn
 # RSP2-NEXT: -rpath {{.+}}file
 # RSP2-NEXT: --script {{.+}}file
-# RSP2-NEXT: --version-script {{.+}}ver
+# RSP2-NEXT: --version-script [[PATH:.*]]ver
 # RSP2-NEXT: --dynamic-linker "some unusual/path"
 # RSP2-NEXT: -soname="foo bar"
 # RSP2-NEXT: -soname="foo bar"
+
+# RUN: cpio -t < repro2.cpio | FileCheck %s
+# CHECK:      repro2/response.txt
+# CHECK-NEXT: repro2/{{.*}}/dyn
+# CHECK-NEXT: repro2/{{.*}}/ver
+# CHECK-NEXT: repro2/{{.*}}/foo bar
+# CHECK-NEXT: repro2/{{.*}}/file2
+# CHECK-NEXT: repro2/{{.*}}/file
 
 .globl _start
 _start:
