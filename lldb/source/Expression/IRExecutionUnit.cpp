@@ -125,7 +125,7 @@ IRExecutionUnit::DisassembleFunction (Stream &stream,
 
     for (JittedFunction &function : m_jitted_functions)
     {
-        if (function.m_name.AsCString() != m_name.AsCString())
+        if (function.m_name == m_name)
         {
             func_local_addr = function.m_local_addr;
             func_remote_addr = function.m_remote_addr;

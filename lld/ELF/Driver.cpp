@@ -115,9 +115,6 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (Cpio)
-    Cpio->append(relativeToRoot(Path), MBRef.getBuffer());
-
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
     readLinkerScript(MBRef);
@@ -153,6 +150,10 @@ Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
+
+  if (Cpio)
+    Cpio->append(relativeToRoot(Path), MBRef.getBuffer());
+
   return MBRef;
 }
 
@@ -251,9 +252,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
-  readConfigs(Args);
-  initLLVM(Args);
-
   if (auto *Arg = Args.getLastArg(OPT_reproduce)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
@@ -262,6 +260,8 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
       Cpio->append("response.txt", createResponseFile(Args));
   }
 
+  readConfigs(Args);
+  initLLVM(Args);
   createFiles(Args);
   checkOptions(Args);
   if (HasError)

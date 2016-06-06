@@ -148,18 +148,20 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     // depending on the symbol being locally defined or not.
     if (isPreemptible(Body, Type)) {
       C.Relocations.push_back(
-          {R_RELAX_TLS_GD_TO_IE, Type, Offset, Addend, &Body});
+          {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_IE), Type,
+           Offset, Addend, &Body});
       if (!Body.isInGot()) {
         Out<ELFT>::Got->addEntry(Body);
         Out<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, Out<ELFT>::Got,
                                       Body.getGotOffset<ELFT>(), false, &Body,
                                       0});
       }
-      return 2;
+      return Target->TlsGdRelaxSkip;
     }
     C.Relocations.push_back(
-        {R_RELAX_TLS_GD_TO_LE, Type, Offset, Addend, &Body});
-    return Target->TlsGdToLeSkip;
+        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
+         Offset, Addend, &Body});
+    return Target->TlsGdRelaxSkip;
   }
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
@@ -251,7 +253,8 @@ template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
 }
 
 static bool needsPlt(RelExpr Expr) {
-  return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT;
+  return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT ||
+         Expr == R_PLT_PAGE_PC;
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -311,6 +314,8 @@ static RelExpr toPlt(RelExpr Expr) {
     return R_PPC_PLT_OPD;
   if (Expr == R_PC)
     return R_PLT_PC;
+  if (Expr == R_PAGE_PC)
+    return R_PLT_PAGE_PC;
   if (Expr == R_ABS)
     return R_PLT;
   return Expr;
@@ -385,7 +390,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     if (needsPlt(Expr))
       Expr = fromPlt(Expr);
     if (Expr == R_GOT_PC)
-      Expr = Target->adjustRelaxGotExpr(Type, Data + Offset, Expr);
+      Expr = Target->adjustRelaxExpr(Type, Data + Offset, Expr);
   }
 
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body))

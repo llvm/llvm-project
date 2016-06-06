@@ -484,6 +484,9 @@ bool ScheduleTreeOptimizer::isMatrMultPattern(
     isl_map_free(NewPartialSchedule);
     return false;
   }
+  assert(isl_map_dim(NewPartialSchedule, isl_dim_out) == 3 &&
+         "Each schedule dimension should be represented by a union piecewise"
+         "quasi-affine expression.");
   NewPartialSchedule = circularShiftOutputDims(NewPartialSchedule);
   if (containsMatrMult(NewPartialSchedule)) {
     isl_map_free(NewPartialSchedule);

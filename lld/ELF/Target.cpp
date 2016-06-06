@@ -92,6 +92,8 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
+  RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+                          RelExpr Expr) const override;
   void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -113,8 +115,8 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 
-  RelExpr adjustRelaxGotExpr(uint32_t Type, const uint8_t *Data,
-                             RelExpr Expr) const override;
+  RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+                          RelExpr Expr) const override;
   void relaxGot(uint8_t *Loc, uint64_t Val) const override;
   void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
@@ -154,7 +156,10 @@ public:
                 int32_t Index, unsigned RelOff) const override;
   bool usesOnlyLowPageBits(uint32_t Type) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+                          RelExpr Expr) const override;
   void relaxTlsGdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+  void relaxTlsGdToIe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 };
 
@@ -238,8 +243,8 @@ bool TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
   return false;
 }
 
-RelExpr TargetInfo::adjustRelaxGotExpr(uint32_t Type, const uint8_t *Data,
-                                       RelExpr Expr) const {
+RelExpr TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+                                    RelExpr Expr) const {
   return Expr;
 }
 
@@ -278,7 +283,7 @@ X86TargetInfo::X86TargetInfo() {
   TlsOffsetRel = R_386_TLS_DTPOFF32;
   PltEntrySize = 16;
   PltZeroSize = 16;
-  TlsGdToLeSkip = 2;
+  TlsGdRelaxSkip = 2;
 }
 
 RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
@@ -306,6 +311,18 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     return R_TLS;
   case R_386_TLS_LE_32:
     return R_NEG_TLS;
+  }
+}
+
+RelExpr X86TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+                                       RelExpr Expr) const {
+  switch (Expr) {
+  default:
+    return Expr;
+  case R_RELAX_TLS_GD_TO_IE:
+    return R_RELAX_TLS_GD_TO_IE_END;
+  case R_RELAX_TLS_GD_TO_LE:
+    return R_RELAX_TLS_GD_TO_LE_NEG;
   }
 }
 
@@ -507,7 +524,7 @@ X86_64TargetInfo::X86_64TargetInfo() {
   TlsOffsetRel = R_X86_64_DTPOFF64;
   PltEntrySize = 16;
   PltZeroSize = 16;
-  TlsGdToLeSkip = 2;
+  TlsGdRelaxSkip = 2;
 }
 
 RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
@@ -739,8 +756,8 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   }
 }
 
-RelExpr X86_64TargetInfo::adjustRelaxGotExpr(uint32_t Type, const uint8_t *Data,
-                                             RelExpr RelExpr) const {
+RelExpr X86_64TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+                                          RelExpr RelExpr) const {
   if (Type != R_X86_64_GOTPCRELX && Type != R_X86_64_REX_GOTPCRELX)
     return RelExpr;
   const uint8_t Op = Data[-2];
@@ -1127,6 +1144,16 @@ RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
   }
 }
 
+RelExpr AArch64TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
+                                           RelExpr Expr) const {
+  if (Expr == R_RELAX_TLS_GD_TO_IE) {
+    if (Type == R_AARCH64_TLSDESC_ADR_PAGE21)
+      return R_RELAX_TLS_GD_TO_IE_PAGE_PC;
+    return R_RELAX_TLS_GD_TO_IE_ABS;
+  }
+  return Expr;
+}
+
 bool AArch64TargetInfo::usesOnlyLowPageBits(uint32_t Type) const {
   switch (Type) {
   default:
@@ -1306,6 +1333,7 @@ void AArch64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
   //   ldr     x1, [x0, #:tlsdesc_lo12:v  [R_AARCH64_TLSDESC_LD64_LO12_NC]
   //   add     x0, x0, :tlsdesc_los:v     [_AARCH64_TLSDESC_ADD_LO12_NC]
   //   .tlsdesccall                       [R_AARCH64_TLSDESC_CALL]
+  //   blr     x1
   // And it can optimized to:
   //   movz    x0, #0x0, lsl #16
   //   movk    x0, #0x10
@@ -1332,6 +1360,38 @@ void AArch64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
     llvm_unreachable("unsupported Relocation for TLS GD to LE relax");
   }
   write32le(Loc, NewInst);
+}
+
+void AArch64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
+                                       uint64_t Val) const {
+  // TLSDESC Global-Dynamic relocation are in the form:
+  //   adrp    x0, :tlsdesc:v             [R_AARCH64_TLSDESC_ADR_PAGE21]
+  //   ldr     x1, [x0, #:tlsdesc_lo12:v  [R_AARCH64_TLSDESC_LD64_LO12_NC]
+  //   add     x0, x0, :tlsdesc_los:v     [_AARCH64_TLSDESC_ADD_LO12_NC]
+  //   .tlsdesccall                       [R_AARCH64_TLSDESC_CALL]
+  //   blr     x1
+  // And it can optimized to:
+  //   adrp    x0, :gottprel:v
+  //   ldr     x0, [x0, :gottprel_lo12:v]
+  //   nop
+  //   nop
+
+  switch (Type) {
+  case R_AARCH64_TLSDESC_ADD_LO12_NC:
+  case R_AARCH64_TLSDESC_CALL:
+    write32le(Loc, 0xd503201f); // nop
+    break;
+  case R_AARCH64_TLSDESC_ADR_PAGE21:
+    write32le(Loc, 0x90000000); // adrp
+    relocateOne(Loc, R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21, Val);
+    break;
+  case R_AARCH64_TLSDESC_LD64_LO12_NC:
+    write32le(Loc, 0xf9400000); // ldr
+    relocateOne(Loc, R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC, Val);
+    break;
+  default:
+    llvm_unreachable("unsupported Relocation for TLS GD to LE relax");
+  }
 }
 
 void AArch64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,

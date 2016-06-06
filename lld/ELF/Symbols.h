@@ -91,6 +91,7 @@ public:
   uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
   uint32_t ThunkIndex = -1;
+  uint32_t GlobalDynIndex = -1;
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
   bool hasThunk() const { return ThunkIndex != -1U; }
@@ -395,8 +396,6 @@ template <class ELFT> SymbolBody *ElfSym<ELFT>::MipsGpDisp;
 // stored in the Body field of this object as it resolves symbols. Symbol also
 // holds computed properties of symbol names.
 struct Symbol {
-  uint32_t GlobalDynIndex = -1;
-
   // Symbol binding. This is on the Symbol to track changes during resolution.
   // In particular:
   // An undefined weak is still weak when it resolves to a shared library.

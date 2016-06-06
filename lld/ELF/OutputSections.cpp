@@ -145,9 +145,9 @@ template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
 }
 
 template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
-  if (Sym.symbol()->GlobalDynIndex != -1U)
+  if (Sym.GlobalDynIndex != -1U)
     return false;
-  Sym.symbol()->GlobalDynIndex = Entries.size();
+  Sym.GlobalDynIndex = Entries.size();
   // Global Dynamic TLS entries take two GOT slots.
   Entries.push_back(&Sym);
   Entries.push_back(nullptr);
@@ -187,13 +187,13 @@ GotSection<ELFT>::getMipsLocalEntryOffset(uintX_t EntryValue) {
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getGlobalDynAddr(const SymbolBody &B) const {
-  return this->getVA() + B.symbol()->GlobalDynIndex * sizeof(uintX_t);
+  return this->getVA() + B.GlobalDynIndex * sizeof(uintX_t);
 }
 
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getGlobalDynOffset(const SymbolBody &B) const {
-  return B.symbol()->GlobalDynIndex * sizeof(uintX_t);
+  return B.GlobalDynIndex * sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -1418,6 +1418,9 @@ template <class ELFT> void VersionTableSection<ELFT>::finalize() {
   this->Header.sh_size =
       sizeof(Elf_Versym) * (Out<ELFT>::DynSymTab->getSymbols().size() + 1);
   this->Header.sh_entsize = sizeof(Elf_Versym);
+  // At the moment of june 2016 GNU docs does not mention that sh_link field
+  // should be set, but Sun docs do. Also readelf relies on this field.
+  this->Header.sh_link = Out<ELFT>::DynSymTab->SectionIndex;
 }
 
 template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
