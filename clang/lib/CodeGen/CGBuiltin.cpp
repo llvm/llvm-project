@@ -6653,7 +6653,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
   case X86::BI__builtin_ia32_palignr128:
-  case X86::BI__builtin_ia32_palignr256: {
+  case X86::BI__builtin_ia32_palignr256:
+  case X86::BI__builtin_ia32_palignr128_mask:
+  case X86::BI__builtin_ia32_palignr256_mask:
+  case X86::BI__builtin_ia32_palignr512_mask: {
     unsigned ShiftVal = cast<llvm::ConstantInt>(Ops[2])->getZExtValue();
 
     unsigned NumElts =
@@ -6673,7 +6676,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       Ops[0] = llvm::Constant::getNullValue(Ops[0]->getType());
     }
 
-    int Indices[32];
+    int Indices[64];
     // 256-bit palignr operates on 128-bit lanes so we need to handle that
     for (unsigned l = 0; l != NumElts; l += 16) {
       for (unsigned i = 0; i != 16; ++i) {
@@ -6684,10 +6687,25 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       }
     }
 
-    return Builder.CreateShuffleVector(Ops[1], Ops[0],
-                                       makeArrayRef(Indices, NumElts),
-                                       "palignr");
+    Value *Align = Builder.CreateShuffleVector(Ops[1], Ops[0],
+                                               makeArrayRef(Indices, NumElts),
+                                               "palignr");
+
+    // If this isn't a masked builtin, just return the align operation.
+    if (Ops.size() == 3)
+      return Align;
+
+    // If the mask is all ones just emit the align operation.
+    if (const auto *C = dyn_cast<Constant>(Ops[4]))
+      if (C->isAllOnesValue())
+        return Align;
+
+    llvm::VectorType *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(),
+                                                     NumElts);
+    llvm::Value *Mask = Builder.CreateBitCast(Ops[4], MaskTy, "cast");
+    return Builder.CreateSelect(Mask, Align, Ops[3]);
   }
+
   case X86::BI__builtin_ia32_pslldqi256: {
     // Shift value is in bits so divide by 8.
     unsigned shiftVal = cast<llvm::ConstantInt>(Ops[1])->getZExtValue() >> 3;

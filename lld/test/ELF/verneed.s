@@ -4,7 +4,23 @@
 # RUN: llvm-readobj -sections -dyn-symbols -dynamic-table %t | FileCheck %s
 # RUN: llvm-objdump -s %t | FileCheck --check-prefix=CONTENTS %s
 
-# CHECK:        Index: 2
+# CHECK:        Section {
+# CHECK:         Index: 1
+# CHECK-NEXT:    Name: .dynsym (1)
+# CHECK-NEXT:    Type: SHT_DYNSYM (0xB)
+# CHECK-NEXT:    Flags [ (0x2)
+# CHECK-NEXT:      SHF_ALLOC (0x2)
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    Address: 0x101C8
+# CHECK-NEXT:    Offset: 0x1C8
+# CHECK-NEXT:    Size: 96
+# CHECK-NEXT:    Link: 5
+# CHECK-NEXT:    Info: 1
+# CHECK-NEXT:    AddressAlignment: 8
+# CHECK-NEXT:    EntrySize: 24
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:   Index: 2
 # CHECK-NEXT:   Name: .gnu.version (9)
 # CHECK-NEXT:   Type: SHT_GNU_versym (0x6FFFFFFF)
 # CHECK-NEXT:   Flags [ (0x2)
@@ -13,7 +29,7 @@
 # CHECK-NEXT:   Address: 0x10228
 # CHECK-NEXT:   Offset: 0x228
 # CHECK-NEXT:   Size: 8
-# CHECK-NEXT:   Link: 0
+# CHECK-NEXT:   Link: 1
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 2
 # CHECK-NEXT:   EntrySize: 2

@@ -7047,38 +7047,19 @@ protected:
 
 public:
   MipsTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), CPU((getTriple().getArch() == llvm::Triple::mips ||
-                                 getTriple().getArch() == llvm::Triple::mipsel)
-                                    ? "mips32r2"
-                                    : "mips64r2"),
-        IsMips16(false), IsMicromips(false), IsNan2008(false),
-        IsSingleFloat(false), FloatABI(HardFloat), DspRev(NoDSP), HasMSA(false),
-        HasFP64(false), ABI((getTriple().getArch() == llvm::Triple::mips ||
-                             getTriple().getArch() == llvm::Triple::mipsel)
-                                ? "o32"
-                                : "n64") {
+      : TargetInfo(Triple), IsMips16(false), IsMicromips(false),
+        IsNan2008(false), IsSingleFloat(false), FloatABI(HardFloat),
+        DspRev(NoDSP), HasMSA(false), HasFP64(false) {
     TheCXXABI.set(TargetCXXABI::GenericMIPS);
     BigEndian = getTriple().getArch() == llvm::Triple::mips ||
                 getTriple().getArch() == llvm::Triple::mips64;
 
-    if (getTriple().getArch() == llvm::Triple::mips ||
-        getTriple().getArch() == llvm::Triple::mipsel) {
-      SizeType = UnsignedInt;
-      PtrDiffType = SignedInt;
-      Int64Type = SignedLongLong;
-      IntMaxType = Int64Type;
-      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
-    } else {
-      LongDoubleWidth = LongDoubleAlign = 128;
-      LongDoubleFormat = &llvm::APFloat::IEEEquad;
-      if (getTriple().getOS() == llvm::Triple::FreeBSD) {
-        LongDoubleWidth = LongDoubleAlign = 64;
-        LongDoubleFormat = &llvm::APFloat::IEEEdouble;
-      }
-      setN64ABITypes();
-      SuitableAlign = 128;
-      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-    }
+    setABI((getTriple().getArch() == llvm::Triple::mips ||
+            getTriple().getArch() == llvm::Triple::mipsel)
+               ? "o32"
+               : "n64");
+
+    CPU = ABI == "o32" ? "mips32r2" : "mips64r2";
   }
 
   bool isNaN2008Default() const {
@@ -7095,9 +7076,16 @@ public:
 
   StringRef getABI() const override { return ABI; }
   bool setABI(const std::string &Name) override {
+    // FIXME: The Arch component on the triple actually has no bearing on
+    //        whether the ABI is valid or not. It's features of the CPU that
+    //        matters and the size of the GPR's in particular.
+    //        However, we can't allow O32 on 64-bit processors just yet because
+    //        the backend still checks the Arch component instead of the ABI in
+    //        a few places.
     if (getTriple().getArch() == llvm::Triple::mips ||
         getTriple().getArch() == llvm::Triple::mipsel) {
       if (Name == "o32") {
+        setO32ABITypes();
         ABI = Name;
         return true;
       }
@@ -7118,46 +7106,71 @@ public:
     return false;
   }
 
+  void setO32ABITypes() {
+    Int64Type = SignedLongLong;
+    IntMaxType = Int64Type;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongWidth = LongAlign = 32;
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
+    PointerWidth = PointerAlign = 32;
+    PtrDiffType = SignedInt;
+    SizeType = UnsignedInt;
+    SuitableAlign = 64;
+  }
+
+  void setN32N64ABITypes() {
+    LongDoubleWidth = LongDoubleAlign = 128;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad;
+    if (getTriple().getOS() == llvm::Triple::FreeBSD) {
+      LongDoubleWidth = LongDoubleAlign = 64;
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble;
+    }
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
+    SuitableAlign = 128;
+  }
+
   void setN64ABITypes() {
-    LongWidth = LongAlign = 64;
-    PointerWidth = PointerAlign = 64;
-    SizeType = UnsignedLong;
-    PtrDiffType = SignedLong;
+    setN32N64ABITypes();
     Int64Type = SignedLong;
     IntMaxType = Int64Type;
+    LongWidth = LongAlign = 64;
+    PointerWidth = PointerAlign = 64;
+    PtrDiffType = SignedLong;
+    SizeType = UnsignedLong;
   }
 
   void setN32ABITypes() {
-    LongWidth = LongAlign = 32;
-    PointerWidth = PointerAlign = 32;
-    SizeType = UnsignedInt;
-    PtrDiffType = SignedInt;
+    setN32N64ABITypes();
     Int64Type = SignedLongLong;
     IntMaxType = Int64Type;
+    LongWidth = LongAlign = 32;
+    PointerWidth = PointerAlign = 32;
+    PtrDiffType = SignedInt;
+    SizeType = UnsignedInt;
   }
 
   bool setCPU(const std::string &Name) override {
-    bool IsMips32 = getTriple().getArch() == llvm::Triple::mips ||
-                    getTriple().getArch() == llvm::Triple::mipsel;
+    bool GPR64Required = ABI == "n32" || ABI == "n64";
     CPU = Name;
     return llvm::StringSwitch<bool>(Name)
-        .Case("mips1", IsMips32)
-        .Case("mips2", IsMips32)
+        .Case("mips1", !GPR64Required)
+        .Case("mips2", !GPR64Required)
         .Case("mips3", true)
         .Case("mips4", true)
         .Case("mips5", true)
-        .Case("mips32", IsMips32)
-        .Case("mips32r2", IsMips32)
-        .Case("mips32r3", IsMips32)
-        .Case("mips32r5", IsMips32)
-        .Case("mips32r6", IsMips32)
+        .Case("mips32", !GPR64Required)
+        .Case("mips32r2", !GPR64Required)
+        .Case("mips32r3", !GPR64Required)
+        .Case("mips32r5", !GPR64Required)
+        .Case("mips32r6", !GPR64Required)
         .Case("mips64", true)
         .Case("mips64r2", true)
         .Case("mips64r3", true)
         .Case("mips64r5", true)
         .Case("mips64r6", true)
         .Case("octeon", true)
-        .Case("p5600", true)
+        .Case("p5600", !GPR64Required)
         .Default(false);
   }
   const std::string& getCPU() const { return CPU; }
@@ -7189,8 +7202,7 @@ public:
     if (Opts.GNUMode)
       Builder.defineMacro("mips");
 
-    if (getTriple().getArch() == llvm::Triple::mips ||
-        getTriple().getArch() == llvm::Triple::mipsel) {
+    if (ABI == "o32") {
       Builder.defineMacro("__mips", "32");
       Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS32");
     } else {
@@ -7281,8 +7293,12 @@ public:
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
-    if (getTriple().getArch() == llvm::Triple::mips64 ||
-        getTriple().getArch() == llvm::Triple::mips64el)
+
+    // 32-bit MIPS processors don't have the necessary lld/scd instructions
+    // found in 64-bit processors. In the case of O32 on a 64-bit processor,
+    // the instructions exist but using them violates the ABI since they
+    // require 64-bit GPRs and O32 only supports 32-bit GPRs.
+    if (ABI == "n32" || ABI == "n64")
       Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
   }
 
@@ -7475,15 +7491,13 @@ public:
         {{"t9"}, "$25"}, {{"k0"}, "$26"},        {{"k1"}, "$27"},
         {{"gp"}, "$28"}, {{"sp", "$sp"}, "$29"}, {{"fp", "$fp"}, "$30"},
         {{"ra"}, "$31"}};
-    if (getTriple().getArch() == llvm::Triple::mips ||
-        getTriple().getArch() == llvm::Triple::mipsel)
+    if (ABI == "o32")
       return llvm::makeArrayRef(O32RegAliases);
     return llvm::makeArrayRef(NewABIRegAliases);
   }
 
   bool hasInt128Type() const override {
-    return getTriple().getArch() == llvm::Triple::mips64 ||
-           getTriple().getArch() == llvm::Triple::mips64el;
+    return ABI == "n32" || ABI == "n64";
   }
 };
 

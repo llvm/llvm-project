@@ -98,6 +98,11 @@
 // MIPS-ARCH-P5600: "-target-cpu" "p5600"
 // MIPS-ARCH-P5600: "-target-abi" "o32"
 //
+// RUN: not %clang -target mips-linux-gnu -c %s \
+// RUN:        -march=p5600 -mabi=64 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-P5600-N64 %s
+// MIPS-ARCH-P5600-N64: error: unknown target ABI 'n64'
+//
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:        -march=mips64 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ARCH-3264 %s
