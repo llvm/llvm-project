@@ -22,6 +22,22 @@ int main() {
       }
 " COMPILER_RT_TARGET_HAS_ATOMICS)
 
+CHECK_CXX_SOURCE_COMPILES("
+#if defined(__linux__)
+#include <unistd.h>
+#endif
+#include <fcntl.h>
+int fd;
+int main() {
+ struct flock s_flock;
+
+ s_flock.l_type = F_WRLCK;
+ fcntl(fd, F_SETLKW, &s_flock);
+ return 0;
+}
+
+" COMPILER_RT_TARGET_HAS_FCNTL_LCK)
+
 add_custom_target(profile)
 
 set(PROFILE_SOURCES
@@ -54,6 +70,12 @@ if(COMPILER_RT_TARGET_HAS_ATOMICS)
      ${EXTRA_FLAGS}
      -DCOMPILER_RT_HAS_ATOMICS=1)
 endif() 
+
+if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
+ set(EXTRA_FLAGS
+     ${EXTRA_FLAGS}
+     -DCOMPILER_RT_HAS_FCNTL_LCK=1)
+endif()
 
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.profile

@@ -68,8 +68,8 @@ elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	"
 elif [ "`uname -a | grep Darwin`" != "" ]; then
 	SUFFIX="darwin_amd64"
-	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option"
-	OSLDFLAGS="-lpthread -fPIC -fpie"
+	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option -mmacosx-version-min=10.7"
+	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7"
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_mac.cc

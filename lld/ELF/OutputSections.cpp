@@ -145,9 +145,9 @@ template <class ELFT> void GotSection<ELFT>::addEntry(SymbolBody &Sym) {
 }
 
 template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
-  if (Sym.symbol()->GlobalDynIndex != -1U)
+  if (Sym.GlobalDynIndex != -1U)
     return false;
-  Sym.symbol()->GlobalDynIndex = Entries.size();
+  Sym.GlobalDynIndex = Entries.size();
   // Global Dynamic TLS entries take two GOT slots.
   Entries.push_back(&Sym);
   Entries.push_back(nullptr);
@@ -187,13 +187,13 @@ GotSection<ELFT>::getMipsLocalEntryOffset(uintX_t EntryValue) {
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getGlobalDynAddr(const SymbolBody &B) const {
-  return this->getVA() + B.symbol()->GlobalDynIndex * sizeof(uintX_t);
+  return this->getVA() + B.GlobalDynIndex * sizeof(uintX_t);
 }
 
 template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getGlobalDynOffset(const SymbolBody &B) const {
-  return B.symbol()->GlobalDynIndex * sizeof(uintX_t);
+  return B.GlobalDynIndex * sizeof(uintX_t);
 }
 
 template <class ELFT>
