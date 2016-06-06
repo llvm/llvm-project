@@ -39,16 +39,16 @@ test()
 
 void test_edges()
 {
-    const unsigned N = sizeof(x) / sizeof(x[0]);
+    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
     for (unsigned i = 0; i < N; ++i)
     {
         for (unsigned j = 0; j < N; ++j)
         {
-            std::complex<double> r = x[i] * x[j];
-            switch (classify(x[i]))
+            std::complex<double> r = testcases[i] * testcases[j];
+            switch (classify(testcases[i]))
             {
             case zero:
-                switch (classify(x[j]))
+                switch (classify(testcases[j]))
                 {
                 case zero:
                     assert(classify(r) == zero);
@@ -68,7 +68,7 @@ void test_edges()
                 }
                 break;
             case non_zero:
-                switch (classify(x[j]))
+                switch (classify(testcases[j]))
                 {
                 case zero:
                     assert(classify(r) == zero);
@@ -88,7 +88,7 @@ void test_edges()
                 }
                 break;
             case inf:
-                switch (classify(x[j]))
+                switch (classify(testcases[j]))
                 {
                 case zero:
                     assert(classify(r) == NaN);
@@ -108,7 +108,7 @@ void test_edges()
                 }
                 break;
             case NaN:
-                switch (classify(x[j]))
+                switch (classify(testcases[j]))
                 {
                 case zero:
                     assert(classify(r) == NaN);
@@ -128,7 +128,7 @@ void test_edges()
                 }
                 break;
             case non_zero_nan:
-                switch (classify(x[j]))
+                switch (classify(testcases[j]))
                 {
                 case zero:
                     assert(classify(r) == NaN);

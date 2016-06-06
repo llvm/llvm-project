@@ -248,7 +248,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     return;
   }
   if (Args.hasArg(OPT_version)) {
-    printVersion();
+    outs() << getVersionString();
     return;
   }
 
@@ -256,8 +256,10 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
     Cpio.reset(CpioFile::create(Arg->getValue()));
-    if (Cpio)
+    if (Cpio) {
       Cpio->append("response.txt", createResponseFile(Args));
+      Cpio->append("version.txt", getVersionString());
+    }
   }
 
   readConfigs(Args);

@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
       fseek(F, 0, SEEK_END);
-      fprintf(F, "Dump from Child %d\n", i + 11);
+      fprintf(F, "Dump from Child %d\n", i);
       fclose(F);
       exit(0);
     } else {
@@ -54,6 +54,6 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   fseek(F, 0, SEEK_END);
-  fprintf(F, "Dump from parent %d\n", i + 11);
+  fprintf(F, "Dump from parent %d\n", i);
   return 0;
 }

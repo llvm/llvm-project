@@ -95,7 +95,7 @@ private:
 };
 
 void printHelp(const char *Argv0);
-void printVersion();
+std::string getVersionString();
 std::vector<uint8_t> parseHexstring(StringRef S);
 
 std::string createResponseFile(const llvm::opt::InputArgList &Args);

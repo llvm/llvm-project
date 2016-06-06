@@ -67,6 +67,12 @@
 # define SANITIZER_WINDOWS 0
 #endif
 
+#if defined(_WIN64)
+# define SANITIZER_WINDOWS64 1
+#else
+# define SANITIZER_WINDOWS64 0
+#endif
+
 #if defined(__ANDROID__)
 # define SANITIZER_ANDROID 1
 #else

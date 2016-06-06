@@ -36,77 +36,77 @@ void test_edges()
 {
     typedef std::complex<double> C;
     const double pi = std::atan2(+0., -0.);
-    const unsigned N = sizeof(x) / sizeof(x[0]);
+    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
     for (unsigned i = 0; i < N; ++i)
     {
-        std::complex<double> r = asin(x[i]);
-        if (x[i].real() == 0 && x[i].imag() == 0)
+        std::complex<double> r = asin(testcases[i]);
+        if (testcases[i].real() == 0 && testcases[i].imag() == 0)
         {
-            assert(std::signbit(r.real()) == std::signbit(x[i].real()));
-            assert(std::signbit(r.imag()) == std::signbit(x[i].imag()));
+            assert(std::signbit(r.real()) == std::signbit(testcases[i].real()));
+            assert(std::signbit(r.imag()) == std::signbit(testcases[i].imag()));
         }
-        else if (std::isfinite(x[i].real()) && std::isinf(x[i].imag()))
+        else if (std::isfinite(testcases[i].real()) && std::isinf(testcases[i].imag()))
         {
             assert(r.real() == 0);
-            assert(std::signbit(x[i].real()) == std::signbit(r.real()));
+            assert(std::signbit(testcases[i].real()) == std::signbit(r.real()));
             assert(std::isinf(r.imag()));
-            assert(std::signbit(x[i].imag()) == std::signbit(r.imag()));
+            assert(std::signbit(testcases[i].imag()) == std::signbit(r.imag()));
         }
-        else if ( x[i].real() == 0 && std::isnan(x[i].imag()))
+        else if ( testcases[i].real() == 0 && std::isnan(testcases[i].imag()))
         {
             assert(r.real() == 0);
-            assert(std::signbit(x[i].real()) == std::signbit(r.real()));
+            assert(std::signbit(testcases[i].real()) == std::signbit(r.real()));
             assert(std::isnan(r.imag()));
         }
-        else if (std::isfinite(x[i].real()) && std::isnan(x[i].imag()))
+        else if (std::isfinite(testcases[i].real()) && std::isnan(testcases[i].imag()))
         {
             assert(std::isnan(r.real()));
             assert(std::isnan(r.imag()));
         }
-        else if (std::isinf(x[i].real()) && std::isfinite(x[i].imag()))
+        else if (std::isinf(testcases[i].real()) && std::isfinite(testcases[i].imag()))
         {
-            if (x[i].real() > 0)
+            if (testcases[i].real() > 0)
                 is_about(r.real(),  pi/2);
             else
                 is_about(r.real(), - pi/2);
             assert(std::isinf(r.imag()));
-            assert(std::signbit(x[i].imag()) == std::signbit(r.imag()));
+            assert(std::signbit(testcases[i].imag()) == std::signbit(r.imag()));
         }
-        else if (std::isinf(x[i].real()) && std::isinf(x[i].imag()))
+        else if (std::isinf(testcases[i].real()) && std::isinf(testcases[i].imag()))
         {
-            if (std::signbit(x[i].real()))
+            if (std::signbit(testcases[i].real()))
                 is_about(r.real(), -pi/4);
             else
                 is_about(r.real(),  pi/4);
             assert(std::isinf(r.imag()));
-            assert(std::signbit(x[i].imag()) == std::signbit(r.imag()));
+            assert(std::signbit(testcases[i].imag()) == std::signbit(r.imag()));
         }
-        else if (std::isinf(x[i].real()) && std::isnan(x[i].imag()))
+        else if (std::isinf(testcases[i].real()) && std::isnan(testcases[i].imag()))
         {
             assert(std::isnan(r.real()));
             assert(std::isinf(r.imag()));
-            assert(std::signbit(x[i].real()) != std::signbit(r.imag()));
+            assert(std::signbit(testcases[i].real()) != std::signbit(r.imag()));
         }
-        else if (std::isnan(x[i].real()) && std::isfinite(x[i].imag()))
+        else if (std::isnan(testcases[i].real()) && std::isfinite(testcases[i].imag()))
         {
             assert(std::isnan(r.real()));
             assert(std::isnan(r.imag()));
-            assert(std::signbit(x[i].imag()) == std::signbit(r.imag()));
+            assert(std::signbit(testcases[i].imag()) == std::signbit(r.imag()));
         }
-        else if (std::isnan(x[i].real()) && std::isinf(x[i].imag()))
+        else if (std::isnan(testcases[i].real()) && std::isinf(testcases[i].imag()))
         {
             assert(std::isnan(r.real()));
             assert(std::isinf(r.imag()));
         }
-        else if (std::isnan(x[i].real()) && std::isnan(x[i].imag()))
+        else if (std::isnan(testcases[i].real()) && std::isnan(testcases[i].imag()))
         {
             assert(std::isnan(r.real()));
             assert(std::isnan(r.imag()));
         }
         else
         {
-            assert(std::signbit(r.real()) == std::signbit(x[i].real()));
-            assert(std::signbit(r.imag()) == std::signbit(x[i].imag()));
+            assert(std::signbit(r.real()) == std::signbit(testcases[i].real()));
+            assert(std::signbit(r.imag()) == std::signbit(testcases[i].imag()));
         }
     }
 }

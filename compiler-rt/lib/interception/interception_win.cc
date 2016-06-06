@@ -35,12 +35,57 @@ static void _memcpy(void *dst, void *src, size_t sz) {
     dst_c[i] = src_c[i];
 }
 
+#if SANITIZER_WINDOWS64
+static void WriteIndirectJumpInstruction(char *jmp_from, uptr *indirect_target) {  // NOLINT
+  // jmp [rip + XXYYZZWW] = FF 25 WW ZZ YY XX, where
+  // XXYYZZWW is an offset from jmp_from.
+  // The displacement is still 32-bit in x64, so indirect_target must be located
+  // within +/- 2GB range.
+  int offset = (int)(indirect_target - (uptr *)jmp_from);
+  jmp_from[0] = '\xFF';
+  jmp_from[1] = '\x25';
+  *(int*)(jmp_from + 2) = offset;
+}
+#else
 static void WriteJumpInstruction(char *jmp_from, char *to) {
   // jmp XXYYZZWW = E9 WW ZZ YY XX, where XXYYZZWW is an offset from jmp_from
   // to the next instruction to the destination.
   ptrdiff_t offset = to - jmp_from - 5;
   *jmp_from = '\xE9';
   *(ptrdiff_t*)(jmp_from + 1) = offset;
+}
+#endif
+
+static void WriteTrampolineJumpInstruction(char *jmp_from, char *to) {
+#if SANITIZER_WINDOWS64
+  // Emit an indirect jump through immediately following bytes:
+  // jmp_from:
+  //   jmp [rip + 6]
+  //   .quad to
+  // Store the address.
+  uptr *indirect_target = (uptr *)(jmp_from + 6);
+  *indirect_target = (uptr)to;
+  // Write the indirect jump.
+  WriteIndirectJumpInstruction(jmp_from, indirect_target);
+#else
+  WriteJumpInstruction(jmp_from, to);
+#endif
+}
+
+static void WriteInterceptorJumpInstruction(char *jmp_from, char *to) {
+#if SANITIZER_WINDOWS64
+  // Emit an indirect jump through immediately following bytes:
+  // jmp_from:
+  //   jmp [rip - 8]
+  //   .quad to
+  // Store the address.
+  uptr *indirect_target = (uptr *)(jmp_from - 8);
+  *indirect_target = (uptr)to;
+  // Write the indirect jump.
+  WriteIndirectJumpInstruction(jmp_from, indirect_target);
+#else
+  WriteJumpInstruction(jmp_from, to);
+#endif
 }
 
 static char *GetMemoryForTrampoline(size_t size) {
@@ -68,11 +113,74 @@ static char *GetMemoryForTrampoline(size_t size) {
 
 // Returns 0 on error.
 static size_t RoundUpToInstrBoundary(size_t size, char *code) {
-#ifdef _WIN64
-  // TODO(wwchrome): Implement similar logic for x64 instructions.
-  // Win64 RoundUpToInstrBoundary is not supported yet.
-  __debugbreak();
-  return 0;
+#if SANITIZER_WINDOWS64
+  // Win64 RoundUpToInstrBoundary is a work in progress.
+  size_t cursor = 0;
+  while (cursor < size) {
+    switch (code[cursor]) {
+      case '\x57':  // 57 : push rdi
+        cursor++;
+        continue;
+      case '\xb8':  // b8 XX XX XX XX : mov eax, XX XX XX XX
+        cursor += 5;
+        continue;
+    }
+
+    switch (*(unsigned short*)(code + cursor)) {  // NOLINT
+      case 0x5540:  // 40 55 : rex push rbp
+      case 0x5340:  // 40 53 : rex push rbx
+        cursor += 2;
+        continue;
+    }
+
+    switch (0x00FFFFFF & *(unsigned int*)(code + cursor)) {
+      case 0xc18b48:    // 48 8b c1 : mov rax, rcx
+      case 0xc48b48:    // 48 8b c4 : mov rax, rsp
+      case 0xd9f748:    // 48 f7 d9 : neg rcx
+      case 0xd12b48:    // 48 2b d1 : sub rdx, rcx
+      case 0x07c1f6:    // f6 c1 07 : test cl, 0x7
+      case 0xc0854d:    // 4d 85 c0 : test r8, r8
+      case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
+      case 0xc03345:    // 45 33 c0 : xor r8d, r8d
+      case 0xd98b4c:    // 4c 8b d9 : mov r11, rcx
+      case 0xd28b4c:    // 4c 8b d2 : mov r10, rdx
+      case 0xd2b60f:    // 0f b6 d2 : movzx edx, dl
+      case 0xca2b48:    // 48 2b ca : sub rcx, rdx
+      case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
+      case 0xc00b4d:    // 3d 0b c0 : or r8, r8
+      case 0xd18b48:    // 48 8b d1 : mov rdx, rcx
+      case 0xdc8b4c:    // 4c 8b dc : mov r11,rsp
+      case 0xd18b4c:    // 4c 8b d1 : mov r10, rcx
+        cursor += 3;
+        continue;
+
+      case 0xec8348:    // 48 83 ec XX : sub rsp, 0xXX
+      case 0xf88349:    // 49 83 f8 XX : cmp r8, XX
+      case 0x588948:    // 48 89 58 XX : mov QWORD PTR[rax + XX], rbx
+        cursor += 4;
+        continue;
+
+      case 0x058b48:    // 48 8b 05 XX XX XX XX
+                        // = mov rax, QWORD PTR [rip+ 0xXXXXXXXX]
+      case 0x25ff48:    // 48 ff 25 XX XX XX XX
+                        // = rex.W jmp QWORD PTR [rip + 0xXXXXXXXX]
+        cursor += 7;
+        continue;
+    }
+
+    // Check first 5 bytes.
+    switch (0xFFFFFFFFFFull & *(unsigned long long*)(code + cursor)) {
+      case 0x08245c8948:    // 48 89 5c 24 08 : mov QWORD PTR [rsp+0x8], rbx
+      case 0x1024748948:    // 48 89 74 24 10 : mov QWORD PTR [rsp+0x10], rsi
+        cursor += 5;
+        continue;
+    }
+
+    // Unknown instructions!
+    __debugbreak();
+  }
+
+  return cursor;
 #else
   size_t cursor = 0;
   while (cursor < size) {
@@ -150,36 +258,45 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
 }
 
 bool OverrideFunction(uptr old_func, uptr new_func, uptr *orig_old_func) {
-#ifdef _WIN64
-  // TODO(wwchrome): Implement using x64 jmp.
-  // OverrideFunction is not yet supported on x64.
-  __debugbreak();
-  return false;
-#else
   // Function overriding works basically like this:
-  // We write "jmp <new_func>" (5 bytes) at the beginning of the 'old_func'
-  // to override it.
+  // On Win32, We write "jmp <new_func>" (5 bytes) at the beginning of
+  // the 'old_func' to override it.
+  // On Win64, We write "jmp [rip -8]" (6 bytes) at the beginning of
+  // the 'old_func' to override it, and use 8 bytes of data to store
+  // the full 64-bit address for new_func.
   // We might want to be able to execute the original 'old_func' from the
-  // wrapper, in this case we need to keep the leading 5+ bytes ('head')
-  // of the original code somewhere with a "jmp <old_func+head>".
-  // We call these 'head'+5 bytes of instructions a "trampoline".
+  // wrapper, in this case we need to keep the leading 5+ (6+ on Win64)
+  // bytes ('head') of the original code somewhere with a "jmp <old_func+head>".
+  // We call these 'head'+5/6 bytes of instructions a "trampoline".
   char *old_bytes = (char *)old_func;
 
-  // We'll need at least 5 bytes for a 'jmp'.
-  size_t head = 5;
+#if SANITIZER_WINDOWS64
+  size_t kHeadMin = 6;  // The minimum size of the head to contain the 'jmp'.
+  size_t kTrampolineJumpSize = 14;  // The total bytes used at the end of
+                                    // trampoline for jumping back to the
+                                    // remains of original function.
+  size_t kExtraPrevBytes = 8;  // The extra bytes we need to mark READWRITE for
+                               // page access, that is preceeding the begin
+                               // of function.
+#else
+  size_t kHeadMin = 5;
+  size_t kTrampolineJumpSize = 5;
+  size_t kExtraPrevBytes = 0;
+#endif
+  size_t head = kHeadMin;
   if (orig_old_func) {
     // Find out the number of bytes of the instructions we need to copy
     // to the trampoline and store it in 'head'.
-    head = RoundUpToInstrBoundary(head, old_bytes);
+    head = RoundUpToInstrBoundary(kHeadMin, old_bytes);
     if (!head)
       return false;
 
     // Put the needed instructions into the trampoline bytes.
-    char *trampoline = GetMemoryForTrampoline(head + 5);
+    char *trampoline = GetMemoryForTrampoline(head + kTrampolineJumpSize);
     if (!trampoline)
       return false;
     _memcpy(trampoline, old_bytes, head);
-    WriteJumpInstruction(trampoline + head, old_bytes + head);
+    WriteTrampolineJumpInstruction(trampoline + head, old_bytes + head);
     *orig_old_func = (uptr)trampoline;
   }
 
@@ -188,19 +305,23 @@ bool OverrideFunction(uptr old_func, uptr new_func, uptr *orig_old_func) {
   // located in the same page (sic!).  FIXME: might consider putting the
   // __interception code into a separate section or something?
   DWORD old_prot, unused_prot;
-  if (!VirtualProtect((void *)old_bytes, head, PAGE_EXECUTE_READWRITE,
+  // TODO(wwchrome): Properly handle access violations when finding a safe
+  // region to store the indirect jump target address.
+  // Need to mark extra 8 bytes for Win64 because jmp [rip -8]
+  if (!VirtualProtect((void *)(old_bytes - kExtraPrevBytes),
+                      head + kExtraPrevBytes, PAGE_EXECUTE_READWRITE,
                       &old_prot))
     return false;
 
-  WriteJumpInstruction(old_bytes, (char *)new_func);
-  _memset(old_bytes + 5, 0xCC /* int 3 */, head - 5);
+  WriteInterceptorJumpInstruction(old_bytes, (char *)new_func);
+  _memset(old_bytes + kHeadMin, 0xCC /* int 3 */, head - kHeadMin);
 
   // Restore the original permissions.
-  if (!VirtualProtect((void *)old_bytes, head, old_prot, &unused_prot))
+  if (!VirtualProtect((void *)(old_bytes - kExtraPrevBytes),
+                      head + kExtraPrevBytes, old_prot, &unused_prot))
     return false;  // not clear if this failure bothers us.
 
   return true;
-#endif
 }
 
 static void **InterestingDLLsAvailable() {

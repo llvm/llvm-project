@@ -41,20 +41,8 @@ using namespace __tsan;  // NOLINT
 #define stderr __stderrp
 #endif
 
-#if SANITIZER_FREEBSD
-#define __libc_realloc __realloc
-#define __libc_calloc __calloc
-#elif SANITIZER_MAC
-#define __libc_malloc REAL(malloc)
-#define __libc_realloc REAL(realloc)
-#define __libc_calloc REAL(calloc)
-#define __libc_free REAL(free)
-#elif SANITIZER_ANDROID
+#if SANITIZER_ANDROID
 #define __errno_location __errno
-#define __libc_malloc REAL(malloc)
-#define __libc_realloc REAL(realloc)
-#define __libc_calloc REAL(calloc)
-#define __libc_free REAL(free)
 #define mallopt(a, b)
 #endif
 
@@ -109,10 +97,6 @@ extern "C" void *pthread_self();
 extern "C" void _exit(int status);
 extern "C" int *__errno_location();
 extern "C" int fileno_unlocked(void *stream);
-#if !SANITIZER_ANDROID
-extern "C" void *__libc_calloc(uptr size, uptr n);
-extern "C" void *__libc_realloc(void *ptr, uptr size);
-#endif
 extern "C" int dirfd(void *dirp);
 #if !SANITIZER_FREEBSD && !SANITIZER_ANDROID
 extern "C" int mallopt(int param, int value);
@@ -396,7 +380,7 @@ static void at_exit_wrapper(void *arg) {
   Acquire(thr, pc, (uptr)arg);
   AtExitCtx *ctx = (AtExitCtx*)arg;
   ((void(*)(void *arg))ctx->f)(ctx->arg);
-  __libc_free(ctx);
+  InternalFree(ctx);
 }
 
 static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
@@ -422,7 +406,7 @@ TSAN_INTERCEPTOR(int, __cxa_atexit, void (*f)(void *a), void *arg, void *dso) {
 
 static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
       void *arg, void *dso) {
-  AtExitCtx *ctx = (AtExitCtx*)__libc_malloc(sizeof(AtExitCtx));
+  AtExitCtx *ctx = (AtExitCtx*)InternalAlloc(sizeof(AtExitCtx));
   ctx->f = f;
   ctx->arg = arg;
   Release(thr, pc, (uptr)ctx);
@@ -441,14 +425,14 @@ static void on_exit_wrapper(int status, void *arg) {
   Acquire(thr, pc, (uptr)arg);
   AtExitCtx *ctx = (AtExitCtx*)arg;
   ((void(*)(int status, void *arg))ctx->f)(status, ctx->arg);
-  __libc_free(ctx);
+  InternalFree(ctx);
 }
 
 TSAN_INTERCEPTOR(int, on_exit, void(*f)(int, void*), void *arg) {
   if (cur_thread()->in_symbolizer)
     return 0;
   SCOPED_TSAN_INTERCEPTOR(on_exit, f, arg);
-  AtExitCtx *ctx = (AtExitCtx*)__libc_malloc(sizeof(AtExitCtx));
+  AtExitCtx *ctx = (AtExitCtx*)InternalAlloc(sizeof(AtExitCtx));
   ctx->f = (void(*)())f;
   ctx->arg = arg;
   Release(thr, pc, (uptr)ctx);
@@ -601,7 +585,7 @@ TSAN_INTERCEPTOR(void, siglongjmp, uptr *env, int val) {
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, malloc, uptr size) {
   if (cur_thread()->in_symbolizer)
-    return __libc_malloc(size);
+    return InternalAlloc(size);
   void *p = 0;
   {
     SCOPED_INTERCEPTOR_RAW(malloc, size);
@@ -618,7 +602,7 @@ TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
 
 TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
   if (cur_thread()->in_symbolizer)
-    return __libc_calloc(size, n);
+    return InternalCalloc(size, n);
   void *p = 0;
   {
     SCOPED_INTERCEPTOR_RAW(calloc, size, n);
@@ -630,7 +614,7 @@ TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
 
 TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
   if (cur_thread()->in_symbolizer)
-    return __libc_realloc(p, size);
+    return InternalRealloc(p, size);
   if (p)
     invoke_free_hook(p);
   {
@@ -645,7 +629,7 @@ TSAN_INTERCEPTOR(void, free, void *p) {
   if (p == 0)
     return;
   if (cur_thread()->in_symbolizer)
-    return __libc_free(p);
+    return InternalFree(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(free, p);
   user_free(thr, pc, p);
@@ -655,7 +639,7 @@ TSAN_INTERCEPTOR(void, cfree, void *p) {
   if (p == 0)
     return;
   if (cur_thread()->in_symbolizer)
-    return __libc_free(p);
+    return InternalFree(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(cfree, p);
   user_free(thr, pc, p);

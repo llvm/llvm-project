@@ -463,6 +463,12 @@ static void AsanInitInternal() {
     kMidMemBeg = kLowMemEnd < 0x3000000000ULL ? 0x3000000000ULL : 0;
     kMidMemEnd = kLowMemEnd < 0x3000000000ULL ? 0x4fffffffffULL : 0;
   }
+#elif SANITIZER_WINDOWS64
+  // Disable the "mid mem" shadow layout.
+  if (!full_shadow_is_available) {
+    kMidMemBeg = 0;
+    kMidMemEnd = 0;
+  }
 #endif
 
   if (Verbosity()) PrintAddressSpaceLayout();

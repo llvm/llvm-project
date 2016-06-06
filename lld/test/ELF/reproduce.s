@@ -19,6 +19,9 @@
 # RSP-NEXT: -shared
 # RSP-NEXT: --as-needed
 
+# RUN: FileCheck %s --check-prefix=VERSION < repro/version.txt
+# VERSION: LLD
+
 # RUN: mkdir -p %t.dir/build2/a/b/c
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.dir/build2/foo.o
 # RUN: cd %t.dir/build2/a/b/c
@@ -50,6 +53,7 @@
 
 # RUN: cpio -t < repro2.cpio | FileCheck %s
 # CHECK:      repro2/response.txt
+# CHECK-NEXT: repro2/version.txt
 # CHECK-NEXT: repro2/{{.*}}/dyn
 # CHECK-NEXT: repro2/{{.*}}/ver
 # CHECK-NEXT: repro2/{{.*}}/foo bar

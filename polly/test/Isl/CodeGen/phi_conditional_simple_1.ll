@@ -22,8 +22,7 @@
 ; CHECK-NEXT:     %phi.phiops = alloca i32
 ; CHECK-LABEL:  polly.stmt.if.end:
 ; CHECK-NEXT:     %phi.phiops.reload = load i32, i32* %phi.phiops
-; CHECK-NEXT:     %scevgep
-; CHECK-NEXT:     store i32 %phi.phiops.reload, i32*
+; CHECK:          store i32 %phi.phiops.reload, i32*
 ; CHECK-LABEL:  polly.stmt.if.then:
 ; CHECK-NEXT:     store i32 1, i32* %phi.phiops
 ; CHECK-NEXT:     br label %polly.merge{{[.]?}}

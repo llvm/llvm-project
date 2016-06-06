@@ -9,7 +9,7 @@
 ;           for (int c4 = 0; c4 <= 3; c4 += 1)
 ;             Stmt_for_body_3(32 * c0 + 4 * c2 + c4, 32 * c1 + c3);
 
-; CHECK: polly.stmt.for.body.3:                            ; preds = %polly.loop_header18
+; CHECK: polly.stmt.for.body.3:
 ; CHECK:   %_p_splat_one = load <1 x double>, <1 x double>* %_p_vec_p, align 8, !alias.scope !1, !noalias !3, !llvm.mem.parallel_loop_access !0
 ; CHECK:   %_p_vec_full = load <4 x double>, <4 x double>* %vector_ptr, align 8, !alias.scope !4, !noalias !5, !llvm.mem.parallel_loop_access !0
 ; CHECK:   extractelement <4 x double> %addp_vec, i32 0

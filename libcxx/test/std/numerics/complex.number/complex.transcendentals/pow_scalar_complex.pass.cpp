@@ -37,13 +37,13 @@ test()
 void test_edges()
 {
     const double pi = std::atan2(+0., -0.);
-    const unsigned N = sizeof(x) / sizeof(x[0]);
+    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
     for (unsigned i = 0; i < N; ++i)
     {
         for (unsigned j = 0; j < N; ++j)
         {
-            std::complex<double> r = pow(real(x[i]), x[j]);
-            std::complex<double> z = exp(x[j] * log(std::complex<double>(real(x[i]))));
+            std::complex<double> r = pow(real(testcases[i]), testcases[j]);
+            std::complex<double> z = exp(testcases[j] * log(std::complex<double>(real(testcases[i]))));
             if (std::isnan(real(r)))
                 assert(std::isnan(real(z)));
             else

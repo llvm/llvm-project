@@ -1942,6 +1942,15 @@ public:
   /// @returns True if the optimized SCoP can be executed.
   bool hasFeasibleRuntimeContext() const;
 
+  /// @brief Check if the assumption in @p Set is trivial or not.
+  ///
+  /// @param Set  The relations between parameters that are assumed to hold.
+  /// @param Sign Enum to indicate if the assumptions in @p Set are positive
+  ///             (needed/assumptions) or negative (invalid/restrictions).
+  ///
+  /// @returns True if the assumption @p Set is not trivial.
+  bool isEffectiveAssumption(__isl_keep isl_set *Set, AssumptionSign Sign);
+
   /// @brief Track and report an assumption.
   ///
   /// Use 'clang -Rpass-analysis=polly-scops' or 'opt

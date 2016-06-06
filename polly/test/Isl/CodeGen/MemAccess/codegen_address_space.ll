@@ -40,5 +40,5 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; CHECK: %polly.access.cast.A = bitcast [100 x i32] addrspace(5)* %A to i32 addrspace(5)*
-; CHECK: %polly.access.A = getelementptr i32, i32 addrspace(5)* %polly.access.cast.A, i64 0
+; CHECK: %polly.access.A = getelementptr i32, i32 addrspace(5)* %polly.access.cast.A, i1 false
 ; CHECK: %tmp2_p_scalar_ = load i32, i32 addrspace(5)* %polly.access.A, align 4, !alias.scope !0, !noalias !2

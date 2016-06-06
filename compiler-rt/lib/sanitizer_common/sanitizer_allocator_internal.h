@@ -45,7 +45,12 @@ typedef SizeClassAllocatorLocalCache<PrimaryInternalAllocator>
 typedef CombinedAllocator<PrimaryInternalAllocator, InternalAllocatorCache,
                           LargeMmapAllocator<> > InternalAllocator;
 
-void *InternalAlloc(uptr size, InternalAllocatorCache *cache = nullptr);
+void *InternalAlloc(uptr size, InternalAllocatorCache *cache = nullptr,
+                    uptr alignment = 0);
+void *InternalRealloc(void *p, uptr size,
+                      InternalAllocatorCache *cache = nullptr);
+void *InternalCalloc(uptr countr, uptr size,
+                     InternalAllocatorCache *cache = nullptr);
 void InternalFree(void *p, InternalAllocatorCache *cache = nullptr);
 InternalAllocator *internal_allocator();
 

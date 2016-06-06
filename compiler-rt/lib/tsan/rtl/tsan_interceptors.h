@@ -46,12 +46,4 @@ class ScopedInterceptor {
 
 #define TSAN_INTERCEPTOR(ret, func, ...) INTERCEPTOR(ret, func, __VA_ARGS__)
 
-#if SANITIZER_FREEBSD
-#define __libc_free __free
-#define __libc_malloc __malloc
-#endif
-
-extern "C" void __libc_free(void *ptr);
-extern "C" void *__libc_malloc(uptr size);
-
 #endif  // TSAN_INTERCEPTORS_H
