@@ -1094,7 +1094,7 @@ print_encoding_armv7 (struct baton baton, uint8_t *function_start, uint32_t enco
         case UNWIND_ARM_MODE_FRAME_D:
         case UNWIND_ARM_MODE_FRAME:
         {
-			int stack_adjust = EXTRACT_BITS (mode, UNWIND_ARM_FRAME_STACK_ADJUST_MASK);
+            int stack_adjust = EXTRACT_BITS (encoding, UNWIND_ARM_FRAME_STACK_ADJUST_MASK) * wordsize;
 
             printf ("frame func: CFA is fp+%d ", (2 * wordsize) + stack_adjust);
             int cfa_offset = -stack_adjust;
@@ -1146,7 +1146,7 @@ print_encoding_armv7 (struct baton baton, uint8_t *function_start, uint32_t enco
                 printf (" r8=[CFA%d]", cfa_offset);
             }
 
-            if (mode & UNWIND_ARM_MODE_FRAME_D)
+            if (mode == UNWIND_ARM_MODE_FRAME_D)
             {
                 uint32_t d_reg_bits = EXTRACT_BITS (encoding, UNWIND_ARM_FRAME_D_REG_COUNT_MASK);
                 switch (d_reg_bits)

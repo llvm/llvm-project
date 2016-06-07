@@ -316,6 +316,14 @@ DWARFCallFrameInfo::GetFDEIndex ()
 
     Timer scoped_timer (__PRETTY_FUNCTION__, "%s - %s", __PRETTY_FUNCTION__, m_objfile.GetFileSpec().GetFilename().AsCString(""));
 
+    bool clear_address_zeroth_bit = false;
+    ArchSpec arch;
+    if (m_objfile.GetArchitecture (arch))
+    {
+        if (arch.GetTriple().getArch() == llvm::Triple::arm || arch.GetTriple().getArch() == llvm::Triple::thumb)
+            clear_address_zeroth_bit = true;
+    }
+
     lldb::offset_t offset = 0;
     if (m_cfi_data_initialized == false)
         GetCFIData();
@@ -376,6 +384,9 @@ DWARFCallFrameInfo::GetFDEIndex ()
             const lldb::addr_t data_addr = LLDB_INVALID_ADDRESS;
 
             lldb::addr_t addr = m_cfi_data.GetGNUEHPointer(&offset, cie->ptr_encoding, pc_rel_addr, text_addr, data_addr);
+            if (clear_address_zeroth_bit)
+                addr &= ~1ull;
+
             lldb::addr_t length = m_cfi_data.GetGNUEHPointer(&offset, cie->ptr_encoding & DW_EH_PE_MASK_ENCODING, pc_rel_addr, text_addr, data_addr);
             FDEEntryMap::Entry fde (addr, length, current_entry);
             m_fde_index.Append(fde);
