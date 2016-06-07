@@ -233,8 +233,22 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::TemplateArgument">
-    <DisplayString IncludeView="cpp">{*(clang::QualType *)&amp;TypeOrValue.V,view(cpp)}</DisplayString>
-    <DisplayString Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">{(clang::TemplateArgument::ArgKind)TypeOrValue.Kind,en} template parameter: {*(clang::QualType *)&amp;TypeOrValue.V}</DisplayString>
+    <DisplayString IncludeView="cpp" Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">{*(clang::QualType *)&amp;TypeOrValue.V,view(cpp)}</DisplayString>
+    <DisplayString Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">{(clang::TemplateArgument::ArgKind)TypeOrValue.Kind,en} template argument: {*(clang::QualType *)&amp;TypeOrValue.V}</DisplayString>
+    <DisplayString IncludeView="arg0" Condition="Args.NumArgs==0"></DisplayString>
+    <DisplayString IncludeView="arg0">{Args.Args[0]}{*this,view(arg1)}</DisplayString>
+    <DisplayString IncludeView="arg1" Condition="Args.NumArgs==1"></DisplayString>
+    <DisplayString IncludeView="arg1">, {Args.Args[1]}{*this,view(arg2)}</DisplayString>
+    <DisplayString IncludeView="arg2" Condition="Args.NumArgs==2"></DisplayString>
+    <DisplayString IncludeView="arg2">, {Args.Args[2]}, ...</DisplayString>
+    <DisplayString IncludeView="arg0cpp" Condition="Args.NumArgs==0"></DisplayString>
+    <DisplayString IncludeView="arg0cpp">{Args.Args[0],view(cpp)}{*this,view(arg1cpp)}</DisplayString>
+    <DisplayString IncludeView="arg1cpp" Condition="Args.NumArgs==1"></DisplayString>
+    <DisplayString IncludeView="arg1cpp">, {Args.Args[1],view(cpp)}{*this,view(arg2cpp)}</DisplayString>
+    <DisplayString IncludeView="arg2cpp" Condition="Args.NumArgs==2"></DisplayString>
+    <DisplayString IncludeView="arg2cpp">, {Args.Args[2],view(cpp)}, ...</DisplayString>
+    <DisplayString IncludeView="cpp" Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Pack">{*this,view(arg0cpp)}</DisplayString>
+    <DisplayString Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Pack">{*this,view(arg0)}</DisplayString>
     <DisplayString>{(clang::TemplateArgument::ArgKind)TypeOrValue.Kind,en}</DisplayString>
     <Expand>
       <Item Name="QualType" Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">*(clang::QualType *)&amp;TypeOrValue.V</Item>
@@ -243,6 +257,43 @@ For later versions of Visual Studio, no setup is required-->
         <ValuePointer>Args.Args</ValuePointer>
       </ArrayItems>
       <!-- TODO: Other kinds-->
+    </Expand>
+  </Type>
+  <Type Name="clang::TemplateArgumentList">
+    <DisplayString IncludeView="arg0" Condition="NumArguments==0"></DisplayString>
+    <DisplayString IncludeView="arg0">{Arguments[0],view(cpp)}{*this,view(arg1)}</DisplayString>
+    <DisplayString IncludeView="arg1" Condition="NumArguments==1"></DisplayString>
+    <DisplayString IncludeView="arg1">, {Arguments[1],view(cpp)}{*this,view(arg2)}</DisplayString>
+    <DisplayString IncludeView="arg2" Condition="NumArguments==2"></DisplayString>
+    <DisplayString IncludeView="arg2">, {Arguments[1],view(cpp)}, ...</DisplayString>
+    <DisplayString>&lt;{*this,view(arg0)}&gt;</DisplayString>
+    <Expand>
+      <Item Name="NumArguments">NumArguments</Item>
+      <ArrayItems>
+        <Size>NumArguments</Size>
+        <ValuePointer>Arguments</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="llvm::ArrayRef&lt;clang::TemplateArgument&gt;">
+    <DisplayString IncludeView="arg0" Condition="Length==0"></DisplayString>
+    <DisplayString IncludeView="arg0">{Data[0],view(cpp)}{*this,view(arg1)}</DisplayString>
+    <DisplayString IncludeView="arg1" Condition="Length==1"></DisplayString>
+    <DisplayString IncludeView="arg1">, {Data[1],view(cpp)}{*this,view(arg2)}</DisplayString>
+    <DisplayString IncludeView="arg2" Condition="Length==2"></DisplayString>
+    <DisplayString IncludeView="arg2">, {Data[2],view(cpp)}, ...</DisplayString>
+    <DisplayString>&lt;{*this,view(arg0)}&gt;</DisplayString>
+  </Type>
+  <Type Name="clang::MultiLevelTemplateArgumentList">
+    <DisplayString IncludeView="level0" Condition="(llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.EndX - (llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.BeginX==0"></DisplayString>
+    <DisplayString IncludeView="level0">{((llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.BeginX)[0],view(cpp)}{*this,view(level1)}</DisplayString>
+    <DisplayString IncludeView="level1" Condition="(llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.EndX - (llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.BeginX==1"></DisplayString>
+    <DisplayString IncludeView="level1">::{((llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.BeginX)[1],view(cpp)}{*this,view(level2)}</DisplayString>
+    <DisplayString IncludeView="level2" Condition="(llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.EndX - (llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.BeginX==2"></DisplayString>
+    <DisplayString IncludeView="level2">::{((llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.BeginX)[2],view(cpp)}, ...</DisplayString>
+    <DisplayString>{*this,view(level0)}</DisplayString>
+    <Expand>
+      <Item Name="TemplateList">TemplateArgumentLists</Item>
     </Expand>
   </Type>
   <!-- Builtin types that have C++ keywords are manually displayed as that keyword. Otherwise, just use the enum name -->
@@ -352,6 +403,10 @@ For later versions of Visual Studio, no setup is required-->
   </Type>
   <Type Name="clang::DeclaratorDecl">
     <DisplayString>{DeclType,view(cpp)} {Name,view(cpp)}</DisplayString>
+    <Expand>
+      <Item Name="Name">Name</Item>
+      <Item Name="DeclType">DeclType</Item>
+    </Expand>
   </Type>
   <Type Name="clang::VarDecl">
     <DisplayString>{*(DeclaratorDecl*)this,nd}</DisplayString>

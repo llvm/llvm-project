@@ -625,6 +625,22 @@ AST_MATCHER_P(Expr, ignoringParenImpCasts,
   return InnerMatcher.matches(*Node.IgnoreParenImpCasts(), Finder, Builder);
 }
 
+/// \brief Matches types that match InnerMatcher after any parens are stripped.
+///
+/// Given
+/// \code
+///   void (*fp)(void);
+/// \endcode
+/// The matcher
+/// \code
+///   varDecl(hasType(pointerType(pointee(ignoringParens(functionType())))))
+/// \endcode
+/// would match the declaration for fp.
+AST_MATCHER_P(QualType, ignoringParens,
+              internal::Matcher<QualType>, InnerMatcher) {
+  return InnerMatcher.matches(Node.IgnoreParens(), Finder, Builder);
+}
+
 /// \brief Matches classTemplateSpecializations where the n'th TemplateArgument
 /// matches the given InnerMatcher.
 ///

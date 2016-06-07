@@ -79,3 +79,8 @@ Kernel7()
 }
 // CHECK:     !{{[0-9]+}} = !{void ()* @{{.*}}Kernel7{{.*}}, !"maxntidx",
 // CHECK-NOT: !{{[0-9]+}} = !{void ()* @{{.*}}Kernel7{{.*}}, !"minctasm",
+
+const char constchar = 12;
+__global__ void __launch_bounds__(constint, constchar) Kernel8() {}
+// CHECK:     !{{[0-9]+}} = !{void ()* @{{.*}}Kernel8{{.*}}, !"maxntidx", i32 100
+// CHECK:     !{{[0-9]+}} = !{void ()* @{{.*}}Kernel8{{.*}}, !"minctasm", i32 12

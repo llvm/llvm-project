@@ -268,6 +268,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(ignoringImpCasts);
   REGISTER_MATCHER(ignoringParenCasts);
   REGISTER_MATCHER(ignoringParenImpCasts);
+  REGISTER_MATCHER(ignoringParens);
   REGISTER_MATCHER(implicitCastExpr);
   REGISTER_MATCHER(implicitValueInitExpr);
   REGISTER_MATCHER(incompleteArrayType);

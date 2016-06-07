@@ -115,7 +115,7 @@
 // RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-POWERPC64 %s
 
-// STATIC: ld{{.*}}"
+// STATIC: ld{{.*}}" "--eh-frame-hdr"
 // STATIC-NOT: "-pie"
 // STATIC-NOT: "-Bshareable"
 // STATIC: "-dynamic-linker" "/libexec/ld.elf_so"
@@ -125,14 +125,14 @@
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o"
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
-// SHARED: ld{{.*}}"
+// SHARED: ld{{.*}}" "--eh-frame-hdr"
 // SHARED-NOT: "-pie"
 // SHARED-NOT: "-dynamic-linker"
 // SHARED-NOT: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // SHARED: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
 // SHARED: "{{.*}}/usr/lib{{/|\\\\}}crtendS.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
-// PIE: ld{{.*}}"
+// PIE: ld{{.*}}" "--eh-frame-hdr"
 // PIE-NOT: "-Bshareable"
 // PIE "-pie" "-dynamic-linker" "/libexec/ld.elf_so"
 // PIE-NOT: "-Bshareable"
