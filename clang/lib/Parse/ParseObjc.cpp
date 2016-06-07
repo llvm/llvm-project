@@ -1274,7 +1274,6 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
     if (context == Declarator::ObjCResultContext)
       dsContext = DSC_objc_method_result;
     ParseSpecifierQualifierList(declSpec, AS_none, dsContext);
-    declSpec.SetRangeEnd(Tok.getLocation());
     Declarator declarator(declSpec, context);
     ParseDeclarator(declarator);
 
