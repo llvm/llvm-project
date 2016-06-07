@@ -22,30 +22,47 @@ namespace __sanitizer {
 #if defined(SANITIZER_GO) || defined(SANITIZER_USE_MALLOC)
 # if SANITIZER_LINUX && !SANITIZER_ANDROID
 extern "C" void *__libc_malloc(uptr size);
+extern "C" void *__libc_memalign(uptr alignment, uptr size);
+extern "C" void *__libc_realloc(void *ptr, uptr size);
 extern "C" void __libc_free(void *ptr);
-#  define LIBC_MALLOC __libc_malloc
-#  define LIBC_FREE __libc_free
 # else
 #  include <stdlib.h>
-#  define LIBC_MALLOC malloc
-#  define LIBC_FREE free
+#  define __libc_malloc malloc
+static void *__libc_memalign(uptr alignment, uptr size) {
+  void *p;
+  uptr error = posix_memalign(&p, alignment, size);
+  if (error) return nullptr;
+  return p;
+}
+#  define __libc_realloc realloc
+#  define __libc_free free
 # endif
 
-static void *RawInternalAlloc(uptr size, InternalAllocatorCache *cache) {
+static void *RawInternalAlloc(uptr size, InternalAllocatorCache *cache,
+                              uptr alignment) {
   (void)cache;
-  return LIBC_MALLOC(size);
+  if (alignment == 0)
+    return __libc_malloc(size);
+  else
+    return __libc_memalign(alignment, size);
+}
+
+static void *RawInternalRealloc(void *ptr, uptr size,
+                                InternalAllocatorCache *cache) {
+  (void)cache;
+  return __libc_realloc(ptr, size);
 }
 
 static void RawInternalFree(void *ptr, InternalAllocatorCache *cache) {
   (void)cache;
-  LIBC_FREE(ptr);
+  __libc_free(ptr);
 }
 
 InternalAllocator *internal_allocator() {
   return 0;
 }
 
-#else // SANITIZER_GO
+#else  // defined(SANITIZER_GO) || defined(SANITIZER_USE_MALLOC)
 
 static ALIGNED(64) char internal_alloc_placeholder[sizeof(InternalAllocator)];
 static atomic_uint8_t internal_allocator_initialized;
@@ -68,13 +85,26 @@ InternalAllocator *internal_allocator() {
   return internal_allocator_instance;
 }
 
-static void *RawInternalAlloc(uptr size, InternalAllocatorCache *cache) {
+static void *RawInternalAlloc(uptr size, InternalAllocatorCache *cache,
+                              uptr alignment) {
+  if (alignment == 0) alignment = 8;
   if (cache == 0) {
     SpinMutexLock l(&internal_allocator_cache_mu);
-    return internal_allocator()->Allocate(&internal_allocator_cache, size, 8,
-                                          false);
+    return internal_allocator()->Allocate(&internal_allocator_cache, size,
+                                          alignment, false);
   }
-  return internal_allocator()->Allocate(cache, size, 8, false);
+  return internal_allocator()->Allocate(cache, size, alignment, false);
+}
+
+static void *RawInternalRealloc(void *ptr, uptr size,
+                                InternalAllocatorCache *cache) {
+  uptr alignment = 8;
+  if (cache == 0) {
+    SpinMutexLock l(&internal_allocator_cache_mu);
+    return internal_allocator()->Reallocate(&internal_allocator_cache, ptr,
+                                            size, alignment);
+  }
+  return internal_allocator()->Reallocate(cache, ptr, size, alignment);
 }
 
 static void RawInternalFree(void *ptr, InternalAllocatorCache *cache) {
@@ -85,18 +115,40 @@ static void RawInternalFree(void *ptr, InternalAllocatorCache *cache) {
   internal_allocator()->Deallocate(cache, ptr);
 }
 
-#endif // SANITIZER_GO
+#endif  // defined(SANITIZER_GO) || defined(SANITIZER_USE_MALLOC)
 
 const u64 kBlockMagic = 0x6A6CB03ABCEBC041ull;
 
-void *InternalAlloc(uptr size, InternalAllocatorCache *cache) {
+void *InternalAlloc(uptr size, InternalAllocatorCache *cache, uptr alignment) {
   if (size + sizeof(u64) < size)
     return nullptr;
-  void *p = RawInternalAlloc(size + sizeof(u64), cache);
+  void *p = RawInternalAlloc(size + sizeof(u64), cache, alignment);
   if (!p)
     return nullptr;
   ((u64*)p)[0] = kBlockMagic;
   return (char*)p + sizeof(u64);
+}
+
+void *InternalRealloc(void *addr, uptr size, InternalAllocatorCache *cache) {
+  if (!addr)
+    return InternalAlloc(size, cache);
+  if (size + sizeof(u64) < size)
+    return nullptr;
+  addr = (char*)addr - sizeof(u64);
+  size = size + sizeof(u64);
+  CHECK_EQ(kBlockMagic, ((u64*)addr)[0]);
+  void *p = RawInternalRealloc(addr, size, cache);
+  if (!p)
+    return nullptr;
+  return (char*)p + sizeof(u64);
+}
+
+void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {
+  if (CallocShouldReturnNullDueToOverflow(count, size))
+    return internal_allocator()->ReturnNullOrDie();
+  void *p = InternalAlloc(count * size, cache);
+  if (p) internal_memset(p, 0, count * size);
+  return p;
 }
 
 void InternalFree(void *addr, InternalAllocatorCache *cache) {
