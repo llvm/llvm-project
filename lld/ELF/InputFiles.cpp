@@ -527,7 +527,7 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
 
     if (Versym) {
       // Ignore local symbols and non-default versions.
-      if (VersymIndex == 0 || (VersymIndex & VERSYM_HIDDEN))
+      if (VersymIndex == 0 || VersymIndex == 1 || (VersymIndex & VERSYM_HIDDEN))
         continue;
     }
     elf::Symtab<ELFT>::X->addShared(this, Name, Sym, Verdefs[VersymIndex]);

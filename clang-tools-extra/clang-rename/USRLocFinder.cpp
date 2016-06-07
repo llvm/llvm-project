@@ -123,6 +123,23 @@ public:
     return true;
   }
 
+  bool VisitCXXStaticCastExpr(clang::CXXStaticCastExpr *Expr) {
+    clang::QualType Type = Expr->getType();
+    // See if this a cast of a pointer.
+    const RecordDecl* Decl = Type->getPointeeCXXRecordDecl();
+    if (!Decl) {
+      // See if this is a cast of a reference.
+      Decl = Type->getAsCXXRecordDecl();
+    }
+
+    if (Decl && getUSRForDecl(Decl) == USR) {
+      SourceLocation Location = Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
+      LocationsFound.push_back(Location);
+    }
+
+    return true;
+  }
+
   // Non-visitors:
 
   // \brief Returns a list of unique locations. Duplicate or overlapping
