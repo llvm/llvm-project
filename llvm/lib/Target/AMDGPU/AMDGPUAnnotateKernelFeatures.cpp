@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 
@@ -42,6 +43,11 @@ public:
     AU.setPreservesAll();
     ModulePass::getAnalysisUsage(AU);
   }
+
+  static bool visitConstantExpr(const ConstantExpr *CE);
+  static bool visitConstantExprsRecursively(
+    const Constant *EntryC,
+    SmallPtrSet<const Constant *, 8> &ConstantExprVisited);
 };
 
 }
@@ -53,19 +59,77 @@ char &llvm::AMDGPUAnnotateKernelFeaturesID = AMDGPUAnnotateKernelFeatures::ID;
 INITIALIZE_PASS(AMDGPUAnnotateKernelFeatures, DEBUG_TYPE,
                 "Add AMDGPU function attributes", false, false)
 
-static bool castRequiresQueuePtr(const AddrSpaceCastInst *ASC) {
-  unsigned SrcAS = ASC->getSrcAddressSpace();
 
-  // The queue ptr is only needed when casting to flat, not from it.
+// The queue ptr is only needed when casting to flat, not from it.
+static bool castRequiresQueuePtr(unsigned SrcAS) {
   return SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS;
+}
+
+static bool castRequiresQueuePtr(const AddrSpaceCastInst *ASC) {
+  return castRequiresQueuePtr(ASC->getSrcAddressSpace());
+}
+
+bool AMDGPUAnnotateKernelFeatures::visitConstantExpr(const ConstantExpr *CE) {
+  if (CE->getOpcode() == Instruction::AddrSpaceCast) {
+    unsigned SrcAS = CE->getOperand(0)->getType()->getPointerAddressSpace();
+    return castRequiresQueuePtr(SrcAS);
+  }
+
+  return false;
+}
+
+bool AMDGPUAnnotateKernelFeatures::visitConstantExprsRecursively(
+  const Constant *EntryC,
+  SmallPtrSet<const Constant *, 8> &ConstantExprVisited) {
+
+  if (!ConstantExprVisited.insert(EntryC).second)
+    return false;
+
+  SmallVector<const Constant *, 16> Stack;
+  Stack.push_back(EntryC);
+
+  while (!Stack.empty()) {
+    const Constant *C = Stack.pop_back_val();
+
+    // Check this constant expression.
+    if (const auto *CE = dyn_cast<ConstantExpr>(C)) {
+      if (visitConstantExpr(CE))
+        return true;
+    }
+
+    // Visit all sub-expressions.
+    for (const Use &U : C->operands()) {
+      const auto *OpC = dyn_cast<Constant>(U);
+      if (!OpC)
+        continue;
+
+      if (!ConstantExprVisited.insert(OpC).second)
+        continue;
+
+      Stack.push_back(OpC);
+    }
+  }
+
+  return false;
 }
 
 // Return true if an addrspacecast is used that requires the queue ptr.
 bool AMDGPUAnnotateKernelFeatures::hasAddrSpaceCast(const Function &F) {
+  SmallPtrSet<const Constant *, 8> ConstantExprVisited;
+
   for (const BasicBlock &BB : F) {
     for (const Instruction &I : BB) {
       if (const AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
         if (castRequiresQueuePtr(ASC))
+          return true;
+      }
+
+      for (const Use &U : I.operands()) {
+        const auto *OpC = dyn_cast<Constant>(U);
+        if (!OpC)
+          continue;
+
+        if (visitConstantExprsRecursively(OpC, ConstantExprVisited))
           return true;
       }
     }

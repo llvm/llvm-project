@@ -2253,7 +2253,12 @@ TEST_F(FunctionAttachmentTest, Verifier) {
   // be verified directly, so check that the module fails to verify).
   EXPECT_TRUE(verifyModule(*F->getParent()));
 
+  // Nor can materializable functions.
+  F->setIsMaterializable(true);
+  EXPECT_TRUE(verifyModule(*F->getParent()));
+
   // Functions with a body can.
+  F->setIsMaterializable(false);
   (void)new UnreachableInst(Context, BasicBlock::Create(Context, "bb", F));
   EXPECT_FALSE(verifyModule(*F->getParent()));
   EXPECT_FALSE(verifyFunction(*F));

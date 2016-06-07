@@ -26,7 +26,7 @@ class ModInfo;
 
 class ModStream {
 public:
-  ModStream(PDBFile &File, const ModInfo &Module);
+  ModStream(const PDBFile &File, const ModInfo &Module);
   ~ModStream();
 
   Error reload();

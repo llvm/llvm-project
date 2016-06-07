@@ -73,26 +73,32 @@ parser, which will be used to report errors found during code generation
 
 .. code-block:: c++
 
-    static std::unique_ptr<Module> *TheModule;
-    static IRBuilder<> Builder(LLVMContext);
-    static std::map<std::string, Value*> NamedValues;
+    static LLVMContext TheContext;
+    static IRBuilder<> Builder(TheContext);
+    static std::unique_ptr<Module> TheModule;
+    static std::map<std::string, Value *> NamedValues;
 
     Value *LogErrorV(const char *Str) {
       LogError(Str);
       return nullptr;
     }
 
-The static variables will be used during code generation. ``TheModule``
-is an LLVM construct that contains functions and global variables. In many
-ways, it is the top-level structure that the LLVM IR uses to contain code.
-It will own the memory for all of the IR that we generate, which is why
-the codegen() method returns a raw Value\*, rather than a unique_ptr<Value>.
+The static variables will be used during code generation. ``TheContext``
+is an opaque object that owns a lot of core LLVM data structures, such as
+the type and constant value tables. We don't need to understand it in
+detail, we just need a single instance to pass into APIs that require it.
 
 The ``Builder`` object is a helper object that makes it easy to generate
 LLVM instructions. Instances of the
 `IRBuilder <http://llvm.org/doxygen/IRBuilder_8h-source.html>`_
 class template keep track of the current place to insert instructions
 and has methods to create new instructions.
+
+``TheModule`` is an LLVM construct that contains functions and global
+variables. In many ways, it is the top-level structure that the LLVM IR
+uses to contain code. It will own the memory for all of the IR that we
+generate, which is why the codegen() method returns a raw Value\*,
+rather than a unique_ptr<Value>.
 
 The ``NamedValues`` map keeps track of which values are defined in the
 current scope and what their LLVM representation is. (In other words, it

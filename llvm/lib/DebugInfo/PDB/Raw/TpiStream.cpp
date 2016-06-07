@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -61,8 +62,10 @@ struct TpiStream::HeaderInfo {
   EmbeddedBuf HashAdjBuffer;
 };
 
-TpiStream::TpiStream(PDBFile &File, uint32_t StreamIdx)
-    : Pdb(File), Stream(StreamIdx, File), HashFunction(nullptr) {}
+TpiStream::TpiStream(const PDBFile &File, uint32_t StreamIdx)
+    : Pdb(File),
+      Stream(llvm::make_unique<IndexedStreamData>(StreamIdx, File), File),
+      HashFunction(nullptr) {}
 
 TpiStream::~TpiStream() {}
 
@@ -101,9 +104,15 @@ Error TpiStream::reload() {
     return EC;
 
   // Hash indices, hash values, etc come from the hash stream.
-  HashStream.reset(new MappedBlockStream(Header->HashStreamIndex, Pdb));
+  HashStream.reset(new MappedBlockStream(
+      llvm::make_unique<IndexedStreamData>(Header->HashStreamIndex, Pdb), Pdb));
   codeview::StreamReader HSR(*HashStream);
+
   uint32_t NumHashValues = Header->HashValueBuffer.Length / sizeof(ulittle32_t);
+  if (NumHashValues != NumTypeRecords())
+    return make_error<RawError>(
+        raw_error_code::corrupt_file,
+        "TPI hash count does not match with the number of type records.");
   HSR.setOffset(Header->HashValueBuffer.Off);
   if (auto EC = HSR.readArray(HashValues, NumHashValues))
     return EC;

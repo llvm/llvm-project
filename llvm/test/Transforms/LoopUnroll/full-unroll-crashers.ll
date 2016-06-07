@@ -188,3 +188,19 @@ for.inc:
 for.end:
   ret void
 }
+
+define void @cmp_type_mismatch() {
+entry:
+  br label %for.header
+
+for.header:
+  br label %for.body
+
+for.body:
+  %d = phi i32* [ null, %for.header ]
+  %cmp = icmp eq i32* %d, null
+  br i1 undef, label %for.end, label %for.header
+
+for.end:
+  ret void
+}

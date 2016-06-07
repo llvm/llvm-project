@@ -41,6 +41,8 @@ database for LLVM, any project built by CMake should follow similar steps.
 .. code-block:: console
 
   $ cd path/to/llvm-build
+  $ ninja find-all-symbols // build find-all-symbols tool.
+  $ ninja clang-include-fixer // build clang-include-fixer tool.
   $ ls compile_commands.json # Make sure compile_commands.json exists.
     compile_commands.json
   $ path/to/llvm/source/tools/clang/tools/extra/include-fixer/find-all-symbols/tool/run-find-all-symbols.py
@@ -48,7 +50,7 @@ database for LLVM, any project built by CMake should follow similar steps.
   $ ln -s $PWD/find_all_symbols_db.yaml path/to/llvm/source/ # Link database into the source tree.
   $ ln -s $PWD/compile_commands.json path/to/llvm/source/ # Also link compilation database if it's not there already.
   $ cd path/to/llvm/source
-  $ clang-include-fixer -db=yaml path/to/file/with/missing/include.cpp
+  $ /path/to/clang-include-fixer -db=yaml path/to/file/with/missing/include.cpp
     Added #include "foo.h"
 
 Integrate with Vim
@@ -62,6 +64,14 @@ following key binding to your ``.vimrc``:
 
 This enables `clang-include-fixer` for NORMAL and VISUAL mode. Change ``,cf`` to
 another binding if you need clang-include-fixer on a different key.
+
+Make sure vim can find :program:`clang-include-fixer`:
+
+- Add the path to :program:`clang-include-fixer` to the PATH environment variable.
+- Or set ``g:clang_include_fixer_path`` in vimrc: ``let g:clang_include_fixer_path=path/to/clang-include-fixer``
+
+You can customize the number of headers being shown by setting
+``let g:clang_include_fixer_maximum_suggested_headers=5``
 
 See ``clang-include-fixer.py`` for more details.
 

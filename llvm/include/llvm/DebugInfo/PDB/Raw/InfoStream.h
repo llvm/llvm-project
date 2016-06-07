@@ -24,7 +24,7 @@ namespace pdb {
 class PDBFile;
 class InfoStream {
 public:
-  InfoStream(PDBFile &File);
+  InfoStream(const PDBFile &File);
 
   Error reload();
 
@@ -36,10 +36,7 @@ public:
   uint32_t getNamedStreamIndex(llvm::StringRef Name) const;
   iterator_range<StringMapConstIterator<uint32_t>> named_streams() const;
 
-  PDBFile &getFile() { return Pdb; }
-
 private:
-  PDBFile &Pdb;
   MappedBlockStream Stream;
 
   // PDB file format version.  We only support VC70.  See the enumeration

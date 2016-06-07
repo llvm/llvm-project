@@ -3116,6 +3116,55 @@ bool SIInstrInfo::isHighLatencyInstruction(const MachineInstr *MI) const {
   return isMUBUF(Opc) || isMTBUF(Opc) || isMIMG(Opc);
 }
 
+unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  unsigned Opc = MI.getOpcode();
+  const MCInstrDesc &Desc = getMCOpcodeFromPseudo(Opc);
+  unsigned DescSize = Desc.getSize();
+
+  // If we have a definitive size, we can use it. Otherwise we need to inspect
+  // the operands to know the size.
+  if (DescSize == 8 || DescSize == 4)
+    return DescSize;
+
+  assert(DescSize == 0);
+
+  // 4-byte instructions may have a 32-bit literal encoded after them. Check
+  // operands that coud ever be literals.
+  if (isVALU(MI) || isSALU(MI)) {
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    if (Src0Idx == -1)
+      return 4; // No operands.
+
+    if (isLiteralConstant(MI.getOperand(Src0Idx), getOpSize(MI, Src0Idx)))
+      return 8;
+
+    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+    if (Src1Idx == -1)
+      return 4;
+
+    if (isLiteralConstant(MI.getOperand(Src1Idx), getOpSize(MI, Src1Idx)))
+      return 8;
+
+    return 4;
+  }
+
+  switch (Opc) {
+  case TargetOpcode::IMPLICIT_DEF:
+  case TargetOpcode::KILL:
+  case TargetOpcode::DBG_VALUE:
+  case TargetOpcode::BUNDLE:
+  case TargetOpcode::EH_LABEL:
+    return 0;
+  case TargetOpcode::INLINEASM: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const char *AsmStr = MI.getOperand(0).getSymbolName();
+    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+  }
+  default:
+    llvm_unreachable("unable to find instruction size");
+  }
+}
+
 ArrayRef<std::pair<int, const char *>>
 SIInstrInfo::getSerializableTargetIndices() const {
   static const std::pair<int, const char *> TargetIndices[] = {

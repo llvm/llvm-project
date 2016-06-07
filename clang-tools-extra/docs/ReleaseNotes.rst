@@ -44,7 +44,8 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
-- Feature1...
+- :program:`clang-include-fixer`, a tool that provides an automated way of
+  adding ``#include`` directives for missing symbols in one translation unit.
 
 Improvements to clang-query
 ---------------------------

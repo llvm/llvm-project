@@ -8,8 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
+#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 #include "llvm/DebugInfo/PDB/Raw/PublicsStream.h"
@@ -49,13 +53,28 @@ struct SuperBlock {
   // This contains the block # of the block map.
   support::ulittle32_t BlockMapAddr;
 };
+
+class DirectoryStreamData : public IPDBStreamData {
+public:
+  DirectoryStreamData(const PDBFile &File) : File(File) {}
+
+  virtual uint32_t getLength() { return File.getNumDirectoryBytes(); }
+  virtual llvm::ArrayRef<llvm::support::ulittle32_t> getStreamBlocks() {
+    return File.getDirectoryBlockArray();
+  }
+
+private:
+  const PDBFile &File;
+};
+
+typedef codeview::FixedStreamArray<support::ulittle32_t> ulittle_array;
 }
 
 struct llvm::pdb::PDBFileContext {
   std::unique_ptr<MemoryBuffer> Buffer;
   const SuperBlock *SB;
-  std::vector<uint32_t> StreamSizes;
-  DenseMap<uint32_t, std::vector<uint32_t>> StreamMap;
+  ArrayRef<support::ulittle32_t> StreamSizes;
+  std::vector<ulittle_array> StreamMap;
 };
 
 static Error checkOffset(MemoryBufferRef M, uintptr_t Addr,
@@ -109,10 +128,14 @@ uint32_t PDBFile::getStreamByteSize(uint32_t StreamIndex) const {
   return Context->StreamSizes[StreamIndex];
 }
 
-llvm::ArrayRef<uint32_t>
+ArrayRef<support::ulittle32_t>
 PDBFile::getStreamBlockList(uint32_t StreamIndex) const {
-  auto &Data = Context->StreamMap[StreamIndex];
-  return llvm::ArrayRef<uint32_t>(Data);
+  auto Result = Context->StreamMap[StreamIndex];
+  codeview::StreamReader Reader(Result.getUnderlyingStream());
+  ArrayRef<support::ulittle32_t> Array;
+  if (auto EC = Reader.readArray(Array, Result.size()))
+    return ArrayRef<support::ulittle32_t>();
+  return Array;
 }
 
 StringRef PDBFile::getBlockData(uint32_t BlockIndex, uint32_t NumBytes) const {
@@ -184,113 +207,44 @@ Error PDBFile::parseFileHeaders() {
 
 Error PDBFile::parseStreamData() {
   assert(Context && Context->SB);
+  if (DirectoryStream)
+    return Error::success();
 
-  bool SeenNumStreams = false;
+  // bool SeenNumStreams = false;
   uint32_t NumStreams = 0;
-  uint32_t StreamIdx = 0;
-  uint64_t DirectoryBytesRead = 0;
+  // uint32_t StreamIdx = 0;
+  // uint64_t DirectoryBytesRead = 0;
 
-  MemoryBufferRef M = *Context->Buffer;
   const SuperBlock *SB = Context->SB;
 
-  auto DirectoryBlocks = getDirectoryBlockArray();
+  // Normally you can't use a MappedBlockStream without having fully parsed the
+  // PDB file, because it accesses the directory and various other things, which
+  // is exactly what we are attempting to parse.  By specifying a custom
+  // subclass of IPDBStreamData which only accesses the fields that have already
+  // been parsed, we can avoid this and reuse MappedBlockStream.
+  auto SD = llvm::make_unique<DirectoryStreamData>(*this);
+  DirectoryStream = llvm::make_unique<MappedBlockStream>(std::move(SD), *this);
+  codeview::StreamReader Reader(*DirectoryStream);
+  if (auto EC = Reader.readInteger(NumStreams))
+    return EC;
 
-  // The structure of the directory is as follows:
-  //    struct PDBDirectory {
-  //      uint32_t NumStreams;
-  //      uint32_t StreamSizes[NumStreams];
-  //      uint32_t StreamMap[NumStreams][];
-  //    };
-  //
-  //  Empty streams don't consume entries in the StreamMap.
-  for (uint32_t DirectoryBlockAddr : DirectoryBlocks) {
-    uint64_t DirectoryBlockOffset =
-        blockToOffset(DirectoryBlockAddr, SB->BlockSize);
-    auto DirectoryBlock =
-        makeArrayRef(reinterpret_cast<const support::ulittle32_t *>(
-                         M.getBufferStart() + DirectoryBlockOffset),
-                     SB->BlockSize / sizeof(support::ulittle32_t));
-    if (auto EC = checkOffset(M, DirectoryBlock))
-      return EC;
-
-    // We read data out of the directory four bytes at a time.  Depending on
-    // where we are in the directory, the contents may be: the number of streams
-    // in the directory, a stream's size, or a block in the stream map.
-    for (uint32_t Data : DirectoryBlock) {
-      // Don't read beyond the end of the directory.
-      if (DirectoryBytesRead == SB->NumDirectoryBytes)
-        break;
-
-      DirectoryBytesRead += sizeof(Data);
-
-      // This data must be the number of streams if we haven't seen it yet.
-      if (!SeenNumStreams) {
-        NumStreams = Data;
-        SeenNumStreams = true;
-        continue;
-      }
-      // This data must be a stream size if we have not seen them all yet.
-      if (Context->StreamSizes.size() < NumStreams) {
-        // It seems like some streams have their set to -1 when their contents
-        // are not present.  Treat them like empty streams for now.
-        if (Data == UINT32_MAX)
-          Context->StreamSizes.push_back(0);
-        else
-          Context->StreamSizes.push_back(Data);
-        continue;
-      }
-
-      // This data must be a stream block number if we have seen all of the
-      // stream sizes.
-      std::vector<uint32_t> *StreamBlocks = nullptr;
-      // Figure out which stream this block number belongs to.
-      while (StreamIdx < NumStreams) {
-        uint64_t NumExpectedStreamBlocks =
-            bytesToBlocks(Context->StreamSizes[StreamIdx], SB->BlockSize);
-        StreamBlocks = &Context->StreamMap[StreamIdx];
-        if (NumExpectedStreamBlocks > StreamBlocks->size())
-          break;
-        ++StreamIdx;
-      }
-      // It seems this block doesn't belong to any stream?  The stream is either
-      // corrupt or something more mysterious is going on.
-      if (StreamIdx == NumStreams)
-        return make_error<RawError>(raw_error_code::corrupt_file,
-                                    "Orphaned block found?");
-
-      uint64_t BlockOffset = blockToOffset(Data, getBlockSize());
-      if (BlockOffset + getBlockSize() < BlockOffset)
-        return make_error<RawError>(raw_error_code::corrupt_file,
-                                    "Bogus stream block number");
-      if (BlockOffset + getBlockSize() > M.getBufferSize())
-        return make_error<RawError>(raw_error_code::corrupt_file,
-                                    "Stream block number is out of bounds");
-
-      StreamBlocks->push_back(Data);
-    }
-  }
-
-  if (Context->StreamSizes.size() != NumStreams)
-    return make_error<RawError>(
-        raw_error_code::corrupt_file,
-        "The directory has fewer streams then expected");
-
-  for (uint32_t I = 0; I != NumStreams; ++I) {
+  if (auto EC = Reader.readArray(Context->StreamSizes, NumStreams))
+    return EC;
+  for (uint32_t I = 0; I < NumStreams; ++I) {
     uint64_t NumExpectedStreamBlocks =
-        bytesToBlocks(getStreamByteSize(I), getBlockSize());
-    size_t NumStreamBlocks = getStreamBlockList(I).size();
-    if (NumExpectedStreamBlocks != NumStreamBlocks)
-      return make_error<RawError>(raw_error_code::corrupt_file,
-                                  "The number of stream blocks is not "
-                                  "sufficient for the size of this stream");
+        bytesToBlocks(getStreamByteSize(I), SB->BlockSize);
+    ulittle_array Blocks;
+    if (auto EC = Reader.readArray(Blocks, NumExpectedStreamBlocks))
+      return EC;
+    Context->StreamMap.push_back(Blocks);
   }
 
   // We should have read exactly SB->NumDirectoryBytes bytes.
-  assert(DirectoryBytesRead == SB->NumDirectoryBytes);
+  assert(Reader.bytesRemaining() == 0);
   return Error::success();
 }
 
-llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() {
+llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
   return makeArrayRef(
       reinterpret_cast<const support::ulittle32_t *>(
           Context->Buffer->getBufferStart() + getBlockMapOffset()),
@@ -371,7 +325,8 @@ Expected<NameHashTable &> PDBFile::getStringTable() {
 
     if (NameStreamIndex == 0)
       return make_error<RawError>(raw_error_code::no_stream);
-    auto S = llvm::make_unique<MappedBlockStream>(NameStreamIndex, *this);
+    auto SD = llvm::make_unique<IndexedStreamData>(NameStreamIndex, *this);
+    auto S = llvm::make_unique<MappedBlockStream>(std::move(SD), *this);
     codeview::StreamReader Reader(*S);
     auto N = llvm::make_unique<NameHashTable>();
     if (auto EC = N->load(Reader))

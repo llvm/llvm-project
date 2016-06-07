@@ -325,6 +325,45 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   return Builder.CreateAShr(Vec, ShiftVec);
 }
 
+static Value *simplifyX86movmsk(const IntrinsicInst &II,
+                                InstCombiner::BuilderTy &Builder) {
+  Value *Arg = II.getArgOperand(0);
+  Type *ResTy = II.getType();
+  Type *ArgTy = Arg->getType();
+
+  // movmsk(undef) -> zero as we must ensure the upper bits are zero.
+  if (isa<UndefValue>(Arg))
+    return Constant::getNullValue(ResTy);
+
+  // We can't easily peek through x86_mmx types.
+  if (!ArgTy->isVectorTy())
+    return nullptr;
+
+  auto *C = dyn_cast<Constant>(Arg);
+  if (!C)
+    return nullptr;
+
+  // Extract signbits of the vector input and pack into integer result.
+  APInt Result(ResTy->getPrimitiveSizeInBits(), 0);
+  for (unsigned I = 0, E = ArgTy->getVectorNumElements(); I != E; ++I) {
+    auto *COp = C->getAggregateElement(I);
+    if (!COp)
+      return nullptr;
+    if (isa<UndefValue>(COp))
+      continue;
+
+    auto *CInt = dyn_cast<ConstantInt>(COp);
+    auto *CFp = dyn_cast<ConstantFP>(COp);
+    if (!CInt && !CFp)
+      return nullptr;
+
+    if ((CInt && CInt->isNegative()) || (CFp && CFp->isNegative()))
+      Result.setBit(I);
+  }
+
+  return Constant::getIntegerValue(ResTy, Result);
+}
+
 static Value *simplifyX86insertps(const IntrinsicInst &II,
                                   InstCombiner::BuilderTy &Builder) {
   auto *CInt = dyn_cast<ConstantInt>(II.getArgOperand(2));
@@ -1457,6 +1496,18 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       II->setArgOperand(0, V);
       return II;
     }
+    break;
+  }
+
+  case Intrinsic::x86_mmx_pmovmskb:
+  case Intrinsic::x86_sse_movmsk_ps:
+  case Intrinsic::x86_sse2_movmsk_pd:
+  case Intrinsic::x86_sse2_pmovmskb_128:
+  case Intrinsic::x86_avx_movmsk_pd_256:
+  case Intrinsic::x86_avx_movmsk_ps_256:
+  case Intrinsic::x86_avx2_pmovmskb: {
+    if (Value *V = simplifyX86movmsk(*II, *Builder))
+      return replaceInstUsesWith(*II, V);
     break;
   }
 

@@ -52,6 +52,20 @@ public:
     return Error::success();
   }
 
+  template <typename T>
+  Error readArray(ArrayRef<T> &Array, uint32_t NumElements) {
+    ArrayRef<uint8_t> Bytes;
+    if (NumElements == 0) {
+      Array = ArrayRef<T>();
+      return Error::success();
+    }
+
+    if (auto EC = readBytes(Bytes, NumElements * sizeof(T)))
+      return EC;
+    Array = ArrayRef<T>(reinterpret_cast<const T *>(Bytes.data()), NumElements);
+    return Error::success();
+  }
+
   template <typename T, typename U>
   Error readArray(VarStreamArray<T, U> &Array, uint32_t Size) {
     StreamRef S;

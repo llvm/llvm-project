@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
@@ -22,15 +23,16 @@ namespace llvm {
 namespace pdb {
 
 class IPDBFile;
+class IPDBStreamData;
 
 class MappedBlockStream : public codeview::StreamInterface {
 public:
-  MappedBlockStream(uint32_t StreamIdx, const IPDBFile &File);
+  MappedBlockStream(std::unique_ptr<IPDBStreamData> Data, const IPDBFile &File);
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override;
 
-  uint32_t getLength() const override { return StreamLength; }
+  uint32_t getLength() const override;
 
   uint32_t getNumBytesCopied() const;
 
@@ -39,11 +41,11 @@ private:
   bool tryReadContiguously(uint32_t Offset, uint32_t Size,
                            ArrayRef<uint8_t> &Buffer) const;
 
-  uint32_t StreamLength;
-  std::vector<uint32_t> BlockList;
+  const IPDBFile &Pdb;
+  std::unique_ptr<IPDBStreamData> Data;
+
   mutable llvm::BumpPtrAllocator Pool;
   mutable DenseMap<uint32_t, uint8_t *> CacheMap;
-  const IPDBFile &Pdb;
 };
 
 } // end namespace pdb

@@ -22,6 +22,7 @@
 #include "OutputStyle.h"
 #include "TypeDumper.h"
 #include "VariableDumper.h"
+#include "YAMLOutputStyle.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -154,6 +155,8 @@ cl::opt<bool>
 cl::opt<bool> DumpSectionHeaders("raw-section-headers",
                                  cl::desc("dump section headers"),
                                  cl::cat(NativeOptions));
+cl::opt<bool> DumpFpo("raw-fpo", cl::desc("dump FPO records"),
+                      cl::cat(NativeOptions));
 
 cl::opt<bool>
     RawAll("raw-all",
@@ -209,6 +212,8 @@ static Error dumpStructure(RawSession &RS) {
   std::unique_ptr<OutputStyle> O;
   if (opts::RawOutputStyle == opts::OutputStyleTy::LLVM)
     O = llvm::make_unique<LLVMOutputStyle>(File);
+  else if (opts::RawOutputStyle == opts::OutputStyleTy::YAML)
+    O = llvm::make_unique<YAMLOutputStyle>(File);
   else
     return make_error<RawError>(raw_error_code::feature_unsupported,
                                 "Requested output style unsupported");
@@ -251,6 +256,10 @@ static Error dumpStructure(RawSession &RS) {
 
   if (auto EC = O->dumpSectionHeaders())
     return EC;
+
+  if (auto EC = O->dumpFpoStream())
+    return EC;
+  O->flush();
   return Error::success();
 }
 
@@ -290,6 +299,8 @@ bool isRawDumpEnabled() {
   if (opts::DumpSectionMap)
     return true;
   if (opts::DumpLineInfo)
+    return true;
+  if (opts::DumpFpo)
     return true;
   return false;
 }
@@ -460,6 +471,7 @@ int main(int argc_, const char *argv_[]) {
     opts::DumpSectionMap = true;
     opts::DumpSectionContribs = true;
     opts::DumpLineInfo = true;
+    opts::DumpFpo = true;
   }
 
   // When adding filters for excluded compilands and types, we need to remember

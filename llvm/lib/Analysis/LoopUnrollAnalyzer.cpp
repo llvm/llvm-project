@@ -187,9 +187,11 @@ bool UnrolledInstAnalyzer::visitCmpInst(CmpInst &I) {
 
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
     if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
-      if (Constant *C = ConstantExpr::getCompare(I.getPredicate(), CLHS, CRHS)) {
-        SimplifiedValues[&I] = C;
-        return true;
+      if (CLHS->getType() == CRHS->getType()) {
+        if (Constant *C = ConstantExpr::getCompare(I.getPredicate(), CLHS, CRHS)) {
+          SimplifiedValues[&I] = C;
+          return true;
+        }
       }
     }
   }

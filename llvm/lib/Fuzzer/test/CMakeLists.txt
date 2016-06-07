@@ -93,6 +93,16 @@ set(Tests
   TimeoutTest
   )
 
+if(APPLE)
+  # LeakSanitizer is not supported on OSX right now
+  set(HAS_LSAN 0)
+  message(WARNING "LeakSanitizer is not supported on Apple platforms."
+    " Building and running LibFuzzer LeakSanitizer tests is disabled."
+    )
+else()
+  set(HAS_LSAN 1)
+endif()
+
 foreach(Test ${Tests})
   add_libfuzzer_test(${Test} SOURCES ${Test}.cpp)
 endforeach()
@@ -128,8 +138,8 @@ set_target_properties(LLVMFuzzer-Unittest
 include_directories(..)
 
 if(APPLE)
-  message(WARNING "Dataflow sanitizer is not supported on Apple platforms."
-    " Building and running LibFuzzer dataflow sanitizer tests is disabled."
+  message(WARNING "DataflowSanitizer is not supported on Apple platforms."
+    " Building and running LibFuzzer DataflowSanitizer tests is disabled."
     )
   set(HAS_DFSAN 0)
 else()

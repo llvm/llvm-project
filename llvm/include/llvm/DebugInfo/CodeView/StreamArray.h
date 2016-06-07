@@ -224,6 +224,8 @@ public:
     return FixedStreamArrayIterator<T>(*this, size());
   }
 
+  StreamRef getUnderlyingStream() const { return Stream; }
+
 private:
   StreamRef Stream;
 };

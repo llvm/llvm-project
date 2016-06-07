@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7--windows %s -o - | FileCheck %s
+; RUN: llc -mtriple thumbv7--windows-itanium %s -o - | FileCheck %s
 
 @i = thread_local global i32 0
 @j = external thread_local global i32
@@ -22,10 +22,12 @@ define i32 @f() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: movw [[SLOT:r[0-9]]], :lower16:i
-; CHECK-NEXT: movt [[SLOT]], :upper16:i
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+
+; CHECK: [[CPI]]:
+; CHECK-NEXT: .long i(SECREL32)
 
 define i32 @e() {
   %1 = load i32, i32* @j
@@ -41,10 +43,12 @@ define i32 @e() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: movw [[SLOT:r[0-9]]], :lower16:j
-; CHECK-NEXT: movt [[SLOT]], :upper16:j
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+
+; CHECK: [[CPI]]:
+; CHECK-NEXT: .long j(SECREL32)
 
 define i32 @d() {
   %1 = load i32, i32* @k
@@ -60,10 +64,12 @@ define i32 @d() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: movw [[SLOT:r[0-9]]], :lower16:k
-; CHECK-NEXT: movt [[SLOT]], :upper16:k
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+
+; CHECK: [[CPI]]:
+; CHECK-NEXT: .long k(SECREL32)
 
 define i32 @c() {
   %1 = load i32, i32* @l
@@ -79,10 +85,12 @@ define i32 @c() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: movw [[SLOT:r[0-9]]], :lower16:l
-; CHECK-NEXT: movt [[SLOT]], :upper16:l
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+
+; CHECK: [[CPI]]:
+; CHECK-NEXT: .long l(SECREL32)
 
 define i32 @b() {
   %1 = load i32, i32* @m
@@ -98,10 +106,12 @@ define i32 @b() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: movw [[SLOT:r[0-9]]], :lower16:m
-; CHECK-NEXT: movt [[SLOT]], :upper16:m
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldr r0, {{\[}}[[TLS]], [[SLOT]]]
+
+; CHECK: [[CPI]]:
+; CHECK: .long m(SECREL32)
 
 define i16 @a() {
   %1 = load i16, i16* @n
@@ -117,10 +127,12 @@ define i16 @a() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: movw [[SLOT:r[0-9]]], :lower16:n
-; CHECK-NEXT: movt [[SLOT]], :upper16:n
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldrh r0, {{\[}}[[TLS]], [[SLOT]]]
+
+; CHECK: [[CPI]]:
+; CHECK: .long n(SECREL32)
 
 define i8 @Z() {
   %1 = load i8, i8* @o
@@ -136,8 +148,10 @@ define i8 @Z() {
 ; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
-; CHECK-NEXT: movw [[SLOT:r[0-9]]], :lower16:o
-; CHECK-NEXT: movt [[SLOT]], :upper16:o
+; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:LCPI[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ldrb r0, {{\[}}[[TLS]], [[SLOT]]]
+
+; CHECK: [[CPI]]:
+; CHECK-NEXT: .long o(SECREL32)
 

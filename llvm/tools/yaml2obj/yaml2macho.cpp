@@ -31,8 +31,7 @@ public:
   MachOWriter(MachOYAML::Object &Obj) : Obj(Obj), is64Bit(true), fileStart(0) {
     is64Bit = Obj.Header.magic == MachO::MH_MAGIC_64 ||
               Obj.Header.magic == MachO::MH_CIGAM_64;
-    memset(reinterpret_cast<void *>(&Header64), 0,
-           sizeof(MachO::mach_header_64));
+    memset(reinterpret_cast<void *>(&Header), 0, sizeof(MachO::mach_header_64));
     assert((is64Bit || Obj.Header.reserved == 0xDEADBEEFu) &&
            "32-bit MachO has reserved in header");
     assert((!is64Bit || Obj.Header.reserved != 0xDEADBEEFu) &&
@@ -64,10 +63,7 @@ private:
   bool is64Bit;
   uint64_t fileStart;
 
-  union {
-    MachO::mach_header_64 Header64;
-    MachO::mach_header Header;
-  };
+  MachO::mach_header_64 Header;
 };
 
 Error MachOWriter::writeMachO(raw_ostream &OS) {
@@ -89,12 +85,11 @@ Error MachOWriter::writeHeader(raw_ostream &OS) {
   Header.ncmds = Obj.Header.ncmds;
   Header.sizeofcmds = Obj.Header.sizeofcmds;
   Header.flags = Obj.Header.flags;
-  Header64.reserved = Obj.Header.reserved;
+  Header.reserved = Obj.Header.reserved;
 
-  if (is64Bit)
-    OS.write((const char *)&Header64, sizeof(MachO::mach_header_64));
-  else
-    OS.write((const char *)&Header, sizeof(MachO::mach_header));
+  auto header_size =
+      is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
+  OS.write((const char *)&Header, header_size);
 
   return Error::success();
 }

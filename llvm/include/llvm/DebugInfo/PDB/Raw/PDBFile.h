@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBFILE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -48,11 +49,12 @@ public:
 
   uint32_t getNumStreams() const override;
   uint32_t getStreamByteSize(uint32_t StreamIndex) const override;
-  ArrayRef<uint32_t> getStreamBlockList(uint32_t StreamIndex) const override;
+  ArrayRef<support::ulittle32_t>
+  getStreamBlockList(uint32_t StreamIndex) const override;
 
   StringRef getBlockData(uint32_t BlockIndex, uint32_t NumBytes) const override;
 
-  ArrayRef<support::ulittle32_t> getDirectoryBlockArray();
+  ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 
   Error parseFileHeaders();
   Error parseStreamData();
@@ -81,6 +83,7 @@ private:
   std::unique_ptr<TpiStream> Ipi;
   std::unique_ptr<PublicsStream> Publics;
   std::unique_ptr<SymbolStream> Symbols;
+  std::unique_ptr<MappedBlockStream> DirectoryStream;
   std::unique_ptr<MappedBlockStream> StringTableStream;
   std::unique_ptr<NameHashTable> StringTable;
 };

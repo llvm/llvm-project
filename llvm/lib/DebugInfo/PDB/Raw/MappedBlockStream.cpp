@@ -8,28 +8,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
 
-MappedBlockStream::MappedBlockStream(uint32_t StreamIdx, const IPDBFile &File)
-    : Pdb(File) {
-  if (StreamIdx >= Pdb.getNumStreams()) {
-    StreamLength = 0;
-  } else {
-    StreamLength = Pdb.getStreamByteSize(StreamIdx);
-    BlockList = Pdb.getStreamBlockList(StreamIdx);
-  }
-}
+MappedBlockStream::MappedBlockStream(std::unique_ptr<IPDBStreamData> Data,
+                                     const IPDBFile &Pdb)
+    : Pdb(Pdb), Data(std::move(Data)) {}
 
 Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
                                    ArrayRef<uint8_t> &Buffer) const {
   // Make sure we aren't trying to read beyond the end of the stream.
-  if (Size > StreamLength)
+  if (Size > Data->getLength())
     return make_error<RawError>(raw_error_code::insufficient_buffer);
-  if (Offset > StreamLength - Size)
+  if (Offset > Data->getLength() - Size)
     return make_error<RawError>(raw_error_code::insufficient_buffer);
 
   if (tryReadContiguously(Offset, Size, Buffer))
@@ -57,6 +52,8 @@ Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
   return Error::success();
 }
 
+uint32_t MappedBlockStream::getLength() const { return Data->getLength(); }
+
 bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
                                             ArrayRef<uint8_t> &Buffer) const {
   // Attempt to fulfill the request with a reference directly into the stream.
@@ -72,6 +69,7 @@ bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
       llvm::alignTo(Size - BytesFromFirstBlock, Pdb.getBlockSize()) /
       Pdb.getBlockSize();
 
+  auto BlockList = Data->getStreamBlocks();
   uint32_t RequiredContiguousBlocks = NumAdditionalBlocks + 1;
   uint32_t E = BlockList[BlockNum];
   for (uint32_t I = 0; I < RequiredContiguousBlocks; ++I, ++E) {
@@ -93,14 +91,15 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
   uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
 
   // Make sure we aren't trying to read beyond the end of the stream.
-  if (Buffer.size() > StreamLength)
+  if (Buffer.size() > Data->getLength())
     return make_error<RawError>(raw_error_code::insufficient_buffer);
-  if (Offset > StreamLength - Buffer.size())
+  if (Offset > Data->getLength() - Buffer.size())
     return make_error<RawError>(raw_error_code::insufficient_buffer);
 
   uint32_t BytesLeft = Buffer.size();
   uint32_t BytesWritten = 0;
   uint8_t *WriteBuffer = Buffer.data();
+  auto BlockList = Data->getStreamBlocks();
   while (BytesLeft > 0) {
     uint32_t StreamBlockAddr = BlockList[BlockNum];
 

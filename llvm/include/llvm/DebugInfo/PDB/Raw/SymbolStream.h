@@ -22,7 +22,7 @@ class PDBFile;
 
 class SymbolStream {
 public:
-  SymbolStream(PDBFile &File, uint32_t StreamNum);
+  SymbolStream(const PDBFile &File, uint32_t StreamNum);
   ~SymbolStream();
   Error reload();
 

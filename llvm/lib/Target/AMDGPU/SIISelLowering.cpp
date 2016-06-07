@@ -1334,8 +1334,11 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
   SDLoc SL;
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned UserSGPR = Info->getQueuePtrUserSGPR();
+  assert(UserSGPR != AMDGPU::NoRegister);
+
   SDValue QueuePtr = CreateLiveInRegister(
-    DAG, &AMDGPU::SReg_64RegClass, Info->getQueuePtrUserSGPR(), MVT::i64);
+    DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /
   // private_segment_aperture_base_hi.

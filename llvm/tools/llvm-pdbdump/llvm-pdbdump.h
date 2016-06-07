@@ -43,6 +43,7 @@ extern llvm::cl::opt<bool> DumpLineInfo;
 extern llvm::cl::opt<bool> DumpSectionMap;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpSectionHeaders;
+extern llvm::cl::opt<bool> DumpFpo;
 
 extern llvm::cl::opt<bool> ExcludeCompilerGenerated;
 

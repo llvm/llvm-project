@@ -80,12 +80,6 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
     assert(TargetRegisterInfo::virtReg2Index(Reg) < WARegs.size());
     return WARegs[TargetRegisterInfo::virtReg2Index(Reg)];
   }
-  // If new virtual registers are created after initWARegs has been called,
-  // this function can be used to add WebAssembly register mappings for them.
-  void addWAReg(unsigned VReg, unsigned WAReg) {
-    assert(VReg = WARegs.size());
-    WARegs.push_back(WAReg);
-  }
 
   // For a given stackified WAReg, return the id number to print with push/pop.
   static unsigned getWARegStackId(unsigned Reg) {
