@@ -141,7 +141,7 @@ macro(clang_opencl_test name dir)
   if(AMDHSACOD)
     add_test(
       NAME ${name}:llvm-objdump
-      COMMAND ${LLVM_OBJDUMP} -disassemble-all -mcpu=fiji $<TARGET_FILE:${name}_code>
+      COMMAND ${LLVM_OBJDUMP} -disassemble -mcpu=fiji $<TARGET_FILE:${name}_code>
     )
     add_test(
       NAME ${name}:amdhsacod
