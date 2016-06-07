@@ -246,6 +246,27 @@ private:
   const Region &R;
   ValueMapT *VMap;
 
+  const SCEV *visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
+                               Instruction *IP) {
+    if (!Inst || !R.contains(Inst))
+      return E;
+
+    assert(!Inst->mayThrow() && !Inst->mayReadOrWriteMemory() &&
+           !isa<PHINode>(Inst));
+
+    auto *InstClone = Inst->clone();
+    for (auto &Op : Inst->operands()) {
+      assert(SE.isSCEVable(Op->getType()));
+      auto *OpSCEV = SE.getSCEV(Op);
+      auto *OpClone = expandCodeFor(OpSCEV, Op->getType(), IP);
+      InstClone->replaceUsesOfWith(Op, OpClone);
+    }
+
+    InstClone->setName(Name + Inst->getName());
+    InstClone->insertBefore(IP);
+    return SE.getSCEV(InstClone);
+  }
+
   const SCEV *visitUnknown(const SCEVUnknown *E) {
 
     // If a value mapping was given try if the underlying value is remapped.
@@ -259,15 +280,19 @@ private:
         return visit(NewE);
     }
 
+    auto *EnteringBB = R.getEnteringBlock();
     Instruction *Inst = dyn_cast<Instruction>(E->getValue());
+    Instruction *IP;
+    if (Inst && !R.contains(Inst))
+      IP = Inst;
+    else if (Inst && EnteringBB->getParent() == Inst->getFunction())
+      IP = EnteringBB->getTerminator();
+    else
+      IP = EnteringBB->getParent()->getEntryBlock().getTerminator();
+
     if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
                   Inst->getOpcode() != Instruction::SDiv))
-      return E;
-
-    if (!R.contains(Inst))
-      return E;
-
-    Instruction *StartIP = R.getEnteringBlock()->getTerminator();
+      return visitGenericInst(E, Inst, IP);
 
     const SCEV *LHSScev = SE.getSCEV(Inst->getOperand(0));
     const SCEV *RHSScev = SE.getSCEV(Inst->getOperand(1));
@@ -275,11 +300,11 @@ private:
     if (!SE.isKnownNonZero(RHSScev))
       RHSScev = SE.getUMaxExpr(RHSScev, SE.getConstant(E->getType(), 1));
 
-    Value *LHS = expandCodeFor(LHSScev, E->getType(), StartIP);
-    Value *RHS = expandCodeFor(RHSScev, E->getType(), StartIP);
+    Value *LHS = expandCodeFor(LHSScev, E->getType(), IP);
+    Value *RHS = expandCodeFor(RHSScev, E->getType(), IP);
 
     Inst = BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(),
-                                  LHS, RHS, Inst->getName() + Name, StartIP);
+                                  LHS, RHS, Inst->getName() + Name, IP);
     return SE.getSCEV(Inst);
   }
 
@@ -299,7 +324,7 @@ private:
   }
   const SCEV *visitUDivExpr(const SCEVUDivExpr *E) {
     auto *RHSScev = visit(E->getRHS());
-    if (!SE.isKnownNonZero(E->getRHS()))
+    if (!SE.isKnownNonZero(RHSScev))
       RHSScev = SE.getUMaxExpr(RHSScev, SE.getConstant(E->getType(), 1));
     return SE.getUDivExpr(visit(E->getLHS()), RHSScev);
   }

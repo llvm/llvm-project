@@ -3678,23 +3678,27 @@ static std::string toString(AssumptionKind Kind) {
   llvm_unreachable("Unknown AssumptionKind!");
 }
 
+bool Scop::isEffectiveAssumption(__isl_keep isl_set *Set, AssumptionSign Sign) {
+  if (Sign == AS_ASSUMPTION) {
+    if (isl_set_is_subset(Context, Set))
+      return false;
+
+    if (isl_set_is_subset(AssumedContext, Set))
+      return false;
+  } else {
+    if (isl_set_is_disjoint(Set, Context))
+      return false;
+
+    if (isl_set_is_subset(Set, InvalidContext))
+      return false;
+  }
+  return true;
+}
+
 bool Scop::trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
                            DebugLoc Loc, AssumptionSign Sign) {
-  if (PollyRemarksMinimal) {
-    if (Sign == AS_ASSUMPTION) {
-      if (isl_set_is_subset(Context, Set))
-        return false;
-
-      if (isl_set_is_subset(AssumedContext, Set))
-        return false;
-    } else {
-      if (isl_set_is_disjoint(Set, Context))
-        return false;
-
-      if (isl_set_is_subset(Set, InvalidContext))
-        return false;
-    }
-  }
+  if (PollyRemarksMinimal && !isEffectiveAssumption(Set, Sign))
+    return false;
 
   auto &F = getFunction();
   auto Suffix = Sign == AS_ASSUMPTION ? " assumption:\t" : " restriction:\t";

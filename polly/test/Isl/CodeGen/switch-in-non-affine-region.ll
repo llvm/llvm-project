@@ -15,8 +15,7 @@
 ;    }
 ;
 ; CHECK: polly.stmt.if.then:
-; CHECK:   %1 = trunc i64 %polly.indvar to i32
-; CHECK:   %p_rem = srem i32 %1, 4
+; CHECK:   %p_rem = srem i32 %polly.indvar, 4
 ; CHECK:   switch i32 %p_rem, label %polly.stmt.sw.epilog [
 ; CHECK:     i32 0, label %polly.stmt.sw.bb
 ; CHECK:     i32 1, label %polly.stmt.sw.bb.3

@@ -16,7 +16,7 @@
 ;    }
 ;
 ; CHECK: polly.preload.begin:
-; CHECK:   %polly.access.B = getelementptr i32, i32* %B, i64 0
+; CHECK:   %polly.access.B = getelementptr i32, i32* %B, i1 false
 ; CHECK:   %polly.access.B.load = load i32, i32* %polly.access.B
 ; CHECK:   store i32 %polly.access.B.load, i32* %tmp.preload.s2a
 ;

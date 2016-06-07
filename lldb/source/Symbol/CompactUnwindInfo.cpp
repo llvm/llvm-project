@@ -104,24 +104,49 @@ namespace lldb_private {
 
     FLAGS_ANONYMOUS_ENUM()
     {
-    	UNWIND_ARM64_MODE_MASK                     = 0x0F000000,
-    	UNWIND_ARM64_MODE_FRAMELESS                = 0x02000000,
-    	UNWIND_ARM64_MODE_DWARF                    = 0x03000000,
-    	UNWIND_ARM64_MODE_FRAME                    = 0x04000000,
+        UNWIND_ARM64_MODE_MASK                     = 0x0F000000,
+        UNWIND_ARM64_MODE_FRAMELESS                = 0x02000000,
+        UNWIND_ARM64_MODE_DWARF                    = 0x03000000,
+        UNWIND_ARM64_MODE_FRAME                    = 0x04000000,
 
-    	UNWIND_ARM64_FRAME_X19_X20_PAIR            = 0x00000001,
-    	UNWIND_ARM64_FRAME_X21_X22_PAIR            = 0x00000002,
-    	UNWIND_ARM64_FRAME_X23_X24_PAIR            = 0x00000004,
-    	UNWIND_ARM64_FRAME_X25_X26_PAIR            = 0x00000008,
-    	UNWIND_ARM64_FRAME_X27_X28_PAIR            = 0x00000010,
-    	UNWIND_ARM64_FRAME_D8_D9_PAIR              = 0x00000100,
-    	UNWIND_ARM64_FRAME_D10_D11_PAIR            = 0x00000200,
-    	UNWIND_ARM64_FRAME_D12_D13_PAIR            = 0x00000400,
-    	UNWIND_ARM64_FRAME_D14_D15_PAIR            = 0x00000800,
+        UNWIND_ARM64_FRAME_X19_X20_PAIR            = 0x00000001,
+        UNWIND_ARM64_FRAME_X21_X22_PAIR            = 0x00000002,
+        UNWIND_ARM64_FRAME_X23_X24_PAIR            = 0x00000004,
+        UNWIND_ARM64_FRAME_X25_X26_PAIR            = 0x00000008,
+        UNWIND_ARM64_FRAME_X27_X28_PAIR            = 0x00000010,
+        UNWIND_ARM64_FRAME_D8_D9_PAIR              = 0x00000100,
+        UNWIND_ARM64_FRAME_D10_D11_PAIR            = 0x00000200,
+        UNWIND_ARM64_FRAME_D12_D13_PAIR            = 0x00000400,
+        UNWIND_ARM64_FRAME_D14_D15_PAIR            = 0x00000800,
 
-    	UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK     = 0x00FFF000,
-    	UNWIND_ARM64_DWARF_SECTION_OFFSET          = 0x00FFFFFF,
+        UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK     = 0x00FFF000,
+        UNWIND_ARM64_DWARF_SECTION_OFFSET          = 0x00FFFFFF,
     };
+
+    FLAGS_ANONYMOUS_ENUM()
+    {
+        UNWIND_ARM_MODE_MASK                         = 0x0F000000,
+        UNWIND_ARM_MODE_FRAME                        = 0x01000000,
+        UNWIND_ARM_MODE_FRAME_D                      = 0x02000000,
+        UNWIND_ARM_MODE_DWARF                        = 0x04000000,
+
+        UNWIND_ARM_FRAME_STACK_ADJUST_MASK           = 0x00C00000,
+
+        UNWIND_ARM_FRAME_FIRST_PUSH_R4               = 0x00000001,
+        UNWIND_ARM_FRAME_FIRST_PUSH_R5               = 0x00000002,
+        UNWIND_ARM_FRAME_FIRST_PUSH_R6               = 0x00000004,
+
+        UNWIND_ARM_FRAME_SECOND_PUSH_R8              = 0x00000008,
+        UNWIND_ARM_FRAME_SECOND_PUSH_R9              = 0x00000010,
+        UNWIND_ARM_FRAME_SECOND_PUSH_R10             = 0x00000020,
+        UNWIND_ARM_FRAME_SECOND_PUSH_R11             = 0x00000040,
+        UNWIND_ARM_FRAME_SECOND_PUSH_R12             = 0x00000080,
+
+        UNWIND_ARM_FRAME_D_REG_COUNT_MASK            = 0x00000700,
+
+        UNWIND_ARM_DWARF_SECTION_OFFSET              = 0x00FFFFFF,
+    };
+
 }
 
 
@@ -148,7 +173,7 @@ namespace lldb_private {
 
 
 //----------------------
-// constructor 
+// constructor
 //----------------------
 
 CompactUnwindInfo::CompactUnwindInfo(ObjectFile &objfile, SectionSP &section_sp)
@@ -194,7 +219,7 @@ CompactUnwindInfo::GetUnwindPlan (Target &target, Address addr, UnwindPlan& unwi
             if (log && log->GetVerbose())
             {
                 StreamString strm;
-                addr.Dump (&strm, NULL, Address::DumpStyle::DumpStyleResolvedDescriptionNoFunctionArguments, Address::DumpStyle::DumpStyleFileAddress, arch.GetAddressByteSize()); 
+                addr.Dump (&strm, NULL, Address::DumpStyle::DumpStyleResolvedDescriptionNoFunctionArguments, Address::DumpStyle::DumpStyleFileAddress, arch.GetAddressByteSize());
                 log->Printf ("Got compact unwind encoding 0x%x for function %s", function_info.encoding, strm.GetData());
             }
 
@@ -203,7 +228,7 @@ CompactUnwindInfo::GetUnwindPlan (Target &target, Address addr, UnwindPlan& unwi
                 SectionList *sl = m_objfile.GetSectionList ();
                 if (sl)
                 {
-                    addr_t func_range_start_file_addr = 
+                    addr_t func_range_start_file_addr =
                               function_info.valid_range_offset_start + m_objfile.GetHeaderAddress().GetFileAddress();
                     AddressRange func_range (func_range_start_file_addr,
                                       function_info.valid_range_offset_end - function_info.valid_range_offset_start,
@@ -223,6 +248,10 @@ CompactUnwindInfo::GetUnwindPlan (Target &target, Address addr, UnwindPlan& unwi
             if (arch.GetTriple().getArch() == llvm::Triple::x86)
             {
                 return CreateUnwindPlan_i386 (target, function_info, unwind_plan, addr);
+            }
+            if (arch.GetTriple().getArch() == llvm::Triple::arm || arch.GetTriple().getArch() == llvm::Triple::thumb)
+            {
+                return CreateUnwindPlan_armv7 (target, function_info, unwind_plan, addr);
             }
         }
     }
@@ -271,8 +300,8 @@ CompactUnwindInfo::ScanIndex (const ProcessSP &process_sp)
             m_section_contents_if_encrypted.reset (new DataBufferHeap (m_section_sp->GetByteSize(), 0));
             Error error;
             if (process_sp->ReadMemory (
-                        m_section_sp->GetLoadBaseAddress (&process_sp->GetTarget()), 
-                        m_section_contents_if_encrypted->GetBytes(), 
+                        m_section_sp->GetLoadBaseAddress (&process_sp->GetTarget()),
+                        m_section_contents_if_encrypted->GetBytes(),
                         m_section_sp->GetByteSize(), error) == m_section_sp->GetByteSize() && error.Success())
             {
                 m_unwindinfo_data.SetAddressByteSize (process_sp->GetTarget().GetArchitecture().GetAddressByteSize());
@@ -302,7 +331,7 @@ CompactUnwindInfo::ScanIndex (const ProcessSP &process_sp)
                 // uint32_t    personalityArrayCount;
                 // uint32_t    indexSectionOffset;
                 // uint32_t    indexCount;
-        
+
         m_unwind_header.version = m_unwindinfo_data.GetU32(&offset);
         m_unwind_header.common_encodings_array_offset = m_unwindinfo_data.GetU32(&offset);
         m_unwind_header.common_encodings_array_count = m_unwindinfo_data.GetU32(&offset);
@@ -328,12 +357,20 @@ CompactUnwindInfo::ScanIndex (const ProcessSP &process_sp)
         // Parse the basic information from the indexes
         // We wait to scan the second level page info until it's needed
 
-            // struct unwind_info_section_header_index_entry 
+            // struct unwind_info_section_header_index_entry
             // {
             //     uint32_t        functionOffset;
             //     uint32_t        secondLevelPagesSectionOffset;
             //     uint32_t        lsdaIndexArraySectionOffset;
             // };
+
+        bool clear_address_zeroth_bit = false;
+        ArchSpec arch;
+        if (m_objfile.GetArchitecture (arch))
+        {
+            if (arch.GetTriple().getArch() == llvm::Triple::arm || arch.GetTriple().getArch() == llvm::Triple::thumb)
+                clear_address_zeroth_bit = true;
+        }
 
         offset = indexSectionOffset;
         for (uint32_t idx = 0; idx < indexCount; idx++)
@@ -347,8 +384,11 @@ CompactUnwindInfo::ScanIndex (const ProcessSP &process_sp)
                 m_indexes_computed = eLazyBoolNo;
             }
 
+            if (clear_address_zeroth_bit)
+                function_offset &= ~1ull;
+
             UnwindIndex this_index;
-            this_index.function_offset = function_offset;     // 
+            this_index.function_offset = function_offset;
             this_index.second_level = second_level_offset;
             this_index.lsda_array_start = lsda_offset;
 
@@ -375,7 +415,7 @@ CompactUnwindInfo::ScanIndex (const ProcessSP &process_sp)
 uint32_t
 CompactUnwindInfo::GetLSDAForFunctionOffset (uint32_t lsda_offset, uint32_t lsda_count, uint32_t function_offset)
 {
-        // struct unwind_info_section_header_lsda_index_entry 
+        // struct unwind_info_section_header_lsda_index_entry
         // {
         //         uint32_t        functionOffset;
         //         uint32_t        lsdaOffset;
@@ -410,7 +450,7 @@ lldb::offset_t
 CompactUnwindInfo::BinarySearchRegularSecondPage (uint32_t entry_page_offset, uint32_t entry_count, uint32_t function_offset, uint32_t *entry_func_start_offset, uint32_t *entry_func_end_offset)
 {
     // typedef uint32_t compact_unwind_encoding_t;
-    // struct unwind_info_regular_second_level_entry 
+    // struct unwind_info_regular_second_level_entry
     // {
     //     uint32_t                    functionOffset;
     //     compact_unwind_encoding_t    encoding;
@@ -525,10 +565,10 @@ CompactUnwindInfo::GetCompactUnwindInfoForFunction (Target &target, Address addr
         return false;
 
     addr_t function_offset = address.GetFileAddress() - m_objfile.GetHeaderAddress().GetFileAddress();
-    
+
     UnwindIndex key;
     key.function_offset = function_offset;
-    
+
     std::vector<UnwindIndex>::const_iterator it;
     it = std::lower_bound (m_indexes.begin(), m_indexes.end(), key);
     if (it == m_indexes.end())
@@ -550,7 +590,7 @@ CompactUnwindInfo::GetCompactUnwindInfoForFunction (Target &target, Address addr
     auto next_it = it + 1;
     if (next_it != m_indexes.end())
     {
-        // initialize the function offset end range to be the start of the 
+        // initialize the function offset end range to be the start of the
         // next index offset.  If we find an entry which is at the end of
         // the index table, this will establish the range end.
         unwind_info.valid_range_offset_end = next_it->function_offset;
@@ -572,7 +612,7 @@ CompactUnwindInfo::GetCompactUnwindInfoForFunction (Target &target, Address addr
             //     uint16_t    entryCount;
 
             // typedef uint32_t compact_unwind_encoding_t;
-            // struct unwind_info_regular_second_level_entry 
+            // struct unwind_info_regular_second_level_entry
             // {
             //     uint32_t                    functionOffset;
             //     compact_unwind_encoding_t    encoding;
@@ -627,9 +667,9 @@ CompactUnwindInfo::GetCompactUnwindInfoForFunction (Target &target, Address addr
             //     uint32_t    kind;    // UNWIND_SECOND_LEVEL_COMPRESSED
             //     uint16_t    entryPageOffset;         // offset from this 2nd lvl page idx to array of entries
             //                                          // (an entry has a function offset and index into the encodings)
-            //                                          // NB function offset from the entry in the compressed page 
+            //                                          // NB function offset from the entry in the compressed page
             //                                          // must be added to the index's functionOffset value.
-            //     uint16_t    entryCount;             
+            //     uint16_t    entryCount;
             //     uint16_t    encodingsPageOffset;     // offset from this 2nd lvl page idx to array of encodings
             //     uint16_t    encodingsCount;
 
@@ -649,7 +689,7 @@ CompactUnwindInfo::GetCompactUnwindInfoForFunction (Target &target, Address addr
             offset = m_unwind_header.common_encodings_array_offset + (encoding_index * sizeof (uint32_t));
             encoding = m_unwindinfo_data.GetU32(&offset);   // encoding entry from the commonEncodingsArray
         }
-        else 
+        else
         {
             uint32_t page_specific_entry_index = encoding_index - m_unwind_header.common_encodings_array_count;
             offset = second_page_offset + encodings_page_offset + (page_specific_entry_index * sizeof (uint32_t));
@@ -765,7 +805,7 @@ CompactUnwindInfo::CreateUnwindPlan_x86_64 (Target &target, FunctionInfo &functi
             row->SetRegisterLocationToAtCFAPlusOffset (x86_64_eh_regnum::rbp, wordsize * -2, true);
             row->SetRegisterLocationToAtCFAPlusOffset (x86_64_eh_regnum::rip, wordsize * -1, true);
             row->SetRegisterLocationToIsCFAPlusOffset (x86_64_eh_regnum::rsp, 0, true);
-            
+
             uint32_t saved_registers_offset = EXTRACT_BITS (function_info.encoding, UNWIND_X86_64_RBP_FRAME_OFFSET);
 
             uint32_t saved_registers_locations = EXTRACT_BITS (function_info.encoding, UNWIND_X86_64_RBP_FRAME_REGISTERS);
@@ -798,7 +838,7 @@ CompactUnwindInfo::CreateUnwindPlan_x86_64 (Target &target, FunctionInfo &functi
         case UNWIND_X86_64_MODE_STACK_IND:
         {
             // The clang in Xcode 6 is emitting incorrect compact unwind encodings for this
-            // style of unwind.  It was fixed in llvm r217020.  
+            // style of unwind.  It was fixed in llvm r217020.
             // The clang in Xcode 7 has this fixed.
             return false;
         }
@@ -861,7 +901,7 @@ CompactUnwindInfo::CreateUnwindPlan_x86_64 (Target &target, FunctionInfo &functi
 
                 // We need to include (up to) 6 registers in 10 bits.
                 // That would be 18 bits if we just used 3 bits per reg to indicate
-                // the order they're saved on the stack. 
+                // the order they're saved on the stack.
                 //
                 // This is done with Lehmer code permutation, e.g. see
                 // http://stackoverflow.com/questions/1506078/fast-permutation-number-permutation-mapping-algorithms
@@ -871,7 +911,7 @@ CompactUnwindInfo::CreateUnwindPlan_x86_64 (Target &target, FunctionInfo &functi
                 // and gives us the Lehmer code sequence which can then
                 // be decoded.
 
-                switch (register_count) 
+                switch (register_count)
                 {
                     case 6:
                         permunreg[0] = permutation/120;    // 120 == 5!
@@ -921,7 +961,7 @@ CompactUnwindInfo::CreateUnwindPlan_x86_64 (Target &target, FunctionInfo &functi
                         permunreg[0] = permutation;
                         break;
                 }
-                
+
                 // Decode the Lehmer code for this permutation of
                 // the registers v. http://en.wikipedia.org/wiki/Lehmer_code
 
@@ -1048,7 +1088,7 @@ CompactUnwindInfo::CreateUnwindPlan_i386 (Target &target, FunctionInfo &function
             row->SetRegisterLocationToAtCFAPlusOffset (i386_eh_regnum::ebp, wordsize * -2, true);
             row->SetRegisterLocationToAtCFAPlusOffset (i386_eh_regnum::eip, wordsize * -1, true);
             row->SetRegisterLocationToIsCFAPlusOffset (i386_eh_regnum::esp, 0, true);
-            
+
             uint32_t saved_registers_offset = EXTRACT_BITS (function_info.encoding, UNWIND_X86_EBP_FRAME_OFFSET);
 
             uint32_t saved_registers_locations = EXTRACT_BITS (function_info.encoding, UNWIND_X86_EBP_FRAME_REGISTERS);
@@ -1129,13 +1169,13 @@ CompactUnwindInfo::CreateUnwindPlan_i386 (Target &target, FunctionInfo &function
             row->SetOffset (0);
             row->SetRegisterLocationToAtCFAPlusOffset (i386_eh_regnum::eip, wordsize * -1, true);
             row->SetRegisterLocationToIsCFAPlusOffset (i386_eh_regnum::esp, 0, true);
-            
+
             if (register_count > 0)
             {
 
                 // We need to include (up to) 6 registers in 10 bits.
                 // That would be 18 bits if we just used 3 bits per reg to indicate
-                // the order they're saved on the stack. 
+                // the order they're saved on the stack.
                 //
                 // This is done with Lehmer code permutation, e.g. see
                 // http://stackoverflow.com/questions/1506078/fast-permutation-number-permutation-mapping-algorithms
@@ -1145,7 +1185,7 @@ CompactUnwindInfo::CreateUnwindPlan_i386 (Target &target, FunctionInfo &function
                 // and gives us the Lehmer code sequence which can then
                 // be decoded.
 
-                switch (register_count) 
+                switch (register_count)
                 {
                     case 6:
                         permunreg[0] = permutation/120;    // 120 == 5!
@@ -1195,7 +1235,7 @@ CompactUnwindInfo::CreateUnwindPlan_i386 (Target &target, FunctionInfo &function
                         permunreg[0] = permutation;
                         break;
                 }
-                
+
                 // Decode the Lehmer code for this permutation of
                 // the registers v. http://en.wikipedia.org/wiki/Lehmer_code
 
@@ -1277,19 +1317,57 @@ enum arm64_eh_regnum {
     pc = 32,
 
     // Compact unwind encodes d8-d15 but we don't have eh_frame / dwarf reg #'s for the 64-bit
-    // fp regs.  Normally in DWARF it's context sensitive - so it knows it is fetching a 
+    // fp regs.  Normally in DWARF it's context sensitive - so it knows it is fetching a
     // 32- or 64-bit quantity from reg v8 to indicate s0 or d0 - but the unwinder is operating
     // at a lower level and we'd try to fetch 128 bits if we were told that v8 were stored on
     // the stack...
-	v8  = 72,  
-	v9  = 73,  
-	v10 = 74,
-	v11 = 75,
-	v12 = 76,
-	v13 = 77,
-	v14 = 78,
-	v15 = 79,
+    v8  = 72,
+    v9  = 73,
+    v10 = 74,
+    v11 = 75,
+    v12 = 76,
+    v13 = 77,
+    v14 = 78,
+    v15 = 79,
 };
+
+enum arm_eh_regnum {
+    arm_r0 = 0,
+    arm_r1 = 1,
+    arm_r2 = 2,
+    arm_r3 = 3,
+    arm_r4 = 4,
+    arm_r5 = 5,
+    arm_r6 = 6,
+    arm_r7 = 7,
+    arm_r8 = 8,
+    arm_r9 = 9,
+    arm_r10 = 10,
+    arm_r11 = 11,
+    arm_r12 = 12,
+
+    arm_sp = 13,
+    arm_lr = 14,
+    arm_pc = 15,
+
+    arm_d0 = 256,
+    arm_d1 = 257,
+    arm_d2 = 258,
+    arm_d3 = 259,
+    arm_d4 = 260,
+    arm_d5 = 261,
+    arm_d6 = 262,
+    arm_d7 = 263,
+    arm_d8 = 264,
+    arm_d9 = 265,
+    arm_d10 = 266,
+    arm_d11 = 267,
+    arm_d12 = 268,
+    arm_d13 = 269,
+    arm_d14 = 270,
+};
+
+
 
 bool
 CompactUnwindInfo::CreateUnwindPlan_arm64 (Target &target, FunctionInfo &function_info, UnwindPlan &unwind_plan, Address pc_or_function_start)
@@ -1340,7 +1418,7 @@ CompactUnwindInfo::CreateUnwindPlan_arm64 (Target &target, FunctionInfo &functio
     row->SetRegisterLocationToIsCFAPlusOffset (arm64_eh_regnum::sp, 0, true);
 
     int reg_pairs_saved_count = 1;
-    
+
     uint32_t saved_register_bits = function_info.encoding & 0xfff;
 
     if (saved_register_bits & UNWIND_ARM64_FRAME_X19_X20_PAIR)
@@ -1416,4 +1494,180 @@ CompactUnwindInfo::CreateUnwindPlan_arm64 (Target &target, FunctionInfo &functio
     unwind_plan.AppendRow (row);
     return true;
 }
+
+bool
+CompactUnwindInfo::CreateUnwindPlan_armv7 (Target &target, FunctionInfo &function_info, UnwindPlan &unwind_plan, Address pc_or_function_start)
+{
+    unwind_plan.SetSourceName ("compact unwind info");
+    unwind_plan.SetSourcedFromCompiler (eLazyBoolYes);
+    unwind_plan.SetUnwindPlanValidAtAllInstructions (eLazyBoolNo);
+    unwind_plan.SetRegisterKind (eRegisterKindEHFrame);
+
+    unwind_plan.SetLSDAAddress (function_info.lsda_address);
+    unwind_plan.SetPersonalityFunctionPtr (function_info.personality_ptr_address);
+
+    UnwindPlan::RowSP row (new UnwindPlan::Row);
+
+    const int wordsize = 4;
+    int mode = function_info.encoding & UNWIND_ARM_MODE_MASK;
+
+    if (mode == UNWIND_ARM_MODE_DWARF)
+        return false;
+
+    uint32_t stack_adjust = (EXTRACT_BITS (function_info.encoding, UNWIND_ARM_FRAME_STACK_ADJUST_MASK)) * wordsize;
+
+    row->GetCFAValue().SetIsRegisterPlusOffset (arm_r7 , (2 * wordsize) + stack_adjust);
+    row->SetOffset (0);
+    row->SetRegisterLocationToAtCFAPlusOffset (arm_r7, (wordsize * -2) - stack_adjust, true);
+    row->SetRegisterLocationToAtCFAPlusOffset (arm_pc, (wordsize * -1) - stack_adjust, true);
+    row->SetRegisterLocationToIsCFAPlusOffset (arm_sp, 0, true);
+
+    int cfa_offset = -stack_adjust - (2 * wordsize);
+
+    uint32_t saved_register_bits = function_info.encoding & 0xff;
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R6)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r6, cfa_offset, true);
+    }
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R5)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r5, cfa_offset, true);
+    }
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R4)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r4, cfa_offset, true);
+    }
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R12)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r12, cfa_offset, true);
+    }
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R11)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r11, cfa_offset, true);
+    }
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R10)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r10, cfa_offset, true);
+    }
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R9)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r9, cfa_offset, true);
+    }
+
+    if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R8)
+    {
+        cfa_offset -= wordsize;
+        row->SetRegisterLocationToAtCFAPlusOffset (arm_r8, cfa_offset, true);
+    }
+
+
+    if (mode == UNWIND_ARM_MODE_FRAME_D)
+    {
+        uint32_t d_reg_bits = EXTRACT_BITS (function_info.encoding, UNWIND_ARM_FRAME_D_REG_COUNT_MASK);
+        switch (d_reg_bits)
+        {
+            case 0:
+                // vpush {d8}
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d8, cfa_offset, true);
+                break;
+            case 1:
+                // vpush {d10}
+                // vpush {d8}
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d10, cfa_offset, true);
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d8, cfa_offset, true);
+                break;
+            case 2:
+                // vpush {d12}
+                // vpush {d10}
+                // vpush {d8}
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d12, cfa_offset, true);
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d10, cfa_offset, true);
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d8, cfa_offset, true);
+                break;
+            case 3:
+                // vpush {d14}
+                // vpush {d12}
+                // vpush {d10}
+                // vpush {d8}
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d14, cfa_offset, true);
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d12, cfa_offset, true);
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d10, cfa_offset, true);
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d8, cfa_offset, true);
+                break;
+            case 4:
+                // vpush {d14}
+                // vpush {d12}
+                // sp = (sp - 24) & (-16);
+                // vst   {d8, d9, d10}
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d14, cfa_offset, true);
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d12, cfa_offset, true);
+
+                // FIXME we don't have a way to represent reg saves at an specific alignment short of
+                // coming up with some DWARF location description.
+
+                break;
+            case 5:
+                // vpush {d14}
+                // sp = (sp - 40) & (-16);
+                // vst   {d8, d9, d10, d11}
+                // vst   {d12}
+
+                cfa_offset -= 8;
+                row->SetRegisterLocationToAtCFAPlusOffset (arm_d14, cfa_offset, true);
+
+                // FIXME we don't have a way to represent reg saves at an specific alignment short of
+                // coming up with some DWARF location description.
+
+                break;
+            case 6:
+                // sp = (sp - 56) & (-16);
+                // vst   {d8, d9, d10, d11}
+                // vst   {d12, d13, d14}
+
+                // FIXME we don't have a way to represent reg saves at an specific alignment short of
+                // coming up with some DWARF location description.
+
+                break;
+            case 7:
+                // sp = (sp - 64) & (-16);
+                // vst   {d8, d9, d10, d11}
+                // vst   {d12, d13, d14, d15}
+
+                // FIXME we don't have a way to represent reg saves at an specific alignment short of
+                // coming up with some DWARF location description.
+
+                break;
+        }
+    }
+
+    unwind_plan.AppendRow (row);
+    return true;
+}
+
 

@@ -4875,11 +4875,10 @@ ProcessGDBRemote::LoadModules (LoadedModuleInfoList &module_list)
                     found = true;
             }
 
-            if (!found)
+            // The main executable will never be included in libraries-svr4, don't remove it
+            if (!found && loaded_module.get() != target.GetExecutableModulePointer())
             {
-                lldb_private::ObjectFile * obj = loaded_module->GetObjectFile ();
-                if (obj && obj->GetType () != ObjectFile::Type::eTypeExecutable)
-                    removed_modules.Append (loaded_module);
+                removed_modules.Append (loaded_module);
             }
         }
 

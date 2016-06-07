@@ -135,6 +135,8 @@ SCEVAffinator::~SCEVAffinator() {
     freePWACtx(CachedPair.second);
 }
 
+Loop *SCEVAffinator::getScope() { return BB ? LI.getLoopFor(BB) : nullptr; }
+
 void SCEVAffinator::interpretAsUnsigned(__isl_keep PWACtx &PWAC,
                                         unsigned Width) {
   auto *PWA = PWAC.first;
@@ -169,7 +171,7 @@ __isl_give PWACtx SCEVAffinator::getPwAff(const SCEV *Expr, BasicBlock *BB) {
   } else
     NumIterators = 0;
 
-  auto *Scope = LI.getLoopFor(BB);
+  auto *Scope = getScope();
   S->addParams(getParamsInAffineExpr(&S->getRegion(), Scope, Expr, SE));
 
   return visit(Expr);
@@ -191,9 +193,11 @@ __isl_give PWACtx SCEVAffinator::checkForWrapping(const SCEV *Expr,
   auto *PWAMod = addModuloSemantic(isl_pw_aff_copy(PWA), Expr->getType());
   auto *NotEqualSet = isl_pw_aff_ne_set(isl_pw_aff_copy(PWA), PWAMod);
   PWAC.second = isl_set_union(PWAC.second, isl_set_copy(NotEqualSet));
+  PWAC.second = isl_set_coalesce(PWAC.second);
 
   const DebugLoc &Loc = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
   NotEqualSet = BB ? NotEqualSet : isl_set_params(NotEqualSet);
+  NotEqualSet = isl_set_coalesce(NotEqualSet);
 
   if (isl_set_is_empty(NotEqualSet))
     isl_set_free(NotEqualSet);
@@ -243,7 +247,7 @@ __isl_give PWACtx SCEVAffinator::visit(const SCEV *Expr) {
   if (PWAC.first)
     return copyPWACtx(PWAC);
 
-  auto ConstantAndLeftOverPair = extractConstantFactor(Expr, *S->getSE());
+  auto ConstantAndLeftOverPair = extractConstantFactor(Expr, SE);
   auto *Factor = ConstantAndLeftOverPair.first;
   Expr = ConstantAndLeftOverPair.second;
 
@@ -460,7 +464,6 @@ __isl_give PWACtx SCEVAffinator::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
   // TODO: Using the original SCEV no-wrap flags is not always safe, however
   //       as our code generation is reordering the expression anyway it doesn't
   //       really matter.
-  ScalarEvolution &SE = *S->getSE();
   const SCEV *ZeroStartExpr =
       SE.getAddRecExpr(SE.getConstant(Expr->getStart()->getType(), 0),
                        Expr->getStepRecurrence(SE), Expr->getLoop(), Flags);
@@ -527,16 +530,16 @@ __isl_give PWACtx SCEVAffinator::visitUDivExpr(const SCEVUDivExpr *Expr) {
 
 __isl_give PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
   assert(SDiv->getOpcode() == Instruction::SDiv && "Assumed SDiv instruction!");
-  auto *SE = S->getSE();
 
+  auto *Scope = getScope();
   auto *Divisor = SDiv->getOperand(1);
-  auto *DivisorSCEV = SE->getSCEV(Divisor);
+  auto *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
   auto DivisorPWAC = visit(DivisorSCEV);
   assert(isa<ConstantInt>(Divisor) &&
          "SDiv is no parameter but has a non-constant RHS.");
 
   auto *Dividend = SDiv->getOperand(0);
-  auto *DividendSCEV = SE->getSCEV(Dividend);
+  auto *DividendSCEV = SE.getSCEVAtScope(Dividend, Scope);
   auto DividendPWAC = visit(DividendSCEV);
   combine(DividendPWAC, DivisorPWAC, isl_pw_aff_tdiv_q);
   return DividendPWAC;
@@ -544,7 +547,6 @@ __isl_give PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
 
 __isl_give PWACtx SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
   assert(SRem->getOpcode() == Instruction::SRem && "Assumed SRem instruction!");
-  auto *SE = S->getSE();
 
   auto *Divisor = dyn_cast<ConstantInt>(SRem->getOperand(1));
   assert(Divisor && "SRem is no parameter but has a non-constant RHS.");
@@ -552,7 +554,7 @@ __isl_give PWACtx SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
                                       /* isSigned */ true);
 
   auto *Dividend = SRem->getOperand(0);
-  auto *DividendSCEV = SE->getSCEV(Dividend);
+  auto *DividendSCEV = SE.getSCEVAtScope(Dividend, getScope());
   auto DividendPWAC = visit(DividendSCEV);
 
   DividendPWAC.first =
@@ -563,6 +565,10 @@ __isl_give PWACtx SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
 __isl_give PWACtx SCEVAffinator::visitUnknown(const SCEVUnknown *Expr) {
   if (Instruction *I = dyn_cast<Instruction>(Expr->getValue())) {
     switch (I->getOpcode()) {
+    case Instruction::IntToPtr:
+      return visit(SE.getSCEVAtScope(I->getOperand(0), getScope()));
+    case Instruction::PtrToInt:
+      return visit(SE.getSCEVAtScope(I->getOperand(0), getScope()));
     case Instruction::SDiv:
       return visitSDivInstruction(I);
     case Instruction::SRem:

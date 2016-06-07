@@ -36,11 +36,11 @@ void test_edges()
 {
     typedef std::complex<double> C;
     const double pi = std::atan2(+0., -0.);
-    const unsigned N = sizeof(x) / sizeof(x[0]);
+    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
     for (unsigned i = 0; i < N; ++i)
     {
-        std::complex<double> r = cos(x[i]);
-        std::complex<double> t1(-imag(x[i]), real(x[i]));
+        std::complex<double> r = cos(testcases[i]);
+        std::complex<double> t1(-imag(testcases[i]), real(testcases[i]));
         std::complex<double> z = cosh(t1);
         if (std::isnan(real(r)))
             assert(std::isnan(real(z)));

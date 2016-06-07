@@ -390,7 +390,11 @@ void IslNodeBuilder::createForVector(__isl_take isl_ast_node *For,
   Value *ValueLB = ExprBuilder.create(Init);
   Value *ValueInc = ExprBuilder.create(Inc);
 
-  ExprBuilder.unifyTypes(ValueLB, ValueInc);
+  CmpInst::Predicate Predicate;
+  auto *UB = getUpperBound(For, Predicate);
+  auto *ValueUB = ExprBuilder.create(UB);
+
+  ExprBuilder.unifyTypes(ValueLB, ValueUB, ValueInc);
 
   std::vector<Value *> IVS(VectorWidth);
   IVS[0] = ValueLB;

@@ -88,6 +88,12 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
     Diag << Param;
   }
 
+  if (Param->getLocStart().isMacroID() != Param->getLocEnd().isMacroID()) {
+    // Do not offer a suggestion if the part of the variable declaration comes
+    // from a macro.
+    return;
+  }
+
   CharSourceRange FileRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(getTypeRange(*Param)),
       *Result.SourceManager, Result.Context->getLangOpts());

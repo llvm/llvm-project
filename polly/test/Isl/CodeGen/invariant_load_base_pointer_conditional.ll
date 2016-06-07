@@ -1,18 +1,18 @@
 ; RUN: opt %loadPolly  -polly-codegen -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
-; CHECK-NEXT:    %0 = sext i32 %N to i64
-; CHECK-NEXT:    %1 = icmp sge i64 %0, 514
+; CHECK-NEXT:    %0 = icmp sge i32 %N, 514
 ; CHECK-NEXT:    br label %polly.preload.cond
 ;
 ; CHECK-LABEL: polly.preload.cond:
-; CHECK-NEXT:    br i1 %1, label %polly.preload.exec, label %polly.preload.merge
+; CHECK-NEXT:    br i1 %0, label %polly.preload.exec, label %polly.preload.merge
 ;
 ; CHECK-LABEL: polly.preload.merge:
 ; CHECK-NEXT:    %polly.preload.tmp6.merge = phi i32* [ %polly.access.BPLoc.load, %polly.preload.exec ], [ null, %polly.preload.cond ]
 ;
 ; CHECK-LABEL: polly.stmt.bb5:
-; CHECK-NEXT:    %p_tmp7 = getelementptr inbounds i32, i32* %polly.preload.tmp6.merge, i64 %polly.indvar6
+; CHECK-NEXT:    %[[R:[0-9]*]] = zext i32 %polly.indvar6 to i64
+; CHECK-NEXT:    %p_tmp7 = getelementptr inbounds i32, i32* %polly.preload.tmp6.merge, i64 %[[R]]
 ;
 ;    void f(int **BPLoc, int *A, int N) {
 ;      for (int i = 0; i < N; i++)

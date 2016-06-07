@@ -18,7 +18,7 @@
 ;
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK-NEXT:    %polly.access.cast.buff = bitcast i8* %buff to i16*
-; CHECK-NEXT:    %polly.access.buff = getelementptr i16, i16* %polly.access.cast.buff, i64 31
+; CHECK-NEXT:    %polly.access.buff = getelementptr i16, i16* %polly.access.cast.buff, i6 31
 ; CHECK-NEXT:    %polly.access.buff.cast = bitcast i16* %polly.access.buff to i32*
 ; CHECK-NEXT:    %polly.access.buff.load = load i32, i32* %polly.access.buff.cast, align 4
 ; CHECK-NEXT:    store i32 %polly.access.buff.load, i32* %tmp1.preload.s2a
