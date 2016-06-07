@@ -1,6 +1,6 @@
 RUN: mkdir -p %t.d
 RUN: %clang_profgen -fprofile-instr-generate %S/../Inputs/instrprof-file_ex.c -o %t
-RUN: rm %t.d/run.dump
+RUN: rm -f %t.d/run.dump
 RUN: %run %t %t.d/run.dump
 RUN: sort %t.d/run.dump | FileCheck %s
 
