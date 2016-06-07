@@ -232,7 +232,7 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
 }
 
 void CodeViewDebug::endModule() {
-  if (FnDebugInfo.empty())
+  if (!Asm || !MMI->hasDebugInfo())
     return;
 
   assert(Asm != nullptr);
@@ -242,12 +242,17 @@ void CodeViewDebug::endModule() {
   // of the payload followed by the payload itself.  The subsections are 4-byte
   // aligned.
 
-  // Make a subsection for all the inlined subprograms.
+  // Use the generic .debug$S section, and make a subsection for all the inlined
+  // subprograms.
+  switchToDebugSectionForSymbol(nullptr);
   emitInlineeLinesSubsection();
 
   // Emit per-function debug information.
   for (auto &P : FnDebugInfo)
     emitDebugInfoForFunction(P.first, P.second);
+
+  // Emit global variable debug information.
+  emitDebugInfoForGlobals();
 
   // Switch back to the generic .debug$S section after potentially processing
   // comdat symbol sections.
@@ -326,17 +331,9 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   if (InlinedSubprograms.empty())
     return;
 
-  // Use the generic .debug$S section.
-  switchToDebugSectionForSymbol(nullptr);
-
-  MCSymbol *InlineBegin = MMI->getContext().createTempSymbol(),
-           *InlineEnd = MMI->getContext().createTempSymbol();
 
   OS.AddComment("Inlinee lines subsection");
-  OS.EmitIntValue(unsigned(ModuleSubstreamKind::InlineeLines), 4);
-  OS.AddComment("Subsection size");
-  OS.emitAbsoluteSymbolDiff(InlineEnd, InlineBegin, 4);
-  OS.EmitLabel(InlineBegin);
+  MCSymbol *InlineEnd = beginCVSubsection(ModuleSubstreamKind::InlineeLines);
 
   // We don't provide any extra file info.
   // FIXME: Find out if debuggers use this info.
@@ -363,7 +360,7 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
     OS.EmitIntValue(SP->getLine(), 4);
   }
 
-  OS.EmitLabel(InlineEnd);
+  endCVSubsection(InlineEnd);
 }
 
 void CodeViewDebug::collectInlineSiteChildren(
@@ -467,13 +464,8 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     FuncName = GlobalValue::getRealLinkageName(GV->getName());
 
   // Emit a symbol subsection, required by VS2012+ to find function boundaries.
-  MCSymbol *SymbolsBegin = MMI->getContext().createTempSymbol(),
-           *SymbolsEnd = MMI->getContext().createTempSymbol();
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
-  OS.EmitIntValue(unsigned(ModuleSubstreamKind::Symbols), 4);
-  OS.AddComment("Subsection size");
-  OS.emitAbsoluteSymbolDiff(SymbolsEnd, SymbolsBegin, 4);
-  OS.EmitLabel(SymbolsBegin);
+  MCSymbol *SymbolsEnd = beginCVSubsection(ModuleSubstreamKind::Symbols);
   {
     MCSymbol *ProcRecordBegin = MMI->getContext().createTempSymbol(),
              *ProcRecordEnd = MMI->getContext().createTempSymbol();
@@ -532,9 +524,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Record kind: S_PROC_ID_END");
     OS.EmitIntValue(unsigned(SymbolKind::S_PROC_ID_END), 2);
   }
-  OS.EmitLabel(SymbolsEnd);
-  // Every subsection must be aligned to a 4-byte boundary.
-  OS.EmitValueToAlignment(4);
+  endCVSubsection(SymbolsEnd);
 
   // We have an assembler directive that takes care of the whole line table.
   OS.EmitCVLinetableDirective(FI.FuncId, Fn, FI.End);
@@ -1271,4 +1261,83 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   if (DL == PrevInstLoc || !DL)
     return;
   maybeRecordLocation(DL, Asm->MF);
+}
+
+MCSymbol *CodeViewDebug::beginCVSubsection(ModuleSubstreamKind Kind) {
+  MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
+           *EndLabel = MMI->getContext().createTempSymbol();
+  OS.EmitIntValue(unsigned(Kind), 4);
+  OS.AddComment("Subsection size");
+  OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 4);
+  OS.EmitLabel(BeginLabel);
+  return EndLabel;
+}
+
+void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
+  OS.EmitLabel(EndLabel);
+  // Every subsection must be aligned to a 4-byte boundary.
+  OS.EmitValueToAlignment(4);
+}
+
+void CodeViewDebug::emitDebugInfoForGlobals() {
+  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  for (const MDNode *Node : CUs->operands()) {
+    const auto *CU = cast<DICompileUnit>(Node);
+
+    // First, emit all globals that are not in a comdat in a single symbol
+    // substream. MSVC doesn't like it if the substream is empty, so only open
+    // it if we have at least one global to emit.
+    switchToDebugSectionForSymbol(nullptr);
+    MCSymbol *EndLabel = nullptr;
+    for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
+      if (const auto *GV = dyn_cast<GlobalVariable>(G->getVariable()))
+        if (!GV->hasComdat()) {
+          if (!EndLabel) {
+            OS.AddComment("Symbol subsection for globals");
+            EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
+          }
+          emitDebugInfoForGlobal(G, Asm->getSymbol(GV));
+        }
+    }
+    if (EndLabel)
+      endCVSubsection(EndLabel);
+
+    // Second, emit each global that is in a comdat into its own .debug$S
+    // section along with its own symbol substream.
+    for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
+      if (const auto *GV = dyn_cast<GlobalVariable>(G->getVariable())) {
+        if (GV->hasComdat()) {
+          MCSymbol *GVSym = Asm->getSymbol(GV);
+          OS.AddComment("Symbol subsection for " +
+                        Twine(GlobalValue::getRealLinkageName(GV->getName())));
+          switchToDebugSectionForSymbol(GVSym);
+          EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
+          emitDebugInfoForGlobal(G, GVSym);
+          endCVSubsection(EndLabel);
+        }
+      }
+    }
+  }
+}
+
+void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
+                                           MCSymbol *GVSym) {
+  // DataSym record, see SymbolRecord.h for more info.
+  // FIXME: Thread local data, etc
+  MCSymbol *DataBegin = MMI->getContext().createTempSymbol(),
+           *DataEnd = MMI->getContext().createTempSymbol();
+  OS.AddComment("Record length");
+  OS.emitAbsoluteSymbolDiff(DataEnd, DataBegin, 2);
+  OS.EmitLabel(DataBegin);
+  OS.AddComment("Record kind: S_GDATA32");
+  OS.EmitIntValue(unsigned(SymbolKind::S_GDATA32), 2);
+  OS.AddComment("Type");
+  OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
+  OS.AddComment("DataOffset");
+  OS.EmitCOFFSecRel32(GVSym);
+  OS.AddComment("Segment");
+  OS.EmitCOFFSectionIndex(GVSym);
+  OS.AddComment("Name");
+  emitNullTerminatedSymbolName(OS, DIGV->getName());
+  OS.EmitLabel(DataEnd);
 }

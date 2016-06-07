@@ -25,7 +25,7 @@ define void @s_sint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
 ; GCN-DAG: v_cmp_lt_u64
 
 ; GCN: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
-; GCN: v_cndmask_b32_e32 [[SIGN_SEL:v[0-9]+]],
+; GCN: v_cndmask_b32_e{{32|64}} [[SIGN_SEL:v[0-9]+]],
 ; GCN: {{buffer|flat}}_store_dword {{.*}}[[SIGN_SEL]]
 define void @v_sint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

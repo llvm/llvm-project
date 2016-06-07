@@ -1,6 +1,6 @@
-====================================================================
-Building a JIT: Adding Optimizations - An introduction to ORC Layers
-====================================================================
+=====================================================================
+Building a JIT: Adding Optimizations -- An introduction to ORC Layers
+=====================================================================
 
 .. contents::
    :local:
@@ -84,8 +84,8 @@ which sits on top of our CompileLayer.
 
 To initialize our OptimizeLayer we pass it a reference to the CompileLayer
 below (standard practice for layers), and we initialize the OptimizeFunction
-using a lambda. In the lambda, we just call out to the "optimizeModule" function
-that we will define below.
+using a lambda that calls out to an "optimizeModule" function that we will
+define below.
 
 .. code-block:: c++
 
@@ -101,8 +101,6 @@ that we will define below.
 .. code-block:: c++
 
   // ...
-  // Add the set to the JIT with the resolver we created above and a newly
-  // created SectionMemoryManager.
   return OptimizeLayer.addModuleSet(std::move(Ms),
                                     make_unique<SectionMemoryManager>(),
                                     std::move(Resolver));
@@ -149,18 +147,19 @@ inside our resolver, and the call through to addModuleSet.
 At the bottom of our JIT we add a private method to do the actual optimization:
 *optimizeModule*. This function sets up a FunctionPassManager, adds some passes
 to it, runs it over every function in the module, and then returns the mutated
-module. The specific optimizations used are the same ones used in
+module. The specific optimizations are the same ones used in
 `Chapter 4 <LangImpl4.html>`_ of the "Implementing a language with LLVM"
-tutorial series -- readers may visit that chapter for a more in-depth
-discussion of them, and of IR optimization in general.
+tutorial series. Readers may visit that chapter for a more in-depth
+discussion of these, and of IR optimization in general.
 
-And that's it: When a module is added to our JIT the OptimizeLayer will now
-pass it to our optimizeModule function before passing the transformed module
-on to the CompileLayer below. Of course, we could have called optimizeModule
-directly in our addModule function and not gone to the bother of using the
-IRTransformLayer, but it gives us an opportunity to see how layers compose, and
-how one can be implemented, because IRTransformLayer turns out to be one of
-the simplest implementations of the *layer* concept that can be devised:
+And that's it in terms of changes to KaleidoscopeJIT: When a module is added via
+addModule the OptimizeLayer will call our optimizeModule function before passing
+the transformed module on to the CompileLayer below. Of course, we could have
+called optimizeModule directly in our addModule function and not gone to the
+bother of using the IRTransformLayer, but doing so gives us another opportunity
+to see how layers compose. It also provides a neat entry point to the *layer*
+concept itself, because IRTransformLayer turns out to be one of the simplest
+implementations of the layer concept that can be devised:
 
 .. code-block:: c++
 
@@ -213,13 +212,13 @@ the simplest implementations of the *layer* concept that can be devised:
 This is the whole definition of IRTransformLayer, from
 ``llvm/include/llvm/ExecutionEngine/Orc/IRTransformLayer.h``, stripped of its
 comments. It is a template class with two template arguments: ``BaesLayerT`` and
-``TransformFtor`` that provide the type of the base layer, and the type of the
-"transform functor" (in our case a std::function) respectively. The body of the
-class is concerned with two very simple jobs: (1) Running every IR Module that
-is added with addModuleSet through the transform functor, and (2) conforming to
-the ORC layer interface, which is:
+``TransformFtor`` that provide the type of the base layer and the type of the
+"transform functor" (in our case a std::function) respectively. This class is
+concerned with two very simple jobs: (1) Running every IR Module that is added
+with addModuleSet through the transform functor, and (2) conforming to the ORC
+layer interface. The interface consists of one typedef and five methods:
 
-+------------------------------------------------------------------------------+
++------------------+-----------------------------------------------------------+
 |     Interface    |                         Description                       |
 +==================+===========================================================+
 |                  | Provides a handle that can be used to identify a module   |

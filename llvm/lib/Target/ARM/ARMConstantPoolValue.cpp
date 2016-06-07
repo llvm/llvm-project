@@ -50,11 +50,18 @@ const char *ARMConstantPoolValue::getModifierText() const {
   switch (Modifier) {
     // FIXME: Are these case sensitive? It'd be nice to lower-case all the
     // strings if that's legal.
-  case ARMCP::no_modifier: return "none";
-  case ARMCP::TLSGD:       return "tlsgd";
-  case ARMCP::GOT_PREL:    return "GOT_PREL";
-  case ARMCP::GOTTPOFF:    return "gottpoff";
-  case ARMCP::TPOFF:       return "tpoff";
+  case ARMCP::no_modifier:
+    return "none";
+  case ARMCP::TLSGD:
+    return "tlsgd";
+  case ARMCP::GOT_PREL:
+    return "GOT_PREL";
+  case ARMCP::GOTTPOFF:
+    return "gottpoff";
+  case ARMCP::TPOFF:
+    return "tpoff";
+  case ARMCP::SECREL:
+    return "secrel32";
   }
   llvm_unreachable("Unknown modifier!");
 }

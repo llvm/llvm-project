@@ -1012,6 +1012,30 @@ private:
   const COFFObjectFile *OwningObject;
 };
 
+// Corresponds to `_FPO_DATA` structure in the PE/COFF spec.
+struct FpoData {
+  support::ulittle32_t Offset; // ulOffStart: Offset 1st byte of function code
+  support::ulittle32_t Size;   // cbProcSize: # bytes in function
+  support::ulittle32_t NumLocals; // cdwLocals: # bytes in locals/4
+  support::ulittle16_t NumParams; // cdwParams: # bytes in params/4
+  support::ulittle16_t Attributes;
+
+  // cbProlog: # bytes in prolog
+  int getPrologSize() const { return Attributes & 0xF; }
+
+  // cbRegs: # regs saved
+  int getNumSavedRegs() const { return (Attributes >> 8) & 0x7; }
+
+  // fHasSEH: true if seh is func
+  bool hasSEH() const { return (Attributes >> 9) & 1; }
+
+  // fUseBP: true if EBP has been allocated
+  bool useBP() const { return (Attributes >> 10) & 1; }
+
+  // cbFrame: frame pointer
+  int getFP() const { return Attributes >> 14; }
+};
+
 } // end namespace object
 } // end namespace llvm
 

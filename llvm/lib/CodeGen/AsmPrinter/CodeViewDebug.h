@@ -169,6 +169,17 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 
+  void emitDebugInfoForGlobals();
+
+  void emitDebugInfoForGlobal(const DIGlobalVariable *DIGV, MCSymbol *GVSym);
+
+  /// Opens a subsection of the given kind in a .debug$S codeview section.
+  /// Returns an end label for use with endCVSubsection when the subsection is
+  /// finished.
+  MCSymbol *beginCVSubsection(codeview::ModuleSubstreamKind Kind);
+
+  void endCVSubsection(MCSymbol *EndLabel);
+
   void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
                            const InlineSite &Site);
 

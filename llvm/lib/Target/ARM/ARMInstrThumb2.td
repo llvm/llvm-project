@@ -3894,14 +3894,13 @@ def : T2Pat<(ARMWrapper tglobaltlsaddr:$dst),
       Requires<[IsThumb2, UseMovt]>;
 
 // ConstantPool, GlobalAddress, and JumpTable
-def : T2Pat<(ARMWrapper  tconstpool  :$dst), (t2LEApcrel tconstpool  :$dst)>;
-def : T2Pat<(ARMWrapper texternalsym :$dst), (t2MOVi32imm texternalsym : $dst)>,
-          Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
-def : T2Pat<(ARMWrapper  tglobaladdr :$dst), (t2MOVi32imm tglobaladdr :$dst)>,
-           Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
+def : T2Pat<(ARMWrapper tconstpool :$dst), (t2LEApcrel tconstpool :$dst)>;
+def : T2Pat<(ARMWrapper texternalsym :$dst), (t2MOVi32imm texternalsym :$dst)>,
+    Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
+def : T2Pat<(ARMWrapper tglobaladdr :$dst), (t2MOVi32imm tglobaladdr :$dst)>,
+    Requires<[IsThumb, HasV8MBaseline, UseMovt]>;
 
-def : T2Pat<(ARMWrapperJT tjumptable:$dst),
-            (t2LEApcrelJT tjumptable:$dst)>;
+def : T2Pat<(ARMWrapperJT tjumptable:$dst), (t2LEApcrelJT tjumptable:$dst)>;
 
 // Pseudo instruction that combines ldr from constpool and add pc. This should
 // be expanded into two instructions late to allow if-conversion and

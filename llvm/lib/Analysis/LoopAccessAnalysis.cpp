@@ -1480,12 +1480,11 @@ bool LoopAccessInfo::canAnalyzeLoop() {
 
 void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
 
-  typedef SmallVector<Value*, 16> ValueVector;
   typedef SmallPtrSet<Value*, 16> ValueSet;
 
-  // Holds the Load and Store *instructions*.
-  ValueVector Loads;
-  ValueVector Stores;
+  // Holds the Load and Store instructions.
+  SmallVector<LoadInst *, 16> Loads;
+  SmallVector<StoreInst *, 16> Stores;
 
   // Holds all the different accesses in the loop.
   unsigned NumReads = 0;
@@ -1580,10 +1579,8 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
   // writes and between reads and writes, but not between reads and reads.
   ValueSet Seen;
 
-  ValueVector::iterator I, IE;
-  for (I = Stores.begin(), IE = Stores.end(); I != IE; ++I) {
-    StoreInst *ST = cast<StoreInst>(*I);
-    Value* Ptr = ST->getPointerOperand();
+  for (StoreInst *ST : Stores) {
+    Value *Ptr = ST->getPointerOperand();
     // Check for store to loop invariant address.
     StoreToLoopInvariantAddress |= isUniform(Ptr);
     // If we did *not* see this pointer before, insert it to  the read-write
@@ -1610,9 +1607,8 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
     return;
   }
 
-  for (I = Loads.begin(), IE = Loads.end(); I != IE; ++I) {
-    LoadInst *LD = cast<LoadInst>(*I);
-    Value* Ptr = LD->getPointerOperand();
+  for (LoadInst *LD : Loads) {
+    Value *Ptr = LD->getPointerOperand();
     // If we did *not* see this pointer before, insert it to the
     // read list. If we *did* see it before, then it is already in
     // the read-write list. This allows us to vectorize expressions

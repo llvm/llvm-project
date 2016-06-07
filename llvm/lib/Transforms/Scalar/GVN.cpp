@@ -594,10 +594,15 @@ PreservedAnalyses GVN::run(Function &F, AnalysisManager<Function> &AM) {
   auto &AA = AM.getResult<AAManager>(F);
   auto &MemDep = AM.getResult<MemoryDependenceAnalysis>(F);
   bool Changed = runImpl(F, AC, DT, TLI, AA, &MemDep);
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void GVN::dump(DenseMap<uint32_t, Value*>& d) {
   errs() << "{\n";
   for (DenseMap<uint32_t, Value*>::iterator I = d.begin(),
@@ -607,7 +612,6 @@ void GVN::dump(DenseMap<uint32_t, Value*>& d) {
   }
   errs() << "}\n";
 }
-#endif
 
 /// Return true if we can prove that the value
 /// we're analyzing is fully available in the specified block.  As we go, keep

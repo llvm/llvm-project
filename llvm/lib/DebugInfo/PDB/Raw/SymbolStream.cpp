@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -23,8 +24,9 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-SymbolStream::SymbolStream(PDBFile &File, uint32_t StreamNum)
-    : MappedStream(StreamNum, File) {}
+SymbolStream::SymbolStream(const PDBFile &File, uint32_t StreamNum)
+    : MappedStream(llvm::make_unique<IndexedStreamData>(StreamNum, File),
+                   File) {}
 
 SymbolStream::~SymbolStream() {}
 

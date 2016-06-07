@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/EnumTables.h"
 #include "llvm/DebugInfo/PDB/Raw/ISectionContribVisitor.h"
+#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/ModStream.h"
@@ -194,7 +195,8 @@ Error LLVMOutputStyle::dumpStreamData() {
       DumpStreamNum >= StreamCount)
     return Error::success();
 
-  MappedBlockStream S(DumpStreamNum, File);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(DumpStreamNum, File),
+                      File);
   codeview::StreamReader R(S);
   while (R.bytesRemaining() > 0) {
     ArrayRef<uint8_t> Data;
@@ -244,7 +246,8 @@ Error LLVMOutputStyle::dumpNamedStream() {
     DictScope D(P, Name);
     P.printNumber("Index", NameStreamIndex);
 
-    MappedBlockStream NameStream(NameStreamIndex, File);
+    MappedBlockStream NameStream(
+        llvm::make_unique<IndexedStreamData>(NameStreamIndex, File), File);
     codeview::StreamReader Reader(NameStream);
 
     NameHashTable NameTable;
@@ -665,7 +668,34 @@ Error LLVMOutputStyle::dumpSectionHeaders() {
     P.printNumber("File Pointer to Linenumbers", Section.PointerToLinenumbers);
     P.printNumber("Number of Relocations", Section.NumberOfRelocations);
     P.printNumber("Number of Linenumbers", Section.NumberOfLinenumbers);
-    P.printNumber("Characteristics", Section.Characteristics);
+    P.printFlags("Characteristics", Section.Characteristics,
+                 getImageSectionCharacteristicNames());
   }
   return Error::success();
 }
+
+Error LLVMOutputStyle::dumpFpoStream() {
+  if (!opts::DumpFpo)
+    return Error::success();
+
+  auto DbiS = File.getPDBDbiStream();
+  if (auto EC = DbiS.takeError())
+    return EC;
+  DbiStream &DS = DbiS.get();
+
+  ListScope D(P, "New FPO");
+  for (const object::FpoData &Fpo : DS.getFpoRecords()) {
+    DictScope DD(P, "");
+    P.printNumber("Offset", Fpo.Offset);
+    P.printNumber("Size", Fpo.Size);
+    P.printNumber("Number of locals", Fpo.NumLocals);
+    P.printNumber("Number of params", Fpo.NumParams);
+    P.printNumber("Size of Prolog", Fpo.getPrologSize());
+    P.printNumber("Number of Saved Registers", Fpo.getNumSavedRegs());
+    P.printBoolean("Has SEH", Fpo.hasSEH());
+    P.printBoolean("Use BP", Fpo.useBP());
+    P.printNumber("Frame Pointer", Fpo.getFP());
+  }
+  return Error::success();
+}
+void LLVMOutputStyle::flush() { P.flush(); }

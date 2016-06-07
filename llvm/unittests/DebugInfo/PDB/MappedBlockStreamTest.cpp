@@ -12,6 +12,8 @@
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
+#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "gtest/gtest.h"
 
@@ -53,10 +55,10 @@ public:
   virtual uint32_t getStreamByteSize(uint32_t StreamIndex) const override {
     return getBlockCount() * getBlockSize();
   }
-  virtual ArrayRef<uint32_t>
+  virtual ArrayRef<support::ulittle32_t>
   getStreamBlockList(uint32_t StreamIndex) const override {
     if (StreamIndex != 0)
-      return ArrayRef<uint32_t>();
+      return ArrayRef<support::ulittle32_t>();
     return Blocks;
   }
   virtual StringRef getBlockData(uint32_t BlockIndex,
@@ -65,7 +67,7 @@ public:
   }
 
 private:
-  std::vector<uint32_t> Blocks;
+  std::vector<support::ulittle32_t> Blocks;
   std::vector<char> Data;
 };
 
@@ -73,7 +75,7 @@ private:
 // and does not allocate.
 TEST(MappedBlockStreamTest, ReadBeyondEndOfStreamRef) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StreamRef SR;
   EXPECT_NO_ERROR(R.readStreamRef(SR, 0U));
@@ -87,7 +89,7 @@ TEST(MappedBlockStreamTest, ReadBeyondEndOfStreamRef) {
 // does not fail due to the length of the output buffer.
 TEST(MappedBlockStreamTest, ReadOntoNonEmptyBuffer) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StringRef Str = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
   EXPECT_NO_ERROR(R.readFixedString(Str, 1));
@@ -100,7 +102,7 @@ TEST(MappedBlockStreamTest, ReadOntoNonEmptyBuffer) {
 // not allocate memory.
 TEST(MappedBlockStreamTest, ZeroCopyReadContiguousBreak) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 2));
@@ -118,7 +120,7 @@ TEST(MappedBlockStreamTest, ZeroCopyReadContiguousBreak) {
 // requested.
 TEST(MappedBlockStreamTest, CopyReadNonContiguousBreak) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 10));
@@ -130,7 +132,7 @@ TEST(MappedBlockStreamTest, CopyReadNonContiguousBreak) {
 // fails and allocates no memory.
 TEST(MappedBlockStreamTest, InvalidReadSizeNoBreak) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StringRef Str;
 
@@ -143,7 +145,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNoBreak) {
 // fails and allocates no memory.
 TEST(MappedBlockStreamTest, InvalidReadSizeContiguousBreak) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StringRef Str;
 
@@ -156,7 +158,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeContiguousBreak) {
 // boundary fails and allocates no memory.
 TEST(MappedBlockStreamTest, InvalidReadSizeNonContiguousBreak) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StringRef Str;
 
@@ -168,7 +170,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNonContiguousBreak) {
 // beyond the end of a StreamRef fails.
 TEST(MappedBlockStreamTest, ZeroCopyReadNoBreak) {
   DiscontiguousFile F;
-  MappedBlockStream S(0, F);
+  MappedBlockStream S(llvm::make_unique<IndexedStreamData>(0, F), F);
   StreamReader R(S);
   StringRef Str;
   EXPECT_NO_ERROR(R.readFixedString(Str, 1));

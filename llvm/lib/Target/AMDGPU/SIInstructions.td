@@ -1473,15 +1473,9 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
 // VOP2 Instructions
 //===----------------------------------------------------------------------===//
 
-multiclass V_CNDMASK <vop2 op, string name> {
-  defm _e32 : VOP2_m <op, name, VOP_CNDMASK, [], name>;
-
-  defm _e64  : VOP3_m <
-      op, VOP_CNDMASK.Outs, VOP_CNDMASK.Ins64,
-      name#!cast<string>(VOP_CNDMASK.Asm64), [], name, 3, 0>;
-}
-
-defm V_CNDMASK_B32 : V_CNDMASK<vop2<0x0>, "v_cndmask_b32">;
+defm V_CNDMASK_B32 : VOP2eInst <vop2<0x0, 0x0>, "v_cndmask_b32",
+  VOP2e_I32_I32_I32_I1
+>;
 
 let isCommutable = 1 in {
 defm V_ADD_F32 : VOP2Inst <vop2<0x3, 0x1>, "v_add_f32",

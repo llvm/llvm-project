@@ -57,7 +57,15 @@ static void HandlePC(uint32_t PC) {
 
 } // namespace fuzzer
 
-extern "C" void __sanitizer_cov_trace_pc() {
+extern "C" {
+void __sanitizer_cov_trace_pc() {
   fuzzer::HandlePC(static_cast<uint32_t>(
       reinterpret_cast<uintptr_t>(__builtin_return_address(0))));
+}
+
+void __sanitizer_cov_trace_pc_indir(int *) {
+  // Stub to allow linking with code built with
+  // -fsanitize=indirect-calls,trace-pc.
+  // This isn't used currently.
+}
 }

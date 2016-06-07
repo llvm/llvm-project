@@ -1475,6 +1475,19 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
 }
 
+// Read in from vcc or arbitrary SGPR
+def VOP2e_I32_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
+  let Src0RC32 = VCSrc_32; // See comment in def VOP2b_I32_I1_I32_I32_I1 above.
+  let Asm32 = "$vdst, $src0, $src1, vcc";
+  let Asm64 = "$vdst, $src0, $src1, $src2";
+  let Outs32 = (outs DstRC:$vdst);
+  let Outs64 = (outs DstRC:$vdst);
+
+  // Suppress src2 implied by type since the 32-bit encoding uses an
+  // implicit VCC use.
+  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
+}
+
 class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
   let Asm64 = "$vdst, $sdst, $src0_modifiers, $src1_modifiers, $src2_modifiers"#"$clamp"#"$omod";
@@ -1516,11 +1529,6 @@ def VOPC_I1_F64_I32 : VOPC_Class_Profile<f64>;
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
 def VOP_I64_I64_I64 : VOPProfile <[i64, i64, i64, untyped]>;
-def VOP_CNDMASK : VOPProfile <[i32, i32, i32, untyped]> {
-  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, SSrc_64:$src2);
-  let Asm64 = "$vdst, $src0, $src1, $src2";
-}
 
 def VOP_F32_F32_F32_F32 : VOPProfile <[f32, f32, f32, f32]>;
 def VOP_MADAK : VOPProfile <[f32, f32, f32, f32]> {
@@ -1863,6 +1871,26 @@ class VOP3b_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
   let DisableDecoder = DisableVIDecoder;
 }
 
+class VOP3e_Real_si <bits<9> op, dag outs, dag ins, string asm, string opName,
+                     bit HasMods = 0, bit VOP3Only = 0> :
+  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
+  VOP3e <op>,
+  SIMCInstr<opName#"_e64", SISubtarget.SI> {
+  let AssemblerPredicates = [isSICI];
+  let DecoderNamespace = "SICI";
+  let DisableDecoder = DisableSIDecoder;
+}
+
+class VOP3e_Real_vi <bits<10> op, dag outs, dag ins, string asm, string opName,
+                     bit HasMods = 0, bit VOP3Only = 0> :
+  VOP3Common <outs, ins, asm, [], HasMods, VOP3Only>,
+  VOP3e_vi <op>,
+  SIMCInstr <opName#"_e64", SISubtarget.VI> {
+  let AssemblerPredicates = [isVI];
+  let DecoderNamespace = "VI";
+  let DisableDecoder = DisableVIDecoder;
+}
+
 multiclass VOP3_m <vop op, dag outs, dag ins, string asm, list<dag> pattern,
                    string opName, int NumSrcArgs, bit HasMods = 1, bit VOP3Only = 0> {
 
@@ -1938,6 +1966,19 @@ multiclass VOP3b_2_3_m <vop op, dag outs, dag ins, string asm,
             VOP3DisableFields<1, useSrc2Input, HasMods>;
 
   def _vi : VOP3b_Real_vi <op.VI3, outs, ins, asm, opName, HasMods, VOP3Only>,
+            VOP3DisableFields<1, useSrc2Input, HasMods>;
+}
+
+// Same as VOP3b_2_3_m but no 2nd destination (sdst), e.g. v_cndmask_b32.
+multiclass VOP3e_2_3_m <vop op, dag outs, dag ins, string asm,
+                        list<dag> pattern, string opName, string revOp,
+                        bit HasMods = 1, bit useSrc2Input = 0, bit VOP3Only = 0> {
+  def "" : VOP3_Pseudo <outs, ins, pattern, opName, HasMods, VOP3Only>;
+
+  def _si : VOP3e_Real_si <op.SI3, outs, ins, asm, opName, HasMods, VOP3Only>,
+            VOP3DisableFields<1, useSrc2Input, HasMods>;
+
+  def _vi : VOP3e_Real_vi <op.VI3, outs, ins, asm, opName, HasMods, VOP3Only>,
             VOP3DisableFields<1, useSrc2Input, HasMods>;
 }
 
@@ -2066,6 +2107,33 @@ multiclass VOP2InstSI <vop2 op, string opName, VOPProfile P,
         [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
     opName, revOp, P.HasModifiers>;
 }
+
+multiclass VOP2e_Helper <vop2 op, string opName, VOPProfile p,
+                         list<dag> pat32, list<dag> pat64,
+                         string revOp, bit useSGPRInput> {
+
+  let SchedRW = [Write32Bit, WriteSALU] in {
+    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
+      defm _e32 : VOP2_m <op, opName, p, pat32, revOp>;
+    }
+
+    defm _e64 : VOP3e_2_3_m <op, p.Outs64, p.Ins64, opName#p.Asm64, pat64,
+                             opName, revOp, p.HasModifiers, useSGPRInput>;
+  }
+}
+
+multiclass VOP2eInst <vop2 op, string opName, VOPProfile P,
+                      SDPatternOperator node = null_frag,
+                      string revOp = opName> : VOP2e_Helper <
+  op, opName, P, [],
+  !if(P.HasModifiers,
+      [(set P.DstVT:$vdst,
+           (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
+                                      i1:$clamp, i32:$omod)),
+                 (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
+      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]),
+  revOp, !eq(P.NumSrcArgs, 3)
+>;
 
 multiclass VOP2b_Helper <vop2 op, string opName, VOPProfile p,
                          list<dag> pat32, list<dag> pat64,

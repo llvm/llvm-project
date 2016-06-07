@@ -528,7 +528,7 @@ void DecodeVPERMIL2PMask(MVT VT, unsigned M2Z, ArrayRef<uint64_t> RawMask,
     // Bits[2:1] - (Per Lane) PD Shuffle Mask.
     // Bits[2:0] - (Per Lane) PS Shuffle Mask.
     uint64_t Selector = RawMask[i];
-    int MatchBit = (Selector >> 3) & 0x1;
+    unsigned MatchBit = (Selector >> 3) & 0x1;
 
     // M2Z[0:1]     MatchBit
     //   0Xb           X        Source selected by Selector index.

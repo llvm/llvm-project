@@ -31,7 +31,7 @@ class TpiStream {
   struct HeaderInfo;
 
 public:
-  TpiStream(PDBFile &File, uint32_t StreamIdx);
+  TpiStream(const PDBFile &File, uint32_t StreamIdx);
   ~TpiStream();
   Error reload();
 
@@ -50,7 +50,7 @@ public:
   iterator_range<codeview::CVTypeArray::Iterator> types(bool *HadError) const;
 
 private:
-  PDBFile &Pdb;
+  const PDBFile &Pdb;
   MappedBlockStream Stream;
   HashFunctionType HashFunction;
 

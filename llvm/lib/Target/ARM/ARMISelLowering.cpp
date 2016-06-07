@@ -2622,6 +2622,7 @@ SDValue
 ARMTargetLowering::LowerGlobalTLSAddressWindows(SDValue Op,
                                                 SelectionDAG &DAG) const {
   assert(Subtarget->isTargetWindows() && "Windows specific TLS lowering");
+
   SDValue Chain = DAG.getEntryNode();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDLoc DL(Op);
@@ -2663,8 +2664,17 @@ ARMTargetLowering::LowerGlobalTLSAddressWindows(SDValue Op,
                             DAG.getNode(ISD::ADD, DL, PtrVT, TLSArray, Slot),
                             MachinePointerInfo(), false, false, false, 0);
 
-  return DAG.getNode(ISD::ADD, DL, PtrVT, TLS,
-                     LowerGlobalAddressWindows(Op, DAG));
+  // Get the offset of the start of the .tls section (section base)
+  const auto *GA = cast<GlobalAddressSDNode>(Op);
+  auto *CPV = ARMConstantPoolConstant::Create(GA->getGlobal(), ARMCP::SECREL);
+  SDValue Offset =
+      DAG.getLoad(PtrVT, DL, Chain,
+                  DAG.getNode(ARMISD::Wrapper, DL, MVT::i32,
+                              DAG.getTargetConstantPool(CPV, PtrVT, 4)),
+                  MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
+                  false, false, false, 0);
+
+  return DAG.getNode(ISD::ADD, DL, PtrVT, TLS, Offset);
 }
 
 // Lower ISD::GlobalTLSAddress using the "general dynamic" model

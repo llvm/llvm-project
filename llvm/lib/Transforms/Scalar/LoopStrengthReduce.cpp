@@ -4315,7 +4315,33 @@ BasicBlock::iterator
 LSRInstance::HoistInsertPosition(BasicBlock::iterator IP,
                                  const SmallVectorImpl<Instruction *> &Inputs)
                                                                          const {
+  Instruction *Tentative = &*IP;
   for (;;) {
+    bool AllDominate = true;
+    Instruction *BetterPos = nullptr;
+    // Don't bother attempting to insert before a catchswitch, their basic block
+    // cannot have other non-PHI instructions.
+    if (isa<CatchSwitchInst>(Tentative))
+      return IP;
+
+    for (Instruction *Inst : Inputs) {
+      if (Inst == Tentative || !DT.dominates(Inst, Tentative)) {
+        AllDominate = false;
+        break;
+      }
+      // Attempt to find an insert position in the middle of the block,
+      // instead of at the end, so that it can be used for other expansions.
+      if (Tentative->getParent() == Inst->getParent() &&
+          (!BetterPos || !DT.dominates(Inst, BetterPos)))
+        BetterPos = &*std::next(BasicBlock::iterator(Inst));
+    }
+    if (!AllDominate)
+      break;
+    if (BetterPos)
+      IP = BetterPos->getIterator();
+    else
+      IP = Tentative->getIterator();
+
     const Loop *IPLoop = LI.getLoopFor(IP->getParent());
     unsigned IPLoopDepth = IPLoop ? IPLoop->getLoopDepth() : 0;
 
@@ -4334,31 +4360,7 @@ LSRInstance::HoistInsertPosition(BasicBlock::iterator IP,
         break;
     }
 
-    bool AllDominate = true;
-    Instruction *BetterPos = nullptr;
-    Instruction *Tentative = IDom->getTerminator();
-    // Don't bother attempting to insert before a catchswitch, their basic block
-    // cannot have other non-PHI instructions.
-    if (isa<CatchSwitchInst>(Tentative))
-      return IP;
-
-    for (Instruction *Inst : Inputs) {
-      if (Inst == Tentative || !DT.dominates(Inst, Tentative)) {
-        AllDominate = false;
-        break;
-      }
-      // Attempt to find an insert position in the middle of the block,
-      // instead of at the end, so that it can be used for other expansions.
-      if (IDom == Inst->getParent() &&
-          (!BetterPos || !DT.dominates(Inst, BetterPos)))
-        BetterPos = &*std::next(BasicBlock::iterator(Inst));
-    }
-    if (!AllDominate)
-      break;
-    if (BetterPos)
-      IP = BetterPos->getIterator();
-    else
-      IP = Tentative->getIterator();
+    Tentative = IDom->getTerminator();
   }
 
   return IP;

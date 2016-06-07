@@ -27,6 +27,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -71,7 +72,8 @@ struct PublicsStream::GSIHashHeader {
 };
 
 PublicsStream::PublicsStream(PDBFile &File, uint32_t StreamNum)
-    : Pdb(File), StreamNum(StreamNum), Stream(StreamNum, File) {}
+    : Pdb(File), StreamNum(StreamNum),
+      Stream(llvm::make_unique<IndexedStreamData>(StreamNum, File), File) {}
 
 PublicsStream::~PublicsStream() {}
 

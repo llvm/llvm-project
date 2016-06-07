@@ -68,6 +68,8 @@ Non-comprehensive list of changes in this release
 * Introduction of ThinLTO: [FIXME: needs to be documented more extensively in
   /docs/ ; ping Mehdi/Teresa before the release if not done]
 
+* Raised the minimum required CMake version to 3.4.3.
+
 .. NOTE
    For small 1-3 sentence descriptions, just add an entry at the end of
    this list. If your description won't fit comfortably in one bullet

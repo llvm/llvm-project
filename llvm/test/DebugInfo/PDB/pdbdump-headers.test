@@ -2,7 +2,7 @@
 ; RUN:              -raw-sym-record-bytes -raw-publics -raw-module-files -raw-stream-name=/names \
 ; RUN:              -raw-stream-summary -raw-stream-blocks -raw-ipi-records -raw-ipi-record-bytes \
 ; RUN:              -raw-section-contribs -raw-section-map -raw-section-headers -raw-line-info \
-; RUN:              -raw-tpi-hash %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
+; RUN:              -raw-tpi-hash -raw-fpo %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbdump -raw-all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
 ; RUN: llvm-pdbdump -raw-headers -raw-stream-name=/names -raw-modules -raw-module-files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
@@ -859,7 +859,11 @@
 ; EMPTY-NEXT:     File Pointer to Linenumbers: 0
 ; EMPTY-NEXT:     Number of Relocations: 0
 ; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics: 1610612768
+; EMPTY-NEXT:     Characteristics [ (0x60000020)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
 ; EMPTY-NEXT:   }
 ; EMPTY-NEXT:   {
 ; EMPTY-NEXT:     Name: .rdata
@@ -871,7 +875,10 @@
 ; EMPTY-NEXT:     File Pointer to Linenumbers: 0
 ; EMPTY-NEXT:     Number of Relocations: 0
 ; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics: 1073741888
+; EMPTY-NEXT:     Characteristics [ (0x40000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
 ; EMPTY-NEXT:   }
 ; EMPTY-NEXT:   {
 ; EMPTY-NEXT:     Name: .data
@@ -883,7 +890,11 @@
 ; EMPTY-NEXT:     File Pointer to Linenumbers: 0
 ; EMPTY-NEXT:     Number of Relocations: 0
 ; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics: 3221225536
+; EMPTY-NEXT:     Characteristics [ (0xC0000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:     ]
 ; EMPTY-NEXT:   }
 ; EMPTY-NEXT:   {
 ; EMPTY-NEXT:     Name: .reloc
@@ -895,7 +906,35 @@
 ; EMPTY-NEXT:     File Pointer to Linenumbers: 0
 ; EMPTY-NEXT:     Number of Relocations: 0
 ; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics: 1107296320
+; EMPTY-NEXT:     Characteristics [ (0x42000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
+; EMPTY:      New FPO [
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Offset: 4112
+; EMPTY-NEXT:     Size: 10
+; EMPTY-NEXT:     Number of locals: 0
+; EMPTY-NEXT:     Number of params: 0
+; EMPTY-NEXT:     Size of Prolog: 0
+; EMPTY-NEXT:     Number of Saved Registers: 0
+; EMPTY-NEXT:     Has SEH: No
+; EMPTY-NEXT:     Use BP: No
+; EMPTY-NEXT:     Frame Pointer: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     Size: 134
+; EMPTY-NEXT:     Number of locals: 3
+; EMPTY-NEXT:     Number of params: 4
+; EMPTY-NEXT:     Size of Prolog: 0
+; EMPTY-NEXT:     Number of Saved Registers: 0
+; EMPTY-NEXT:     Has SEH: No
+; EMPTY-NEXT:     Use BP: No
+; EMPTY-NEXT:     Frame Pointer: 0
 ; EMPTY-NEXT:   }
 ; EMPTY-NEXT: ]
 
@@ -1560,7 +1599,11 @@
 ; ALL:     File Pointer to Linenumbers: 0
 ; ALL:     Number of Relocations: 0
 ; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics: 1610612768
+; ALL:     Characteristics [ (0x60000020)
+; ALL:       IMAGE_SCN_CNT_CODE (0x20)
+; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
 ; ALL:   }
 ; ALL:   {
 ; ALL:     Name: .rdata
@@ -1572,7 +1615,10 @@
 ; ALL:     File Pointer to Linenumbers: 0
 ; ALL:     Number of Relocations: 0
 ; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics: 1073741888
+; ALL:     Characteristics [ (0x40000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
 ; ALL:   }
 ; ALL:   {
 ; ALL:     Name: .data
@@ -1584,7 +1630,11 @@
 ; ALL:     File Pointer to Linenumbers: 0
 ; ALL:     Number of Relocations: 0
 ; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics: 3221225536
+; ALL:     Characteristics [ (0xC0000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:     ]
 ; ALL:   }
 ; ALL:   {
 ; ALL:     Name: .reloc
@@ -1596,7 +1646,11 @@
 ; ALL:     File Pointer to Linenumbers: 0
 ; ALL:     Number of Relocations: 0
 ; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics: 1107296320
+; ALL:     Characteristics [ (0x42000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
 ; ALL:   }
 ; ALL: ]
 

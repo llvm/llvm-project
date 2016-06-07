@@ -2459,12 +2459,14 @@ Instruction *InstCombiner::visitICmpInstWithCastAndCast(ICmpInst &ICmp) {
     return new ICmpInst(ICmp.getUnsignedPredicate(), LHSCIOp, Res1);
   }
 
-  // The re-extended constant changed so the constant cannot be represented
-  // in the shorter type. Consequently, we cannot emit a simple comparison.
+  // The re-extended constant changed, partly changed (in the case of a vector),
+  // or could not be determined to be equal (in the case of a constant
+  // expression), so the constant cannot be represented in the shorter type.
+  // Consequently, we cannot emit a simple comparison.
   // All the cases that fold to true or false will have already been handled
   // by SimplifyICmpInst, so only deal with the tricky case.
 
-  if (isSignedCmp || !isSignedExt)
+  if (isSignedCmp || !isSignedExt || !isa<ConstantInt>(C))
     return nullptr;
 
   // Evaluate the comparison for LT (we invert for GT below). LE and GE cases

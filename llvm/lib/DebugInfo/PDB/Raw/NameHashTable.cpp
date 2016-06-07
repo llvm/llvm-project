@@ -18,6 +18,7 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
+// Corresponds to `Hasher::lhashPbCb` in PDB/include/misc.h.
 static inline uint32_t HashStringV1(StringRef Str) {
   uint32_t Result = 0;
   uint32_t Size = Str.size();
@@ -52,6 +53,7 @@ static inline uint32_t HashStringV1(StringRef Str) {
   return Result ^ (Result >> 16);
 }
 
+// Corresponds to `HasherV2::HashULONG` in PDB/include/misc.h.
 static inline uint32_t HashStringV2(StringRef Str) {
   uint32_t Hash = 0xb170a1bf;
 
