@@ -1165,6 +1165,13 @@ TEST(TypeMatching, MatchesFunctionTypes) {
   EXPECT_TRUE(matches("void f(int i) {}", functionType()));
 }
 
+TEST(TypeMatching, IgnoringParens) {
+  EXPECT_TRUE(
+      notMatches("void (*fp)(void);", pointerType(pointee(functionType()))));
+  EXPECT_TRUE(matches("void (*fp)(void);",
+                      pointerType(pointee(ignoringParens(functionType())))));
+}
+
 TEST(TypeMatching, MatchesFunctionProtoTypes) {
   EXPECT_TRUE(matches("int (*f)(int);", functionProtoType()));
   EXPECT_TRUE(matches("void f(int i);", functionProtoType()));

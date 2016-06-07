@@ -1221,6 +1221,30 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     }
   }
 
+  if (ABIName.empty() &&
+      (Triple.getVendor() == llvm::Triple::MipsTechnologies ||
+       Triple.getVendor() == llvm::Triple::ImaginationTechnologies)) {
+    ABIName = llvm::StringSwitch<const char *>(CPUName)
+                  .Case("mips1", "o32")
+                  .Case("mips2", "o32")
+                  .Case("mips3", "n64")
+                  .Case("mips4", "n64")
+                  .Case("mips5", "n64")
+                  .Case("mips32", "o32")
+                  .Case("mips32r2", "o32")
+                  .Case("mips32r3", "o32")
+                  .Case("mips32r5", "o32")
+                  .Case("mips32r6", "o32")
+                  .Case("mips64", "n64")
+                  .Case("mips64r2", "n64")
+                  .Case("mips64r3", "n64")
+                  .Case("mips64r5", "n64")
+                  .Case("mips64r6", "n64")
+                  .Case("octeon", "n64")
+                  .Case("p5600", "o32")
+                  .Default("");
+  }
+
   if (ABIName.empty()) {
     // Deduce ABI name from the target triple.
     if (Triple.getArch() == llvm::Triple::mips ||

@@ -2745,7 +2745,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
       } else if (BaseType->isIntegralOrEnumerationType()) {
-        if (!BaseType.isConstQualified()) {
+        // In OpenCL if a variable is in constant address space it is a const value.
+        if (!(BaseType.isConstQualified() ||
+              (Info.getLangOpts().OpenCL &&
+               BaseType.getAddressSpace() == LangAS::opencl_constant))) {
           if (Info.getLangOpts().CPlusPlus) {
             Info.Diag(E, diag::note_constexpr_ltor_non_const_int, 1) << VD;
             Info.Note(VD->getLocation(), diag::note_declared_at);

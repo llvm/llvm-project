@@ -6,9 +6,22 @@
 // MIPS-DEF: "-target-abi" "o32"
 //
 // RUN: %clang -target mips64-linux-gnu -### -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS64-DEF %s
-// MIPS64-DEF: "-target-cpu" "mips64r2"
-// MIPS64-DEF: "-target-abi" "n64"
+// RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
+// RUN: %clang -target mips-img-linux-gnu -mips64r2 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
+// RUN: %clang -target mips-mti-linux-gnu -mips64r2 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
+// MIPS64R2-N64: "-target-cpu" "mips64r2"
+// MIPS64R2-N64: "-target-abi" "n64"
+//
+// RUN: %clang -target mips64-linux-gnu -### -mips64r3 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R3-N64 %s
+// RUN: %clang -target mips-img-linux-gnu -mips64r3 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R3-N64 %s
+// RUN: %clang -target mips-mti-linux-gnu -mips64r3 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R3-N64 %s
+// MIPS64R3-N64: "-target-cpu" "mips64r3"
+// MIPS64R3-N64: "-target-abi" "n64"
 //
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:        -mabi=32 2>&1 \

@@ -2063,7 +2063,8 @@ static bool isArraySizeVLA(Sema &S, Expr *ArraySize, llvm::APSInt &SizeVal) {
   } Diagnoser;
 
   return S.VerifyIntegerConstantExpression(ArraySize, &SizeVal, Diagnoser,
-                                           S.LangOpts.GNUMode).isInvalid();
+                                           S.LangOpts.GNUMode ||
+                                           S.LangOpts.OpenCL).isInvalid();
 }
 
 /// \brief Build an array type.

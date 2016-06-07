@@ -188,8 +188,9 @@ Format compatibility guarantees
 Drawbacks and limitations
 =========================
 
-* Code coverage does not handle stack unwinding in the presence of uncaught
-  exceptions precisely. Consider the following function:
+* Code coverage does not handle unpredictable changes in control flow or stack
+  unwinding in the presence of exceptions precisely. Consider the following
+  function:
 
   .. code-block:: cpp
 
@@ -198,6 +199,6 @@ Drawbacks and limitations
         return 0;
       }
 
-  If the function ``may_throw()`` propagates an exception into ``f``, the code
+  If the call to ``may_throw()`` propagates an exception into ``f``, the code
   coverage tool may mark the ``return`` statement as executed even though it is
-  not.
+  not. A call to ``longjmp()`` can have similar effects.

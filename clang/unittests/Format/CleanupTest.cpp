@@ -608,6 +608,86 @@ TEST_F(CleanUpReplacementsTest, CodeAfterComments) {
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
+TEST_F(CleanUpReplacementsTest, FakeHeaderGuardIfDef) {
+  std::string Code = "// comment \n"
+                     "#ifdef X\n"
+                     "#define X\n";
+  std::string Expected = "// comment \n"
+                         "#include <vector>\n"
+                         "#ifdef X\n"
+                         "#define X\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, RealHeaderGuardAfterComments) {
+  std::string Code = "// comment \n"
+                     "#ifndef X\n"
+                     "#define X\n"
+                     "int x;\n"
+                     "#define Y 1\n";
+  std::string Expected = "// comment \n"
+                         "#ifndef X\n"
+                         "#define X\n"
+                         "#include <vector>\n"
+                         "int x;\n"
+                         "#define Y 1\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, IfNDefWithNoDefine) {
+  std::string Code = "// comment \n"
+                     "#ifndef X\n"
+                     "int x;\n"
+                     "#define Y 1\n";
+  std::string Expected = "// comment \n"
+                         "#include <vector>\n"
+                         "#ifndef X\n"
+                         "int x;\n"
+                         "#define Y 1\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, HeaderGuardWithComment) {
+  std::string Code = "// comment \n"
+                     "#ifndef X // comment\n"
+                     "// comment\n"
+                     "/* comment\n"
+                     "*/\n"
+                     "/* comment */ #define X\n"
+                     "int x;\n"
+                     "#define Y 1\n";
+  std::string Expected = "// comment \n"
+                         "#ifndef X // comment\n"
+                         "// comment\n"
+                         "/* comment\n"
+                         "*/\n"
+                         "/* comment */ #define X\n"
+                         "#include <vector>\n"
+                         "int x;\n"
+                         "#define Y 1\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, EmptyCode) {
+  std::string Code = "";
+  std::string Expected = "#include <vector>\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+// FIXME: although this case does not crash, the insertion is wrong. A '\n'
+// should be inserted between the two #includes.
+TEST_F(CleanUpReplacementsTest, NoNewLineAtTheEndOfCode) {
+  std::string Code = "#include <map>";
+  std::string Expected = "#include <map>#include <vector>\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
