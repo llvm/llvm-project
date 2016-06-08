@@ -220,13 +220,6 @@ void test_s_memtime(global ulong* out)
   *out = __builtin_amdgcn_s_memtime();
 }
 
-// CHECK-LABEL: @test_s_memrealtime
-// CHECK: call i64 @llvm.amdgcn.s.memrealtime()
-void test_s_memrealtime(global ulong* out)
-{
-  *out = __builtin_amdgcn_s_memrealtime();
-}
-
 // CHECK-LABEL: @test_s_sleep
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 1)
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 15)

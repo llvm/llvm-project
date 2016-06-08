@@ -100,3 +100,48 @@ auto Fail = call(&foo); // expected-error{{no matching function for call to 'cal
 auto PtrOk = &foo<int>;
 auto PtrFail = &foo; // expected-error{{variable 'PtrFail' with type 'auto' has incompatible initializer of type '<overloaded function type>'}}
 }
+
+namespace pointer_equality {
+  using FnTy = void (*)();
+
+  void bothEnableIf() __attribute__((enable_if(false, "")));
+  void bothEnableIf() __attribute__((enable_if(true, "")));
+
+  void oneEnableIf() __attribute__((enable_if(false, "")));
+  void oneEnableIf();
+
+  void test() {
+    FnTy Fn;
+    (void)(Fn == bothEnableIf);
+    (void)(Fn == &bothEnableIf);
+    (void)(Fn == oneEnableIf);
+    (void)(Fn == &oneEnableIf);
+  }
+
+  void unavailableEnableIf() __attribute__((enable_if(false, "")));
+  void unavailableEnableIf() __attribute__((unavailable("noooo"))); // expected-note 2{{marked unavailable here}}
+
+  void testUnavailable() {
+    FnTy Fn;
+    (void)(Fn == unavailableEnableIf); // expected-error{{is unavailable}}
+    (void)(Fn == &unavailableEnableIf); // expected-error{{is unavailable}}
+  }
+
+  class Foo {
+    static void staticAccessEnableIf(); // expected-note 2{{declared private here}}
+    void accessEnableIf(); // expected-note{{declared private here}}
+
+  public:
+    static void staticAccessEnableIf() __attribute__((enable_if(false, "")));
+    void accessEnableIf() __attribute__((enable_if(false, "")));
+  };
+
+  void testAccess() {
+    FnTy Fn;
+    (void)(Fn == Foo::staticAccessEnableIf); // expected-error{{is a private member}}
+    (void)(Fn == &Foo::staticAccessEnableIf); // expected-error{{is a private member}}
+
+    void (Foo::*MemFn)();
+    (void)(MemFn == &Foo::accessEnableIf); // expected-error{{is a private member}}
+  }
+}

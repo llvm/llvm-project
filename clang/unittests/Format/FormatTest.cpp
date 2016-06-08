@@ -5629,6 +5629,7 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
 
   FormatStyle AlignLeft = getLLVMStyle();
   AlignLeft.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("void A::b() && {}", AlignLeft);
   verifyFormat("Deleted& operator=(const Deleted&) & = default;", AlignLeft);
   verifyFormat("SomeType MemberFunction(const Deleted&) & = delete;",
                AlignLeft);
@@ -7023,6 +7024,14 @@ TEST_F(FormatTest, BlockComments) {
                    "* aaaaaa aaaaaa\n"
                    "*/",
                    getLLVMStyleWithColumns(10)));
+  EXPECT_EQ("int aaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
+            "    /* line 1\n"
+            "       bbbbbbbbbbbb */\n"
+            "    bbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+            format("int aaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
+                   "    /* line 1\n"
+                   "       bbbbbbbbbbbb */ bbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+            getLLVMStyleWithColumns(50)));
 
   FormatStyle NoBinPacking = getLLVMStyle();
   NoBinPacking.BinPackParameters = false;

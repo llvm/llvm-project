@@ -106,6 +106,17 @@ inline QualType getUnderlyingType(const TypedefNameDecl &Node) {
   return Node.getUnderlyingType();
 }
 
+/// \brief Unifies obtaining the FunctionProtoType pointer from both
+/// FunctionProtoType and FunctionDecl nodes..
+inline const FunctionProtoType *
+getFunctionProtoType(const FunctionProtoType &Node) {
+  return &Node;
+}
+
+inline const FunctionProtoType *getFunctionProtoType(const FunctionDecl &Node) {
+  return Node.getType()->getAs<FunctionProtoType>();
+}
+
 /// \brief Internal version of BoundNodes. Holds all the bound nodes.
 class BoundNodesMap {
 public:

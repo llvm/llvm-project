@@ -1101,3 +1101,13 @@ struct c {
   // CHECK-LABEL: @_ZN6test541cC2EPNS0_Ut0_E
 };
 }
+
+namespace test55 {
+enum E { R };
+
+template <typename T>
+void fn(T, __underlying_type(T)) {}
+
+template void fn<E>(E, __underlying_type(E));
+// CHECK-LABEL: @_ZN6test552fnINS_1EEEEvT_U3eutS2_
+}

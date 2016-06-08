@@ -1862,24 +1862,12 @@ static bool fixOverloadedReinterpretCastExpr(Sema &Self, QualType DestType,
       Result.isUsable())
     return true;
 
-  DeclAccessPair DAP;
-  FunctionDecl *Found = Self.resolveAddressOfOnlyViableOverloadCandidate(E, DAP);
-  if (!Found)
+  // No guarantees that ResolveAndFixSingleFunctionTemplateSpecialization
+  // preserves Result.
+  Result = E;
+  if (!Self.resolveAndFixAddressOfOnlyViableOverloadCandidate(Result))
     return false;
-
-  // It seems that if we encounter a call to a function that is both unavailable
-  // and inaccessible, we'll emit multiple diags for said call. Hence, we run
-  // both checks below unconditionally.
-  Self.DiagnoseUseOfDecl(Found, E->getExprLoc());
-  Self.CheckAddressOfMemberAccess(E, DAP);
-
-  Expr *Fixed = Self.FixOverloadedFunctionReference(E, DAP, Found);
-  if (Fixed->getType()->isFunctionType())
-    Result = Self.DefaultFunctionArrayConversion(Fixed, /*Diagnose=*/false);
-  else
-    Result = Fixed;
-
-  return !Result.isInvalid();
+  return Result.isUsable();
 }
 
 static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,

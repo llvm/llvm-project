@@ -185,6 +185,22 @@ Format compatibility guarantees
   into instrumented binaries. Tools must retain **backwards** compatibility
   with these formats. These formats are not forwards-compatible.
 
+Using the profiling runtime without static initializers
+=======================================================
+
+By default the compiler runtime uses a static initializer to determine the
+profile output path and to register a writer function. To collect profiles
+without using static initializers, do this manually:
+
+* Export a ``int __llvm_profile_runtime`` symbol. The linker won't pull in the
+  object file containing the profiling runtime's static initializer if this
+  symbol is defined.
+
+* Call ``__llvm_profile_initialize_file`` once. This parses
+  ``LLVM_PROFILE_FILE`` and sets the output path.
+
+* Call ``__llvm_profile_write_file`` to write out a profile.
+
 Drawbacks and limitations
 =========================
 
