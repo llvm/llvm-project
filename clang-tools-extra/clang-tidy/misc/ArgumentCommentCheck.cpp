@@ -37,8 +37,8 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(cxxConstructExpr().bind("expr"), this);
 }
 
-std::vector<std::pair<SourceLocation, StringRef>>
-ArgumentCommentCheck::getCommentsInRange(ASTContext *Ctx, SourceRange Range) {
+static std::vector<std::pair<SourceLocation, StringRef>>
+getCommentsInRange(ASTContext *Ctx, CharSourceRange Range) {
   std::vector<std::pair<SourceLocation, StringRef>> Comments;
   auto &SM = Ctx->getSourceManager();
   std::pair<FileID, unsigned> BeginLoc = SM.getDecomposedLoc(Range.getBegin()),
@@ -132,16 +132,13 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       }
     }
 
-    SourceLocation BeginSLoc, EndSLoc = Args[i]->getLocStart();
-    if (i == 0)
-      BeginSLoc = ArgBeginLoc;
-    else
-      BeginSLoc = Args[i - 1]->getLocEnd();
-    if (BeginSLoc.isMacroID() || EndSLoc.isMacroID())
-      continue;
+    CharSourceRange BeforeArgument = CharSourceRange::getCharRange(
+        i == 0 ? ArgBeginLoc : Args[i - 1]->getLocEnd(),
+        Args[i]->getLocStart());
+    BeforeArgument = Lexer::makeFileCharRange(
+        BeforeArgument, Ctx->getSourceManager(), Ctx->getLangOpts());
 
-    for (auto Comment :
-         getCommentsInRange(Ctx, SourceRange(BeginSLoc, EndSLoc))) {
+    for (auto Comment : getCommentsInRange(Ctx, BeforeArgument)) {
       llvm::SmallVector<StringRef, 2> Matches;
       if (IdentRE.match(Comment.second, &Matches)) {
         if (Matches[2] != II->getName()) {

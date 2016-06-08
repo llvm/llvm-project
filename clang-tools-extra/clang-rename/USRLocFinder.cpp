@@ -124,20 +124,11 @@ public:
   }
 
   bool VisitCXXStaticCastExpr(clang::CXXStaticCastExpr *Expr) {
-    clang::QualType Type = Expr->getType();
-    // See if this a cast of a pointer.
-    const RecordDecl* Decl = Type->getPointeeCXXRecordDecl();
-    if (!Decl) {
-      // See if this is a cast of a reference.
-      Decl = Type->getAsCXXRecordDecl();
-    }
+    return handleCXXNamedCastExpr(Expr);
+  }
 
-    if (Decl && getUSRForDecl(Decl) == USR) {
-      SourceLocation Location = Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
-      LocationsFound.push_back(Location);
-    }
-
-    return true;
+  bool VisitCXXDynamicCastExpr(clang::CXXDynamicCastExpr *Expr) {
+    return handleCXXNamedCastExpr(Expr);
   }
 
   // Non-visitors:
@@ -157,6 +148,23 @@ private:
         LocationsFound.push_back(NameLoc.getLocalBeginLoc());
       NameLoc = NameLoc.getPrefix();
     }
+  }
+
+  bool handleCXXNamedCastExpr(clang::CXXNamedCastExpr *Expr) {
+    clang::QualType Type = Expr->getType();
+    // See if this a cast of a pointer.
+    const RecordDecl* Decl = Type->getPointeeCXXRecordDecl();
+    if (!Decl) {
+      // See if this is a cast of a reference.
+      Decl = Type->getAsCXXRecordDecl();
+    }
+
+    if (Decl && getUSRForDecl(Decl) == USR) {
+      SourceLocation Location = Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
+      LocationsFound.push_back(Location);
+    }
+
+    return true;
   }
 
   // All the locations of the USR were found.
