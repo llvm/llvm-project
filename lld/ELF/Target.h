@@ -98,6 +98,7 @@ public:
   virtual void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
 };
 
+StringRef getRelName(uint32_t Type);
 uint64_t getPPC64TocBase();
 
 const unsigned MipsGPOffset = 0x7ff0;

@@ -11,6 +11,8 @@
 #define PROFILE_INSTRPROFILING_H_
 
 #include "InstrProfilingPort.h"
+
+#define INSTR_PROF_VISIBILITY COMPILER_RT_VISIBILITY
 #include "InstrProfData.inc"
 
 enum ValueKind {

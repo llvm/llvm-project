@@ -93,14 +93,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
-  # Make sure we can use the console pool for recent cmake and ninja > 1.5
-  # Needed for add_lit_testsuite
-  if(CMAKE_VERSION VERSION_LESS 3.1.20141117)
-    set(cmake_3_2_USES_TERMINAL)
-  else()
-    set(cmake_3_2_USES_TERMINAL USES_TERMINAL)
-  endif()
-
   # Required doc configuration
   if (LLVM_ENABLE_SPHINX)
     message(STATUS "Sphinx enabled.")

@@ -47,7 +47,7 @@ TargetInfo *Target;
 
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 
-static StringRef getRelName(uint32_t Type) {
+StringRef getRelName(uint32_t Type) {
   return getELFRelocationTypeName(Config->EMachine, Type);
 }
 

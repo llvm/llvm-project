@@ -19,8 +19,7 @@ namespace misc {
 namespace {
 class MacroParenthesesPPCallbacks : public PPCallbacks {
 public:
-  MacroParenthesesPPCallbacks(Preprocessor *PP,
-                              MacroParenthesesCheck *Check)
+  MacroParenthesesPPCallbacks(Preprocessor *PP, MacroParenthesesCheck *Check)
       : PP(PP), Check(Check) {}
 
   void MacroDefined(const Token &MacroNameTok,
@@ -67,8 +66,46 @@ static bool isWarnOp(const Token &T) {
                    tok::amp, tok::pipe, tok::caret);
 }
 
+/// Is given Token a keyword that is used in variable declarations?
+static bool isVarDeclKeyword(const Token &T) {
+  return T.isOneOf(tok::kw_bool, tok::kw_char, tok::kw_short, tok::kw_int,
+                   tok::kw_long, tok::kw_float, tok::kw_double, tok::kw_const,
+                   tok::kw_enum, tok::kw_inline, tok::kw_static, tok::kw_struct,
+                   tok::kw_signed, tok::kw_unsigned);
+}
+
+/// Is there a possible variable declaration at Tok?
+static bool possibleVarDecl(const MacroInfo *MI, const Token *Tok) {
+  if (Tok == MI->tokens_end())
+    return false;
+
+  // If we see int/short/struct/etc., just assume this is a variable declaration.
+  if (isVarDeclKeyword(*Tok))
+    return true;
+
+  // Variable declarations start with identifier or coloncolon.
+  if (!Tok->isOneOf(tok::identifier, tok::raw_identifier, tok::coloncolon))
+    return false;
+
+  // Skip possible types, etc
+  while (
+      Tok != MI->tokens_end() &&
+      Tok->isOneOf(tok::identifier, tok::raw_identifier, tok::coloncolon,
+                    tok::star, tok::amp, tok::ampamp, tok::less, tok::greater))
+    Tok++;
+
+  // Return true for possible variable declarations.
+  return Tok == MI->tokens_end() ||
+         Tok->isOneOf(tok::equal, tok::semi, tok::l_square, tok::l_paren) ||
+         isVarDeclKeyword(*Tok);
+}
+
 void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
                                                   const MacroInfo *MI) {
+  // Make sure macro replacement isn't a variable declaration.
+  if (possibleVarDecl(MI, MI->tokens_begin()))
+    return;
+
   // Count how deep we are in parentheses/braces/squares.
   int Count = 0;
 
@@ -117,6 +154,9 @@ void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
 
 void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
                                            const MacroInfo *MI) {
+  
+  // Skip variable declaration.
+  bool VarDecl = possibleVarDecl(MI, MI->tokens_begin());
 
   for (auto TI = MI->tokens_begin(), TE = MI->tokens_end(); TI != TE; ++TI) {
     // First token.
@@ -131,6 +171,13 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
     const Token &Next = *(TI + 1);
 
     const Token &Tok = *TI;
+
+    // There should not be extra parentheses in possible variable declaration.
+    if (VarDecl) {
+      if (Tok.isOneOf(tok::equal, tok::semi, tok::l_square, tok::l_paren))
+        VarDecl = false;
+      continue;
+    }
 
     // Only interested in identifiers.
     if (!Tok.isOneOf(tok::identifier, tok::raw_identifier))

@@ -18,6 +18,18 @@
 /* For _alloca. */
 #include <malloc.h>
 #endif
+#if defined(_WIN32)
+#include "WindowsMMap.h"
+/* For _chsize_s */
+#include <io.h>
+#else
+#include <sys/file.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#if defined(__linux__)
+#include <sys/types.h>
+#endif
+#endif
 
 #define MAX_PID_SIZE 16
 /* Data structure holding the result of parsed filename pattern.  */
@@ -28,13 +40,22 @@ typedef struct lprofFilename {
   char Hostname[COMPILER_RT_MAX_HOSTLEN];
   unsigned NumPids;
   unsigned NumHosts;
+  /* When in-process merging is enabled, this parameter specifies
+   * the total number of profile data files shared by all the processes
+   * spawned from the same binary. By default the value is 1. If merging
+   * is not enabled, its value should be 0. This parameter is specified
+   * by the %[0-9]m specifier. For instance %2m enables merging using
+   * 2 profile data files. %1m is equivalent to %m. Also %m specifier
+   * can only appear once at the end of the name pattern. */
+  unsigned MergePoolSize;
 } lprofFilename;
 
-lprofFilename lprofCurFilename = {0, {0}, {0}, 0, 0};
+lprofFilename lprofCurFilename = {0, {0}, {0}, 0, 0, 0};
 
 int getpid(void);
 static int getCurFilenameLength();
 static const char *getCurFilename(char *FilenameBuf);
+static unsigned doMerging() { return lprofCurFilename.MergePoolSize; }
 
 /* Return 1 if there is an error, otherwise return  0.  */
 static uint32_t fileWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
@@ -66,13 +87,96 @@ static void setupIOBuffer() {
   }
 }
 
+/* Read profile data in \c ProfileFile and merge with in-memory
+   profile counters. Returns -1 if there is fatal error, otheriwse
+   0 is returned.
+*/
+static int doProfileMerging(FILE *ProfileFile) {
+  uint64_t ProfileFileSize;
+  char *ProfileBuffer;
+
+  if (fseek(ProfileFile, 0L, SEEK_END) == -1) {
+    PROF_ERR("Unable to merge profile data, unable to get size: %s\n",
+             strerror(errno));
+    return -1;
+  }
+  ProfileFileSize = ftell(ProfileFile);
+
+  /* Restore file offset.  */
+  if (fseek(ProfileFile, 0L, SEEK_SET) == -1) {
+    PROF_ERR("Unable to merge profile data, unable to rewind: %s\n",
+             strerror(errno));
+    return -1;
+  }
+
+  /* Nothing to merge.  */
+  if (ProfileFileSize < sizeof(__llvm_profile_header)) {
+    if (ProfileFileSize)
+      PROF_WARN("Unable to merge profile data: %s\n",
+                "source profile file is too small.");
+    return 0;
+  }
+
+  ProfileBuffer = mmap(NULL, ProfileFileSize, PROT_READ, MAP_SHARED | MAP_FILE,
+                       fileno(ProfileFile), 0);
+  if (ProfileBuffer == MAP_FAILED) {
+    PROF_ERR("Unable to merge profile data, mmap failed: %s\n",
+             strerror(errno));
+    return -1;
+  }
+
+  if (__llvm_profile_check_compatibility(ProfileBuffer, ProfileFileSize)) {
+    (void)munmap(ProfileBuffer, ProfileFileSize);
+    PROF_WARN("Unable to merge profile data: %s\n",
+              "source profile file is not compatible.");
+    return 0;
+  }
+
+  /* Now start merging */
+  __llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize);
+  (void)munmap(ProfileBuffer, ProfileFileSize);
+
+  return 0;
+}
+
+/* Open the profile data for merging. It opens the file in r+b mode with
+ * file locking.  If the file has content which is compatible with the
+ * current process, it also reads in the profile data in the file and merge
+ * it with in-memory counters. After the profile data is merged in memory,
+ * the original profile data is truncated and gets ready for the profile
+ * dumper. With profile merging enabled, each executable as well as any of
+ * its instrumented shared libraries dump profile data into their own data file.
+*/
+static FILE *openFileForMerging(const char *ProfileFileName) {
+  FILE *ProfileFile;
+  int rc;
+
+  ProfileFile = lprofOpenFileEx(ProfileFileName);
+  if (!ProfileFile)
+    return NULL;
+
+  rc = doProfileMerging(ProfileFile);
+  if (rc || COMPILER_RT_FTRUNCATE(ProfileFile, 0L) ||
+      fseek(ProfileFile, 0L, SEEK_SET) == -1) {
+    PROF_ERR("Profile Merging of file %s failed: %s\n", ProfileFileName,
+             strerror(errno));
+    fclose(ProfileFile);
+    return NULL;
+  }
+  fseek(ProfileFile, 0L, SEEK_SET);
+  return ProfileFile;
+}
+
 /* Write profile data to file \c OutputName.  */
 static int writeFile(const char *OutputName) {
   int RetVal;
   FILE *OutputFile;
 
-  /* Append to the file to support profiling multiple shared objects. */
-  OutputFile = fopen(OutputName, "ab");
+  if (!doMerging())
+    OutputFile = fopen(OutputName, "ab");
+  else
+    OutputFile = openFileForMerging(OutputName);
+
   if (!OutputFile)
     return -1;
 
@@ -115,13 +219,21 @@ static void resetFilenameToDefault(void) {
   lprofCurFilename.FilenamePat = "default.profraw";
 }
 
-/* Parses the pattern string \p FilenamePat and store the result to
- * lprofcurFilename structure. */
+static int containsMergeSpecifier(const char *FilenamePat, int I) {
+  return (FilenamePat[I] == 'm' ||
+          (FilenamePat[I] >= '1' && FilenamePat[I] <= '9' &&
+           /* If FilenamePat[I] is not '\0', the next byte is guaranteed
+            * to be in-bound as the string is null terminated. */
+           FilenamePat[I + 1] == 'm'));
+}
 
+/* Parses the pattern string \p FilenamePat and stores the result to
+ * lprofcurFilename structure. */
 static int parseFilenamePattern(const char *FilenamePat) {
   int NumPids = 0, NumHosts = 0, I;
   char *PidChars = &lprofCurFilename.PidChars[0];
   char *Hostname = &lprofCurFilename.Hostname[0];
+  int MergingEnabled = 0;
 
   lprofCurFilename.FilenamePat = FilenamePat;
   /* Check the filename for "%p", which indicates a pid-substitution. */
@@ -144,6 +256,20 @@ static int parseFilenamePattern(const char *FilenamePat) {
                 FilenamePat);
             return -1;
           }
+      } else if (containsMergeSpecifier(FilenamePat, I)) {
+        if (MergingEnabled) {
+          PROF_WARN(
+              "%%m specifier can only be specified once at the end of %s.\n",
+              FilenamePat);
+          return -1;
+        }
+        MergingEnabled = 1;
+        if (FilenamePat[I] == 'm')
+          lprofCurFilename.MergePoolSize = 1;
+        else {
+          lprofCurFilename.MergePoolSize = FilenamePat[I] - '0';
+          I++; /* advance to 'm' */
+        }
       }
     }
 
@@ -162,22 +288,29 @@ static void parseAndSetFilename(const char *FilenamePat) {
   NewFile =
       !OldFilenamePat || (strcmp(OldFilenamePat, lprofCurFilename.FilenamePat));
 
-  if (NewFile)
+  if (NewFile && !lprofCurFilename.MergePoolSize)
     truncateCurrentFile();
 }
 
 /* Return buffer length that is required to store the current profile
  * filename with PID and hostname substitutions. */
+/* The length to hold uint64_t followed by 2 digit pool id including '_' */
+#define SIGLEN 24
 static int getCurFilenameLength() {
+  int Len;
   if (!lprofCurFilename.FilenamePat || !lprofCurFilename.FilenamePat[0])
     return 0;
 
-  if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts))
+  if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
+        lprofCurFilename.MergePoolSize))
     return strlen(lprofCurFilename.FilenamePat);
 
-  return strlen(lprofCurFilename.FilenamePat) +
-         lprofCurFilename.NumPids * (strlen(lprofCurFilename.PidChars) - 2) +
-         lprofCurFilename.NumHosts * (strlen(lprofCurFilename.Hostname) - 2);
+  Len = strlen(lprofCurFilename.FilenamePat) +
+        lprofCurFilename.NumPids * (strlen(lprofCurFilename.PidChars) - 2) +
+        lprofCurFilename.NumHosts * (strlen(lprofCurFilename.Hostname) - 2);
+  if (lprofCurFilename.MergePoolSize)
+    Len += SIGLEN;
+  return Len;
 }
 
 /* Return the pointer to the current profile file name (after substituting
@@ -191,7 +324,8 @@ static const char *getCurFilename(char *FilenameBuf) {
   if (!lprofCurFilename.FilenamePat || !lprofCurFilename.FilenamePat[0])
     return 0;
 
-  if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts))
+  if (!(lprofCurFilename.NumPids || lprofCurFilename.NumHosts ||
+        lprofCurFilename.MergePoolSize))
     return lprofCurFilename.FilenamePat;
 
   PidLength = strlen(lprofCurFilename.PidChars);
@@ -205,6 +339,18 @@ static const char *getCurFilename(char *FilenameBuf) {
       } else if (FilenamePat[I] == 'h') {
         memcpy(FilenameBuf + J, lprofCurFilename.Hostname, HostNameLength);
         J += HostNameLength;
+      } else if (containsMergeSpecifier(FilenamePat, I)) {
+        char LoadModuleSignature[SIGLEN];
+        int S;
+        int ProfilePoolId = getpid() % lprofCurFilename.MergePoolSize;
+        S = snprintf(LoadModuleSignature, SIGLEN, "%" PRIu64 "_%d",
+                     lprofGetLoadModuleSignature(), ProfilePoolId);
+        if (S == -1 || S > SIGLEN)
+          S = SIGLEN;
+        memcpy(FilenameBuf + J, LoadModuleSignature, S);
+        J += S;
+        if (FilenamePat[I] != 'm')
+          I++;
       }
       /* Drop any unknown substitutions. */
     } else

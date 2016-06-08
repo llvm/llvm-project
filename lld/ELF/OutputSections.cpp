@@ -149,8 +149,8 @@ template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
     return false;
   Sym.GlobalDynIndex = Entries.size();
   // Global Dynamic TLS entries take two GOT slots.
-  Entries.push_back(&Sym);
   Entries.push_back(nullptr);
+  Entries.push_back(&Sym);
   return true;
 }
 
@@ -531,11 +531,6 @@ void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
     Values[I - 1] |= 1;
 }
 
-static bool includeInGnuHashTable(SymbolBody *B) {
-  // Assume that includeInDynsym() is already checked.
-  return !B->isUndefined();
-}
-
 // Add symbols to this symbol hash table. Note that this function
 // destructively sort a given vector -- which is needed because
 // GNU-style hash table places some sorting requirements.
@@ -544,7 +539,7 @@ void GnuHashTableSection<ELFT>::addSymbols(
     std::vector<std::pair<SymbolBody *, size_t>> &V) {
   auto Mid = std::stable_partition(V.begin(), V.end(),
                                    [](std::pair<SymbolBody *, size_t> &P) {
-                                     return !includeInGnuHashTable(P.first);
+                                     return P.first->isUndefined();
                                    });
   if (Mid == V.end())
     return;
@@ -1430,8 +1425,7 @@ template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
     if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(P.first))
       OutVersym->vs_index = SS->VersionId;
     else
-      // The reserved identifier for a non-versioned global symbol.
-      OutVersym->vs_index = 1;
+      OutVersym->vs_index = VER_NDX_GLOBAL;
     ++OutVersym;
   }
 }
@@ -1445,8 +1439,7 @@ VersionNeedSection<ELFT>::VersionNeedSection()
 template <class ELFT>
 void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
   if (!SS->Verdef) {
-    // The reserved identifier for a non-versioned global symbol.
-    SS->VersionId = 1;
+    SS->VersionId = VER_NDX_GLOBAL;
     return;
   }
   SharedFile<ELFT> *F = SS->File;

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains platform-independent functions to processe relocations.
+// This file contains platform-independent functions to process relocations.
 // I'll describe the overview of this file here.
 //
 // Simple relocations are easy to handle for the linker. For example,
@@ -136,9 +136,13 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
         uintX_t Off = Out<ELFT>::Got->getGlobalDynOffset(Body);
         Out<ELFT>::RelaDyn->addReloc(
             {Target->TlsModuleIndexRel, Out<ELFT>::Got, Off, false, &Body, 0});
-        Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Out<ELFT>::Got,
-                                      Off + (uintX_t)sizeof(uintX_t), false,
-                                      &Body, 0});
+
+        // If the symbol is preemptible we need the dynamic linker to write
+        // the offset too.
+        if (Body.isPreemptible())
+          Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Out<ELFT>::Got,
+                                        Off + (uintX_t)sizeof(uintX_t), false,
+                                        &Body, 0});
       }
       C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       return 1;
@@ -235,10 +239,8 @@ static int32_t findMipsPairedAddend(const uint8_t *Buf, const uint8_t *BufLoc,
     return ((read32<E>(BufLoc) & 0xffff) << 16) +
            readSignedLo16<E>(Buf + RI->r_offset);
   }
-  unsigned OldType = Rel->getType(Config->Mips64EL);
-  StringRef OldName = getELFRelocationTypeName(Config->EMachine, OldType);
-  StringRef NewName = getELFRelocationTypeName(Config->EMachine, Type);
-  warning("can't find matching " + NewName + " relocation for " + OldName);
+  warning("can't find matching " + getRelName(Type) + " relocation for " +
+          getRelName(Rel->getType(Config->Mips64EL)));
   return 0;
 }
 
@@ -300,9 +302,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (AbsVal && RelE) {
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
       return true;
-    StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-    error("relocation " + S + " cannot refer to absolute symbol " +
-          Body.getName());
+    error("relocation " + getRelName(Type) +
+          " cannot refer to absolute symbol " + Body.getName());
     return true;
   }
 
@@ -400,9 +401,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-    error("relocation " + S + " cannot be used when making a shared "
-                              "object; recompile with -fPIC.");
+    error("relocation " + getRelName(Type) +
+          " cannot be used when making a shared object; recompile with -fPIC.");
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
