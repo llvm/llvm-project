@@ -1989,10 +1989,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(tok::l_square) && Right.is(tok::amp))
     return false;
   if (Right.is(TT_PointerOrReference))
-    return (Left.is(tok::r_paren) && Left.MatchingParen &&
-            (Left.MatchingParen->is(TT_OverloadedOperatorLParen) ||
-             (Left.MatchingParen->Previous &&
-              Left.MatchingParen->Previous->is(TT_FunctionDeclarationName)))) ||
+    return (Left.is(tok::r_paren) && Line.MightBeFunctionDecl) ||
            (Left.Tok.isLiteral() ||
             (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
              (Style.PointerAlignment != FormatStyle::PAS_Left ||

@@ -845,6 +845,13 @@ TEST(IsNoThrow, MatchesNoThrowFunctionDeclarations) {
     notMatches("void f() noexcept(false);", functionDecl(isNoThrow())));
   EXPECT_TRUE(matches("void f() throw();", functionDecl(isNoThrow())));
   EXPECT_TRUE(matches("void f() noexcept;", functionDecl(isNoThrow())));
+
+  EXPECT_TRUE(notMatches("void f();", functionProtoType(isNoThrow())));
+  EXPECT_TRUE(notMatches("void f() throw(int);", functionProtoType(isNoThrow())));
+  EXPECT_TRUE(
+    notMatches("void f() noexcept(false);", functionProtoType(isNoThrow())));
+  EXPECT_TRUE(matches("void f() throw();", functionProtoType(isNoThrow())));
+  EXPECT_TRUE(matches("void f() noexcept;", functionProtoType(isNoThrow())));
 }
 
 TEST(isConstexpr, MatchesConstexprDeclarations) {
@@ -1396,6 +1403,20 @@ TEST(hasDynamicExceptionSpec, MatchesDynamicExceptionSpecifications) {
       matches("void k() throw(int);", functionDecl(hasDynamicExceptionSpec())));
   EXPECT_TRUE(
       matches("void l() throw(...);", functionDecl(hasDynamicExceptionSpec())));
+
+  EXPECT_TRUE(notMatches("void f();", functionProtoType(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(notMatches("void g() noexcept;",
+                         functionProtoType(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(notMatches("void h() noexcept(true);",
+                         functionProtoType(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(notMatches("void i() noexcept(false);",
+                         functionProtoType(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(
+      matches("void j() throw();", functionProtoType(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(
+      matches("void k() throw(int);", functionProtoType(hasDynamicExceptionSpec())));
+  EXPECT_TRUE(
+      matches("void l() throw(...);", functionProtoType(hasDynamicExceptionSpec())));
 }
 
 TEST(HasObjectExpression, DoesNotMatchMember) {

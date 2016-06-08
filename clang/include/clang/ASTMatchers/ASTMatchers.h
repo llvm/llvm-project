@@ -3265,10 +3265,13 @@ AST_MATCHER(FunctionDecl, isDefaulted) {
 ///   void k() throw(int);
 ///   void l() throw(...);
 /// \endcode
-/// functionDecl(hasDynamicExceptionSpec())
-///   matches the declarations of j, k, and l, but not f, g, h, or i.
-AST_MATCHER(FunctionDecl, hasDynamicExceptionSpec) {
-  if (const auto *FnTy = Node.getType()->getAs<FunctionProtoType>())
+/// functionDecl(hasDynamicExceptionSpec()) and
+///   functionProtoType(hasDynamicExceptionSpec())
+///   match the declarations of j, k, and l, but not f, g, h, or i.
+AST_POLYMORPHIC_MATCHER(hasDynamicExceptionSpec,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
+                                                        FunctionProtoType)) {
+  if (const FunctionProtoType *FnTy = internal::getFunctionProtoType(Node))
     return FnTy->hasDynamicExceptionSpec();
   return false;
 }
@@ -3283,10 +3286,12 @@ AST_MATCHER(FunctionDecl, hasDynamicExceptionSpec) {
 ///   void i() throw(int);
 ///   void j() noexcept(false);
 /// \endcode
-/// functionDecl(isNoThrow())
-///   matches the declarations of g, and h, but not f, i or j.
-AST_MATCHER(FunctionDecl, isNoThrow) {
-  const auto *FnTy = Node.getType()->getAs<FunctionProtoType>();
+/// functionDecl(isNoThrow()) and functionProtoType(isNoThrow())
+///   match the declarations of g, and h, but not f, i or j.
+AST_POLYMORPHIC_MATCHER(isNoThrow,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
+                                                        FunctionProtoType)) {
+  const FunctionProtoType *FnTy = internal::getFunctionProtoType(Node);
 
   // If the function does not have a prototype, then it is assumed to be a
   // throwing function (as it would if the function did not have any exception
@@ -3298,7 +3303,7 @@ AST_MATCHER(FunctionDecl, isNoThrow) {
   if (isUnresolvedExceptionSpec(FnTy->getExceptionSpecType()))
     return true;
 
-  return FnTy->isNothrow(Node.getASTContext());
+  return FnTy->isNothrow(Finder->getASTContext());
 }
 
 /// \brief Matches constexpr variable and function declarations.

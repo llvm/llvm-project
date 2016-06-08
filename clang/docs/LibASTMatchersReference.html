@@ -2414,8 +2414,9 @@ Given:
   void j() throw();
   void k() throw(int);
   void l() throw(...);
-functionDecl(hasDynamicExceptionSpec())
-  matches the declarations of j, k, and l, but not f, g, h, or i.
+functionDecl(hasDynamicExceptionSpec()) and
+  functionProtoType(hasDynamicExceptionSpec())
+  match the declarations of j, k, and l, but not f, g, h, or i.
 </pre></td></tr>
 
 
@@ -2540,8 +2541,8 @@ Given:
   void h() throw();
   void i() throw(int);
   void j() noexcept(false);
-functionDecl(isNoThrow())
-  matches the declarations of g, and h, but not f, i or j.
+functionDecl(isNoThrow()) and functionProtoType(isNoThrow())
+  match the declarations of g, and h, but not f, i or j.
 </pre></td></tr>
 
 
@@ -2594,6 +2595,37 @@ functionProtoType(parameterCountIs(2))
   matches void h(int i, int j)
 functionProtoType(parameterCountIs(3))
   matches void k(int x, int y, int z, ...);
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionProtoType.html">FunctionProtoType</a>&gt;</td><td class="name" onclick="toggle('hasDynamicExceptionSpec1')"><a name="hasDynamicExceptionSpec1Anchor">hasDynamicExceptionSpec</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="hasDynamicExceptionSpec1"><pre>Matches functions that have a dynamic exception specification.
+
+Given:
+  void f();
+  void g() noexcept;
+  void h() noexcept(true);
+  void i() noexcept(false);
+  void j() throw();
+  void k() throw(int);
+  void l() throw(...);
+functionDecl(hasDynamicExceptionSpec()) and
+  functionProtoType(hasDynamicExceptionSpec())
+  match the declarations of j, k, and l, but not f, g, h, or i.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionProtoType.html">FunctionProtoType</a>&gt;</td><td class="name" onclick="toggle('isNoThrow1')"><a name="isNoThrow1Anchor">isNoThrow</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isNoThrow1"><pre>Matches functions that have a non-throwing exception specification.
+
+Given:
+  void f();
+  void g() noexcept;
+  void h() throw();
+  void i() throw(int);
+  void j() noexcept(false);
+functionDecl(isNoThrow()) and functionProtoType(isNoThrow())
+  match the declarations of g, and h, but not f, i or j.
 </pre></td></tr>
 
 

@@ -14,6 +14,10 @@
 
 // The format of this database matches clang/Basic/Builtins.def.
 
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
 BUILTIN(__builtin_amdgcn_s_barrier, "v", "n")
 BUILTIN(__builtin_amdgcn_div_scale, "dddbb*", "n")
 BUILTIN(__builtin_amdgcn_div_scalef, "fffbb*", "n")
@@ -52,7 +56,8 @@ BUILTIN(__builtin_amdgcn_s_sleep, "vIi", "n")
 //===----------------------------------------------------------------------===//
 // VI+ only builtins.
 //===----------------------------------------------------------------------===//
-BUILTIN(__builtin_amdgcn_s_memrealtime, "LUi", "n")
+
+TARGET_BUILTIN(__builtin_amdgcn_s_memrealtime, "LUi", "n", "s-memrealtime")
 
 //===----------------------------------------------------------------------===//
 // Legacy names with amdgpu prefix
@@ -64,3 +69,4 @@ BUILTIN(__builtin_amdgpu_ldexp, "ddi", "nc")
 BUILTIN(__builtin_amdgpu_ldexpf, "ffi", "nc")
 
 #undef BUILTIN
+#undef TARGET_BUILTIN
