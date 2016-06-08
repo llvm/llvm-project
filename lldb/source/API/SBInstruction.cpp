@@ -26,15 +26,63 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
+//----------------------------------------------------------------------
+// We recently fixed a leak in one of the Instruction subclasses where
+// the instruction will only hold a weak reference to the disassembler
+// to avoid a cycle that was keeping both objects alive (leak) and we
+// need the InstructionImpl class to make sure our public API behaves
+// as users would expect. Calls in our public API allow clients to do
+// things like:
+//
+// 1  lldb::SBInstruction inst;
+// 2  inst = target.ReadInstructions(pc, 1).GetInstructionAtIndex(0)
+// 3  if (inst.DoesBranch())
+// 4  ...
+//
+// There was a temporary lldb::DisassemblerSP object created in the
+// SBInstructionList that was returned by lldb.target.ReadInstructions()
+// that will go away after line 2 but the "inst" object should be able
+// to still answer questions about itself. So we make sure that any
+// SBInstruction objects that are given out have a strong reference to
+// the disassembler and the instruction so that the object can live and
+// successfully respond to all queries.
+//----------------------------------------------------------------------
+class InstructionImpl
+{
+public:
+    InstructionImpl (const lldb::DisassemblerSP &disasm_sp, const lldb::InstructionSP& inst_sp) :
+        m_disasm_sp(disasm_sp),
+        m_inst_sp(inst_sp)
+    {
+    }
+
+    lldb::InstructionSP
+    GetSP() const
+    {
+        return m_inst_sp;
+    }
+
+    bool
+    IsValid() const
+    {
+        return (bool)m_inst_sp;
+    }
+
+protected:
+    lldb::DisassemblerSP m_disasm_sp; // Can be empty/invalid
+    lldb::InstructionSP m_inst_sp;
+};
+
 using namespace lldb;
 using namespace lldb_private;
 
-SBInstruction::SBInstruction ()
+SBInstruction::SBInstruction() :
+    m_opaque_sp()
 {
 }
 
-SBInstruction::SBInstruction (const lldb::InstructionSP& inst_sp) :
-    m_opaque_sp (inst_sp)
+SBInstruction::SBInstruction(const lldb::DisassemblerSP &disasm_sp, const lldb::InstructionSP& inst_sp) :
+    m_opaque_sp(new InstructionImpl(disasm_sp, inst_sp))
 {
 }
 
@@ -58,22 +106,24 @@ SBInstruction::~SBInstruction ()
 bool
 SBInstruction::IsValid()
 {
-    return (m_opaque_sp.get() != NULL);
+    return m_opaque_sp && m_opaque_sp->IsValid();
 }
 
 SBAddress
 SBInstruction::GetAddress()
 {
     SBAddress sb_addr;
-    if (m_opaque_sp && m_opaque_sp->GetAddress().IsValid())
-        sb_addr.SetAddress(&m_opaque_sp->GetAddress());
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp && inst_sp->GetAddress().IsValid())
+        sb_addr.SetAddress(&inst_sp->GetAddress());
     return sb_addr;
 }
 
 const char *
 SBInstruction::GetMnemonic(SBTarget target)
 {
-    if (m_opaque_sp)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
     {        
         ExecutionContext exe_ctx;
         TargetSP target_sp (target.GetSP());
@@ -85,7 +135,7 @@ SBInstruction::GetMnemonic(SBTarget target)
             target_sp->CalculateExecutionContext (exe_ctx);
             exe_ctx.SetProcessSP(target_sp->GetProcessSP());
         }
-        return m_opaque_sp->GetMnemonic(&exe_ctx);
+        return inst_sp->GetMnemonic(&exe_ctx);
     }
     return NULL;
 }
@@ -93,7 +143,8 @@ SBInstruction::GetMnemonic(SBTarget target)
 const char *
 SBInstruction::GetOperands(SBTarget target)
 {
-    if (m_opaque_sp)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
     {
         ExecutionContext exe_ctx;
         TargetSP target_sp (target.GetSP());
@@ -105,7 +156,7 @@ SBInstruction::GetOperands(SBTarget target)
             target_sp->CalculateExecutionContext (exe_ctx);
             exe_ctx.SetProcessSP(target_sp->GetProcessSP());
         }
-        return m_opaque_sp->GetOperands(&exe_ctx);
+        return inst_sp->GetOperands(&exe_ctx);
     }
     return NULL;
 }
@@ -113,7 +164,8 @@ SBInstruction::GetOperands(SBTarget target)
 const char *
 SBInstruction::GetComment(SBTarget target)
 {
-    if (m_opaque_sp)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
     {
         ExecutionContext exe_ctx;
         TargetSP target_sp (target.GetSP());
@@ -125,7 +177,7 @@ SBInstruction::GetComment(SBTarget target)
             target_sp->CalculateExecutionContext (exe_ctx);
             exe_ctx.SetProcessSP(target_sp->GetProcessSP());
         }
-        return m_opaque_sp->GetComment(&exe_ctx);
+        return inst_sp->GetComment(&exe_ctx);
     }
     return NULL;
 }
@@ -133,8 +185,9 @@ SBInstruction::GetComment(SBTarget target)
 size_t
 SBInstruction::GetByteSize ()
 {
-    if (m_opaque_sp)
-        return m_opaque_sp->GetOpcode().GetByteSize();
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
+        return inst_sp->GetOpcode().GetByteSize();
     return 0;
 }
 
@@ -142,10 +195,11 @@ SBData
 SBInstruction::GetData (SBTarget target)
 {
     lldb::SBData sb_data;
-    if (m_opaque_sp)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
     {
         DataExtractorSP data_extractor_sp (new DataExtractor());
-        if (m_opaque_sp->GetData (*data_extractor_sp))
+        if (inst_sp->GetData (*data_extractor_sp))
         {
             sb_data.SetOpaque (data_extractor_sp);
         }
@@ -158,32 +212,44 @@ SBInstruction::GetData (SBTarget target)
 bool
 SBInstruction::DoesBranch ()
 {
-    if (m_opaque_sp)
-        return m_opaque_sp->DoesBranch ();
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
+        return inst_sp->DoesBranch ();
     return false;
 }
 
 bool
 SBInstruction::HasDelaySlot ()
 {
-    if (m_opaque_sp)
-        return m_opaque_sp->HasDelaySlot ();
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
+        return inst_sp->HasDelaySlot ();
     return false;
 }
 
-void
-SBInstruction::SetOpaque (const lldb::InstructionSP &inst_sp)
+lldb::InstructionSP
+SBInstruction::GetOpaque ()
 {
-    m_opaque_sp = inst_sp;
+    if (m_opaque_sp)
+        return m_opaque_sp->GetSP();
+    else
+        return lldb::InstructionSP();
+}
+
+void
+SBInstruction::SetOpaque (const lldb::DisassemblerSP &disasm_sp, const lldb::InstructionSP& inst_sp)
+{
+    m_opaque_sp.reset(new InstructionImpl(disasm_sp, inst_sp));
 }
 
 bool
 SBInstruction::GetDescription (lldb::SBStream &s)
 {
-    if (m_opaque_sp)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
     {
         SymbolContext sc;
-        const Address &addr = m_opaque_sp->GetAddress();
+        const Address &addr = inst_sp->GetAddress();
         ModuleSP module_sp (addr.GetModule());
         if (module_sp)
             module_sp->ResolveSymbolContextForAddress(addr, eSymbolContextEverything, sc);
@@ -191,7 +257,7 @@ SBInstruction::GetDescription (lldb::SBStream &s)
         // didn't have a stream already created, one will get created...
         FormatEntity::Entry format;
         FormatEntity::Parse("${addr}: ", format);
-        m_opaque_sp->Dump (&s.ref(), 0, true, false, NULL, &sc, NULL, &format, 0);
+        inst_sp->Dump (&s.ref(), 0, true, false, NULL, &sc, NULL, &format, 0);
         return true;
     }
     return false;
@@ -203,24 +269,26 @@ SBInstruction::Print (FILE *out)
     if (out == NULL)
         return;
 
-    if (m_opaque_sp)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
     {
         SymbolContext sc;
-        const Address &addr = m_opaque_sp->GetAddress();
+        const Address &addr = inst_sp->GetAddress();
         ModuleSP module_sp (addr.GetModule());
         if (module_sp)
             module_sp->ResolveSymbolContextForAddress(addr, eSymbolContextEverything, sc);
         StreamFile out_stream (out, false);
         FormatEntity::Entry format;
         FormatEntity::Parse("${addr}: ", format);
-        m_opaque_sp->Dump (&out_stream, 0, true, false, NULL, &sc, NULL, &format, 0);
+        inst_sp->Dump (&out_stream, 0, true, false, NULL, &sc, NULL, &format, 0);
     }
 }
 
 bool
 SBInstruction::EmulateWithFrame (lldb::SBFrame &frame, uint32_t evaluate_options)
 {
-    if (m_opaque_sp)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
     {
         lldb::StackFrameSP frame_sp (frame.GetFrameSP());
 
@@ -231,13 +299,13 @@ SBInstruction::EmulateWithFrame (lldb::SBFrame &frame, uint32_t evaluate_options
             lldb_private::Target *target = exe_ctx.GetTargetPtr();
             lldb_private::ArchSpec arch = target->GetArchitecture();
             
-            return m_opaque_sp->Emulate (arch, 
-                                         evaluate_options,
-                                         (void *) frame_sp.get(), 
-                                         &lldb_private::EmulateInstruction::ReadMemoryFrame,
-                                         &lldb_private::EmulateInstruction::WriteMemoryFrame,
-                                         &lldb_private::EmulateInstruction::ReadRegisterFrame,
-                                         &lldb_private::EmulateInstruction::WriteRegisterFrame);
+            return inst_sp->Emulate(arch,
+                                    evaluate_options,
+                                    (void *) frame_sp.get(),
+                                    &lldb_private::EmulateInstruction::ReadMemoryFrame,
+                                    &lldb_private::EmulateInstruction::WriteMemoryFrame,
+                                    &lldb_private::EmulateInstruction::ReadRegisterFrame,
+                                    &lldb_private::EmulateInstruction::WriteRegisterFrame);
         }
     }
     return false;
@@ -246,29 +314,32 @@ SBInstruction::EmulateWithFrame (lldb::SBFrame &frame, uint32_t evaluate_options
 bool
 SBInstruction::DumpEmulation (const char *triple)
 {
-    if (m_opaque_sp && triple)
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp && triple)
     {
         lldb_private::ArchSpec arch (triple, NULL);
-        
-        return m_opaque_sp->DumpEmulation (arch);
-                                     
+        return inst_sp->DumpEmulation (arch);
     }
     return false;
 }
 
 bool
-SBInstruction::TestEmulation (lldb::SBStream &output_stream,  const char *test_file)
+SBInstruction::TestEmulation (lldb::SBStream &output_stream, const char *test_file)
 {
-    if (!m_opaque_sp.get())
-        m_opaque_sp.reset (new PseudoInstruction());
-        
-    return m_opaque_sp->TestEmulation (output_stream.get(), test_file);
+    if (!m_opaque_sp)
+        SetOpaque(lldb::DisassemblerSP(), lldb::InstructionSP(new PseudoInstruction()));
+
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
+        return inst_sp->TestEmulation (output_stream.get(), test_file);
+    return false;
 }
 
 lldb::AddressClass
 SBInstruction::GetAddressClass ()
 {
-    if (m_opaque_sp.get())
-        return m_opaque_sp->GetAddressClass();
+    lldb::InstructionSP inst_sp(GetOpaque());
+    if (inst_sp)
+        return inst_sp->GetAddressClass();
     return eAddressClassInvalid;
 }

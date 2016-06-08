@@ -53,15 +53,17 @@ void DefinitionsInHeadersCheck::storeOptions(
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
+  auto DefinitionMatcher =
+      anyOf(functionDecl(isDefinition(), unless(isDeleted())),
+            varDecl(isDefinition()));
   if (UseHeaderFileExtension) {
-    Finder->addMatcher(
-        namedDecl(anyOf(functionDecl(isDefinition()), varDecl(isDefinition())),
-                  usesHeaderFileExtension(HeaderFileExtensions))
-            .bind("name-decl"),
-        this);
+    Finder->addMatcher(namedDecl(DefinitionMatcher,
+                                 usesHeaderFileExtension(HeaderFileExtensions))
+                           .bind("name-decl"),
+                       this);
   } else {
     Finder->addMatcher(
-        namedDecl(anyOf(functionDecl(isDefinition()), varDecl(isDefinition())),
+        namedDecl(DefinitionMatcher,
                   anyOf(usesHeaderFileExtension(HeaderFileExtensions),
                         unless(isExpansionInMainFile())))
             .bind("name-decl"),

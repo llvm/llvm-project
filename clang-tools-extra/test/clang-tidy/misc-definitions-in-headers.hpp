@@ -103,6 +103,8 @@ namespace {
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: function 'f7' defined in a header file;
 }
 
+int f8() = delete; // OK: the function being marked delete is not callable.
+
 int a = 1;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: variable 'a' defined in a header file; variable definitions in header files can lead to ODR violations [misc-definitions-in-headers]
 CA a1;

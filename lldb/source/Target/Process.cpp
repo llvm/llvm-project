@@ -6605,11 +6605,5 @@ Process::AdvanceAddressToNextBranchInstruction (Address default_stop_addr, Addre
         }
     }
 
-    if (disassembler_sp)
-    {
-        // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-        disassembler_sp->GetInstructionList().Clear();
-    }
-
     return retval;
 }

@@ -18,6 +18,8 @@
 // There's a lot to be fixed here, but need to wait for underlying insn implementation
 // to be revised & settle down first.
 
+class InstructionImpl;
+
 namespace lldb {
 
 class LLDB_API SBInstruction
@@ -81,14 +83,17 @@ public:
 protected:
     friend class SBInstructionList;
 
-    SBInstruction (const lldb::InstructionSP &inst_sp);
+    SBInstruction(const lldb::DisassemblerSP &disasm_sp, const lldb::InstructionSP &inst_sp);
 
     void
-    SetOpaque (const lldb::InstructionSP &inst_sp);
+    SetOpaque(const lldb::DisassemblerSP &disasm_sp, const lldb::InstructionSP& inst_sp);
+
+    lldb::InstructionSP
+    GetOpaque();
 
 private:
 
-    lldb::InstructionSP  m_opaque_sp;
+    std::shared_ptr<InstructionImpl> m_opaque_sp;
 };
 
 

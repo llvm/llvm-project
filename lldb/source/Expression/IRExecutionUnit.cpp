@@ -216,10 +216,6 @@ IRExecutionUnit::DisassembleFunction (Stream &stream,
 
     InstructionList &instruction_list = disassembler_sp->GetInstructionList();
     instruction_list.Dump(&stream, true, true, &exe_ctx);
-
-    // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-    // I'll fix that but for now, just clear the list and it will go away nicely.
-    disassembler_sp->GetInstructionList().Clear();
     return ret;
 }
 

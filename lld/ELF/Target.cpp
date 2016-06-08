@@ -47,32 +47,37 @@ TargetInfo *Target;
 
 static void or32le(uint8_t *P, int32_t V) { write32le(P, read32le(P) | V); }
 
+static StringRef getRelName(uint32_t Type) {
+  return getELFRelocationTypeName(Config->EMachine, Type);
+}
+
 template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
   if (isInt<N>(V))
     return;
-  StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("relocation " + S + " out of range");
+  error("relocation " + getRelName(Type) + " out of range");
 }
 
 template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
   if (isUInt<N>(V))
     return;
-  StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("relocation " + S + " out of range");
+  error("relocation " + getRelName(Type) + " out of range");
 }
 
 template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
   if (isInt<N>(V) || isUInt<N>(V))
     return;
-  StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("relocation " + S + " out of range");
+  error("relocation " + getRelName(Type) + " out of range");
 }
 
 template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   if ((V & (N - 1)) == 0)
     return;
-  StringRef S = getELFRelocationTypeName(Config->EMachine, Type);
-  error("improper alignment for relocation " + S);
+  error("improper alignment for relocation " + getRelName(Type));
+}
+
+static void warnDynRel(uint32_t Type) {
+  error("relocation " + getRelName(Type) +
+        " cannot be used when making a shared object; recompile with -fPIC.");
 }
 
 namespace {
@@ -170,6 +175,19 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
 };
 
+class ARMTargetInfo final : public TargetInfo {
+public:
+  ARMTargetInfo();
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
+  uint32_t getDynRel(uint32_t Type) const override;
+  uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  void writeGotPlt(uint8_t *Buf, uint64_t Plt) const override;
+  void writePltZero(uint8_t *Buf) const override;
+  void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
+                int32_t Index, unsigned RelOff) const override;
+  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+};
+
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
@@ -196,6 +214,8 @@ TargetInfo *createTarget() {
     return new AArch64TargetInfo();
   case EM_AMDGPU:
     return new AMDGPUTargetInfo();
+  case EM_ARM:
+    return new ARMTargetInfo();
   case EM_MIPS:
     switch (Config->EKind) {
     case ELF32LEKind:
@@ -597,10 +617,8 @@ void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
-  if (Type == R_X86_64_PC32 || Type == R_X86_64_32)
-    if (Config->Shared)
-      error(getELFRelocationTypeName(EM_X86_64, Type) +
-            " cannot be a dynamic relocation");
+  if (Config->Shared && (Type == R_X86_64_PC32 || Type == R_X86_64_32))
+    error(getRelName(Type) + " cannot be a dynamic relocation");
   return Type;
 }
 
@@ -1180,10 +1198,8 @@ bool AArch64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
 uint32_t AArch64TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
     return Type;
-  StringRef S = getELFRelocationTypeName(EM_AARCH64, Type);
-  error("relocation " + S + " cannot be used when making a shared object; "
-                            "recompile with -fPIC.");
   // Keep it going with a dummy value so that we can find more reloc errors.
+  warnDynRel(Type);
   return R_AARCH64_ABS32;
 }
 
@@ -1427,6 +1443,158 @@ RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   llvm_unreachable("not implemented");
 }
 
+ARMTargetInfo::ARMTargetInfo() {
+  CopyRel = R_ARM_COPY;
+  RelativeRel = R_ARM_RELATIVE;
+  IRelativeRel = R_ARM_IRELATIVE;
+  GotRel = R_ARM_GLOB_DAT;
+  PltRel = R_ARM_JUMP_SLOT;
+  TlsGotRel = R_ARM_TLS_TPOFF32;
+  TlsModuleIndexRel = R_ARM_TLS_DTPMOD32;
+  TlsOffsetRel = R_ARM_TLS_DTPOFF32;
+  PltEntrySize = 16;
+  PltZeroSize = 20;
+}
+
+RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
+  switch (Type) {
+  default:
+    return R_ABS;
+  case R_ARM_CALL:
+  case R_ARM_JUMP24:
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+    return R_PLT_PC;
+  case R_ARM_GOTOFF32:
+    // (S + A) - GOT_ORG
+    return R_GOTREL;
+  case R_ARM_GOT_BREL:
+    // GOT(S) + A - GOT_ORG
+    return R_GOT_OFF;
+  case R_ARM_GOT_PREL:
+    // GOT(S) + - GOT_ORG
+    return R_GOT_PC;
+  case R_ARM_BASE_PREL:
+    // B(S) + A - P
+    // FIXME: currently B(S) assumed to be .got, this may not hold for all
+    // platforms.
+    return R_GOTONLY_PC;
+  case R_ARM_PREL31:
+  case R_ARM_REL32:
+    return R_PC;
+  }
+}
+
+uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
+  if (Type == R_ARM_ABS32)
+    return Type;
+  // Keep it going with a dummy value so that we can find more reloc errors.
+  warnDynRel(Type);
+  return R_ARM_ABS32;
+}
+
+void ARMTargetInfo::writeGotPlt(uint8_t *Buf, uint64_t Plt) const {
+  write32le(Buf, Out<ELF32LE>::Plt->getVA());
+}
+
+void ARMTargetInfo::writePltZero(uint8_t *Buf) const {
+  const uint8_t PltData[] = {
+      0x04, 0xe0, 0x2d, 0xe5, //     str lr, [sp,#-4]!
+      0x04, 0xe0, 0x9f, 0xe5, //     ldr lr, L2
+      0x0e, 0xe0, 0x8f, 0xe0, // L1: add lr, pc, lr
+      0x08, 0xf0, 0xbe, 0xe5, //     ldr pc, [lr, #8]
+      0x00, 0x00, 0x00, 0x00, // L2: .word   &(.got.plt) - L1 - 8
+  };
+  memcpy(Buf, PltData, sizeof(PltData));
+  uint64_t GotPlt = Out<ELF32LE>::GotPlt->getVA();
+  uint64_t L1 = Out<ELF32LE>::Plt->getVA() + 8;
+  write32le(Buf + 16, GotPlt - L1 - 8);
+}
+
+void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
+                             uint64_t PltEntryAddr, int32_t Index,
+                             unsigned RelOff) const {
+  // FIXME: Using simple code sequence with simple relocations.
+  // There is a more optimal sequence but it requires support for the group
+  // relocations. See ELF for the ARM Architecture Appendix A.3
+  const uint8_t PltData[] = {
+      0x04, 0xc0, 0x9f, 0xe5, //     ldr ip, L2
+      0x0f, 0xc0, 0x8c, 0xe0, // L1: add ip, ip, pc
+      0x00, 0xf0, 0x9c, 0xe5, //     ldr pc, [ip]
+      0x00, 0x00, 0x00, 0x00, // L2: .word   Offset(&(.plt.got) - L1 - 8
+  };
+  memcpy(Buf, PltData, sizeof(PltData));
+  uint64_t L1 = PltEntryAddr + 4;
+  write32le(Buf + 12, GotEntryAddr - L1 - 8);
+}
+
+void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
+                                uint64_t Val) const {
+  switch (Type) {
+  case R_ARM_NONE:
+    break;
+  case R_ARM_ABS32:
+  case R_ARM_BASE_PREL:
+  case R_ARM_GOTOFF32:
+  case R_ARM_GOT_BREL:
+  case R_ARM_GOT_PREL:
+  case R_ARM_REL32:
+    write32le(Loc, Val);
+    break;
+  case R_ARM_PREL31:
+    checkInt<31>(Val, Type);
+    write32le(Loc, (read32le(Loc) & 0x80000000) | (Val & ~0x80000000));
+    break;
+  case R_ARM_CALL:
+  case R_ARM_JUMP24:
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+    checkInt<26>(Val, Type);
+    write32le(Loc, (read32le(Loc) & ~0x00ffffff) | ((Val >> 2) & 0x00ffffff));
+    break;
+  case R_ARM_MOVW_ABS_NC:
+    write32le(Loc, (read32le(Loc) & ~0x000f0fff) | ((Val & 0xf000) << 4) |
+                       (Val & 0x0fff));
+    break;
+  case R_ARM_MOVT_ABS:
+    checkUInt<32>(Val, Type);
+    write32le(Loc, (read32le(Loc) & ~0x000f0fff) |
+                       (((Val >> 16) & 0xf000) << 4) | ((Val >> 16) & 0xfff));
+    break;
+  default:
+    fatal("unrecognized reloc " + Twine(Type));
+  }
+}
+
+uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
+                                          uint32_t Type) const {
+  switch (Type) {
+  default:
+    return 0;
+  case R_ARM_ABS32:
+  case R_ARM_BASE_PREL:
+  case R_ARM_GOTOFF32:
+  case R_ARM_GOT_BREL:
+  case R_ARM_GOT_PREL:
+  case R_ARM_REL32:
+    return SignExtend64<32>(read32le(Buf));
+  case R_ARM_PREL31:
+    return SignExtend64<31>(read32le(Buf));
+  case R_ARM_CALL:
+  case R_ARM_JUMP24:
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+    return SignExtend64<26>((read32le(Buf) & 0x00ffffff) << 2);
+  case R_ARM_MOVW_ABS_NC:
+  case R_ARM_MOVT_ABS: {
+    // ELF for the ARM Architecture 4.6.1.1 the implicit addend for MOVW and
+    // MOVT is in the range -32768 <= A < 32768
+    uint64_t Val = read32le(Buf) & 0x000f0fff;
+    return SignExtend64<16>(((Val & 0x000f0000) >> 4) | (Val & 0x00fff));
+  }
+  }
+}
+
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   GotPltHeaderEntriesNum = 2;
   PageSize = 65536;
@@ -1493,10 +1661,8 @@ template <class ELFT>
 uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   if (Type == R_MIPS_32 || Type == R_MIPS_64)
     return RelativeRel;
-  StringRef S = getELFRelocationTypeName(EM_MIPS, Type);
-  error("relocation " + S + " cannot be used when making a shared object; "
-                            "recompile with -fPIC.");
   // Keep it going with a dummy value so that we can find more reloc errors.
+  warnDynRel(Type);
   return R_MIPS_32;
 }
 
