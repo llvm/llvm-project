@@ -35,12 +35,30 @@ if vim.eval('exists("g:clang_include_fixer_maximum_suggested_headers")') == "1":
       vim.eval('g:clang_include_fixer_maximum_suggested_headers'))
 
 
-def ShowDialog(message, choices, default_choice_index=0):
-  to_eval = "confirm('{0}', '{1}', '{2}')".format(message,
-                                                  choices.strip(),
-                                                  default_choice_index)
-  return int(vim.eval(to_eval));
-
+def GetUserSelection(message, headers, maximum_suggested_headers):
+  eval_message = message + '\n'
+  for idx, header in enumerate(headers[0:maximum_suggested_headers]):
+    eval_message += "({0}). {1}\n".format(idx+1, header)
+  eval_message += "Enter (q) to quit;"
+  if maximum_suggested_headers < len(headers):
+    eval_message += " (a) to show all candidates.";
+  eval_message += "\nSelect (default 1): "
+  res = vim.eval("input('{0}')".format(eval_message))
+  if res == '':
+    # choose the top ranked header by default
+    idx = 1
+  elif res == 'q':
+    raise Exception('   Insertion cancelled...')
+  elif res == 'a' and maximum_suggested_headers < len(headers):
+    return GetUserSelection(message, headers, len(headers))
+  else:
+    try:
+      idx = int(res)
+      if idx <= 0 or idx > len(headers):
+        raise Exception()
+    except Exception:
+        raise Exception('   ERROR: Invalid option "{0}"...Abort!'.format(res))
+  return headers[idx-1]
 
 def execute(command, text):
   p = subprocess.Popen(command,
@@ -88,7 +106,7 @@ def main():
 
   if not symbol:
     print "The file is fine, no need to add a header.\n"
-    return;
+    return
 
   if not headers:
     print "Couldn't find a header for {0}.\n".format(symbol)
@@ -102,19 +120,16 @@ def main():
     print "Added #include {0} for {1}.\n".format(headers[0], symbol)
     return
 
-  choices_message = ""
-  index = 1;
-  for header in headers[0:maximum_suggested_headers]:
-    choices_message += "&{0} {1}\n".format(index, header)
-    index += 1
-
-  select = ShowDialog("choose a header file for {0}.".format(symbol),
-                      choices_message)
-  # Insert a selected header.
-  InsertHeaderToVimBuffer({"SymbolIdentifier": symbol,
-                           "Headers":[headers[select-1]]}, text)
-  print "Added #include {0} for {1}.\n".format(headers[select-1], symbol)
-  return;
+  try:
+    selected = GetUserSelection("choose a header file for {0}.".format(symbol),
+                                headers, maximum_suggested_headers)
+    # Insert a selected header.
+    InsertHeaderToVimBuffer({"SymbolIdentifier": symbol,
+                             "Headers":[selected]}, text)
+    print "Added #include {0} for {1}.\n".format(selected, symbol)
+  except Exception as error:
+    print >> sys.stderr, error.message
+  return
 
 
 if __name__ == '__main__':

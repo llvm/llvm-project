@@ -943,7 +943,7 @@ PlatformPOSIX::DoLoadImage(lldb_private::Process* process,
     if (image_ptr == 0)
     {
         ValueObjectSP error_str_sp = result_valobj_sp->GetChildAtIndex(1, true);
-        if (error_str_sp && error_str_sp->IsCStringContainer(true))
+        if (error_str_sp)
         {
             DataBufferSP buffer_sp(new DataBufferHeap(10240,0));
             size_t num_chars = error_str_sp->ReadPointedString (buffer_sp, error, 10240).first;

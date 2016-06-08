@@ -1475,10 +1475,6 @@ DataExtractor::Dump (Stream *s,
                     ExecutionContext exe_ctx;
                     exe_scope->CalculateExecutionContext(exe_ctx);
                     disassembler_sp->GetInstructionList().Dump (s,  show_address, show_bytes, &exe_ctx);
-                    
-                    // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-                    // I'll fix that but for now, just clear the list and it will go away nicely.
-                    disassembler_sp->GetInstructionList().Clear();
                 }
             }
         }

@@ -13,17 +13,17 @@ char *sink[1000];
 int main() {
   int idx = 0;
   for (int i = 0; i < 17; i++)
-    sink[idx++] = new char[131];
-  for (int i = 0; i < 42; i++)
-    sink[idx++] = new char[24];
+    sink[idx++] = new char[131000];
+  for (int i = 0; i < 28; i++)
+    sink[idx++] = new char[24000];
 
   __sanitizer_print_memory_profile(100);
   __sanitizer_print_memory_profile(50);
 }
 
 // CHECK: Live Heap Allocations: {{.*}}; showing top 100%
-// CHECK: 2227 byte(s) ({{.*}}%) in 17 allocation(s)
-// CHECK: 1008 byte(s) ({{.*}}%) in 42 allocation(s)
+// CHECK: 2227000 byte(s) ({{.*}}%) in 17 allocation(s)
+// CHECK: 672000 byte(s) ({{.*}}%) in 28 allocation(s)
 // CHECK: Live Heap Allocations: {{.*}}; showing top 50%
-// CHECK: 2227 byte(s) ({{.*}}%) in 17 allocation(s)
+// CHECK: 2227000 byte(s) ({{.*}}%) in 17 allocation(s)
 // CHECK-NOT: 1008 byte

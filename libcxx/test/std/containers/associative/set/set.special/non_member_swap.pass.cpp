@@ -21,6 +21,7 @@
 int main()
 {
     typedef int V;
+    {
     typedef std::set<int> M;
     {
         M m1;
@@ -93,6 +94,7 @@ int main()
         swap(m1, m2);
         assert(m1 == m2_save);
         assert(m2 == m1_save);
+    }
     }
     {
         typedef test_allocator<V> A;

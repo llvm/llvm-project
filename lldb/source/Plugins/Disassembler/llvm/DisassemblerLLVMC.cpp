@@ -53,7 +53,7 @@ public:
                       const lldb_private::Address &address,
                       AddressClass addr_class) :
         Instruction (address, addr_class),
-        m_disasm_sp (disasm.shared_from_this()),
+        m_disasm_wp (std::static_pointer_cast<DisassemblerLLVMC>(disasm.shared_from_this())),
         m_does_branch (eLazyBoolCalculate),
         m_has_delay_slot (eLazyBoolCalculate),
         m_is_valid (false),
@@ -68,34 +68,38 @@ public:
     {
         if (m_does_branch == eLazyBoolCalculate)
         {
-            GetDisassemblerLLVMC().Lock(this, NULL);
-            DataExtractor data;
-            if (m_opcode.GetData(data))
+            std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
+            if (disasm_sp)
             {
-                bool is_alternate_isa;
-                lldb::addr_t pc = m_address.GetFileAddress();
-
-                DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr = GetDisasmToUse (is_alternate_isa);
-                const uint8_t *opcode_data = data.GetDataStart();
-                const size_t opcode_data_len = data.GetByteSize();
-                llvm::MCInst inst;
-                const size_t inst_size = mc_disasm_ptr->GetMCInst (opcode_data,
-                                                                   opcode_data_len,
-                                                                   pc,
-                                                                   inst);
-                // Be conservative, if we didn't understand the instruction, say it might branch...
-                if (inst_size == 0)
-                    m_does_branch = eLazyBoolYes;
-                else
+                disasm_sp->Lock(this, NULL);
+                DataExtractor data;
+                if (m_opcode.GetData(data))
                 {
-                    const bool can_branch = mc_disasm_ptr->CanBranch(inst);
-                    if (can_branch)
+                    bool is_alternate_isa;
+                    lldb::addr_t pc = m_address.GetFileAddress();
+
+                    DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr = GetDisasmToUse (is_alternate_isa);
+                    const uint8_t *opcode_data = data.GetDataStart();
+                    const size_t opcode_data_len = data.GetByteSize();
+                    llvm::MCInst inst;
+                    const size_t inst_size = mc_disasm_ptr->GetMCInst (opcode_data,
+                                                                       opcode_data_len,
+                                                                       pc,
+                                                                       inst);
+                    // Be conservative, if we didn't understand the instruction, say it might branch...
+                    if (inst_size == 0)
                         m_does_branch = eLazyBoolYes;
                     else
-                        m_does_branch = eLazyBoolNo;
+                    {
+                        const bool can_branch = mc_disasm_ptr->CanBranch(inst);
+                        if (can_branch)
+                            m_does_branch = eLazyBoolYes;
+                        else
+                            m_does_branch = eLazyBoolNo;
+                    }
                 }
+                disasm_sp->Unlock();
             }
-            GetDisassemblerLLVMC().Unlock();
         }
         return m_does_branch == eLazyBoolYes;
     }
@@ -105,34 +109,38 @@ public:
     {
         if (m_has_delay_slot == eLazyBoolCalculate)
         {
-            GetDisassemblerLLVMC().Lock(this, NULL);
-            DataExtractor data;
-            if (m_opcode.GetData(data))
+            std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
+            if (disasm_sp)
             {
-                bool is_alternate_isa;
-                lldb::addr_t pc = m_address.GetFileAddress();
-
-                DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr = GetDisasmToUse (is_alternate_isa);
-                const uint8_t *opcode_data = data.GetDataStart();
-                const size_t opcode_data_len = data.GetByteSize();
-                llvm::MCInst inst;
-                const size_t inst_size = mc_disasm_ptr->GetMCInst (opcode_data,
-                                                                   opcode_data_len,
-                                                                   pc,
-                                                                   inst);
-                // if we didn't understand the instruction, say it doesn't have a delay slot...
-                if (inst_size == 0)
-                    m_has_delay_slot = eLazyBoolNo;
-                else
+                disasm_sp->Lock(this, NULL);
+                DataExtractor data;
+                if (m_opcode.GetData(data))
                 {
-                    const bool has_delay_slot = mc_disasm_ptr->HasDelaySlot(inst);
-                    if (has_delay_slot)
-                        m_has_delay_slot = eLazyBoolYes;
-                    else
+                    bool is_alternate_isa;
+                    lldb::addr_t pc = m_address.GetFileAddress();
+
+                    DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr = GetDisasmToUse (is_alternate_isa);
+                    const uint8_t *opcode_data = data.GetDataStart();
+                    const size_t opcode_data_len = data.GetByteSize();
+                    llvm::MCInst inst;
+                    const size_t inst_size = mc_disasm_ptr->GetMCInst (opcode_data,
+                                                                       opcode_data_len,
+                                                                       pc,
+                                                                       inst);
+                    // if we didn't understand the instruction, say it doesn't have a delay slot...
+                    if (inst_size == 0)
                         m_has_delay_slot = eLazyBoolNo;
+                    else
+                    {
+                        const bool has_delay_slot = mc_disasm_ptr->HasDelaySlot(inst);
+                        if (has_delay_slot)
+                            m_has_delay_slot = eLazyBoolYes;
+                        else
+                            m_has_delay_slot = eLazyBoolNo;
+                    }
                 }
+                disasm_sp->Unlock();
             }
-            GetDisassemblerLLVMC().Unlock();
         }
         return m_has_delay_slot == eLazyBoolYes;
     }
@@ -141,18 +149,22 @@ public:
     GetDisasmToUse (bool &is_alternate_isa)
     {
         is_alternate_isa = false;
-        DisassemblerLLVMC &llvm_disasm = GetDisassemblerLLVMC();
-        if (llvm_disasm.m_alternate_disasm_ap.get() != NULL)
+        std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
+        if (disasm_sp)
         {
-            const AddressClass address_class = GetAddressClass ();
-
-            if (address_class == eAddressClassCodeAlternateISA)
+            if (disasm_sp->m_alternate_disasm_ap.get() != NULL)
             {
-                is_alternate_isa = true;
-                return llvm_disasm.m_alternate_disasm_ap.get();
+                const AddressClass address_class = GetAddressClass ();
+
+                if (address_class == eAddressClassCodeAlternateISA)
+                {
+                    is_alternate_isa = true;
+                    return disasm_sp->m_alternate_disasm_ap.get();
+                }
             }
+            return disasm_sp->m_disasm_ap.get();
         }
-        return llvm_disasm.m_disasm_ap.get();
+        return nullptr;
     }
 
     size_t
@@ -163,101 +175,105 @@ public:
         // All we have to do is read the opcode which can be easy for some
         // architectures
         bool got_op = false;
-        DisassemblerLLVMC &llvm_disasm = GetDisassemblerLLVMC();
-        const ArchSpec &arch = llvm_disasm.GetArchitecture();
-        const lldb::ByteOrder byte_order = data.GetByteOrder();
-
-        const uint32_t min_op_byte_size = arch.GetMinimumOpcodeByteSize();
-        const uint32_t max_op_byte_size = arch.GetMaximumOpcodeByteSize();
-        if (min_op_byte_size == max_op_byte_size)
+        std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
+        if (disasm_sp)
         {
-            // Fixed size instructions, just read that amount of data.
-            if (!data.ValidOffsetForDataOfSize(data_offset, min_op_byte_size))
-                return false;
+            const ArchSpec &arch = disasm_sp->GetArchitecture();
+            const lldb::ByteOrder byte_order = data.GetByteOrder();
 
-            switch (min_op_byte_size)
+            const uint32_t min_op_byte_size = arch.GetMinimumOpcodeByteSize();
+            const uint32_t max_op_byte_size = arch.GetMaximumOpcodeByteSize();
+            if (min_op_byte_size == max_op_byte_size)
             {
-                case 1:
-                    m_opcode.SetOpcode8  (data.GetU8  (&data_offset), byte_order);
-                    got_op = true;
-                    break;
+                // Fixed size instructions, just read that amount of data.
+                if (!data.ValidOffsetForDataOfSize(data_offset, min_op_byte_size))
+                    return false;
 
-                case 2:
-                    m_opcode.SetOpcode16 (data.GetU16 (&data_offset), byte_order);
-                    got_op = true;
-                    break;
-
-                case 4:
-                    m_opcode.SetOpcode32 (data.GetU32 (&data_offset), byte_order);
-                    got_op = true;
-                    break;
-
-                case 8:
-                    m_opcode.SetOpcode64 (data.GetU64 (&data_offset), byte_order);
-                    got_op = true;
-                    break;
-
-                default:
-                    m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
-                    got_op = true;
-                    break;
-            }
-        }
-        if (!got_op)
-        {
-            bool is_alternate_isa = false;
-            DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr = GetDisasmToUse (is_alternate_isa);
-
-            const llvm::Triple::ArchType machine = arch.GetMachine();
-            if (machine == llvm::Triple::arm || machine == llvm::Triple::thumb)
-            {
-                if (machine == llvm::Triple::thumb || is_alternate_isa)
+                switch (min_op_byte_size)
                 {
-                    uint32_t thumb_opcode = data.GetU16(&data_offset);
-                    if ((thumb_opcode & 0xe000) != 0xe000 || ((thumb_opcode & 0x1800u) == 0))
+                    case 1:
+                        m_opcode.SetOpcode8  (data.GetU8  (&data_offset), byte_order);
+                        got_op = true;
+                        break;
+
+                    case 2:
+                        m_opcode.SetOpcode16 (data.GetU16 (&data_offset), byte_order);
+                        got_op = true;
+                        break;
+
+                    case 4:
+                        m_opcode.SetOpcode32 (data.GetU32 (&data_offset), byte_order);
+                        got_op = true;
+                        break;
+
+                    case 8:
+                        m_opcode.SetOpcode64 (data.GetU64 (&data_offset), byte_order);
+                        got_op = true;
+                        break;
+
+                    default:
+                        m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
+                        got_op = true;
+                        break;
+                }
+            }
+            if (!got_op)
+            {
+                bool is_alternate_isa = false;
+                DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr = GetDisasmToUse (is_alternate_isa);
+
+                const llvm::Triple::ArchType machine = arch.GetMachine();
+                if (machine == llvm::Triple::arm || machine == llvm::Triple::thumb)
+                {
+                    if (machine == llvm::Triple::thumb || is_alternate_isa)
                     {
-                        m_opcode.SetOpcode16 (thumb_opcode, byte_order);
-                        m_is_valid = true;
+                        uint32_t thumb_opcode = data.GetU16(&data_offset);
+                        if ((thumb_opcode & 0xe000) != 0xe000 || ((thumb_opcode & 0x1800u) == 0))
+                        {
+                            m_opcode.SetOpcode16 (thumb_opcode, byte_order);
+                            m_is_valid = true;
+                        }
+                        else
+                        {
+                            thumb_opcode <<= 16;
+                            thumb_opcode |= data.GetU16(&data_offset);
+                            m_opcode.SetOpcode16_2 (thumb_opcode, byte_order);
+                            m_is_valid = true;
+                        }
                     }
                     else
                     {
-                        thumb_opcode <<= 16;
-                        thumb_opcode |= data.GetU16(&data_offset);
-                        m_opcode.SetOpcode16_2 (thumb_opcode, byte_order);
+                        m_opcode.SetOpcode32 (data.GetU32(&data_offset), byte_order);
                         m_is_valid = true;
                     }
                 }
                 else
                 {
-                    m_opcode.SetOpcode32 (data.GetU32(&data_offset), byte_order);
-                    m_is_valid = true;
-                }
-            }
-            else
-            {
-                // The opcode isn't evenly sized, so we need to actually use the llvm
-                // disassembler to parse it and get the size.
-                uint8_t *opcode_data = const_cast<uint8_t *>(data.PeekData (data_offset, 1));
-                const size_t opcode_data_len = data.BytesLeft(data_offset);
-                const addr_t pc = m_address.GetFileAddress();
-                llvm::MCInst inst;
+                    // The opcode isn't evenly sized, so we need to actually use the llvm
+                    // disassembler to parse it and get the size.
+                    uint8_t *opcode_data = const_cast<uint8_t *>(data.PeekData (data_offset, 1));
+                    const size_t opcode_data_len = data.BytesLeft(data_offset);
+                    const addr_t pc = m_address.GetFileAddress();
+                    llvm::MCInst inst;
 
-                llvm_disasm.Lock(this, NULL);
-                const size_t inst_size = mc_disasm_ptr->GetMCInst(opcode_data,
-                                                                  opcode_data_len,
-                                                                  pc,
-                                                                  inst);
-                llvm_disasm.Unlock();
-                if (inst_size == 0)
-                    m_opcode.Clear();
-                else
-                {
-                    m_opcode.SetOpcodeBytes(opcode_data, inst_size);
-                    m_is_valid = true;
+                    disasm_sp->Lock(this, NULL);
+                    const size_t inst_size = mc_disasm_ptr->GetMCInst(opcode_data,
+                                                                      opcode_data_len,
+                                                                      pc,
+                                                                      inst);
+                    disasm_sp->Unlock();
+                    if (inst_size == 0)
+                        m_opcode.Clear();
+                    else
+                    {
+                        m_opcode.SetOpcodeBytes(opcode_data, inst_size);
+                        m_is_valid = true;
+                    }
                 }
             }
+            return m_opcode.GetByteSize();
         }
-        return m_opcode.GetByteSize();
+        return 0;
     }
 
     void
@@ -283,146 +299,148 @@ public:
             std::string out_string;
             std::string comment_string;
 
-            DisassemblerLLVMC &llvm_disasm = GetDisassemblerLLVMC();
-
-            DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr;
-
-            if (address_class == eAddressClassCodeAlternateISA)
-                mc_disasm_ptr = llvm_disasm.m_alternate_disasm_ap.get();
-            else
-                mc_disasm_ptr = llvm_disasm.m_disasm_ap.get();
-
-            lldb::addr_t pc = m_address.GetFileAddress();
-            m_using_file_addr = true;
-
-            const bool data_from_file = GetDisassemblerLLVMC().m_data_from_file;
-            bool use_hex_immediates = true;
-            Disassembler::HexImmediateStyle hex_style = Disassembler::eHexStyleC;
-
-            if (exe_ctx)
+            std::shared_ptr<DisassemblerLLVMC> disasm_sp(GetDisassembler());
+            if (disasm_sp)
             {
-                Target *target = exe_ctx->GetTargetPtr();
-                if (target)
-                {
-                    use_hex_immediates = target->GetUseHexImmediates();
-                    hex_style = target->GetHexImmediateStyle();
+                DisassemblerLLVMC::LLVMCDisassembler *mc_disasm_ptr;
 
-                    if (!data_from_file)
+                if (address_class == eAddressClassCodeAlternateISA)
+                    mc_disasm_ptr = disasm_sp->m_alternate_disasm_ap.get();
+                else
+                    mc_disasm_ptr = disasm_sp->m_disasm_ap.get();
+
+                lldb::addr_t pc = m_address.GetFileAddress();
+                m_using_file_addr = true;
+
+                const bool data_from_file = disasm_sp->m_data_from_file;
+                bool use_hex_immediates = true;
+                Disassembler::HexImmediateStyle hex_style = Disassembler::eHexStyleC;
+
+                if (exe_ctx)
+                {
+                    Target *target = exe_ctx->GetTargetPtr();
+                    if (target)
                     {
-                        const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
-                        if (load_addr != LLDB_INVALID_ADDRESS)
+                        use_hex_immediates = target->GetUseHexImmediates();
+                        hex_style = target->GetHexImmediateStyle();
+
+                        if (!data_from_file)
                         {
-                            pc = load_addr;
-                            m_using_file_addr = false;
+                            const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
+                            if (load_addr != LLDB_INVALID_ADDRESS)
+                            {
+                                pc = load_addr;
+                                m_using_file_addr = false;
+                            }
                         }
                     }
                 }
-            }
 
-            llvm_disasm.Lock(this, exe_ctx);
+                disasm_sp->Lock(this, exe_ctx);
 
-            const uint8_t *opcode_data = data.GetDataStart();
-            const size_t opcode_data_len = data.GetByteSize();
-            llvm::MCInst inst;
-            size_t inst_size = mc_disasm_ptr->GetMCInst (opcode_data,
-                                                         opcode_data_len,
-                                                         pc,
-                                                         inst);
+                const uint8_t *opcode_data = data.GetDataStart();
+                const size_t opcode_data_len = data.GetByteSize();
+                llvm::MCInst inst;
+                size_t inst_size = mc_disasm_ptr->GetMCInst (opcode_data,
+                                                             opcode_data_len,
+                                                             pc,
+                                                             inst);
 
-            if (inst_size > 0)
-            {
-                mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
-                mc_disasm_ptr->PrintMCInst(inst, out_string, comment_string);
-                
-                if (!comment_string.empty())
+                if (inst_size > 0)
                 {
-                    AppendComment(comment_string);
+                    mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
+                    mc_disasm_ptr->PrintMCInst(inst, out_string, comment_string);
+                    
+                    if (!comment_string.empty())
+                    {
+                        AppendComment(comment_string);
+                    }
                 }
-            }
 
-            llvm_disasm.Unlock();
+                disasm_sp->Unlock();
 
-            if (inst_size == 0)
-            {
-                m_comment.assign ("unknown opcode");
-                inst_size = m_opcode.GetByteSize();
-                StreamString mnemonic_strm;
-                lldb::offset_t offset = 0;
-                lldb::ByteOrder byte_order = data.GetByteOrder();
-                switch (inst_size)
+                if (inst_size == 0)
                 {
-                    case 1:
-                        {
-                            const uint8_t uval8 = data.GetU8 (&offset);
-                            m_opcode.SetOpcode8 (uval8, byte_order);
-                            m_opcode_name.assign (".byte");
-                            mnemonic_strm.Printf("0x%2.2x", uval8);
-                        }
-                        break;
-                    case 2:
-                        {
-                            const uint16_t uval16 = data.GetU16(&offset);
-                            m_opcode.SetOpcode16(uval16, byte_order);
-                            m_opcode_name.assign (".short");
-                            mnemonic_strm.Printf("0x%4.4x", uval16);
-                        }
-                        break;
-                    case 4:
-                        {
-                            const uint32_t uval32 = data.GetU32(&offset);
-                            m_opcode.SetOpcode32(uval32, byte_order);
-                            m_opcode_name.assign (".long");
-                            mnemonic_strm.Printf("0x%8.8x", uval32);
-                        }
-                        break;
-                    case 8:
-                        {
-                            const uint64_t uval64 = data.GetU64(&offset);
-                            m_opcode.SetOpcode64(uval64, byte_order);
-                            m_opcode_name.assign (".quad");
-                            mnemonic_strm.Printf("0x%16.16" PRIx64, uval64);
-                        }
-                        break;
-                    default:
-                        if (inst_size == 0)
-                            return;
-                        else
-                        {
-                            const uint8_t *bytes = data.PeekData(offset, inst_size);
-                            if (bytes == NULL)
+                    m_comment.assign ("unknown opcode");
+                    inst_size = m_opcode.GetByteSize();
+                    StreamString mnemonic_strm;
+                    lldb::offset_t offset = 0;
+                    lldb::ByteOrder byte_order = data.GetByteOrder();
+                    switch (inst_size)
+                    {
+                        case 1:
+                            {
+                                const uint8_t uval8 = data.GetU8 (&offset);
+                                m_opcode.SetOpcode8 (uval8, byte_order);
+                                m_opcode_name.assign (".byte");
+                                mnemonic_strm.Printf("0x%2.2x", uval8);
+                            }
+                            break;
+                        case 2:
+                            {
+                                const uint16_t uval16 = data.GetU16(&offset);
+                                m_opcode.SetOpcode16(uval16, byte_order);
+                                m_opcode_name.assign (".short");
+                                mnemonic_strm.Printf("0x%4.4x", uval16);
+                            }
+                            break;
+                        case 4:
+                            {
+                                const uint32_t uval32 = data.GetU32(&offset);
+                                m_opcode.SetOpcode32(uval32, byte_order);
+                                m_opcode_name.assign (".long");
+                                mnemonic_strm.Printf("0x%8.8x", uval32);
+                            }
+                            break;
+                        case 8:
+                            {
+                                const uint64_t uval64 = data.GetU64(&offset);
+                                m_opcode.SetOpcode64(uval64, byte_order);
+                                m_opcode_name.assign (".quad");
+                                mnemonic_strm.Printf("0x%16.16" PRIx64, uval64);
+                            }
+                            break;
+                        default:
+                            if (inst_size == 0)
                                 return;
-                            m_opcode_name.assign (".byte");
-                            m_opcode.SetOpcodeBytes(bytes, inst_size);
-                            mnemonic_strm.Printf("0x%2.2x", bytes[0]);
-                            for (uint32_t i=1; i<inst_size; ++i)
-                                mnemonic_strm.Printf(" 0x%2.2x", bytes[i]);
-                        }
-                        break;
+                            else
+                            {
+                                const uint8_t *bytes = data.PeekData(offset, inst_size);
+                                if (bytes == NULL)
+                                    return;
+                                m_opcode_name.assign (".byte");
+                                m_opcode.SetOpcodeBytes(bytes, inst_size);
+                                mnemonic_strm.Printf("0x%2.2x", bytes[0]);
+                                for (uint32_t i=1; i<inst_size; ++i)
+                                    mnemonic_strm.Printf(" 0x%2.2x", bytes[i]);
+                            }
+                            break;
+                    }
+                    m_mnemonics.swap(mnemonic_strm.GetString());
+                    return;
                 }
-                m_mnemonics.swap(mnemonic_strm.GetString());
-                return;
-            }
-            else
-            {
-                if (m_does_branch == eLazyBoolCalculate)
+                else
                 {
-                    const bool can_branch = mc_disasm_ptr->CanBranch(inst);
-                    if (can_branch)
-                        m_does_branch = eLazyBoolYes;
-                    else
-                        m_does_branch = eLazyBoolNo;
+                    if (m_does_branch == eLazyBoolCalculate)
+                    {
+                        const bool can_branch = mc_disasm_ptr->CanBranch(inst);
+                        if (can_branch)
+                            m_does_branch = eLazyBoolYes;
+                        else
+                            m_does_branch = eLazyBoolNo;
 
+                    }
                 }
-            }
 
-            static RegularExpression s_regex("[ \t]*([^ ^\t]+)[ \t]*([^ ^\t].*)?");
+                static RegularExpression s_regex("[ \t]*([^ ^\t]+)[ \t]*([^ ^\t].*)?");
 
-            RegularExpression::Match matches(3);
+                RegularExpression::Match matches(3);
 
-            if (s_regex.Execute(out_string.c_str(), &matches))
-            {
-                matches.GetMatchAtIndex(out_string.c_str(), 1, m_opcode_name);
-                matches.GetMatchAtIndex(out_string.c_str(), 2, m_mnemonics);
+                if (s_regex.Execute(out_string.c_str(), &matches))
+                {
+                    matches.GetMatchAtIndex(out_string.c_str(), 1, m_opcode_name);
+                    matches.GetMatchAtIndex(out_string.c_str(), 2, m_mnemonics);
+                }
             }
         }
     }
@@ -444,14 +462,14 @@ public:
         return m_opcode.GetByteSize();
     }
 
-    DisassemblerLLVMC &
-    GetDisassemblerLLVMC ()
+    std::shared_ptr<DisassemblerLLVMC>
+    GetDisassembler ()
     {
-        return *(DisassemblerLLVMC *)m_disasm_sp.get();
+        return m_disasm_wp.lock();
     }
 protected:
 
-    DisassemblerSP          m_disasm_sp; // for ownership
+    std::weak_ptr<DisassemblerLLVMC> m_disasm_wp;
     LazyBool                m_does_branch;
     LazyBool                m_has_delay_slot;
     bool                    m_is_valid;

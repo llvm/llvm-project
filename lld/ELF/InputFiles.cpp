@@ -244,6 +244,11 @@ void elf::ObjectFile<ELFT>::initializeSections(
       }
       fatal("relocations pointing to SHF_MERGE are not supported");
     }
+    case SHT_ARM_ATTRIBUTES:
+      // FIXME: ARM meta-data section. At present attributes are ignored,
+      // they can be used to reason about object compatibility.
+      Sections[I] = &InputSection<ELFT>::Discarded;
+      break;
     default:
       Sections[I] = createInputSection(Sec);
     }
