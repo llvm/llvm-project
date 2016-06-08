@@ -123,6 +123,12 @@ identified.  The improvements since the 3.8 release include:
 
   Checks if an unused forward declaration is in a wrong namespace.
 
+- New `misc-misplaced-const
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-misplaced-const.html>`_ check
+  
+  Checks if a ``const`` qualifier is applied to a ``typedef`` to pointer type
+  instead of the underlying pointee type.
+
 - New `misc-misplaced-widening-cast
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-misplaced-widening-cast.html>`_ check
 
@@ -175,6 +181,13 @@ identified.  The improvements since the 3.8 release include:
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-suspicious-string-compare.html>`_ check
 
   Find suspicious usage of runtime string comparison functions.
+
+- New `misc-unconventional-assign-operator
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-unconventional-assign-operator.html>`_
+  check replacing the *misc-assign-operator-signature* check.
+
+  Does not only checks for correct signature but also for correct ``return``
+  statements (returning ``*this``)
 
 - New `misc-unused-using-decls
   <http://clang.llvm.org/extra/clang-tidy/checks/misc-unused-using-decls.html>`_ check
@@ -251,13 +264,6 @@ identified.  The improvements since the 3.8 release include:
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-static-definition-in-anonymous-namespace.html>`_ check
 
   Finds static function and variable definitions in anonymous namespace.
-
-- New `misc-unconventional-assign-operator
-  <http://clang.llvm.org/extra/clang-tidy/checks/misc-unconventional-assign-operator.html>`_
-  check replacing the *misc-assign-operator-signature* check.
-
-  Does not only checks for correct signature but also for correct ``return``
-  statements (returning ``*this``)
 
 Fixed bugs:
 

@@ -548,17 +548,17 @@ __isl_give PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
 __isl_give PWACtx SCEVAffinator::visitSRemInstruction(Instruction *SRem) {
   assert(SRem->getOpcode() == Instruction::SRem && "Assumed SRem instruction!");
 
-  auto *Divisor = dyn_cast<ConstantInt>(SRem->getOperand(1));
-  assert(Divisor && "SRem is no parameter but has a non-constant RHS.");
-  auto *DivisorVal = isl_valFromAPInt(Ctx, Divisor->getValue(),
-                                      /* isSigned */ true);
+  auto *Scope = getScope();
+  auto *Divisor = SRem->getOperand(1);
+  auto *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
+  auto DivisorPWAC = visit(DivisorSCEV);
+  assert(isa<ConstantInt>(Divisor) &&
+         "SRem is no parameter but has a non-constant RHS.");
 
   auto *Dividend = SRem->getOperand(0);
-  auto *DividendSCEV = SE.getSCEVAtScope(Dividend, getScope());
+  auto *DividendSCEV = SE.getSCEVAtScope(Dividend, Scope);
   auto DividendPWAC = visit(DividendSCEV);
-
-  DividendPWAC.first =
-      isl_pw_aff_mod_val(DividendPWAC.first, isl_val_abs(DivisorVal));
+  combine(DividendPWAC, DivisorPWAC, isl_pw_aff_tdiv_r);
   return DividendPWAC;
 }
 

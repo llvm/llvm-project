@@ -546,12 +546,12 @@ static void AsanInitInternal() {
   force_interface_symbols();  // no-op.
   SanitizerInitializeUnwinder();
 
-#if CAN_SANITIZE_LEAKS
-  __lsan::InitCommonLsan();
-  if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
-    Atexit(__lsan::DoLeakCheck);
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::InitCommonLsan();
+    if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
+      Atexit(__lsan::DoLeakCheck);
+    }
   }
-#endif  // CAN_SANITIZE_LEAKS
 
 #if CAN_SANITIZE_UB
   __ubsan::InitAsPlugin();
@@ -559,12 +559,12 @@ static void AsanInitInternal() {
 
   InitializeSuppressions();
 
-  {
-#if CAN_SANITIZE_LEAKS
+  if (CAN_SANITIZE_LEAKS) {
     // LateInitialize() calls dlsym, which can allocate an error string buffer
     // in the TLS.  Let's ignore the allocation to avoid reporting a leak.
     __lsan::ScopedInterceptorDisabler disabler;
-#endif
+    Symbolizer::LateInitialize();
+  } else {
     Symbolizer::LateInitialize();
   }
 

@@ -650,6 +650,13 @@ uptr LeakReport::UnsuppressedLeakCount() {
 }
 
 } // namespace __lsan
+#else // CAN_SANITIZE_LEAKS
+namespace __lsan {
+void InitCommonLsan() { }
+void DoLeakCheck() { }
+void DisableInThisThread() { }
+void EnableInThisThread() { }
+}
 #endif // CAN_SANITIZE_LEAKS
 
 using namespace __lsan;  // NOLINT
