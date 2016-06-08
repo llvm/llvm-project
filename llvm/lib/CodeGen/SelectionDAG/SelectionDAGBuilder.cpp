@@ -2040,6 +2040,40 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   const Module &M = *ParentBB->getParent()->getFunction()->getParent();
   unsigned Align = DL->getPrefTypeAlignment(Type::getInt8PtrTy(M.getContext()));
 
+  // Generate code to load the content of the guard slot.
+  SDValue StackSlot = DAG.getLoad(
+      PtrTy, dl, DAG.getEntryNode(), StackSlotPtr,
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), true,
+      false, false, Align);
+
+  // Retrieve guard check function, nullptr if instrumentation is inlined.
+  if (const Value *GuardCheck = TLI.getSSPStackGuardCheck(M)) {
+    // The target provides a guard check function to validate the guard value.
+    // Generate a call to that function with the content of the guard slot as
+    // argument.
+    auto *Fn = cast<Function>(GuardCheck);
+    FunctionType *FnTy = Fn->getFunctionType();
+    assert(FnTy->getNumParams() == 1 && "Invalid function signature");
+
+    TargetLowering::ArgListTy Args;
+    TargetLowering::ArgListEntry Entry;
+    Entry.Node = StackSlot;
+    Entry.Ty = FnTy->getParamType(0);
+    if (Fn->hasAttribute(1, Attribute::AttrKind::InReg))
+      Entry.isInReg = true;
+    Args.push_back(Entry);
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+      .setChain(DAG.getEntryNode())
+      .setCallee(Fn->getCallingConv(), FnTy->getReturnType(),
+                 getValue(GuardCheck), std::move(Args));
+
+    std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
+    DAG.setRoot(Result.second);
+    return;
+  }
+
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   SDValue Chain = DAG.getEntryNode();
@@ -2053,11 +2087,6 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
         DAG.getLoad(PtrTy, dl, Chain, GuardPtr, MachinePointerInfo(IRGuard, 0),
                     true, false, false, Align);
   }
-
-  SDValue StackSlot = DAG.getLoad(
-      PtrTy, dl, DAG.getEntryNode(), StackSlotPtr,
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), true,
-      false, false, Align);
 
   // Perform the comparison via a subtract/getsetcc.
   EVT VT = Guard.getValueType();

@@ -348,7 +348,11 @@ bool X86FastISel::isTypeLegal(Type *Ty, MVT &VT, bool AllowI1) {
 bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
                                   MachineMemOperand *MMO, unsigned &ResultReg,
                                   unsigned Alignment) {
+  bool HasSSE41 = Subtarget->hasSSE41();
   bool HasAVX = Subtarget->hasAVX();
+  bool HasAVX2 = Subtarget->hasAVX2();
+  bool IsNonTemporal = MMO && MMO->isNonTemporal();
+
   // Get opcode and regclass of the output for the given load instruction.
   unsigned Opc = 0;
   const TargetRegisterClass *RC = nullptr;
@@ -394,14 +398,18 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     // No f80 support yet.
     return false;
   case MVT::v4f32:
-    if (Alignment >= 16)
+    if (IsNonTemporal && Alignment >= 16 && HasSSE41)
+      Opc = HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
+    else if (Alignment >= 16)
       Opc = HasAVX ? X86::VMOVAPSrm : X86::MOVAPSrm;
     else
       Opc = HasAVX ? X86::VMOVUPSrm : X86::MOVUPSrm;
     RC  = &X86::VR128RegClass;
     break;
   case MVT::v2f64:
-    if (Alignment >= 16)
+    if (IsNonTemporal && Alignment >= 16 && HasSSE41)
+      Opc = HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
+    else if (Alignment >= 16)
       Opc = HasAVX ? X86::VMOVAPDrm : X86::MOVAPDrm;
     else
       Opc = HasAVX ? X86::VMOVUPDrm : X86::MOVUPDrm;
@@ -411,7 +419,9 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   case MVT::v2i64:
   case MVT::v8i16:
   case MVT::v16i8:
-    if (Alignment >= 16)
+    if (IsNonTemporal && Alignment >= 16)
+      Opc = HasAVX ? X86::VMOVNTDQArm : X86::MOVNTDQArm;
+    else if (Alignment >= 16)
       Opc = HasAVX ? X86::VMOVDQArm : X86::MOVDQArm;
     else
       Opc = HasAVX ? X86::VMOVDQUrm : X86::MOVDQUrm;
@@ -419,12 +429,18 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     break;
   case MVT::v8f32:
     assert(HasAVX);
-    Opc = (Alignment >= 32) ? X86::VMOVAPSYrm : X86::VMOVUPSYrm;
+    if (IsNonTemporal && Alignment >= 32 && HasAVX2)
+      Opc = X86::VMOVNTDQAYrm;
+    else
+      Opc = (Alignment >= 32) ? X86::VMOVAPSYrm : X86::VMOVUPSYrm;
     RC  = &X86::VR256RegClass;
     break;
   case MVT::v4f64:
     assert(HasAVX);
-    Opc = (Alignment >= 32) ? X86::VMOVAPDYrm : X86::VMOVUPDYrm;
+    if (IsNonTemporal && Alignment >= 32 && HasAVX2)
+      Opc = X86::VMOVNTDQAYrm;
+    else
+      Opc = (Alignment >= 32) ? X86::VMOVAPDYrm : X86::VMOVUPDYrm;
     RC  = &X86::VR256RegClass;
     break;
   case MVT::v8i32:
@@ -432,17 +448,26 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
   case MVT::v16i16:
   case MVT::v32i8:
     assert(HasAVX);
-    Opc = (Alignment >= 32) ? X86::VMOVDQAYrm : X86::VMOVDQUYrm;
+    if (IsNonTemporal && Alignment >= 32 && HasAVX2)
+      Opc = X86::VMOVNTDQAYrm;
+    else
+      Opc = (Alignment >= 32) ? X86::VMOVDQAYrm : X86::VMOVDQUYrm;
     RC  = &X86::VR256RegClass;
     break;
   case MVT::v16f32:
     assert(Subtarget->hasAVX512());
-    Opc = (Alignment >= 64) ? X86::VMOVAPSZrm : X86::VMOVUPSZrm;
+    if (IsNonTemporal && Alignment >= 64)
+      Opc = X86::VMOVNTDQAZrm;
+    else
+      Opc = (Alignment >= 64) ? X86::VMOVAPSZrm : X86::VMOVUPSZrm;
     RC  = &X86::VR512RegClass;
     break;
   case MVT::v8f64:
     assert(Subtarget->hasAVX512());
-    Opc = (Alignment >= 64) ? X86::VMOVAPDZrm : X86::VMOVUPDZrm;
+    if (IsNonTemporal && Alignment >= 64)
+      Opc = X86::VMOVNTDQAZrm;
+    else
+      Opc = (Alignment >= 64) ? X86::VMOVAPDZrm : X86::VMOVUPDZrm;
     RC  = &X86::VR512RegClass;
     break;
   case MVT::v8i64:
@@ -452,7 +477,10 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     assert(Subtarget->hasAVX512());
     // Note: There are a lot more choices based on type with AVX-512, but
     // there's really no advantage when the load isn't masked.
-    Opc = (Alignment >= 64) ? X86::VMOVDQA64Zmr : X86::VMOVDQU64Zmr;
+    if (IsNonTemporal && Alignment >= 64)
+      Opc = X86::VMOVNTDQAZrm;
+    else
+      Opc = (Alignment >= 64) ? X86::VMOVDQA64Zrm : X86::VMOVDQU64Zrm;
     RC  = &X86::VR512RegClass;
     break;
   }

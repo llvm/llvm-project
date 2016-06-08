@@ -898,7 +898,7 @@ void TargetLoweringBase::initActions() {
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Expand);
     }
 
-    // For most targets @llvm.get.dynamic.area.offest just returns 0.
+    // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);
   }
 
@@ -1832,4 +1832,8 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
   return M.getGlobalVariable("__stack_chk_guard");
+}
+
+Value *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
+  return nullptr;
 }

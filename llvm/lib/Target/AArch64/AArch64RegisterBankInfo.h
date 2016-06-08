@@ -34,9 +34,13 @@ class AArch64RegisterBankInfo : public RegisterBankInfo {
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
   /// Get the cost of a copy from \p B to \p A, or put differently,
-  /// get the cost of A = COPY B.
-  unsigned copyCost(const RegisterBank &A,
-                    const RegisterBank &B) const override;
+  /// get the cost of A = COPY B. Since register banks may cover
+  /// different size, \p Size specifies what will be the size in bits
+  /// that will be copied around.
+  ///
+  /// \note Since this is a copy, both registers have the same size.
+  unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
+                    unsigned Size) const override;
 
   /// Get a register bank that covers \p RC.
   ///

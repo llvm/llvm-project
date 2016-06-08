@@ -352,10 +352,18 @@ public:
   }
 
   /// Get the cost of a copy from \p B to \p A, or put differently,
-  /// get the cost of A = COPY B.
-  virtual unsigned copyCost(const RegisterBank &A,
-                            const RegisterBank &B) const {
-    return 0;
+  /// get the cost of A = COPY B. Since register banks may cover
+  /// different size, \p Size specifies what will be the size in bits
+  /// that will be copied around.
+  ///
+  /// \note Since this is a copy, both registers have the same size.
+  virtual unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
+                            unsigned Size) const {
+    // Optimistically assume that copies are coalesced. I.e., when
+    // they are on the same bank, they are free.
+    // Otherwise assume a non-zero cost of 1. The targets are supposed
+    // to override that properly anyway if they care.
+    return &A != &B;
   }
 
   /// Identifier used when the related instruction mapping instance
@@ -414,6 +422,15 @@ public:
   ///
   /// \post !returnedVal.empty().
   InstructionMappings getInstrPossibleMappings(const MachineInstr &MI) const;
+
+  /// Get the size in bits of \p Reg.
+  /// Utility method to get the size of any registers. Unlike
+  /// MachineRegisterInfo::getSize, the register does not need to be a
+  /// virtual register.
+  ///
+  /// \pre \p Reg != 0 (NoRegister).
+  static unsigned getSizeInBits(unsigned Reg, const MachineRegisterInfo &MRI,
+                                const TargetRegisterInfo &TRI);
 
   /// Check that information hold by this instance make sense for the
   /// given \p TRI.

@@ -37,10 +37,14 @@ MutationDispatcher::MutationDispatcher(Random &Rand) : Rand(Rand) {
            "AddFromPersAutoDict"},
       });
 
-  if (EF.LLVMFuzzerCustomMutator)
+  if (EF->LLVMFuzzerCustomMutator)
     Mutators.push_back({&MutationDispatcher::Mutate_Custom, "Custom"});
   else
     Mutators = DefaultMutators;
+
+  if (EF->LLVMFuzzerCustomCrossOver)
+    Mutators.push_back(
+        {&MutationDispatcher::Mutate_CustomCrossOver, "CustomCrossOver"});
 }
 
 static char FlipRandomBit(char X, Random &Rand) {
@@ -63,7 +67,26 @@ static char RandCh(Random &Rand) {
 
 size_t MutationDispatcher::Mutate_Custom(uint8_t *Data, size_t Size,
                                          size_t MaxSize) {
-  return EF.LLVMFuzzerCustomMutator(Data, Size, MaxSize, Rand.Rand());
+  return EF->LLVMFuzzerCustomMutator(Data, Size, MaxSize, Rand.Rand());
+}
+
+size_t MutationDispatcher::Mutate_CustomCrossOver(uint8_t *Data, size_t Size,
+                                                  size_t MaxSize) {
+  if (!Corpus || Corpus->size() < 2 || Size == 0)
+    return 0;
+  size_t Idx = Rand(Corpus->size());
+  const Unit &Other = (*Corpus)[Idx];
+  if (Other.empty())
+    return 0;
+  MutateInPlaceHere.resize(MaxSize);
+  auto &U = MutateInPlaceHere;
+  size_t NewSize = EF->LLVMFuzzerCustomCrossOver(
+      Data, Size, Other.data(), Other.size(), U.data(), U.size(), Rand.Rand());
+  if (!NewSize)
+    return 0;
+  assert(NewSize <= MaxSize && "CustomCrossOver returned overisized unit");
+  memcpy(Data, U.data(), NewSize);
+  return NewSize;
 }
 
 size_t MutationDispatcher::Mutate_ShuffleBytes(uint8_t *Data, size_t Size,

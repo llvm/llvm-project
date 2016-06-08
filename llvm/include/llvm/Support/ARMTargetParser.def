@@ -83,14 +83,17 @@ ARM_ARCH("armv7-m", AK_ARMV7M, "7-M", "v7m", ARMBuildAttrs::CPUArch::v7,
 ARM_ARCH("armv7e-m", AK_ARMV7EM, "7E-M", "v7em", ARMBuildAttrs::CPUArch::v7E_M,
           FK_NONE, (ARM::AEK_HWDIV | ARM::AEK_DSP))
 ARM_ARCH("armv8-a", AK_ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
-          FK_CRYPTO_NEON_FP_ARMV8, (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                             ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC))
-ARM_ARCH("armv8.1-a", AK_ARMV8_1A, "8.1-A", "v8.1a", ARMBuildAttrs::CPUArch::v8_A,
-          FK_CRYPTO_NEON_FP_ARMV8, (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                             ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS))
-ARM_ARCH("armv8.2-a", AK_ARMV8_2A, "8.2-A", "v8.2a", ARMBuildAttrs::CPUArch::v8_A,
-          FK_CRYPTO_NEON_FP_ARMV8, (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                             ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC))
+         FK_CRYPTO_NEON_FP_ARMV8,
+         (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC))
+ARM_ARCH("armv8.1-a", AK_ARMV8_1A, "8.1-A", "v8.1a",
+         ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+         (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS))
+ARM_ARCH("armv8.2-a", AK_ARMV8_2A, "8.2-A", "v8.2a",
+         ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+         (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIV | ARM::AEK_DSP | ARM::AEK_CRC))
 ARM_ARCH("armv8-m.base", AK_ARMV8MBaseline, "8-M.Baseline", "v8m.base",
           ARMBuildAttrs::CPUArch::v8_M_Base, FK_NONE, ARM::AEK_HWDIV)
 ARM_ARCH("armv8-m.main", AK_ARMV8MMainline, "8-M.Mainline", "v8m.main",
@@ -191,17 +194,22 @@ ARM_CPU_NAME("cortex-m0", AK_ARMV6M, FK_NONE, true, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m0plus", AK_ARMV6M, FK_NONE, false, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m1", AK_ARMV6M, FK_NONE, false, ARM::AEK_NONE)
 ARM_CPU_NAME("sc000", AK_ARMV6M, FK_NONE, false, ARM::AEK_NONE)
-ARM_CPU_NAME("cortex-a5", AK_ARMV7A, FK_NEON_VFPV4, false, (ARM::AEK_SEC | ARM::AEK_MP))
+ARM_CPU_NAME("cortex-a5", AK_ARMV7A, FK_NEON_VFPV4, false,
+             (ARM::AEK_SEC | ARM::AEK_MP))
 ARM_CPU_NAME("cortex-a7", AK_ARMV7A, FK_NEON_VFPV4, false,
-             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIV))
+             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+              ARM::AEK_HWDIV))
 ARM_CPU_NAME("cortex-a8", AK_ARMV7A, FK_NEON, true, ARM::AEK_SEC)
 ARM_CPU_NAME("cortex-a9", AK_ARMV7A, FK_NEON_FP16, false, (ARM::AEK_SEC | ARM::AEK_MP))
 ARM_CPU_NAME("cortex-a12", AK_ARMV7A, FK_NEON_VFPV4, false,
-             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIV))
+             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+              ARM::AEK_HWDIV))
 ARM_CPU_NAME("cortex-a15", AK_ARMV7A, FK_NEON_VFPV4, false,
-             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIV))
+             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+              ARM::AEK_HWDIV))
 ARM_CPU_NAME("cortex-a17", AK_ARMV7A, FK_NEON_VFPV4, false,
-             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIV))
+             (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+              ARM::AEK_HWDIV))
 ARM_CPU_NAME("krait", AK_ARMV7A, FK_NEON_VFPV4, false,
              (ARM::AEK_HWDIVARM | ARM::AEK_HWDIV))
 ARM_CPU_NAME("cortex-r4", AK_ARMV7R, FK_NONE, true, ARM::AEK_NONE)

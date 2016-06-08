@@ -293,6 +293,9 @@ Error DbiStream::initializeSectionContributionData() {
 // Initializes this->SectionHeaders.
 Error DbiStream::initializeSectionHeadersData() {
   uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::SectionHdr);
+  if (StreamNum >= Pdb.getNumStreams())
+    return make_error<RawError>(raw_error_code::no_stream);
+
   SectionHeaderStream.reset(new MappedBlockStream(
       llvm::make_unique<IndexedStreamData>(StreamNum, Pdb), Pdb));
 
@@ -312,6 +315,9 @@ Error DbiStream::initializeSectionHeadersData() {
 // Initializes this->Fpos.
 Error DbiStream::initializeFpoRecords() {
   uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::NewFPO);
+  if (StreamNum >= Pdb.getNumStreams())
+    return make_error<RawError>(raw_error_code::no_stream);
+
   FpoStream.reset(new MappedBlockStream(
       llvm::make_unique<IndexedStreamData>(StreamNum, Pdb), Pdb));
 

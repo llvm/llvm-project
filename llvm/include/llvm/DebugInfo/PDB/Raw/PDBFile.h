@@ -52,7 +52,8 @@ public:
   ArrayRef<support::ulittle32_t>
   getStreamBlockList(uint32_t StreamIndex) const override;
 
-  StringRef getBlockData(uint32_t BlockIndex, uint32_t NumBytes) const override;
+  ArrayRef<uint8_t> getBlockData(uint32_t BlockIndex,
+                                 uint32_t NumBytes) const override;
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 

@@ -176,6 +176,7 @@ For developers of applications which use LLVM as a library.
    ProgrammersManual
    Extensions
    LibFuzzer
+   ScudoHardenedAllocator
 
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
@@ -219,6 +220,9 @@ For developers of applications which use LLVM as a library.
 
 :doc:`LibFuzzer`
   A library for writing in-process guided fuzzers.
+
+:doc:`ScudoHardenedAllocator`
+  A library that implements a security-hardened `malloc()`.
 
 Subsystem Documentation
 =======================

@@ -1463,8 +1463,12 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
         LowerArguments(Fn);
       }
     }
-    if (getAnalysis<StackProtector>().shouldEmitSDCheck(*LLVMBB))
-      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->MBBMap[LLVMBB]);
+    if (getAnalysis<StackProtector>().shouldEmitSDCheck(*LLVMBB)) {
+      bool FunctionBasedInstrumentation =
+          TLI->getSSPStackGuardCheck(*Fn.getParent());
+      SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->MBBMap[LLVMBB],
+                                   FunctionBasedInstrumentation);
+    }
 
     if (Begin != BI)
       ++NumDAGBlocks;
@@ -1552,7 +1556,7 @@ static bool MIIsInTerminatorSequence(const MachineInstr *MI) {
 /// terminator, but additionally the copies that move the vregs into the
 /// physical registers.
 static MachineBasicBlock::iterator
-FindSplitPointForStackProtector(MachineBasicBlock *BB, DebugLoc DL) {
+FindSplitPointForStackProtector(MachineBasicBlock *BB) {
   MachineBasicBlock::iterator SplitPoint = BB->getFirstTerminator();
   //
   if (SplitPoint == BB->begin())
@@ -1593,7 +1597,23 @@ SelectionDAGISel::FinishBasicBlock() {
   }
 
   // Handle stack protector.
-  if (SDB->SPDescriptor.shouldEmitStackProtector()) {
+  if (SDB->SPDescriptor.shouldEmitFunctionBasedCheckStackProtector()) {
+    // The target provides a guard check function. There is no need to
+    // generate error handling code or to split current basic block.
+    MachineBasicBlock *ParentMBB = SDB->SPDescriptor.getParentMBB();
+
+    // Add load and check to the basicblock.
+    FuncInfo->MBB = ParentMBB;
+    FuncInfo->InsertPt =
+        FindSplitPointForStackProtector(ParentMBB);
+    SDB->visitSPDescriptorParent(SDB->SPDescriptor, ParentMBB);
+    CurDAG->setRoot(SDB->getRoot());
+    SDB->clear();
+    CodeGenAndEmitDAG();
+
+    // Clear the Per-BB State.
+    SDB->SPDescriptor.resetPerBBState();
+  } else if (SDB->SPDescriptor.shouldEmitStackProtector()) {
     MachineBasicBlock *ParentMBB = SDB->SPDescriptor.getParentMBB();
     MachineBasicBlock *SuccessMBB = SDB->SPDescriptor.getSuccessMBB();
 
@@ -1604,7 +1624,7 @@ SelectionDAGISel::FinishBasicBlock() {
     // register allocation issues caused by us splitting the parent mbb. The
     // register allocator will clean up said virtual copies later on.
     MachineBasicBlock::iterator SplitPoint =
-      FindSplitPointForStackProtector(ParentMBB, SDB->getCurDebugLoc());
+        FindSplitPointForStackProtector(ParentMBB);
 
     // Splice the terminator of ParentMBB into SuccessMBB.
     SuccessMBB->splice(SuccessMBB->end(), ParentMBB,

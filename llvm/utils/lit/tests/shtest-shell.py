@@ -1,7 +1,7 @@
 # Check the internal shell handling component of the ShTest format.
 #
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-shell > %t.out
-# RUN: FileCheck < %t.out %s
+# RUN: FileCheck --input-file %t.out %s
 #
 # END.
 

@@ -146,11 +146,25 @@ sg
 // CHECK: bxns r0                    @ encoding: [0x04,0x47]
 bxns r0
 
+// UNDEF-BASELINE: error: invalid operand for instruction
+// UNDEF-BASELINE: error: conditional execution not supported in Thumb1
+// CHECK-MAINLINE: it eq                      @ encoding: [0x08,0xbf]
+// CHECK-MAINLINE: bxnseq r1                  @ encoding: [0x0c,0x47]
+it eq
+bxnseq r1
+
 // CHECK: bxns lr                    @ encoding: [0x74,0x47]
 bxns lr
 
 // CHECK: blxns r0                   @ encoding: [0x84,0x47]
 blxns r0
+
+// UNDEF-BASELINE: error: invalid operand for instruction
+// UNDEF-BASELINE: error: conditional execution not supported in Thumb1
+// CHECK-MAINLINE: it eq                      @ encoding: [0x08,0xbf]
+// CHECK-MAINLINE: blxnseq r1                 @ encoding: [0x8c,0x47]
+it eq
+blxnseq r1
 
 // CHECK: tt r0, r1                  @ encoding: [0x41,0xe8,0x00,0xf0]
 tt r0, r1

@@ -1229,10 +1229,30 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   } else {
     MergeInstr = findIncDecAfter(MBBI, Base, Pred, PredReg, Offset);
     if (((Mode != ARM_AM::ia && Mode != ARM_AM::ib) || Offset != Bytes) &&
-        ((Mode != ARM_AM::da && Mode != ARM_AM::db) || Offset != -Bytes))
-      return false;
+        ((Mode != ARM_AM::da && Mode != ARM_AM::db) || Offset != -Bytes)) {
+
+      // We couldn't find an inc/dec to merge. But if the base is dead, we
+      // can still change to a writeback form as that will save us 2 bytes
+      // of code size. It can create WAW hazards though, so only do it if
+      // we're minimizing code size.
+      if (!MBB.getParent()->getFunction()->optForMinSize() || !BaseKill)
+        return false;
+      
+      bool HighRegsUsed = false;
+      for (unsigned i = 2, e = MI->getNumOperands(); i != e; ++i)
+        if (MI->getOperand(i).getReg() >= ARM::R8) {
+          HighRegsUsed = true;
+          break;
+        }
+
+      if (!HighRegsUsed)
+        MergeInstr = MBB.end();
+      else
+        return false;
+    }
   }
-  MBB.erase(MergeInstr);
+  if (MergeInstr != MBB.end())
+    MBB.erase(MergeInstr);
 
   unsigned NewOpc = getUpdatingLSMultipleOpcode(Opcode, Mode);
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc))

@@ -66,6 +66,14 @@ def thumb_immshifted_shamt : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i32);
 }]>;
 
+def imm256_511 : ImmLeaf<i32, [{
+  return Imm >= 256 && Imm < 512;
+}]>;
+
+def thumb_imm256_511_addend : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() - 255, SDLoc(N), MVT::i32);
+}]>;
+
 // Scaled 4 immediate.
 def t_imm0_1020s4_asmoperand: AsmOperandClass { let Name = "Imm0_1020s4"; }
 def t_imm0_1020s4 : Operand<i32> {
@@ -1488,6 +1496,10 @@ def : T1Pat<(i32 thumb_immshifted:$src),
 
 def : T1Pat<(i32 imm0_255_comp:$src),
             (tMVN (tMOVi8 (imm_comp_XFORM imm:$src)))>;
+
+def : T1Pat<(i32 imm256_511:$src),
+            (tADDi8 (tMOVi8 255),
+                    (thumb_imm256_511_addend imm:$src))>;
 
 // Pseudo instruction that combines ldr from constpool and add pc. This should
 // be expanded into two instructions late to allow if-conversion and

@@ -31,47 +31,23 @@
 #endif
 #endif
 
-extern "C" {
-// Re-declare some of the sanitizer functions as "weak" so that
-// libFuzzer can be linked w/o the sanitizers and sanitizer-coverage
-// (in which case it will complain at start-up time).
-__attribute__((weak)) void __sanitizer_print_stack_trace();
-__attribute__((weak)) void __sanitizer_reset_coverage();
-__attribute__((weak)) size_t __sanitizer_get_total_unique_caller_callee_pairs();
-__attribute__((weak)) size_t __sanitizer_get_total_unique_coverage();
-__attribute__((weak)) void
-__sanitizer_set_death_callback(void (*callback)(void));
-__attribute__((weak)) size_t __sanitizer_get_number_of_counters();
-__attribute__((weak)) uintptr_t
-__sanitizer_update_counter_bitset_and_clear_counters(uint8_t *bitset);
-__attribute__((weak)) uintptr_t
-__sanitizer_get_coverage_pc_buffer(uintptr_t **data);
-
-__attribute__((weak)) void __sanitizer_malloc_hook(void *ptr, size_t size);
-__attribute__((weak)) void __sanitizer_free_hook(void *ptr);
-__attribute__((weak)) void __lsan_enable();
-__attribute__((weak)) void __lsan_disable();
-__attribute__((weak)) int __lsan_do_recoverable_leak_check();
-__attribute__((weak)) int __sanitizer_print_memory_profile(size_t);
-}
-
 namespace fuzzer {
 static const size_t kMaxUnitSizeToPrint = 256;
 static const size_t TruncateMaxRuns = 1000;
 
 thread_local bool Fuzzer::IsMyThread;
 
-static void MissingWeakApiFunction(const char *FnName) {
+static void MissingExternalApiFunction(const char *FnName) {
   Printf("ERROR: %s is not defined. Exiting.\n"
          "Did you use -fsanitize-coverage=... to build your code?\n",
          FnName);
   exit(1);
 }
 
-#define CHECK_WEAK_API_FUNCTION(fn)                                            \
+#define CHECK_EXTERNAL_FUNCTION(fn)                                            \
   do {                                                                         \
-    if (!fn)                                                                   \
-      MissingWeakApiFunction(#fn);                                             \
+    if (!(EF->fn))                                                             \
+      MissingExternalApiFunction(#fn);                                         \
   } while (false)
 
 // Only one Fuzzer per process.
@@ -79,21 +55,21 @@ static Fuzzer *F;
 
 struct CoverageController {
   static void Reset() {
-    CHECK_WEAK_API_FUNCTION(__sanitizer_reset_coverage);
-    __sanitizer_reset_coverage();
+    CHECK_EXTERNAL_FUNCTION(__sanitizer_reset_coverage);
+    EF->__sanitizer_reset_coverage();
     PcMapResetCurrent();
   }
 
   static void ResetCounters(const Fuzzer::FuzzingOptions &Options) {
     if (Options.UseCounters) {
-      __sanitizer_update_counter_bitset_and_clear_counters(0);
+      EF->__sanitizer_update_counter_bitset_and_clear_counters(0);
     }
   }
 
   static void Prepare(const Fuzzer::FuzzingOptions &Options,
                       Fuzzer::Coverage *C) {
     if (Options.UseCounters) {
-      size_t NumCounters = __sanitizer_get_number_of_counters();
+      size_t NumCounters = EF->__sanitizer_get_number_of_counters();
       C->CounterBitmap.resize(NumCounters);
     }
   }
@@ -104,16 +80,16 @@ struct CoverageController {
                         Fuzzer::Coverage *C) {
     bool Res = false;
 
-    uint64_t NewBlockCoverage = __sanitizer_get_total_unique_coverage();
+    uint64_t NewBlockCoverage = EF->__sanitizer_get_total_unique_coverage();
     if (NewBlockCoverage > C->BlockCoverage) {
       Res = true;
       C->BlockCoverage = NewBlockCoverage;
     }
 
     if (Options.UseIndirCalls &&
-        __sanitizer_get_total_unique_caller_callee_pairs) {
+        EF->__sanitizer_get_total_unique_caller_callee_pairs) {
       uint64_t NewCallerCalleeCoverage =
-          __sanitizer_get_total_unique_caller_callee_pairs();
+          EF->__sanitizer_get_total_unique_caller_callee_pairs();
       if (NewCallerCalleeCoverage > C->CallerCalleeCoverage) {
         Res = true;
         C->CallerCalleeCoverage = NewCallerCalleeCoverage;
@@ -122,7 +98,7 @@ struct CoverageController {
 
     if (Options.UseCounters) {
       uint64_t CounterDelta =
-          __sanitizer_update_counter_bitset_and_clear_counters(
+          EF->__sanitizer_update_counter_bitset_and_clear_counters(
               C->CounterBitmap.data());
       if (CounterDelta > 0) {
         Res = true;
@@ -137,7 +113,8 @@ struct CoverageController {
     }
 
     uintptr_t *CoverageBuf;
-    uint64_t NewPcBufferLen = __sanitizer_get_coverage_pc_buffer(&CoverageBuf);
+    uint64_t NewPcBufferLen =
+        EF->__sanitizer_get_coverage_pc_buffer(&CoverageBuf);
     if (NewPcBufferLen > C->PcBufferLen) {
       Res = true;
       C->PcBufferLen = NewPcBufferLen;
@@ -163,8 +140,8 @@ void Fuzzer::LazyAllocateCurrentUnitData() {
 }
 
 void Fuzzer::SetDeathCallback() {
-  CHECK_WEAK_API_FUNCTION(__sanitizer_set_death_callback);
-  __sanitizer_set_death_callback(StaticDeathCallback);
+  CHECK_EXTERNAL_FUNCTION(__sanitizer_set_death_callback);
+  EF->__sanitizer_set_death_callback(StaticDeathCallback);
 }
 
 void Fuzzer::StaticDeathCallback() {
@@ -206,8 +183,8 @@ void Fuzzer::StaticInterruptCallback() {
 
 void Fuzzer::CrashCallback() {
   Printf("==%d== ERROR: libFuzzer: deadly signal\n", GetPid());
-  if (__sanitizer_print_stack_trace)
-    __sanitizer_print_stack_trace();
+  if (EF->__sanitizer_print_stack_trace)
+    EF->__sanitizer_print_stack_trace();
   Printf("NOTE: libFuzzer has rudimentary signal handlers.\n"
          "      Combine libFuzzer with AddressSanitizer or similar for better "
          "crash reports.\n");
@@ -242,8 +219,8 @@ void Fuzzer::AlarmCallback() {
     DumpCurrentUnit("timeout-");
     Printf("==%d== ERROR: libFuzzer: timeout after %d seconds\n", GetPid(),
            Seconds);
-    if (__sanitizer_print_stack_trace)
-      __sanitizer_print_stack_trace();
+    if (EF->__sanitizer_print_stack_trace)
+      EF->__sanitizer_print_stack_trace();
     Printf("SUMMARY: libFuzzer: timeout\n");
     PrintFinalStats();
     _Exit(Options.TimeoutExitCode); // Stop right now.
@@ -255,8 +232,8 @@ void Fuzzer::RssLimitCallback() {
       "==%d== ERROR: libFuzzer: out-of-memory (used: %zdMb; limit: %zdMb)\n",
       GetPid(), GetPeakRSSMb(), Options.RssLimitMb);
   Printf("   To change the out-of-memory limit use -rss_limit_mb=<N>\n\n");
-  if (__sanitizer_print_memory_profile)
-    __sanitizer_print_memory_profile(50);
+  if (EF->__sanitizer_print_memory_profile)
+    EF->__sanitizer_print_memory_profile(50);
   DumpCurrentUnit("oom-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
   PrintFinalStats();
@@ -400,7 +377,8 @@ void Fuzzer::ShuffleAndMinimize() {
   }
 
   for (const auto &U : Corpus) {
-    if (RunOne(U)) {
+    bool NewCoverage = RunOne(U);
+    if (!Options.PruneCorpus || NewCoverage) {
       NewCorpus.push_back(U);
       if (Options.Verbosity >= 2)
         Printf("NEW0: %zd L %zd\n", MaxCoverage.BlockCoverage, U.size());
@@ -413,6 +391,11 @@ void Fuzzer::ShuffleAndMinimize() {
   for (auto &X : Corpus)
     UnitHashesAddedToCorpus.insert(Hash(X));
   PrintStats("INITED");
+  if (Corpus.empty()) {
+    Printf("ERROR: no interesting inputs were found. "
+           "Is the code instrumented for coverage? Exiting.\n");
+    exit(1);
+  }
 }
 
 bool Fuzzer::UpdateMaxCoverage() {
@@ -421,7 +404,7 @@ bool Fuzzer::UpdateMaxCoverage() {
 
   if (Options.PrintNewCovPcs && PrevBufferLen != MaxCoverage.PcBufferLen) {
     uintptr_t *CoverageBuf;
-    __sanitizer_get_coverage_pc_buffer(&CoverageBuf);
+    EF->__sanitizer_get_coverage_pc_buffer(&CoverageBuf);
     assert(CoverageBuf);
     for (size_t I = PrevBufferLen; I < MaxCoverage.PcBufferLen; ++I) {
       Printf("%p\n", CoverageBuf[I]);
@@ -481,10 +464,12 @@ static thread_local MallocFreeTracer AllocTracer;
 // thread local storage is initialised leading to
 // crashes when accessing ``AllocTracer``.
 extern "C" {
+__attribute__((weak))
 void __sanitizer_malloc_hook(void *ptr, size_t size) {
   if (!LIBFUZZER_APPLE)
     AllocTracer.Mallocs++;
 }
+__attribute__((weak))
 void __sanitizer_free_hook(void *ptr) {
   if (!LIBFUZZER_APPLE)
     AllocTracer.Frees++;
@@ -650,13 +635,14 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
                                      bool DuringInitialCorpusExecution) {
   if (!HasMoreMallocsThanFrees) return;  // mallocs==frees, a leak is unlikely.
   if (!Options.DetectLeaks) return;
-  if (!&__lsan_enable || !&__lsan_disable || !__lsan_do_recoverable_leak_check)
+  if (!&(EF->__lsan_enable) || !&(EF->__lsan_disable) ||
+      !(EF->__lsan_do_recoverable_leak_check))
     return;  // No lsan.
   // Run the target once again, but with lsan disabled so that if there is
   // a real leak we do not report it twice.
-  __lsan_disable();
+  EF->__lsan_disable();
   RunOne(Data, Size);
-  __lsan_enable();
+  EF->__lsan_enable();
   if (!HasMoreMallocsThanFrees) return;  // a leak is unlikely.
   if (NumberOfLeakDetectionAttempts++ > 1000) {
     Options.DetectLeaks = false;
@@ -669,7 +655,7 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   }
   // Now perform the actual lsan pass. This is expensive and we must ensure
   // we don't call it too often.
-  if (__lsan_do_recoverable_leak_check()) {  // Leak is found, report it.
+  if (EF->__lsan_do_recoverable_leak_check()) { // Leak is found, report it.
     if (DuringInitialCorpusExecution)
       Printf("\nINFO: a leak has been found in the initial corpus.\n\n");
     Printf("INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.\n\n");

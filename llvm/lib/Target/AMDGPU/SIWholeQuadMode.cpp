@@ -154,6 +154,7 @@ FunctionPass *llvm::createSIWholeQuadModePass() {
 char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
                                        std::vector<WorkItem> &Worklist) {
   char GlobalFlags = 0;
+  bool WQMOutputs = MF.getFunction()->hasFnAttribute("amdgpu-ps-wqm-outputs");
 
   for (auto BI = MF.begin(), BE = MF.end(); BI != BE; ++BI) {
     MachineBasicBlock &MBB = *BI;
@@ -161,7 +162,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
     for (auto II = MBB.begin(), IE = MBB.end(); II != IE; ++II) {
       MachineInstr &MI = *II;
       unsigned Opcode = MI.getOpcode();
-      char Flags;
+      char Flags = 0;
 
       if (TII->isWQM(Opcode) || TII->isDS(Opcode)) {
         Flags = StateWQM;
@@ -175,14 +176,38 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
             ExecExports.push_back(&MI);
         } else if (Opcode == AMDGPU::SI_PS_LIVE) {
           LiveMaskQueries.push_back(&MI);
+        } else if (WQMOutputs) {
+          // The function is in machine SSA form, which means that physical
+          // VGPRs correspond to shader inputs and outputs. Inputs are
+          // only used, outputs are only defined.
+          for (const MachineOperand &MO : MI.defs()) {
+            if (!MO.isReg())
+              continue;
+
+            unsigned Reg = MO.getReg();
+
+            if (!TRI->isVirtualRegister(Reg) &&
+                TRI->hasVGPRs(TRI->getPhysRegClass(Reg))) {
+              Flags = StateWQM;
+              break;
+            }
+          }
         }
 
-        continue;
+        if (!Flags)
+          continue;
       }
 
       Instructions[&MI].Needs = Flags;
       Worklist.push_back(&MI);
       GlobalFlags |= Flags;
+    }
+
+    if (WQMOutputs && MBB.succ_empty()) {
+      // This is a prolog shader. Make sure we go back to exact mode at the end.
+      Blocks[&MBB].OutNeeds = StateExact;
+      Worklist.push_back(&MBB);
+      GlobalFlags |= StateExact;
     }
   }
 

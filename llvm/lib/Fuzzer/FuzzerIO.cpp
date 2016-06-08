@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 // IO functions.
 //===----------------------------------------------------------------------===//
+#include "FuzzerExtFunctions.h"
 #include "FuzzerInternal.h"
 #include <iterator>
 #include <fstream>
@@ -17,10 +18,6 @@
 #include <unistd.h>
 #include <cstdarg>
 #include <cstdio>
-
-extern "C" {
-__attribute__((weak)) void __sanitizer_set_report_fd(void *);
-}
 
 namespace fuzzer {
 
@@ -126,8 +123,8 @@ void DupAndCloseStderr() {
     FILE *NewOutputFile = fdopen(OutputFd, "w");
     if (NewOutputFile) {
       OutputFile = NewOutputFile;
-      if (__sanitizer_set_report_fd)
-        __sanitizer_set_report_fd(reinterpret_cast<void*>(OutputFd));
+      if (EF->__sanitizer_set_report_fd)
+        EF->__sanitizer_set_report_fd(reinterpret_cast<void *>(OutputFd));
       close(2);
     }
   }

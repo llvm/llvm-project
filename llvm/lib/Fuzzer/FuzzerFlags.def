@@ -85,6 +85,8 @@ FUZZER_FLAG_INT(detect_leaks, 1, "If 1, and if LeakSanitizer is enabled "
 FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
     "reaching this limit of RSS memory usage.")
 FUZZER_FLAG_INT(truncate_units, 0, "Try truncated units when loading corpus.")
+FUZZER_FLAG_INT(prune_corpus, 1, "Prune corpus items without new coverage when "
+                                 "loading corpus.")
 
 FUZZER_DEPRECATED_FLAG(exit_on_first)
 FUZZER_DEPRECATED_FLAG(save_minimized_corpus)

@@ -844,10 +844,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
 }
 
 bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
-  if (ValuesToLink.count(&SGV))
-    return true;
-
-  if (SGV.hasLocalLinkage())
+  if (ValuesToLink.count(&SGV) || SGV.hasLocalLinkage())
     return true;
 
   if (DGV && !DGV->isDeclarationForLinker())
@@ -856,10 +853,7 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   if (SGV.hasAvailableExternallyLinkage())
     return true;
 
-  if (SGV.isDeclaration())
-    return false;
-
-  if (DoneLinkingBodies)
+  if (SGV.isDeclaration() || DoneLinkingBodies)
     return false;
 
   // Callback to the client to give a chance to lazily add the Global to the
@@ -1262,11 +1256,7 @@ IRMover::StructTypeKeyInfo::KeyTy::KeyTy(const StructType *ST)
     : ETypes(ST->elements()), IsPacked(ST->isPacked()) {}
 
 bool IRMover::StructTypeKeyInfo::KeyTy::operator==(const KeyTy &That) const {
-  if (IsPacked != That.IsPacked)
-    return false;
-  if (ETypes != That.ETypes)
-    return false;
-  return true;
+  return IsPacked == That.IsPacked && ETypes == That.ETypes;
 }
 
 bool IRMover::StructTypeKeyInfo::KeyTy::operator!=(const KeyTy &That) const {
@@ -1299,12 +1289,8 @@ bool IRMover::StructTypeKeyInfo::isEqual(const KeyTy &LHS,
 
 bool IRMover::StructTypeKeyInfo::isEqual(const StructType *LHS,
                                          const StructType *RHS) {
-  if (RHS == getEmptyKey())
-    return LHS == getEmptyKey();
-
-  if (RHS == getTombstoneKey())
-    return LHS == getTombstoneKey();
-
+  if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+    return LHS == RHS;
   return KeyTy(LHS) == KeyTy(RHS);
 }
 
@@ -1331,18 +1317,14 @@ IRMover::IdentifiedStructTypeSet::findNonOpaque(ArrayRef<Type *> ETypes,
                                                 bool IsPacked) {
   IRMover::StructTypeKeyInfo::KeyTy Key(ETypes, IsPacked);
   auto I = NonOpaqueStructTypes.find_as(Key);
-  if (I == NonOpaqueStructTypes.end())
-    return nullptr;
-  return *I;
+  return I == NonOpaqueStructTypes.end() ? nullptr : *I;
 }
 
 bool IRMover::IdentifiedStructTypeSet::hasType(StructType *Ty) {
   if (Ty->isOpaque())
     return OpaqueStructTypes.count(Ty);
   auto I = NonOpaqueStructTypes.find(Ty);
-  if (I == NonOpaqueStructTypes.end())
-    return false;
-  return *I == Ty;
+  return I == NonOpaqueStructTypes.end() ? false : *I == Ty;
 }
 
 IRMover::IRMover(Module &M) : Composite(M) {

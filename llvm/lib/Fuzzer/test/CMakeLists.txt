@@ -66,6 +66,7 @@ set(Tests
   BufferOverflowOnInput
   CallerCalleeTest
   CounterTest
+  CustomCrossOverTest
   CustomMutatorTest
   EmptyTest
   FourIndependentBranchesTest
@@ -148,6 +149,7 @@ else()
 endif()
 
 add_subdirectory(uninstrumented)
+add_subdirectory(no-coverage)
 add_subdirectory(ubsan)
 add_subdirectory(trace-bb)
 add_subdirectory(trace-pc)

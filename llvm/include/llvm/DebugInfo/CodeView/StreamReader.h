@@ -60,6 +60,9 @@ public:
       return Error::success();
     }
 
+    if (NumElements > UINT32_MAX/sizeof(T))
+      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+
     if (auto EC = readBytes(Bytes, NumElements * sizeof(T)))
       return EC;
     Array = ArrayRef<T>(reinterpret_cast<const T *>(Bytes.data()), NumElements);

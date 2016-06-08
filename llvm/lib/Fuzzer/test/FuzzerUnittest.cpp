@@ -3,6 +3,7 @@
 
 #include "FuzzerInternal.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <set>
 
 using namespace fuzzer;
@@ -14,6 +15,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 }
 
 TEST(Fuzzer, CrossOver) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   Unit A({0, 1, 2}), B({5, 6, 7});
@@ -82,6 +85,8 @@ typedef size_t (MutationDispatcher::*Mutator)(uint8_t *Data, size_t Size,
                                               size_t MaxSize);
 
 void TestEraseByte(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   uint8_t REM0[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
   uint8_t REM1[8] = {0x00, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
   uint8_t REM2[8] = {0x00, 0x11, 0x33, 0x44, 0x55, 0x66, 0x77};
@@ -116,6 +121,8 @@ TEST(FuzzerMutate, EraseByte2) {
 }
 
 void TestInsertByte(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
@@ -150,6 +157,8 @@ TEST(FuzzerMutate, InsertByte2) {
 }
 
 void TestChangeByte(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
@@ -184,6 +193,8 @@ TEST(FuzzerMutate, ChangeByte2) {
 }
 
 void TestChangeBit(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
@@ -218,6 +229,8 @@ TEST(FuzzerMutate, ChangeBit2) {
 }
 
 void TestShuffleBytes(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   int FoundMask = 0;
@@ -246,6 +259,8 @@ TEST(FuzzerMutate, ShuffleBytes2) {
 }
 
 void TestAddWordFromDictionary(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   uint8_t Word1[4] = {0xAA, 0xBB, 0xCC, 0xDD};
@@ -286,6 +301,8 @@ TEST(FuzzerMutate, AddWordFromDictionary2) {
 }
 
 void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   uint8_t W[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
@@ -313,6 +330,8 @@ TEST(FuzzerMutate, AddWordFromDictionaryWithHint2) {
 }
 
 void TestChangeASCIIInteger(Mutator M, int NumIter) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
 
@@ -405,6 +424,8 @@ TEST(FuzzerUtil, Base64) {
 }
 
 TEST(Corpus, Distribution) {
+  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
+  fuzzer::EF = t.get();
   Random Rand(0);
   MutationDispatcher MD(Rand);
   Fuzzer::FuzzingOptions Options;

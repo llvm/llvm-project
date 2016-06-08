@@ -44,6 +44,9 @@ interpreted as relatively more important than a shorter run. Depending on the
 nature of the training runs it may be useful to adjust the weight given to each
 input file by using the ``-weighted-input`` option.
 
+Profiles passed in via ``-weighted-input``, ``-input-files``, or via positional
+arguments are processed once for each time they are seen.
+
 
 OPTIONS
 ^^^^^^^
@@ -64,6 +67,12 @@ OPTIONS
  ``weight``, where where ``weight`` is a decimal integer >= 1.
  Input files specified without using this option are assigned a default
  weight of 1. Examples are shown below.
+
+.. option:: -input-files=path, -f=path
+
+  Specify a file which contains a list of files to merge. The entries in this
+  file are newline-separated. Lines starting with '#' are skipped. Entries may
+  be of the form <filename> or <weight>,<filename>.
 
 .. option:: -instr (default)
 

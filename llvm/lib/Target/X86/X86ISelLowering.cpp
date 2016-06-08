@@ -1974,8 +1974,39 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
 }
 
 void X86TargetLowering::insertSSPDeclarations(Module &M) const {
-  if (!Subtarget.isTargetGlibc())
-    TargetLowering::insertSSPDeclarations(M);
+  // MSVC CRT provides functionalities for stack protection.
+  if (Subtarget.getTargetTriple().isOSMSVCRT()) {
+    // MSVC CRT has a global variable holding security cookie.
+    M.getOrInsertGlobal("__security_cookie",
+                        Type::getInt8PtrTy(M.getContext()));
+
+    // MSVC CRT has a function to validate security cookie.
+    auto *SecurityCheckCookie = cast<Function>(
+        M.getOrInsertFunction("__security_check_cookie",
+                              Type::getVoidTy(M.getContext()),
+                              Type::getInt8PtrTy(M.getContext()), nullptr));
+    SecurityCheckCookie->setCallingConv(CallingConv::X86_FastCall);
+    SecurityCheckCookie->addAttribute(1, Attribute::AttrKind::InReg);
+    return;
+  }
+  // glibc has a special slot for the stack guard.
+  if (Subtarget.isTargetGlibc())
+    return;
+  TargetLowering::insertSSPDeclarations(M);
+}
+
+Value *X86TargetLowering::getSDagStackGuard(const Module &M) const {
+  // MSVC CRT has a global variable holding security cookie.
+  if (Subtarget.getTargetTriple().isOSMSVCRT())
+    return M.getGlobalVariable("__security_cookie");
+  return TargetLowering::getSDagStackGuard(M);
+}
+
+Value *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
+  // MSVC CRT has a function to validate security cookie.
+  if (Subtarget.getTargetTriple().isOSMSVCRT())
+    return M.getFunction("__security_check_cookie");
+  return TargetLowering::getSSPStackGuardCheck(M);
 }
 
 Value *X86TargetLowering::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
@@ -24602,23 +24633,27 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   }
 
   // Attempt to blend with zero.
-  if (VT.getVectorNumElements() <= 8 &&
+  if (NumMaskElts <= 8 &&
       ((Subtarget.hasSSE41() && VT.is128BitVector()) ||
        (Subtarget.hasAVX() && VT.is256BitVector()))) {
     // Convert VT to a type compatible with X86ISD::BLENDI.
     // TODO - add 16i16 support (requires lane duplication).
-    MVT ShuffleVT = VT;
+    bool FloatDomain = VT.isFloatingPoint();
+    MVT ShuffleVT = FloatDomain ? MVT::getFloatingPointVT(MaskEltSizeInBits)
+                                : MVT::getIntegerVT(MaskEltSizeInBits);
+    ShuffleVT = MVT::getVectorVT(ShuffleVT, NumMaskElts);
+
     if (Subtarget.hasAVX2()) {
-      if (VT == MVT::v4i64)
+      if (ShuffleVT == MVT::v4i64)
         ShuffleVT = MVT::v8i32;
-      else if (VT == MVT::v2i64)
+      else if (ShuffleVT == MVT::v2i64)
         ShuffleVT = MVT::v4i32;
     } else {
-      if (VT == MVT::v2i64 || VT == MVT::v4i32)
+      if (ShuffleVT == MVT::v2i64 || ShuffleVT == MVT::v4i32)
         ShuffleVT = MVT::v8i16;
-      else if (VT == MVT::v4i64)
+      else if (ShuffleVT == MVT::v4i64)
         ShuffleVT = MVT::v4f64;
-      else if (VT == MVT::v8i32)
+      else if (ShuffleVT == MVT::v8i32)
         ShuffleVT = MVT::v8f32;
     }
 

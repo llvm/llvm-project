@@ -663,8 +663,9 @@ At the end of the process it will dump a single html file with coverage informat
 See SanitizerCoverage_ for details.
 
 You may also use other ways to visualize coverage,
-e.g. `llvm-cov <http://llvm.org/docs/CommandGuide/llvm-cov.html>`_, but those will require
-you to rebuild the code with different compiler flags. 
+e.g. using `Clang coverage <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_,
+but those will require
+you to rebuild the code with different compiler flags.
 
 User-supplied mutators
 ----------------------
@@ -721,12 +722,12 @@ you will eventually run out of RAM (see the ``-rss_limit_mb`` flag).
 Developing libFuzzer
 ====================
 
-Building libFuzzer as a part of LLVM project and running its test requires 
-special CMake configuration:
+Building libFuzzer as a part of LLVM project and running its test requires
+fresh clang as the host compiler and special CMake configuration:
 
 .. code-block:: console
 
-    cmake -GNinja  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=YES -DCMAKE_BUILD_TYPE=Release /path/to/llvm
+    cmake -GNinja  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=YES -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON /path/to/llvm
     ninja check-fuzzer
 
 
@@ -736,15 +737,14 @@ Fuzzing components of LLVM
    :local:
    :depth: 1
 
+To build any of the LLVM fuzz targets use the build instructions above.
+
 clang-format-fuzzer
 -------------------
 The inputs are random pieces of C++-like text.
 
-Build (make sure to use fresh clang as the host compiler):
-
 .. code-block:: console
 
-    cmake -GNinja  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_SANITIZER=Address -DLLVM_USE_SANITIZE_COVERAGE=YES -DCMAKE_BUILD_TYPE=Release /path/to/llvm
     ninja clang-format-fuzzer
     mkdir CORPUS_DIR
     ./bin/clang-format-fuzzer CORPUS_DIR

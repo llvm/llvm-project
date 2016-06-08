@@ -93,19 +93,17 @@ struct StratifiedLink {
 /// below set A.
 template <typename T> class StratifiedSets {
 public:
-  StratifiedSets() {}
+  StratifiedSets() = default;
+  // If we have a need to copy these at some point, it's fine to default this.
+  // At the time of writing, copying StratifiedSets is always a perf bug.
+  StratifiedSets(const StratifiedSets &) = delete;
+  StratifiedSets(StratifiedSets &&Other) = default;
 
   StratifiedSets(DenseMap<T, StratifiedInfo> Map,
                  std::vector<StratifiedLink> Links)
       : Values(std::move(Map)), Links(std::move(Links)) {}
 
-  StratifiedSets(StratifiedSets<T> &&Other) { *this = std::move(Other); }
-
-  StratifiedSets &operator=(StratifiedSets<T> &&Other) {
-    Values = std::move(Other.Values);
-    Links = std::move(Other.Links);
-    return *this;
-  }
+  StratifiedSets &operator=(StratifiedSets<T> &&Other) = default;
 
   Optional<StratifiedInfo> find(const T &Elem) const {
     auto Iter = Values.find(Elem);
@@ -150,9 +148,9 @@ private:
 /// %app = alloca i32**, align 8
 /// store %a, %ap
 /// store %ap, %app
-/// %aw = getelementptr %ap, 0
+/// %aw = getelementptr %ap, i32 0
 ///
-/// Given this, the follow relations exist:
+/// Given this, the following relations exist:
 ///   - %a below %ap & %ap above %a
 ///   - %ap below %app & %app above %ap
 ///   - %aw with %ap & %ap with %aw
@@ -160,46 +158,25 @@ private:
 /// These relations produce the following sets:
 ///   [{%a}, {%ap, %aw}, {%app}]
 ///
-/// ...Which states that the only MayAlias relationship in the above program is
+/// ...Which state that the only MayAlias relationship in the above program is
 /// between %ap and %aw.
 ///
-/// Life gets more complicated when we actually have logic in our programs. So,
-/// we either must remove this logic from our programs, or make consessions for
-/// it in our AA algorithms. In this case, we have decided to select the latter
-/// option.
+/// Because LLVM allows arbitrary casts, code like the following needs to be
+/// supported:
+///   %ip = alloca i64, align 8
+///   %ipp = alloca i64*, align 8
+///   %i = bitcast i64** ipp to i64
+///   store i64* %ip, i64** %ipp
+///   store i64 %i, i64* %ip
 ///
-/// First complication: Conditionals
-/// Motivation:
-///  %ad = alloca int, align 4
-///  %a = alloca int*, align 8
-///  %b = alloca int*, align 8
-///  %bp = alloca int**, align 8
-///  %c = call i1 @SomeFunc()
-///  %k = select %c, %ad, %bp
-///  store %ad, %a
-///  store %b, %bp
+/// Which, because %ipp ends up *both* above and below %ip, is fun.
 ///
-/// %k has 'with' edges to both %a and %b, which ordinarily would not be linked
-/// together. So, we merge the set that contains %a with the set that contains
-/// %b. We then recursively merge the set above %a with the set above %b, and
-/// the set below  %a with the set below %b, etc. Ultimately, the sets for this
-// program would end up like: {%ad}, {%a, %b, %k}, {%bp}, where {%ad} is below
-/// {%a, %b, %c} is below {%ad}.
-///
-/// Second complication: Arbitrary casts
-/// Motivation:
-///  %ip = alloca int*, align 8
-///  %ipp = alloca int**, align 8
-///  %i = bitcast ipp to int
-///  store %ip, %ipp
-///  store %i, %ip
-///
-/// This is impossible to construct with any of the rules above, because a set
-/// containing both {%i, %ipp} is supposed to exist, the set with %i is supposed
-/// to be below the set with %ip, and the set with %ip is supposed to be below
-/// the set with %ipp. Because we don't allow circular relationships like this,
-/// we merge all concerned sets into one. So, the above code would generate a
-/// single StratifiedSet: {%ip, %ipp, %i}.
+/// This is solved by merging %i and %ipp into a single set (...which is the
+/// only way to solve this, since their bit patterns are equivalent). Any sets
+/// that ended up in between %i and %ipp at the time of merging (in this case,
+/// the set containing %ip) also get conservatively merged into the set of %i
+/// and %ipp. In short, the resulting StratifiedSet from the above code would be
+/// {%ip, %ipp, %i}.
 ///
 /// ==== Set remaps ====
 /// More of an implementation detail than anything -- when merging sets, we need
@@ -263,12 +240,6 @@ template <typename T> class StratifiedSetsBuilder {
     StratifiedAttrs &getAttrs() {
       assert(!isRemapped());
       return Link.Attrs;
-    }
-
-    void setAttr(unsigned index) {
-      assert(!isRemapped());
-      assert(index < NumStratifiedAttrs);
-      Link.Attrs.set(index);
     }
 
     void setAttrs(const StratifiedAttrs &other) {
@@ -383,9 +354,6 @@ public:
     return StratifiedSets<T>(std::move(Values), std::move(StratLinks));
   }
 
-  std::size_t size() const { return Values.size(); }
-  std::size_t numSets() const { return Links.size(); }
-
   bool has(const T &Elem) const { return get(Elem).hasValue(); }
 
   bool add(const T &Main) {
@@ -428,57 +396,11 @@ public:
     return addAtMerging(ToAdd, MainIndex);
   }
 
-  void noteAttribute(const T &Main, unsigned AttrNum) {
-    assert(has(Main));
-    assert(AttrNum < StratifiedLink::SetSentinel);
-    auto *Info = *get(Main);
-    auto &Link = linksAt(Info->Index);
-    Link.setAttr(AttrNum);
-  }
-
   void noteAttributes(const T &Main, const StratifiedAttrs &NewAttrs) {
     assert(has(Main));
     auto *Info = *get(Main);
     auto &Link = linksAt(Info->Index);
     Link.setAttrs(NewAttrs);
-  }
-
-  StratifiedAttrs getAttributes(const T &Main) {
-    assert(has(Main));
-    auto *Info = *get(Main);
-    auto *Link = &linksAt(Info->Index);
-    auto Attrs = Link->getAttrs();
-    while (Link->hasAbove()) {
-      Link = &linksAt(Link->getAbove());
-      Attrs |= Link->getAttrs();
-    }
-
-    return Attrs;
-  }
-
-  bool getAttribute(const T &Main, unsigned AttrNum) {
-    assert(AttrNum < StratifiedLink::SetSentinel);
-    auto Attrs = getAttributes(Main);
-    return Attrs[AttrNum];
-  }
-
-  /// \brief Gets the attributes that have been applied to the set that Main
-  /// belongs to. It ignores attributes in any sets above the one that Main
-  /// resides in.
-  StratifiedAttrs getRawAttributes(const T &Main) {
-    assert(has(Main));
-    auto *Info = *get(Main);
-    auto &Link = linksAt(Info->Index);
-    return Link.getAttrs();
-  }
-
-  /// \brief Gets an attribute from the attributes that have been applied to the
-  /// set that Main belongs to. It ignores attributes in any sets above the one
-  /// that Main resides in.
-  bool getRawAttribute(const T &Main, unsigned AttrNum) {
-    assert(AttrNum < StratifiedLink::SetSentinel);
-    auto Attrs = getRawAttributes(Main);
-    return Attrs[AttrNum];
   }
 
 private:
