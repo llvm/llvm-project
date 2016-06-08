@@ -32,8 +32,8 @@ public:
   virtual ArrayRef<support::ulittle32_t>
   getStreamBlockList(uint32_t StreamIndex) const = 0;
 
-  virtual StringRef getBlockData(uint32_t BlockIndex,
-                                 uint32_t NumBytes) const = 0;
+  virtual ArrayRef<uint8_t> getBlockData(uint32_t BlockIndex,
+                                         uint32_t NumBytes) const = 0;
 };
 }
 }

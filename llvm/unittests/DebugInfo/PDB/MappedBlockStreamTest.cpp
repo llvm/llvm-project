@@ -61,14 +61,14 @@ public:
       return ArrayRef<support::ulittle32_t>();
     return Blocks;
   }
-  virtual StringRef getBlockData(uint32_t BlockIndex,
-                                 uint32_t NumBytes) const override {
-    return StringRef(&Data[BlockIndex], NumBytes);
+  virtual ArrayRef<uint8_t> getBlockData(uint32_t BlockIndex,
+                                         uint32_t NumBytes) const override {
+    return ArrayRef<uint8_t>(&Data[BlockIndex], NumBytes);
   }
 
 private:
   std::vector<support::ulittle32_t> Blocks;
-  std::vector<char> Data;
+  std::vector<uint8_t> Data;
 };
 
 // Tests that a read which is entirely contained within a single block works

@@ -7245,6 +7245,7 @@ let Predicates = [UseSSE41] in {
             (BLENDVPDrr0 VR128:$src2, VR128:$src1)>;
 }
 
+let AddedComplexity = 400 in { // Prefer non-temporal versions
 let SchedRW = [WriteLoad] in {
 let Predicates = [HasAVX, NoVLX] in
 def VMOVNTDQArm : SS48I<0x2A, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
@@ -7260,6 +7261,35 @@ def MOVNTDQArm : SS48I<0x2A, MRMSrcMem, (outs VR128:$dst), (ins i128mem:$src),
                        "movntdqa\t{$src, $dst|$dst, $src}",
                        [(set VR128:$dst, (int_x86_sse41_movntdqa addr:$src))]>;
 } // SchedRW
+
+let Predicates = [HasAVX2, NoVLX] in {
+  def : Pat<(v8f32 (alignednontemporalload addr:$src)),
+            (VMOVNTDQAYrm addr:$src)>;
+  def : Pat<(v4f64 (alignednontemporalload addr:$src)),
+            (VMOVNTDQAYrm addr:$src)>;
+  def : Pat<(v4i64 (alignednontemporalload addr:$src)),
+            (VMOVNTDQAYrm addr:$src)>;
+}
+
+let Predicates = [HasAVX, NoVLX] in {
+  def : Pat<(v4f32 (alignednontemporalload addr:$src)),
+            (VMOVNTDQArm addr:$src)>;
+  def : Pat<(v2f64 (alignednontemporalload addr:$src)),
+            (VMOVNTDQArm addr:$src)>;
+  def : Pat<(v2i64 (alignednontemporalload addr:$src)),
+            (VMOVNTDQArm addr:$src)>;
+}
+
+let Predicates = [UseSSE41] in {
+  def : Pat<(v4f32 (alignednontemporalload addr:$src)),
+            (MOVNTDQArm addr:$src)>;
+  def : Pat<(v2f64 (alignednontemporalload addr:$src)),
+            (MOVNTDQArm addr:$src)>;
+  def : Pat<(v2i64 (alignednontemporalload addr:$src)),
+            (MOVNTDQArm addr:$src)>;
+}
+
+} // AddedComplexity
 
 //===----------------------------------------------------------------------===//
 // SSE4.2 - Compare Instructions

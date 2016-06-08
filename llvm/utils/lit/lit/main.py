@@ -336,6 +336,9 @@ def main(builtinParameters = {}):
                 print('  %s - %d tests' %(ts.name, len(ts_tests)))
                 print('    Source Root: %s' % ts.source_root)
                 print('    Exec Root  : %s' % ts.exec_root)
+                if ts.config.available_features:
+                    print('    Available Features : %s' % ' '.join(
+                        sorted(ts.config.available_features)))
 
         # Show the tests, if requested.
         if opts.showTests:

@@ -101,16 +101,17 @@ namespace {
 /// StratifiedInfo Attribute things.
 typedef unsigned StratifiedAttr;
 LLVM_CONSTEXPR unsigned MaxStratifiedAttrIndex = NumStratifiedAttrs;
-LLVM_CONSTEXPR unsigned AttrAllIndex = 0;
-LLVM_CONSTEXPR unsigned AttrGlobalIndex = 1;
-LLVM_CONSTEXPR unsigned AttrUnknownIndex = 2;
+LLVM_CONSTEXPR unsigned AttrEscapedIndex = 0;
+LLVM_CONSTEXPR unsigned AttrUnknownIndex = 1;
+LLVM_CONSTEXPR unsigned AttrGlobalIndex = 2;
 LLVM_CONSTEXPR unsigned AttrFirstArgIndex = 3;
 LLVM_CONSTEXPR unsigned AttrLastArgIndex = MaxStratifiedAttrIndex;
 LLVM_CONSTEXPR unsigned AttrMaxNumArgs = AttrLastArgIndex - AttrFirstArgIndex;
 
 LLVM_CONSTEXPR StratifiedAttr AttrNone = 0;
+LLVM_CONSTEXPR StratifiedAttr AttrEscaped = 1 << AttrEscapedIndex;
 LLVM_CONSTEXPR StratifiedAttr AttrUnknown = 1 << AttrUnknownIndex;
-LLVM_CONSTEXPR StratifiedAttr AttrAll = ~AttrNone;
+LLVM_CONSTEXPR StratifiedAttr AttrGlobal = 1 << AttrGlobalIndex;
 
 /// StratifiedSets call for knowledge of "direction", so this is how we
 /// represent that locally.
@@ -175,7 +176,7 @@ public:
 
   void visitPtrToIntInst(PtrToIntInst &Inst) {
     auto *Ptr = Inst.getOperand(0);
-    Output.push_back(Edge(Ptr, Ptr, EdgeType::Assign, AttrUnknown));
+    Output.push_back(Edge(Ptr, &Inst, EdgeType::Assign, AttrEscaped));
   }
 
   void visitIntToPtrInst(IntToPtrInst &Inst) {
@@ -251,7 +252,7 @@ public:
     // For now, we'll handle this like a landingpad instruction (by placing the
     // result in its own group, and having that group alias externals).
     auto *Val = &Inst;
-    Output.push_back(Edge(Val, Val, EdgeType::Assign, AttrAll));
+    Output.push_back(Edge(Val, Val, EdgeType::Assign, AttrUnknown));
   }
 
   static bool isFunctionExternal(Function *Fn) {
@@ -344,8 +345,8 @@ public:
           }
         }
         if (AddEdge)
-          Output.push_back(Edge(FuncValue, ArgVal, EdgeType::Assign,
-                                StratifiedAttrs().flip()));
+          Output.push_back(
+              Edge(FuncValue, ArgVal, EdgeType::Assign, Externals));
       }
 
       if (Parameters.size() != Arguments.size())
@@ -410,10 +411,10 @@ public:
     // The goal of the loop is in part to unify many Values into one set, so we
     // don't care if the function is void there.
     for (Value *V : Inst.arg_operands())
-      Output.push_back(Edge(&Inst, V, EdgeType::Assign, AttrAll));
+      Output.push_back(Edge(&Inst, V, EdgeType::Assign, AttrUnknown));
     if (Inst.getNumArgOperands() == 0 &&
         Inst.getType() != Type::getVoidTy(Inst.getContext()))
-      Output.push_back(Edge(&Inst, &Inst, EdgeType::Assign, AttrAll));
+      Output.push_back(Edge(&Inst, &Inst, EdgeType::Assign, AttrUnknown));
   }
 
   void visitCallInst(CallInst &Inst) { visitCallLikeInst(Inst); }
@@ -441,7 +442,7 @@ public:
     // Exceptions come from "nowhere", from our analysis' perspective.
     // So we place the instruction its own group, noting that said group may
     // alias externals
-    Output.push_back(Edge(&Inst, &Inst, EdgeType::Assign, AttrAll));
+    Output.push_back(Edge(&Inst, &Inst, EdgeType::Assign, AttrUnknown));
   }
 
   void visitInsertValueInst(InsertValueInst &Inst) {
@@ -652,11 +653,15 @@ typedef DenseMap<Value *, GraphT::Node> NodeMapT;
 // Function declarations that require types defined in the namespace above
 //===----------------------------------------------------------------------===//
 
-/// Given an argument number, returns the appropriate Attr index to set.
-static StratifiedAttr argNumberToAttrIndex(unsigned ArgNum);
+/// Given a StratifiedAttrs, returns true if it marks the corresponding values
+/// as globals or arguments
+static bool isGlobalOrArgAttr(StratifiedAttrs Attr);
 
-/// Given a Value, potentially return which AttrIndex it maps to.
-static Optional<StratifiedAttr> valueToAttrIndex(Value *Val);
+/// Given an argument number, returns the appropriate StratifiedAttr to set.
+static StratifiedAttr argNumberToAttr(unsigned ArgNum);
+
+/// Given a Value, potentially return which StratifiedAttr it maps to.
+static Optional<StratifiedAttr> valueToAttr(Value *Val);
 
 /// Gets the inverse of a given EdgeType.
 static EdgeType flipWeight(EdgeType Initial);
@@ -741,23 +746,27 @@ static bool hasUsefulEdges(ConstantExpr *CE) {
          CE->getOpcode() != Instruction::FCmp;
 }
 
-static Optional<StratifiedAttr> valueToAttrIndex(Value *Val) {
+static bool isGlobalOrArgAttr(StratifiedAttrs Attr) {
+  return Attr.reset(AttrEscapedIndex).reset(AttrUnknownIndex).any();
+}
+
+static Optional<StratifiedAttr> valueToAttr(Value *Val) {
   if (isa<GlobalValue>(Val))
-    return AttrGlobalIndex;
+    return AttrGlobal;
 
   if (auto *Arg = dyn_cast<Argument>(Val))
     // Only pointer arguments should have the argument attribute,
     // because things can't escape through scalars without us seeing a
     // cast, and thus, interaction with them doesn't matter.
     if (!Arg->hasNoAliasAttr() && Arg->getType()->isPointerTy())
-      return argNumberToAttrIndex(Arg->getArgNo());
+      return argNumberToAttr(Arg->getArgNo());
   return None;
 }
 
-static StratifiedAttr argNumberToAttrIndex(unsigned ArgNum) {
+static StratifiedAttr argNumberToAttr(unsigned ArgNum) {
   if (ArgNum >= AttrMaxNumArgs)
-    return AttrAllIndex;
-  return ArgNum + AttrFirstArgIndex;
+    return AttrUnknown;
+  return 1 << (ArgNum + AttrFirstArgIndex);
 }
 
 static EdgeType flipWeight(EdgeType Initial) {
@@ -959,9 +968,9 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
       if (canSkipAddingToSets(CurValue))
         continue;
 
-      Optional<StratifiedAttr> MaybeCurIndex = valueToAttrIndex(CurValue);
-      if (MaybeCurIndex)
-        Builder.noteAttributes(CurValue, *MaybeCurIndex);
+      Optional<StratifiedAttr> MaybeCurAttr = valueToAttr(CurValue);
+      if (MaybeCurAttr)
+        Builder.noteAttributes(CurValue, *MaybeCurAttr);
 
       for (const auto &EdgeTuple : Graph.edgesFor(Node)) {
         auto Weight = std::get<0>(EdgeTuple);
@@ -986,10 +995,10 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
         }
 
         auto Aliasing = Weight.second;
-        if (MaybeCurIndex)
-          Aliasing.set(*MaybeCurIndex);
-        if (auto MaybeOtherIndex = valueToAttrIndex(OtherValue))
-          Aliasing.set(*MaybeOtherIndex);
+        if (MaybeCurAttr)
+          Aliasing |= *MaybeCurAttr;
+        if (auto MaybeOtherAttr = valueToAttr(OtherValue))
+          Aliasing |= *MaybeOtherAttr;
         Builder.noteAttributes(CurValue, Aliasing);
         Builder.noteAttributes(OtherValue, Aliasing);
 
@@ -1007,9 +1016,9 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
     if (!Builder.add(&Arg))
       continue;
 
-    auto Attrs = valueToAttrIndex(&Arg);
-    if (Attrs.hasValue())
-      Builder.noteAttributes(&Arg, *Attrs);
+    auto Attr = valueToAttr(&Arg);
+    if (Attr.hasValue())
+      Builder.noteAttributes(&Arg, *Attr);
   }
 
   return FunctionInfo(Builder.build(), std::move(ReturnedValues));
@@ -1087,25 +1096,25 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
   auto AttrsA = Sets.getLink(SetA.Index).Attrs;
   auto AttrsB = Sets.getLink(SetB.Index).Attrs;
 
-  // Stratified set attributes are used as markets to signify whether a member
-  // of a StratifiedSet (or a member of a set above the current set) has
-  // interacted with either arguments or globals. "Interacted with" meaning its
-  // value may be different depending on the value of an argument or global. The
-  // thought behind this is that, because arguments and globals may alias each
-  // other, if AttrsA and AttrsB have touched args/globals, we must
-  // conservatively say that they alias. However, if at least one of the sets
-  // has no values that could legally be altered by changing the value of an
-  // argument or global, then we don't have to be as conservative.
-  if (AttrsA.any() && AttrsB.any())
+  // If both values are local (meaning the corresponding set has attribute
+  // AttrNone or AttrEscaped), then we know that CFLAA fully models them: they
+  // may-alias each other if and only if they are in the same set
+  // If at least one value is non-local (meaning it either is global/argument or
+  // it comes from unknown sources like integer cast), the situation becomes a
+  // bit more interesting. We follow three general rules described below:
+  // - Non-local values may alias each other
+  // - AttrNone values do not alias any non-local values
+  // - AttrEscaped values do not alias globals/arguments, but they may alias
+  // AttrUnknown values
+  if (SetA.Index == SetB.Index)
     return MayAlias;
-
-  // We currently unify things even if the accesses to them may not be in
-  // bounds, so we can't return partial alias here because we don't know whether
-  // the pointer is really within the object or not.
-  // e.g. Given an out of bounds GEP and an alloca'd pointer, we may unify the
-  // two. We can't return partial alias for this case. Since we do not currently
-  // track enough information to differentiate.
-  return SetA.Index == SetB.Index ? MayAlias : NoAlias;
+  if (AttrsA.none() || AttrsB.none())
+    return NoAlias;
+  if (AttrsA.test(AttrUnknownIndex) || AttrsB.test(AttrUnknownIndex))
+    return MayAlias;
+  if (isGlobalOrArgAttr(AttrsA) && isGlobalOrArgAttr(AttrsB))
+    return MayAlias;
+  return NoAlias;
 }
 
 char CFLAA::PassID;

@@ -65,6 +65,8 @@ public:
                  bool isExternallyInitialized = false);
 
   ~GlobalVariable() override {
+    dropAllReferences();
+
     // FIXME: needed by operator delete
     setGlobalVariableNumOperands(1);
   }

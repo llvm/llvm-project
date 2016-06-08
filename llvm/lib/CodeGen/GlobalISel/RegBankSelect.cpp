@@ -163,7 +163,9 @@ uint64_t RegBankSelect::getRepairCost(
     // the repairing.
     if (MO.isDef())
       std::swap(CurRegBank, DesiredRegBrank);
-    unsigned Cost = RBI->copyCost(*DesiredRegBrank, *CurRegBank);
+    unsigned Cost =
+        RBI->copyCost(*DesiredRegBrank, *CurRegBank,
+                      RegisterBankInfo::getSizeInBits(MO.getReg(), *MRI, *TRI));
     // TODO: use a dedicated constant for ImpossibleCost.
     if (Cost != UINT_MAX)
       return Cost;

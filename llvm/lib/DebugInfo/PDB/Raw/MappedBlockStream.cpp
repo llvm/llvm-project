@@ -78,10 +78,9 @@ bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
   }
 
   uint32_t FirstBlockAddr = BlockList[BlockNum];
-  StringRef Str = Pdb.getBlockData(FirstBlockAddr, Pdb.getBlockSize());
-  Str = Str.drop_front(OffsetInBlock);
-  Buffer =
-      ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Str.data()), Size);
+  auto Data = Pdb.getBlockData(FirstBlockAddr, Pdb.getBlockSize());
+  Data = Data.drop_front(OffsetInBlock);
+  Buffer = ArrayRef<uint8_t>(Data.data(), Size);
   return true;
 }
 
@@ -103,9 +102,9 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
   while (BytesLeft > 0) {
     uint32_t StreamBlockAddr = BlockList[BlockNum];
 
-    StringRef Data = Pdb.getBlockData(StreamBlockAddr, Pdb.getBlockSize());
+    auto Data = Pdb.getBlockData(StreamBlockAddr, Pdb.getBlockSize());
 
-    const char *ChunkStart = Data.data() + OffsetInBlock;
+    const uint8_t *ChunkStart = Data.data() + OffsetInBlock;
     uint32_t BytesInChunk =
         std::min(BytesLeft, Pdb.getBlockSize() - OffsetInBlock);
     ::memcpy(WriteBuffer + BytesWritten, ChunkStart, BytesInChunk);

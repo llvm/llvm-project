@@ -26,8 +26,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
-#include "BranchFolding.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -117,12 +115,6 @@ static cl::opt<unsigned> MisfetchCost(
 static cl::opt<unsigned> JumpInstCost("jump-inst-cost",
                                       cl::desc("Cost of jump instructions."),
                                       cl::init(1), cl::Hidden);
-
-static cl::opt<bool>
-BranchFoldPlacement("branch-fold-placement",
-              cl::desc("Perform branch folding during placement. "
-                       "Reduces code size."),
-              cl::init(true), cl::Hidden);
 
 extern cl::opt<unsigned> StaticLikelyProb;
 
@@ -240,10 +232,10 @@ class MachineBlockPlacement : public MachineFunctionPass {
   const MachineBranchProbabilityInfo *MBPI;
 
   /// \brief A handle to the function-wide block frequency pass.
-  std::unique_ptr<BranchFolder::MBFIWrapper> MBFI;
+  const MachineBlockFrequencyInfo *MBFI;
 
   /// \brief A handle to the loop info.
-  MachineLoopInfo *MLI;
+  const MachineLoopInfo *MLI;
 
   /// \brief A handle to the target's instruction info.
   const TargetInstrInfo *TII;
@@ -331,7 +323,6 @@ public:
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineDominatorTree>();
     AU.addRequired<MachineLoopInfo>();
-    AU.addRequired<TargetPassConfig>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -1471,8 +1462,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &F) {
     return false;
 
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
-  MBFI = llvm::make_unique<BranchFolder::MBFIWrapper>(
-      getAnalysis<MachineBlockFrequencyInfo>());
+  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
   TII = F.getSubtarget().getInstrInfo();
   TLI = F.getSubtarget().getTargetLowering();
@@ -1480,29 +1470,6 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &F) {
   assert(BlockToChain.empty());
 
   buildCFGChains(F);
-
-  // Changing the layout can create new tail merging opportunities.
-  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
-  // TailMerge can create jump into if branches that make CFG irreducible for
-  // HW that requires structurized CFG.
-  bool EnableTailMerge = !F.getTarget().requiresStructuredCFG() &&
-                         PassConfig->getEnableTailMerge() &&
-                         BranchFoldPlacement;
-  // No tail merging opportunities if the block number is less than four.
-  if (F.size() > 3 && EnableTailMerge) {
-    BranchFolder BF(/*EnableTailMerge=*/true, /*CommonHoist=*/false, *MBFI,
-                    *MBPI);
-
-    if (BF.OptimizeFunction(F, TII, F.getSubtarget().getRegisterInfo(),
-                            getAnalysisIfAvailable<MachineModuleInfo>(), MLI,
-                            /*AfterBlockPlacement=*/true)) {
-      // Redo the layout if tail merging creates/removes/moves blocks.
-      BlockToChain.clear();
-      ChainAllocator.DestroyAll();
-      buildCFGChains(F);
-    }
-  }
-
   optimizeBranches(F);
   alignBlocks(F);
 

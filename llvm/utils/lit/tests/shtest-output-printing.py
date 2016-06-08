@@ -1,7 +1,7 @@
 # Check the various features of the ShTest format.
 #
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-output-printing > %t.out
-# RUN: FileCheck < %t.out %s
+# RUN: FileCheck --input-file %t.out %s
 #
 # END.
 
@@ -21,6 +21,8 @@
 # CHECK-NEXT: # command output:
 # CHECK-NEXT: hi
 #
-# CHECK:      $ "false"
-# CHECK-NEXT: note: command had no output on stdout or stderr
+# CHECK:      $ "wc" "missing-file"
+# CHECK-NEXT: # redirected output from '{{.*}}/basic.txt.tmp.out':
+# CHECK-NEXT: missing-file{{.*}} No such file or directory
+# CHECK:      note: command had no output on stdout or stderr
 # CHECK-NEXT: error: command failed with exit status: 1

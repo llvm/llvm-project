@@ -35,30 +35,6 @@ using namespace llvm;
 const unsigned RegisterBankInfo::DefaultMappingID = UINT_MAX;
 const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
 
-/// Get the size in bits of the \p Reg.
-///
-/// \pre \p Reg != 0 (NoRegister).
-static unsigned getSizeInBits(unsigned Reg, const MachineRegisterInfo &MRI,
-                              const TargetRegisterInfo &TRI) {
-  const TargetRegisterClass *RC = nullptr;
-  if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
-    // The size is not directly available for physical registers.
-    // Instead, we need to access a register class that contains Reg and
-    // get the size of that register class.
-    RC = TRI.getMinimalPhysRegClass(Reg);
-  } else {
-    unsigned RegSize = MRI.getSize(Reg);
-    // If Reg is not a generic register, query the register class to
-    // get its size.
-    if (RegSize)
-      return RegSize;
-    // Since Reg is not a generic register, it must have a register class.
-    RC = MRI.getRegClass(Reg);
-  }
-  assert(RC && "Unable to deduce the register class");
-  return RC->getSize() * 8;
-}
-
 //------------------------------------------------------------------------------
 // RegisterBankInfo implementation.
 //------------------------------------------------------------------------------
@@ -354,6 +330,28 @@ RegisterBankInfo::InstructionMappings
 RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
   // No alternative for MI.
   return InstructionMappings();
+}
+
+unsigned RegisterBankInfo::getSizeInBits(unsigned Reg,
+                                         const MachineRegisterInfo &MRI,
+                                         const TargetRegisterInfo &TRI) {
+  const TargetRegisterClass *RC = nullptr;
+  if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
+    // The size is not directly available for physical registers.
+    // Instead, we need to access a register class that contains Reg and
+    // get the size of that register class.
+    RC = TRI.getMinimalPhysRegClass(Reg);
+  } else {
+    unsigned RegSize = MRI.getSize(Reg);
+    // If Reg is not a generic register, query the register class to
+    // get its size.
+    if (RegSize)
+      return RegSize;
+    // Since Reg is not a generic register, it must have a register class.
+    RC = MRI.getRegClass(Reg);
+  }
+  assert(RC && "Unable to deduce the register class");
+  return RC->getSize() * 8;
 }
 
 //------------------------------------------------------------------------------

@@ -116,12 +116,14 @@ namespace {
   { ARM::t2LDRHs, ARM::tLDRHr,  0,             0,   0,   1,   0,  0,0, 0,1,0 },
   { ARM::t2LDRSBs,ARM::tLDRSB,  0,             0,   0,   1,   0,  0,0, 0,1,0 },
   { ARM::t2LDRSHs,ARM::tLDRSH,  0,             0,   0,   1,   0,  0,0, 0,1,0 },
+  { ARM::t2LDR_POST,ARM::tLDMIA_UPD,0,         0,   0,   1,   0,  0,0, 0,1,0 },
   { ARM::t2STRi12,ARM::tSTRi,   ARM::tSTRspi,  5,   8,   1,   0,  0,0, 0,1,0 },
   { ARM::t2STRs,  ARM::tSTRr,   0,             0,   0,   1,   0,  0,0, 0,1,0 },
   { ARM::t2STRBi12,ARM::tSTRBi, 0,             5,   0,   1,   0,  0,0, 0,1,0 },
   { ARM::t2STRBs, ARM::tSTRBr,  0,             0,   0,   1,   0,  0,0, 0,1,0 },
   { ARM::t2STRHi12,ARM::tSTRHi, 0,             5,   0,   1,   0,  0,0, 0,1,0 },
   { ARM::t2STRHs, ARM::tSTRHr,  0,             0,   0,   1,   0,  0,0, 0,1,0 },
+  { ARM::t2STR_POST,ARM::tSTMIA_UPD,0,         0,   0,   1,   0,  0,0, 0,1,0 },
 
   { ARM::t2LDMIA, ARM::tLDMIA,  0,             0,   0,   1,   1,  1,1, 0,1,0 },
   { ARM::t2LDMIA_RET,0,         ARM::tPOP_RET, 0,   0,   1,   1,  1,1, 0,1,0 },
@@ -423,6 +425,46 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     HasShift = true;
     OpNum = 4;
     break;
+  case ARM::t2LDR_POST:
+  case ARM::t2STR_POST: {
+    if (!MBB.getParent()->getFunction()->optForMinSize())
+      return false;
+
+    // We're creating a completely different type of load/store - LDM from LDR.
+    // For this reason we can't reuse the logic at the end of this function; we
+    // have to implement the MI building here.
+    bool IsStore = Entry.WideOpc == ARM::t2STR_POST;
+    unsigned Rt = MI->getOperand(IsStore ? 1 : 0).getReg();
+    unsigned Rn = MI->getOperand(IsStore ? 0 : 1).getReg();
+    unsigned Offset = MI->getOperand(3).getImm();
+    unsigned PredImm = MI->getOperand(4).getImm();
+    unsigned PredReg = MI->getOperand(5).getReg();
+    assert(isARMLowRegister(Rt));
+    assert(isARMLowRegister(Rn));
+
+    if (Offset != 4)
+      return false;
+
+    // Add the 16-bit load / store instruction.
+    DebugLoc dl = MI->getDebugLoc();
+    auto MIB = BuildMI(MBB, MI, dl, TII->get(Entry.NarrowOpc1))
+                   .addReg(Rn, RegState::Define)
+                   .addReg(Rn)
+                   .addImm(PredImm)
+                   .addReg(PredReg)
+                   .addReg(Rt, IsStore ? 0 : RegState::Define);
+
+    // Transfer memoperands.
+    MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+
+    // Transfer MI flags.
+    MIB.setMIFlags(MI->getFlags());
+
+    // Kill the old instruction.
+    MI->eraseFromParent();
+    ++NumLdSts;
+    return true;
+  }
   case ARM::t2LDMIA: {
     unsigned BaseReg = MI->getOperand(0).getReg();
     assert(isARMLowRegister(BaseReg));

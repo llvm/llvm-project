@@ -113,12 +113,14 @@ class TimeoutHelper(object):
 class ShellCommandResult(object):
     """Captures the result of an individual command."""
 
-    def __init__(self, command, stdout, stderr, exitCode, timeoutReached):
+    def __init__(self, command, stdout, stderr, exitCode, timeoutReached,
+                 outputFiles = []):
         self.command = command
         self.stdout = stdout
         self.stderr = stderr
         self.exitCode = exitCode
         self.timeoutReached = timeoutReached
+        self.outputFiles = list(outputFiles)
                
 def executeShCmd(cmd, shenv, results, timeout=0):
     """
@@ -253,6 +255,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 result = subprocess.PIPE
             else:
                 if r[2] is None:
+                    redir_filename = None
                     if kAvoidDevNull and r[0] == '/dev/null':
                         r[2] = tempfile.TemporaryFile(mode=r[1])
                     elif kIsWindows and r[0] == '/dev/tty':
@@ -268,7 +271,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     # FIXME: Actually, this is probably an instance of PR6753.
                     if r[1] == 'a':
                         r[2].seek(0, 2)
-                    opened_files.append(r[2])
+                    opened_files.append(tuple(r) + (redir_filename,))
                 result = r[2]
             final_redirects.append(result)
 
@@ -342,7 +345,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     # need to release any handles we may have on the temporary files (important
     # on Win32, for example). Since we have already spawned the subprocess, our
     # handles have already been transferred so we do not need them anymore.
-    for f in opened_files:
+    for (name, mode, f, path) in opened_files:
         f.close()
 
     # FIXME: There is probably still deadlock potential here. Yawn.
@@ -393,8 +396,21 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         except:
             err = str(err)
 
+        # Gather the redirected output files.
+        output_files = []
+        for (name, mode, f, path) in sorted(opened_files):
+            if path is not None and mode in ('w', 'a'):
+                try:
+                    with open(path) as f:
+                        data = f.read()
+                except:
+                    data = None
+                if data != None:
+                    output_files.append((name, path, data))
+            
         results.append(ShellCommandResult(
-            cmd.commands[i], out, err, res, timeoutHelper.timeoutReached()))
+            cmd.commands[i], out, err, res, timeoutHelper.timeoutReached(),
+            output_files))
         if cmd.pipe_err:
             # Python treats the exit code as a signed char.
             if exitCode is None:
@@ -455,6 +471,19 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
             continue
 
         # Otherwise, something failed or was printed, show it.
+
+        # Add the command output, if redirected.
+        for (name, path, data) in result.outputFiles:
+            if data.strip():
+                out += "# redirected output from %r:\n" % (name,)
+                data = to_string(data.decode('utf-8', errors='replace'))
+                if len(data) > 1024:
+                    out += data[:1024] + "\n...\n"
+                    out += "note: data was truncated\n"
+                else:
+                    out += data
+                out += "\n"
+                    
         if result.stdout.strip():
             out += '# command output:\n%s\n' % (result.stdout,)
         if result.stderr.strip():

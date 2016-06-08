@@ -138,11 +138,14 @@ PDBFile::getStreamBlockList(uint32_t StreamIndex) const {
   return Array;
 }
 
-StringRef PDBFile::getBlockData(uint32_t BlockIndex, uint32_t NumBytes) const {
+ArrayRef<uint8_t> PDBFile::getBlockData(uint32_t BlockIndex,
+                                        uint32_t NumBytes) const {
   uint64_t StreamBlockOffset = blockToOffset(BlockIndex, getBlockSize());
 
-  return StringRef(Context->Buffer->getBufferStart() + StreamBlockOffset,
-                   NumBytes);
+  return ArrayRef<uint8_t>(
+      reinterpret_cast<const uint8_t *>(Context->Buffer->getBufferStart()) +
+          StreamBlockOffset,
+      NumBytes);
 }
 
 Error PDBFile::parseFileHeaders() {
@@ -210,10 +213,7 @@ Error PDBFile::parseStreamData() {
   if (DirectoryStream)
     return Error::success();
 
-  // bool SeenNumStreams = false;
   uint32_t NumStreams = 0;
-  // uint32_t StreamIdx = 0;
-  // uint64_t DirectoryBytesRead = 0;
 
   const SuperBlock *SB = Context->SB;
 
@@ -325,6 +325,9 @@ Expected<NameHashTable &> PDBFile::getStringTable() {
 
     if (NameStreamIndex == 0)
       return make_error<RawError>(raw_error_code::no_stream);
+    if (NameStreamIndex >= getNumStreams())
+      return make_error<RawError>(raw_error_code::no_stream);
+
     auto SD = llvm::make_unique<IndexedStreamData>(NameStreamIndex, *this);
     auto S = llvm::make_unique<MappedBlockStream>(std::move(SD), *this);
     codeview::StreamReader Reader(*S);

@@ -332,6 +332,19 @@ main_body:
   ret <4 x float> %tex
 }
 
+; Check prolog shaders.
+;
+; CHECK-LABEL: {{^}}test_prolog_1:
+; CHECK: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_wqm_b64 exec, exec
+; CHECK: v_add_f32_e32 v0,
+; CHECK: s_and_b64 exec, exec, [[ORIG]]
+define amdgpu_ps float @test_prolog_1(float %a, float %b) #4 {
+main_body:
+  %s = fadd float %a, %b
+  ret float %s
+}
+
 declare void @llvm.amdgcn.image.store.v4i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 
 declare <4 x float> @llvm.amdgcn.image.load.v4i32(<4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #2
@@ -345,3 +358,4 @@ declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readonly }
 attributes #3 = { nounwind readnone }
+attributes #4 = { "amdgpu-ps-wqm-outputs" }

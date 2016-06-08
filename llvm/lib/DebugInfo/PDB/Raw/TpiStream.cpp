@@ -104,6 +104,10 @@ Error TpiStream::reload() {
     return EC;
 
   // Hash indices, hash values, etc come from the hash stream.
+  if (Header->HashStreamIndex >= Pdb.getNumStreams())
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid TPI hash stream index.");
+
   HashStream.reset(new MappedBlockStream(
       llvm::make_unique<IndexedStreamData>(Header->HashStreamIndex, Pdb), Pdb));
   codeview::StreamReader HSR(*HashStream);
@@ -152,6 +156,9 @@ uint16_t TpiStream::getTypeHashStreamIndex() const {
 uint16_t TpiStream::getTypeHashStreamAuxIndex() const {
   return Header->HashAuxStreamIndex;
 }
+
+uint32_t TpiStream::NumHashBuckets() const { return Header->NumHashBuckets; }
+uint32_t TpiStream::getHashKeySize() const { return Header->HashKeySize; }
 
 codeview::FixedStreamArray<support::ulittle32_t>
 TpiStream::getHashValues() const {

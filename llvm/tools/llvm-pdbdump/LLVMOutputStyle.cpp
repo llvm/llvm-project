@@ -191,9 +191,11 @@ Error LLVMOutputStyle::dumpStreamData() {
   uint32_t StreamCount = File.getNumStreams();
   StringRef DumpStreamStr = opts::DumpStreamDataIdx;
   uint32_t DumpStreamNum;
-  if (DumpStreamStr.getAsInteger(/*Radix=*/0U, DumpStreamNum) ||
-      DumpStreamNum >= StreamCount)
+  if (DumpStreamStr.getAsInteger(/*Radix=*/0U, DumpStreamNum))
     return Error::success();
+
+  if (DumpStreamNum >= StreamCount)
+    return make_error<RawError>(raw_error_code::no_stream);
 
   MappedBlockStream S(llvm::make_unique<IndexedStreamData>(DumpStreamNum, File),
                       File);
@@ -238,6 +240,8 @@ Error LLVMOutputStyle::dumpNamedStream() {
   InfoStream &IS = InfoS.get();
 
   uint32_t NameStreamIndex = IS.getNamedStreamIndex(opts::DumpStreamDataName);
+  if (NameStreamIndex == 0 || NameStreamIndex >= File.getNumStreams())
+    return make_error<RawError>(raw_error_code::no_stream);
 
   if (NameStreamIndex != 0) {
     std::string Name("Stream '");
@@ -276,6 +280,8 @@ static void dumpTpiHash(ScopedPrinter &P, TpiStream &Tpi) {
   if (!opts::DumpTpiHash)
     return;
   DictScope DD(P, "Hash");
+  P.printNumber("Number of Hash Buckets", Tpi.NumHashBuckets());
+  P.printNumber("Hash Key Size", Tpi.getHashKeySize());
   codeview::FixedStreamArray<support::ulittle32_t> S = Tpi.getHashValues();
   P.printList("Values", Tpi.getHashValues());
   P.printList("Type Index Offsets", Tpi.getTypeIndexOffsets(),

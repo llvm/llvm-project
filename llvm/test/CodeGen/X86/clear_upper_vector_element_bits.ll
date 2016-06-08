@@ -347,16 +347,11 @@ define <4 x i32> @_clearupper4xi32b(<4 x i32>) nounwind {
 ; SSE-NEXT:    pinsrw $7, %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: _clearupper4xi32b:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: _clearupper4xi32b:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[4,5],zero,zero,xmm0[8,9],zero,zero,xmm0[12,13],zero,zero
-; AVX2-NEXT:    retq
+; AVX-LABEL: _clearupper4xi32b:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; AVX-NEXT:    retq
   %x16 = bitcast <4 x i32> %0 to <8 x i16>
   %r0 = insertelement <8 x i16> %x16, i16 zeroinitializer, i32 1
   %r1 = insertelement <8 x i16> %r0,  i16 zeroinitializer, i32 3

@@ -215,6 +215,8 @@ public:
   void RecordSuccessfulMutationSequence();
   /// Mutates data by invoking user-provided mutator.
   size_t Mutate_Custom(uint8_t *Data, size_t Size, size_t MaxSize);
+  /// Mutates data by invoking user-provided crossover.
+  size_t Mutate_CustomCrossOver(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by shuffling bytes.
   size_t Mutate_ShuffleBytes(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by erasing a byte.
@@ -277,9 +279,6 @@ private:
   size_t MutateImpl(uint8_t *Data, size_t Size, size_t MaxSize,
                     const std::vector<Mutator> &Mutators);
 
-  // Interface to functions that may or may not be available.
-  const ExternalFunctions EF;
-
   Random &Rand;
   // Dictionary provided by the user via -dict=DICT_FILE.
   Dictionary ManualDictionary;
@@ -331,6 +330,7 @@ public:
     bool PrintFinalStats = false;
     bool DetectLeaks = true;
     bool TruncateUnits = false;
+    bool PruneCorpus = true;
   };
 
   // Aggregates all available coverage measurements.
@@ -480,11 +480,10 @@ private:
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;
-
-  // Interface to functions that may or may not be available.
-  // For future use, currently not used.
-  const ExternalFunctions EF;
 };
+
+// Global interface to functions that may or may not be available.
+extern ExternalFunctions *EF;
 
 }; // namespace fuzzer
 

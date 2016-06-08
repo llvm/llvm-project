@@ -82,3 +82,36 @@ CHECK-NEXT:       Name: VERSION2
 CHECK-NEXT:     }
 CHECK-NEXT:   ]
 CHECK-NEXT: }
+
+RUN: llvm-readobj -V %p/Inputs/verneed.elf-x86-64 | FileCheck %s --check-prefix=VERNEED
+
+VERNEED:       SHT_GNU_verneed {
+VERNEED-NEXT:   Dependency {
+VERNEED-NEXT:     Version: 1
+VERNEED-NEXT:     Count: 2
+VERNEED-NEXT:     FileName: verneed1.so.0
+VERNEED-NEXT:     Entry {
+VERNEED-NEXT:       Hash: 1938
+VERNEED-NEXT:       Flags: 0x0
+VERNEED-NEXT:       Index: 3
+VERNEED-NEXT:       Name: v2
+VERNEED-NEXT:     }
+VERNEED-NEXT:     Entry {
+VERNEED-NEXT:       Hash: 1939
+VERNEED-NEXT:       Flags: 0x0
+VERNEED-NEXT:       Index: 2
+VERNEED-NEXT:       Name: v3
+VERNEED-NEXT:     }
+VERNEED-NEXT:   }
+VERNEED-NEXT:   Dependency {
+VERNEED-NEXT:     Version: 1
+VERNEED-NEXT:     Count: 1
+VERNEED-NEXT:     FileName: verneed2.so.0
+VERNEED-NEXT:     Entry {
+VERNEED-NEXT:       Hash: 1937
+VERNEED-NEXT:       Flags: 0x0
+VERNEED-NEXT:       Index: 4
+VERNEED-NEXT:       Name: v1
+VERNEED-NEXT:     }
+VERNEED-NEXT:   }
+VERNEED-NEXT: }

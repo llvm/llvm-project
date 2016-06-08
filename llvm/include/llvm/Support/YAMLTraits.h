@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
@@ -854,6 +855,32 @@ struct ScalarTraits<double> {
   static void output(const double &, void*, llvm::raw_ostream &);
   static StringRef input(StringRef, void*, double &);
   static bool mustQuote(StringRef) { return false; }
+};
+
+// For endian types, we just use the existing ScalarTraits for the underlying
+// type.  This way endian aware types are supported whenever a ScalarTraits
+// is defined for the underlying type.
+template <typename value_type, support::endianness endian, size_t alignment>
+struct ScalarTraits<support::detail::packed_endian_specific_integral<
+    value_type, endian, alignment>> {
+  typedef support::detail::packed_endian_specific_integral<value_type, endian,
+                                                           alignment>
+      endian_type;
+
+  static void output(const endian_type &E, void *Ctx,
+                     llvm::raw_ostream &Stream) {
+    ScalarTraits<value_type>::output(static_cast<value_type>(E), Ctx, Stream);
+  }
+  static StringRef input(StringRef Str, void *Ctx, endian_type &E) {
+    value_type V;
+    auto R = ScalarTraits<value_type>::input(Str, Ctx, V);
+    E = static_cast<endian_type>(V);
+    return R;
+  }
+
+  static bool mustQuote(StringRef Str) {
+    return ScalarTraits<value_type>::mustQuote(Str);
+  }
 };
 
 // Utility for use within MappingTraits<>::mapping() method

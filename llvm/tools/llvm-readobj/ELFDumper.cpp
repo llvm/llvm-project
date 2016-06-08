@@ -520,6 +520,11 @@ static void printVersionSymbolSection(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
   }
 }
 
+static const EnumEntry<unsigned> SymVersionFlags[] = {
+    {"Base", "BASE", VER_FLG_BASE},
+    {"Weak", "WEAK", VER_FLG_WEAK},
+    {"Info", "INFO", VER_FLG_INFO}};
+
 template <typename ELFO, class ELFT>
 static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
                                           const ELFO *Obj,
@@ -568,12 +573,62 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
   }
 }
 
+template <typename ELFO, class ELFT>
+static void printVersionDependencySection(ELFDumper<ELFT> *Dumper,
+                                          const ELFO *Obj,
+                                          const typename ELFO::Elf_Shdr *Sec,
+                                          ScopedPrinter &W) {
+  typedef typename ELFO::Elf_Verneed VerNeed;
+  typedef typename ELFO::Elf_Vernaux VernAux;
+
+  DictScope SD(W, "SHT_GNU_verneed");
+  if (!Sec)
+    return;
+
+  unsigned VerNeedNum = 0;
+  for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table())
+    if (Dyn.d_tag == DT_VERNEEDNUM)
+      VerNeedNum = Dyn.d_un.d_val;
+
+  const uint8_t *SecData = (const uint8_t *)Obj->base() + Sec->sh_offset;
+  const typename ELFO::Elf_Shdr *StrTab =
+      unwrapOrError(Obj->getSection(Sec->sh_link));
+
+  const uint8_t *P = SecData;
+  for (unsigned I = 0; I < VerNeedNum; ++I) {
+    const VerNeed *Need = reinterpret_cast<const VerNeed *>(P);
+    DictScope Entry(W, "Dependency");
+    W.printNumber("Version", Need->vn_version);
+    W.printNumber("Count", Need->vn_cnt);
+    W.printString("FileName",
+                  StringRef((const char *)(Obj->base() + StrTab->sh_offset +
+                                           Need->vn_file)));
+
+    const uint8_t *PAux = P + Need->vn_aux;
+    for (unsigned J = 0; J < Need->vn_cnt; ++J) {
+      const VernAux *Aux = reinterpret_cast<const VernAux *>(PAux);
+      DictScope Entry(W, "Entry");
+      W.printNumber("Hash", Aux->vna_hash);
+      W.printEnum("Flags", Aux->vna_flags, makeArrayRef(SymVersionFlags));
+      W.printNumber("Index", Aux->vna_other);
+      W.printString("Name",
+                    StringRef((const char *)(Obj->base() + StrTab->sh_offset +
+                                             Aux->vna_name)));
+      PAux += Aux->vna_next;
+    }
+    P += Need->vn_next;
+  }
+}
+
 template <typename ELFT> void ELFDumper<ELFT>::printVersionInfo() {
   // Dump version symbol section.
   printVersionSymbolSection(this, Obj, dot_gnu_version_sec, W);
 
   // Dump version definition section.
   printVersionDefinitionSection(this, Obj, dot_gnu_version_d_sec, W);
+
+  // Dump version dependency section.
+  printVersionDependencySection(this, Obj, dot_gnu_version_r_sec, W);
 }
 
 template <typename ELFT>

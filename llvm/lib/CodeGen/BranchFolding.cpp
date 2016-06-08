@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -100,9 +99,8 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
   // HW that requires structurized CFG.
   bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
                          PassConfig->getEnableTailMerge();
-  BranchFolder::MBFIWrapper MBBFreqInfo(
-      getAnalysis<MachineBlockFrequencyInfo>());
-  BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
+  BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true,
+                      getAnalysis<MachineBlockFrequencyInfo>(),
                       getAnalysis<MachineBranchProbabilityInfo>());
   return Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
                                  MF.getSubtarget().getRegisterInfo(),
@@ -110,7 +108,7 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
 }
 
 BranchFolder::BranchFolder(bool defaultEnableTailMerge, bool CommonHoist,
-                           MBFIWrapper &FreqInfo,
+                           const MachineBlockFrequencyInfo &FreqInfo,
                            const MachineBranchProbabilityInfo &ProbInfo)
     : EnableHoistCommonCode(CommonHoist), MBBFreqInfo(FreqInfo),
       MBPI(ProbInfo) {
@@ -138,8 +136,6 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   // Remove the block.
   MF->erase(MBB);
   FuncletMembership.erase(MBB);
-  if (MLI)
-    MLI->removeBlock(MBB);
 }
 
 /// OptimizeImpDefsBlock - If a basic block is just a bunch of implicit_def
@@ -196,22 +192,18 @@ bool BranchFolder::OptimizeImpDefsBlock(MachineBasicBlock *MBB) {
 }
 
 /// OptimizeFunction - Perhaps branch folding, tail merging and other
-/// CFG optimizations on the given function.  Block placement changes the layout
-/// and may create new tail merging opportunities.
+/// CFG optimizations on the given function.
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
                                     const TargetInstrInfo *tii,
                                     const TargetRegisterInfo *tri,
-                                    MachineModuleInfo *mmi,
-                                    MachineLoopInfo *mli, bool AfterPlacement) {
+                                    MachineModuleInfo *mmi) {
   if (!tii) return false;
 
   TriedMerging.clear();
 
-  AfterBlockPlacement = AfterPlacement;
   TII = tii;
   TRI = tri;
   MMI = mmi;
-  MLI = mli;
   RS = nullptr;
 
   // Use a RegScavenger to help update liveness when required.
@@ -237,10 +229,7 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   bool MadeChangeThisIteration = true;
   while (MadeChangeThisIteration) {
     MadeChangeThisIteration    = TailMergeBlocks(MF);
-    // No need to clean up if tail merging does not change anything after the
-    // block placement.
-    if (!AfterBlockPlacement || MadeChangeThisIteration)
-      MadeChangeThisIteration |= OptimizeBranches(MF);
+    MadeChangeThisIteration   |= OptimizeBranches(MF);
     if (EnableHoistCommonCode)
       MadeChangeThisIteration |= HoistCommonCode(MF);
     MadeChange |= MadeChangeThisIteration;
@@ -457,11 +446,6 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
   // Splice the code over.
   NewMBB->splice(NewMBB->end(), &CurMBB, BBI1, CurMBB.end());
 
-  // NewMBB belongs to the same loop as CurMBB.
-  if (MLI) 
-    if (MachineLoop *ML = MLI->getLoopFor(&CurMBB))
-      ML->addBasicBlockToLoop(NewMBB, MLI->getBase());
-
   // NewMBB inherits CurMBB's block frequency.
   MBBFreqInfo.setBlockFreq(NewMBB, MBBFreqInfo.getBlockFreq(&CurMBB));
 
@@ -554,18 +538,6 @@ BranchFolder::MBFIWrapper::getBlockFreq(const MachineBasicBlock *MBB) const {
 void BranchFolder::MBFIWrapper::setBlockFreq(const MachineBasicBlock *MBB,
                                              BlockFrequency F) {
   MergedBBFreq[MBB] = F;
-}
-
-raw_ostream &
-BranchFolder::MBFIWrapper::printBlockFreq(raw_ostream &OS,
-                                          const MachineBasicBlock *MBB) const {
-  return MBFI.printBlockFreq(OS, getBlockFreq(MBB));
-}
-
-raw_ostream &
-BranchFolder::MBFIWrapper::printBlockFreq(raw_ostream &OS,
-                                          const BlockFrequency Freq) const {
-  return MBFI.printBlockFreq(OS, Freq);
 }
 
 /// CountTerminators - Count the number of terminators in the given
@@ -949,27 +921,23 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
   if (!EnableTailMerge) return MadeChange;
 
   // First find blocks with no successors.
-  // Block placement does not create new tail merging opportunities for these
-  // blocks.
-  if (!AfterBlockPlacement) {
-    MergePotentials.clear();
-    for (MachineBasicBlock &MBB : MF) {
-      if (MergePotentials.size() == TailMergeThreshold)
-        break;
-      if (!TriedMerging.count(&MBB) && MBB.succ_empty())
-        MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(MBB), &MBB));
-    }
-
-    // If this is a large problem, avoid visiting the same basic blocks
-    // multiple times.
+  MergePotentials.clear();
+  for (MachineBasicBlock &MBB : MF) {
     if (MergePotentials.size() == TailMergeThreshold)
-      for (unsigned i = 0, e = MergePotentials.size(); i != e; ++i)
-        TriedMerging.insert(MergePotentials[i].getBlock());
-
-    // See if we can do any tail merging on those.
-    if (MergePotentials.size() >= 2)
-      MadeChange |= TryTailMergeBlocks(nullptr, nullptr);
+      break;
+    if (!TriedMerging.count(&MBB) && MBB.succ_empty())
+      MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(MBB), &MBB));
   }
+
+  // If this is a large problem, avoid visiting the same basic blocks
+  // multiple times.
+  if (MergePotentials.size() == TailMergeThreshold)
+    for (unsigned i = 0, e = MergePotentials.size(); i != e; ++i)
+      TriedMerging.insert(MergePotentials[i].getBlock());
+
+  // See if we can do any tail merging on those.
+  if (MergePotentials.size() >= 2)
+    MadeChange |= TryTailMergeBlocks(nullptr, nullptr);
 
   // Look at blocks (IBB) with multiple predecessors (PBB).
   // We change each predecessor to a canonical form, by
@@ -1015,17 +983,6 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
       // Skip blocks which may jump to a landing pad. Can't tail merge these.
       if (PBB->hasEHPadSuccessor())
         continue;
-
-      // Bail out if the loop header (IBB) is not the top of the loop chain
-      // after the block placement.  Otherwise, the common tail of IBB's
-      // predecessors may become the loop top if block placement is called again
-      // and the predecessors may branch to this common tail.
-      // FIXME: Relaxed this check if the algorithm of finding loop top is
-      // changed in MBP.
-      if (AfterBlockPlacement && MLI)
-        if (MachineLoop *ML = MLI->getLoopFor(IBB))
-          if (IBB == ML->getHeader() && ML == MLI->getLoopFor(PBB))
-            continue;
 
       MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
       SmallVector<MachineOperand, 4> Cond;

@@ -294,6 +294,8 @@ bool isRawDumpEnabled() {
     return true;
   if (opts::DumpIpiRecordBytes)
     return true;
+  if (opts::DumpSectionHeaders)
+    return true;
   if (opts::DumpSectionContribs)
     return true;
   if (opts::DumpSectionMap)

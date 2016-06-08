@@ -112,7 +112,7 @@ def RetCC_PPC64_ELF_FIS : CallingConv<[
   CCIfType<[i8],   CCPromoteToType<i64>>,
   CCIfType<[i16],  CCPromoteToType<i64>>,
   CCIfType<[i32],  CCPromoteToType<i64>>,
-  CCIfType<[i64],  CCAssignToReg<[X3, X4]>>,
+  CCIfType<[i64],  CCAssignToReg<[X3, X4, X5, X6]>>,
   CCIfType<[i128], CCAssignToReg<[X3, X4, X5, X6]>>,
   CCIfType<[f32],  CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
   CCIfType<[f64],  CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
