@@ -183,10 +183,10 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
       this);
 
   // Matchers for enum declarations.
-  MatchFinder->addMatcher(
-      enumDecl(CommonFilter, anyOf(HasNSOrTUCtxMatcher, ExternCMatcher))
-          .bind("decl"),
-      this);
+  MatchFinder->addMatcher(enumDecl(CommonFilter, isDefinition(),
+                                   anyOf(HasNSOrTUCtxMatcher, ExternCMatcher))
+                              .bind("decl"),
+                          this);
 
   // Matchers for enum constant declarations.
   // We only match the enum constants in non-scoped enum declarations which are

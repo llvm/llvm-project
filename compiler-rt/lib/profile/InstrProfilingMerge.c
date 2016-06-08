@@ -19,6 +19,22 @@
 
 COMPILER_RT_WEAK void (*VPMergeHook)(ValueProfData *,
                                      __llvm_profile_data *) = NULL;
+COMPILER_RT_VISIBILITY
+uint64_t lprofGetLoadModuleSignature() {
+  /* A very fast way to compute a module signature.  */
+  uint64_t CounterSize = (uint64_t)(__llvm_profile_end_counters() -
+                                    __llvm_profile_begin_counters());
+  uint64_t DataSize = __llvm_profile_get_data_size(__llvm_profile_begin_data(),
+                                                   __llvm_profile_end_data());
+  uint64_t NamesSize =
+      (uint64_t)(__llvm_profile_end_names() - __llvm_profile_begin_names());
+  uint64_t NumVnodes =
+      (uint64_t)(__llvm_profile_end_vnodes() - __llvm_profile_begin_vnodes());
+  const __llvm_profile_data *FirstD = __llvm_profile_begin_data();
+
+  return (NamesSize << 40) + (CounterSize << 30) + (DataSize << 20) +
+         (NumVnodes << 10) + (DataSize > 0 ? FirstD->NameRef : 0);
+}
 
 /* Returns 1 if profile is not structurally compatible.  */
 COMPILER_RT_VISIBILITY
@@ -30,6 +46,9 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header));
   SrcDataEnd = SrcDataStart + Header->DataSize;
+
+  if (ProfileSize < sizeof(__llvm_profile_header))
+    return 1;
 
   /* Check the header first.  */
   if (Header->Magic != __llvm_profile_get_magic() ||

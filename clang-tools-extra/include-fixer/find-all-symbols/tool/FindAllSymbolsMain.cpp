@@ -158,6 +158,5 @@ int main(int argc, const char **argv) {
   auto Factory =
       llvm::make_unique<clang::find_all_symbols::FindAllSymbolsActionFactory>(
           &Reporter, clang::find_all_symbols::getSTLPostfixHeaderMap());
-  Tool.run(Factory.get());
-  return 0;
+  return Tool.run(Factory.get());
 }

@@ -57,6 +57,12 @@
  *
 \*===----------------------------------------------------------------------===*/
 
+/* Functions marked with INSTR_PROF_VISIBILITY must have hidden visibility in
+ * the compiler runtime. */
+#ifndef INSTR_PROF_VISIBILITY
+#define INSTR_PROF_VISIBILITY
+#endif
+
 /* INSTR_PROF_DATA start. */
 /* Definition of member fields of the per-function control structure. */
 #ifndef INSTR_PROF_DATA
@@ -387,11 +393,14 @@ typedef struct ValueProfRecordClosure {
   ValueProfData *(*AllocValueProfData)(size_t TotalSizeInBytes);
 } ValueProfRecordClosure;
 
-
-ValueProfRecord *getFirstValueProfRecord(ValueProfData *VPD);
-ValueProfRecord *getValueProfRecordNext(ValueProfRecord *VPR);
-InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *VPR);
-uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites);
+INSTR_PROF_VISIBILITY ValueProfRecord *
+getFirstValueProfRecord(ValueProfData *VPD);
+INSTR_PROF_VISIBILITY ValueProfRecord *
+getValueProfRecordNext(ValueProfRecord *VPR);
+INSTR_PROF_VISIBILITY InstrProfValueData *
+getValueProfRecordValueData(ValueProfRecord *VPR);
+INSTR_PROF_VISIBILITY uint32_t
+getValueProfRecordHeaderSize(uint32_t NumValueSites);
 
 #undef INSTR_PROF_VALUE_PROF_DATA
 #endif  /* INSTR_PROF_VALUE_PROF_DATA */
@@ -415,7 +424,7 @@ uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites);
  * \brief Return the \c ValueProfRecord header size including the
  * padding bytes.
  */
-INSTR_PROF_INLINE
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
   uint32_t Size = offsetof(ValueProfRecord, SiteCountArray) +
                   sizeof(uint8_t) * NumValueSites;
@@ -428,7 +437,7 @@ uint32_t getValueProfRecordHeaderSize(uint32_t NumValueSites) {
  * \brief Return the total size of the value profile record including the
  * header and the value data.
  */
-INSTR_PROF_INLINE
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 uint32_t getValueProfRecordSize(uint32_t NumValueSites,
                                 uint32_t NumValueData) {
   return getValueProfRecordHeaderSize(NumValueSites) +
@@ -438,7 +447,7 @@ uint32_t getValueProfRecordSize(uint32_t NumValueSites,
 /*!
  * \brief Return the pointer to the start of value data array.
  */
-INSTR_PROF_INLINE
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
   return (InstrProfValueData *)((char *)This + getValueProfRecordHeaderSize(
                                                    This->NumValueSites));
@@ -447,7 +456,7 @@ InstrProfValueData *getValueProfRecordValueData(ValueProfRecord *This) {
 /*!
  * \brief Return the total number of value data for \c This record.
  */
-INSTR_PROF_INLINE
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
   uint32_t NumValueData = 0;
   uint32_t I;
@@ -459,7 +468,7 @@ uint32_t getValueProfRecordNumValueData(ValueProfRecord *This) {
 /*!
  * \brief Use this method to advance to the next \c This \c ValueProfRecord.
  */
-INSTR_PROF_INLINE
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
   uint32_t NumValueData = getValueProfRecordNumValueData(This);
   return (ValueProfRecord *)((char *)This +
@@ -470,7 +479,7 @@ ValueProfRecord *getValueProfRecordNext(ValueProfRecord *This) {
 /*!
  * \brief Return the first \c ValueProfRecord instance.
  */
-INSTR_PROF_INLINE
+INSTR_PROF_VISIBILITY INSTR_PROF_INLINE
 ValueProfRecord *getFirstValueProfRecord(ValueProfData *This) {
   return (ValueProfRecord *)((char *)This + sizeof(ValueProfData));
 }
@@ -481,7 +490,8 @@ ValueProfRecord *getFirstValueProfRecord(ValueProfData *This) {
  * Return the total size in bytes of the on-disk value profile data
  * given the data stored in Record.
  */
-uint32_t getValueProfDataSize(ValueProfRecordClosure *Closure) {
+INSTR_PROF_VISIBILITY uint32_t
+getValueProfDataSize(ValueProfRecordClosure *Closure) {
   uint32_t Kind;
   uint32_t TotalSize = sizeof(ValueProfData);
   const void *Record = Closure->Record;
@@ -500,9 +510,10 @@ uint32_t getValueProfDataSize(ValueProfRecordClosure *Closure) {
  * Extract value profile data of a function for the profile kind \c ValueKind
  * from the \c Closure and serialize the data into \c This record instance.
  */
-void serializeValueProfRecordFrom(ValueProfRecord *This,
-                                  ValueProfRecordClosure *Closure,
-                                  uint32_t ValueKind, uint32_t NumValueSites) {
+INSTR_PROF_VISIBILITY void
+serializeValueProfRecordFrom(ValueProfRecord *This,
+                             ValueProfRecordClosure *Closure,
+                             uint32_t ValueKind, uint32_t NumValueSites) {
   uint32_t S;
   const void *Record = Closure->Record;
   This->Kind = ValueKind;
@@ -524,8 +535,9 @@ void serializeValueProfRecordFrom(ValueProfRecord *This,
  * DstData is not null, the caller is expected to set the TotalSize
  * in DstData.
  */
-ValueProfData *serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
-                                          ValueProfData *DstData) {
+INSTR_PROF_VISIBILITY ValueProfData *
+serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
+                           ValueProfData *DstData) {
   uint32_t Kind;
   uint32_t TotalSize =
       DstData ? DstData->TotalSize : getValueProfDataSize(Closure);

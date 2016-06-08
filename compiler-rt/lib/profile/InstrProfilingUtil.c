@@ -16,9 +16,7 @@
 #else
 #include <sys/stat.h>
 #include <sys/types.h>
-#if defined(__linux__)
 #include <unistd.h>
-#endif
 #include <fcntl.h>
 #include <errno.h>
 #endif

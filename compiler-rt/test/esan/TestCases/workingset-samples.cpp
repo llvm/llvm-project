@@ -22,12 +22,12 @@ int main(int argc, char **argv) {
   // We only check for a few samples here to reduce the chance of flakiness.
   // CHECK:      =={{[0-9]+}}== Total number of samples: {{[0-9]+}}
   // CHECK-NEXT: =={{[0-9]+}}== Samples array #0 at period 20 ms
-  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} KB ({{[ 0-9]+}} cache lines)
-  // CHECK-NEXT: =={{[0-9]+}}==#   1: {{[ 0-9]+}} KB ({{[ 0-9]+}} cache lines)
-  // CHECK-NEXT: =={{[0-9]+}}==#   2: {{[ 0-9]+}} KB ({{[ 0-9]+}} cache lines)
-  // CHECK-NEXT: =={{[0-9]+}}==#   3: {{[ 0-9]+}} KB ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   1: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   2: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   3: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
   // CHECK:      =={{[0-9]+}}== Samples array #1 at period 80 ms
-  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} KB ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
   // CHECK:      =={{[0-9]+}}== Samples array #2 at period 320 ms
   // CHECK:      =={{[0-9]+}}== Samples array #3 at period 1280 ms
   // CHECK:      =={{[0-9]+}}== Samples array #4 at period 5120 ms

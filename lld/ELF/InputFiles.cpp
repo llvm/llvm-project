@@ -179,10 +179,7 @@ template <class ELFT> static bool shouldMerge(const typename ELFT::Shdr &Sec) {
   if (Flags & SHF_STRINGS)
     return true;
 
-  if (Sec.sh_addralign > EntSize)
-    return false;
-
-  return true;
+  return Sec.sh_addralign <= EntSize;
 }
 
 template <class ELFT>
@@ -532,7 +529,8 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
 
     if (Versym) {
       // Ignore local symbols and non-default versions.
-      if (VersymIndex == 0 || VersymIndex == 1 || (VersymIndex & VERSYM_HIDDEN))
+      if (VersymIndex == VER_NDX_LOCAL || VersymIndex == VER_NDX_GLOBAL ||
+          (VersymIndex & VERSYM_HIDDEN))
         continue;
     }
     elf::Symtab<ELFT>::X->addShared(this, Name, Sym, Verdefs[VersymIndex]);

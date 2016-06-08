@@ -87,3 +87,57 @@ class WatchpointPythonCommandTestCase(TestBase):
         # The watchpoint command "forced" our global variable 'cookie' to become 777.
         self.expect("frame variable --show-globals cookie",
             substrs = ['(int32_t)', 'cookie = 777'])
+
+    @skipIfFreeBSD # timing out on buildbot
+    @expectedFailureAll(bugnumber="llvm.org/pr28055: continue in watchpoint commands disables the watchpoint")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
+    @expectedFailureAll(oslist=["linux"], archs=["aarch64"], bugnumber="llvm.org/pr27710")
+    def test_continue_in_watchpoint_command(self):
+        """Test continue in a watchpoint command."""
+        self.build(dictionary=self.d)
+        self.setTearDownCleanup(dictionary=self.d)
+
+        exe = os.path.join(os.getcwd(), self.exe_name)
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
+        lldbutil.run_break_set_by_file_and_line (self, None, self.line, num_expected_locations=1)
+#        self.expect("breakpoint set -l %d" % self.line, BREAKPOINT_CREATED,
+#            startstr = "Breakpoint created: 1: file ='%s', line = %d, locations = 1" %
+#                       (self.source, self.line))#
+
+        # Run the program.
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # We should be stopped again due to the breakpoint.
+        # The stop reason of the thread should be breakpoint.
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            substrs = ['stopped',
+                       'stop reason = breakpoint'])
+
+        # Now let's set a write-type watchpoint for 'global'.
+        self.expect("watchpoint set variable -w write global", WATCHPOINT_CREATED,
+            substrs = ['Watchpoint created', 'size = 4', 'type = w',
+                       '%s:%d' % (self.source, self.decl)])
+
+        cmd_script_file = os.path.join(os.getcwd(), "watchpoint_command.py")
+        self.runCmd("command script import '%s'"%(cmd_script_file))
+
+        self.runCmd('watchpoint command add -F watchpoint_command.watchpoint_command')
+
+        # List the watchpoint command we just added.
+        self.expect("watchpoint command list 1",
+            substrs = ['watchpoint_command.watchpoint_command'])
+
+        self.runCmd("process continue")
+
+        # We should be stopped again due to the watchpoint (write type).
+        # The stop reason of the thread should be watchpoint.
+        self.expect("thread backtrace", STOPPED_DUE_TO_WATCHPOINT,
+            substrs = ['stop reason = watchpoint'])
+
+        # We should have hit the watchpoint once, set cookie to 888, then continued to the
+        # second hit and set it to 999
+        self.expect("frame variable --show-globals cookie",
+            substrs = ['(int32_t)', 'cookie = 999'])

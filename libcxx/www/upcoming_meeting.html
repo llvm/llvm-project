@@ -65,8 +65,8 @@
 	<tr><td><a href="http://wg21.link/LWG2328">2328</a></td><td>Rvalue stream extraction should use perfect forwarding</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2393">2393</a></td><td>std::function's Callable definition is broken</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2426">2426</a></td><td>Issue about compare_exchange</td><td>Oulu</td><td></td></tr>
-	<tr><td><a href="http://wg21.link/LWG2436">2436</a></td><td>Comparators for associative containers should always be CopyConstructible</td><td>Oulu</td><td></td></tr>
-	<tr><td><a href="http://wg21.link/LWG2441">2441</a></td><td>Exact-width atomic typedefs should be provided</td><td>Oulu</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2436">2436</a></td><td>Comparators for associative containers should always be CopyConstructible</td><td>Oulu</td><td>Patch Ready</td></tr>
+	<tr><td><a href="http://wg21.link/LWG2441">2441</a></td><td>Exact-width atomic typedefs should be provided</td><td>Oulu</td><td>Patch Ready</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2451">2451</a></td><td>[fund.ts.v2] optional<T> should 'forward' T's implicit conversions</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2509">2509</a></td><td>[fund.ts.v2] any_cast doesn't work with rvalue reference targets and cannot move with a value target</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2516">2516</a></td><td>[fund.ts.v2] Public "exposition only" members in observer_ptr</td><td>Oulu</td><td></td></tr>
@@ -86,7 +86,7 @@
 	<tr><td><a href="http://wg21.link/LWG2683">2683</a></td><td>filesystem::copy() says "no effects"</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2684">2684</a></td><td>priority_queue lacking comparator typedef</td><td>Oulu</td><td>Patch Ready</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2685">2685</a></td><td>shared_ptr deleters must not not throw on move construction</td><td>Oulu</td><td>Complete</td></tr>
-	<tr><td><a href="http://wg21.link/LWG2688">2688</a></td><td>clamp misses preconditions and has extraneous condition on result</td><td>Oulu</td><td></td></tr>
+	<tr><td><a href="http://wg21.link/LWG2688">2688</a></td><td>clamp misses preconditions and has extraneous condition on result</td><td>Oulu</td><td>Patch Ready</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2689">2689</a></td><td>Parallel versions of std::copy and std::move shouldn't be in order</td><td>Oulu</td><td></td></tr>
 	<tr><td><a href="http://wg21.link/LWG2698">2698</a></td><td>Effect of assign() on iterators/pointers/references</td><td>Oulu</td><td>Complete</td></tr>
 	<tr><td><a href="http://wg21.link/LWG2706">2706</a></td><td>Error reporting for recursive_directory_iterator::pop() is under-specified</td><td>Oulu</td><td></td></tr>
@@ -123,7 +123,7 @@
 <li>2683 - </li>
 <li>2684 - We already have one; just need to add a test for it.</li>
 <li>2685 - Wording clarification; no code change needed. We don't handle throwing move ctors here anyway.</li>
-<li>2688 - I believe that we already do this.</li>
+<li>2688 - I believe that we already do this. Add more tests</li>
 <li>2689 - We don't have a parallel implementation yet (though I'm working on it).</li>
 <li>2698 - Wording clarification; no code change needed.</li>
 <li>2706 - </li>

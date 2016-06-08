@@ -8,6 +8,8 @@
 // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: macro argument should be enclosed in parentheses [misc-macro-parentheses]
 #define BAD4(x)           ((unsigned char)(x & 0xff))
 // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: macro argument should be enclosed in parentheses [misc-macro-parentheses]
+#define BAD5(X)           A*B=(C*)X+2
+// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: macro argument should be enclosed in parentheses [misc-macro-parentheses]
 
 #define GOOD1             1
 #define GOOD2             (1+2)
@@ -39,6 +41,8 @@
 #define GOOD28(x)         namespace x {int b;}
 #define GOOD29(...)       std::cout << __VA_ARGS__;
 #define GOOD30(args...)   std::cout << args;
+#define GOOD31(X)         A*X=2
+#define GOOD32(X)         std::vector<X>
 
 // These are allowed for now..
 #define MAYBE1            *12.34
