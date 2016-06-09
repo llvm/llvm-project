@@ -430,6 +430,13 @@ IRMemoryMap::Malloc (size_t size, uint8_t alignment, uint32_t permissions, Alloc
                                                 alignment,
                                                 policy);
 
+    if (zero_memory)
+    {
+        Error write_error;
+        std::vector<uint8_t> zero_buf(size, 0);
+        WriteMemory(aligned_address, zero_buf.data(), size, write_error);
+    }
+
     if (log)
     {
         const char * policy_string;
