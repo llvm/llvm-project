@@ -531,7 +531,7 @@ public:
   /// original \p Entries.
   void emitRangesEntries(
       int64_t UnitPcOffset, uint64_t OrigLowPc,
-      FunctionIntervals::const_iterator FuncRange,
+      const FunctionIntervals::const_iterator &FuncRange,
       const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
       unsigned AddressSize);
 
@@ -715,7 +715,7 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
 /// sized addresses describing the ranges.
 void DwarfStreamer::emitRangesEntries(
     int64_t UnitPcOffset, uint64_t OrigLowPc,
-    FunctionIntervals::const_iterator FuncRange,
+    const FunctionIntervals::const_iterator &FuncRange,
     const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
     unsigned AddressSize) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
@@ -1416,7 +1416,7 @@ private:
   /// \defgroup Helpers Various helper methods.
   ///
   /// @{
-  bool createStreamer(Triple TheTriple, StringRef OutputFilename);
+  bool createStreamer(const Triple &TheTriple, StringRef OutputFilename);
 
   /// \brief Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(BinaryHolder &BinaryHolder,
@@ -1744,7 +1744,8 @@ void DwarfLinker::reportWarning(const Twine &Warning, const DWARFUnit *Unit,
             6 /* Indent */);
 }
 
-bool DwarfLinker::createStreamer(Triple TheTriple, StringRef OutputFilename) {
+bool DwarfLinker::createStreamer(const Triple &TheTriple,
+                                 StringRef OutputFilename) {
   if (Options.NoOutput)
     return true;
 

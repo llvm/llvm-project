@@ -356,9 +356,9 @@ private:
   MCContext *Ctx;
   Triple TT;
 
-  void initMachOMCObjectFileInfo(Triple T);
-  void initELFMCObjectFileInfo(Triple T);
-  void initCOFFMCObjectFileInfo(Triple T);
+  void initMachOMCObjectFileInfo(const Triple &T);
+  void initELFMCObjectFileInfo(const Triple &T);
+  void initCOFFMCObjectFileInfo(const Triple &T);
 
 public:
   const Triple &getTargetTriple() const { return TT; }

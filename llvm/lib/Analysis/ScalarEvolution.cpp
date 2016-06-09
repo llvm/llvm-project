@@ -4880,22 +4880,23 @@ bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
     return false;
 
   SmallPtrSet<const Instruction *, 16> Pushed;
-  SmallVector<const Instruction *, 8> Stack;
+  SmallVector<const Instruction *, 8> PoisonStack;
 
+  // We start by assuming \c I, the post-inc add recurrence, is poison.  Only
+  // things that are known to be fully poison under that assumption go on the
+  // PoisonStack.
   Pushed.insert(I);
-  for (auto *U : I->users())
-    if (Pushed.insert(cast<Instruction>(U)).second)
-      Stack.push_back(cast<Instruction>(U));
+  PoisonStack.push_back(I);
 
   bool LatchControlDependentOnPoison = false;
-  while (!Stack.empty()) {
-    const Instruction *I = Stack.pop_back_val();
+  while (!PoisonStack.empty() && !LatchControlDependentOnPoison) {
+    const Instruction *Poison = PoisonStack.pop_back_val();
 
-    for (auto *U : I->users()) {
-      if (propagatesFullPoison(cast<Instruction>(U))) {
-        if (Pushed.insert(cast<Instruction>(U)).second)
-          Stack.push_back(cast<Instruction>(U));
-      } else if (auto *BI = dyn_cast<BranchInst>(U)) {
+    for (auto *PoisonUser : Poison->users()) {
+      if (propagatesFullPoison(cast<Instruction>(PoisonUser))) {
+        if (Pushed.insert(cast<Instruction>(PoisonUser)).second)
+          PoisonStack.push_back(cast<Instruction>(PoisonUser));
+      } else if (auto *BI = dyn_cast<BranchInst>(PoisonUser)) {
         assert(BI->isConditional() && "Only possibility!");
         if (BI->getParent() == LatchBB) {
           LatchControlDependentOnPoison = true;
@@ -4905,27 +4906,25 @@ bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
     }
   }
 
-  if (!LatchControlDependentOnPoison)
-    return false;
+  return LatchControlDependentOnPoison && loopHasNoAbnormalExits(L);
+}
 
-  // Now check if loop is no-throw, and cache the information.  In the future,
-  // we can consider commoning this logic with LICMSafetyInfo into a separate
-  // analysis pass.
+bool ScalarEvolution::loopHasNoAbnormalExits(const Loop *L) {
+  auto Itr = LoopHasNoAbnormalExits.find(L);
+  if (Itr == LoopHasNoAbnormalExits.end()) {
+    auto NoAbnormalExitInBB = [&](BasicBlock *BB) {
+      return all_of(*BB, [](Instruction &I) {
+        return isGuaranteedToTransferExecutionToSuccessor(&I);
+      });
+    };
 
-  auto Itr = LoopMayThrow.find(L);
-  if (Itr == LoopMayThrow.end()) {
-    bool MayThrow = false;
-    for (auto *BB : L->getBlocks()) {
-      MayThrow = any_of(*BB, [](Instruction &I) { return I.mayThrow(); });
-      if (MayThrow)
-        break;
-    }
-    auto InsertPair = LoopMayThrow.insert({L, MayThrow});
+    auto InsertPair = LoopHasNoAbnormalExits.insert(
+        {L, all_of(L->getBlocks(), NoAbnormalExitInBB)});
     assert(InsertPair.second && "We just checked!");
     Itr = InsertPair.first;
   }
 
-  return !Itr->second;
+  return Itr->second;
 }
 
 const SCEV *ScalarEvolution::createSCEV(Value *V) {
@@ -5489,7 +5488,7 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
   for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I)
     forgetLoop(*I);
 
-  LoopMayThrow.erase(L);
+  LoopHasNoAbnormalExits.erase(L);
 }
 
 void ScalarEvolution::forgetValue(Value *V) {
@@ -7199,7 +7198,8 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
   // compute the backedge count.  In this case, the step may not divide the
   // distance, but we don't care because if the condition is "missed" the loop
   // will have undefined behavior due to wrapping.
-  if (ControlsExit && AddRec->hasNoSelfWrap()) {
+  if (ControlsExit && AddRec->hasNoSelfWrap() &&
+      loopHasNoAbnormalExits(AddRec->getLoop())) {
     const SCEV *Exact =
         getUDivExpr(Distance, CountDown ? getNegativeSCEV(Step) : Step);
     return ExitLimit(Exact, Exact, P);
@@ -8810,7 +8810,7 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
   return ExitLimit(BECount, MaxBECount, P);
 }
 
-const SCEV *SCEVAddRecExpr::getNumIterationsInRange(ConstantRange Range,
+const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
                                                     ScalarEvolution &SE) const {
   if (Range.isFullSet())  // Infinite loop.
     return SE.getCouldNotCompute();

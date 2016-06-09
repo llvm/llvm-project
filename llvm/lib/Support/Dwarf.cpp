@@ -384,23 +384,22 @@ const char *llvm::dwarf::CaseString(unsigned Case) {
   return nullptr;
 }
 
-const char *llvm::dwarf::ConventionString(unsigned Convention) {
-   switch (Convention) {
-   case DW_CC_normal:                     return "DW_CC_normal";
-   case DW_CC_program:                    return "DW_CC_program";
-   case DW_CC_nocall:                     return "DW_CC_nocall";
-   case DW_CC_lo_user:                    return "DW_CC_lo_user";
-   case DW_CC_hi_user:                    return "DW_CC_hi_user";
-   case DW_CC_GNU_borland_fastcall_i386:  return "DW_CC_GNU_borland_fastcall_i386";
-   case DW_CC_BORLAND_safecall:           return "DW_CC_BORLAND_safecall";
-   case DW_CC_BORLAND_stdcall:            return "DW_CC_BORLAND_stdcall";
-   case DW_CC_BORLAND_pascal:             return "DW_CC_BORLAND_pascal";
-   case DW_CC_BORLAND_msfastcall:         return "DW_CC_BORLAND_msfastcall";
-   case DW_CC_BORLAND_msreturn:           return "DW_CC_BORLAND_msreturn";
-   case DW_CC_BORLAND_thiscall:           return "DW_CC_BORLAND_thiscall";
-   case DW_CC_BORLAND_fastcall:           return "DW_CC_BORLAND_fastcall";
+const char *llvm::dwarf::ConventionString(unsigned CC) {
+  switch (CC) {
+  default:
+    return nullptr;
+#define HANDLE_DW_CC(ID, NAME)                                               \
+  case DW_CC_##NAME:                                                         \
+    return "DW_CC_" #NAME;
+#include "llvm/Support/Dwarf.def"
   }
-  return nullptr;
+}
+
+unsigned llvm::dwarf::getCallingConvention(StringRef CCString) {
+  return StringSwitch<unsigned>(CCString)
+#define HANDLE_DW_CC(ID, NAME) .Case("DW_CC_" #NAME, DW_CC_##NAME)
+#include "llvm/Support/Dwarf.def"
+      .Default(0);
 }
 
 const char *llvm::dwarf::InlineCodeString(unsigned Code) {

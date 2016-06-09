@@ -30,6 +30,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
@@ -69,6 +70,7 @@ private:
   bool Error(SMLoc L, const Twine &Msg) { return getParser().Error(L, Msg); }
   bool showMatchError(SMLoc Loc, unsigned ErrCode);
 
+  bool parseDirectiveArch(SMLoc L);
   bool parseDirectiveCPU(SMLoc L);
   bool parseDirectiveWord(unsigned Size, SMLoc L);
   bool parseDirectiveInst(SMLoc L);
@@ -4195,6 +4197,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
 
   StringRef IDVal = DirectiveID.getIdentifier();
   SMLoc Loc = DirectiveID.getLoc();
+  if (IDVal == ".arch")
+    return parseDirectiveArch(Loc);
   if (IDVal == ".cpu")
     return parseDirectiveCPU(Loc);
   if (IDVal == ".hword")
@@ -4234,6 +4238,30 @@ static const struct {
   { "rdma", {} },
   { "profile", {} },
 };
+
+/// parseDirectiveArch
+///   ::= .arch token
+bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
+  SMLoc ArchLoc = getLoc();
+
+  StringRef Arch, ExtensionString;
+  std::tie(Arch, ExtensionString) =
+      getParser().parseStringToEndOfStatement().trim().split('+');
+
+  unsigned ID = AArch64::parseArch(Arch);
+  if (ID == ARM::AK_INVALID) {
+    Error(ArchLoc, "unknown arch name");
+    return false;
+  }
+
+  MCSubtargetInfo &STI = copySTI();
+  STI.setDefaultFeatures("", "");
+  if (!ExtensionString.empty())
+    STI.setDefaultFeatures("", ("+" + ExtensionString).str());
+  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+
+  return false;
+}
 
 /// parseDirectiveCPU
 ///   ::= .cpu id

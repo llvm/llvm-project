@@ -970,10 +970,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       TiedDefIdx = Idx;
     }
   } else if (consumeIfPresent(MIToken::lparen)) {
-    // Generic virtual registers must have a size.
-    // The "must" part will be verify by the machine verifier,
-    // because at this point we actually do not know if Reg is
-    // a generic virtual register.
+    // Virtual registers may have a size with GlobalISel.
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       return error("unexpected size on physical register");
     unsigned Size;
@@ -982,6 +979,11 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
 
     MachineRegisterInfo &MRI = MF.getRegInfo();
     MRI.setSize(Reg, Size);
+  } else if (PFS.GenericVRegs.count(Reg)) {
+    // Generic virtual registers must have a size.
+    // If we end up here this means the size hasn't been specified and
+    // this is bad!
+    return error("generic virtual registers must have a size");
   }
   Dest = MachineOperand::CreateReg(
       Reg, Flags & RegState::Define, Flags & RegState::Implicit,

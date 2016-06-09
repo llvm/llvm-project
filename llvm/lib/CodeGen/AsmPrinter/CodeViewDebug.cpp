@@ -726,6 +726,8 @@ void CodeViewDebug::beginFunction(const MachineFunction *MF) {
 TypeIndex CodeViewDebug::lowerType(const DIType *Ty) {
   // Generic dispatch for lowering an unknown type.
   switch (Ty->getTag()) {
+  case dwarf::DW_TAG_array_type:
+    return lowerTypeArray(cast<DICompositeType>(Ty));
   case dwarf::DW_TAG_typedef:
     return lowerTypeAlias(cast<DIDerivedType>(Ty));
   case dwarf::DW_TAG_base_type:
@@ -763,6 +765,18 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
       Ty->getName() == "wchar_t")
     return TypeIndex(SimpleTypeKind::WideCharacter);
   return UnderlyingTypeIndex;
+}
+
+TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
+  DITypeRef ElementTypeRef = Ty->getBaseType();
+  TypeIndex ElementTypeIndex = getTypeIndex(ElementTypeRef);
+  // IndexType is size_t, which depends on the bitness of the target.
+  TypeIndex IndexType = Asm->MAI->getPointerSize() == 8
+                            ? TypeIndex(SimpleTypeKind::UInt64Quad)
+                            : TypeIndex(SimpleTypeKind::UInt32Long);
+  uint64_t Size = Ty->getSizeInBits() / 8;
+  ArrayRecord Record(ElementTypeIndex, IndexType, Size, Ty->getName());
+  return TypeTable.writeArray(Record);
 }
 
 TypeIndex CodeViewDebug::lowerTypeBasic(const DIBasicType *Ty) {
@@ -912,6 +926,20 @@ TypeIndex CodeViewDebug::lowerTypeMemberPointer(const DIDerivedType *Ty) {
   return TypeTable.writePointer(PR);
 }
 
+/// Given a DWARF calling convention, get the CodeView equivalent. If we don't
+/// have a translation, use the NearC convention.
+static CallingConvention dwarfCCToCodeView(unsigned DwarfCC) {
+  switch (DwarfCC) {
+  case dwarf::DW_CC_normal:             return CallingConvention::NearC;
+  case dwarf::DW_CC_BORLAND_msfastcall: return CallingConvention::NearFast;
+  case dwarf::DW_CC_BORLAND_thiscall:   return CallingConvention::ThisCall;
+  case dwarf::DW_CC_BORLAND_stdcall:    return CallingConvention::NearStdCall;
+  case dwarf::DW_CC_BORLAND_pascal:     return CallingConvention::NearPascal;
+  case dwarf::DW_CC_LLVM_vectorcall:    return CallingConvention::NearVector;
+  }
+  return CallingConvention::NearC;
+}
+
 TypeIndex CodeViewDebug::lowerTypeModifier(const DIDerivedType *Ty) {
   ModifierOptions Mods = ModifierOptions::None;
   bool IsModifier = true;
@@ -953,13 +981,12 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
   ArgListRecord ArgListRec(TypeRecordKind::ArgList, ArgTypeIndices);
   TypeIndex ArgListIndex = TypeTable.writeArgList(ArgListRec);
 
-  // TODO: We should use DW_AT_calling_convention to determine what CC this
-  // procedure record should have.
+  CallingConvention CC = dwarfCCToCodeView(Ty->getCC());
+
   // TODO: Some functions are member functions, we should use a more appropriate
   // record for those.
-  ProcedureRecord Procedure(ReturnTypeIndex, CallingConvention::NearC,
-                            FunctionOptions::None, ArgTypeIndices.size(),
-                            ArgListIndex);
+  ProcedureRecord Procedure(ReturnTypeIndex, CC, FunctionOptions::None,
+                            ArgTypeIndices.size(), ArgListIndex);
   return TypeTable.writeProcedure(Procedure);
 }
 
@@ -1290,7 +1317,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     switchToDebugSectionForSymbol(nullptr);
     MCSymbol *EndLabel = nullptr;
     for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = dyn_cast<GlobalVariable>(G->getVariable()))
+      if (const auto *GV = dyn_cast_or_null<GlobalVariable>(G->getVariable())) {
         if (!GV->hasComdat()) {
           if (!EndLabel) {
             OS.AddComment("Symbol subsection for globals");
@@ -1298,6 +1325,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
           }
           emitDebugInfoForGlobal(G, Asm->getSymbol(GV));
         }
+      }
     }
     if (EndLabel)
       endCVSubsection(EndLabel);
@@ -1305,7 +1333,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     // Second, emit each global that is in a comdat into its own .debug$S
     // section along with its own symbol substream.
     for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = dyn_cast<GlobalVariable>(G->getVariable())) {
+      if (const auto *GV = dyn_cast_or_null<GlobalVariable>(G->getVariable())) {
         if (GV->hasComdat()) {
           MCSymbol *GVSym = Asm->getSymbol(GV);
           OS.AddComment("Symbol subsection for " +

@@ -920,34 +920,43 @@ class DISubroutineType : public DIType {
   friend class LLVMContextImpl;
   friend class MDNode;
 
+  /// The calling convention used with DW_AT_calling_convention. Actually of
+  /// type dwarf::CallingConvention.
+  uint8_t CC;
+
   DISubroutineType(LLVMContext &C, StorageType Storage, unsigned Flags,
-                   ArrayRef<Metadata *> Ops)
+                   uint8_t CC, ArrayRef<Metadata *> Ops)
       : DIType(C, DISubroutineTypeKind, Storage, dwarf::DW_TAG_subroutine_type,
-               0, 0, 0, 0, Flags, Ops) {}
+               0, 0, 0, 0, Flags, Ops),
+        CC(CC) {}
   ~DISubroutineType() = default;
 
   static DISubroutineType *getImpl(LLVMContext &Context, unsigned Flags,
-                                   DITypeRefArray TypeArray,
+                                   uint8_t CC, DITypeRefArray TypeArray,
                                    StorageType Storage,
                                    bool ShouldCreate = true) {
-    return getImpl(Context, Flags, TypeArray.get(), Storage, ShouldCreate);
+    return getImpl(Context, Flags, CC, TypeArray.get(), Storage, ShouldCreate);
   }
   static DISubroutineType *getImpl(LLVMContext &Context, unsigned Flags,
-                                   Metadata *TypeArray, StorageType Storage,
+                                   uint8_t CC, Metadata *TypeArray,
+                                   StorageType Storage,
                                    bool ShouldCreate = true);
 
   TempDISubroutineType cloneImpl() const {
-    return getTemporary(getContext(), getFlags(), getTypeArray());
+    return getTemporary(getContext(), getFlags(), getCC(), getTypeArray());
   }
 
 public:
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (unsigned Flags, DITypeRefArray TypeArray),
-                    (Flags, TypeArray))
-  DEFINE_MDNODE_GET(DISubroutineType, (unsigned Flags, Metadata *TypeArray),
-                    (Flags, TypeArray))
+                    (unsigned Flags, uint8_t CC, DITypeRefArray TypeArray),
+                    (Flags, CC, TypeArray))
+  DEFINE_MDNODE_GET(DISubroutineType,
+                    (unsigned Flags, uint8_t CC, Metadata *TypeArray),
+                    (Flags, CC, TypeArray))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
+
+  uint8_t getCC() const { return CC; }
 
   DITypeRefArray getTypeArray() const {
     return cast_or_null<MDTuple>(getRawTypeArray());

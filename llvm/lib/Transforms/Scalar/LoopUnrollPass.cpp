@@ -604,22 +604,22 @@ static unsigned UnrollCountPragmaValue(const Loop *L) {
 // unrolling pass is run more than once (which it generally is).
 static void SetLoopAlreadyUnrolled(Loop *L) {
   MDNode *LoopID = L->getLoopID();
-  if (!LoopID)
-    return;
-
   // First remove any existing loop unrolling metadata.
   SmallVector<Metadata *, 4> MDs;
   // Reserve first location for self reference to the LoopID metadata node.
   MDs.push_back(nullptr);
-  for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-    bool IsUnrollMetadata = false;
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-    if (MD) {
-      const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-      IsUnrollMetadata = S && S->getString().startswith("llvm.loop.unroll.");
+
+  if (LoopID) {
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      bool IsUnrollMetadata = false;
+      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+      if (MD) {
+        const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+        IsUnrollMetadata = S && S->getString().startswith("llvm.loop.unroll.");
+      }
+      if (!IsUnrollMetadata)
+        MDs.push_back(LoopID->getOperand(i));
     }
-    if (!IsUnrollMetadata)
-      MDs.push_back(LoopID->getOperand(i));
   }
 
   // Add unroll(disable) metadata to disable future unrolling.

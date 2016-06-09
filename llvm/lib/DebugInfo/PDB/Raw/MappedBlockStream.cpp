@@ -8,12 +8,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Raw/DirectoryStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
+#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
+
+namespace {
+// This exists so that we can use make_unique while still keeping the
+// constructor of MappedBlockStream private, forcing users to go through
+// the `create` interface.
+class MappedBlockStreamImpl : public MappedBlockStream {
+public:
+  MappedBlockStreamImpl(std::unique_ptr<IPDBStreamData> Data,
+                        const IPDBFile &File)
+      : MappedBlockStream(std::move(Data), File) {}
+};
+}
 
 MappedBlockStream::MappedBlockStream(std::unique_ptr<IPDBStreamData> Data,
                                      const IPDBFile &Pdb)
@@ -121,4 +135,20 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
 
 uint32_t MappedBlockStream::getNumBytesCopied() const {
   return static_cast<uint32_t>(Pool.getBytesAllocated());
+}
+
+Expected<std::unique_ptr<MappedBlockStream>>
+MappedBlockStream::createIndexedStream(uint32_t StreamIdx,
+                                       const IPDBFile &File) {
+  if (StreamIdx >= File.getNumStreams())
+    return make_error<RawError>(raw_error_code::no_stream);
+
+  auto Data = llvm::make_unique<IndexedStreamData>(StreamIdx, File);
+  return llvm::make_unique<MappedBlockStreamImpl>(std::move(Data), File);
+}
+
+Expected<std::unique_ptr<MappedBlockStream>>
+MappedBlockStream::createDirectoryStream(const PDBFile &File) {
+  auto Data = llvm::make_unique<DirectoryStreamData>(File);
+  return llvm::make_unique<MappedBlockStreamImpl>(std::move(Data), File);
 }

@@ -4153,7 +4153,7 @@ static bool AreMulWideOperandsDemotable(SDValue LHS, SDValue RHS,
 
   // The RHS can be a demotable op or a constant
   if (ConstantSDNode *CI = dyn_cast<ConstantSDNode>(RHS)) {
-    APInt Val = CI->getAPIntValue();
+    const APInt &Val = CI->getAPIntValue();
     if (LHSSign == Unsigned) {
       return Val.isIntN(OptSize);
     } else {

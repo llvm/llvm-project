@@ -29,11 +29,10 @@ class PublicsStream {
   struct HeaderInfo;
 
 public:
-  PublicsStream(PDBFile &File, uint32_t StreamNum);
+  PublicsStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream);
   ~PublicsStream();
   Error reload();
 
-  uint32_t getStreamNum() const { return StreamNum; }
   uint32_t getSymHash() const;
   uint32_t getAddrMap() const;
   uint32_t getNumBuckets() const { return NumBuckets; }
@@ -55,8 +54,7 @@ public:
 private:
   PDBFile &Pdb;
 
-  uint32_t StreamNum;
-  MappedBlockStream Stream;
+  std::unique_ptr<MappedBlockStream> Stream;
   uint32_t NumBuckets = 0;
   ArrayRef<uint8_t> Bitmap;
   codeview::FixedStreamArray<PSHashRecord> HashRecords;

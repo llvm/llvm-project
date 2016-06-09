@@ -22,7 +22,7 @@ class PDBFile;
 
 class SymbolStream {
 public:
-  SymbolStream(const PDBFile &File, uint32_t StreamNum);
+  SymbolStream(std::unique_ptr<MappedBlockStream> Stream);
   ~SymbolStream();
   Error reload();
 
@@ -31,7 +31,7 @@ public:
 
 private:
   codeview::CVSymbolArray SymbolRecords;
-  MappedBlockStream MappedStream;
+  std::unique_ptr<MappedBlockStream> Stream;
 };
 }
 }

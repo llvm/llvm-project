@@ -773,7 +773,7 @@ static int ranlib_main() {
 int main(int argc, char **argv) {
   ToolName = argv[0];
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 

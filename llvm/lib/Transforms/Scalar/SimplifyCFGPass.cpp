@@ -191,10 +191,11 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
 
-  if (simplifyFunctionCFG(F, TTI, &AC, BonusInstThreshold))
-    return PreservedAnalyses::none();
-
-  return PreservedAnalyses::all();
+  if (!simplifyFunctionCFG(F, TTI, &AC, BonusInstThreshold))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 
 namespace {

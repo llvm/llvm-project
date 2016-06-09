@@ -401,7 +401,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         for (name, mode, f, path) in sorted(opened_files):
             if path is not None and mode in ('w', 'a'):
                 try:
-                    with open(path) as f:
+                    with open(path, 'rb') as f:
                         data = f.read()
                 except:
                     data = None

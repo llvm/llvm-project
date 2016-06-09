@@ -5233,6 +5233,7 @@ def MRSbanked : ABI<0b0001, (outs GPRnopc:$Rd), (ins banked_reg:$banked),
 // to distinguish between them. The mask operand contains the special register
 // (R Bit) in bit 4 and bits 3-0 contains the mask with the fields to be
 // accessed in the special register.
+let Defs = [CPSR] in
 def MSR : ABI<0b0001, (outs), (ins msr_mask:$mask, GPR:$Rn), NoItinerary,
               "msr", "\t$mask, $Rn", []> {
   bits<5> mask;
@@ -5247,6 +5248,7 @@ def MSR : ABI<0b0001, (outs), (ins msr_mask:$mask, GPR:$Rn), NoItinerary,
   let Inst{3-0} = Rn;
 }
 
+let Defs = [CPSR] in
 def MSRi : ABI<0b0011, (outs), (ins msr_mask:$mask,  mod_imm:$imm), NoItinerary,
                "msr", "\t$mask, $imm", []> {
   bits<5> mask;

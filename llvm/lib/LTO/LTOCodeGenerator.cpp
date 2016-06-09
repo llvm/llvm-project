@@ -165,7 +165,7 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
   HasVerifiedInput = false;
 }
 
-void LTOCodeGenerator::setTargetOptions(TargetOptions Options) {
+void LTOCodeGenerator::setTargetOptions(const TargetOptions &Options) {
   this->Options = Options;
 }
 

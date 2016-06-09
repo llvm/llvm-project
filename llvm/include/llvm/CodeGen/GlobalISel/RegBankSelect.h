@@ -520,10 +520,11 @@ private:
   ///
   /// \note The caller is supposed to do the rewriting of op if need be.
   /// I.e., Reg = op ... => <NewRegs> = NewOp ...
-  void repairReg(
-      MachineOperand &MO, const RegisterBankInfo::ValueMapping &ValMapping,
-      RegBankSelect::RepairingPlacement &RepairPt,
-      const iterator_range<SmallVectorImpl<unsigned>::iterator> &NewVRegs);
+  void repairReg(MachineOperand &MO,
+                 const RegisterBankInfo::ValueMapping &ValMapping,
+                 RegBankSelect::RepairingPlacement &RepairPt,
+                 const iterator_range<SmallVectorImpl<unsigned>::const_iterator>
+                     &NewVRegs);
 
   /// Return the cost of the instruction needed to map \p MO to \p ValMapping.
   /// The cost is free of basic block frequencies.

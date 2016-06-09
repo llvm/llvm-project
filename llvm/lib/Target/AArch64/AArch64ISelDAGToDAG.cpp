@@ -1748,7 +1748,7 @@ bool AArch64DAGToDAGISel::tryBitfieldExtractOp(SDNode *N) {
 /// BitsToBeInserted, suitable for use in a BFI instruction. Roughly speaking,
 /// this asks whether DstMask zeroes precisely those bits that will be set by
 /// the other half.
-static bool isBitfieldDstMask(uint64_t DstMask, APInt BitsToBeInserted,
+static bool isBitfieldDstMask(uint64_t DstMask, const APInt &BitsToBeInserted,
                               unsigned NumberOfIgnoredHighBits, EVT VT) {
   assert((VT == MVT::i32 || VT == MVT::i64) &&
          "i32 or i64 mask type expected!");

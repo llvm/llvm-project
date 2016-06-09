@@ -8806,7 +8806,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // fold (fdiv X, c2) -> fmul X, 1/c2 if losing precision is acceptable.
     if (N1CFP) {
       // Compute the reciprocal 1.0 / c2.
-      APFloat N1APF = N1CFP->getValueAPF();
+      const APFloat &N1APF = N1CFP->getValueAPF();
       APFloat Recip(N1APF.getSemantics(), 1); // 1.0
       APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
       // Only do the transform if the reciprocal is a legal fp immediate that
@@ -9874,7 +9874,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
     ConstantSDNode *CN =
       cast<ConstantSDNode>(OtherUses[i]->getOperand(OffsetIdx));
     int X0, X1, Y0, Y1;
-    APInt Offset0 = CN->getAPIntValue();
+    const APInt &Offset0 = CN->getAPIntValue();
     APInt Offset1 = cast<ConstantSDNode>(Offset)->getAPIntValue();
 
     X0 = (OtherUses[i]->getOpcode() == ISD::SUB && OffsetIdx == 1) ? -1 : 1;
@@ -14336,7 +14336,7 @@ SDValue DAGCombiner::SimplifySelectCC(SDLoc DL, SDValue N0, SDValue N1,
     ConstantSDNode *ConstAndRHS = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     if (ConstAndRHS && ConstAndRHS->getAPIntValue().countPopulation() == 1) {
       // Shift the tested bit over the sign bit.
-      APInt AndMask = ConstAndRHS->getAPIntValue();
+      const APInt &AndMask = ConstAndRHS->getAPIntValue();
       SDValue ShlAmt =
         DAG.getConstant(AndMask.countLeadingZeros(), SDLoc(AndLHS),
                         getShiftAmountTy(AndLHS.getValueType()));

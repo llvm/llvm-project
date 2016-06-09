@@ -2324,12 +2324,10 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
 namespace llvm {
 
 void EmitFixedLenDecoder(RecordKeeper &RK, raw_ostream &OS,
-                         std::string PredicateNamespace,
-                         std::string GPrefix,
-                         std::string GPostfix,
-                         std::string ROK,
-                         std::string RFail,
-                         std::string L) {
+                         const std::string &PredicateNamespace,
+                         const std::string &GPrefix,
+                         const std::string &GPostfix, const std::string &ROK,
+                         const std::string &RFail, const std::string &L) {
   FixedLenDecoderEmitter(RK, PredicateNamespace, GPrefix, GPostfix,
                          ROK, RFail, L).run(OS);
 }

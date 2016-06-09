@@ -686,8 +686,10 @@ ReprocessLoop:
       }
       DT->eraseNode(ExitingBlock);
 
-      BI->getSuccessor(0)->removePredecessor(ExitingBlock);
-      BI->getSuccessor(1)->removePredecessor(ExitingBlock);
+      BI->getSuccessor(0)->removePredecessor(
+          ExitingBlock, /* DontDeleteUselessPHIs */ PreserveLCSSA);
+      BI->getSuccessor(1)->removePredecessor(
+          ExitingBlock, /* DontDeleteUselessPHIs */ PreserveLCSSA);
       ExitingBlock->eraseFromParent();
     }
   }
@@ -748,6 +750,7 @@ namespace {
       AU.addPreserved<GlobalsAAWrapperPass>();
       AU.addPreserved<ScalarEvolutionWrapperPass>();
       AU.addPreserved<SCEVAAWrapperPass>();
+      AU.addPreservedID(LCSSAID);
       AU.addPreserved<DependenceAnalysisWrapperPass>();
       AU.addPreservedID(BreakCriticalEdgesID);  // No critical edges added.
     }
@@ -763,9 +766,6 @@ INITIALIZE_PASS_BEGIN(LoopSimplify, "loop-simplify",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(BasicAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(SCEVAAWrapperPass)
 INITIALIZE_PASS_END(LoopSimplify, "loop-simplify",
                 "Canonicalize natural loops", false, false)
 
@@ -784,11 +784,27 @@ bool LoopSimplify::runOnFunction(Function &F) {
   SE = SEWP ? &SEWP->getSE() : nullptr;
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
+#ifndef NDEBUG
+  if (PreserveLCSSA) {
+    assert(DT && "DT not available.");
+    assert(LI && "LI not available.");
+    bool InLCSSA =
+        all_of(*LI, [&](Loop *L) { return L->isRecursivelyLCSSAForm(*DT); });
+    assert(InLCSSA && "Requested to preserve LCSSA, but it's already broken.");
+  }
+#endif
 
   // Simplify each loop nest in the function.
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
     Changed |= simplifyLoop(*I, DT, LI, SE, AC, PreserveLCSSA);
 
+#ifndef NDEBUG
+  if (PreserveLCSSA) {
+    bool InLCSSA =
+        all_of(*LI, [&](Loop *L) { return L->isRecursivelyLCSSAForm(*DT); });
+    assert(InLCSSA && "LCSSA is broken after loop-simplify.");
+  }
+#endif
   return Changed;
 }
 

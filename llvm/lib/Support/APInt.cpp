@@ -1664,10 +1664,8 @@ static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
   DEBUG(dbgs() << '\n');
 }
 
-void APInt::divide(const APInt LHS, unsigned lhsWords,
-                   const APInt &RHS, unsigned rhsWords,
-                   APInt *Quotient, APInt *Remainder)
-{
+void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
+                   unsigned rhsWords, APInt *Quotient, APInt *Remainder) {
   assert(lhsWords >= rhsWords && "Fractional result");
 
   // First, compose the values into an array of 32-bit words instead of

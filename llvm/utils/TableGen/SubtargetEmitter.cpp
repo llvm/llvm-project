@@ -101,7 +101,7 @@ class SubtargetEmitter {
   void EmitSchedClassTables(SchedClassTables &SchedTables, raw_ostream &OS);
   void EmitProcessorModels(raw_ostream &OS);
   void EmitProcessorLookup(raw_ostream &OS);
-  void EmitSchedModelHelpers(std::string ClassName, raw_ostream &OS);
+  void EmitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void EmitSchedModel(raw_ostream &OS);
   void ParseFeaturesFunction(raw_ostream &OS, unsigned NumFeatures,
                              unsigned NumProcs);
@@ -1268,7 +1268,7 @@ void SubtargetEmitter::EmitSchedModel(raw_ostream &OS) {
   OS << "#undef DBGFIELD";
 }
 
-void SubtargetEmitter::EmitSchedModelHelpers(std::string ClassName,
+void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
                                              raw_ostream &OS) {
   OS << "unsigned " << ClassName
      << "\n::resolveSchedClass(unsigned SchedClass, const MachineInstr *MI,"

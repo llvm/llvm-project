@@ -26,7 +26,7 @@ class ModInfo;
 
 class ModStream {
 public:
-  ModStream(const PDBFile &File, const ModInfo &Module);
+  ModStream(const ModInfo &Module, std::unique_ptr<MappedBlockStream> Stream);
   ~ModStream();
 
   Error reload();
@@ -40,7 +40,7 @@ public:
 private:
   const ModInfo &Mod;
 
-  MappedBlockStream Stream;
+  std::unique_ptr<MappedBlockStream> Stream;
 
   codeview::CVSymbolArray SymbolsSubstream;
   codeview::StreamRef LinesSubstream;

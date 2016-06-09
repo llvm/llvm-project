@@ -71,9 +71,9 @@ struct PublicsStream::GSIHashHeader {
   ulittle32_t NumBuckets;
 };
 
-PublicsStream::PublicsStream(PDBFile &File, uint32_t StreamNum)
-    : Pdb(File), StreamNum(StreamNum),
-      Stream(llvm::make_unique<IndexedStreamData>(StreamNum, File), File) {}
+PublicsStream::PublicsStream(PDBFile &File,
+                             std::unique_ptr<MappedBlockStream> Stream)
+    : Pdb(File), Stream(std::move(Stream)) {}
 
 PublicsStream::~PublicsStream() {}
 
@@ -86,7 +86,7 @@ uint32_t PublicsStream::getAddrMap() const { return Header->AddrMap; }
 // we skip over the hash table which we believe contains information about
 // public symbols.
 Error PublicsStream::reload() {
-  codeview::StreamReader Reader(Stream);
+  codeview::StreamReader Reader(*Stream);
 
   // Check stream size.
   if (Reader.bytesRemaining() < sizeof(HeaderInfo) + sizeof(GSIHashHeader))

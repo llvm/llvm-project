@@ -5075,7 +5075,7 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   // Try splatting with a VMOV.f32...
-  APFloat FPVal = CFP->getValueAPF();
+  const APFloat &FPVal = CFP->getValueAPF();
   int ImmVal = IsDouble ? ARM_AM::getFP64Imm(FPVal) : ARM_AM::getFP32Imm(FPVal);
 
   if (ImmVal != -1) {
@@ -10601,7 +10601,7 @@ static void computeKnownBits(SelectionDAG &DAG, SDValue Op, APInt &KnownZero,
     // The operand to BFI is already a mask suitable for removing the bits it
     // sets.
     ConstantSDNode *CI = cast<ConstantSDNode>(Op.getOperand(2));
-    APInt Mask = CI->getAPIntValue();
+    const APInt &Mask = CI->getAPIntValue();
     KnownZero &= Mask;
     KnownOne &= Mask;
     return;

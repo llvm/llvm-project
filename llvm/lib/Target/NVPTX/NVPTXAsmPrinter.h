@@ -293,7 +293,7 @@ private:
   bool isLoopHeaderOfNoUnroll(const MachineBasicBlock &MBB) const;
 
   LineReader *reader;
-  LineReader *getReader(std::string);
+  LineReader *getReader(const std::string &);
 
   // Used to control the need to emit .generic() in the initializer of
   // module scope variables.

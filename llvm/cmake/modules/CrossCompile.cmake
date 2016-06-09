@@ -1,4 +1,4 @@
-function(llvm_create_cross_target_internal target_name toochain buildtype)
+function(llvm_create_cross_target_internal target_name toolchain buildtype)
 
   if(NOT DEFINED LLVM_${target_name}_BUILD)
     set(LLVM_${target_name}_BUILD "${CMAKE_BINARY_DIR}/${target_name}")

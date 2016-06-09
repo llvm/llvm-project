@@ -19,15 +19,14 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-ModStream::ModStream(const PDBFile &File, const ModInfo &Module)
-    : Mod(Module), Stream(llvm::make_unique<IndexedStreamData>(
-                              Module.getModuleStreamIndex(), File),
-                          File) {}
+ModStream::ModStream(const ModInfo &Module,
+                     std::unique_ptr<MappedBlockStream> Stream)
+    : Mod(Module), Stream(std::move(Stream)) {}
 
 ModStream::~ModStream() {}
 
 Error ModStream::reload() {
-  codeview::StreamReader Reader(Stream);
+  codeview::StreamReader Reader(*Stream);
 
   uint32_t SymbolSize = Mod.getSymbolDebugInfoByteSize();
   uint32_t C11Size = Mod.getLineInfoByteSize();

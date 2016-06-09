@@ -523,7 +523,7 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
       }
       if (const SCEVConstant *CUB =
           collectConstantUpperBound(X->getAssociatedLoop(), Prod1->getType())) {
-        APInt UpperBound = CUB->getAPInt();
+        const APInt &UpperBound = CUB->getAPInt();
         DEBUG(dbgs() << "\t\tupper bound = " << UpperBound << "\n");
         if (Xq.sgt(UpperBound) || Yq.sgt(UpperBound)) {
           X->setEmpty();
@@ -1326,9 +1326,8 @@ bool DependenceInfo::weakCrossingSIVtest(
 // Computes the GCD of AM and BM.
 // Also finds a solution to the equation ax - by = gcd(a, b).
 // Returns true if dependence disproved; i.e., gcd does not divide Delta.
-static
-bool findGCD(unsigned Bits, APInt AM, APInt BM, APInt Delta,
-             APInt &G, APInt &X, APInt &Y) {
+static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
+                    const APInt &Delta, APInt &G, APInt &X, APInt &Y) {
   APInt A0(Bits, 1, true), A1(Bits, 0, true);
   APInt B0(Bits, 0, true), B1(Bits, 1, true);
   APInt G0 = AM.abs();
@@ -1357,9 +1356,7 @@ bool findGCD(unsigned Bits, APInt AM, APInt BM, APInt Delta,
   return false;
 }
 
-
-static
-APInt floorOfQuotient(APInt A, APInt B) {
+static APInt floorOfQuotient(const APInt &A, const APInt &B) {
   APInt Q = A; // these need to be initialized
   APInt R = A;
   APInt::sdivrem(A, B, Q, R);
@@ -1372,9 +1369,7 @@ APInt floorOfQuotient(APInt A, APInt B) {
     return Q - 1;
 }
 
-
-static
-APInt ceilingOfQuotient(APInt A, APInt B) {
+static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
   APInt Q = A; // these need to be initialized
   APInt R = A;
   APInt::sdivrem(A, B, Q, R);
@@ -1587,8 +1582,8 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
 static
 bool isRemainderZero(const SCEVConstant *Dividend,
                      const SCEVConstant *Divisor) {
-  APInt ConstDividend = Dividend->getAPInt();
-  APInt ConstDivisor = Divisor->getAPInt();
+  const APInt &ConstDividend = Dividend->getAPInt();
+  const APInt &ConstDivisor = Divisor->getAPInt();
   return ConstDividend.srem(ConstDivisor) == 0;
 }
 

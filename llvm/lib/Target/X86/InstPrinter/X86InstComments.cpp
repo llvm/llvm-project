@@ -342,14 +342,10 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
                        ShuffleMask);
     break;
 
-  case X86::PALIGNR128rr:
-  case X86::VPALIGNR128rr:
-  case X86::VPALIGNR256rr:
+  CASE_SHUF(PALIGNR, rri)
     Src1Name = getRegName(MI->getOperand(2).getReg());
     // FALL THROUGH.
-  case X86::PALIGNR128rm:
-  case X86::VPALIGNR128rm:
-  case X86::VPALIGNR256rm:
+  CASE_SHUF(PALIGNR, rmi)
     Src2Name = getRegName(MI->getOperand(1).getReg());
     DestName = getRegName(MI->getOperand(0).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
@@ -359,7 +355,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     break;
 
   CASE_SHUF(PSHUFD, ri)
-    Src1Name = getRegName(MI->getOperand(1).getReg());
+    Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
     // FALL THROUGH.
   CASE_SHUF(PSHUFD, mi)
     DestName = getRegName(MI->getOperand(0).getReg());
@@ -370,7 +366,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     break;
 
   CASE_SHUF(PSHUFHW, ri)
-    Src1Name = getRegName(MI->getOperand(1).getReg());
+    Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
     // FALL THROUGH.
   CASE_SHUF(PSHUFHW, mi)
     DestName = getRegName(MI->getOperand(0).getReg());
@@ -381,7 +377,7 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     break;
 
   CASE_SHUF(PSHUFLW, ri)
-    Src1Name = getRegName(MI->getOperand(1).getReg());
+    Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
     // FALL THROUGH.
   CASE_SHUF(PSHUFLW, mi)
     DestName = getRegName(MI->getOperand(0).getReg());

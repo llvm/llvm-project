@@ -206,6 +206,8 @@ static PTOP_LEVEL_EXCEPTION_FILTER OldFilter = NULL;
 static CRITICAL_SECTION CriticalSection;
 static bool CriticalSectionInitialized = false;
 
+static StringRef Argv0;
+
 enum {
 #if defined(_M_X64)
   NativeMachineType = IMAGE_FILE_MACHINE_AMD64
@@ -240,7 +242,7 @@ static bool printStackTraceWithLLVMSymbolizer(llvm::raw_ostream &OS,
       break;
   }
 
-  return printSymbolizedStackTrace(&StackTrace[0], Depth, OS);
+  return printSymbolizedStackTrace(Argv0, &StackTrace[0], Depth, OS);
 }
 
 namespace {
@@ -496,7 +498,10 @@ void sys::DisableSystemDialogsOnCrash() {
 
 /// PrintStackTraceOnErrorSignal - When an error signal (such as SIBABRT or
 /// SIGSEGV) is delivered to the process, print a stack trace and then exit.
-void sys::PrintStackTraceOnErrorSignal(bool DisableCrashReporting) {
+void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
+                                       bool DisableCrashReporting) {
+  ::Argv0 = Argv0;
+
   if (DisableCrashReporting || getenv("LLVM_DISABLE_CRASH_REPORT"))
     Process::PreventCoreFiles();
 

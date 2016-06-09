@@ -614,6 +614,7 @@ template <class T> class Expected {
 
 public:
   typedef typename std::conditional<isRef, wrap, T>::type storage_type;
+  typedef T value_type;
 
 private:
   typedef typename std::remove_reference<T>::type &reference;

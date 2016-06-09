@@ -1066,7 +1066,7 @@ void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
 void HexagonDAGToDAGISel::SelectConstantFP(SDNode *N) {
   SDLoc dl(N);
   ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N);
-  APFloat APF = CN->getValueAPF();
+  const APFloat &APF = CN->getValueAPF();
   if (N->getValueType(0) == MVT::f32) {
     ReplaceNode(
         N, CurDAG->getMachineNode(Hexagon::TFRI_f, dl, MVT::f32,

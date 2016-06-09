@@ -897,6 +897,9 @@ class CodeGen {
   // Functions to import into this module.
   FunctionImporter::ImportMapTy *ImportList;
 
+  // Map of globals defined in this module to their summary.
+  std::map<GlobalValue::GUID, GlobalValueSummary *> *DefinedGlobals;
+
 public:
   /// Constructor used by full LTO.
   CodeGen(std::unique_ptr<llvm::Module> M)
@@ -908,10 +911,11 @@ public:
   CodeGen(std::unique_ptr<llvm::Module> M, raw_fd_ostream *OS, int TaskID,
           const ModuleSummaryIndex *CombinedIndex, std::string Filename,
           StringMap<MemoryBufferRef> *ModuleMap,
-          FunctionImporter::ImportMapTy *ImportList)
+          FunctionImporter::ImportMapTy *ImportList,
+          std::map<GlobalValue::GUID, GlobalValueSummary *> *DefinedGlobals)
       : M(std::move(M)), OS(OS), TaskID(TaskID), CombinedIndex(CombinedIndex),
         SaveTempsFilename(std::move(Filename)), ModuleMap(ModuleMap),
-        ImportList(ImportList) {
+        ImportList(ImportList), DefinedGlobals(DefinedGlobals) {
     assert(options::thinlto == !!CombinedIndex &&
            "Expected module summary index iff performing ThinLTO");
     initTargetMachine();
@@ -996,6 +1000,14 @@ void CodeGen::runLTOPasses() {
   M->setDataLayout(TM->createDataLayout());
 
   if (CombinedIndex) {
+    // Apply summary-based internalization decisions. Skip if there are no
+    // defined globals from the summary since not only is it unnecessary, but
+    // if this module did not have a summary section the internalizer will
+    // assert if it finds any definitions in this module that aren't in the
+    // DefinedGlobals set.
+    if (!DefinedGlobals->empty())
+      thinLTOInternalizeModule(*M, *DefinedGlobals);
+
     // Create a loader that will parse the bitcode from the buffers
     // in the ModuleMap.
     ModuleLoader Loader(M->getContext(), *ModuleMap);
@@ -1137,7 +1149,7 @@ void CodeGen::runAll() {
 static void linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
                          const void *View, StringRef Name,
                          raw_fd_ostream *ApiFile, StringSet<> &Internalize,
-                         StringSet<> &Maybe) {
+                         StringSet<> &Maybe, bool SetName = false) {
   std::vector<GlobalValue *> Keep;
   StringMap<unsigned> Realign;
   std::unique_ptr<Module> M = getModuleForFile(
@@ -1149,6 +1161,12 @@ static void linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
   else if (M->getTargetTriple().empty()) {
     M->setTargetTriple(DefaultTriple);
   }
+
+  // For ThinLTO we want to propagate the source file name to ensure
+  // we can create the correct global identifiers matching those in the
+  // original module.
+  if (SetName)
+    L.getModule().setSourceFileName(M->getSourceFileName());
 
   if (Error E = L.move(std::move(M), Keep,
                        [](GlobalValue &, IRMover::ValueAdder) {})) {
@@ -1173,7 +1191,8 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
                                const ModuleSummaryIndex &CombinedIndex,
                                raw_fd_ostream *OS, unsigned TaskID,
                                StringMap<MemoryBufferRef> &ModuleMap,
-                               FunctionImporter::ImportMapTy &ImportList) {
+                               FunctionImporter::ImportMapTy &ImportList,
+                               std::map<GlobalValue::GUID, GlobalValueSummary *> &DefinedGlobals) {
   // Need to use a separate context for each task
   LLVMContext Context;
   Context.setDiscardValueNames(options::TheOutputType !=
@@ -1185,12 +1204,12 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
   IRMover L(*NewModule.get());
 
   StringSet<> Dummy;
-  linkInModule(Context, L, F, View, Name, ApiFile, Dummy, Dummy);
+  linkInModule(Context, L, F, View, Name, ApiFile, Dummy, Dummy, true);
   if (renameModuleForThinLTO(*NewModule, CombinedIndex))
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
 
   CodeGen codeGen(std::move(NewModule), OS, TaskID, &CombinedIndex, Name,
-                  &ModuleMap, &ImportList);
+                  &ModuleMap, &ImportList, &DefinedGlobals);
   codeGen.runAll();
 }
 
@@ -1199,7 +1218,9 @@ static void
 thinLTOBackends(raw_fd_ostream *ApiFile,
                 const ModuleSummaryIndex &CombinedIndex,
                 StringMap<MemoryBufferRef> &ModuleMap,
-                StringMap<FunctionImporter::ImportMapTy> &ImportLists) {
+                StringMap<FunctionImporter::ImportMapTy> &ImportLists,
+  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
+      &ModuleToDefinedGVSummaries) {
   unsigned TaskCount = 0;
   std::vector<ThinLTOTaskInfo> Tasks;
   Tasks.reserve(Modules.size());
@@ -1243,7 +1264,8 @@ thinLTOBackends(raw_fd_ostream *ApiFile,
       ThinLTOThreadPool.async(thinLTOBackendTask, std::ref(F), View, F.name,
                               ApiFile, std::ref(CombinedIndex), OS.get(),
                               TaskCount, std::ref(ModuleMap),
-                              std::ref(ImportLists[F.name]));
+                              std::ref(ImportLists[F.name]),
+                              std::ref(ModuleToDefinedGVSummaries[F.name]));
 
       // Record the information needed by the task or during its cleanup
       // to a ThinLTOTaskInfo instance. For information needed by the task
@@ -1298,6 +1320,11 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
   // interfaces with gold.
   DenseMap<void *, std::unique_ptr<PluginInputFile>> HandleToInputFile;
 
+  // Keep track of internalization candidates as well as those that may not
+  // be internalized because they are refereneced from other IR modules.
+  DenseSet<GlobalValue::GUID> Internalize;
+  DenseSet<GlobalValue::GUID> CrossReferenced;
+
   ModuleSummaryIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (claimed_file &F : Modules) {
@@ -1321,11 +1348,23 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     // Skip files without a module summary.
     if (Index)
       CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
+
+    // Look for internalization candidates based on gold's symbol resolution
+    // information. Also track symbols referenced from other IR modules.
+    for (auto &Sym : F.syms) {
+      ld_plugin_symbol_resolution Resolution =
+          (ld_plugin_symbol_resolution)Sym.resolution;
+      if (Resolution == LDPR_PREVAILING_DEF_IRONLY)
+        Internalize.insert(GlobalValue::getGUID(Sym.name));
+      if (Resolution == LDPR_RESOLVED_IR || Resolution == LDPR_PREEMPTED_IR)
+        CrossReferenced.insert(GlobalValue::getGUID(Sym.name));
+    }
   }
 
-  if (options::thinlto_emit_imports_files && !options::thinlto_index_only)
-    message(LDPL_WARNING,
-            "thinlto-emit-imports-files ignored unless thinlto-index-only");
+  // Remove symbols referenced from other IR modules from the internalization
+  // candidate set.
+  for (auto &S : CrossReferenced)
+    Internalize.erase(S);
 
   // Collect for each module the list of function it defines (GUID ->
   // Summary).
@@ -1337,6 +1376,25 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
   StringMap<FunctionImporter::ExportSetTy> ExportLists(NextModuleId);
   ComputeCrossModuleImport(CombinedIndex, ModuleToDefinedGVSummaries,
                            ImportLists, ExportLists);
+
+  // Callback for internalization, to prevent internalization of symbols
+  // that were not candidates initially, and those that are being imported
+  // (which introduces new cross references).
+  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
+    const auto &ExportList = ExportLists.find(ModuleIdentifier);
+    return (ExportList != ExportLists.end() &&
+            ExportList->second.count(GUID)) ||
+           !Internalize.count(GUID);
+  };
+
+  // Use global summary-based analysis to identify symbols that can be
+  // internalized (because they aren't exported or preserved as per callback).
+  // Changes are made in the index, consumed in the ThinLTO backends.
+  thinLTOInternalizeAndPromoteInIndex(CombinedIndex, isExported);
+
+  if (options::thinlto_emit_imports_files && !options::thinlto_index_only)
+    message(LDPL_WARNING,
+            "thinlto-emit-imports-files ignored unless thinlto-index-only");
 
   if (options::thinlto_index_only) {
     // If the thinlto-prefix-replace option was specified, parse it and
@@ -1388,7 +1446,8 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     WriteIndexToFile(CombinedIndex, OS);
   }
 
-  thinLTOBackends(ApiFile, CombinedIndex, ModuleMap, ImportLists);
+  thinLTOBackends(ApiFile, CombinedIndex, ModuleMap, ImportLists,
+                  ModuleToDefinedGVSummaries);
   return LDPS_OK;
 }
 

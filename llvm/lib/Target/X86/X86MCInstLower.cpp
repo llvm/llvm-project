@@ -1543,7 +1543,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
               CS << CI->getZExtValue();
             } else {
               // print multi-word constant as (w0,w1)
-              auto Val = CI->getValue();
+              const auto &Val = CI->getValue();
               CS << "(";
               for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
                 if (i > 0)

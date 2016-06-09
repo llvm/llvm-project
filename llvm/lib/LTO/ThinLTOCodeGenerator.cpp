@@ -335,7 +335,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
                      const FunctionImporter::ExportSetTy &ExportList,
                      const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
                      const GVSummaryMapTy &DefinedGlobals,
-                     ThinLTOCodeGenerator::CachingOptions CacheOptions,
+                     const ThinLTOCodeGenerator::CachingOptions &CacheOptions,
                      bool DisableCodeGen, StringRef SaveTempsDir,
                      unsigned count) {
 

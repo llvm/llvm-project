@@ -25,9 +25,6 @@ public:
       : Stream(&Stream), ViewOffset(Offset), Length(Length) {}
 
   StreamRef(const StreamRef &Stream, uint32_t Offset, uint32_t Length) = delete;
-  StreamRef(const StreamRef &Other)
-      : Stream(Other.Stream), ViewOffset(Other.ViewOffset),
-        Length(Other.Length) {}
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
@@ -67,13 +64,6 @@ public:
   }
 
   bool operator!=(const StreamRef &Other) const { return !(*this == Other); }
-
-  StreamRef &operator=(const StreamRef &Other) {
-    Stream = Other.Stream;
-    ViewOffset = Other.ViewOffset;
-    Length = Other.Length;
-    return *this;
-  }
 
 private:
   const StreamInterface *Stream;

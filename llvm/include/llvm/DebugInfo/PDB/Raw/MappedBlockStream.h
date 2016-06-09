@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
@@ -24,11 +25,10 @@ namespace pdb {
 
 class IPDBFile;
 class IPDBStreamData;
+class PDBFile;
 
 class MappedBlockStream : public codeview::StreamInterface {
 public:
-  MappedBlockStream(std::unique_ptr<IPDBStreamData> Data, const IPDBFile &File);
-
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override;
 
@@ -36,7 +36,14 @@ public:
 
   uint32_t getNumBytesCopied() const;
 
-private:
+  static Expected<std::unique_ptr<MappedBlockStream>>
+  createIndexedStream(uint32_t StreamIdx, const IPDBFile &File);
+  static Expected<std::unique_ptr<MappedBlockStream>>
+  createDirectoryStream(const PDBFile &File);
+
+protected:
+  MappedBlockStream(std::unique_ptr<IPDBStreamData> Data, const IPDBFile &File);
+
   Error readBytes(uint32_t Offset, MutableArrayRef<uint8_t> Buffer) const;
   bool tryReadContiguously(uint32_t Offset, uint32_t Size,
                            ArrayRef<uint8_t> &Buffer) const;

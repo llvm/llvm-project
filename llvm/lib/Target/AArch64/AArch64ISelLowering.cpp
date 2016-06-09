@@ -7588,7 +7588,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-    APInt Value = C->getAPIntValue();
+    const APInt &Value = C->getAPIntValue();
     EVT VT = N->getValueType(0);
     SDLoc DL(N);
     if (Value.isNonNegative()) {

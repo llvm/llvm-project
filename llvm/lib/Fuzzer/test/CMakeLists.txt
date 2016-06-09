@@ -78,6 +78,7 @@ set(Tests
   NullDerefTest
   NullDerefOnEmptyTest
   NthRunCrashTest
+  OneHugeAllocTest
   OutOfMemoryTest
   RepeatedMemcmp
   SimpleCmpTest

@@ -68,6 +68,8 @@ static void (*InterruptFunction)() = nullptr;
 
 static ManagedStatic<std::vector<std::string>> FilesToRemove;
 
+static StringRef Argv0;
+
 // IntSigs - Signals that represent requested termination. There's no bug
 // or failure, or if there is, it's not our direct responsibility. For whatever
 // reason, our continued execution is no longer desirable.
@@ -408,7 +410,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
   if (!depth)
     return;
 
-  if (printSymbolizedStackTrace(StackTrace, depth, OS))
+  if (printSymbolizedStackTrace(Argv0, StackTrace, depth, OS))
     return;
 #if HAVE_DLFCN_H && __GNUG__
   int width = 0;
@@ -471,7 +473,10 @@ void llvm::sys::DisableSystemDialogsOnCrash() {}
 
 /// PrintStackTraceOnErrorSignal - When an error signal (such as SIGABRT or
 /// SIGSEGV) is delivered to the process, print a stack trace and then exit.
-void llvm::sys::PrintStackTraceOnErrorSignal(bool DisableCrashReporting) {
+void llvm::sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
+                                             bool DisableCrashReporting) {
+  ::Argv0 = Argv0;
+
   AddSignalHandler(PrintStackTraceSignalHandler, nullptr);
 
 #if defined(__APPLE__) && defined(ENABLE_CRASH_OVERRIDES)

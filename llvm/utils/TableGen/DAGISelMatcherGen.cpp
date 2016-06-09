@@ -116,7 +116,7 @@ namespace {
     /// If this is the first time a node with unique identifier Name has been
     /// seen, record it. Otherwise, emit a check to make sure this is the same
     /// node. Returns true if this is the first encounter.
-    bool recordUniqueNode(std::string Name);
+    bool recordUniqueNode(const std::string &Name);
 
     // Result Code Generation.
     unsigned getNamedArgumentSlot(StringRef Name) {
@@ -438,7 +438,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
   }
 }
 
-bool MatcherGen::recordUniqueNode(std::string Name) {
+bool MatcherGen::recordUniqueNode(const std::string &Name) {
   unsigned &VarMapEntry = VariableMap[Name];
   if (VarMapEntry == 0) {
     // If it is a named node, we must emit a 'Record' opcode.

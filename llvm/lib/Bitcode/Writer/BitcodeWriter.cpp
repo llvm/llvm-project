@@ -1467,6 +1467,7 @@ void ModuleBitcodeWriter::writeDISubroutineType(
   Record.push_back(HasNoOldTypeRefs | (unsigned)N->isDistinct());
   Record.push_back(N->getFlags());
   Record.push_back(VE.getMetadataOrNullID(N->getTypeArray().get()));
+  Record.push_back(N->getCC());
 
   Stream.EmitRecord(bitc::METADATA_SUBROUTINE_TYPE, Record, Abbrev);
   Record.clear();

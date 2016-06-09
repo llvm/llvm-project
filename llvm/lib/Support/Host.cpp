@@ -320,6 +320,7 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
       *Type = INTEL_i486;
       break;
     }
+    break;
   case 5:
     switch (Model) {
     case 1: // Pentium OverDrive processor for Pentium processor (60, 66),
@@ -341,6 +342,7 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
       *Type = INTEL_PENTIUM;
       break;
     }
+    break;
   case 6:
     switch (Model) {
     case 0x01: // Pentium Pro processor
@@ -537,6 +539,7 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
       *Type = INTEL_PENTIUM_PRO;
       break;
     }
+    break;
   case 15: {
     switch (Model) {
     case 0: // Pentium 4 processor, Intel Xeon processor. All processors are
@@ -572,6 +575,7 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
           ((Features & (1 << FEATURE_EM64T)) ? INTEL_X86_64 : INTEL_PENTIUM_IV);
       break;
     }
+    break;
   }
   default:
     break; /*"generic"*/
@@ -589,6 +593,7 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
   switch (Family) {
   case 4:
     *Type = AMD_i486;
+    break;
   case 5:
     *Type = AMDPENTIUM;
     switch (Model) {
@@ -606,9 +611,8 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
     case 10:
       *Subtype = AMDPENTIUM_GEODE;
       break; // "geode"
-    default:
-      break;
     }
+    break;
   case 6:
     *Type = AMDATHLON;
     switch (Model) {
@@ -623,9 +627,8 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
     case 10:
       *Subtype = AMDATHLON_XP;
       break; // "athlon-xp"
-    default:
-      break;
     }
+    break;
   case 15:
     *Type = AMDATHLON;
     if (Features & (1 << FEATURE_SSE3)) {
@@ -643,6 +646,7 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
       *Subtype = AMDATHLON_64;
       break; // "athlon64"
     }
+    break;
   case 16:
     *Type = AMDFAM10H; // "amdfam10"
     switch (Model) {
@@ -655,9 +659,8 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
     case 8:
       *Subtype = AMDFAM10H_ISTANBUL;
       break;
-    default:
-      break;
     }
+    break;
   case 20:
     *Type = AMDFAM14H;
     *Subtype = AMD_BTVER1;

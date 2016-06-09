@@ -178,7 +178,7 @@ void DwarfExpression::AddUnsignedConstant(unsigned Value) {
   AddStackValue();
 }
 
-void DwarfExpression::AddUnsignedConstant(APInt Value) {
+void DwarfExpression::AddUnsignedConstant(const APInt &Value) {
   unsigned Size = Value.getBitWidth();
   const uint64_t *Data = Value.getRawData();
 

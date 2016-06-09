@@ -389,18 +389,9 @@ enum CaseSensitivity {
 
 enum CallingConvention {
   // Calling convention codes
-  DW_CC_normal = 0x01,
-  DW_CC_program = 0x02,
-  DW_CC_nocall = 0x03,
+#define HANDLE_DW_CC(ID, NAME) DW_CC_##NAME = ID,
+#include "llvm/Support/Dwarf.def"
   DW_CC_lo_user = 0x40,
-  DW_CC_GNU_borland_fastcall_i386 = 0x41,
-  DW_CC_BORLAND_safecall = 0xb0,
-  DW_CC_BORLAND_stdcall = 0xb1,
-  DW_CC_BORLAND_pascal = 0xb2,
-  DW_CC_BORLAND_msfastcall = 0xb3,
-  DW_CC_BORLAND_msreturn = 0xb4,
-  DW_CC_BORLAND_thiscall = 0xb5,
-  DW_CC_BORLAND_fastcall = 0xb6,
   DW_CC_hi_user = 0xff
 };
 
@@ -652,6 +643,7 @@ unsigned getTag(StringRef TagString);
 unsigned getOperationEncoding(StringRef OperationEncodingString);
 unsigned getVirtuality(StringRef VirtualityString);
 unsigned getLanguage(StringRef LanguageString);
+unsigned getCallingConvention(StringRef LanguageString);
 unsigned getAttributeEncoding(StringRef EncodingString);
 unsigned getMacinfo(StringRef MacinfoString);
 /// @}

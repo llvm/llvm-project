@@ -602,7 +602,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   // updating domtree after partial loop unrolling should also be easy.
   if (DT && !CompletelyUnroll)
     DT->recalculate(*L->getHeader()->getParent());
-  else
+  else if (DT)
     DEBUG(DT->verifyDomTree());
 
   // Simplify any new induction variables in the partially unrolled loop.

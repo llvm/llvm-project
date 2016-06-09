@@ -3663,7 +3663,7 @@ void Verifier::visitInstruction(Instruction &I) {
     Assert(MD->getNumOperands() == 1, "fpmath takes one operand!", &I);
     if (ConstantFP *CFP0 =
             mdconst::dyn_extract_or_null<ConstantFP>(MD->getOperand(0))) {
-      APFloat Accuracy = CFP0->getValueAPF();
+      const APFloat &Accuracy = CFP0->getValueAPF();
       Assert(Accuracy.isFiniteNonZero() && !Accuracy.isNegative(),
              "fpmath accuracy not a positive number!", &I);
     } else {

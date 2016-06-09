@@ -365,6 +365,7 @@ bool MIRParserImpl::initializeRegisterInfo(MachineFunction &MF,
       // This is a generic virtual register.
       // The size will be set appropriately when we reach the definition.
       Reg = RegInfo.createGenericVirtualRegister(/*Size*/ 1);
+      PFS.GenericVRegs.insert(Reg);
     } else {
       const auto *RC = getRegClass(MF, VReg.Class.Value);
       if (RC) {
@@ -378,6 +379,7 @@ bool MIRParserImpl::initializeRegisterInfo(MachineFunction &MF,
                   VReg.Class.Value + "'");
         Reg = RegInfo.createGenericVirtualRegister(/*Size*/ 1);
         RegInfo.setRegBank(Reg, *RegBank);
+        PFS.GenericVRegs.insert(Reg);
       }
     }
     if (!PFS.VirtualRegisterSlots.insert(std::make_pair(VReg.ID.Value, Reg))

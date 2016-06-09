@@ -190,7 +190,7 @@ public:
     startLine() << Label << ": " << int(Value) << "\n";
   }
 
-  void printNumber(StringRef Label, APSInt Value) {
+  void printNumber(StringRef Label, const APSInt &Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 

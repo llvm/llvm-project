@@ -5674,7 +5674,7 @@ defm PMULHRSW    : SS3I_binop_rm_int<0x0B, "pmulhrsw",
 
 multiclass ssse3_palignr<string asm, bit Is2Addr = 1> {
   let hasSideEffects = 0 in {
-  def R128rr : SS3AI<0x0F, MRMSrcReg, (outs VR128:$dst),
+  def rri : SS3AI<0x0F, MRMSrcReg, (outs VR128:$dst),
       (ins VR128:$src1, VR128:$src2, u8imm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
@@ -5682,7 +5682,7 @@ multiclass ssse3_palignr<string asm, bit Is2Addr = 1> {
                   "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}")),
       [], IIC_SSE_PALIGNRR>, Sched<[WriteShuffle]>;
   let mayLoad = 1 in
-  def R128rm : SS3AI<0x0F, MRMSrcMem, (outs VR128:$dst),
+  def rmi : SS3AI<0x0F, MRMSrcMem, (outs VR128:$dst),
       (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
       !if(Is2Addr,
         !strconcat(asm, "\t{$src3, $src2, $dst|$dst, $src2, $src3}"),
@@ -5694,13 +5694,13 @@ multiclass ssse3_palignr<string asm, bit Is2Addr = 1> {
 
 multiclass ssse3_palignr_y<string asm, bit Is2Addr = 1> {
   let hasSideEffects = 0 in {
-  def R256rr : SS3AI<0x0F, MRMSrcReg, (outs VR256:$dst),
+  def Yrri : SS3AI<0x0F, MRMSrcReg, (outs VR256:$dst),
       (ins VR256:$src1, VR256:$src2, u8imm:$src3),
       !strconcat(asm,
                  "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
       []>, Sched<[WriteShuffle]>;
   let mayLoad = 1 in
-  def R256rm : SS3AI<0x0F, MRMSrcMem, (outs VR256:$dst),
+  def Yrmi : SS3AI<0x0F, MRMSrcMem, (outs VR256:$dst),
       (ins VR256:$src1, i256mem:$src2, u8imm:$src3),
       !strconcat(asm,
                  "\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
@@ -5709,43 +5709,43 @@ multiclass ssse3_palignr_y<string asm, bit Is2Addr = 1> {
 }
 
 let Predicates = [HasAVX] in
-  defm VPALIGN : ssse3_palignr<"vpalignr", 0>, VEX_4V;
+  defm VPALIGNR : ssse3_palignr<"vpalignr", 0>, VEX_4V;
 let Predicates = [HasAVX2] in
-  defm VPALIGN : ssse3_palignr_y<"vpalignr", 0>, VEX_4V, VEX_L;
+  defm VPALIGNR : ssse3_palignr_y<"vpalignr", 0>, VEX_4V, VEX_L;
 let Constraints = "$src1 = $dst", Predicates = [UseSSSE3] in
-  defm PALIGN : ssse3_palignr<"palignr">;
+  defm PALIGNR : ssse3_palignr<"palignr">;
 
 let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
 def : Pat<(v8i32 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNR256rr VR256:$src1, VR256:$src2, imm:$imm)>;
+          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
 def : Pat<(v8f32 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNR256rr VR256:$src1, VR256:$src2, imm:$imm)>;
+          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
 def : Pat<(v16i16 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNR256rr VR256:$src1, VR256:$src2, imm:$imm)>;
+          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
 def : Pat<(v32i8 (X86PAlignr VR256:$src1, VR256:$src2, (i8 imm:$imm))),
-          (VPALIGNR256rr VR256:$src1, VR256:$src2, imm:$imm)>;
+          (VPALIGNRYrri VR256:$src1, VR256:$src2, imm:$imm)>;
 }
 
 let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
 def : Pat<(v4i32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 def : Pat<(v4f32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 def : Pat<(v8i16 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 def : Pat<(v16i8 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (VPALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (VPALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 }
 
 let Predicates = [UseSSSE3] in {
 def : Pat<(v4i32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 def : Pat<(v4f32 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 def : Pat<(v8i16 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 def : Pat<(v16i8 (X86PAlignr VR128:$src1, VR128:$src2, (i8 imm:$imm))),
-          (PALIGNR128rr VR128:$src1, VR128:$src2, imm:$imm)>;
+          (PALIGNRrri VR128:$src1, VR128:$src2, imm:$imm)>;
 }
 
 //===---------------------------------------------------------------------===//

@@ -12,6 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+//------------------------------------------------------------------------------
+// Binary ops.
+//------------------------------------------------------------------------------
 // Generic addition.
 def G_ADD : Instruction {
   let OutOperandList = (outs unknown:$dst);
@@ -21,6 +24,18 @@ def G_ADD : Instruction {
   let isCommutable = 1;
 }
 
+// Generic bitwise or.
+def G_OR : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let AsmString = "";
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+//------------------------------------------------------------------------------
+// Branches.
+//------------------------------------------------------------------------------
 // Generic unconditional branch.
 def G_BR : Instruction {
   let OutOperandList = (outs);

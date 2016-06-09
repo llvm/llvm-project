@@ -597,8 +597,8 @@ static void darwinPrintStab(MachOObjectFile *MachO, SymbolListT::iterator I) {
 }
 
 static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
-                                   std::string ArchiveName,
-                                   std::string ArchitectureName) {
+                                   const std::string &ArchiveName,
+                                   const std::string &ArchitectureName) {
   if (!NoSort) {
     std::function<bool(const NMSymbol &, const NMSymbol &)> Cmp;
     if (NumericSort)
@@ -963,10 +963,10 @@ static unsigned getNsectInMachO(MachOObjectFile &Obj, BasicSymbolRef Sym) {
   return (STE.n_type & MachO::N_TYPE) == MachO::N_SECT ? STE.n_sect : 0;
 }
 
-static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
-                                      std::string ArchiveName = std::string(),
-                                      std::string ArchitectureName =
-                                        std::string()) {
+static void
+dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
+                          const std::string &ArchiveName = std::string(),
+                          const std::string &ArchitectureName = std::string()) {
   auto Symbols = Obj.symbols();
   if (DynamicSyms) {
     const auto *E = dyn_cast<ELFObjectFileBase>(&Obj);
@@ -1347,7 +1347,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
 
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.

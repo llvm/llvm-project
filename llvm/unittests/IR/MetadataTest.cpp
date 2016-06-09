@@ -80,7 +80,7 @@ protected:
 
   MDTuple *getTuple() { return MDTuple::getDistinct(Context, None); }
   DISubroutineType *getSubroutineType() {
-    return DISubroutineType::getDistinct(Context, 0, getNode(nullptr));
+    return DISubroutineType::getDistinct(Context, 0, 0, getNode(nullptr));
   }
   DISubprogram *getSubprogram() {
     return DISubprogram::getDistinct(Context, nullptr, "", "", nullptr, 0,
@@ -969,14 +969,14 @@ TEST_F(DITypeTest, setFlags) {
   Metadata *TypesOps[] = {nullptr};
   Metadata *Types = MDTuple::get(Context, TypesOps);
 
-  DIType *D = DISubroutineType::getDistinct(Context, 0u, Types);
+  DIType *D = DISubroutineType::getDistinct(Context, 0u, 0, Types);
   EXPECT_EQ(0u, D->getFlags());
   D->setFlags(DINode::FlagRValueReference);
   EXPECT_EQ(DINode::FlagRValueReference, D->getFlags());
   D->setFlags(0u);
   EXPECT_EQ(0u, D->getFlags());
 
-  TempDIType T = DISubroutineType::getTemporary(Context, 0u, Types);
+  TempDIType T = DISubroutineType::getTemporary(Context, 0u, 0, Types);
   EXPECT_EQ(0u, T->getFlags());
   T->setFlags(DINode::FlagRValueReference);
   EXPECT_EQ(DINode::FlagRValueReference, T->getFlags());
@@ -1254,14 +1254,29 @@ TEST_F(DISubroutineTypeTest, get) {
   unsigned Flags = 1;
   MDTuple *TypeArray = getTuple();
 
-  auto *N = DISubroutineType::get(Context, Flags, TypeArray);
+  auto *N = DISubroutineType::get(Context, Flags, 0, TypeArray);
   EXPECT_EQ(dwarf::DW_TAG_subroutine_type, N->getTag());
   EXPECT_EQ(Flags, N->getFlags());
   EXPECT_EQ(TypeArray, N->getTypeArray().get());
-  EXPECT_EQ(N, DISubroutineType::get(Context, Flags, TypeArray));
+  EXPECT_EQ(N, DISubroutineType::get(Context, Flags, 0, TypeArray));
 
-  EXPECT_NE(N, DISubroutineType::get(Context, Flags + 1, TypeArray));
-  EXPECT_NE(N, DISubroutineType::get(Context, Flags, getTuple()));
+  EXPECT_NE(N, DISubroutineType::get(Context, Flags + 1, 0, TypeArray));
+  EXPECT_NE(N, DISubroutineType::get(Context, Flags, 0, getTuple()));
+
+  // Test the hashing of calling conventions.
+  auto *Fast = DISubroutineType::get(
+      Context, Flags, dwarf::DW_CC_BORLAND_msfastcall, TypeArray);
+  auto *Std = DISubroutineType::get(Context, Flags,
+                                    dwarf::DW_CC_BORLAND_stdcall, TypeArray);
+  EXPECT_EQ(Fast,
+            DISubroutineType::get(Context, Flags,
+                                  dwarf::DW_CC_BORLAND_msfastcall, TypeArray));
+  EXPECT_EQ(Std, DISubroutineType::get(
+                     Context, Flags, dwarf::DW_CC_BORLAND_stdcall, TypeArray));
+
+  EXPECT_NE(N, Fast);
+  EXPECT_NE(N, Std);
+  EXPECT_NE(Fast, Std);
 
   TempDISubroutineType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));

@@ -9552,9 +9552,9 @@ define <4 x i32>@test_int_x86_avx512_mask_pshuf_d_128(<4 x i32> %x0, i32 %x1, <4
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vpshufd $3, %xmm0, %xmm1 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x70,0xc8,0x03]
-; CHECK-NEXT:    ## xmm1 = xmm1[3,0,0,0]
+; CHECK-NEXT:    ## xmm1 = xmm0[3,0,0,0]
 ; CHECK-NEXT:    vpshufd $3, %xmm0, %xmm2 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0x89,0x70,0xd0,0x03]
-; CHECK-NEXT:    ## xmm2 = k1[3,0,0,0]
+; CHECK-NEXT:    ## xmm2 = xmm0[3,0,0,0]
 ; CHECK-NEXT:    vpshufd $3, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x70,0xc0,0x03]
 ; CHECK-NEXT:    ## xmm0 = xmm0[3,0,0,0]
 ; CHECK-NEXT:    vpaddd %xmm2, %xmm1, %xmm1 ## encoding: [0x62,0xf1,0x75,0x08,0xfe,0xca]
@@ -9575,9 +9575,9 @@ define <8 x i32>@test_int_x86_avx512_mask_pshuf_d_256(<8 x i32> %x0, i32 %x1, <8
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1 ## encoding: [0xc5,0xf8,0x92,0xce]
 ; CHECK-NEXT:    vpshufd $3, %ymm0, %ymm1 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x70,0xc8,0x03]
-; CHECK-NEXT:    ## ymm1 = ymm1[3,0,0,0,7,4,4,4]
+; CHECK-NEXT:    ## ymm1 = ymm0[3,0,0,0,7,4,4,4]
 ; CHECK-NEXT:    vpshufd $3, %ymm0, %ymm2 {%k1} {z} ## encoding: [0x62,0xf1,0x7d,0xa9,0x70,0xd0,0x03]
-; CHECK-NEXT:    ## ymm2 = k1[3,0,0,0,7,4,4,4]
+; CHECK-NEXT:    ## ymm2 = ymm0[3,0,0,0,7,4,4,4]
 ; CHECK-NEXT:    vpshufd $3, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x70,0xc0,0x03]
 ; CHECK-NEXT:    ## ymm0 = ymm0[3,0,0,0,7,4,4,4]
 ; CHECK-NEXT:    vpaddd %ymm2, %ymm1, %ymm1 ## encoding: [0x62,0xf1,0x75,0x28,0xfe,0xca]

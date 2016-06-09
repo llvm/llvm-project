@@ -422,7 +422,7 @@ BT::RegisterCell BT::MachineEvaluator::eIMM(int64_t V, uint16_t W) const {
 
 
 BT::RegisterCell BT::MachineEvaluator::eIMM(const ConstantInt *CI) const {
-  APInt A = CI->getValue();
+  const APInt &A = CI->getValue();
   uint16_t BW = A.getBitWidth();
   assert((unsigned)BW == A.getBitWidth() && "BitWidth overflow");
   RegisterCell Res(BW);

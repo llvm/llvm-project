@@ -4764,7 +4764,7 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
     if (VT.getScalarSizeInBits() != MaskEltSizeInBits)
       return false;
     if (auto *CN = dyn_cast<ConstantSDNode>(MaskNode.getOperand(0))) {
-      APInt MaskElement = CN->getAPIntValue();
+      const APInt &MaskElement = CN->getAPIntValue();
       for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
         APInt RawElt = MaskElement.getLoBits(MaskEltSizeInBits);
         RawMask.push_back(RawElt.getZExtValue());
@@ -11661,7 +11661,7 @@ static SDValue lowerV4X128VectorShuffle(SDLoc DL, MVT VT,
 
   // To handle 256 bit vector requires VLX and most probably
   // function lowerV2X128VectorShuffle() is better solution.
-  assert(VT.is512BitVector() && "Unexpected vector size for 128bit shuffle.");
+  assert(VT.is512BitVector() && "Unexpected vector size for 512bit shuffle.");
 
   SmallVector<int, 4> WidenedMask;
   if (!canWidenShuffleElements(Mask, WidenedMask))
@@ -26928,7 +26928,7 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
       N0.getOperand(1).getOpcode() == ISD::Constant) {
     SDValue N00 = N0.getOperand(0);
     APInt Mask = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
-    APInt ShAmt = N1C->getAPIntValue();
+    const APInt &ShAmt = N1C->getAPIntValue();
     Mask = Mask.shl(ShAmt);
     bool MaskOK = false;
     // We can handle cases concerning bit-widening nodes containing setcc_c if
@@ -27044,7 +27044,7 @@ static SDValue performShiftToAllZeros(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   if (auto *AmtBV = dyn_cast<BuildVectorSDNode>(Amt))
     if (auto *AmtSplat = AmtBV->getConstantSplatNode()) {
-      APInt ShiftAmt = AmtSplat->getAPIntValue();
+      const APInt &ShiftAmt = AmtSplat->getAPIntValue();
       unsigned MaxAmount =
         VT.getSimpleVT().getVectorElementType().getSizeInBits();
 
@@ -30330,7 +30330,7 @@ static bool clobbersFlagRegisters(const SmallVector<StringRef, 4> &AsmPieces) {
 bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
   InlineAsm *IA = cast<InlineAsm>(CI->getCalledValue());
 
-  std::string AsmStr = IA->getAsmString();
+  const std::string &AsmStr = IA->getAsmString();
 
   IntegerType *Ty = dyn_cast<IntegerType>(CI->getType());
   if (!Ty || Ty->getBitWidth() % 16 != 0)

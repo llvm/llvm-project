@@ -1176,3 +1176,35 @@ innercleanup:
   call void @clean()
   br label %outercleanup
 }
+
+declare void @hot_function()
+
+define void @test_hot_branch(i32* %a) {
+; Test that a hot branch that has a probability a little larger than 80% will
+; break CFG constrains when doing block placement.
+; CHECK-LABEL: test_hot_branch:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+; CHECK: %else
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %then, label %else, !prof !5
+
+then:
+  call void @hot_function()
+  br label %exit
+
+else:
+  call void @cold_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+!5 = !{!"branch_weights", i32 84, i32 16}

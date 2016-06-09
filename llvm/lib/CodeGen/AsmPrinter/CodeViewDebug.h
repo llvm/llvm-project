@@ -201,6 +201,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   codeview::TypeIndex lowerType(const DIType *Ty);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);
+  codeview::TypeIndex lowerTypeArray(const DICompositeType *Ty);
   codeview::TypeIndex lowerTypeBasic(const DIBasicType *Ty);
   codeview::TypeIndex lowerTypePointer(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeMemberPointer(const DIDerivedType *Ty);
