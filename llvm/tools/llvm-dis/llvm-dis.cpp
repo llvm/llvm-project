@@ -134,7 +134,7 @@ static void diagnosticHandler(const DiagnosticInfo &DI, void *Context) {
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
 
   LLVMContext Context;

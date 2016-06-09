@@ -946,7 +946,7 @@ public:
   // getValueName - Overload in subclass to provide a better default value.
   const char *getValueName() const override { return "string"; }
 
-  void printOptionDiff(const Option &O, StringRef V, OptVal Default,
+  void printOptionDiff(const Option &O, StringRef V, const OptVal &Default,
                        size_t GlobalWidth) const;
 
   // An out-of-line virtual method to provide a 'home' for this class.

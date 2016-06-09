@@ -1014,7 +1014,7 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
 
 
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
-  bool SameTy = getSameType(VL); (void)SameTy;
+  bool SameTy = allConstant(VL) || getSameType(VL); (void)SameTy;
   bool isAltShuffle = false;
   assert(SameTy && "Invalid types!");
 

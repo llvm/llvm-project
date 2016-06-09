@@ -344,6 +344,7 @@ enum Kind {
   DwarfAttEncoding, // DW_ATE_foo
   DwarfVirtuality,  // DW_VIRTUALITY_foo
   DwarfLang,        // DW_LANG_foo
+  DwarfCC,          // DW_CC_foo
   EmissionKind,     // lineTablesOnly
   DwarfOp,          // DW_OP_foo
   DIFlag,           // DIFlagFoo

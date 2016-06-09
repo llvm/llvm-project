@@ -3149,7 +3149,7 @@ ARMBaseInstrInfo::getNumMicroOps(const InstrItineraryData *ItinData,
       if (NumRegs % 2)
         ++A8UOps;
       return A8UOps;
-    } else if (Subtarget.isLikeA9() || Subtarget.isSwift()) {
+    } else if (Subtarget.isLikeA9()) {
       int A9UOps = (NumRegs / 2);
       // If there are odd number of registers or if it's not 64-bit aligned,
       // then it takes an extra AGU (Address Generation Unit) cycle.

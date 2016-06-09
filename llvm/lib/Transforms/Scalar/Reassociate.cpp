@@ -1028,7 +1028,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
         }
     } else if (ConstantFP *FC1 = dyn_cast<ConstantFP>(Factor)) {
       if (ConstantFP *FC2 = dyn_cast<ConstantFP>(Factors[i].Op)) {
-        APFloat F1(FC1->getValueAPF());
+        const APFloat &F1 = FC1->getValueAPF();
         APFloat F2(FC2->getValueAPF());
         F2.changeSign();
         if (F1.compare(F2) == APFloat::cmpEqual) {

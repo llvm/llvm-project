@@ -202,7 +202,7 @@ static void DiagnosticHandler(const DiagnosticInfo &DI, void *Context) {
 // main - Entry point for the llc compiler.
 //
 int main(int argc, char **argv) {
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
 
   // Enable debug stream buffering.

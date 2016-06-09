@@ -903,6 +903,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DISubroutineType *CTy) {
        Language == dwarf::DW_LANG_ObjC))
     addFlag(Buffer, dwarf::DW_AT_prototyped);
 
+  // Add a DW_AT_calling_convention if this has an explicit convention.
+  if (CTy->getCC() && CTy->getCC() != dwarf::DW_CC_normal)
+    addUInt(Buffer, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1,
+            CTy->getCC());
+
   if (CTy->isLValueReference())
     addFlag(Buffer, dwarf::DW_AT_reference);
 
@@ -1215,9 +1220,16 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
        Language == dwarf::DW_LANG_ObjC))
     addFlag(SPDie, dwarf::DW_AT_prototyped);
 
+  unsigned CC = 0;
   DITypeRefArray Args;
-  if (const DISubroutineType *SPTy = SP->getType())
+  if (const DISubroutineType *SPTy = SP->getType()) {
     Args = SPTy->getTypeArray();
+    CC = SPTy->getCC();
+  }
+
+  // Add a DW_AT_calling_convention if this has an explicit convention.
+  if (CC && CC != dwarf::DW_CC_normal)
+    addUInt(SPDie, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1, CC);
 
   // Add a return type. If this is a type like a C/C++ void type we don't add a
   // return type.

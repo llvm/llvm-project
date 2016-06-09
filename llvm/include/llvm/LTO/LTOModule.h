@@ -91,19 +91,22 @@ public:
   /// InitializeAllAsmPrinters();
   /// InitializeAllAsmParsers();
   static ErrorOr<std::unique_ptr<LTOModule>>
-  createFromFile(LLVMContext &Context, const char *path, TargetOptions options);
+  createFromFile(LLVMContext &Context, const char *path,
+                 const TargetOptions &options);
   static ErrorOr<std::unique_ptr<LTOModule>>
   createFromOpenFile(LLVMContext &Context, int fd, const char *path,
-                     size_t size, TargetOptions options);
+                     size_t size, const TargetOptions &options);
   static ErrorOr<std::unique_ptr<LTOModule>>
   createFromOpenFileSlice(LLVMContext &Context, int fd, const char *path,
-                          size_t map_size, off_t offset, TargetOptions options);
+                          size_t map_size, off_t offset,
+                          const TargetOptions &options);
   static ErrorOr<std::unique_ptr<LTOModule>>
   createFromBuffer(LLVMContext &Context, const void *mem, size_t length,
-                   TargetOptions options, StringRef path = "");
+                   const TargetOptions &options, StringRef path = "");
   static ErrorOr<std::unique_ptr<LTOModule>>
   createInLocalContext(std::unique_ptr<LLVMContext> Context, const void *mem,
-                       size_t length, TargetOptions options, StringRef path);
+                       size_t length, const TargetOptions &options,
+                       StringRef path);
 
   const Module &getModule() const {
     return const_cast<LTOModule*>(this)->getModule();
@@ -202,7 +205,7 @@ private:
 
   /// Create an LTOModule (private version).
   static ErrorOr<std::unique_ptr<LTOModule>>
-  makeLTOModule(MemoryBufferRef Buffer, TargetOptions options,
+  makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
                 LLVMContext &Context, bool ShouldBeLazy);
 };
 }

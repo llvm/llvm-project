@@ -1,0 +1,44 @@
+# RUN: not llc -mtriple=aarch64-apple-ios -start-after machine-sink -stop-after machine-sink -o /dev/null %s 2> %t.log
+# Everything is written on STDERR with mir, which is bad. So make two runs for now.
+# RUN: FileCheck %s -input-file=%t.log --check-prefix=CHECK
+# RUN: FileCheck %s -input-file=%t.log --check-prefix=ERR
+# RUN: rm -f %t.log
+# REQUIRES: global-isel
+# This test ensures that the MIR parser errors out when
+# generic virtual register definitions are not correct.
+
+--- |
+  define void @bar() { ret void }
+
+  define void @baz() { ret void }
+...
+
+---
+name:            bar
+isSSA:           true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gpr }
+registers:
+  - { id: 0, class: gpr }
+body: |
+  bb.0:
+    liveins: %w0
+    ; ERR: generic virtual registers must have a size
+    ; ERR-NEXT: %0
+    %0 = G_ADD i32 %w0, %w0
+...
+
+---
+name:            baz
+isSSA:           true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: _ }
+registers:
+  - { id: 0, class: _ }
+body: |
+  bb.0:
+    liveins: %w0
+    ; ERR: generic virtual registers must have a size
+    ; ERR-NEXT: %0
+    %0 = G_ADD i32 %w0, %w0
+...

@@ -839,6 +839,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   // FIXME: Bundle this with other CFG-preservation.
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<GlobalsAA>();
   return PA;
 }
 

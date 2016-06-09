@@ -1432,7 +1432,7 @@ PRINT_OPT_DIFF(float)
 PRINT_OPT_DIFF(char)
 
 void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
-                                          OptionValue<std::string> D,
+                                          const OptionValue<std::string> &D,
                                           size_t GlobalWidth) const {
   printOptionName(O, GlobalWidth);
   outs() << "= " << V;

@@ -1142,7 +1142,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, SDLoc DL, EVT VT,
   else if (NewNodesMustHaveLegalTypes && VT.isVector() &&
            TLI->getTypeAction(*getContext(), EltVT) ==
            TargetLowering::TypeExpandInteger) {
-    APInt NewVal = Elt->getValue();
+    const APInt &NewVal = Elt->getValue();
     EVT ViaEltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
     unsigned ViaEltSizeInBits = ViaEltVT.getSizeInBits();
     unsigned ViaVecNumElts = VT.getSizeInBits() / ViaEltSizeInBits;
@@ -3671,7 +3671,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, SDLoc DL, EVT VT, SDValue N1,
     };
 
     if (N1C) {
-      APInt Val = N1C->getAPIntValue();
+      const APInt &Val = N1C->getAPIntValue();
       return SignExtendInReg(Val);
     }
     if (ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
@@ -7261,7 +7261,7 @@ BuildVectorSDNode::getConstantFPSplatPow2ToLog2Int(BitVector *UndefElements,
           dyn_cast_or_null<ConstantFPSDNode>(getSplatValue(UndefElements))) {
     bool IsExact;
     APSInt IntVal(BitWidth);
-    APFloat APF = CN->getValueAPF();
+    const APFloat &APF = CN->getValueAPF();
     if (APF.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact) !=
             APFloat::opOK ||
         !IsExact)

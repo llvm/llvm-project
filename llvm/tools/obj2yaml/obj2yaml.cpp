@@ -48,7 +48,7 @@ cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
 
 int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv);
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 

@@ -45,7 +45,7 @@ static bool useCompactUnwind(const Triple &T) {
   return false;
 }
 
-void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
+void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   // MachO
   SupportsWeakOmittedEHFrame = false;
 
@@ -283,7 +283,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(Triple T) {
   TLSExtraDataSection = TLSTLVSection;
 }
 
-void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
+void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
   switch (T.getArch()) {
   case Triple::mips:
   case Triple::mipsel:
@@ -589,7 +589,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(Triple T) {
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
 }
 
-void MCObjectFileInfo::initCOFFMCObjectFileInfo(Triple T) {
+void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
   EHFrameSection = Ctx->getCOFFSection(
       ".eh_frame", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                        COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,

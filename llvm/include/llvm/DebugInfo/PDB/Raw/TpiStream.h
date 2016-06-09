@@ -31,7 +31,7 @@ class TpiStream {
   struct HeaderInfo;
 
 public:
-  TpiStream(const PDBFile &File, uint32_t StreamIdx);
+  TpiStream(const PDBFile &File, std::unique_ptr<MappedBlockStream> Stream);
   ~TpiStream();
   Error reload();
 
@@ -53,7 +53,7 @@ public:
 
 private:
   const PDBFile &Pdb;
-  MappedBlockStream Stream;
+  std::unique_ptr<MappedBlockStream> Stream;
   HashFunctionType HashFunction;
 
   codeview::CVTypeArray TypeRecords;

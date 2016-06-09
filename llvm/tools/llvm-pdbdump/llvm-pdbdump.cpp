@@ -433,7 +433,7 @@ static void dumpInput(StringRef Path) {
 
 int main(int argc_, const char *argv_[]) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv_[0]);
   PrettyStackTraceProgram X(argc_, argv_);
 
   ExitOnErr.setBanner("llvm-pdbdump: ");

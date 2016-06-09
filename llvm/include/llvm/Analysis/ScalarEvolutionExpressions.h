@@ -335,8 +335,8 @@ namespace llvm {
     /// where the value is not in the condition, thus computing the
     /// exit count.  If the iteration count can't be computed, an
     /// instance of SCEVCouldNotCompute is returned.
-    const SCEV *getNumIterationsInRange(ConstantRange Range,
-                                       ScalarEvolution &SE) const;
+    const SCEV *getNumIterationsInRange(const ConstantRange &Range,
+                                        ScalarEvolution &SE) const;
 
     /// Return an expression representing the value of this expression
     /// one iteration of the loop ahead.

@@ -254,7 +254,7 @@ public:
   ~LLIObjectCache() override {}
 
   void notifyObjectCompiled(const Module *M, MemoryBufferRef Obj) override {
-    const std::string ModuleID = M->getModuleIdentifier();
+    const std::string &ModuleID = M->getModuleIdentifier();
     std::string CacheName;
     if (!getCacheFilename(ModuleID, CacheName))
       return;
@@ -269,7 +269,7 @@ public:
   }
 
   std::unique_ptr<MemoryBuffer> getObject(const Module* M) override {
-    const std::string ModuleID = M->getModuleIdentifier();
+    const std::string &ModuleID = M->getModuleIdentifier();
     std::string CacheName;
     if (!getCacheFilename(ModuleID, CacheName))
       return nullptr;
@@ -365,7 +365,7 @@ CodeGenOpt::Level getOptLevel() {
 // main Driver function
 //
 int main(int argc, char **argv, char * const *envp) {
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
 
   atexit(llvm_shutdown); // Call llvm_shutdown() on exit.

@@ -24,7 +24,7 @@ for.body:                                         ; preds = %for.body, %entry
   %add2 = add nsw i32 %i.08, 2
   %call3 = tail call i32 @foo(i32 %add2) #1
   %add3 = add nsw i32 %i.08, 3
-  %exitcond = icmp eq i32 %add3, 500
+  %exitcond = icmp sge i32 %add3, 500
   br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK-LABEL: @bar
@@ -33,7 +33,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: %indvar = phi i32 [ %indvar.next, %for.body ], [ 0, %entry ]
 ; CHECK: %call = tail call i32 @foo(i32 %indvar) #1
 ; CHECK: %indvar.next = add i32 %indvar, 1
-; CHECK: %exitcond1 = icmp eq i32 %indvar, 497
+; CHECK: %exitcond1 = icmp eq i32 %indvar, 500
 ; CHECK: br i1 %exitcond1, label %for.end, label %for.body
 
 ; CHECK: ret
@@ -524,7 +524,7 @@ for.body:                                         ; preds = %for.body, %entry
 
   %add3 = add nsw i32 %i.08, 3
 
-  %exitcond = icmp eq i32 %add3, 500
+  %exitcond = icmp sge i32 %add3, 500
   br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK-LABEL: @bar2
@@ -536,7 +536,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: %tmp3 = add i32 %tmp2, %tmp1
 ; CHECK: %call = tail call i32 @foo(i32 %tmp3) #1
 ; CHECK: %indvar.next = add i32 %indvar, 1
-; CHECK: %exitcond1 = icmp eq i32 %indvar, 497
+; CHECK: %exitcond1 = icmp eq i32 %indvar, 500
 ; CHECK: br i1 %exitcond1, label %for.end, label %for.body
 
 ; CHECK: ret

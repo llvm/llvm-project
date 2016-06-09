@@ -297,7 +297,7 @@ raw_ostream &operator<<(raw_ostream &OS, const LVILatticeVal &Val) {
 /// Returns true if this lattice value represents at most one possible value.
 /// This is as precise as any lattice value can get while still representing
 /// reachable code.
-static bool hasSingleValue(LVILatticeVal Val) {
+static bool hasSingleValue(const LVILatticeVal &Val) {
   if (Val.isConstantRange() &&
       Val.getConstantRange().isSingleElement())
     // Integer constants are single element ranges

@@ -96,12 +96,11 @@ using namespace llvm::X86Disassembler;
 namespace llvm {
 
 extern void EmitFixedLenDecoder(RecordKeeper &RK, raw_ostream &OS,
-                                std::string PredicateNamespace,
-                                std::string GPrefix,
-                                std::string GPostfix,
-                                std::string ROK,
-                                std::string RFail,
-                                std::string L);
+                                const std::string &PredicateNamespace,
+                                const std::string &GPrefix,
+                                const std::string &GPostfix,
+                                const std::string &ROK,
+                                const std::string &RFail, const std::string &L);
 
 void EmitDisassembler(RecordKeeper &Records, raw_ostream &OS) {
   CodeGenTarget Target(Records);

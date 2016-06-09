@@ -496,27 +496,18 @@ function(llvm_add_library name)
     get_property(lib_deps GLOBAL PROPERTY LLVMBUILD_LIB_DEPS_${name})
   endif()
 
-  if(CMAKE_VERSION VERSION_LESS 2.8.12)
-    # Link libs w/o keywords, assuming PUBLIC.
-    target_link_libraries(${name}
-      ${ARG_LINK_LIBS}
-      ${lib_deps}
-      ${llvm_libs}
-      )
-  elseif(ARG_STATIC)
-    target_link_libraries(${name} INTERFACE
-      ${ARG_LINK_LIBS}
-      ${lib_deps}
-      ${llvm_libs}
-      )
+  if(ARG_STATIC)
+    set(libtype INTERFACE)
   else()
     # We can use PRIVATE since SO knows its dependent libs.
-    target_link_libraries(${name} PRIVATE
+    set(libtype PRIVATE)
+  endif()
+
+  target_link_libraries(${name} ${libtype}
       ${ARG_LINK_LIBS}
       ${lib_deps}
       ${llvm_libs}
       )
-  endif()
 
   if(LLVM_COMMON_DEPENDS)
     add_dependencies(${name} ${LLVM_COMMON_DEPENDS})
@@ -771,7 +762,7 @@ macro(add_llvm_tool name)
     if( LLVM_BUILD_TOOLS )
       install(TARGETS ${name}
               EXPORT LLVMExports
-              RUNTIME DESTINATION bin
+              RUNTIME DESTINATION ${LLVM_TOOLS_INSTALL_DIR}
               COMPONENT ${name})
 
       if (NOT CMAKE_CONFIGURATION_TYPES)
@@ -1079,7 +1070,7 @@ function(add_lit_target target comment)
     add_custom_target(${target}
       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
       COMMENT "${comment}"
-      ${cmake_3_2_USES_TERMINAL}
+      USES_TERMINAL
       )
   else()
     add_custom_target(${target}
@@ -1122,32 +1113,24 @@ function(add_lit_testsuites project directory)
 
     # Search recursively for test directories by assuming anything not
     # in a directory called Inputs contains tests.
-    set(lit_suites)
-    file(GLOB to_process ${directory}/*)
-    while(to_process)
-      set(cur_to_process ${to_process})
-      set(to_process)
-      foreach(lit_suite ${cur_to_process})
-        if(IS_DIRECTORY ${lit_suite})
-          string(FIND ${lit_suite} Inputs is_inputs)
-          if (is_inputs EQUAL -1)
-            list(APPEND lit_suites "${lit_suite}")
-            file(GLOB subdirs ${lit_suite}/*)
-            list(APPEND to_process ${subdirs})
-          endif()
-        endif()
-      endforeach()
-    endwhile()
+    file(GLOB_RECURSE to_process LIST_DIRECTORIES true ${directory}/*)
+    foreach(lit_suite ${to_process})
+      if(NOT IS_DIRECTORY ${lit_suite})
+        continue()
+      endif()
+      string(FIND ${lit_suite} Inputs is_inputs)
+      if (NOT is_inputs EQUAL -1)
+        continue()
+      endif()
 
-    # Now create a check- target for each test directory.
-    foreach(dir ${lit_suites})
-      string(REPLACE ${directory} "" name_slash ${dir})
+      # Create a check- target for the directory.
+      string(REPLACE ${directory} "" name_slash ${lit_suite})
       if (name_slash)
         string(REPLACE "/" "-" name_slash ${name_slash})
         string(REPLACE "\\" "-" name_dashes ${name_slash})
         string(TOLOWER "${project}${name_dashes}" name_var)
-        add_lit_target("check-${name_var}" "Running lit suite ${dir}"
-          ${dir}
+        add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
+          ${lit_suite}
           PARAMS ${ARG_PARAMS}
           DEPENDS ${ARG_DEPENDS}
           ARGS ${ARG_ARGS}
@@ -1211,7 +1194,7 @@ function(llvm_install_symlink name dest)
   set(full_dest ${dest}${CMAKE_EXECUTABLE_SUFFIX})
 
   install(SCRIPT ${INSTALL_SYMLINK}
-          CODE "install_symlink(${full_name} ${full_dest} bin)"
+          CODE "install_symlink(${full_name} ${full_dest} ${LLVM_TOOLS_INSTALL_DIR})"
           COMPONENT ${component})
 
   if (NOT CMAKE_CONFIGURATION_TYPES AND NOT ARG_ALWAYS_GENERATE)

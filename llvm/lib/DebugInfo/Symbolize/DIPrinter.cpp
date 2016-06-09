@@ -36,7 +36,7 @@ static const char kDILineInfoBadString[] = "<invalid>";
 static const char kBadString[] = "??";
 
 // Prints source code around in the FileName the Line.
-void DIPrinter::printContext(std::string FileName, int64_t Line) {
+void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
   if (PrintSourceContext <= 0)
     return;
 

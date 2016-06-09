@@ -525,7 +525,7 @@ static void dumpInput(StringRef File) {
 }
 
 int main(int argc, const char *argv[]) {
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;
 

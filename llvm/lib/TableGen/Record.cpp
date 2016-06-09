@@ -651,7 +651,7 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
         return StringInit::get(LHSi->getAsString());
     } else {
       if (StringInit *LHSs = dyn_cast<StringInit>(LHS)) {
-        std::string Name = LHSs->getValue();
+        const std::string &Name = LHSs->getValue();
 
         // From TGParser::ParseIDValue
         if (CurRec) {

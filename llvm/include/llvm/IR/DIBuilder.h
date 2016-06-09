@@ -374,8 +374,9 @@ namespace llvm {
     ///                        includes return type at 0th index.
     /// \param Flags           E.g.: LValueReference.
     ///                        These flags are used to emit dwarf attributes.
+    /// \param CC              Calling convention, e.g. dwarf::DW_CC_normal
     DISubroutineType *createSubroutineType(DITypeRefArray ParameterTypes,
-                                           unsigned Flags = 0);
+                                           unsigned Flags = 0, unsigned CC = 0);
 
     /// Create an external type reference.
     /// \param Tag              Dwarf TAG.

@@ -23,7 +23,8 @@ void JITCompileCallbackManager::anchor() {}
 void IndirectStubsManager::anchor() {}
 
 std::unique_ptr<JITCompileCallbackManager>
-createLocalCompileCallbackManager(Triple T, TargetAddress ErrorHandlerAddress) {
+createLocalCompileCallbackManager(const Triple &T,
+                                  TargetAddress ErrorHandlerAddress) {
   switch (T.getArch()) {
     default: return nullptr;
 
@@ -45,7 +46,7 @@ createLocalCompileCallbackManager(Triple T, TargetAddress ErrorHandlerAddress) {
 }
 
 std::function<std::unique_ptr<IndirectStubsManager>()>
-createLocalIndirectStubsManagerBuilder(Triple T) {
+createLocalIndirectStubsManagerBuilder(const Triple &T) {
   switch (T.getArch()) {
     default: return nullptr;
 

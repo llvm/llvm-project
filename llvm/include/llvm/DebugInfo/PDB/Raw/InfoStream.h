@@ -24,7 +24,7 @@ namespace pdb {
 class PDBFile;
 class InfoStream {
 public:
-  InfoStream(const PDBFile &File);
+  InfoStream(std::unique_ptr<MappedBlockStream> Stream);
 
   Error reload();
 
@@ -37,7 +37,7 @@ public:
   iterator_range<StringMapConstIterator<uint32_t>> named_streams() const;
 
 private:
-  MappedBlockStream Stream;
+  std::unique_ptr<MappedBlockStream> Stream;
 
   // PDB file format version.  We only support VC70.  See the enumeration
   // `PdbRaw_ImplVer` for the other possible values.

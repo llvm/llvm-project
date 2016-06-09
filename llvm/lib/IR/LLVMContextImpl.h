@@ -484,17 +484,19 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
 
 template <> struct MDNodeKeyImpl<DISubroutineType> {
   unsigned Flags;
+  uint8_t CC;
   Metadata *TypeArray;
 
-  MDNodeKeyImpl(int64_t Flags, Metadata *TypeArray)
-      : Flags(Flags), TypeArray(TypeArray) {}
+  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray)
+      : Flags(Flags), CC(CC), TypeArray(TypeArray) {}
   MDNodeKeyImpl(const DISubroutineType *N)
-      : Flags(N->getFlags()), TypeArray(N->getRawTypeArray()) {}
+      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()) {}
 
   bool isKeyOf(const DISubroutineType *RHS) const {
-    return Flags == RHS->getFlags() && TypeArray == RHS->getRawTypeArray();
+    return Flags == RHS->getFlags() && CC == RHS->getCC() &&
+           TypeArray == RHS->getRawTypeArray();
   }
-  unsigned getHashValue() const { return hash_combine(Flags, TypeArray); }
+  unsigned getHashValue() const { return hash_combine(Flags, CC, TypeArray); }
 };
 
 template <> struct MDNodeKeyImpl<DIFile> {

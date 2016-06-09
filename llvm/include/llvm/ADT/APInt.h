@@ -177,7 +177,7 @@ class APInt {
   /// provides a more convenient form of divide for internal use since KnuthDiv
   /// has specific constraints on its inputs. If those constraints are not met
   /// then it provides a simpler form of divide.
-  static void divide(const APInt LHS, unsigned lhsWords, const APInt &RHS,
+  static void divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
                      unsigned rhsWords, APInt *Quotient, APInt *Remainder);
 
   /// out-of-line slow case for inline constructor

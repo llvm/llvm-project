@@ -68,7 +68,7 @@ bool InstCombiner::SimplifyDemandedInstructionBits(Instruction &Inst) {
 /// SimplifyDemandedBits - This form of SimplifyDemandedBits simplifies the
 /// specified instruction operand if possible, updating it in place.  It returns
 /// true if it made any change and false otherwise.
-bool InstCombiner::SimplifyDemandedBits(Use &U, APInt DemandedMask,
+bool InstCombiner::SimplifyDemandedBits(Use &U, const APInt &DemandedMask,
                                         APInt &KnownZero, APInt &KnownOne,
                                         unsigned Depth) {
   auto *UserI = dyn_cast<Instruction>(U.getUser());
@@ -830,7 +830,10 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 /// As with SimplifyDemandedUseBits, it returns NULL if the simplification was
 /// not successful.
 Value *InstCombiner::SimplifyShrShlDemandedBits(Instruction *Shr,
-  Instruction *Shl, APInt DemandedMask, APInt &KnownZero, APInt &KnownOne) {
+                                                Instruction *Shl,
+                                                const APInt &DemandedMask,
+                                                APInt &KnownZero,
+                                                APInt &KnownOne) {
 
   const APInt &ShlOp1 = cast<ConstantInt>(Shl->getOperand(1))->getValue();
   const APInt &ShrOp1 = cast<ConstantInt>(Shr->getOperand(1))->getValue();

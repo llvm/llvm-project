@@ -19,11 +19,11 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-InfoStream::InfoStream(const PDBFile &File)
-    : Stream(llvm::make_unique<IndexedStreamData>(StreamPDB, File), File) {}
+InfoStream::InfoStream(std::unique_ptr<MappedBlockStream> Stream)
+    : Stream(std::move(Stream)) {}
 
 Error InfoStream::reload() {
-  codeview::StreamReader Reader(Stream);
+  codeview::StreamReader Reader(*Stream);
 
   struct Header {
     support::ulittle32_t Version;

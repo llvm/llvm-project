@@ -317,7 +317,7 @@ void Float2Int::walkForwards() {
         // Instead, we ask APFloat to round itself to an integral value - this
         // preserves sign-of-zero - then compare the result with the original.
         //
-        APFloat F = CF->getValueAPF();
+        const APFloat &F = CF->getValueAPF();
 
         // First, weed out obviously incorrect values. Non-finite numbers
         // can't be represented and neither can negative zero, unless

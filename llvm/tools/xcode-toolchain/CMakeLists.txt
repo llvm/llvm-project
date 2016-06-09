@@ -69,7 +69,7 @@ add_custom_target(install-xcode-toolchain
                   COMMAND "${CMAKE_COMMAND}"
                           -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
                           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                  ${cmake_3_2_USES_TERMINAL})
+                  USES_TERMINAL)
 
 if(LLVM_DISTRIBUTION_COMPONENTS)
   if(CMAKE_CONFIGURATION_TYPES)
@@ -86,7 +86,7 @@ if(LLVM_DISTRIBUTION_COMPONENTS)
                         -DCMAKE_INSTALL_COMPONENT=${target}
                         -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
                         -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                ${cmake_3_2_USES_TERMINAL})
+                USES_TERMINAL)
     add_dependencies(install-distribution-toolchain install-distribution-${target})
   endforeach()
 endif()

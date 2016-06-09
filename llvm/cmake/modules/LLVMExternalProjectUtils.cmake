@@ -75,10 +75,6 @@ function(llvm_ExternalProject_Add name source_dir)
     set(cmake_3_4_USES_TERMINAL USES_TERMINAL 1)
   endif()
 
-  if(CMAKE_VERSION VERSION_GREATER 3.1.20141116)
-    set(cmake_3_2_USES_TERMINAL USES_TERMINAL)
-  endif()
-
   set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}-stamps/)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}-bins/)
 
@@ -86,7 +82,7 @@ function(llvm_ExternalProject_Add name source_dir)
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${STAMP_DIR}
     COMMENT "Clobbering ${name} build and stamp directories"
-    ${cmake_3_2_USES_TERMINAL}
+    USES_TERMINAL
     )
 
   # Find all variables that start with COMPILER_RT and populate a variable with
@@ -187,7 +183,7 @@ function(llvm_ExternalProject_Add name source_dir)
                       COMMAND "${CMAKE_COMMAND}"
                                -DCMAKE_INSTALL_COMPONENT=${name}
                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                      ${cmake_3_2_USES_TERMINAL})
+                      USES_TERMINAL)
   endif()
 
   # Add top-level targets
@@ -198,6 +194,6 @@ function(llvm_ExternalProject_Add name source_dir)
       DEPENDS ${name}-configure
       WORKING_DIRECTORY ${BINARY_DIR}
       VERBATIM
-      ${cmake_3_2_USES_TERMINAL})
+      USES_TERMINAL)
   endforeach()
 endfunction()

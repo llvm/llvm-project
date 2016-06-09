@@ -41,7 +41,7 @@ define <2 x i1> @shuf2i1_1_2(<2 x i1> %a) {
 ; VL_BW_DQ-NEXT:    movb $1, %al
 ; VL_BW_DQ-NEXT:    kmovb %eax, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %xmm1
-; VL_BW_DQ-NEXT:    vpalignr $8, %xmm0, %xmm1, %xmm0
+; VL_BW_DQ-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7]
 ; VL_BW_DQ-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; VL_BW_DQ-NEXT:    vptestmq %xmm0, %xmm0, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2q %k0, %xmm0

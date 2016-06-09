@@ -6443,8 +6443,8 @@ define <16 x i32>@test_int_x86_avx512_mask_pshuf_d_512(<16 x i32> %x0, i32 %x1, 
 ; CHECK-LABEL: test_int_x86_avx512_mask_pshuf_d_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm1[3,0,0,0,7,4,4,4,11,8,8,8,15,12,12,12]
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm2 = k1[3,0,0,0,7,4,4,4,11,8,8,8,15,12,12,12]
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm0[3,0,0,0,7,4,4,4,11,8,8,8,15,12,12,12]
+; CHECK-NEXT:    vpshufd {{.*#+}} zmm2 = zmm0[3,0,0,0,7,4,4,4,11,8,8,8,15,12,12,12]
 ; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[3,0,0,0,7,4,4,4,11,8,8,8,15,12,12,12]
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0

@@ -79,7 +79,7 @@ static int convertYAML(yaml::Input &YIn, raw_ostream &Out,
 
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 

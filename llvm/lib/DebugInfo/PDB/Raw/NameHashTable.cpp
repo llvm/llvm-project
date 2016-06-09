@@ -11,71 +11,13 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/PDB/Raw/Hash.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
-
-// Corresponds to `Hasher::lhashPbCb` in PDB/include/misc.h.
-static inline uint32_t HashStringV1(StringRef Str) {
-  uint32_t Result = 0;
-  uint32_t Size = Str.size();
-
-  ArrayRef<ulittle32_t> Longs(reinterpret_cast<const ulittle32_t *>(Str.data()),
-                              Size / 4);
-
-  for (auto Value : Longs)
-    Result ^= Value;
-
-  const uint8_t *Remainder = reinterpret_cast<const uint8_t *>(Longs.end());
-  uint32_t RemainderSize = Size - Longs.size() * 4;
-
-  // Maximum of 3 bytes left.  Hash a 2 byte word if possible, then hash the
-  // possibly remaining 1 byte.
-  if (RemainderSize >= 2) {
-    uint16_t Value = *reinterpret_cast<const ulittle16_t *>(Remainder);
-    Result ^= static_cast<uint32_t>(Value);
-    Remainder += 2;
-    RemainderSize -= 2;
-  }
-
-  // hash possible odd byte
-  if (RemainderSize == 1) {
-    Result ^= *(Remainder++);
-  }
-
-  const uint32_t toLowerMask = 0x20202020;
-  Result |= toLowerMask;
-  Result ^= (Result >> 11);
-
-  return Result ^ (Result >> 16);
-}
-
-// Corresponds to `HasherV2::HashULONG` in PDB/include/misc.h.
-static inline uint32_t HashStringV2(StringRef Str) {
-  uint32_t Hash = 0xb170a1bf;
-
-  ArrayRef<char> Buffer(Str.begin(), Str.end());
-
-  ArrayRef<ulittle32_t> Items(
-      reinterpret_cast<const ulittle32_t *>(Buffer.data()),
-      Buffer.size() / sizeof(ulittle32_t));
-  for (ulittle32_t Item : Items) {
-    Hash += Item;
-    Hash += (Hash << 10);
-    Hash ^= (Hash >> 6);
-  }
-  Buffer = Buffer.slice(Items.size() * sizeof(ulittle32_t));
-  for (uint8_t Item : Buffer) {
-    Hash += Item;
-    Hash += (Hash << 10);
-    Hash ^= (Hash >> 6);
-  }
-
-  return Hash * 1664525L + 1013904223L;
-}
 
 NameHashTable::NameHashTable() : Signature(0), HashVersion(0), NameCount(0) {}
 
@@ -138,7 +80,7 @@ StringRef NameHashTable::getStringForID(uint32_t ID) const {
 }
 
 uint32_t NameHashTable::getIDForString(StringRef Str) const {
-  uint32_t Hash = (HashVersion == 1) ? HashStringV1(Str) : HashStringV2(Str);
+  uint32_t Hash = (HashVersion == 1) ? hashStringV1(Str) : hashStringV2(Str);
   size_t Count = IDs.size();
   uint32_t Start = Hash % Count;
   for (size_t I = 0; I < Count; ++I) {

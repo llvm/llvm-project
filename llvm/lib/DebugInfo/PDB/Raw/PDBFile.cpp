@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/DirectoryStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
@@ -52,19 +53,6 @@ struct SuperBlock {
   support::ulittle32_t Unknown1;
   // This contains the block # of the block map.
   support::ulittle32_t BlockMapAddr;
-};
-
-class DirectoryStreamData : public IPDBStreamData {
-public:
-  DirectoryStreamData(const PDBFile &File) : File(File) {}
-
-  virtual uint32_t getLength() { return File.getNumDirectoryBytes(); }
-  virtual llvm::ArrayRef<llvm::support::ulittle32_t> getStreamBlocks() {
-    return File.getDirectoryBlockArray();
-  }
-
-private:
-  const PDBFile &File;
 };
 
 typedef codeview::FixedStreamArray<support::ulittle32_t> ulittle_array;
@@ -222,9 +210,10 @@ Error PDBFile::parseStreamData() {
   // is exactly what we are attempting to parse.  By specifying a custom
   // subclass of IPDBStreamData which only accesses the fields that have already
   // been parsed, we can avoid this and reuse MappedBlockStream.
-  auto SD = llvm::make_unique<DirectoryStreamData>(*this);
-  DirectoryStream = llvm::make_unique<MappedBlockStream>(std::move(SD), *this);
-  codeview::StreamReader Reader(*DirectoryStream);
+  auto DS = MappedBlockStream::createDirectoryStream(*this);
+  if (!DS)
+    return DS.takeError();
+  codeview::StreamReader Reader(**DS);
   if (auto EC = Reader.readInteger(NumStreams))
     return EC;
 
@@ -241,6 +230,7 @@ Error PDBFile::parseStreamData() {
 
   // We should have read exactly SB->NumDirectoryBytes bytes.
   assert(Reader.bytesRemaining() == 0);
+  DirectoryStream = std::move(*DS);
   return Error::success();
 }
 
@@ -253,36 +243,52 @@ llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
 
 Expected<InfoStream &> PDBFile::getPDBInfoStream() {
   if (!Info) {
-    Info.reset(new InfoStream(*this));
-    if (auto EC = Info->reload())
+    auto InfoS = MappedBlockStream::createIndexedStream(StreamPDB, *this);
+    if (!InfoS)
+      return InfoS.takeError();
+    auto TempInfo = llvm::make_unique<InfoStream>(std::move(*InfoS));
+    if (auto EC = TempInfo->reload())
       return std::move(EC);
+    Info = std::move(TempInfo);
   }
   return *Info;
 }
 
 Expected<DbiStream &> PDBFile::getPDBDbiStream() {
   if (!Dbi) {
-    Dbi.reset(new DbiStream(*this));
-    if (auto EC = Dbi->reload())
+    auto DbiS = MappedBlockStream::createIndexedStream(StreamDBI, *this);
+    if (!DbiS)
+      return DbiS.takeError();
+    auto TempDbi = llvm::make_unique<DbiStream>(*this, std::move(*DbiS));
+    if (auto EC = TempDbi->reload())
       return std::move(EC);
+    Dbi = std::move(TempDbi);
   }
   return *Dbi;
 }
 
 Expected<TpiStream &> PDBFile::getPDBTpiStream() {
   if (!Tpi) {
-    Tpi.reset(new TpiStream(*this, StreamTPI));
-    if (auto EC = Tpi->reload())
+    auto TpiS = MappedBlockStream::createIndexedStream(StreamTPI, *this);
+    if (!TpiS)
+      return TpiS.takeError();
+    auto TempTpi = llvm::make_unique<TpiStream>(*this, std::move(*TpiS));
+    if (auto EC = TempTpi->reload())
       return std::move(EC);
+    Tpi = std::move(TempTpi);
   }
   return *Tpi;
 }
 
 Expected<TpiStream &> PDBFile::getPDBIpiStream() {
   if (!Ipi) {
-    Ipi.reset(new TpiStream(*this, StreamIPI));
-    if (auto EC = Ipi->reload())
+    auto IpiS = MappedBlockStream::createIndexedStream(StreamIPI, *this);
+    if (!IpiS)
+      return IpiS.takeError();
+    auto TempIpi = llvm::make_unique<TpiStream>(*this, std::move(*IpiS));
+    if (auto EC = TempIpi->reload())
       return std::move(EC);
+    Ipi = std::move(TempIpi);
   }
   return *Ipi;
 }
@@ -290,13 +296,20 @@ Expected<TpiStream &> PDBFile::getPDBIpiStream() {
 Expected<PublicsStream &> PDBFile::getPDBPublicsStream() {
   if (!Publics) {
     auto DbiS = getPDBDbiStream();
-    if (auto EC = DbiS.takeError())
-      return std::move(EC);
+    if (!DbiS)
+      return DbiS.takeError();
+
     uint32_t PublicsStreamNum = DbiS->getPublicSymbolStreamIndex();
 
-    Publics.reset(new PublicsStream(*this, PublicsStreamNum));
-    if (auto EC = Publics->reload())
+    auto PublicS =
+        MappedBlockStream::createIndexedStream(PublicsStreamNum, *this);
+    if (!PublicS)
+      return PublicS.takeError();
+    auto TempPublics =
+        llvm::make_unique<PublicsStream>(*this, std::move(*PublicS));
+    if (auto EC = TempPublics->reload())
       return std::move(EC);
+    Publics = std::move(TempPublics);
   }
   return *Publics;
 }
@@ -304,38 +317,46 @@ Expected<PublicsStream &> PDBFile::getPDBPublicsStream() {
 Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
   if (!Symbols) {
     auto DbiS = getPDBDbiStream();
-    if (auto EC = DbiS.takeError())
-      return std::move(EC);
+    if (!DbiS)
+      return DbiS.takeError();
+
     uint32_t SymbolStreamNum = DbiS->getSymRecordStreamIndex();
 
-    Symbols.reset(new SymbolStream(*this, SymbolStreamNum));
-    if (auto EC = Symbols->reload())
+    auto SymbolS =
+        MappedBlockStream::createIndexedStream(SymbolStreamNum, *this);
+    if (!SymbolS)
+      return SymbolS.takeError();
+    auto TempSymbols = llvm::make_unique<SymbolStream>(std::move(*SymbolS));
+    if (auto EC = TempSymbols->reload())
       return std::move(EC);
+    Symbols = std::move(TempSymbols);
   }
   return *Symbols;
 }
 
 Expected<NameHashTable &> PDBFile::getStringTable() {
   if (!StringTable || !StringTableStream) {
-    auto InfoS = getPDBInfoStream();
-    if (auto EC = InfoS.takeError())
-      return std::move(EC);
-    auto &IS = InfoS.get();
-    uint32_t NameStreamIndex = IS.getNamedStreamIndex("/names");
+    auto IS = getPDBInfoStream();
+    if (!IS)
+      return IS.takeError();
+
+    uint32_t NameStreamIndex = IS->getNamedStreamIndex("/names");
 
     if (NameStreamIndex == 0)
       return make_error<RawError>(raw_error_code::no_stream);
     if (NameStreamIndex >= getNumStreams())
       return make_error<RawError>(raw_error_code::no_stream);
 
-    auto SD = llvm::make_unique<IndexedStreamData>(NameStreamIndex, *this);
-    auto S = llvm::make_unique<MappedBlockStream>(std::move(SD), *this);
-    codeview::StreamReader Reader(*S);
+    auto NS = MappedBlockStream::createIndexedStream(NameStreamIndex, *this);
+    if (!NS)
+      return NS.takeError();
+
+    codeview::StreamReader Reader(**NS);
     auto N = llvm::make_unique<NameHashTable>();
     if (auto EC = N->load(Reader))
       return std::move(EC);
     StringTable = std::move(N);
-    StringTableStream = std::move(S);
+    StringTableStream = std::move(*NS);
   }
   return *StringTable;
 }

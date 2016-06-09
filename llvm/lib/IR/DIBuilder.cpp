@@ -420,8 +420,8 @@ DICompositeType *DIBuilder::createUnionType(
 }
 
 DISubroutineType *DIBuilder::createSubroutineType(DITypeRefArray ParameterTypes,
-                                                  unsigned Flags) {
-  return DISubroutineType::get(VMContext, Flags, ParameterTypes);
+                                                  unsigned Flags, unsigned CC) {
+  return DISubroutineType::get(VMContext, Flags, CC, ParameterTypes);
 }
 
 DICompositeType *DIBuilder::createExternalTypeRef(unsigned Tag, DIFile *File,

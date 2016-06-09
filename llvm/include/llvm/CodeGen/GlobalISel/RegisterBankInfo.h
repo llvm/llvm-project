@@ -188,6 +188,103 @@ public:
   /// \todo When we move to TableGen this should be an array ref.
   typedef SmallVector<InstructionMapping, 4> InstructionMappings;
 
+  /// Helper class use to get/create the virtual registers that will be used
+  /// to replace the MachineOperand when applying a mapping.
+  class OperandsMapper {
+    /// The OpIdx-th cell contains the index in NewVRegs where the VRegs of the
+    /// OpIdx-th operand starts. -1 means we do not have such mapping yet.
+    std::unique_ptr<int[]> OpToNewVRegIdx;
+    /// Hold the registers that will be used to map MI with InstrMapping.
+    SmallVector<unsigned, 8> NewVRegs;
+    /// Current MachineRegisterInfo, used to create new virtual registers.
+    MachineRegisterInfo &MRI;
+    /// Instruction being remapped.
+    MachineInstr &MI;
+    /// New mapping of the instruction.
+    const InstructionMapping &InstrMapping;
+
+    /// Constant value identifying that the index in OpToNewVRegIdx
+    /// for an operand has not been set yet.
+    static const int DontKnowIdx;
+
+    /// Get the range in NewVRegs to store all the partial
+    /// values for the \p OpIdx-th operand.
+    ///
+    /// \return The iterator range for the space created.
+    //
+    /// \pre getMI().getOperand(OpIdx).isReg()
+    iterator_range<SmallVectorImpl<unsigned>::iterator>
+    getVRegsMem(unsigned OpIdx);
+
+    /// Get the end iterator for a range starting at \p StartIdx and
+    /// spannig \p NumVal in NewVRegs.
+    /// \pre StartIdx + NumVal <= NewVRegs.size()
+    SmallVectorImpl<unsigned>::const_iterator
+    getNewVRegsEnd(unsigned StartIdx, unsigned NumVal) const;
+    SmallVectorImpl<unsigned>::iterator getNewVRegsEnd(unsigned StartIdx,
+                                                       unsigned NumVal);
+
+  public:
+    /// Create an OperandsMapper that will hold the information to apply \p
+    /// InstrMapping to \p MI.
+    /// \pre InstrMapping.verify(MI)
+    OperandsMapper(MachineInstr &MI, const InstructionMapping &InstrMapping,
+                   MachineRegisterInfo &MRI);
+
+    /// Getters.
+    /// @{
+    /// The MachineInstr being remapped.
+    MachineInstr &getMI() const { return MI; }
+
+    /// The final mapping of the instruction.
+    const InstructionMapping &getInstrMapping() const { return InstrMapping; }
+    /// @}
+
+    /// Create as many new virtual registers as needed for the mapping of the \p
+    /// OpIdx-th operand.
+    /// The number of registers is determined by the number of breakdown for the
+    /// related operand in the instruction mapping.
+    ///
+    /// \pre getMI().getOperand(OpIdx).isReg()
+    ///
+    /// \post All the partial mapping of the \p OpIdx-th operand have been
+    /// assigned a new virtual register.
+    void createVRegs(unsigned OpIdx);
+
+    /// Set the virtual register of the \p PartialMapIdx-th partial mapping of
+    /// the OpIdx-th operand to \p NewVReg.
+    ///
+    /// \pre getMI().getOperand(OpIdx).isReg()
+    /// \pre getInstrMapping().getOperandMapping(OpIdx).BreakDown.size() >
+    /// PartialMapIdx
+    /// \pre NewReg != 0
+    ///
+    /// \post the \p PartialMapIdx-th register of the value mapping of the \p
+    /// OpIdx-th operand has been set.
+    void setVRegs(unsigned OpIdx, unsigned PartialMapIdx, unsigned NewVReg);
+
+    /// Get all the virtual registers required to map the \p OpIdx-th operand of
+    /// the instruction.
+    ///
+    /// This return an empty range when createVRegs or setVRegs has not been
+    /// called.
+    /// The iterator may be invalidated by a call to setVRegs or createVRegs.
+    ///
+    /// When \p ForDebug is true, we will not check that the list of new virtual
+    /// registers does not contain uninitialized values.
+    ///
+    /// \pre getMI().getOperand(OpIdx).isReg()
+    /// \pre ForDebug || All partial mappings have been set a register
+    iterator_range<SmallVectorImpl<unsigned>::const_iterator>
+    getVRegs(unsigned OpIdx, bool ForDebug = false) const;
+
+    /// Print this operands mapper on dbgs() stream.
+    void dump() const;
+
+    /// Print this operands mapper on \p OS stream.
+    void print(raw_ostream &OS, bool ForDebug = false) const;
+  };
+
 protected:
   /// Hold the set of supported register banks.
   std::unique_ptr<RegisterBank[]> RegBanks;
@@ -315,6 +412,22 @@ protected:
                             const TargetInstrInfo &TII,
                             const TargetRegisterInfo &TRI) const;
 
+  /// Helper method to apply something that is like the default mapping.
+  /// Basically, that means that \p OpdMapper.getMI() is left untouched
+  /// aside from the reassignment of the register operand that have been
+  /// remapped.
+  /// If the mapping of one of the operand spans several registers, this
+  /// method will abort as this is not like a default mapping anymore.
+  ///
+  /// \pre For OpIdx in {0..\p OpdMapper.getMI().getNumOperands())
+  ///        the range OpdMapper.getVRegs(OpIdx) is empty or of size 1.
+  static void applyDefaultMapping(const OperandsMapper &OpdMapper);
+
+  /// See ::applyMapping.
+  virtual void applyMappingImpl(const OperandsMapper &OpdMapper) const {
+    llvm_unreachable("The target has to implement that part");
+  }
+
 public:
   virtual ~RegisterBankInfo() {}
 
@@ -423,6 +536,24 @@ public:
   /// \post !returnedVal.empty().
   InstructionMappings getInstrPossibleMappings(const MachineInstr &MI) const;
 
+  /// Apply \p OpdMapper.getInstrMapping() to \p OpdMapper.getMI().
+  /// After this call \p OpdMapper.getMI() may not be valid anymore.
+  /// \p OpdMapper.getInstrMapping().getID() carries the information of
+  /// what has been chosen to map \p OpdMapper.getMI(). This ID is set
+  /// by the various getInstrXXXMapping method.
+  ///
+  /// Therefore, getting the mapping and applying it should be kept in
+  /// sync.
+  void applyMapping(const OperandsMapper &OpdMapper) const {
+    // The only mapping we know how to handle is the default mapping.
+    if (OpdMapper.getInstrMapping().getID() == DefaultMappingID)
+      return applyDefaultMapping(OpdMapper);
+    // For other mapping, the target needs to do the right thing.
+    // If that means calling applyDefaultMapping, fine, but this
+    // must be explicitly stated.
+    applyMappingImpl(OpdMapper);
+  }
+
   /// Get the size in bits of \p Reg.
   /// Utility method to get the size of any registers. Unlike
   /// MachineRegisterInfo::getSize, the register does not need to be a
@@ -458,6 +589,12 @@ inline raw_ostream &
 operator<<(raw_ostream &OS,
            const RegisterBankInfo::InstructionMapping &InstrMapping) {
   InstrMapping.print(OS);
+  return OS;
+}
+
+inline raw_ostream &
+operator<<(raw_ostream &OS, const RegisterBankInfo::OperandsMapper &OpdMapper) {
+  OpdMapper.print(OS, /*ForDebug*/ false);
   return OS;
 }
 } // End namespace llvm.

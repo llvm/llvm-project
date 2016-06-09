@@ -36,7 +36,7 @@ class DbiStream {
   struct HeaderInfo;
 
 public:
-  DbiStream(PDBFile &File);
+  DbiStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream);
   ~DbiStream();
   Error reload();
 
@@ -79,7 +79,7 @@ private:
   Error initializeFpoRecords();
 
   PDBFile &Pdb;
-  MappedBlockStream Stream;
+  std::unique_ptr<MappedBlockStream> Stream;
 
   std::vector<ModuleInfoEx> ModuleInfos;
   NameHashTable ECNames;

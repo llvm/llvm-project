@@ -1659,6 +1659,7 @@ static void writeDISubroutineType(raw_ostream &Out, const DISubroutineType *N,
   Out << "!DISubroutineType(";
   MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
   Printer.printDIFlags("flags", N->getFlags());
+  Printer.printDwarfEnum("cc", N->getCC(), dwarf::ConventionString);
   Printer.printMetadata("types", N->getRawTypeArray(),
                         /* ShouldSkipNull */ false);
   Out << ")";

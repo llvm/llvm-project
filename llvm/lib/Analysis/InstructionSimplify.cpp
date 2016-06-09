@@ -2300,7 +2300,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     } else if (match(LHS, m_SDiv(m_Value(), m_ConstantInt(CI2)))) {
       APInt IntMin = APInt::getSignedMinValue(Width);
       APInt IntMax = APInt::getSignedMaxValue(Width);
-      APInt Val = CI2->getValue();
+      const APInt &Val = CI2->getValue();
       if (Val.isAllOnesValue()) {
         // 'sdiv x, -1' produces [INT_MIN + 1, INT_MAX]
         //    where CI2 != -1 and CI2 != 0 and CI2 != 1

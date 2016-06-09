@@ -285,8 +285,8 @@ struct AArch64NamedImmMapper {
     // Zero value of FeatureBitSet means the mapping is always available
     FeatureBitset FeatureBitSet;
 
-    bool isNameEqual(std::string Other,
-                     const FeatureBitset& FeatureBits) const {
+    bool isNameEqual(const std::string &Other,
+                     const FeatureBitset &FeatureBits) const {
       if (FeatureBitSet.any() &&
           (FeatureBitSet & FeatureBits).none())
         return false;

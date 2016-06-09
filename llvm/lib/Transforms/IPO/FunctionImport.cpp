@@ -525,8 +525,19 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
           OrigName, GlobalValue::InternalLinkage,
           TheModule.getSourceFileName());
       const auto &GS = DefinedGlobals.find(GlobalValue::getGUID(OrigId));
-      assert(GS != DefinedGlobals.end());
-      Linkage = GS->second->linkage();
+      if (GS == DefinedGlobals.end()) {
+        // Also check the original non-promoted non-globalized name. In some
+        // cases a preempted weak value is linked in as a local copy because
+        // it is referenced by an alias (IRLinker::linkGlobalValueProto).
+        // In that case, since it was originally not a local value, it was
+        // recorded in the index using the original name.
+        // FIXME: This may not be needed once PR27866 is fixed.
+        const auto &GS = DefinedGlobals.find(GlobalValue::getGUID(OrigName));
+        assert(GS != DefinedGlobals.end());
+        Linkage = GS->second->linkage();
+      } else {
+        Linkage = GS->second->linkage();
+      }
     } else
       Linkage = GS->second->linkage();
     return !GlobalValue::isLocalLinkage(Linkage);

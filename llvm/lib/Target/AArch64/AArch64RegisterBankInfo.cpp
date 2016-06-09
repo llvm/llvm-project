@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -109,5 +110,59 @@ const RegisterBank &AArch64RegisterBankInfo::getRegBankFromRegClass(
     return getRegBank(AArch64::CCRRegBankID);
   default:
     llvm_unreachable("Register class not supported");
+  }
+}
+
+RegisterBankInfo::InstructionMappings
+AArch64RegisterBankInfo::getInstrAlternativeMappings(
+    const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_OR: {
+    // 32 and 64-bit or can be mapped on either FPR or
+    // GPR for the same cost.
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    const TargetSubtargetInfo &STI = MF.getSubtarget();
+    const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+    if (Size != 32 && Size != 64)
+      break;
+
+    // If the instruction has any implicit-defs or uses,
+    // do not mess with it.
+    if (MI.getNumOperands() != 3)
+      break;
+    InstructionMappings AltMappings;
+    InstructionMapping GPRMapping(/*ID*/ 1, /*Cost*/ 1, /*NumOperands*/ 3);
+    InstructionMapping FPRMapping(/*ID*/ 2, /*Cost*/ 1, /*NumOperands*/ 3);
+    for (unsigned Idx = 0; Idx != 3; ++Idx) {
+      GPRMapping.setOperandMapping(Idx, Size,
+                                   getRegBank(AArch64::GPRRegBankID));
+      FPRMapping.setOperandMapping(Idx, Size,
+                                   getRegBank(AArch64::FPRRegBankID));
+    }
+    AltMappings.emplace_back(std::move(GPRMapping));
+    AltMappings.emplace_back(std::move(FPRMapping));
+    return AltMappings;
+  }
+  default:
+    break;
+  }
+  return RegisterBankInfo::getInstrAlternativeMappings(MI);
+}
+
+void AArch64RegisterBankInfo::applyMappingImpl(
+    const OperandsMapper &OpdMapper) const {
+  switch (OpdMapper.getMI().getOpcode()) {
+  case TargetOpcode::G_OR: {
+    // Those ID must match getInstrAlternativeMappings.
+    assert((OpdMapper.getInstrMapping().getID() == 1 ||
+            OpdMapper.getInstrMapping().getID() == 2) &&
+           "Don't know how to handle that ID");
+    return applyDefaultMapping(OpdMapper);
+  }
+  default:
+    llvm_unreachable("Don't know how to handle that operation");
   }
 }

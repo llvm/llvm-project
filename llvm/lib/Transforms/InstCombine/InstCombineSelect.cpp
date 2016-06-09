@@ -120,22 +120,19 @@ static Constant *GetSelectFoldableConstant(Instruction *I) {
 /// have the same opcode and only one use each.  Try to simplify this.
 Instruction *InstCombiner::FoldSelectOpOp(SelectInst &SI, Instruction *TI,
                                           Instruction *FI) {
-  if (TI->getNumOperands() == 1) {
-    // If this is a non-volatile load or a cast from the same type,
-    // merge.
-    if (TI->isCast()) {
-      Type *FIOpndTy = FI->getOperand(0)->getType();
-      if (TI->getOperand(0)->getType() != FIOpndTy)
-        return nullptr;
-      // The select condition may be a vector. We may only change the operand
-      // type if the vector width remains the same (and matches the condition).
-      Type *CondTy = SI.getCondition()->getType();
-      if (CondTy->isVectorTy() && (!FIOpndTy->isVectorTy() ||
-          CondTy->getVectorNumElements() != FIOpndTy->getVectorNumElements()))
-        return nullptr;
-    } else {
-      return nullptr;  // unknown unary op.
-    }
+  // If this is a cast from the same type, merge.
+  if (TI->getNumOperands() == 1 && TI->isCast()) {
+    Type *FIOpndTy = FI->getOperand(0)->getType();
+    if (TI->getOperand(0)->getType() != FIOpndTy)
+      return nullptr;
+
+    // The select condition may be a vector. We may only change the operand
+    // type if the vector width remains the same (and matches the condition).
+    Type *CondTy = SI.getCondition()->getType();
+    if (CondTy->isVectorTy() &&
+        (!FIOpndTy->isVectorTy() ||
+         CondTy->getVectorNumElements() != FIOpndTy->getVectorNumElements()))
+      return nullptr;
 
     // Fold this by inserting a select from the input values.
     Value *NewSI = Builder->CreateSelect(SI.getCondition(), TI->getOperand(0),
@@ -231,12 +228,7 @@ Instruction *InstCombiner::FoldSelectIntoOp(SelectInst &SI, Value *TrueVal,
             BinaryOperator *TVI_BO = cast<BinaryOperator>(TVI);
             BinaryOperator *BO = BinaryOperator::Create(TVI_BO->getOpcode(),
                                                         FalseVal, NewSel);
-            if (isa<PossiblyExactOperator>(BO))
-              BO->setIsExact(TVI_BO->isExact());
-            if (isa<OverflowingBinaryOperator>(BO)) {
-              BO->setHasNoUnsignedWrap(TVI_BO->hasNoUnsignedWrap());
-              BO->setHasNoSignedWrap(TVI_BO->hasNoSignedWrap());
-            }
+            BO->copyIRFlags(TVI_BO);
             return BO;
           }
         }
@@ -266,12 +258,7 @@ Instruction *InstCombiner::FoldSelectIntoOp(SelectInst &SI, Value *TrueVal,
             BinaryOperator *FVI_BO = cast<BinaryOperator>(FVI);
             BinaryOperator *BO = BinaryOperator::Create(FVI_BO->getOpcode(),
                                                         TrueVal, NewSel);
-            if (isa<PossiblyExactOperator>(BO))
-              BO->setIsExact(FVI_BO->isExact());
-            if (isa<OverflowingBinaryOperator>(BO)) {
-              BO->setHasNoUnsignedWrap(FVI_BO->hasNoUnsignedWrap());
-              BO->setHasNoSignedWrap(FVI_BO->hasNoSignedWrap());
-            }
+            BO->copyIRFlags(FVI_BO);
             return BO;
           }
         }
@@ -663,8 +650,8 @@ Instruction *InstCombiner::FoldSPFofSPF(Instruction *Inner,
   if (SPF1 == SPF2) {
     if (ConstantInt *CB = dyn_cast<ConstantInt>(B)) {
       if (ConstantInt *CC = dyn_cast<ConstantInt>(C)) {
-        APInt ACB = CB->getValue();
-        APInt ACC = CC->getValue();
+        const APInt &ACB = CB->getValue();
+        const APInt &ACC = CC->getValue();
 
         // MIN(MIN(A, 23), 97) -> MIN(A, 23)
         // MAX(MAX(A, 97), 23) -> MAX(A, 97)
@@ -824,6 +811,78 @@ static Value *foldSelectICmpAnd(const SelectInst &SI, ConstantInt *TrueVal,
   if (Offset)
     V = Builder->CreateAdd(V, Offset);
   return V;
+}
+
+/// Turn select C, (X + Y), (X - Y) --> (X + (select C, Y, (-Y))).
+/// This is even legal for FP.
+static Instruction *foldAddSubSelect(SelectInst &SI,
+                                     InstCombiner::BuilderTy &Builder) {
+  Value *CondVal = SI.getCondition();
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+  auto *TI = dyn_cast<Instruction>(TrueVal);
+  auto *FI = dyn_cast<Instruction>(FalseVal);
+  if (!TI || !FI || !TI->hasOneUse() || !FI->hasOneUse())
+    return nullptr;
+
+  Instruction *AddOp = nullptr, *SubOp = nullptr;
+  if ((TI->getOpcode() == Instruction::Sub &&
+       FI->getOpcode() == Instruction::Add) ||
+      (TI->getOpcode() == Instruction::FSub &&
+       FI->getOpcode() == Instruction::FAdd)) {
+    AddOp = FI;
+    SubOp = TI;
+  } else if ((FI->getOpcode() == Instruction::Sub &&
+              TI->getOpcode() == Instruction::Add) ||
+             (FI->getOpcode() == Instruction::FSub &&
+              TI->getOpcode() == Instruction::FAdd)) {
+    AddOp = TI;
+    SubOp = FI;
+  }
+
+  if (AddOp) {
+    Value *OtherAddOp = nullptr;
+    if (SubOp->getOperand(0) == AddOp->getOperand(0)) {
+      OtherAddOp = AddOp->getOperand(1);
+    } else if (SubOp->getOperand(0) == AddOp->getOperand(1)) {
+      OtherAddOp = AddOp->getOperand(0);
+    }
+
+    if (OtherAddOp) {
+      // So at this point we know we have (Y -> OtherAddOp):
+      //        select C, (add X, Y), (sub X, Z)
+      Value *NegVal; // Compute -Z
+      if (SI.getType()->isFPOrFPVectorTy()) {
+        NegVal = Builder.CreateFNeg(SubOp->getOperand(1));
+        if (Instruction *NegInst = dyn_cast<Instruction>(NegVal)) {
+          FastMathFlags Flags = AddOp->getFastMathFlags();
+          Flags &= SubOp->getFastMathFlags();
+          NegInst->setFastMathFlags(Flags);
+        }
+      } else {
+        NegVal = Builder.CreateNeg(SubOp->getOperand(1));
+      }
+
+      Value *NewTrueOp = OtherAddOp;
+      Value *NewFalseOp = NegVal;
+      if (AddOp != TI)
+        std::swap(NewTrueOp, NewFalseOp);
+      Value *NewSel = Builder.CreateSelect(CondVal, NewTrueOp, NewFalseOp,
+                                           SI.getName() + ".p");
+
+      if (SI.getType()->isFPOrFPVectorTy()) {
+        Instruction *RI =
+            BinaryOperator::CreateFAdd(SubOp->getOperand(0), NewSel);
+
+        FastMathFlags Flags = AddOp->getFastMathFlags();
+        Flags &= SubOp->getFastMathFlags();
+        RI->setFastMathFlags(Flags);
+        return RI;
+      } else
+        return BinaryOperator::CreateAdd(SubOp->getOperand(0), NewSel);
+    }
+  }
+  return nullptr;
 }
 
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
@@ -994,74 +1053,17 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (Instruction *Result = visitSelectInstWithICmp(SI, ICI))
       return Result;
 
-  if (Instruction *TI = dyn_cast<Instruction>(TrueVal))
-    if (Instruction *FI = dyn_cast<Instruction>(FalseVal))
-      if (TI->hasOneUse() && FI->hasOneUse()) {
-        Instruction *AddOp = nullptr, *SubOp = nullptr;
+  if (Instruction *Add = foldAddSubSelect(SI, *Builder))
+    return Add;
 
-        // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
-        if (TI->getOpcode() == FI->getOpcode())
-          if (Instruction *IV = FoldSelectOpOp(SI, TI, FI))
-            return IV;
-
-        // Turn select C, (X+Y), (X-Y) --> (X+(select C, Y, (-Y))).  This is
-        // even legal for FP.
-        if ((TI->getOpcode() == Instruction::Sub &&
-             FI->getOpcode() == Instruction::Add) ||
-            (TI->getOpcode() == Instruction::FSub &&
-             FI->getOpcode() == Instruction::FAdd)) {
-          AddOp = FI; SubOp = TI;
-        } else if ((FI->getOpcode() == Instruction::Sub &&
-                    TI->getOpcode() == Instruction::Add) ||
-                   (FI->getOpcode() == Instruction::FSub &&
-                    TI->getOpcode() == Instruction::FAdd)) {
-          AddOp = TI; SubOp = FI;
-        }
-
-        if (AddOp) {
-          Value *OtherAddOp = nullptr;
-          if (SubOp->getOperand(0) == AddOp->getOperand(0)) {
-            OtherAddOp = AddOp->getOperand(1);
-          } else if (SubOp->getOperand(0) == AddOp->getOperand(1)) {
-            OtherAddOp = AddOp->getOperand(0);
-          }
-
-          if (OtherAddOp) {
-            // So at this point we know we have (Y -> OtherAddOp):
-            //        select C, (add X, Y), (sub X, Z)
-            Value *NegVal;  // Compute -Z
-            if (SI.getType()->isFPOrFPVectorTy()) {
-              NegVal = Builder->CreateFNeg(SubOp->getOperand(1));
-              if (Instruction *NegInst = dyn_cast<Instruction>(NegVal)) {
-                FastMathFlags Flags = AddOp->getFastMathFlags();
-                Flags &= SubOp->getFastMathFlags();
-                NegInst->setFastMathFlags(Flags);
-              }
-            } else {
-              NegVal = Builder->CreateNeg(SubOp->getOperand(1));
-            }
-
-            Value *NewTrueOp = OtherAddOp;
-            Value *NewFalseOp = NegVal;
-            if (AddOp != TI)
-              std::swap(NewTrueOp, NewFalseOp);
-            Value *NewSel =
-              Builder->CreateSelect(CondVal, NewTrueOp,
-                                    NewFalseOp, SI.getName() + ".p");
-
-            if (SI.getType()->isFPOrFPVectorTy()) {
-              Instruction *RI =
-                BinaryOperator::CreateFAdd(SubOp->getOperand(0), NewSel);
-
-              FastMathFlags Flags = AddOp->getFastMathFlags();
-              Flags &= SubOp->getFastMathFlags();
-              RI->setFastMathFlags(Flags);
-              return RI;
-            } else
-              return BinaryOperator::CreateAdd(SubOp->getOperand(0), NewSel);
-          }
-        }
-      }
+  auto *TI = dyn_cast<Instruction>(TrueVal);
+  auto *FI = dyn_cast<Instruction>(FalseVal);
+  if (TI && FI && TI->hasOneUse() && FI->hasOneUse()) {
+    // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
+    if (TI->getOpcode() == FI->getOpcode())
+      if (Instruction *IV = FoldSelectOpOp(SI, TI, FI))
+        return IV;
+  }
 
   // See if we can fold the select into one of our operands.
   if (SI.getType()->isIntOrIntVectorTy() || SI.getType()->isFPOrFPVectorTy()) {

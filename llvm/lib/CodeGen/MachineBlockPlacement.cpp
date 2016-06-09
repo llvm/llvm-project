@@ -496,8 +496,7 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
       // Make sure that a hot successor doesn't have a globally more
       // important predecessor.
       auto RealSuccProb = MBPI->getEdgeProbability(BB, Succ);
-      BlockFrequency CandidateEdgeFreq =
-          MBFI->getBlockFreq(BB) * RealSuccProb * HotProb.getCompl();
+      BlockFrequency CandidateEdgeFreq = MBFI->getBlockFreq(BB) * RealSuccProb;
       bool BadCFGConflict = false;
       for (MachineBasicBlock *Pred : Succ->predecessors()) {
         if (Pred == Succ || BlockToChain[Pred] == &SuccChain ||
@@ -506,7 +505,15 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
           continue;
         BlockFrequency PredEdgeFreq =
             MBFI->getBlockFreq(Pred) * MBPI->getEdgeProbability(Pred, Succ);
-        if (PredEdgeFreq >= CandidateEdgeFreq) {
+        // A   B
+        //  \ /
+        //   C
+        // We layout ACB iff  A.freq > C.freq * HotProb
+        //               i.e. A.freq > A.freq * HotProb + B.freq * HotProb
+        //               i.e. A.freq * (1 - HotProb) > B.freq * HotProb
+        // A: CandidateEdge
+        // B: PredEdge
+        if (PredEdgeFreq * HotProb >= CandidateEdgeFreq * HotProb.getCompl()) {
           BadCFGConflict = true;
           break;
         }

@@ -237,7 +237,7 @@ void llvm::dsymutil::exitDsymutil(int ExitStatus) {
 }
 
 int main(int argc, char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram StackPrinter(argc, argv);
   llvm::llvm_shutdown_obj Shutdown;
   LinkOptions Options;

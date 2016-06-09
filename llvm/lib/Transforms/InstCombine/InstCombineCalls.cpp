@@ -1866,7 +1866,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     // Attempt to simplify to a constant, shuffle vector or INSERTQI call.
     if (CI11) {
-      APInt V11 = CI11->getValue();
+      const APInt &V11 = CI11->getValue();
       APInt Len = V11.zextOrTrunc(6);
       APInt Idx = V11.lshr(8).zextOrTrunc(6);
       if (Value *V = simplifyX86insertq(*II, Op0, Op1, Len, Idx, *Builder))

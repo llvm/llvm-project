@@ -327,12 +327,13 @@ DICompositeType *DICompositeType::getODRTypeIfExists(LLVMContext &Context,
 }
 
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context,
-                                            unsigned Flags, Metadata *TypeArray,
+                                            unsigned Flags, uint8_t CC,
+                                            Metadata *TypeArray,
                                             StorageType Storage,
                                             bool ShouldCreate) {
-  DEFINE_GETIMPL_LOOKUP(DISubroutineType, (Flags, TypeArray));
+  DEFINE_GETIMPL_LOOKUP(DISubroutineType, (Flags, CC, TypeArray));
   Metadata *Ops[] = {nullptr, nullptr, nullptr, TypeArray};
-  DEFINE_GETIMPL_STORE(DISubroutineType, (Flags), Ops);
+  DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
 
 DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,

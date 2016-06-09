@@ -4083,6 +4083,7 @@ def t2MRS_M : T2I<(outs rGPR:$Rd), (ins msr_mask:$SYSm), NoItinerary,
 // same and the assembly parser has no way to distinguish between them. The mask
 // operand contains the special register (R Bit) in bit 4 and bits 3-0 contains
 // the mask with the fields to be accessed in the special register.
+let Defs = [CPSR] in
 def t2MSR_AR : T2I<(outs), (ins msr_mask:$mask, rGPR:$Rn),
                    NoItinerary, "msr", "\t$mask, $Rn", []>,
                Requires<[IsThumb2,IsNotMClass]> {
@@ -4118,6 +4119,7 @@ def t2MSRbanked : T2I<(outs), (ins banked_reg:$banked, rGPR:$Rn),
 // M class MSR.
 //
 // Move from ARM core register to Special Register
+let Defs = [CPSR] in
 def t2MSR_M : T2I<(outs), (ins msr_mask:$SYSm, rGPR:$Rn),
                   NoItinerary, "msr", "\t$SYSm, $Rn", []>,
               Requires<[IsThumb,IsMClass]> {

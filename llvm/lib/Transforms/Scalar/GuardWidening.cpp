@@ -599,7 +599,7 @@ bool GuardWideningImpl::combineRangeChecks(
       return false;
 
     APInt MaxDiff = MaxOffset->getValue() - MinOffset->getValue();
-    APInt HighOffset = MaxOffset->getValue();
+    const APInt &HighOffset = MaxOffset->getValue();
     auto OffsetOK = [&](const GuardWideningImpl::RangeCheck &RC) {
       return (HighOffset - RC.getOffsetValue()).ult(MaxDiff);
     };

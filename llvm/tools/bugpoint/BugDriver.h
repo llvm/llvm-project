@@ -76,7 +76,7 @@ public:
   // command line arguments into instance variables of BugDriver.
   //
   bool addSources(const std::vector<std::string> &FileNames);
-  void addPass(std::string p) { PassesToRun.push_back(p); }
+  void addPass(std::string p) { PassesToRun.push_back(std::move(p)); }
   void setPassesToRun(const std::vector<std::string> &PTR) {
     PassesToRun = PTR;
   }
@@ -183,7 +183,7 @@ public:
   /// Error.
   ///
   std::string executeProgramSafely(const Module *Program,
-                                   std::string OutputFile,
+                                   const std::string &OutputFile,
                                    std::string *Error) const;
 
   /// createReferenceFile - calls compileProgram and then records the output

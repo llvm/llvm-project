@@ -1133,7 +1133,7 @@ TargetLibraryInfo TargetLibraryAnalysis::run(Function &F) {
       lookupInfoImpl(Triple(F.getParent()->getTargetTriple())));
 }
 
-TargetLibraryInfoImpl &TargetLibraryAnalysis::lookupInfoImpl(Triple T) {
+TargetLibraryInfoImpl &TargetLibraryAnalysis::lookupInfoImpl(const Triple &T) {
   std::unique_ptr<TargetLibraryInfoImpl> &Impl =
       Impls[T.normalize()];
   if (!Impl)

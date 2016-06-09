@@ -1444,8 +1444,8 @@ Instruction *InstCombiner::FoldICmpCstShrCst(ICmpInst &I, Value *Op, Value *A,
     return new ICmpInst(Pred, LHS, RHS);
   };
 
-  APInt AP1 = CI1->getValue();
-  APInt AP2 = CI2->getValue();
+  const APInt &AP1 = CI1->getValue();
+  const APInt &AP2 = CI2->getValue();
 
   // Don't bother doing any work for cases which InstSimplify handles.
   if (AP2 == 0)
@@ -1508,8 +1508,8 @@ Instruction *InstCombiner::FoldICmpCstShlCst(ICmpInst &I, Value *Op, Value *A,
     return new ICmpInst(Pred, LHS, RHS);
   };
 
-  APInt AP1 = CI1->getValue();
-  APInt AP2 = CI2->getValue();
+  const APInt &AP1 = CI1->getValue();
+  const APInt &AP2 = CI2->getValue();
 
   // Don't bother doing any work for cases which InstSimplify handles.
   if (AP2 == 0)
@@ -2092,8 +2092,8 @@ Instruction *InstCombiner::visitICmpInstWithInstAndIntCst(ICmpInst &ICI,
   case Instruction::UDiv:
     if (ConstantInt *DivLHS = dyn_cast<ConstantInt>(LHSI->getOperand(0))) {
       Value *X = LHSI->getOperand(1);
-      APInt C1 = RHS->getValue();
-      APInt C2 = DivLHS->getValue();
+      const APInt &C1 = RHS->getValue();
+      const APInt &C2 = DivLHS->getValue();
       assert(C2 != 0 && "udiv 0, X should have been simplified already.");
       // (icmp ugt (udiv C2, X), C1) -> (icmp ule X, C2/(C1+1))
       if (ICI.getPredicate() == ICmpInst::ICMP_UGT) {

@@ -788,6 +788,11 @@ bool MemCpyOpt::performCallSlotOptzn(Instruction *cpy,
   // src only holds uninitialized values at the moment of the call, meaning that
   // the memcpy can be discarded rather than moved.
 
+  // Lifetime marks shouldn't be operated on.
+  if (Function *F = C->getCalledFunction())
+    if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::lifetime_start)
+      return false;
+
   // Deliberately get the source and destination with bitcasts stripped away,
   // because we'll need to do type comparisons based on the underlying type.
   CallSite CS(C);

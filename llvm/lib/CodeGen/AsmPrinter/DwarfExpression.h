@@ -100,7 +100,7 @@ public:
   /// Emit an unsigned constant.
   void AddUnsignedConstant(unsigned Value);
   /// Emit an unsigned constant.
-  void AddUnsignedConstant(APInt Value);
+  void AddUnsignedConstant(const APInt &Value);
 
   /// \brief Emit an entire expression on top of a machine register location.
   ///

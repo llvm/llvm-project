@@ -11,6 +11,7 @@
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=-import-instr-limit=0 \
 ; RUN:     --plugin-opt=save-temps \
+; RUN:     -shared \
 ; RUN:     -o %t3.o %t2.o %t.o
 ; RUN: llvm-nm %t3.o | FileCheck %s
 ; RUN: llvm-dis %t.o.opt.bc -o - | FileCheck --check-prefix=OPT %s

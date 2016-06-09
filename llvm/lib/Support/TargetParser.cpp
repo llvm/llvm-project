@@ -462,50 +462,52 @@ bool llvm::AArch64::getArchFeatures(unsigned ArchKind,
 }
 
 StringRef llvm::AArch64::getArchName(unsigned ArchKind) {
-  if (ArchKind >= ARM::AK_LAST)
-    return StringRef();
-  return AArch64ARCHNames[ArchKind].getName();
+  for (const auto &AI : AArch64ARCHNames)
+    if (AI.ID == ArchKind)
+      return AI.getName();
+  return StringRef();
 }
 
 StringRef llvm::AArch64::getCPUAttr(unsigned ArchKind) {
-  if (ArchKind == ARM::AK_INVALID || ArchKind >= ARM::AK_LAST)
-    return StringRef();
-  return AArch64ARCHNames[ArchKind].getCPUAttr();
+  for (const auto &AI : AArch64ARCHNames)
+    if (AI.ID == ArchKind)
+      return AI.getCPUAttr();
+  return StringRef();
 }
 
 StringRef llvm::AArch64::getSubArch(unsigned ArchKind) {
-  if (ArchKind == ARM::AK_INVALID || ArchKind >= ARM::AK_LAST)
-    return StringRef();
-  return AArch64ARCHNames[ArchKind].getSubArch();
+  for (const auto &AI : AArch64ARCHNames)
+    if (AI.ID == ArchKind)
+      return AI.getSubArch();
+  return StringRef();
 }
 
 unsigned llvm::AArch64::getArchAttr(unsigned ArchKind) {
-  if (ArchKind >= ARM::AK_LAST)
-    return ARMBuildAttrs::CPUArch::v8_A;
-  return AArch64ARCHNames[ArchKind].ArchAttr;
+  for (const auto &AI : AArch64ARCHNames)
+    if (AI.ID == ArchKind)
+      return AI.ArchAttr;
+  return ARMBuildAttrs::CPUArch::v8_A;
 }
 
 StringRef llvm::AArch64::getArchExtName(unsigned AArchExtKind) {
-  for (const auto AE : AArch64ARCHExtNames) {
+  for (const auto &AE : AArch64ARCHExtNames)
     if (AArchExtKind == AE.ID)
       return AE.getName();
-  }
   return StringRef();
 }
 
 const char *llvm::AArch64::getArchExtFeature(StringRef ArchExt) {
   if (ArchExt.startswith("no")) {
     StringRef ArchExtBase(ArchExt.substr(2));
-    for (const auto AE : AArch64ARCHExtNames) {
+    for (const auto &AE : AArch64ARCHExtNames) {
       if (AE.NegFeature && ArchExtBase == AE.getName())
         return AE.NegFeature;
     }
   }
-  for (const auto AE : AArch64ARCHExtNames) {
+
+  for (const auto &AE : AArch64ARCHExtNames)
     if (AE.Feature && ArchExt == AE.getName())
       return AE.Feature;
-  }
-
   return nullptr;
 }
 
@@ -515,10 +517,9 @@ StringRef llvm::AArch64::getDefaultCPU(StringRef Arch) {
     return StringRef();
 
   // Look for multiple AKs to find the default for pair AK+Name.
-  for (const auto CPU : AArch64CPUNames) {
+  for (const auto &CPU : AArch64CPUNames)
     if (CPU.ArchID == AK && CPU.Default)
       return CPU.getName();
-  }
 
   // If we can't find a default then target the architecture instead
   return "generic";

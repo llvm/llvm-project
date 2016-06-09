@@ -99,7 +99,7 @@ static void cacheAnnotationFromMD(const Module *m, const GlobalValue *gv) {
   }
 }
 
-bool llvm::findOneNVVMAnnotation(const GlobalValue *gv, std::string prop,
+bool llvm::findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                                  unsigned &retval) {
   MutexGuard Guard(Lock);
   const Module *m = gv->getParent();
@@ -113,7 +113,7 @@ bool llvm::findOneNVVMAnnotation(const GlobalValue *gv, std::string prop,
   return true;
 }
 
-bool llvm::findAllNVVMAnnotation(const GlobalValue *gv, std::string prop,
+bool llvm::findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                                  std::vector<unsigned> &retval) {
   MutexGuard Guard(Lock);
   const Module *m = gv->getParent();

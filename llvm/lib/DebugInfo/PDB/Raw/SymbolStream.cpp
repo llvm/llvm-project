@@ -24,16 +24,15 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-SymbolStream::SymbolStream(const PDBFile &File, uint32_t StreamNum)
-    : MappedStream(llvm::make_unique<IndexedStreamData>(StreamNum, File),
-                   File) {}
+SymbolStream::SymbolStream(std::unique_ptr<MappedBlockStream> Stream)
+    : Stream(std::move(Stream)) {}
 
 SymbolStream::~SymbolStream() {}
 
 Error SymbolStream::reload() {
-  codeview::StreamReader Reader(MappedStream);
+  codeview::StreamReader Reader(*Stream);
 
-  if (auto EC = Reader.readArray(SymbolRecords, MappedStream.getLength()))
+  if (auto EC = Reader.readArray(SymbolRecords, Stream->getLength()))
     return EC;
 
   return Error::success();

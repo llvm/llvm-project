@@ -31,6 +31,9 @@ enum {
 
 /// This class provides the information for the target register banks.
 class AArch64RegisterBankInfo : public RegisterBankInfo {
+  /// See RegisterBankInfo::applyMapping.
+  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
+
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
   /// Get the cost of a copy from \p B to \p A, or put differently,
@@ -56,6 +59,11 @@ public:
   /// \todo This should be TableGen'ed.
   const RegisterBank &
   getRegBankFromRegClass(const TargetRegisterClass &RC) const override;
+
+  /// Get the alternative mappings for \p MI.
+  /// Alternative in the sense different from getInstrMapping.
+  InstructionMappings
+  getInstrAlternativeMappings(const MachineInstr &MI) const override;
 };
 } // End llvm namespace.
 #endif
