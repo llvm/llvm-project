@@ -16,27 +16,29 @@
 
 // Project includes
 #include "CommandObjectMemory.h"
+#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
-#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
-#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/Options.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupOutputFile.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Interpreter/OptionValueString.h"
+#include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/Target/MemoryHistory.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
@@ -1767,6 +1769,109 @@ protected:
 };
 
 //-------------------------------------------------------------------------
+// CommandObjectMemoryRegion
+//-------------------------------------------------------------------------
+#pragma mark CommandObjectMemoryRegion
+
+class CommandObjectMemoryRegion : public CommandObjectParsed
+{
+public:
+    CommandObjectMemoryRegion(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "memory region",
+                              "Get information on a memory region that contains an address in the current process.",
+                              "memory region ADDR",
+                              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched),
+          m_prev_end_addr(LLDB_INVALID_ADDRESS)
+    {
+    }
+
+    ~CommandObjectMemoryRegion() override = default;
+
+protected:
+    bool
+    DoExecute(Args &command, CommandReturnObject &result) override
+    {
+        ProcessSP process_sp = m_exe_ctx.GetProcessSP();
+        if (process_sp)
+        {
+            Error error;
+            lldb::addr_t load_addr = m_prev_end_addr;
+            m_prev_end_addr = LLDB_INVALID_ADDRESS;
+
+            const size_t argc = command.GetArgumentCount();
+            if (argc > 1 || (argc == 0 && load_addr == LLDB_INVALID_ADDRESS))
+            {
+                result.AppendErrorWithFormat("'%s' takes one argument:\nUsage: %s\n", m_cmd_name.c_str(),
+                                             m_cmd_syntax.c_str());
+                result.SetStatus(eReturnStatusFailed);
+            }
+            else
+            {
+                const char *load_addr_cstr = command.GetArgumentAtIndex(0);
+                if (command.GetArgumentCount() == 1)
+                {
+                    load_addr = Args::StringToAddress(&m_exe_ctx, load_addr_cstr, LLDB_INVALID_ADDRESS, &error);
+                    if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS)
+                    {
+                        result.AppendErrorWithFormat("invalid address argument \"%s\": %s\n", load_addr_cstr,
+                                                     error.AsCString());
+                        result.SetStatus(eReturnStatusFailed);
+                    }
+                }
+
+                lldb_private::MemoryRegionInfo range_info;
+                error = process_sp->GetMemoryRegionInfo(load_addr, range_info);
+                if (error.Success())
+                {
+                    lldb_private::Address addr;
+                    ConstString section_name;
+                    if (process_sp->GetTarget().ResolveLoadAddress(load_addr, addr))
+                    {
+                        SectionSP section_sp(addr.GetSection());
+                        if (section_sp)
+                        {
+                            // Got the top most section, not the deepest section
+                            while (section_sp->GetParent())
+                                section_sp = section_sp->GetParent();
+                            section_name = section_sp->GetName();
+                        }
+                    }
+                    result.AppendMessageWithFormat(
+                        "[0x%16.16" PRIx64 "-0x%16.16" PRIx64 ") %c%c%c%s%s\n", range_info.GetRange().GetRangeBase(),
+                        range_info.GetRange().GetRangeEnd(), range_info.GetReadable() ? 'r' : '-',
+                        range_info.GetWritable() ? 'w' : '-', range_info.GetExecutable() ? 'x' : '-',
+                        section_name ? " " : "", section_name ? section_name.AsCString() : "");
+                    m_prev_end_addr = range_info.GetRange().GetRangeEnd();
+                    result.SetStatus(eReturnStatusSuccessFinishResult);
+                }
+                else
+                {
+                    result.SetStatus(eReturnStatusFailed);
+                    result.AppendErrorWithFormat("%s\n", error.AsCString());
+                }
+            }
+        }
+        else
+        {
+            m_prev_end_addr = LLDB_INVALID_ADDRESS;
+            result.AppendError("invalid process");
+            result.SetStatus(eReturnStatusFailed);
+        }
+        return result.Succeeded();
+    }
+
+    const char *
+    GetRepeatCommand(Args &current_command_args, uint32_t index) override
+    {
+        // If we repeat this command, repeat it without any arguments so we can
+        // show the next memory range
+        return m_cmd_name.c_str();
+    }
+
+    lldb::addr_t m_prev_end_addr;
+};
+
+//-------------------------------------------------------------------------
 // CommandObjectMemory
 //-------------------------------------------------------------------------
 
@@ -1776,10 +1881,11 @@ CommandObjectMemory::CommandObjectMemory (CommandInterpreter &interpreter) :
                             "A set of commands for operating on memory.",
                             "memory <subcommand> [<subcommand-options>]")
 {
-    LoadSubCommand ("find", CommandObjectSP (new CommandObjectMemoryFind (interpreter)));
-    LoadSubCommand ("read",  CommandObjectSP (new CommandObjectMemoryRead (interpreter)));
-    LoadSubCommand ("write", CommandObjectSP (new CommandObjectMemoryWrite (interpreter)));
-    LoadSubCommand ("history", CommandObjectSP (new CommandObjectMemoryHistory (interpreter)));
+    LoadSubCommand("find", CommandObjectSP(new CommandObjectMemoryFind(interpreter)));
+    LoadSubCommand("read", CommandObjectSP(new CommandObjectMemoryRead(interpreter)));
+    LoadSubCommand("write", CommandObjectSP(new CommandObjectMemoryWrite(interpreter)));
+    LoadSubCommand("history", CommandObjectSP(new CommandObjectMemoryHistory(interpreter)));
+    LoadSubCommand("region", CommandObjectSP(new CommandObjectMemoryRegion(interpreter)));
 }
 
 CommandObjectMemory::~CommandObjectMemory() = default;

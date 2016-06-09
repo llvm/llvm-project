@@ -273,7 +273,19 @@ public:
     {
         m_thread_specific = b;
     }
-    
+
+    //------------------------------------------------------------------
+    /// Get the permissions as OR'ed bits from lldb::Permissions
+    //------------------------------------------------------------------
+    uint32_t
+    GetPermissions() const;
+
+    //------------------------------------------------------------------
+    /// Set the permissions using bits OR'ed from lldb::Permissions
+    //------------------------------------------------------------------
+    void
+    SetPermissions(uint32_t permissions);
+
     ObjectFile *
     GetObjectFile ()
     {
@@ -356,12 +368,15 @@ protected:
     lldb::offset_t  m_file_size;        // Object file size (can be smaller than m_byte_size for zero filled sections...)
     uint32_t        m_log2align;        // log_2(align) of the section (i.e. section has to be aligned to 2^m_log2align)
     SectionList     m_children;         // Child sections
-    bool            m_fake:1,           // If true, then this section only can contain the address if one of its
+    bool m_fake : 1,                    // If true, then this section only can contain the address if one of its
                                         // children contains an address. This allows for gaps between the children
                                         // that are contained in the address range for this section, but do not produce
                                         // hits unless the children contain the address.
-                    m_encrypted:1,      // Set to true if the contents are encrypted
-                    m_thread_specific:1;// This section is thread specific
+        m_encrypted : 1,                // Set to true if the contents are encrypted
+        m_thread_specific : 1,          // This section is thread specific
+        m_readable : 1,                 // If this section has read permissions
+        m_writable : 1,                 // If this section has write permissions
+        m_executable : 1;               // If this section has executable permissions
     uint32_t        m_target_byte_size; // Some architectures have non-8-bit byte size. This is specified as
                                         // as a multiple number of a host bytes   
 private:

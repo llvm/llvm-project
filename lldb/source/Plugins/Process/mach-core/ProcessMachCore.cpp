@@ -18,14 +18,15 @@
 // Other libraries and framework includes
 #include "lldb/Core/DataBuffer.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
@@ -122,14 +123,15 @@ ProcessMachCore::CanDebug(lldb::TargetSP target_sp, bool plugin_specified_by_nam
 //----------------------------------------------------------------------
 // ProcessMachCore constructor
 //----------------------------------------------------------------------
-ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp, ListenerSP listener_sp, const FileSpec &core_file) :
-    Process (target_sp, listener_sp),
-    m_core_aranges (),
-    m_core_module_sp (),
-    m_core_file (core_file),
-    m_dyld_addr (LLDB_INVALID_ADDRESS),
-    m_mach_kernel_addr (LLDB_INVALID_ADDRESS),
-    m_dyld_plugin_name ()
+ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp, ListenerSP listener_sp, const FileSpec &core_file)
+    : Process(target_sp, listener_sp),
+      m_core_aranges(),
+      m_core_range_infos(),
+      m_core_module_sp(),
+      m_core_file(core_file),
+      m_dyld_addr(LLDB_INVALID_ADDRESS),
+      m_mach_kernel_addr(LLDB_INVALID_ADDRESS),
+      m_dyld_plugin_name()
 {
 }
 
@@ -304,11 +306,14 @@ ProcessMachCore::DoLoadCore ()
             {
                 m_core_aranges.Append(range_entry);
             }
+            m_core_range_infos.Append(
+                VMRangeToPermissions::Entry(section_vm_addr, section->GetByteSize(), section->GetPermissions()));
         }
     }
     if (!ranges_are_sorted)
     {
         m_core_aranges.Sort();
+        m_core_range_infos.Sort();
     }
 
     if (m_dyld_addr == LLDB_INVALID_ADDRESS || m_mach_kernel_addr == LLDB_INVALID_ADDRESS)
@@ -520,6 +525,39 @@ ProcessMachCore::DoReadMemory (addr_t addr, void *buf, size_t size, Error &error
         }
     }
     return 0;
+}
+
+Error
+ProcessMachCore::GetMemoryRegionInfo(addr_t load_addr, MemoryRegionInfo &region_info)
+{
+    region_info.Clear();
+    const VMRangeToPermissions::Entry *permission_entry = m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);
+    if (permission_entry)
+    {
+        if (permission_entry->Contains(load_addr))
+        {
+            region_info.GetRange().SetRangeBase(permission_entry->GetRangeBase());
+            region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
+            const Flags permissions(permission_entry->data);
+            region_info.SetReadable(permissions.Test(ePermissionsReadable) ? MemoryRegionInfo::eYes
+                                                                           : MemoryRegionInfo::eNo);
+            region_info.SetWritable(permissions.Test(ePermissionsWritable) ? MemoryRegionInfo::eYes
+                                                                           : MemoryRegionInfo::eNo);
+            region_info.SetExecutable(permissions.Test(ePermissionsExecutable) ? MemoryRegionInfo::eYes
+                                                                               : MemoryRegionInfo::eNo);
+        }
+        else if (load_addr < permission_entry->GetRangeBase())
+        {
+            region_info.GetRange().SetRangeBase(load_addr);
+            region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
+            region_info.SetReadable(MemoryRegionInfo::eNo);
+            region_info.SetWritable(MemoryRegionInfo::eNo);
+            region_info.SetExecutable(MemoryRegionInfo::eNo);
+        }
+        return Error();
+    }
+
+    return Error("invalid address");
 }
 
 void
