@@ -129,7 +129,7 @@ private:
     typedef std::map<lldb::addr_t, Allocation>  AllocationMap;
     AllocationMap                               m_allocations;
         
-    lldb::addr_t FindSpace (size_t size, bool zero_memory = false);
+    lldb::addr_t FindSpace (size_t size);
     bool ContainsHostOnlyAllocations ();
     AllocationMap::iterator FindAllocation (lldb::addr_t addr, size_t size);
 

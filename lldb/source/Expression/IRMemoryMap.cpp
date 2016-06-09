@@ -13,8 +13,10 @@
 #include "lldb/Core/Log.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Expression/IRMemoryMap.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb_private;
 
@@ -47,32 +49,131 @@ IRMemoryMap::~IRMemoryMap ()
 }
 
 lldb::addr_t
-IRMemoryMap::FindSpace (size_t size, bool zero_memory)
+IRMemoryMap::FindSpace (size_t size)
 {
+    // The FindSpace algorithm's job is to find a region of memory that the
+    // underlying process is unlikely to be using.
+    //
+    // The memory returned by this function will never be written to.  The only
+    // point is that it should not shadow process memory if possible, so that
+    // expressions processing real values from the process do not use the
+    // wrong data.
+    //
+    // If the process can in fact allocate memory (CanJIT() lets us know this)
+    // then this can be accomplished just be allocating memory in the inferior.
+    // Then no guessing is required.
+
     lldb::TargetSP target_sp = m_target_wp.lock();
     lldb::ProcessSP process_sp = m_process_wp.lock();
+    
+    const bool process_is_alive = process_sp && process_sp->IsAlive();
 
     lldb::addr_t ret = LLDB_INVALID_ADDRESS;
     if (size == 0)
         return ret;
 
-    if (process_sp && process_sp->CanJIT() && process_sp->IsAlive())
+    if (process_is_alive && process_sp->CanJIT())
     {
         Error alloc_error;
 
-        if (!zero_memory)
-            ret = process_sp->AllocateMemory(size, lldb::ePermissionsReadable | lldb::ePermissionsWritable, alloc_error);
-        else
-            ret = process_sp->CallocateMemory(size, lldb::ePermissionsReadable | lldb::ePermissionsWritable, alloc_error);
+        ret = process_sp->AllocateMemory(size, lldb::ePermissionsReadable | lldb::ePermissionsWritable, alloc_error);
 
         if (!alloc_error.Success())
             return LLDB_INVALID_ADDRESS;
         else
             return ret;
     }
+    
+    // At this point we know that we need to hunt.
+    //
+    // First, go to the end of the existing allocations we've made if there are
+    // any allocations.  Otherwise start at the beginning of memory.
 
-    ret = 0;
-    if (!m_allocations.empty())
+    if (m_allocations.empty())
+    {
+        ret = 0x0;
+    }
+    else
+    {
+        auto back = m_allocations.rbegin();
+        lldb::addr_t addr = back->first;
+        size_t alloc_size = back->second.m_size;
+        ret = llvm::alignTo(addr+alloc_size, 4096);
+    }
+    
+    // Now, if it's possible to use the GetMemoryRegionInfo API to detect mapped
+    // regions, walk forward through memory until a region is found that
+    // has adequate space for our allocation.
+    if (process_is_alive)
+    {
+        const uint64_t end_of_memory = process_sp->GetAddressByteSize() == 8 ?
+            0xffffffffffffffffull : 0xffffffffull;
+        
+        lldbassert(process_sp->GetAddressByteSize() == 4 || end_of_memory != 0xffffffffull);
+        
+        MemoryRegionInfo region_info;
+        Error err = process_sp->GetMemoryRegionInfo(ret, region_info);
+        if (err.Success())
+        {
+            while (true)
+            {
+                if (region_info.GetReadable() != MemoryRegionInfo::OptionalBool::eNo ||
+                    region_info.GetWritable() != MemoryRegionInfo::OptionalBool::eNo ||
+                    region_info.GetExecutable() != MemoryRegionInfo::OptionalBool::eNo)
+                {
+                    if (region_info.GetRange().GetRangeEnd() - 1 >= end_of_memory)
+                    {
+                        ret = LLDB_INVALID_ADDRESS;
+                        break;
+                    }
+                    else
+                    {
+                        ret = region_info.GetRange().GetRangeEnd();
+                    }
+                }
+                else if (ret + size < region_info.GetRange().GetRangeEnd())
+                {
+                    return ret;
+                }
+                else
+                {
+                    // ret stays the same.  We just need to walk a bit further.
+                }
+                
+                err = process_sp->GetMemoryRegionInfo(region_info.GetRange().GetRangeEnd(), region_info);
+                if (err.Fail())
+                {
+                    lldbassert(!"GetMemoryRegionInfo() succeeded, then failed");
+                    ret = LLDB_INVALID_ADDRESS;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // We've tried our algorithm, and it didn't work.  Now we have to reset back
+    // to the end of the allocations we've already reported, or use a 'sensible'
+    // default if this is our first allocation.
+    
+    if (m_allocations.empty())
+    {
+        uint32_t address_byte_size = GetAddressByteSize();
+        if (address_byte_size != UINT32_MAX)
+        {
+            switch (address_byte_size)
+            {
+                case 8:
+                    ret = 0xffffffff00000000ull;
+                    break;
+                case 4:
+                    ret = 0xee000000ull;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    else
     {
         auto back = m_allocations.rbegin();
         lldb::addr_t addr = back->first;
