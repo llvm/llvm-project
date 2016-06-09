@@ -306,8 +306,15 @@ ProcessMachCore::DoLoadCore ()
             {
                 m_core_aranges.Append(range_entry);
             }
+            // Some core files don't fill in the permissions correctly. If that is the case
+            // assume read + execute so clients don't think the memory is not readable,
+            // or executable. The memory isn't writable since this plug-in doesn't implement
+            // DoWriteMemory.
+            uint32_t permissions = section->GetPermissions();
+            if (permissions == 0)
+                permissions = lldb::ePermissionsReadable | lldb::ePermissionsExecutable;
             m_core_range_infos.Append(
-                VMRangeToPermissions::Entry(section_vm_addr, section->GetByteSize(), section->GetPermissions()));
+                VMRangeToPermissions::Entry(section_vm_addr, section->GetByteSize(), permissions));
         }
     }
     if (!ranges_are_sorted)
