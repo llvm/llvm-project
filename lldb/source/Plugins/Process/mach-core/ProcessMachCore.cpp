@@ -513,25 +513,54 @@ size_t
 ProcessMachCore::DoReadMemory (addr_t addr, void *buf, size_t size, Error &error)
 {
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
+    size_t bytes_read = 0;
 
     if (core_objfile)
     {
-        const VMRangeToFileOffset::Entry *core_memory_entry = m_core_aranges.FindEntryThatContains (addr);
-        if (core_memory_entry)
+        //----------------------------------------------------------------------
+        // Segments are not always contiguous in mach-o core files. We have core
+        // files that have segments like:
+        //            Address    Size       File off   File size
+        //            ---------- ---------- ---------- ----------
+        // LC_SEGMENT 0x000f6000 0x00001000 0x1d509ee8 0x00001000 --- ---   0 0x00000000 __TEXT
+        // LC_SEGMENT 0x0f600000 0x00100000 0x1d50aee8 0x00100000 --- ---   0 0x00000000 __TEXT
+        // LC_SEGMENT 0x000f7000 0x00001000 0x1d60aee8 0x00001000 --- ---   0 0x00000000 __TEXT
+        //
+        // Any if the user executes the following command:
+        //
+        // (lldb) mem read 0xf6ff0
+        //
+        // We would attempt to read 32 bytes from 0xf6ff0 but would only
+        // get 16 unless we loop through consecutive memory ranges that are
+        // contiguous in the address space, but not in the file data.
+        //----------------------------------------------------------------------
+        while (bytes_read < size)
         {
-            const addr_t offset = addr - core_memory_entry->GetRangeBase();
-            const addr_t bytes_left = core_memory_entry->GetRangeEnd() - addr;
-            size_t bytes_to_read = size;
-            if (bytes_to_read > bytes_left)
-                bytes_to_read = bytes_left;
-            return core_objfile->CopyData (core_memory_entry->data.GetRangeBase() + offset, bytes_to_read, buf);
-        }
-        else
-        {
-            error.SetErrorStringWithFormat ("core file does not contain 0x%" PRIx64, addr);
+            const addr_t curr_addr = addr + bytes_read;
+            const VMRangeToFileOffset::Entry *core_memory_entry = m_core_aranges.FindEntryThatContains(curr_addr);
+
+            if (core_memory_entry)
+            {
+                const addr_t offset = curr_addr - core_memory_entry->GetRangeBase();
+                const addr_t bytes_left = core_memory_entry->GetRangeEnd() - curr_addr;
+                const size_t bytes_to_read = std::min(size - bytes_read, (size_t)bytes_left);
+                const size_t curr_bytes_read = core_objfile->CopyData(core_memory_entry->data.GetRangeBase() + offset,
+                                                                      bytes_to_read, (char *)buf + bytes_read);
+                if (curr_bytes_read == 0)
+                    break;
+                bytes_read += curr_bytes_read;
+            }
+            else
+            {
+                // Only set the error if we didn't read any bytes
+                if (bytes_read == 0)
+                    error.SetErrorStringWithFormat("core file does not contain 0x%" PRIx64, curr_addr);
+                break;
+            }
         }
     }
-    return 0;
+
+    return bytes_read;
 }
 
 Error
