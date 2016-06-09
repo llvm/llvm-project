@@ -192,14 +192,23 @@ By default the compiler runtime uses a static initializer to determine the
 profile output path and to register a writer function. To collect profiles
 without using static initializers, do this manually:
 
-* Export a ``int __llvm_profile_runtime`` symbol. The linker won't pull in the
-  object file containing the profiling runtime's static initializer if this
-  symbol is defined.
+* Export a ``int __llvm_profile_runtime`` symbol from each instrumented shared
+  library and executable. When the linker finds a definition of this symbol, it
+  knows to skip loading the object which contains the profiling runtime's
+  static initializer.
 
-* Call ``__llvm_profile_initialize_file`` once. This parses
-  ``LLVM_PROFILE_FILE`` and sets the output path.
+* Forward-declare ``void __llvm_profile_initialize_file(void)`` and call it
+  once from each instrumented executable. This function parses
+  ``LLVM_PROFILE_FILE``, sets the output path, and truncates any existing files
+  at that path. To get the same behavior without truncating existing files,
+  pass a filename pattern string to ``void __llvm_profile_set_filename(char
+  *)``.  These calls can be placed anywhere so long as they precede all calls
+  to ``__llvm_profile_write_file``.
 
-* Call ``__llvm_profile_write_file`` to write out a profile.
+* Forward-declare ``int __llvm_profile_write_file(void)`` and call it to write
+  out a profile. This function returns 0 when it succeeds, and a non-zero value
+  otherwise. Calling this function multiple times appends profile data to an
+  existing on-disk raw profile.
 
 Drawbacks and limitations
 =========================

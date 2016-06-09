@@ -22,10 +22,6 @@
 namespace clang {
 namespace ast_matchers {
 
-using clang::tooling::newFrontendActionFactory;
-using clang::tooling::runToolOnCodeWithArgs;
-using clang::tooling::FrontendActionFactory;
-
 typedef std::vector<std::string> StringVector;
 
 void getLangArgs(Language Lang, StringVector &Args) {

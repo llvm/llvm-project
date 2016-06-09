@@ -96,7 +96,7 @@ static Flavor parseFlavor(std::vector<const char *> &V) {
 /// windows linker based on the argv[0] or -flavor option.
 int main(int Argc, const char **Argv) {
   // Standard set up, so program fails gracefully.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(Argv[0]);
   PrettyStackTraceProgram StackPrinter(Argc, Argv);
   llvm_shutdown_obj Shutdown;
 

@@ -536,7 +536,7 @@ _mm_loadl_pd(__m128d __a, double const *__dp)
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
-_mm_undefined_pd()
+_mm_undefined_pd(void)
 {
   return (__m128d)__builtin_ia32_undef128();
 }
@@ -1089,25 +1089,27 @@ _mm_xor_si128(__m128i __a, __m128i __b)
 ///    An immediate value specifying the number of bytes to left-shift
 ///    operand a.
 /// \returns A 128-bit integer vector containing the left-shifted value.
-#define _mm_slli_si128(a, imm) __extension__ ({                         \
-  (__m128i)__builtin_shufflevector((__v16qi)_mm_setzero_si128(),        \
-                                   (__v16qi)(__m128i)(a),               \
-                                   ((imm)&0xF0) ? 0 : 16 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 17 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 18 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 19 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 20 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 21 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 22 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 23 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 24 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 25 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 26 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 27 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 28 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 29 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 30 - ((imm)&0xF), \
-                                   ((imm)&0xF0) ? 0 : 31 - ((imm)&0xF)); })
+#define _mm_slli_si128(a, imm) __extension__ ({                                \
+  ((char)(imm)&0xF0) ? _mm_setzero_si128() :                                   \
+                     (__m128i)__builtin_shufflevector(                         \
+                                                 (__v16qi)_mm_setzero_si128(), \
+                                                 (__v16qi)(__m128i)(a),        \
+                                                 16 - (char)(imm),             \
+                                                 17 - (char)(imm),             \
+                                                 18 - (char)(imm),             \
+                                                 19 - (char)(imm),             \
+                                                 20 - (char)(imm),             \
+                                                 21 - (char)(imm),             \
+                                                 22 - (char)(imm),             \
+                                                 23 - (char)(imm),             \
+                                                 24 - (char)(imm),             \
+                                                 25 - (char)(imm),             \
+                                                 26 - (char)(imm),             \
+                                                 27 - (char)(imm),             \
+                                                 28 - (char)(imm),             \
+                                                 29 - (char)(imm),             \
+                                                 30 - (char)(imm),             \
+                                                 31 - (char)(imm)); })
 
 #define _mm_bslli_si128(a, imm) \
   _mm_slli_si128((a), (imm))
@@ -1323,25 +1325,27 @@ _mm_sra_epi32(__m128i __a, __m128i __count)
 ///    An immediate value specifying the number of bytes to right-shift operand
 ///    a.
 /// \returns A 128-bit integer vector containing the right-shifted value.
-#define _mm_srli_si128(a, imm) __extension__ ({                          \
-  (__m128i)__builtin_shufflevector((__v16qi)(__m128i)(a),                \
-                                   (__v16qi)_mm_setzero_si128(),         \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 0,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 1,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 2,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 3,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 4,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 5,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 6,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 7,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 8,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 9,  \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 10, \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 11, \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 12, \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 13, \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 14, \
-                                   ((imm)&0xF0) ? 16 : ((imm)&0xF) + 15); })
+#define _mm_srli_si128(a, imm) __extension__ ({                                \
+  ((char)(imm)&0xF0) ? _mm_setzero_si128() :                                   \
+                     (__m128i)__builtin_shufflevector(                         \
+                                                 (__v16qi)(__m128i)(a),        \
+                                                 (__v16qi)_mm_setzero_si128(), \
+                                                 (char)(imm) + 0,              \
+                                                 (char)(imm) + 1,              \
+                                                 (char)(imm) + 2,              \
+                                                 (char)(imm) + 3,              \
+                                                 (char)(imm) + 4,              \
+                                                 (char)(imm) + 5,              \
+                                                 (char)(imm) + 6,              \
+                                                 (char)(imm) + 7,              \
+                                                 (char)(imm) + 8,              \
+                                                 (char)(imm) + 9,              \
+                                                 (char)(imm) + 10,             \
+                                                 (char)(imm) + 11,             \
+                                                 (char)(imm) + 12,             \
+                                                 (char)(imm) + 13,             \
+                                                 (char)(imm) + 14,             \
+                                                 (char)(imm) + 15); })
 
 #define _mm_bsrli_si128(a, imm) \
   _mm_srli_si128((a), (imm))
@@ -1883,7 +1887,7 @@ _mm_loadl_epi64(__m128i const *__p)
 ///
 /// \returns A 128-bit vector of [4 x i32] with unspecified content.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_undefined_si128()
+_mm_undefined_si128(void)
 {
   return (__m128i)__builtin_ia32_undef128();
 }

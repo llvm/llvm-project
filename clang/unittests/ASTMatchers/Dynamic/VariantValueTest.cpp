@@ -16,9 +16,6 @@ namespace ast_matchers {
 namespace dynamic {
 namespace {
 
-using ast_matchers::internal::DynTypedMatcher;
-using ast_matchers::internal::Matcher;
-
 TEST(VariantValueTest, Unsigned) {
   const unsigned kUnsigned = 17;
   VariantValue Value = kUnsigned;

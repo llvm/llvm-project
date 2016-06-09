@@ -33,7 +33,7 @@ typedef float __v2sf __attribute__((__vector_size__(8)));
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("3dnow")))
 
 static __inline__ void __DEFAULT_FN_ATTRS
-_m_femms() {
+_m_femms(void) {
   __builtin_ia32_femms();
 }
 

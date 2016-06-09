@@ -341,7 +341,7 @@ static void printSourceRange(CharSourceRange range, ASTContext &Ctx,
 
 int main(int argc, const char **argv) {
   void *MainAddr = (void*) (intptr_t) GetExecutablePath;
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   std::string
     resourcesPath = CompilerInvocation::GetResourcesPath(argv[0], MainAddr);

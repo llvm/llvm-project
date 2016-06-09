@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This files defines TypeLocBuilder, a class for building TypeLocs
+//  This file defines TypeLocBuilder, a class for building TypeLocs
 //  bottom-up.
 //
 //===----------------------------------------------------------------------===//
