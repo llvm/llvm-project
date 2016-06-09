@@ -2637,8 +2637,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             Instantiation->getTemplateInstantiationPattern();
         DeclContext::lookup_result Lookup =
             ClassPattern->lookup(Field->getDeclName());
-        assert(Lookup.size() == 1);
-        FieldDecl *Pattern = cast<FieldDecl>(Lookup[0]);
+        FieldDecl *Pattern = cast<FieldDecl>(Lookup.front());
         InstantiateInClassInitializer(PointOfInstantiation, Field, Pattern,
                                       TemplateArgs);
       }

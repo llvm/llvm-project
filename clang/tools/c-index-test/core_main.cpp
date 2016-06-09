@@ -196,8 +196,12 @@ static void printSymbolNameAndUSR(const Decl *D, ASTContext &Ctx,
 //===----------------------------------------------------------------------===//
 
 int indextest_core_main(int argc, const char **argv) {
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
+
+  assert(argv[1] == StringRef("core"));
+  ++argv;
+  --argc;
 
   std::vector<const char *> CompArgs;
   const char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));

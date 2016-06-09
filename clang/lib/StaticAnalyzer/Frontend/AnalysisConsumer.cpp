@@ -51,7 +51,6 @@
 
 using namespace clang;
 using namespace ento;
-using llvm::SmallPtrSet;
 
 #define DEBUG_TYPE "AnalysisConsumer"
 

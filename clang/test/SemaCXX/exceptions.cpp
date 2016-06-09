@@ -268,3 +268,17 @@ void g() {
   }
 }
 }
+
+namespace PR28047 {
+void test1(int i) {
+  try {
+  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}}
+  }
+}
+void test2() {
+  int i;
+  try {
+  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}}
+  }
+}
+}

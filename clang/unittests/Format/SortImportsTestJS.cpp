@@ -223,6 +223,19 @@ TEST_F(SortImportsTestJS, AffectedRange) {
              24, 30);
 }
 
+TEST_F(SortImportsTestJS, SortingCanShrink) {
+  // Sort excluding a suffix.
+  verifySort("import {B} from 'a';\n"
+             "import {A} from 'b';\n"
+             "\n"
+             "1;",
+             "import {A} from 'b';\n"
+             "\n"
+             "import {B} from 'a';\n"
+             "\n"
+             "1;");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

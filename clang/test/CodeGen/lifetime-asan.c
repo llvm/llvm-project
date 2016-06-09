@@ -1,8 +1,7 @@
-// RUN: %clang -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefix=CHECK-O0
-// RUN: %clang -S -emit-llvm -o - -O0 \
+// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - -O0 %s | FileCheck %s -check-prefix=CHECK-O0
+// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - -O0 \
 // RUN:     -fsanitize=address -fsanitize-address-use-after-scope %s | \
 // RUN:     FileCheck %s -check-prefix=CHECK-ASAN-USE-AFTER-SCOPE
-// UNSUPPORTED: mingw32
 
 extern int bar(char *A, int n);
 

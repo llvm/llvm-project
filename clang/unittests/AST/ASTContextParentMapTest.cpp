@@ -21,10 +21,6 @@
 namespace clang {
 namespace ast_matchers {
 
-using clang::tooling::newFrontendActionFactory;
-using clang::tooling::runToolOnCodeWithArgs;
-using clang::tooling::FrontendActionFactory;
-
 TEST(GetParents, ReturnsParentForDecl) {
   MatchVerifier<Decl> Verifier;
   EXPECT_TRUE(

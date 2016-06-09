@@ -43,10 +43,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -450,11 +448,6 @@ static void LLVMErrorHandler(void *UserData, const std::string &Message,
 }
 
 int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
-  // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
-  PrettyStackTraceProgram X(Argv.size(), Argv.data());
-  llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
-
   // Initialize targets and assembly printers/parsers.
   InitializeAllTargetInfos();
   InitializeAllTargetMCs();

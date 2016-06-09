@@ -29,7 +29,6 @@
 
 using namespace clang;
 using namespace ento;
-using llvm::APInt;
 using llvm::APSInt;
 
 namespace {

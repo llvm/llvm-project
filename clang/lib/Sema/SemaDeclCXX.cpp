@@ -12210,6 +12210,11 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
     Invalid = true;
   }
 
+  if (ExDeclType->isVariablyModifiedType()) {
+    Diag(Loc, diag::err_catch_variably_modified) << ExDeclType;
+    Invalid = true;
+  }
+
   QualType BaseType = ExDeclType;
   int Mode = 0; // 0 for direct type, 1 for pointer, 2 for reference
   unsigned DK = diag::err_catch_incomplete;

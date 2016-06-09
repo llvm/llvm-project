@@ -5974,6 +5974,8 @@ def err_catch_incomplete_ref : Error<
   "cannot catch reference to incomplete type %0">;
 def err_catch_incomplete : Error<"cannot catch incomplete type %0">;
 def err_catch_rvalue_ref : Error<"cannot catch exceptions by rvalue reference">;
+def err_catch_variably_modified : Error<
+  "cannot catch variably modified type %0">;
 def err_qualified_catch_declarator : Error<
   "exception declarator cannot be qualified">;
 def err_early_catch_all : Error<"catch-all handler must come last">;

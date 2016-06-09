@@ -192,3 +192,13 @@ struct S {
   int x[3] = {[N] = 3};
 };
 }
+
+namespace PR28060 {
+template <class T>
+void foo(T v) {
+  struct s {
+    T *s = 0;
+  };
+}
+template void foo(int);
+}

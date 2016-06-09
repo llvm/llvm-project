@@ -831,6 +831,39 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
       getDeclContextDescriptor(Ty->getDecl()));
 }
 
+static unsigned getDwarfCC(CallingConv CC) {
+  switch (CC) {
+  case CC_C:
+    // Avoid emitting DW_AT_calling_convention if the C convention was used.
+    return 0;
+
+  case CC_X86StdCall:
+    return llvm::dwarf::DW_CC_BORLAND_stdcall;
+  case CC_X86FastCall:
+    return llvm::dwarf::DW_CC_BORLAND_msfastcall;
+  case CC_X86ThisCall:
+    return llvm::dwarf::DW_CC_BORLAND_thiscall;
+  case CC_X86VectorCall:
+    return llvm::dwarf::DW_CC_LLVM_vectorcall;
+  case CC_X86Pascal:
+    return llvm::dwarf::DW_CC_BORLAND_pascal;
+
+  // FIXME: Create new DW_CC_ codes for these calling conventions.
+  case CC_X86_64Win64:
+  case CC_X86_64SysV:
+  case CC_AAPCS:
+  case CC_AAPCS_VFP:
+  case CC_IntelOclBicc:
+  case CC_SpirFunction:
+  case CC_SpirKernel:
+  case CC_Swift:
+  case CC_PreserveMost:
+  case CC_PreserveAll:
+    return 0;
+  }
+  return 0;
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
                                       llvm::DIFile *Unit) {
   SmallVector<llvm::Metadata *, 16> EltTys;
@@ -850,7 +883,8 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   }
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-  return DBuilder.createSubroutineType(EltTypeArray);
+  return DBuilder.createSubroutineType(EltTypeArray, 0,
+                                       getDwarfCC(Ty->getCallConv()));
 }
 
 /// Convert an AccessSpecifier into the corresponding DINode flag.
@@ -1103,7 +1137,8 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   if (Func->getExtProtoInfo().RefQualifier == RQ_RValue)
     Flags |= llvm::DINode::FlagRValueReference;
 
-  return DBuilder.createSubroutineType(EltTypeArray, Flags);
+  return DBuilder.createSubroutineType(EltTypeArray, Flags,
+                                       getDwarfCC(Func->getCallConv()));
 }
 
 /// isFunctionLocalClass - Return true if CXXRecordDecl is defined
@@ -2562,9 +2597,9 @@ CGDebugInfo::getFunctionForwardDeclaration(const FunctionDecl *FD) {
   SmallVector<QualType, 16> ArgTypes;
   for (const ParmVarDecl *Parm: FD->parameters())
     ArgTypes.push_back(Parm->getType());
-  QualType FnType =
-    CGM.getContext().getFunctionType(FD->getReturnType(), ArgTypes,
-                                     FunctionProtoType::ExtProtoInfo());
+  CallingConv CC = FD->getType()->castAs<FunctionType>()->getCallConv();
+  QualType FnType = CGM.getContext().getFunctionType(
+      FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
   llvm::DISubprogram *SP = DBuilder.createTempFunctionFwdDecl(
       DContext, Name, LinkageName, Unit, Line,
       getOrCreateFunctionType(FD, FnType, Unit), !FD->isExternallyVisible(),
@@ -2668,6 +2703,10 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
 
   if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);
+
+  const auto *FTy = FnType->getAs<FunctionType>();
+  CallingConv CC = FTy ? FTy->getCallConv() : CallingConv::CC_C;
+
   if (const ObjCMethodDecl *OMethod = dyn_cast<ObjCMethodDecl>(D)) {
     // Add "self" and "_cmd"
     SmallVector<llvm::Metadata *, 16> Elts;
@@ -2701,7 +2740,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
       Elts.push_back(DBuilder.createUnspecifiedParameter());
 
     llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
-    return DBuilder.createSubroutineType(EltTypeArray);
+    return DBuilder.createSubroutineType(EltTypeArray, 0, getDwarfCC(CC));
   }
 
   // Handle variadic function types; they need an additional
@@ -2715,7 +2754,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
           EltTys.push_back(getOrCreateType(FPT->getParamType(i), F));
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
       llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-      return DBuilder.createSubroutineType(EltTypeArray);
+      return DBuilder.createSubroutineType(EltTypeArray, 0, getDwarfCC(CC));
     }
 
   return cast<llvm::DISubroutineType>(getOrCreateType(FnType, F));

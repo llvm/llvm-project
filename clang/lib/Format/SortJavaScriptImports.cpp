@@ -170,12 +170,25 @@ public:
     if (ReferencesInOrder && SymbolsInOrder)
       return Result;
 
+    SourceRange InsertionPoint = References[0].Range;
+    InsertionPoint.setEnd(References[References.size() - 1].Range.getEnd());
+
+    // The loop above might collapse previously existing line breaks between
+    // import blocks, and thus shrink the file. SortIncludes must not shrink
+    // overall source length as there is currently no re-calculation of ranges
+    // after applying source sorting.
+    // This loop just backfills trailing spaces after the imports, which are
+    // harmless and will be stripped by the subsequent formatting pass.
+    // FIXME: A better long term fix is to re-calculate Ranges after sorting.
+    unsigned PreviousSize = getSourceText(InsertionPoint).size();
+    while (ReferencesText.size() < PreviousSize) {
+      ReferencesText += " ";
+    }
+
     // Separate references from the main code body of the file.
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2)
       ReferencesText += "\n";
 
-    SourceRange InsertionPoint = References[0].Range;
-    InsertionPoint.setEnd(References[References.size() - 1].Range.getEnd());
     DEBUG(llvm::dbgs() << "Replacing imports:\n"
                        << getSourceText(InsertionPoint) << "\nwith:\n"
                        << ReferencesText << "\n");

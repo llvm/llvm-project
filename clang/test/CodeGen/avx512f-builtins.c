@@ -2594,25 +2594,25 @@ __m512i test_mm512_maskz_load_epi32(__mmask16 __U, void const *__P) {
 
 __m512i test_mm512_mask_mov_epi32(__m512i __W, __mmask16 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_mov_epi32
-  // CHECK: @llvm.x86.avx512.mask.mov
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_mov_epi32(__W, __U, __A); 
 }
 
 __m512i test_mm512_maskz_mov_epi32(__mmask16 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_mov_epi32
-  // CHECK: @llvm.x86.avx512.mask.mov
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_mov_epi32(__U, __A); 
 }
 
 __m512i test_mm512_mask_mov_epi64(__m512i __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_mov_epi64
-  // CHECK: @llvm.x86.avx512.mask.mov
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_mov_epi64(__W, __U, __A); 
 }
 
 __m512i test_mm512_maskz_mov_epi64(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_mov_epi64
-  // CHECK: @llvm.x86.avx512.mask.mov
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_maskz_mov_epi64(__U, __A); 
 }
 
@@ -6091,25 +6091,25 @@ __m512d test_mm512_maskz_cvtps_pd(__mmask8 __U, __m256 __A) {
 }
 __m512d test_mm512_mask_mov_pd(__m512d __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_mov_pd
-  // CHECK: @llvm.x86.avx512.mask.mova.pd.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_mov_pd(__W, __U, __A); 
 }
 
 __m512d test_mm512_maskz_mov_pd(__mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_maskz_mov_pd
-  // CHECK: @llvm.x86.avx512.mask.mova.pd.512
+  // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_mov_pd(__U, __A); 
 }
 
 __m512 test_mm512_mask_mov_ps(__m512 __W, __mmask16 __U, __m512 __A) {
   // CHECK-LABEL: @test_mm512_mask_mov_ps
-  // CHECK: @llvm.x86.avx512.mask.mova.ps.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_mov_ps(__W, __U, __A); 
 }
 
 __m512 test_mm512_maskz_mov_ps(__mmask16 __U, __m512 __A) {
   // CHECK-LABEL: @test_mm512_maskz_mov_ps
-  // CHECK: @llvm.x86.avx512.mask.mova.ps.512
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_mov_ps(__U, __A); 
 }
 

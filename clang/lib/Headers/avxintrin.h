@@ -2513,19 +2513,19 @@ _mm256_stream_ps(float *__p, __m256 __a)
 
 /* Create vectors */
 static __inline__ __m256d __DEFAULT_FN_ATTRS
-_mm256_undefined_pd()
+_mm256_undefined_pd(void)
 {
   return (__m256d)__builtin_ia32_undef256();
 }
 
 static __inline__ __m256 __DEFAULT_FN_ATTRS
-_mm256_undefined_ps()
+_mm256_undefined_ps(void)
 {
   return (__m256)__builtin_ia32_undef256();
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS
-_mm256_undefined_si256()
+_mm256_undefined_si256(void)
 {
   return (__m256i)__builtin_ia32_undef256();
 }
