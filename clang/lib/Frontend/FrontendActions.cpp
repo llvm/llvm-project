@@ -740,6 +740,7 @@ void PrintPreambleAction::ExecuteAction() {
   case IK_PreprocessedObjCXX:
   case IK_AST:
   case IK_LLVM_IR:
+  case IK_RenderScript:
     // We can't do anything with these.
     return;
   }

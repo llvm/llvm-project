@@ -1230,6 +1230,14 @@ bool CursorVisitor::VisitUnresolvedUsingTypenameDecl(
   return false;
 }
 
+bool CursorVisitor::VisitStaticAssertDecl(StaticAssertDecl *D) {
+  if (Visit(MakeCXCursor(D->getAssertExpr(), StmtParent, TU, RegionOfInterest)))
+    return true;
+  if (Visit(MakeCXCursor(D->getMessage(), StmtParent, TU, RegionOfInterest)))
+    return true;
+  return false;
+}
+
 bool CursorVisitor::VisitDeclarationNameInfo(DeclarationNameInfo Name) {
   switch (Name.getName().getNameKind()) {
   case clang::DeclarationName::Identifier:
@@ -4822,6 +4830,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
       return cxstring::createRef("OverloadCandidate");
   case CXCursor_TypeAliasTemplateDecl:
       return cxstring::createRef("TypeAliasTemplateDecl");
+  case CXCursor_StaticAssert:
+      return cxstring::createRef("StaticAssert");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

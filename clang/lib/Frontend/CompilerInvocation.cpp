@@ -1293,6 +1293,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       .Case("objective-c++-header", IK_ObjCXX)
       .Cases("ast", "pcm", IK_AST)
       .Case("ir", IK_LLVM_IR)
+      .Case("renderscript", IK_RenderScript)
       .Default(IK_None);
     if (DashX == IK_None)
       Diags.Report(diag::err_drv_invalid_value)
@@ -1502,6 +1503,9 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     case IK_PreprocessedObjCXX:
       LangStd = LangStandard::lang_gnucxx98;
       break;
+    case IK_RenderScript:
+      LangStd = LangStandard::lang_c99;
+      break;
     }
   }
 
@@ -1543,6 +1547,12 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
 
   Opts.CUDA = IK == IK_CUDA || IK == IK_PreprocessedCuda ||
               LangStd == LangStandard::lang_cuda;
+
+  Opts.RenderScript = IK == IK_RenderScript;
+  if (Opts.RenderScript) {
+    Opts.NativeHalfType = 1;
+    Opts.NativeHalfArgsAndReturns = 1;
+  }
 
   // OpenCL and C++ both have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus;

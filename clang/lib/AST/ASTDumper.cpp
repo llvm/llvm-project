@@ -2177,8 +2177,10 @@ void ASTDumper::VisitObjCMessageExpr(const ObjCMessageExpr *Node) {
 
 void ASTDumper::VisitObjCBoxedExpr(const ObjCBoxedExpr *Node) {
   VisitExpr(Node);
-  OS << " selector=";
-  Node->getBoxingMethod()->getSelector().print(OS);
+  if (auto *BoxingMethod = Node->getBoxingMethod()) {
+    OS << " selector=";
+    BoxingMethod->getSelector().print(OS);
+  }
 }
 
 void ASTDumper::VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node) {

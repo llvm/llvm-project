@@ -142,7 +142,10 @@ private:
       // static_assert, if and while usually contain expressions.
       Contexts.back().IsExpression = true;
     } else if (Style.Language == FormatStyle::LK_JavaScript && Left->Previous &&
-               Left->Previous->is(Keywords.kw_function)) {
+               (Left->Previous->is(Keywords.kw_function) ||
+                (Left->Previous->endsSequence(tok::identifier,
+                                              Keywords.kw_function)))) {
+      // function(...) or function f(...)
       Contexts.back().IsExpression = false;
     } else if (Left->Previous && Left->Previous->is(tok::r_square) &&
                Left->Previous->MatchingParen &&

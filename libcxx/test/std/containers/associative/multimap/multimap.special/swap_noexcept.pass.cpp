@@ -35,9 +35,7 @@ struct some_comp
 
     some_comp() {}
     some_comp(const some_comp&) {}
-    void deallocate(void*, unsigned) {}
-
-    typedef std::true_type propagate_on_container_swap;
+    bool operator()(const T&, const T&) const { return false; }
 };
 
 template <class T>
@@ -47,8 +45,7 @@ struct some_comp2
 
     some_comp2() {}
     some_comp2(const some_comp2&) {}
-    void deallocate(void*, unsigned) {}
-    typedef std::true_type propagate_on_container_swap;
+    bool operator()(const T&, const T&) const { return false; }
 };
 
 #if TEST_STD_VER >= 14

@@ -402,6 +402,17 @@ BUILTIN(__nvvm_bar0_popc, "ii", "")
 BUILTIN(__nvvm_bar0_and, "ii", "")
 BUILTIN(__nvvm_bar0_or, "ii", "")
 
+// Shuffle
+
+BUILTIN(__builtin_ptx_shfl_down_i32, "iiii", "")
+BUILTIN(__builtin_ptx_shfl_down_f32, "ffii", "")
+BUILTIN(__builtin_ptx_shfl_up_i32, "iiii", "")
+BUILTIN(__builtin_ptx_shfl_up_f32, "ffii", "")
+BUILTIN(__builtin_ptx_shfl_bfly_i32, "iiii", "")
+BUILTIN(__builtin_ptx_shfl_bfly_f32, "ffii", "")
+BUILTIN(__builtin_ptx_shfl_idx_i32, "iiii", "")
+BUILTIN(__builtin_ptx_shfl_idx_f32, "ffii", "")
+
 // Membar
 
 BUILTIN(__nvvm_membar_cta, "v", "")

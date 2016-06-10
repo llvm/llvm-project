@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
-// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump-lookups | FileCheck %s --check-prefix=CHECK-GLOBAL
-// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump-lookups -ast-dump-filter N | FileCheck %s --check-prefix=CHECK-NAMESPACE-N
-// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump -ast-dump-filter SomeTemplate | FileCheck %s --check-prefix=CHECK-DUMP
+// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump-lookups 2>/dev/null | FileCheck %s --check-prefix=CHECK-GLOBAL
+// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump-lookups -ast-dump-filter N 2>/dev/null | FileCheck %s --check-prefix=CHECK-NAMESPACE-N
+// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump -ast-dump-filter SomeTemplate 2>/dev/null | FileCheck %s --check-prefix=CHECK-DUMP
 // RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -verify -std=c++14
 // RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -verify -std=c++14 -DEARLY_IMPORT
 

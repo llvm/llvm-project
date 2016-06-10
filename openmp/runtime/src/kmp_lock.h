@@ -237,6 +237,21 @@ extern void __kmp_destroy_nested_futex_lock( kmp_futex_lock_t *lck );
 
 #ifdef __cplusplus
 
+#ifdef _MSC_VER
+// MSVC won't allow use of std::atomic<> in a union since it has non-trivial copy constructor.
+
+struct kmp_base_ticket_lock {
+    // `initialized' must be the first entry in the lock data structure!
+    std::atomic_bool      initialized;
+    volatile union kmp_ticket_lock *self; // points to the lock union
+    ident_t const *       location;       // Source code location of omp_init_lock().
+    std::atomic_uint      next_ticket;    // ticket number to give to next thread which acquires
+    std::atomic_uint      now_serving;    // ticket number for thread which holds the lock
+    std::atomic_int       owner_id;       // (gtid+1) of owning thread, 0 if unlocked
+    std::atomic_int       depth_locked;   // depth locked, for nested locks only
+    kmp_lock_flags_t      flags;          // lock specifics, e.g. critical section lock
+};
+#else
 struct kmp_base_ticket_lock {
     // `initialized' must be the first entry in the lock data structure!
     std::atomic<bool>     initialized;
@@ -248,6 +263,7 @@ struct kmp_base_ticket_lock {
     std::atomic<int>      depth_locked;   // depth locked, for nested locks only
     kmp_lock_flags_t      flags;          // lock specifics, e.g. critical section lock
 };
+#endif
 
 #else // __cplusplus
 

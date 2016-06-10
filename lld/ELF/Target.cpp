@@ -75,7 +75,7 @@ template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
   error("improper alignment for relocation " + getRelName(Type));
 }
 
-static void warnDynRel(uint32_t Type) {
+static void errorDynRel(uint32_t Type) {
   error("relocation " + getRelName(Type) +
         " cannot be used when making a shared object; recompile with -fPIC.");
 }
@@ -617,8 +617,8 @@ void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
-  if (Config->Shared && (Type == R_X86_64_PC32 || Type == R_X86_64_32))
-    error(getRelName(Type) + " cannot be a dynamic relocation");
+  if (Type == R_X86_64_PC32 || Type == R_X86_64_32)
+    errorDynRel(Type);
   return Type;
 }
 
@@ -1199,7 +1199,7 @@ uint32_t AArch64TargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
     return Type;
   // Keep it going with a dummy value so that we can find more reloc errors.
-  warnDynRel(Type);
+  errorDynRel(Type);
   return R_AARCH64_ABS32;
 }
 
@@ -1489,7 +1489,7 @@ uint32_t ARMTargetInfo::getDynRel(uint32_t Type) const {
   if (Type == R_ARM_ABS32)
     return Type;
   // Keep it going with a dummy value so that we can find more reloc errors.
-  warnDynRel(Type);
+  errorDynRel(Type);
   return R_ARM_ABS32;
 }
 
@@ -1662,7 +1662,7 @@ uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   if (Type == R_MIPS_32 || Type == R_MIPS_64)
     return RelativeRel;
   // Keep it going with a dummy value so that we can find more reloc errors.
-  warnDynRel(Type);
+  errorDynRel(Type);
   return R_MIPS_32;
 }
 

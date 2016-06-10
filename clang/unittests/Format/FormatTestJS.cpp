@@ -903,6 +903,8 @@ TEST_F(FormatTestJS, UnionIntersectionTypes) {
   verifyFormat("let x: Foo<A|B> = new Foo<A|B>();");
   verifyFormat("function(x: A|B): C&D {}");
   verifyFormat("function(x: A|B = A | B): C&D {}");
+  verifyFormat("function x(path: number|string) {}");
+  verifyFormat("function x(): string|number {}");
 }
 
 TEST_F(FormatTestJS, ClassDeclarations) {

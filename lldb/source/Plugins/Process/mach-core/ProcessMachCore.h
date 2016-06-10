@@ -103,7 +103,10 @@ public:
     
     size_t
     DoReadMemory (lldb::addr_t addr, void *buf, size_t size, lldb_private::Error &error) override;
-    
+
+    lldb_private::Error
+    GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &region_info) override;
+
     lldb::addr_t
     GetImageInfoAddress () override;
 
@@ -150,8 +153,10 @@ private:
     //------------------------------------------------------------------
     typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
     typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange> VMRangeToFileOffset;
+    typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t> VMRangeToPermissions;
 
     VMRangeToFileOffset m_core_aranges;
+    VMRangeToPermissions m_core_range_infos;
     lldb::ModuleSP m_core_module_sp;
     lldb_private::FileSpec m_core_file;
     lldb::addr_t m_dyld_addr;

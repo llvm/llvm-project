@@ -198,13 +198,14 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 #include "sm_20_atomic_functions.hpp"
 #include "sm_20_intrinsics.hpp"
 #include "sm_32_atomic_functions.hpp"
-// sm_30_intrinsics.h has declarations that use default argument, so
-// we have to include it and it will in turn include .hpp
-#include "sm_30_intrinsics.h"
 
-// Don't include sm_32_intrinsics.h.  That header defines __ldg using inline
-// asm, but we want to define it using builtins, because we can't use the
-// [addr+imm] addressing mode if we use the inline asm in the header.
+// Don't include sm_30_intrinsics.h and sm_32_intrinsics.h.  These define the
+// __shfl and __ldg intrinsics using inline (volatile) asm, but we want to
+// define them using builtins so that the optimizer can reason about and across
+// these instructions.  In particular, using intrinsics for ldg gets us the
+// [addr+imm] addressing mode, which, although it doesn't actually exist in the
+// hardware, seems to generate faster machine code because ptxas can more easily
+// reason about our code.
 
 #undef __MATH_FUNCTIONS_HPP__
 

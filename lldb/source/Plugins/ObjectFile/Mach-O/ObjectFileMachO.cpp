@@ -1625,6 +1625,10 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
                     }
                     if (m_data.GetU32(&offset, &load_cmd.maxprot, 4))
                     {
+                        const uint32_t segment_permissions =
+                            ((load_cmd.initprot & VM_PROT_READ) ? ePermissionsReadable : 0) |
+                            ((load_cmd.initprot & VM_PROT_WRITE) ? ePermissionsWritable : 0) |
+                            ((load_cmd.initprot & VM_PROT_EXECUTE) ? ePermissionsExecutable : 0);
 
                         const bool segment_is_encrypted = (load_cmd.flags & SG_PROTECTED_VERSION_1) != 0;
 
@@ -1651,6 +1655,7 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
 
                             segment_sp->SetIsEncrypted (segment_is_encrypted);
                             m_sections_ap->AddSection(segment_sp);
+                            segment_sp->SetPermissions(segment_permissions);
                             if (add_to_unified)
                                 unified_section_list.AddSection(segment_sp);
                         }
@@ -1782,7 +1787,7 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
                                                                       sect64.align,
                                                                       load_cmd.flags));      // Flags for this section
                                         segment_sp->SetIsFake(true);
-                                        
+                                        segment_sp->SetPermissions(segment_permissions);
                                         m_sections_ap->AddSection(segment_sp);
                                         if (add_to_unified)
                                             unified_section_list.AddSection(segment_sp);
@@ -1932,6 +1937,7 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
                                     section_is_encrypted = encrypted_file_ranges.FindEntryThatContains(sect64.offset) != NULL;
 
                                 section_sp->SetIsEncrypted (segment_is_encrypted || section_is_encrypted);
+                                section_sp->SetPermissions(segment_permissions);
                                 segment_sp->GetChildren().AddSection(section_sp);
 
                                 if (segment_sp->IsFake())

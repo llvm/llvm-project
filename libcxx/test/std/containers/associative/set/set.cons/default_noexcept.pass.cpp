@@ -28,6 +28,7 @@ struct some_comp
 {
     typedef T value_type;
     some_comp();
+    bool operator()(const T&, const T&) const { return false; }
 };
 
 int main()

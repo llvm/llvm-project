@@ -732,6 +732,12 @@ def OpenCLNoSVM : Attr {
   let ASTNode = 0;
 }
 
+def Kernel : Attr {
+  let Spellings = [GNU<"kernel">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
+}
+
 def Deprecated : InheritableAttr {
   let Spellings = [GCC<"deprecated">, Declspec<"deprecated">,
                    CXX11<"","deprecated", 201309>];
