@@ -24,7 +24,8 @@ public:
   StreamRef(const StreamInterface &Stream, uint32_t Offset, uint32_t Length)
       : Stream(&Stream), ViewOffset(Offset), Length(Length) {}
 
-  StreamRef(const StreamRef &Stream, uint32_t Offset, uint32_t Length) = delete;
+  // Use StreamRef.slice() instead.
+  StreamRef(const StreamRef &S, uint32_t Offset, uint32_t Length) = delete;
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
@@ -33,7 +34,32 @@ public:
     return Stream->readBytes(ViewOffset + Offset, Size, Buffer);
   }
 
+  // Given an offset into the stream, read as much as possible without copying
+  // any data.
+  Error readLongestContiguousChunk(uint32_t Offset,
+                                   ArrayRef<uint8_t> &Buffer) const override {
+    if (Offset >= Length)
+      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+
+    if (auto EC = Stream->readLongestContiguousChunk(Offset, Buffer))
+      return EC;
+    // This StreamRef might refer to a smaller window over a larger stream.  In
+    // that case we will have read out more bytes than we should return, because
+    // we should not read past the end of the current view.
+    uint32_t MaxLength = Length - Offset;
+    if (Buffer.size() > MaxLength)
+      Buffer = Buffer.slice(0, MaxLength);
+    return Error::success();
+  }
+
+  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const override {
+    if (Data.size() + Offset > Length)
+      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    return Stream->writeBytes(ViewOffset + Offset, Data);
+  }
+
   uint32_t getLength() const override { return Length; }
+
   StreamRef drop_front(uint32_t N) const {
     if (!Stream)
       return StreamRef();

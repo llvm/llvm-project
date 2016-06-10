@@ -49,6 +49,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFoldOperandsPass(*PR);
+  initializeSIShrinkInstructionsPass(*PR);
   initializeSIFixControlFlowLiveIntervalsPass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUAnnotateKernelFeaturesPass(*PR);
@@ -406,7 +407,7 @@ void GCNPassConfig::addPreEmitPass() {
   // hazard recognizer pass.
   addPass(&PostRAHazardRecognizerID);
 
-  addPass(createSIInsertWaitsPass(), false);
+  addPass(createSIInsertWaitsPass());
   addPass(createSIShrinkInstructionsPass());
   addPass(createSILowerControlFlowPass(), false);
   addPass(createSIDebuggerInsertNopsPass(), false);

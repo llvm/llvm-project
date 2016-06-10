@@ -1,5 +1,5 @@
 // RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=186 -new-name=X %t.cpp -i --
+// RUN: clang-rename -offset=193 -new-name=X %t.cpp -i -- -frtti
 // RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 class Base {
   virtual int getValue() const = 0;

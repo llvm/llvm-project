@@ -124,11 +124,15 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   do {
     // ToDo: better to switch encoding length using some bit predicate
     // but it is unknown yet, so try all we can
-    
-    // Try to decode DPP first to solve conflict with VOP1 and VOP2 encodings
+
+    // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
+    // encodings
     if (Bytes.size() >= 8) {
       const uint64_t QW = eatBytes<uint64_t>(Bytes);
       Res = tryDecodeInst(DecoderTableDPP64, MI, QW, Address);
+      if (Res) break;
+
+      Res = tryDecodeInst(DecoderTableSDWA64, MI, QW, Address);
       if (Res) break;
     }
 

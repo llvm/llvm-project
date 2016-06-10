@@ -12,4 +12,4 @@ define void @f1(i64 %base) {
 }
 
 ; FIXME: at the moment the precise constraint is not passed down to
-; target code, so we must conservatively treat "m" as "Q".
+; target code, so we must conservatively treat "m" as "S".

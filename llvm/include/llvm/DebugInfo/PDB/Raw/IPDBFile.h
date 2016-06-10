@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 
 #include <stdint.h>
 
@@ -34,6 +35,8 @@ public:
 
   virtual ArrayRef<uint8_t> getBlockData(uint32_t BlockIndex,
                                          uint32_t NumBytes) const = 0;
+  virtual Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
+                             ArrayRef<uint8_t> Data) const = 0;
 };
 }
 }

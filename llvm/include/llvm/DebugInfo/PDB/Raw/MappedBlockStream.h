@@ -31,6 +31,9 @@ class MappedBlockStream : public codeview::StreamInterface {
 public:
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override;
+  Error readLongestContiguousChunk(uint32_t Offset,
+                                   ArrayRef<uint8_t> &Buffer) const override;
+  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) const override;
 
   uint32_t getLength() const override;
 
@@ -51,8 +54,9 @@ protected:
   const IPDBFile &Pdb;
   std::unique_ptr<IPDBStreamData> Data;
 
+  typedef MutableArrayRef<uint8_t> CacheEntry;
   mutable llvm::BumpPtrAllocator Pool;
-  mutable DenseMap<uint32_t, uint8_t *> CacheMap;
+  mutable DenseMap<uint32_t, std::vector<CacheEntry>> CacheMap;
 };
 
 } // end namespace pdb

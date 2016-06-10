@@ -124,6 +124,10 @@ void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
   } else if (Inst.getOpcode() == Mips::BNVC || Inst.getOpcode() == Mips::BOVC) {
     if (Reg0 >= Reg1)
       return;
+  } else if (Inst.getOpcode() == Mips::BNVC_MMR6 ||
+             Inst.getOpcode() == Mips::BOVC_MMR6) {
+    if (Reg1 >= Reg0)
+      return;
   } else
    llvm_unreachable("Cannot rewrite unknown branch!");
 
@@ -191,7 +195,9 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case Mips::BEQC:
   case Mips::BNEC:
   case Mips::BOVC:
+  case Mips::BOVC_MMR6:
   case Mips::BNVC:
+  case Mips::BNVC_MMR6:
     LowerCompactBranch(TmpInst);
   }
 
@@ -281,6 +287,30 @@ getBranchTargetOpValue1SImm16(const MCInst &MI, unsigned OpNo,
 
   const MCExpr *FixupExpression = MCBinaryExpr::createAdd(
       MO.getExpr(), MCConstantExpr::create(-4, Ctx), Ctx);
+  Fixups.push_back(MCFixup::create(0, FixupExpression,
+                                   MCFixupKind(Mips::fixup_Mips_PC16)));
+  return 0;
+}
+
+/// getBranchTargetOpValueMMR6 - Return binary encoding of the branch
+/// target operand. If the machine operand requires relocation,
+/// record the relocation and return zero.
+unsigned MipsMCCodeEmitter::
+getBranchTargetOpValueMMR6(const MCInst &MI, unsigned OpNo,
+                           SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const {
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  // If the destination is an immediate, divide by 2.
+  if (MO.isImm())
+    return MO.getImm() >> 1;
+
+  assert(MO.isExpr() &&
+         "getBranchTargetOpValueMMR6 expects only expressions or immediates");
+
+  const MCExpr *FixupExpression = MCBinaryExpr::createAdd(
+      MO.getExpr(), MCConstantExpr::create(-2, Ctx), Ctx);
   Fixups.push_back(MCFixup::create(0, FixupExpression,
                                    MCFixupKind(Mips::fixup_Mips_PC16)));
   return 0;

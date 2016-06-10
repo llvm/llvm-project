@@ -50,7 +50,7 @@ Thumb2InstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
                                          MachineBasicBlock *NewDest) const {
   MachineBasicBlock *MBB = Tail->getParent();
   ARMFunctionInfo *AFI = MBB->getParent()->getInfo<ARMFunctionInfo>();
-  if (!AFI->hasITBlocks()) {
+  if (!AFI->hasITBlocks() || Tail->isBranch()) {
     TargetInstrInfo::ReplaceTailWithBranchTo(Tail, NewDest);
     return;
   }

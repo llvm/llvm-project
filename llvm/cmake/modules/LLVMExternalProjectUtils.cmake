@@ -61,20 +61,6 @@ function(llvm_ExternalProject_Add name source_dir)
     list(APPEND TOOLCHAIN_BINS ${RUNTIME_LIBRARIES})
   endif()
 
-  if(CMAKE_VERSION VERSION_GREATER 3.1.0)
-    set(cmake_3_1_EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL 1)
-    set(cmake_3_1_BUILD_ALWAYS BUILD_ALWAYS 1)
-  endif()
-
-  if(CMAKE_VERSION VERSION_GREATER 3.3.20150708)
-    set(cmake_3_4_USES_TERMINAL_OPTIONS
-      USES_TERMINAL_CONFIGURE 1
-      USES_TERMINAL_BUILD 1
-      USES_TERMINAL_INSTALL 1
-      )
-    set(cmake_3_4_USES_TERMINAL USES_TERMINAL 1)
-  endif()
-
   set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}-stamps/)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}-bins/)
 
@@ -117,7 +103,7 @@ function(llvm_ExternalProject_Add name source_dir)
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
 
   if(ARG_EXCLUDE_FROM_ALL)
-    set(exclude ${cmake_3_1_EXCLUDE_FROM_ALL})
+    set(exclude EXCLUDE_FROM_ALL 1)
   endif()
 
   ExternalProject_Add(${name}
@@ -135,23 +121,11 @@ function(llvm_ExternalProject_Add name source_dir)
                ${PASSTHROUGH_VARIABLES}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
-    ${cmake_3_1_BUILD_ALWAYS}
-    ${cmake_3_4_USES_TERMINAL_OPTIONS}
+    BUILD_ALWAYS 1
+    USES_TERMINAL_CONFIGURE 1
+    USES_TERMINAL_BUILD 1
+    USES_TERMINAL_INSTALL 1
     )
-
-  if(CMAKE_VERSION VERSION_LESS 3.1.0)
-    set(ALWAYS_REBUILD ${CMAKE_CURRENT_BINARY_DIR}/${name}-always-rebuild)
-    add_custom_target(${name}-always-rebuild
-      COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_DIR}/${name}-clobber-stamp)
-
-    llvm_ExternalProject_BuildCmd(run_build all ${BINARY_DIR})
-    ExternalProject_Add_Step(${name} force-rebuild
-      COMMAND ${run_build}
-      COMMENT "Forcing rebuild of ${name}"
-      DEPENDEES configure clean
-      DEPENDS ${ALWAYS_REBUILD} ${ARG_DEPENDS} ${TOOLCHAIN_BINS}
-      ${cmake_3_4_USES_TERMINAL} )
-  endif()
 
   if(ARG_USE_TOOLCHAIN)
     set(force_deps DEPENDS ${TOOLCHAIN_BINS})
@@ -164,7 +138,7 @@ function(llvm_ExternalProject_Add name source_dir)
     DEPENDEES configure
     ${force_deps}
     WORKING_DIRECTORY ${BINARY_DIR}
-    ${cmake_3_4_USES_TERMINAL}
+    USES_TERMINAL 1
     )
   ExternalProject_Add_StepTargets(${name} clean)
 

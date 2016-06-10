@@ -20,20 +20,24 @@ namespace llvm {
   class MachineBranchProbabilityInfo;
   class MachineFunction;
   class MachineModuleInfo;
+  class MachineLoopInfo;
   class RegScavenger;
   class TargetInstrInfo;
   class TargetRegisterInfo;
 
   class LLVM_LIBRARY_VISIBILITY BranchFolder {
   public:
+    class MBFIWrapper;
+
     explicit BranchFolder(bool defaultEnableTailMerge, bool CommonHoist,
-                          const MachineBlockFrequencyInfo &MBFI,
+                          MBFIWrapper &MBFI,
                           const MachineBranchProbabilityInfo &MBPI);
 
-    bool OptimizeFunction(MachineFunction &MF,
-                          const TargetInstrInfo *tii,
-                          const TargetRegisterInfo *tri,
-                          MachineModuleInfo *mmi);
+    bool OptimizeFunction(MachineFunction &MF, const TargetInstrInfo *tii,
+                          const TargetRegisterInfo *tri, MachineModuleInfo *mmi,
+                          MachineLoopInfo *mli = nullptr,
+                          bool AfterPlacement = false);
+
   private:
     class MergePotentialsElt {
       unsigned Hash;
@@ -91,13 +95,16 @@ namespace llvm {
     };
     std::vector<SameTailElt> SameTails;
 
+    bool AfterBlockPlacement;
     bool EnableTailMerge;
     bool EnableHoistCommonCode;
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
     MachineModuleInfo *MMI;
+    MachineLoopInfo *MLI;
     RegScavenger *RS;
 
+  public:
     /// \brief This class keeps track of branch frequencies of newly created
     /// blocks and tail-merged blocks.
     class MBFIWrapper {
@@ -105,13 +112,18 @@ namespace llvm {
       MBFIWrapper(const MachineBlockFrequencyInfo &I) : MBFI(I) {}
       BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
       void setBlockFreq(const MachineBasicBlock *MBB, BlockFrequency F);
+      raw_ostream &printBlockFreq(raw_ostream &OS,
+                                  const MachineBasicBlock *MBB) const;
+      raw_ostream &printBlockFreq(raw_ostream &OS,
+                                  const BlockFrequency Freq) const;
 
     private:
       const MachineBlockFrequencyInfo &MBFI;
       DenseMap<const MachineBasicBlock *, BlockFrequency> MergedBBFreq;
     };
 
-    MBFIWrapper MBBFreqInfo;
+  private:
+    MBFIWrapper &MBBFreqInfo;
     const MachineBranchProbabilityInfo &MBPI;
 
     bool TailMergeBlocks(MachineFunction &MF);

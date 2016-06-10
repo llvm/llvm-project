@@ -277,10 +277,6 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const AMDGPUSubtarget &Subtarget = MF->getSubtarget<AMDGPUSubtarget>();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
 
-  assert(isUInt<27>(Offset) &&
-         "Private offset should never exceed maximum private size");
-
-
   if (Offset == 0) {
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::V_MOV_B32_e32), BaseReg)
       .addFrameIndex(FrameIdx);

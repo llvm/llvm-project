@@ -267,7 +267,12 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     unsigned Original = VRM->getOriginal(Dest);
     LiveInterval &OrigLI = LIS.getInterval(Original);
     VNInfo *OrigVNI = OrigLI.getVNInfoAt(Idx);
-    isOrigDef = SlotIndex::isSameInstr(OrigVNI->def, Idx);
+    // The original live-range may have been shrunk to
+    // an empty live-range. It happens when it is dead, but
+    // we still keep it around to be able to rematerialize
+    // other values that depend on it.
+    if (OrigVNI)
+      isOrigDef = SlotIndex::isSameInstr(OrigVNI->def, Idx);
   }
 
   // Check for live intervals that may shrink

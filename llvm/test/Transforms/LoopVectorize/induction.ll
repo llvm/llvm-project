@@ -174,8 +174,11 @@ loopexit:
 
 ; CHECK-LABEL: wrappingindvars1
 ; CHECK-LABEL: vector.scevcheck
+; CHECK-LABEL: vector.ph
+; CHECK: %[[START:.*]] = add <2 x i32> %{{.*}}, <i32 0, i32 1>
 ; CHECK-LABEL: vector.body
-; CHECK: add <2 x i32> {{%[^ ]*}}, <i32 0, i32 1>
+; CHECK: %[[PHI:.*]] = phi <2 x i32> [ %[[START]], %vector.ph ], [ %[[STEP:.*]], %vector.body ]
+; CHECK: %[[STEP]] = add <2 x i32> %[[PHI]], <i32 2, i32 2>
 define void @wrappingindvars1(i8 %t, i32 %len, i32 *%A) {
  entry:
   %st = zext i8 %t to i16
@@ -209,8 +212,11 @@ define void @wrappingindvars1(i8 %t, i32 %len, i32 *%A) {
 ; The expression gets converted to ({4 * (zext %t to i32),+,4}).
 ; CHECK-LABEL: wrappingindvars2
 ; CHECK-LABEL: vector.scevcheck
+; CHECK-LABEL: vector.ph
+; CHECK: %[[START:.*]] = add <2 x i32> %{{.*}}, <i32 0, i32 4>
 ; CHECK-LABEL: vector.body
-; CHECK: add <2 x i32> {{%[^ ]*}}, <i32 0, i32 4>
+; CHECK: %[[PHI:.*]] = phi <2 x i32> [ %[[START]], %vector.ph ], [ %[[STEP:.*]], %vector.body ]
+; CHECK: %[[STEP]] = add <2 x i32> %[[PHI]], <i32 8, i32 8>
 define void @wrappingindvars2(i8 %t, i32 %len, i32 *%A) {
 
 entry:
@@ -297,6 +303,47 @@ for.body:
   store i32 %trunc.iv, i32* %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %k
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; IND-LABEL: nonprimary
+; IND-LABEL: vector.ph
+; IND: %[[INSERT:.*]] = insertelement <2 x i32> undef, i32 %i, i32 0
+; IND: %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+; IND: %[[START:.*]] = add <2 x i32> %[[SPLAT]], <i32 0, i32 42>
+; IND-LABEL: vector.body:
+; IND: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; IND: %vec.ind = phi <2 x i32> [ %[[START]], %vector.ph ], [ %step.add, %vector.body ]
+; IND: %step.add = add <2 x i32> %vec.ind, <i32 84, i32 84>
+; IND: %index.next = add i32 %index, 2
+; IND: %[[CMP:.*]] = icmp eq i32 %index.next
+; IND: br i1 %[[CMP]]
+; UNROLL-LABEL: nonprimary
+; UNROLL-LABEL: vector.ph
+; UNROLL: %[[INSERT:.*]] = insertelement <2 x i32> undef, i32 %i, i32 0
+; UNROLL: %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+; UNROLL: %[[START:.*]] = add <2 x i32> %[[SPLAT]], <i32 0, i32 42>
+; UNROLL-LABEL: vector.body:
+; UNROLL: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; UNROLL: %vec.ind = phi <2 x i32> [ %[[START]], %vector.ph ], [ %step.add1, %vector.body ]
+; UNROLL: %step.add = add <2 x i32> %vec.ind, <i32 84, i32 84>
+; UNROLL: %step.add1 = add <2 x i32> %vec.ind, <i32 168, i32 168>
+; UNROLL: %index.next = add i32 %index, 4
+; UNROLL: %[[CMP:.*]] = icmp eq i32 %index.next
+; UNROLL: br i1 %[[CMP]]
+define void @nonprimary(i32* nocapture %a, i32 %start, i32 %i, i32 %k) {
+for.body.preheader:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i32 [ %indvars.iv.next, %for.body ], [ %i, %for.body.preheader ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %indvars.iv
+  store i32 %indvars.iv, i32* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i32 %indvars.iv, 42
+  %exitcond = icmp eq i32 %indvars.iv.next, %k
   br i1 %exitcond, label %exit, label %for.body
 
 exit:

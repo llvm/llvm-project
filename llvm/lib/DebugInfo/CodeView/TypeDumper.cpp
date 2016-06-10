@@ -692,7 +692,7 @@ bool CVTypeDumper::dump(const CVTypeArray &Types) {
 }
 
 bool CVTypeDumper::dump(ArrayRef<uint8_t> Data) {
-  ByteStream Stream(Data);
+  ByteStream<> Stream(Data);
   CVTypeArray Types;
   StreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Types, Reader.getLength())) {

@@ -223,6 +223,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name.startswith("x86.sse2.psrl.dq") ||
         Name.startswith("x86.avx2.psll.dq") ||
         Name.startswith("x86.avx2.psrl.dq") ||
+        Name.startswith("x86.avx512.psll.dq") ||
+        Name.startswith("x86.avx512.psrl.dq") ||
         Name == "x86.sse41.pblendw" ||
         Name.startswith("x86.sse41.blendp") ||
         Name.startswith("x86.avx.blend.p") ||
@@ -333,7 +335,7 @@ bool llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
   return false;
 }
 
-// Handles upgrading SSE2 and AVX2 PSLLDQ intrinsics by converting them
+// Handles upgrading SSE2/AVX2/AVX512BW PSLLDQ intrinsics by converting them
 // to byte shuffles.
 static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
                                          Value *Op, unsigned Shift) {
@@ -350,8 +352,8 @@ static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
   if (Shift < 16) {
-    int Idxs[32];
-    // 256-bit version is split into two 16-byte lanes.
+    int Idxs[64];
+    // 256/512-bit version is split into 2/4 16-byte lanes.
     for (unsigned l = 0; l != NumElts; l += 16)
       for (unsigned i = 0; i != 16; ++i) {
         unsigned Idx = NumElts + i - Shift;
@@ -414,7 +416,7 @@ static Value *UpgradeX86PALIGNRIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
   return Builder.CreateSelect(Mask, Align, Passthru);
 }
 
-// Handles upgrading SSE2 and AVX2 PSRLDQ intrinsics by converting them
+// Handles upgrading SSE2/AVX2/AVX512BW PSRLDQ intrinsics by converting them
 // to byte shuffles.
 static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
                                          Value *Op,
@@ -432,8 +434,8 @@ static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
   if (Shift < 16) {
-    int Idxs[32];
-    // 256-bit version is split into two 16-byte lanes.
+    int Idxs[64];
+    // 256/512-bit version is split into 2/4 16-byte lanes.
     for (unsigned l = 0; l != NumElts; l += 16)
       for (unsigned i = 0; i != 16; ++i) {
         unsigned Idx = i + Shift;
@@ -792,13 +794,15 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0),
                                        Shift / 8); // Shift is in bits.
     } else if (Name == "llvm.x86.sse2.psll.dq.bs" ||
-               Name == "llvm.x86.avx2.psll.dq.bs") {
-      // 128/256-bit shift left specified in bytes.
+               Name == "llvm.x86.avx2.psll.dq.bs" ||
+               Name == "llvm.x86.avx512.psll.dq.512") {
+      // 128/256/512-bit shift left specified in bytes.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
       Rep = UpgradeX86PSLLDQIntrinsics(Builder, C, CI->getArgOperand(0), Shift);
     } else if (Name == "llvm.x86.sse2.psrl.dq.bs" ||
-               Name == "llvm.x86.avx2.psrl.dq.bs") {
-      // 128/256-bit shift right specified in bytes.
+               Name == "llvm.x86.avx2.psrl.dq.bs" ||
+               Name == "llvm.x86.avx512.psrl.dq.512") {
+      // 128/256/512-bit shift right specified in bytes.
       unsigned Shift = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
       Rep = UpgradeX86PSRLDQIntrinsics(Builder, C, CI->getArgOperand(0), Shift);
     } else if (Name == "llvm.x86.sse41.pblendw" ||

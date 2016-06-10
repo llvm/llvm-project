@@ -191,6 +191,10 @@ public:
     return FlatForGlobal;
   }
 
+  bool hasAddr64() const {
+    return (getGeneration() < VOLCANIC_ISLANDS);
+  }
+
   bool hasBFE() const {
     return (getGeneration() >= EVERGREEN);
   }

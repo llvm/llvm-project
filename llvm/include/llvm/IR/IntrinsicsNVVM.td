@@ -3744,5 +3744,49 @@ def int_ptx_read_pm2         : PTXReadSpecialRegisterIntrinsic_r32
 def int_ptx_read_pm3         : PTXReadSpecialRegisterIntrinsic_r32
                                <"__builtin_ptx_read_pm3">;
 
-def int_ptx_bar_sync : Intrinsic<[], [llvm_i32_ty], []>,
+def int_ptx_bar_sync : Intrinsic<[], [llvm_i32_ty], [IntrConvergent]>,
                        GCCBuiltin<"__builtin_ptx_bar_sync">;
+
+//
+// SHUFFLE
+//
+
+// shfl.down.b32 dest, val, offset, mask_and_clamp
+def int_ptx_shfl_down_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.down.i32">,
+  GCCBuiltin<"__builtin_ptx_shfl_down_i32">;
+def int_ptx_shfl_down_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.down.f32">,
+  GCCBuiltin<"__builtin_ptx_shfl_down_f32">;
+
+// shfl.up.b32 dest, val, offset, mask_and_clamp
+def int_ptx_shfl_up_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.up.i32">,
+  GCCBuiltin<"__builtin_ptx_shfl_up_i32">;
+def int_ptx_shfl_up_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.up.f32">,
+  GCCBuiltin<"__builtin_ptx_shfl_up_f32">;
+
+// shfl.bfly.b32 dest, val, offset, mask_and_clamp
+def int_ptx_shfl_bfly_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.bfly.i32">,
+  GCCBuiltin<"__builtin_ptx_shfl_bfly_i32">;
+def int_ptx_shfl_bfly_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.bfly.f32">,
+  GCCBuiltin<"__builtin_ptx_shfl_bfly_f32">;
+
+// shfl.idx.b32 dest, val, lane, mask_and_clamp
+def int_ptx_shfl_idx_i32 :
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.idx.i32">,
+  GCCBuiltin<"__builtin_ptx_shfl_idx_i32">;
+def int_ptx_shfl_idx_f32 :
+  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.idx.f32">,
+  GCCBuiltin<"__builtin_ptx_shfl_idx_f32">;

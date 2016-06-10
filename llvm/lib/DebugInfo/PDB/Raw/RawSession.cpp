@@ -9,6 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
@@ -23,6 +25,21 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+namespace {
+// We need a class which behaves like an immutable ByteStream, but whose data
+// is backed by an llvm::MemoryBuffer.  It also needs to own the underlying
+// MemoryBuffer, so this simple adapter is a good way to achieve that.
+class InputByteStream : public codeview::ByteStream<false> {
+public:
+  explicit InputByteStream(std::unique_ptr<MemoryBuffer> Buffer)
+      : ByteStream(ArrayRef<uint8_t>(Buffer->getBuffer().bytes_begin(),
+                                     Buffer->getBuffer().bytes_end())),
+        MemBuffer(std::move(Buffer)) {}
+
+  std::unique_ptr<MemoryBuffer> MemBuffer;
+};
+}
+
 RawSession::RawSession(std::unique_ptr<PDBFile> PdbFile)
     : Pdb(std::move(PdbFile)) {}
 
@@ -35,12 +52,10 @@ Error RawSession::createFromPdb(StringRef Path,
       MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
                                    /*RequiresNullTerminator=*/false);
 
-  if (ErrorOrBuffer.getError())
-    return make_error<GenericError>(generic_error_code::invalid_path, Path);
+  std::unique_ptr<MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
+  auto Stream = llvm::make_unique<InputByteStream>(std::move(Buffer));
 
-  std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
-
-  std::unique_ptr<PDBFile> File(new PDBFile(std::move(Buffer)));
+  std::unique_ptr<PDBFile> File(new PDBFile(std::move(Stream)));
   if (auto EC = File->parseFileHeaders())
     return EC;
   if (auto EC = File->parseStreamData())

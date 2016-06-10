@@ -1071,6 +1071,7 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   case Mips::DMODU_MM64R6:
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, true);
   case Mips::SEL_D:
+  case Mips::SEL_D_MMR6:
     return emitSEL_D(MI, BB);
 
   case Mips::PseudoSELECT_I:

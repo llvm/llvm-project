@@ -7,10 +7,9 @@ for later architectures at some point.
 
 --
 
-SystemZDAGToDAGISel::SelectInlineAsmMemoryOperand() is passed "m" for all
-inline asm memory constraints; it doesn't get to see the original constraint.
-This means that it must conservatively treat all inline asm constraints
-as the most restricted type, "R".
+SystemZDAGToDAGISel::SelectInlineAsmMemoryOperand() treats the Q and R
+constraints the same, and the S and T constraints the same, because the optional
+index is not used.
 
 --
 

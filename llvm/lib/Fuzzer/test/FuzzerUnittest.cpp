@@ -1,6 +1,10 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 
+// Avoid ODR violations (LibFuzzer is built without ASan and this test is built
+// with ASan) involving C++ standard library types when using libcxx.
+#define _LIBCPP_HAS_NO_ASAN
+
 #include "FuzzerInternal.h"
 #include "gtest/gtest.h"
 #include <memory>

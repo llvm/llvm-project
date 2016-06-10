@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_HASH_H
 
 #include "llvm/ADT/StringRef.h"
+#include <stdint.h>
 
 namespace llvm {
 namespace pdb {

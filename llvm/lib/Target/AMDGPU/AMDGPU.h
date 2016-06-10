@@ -61,6 +61,9 @@ extern char &AMDGPUAnnotateKernelFeaturesID;
 void initializeSIFoldOperandsPass(PassRegistry &);
 extern char &SIFoldOperandsID;
 
+void initializeSIShrinkInstructionsPass(PassRegistry&);
+extern char &SIShrinkInstructionsID;
+
 void initializeSIFixSGPRCopiesPass(PassRegistry &);
 extern char &SIFixSGPRCopiesID;
 

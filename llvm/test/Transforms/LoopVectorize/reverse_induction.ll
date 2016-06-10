@@ -6,8 +6,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; PR15882
 
 ; CHECK-LABEL: @reverse_induction_i64(
-; CHECK: add <4 x i64> %[[SPLAT:.*]], <i64 0, i64 -1, i64 -2, i64 -3>
-; CHECK: add <4 x i64> %[[SPLAT]], <i64 -4, i64 -5, i64 -6, i64 -7>
+; CHECK: %step.add = add <4 x i64> %vec.ind, <i64 -4, i64 -4, i64 -4, i64 -4>
+; CHECK: %step.add2 = add <4 x i64> %step.add, <i64 -4, i64 -4, i64 -4, i64 -4>
 
 define i32 @reverse_induction_i64(i64 %startval, i32 * %ptr) {
 entry:
@@ -30,8 +30,8 @@ loopend:
 }
 
 ; CHECK-LABEL: @reverse_induction_i128(
-; CHECK: add <4 x i128> %[[SPLAT:.*]], <i128 0, i128 -1, i128 -2, i128 -3>
-; CHECK: add <4 x i128> %[[SPLAT]], <i128 -4, i128 -5, i128 -6, i128 -7>
+; CHECK: %step.add = add <4 x i128> %vec.ind, <i128 -4, i128 -4, i128 -4, i128 -4>
+; CHECK: %step.add2 = add <4 x i128> %step.add, <i128 -4, i128 -4, i128 -4, i128 -4>
 define i32 @reverse_induction_i128(i128 %startval, i32 * %ptr) {
 entry:
   br label %for.body
@@ -96,7 +96,8 @@ loopend:
 ; CHECK-LABEL: @reverse_forward_induction_i64_i8(
 ; CHECK: vector.body
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %offset.idx = sub i64 1023, %index
+; CHECK: %vec.ind = phi <4 x i64> [ <i64 1023, i64 1022, i64 1021, i64 1020>, %vector.ph ]
+; CHECK: %step.add = add <4 x i64> %vec.ind, <i64 -4, i64 -4, i64 -4, i64 -4>
 ; CHECK: trunc i64 %index to i8
 
 define void @reverse_forward_induction_i64_i8() {
@@ -122,7 +123,8 @@ while.end:
 ; CHECK-LABEL: @reverse_forward_induction_i64_i8_signed(
 ; CHECK: vector.body:
 ; CHECK:  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:  %offset.idx = sub i64 1023, %index
+; CHECK: %vec.ind = phi <4 x i64> [ <i64 1023, i64 1022, i64 1021, i64 1020>, %vector.ph ]
+; CHECK: %step.add = add <4 x i64> %vec.ind, <i64 -4, i64 -4, i64 -4, i64 -4>
 
 define void @reverse_forward_induction_i64_i8_signed() {
 entry:

@@ -17,6 +17,13 @@ using namespace llvm::codeview;
 
 StreamReader::StreamReader(StreamRef S) : Stream(S), Offset(0) {}
 
+Error StreamReader::readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer) {
+  if (auto EC = Stream.readLongestContiguousChunk(Offset, Buffer))
+    return EC;
+  Offset += Buffer.size();
+  return Error::success();
+}
+
 Error StreamReader::readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size) {
   if (auto EC = Stream.readBytes(Offset, Size, Buffer))
     return EC;

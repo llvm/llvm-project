@@ -16,6 +16,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <type_traits>
@@ -679,6 +680,14 @@ template <unsigned B> inline int64_t SignExtend64(uint64_t x) {
 /// Requires 0 < B <= 64.
 inline int64_t SignExtend64(uint64_t X, unsigned B) {
   return int64_t(X << (64 - B)) >> (64 - B);
+}
+
+/// \brief Subtract two unsigned integers, X and Y, of type T and return their
+/// absolute value.
+template <typename T>
+typename std::enable_if<std::is_unsigned<T>::value, T>::type
+AbsoluteDifference(T X, T Y) {
+  return std::max(X, Y) - std::min(X, Y);
 }
 
 /// \brief Add two unsigned integers, X and Y, of type T.

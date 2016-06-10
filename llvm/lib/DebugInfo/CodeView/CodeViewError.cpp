@@ -31,6 +31,8 @@ public:
              "bytes.";
     case cv_error_code::corrupt_record:
       return "The CodeView record is corrupted.";
+    case cv_error_code::operation_unsupported:
+      return "The requested operation is not supported.";
     }
     llvm_unreachable("Unrecognized cv_error_code");
   }

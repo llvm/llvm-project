@@ -13,7 +13,7 @@
 ; RUN:    -check-prefix=ALL -check-prefix=CMOV \
 ; RUN:    -check-prefix=CMOV-32 -check-prefix=CMOV-32R2-R5
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=SEL -check-prefix=SEL-32
+; RUN:    -check-prefix=ALL -check-prefix=SEL-32 -check-prefix=32R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=M3 -check-prefix=M2-M3
 ; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
@@ -27,7 +27,11 @@
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=CMOV -check-prefix=CMOV-64
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=SEL -check-prefix=SEL-64
+; RUN:    -check-prefix=ALL -check-prefix=SEL-64 -check-prefix=64R6
+; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
+; RUN:    -check-prefix=ALL -check-prefix=MM32R3
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
+; RUN:    -check-prefix=ALL -check-prefix=MM32R6 -check-prefix=SEL-32
 
 define float @tst_select_i1_float(i1 signext %s, float %x, float %y) {
 entry:
@@ -60,6 +64,12 @@ entry:
 
   ; SEL-64:     mtc1    $4, $f0
   ; SEL-64:     sel.s   $f0, $f14, $f13
+
+  ; MM32R3:     mtc1    $6, $[[F0:f[0-9]+]]
+  ; MM32R3:     mtc1    $5, $[[F1:f[0-9]+]]
+  ; MM32R3:     andi16  $[[T0:[0-9]+]], $4, 1
+  ; MM32R3:     movn.s  $f0, $[[F1]], $[[T0]]
+
   %r = select i1 %s, float %x, float %y
   ret float %r
 }
@@ -91,6 +101,11 @@ entry:
 
   ; SEL-64:     mtc1    $6, $f0
   ; SEL-64:     sel.s   $f0, $f13, $f12
+
+  ; MM32R3:     andi16  $[[T0:[0-9]+]], $6, 1
+  ; MM32R3:     movn.s  $[[F0:f[0-9]+]], $f12, $[[T0]]
+  ; MM32R3:     mov.s   $f0, $[[F0]]
+
   %r = select i1 %s, float %x, float %y
   ret float %r
 }
@@ -122,6 +137,11 @@ entry:
 
   ; SEL-64:     cmp.lt.s  $f0, $f12, $f13
   ; SEL-64:     sel.s     $f0, $f13, $f12
+
+  ; MM32R3:     c.olt.s   $f12, $f14
+  ; MM32R3:     movt.s    $f14, $f12, $fcc0
+  ; MM32R3:     mov.s     $f0, $f14
+
   %s = fcmp olt float %x, %y
   %r = select i1 %s, float %x, float %y
   ret float %r
@@ -154,6 +174,11 @@ entry:
 
   ; SEL-64:     cmp.le.s  $f0, $f12, $f13
   ; SEL-64:     sel.s     $f0, $f13, $f12
+
+  ; MM32R3:     c.ole.s   $f12, $f14
+  ; MM32R3:     movt.s    $f14, $f12, $fcc0
+  ; MM32R3:     mov.s     $f0, $f14
+
   %s = fcmp ole float %x, %y
   %r = select i1 %s, float %x, float %y
   ret float %r
@@ -186,6 +211,11 @@ entry:
 
   ; SEL-64:     cmp.lt.s  $f0, $f13, $f12
   ; SEL-64:     sel.s     $f0, $f13, $f12
+
+  ; MM32R3:     c.ule.s   $f12, $f14
+  ; MM32R3:     movf.s    $f14, $f12, $fcc0
+  ; MM32R3:     mov.s     $f0, $f14
+
   %s = fcmp ogt float %x, %y
   %r = select i1 %s, float %x, float %y
   ret float %r
@@ -218,6 +248,11 @@ entry:
 
   ; SEL-64:     cmp.le.s  $f0, $f13, $f12
   ; SEL-64:     sel.s     $f0, $f13, $f12
+
+  ; MM32R3:     c.ult.s   $f12, $f14
+  ; MM32R3:     movf.s    $f14, $f12, $fcc0
+  ; MM32R3:     mov.s     $f0, $f14
+
   %s = fcmp oge float %x, %y
   %r = select i1 %s, float %x, float %y
   ret float %r
@@ -250,6 +285,11 @@ entry:
 
   ; SEL-64:     cmp.eq.s  $f0, $f12, $f13
   ; SEL-64:     sel.s     $f0, $f13, $f12
+
+  ; MM32R3:     c.eq.s    $f12, $f14
+  ; MM32R3:     movt.s    $f14, $f12, $fcc0
+  ; MM32R3:     mov.s     $f0, $f14
+
   %s = fcmp oeq float %x, %y
   %r = select i1 %s, float %x, float %y
   ret float %r
@@ -275,7 +315,8 @@ entry:
 
   ; SEL-32:     cmp.ueq.s $f0, $f12, $f14
   ; SEL-32:     mfc1      $[[T0:[0-9]+]], $f0
-  ; SEL-32:     not       $[[T0]], $[[T0]]
+  ; 32R6:       not       $[[T0]], $[[T0]]
+  ; MM32R6:     nor       $[[T0]], $[[T0]], $zero
   ; SEL-32:     mtc1      $[[T0:[0-9]+]], $f0
   ; SEL-32:     sel.s     $f0, $f14, $f12
 
@@ -288,6 +329,10 @@ entry:
   ; SEL-64:     not       $[[T0]], $[[T0]]
   ; SEL-64:     mtc1      $[[T0:[0-9]+]], $f0
   ; SEL-64:     sel.s     $f0, $f13, $f12
+
+  ; MM32R3:     c.ueq.s   $f12, $f14
+  ; MM32R3:     movf.s    $f14, $f12, $fcc0
+  ; MM32R3:     mov.s     $f0, $f14
 
   %s = fcmp one float %x, %y
   %r = select i1 %s, float %x, float %y

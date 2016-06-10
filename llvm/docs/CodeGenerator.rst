@@ -2643,3 +2643,54 @@ of a program is limited to 4K instructions:  this ensures fast termination and
 a limited number of kernel function calls.  Prior to running an eBPF program,
 a verifier performs static analysis to prevent loops in the code and
 to ensure valid register usage and operand types.
+
+The AMDGPU backend
+------------------
+
+The AMDGPU code generator lives in the lib/Target/AMDGPU directory, and is an
+open source native AMD GCN ISA code generator.
+
+Target triples supported
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following are the known target triples that are supported by the AMDGPU
+backend.
+
+* **amdgcn--** --- AMD GCN GPUs (AMDGPU.7.0.0+)
+* **amdgcn--amdhsa** --- AMD GCN GPUs (AMDGPU.7.0.0+) with HSA support
+* **r600--** --- AMD GPUs HD2XXX-HD6XXX
+
+Relocations
+^^^^^^^^^^^
+
+Supported relocatable fields are:
+
+* **word32** --- This specifies a 32-bit field occupying 4 bytes with arbitrary
+  byte alignment. These values use the same byte order as other word values in
+  the AMD GPU architecture
+* **word64** --- This specifies a 64-bit field occupying 8 bytes with arbitrary
+  byte alignment. These values use the same byte order as other word values in
+  the AMD GPU architecture
+
+Following notations are used for specifying relocation types
+
+* **A** --- Represents the addend used to compute the value of the relocatable
+  field
+* **S** --- Represents the value of the symbol whose index resides in the
+  relocation entry
+
+AMDGPU Backend generates *Elf64_Rela* relocation records with the following
+supported relocation types:
+
+  ====================  =====  ==========  ============================
+  Relocation type       Value  Field       Calculation
+  ====================  =====  ==========  ============================
+  ``R_AMDGPU_NONE``     0      ``none``    ``none``
+  ``R_AMDGPU_32_LOW``   1      ``word32``  (S + A) & 0xFFFFFFFF
+  ``R_AMDGPU_32_HIGH``  2      ``word32``  ((S + A) >> 32) & 0xFFFFFFFF
+  ``R_AMDGPU_64``       3      ``word64``  S + A
+  ``R_AMDGPU_32``       4      ``word32``  S + A
+  ====================  =====  ==========  ============================
+
+Only R_AMDGPU_32_LOW and R_AMDGPU_32_HIGH can be handled by the
+dynamic linker.  The rest must be statically resolved.

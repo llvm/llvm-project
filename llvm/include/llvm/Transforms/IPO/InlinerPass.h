@@ -24,6 +24,7 @@ class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class InlineCost;
+class ProfileSummaryInfo;
 template <class PtrType, unsigned SmallSize> class SmallPtrSet;
 
 /// Inliner - This class contains all of the helper code which is used to
@@ -85,6 +86,7 @@ private:
 
 protected:
   AssumptionCacheTracker *ACT;
+  ProfileSummaryInfo *PSI;
 };
 
 } // End llvm namespace

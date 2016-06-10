@@ -657,6 +657,10 @@ typedef DenseMap<Value *, GraphT::Node> NodeMapT;
 /// as globals or arguments
 static bool isGlobalOrArgAttr(StratifiedAttrs Attr);
 
+/// Given a StratifiedAttrs, returns true if the corresponding values come from
+/// an unknown source (such as opaque memory or an integer cast)
+static bool isUnknownAttr(StratifiedAttrs Attr);
+
 /// Given an argument number, returns the appropriate StratifiedAttr to set.
 static StratifiedAttr argNumberToAttr(unsigned ArgNum);
 
@@ -748,6 +752,10 @@ static bool hasUsefulEdges(ConstantExpr *CE) {
 
 static bool isGlobalOrArgAttr(StratifiedAttrs Attr) {
   return Attr.reset(AttrEscapedIndex).reset(AttrUnknownIndex).any();
+}
+
+static bool isUnknownAttr(StratifiedAttrs Attr) {
+  return Attr.test(AttrUnknownIndex);
 }
 
 static Optional<StratifiedAttr> valueToAttr(Value *Val) {
@@ -955,6 +963,7 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
   StratifiedSetsBuilder<Value *> Builder;
 
   SmallVector<GraphT::Node, 16> Worklist;
+  SmallPtrSet<Value *, 16> Globals;
   for (auto &Pair : Map) {
     Worklist.clear();
 
@@ -968,9 +977,8 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
       if (canSkipAddingToSets(CurValue))
         continue;
 
-      Optional<StratifiedAttr> MaybeCurAttr = valueToAttr(CurValue);
-      if (MaybeCurAttr)
-        Builder.noteAttributes(CurValue, *MaybeCurAttr);
+      if (isa<GlobalValue>(CurValue))
+        Globals.insert(CurValue);
 
       for (const auto &EdgeTuple : Graph.edgesFor(Node)) {
         auto Weight = std::get<0>(EdgeTuple);
@@ -980,6 +988,8 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
 
         if (canSkipAddingToSets(OtherValue))
           continue;
+        if (isa<GlobalValue>(OtherValue))
+          Globals.insert(OtherValue);
 
         bool Added;
         switch (directionOfEdgeType(Label)) {
@@ -995,10 +1005,6 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
         }
 
         auto Aliasing = Weight.second;
-        if (MaybeCurAttr)
-          Aliasing |= *MaybeCurAttr;
-        if (auto MaybeOtherAttr = valueToAttr(OtherValue))
-          Aliasing |= *MaybeOtherAttr;
         Builder.noteAttributes(CurValue, Aliasing);
         Builder.noteAttributes(OtherValue, Aliasing);
 
@@ -1008,18 +1014,21 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
     }
   }
 
-  // There are times when we end up with parameters not in our graph (i.e. if
-  // it's only used as the condition of a branch). Other bits of code depend on
-  // things that were present during construction being present in the graph.
-  // So, we add all present arguments here.
-  for (auto &Arg : Fn->args()) {
-    if (!Builder.add(&Arg))
-      continue;
+  // Special handling for globals and arguments
+  auto ProcessGlobalOrArgValue = [&Builder](Value &Val) {
+    Builder.add(&Val);
+    auto Attr = valueToAttr(&Val);
+    if (Attr.hasValue()) {
+      Builder.noteAttributes(&Val, *Attr);
+      // TODO: do we need to filter out non-pointer values here?
+      Builder.addAttributesBelow(&Val, AttrUnknown);
+    }
+  };
 
-    auto Attr = valueToAttr(&Arg);
-    if (Attr.hasValue())
-      Builder.noteAttributes(&Arg, *Attr);
-  }
+  for (auto &Arg : Fn->args())
+    ProcessGlobalOrArgValue(Arg);
+  for (auto *Global : Globals)
+    ProcessGlobalOrArgValue(*Global);
 
   return FunctionInfo(Builder.build(), std::move(ReturnedValues));
 }
@@ -1104,13 +1113,13 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
   // bit more interesting. We follow three general rules described below:
   // - Non-local values may alias each other
   // - AttrNone values do not alias any non-local values
-  // - AttrEscaped values do not alias globals/arguments, but they may alias
+  // - AttrEscaped do not alias globals/arguments, but they may alias
   // AttrUnknown values
   if (SetA.Index == SetB.Index)
     return MayAlias;
   if (AttrsA.none() || AttrsB.none())
     return NoAlias;
-  if (AttrsA.test(AttrUnknownIndex) || AttrsB.test(AttrUnknownIndex))
+  if (isUnknownAttr(AttrsA) || isUnknownAttr(AttrsB))
     return MayAlias;
   if (isGlobalOrArgAttr(AttrsA) && isGlobalOrArgAttr(AttrsB))
     return MayAlias;

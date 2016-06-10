@@ -31,10 +31,6 @@ STATISTIC(NumInstructionsShrunk,
 STATISTIC(NumLiteralConstantsFolded,
           "Number of literal constants folded into 32-bit instructions.");
 
-namespace llvm {
-  void initializeSIShrinkInstructionsPass(PassRegistry&);
-}
-
 using namespace llvm;
 
 namespace {
@@ -61,10 +57,8 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SIShrinkInstructions, DEBUG_TYPE,
-                      "SI Lower il Copies", false, false)
-INITIALIZE_PASS_END(SIShrinkInstructions, DEBUG_TYPE,
-                    "SI Lower il Copies", false, false)
+INITIALIZE_PASS(SIShrinkInstructions, DEBUG_TYPE,
+                "SI Shrink Instructions", false, false)
 
 char SIShrinkInstructions::ID = 0;
 

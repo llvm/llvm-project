@@ -1371,6 +1371,11 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::OR:
   case ISD::XOR: ExpandIntRes_Logical(N, Lo, Hi); break;
 
+  case ISD::UMAX:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::SMIN: ExpandIntRes_MINMAX(N, Lo, Hi); break;
+
   case ISD::ADD:
   case ISD::SUB: ExpandIntRes_ADDSUB(N, Lo, Hi); break;
 
@@ -1661,6 +1666,54 @@ ExpandShiftWithUnknownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
     Hi = DAG.getSelect(dl, NVT, isShort, HiS, HiL);
     return true;
   }
+}
+
+static std::pair<ISD::CondCode, ISD::NodeType> getExpandedMinMaxOps(int Op) {
+
+  switch (Op) {
+    default: llvm_unreachable("invalid min/max opcode");
+    case ISD::SMAX:
+      return std::make_pair(ISD::SETGT, ISD::UMAX);
+    case ISD::UMAX:
+      return std::make_pair(ISD::SETUGT, ISD::UMAX);
+    case ISD::SMIN:
+      return std::make_pair(ISD::SETLT, ISD::UMIN);
+    case ISD::UMIN:
+      return std::make_pair(ISD::SETULT, ISD::UMIN);
+  }
+}
+
+void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
+                                           SDValue &Lo, SDValue &Hi) {
+  SDLoc DL(N);
+  ISD::NodeType LoOpc;
+  ISD::CondCode CondC;
+  std::tie(CondC, LoOpc) = getExpandedMinMaxOps(N->getOpcode());
+
+  // Expand the subcomponents.
+  SDValue LHSL, LHSH, RHSL, RHSH;
+  GetExpandedInteger(N->getOperand(0), LHSL, LHSH);
+  GetExpandedInteger(N->getOperand(1), RHSL, RHSH);
+
+  // Value types
+  EVT NVT = LHSL.getValueType();
+  EVT CCT = getSetCCResultType(NVT);
+
+  // Hi part is always the same op
+  Hi = DAG.getNode(N->getOpcode(), DL, {NVT, NVT}, {LHSH, RHSH});
+
+  // We need to know whether to select Lo part that corresponds to 'winning'
+  // Hi part or if Hi parts are equal.
+  SDValue IsHiLeft = DAG.getSetCC(DL, CCT, LHSH, RHSH, CondC);
+  SDValue IsHiEq = DAG.getSetCC(DL, CCT, LHSH, RHSH, ISD::SETEQ);
+
+  // Lo part corresponding to the 'winning' Hi part
+  SDValue LoCmp = DAG.getSelect(DL, NVT, IsHiLeft, LHSL, RHSL);
+
+  // Recursed Lo part if Hi parts are equal, this uses unsigned version
+  SDValue LoMinMax = DAG.getNode(LoOpc, DL, {NVT, NVT}, {LHSL, RHSL});
+
+  Lo = DAG.getSelect(DL, NVT, IsHiEq, LoMinMax, LoCmp);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,

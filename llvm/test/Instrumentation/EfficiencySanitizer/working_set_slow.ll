@@ -1,6 +1,6 @@
-; Test basic EfficiencySanitizer cache frag instrumentation.
+; Test basic EfficiencySanitizer slowpath instrumentation.
 ;
-; RUN: opt < %s -esan -esan-cache-frag -S | FileCheck %s
+; RUN: opt < %s -esan -esan-working-set -esan-instrument-fastpath=false -S | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Aligned loads:
@@ -254,6 +254,6 @@ entry:
 ; Top-level:
 
 ; CHECK: define internal void @esan.module_ctor()
-; CHECK: call void @__esan_init(i32 1, i8* bitcast ({ i8*, i32, { i8*, i32, i64*, i8** }* }* @1 to i8*))
+; CHECK: call void @__esan_init(i32 2, i8* null)
 ; CHECK: define internal void @esan.module_dtor()
-; CHECK: call void @__esan_exit(i8* bitcast ({ i8*, i32, { i8*, i32, i64*, i8** }* }* @1 to i8*))
+; CHECK: call void @__esan_exit(i8* null)
