@@ -38,22 +38,8 @@ macro(add_sanitizer_rt_symbols name)
       DEPENDS ${stamp}
       SOURCES ${SANITIZER_GEN_DYNAMIC_LIST} ${ARG_EXTRA})
 
-    if(NOT CMAKE_VERSION VERSION_LESS 3.0)
-      install(FILES $<TARGET_FILE:${target_name}>.syms
-              DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR})
-    else()
-      # Per-config install location.
-      if(CMAKE_CONFIGURATION_TYPES)
-        foreach(c ${CMAKE_CONFIGURATION_TYPES})
-          get_target_property(libfile ${target_name} LOCATION_${c})
-          install(FILES ${libfile}.syms CONFIGURATIONS ${c}
+    install(FILES $<TARGET_FILE:${target_name}>.syms
             DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR})
-        endforeach()
-      else()
-        get_target_property(libfile ${target_name} LOCATION_${CMAKE_BUILD_TYPE})
-        install(FILES ${libfile}.syms DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR})
-      endif()
-    endif()
     if(ARG_PARENT_TARGET)
       add_dependencies(${ARG_PARENT_TARGET} ${target_name}-symbols)
     endif()

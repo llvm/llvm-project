@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
   // In parent
   for (i = 0; i < 10; i++) {
     int child_status;
-    if ((tid = waitpid(child[i], &child_status, 0) == -1))
+    if ((tid = waitpid(child[i], &child_status, 0)) == -1)
       break;
   }
   F = lprofOpenFileEx(FN);
