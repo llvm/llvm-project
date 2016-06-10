@@ -1840,7 +1840,7 @@ ProcessGDBRemote::UpdateThreadList (ThreadList &old_thread_list, ThreadList &new
                     }
                 }
             }
-            new_thread_list.AddThread(thread_sp);
+            new_thread_list.AddThreadSortedByIndexID (thread_sp);
         }
     }
 
