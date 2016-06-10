@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <mutex>
 
 #include "lldb/Target/ThreadCollection.h"
 #include "lldb/Target/Thread.h"
