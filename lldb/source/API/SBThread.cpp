@@ -313,7 +313,9 @@ SBThread::GetStopReasonExtendedInfoAsJSON (lldb::SBStream &stream)
 {
     Stream &strm = stream.ref();
     
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     if (! exe_ctx.HasThreadScope())
         return false;
 
@@ -338,7 +340,9 @@ SBThread::GetStopReasonExtendedBacktraces (InstrumentationRuntimeType type)
     if (type != eInstrumentationRuntimeTypeThreadSanitizer)
         return threads;
     
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     if (! exe_ctx.HasThreadScope())
         return threads;
     
@@ -1265,7 +1269,9 @@ bool
 SBThread::Suspend()
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     bool result = false;
     if (exe_ctx.HasThreadScope())
     {
@@ -1292,7 +1298,9 @@ bool
 SBThread::Resume ()
 {
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     bool result = false;
     if (exe_ctx.HasThreadScope())
     {
@@ -1319,7 +1327,9 @@ SBThread::Resume ()
 bool
 SBThread::IsSuspended()
 {
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     if (exe_ctx.HasThreadScope())
         return exe_ctx.GetThreadPtr()->GetResumeState () == eStateSuspended;
     return false;
@@ -1328,7 +1338,9 @@ SBThread::IsSuspended()
 bool
 SBThread::IsStopped()
 {
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     if (exe_ctx.HasThreadScope())
         return StateIsStoppedState(exe_ctx.GetThreadPtr()->GetState(), true);
     return false;
@@ -1338,7 +1350,9 @@ SBProcess
 SBThread::GetProcess ()
 {
     SBProcess sb_process;
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     if (exe_ctx.HasThreadScope())
     {
         // Have to go up to the target so we can get a shared pointer to our process...
@@ -1547,7 +1561,9 @@ SBThread::GetStatus (SBStream &status) const
 {
     Stream &strm = status.ref();
 
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     if (exe_ctx.HasThreadScope())
     {
         exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1);
@@ -1563,7 +1579,9 @@ SBThread::GetDescription (SBStream &description) const
 {
     Stream &strm = description.ref();
 
-    ExecutionContext exe_ctx (m_opaque_sp.get());
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
+
     if (exe_ctx.HasThreadScope())
     {
         exe_ctx.GetThreadPtr()->DumpUsingSettingsFormat(strm, LLDB_INVALID_THREAD_ID);
