@@ -1,6 +1,6 @@
 
 // OCML prototypes
-#include "../inc/ocml.h"
+#include "ocml.h"
 
 // Tables
 #include "tables.h"

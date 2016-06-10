@@ -137,7 +137,7 @@ enable_testing()
 
 macro(clang_opencl_test name dir)
   #clang_opencl_code(${dir} ${name} llvm ocml opencl)
-  clang_opencl_code(${name} ${dir} opencl ocml llvm)
+  clang_opencl_code(${name} ${dir} opencl ocml ockl oclc llvm)
   if(AMDHSACOD)
     add_test(
       NAME ${name}:llvm-objdump

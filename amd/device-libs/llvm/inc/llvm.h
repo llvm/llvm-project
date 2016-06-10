@@ -177,6 +177,15 @@ extern uint __attribute__((pure)) __llvm_amdgcn_ds_bpermute(uint, uint) __asm("l
 // Operand bits: [0..3]=VM_CNT, [4..6]=EXP_CNT (Export), [8..11]=LGKM_CNT (LDS, GDS, Konstant, Message)
 extern void __llvm_amdgcn_s_waitcount(int) __asm("llvm.amdgcn.s.waitcount");
 
+extern void __llvm_amdgcn_s_dcache_inv_vol(void) __asm("llvm.amdgcn.s.dcache.inv.vol");
+extern void __llvm_amdgcn_s_dcache_wb(void) __asm("llvm.amdgcn.s.dcache.wb");
+extern void __llvm_amdgcn_s_dcache_wb_vol(void) __asm("llvm.amdgcn.s.dcache.wb.vol");
+extern void __llvm_amdcgn_buffer_wbinvl1_vol(void) __asm("llvm.amdgcn.buffer.wbinvl1.vol");
+
+extern __attribute__((const)) uint __llvm_amdgcn_mbcnt_lo(uint, uint) __asm("llvm.amdgcn.mbcnt.lo");
+extern __attribute__((const)) uint __llvm_amdgcn_mbcnt_hi(uint, uint) __asm("llvm.amdgcn.mbcnt.hi");
+
+extern ulong __llvm_amdgcn_read_exec(void);
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // LLVM_H

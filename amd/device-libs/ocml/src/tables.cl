@@ -1,5 +1,5 @@
 
-#include "../inc/ocml.h"
+#include "ocml.h"
 #include "tables.h"
 
 #ifdef USE_TABLESTRUCT

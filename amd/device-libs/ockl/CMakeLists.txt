@@ -41,18 +41,9 @@
 ################################################################################
 
 file(GLOB sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/async/*.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/geometric/*.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/integer/*.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/math/*.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/misc/*.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/relational/*.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/vldst/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cl
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/integer)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../llvm/inc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ockl/inc)
-clang_opencl_bc_builtins_lib(opencl ${CMAKE_CURRENT_SOURCE_DIR} ${sources})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
+
+clang_opencl_bc_builtins_lib(ockl ${CMAKE_CURRENT_SOURCE_DIR} ${sources})
