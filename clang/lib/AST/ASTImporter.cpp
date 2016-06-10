@@ -5796,11 +5796,6 @@ Expr *ASTNodeImporter::VisitCXXConstructExpr(CXXConstructExpr *E) {
   if (T.isNull())
     return nullptr;
 
-  NamedDecl *ToFound =
-    dyn_cast_or_null<NamedDecl>(Importer.Import(E->getFoundDecl()));
-  if (!ToFound)
-    return nullptr;
-
   CXXConstructorDecl *ToCCD =
     dyn_cast_or_null<CXXConstructorDecl>(Importer.Import(E->getConstructor()));
   if (!ToCCD)
@@ -5813,7 +5808,7 @@ Expr *ASTNodeImporter::VisitCXXConstructExpr(CXXConstructExpr *E) {
 
   return CXXConstructExpr::Create(Importer.getToContext(), T,
                                   Importer.Import(E->getLocation()),
-                                  ToFound, ToCCD, E->isElidable(),
+                                  ToCCD, E->isElidable(),
                                   ToArgs, E->hadMultipleCandidates(),
                                   E->isListInitialization(),
                                   E->isStdInitListInitialization(),

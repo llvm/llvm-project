@@ -3,8 +3,8 @@
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: not ld.lld %t.o %t2.so -o %t.exe -pie 2>&1 | FileCheck %s
 
-// CHECK: relocation R_X86_64_64 cannot be used when making a shared object; recompile with -fPIC.
-// CHECK: relocation R_X86_64_64 cannot be used when making a shared object; recompile with -fPIC.
+// CHECK: can't create dynamic relocation R_X86_64_64 against readonly segment
+// CHECK: can't create dynamic relocation R_X86_64_64 against readonly segment
 
 .global _start
 _start:

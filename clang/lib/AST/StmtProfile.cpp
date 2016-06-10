@@ -69,6 +69,7 @@ namespace {
 }
 
 void StmtProfiler::VisitStmt(const Stmt *S) {
+  assert(S && "Requires non-null Stmt pointer");
   ID.AddInteger(S->getStmtClass());
   for (const Stmt *SubStmt : S->children()) {
     if (SubStmt)
@@ -355,14 +356,16 @@ void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 template<typename T>
 void OMPClauseProfiler::VisitOMPClauseList(T *Node) {
   for (auto *E : Node->varlists()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
 }
 
 void OMPClauseProfiler::VisitOMPPrivateClause(const OMPPrivateClause *C) {
   VisitOMPClauseList(C);
   for (auto *E : C->private_copies()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
 }
 void
@@ -370,10 +373,12 @@ OMPClauseProfiler::VisitOMPFirstprivateClause(const OMPFirstprivateClause *C) {
   VisitOMPClauseList(C);
   VistOMPClauseWithPreInit(C);
   for (auto *E : C->private_copies()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->inits()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
 }
 void
@@ -381,13 +386,16 @@ OMPClauseProfiler::VisitOMPLastprivateClause(const OMPLastprivateClause *C) {
   VisitOMPClauseList(C);
   VistOMPClauseWithPostUpdate(C);
   for (auto *E : C->source_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->destination_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->assignment_ops()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
 }
 void OMPClauseProfiler::VisitOMPSharedClause(const OMPSharedClause *C) {
@@ -401,63 +409,80 @@ void OMPClauseProfiler::VisitOMPReductionClause(
   VisitOMPClauseList(C);
   VistOMPClauseWithPostUpdate(C);
   for (auto *E : C->privates()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->lhs_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->rhs_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->reduction_ops()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
 }
 void OMPClauseProfiler::VisitOMPLinearClause(const OMPLinearClause *C) {
   VisitOMPClauseList(C);
   VistOMPClauseWithPostUpdate(C);
   for (auto *E : C->privates()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->inits()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->updates()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->finals()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
-  Profiler->VisitStmt(C->getStep());
-  Profiler->VisitStmt(C->getCalcStep());
+  if (C->getStep())
+    Profiler->VisitStmt(C->getStep());
+  if (C->getCalcStep())
+    Profiler->VisitStmt(C->getCalcStep());
 }
 void OMPClauseProfiler::VisitOMPAlignedClause(const OMPAlignedClause *C) {
   VisitOMPClauseList(C);
-  Profiler->VisitStmt(C->getAlignment());
+  if (C->getAlignment())
+    Profiler->VisitStmt(C->getAlignment());
 }
 void OMPClauseProfiler::VisitOMPCopyinClause(const OMPCopyinClause *C) {
   VisitOMPClauseList(C);
   for (auto *E : C->source_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->destination_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->assignment_ops()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
 }
 void
 OMPClauseProfiler::VisitOMPCopyprivateClause(const OMPCopyprivateClause *C) {
   VisitOMPClauseList(C);
   for (auto *E : C->source_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->destination_exprs()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
   for (auto *E : C->assignment_ops()) {
-    Profiler->VisitStmt(E);
+    if (E)
+      Profiler->VisitStmt(E);
   }
 }
 void OMPClauseProfiler::VisitOMPFlushClause(const OMPFlushClause *C) {
@@ -467,29 +492,36 @@ void OMPClauseProfiler::VisitOMPDependClause(const OMPDependClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPDeviceClause(const OMPDeviceClause *C) {
-  Profiler->VisitStmt(C->getDevice());
+  if (C->getDevice())
+    Profiler->VisitStmt(C->getDevice());
 }
 void OMPClauseProfiler::VisitOMPMapClause(const OMPMapClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
-  Profiler->VisitStmt(C->getNumTeams());
+  if (C->getNumTeams())
+    Profiler->VisitStmt(C->getNumTeams());
 }
 void OMPClauseProfiler::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
-  Profiler->VisitStmt(C->getThreadLimit());
+  if (C->getThreadLimit())
+    Profiler->VisitStmt(C->getThreadLimit());
 }
 void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
-  Profiler->VisitStmt(C->getPriority());
+  if (C->getPriority())
+    Profiler->VisitStmt(C->getPriority());
 }
 void OMPClauseProfiler::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
-  Profiler->VisitStmt(C->getGrainsize());
+  if (C->getGrainsize())
+    Profiler->VisitStmt(C->getGrainsize());
 }
 void OMPClauseProfiler::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
-  Profiler->VisitStmt(C->getNumTasks());
+  if (C->getNumTasks())
+    Profiler->VisitStmt(C->getNumTasks());
 }
 void OMPClauseProfiler::VisitOMPHintClause(const OMPHintClause *C) {
-  Profiler->VisitStmt(C->getHint());
+  if (C->getHint())
+    Profiler->VisitStmt(C->getHint());
 }
 void OMPClauseProfiler::VisitOMPToClause(const OMPToClause *C) {
   VisitOMPClauseList(C);

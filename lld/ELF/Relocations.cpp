@@ -401,8 +401,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    error("relocation " + getRelName(Type) +
-          " cannot be used when making a shared object; recompile with -fPIC.");
+    error("can't create dynamic relocation " + getRelName(Type) +
+          " against readonly segment");
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {

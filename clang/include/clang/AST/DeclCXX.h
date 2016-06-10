@@ -2165,16 +2165,17 @@ public:
 /// \endcode
 class CXXConstructorDecl : public CXXMethodDecl {
   void anchor() override;
-  /// \brief Whether this constructor declaration has the \c explicit keyword
-  /// specified.
-  bool IsExplicitSpecified : 1;
 
   /// \name Support for base and member initializers.
   /// \{
   /// \brief The arguments used to initialize the base or member.
   LazyCXXCtorInitializersPtr CtorInitializers;
-  unsigned NumCtorInitializers;
+  unsigned NumCtorInitializers : 31;
   /// \}
+
+  /// \brief Whether this constructor declaration has the \c explicit keyword
+  /// specified.
+  unsigned IsExplicitSpecified : 1;
 
   CXXConstructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                      const DeclarationNameInfo &NameInfo,
@@ -2183,8 +2184,8 @@ class CXXConstructorDecl : public CXXMethodDecl {
                      bool isImplicitlyDeclared, bool isConstexpr)
     : CXXMethodDecl(CXXConstructor, C, RD, StartLoc, NameInfo, T, TInfo,
                     SC_None, isInline, isConstexpr, SourceLocation()),
-      IsExplicitSpecified(isExplicitSpecified), CtorInitializers(nullptr),
-      NumCtorInitializers(0) {
+      CtorInitializers(nullptr), NumCtorInitializers(0),
+      IsExplicitSpecified(isExplicitSpecified) {
     setImplicit(isImplicitlyDeclared);
   }
 

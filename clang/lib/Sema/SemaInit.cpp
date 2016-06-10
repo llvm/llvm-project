@@ -5742,7 +5742,7 @@ PerformConstructorInitialization(Sema &S,
       : Kind.getParenRange();
 
     CurInit = new (S.Context) CXXTemporaryObjectExpr(
-        S.Context, Step.Function.FoundDecl, Constructor, TSInfo,
+        S.Context, Constructor, TSInfo,
         ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,
         IsListInitialization, IsStdInitListInitialization,
         ConstructorInitRequiresZeroInit);
