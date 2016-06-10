@@ -22,7 +22,7 @@ class ConstVariableTestCase(TestBase):
         compiler="clang", compiler_version=["=", "3.7"])
     @expectedFailureAll(
         oslist=["freebsd", "linux"],
-        compiler="clang", compiler_version=[">=", "3.8"])
+        compiler="clang", compiler_version=["=", "3.8"])
     @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
     @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
     @expectedFailureAll(oslist=["linux"], archs=['arm', 'aarch64'], bugnumber="llvm.org/pr27883")

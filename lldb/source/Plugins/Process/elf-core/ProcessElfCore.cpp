@@ -14,15 +14,16 @@
 #include <mutex>
 
 // Other libraries and framework includes
-#include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/DataBufferHeap.h"
 #include "lldb/Core/Log.h"
-#include "lldb/Target/Target.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
+#include "lldb/Core/State.h"
 #include "lldb/Target/DynamicLoader.h"
+#include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 
 #include "llvm/Support/ELF.h"
@@ -148,7 +149,7 @@ ProcessElfCore::GetPluginVersion()
 lldb::addr_t
 ProcessElfCore::AddAddressRangeFromLoadSegment(const elf::ELFProgramHeader *header)
 {
-    lldb::addr_t addr = header->p_vaddr;
+    const lldb::addr_t addr = header->p_vaddr;
     FileRange file_range (header->p_offset, header->p_filesz);
     VMRangeToFileOffset::Entry range_entry(addr, header->p_memsz, file_range);
 
@@ -165,6 +166,14 @@ ProcessElfCore::AddAddressRangeFromLoadSegment(const elf::ELFProgramHeader *head
     {
         m_core_aranges.Append(range_entry);
     }
+
+    // Keep a separate map of permissions that that isn't coalesced so all ranges
+    // are maintained.
+    const uint32_t permissions = ((header->p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0) |
+                                 ((header->p_flags & llvm::ELF::PF_W) ? lldb::ePermissionsWritable : 0) |
+                                 ((header->p_flags & llvm::ELF::PF_X) ? lldb::ePermissionsExecutable : 0);
+
+    m_core_range_infos.Append(VMRangeToPermissions::Entry(addr, header->p_memsz, permissions));
 
     return addr;
 }
@@ -227,7 +236,10 @@ ProcessElfCore::DoLoadCore ()
     }
 
     if (!ranges_are_sorted)
+    {
         m_core_aranges.Sort();
+        m_core_range_infos.Sort();
+    }
 
     // Even if the architecture is set in the target, we need to override
     // it to match the core file which is always single arch.
@@ -313,6 +325,38 @@ ProcessElfCore::ReadMemory (lldb::addr_t addr, void *buf, size_t size, Error &er
     // Don't allow the caching that lldb_private::Process::ReadMemory does
     // since in core files we have it all cached our our core file anyway.
     return DoReadMemory (addr, buf, size, error);
+}
+
+Error
+ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr, MemoryRegionInfo &region_info)
+{
+    region_info.Clear();
+    const VMRangeToPermissions::Entry *permission_entry = m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);
+    if (permission_entry)
+    {
+        if (permission_entry->Contains(load_addr))
+        {
+            region_info.GetRange().SetRangeBase(permission_entry->GetRangeBase());
+            region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
+            const Flags permissions(permission_entry->data);
+            region_info.SetReadable(permissions.Test(lldb::ePermissionsReadable) ? MemoryRegionInfo::eYes
+                                                                                 : MemoryRegionInfo::eNo);
+            region_info.SetWritable(permissions.Test(lldb::ePermissionsWritable) ? MemoryRegionInfo::eYes
+                                                                                 : MemoryRegionInfo::eNo);
+            region_info.SetExecutable(permissions.Test(lldb::ePermissionsExecutable) ? MemoryRegionInfo::eYes
+                                                                                     : MemoryRegionInfo::eNo);
+        }
+        else if (load_addr < permission_entry->GetRangeBase())
+        {
+            region_info.GetRange().SetRangeBase(load_addr);
+            region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
+            region_info.SetReadable(MemoryRegionInfo::eNo);
+            region_info.SetWritable(MemoryRegionInfo::eNo);
+            region_info.SetExecutable(MemoryRegionInfo::eNo);
+        }
+        return Error();
+    }
+    return Error("invalid address");
 }
 
 size_t

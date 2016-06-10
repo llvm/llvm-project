@@ -149,8 +149,8 @@ template <class ELFT> bool GotSection<ELFT>::addDynTlsEntry(SymbolBody &Sym) {
     return false;
   Sym.GlobalDynIndex = Entries.size();
   // Global Dynamic TLS entries take two GOT slots.
-  Entries.push_back(&Sym);
   Entries.push_back(nullptr);
+  Entries.push_back(&Sym);
   return true;
 }
 

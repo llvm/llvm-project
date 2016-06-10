@@ -24,6 +24,7 @@ struct some_comp
 {
     typedef T value_type;
     ~some_comp() noexcept(false);
+    bool operator()(const T&, const T&) const noexcept { return false; }
 };
 
 #endif

@@ -813,11 +813,6 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   for (Symbol *S : Symtab.getSymbols()) {
     SymbolBody *Body = S->body();
 
-    // Set "used" bit for --as-needed.
-    if (S->IsUsedInRegularObj && !S->isWeak())
-      if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
-        SS->File->IsUsed = true;
-
     // We only report undefined symbols in regular objects. This means that we
     // will accept an undefined reference in bitcode if it can be optimized out.
     if (S->IsUsedInRegularObj && Body->isUndefined() && !S->isWeak())
@@ -834,7 +829,8 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (isOutputDynamic() && S->includeInDynsym()) {
       Out<ELFT>::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
-        Out<ELFT>::VerNeed->addSymbol(SS);
+        if (SS->File->isNeeded())
+          Out<ELFT>::VerNeed->addSymbol(SS);
     }
   }
 

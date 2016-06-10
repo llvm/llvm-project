@@ -1340,7 +1340,27 @@ namespace lldb_private {
             }
             return nullptr;
         }
-        
+
+        const Entry *
+        FindEntryThatContainsOrFollows(B addr) const
+        {
+#ifdef ASSERT_RANGEMAP_ARE_SORTED
+            assert(IsSorted());
+#endif
+            if (!m_entries.empty())
+            {
+                typename Collection::const_iterator end = m_entries.end();
+                typename Collection::const_iterator pos =
+                    std::lower_bound(m_entries.begin(), end, addr, [](const Entry &lhs, B rhs_base) -> bool {
+                        return lhs.GetRangeBase() < rhs_base;
+                    });
+
+                if (pos != end)
+                    return &(*pos);
+            }
+            return nullptr;
+        }
+
         Entry *
         Back()
         {

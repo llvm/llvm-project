@@ -2032,6 +2032,9 @@ ObjectFileELF::CreateSections(SectionList &unified_section_list)
             else if (name == g_sect_name_arm_extab)                   sect_type = eSectionTypeARMextab;
             else if (name == g_sect_name_go_symtab)                   sect_type = eSectionTypeGoSymtab;
 
+            const uint32_t permissions = ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0) |
+                                         ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0) |
+                                         ((header.sh_flags & SHF_EXECINSTR) ? ePermissionsExecutable : 0);
             switch (header.sh_type)
             {
                 case SHT_SYMTAB:
@@ -2083,6 +2086,7 @@ ObjectFileELF::CreateSections(SectionList &unified_section_list)
                                               header.sh_flags,    // Flags for this section.
                                               target_bytes_size));// Number of host bytes per target byte
 
+            section_sp->SetPermissions(permissions);
             if (is_thread_specific)
                 section_sp->SetIsThreadSpecific (is_thread_specific);
             m_sections_ap->AddSection(section_sp);

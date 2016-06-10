@@ -21,7 +21,6 @@ class BitfieldsTestCase(TestBase):
         self.line = line_number('main.c', '// Set break point at this line.')
 
     @skipIfWindows # BitFields exhibit crashes in record layout on Windows (http://llvm.org/pr21800)
-    @expectedFailureAll("llvm.org/pr27510", oslist=["linux"], compiler="clang", compiler_version=[">=", "3.9"])
     def test_and_run_command(self):
         """Test 'frame variable ...' on a variable with bitfields."""
         self.build()
