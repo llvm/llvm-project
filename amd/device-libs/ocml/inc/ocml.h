@@ -2,40 +2,9 @@
 #ifndef OCML_H
 #define OCML_H
 
-
-// This C header declares the functions defined by the OCML library
-// The behavior of some of these functions can be controlled or optimized
-// by the following set, which must be provided by the implementation
-// possibly on a per-program basis
-//
-//    int __ocml_have_fast_fma32(void)
-//        - fma on float arguments is faster than separate multiply then add
-//
-//    int __ocml_have_fast_fma64(void)
-//        - fma on double arguments is faster than separate multiply then add
-//
-//    int __ocml_finite_only_opt(void)
-//        - the application will only pass finite arguments and expects only finite results
-//
-//    int __ocml_fast_relaxed_opt(void)
-//        - the aopplication accepts optimizations that may lower the accuracy of the results
-//
-//    int __ocml_daz_opt(void)
-//        - the application allows subnormal inputs or outputs to be flushed to zero
-//
-//    int __ocml_amd_opt(void)
-//        - teh applicaiton is running on an AMD device
-//
-//    int __ocml_correctly_rounded_sqrt32(void)
-//        - the application is expecting sqrt(float) to produce a correctly rounded result
-//
-// it is expected that the implementation provides these as if compiled from the following
-// C code:
-//
-//     __attribute__((always_inline, const)) int __ocml_...(void) { return 0; /* or 1 */ }
-// 
-// allowing them and any control flow associated with them to be optimized away
-
+// This C header declares the functions provided by the OCML library
+// Aspects of this library's behavior can be controlled via the 
+// oclc library.  See the oclc header for further information
 
 // Define here the return values from fpclassify
 // These match most host definitions
