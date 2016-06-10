@@ -6,7 +6,7 @@
 // CHECK-SAME:                                  DIFlagArtificial
 // CHECK: !DIDerivedType(tag: DW_TAG_ptr_to_member_type
 // CHECK: !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: ![[MEMFUNTYPE:[0-9]+]]
-// CHECK: ![[MEMFUNTYPE]] = !DISubroutineType(types: ![[MEMFUNARGS:[0-9]+]])
+// CHECK: ![[MEMFUNTYPE]] = !DISubroutineType({{(cc: DW_CC_BORLAND_thiscall, )?}}types: ![[MEMFUNARGS:[0-9]+]])
 // CHECK: ![[MEMFUNARGS]] = {{.*}}, ![[THISTYPE]],
 // CHECK: !DILocalVariable(name: "this", arg: 1
 // CHECK: !DILocalVariable(arg: 2

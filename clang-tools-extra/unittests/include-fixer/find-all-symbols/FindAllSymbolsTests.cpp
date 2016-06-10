@@ -433,5 +433,26 @@ TEST_F(FindAllSymbolsTest, MacroTestWithIWYU) {
   EXPECT_TRUE(hasSymbol(Symbol));
 }
 
+TEST_F(FindAllSymbolsTest, NoFriendTest) {
+  static const char Code[] = R"(
+    class WorstFriend {
+      friend void Friend();
+      friend class BestFriend;
+    };
+  )";
+  runFindAllSymbols(Code);
+  SymbolInfo Symbol = SymbolInfo("WorstFriend", SymbolInfo::SymbolKind::Class,
+                                 HeaderName, 2, {});
+  EXPECT_TRUE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("Friend", SymbolInfo::SymbolKind::Function, HeaderName,
+                      3, {});
+  EXPECT_FALSE(hasSymbol(Symbol));
+
+  Symbol = SymbolInfo("BestFriend", SymbolInfo::SymbolKind::Class, HeaderName,
+                      4, {});
+  EXPECT_FALSE(hasSymbol(Symbol));
+}
+
 } // namespace find_all_symbols
 } // namespace clang

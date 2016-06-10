@@ -204,6 +204,7 @@ types::ID types::lookupTypeForExtension(const char *Ext) {
            .Case("pcm", TY_ModuleFile)
            .Case("pch", TY_PCH)
            .Case("gch", TY_PCH)
+           .Case("rs", TY_RenderScript)
            .Default(TY_INVALID);
 }
 

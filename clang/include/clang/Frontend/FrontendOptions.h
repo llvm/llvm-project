@@ -74,6 +74,7 @@ enum InputKind {
   IK_OpenCL,
   IK_CUDA,
   IK_PreprocessedCuda,
+  IK_RenderScript,
   IK_AST,
   IK_LLVM_IR
 };

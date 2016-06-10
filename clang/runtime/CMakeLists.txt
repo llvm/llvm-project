@@ -34,13 +34,6 @@ if(NOT EXISTS ${COMPILER_RT_SRC_ROOT})
 endif()
 
 if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
-  if(CMAKE_VERSION VERSION_GREATER 3.3.20150708)
-    set(cmake_3_4_USES_TERMINAL_OPTIONS
-      USES_TERMINAL_CONFIGURE 1
-      USES_TERMINAL_BUILD 1
-      USES_TERMINAL_INSTALL 1
-      )
-  endif()
 
   # Add compiler-rt as an external project.
   set(COMPILER_RT_PREFIX ${CMAKE_BINARY_DIR}/projects/compiler-rt)
@@ -86,7 +79,9 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
                ${COMPILER_RT_PASSTHROUGH_VARIABLES}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
-    ${cmake_3_4_USES_TERMINAL_OPTIONS}
+    USES_TERMINAL_CONFIGURE 1
+    USES_TERMINAL_BUILD 1
+    USES_TERMINAL_INSTALL 1
     )
 
   get_ext_project_build_command(run_clean_compiler_rt clean)

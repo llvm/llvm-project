@@ -496,8 +496,7 @@ template <class ELFT, class RelTy>
 static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   typedef typename ELFT::uint uintX_t;
 
-  uintX_t Flags = C.getSectionHdr()->sh_flags;
-  bool IsWrite = Flags & SHF_WRITE;
+  bool IsWrite = C.getSectionHdr()->sh_flags & SHF_WRITE;
 
   auto AddDyn = [=](const DynamicReloc<ELFT> &Reloc) {
     Out<ELFT>::RelaDyn->addReloc(Reloc);

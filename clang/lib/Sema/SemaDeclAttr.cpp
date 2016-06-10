@@ -4234,6 +4234,17 @@ static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
                                     Attr.getAttributeSpellingListIndex()));
 }
 
+static void handleKernelAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+  if (S.LangOpts.RenderScript) {
+    D->addAttr(::new (S.Context)
+               KernelAttr(Attr.getRange(), S.Context,
+                          Attr.getAttributeSpellingListIndex()));
+  } else {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << "kernel";
+  }
+}
+
+
 //===----------------------------------------------------------------------===//
 // Checker-specific attribute handlers.
 //===----------------------------------------------------------------------===//
@@ -6423,6 +6434,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_TypeTagForDatatype:
     handleTypeTagForDatatypeAttr(S, D, Attr);
+    break;
+
+  case AttributeList::AT_Kernel:
+    handleKernelAttr(S, D, Attr);
     break;
 
   // Swift attributes.

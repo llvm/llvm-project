@@ -256,7 +256,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::PredefinedExprClass:
   case Stmt::ShuffleVectorExprClass:
   case Stmt::ConvertVectorExprClass:
-  case Stmt::UnaryExprOrTypeTraitExprClass:
   case Stmt::VAArgExprClass:
   case Stmt::ObjCArrayLiteralClass:
   case Stmt::ObjCDictionaryLiteralClass:
@@ -327,6 +326,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_UnaryOperator;
     break;
 
+  case Stmt::UnaryExprOrTypeTraitExprClass:
   case Stmt::CXXNoexceptExprClass:
     K = CXCursor_UnaryExpr;
     break;
