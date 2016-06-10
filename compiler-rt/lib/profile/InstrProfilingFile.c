@@ -31,6 +31,33 @@
 #endif
 #endif
 
+/* From where is profile name specified.
+ * The order the enumerators define their
+ * precedence. Re-order them may lead to
+ * runtime behavior change. */ 
+typedef enum ProfileNameSpecifier {
+  PNS_unknown = 0,
+  PNS_default,
+  PNS_command_line,
+  PNS_environment,
+  PNS_runtime_api
+} ProfileNameSpecifier;
+
+static const char *getPNSStr(ProfileNameSpecifier PNS) {
+  switch (PNS) {
+  case PNS_default:
+    return "default setting";
+  case PNS_command_line:
+    return "command line";
+  case PNS_environment:
+    return "environment variable";
+  case PNS_runtime_api:
+    return "runtime API";
+  default:
+    return "Unknown";
+  }
+}
+
 #define MAX_PID_SIZE 16
 /* Data structure holding the result of parsed filename pattern.  */
 typedef struct lprofFilename {
@@ -48,9 +75,10 @@ typedef struct lprofFilename {
    * 2 profile data files. %1m is equivalent to %m. Also %m specifier
    * can only appear once at the end of the name pattern. */
   unsigned MergePoolSize;
+  ProfileNameSpecifier PNS;
 } lprofFilename;
 
-lprofFilename lprofCurFilename = {0, {0}, {0}, 0, 0, 0};
+lprofFilename lprofCurFilename = {0, {0}, {0}, 0, 0, 0, PNS_unknown};
 
 int getpid(void);
 static int getCurFilenameLength();
@@ -214,9 +242,11 @@ static void truncateCurrentFile(void) {
   fclose(File);
 }
 
+static const char *DefaultProfileName = "default.profraw";
 static void resetFilenameToDefault(void) {
   memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
-  lprofCurFilename.FilenamePat = "default.profraw";
+  lprofCurFilename.FilenamePat = DefaultProfileName;
+  lprofCurFilename.PNS = PNS_default;
 }
 
 static int containsMergeSpecifier(const char *FilenamePat, int I) {
@@ -278,17 +308,44 @@ static int parseFilenamePattern(const char *FilenamePat) {
   return 0;
 }
 
-static void parseAndSetFilename(const char *FilenamePat) {
-  int NewFile;
-  const char *OldFilenamePat = lprofCurFilename.FilenamePat;
+static void parseAndSetFilename(const char *FilenamePat,
+                                ProfileNameSpecifier PNS) {
 
+  const char *OldFilenamePat = lprofCurFilename.FilenamePat;
+  ProfileNameSpecifier OldPNS = lprofCurFilename.PNS;
+
+  if (PNS < OldPNS)
+    return;
+
+  if (!FilenamePat)
+    FilenamePat = DefaultProfileName;
+
+  /* When -fprofile-instr-generate=<path> is specified on the
+   * command line, each module will be instrumented with runtime
+   * init call to __llvm_profile_init function which calls
+   * __llvm_profile_override_default_filename. In most of the cases,
+   * the path will be identical, so bypass the parsing completely.
+   */
+  if (OldFilenamePat && !strcmp(OldFilenamePat, FilenamePat)) {
+    lprofCurFilename.PNS = PNS;
+    return;
+  }
+
+  /* When PNS >= OldPNS, the last one wins. */
   if (!FilenamePat || parseFilenamePattern(FilenamePat))
     resetFilenameToDefault();
+  lprofCurFilename.PNS = PNS;
 
-  NewFile =
-      !OldFilenamePat || (strcmp(OldFilenamePat, lprofCurFilename.FilenamePat));
+  if (!OldFilenamePat) {
+    PROF_NOTE("Set profile file path to \"%s\" via %s.\n",
+              lprofCurFilename.FilenamePat, getPNSStr(PNS));
+  } else {
+    PROF_NOTE("Override old profile path \"%s\" via %s to \"%s\" via %s.\n",
+              OldFilenamePat, getPNSStr(OldPNS), lprofCurFilename.FilenamePat,
+              getPNSStr(PNS));
+  }
 
-  if (NewFile && !lprofCurFilename.MergePoolSize)
+  if (!lprofCurFilename.MergePoolSize)
     truncateCurrentFile();
 }
 
@@ -376,13 +433,9 @@ static const char *getFilenamePatFromEnv(void) {
 COMPILER_RT_VISIBILITY
 void __llvm_profile_initialize_file(void) {
   const char *FilenamePat;
-  /* Check if the filename has been initialized. */
-  if (lprofCurFilename.FilenamePat)
-    return;
 
-  /* Detect the filename and truncate. */
   FilenamePat = getFilenamePatFromEnv();
-  parseAndSetFilename(FilenamePat);
+  parseAndSetFilename(FilenamePat, FilenamePat ? PNS_environment : PNS_default);
 }
 
 /* This API is directly called by the user application code. It has the
@@ -391,7 +444,7 @@ void __llvm_profile_initialize_file(void) {
  */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_set_filename(const char *FilenamePat) {
-  parseAndSetFilename(FilenamePat);
+  parseAndSetFilename(FilenamePat, PNS_runtime_api);
 }
 
 /*
@@ -402,12 +455,7 @@ void __llvm_profile_set_filename(const char *FilenamePat) {
  */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_override_default_filename(const char *FilenamePat) {
-  /* If the env var is set, skip setting filename from argument. */
-  const char *Env_Filename = getFilenamePatFromEnv();
-  if (Env_Filename)
-    return;
-
-  parseAndSetFilename(FilenamePat);
+  parseAndSetFilename(FilenamePat, PNS_command_line);
 }
 
 /* The public API for writing profile data into the file with name

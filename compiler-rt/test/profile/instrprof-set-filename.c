@@ -35,12 +35,6 @@
 // RUN: %clang_profuse=%t.env.profdata -o - -S -emit-llvm %s | FileCheck %s
 // RUN: rm %t.env.profraw
 // RUN: rm %t.env.profdata
-// 6. Test that __llvm_profile_set_filename is honored by shared libary too.
-// RUN: mkdir -p %t.d
-// RUN: %clang -fprofile-instr-generate=%t.shared.profraw -fPIC -shared -o %t.d/t.shared %S/Inputs/instrprof-dlopen-func.c
-// RUN: %clang_profgen -DCALL_SHARED -o %t.m -O3 -rpath %t.d %t.d/t.shared %s  
-// RUN: %run %t.m %t.main.profraw
-// RUN: llvm-profdata show %t.main.profraw | FileCheck --check-prefix=SHARED %s
 
 #ifdef CALL_SHARED
 extern void func(int);

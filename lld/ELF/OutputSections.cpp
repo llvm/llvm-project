@@ -207,19 +207,22 @@ unsigned GotSection<ELFT>::getMipsLocalEntriesNum() const {
 }
 
 template <class ELFT> void GotSection<ELFT>::finalize() {
-  if (Config->EMachine == EM_MIPS)
+  size_t EntriesNum = Entries.size();
+  if (Config->EMachine == EM_MIPS) {
     // Take into account MIPS GOT header.
     // See comment in the GotSection::writeTo.
     MipsLocalEntries += 2;
-  for (const OutputSectionBase<ELFT> *OutSec : MipsOutSections) {
-    // Calculate an upper bound of MIPS GOT entries required to store page
-    // addresses of local symbols. We assume the worst case - each 64kb
-    // page of the output section has at least one GOT relocation against it.
-    // Add 0x8000 to the section's size because the page address stored
-    // in the GOT entry is calculated as (value + 0x8000) & ~0xffff.
-    MipsLocalEntries += (OutSec->getSize() + 0x8000 + 0xfffe) / 0xffff;
+    for (const OutputSectionBase<ELFT> *OutSec : MipsOutSections) {
+      // Calculate an upper bound of MIPS GOT entries required to store page
+      // addresses of local symbols. We assume the worst case - each 64kb
+      // page of the output section has at least one GOT relocation against it.
+      // Add 0x8000 to the section's size because the page address stored
+      // in the GOT entry is calculated as (value + 0x8000) & ~0xffff.
+      MipsLocalEntries += (OutSec->getSize() + 0x8000 + 0xfffe) / 0xffff;
+    }
+    EntriesNum += MipsLocalEntries;
   }
-  this->Header.sh_size = (MipsLocalEntries + Entries.size()) * sizeof(uintX_t);
+  this->Header.sh_size = EntriesNum * sizeof(uintX_t);
 }
 
 template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -240,12 +243,12 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
     // if we had to do this.
     auto *P = reinterpret_cast<typename ELFT::Off *>(Buf);
     P[1] = uintX_t(1) << (ELFT::Is64Bits ? 63 : 31);
+    for (std::pair<uintX_t, size_t> &L : MipsLocalGotPos) {
+      uint8_t *Entry = Buf + L.second * sizeof(uintX_t);
+      write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, L.first);
+    }
+    Buf += MipsLocalEntries * sizeof(uintX_t);
   }
-  for (std::pair<uintX_t, size_t> &L : MipsLocalGotPos) {
-    uint8_t *Entry = Buf + L.second * sizeof(uintX_t);
-    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, L.first);
-  }
-  Buf += MipsLocalEntries * sizeof(uintX_t);
   for (const SymbolBody *B : Entries) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
