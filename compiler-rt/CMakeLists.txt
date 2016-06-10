@@ -25,27 +25,7 @@ cmake_minimum_required(VERSION 3.4.3)
 # projects/compiler-rt/cmake/Modules/CompilerRTUtils.cmake:121 such that
 # CAN_TARGET_${arch} is not set properly. This results in COMPILER_RT_SUPPORTED_ARCH
 # not being updated properly leading to poblems.
-cmake_policy(SET CMP0056 OLD) 
-
-# FIXME: It may be removed when we use 2.8.12.
-if(CMAKE_VERSION VERSION_LESS 2.8.12)
-  # Invalidate a couple of keywords.
-  set(cmake_2_8_12_INTERFACE)
-  set(cmake_2_8_12_PRIVATE)
-  if(APPLE)
-    set(CMAKE_MACOSX_RPATH On)
-  endif()
-else()
-  # Use ${cmake_2_8_12_KEYWORD} intead of KEYWORD in target_link_libraries().
-  set(cmake_2_8_12_INTERFACE INTERFACE)
-  set(cmake_2_8_12_PRIVATE PRIVATE)
-  if(POLICY CMP0022)
-    cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required
-  endif()
-  if(POLICY CMP0042)
-    cmake_policy(SET CMP0042 NEW) # automatic when 2.8.12 is required
-  endif()
-endif()
+cmake_policy(SET CMP0056 OLD)
 
 # Add path for custom compiler-rt modules.
 list(INSERT CMAKE_MODULE_PATH 0

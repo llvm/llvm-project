@@ -26,7 +26,9 @@ namespace __esan {
 // This should be kept consistent with LLVM's EfficiencySanitizer StructInfo.
 struct StructInfo {
   const char *StructName;
+  u32 Size;
   u32 NumFields;
+  u32 *FieldOffsets;
   u64 *FieldCounters;
   const char **FieldTypeNames;
 };
@@ -89,9 +91,11 @@ static void reportStructCounter(StructHashMap::Handle &Handle) {
   end = strchr(start, '#');
   CHECK(end != nullptr);
   Report("  %s %.*s\n", type, end - start, start);
-  Report("   count = %llu, ratio = %llu\n", Handle->Count, Handle->Ratio);
+  Report("   size = %u, count = %llu, ratio = %llu\n",
+         Struct->Size, Handle->Count, Handle->Ratio);
   for (u32 i = 0; i < Struct->NumFields; ++i) {
-    Report("   #%2u: count = %llu,\t type = %s\n", i, Struct->FieldCounters[i],
+    Report("   #%2u: offset = %u,\t count = %llu,\t type = %s\n", i,
+           Struct->FieldOffsets[i], Struct->FieldCounters[i],
            Struct->FieldTypeNames[i]);
   }
 }
