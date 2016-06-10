@@ -171,7 +171,7 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
     return VarName;
 
   // Now fix up illegal chars in local VarName that may upset the assembler.
-  const char *InvalidChars = "-:<>\"'";
+  const char *InvalidChars = "-:<>/\"'";
   size_t found = VarName.find_first_of(InvalidChars);
   while (found != std::string::npos) {
     VarName[found] = '_';

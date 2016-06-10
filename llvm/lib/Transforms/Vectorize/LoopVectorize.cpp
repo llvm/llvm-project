@@ -423,8 +423,8 @@ protected:
   virtual Value *getStepVector(Value *Val, int StartIdx, const SCEV *Step);
 
   /// Create a vector induction variable based on an existing scalar one.
-  /// Currently only works for integer primary induction variables with
-  /// a constant step.
+  /// Currently only works for integer induction variables with a constant
+  /// step.
   /// If TruncType is provided, instead of widening the original IV, we
   /// widen a version of the IV truncated to TruncType.
   void widenInductionVariable(const InductionDescriptor &II, VectorParts &Entry,
@@ -2126,7 +2126,8 @@ void InnerLoopVectorizer::widenInductionVariable(const InductionDescriptor &II,
   Builder.restoreIP(CurrIP);
 
   Value *SplatVF =
-      ConstantVector::getSplat(VF, ConstantInt::get(Start->getType(), VF));
+      ConstantVector::getSplat(VF, ConstantInt::getSigned(Start->getType(),
+                               VF * Step->getSExtValue()));
   // We may need to add the step a number of times, depending on the unroll
   // factor. The last of those goes into the PHI.
   PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind",
@@ -4098,7 +4099,8 @@ void InnerLoopVectorizer::widenPHIInstruction(
     llvm_unreachable("Unknown induction");
   case InductionDescriptor::IK_IntInduction: {
     assert(P->getType() == II.getStartValue()->getType() && "Types must match");
-    if (P != OldInduction || VF == 1) {
+    if (VF == 1 || P->getType() != Induction->getType() ||
+        !II.getConstIntStepValue()) {
       Value *V = Induction;
       // Handle other induction variables that are now based on the
       // canonical one.
@@ -6191,7 +6193,7 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LCSSA)
+INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)

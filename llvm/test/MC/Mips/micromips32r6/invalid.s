@@ -234,3 +234,5 @@
   bc2nezc $31, -65537      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
   bc2nezc $31, 65535       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
   bc2nezc $31, 65536       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  jalrc $31                # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+  jalrc $31, $31           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different

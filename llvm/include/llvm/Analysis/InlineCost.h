@@ -23,6 +23,7 @@ class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class Function;
+class ProfileSummaryInfo;
 class TargetTransformInfo;
 
 namespace InlineConstants {
@@ -111,7 +112,7 @@ public:
 /// inlining the callsite. It is an expensive, heavyweight call.
 InlineCost getInlineCost(CallSite CS, int DefaultThreshold,
                          TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT);
+                         AssumptionCacheTracker *ACT, ProfileSummaryInfo *PSI);
 
 /// \brief Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
@@ -120,7 +121,7 @@ InlineCost getInlineCost(CallSite CS, int DefaultThreshold,
 //
 InlineCost getInlineCost(CallSite CS, Function *Callee, int DefaultThreshold,
                          TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT);
+                         AssumptionCacheTracker *ACT, ProfileSummaryInfo *PSI);
 
 int computeThresholdFromOptLevels(unsigned OptLevel, unsigned SizeOptLevel);
 

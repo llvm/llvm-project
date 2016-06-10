@@ -118,6 +118,28 @@ static cl::opt<bool> ExitOnError(
     cl::desc("Exit as soon as an error is encountered."),
     cl::init(false), cl::Hidden);
 
+namespace {
+static ManagedStatic<std::vector<std::string>> RunPassNames;
+
+struct RunPassOption {
+  void operator=(const std::string &Val) const {
+    if (Val.empty())
+      return;
+    SmallVector<StringRef, 8> PassNames;
+    StringRef(Val).split(PassNames, ',', -1, false);
+    for (auto PassName : PassNames)
+      RunPassNames->push_back(PassName);
+  }
+};
+}
+
+static RunPassOption RunPassOpt;
+
+static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
+    "run-pass",
+    cl::desc("Run compiler only for specified passes (comma separated list)"),
+    cl::value_desc("pass-name"), cl::ZeroOrMore, cl::location(RunPassOpt));
+
 static int compileModule(char **, LLVMContext &);
 
 static std::unique_ptr<tool_output_file>
@@ -260,10 +282,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
   if (!SkipModule) {
     if (StringRef(InputFilename).endswith_lower(".mir")) {
       MIR = createMIRParserFromFile(InputFilename, Err, Context);
-      if (MIR) {
+      if (MIR)
         M = MIR->parseLLVMModule();
-        assert(M && "parseLLVMModule should exit on failure");
-      }
     } else
       M = parseIRFile(InputFilename, Err, Context);
     if (!M) {
@@ -381,7 +401,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     AnalysisID StartAfterID = nullptr;
     AnalysisID StopAfterID = nullptr;
     const PassRegistry *PR = PassRegistry::getPassRegistry();
-    if (!RunPass.empty()) {
+    if (!RunPassNames->empty()) {
       if (!StartAfter.empty() || !StopAfter.empty()) {
         errs() << argv[0] << ": start-after and/or stop-after passes are "
                              "redundant when run-pass is specified.\n";
@@ -391,11 +411,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
         errs() << argv[0] << ": run-pass needs a .mir input.\n";
         return 1;
       }
-      const PassInfo *PI = PR->getPassInfo(RunPass);
-      if (!PI) {
-        errs() << argv[0] << ": run-pass pass is not registered.\n";
-        return 1;
-      }
       LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine&>(*Target);
       TargetPassConfig *TPC = LLVMTM.createPassConfig(PM);
       PM.add(TPC);
@@ -403,21 +418,28 @@ static int compileModule(char **argv, LLVMContext &Context) {
       LLVMTM.addMachineFunctionAnalysis(PM, MIR.get());
       TPC->printAndVerify("");
 
-      Pass *P;
-      if (PI->getTargetMachineCtor())
-        P = PI->getTargetMachineCtor()(Target.get());
-      else if (PI->getNormalCtor())
-        P = PI->getNormalCtor()();
-      else {
-        errs() << argv[0] << ": cannot create pass: "
-               << PI->getPassName() << "\n";
-        return 1;
-      }
-      std::string Banner
-        = std::string("After ") + std::string(P->getPassName());
-      PM.add(P);
-      TPC->printAndVerify(Banner);
+      for (std::string &RunPassName : *RunPassNames) {
+        const PassInfo *PI = PR->getPassInfo(RunPassName);
+        if (!PI) {
+          errs() << argv[0] << ": run-pass " << RunPassName << " is not registered.\n";
+          return 1;
+        }
 
+        Pass *P;
+        if (PI->getTargetMachineCtor())
+          P = PI->getTargetMachineCtor()(Target.get());
+        else if (PI->getNormalCtor())
+          P = PI->getNormalCtor()();
+        else {
+          errs() << argv[0] << ": cannot create pass: "
+                 << PI->getPassName() << "\n";
+          return 1;
+        }
+        std::string Banner
+          = std::string("After ") + std::string(P->getPassName());
+        PM.add(P);
+        TPC->printAndVerify(Banner);
+      }
       PM.add(createPrintMIRPass(errs()));
     } else {
       if (!StartAfter.empty()) {

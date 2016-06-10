@@ -124,7 +124,7 @@ public:
 
   void addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers = true) const {
     if (Imm.Type == ImmTyNone && ApplyModifiers && Imm.Modifiers != 0) {
-      // Apply modifiers to immediate value 
+      // Apply modifiers to immediate value
       int64_t Val = Imm.Val;
       bool Negate = Imm.Modifiers & 0x1;
       bool Abs = Imm.Modifiers & 0x2;
@@ -562,7 +562,7 @@ public:
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<AMDGPUTargetStreamer &>(TS);
   }
-  
+
   void setForcedEncodingSize(unsigned Size) { ForcedEncodingSize = Size; }
   void setForcedDPP(bool ForceDPP_) { ForcedDPP = ForceDPP_; }
   void setForcedSDWA(bool ForceSDWA_) { ForcedSDWA = ForceSDWA_; }
@@ -638,10 +638,10 @@ public:
   AMDGPUOperand::Ptr defaultLWE() const;
   AMDGPUOperand::Ptr defaultSMRDOffset() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
-  
+
   AMDGPUOperand::Ptr defaultClampSI() const;
   AMDGPUOperand::Ptr defaultOModSI() const;
-  
+
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
 
   void cvtId(MCInst &Inst, const OperandVector &Operands);
@@ -943,7 +943,7 @@ AMDGPUAsmParser::parseImm(OperandVector &Operands) {
     if (Minus)
       F.changeSign();
     Operands.push_back(
-        AMDGPUOperand::CreateImm(F.bitcastToAPInt().getZExtValue(), S, 
+        AMDGPUOperand::CreateImm(F.bitcastToAPInt().getZExtValue(), S,
                                  AMDGPUOperand::ImmTyNone, true));
     return MatchOperand_Success;
   }
@@ -970,7 +970,7 @@ AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands) {
 
 AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseRegOrImmWithInputMods(OperandVector &Operands) {
-  // XXX: During parsing we can't determine if minus sign means 
+  // XXX: During parsing we can't determine if minus sign means
   // negate-modifier or negative immediate value.
   // By default we suppose it is modifier.
   bool Negate = false, Abs = false, Abs2 = false;
@@ -1024,7 +1024,7 @@ AMDGPUAsmParser::parseRegOrImmWithInputMods(OperandVector &Operands) {
     Parser.Lex();
     Modifiers |= 0x2;
   }
-  
+
   if (Modifiers) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     Op.setModifiers(Modifiers);
@@ -1403,23 +1403,23 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   // Add the instruction mnemonic
   Name = parseMnemonicSuffix(Name);
   Operands.push_back(AMDGPUOperand::CreateToken(Name, NameLoc));
-    
+
   while (!getLexer().is(AsmToken::EndOfStatement)) {
     AMDGPUAsmParser::OperandMatchResultTy Res = parseOperand(Operands, Name);
 
     // Eat the comma or space if there is one.
     if (getLexer().is(AsmToken::Comma))
       Parser.Lex();
-    
+
     switch (Res) {
       case MatchOperand_Success: break;
-      case MatchOperand_ParseFail: 
+      case MatchOperand_ParseFail:
         Error(getLexer().getLoc(), "failed parsing operand.");
         while (!getLexer().is(AsmToken::EndOfStatement)) {
           Parser.Lex();
         }
         return true;
-      case MatchOperand_NoMatch: 
+      case MatchOperand_NoMatch:
         Error(getLexer().getLoc(), "not a valid operand.");
         while (!getLexer().is(AsmToken::EndOfStatement)) {
           Parser.Lex();
@@ -1527,7 +1527,7 @@ void addOptionalImmOperand(MCInst& Inst, const OperandVector& Operands,
   }
 }
 
-AMDGPUAsmParser::OperandMatchResultTy 
+AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseStringWithPrefix(StringRef Prefix, StringRef &Value) {
   if (getLexer().isNot(AsmToken::Identifier)) {
     return MatchOperand_NoMatch;
@@ -1541,7 +1541,7 @@ AMDGPUAsmParser::parseStringWithPrefix(StringRef Prefix, StringRef &Value) {
   if (getLexer().isNot(AsmToken::Colon)) {
     return MatchOperand_ParseFail;
   }
-    
+
   Parser.Lex();
   if (getLexer().isNot(AsmToken::Identifier)) {
     return MatchOperand_ParseFail;
@@ -2538,12 +2538,12 @@ AMDGPUAsmParser::parseSDWASel(OperandVector &Operands, StringRef Prefix,
   SMLoc S = Parser.getTok().getLoc();
   StringRef Value;
   AMDGPUAsmParser::OperandMatchResultTy res;
-  
+
   res = parseStringWithPrefix(Prefix, Value);
   if (res != MatchOperand_Success) {
     return res;
   }
-  
+
   int64_t Int;
   Int = StringSwitch<int64_t>(Value)
         .Case("BYTE_0", 0)
@@ -2564,7 +2564,7 @@ AMDGPUAsmParser::parseSDWASel(OperandVector &Operands, StringRef Prefix,
   return MatchOperand_Success;
 }
 
-AMDGPUAsmParser::OperandMatchResultTy 
+AMDGPUAsmParser::OperandMatchResultTy
 AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
   SMLoc S = Parser.getTok().getLoc();
   StringRef Value;
@@ -2688,7 +2688,7 @@ extern "C" void LLVMInitializeAMDGPUAsmParser() {
 unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
                                                      unsigned Kind) {
   // Tokens like "glc" would be parsed as immediate operands in ParseOperand().
-  // But MatchInstructionImpl() expects to meet token and fails to validate 
+  // But MatchInstructionImpl() expects to meet token and fails to validate
   // operand. This method checks if we are given immediate operand but expect to
   // get corresponding token.
   AMDGPUOperand &Operand = (AMDGPUOperand&)Op;

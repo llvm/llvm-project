@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
+#include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -20,10 +21,12 @@
 #include <memory>
 
 namespace llvm {
-class MemoryBuffer;
+
+namespace codeview {
+class StreamInterface;
+}
 
 namespace pdb {
-struct PDBFileContext;
 class DbiStream;
 class InfoStream;
 class MappedBlockStream;
@@ -32,9 +35,37 @@ class PublicsStream;
 class SymbolStream;
 class TpiStream;
 
+static const char MsfMagic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
+                                't',  ' ',  'C',    '/', 'C', '+',  '+',  ' ',
+                                'M',  'S',  'F',    ' ', '7', '.',  '0',  '0',
+                                '\r', '\n', '\x1a', 'D', 'S', '\0', '\0', '\0'};
+
 class PDBFile : public IPDBFile {
 public:
-  explicit PDBFile(std::unique_ptr<MemoryBuffer> MemBuffer);
+  // The superblock is overlaid at the beginning of the file (offset 0).
+  // It starts with a magic header and is followed by information which
+  // describes the layout of the file system.
+  struct SuperBlock {
+    char MagicBytes[sizeof(MsfMagic)];
+    // The file system is split into a variable number of fixed size elements.
+    // These elements are referred to as blocks.  The size of a block may vary
+    // from system to system.
+    support::ulittle32_t BlockSize;
+    // This field's purpose is not yet known.
+    support::ulittle32_t Unknown0;
+    // This contains the number of blocks resident in the file system.  In
+    // practice, NumBlocks * BlockSize is equivalent to the size of the PDB
+    // file.
+    support::ulittle32_t NumBlocks;
+    // This contains the number of bytes which make up the directory.
+    support::ulittle32_t NumDirectoryBytes;
+    // This field's purpose is not yet known.
+    support::ulittle32_t Unknown1;
+    // This contains the block # of the block map.
+    support::ulittle32_t BlockMapAddr;
+  };
+
+  explicit PDBFile(std::unique_ptr<codeview::StreamInterface> PdbFileBuffer);
   ~PDBFile() override;
 
   uint32_t getUnknown0() const;
@@ -54,6 +85,8 @@ public:
 
   ArrayRef<uint8_t> getBlockData(uint32_t BlockIndex,
                                  uint32_t NumBytes) const override;
+  Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
+                     ArrayRef<uint8_t> Data) const override;
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 
@@ -77,7 +110,11 @@ public:
   Expected<NameHashTable &> getStringTable();
 
 private:
-  std::unique_ptr<PDBFileContext> Context;
+  std::unique_ptr<codeview::StreamInterface> Buffer;
+  const PDBFile::SuperBlock *SB;
+  ArrayRef<support::ulittle32_t> StreamSizes;
+  std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
+
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;
   std::unique_ptr<TpiStream> Tpi;

@@ -1238,9 +1238,9 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
 
   // Create and return a placeholder to use for now.  Eventually
   // resolveTypeRefArrays() will be resolve this forward reference.
-  OldTypeRefs.Arrays.emplace_back();
-  OldTypeRefs.Arrays.back().first.reset(Tuple);
-  OldTypeRefs.Arrays.back().second = MDTuple::getTemporary(Context, None);
+  OldTypeRefs.Arrays.emplace_back(
+      std::piecewise_construct, std::forward_as_tuple(Tuple),
+      std::forward_as_tuple(MDTuple::getTemporary(Context, None)));
   return OldTypeRefs.Arrays.back().second.get();
 }
 

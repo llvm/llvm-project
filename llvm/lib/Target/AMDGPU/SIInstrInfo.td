@@ -190,6 +190,9 @@ def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
 def atomic_inc_global : global_binary_atomic_op<SIatomic_inc>;
 def atomic_dec_global : global_binary_atomic_op<SIatomic_dec>;
 
+def atomic_inc_flat : flat_binary_atomic_op<SIatomic_inc>;
+def atomic_dec_flat : flat_binary_atomic_op<SIatomic_dec>;
+
 //===----------------------------------------------------------------------===//
 // SDNodes and PatFrag for local loads and stores to enable s_mov_b32 m0, -1
 // to be glued to the memory instructions.
@@ -567,6 +570,7 @@ def DS64Bit4ByteAligned : ComplexPattern<i32, 3, "SelectDS64Bit4ByteAligned">;
 def MUBUFAddr32 : ComplexPattern<i64, 9, "SelectMUBUFAddr32">;
 def MUBUFAddr64 : ComplexPattern<i64, 7, "SelectMUBUFAddr64">;
 def MUBUFAddr64Atomic : ComplexPattern<i64, 5, "SelectMUBUFAddr64">;
+def FLATAtomic : ComplexPattern<i64, 3, "SelectFlat">;
 def MUBUFScratch : ComplexPattern<i64, 4, "SelectMUBUFScratch">;
 def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
 def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
@@ -2112,8 +2116,8 @@ multiclass VOP2e_Helper <vop2 op, string opName, VOPProfile p,
                          list<dag> pat32, list<dag> pat64,
                          string revOp, bit useSGPRInput> {
 
-  let SchedRW = [Write32Bit, WriteSALU] in {
-    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC] in {
+  let SchedRW = [Write32Bit] in {
+    let Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]) in {
       defm _e32 : VOP2_m <op, opName, p, pat32, revOp>;
     }
 
@@ -3210,32 +3214,36 @@ multiclass FLAT_Store_Helper <flat op, string asm_name,
 }
 
 multiclass FLAT_ATOMIC <flat op, string asm_name, RegisterClass vdst_rc,
+    ValueType vt, SDPatternOperator atomic = null_frag,
+    ValueType data_vt = vt,
     RegisterClass data_rc = vdst_rc,
-    dag outs_noret = (outs),
     string asm_noret = asm_name#" $addr, $data"#"$slc"#"$tfe"> {
 
   let mayLoad = 1, mayStore = 1, glc = 0, vdst = 0 in {
-    def "" : FLAT_Pseudo <NAME, outs_noret,
+    def "" : FLAT_Pseudo <NAME, (outs),
                           (ins VReg_64:$addr, data_rc:$data,
                                slc:$slc, tfe:$tfe), []>,
              AtomicNoRet <NAME, 0>;
 
-    def _ci : FLAT_Real_ci <op.CI, NAME, outs_noret,
+    def _ci : FLAT_Real_ci <op.CI, NAME, (outs),
                             (ins VReg_64:$addr, data_rc:$data,
                                  slc:$slc, tfe:$tfe),
                             asm_noret>;
 
-    def _vi : FLAT_Real_vi <op.VI, NAME, outs_noret,
+    def _vi : FLAT_Real_vi <op.VI, NAME, (outs),
                             (ins VReg_64:$addr, data_rc:$data,
                                  slc:$slc, tfe:$tfe),
                             asm_noret>;
   }
 
   let glc = 1, hasPostISelHook = 1 in {
-    defm _RTN : FLAT_AtomicRet_m <op, (outs vdst_rc:$vdst),
-                        (ins VReg_64:$addr, data_rc:$data, slc:$slc,
-                             tfe:$tfe),
-                        asm_name#" $vdst, $addr, $data glc$slc$tfe", []>;
+    defm _RTN : FLAT_AtomicRet_m <
+      op, (outs vdst_rc:$vdst),
+      (ins VReg_64:$addr, data_rc:$data, slc:$slc, tfe:$tfe),
+      asm_name#" $vdst, $addr, $data glc$slc$tfe",
+      [(set vt:$vdst,
+         (atomic (FLATAtomic i64:$addr, i1:$slc, i1:$tfe), data_vt:$data))]
+    >;
   }
 }
 

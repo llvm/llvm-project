@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
+#include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/DirectoryStreamData.h"
@@ -25,132 +26,86 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
+using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 namespace {
-static const char Magic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
-                             't',  ' ',  'C',    '/', 'C', '+',  '+',  ' ',
-                             'M',  'S',  'F',    ' ', '7', '.',  '0',  '0',
-                             '\r', '\n', '\x1a', 'D', 'S', '\0', '\0', '\0'};
-
-// The superblock is overlaid at the beginning of the file (offset 0).
-// It starts with a magic header and is followed by information which describes
-// the layout of the file system.
-struct SuperBlock {
-  char MagicBytes[sizeof(Magic)];
-  // The file system is split into a variable number of fixed size elements.
-  // These elements are referred to as blocks.  The size of a block may vary
-  // from system to system.
-  support::ulittle32_t BlockSize;
-  // This field's purpose is not yet known.
-  support::ulittle32_t Unknown0;
-  // This contains the number of blocks resident in the file system.  In
-  // practice, NumBlocks * BlockSize is equivalent to the size of the PDB file.
-  support::ulittle32_t NumBlocks;
-  // This contains the number of bytes which make up the directory.
-  support::ulittle32_t NumDirectoryBytes;
-  // This field's purpose is not yet known.
-  support::ulittle32_t Unknown1;
-  // This contains the block # of the block map.
-  support::ulittle32_t BlockMapAddr;
-};
-
-typedef codeview::FixedStreamArray<support::ulittle32_t> ulittle_array;
+typedef FixedStreamArray<support::ulittle32_t> ulittle_array;
 }
 
-struct llvm::pdb::PDBFileContext {
-  std::unique_ptr<MemoryBuffer> Buffer;
-  const SuperBlock *SB;
-  ArrayRef<support::ulittle32_t> StreamSizes;
-  std::vector<ulittle_array> StreamMap;
-};
-
-static Error checkOffset(MemoryBufferRef M, uintptr_t Addr,
-                         const uint64_t Size) {
-  if (Addr + Size < Addr || Addr + Size < Size ||
-      Addr + Size > uintptr_t(M.getBufferEnd()) ||
-      Addr < uintptr_t(M.getBufferStart())) {
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Invalid buffer address");
-  }
-  return Error::success();
-}
-
-template <typename T>
-static Error checkOffset(MemoryBufferRef M, ArrayRef<T> AR) {
-  return checkOffset(M, uintptr_t(AR.data()), (uint64_t)AR.size() * sizeof(T));
-}
-
-PDBFile::PDBFile(std::unique_ptr<MemoryBuffer> MemBuffer) {
-  Context.reset(new PDBFileContext());
-  Context->Buffer = std::move(MemBuffer);
-}
+PDBFile::PDBFile(std::unique_ptr<StreamInterface> PdbFileBuffer)
+    : Buffer(std::move(PdbFileBuffer)), SB(nullptr) {}
 
 PDBFile::~PDBFile() {}
 
-uint32_t PDBFile::getBlockSize() const { return Context->SB->BlockSize; }
+uint32_t PDBFile::getBlockSize() const { return SB->BlockSize; }
 
-uint32_t PDBFile::getUnknown0() const { return Context->SB->Unknown0; }
+uint32_t PDBFile::getUnknown0() const { return SB->Unknown0; }
 
-uint32_t PDBFile::getBlockCount() const { return Context->SB->NumBlocks; }
+uint32_t PDBFile::getBlockCount() const { return SB->NumBlocks; }
 
-uint32_t PDBFile::getNumDirectoryBytes() const {
-  return Context->SB->NumDirectoryBytes;
-}
+uint32_t PDBFile::getNumDirectoryBytes() const { return SB->NumDirectoryBytes; }
 
-uint32_t PDBFile::getBlockMapIndex() const { return Context->SB->BlockMapAddr; }
+uint32_t PDBFile::getBlockMapIndex() const { return SB->BlockMapAddr; }
 
-uint32_t PDBFile::getUnknown1() const { return Context->SB->Unknown1; }
+uint32_t PDBFile::getUnknown1() const { return SB->Unknown1; }
 
 uint32_t PDBFile::getNumDirectoryBlocks() const {
-  return bytesToBlocks(Context->SB->NumDirectoryBytes, Context->SB->BlockSize);
+  return bytesToBlocks(SB->NumDirectoryBytes, SB->BlockSize);
 }
 
 uint64_t PDBFile::getBlockMapOffset() const {
-  return (uint64_t)Context->SB->BlockMapAddr * Context->SB->BlockSize;
+  return (uint64_t)SB->BlockMapAddr * SB->BlockSize;
 }
 
-uint32_t PDBFile::getNumStreams() const { return Context->StreamSizes.size(); }
+uint32_t PDBFile::getNumStreams() const { return StreamSizes.size(); }
 
 uint32_t PDBFile::getStreamByteSize(uint32_t StreamIndex) const {
-  return Context->StreamSizes[StreamIndex];
+  return StreamSizes[StreamIndex];
 }
 
 ArrayRef<support::ulittle32_t>
 PDBFile::getStreamBlockList(uint32_t StreamIndex) const {
-  auto Result = Context->StreamMap[StreamIndex];
-  codeview::StreamReader Reader(Result.getUnderlyingStream());
-  ArrayRef<support::ulittle32_t> Array;
-  if (auto EC = Reader.readArray(Array, Result.size()))
-    return ArrayRef<support::ulittle32_t>();
-  return Array;
+  return StreamMap[StreamIndex];
 }
 
 ArrayRef<uint8_t> PDBFile::getBlockData(uint32_t BlockIndex,
                                         uint32_t NumBytes) const {
   uint64_t StreamBlockOffset = blockToOffset(BlockIndex, getBlockSize());
 
-  return ArrayRef<uint8_t>(
-      reinterpret_cast<const uint8_t *>(Context->Buffer->getBufferStart()) +
-          StreamBlockOffset,
-      NumBytes);
+  ArrayRef<uint8_t> Result;
+  if (auto EC = Buffer->readBytes(StreamBlockOffset, NumBytes, Result))
+    consumeError(std::move(EC));
+  return Result;
+}
+
+Error PDBFile::setBlockData(uint32_t BlockIndex, uint32_t Offset,
+                            ArrayRef<uint8_t> Data) const {
+  if (Offset >= getBlockSize())
+    return make_error<RawError>(
+        raw_error_code::invalid_block_address,
+        "setBlockData attempted to write out of block bounds.");
+  if (Data.size() >= getBlockSize() - Offset)
+    return make_error<RawError>(
+        raw_error_code::invalid_block_address,
+        "setBlockData attempted to write out of block bounds.");
+
+  uint64_t StreamBlockOffset = blockToOffset(BlockIndex, getBlockSize());
+  StreamBlockOffset += Offset;
+  return Buffer->writeBytes(StreamBlockOffset, Data);
 }
 
 Error PDBFile::parseFileHeaders() {
-  std::error_code EC;
-  MemoryBufferRef BufferRef = *Context->Buffer;
+  StreamReader Reader(*Buffer);
 
-  // Make sure the file is sufficiently large to hold a super block.
-  // Do this before attempting to read the super block.
-  if (BufferRef.getBufferSize() < sizeof(SuperBlock))
+  if (auto EC = Reader.readObject(SB)) {
+    consumeError(std::move(EC));
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Does not contain superblock");
+  }
 
-  Context->SB =
-      reinterpret_cast<const SuperBlock *>(BufferRef.getBufferStart());
-  const SuperBlock *SB = Context->SB;
   // Check the magic bytes.
-  if (memcmp(SB->MagicBytes, Magic, sizeof(Magic)) != 0)
+  if (memcmp(SB->MagicBytes, MsfMagic, sizeof(MsfMagic)) != 0)
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "MSF magic header doesn't match");
 
@@ -168,7 +123,7 @@ Error PDBFile::parseFileHeaders() {
                                 "Unsupported block size.");
   }
 
-  if (BufferRef.getBufferSize() % SB->BlockSize != 0)
+  if (Buffer->getLength() % SB->BlockSize != 0)
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "File size is not a multiple of block size");
 
@@ -181,29 +136,22 @@ Error PDBFile::parseFileHeaders() {
   // the number of bytes it contains.
   uint64_t NumDirectoryBlocks = getNumDirectoryBlocks();
 
-  // The block map, as we understand it, is a block which consists of a list of
-  // block numbers.
-  // It is unclear what would happen if the number of blocks couldn't fit on a
-  // single block.
+  // The directory, as we understand it, is a block which consists of a list of
+  // block numbers.  It is unclear what would happen if the number of blocks
+  // couldn't fit on a single block.
   if (NumDirectoryBlocks > SB->BlockSize / sizeof(support::ulittle32_t))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Too many directory blocks.");
-
-  // Make sure the directory block array fits within the file.
-  if (auto EC = checkOffset(BufferRef, getDirectoryBlockArray()))
-    return EC;
 
   return Error::success();
 }
 
 Error PDBFile::parseStreamData() {
-  assert(Context && Context->SB);
+  assert(SB);
   if (DirectoryStream)
     return Error::success();
 
   uint32_t NumStreams = 0;
-
-  const SuperBlock *SB = Context->SB;
 
   // Normally you can't use a MappedBlockStream without having fully parsed the
   // PDB file, because it accesses the directory and various other things, which
@@ -213,19 +161,26 @@ Error PDBFile::parseStreamData() {
   auto DS = MappedBlockStream::createDirectoryStream(*this);
   if (!DS)
     return DS.takeError();
-  codeview::StreamReader Reader(**DS);
+  StreamReader Reader(**DS);
   if (auto EC = Reader.readInteger(NumStreams))
     return EC;
 
-  if (auto EC = Reader.readArray(Context->StreamSizes, NumStreams))
+  if (auto EC = Reader.readArray(StreamSizes, NumStreams))
     return EC;
   for (uint32_t I = 0; I < NumStreams; ++I) {
     uint64_t NumExpectedStreamBlocks =
         bytesToBlocks(getStreamByteSize(I), SB->BlockSize);
-    ulittle_array Blocks;
+
+    // For convenience, we store the block array contiguously.  This is because
+    // if someone calls setStreamMap(), it is more convenient to be able to call
+    // it with an ArrayRef instead of setting up a StreamRef.  Since the
+    // DirectoryStream is cached in the class and thus lives for the life of the
+    // class, we can be guaranteed that readArray() will return a stable
+    // reference, even if it has to allocate from its internal pool.
+    ArrayRef<support::ulittle32_t> Blocks;
     if (auto EC = Reader.readArray(Blocks, NumExpectedStreamBlocks))
       return EC;
-    Context->StreamMap.push_back(Blocks);
+    StreamMap.push_back(Blocks);
   }
 
   // We should have read exactly SB->NumDirectoryBytes bytes.
@@ -235,10 +190,12 @@ Error PDBFile::parseStreamData() {
 }
 
 llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
-  return makeArrayRef(
-      reinterpret_cast<const support::ulittle32_t *>(
-          Context->Buffer->getBufferStart() + getBlockMapOffset()),
-      getNumDirectoryBlocks());
+  StreamReader Reader(*Buffer);
+  Reader.setOffset(getBlockMapOffset());
+  llvm::ArrayRef<support::ulittle32_t> Result;
+  if (auto EC = Reader.readArray(Result, getNumDirectoryBlocks()))
+    consumeError(std::move(EC));
+  return Result;
 }
 
 Expected<InfoStream &> PDBFile::getPDBInfoStream() {
@@ -351,7 +308,7 @@ Expected<NameHashTable &> PDBFile::getStringTable() {
     if (!NS)
       return NS.takeError();
 
-    codeview::StreamReader Reader(**NS);
+    StreamReader Reader(**NS);
     auto N = llvm::make_unique<NameHashTable>();
     if (auto EC = N->load(Reader))
       return std::move(EC);

@@ -1,9 +1,12 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}s_abs_i32:
 ; GCN: s_abs_i32
 ; GCN: s_add_i32
+
+; EG: MAX_INT
 define void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind {
   %neg = sub i32 0, %val
   %cond = icmp sgt i32 %val, %neg
@@ -17,6 +20,8 @@ define void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind {
 ; GCN: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
 ; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG]], [[SRC]]
 ; GCN: v_add_i32
+
+; EG: MAX_INT
 define void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
   %val = load i32, i32 addrspace(1)* %src, align 4
   %neg = sub i32 0, %val
@@ -32,6 +37,9 @@ define void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind 
 ; GCN: s_abs_i32
 ; GCN: s_add_i32
 ; GCN: s_add_i32
+
+; EG: MAX_INT
+; EG: MAX_INT
 define void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind {
   %z0 = insertelement <2 x i32> undef, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
@@ -54,6 +62,9 @@ define void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %val) nounwind 
 
 ; GCN: v_add_i32
 ; GCN: v_add_i32
+
+; EG: MAX_INT
+; EG: MAX_INT
 define void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %src) nounwind {
   %z0 = insertelement <2 x i32> undef, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
@@ -79,6 +90,11 @@ define void @v_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %
 ; GCN: s_add_i32
 ; GCN: s_add_i32
 ; GCN: s_add_i32
+
+; EG: MAX_INT
+; EG: MAX_INT
+; EG: MAX_INT
+; EG: MAX_INT
 define void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind {
   %z0 = insertelement <4 x i32> undef, i32 0, i32 0
   %z1 = insertelement <4 x i32> %z0, i32 0, i32 1
@@ -111,6 +127,11 @@ define void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %val) nounwind 
 ; GCN: v_add_i32
 ; GCN: v_add_i32
 ; GCN: v_add_i32
+
+; EG: MAX_INT
+; EG: MAX_INT
+; EG: MAX_INT
+; EG: MAX_INT
 define void @v_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %src) nounwind {
   %z0 = insertelement <4 x i32> undef, i32 0, i32 0
   %z1 = insertelement <4 x i32> %z0, i32 0, i32 1

@@ -84,9 +84,13 @@ bool ProfileSummaryInfo::isHotFunction(const Function *F) {
 // example, no profile data is available).
 bool ProfileSummaryInfo::isColdFunction(const Function *F) {
   computeSummary();
+  if (!F)
+    return false;
   if (F->hasFnAttribute(Attribute::Cold)) {
     return true;
   }
+  if (!Summary)
+    return false;
   auto FunctionCount = F->getEntryCount();
   // FIXME: The heuristic used below for determining coldness is based on
   // preliminary SPEC tuning for inliner. This will eventually be a

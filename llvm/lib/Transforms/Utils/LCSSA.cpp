@@ -27,7 +27,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -42,6 +42,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 using namespace llvm;
@@ -270,11 +271,20 @@ bool llvm::formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
   return Changed;
 }
 
+/// Process all loops in the function, inner-most out.
+static bool formLCSSAOnAllLoops(LoopInfo *LI, DominatorTree &DT,
+                                ScalarEvolution *SE) {
+  bool Changed = false;
+  for (auto &L : *LI)
+    Changed |= formLCSSARecursively(*L, DT, LI, SE);
+  return Changed;
+}
+
 namespace {
-struct LCSSA : public FunctionPass {
+struct LCSSAWrapperPass : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  LCSSA() : FunctionPass(ID) {
-    initializeLCSSAPass(*PassRegistry::getPassRegistry());
+  LCSSAWrapperPass() : FunctionPass(ID) {
+    initializeLCSSAWrapperPassPass(*PassRegistry::getPassRegistry());
   }
 
   // Cached analysis information for the current function.
@@ -302,28 +312,40 @@ struct LCSSA : public FunctionPass {
 };
 }
 
-char LCSSA::ID = 0;
-INITIALIZE_PASS_BEGIN(LCSSA, "lcssa", "Loop-Closed SSA Form Pass", false, false)
+char LCSSAWrapperPass::ID = 0;
+INITIALIZE_PASS_BEGIN(LCSSAWrapperPass, "lcssa", "Loop-Closed SSA Form Pass",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(LCSSA, "lcssa", "Loop-Closed SSA Form Pass", false, false)
+INITIALIZE_PASS_END(LCSSAWrapperPass, "lcssa", "Loop-Closed SSA Form Pass",
+                    false, false)
 
-Pass *llvm::createLCSSAPass() { return new LCSSA(); }
-char &llvm::LCSSAID = LCSSA::ID;
+Pass *llvm::createLCSSAPass() { return new LCSSAWrapperPass(); }
+char &llvm::LCSSAID = LCSSAWrapperPass::ID;
 
-
-/// Process all loops in the function, inner-most out.
-bool LCSSA::runOnFunction(Function &F) {
-  bool Changed = false;
+/// Transform \p F into loop-closed SSA form.
+bool LCSSAWrapperPass::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
   SE = SEWP ? &SEWP->getSE() : nullptr;
 
-  // Simplify each loop nest in the function.
-  for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
-    Changed |= formLCSSARecursively(**I, *DT, LI, SE);
-
-  return Changed;
+  return formLCSSAOnAllLoops(LI, *DT, SE);
 }
 
+PreservedAnalyses LCSSAPass::run(Function &F, AnalysisManager<Function> &AM) {
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
+  if (!formLCSSAOnAllLoops(&LI, DT, SE))
+    return PreservedAnalyses::all();
+
+  // FIXME: There is no setPreservesCFG in the new PM. When that becomes
+  // available, it should be used here.
+  PreservedAnalyses PA;
+  PA.preserve<BasicAA>();
+  PA.preserve<GlobalsAA>();
+  PA.preserve<SCEVAA>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  return PA;
+}

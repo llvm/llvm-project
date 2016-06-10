@@ -3497,6 +3497,12 @@
 # CHECK-BE: mfctr 2                         # encoding: [0x7c,0x49,0x02,0xa6]
 # CHECK-LE: mfctr 2                         # encoding: [0xa6,0x02,0x49,0x7c]
             mfctr 2
+# CHECK-BE: mfvrsave 2                      # encoding: [0x7c,0x40,0x42,0xa6]
+# CHECK-LE: mfvrsave 2                      # encoding: [0xa6,0x42,0x40,0x7c]
+            mfvrsave 2
+# CHECK-BE: mtvrsave 2                      # encoding: [0x7c,0x40,0x43,0xa6]
+# CHECK-LE: mtvrsave 2                      # encoding: [0xa6,0x43,0x40,0x7c]
+            mtvrsave 2
 
 # Miscellaneous mnemonics
 

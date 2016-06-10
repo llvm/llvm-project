@@ -28,7 +28,7 @@ namespace llvm {
 // visited nodes during the po_iterator's depth-first traversal.
 //
 // The default implementation simply contains a set of visited nodes, while
-// the Extended=true version uses a reference to an external set.
+// the External=true version uses a reference to an external set.
 //
 // It is possible to prune the depth-first traversal in several ways:
 //

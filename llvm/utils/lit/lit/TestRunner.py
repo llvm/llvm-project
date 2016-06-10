@@ -396,17 +396,18 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         except:
             err = str(err)
 
-        # Gather the redirected output files.
+        # Gather the redirected output files for failed commands.
         output_files = []
-        for (name, mode, f, path) in sorted(opened_files):
-            if path is not None and mode in ('w', 'a'):
-                try:
-                    with open(path, 'rb') as f:
-                        data = f.read()
-                except:
-                    data = None
-                if data != None:
-                    output_files.append((name, path, data))
+        if res != 0:
+            for (name, mode, f, path) in sorted(opened_files):
+                if path is not None and mode in ('w', 'a'):
+                    try:
+                        with open(path, 'rb') as f:
+                            data = f.read()
+                    except:
+                        data = None
+                    if data != None:
+                        output_files.append((name, path, data))
             
         results.append(ShellCommandResult(
             cmd.commands[i], out, err, res, timeoutHelper.timeoutReached(),

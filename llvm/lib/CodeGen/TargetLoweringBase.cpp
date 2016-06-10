@@ -1831,7 +1831,7 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
 Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
-  return M.getGlobalVariable("__stack_chk_guard");
+  return M.getGlobalVariable("__stack_chk_guard", true);
 }
 
 Value *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {

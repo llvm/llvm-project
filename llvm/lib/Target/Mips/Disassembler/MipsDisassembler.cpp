@@ -434,8 +434,18 @@ DecodeAddiGroupBranch(MCInst &MI, InsnType insn, uint64_t Address,
 
 template <typename InsnType>
 static DecodeStatus
+DecodePOP35GroupBranchMMR6(MCInst &MI, InsnType insn, uint64_t Address,
+                           const void *Decoder);
+
+template <typename InsnType>
+static DecodeStatus
 DecodeDaddiGroupBranch(MCInst &MI, InsnType insn, uint64_t Address,
                        const void *Decoder);
+
+template <typename InsnType>
+static DecodeStatus
+DecodePOP37GroupBranchMMR6(MCInst &MI, InsnType insn, uint64_t Address,
+                           const void *Decoder);
 
 template <typename InsnType>
 static DecodeStatus
@@ -604,6 +614,37 @@ static DecodeStatus DecodeAddiGroupBranch(MCInst &MI, InsnType insn,
 }
 
 template <typename InsnType>
+static DecodeStatus DecodePOP35GroupBranchMMR6(MCInst &MI, InsnType insn,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  InsnType Rt = fieldFromInstruction(insn, 21, 5);
+  InsnType Rs = fieldFromInstruction(insn, 16, 5);
+  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2;
+
+  if (Rs >= Rt) {
+    MI.setOpcode(Mips::BOVC_MMR6);
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rt)));
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rs)));
+  } else if (Rs != 0 && Rs < Rt) {
+    MI.setOpcode(Mips::BEQC_MMR6);
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rs)));
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rt)));
+  } else {
+    MI.setOpcode(Mips::BEQZALC_MMR6);
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rt)));
+  }
+
+  MI.addOperand(MCOperand::createImm(Imm));
+
+  return MCDisassembler::Success;
+}
+
+template <typename InsnType>
 static DecodeStatus DecodeDaddiGroupBranch(MCInst &MI, InsnType insn,
                                            uint64_t Address,
                                            const void *Decoder) {
@@ -637,6 +678,37 @@ static DecodeStatus DecodeDaddiGroupBranch(MCInst &MI, InsnType insn,
 
   MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
                                      Rt)));
+  MI.addOperand(MCOperand::createImm(Imm));
+
+  return MCDisassembler::Success;
+}
+
+template <typename InsnType>
+static DecodeStatus DecodePOP37GroupBranchMMR6(MCInst &MI, InsnType insn,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  InsnType Rt = fieldFromInstruction(insn, 21, 5);
+  InsnType Rs = fieldFromInstruction(insn, 16, 5);
+  InsnType Imm = SignExtend64(fieldFromInstruction(insn, 0, 16), 16) * 2;
+
+  if (Rs >= Rt) {
+    MI.setOpcode(Mips::BNVC_MMR6);
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rt)));
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rs)));
+  } else if (Rs != 0 && Rs < Rt) {
+    MI.setOpcode(Mips::BNEC_MMR6);
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rs)));
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rt)));
+  } else {
+    MI.setOpcode(Mips::BNEZALC_MMR6);
+    MI.addOperand(MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID,
+                                       Rt)));
+  }
+
   MI.addOperand(MCOperand::createImm(Imm));
 
   return MCDisassembler::Success;

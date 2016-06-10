@@ -3590,8 +3590,10 @@ SystemZ:
 - ``K``: An immediate signed 16-bit integer.
 - ``L``: An immediate signed 20-bit integer.
 - ``M``: An immediate integer 0x7fffffff.
-- ``Q``, ``R``, ``S``, ``T``: A memory address operand, treated the same as
-  ``m``, at the moment.
+- ``Q``, ``R``: A memory address operand with a base address and a 12-bit
+  immediate unsigned displacement.
+- ``S``, ``T``: A memory address operand with a base address and a 20-bit
+  immediate signed displacement.
 - ``r`` or ``d``: A 32, 64, or 128-bit integer register.
 - ``a``: A 32, 64, or 128-bit integer address register (excludes R0, which in an
   address context evaluates as zero).
@@ -8551,8 +8553,8 @@ This instruction requires several arguments:
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
 #. The optional :ref:`function attributes <fnattrs>` list. Only
-   '``noreturn``', '``nounwind``', '``readonly``' and '``readnone``'
-   attributes are valid here.
+   '``noreturn``', '``nounwind``', '``readonly``' , '``readnone``',
+   and '``convergent``' attributes are valid here.
 #. The optional :ref:`operand bundles <opbundles>` list.
 
 Semantics:

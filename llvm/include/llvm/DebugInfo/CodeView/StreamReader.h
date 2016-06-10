@@ -28,6 +28,7 @@ class StreamReader {
 public:
   StreamReader(StreamRef Stream);
 
+  Error readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer);
   Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
   Error readInteger(uint16_t &Dest);
   Error readInteger(uint32_t &Dest);

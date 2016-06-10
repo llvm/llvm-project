@@ -10,8 +10,8 @@ entry:
   br label %return
 
 ; CHECK: @foo
-; CHECK: mfspr r{{[0-9]+}}, 256
-; CHECK: mtspr 256, r{{[0-9]+}}
+; CHECK: mfvrsave r{{[0-9]+}}
+; CHECK: mtvrsave r{{[0-9]+}}
 
 return:                                           ; preds = %entry
   ret <4 x float> %d

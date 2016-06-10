@@ -3722,6 +3722,7 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   // and registers Rd and Base for microMIPS lwp instruction
   case Mips::JALR_HB:
   case Mips::JALRC_HB_MMR6:
+  case Mips::JALRC_MMR6:
     if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
       return Match_RequiresDifferentSrcAndDst;
     return Match_Success;

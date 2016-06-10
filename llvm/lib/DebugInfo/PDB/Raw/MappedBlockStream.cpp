@@ -29,6 +29,12 @@ public:
 };
 }
 
+typedef std::pair<uint32_t, uint32_t> Interval;
+static Interval intersect(const Interval &I1, const Interval &I2) {
+  return std::make_pair(std::max(I1.first, I2.first),
+                        std::min(I1.second, I2.second));
+}
+
 MappedBlockStream::MappedBlockStream(std::unique_ptr<IPDBStreamData> Data,
                                      const IPDBFile &Pdb)
     : Pdb(Pdb), Data(std::move(Data)) {}
@@ -46,23 +52,96 @@ Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
 
   auto CacheIter = CacheMap.find(Offset);
   if (CacheIter != CacheMap.end()) {
-    // In a more general solution, we would need to guarantee that the
-    // cached allocation is at least the requested size.  In practice, since
-    // these are CodeView / PDB records, we know they are always formatted
-    // the same way and never change, so we should never be requesting two
-    // allocations from the same address with different sizes.
-    Buffer = ArrayRef<uint8_t>(CacheIter->second, Size);
+    // Try to find an alloc that was large enough for this request.
+    for (auto &Entry : CacheIter->second) {
+      if (Entry.size() >= Size) {
+        Buffer = Entry.slice(0, Size);
+        return Error::success();
+      }
+    }
+  }
+
+  // We couldn't find a buffer that started at the correct offset (the most
+  // common scenario).  Try to see if there is a buffer that starts at some
+  // other offset but overlaps the desired range.
+  for (auto &CacheItem : CacheMap) {
+    Interval RequestExtent = std::make_pair(Offset, Offset + Size);
+
+    // We already checked this one on the fast path above.
+    if (CacheItem.first == Offset)
+      continue;
+    // If the initial extent of the cached item is beyond the ending extent
+    // of the request, there is no overlap.
+    if (CacheItem.first >= Offset + Size)
+      continue;
+
+    // We really only have to check the last item in the list, since we append
+    // in order of increasing length.
+    if (CacheItem.second.empty())
+      continue;
+
+    auto CachedAlloc = CacheItem.second.back();
+    // If the initial extent of the request is beyond the ending extent of
+    // the cached item, there is no overlap.
+    Interval CachedExtent =
+        std::make_pair(CacheItem.first, CacheItem.first + CachedAlloc.size());
+    if (RequestExtent.first >= CachedExtent.first + CachedExtent.second)
+      continue;
+
+    Interval Intersection = intersect(CachedExtent, RequestExtent);
+    // Only use this if the entire request extent is contained in the cached
+    // extent.
+    if (Intersection != RequestExtent)
+      continue;
+
+    uint32_t CacheRangeOffset =
+        AbsoluteDifference(CachedExtent.first, Intersection.first);
+    Buffer = CachedAlloc.slice(CacheRangeOffset, Size);
     return Error::success();
   }
 
   // Otherwise allocate a large enough buffer in the pool, memcpy the data
-  // into it, and return an ArrayRef to that.
+  // into it, and return an ArrayRef to that.  Do not touch existing pool
+  // allocations, as existing clients may be holding a pointer which must
+  // not be invalidated.
   uint8_t *WriteBuffer = Pool.Allocate<uint8_t>(Size);
-
   if (auto EC = readBytes(Offset, MutableArrayRef<uint8_t>(WriteBuffer, Size)))
     return EC;
-  CacheMap.insert(std::make_pair(Offset, WriteBuffer));
+
+  if (CacheIter != CacheMap.end()) {
+    CacheIter->second.emplace_back(WriteBuffer, Size);
+  } else {
+    std::vector<CacheEntry> List;
+    List.emplace_back(WriteBuffer, Size);
+    CacheMap.insert(std::make_pair(Offset, List));
+  }
   Buffer = ArrayRef<uint8_t>(WriteBuffer, Size);
+  return Error::success();
+}
+
+Error MappedBlockStream::readLongestContiguousChunk(
+    uint32_t Offset, ArrayRef<uint8_t> &Buffer) const {
+  // Make sure we aren't trying to read beyond the end of the stream.
+  if (Offset >= Data->getLength())
+    return make_error<RawError>(raw_error_code::insufficient_buffer);
+  uint32_t First = Offset / Pdb.getBlockSize();
+  uint32_t Last = First;
+
+  auto BlockList = Data->getStreamBlocks();
+  while (Last < Pdb.getBlockCount() - 1) {
+    if (BlockList[Last] != BlockList[Last + 1] - 1)
+      break;
+    ++Last;
+  }
+
+  uint32_t OffsetInFirstBlock = Offset % Pdb.getBlockSize();
+  uint32_t BytesFromFirstBlock = Pdb.getBlockSize() - OffsetInFirstBlock;
+  uint32_t BlockSpan = Last - First + 1;
+  uint32_t ByteSpan =
+      BytesFromFirstBlock + (BlockSpan - 1) * Pdb.getBlockSize();
+  Buffer = Pdb.getBlockData(BlockList[First], Pdb.getBlockSize());
+  Buffer = Buffer.drop_front(OffsetInFirstBlock);
+  Buffer = ArrayRef<uint8_t>(Buffer.data(), ByteSpan);
   return Error::success();
 }
 
@@ -130,7 +209,73 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
   }
 
   return Error::success();
+}
 
+Error MappedBlockStream::writeBytes(uint32_t Offset,
+                                    ArrayRef<uint8_t> Buffer) const {
+  // Make sure we aren't trying to write beyond the end of the stream.
+  if (Buffer.size() > Data->getLength())
+    return make_error<RawError>(raw_error_code::insufficient_buffer);
+
+  if (Offset > Data->getLength() - Buffer.size())
+    return make_error<RawError>(raw_error_code::insufficient_buffer);
+
+  uint32_t BlockNum = Offset / Pdb.getBlockSize();
+  uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
+
+  uint32_t BytesLeft = Buffer.size();
+  auto BlockList = Data->getStreamBlocks();
+  uint32_t BytesWritten = 0;
+  while (BytesLeft > 0) {
+    uint32_t StreamBlockAddr = BlockList[BlockNum];
+    uint32_t BytesToWriteInChunk =
+        std::min(BytesLeft, Pdb.getBlockSize() - OffsetInBlock);
+
+    const uint8_t *Chunk = Buffer.data() + BytesWritten;
+    ArrayRef<uint8_t> ChunkData(Chunk, BytesToWriteInChunk);
+    if (auto EC = Pdb.setBlockData(StreamBlockAddr, OffsetInBlock, ChunkData))
+      return EC;
+
+    BytesLeft -= BytesToWriteInChunk;
+    BytesWritten += BytesToWriteInChunk;
+    ++BlockNum;
+    OffsetInBlock = 0;
+  }
+
+  // If this write overlapped a read which previously came from the pool,
+  // someone may still be holding a pointer to that alloc which is now invalid.
+  // Compute the overlapping range and update the cache entry, so any
+  // outstanding buffers are automatically updated.
+  for (const auto &MapEntry : CacheMap) {
+    // If the end of the written extent precedes the beginning of the cached
+    // extent, ignore this map entry.
+    if (Offset + BytesWritten < MapEntry.first)
+      continue;
+    for (const auto &Alloc : MapEntry.second) {
+      // If the end of the cached extent precedes the beginning of the written
+      // extent, ignore this alloc.
+      if (MapEntry.first + Alloc.size() < Offset)
+        continue;
+
+      // If we get here, they are guaranteed to overlap.
+      Interval WriteInterval = std::make_pair(Offset, Offset + BytesWritten);
+      Interval CachedInterval =
+          std::make_pair(MapEntry.first, MapEntry.first + Alloc.size());
+      // If they overlap, we need to write the new data into the overlapping
+      // range.
+      auto Intersection = intersect(WriteInterval, CachedInterval);
+      assert(Intersection.first <= Intersection.second);
+
+      uint32_t Length = Intersection.second - Intersection.first;
+      uint32_t SrcOffset =
+          AbsoluteDifference(WriteInterval.first, Intersection.first);
+      uint32_t DestOffset =
+          AbsoluteDifference(CachedInterval.first, Intersection.first);
+      ::memcpy(Alloc.data() + DestOffset, Buffer.data() + SrcOffset, Length);
+    }
+  }
+
+  return Error::success();
 }
 
 uint32_t MappedBlockStream::getNumBytesCopied() const {

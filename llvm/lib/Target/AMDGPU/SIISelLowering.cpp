@@ -36,6 +36,12 @@
 
 using namespace llvm;
 
+// -amdgpu-fast-fdiv - Command line option to enable faster 2.5 ulp fdiv.
+static cl::opt<bool> EnableAMDGPUFastFDIV(
+  "amdgpu-fast-fdiv",
+  cl::desc("Enable faster 2.5 ulp fdiv"),
+  cl::init(false));
+
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   unsigned NumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (unsigned Reg = 0; Reg < NumSGPRs; ++Reg) {
@@ -486,7 +492,7 @@ static bool isFlatGlobalAddrSpace(unsigned AS) {
 
 bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
-  return isFlatGlobalAddrSpace(SrcAS) &&  isFlatGlobalAddrSpace(DestAS);
+  return isFlatGlobalAddrSpace(SrcAS) && isFlatGlobalAddrSpace(DestAS);
 }
 
 
@@ -1928,7 +1934,9 @@ SDValue SITargetLowering::LowerFastFDIV(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  if (Unsafe) {
+  const SDNodeFlags *Flags = Op->getFlags();
+
+  if (Unsafe || Flags->hasAllowReciprocal()) {
     // Turn into multiply by the reciprocal.
     // x / y -> x * (1.0 / y)
     SDNodeFlags Flags;
@@ -1953,32 +1961,61 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS);
+  // faster 2.5 ulp fdiv when using -amdgpu-fast-fdiv flag
+  if (EnableAMDGPUFastFDIV) {
+    SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS);
 
-  const APFloat K0Val(BitsToFloat(0x6f800000));
-  const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);
+    const APFloat K0Val(BitsToFloat(0x6f800000));
+    const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);
 
-  const APFloat K1Val(BitsToFloat(0x2f800000));
-  const SDValue K1 = DAG.getConstantFP(K1Val, SL, MVT::f32);
+    const APFloat K1Val(BitsToFloat(0x2f800000));
+    const SDValue K1 = DAG.getConstantFP(K1Val, SL, MVT::f32);
 
+    const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
+
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
+
+    SDValue r2 = DAG.getSetCC(SL, SetCCVT, r1, K0, ISD::SETOGT);
+
+    SDValue r3 = DAG.getNode(ISD::SELECT, SL, MVT::f32, r2, K1, One);
+
+    // TODO: Should this propagate fast-math-flags?
+
+    r1 = DAG.getNode(ISD::FMUL, SL, MVT::f32, RHS, r3);
+
+    SDValue r0 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, r1);
+
+    SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f32, LHS, r0);
+
+    return DAG.getNode(ISD::FMUL, SL, MVT::f32, r3, Mul);
+  }
+
+  // Generates more precise fpdiv32.
   const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
 
-  EVT SetCCVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::f32);
+  SDVTList ScaleVT = DAG.getVTList(MVT::f32, MVT::i1);
 
-  SDValue r2 = DAG.getSetCC(SL, SetCCVT, r1, K0, ISD::SETOGT);
+  SDValue DenominatorScaled = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT, RHS, RHS, LHS);
+  SDValue NumeratorScaled = DAG.getNode(AMDGPUISD::DIV_SCALE, SL, ScaleVT, LHS, RHS, LHS);
 
-  SDValue r3 = DAG.getNode(ISD::SELECT, SL, MVT::f32, r2, K1, One);
+  SDValue ApproxRcp = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, DenominatorScaled);
 
-  // TODO: Should this propagate fast-math-flags?
+  SDValue NegDivScale0 = DAG.getNode(ISD::FNEG, SL, MVT::f32, DenominatorScaled);
 
-  r1 = DAG.getNode(ISD::FMUL, SL, MVT::f32, RHS, r3);
+  SDValue Fma0 = DAG.getNode(ISD::FMA, SL, MVT::f32, NegDivScale0, ApproxRcp, One);
+  SDValue Fma1 = DAG.getNode(ISD::FMA, SL, MVT::f32, Fma0, ApproxRcp, ApproxRcp);
 
-  SDValue r0 = DAG.getNode(AMDGPUISD::RCP, SL, MVT::f32, r1);
+  SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f32, NumeratorScaled, Fma1);
 
-  SDValue Mul = DAG.getNode(ISD::FMUL, SL, MVT::f32, LHS, r0);
+  SDValue Fma2 = DAG.getNode(ISD::FMA, SL, MVT::f32, NegDivScale0, Mul, NumeratorScaled);
+  SDValue Fma3 = DAG.getNode(ISD::FMA, SL, MVT::f32, Fma2, Fma1, Mul);
+  SDValue Fma4 = DAG.getNode(ISD::FMA, SL, MVT::f32, NegDivScale0, Fma3, NumeratorScaled);
 
-  return DAG.getNode(ISD::FMUL, SL, MVT::f32, r3, Mul);
+  SDValue Scale = NumeratorScaled.getValue(1);
+  SDValue Fmas = DAG.getNode(AMDGPUISD::DIV_FMAS, SL, MVT::f32, Fma4, Fma1, Fma3, Scale);
+
+  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f32, Fmas, RHS, LHS);
 }
 
 SDValue SITargetLowering::LowerFDIV64(SDValue Op, SelectionDAG &DAG) const {
@@ -2160,9 +2197,9 @@ SDValue SITargetLowering::LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) co
 
   SDValue NewOld = DAG.getBuildVector(VecType, DL, {New, Old});
   SDValue Ops[] = { ChainIn, Addr, NewOld };
-  SDVTList VTList = DAG.getVTList(VT, MVT::Other);
-  return DAG.getMemIntrinsicNode(AMDGPUISD::ATOMIC_CMP_SWAP, DL,
-                                 VTList, Ops, VT, AtomicNode->getMemOperand());
+
+  return DAG.getMemIntrinsicNode(AMDGPUISD::ATOMIC_CMP_SWAP, DL, Op->getVTList(),
+                                 Ops, VT, AtomicNode->getMemOperand());
 }
 
 //===----------------------------------------------------------------------===//

@@ -512,7 +512,7 @@ public:
       std::vector<ClauseFile> FetchClauses, AluClauses;
       std::vector<MachineInstr *> LastAlu(1);
       std::vector<MachineInstr *> ToPopAfter;
-      
+
       for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
           I != E;) {
         if (TII->usesTextureCache(I) || TII->usesVertexCache(I)) {
@@ -614,7 +614,7 @@ public:
             DEBUG(dbgs() << CfCount << ":"; MIb->dump(););
             CfCount++;
           }
-          
+
           MachineInstr *IfOrElseInst = IfThenElseStack.back();
           IfThenElseStack.pop_back();
           CounterPropagateAddr(IfOrElseInst, CfCount);

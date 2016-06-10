@@ -13,7 +13,7 @@
 ; RUN:    -check-prefix=ALL -check-prefix=CMOV \
 ; RUN:    -check-prefix=CMOV-32 -check-prefix=CMOV-32R2-R5
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=SEL -check-prefix=SEL-32
+; RUN:    -check-prefix=ALL -check-prefix=SEL-32 -check-prefix=32R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=M3 -check-prefix=M2-M3
 ; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
@@ -27,7 +27,11 @@
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=CMOV -check-prefix=CMOV-64
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=SEL -check-prefix=SEL-64
+; RUN:    -check-prefix=ALL -check-prefix=SEL-64 -check-prefix=64R6
+; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
+; RUN:    -check-prefix=ALL -check-prefix=MM32R3
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
+; RUN:    -check-prefix=ALL -check-prefix=MM32R6 -check-prefix=SEL-32
 
 define double @tst_select_i1_double(i1 signext %s, double %x, double %y) {
 entry:
@@ -71,6 +75,13 @@ entry:
 
   ; SEL-64:     mtc1    $4, $f0
   ; SEL-64:     sel.d   $f0, $f14, $f13
+
+  ; MM32R3:     mtc1    $7, $[[F0:f[0-9]+]]
+  ; MM32R3:     mthc1   $6, $[[F0]]
+  ; MM32R3:     andi16  $[[T0:[0-9]+]], $4, 1
+  ; MM32R3:     ldc1    $f0, 16($sp)
+  ; MM32R3:     movn.d  $f0, $[[F0]], $[[T0]]
+
   %r = select i1 %s, double %x, double %y
   ret double %r
 }
@@ -112,6 +123,12 @@ entry:
 
   ; SEL-64:     mtc1    $6, $f0
   ; SEL-64:     sel.d   $f0, $f13, $f12
+
+  ; MM32R3:     lw      $[[T0:[0-9]+]], 16($sp)
+  ; MM32R3:     andi16  $[[T1:[0-9]+]], $[[T0:[0-9]+]], 1
+  ; MM32R3:     movn.d  $f14, $f12, $[[T1]]
+  ; MM32R3:     mov.d   $f0, $f14
+
   %r = select i1 %s, double %x, double %y
   ret double %r
 }
@@ -143,6 +160,11 @@ entry:
 
   ; SEL-64:     cmp.lt.d  $f0, $f12, $f13
   ; SEL-64:     sel.d     $f0, $f13, $f12
+
+  ; MM32R3:     c.olt.d   $f12, $f14
+  ; MM32R3:     movt.d    $f14, $f12, $fcc0
+  ; MM32R3:     mov.d     $f0, $f14
+
   %s = fcmp olt double %x, %y
   %r = select i1 %s, double %x, double %y
   ret double %r
@@ -175,6 +197,11 @@ entry:
 
   ; SEL-64:     cmp.le.d  $f0, $f12, $f13
   ; SEL-64:     sel.d     $f0, $f13, $f12
+
+  ; MM32R3:     c.ole.d   $f12, $f14
+  ; MM32R3:     movt.d    $f14, $f12, $fcc0
+  ; MM32R3:     mov.d     $f0, $f14
+
   %s = fcmp ole double %x, %y
   %r = select i1 %s, double %x, double %y
   ret double %r
@@ -207,6 +234,11 @@ entry:
 
   ; SEL-64:     cmp.lt.d  $f0, $f13, $f12
   ; SEL-64:     sel.d     $f0, $f13, $f12
+
+  ; MM32R3:     c.ule.d   $f12, $f14
+  ; MM32R3:     movf.d    $f14, $f12, $fcc0
+  ; MM32R3:     mov.d     $f0, $f14
+
   %s = fcmp ogt double %x, %y
   %r = select i1 %s, double %x, double %y
   ret double %r
@@ -239,6 +271,11 @@ entry:
 
   ; SEL-64:     cmp.le.d  $f0, $f13, $f12
   ; SEL-64:     sel.d     $f0, $f13, $f12
+
+  ; MM32R3:     c.ult.d   $f12, $f14
+  ; MM32R3:     movf.d    $f14, $f12, $fcc0
+  ; MM32R3:     mov.d     $f0, $f14
+
   %s = fcmp oge double %x, %y
   %r = select i1 %s, double %x, double %y
   ret double %r
@@ -271,6 +308,11 @@ entry:
 
   ; SEL-64:     cmp.eq.d  $f0, $f12, $f13
   ; SEL-64:     sel.d     $f0, $f13, $f12
+
+  ; MM32R3:     c.eq.d    $f12, $f14
+  ; MM32R3:     movt.d    $f14, $f12, $fcc0
+  ; MM32R3:     mov.d     $f0, $f14
+
   %s = fcmp oeq double %x, %y
   %r = select i1 %s, double %x, double %y
   ret double %r
@@ -296,7 +338,8 @@ entry:
 
   ; SEL-32:     cmp.ueq.d $f0, $f12, $f14
   ; SEL-32:     mfc1      $[[T0:[0-9]+]], $f0
-  ; SEL-32:     not       $[[T0]], $[[T0]]
+  ; 32R6:       not       $[[T0]], $[[T0]]
+  ; MM32R6:     nor       $[[T0]], $[[T0]], $zero
   ; SEL-32:     mtc1      $[[T0:[0-9]+]], $f0
   ; SEL-32:     sel.d     $f0, $f14, $f12
 
@@ -309,6 +352,11 @@ entry:
   ; SEL-64:     not       $[[T0]], $[[T0]]
   ; SEL-64:     mtc1      $[[T0:[0-9]+]], $f0
   ; SEL-64:     sel.d     $f0, $f13, $f12
+
+  ; MM32R3:     c.ueq.d   $f12, $f14
+  ; MM32R3:     movf.d    $f14, $f12, $fcc0
+  ; MM32R3:     mov.d     $f0, $f14
+
   %s = fcmp one double %x, %y
   %r = select i1 %s, double %x, double %y
   ret double %r

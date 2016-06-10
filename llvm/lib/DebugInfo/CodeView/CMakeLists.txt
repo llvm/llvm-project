@@ -11,6 +11,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   ModuleSubstreamVisitor.cpp
   RecordSerialization.cpp
   StreamReader.cpp
+  StreamWriter.cpp
   SymbolDumper.cpp
   TypeDumper.cpp
   TypeRecord.cpp

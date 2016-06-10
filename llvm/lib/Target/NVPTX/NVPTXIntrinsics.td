@@ -30,7 +30,7 @@ def immDouble1 : PatLeaf<(fpimm), [{
 
 
 //-----------------------------------
-// Synchronization Functions
+// Synchronization and shuffle functions
 //-----------------------------------
 let isConvergent = 1 in {
 def INT_CUDA_SYNCTHREADS : NVPTXInst<(outs), (ins),
@@ -64,6 +64,47 @@ def INT_BARRIER0_OR : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
       !strconcat("selp.u32 \t$dst, 1, 0, %p2; \n\t",
         !strconcat("}}", ""))))))),
       [(set Int32Regs:$dst, (int_nvvm_barrier0_or Int32Regs:$pred))]>;
+
+// shfl.{up,down,bfly,idx}.b32
+multiclass SHFL<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
+  // The last two parameters to shfl can be regs or imms.  ptxas is smart
+  // enough to inline constant registers, so strictly speaking we don't need to
+  // handle immediates here.  But it's easy enough, and it makes our ptx more
+  // readable.
+  def reg : NVPTXInst<
+      (outs regclass:$dst),
+      (ins regclass:$src, Int32Regs:$offset, Int32Regs:$mask),
+      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
+      [(set regclass:$dst, (IntOp regclass:$src, Int32Regs:$offset, Int32Regs:$mask))]>;
+
+  def imm1 : NVPTXInst<
+      (outs regclass:$dst),
+      (ins regclass:$src, i32imm:$offset, Int32Regs:$mask),
+      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
+      [(set regclass:$dst, (IntOp regclass:$src, imm:$offset, Int32Regs:$mask))]>;
+
+  def imm2 : NVPTXInst<
+      (outs regclass:$dst),
+      (ins regclass:$src, Int32Regs:$offset, i32imm:$mask),
+      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
+      [(set regclass:$dst, (IntOp regclass:$src, Int32Regs:$offset, imm:$mask))]>;
+
+  def imm3 : NVPTXInst<
+      (outs regclass:$dst),
+      (ins regclass:$src, i32imm:$offset, i32imm:$mask),
+      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
+      [(set regclass:$dst, (IntOp regclass:$src, imm:$offset, imm:$mask))]>;
+}
+
+defm INT_SHFL_DOWN_I32 : SHFL<Int32Regs, "down", int_ptx_shfl_down_i32>;
+defm INT_SHFL_DOWN_F32 : SHFL<Float32Regs, "down", int_ptx_shfl_down_f32>;
+defm INT_SHFL_UP_I32 : SHFL<Int32Regs, "up", int_ptx_shfl_up_i32>;
+defm INT_SHFL_UP_F32 : SHFL<Float32Regs, "up", int_ptx_shfl_up_f32>;
+defm INT_SHFL_BFLY_I32 : SHFL<Int32Regs, "bfly", int_ptx_shfl_bfly_i32>;
+defm INT_SHFL_BFLY_F32 : SHFL<Float32Regs, "bfly", int_ptx_shfl_bfly_f32>;
+defm INT_SHFL_IDX_I32 : SHFL<Int32Regs, "idx", int_ptx_shfl_idx_i32>;
+defm INT_SHFL_IDX_F32 : SHFL<Float32Regs, "idx", int_ptx_shfl_idx_f32>;
+
 } // isConvergent = 1
 
 

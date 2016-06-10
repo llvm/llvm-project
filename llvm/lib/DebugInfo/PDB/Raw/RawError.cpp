@@ -28,6 +28,10 @@ public:
       return "The specified stream could not be loaded.";
     case raw_error_code::index_out_of_bounds:
       return "The specified item does not exist in the array.";
+    case raw_error_code::invalid_block_address:
+      return "The specified block address is not valid.";
+    case raw_error_code::not_writable:
+      return "The PDB does not support writing.";
     }
     llvm_unreachable("Unrecognized raw_error_code");
   }

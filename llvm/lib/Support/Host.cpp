@@ -869,16 +869,9 @@ StringRef sys::getHostCPUName() {
         return "athlon";
       }
     case AMDFAM10H:
-      switch (Subtype) {
-      case AMDFAM10H_BARCELONA:
-        return "amdfam10-barcelona";
-      case AMDFAM10H_SHANGHAI:
-        return "amdfam10-shanghai";
-      case AMDFAM10H_ISTANBUL:
-        return "amdfam10-istanbul";
-      default:
-        return "amdfam10";
-      }
+      if(Subtype == AMDFAM10H_BARCELONA)
+        return "barcelona";
+      return "amdfam10";
     case AMDFAM14H:
       return "btver1";
     case AMDFAM15H:

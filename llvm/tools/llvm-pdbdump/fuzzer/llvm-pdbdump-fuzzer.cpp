@@ -12,6 +12,8 @@
 ///  on a single input. This function is then linked into the Fuzzer library.
 ///
 //===----------------------------------------------------------------------===//
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
@@ -25,6 +27,21 @@
 
 using namespace llvm;
 
+namespace {
+// We need a class which behaves like an immutable ByteStream, but whose data
+// is backed by an llvm::MemoryBuffer.  It also needs to own the underlying
+// MemoryBuffer, so this simple adapter is a good way to achieve that.
+class InputByteStream : public codeview::ByteStream<false> {
+public:
+  explicit InputByteStream(std::unique_ptr<MemoryBuffer> Buffer)
+      : ByteStream(ArrayRef<uint8_t>(Buffer->getBuffer().bytes_begin(),
+                                     Buffer->getBuffer().bytes_end())),
+        MemBuffer(std::move(Buffer)) {}
+
+  std::unique_ptr<MemoryBuffer> MemBuffer;
+};
+}
+
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   std::unique_ptr<MemoryBuffer> Buff = MemoryBuffer::getMemBuffer(
       StringRef((const char *)data, size), "", false);
@@ -32,7 +49,8 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   ScopedPrinter P(nulls());
   codeview::CVTypeDumper TD(&P, false);
 
-  std::unique_ptr<pdb::PDBFile> File(new pdb::PDBFile(std::move(Buff)));
+  auto InputStream = llvm::make_unique<InputByteStream>(std::move(Buff));
+  std::unique_ptr<pdb::PDBFile> File(new pdb::PDBFile(std::move(InputStream)));
   if (auto E = File->parseFileHeaders()) {
     consumeError(std::move(E));
     return 0;

@@ -97,6 +97,8 @@ public:
 
   const Extractor &getExtractor() const { return E; }
 
+  StreamRef getUnderlyingStream() const { return Stream; }
+
 private:
   StreamRef Stream;
   Extractor E;

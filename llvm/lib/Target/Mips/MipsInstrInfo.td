@@ -2006,13 +2006,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def PseudoUDIV : MultDivPseudo<UDIV, ACC64, GPR32Opnd, MipsDivRemU, II_DIVU,
                                  0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM;
+  // TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
+  def EXT : MMRel, StdMMR6Rel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1,
+                                       immZExt5, immZExt5Plus1, MipsExt>,
+            EXT_FM<0>;
+  def INS : MMRel, StdMMR6Rel, InsBase<"ins", GPR32Opnd, uimm5,
+                                       uimm5_inssize_plus1, MipsIns>,
+            EXT_FM<4>;
 }
-// TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
-def EXT : MMRel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1, immZExt5,
-                         immZExt5Plus1, MipsExt>, EXT_FM<0>;
-def INS : MMRel, InsBase<"ins", GPR32Opnd, uimm5, uimm5_inssize_plus1, MipsIns>,
-          EXT_FM<4>;
-
 /// Move Control Registers From/To CPU Registers
 let AdditionalPredicates = [NotInMicroMips] in {
   def MTC0 : MTC3OP<"mtc0", COP0Opnd, GPR32Opnd>, MFC3OP_FM<0x10, 4>,

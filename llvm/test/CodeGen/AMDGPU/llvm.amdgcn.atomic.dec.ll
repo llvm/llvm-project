@@ -3,9 +3,11 @@
 
 declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32) #2
 declare i32 @llvm.amdgcn.atomic.dec.i32.p3i32(i32 addrspace(3)* nocapture, i32) #2
+declare i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* nocapture, i32) #2
 
 declare i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* nocapture, i64) #2
 declare i64 @llvm.amdgcn.atomic.dec.i64.p3i64(i64 addrspace(3)* nocapture, i64) #2
+declare i64 @llvm.amdgcn.atomic.dec.i64.p4i64(i64 addrspace(4)* nocapture, i64) #2
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
@@ -105,6 +107,131 @@ define void @global_atomic_dec_noret_i32_offset_addr64(i32 addrspace(1)* %ptr) #
   %gep.tid = getelementptr i32, i32 addrspace(1)* %ptr, i32 %id
   %gep = getelementptr i32, i32 addrspace(1)* %gep.tid, i32 5
   %result = call i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* %gep, i32 42)
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_ret_i32:
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; GCN: flat_atomic_dec v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, [[K]] glc{{$}}
+define void @flat_atomic_dec_ret_i32(i32 addrspace(4)* %out, i32 addrspace(4)* %ptr) #0 {
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* %ptr, i32 42)
+  store i32 %result, i32 addrspace(4)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_ret_i32_offset:
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; GCN: flat_atomic_dec v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, [[K]] glc{{$}}
+define void @flat_atomic_dec_ret_i32_offset(i32 addrspace(4)* %out, i32 addrspace(4)* %ptr) #0 {
+  %gep = getelementptr i32, i32 addrspace(4)* %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* %gep, i32 42)
+  store i32 %result, i32 addrspace(4)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}flat_atomic_dec_noret_i32:
+; GCN: flat_atomic_dec v{{\[[0-9]+:[0-9]+\]}}, [[K]]{{$}}
+define void @flat_atomic_dec_noret_i32(i32 addrspace(4)* %ptr) nounwind {
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* %ptr, i32 42)
+  ret void
+}
+
+; FUNC-LABEL: {{^}}flat_atomic_dec_noret_i32_offset:
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; GCN: flat_atomic_dec v{{\[[0-9]+:[0-9]+\]}}, [[K]]{{$}}
+define void @flat_atomic_dec_noret_i32_offset(i32 addrspace(4)* %ptr) nounwind {
+  %gep = getelementptr i32, i32 addrspace(4)* %ptr, i32 4
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* %gep, i32 42)
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_ret_i32_offset_addr64:
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; GCN: flat_atomic_dec v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, [[K]] glc{{$}}
+define void @flat_atomic_dec_ret_i32_offset_addr64(i32 addrspace(4)* %out, i32 addrspace(4)* %ptr) #0 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.tid = getelementptr i32, i32 addrspace(4)* %ptr, i32 %id
+  %out.gep = getelementptr i32, i32 addrspace(4)* %out, i32 %id
+  %gep = getelementptr i32, i32 addrspace(4)* %gep.tid, i32 5
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* %gep, i32 42)
+  store i32 %result, i32 addrspace(4)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_noret_i32_offset_addr64:
+; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 42
+; GCN: flat_atomic_dec v{{\[[0-9]+:[0-9]+\]}}, [[K]]{{$}}
+define void @flat_atomic_dec_noret_i32_offset_addr64(i32 addrspace(4)* %ptr) #0 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.tid = getelementptr i32, i32 addrspace(4)* %ptr, i32 %id
+  %gep = getelementptr i32, i32 addrspace(4)* %gep.tid, i32 5
+  %result = call i32 @llvm.amdgcn.atomic.dec.i32.p4i32(i32 addrspace(4)* %gep, i32 42)
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_ret_i64:
+; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]}} glc{{$}}
+define void @flat_atomic_dec_ret_i64(i64 addrspace(4)* %out, i64 addrspace(4)* %ptr) #0 {
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p4i64(i64 addrspace(4)* %ptr, i64 42)
+  store i64 %result, i64 addrspace(4)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_ret_i64_offset:
+; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]}} glc{{$}}
+define void @flat_atomic_dec_ret_i64_offset(i64 addrspace(4)* %out, i64 addrspace(4)* %ptr) #0 {
+  %gep = getelementptr i64, i64 addrspace(4)* %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p4i64(i64 addrspace(4)* %gep, i64 42)
+  store i64 %result, i64 addrspace(4)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}flat_atomic_dec_noret_i64:
+; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]$}}
+define void @flat_atomic_dec_noret_i64(i64 addrspace(4)* %ptr) nounwind {
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p4i64(i64 addrspace(4)* %ptr, i64 42)
+  ret void
+}
+
+; FUNC-LABEL: {{^}}flat_atomic_dec_noret_i64_offset:
+; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]$}}
+define void @flat_atomic_dec_noret_i64_offset(i64 addrspace(4)* %ptr) nounwind {
+  %gep = getelementptr i64, i64 addrspace(4)* %ptr, i32 4
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p4i64(i64 addrspace(4)* %gep, i64 42)
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_ret_i64_offset_addr64:
+; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]}} glc{{$}}
+define void @flat_atomic_dec_ret_i64_offset_addr64(i64 addrspace(4)* %out, i64 addrspace(4)* %ptr) #0 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.tid = getelementptr i64, i64 addrspace(4)* %ptr, i32 %id
+  %out.gep = getelementptr i64, i64 addrspace(4)* %out, i32 %id
+  %gep = getelementptr i64, i64 addrspace(4)* %gep.tid, i32 5
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p4i64(i64 addrspace(4)* %gep, i64 42)
+  store i64 %result, i64 addrspace(4)* %out.gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}flat_atomic_dec_noret_i64_offset_addr64:
+; GCN-DAG: v_mov_b32_e32 v[[KLO:[0-9]+]], 42
+; GCN-DAG: v_mov_b32_e32 v[[KHI:[0-9]+]], 0{{$}}
+; GCN: flat_atomic_dec_x2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[KLO]]:[[KHI]]{{\]$}}
+define void @flat_atomic_dec_noret_i64_offset_addr64(i64 addrspace(4)* %ptr) #0 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.tid = getelementptr i64, i64 addrspace(4)* %ptr, i32 %id
+  %gep = getelementptr i64, i64 addrspace(4)* %gep.tid, i32 5
+  %result = call i64 @llvm.amdgcn.atomic.dec.i64.p4i64(i64 addrspace(4)* %gep, i64 42)
   ret void
 }
 
@@ -249,3 +376,12 @@ define void @atomic_dec_shl_base_lds_0_i64(i64 addrspace(1)* %out, i32 addrspace
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind argmemonly }
+
+
+
+
+
+
+
+
+

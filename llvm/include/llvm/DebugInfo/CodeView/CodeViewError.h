@@ -19,6 +19,7 @@ namespace codeview {
 enum class cv_error_code {
   unspecified = 1,
   insufficient_buffer,
+  operation_unsupported,
   corrupt_record,
 };
 

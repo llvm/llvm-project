@@ -320,7 +320,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
   } else {
     llvm_unreachable("Unhandled loop condition!");
   }
-  return 0;
+  return nullptr;
 }
 
 /// \brief Handle a back edge (loop)
