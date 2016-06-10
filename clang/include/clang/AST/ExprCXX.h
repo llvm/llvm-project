@@ -1187,7 +1187,7 @@ private:
 protected:
   CXXConstructExpr(const ASTContext &C, StmtClass SC, QualType T,
                    SourceLocation Loc,
-                   NamedDecl *Found, CXXConstructorDecl *Ctor,
+                   CXXConstructorDecl *Ctor,
                    bool Elidable,
                    ArrayRef<Expr *> Args,
                    bool HadMultipleCandidates,
@@ -1211,7 +1211,6 @@ public:
 
   static CXXConstructExpr *Create(const ASTContext &C, QualType T,
                                   SourceLocation Loc,
-                                  NamedDecl *Found,
                                   CXXConstructorDecl *Ctor,
                                   bool Elidable,
                                   ArrayRef<Expr *> Args,
@@ -1221,9 +1220,6 @@ public:
                                   bool ZeroInitialization,
                                   ConstructionKind ConstructKind,
                                   SourceRange ParenOrBraceRange);
-
-  /// \brief Get the declaration that was found by name lookup.
-  NamedDecl *getFoundDecl() const;
 
   /// \brief Get the constructor that this expression will (ultimately) call.
   CXXConstructorDecl *getConstructor() const { return Constructor; }
@@ -1393,7 +1389,6 @@ class CXXTemporaryObjectExpr : public CXXConstructExpr {
 
 public:
   CXXTemporaryObjectExpr(const ASTContext &C,
-                         NamedDecl *Found,
                          CXXConstructorDecl *Cons,
                          TypeSourceInfo *Type,
                          ArrayRef<Expr *> Args,
