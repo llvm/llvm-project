@@ -89,6 +89,9 @@
 #define PROF_WARN(Format, ...)                                                 \
   fprintf(stderr, "LLVM Profile Warning: " Format, __VA_ARGS__);
 
+#define PROF_NOTE(Format, ...)                                                 \
+  fprintf(stderr, "LLVM Profile Note: " Format, __VA_ARGS__);
+
 #if defined(__FreeBSD__)
 
 #include <inttypes.h>

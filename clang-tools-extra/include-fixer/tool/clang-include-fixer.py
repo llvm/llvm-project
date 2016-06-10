@@ -34,6 +34,11 @@ if vim.eval('exists("g:clang_include_fixer_maximum_suggested_headers")') == "1":
       1,
       vim.eval('g:clang_include_fixer_maximum_suggested_headers'))
 
+increment_num=5
+if vim.eval('exists("g:clang_include_fixer_increment_num")') == "1":
+  increment_num = max(
+      1,
+      vim.eval('g:clang_include_fixer_increment_num'))
 
 def GetUserSelection(message, headers, maximum_suggested_headers):
   eval_message = message + '\n'
@@ -41,7 +46,9 @@ def GetUserSelection(message, headers, maximum_suggested_headers):
     eval_message += "({0}). {1}\n".format(idx+1, header)
   eval_message += "Enter (q) to quit;"
   if maximum_suggested_headers < len(headers):
-    eval_message += " (a) to show all candidates.";
+    eval_message += " (m) to show {0} more candidates.".format(
+        min(increment_num, len(headers) - maximum_suggested_headers))
+
   eval_message += "\nSelect (default 1): "
   res = vim.eval("input('{0}')".format(eval_message))
   if res == '':
@@ -49,15 +56,19 @@ def GetUserSelection(message, headers, maximum_suggested_headers):
     idx = 1
   elif res == 'q':
     raise Exception('   Insertion cancelled...')
-  elif res == 'a' and maximum_suggested_headers < len(headers):
-    return GetUserSelection(message, headers, len(headers))
+  elif res == 'm':
+    return GetUserSelection(message,
+                            headers, maximum_suggested_headers + increment_num)
   else:
     try:
       idx = int(res)
       if idx <= 0 or idx > len(headers):
         raise Exception()
     except Exception:
-        raise Exception('   ERROR: Invalid option "{0}"...Abort!'.format(res))
+      # Show a new prompt on invalid option instead of aborting so that users
+      # don't need to wait for another include-fixer run.
+      print >> sys.stderr, "Invalid option:", res
+      return GetUserSelection(message, headers, maximum_suggested_headers)
   return headers[idx-1]
 
 def execute(command, text):
