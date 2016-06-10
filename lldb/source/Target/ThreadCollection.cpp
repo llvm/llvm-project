@@ -9,8 +9,10 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <mutex>
 
 #include "lldb/Target/ThreadCollection.h"
+#include "lldb/Target/Thread.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,6 +34,24 @@ ThreadCollection::AddThread (const ThreadSP &thread_sp)
 {
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
     m_threads.push_back (thread_sp);
+}
+
+void
+ThreadCollection::AddThreadSortedByIndexID (const ThreadSP &thread_sp)
+{
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    // Make sure we always keep the threads sorted by thread index ID
+    const uint32_t thread_index_id = thread_sp->GetIndexID();
+    if (m_threads.empty() || m_threads.back()->GetIndexID() < thread_index_id)
+        m_threads.push_back (thread_sp);
+    else
+    {
+        m_threads.insert(std::upper_bound(m_threads.begin(), m_threads.end(), thread_sp,
+                                          [] (const ThreadSP &lhs, const ThreadSP &rhs) -> bool
+                                          {
+                                              return lhs->GetIndexID() < rhs->GetIndexID();
+                                          }), thread_sp);
+    }
 }
 
 void

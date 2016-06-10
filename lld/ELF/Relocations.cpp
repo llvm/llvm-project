@@ -72,11 +72,11 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   // if the target symbol is preemptible. There are two two MIPS GP-relative
   // relocations R_MIPS_GPREL16 and R_MIPS_GPREL32. But only R_MIPS_GPREL16
   // can be against a preemptible symbol.
-  // To get MIPS relocation type we apply 0xf mask. In case of O32 ABI all
+  // To get MIPS relocation type we apply 0xff mask. In case of O32 ABI all
   // relocation types occupy eight bit. In case of N64 ABI we extract first
   // relocation from 3-in-1 packet because only the first relocation can
   // be against a real symbol.
-  if (Config->EMachine == EM_MIPS && (Type & 0xf) == R_MIPS_GPREL16)
+  if (Config->EMachine == EM_MIPS && (Type & 0xff) == R_MIPS_GPREL16)
     return false;
   return Body.isPreemptible();
 }
@@ -139,7 +139,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
 
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
-        if (Body.isPreemptible())
+        if (isPreemptible(Body, Type))
           Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Out<ELFT>::Got,
                                         Off + (uintX_t)sizeof(uintX_t), false,
                                         &Body, 0});
@@ -401,8 +401,8 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
   // only memory. We can hack around it if we are producing an executable and
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
-    error("relocation " + getRelName(Type) +
-          " cannot be used when making a shared object; recompile with -fPIC.");
+    error("can't create dynamic relocation " + getRelName(Type) +
+          " against readonly segment");
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {

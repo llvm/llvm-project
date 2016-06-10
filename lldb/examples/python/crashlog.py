@@ -452,7 +452,7 @@ class CrashLog(symbolication.Symbolicator):
         for image in self.images:
             if image.identifier == identifier:
                 return image            
-        regex_text = '^.*\.%s$' % (identifier)
+        regex_text = '^.*\.%s$' % (re.escape(identifier))
         regex = re.compile(regex_text)
         for image in self.images:
             if regex.match(image.identifier):

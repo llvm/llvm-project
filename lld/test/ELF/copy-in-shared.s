@@ -7,4 +7,4 @@
 
 .quad foo
 
-// CHECK: relocation R_X86_64_64 cannot be used when making a shared object; recompile with -fPIC.
+// CHECK: can't create dynamic relocation R_X86_64_64 against readonly segment
