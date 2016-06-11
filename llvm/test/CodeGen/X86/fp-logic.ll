@@ -265,8 +265,7 @@ define float @movmsk(float %x) {
 define double @bitcast_fabs(double %x) {
 ; CHECK-LABEL: bitcast_fabs:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    andpd %xmm1, %xmm0
+; CHECK-NEXT:    andpd {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast double %x to i64
@@ -278,8 +277,7 @@ define double @bitcast_fabs(double %x) {
 define float @bitcast_fneg(float %x) {
 ; CHECK-LABEL: bitcast_fneg:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    xorps %xmm1, %xmm0
+; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 ;
   %bc1 = bitcast float %x to i32

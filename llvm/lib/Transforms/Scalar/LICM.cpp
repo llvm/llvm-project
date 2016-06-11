@@ -80,20 +80,17 @@ static cl::opt<bool>
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop,
-                            const LICMSafetyInfo *SafetyInfo);
+                            const LoopSafetyInfo *SafetyInfo);
 static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
-                  const LICMSafetyInfo *SafetyInfo);
+                  const LoopSafetyInfo *SafetyInfo);
 static bool sink(Instruction &I, const LoopInfo *LI, const DominatorTree *DT,
                  const Loop *CurLoop, AliasSetTracker *CurAST,
-                 const LICMSafetyInfo *SafetyInfo);
-static bool isGuaranteedToExecute(const Instruction &Inst,
-                                  const DominatorTree *DT, const Loop *CurLoop,
-                                  const LICMSafetyInfo *SafetyInfo);
+                 const LoopSafetyInfo *SafetyInfo);
 static bool isSafeToExecuteUnconditionally(const Instruction &Inst,
                                            const DominatorTree *DT,
                                            const TargetLibraryInfo *TLI,
                                            const Loop *CurLoop,
-                                           const LICMSafetyInfo *SafetyInfo,
+                                           const LoopSafetyInfo *SafetyInfo,
                                            const Instruction *CtxI = nullptr);
 static bool pointerInvalidatedByLoop(Value *V, uint64_t Size,
                                      const AAMDNodes &AAInfo,
@@ -101,11 +98,11 @@ static bool pointerInvalidatedByLoop(Value *V, uint64_t Size,
 static Instruction *
 CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
-                            const LICMSafetyInfo *SafetyInfo);
+                            const LoopSafetyInfo *SafetyInfo);
 static bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA,
                                DominatorTree *DT, TargetLibraryInfo *TLI,
                                Loop *CurLoop, AliasSetTracker *CurAST,
-                               LICMSafetyInfo *SafetyInfo);
+                               LoopSafetyInfo *SafetyInfo);
 
 namespace {
 struct LICM : public LoopPass {
@@ -196,8 +193,8 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
   Preheader = L->getLoopPreheader();
 
   // Compute loop safety information.
-  LICMSafetyInfo SafetyInfo;
-  computeLICMSafetyInfo(&SafetyInfo, CurLoop);
+  LoopSafetyInfo SafetyInfo;
+  computeLoopSafetyInfo(&SafetyInfo, CurLoop);
 
   // We want to visit all of the instructions in this loop... that are not parts
   // of our subloops (they have already had their invariants hoisted out of
@@ -272,7 +269,7 @@ bool LICM::runOnLoop(Loop *L, LPPassManager &LPM) {
 ///
 bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                       DominatorTree *DT, TargetLibraryInfo *TLI, Loop *CurLoop,
-                      AliasSetTracker *CurAST, LICMSafetyInfo *SafetyInfo) {
+                      AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo) {
 
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
@@ -330,7 +327,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 ///
 bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                        DominatorTree *DT, TargetLibraryInfo *TLI, Loop *CurLoop,
-                       AliasSetTracker *CurAST, LICMSafetyInfo *SafetyInfo) {
+                       AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo) {
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
          CurLoop != nullptr && CurAST != nullptr && SafetyInfo != nullptr &&
@@ -382,7 +379,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 /// Computes loop safety information, checks loop body & header
 /// for the possibility of may throw exception.
 ///
-void llvm::computeLICMSafetyInfo(LICMSafetyInfo *SafetyInfo, Loop *CurLoop) {
+void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
   assert(CurLoop != nullptr && "CurLoop cant be null");
   BasicBlock *Header = CurLoop->getHeader();
   // Setting default safety values.
@@ -416,7 +413,7 @@ void llvm::computeLICMSafetyInfo(LICMSafetyInfo *SafetyInfo, Loop *CurLoop) {
 ///
 bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
                         TargetLibraryInfo *TLI, Loop *CurLoop,
-                        AliasSetTracker *CurAST, LICMSafetyInfo *SafetyInfo) {
+                        AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo) {
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (!LI->isUnordered())
@@ -515,7 +512,7 @@ static bool isTriviallyReplacablePHI(const PHINode &PN, const Instruction &I) {
 /// blocks of the loop.
 ///
 static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop,
-                            const LICMSafetyInfo *SafetyInfo) {
+                            const LoopSafetyInfo *SafetyInfo) {
   const auto &BlockColors = SafetyInfo->BlockColors;
   for (const User *U : I.users()) {
     const Instruction *UI = cast<Instruction>(U);
@@ -562,7 +559,7 @@ static bool isNotUsedInLoop(const Instruction &I, const Loop *CurLoop,
 static Instruction *
 CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
-                            const LICMSafetyInfo *SafetyInfo) {
+                            const LoopSafetyInfo *SafetyInfo) {
   Instruction *New;
   if (auto *CI = dyn_cast<CallInst>(&I)) {
     const auto &BlockColors = SafetyInfo->BlockColors;
@@ -627,7 +624,7 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
 ///
 static bool sink(Instruction &I, const LoopInfo *LI, const DominatorTree *DT,
                  const Loop *CurLoop, AliasSetTracker *CurAST,
-                 const LICMSafetyInfo *SafetyInfo) {
+                 const LoopSafetyInfo *SafetyInfo) {
   DEBUG(dbgs() << "LICM sinking instruction: " << I << "\n");
   bool Changed = false;
   if (isa<LoadInst>(I))
@@ -695,7 +692,7 @@ static bool sink(Instruction &I, const LoopInfo *LI, const DominatorTree *DT,
 /// is safe to hoist, this instruction is called to do the dirty work.
 ///
 static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
-                  const LICMSafetyInfo *SafetyInfo) {
+                  const LoopSafetyInfo *SafetyInfo) {
   auto *Preheader = CurLoop->getLoopPreheader();
   DEBUG(dbgs() << "LICM hoisting to " << Preheader->getName() << ": " << I
                << "\n");
@@ -729,50 +726,12 @@ static bool isSafeToExecuteUnconditionally(const Instruction &Inst,
                                            const DominatorTree *DT,
                                            const TargetLibraryInfo *TLI,
                                            const Loop *CurLoop,
-                                           const LICMSafetyInfo *SafetyInfo,
+                                           const LoopSafetyInfo *SafetyInfo,
                                            const Instruction *CtxI) {
   if (isSafeToSpeculativelyExecute(&Inst, CtxI, DT, TLI))
     return true;
 
   return isGuaranteedToExecute(Inst, DT, CurLoop, SafetyInfo);
-}
-
-static bool isGuaranteedToExecute(const Instruction &Inst,
-                                  const DominatorTree *DT, const Loop *CurLoop,
-                                  const LICMSafetyInfo *SafetyInfo) {
-
-  // We have to check to make sure that the instruction dominates all
-  // of the exit blocks.  If it doesn't, then there is a path out of the loop
-  // which does not execute this instruction, so we can't hoist it.
-
-  // If the instruction is in the header block for the loop (which is very
-  // common), it is always guaranteed to dominate the exit blocks.  Since this
-  // is a common case, and can save some work, check it now.
-  if (Inst.getParent() == CurLoop->getHeader())
-    // If there's a throw in the header block, we can't guarantee we'll reach
-    // Inst.
-    return !SafetyInfo->HeaderMayThrow;
-
-  // Somewhere in this loop there is an instruction which may throw and make us
-  // exit the loop.
-  if (SafetyInfo->MayThrow)
-    return false;
-
-  // Get the exit blocks for the current loop.
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  CurLoop->getExitBlocks(ExitBlocks);
-
-  // Verify that the block dominates each of the exit blocks of the loop.
-  for (BasicBlock *ExitBlock : ExitBlocks)
-    if (!DT->dominates(Inst.getParent(), ExitBlock))
-      return false;
-
-  // As a degenerate case, if the loop is statically infinite then we haven't
-  // proven anything since there are no exit blocks.
-  if (ExitBlocks.empty())
-    return false;
-
-  return true;
 }
 
 namespace {
@@ -860,7 +819,7 @@ bool llvm::promoteLoopAccessesToScalars(
     AliasSet &AS, SmallVectorImpl<BasicBlock *> &ExitBlocks,
     SmallVectorImpl<Instruction *> &InsertPts, PredIteratorCache &PIC,
     LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
-    Loop *CurLoop, AliasSetTracker *CurAST, LICMSafetyInfo *SafetyInfo) {
+    Loop *CurLoop, AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo) {
   // Verify inputs.
   assert(LI != nullptr && DT != nullptr && CurLoop != nullptr &&
          CurAST != nullptr && SafetyInfo != nullptr &&

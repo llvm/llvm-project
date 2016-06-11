@@ -245,6 +245,7 @@ void initializePGOIndirectCallPromotionLegacyPassPass(PassRegistry&);
 void initializePGOInstrumentationGenLegacyPassPass(PassRegistry&);
 void initializePGOInstrumentationUseLegacyPassPass(PassRegistry&);
 void initializePHIEliminationPass(PassRegistry&);
+void initializePhysicalRegisterUsageInfoPass(PassRegistry &);
 void initializePartialInlinerPass(PassRegistry&);
 void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);
 void initializePatchableFunctionPass(PassRegistry &);

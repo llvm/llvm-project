@@ -189,7 +189,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
        I != IE; ++I) {
 
     // If the loop already has prefetches, then assume that the user knows
-    // what he or she is doing and don't add any more.
+    // what they are doing and don't add any more.
     for (BasicBlock::iterator J = (*I)->begin(), JE = (*I)->end();
          J != JE; ++J)
       if (CallInst *CI = dyn_cast<CallInst>(J))

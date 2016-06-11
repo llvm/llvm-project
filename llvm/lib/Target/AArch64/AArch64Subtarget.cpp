@@ -63,14 +63,17 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA57:
     MaxInterleaveFactor = 4;
     break;
+  case ExynosM1:
+    PrefFunctionAlignment = 4;
+    PrefLoopAlignment = 3;
+    break;
   case Kryo:
     MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
     break;
-  case Others: break;
   case CortexA35: break;
   case CortexA53: break;
-  case ExynosM1: break;
+  case Others: break;
   }
 }
 

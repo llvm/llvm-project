@@ -158,12 +158,6 @@ We might want to model all access registers and use them to spill
 
 --
 
-We might want to use 'j .+2' as a trap instruction, like gcc does.  It can
-also be made conditional like the return instruction, allowing us to utilize
-compare-and-trap and load-and-trap instructions.
-
---
-
 We might want to use the 'overflow' condition of eg. AR to support
 llvm.sadd.with.overflow.i32 and related instructions - the generated code
 for signed overflow check is currently quite bad.  This would improve

@@ -329,6 +329,30 @@ TEST(LiveIntervalTest, MoveUpValNos) {
   });
 }
 
+TEST(LiveIntervalTest, MoveOverUndefUse0) {
+  // findLastUseBefore() used by handleMoveUp() must ignore undef operands.
+  liveIntervalTest(
+"    %0 = IMPLICIT_DEF\n"
+"    NOOP\n"
+"    NOOP implicit undef %0\n"
+"    %0 = IMPLICIT_DEF implicit %0(tied-def 0)\n",
+  [](MachineFunction &MF, LiveIntervals &LIS) {
+    testHandleMove(MF, LIS, 3, 1);
+  });
+}
+
+TEST(LiveIntervalTest, MoveOverUndefUse1) {
+  // findLastUseBefore() used by handleMoveUp() must ignore undef operands.
+  liveIntervalTest(
+"    %rax = IMPLICIT_DEF\n"
+"    NOOP\n"
+"    NOOP implicit undef %rax\n"
+"    %rax = IMPLICIT_DEF implicit %rax(tied-def 0)\n",
+  [](MachineFunction &MF, LiveIntervals &LIS) {
+    testHandleMove(MF, LIS, 3, 1);
+  });
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   initLLVM();

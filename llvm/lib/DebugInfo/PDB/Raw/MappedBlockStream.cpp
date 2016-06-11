@@ -104,7 +104,7 @@ Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
   // into it, and return an ArrayRef to that.  Do not touch existing pool
   // allocations, as existing clients may be holding a pointer which must
   // not be invalidated.
-  uint8_t *WriteBuffer = Pool.Allocate<uint8_t>(Size);
+  uint8_t *WriteBuffer = static_cast<uint8_t *>(Pool.Allocate(Size, 8));
   if (auto EC = readBytes(Offset, MutableArrayRef<uint8_t>(WriteBuffer, Size)))
     return EC;
 

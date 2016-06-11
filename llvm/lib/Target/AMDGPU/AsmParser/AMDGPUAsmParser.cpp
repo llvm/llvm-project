@@ -64,6 +64,43 @@ public:
 
   typedef std::unique_ptr<AMDGPUOperand> Ptr;
 
+  struct Modifiers {
+    bool Abs;
+    bool Neg;
+    bool Sext;
+
+    bool hasFPModifiers() const { return Abs || Neg; }
+    bool hasIntModifiers() const { return Sext; }
+    bool hasModifiers() const { return hasFPModifiers() || hasIntModifiers(); }
+
+    int64_t getFPModifiersOperand() const {
+      int64_t Operand = 0;
+      Operand |= Abs ? SISrcMods::ABS : 0;
+      Operand |= Neg ? SISrcMods::NEG : 0;
+      return Operand;
+    }
+
+    int64_t getIntModifiersOperand() const {
+      int64_t Operand = 0;
+      Operand |= Sext ? SISrcMods::SEXT : 0;
+      return Operand;
+    }
+
+    int64_t getModifiersOperand() const {
+      assert(!(hasFPModifiers() && hasIntModifiers())
+           && "fp and int modifiers should not be used simultaneously");
+      if (hasFPModifiers()) {
+        return getFPModifiersOperand();
+      } else if (hasIntModifiers()) {
+        return getIntModifiersOperand();
+      } else {
+        return 0;
+      }
+    }
+
+    friend raw_ostream &operator <<(raw_ostream &OS, AMDGPUOperand::Modifiers Mods);
+  };
+
   enum ImmTy {
     ImmTyNone,
     ImmTyGDS,
@@ -104,12 +141,12 @@ public:
     bool IsFPImm;
     ImmTy Type;
     int64_t Val;
-    int Modifiers;
+    Modifiers Mods;
   };
 
   struct RegOp {
     unsigned RegNo;
-    int Modifiers;
+    Modifiers Mods;
     const MCRegisterInfo *TRI;
     const MCSubtargetInfo *STI;
     bool IsForcedVOP3;
@@ -122,65 +159,6 @@ public:
     const MCExpr *Expr;
   };
 
-  void addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers = true) const {
-    if (Imm.Type == ImmTyNone && ApplyModifiers && Imm.Modifiers != 0) {
-      // Apply modifiers to immediate value
-      int64_t Val = Imm.Val;
-      bool Negate = Imm.Modifiers & 0x1;
-      bool Abs = Imm.Modifiers & 0x2;
-      if (Imm.IsFPImm) {
-        APFloat F(BitsToFloat(Val));
-        if (Abs) {
-          F.clearSign();
-        }
-        if (Negate) {
-          F.changeSign();
-        }
-        Val = F.bitcastToAPInt().getZExtValue();
-      } else {
-        Val = Abs ? std::abs(Val) : Val;
-        Val = Negate ? -Val : Val;
-      }
-      Inst.addOperand(MCOperand::createImm(Val));
-    } else {
-      Inst.addOperand(MCOperand::createImm(getImm()));
-    }
-  }
-
-  StringRef getToken() const {
-    return StringRef(Tok.Data, Tok.Length);
-  }
-
-  void addRegOperands(MCInst &Inst, unsigned N) const {
-    Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(getReg(), *Reg.STI)));
-  }
-
-  void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
-    if (isRegKind())
-      addRegOperands(Inst, N);
-    else
-      addImmOperands(Inst, N);
-  }
-
-  void addRegOrImmWithInputModsOperands(MCInst &Inst, unsigned N) const {
-    if (isRegKind()) {
-      Inst.addOperand(MCOperand::createImm(Reg.Modifiers));
-      addRegOperands(Inst, N);
-    } else {
-      Inst.addOperand(MCOperand::createImm(Imm.Modifiers));
-      addImmOperands(Inst, N, false);
-    }
-  }
-
-  void addSoppBrTargetOperands(MCInst &Inst, unsigned N) const {
-    if (isImm())
-      addImmOperands(Inst, N);
-    else {
-      assert(isExpr());
-      Inst.addOperand(MCOperand::createExpr(Expr));
-    }
-  }
-
   bool isToken() const override {
     return Kind == Token;
   }
@@ -190,9 +168,10 @@ public:
   }
 
   bool isInlinableImm() const {
-    if (!isImm() || Imm.Type != AMDGPUOperand::ImmTyNone /* Only plain
-      immediates are inlinable (e.g. "clamp" attribute is not) */ )
+    if (!isImmTy(ImmTyNone)) {
+      // Only plain immediates are inlinable (e.g. "clamp" attribute is not)
       return false;
+    }
     // TODO: We should avoid using host float here. It would be better to
     // check the float bit values which is what a few other places do.
     // We've had bot failures before due to weird NaN support on mips hosts.
@@ -203,56 +182,33 @@ public:
            F == 2.0 || F == -2.0 || F == 4.0 || F == -4.0);
   }
 
-  int64_t getImm() const {
-    return Imm.Val;
-  }
-
-  enum ImmTy getImmTy() const {
-    assert(isImm());
-    return Imm.Type;
-  }
-
   bool isRegKind() const {
     return Kind == Register;
   }
 
   bool isReg() const override {
-    return Kind == Register && Reg.Modifiers == 0;
+    return isRegKind() && !Reg.Mods.hasModifiers();
   }
 
   bool isRegOrImmWithInputMods() const {
-    return Kind == Register || isInlinableImm();
+    return isRegKind() || isInlinableImm();
   }
 
   bool isImmTy(ImmTy ImmT) const {
     return isImm() && Imm.Type == ImmT;
   }
-
-  bool isClampSI() const {
-    return isImmTy(ImmTyClampSI);
-  }
-
-  bool isOModSI() const {
-    return isImmTy(ImmTyOModSI);
-  }
-
+  
   bool isImmModifier() const {
-    return Kind == Immediate && Imm.Type != ImmTyNone;
+    return isImm() && Imm.Type != ImmTyNone;
   }
-
-  bool isDMask() const {
-    return isImmTy(ImmTyDMask);
-  }
-
+  
+  bool isClampSI() const { return isImmTy(ImmTyClampSI); }
+  bool isOModSI() const { return isImmTy(ImmTyOModSI); }
+  bool isDMask() const { return isImmTy(ImmTyDMask); }
   bool isUNorm() const { return isImmTy(ImmTyUNorm); }
   bool isDA() const { return isImmTy(ImmTyDA); }
   bool isR128() const { return isImmTy(ImmTyUNorm); }
   bool isLWE() const { return isImmTy(ImmTyLWE); }
-
-  bool isMod() const {
-    return isClampSI() || isOModSI();
-  }
-
   bool isOffen() const { return isImmTy(ImmTyOffen); }
   bool isIdxen() const { return isImmTy(ImmTyIdxen); }
   bool isAddr64() const { return isImmTy(ImmTyAddr64); }
@@ -263,50 +219,16 @@ public:
   bool isGLC() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
-
-  bool isBankMask() const {
-    return isImmTy(ImmTyDppBankMask);
-  }
-
-  bool isRowMask() const {
-    return isImmTy(ImmTyDppRowMask);
-  }
-
-  bool isBoundCtrl() const {
-    return isImmTy(ImmTyDppBoundCtrl);
-  }
-
-  bool isSDWADstSel() const {
-    return isImmTy(ImmTySdwaDstSel);
-  }
-
-  bool isSDWASrc0Sel() const {
-    return isImmTy(ImmTySdwaSrc0Sel);
-  }
-
-  bool isSDWASrc1Sel() const {
-    return isImmTy(ImmTySdwaSrc1Sel);
-  }
-
-  bool isSDWADstUnused() const {
-    return isImmTy(ImmTySdwaDstUnused);
-  }
-
-  void setModifiers(unsigned Mods) {
-    assert(isReg() || (isImm() && Imm.Modifiers == 0));
-    if (isReg())
-      Reg.Modifiers = Mods;
-    else
-      Imm.Modifiers = Mods;
-  }
-
-  bool hasModifiers() const {
-    assert(isRegKind() || isImm());
-    return isRegKind() ? Reg.Modifiers != 0 : Imm.Modifiers != 0;
-  }
-
-  unsigned getReg() const override {
-    return Reg.RegNo;
+  bool isBankMask() const { return isImmTy(ImmTyDppBankMask); }
+  bool isRowMask() const { return isImmTy(ImmTyDppRowMask); }
+  bool isBoundCtrl() const { return isImmTy(ImmTyDppBoundCtrl); }
+  bool isSDWADstSel() const { return isImmTy(ImmTySdwaDstSel); }
+  bool isSDWASrc0Sel() const { return isImmTy(ImmTySdwaSrc0Sel); }
+  bool isSDWASrc1Sel() const { return isImmTy(ImmTySdwaSrc1Sel); }
+  bool isSDWADstUnused() const { return isImmTy(ImmTySdwaDstUnused); }
+  
+  bool isMod() const {
+    return isClampSI() || isOModSI();
   }
 
   bool isRegOrImm() const {
@@ -368,12 +290,123 @@ public:
     return isExpr() || isImm();
   }
 
+  bool isSWaitCnt() const;
+  bool isHwreg() const;
+  bool isSendMsg() const;
+  bool isMubufOffset() const;
+  bool isSMRDOffset() const;
+  bool isSMRDLiteralOffset() const;
+  bool isDPPCtrl() const;
+
+  StringRef getToken() const {
+    return StringRef(Tok.Data, Tok.Length);
+  }
+
+  int64_t getImm() const {
+    assert(isImm());
+    return Imm.Val;
+  }
+
+  enum ImmTy getImmTy() const {
+    assert(isImm());
+    return Imm.Type;
+  }
+
+  unsigned getReg() const override {
+    return Reg.RegNo;
+  }
+
   SMLoc getStartLoc() const override {
     return StartLoc;
   }
 
   SMLoc getEndLoc() const override {
     return EndLoc;
+  }
+
+  Modifiers getModifiers() const {
+    assert(isRegKind() || isImmTy(ImmTyNone));
+    return isRegKind() ? Reg.Mods : Imm.Mods;
+  }
+
+  void setModifiers(Modifiers Mods) {
+    assert(isRegKind() || isImmTy(ImmTyNone));
+    if (isRegKind())
+      Reg.Mods = Mods;
+    else
+      Imm.Mods = Mods;
+  }
+
+  bool hasModifiers() const {
+    return getModifiers().hasModifiers();
+  }
+  
+  bool hasFPModifiers() const {
+    return getModifiers().hasFPModifiers();
+  }
+
+  bool hasIntModifiers() const {
+    return getModifiers().hasIntModifiers();
+  }
+
+  void addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers = true) const {
+    if (isImmTy(ImmTyNone) && ApplyModifiers && Imm.Mods.hasFPModifiers()) {
+      // Apply modifiers to immediate value 
+      int64_t Val = Imm.Val;
+      bool Negate = Imm.Mods.Neg; // Only negate can get here
+      if (Imm.IsFPImm) {
+        APFloat F(BitsToFloat(Val));
+        if (Negate) {
+          F.changeSign();
+        }
+        Val = F.bitcastToAPInt().getZExtValue();
+      } else {
+        Val = Negate ? -Val : Val;
+      }
+      Inst.addOperand(MCOperand::createImm(Val));
+    } else {
+      Inst.addOperand(MCOperand::createImm(getImm()));
+    }
+  }
+
+  void addRegOperands(MCInst &Inst, unsigned N) const {
+    Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(getReg(), *Reg.STI)));
+  }
+
+  void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
+    if (isRegKind())
+      addRegOperands(Inst, N);
+    else
+      addImmOperands(Inst, N);
+  }
+
+  void addRegOrImmWithInputModsOperands(MCInst &Inst, unsigned N) const {
+    Modifiers Mods = getModifiers();
+    Inst.addOperand(MCOperand::createImm(Mods.getModifiersOperand()));
+    if (isRegKind()) {
+      addRegOperands(Inst, N);
+    } else {
+      addImmOperands(Inst, N, false);
+    }
+  }
+
+  void addRegOrImmWithFPInputModsOperands(MCInst &Inst, unsigned N) const {
+    assert(!hasIntModifiers());
+    addRegOrImmWithInputModsOperands(Inst, N);
+  }
+
+  void addRegOrImmWithIntInputModsOperands(MCInst &Inst, unsigned N) const {
+    assert(!hasFPModifiers());
+    addRegOrImmWithInputModsOperands(Inst, N);
+  }
+
+  void addSoppBrTargetOperands(MCInst &Inst, unsigned N) const {
+    if (isImm())
+      addImmOperands(Inst, N);
+    else {
+      assert(isExpr());
+      Inst.addOperand(MCOperand::createExpr(Expr));
+    }
   }
 
   void printImmTy(raw_ostream& OS, ImmTy Type) const {
@@ -412,14 +445,14 @@ public:
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Register:
-      OS << "<register " << getReg() << " mods: " << Reg.Modifiers << '>';
+      OS << "<register " << getReg() << " mods: " << Reg.Mods << '>';
       break;
     case Immediate:
       OS << '<' << getImm();
       if (getImmTy() != ImmTyNone) {
         OS << " type: "; printImmTy(OS, getImmTy());
       }
-      OS << " mods: " << Imm.Modifiers << '>';
+      OS << " mods: " << Imm.Mods << '>';
       break;
     case Token:
       OS << '\'' << getToken() << '\'';
@@ -437,7 +470,7 @@ public:
     Op->Imm.Val = Val;
     Op->Imm.IsFPImm = IsFPImm;
     Op->Imm.Type = Type;
-    Op->Imm.Modifiers = 0;
+    Op->Imm.Mods = {false, false, false};
     Op->StartLoc = Loc;
     Op->EndLoc = Loc;
     return Op;
@@ -462,7 +495,7 @@ public:
     Op->Reg.RegNo = RegNo;
     Op->Reg.TRI = TRI;
     Op->Reg.STI = STI;
-    Op->Reg.Modifiers = 0;
+    Op->Reg.Mods = {false, false, false};
     Op->Reg.IsForcedVOP3 = ForceVOP3;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -476,15 +509,12 @@ public:
     Op->EndLoc = S;
     return Op;
   }
-
-  bool isSWaitCnt() const;
-  bool isHwreg() const;
-  bool isSendMsg() const;
-  bool isMubufOffset() const;
-  bool isSMRDOffset() const;
-  bool isSMRDLiteralOffset() const;
-  bool isDPPCtrl() const;
 };
+
+raw_ostream &operator <<(raw_ostream &OS, AMDGPUOperand::Modifiers Mods) {
+  OS << "abs:" << Mods.Abs << " neg: " << Mods.Neg << " sext:" << Mods.Sext;
+  return OS;
+}
 
 class AMDGPUAsmParser : public MCTargetAsmParser {
   const MCInstrInfo &MII;
@@ -598,7 +628,8 @@ public:
 
   OperandMatchResultTy parseImm(OperandVector &Operands);
   OperandMatchResultTy parseRegOrImm(OperandVector &Operands);
-  OperandMatchResultTy parseRegOrImmWithInputMods(OperandVector &Operands);
+  OperandMatchResultTy parseRegOrImmWithFPInputMods(OperandVector &Operands);
+  OperandMatchResultTy parseRegOrImmWithIntInputMods(OperandVector &Operands);
 
   void cvtDSOffset01(MCInst &Inst, const OperandVector &Operands);
   void cvtDS(MCInst &Inst, const OperandVector &Operands);
@@ -665,12 +696,9 @@ public:
   AMDGPUOperand::Ptr defaultSDWASrc0Sel() const;
   AMDGPUOperand::Ptr defaultSDWASrc1Sel() const;
   AMDGPUOperand::Ptr defaultSDWADstUnused() const;
-  void cvtSdwaVop1_mod(MCInst &Inst, const OperandVector &Operands);
-  void cvtSdwaVop1_nomod(MCInst &Inst, const OperandVector &Operands);
-  void cvtSdwaVop2_mod(MCInst &Inst, const OperandVector &Operands);
-  void cvtSdwaVop2_nomod(MCInst &Inst, const OperandVector &Operands);
-  void cvtSDWA(MCInst &Inst, const OperandVector &Operands, bool HasMods,
-               bool IsVOP1);
+  void cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands);
+  void cvtSdwaVOP2(MCInst &Inst, const OperandVector &Operands);
+  void cvtSDWA(MCInst &Inst, const OperandVector &Operands, bool IsVOP1);
 };
 
 struct OptionalOperand {
@@ -969,7 +997,7 @@ AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands) {
 }
 
 AMDGPUAsmParser::OperandMatchResultTy
-AMDGPUAsmParser::parseRegOrImmWithInputMods(OperandVector &Operands) {
+AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands) {
   // XXX: During parsing we can't determine if minus sign means
   // negate-modifier or negative immediate value.
   // By default we suppose it is modifier.
@@ -1004,9 +1032,9 @@ AMDGPUAsmParser::parseRegOrImmWithInputMods(OperandVector &Operands) {
     return Res;
   }
 
-  unsigned Modifiers = 0;
+  AMDGPUOperand::Modifiers Mods = {false, false, false};
   if (Negate) {
-    Modifiers |= 0x1;
+    Mods.Neg = true;
   }
   if (Abs) {
     if (getLexer().getKind() != AsmToken::Pipe) {
@@ -1014,7 +1042,7 @@ AMDGPUAsmParser::parseRegOrImmWithInputMods(OperandVector &Operands) {
       return MatchOperand_ParseFail;
     }
     Parser.Lex();
-    Modifiers |= 0x2;
+    Mods.Abs = true;
   }
   if (Abs2) {
     if (getLexer().isNot(AsmToken::RParen)) {
@@ -1022,16 +1050,56 @@ AMDGPUAsmParser::parseRegOrImmWithInputMods(OperandVector &Operands) {
       return MatchOperand_ParseFail;
     }
     Parser.Lex();
-    Modifiers |= 0x2;
+    Mods.Abs = true;
   }
 
-  if (Modifiers) {
+  if (Mods.hasFPModifiers()) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
-    Op.setModifiers(Modifiers);
+    Op.setModifiers(Mods);
   }
   return MatchOperand_Success;
 }
 
+AMDGPUAsmParser::OperandMatchResultTy
+AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
+  bool Sext = false;
+
+  if (getLexer().getKind() == AsmToken::Identifier && Parser.getTok().getString() == "sext") {
+    Parser.Lex();
+    Sext = true;
+    if (getLexer().isNot(AsmToken::LParen)) {
+      Error(Parser.getTok().getLoc(), "expected left paren after sext");
+      return MatchOperand_ParseFail;
+    }
+    Parser.Lex();
+  }
+
+  auto Res = parseRegOrImm(Operands);
+  if (Res != MatchOperand_Success) {
+    return Res;
+  }
+
+  AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
+  if (Op.isImm() && Op.Imm.IsFPImm) {
+    Error(Parser.getTok().getLoc(), "floating point operands not allowed with sext() modifier");
+    return MatchOperand_ParseFail;
+  }
+
+  AMDGPUOperand::Modifiers Mods = {false, false, false};
+  if (Sext) {
+    if (getLexer().isNot(AsmToken::RParen)) {
+      Error(Parser.getTok().getLoc(), "expected closing parentheses");
+      return MatchOperand_ParseFail;
+    }
+    Parser.Lex();
+    Mods.Sext = true;
+  }
+  
+  if (Mods.hasIntModifiers()) {
+    Op.setModifiers(Mods);
+  }
+  return MatchOperand_Success;
+}
 
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 
@@ -2338,7 +2406,8 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands) {
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     if (Op.isRegOrImmWithInputMods()) {
-      Op.addRegOrImmWithInputModsOperands(Inst, 2);
+      // only fp modifiers allowed in VOP3
+      Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isImm()) {
       OptionalIdx[Op.getImmTy()] = I;
     } else {
@@ -2511,8 +2580,8 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
     if (Op.isRegOrImmWithInputMods()) {
-      // We convert only instructions with modifiers
-      Op.addRegOrImmWithInputModsOperands(Inst, 2);
+      // Only float modifiers supported in DPP
+      Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isDPPCtrl()) {
       Op.addImmOperands(Inst, 1);
     } else if (Op.isImm()) {
@@ -2612,24 +2681,16 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSDWADstUnused() const {
   return AMDGPUOperand::CreateImm(0, SMLoc(), AMDGPUOperand::ImmTySdwaDstUnused);
 }
 
-void AMDGPUAsmParser::cvtSdwaVop1_mod(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, true, true);
+void AMDGPUAsmParser::cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands) {
+  cvtSDWA(Inst, Operands, true);
 }
 
-void AMDGPUAsmParser::cvtSdwaVop1_nomod(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, false, true);
-}
-
-void AMDGPUAsmParser::cvtSdwaVop2_mod(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, true, false);
-}
-
-void AMDGPUAsmParser::cvtSdwaVop2_nomod(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, false, false);
+void AMDGPUAsmParser::cvtSdwaVOP2(MCInst &Inst, const OperandVector &Operands) {
+  cvtSDWA(Inst, Operands, false);
 }
 
 void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
-                              bool HasMods, bool IsVOP1) {
+                              bool IsVOP1) {
   OptionalImmIndexMap OptionalIdx;
 
   unsigned I = 1;
@@ -2641,10 +2702,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
-    if (!HasMods && Op.isReg()) {
-      Op.addRegOperands(Inst, 1);
-    } else if (HasMods && Op.isRegOrImmWithInputMods()) {
-      Op.addRegOrImmWithInputModsOperands(Inst, 2);
+    if (Op.isRegOrImmWithInputMods()) {
+       Op.addRegOrImmWithInputModsOperands(Inst, 2);
     } else if (Op.isImm()) {
       // Handle optional arguments
       OptionalIdx[Op.getImmTy()] = I;
@@ -2653,9 +2712,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
-  if (HasMods) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
-  }
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
+  
   if (Inst.getOpcode() == AMDGPU::V_NOP_sdwa) {
     // V_NOP_sdwa has no optional sdwa arguments
     return;

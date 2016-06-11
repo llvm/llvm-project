@@ -412,6 +412,9 @@ public:
       // If we are converting vectors and the operation is illegal, or
       // if the vectors are legalized to different types, estimate the
       // scalarization costs.
+      // TODO: This is probably a big overestimate. For splits, we should have
+      // something like getTypeLegalizationCost() + 2 * getCastInstrCost().
+      // The same applies to getCmpSelInstrCost() and getArithmeticInstrCost()
       unsigned Num = Dst->getVectorNumElements();
       unsigned Cost = static_cast<T *>(this)->getCastInstrCost(
           Opcode, Dst->getScalarType(), Src->getScalarType());
@@ -541,6 +544,51 @@ public:
     // Firstly, the cost of load/store operation.
     unsigned Cost = static_cast<T *>(this)->getMemoryOpCost(
         Opcode, VecTy, Alignment, AddressSpace);
+
+    // Legalize the vector type, and get the legalized and unlegalized type
+    // sizes.
+    MVT VecTyLT = getTLI()->getTypeLegalizationCost(DL, VecTy).second;
+    unsigned VecTySize =
+        static_cast<T *>(this)->getDataLayout().getTypeStoreSize(VecTy);
+    unsigned VecTyLTSize = VecTyLT.getStoreSize();
+
+    // Return the ceiling of dividing A by B.
+    auto ceil = [](unsigned A, unsigned B) { return (A + B - 1) / B; };
+
+    // Scale the cost of the memory operation by the fraction of legalized
+    // instructions that will actually be used. We shouldn't account for the
+    // cost of dead instructions since they will be removed.
+    //
+    // E.g., An interleaved load of factor 8:
+    //       %vec = load <16 x i64>, <16 x i64>* %ptr
+    //       %v0 = shufflevector %vec, undef, <0, 8>
+    //
+    // If <16 x i64> is legalized to 8 v2i64 loads, only 2 of the loads will be
+    // used (those corresponding to elements [0:1] and [8:9] of the unlegalized
+    // type). The other loads are unused.
+    //
+    // We only scale the cost of loads since interleaved store groups aren't
+    // allowed to have gaps.
+    if (Opcode == Instruction::Load && VecTySize > VecTyLTSize) {
+
+      // The number of loads of a legal type it will take to represent a load
+      // of the unlegalized vector type.
+      unsigned NumLegalInsts = ceil(VecTySize, VecTyLTSize);
+
+      // The number of elements of the unlegalized type that correspond to a
+      // single legal instruction.
+      unsigned NumEltsPerLegalInst = ceil(NumElts, NumLegalInsts);
+
+      // Determine which legal instructions will be used.
+      BitVector UsedInsts(NumLegalInsts, false);
+      for (unsigned Index : Indices)
+        for (unsigned Elt = 0; Elt < NumSubElts; ++Elt)
+          UsedInsts.set((Index + Elt * Factor) / NumEltsPerLegalInst);
+
+      // Scale the cost of the load by the fraction of legal instructions that
+      // will be used.
+      Cost *= UsedInsts.count() / NumLegalInsts;
+    }
 
     // Then plus the cost of interleave operation.
     if (Opcode == Instruction::Load) {

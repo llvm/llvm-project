@@ -502,7 +502,7 @@ static bool isOperandUnresolved(Metadata *Op) {
 void MDNode::countUnresolvedOperands() {
   assert(NumUnresolved == 0 && "Expected unresolved ops to be uncounted");
   assert(isUniqued() && "Expected this to be uniqued");
-  NumUnresolved = std::count_if(op_begin(), op_end(), isOperandUnresolved);
+  NumUnresolved = count_if(operands(), isOperandUnresolved);
 }
 
 void MDNode::makeUniqued() {

@@ -101,6 +101,9 @@ add_llvm_library(LLVMCodeGen
   RegisterPressure.cpp
   RegisterScavenging.cpp
   RenameIndependentSubregs.cpp
+  RegisterUsageInfo.cpp
+  RegUsageInfoCollector.cpp
+  RegUsageInfoPropagate.cpp
   SafeStack.cpp
   ScheduleDAG.cpp
   ScheduleDAGInstrs.cpp

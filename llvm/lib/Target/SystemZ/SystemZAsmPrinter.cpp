@@ -430,6 +430,36 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     OutStreamer->emitRawComment("MEMBARRIER");
     return;
 
+  // We want to emit "j .+2" for traps, jumping to the relative immediate field
+  // of the jump instruction, which is an illegal instruction. We cannot emit a
+  // "." symbol, so create and emit a temp label before the instruction and use
+  // that instead.
+  case SystemZ::Trap: {
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(DotSym);
+
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
+    const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
+    LoweredMI = MCInstBuilder(SystemZ::J)
+      .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
+    }
+    break;
+
+  // Conditional traps will create a branch on condition instruction that jumps
+  // to the relative immediate field of the jump instruction. (eg. "jo .+2")
+  case SystemZ::CondTrap: {
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(DotSym);
+
+    const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(DotSym, OutContext);
+    const MCConstantExpr *ConstExpr = MCConstantExpr::create(2, OutContext);
+    LoweredMI = MCInstBuilder(SystemZ::BRC)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addExpr(MCBinaryExpr::createAdd(Expr, ConstExpr, OutContext));
+    }
+    break;
+
   default:
     Lower.lower(MI, LoweredMI);
     break;

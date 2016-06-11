@@ -543,6 +543,7 @@ bool SystemZInstrInfo::isPredicable(MachineInstr &MI) const {
   if (STI.hasLoadStoreOnCond() && getConditionalMove(Opcode))
     return true;
   if (Opcode == SystemZ::Return ||
+      Opcode == SystemZ::Trap ||
       Opcode == SystemZ::CallJG ||
       Opcode == SystemZ::CallBR)
     return true;
@@ -558,7 +559,11 @@ isProfitableToIfCvt(MachineBasicBlock &MBB,
   // making the loop body longer).  This doesn't apply for low-probability
   // loops (eg. compare-and-swap retry), so just decide based on branch
   // probability instead of looping structure.
-  if (MBB.succ_empty() && Probability < BranchProbability(1, 8))
+  // However, since Compare and Trap instructions cost the same as a regular
+  // Compare instruction, we should allow the if conversion to convert this
+  // into a Conditional Compare regardless of the branch probability.
+  if (MBB.getLastNonDebugInstr()->getOpcode() != SystemZ::Trap &&
+      MBB.succ_empty() && Probability < BranchProbability(1, 8))
     return false;
   // For now only convert single instructions.
   return NumCycles == 1;
@@ -597,6 +602,13 @@ bool SystemZInstrInfo::PredicateInstruction(
           .addReg(SystemZ::CC, RegState::Implicit);
       return true;
     }
+  }
+  if (Opcode == SystemZ::Trap) {
+    MI.setDesc(get(SystemZ::CondTrap));
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+      .addImm(CCValid).addImm(CCMask)
+      .addReg(SystemZ::CC, RegState::Implicit);
+    return true;
   }
   if (Opcode == SystemZ::Return) {
     MI.setDesc(get(SystemZ::CondReturn));
@@ -1370,9 +1382,9 @@ bool SystemZInstrInfo::isRxSBGMask(uint64_t Mask, unsigned BitSize,
   return false;
 }
 
-unsigned SystemZInstrInfo::getCompareAndBranch(unsigned Opcode,
-                                               SystemZII::CompareAndBranchType Type,
-                                               const MachineInstr *MI) const {
+unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
+                                           SystemZII::FusedCompareType Type,
+                                           const MachineInstr *MI) const {
   switch (Opcode) {
   case SystemZ::CHI:
   case SystemZ::CGHI:
@@ -1445,6 +1457,27 @@ unsigned SystemZInstrInfo::getCompareAndBranch(unsigned Opcode,
       return SystemZ::CLIBCall;
     case SystemZ::CLGFI:
       return SystemZ::CLGIBCall;
+    default:
+      return 0;
+    }
+  case SystemZII::CompareAndTrap:
+    switch (Opcode) {
+    case SystemZ::CR:
+      return SystemZ::CRT;
+    case SystemZ::CGR:
+      return SystemZ::CGRT;
+    case SystemZ::CHI:
+      return SystemZ::CIT;
+    case SystemZ::CGHI:
+      return SystemZ::CGIT;
+    case SystemZ::CLR:
+      return SystemZ::CLRT;
+    case SystemZ::CLGR:
+      return SystemZ::CLGRT;
+    case SystemZ::CLFI:
+      return SystemZ::CLFIT;
+    case SystemZ::CLGFI:
+      return SystemZ::CLGIT;
     default:
       return 0;
     }

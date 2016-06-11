@@ -8684,11 +8684,10 @@ static SDValue lowerVectorShuffleAsPermuteAndUnpack(SDLoc DL, MVT VT,
 
   int Size = Mask.size();
 
-  int NumLoInputs = std::count_if(Mask.begin(), Mask.end(), [Size](int M) {
-    return M >= 0 && M % Size < Size / 2;
-  });
-  int NumHiInputs = std::count_if(
-      Mask.begin(), Mask.end(), [Size](int M) { return M % Size >= Size / 2; });
+  int NumLoInputs =
+      count_if(Mask, [Size](int M) { return M >= 0 && M % Size < Size / 2; });
+  int NumHiInputs =
+      count_if(Mask, [Size](int M) { return M % Size >= Size / 2; });
 
   bool UnpackLo = NumLoInputs >= NumHiInputs;
 
@@ -9000,8 +8999,7 @@ static SDValue lowerVectorShuffleWithSHUFPS(SDLoc DL, MVT VT,
   SDValue LowV = V1, HighV = V2;
   int NewMask[4] = {Mask[0], Mask[1], Mask[2], Mask[3]};
 
-  int NumV2Elements =
-      std::count_if(Mask.begin(), Mask.end(), [](int M) { return M >= 4; });
+  int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 1) {
     int V2Index =
@@ -9095,8 +9093,7 @@ static SDValue lowerV4F32VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   ArrayRef<int> Mask = SVOp->getMask();
   assert(Mask.size() == 4 && "Unexpected mask size for v4 shuffle!");
 
-  int NumV2Elements =
-      std::count_if(Mask.begin(), Mask.end(), [](int M) { return M >= 4; });
+  int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 0) {
     // Check for being able to broadcast a single element.
@@ -9187,8 +9184,7 @@ static SDValue lowerV4I32VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
                                                          Mask, Subtarget, DAG))
     return ZExt;
 
-  int NumV2Elements =
-      std::count_if(Mask.begin(), Mask.end(), [](int M) { return M >= 4; });
+  int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 0) {
     // Check for being able to broadcast a single element.
@@ -9716,11 +9712,9 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
 
   // At this point, each half should contain all its inputs, and we can then
   // just shuffle them into their final position.
-  assert(std::count_if(LoMask.begin(), LoMask.end(),
-                       [](int M) { return M >= 4; }) == 0 &&
+  assert(count_if(LoMask, [](int M) { return M >= 4; }) == 0 &&
          "Failed to lift all the high half inputs to the low mask!");
-  assert(std::count_if(HiMask.begin(), HiMask.end(),
-                       [](int M) { return M >= 0 && M < 4; }) == 0 &&
+  assert(count_if(HiMask, [](int M) { return M >= 0 && M < 4; }) == 0 &&
          "Failed to lift all the low half inputs to the high mask!");
 
   // Do a half shuffle for the low mask.
@@ -9830,7 +9824,7 @@ static SDValue lowerV8I16VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   (void)isV1;
   auto isV2 = [](int M) { return M >= 8; };
 
-  int NumV2Inputs = std::count_if(Mask.begin(), Mask.end(), isV2);
+  int NumV2Inputs = count_if(Mask, isV2);
 
   if (NumV2Inputs == 0) {
     // Check for being able to broadcast a single element.
@@ -10027,8 +10021,7 @@ static SDValue lowerV16I8VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
     if (SDValue V = lowerVectorShuffleWithSSE4A(DL, MVT::v16i8, V1, V2, Mask, DAG))
       return V;
 
-  int NumV2Elements =
-      std::count_if(Mask.begin(), Mask.end(), [](int M) { return M >= 16; });
+  int NumV2Elements = count_if(Mask, [](int M) { return M >= 16; });
 
   // For single-input shuffles, there are some nicer lowering tricks we can use.
   if (NumV2Elements == 0) {
@@ -11595,9 +11588,7 @@ static SDValue lower256BitVectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   // If we have a single input to the zero element, insert that into V1 if we
   // can do so cheaply.
   int NumElts = VT.getVectorNumElements();
-  int NumV2Elements = std::count_if(Mask.begin(), Mask.end(), [NumElts](int M) {
-    return M >= NumElts;
-  });
+  int NumV2Elements = count_if(Mask, [NumElts](int M) { return M >= NumElts; });
 
   if (NumV2Elements == 1 && Mask[0] >= NumElts)
     if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
@@ -11836,6 +11827,17 @@ static SDValue lowerV32I16VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
           DL, MVT::v32i16, V1, V2, Mask, Subtarget, DAG))
     return Rotate;
 
+  if (isSingleInputShuffleMask(Mask)) {
+    SmallVector<int, 8> RepeatedMask;
+    if (is128BitLaneRepeatedShuffleMask(MVT::v32i16, Mask, RepeatedMask)) {
+      // As this is a single-input shuffle, the repeated mask should be
+      // a strictly valid v8i16 mask that we can pass through to the v8i16
+      // lowering to handle even the v32 case.
+      return lowerV8I16GeneralSingleInputVectorShuffle(
+          DL, MVT::v32i16, V1, RepeatedMask, Subtarget, DAG);
+    }
+  }
+
   return lowerVectorShuffleWithPERMV(DL, MVT::v32i16, Mask, V1, V2, DAG);
 }
 
@@ -11898,20 +11900,13 @@ static SDValue lower512BitVectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   case MVT::v16i32:
     return lowerV16I32VectorShuffle(Op, V1, V2, Subtarget, DAG);
   case MVT::v32i16:
-    if (Subtarget.hasBWI())
-      return lowerV32I16VectorShuffle(Op, V1, V2, Subtarget, DAG);
-    break;
+    return lowerV32I16VectorShuffle(Op, V1, V2, Subtarget, DAG);
   case MVT::v64i8:
-    if (Subtarget.hasBWI())
-      return lowerV64I8VectorShuffle(Op, V1, V2, Subtarget, DAG);
-    break;
+    return lowerV64I8VectorShuffle(Op, V1, V2, Subtarget, DAG);
 
   default:
     llvm_unreachable("Not a valid 512-bit x86 vector type!");
   }
-
-  // Otherwise fall back on splitting.
-  return splitAndLowerVectorShuffle(DL, VT, V1, V2, Mask, DAG);
 }
 
 // Lower vXi1 vector shuffles.

@@ -623,6 +623,21 @@ bool MemorySSA::locallyDominates(const MemoryAccess *Dominator,
 
   assert((Dominator->getBlock() == Dominatee->getBlock()) &&
          "Asking for local domination when accesses are in different blocks!");
+
+  // A node dominates itself.
+  if (Dominatee == Dominator)
+    return true;
+
+  // When Dominatee is defined on function entry, it is not dominated by another
+  // memory access.
+  if (isLiveOnEntryDef(Dominatee))
+    return false;
+
+  // When Dominator is defined on function entry, it dominates the other memory
+  // access.
+  if (isLiveOnEntryDef(Dominator))
+    return true;
+
   // Get the access list for the block
   const AccessListType *AccessList = getBlockAccesses(Dominator->getBlock());
   AccessListType::const_reverse_iterator It(Dominator->getIterator());

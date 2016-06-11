@@ -38,13 +38,13 @@ class TargetLibraryInfo;
 
 /// \brief Captures loop safety information.
 /// It keep information for loop & its header may throw exception.
-struct LICMSafetyInfo {
+struct LoopSafetyInfo {
   bool MayThrow;       // The current loop contains an instruction which
                        // may throw.
   bool HeaderMayThrow; // Same as previous, but specific to loop header
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
-  LICMSafetyInfo() : MayThrow(false), HeaderMayThrow(false) {}
+  LoopSafetyInfo() : MayThrow(false), HeaderMayThrow(false) {}
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -366,7 +366,7 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                LICMSafetyInfo *);
+                LoopSafetyInfo *);
 
 /// \brief Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -377,7 +377,7 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// loop and loop safety information as arguments. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 LICMSafetyInfo *);
+                 LoopSafetyInfo *);
 
 /// \brief Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
@@ -390,13 +390,19 @@ bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock *> &,
                                   SmallVectorImpl<Instruction *> &,
                                   PredIteratorCache &, LoopInfo *,
                                   DominatorTree *, const TargetLibraryInfo *,
-                                  Loop *, AliasSetTracker *, LICMSafetyInfo *);
+                                  Loop *, AliasSetTracker *, LoopSafetyInfo *);
 
 /// \brief Computes safety information for a loop
 /// checks loop body & header for the possibility of may throw
-/// exception, it takes LICMSafetyInfo and loop as argument.
-/// Updates safety information in LICMSafetyInfo argument.
-void computeLICMSafetyInfo(LICMSafetyInfo *, Loop *);
+/// exception, it takes LoopSafetyInfo and loop as argument.
+/// Updates safety information in LoopSafetyInfo argument.
+void computeLoopSafetyInfo(LoopSafetyInfo *, Loop *);
+
+/// Returns true if the instruction in a loop is guaranteed to execute at least
+/// once.
+bool isGuaranteedToExecute(const Instruction &Inst, const DominatorTree *DT,
+                           const Loop *CurLoop,
+                           const LoopSafetyInfo *SafetyInfo);
 
 /// \brief Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);

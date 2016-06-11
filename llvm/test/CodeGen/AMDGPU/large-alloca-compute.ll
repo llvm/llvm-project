@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=carrizo < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa < %s -mattr=-flat-for-global | FileCheck -check-prefix=GCNHSA -check-prefix=CIHSA -check-prefix=ALL %s
 ; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=VIHSA -check-prefix=ALL %s
 
@@ -8,7 +8,9 @@
 ; ALL-LABEL: {{^}}large_alloca_compute_shader:
 
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
+; GCN-DAG: ; fixup A - offset: 4, value: SCRATCH_RSRC_DWORD0, kind: FK_Data_4
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
+; GCN-DAG: ; fixup A - offset: 4, value: SCRATCH_RSRC_DWORD1, kind: FK_Data_4
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, -1
 ; CI-DAG: s_mov_b32 s{{[0-9]+}}, 0x88f000
 ; VI-DAG: s_mov_b32 s{{[0-9]+}}, 0x880000

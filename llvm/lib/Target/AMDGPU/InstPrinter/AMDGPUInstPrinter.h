@@ -64,7 +64,8 @@ private:
   void printImmediate32(uint32_t I, raw_ostream &O);
   void printImmediate64(uint64_t I, raw_ostream &O);
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printOperandAndMods(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printOperandAndFPInputMods(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printOperandAndIntInputMods(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printDPPCtrl(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printRowMask(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printBankMask(const MCInst *MI, unsigned OpNo, raw_ostream &O);

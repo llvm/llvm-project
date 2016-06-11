@@ -638,3 +638,7 @@ bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC) const {
               .getOptBisect()
               .shouldRunPass(this, SCC);
 }
+
+char DummyCGSCCPass::ID = 0;
+INITIALIZE_PASS(DummyCGSCCPass, "DummyCGSCCPass", "DummyCGSCCPass", false,
+                false)
