@@ -7276,7 +7276,7 @@ bool InitializationSequence::Diagnose(Sema &S,
             isa<CXXConstructorDecl>(S.CurContext)) {
           // This is implicit default initialization of a member or
           // base within a constructor. If no viable function was
-          // found, notify the user that she needs to explicitly
+          // found, notify the user that they need to explicitly
           // initialize this base/member.
           CXXConstructorDecl *Constructor
             = cast<CXXConstructorDecl>(S.CurContext);

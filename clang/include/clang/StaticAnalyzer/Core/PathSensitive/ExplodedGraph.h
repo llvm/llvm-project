@@ -321,6 +321,8 @@ public:
   bool empty() const { return NumNodes == 0; }
   unsigned size() const { return NumNodes; }
 
+  void reserve(unsigned NodeCount) { Nodes.reserve(NodeCount); }
+
   // Iterators.
   typedef ExplodedNode                        NodeTy;
   typedef llvm::FoldingSet<ExplodedNode>      AllNodesTy;

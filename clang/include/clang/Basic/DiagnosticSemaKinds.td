@@ -1225,6 +1225,8 @@ def err_distant_exception_spec : Error<
 def err_incomplete_in_exception_spec : Error<
   "%select{|pointer to |reference to }0incomplete type %1 is not allowed "
   "in exception specification">;
+def ext_incomplete_in_exception_spec : ExtWarn<err_incomplete_in_exception_spec.Text>,
+  InGroup<MicrosoftExceptionSpec>;
 def err_rref_in_exception_spec : Error<
   "rvalue reference type %0 is not allowed in exception specification">;
 def err_mismatched_exception_spec : Error<

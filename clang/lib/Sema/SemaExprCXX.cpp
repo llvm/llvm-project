@@ -5950,7 +5950,7 @@ static bool CheckArrow(Sema& S, QualType& ObjectType, Expr *&Base,
     if (const PointerType *Ptr = ObjectType->getAs<PointerType>()) {
       ObjectType = Ptr->getPointeeType();
     } else if (!Base->isTypeDependent()) {
-      // The user wrote "p->" when she probably meant "p."; fix it.
+      // The user wrote "p->" when they probably meant "p."; fix it.
       S.Diag(OpLoc, diag::err_typecheck_member_reference_suggestion)
         << ObjectType << true
         << FixItHint::CreateReplacement(OpLoc, ".");

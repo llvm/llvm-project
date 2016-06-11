@@ -2053,7 +2053,7 @@ DWARFASTParserClang::ParseTemplateDIE (const DWARFDIE &die,
                     {
                         llvm::APInt apint (lldb_type->GetByteSize() * 8, uval64, is_signed);
                         template_param_infos.args.push_back(
-                            clang::TemplateArgument(*ast, llvm::APSInt(apint), ClangUtil::GetQualType(clang_type)));
+                            clang::TemplateArgument(*ast, llvm::APSInt(apint, !is_signed), ClangUtil::GetQualType(clang_type)));
                     }
                     else
                     {

@@ -5271,7 +5271,7 @@ private:
                .getPointer();
 
       // If the variable is a pointer and is being dereferenced (i.e. is not
-      // the last component), the base has to be the pointer itself, not his
+      // the last component), the base has to be the pointer itself, not its
       // reference.
       if (I->getAssociatedDeclaration()->getType()->isAnyPointerType() &&
           std::next(I) != CE) {

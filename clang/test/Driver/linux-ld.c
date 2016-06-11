@@ -1561,7 +1561,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ARMEB %s
 // CHECK-ARMEB: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-ARMEB-NOT: "--be8"
-// CHECK-ARMEB: "-m" "armebelf_linux_eabi"
+// CHECK-ARMEB: "-m" "armelfb_linux_eabi"
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=armebv7-unknown-linux \
@@ -1570,4 +1570,4 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ARMV7EB %s
 // CHECK-ARMV7EB: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-ARMV7EB: "--be8"
-// CHECK-ARMV7EB: "-m" "armebelf_linux_eabi"
+// CHECK-ARMV7EB: "-m" "armelfb_linux_eabi"

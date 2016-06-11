@@ -2,11 +2,15 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x c %s
 
 #ifndef __RENDERSCRIPT__
-// expected-warning@+2 {{kernel attribute ignored}}
+// expected-warning@+2 {{'kernel' attribute ignored}}
 #endif
-void __attribute__((kernel)) kernel();
+void __attribute__((kernel)) kernel() {}
 
-// expected-warning@+1 {{'kernel' attribute only applies to functions}}
+#ifndef __RENDERSCRIPT__
+// expected-warning@+4 {{'kernel' attribute ignored}}
+#else
+// expected-warning@+2 {{'kernel' attribute only applies to functions}}
+#endif
 int __attribute__((kernel)) global;
 
 #ifndef __RENDERSCRIPT__
