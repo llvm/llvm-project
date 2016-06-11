@@ -79,10 +79,13 @@ namespace SIInstrFlags {
   };
 }
 
+// Input operand modifiers bit-masks
+// NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
   enum {
-   NEG = 1 << 0,
-   ABS = 1 << 1
+   NEG = 1 << 0,  // Floating-point negate modifier
+   ABS = 1 << 1,  // Floating-point absolute modifier
+   SEXT = 1 << 0  // Integer sign-extend modifier
   };
 }
 

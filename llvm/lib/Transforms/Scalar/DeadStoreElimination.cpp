@@ -51,7 +51,7 @@ STATISTIC(NumFastOther , "Number of other instrs removed");
 // Helper functions
 //===----------------------------------------------------------------------===//
 
-/// Delete this instruction.  Before we do, go through  and zero out all the
+/// Delete this instruction.  Before we do, go through and zero out all the
 /// operands of this instruction.  If any of them become dead, delete them and
 /// the computation tree that feeds them.
 /// If ValueSet is non-null, remove any deleted instructions from it as well.
@@ -545,7 +545,7 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
 
       auto Next = ++Dependency->getIterator();
 
-      // DCE instructions only used to calculate that store
+      // DCE instructions only used to calculate that store.
       deleteDeadInstruction(Dependency, *MD, *TLI);
       ++NumFastStores;
       MadeChange = true;

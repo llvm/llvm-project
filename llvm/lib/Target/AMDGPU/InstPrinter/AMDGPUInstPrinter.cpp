@@ -423,8 +423,9 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printOperandAndMods(const MCInst *MI, unsigned OpNo,
-                                            raw_ostream &O) {
+void AMDGPUInstPrinter::printOperandAndFPInputMods(const MCInst *MI,
+                                                      unsigned OpNo,
+                                                      raw_ostream &O) {
   unsigned InputModifiers = MI->getOperand(OpNo).getImm();
   if (InputModifiers & SISrcMods::NEG)
     O << '-';
@@ -433,6 +434,17 @@ void AMDGPUInstPrinter::printOperandAndMods(const MCInst *MI, unsigned OpNo,
   printOperand(MI, OpNo + 1, O);
   if (InputModifiers & SISrcMods::ABS)
     O << '|';
+}
+
+void AMDGPUInstPrinter::printOperandAndIntInputMods(const MCInst *MI,
+                                                     unsigned OpNo,
+                                                     raw_ostream &O) {
+  unsigned InputModifiers = MI->getOperand(OpNo).getImm();
+  if (InputModifiers & SISrcMods::SEXT)
+    O << "sext(";
+  printOperand(MI, OpNo + 1, O);
+  if (InputModifiers & SISrcMods::SEXT)
+    O << ')';
 }
 
 

@@ -216,6 +216,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
+  // Traps are legal, as we will convert them to "j .+2".
+  setOperationAction(ISD::TRAP, MVT::Other, Legal);
+
   // z10 has instructions for signed but not unsigned FP conversion.
   // Handle unsigned 32-bit types as signed 64-bit types.
   if (!Subtarget.hasFPExtension()) {

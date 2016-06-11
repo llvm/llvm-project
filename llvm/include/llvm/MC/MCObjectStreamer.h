@@ -140,6 +140,7 @@ public:
   void EmitGPRel64Value(const MCExpr *Value) override;
   bool EmitRelocDirective(const MCExpr &Offset, StringRef Name,
                           const MCExpr *Expr, SMLoc Loc) override;
+  using MCStreamer::emitFill;
   void emitFill(uint64_t NumBytes, uint8_t FillValue) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;

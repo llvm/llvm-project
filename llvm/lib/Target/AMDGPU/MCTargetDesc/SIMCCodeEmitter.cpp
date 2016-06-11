@@ -249,7 +249,12 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   if (MO.isExpr()) {
     const MCSymbolRefExpr *Expr = cast<MCSymbolRefExpr>(MO.getExpr());
-    MCFixupKind Kind = (MCFixupKind)AMDGPU::fixup_si_rodata;
+    const MCSymbol &Sym = Expr->getSymbol();
+    MCFixupKind Kind;
+    if (Sym.isExternal())
+      Kind = FK_Data_4;
+    else
+      Kind = (MCFixupKind)AMDGPU::fixup_si_rodata;
     Fixups.push_back(MCFixup::create(4, Expr, Kind, MI.getLoc()));
   }
 

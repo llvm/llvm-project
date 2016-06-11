@@ -956,7 +956,7 @@ bool MipsFastISel::selectFPExt(const Instruction *I) {
     return false;
 
   unsigned SrcReg =
-      getRegForValue(Src); // his must be a 32 bit floating point register class
+      getRegForValue(Src); // this must be a 32bit floating point register class
                            // maybe we should handle this differently
   if (!SrcReg)
     return false;

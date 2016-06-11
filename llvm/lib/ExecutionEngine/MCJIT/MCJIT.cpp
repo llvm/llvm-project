@@ -85,6 +85,9 @@ MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
   std::unique_ptr<Module> First = std::move(Modules[0]);
   Modules.clear();
 
+  if (First->getDataLayout().isDefault())
+    First->setDataLayout(getDataLayout());
+
   OwnedModules.addModule(std::move(First));
   RegisterJITEventListener(JITEventListener::createGDBRegistrationListener());
 }
@@ -103,6 +106,10 @@ MCJIT::~MCJIT() {
 
 void MCJIT::addModule(std::unique_ptr<Module> M) {
   MutexGuard locked(lock);
+
+  if (M->getDataLayout().isDefault())
+    M->setDataLayout(getDataLayout());
+
   OwnedModules.addModule(std::move(M));
 }
 
@@ -192,11 +199,7 @@ void MCJIT::generateCodeForModule(Module *M) {
   if (ObjCache)
     ObjectToLoad = ObjCache->getObject(M);
 
-  if (M->getDataLayout().isDefault()) {
-    M->setDataLayout(getDataLayout());
-  } else {
-    assert(M->getDataLayout() == getDataLayout() && "DataLayout Mismatch");
-  }
+  assert(M->getDataLayout() == getDataLayout() && "DataLayout Mismatch");
 
   // If the cache did not contain a suitable object, compile the object
   if (!ObjectToLoad) {
@@ -490,6 +493,7 @@ GenericValue MCJIT::runFunction(Function *F, ArrayRef<GenericValue> ArgValues) {
   assert(F && "Function *F was null at entry to run()");
 
   void *FPtr = getPointerToFunction(F);
+  finalizeModule(F->getParent());
   assert(FPtr && "Pointer to fn's code was null after getPointerToFunction");
   FunctionType *FTy = F->getFunctionType();
   Type *RetTy = FTy->getReturnType();

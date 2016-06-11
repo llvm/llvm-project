@@ -1314,6 +1314,8 @@ private:
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
       SlotIndex LastUse = Before;
       for (MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+        if (MO.isUndef())
+          continue;
         unsigned SubReg = MO.getSubReg();
         if (SubReg != 0 && LaneMask != 0
             && (TRI.getSubRegIndexLaneMask(SubReg) & LaneMask) == 0)
@@ -1353,7 +1355,7 @@ private:
 
       // Check if MII uses Reg.
       for (MIBundleOperands MO(*MII); MO.isValid(); ++MO)
-        if (MO->isReg() &&
+        if (MO->isReg() && !MO->isUndef() &&
             TargetRegisterInfo::isPhysicalRegister(MO->getReg()) &&
             TRI.hasRegUnit(MO->getReg(), Reg))
           return Idx.getRegSlot();

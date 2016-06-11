@@ -569,12 +569,10 @@ static bool simplifyLoopLatch(Loop *L, LoopInfo *LI, DominatorTree *DT) {
   return true;
 }
 
-/// Rotate \c L as many times as possible. Return true if the loop is rotated
-/// at least once.
-static bool iterativelyRotateLoop(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
-                                  const TargetTransformInfo *TTI,
-                                  AssumptionCache *AC, DominatorTree *DT,
-                                  ScalarEvolution *SE) {
+/// Rotate \c L, and return true if any modification was made.
+static bool processLoop(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
+                        const TargetTransformInfo *TTI, AssumptionCache *AC,
+                        DominatorTree *DT, ScalarEvolution *SE) {
   // Save the loop metadata.
   MDNode *LoopMD = L->getLoopID();
 
@@ -583,12 +581,10 @@ static bool iterativelyRotateLoop(Loop *L, unsigned MaxHeaderSize, LoopInfo *LI,
   // loop exit.
   bool SimplifiedLatch = simplifyLoopLatch(L, LI, DT);
 
-  // One loop can be rotated multiple times.
-  bool MadeChange = false;
-  while (rotateLoop(L, MaxHeaderSize, LI, TTI, AC, DT, SE, SimplifiedLatch)) {
-    MadeChange = true;
-    SimplifiedLatch = false;
-  }
+  bool MadeChange =
+      rotateLoop(L, MaxHeaderSize, LI, TTI, AC, DT, SE, SimplifiedLatch);
+  assert((!MadeChange || L->isLoopExiting(L->getLoopLatch())) &&
+         "Loop latch should be exiting after loop-rotate.");
 
   // Restore the loop metadata.
   // NB! We presume LoopRotation DOESN'T ADD its own metadata.
@@ -613,7 +609,7 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, AnalysisManager<Loop> &AM) {
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
   auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
 
-  bool Changed = iterativelyRotateLoop(&L, MaxHeaderSize, LI, TTI, AC, DT, SE);
+  bool Changed = processLoop(&L, MaxHeaderSize, LI, TTI, AC, DT, SE);
   if (!Changed)
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
@@ -654,7 +650,7 @@ public:
     auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     auto *SE = SEWP ? &SEWP->getSE() : nullptr;
 
-    return iterativelyRotateLoop(L, MaxHeaderSize, LI, TTI, AC, DT, SE);
+    return processLoop(L, MaxHeaderSize, LI, TTI, AC, DT, SE);
   }
 };
 }

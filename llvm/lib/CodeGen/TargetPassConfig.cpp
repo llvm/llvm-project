@@ -16,11 +16,13 @@
 
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAliasAnalysis.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -111,6 +113,10 @@ static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
 static cl::opt<bool> UseCFLAA("use-cfl-aa-in-codegen",
   cl::init(false), cl::Hidden,
   cl::desc("Enable the new, experimental CFL alias analysis in CodeGen"));
+
+cl::opt<bool> UseIPRA("enable-ipra", cl::init(false), cl::Hidden,
+                      cl::desc("Enable interprocedural register allocation "
+                               "to reduce load/store at procedure calls."));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -492,6 +498,10 @@ void TargetPassConfig::addCodeGenPrepare() {
 void TargetPassConfig::addISelPrepare() {
   addPreISel();
 
+  // Force codegen to run according to the callgraph.
+  if (UseIPRA)
+    addPass(new DummyCGSCCPass);
+
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
   addPass(createSafeStackPass(TM));
@@ -527,6 +537,9 @@ void TargetPassConfig::addISelPrepare() {
 /// before/after any target-independent pass. But it's currently overkill.
 void TargetPassConfig::addMachinePasses() {
   AddingMachinePasses = true;
+
+  if (UseIPRA)
+    addPass(createRegUsageInfoPropPass());
 
   // Insert a machine instr printer pass after the specified pass.
   if (!StringRef(PrintMachineInstrs.getValue()).equals("") &&
@@ -612,6 +625,11 @@ void TargetPassConfig::addMachinePasses() {
     addBlockPlacement();
 
   addPreEmitPass();
+
+  if (UseIPRA)
+    // Collect register usage information and produce a register mask of
+    // clobbered registers, to be used to optimize call sites.
+    addPass(createRegUsageInfoCollector());
 
   addPass(&FuncletLayoutID, false);
 

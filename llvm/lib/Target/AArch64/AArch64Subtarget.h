@@ -86,6 +86,8 @@ protected:
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
   unsigned MaxPrefetchIterationsAhead = UINT_MAX;
+  unsigned PrefFunctionAlignment = 0;
+  unsigned PrefLoopAlignment = 0;
 
   // ReserveX18 - X18 is not available as a general purpose register.
   bool ReserveX18;
@@ -195,6 +197,8 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const {
     return MaxPrefetchIterationsAhead;
   }
+  unsigned getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
+  unsigned getPrefLoopAlignment() const { return PrefLoopAlignment; }
 
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.

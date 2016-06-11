@@ -61,7 +61,7 @@ MachineBasicBlock &IRTranslator::getOrCreateBB(const BasicBlock &BB) {
   return *MBB;
 }
 
-bool IRTranslator::translateADD(const Instruction &Inst) {
+bool IRTranslator::translateBinaryOp(unsigned Opcode, const Instruction &Inst) {
   // Get or create a virtual register for each value.
   // Unless the value is a Constant => loadimm cst?
   // or inline constant each time?
@@ -69,7 +69,7 @@ bool IRTranslator::translateADD(const Instruction &Inst) {
   unsigned Op0 = getOrCreateVReg(*Inst.getOperand(0));
   unsigned Op1 = getOrCreateVReg(*Inst.getOperand(1));
   unsigned Res = getOrCreateVReg(Inst);
-  MIRBuilder.buildInstr(TargetOpcode::G_ADD, Inst.getType(), Res, Op0, Op1);
+  MIRBuilder.buildInstr(Opcode, Inst.getType(), Res, Op0, Op1);
   return true;
 }
 
@@ -103,7 +103,9 @@ bool IRTranslator::translate(const Instruction &Inst) {
   MIRBuilder.setDebugLoc(Inst.getDebugLoc());
   switch(Inst.getOpcode()) {
   case Instruction::Add:
-    return translateADD(Inst);
+    return translateBinaryOp(TargetOpcode::G_ADD, Inst);
+  case Instruction::Or:
+    return translateBinaryOp(TargetOpcode::G_OR, Inst);
   case Instruction::Br:
     return translateBr(Inst);
   case Instruction::Ret:

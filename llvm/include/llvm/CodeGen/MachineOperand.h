@@ -534,6 +534,15 @@ public:
     Contents.MBB = MBB;
   }
 
+  /// Sets value of register mask operand referencing Mask.  The
+  /// operand does not take ownership of the memory referenced by Mask, it must
+  /// remain valid for the lifetime of the operand. See CreateRegMask().
+  /// Any physreg with a 0 bit in the mask is clobbered by the instruction.
+  void setRegMask(const uint32_t *RegMaskPtr) {
+    assert(isRegMask() && "Wrong MachineOperand mutator");
+    Contents.RegMask = RegMaskPtr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Other methods.
   //===--------------------------------------------------------------------===//

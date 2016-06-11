@@ -709,6 +709,13 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
   };
 
   static const TypeConversionCostTblEntry SSE41ConversionTbl[] = {
+    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i32,   2 },
+    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i32,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i16,   2 },
+    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i16,   2 },
+    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i8,    2 },
+    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i8,    2 },
+
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 4 },
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 4 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16,  2 },
@@ -758,6 +765,13 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i32, 15 },
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v8i16, 15 },
     { ISD::SINT_TO_FP, MVT::v4f32, MVT::v16i8, 8 },
+
+    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i32,   3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i32,   5 },
+    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i16,   3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i16,  10 },
+    { ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i8,    4 },
+    { ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i8,    8 },
 
     { ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 6 },
     { ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 8 },

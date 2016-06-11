@@ -27,6 +27,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -103,6 +104,7 @@ int main(int argc, char **argv) {
   int n = argc > 1 ? atol(argv[1]) : 24;
 
   InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
   LLVMContext Context;
 
   // Create some module to put our function into it.

@@ -128,7 +128,7 @@ namespace llvm {
       std::string Name("LLVMGetRegistry_");
       Name.append(RegistryName);
       GetRegistry Getter =
-          reinterpret_cast<GetRegistry>(DL.getAddressOfSymbol(Name.c_str()));
+          (GetRegistry)(intptr_t)DL.getAddressOfSymbol(Name.c_str());
       if (Getter) {
         // Call the getter function in order to get the full copy of the
         // registry defined in the plugin DLL, and copy them over to the

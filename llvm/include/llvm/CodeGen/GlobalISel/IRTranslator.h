@@ -66,32 +66,47 @@ private:
 
   DenseMap<const BasicBlock *, MachineBasicBlock *> BBToMBB;
 
-  /* A bunch of methods targeting ADD, SUB, etc. */
-  // Return true if the translation was successful, false
-  // otherwise.
-  // Note: The MachineIRBuilder would encapsulate a
-  // MachineRegisterInfo to create virtual registers.
-  //
-  // Algo:
-  // 1. Look for a virtual register for each operand or
-  //    create one.
-  // 2 Update the ValToVReg accordingly.
-  // 2.alt. For constant arguments, if they are compile time constants,
-  //   produce an immediate in the right operand and do not touch
-  //   ValToReg. Actually we will go with a virtual register for each
-  //   constants because it may be expensive to actually materialize the
-  //   constant. Moreover, if the constant spans on several instructions,
-  //   CSE may not catch them.
-  //   => Update ValToVReg and remember that we saw a constant in Constants.
-  //   We will materialize all the constants in finalize.
-  // Note: we would need to do something so that we can recognize such operand
-  //       as constants.
-  // 3. Create the generic instruction.
-  bool translateADD(const Instruction &Inst);
+  /// Methods for translating form LLVM IR to MachineInstr.
+  /// \see ::translate for general information on the translate methods.
+  /// @{
 
+  /// Translate \p Inst into its corresponding MachineInstr instruction(s).
+  /// Insert the newly translated instruction(s) right where the MIRBuilder
+  /// is set.
+  ///
+  /// The general algorithm is:
+  /// 1. Look for a virtual register for each operand or
+  ///    create one.
+  /// 2 Update the ValToVReg accordingly.
+  /// 2.alt. For constant arguments, if they are compile time constants,
+  ///   produce an immediate in the right operand and do not touch
+  ///   ValToReg. Actually we will go with a virtual register for each
+  ///   constants because it may be expensive to actually materialize the
+  ///   constant. Moreover, if the constant spans on several instructions,
+  ///   CSE may not catch them.
+  ///   => Update ValToVReg and remember that we saw a constant in Constants.
+  ///   We will materialize all the constants in finalize.
+  /// Note: we would need to do something so that we can recognize such operand
+  ///       as constants.
+  /// 3. Create the generic instruction.
+  ///
+  /// \return true if the translation succeeded.
+  bool translate(const Instruction &Inst);
+
+  /// Translate \p Inst into a binary operation \p Opcode.
+  /// \pre \p Inst is a binary operation.
+  bool translateBinaryOp(unsigned Opcode, const Instruction &Inst);
+
+  /// Translate branch (br) instruction.
+  /// \pre \p Inst is a branch instruction.
   bool translateBr(const Instruction &Inst);
 
+  /// Translate return (ret) instruction.
+  /// The target needs to implement CallLowering::lowerReturn for
+  /// this to succeed.
+  /// \pre \p Inst is a return instruction.
   bool translateReturn(const Instruction &Inst);
+  /// @}
 
   // Builder for machine instruction a la IRBuilder.
   // I.e., compared to regular MIBuilder, this one also inserts the instruction
@@ -101,11 +116,6 @@ private:
 
   /// MachineRegisterInfo used to create virtual registers.
   MachineRegisterInfo *MRI;
-
-  // Return true if the translation from LLVM IR to Machine IR
-  // suceeded.
-  // See translateXXX for details.
-  bool translate(const Instruction &);
 
   // * Insert all the code needed to materialize the constants
   // at the proper place. E.g., Entry block or dominator block

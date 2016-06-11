@@ -517,7 +517,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   MaskAndBranchFoldingIsLegal = true;
   EnableExtLdPromotion = true;
 
+  // Set required alignment.
   setMinFunctionAlignment(2);
+  // Set preferred alignments.
+  setPrefFunctionAlignment(STI.getPrefFunctionAlignment());
+  setPrefLoopAlignment(STI.getPrefLoopAlignment());
 
   setHasExtractBitsInsn(true);
 

@@ -758,6 +758,10 @@ namespace llvm {
 
     bool isCheapToSpeculateCtlz() const override;
 
+    bool hasBitPreservingFPLogic(EVT VT) const override {
+      return VT == MVT::f32 || VT == MVT::f64 || VT.isVector();
+    }
+
     bool hasAndNotCompare(SDValue Y) const override;
 
     /// Return the value type to use for ISD::SETCC.

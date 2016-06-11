@@ -584,6 +584,20 @@
 	cgijo	%r0, 0, 0, 0
 	cgijno	%r0, 0, 0, 0
 
+#CHECK: error: invalid operand
+#CHECK: cgit     %r0, -32769
+#CHECK: error: invalid operand
+#CHECK: cgit     %r0, 32768
+#CHECK: error: invalid instruction
+#CHECK: cgito    %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: cgitno   %r0, 0
+
+        cgit     %r0, -32769
+        cgit     %r0, 32768
+        cgito    %r0, 0
+        cgitno   %r0, 0
+
 #CHECK: error: offset out of range
 #CHECK: cgrj	%r0, %r0, 0, -0x100002
 #CHECK: error: offset out of range
@@ -619,6 +633,14 @@
 	cgrl	%r0, -1
 	cgrl	%r0, 1
 	cgrl	%r0, 0x100000000
+
+#CHECK: error: invalid instruction
+#CHECK: cgrto    %r0, %r0
+#CHECK: error: invalid instruction
+#CHECK: cgrtno   %r0, %r0
+
+        cgrto    %r0, %r0
+        cgrtno   %r0, %r0
 
 #CHECK: error: invalid operand
 #CHECK: cgxbr	%r0, -1, %f0
@@ -748,6 +770,20 @@
 	cijno	%r0, 0, 0, 0
 
 #CHECK: error: invalid operand
+#CHECK: cit     %r0, -32769
+#CHECK: error: invalid operand
+#CHECK: cit     %r0, 32768
+#CHECK: error: invalid instruction
+#CHECK: cito    %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: citno   %r0, 0
+
+        cit     %r0, -32769
+        cit     %r0, 32768
+        cito    %r0, 0
+        citno   %r0, 0
+
+#CHECK: error: invalid operand
 #CHECK: cl	%r0, -1
 #CHECK: error: invalid operand
 #CHECK: cl	%r0, 4096
@@ -839,6 +875,20 @@
 	clfi	%r0, -1
 	clfi	%r0, (1 << 32)
 
+#CHECK: error: invalid operand
+#CHECK: clfit   %r0, -1
+#CHECK: error: invalid operand
+#CHECK: clfit   %r0, 65536
+#CHECK: error: invalid instruction
+#CHECK: clfito  %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: clfitno %r0, 0
+
+        clfit   %r0, -1
+        clfit   %r0, 65536
+        clfito  %r0, 0
+        clfitno %r0, 0
+
 #CHECK: error: {{(instruction requires: fp-extension)?}}
 #CHECK: clfxbr	%r0, 0, %f0, 0
 
@@ -851,6 +901,20 @@
 
 	clg	%r0, -524289
 	clg	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: clgit   %r0, -1
+#CHECK: error: invalid operand
+#CHECK: clgit   %r0, 65536
+#CHECK: error: invalid instruction
+#CHECK: clgito  %r0, 0
+#CHECK: error: invalid instruction
+#CHECK: clgitno %r0, 0
+
+        clgit   %r0, -1
+        clgit   %r0, 65536
+        clgito  %r0, 0
+        clgitno %r0, 0
 
 #CHECK: error: {{(instruction requires: fp-extension)?}}
 #CHECK: clgdbr	%r0, 0, %f0, 0
@@ -980,6 +1044,14 @@
 	clgrl	%r0, -1
 	clgrl	%r0, 1
 	clgrl	%r0, 0x100000000
+
+#CHECK: error: invalid instruction
+#CHECK: clgrto    %r0, %r0
+#CHECK: error: invalid instruction
+#CHECK: clgrtno   %r0, %r0
+
+        clgrto    %r0, %r0
+        clgrtno   %r0, %r0
 
 #CHECK: error: {{(instruction requires: fp-extension)?}}
 #CHECK: clgxbr	%r0, 0, %f0, 0
@@ -1122,6 +1194,14 @@
 	clrl	%r0, 1
 	clrl	%r0, 0x100000000
 
+#CHECK: error: invalid instruction
+#CHECK: clrto    %r0, %r0
+#CHECK: error: invalid instruction
+#CHECK: clrtno   %r0, %r0
+
+        clrto    %r0, %r0
+        clrtno   %r0, %r0
+
 #CHECK: error: invalid operand
 #CHECK: cly	%r0, -524289
 #CHECK: error: invalid operand
@@ -1165,6 +1245,14 @@
 	crl	%r0, -1
 	crl	%r0, 1
 	crl	%r0, 0x100000000
+
+#CHECK: error: invalid instruction
+#CHECK: crto    %r0, %r0
+#CHECK: error: invalid instruction
+#CHECK: crtno   %r0, %r0
+
+        crto    %r0, %r0
+        crtno   %r0, %r0
 
 #CHECK: error: invalid operand
 #CHECK: cs	%r0, %r0, -1

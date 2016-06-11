@@ -188,6 +188,9 @@ namespace {
     BasicBlock *loopHeader;
     BasicBlock *loopPreheader;
 
+    bool SanitizeMemory;
+    LoopSafetyInfo SafetyInfo;
+
     // LoopBlocks contains all of the basic blocks of the loop, including the
     // preheader of the loop, the body of the loop, and the exit blocks of the
     // loop, in that order.
@@ -431,6 +434,10 @@ bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {
   currentLoop = L;
   Function *F = currentLoop->getHeader()->getParent();
 
+  SanitizeMemory = F->hasFnAttribute(Attribute::SanitizeMemory);
+  if (SanitizeMemory)
+    computeLoopSafetyInfo(&SafetyInfo, L);
+
   EnabledPGO = F->getEntryCount().hasValue();
 
   if (LoopUnswitchWithBlockFrequency && EnabledPGO) {
@@ -530,6 +537,17 @@ bool LoopUnswitch::processCurrentLoop() {
   for (Loop::block_iterator I = currentLoop->block_begin(),
          E = currentLoop->block_end(); I != E; ++I) {
     TerminatorInst *TI = (*I)->getTerminator();
+
+    // Unswitching on a potentially uninitialized predicate is not
+    // MSan-friendly. Limit this to the cases when the original predicate is
+    // guaranteed to execute, to avoid creating a use-of-uninitialized-value
+    // in the code that did not have one.
+    // This is a workaround for the discrepancy between LLVM IR and MSan
+    // semantics. See PR28054 for more details.
+    if (SanitizeMemory &&
+        !isGuaranteedToExecute(*TI, DT, currentLoop, &SafetyInfo))
+      continue;
+
     if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
       // If this isn't branching on an invariant condition, we can't unswitch
       // it.

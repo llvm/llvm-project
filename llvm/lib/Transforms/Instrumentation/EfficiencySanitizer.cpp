@@ -656,45 +656,52 @@ bool EfficiencySanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
 
 bool EfficiencySanitizer::instrumentGetElementPtr(Instruction *I, Module &M) {
   GetElementPtrInst *GepInst = dyn_cast<GetElementPtrInst>(I);
-  if (GepInst == nullptr || !isa<StructType>(GepInst->getSourceElementType()) ||
-      StructTyMap.count(GepInst->getSourceElementType()) == 0 ||
-      !GepInst->hasAllConstantIndices() ||
-      // Only handle simple struct field GEP.
-      GepInst->getNumIndices() != 2) {
+  bool Res = false;
+  if (GepInst == nullptr || GepInst->getNumIndices() == 1) {
     ++NumIgnoredGEPs;
     return false;
   }
-  StructType *StructTy = dyn_cast<StructType>(GepInst->getSourceElementType());
-  if (shouldIgnoreStructType(StructTy)) {
-    ++NumIgnoredGEPs;
-    return false;
+  Type *SourceTy = GepInst->getSourceElementType();
+  // Iterate all (except the first and the last) idx within each GEP instruction
+  // for possible nested struct field address calculation.
+  for (unsigned i = 1; i < GepInst->getNumIndices(); ++i) {
+    SmallVector<Value *, 8> IdxVec(GepInst->idx_begin(),
+                                   GepInst->idx_begin() + i);
+    StructType *StructTy = dyn_cast<StructType>(
+        GetElementPtrInst::getIndexedType(SourceTy, IdxVec));
+    if (StructTy == nullptr || shouldIgnoreStructType(StructTy) ||
+        StructTyMap.count(StructTy) == 0)
+      continue;
+    // Get the StructTy's subfield index.
+    ConstantInt *Idx = dyn_cast<ConstantInt>(GepInst->getOperand(i+1));
+    if (Idx == nullptr || Idx->getZExtValue() > StructTy->getNumElements())
+      continue;
+    GlobalVariable *CounterArray = StructTyMap[StructTy];
+    if (CounterArray == nullptr)
+      return false;
+    IRBuilder<> IRB(I);
+    Constant *Indices[2];
+    // Xref http://llvm.org/docs/LangRef.html#i-getelementptr and
+    // http://llvm.org/docs/GetElementPtr.html.
+    // The first index of the GEP instruction steps through the first operand,
+    // i.e., the array itself.
+    Indices[0] = ConstantInt::get(IRB.getInt32Ty(), 0);
+    // The second index is the index within the array.
+    Indices[1] = ConstantInt::get(IRB.getInt32Ty(), Idx->getZExtValue());
+    Constant *Counter =
+        ConstantExpr::getGetElementPtr(
+            ArrayType::get(IRB.getInt64Ty(), StructTy->getNumElements()),
+            CounterArray, Indices);
+    Value *Load = IRB.CreateLoad(Counter);
+    IRB.CreateStore(IRB.CreateAdd(Load, ConstantInt::get(IRB.getInt64Ty(), 1)),
+                    Counter);
+    Res = true;
   }
-  ++NumInstrumentedGEPs;
-  // Use the last index as the index within the struct.
-  ConstantInt *Idx = dyn_cast<ConstantInt>(GepInst->getOperand(2));
-  if (Idx == nullptr || Idx->getZExtValue() > StructTy->getNumElements())
-    return false;
-
-  GlobalVariable *CounterArray = StructTyMap[StructTy];
-  if (CounterArray == nullptr)
-    return false;
-  IRBuilder<> IRB(I);
-  Constant *Indices[2];
-  // Xref http://llvm.org/docs/LangRef.html#i-getelementptr and
-  // http://llvm.org/docs/GetElementPtr.html.
-  // The first index of the GEP instruction steps through the first operand,
-  // i.e., the array itself.
-  Indices[0] = ConstantInt::get(IRB.getInt32Ty(), 0);
-  // The second index is the index within the array.
-  Indices[1] = ConstantInt::get(IRB.getInt32Ty(), Idx->getZExtValue());
-  Constant *Counter =
-      ConstantExpr::getGetElementPtr(ArrayType::get(IRB.getInt64Ty(),
-                                                    StructTy->getNumElements()),
-                                     CounterArray, Indices);
-  Value *Load = IRB.CreateLoad(Counter);
-  IRB.CreateStore(IRB.CreateAdd(Load, ConstantInt::get(IRB.getInt64Ty(), 1)),
-                  Counter);
-  return true;
+  if (Res)
+    ++NumInstrumentedGEPs;
+  else
+    ++NumIgnoredGEPs;
+  return Res;
 }
 
 int EfficiencySanitizer::getMemoryAccessFuncIndex(Value *Addr,

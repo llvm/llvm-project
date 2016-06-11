@@ -194,11 +194,10 @@ public:
   void printOptionValues();
 
   void registerCategory(OptionCategory *cat) {
-    assert(std::count_if(RegisteredOptionCategories.begin(),
-                         RegisteredOptionCategories.end(),
-                         [cat](const OptionCategory *Category) {
-                           return cat->getName() == Category->getName();
-                         }) == 0 &&
+    assert(count_if(RegisteredOptionCategories,
+                    [cat](const OptionCategory *Category) {
+             return cat->getName() == Category->getName();
+           }) == 0 &&
            "Duplicate option categories");
 
     RegisteredOptionCategories.insert(cat);

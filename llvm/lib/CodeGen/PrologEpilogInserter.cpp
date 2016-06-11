@@ -815,6 +815,11 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
     MaxAlign = std::max(Align, MaxAlign);
   }
 
+  // Retrieve the Exception Handler registration node.
+  int EHRegNodeFrameIndex = INT_MAX;
+  if (const WinEHFuncInfo *FuncInfo = Fn.getWinEHFuncInfo())
+    EHRegNodeFrameIndex = FuncInfo->EHRegNodeFrameIndex;
+
   // Make sure that the stack protector comes before the local variables on the
   // stack.
   SmallSet<int, 16> ProtectedObjs;
@@ -837,7 +842,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
         continue;
       if (MFI->isDeadObjectIndex(i))
         continue;
-      if (MFI->getStackProtectorIndex() == (int)i)
+      if (MFI->getStackProtectorIndex() == (int)i ||
+          EHRegNodeFrameIndex == (int)i)
         continue;
 
       switch (SP->getSSPLayout(MFI->getObjectAllocation(i))) {
@@ -866,10 +872,6 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
 
   SmallVector<int, 8> ObjectsToAllocate;
 
-  int EHRegNodeFrameIndex = INT_MAX;
-  if (const WinEHFuncInfo *FuncInfo = Fn.getWinEHFuncInfo())
-    EHRegNodeFrameIndex = FuncInfo->EHRegNodeFrameIndex;
-
   // Then prepare to assign frame offsets to stack objects that are not used to
   // spill callee saved registers.
   for (unsigned i = 0, e = MFI->getObjectIndexEnd(); i != e; ++i) {
@@ -882,9 +884,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
       continue;
     if (MFI->isDeadObjectIndex(i))
       continue;
-    if (MFI->getStackProtectorIndex() == (int)i)
-      continue;
-    if (EHRegNodeFrameIndex == (int)i)
+    if (MFI->getStackProtectorIndex() == (int)i ||
+        EHRegNodeFrameIndex == (int)i)
       continue;
     if (ProtectedObjs.count(i))
       continue;

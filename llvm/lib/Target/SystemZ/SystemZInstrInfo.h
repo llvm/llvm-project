@@ -111,10 +111,10 @@ struct Branch {
          const MachineOperand *target)
     : Type(type), CCValid(ccValid), CCMask(ccMask), Target(target) {}
 };
-// Kinds of branch in compare-and-branch instructions.  Together with type
-// of the converted compare, this identifies the compare-and-branch
+// Kinds of fused compares in compare-and-* instructions.  Together with type
+// of the converted compare, this identifies the compare-and-*
 // instruction.
-enum CompareAndBranchType {
+enum FusedCompareType {
   // Relative branch - CRJ etc.
   CompareAndBranch,
 
@@ -122,7 +122,10 @@ enum CompareAndBranchType {
   CompareAndReturn,
 
   // Indirect branch, used for sibcall - CRBCall etc.
-  CompareAndSibcall
+  CompareAndSibcall,
+
+  // Trap
+  CompareAndTrap
 };
 } // end namespace SystemZII
 
@@ -247,12 +250,12 @@ public:
   bool isRxSBGMask(uint64_t Mask, unsigned BitSize,
                    unsigned &Start, unsigned &End) const;
 
-  // If Opcode is a COMPARE opcode for which an associated COMPARE AND
-  // BRANCH exists, return the opcode for the latter, otherwise return 0.
+  // If Opcode is a COMPARE opcode for which an associated fused COMPARE AND *
+  // operation exists, return the opcode for the latter, otherwise return 0.
   // MI, if nonnull, is the compare instruction.
-  unsigned getCompareAndBranch(unsigned Opcode,
-                               SystemZII::CompareAndBranchType Type,
-                               const MachineInstr *MI = nullptr) const;
+  unsigned getFusedCompare(unsigned Opcode,
+                           SystemZII::FusedCompareType Type,
+                           const MachineInstr *MI = nullptr) const;
 
   // Emit code before MBBI in MI to move immediate value Value into
   // physical register Reg.

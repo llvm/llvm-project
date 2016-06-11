@@ -38,3 +38,26 @@ define void @uncondbr() {
 end:
   ret void
 }
+
+; Tests for or.
+; CHECK: name: ori64
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
+; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_OR i64 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %x0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %x0
+define i64 @ori64(i64 %arg1, i64 %arg2) {
+  %res = or i64 %arg1, %arg2
+  ret i64 %res
+}
+
+; CHECK: name: ori32
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_OR i32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @ori32(i32 %arg1, i32 %arg2) {
+  %res = or i32 %arg1, %arg2
+  ret i32 %res
+}

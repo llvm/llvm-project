@@ -75,6 +75,7 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     }
     case MachineOperand::MO_ExternalSymbol: {
       MCSymbol *Sym = Ctx.getOrCreateSymbol(StringRef(MO.getSymbolName()));
+      Sym->setExternal(true);
       const MCSymbolRefExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
       MCOp = MCOperand::createExpr(Expr);
       break;

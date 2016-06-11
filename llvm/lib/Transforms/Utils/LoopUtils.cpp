@@ -925,3 +925,42 @@ Optional<const MDOperand *> llvm::findStringMetadataForLoop(Loop *TheLoop,
   }
   return None;
 }
+
+/// Returns true if the instruction in a loop is guaranteed to execute at least
+/// once.
+bool llvm::isGuaranteedToExecute(const Instruction &Inst,
+                                 const DominatorTree *DT, const Loop *CurLoop,
+                                 const LoopSafetyInfo *SafetyInfo) {
+  // We have to check to make sure that the instruction dominates all
+  // of the exit blocks.  If it doesn't, then there is a path out of the loop
+  // which does not execute this instruction, so we can't hoist it.
+
+  // If the instruction is in the header block for the loop (which is very
+  // common), it is always guaranteed to dominate the exit blocks.  Since this
+  // is a common case, and can save some work, check it now.
+  if (Inst.getParent() == CurLoop->getHeader())
+    // If there's a throw in the header block, we can't guarantee we'll reach
+    // Inst.
+    return !SafetyInfo->HeaderMayThrow;
+
+  // Somewhere in this loop there is an instruction which may throw and make us
+  // exit the loop.
+  if (SafetyInfo->MayThrow)
+    return false;
+
+  // Get the exit blocks for the current loop.
+  SmallVector<BasicBlock *, 8> ExitBlocks;
+  CurLoop->getExitBlocks(ExitBlocks);
+
+  // Verify that the block dominates each of the exit blocks of the loop.
+  for (BasicBlock *ExitBlock : ExitBlocks)
+    if (!DT->dominates(Inst.getParent(), ExitBlock))
+      return false;
+
+  // As a degenerate case, if the loop is statically infinite then we haven't
+  // proven anything since there are no exit blocks.
+  if (ExitBlocks.empty())
+    return false;
+
+  return true;
+}
