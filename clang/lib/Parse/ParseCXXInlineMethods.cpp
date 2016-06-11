@@ -382,7 +382,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       assert (!OldParam->hasUnparsedDefaultArg());
       if (OldParam->hasUninstantiatedDefaultArg())
         Param->setUninstantiatedDefaultArg(
-                                      Param->getUninstantiatedDefaultArg());
+            OldParam->getUninstantiatedDefaultArg());
       else
         Param->setDefaultArg(OldParam->getInit());
     }

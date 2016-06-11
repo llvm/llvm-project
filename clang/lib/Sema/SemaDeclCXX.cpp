@@ -471,7 +471,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
       continue;
     }
 
-    // We found our guy.
+    // We found the right previous declaration.
     break;
   }
 
