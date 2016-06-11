@@ -67,20 +67,18 @@ static void *SignalSafeGetOrAllocate(uptr *dst, uptr size) {
 // when TLVs are not accessible (early process startup, thread cleanup, ...).
 // The following provides a "poor man's TLV" implementation, where we use the
 // shadow memory of the pointer returned by pthread_self() to store a pointer to
-// the ThreadState object. The main thread's ThreadState pointer is stored
-// separately in a static variable, because we need to access it even before the
+// the ThreadState object. The main thread's ThreadState is stored separately
+// in a static variable, because we need to access it even before the
 // shadow memory is set up.
 static uptr main_thread_identity = 0;
-static ThreadState *main_thread_state = nullptr;
+ALIGNED(64) static char main_thread_state[sizeof(ThreadState)];
 
 ThreadState *cur_thread() {
-  ThreadState **fake_tls;
   uptr thread_identity = (uptr)pthread_self();
   if (thread_identity == main_thread_identity || main_thread_identity == 0) {
-    fake_tls = &main_thread_state;
-  } else {
-    fake_tls = (ThreadState **)MemToShadow(thread_identity);
+    return (ThreadState *)&main_thread_state;
   }
+  ThreadState **fake_tls = (ThreadState **)MemToShadow(thread_identity);
   ThreadState *thr = (ThreadState *)SignalSafeGetOrAllocate(
       (uptr *)fake_tls, sizeof(ThreadState));
   return thr;
