@@ -2500,11 +2500,6 @@ Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint32_t> Elts)
   const char *Data = reinterpret_cast<const char *>(Elts.data());
   return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*4), Ty);
 }
-Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<int32_t> Elts){
-  Type *Ty = VectorType::get(Type::getInt32Ty(Context), Elts.size());
-  const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*4), Ty);
-}
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint64_t> Elts){
   Type *Ty = VectorType::get(Type::getInt64Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());

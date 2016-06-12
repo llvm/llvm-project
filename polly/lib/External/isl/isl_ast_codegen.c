@@ -3221,6 +3221,38 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_tree_unroll(
 	return data.list;
 }
 
+/* Does "domain" involve a disjunction that is purely based on
+ * constraints involving only outer dimension?
+ *
+ * In particular, is there a disjunction such that the constraints
+ * involving the current and later dimensions are the same over
+ * all the disjuncts?
+ */
+static isl_bool has_pure_outer_disjunction(__isl_keep isl_set *domain,
+	__isl_keep isl_ast_build *build)
+{
+	isl_basic_set *hull;
+	isl_set *shared, *inner;
+	isl_bool equal;
+	int depth, dim;
+
+	if (isl_set_n_basic_set(domain) <= 1)
+		return isl_bool_false;
+
+	inner = isl_set_copy(domain);
+	depth = isl_ast_build_get_depth(build);
+	dim = isl_set_dim(inner, isl_dim_set);
+	inner = isl_set_drop_constraints_not_involving_dims(inner,
+					    isl_dim_set, depth, dim - depth);
+	hull = isl_set_plain_unshifted_simple_hull(isl_set_copy(inner));
+	shared = isl_set_from_basic_set(hull);
+	equal = isl_set_plain_is_equal(inner, shared);
+	isl_set_free(inner);
+	isl_set_free(shared);
+
+	return equal;
+}
+
 /* Generate code for a single component, after shifting (if any)
  * has been applied, in case the schedule was specified as a schedule tree.
  * In particular, handle the base case where there is either no isolated
@@ -3246,11 +3278,18 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_tree_unroll(
  * split up into disjoint basic sets.
  * Finally an AST is generated for each basic set and the results are
  * concatenated.
+ *
+ * If the schedule domain involves a disjunction that is purely based on
+ * constraints involving only outer dimension, then it is treated as
+ * if atomic was specified.  This ensures that only a single loop
+ * is generated instead of a sequence of identical loops with
+ * different guards.
  */
 static __isl_give isl_ast_graft_list *generate_shifted_component_tree_base(
 	__isl_take isl_union_map *executed, __isl_take isl_ast_build *build,
 	int isolated)
 {
+	isl_bool outer_disjunction;
 	isl_union_set *schedule_domain;
 	isl_set *domain;
 	isl_basic_set_list *domain_list;
@@ -3275,7 +3314,11 @@ static __isl_give isl_ast_graft_list *generate_shifted_component_tree_base(
 	domain = isl_ast_build_eliminate(build, domain);
 	domain = isl_set_coalesce(domain);
 
-	if (type == isl_ast_loop_atomic) {
+	outer_disjunction = has_pure_outer_disjunction(domain, build);
+	if (outer_disjunction < 0)
+		domain = isl_set_free(domain);
+
+	if (outer_disjunction || type == isl_ast_loop_atomic) {
 		isl_basic_set *hull;
 		hull = isl_set_unshifted_simple_hull(domain);
 		domain_list = isl_basic_set_list_from_basic_set(hull);

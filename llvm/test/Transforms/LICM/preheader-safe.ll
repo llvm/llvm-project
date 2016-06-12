@@ -14,6 +14,9 @@ entry:
 
 loop:                                         ; preds = %entry, %for.inc
   %div = udiv i64 %x, %y
+  br label %loop2
+
+loop2:
   call void @use_nothrow(i64 %div)
   br label %loop
 }

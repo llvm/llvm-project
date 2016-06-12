@@ -621,20 +621,18 @@ __isl_give isl_basic_set *isl_basic_set_drop_constraints_involving_dims(
 							    type, first, n);
 }
 
-/* Drop all constraints in map that involve any of the dimensions
- * first to first + n - 1 of the given type.
+/* Drop constraints from "map" by applying "drop" to each basic map.
  */
-__isl_give isl_map *isl_map_drop_constraints_involving_dims(
-	__isl_take isl_map *map,
-	enum isl_dim_type type, unsigned first, unsigned n)
+__isl_give isl_map *drop_constraints(__isl_take isl_map *map,
+	enum isl_dim_type type, unsigned first, unsigned n,
+	__isl_give isl_basic_map *(*drop)(__isl_take isl_basic_map *bmap,
+		enum isl_dim_type type, unsigned first, unsigned n))
 {
 	int i;
 	unsigned dim;
 
 	if (!map)
 		return NULL;
-	if (n == 0)
-		return map;
 
 	dim = isl_map_dim(map, type);
 	if (first + n > dim || first + n < first)
@@ -646,8 +644,7 @@ __isl_give isl_map *isl_map_drop_constraints_involving_dims(
 		return NULL;
 
 	for (i = 0; i < map->n; ++i) {
-		map->p[i] = isl_basic_map_drop_constraints_involving_dims(
-						    map->p[i], type, first, n);
+		map->p[i] = drop(map->p[i], type, first, n);
 		if (!map->p[i])
 			return isl_map_free(map);
 	}
@@ -656,6 +653,35 @@ __isl_give isl_map *isl_map_drop_constraints_involving_dims(
 		ISL_F_CLR(map, ISL_MAP_DISJOINT);
 
 	return map;
+}
+
+/* Drop all constraints in map that involve any of the dimensions
+ * first to first + n - 1 of the given type.
+ */
+__isl_give isl_map *isl_map_drop_constraints_involving_dims(
+	__isl_take isl_map *map,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	if (n == 0)
+		return map;
+	return drop_constraints(map, type, first, n,
+				&isl_basic_map_drop_constraints_involving_dims);
+}
+
+/* Drop all constraints in "map" that do not involve any of the dimensions
+ * first to first + n - 1 of the given type.
+ */
+__isl_give isl_map *isl_map_drop_constraints_not_involving_dims(
+	__isl_take isl_map *map,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	if (n == 0) {
+		isl_space *space = isl_map_get_space(map);
+		isl_map_free(map);
+		return isl_map_universe(space);
+	}
+	return drop_constraints(map, type, first, n,
+			    &isl_basic_map_drop_constraints_not_involving_dims);
 }
 
 /* Drop all constraints in set that involve any of the dimensions
@@ -668,7 +694,17 @@ __isl_give isl_set *isl_set_drop_constraints_involving_dims(
 	return isl_map_drop_constraints_involving_dims(set, type, first, n);
 }
 
-/* Construct an initial underapproximatino of the hull of "bset"
+/* Drop all constraints in "set" that do not involve any of the dimensions
+ * first to first + n - 1 of the given type.
+ */
+__isl_give isl_set *isl_set_drop_constraints_not_involving_dims(
+	__isl_take isl_set *set,
+	enum isl_dim_type type, unsigned first, unsigned n)
+{
+	return isl_map_drop_constraints_not_involving_dims(set, type, first, n);
+}
+
+/* Construct an initial underapproximation of the hull of "bset"
  * from "sample" and any of its adjacent points that also belong to "bset".
  */
 static __isl_give isl_basic_set *initialize_hull(__isl_keep isl_basic_set *bset,

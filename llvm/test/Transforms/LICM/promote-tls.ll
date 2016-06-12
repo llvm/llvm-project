@@ -25,7 +25,7 @@ for.header:
   %i.02 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %old = load i32, i32* %addr, align 4
   ; deliberate impossible to analyze branch
-  %guard = load volatile i8*, i8** @p
+  %guard = load atomic i8*, i8** @p monotonic, align 8
   %exitcmp = icmp eq i8* %guard, null
   br i1 %exitcmp, label %for.body, label %early-exit
 

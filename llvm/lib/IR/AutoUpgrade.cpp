@@ -352,7 +352,7 @@ static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
   if (Shift < 16) {
-    int Idxs[64];
+    uint32_t Idxs[64];
     // 256/512-bit version is split into 2/4 16-byte lanes.
     for (unsigned l = 0; l != NumElts; l += 16)
       for (unsigned i = 0; i != 16; ++i) {
@@ -390,7 +390,7 @@ static Value *UpgradeX86PALIGNRIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
     Op0 = llvm::Constant::getNullValue(Op0->getType());
   }
 
-  int Indices[64];
+  uint32_t Indices[64];
   // 256-bit palignr operates on 128-bit lanes so we need to handle that
   for (unsigned l = 0; l != NumElts; l += 16) {
     for (unsigned i = 0; i != 16; ++i) {
@@ -434,7 +434,7 @@ static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, LLVMContext &C,
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
   if (Shift < 16) {
-    int Idxs[64];
+    uint32_t Idxs[64];
     // 256/512-bit version is split into 2/4 16-byte lanes.
     for (unsigned l = 0; l != NumElts; l += 16)
       for (unsigned i = 0; i != 16; ++i) {
@@ -474,7 +474,7 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder, LLVMContext &C,
   // If we have less than 8 elements, then the starting mask was an i8 and
   // we need to extract down to the right number of elements.
   if (NumElts < 8) {
-    int Indices[4];
+    uint32_t Indices[4];
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i;
     Mask = Builder.CreateShuffleVector(Mask, Mask,
@@ -508,7 +508,7 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder, LLVMContext &C,
   // If we have less than 8 elements, then the starting mask was an i8 and
   // we need to extract down to the right number of elements.
   if (NumElts < 8) {
-    int Indices[4];
+    uint32_t Indices[4];
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i;
     Mask = Builder.CreateShuffleVector(Mask, Mask,
@@ -562,8 +562,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       unsigned NumDstElts = DstTy->getNumElements();
       if (NumDstElts < SrcTy->getNumElements()) {
         assert(NumDstElts == 2 && "Unexpected vector size");
-        const int ShuffleMask[2] = { 0, 1 };
-        Rep = Builder.CreateShuffleVector(Rep, UndefValue::get(SrcTy), ShuffleMask);
+        uint32_t ShuffleMask[2] = { 0, 1 };
+        Rep = Builder.CreateShuffleVector(Rep, UndefValue::get(SrcTy),
+                                          ShuffleMask);
       }
 
       bool Int2Double = (StringRef::npos != Name.find("cvtdq2"));
@@ -748,9 +749,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       unsigned NumDstElts = DstTy->getNumElements();
 
       // Extract a subvector of the first NumDstElts lanes and sign/zero extend.
-      SmallVector<int, 8> ShuffleMask;
-      for (int i = 0; i != (int)NumDstElts; ++i)
-        ShuffleMask.push_back(i);
+      SmallVector<uint32_t, 8> ShuffleMask(NumDstElts);
+      for (unsigned i = 0; i != NumDstElts; ++i)
+        ShuffleMask[i] = i;
 
       Value *SV = Builder.CreateShuffleVector(
           CI->getArgOperand(0), UndefValue::get(SrcTy), ShuffleMask);
@@ -764,7 +765,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Op = Builder.CreatePointerCast(CI->getArgOperand(0),
                                             PointerType::getUnqual(VT));
       Value *Load = Builder.CreateLoad(VT, Op);
-      const int Idxs[4] = { 0, 1, 0, 1 };
+      uint32_t Idxs[4] = { 0, 1, 0, 1 };
       Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
                                         Idxs);
     } else if (Name.startswith("llvm.x86.avx2.pbroadcast") ||
@@ -816,13 +817,11 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       VectorType *VecTy = cast<VectorType>(CI->getType());
       unsigned NumElts = VecTy->getNumElements();
 
-      SmallVector<Constant*, 16> Idxs;
-      for (unsigned i = 0; i != NumElts; ++i) {
-        unsigned Idx = ((Imm >> (i%8)) & 1) ? i + NumElts : i;
-        Idxs.push_back(Builder.getInt32(Idx));
-      }
+      SmallVector<uint32_t, 16> Idxs(NumElts);
+      for (unsigned i = 0; i != NumElts; ++i)
+        Idxs[i] = ((Imm >> (i%8)) & 1) ? i + NumElts : i;
 
-      Rep = Builder.CreateShuffleVector(Op0, Op1, ConstantVector::get(Idxs));
+      Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
     } else if (Name.startswith("llvm.x86.avx.vinsertf128.") ||
                Name == "llvm.x86.avx2.vinserti128") {
       Value *Op0 = CI->getArgOperand(0);
@@ -836,11 +835,10 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
 
       // Extend the second operand into a vector that is twice as big.
       Value *UndefV = UndefValue::get(Op1->getType());
-      SmallVector<Constant*, 8> Idxs;
-      for (unsigned i = 0; i != NumElts; ++i) {
-        Idxs.push_back(Builder.getInt32(i));
-      }
-      Rep = Builder.CreateShuffleVector(Op1, UndefV, ConstantVector::get(Idxs));
+      SmallVector<uint32_t, 8> Idxs(NumElts);
+      for (unsigned i = 0; i != NumElts; ++i)
+        Idxs[i] = i;
+      Rep = Builder.CreateShuffleVector(Op1, UndefV, Idxs);
 
       // Insert the second operand into the first operand.
 
@@ -853,20 +851,15 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Imm = 1  <i32 0, i32 1, i32 2,  i32 3,  i32 8, i32 9, i32 10, i32 11>
       // Imm = 0  <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6,  i32 7 >
 
-      SmallVector<Constant*, 8> Idxs2;
       // The low half of the result is either the low half of the 1st operand
       // or the low half of the 2nd operand (the inserted vector).
-      for (unsigned i = 0; i != NumElts / 2; ++i) {
-        unsigned Idx = Imm ? i : (i + NumElts);
-        Idxs2.push_back(Builder.getInt32(Idx));
-      }
+      for (unsigned i = 0; i != NumElts / 2; ++i)
+        Idxs[i] = Imm ? i : (i + NumElts);
       // The high half of the result is either the low half of the 2nd operand
       // (the inserted vector) or the high half of the 1st operand.
-      for (unsigned i = NumElts / 2; i != NumElts; ++i) {
-        unsigned Idx = Imm ? (i + NumElts / 2) : i;
-        Idxs2.push_back(Builder.getInt32(Idx));
-      }
-      Rep = Builder.CreateShuffleVector(Op0, Rep, ConstantVector::get(Idxs2));
+      for (unsigned i = NumElts / 2; i != NumElts; ++i)
+        Idxs[i] = Imm ? (i + NumElts / 2) : i;
+      Rep = Builder.CreateShuffleVector(Op0, Rep, Idxs);
     } else if (Name.startswith("llvm.x86.avx.vextractf128.") ||
                Name == "llvm.x86.avx2.vextracti128") {
       Value *Op0 = CI->getArgOperand(0);
@@ -878,53 +871,34 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Imm = Imm & 1;
 
       // Get indexes for either the high half or low half of the input vector.
-      SmallVector<Constant*, 4> Idxs(NumElts);
+      SmallVector<uint32_t, 4> Idxs(NumElts);
       for (unsigned i = 0; i != NumElts; ++i) {
-        unsigned Idx = Imm ? (i + NumElts) : i;
-        Idxs[i] = Builder.getInt32(Idx);
+        Idxs[i] = Imm ? (i + NumElts) : i;
       }
 
       Value *UndefV = UndefValue::get(Op0->getType());
-      Rep = Builder.CreateShuffleVector(Op0, UndefV, ConstantVector::get(Idxs));
+      Rep = Builder.CreateShuffleVector(Op0, UndefV, Idxs);
     } else if (Name == "llvm.stackprotectorcheck") {
       Rep = nullptr;
+    } else if (Name.startswith("llvm.x86.avx.vpermil.")) {
+      Value *Op0 = CI->getArgOperand(0);
+      unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+      VectorType *VecTy = cast<VectorType>(CI->getType());
+      unsigned NumElts = VecTy->getNumElements();
+      // Calcuate the size of each index in the immediate.
+      unsigned IdxSize = 64 / VecTy->getScalarSizeInBits();
+      unsigned IdxMask = ((1 << IdxSize) - 1);
+
+      SmallVector<uint32_t, 8> Idxs(NumElts);
+      // Lookup the bits for this element, wrapping around the immediate every
+      // 8-bits. Elements are grouped into sets of 2 or 4 elements so we need
+      // to offset by the first index of each group.
+      for (unsigned i = 0; i != NumElts; ++i)
+        Idxs[i] = ((Imm >> ((i * IdxSize) % 8)) & IdxMask) | (i & ~IdxMask);
+
+      Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
     } else {
-      bool PD128 = false, PD256 = false, PS128 = false, PS256 = false;
-      if (Name == "llvm.x86.avx.vpermil.pd.256")
-        PD256 = true;
-      else if (Name == "llvm.x86.avx.vpermil.pd")
-        PD128 = true;
-      else if (Name == "llvm.x86.avx.vpermil.ps.256")
-        PS256 = true;
-      else if (Name == "llvm.x86.avx.vpermil.ps")
-        PS128 = true;
-
-      if (PD256 || PD128 || PS256 || PS128) {
-        Value *Op0 = CI->getArgOperand(0);
-        unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-        SmallVector<Constant*, 8> Idxs;
-
-        if (PD128)
-          for (unsigned i = 0; i != 2; ++i)
-            Idxs.push_back(Builder.getInt32((Imm >> i) & 0x1));
-        else if (PD256)
-          for (unsigned l = 0; l != 4; l+=2)
-            for (unsigned i = 0; i != 2; ++i)
-              Idxs.push_back(Builder.getInt32(((Imm >> (l+i)) & 0x1) + l));
-        else if (PS128)
-          for (unsigned i = 0; i != 4; ++i)
-            Idxs.push_back(Builder.getInt32((Imm >> (2 * i)) & 0x3));
-        else if (PS256)
-          for (unsigned l = 0; l != 8; l+=4)
-            for (unsigned i = 0; i != 4; ++i)
-              Idxs.push_back(Builder.getInt32(((Imm >> (2 * i)) & 0x3) + l));
-        else
-          llvm_unreachable("Unexpected function");
-
-        Rep = Builder.CreateShuffleVector(Op0, Op0, ConstantVector::get(Idxs));
-      } else {
-        llvm_unreachable("Unknown function for CallInst upgrade.");
-      }
+      llvm_unreachable("Unknown function for CallInst upgrade.");
     }
 
     if (Rep)

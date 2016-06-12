@@ -1083,7 +1083,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ; X32-SSE41-NEXT:    pinsrd $2, %ecx, %xmm1
 ; X32-SSE41-NEXT:    shrl $3, %eax
 ; X32-SSE41-NEXT:    pinsrd $3, %eax, %xmm1
-; X32-SSE41-NEXT:    pand .LCPI17_0, %xmm1
+; X32-SSE41-NEXT:    pand {{\.LCPI.*}}, %xmm1
 ; X32-SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
 ; X32-SSE41-NEXT:    psllq $63, %xmm0
 ; X32-SSE41-NEXT:    psrad $31, %xmm0

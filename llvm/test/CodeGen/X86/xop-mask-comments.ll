@@ -80,7 +80,7 @@ define <16 x i8> @vpperm_shuffle_binary_zero(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @vpperm_shuffle_general(<16 x i8> %a0, <16 x i8> %a1) {
 ; X32-LABEL: vpperm_shuffle_general:
 ; X32:       # BB#0:
-; X32-NEXT:    vpperm .LCPI5_0, %xmm0, %xmm0, %xmm0
+; X32-NEXT:    vpperm {{\.LCPI.*}}, %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpperm_shuffle_general:

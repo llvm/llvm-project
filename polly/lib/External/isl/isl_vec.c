@@ -51,6 +51,7 @@ struct isl_vec *isl_vec_alloc(struct isl_ctx *ctx, unsigned size)
 	return vec;
 error:
 	isl_blk_free(ctx, vec->block);
+	free(vec);
 	return NULL;
 }
 

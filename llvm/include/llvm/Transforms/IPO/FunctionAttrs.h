@@ -37,6 +37,21 @@ struct PostOrderFunctionAttrsPass : PassInfoMixin<PostOrderFunctionAttrsPass> {
 /// in post-order.
 Pass *createPostOrderFunctionAttrsLegacyPass();
 
+/// A pass to do RPO deduction and propagation of function attributes.
+///
+/// This pass provides a general RPO or "top down" propagation of
+/// function attributes. For a few (rare) cases, we can deduce significantly
+/// more about function attributes by working in RPO, so this pass
+/// provides the compliment to the post-order pass above where the majority of
+/// deduction is performed.
+// FIXME: Currently there is no RPO CGSCC pass structure to slide into and so
+// this is a boring module pass, but eventually it should be an RPO CGSCC pass
+// when such infrastructure is available.
+class ReversePostOrderFunctionAttrsPass
+    : public PassInfoMixin<ReversePostOrderFunctionAttrsPass> {
+public:
+  PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
+};
 }
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

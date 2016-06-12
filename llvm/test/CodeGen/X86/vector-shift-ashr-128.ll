@@ -1638,7 +1638,7 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
 ; X32-SSE-LABEL: splatconstant_shift_v16i8:
 ; X32-SSE:       # BB#0:
 ; X32-SSE-NEXT:    psrlw $3, %xmm0
-; X32-SSE-NEXT:    pand .LCPI15_0, %xmm0
+; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X32-SSE-NEXT:    pxor %xmm1, %xmm0
 ; X32-SSE-NEXT:    psubb %xmm1, %xmm0

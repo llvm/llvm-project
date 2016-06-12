@@ -56,51 +56,87 @@ int isl_val_get_abs_num_chunks(__isl_keep isl_val *v, size_t size,
 
 __isl_give isl_val *isl_val_set_si(__isl_take isl_val *v, long i);
 
+__isl_export
 __isl_give isl_val *isl_val_abs(__isl_take isl_val *v);
+__isl_export
 __isl_give isl_val *isl_val_neg(__isl_take isl_val *v);
+__isl_export
 __isl_give isl_val *isl_val_inv(__isl_take isl_val *v);
+__isl_export
 __isl_give isl_val *isl_val_floor(__isl_take isl_val *v);
+__isl_export
 __isl_give isl_val *isl_val_ceil(__isl_take isl_val *v);
+__isl_export
 __isl_give isl_val *isl_val_trunc(__isl_take isl_val *v);
 __isl_give isl_val *isl_val_2exp(__isl_take isl_val *v);
+__isl_export
 __isl_give isl_val *isl_val_min(__isl_take isl_val *v1, __isl_take isl_val *v2);
+__isl_export
 __isl_give isl_val *isl_val_max(__isl_take isl_val *v1, __isl_take isl_val *v2);
+__isl_export
 __isl_give isl_val *isl_val_add(__isl_take isl_val *v1, __isl_take isl_val *v2);
 __isl_give isl_val *isl_val_add_ui(__isl_take isl_val *v1, unsigned long v2);
+__isl_export
 __isl_give isl_val *isl_val_sub(__isl_take isl_val *v1, __isl_take isl_val *v2);
 __isl_give isl_val *isl_val_sub_ui(__isl_take isl_val *v1, unsigned long v2);
+__isl_export
 __isl_give isl_val *isl_val_mul(__isl_take isl_val *v1, __isl_take isl_val *v2);
 __isl_give isl_val *isl_val_mul_ui(__isl_take isl_val *v1, unsigned long v2);
+__isl_export
 __isl_give isl_val *isl_val_div(__isl_take isl_val *v1, __isl_take isl_val *v2);
+__isl_export
 __isl_give isl_val *isl_val_mod(__isl_take isl_val *v1, __isl_take isl_val *v2);
+__isl_export
 __isl_give isl_val *isl_val_gcd(__isl_take isl_val *v1, __isl_take isl_val *v2);
 __isl_give isl_val *isl_val_gcdext(__isl_take isl_val *v1,
 	__isl_take isl_val *v2, __isl_give isl_val **x, __isl_give isl_val **y);
 
+__isl_export
 int isl_val_sgn(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_zero(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_one(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_negone(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_nonneg(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_nonpos(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_pos(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_neg(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_int(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_rat(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_nan(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_infty(__isl_keep isl_val *v);
+__isl_export
 isl_bool isl_val_is_neginfty(__isl_keep isl_val *v);
 
+__isl_export
 int isl_val_cmp_si(__isl_keep isl_val *v, long i);
 
+__isl_export
 isl_bool isl_val_lt(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+__isl_export
 isl_bool isl_val_le(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+__isl_export
 isl_bool isl_val_gt(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+__isl_export
 isl_bool isl_val_ge(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+__isl_export
 isl_bool isl_val_eq(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+__isl_export
 isl_bool isl_val_ne(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
+__isl_export
 isl_bool isl_val_abs_eq(__isl_keep isl_val *v1, __isl_keep isl_val *v2);
 
+__isl_export
 isl_bool isl_val_is_divisible_by(__isl_keep isl_val *v1,
 	__isl_keep isl_val *v2);
 

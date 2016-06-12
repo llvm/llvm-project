@@ -37,16 +37,21 @@ define i32 @test2(i1 %c) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT: load i32, i32* @X
 ; CHECK-NEXT: %B = sdiv i32 4, %A
-	%A = load i32, i32* @X		; <i32> [#uses=2]
-	br label %Loop
+  %A = load i32, i32* @X
+  br label %Loop
+
 Loop:
-        ;; Should have hoisted this div!
-	%B = sdiv i32 4, %A		; <i32> [#uses=2]
-	call void @foo2( i32 %B )
-	br i1 %c, label %Loop, label %Out
-Out:		; preds = %Loop
-	%C = sub i32 %A, %B		; <i32> [#uses=1]
-	ret i32 %C
+  ;; Should have hoisted this div!
+  %B = sdiv i32 4, %A
+  br label %loop2
+
+loop2:
+  call void @foo2( i32 %B )
+  br i1 %c, label %Loop, label %Out
+
+Out:
+  %C = sub i32 %A, %B
+  ret i32 %C
 }
 
 

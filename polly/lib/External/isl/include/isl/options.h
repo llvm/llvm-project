@@ -40,6 +40,9 @@ int isl_options_get_gbr_only_first(isl_ctx *ctx);
 isl_stat isl_options_set_schedule_algorithm(isl_ctx *ctx, int val);
 int isl_options_get_schedule_algorithm(isl_ctx *ctx);
 
+isl_stat isl_options_set_pip_symmetry(isl_ctx *ctx, int val);
+int isl_options_get_pip_symmetry(isl_ctx *ctx);
+
 isl_stat isl_options_set_coalesce_bounded_wrapping(isl_ctx *ctx, int val);
 int isl_options_get_coalesce_bounded_wrapping(isl_ctx *ctx);
 

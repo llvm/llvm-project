@@ -381,6 +381,20 @@ typedef enum {
 } LLVMDiagnosticSeverity;
 
 /**
+ * Attribute index are either LLVMAttributeReturnIndex,
+ * LLVMAttributeFunctionIndex or a parameter number from 1 to N.
+ */
+enum {
+  LLVMAttributeReturnIndex = 0U,
+  // ISO C restricts enumerator values to range of 'int'
+  // (4294967295 is too large)
+  // LLVMAttributeFunctionIndex = ~0U,
+  LLVMAttributeFunctionIndex = -1,
+};
+
+typedef unsigned LLVMAttributeIndex;
+
+/**
  * @}
  */
 
@@ -477,7 +491,7 @@ unsigned LLVMGetMDKindIDInContext(LLVMContextRef C, const char *Name,
 unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
 
 /**
- * Return an unique id given the name of a target independent attribute,
+ * Return an unique id given the name of a enum attribute,
  * or 0 if no attribute by that name exists.
  *
  * See http://llvm.org/docs/LangRef.html#parameter-attributes
@@ -487,7 +501,48 @@ unsigned LLVMGetMDKindID(const char *Name, unsigned SLen);
  * NB: Attribute names and/or id are subject to change without
  * going through the C API deprecation cycle.
  */
-unsigned LLVMGetAttributeKindForName(const char *Name, size_t SLen);
+unsigned LLVMGetEnumAttributeKindForName(const char *Name, size_t SLen);
+unsigned LLVMGetLastEnumAttributeKind(void);
+
+/**
+ * Create an enum attribute.
+ */
+LLVMAttributeRef LLVMCreateEnumAttribute(LLVMContextRef C, unsigned KindID,
+                                         uint64_t Val);
+
+/**
+ * Get the unique id corresponding to the enum attribute
+ * passed as argument.
+ */
+unsigned LLVMGetEnumAttributeKind(LLVMAttributeRef A);
+
+/**
+ * Get the enum attribute's value. 0 is returned if none exists.
+ */
+uint64_t LLVMGetEnumAttributeValue(LLVMAttributeRef A);
+
+/**
+ * Create a string attribute.
+ */
+LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
+                                           const char *K, unsigned KLength,
+                                           const char *V, unsigned VLength);
+
+/**
+ * Get the string attribute's kind.
+ */
+const char *LLVMGetStringAttributeKind(LLVMAttributeRef A, unsigned *Length);
+
+/**
+ * Get the string attribute's value.
+ */
+const char *LLVMGetStringAttributeValue(LLVMAttributeRef A, unsigned *Length);
+
+/**
+ * Check for the different types of attributes.
+ */
+LLVMBool LLVMIsEnumAttribute(LLVMAttributeRef A);
+LLVMBool LLVMIsStringAttribute(LLVMAttributeRef A);
 
 /**
  * @}
@@ -1956,6 +2011,14 @@ void LLVMSetGC(LLVMValueRef Fn, const char *Name);
  * @see llvm::Function::addAttribute()
  */
 void LLVMAddFunctionAttr(LLVMValueRef Fn, LLVMAttribute PA);
+
+void LLVMAddAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
+                             LLVMAttributeRef A);
+LLVMAttributeRef LLVMGetEnumAttributeAtIndex(LLVMValueRef F,
+                                             LLVMAttributeIndex Idx,
+                                             unsigned KindID);
+void LLVMRemoveEnumAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
+                                    unsigned KindID);
 
 /**
  * Add a target-dependent attribute to a function

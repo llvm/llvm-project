@@ -135,7 +135,7 @@ Loop:   ; preds = %Loop, %0
   %x2 = add i32 %x, 1   ; <i32> [#uses=1]
   store i32 %x2, i32* @X
 
-        store volatile i32* @X, i32** %P2
+        store atomic i32* @X, i32** %P2 monotonic, align 8
 
   %Next = add i32 %j, 1   ; <i32> [#uses=2]
   %cond = icmp eq i32 %Next, 0    ; <i1> [#uses=1]

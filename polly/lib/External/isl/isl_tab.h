@@ -113,7 +113,7 @@ struct isl_tab_undo {
  * However, the basic operations do not ensure that all dead columns
  * or all redundant rows are detected.
  * isl_tab_detect_implicit_equalities and isl_tab_detect_redundant can be used
- * to perform and exhaustive search for dead columns and redundant rows.
+ * to perform an exhaustive search for dead columns and redundant rows.
  *
  * The samples matrix contains "n_sample" integer points that have at some
  * point been elements satisfying the tableau.  The first "n_outside"

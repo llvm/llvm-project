@@ -54,8 +54,12 @@ Non-comprehensive list of changes in this release
 * The C API function LLVMGetDataLayout is deprecated
   in favor of LLVMGetDataLayoutStr.
 
-* The C API enum LLVMAttribute is deprecated in favor of
-  LLVMGetAttributeKindForName.
+* The C API enum LLVMAttribute and associated API is deprecated in favor of
+  the new LLVMAttributeRef API. The deprecated functions are
+  LLVMAddFunctionAttr, LLVMAddTargetDependentFunctionAttr,
+  LLVMRemoveFunctionAttr, LLVMGetFunctionAttr, LLVMAddAttribute,
+  LLVMRemoveAttribute, LLVMGetAttribute, LLVMAddInstrAttribute and
+  LLVMRemoveInstrAttribute.
 
 * ``TargetFrameLowering::eliminateCallFramePseudoInstr`` now returns an
   iterator to the next instruction instead of ``void``. Targets that previously

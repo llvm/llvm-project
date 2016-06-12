@@ -177,6 +177,9 @@ public:
 
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
 
+  /// \brief Return the number of attributes this AttributeSet contains.
+  unsigned getNumAttributes() const { return NumAttrs; }
+
   bool hasAttribute(Attribute::AttrKind Kind) const {
     return AvailableAttrs & ((uint64_t)1) << Kind;
   }

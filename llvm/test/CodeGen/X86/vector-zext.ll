@@ -1378,10 +1378,7 @@ define <2 x i64> @shuf_zext_8i16_to_2i64_offset6(<8 x i16> %A) nounwind uwtable 
 ;
 ; SSSE3-LABEL: shuf_zext_8i16_to_2i64_offset6:
 ; SSSE3:       # BB#0: # %entry
-; SSSE3-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
-; SSSE3-NEXT:    pxor %xmm1, %xmm1
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSSE3-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[6,7],zero,zero,zero,zero,zero,zero,xmm0[8,9],zero,zero,zero,zero,zero,zero
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuf_zext_8i16_to_2i64_offset6:

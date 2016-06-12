@@ -32,16 +32,18 @@ for (int c0 = 0; c0 < m; c0 += 32)
         if (c0 + 31 >= m && c1 + 31 >= n && c2 == c0) {
           for (int c5 = m - c0 - 1; c5 <= min(31, 2 * m - c0 - 3); c5 += 1)
             S_29(-m + c0 + c5 + 1, m - 1);
-        } else if (m >= c0 + 32 && c1 + 31 >= n && c2 == c0)
+        } else if (m >= c0 + 32 && c1 + 31 >= n && c2 == c0) {
           S_29(0, c0 + 31);
+        }
       } else if (c1 + 31 >= n && c2 >= m) {
         for (int c3 = max(0, (c2 / 2) - c0 + 1); c3 <= min(31, m - c0 - 1); c3 += 1)
           for (int c5 = 0; c5 <= min(31, 2 * c0 - c2 + 2 * c3 - 1); c5 += 1)
             S_29(-c0 + c2 - c3 + c5, c0 + c3);
-      } else if (c1 <= -32 && c1 + 31 >= n && m >= c2 + 1)
+      } else if (c1 <= -32 && c1 + 31 >= n && m >= c2 + 1) {
         for (int c3 = max(0, (c2 / 2) - c0 + 1); c3 <= min(31, m - c0 - 1); c3 += 1)
           for (int c5 = max(0, c0 - c2 + c3); c5 <= min(31, 2 * c0 - c2 + 2 * c3 - 1); c5 += 1)
             S_29(-c0 + c2 - c3 + c5, c0 + c3);
+      }
       if (m == 1 && c0 == 0 && c1 >= 32 && c2 == 0) {
         for (int c4 = 0; c4 <= min(31, n - c1 - 1); c4 += 1)
           S_19(c1 + c4, 0);

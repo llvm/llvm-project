@@ -326,7 +326,7 @@ __isl_give isl_local_space *isl_basic_set_get_local_space(
 /* For each known div d = floor(f/m), add the constraints
  *
  *		f - m d >= 0
- *		-(f-(n-1)) + m d >= 0
+ *		-(f-(m-1)) + m d >= 0
  *
  * Do not finalize the result.
  */
@@ -1673,24 +1673,42 @@ struct isl_basic_map *isl_basic_map_cow(struct isl_basic_map *bmap)
 	return bmap;
 }
 
-struct isl_set *isl_set_cow(struct isl_set *set)
+/* Clear all cached information in "map", either because it is about
+ * to be modified or because it is being freed.
+ * Always return the same pointer that is passed in.
+ * This is needed for the use in isl_map_free.
+ */
+static __isl_give isl_map *clear_caches(__isl_take isl_map *map)
 {
-	if (!set)
-		return NULL;
-
-	if (set->ref == 1)
-		return set;
-	set->ref--;
-	return isl_set_dup(set);
+	isl_basic_map_free(map->cached_simple_hull[0]);
+	isl_basic_map_free(map->cached_simple_hull[1]);
+	map->cached_simple_hull[0] = NULL;
+	map->cached_simple_hull[1] = NULL;
+	return map;
 }
 
+struct isl_set *isl_set_cow(struct isl_set *set)
+{
+	return isl_map_cow(set);
+}
+
+/* Return an isl_map that is equal to "map" and that has only
+ * a single reference.
+ *
+ * If the original input already has only one reference, then
+ * simply return it, but clear all cached information, since
+ * it may be rendered invalid by the operations that will be
+ * performed on the result.
+ *
+ * Otherwise, create a duplicate (without any cached information).
+ */
 struct isl_map *isl_map_cow(struct isl_map *map)
 {
 	if (!map)
 		return NULL;
 
 	if (map->ref == 1)
-		return map;
+		return clear_caches(map);
 	map->ref--;
 	return isl_map_dup(map);
 }
@@ -2580,31 +2598,17 @@ int isl_inequality_negate(struct isl_basic_map *bmap, unsigned pos)
 	return 0;
 }
 
-__isl_give isl_set *isl_set_alloc_space(__isl_take isl_space *dim, int n,
+__isl_give isl_set *isl_set_alloc_space(__isl_take isl_space *space, int n,
 	unsigned flags)
 {
-	struct isl_set *set;
-
-	if (!dim)
+	if (!space)
 		return NULL;
-	isl_assert(dim->ctx, dim->n_in == 0, goto error);
-	isl_assert(dim->ctx, n >= 0, goto error);
-	set = isl_alloc(dim->ctx, struct isl_set,
-			sizeof(struct isl_set) +
-			(n - 1) * sizeof(struct isl_basic_set *));
-	if (!set)
-		goto error;
-
-	set->ctx = dim->ctx;
-	isl_ctx_ref(set->ctx);
-	set->ref = 1;
-	set->size = n;
-	set->n = 0;
-	set->dim = dim;
-	set->flags = flags;
-	return set;
+	if (isl_space_dim(space, isl_dim_in) != 0)
+		isl_die(isl_space_get_ctx(space), isl_error_invalid,
+			"set cannot have input dimensions", goto error);
+	return isl_map_alloc_space(space, n, flags);
 error:
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 
@@ -2699,21 +2703,7 @@ __isl_give isl_set *isl_set_add_basic_set(__isl_take isl_set *set,
 
 __isl_null isl_set *isl_set_free(__isl_take isl_set *set)
 {
-	int i;
-
-	if (!set)
-		return NULL;
-
-	if (--set->ref > 0)
-		return NULL;
-
-	isl_ctx_deref(set->ctx);
-	for (i = 0; i < set->n; ++i)
-		isl_basic_set_free(set->p[i]);
-	isl_space_free(set->dim);
-	free(set);
-
-	return NULL;
+	return isl_map_free(set);
 }
 
 void isl_set_print_internal(struct isl_set *set, FILE *out, int indent)
@@ -4493,7 +4483,7 @@ static int add_upper_div_constraint(__isl_keep isl_basic_map *bmap,
 
 /* For a div d = floor(f/m), add the constraint
  *
- *		-(f-(n-1)) + m d >= 0
+ *		-(f-(m-1)) + m d >= 0
  */
 static int add_lower_div_constraint(__isl_keep isl_basic_map *bmap,
 	unsigned pos, isl_int *div)
@@ -4515,11 +4505,11 @@ static int add_lower_div_constraint(__isl_keep isl_basic_map *bmap,
 /* For a div d = floor(f/m), add the constraints
  *
  *		f - m d >= 0
- *		-(f-(n-1)) + m d >= 0
+ *		-(f-(m-1)) + m d >= 0
  *
  * Note that the second constraint is the negation of
  *
- *		f - m d >= n
+ *		f - m d >= m
  */
 int isl_basic_map_add_div_constraints_var(__isl_keep isl_basic_map *bmap,
 	unsigned pos, isl_int *div)
@@ -4550,7 +4540,7 @@ int isl_basic_map_add_div_constraints(struct isl_basic_map *bmap, unsigned div)
 /* For each known div d = floor(f/m), add the constraints
  *
  *		f - m d >= 0
- *		-(f-(n-1)) + m d >= 0
+ *		-(f-(m-1)) + m d >= 0
  *
  * Remove duplicate constraints in case of some these div constraints
  * already appear in "bmap".
@@ -4581,7 +4571,7 @@ __isl_give isl_basic_map *isl_basic_map_add_known_div_constraints(
  *
  * if sign < 0 or the constraint
  *
- *		-(f-(n-1)) + m d >= 0
+ *		-(f-(m-1)) + m d >= 0
  *
  * if sign > 0.
  */
@@ -5276,32 +5266,36 @@ __isl_give isl_map *isl_map_from_domain_and_range(__isl_take isl_set *domain,
 	return isl_map_apply_range(isl_map_reverse(domain), range);
 }
 
-__isl_give isl_map *isl_map_alloc_space(__isl_take isl_space *dim, int n,
+/* Return a newly allocated isl_map with given space and flags and
+ * room for "n" basic maps.
+ * Make sure that all cached information is cleared.
+ */
+__isl_give isl_map *isl_map_alloc_space(__isl_take isl_space *space, int n,
 	unsigned flags)
 {
 	struct isl_map *map;
 
-	if (!dim)
+	if (!space)
 		return NULL;
 	if (n < 0)
-		isl_die(dim->ctx, isl_error_internal,
+		isl_die(space->ctx, isl_error_internal,
 			"negative number of basic maps", goto error);
-	map = isl_alloc(dim->ctx, struct isl_map,
+	map = isl_calloc(space->ctx, struct isl_map,
 			sizeof(struct isl_map) +
 			(n - 1) * sizeof(struct isl_basic_map *));
 	if (!map)
 		goto error;
 
-	map->ctx = dim->ctx;
+	map->ctx = space->ctx;
 	isl_ctx_ref(map->ctx);
 	map->ref = 1;
 	map->size = n;
 	map->n = 0;
-	map->dim = dim;
+	map->dim = space;
 	map->flags = flags;
 	return map;
 error:
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 
@@ -5463,6 +5457,7 @@ __isl_null isl_map *isl_map_free(__isl_take isl_map *map)
 	if (--map->ref > 0)
 		return NULL;
 
+	clear_caches(map);
 	isl_ctx_deref(map->ctx);
 	for (i = 0; i < map->n; ++i)
 		isl_basic_map_free(map->p[i]);
@@ -8213,57 +8208,69 @@ error:
  * The expansion itself is given by "exp" while the resulting
  * list of divs is given by "div".
  *
- * Move the integer divisions of "bset" into the right position
+ * Move the integer divisions of "bmap" into the right position
  * according to "exp" and then introduce the additional integer
  * divisions, adding div constraints.
  * The moving should be done first to avoid moving coefficients
  * in the definitions of the extra integer divisions.
  */
-__isl_give isl_basic_set *isl_basic_set_expand_divs(
-	__isl_take isl_basic_set *bset, __isl_take isl_mat *div, int *exp)
+__isl_give isl_basic_map *isl_basic_map_expand_divs(
+	__isl_take isl_basic_set *bmap, __isl_take isl_mat *div, int *exp)
 {
 	int i, j;
 	int n_div;
 
-	bset = isl_basic_set_cow(bset);
-	if (!bset || !div)
+	bmap = isl_basic_map_cow(bmap);
+	if (!bmap || !div)
 		goto error;
 
-	if (div->n_row < bset->n_div)
+	if (div->n_row < bmap->n_div)
 		isl_die(isl_mat_get_ctx(div), isl_error_invalid,
 			"not an expansion", goto error);
 
-	n_div = bset->n_div;
-	bset = isl_basic_map_extend_space(bset, isl_space_copy(bset->dim),
+	n_div = bmap->n_div;
+	bmap = isl_basic_map_extend_space(bmap, isl_space_copy(bmap->dim),
 					    div->n_row - n_div, 0,
 					    2 * (div->n_row - n_div));
 
 	for (i = n_div; i < div->n_row; ++i)
-		if (isl_basic_set_alloc_div(bset) < 0)
+		if (isl_basic_map_alloc_div(bmap) < 0)
 			goto error;
 
 	for (j = n_div - 1; j >= 0; --j) {
 		if (exp[j] == j)
 			break;
-		isl_basic_map_swap_div(bset, j, exp[j]);
+		isl_basic_map_swap_div(bmap, j, exp[j]);
 	}
 	j = 0;
 	for (i = 0; i < div->n_row; ++i) {
 		if (j < n_div && exp[j] == i) {
 			j++;
 		} else {
-			isl_seq_cpy(bset->div[i], div->row[i], div->n_col);
-			if (isl_basic_map_add_div_constraints(bset, i) < 0)
+			isl_seq_cpy(bmap->div[i], div->row[i], div->n_col);
+			if (!isl_basic_map_div_is_known(bmap, i))
+				continue;
+			if (isl_basic_map_add_div_constraints(bmap, i) < 0)
 				goto error;
 		}
 	}
 
 	isl_mat_free(div);
-	return bset;
+	return bmap;
 error:
-	isl_basic_set_free(bset);
+	isl_basic_map_free(bmap);
 	isl_mat_free(div);
 	return NULL;
+}
+
+/* Apply the expansion computed by isl_merge_divs.
+ * The expansion itself is given by "exp" while the resulting
+ * list of divs is given by "div".
+ */
+__isl_give isl_basic_set *isl_basic_set_expand_divs(
+	__isl_take isl_basic_set *bset, __isl_take isl_mat *div, int *exp)
+{
+	return isl_basic_map_expand_divs(bset, div, exp);
 }
 
 /* Look for a div in dst that corresponds to the div "div" in src.

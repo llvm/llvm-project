@@ -2158,7 +2158,7 @@ error:
  * Given two rows in the main tableau, if the inequality corresponding
  * to the first row is redundant with respect to that of the second row
  * in the current tableau, then it is better to split on the second row,
- * since in the positive part, both row will be positive.
+ * since in the positive part, both rows will be positive.
  * (In the negative part a pivot will have to be performed and just about
  * anything can happen to the sign of the other row.)
  *
@@ -3692,6 +3692,21 @@ error:
 	sol->error = 1;
 }
 
+/* Reset all row variables that are marked to have a sign that may
+ * be both positive and negative to have an unknown sign.
+ */
+static void reset_any_to_unknown(struct isl_tab *tab)
+{
+	int row;
+
+	for (row = tab->n_redundant; row < tab->n_row; ++row) {
+		if (!isl_tab_var_from_row(tab, row)->is_nonneg)
+			continue;
+		if (tab->row_sign[row] == isl_tab_row_any)
+			tab->row_sign[row] = isl_tab_row_unknown;
+	}
+}
+
 /* Compute the lexicographic minimum of the set represented by the main
  * tableau "tab" within the context "sol->context_tab".
  * On entry the sample value of the main tableau is lexicographically
@@ -3834,12 +3849,7 @@ static void find_solutions(struct isl_sol *sol, struct isl_tab *tab)
 			if (!ineq)
 				goto error;
 			is_strict(ineq);
-			for (row = tab->n_redundant; row < tab->n_row; ++row) {
-				if (!isl_tab_var_from_row(tab, row)->is_nonneg)
-					continue;
-				if (tab->row_sign[row] == isl_tab_row_any)
-					tab->row_sign[row] = isl_tab_row_unknown;
-			}
+			reset_any_to_unknown(tab);
 			tab->row_sign[split] = isl_tab_row_pos;
 			sol_inc_level(sol);
 			find_in_pos(sol, tab, ineq->el);

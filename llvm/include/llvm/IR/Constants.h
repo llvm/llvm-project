@@ -725,7 +725,6 @@ public:
   static Constant *get(LLVMContext &Context, ArrayRef<uint8_t> Elts);
   static Constant *get(LLVMContext &Context, ArrayRef<uint16_t> Elts);
   static Constant *get(LLVMContext &Context, ArrayRef<uint32_t> Elts);
-  static Constant *get(LLVMContext &Context, ArrayRef<int32_t> Elts);
   static Constant *get(LLVMContext &Context, ArrayRef<uint64_t> Elts);
   static Constant *get(LLVMContext &Context, ArrayRef<float> Elts);
   static Constant *get(LLVMContext &Context, ArrayRef<double> Elts);

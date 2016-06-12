@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | FileCheck %s
+; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
 %Ty = type { i32, i32 }
 
