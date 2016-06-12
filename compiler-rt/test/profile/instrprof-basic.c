@@ -10,7 +10,7 @@
 // RUN: llvm-profdata merge -o %t.em.profdata %t.profraw_e_*
 // RUN: %clang_profuse=%t.em.profdata -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=MERGE
 //
-// RUN: %clang -o %t.merge -fprofile-instr-generate=%t.%m.profraw -O3 %s
+// RUN: %clang_profgen=%t.%m.profraw -o %t.merge -O3 %s
 // RUN: rm -f %t.*.profraw*
 // RUN: %run %t.merge
 // RUN: %run %t.merge
