@@ -5900,7 +5900,7 @@ static isl_bool has_singular_src_or_dst(__isl_keep isl_map *map, int pos)
  * in the remaining dimensions, but only if either the source or
  * the destination has a fixed value in that direction.
  * This allows a statement that produces values that are used by
- * several instance of another statement to be merged with that
+ * several instances of another statement to be merged with that
  * other statement.
  * However, merging such clusters will introduce an inherently
  * large proximity distance inside the merged cluster, meaning

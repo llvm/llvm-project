@@ -372,6 +372,12 @@ void Function::addAttribute(unsigned i, Attribute::AttrKind attr) {
   setAttributes(PAL);
 }
 
+void Function::addAttribute(unsigned i, Attribute Attr) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.addAttribute(getContext(), i, Attr);
+  setAttributes(PAL);
+}
+
 void Function::addAttributes(unsigned i, AttributeSet attrs) {
   AttributeSet PAL = getAttributes();
   PAL = PAL.addAttributes(getContext(), i, attrs);

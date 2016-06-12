@@ -31,8 +31,9 @@ for (int c0 = 0; c0 <= 1; c0 += 1) {
         S_4(c0);
     } else if (length >= 32) {
       S_4(c0);
-    } else
+    } else {
       S_4(c0);
+    }
   }
   for (int c1 = 32; c1 < length - 1; c1 += 32)
     for (int c2 = c1; c2 < length; c2 += 32)

@@ -1646,7 +1646,7 @@ public:
     return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 
-  Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<int> IntMask,
+  Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<uint32_t> IntMask,
                              const Twine &Name = "") {
     Value *Mask = ConstantDataVector::get(Context, IntMask);
     return CreateShuffleVector(V1, V2, Mask, Name);

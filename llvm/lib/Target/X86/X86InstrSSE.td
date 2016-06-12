@@ -4081,13 +4081,13 @@ let ExeDomain = SSEPackedInt, SchedRW = [WriteVecShift] ,
                     (outs VR128:$dst), (ins VR128:$src1, u8imm:$src2),
                     "vpslldq\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [(set VR128:$dst,
-                      (v2i64 (X86vshldq VR128:$src1, (i8 imm:$src2))))]>,
+                      (v16i8 (X86vshldq VR128:$src1, (i8 imm:$src2))))]>,
                     VEX_4V;
   def VPSRLDQri : PDIi8<0x73, MRM3r,
                     (outs VR128:$dst), (ins VR128:$src1, u8imm:$src2),
                     "vpsrldq\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [(set VR128:$dst,
-                      (v2i64 (X86vshrdq VR128:$src1, (i8 imm:$src2))))]>,
+                      (v16i8 (X86vshrdq VR128:$src1, (i8 imm:$src2))))]>,
                     VEX_4V;
   // PSRADQri doesn't exist in SSE[1-3].
 } // Predicates = [HasAVX, NoVLX_Or_NoBWI]
@@ -4131,13 +4131,13 @@ let ExeDomain = SSEPackedInt, SchedRW = [WriteVecShift], hasSideEffects = 0 ,
                     (outs VR256:$dst), (ins VR256:$src1, u8imm:$src2),
                     "vpslldq\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [(set VR256:$dst,
-                      (v4i64 (X86vshldq VR256:$src1, (i8 imm:$src2))))]>,
+                      (v32i8 (X86vshldq VR256:$src1, (i8 imm:$src2))))]>,
                     VEX_4V, VEX_L;
   def VPSRLDQYri : PDIi8<0x73, MRM3r,
                     (outs VR256:$dst), (ins VR256:$src1, u8imm:$src2),
                     "vpsrldq\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                     [(set VR256:$dst,
-                      (v4i64 (X86vshrdq VR256:$src1, (i8 imm:$src2))))]>,
+                      (v32i8 (X86vshrdq VR256:$src1, (i8 imm:$src2))))]>,
                     VEX_4V, VEX_L;
   // PSRADQYri doesn't exist in SSE[1-3].
 } // Predicates = [HasAVX2, NoVLX_Or_NoBWI]
@@ -4176,13 +4176,13 @@ let ExeDomain = SSEPackedInt, SchedRW = [WriteVecShift], hasSideEffects = 0 in {
                        (outs VR128:$dst), (ins VR128:$src1, u8imm:$src2),
                        "pslldq\t{$src2, $dst|$dst, $src2}",
                        [(set VR128:$dst,
-                         (v2i64 (X86vshldq VR128:$src1, (i8 imm:$src2))))],
+                         (v16i8 (X86vshldq VR128:$src1, (i8 imm:$src2))))],
                        IIC_SSE_INTSHDQ_P_RI>;
   def PSRLDQri : PDIi8<0x73, MRM3r,
                        (outs VR128:$dst), (ins VR128:$src1, u8imm:$src2),
                        "psrldq\t{$src2, $dst|$dst, $src2}",
                        [(set VR128:$dst,
-                         (v2i64 (X86vshrdq VR128:$src1, (i8 imm:$src2))))],
+                         (v16i8 (X86vshrdq VR128:$src1, (i8 imm:$src2))))],
                        IIC_SSE_INTSHDQ_P_RI>;
   // PSRADQri doesn't exist in SSE[1-3].
 }

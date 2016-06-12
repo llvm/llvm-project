@@ -4963,14 +4963,10 @@ static __isl_give isl_pw_multi_aff *pw_multi_aff_from_map_stride(
 }
 
 /* Try and create an isl_pw_multi_aff that is equivalent to the given isl_map.
+ * "hull" contains the equalities valid for "map".
  *
- * As a special case, we first check if all output dimensions are uniquely
- * defined in terms of the parameters and input dimensions over the entire
- * domain.  If so, we extract the desired isl_pw_multi_aff directly
- * from the affine hull of "map" and its domain.
- *
- * Otherwise, we check if any of the output dimensions is "strided".
- * That is, we check if can be written as
+ * Check if any of the output dimensions is "strided".
+ * That is, we check if it can be written as
  *
  *	x = m a + f(..)
  *
@@ -4981,29 +4977,15 @@ static __isl_give isl_pw_multi_aff *pw_multi_aff_from_map_stride(
  * Otherwise, we continue with pw_multi_aff_from_map_check_div for a further
  * special case.
  */
-__isl_give isl_pw_multi_aff *isl_pw_multi_aff_from_map(__isl_take isl_map *map)
+static __isl_give isl_pw_multi_aff *pw_multi_aff_from_map_check_strides(
+	__isl_take isl_map *map, __isl_take isl_basic_map *hull)
 {
 	int i, j;
-	isl_bool sv;
-	isl_basic_map *hull;
 	unsigned n_out;
 	unsigned o_out;
 	unsigned n_div;
 	unsigned o_div;
 	isl_int gcd;
-
-	if (!map)
-		return NULL;
-
-	map = isl_map_detect_equalities(map);
-	hull = isl_map_unshifted_simple_hull(isl_map_copy(map));
-	sv = isl_basic_map_plain_is_single_valued(hull);
-	if (sv >= 0 && sv)
-		return plain_pw_multi_aff_from_map(isl_map_domain(map), hull);
-	if (sv < 0)
-		hull = isl_basic_map_free(hull);
-	if (!hull)
-		goto error;
 
 	n_div = isl_basic_map_dim(hull, isl_dim_div);
 	o_div = isl_basic_map_offset(hull, isl_dim_div);
@@ -5047,7 +5029,43 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_from_map(__isl_take isl_map *map)
 	isl_int_clear(gcd);
 	isl_basic_map_free(hull);
 	return pw_multi_aff_from_map_check_div(map);
-error:
+}
+
+/* Try and create an isl_pw_multi_aff that is equivalent to the given isl_map.
+ *
+ * As a special case, we first check if all output dimensions are uniquely
+ * defined in terms of the parameters and input dimensions over the entire
+ * domain.  If so, we extract the desired isl_pw_multi_aff directly
+ * from the affine hull of "map" and its domain.
+ *
+ * Otherwise, continue with pw_multi_aff_from_map_check_strides for more
+ * special cases.
+ */
+__isl_give isl_pw_multi_aff *isl_pw_multi_aff_from_map(__isl_take isl_map *map)
+{
+	isl_bool sv;
+	isl_basic_map *hull;
+
+	if (!map)
+		return NULL;
+
+	if (isl_map_n_basic_map(map) == 1) {
+		hull = isl_map_unshifted_simple_hull(isl_map_copy(map));
+		hull = isl_basic_map_plain_affine_hull(hull);
+		sv = isl_basic_map_plain_is_single_valued(hull);
+		if (sv >= 0 && sv)
+			return plain_pw_multi_aff_from_map(isl_map_domain(map),
+							    hull);
+		isl_basic_map_free(hull);
+	}
+	map = isl_map_detect_equalities(map);
+	hull = isl_map_unshifted_simple_hull(isl_map_copy(map));
+	sv = isl_basic_map_plain_is_single_valued(hull);
+	if (sv >= 0 && sv)
+		return plain_pw_multi_aff_from_map(isl_map_domain(map), hull);
+	if (sv >= 0)
+		return pw_multi_aff_from_map_check_strides(map, hull);
+	isl_basic_map_free(hull);
 	isl_map_free(map);
 	return NULL;
 }

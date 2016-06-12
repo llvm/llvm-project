@@ -8,9 +8,10 @@ for (int c0 = 1; c0 <= 100; c0 += 1)
         } else if (c0 <= 4) {
           for (int c4 = 1; c4 <= 100; c4 += 1)
             s1(c0, c1, c2, c3, c4);
-        } else
+        } else {
           for (int c4 = 1; c4 <= 100; c4 += 1) {
             s1(c0, c1, c2, c3, c4);
             s0(c0, c1, c2, c3, c4);
           }
+        }
       }

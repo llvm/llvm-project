@@ -129,27 +129,6 @@ static MVT getZeroExtensionResultType(const MCInst *MI) {
   }
 }
 
-/// \brief Extracts the types and if it has memory operand for a given
-/// (SHUFF32x4/SHUFF64x2/SHUFI32x4/SHUFI64x2) instruction.
-static void getVSHUF64x2FamilyInfo(const MCInst *MI, MVT &VT, bool &HasMemOp) {
-  HasMemOp = false;
-  switch (MI->getOpcode()) {
-  default:
-    llvm_unreachable("Unknown VSHUF64x2 family instructions.");
-    break;
-  CASE_VSHUF(64X2, m)
-    HasMemOp = true;        // FALL THROUGH.
-  CASE_VSHUF(64X2, r)
-    VT = getRegOperandVectorVT(MI, MVT::i64, 0);
-    break;
-  CASE_VSHUF(32X4, m)
-    HasMemOp = true;        // FALL THROUGH.
-  CASE_VSHUF(32X4, r)
-    VT = getRegOperandVectorVT(MI, MVT::i32, 0);
-    break;
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Top Level Entrypoint
 //===----------------------------------------------------------------------===//
@@ -539,25 +518,28 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     break;
 
   CASE_VSHUF(64X2, r)
+    Src2Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
+    RegForm = true;
+    // FALL THROUGH.
   CASE_VSHUF(64X2, m)
-  CASE_VSHUF(32X4, r)
-  CASE_VSHUF(32X4, m) {
-    MVT VT;
-    bool HasMemOp;
-    getVSHUF64x2FamilyInfo(MI, VT, HasMemOp);
-    decodeVSHUF64x2FamilyMask(VT, MI->getOperand(NumOperands - 1).getImm(),
+    decodeVSHUF64x2FamilyMask(getRegOperandVectorVT(MI, MVT::i64, 0),
+                              MI->getOperand(NumOperands - 1).getImm(),
                               ShuffleMask);
+    Src1Name = getRegName(MI->getOperand(NumOperands-(RegForm?3:7)).getReg());
     DestName = getRegName(MI->getOperand(0).getReg());
-    if (HasMemOp) {
-      assert((NumOperands >= 8) && "Expected at least 8 operands!");
-      Src1Name = getRegName(MI->getOperand(NumOperands - 7).getReg());
-    } else {
-      assert((NumOperands >= 4) && "Expected at least 4 operands!");
-      Src2Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
-      Src1Name = getRegName(MI->getOperand(NumOperands - 3).getReg());
-    }
     break;
-  }
+
+  CASE_VSHUF(32X4, r)
+    Src2Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
+    RegForm = true;
+    // FALL THROUGH.
+  CASE_VSHUF(32X4, m)
+    decodeVSHUF64x2FamilyMask(getRegOperandVectorVT(MI, MVT::i32, 0),
+                              MI->getOperand(NumOperands - 1).getImm(),
+                              ShuffleMask);
+    Src1Name = getRegName(MI->getOperand(NumOperands-(RegForm?3:7)).getReg());
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
 
   CASE_UNPCK(UNPCKLPD, r)
     Src2Name = getRegName(MI->getOperand(NumOperands - 1).getReg());

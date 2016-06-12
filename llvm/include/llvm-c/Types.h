@@ -109,6 +109,13 @@ typedef struct LLVMOpaquePassRegistry *LLVMPassRegistryRef;
 typedef struct LLVMOpaqueUse *LLVMUseRef;
 
 /**
+ * Used to represent an attributes.
+ *
+ * @see llvm::Attribute
+ */
+typedef struct LLVMOpaqueAttributeRef *LLVMAttributeRef;
+
+/**
  * @see llvm::DiagnosticInfo
  */
 typedef struct LLVMOpaqueDiagnosticInfo *LLVMDiagnosticInfoRef;

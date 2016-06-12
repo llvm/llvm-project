@@ -1182,7 +1182,7 @@ static enum isl_change wrap_in_facets(int i, int j, int *cuts, int n,
 	struct isl_tab_undo *snap;
 
 	if (isl_tab_extend_cons(info[j].tab, 1) < 0)
-		goto error;
+		return isl_change_error;
 
 	max_wrap = 1 + 2 * info[j].bmap->n_eq + info[j].bmap->n_ineq;
 	max_wrap *= n;
@@ -1819,7 +1819,7 @@ static int contains_with_expanded_divs(__isl_keep isl_basic_map *bmap,
 	int *ineq_i = NULL;
 
 	bmap = isl_basic_map_copy(bmap);
-	bmap = isl_basic_set_expand_divs(bmap, isl_mat_copy(div), exp);
+	bmap = isl_basic_map_expand_divs(bmap, isl_mat_copy(div), exp);
 
 	if (!bmap)
 		goto error;
@@ -2149,11 +2149,19 @@ error:
  * start considering the elements in "list".
  * When this function returns, the total number of variables in "tab"
  * is equal to "dim" plus the number of elements in "list".
+ *
+ * The newly added existentially quantified variables are not given
+ * an explicit representation because the corresponding div constraints
+ * do not appear in info->bmap.  These constraints are not added
+ * to info->bmap because for internal consistency, they would need to
+ * be added to info->tab as well, where they could combine with the equality
+ * that is added later to result in constraints that do not hold
+ * in the original input.
  */
 static int add_sub_vars(struct isl_coalesce_info *info,
 	__isl_keep isl_aff_list *list, int dim, int extra_var)
 {
-	int i, j, n;
+	int i, j, n, d;
 	isl_space *space;
 
 	space = isl_basic_map_get_space(info->bmap);
@@ -2177,9 +2185,13 @@ static int add_sub_vars(struct isl_coalesce_info *info,
 
 		if (isl_tab_insert_var(info->tab, dim + i) < 0)
 			return -1;
-		if (isl_basic_map_alloc_div(info->bmap) < 0)
+		d = isl_basic_map_alloc_div(info->bmap);
+		if (d < 0)
 			return -1;
-		for (j = n - 1; j > i; --j)
+		info->bmap = isl_basic_map_mark_div_unknown(info->bmap, d);
+		if (!info->bmap)
+			return -1;
+		for (j = d; j > i; --j)
 			isl_basic_map_swap_div(info->bmap, j - 1, j);
 	}
 

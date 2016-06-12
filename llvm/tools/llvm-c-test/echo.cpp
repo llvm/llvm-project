@@ -782,13 +782,28 @@ FunDecl:
     return;
   }
 
+  auto Ctx = LLVMGetModuleContext(M);
+
   Cur = Begin;
   Next = nullptr;
   while (true) {
     const char *Name = LLVMGetValueName(Cur);
     if (LLVMGetNamedFunction(M, Name))
       report_fatal_error("Function already cloned");
-    LLVMAddFunction(M, Name, LLVMGetElementType(TypeCloner(M).Clone(Cur)));
+    auto Ty = LLVMGetElementType(TypeCloner(M).Clone(Cur));
+    auto F = LLVMAddFunction(M, Name, Ty);
+
+    // Copy attributes
+    for (int i = LLVMAttributeFunctionIndex, c = LLVMCountParams(F);
+         i <= c; ++i) {
+      for (unsigned k = 0, e = LLVMGetLastEnumAttributeKind(); k < e; ++k) {
+        if (auto SrcA = LLVMGetEnumAttributeAtIndex(Cur, i, k)) {
+          auto Val = LLVMGetEnumAttributeValue(SrcA);
+          auto DstA = LLVMCreateEnumAttribute(Ctx, k, Val);
+          LLVMAddAttributeAtIndex(F, i, DstA);
+        }
+      }
+    }
 
     Next = LLVMGetNextFunction(Cur);
     if (Next == nullptr) {

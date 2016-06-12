@@ -5,8 +5,9 @@
         s0(1, -1, c2, 0, 0);
       } else if (c2 == 0) {
         s0(1, c1, 0, 0, 0);
-      } else if (c2 + 1 == N)
+      } else if (c2 + 1 == N) {
         s0(1, c1, N - 1, 0, 0);
+      }
     }
   for (int c1 = 0; c1 <= floord(T - 1, 500); c1 += 1) {
     for (int c3 = -((c1 + 9) / 8) + 2; c3 <= floord(N - 500 * c1 - 3, 4000) + 1; c3 += 1)

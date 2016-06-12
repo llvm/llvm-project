@@ -3444,19 +3444,45 @@ OverflowResult llvm::computeOverflowForSignedAdd(Value *LHS, Value *RHS,
 }
 
 bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
-  // FIXME: This conservative implementation can be relaxed. E.g. most
-  // atomic operations are guaranteed to terminate on most platforms
-  // and most functions terminate.
+  // A memory operation returns normally if it isn't volatile. A volatile
+  // operation is allowed to trap.
+  //
+  // An atomic operation isn't guaranteed to return in a reasonable amount of
+  // time because it's possible for another thread to interfere with it for an
+  // arbitrary length of time, but programs aren't allowed to rely on that.
+  if (const LoadInst *LI = dyn_cast<LoadInst>(I))
+    return !LI->isVolatile();
+  if (const StoreInst *SI = dyn_cast<StoreInst>(I))
+    return !SI->isVolatile();
+  if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I))
+    return !CXI->isVolatile();
+  if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I))
+    return !RMWI->isVolatile();
+  if (const MemIntrinsic *MII = dyn_cast<MemIntrinsic>(I))
+    return !MII->isVolatile();
 
-  // Calls can throw and thus not terminate, and invokes may not terminate and
-  // could throw to non-successor (see bug 24185 for details).
-  if (isa<CallInst>(I) || isa<InvokeInst>(I))
-    // However, llvm.dbg intrinsics are safe, since they're no-ops.
-    return isa<DbgInfoIntrinsic>(I);
+  // If there is no successor, then execution can't transfer to it.
+  if (const auto *CRI = dyn_cast<CleanupReturnInst>(I))
+    return !CRI->unwindsToCaller();
+  if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(I))
+    return !CatchSwitch->unwindsToCaller();
+  if (isa<ResumeInst>(I))
+    return false;
+  if (isa<ReturnInst>(I))
+    return false;
 
-  return !I->isAtomic() &&       // atomics may never succeed on some platforms
-         !isa<ResumeInst>(I) &&  // has no successors
-         !isa<ReturnInst>(I);    // has no successors
+  // Calls can throw, or contain an infinite loop, or kill the process.
+  if (CallSite CS = CallSite(const_cast<Instruction*>(I))) {
+    // Calls which don't write to arbitrary memory are safe.
+    // FIXME: Ignoring infinite loops without any side-effects is too aggressive,
+    // but it's consistent with other passes. See http://llvm.org/PR965 .
+    // FIXME: This isn't aggressive enough; a call which only writes to a
+    // global is guaranteed to return.
+    return CS.onlyReadsMemory() || CS.onlyAccessesArgMemory();
+  }
+
+  // Other instructions return normally.
+  return true;
 }
 
 bool llvm::isGuaranteedToExecuteForEveryIteration(const Instruction *I,

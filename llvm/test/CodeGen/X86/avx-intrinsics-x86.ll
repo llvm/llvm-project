@@ -3997,70 +3997,6 @@ define <8 x i32> @test_x86_avx_vperm2f128_si_256(<8 x i32> %a0, <8 x i32> %a1) {
 declare <8 x i32> @llvm.x86.avx.vperm2f128.si.256(<8 x i32>, <8 x i32>, i8) nounwind readnone
 
 
-define <2 x double> @test_x86_avx_vpermil_pd(<2 x double> %a0) {
-; AVX-LABEL: test_x86_avx_vpermil_pd:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX-NEXT:    retl
-;
-; AVX512VL-LABEL: test_x86_avx_vpermil_pd:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512VL-NEXT:    retl
-  %res = call <2 x double> @llvm.x86.avx.vpermil.pd(<2 x double> %a0, i8 1) ; <<2 x double>> [#uses=1]
-  ret <2 x double> %res
-}
-declare <2 x double> @llvm.x86.avx.vpermil.pd(<2 x double>, i8) nounwind readnone
-
-
-define <4 x double> @test_x86_avx_vpermil_pd_256(<4 x double> %a0) {
-; AVX-LABEL: test_x86_avx_vpermil_pd_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,3,2]
-; AVX-NEXT:    retl
-;
-; AVX512VL-LABEL: test_x86_avx_vpermil_pd_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,3,2]
-; AVX512VL-NEXT:    retl
-  %res = call <4 x double> @llvm.x86.avx.vpermil.pd.256(<4 x double> %a0, i8 7) ; <<4 x double>> [#uses=1]
-  ret <4 x double> %res
-}
-declare <4 x double> @llvm.x86.avx.vpermil.pd.256(<4 x double>, i8) nounwind readnone
-
-
-define <4 x float> @test_x86_avx_vpermil_ps(<4 x float> %a0) {
-; AVX-LABEL: test_x86_avx_vpermil_ps:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,0,0]
-; AVX-NEXT:    retl
-;
-; AVX512VL-LABEL: test_x86_avx_vpermil_ps:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,0,0]
-; AVX512VL-NEXT:    retl
-  %res = call <4 x float> @llvm.x86.avx.vpermil.ps(<4 x float> %a0, i8 7) ; <<4 x float>> [#uses=1]
-  ret <4 x float> %res
-}
-declare <4 x float> @llvm.x86.avx.vpermil.ps(<4 x float>, i8) nounwind readnone
-
-
-define <8 x float> @test_x86_avx_vpermil_ps_256(<8 x float> %a0) {
-; AVX-LABEL: test_x86_avx_vpermil_ps_256:
-; AVX:       ## BB#0:
-; AVX-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,1,0,0,7,5,4,4]
-; AVX-NEXT:    retl
-;
-; AVX512VL-LABEL: test_x86_avx_vpermil_ps_256:
-; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,1,0,0,7,5,4,4]
-; AVX512VL-NEXT:    retl
-  %res = call <8 x float> @llvm.x86.avx.vpermil.ps.256(<8 x float> %a0, i8 7) ; <<8 x float>> [#uses=1]
-  ret <8 x float> %res
-}
-declare <8 x float> @llvm.x86.avx.vpermil.ps.256(<8 x float>, i8) nounwind readnone
-
-
 define <2 x double> @test_x86_avx_vpermilvar_pd(<2 x double> %a0, <2 x i64> %a1) {
 ; AVX-LABEL: test_x86_avx_vpermilvar_pd:
 ; AVX:       ## BB#0:
@@ -4100,7 +4036,7 @@ define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx_vpermilvar_pd_256_2:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermilpd LCPI231_0, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpermilpd LCPI227_0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retl
   %res = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 0, i64 2>) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
@@ -4592,7 +4528,7 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX-LABEL: movnt_dq:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    vpaddq LCPI258_0, %xmm0, %xmm0
+; AVX-NEXT:    vpaddq LCPI254_0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntdq %ymm0, (%eax)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
@@ -4600,7 +4536,7 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX512VL-LABEL: movnt_dq:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512VL-NEXT:    vpaddq LCPI258_0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpaddq LCPI254_0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovntdq %ymm0, (%eax)
 ; AVX512VL-NEXT:    retl
   %a2 = add <2 x i64> %a1, <i64 1, i64 1>

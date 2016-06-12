@@ -21,6 +21,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "llvm-c/Types.h"
 #include <bitset>
 #include <cassert>
 #include <map>
@@ -169,7 +170,27 @@ public:
   void Profile(FoldingSetNodeID &ID) const {
     ID.AddPointer(pImpl);
   }
+
+  /// \brief Return a raw pointer that uniquely identifies this attribute.
+  void *getRawPointer() const {
+    return pImpl;
+  }
+
+  /// \brief Get an attribute from a raw pointer created by getRawPointer.
+  static Attribute fromRawPointer(void *RawPtr) {
+    return Attribute(reinterpret_cast<AttributeImpl*>(RawPtr));
+  }
 };
+
+// Specialized opaque value conversions.
+inline LLVMAttributeRef wrap(Attribute Attr) {
+  return reinterpret_cast<LLVMAttributeRef>(Attr.getRawPointer());
+}
+
+// Specialized opaque value conversions.
+inline Attribute unwrap(LLVMAttributeRef Attr) {
+  return Attribute::fromRawPointer(Attr);
+}
 
 //===----------------------------------------------------------------------===//
 /// \class

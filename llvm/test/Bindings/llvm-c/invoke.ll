@@ -70,13 +70,14 @@ unwind7:                                          ; preds = %unwind5
 
 declare void @_D6object6Object6__ctorFMC6object6ObjectZv(%C6object6Object*)
 
-declare i8* @_d_allocmemory(i64)
+declare noalias i8* @_d_allocmemory(i64)
 
 declare i32 @__sd_eh_personality(i32, i32, i64, i8*, i8*)
 
-declare void @__sd_eh_throw(%C6object9Throwable*)
+declare void @__sd_eh_throw(%C6object9Throwable* nonnull) #0
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.eh.typeid.for(i8*) #0
+declare i32 @llvm.eh.typeid.for(i8*) #1
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { noreturn }
+attributes #1 = { nounwind readnone }

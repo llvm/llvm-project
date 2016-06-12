@@ -1137,20 +1137,10 @@ bool PostOrderFunctionAttrsLegacyPass::runOnSCC(CallGraphSCC &SCC) {
 }
 
 namespace {
-/// A pass to do RPO deduction and propagation of function attributes.
-///
-/// This pass provides a general RPO or "top down" propagation of
-/// function attributes. For a few (rare) cases, we can deduce significantly
-/// more about function attributes by working in RPO, so this pass
-/// provides the compliment to the post-order pass above where the majority of
-/// deduction is performed.
-// FIXME: Currently there is no RPO CGSCC pass structure to slide into and so
-// this is a boring module pass, but eventually it should be an RPO CGSCC pass
-// when such infrastructure is available.
-struct ReversePostOrderFunctionAttrs : public ModulePass {
+struct ReversePostOrderFunctionAttrsLegacyPass : public ModulePass {
   static char ID; // Pass identification, replacement for typeid
-  ReversePostOrderFunctionAttrs() : ModulePass(ID) {
-    initializeReversePostOrderFunctionAttrsPass(*PassRegistry::getPassRegistry());
+  ReversePostOrderFunctionAttrsLegacyPass() : ModulePass(ID) {
+    initializeReversePostOrderFunctionAttrsLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override;
@@ -1163,15 +1153,15 @@ struct ReversePostOrderFunctionAttrs : public ModulePass {
 };
 }
 
-char ReversePostOrderFunctionAttrs::ID = 0;
-INITIALIZE_PASS_BEGIN(ReversePostOrderFunctionAttrs, "rpo-functionattrs",
+char ReversePostOrderFunctionAttrsLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ReversePostOrderFunctionAttrsLegacyPass, "rpo-functionattrs",
                       "Deduce function attributes in RPO", false, false)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(ReversePostOrderFunctionAttrs, "rpo-functionattrs",
+INITIALIZE_PASS_END(ReversePostOrderFunctionAttrsLegacyPass, "rpo-functionattrs",
                     "Deduce function attributes in RPO", false, false)
 
 Pass *llvm::createReversePostOrderFunctionAttrsPass() {
-  return new ReversePostOrderFunctionAttrs();
+  return new ReversePostOrderFunctionAttrsLegacyPass();
 }
 
 static bool addNoRecurseAttrsTopDown(Function &F) {
@@ -1203,10 +1193,7 @@ static bool addNoRecurseAttrsTopDown(Function &F) {
   return setDoesNotRecurse(F);
 }
 
-bool ReversePostOrderFunctionAttrs::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
+static bool deduceFunctionAttributeInRPO(Module &M, CallGraph &CG) {
   // We only have a post-order SCC traversal (because SCCs are inherently
   // discovered in post-order), so we accumulate them in a vector and then walk
   // it in reverse. This is simpler than using the RPO iterator infrastructure
@@ -1214,7 +1201,6 @@ bool ReversePostOrderFunctionAttrs::runOnModule(Module &M) {
   // graph. We can also cheat egregiously because we're primarily interested in
   // synthesizing norecurse and so we can only save the singular SCCs as SCCs
   // with multiple functions in them will clearly be recursive.
-  auto &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   SmallVector<Function *, 16> Worklist;
   for (scc_iterator<CallGraph *> I = scc_begin(&CG); !I.isAtEnd(); ++I) {
     if (I->size() != 1)
@@ -1231,4 +1217,25 @@ bool ReversePostOrderFunctionAttrs::runOnModule(Module &M) {
     Changed |= addNoRecurseAttrsTopDown(*F);
 
   return Changed;
+}
+
+bool ReversePostOrderFunctionAttrsLegacyPass::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
+  auto &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+
+  return deduceFunctionAttributeInRPO(M, CG);
+}
+
+PreservedAnalyses
+ReversePostOrderFunctionAttrsPass::run(Module &M, AnalysisManager<Module> &AM) {
+  auto &CG = AM.getResult<CallGraphAnalysis>(M);
+
+  bool Changed = deduceFunctionAttributeInRPO(M, CG);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<CallGraphAnalysis>();
+  return PA;
 }

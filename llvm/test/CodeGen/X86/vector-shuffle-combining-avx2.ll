@@ -5,6 +5,26 @@ declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>)
 declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>)
 declare <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8>, <32 x i8>)
 
+define <32 x i8> @combine_pshufb_pslldq(<32 x i8> %a0) {
+; CHECK-LABEL: combine_pshufb_pslldq:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>)
+  %2 = shufflevector <32 x i8> %1, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  ret <32 x i8> %2
+}
+
+define <32 x i8> @combine_pshufb_psrldq(<32 x i8> %a0) {
+; CHECK-LABEL: combine_pshufb_psrldq:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vxorps %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %1 = tail call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>)
+  %2 = shufflevector <32 x i8> %1, <32 x i8> zeroinitializer, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
+  ret <32 x i8> %2
+}
+
 define <32 x i8> @combine_pshufb_vpermd(<8 x i32> %a) {
 ; CHECK-LABEL: combine_pshufb_vpermd:
 ; CHECK:       # BB#0:

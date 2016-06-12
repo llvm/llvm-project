@@ -79,6 +79,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
@@ -232,7 +233,7 @@ bool MergedLoadStoreMotion::isLoadHoistBarrierInRange(
   if (!SafeToLoadUnconditionally)
     for (const Instruction &Inst :
          make_range(Start.getIterator(), End.getIterator()))
-      if (Inst.mayThrow())
+      if (!isGuaranteedToTransferExecutionToSuccessor(&Inst))
         return true;
   MemoryLocation Loc = MemoryLocation::get(LI);
   return AA->canInstructionRangeModRef(Start, End, Loc, MRI_Mod);

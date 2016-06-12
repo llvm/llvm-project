@@ -17,6 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -49,77 +50,6 @@ namespace {
   /// DAE - The dead argument elimination pass.
   ///
   class DAE : public ModulePass {
-  public:
-
-    /// Struct that represents (part of) either a return value or a function
-    /// argument.  Used so that arguments and return values can be used
-    /// interchangeably.
-    struct RetOrArg {
-      RetOrArg(const Function *F, unsigned Idx, bool IsArg) : F(F), Idx(Idx),
-               IsArg(IsArg) {}
-      const Function *F;
-      unsigned Idx;
-      bool IsArg;
-
-      /// Make RetOrArg comparable, so we can put it into a map.
-      bool operator<(const RetOrArg &O) const {
-        return std::tie(F, Idx, IsArg) < std::tie(O.F, O.Idx, O.IsArg);
-      }
-
-      /// Make RetOrArg comparable, so we can easily iterate the multimap.
-      bool operator==(const RetOrArg &O) const {
-        return F == O.F && Idx == O.Idx && IsArg == O.IsArg;
-      }
-
-      std::string getDescription() const {
-        return (Twine(IsArg ? "Argument #" : "Return value #") + Twine(Idx) +
-                " of function " + F->getName()).str();
-      }
-    };
-
-    /// Liveness enum - During our initial pass over the program, we determine
-    /// that things are either alive or maybe alive. We don't mark anything
-    /// explicitly dead (even if we know they are), since anything not alive
-    /// with no registered uses (in Uses) will never be marked alive and will
-    /// thus become dead in the end.
-    enum Liveness { Live, MaybeLive };
-
-    /// Convenience wrapper
-    RetOrArg CreateRet(const Function *F, unsigned Idx) {
-      return RetOrArg(F, Idx, false);
-    }
-    /// Convenience wrapper
-    RetOrArg CreateArg(const Function *F, unsigned Idx) {
-      return RetOrArg(F, Idx, true);
-    }
-
-    typedef std::multimap<RetOrArg, RetOrArg> UseMap;
-    /// This maps a return value or argument to any MaybeLive return values or
-    /// arguments it uses. This allows the MaybeLive values to be marked live
-    /// when any of its users is marked live.
-    /// For example (indices are left out for clarity):
-    ///  - Uses[ret F] = ret G
-    ///    This means that F calls G, and F returns the value returned by G.
-    ///  - Uses[arg F] = ret G
-    ///    This means that some function calls G and passes its result as an
-    ///    argument to F.
-    ///  - Uses[ret F] = arg F
-    ///    This means that F returns one of its own arguments.
-    ///  - Uses[arg F] = arg G
-    ///    This means that G calls F and passes one of its own (G's) arguments
-    ///    directly to F.
-    UseMap Uses;
-
-    typedef std::set<RetOrArg> LiveSet;
-    typedef std::set<const Function*> LiveFuncSet;
-
-    /// This set contains all values that have been determined to be live.
-    LiveSet LiveValues;
-    /// This set contains all values that are cannot be changed in any way.
-    LiveFuncSet LiveFunctions;
-
-    typedef SmallVector<RetOrArg, 5> UseVector;
-
   protected:
     // DAH uses this to specify a different ID.
     explicit DAE(char &ID) : ModulePass(ID) {}
@@ -130,25 +60,15 @@ namespace {
       initializeDAEPass(*PassRegistry::getPassRegistry());
     }
 
-    bool runOnModule(Module &M) override;
+    bool runOnModule(Module &M) override {
+      if (skipModule(M))
+        return false;
+      DeadArgumentEliminationPass DAEP(ShouldHackArguments());
+      PreservedAnalyses PA = DAEP.run(M);
+      return !PA.areAllPreserved();
+    }
 
     virtual bool ShouldHackArguments() const { return false; }
-
-  private:
-    Liveness MarkIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses);
-    Liveness SurveyUse(const Use *U, UseVector &MaybeLiveUses,
-                       unsigned RetValNum = -1U);
-    Liveness SurveyUses(const Value *V, UseVector &MaybeLiveUses);
-
-    void SurveyFunction(const Function &F);
-    void MarkValue(const RetOrArg &RA, Liveness L,
-                   const UseVector &MaybeLiveUses);
-    void MarkLive(const RetOrArg &RA);
-    void MarkLive(const Function &F);
-    void PropagateLiveness(const RetOrArg &RA);
-    bool RemoveDeadStuffFromFunction(Function *F);
-    bool DeleteDeadVarargs(Function &Fn);
-    bool RemoveDeadArgumentsFromCallers(Function &Fn);
   };
 }
 
@@ -181,7 +101,7 @@ ModulePass *llvm::createDeadArgHackingPass() { return new DAH(); }
 
 /// DeleteDeadVarargs - If this is an function that takes a ... list, and if
 /// llvm.vastart is never called, the varargs list is dead for the function.
-bool DAE::DeleteDeadVarargs(Function &Fn) {
+bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
   assert(Fn.getFunctionType()->isVarArg() && "Function isn't varargs!");
   if (Fn.isDeclaration() || !Fn.hasLocalLinkage()) return false;
 
@@ -317,8 +237,7 @@ bool DAE::DeleteDeadVarargs(Function &Fn) {
 /// RemoveDeadArgumentsFromCallers - Checks if the given function has any 
 /// arguments that are unused, and changes the caller parameters to be undefined
 /// instead.
-bool DAE::RemoveDeadArgumentsFromCallers(Function &Fn)
-{
+bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
   // We cannot change the arguments if this TU does not define the function or
   // if the linker may choose a function body from another TU, even if the
   // nominal linkage indicates that other copies of the function have the same
@@ -410,7 +329,9 @@ static Type *getRetComponentType(const Function *F, unsigned Idx) {
 /// MarkIfNotLive - This checks Use for liveness in LiveValues. If Use is not
 /// live, it adds Use to the MaybeLiveUses argument. Returns the determined
 /// liveness of Use.
-DAE::Liveness DAE::MarkIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses) {
+DeadArgumentEliminationPass::Liveness
+DeadArgumentEliminationPass::MarkIfNotLive(RetOrArg Use,
+                                           UseVector &MaybeLiveUses) {
   // We're live if our use or its Function is already marked as live.
   if (LiveFunctions.count(Use.F) || LiveValues.count(Use))
     return Live;
@@ -429,8 +350,9 @@ DAE::Liveness DAE::MarkIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses) {
 /// RetValNum is the return value number to use when this use is used in a
 /// return instruction. This is used in the recursion, you should always leave
 /// it at 0.
-DAE::Liveness DAE::SurveyUse(const Use *U,
-                             UseVector &MaybeLiveUses, unsigned RetValNum) {
+DeadArgumentEliminationPass::Liveness
+DeadArgumentEliminationPass::SurveyUse(const Use *U, UseVector &MaybeLiveUses,
+                                       unsigned RetValNum) {
     const User *V = U->getUser();
     if (const ReturnInst *RI = dyn_cast<ReturnInst>(V)) {
       // The value is returned from a function. It's only live when the
@@ -443,13 +365,14 @@ DAE::Liveness DAE::SurveyUse(const Use *U,
         // We might be live, depending on the liveness of Use.
         return MarkIfNotLive(Use, MaybeLiveUses);
       } else {
-        DAE::Liveness Result = MaybeLive;
+        DeadArgumentEliminationPass::Liveness Result = MaybeLive;
         for (unsigned i = 0; i < NumRetVals(F); ++i) {
           RetOrArg Use = CreateRet(F, i);
           // We might be live, depending on the liveness of Use. If any
           // sub-value is live, then the entire value is considered live. This
           // is a conservative choice, and better tracking is possible.
-          DAE::Liveness SubResult = MarkIfNotLive(Use, MaybeLiveUses);
+          DeadArgumentEliminationPass::Liveness SubResult =
+              MarkIfNotLive(Use, MaybeLiveUses);
           if (Result != Live)
             Result = SubResult;
         }
@@ -515,7 +438,9 @@ DAE::Liveness DAE::SurveyUse(const Use *U,
 /// Adds all uses that cause the result to be MaybeLive to MaybeLiveRetUses. If
 /// the result is Live, MaybeLiveUses might be modified but its content should
 /// be ignored (since it might not be complete).
-DAE::Liveness DAE::SurveyUses(const Value *V, UseVector &MaybeLiveUses) {
+DeadArgumentEliminationPass::Liveness
+DeadArgumentEliminationPass::SurveyUses(const Value *V,
+                                        UseVector &MaybeLiveUses) {
   // Assume it's dead (which will only hold if there are no uses at all..).
   Liveness Result = MaybeLive;
   // Check each use.
@@ -535,7 +460,7 @@ DAE::Liveness DAE::SurveyUses(const Value *V, UseVector &MaybeLiveUses) {
 // We consider arguments of non-internal functions to be intrinsically alive as
 // well as arguments to functions which have their "address taken".
 //
-void DAE::SurveyFunction(const Function &F) {
+void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
   // Functions with inalloca parameters are expecting args in a particular
   // register and memory layout.
   if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca)) {
@@ -571,12 +496,13 @@ void DAE::SurveyFunction(const Function &F) {
         return;
       }
 
-  if (!F.hasLocalLinkage() && (!ShouldHackArguments() || F.isIntrinsic())) {
+  if (!F.hasLocalLinkage() && (!ShouldHackArguments || F.isIntrinsic())) {
     MarkLive(F);
     return;
   }
 
-  DEBUG(dbgs() << "DAE - Inspecting callers for fn: " << F.getName() << "\n");
+  DEBUG(dbgs() << "DeadArgumentEliminationPass - Inspecting callers for fn: "
+               << F.getName() << "\n");
   // Keep track of the number of live retvals, so we can skip checks once all
   // of them turn out to be live.
   unsigned NumLiveRetVals = 0;
@@ -638,7 +564,8 @@ void DAE::SurveyFunction(const Function &F) {
   for (unsigned i = 0; i != RetCount; ++i)
     MarkValue(CreateRet(&F, i), RetValLiveness[i], MaybeLiveRetUses[i]);
 
-  DEBUG(dbgs() << "DAE - Inspecting args for fn: " << F.getName() << "\n");
+  DEBUG(dbgs() << "DeadArgumentEliminationPass - Inspecting args for fn: "
+               << F.getName() << "\n");
 
   // Now, check all of our arguments.
   unsigned i = 0;
@@ -670,8 +597,8 @@ void DAE::SurveyFunction(const Function &F) {
 /// MaybeLive, it also takes all uses in MaybeLiveUses and records them in Uses,
 /// such that RA will be marked live if any use in MaybeLiveUses gets marked
 /// live later on.
-void DAE::MarkValue(const RetOrArg &RA, Liveness L,
-                    const UseVector &MaybeLiveUses) {
+void DeadArgumentEliminationPass::MarkValue(const RetOrArg &RA, Liveness L,
+                                            const UseVector &MaybeLiveUses) {
   switch (L) {
     case Live: MarkLive(RA); break;
     case MaybeLive:
@@ -690,8 +617,9 @@ void DAE::MarkValue(const RetOrArg &RA, Liveness L,
 /// changed in any way. Additionally,
 /// mark any values that are used as this function's parameters or by its return
 /// values (according to Uses) live as well.
-void DAE::MarkLive(const Function &F) {
-  DEBUG(dbgs() << "DAE - Intrinsically live fn: " << F.getName() << "\n");
+void DeadArgumentEliminationPass::MarkLive(const Function &F) {
+  DEBUG(dbgs() << "DeadArgumentEliminationPass - Intrinsically live fn: "
+               << F.getName() << "\n");
   // Mark the function as live.
   LiveFunctions.insert(&F);
   // Mark all arguments as live.
@@ -705,20 +633,21 @@ void DAE::MarkLive(const Function &F) {
 /// MarkLive - Mark the given return value or argument as live. Additionally,
 /// mark any values that are used by this value (according to Uses) live as
 /// well.
-void DAE::MarkLive(const RetOrArg &RA) {
+void DeadArgumentEliminationPass::MarkLive(const RetOrArg &RA) {
   if (LiveFunctions.count(RA.F))
     return; // Function was already marked Live.
 
   if (!LiveValues.insert(RA).second)
     return; // We were already marked Live.
 
-  DEBUG(dbgs() << "DAE - Marking " << RA.getDescription() << " live\n");
+  DEBUG(dbgs() << "DeadArgumentEliminationPass - Marking "
+               << RA.getDescription() << " live\n");
   PropagateLiveness(RA);
 }
 
 /// PropagateLiveness - Given that RA is a live value, propagate it's liveness
 /// to any other values it uses (according to Uses).
-void DAE::PropagateLiveness(const RetOrArg &RA) {
+void DeadArgumentEliminationPass::PropagateLiveness(const RetOrArg &RA) {
   // We don't use upper_bound (or equal_range) here, because our recursive call
   // to ourselves is likely to cause the upper_bound (which is the first value
   // not belonging to RA) to become erased and the iterator invalidated.
@@ -737,7 +666,7 @@ void DAE::PropagateLiveness(const RetOrArg &RA) {
 // that are not in LiveValues. Transform the function and all of the callees of
 // the function to not have these arguments and return values.
 //
-bool DAE::RemoveDeadStuffFromFunction(Function *F) {
+bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   // Don't modify fully live functions
   if (LiveFunctions.count(F))
     return false;
@@ -778,8 +707,9 @@ bool DAE::RemoveDeadStuffFromFunction(Function *F) {
       }
     } else {
       ++NumArgumentsEliminated;
-      DEBUG(dbgs() << "DAE - Removing argument " << i << " (" << I->getName()
-            << ") from " << F->getName() << "\n");
+      DEBUG(dbgs() << "DeadArgumentEliminationPass - Removing argument " << i
+                   << " (" << I->getName() << ") from " << F->getName()
+                   << "\n");
     }
   }
 
@@ -822,8 +752,8 @@ bool DAE::RemoveDeadStuffFromFunction(Function *F) {
         NewRetIdxs[i] = RetTypes.size() - 1;
       } else {
         ++NumRetValsEliminated;
-        DEBUG(dbgs() << "DAE - Removing return value " << i << " from "
-              << F->getName() << "\n");
+        DEBUG(dbgs() << "DeadArgumentEliminationPass - Removing return value "
+                     << i << " from " << F->getName() << "\n");
       }
     }
     if (RetTypes.size() > 1) {
@@ -1097,17 +1027,14 @@ bool DAE::RemoveDeadStuffFromFunction(Function *F) {
   return true;
 }
 
-bool DAE::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
+PreservedAnalyses DeadArgumentEliminationPass::run(Module &M) {
   bool Changed = false;
 
   // First pass: Do a simple check to see if any functions can have their "..."
   // removed.  We can do this if they never call va_start.  This loop cannot be
   // fused with the next loop, because deleting a function invalidates
   // information computed while surveying other functions.
-  DEBUG(dbgs() << "DAE - Deleting dead varargs\n");
+  DEBUG(dbgs() << "DeadArgumentEliminationPass - Deleting dead varargs\n");
   for (Module::iterator I = M.begin(), E = M.end(); I != E; ) {
     Function &F = *I++;
     if (F.getFunctionType()->isVarArg())
@@ -1118,7 +1045,7 @@ bool DAE::runOnModule(Module &M) {
   // We assume all arguments are dead unless proven otherwise (allowing us to
   // determine that dead arguments passed into recursive functions are dead).
   //
-  DEBUG(dbgs() << "DAE - Determining liveness\n");
+  DEBUG(dbgs() << "DeadArgumentEliminationPass - Determining liveness\n");
   for (auto &F : M)
     SurveyFunction(F);
 
@@ -1136,5 +1063,7 @@ bool DAE::runOnModule(Module &M) {
   for (auto &F : M)
     Changed |= RemoveDeadArgumentsFromCallers(F);
 
-  return Changed;
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }

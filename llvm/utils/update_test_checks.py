@@ -51,6 +51,7 @@ SCRUB_X86_SHUFFLES_RE = (
         flags=re.M))
 SCRUB_X86_SP_RE = re.compile(r'\d+\(%(esp|rsp)\)')
 SCRUB_X86_RIP_RE = re.compile(r'[.\w]+\(%rip\)')
+SCRUB_X86_LCP_RE = re.compile(r'\.LCPI[0-9]+_[0-9]+')
 SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
 SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 
@@ -88,6 +89,8 @@ def scrub_asm(asm):
   asm = SCRUB_X86_SP_RE.sub(r'{{[0-9]+}}(%\1)', asm)
   # Generically match a RIP-relative memory operand.
   asm = SCRUB_X86_RIP_RE.sub(r'{{.*}}(%rip)', asm)
+  # Generically match a LCP symbol.
+  asm = SCRUB_X86_LCP_RE.sub(r'{{\.LCPI.*}}', asm)
   # Strip kill operands inserted into the asm.
   asm = SCRUB_KILL_COMMENT_RE.sub('', asm)
   return asm

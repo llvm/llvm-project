@@ -502,7 +502,7 @@ static Value *simplifyX86insertps(const IntrinsicInst &II,
     return ZeroVector;
 
   // Initialize by passing all of the first source bits through.
-  int ShuffleMask[4] = { 0, 1, 2, 3 };
+  uint32_t ShuffleMask[4] = { 0, 1, 2, 3 };
 
   // We may replace the second operand with the zero vector.
   Value *V1 = II.getArgOperand(1);
@@ -890,7 +890,7 @@ static Value *simplifyX86vperm2(const IntrinsicInst &II,
   // If 0 or 1 zero mask bits are set, this is a simple shuffle.
   unsigned NumElts = VecTy->getNumElements();
   unsigned HalfSize = NumElts / 2;
-  SmallVector<int, 8> ShuffleMask(NumElts);
+  SmallVector<uint32_t, 8> ShuffleMask(NumElts);
 
   // The high bit of the selection field chooses the 1st or 2nd operand.
   bool LowInputSelect = Imm & 0x02;
@@ -1568,7 +1568,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (isa<ConstantDataVector>(Arg)) {
       auto VectorHalfAsShorts = Arg;
       if (RetWidth < ArgWidth) {
-        SmallVector<int, 8> SubVecMask;
+        SmallVector<uint32_t, 8> SubVecMask;
         for (unsigned i = 0; i != RetWidth; ++i)
           SubVecMask.push_back((int)i);
         VectorHalfAsShorts = Builder->CreateShuffleVector(

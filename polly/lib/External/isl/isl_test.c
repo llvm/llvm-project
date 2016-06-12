@@ -632,9 +632,40 @@ static int test_val(isl_ctx *ctx)
 	return 0;
 }
 
+/* Sets described using existentially quantified variables that
+ * can also be described without.
+ */
+static const char *elimination_tests[] = {
+	"{ [i,j] : 2 * [i/2] + 3 * [j/4] <= 10 and 2 i = j }",
+	"{ [m, w] : exists a : w - 2m - 5 <= 3a <= m - 2w }",
+	"{ [m, w] : exists a : w >= 0 and a < m and -1 + w <= a <= 2m - w }",
+};
+
+/* Check that redundant existentially quantified variables are
+ * getting removed.
+ */
+static int test_elimination(isl_ctx *ctx)
+{
+	int i;
+	unsigned n;
+	isl_basic_set *bset;
+
+	for (i = 0; i < ARRAY_SIZE(elimination_tests); ++i) {
+		bset = isl_basic_set_read_from_str(ctx, elimination_tests[i]);
+		n = isl_basic_set_dim(bset, isl_dim_div);
+		isl_basic_set_free(bset);
+		if (!bset)
+			return -1;
+		if (n != 0)
+			isl_die(ctx, isl_error_unknown,
+				"expecting no existentials", return -1);
+	}
+
+	return 0;
+}
+
 static int test_div(isl_ctx *ctx)
 {
-	unsigned n;
 	const char *str;
 	int empty;
 	isl_int v;
@@ -941,15 +972,8 @@ static int test_div(isl_ctx *ctx)
 	if (!set)
 		return -1;
 
-	str = "{ [i,j] : 2*[i/2] + 3 * [j/4] <= 10 and 2 i = j }";
-	bset = isl_basic_set_read_from_str(ctx, str);
-	n = isl_basic_set_dim(bset, isl_dim_div);
-	isl_basic_set_free(bset);
-	if (!bset)
+	if (test_elimination(ctx) < 0)
 		return -1;
-	if (n != 0)
-		isl_die(ctx, isl_error_unknown,
-			"expecting no existentials", return -1);
 
 	str = "{ [i,j,k] : 3 + i + 2j >= 0 and 2 * [(i+2j)/4] <= k }";
 	set = isl_set_read_from_str(ctx, str);
@@ -1813,6 +1837,8 @@ struct {
 				"2*floor((c)/2) = c and 0 <= a <= 192;"
 		"[224, 224, b, c] : 2*floor((b)/2) = b and 2*floor((c)/2) = c }"
 	},
+	{ 1, "[n] -> { [a,b] : (exists e : 1 <= a <= 7e and 9e <= b <= n) or "
+				"(0 <= a <= b <= n) }" },
 };
 
 /* A specialized coalescing test case that would result
@@ -4849,6 +4875,40 @@ static int test_eval(isl_ctx *ctx)
 	return 0;
 }
 
+/* Descriptions of sets that are tested for reparsing after printing.
+ */
+const char *output_tests[] = {
+	"{ [1, y] : 0 <= y <= 1; [x, -x] : 0 <= x <= 1 }",
+};
+
+/* Check that printing a set and reparsing a set from the printed output
+ * results in the same set.
+ */
+static int test_output_set(isl_ctx *ctx)
+{
+	int i;
+	char *str;
+	isl_set *set1, *set2;
+	isl_bool equal;
+
+	for (i = 0; i < ARRAY_SIZE(output_tests); ++i) {
+		set1 = isl_set_read_from_str(ctx, output_tests[i]);
+		str = isl_set_to_str(set1);
+		set2 = isl_set_read_from_str(ctx, str);
+		free(str);
+		equal = isl_set_is_equal(set1, set2);
+		isl_set_free(set1);
+		isl_set_free(set2);
+		if (equal < 0)
+			return -1;
+		if (!equal)
+			isl_die(ctx, isl_error_unknown,
+				"parsed output not the same", return -1);
+	}
+
+	return 0;
+}
+
 int test_output(isl_ctx *ctx)
 {
 	char *s;
@@ -4856,6 +4916,9 @@ int test_output(isl_ctx *ctx)
 	isl_pw_aff *pa;
 	isl_printer *p;
 	int equal;
+
+	if (test_output_set(ctx) < 0)
+		return -1;
 
 	str = "[x] -> { [1] : x % 4 <= 2; [2] : x = 3 }";
 	pa = isl_pw_aff_read_from_str(ctx, str);

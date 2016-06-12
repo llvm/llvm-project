@@ -962,5 +962,8 @@ bool llvm::isGuaranteedToExecute(const Instruction &Inst,
   if (ExitBlocks.empty())
     return false;
 
+  // FIXME: In general, we have to prove that the loop isn't an infinite loop.
+  // See http::llvm.org/PR24078 .  (The "ExitBlocks.empty()" check above is
+  // just a special case of this.)
   return true;
 }
