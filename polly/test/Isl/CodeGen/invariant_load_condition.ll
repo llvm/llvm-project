@@ -1,15 +1,17 @@
 ; RUN: opt %loadPolly -polly-process-unprofitable -polly-codegen -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
-; CHECK-NEXT:     %polly.access.C = getelementptr i32, i32* %C, i1 false
+; CHECK-NEXT:     %polly.access.C = getelementptr i32, i32* %C, i64 0
 ; CHECK-NEXT:     %polly.access.C.load = load i32, i32* %polly.access.C
 ; CHECK-NOT:      %polly.access.C.load = load i32, i32* %polly.access.C
 ;
 ; CHECK: polly.cond
-; CHECK:   %[[R1:[0-9]*]] = icmp sle i32 %polly.access.C.load, -1
+; CHECK:   %[[R0:[0-9]*]] = sext i32 %polly.access.C.load to i64
+; CHECK:   %[[R1:[0-9]*]] = icmp sle i64 %[[R0]], -1
 ;
 ; CHECK: polly.cond
-; CHECK:   %[[R3:[0-9]*]] = icmp sge i32 %polly.access.C.load, 1
+; CHECK:   %[[R2:[0-9]*]] = sext i32 %polly.access.C.load to i64
+; CHECK:   %[[R3:[0-9]*]] = icmp sge i64 %[[R2]], 1
 ;
 ; CHECK-NOT:  polly.stmt.bb2
 ;

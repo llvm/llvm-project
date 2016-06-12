@@ -8,11 +8,14 @@
 ; CHECK-NEXT: %0 = zext i32 %n to i64
 
 ; CHECK: polly.split_new_and_old:
-; CHECK-NEXT:  %1 = icmp sge i32 %n, 1
-; CHECK-NEXT:  %2 = icmp sle i32 %n, -1
-; CHECK-NEXT:  %3 = icmp eq i1 false, %2
-; CHECK-NEXT:  %4 = and i1 %1, %3
-; CHECK-NEXT:  br i1 %4, label %polly.start, label %for.body4
+; CHECK-NEXT:  %1 = sext i32 %n to i64
+; CHECK-NEXT:  %2 = icmp sge i64 %1, 1
+; CHECK-NEXT:  %3 = sext i32 %n to i64
+; CHECK-NEXT:  %4 = icmp sle i64 %3, -1
+; CHECK-NEXT:  %5 = sext i1 %4 to i64
+; CHECK-NEXT:  %6 = icmp eq i64 0, %5
+; CHECK-NEXT:  %7 = and i1 %2, %6
+; CHECK-NEXT:  br i1 %7, label %polly.start, label %for.body4
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

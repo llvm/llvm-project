@@ -15,16 +15,15 @@
 ; unique within non-affine scop statements.
 
 ; CHECK: polly.stmt.bb2:
-; CHECK:   %[[R:[0-9]*]] = zext i5 %polly.indvar to i64
-; CHECK:   %scevgep = getelementptr double, double* %A, i64 %[[R]]
+; CHECK:   %scevgep = getelementptr double, double* %A, i64 %polly.indvar
 
 ; CHECK: polly.stmt.bb9:
-; CHECK:   %polly.access.C{{.*}} = getelementptr double, double* %C, i7 42
-; CHECK:   %polly.access.C{{.*}} = getelementptr double, double* %C, i7 42
+; CHECK:   %polly.access.C{{.*}} = getelementptr double, double* %C, i64 42
+; CHECK:   %polly.access.C{{.*}} = getelementptr double, double* %C, i64 42
 
 ; CHECK: polly.stmt.bb5:
-; CHECK:   %polly.access.B{{.*}} = getelementptr double, double* %B, i8 113
-; CHECK:   %polly.access.B{{.*}} = getelementptr double, double* %B, i8 113
+; CHECK:   %polly.access.B{{.*}} = getelementptr double, double* %B, i64 113
+; CHECK:   %polly.access.B{{.*}} = getelementptr double, double* %B, i64 113
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

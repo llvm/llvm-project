@@ -20,6 +20,7 @@ For later versions of Visual Studio, no setup is required-->
                    containing all the gory details.
            "cpp": Only occasionally used when we need to distinguish between an ordinary view and a C++-like view.
     -->
+    <DisplayString IncludeView="cmn" Condition="TypeBits.TC==clang::LocInfoType::LocInfo">LocInfoType</DisplayString>
     <DisplayString IncludeView="cmn">{(clang::Type::TypeClass)TypeBits.TC, en}Type</DisplayString>
     <!-- Dispatch to visualizers for the actual Type subclass -->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Builtin" IncludeView="poly">{*(clang::BuiltinType *)this}</DisplayString>
@@ -34,6 +35,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto" IncludeView="poly">{*(clang::FunctionProtoType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization" IncludeView="poly">{*(clang::TemplateSpecializationType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName" IncludeView="poly">{*(clang::InjectedClassNameType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::LocInfoType::LocInfo" IncludeView="poly">{*(clang::LocInfoType *)this}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(poly)}</DisplayString>
     <DisplayString IncludeView="poly">{*this,view(cmn)}</DisplayString> <!-- Not yet implemented Type subclass -->
     <DisplayString>{*this,view(cmn)}  {{{*this,view(poly)}}}</DisplayString>
@@ -52,6 +54,7 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto">(clang::FunctionProtoType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization">(clang::TemplateSpecializationType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName">(clang::InjectedClassNameType *)this</ExpandedItem>
+      <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::LocInfoType::LocInfo">(clang::LocInfoType *)this</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="clang::PointerType">
@@ -225,6 +228,16 @@ For later versions of Visual Studio, no setup is required-->
       <Item Name="Fast Quals">*this,view(fastQuals)</Item>
       <Item Name="BaseType">*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType</Item>
     </Expand>
+  </Type>
+  <Type Name="clang::LocInfoType">
+    <DisplayString>{*DeclInfo}</DisplayString>
+    <Expand>
+      <Item Name="DeclInfo">DeclInfo</Item>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::TypeSourceInfo">
+    <DisplayString>{Ty}</DisplayString>
   </Type>
   <Type Name="clang::TemplateArgumentLoc">
     <DisplayString>{Argument}</DisplayString>
@@ -498,5 +511,31 @@ For later versions of Visual Studio, no setup is required-->
   <Type Name="clang::LookupResult">
     <DisplayString Condition="ResultKind == clang::LookupResult::Ambiguous">{Ambiguity,en}: {Decls}</DisplayString>
     <DisplayString>{ResultKind,en}: {Decls}</DisplayString>
+  </Type>
+  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="packedValidity">
+    <DisplayString Condition="PtrWithInvalid&amp;1">Invalid</DisplayString>
+    <DisplayString Condition="!(PtrWithInvalid&amp;1)">Valid</DisplayString>
+   </Type>
+  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="unpackedValidity">
+    <DisplayString Condition="Invalid">Invalid</DisplayString>
+    <DisplayString Condition="!Invalid">Valid</DisplayString>
+  </Type>
+  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="packed">
+    <DisplayString>{*this,view(packedValidity)}: {($T1 *)(PtrWithInvalid&amp;~1)}</DisplayString>
+    <Expand>
+      <Item Name="Invalid">(bool)(PtrWithInvalid&amp;1)</Item>
+      <Item Name="Val">($T1 *)(PtrWithInvalid&amp;~1)</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::ActionResult&lt;*&gt;" IncludeView="unpacked">
+    <DisplayString>{*this,view(unpackedValidity)}: {Val}</DisplayString>
+  </Type>
+  <Type Name="clang::ActionResult&lt;*&gt;">
+    <DisplayString Condition="$T2">{*this,view(packed)}</DisplayString>
+    <DisplayString Condition="!$T2">{*this,view(unpacked)}</DisplayString>
+    <Expand>
+      <ExpandedItem Condition="$T2">*this,view(packed)</ExpandedItem>
+      <ExpandedItem Condition="!$T2">*this,view(unpacked)</ExpandedItem>
+    </Expand>
   </Type>
 </AutoVisualizer>

@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-allow-differing-element-types -polly-codegen -S < %s | FileCheck %s
 
 ; CHECK: %polly.access.cast.global.load = bitcast %struct.hoge* %global.load to i32*
-; CHECK: %polly.access.global.load = getelementptr i32, i32* %polly.access.cast.global.load, i1 false
+; CHECK: %polly.access.global.load = getelementptr i32, i32* %polly.access.cast.global.load, i64 0
 ; CHECK: %polly.access.global.load.load = load i32, i32* %polly.access.global.load
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

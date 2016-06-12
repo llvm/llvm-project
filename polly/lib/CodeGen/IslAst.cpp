@@ -331,7 +331,8 @@ buildCondition(__isl_keep isl_ast_build *Build, const Scop::MinMaxAccessTy *It0,
   return NonAliasGroup;
 }
 
-__isl_give isl_ast_expr *IslAst::buildRunCondition() {
+__isl_give isl_ast_expr *
+IslAst::buildRunCondition(Scop *S, __isl_keep isl_ast_build *Build) {
   isl_ast_expr *RunCondition;
 
   // The conditions that need to be checked at run-time for this scop are
@@ -392,7 +393,8 @@ static bool benefitsFromPolly(Scop *Scop, bool PerformParallelTest) {
 }
 
 IslAst::IslAst(Scop *Scop)
-    : S(Scop), Root(nullptr), Build(nullptr), Ctx(Scop->getSharedIslCtx()) {}
+    : S(Scop), Root(nullptr), RunCondition(nullptr),
+      Ctx(Scop->getSharedIslCtx()) {}
 
 void IslAst::init(const Dependences &D) {
   bool PerformParallelTest = PollyParallel || DetectParallel ||
@@ -405,6 +407,7 @@ void IslAst::init(const Dependences &D) {
   isl_ctx *Ctx = S->getIslCtx();
   isl_options_set_ast_build_atomic_upper_bound(Ctx, true);
   isl_options_set_ast_build_detect_min_max(Ctx, true);
+  isl_ast_build *Build;
   AstBuildUserInfo BuildInfo;
 
   if (UseContext)
@@ -430,7 +433,11 @@ void IslAst::init(const Dependences &D) {
                                               &BuildInfo);
   }
 
+  RunCondition = buildRunCondition(S, Build);
+
   Root = isl_ast_build_node_from_schedule(Build, S->getScheduleTree());
+
+  isl_ast_build_free(Build);
 }
 
 IslAst *IslAst::create(Scop *Scop, const Dependences &D) {
@@ -441,10 +448,13 @@ IslAst *IslAst::create(Scop *Scop, const Dependences &D) {
 
 IslAst::~IslAst() {
   isl_ast_node_free(Root);
-  isl_ast_build_free(Build);
+  isl_ast_expr_free(RunCondition);
 }
 
 __isl_give isl_ast_node *IslAst::getAst() { return isl_ast_node_copy(Root); }
+__isl_give isl_ast_expr *IslAst::getRunCondition() {
+  return isl_ast_expr_copy(RunCondition);
+}
 
 void IslAstInfo::releaseMemory() {
   if (Ast) {
@@ -470,7 +480,7 @@ bool IslAstInfo::runOnScop(Scop &Scop) {
 
 __isl_give isl_ast_node *IslAstInfo::getAst() const { return Ast->getAst(); }
 __isl_give isl_ast_expr *IslAstInfo::getRunCondition() const {
-  return Ast->buildRunCondition();
+  return Ast->getRunCondition();
 }
 
 IslAstUserPayload *IslAstInfo::getNodePayload(__isl_keep isl_ast_node *Node) {
