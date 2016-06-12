@@ -9052,19 +9052,34 @@ _mm512_maskz_moveldup_ps (__mmask16 __U, __m512 __A)
 }
 
 #define _mm512_shuffle_epi32(A, I) __extension__ ({ \
-  (__m512i)__builtin_ia32_pshufd512_mask((__v16si)(__m512i)(A), (int)(I), \
-                                         (__v16si)_mm512_undefined_epi32(), \
-                                         (__mmask16)-1); })
+  (__m512i)__builtin_shufflevector((__v16si)(__m512i)(A), \
+                                   (__v16si)_mm512_setzero_si512(), \
+                                   0  + (((I) & 0x03) >> 0), \
+                                   0  + (((I) & 0x0c) >> 2), \
+                                   0  + (((I) & 0x30) >> 4), \
+                                   0  + (((I) & 0xc0) >> 6), \
+                                   4  + (((I) & 0x03) >> 0), \
+                                   4  + (((I) & 0x0c) >> 2), \
+                                   4  + (((I) & 0x30) >> 4), \
+                                   4  + (((I) & 0xc0) >> 6), \
+                                   8  + (((I) & 0x03) >> 0), \
+                                   8  + (((I) & 0x0c) >> 2), \
+                                   8  + (((I) & 0x30) >> 4), \
+                                   8  + (((I) & 0xc0) >> 6), \
+                                   12 + (((I) & 0x03) >> 0), \
+                                   12 + (((I) & 0x0c) >> 2), \
+                                   12 + (((I) & 0x30) >> 4), \
+                                   12 + (((I) & 0xc0) >> 6)); })
 
 #define _mm512_mask_shuffle_epi32(W, U, A, I) __extension__ ({ \
-  (__m512i)__builtin_ia32_pshufd512_mask((__v16si)(__m512i)(A), (int)(I), \
-                                         (__v16si)(__m512i)(W), \
-                                         (__mmask16)(U)); })
+  (__m512i)__builtin_ia32_selectd_512((__mmask16)(U), \
+                                      (__v16si)_mm512_shuffle_epi32((A), (I)), \
+                                      (__v16si)(__m512i)(W)); })
 
 #define _mm512_maskz_shuffle_epi32(U, A, I) __extension__ ({ \
-  (__m512i)__builtin_ia32_pshufd512_mask((__v16si)(__m512i)(A), (int)(I), \
-                                         (__v16si)_mm512_setzero_si512(), \
-                                         (__mmask16)(U)); })
+  (__m512i)__builtin_ia32_selectd_512((__mmask16)(U), \
+                                      (__v16si)_mm512_shuffle_epi32((A), (I)), \
+                                      (__v16si)_mm512_setzero_si512()); })
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_mask_expand_pd (__m512d __W, __mmask8 __U, __m512d __A)

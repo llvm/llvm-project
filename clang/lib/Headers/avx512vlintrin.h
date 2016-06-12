@@ -9257,25 +9257,24 @@ _mm256_maskz_moveldup_ps (__mmask8 __U, __m256 __A)
 }
 
 #define _mm256_mask_shuffle_epi32(W, U, A, I) __extension__({\
-  (__m256i)__builtin_ia32_pshufd256_mask((__v8si)(__m256i)(A), (int)(I), \
-                                         (__v8si)(__m256i)(W), \
-                                         (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
+                                      (__v8si)_mm256_shuffle_epi32((A), (I)), \
+                                      (__v8si)(__m256i)(W)); })
 
 #define _mm256_maskz_shuffle_epi32(U, A, I) __extension__({\
-  (__m256i)__builtin_ia32_pshufd256_mask((__v8si)(__m256i)(A), (int)(I), \
-                                         (__v8si)_mm256_setzero_si256(), \
-                                         (__mmask8)(U)); })
+  (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
+                                      (__v8si)_mm256_shuffle_epi32((A), (I)), \
+                                      (__v8si)_mm256_setzero_si256()); })
 
 #define _mm_mask_shuffle_epi32(W, U, A, I) __extension__({\
-  (__m128i)__builtin_ia32_pshufd128_mask((__v4si)(__m128i)(A), (int)(I), \
-                                         (__v4si)(__m128i)(W), \
-                                         (__mmask8)(U)); })
+  (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
+                                      (__v4si)_mm_shuffle_epi32((A), (I)), \
+                                      (__v4si)(__m128i)(W)); })
 
 #define _mm_maskz_shuffle_epi32(U, A, I) __extension__({\
-  (__m128i)__builtin_ia32_pshufd128_mask((__v4si)(__m128i)(A), (int)(I), \
-                                         (__v4si)_mm_setzero_si128(), \
-                                         (__mmask8)(U)); })
-
+  (__m128i)__builtin_ia32_selectd_128((__mmask8)(U), \
+                                      (__v4si)_mm_shuffle_epi32((A), (I)), \
+                                      (__v4si)_mm_setzero_si128()); })
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_mask_mov_pd (__m128d __W, __mmask8 __U, __m128d __A)

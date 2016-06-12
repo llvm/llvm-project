@@ -1,14 +1,13 @@
 ; RUN: opt %loadPolly -polly-process-unprofitable -polly-codegen -polly-ignore-aliasing -S  < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
-; CHECK:   %polly.access.A = getelementptr i32**, i32*** %A, i7 42
+; CHECK:   %polly.access.A = getelementptr i32**, i32*** %A, i64 42
 ; CHECK:   %polly.access.A.load = load i32**, i32*** %polly.access.A
-; CHECK:   %polly.access.polly.access.A.load = getelementptr i32*, i32** %polly.access.A.load, i7 32
+; CHECK:   %polly.access.polly.access.A.load = getelementptr i32*, i32** %polly.access.A.load, i64 32
 ; CHECK:   %polly.access.polly.access.A.load.load = load i32*, i32** %polly.access.polly.access.A.load
 ;
 ; CHECK: polly.stmt.bb2:
-; CHECK:   %[[R:[0-9]]] = zext i11 %polly.indvar to i64
-; CHECK:   %p_tmp6 = getelementptr inbounds i32, i32* %polly.access.polly.access.A.load.load, i64 %[[R]]
+; CHECK:   %p_tmp6 = getelementptr inbounds i32, i32* %polly.access.polly.access.A.load.load, i64 %polly.indvar
 ; CHECK:   store i32 0, i32* %p_tmp6, align 4
 ;
 ;    void f(int ***A) {

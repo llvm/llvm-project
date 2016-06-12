@@ -9,4 +9,4 @@ _start:
         .data
         .long bar
 
-// CHECK: R_X86_64_32 cannot be used when making a shared object; recompile with -fPIC.
+// CHECK: R_X86_64_32 cannot be used against shared object; recompile with -fPIC.

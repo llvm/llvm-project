@@ -1,12 +1,11 @@
 ; RUN: opt %loadPolly  -polly-codegen -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
-; CHECK-NEXT:    %polly.access.BPLoc = getelementptr i32*, i32** %BPLoc, i1 false
+; CHECK-NEXT:    %polly.access.BPLoc = getelementptr i32*, i32** %BPLoc, i64 0
 ; CHECK-NEXT:    %polly.access.BPLoc.load = load i32*, i32** %polly.access.BPLoc
 ;
 ; CHECK-LABEL: polly.stmt.bb2:
-; CHECK-NEXT:    %[[R:[0-9]*]] = zext i11 %polly.indvar to i64
-; CHECK-NEXT:    %p_tmp3 = getelementptr inbounds i32, i32* %polly.access.BPLoc.load, i64 %[[R]]
+; CHECK-NEXT:    %p_tmp3 = getelementptr inbounds i32, i32* %polly.access.BPLoc.load, i64 %polly.indvar
 ;
 ;    void f(int **BPLoc) {
 ;      for (int i = 0; i < 1024; i++)

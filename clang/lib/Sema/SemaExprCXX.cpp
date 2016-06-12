@@ -872,6 +872,92 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
   return false;
 }
 
+static QualType adjustCVQualifiersForCXXThisWithinLambda(
+    ArrayRef<FunctionScopeInfo *> FunctionScopes, QualType ThisTy,
+    DeclContext *CurSemaContext, ASTContext &ASTCtx) {
+
+  QualType ClassType = ThisTy->getPointeeType();
+  LambdaScopeInfo *CurLSI = nullptr;
+  DeclContext *CurDC = CurSemaContext;
+
+  // Iterate through the stack of lambdas starting from the innermost lambda to
+  // the outermost lambda, checking if '*this' is ever captured by copy - since
+  // that could change the cv-qualifiers of the '*this' object.
+  // The object referred to by '*this' starts out with the cv-qualifiers of its
+  // member function.  We then start with the innermost lambda and iterate
+  // outward checking to see if any lambda performs a by-copy capture of '*this'
+  // - and if so, any nested lambda must respect the 'constness' of that
+  // capturing lamdbda's call operator.
+  //
+
+  // The issue is that we cannot rely entirely on the FunctionScopeInfo stack
+  // since ScopeInfos are pushed on during parsing and treetransforming. But
+  // since a generic lambda's call operator can be instantiated anywhere (even
+  // end of the TU) we need to be able to examine its enclosing lambdas and so
+  // we use the DeclContext to get a hold of the closure-class and query it for
+  // capture information.  The reason we don't just resort to always using the
+  // DeclContext chain is that it is only mature for lambda expressions
+  // enclosing generic lambda's call operators that are being instantiated.
+
+  for (int I = FunctionScopes.size();
+       I-- && isa<LambdaScopeInfo>(FunctionScopes[I]);
+       CurDC = getLambdaAwareParentOfDeclContext(CurDC)) {
+    CurLSI = cast<LambdaScopeInfo>(FunctionScopes[I]);
+    
+    if (!CurLSI->isCXXThisCaptured()) 
+        continue;
+      
+    auto C = CurLSI->getCXXThisCapture();
+
+    if (C.isCopyCapture()) {
+      ClassType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
+      if (CurLSI->CallOperator->isConst())
+        ClassType.addConst();
+      return ASTCtx.getPointerType(ClassType);
+    }
+  }
+  // We've run out of ScopeInfos but check if CurDC is a lambda (which can
+  // happen during instantiation of generic lambdas)
+  if (isLambdaCallOperator(CurDC)) {
+    assert(CurLSI);
+    assert(isGenericLambdaCallOperatorSpecialization(CurLSI->CallOperator));
+    assert(CurDC == getLambdaAwareParentOfDeclContext(CurLSI->CallOperator));
+    
+    auto IsThisCaptured =
+        [](CXXRecordDecl *Closure, bool &IsByCopy, bool &IsConst) {
+      IsConst = false;
+      IsByCopy = false;
+      for (auto &&C : Closure->captures()) {
+        if (C.capturesThis()) {
+          if (C.getCaptureKind() == LCK_StarThis)
+            IsByCopy = true;
+          if (Closure->getLambdaCallOperator()->isConst())
+            IsConst = true;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    bool IsByCopyCapture = false;
+    bool IsConstCapture = false;
+    CXXRecordDecl *Closure = cast<CXXRecordDecl>(CurDC->getParent());
+    while (Closure &&
+           IsThisCaptured(Closure, IsByCopyCapture, IsConstCapture)) {
+      if (IsByCopyCapture) {
+        ClassType.removeLocalCVRQualifiers(Qualifiers::CVRMask);
+        if (IsConstCapture)
+          ClassType.addConst();
+        return ASTCtx.getPointerType(ClassType);
+      }
+      Closure = isLambdaCallOperator(Closure->getParent())
+                    ? cast<CXXRecordDecl>(Closure->getParent()->getParent())
+                    : nullptr;
+    }
+  }
+  return ASTCtx.getPointerType(ClassType);
+}
+
 QualType Sema::getCurrentThisType() {
   DeclContext *DC = getFunctionLevelDeclContext();
   QualType ThisTy = CXXThisTypeOverride;
@@ -902,20 +988,13 @@ QualType Sema::getCurrentThisType() {
       ThisTy = Context.getPointerType(ClassTy);
     }
   }
-   // Add const for '* this' capture if not mutable.
-  if (isLambdaCallOperator(CurContext)) {
-    LambdaScopeInfo *LSI = getCurLambda();
-    assert(LSI);
-    if (LSI->isCXXThisCaptured()) {
-      auto C = LSI->getCXXThisCapture();
-      QualType BaseType = ThisTy->getPointeeType();
-      if ((C.isThisCapture() && C.isCopyCapture()) &&
-          LSI->CallOperator->isConst() && !BaseType.isConstQualified()) {
-        BaseType.addConst();
-        ThisTy = Context.getPointerType(BaseType);
-      }
-    }
-  }
+
+  // If we are within a lambda's call operator, the cv-qualifiers of 'this'
+  // might need to be adjusted if the lambda or any of its enclosing lambda's
+  // captures '*this' by copy.
+  if (!ThisTy.isNull() && isLambdaCallOperator(CurContext))
+    return adjustCVQualifiersForCXXThisWithinLambda(FunctionScopes, ThisTy,
+                                                    CurContext, Context);
   return ThisTy;
 }
 
@@ -953,22 +1032,36 @@ Sema::CXXThisScopeRAII::~CXXThisScopeRAII() {
 static Expr *captureThis(Sema &S, ASTContext &Context, RecordDecl *RD,
                          QualType ThisTy, SourceLocation Loc,
                          const bool ByCopy) {
-  QualType CaptureThisTy = ByCopy ? ThisTy->getPointeeType() : ThisTy;
  
-  FieldDecl *Field
-       = FieldDecl::Create(Context, RD, Loc, Loc, nullptr, CaptureThisTy,
-                       Context.getTrivialTypeSourceInfo(CaptureThisTy, Loc),
-                        nullptr, false, ICIS_NoInit);
+  QualType AdjustedThisTy = ThisTy;
+  // The type of the corresponding data member (not a 'this' pointer if 'by
+  // copy').
+  QualType CaptureThisFieldTy = ThisTy;
+  if (ByCopy) {
+    // If we are capturing the object referred to by '*this' by copy, ignore any
+    // cv qualifiers inherited from the type of the member function for the type
+    // of the closure-type's corresponding data member and any use of 'this'.
+    CaptureThisFieldTy = ThisTy->getPointeeType();
+    CaptureThisFieldTy.removeLocalCVRQualifiers(Qualifiers::CVRMask);
+    AdjustedThisTy = Context.getPointerType(CaptureThisFieldTy);
+  }
+  
+  FieldDecl *Field = FieldDecl::Create(
+      Context, RD, Loc, Loc, nullptr, CaptureThisFieldTy,
+      Context.getTrivialTypeSourceInfo(CaptureThisFieldTy, Loc), nullptr, false,
+      ICIS_NoInit);
+
   Field->setImplicit(true);
   Field->setAccess(AS_private);
   RD->addDecl(Field);
-  Expr *This = new (Context) CXXThisExpr(Loc, ThisTy, /*isImplicit*/true);
+  Expr *This =
+      new (Context) CXXThisExpr(Loc, ThisTy, /*isImplicit*/ true);
   if (ByCopy) {
     Expr *StarThis =  S.CreateBuiltinUnaryOp(Loc,
                                       UO_Deref,
                                       This).get();
     InitializedEntity Entity = InitializedEntity::InitializeLambdaCapture(
-      nullptr, CaptureThisTy, Loc);
+      nullptr, CaptureThisFieldTy, Loc);
     InitializationKind InitKind = InitializationKind::CreateDirect(Loc, Loc, Loc);
     InitializationSequence Init(S, Entity, InitKind, StarThis);
     ExprResult ER = Init.Perform(S, Entity, InitKind, StarThis);
@@ -1067,12 +1160,12 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
          "*this) by copy");
   // FIXME: We need to delay this marking in PotentiallyPotentiallyEvaluated
   // contexts.
-
+  QualType ThisTy = getCurrentThisType();
   for (unsigned idx = MaxFunctionScopesIndex; NumCapturingClosures; 
       --idx, --NumCapturingClosures) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
     Expr *ThisExpr = nullptr;
-    QualType ThisTy = getCurrentThisType();
+    
     if (LambdaScopeInfo *LSI = dyn_cast<LambdaScopeInfo>(CSI)) {
       // For lambda expressions, build a field and an initializing expression,
       // and capture the *enclosing object* by copy only if this is the first
@@ -1087,7 +1180,7 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
                       false/*ByCopy*/);
 
     bool isNested = NumCapturingClosures > 1;
-    CSI->addThisCapture(isNested, Loc, ThisTy, ThisExpr, ByCopy);
+    CSI->addThisCapture(isNested, Loc, ThisExpr, ByCopy);
   }
   return false;
 }

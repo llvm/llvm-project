@@ -61,8 +61,6 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
   assert(LB->getType() == UB->getType() && "Types of loop bounds do not match");
   IntegerType *LoopIVType = dyn_cast<IntegerType>(UB->getType());
   assert(LoopIVType && "UB is not integer?");
-  assert((LoopIVType == LB->getType() && LoopIVType == Stride->getType()) &&
-         "LB, UB and Stride should have equal types.");
 
   BasicBlock *BeforeBB = Builder.GetInsertBlock();
   BasicBlock *GuardBB =
@@ -123,6 +121,7 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
   Builder.SetInsertPoint(HeaderBB);
   PHINode *IV = Builder.CreatePHI(LoopIVType, 2, "polly.indvar");
   IV->addIncoming(LB, PreHeaderBB);
+  Stride = Builder.CreateZExtOrBitCast(Stride, LoopIVType);
   Value *IncrementedIV = Builder.CreateNSWAdd(IV, Stride, "polly.indvar_next");
   Value *LoopCondition;
   UB = Builder.CreateSub(UB, Stride, "polly.adjust_ub");
@@ -148,12 +147,6 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
 Value *ParallelLoopGenerator::createParallelLoop(
     Value *LB, Value *UB, Value *Stride, SetVector<Value *> &UsedValues,
     ValueMapT &Map, BasicBlock::iterator *LoopBody) {
-
-  // Adjust the types to match the GOMP API.
-  LB = Builder.CreateSExt(LB, LongType);
-  UB = Builder.CreateSExt(UB, LongType);
-  Stride = Builder.CreateSExt(Stride, LongType);
-
   Function *SubFn;
 
   AllocaInst *Struct = storeValuesIntoStruct(UsedValues);

@@ -19,9 +19,7 @@
 ;    }
 ;
 ; CHECK: polly.stmt.stmt.P:
-; CHECK:   %polly.div.shr = ashr i32 %tmp.merge, 1
-; CHECK:   %polly.div.trunc = trunc i32 %polly.div.shr to i31
-; CHECK:   sext i31 %polly.div.trunc to i32
+; CHECK:   sext i32 %tmp.merge to i64
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

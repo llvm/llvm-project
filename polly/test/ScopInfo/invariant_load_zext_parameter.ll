@@ -20,14 +20,15 @@
 ; CHECK-NEXT:      [loadI0] -> { Stmt_if_then[i0] : loadI0 = 0 and 0 <= i0 <= 999 };
 ;
 ; CODEGEN:      polly.preload.begin:
-; CODEGEN-NEXT:   %polly.access.I0 = getelementptr i32, i32* %I0, i1 false
+; CODEGEN-NEXT:   %polly.access.I0 = getelementptr i32, i32* %I0, i64 0
 ; CODEGEN-NEXT:   %polly.access.I0.load = load i32, i32* %polly.access.I0
 ; CODEGEN-NEXT:   store i32 %polly.access.I0.load, i32* %loadI0.preload.s2a
-; CODEGEN-NEXT:   %0 = icmp eq i32 %polly.access.I0.load, 0
+; CODEGEN-NEXT:   %0 = sext i32 %polly.access.I0.load to i64
+; CODEGEN-NEXT:   %1 = icmp eq i64 %0, 0
 ; CODEGEN-NEXT:   br label %polly.preload.cond
 ;
 ; CODEGEN:      polly.preload.cond:
-; CODEGEN-NEXT:   br i1 %0, label %polly.preload.exec, label %polly.preload.merge
+; CODEGEN-NEXT:   br i1 %1, label %polly.preload.exec, label %polly.preload.merge
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

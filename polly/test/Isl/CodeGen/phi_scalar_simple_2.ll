@@ -28,6 +28,7 @@ entry:
 ; CHECK:         ret i32 %x.addr.0.merge
 
 ; CHECK-LABEL: polly.start:
+; CHECK-NEXT:    sext
 ; CHECK-NEXT:    store i32 %x, i32* %x.addr.0.phiops
 
 ; CHECK-LABEL: polly.merge21:

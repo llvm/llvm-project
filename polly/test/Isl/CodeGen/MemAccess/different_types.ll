@@ -9,14 +9,12 @@
 ;        A[i] += 10;
 ;    }
 
-; CHECK: %polly.access.cast.A{{[0-9]*}} = bitcast float* %A to i32*
-; CHECK: %[[R0:[._0-9]*]] = sext i8 %polly.indvar{{[0-9]*}} to i9
-; CHECK: %[[R1:[._0-9]*]] = sub nsw i9 0, %[[R0]]
-; CHECK: %[[R1s:[._0-9]*]] = sext i9 %[[R1]] to i10
-; CHECK: %[[R2:[._0-9]*]] = add nsw i10 %[[R1s]], 99
-; CHECK: %polly.access.A{{[0-9]*}} = getelementptr i32, i32* %polly.access.cast.A{{[0-9]*}}, i10 %[[R2]]
-; CHECK: %[[R3:[._0-9]*]] = bitcast i32* %polly.access.A{{[0-9]*}} to float*
-; CHECK: %tmp14_p_scalar_ = load float, float* %[[R3]]
+; CHECK: %polly.access.cast.A14 = bitcast float* %A to i32*
+; CHECK: %[[R1:[._0-9]*]] = sub nsw i64 0, %polly.indvar11
+; CHECK: %[[R2:[._0-9]*]] = add nsw i64 %[[R1]], 99
+; CHECK: %polly.access.A15 = getelementptr i32, i32* %polly.access.cast.A14, i64 %[[R2]]
+; CHECK: %[[R3:[._0-9]*]] = bitcast i32* %polly.access.A15 to float*
+; CHECK: %tmp14_p_scalar_ = load float, float* %[[R3]], align 4, !alias.scope !3, !noalias !4
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: polly.preload.begin:  ; preds = %polly.split_new_and_old
 ; CHECK-NEXT:   %polly.access.cast.tmp2 = bitcast %struct.hoge* %tmp2 to i32*
-; CHECK-NEXT:   %polly.access.tmp2 = getelementptr i32, i32* %polly.access.cast.tmp2, i2 1
+; CHECK-NEXT:   %polly.access.tmp2 = getelementptr i32, i32* %polly.access.cast.tmp2, i64 1
 ; CHECK-NEXT:   %polly.access.tmp2.load = load i32, i32* %polly.access.tmp2, align 1
 ; CHECK-NEXT:   store i32 %polly.access.tmp2.load, i32* %tmp.preload.s2a
 

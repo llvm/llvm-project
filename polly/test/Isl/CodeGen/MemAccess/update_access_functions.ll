@@ -3,7 +3,7 @@
 ; RUN:                 < %s -S | FileCheck %s
 
 ; CHECK: polly.stmt.loop2:
-; CHECK-NEXT:   %polly.access.A = getelementptr double, double* %A, i7 42
+; CHECK-NEXT:   %polly.access.A = getelementptr double, double* %A, i64 42
 ; CHECK-NEXT:   %val_p_scalar_ = load double, double* %polly.access.A
 
 ; CHECK: polly.stmt.loop3:

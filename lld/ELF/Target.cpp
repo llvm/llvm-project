@@ -77,7 +77,7 @@ template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
 
 static void errorDynRel(uint32_t Type) {
   error("relocation " + getRelName(Type) +
-        " cannot be used when making a shared object; recompile with -fPIC.");
+        " cannot be used against shared object; recompile with -fPIC.");
 }
 
 namespace {

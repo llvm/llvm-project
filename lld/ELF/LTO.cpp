@@ -140,12 +140,8 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
 
 static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
                               Symbol *S, GlobalValue *GV) {
-  if (S->IsUsedInRegularObj)
+  if (S->IsUsedInRegularObj || Used.count(GV))
     return false;
-
-  if (Used.count(GV))
-    return false;
-
   return !S->includeInDynsym();
 }
 

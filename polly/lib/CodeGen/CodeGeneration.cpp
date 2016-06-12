@@ -191,12 +191,7 @@ public:
     } else {
 
       NodeBuilder.addParameters(S.getContext());
-      SplitBlock = Builder.GetInsertBlock();
 
-      Builder.SetInsertPoint(&StartBlock->front());
-      NodeBuilder.create(AstRoot);
-
-      Builder.SetInsertPoint(SplitBlock->getTerminator());
       ExprBuilder.setTrackOverflow(true);
       Value *RTC = buildRTC(Builder, ExprBuilder);
       Value *OverflowHappened = Builder.CreateNot(
@@ -204,7 +199,10 @@ public:
       RTC = Builder.CreateAnd(RTC, OverflowHappened, "polly.rtc.result");
       ExprBuilder.setTrackOverflow(false);
 
-      SplitBlock->getTerminator()->setOperand(0, RTC);
+      Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
+      Builder.SetInsertPoint(&StartBlock->front());
+
+      NodeBuilder.create(AstRoot);
 
       NodeBuilder.finalizeSCoP(S);
       fixRegionInfo(EnteringBB->getParent(), R->getParent());
