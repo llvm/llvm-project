@@ -8689,7 +8689,7 @@ SwiftASTContext::GetTemplateArgument (void* type,
                 swift::BoundGenericType *bound_generic_type = swift_can_type->getAs<swift::BoundGenericType>();
                 if (!bound_generic_type)
                     break;
-                const llvm::ArrayRef<swift::Substitution>& substitutions = bound_generic_type->getSubstitutions(nullptr,nullptr);
+                const llvm::ArrayRef<swift::Substitution>& substitutions = bound_generic_type->gatherAllSubstitutions(nullptr,nullptr);
                 if (arg_idx >= substitutions.size())
                     break;
                 kind = eTemplateArgumentKindType;
