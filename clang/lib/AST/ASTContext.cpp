@@ -816,7 +816,7 @@ void ASTContext::AddDeallocation(void (*Callback)(void*), void *Data) {
 
 void
 ASTContext::setExternalSource(IntrusiveRefCntPtr<ExternalASTSource> Source) {
-  ExternalSource = Source;
+  ExternalSource = std::move(Source);
 }
 
 void ASTContext::PrintStats() const {

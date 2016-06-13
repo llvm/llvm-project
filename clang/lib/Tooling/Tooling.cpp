@@ -104,7 +104,8 @@ bool runToolOnCode(clang::FrontendAction *ToolAction, const Twine &Code,
                    const Twine &FileName,
                    std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
   return runToolOnCodeWithArgs(ToolAction, Code, std::vector<std::string>(),
-                               FileName, "clang-tool", PCHContainerOps);
+                               FileName, "clang-tool",
+                               std::move(PCHContainerOps));
 }
 
 static std::vector<std::string>
@@ -136,7 +137,8 @@ bool runToolOnCodeWithArgs(
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), OverlayFileSystem));
   ToolInvocation Invocation(getSyntaxOnlyToolArgs(ToolName, Args, FileNameRef),
-                            ToolAction, Files.get(), PCHContainerOps);
+                            ToolAction, Files.get(),
+                            std::move(PCHContainerOps));
 
   SmallString<1024> CodeStorage;
   InMemoryFileSystem->addFile(FileNameRef, 0,
@@ -265,7 +267,7 @@ bool ToolInvocation::run() {
                                                       Input.release());
   }
   return runInvocation(BinaryName, Compilation.get(), Invocation.release(),
-                       PCHContainerOps);
+                       std::move(PCHContainerOps));
 }
 
 bool ToolInvocation::runInvocation(
@@ -279,7 +281,7 @@ bool ToolInvocation::runInvocation(
     llvm::errs() << "\n";
   }
 
-  return Action->runInvocation(Invocation, Files, PCHContainerOps,
+  return Action->runInvocation(Invocation, Files, std::move(PCHContainerOps),
                                DiagConsumer);
 }
 
@@ -288,7 +290,7 @@ bool FrontendActionFactory::runInvocation(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagConsumer) {
   // Create a compiler instance to handle the actual work.
-  clang::CompilerInstance Compiler(PCHContainerOps);
+  clang::CompilerInstance Compiler(std::move(PCHContainerOps));
   Compiler.setInvocation(Invocation);
   Compiler.setFileManager(Files);
 
@@ -332,9 +334,10 @@ void ClangTool::mapVirtualFile(StringRef FilePath, StringRef Content) {
 
 void ClangTool::appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
   if (ArgsAdjuster)
-    ArgsAdjuster = combineAdjusters(ArgsAdjuster, Adjuster);
+    ArgsAdjuster =
+        combineAdjusters(std::move(ArgsAdjuster), std::move(Adjuster));
   else
-    ArgsAdjuster = Adjuster;
+    ArgsAdjuster = std::move(Adjuster);
 }
 
 void ClangTool::clearArgumentsAdjusters() {
@@ -466,7 +469,7 @@ public:
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
-        Invocation, PCHContainerOps,
+        Invocation, std::move(PCHContainerOps),
         CompilerInstance::createDiagnostics(&Invocation->getDiagnosticOpts(),
                                             DiagConsumer,
                                             /*ShouldOwnClient=*/false),
@@ -490,7 +493,7 @@ std::unique_ptr<ASTUnit>
 buildASTFromCode(const Twine &Code, const Twine &FileName,
                  std::shared_ptr<PCHContainerOperations> PCHContainerOps) {
   return buildASTFromCodeWithArgs(Code, std::vector<std::string>(), FileName,
-                                  "clang-tool", PCHContainerOps);
+                                  "clang-tool", std::move(PCHContainerOps));
 }
 
 std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
@@ -510,7 +513,7 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), OverlayFileSystem));
   ToolInvocation Invocation(getSyntaxOnlyToolArgs(ToolName, Args, FileNameRef),
-                            &Action, Files.get(), PCHContainerOps);
+                            &Action, Files.get(), std::move(PCHContainerOps));
 
   SmallString<1024> CodeStorage;
   InMemoryFileSystem->addFile(FileNameRef, 0,

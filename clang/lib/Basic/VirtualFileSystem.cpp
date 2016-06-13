@@ -280,7 +280,7 @@ directory_iterator RealFileSystem::dir_begin(const Twine &Dir,
 // OverlayFileSystem implementation
 //===-----------------------------------------------------------------------===/
 OverlayFileSystem::OverlayFileSystem(IntrusiveRefCntPtr<FileSystem> BaseFS) {
-  FSList.push_back(BaseFS);
+  FSList.push_back(std::move(BaseFS));
 }
 
 void OverlayFileSystem::pushOverlay(IntrusiveRefCntPtr<FileSystem> FS) {
@@ -1395,7 +1395,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
   RedirectingFileSystemParser P(Stream);
 
   std::unique_ptr<RedirectingFileSystem> FS(
-      new RedirectingFileSystem(ExternalFS));
+      new RedirectingFileSystem(std::move(ExternalFS)));
 
   if (!YAMLFilePath.empty()) {
     // Use the YAML path from -ivfsoverlay to compute the dir to be prefixed
@@ -1576,7 +1576,8 @@ vfs::getVFSFromYAML(std::unique_ptr<MemoryBuffer> Buffer,
                     void *DiagContext,
                     IntrusiveRefCntPtr<FileSystem> ExternalFS) {
   return RedirectingFileSystem::create(std::move(Buffer), DiagHandler,
-                                       YAMLFilePath, DiagContext, ExternalFS);
+                                       YAMLFilePath, DiagContext,
+                                       std::move(ExternalFS));
 }
 
 UniqueID vfs::getNextVirtualUniqueID() {

@@ -1040,7 +1040,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   // Create the compiler instance to use for building the AST.
   std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(PCHContainerOps));
+      new CompilerInstance(std::move(PCHContainerOps)));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
@@ -1514,7 +1514,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
   
   // Create the compiler instance to use for building the precompiled preamble.
   std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(PCHContainerOps));
+      new CompilerInstance(std::move(PCHContainerOps)));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
@@ -1776,7 +1776,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 
   // Create the compiler instance to use for building the AST.
   std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(PCHContainerOps));
+      new CompilerInstance(std::move(PCHContainerOps)));
 
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
@@ -1896,7 +1896,7 @@ bool ASTUnit::LoadFromCompilerInvocation(
   llvm::CrashRecoveryContextCleanupRegistrar<llvm::MemoryBuffer>
     MemBufferCleanup(OverrideMainBuffer.get());
 
-  return Parse(PCHContainerOps, std::move(OverrideMainBuffer));
+  return Parse(std::move(PCHContainerOps), std::move(OverrideMainBuffer));
 }
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
@@ -1929,7 +1929,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
     llvm::CrashRecoveryContextReleaseRefCleanup<DiagnosticsEngine> >
     DiagCleanup(Diags.get());
 
-  if (AST->LoadFromCompilerInvocation(PCHContainerOps,
+  if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
                                       PrecompilePreambleAfterNParses))
     return nullptr;
   return AST;
@@ -2012,7 +2012,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   llvm::CrashRecoveryContextCleanupRegistrar<ASTUnit>
     ASTUnitCleanup(AST.get());
 
-  if (AST->LoadFromCompilerInvocation(PCHContainerOps,
+  if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
                                       PrecompilePreambleAfterNParses)) {
     // Some error occurred, if caller wants to examine diagnostics, pass it the
     // ASTUnit.
@@ -2062,7 +2062,8 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     getDiagnostics().setNumWarnings(NumWarningsInPreamble);
 
   // Parse the sources
-  bool Result = Parse(PCHContainerOps, std::move(OverrideMainBuffer));
+  bool Result =
+      Parse(std::move(PCHContainerOps), std::move(OverrideMainBuffer));
 
   // If we're caching global code-completion results, and the top-level 
   // declarations have changed, clear out the code-completion cache.

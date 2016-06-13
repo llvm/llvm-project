@@ -121,8 +121,8 @@ namespace clang {
     KindType Kind;
     
     /// \brief The actual template argument representation, which may be
-    /// an \c ActionBase::TypeTy* (for a type), an Expr* (for an
-    /// expression), or an ActionBase::TemplateTy (for a template).
+    /// an \c Sema::TypeTy* (for a type), an Expr* (for an
+    /// expression), or an Sema::TemplateTy (for a template).
     void *Arg;
 
     /// \brief The nested-name-specifier that can accompany a template template

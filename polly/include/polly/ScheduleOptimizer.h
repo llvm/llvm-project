@@ -90,6 +90,16 @@ private:
   tileNode(__isl_take isl_schedule_node *Node, const char *Identifier,
            llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
 
+  /// @brief Tile a schedule node and unroll point loops.
+  ///
+  /// @param Node            The node to register tile.
+  /// @param TileSizes       A vector of tile sizes that should be used for
+  ///                        tiling.
+  /// @param DefaultTileSize A default tile size that is used for dimensions
+  static __isl_give isl_schedule_node *
+  applyRegisterTiling(__isl_take isl_schedule_node *Node,
+                      llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
+
   /// @brief Check if this node is a band node we want to tile.
   ///
   /// We look for innermost band nodes where individual dimensions are marked as

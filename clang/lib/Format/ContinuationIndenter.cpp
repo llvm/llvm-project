@@ -476,11 +476,13 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   //     // code
   //   }
   //
-  // is common and should be formatted like a free-standing function.
-  if (Style.Language != FormatStyle::LK_JavaScript ||
-      Current.NestingLevel != 0 || !PreviousNonComment ||
-      !PreviousNonComment->is(tok::equal) ||
-      !Current.isOneOf(Keywords.kw_async, Keywords.kw_function))
+  // is common and should be formatted like a free-standing function. The same
+  // goes for wrapping before the lambda return type arrow.
+  if (!Current.is(TT_LambdaArrow) &&
+      (Style.Language != FormatStyle::LK_JavaScript ||
+       Current.NestingLevel != 0 || !PreviousNonComment ||
+       !PreviousNonComment->is(tok::equal) ||
+       !Current.isOneOf(Keywords.kw_async, Keywords.kw_function)))
     State.Stack.back().NestedBlockIndent = State.Column;
 
   if (NextNonComment->isMemberAccess()) {

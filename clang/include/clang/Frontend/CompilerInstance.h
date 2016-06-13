@@ -387,7 +387,7 @@ public:
   /// \note Most clients should use setFileManager, which will implicitly reset
   /// the virtual file system to the one contained in the file manager.
   void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
-    VirtualFileSystem = FS;
+    VirtualFileSystem = std::move(FS);
   }
 
   /// }

@@ -335,6 +335,17 @@ ScheduleTreeOptimizer::tileNode(__isl_take isl_schedule_node *Node,
   return Node;
 }
 
+__isl_give isl_schedule_node *
+ScheduleTreeOptimizer::applyRegisterTiling(__isl_take isl_schedule_node *Node,
+                                           llvm::ArrayRef<int> TileSizes,
+                                           int DefaultTileSize) {
+  auto *Ctx = isl_schedule_node_get_ctx(Node);
+  Node = tileNode(Node, "Register tiling", TileSizes, DefaultTileSize);
+  Node = isl_schedule_node_band_set_ast_build_options(
+      Node, isl_union_set_read_from_str(Ctx, "{unroll[x]}"));
+  return Node;
+}
+
 bool ScheduleTreeOptimizer::isTileableBandNode(
     __isl_keep isl_schedule_node *Node) {
   if (isl_schedule_node_get_type(Node) != isl_schedule_node_band)
@@ -374,13 +385,9 @@ ScheduleTreeOptimizer::standardBandOpts(__isl_take isl_schedule_node *Node,
     Node = tileNode(Node, "2nd level tiling", SecondLevelTileSizes,
                     SecondLevelDefaultTileSize);
 
-  if (RegisterTiling) {
-    auto *Ctx = isl_schedule_node_get_ctx(Node);
-    Node = tileNode(Node, "Register tiling", RegisterTileSizes,
-                    RegisterDefaultTileSize);
-    Node = isl_schedule_node_band_set_ast_build_options(
-        Node, isl_union_set_read_from_str(Ctx, "{unroll[x]}"));
-  }
+  if (RegisterTiling)
+    Node =
+        applyRegisterTiling(Node, RegisterTileSizes, RegisterDefaultTileSize);
 
   if (PollyVectorizerChoice == VECTORIZER_NONE)
     return Node;
