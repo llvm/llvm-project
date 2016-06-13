@@ -571,6 +571,7 @@ const char *ConversionSpecifier::toString() const {
   case cArg: return "c";
   case sArg: return "s";
   case pArg: return "p";
+  case PArg: return "P";
   case nArg: return "n";
   case PercentArg:  return "%";
   case ScanListArg: return "[";
@@ -846,6 +847,7 @@ bool FormatSpecifier::hasStandardConversionSpecifier(
     case ConversionSpecifier::ObjCObjArg:
     case ConversionSpecifier::ScanListArg:
     case ConversionSpecifier::PercentArg:
+    case ConversionSpecifier::PArg:
       return true;
     case ConversionSpecifier::CArg:
     case ConversionSpecifier::SArg:
