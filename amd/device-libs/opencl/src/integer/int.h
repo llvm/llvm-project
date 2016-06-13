@@ -1,5 +1,5 @@
 
-#include "llvm.h"
+#include "ockl.h"
 
 #define ULIST2(F) F(x.s0), F(x.s1)
 #define ULIST3(F) F(x.s0), F(x.s1), F(x.s2)

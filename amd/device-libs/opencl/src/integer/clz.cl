@@ -15,7 +15,7 @@ UEXPATTR char
 clz(char x)
 {
     int y = (int)(uchar)x;
-    int z = y ? __llvm_ctlz_i32(y) : 32;
+    int z = __ockl_clz_i32(y);
     return (char)(z - 24);
 }
 
@@ -23,7 +23,7 @@ UEXPATTR uchar
 clz(uchar x)
 {
     int y = (int)x;
-    int z = y ? __llvm_ctlz_i32(y) : 32;
+    int z = __ockl_clz_i32(y);
     return (char)(z - 24);
 }
 
@@ -31,7 +31,7 @@ UEXPATTR short
 clz(short x)
 {
     int y = (int)(ushort)x;
-    int z = y ? __llvm_ctlz_i32(y) : 32;
+    int z = __ockl_clz_i32(y);
     return (char)(z - 16);
 }
 
@@ -39,20 +39,20 @@ UEXPATTR ushort
 clz(ushort x)
 {
     int y = (int)x;
-    int z = y ? __llvm_ctlz_i32(y) : 32;
+    int z = __ockl_clz_i32(y);
     return (char)(z - 16);
 }
 
 UEXPATTR int
 clz(int x)
 {
-    return x ? __llvm_ctlz_i32(x) : 32;
+    return __ockl_clz_i32(x);
 }
 
 UEXPATTR uint
 clz(uint x)
 {
-    return x ? __llvm_ctlz_i32((int)x) : 32;
+    return __ockl_clz_i32((int)x);
 }
 
 __attribute__((always_inline, const)) static ulong
@@ -60,8 +60,8 @@ clz_u64(ulong x)
 {
     int xlo = (int)x;
     int xhi = (int)(x >> 32);
-    int zlo = (xlo ? __llvm_ctlz_i32(xlo) : 32) + 32;
-    int zhi = xhi ? __llvm_ctlz_i32(xlo) : 32;
+    int zlo = __ockl_clz_i32(xlo) + 32;
+    int zhi = __ockl_clz_i32(xhi);
     return (ulong)(xhi == 0 ? zlo : zhi);
 }
 

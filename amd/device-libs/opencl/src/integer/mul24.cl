@@ -9,12 +9,12 @@ BEXP(uint,mul24)
 BEXPATTR int
 mul24(int x, int y)
 {
-    return ((x << 8) >> 8) * ((y << 8) >> 8);
+    return __ockl_mul24_i32(x, y);
 }
 
 BEXPATTR uint
 mul24(uint x, uint y)
 {
-    return ((x << 8) >> 8) * ((y << 8) >> 8);
+    return __ockl_mul24_u32(x, y);
 }
 

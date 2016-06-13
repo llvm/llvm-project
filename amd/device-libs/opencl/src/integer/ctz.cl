@@ -15,40 +15,40 @@ UEXPATTR char
 ctz(char x)
 {
     int y = (int)(uchar)x;
-    return (char)(y ? __llvm_cttz_i32(y) : 8);
+    return (char)min(__ockl_ctz_i32(y), 8);
 }
 
 UEXPATTR uchar
 ctz(uchar x)
 {
     int y = (int)x;
-    return (uchar)(y ? __llvm_cttz_i32(y) : 8);
+    return (uchar)min(__ockl_ctz_i32(y), 8);
 }
 
 UEXPATTR short
 ctz(short x)
 {
     int y = (int)(ushort)x;
-    return (short)(y ? __llvm_cttz_i32(y) : 16);
+    return (short)min(__ockl_ctz_i32(y), 16);
 }
 
 UEXPATTR ushort
 ctz(ushort x)
 {
     int y = (int)x;
-    return (ushort)(y ? __llvm_cttz_i32(y) : 16);
+    return (ushort)min(__ockl_ctz_i32(y), 16);
 }
 
 UEXPATTR int
 ctz(int x)
 {
-    return x ? __llvm_cttz_i32(x) : 32;
+    return __ockl_ctz_i32(x);
 }
 
 UEXPATTR uint
 ctz(uint x)
 {
-    return x ? (uint)__llvm_cttz_i32((int)x) : 32u;
+    return __ockl_ctz_i32((int)x);
 }
 
 __attribute__((always_inline, const)) static ulong
@@ -56,8 +56,8 @@ ctz_u64(ulong x)
 {
     int xlo = (int)x;
     int xhi = (int)(x >> 32);
-    int zlo = xlo ? __llvm_cttz_i32(xlo) : 32;
-    int zhi = (xhi ? __llvm_cttz_i32(xlo) : 32) + 32;
+    int zlo = __ockl_ctz_i32(xlo);
+    int zhi = __ockl_ctz_i32(xhi) + 32;
     return (ulong)(xlo == 0 ? zhi : zlo);
 }
 
