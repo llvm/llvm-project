@@ -248,7 +248,7 @@ public:
   void setCheckInputsExist(bool Value) { CheckInputsExist = Value; }
 
   const std::string &getTitle() { return DriverTitle; }
-  void setTitle(std::string Value) { DriverTitle = Value; }
+  void setTitle(std::string Value) { DriverTitle = std::move(Value); }
 
   /// \brief Get the path to the main clang executable.
   const char *getClangProgramPath() const {

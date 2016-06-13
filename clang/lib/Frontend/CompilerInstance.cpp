@@ -128,7 +128,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::getModuleManager() const {
   return ModuleManager;
 }
 void CompilerInstance::setModuleManager(IntrusiveRefCntPtr<ASTReader> Reader) {
-  ModuleManager = Reader;
+  ModuleManager = std::move(Reader);
 }
 
 std::shared_ptr<ModuleDependencyCollector>
@@ -138,7 +138,7 @@ CompilerInstance::getModuleDepCollector() const {
 
 void CompilerInstance::setModuleDepCollector(
     std::shared_ptr<ModuleDependencyCollector> Collector) {
-  ModuleDepCollector = Collector;
+  ModuleDepCollector = std::move(Collector);
 }
 
 // Diagnostics

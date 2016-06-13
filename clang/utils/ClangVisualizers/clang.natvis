@@ -35,6 +35,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto" IncludeView="poly">{*(clang::FunctionProtoType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization" IncludeView="poly">{*(clang::TemplateSpecializationType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName" IncludeView="poly">{*(clang::InjectedClassNameType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::PackExpansion" IncludeView="poly">{*(clang::PackExpansionType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::LocInfoType::LocInfo" IncludeView="poly">{*(clang::LocInfoType *)this}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(poly)}</DisplayString>
     <DisplayString IncludeView="poly">{*this,view(cmn)}</DisplayString> <!-- Not yet implemented Type subclass -->
@@ -54,6 +55,7 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::FunctionProto">(clang::FunctionProtoType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization">(clang::TemplateSpecializationType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName">(clang::InjectedClassNameType *)this</ExpandedItem>
+      <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::PackExpansion">(clang::PackExpansionType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::LocInfoType::LocInfo">(clang::LocInfoType *)this</ExpandedItem>
     </Expand>
   </Type>
@@ -208,6 +210,14 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
+  <Type Name="clang::PackExpansionType">
+    <DisplayString>{Pattern}</DisplayString>
+    <Expand>
+      <Item Name="Pattern">Pattern</Item>
+      <Item Name="NumExpansions">NumExpansions</Item>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
+    </Expand>
+  </Type>
   <Type Name="clang::QualType">
     <!-- When VS2013 support is deprecated, change 4 to clang::TypeAlignmentInBits (not properly recognized by VS2013) -->
     <DisplayString IncludeView="poly">{*((clang::ExtQualsTypeCommonBase *)(((uintptr_t)Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType,view(poly)}{*this,view(fastQuals)}</DisplayString>
@@ -307,6 +317,17 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{*this,view(level0)}</DisplayString>
     <Expand>
       <Item Name="TemplateList">TemplateArgumentLists</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::ParsedTemplateArgument">
+    <DisplayString Condition="Kind==clang::ParsedTemplateArgument::Type">Type template argument: {*(clang::QualType *)Arg}</DisplayString>
+    <DisplayString Condition="Kind==clang::ParsedTemplateArgument::NonType">Non-type template argument: {*(clang::Expr *)Arg}</DisplayString>
+    <DisplayString Condition="Kind==clang::ParsedTemplateArgument::Template">Template template argument: {*(clang::TemplateName *)Arg</DisplayString>
+    <Expand>
+      <Item Name="Kind">Kind,en</Item>
+      <Item Name="Arg" Condition="Kind==clang::ParsedTemplateArgument::Type">(clang::QualType *)Arg</Item>
+      <Item Name="Arg" Condition="Kind==clang::ParsedTemplateArgument::NonType">(clang::Expr *)Arg</Item>
+      <Item Name="Arg" Condition="Kind==clang::ParsedTemplateArgument::Template">(clang::TemplateName *)Arg</Item>
     </Expand>
   </Type>
   <!-- Builtin types that have C++ keywords are manually displayed as that keyword. Otherwise, just use the enum name -->
@@ -464,7 +485,25 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
+  <Type Name="clang::OpaquePtr&lt;clang::QualType&gt;">
+    <DisplayString>{*(clang::QualType *)this}</DisplayString>
+    <Expand>
+      <Item Name="Ptr">*(clang::QualType *)this</Item>
+    </Expand>
+  </Type>
+  <Type Name="clang::UnionOpaquePtr&lt;clang::QualType&gt;">
+    <DisplayString>{*(clang::QualType *)this}</DisplayString>
+    <Expand>
+      <Item Name="Ptr">*(clang::QualType *)this</Item>
+    </Expand>
+  </Type>
   <Type Name="clang::OpaquePtr&lt;*&gt;">
+    <DisplayString>{($T1 *)Ptr}</DisplayString>
+    <Expand>
+      <ExpandedItem>($T1 *)Ptr</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::UnionOpaquePtr&lt;*&gt;">
     <DisplayString>{($T1 *)Ptr}</DisplayString>
     <Expand>
       <ExpandedItem>($T1 *)Ptr</ExpandedItem>
@@ -489,6 +528,12 @@ For later versions of Visual Studio, no setup is required-->
         <Size>NumParams</Size>
       <ValuePointer>(NamedDecl **)(this+1)</ValuePointer>
       </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="clang::Stmt">
+    <DisplayString>{(clang::Stmt::StmtClass)StmtBits.sClass,en}</DisplayString>
+    <Expand>
+      <Item Name="Class">(clang::Stmt::StmtClass)StmtBits.sClass,en</Item>
     </Expand>
   </Type>
   <Type Name="clang::Expr">

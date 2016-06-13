@@ -632,6 +632,65 @@ void CXXBaseObjectRegion::printPrettyAsExpr(raw_ostream &os) const {
   superRegion->printPrettyAsExpr(os);
 }
 
+std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
+  std::string VariableName;
+  std::string ArrayIndices;
+  const MemRegion *R = this;
+  SmallString<50> buf;
+  llvm::raw_svector_ostream os(buf);
+
+  // Obtain array indices to add them to the variable name.
+  const ElementRegion *ER = nullptr;
+  while ((ER = R->getAs<ElementRegion>())) {
+    // Index is a ConcreteInt.
+    if (auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>()) {
+      llvm::SmallString<2> Idx;
+      CI->getValue().toString(Idx);
+      ArrayIndices = (llvm::Twine("[") + Idx.str() + "]" + ArrayIndices).str();
+    }
+    // If not a ConcreteInt, try to obtain the variable
+    // name by calling 'getDescriptiveName' recursively.
+    else {
+      std::string Idx = ER->getDescriptiveName(false);
+      if (!Idx.empty()) {
+        ArrayIndices = (llvm::Twine("[") + Idx + "]" + ArrayIndices).str();
+      }
+    }
+    R = ER->getSuperRegion();
+  }
+
+  // Get variable name.
+  if (R && R->canPrintPrettyAsExpr()) {
+    R->printPrettyAsExpr(os);
+    if (UseQuotes) {
+      return (llvm::Twine("'") + os.str() + ArrayIndices + "'").str();
+    } else {
+      return (llvm::Twine(os.str()) + ArrayIndices).str();
+    }
+  }
+
+  return VariableName;
+}
+
+SourceRange MemRegion::sourceRange() const {
+  const VarRegion *const VR = dyn_cast<VarRegion>(this->getBaseRegion());
+  const FieldRegion *const FR = dyn_cast<FieldRegion>(this);
+
+  // Check for more specific regions first.
+  // FieldRegion
+  if (FR) {
+    return FR->getDecl()->getSourceRange();
+  }
+  // VarRegion
+  else if (VR) {
+    return VR->getDecl()->getSourceRange();
+  }
+  // Return invalid source range (can be checked by client).
+  else {
+    return SourceRange{};
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // MemRegionManager methods.
 //===----------------------------------------------------------------------===//

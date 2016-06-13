@@ -2356,7 +2356,7 @@ public:
                                                    bool HasExplicitTemplateArgs,
                                         TemplateArgumentListInfo TemplateArgs) {
     return new (C, DC) ClassScopeFunctionSpecializationDecl(
-        DC, Loc, FD, HasExplicitTemplateArgs, TemplateArgs);
+        DC, Loc, FD, HasExplicitTemplateArgs, std::move(TemplateArgs));
   }
 
   static ClassScopeFunctionSpecializationDecl *

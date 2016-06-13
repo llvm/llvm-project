@@ -41,6 +41,9 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocChecker.cpp
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
+  MPI-Checker/MPIBugReporter.cpp
+  MPI-Checker/MPIChecker.cpp
+  MPI-Checker/MPIFunctionClassifier.cpp
   NSAutoreleasePoolChecker.cpp
   NSErrorChecker.cpp
   NoReturnFunctionChecker.cpp

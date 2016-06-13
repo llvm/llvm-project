@@ -1293,5 +1293,14 @@ TEST_F(FormatTestJS, SupportShebangLines) {
                "var x   =  hello();");
 }
 
+TEST_F(FormatTestJS, NonNullAssertionOperator) {
+  verifyFormat("let x = foo!.bar();\n");
+  verifyFormat("let x = foo ? bar! : baz;\n");
+  verifyFormat("let x = !foo;\n");
+  verifyFormat("let x = foo[0]!;\n");
+  verifyFormat("let x = (foo)!;\n");
+  verifyFormat("let x = {foo: 1}!;\n");
+}
+
 } // end namespace tooling
 } // end namespace clang
