@@ -433,14 +433,25 @@ Value *Mapper::mapValue(const Value *V) {
   if (BlockAddress *BA = dyn_cast<BlockAddress>(C))
     return mapBlockAddress(*BA);
 
+  auto mapValueOrNull = [this](Value *V) {
+    auto Mapped = mapValue(V);
+    assert((Mapped || (Flags & RF_NullMapMissingGlobalValues)) &&
+           "Unexpected null mapping for constant operand without "
+           "NullMapMissingGlobalValues flag");
+    return Mapped;
+  };
+
   // Otherwise, we have some other constant to remap.  Start by checking to see
   // if all operands have an identity remapping.
   unsigned OpNo = 0, NumOperands = C->getNumOperands();
   Value *Mapped = nullptr;
   for (; OpNo != NumOperands; ++OpNo) {
     Value *Op = C->getOperand(OpNo);
-    Mapped = mapValue(Op);
-    if (Mapped != C) break;
+    Mapped = mapValueOrNull(Op);
+    if (!Mapped)
+      return nullptr;
+    if (Mapped != C)
+      break;
   }
   
   // See if the type mapper wants to remap the type as well.
@@ -465,8 +476,12 @@ Value *Mapper::mapValue(const Value *V) {
     Ops.push_back(cast<Constant>(Mapped));
   
     // Map the rest of the operands that aren't processed yet.
-    for (++OpNo; OpNo != NumOperands; ++OpNo)
-      Ops.push_back(cast<Constant>(mapValue(C->getOperand(OpNo))));
+    for (++OpNo; OpNo != NumOperands; ++OpNo) {
+      Mapped = mapValueOrNull(C->getOperand(OpNo));
+      if (!Mapped)
+        return nullptr;
+      Ops.push_back(cast<Constant>(Mapped));
+    }
   }
   Type *NewSrcTy = nullptr;
   if (TypeMapper)
