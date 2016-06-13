@@ -105,7 +105,7 @@ public:
     }
     return result;
   }
-  
+
   bool getHasPrivateItems() const {
     return std::any_of(Items.begin(), Items.end(),
       [](const OSLogBufferItem &item) { return item.getIsPrivate(); });
@@ -139,7 +139,8 @@ public:
 // __builtin_os_log_format_buffer_size(), compute the layout of the buffer that
 // the call will write into and store it in 'layout'. Returns 'false' if there
 // was some error encountered while computing the layout, and 'true' otherwise.
-bool computeOSLogBufferLayout(clang::ASTContext &Ctx, const clang::CallExpr *E, OSLogBufferLayout &layout);
+bool computeOSLogBufferLayout(clang::ASTContext &Ctx, const clang::CallExpr *E,
+                              OSLogBufferLayout &layout);
 
 } // namespace analyze_os_log
 } // namespace clang

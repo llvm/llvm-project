@@ -2877,7 +2877,7 @@ bool Sema::SemaBuiltinOSLogFormat(CallExpr *TheCall) {
   unsigned BuiltinID =
     cast<FunctionDecl>(TheCall->getCalleeDecl())->getBuiltinID();
   bool IsSizeCall = BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size;
-    
+
   unsigned NumArgs = TheCall->getNumArgs();
   unsigned NumRequiredArgs = IsSizeCall ? 1 : 2;
   if (NumArgs < NumRequiredArgs) {
@@ -2931,7 +2931,7 @@ bool Sema::SemaBuiltinOSLogFormat(CallExpr *TheCall) {
     TheCall->setArg(i, Arg.get());
     i++;
   }
-  
+
   // Check formatting specifiers. NOTE: We're only doing this for the non-size
   // call to avoid duplicate diagnostics.
   if (!IsSizeCall) {
@@ -3443,12 +3443,13 @@ protected:
   llvm::SmallBitVector &CheckedVarArgs;
 public:
   CheckFormatHandler(Sema &s, const StringLiteral *fexpr,
-                     const Expr *origFormatExpr, const Sema::FormatStringType
-                     type, unsigned firstDataArg, unsigned numDataArgs, const
-                     char *beg, bool hasVAListArg, ArrayRef<const Expr *> Args,
+                     const Expr *origFormatExpr,
+                     const Sema::FormatStringType type, unsigned firstDataArg,
+                     unsigned numDataArgs, const char *beg, bool hasVAListArg,
+                     ArrayRef<const Expr *> Args,
                      unsigned formatIdx, bool inFunctionCall,
-                     Sema::VariadicCallType callType, llvm::SmallBitVector
-                     &CheckedVarArgs)
+                     Sema::VariadicCallType callType,
+                     llvm::SmallBitVector &CheckedVarArgs)
     : S(s), FExpr(fexpr), OrigFormatExpr(origFormatExpr), FSType(type),
       FirstDataArg(firstDataArg), NumDataArgs(numDataArgs), Beg(beg),
       HasVAListArg(hasVAListArg), Args(Args), FormatIdx(formatIdx),
@@ -3861,11 +3862,13 @@ namespace {
 class CheckPrintfHandler : public CheckFormatHandler {
 public:
   CheckPrintfHandler(Sema &s, const StringLiteral *fexpr,
-                     const Expr *origFormatExpr, const Sema::FormatStringType type,
-                     unsigned firstDataArg, unsigned numDataArgs,
+                     const Expr *origFormatExpr,
+                     const Sema::FormatStringType type, unsigned firstDataArg,
+                     unsigned numDataArgs,
                      const char *beg, bool hasVAListArg,
-                     ArrayRef<const Expr *> Args, unsigned formatIdx,
-                     bool inFunctionCall, Sema::VariadicCallType CallType,
+                     ArrayRef<const Expr *> Args,
+                     unsigned formatIdx, bool inFunctionCall,
+                     Sema::VariadicCallType CallType,
                      llvm::SmallBitVector &CheckedVarArgs)
     : CheckFormatHandler(s, fexpr, origFormatExpr, type, firstDataArg,
                          numDataArgs, beg, hasVAListArg, Args,
@@ -4701,11 +4704,12 @@ class CheckScanfHandler : public CheckFormatHandler {
 public:
   CheckScanfHandler(Sema &s, const StringLiteral *fexpr,
                     const Expr *origFormatExpr, Sema::FormatStringType type,
-                    unsigned firstDataArg, unsigned numDataArgs, const char
-                    *beg, bool hasVAListArg, ArrayRef<const Expr *> Args,
+                    unsigned firstDataArg,
+                    unsigned numDataArgs, const char *beg, bool hasVAListArg,
+                    ArrayRef<const Expr *> Args,
                     unsigned formatIdx, bool inFunctionCall,
-                    Sema::VariadicCallType CallType, llvm::SmallBitVector
-                    &CheckedVarArgs)
+                    Sema::VariadicCallType CallType,
+                    llvm::SmallBitVector &CheckedVarArgs)
     : CheckFormatHandler(s, fexpr, origFormatExpr, type, firstDataArg,
                          numDataArgs, beg, hasVAListArg, Args, formatIdx,
                          inFunctionCall, CallType, CheckedVarArgs)
