@@ -15,11 +15,13 @@ import os, time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+from lldbsuite.test import decorators
 
 class REPLSubclassingTestCase (REPLTest):
 
     mydir = REPLTest.compute_mydir(__file__)
 
+    @decorators.expectedFailureAll(oslist=["macosx"], bugnumber="rdar://26768714")
     def doTest(self):
         self.command('class A {init(a: Int) {}}')
         self.command('class B : A {let x: Int; init() { x = 10; super.init(a: x) } }')
