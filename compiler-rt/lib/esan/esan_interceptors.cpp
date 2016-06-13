@@ -17,6 +17,7 @@
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __esan; // NOLINT
@@ -397,6 +398,11 @@ INTERCEPTOR(int, sigaction, int signum, const struct sigaction *act,
 // This is required to properly use internal_sigaction.
 namespace __sanitizer {
 int real_sigaction(int signum, const void *act, void *oldact) {
+  if (REAL(sigaction) == nullptr) {
+    // With an instrumented allocator, this is called during interceptor init
+    // and we need a raw syscall solution.
+    return internal_sigaction_syscall(signum, act, oldact);
+  }
   return REAL(sigaction)(signum, (const struct sigaction *)act,
                          (struct sigaction *)oldact);
 }

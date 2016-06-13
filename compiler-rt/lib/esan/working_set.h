@@ -21,6 +21,7 @@
 namespace __esan {
 
 void initializeWorkingSet();
+void initializeShadowWorkingSet();
 int finalizeWorkingSet();
 void processRangeAccessWorkingSet(uptr PC, uptr Addr, SIZE_T Size,
                                   bool IsWrite);

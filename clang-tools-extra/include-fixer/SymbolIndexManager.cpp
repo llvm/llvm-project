@@ -67,8 +67,8 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
   // Eventually we will either hit a class (namespaces aren't in the database
   // either) and can report that result.
   bool TookPrefix = false;
-  std::vector<std::string> Results;
-  while (Results.empty() && !Names.empty()) {
+  std::vector<clang::find_all_symbols::SymbolInfo> MatchedSymbols;
+  while (MatchedSymbols.empty() && !Names.empty()) {
     std::vector<clang::find_all_symbols::SymbolInfo> Symbols;
     for (const auto &DB : SymbolIndices) {
       auto Res = DB->search(Names.back().str());
@@ -77,8 +77,6 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
 
     DEBUG(llvm::dbgs() << "Searching " << Names.back() << "... got "
                        << Symbols.size() << " results...\n");
-
-    rankByPopularity(Symbols);
 
     for (const auto &Symbol : Symbols) {
       // Match the identifier name without qualifier.
@@ -120,20 +118,26 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
                Symbol.getSymbolKind() == SymbolInfo::SymbolKind::Macro))
             continue;
 
-          // FIXME: file path should never be in the form of <...> or "...", but
-          // the unit test with fixed database use <...> file path, which might
-          // need to be changed.
-          // FIXME: if the file path is a system header name, we want to use
-          // angle brackets.
-          std::string FilePath = Symbol.getFilePath().str();
-          Results.push_back((FilePath[0] == '"' || FilePath[0] == '<')
-                                ? FilePath
-                                : "\"" + FilePath + "\"");
+          MatchedSymbols.push_back(Symbol);
         }
       }
     }
     Names.pop_back();
     TookPrefix = true;
+  }
+
+  rankByPopularity(MatchedSymbols);
+  std::vector<std::string> Results;
+  for (const auto &Symbol : MatchedSymbols) {
+    // FIXME: file path should never be in the form of <...> or "...", but
+    // the unit test with fixed database use <...> file path, which might
+    // need to be changed.
+    // FIXME: if the file path is a system header name, we want to use
+    // angle brackets.
+    std::string FilePath = Symbol.getFilePath().str();
+    Results.push_back((FilePath[0] == '"' || FilePath[0] == '<')
+                          ? FilePath
+                          : "\"" + FilePath + "\"");
   }
 
   return Results;

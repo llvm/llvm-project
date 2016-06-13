@@ -131,6 +131,14 @@ public:
     return handleCXXNamedCastExpr(Expr);
   }
 
+  bool VisitCXXReinterpretCastExpr(clang::CXXReinterpretCastExpr *Expr) {
+    return handleCXXNamedCastExpr(Expr);
+  }
+
+  bool VisitCXXConstCastExpr(clang::CXXConstCastExpr *Expr) {
+    return handleCXXNamedCastExpr(Expr);
+  }
+
   // Non-visitors:
 
   // \brief Returns a list of unique locations. Duplicate or overlapping
