@@ -308,7 +308,7 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: store i8 34, i8* [[ARG2_DESC]]
   // CHECK: [[ARG2_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 9
   // CHECK: store i8 8, i8* [[ARG2_SIZE]]
-  // CHECK: [[ARG2:%.*]] = getelementptr i8, i8* [[BUF2]], i64 10 
+  // CHECK: [[ARG2:%.*]] = getelementptr i8, i8* [[BUF2]], i64 10
   // CHECK: [[ARG2_PTR:%.*]] = bitcast i8* [[ARG2]] to i8**
   // CHECK: [[DATA2:%.*]] = load i8*, i8** [[DATA_ADDR]]
   // CHECK: store i8* [[DATA2]], i8** [[ARG2_PTR]]
