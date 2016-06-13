@@ -121,7 +121,7 @@ public:
   /// addSafePoint - Notes the existence of a safe point. Num is the ID of the
   /// label just prior to the safe point (if the code generator is using
   /// MachineModuleInfo).
-  void addSafePoint(GC::PointKind Kind, MCSymbol *Label, DebugLoc DL) {
+  void addSafePoint(GC::PointKind Kind, MCSymbol *Label, const DebugLoc &DL) {
     SafePoints.emplace_back(Kind, Label, DL);
   }
 

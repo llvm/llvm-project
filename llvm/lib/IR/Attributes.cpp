@@ -792,7 +792,7 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
   }
 
   // Add target-dependent (string) attributes.
-  for (const AttrBuilder::td_type &TDA : B.td_attrs())
+  for (const auto &TDA : B.td_attrs())
     Attrs.push_back(
         std::make_pair(Index, Attribute::get(C, TDA.first, TDA.second)));
 

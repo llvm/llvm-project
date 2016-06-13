@@ -662,15 +662,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_ssse3_pshuf_b_128     : GCCBuiltin<"__builtin_ia32_pshufb128">,
               Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty,
                          llvm_v16i8_ty], [IntrNoMem]>;
-  def int_x86_sse2_pshuf_d          :
-              Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_i8_ty],
-                         [IntrNoMem]>;
-  def int_x86_sse2_pshufl_w         :
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_i8_ty],
-                         [IntrNoMem]>;
-  def int_x86_sse2_pshufh_w         :
-              Intrinsic<[llvm_v8i16_ty], [llvm_v8i16_ty, llvm_i8_ty],
-                         [IntrNoMem]>;
   def int_x86_sse_pshuf_w           : GCCBuiltin<"__builtin_ia32_pshufw">,
               Intrinsic<[llvm_x86mmx_ty], [llvm_x86mmx_ty, llvm_i8_ty],
                          [IntrNoMem]>;
@@ -1493,51 +1484,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
         GCCBuiltin<"__builtin_ia32_pshufb512_mask">,
           Intrinsic<[llvm_v64i8_ty],
           [llvm_v64i8_ty, llvm_v64i8_ty, llvm_v64i8_ty,  llvm_i64_ty],
-          [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshuf_d_128 :
-        Intrinsic<[llvm_v4i32_ty],
-        [llvm_v4i32_ty, llvm_i32_ty, llvm_v4i32_ty, llvm_i8_ty],
-        [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshuf_d_256 :
-        Intrinsic<[llvm_v8i32_ty],
-        [llvm_v8i32_ty, llvm_i32_ty, llvm_v8i32_ty, llvm_i8_ty],
-        [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshuf_d_512 :
-        Intrinsic<[llvm_v16i32_ty],
-        [llvm_v16i32_ty, llvm_i32_ty, llvm_v16i32_ty, llvm_i16_ty],
-        [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshufh_w_128 :
-          Intrinsic<[llvm_v8i16_ty],
-          [llvm_v8i16_ty, llvm_i32_ty, llvm_v8i16_ty, llvm_i8_ty],
-          [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshufh_w_256 :
-          Intrinsic<[llvm_v16i16_ty],
-          [llvm_v16i16_ty, llvm_i32_ty, llvm_v16i16_ty, llvm_i16_ty],
-          [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshufh_w_512 :
-          Intrinsic<[llvm_v32i16_ty],
-          [llvm_v32i16_ty, llvm_i32_ty, llvm_v32i16_ty, llvm_i32_ty],
-          [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshufl_w_128 :
-          Intrinsic<[llvm_v8i16_ty],
-          [llvm_v8i16_ty, llvm_i32_ty, llvm_v8i16_ty, llvm_i8_ty],
-          [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshufl_w_256 :
-          Intrinsic<[llvm_v16i16_ty],
-          [llvm_v16i16_ty, llvm_i32_ty, llvm_v16i16_ty, llvm_i16_ty],
-          [IntrNoMem]>;
-
-  def int_x86_avx512_mask_pshufl_w_512 :
-          Intrinsic<[llvm_v32i16_ty],
-          [llvm_v32i16_ty, llvm_i32_ty, llvm_v32i16_ty, llvm_i32_ty],
           [IntrNoMem]>;
 
   def int_x86_avx512_mask_shuf_f32x4_256 :

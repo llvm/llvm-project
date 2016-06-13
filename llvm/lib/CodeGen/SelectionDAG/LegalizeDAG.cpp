@@ -94,25 +94,25 @@ private:
   /// insertion index for the INSERT_VECTOR_ELT instruction.  In this case, it
   /// is necessary to spill the vector being inserted into to memory, perform
   /// the insert there, and then read the result back.
-  SDValue PerformInsertVectorEltInMemory(SDValue Vec, SDValue Val,
-                                         SDValue Idx, SDLoc dl);
-  SDValue ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
-                                  SDValue Idx, SDLoc dl);
+  SDValue PerformInsertVectorEltInMemory(SDValue Vec, SDValue Val, SDValue Idx,
+                                         const SDLoc &dl);
+  SDValue ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val, SDValue Idx,
+                                  const SDLoc &dl);
 
   /// Return a vector shuffle operation which
   /// performs the same shuffe in terms of order or result bytes, but on a type
   /// whose vector element type is narrower than the original shuffle type.
   /// e.g. <v4i32> <0, 1, 0, 1> -> v8i16 <0, 1, 2, 3, 0, 1, 2, 3>
-  SDValue ShuffleWithNarrowerEltType(EVT NVT, EVT VT, SDLoc dl,
+  SDValue ShuffleWithNarrowerEltType(EVT NVT, EVT VT, const SDLoc &dl,
                                      SDValue N1, SDValue N2,
                                      ArrayRef<int> Mask) const;
 
   bool LegalizeSetCCCondCode(EVT VT, SDValue &LHS, SDValue &RHS, SDValue &CC,
-                             bool &NeedInvert, SDLoc dl);
+                             bool &NeedInvert, const SDLoc &dl);
 
   SDValue ExpandLibCall(RTLIB::Libcall LC, SDNode *Node, bool isSigned);
   SDValue ExpandLibCall(RTLIB::Libcall LC, EVT RetVT, const SDValue *Ops,
-                        unsigned NumOps, bool isSigned, SDLoc dl);
+                        unsigned NumOps, bool isSigned, const SDLoc &dl);
 
   std::pair<SDValue, SDValue> ExpandChainLibCall(RTLIB::Libcall LC,
                                                  SDNode *Node, bool isSigned);
@@ -129,26 +129,28 @@ private:
   void ExpandDivRemLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandSinCosLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
-  SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT, SDLoc dl);
+  SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
+                           const SDLoc &dl);
   SDValue ExpandBUILD_VECTOR(SDNode *Node);
   SDValue ExpandSCALAR_TO_VECTOR(SDNode *Node);
   void ExpandDYNAMIC_STACKALLOC(SDNode *Node,
                                 SmallVectorImpl<SDValue> &Results);
-  void getSignAsIntValue(FloatSignAsInt &State, SDLoc DL, SDValue Value) const;
-  SDValue modifySignAsInt(const FloatSignAsInt &State, SDLoc DL,
+  void getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL,
+                         SDValue Value) const;
+  SDValue modifySignAsInt(const FloatSignAsInt &State, const SDLoc &DL,
                           SDValue NewIntValue) const;
   SDValue ExpandFCOPYSIGN(SDNode *Node) const;
   SDValue ExpandFABS(SDNode *Node) const;
   SDValue ExpandLegalINT_TO_FP(bool isSigned, SDValue LegalOp, EVT DestVT,
-                               SDLoc dl);
+                               const SDLoc &dl);
   SDValue PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT, bool isSigned,
-                                SDLoc dl);
+                                const SDLoc &dl);
   SDValue PromoteLegalFP_TO_INT(SDValue LegalOp, EVT DestVT, bool isSigned,
-                                SDLoc dl);
+                                const SDLoc &dl);
 
-  SDValue ExpandBITREVERSE(SDValue Op, SDLoc dl);
-  SDValue ExpandBSWAP(SDValue Op, SDLoc dl);
-  SDValue ExpandBitCount(unsigned Opc, SDValue Op, SDLoc dl);
+  SDValue ExpandBITREVERSE(SDValue Op, const SDLoc &dl);
+  SDValue ExpandBSWAP(SDValue Op, const SDLoc &dl);
+  SDValue ExpandBitCount(unsigned Opc, SDValue Op, const SDLoc &dl);
 
   SDValue ExpandExtractFromVectorThroughStack(SDValue Op);
   SDValue ExpandInsertToVectorThroughStack(SDValue Op);
@@ -214,10 +216,9 @@ public:
 /// performs the same shuffe in terms of order or result bytes, but on a type
 /// whose vector element type is narrower than the original shuffle type.
 /// e.g. <v4i32> <0, 1, 0, 1> -> v8i16 <0, 1, 2, 3, 0, 1, 2, 3>
-SDValue
-SelectionDAGLegalize::ShuffleWithNarrowerEltType(EVT NVT, EVT VT,  SDLoc dl,
-                                                 SDValue N1, SDValue N2,
-                                                 ArrayRef<int> Mask) const {
+SDValue SelectionDAGLegalize::ShuffleWithNarrowerEltType(
+    EVT NVT, EVT VT, const SDLoc &dl, SDValue N1, SDValue N2,
+    ArrayRef<int> Mask) const {
   unsigned NumMaskElts = VT.getVectorNumElements();
   unsigned NumDestElts = NVT.getVectorNumElements();
   unsigned NumEltsGrowth = NumDestElts / NumMaskElts;
@@ -314,9 +315,10 @@ SDValue SelectionDAGLegalize::ExpandConstant(ConstantSDNode *CP) {
 /// INSERT_VECTOR_ELT instruction.  In this case, it
 /// is necessary to spill the vector being inserted into to memory, perform
 /// the insert there, and then read the result back.
-SDValue SelectionDAGLegalize::
-PerformInsertVectorEltInMemory(SDValue Vec, SDValue Val, SDValue Idx,
-                               SDLoc dl) {
+SDValue SelectionDAGLegalize::PerformInsertVectorEltInMemory(SDValue Vec,
+                                                             SDValue Val,
+                                                             SDValue Idx,
+                                                             const SDLoc &dl) {
   SDValue Tmp1 = Vec;
   SDValue Tmp2 = Val;
   SDValue Tmp3 = Idx;
@@ -357,9 +359,9 @@ PerformInsertVectorEltInMemory(SDValue Vec, SDValue Val, SDValue Idx,
                      false, false, false, 0);
 }
 
-
-SDValue SelectionDAGLegalize::
-ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val, SDValue Idx, SDLoc dl) {
+SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
+                                                      SDValue Idx,
+                                                      const SDLoc &dl) {
   if (ConstantSDNode *InsertPos = dyn_cast<ConstantSDNode>(Idx)) {
     // SCALAR_TO_VECTOR requires that the type of the value being inserted
     // match the element type of the vector being created, except for
@@ -1368,7 +1370,8 @@ struct FloatSignAsInt {
 /// containing the sign bit if the target has no integer value capable of
 /// holding all bits of the floating-point value.
 void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
-                                             SDLoc DL, SDValue Value) const {
+                                             const SDLoc &DL,
+                                             SDValue Value) const {
   EVT FloatVT = Value.getValueType();
   unsigned NumBits = FloatVT.getSizeInBits();
   State.FloatVT = FloatVT;
@@ -1420,7 +1423,8 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
 /// Replace the integer value produced by getSignAsIntValue() with a new value
 /// and cast the result back to a floating-point type.
 SDValue SelectionDAGLegalize::modifySignAsInt(const FloatSignAsInt &State,
-                                          SDLoc DL, SDValue NewIntValue) const {
+                                              const SDLoc &DL,
+                                              SDValue NewIntValue) const {
   if (!State.Chain)
     return DAG.getNode(ISD::BITCAST, DL, State.FloatVT, NewIntValue);
 
@@ -1566,11 +1570,10 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
 /// of a true/false result.
 ///
 /// \returns true if the SetCC has been legalized, false if it hasn't.
-bool SelectionDAGLegalize::LegalizeSetCCCondCode(EVT VT,
-                                                 SDValue &LHS, SDValue &RHS,
-                                                 SDValue &CC,
+bool SelectionDAGLegalize::LegalizeSetCCCondCode(EVT VT, SDValue &LHS,
+                                                 SDValue &RHS, SDValue &CC,
                                                  bool &NeedInvert,
-                                                 SDLoc dl) {
+                                                 const SDLoc &dl) {
   MVT OpVT = LHS.getSimpleValueType();
   ISD::CondCode CCCode = cast<CondCodeSDNode>(CC)->get();
   NeedInvert = false;
@@ -1667,10 +1670,8 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(EVT VT,
 /// SrcOp to a stack slot of type SlotVT, truncating it if needed.  It then does
 /// a load from the stack slot to DestVT, extending it if needed.
 /// The resultant code need not be legal.
-SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp,
-                                               EVT SlotVT,
-                                               EVT DestVT,
-                                               SDLoc dl) {
+SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
+                                               EVT DestVT, const SDLoc &dl) {
   // Create the stack frame object.
   unsigned SrcAlign = DAG.getDataLayout().getPrefTypeAlignment(
       SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
@@ -1993,7 +1994,7 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
 /// and returning a result of type RetVT.
 SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, EVT RetVT,
                                             const SDValue *Ops, unsigned NumOps,
-                                            bool isSigned, SDLoc dl) {
+                                            bool isSigned, const SDLoc &dl) {
   TargetLowering::ArgListTy Args;
   Args.reserve(NumOps);
 
@@ -2268,10 +2269,9 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
 /// INT_TO_FP operation of the specified operand when the target requests that
 /// we expand it.  At this point, we know that the result and operand types are
 /// legal for the target.
-SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned,
-                                                   SDValue Op0,
+SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                                    EVT DestVT,
-                                                   SDLoc dl) {
+                                                   const SDLoc &dl) {
   // TODO: Should any fast-math-flags be set for the created nodes?
   
   if (Op0.getValueType() == MVT::i32 && TLI.isTypeLegal(MVT::f64)) {
@@ -2479,10 +2479,9 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned,
 /// we promote it.  At this point, we know that the result and operand types are
 /// legal for the target, and that there is a legal UINT_TO_FP or SINT_TO_FP
 /// operation that takes a larger input.
-SDValue SelectionDAGLegalize::PromoteLegalINT_TO_FP(SDValue LegalOp,
-                                                    EVT DestVT,
+SDValue SelectionDAGLegalize::PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT,
                                                     bool isSigned,
-                                                    SDLoc dl) {
+                                                    const SDLoc &dl) {
   // First step, figure out the appropriate *INT_TO_FP operation to use.
   EVT NewInTy = LegalOp.getValueType();
 
@@ -2521,10 +2520,9 @@ SDValue SelectionDAGLegalize::PromoteLegalINT_TO_FP(SDValue LegalOp,
 /// we promote it.  At this point, we know that the result and operand types are
 /// legal for the target, and that there is a legal FP_TO_UINT or FP_TO_SINT
 /// operation that returns a larger result.
-SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDValue LegalOp,
-                                                    EVT DestVT,
+SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDValue LegalOp, EVT DestVT,
                                                     bool isSigned,
-                                                    SDLoc dl) {
+                                                    const SDLoc &dl) {
   // First step, figure out the appropriate FP_TO*INT operation to use.
   EVT NewOutTy = DestVT;
 
@@ -2561,7 +2559,7 @@ SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDValue LegalOp,
 }
 
 /// Open code the operations for BITREVERSE.
-SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, SDLoc dl) {
+SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, const SDLoc &dl) {
   EVT VT = Op.getValueType();
   EVT SHVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   unsigned Sz = VT.getScalarSizeInBits();
@@ -2586,7 +2584,7 @@ SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, SDLoc dl) {
 }
 
 /// Open code the operations for BSWAP of the specified operation.
-SDValue SelectionDAGLegalize::ExpandBSWAP(SDValue Op, SDLoc dl) {
+SDValue SelectionDAGLegalize::ExpandBSWAP(SDValue Op, const SDLoc &dl) {
   EVT VT = Op.getValueType();
   EVT SHVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Tmp1, Tmp2, Tmp3, Tmp4, Tmp5, Tmp6, Tmp7, Tmp8;
@@ -2640,7 +2638,7 @@ SDValue SelectionDAGLegalize::ExpandBSWAP(SDValue Op, SDLoc dl) {
 
 /// Expand the specified bitcount instruction into operations.
 SDValue SelectionDAGLegalize::ExpandBitCount(unsigned Opc, SDValue Op,
-                                             SDLoc dl) {
+                                             const SDLoc &dl) {
   switch (Opc) {
   default: llvm_unreachable("Cannot expand this yet!");
   case ISD::CTPOP: {

@@ -709,7 +709,7 @@ int DFAPacketizerEmitter::collectAllComboFuncs(
       Record *ComboFunc = FuncData->getValueAsDef("TheComboFunc");
       const std::vector<Record*> &FuncList =
                                    FuncData->getValueAsListOfDefs("FuncList");
-      std::string ComboFuncName = ComboFunc->getName();
+      const std::string &ComboFuncName = ComboFunc->getName();
       unsigned ComboBit = FUNameToBitsMap[ComboFuncName];
       unsigned ComboResources = ComboBit;
       DEBUG(dbgs() << "      combo: " << ComboFuncName

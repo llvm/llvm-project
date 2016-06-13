@@ -77,9 +77,9 @@ unsigned MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr *MI,
 }
 
 void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  unsigned DestReg, unsigned SrcReg,
-                                  bool KillSrc) const {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, bool KillSrc) const {
   unsigned Opc = 0, ZeroReg = 0;
   bool isMicroMips = Subtarget.inMicroMipsMode();
 
@@ -453,10 +453,10 @@ void MipsSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
 
 /// This function generates the sequence of instructions needed to get the
 /// result of adding register REG and immediate IMM.
-unsigned
-MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator II, DebugLoc DL,
-                               unsigned *NewImm) const {
+unsigned MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator II,
+                                        const DebugLoc &DL,
+                                        unsigned *NewImm) const {
   MipsAnalyzeImmediate AnalyzeImm;
   const MipsSubtarget &STI = Subtarget;
   MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();

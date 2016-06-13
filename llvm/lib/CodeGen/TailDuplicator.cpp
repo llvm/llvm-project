@@ -617,7 +617,7 @@ bool TailDuplicator::isSimpleBB(MachineBasicBlock *TailBB) {
 }
 
 static bool bothUsedInPHI(const MachineBasicBlock &A,
-                          SmallPtrSet<MachineBasicBlock *, 8> SuccsB) {
+                          const SmallPtrSet<MachineBasicBlock *, 8> &SuccsB) {
   for (MachineBasicBlock *BB : A.successors())
     if (SuccsB.count(BB) && !BB->empty() && BB->begin()->isPHI())
       return true;

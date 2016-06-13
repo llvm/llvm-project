@@ -38,12 +38,11 @@ bool Thumb1FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const{
   return !MF.getFrameInfo()->hasVarSizedObjects();
 }
 
-static void
-emitSPUpdate(MachineBasicBlock &MBB,
-             MachineBasicBlock::iterator &MBBI,
-             const TargetInstrInfo &TII, DebugLoc dl,
-             const ThumbRegisterInfo &MRI,
-             int NumBytes, unsigned MIFlags = MachineInstr::NoFlags)  {
+static void emitSPUpdate(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator &MBBI,
+                         const TargetInstrInfo &TII, const DebugLoc &dl,
+                         const ThumbRegisterInfo &MRI, int NumBytes,
+                         unsigned MIFlags = MachineInstr::NoFlags) {
   emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII,
                             MRI, MIFlags);
 }

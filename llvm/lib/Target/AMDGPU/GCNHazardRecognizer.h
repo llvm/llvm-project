@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 #define LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
-#include <functional>
 #include <list>
 
 namespace llvm {
@@ -35,8 +35,8 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
   const MachineFunction &MF;
 
   int getWaitStatesSinceDef(unsigned Reg,
-                            std::function<bool(MachineInstr*)> IsHazardDef =
-                            [](MachineInstr*) {return true;});
+                            function_ref<bool(MachineInstr *)> IsHazardDef =
+                                [](MachineInstr *) { return true; });
 
   int checkSMEMSoftClauseHazards(MachineInstr *SMEM);
   int checkSMRDHazards(MachineInstr *SMRD);

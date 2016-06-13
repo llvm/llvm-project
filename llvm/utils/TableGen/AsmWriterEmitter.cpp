@@ -576,7 +576,7 @@ void AsmWriterEmitter::EmitGetRegisterName(raw_ostream &O) {
     O << "  switch(AltIdx) {\n"
       << "  default: llvm_unreachable(\"Invalid register alt name index!\");\n";
     for (const Record *R : AltNameIndices) {
-      std::string AltName(R->getName());
+      const std::string &AltName = R->getName();
       std::string Prefix = !Namespace.empty() ? Namespace + "::" : "";
       O << "  case " << Prefix << AltName << ":\n"
         << "    assert(*(AsmStrs" << AltName << "+RegAsmOffset"

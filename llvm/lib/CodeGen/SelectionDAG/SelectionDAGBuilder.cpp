@@ -115,7 +115,7 @@ OptsizeJumpTableDensity("optsize-jump-table-density", cl::init(40), cl::Hidden,
 // store [4096 x i8] %data, [4096 x i8]* %buffer
 static const unsigned MaxParallelChains = 64;
 
-static SDValue getCopyFromPartsVector(SelectionDAG &DAG, SDLoc DL,
+static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
                                       MVT PartVT, EVT ValueVT, const Value *V);
 
@@ -124,10 +124,9 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, SDLoc DL,
 /// larger than ValueVT then AssertOp can be used to specify whether the extra
 /// bits are known to be zero (ISD::AssertZext) or sign extended from ValueVT
 /// (ISD::AssertSext).
-static SDValue getCopyFromParts(SelectionDAG &DAG, SDLoc DL,
-                                const SDValue *Parts,
-                                unsigned NumParts, MVT PartVT, EVT ValueVT,
-                                const Value *V,
+static SDValue getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL,
+                                const SDValue *Parts, unsigned NumParts,
+                                MVT PartVT, EVT ValueVT, const Value *V,
                                 Optional<ISD::NodeType> AssertOp = None) {
   if (ValueVT.isVector())
     return getCopyFromPartsVector(DAG, DL, Parts, NumParts,
@@ -273,7 +272,7 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
 /// type larger than ValueVT then AssertOp can be used to specify whether the
 /// extra bits are known to be zero (ISD::AssertZext) or sign extended from
 /// ValueVT (ISD::AssertSext).
-static SDValue getCopyFromPartsVector(SelectionDAG &DAG, SDLoc DL,
+static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                       const SDValue *Parts, unsigned NumParts,
                                       MVT PartVT, EVT ValueVT, const Value *V) {
   assert(ValueVT.isVector() && "Not a vector value");
@@ -372,16 +371,16 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, SDLoc DL,
   return DAG.getNode(ISD::BUILD_VECTOR, DL, ValueVT, Val);
 }
 
-static void getCopyToPartsVector(SelectionDAG &DAG, SDLoc dl,
+static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &dl,
                                  SDValue Val, SDValue *Parts, unsigned NumParts,
                                  MVT PartVT, const Value *V);
 
 /// getCopyToParts - Create a series of nodes that contain the specified value
 /// split into legal parts.  If the parts contain more bits than Val, then, for
 /// integers, ExtendKind can be used to specify how to generate the extra bits.
-static void getCopyToParts(SelectionDAG &DAG, SDLoc DL,
-                           SDValue Val, SDValue *Parts, unsigned NumParts,
-                           MVT PartVT, const Value *V,
+static void getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                           SDValue *Parts, unsigned NumParts, MVT PartVT,
+                           const Value *V,
                            ISD::NodeType ExtendKind = ISD::ANY_EXTEND) {
   EVT ValueVT = Val.getValueType();
 
@@ -508,7 +507,7 @@ static void getCopyToParts(SelectionDAG &DAG, SDLoc DL,
 
 /// getCopyToPartsVector - Create a series of nodes that contain the specified
 /// value split into legal parts.
-static void getCopyToPartsVector(SelectionDAG &DAG, SDLoc DL,
+static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                                  SDValue Val, SDValue *Parts, unsigned NumParts,
                                  MVT PartVT, const Value *V) {
   EVT ValueVT = Val.getValueType();
@@ -637,9 +636,8 @@ RegsForValue::RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
 /// If the Flag pointer is NULL, no flag is used.
 SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
                                       FunctionLoweringInfo &FuncInfo,
-                                      SDLoc dl,
-                                      SDValue &Chain, SDValue *Flag,
-                                      const Value *V) const {
+                                      const SDLoc &dl, SDValue &Chain,
+                                      SDValue *Flag, const Value *V) const {
   // A Value with type {} or [0 x %t] needs no registers.
   if (ValueVTs.empty())
     return SDValue();
@@ -741,8 +739,9 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
 /// specified value into the registers specified by this object.  This uses
 /// Chain/Flag as the input and updates them for the output Chain/Flag.
 /// If the Flag pointer is NULL, no flag is used.
-void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG, SDLoc dl,
-                                 SDValue &Chain, SDValue *Flag, const Value *V,
+void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
+                                 const SDLoc &dl, SDValue &Chain, SDValue *Flag,
+                                 const Value *V,
                                  ISD::NodeType PreferredExtendType) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   ISD::NodeType ExtendKind = PreferredExtendType;
@@ -797,7 +796,7 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG, SDLoc dl,
 /// operand list.  This adds the code marker and includes the number of
 /// values added into it.
 void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
-                                        unsigned MatchingIdx, SDLoc dl,
+                                        unsigned MatchingIdx, const SDLoc &dl,
                                         SelectionDAG &DAG,
                                         std::vector<SDValue> &Ops) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -2000,7 +1999,8 @@ void SelectionDAGBuilder::visitJumpTableHeader(JumpTable &JT,
 
 /// Create a LOAD_STACK_GUARD node, and let it carry the target specific global
 /// variable if there exists one.
-static SDValue getLoadStackGuard(SelectionDAG &DAG, SDLoc DL, SDValue &Chain) {
+static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
+                                 SDValue &Chain) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
   MachineFunction &MF = DAG.getMachineFunction();
@@ -4111,8 +4111,7 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 ///   Op = (Op & 0x007fffff) | 0x3f800000;
 ///
 /// where Op is the hexadecimal representation of floating point value.
-static SDValue
-GetSignificand(SelectionDAG &DAG, SDValue Op, SDLoc dl) {
+static SDValue GetSignificand(SelectionDAG &DAG, SDValue Op, const SDLoc &dl) {
   SDValue t1 = DAG.getNode(ISD::AND, dl, MVT::i32, Op,
                            DAG.getConstant(0x007fffff, dl, MVT::i32));
   SDValue t2 = DAG.getNode(ISD::OR, dl, MVT::i32, t1,
@@ -4125,9 +4124,8 @@ GetSignificand(SelectionDAG &DAG, SDValue Op, SDLoc dl) {
 ///   (float)(int)(((Op & 0x7f800000) >> 23) - 127);
 ///
 /// where Op is the hexadecimal representation of floating point value.
-static SDValue
-GetExponent(SelectionDAG &DAG, SDValue Op, const TargetLowering &TLI,
-            SDLoc dl) {
+static SDValue GetExponent(SelectionDAG &DAG, SDValue Op,
+                           const TargetLowering &TLI, const SDLoc &dl) {
   SDValue t0 = DAG.getNode(ISD::AND, dl, MVT::i32, Op,
                            DAG.getConstant(0x7f800000, dl, MVT::i32));
   SDValue t1 = DAG.getNode(
@@ -4139,13 +4137,13 @@ GetExponent(SelectionDAG &DAG, SDValue Op, const TargetLowering &TLI,
 }
 
 /// getF32Constant - Get 32-bit floating point constant.
-static SDValue
-getF32Constant(SelectionDAG &DAG, unsigned Flt, SDLoc dl) {
+static SDValue getF32Constant(SelectionDAG &DAG, unsigned Flt,
+                              const SDLoc &dl) {
   return DAG.getConstantFP(APFloat(APFloat::IEEEsingle, APInt(32, Flt)), dl,
                            MVT::f32);
 }
 
-static SDValue getLimitedPrecisionExp2(SDValue t0, SDLoc dl,
+static SDValue getLimitedPrecisionExp2(SDValue t0, const SDLoc &dl,
                                        SelectionDAG &DAG) {
   // TODO: What fast-math-flags should be set on the floating-point nodes?
 
@@ -4237,7 +4235,7 @@ static SDValue getLimitedPrecisionExp2(SDValue t0, SDLoc dl,
 
 /// expandExp - Lower an exp intrinsic. Handles the special sequences for
 /// limited-precision mode.
-static SDValue expandExp(SDLoc dl, SDValue Op, SelectionDAG &DAG,
+static SDValue expandExp(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
                          const TargetLowering &TLI) {
   if (Op.getValueType() == MVT::f32 &&
       LimitFloatPrecision > 0 && LimitFloatPrecision <= 18) {
@@ -4260,7 +4258,7 @@ static SDValue expandExp(SDLoc dl, SDValue Op, SelectionDAG &DAG,
 
 /// expandLog - Lower a log intrinsic. Handles the special sequences for
 /// limited-precision mode.
-static SDValue expandLog(SDLoc dl, SDValue Op, SelectionDAG &DAG,
+static SDValue expandLog(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
                          const TargetLowering &TLI) {
 
   // TODO: What fast-math-flags should be set on the floating-point nodes?
@@ -4359,7 +4357,7 @@ static SDValue expandLog(SDLoc dl, SDValue Op, SelectionDAG &DAG,
 
 /// expandLog2 - Lower a log2 intrinsic. Handles the special sequences for
 /// limited-precision mode.
-static SDValue expandLog2(SDLoc dl, SDValue Op, SelectionDAG &DAG,
+static SDValue expandLog2(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
                           const TargetLowering &TLI) {
 
   // TODO: What fast-math-flags should be set on the floating-point nodes?
@@ -4457,7 +4455,7 @@ static SDValue expandLog2(SDLoc dl, SDValue Op, SelectionDAG &DAG,
 
 /// expandLog10 - Lower a log10 intrinsic. Handles the special sequences for
 /// limited-precision mode.
-static SDValue expandLog10(SDLoc dl, SDValue Op, SelectionDAG &DAG,
+static SDValue expandLog10(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
                            const TargetLowering &TLI) {
 
   // TODO: What fast-math-flags should be set on the floating-point nodes?
@@ -4548,7 +4546,7 @@ static SDValue expandLog10(SDLoc dl, SDValue Op, SelectionDAG &DAG,
 
 /// expandExp2 - Lower an exp2 intrinsic. Handles the special sequences for
 /// limited-precision mode.
-static SDValue expandExp2(SDLoc dl, SDValue Op, SelectionDAG &DAG,
+static SDValue expandExp2(const SDLoc &dl, SDValue Op, SelectionDAG &DAG,
                           const TargetLowering &TLI) {
   if (Op.getValueType() == MVT::f32 &&
       LimitFloatPrecision > 0 && LimitFloatPrecision <= 18)
@@ -4560,7 +4558,7 @@ static SDValue expandExp2(SDLoc dl, SDValue Op, SelectionDAG &DAG,
 
 /// visitPow - Lower a pow intrinsic. Handles the special sequences for
 /// limited-precision mode with x == 10.0f.
-static SDValue expandPow(SDLoc dl, SDValue LHS, SDValue RHS,
+static SDValue expandPow(const SDLoc &dl, SDValue LHS, SDValue RHS,
                          SelectionDAG &DAG, const TargetLowering &TLI) {
   bool IsExp10 = false;
   if (LHS.getValueType() == MVT::f32 && RHS.getValueType() == MVT::f32 &&
@@ -4589,7 +4587,7 @@ static SDValue expandPow(SDLoc dl, SDValue LHS, SDValue RHS,
 
 
 /// ExpandPowI - Expand a llvm.powi intrinsic.
-static SDValue ExpandPowI(SDLoc DL, SDValue LHS, SDValue RHS,
+static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
                           SelectionDAG &DAG) {
   // If RHS is a constant, we can expand this out to a multiplication tree,
   // otherwise we end up lowering to a call to __powidf2 (for example).  When
@@ -6450,9 +6448,8 @@ typedef SmallVector<SDISelAsmOperandInfo,16> SDISelAsmOperandInfoVector;
 ///
 ///   OpInfo describes the operand.
 ///
-static void GetRegistersForValue(SelectionDAG &DAG,
-                                 const TargetLowering &TLI,
-                                 SDLoc DL,
+static void GetRegistersForValue(SelectionDAG &DAG, const TargetLowering &TLI,
+                                 const SDLoc &DL,
                                  SDISelAsmOperandInfo &OpInfo) {
   LLVMContext &Context = *DAG.getContext();
 
@@ -7219,7 +7216,7 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
 /// only available in a register, then the runtime would need to trap when
 /// execution reaches the StackMap in order to read the alloca's location.
 static void addStackMapLiveVars(ImmutableCallSite CS, unsigned StartIdx,
-                                SDLoc DL, SmallVectorImpl<SDValue> &Ops,
+                                const SDLoc &DL, SmallVectorImpl<SDValue> &Ops,
                                 SelectionDAGBuilder &Builder) {
   for (unsigned i = StartIdx, e = CS.arg_size(); i != e; ++i) {
     SDValue OpVal = Builder.getValue(CS.getArgument(i));

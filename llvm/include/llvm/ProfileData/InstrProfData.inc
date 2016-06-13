@@ -72,7 +72,7 @@
 #endif
 INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
-		IndexedInstrProf::ComputeHash(getPGOFuncNameVarInitializer(Inc->getName()))))
+                IndexedInstrProf::ComputeHash(getPGOFuncNameVarInitializer(Inc->getName()))))
 INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                 Inc->getHash()->getZExtValue()))
@@ -204,7 +204,7 @@ COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
 #else
 COVMAP_FUNC_RECORD(const int64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
                    llvm::ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
-	           llvm::IndexedInstrProf::ComputeHash(NameValue)))
+                   llvm::IndexedInstrProf::ComputeHash(NameValue)))
 #endif
 COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), DataSize, \
                    llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx),\

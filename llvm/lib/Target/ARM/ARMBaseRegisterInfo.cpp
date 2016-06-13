@@ -408,13 +408,10 @@ ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 /// emitLoadConstPool - Emits a load from constpool to materialize the
 /// specified immediate.
-void ARMBaseRegisterInfo::
-emitLoadConstPool(MachineBasicBlock &MBB,
-                  MachineBasicBlock::iterator &MBBI,
-                  DebugLoc dl,
-                  unsigned DestReg, unsigned SubIdx, int Val,
-                  ARMCC::CondCodes Pred,
-                  unsigned PredReg, unsigned MIFlags) const {
+void ARMBaseRegisterInfo::emitLoadConstPool(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+    const DebugLoc &dl, unsigned DestReg, unsigned SubIdx, int Val,
+    ARMCC::CondCodes Pred, unsigned PredReg, unsigned MIFlags) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineConstantPool *ConstantPool = MF.getConstantPool();

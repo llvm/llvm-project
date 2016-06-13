@@ -83,7 +83,7 @@ private:
                       SDValue &AluOp);
 
   // getI32Imm - Return a target constant with the specified value, of type i32.
-  inline SDValue getI32Imm(unsigned Imm, SDLoc DL) {
+  inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
 

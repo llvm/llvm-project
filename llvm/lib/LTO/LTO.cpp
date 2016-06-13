@@ -43,10 +43,10 @@ std::unique_ptr<Module> loadModuleFromBuffer(const MemoryBufferRef &Buffer,
 static void thinLTOResolveWeakForLinkerGUID(
     GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
     DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
-    std::function<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    std::function<bool(StringRef, GlobalValue::GUID)> isExported,
-    std::function<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
+    function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage) {
   auto HasMultipleCopies = GVSummaryList.size() > 1;
 
@@ -87,10 +87,10 @@ static void thinLTOResolveWeakForLinkerGUID(
 // one copy.
 void thinLTOResolveWeakForLinkerInIndex(
     ModuleSummaryIndex &Index,
-    std::function<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    std::function<bool(StringRef, GlobalValue::GUID)> isExported,
-    std::function<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
+    function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage) {
   if (Index.modulePaths().size() == 1)
     // Nothing to do if we don't have multiple modules
@@ -112,7 +112,7 @@ void thinLTOResolveWeakForLinkerInIndex(
 
 static void thinLTOInternalizeAndPromoteGUID(
     GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
-    std::function<bool(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &S : GVSummaryList) {
     if (isExported(S->modulePath(), GUID)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
@@ -126,7 +126,7 @@ static void thinLTOInternalizeAndPromoteGUID(
 // as external and non-exported values as internal.
 void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    std::function<bool(StringRef, GlobalValue::GUID)> isExported) {
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported) {
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(I.second, I.first, isExported);
 }

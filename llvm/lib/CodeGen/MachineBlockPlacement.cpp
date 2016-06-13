@@ -283,6 +283,11 @@ class MachineBlockPlacement : public MachineFunctionPass {
   collectViableSuccessors(MachineBasicBlock *BB, BlockChain &Chain,
                           const BlockFilterSet *BlockFilter,
                           SmallVector<MachineBasicBlock *, 4> &Successors);
+  bool shouldPredBlockBeOutlined(MachineBasicBlock *BB, MachineBasicBlock *Succ,
+                                 BlockChain &Chain,
+                                 const BlockFilterSet *BlockFilter,
+                                 BranchProbability SuccProb,
+                                 BranchProbability HotProb);
   MachineBasicBlock *selectBestSuccessor(MachineBasicBlock *BB,
                                          BlockChain &Chain,
                                          const BlockFilterSet *BlockFilter);
@@ -318,6 +323,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
                   const BlockFilterSet &LoopBlockSet);
   void rotateLoopWithProfile(BlockChain &LoopChain, MachineLoop &L,
                              const BlockFilterSet &LoopBlockSet);
+  void collectMustExecuteBBs(MachineFunction &F);
   void buildCFGChains(MachineFunction &F);
   void optimizeBranches(MachineFunction &F);
   void alignBlocks(MachineFunction &F);
@@ -470,6 +476,42 @@ getAdjustedProbability(BranchProbability OrigProb,
   return SuccProb;
 }
 
+/// When the option OutlineOptionalBranches is on, this method
+/// checks if the fallthrough candidate block \p Succ (of block
+/// \p BB) also has other unscheduled predecessor blocks which
+/// are also successors of \p BB (forming triagular shape CFG).
+/// If none of such predecessors are small, it returns true.
+/// The caller can choose to select \p Succ as the layout successors
+/// so that \p Succ's predecessors (optional branches) can be
+/// outlined.
+/// FIXME: fold this with more general layout cost analysis.
+bool MachineBlockPlacement::shouldPredBlockBeOutlined(
+    MachineBasicBlock *BB, MachineBasicBlock *Succ, BlockChain &Chain,
+    const BlockFilterSet *BlockFilter, BranchProbability SuccProb,
+    BranchProbability HotProb) {
+  if (!OutlineOptionalBranches)
+    return false;
+  // If we outline optional branches, look whether Succ is unavoidable, i.e.
+  // dominates all terminators of the MachineFunction. If it does, other
+  // successors must be optional. Don't do this for cold branches.
+  if (SuccProb > HotProb.getCompl() && UnavoidableBlocks.count(Succ) > 0) {
+    for (MachineBasicBlock *Pred : Succ->predecessors()) {
+      // Check whether there is an unplaced optional branch.
+      if (Pred == Succ || (BlockFilter && !BlockFilter->count(Pred)) ||
+          BlockToChain[Pred] == &Chain)
+        continue;
+      // Check whether the optional branch has exactly one BB.
+      if (Pred->pred_size() > 1 || *Pred->pred_begin() != BB)
+        continue;
+      // Check whether the optional branch is small.
+      if (Pred->size() < OutlineOptionalThreshold)
+        return false;
+    }
+    return true;
+  } else
+    return false;
+}
+
 /// \brief Select the best successor for a block.
 ///
 /// This looks across all successors of a particular block and attempts to
@@ -498,29 +540,10 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
     BranchProbability SuccProb =
         getAdjustedProbability(RealSuccProb, AdjustedSumProb);
 
-    // If we outline optional branches, look whether Succ is unavoidable, i.e.
-    // dominates all terminators of the MachineFunction. If it does, other
-    // successors must be optional. Don't do this for cold branches.
-    if (OutlineOptionalBranches && SuccProb > HotProb.getCompl() &&
-        UnavoidableBlocks.count(Succ) > 0) {
-      auto HasShortOptionalBranch = [&]() {
-        for (MachineBasicBlock *Pred : Succ->predecessors()) {
-          // Check whether there is an unplaced optional branch.
-          if (Pred == Succ || (BlockFilter && !BlockFilter->count(Pred)) ||
-              BlockToChain[Pred] == &Chain)
-            continue;
-          // Check whether the optional branch has exactly one BB.
-          if (Pred->pred_size() > 1 || *Pred->pred_begin() != BB)
-            continue;
-          // Check whether the optional branch is small.
-          if (Pred->size() < OutlineOptionalThreshold)
-            return true;
-        }
-        return false;
-      };
-      if (!HasShortOptionalBranch())
-        return Succ;
-    }
+    // This heuristic is off by default.
+    if (shouldPredBlockBeOutlined(BB, Succ, Chain, BlockFilter, SuccProb,
+                                  HotProb))
+      return Succ;
 
     // Only consider successors which are either "hot", or wouldn't violate
     // any CFG constraints.
@@ -1251,6 +1274,31 @@ void MachineBlockPlacement::buildLoopChains(MachineFunction &F,
   });
 }
 
+/// When OutlineOpitonalBranches is on, this method colects BBs that
+/// dominates all terminator blocks of the function \p F.
+void MachineBlockPlacement::collectMustExecuteBBs(MachineFunction &F) {
+  if (OutlineOptionalBranches) {
+    // Find the nearest common dominator of all of F's terminators.
+    MachineBasicBlock *Terminator = nullptr;
+    for (MachineBasicBlock &MBB : F) {
+      if (MBB.succ_size() == 0) {
+        if (Terminator == nullptr)
+          Terminator = &MBB;
+        else
+          Terminator = MDT->findNearestCommonDominator(Terminator, &MBB);
+      }
+    }
+
+    // MBBs dominating this common dominator are unavoidable.
+    UnavoidableBlocks.clear();
+    for (MachineBasicBlock &MBB : F) {
+      if (MDT->dominates(&MBB, Terminator)) {
+        UnavoidableBlocks.insert(&MBB);
+      }
+    }
+  }
+}
+
 void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
   // Ensure that every BB in the function has an associated chain to simplify
   // the assumptions of the remaining algorithm.
@@ -1281,26 +1329,8 @@ void MachineBlockPlacement::buildCFGChains(MachineFunction &F) {
     }
   }
 
-  if (OutlineOptionalBranches) {
-    // Find the nearest common dominator of all of F's terminators.
-    MachineBasicBlock *Terminator = nullptr;
-    for (MachineBasicBlock &MBB : F) {
-      if (MBB.succ_size() == 0) {
-        if (Terminator == nullptr)
-          Terminator = &MBB;
-        else
-          Terminator = MDT->findNearestCommonDominator(Terminator, &MBB);
-      }
-    }
-
-    // MBBs dominating this common dominator are unavoidable.
-    UnavoidableBlocks.clear();
-    for (MachineBasicBlock &MBB : F) {
-      if (MDT->dominates(&MBB, Terminator)) {
-        UnavoidableBlocks.insert(&MBB);
-      }
-    }
-  }
+  // Turned on with OutlineOptionalBranches option
+  collectMustExecuteBBs(F);
 
   // Build any loop-based chains.
   for (MachineLoop *L : *MLI)

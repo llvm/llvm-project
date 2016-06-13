@@ -145,17 +145,19 @@ namespace {
                             MachineBasicBlock::const_iterator Before);
     unsigned findFreeReg(const TargetRegisterClass &RegClass);
     void UpdateBaseRegUses(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI,
-                           DebugLoc DL, unsigned Base, unsigned WordOffset,
+                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                           unsigned Base, unsigned WordOffset,
                            ARMCC::CondCodes Pred, unsigned PredReg);
-    MachineInstr *CreateLoadStoreMulti(MachineBasicBlock &MBB,
-        MachineBasicBlock::iterator InsertBefore, int Offset, unsigned Base,
-        bool BaseKill, unsigned Opcode, ARMCC::CondCodes Pred, unsigned PredReg,
-        DebugLoc DL, ArrayRef<std::pair<unsigned, bool>> Regs);
-    MachineInstr *CreateLoadStoreDouble(MachineBasicBlock &MBB,
-        MachineBasicBlock::iterator InsertBefore, int Offset, unsigned Base,
-        bool BaseKill, unsigned Opcode, ARMCC::CondCodes Pred, unsigned PredReg,
-        DebugLoc DL, ArrayRef<std::pair<unsigned, bool>> Regs) const;
+    MachineInstr *CreateLoadStoreMulti(
+        MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+        int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
+        ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
+        ArrayRef<std::pair<unsigned, bool>> Regs);
+    MachineInstr *CreateLoadStoreDouble(
+        MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+        int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
+        ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
+        ArrayRef<std::pair<unsigned, bool>> Regs) const;
     void FormCandidates(const MemOpQueue &MemOps);
     MachineInstr *MergeOpsUpdate(const MergeCandidate &Cand);
     bool FixInvalidRegPairOp(MachineBasicBlock &MBB,
@@ -450,12 +452,12 @@ static unsigned getLSMultipleTransferSize(const MachineInstr *MI) {
 
 /// Update future uses of the base register with the offset introduced
 /// due to writeback. This function only works on Thumb1.
-void
-ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI,
-                                   DebugLoc DL, unsigned Base,
-                                   unsigned WordOffset,
-                                   ARMCC::CondCodes Pred, unsigned PredReg) {
+void ARMLoadStoreOpt::UpdateBaseRegUses(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL, unsigned Base,
+                                        unsigned WordOffset,
+                                        ARMCC::CondCodes Pred,
+                                        unsigned PredReg) {
   assert(isThumb1 && "Can only update base register uses for Thumb1!");
   // Start updating any instructions with immediate offsets. Insert a SUB before
   // the first non-updateable instruction (if any).
@@ -588,10 +590,11 @@ static bool ContainsReg(const ArrayRef<std::pair<unsigned, bool>> &Regs,
 /// Create and insert a LDM or STM with Base as base register and registers in
 /// Regs as the register operands that would be loaded / stored.  It returns
 /// true if the transformation is done.
-MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, int Offset, unsigned Base,
-    bool BaseKill, unsigned Opcode, ARMCC::CondCodes Pred, unsigned PredReg,
-    DebugLoc DL, ArrayRef<std::pair<unsigned, bool>> Regs) {
+MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+    int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
+    ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
+    ArrayRef<std::pair<unsigned, bool>> Regs) {
   unsigned NumRegs = Regs.size();
   assert(NumRegs > 1);
 
@@ -784,10 +787,11 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(MachineBasicBlock &MBB,
   return MIB.getInstr();
 }
 
-MachineInstr *ARMLoadStoreOpt::CreateLoadStoreDouble(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, int Offset, unsigned Base,
-    bool BaseKill, unsigned Opcode, ARMCC::CondCodes Pred, unsigned PredReg,
-    DebugLoc DL, ArrayRef<std::pair<unsigned, bool>> Regs) const {
+MachineInstr *ARMLoadStoreOpt::CreateLoadStoreDouble(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+    int Offset, unsigned Base, bool BaseKill, unsigned Opcode,
+    ARMCC::CondCodes Pred, unsigned PredReg, const DebugLoc &DL,
+    ArrayRef<std::pair<unsigned, bool>> Regs) const {
   bool IsLoad = isi32Load(Opcode);
   assert((IsLoad || isi32Store(Opcode)) && "Must have integer load or store");
   unsigned LoadStoreOpcode = IsLoad ? ARM::t2LDRDi8 : ARM::t2STRDi8;
@@ -1543,14 +1547,13 @@ static bool isMemoryOp(const MachineInstr &MI) {
 }
 
 static void InsertLDR_STR(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &MBBI,
-                          int Offset, bool isDef,
-                          DebugLoc DL, unsigned NewOpc,
+                          MachineBasicBlock::iterator &MBBI, int Offset,
+                          bool isDef, const DebugLoc &DL, unsigned NewOpc,
                           unsigned Reg, bool RegDeadKill, bool RegUndef,
                           unsigned BaseReg, bool BaseKill, bool BaseUndef,
-                          bool OffKill, bool OffUndef,
-                          ARMCC::CondCodes Pred, unsigned PredReg,
-                          const TargetInstrInfo *TII, bool isT2) {
+                          bool OffKill, bool OffUndef, ARMCC::CondCodes Pred,
+                          unsigned PredReg, const TargetInstrInfo *TII,
+                          bool isT2) {
   if (isDef) {
     MachineInstrBuilder MIB = BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
                                       TII->get(NewOpc))

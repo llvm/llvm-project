@@ -224,8 +224,8 @@ namespace {
   private:
     bool runOnMachineBasicBlock(MachineBasicBlock &MBB);
 
-    Iter replaceWithCompactBranch(MachineBasicBlock &MBB,
-                                  Iter Branch, DebugLoc DL);
+    Iter replaceWithCompactBranch(MachineBasicBlock &MBB, Iter Branch,
+                                  const DebugLoc &DL);
 
     /// This function checks if it is valid to move Candidate to the delay slot
     /// and returns true if it isn't. It also updates memory and register
@@ -529,8 +529,8 @@ getUnderlyingObjects(const MachineInstr &MI,
 }
 
 // Replace Branch with the compact branch instruction.
-Iter Filler::replaceWithCompactBranch(MachineBasicBlock &MBB,
-                                      Iter Branch, DebugLoc DL) {
+Iter Filler::replaceWithCompactBranch(MachineBasicBlock &MBB, Iter Branch,
+                                      const DebugLoc &DL) {
   const MipsSubtarget &STI = MBB.getParent()->getSubtarget<MipsSubtarget>();
   const MipsInstrInfo *TII = STI.getInstrInfo();
 

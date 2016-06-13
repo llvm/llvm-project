@@ -39,7 +39,7 @@ class Printable {
 public:
   std::function<void(raw_ostream &OS)> Print;
   Printable(const std::function<void(raw_ostream &OS)> Print)
-    : Print(Print) {}
+      : Print(std::move(Print)) {}
 };
 
 static inline raw_ostream &operator<<(raw_ostream &OS, const Printable &P) {

@@ -1098,5 +1098,5 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
 /// reduction pass.
 FunctionPass *llvm::createThumb2SizeReductionPass(
     std::function<bool(const Function &)> Ftor) {
-  return new Thumb2SizeReduce(Ftor);
+  return new Thumb2SizeReduce(std::move(Ftor));
 }

@@ -196,7 +196,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // register and use it with offset 0.
     auto &MRI = MF.getRegInfo();
     unsigned TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-    DebugLoc DL = MI.getDebugLoc();
+    const DebugLoc &DL = MI.getDebugLoc();
     BuildMI(MB, II, DL, HII.get(Hexagon::A2_addi), TmpR)
       .addReg(BP)
       .addImm(RealOffset);

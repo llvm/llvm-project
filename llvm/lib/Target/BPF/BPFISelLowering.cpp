@@ -33,13 +33,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bpf-lower"
 
-static void fail(SDLoc DL, SelectionDAG &DAG, const char *Msg) {
+static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *Msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
       DiagnosticInfoUnsupported(*MF.getFunction(), Msg, DL.getDebugLoc()));
 }
 
-static void fail(SDLoc DL, SelectionDAG &DAG, const char *Msg, SDValue Val) {
+static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *Msg,
+                 SDValue Val) {
   MachineFunction &MF = DAG.getMachineFunction();
   std::string Str;
   raw_string_ostream OS(Str);
@@ -149,8 +150,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue BPFTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL, SelectionDAG &DAG,
-    SmallVectorImpl<SDValue> &InVals) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   switch (CallConv) {
   default:
     llvm_unreachable("Unsupported calling convention");
@@ -345,7 +346,7 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                bool IsVarArg,
                                const SmallVectorImpl<ISD::OutputArg> &Outs,
                                const SmallVectorImpl<SDValue> &OutVals,
-                               SDLoc DL, SelectionDAG &DAG) const {
+                               const SDLoc &DL, SelectionDAG &DAG) const {
   unsigned Opc = BPFISD::RET_FLAG;
 
   // CCValAssign - represent the assignment of the return value to a location
@@ -390,8 +391,8 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
 SDValue BPFTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL, SelectionDAG &DAG,
-    SmallVectorImpl<SDValue> &InVals) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   // Assign locations to each value returned by this call.

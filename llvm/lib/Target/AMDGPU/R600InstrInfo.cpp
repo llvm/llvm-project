@@ -43,11 +43,10 @@ bool R600InstrInfo::isVector(const MachineInstr &MI) const {
   return get(MI.getOpcode()).TSFlags & R600_InstFlag::VECTOR;
 }
 
-void
-R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, DebugLoc DL,
-                           unsigned DestReg, unsigned SrcReg,
-                           bool KillSrc) const {
+void R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI,
+                                const DebugLoc &DL, unsigned DestReg,
+                                unsigned SrcReg, bool KillSrc) const {
   unsigned VectorComponents = 0;
   if ((AMDGPU::R600_Reg128RegClass.contains(DestReg) ||
       AMDGPU::R600_Reg128VerticalRegClass.contains(DestReg)) &&
@@ -772,12 +771,11 @@ MachineBasicBlock::iterator FindLastAluClause(MachineBasicBlock &MBB) {
   return MBB.end();
 }
 
-unsigned
-R600InstrInfo::InsertBranch(MachineBasicBlock &MBB,
-                            MachineBasicBlock *TBB,
-                            MachineBasicBlock *FBB,
-                            ArrayRef<MachineOperand> Cond,
-                            DebugLoc DL) const {
+unsigned R600InstrInfo::InsertBranch(MachineBasicBlock &MBB,
+                                     MachineBasicBlock *TBB,
+                                     MachineBasicBlock *FBB,
+                                     ArrayRef<MachineOperand> Cond,
+                                     const DebugLoc &DL) const {
   assert(TBB && "InsertBranch must not be told to insert a fallthrough");
 
   if (!FBB) {

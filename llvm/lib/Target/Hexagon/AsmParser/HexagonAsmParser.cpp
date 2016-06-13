@@ -1139,7 +1139,7 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
           static char const *RParen = ")";
           Operands.push_back(HexagonOperand::CreateToken(LParen, Begin));
           Operands.push_back(HexagonOperand::CreateReg(Register, Begin, End));
-          AsmToken MaybeDotNew = Lexer.getTok();
+          const AsmToken &MaybeDotNew = Lexer.getTok();
           if (MaybeDotNew.is(AsmToken::TokenKind::Identifier) &&
               MaybeDotNew.getString().equals_lower(".new"))
             splitIdentifier(Operands);
@@ -1155,7 +1155,7 @@ bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
           Operands.insert(Operands.end () - 1,
                           HexagonOperand::CreateToken(LParen, Begin));
           Operands.push_back(HexagonOperand::CreateReg(Register, Begin, End));
-          AsmToken MaybeDotNew = Lexer.getTok();
+          const AsmToken &MaybeDotNew = Lexer.getTok();
           if (MaybeDotNew.is(AsmToken::TokenKind::Identifier) &&
               MaybeDotNew.getString().equals_lower(".new"))
             splitIdentifier(Operands);

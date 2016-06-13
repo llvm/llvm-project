@@ -241,7 +241,7 @@ namespace {
 
     void emitSpecialCodeForMain();
 
-    inline void getAddressOperands(X86ISelAddressMode &AM, SDLoc DL,
+    inline void getAddressOperands(X86ISelAddressMode &AM, const SDLoc &DL,
                                    SDValue &Base, SDValue &Scale,
                                    SDValue &Index, SDValue &Disp,
                                    SDValue &Segment) {
@@ -360,12 +360,12 @@ namespace {
     }
 
     /// Return a target constant with the specified value of type i8.
-    inline SDValue getI8Imm(unsigned Imm, SDLoc DL) {
+    inline SDValue getI8Imm(unsigned Imm, const SDLoc &DL) {
       return CurDAG->getTargetConstant(Imm, DL, MVT::i8);
     }
 
     /// Return a target constant with the specified value, of type i32.
-    inline SDValue getI32Imm(unsigned Imm, SDLoc DL) {
+    inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
       return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
     }
 

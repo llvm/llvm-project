@@ -2056,11 +2056,11 @@ const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
 }
 
 SDValue
-X86TargetLowering::LowerReturn(SDValue Chain,
-                               CallingConv::ID CallConv, bool isVarArg,
+X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                               bool isVarArg,
                                const SmallVectorImpl<ISD::OutputArg> &Outs,
                                const SmallVectorImpl<SDValue> &OutVals,
-                               SDLoc dl, SelectionDAG &DAG) const {
+                               const SDLoc &dl, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
@@ -2278,12 +2278,10 @@ EVT X86TargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
 /// Lower the result values of a call into the
 /// appropriate copies out of appropriate physical registers.
 ///
-SDValue
-X86TargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
-                                   CallingConv::ID CallConv, bool isVarArg,
-                                   const SmallVectorImpl<ISD::InputArg> &Ins,
-                                   SDLoc dl, SelectionDAG &DAG,
-                                   SmallVectorImpl<SDValue> &InVals) const {
+SDValue X86TargetLowering::LowerCallResult(
+    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -2380,10 +2378,9 @@ argsAreStructReturn(const SmallVectorImpl<ISD::InputArg> &Ins, bool IsMCU) {
 /// Make a copy of an aggregate at address specified by "Src" to address
 /// "Dst" with size and alignment information specified by the specific
 /// parameter attribute. The copy will be passed as a byval function parameter.
-static SDValue
-CreateCopyOfByValArgument(SDValue Src, SDValue Dst, SDValue Chain,
-                          ISD::ArgFlagsTy Flags, SelectionDAG &DAG,
-                          SDLoc dl) {
+static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
+                                         SDValue Chain, ISD::ArgFlagsTy Flags,
+                                         SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
 
   return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Flags.getByValAlign(),
@@ -2437,13 +2434,11 @@ bool X86TargetLowering::mayBeEmittedAsTailCall(CallInst *CI) const {
 }
 
 SDValue
-X86TargetLowering::LowerMemArgument(SDValue Chain,
-                                    CallingConv::ID CallConv,
+X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
                                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                                    SDLoc dl, SelectionDAG &DAG,
+                                    const SDLoc &dl, SelectionDAG &DAG,
                                     const CCValAssign &VA,
-                                    MachineFrameInfo *MFI,
-                                    unsigned i) const {
+                                    MachineFrameInfo *MFI, unsigned i) const {
   // Create the nodes corresponding to a load from this parameter slot.
   ISD::ArgFlagsTy Flags = Ins[i].Flags;
   bool AlwaysUseMutable = shouldGuaranteeTCO(
@@ -2563,8 +2558,8 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
 
 SDValue X86TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc dl, SelectionDAG &DAG,
-    SmallVectorImpl<SDValue> &InVals) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
   const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
@@ -2897,12 +2892,11 @@ SDValue X86TargetLowering::LowerFormalArguments(
   return Chain;
 }
 
-SDValue
-X86TargetLowering::LowerMemOpCallTo(SDValue Chain,
-                                    SDValue StackPtr, SDValue Arg,
-                                    SDLoc dl, SelectionDAG &DAG,
-                                    const CCValAssign &VA,
-                                    ISD::ArgFlagsTy Flags) const {
+SDValue X86TargetLowering::LowerMemOpCallTo(SDValue Chain, SDValue StackPtr,
+                                            SDValue Arg, const SDLoc &dl,
+                                            SelectionDAG &DAG,
+                                            const CCValAssign &VA,
+                                            ISD::ArgFlagsTy Flags) const {
   unsigned LocMemOffset = VA.getLocMemOffset();
   SDValue PtrOff = DAG.getIntPtrConstant(LocMemOffset, dl);
   PtrOff = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
@@ -2918,11 +2912,9 @@ X86TargetLowering::LowerMemOpCallTo(SDValue Chain,
 
 /// Emit a load of return address if tail call
 /// optimization is performed and it is required.
-SDValue
-X86TargetLowering::EmitTailCallLoadRetAddr(SelectionDAG &DAG,
-                                           SDValue &OutRetAddr, SDValue Chain,
-                                           bool IsTailCall, bool Is64Bit,
-                                           int FPDiff, SDLoc dl) const {
+SDValue X86TargetLowering::EmitTailCallLoadRetAddr(
+    SelectionDAG &DAG, SDValue &OutRetAddr, SDValue Chain, bool IsTailCall,
+    bool Is64Bit, int FPDiff, const SDLoc &dl) const {
   // Adjust the Return address stack slot.
   EVT VT = getPointerTy(DAG.getDataLayout());
   OutRetAddr = getReturnAddressFrameIndex(DAG);
@@ -2938,7 +2930,7 @@ X86TargetLowering::EmitTailCallLoadRetAddr(SelectionDAG &DAG,
 static SDValue EmitTailCallStoreRetAddr(SelectionDAG &DAG, MachineFunction &MF,
                                         SDValue Chain, SDValue RetAddrFrIdx,
                                         EVT PtrVT, unsigned SlotSize,
-                                        int FPDiff, SDLoc dl) {
+                                        int FPDiff, const SDLoc &dl) {
   // Store the return address to the appropriate stack slot.
   if (!FPDiff) return Chain;
   // Calculate the new stack slot for the return address.
@@ -2955,7 +2947,7 @@ static SDValue EmitTailCallStoreRetAddr(SelectionDAG &DAG, MachineFunction &MF,
 
 /// Returns a vector_shuffle mask for an movs{s|d}, movd
 /// operation of specified width.
-static SDValue getMOVL(SelectionDAG &DAG, SDLoc dl, MVT VT, SDValue V1,
+static SDValue getMOVL(SelectionDAG &DAG, const SDLoc &dl, MVT VT, SDValue V1,
                        SDValue V2) {
   unsigned NumElems = VT.getVectorNumElements();
   SmallVector<int, 8> Mask;
@@ -3835,7 +3827,7 @@ static bool isTargetShuffle(unsigned Opcode) {
   }
 }
 
-static SDValue getTargetShuffleNode(unsigned Opc, SDLoc dl, MVT VT,
+static SDValue getTargetShuffleNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                     SDValue V1, unsigned TargetMask,
                                     SelectionDAG &DAG) {
   switch(Opc) {
@@ -3850,7 +3842,7 @@ static SDValue getTargetShuffleNode(unsigned Opc, SDLoc dl, MVT VT,
   }
 }
 
-static SDValue getTargetShuffleNode(unsigned Opc, SDLoc dl, MVT VT,
+static SDValue getTargetShuffleNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                     SDValue V1, SDValue V2, SelectionDAG &DAG) {
   switch(Opc) {
   default: llvm_unreachable("Unknown x86 shuffle node");
@@ -3974,8 +3966,9 @@ static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
 /// Do a one-to-one translation of a ISD::CondCode to the X86-specific
 /// condition code, returning the condition code and the LHS/RHS of the
 /// comparison to make.
-static unsigned TranslateX86CC(ISD::CondCode SetCCOpcode, SDLoc DL, bool isFP,
-                               SDValue &LHS, SDValue &RHS, SelectionDAG &DAG) {
+static unsigned TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
+                               bool isFP, SDValue &LHS, SDValue &RHS,
+                               SelectionDAG &DAG) {
   if (!isFP) {
     if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
       if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnesValue()) {
@@ -4354,9 +4347,8 @@ bool X86::isZeroNode(SDValue Elt) {
 // Build a vector of constants
 // Use an UNDEF node if MaskElt == -1.
 // Spilt 64-bit constants in the 32-bit mode.
-static SDValue getConstVector(ArrayRef<int> Values, MVT VT,
-                              SelectionDAG &DAG,
-                              SDLoc dl, bool IsMask = false) {
+static SDValue getConstVector(ArrayRef<int> Values, MVT VT, SelectionDAG &DAG,
+                              const SDLoc &dl, bool IsMask = false) {
 
   SmallVector<SDValue, 32>  Ops;
   bool Split = false;
@@ -4387,7 +4379,7 @@ static SDValue getConstVector(ArrayRef<int> Values, MVT VT,
 
 /// Returns a vector of specified type with all zero elements.
 static SDValue getZeroVector(MVT VT, const X86Subtarget &Subtarget,
-                             SelectionDAG &DAG, SDLoc dl) {
+                             SelectionDAG &DAG, const SDLoc &dl) {
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector() ||
           VT.getVectorElementType() == MVT::i1) &&
          "Unexpected vector type");
@@ -4411,9 +4403,8 @@ static SDValue getZeroVector(MVT VT, const X86Subtarget &Subtarget,
   return DAG.getBitcast(VT, Vec);
 }
 
-static SDValue extractSubVector(SDValue Vec, unsigned IdxVal,
-                                SelectionDAG &DAG, SDLoc dl,
-                                unsigned vectorWidth) {
+static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
+                                const SDLoc &dl, unsigned vectorWidth) {
   assert((vectorWidth == 128 || vectorWidth == 256) &&
          "Unsupported vector width");
   EVT VT = Vec.getValueType();
@@ -4450,7 +4441,7 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal,
 /// 128 bits we want.  It need not be aligned to a 128-bit boundary.  That makes
 /// lowering EXTRACT_VECTOR_ELT operations easier.
 static SDValue extract128BitVector(SDValue Vec, unsigned IdxVal,
-                                   SelectionDAG &DAG, SDLoc dl) {
+                                   SelectionDAG &DAG, const SDLoc &dl) {
   assert((Vec.getValueType().is256BitVector() ||
           Vec.getValueType().is512BitVector()) && "Unexpected vector size!");
   return extractSubVector(Vec, IdxVal, DAG, dl, 128);
@@ -4458,14 +4449,14 @@ static SDValue extract128BitVector(SDValue Vec, unsigned IdxVal,
 
 /// Generate a DAG to grab 256-bits from a 512-bit vector.
 static SDValue extract256BitVector(SDValue Vec, unsigned IdxVal,
-                                   SelectionDAG &DAG, SDLoc dl) {
+                                   SelectionDAG &DAG, const SDLoc &dl) {
   assert(Vec.getValueType().is512BitVector() && "Unexpected vector size!");
   return extractSubVector(Vec, IdxVal, DAG, dl, 256);
 }
 
-static SDValue insertSubVector(SDValue Result, SDValue Vec,
-                               unsigned IdxVal, SelectionDAG &DAG,
-                               SDLoc dl, unsigned vectorWidth) {
+static SDValue insertSubVector(SDValue Result, SDValue Vec, unsigned IdxVal,
+                               SelectionDAG &DAG, const SDLoc &dl,
+                               unsigned vectorWidth) {
   assert((vectorWidth == 128 || vectorWidth == 256) &&
          "Unsupported vector width");
   // Inserting UNDEF is Result
@@ -4494,7 +4485,7 @@ static SDValue insertSubVector(SDValue Result, SDValue Vec,
 /// we want.  It need not be aligned to a 128-bit boundary.  That makes
 /// lowering INSERT_VECTOR_ELT operations easier.
 static SDValue insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
-                                  SelectionDAG &DAG, SDLoc dl) {
+                                  SelectionDAG &DAG, const SDLoc &dl) {
   assert(Vec.getValueType().is128BitVector() && "Unexpected vector size!");
 
   // For insertion into the zero index (low half) of a 256-bit vector, it is
@@ -4544,7 +4535,7 @@ static SDValue insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
 }
 
 static SDValue insert256BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
-                                  SelectionDAG &DAG, SDLoc dl) {
+                                  SelectionDAG &DAG, const SDLoc &dl) {
   assert(Vec.getValueType().is256BitVector() && "Unexpected vector size!");
   return insertSubVector(Result, Vec, IdxVal, DAG, dl, 256);
 }
@@ -4659,14 +4650,14 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
 /// large BUILD_VECTORS.
 static SDValue concat128BitVectors(SDValue V1, SDValue V2, EVT VT,
                                    unsigned NumElems, SelectionDAG &DAG,
-                                   SDLoc dl) {
+                                   const SDLoc &dl) {
   SDValue V = insert128BitVector(DAG.getUNDEF(VT), V1, 0, DAG, dl);
   return insert128BitVector(V, V2, NumElems / 2, DAG, dl);
 }
 
 static SDValue concat256BitVectors(SDValue V1, SDValue V2, EVT VT,
                                    unsigned NumElems, SelectionDAG &DAG,
-                                   SDLoc dl) {
+                                   const SDLoc &dl) {
   SDValue V = insert256BitVector(DAG.getUNDEF(VT), V1, 0, DAG, dl);
   return insert256BitVector(V, V2, NumElems / 2, DAG, dl);
 }
@@ -4676,7 +4667,7 @@ static SDValue concat256BitVectors(SDValue V1, SDValue V2, EVT VT,
 /// no AVX2 support, use two <4 x i32> inserted in a <8 x i32> appropriately.
 /// Then bitcast to their original type, ensuring they get CSE'd.
 static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
-                             SelectionDAG &DAG, SDLoc dl) {
+                             SelectionDAG &DAG, const SDLoc &dl) {
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Expected a 128/256/512-bit vector type");
 
@@ -4693,8 +4684,8 @@ static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
 }
 
 /// Returns a vector_shuffle node for an unpackl operation.
-static SDValue getUnpackl(SelectionDAG &DAG, SDLoc dl, MVT VT, SDValue V1,
-                          SDValue V2) {
+static SDValue getUnpackl(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
+                          SDValue V1, SDValue V2) {
   unsigned NumElems = VT.getVectorNumElements();
   SmallVector<int, 8> Mask;
   for (unsigned i = 0, e = NumElems/2; i != e; ++i) {
@@ -4705,8 +4696,8 @@ static SDValue getUnpackl(SelectionDAG &DAG, SDLoc dl, MVT VT, SDValue V1,
 }
 
 /// Returns a vector_shuffle node for an unpackh operation.
-static SDValue getUnpackh(SelectionDAG &DAG, SDLoc dl, MVT VT, SDValue V1,
-                          SDValue V2) {
+static SDValue getUnpackh(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
+                          SDValue V1, SDValue V2) {
   unsigned NumElems = VT.getVectorNumElements();
   SmallVector<int, 8> Mask;
   for (unsigned i = 0, Half = NumElems/2; i != Half; ++i) {
@@ -5457,9 +5448,9 @@ static SDValue LowerBuildVectorv4x32(SDValue Op, SelectionDAG &DAG,
 }
 
 /// Return a vector logical shift node.
-static SDValue getVShift(bool isLeft, EVT VT, SDValue SrcOp,
-                         unsigned NumBits, SelectionDAG &DAG,
-                         const TargetLowering &TLI, SDLoc dl) {
+static SDValue getVShift(bool isLeft, EVT VT, SDValue SrcOp, unsigned NumBits,
+                         SelectionDAG &DAG, const TargetLowering &TLI,
+                         const SDLoc &dl) {
   assert(VT.is128BitVector() && "Unknown type for VShift");
   MVT ShVT = MVT::v16i8;
   unsigned Opc = isLeft ? X86ISD::VSHLDQ : X86ISD::VSRLDQ;
@@ -5470,8 +5461,8 @@ static SDValue getVShift(bool isLeft, EVT VT, SDValue SrcOp,
   return DAG.getBitcast(VT, DAG.getNode(Opc, dl, ShVT, SrcOp, ShiftVal));
 }
 
-static SDValue
-LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, SDLoc dl, SelectionDAG &DAG) {
+static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
+                                      SelectionDAG &DAG) {
 
   // Check if the scalar load can be widened into a vector load. And if
   // the address is "base + cst" see if the cst can be "absorbed" into
@@ -6217,7 +6208,7 @@ static bool isHorizontalBinOp(const BuildVectorSDNode *N, unsigned Opcode,
 /// 128-bits of the result. If \p isUndefHI is set, then UNDEF is propagated to
 /// the upper 128-bits of the result.
 static SDValue ExpandHorizontalBinOp(const SDValue &V0, const SDValue &V1,
-                                     SDLoc DL, SelectionDAG &DAG,
+                                     const SDLoc &DL, SelectionDAG &DAG,
                                      unsigned X86Opcode, bool Mode,
                                      bool isUndefLO, bool isUndefHI) {
   MVT VT = V0.getSimpleValueType();
@@ -7141,7 +7132,7 @@ static bool isShuffleEquivalent(SDValue V1, SDValue V2, ArrayRef<int> Mask,
 /// example.
 ///
 /// NB: We rely heavily on "undef" masks preserving the input lane.
-static SDValue getV4X86ShuffleImm8ForMask(ArrayRef<int> Mask, SDLoc DL,
+static SDValue getV4X86ShuffleImm8ForMask(ArrayRef<int> Mask, const SDLoc &DL,
                                           SelectionDAG &DAG) {
   assert(Mask.size() == 4 && "Only 4-lane shuffle masks");
   assert(Mask[0] >= -1 && Mask[0] < 4 && "Out of bound mask element!");
@@ -7244,7 +7235,7 @@ static void computeZeroableShuffleMask(MutableArrayRef<int> Mask,
 
 /// Try to lower a shuffle with a single PSHUFB of V1.
 /// This is only possible if V2 is unused (at all, or only for zero elements).
-static SDValue lowerVectorShuffleWithPSHUFB(SDLoc DL, MVT VT,
+static SDValue lowerVectorShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
                                             ArrayRef<int> Mask, SDValue V1,
                                             SDValue V2,
                                             const X86Subtarget &Subtarget,
@@ -7287,9 +7278,9 @@ static SDValue lowerVectorShuffleWithPSHUFB(SDLoc DL, MVT VT,
 
 // X86 has dedicated unpack instructions that can handle specific blend
 // operations: UNPCKH and UNPCKL.
-static SDValue lowerVectorShuffleWithUNPCK(SDLoc DL, MVT VT, ArrayRef<int> Mask,
-                                           SDValue V1, SDValue V2,
-                                           SelectionDAG &DAG) {
+static SDValue lowerVectorShuffleWithUNPCK(const SDLoc &DL, MVT VT,
+                                           ArrayRef<int> Mask, SDValue V1,
+                                           SDValue V2, SelectionDAG &DAG) {
   int NumElts = VT.getVectorNumElements();
   int NumEltsInLane = 128 / VT.getScalarSizeInBits();
   SmallVector<int, 8> Unpckl;
@@ -7324,7 +7315,7 @@ static SDValue lowerVectorShuffleWithUNPCK(SDLoc DL, MVT VT, ArrayRef<int> Mask,
 ///
 /// This handles cases where we can model a blend exactly as a bitmask due to
 /// one of the inputs being zeroable.
-static SDValue lowerVectorShuffleAsBitMask(SDLoc DL, MVT VT, SDValue V1,
+static SDValue lowerVectorShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
                                            SDValue V2, ArrayRef<int> Mask,
                                            SelectionDAG &DAG) {
   MVT EltVT = VT.getVectorElementType();
@@ -7367,7 +7358,7 @@ static SDValue lowerVectorShuffleAsBitMask(SDLoc DL, MVT VT, SDValue V1,
 /// This is used as a fallback approach when first class blend instructions are
 /// unavailable. Currently it is only suitable for integer vectors, but could
 /// be generalized for floating point vectors if desirable.
-static SDValue lowerVectorShuffleAsBitBlend(SDLoc DL, MVT VT, SDValue V1,
+static SDValue lowerVectorShuffleAsBitBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                             SDValue V2, ArrayRef<int> Mask,
                                             SelectionDAG &DAG) {
   assert(VT.isInteger() && "Only supports integer vector types!");
@@ -7399,7 +7390,7 @@ static SDValue lowerVectorShuffleAsBitBlend(SDLoc DL, MVT VT, SDValue V1,
 /// these values. It relies on the availability of the X86ISD::BLENDI pattern to
 /// be matched in the backend with the type given. What it does check for is
 /// that the shuffle mask is a blend, or convertible into a blend with zero.
-static SDValue lowerVectorShuffleAsBlend(SDLoc DL, MVT VT, SDValue V1,
+static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                          SDValue V2, ArrayRef<int> Original,
                                          const X86Subtarget &Subtarget,
                                          SelectionDAG &DAG) {
@@ -7561,8 +7552,8 @@ static SDValue lowerVectorShuffleAsBlend(SDLoc DL, MVT VT, SDValue V1,
 ///
 /// This matches the pattern where we can blend elements from two inputs and
 /// then reduce the shuffle to a single-input permutation.
-static SDValue lowerVectorShuffleAsBlendAndPermute(SDLoc DL, MVT VT, SDValue V1,
-                                                   SDValue V2,
+static SDValue lowerVectorShuffleAsBlendAndPermute(const SDLoc &DL, MVT VT,
+                                                   SDValue V1, SDValue V2,
                                                    ArrayRef<int> Mask,
                                                    SelectionDAG &DAG) {
   // We build up the blend mask while checking whether a blend is a viable way
@@ -7595,8 +7586,8 @@ static SDValue lowerVectorShuffleAsBlendAndPermute(SDLoc DL, MVT VT, SDValue V1,
 /// shuffle+blend operations on newer X86 ISAs where we have very fast blend
 /// operations. It will try to pick the best arrangement of shuffles and
 /// blends.
-static SDValue lowerVectorShuffleAsDecomposedShuffleBlend(SDLoc DL, MVT VT,
-                                                          SDValue V1,
+static SDValue lowerVectorShuffleAsDecomposedShuffleBlend(const SDLoc &DL,
+                                                          MVT VT, SDValue V1,
                                                           SDValue V2,
                                                           ArrayRef<int> Mask,
                                                           SelectionDAG &DAG) {
@@ -7645,8 +7636,8 @@ static SDValue lowerVectorShuffleAsDecomposedShuffleBlend(SDLoc DL, MVT VT,
 /// elements, and takes the low elements as the result. Note that while this is
 /// specified as a *right shift* because x86 is little-endian, it is a *left
 /// rotate* of the vector lanes.
-static SDValue lowerVectorShuffleAsByteRotate(SDLoc DL, MVT VT, SDValue V1,
-                                              SDValue V2,
+static SDValue lowerVectorShuffleAsByteRotate(const SDLoc &DL, MVT VT,
+                                              SDValue V1, SDValue V2,
                                               ArrayRef<int> Mask,
                                               const X86Subtarget &Subtarget,
                                               SelectionDAG &DAG) {
@@ -7783,7 +7774,7 @@ static SDValue lowerVectorShuffleAsByteRotate(SDLoc DL, MVT VT, SDValue V1,
 /// [  5, 6,  7, zz, zz, zz, zz, zz]
 /// [ -1, 5,  6,  7, zz, zz, zz, zz]
 /// [  1, 2, -1, -1, -1, -1, zz, zz]
-static SDValue lowerVectorShuffleAsShift(SDLoc DL, MVT VT, SDValue V1,
+static SDValue lowerVectorShuffleAsShift(const SDLoc &DL, MVT VT, SDValue V1,
                                          SDValue V2, ArrayRef<int> Mask,
                                          const X86Subtarget &Subtarget,
                                          SelectionDAG &DAG) {
@@ -7854,7 +7845,7 @@ static SDValue lowerVectorShuffleAsShift(SDLoc DL, MVT VT, SDValue V1,
 }
 
 /// \brief Try to lower a vector shuffle using SSE4a EXTRQ/INSERTQ.
-static SDValue lowerVectorShuffleWithSSE4A(SDLoc DL, MVT VT, SDValue V1,
+static SDValue lowerVectorShuffleWithSSE4A(const SDLoc &DL, MVT VT, SDValue V1,
                                            SDValue V2, ArrayRef<int> Mask,
                                            SelectionDAG &DAG) {
   SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
@@ -7994,7 +7985,7 @@ static SDValue lowerVectorShuffleWithSSE4A(SDLoc DL, MVT VT, SDValue V1,
 /// or at the start of a higher lane. All extended elements must be from
 /// the same lane.
 static SDValue lowerVectorShuffleAsSpecificZeroOrAnyExtend(
-    SDLoc DL, MVT VT, int Scale, int Offset, bool AnyExt, SDValue InputV,
+    const SDLoc &DL, MVT VT, int Scale, int Offset, bool AnyExt, SDValue InputV,
     ArrayRef<int> Mask, const X86Subtarget &Subtarget, SelectionDAG &DAG) {
   assert(Scale > 1 && "Need a scale to extend.");
   int EltBits = VT.getScalarSizeInBits();
@@ -8157,7 +8148,7 @@ static SDValue lowerVectorShuffleAsSpecificZeroOrAnyExtend(
 /// The reason we have dedicated lowering for zext-style shuffles is that they
 /// are both incredibly common and often quite performance sensitive.
 static SDValue lowerVectorShuffleAsZeroOrAnyExtend(
-    SDLoc DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
   SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
 
@@ -8314,7 +8305,7 @@ static bool isShuffleFoldableLoad(SDValue V) {
 /// This is a common pattern that we have especially efficient patterns to lower
 /// across all subtarget feature sets.
 static SDValue lowerVectorShuffleAsElementInsertion(
-    SDLoc DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
   SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
   MVT ExtVT = VT;
@@ -8416,8 +8407,8 @@ static SDValue lowerVectorShuffleAsElementInsertion(
 /// coming from a scalar_to_vector/build_vector node \p V0 with larger elements.
 ///
 /// This assumes we have AVX2.
-static SDValue lowerVectorShuffleAsTruncBroadcast(SDLoc DL, MVT VT, SDValue V0,
-                                                  int BroadcastIdx,
+static SDValue lowerVectorShuffleAsTruncBroadcast(const SDLoc &DL, MVT VT,
+                                                  SDValue V0, int BroadcastIdx,
                                                   const X86Subtarget &Subtarget,
                                                   SelectionDAG &DAG) {
   assert(Subtarget.hasAVX2() &&
@@ -8471,8 +8462,9 @@ static SDValue lowerVectorShuffleAsTruncBroadcast(SDLoc DL, MVT VT, SDValue V0,
 /// filtering. While a little annoying to re-dispatch on type here, there isn't
 /// a convenient way to factor it out.
 /// FIXME: This is very similar to LowerVectorBroadcast - can we merge them?
-static SDValue lowerVectorShuffleAsBroadcast(SDLoc DL, MVT VT, SDValue V1,
-                                             SDValue V2, ArrayRef<int> Mask,
+static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
+                                             SDValue V1, SDValue V2,
+                                             ArrayRef<int> Mask,
                                              const X86Subtarget &Subtarget,
                                              SelectionDAG &DAG) {
   if (!((Subtarget.hasSSE3() && VT == MVT::v2f64) ||
@@ -8690,7 +8682,7 @@ static SDValue lowerVectorShuffleAsInsertPS(SDValue Op, SDValue V1, SDValue V2,
 /// because for floating point vectors we have a generalized SHUFPS lowering
 /// strategy that handles everything that doesn't *exactly* match an unpack,
 /// making this clever lowering unnecessary.
-static SDValue lowerVectorShuffleAsPermuteAndUnpack(SDLoc DL, MVT VT,
+static SDValue lowerVectorShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
                                                     SDValue V1, SDValue V2,
                                                     ArrayRef<int> Mask,
                                                     SelectionDAG &DAG) {
@@ -9011,7 +9003,7 @@ static bool isSingleSHUFPSMask(ArrayRef<int> Mask) {
 /// This is a helper routine dedicated to lowering vector shuffles using SHUFPS.
 /// It makes no assumptions about whether this is the *best* lowering, it simply
 /// uses it.
-static SDValue lowerVectorShuffleWithSHUFPS(SDLoc DL, MVT VT,
+static SDValue lowerVectorShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
                                             ArrayRef<int> Mask, SDValue V1,
                                             SDValue V2, SelectionDAG &DAG) {
   SDValue LowV = V1, HighV = V2;
@@ -9300,7 +9292,7 @@ static SDValue lowerV4I32VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
 /// this routine for it to work correctly. To shuffle a 256-bit or 512-bit i16
 /// vector, form the analogous 128-bit 8-element Mask.
 static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
-    SDLoc DL, MVT VT, SDValue V, MutableArrayRef<int> Mask,
+    const SDLoc &DL, MVT VT, SDValue V, MutableArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
   assert(VT.getVectorElementType() == MVT::i16 && "Bad input type!");
   MVT PSHUFDVT = MVT::getVectorVT(MVT::i32, VT.getVectorNumElements() / 2);
@@ -9753,10 +9745,9 @@ static SDValue lowerV8I16GeneralSingleInputVectorShuffle(
 
 /// Helper to form a PSHUFB-based shuffle+blend, opportunistically avoiding the
 /// blend if only one input is used.
-static SDValue
-lowerVectorShuffleAsBlendOfPSHUFBs(SDLoc DL, MVT VT, SDValue V1, SDValue V2,
-                                   ArrayRef<int> Mask, SelectionDAG &DAG,
-                                   bool &V1InUse, bool &V2InUse) {
+static SDValue lowerVectorShuffleAsBlendOfPSHUFBs(
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    SelectionDAG &DAG, bool &V1InUse, bool &V2InUse) {
   assert(VT.is128BitVector() && "v32i8 VPSHUFB blend not implemented yet!");
   SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
   SDValue V1Mask[16];
@@ -10382,7 +10373,7 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
 /// This routine just extracts two subvectors, shuffles them independently, and
 /// then concatenates them back together. This should work effectively with all
 /// AVX vector shuffle types.
-static SDValue splitAndLowerVectorShuffle(SDLoc DL, MVT VT, SDValue V1,
+static SDValue splitAndLowerVectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
                                           SDValue V2, ArrayRef<int> Mask,
                                           SelectionDAG &DAG) {
   assert(VT.getSizeInBits() >= 256 &&
@@ -10512,8 +10503,9 @@ static SDValue splitAndLowerVectorShuffle(SDLoc DL, MVT VT, SDValue V1,
 /// between splitting the shuffle into 128-bit components and stitching those
 /// back together vs. extracting the single-input shuffles and blending those
 /// results.
-static SDValue lowerVectorShuffleAsSplitOrBlend(SDLoc DL, MVT VT, SDValue V1,
-                                                SDValue V2, ArrayRef<int> Mask,
+static SDValue lowerVectorShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT,
+                                                SDValue V1, SDValue V2,
+                                                ArrayRef<int> Mask,
                                                 SelectionDAG &DAG) {
   assert(!isSingleInputShuffleMask(Mask) && "This routine must not be used to "
                                             "lower single-input shuffles as it "
@@ -10571,7 +10563,7 @@ static SDValue lowerVectorShuffleAsSplitOrBlend(SDLoc DL, MVT VT, SDValue V1,
 /// is lower than any other fully general cross-lane shuffle strategy I'm aware
 /// of. Special cases for each particular shuffle pattern should be handled
 /// prior to trying this lowering.
-static SDValue lowerVectorShuffleAsLanePermuteAndBlend(SDLoc DL, MVT VT,
+static SDValue lowerVectorShuffleAsLanePermuteAndBlend(const SDLoc &DL, MVT VT,
                                                        SDValue V1, SDValue V2,
                                                        ArrayRef<int> Mask,
                                                        SelectionDAG &DAG) {
@@ -10616,7 +10608,7 @@ static SDValue lowerVectorShuffleAsLanePermuteAndBlend(SDLoc DL, MVT VT,
 }
 
 /// \brief Handle lowering 2-lane 128-bit shuffles.
-static SDValue lowerV2X128VectorShuffle(SDLoc DL, MVT VT, SDValue V1,
+static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
                                         SDValue V2, ArrayRef<int> Mask,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
@@ -10714,7 +10706,7 @@ static SDValue lowerV2X128VectorShuffle(SDLoc DL, MVT VT, SDValue V1,
 /// in x86 only floating point has interesting non-repeating shuffles, and even
 /// those are still *marginally* more expensive.
 static SDValue lowerVectorShuffleByMerging128BitLanes(
-    SDLoc DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
   assert(!isSingleInputShuffleMask(Mask) &&
          "This is only useful with multiple inputs.");
@@ -10787,8 +10779,9 @@ static SDValue lowerVectorShuffleByMerging128BitLanes(
 /// Lower shuffles where an entire half of a 256-bit vector is UNDEF.
 /// This allows for fast cases such as subvector extraction/insertion
 /// or shuffling smaller vector types which can lower more efficiently.
-static SDValue lowerVectorShuffleWithUndefHalf(SDLoc DL, MVT VT, SDValue V1,
-                                               SDValue V2, ArrayRef<int> Mask,
+static SDValue lowerVectorShuffleWithUndefHalf(const SDLoc &DL, MVT VT,
+                                               SDValue V1, SDValue V2,
+                                               ArrayRef<int> Mask,
                                                const X86Subtarget &Subtarget,
                                                SelectionDAG &DAG) {
   assert(VT.is256BitVector() && "Expected 256-bit vector");
@@ -10923,7 +10916,7 @@ static bool isShuffleMaskInputInPlace(int Input, ArrayRef<int> Mask) {
 /// shuffle the sources with the repeating shuffle and then permute the result
 /// to the destination lanes.
 static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
-    SDLoc DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
+    const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
   int NumElts = VT.getVectorNumElements();
   int NumLanes = VT.getSizeInBits() / 128;
@@ -11048,7 +11041,7 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
                               SubLaneMask);
 }
 
-static SDValue lowerVectorShuffleWithSHUFPD(SDLoc DL, MVT VT,
+static SDValue lowerVectorShuffleWithSHUFPD(const SDLoc &DL, MVT VT,
                                             ArrayRef<int> Mask, SDValue V1,
                                             SDValue V2, SelectionDAG &DAG) {
 
@@ -11663,10 +11656,9 @@ static SDValue lower256BitVectorShuffle(SDValue Op, SDValue V1, SDValue V2,
 }
 
 /// \brief Try to lower a vector shuffle as a 128-bit shuffles.
-static SDValue lowerV4X128VectorShuffle(SDLoc DL, MVT VT,
-                                        ArrayRef<int> Mask,
-                                        SDValue V1, SDValue V2,
-                                        SelectionDAG &DAG) {
+static SDValue lowerV4X128VectorShuffle(const SDLoc &DL, MVT VT,
+                                        ArrayRef<int> Mask, SDValue V1,
+                                        SDValue V2, SelectionDAG &DAG) {
   assert(VT.getScalarSizeInBits() == 64 &&
          "Unexpected element type size for 128bit shuffle.");
 
@@ -11711,7 +11703,7 @@ static SDValue lowerV4X128VectorShuffle(SDLoc DL, MVT VT,
                      DAG.getConstant(PermMask, DL, MVT::i8));
 }
 
-static SDValue lowerVectorShuffleWithPERMV(SDLoc DL, MVT VT,
+static SDValue lowerVectorShuffleWithPERMV(const SDLoc &DL, MVT VT,
                                            ArrayRef<int> Mask, SDValue V1,
                                            SDValue V2, SelectionDAG &DAG) {
 
@@ -12831,9 +12823,9 @@ X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
   return Result;
 }
 
-SDValue
-X86TargetLowering::LowerGlobalAddress(const GlobalValue *GV, SDLoc dl,
-                                      int64_t Offset, SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerGlobalAddress(const GlobalValue *GV,
+                                              const SDLoc &dl, int64_t Offset,
+                                              SelectionDAG &DAG) const {
   // Create the TargetGlobalAddress node, folding in the constant
   // offset if it is legal.
   unsigned char OpFlags = Subtarget.classifyGlobalReference(GV);
@@ -14517,7 +14509,7 @@ static SDValue EmitKTEST(SDValue Op, SelectionDAG &DAG,
 
 /// Emit nodes that will be selected as "test Op0,Op0", or something
 /// equivalent.
-SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, SDLoc dl,
+SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
                                     SelectionDAG &DAG) const {
   if (Op.getValueType() == MVT::i1) {
     SDValue ExtOp = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i8, Op);
@@ -14765,7 +14757,7 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, SDLoc dl,
 /// Emit nodes that will be selected as "cmp Op0,Op1", or something
 /// equivalent.
 SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
-                                   SDLoc dl, SelectionDAG &DAG) const {
+                                   const SDLoc &dl, SelectionDAG &DAG) const {
   if (isNullConstant(Op1))
     return EmitTest(Op0, X86CC, dl, DAG);
 
@@ -14898,7 +14890,7 @@ unsigned X86TargetLowering::combineRepeatedFPDivisors() const {
 
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
 SDValue X86TargetLowering::LowerToBT(SDValue And, ISD::CondCode CC,
-                                     SDLoc dl, SelectionDAG &DAG) const {
+                                     const SDLoc &dl, SelectionDAG &DAG) const {
   SDValue Op0 = And.getOperand(0);
   SDValue Op1 = And.getOperand(1);
   if (Op0.getOpcode() == ISD::TRUNCATE)
@@ -15125,8 +15117,8 @@ static SDValue LowerIntVSETCC_AVX512(SDValue Op, SelectionDAG &DAG) {
 /// \brief Try to turn a VSETULT into a VSETULE by modifying its second
 /// operand \p Op1.  If non-trivial (for example because it's not constant)
 /// return an empty value.
-static SDValue ChangeVSETULTtoVSETULE(SDLoc dl, SDValue Op1, SelectionDAG &DAG)
-{
+static SDValue ChangeVSETULTtoVSETULE(const SDLoc &dl, SDValue Op1,
+                                      SelectionDAG &DAG) {
   BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(Op1.getNode());
   if (!BV)
     return SDValue();
@@ -15168,32 +15160,59 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     assert(EltVT == MVT::f32 || EltVT == MVT::f64);
 #endif
 
-    unsigned SSECC = translateX86FSETCC(SetCCOpcode, Op0, Op1);
-    unsigned Opc = X86ISD::CMPP;
+    unsigned Opc;
     if (Subtarget.hasAVX512() && VT.getVectorElementType() == MVT::i1) {
       assert(VT.getVectorNumElements() <= 16);
       Opc = X86ISD::CMPM;
+    } else {
+      Opc = X86ISD::CMPP;
+      // The SSE/AVX packed FP comparison nodes are defined with a
+      // floating-point vector result that matches the operand type. This allows
+      // them to work with an SSE1 target (integer vector types are not legal).
+      VT = Op0.getSimpleValueType();
     }
-    // In the two special cases we can't handle, emit two comparisons.
+
+    // In the two cases not handled by SSE compare predicates (SETUEQ/SETONE),
+    // emit two comparisons and a logic op to tie them together.
+    // TODO: This can be avoided if Intel (and only Intel as of 2016) AVX is
+    // available.
+    SDValue Cmp;
+    unsigned SSECC = translateX86FSETCC(SetCCOpcode, Op0, Op1);
     if (SSECC == 8) {
+      // LLVM predicate is SETUEQ or SETONE.
       unsigned CC0, CC1;
       unsigned CombineOpc;
       if (SetCCOpcode == ISD::SETUEQ) {
-        CC0 = 3; CC1 = 0; CombineOpc = ISD::OR;
+        CC0 = 3; // UNORD
+        CC1 = 0; // EQ
+        CombineOpc = Opc == X86ISD::CMPP ? static_cast<unsigned>(X86ISD::FOR) :
+                                           static_cast<unsigned>(ISD::OR);
       } else {
         assert(SetCCOpcode == ISD::SETONE);
-        CC0 = 7; CC1 = 4; CombineOpc = ISD::AND;
+        CC0 = 7; // ORD
+        CC1 = 4; // NEQ
+        CombineOpc = Opc == X86ISD::CMPP ? static_cast<unsigned>(X86ISD::FAND) :
+                                           static_cast<unsigned>(ISD::AND);
       }
 
       SDValue Cmp0 = DAG.getNode(Opc, dl, VT, Op0, Op1,
                                  DAG.getConstant(CC0, dl, MVT::i8));
       SDValue Cmp1 = DAG.getNode(Opc, dl, VT, Op0, Op1,
                                  DAG.getConstant(CC1, dl, MVT::i8));
-      return DAG.getNode(CombineOpc, dl, VT, Cmp0, Cmp1);
+      Cmp = DAG.getNode(CombineOpc, dl, VT, Cmp0, Cmp1);
+    } else {
+      // Handle all other FP comparisons here.
+      Cmp = DAG.getNode(Opc, dl, VT, Op0, Op1,
+                        DAG.getConstant(SSECC, dl, MVT::i8));
     }
-    // Handle all other FP comparisons here.
-    return DAG.getNode(Opc, dl, VT, Op0, Op1,
-                       DAG.getConstant(SSECC, dl, MVT::i8));
+
+    // If this is SSE/AVX CMPP, bitcast the result back to integer to match the
+    // result type of SETCC. The bitcast is expected to be optimized away
+    // during combining/isel.
+    if (Opc == X86ISD::CMPP)
+      Cmp = DAG.getBitcast(Op.getSimpleValueType(), Cmp);
+
+    return Cmp;
   }
 
   MVT VTOp0 = Op0.getSimpleValueType();
@@ -16896,7 +16915,7 @@ static SDValue LowerVACOPY(SDValue Op, const X86Subtarget &Subtarget,
 
 /// Handle vector element shifts where the shift amount is a constant.
 /// Takes immediate version of shift as input.
-static SDValue getTargetVShiftByConstNode(unsigned Opc, SDLoc dl, MVT VT,
+static SDValue getTargetVShiftByConstNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                           SDValue SrcOp, uint64_t ShiftAmt,
                                           SelectionDAG &DAG) {
   MVT ElementType = VT.getVectorElementType();
@@ -16973,7 +16992,7 @@ static SDValue getTargetVShiftByConstNode(unsigned Opc, SDLoc dl, MVT VT,
 
 /// Handle vector element shifts where the shift amount may or may not be a
 /// constant. Takes immediate version of shift as input.
-static SDValue getTargetVShiftNode(unsigned Opc, SDLoc dl, MVT VT,
+static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                    SDValue SrcOp, SDValue ShAmt,
                                    SelectionDAG &DAG) {
   MVT SVT = ShAmt.getSimpleValueType();
@@ -17027,8 +17046,8 @@ static SDValue getTargetVShiftNode(unsigned Opc, SDLoc dl, MVT VT,
 /// \brief Return Mask with the necessary casting or extending
 /// for \p Mask according to \p MaskVT when lowering masking intrinsics
 static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
-                           const X86Subtarget &Subtarget,
-                           SelectionDAG &DAG, SDLoc dl) {
+                           const X86Subtarget &Subtarget, SelectionDAG &DAG,
+                           const SDLoc &dl) {
 
   if (isAllOnesConstant(Mask))
     return DAG.getTargetConstant(1, dl, MaskVT);
@@ -18090,9 +18109,10 @@ static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
 
 /// Handles the lowering of builtin intrinsics that read performance monitor
 /// counters (x86_rdpmc).
-static void getReadPerformanceCounter(SDNode *N, SDLoc DL,
-                              SelectionDAG &DAG, const X86Subtarget &Subtarget,
-                              SmallVectorImpl<SDValue> &Results) {
+static void getReadPerformanceCounter(SDNode *N, const SDLoc &DL,
+                                      SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget,
+                                      SmallVectorImpl<SDValue> &Results) {
   assert(N->getNumOperands() == 3 && "Unexpected number of operands!");
   SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDValue LO, HI;
@@ -18136,9 +18156,10 @@ static void getReadPerformanceCounter(SDNode *N, SDLoc DL,
 /// Handles the lowering of builtin intrinsics that read the time stamp counter
 /// (x86_rdtsc and x86_rdtscp). This function is also used to custom lower
 /// READCYCLECOUNTER nodes.
-static void getReadTimeStampCounter(SDNode *N, SDLoc DL, unsigned Opcode,
-                              SelectionDAG &DAG, const X86Subtarget &Subtarget,
-                              SmallVectorImpl<SDValue> &Results) {
+static void getReadTimeStampCounter(SDNode *N, const SDLoc &DL, unsigned Opcode,
+                                    SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget,
+                                    SmallVectorImpl<SDValue> &Results) {
   SDVTList Tys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDValue rd = DAG.getNode(Opcode, DL, Tys, N->getOperand(0));
   SDValue LO, HI;
@@ -18888,7 +18909,7 @@ static SDValue LowerVectorCTLZ_AVX512(SDValue Op, SelectionDAG &DAG) {
 }
 
 // Lower CTLZ using a PSHUFB lookup table implementation.
-static SDValue LowerVectorCTLZInRegLUT(SDValue Op, SDLoc DL,
+static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -18957,7 +18978,7 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, SDLoc DL,
   return Res;
 }
 
-static SDValue LowerVectorCTLZ(SDValue Op, SDLoc DL,
+static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
                                const X86Subtarget &Subtarget,
                                SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -20742,7 +20763,7 @@ static SDValue LowerHorizontalByteSum(SDValue V, MVT VT,
   return DAG.getNode(ISD::SRL, DL, VT, DAG.getBitcast(VT, V), ShifterV);
 }
 
-static SDValue LowerVectorCTPOPInRegLUT(SDValue Op, SDLoc DL,
+static SDValue LowerVectorCTPOPInRegLUT(SDValue Op, const SDLoc &DL,
                                         const X86Subtarget &Subtarget,
                                         SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -20799,7 +20820,7 @@ static SDValue LowerVectorCTPOPInRegLUT(SDValue Op, SDLoc DL,
   return LowerHorizontalByteSum(PopCnt, VT, Subtarget, DAG);
 }
 
-static SDValue LowerVectorCTPOPBitmath(SDValue Op, SDLoc DL,
+static SDValue LowerVectorCTPOPBitmath(SDValue Op, const SDLoc &DL,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -27966,7 +27987,8 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 /// which is c = (a + b + 1) / 2, and replace this operation with the efficient
 /// X86ISD::AVG instruction.
 static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
-                                const X86Subtarget &Subtarget, SDLoc DL) {
+                                const X86Subtarget &Subtarget,
+                                const SDLoc &DL) {
   if (!VT.isVector() || !VT.isSimple())
     return SDValue();
   EVT InVT = In.getValueType();
@@ -29409,7 +29431,7 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
 
   SDLoc DL(N);
 
-  auto ExtendVecSize = [&DAG](SDLoc DL, SDValue N, unsigned Size) {
+  auto ExtendVecSize = [&DAG](const SDLoc &DL, SDValue N, unsigned Size) {
     EVT InVT = N.getValueType();
     EVT OutVT = EVT::getVectorVT(*DAG.getContext(), InVT.getScalarType(),
                                  Size / InVT.getScalarSizeInBits());
@@ -29647,6 +29669,11 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // For an SSE1-only target, lower to X86ISD::CMPP early to avoid scalarization
+  // via legalization because v4i32 is not a legal type.
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32)
+    return LowerVSETCC(SDValue(N, 0), Subtarget, DAG);
+
   return SDValue();
 }
 
@@ -29667,8 +29694,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG) {
 // Helper function of performSETCCCombine. It is to materialize "setb reg"
 // as "sbb reg,reg", since it can be extended without zext and produces
 // an all-ones bit which is more useful than 0/1 in some cases.
-static SDValue MaterializeSETB(SDLoc DL, SDValue EFLAGS, SelectionDAG &DAG,
-                               MVT VT) {
+static SDValue MaterializeSETB(const SDLoc &DL, SDValue EFLAGS,
+                               SelectionDAG &DAG, MVT VT) {
   if (VT == MVT::i8)
     return DAG.getNode(ISD::AND, DL, VT,
                        DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8,

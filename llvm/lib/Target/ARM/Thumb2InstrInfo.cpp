@@ -110,9 +110,9 @@ Thumb2InstrInfo::isLegalToSplitMBBAt(MachineBasicBlock &MBB,
 }
 
 void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  unsigned DestReg, unsigned SrcReg,
-                                  bool KillSrc) const {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, bool KillSrc) const {
   // Handle SPR, DPR, and QPR copies.
   if (!ARM::GPRRegClass.contains(DestReg, SrcReg))
     return ARMBaseInstrInfo::copyPhysReg(MBB, I, DL, DestReg, SrcReg, KillSrc);
@@ -219,10 +219,12 @@ Thumb2InstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI,
 }
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator &MBBI, DebugLoc dl,
-                               unsigned DestReg, unsigned BaseReg, int NumBytes,
-                               ARMCC::CondCodes Pred, unsigned PredReg,
-                               const ARMBaseInstrInfo &TII, unsigned MIFlags) {
+                                  MachineBasicBlock::iterator &MBBI,
+                                  const DebugLoc &dl, unsigned DestReg,
+                                  unsigned BaseReg, int NumBytes,
+                                  ARMCC::CondCodes Pred, unsigned PredReg,
+                                  const ARMBaseInstrInfo &TII,
+                                  unsigned MIFlags) {
   if (NumBytes == 0 && DestReg != BaseReg) {
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), DestReg)
       .addReg(BaseReg, RegState::Kill)

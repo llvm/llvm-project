@@ -52,8 +52,8 @@ public:
   /// the number of bytes to probe in RAX/EAX. Returns instruction just
   /// after the expansion.
   MachineInstr *emitStackProbe(MachineFunction &MF, MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                               bool InProlog) const;
+                               MachineBasicBlock::iterator MBBI,
+                               const DebugLoc &DL, bool InProlog) const;
 
   /// Replace a StackProbe inline-stub with the actual probe code inline.
   void inlineStackProbe(MachineFunction &MF,
@@ -61,7 +61,7 @@ public:
 
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
-                                 DebugLoc DL) const;
+                                 const DebugLoc &DL) const;
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
@@ -165,14 +165,14 @@ public:
 
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                DebugLoc DL, MCCFIInstruction CFIInst) const;
+                const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
 
   /// Sets up EBP and optionally ESI based on the incoming EBP value.  Only
   /// needed for 32-bit. Used in funclet prologues and at catchret destinations.
   MachineBasicBlock::iterator
   restoreWin32EHStackPointers(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                              bool RestoreSP = false) const;
+                              MachineBasicBlock::iterator MBBI,
+                              const DebugLoc &DL, bool RestoreSP = false) const;
 
 private:
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
@@ -180,34 +180,35 @@ private:
   /// Emit target stack probe as a call to a helper function
   MachineInstr *emitStackProbeCall(MachineFunction &MF, MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
-                                   DebugLoc DL, bool InProlog) const;
+                                   const DebugLoc &DL, bool InProlog) const;
 
   /// Emit target stack probe as an inline sequence.
   MachineInstr *emitStackProbeInline(MachineFunction &MF,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     DebugLoc DL, bool InProlog) const;
+                                     const DebugLoc &DL, bool InProlog) const;
 
   /// Emit a stub to later inline the target stack probe.
   MachineInstr *emitStackProbeInlineStub(MachineFunction &MF,
                                          MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI,
-                                         DebugLoc DL, bool InProlog) const;
+                                         const DebugLoc &DL,
+                                         bool InProlog) const;
 
   /// Aligns the stack pointer by ANDing it with -MaxAlign.
   void BuildStackAlignAND(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                           unsigned Reg, uint64_t MaxAlign) const;
 
   /// Make small positive stack adjustments using POPs.
   bool adjustStackWithPops(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                            int Offset) const;
 
   /// Adjusts the stack pointer using LEA, SUB, or ADD.
   MachineInstrBuilder BuildStackAdjustment(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
-                                           DebugLoc DL, int64_t Offset,
+                                           const DebugLoc &DL, int64_t Offset,
                                            bool InEpilogue) const;
 
   unsigned getPSPSlotOffsetFromSP(const MachineFunction &MF) const;

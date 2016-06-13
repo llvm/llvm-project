@@ -91,18 +91,18 @@ namespace {
 
     /// getI32Imm - Return a target constant with the specified value, of type
     /// i32.
-    inline SDValue getI32Imm(unsigned Imm, SDLoc dl) {
+    inline SDValue getI32Imm(unsigned Imm, const SDLoc &dl) {
       return CurDAG->getTargetConstant(Imm, dl, MVT::i32);
     }
 
     /// getI64Imm - Return a target constant with the specified value, of type
     /// i64.
-    inline SDValue getI64Imm(uint64_t Imm, SDLoc dl) {
+    inline SDValue getI64Imm(uint64_t Imm, const SDLoc &dl) {
       return CurDAG->getTargetConstant(Imm, dl, MVT::i64);
     }
 
     /// getSmallIPtrImm - Return a target constant of pointer type.
-    inline SDValue getSmallIPtrImm(unsigned Imm, SDLoc dl) {
+    inline SDValue getSmallIPtrImm(unsigned Imm, const SDLoc &dl) {
       return CurDAG->getTargetConstant(
           Imm, dl, PPCLowering->getPointerTy(CurDAG->getDataLayout()));
     }
@@ -127,7 +127,8 @@ namespace {
 
     /// SelectCC - Select a comparison of the specified values with the
     /// specified condition code, returning the CR# of the expression.
-    SDValue SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDLoc dl);
+    SDValue SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                     const SDLoc &dl);
 
     /// SelectAddrImm - Returns true if the address N can be represented by
     /// a base register plus a signed 16-bit displacement [r+imm].
@@ -676,7 +677,8 @@ static unsigned getInt64Count(int64_t Imm) {
 
 // Select a 64-bit constant. For cost-modeling purposes, getInt64Count
 // (above) needs to be kept in sync with this function.
-static SDNode *getInt64Direct(SelectionDAG *CurDAG, SDLoc dl, int64_t Imm) {
+static SDNode *getInt64Direct(SelectionDAG *CurDAG, const SDLoc &dl,
+                              int64_t Imm) {
   // Assume no remaining bits.
   unsigned Remainder = 0;
   // Assume no shift required.
@@ -750,7 +752,7 @@ static SDNode *getInt64Direct(SelectionDAG *CurDAG, SDLoc dl, int64_t Imm) {
   return Result;
 }
 
-static SDNode *getInt64(SelectionDAG *CurDAG, SDLoc dl, int64_t Imm) {
+static SDNode *getInt64(SelectionDAG *CurDAG, const SDLoc &dl, int64_t Imm) {
   unsigned Count = getInt64CountDirect(Imm);
   if (Count == 1)
     return getInt64Direct(CurDAG, dl, Imm);
@@ -1248,7 +1250,7 @@ class BitPermutationSelector {
     }
   }
 
-  SDValue getI32Imm(unsigned Imm, SDLoc dl) {
+  SDValue getI32Imm(unsigned Imm, const SDLoc &dl) {
     return CurDAG->getTargetConstant(Imm, dl, MVT::i32);
   }
 
@@ -1266,7 +1268,7 @@ class BitPermutationSelector {
   // Depending on the number of groups for a particular value, it might be
   // better to rotate, mask explicitly (using andi/andis), and then or the
   // result. Select this part of the result first.
-  void SelectAndParts32(SDLoc dl, SDValue &Res, unsigned *InstCnt) {
+  void SelectAndParts32(const SDLoc &dl, SDValue &Res, unsigned *InstCnt) {
     if (BPermRewriterNoMasking)
       return;
 
@@ -1462,8 +1464,8 @@ class BitPermutationSelector {
 
   // For 64-bit values, not all combinations of rotates and masks are
   // available. Produce one if it is available.
-  SDValue SelectRotMask64(SDValue V, SDLoc dl, unsigned RLAmt, bool Repl32,
-                          unsigned MaskStart, unsigned MaskEnd,
+  SDValue SelectRotMask64(SDValue V, const SDLoc &dl, unsigned RLAmt,
+                          bool Repl32, unsigned MaskStart, unsigned MaskEnd,
                           unsigned *InstCnt = nullptr) {
     // In the notation used by the instructions, 'start' and 'end' are reversed
     // because bits are counted from high to low order.
@@ -1523,8 +1525,8 @@ class BitPermutationSelector {
 
   // For 64-bit values, not all combinations of rotates and masks are
   // available. Produce a rotate-mask-and-insert if one is available.
-  SDValue SelectRotMaskIns64(SDValue Base, SDValue V, SDLoc dl, unsigned RLAmt,
-                             bool Repl32, unsigned MaskStart,
+  SDValue SelectRotMaskIns64(SDValue Base, SDValue V, const SDLoc &dl,
+                             unsigned RLAmt, bool Repl32, unsigned MaskStart,
                              unsigned MaskEnd, unsigned *InstCnt = nullptr) {
     // In the notation used by the instructions, 'start' and 'end' are reversed
     // because bits are counted from high to low order.
@@ -1570,7 +1572,7 @@ class BitPermutationSelector {
     return SelectRotMaskIns64(Base, V, dl, RLAmt2, false, MaskStart, MaskEnd);
   }
 
-  void SelectAndParts64(SDLoc dl, SDValue &Res, unsigned *InstCnt) {
+  void SelectAndParts64(const SDLoc &dl, SDValue &Res, unsigned *InstCnt) {
     if (BPermRewriterNoMasking)
       return;
 
@@ -1980,8 +1982,8 @@ bool PPCDAGToDAGISel::tryBitPermutation(SDNode *N) {
 
 /// SelectCC - Select a comparison of the specified values with the specified
 /// condition code, returning the CR# of the expression.
-SDValue PPCDAGToDAGISel::SelectCC(SDValue LHS, SDValue RHS,
-                                    ISD::CondCode CC, SDLoc dl) {
+SDValue PPCDAGToDAGISel::SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                  const SDLoc &dl) {
   // Always select the LHS.
   unsigned Opc;
 

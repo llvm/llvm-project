@@ -561,10 +561,11 @@ unsigned HexagonInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
   return Count;
 }
 
-
 unsigned HexagonInstrInfo::InsertBranch(MachineBasicBlock &MBB,
-      MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-      ArrayRef<MachineOperand> Cond, DebugLoc DL) const {
+                                        MachineBasicBlock *TBB,
+                                        MachineBasicBlock *FBB,
+                                        ArrayRef<MachineOperand> Cond,
+                                        const DebugLoc &DL) const {
   unsigned BOpc   = Hexagon::J2_jump;
   unsigned BccOpc = Hexagon::J2_jumpt;
   assert(validateBranchCond(Cond) && "Invalid branching condition");
@@ -677,10 +678,10 @@ bool HexagonInstrInfo::isProfitableToDupForIfCvt(MachineBasicBlock &MBB,
   return NumInstrs <= 4;
 }
 
-
 void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator I, DebugLoc DL, unsigned DestReg,
-      unsigned SrcReg, bool KillSrc) const {
+                                   MachineBasicBlock::iterator I,
+                                   const DebugLoc &DL, unsigned DestReg,
+                                   unsigned SrcReg, bool KillSrc) const {
   auto &HRI = getRegisterInfo();
   unsigned KillFlag = getKillRegState(KillSrc);
 

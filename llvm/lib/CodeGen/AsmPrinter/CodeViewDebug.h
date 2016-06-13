@@ -150,7 +150,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   unsigned maybeRecordFile(const DIFile *F);
 
-  void maybeRecordLocation(DebugLoc DL, const MachineFunction *MF);
+  void maybeRecordLocation(const DebugLoc &DL, const MachineFunction *MF);
 
   void clear() {
     assert(CurFn == nullptr);

@@ -59,7 +59,7 @@ std::unique_ptr<Module> CloneModule(const Module *M, ValueToValueMapTy &VMap);
 /// in place of the global definition.
 std::unique_ptr<Module>
 CloneModule(const Module *M, ValueToValueMapTy &VMap,
-            std::function<bool(const GlobalValue *)> ShouldCloneDefinition);
+            function_ref<bool(const GlobalValue *)> ShouldCloneDefinition);
 
 /// ClonedCodeInfo - This struct can be used to capture information about code
 /// being cloned, while it is being cloned.

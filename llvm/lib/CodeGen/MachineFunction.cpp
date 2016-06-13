@@ -247,9 +247,9 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
 }
 
 /// Allocate a new MachineInstr. Use this instead of `new MachineInstr'.
-MachineInstr *
-MachineFunction::CreateMachineInstr(const MCInstrDesc &MCID,
-                                    DebugLoc DL, bool NoImp) {
+MachineInstr *MachineFunction::CreateMachineInstr(const MCInstrDesc &MCID,
+                                                  const DebugLoc &DL,
+                                                  bool NoImp) {
   return new (InstructionRecycler.Allocate<MachineInstr>(Allocator))
     MachineInstr(*this, MCID, DL, NoImp);
 }

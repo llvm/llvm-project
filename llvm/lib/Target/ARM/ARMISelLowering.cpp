@@ -1438,13 +1438,11 @@ CCAssignFn *ARMTargetLowering::CCAssignFnForNode(CallingConv::ID CC,
 
 /// LowerCallResult - Lower the result values of a call into the
 /// appropriate copies out of appropriate physical registers.
-SDValue
-ARMTargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
-                                   CallingConv::ID CallConv, bool isVarArg,
-                                   const SmallVectorImpl<ISD::InputArg> &Ins,
-                                   SDLoc dl, SelectionDAG &DAG,
-                                   SmallVectorImpl<SDValue> &InVals,
-                                   bool isThisReturn, SDValue ThisVal) const {
+SDValue ARMTargetLowering::LowerCallResult(
+    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
+    SDValue ThisVal) const {
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -1524,12 +1522,11 @@ ARMTargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
 }
 
 /// LowerMemOpCallTo - Store the argument to the stack.
-SDValue
-ARMTargetLowering::LowerMemOpCallTo(SDValue Chain,
-                                    SDValue StackPtr, SDValue Arg,
-                                    SDLoc dl, SelectionDAG &DAG,
-                                    const CCValAssign &VA,
-                                    ISD::ArgFlagsTy Flags) const {
+SDValue ARMTargetLowering::LowerMemOpCallTo(SDValue Chain, SDValue StackPtr,
+                                            SDValue Arg, const SDLoc &dl,
+                                            SelectionDAG &DAG,
+                                            const CCValAssign &VA,
+                                            ISD::ArgFlagsTy Flags) const {
   unsigned LocMemOffset = VA.getLocMemOffset();
   SDValue PtrOff = DAG.getIntPtrConstant(LocMemOffset, dl);
   PtrOff = DAG.getNode(ISD::ADD, dl, getPointerTy(DAG.getDataLayout()),
@@ -1540,7 +1537,7 @@ ARMTargetLowering::LowerMemOpCallTo(SDValue Chain,
       false, false, 0);
 }
 
-void ARMTargetLowering::PassF64ArgInRegs(SDLoc dl, SelectionDAG &DAG,
+void ARMTargetLowering::PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG,
                                          SDValue Chain, SDValue &Arg,
                                          RegsToPassVector &RegsToPass,
                                          CCValAssign &VA, CCValAssign &NextVA,
@@ -2234,7 +2231,7 @@ ARMTargetLowering::CanLowerReturn(CallingConv::ID CallConv,
 }
 
 static SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
-                                    SDLoc DL, SelectionDAG &DAG) {
+                                    const SDLoc &DL, SelectionDAG &DAG) {
   const MachineFunction &MF = DAG.getMachineFunction();
   const Function *F = MF.getFunction();
 
@@ -2267,11 +2264,11 @@ static SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
 }
 
 SDValue
-ARMTargetLowering::LowerReturn(SDValue Chain,
-                               CallingConv::ID CallConv, bool isVarArg,
+ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                               bool isVarArg,
                                const SmallVectorImpl<ISD::OutputArg> &Outs,
                                const SmallVectorImpl<SDValue> &OutVals,
-                               SDLoc dl, SelectionDAG &DAG) const {
+                               const SDLoc &dl, SelectionDAG &DAG) const {
 
   // CCValAssign - represent the assignment of the return value to a location.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -3088,10 +3085,11 @@ static SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) {
                       MachinePointerInfo(SV), false, false, 0);
 }
 
-SDValue
-ARMTargetLowering::GetF64FormalArgument(CCValAssign &VA, CCValAssign &NextVA,
-                                        SDValue &Root, SelectionDAG &DAG,
-                                        SDLoc dl) const {
+SDValue ARMTargetLowering::GetF64FormalArgument(CCValAssign &VA,
+                                                CCValAssign &NextVA,
+                                                SDValue &Root,
+                                                SelectionDAG &DAG,
+                                                const SDLoc &dl) const {
   MachineFunction &MF = DAG.getMachineFunction();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
@@ -3133,13 +3131,11 @@ ARMTargetLowering::GetF64FormalArgument(CCValAssign &VA, CCValAssign &NextVA,
 // these values; otherwise, this reassembles a (byval) structure that
 // was split between registers and memory.
 // Return: The frame index registers were stored into.
-int
-ARMTargetLowering::StoreByValRegs(CCState &CCInfo, SelectionDAG &DAG,
-                                  SDLoc dl, SDValue &Chain,
-                                  const Value *OrigArg,
-                                  unsigned InRegsParamRecordIdx,
-                                  int ArgOffset,
-                                  unsigned ArgSize) const {
+int ARMTargetLowering::StoreByValRegs(CCState &CCInfo, SelectionDAG &DAG,
+                                      const SDLoc &dl, SDValue &Chain,
+                                      const Value *OrigArg,
+                                      unsigned InRegsParamRecordIdx,
+                                      int ArgOffset, unsigned ArgSize) const {
   // Currently, two use-cases possible:
   // Case #1. Non-var-args function, and we meet first byval parameter.
   //          Setup first unallocated register as first byval register;
@@ -3190,12 +3186,11 @@ ARMTargetLowering::StoreByValRegs(CCState &CCInfo, SelectionDAG &DAG,
 }
 
 // Setup stack frame, the va_list pointer will start from.
-void
-ARMTargetLowering::VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
-                                        SDLoc dl, SDValue &Chain,
-                                        unsigned ArgOffset,
-                                        unsigned TotalArgRegsSaveSize,
-                                        bool ForceMutable) const {
+void ARMTargetLowering::VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
+                                             const SDLoc &dl, SDValue &Chain,
+                                             unsigned ArgOffset,
+                                             unsigned TotalArgRegsSaveSize,
+                                             bool ForceMutable) const {
   MachineFunction &MF = DAG.getMachineFunction();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
@@ -3210,14 +3205,10 @@ ARMTargetLowering::VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
   AFI->setVarArgsFrameIndex(FrameIndex);
 }
 
-SDValue
-ARMTargetLowering::LowerFormalArguments(SDValue Chain,
-                                        CallingConv::ID CallConv, bool isVarArg,
-                                        const SmallVectorImpl<ISD::InputArg>
-                                          &Ins,
-                                        SDLoc dl, SelectionDAG &DAG,
-                                        SmallVectorImpl<SDValue> &InVals)
-                                          const {
+SDValue ARMTargetLowering::LowerFormalArguments(
+    SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
 
@@ -3442,10 +3433,9 @@ static bool isFloatingPointZero(SDValue Op) {
 
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
-SDValue
-ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                             SDValue &ARMcc, SelectionDAG &DAG,
-                             SDLoc dl) const {
+SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                                     SDValue &ARMcc, SelectionDAG &DAG,
+                                     const SDLoc &dl) const {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     unsigned C = RHSC->getZExtValue();
     if (!isLegalICmpImmediate(C)) {
@@ -3501,9 +3491,8 @@ ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 }
 
 /// Returns a appropriate VFP CMP (fcmp{s|d}+fmstat) for the given operands.
-SDValue
-ARMTargetLowering::getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
-                             SDLoc dl) const {
+SDValue ARMTargetLowering::getVFPCmp(SDValue LHS, SDValue RHS,
+                                     SelectionDAG &DAG, const SDLoc &dl) const {
   assert(!Subtarget->isFPOnlySP() || RHS.getValueType() != MVT::f64);
   SDValue Cmp;
   if (!isFloatingPointZero(RHS))
@@ -3720,7 +3709,7 @@ static void checkVSELConstraints(ISD::CondCode CC, ARMCC::CondCodes &CondCode,
   }
 }
 
-SDValue ARMTargetLowering::getCMOV(SDLoc dl, EVT VT, SDValue FalseVal,
+SDValue ARMTargetLowering::getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal,
                                    SDValue TrueVal, SDValue ARMcc, SDValue CCR,
                                    SDValue Cmp, SelectionDAG &DAG) const {
   if (Subtarget->isFPOnlySP() && VT == MVT::f64) {
@@ -4394,7 +4383,7 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG) {
 /// not support i64 elements, so sometimes the zero vectors will need to be
 /// explicitly constructed.  Regardless, use a canonical VMOV to create the
 /// zero vector.
-static SDValue getZeroVector(EVT VT, SelectionDAG &DAG, SDLoc dl) {
+static SDValue getZeroVector(EVT VT, SelectionDAG &DAG, const SDLoc &dl) {
   assert(VT.isVector() && "Expected a vector type");
   // The canonical modified immediate encoding of a zero vector is....0!
   SDValue EncodedVal = DAG.getTargetConstant(0, dl, MVT::i32);
@@ -4927,7 +4916,7 @@ static SDValue LowerSETCCE(SDValue Op, SelectionDAG &DAG) {
 /// operand (e.g., VMOV).  If so, return the encoded value.
 static SDValue isNEONModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
                                  unsigned SplatBitSize, SelectionDAG &DAG,
-                                 SDLoc dl, EVT &VT, bool is128Bits,
+                                 const SDLoc &dl, EVT &VT, bool is128Bits,
                                  NEONModImmType type) {
   unsigned OpCmode, Imm;
 
@@ -5517,7 +5506,7 @@ static bool isReverseMask(ArrayRef<int> M, EVT VT) {
 // instruction, return an SDValue of such a constant (will become a MOV
 // instruction).  Otherwise return null.
 static SDValue IsSingleInstrConstant(SDValue N, SelectionDAG &DAG,
-                                     const ARMSubtarget *ST, SDLoc dl) {
+                                     const ARMSubtarget *ST, const SDLoc &dl) {
   uint64_t Val;
   if (!isa<ConstantSDNode>(N))
     return SDValue();
@@ -5991,7 +5980,7 @@ ARMTargetLowering::isShuffleMaskLegal(const SmallVectorImpl<int> &M,
 /// the specified operations to build the shuffle.
 static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
                                       SDValue RHS, SelectionDAG &DAG,
-                                      SDLoc dl) {
+                                      const SDLoc &dl) {
   unsigned OpNum = (PFEntry >> 26) & 0x0F;
   unsigned LHSID = (PFEntry >> 13) & ((1 << 13)-1);
   unsigned RHSID = (PFEntry >>  0) & ((1 << 13)-1);
@@ -6598,8 +6587,8 @@ static SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) {
                                DAG.getNode(ISD::BITCAST, DL, Op1VT, N01), Op1));
 }
 
-static SDValue
-LowerSDIV_v4i8(SDValue X, SDValue Y, SDLoc dl, SelectionDAG &DAG) {
+static SDValue LowerSDIV_v4i8(SDValue X, SDValue Y, const SDLoc &dl,
+                              SelectionDAG &DAG) {
   // TODO: Should this propagate fast-math-flags?
 
   // Convert to float
@@ -6629,8 +6618,8 @@ LowerSDIV_v4i8(SDValue X, SDValue Y, SDLoc dl, SelectionDAG &DAG) {
   return X;
 }
 
-static SDValue
-LowerSDIV_v4i16(SDValue N0, SDValue N1, SDLoc dl, SelectionDAG &DAG) {
+static SDValue LowerSDIV_v4i16(SDValue N0, SDValue N1, const SDLoc &dl,
+                               SelectionDAG &DAG) {
   // TODO: Should this propagate fast-math-flags?
 
   SDValue N2;
@@ -7723,7 +7712,7 @@ static unsigned getStOpcode(unsigned StSize, bool IsThumb1, bool IsThumb2) {
 /// Emit a post-increment load operation with given size. The instructions
 /// will be added to BB at Pos.
 static void emitPostLd(MachineBasicBlock *BB, MachineInstr *Pos,
-                       const TargetInstrInfo *TII, DebugLoc dl,
+                       const TargetInstrInfo *TII, const DebugLoc &dl,
                        unsigned LdSize, unsigned Data, unsigned AddrIn,
                        unsigned AddrOut, bool IsThumb1, bool IsThumb2) {
   unsigned LdOpc = getLdOpcode(LdSize, IsThumb1, IsThumb2);
@@ -7755,7 +7744,7 @@ static void emitPostLd(MachineBasicBlock *BB, MachineInstr *Pos,
 /// Emit a post-increment store operation with given size. The instructions
 /// will be added to BB at Pos.
 static void emitPostSt(MachineBasicBlock *BB, MachineInstr *Pos,
-                       const TargetInstrInfo *TII, DebugLoc dl,
+                       const TargetInstrInfo *TII, const DebugLoc &dl,
                        unsigned StSize, unsigned Data, unsigned AddrIn,
                        unsigned AddrOut, bool IsThumb1, bool IsThumb2) {
   unsigned StOpc = getStOpcode(StSize, IsThumb1, IsThumb2);

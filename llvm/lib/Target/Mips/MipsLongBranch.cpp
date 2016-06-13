@@ -82,7 +82,7 @@ namespace {
     void splitMBB(MachineBasicBlock *MBB);
     void initMBBInfo();
     int64_t computeOffset(const MachineInstr *Br);
-    void replaceBranch(MachineBasicBlock &MBB, Iter Br, DebugLoc DL,
+    void replaceBranch(MachineBasicBlock &MBB, Iter Br, const DebugLoc &DL,
                        MachineBasicBlock *MBBOpnd);
     void expandToLongBranch(MBBInfo &Info);
 
@@ -118,7 +118,7 @@ static MachineBasicBlock *getTargetMBB(const MachineInstr &Br) {
 
 // Traverse the list of instructions backwards until a non-debug instruction is
 // found or it reaches E.
-static ReverseIter getNonDebugInstr(ReverseIter B, ReverseIter E) {
+static ReverseIter getNonDebugInstr(ReverseIter B, const ReverseIter &E) {
   for (; B != E; ++B)
     if (!B->isDebugValue())
       return B;
@@ -218,7 +218,8 @@ int64_t MipsLongBranch::computeOffset(const MachineInstr *Br) {
 // Replace Br with a branch which has the opposite condition code and a
 // MachineBasicBlock operand MBBOpnd.
 void MipsLongBranch::replaceBranch(MachineBasicBlock &MBB, Iter Br,
-                                   DebugLoc DL, MachineBasicBlock *MBBOpnd) {
+                                   const DebugLoc &DL,
+                                   MachineBasicBlock *MBBOpnd) {
   const MipsInstrInfo *TII = static_cast<const MipsInstrInfo *>(
       MBB.getParent()->getSubtarget().getInstrInfo());
   unsigned NewOpc = TII->getOppositeBranchOpc(Br->getOpcode());

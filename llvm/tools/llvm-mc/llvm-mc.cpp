@@ -250,7 +250,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
 
   bool Error = false;
   while (Lexer.Lex().isNot(AsmToken::Eof)) {
-    AsmToken Tok = Lexer.getTok();
+    const AsmToken &Tok = Lexer.getTok();
 
     switch (Tok.getKind()) {
     default:

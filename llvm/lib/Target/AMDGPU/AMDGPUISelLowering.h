@@ -72,8 +72,8 @@ protected:
   SDValue performSraCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSrlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performCtlzCombine(SDLoc SL, SDValue Cond, SDValue LHS, SDValue RHS,
-                             DAGCombinerInfo &DCI) const;
+  SDValue performCtlzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
+                             SDValue RHS, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
@@ -147,11 +147,10 @@ public:
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
 
-  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                      bool isVarArg,
+  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals,
-                      SDLoc DL, SelectionDAG &DAG) const override;
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
+                      SelectionDAG &DAG) const override;
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
@@ -164,14 +163,9 @@ public:
                           SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  SDValue CombineFMinMaxLegacy(SDLoc DL,
-                               EVT VT,
-                               SDValue LHS,
-                               SDValue RHS,
-                               SDValue True,
-                               SDValue False,
-                               SDValue CC,
-                               DAGCombinerInfo &DCI) const;
+  SDValue CombineFMinMaxLegacy(const SDLoc &DL, EVT VT, SDValue LHS,
+                               SDValue RHS, SDValue True, SDValue False,
+                               SDValue CC, DAGCombinerInfo &DCI) const;
 
   const char* getTargetNodeName(unsigned Opcode) const override;
 

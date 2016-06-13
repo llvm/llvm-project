@@ -89,9 +89,9 @@ void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 }
 
 void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  unsigned DestReg, unsigned SrcReg,
-                                  bool KillSrc) const {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, bool KillSrc) const {
   unsigned Opc;
   if (MSP430::GR16RegClass.contains(DestReg, SrcReg))
     Opc = MSP430::MOV16rr;
@@ -260,11 +260,11 @@ bool MSP430InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned
-MSP430InstrInfo::InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
-                              MachineBasicBlock *FBB,
-                              ArrayRef<MachineOperand> Cond,
-                              DebugLoc DL) const {
+unsigned MSP430InstrInfo::InsertBranch(MachineBasicBlock &MBB,
+                                       MachineBasicBlock *TBB,
+                                       MachineBasicBlock *FBB,
+                                       ArrayRef<MachineOperand> Cond,
+                                       const DebugLoc &DL) const {
   // Shouldn't be a fall through.
   assert(TBB && "InsertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&

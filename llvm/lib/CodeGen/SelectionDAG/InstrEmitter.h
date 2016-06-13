@@ -83,8 +83,8 @@ class LLVM_LIBRARY_VISIBILITY InstrEmitter {
   /// ConstrainForSubReg - Try to constrain VReg to a register class that
   /// supports SubIdx sub-registers.  Emit a copy if that isn't possible.
   /// Return the virtual register to use.
-  unsigned ConstrainForSubReg(unsigned VReg, unsigned SubIdx,
-                              MVT VT, DebugLoc DL);
+  unsigned ConstrainForSubReg(unsigned VReg, unsigned SubIdx, MVT VT,
+                              const DebugLoc &DL);
 
   /// EmitSubregNode - Generate machine code for subreg nodes.
   ///

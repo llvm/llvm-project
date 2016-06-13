@@ -43,9 +43,8 @@ public:
   unsigned isStoreToStackSlot(const MachineInstr *MI,
                               int &FrameIndex) const override;
 
-  void copyPhysReg(MachineBasicBlock &MBB,
-                   MachineBasicBlock::iterator MI, DebugLoc DL,
-                   unsigned DestReg, unsigned SrcReg,
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
   void storeRegToStack(MachineBasicBlock &MBB,
@@ -74,7 +73,7 @@ public:
   /// non-NULL parameter, the last instruction is not emitted, but instead
   /// its immediate operand is returned in NewImm.
   unsigned loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator II, DebugLoc DL,
+                         MachineBasicBlock::iterator II, const DebugLoc &DL,
                          unsigned *NewImm) const;
 
 private:

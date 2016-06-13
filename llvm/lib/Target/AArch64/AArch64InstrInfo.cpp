@@ -244,7 +244,7 @@ unsigned AArch64InstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
 }
 
 void AArch64InstrInfo::instantiateCondBranch(
-    MachineBasicBlock &MBB, DebugLoc DL, MachineBasicBlock *TBB,
+    MachineBasicBlock &MBB, const DebugLoc &DL, MachineBasicBlock *TBB,
     ArrayRef<MachineOperand> Cond) const {
   if (Cond[0].getImm() != -1) {
     // Regular Bcc
@@ -260,9 +260,11 @@ void AArch64InstrInfo::instantiateCondBranch(
   }
 }
 
-unsigned AArch64InstrInfo::InsertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, DebugLoc DL) const {
+unsigned AArch64InstrInfo::InsertBranch(MachineBasicBlock &MBB,
+                                        MachineBasicBlock *TBB,
+                                        MachineBasicBlock *FBB,
+                                        ArrayRef<MachineOperand> Cond,
+                                        const DebugLoc &DL) const {
   // Shouldn't be a fall through.
   assert(TBB && "InsertBranch must not be told to insert a fallthrough");
 
@@ -400,8 +402,8 @@ bool AArch64InstrInfo::canInsertSelect(
 }
 
 void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator I, DebugLoc DL,
-                                    unsigned DstReg,
+                                    MachineBasicBlock::iterator I,
+                                    const DebugLoc &DL, unsigned DstReg,
                                     ArrayRef<MachineOperand> Cond,
                                     unsigned TrueReg, unsigned FalseReg) const {
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
@@ -1841,7 +1843,7 @@ bool AArch64InstrInfo::shouldScheduleAdjacent(MachineInstr *First,
 
 MachineInstr *AArch64InstrInfo::emitFrameIndexDebugValue(
     MachineFunction &MF, int FrameIx, uint64_t Offset, const MDNode *Var,
-    const MDNode *Expr, DebugLoc DL) const {
+    const MDNode *Expr, const DebugLoc &DL) const {
   MachineInstrBuilder MIB = BuildMI(MF, DL, get(AArch64::DBG_VALUE))
                                 .addFrameIndex(FrameIx)
                                 .addImm(0)
@@ -1871,7 +1873,7 @@ static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
 }
 
 void AArch64InstrInfo::copyPhysRegTuple(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, DebugLoc DL,
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, const DebugLoc &DL,
     unsigned DestReg, unsigned SrcReg, bool KillSrc, unsigned Opcode,
     llvm::ArrayRef<unsigned> Indices) const {
   assert(Subtarget.hasNEON() &&
@@ -1897,9 +1899,9 @@ void AArch64InstrInfo::copyPhysRegTuple(
 }
 
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator I, DebugLoc DL,
-                                   unsigned DestReg, unsigned SrcReg,
-                                   bool KillSrc) const {
+                                   MachineBasicBlock::iterator I,
+                                   const DebugLoc &DL, unsigned DestReg,
+                                   unsigned SrcReg, bool KillSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       (AArch64::GPR32spRegClass.contains(SrcReg) || SrcReg == AArch64::WZR)) {
     const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -2385,7 +2387,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
 }
 
 void llvm::emitFrameOffset(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                            unsigned DestReg, unsigned SrcReg, int Offset,
                            const TargetInstrInfo *TII,
                            MachineInstr::MIFlag Flag, bool SetNZCV) {

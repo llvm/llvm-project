@@ -111,11 +111,9 @@ void TargetLowering::ArgListEntry::setAttributes(ImmutableCallSite *CS,
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
-TargetLowering::makeLibCall(SelectionDAG &DAG,
-                            RTLIB::Libcall LC, EVT RetVT,
-                            ArrayRef<SDValue> Ops,
-                            bool isSigned, SDLoc dl,
-                            bool doesNotReturn,
+TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
+                            ArrayRef<SDValue> Ops, bool isSigned,
+                            const SDLoc &dl, bool doesNotReturn,
                             bool isReturnValueUsed) const {
   TargetLowering::ArgListTy Args;
   Args.reserve(Ops.size());
@@ -149,7 +147,7 @@ TargetLowering::makeLibCall(SelectionDAG &DAG,
 void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
                                          SDValue &NewLHS, SDValue &NewRHS,
                                          ISD::CondCode &CCCode,
-                                         SDLoc dl) const {
+                                         const SDLoc &dl) const {
   assert((VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128 || VT == MVT::ppcf128)
          && "Unsupported setcc type!");
 
@@ -370,11 +368,10 @@ bool TargetLowering::TargetLoweringOpt::ShrinkDemandedConstant(SDValue Op,
 /// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.
 /// This uses isZExtFree and ZERO_EXTEND for the widening cast, but it could be
 /// generalized for targets with other types of implicit widening casts.
-bool
-TargetLowering::TargetLoweringOpt::ShrinkDemandedOp(SDValue Op,
-                                                    unsigned BitWidth,
-                                                    const APInt &Demanded,
-                                                    SDLoc dl) {
+bool TargetLowering::TargetLoweringOpt::ShrinkDemandedOp(SDValue Op,
+                                                         unsigned BitWidth,
+                                                         const APInt &Demanded,
+                                                         const SDLoc &dl) {
   assert(Op.getNumOperands() == 2 &&
          "ShrinkDemandedOp only supports binary operators!");
   assert(Op.getNode()->getNumValues() == 1 &&
@@ -1278,7 +1275,7 @@ bool TargetLowering::isExtendedTrueVal(const ConstantSDNode *N, EVT VT,
 SDValue TargetLowering::simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
                                              ISD::CondCode Cond,
                                              DAGCombinerInfo &DCI,
-                                             SDLoc DL) const {
+                                             const SDLoc &DL) const {
   // Match these patterns in any of their permutations:
   // (X & Y) == Y
   // (X & Y) != Y
@@ -1336,10 +1333,10 @@ SDValue TargetLowering::simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
 
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
-SDValue
-TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
-                              ISD::CondCode Cond, bool foldBooleans,
-                              DAGCombinerInfo &DCI, SDLoc dl) const {
+SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
+                                      ISD::CondCode Cond, bool foldBooleans,
+                                      DAGCombinerInfo &DCI,
+                                      const SDLoc &dl) const {
   SelectionDAG &DAG = DCI.DAG;
 
   // These setcc operations always fold.
@@ -2782,7 +2779,7 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
 /// \brief Given an exact SDIV by a constant, create a multiplication
 /// with the multiplicative inverse of the constant.
 static SDValue BuildExactSDIV(const TargetLowering &TLI, SDValue Op1, APInt d,
-                              SDLoc dl, SelectionDAG &DAG,
+                              const SDLoc &dl, SelectionDAG &DAG,
                               std::vector<SDNode *> &Created) {
   assert(d != 0 && "Division by zero!");
 

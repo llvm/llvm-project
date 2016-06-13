@@ -58,10 +58,9 @@ static bool CompareSSIOffset(const StackSlotInfo& a, const StackSlotInfo& b) {
   return a.Offset < b.Offset;
 }
 
-
 static void EmitDefCfaRegister(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI, DebugLoc dl,
-                               const TargetInstrInfo &TII,
+                               MachineBasicBlock::iterator MBBI,
+                               const DebugLoc &dl, const TargetInstrInfo &TII,
                                MachineModuleInfo *MMI, unsigned DRegNum) {
   unsigned CFIIndex = MMI->addFrameInst(
       MCCFIInstruction::createDefCfaRegister(nullptr, DRegNum));
@@ -70,8 +69,8 @@ static void EmitDefCfaRegister(MachineBasicBlock &MBB,
 }
 
 static void EmitDefCfaOffset(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator MBBI, DebugLoc dl,
-                             const TargetInstrInfo &TII,
+                             MachineBasicBlock::iterator MBBI,
+                             const DebugLoc &dl, const TargetInstrInfo &TII,
                              MachineModuleInfo *MMI, int Offset) {
   unsigned CFIIndex =
       MMI->addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, -Offset));
@@ -80,7 +79,7 @@ static void EmitDefCfaOffset(MachineBasicBlock &MBB,
 }
 
 static void EmitCfiOffset(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc dl,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &dl,
                           const TargetInstrInfo &TII, MachineModuleInfo *MMI,
                           unsigned DRegNum, int Offset) {
   unsigned CFIIndex = MMI->addFrameInst(
@@ -96,7 +95,7 @@ static void EmitCfiOffset(MachineBasicBlock &MBB,
 /// \param OffsetFromTop the spill offset from the top of the frame.
 /// \param [in,out] Adjusted the current SP offset from the top of the frame.
 static void IfNeededExtSP(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc dl,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &dl,
                           const TargetInstrInfo &TII, MachineModuleInfo *MMI,
                           int OffsetFromTop, int &Adjusted, int FrameSize,
                           bool emitFrameMoves) {
@@ -120,7 +119,7 @@ static void IfNeededExtSP(MachineBasicBlock &MBB,
 /// \param [in,out] RemainingAdj the current SP offset from the top of the
 /// frame.
 static void IfNeededLDAWSP(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, DebugLoc dl,
+                           MachineBasicBlock::iterator MBBI, const DebugLoc &dl,
                            const TargetInstrInfo &TII, int OffsetFromTop,
                            int &RemainingAdj) {
   while (OffsetFromTop < RemainingAdj - MaxImmU16) {
@@ -187,10 +186,11 @@ getFrameIndexMMO(MachineBasicBlock &MBB, int FrameIndex, unsigned flags) {
 /// Restore clobbered registers with their spill slot value.
 /// The SP will be adjusted at the same time, thus the SpillList must be ordered
 /// with the largest (negative) offsets first.
-static void
-RestoreSpillList(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                 DebugLoc dl, const TargetInstrInfo &TII, int &RemainingAdj,
-                 SmallVectorImpl<StackSlotInfo> &SpillList) {
+static void RestoreSpillList(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI,
+                             const DebugLoc &dl, const TargetInstrInfo &TII,
+                             int &RemainingAdj,
+                             SmallVectorImpl<StackSlotInfo> &SpillList) {
   for (unsigned i = 0, e = SpillList.size(); i != e; ++i) {
     assert(SpillList[i].Offset % 4 == 0 && "Misaligned stack offset");
     assert(SpillList[i].Offset <= 0 && "Unexpected positive stack offset");

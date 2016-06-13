@@ -786,7 +786,7 @@ static const TableEntry PopTable[] = {
 ///
 void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
   MachineInstr* MI = I;
-  DebugLoc dl = MI->getDebugLoc();
+  const DebugLoc &dl = MI->getDebugLoc();
   ASSERT_SORTED(PopTable);
   if (StackTop == 0)
     report_fatal_error("Cannot pop empty stack!");

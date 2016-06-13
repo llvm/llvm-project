@@ -317,8 +317,8 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
 // decrement/increment to allocate/deallocate the callee-save stack area by
 // converting store/load to use pre/post increment version.
 static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc DL,
-    const TargetInstrInfo *TII, int CSStackSizeInc) {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, const TargetInstrInfo *TII, int CSStackSizeInc) {
 
   unsigned NewOpc;
   bool NewIsUnscaled = false;

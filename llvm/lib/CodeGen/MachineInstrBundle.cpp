@@ -79,7 +79,7 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
 
 FunctionPass *
 llvm::createUnpackMachineBundles(std::function<bool(const Function &)> Ftor) {
-  return new UnpackMachineBundles(Ftor);
+  return new UnpackMachineBundles(std::move(Ftor));
 }
 
 namespace {
