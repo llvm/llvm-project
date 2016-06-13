@@ -1268,27 +1268,23 @@ __kmp_reap_monitor( kmp_info_t *th )
     KMP_MB();       /* Flush all pending memory write invalidates.  */
 
 
-    /* First, check to see whether the monitor thread exists.  This could prevent a hang,
-       but if the monitor dies after the pthread_kill call and before the pthread_join
-       call, it will still hang. */
+    /* First, check to see whether the monitor thread exists to wake it up. This is
+       to avoid performance problem when the monitor sleeps during blocktime-size
+       interval */
 
     status = pthread_kill( th->th.th_info.ds.ds_thread, 0 );
-    if (status == ESRCH) {
-
-        KA_TRACE( 10, ("__kmp_reap_monitor: monitor does not exist, returning\n") );
-
-    } else
-    {
+    if (status != ESRCH) {
         __kmp_resume_monitor();   // Wake up the monitor thread
-        status = pthread_join( th->th.th_info.ds.ds_thread, & exit_val);
-        if (exit_val != th) {
-            __kmp_msg(
-                kmp_ms_fatal,
-                KMP_MSG( ReapMonitorError ),
-                KMP_ERR( status ),
-                __kmp_msg_null
-            );
-        }
+    }
+    KA_TRACE( 10, ("__kmp_reap_monitor: try to join with monitor\n") );
+    status = pthread_join( th->th.th_info.ds.ds_thread, & exit_val);
+    if (exit_val != th) {
+        __kmp_msg(
+            kmp_ms_fatal,
+            KMP_MSG( ReapMonitorError ),
+            KMP_ERR( status ),
+            __kmp_msg_null
+        );
     }
 
     th->th.th_info.ds.ds_tid  = KMP_GTID_DNE;
@@ -1311,28 +1307,17 @@ __kmp_reap_worker( kmp_info_t *th )
 
     KA_TRACE( 10, ("__kmp_reap_worker: try to reap T#%d\n", th->th.th_info.ds.ds_gtid ) );
 
-    /* First, check to see whether the worker thread exists.  This could prevent a hang,
-       but if the worker dies after the pthread_kill call and before the pthread_join
-       call, it will still hang. */
-
-    status = pthread_kill( th->th.th_info.ds.ds_thread, 0 );
-    if (status == ESRCH) {
-        KA_TRACE( 10, ("__kmp_reap_worker: worker T#%d does not exist, returning\n", th->th.th_info.ds.ds_gtid ) );
-    }
-    else {
-        KA_TRACE( 10, ("__kmp_reap_worker: try to join with worker T#%d\n", th->th.th_info.ds.ds_gtid ) );
-        status = pthread_join( th->th.th_info.ds.ds_thread, & exit_val);
+    status = pthread_join( th->th.th_info.ds.ds_thread, & exit_val);
 #ifdef KMP_DEBUG
-        /* Don't expose these to the user until we understand when they trigger */
-        if ( status != 0 ) {
-            __kmp_msg(kmp_ms_fatal, KMP_MSG( ReapWorkerError ), KMP_ERR( status ), __kmp_msg_null);
-        }
-        if ( exit_val != th ) {
-            KA_TRACE( 10, ( "__kmp_reap_worker: worker T#%d did not reap properly, exit_val = %p\n",
-                            th->th.th_info.ds.ds_gtid, exit_val ) );
-        }
-#endif /* KMP_DEBUG */
+    /* Don't expose these to the user until we understand when they trigger */
+    if ( status != 0 ) {
+        __kmp_msg(kmp_ms_fatal, KMP_MSG( ReapWorkerError ), KMP_ERR( status ), __kmp_msg_null);
     }
+    if ( exit_val != th ) {
+        KA_TRACE( 10, ( "__kmp_reap_worker: worker T#%d did not reap properly, exit_val = %p\n",
+                        th->th.th_info.ds.ds_gtid, exit_val ) );
+    }
+#endif /* KMP_DEBUG */
 
     KA_TRACE( 10, ("__kmp_reap_worker: done reaping T#%d\n", th->th.th_info.ds.ds_gtid ) );
 

@@ -60,13 +60,20 @@ static std::string runIncludeFixer(
       SymbolInfo("foo", SymbolInfo::SymbolKind::Class, "\"dir/otherdir/qux.h\"",
                  1, {{SymbolInfo::ContextType::Namespace, "b"},
                      {SymbolInfo::ContextType::Namespace, "a"}}),
-      SymbolInfo("bar", SymbolInfo::SymbolKind::Class, "\"bar.h\"",
-                 1, {{SymbolInfo::ContextType::Namespace, "b"},
-                     {SymbolInfo::ContextType::Namespace, "a"}}),
-      SymbolInfo("Green", SymbolInfo::SymbolKind::Class, "\"color.h\"",
-                 1, {{SymbolInfo::ContextType::EnumDecl, "Color"},
-                     {SymbolInfo::ContextType::Namespace, "b"},
-                     {SymbolInfo::ContextType::Namespace, "a"}}),
+      SymbolInfo("bar", SymbolInfo::SymbolKind::Class, "\"bar.h\"", 1,
+                 {{SymbolInfo::ContextType::Namespace, "b"},
+                  {SymbolInfo::ContextType::Namespace, "a"}}),
+      SymbolInfo("Green", SymbolInfo::SymbolKind::Class, "\"color.h\"", 1,
+                 {{SymbolInfo::ContextType::EnumDecl, "Color"},
+                  {SymbolInfo::ContextType::Namespace, "b"},
+                  {SymbolInfo::ContextType::Namespace, "a"}}),
+      SymbolInfo("Vector", SymbolInfo::SymbolKind::Class, "\"Vector.h\"", 1,
+                 {{SymbolInfo::ContextType::Namespace, "__a"},
+                  {SymbolInfo::ContextType::Namespace, "a"}},
+                 /*num_occurrences=*/2),
+      SymbolInfo("Vector", SymbolInfo::SymbolKind::Class, "\"Vector.h\"", 2,
+                 {{SymbolInfo::ContextType::Namespace, "a"}},
+                 /*num_occurrences=*/1),
   };
   auto SymbolIndexMgr = llvm::make_unique<include_fixer::SymbolIndexManager>();
   SymbolIndexMgr->addSymbolIndex(
@@ -207,6 +214,11 @@ TEST(IncludeFixer, InsertAndSortSingleHeader) {
                          "\n"
                          "namespace a { b::bar b; }";
   EXPECT_EQ(Expected, runIncludeFixer(Code));
+}
+
+TEST(IncludeFixer, DoNotDeleteMatchedSymbol) {
+  EXPECT_EQ("#include \"Vector.h\"\na::Vector v;",
+            runIncludeFixer("a::Vector v;"));
 }
 
 } // namespace

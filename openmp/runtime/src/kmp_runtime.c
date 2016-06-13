@@ -4424,7 +4424,7 @@ __kmp_set_thread_affinity_mask_full_tmp( kmp_affin_mask_t *old_mask )
                 );
             }
         }
-        __kmp_set_system_affinity( __kmp_affinity_get_fullMask(), TRUE );
+        __kmp_set_system_affinity( __kmp_affin_fullMask, TRUE );
     }
 }
 #endif

@@ -99,6 +99,12 @@ const int FUTEX_WAKE = 1;
 # define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
 #endif
 
+#if defined(__x86_64__)
+extern "C" {
+extern void internal_sigreturn();
+}
+#endif
+
 namespace __sanitizer {
 
 #if SANITIZER_LINUX && defined(__x86_64__)
@@ -616,7 +622,8 @@ int internal_fork() {
 
 #if SANITIZER_LINUX
 #define SA_RESTORER 0x04000000
-// Doesn't set sa_restorer, use with caution (see below).
+// Doesn't set sa_restorer if the caller did not set it, so use with caution
+//(see below).
 int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
   __sanitizer_kernel_sigaction_t k_act, k_oldact;
   internal_memset(&k_act, 0, sizeof(__sanitizer_kernel_sigaction_t));
@@ -660,6 +667,23 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
   }
   return result;
 }
+
+// Invokes sigaction via a raw syscall with a restorer, but does not support
+// all platforms yet.
+// We disable for Go simply because we have not yet added to buildgo.sh.
+#if defined(__x86_64__) && !SANITIZER_GO
+int internal_sigaction_syscall(int signum, const void *act, void *oldact) {
+  __sanitizer_sigaction u_adjust;
+  internal_memcpy(&u_adjust, act, sizeof(u_adjust));
+#if !SANITIZER_ANDROID || !SANITIZER_MIPS32
+    if (u_adjust.sa_restorer == nullptr) {
+      u_adjust.sa_restorer = internal_sigreturn;
+    }
+#endif
+    return internal_sigaction_norestorer(signum, (const void *)&u_adjust,
+                                         oldact);
+}
+#endif // defined(__x86_64__) && !SANITIZER_GO
 #endif  // SANITIZER_LINUX
 
 uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,

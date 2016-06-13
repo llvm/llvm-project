@@ -101,6 +101,7 @@ enum stats_state_e {
     macro (REDUCE_wait, 0, arg)                                 \
     macro (REDUCE_nowait, 0, arg)                               \
     macro (OMP_TASKYIELD, 0, arg)                               \
+    macro (OMP_TASKLOOP, 0, arg)                                \
     macro (TASK_executed, 0, arg)                               \
     macro (TASK_cancelled, 0, arg)                              \
     macro (TASK_stolen, 0, arg)                                 \
@@ -140,6 +141,7 @@ enum stats_state_e {
     macro (OMP_task_join_bar, 0, arg)                              \
     macro (OMP_task_plain_bar, 0, arg)                             \
     macro (OMP_serial, 0, arg)                                     \
+    macro (OMP_taskloop_scheduling, 0, arg)                        \
     macro (OMP_set_numthreads,    stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     macro (OMP_PARALLEL_args,     stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
     macro (FOR_static_iterations, stats_flags_e::noUnits | stats_flags_e::noTotal, arg) \
@@ -250,6 +252,7 @@ enum stats_state_e {
     macro(OMP_task_join_bar, 0, arg)               \
     macro(OMP_task_plain_bar, 0, arg)              \
     macro(OMP_serial, 0, arg)                      \
+    macro(OMP_taskloop_scheduling, 0, arg)         \
     KMP_FOREACH_EXPLICIT_DEVELOPER_TIMER(macro,arg)     \
     macro(LAST, 0, arg)
 

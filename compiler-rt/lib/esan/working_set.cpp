@@ -182,10 +182,13 @@ static void takeSample(void *Arg) {
   }
 }
 
-void initializeWorkingSet() {
+// Initialization that must be done before any instrumented code is executed.
+void initializeShadowWorkingSet() {
   CHECK(getFlags()->cache_line_size == CacheLineSize);
   registerMemoryFaultHandler();
+}
 
+void initializeWorkingSet() {
   if (getFlags()->record_snapshots) {
     for (u32 i = 0; i < NumFreq; ++i)
       SizePerFreq[i].initialize(CircularBufferSizes[i]);
