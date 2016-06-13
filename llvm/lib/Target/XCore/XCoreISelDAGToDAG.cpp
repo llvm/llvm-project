@@ -46,7 +46,7 @@ namespace {
 
     /// getI32Imm - Return a target constant with the specified value, of type
     /// i32.
-    inline SDValue getI32Imm(unsigned Imm, SDLoc dl) {
+    inline SDValue getI32Imm(unsigned Imm, const SDLoc &dl) {
       return CurDAG->getTargetConstant(Imm, dl, MVT::i32);
     }
 

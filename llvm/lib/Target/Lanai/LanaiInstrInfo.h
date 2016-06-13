@@ -48,7 +48,7 @@ public:
                               int &FrameIndex) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
-                   DebugLoc DL, unsigned DestinationRegister,
+                   const DebugLoc &DL, unsigned DestinationRegister,
                    unsigned SourceRegister, bool KillSource) const override;
 
   void
@@ -88,7 +88,7 @@ public:
   unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TrueBlock,
                         MachineBasicBlock *FalseBlock,
                         ArrayRef<MachineOperand> Condition,
-                        DebugLoc DL) const override;
+                        const DebugLoc &DL) const override;
 };
 
 static inline bool isSPLSOpcode(unsigned Opcode) {

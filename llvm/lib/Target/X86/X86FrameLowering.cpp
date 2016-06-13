@@ -315,8 +315,8 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
 }
 
 MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc DL,
-    int64_t Offset, bool InEpilogue) const {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, int64_t Offset, bool InEpilogue) const {
   assert(Offset != 0 && "zero offset stack adjustment requested");
 
   // On Atom, using LEA to adjust SP is preferred, but using it in the epilogue
@@ -411,18 +411,18 @@ int X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
 }
 
 void X86FrameLowering::BuildCFI(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                                MCCFIInstruction CFIInst) const {
+                                MachineBasicBlock::iterator MBBI,
+                                const DebugLoc &DL,
+                                const MCCFIInstruction &CFIInst) const {
   MachineFunction &MF = *MBB.getParent();
   unsigned CFIIndex = MF.getMMI().addFrameInst(CFIInst);
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 }
 
-void
-X86FrameLowering::emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator MBBI,
-                                            DebugLoc DL) const {
+void X86FrameLowering::emitCalleeSavedFrameMoves(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   MachineModuleInfo &MMI = MF.getMMI();
@@ -447,7 +447,7 @@ X86FrameLowering::emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
 MachineInstr *X86FrameLowering::emitStackProbe(MachineFunction &MF,
                                                MachineBasicBlock &MBB,
                                                MachineBasicBlock::iterator MBBI,
-                                               DebugLoc DL,
+                                               const DebugLoc &DL,
                                                bool InProlog) const {
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   if (STI.isTargetWindowsCoreCLR()) {
@@ -487,8 +487,8 @@ void X86FrameLowering::inlineStackProbe(MachineFunction &MF,
 }
 
 MachineInstr *X86FrameLowering::emitStackProbeInline(
-  MachineFunction &MF, MachineBasicBlock &MBB,
-  MachineBasicBlock::iterator MBBI, DebugLoc DL, bool InProlog) const {
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   assert(STI.is64Bit() && "different expansion needed for 32 bit");
   assert(STI.isTargetWindowsCoreCLR() && "custom expansion expects CoreCLR");
@@ -704,7 +704,7 @@ MachineInstr *X86FrameLowering::emitStackProbeInline(
 
 MachineInstr *X86FrameLowering::emitStackProbeCall(
     MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, DebugLoc DL, bool InProlog) const {
+    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
   bool IsLargeCodeModel = MF.getTarget().getCodeModel() == CodeModel::Large;
 
   unsigned CallOp;
@@ -768,7 +768,7 @@ MachineInstr *X86FrameLowering::emitStackProbeCall(
 
 MachineInstr *X86FrameLowering::emitStackProbeInlineStub(
     MachineFunction &MF, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, DebugLoc DL, bool InProlog) const {
+    MachineBasicBlock::iterator MBBI, const DebugLoc &DL, bool InProlog) const {
 
   assert(InProlog && "ChkStkStub called outside prolog!");
 
@@ -806,7 +806,7 @@ uint64_t X86FrameLowering::calculateMaxStackAlign(const MachineFunction &MF) con
 
 void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
-                                          DebugLoc DL, unsigned Reg,
+                                          const DebugLoc &DL, unsigned Reg,
                                           uint64_t MaxAlign) const {
   uint64_t Val = -MaxAlign;
   unsigned AndOp = getANDriOpcode(Uses64BitFramePtr, Val);
@@ -2441,7 +2441,9 @@ void X86FrameLowering::adjustForHiPEPrologue(
 }
 
 bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, DebugLoc DL, int Offset) const {
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL,
+                                           int Offset) const {
 
   if (Offset <= 0)
     return false;
@@ -2662,7 +2664,7 @@ bool X86FrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
 
 MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    DebugLoc DL, bool RestoreSP) const {
+    const DebugLoc &DL, bool RestoreSP) const {
   assert(STI.isTargetWindowsMSVC() && "funclets only supported in MSVC env");
   assert(STI.isTargetWin32() && "EBP/ESI restoration only required on win32");
   assert(STI.is32Bit() && !Uses64BitFramePtr &&

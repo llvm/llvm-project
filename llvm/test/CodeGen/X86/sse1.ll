@@ -53,55 +53,8 @@ entry:
 define <4 x float> @PR28044(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; CHECK-LABEL: PR28044:
 ; CHECK:       # BB#0:
-; CHECK:         movaps %xmm1, %xmm2
-; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; CHECK-NEXT:    ucomiss %xmm2, %xmm3
-; CHECK-NEXT:    setnp %al
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    andb %al, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    shll $31, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    movl %eax,
-; CHECK-NEXT:    movaps %xmm1, %xmm2
-; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
-; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
-; CHECK-NEXT:    ucomiss %xmm2, %xmm3
-; CHECK-NEXT:    setnp %al
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    andb %al, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    shll $31, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    movl %eax,
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    setnp %al
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    andb %al, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    shll $31, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    movl %eax,
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,1,2,3]
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,1,2,3]
-; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    setnp %al
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    andb %al, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    shll $31, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    movl %eax,
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    cmpeqps %xmm1, %xmm0
+; CHECK-NEXT:    ret
 ;
   %cmp = fcmp oeq <4 x float> %a0, %a1
   %sext = sext <4 x i1> %cmp to <4 x i32>

@@ -38,7 +38,7 @@ std::unique_ptr<Module> llvm::CloneModule(const Module *M,
 
 std::unique_ptr<Module> llvm::CloneModule(
     const Module *M, ValueToValueMapTy &VMap,
-    std::function<bool(const GlobalValue *)> ShouldCloneDefinition) {
+    function_ref<bool(const GlobalValue *)> ShouldCloneDefinition) {
   // First off, we need to create the new module.
   std::unique_ptr<Module> New =
       llvm::make_unique<Module>(M->getModuleIdentifier(), M->getContext());

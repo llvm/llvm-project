@@ -93,11 +93,13 @@ public:
   bool tryLoadOfLoadIntrinsic(LoadSDNode *N);
   void SelectLoad(SDNode *N);
   void SelectBaseOffsetLoad(LoadSDNode *LD, SDLoc dl);
-  void SelectIndexedLoad(LoadSDNode *LD, SDLoc dl);
-  void SelectIndexedLoadZeroExtend64(LoadSDNode *LD, unsigned Opcode, SDLoc dl);
-  void SelectIndexedLoadSignExtend64(LoadSDNode *LD, unsigned Opcode, SDLoc dl);
+  void SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl);
+  void SelectIndexedLoadZeroExtend64(LoadSDNode *LD, unsigned Opcode,
+                                     const SDLoc &dl);
+  void SelectIndexedLoadSignExtend64(LoadSDNode *LD, unsigned Opcode,
+                                     const SDLoc &dl);
   void SelectBaseOffsetStore(StoreSDNode *ST, SDLoc dl);
-  void SelectIndexedStore(StoreSDNode *ST, SDLoc dl);
+  void SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl);
   void SelectStore(SDNode *N);
   void SelectSHL(SDNode *N);
   void SelectMul(SDNode *N);
@@ -112,7 +114,7 @@ public:
   // XformMskToBitPosU5Imm - Returns the bit position which
   // the single bit 32 bit mask represents.
   // Used in Clr and Set bit immediate memops.
-  SDValue XformMskToBitPosU5Imm(uint32_t Imm, SDLoc DL) {
+  SDValue XformMskToBitPosU5Imm(uint32_t Imm, const SDLoc &DL) {
     int32_t bitPos;
     bitPos = Log2_32(Imm);
     assert(bitPos >= 0 && bitPos < 32 &&
@@ -122,13 +124,13 @@ public:
 
   // XformMskToBitPosU4Imm - Returns the bit position which the single-bit
   // 16 bit mask represents. Used in Clr and Set bit immediate memops.
-  SDValue XformMskToBitPosU4Imm(uint16_t Imm, SDLoc DL) {
+  SDValue XformMskToBitPosU4Imm(uint16_t Imm, const SDLoc &DL) {
     return XformMskToBitPosU5Imm(Imm, DL);
   }
 
   // XformMskToBitPosU3Imm - Returns the bit position which the single-bit
   // 8 bit mask represents. Used in Clr and Set bit immediate memops.
-  SDValue XformMskToBitPosU3Imm(uint8_t Imm, SDLoc DL) {
+  SDValue XformMskToBitPosU3Imm(uint8_t Imm, const SDLoc &DL) {
     return XformMskToBitPosU5Imm(Imm, DL);
   }
 
@@ -141,36 +143,36 @@ public:
   // XformM5ToU5Imm - Return a target constant with the specified value, of
   // type i32 where the negative literal is transformed into a positive literal
   // for use in -= memops.
-  inline SDValue XformM5ToU5Imm(signed Imm, SDLoc DL) {
-     assert((Imm >= -31 && Imm <= -1)  && "Constant out of range for Memops");
-     return CurDAG->getTargetConstant(-Imm, DL, MVT::i32);
+  inline SDValue XformM5ToU5Imm(signed Imm, const SDLoc &DL) {
+    assert((Imm >= -31 && Imm <= -1) && "Constant out of range for Memops");
+    return CurDAG->getTargetConstant(-Imm, DL, MVT::i32);
   }
 
   // XformU7ToU7M1Imm - Return a target constant decremented by 1, in range
   // [1..128], used in cmpb.gtu instructions.
-  inline SDValue XformU7ToU7M1Imm(signed Imm, SDLoc DL) {
+  inline SDValue XformU7ToU7M1Imm(signed Imm, const SDLoc &DL) {
     assert((Imm >= 1 && Imm <= 128) && "Constant out of range for cmpb op");
     return CurDAG->getTargetConstant(Imm - 1, DL, MVT::i8);
   }
 
   // XformS8ToS8M1Imm - Return a target constant decremented by 1.
-  inline SDValue XformSToSM1Imm(signed Imm, SDLoc DL) {
+  inline SDValue XformSToSM1Imm(signed Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm - 1, DL, MVT::i32);
   }
 
   // XformU8ToU8M1Imm - Return a target constant decremented by 1.
-  inline SDValue XformUToUM1Imm(unsigned Imm, SDLoc DL) {
+  inline SDValue XformUToUM1Imm(unsigned Imm, const SDLoc &DL) {
     assert((Imm >= 1) && "Cannot decrement unsigned int less than 1");
     return CurDAG->getTargetConstant(Imm - 1, DL, MVT::i32);
   }
 
   // XformSToSM2Imm - Return a target constant decremented by 2.
-  inline SDValue XformSToSM2Imm(unsigned Imm, SDLoc DL) {
+  inline SDValue XformSToSM2Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm - 2, DL, MVT::i32);
   }
 
   // XformSToSM3Imm - Return a target constant decremented by 3.
-  inline SDValue XformSToSM3Imm(unsigned Imm, SDLoc DL) {
+  inline SDValue XformSToSM3Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm - 3, DL, MVT::i32);
   }
 
@@ -241,7 +243,7 @@ static bool doesIntrinsicReturnPredicate(unsigned ID) {
 
 void HexagonDAGToDAGISel::SelectIndexedLoadSignExtend64(LoadSDNode *LD,
                                                         unsigned Opcode,
-                                                        SDLoc dl) {
+                                                        const SDLoc &dl) {
   SDValue Chain = LD->getChain();
   EVT LoadedVT = LD->getMemoryVT();
   SDValue Base = LD->getBasePtr();
@@ -294,7 +296,7 @@ void HexagonDAGToDAGISel::SelectIndexedLoadSignExtend64(LoadSDNode *LD,
 
 void HexagonDAGToDAGISel::SelectIndexedLoadZeroExtend64(LoadSDNode *LD,
                                                         unsigned Opcode,
-                                                        SDLoc dl) {
+                                                        const SDLoc &dl) {
   SDValue Chain = LD->getChain();
   EVT LoadedVT = LD->getMemoryVT();
   SDValue Base = LD->getBasePtr();
@@ -354,8 +356,7 @@ void HexagonDAGToDAGISel::SelectIndexedLoadZeroExtend64(LoadSDNode *LD,
   return;
 }
 
-
-void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, SDLoc dl) {
+void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   SDValue Chain = LD->getChain();
   SDValue Base = LD->getBasePtr();
   SDValue Offset = LD->getOffset();
@@ -662,8 +663,7 @@ void HexagonDAGToDAGISel::SelectLoad(SDNode *N) {
   SelectCode(LD);
 }
 
-
-void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, SDLoc dl) {
+void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
   SDValue Chain = ST->getChain();
   SDValue Base = ST->getBasePtr();
   SDValue Offset = ST->getOffset();

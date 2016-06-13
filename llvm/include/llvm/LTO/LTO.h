@@ -58,10 +58,10 @@ public:
 /// emit a copy), and compile-time optimization (allow drop of duplicates).
 void thinLTOResolveWeakForLinkerInIndex(
     ModuleSummaryIndex &Index,
-    std::function<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    std::function<bool(StringRef, GlobalValue::GUID)> isExported,
-    std::function<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
+    function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage);
 
 /// Update the linkages in the given \p Index to mark exported values
@@ -69,8 +69,7 @@ void thinLTOResolveWeakForLinkerInIndex(
 /// must apply the changes to the Module via thinLTOInternalizeModule.
 void thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    std::function<bool(StringRef, GlobalValue::GUID)> isExported);
-
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported);
 }
 
 #endif

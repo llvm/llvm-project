@@ -59,7 +59,7 @@ public:
 
   unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        DebugLoc DL) const override;
+                        const DebugLoc &DL) const override;
 
   bool
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
@@ -146,8 +146,8 @@ private:
                      MachineBasicBlock *&BB,
                      SmallVectorImpl<MachineOperand> &Cond) const;
 
-  void BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB, DebugLoc DL,
-                   ArrayRef<MachineOperand> Cond) const;
+  void BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                   const DebugLoc &DL, ArrayRef<MachineOperand> Cond) const;
 };
 
 /// Create MipsInstrInfo objects.

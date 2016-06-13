@@ -227,7 +227,7 @@ static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
 
 void llvm::SplitModule(
     std::unique_ptr<Module> M, unsigned N,
-    std::function<void(std::unique_ptr<Module> MPart)> ModuleCallback,
+    function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback,
     bool PreserveLocals) {
   if (!PreserveLocals) {
     for (Function &F : *M)

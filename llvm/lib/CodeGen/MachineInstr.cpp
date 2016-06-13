@@ -2168,7 +2168,7 @@ void MachineInstr::emitError(StringRef Msg) const {
   report_fatal_error(Msg);
 }
 
-MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, DebugLoc DL,
+MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
                                   const MCInstrDesc &MCID, bool IsIndirect,
                                   unsigned Reg, unsigned Offset,
                                   const MDNode *Variable, const MDNode *Expr) {
@@ -2193,10 +2193,11 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, DebugLoc DL,
 }
 
 MachineInstrBuilder llvm::BuildMI(MachineBasicBlock &BB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  const MCInstrDesc &MCID, bool IsIndirect,
-                                  unsigned Reg, unsigned Offset,
-                                  const MDNode *Variable, const MDNode *Expr) {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, const MCInstrDesc &MCID,
+                                  bool IsIndirect, unsigned Reg,
+                                  unsigned Offset, const MDNode *Variable,
+                                  const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   MachineFunction &MF = *BB.getParent();

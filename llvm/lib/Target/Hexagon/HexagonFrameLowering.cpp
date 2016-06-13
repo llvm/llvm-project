@@ -2120,7 +2120,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         MachineBasicBlock::iterator StartIt = SI, NextIt;
         MachineInstr *CopyIn = nullptr;
         if (SrcRR.Reg != FoundR || SrcRR.Sub != 0) {
-          DebugLoc DL = SI->getDebugLoc();
+          const DebugLoc &DL = SI->getDebugLoc();
           CopyIn = BuildMI(B, StartIt, DL, HII.get(TargetOpcode::COPY), FoundR)
                       .addOperand(SrcOp);
         }

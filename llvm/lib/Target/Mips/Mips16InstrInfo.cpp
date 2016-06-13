@@ -57,9 +57,9 @@ unsigned Mips16InstrInfo::isStoreToStackSlot(const MachineInstr *MI,
 }
 
 void Mips16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  unsigned DestReg, unsigned SrcReg,
-                                  bool KillSrc) const {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, bool KillSrc) const {
   unsigned Opc = 0;
 
   if (Mips::CPU16RegsRegClass.contains(DestReg) &&
@@ -305,7 +305,8 @@ void Mips16InstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
 unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator II,
-                                        DebugLoc DL, unsigned &NewImm) const {
+                                        const DebugLoc &DL,
+                                        unsigned &NewImm) const {
   //
   // given original instruction is:
   // Instr rx, T[offset] where offset is too big.

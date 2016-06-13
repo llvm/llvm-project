@@ -73,10 +73,10 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                            const TargetRegisterClass *RC,
                            SmallVectorImpl<MachineInstr*> &NewMIs,
                            bool &NonRI, bool &SpillsVRS) const;
-  bool LoadRegFromStackSlot(MachineFunction &MF, DebugLoc DL,
+  bool LoadRegFromStackSlot(MachineFunction &MF, const DebugLoc &DL,
                             unsigned DestReg, int FrameIdx,
                             const TargetRegisterClass *RC,
-                            SmallVectorImpl<MachineInstr*> &NewMIs,
+                            SmallVectorImpl<MachineInstr *> &NewMIs,
                             bool &NonRI, bool &SpillsVRS) const;
   virtual void anchor();
 
@@ -172,18 +172,18 @@ public:
   unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
   unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        DebugLoc DL) const override;
+                        const DebugLoc &DL) const override;
 
   // Select analysis.
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
                        unsigned, unsigned, int &, int &, int &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                    DebugLoc DL, unsigned DstReg, ArrayRef<MachineOperand> Cond,
-                    unsigned TrueReg, unsigned FalseReg) const override;
+                    const DebugLoc &DL, unsigned DstReg,
+                    ArrayRef<MachineOperand> Cond, unsigned TrueReg,
+                    unsigned FalseReg) const override;
 
-  void copyPhysReg(MachineBasicBlock &MBB,
-                   MachineBasicBlock::iterator I, DebugLoc DL,
-                   unsigned DestReg, unsigned SrcReg,
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,

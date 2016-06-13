@@ -998,7 +998,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   // Check if source location changes, but ignore DBG_VALUE locations.
   if (!MI->isDebugValue()) {
-    DebugLoc DL = MI->getDebugLoc();
+    const DebugLoc &DL = MI->getDebugLoc();
     if (DL != PrevInstLoc) {
       if (DL) {
         unsigned Flags = 0;

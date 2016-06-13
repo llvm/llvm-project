@@ -542,7 +542,7 @@ public:
   virtual unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                                 MachineBasicBlock *FBB,
                                 ArrayRef<MachineOperand> Cond,
-                                DebugLoc DL) const {
+                                const DebugLoc &DL) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::InsertBranch!");
   }
 
@@ -689,7 +689,7 @@ public:
   /// @param TrueReg  Virtual register to copy when Cond is true.
   /// @param FalseReg Virtual register to copy when Cons is false.
   virtual void insertSelect(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator I, DebugLoc DL,
+                            MachineBasicBlock::iterator I, const DebugLoc &DL,
                             unsigned DstReg, ArrayRef<MachineOperand> Cond,
                             unsigned TrueReg, unsigned FalseReg) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertSelect!");
@@ -752,7 +752,7 @@ public:
   /// careful implementation when multiple copy instructions are required for
   /// large registers. See for example the ARM target.
   virtual void copyPhysReg(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, DebugLoc DL,
+                           MachineBasicBlock::iterator MI, const DebugLoc &DL,
                            unsigned DestReg, unsigned SrcReg,
                            bool KillSrc) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");

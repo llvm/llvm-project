@@ -793,7 +793,7 @@ static SDValue performSUBECombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue genConstMult(SDValue X, uint64_t C, SDLoc DL, EVT VT,
+static SDValue genConstMult(SDValue X, uint64_t C, const SDLoc &DL, EVT VT,
                             EVT ShiftTy, SelectionDAG &DAG) {
   // Clear the upper (64 - VT.sizeInBits) bits.
   C &= ((uint64_t)-1) >> (64 - VT.getSizeInBits());
@@ -1292,8 +1292,7 @@ SDValue MipsSETargetLowering::lowerMulDiv(SDValue Op, unsigned NewOpc,
   return DAG.getMergeValues(Vals, DL);
 }
 
-
-static SDValue initAccumulator(SDValue In, SDLoc DL, SelectionDAG &DAG) {
+static SDValue initAccumulator(SDValue In, const SDLoc &DL, SelectionDAG &DAG) {
   SDValue InLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, In,
                              DAG.getConstant(0, DL, MVT::i32));
   SDValue InHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, In,
@@ -1301,7 +1300,7 @@ static SDValue initAccumulator(SDValue In, SDLoc DL, SelectionDAG &DAG) {
   return DAG.getNode(MipsISD::MTLOHI, DL, MVT::Untyped, InLo, InHi);
 }
 
-static SDValue extractLOHI(SDValue Op, SDLoc DL, SelectionDAG &DAG) {
+static SDValue extractLOHI(SDValue Op, const SDLoc &DL, SelectionDAG &DAG) {
   SDValue Lo = DAG.getNode(MipsISD::MFLO, DL, MVT::i32, Op);
   SDValue Hi = DAG.getNode(MipsISD::MFHI, DL, MVT::i32, Op);
   return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);

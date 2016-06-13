@@ -305,7 +305,7 @@ class LDVImpl {
 
   /// getUserValue - Find or create a UserValue.
   UserValue *getUserValue(const MDNode *Var, const MDNode *Expr,
-                          unsigned Offset, bool IsIndirect, DebugLoc DL);
+                          unsigned Offset, bool IsIndirect, const DebugLoc &DL);
 
   /// lookupVirtReg - Find the EC leader for VirtReg or null.
   UserValue *lookupVirtReg(unsigned VirtReg);
@@ -358,7 +358,7 @@ public:
 };
 } // namespace
 
-static void printDebugLoc(DebugLoc DL, raw_ostream &CommentOS,
+static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
     return;
@@ -459,7 +459,7 @@ void UserValue::mapVirtRegs(LDVImpl *LDV) {
 
 UserValue *LDVImpl::getUserValue(const MDNode *Var, const MDNode *Expr,
                                  unsigned Offset, bool IsIndirect,
-                                 DebugLoc DL) {
+                                 const DebugLoc &DL) {
   UserValue *&Leader = userVarMap[Var];
   if (Leader) {
     UserValue *UV = Leader->getLeader();

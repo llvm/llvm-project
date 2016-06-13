@@ -98,7 +98,7 @@ void MipsTargetStreamer::emitDirectiveSetDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
 bool MipsTargetStreamer::emitDirectiveCpRestore(
-    int Offset, std::function<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   forbidModuleDirective();
   return true;
@@ -229,7 +229,7 @@ void MipsTargetStreamer::emitGPRestore(int Offset, SMLoc IDLoc,
 /// Emit a store instruction with an immediate offset.
 void MipsTargetStreamer::emitStoreWithImmOffset(
     unsigned Opcode, unsigned SrcReg, unsigned BaseReg, int64_t Offset,
-    std::function<unsigned()> GetATReg, SMLoc IDLoc,
+    function_ref<unsigned()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   if (isInt<16>(Offset)) {
     emitRRI(Opcode, SrcReg, BaseReg, Offset, IDLoc, STI);
@@ -586,7 +586,7 @@ void MipsTargetAsmStreamer::emitDirectiveCpLoad(unsigned RegNo) {
 }
 
 bool MipsTargetAsmStreamer::emitDirectiveCpRestore(
-    int Offset, std::function<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   OS << "\t.cprestore\t" << Offset << "\n";
@@ -1049,7 +1049,7 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
 }
 
 bool MipsTargetELFStreamer::emitDirectiveCpRestore(
-    int Offset, std::function<unsigned()> GetATReg, SMLoc IDLoc,
+    int Offset, function_ref<unsigned()> GetATReg, SMLoc IDLoc,
     const MCSubtargetInfo *STI) {
   MipsTargetStreamer::emitDirectiveCpRestore(Offset, GetATReg, IDLoc, STI);
   // .cprestore offset

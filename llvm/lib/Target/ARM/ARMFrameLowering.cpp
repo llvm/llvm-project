@@ -120,13 +120,11 @@ static bool isCSRestore(MachineInstr *MI,
   return false;
 }
 
-static void emitRegPlusImmediate(bool isARM, MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator &MBBI, DebugLoc dl,
-                                 const ARMBaseInstrInfo &TII, unsigned DestReg,
-                                 unsigned SrcReg, int NumBytes,
-                                 unsigned MIFlags = MachineInstr::NoFlags,
-                                 ARMCC::CondCodes Pred = ARMCC::AL,
-                                 unsigned PredReg = 0) {
+static void emitRegPlusImmediate(
+    bool isARM, MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+    const DebugLoc &dl, const ARMBaseInstrInfo &TII, unsigned DestReg,
+    unsigned SrcReg, int NumBytes, unsigned MIFlags = MachineInstr::NoFlags,
+    ARMCC::CondCodes Pred = ARMCC::AL, unsigned PredReg = 0) {
   if (isARM)
     emitARMRegPlusImmediate(MBB, MBBI, dl, DestReg, SrcReg, NumBytes,
                             Pred, PredReg, TII, MIFlags);
@@ -136,7 +134,7 @@ static void emitRegPlusImmediate(bool isARM, MachineBasicBlock &MBB,
 }
 
 static void emitSPUpdate(bool isARM, MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator &MBBI, DebugLoc dl,
+                         MachineBasicBlock::iterator &MBBI, const DebugLoc &dl,
                          const ARMBaseInstrInfo &TII, int NumBytes,
                          unsigned MIFlags = MachineInstr::NoFlags,
                          ARMCC::CondCodes Pred = ARMCC::AL,
@@ -206,7 +204,8 @@ struct StackAdjustingInsts {
   }
 
   void emitDefCFAOffsets(MachineModuleInfo &MMI, MachineBasicBlock &MBB,
-                         DebugLoc dl, const ARMBaseInstrInfo &TII, bool HasFP) {
+                         const DebugLoc &dl, const ARMBaseInstrInfo &TII,
+                         bool HasFP) {
     unsigned CFAOffset = 0;
     for (auto &Info : Insts) {
       if (HasFP && !Info.BeforeFPSet)
@@ -235,7 +234,7 @@ static void emitAligningInstructions(MachineFunction &MF, ARMFunctionInfo *AFI,
                                      const TargetInstrInfo &TII,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     DebugLoc DL, const unsigned Reg,
+                                     const DebugLoc &DL, const unsigned Reg,
                                      const unsigned Alignment,
                                      const bool MustBeSingleInstruction) {
   const ARMSubtarget &AST =

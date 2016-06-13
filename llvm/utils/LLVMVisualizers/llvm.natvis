@@ -8,10 +8,33 @@ For Visual Studio 2013 only, put this file into
 For later versions of Visual Studio, no setup is required.
 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-
-  <Type Name="llvm::SmallVectorImpl&lt;*&gt;">
+  <!-- VS2013 -->
+  <Type Name="llvm::SmallVectorImpl&lt;*&gt;" Priority="MediumLow">
     <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) == 0">empty</DisplayString>
     <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) != 0">{{ size={($T1*)EndX - ($T1*)BeginX} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]">($T1*)EndX - ($T1*)BeginX</Item>
+      <Item Name="[capacity]">($T1*)CapacityX - ($T1*)BeginX</Item>
+      <ArrayItems>
+        <Size>($T1*)EndX - ($T1*)BeginX</Size>
+        <ValuePointer>($T1*)BeginX</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <!-- VS2015 and up -->
+  <Type Name="llvm::SmallVectorImpl&lt;*&gt;">
+    <DisplayString IncludeView ="elt0" Condition="(($T1*)EndX - ($T1*)BeginX) == 0"></DisplayString>
+    <DisplayString IncludeView ="elt0">{(($T1*)BeginX)[0]}{*this,view(elt1)}</DisplayString>
+    <DisplayString IncludeView ="elt1" Condition="(($T1*)EndX - ($T1*)BeginX) == 1"></DisplayString>
+    <DisplayString IncludeView ="elt1">, {(($T1*)BeginX)[1]}{*this,view(elt2)}</DisplayString>
+    <DisplayString IncludeView ="elt2" Condition="(($T1*)EndX - ($T1*)BeginX) == 2"></DisplayString>
+    <DisplayString IncludeView ="elt2">, {(($T1*)BeginX)[2]}{*this,view(elt3)}</DisplayString>
+    <DisplayString IncludeView ="elt3" Condition="(($T1*)EndX - ($T1*)BeginX) == 3"></DisplayString>
+    <DisplayString IncludeView ="elt3">, {(($T1*)BeginX)[2]}{*this,view(elt4)}</DisplayString>
+    <DisplayString IncludeView ="elt4" Condition="(($T1*)EndX - ($T1*)BeginX) == 4"></DisplayString>
+    <DisplayString IncludeView ="elt4">, /* {(($T1*)EndX - ($T1*)BeginX) - 4} more*/ </DisplayString>
+    <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) == 0">empty</DisplayString>
+    <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) != 0">{{{*this,view(elt0)}}}</DisplayString>
     <Expand>
       <Item Name="[size]">($T1*)EndX - ($T1*)BeginX</Item>
       <Item Name="[capacity]">($T1*)CapacityX - ($T1*)BeginX</Item>

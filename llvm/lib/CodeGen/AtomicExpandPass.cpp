@@ -59,7 +59,7 @@ namespace {
     bool tryExpandAtomicRMW(AtomicRMWInst *AI);
     bool expandAtomicOpToLLSC(
         Instruction *I, Value *Addr, AtomicOrdering MemOpOrder,
-        std::function<Value *(IRBuilder<> &, Value *)> PerformOp);
+        function_ref<Value *(IRBuilder<> &, Value *)> PerformOp);
     AtomicCmpXchgInst *convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI);
     bool expandAtomicCmpXchg(AtomicCmpXchgInst *CI);
     bool isIdempotentRMW(AtomicRMWInst *AI);
@@ -514,7 +514,7 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
 
 bool AtomicExpand::expandAtomicOpToLLSC(
     Instruction *I, Value *Addr, AtomicOrdering MemOpOrder,
-    std::function<Value *(IRBuilder<> &, Value *)> PerformOp) {
+    function_ref<Value *(IRBuilder<> &, Value *)> PerformOp) {
   BasicBlock *BB = I->getParent();
   Function *F = BB->getParent();
   LLVMContext &Ctx = F->getContext();

@@ -128,23 +128,19 @@ namespace llvm {
                            EVT VT) const override;
 
     SDValue
-      LowerFormalArguments(SDValue Chain,
-                           CallingConv::ID CallConv,
-                           bool isVarArg,
-                           const SmallVectorImpl<ISD::InputArg> &Ins,
-                           SDLoc dl, SelectionDAG &DAG,
-                           SmallVectorImpl<SDValue> &InVals) const override;
-    SDValue LowerFormalArguments_32(SDValue Chain,
-                                    CallingConv::ID CallConv,
+    LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+                         const SmallVectorImpl<ISD::InputArg> &Ins,
+                         const SDLoc &dl, SelectionDAG &DAG,
+                         SmallVectorImpl<SDValue> &InVals) const override;
+    SDValue LowerFormalArguments_32(SDValue Chain, CallingConv::ID CallConv,
                                     bool isVarArg,
                                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                                    SDLoc dl, SelectionDAG &DAG,
+                                    const SDLoc &dl, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &InVals) const;
-    SDValue LowerFormalArguments_64(SDValue Chain,
-                                    CallingConv::ID CallConv,
+    SDValue LowerFormalArguments_64(SDValue Chain, CallingConv::ID CallConv,
                                     bool isVarArg,
                                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                                    SDLoc dl, SelectionDAG &DAG,
+                                    const SDLoc &dl, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &InVals) const;
 
     SDValue
@@ -155,22 +151,20 @@ namespace llvm {
     SDValue LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
                          SmallVectorImpl<SDValue> &InVals) const;
 
-    SDValue
-      LowerReturn(SDValue Chain,
-                  CallingConv::ID CallConv, bool isVarArg,
-                  const SmallVectorImpl<ISD::OutputArg> &Outs,
-                  const SmallVectorImpl<SDValue> &OutVals,
-                  SDLoc dl, SelectionDAG &DAG) const override;
-    SDValue LowerReturn_32(SDValue Chain,
-                           CallingConv::ID CallConv, bool IsVarArg,
+    SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        const SmallVectorImpl<SDValue> &OutVals,
+                        const SDLoc &dl, SelectionDAG &DAG) const override;
+    SDValue LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
+                           bool IsVarArg,
                            const SmallVectorImpl<ISD::OutputArg> &Outs,
                            const SmallVectorImpl<SDValue> &OutVals,
-                           SDLoc DL, SelectionDAG &DAG) const;
-    SDValue LowerReturn_64(SDValue Chain,
-                           CallingConv::ID CallConv, bool IsVarArg,
+                           const SDLoc &DL, SelectionDAG &DAG) const;
+    SDValue LowerReturn_64(SDValue Chain, CallingConv::ID CallConv,
+                           bool IsVarArg,
                            const SmallVectorImpl<ISD::OutputArg> &Outs,
                            const SmallVectorImpl<SDValue> &OutVals,
-                           SDLoc DL, SelectionDAG &DAG) const;
+                           const SDLoc &DL, SelectionDAG &DAG) const;
 
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -188,16 +182,13 @@ namespace llvm {
                          SelectionDAG &DAG) const;
     SDValue makeAddress(SDValue Op, SelectionDAG &DAG) const;
 
-    SDValue LowerF128_LibCallArg(SDValue Chain, ArgListTy &Args,
-                                 SDValue Arg, SDLoc DL,
-                                 SelectionDAG &DAG) const;
+    SDValue LowerF128_LibCallArg(SDValue Chain, ArgListTy &Args, SDValue Arg,
+                                 const SDLoc &DL, SelectionDAG &DAG) const;
     SDValue LowerF128Op(SDValue Op, SelectionDAG &DAG,
                         const char *LibFuncName,
                         unsigned numArgs) const;
-    SDValue LowerF128Compare(SDValue LHS, SDValue RHS,
-                             unsigned &SPCC,
-                             SDLoc DL,
-                             SelectionDAG &DAG) const;
+    SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
+                             const SDLoc &DL, SelectionDAG &DAG) const;
 
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 

@@ -1302,7 +1302,7 @@ bool RedundantInstrElimination::processBlock(MachineBasicBlock &B,
         continue;
 
       // If found, replace the instruction with a COPY.
-      DebugLoc DL = MI->getDebugLoc();
+      const DebugLoc &DL = MI->getDebugLoc();
       const TargetRegisterClass *FRC = HBS::getFinalVRegClass(RD, MRI);
       unsigned NewR = MRI.createVirtualRegister(FRC);
       BuildMI(B, At, DL, HII.get(TargetOpcode::COPY), NewR)

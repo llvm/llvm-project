@@ -536,7 +536,7 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
 }
 
 SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
-                                         SDLoc SL, SDValue Chain,
+                                         const SDLoc &SL, SDValue Chain,
                                          unsigned Offset, bool Signed) const {
   const DataLayout &DL = DAG.getDataLayout();
   MachineFunction &MF = DAG.getMachineFunction();
@@ -572,8 +572,8 @@ SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
 
 SDValue SITargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL, SelectionDAG &DAG,
-    SmallVectorImpl<SDValue> &InVals) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   const SIRegisterInfo *TRI =
       static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
 
@@ -916,12 +916,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
 }
 
-SDValue SITargetLowering::LowerReturn(SDValue Chain,
-                                      CallingConv::ID CallConv,
-                                      bool isVarArg,
-                                      const SmallVectorImpl<ISD::OutputArg> &Outs,
-                                      const SmallVectorImpl<SDValue> &OutVals,
-                                      SDLoc DL, SelectionDAG &DAG) const {
+SDValue
+SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                              bool isVarArg,
+                              const SmallVectorImpl<ISD::OutputArg> &Outs,
+                              const SmallVectorImpl<SDValue> &OutVals,
+                              const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
@@ -1416,8 +1416,8 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   return DAG.getUNDEF(ASC->getValueType(0));
 }
 
-SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
-                                   SDValue V) const {
+SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain,
+                                   const SDLoc &DL, SDValue V) const {
   // We can't use S_MOV_B32 directly, because there is no way to specify m0 as
   // the destination register.
   //
@@ -2575,11 +2575,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   }
 }
 
-static SDValue performIntMed3ImmCombine(SelectionDAG &DAG,
-                                        SDLoc SL,
-                                        SDValue Op0,
-                                        SDValue Op1,
-                                        bool Signed) {
+static SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
+                                        SDValue Op0, SDValue Op1, bool Signed) {
   ConstantSDNode *K1 = dyn_cast<ConstantSDNode>(Op1);
   if (!K1)
     return SDValue();
@@ -2609,10 +2606,8 @@ static bool isKnownNeverSNan(SelectionDAG &DAG, SDValue Op) {
   return DAG.isKnownNeverNaN(Op);
 }
 
-static SDValue performFPMed3ImmCombine(SelectionDAG &DAG,
-                                       SDLoc SL,
-                                       SDValue Op0,
-                                       SDValue Op1) {
+static SDValue performFPMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
+                                       SDValue Op0, SDValue Op1) {
   ConstantFPSDNode *K1 = dyn_cast<ConstantFPSDNode>(Op1);
   if (!K1)
     return SDValue();
@@ -3166,13 +3161,14 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
   }
 }
 
-static SDValue buildSMovImm32(SelectionDAG &DAG, SDLoc DL, uint64_t Val) {
+static SDValue buildSMovImm32(SelectionDAG &DAG, const SDLoc &DL,
+                              uint64_t Val) {
   SDValue K = DAG.getTargetConstant(Val, DL, MVT::i32);
   return SDValue(DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, K), 0);
 }
 
 MachineSDNode *SITargetLowering::wrapAddr64Rsrc(SelectionDAG &DAG,
-                                                SDLoc DL,
+                                                const SDLoc &DL,
                                                 SDValue Ptr) const {
   const SIInstrInfo *TII =
     static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
@@ -3207,10 +3203,8 @@ MachineSDNode *SITargetLowering::wrapAddr64Rsrc(SelectionDAG &DAG,
 ///        The TID (Thread ID) is multiplied by the stride value (bits [61:48]
 ///        of the resource descriptor) to create an offset, which is added to
 ///        the resource pointer.
-MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG,
-                                           SDLoc DL,
-                                           SDValue Ptr,
-                                           uint32_t RsrcDword1,
+MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG, const SDLoc &DL,
+                                           SDValue Ptr, uint32_t RsrcDword1,
                                            uint64_t RsrcDword2And3) const {
   SDValue PtrLo = DAG.getTargetExtractSubreg(AMDGPU::sub0, DL, MVT::i32, Ptr);
   SDValue PtrHi = DAG.getTargetExtractSubreg(AMDGPU::sub1, DL, MVT::i32, Ptr);

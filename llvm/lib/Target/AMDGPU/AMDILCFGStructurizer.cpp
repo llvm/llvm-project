@@ -229,15 +229,15 @@ protected:
 
   // Function originally from CFGStructTraits
   void insertInstrEnd(MachineBasicBlock *MBB, int NewOpcode,
-      DebugLoc DL = DebugLoc());
+                      const DebugLoc &DL = DebugLoc());
   MachineInstr *insertInstrBefore(MachineBasicBlock *MBB, int NewOpcode,
-    DebugLoc DL = DebugLoc());
+                                  const DebugLoc &DL = DebugLoc());
   MachineInstr *insertInstrBefore(MachineBasicBlock::iterator I, int NewOpcode);
   void insertCondBranchBefore(MachineBasicBlock::iterator I, int NewOpcode,
-      DebugLoc DL);
+                              const DebugLoc &DL);
   void insertCondBranchBefore(MachineBasicBlock *MBB,
-      MachineBasicBlock::iterator I, int NewOpcode, int RegNum,
-      DebugLoc DL);
+                              MachineBasicBlock::iterator I, int NewOpcode,
+                              int RegNum, const DebugLoc &DL);
   void insertCondBranchEnd(MachineBasicBlock *MBB, int NewOpcode, int RegNum);
   static int getBranchNzeroOpcode(int OldOpcode);
   static int getBranchZeroOpcode(int OldOpcode);
@@ -469,16 +469,17 @@ void AMDGPUCFGStructurizer::reversePredicateSetter(
 }
 
 void AMDGPUCFGStructurizer::insertInstrEnd(MachineBasicBlock *MBB,
-    int NewOpcode, DebugLoc DL) {
- MachineInstr *MI = MBB->getParent()
-    ->CreateMachineInstr(TII->get(NewOpcode), DL);
+                                           int NewOpcode, const DebugLoc &DL) {
+  MachineInstr *MI =
+      MBB->getParent()->CreateMachineInstr(TII->get(NewOpcode), DL);
   MBB->push_back(MI);
   //assume the instruction doesn't take any reg operand ...
   SHOWNEWINSTR(MI);
 }
 
 MachineInstr *AMDGPUCFGStructurizer::insertInstrBefore(MachineBasicBlock *MBB,
-    int NewOpcode, DebugLoc DL) {
+                                                       int NewOpcode,
+                                                       const DebugLoc &DL) {
   MachineInstr *MI =
       MBB->getParent()->CreateMachineInstr(TII->get(NewOpcode), DL);
   if (MBB->begin() != MBB->end())
@@ -502,7 +503,7 @@ MachineInstr *AMDGPUCFGStructurizer::insertInstrBefore(
 }
 
 void AMDGPUCFGStructurizer::insertCondBranchBefore(
-    MachineBasicBlock::iterator I, int NewOpcode, DebugLoc DL) {
+    MachineBasicBlock::iterator I, int NewOpcode, const DebugLoc &DL) {
   MachineInstr *OldMI = &(*I);
   MachineBasicBlock *MBB = OldMI->getParent();
   MachineFunction *MF = MBB->getParent();
@@ -514,9 +515,9 @@ void AMDGPUCFGStructurizer::insertCondBranchBefore(
   //erase later oldInstr->eraseFromParent();
 }
 
-void AMDGPUCFGStructurizer::insertCondBranchBefore(MachineBasicBlock *blk,
-    MachineBasicBlock::iterator I, int NewOpcode, int RegNum,
-    DebugLoc DL) {
+void AMDGPUCFGStructurizer::insertCondBranchBefore(
+    MachineBasicBlock *blk, MachineBasicBlock::iterator I, int NewOpcode,
+    int RegNum, const DebugLoc &DL) {
   MachineFunction *MF = blk->getParent();
   MachineInstr *NewInstr = MF->CreateMachineInstr(TII->get(NewOpcode), DL);
   //insert before

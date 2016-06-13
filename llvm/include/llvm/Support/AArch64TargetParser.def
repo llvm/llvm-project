@@ -27,7 +27,8 @@ AARCH64_ARCH("armv8.1-a", AK_ARMV8_1A, "8.1-A", "v8.1a",
 AARCH64_ARCH("armv8.2-a", AK_ARMV8_2A, "8.2-A", "v8.2a",
              ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-              AArch64::AEK_SIMD | AArch64::AEK_FP16 | AArch64::AEK_PROFILE))
+              AArch64::AEK_SIMD | AArch64::AEK_FP16 | AArch64::AEK_PROFILE |
+              AArch64::AEK_RAS))
 #undef AARCH64_ARCH
 
 #ifndef AARCH64_ARCH_EXT_NAME
@@ -42,6 +43,7 @@ AARCH64_ARCH_EXT_NAME("fp",       AArch64::AEK_FP,       "+fp-armv8",  "-fp-armv
 AARCH64_ARCH_EXT_NAME("simd",     AArch64::AEK_SIMD,     "+neon",  "-neon")
 AARCH64_ARCH_EXT_NAME("fp16",     AArch64::AEK_FP16,     "+fullfp16",  "-fullfp16")
 AARCH64_ARCH_EXT_NAME("profile",     AArch64::AEK_PROFILE,     "+spe",  "-spe")
+AARCH64_ARCH_EXT_NAME("ras",     AArch64::AEK_RAS,     "+ras",  "-ras")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME

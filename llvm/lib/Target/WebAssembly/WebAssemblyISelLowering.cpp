@@ -257,7 +257,7 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT, AttributeSet Attr) const {
 // Lowering Code
 //===----------------------------------------------------------------------===//
 
-static void fail(SDLoc DL, SelectionDAG &DAG, const char *msg) {
+static void fail(const SDLoc &DL, SelectionDAG &DAG, const char *msg) {
   MachineFunction &MF = DAG.getMachineFunction();
   DAG.getContext()->diagnose(
       DiagnosticInfoUnsupported(*MF.getFunction(), msg, DL.getDebugLoc()));
@@ -441,7 +441,7 @@ bool WebAssemblyTargetLowering::CanLowerReturn(
 SDValue WebAssemblyTargetLowering::LowerReturn(
     SDValue Chain, CallingConv::ID CallConv, bool /*IsVarArg*/,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals, SDLoc DL,
+    const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
   assert(Outs.size() <= 1 && "WebAssembly can only return up to one value");
   if (!CallingConvSupported(CallConv))
@@ -469,8 +469,8 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
 
 SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL, SelectionDAG &DAG,
-    SmallVectorImpl<SDValue> &InVals) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   auto *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
 

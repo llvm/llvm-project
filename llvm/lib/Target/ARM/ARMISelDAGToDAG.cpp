@@ -83,7 +83,7 @@ public:
 
   /// getI32Imm - Return a target constant of type i32 with the specified
   /// value.
-  inline SDValue getI32Imm(unsigned Imm, SDLoc dl) {
+  inline SDValue getI32Imm(unsigned Imm, const SDLoc &dl) {
     return CurDAG->getTargetConstant(Imm, dl, MVT::i32);
   }
 
@@ -270,7 +270,7 @@ private:
   SDNode *createQuadQRegsNode(EVT VT, SDValue V0, SDValue V1, SDValue V2, SDValue V3);
 
   // Get the alignment operand for a NEON VLD or VST instruction.
-  SDValue GetVLDSTAlign(SDValue Align, SDLoc dl, unsigned NumVecs,
+  SDValue GetVLDSTAlign(SDValue Align, const SDLoc &dl, unsigned NumVecs,
                         bool is64BitVector);
 
   /// Returns the number of instructions required to materialize the given
@@ -1473,7 +1473,7 @@ bool ARMDAGToDAGISel::SelectT2AddrModeExclusive(SDValue N, SDValue &Base,
 //===--------------------------------------------------------------------===//
 
 /// getAL - Returns a ARMCC::AL immediate node.
-static inline SDValue getAL(SelectionDAG *CurDAG, SDLoc dl) {
+static inline SDValue getAL(SelectionDAG *CurDAG, const SDLoc &dl) {
   return CurDAG->getTargetConstant((uint64_t)ARMCC::AL, dl, MVT::i32);
 }
 
@@ -1693,7 +1693,7 @@ SDNode *ARMDAGToDAGISel::createQuadQRegsNode(EVT VT, SDValue V0, SDValue V1,
 /// GetVLDSTAlign - Get the alignment (in bytes) for the alignment operand
 /// of a NEON VLD or VST instruction.  The supported values depend on the
 /// number of registers being loaded.
-SDValue ARMDAGToDAGISel::GetVLDSTAlign(SDValue Align, SDLoc dl,
+SDValue ARMDAGToDAGISel::GetVLDSTAlign(SDValue Align, const SDLoc &dl,
                                        unsigned NumVecs, bool is64BitVector) {
   unsigned NumRegs = NumVecs;
   if (!is64BitVector && NumVecs < 3)
@@ -3675,8 +3675,9 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 // and obtain the integer operands from them, adding these operands to the
 // provided vector.
 static void getIntOperandsFromRegisterString(StringRef RegString,
-                                             SelectionDAG *CurDAG, SDLoc DL,
-                                             std::vector<SDValue>& Ops) {
+                                             SelectionDAG *CurDAG,
+                                             const SDLoc &DL,
+                                             std::vector<SDValue> &Ops) {
   SmallVector<StringRef, 5> Fields;
   RegString.split(Fields, ':');
 

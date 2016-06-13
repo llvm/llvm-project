@@ -564,7 +564,7 @@ static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
 
 // Creates and returns a CMovFPT/F node.
 static SDValue createCMovFP(SelectionDAG &DAG, SDValue Cond, SDValue True,
-                            SDValue False, SDLoc DL) {
+                            SDValue False, const SDLoc &DL) {
   ConstantSDNode *CC = cast<ConstantSDNode>(Cond.getOperand(2));
   bool invert = invertFPCondCodeUser((Mips::CondCode)CC->getSExtValue());
   SDValue FCC0 = DAG.getRegister(Mips::FCC0, MVT::i32);
@@ -1191,7 +1191,7 @@ MachineBasicBlock *MipsTargetLowering::emitSignExtendToI32InReg(
     MachineInstr *MI, MachineBasicBlock *BB, unsigned Size, unsigned DstReg,
     unsigned SrcReg) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
 
   if (Subtarget.hasMips32r2() && Size == 1) {
     BuildMI(BB, DL, TII->get(Mips::SEB), DstReg).addReg(SrcReg);
@@ -2529,10 +2529,10 @@ static unsigned getNextIntArgReg(unsigned Reg) {
   return (Reg == Mips::A0) ? Mips::A1 : Mips::A3;
 }
 
-SDValue
-MipsTargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
-                                   SDValue Chain, SDValue Arg, SDLoc DL,
-                                   bool IsTailCall, SelectionDAG &DAG) const {
+SDValue MipsTargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
+                                           SDValue Chain, SDValue Arg,
+                                           const SDLoc &DL, bool IsTailCall,
+                                           SelectionDAG &DAG) const {
   if (!IsTailCall) {
     SDValue PtrOff =
         DAG.getNode(ISD::ADD, DL, getPointerTy(DAG.getDataLayout()), StackPtr,
@@ -2858,8 +2858,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 /// appropriate copies out of appropriate physical registers.
 SDValue MipsTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc DL, SelectionDAG &DAG,
-    SmallVectorImpl<SDValue> &InVals,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
     TargetLowering::CallLoweringInfo &CLI) const {
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -2920,7 +2920,8 @@ SDValue MipsTargetLowering::LowerCallResult(
 }
 
 static SDValue UnpackFromArgumentSlot(SDValue Val, const CCValAssign &VA,
-                                      EVT ArgVT, SDLoc DL, SelectionDAG &DAG) {
+                                      EVT ArgVT, const SDLoc &DL,
+                                      SelectionDAG &DAG) {
   MVT LocVT = VA.getLocVT();
   EVT ValVT = VA.getValVT();
 
@@ -2978,14 +2979,10 @@ static SDValue UnpackFromArgumentSlot(SDValue Val, const CCValAssign &VA,
 //===----------------------------------------------------------------------===//
 /// LowerFormalArguments - transform physical registers into virtual registers
 /// and generate load operations for arguments places on the stack.
-SDValue
-MipsTargetLowering::LowerFormalArguments(SDValue Chain,
-                                         CallingConv::ID CallConv,
-                                         bool IsVarArg,
-                                      const SmallVectorImpl<ISD::InputArg> &Ins,
-                                         SDLoc DL, SelectionDAG &DAG,
-                                         SmallVectorImpl<SDValue> &InVals)
-                                          const {
+SDValue MipsTargetLowering::LowerFormalArguments(
+    SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
@@ -3158,7 +3155,8 @@ MipsTargetLowering::shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const
 
 SDValue
 MipsTargetLowering::LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
-                                         SDLoc DL, SelectionDAG &DAG) const {
+                                         const SDLoc &DL,
+                                         SelectionDAG &DAG) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
@@ -3173,7 +3171,7 @@ MipsTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                 bool IsVarArg,
                                 const SmallVectorImpl<ISD::OutputArg> &Outs,
                                 const SmallVectorImpl<SDValue> &OutVals,
-                                SDLoc DL, SelectionDAG &DAG) const {
+                                const SDLoc &DL, SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of
   // the return value to a location
   SmallVector<CCValAssign, 16> RVLocs;
@@ -3681,10 +3679,11 @@ bool MipsTargetLowering::useSoftFloat() const {
 }
 
 void MipsTargetLowering::copyByValRegs(
-    SDValue Chain, SDLoc DL, std::vector<SDValue> &OutChains, SelectionDAG &DAG,
-    const ISD::ArgFlagsTy &Flags, SmallVectorImpl<SDValue> &InVals,
-    const Argument *FuncArg, unsigned FirstReg, unsigned LastReg,
-    const CCValAssign &VA, MipsCCState &State) const {
+    SDValue Chain, const SDLoc &DL, std::vector<SDValue> &OutChains,
+    SelectionDAG &DAG, const ISD::ArgFlagsTy &Flags,
+    SmallVectorImpl<SDValue> &InVals, const Argument *FuncArg,
+    unsigned FirstReg, unsigned LastReg, const CCValAssign &VA,
+    MipsCCState &State) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
@@ -3729,7 +3728,7 @@ void MipsTargetLowering::copyByValRegs(
 
 // Copy byVal arg to registers and stack.
 void MipsTargetLowering::passByValArg(
-    SDValue Chain, SDLoc DL,
+    SDValue Chain, const SDLoc &DL,
     std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
     SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
     MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg, unsigned FirstReg,
@@ -3827,7 +3826,7 @@ void MipsTargetLowering::passByValArg(
 }
 
 void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
-                                         SDValue Chain, SDLoc DL,
+                                         SDValue Chain, const SDLoc &DL,
                                          SelectionDAG &DAG,
                                          CCState &State) const {
   ArrayRef<MCPhysReg> ArgRegs = ABI.GetVarArgRegs();

@@ -358,16 +358,10 @@ static void AnalyzeReturnValues(CCState &State,
   std::reverse(RVLocs.begin(), RVLocs.end());
 }
 
-SDValue
-MSP430TargetLowering::LowerFormalArguments(SDValue Chain,
-                                           CallingConv::ID CallConv,
-                                           bool isVarArg,
-                                           const SmallVectorImpl<ISD::InputArg>
-                                             &Ins,
-                                           SDLoc dl,
-                                           SelectionDAG &DAG,
-                                           SmallVectorImpl<SDValue> &InVals)
-                                             const {
+SDValue MSP430TargetLowering::LowerFormalArguments(
+    SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   switch (CallConv) {
   default:
@@ -414,16 +408,10 @@ MSP430TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 /// LowerCCCArguments - transform physical registers into virtual registers and
 /// generate load operations for arguments places on the stack.
 // FIXME: struct return stuff
-SDValue
-MSP430TargetLowering::LowerCCCArguments(SDValue Chain,
-                                        CallingConv::ID CallConv,
-                                        bool isVarArg,
-                                        const SmallVectorImpl<ISD::InputArg>
-                                          &Ins,
-                                        SDLoc dl,
-                                        SelectionDAG &DAG,
-                                        SmallVectorImpl<SDValue> &InVals)
-                                          const {
+SDValue MSP430TargetLowering::LowerCCCArguments(
+    SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -514,11 +502,11 @@ MSP430TargetLowering::LowerCCCArguments(SDValue Chain,
 }
 
 SDValue
-MSP430TargetLowering::LowerReturn(SDValue Chain,
-                                  CallingConv::ID CallConv, bool isVarArg,
+MSP430TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                  bool isVarArg,
                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
                                   const SmallVectorImpl<SDValue> &OutVals,
-                                  SDLoc dl, SelectionDAG &DAG) const {
+                                  const SDLoc &dl, SelectionDAG &DAG) const {
 
   // CCValAssign - represent the assignment of the return value to a location
   SmallVector<CCValAssign, 16> RVLocs;
@@ -566,16 +554,12 @@ MSP430TargetLowering::LowerReturn(SDValue Chain,
 /// LowerCCCCallTo - functions arguments are copied from virtual regs to
 /// (physical regs)/(stack frame), CALLSEQ_START and CALLSEQ_END are emitted.
 // TODO: sret.
-SDValue
-MSP430TargetLowering::LowerCCCCallTo(SDValue Chain, SDValue Callee,
-                                     CallingConv::ID CallConv, bool isVarArg,
-                                     bool isTailCall,
-                                     const SmallVectorImpl<ISD::OutputArg>
-                                       &Outs,
-                                     const SmallVectorImpl<SDValue> &OutVals,
-                                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                                     SDLoc dl, SelectionDAG &DAG,
-                                     SmallVectorImpl<SDValue> &InVals) const {
+SDValue MSP430TargetLowering::LowerCCCCallTo(
+    SDValue Chain, SDValue Callee, CallingConv::ID CallConv, bool isVarArg,
+    bool isTailCall, const SmallVectorImpl<ISD::OutputArg> &Outs,
+    const SmallVectorImpl<SDValue> &OutVals,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
@@ -704,12 +688,10 @@ MSP430TargetLowering::LowerCCCCallTo(SDValue Chain, SDValue Callee,
 /// LowerCallResult - Lower the result values of a call into the
 /// appropriate copies out of appropriate physical registers.
 ///
-SDValue
-MSP430TargetLowering::LowerCallResult(SDValue Chain, SDValue InFlag,
-                                      CallingConv::ID CallConv, bool isVarArg,
-                                      const SmallVectorImpl<ISD::InputArg> &Ins,
-                                      SDLoc dl, SelectionDAG &DAG,
-                                      SmallVectorImpl<SDValue> &InVals) const {
+SDValue MSP430TargetLowering::LowerCallResult(
+    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
@@ -804,8 +786,7 @@ SDValue MSP430TargetLowering::LowerBlockAddress(SDValue Op,
 }
 
 static SDValue EmitCMP(SDValue &LHS, SDValue &RHS, SDValue &TargetCC,
-                       ISD::CondCode CC,
-                       SDLoc dl, SelectionDAG &DAG) {
+                       ISD::CondCode CC, const SDLoc &dl, SelectionDAG &DAG) {
   // FIXME: Handle bittests someday
   assert(!LHS.getValueType().isFloatingPoint() && "We don't handle FP yet");
 

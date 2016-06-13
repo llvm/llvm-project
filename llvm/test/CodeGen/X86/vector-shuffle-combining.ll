@@ -96,10 +96,15 @@ define <4 x i32> @combine_pshufd6(<4 x i32> %a) {
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_pshufd6:
-; AVX:       # BB#0: # %entry
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_pshufd6:
+; AVX1:       # BB#0: # %entry
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pshufd6:
+; AVX2:       # BB#0: # %entry
+; AVX2-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX2-NEXT:    retq
 entry:
   %b = call <4 x i32> @llvm.x86.sse2.pshuf.d(<4 x i32> %a, i8 0)
   %c = call <4 x i32> @llvm.x86.sse2.pshuf.d(<4 x i32> %b, i8 8)

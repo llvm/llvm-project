@@ -455,7 +455,7 @@ public:
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
-                               SDLoc DL, SelectionDAG &DAG,
+                               const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
@@ -466,9 +466,9 @@ public:
                       LLVMContext &Context) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals,
-                      SDLoc DL, SelectionDAG &DAG) const override;
-  SDValue prepareVolatileOrAtomicLoad(SDValue Chain, SDLoc DL,
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
+                      SelectionDAG &DAG) const override;
+  SDValue prepareVolatileOrAtomicLoad(SDValue Chain, const SDLoc &DL,
                                       SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
@@ -534,10 +534,10 @@ private:
                                  unsigned UnpackHigh) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
 
-  SDValue combineExtract(SDLoc DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,
+  SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,
                          unsigned Index, DAGCombinerInfo &DCI,
                          bool Force) const;
-  SDValue combineTruncateExtract(SDLoc DL, EVT TruncVT, SDValue Op,
+  SDValue combineTruncateExtract(const SDLoc &DL, EVT TruncVT, SDValue Op,
                                  DAGCombinerInfo &DCI) const;
 
   // If the last instruction before MBBI in MBB was some form of COMPARE,

@@ -21,7 +21,7 @@
 namespace llvm {
 
 class SITargetLowering final : public AMDGPUTargetLowering {
-  SDValue LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT, SDLoc DL,
+  SDValue LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT, const SDLoc &DL,
                          SDValue Chain, unsigned Offset, bool Signed) const;
 
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
@@ -102,15 +102,13 @@ public:
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
                                const SmallVectorImpl<ISD::InputArg> &Ins,
-                               SDLoc DL, SelectionDAG &DAG,
+                               const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
-  SDValue LowerReturn(SDValue Chain,
-                      CallingConv::ID CallConv,
-                      bool isVarArg,
+  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals,
-                      SDLoc DL, SelectionDAG &DAG) const override;
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
+                      SelectionDAG &DAG) const override;
 
   unsigned getRegisterByName(const char* RegName, EVT VT,
                              SelectionDAG &DAG) const override;
@@ -133,17 +131,16 @@ public:
                                unsigned Reg, EVT VT) const override;
   void legalizeTargetIndependentNode(SDNode *Node, SelectionDAG &DAG) const;
 
-  MachineSDNode *wrapAddr64Rsrc(SelectionDAG &DAG, SDLoc DL, SDValue Ptr) const;
-  MachineSDNode *buildRSRC(SelectionDAG &DAG,
-                           SDLoc DL,
-                           SDValue Ptr,
-                           uint32_t RsrcDword1,
-                           uint64_t RsrcDword2And3) const;
+  MachineSDNode *wrapAddr64Rsrc(SelectionDAG &DAG, const SDLoc &DL,
+                                SDValue Ptr) const;
+  MachineSDNode *buildRSRC(SelectionDAG &DAG, const SDLoc &DL, SDValue Ptr,
+                           uint32_t RsrcDword1, uint64_t RsrcDword2And3) const;
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
-  SDValue copyToM0(SelectionDAG &DAG, SDValue Chain, SDLoc DL, SDValue V) const;
+  SDValue copyToM0(SelectionDAG &DAG, SDValue Chain, const SDLoc &DL,
+                   SDValue V) const;
 };
 
 } // End namespace llvm

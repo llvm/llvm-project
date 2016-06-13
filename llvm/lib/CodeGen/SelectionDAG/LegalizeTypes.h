@@ -389,7 +389,7 @@ private:
   SDValue ExpandIntOp_ATOMIC_STORE(SDNode *N);
 
   void IntegerExpandSetCCOperands(SDValue &NewLHS, SDValue &NewRHS,
-                                  ISD::CondCode &CCCode, SDLoc dl);
+                                  ISD::CondCode &CCCode, const SDLoc &dl);
 
   //===--------------------------------------------------------------------===//
   // Float to Integer Conversion Support: LegalizeFloatTypes.cpp
@@ -543,8 +543,7 @@ private:
   SDValue ExpandFloatOp_STORE(SDNode *N, unsigned OpNo);
 
   void FloatExpandSetCCOperands(SDValue &NewLHS, SDValue &NewRHS,
-                                ISD::CondCode &CCCode, SDLoc dl);
-
+                                ISD::CondCode &CCCode, const SDLoc &dl);
 
   //===--------------------------------------------------------------------===//
   // Float promotion support: LegalizeFloatTypes.cpp

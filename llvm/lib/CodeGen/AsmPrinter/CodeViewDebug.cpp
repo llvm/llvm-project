@@ -169,7 +169,7 @@ static void addLocIfNotPresent(SmallVectorImpl<const DILocation *> &Locs,
     Locs.push_back(Loc);
 }
 
-void CodeViewDebug::maybeRecordLocation(DebugLoc DL,
+void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
                                         const MachineFunction *MF) {
   // Skip this instruction if it has the same location as the previous one.
   if (DL == CurFn->LastLoc)

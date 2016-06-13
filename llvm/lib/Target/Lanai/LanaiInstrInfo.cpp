@@ -34,7 +34,8 @@ LanaiInstrInfo::LanaiInstrInfo()
 
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator Position,
-                                 DebugLoc DL, unsigned DestinationRegister,
+                                 const DebugLoc &DL,
+                                 unsigned DestinationRegister,
                                  unsigned SourceRegister,
                                  bool KillSource) const {
   if (!Lanai::GPRRegClass.contains(DestinationRegister, SourceRegister)) {
@@ -272,7 +273,7 @@ unsigned LanaiInstrInfo::InsertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TrueBlock,
                                       MachineBasicBlock *FalseBlock,
                                       ArrayRef<MachineOperand> Condition,
-                                      DebugLoc DL) const {
+                                      const DebugLoc &DL) const {
   // Shouldn't be a fall through.
   assert(TrueBlock && "InsertBranch must not be told to insert a fallthrough");
 

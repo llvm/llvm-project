@@ -23,8 +23,9 @@ public:
   explicit Mips16DAGToDAGISel(MipsTargetMachine &TM) : MipsDAGToDAGISel(TM) {}
 
 private:
-  std::pair<SDNode*, SDNode*> selectMULT(SDNode *N, unsigned Opc, SDLoc DL,
-                                         EVT Ty, bool HasLo, bool HasHi);
+  std::pair<SDNode *, SDNode *> selectMULT(SDNode *N, unsigned Opc,
+                                           const SDLoc &DL, EVT Ty, bool HasLo,
+                                           bool HasHi);
 
   SDValue getMips16SPAliasReg();
 

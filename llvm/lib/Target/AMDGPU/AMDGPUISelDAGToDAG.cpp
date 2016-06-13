@@ -168,7 +168,7 @@ private:
   void SelectADD_SUB_I64(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
 
-  SDNode *getS_BFE(unsigned Opcode, SDLoc DL, SDValue Val,
+  SDNode *getS_BFE(unsigned Opcode, const SDLoc &DL, SDValue Val,
                    uint32_t Offset, uint32_t Width);
   void SelectS_BFEFromShifts(SDNode *N);
   void SelectS_BFE(SDNode *N);
@@ -1364,8 +1364,9 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgpr(SDValue Addr,
          !isa<ConstantSDNode>(Offset);
 }
 
-SDNode *AMDGPUDAGToDAGISel::getS_BFE(unsigned Opcode, SDLoc DL, SDValue Val,
-                                     uint32_t Offset, uint32_t Width) {
+SDNode *AMDGPUDAGToDAGISel::getS_BFE(unsigned Opcode, const SDLoc &DL,
+                                     SDValue Val, uint32_t Offset,
+                                     uint32_t Width) {
   // Transformation function, pack the offset and width of a BFE into
   // the format expected by the S_BFE_I32 / S_BFE_U32. In the second
   // source, bits [5:0] contain the offset and bits [22:16] the width.

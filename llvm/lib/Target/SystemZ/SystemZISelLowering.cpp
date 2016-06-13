@@ -802,7 +802,7 @@ static void VerifyVectorTypes(const SmallVectorImpl<ISD::OutputArg> &Outs) {
 // Value is a value that has been passed to us in the location described by VA
 // (and so has type VA.getLocVT()).  Convert Value to VA.getValVT(), chaining
 // any loads onto Chain.
-static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDLoc DL,
+static SDValue convertLocVTToValVT(SelectionDAG &DAG, const SDLoc &DL,
                                    CCValAssign &VA, SDValue Chain,
                                    SDValue Value) {
   // If the argument has been promoted from a smaller type, insert an
@@ -831,7 +831,7 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDLoc DL,
 // Value is a value of type VA.getValVT() that we need to copy into
 // the location described by VA.  Return a copy of Value converted to
 // VA.getValVT().  The caller is responsible for handling indirect values.
-static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDLoc DL,
+static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
                                    CCValAssign &VA, SDValue Value) {
   switch (VA.getLocInfo()) {
   case CCValAssign::SExt:
@@ -855,11 +855,10 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDLoc DL,
   }
 }
 
-SDValue SystemZTargetLowering::
-LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                     SDLoc DL, SelectionDAG &DAG,
-                     SmallVectorImpl<SDValue> &InVals) const {
+SDValue SystemZTargetLowering::LowerFormalArguments(
+    SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo *MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1228,11 +1227,11 @@ CanLowerReturn(CallingConv::ID CallConv,
 }
 
 SDValue
-SystemZTargetLowering::LowerReturn(SDValue Chain,
-                                   CallingConv::ID CallConv, bool IsVarArg,
+SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                   bool IsVarArg,
                                    const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const SmallVectorImpl<SDValue> &OutVals,
-                                   SDLoc DL, SelectionDAG &DAG) const {
+                                   const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Detect unsupported vector return types.
@@ -1277,8 +1276,8 @@ SystemZTargetLowering::LowerReturn(SDValue Chain,
   return DAG.getNode(SystemZISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
-SDValue SystemZTargetLowering::
-prepareVolatileOrAtomicLoad(SDValue Chain, SDLoc DL, SelectionDAG &DAG) const {
+SDValue SystemZTargetLowering::prepareVolatileOrAtomicLoad(
+    SDValue Chain, const SDLoc &DL, SelectionDAG &DAG) const {
   return DAG.getNode(SystemZISD::SERIALIZE, DL, MVT::Other, Chain);
 }
 
@@ -1580,7 +1579,7 @@ static IPMConversion getIPMConversion(unsigned CCValid, unsigned CCMask) {
 
 // If C can be converted to a comparison against zero, adjust the operands
 // as necessary.
-static void adjustZeroCmp(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
+static void adjustZeroCmp(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
   if (C.ICmpType == SystemZICMP::UnsignedOnly)
     return;
 
@@ -1600,7 +1599,8 @@ static void adjustZeroCmp(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
 
 // If a comparison described by C is suitable for CLI(Y), CHHSI or CLHHSI,
 // adjust the operands as necessary.
-static void adjustSubwordCmp(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
+static void adjustSubwordCmp(SelectionDAG &DAG, const SDLoc &DL,
+                             Comparison &C) {
   // For us to make any changes, it must a comparison between a single-use
   // load and a constant.
   if (!C.Op0.hasOneUse() ||
@@ -1761,7 +1761,8 @@ static unsigned reverseCCMask(unsigned CCMask) {
 // Check whether C tests for equality between X and Y and whether X - Y
 // or Y - X is also computed.  In that case it's better to compare the
 // result of the subtraction against zero.
-static void adjustForSubtraction(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
+static void adjustForSubtraction(SelectionDAG &DAG, const SDLoc &DL,
+                                 Comparison &C) {
   if (C.CCMask == SystemZ::CCMASK_CMP_EQ ||
       C.CCMask == SystemZ::CCMASK_CMP_NE) {
     for (auto I = C.Op0->use_begin(), E = C.Op0->use_end(); I != E; ++I) {
@@ -1826,7 +1827,8 @@ static void adjustForLTGFR(Comparison &C) {
 // If C compares the truncation of an extending load, try to compare
 // the untruncated value instead.  This exposes more opportunities to
 // reuse CC.
-static void adjustICmpTruncate(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
+static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
+                               Comparison &C) {
   if (C.Op0.getOpcode() == ISD::TRUNCATE &&
       C.Op0.getOperand(0).getOpcode() == ISD::LOAD &&
       C.Op1.getOpcode() == ISD::Constant &&
@@ -1957,7 +1959,8 @@ static unsigned getTestUnderMaskCond(unsigned BitSize, unsigned CCMask,
 
 // See whether C can be implemented as a TEST UNDER MASK instruction.
 // Update the arguments with the TM version if so.
-static void adjustForTestUnderMask(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
+static void adjustForTestUnderMask(SelectionDAG &DAG, const SDLoc &DL,
+                                   Comparison &C) {
   // Check that we have a comparison with a constant.
   auto *ConstOp1 = dyn_cast<ConstantSDNode>(C.Op1);
   if (!ConstOp1)
@@ -2078,7 +2081,7 @@ static Comparison getIntrinsicCmp(SelectionDAG &DAG, unsigned Opcode,
 
 // Decide how to implement a comparison of type Cond between CmpOp0 with CmpOp1.
 static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
-                         ISD::CondCode Cond, SDLoc DL) {
+                         ISD::CondCode Cond, const SDLoc &DL) {
   if (CmpOp1.getOpcode() == ISD::Constant) {
     uint64_t Constant = cast<ConstantSDNode>(CmpOp1)->getZExtValue();
     unsigned Opcode, CCValid;
@@ -2131,7 +2134,7 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
 }
 
 // Emit the comparison instruction described by C.
-static SDValue emitCmp(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
+static SDValue emitCmp(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
   if (!C.Op1.getNode()) {
     SDValue Op;
     switch (C.Op0.getOpcode()) {
@@ -2161,9 +2164,9 @@ static SDValue emitCmp(SelectionDAG &DAG, SDLoc DL, Comparison &C) {
 // Implement a 32-bit *MUL_LOHI operation by extending both operands to
 // 64 bits.  Extend is the extension type to use.  Store the high part
 // in Hi and the low part in Lo.
-static void lowerMUL_LOHI32(SelectionDAG &DAG, SDLoc DL,
-                            unsigned Extend, SDValue Op0, SDValue Op1,
-                            SDValue &Hi, SDValue &Lo) {
+static void lowerMUL_LOHI32(SelectionDAG &DAG, const SDLoc &DL, unsigned Extend,
+                            SDValue Op0, SDValue Op1, SDValue &Hi,
+                            SDValue &Lo) {
   Op0 = DAG.getNode(Extend, DL, MVT::i64, Op0);
   Op1 = DAG.getNode(Extend, DL, MVT::i64, Op1);
   SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, Op0, Op1);
@@ -2178,10 +2181,9 @@ static void lowerMUL_LOHI32(SelectionDAG &DAG, SDLoc DL,
 // Extend extends Op0 to a GR128, and Opcode performs the GR128 operation
 // on the extended Op0 and (unextended) Op1.  Store the even register result
 // in Even and the odd register result in Odd.
-static void lowerGR128Binary(SelectionDAG &DAG, SDLoc DL, EVT VT,
-                             unsigned Extend, unsigned Opcode,
-                             SDValue Op0, SDValue Op1,
-                             SDValue &Even, SDValue &Odd) {
+static void lowerGR128Binary(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
+                             unsigned Extend, unsigned Opcode, SDValue Op0,
+                             SDValue Op1, SDValue &Even, SDValue &Odd) {
   SDNode *In128 = DAG.getMachineNode(Extend, DL, MVT::Untyped, Op0);
   SDValue Result = DAG.getNode(Opcode, DL, MVT::Untyped,
                                SDValue(In128, 0), Op1);
@@ -2193,7 +2195,7 @@ static void lowerGR128Binary(SelectionDAG &DAG, SDLoc DL, EVT VT,
 // Return an i32 value that is 1 if the CC value produced by Glue is
 // in the mask CCMask and 0 otherwise.  CC is known to have a value
 // in CCValid, so other values can be ignored.
-static SDValue emitSETCC(SelectionDAG &DAG, SDLoc DL, SDValue Glue,
+static SDValue emitSETCC(SelectionDAG &DAG, const SDLoc &DL, SDValue Glue,
                          unsigned CCValid, unsigned CCMask) {
   IPMConversion Conversion = getIPMConversion(CCValid, CCMask);
   SDValue Result = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, Glue);
@@ -2262,7 +2264,7 @@ static unsigned getVectorComparisonOrInvert(ISD::CondCode CC, bool IsFP,
 
 // Return a v2f64 that contains the extended form of elements Start and Start+1
 // of v4f32 value Op.
-static SDValue expandV4F32ToV2F64(SelectionDAG &DAG, int Start, SDLoc DL,
+static SDValue expandV4F32ToV2F64(SelectionDAG &DAG, int Start, const SDLoc &DL,
                                   SDValue Op) {
   int Mask[] = { Start, -1, Start + 1, -1 };
   Op = DAG.getVectorShuffle(MVT::v4f32, DL, Op, DAG.getUNDEF(MVT::v4f32), Mask);
@@ -2271,7 +2273,7 @@ static SDValue expandV4F32ToV2F64(SelectionDAG &DAG, int Start, SDLoc DL,
 
 // Build a comparison of vectors CmpOp0 and CmpOp1 using opcode Opcode,
 // producing a result of type VT.
-static SDValue getVectorCmp(SelectionDAG &DAG, unsigned Opcode, SDLoc DL,
+static SDValue getVectorCmp(SelectionDAG &DAG, unsigned Opcode, const SDLoc &DL,
                             EVT VT, SDValue CmpOp0, SDValue CmpOp1) {
   // There is no hardware support for v4f32, so extend the vector into
   // two v2f64s and compare those.
@@ -2289,7 +2291,7 @@ static SDValue getVectorCmp(SelectionDAG &DAG, unsigned Opcode, SDLoc DL,
 
 // Lower a vector comparison of type CC between CmpOp0 and CmpOp1, producing
 // an integer mask of type VT.
-static SDValue lowerVectorSETCC(SelectionDAG &DAG, SDLoc DL, EVT VT,
+static SDValue lowerVectorSETCC(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
                                 ISD::CondCode CC, SDValue CmpOp0,
                                 SDValue CmpOp1) {
   bool IsFP = CmpOp0.getValueType().isFloatingPoint();
@@ -2384,7 +2386,7 @@ static bool isAbsolute(SDValue CmpOp, SDValue Pos, SDValue Neg) {
 }
 
 // Return the absolute or negative absolute of Op; IsNegative decides which.
-static SDValue getAbsolute(SelectionDAG &DAG, SDLoc DL, SDValue Op,
+static SDValue getAbsolute(SelectionDAG &DAG, const SDLoc &DL, SDValue Op,
                            bool IsNegative) {
   Op = DAG.getNode(SystemZISD::IABS, DL, Op.getValueType(), Op);
   if (IsNegative)
@@ -3713,7 +3715,7 @@ static bool isShlDoublePermute(const SmallVectorImpl<int> &Bytes,
 
 // Create a node that performs P on operands Op0 and Op1, casting the
 // operands to the appropriate type.  The type of the result is determined by P.
-static SDValue getPermuteNode(SelectionDAG &DAG, SDLoc DL,
+static SDValue getPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
                               const Permute &P, SDValue Op0, SDValue Op1) {
   // VPDI (PERMUTE_DWORDS) always operates on v2i64s.  The input
   // elements of a PACK are twice as wide as the outputs.
@@ -3742,7 +3744,8 @@ static SDValue getPermuteNode(SelectionDAG &DAG, SDLoc DL,
 // Bytes is a VPERM-like permute vector, except that -1 is used for
 // undefined bytes.  Implement it on operands Ops[0] and Ops[1] using
 // VSLDI or VPERM.
-static SDValue getGeneralPermuteNode(SelectionDAG &DAG, SDLoc DL, SDValue *Ops,
+static SDValue getGeneralPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
+                                     SDValue *Ops,
                                      const SmallVectorImpl<int> &Bytes) {
   for (unsigned I = 0; I < 2; ++I)
     Ops[I] = DAG.getNode(ISD::BITCAST, DL, MVT::v16i8, Ops[I]);
@@ -3770,7 +3773,7 @@ struct GeneralShuffle {
   GeneralShuffle(EVT vt) : VT(vt) {}
   void addUndef();
   void add(SDValue, unsigned);
-  SDValue getNode(SelectionDAG &, SDLoc);
+  SDValue getNode(SelectionDAG &, const SDLoc &);
 
   // The operands of the shuffle.
   SmallVector<SDValue, SystemZ::VectorBytes> Ops;
@@ -3849,7 +3852,7 @@ void GeneralShuffle::add(SDValue Op, unsigned Elem) {
 }
 
 // Return SDNodes for the completed shuffle.
-SDValue GeneralShuffle::getNode(SelectionDAG &DAG, SDLoc DL) {
+SDValue GeneralShuffle::getNode(SelectionDAG &DAG, const SDLoc &DL) {
   assert(Bytes.size() == SystemZ::VectorBytes && "Incomplete vector");
 
   if (Ops.size() == 0)
@@ -3937,7 +3940,7 @@ static bool isScalarToVector(SDValue Op) {
 
 // Return a vector of type VT that contains Value in the first element.
 // The other elements don't matter.
-static SDValue buildScalarToVector(SelectionDAG &DAG, SDLoc DL, EVT VT,
+static SDValue buildScalarToVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
                                    SDValue Value) {
   // If we have a constant, replicate it to all elements and let the
   // BUILD_VECTOR lowering take care of it.
@@ -3953,7 +3956,7 @@ static SDValue buildScalarToVector(SelectionDAG &DAG, SDLoc DL, EVT VT,
 
 // Return a vector of type VT in which Op0 is in element 0 and Op1 is in
 // element 1.  Used for cases in which replication is cheap.
-static SDValue buildMergeScalars(SelectionDAG &DAG, SDLoc DL, EVT VT,
+static SDValue buildMergeScalars(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
                                  SDValue Op0, SDValue Op1) {
   if (Op0.isUndef()) {
     if (Op1.isUndef())
@@ -3969,7 +3972,7 @@ static SDValue buildMergeScalars(SelectionDAG &DAG, SDLoc DL, EVT VT,
 
 // Extend GPR scalars Op0 and Op1 to doublewords and return a v2i64
 // vector for them.
-static SDValue joinDwords(SelectionDAG &DAG, SDLoc DL, SDValue Op0,
+static SDValue joinDwords(SelectionDAG &DAG, const SDLoc &DL, SDValue Op0,
                           SDValue Op1) {
   if (Op0.isUndef() && Op1.isUndef())
     return DAG.getUNDEF(MVT::v2i64);
@@ -4022,7 +4025,7 @@ static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask) {
 // an empty value.
 static SDValue tryBuildVectorReplicate(SelectionDAG &DAG,
                                        const SystemZInstrInfo *TII,
-                                       SDLoc DL, EVT VT, uint64_t Value,
+                                       const SDLoc &DL, EVT VT, uint64_t Value,
                                        unsigned BitsPerElement) {
   // Signed 16-bit values can be replicated using VREPI.
   int64_t SignedValue = SignExtend64(Value, BitsPerElement);
@@ -4106,7 +4109,7 @@ static SDValue tryBuildVectorShuffle(SelectionDAG &DAG,
 }
 
 // Combine GPR scalar values Elems into a vector of type VT.
-static SDValue buildVector(SelectionDAG &DAG, SDLoc DL, EVT VT,
+static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
                            SmallVectorImpl<SDValue> &Elems) {
   // See whether there is a single replicated value.
   SDValue Single;
@@ -4699,8 +4702,9 @@ static bool canTreatAsByteVector(EVT VT) {
 // of the input vector and Index is the index (based on type VecVT) that
 // should be extracted.  Return the new extraction if a simplification
 // was possible or if Force is true.
-SDValue SystemZTargetLowering::combineExtract(SDLoc DL, EVT ResVT, EVT VecVT,
-                                              SDValue Op, unsigned Index,
+SDValue SystemZTargetLowering::combineExtract(const SDLoc &DL, EVT ResVT,
+                                              EVT VecVT, SDValue Op,
+                                              unsigned Index,
                                               DAGCombinerInfo &DCI,
                                               bool Force) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -4803,9 +4807,8 @@ SDValue SystemZTargetLowering::combineExtract(SDLoc DL, EVT ResVT, EVT VecVT,
 
 // Optimize vector operations in scalar value Op on the basis that Op
 // is truncated to TruncVT.
-SDValue
-SystemZTargetLowering::combineTruncateExtract(SDLoc DL, EVT TruncVT, SDValue Op,
-                                              DAGCombinerInfo &DCI) const {
+SDValue SystemZTargetLowering::combineTruncateExtract(
+    const SDLoc &DL, EVT TruncVT, SDValue Op, DAGCombinerInfo &DCI) const {
   // If we have (trunc (extract_vector_elt X, Y)), try to turn it into
   // (extract_vector_elt (bitcast X), Y'), where (bitcast X) has elements
   // of type TruncVT.

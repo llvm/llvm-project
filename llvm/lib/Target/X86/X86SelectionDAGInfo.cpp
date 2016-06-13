@@ -45,7 +45,7 @@ bool X86SelectionDAGInfo::isBaseRegConflictPossible(
 }
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
-    SelectionDAG &DAG, SDLoc dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, unsigned Align, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -195,7 +195,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
 }
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
-    SelectionDAG &DAG, SDLoc dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   // This requires the copy size to be a constant, preferably

@@ -193,22 +193,22 @@ static unsigned toCallerWindow(unsigned Reg) {
 }
 
 SDValue
-SparcTargetLowering::LowerReturn(SDValue Chain,
-                                 CallingConv::ID CallConv, bool IsVarArg,
+SparcTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                 bool IsVarArg,
                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
-                                 SDLoc DL, SelectionDAG &DAG) const {
+                                 const SDLoc &DL, SelectionDAG &DAG) const {
   if (Subtarget->is64Bit())
     return LowerReturn_64(Chain, CallConv, IsVarArg, Outs, OutVals, DL, DAG);
   return LowerReturn_32(Chain, CallConv, IsVarArg, Outs, OutVals, DL, DAG);
 }
 
 SDValue
-SparcTargetLowering::LowerReturn_32(SDValue Chain,
-                                    CallingConv::ID CallConv, bool IsVarArg,
+SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
+                                    bool IsVarArg,
                                     const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const SmallVectorImpl<SDValue> &OutVals,
-                                    SDLoc DL, SelectionDAG &DAG) const {
+                                    const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
   // CCValAssign - represent the assignment of the return value to locations.
@@ -289,11 +289,11 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain,
 // Lower return values for the 64-bit ABI.
 // Return values are passed the exactly the same way as function arguments.
 SDValue
-SparcTargetLowering::LowerReturn_64(SDValue Chain,
-                                    CallingConv::ID CallConv, bool IsVarArg,
+SparcTargetLowering::LowerReturn_64(SDValue Chain, CallingConv::ID CallConv,
+                                    bool IsVarArg,
                                     const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const SmallVectorImpl<SDValue> &OutVals,
-                                    SDLoc DL, SelectionDAG &DAG) const {
+                                    const SDLoc &DL, SelectionDAG &DAG) const {
   // CCValAssign - represent the assignment of the return value to locations.
   SmallVector<CCValAssign, 16> RVLocs;
 
@@ -365,14 +365,10 @@ SparcTargetLowering::LowerReturn_64(SDValue Chain,
   return DAG.getNode(SPISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
-SDValue SparcTargetLowering::
-LowerFormalArguments(SDValue Chain,
-                     CallingConv::ID CallConv,
-                     bool IsVarArg,
-                     const SmallVectorImpl<ISD::InputArg> &Ins,
-                     SDLoc DL,
-                     SelectionDAG &DAG,
-                     SmallVectorImpl<SDValue> &InVals) const {
+SDValue SparcTargetLowering::LowerFormalArguments(
+    SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   if (Subtarget->is64Bit())
     return LowerFormalArguments_64(Chain, CallConv, IsVarArg, Ins,
                                    DL, DAG, InVals);
@@ -383,14 +379,10 @@ LowerFormalArguments(SDValue Chain,
 /// LowerFormalArguments32 - V8 uses a very simple ABI, where all values are
 /// passed in either one or two GPRs, including FP values.  TODO: we should
 /// pass FP values in FP registers for fastcc functions.
-SDValue SparcTargetLowering::
-LowerFormalArguments_32(SDValue Chain,
-                        CallingConv::ID CallConv,
-                        bool isVarArg,
-                        const SmallVectorImpl<ISD::InputArg> &Ins,
-                        SDLoc dl,
-                        SelectionDAG &DAG,
-                        SmallVectorImpl<SDValue> &InVals) const {
+SDValue SparcTargetLowering::LowerFormalArguments_32(
+    SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   SparcMachineFunctionInfo *FuncInfo = MF.getInfo<SparcMachineFunctionInfo>();
@@ -591,14 +583,10 @@ LowerFormalArguments_32(SDValue Chain,
 }
 
 // Lower formal arguments for the 64 bit ABI.
-SDValue SparcTargetLowering::
-LowerFormalArguments_64(SDValue Chain,
-                        CallingConv::ID CallConv,
-                        bool IsVarArg,
-                        const SmallVectorImpl<ISD::InputArg> &Ins,
-                        SDLoc DL,
-                        SelectionDAG &DAG,
-                        SmallVectorImpl<SDValue> &InVals) const {
+SDValue SparcTargetLowering::LowerFormalArguments_64(
+    SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze arguments according to CC_Sparc64.
@@ -2141,10 +2129,10 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
                      DAG.getRegister(SP::G7, PtrVT), Offset);
 }
 
-SDValue
-SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain, ArgListTy &Args,
-                                          SDValue Arg, SDLoc DL,
-                                          SelectionDAG &DAG) const {
+SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
+                                                  ArgListTy &Args, SDValue Arg,
+                                                  const SDLoc &DL,
+                                                  SelectionDAG &DAG) const {
   MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
   EVT ArgVT = Arg.getValueType();
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
@@ -2230,11 +2218,9 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
                      false, false, false, 8);
 }
 
-SDValue
-SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
-                                      unsigned &SPCC,
-                                      SDLoc DL,
-                                      SelectionDAG &DAG) const {
+SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
+                                              unsigned &SPCC, const SDLoc &DL,
+                                              SelectionDAG &DAG) const {
 
   const char *LibCall = nullptr;
   bool is64Bit = Subtarget->is64Bit();
@@ -2706,8 +2692,8 @@ static SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   return RetAddr;
 }
 
-static SDValue LowerF64Op(SDValue SrcReg64, SDLoc dl, SelectionDAG &DAG, unsigned opcode)
-{
+static SDValue LowerF64Op(SDValue SrcReg64, const SDLoc &dl, SelectionDAG &DAG,
+                          unsigned opcode) {
   assert(SrcReg64.getValueType() == MVT::f64 && "LowerF64Op called on non-double!");
   assert(opcode == ISD::FNEG || opcode == ISD::FABS);
 

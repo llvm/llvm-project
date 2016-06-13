@@ -64,7 +64,7 @@ class GCMachineCodeAnalysis : public MachineFunctionPass {
   void FindSafePoints(MachineFunction &MF);
   void VisitCallPoint(MachineBasicBlock::iterator MI);
   MCSymbol *InsertLabel(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                        DebugLoc DL) const;
+                        const DebugLoc &DL) const;
 
   void FindStackOffsets(MachineFunction &MF);
 
@@ -270,7 +270,7 @@ void GCMachineCodeAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
 
 MCSymbol *GCMachineCodeAnalysis::InsertLabel(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator MI,
-                                             DebugLoc DL) const {
+                                             const DebugLoc &DL) const {
   MCSymbol *Label = MBB.getParent()->getContext().createTempSymbol();
   BuildMI(MBB, MI, DL, TII->get(TargetOpcode::GC_LABEL)).addSym(Label);
   return Label;

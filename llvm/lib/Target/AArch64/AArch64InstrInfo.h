@@ -119,13 +119,14 @@ public:
 
   MachineInstr *emitFrameIndexDebugValue(MachineFunction &MF, int FrameIx,
                                          uint64_t Offset, const MDNode *Var,
-                                         const MDNode *Expr, DebugLoc DL) const;
+                                         const MDNode *Expr,
+                                         const DebugLoc &DL) const;
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                        DebugLoc DL, unsigned DestReg, unsigned SrcReg,
+                        const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                         bool KillSrc, unsigned Opcode,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   DebugLoc DL, unsigned DestReg, unsigned SrcReg,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
@@ -153,14 +154,15 @@ public:
   unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
   unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        DebugLoc DL) const override;
+                        const DebugLoc &DL) const override;
   bool
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
                        unsigned, unsigned, int &, int &, int &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                    DebugLoc DL, unsigned DstReg, ArrayRef<MachineOperand> Cond,
-                    unsigned TrueReg, unsigned FalseReg) const override;
+                    const DebugLoc &DL, unsigned DstReg,
+                    ArrayRef<MachineOperand> Cond, unsigned TrueReg,
+                    unsigned FalseReg) const override;
   void getNoopForMachoTarget(MCInst &NopInst) const override;
 
   /// analyzeCompare - For a comparison instruction, return the source registers
@@ -209,7 +211,7 @@ public:
   getSerializableBitmaskMachineOperandTargetFlags() const override;
 
 private:
-  void instantiateCondBranch(MachineBasicBlock &MBB, DebugLoc DL,
+  void instantiateCondBranch(MachineBasicBlock &MBB, const DebugLoc &DL,
                              MachineBasicBlock *TBB,
                              ArrayRef<MachineOperand> Cond) const;
   bool substituteCmpToZero(MachineInstr *CmpInstr,
@@ -221,8 +223,8 @@ private:
 /// insertion (PEI) pass, where a virtual scratch register may be allocated
 /// if necessary, to be replaced by the scavenger at the end of PEI.
 void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     DebugLoc DL, unsigned DestReg, unsigned SrcReg, int Offset,
-                     const TargetInstrInfo *TII,
+                     const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
+                     int Offset, const TargetInstrInfo *TII,
                      MachineInstr::MIFlag = MachineInstr::NoFlags,
                      bool SetNZCV = false);
 

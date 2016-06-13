@@ -17,13 +17,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-selectiondag-info"
 
-SDValue
-HexagonSelectionDAGInfo::
-EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl, SDValue Chain,
-                        SDValue Dst, SDValue Src, SDValue Size, unsigned Align,
-                        bool isVolatile, bool AlwaysInline,
-                        MachinePointerInfo DstPtrInfo,
-                        MachinePointerInfo SrcPtrInfo) const {
+SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (AlwaysInline || (Align & 0x3) != 0 || !ConstantSize)
     return SDValue();

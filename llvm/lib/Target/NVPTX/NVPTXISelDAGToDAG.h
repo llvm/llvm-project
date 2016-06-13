@@ -70,7 +70,7 @@ private:
   bool trySurfaceIntrinsic(SDNode *N);
   bool tryBFE(SDNode *N);
 
-  inline SDValue getI32Imm(unsigned Imm, SDLoc DL) {
+  inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
 

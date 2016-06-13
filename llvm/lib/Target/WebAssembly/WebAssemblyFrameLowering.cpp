@@ -81,7 +81,7 @@ static void writeSPToMemory(unsigned SrcReg, MachineFunction &MF,
                             MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator &InsertAddr,
                             MachineBasicBlock::iterator &InsertStore,
-                            DebugLoc DL) {
+                            const DebugLoc &DL) {
   const char *ES = "__stack_pointer";
   auto *SPSymbol = MF.createExternalSymbolName(ES);
   MachineRegisterInfo &MRI = MF.getRegInfo();

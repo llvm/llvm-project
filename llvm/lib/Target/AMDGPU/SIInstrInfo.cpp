@@ -339,11 +339,10 @@ bool SIInstrInfo::shouldClusterMemOps(MachineInstr *FirstLdSt,
   return (NumLoads * DstRC->getSize()) <= LoadClusterThreshold;
 }
 
-void
-SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MI, DebugLoc DL,
-                         unsigned DestReg, unsigned SrcReg,
-                         bool KillSrc) const {
+void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              const DebugLoc &DL, unsigned DestReg,
+                              unsigned SrcReg, bool KillSrc) const {
 
   // If we are trying to copy to or from SCC, there is a bug somewhere else in
   // the backend.  While it may be theoretically possible to do this, it should
@@ -1173,7 +1172,7 @@ unsigned SIInstrInfo::InsertBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *TBB,
                                    MachineBasicBlock *FBB,
                                    ArrayRef<MachineOperand> Cond,
-                                   DebugLoc DL) const {
+                                   const DebugLoc &DL) const {
 
   if (!FBB && Cond.empty()) {
     BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))

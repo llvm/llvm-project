@@ -50,7 +50,7 @@ bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(
 
 void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator I,
-                                       DebugLoc DL, unsigned DestReg,
+                                       const DebugLoc &DL, unsigned DestReg,
                                        unsigned SrcReg, bool KillSrc) const {
   // This method is called by post-RA expansion, which expects only pregs to
   // exist. However we need to handle both here.
@@ -165,7 +165,7 @@ unsigned WebAssemblyInstrInfo::InsertBranch(MachineBasicBlock &MBB,
                                             MachineBasicBlock *TBB,
                                             MachineBasicBlock *FBB,
                                             ArrayRef<MachineOperand> Cond,
-                                            DebugLoc DL) const {
+                                            const DebugLoc &DL) const {
   if (Cond.empty()) {
     if (!TBB)
       return 0;

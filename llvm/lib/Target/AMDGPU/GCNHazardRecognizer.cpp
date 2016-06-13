@@ -112,8 +112,8 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-int GCNHazardRecognizer::getWaitStatesSinceDef(unsigned Reg,
-                              std::function<bool(MachineInstr*)> IsHazardDef ) {
+int GCNHazardRecognizer::getWaitStatesSinceDef(
+    unsigned Reg, function_ref<bool(MachineInstr *)> IsHazardDef) {
   const TargetRegisterInfo *TRI =
       MF.getSubtarget<AMDGPUSubtarget>().getRegisterInfo();
 

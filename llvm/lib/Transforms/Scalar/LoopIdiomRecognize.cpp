@@ -1123,7 +1123,7 @@ bool LoopIdiomRecognize::recognizePopcount() {
 }
 
 static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                       DebugLoc DL) {
+                                       const DebugLoc &DL) {
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 

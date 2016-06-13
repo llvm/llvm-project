@@ -439,6 +439,8 @@ bool llvm::AArch64::getExtensionFeatures(unsigned Extensions,
     Features.push_back("+fullfp16");
   if (Extensions & AArch64::AEK_PROFILE)
     Features.push_back("+spe");
+  if (Extensions & AArch64::AEK_RAS)
+    Features.push_back("+ras");
 
   return true;
 }
