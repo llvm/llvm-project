@@ -15,6 +15,7 @@ add_clang_library(clangAnalysis
   Dominators.cpp
   FormatString.cpp
   LiveVariables.cpp
+  OSLog.cpp
   ObjCNoReturn.cpp
   PostOrderCFGView.cpp
   PrintfFormatString.cpp
