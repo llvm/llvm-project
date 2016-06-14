@@ -604,6 +604,12 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath);
 
+/// @brief Fetch a path to an open file, as specified by a file descriptor
+///
+/// @param FD File descriptor to a currently open file
+/// @param ResultPath The buffer into which to write the path
+std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath);
+
 enum OpenFlags : unsigned {
   F_None = 0,
 
@@ -636,7 +642,8 @@ inline OpenFlags &operator|=(OpenFlags &A, OpenFlags B) {
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
                                  OpenFlags Flags, unsigned Mode = 0666);
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD);
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                SmallVectorImpl<char> *RealPath = nullptr);
 
 /// @brief Identify the type of a binary file based on how magical it is.
 file_magic identify_magic(StringRef magic);

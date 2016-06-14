@@ -23,8 +23,8 @@
 ; GCNMESA-DAG: s_mov_b32 s12, SCRATCH_RSRC_DWORD0
 ; GCNMESA--DAG: s_mov_b32 s13, SCRATCH_RSRC_DWORD1
 ; GCNMESA-DAG: s_mov_b32 s14, -1
-; SIMESA-DAG: s_mov_b32 s15, 0x88f000
-; VIMESA-DAG: s_mov_b32 s15, 0x880000
+; SIMESA-DAG: s_mov_b32 s15, 0xe8f000
+; VIMESA-DAG: s_mov_b32 s15, 0xe80000
 
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, s[12:15], s16 offset:{{[0-9]+}} ; 4-byte Folded Spill

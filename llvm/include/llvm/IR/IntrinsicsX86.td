@@ -8098,13 +8098,3 @@ let TargetPrefix = "x86" in {
       : GCCBuiltin<"__builtin_ia32_mwaitx">,
         Intrinsic<[], [ llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ], []>;
 }
-
-//===----------------------------------------------------------------------===//
-// Bit Scan intrinsics
-let TargetPrefix = "x86" in {
-  def int_x86_bit_scan_forward_32 : GCCBuiltin<"__builtin_ia32_bit_scan_forward">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
-   
-  def int_x86_bit_scan_reverse_32 : GCCBuiltin<"__builtin_ia32_bit_scan_reverse">,
-      Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
-}

@@ -149,9 +149,26 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo) {
   if (isLegalInHWReg(N->getValueType(ResNo)))
     return SDValue(N, ResNo);
   ConstantFPSDNode *CN = cast<ConstantFPSDNode>(N);
-  return DAG.getConstant(CN->getValueAPF().bitcastToAPInt(), SDLoc(CN),
-                         TLI.getTypeToTransformTo(*DAG.getContext(),
-                                                  CN->getValueType(0)));
+  // In ppcf128, the high 64 bits are always first in memory regardless
+  // of Endianness. LLVM's APFloat representation is not Endian sensitive,
+  // and so always converts into a 128-bit APInt in a non-Endian-sensitive
+  // way. However, APInt's are serialized in an Endian-sensitive fashion,
+  // so on big-Endian targets, the two doubles are output in the wrong 
+  // order. Fix this by manually flipping the order of the high 64 bits
+  // and the low 64 bits here.
+  if (DAG.getDataLayout().isBigEndian() &&
+      CN->getValueType(0).getSimpleVT() == llvm::MVT::ppcf128) {
+    uint64_t words[2] = { CN->getValueAPF().bitcastToAPInt().getRawData()[1],
+                          CN->getValueAPF().bitcastToAPInt().getRawData()[0] };
+    APInt Val(128, words);
+    return DAG.getConstant(Val, SDLoc(CN),
+                           TLI.getTypeToTransformTo(*DAG.getContext(),
+                                                    CN->getValueType(0)));
+  } else {
+    return DAG.getConstant(CN->getValueAPF().bitcastToAPInt(), SDLoc(CN),
+                           TLI.getTypeToTransformTo(*DAG.getContext(),
+                                                    CN->getValueType(0)));
+  }
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N) {

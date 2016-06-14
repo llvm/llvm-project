@@ -7,8 +7,7 @@ OBJ: 000000000000001c	adrp	x0, L_.str@PAGE
 OBJ: 0000000000000020	add	x0, x0, L_.str@PAGEOFF
 OBJ: 0000000000000024	bl	_printf
 
-EXE: 0000000100007f58	add	x0, x0, #0xfa8 ; literal pool for: "Hello world
-"
+EXE: 0000000100007f58	add	x0, x0, #0xfa8 ; literal pool for: "Hello world\n"
 EXE: 0000000100007f5c	bl	0x100007f78 ; symbol stub for: _printf
 
 ObjC-OBJ: 000000000000000c	adrp	x8, L_OBJC_SELECTOR_REFERENCES_3@PAGE

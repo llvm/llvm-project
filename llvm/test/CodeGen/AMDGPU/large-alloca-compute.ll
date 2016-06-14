@@ -12,8 +12,8 @@
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 ; GCN-DAG: ; fixup A - offset: 4, value: SCRATCH_RSRC_DWORD1, kind: FK_Data_4
 ; GCN-DAG: s_mov_b32 s{{[0-9]+}}, -1
-; CI-DAG: s_mov_b32 s{{[0-9]+}}, 0x88f000
-; VI-DAG: s_mov_b32 s{{[0-9]+}}, 0x880000
+; CI-DAG: s_mov_b32 s{{[0-9]+}}, 0xe8f000
+; VI-DAG: s_mov_b32 s{{[0-9]+}}, 0xe80000
 
 
 ; GCNHSA: .amd_kernel_code_t

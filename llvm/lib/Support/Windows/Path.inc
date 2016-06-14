@@ -707,7 +707,8 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   return std::error_code();
 }
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD) {
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                SmallVectorImpl<char> *RealPath) {
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Name, PathUTF16))
@@ -734,6 +735,22 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD) {
   if (FD == -1) {
     ::CloseHandle(H);
     return mapWindowsError(ERROR_INVALID_HANDLE);
+  }
+
+  // Fetch the real name of the file, if the user asked
+  if (RealPath) {
+    RealPath->clear();
+    wchar_t RealPathUTF16[MAX_PATH];
+    DWORD CountChars =
+      ::GetFinalPathNameByHandleW(H, RealPathUTF16, MAX_PATH,
+                                  FILE_NAME_NORMALIZED);
+    if (CountChars > 0 && CountChars < MAX_PATH) {
+      // Convert the result from UTF-16 to UTF-8.
+      SmallString<MAX_PATH> RealPathUTF8;
+      if (!UTF16ToUTF8(RealPathUTF16, CountChars, RealPathUTF8))
+        RealPath->append(RealPathUTF8.data(),
+                         RealPathUTF8.data() + strlen(RealPathUTF8.data()));
+    }
   }
 
   ResultFD = FD;
@@ -794,6 +811,32 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
   }
 
   ResultFD = FD;
+  return std::error_code();
+}
+
+std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath) {
+  HANDLE FileHandle = reinterpret_cast<HANDLE>(::_get_osfhandle(FD));
+  if (FileHandle == INVALID_HANDLE_VALUE)
+    return make_error_code(errc::bad_file_descriptor);
+
+  DWORD CharCount;
+  do {
+    CharCount = ::GetFinalPathNameByHandleA(FileHandle, ResultPath.begin(),
+                                            ResultPath.capacity(), FILE_NAME_NORMALIZED);
+    if (CharCount <= ResultPath.capacity())
+      break;
+    ResultPath.reserve(CharCount);
+  } while (true);
+
+  if (CharCount == 0)
+    return mapWindowsError(::GetLastError());
+
+  ResultPath.set_size(CharCount);
+
+  // On earlier Windows releases, the character count includes the terminating null.
+  if (ResultPath.back() == '\0')
+    ResultPath.pop_back();
+
   return std::error_code();
 }
 } // end namespace fs
@@ -930,6 +973,7 @@ std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
                              llvm::SmallVectorImpl<char> &utf8) {
   return UTF16ToCodePage(CP_ACP, utf16, utf16_len, utf8);
 }
+
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm
