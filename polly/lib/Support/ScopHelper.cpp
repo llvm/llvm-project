@@ -246,13 +246,25 @@ private:
   const Region &R;
   ValueMapT *VMap;
 
-  /// @brief Return the Value for @p E if it is not zero or else the value 1.
-  Value *selectOneIfZero(const SCEV *E, Instruction *IP) {
-    auto *Ty = E->getType();
-    auto *RHS = Expander.expandCodeFor(E, Ty, IP);
-    auto *Zero = ConstantInt::get(Ty, 0);
-    auto *Cond = new ICmpInst(IP, ICmpInst::ICMP_NE, RHS, Zero);
-    return SelectInst::Create(Cond, RHS, ConstantInt::get(Ty, 1), "", IP);
+  const SCEV *visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
+                               Instruction *IP) {
+    if (!Inst || !R.contains(Inst))
+      return E;
+
+    assert(!Inst->mayThrow() && !Inst->mayReadOrWriteMemory() &&
+           !isa<PHINode>(Inst));
+
+    auto *InstClone = Inst->clone();
+    for (auto &Op : Inst->operands()) {
+      assert(SE.isSCEVable(Op->getType()));
+      auto *OpSCEV = SE.getSCEV(Op);
+      auto *OpClone = expandCodeFor(OpSCEV, Op->getType(), IP);
+      InstClone->replaceUsesOfWith(Op, OpClone);
+    }
+
+    InstClone->setName(Name + Inst->getName());
+    InstClone->insertBefore(IP);
+    return SE.getSCEV(InstClone);
   }
 
   const SCEV *visitUnknown(const SCEVUnknown *E) {
@@ -268,28 +280,31 @@ private:
         return visit(NewE);
     }
 
+    auto *EnteringBB = R.getEnteringBlock();
     Instruction *Inst = dyn_cast<Instruction>(E->getValue());
+    Instruction *IP;
+    if (Inst && !R.contains(Inst))
+      IP = Inst;
+    else if (Inst && EnteringBB->getParent() == Inst->getFunction())
+      IP = EnteringBB->getTerminator();
+    else
+      IP = EnteringBB->getParent()->getEntryBlock().getTerminator();
+
     if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
                   Inst->getOpcode() != Instruction::SDiv))
-      return E;
+      return visitGenericInst(E, Inst, IP);
 
-    if (!R.contains(Inst))
-      return E;
+    const SCEV *LHSScev = SE.getSCEV(Inst->getOperand(0));
+    const SCEV *RHSScev = SE.getSCEV(Inst->getOperand(1));
 
-    Instruction *StartIP = R.getEnteringBlock()->getTerminator();
+    if (!SE.isKnownNonZero(RHSScev))
+      RHSScev = SE.getUMaxExpr(RHSScev, SE.getConstant(E->getType(), 1));
 
-    const SCEV *LHSScev = visit(SE.getSCEV(Inst->getOperand(0)));
-    const SCEV *RHSScev = visit(SE.getSCEV(Inst->getOperand(1)));
-
-    Value *LHS = Expander.expandCodeFor(LHSScev, E->getType(), StartIP);
-    Value *RHS = nullptr;
-    if (SE.isKnownNonZero(RHSScev))
-      RHS = Expander.expandCodeFor(RHSScev, E->getType(), StartIP);
-    else
-      RHS = selectOneIfZero(RHSScev, StartIP);
+    Value *LHS = expandCodeFor(LHSScev, E->getType(), IP);
+    Value *RHS = expandCodeFor(RHSScev, E->getType(), IP);
 
     Inst = BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(),
-                                  LHS, RHS, Inst->getName() + Name, StartIP);
+                                  LHS, RHS, Inst->getName() + Name, IP);
     return SE.getSCEV(Inst);
   }
 
@@ -308,12 +323,10 @@ private:
     return SE.getSignExtendExpr(visit(E->getOperand()), E->getType());
   }
   const SCEV *visitUDivExpr(const SCEVUDivExpr *E) {
-    if (SE.isKnownNonZero(E->getRHS()))
-      return SE.getUDivExpr(visit(E->getLHS()), visit(E->getRHS()));
     auto *RHSScev = visit(E->getRHS());
-    auto *IP = R.getEnteringBlock()->getTerminator();
-    auto *RHS = selectOneIfZero(RHSScev, IP);
-    return SE.getUDivExpr(visit(E->getLHS()), SE.getSCEV(RHS));
+    if (!SE.isKnownNonZero(RHSScev))
+      RHSScev = SE.getUMaxExpr(RHSScev, SE.getConstant(E->getType(), 1));
+    return SE.getUDivExpr(visit(E->getLHS()), RHSScev);
   }
   const SCEV *visitAddExpr(const SCEVAddExpr *E) {
     SmallVector<const SCEV *, 4> NewOps;
@@ -453,14 +466,15 @@ bool polly::isIgnoredIntrinsic(const Value *V) {
   return false;
 }
 
-bool polly::canSynthesize(const Value *V, const llvm::LoopInfo *LI,
-                          ScalarEvolution *SE, const Region *R, Loop *Scope) {
+bool polly::canSynthesize(const Value *V, const Scop &S,
+                          const llvm::LoopInfo *LI, ScalarEvolution *SE,
+                          Loop *Scope) {
   if (!V || !SE->isSCEVable(V->getType()))
     return false;
 
   if (const SCEV *Scev = SE->getSCEVAtScope(const_cast<Value *>(V), Scope))
     if (!isa<SCEVCouldNotCompute>(Scev))
-      if (!hasScalarDepsInsideRegion(Scev, R, Scope, false))
+      if (!hasScalarDepsInsideRegion(Scev, &S.getRegion(), Scope, false))
         return true;
 
   return false;

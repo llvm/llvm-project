@@ -2,7 +2,7 @@
 # Setup Project
 #===============================================================================
 
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 3.4.3)
 
 if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
@@ -108,14 +108,18 @@ endif()
 #===============================================================================
 
 # Define options.
+option(LIBCXXABI_ENABLE_EXCEPTIONS "Use exceptions." ON)
 option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
-set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE STRING "GCC toolchain for cross compiling.")
-set(LIBCXXABI_SYSROOT "" CACHE STRING "Sysroot for cross compiling.")
-set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE STRING "The path to libc++ library.")
+option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
+option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
+set(LIBCXXABI_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
+set(LIBCXXABI_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
+set(LIBCXXABI_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
+set(LIBCXXABI_LIBCXX_LIBRARY_PATH "" CACHE PATH "The path to libc++ library.")
 
 # Default to building a shared library so that the default options still test
 # the libc++abi that is being built. There are two problems with testing a
@@ -171,9 +175,6 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-# Configure compiler.
-include(config-ix)
-
 set(LIBCXXABI_COMPILER    ${CMAKE_CXX_COMPILER})
 set(LIBCXXABI_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXXABI_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
@@ -181,6 +182,23 @@ set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
+
+# By default, for non-standalone builds, libcxx and libcxxabi share a library
+# directory.
+if (NOT LIBCXXABI_LIBCXX_LIBRARY_PATH)
+  set(LIBCXXABI_LIBCXX_LIBRARY_PATH "${LIBCXXABI_LIBRARY_DIR}" CACHE PATH
+      "The path to libc++ library.")
+endif ()
+
+
+# Check that we can build with 32 bits if requested.
+if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
+  if (LIBCXXABI_BUILD_32_BITS AND NOT LLVM_BUILD_32_BITS) # Don't duplicate the output from LLVM
+    message(STATUS "Building 32 bits executables and libraries.")
+  endif()
+elseif(LIBCXXABI_BUILD_32_BITS)
+  message(FATAL_ERROR "LIBCXXABI_BUILD_32_BITS=ON is not supported on this platform.")
+endif()
 
 #===============================================================================
 # Setup Compiler Flags
@@ -193,11 +211,30 @@ macro(append_if list condition var)
   endif()
 endmacro()
 
+macro(add_target_flags_if condition var)
+  if (${condition})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${var}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${var}")
+    list(APPEND LIBCXXABI_LINK_FLAGS ${var})
+  endif()
+endmacro()
+
 set(LIBCXXABI_C_FLAGS "")
 set(LIBCXXABI_CXX_FLAGS "")
 set(LIBCXXABI_COMPILE_FLAGS "")
 set(LIBCXXABI_LINK_FLAGS "")
 
+# Configure target flags
+add_target_flags_if(LIBCXXABI_BUILD_32_BITS "-m32")
+add_target_flags_if(LIBCXXABI_TARGET_TRIPLE
+          "-target ${LIBCXXABI_TARGET_TRIPLE}")
+add_target_flags_if(LIBCXXABI_GCC_TOOLCHAIN
+         "-gcc-toolchain ${LIBCXXABI_GCC_TOOLCHAIN}")
+add_target_flags_if(LIBCXXABI_SYSROOT
+          "--sysroot=${LIBCXXABI_SYSROOT}")
+
+# Configure compiler. Must happen after setting the target flags.
+include(config-ix)
 
 if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
@@ -241,13 +278,20 @@ if (LIBCXXABI_ENABLE_PEDANTIC)
 endif()
 
 # Get feature flags.
-# Exceptions
-# Catches C++ exceptions only and tells the compiler to assume that extern C
-# functions never throw a C++ exception.
 append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_FSTRICT_ALIASING_FLAG -fstrict-aliasing)
-append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_EHSC_FLAG -EHsc)
 
-append_if(LIBCXXABI_C_FLAGS LIBCXXABI_HAS_FUNWIND_TABLES -funwind-tables)
+# Exceptions
+if (LIBCXXABI_ENABLE_EXCEPTIONS)
+  # Catches C++ exceptions only and tells the compiler to assume that extern C
+  # functions never throw a C++ exception.
+  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_EHSC_FLAG -EHsc)
+  append_if(LIBCXXABI_C_FLAGS LIBCXXABI_HAS_FUNWIND_TABLES -funwind-tables)
+else()
+  add_definitions(-D_LIBCXXABI_NO_EXCEPTIONS)
+  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_NO_EXCEPTIONS_FLAG -fno-exceptions)
+  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_NO_EHS_FLAG -EHs-)
+  append_if(LIBCXXABI_CXX_FLAGS LIBCXXABI_HAS_NO_EHA_FLAG -EHa-)
+endif()
 
 # Assert
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
@@ -272,7 +316,16 @@ if (NOT LIBCXXABI_ENABLE_SHARED)
 endif()
 
 if (NOT LIBCXXABI_ENABLE_THREADS)
+  if (LIBCXXABI_HAS_PTHREAD_API)
+    message(FATAL_ERROR "LIBCXXABI_HAS_PTHREAD_API can only"
+                        " be set to ON when LIBCXXABI_ENABLE_THREADS"
+                        " is also set to ON.")
+  endif()
   add_definitions(-DLIBCXXABI_HAS_NO_THREADS=1)
+endif()
+
+if (LIBCXXABI_HAS_PTHREAD_API)
+  add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
 endif()
 
 # This is the _ONLY_ place where add_definitions is called.
@@ -285,12 +338,6 @@ if (LIBCXXABI_USE_LLVM_UNWINDER OR LLVM_NATIVE_ARCH MATCHES ARM)
   add_definitions(-DLIBCXXABI_USE_LLVM_UNWINDER=1)
 endif()
 
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_TARGET_TRIPLE
-          "-target ${LIBCXXABI_TARGET_TRIPLE}")
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_GCC_TOOLCHAIN
-         "-gcc-toolchain ${LIBCXXABI_GCC_TOOLCHAIN}")
-append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_SYSROOT
-          "--sysroot ${LIBCXXABI_SYSROOT}")
 string(REPLACE ";" " " LIBCXXABI_CXX_FLAGS "${LIBCXXABI_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LIBCXXABI_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")
@@ -338,14 +385,16 @@ endif ()
 # soname, etc...
 add_subdirectory(src)
 
-if(NOT LIBCXXABI_ENABLE_SHARED)
-  # TODO: Fix the libc++ cmake files so that libc++abi can be statically linked.
-  # As it is now, libc++ will prefer linking against a dynamic libc++abi in the
-  # system library paths over a static libc++abi in the out directory. This
-  # would test the system library rather than the one we just built, which isn't
-  # very helpful.
-  message(WARNING "The libc++abi tests are currently only valid when "
-                  "LIBCXXABI_ENABLE_SHARED is on, no check target will be "
+if (LIBCXXABI_BUILT_STANDALONE AND NOT LIBCXXABI_ENABLE_SHARED)
+  # We can't reasonably test the system C++ library with a static libc++abi.
+  # We either need to be able to replace libc++abi at run time (with a shared
+  # libc++abi), or we need to be able to replace the C++ runtime (with a non-
+  # standalone build).
+  message(WARNING "The libc++abi tests aren't valid when libc++abi is built "
+                  "standalone (i.e. outside of llvm/projects/libcxxabi ) and "
+                  "is built without a shared library.  Either build a shared "
+                  "library, build libc++abi at the same time as you build "
+                  "libc++, or do without testing.  No check target will be "
                   "available!")
 else()
   add_subdirectory(test)

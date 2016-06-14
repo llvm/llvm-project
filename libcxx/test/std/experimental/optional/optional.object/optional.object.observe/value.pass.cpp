@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // XFAIL: libcpp-no-exceptions
 // <optional>
 
@@ -15,8 +16,6 @@
 #include <experimental/optional>
 #include <type_traits>
 #include <cassert>
-
-#if _LIBCPP_STD_VER > 11
 
 using std::experimental::optional;
 using std::experimental::bad_optional_access;
@@ -29,11 +28,8 @@ struct X
     int test() {return 4;}
 };
 
-#endif  // _LIBCPP_STD_VER > 11
-
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     {
         optional<X> opt;
         opt.emplace();
@@ -50,5 +46,4 @@ int main()
         {
         }
     }
-#endif  // _LIBCPP_STD_VER > 11
 }

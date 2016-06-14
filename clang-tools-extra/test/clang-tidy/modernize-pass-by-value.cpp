@@ -1,7 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-pass-by-value %t -- -- -std=c++11 -fno-delayed-template-parsing
 
-// CHECK-FIXES: #include <utility>
-
 namespace {
 // POD types are trivially move constructible.
 struct Movable {
@@ -149,8 +147,7 @@ template <typename T> struct N {
 // Test with value parameter.
 struct O {
   O(Movable M) : M(M) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pass by value and use std::move
-  // CHECK-FIXES: O(Movable M) : M(std::move(M)) {}
+  // CHECK-FIXES: O(Movable M) : M(M) {}
   Movable M;
 };
 
@@ -182,8 +179,7 @@ typedef ::Movable RMovable;
 }
 struct R {
   R(ns_R::RMovable M) : M(M) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pass by value and use std::move
-  // CHECK-FIXES: R(ns_R::RMovable M) : M(std::move(M)) {}
+  // CHECK-FIXES: R(ns_R::RMovable M) : M(M) {}
   ns_R::RMovable M;
 };
 
@@ -194,3 +190,12 @@ struct S {
   Movable M;
 };
 
+template <typename T, int N> struct array { T A[N]; };
+
+// Test that types that are trivially copyable will not use std::move. This will
+// cause problems with misc-move-const-arg, as it will revert it.
+struct T {
+  T(array<int, 10> a) : a_(a) {}
+  // CHECK-FIXES: T(array<int, 10> a) : a_(a) {}
+  array<int, 10> a_;
+};

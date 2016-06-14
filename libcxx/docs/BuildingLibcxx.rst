@@ -1,3 +1,4 @@
+.. _BuildingLibcxx:
 
 ===============
 Building libc++
@@ -336,3 +337,72 @@ own copy of libsupc++ and this can lead to subtle problems.
   $ make install
 
 You can now run clang with -stdlib=libc++.
+
+
+.. _libcxxrt_ref:
+
+Using libcxxrt on Linux
+------------------------
+
+You will need to keep the source tree of `libcxxrt`_ available
+on your build machine and your copy of the libcxxrt shared library must
+be placed where your linker will find it.
+
+We can now run CMake like:
+
+.. code-block:: bash
+
+  $ CC=clang CXX=clang++ cmake -G "Unix Makefiles" \
+          -DLIBCXX_CXX_ABI=libcxxrt \
+          -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxrt-sources/src \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                <libc++-source-directory>
+  $ make cxx
+  $ make install
+
+Unfortunately you can't simply run clang with "-stdlib=libc++" at this point, as
+clang is set up to link for libc++ linked to libsupc++.  To get around this
+you'll have to set up your linker yourself (or patch clang).  For example,
+
+.. code-block:: bash
+
+  $ clang++ -stdlib=libc++ helloworld.cpp \
+            -nodefaultlibs -lc++ -lcxxrt -lm -lc -lgcc_s -lgcc
+
+Alternately, you could just add libcxxrt to your libraries list, which in most
+situations will give the same result:
+
+.. code-block:: bash
+
+  $ clang++ -stdlib=libc++ helloworld.cpp -lcxxrt
+
+.. _`libcxxrt`: https://github.com/pathscale/libcxxrt/
+
+
+Using a local ABI library installation
+---------------------------------------
+
+.. warning::
+  This is not recommended in almost all cases.
+
+These instructions should only be used when you can't install your ABI library.
+
+Normally you must link libc++ against a ABI shared library that the
+linker can find.  If you want to build and test libc++ against an ABI
+library not in the linker's path you needq to set
+``-DLIBCXX_CXX_ABI_LIBRARY_PATH=/path/to/abi/lib`` when configuring CMake.
+
+An example build using libc++abi would look like:
+
+.. code-block:: bash
+
+  $ CC=clang CXX=clang++ cmake \
+              -DLIBCXX_CXX_ABI=libc++abi  \
+              -DLIBCXX_CXX_ABI_INCLUDE_PATHS="/path/to/libcxxabi/include" \
+              -DLIBCXX_CXX_ABI_LIBRARY_PATH="/path/to/libcxxabi-build/lib" \
+               path/to/libcxx
+  $ make
+
+When testing libc++ LIT will automatically link against the proper ABI
+library.

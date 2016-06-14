@@ -7,15 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <experimental/tuple>
 
 #include <experimental/tuple>
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
-# ifndef _LIBCPP_TUPLE
-#   error "<experimental/tuple> must include <tuple>"
-# endif
-#endif /* _LIBCPP_STD_VER > 11 */
+#ifndef _LIBCPP_TUPLE
+#  error "<experimental/tuple> must include <tuple>"
+#endif
 }

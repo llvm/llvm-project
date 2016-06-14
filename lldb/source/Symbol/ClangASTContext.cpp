@@ -2067,10 +2067,33 @@ ClangASTContext::CreateFunctionType (ASTContext *ast,
                                      bool is_variadic, 
                                      unsigned type_quals)
 {
-    assert (ast != nullptr);
+    if (ast == nullptr)
+        return CompilerType(); // invalid AST
+
+    if (!result_type || !ClangUtil::IsClangType(result_type))
+        return CompilerType(); // invalid return type
+
     std::vector<QualType> qual_type_args;
+    if (num_args > 0 && args == nullptr)
+        return CompilerType(); // invalid argument array passed in
+
+    // Verify that all arguments are valid and the right type
     for (unsigned i=0; i<num_args; ++i)
-        qual_type_args.push_back(ClangUtil::GetQualType(args[i]));
+    {
+        if (args[i])
+        {
+            // Make sure we have a clang type in args[i] and not a type from another
+            // language whose name might match
+            const bool is_clang_type = ClangUtil::IsClangType(args[i]);
+            lldbassert(is_clang_type);
+            if (is_clang_type)
+                qual_type_args.push_back(ClangUtil::GetQualType(args[i]));
+            else
+                return CompilerType(); //  invalid argument type (must be a clang type)
+        }
+        else
+            return CompilerType(); // invalid argument type (empty)
+    }
 
     // TODO: Detect calling convention in DWARF?
     FunctionProtoType::ExtProtoInfo proto_info;
@@ -8709,18 +8732,28 @@ ClangASTContext::CompleteTagDeclarationDefinition (const CompilerType& type)
     clang::QualType qual_type(ClangUtil::GetQualType(type));
     if (!qual_type.isNull())
     {
-        clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-        
-        if (cxx_record_decl)
+        // Make sure we use the same methodology as ClangASTContext::StartTagDeclarationDefinition()
+        // as to how we start/end the definition. Previously we were calling 
+        const clang::TagType *tag_type = qual_type->getAs<clang::TagType>();
+        if (tag_type)
         {
-            if (!cxx_record_decl->isCompleteDefinition())
-                cxx_record_decl->completeDefinition();
-            cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
-            cxx_record_decl->setHasExternalLexicalStorage (false);
-            cxx_record_decl->setHasExternalVisibleStorage (false);
-            return true;
+            clang::TagDecl *tag_decl = tag_type->getDecl();
+            if (tag_decl)
+            {
+                clang::CXXRecordDecl *cxx_record_decl = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tag_decl);
+                
+                if (cxx_record_decl)
+                {
+                    if (!cxx_record_decl->isCompleteDefinition())
+                        cxx_record_decl->completeDefinition();
+                    cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
+                    cxx_record_decl->setHasExternalLexicalStorage (false);
+                    cxx_record_decl->setHasExternalVisibleStorage (false);
+                    return true;
+                }
+            }
         }
-        
+
         const clang::EnumType *enutype = qual_type->getAs<clang::EnumType>();
         
         if (enutype)
@@ -9718,24 +9751,6 @@ ClangASTContext::LayoutRecordType(void *baton,
 //----------------------------------------------------------------------
 // CompilerDecl override functions
 //----------------------------------------------------------------------
-lldb::VariableSP
-ClangASTContext::DeclGetVariable (void *opaque_decl)
-{
-    if (llvm::dyn_cast<clang::VarDecl>((clang::Decl *)opaque_decl))
-    {
-        auto decl_search_it = m_decl_objects.find(opaque_decl);
-        if (decl_search_it != m_decl_objects.end())
-            return std::static_pointer_cast<Variable>(decl_search_it->second);
-    }
-    return VariableSP();
-}
-
-void
-ClangASTContext::DeclLinkToObject (void *opaque_decl, std::shared_ptr<void> object)
-{
-    if (m_decl_objects.find(opaque_decl) == m_decl_objects.end())
-        m_decl_objects.insert(std::make_pair(opaque_decl, object));
-}
 
 ConstString
 ClangASTContext::DeclGetName (void *opaque_decl)

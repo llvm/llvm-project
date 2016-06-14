@@ -13,5 +13,5 @@
 
 int main()
 {
-    auto up4 = std::make_unique<int[5]>(11, 22, 33, 44, 55); // deleted 
+    auto up4 = std::make_unique<int[5]>(11, 22, 33, 44, 55); // deleted
 }

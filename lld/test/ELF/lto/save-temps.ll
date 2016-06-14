@@ -1,4 +1,5 @@
 ; REQUIRES: x86
+; RUN: cd %T
 ; RUN: rm -f a.out a.out.lto.bc a.out.lto.o
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/save-temps.ll -o %t2.o

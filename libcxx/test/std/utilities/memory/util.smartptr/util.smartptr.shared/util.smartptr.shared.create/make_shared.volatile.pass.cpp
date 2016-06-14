@@ -34,7 +34,7 @@ void test(const T &t0)
     assert(*p0 == t0);
     assert(*p1 == t1);
     }
-    
+
     {
     volatile T t1 = t0;
     std::shared_ptr<volatile T> p0 = std::make_shared<volatile T>(t0);
@@ -50,7 +50,7 @@ void test(const T &t0)
     assert(*p0 == t0);
     assert(*p1 == t1);
     }
-    
+
 }
 
 int main()

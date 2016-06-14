@@ -4828,6 +4828,9 @@ variables, then the result of these operations is currently undefined.
 	__isl_give isl_basic_set *isl_set_simple_hull(
 		__isl_take isl_set *set);
 	__isl_give isl_basic_set *
+	isl_set_plain_unshifted_simple_hull(
+		__isl_take isl_set *set);
+	__isl_give isl_basic_set *
 	isl_set_unshifted_simple_hull_from_set_list(
 		__isl_take isl_set *set,
 		__isl_take isl_set_list *list);
@@ -4839,6 +4842,9 @@ variables, then the result of these operations is currently undefined.
 	__isl_give isl_basic_map *isl_map_simple_hull(
 		__isl_take isl_map *map);
 	__isl_give isl_basic_map *
+	isl_map_plain_unshifted_simple_hull(
+		__isl_take isl_map *map);
+		__isl_give isl_basic_map *
 	isl_map_unshifted_simple_hull_from_map_list(
 		__isl_take isl_map *map,
 		__isl_take isl_map_list *list);
@@ -4853,6 +4859,10 @@ In particular, the output is described by translates
 of the constraints describing the basic sets or relations in the input.
 In case of C<isl_set_unshifted_simple_hull>, only the original
 constraints are used, without any translation.
+In case of C<isl_set_plain_unshifted_simple_hull> and
+C<isl_map_plain_unshifted_simple_hull>, the result is described
+by original constraints that are obviously satisfied
+by the entire input set or relation.
 In case of C<isl_set_unshifted_simple_hull_from_set_list> and
 C<isl_map_unshifted_simple_hull_from_map_list>, the
 constraints are taken from the elements of the second argument.
@@ -4916,6 +4926,11 @@ per space.
 		__isl_take isl_set *set,
 		enum isl_dim_type type,
 		unsigned first, unsigned n);
+	__isl_give isl_set *
+	isl_set_drop_constraints_not_involving_dims(
+		__isl_take isl_set *set,
+		enum isl_dim_type type,
+		unsigned first, unsigned n);
 
 	#include <isl/map.h>
 	__isl_give isl_basic_map *
@@ -4930,6 +4945,11 @@ per space.
 		unsigned first, unsigned n);
 	__isl_give isl_map *
 	isl_map_drop_constraints_involving_dims(
+		__isl_take isl_map *map,
+		enum isl_dim_type type,
+		unsigned first, unsigned n);
+	__isl_give isl_map *
+	isl_map_drop_constraints_not_involving_dims(
 		__isl_take isl_map *map,
 		enum isl_dim_type type,
 		unsigned first, unsigned n);
@@ -7244,6 +7264,32 @@ on those parts of the domain where only a single function is defined.
 	__isl_give isl_pw_multi_aff *isl_pw_multi_aff_union_lexmax(
 		__isl_take isl_pw_multi_aff *pma1,
 		__isl_take isl_pw_multi_aff *pma2);
+
+If the input to a lexicographic optimization problem has
+multiple constraints with the same coefficients for the optimized
+variables, then, by default, this symmetry is exploited by
+replacing those constraints by a single constraint with
+an abstract bound, which is in turn bounded by the corresponding terms
+in the original constraints.
+Without this optimization, the solver would typically consider
+all possible orderings of those original bounds, resulting in a needless
+decomposition of the domain.
+However, the optimization can also result in slowdowns since
+an extra parameter is introduced that may get used in additional
+integer divisions.
+The following option determines whether symmetry detection is applied
+during lexicographic optimization.
+
+	#include <isl/options.h>
+	isl_stat isl_options_set_pip_symmetry(isl_ctx *ctx,
+		int val);
+	int isl_options_get_pip_symmetry(isl_ctx *ctx);
+
+=begin latex
+
+See also \autoref{s:offline}.
+
+=end latex
 
 =head2 Ternary Operations
 

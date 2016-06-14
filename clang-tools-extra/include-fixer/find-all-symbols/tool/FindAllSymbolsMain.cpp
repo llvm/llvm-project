@@ -1,4 +1,4 @@
-//===-- FindAllSymbolsMain.cpp --------------------------------------------===//
+//===-- FindAllSymbolsMain.cpp - find all symbols tool ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FindAllSymbols.h"
-#include "HeaderMapCollector.h"
-#include "PragmaCommentHandler.h"
+#include "FindAllSymbolsAction.h"
+#include "STLPostfixHeaderMap.h"
 #include "SymbolInfo.h"
+#include "SymbolReporter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -59,68 +59,41 @@ static cl::opt<std::string> MergeDir("merge-dir", cl::desc(R"(
 The directory for merging symbols.)"),
                                      cl::init(""),
                                      cl::cat(FindAllSymbolsCategory));
-
 namespace clang {
 namespace find_all_symbols {
 
-class YamlReporter
-    : public clang::find_all_symbols::FindAllSymbols::ResultReporter {
+class YamlReporter : public clang::find_all_symbols::SymbolReporter {
 public:
-  ~YamlReporter() override {}
-
-  void reportResult(StringRef FileName, const SymbolInfo &Symbol) override {
-    Symbols[FileName].insert(Symbol);
-  }
-
-  void Write(const std::string &Dir) {
+  ~YamlReporter() override {
     for (const auto &Symbol : Symbols) {
       int FD;
       SmallString<128> ResultPath;
       llvm::sys::fs::createUniqueFile(
-          Dir + "/" + llvm::sys::path::filename(Symbol.first) + "-%%%%%%.yaml",
+          OutputDir + "/" + llvm::sys::path::filename(Symbol.first) +
+              "-%%%%%%.yaml",
           FD, ResultPath);
       llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
       WriteSymbolInfosToStream(OS, Symbol.second);
     }
   }
 
+  void reportSymbol(StringRef FileName, const SymbolInfo &Symbol) override {
+    Symbols[FileName].insert(Symbol);
+  }
+
 private:
   std::map<std::string, std::set<SymbolInfo>> Symbols;
 };
 
-class FindAllSymbolsAction : public clang::ASTFrontendAction {
-public:
-  FindAllSymbolsAction()
-      : Reporter(), MatchFinder(), Collector(), Handler(&Collector),
-        Matcher(&Reporter, &Collector) {
-    Matcher.registerMatchers(&MatchFinder);
-  }
-
-  std::unique_ptr<clang::ASTConsumer>
-  CreateASTConsumer(clang::CompilerInstance &Compiler,
-                    StringRef InFile) override {
-    Compiler.getPreprocessor().addCommentHandler(&Handler);
-    return MatchFinder.newASTConsumer();
-  }
-
-  void EndSourceFileAction() override { Reporter.Write(OutputDir); }
-
-private:
-  YamlReporter Reporter;
-  clang::ast_matchers::MatchFinder MatchFinder;
-  HeaderMapCollector Collector;
-  PragmaCommentHandler Handler;
-  FindAllSymbols Matcher;
-};
-
 bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
   std::error_code EC;
-  std::set<SymbolInfo> UniqueSymbols;
+  std::map<SymbolInfo, int> SymbolToNumOccurrences;
   std::mutex SymbolMutex;
   auto AddSymbols = [&](ArrayRef<SymbolInfo> Symbols) {
     // Synchronize set accesses.
     std::unique_lock<std::mutex> LockGuard(SymbolMutex);
-    UniqueSymbols.insert(Symbols.begin(), Symbols.end());
+    for (const auto &Symbol : Symbols)
+      ++SymbolToNumOccurrences[Symbol];
   };
 
   // Load all symbol files in MergeDir.
@@ -151,7 +124,14 @@ bool Merge(llvm::StringRef MergeDir, llvm::StringRef OutputFile) {
                  << '\n';
     return false;
   }
-  WriteSymbolInfosToStream(OS, UniqueSymbols);
+  std::set<SymbolInfo> Result;
+  for (const auto &Entry : SymbolToNumOccurrences) {
+    const auto &Symbol = Entry.first;
+    Result.insert(SymbolInfo(Symbol.getName(), Symbol.getSymbolKind(),
+                             Symbol.getFilePath(), Symbol.getLineNumber(),
+                             Symbol.getContexts(), Entry.second));
+  }
+  WriteSymbolInfosToStream(OS, Result);
   return true;
 }
 
@@ -172,8 +152,11 @@ int main(int argc, const char **argv) {
     clang::find_all_symbols::Merge(MergeDir, sources[0]);
     return 0;
   }
-  Tool.run(
-      newFrontendActionFactory<clang::find_all_symbols::FindAllSymbolsAction>()
-          .get());
-  return 0;
+
+  clang::find_all_symbols::YamlReporter Reporter;
+
+  auto Factory =
+      llvm::make_unique<clang::find_all_symbols::FindAllSymbolsActionFactory>(
+          &Reporter, clang::find_all_symbols::getSTLPostfixHeaderMap());
+  return Tool.run(Factory.get());
 }

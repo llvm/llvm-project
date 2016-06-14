@@ -29,7 +29,7 @@ int main()
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == short('a'));
     }
-#if _LIBCPP_STD_VER > 11 
+#if _LIBCPP_STD_VER > 11
     {
         typedef std::pair<double, char> P0;
         typedef std::tuple<int, short> T1;

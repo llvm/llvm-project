@@ -11,7 +11,7 @@
 // __is_referenceable<Tp>
 //
 // [defns.referenceable] defines "a referenceable type" as:
-// An object type, a function type that does not have cv-qualifiers 
+// An object type, a function type that does not have cv-qualifiers
 //    or a ref-qualifier, or a reference type.
 //
 
@@ -44,7 +44,7 @@ static_assert(( std::__is_referenceable<const int   __attribute__((__vector_size
 static_assert(( std::__is_referenceable<float __attribute__((__vector_size__(16)))>::value), "");
 static_assert(( std::__is_referenceable<const float __attribute__((__vector_size__(16)))>::value), "");
 
-// Functions without cv-qualifiers are referenceable 
+// Functions without cv-qualifiers are referenceable
 static_assert(( std::__is_referenceable<void ()>::value), "");
 #if TEST_STD_VER >= 11
 static_assert((!std::__is_referenceable<void () const>::value), "");
@@ -117,7 +117,7 @@ static_assert((!std::__is_referenceable<void (int, float, Foo &, ...) &&>::value
 static_assert((!std::__is_referenceable<void (int, float, Foo &, ...) const &&>::value), "");
 #endif
 
-// member functions with or without cv-qualifiers are referenceable 
+// member functions with or without cv-qualifiers are referenceable
 static_assert(( std::__is_referenceable<void (Foo::*)()>::value), "");
 static_assert(( std::__is_referenceable<void (Foo::*)() const>::value), "");
 #if TEST_STD_VER >= 11

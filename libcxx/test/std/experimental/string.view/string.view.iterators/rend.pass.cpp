@@ -35,7 +35,7 @@ test(S s)
         assert(ce1 != cs.rbegin());
         assert(ce2 !=  s.rbegin());
     }
-    
+
     assert(  e -  s.rbegin() == s.size());
     assert(ce1 - cs.rbegin() == cs.size());
     assert(ce2 - s.crbegin() == s.size());
@@ -52,7 +52,7 @@ int main()
     typedef std::experimental::u16string_view u16string_view;
     typedef std::experimental::u32string_view u32string_view;
     typedef std::experimental::wstring_view   wstring_view;
-    
+
     test(string_view   ());
     test(u16string_view());
     test(u32string_view());

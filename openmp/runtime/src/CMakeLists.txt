@@ -146,7 +146,11 @@ set_target_properties(omp PROPERTIES
 )
 
 # Get the library's location within the build tree for the unit tester
-get_target_property(LIBOMP_LIBRARY_DIR omp LIBRARY_OUTPUT_DIRECTORY)
+if(NOT WIN32)
+  get_target_property(LIBOMP_LIBRARY_DIR omp LIBRARY_OUTPUT_DIRECTORY)
+else()
+  get_target_property(LIBOMP_LIBRARY_DIR omp RUNTIME_OUTPUT_DIRECTORY)
+endif()
 if(NOT LIBOMP_LIBRARY_DIR)
   set(LIBOMP_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   set(LIBOMP_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)

@@ -32,7 +32,7 @@ int main()
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, input_iterator<const int*>(a),
                                         input_iterator<const int*>(a+N));
         assert(v.size() == 100 + N);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
         int j;
         for (j = 0; j < 10; ++j)
@@ -49,7 +49,7 @@ int main()
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, forward_iterator<const int*>(a),
                                         forward_iterator<const int*>(a+N));
         assert(v.size() == 100 + N);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
         int j;
         for (j = 0; j < 10; ++j)
@@ -102,7 +102,7 @@ int main()
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, input_iterator<const int*>(a),
                                         input_iterator<const int*>(a+N));
         assert(v.size() == 100 + N);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
         int j;
         for (j = 0; j < 10; ++j)
@@ -119,7 +119,7 @@ int main()
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, forward_iterator<const int*>(a),
                                         forward_iterator<const int*>(a+N));
         assert(v.size() == 100 + N);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
         int j;
         for (j = 0; j < 10; ++j)
@@ -148,7 +148,7 @@ int main()
         std::vector<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, input_iterator<const int*>(a),
                                         input_iterator<const int*>(a+N));
         assert(v.size() == 100 + N);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
         int j;
         for (j = 0; j < 10; ++j)
@@ -165,7 +165,7 @@ int main()
         std::vector<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, forward_iterator<const int*>(a),
                                         forward_iterator<const int*>(a+N));
         assert(v.size() == 100 + N);
-        assert(is_contiguous_container_asan_correct(v)); 
+        assert(is_contiguous_container_asan_correct(v));
         assert(i == v.begin() + 10);
         int j;
         for (j = 0; j < 10; ++j)

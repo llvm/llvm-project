@@ -112,9 +112,6 @@ TCPSocket::Connect(llvm::StringRef name)
     if (!DecodeHostAndPort (name, host_str, port_str, port, &error))
         return error;
 
-    // Enable local address reuse
-    SetOptionReuseAddress();
-
     struct sockaddr_in sa;
     ::memset (&sa, 0, sizeof (sa));
     sa.sin_family = kDomain;

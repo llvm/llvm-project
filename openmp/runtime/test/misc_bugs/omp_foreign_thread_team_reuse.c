@@ -1,6 +1,5 @@
 // RUN: %libomp-compile-and-run
 #include <stdio.h>
-#include <pthread.h>
 #include "omp_testsuite.h"
 
 #define NUM_THREADS 10

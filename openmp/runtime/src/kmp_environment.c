@@ -23,17 +23,17 @@
     ------------------------------------------------------------------------------------------------
     On Windows* OS, there are two environments (at least, see below):
 
-        1. Environment maintained by Windows* OS on IA-32 architecture. 
+        1. Environment maintained by Windows* OS on IA-32 architecture.
 	   Accessible through GetEnvironmentVariable(),
            SetEnvironmentVariable(), and GetEnvironmentStrings().
 
         2. Environment maintained by C RTL. Accessible through getenv(), putenv().
 
-    putenv() function updates both C and Windows* OS on IA-32 architecture. getenv() function 
-    search for variables in C RTL environment only. Windows* OS on IA-32 architecture functions work *only* 
+    putenv() function updates both C and Windows* OS on IA-32 architecture. getenv() function
+    search for variables in C RTL environment only. Windows* OS on IA-32 architecture functions work *only*
     with Windows* OS on IA-32 architecture.
 
-    Windows* OS on IA-32 architecture maintained by OS, so there is always only one Windows* OS on 
+    Windows* OS on IA-32 architecture maintained by OS, so there is always only one Windows* OS on
     IA-32 architecture per process. Changes in Windows* OS on IA-32 architecture are process-visible.
 
     C environment maintained by C RTL. Multiple copies of C RTL may be present in the process, and
@@ -42,11 +42,11 @@
     Thus, proper way to work with environment on Windows* OS is:
 
         1. Set variables with putenv() function -- both C and Windows* OS on
-	   IA-32 architecture are being updated. Windows* OS on 
+	   IA-32 architecture are being updated. Windows* OS on
 	   IA-32 architecture may be considered as primary target,
 	   while updating C RTL environment is a free bonus.
 
-        2. Get variables with GetEnvironmentVariable() -- getenv() does not 
+        2. Get variables with GetEnvironmentVariable() -- getenv() does not
 	   search Windows* OS on IA-32 architecture, and can not see variables
 	   set with SetEnvironmentVariable().
 
@@ -214,7 +214,7 @@ __kmp_env_set( char const * name, char const * value, int overwrite ) {
             // Dead code. I tried to put too many variables into Linux* OS
             // environment on IA-32 architecture. When application consumes
             // more than ~2.5 GB of memory, entire system feels bad. Sometimes
-            // application is killed (by OS?), sometimes system stops 
+            // application is killed (by OS?), sometimes system stops
             // responding... But this error message never appears. --ln
             __kmp_msg(
                 kmp_ms_fatal,

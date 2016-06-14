@@ -305,7 +305,7 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
     }
 
     // Check if deque is full
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
+    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
     {
         KA_TRACE(20, ( "__kmp_push_task: T#%d deque is full; returning TASK_NOT_PUSHED for task %p\n",
                        gtid, taskdata ) );
@@ -317,7 +317,7 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
 
 #if OMP_41_ENABLED
     // Need to recheck as we can get a proxy task from a thread outside of OpenMP
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
+    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
     {
         __kmp_release_bootstrap_lock( & thread_data -> td.td_deque_lock );
         KA_TRACE(20, ( "__kmp_push_task: T#%d deque is full on 2nd check; returning TASK_NOT_PUSHED for task %p\n",
@@ -326,12 +326,12 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
     }
 #else
     // Must have room since no thread can add tasks but calling thread
-    KMP_DEBUG_ASSERT( TCR_4(thread_data -> td.td_deque_ntasks) < TASK_DEQUE_SIZE );
+    KMP_DEBUG_ASSERT( TCR_4(thread_data -> td.td_deque_ntasks) < TASK_DEQUE_SIZE(thread_data->td) );
 #endif
 
     thread_data -> td.td_deque[ thread_data -> td.td_deque_tail ] = taskdata;  // Push taskdata
     // Wrap index.
-    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK;
+    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK(thread_data->td);
     TCW_4(thread_data -> td.td_deque_ntasks, TCR_4(thread_data -> td.td_deque_ntasks) + 1);             // Adjust task count
 
     __kmp_release_bootstrap_lock( & thread_data -> td.td_deque_lock );
@@ -1057,9 +1057,9 @@ __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_tasking_flags_t *flags,
 
     // Only need to keep track of child task counts if team parallel and tasking not serialized or if it is a proxy task
 #if OMP_41_ENABLED
-    if ( flags->proxy == TASK_PROXY || !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) ) 
+    if ( flags->proxy == TASK_PROXY || !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) )
 #else
-    if ( !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) ) 
+    if ( !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) )
 #endif
     {
         KMP_TEST_THEN_INC32( (kmp_int32 *)(& parent_task->td_incomplete_child_tasks) );
@@ -1406,12 +1406,12 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
 #if OMPT_SUPPORT && OMPT_TRACE
         ompt_task_id_t my_task_id;
         ompt_parallel_id_t my_parallel_id;
-        
+
         if (ompt_enabled) {
             kmp_team_t *team = thread->th.th_team;
             my_task_id = taskdata->ompt_task_info.task_id;
             my_parallel_id = team->t.ompt_team_info.parallel_id;
-            
+
             taskdata->ompt_task_info.frame.reenter_runtime_frame = __builtin_frame_address(0);
             if (ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)) {
                 ompt_callbacks.ompt_callback(ompt_event_taskwait_begin)(
@@ -1434,9 +1434,9 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
 #endif /* USE_ITT_BUILD */
 
 #if OMP_41_ENABLED
-        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) ) 
+        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
 #else
-        if ( ! taskdata->td_flags.team_serial ) 
+        if ( ! taskdata->td_flags.team_serial )
 #endif
         {
             // GEH: if team serialized, avoid reading the volatile variable below.
@@ -1575,9 +1575,9 @@ __kmpc_end_taskgroup( ident_t* loc, int gtid )
 #endif /* USE_ITT_BUILD */
 
 #if OMP_41_ENABLED
-        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) ) 
+        if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
 #else
-        if ( ! taskdata->td_flags.team_serial ) 
+        if ( ! taskdata->td_flags.team_serial )
 #endif
         {
             kmp_flag_32 flag(&(taskgroup->count), 0U);
@@ -1641,10 +1641,10 @@ __kmp_remove_my_task( kmp_info_t * thread, kmp_int32 gtid, kmp_task_team_t *task
         return NULL;
     }
 
-    tail = ( thread_data -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK;  // Wrap index.
+    tail = ( thread_data -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK(thread_data->td);  // Wrap index.
     taskdata = thread_data -> td.td_deque[ tail ];
 
-    if (is_constrained) {
+    if (is_constrained && (taskdata->td_flags.tiedness == TASK_TIED)) {
         // we need to check if the candidate obeys task scheduling constraint:
         // only child of current task can be scheduled
         kmp_taskdata_t * current = thread->th.th_current_task;
@@ -1655,7 +1655,7 @@ __kmp_remove_my_task( kmp_info_t * thread, kmp_int32 gtid, kmp_task_team_t *task
             KMP_DEBUG_ASSERT(parent != NULL);
         }
         if ( parent != current ) {
-            // If the tail task is not a child, then no other childs can appear in the deque.
+            // If the tail task is not a child, then no other child can appear in the deque.
             __kmp_release_bootstrap_lock( & thread_data -> td.td_deque_lock );
             KA_TRACE(10, ("__kmp_remove_my_task(exit #2): T#%d No tasks to remove: ntasks=%d head=%u tail=%u\n",
                           gtid, thread_data->td.td_deque_ntasks, thread_data->td.td_deque_head,
@@ -1734,12 +1734,14 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
 
     if ( !is_constrained ) {
         taskdata = victim_td -> td.td_deque[ victim_td -> td.td_deque_head ];
+        KMP_ASSERT(taskdata);
         // Bump head pointer and Wrap.
-        victim_td -> td.td_deque_head = ( victim_td -> td.td_deque_head + 1 ) & TASK_DEQUE_MASK;
+        victim_td -> td.td_deque_head = ( victim_td -> td.td_deque_head + 1 ) & TASK_DEQUE_MASK(victim_td->td);
     } else {
         // While we have postponed tasks let's steal from tail of the deque (smaller tasks)
-        kmp_int32 tail = ( victim_td -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK;  // Wrap index.
+        kmp_int32 tail = ( victim_td -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK(victim_td->td);  // Wrap index.
         taskdata = victim_td -> td.td_deque[ tail ];
+        KMP_ASSERT(taskdata);
         // we need to check if the candidate obeys task scheduling constraint:
         // only child of current task can be scheduled
         kmp_taskdata_t * current = __kmp_threads[ gtid ]->th.th_current_task;
@@ -1749,7 +1751,7 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
             parent = parent->td_parent;  // check generation up to the level of the current task
             KMP_DEBUG_ASSERT(parent != NULL);
         }
-        if ( parent != current ) {
+        if ( parent != current && (taskdata->td_flags.tiedness == TASK_TIED) ) { // untied is always allowed to be stolen
             // If the tail task is not a child, then no other childs can appear in the deque (?).
             __kmp_release_bootstrap_lock( & victim_td -> td.td_deque_lock );
             KA_TRACE(10, ("__kmp_steal_task(exit #2): T#%d could not steal from T#%d: task_team=%p "
@@ -1800,21 +1802,21 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
 // spinner == NULL means only execute a single task and return.
 // checker is the value to check to terminate the spin.
 template <class C>
-static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gtid, C *flag, int final_spin, 
+static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gtid, C *flag, int final_spin,
                                                int *thread_finished
                                                USE_ITT_BUILD_ARG(void * itt_sync_obj), kmp_int32 is_constrained)
 {
-    kmp_task_team_t *     task_team;
+    kmp_task_team_t *     task_team = thread->th.th_task_team;
     kmp_thread_data_t *   threads_data;
     kmp_task_t *          task;
+    kmp_info_t *          other_thread;
     kmp_taskdata_t *      current_task = thread -> th.th_current_task;
     volatile kmp_uint32 * unfinished_threads;
-    kmp_int32             nthreads, last_stolen, k, tid;
+    kmp_int32             nthreads, victim=-2, use_own_tasks=1, new_victim=0, tid=thread->th.th_info.ds.ds_tid;
 
     KMP_DEBUG_ASSERT( __kmp_tasking_mode != tskm_immediate_exec );
     KMP_DEBUG_ASSERT( thread == __kmp_threads[ gtid ] );
 
-    task_team = thread -> th.th_task_team;
     if (task_team == NULL) return FALSE;
 
     KA_TRACE(15, ("__kmp_execute_tasks_template(enter): T#%d final_spin=%d *thread_finished=%d\n",
@@ -1830,279 +1832,156 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
 #else
     KMP_DEBUG_ASSERT( nthreads > 1 );
 #endif
-    KMP_DEBUG_ASSERT( TCR_4((int)*unfinished_threads) >= 0 );
+    KMP_DEBUG_ASSERT( (int)(TCR_4(*unfinished_threads)) >= 0 );
 
-    // Choose tasks from our own work queue.
-    start:
-    while (( task = __kmp_remove_my_task( thread, gtid, task_team, is_constrained )) != NULL ) {
-#if USE_ITT_BUILD && USE_ITT_NOTIFY
-        if ( __itt_sync_create_ptr || KMP_ITT_DEBUG ) {
-            if ( itt_sync_obj == NULL ) {
-                // we are at fork barrier where we could not get the object reliably
-                itt_sync_obj  = __kmp_itt_barrier_object( gtid, bs_forkjoin_barrier );
+    while (1) { // Outer loop keeps trying to find tasks in case of single thread getting tasks from target constructs
+        while (1) { // Inner loop to find a task and execute it
+            task = NULL;
+            if (use_own_tasks) { // check on own queue first
+                task = __kmp_remove_my_task( thread, gtid, task_team, is_constrained );
             }
-            __kmp_itt_task_starting( itt_sync_obj );
-        }
-#endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
-        __kmp_invoke_task( gtid, task, current_task );
-#if USE_ITT_BUILD
-        if ( itt_sync_obj != NULL )
-            __kmp_itt_task_finished( itt_sync_obj );
-#endif /* USE_ITT_BUILD */
+            if ((task == NULL) && (nthreads > 1)) { // Steal a task
+                int asleep = 1;
+                use_own_tasks = 0;
+                // Try to steal from the last place I stole from successfully.
+                if (victim == -2) { // haven't stolen anything yet
+                    victim = threads_data[tid].td.td_deque_last_stolen;
+                    if (victim != -1) // if we have a last stolen from victim, get the thread
+                        other_thread = threads_data[victim].td.td_thr;
+                }
+                if (victim != -1) { // found last victim
+                    asleep = 0;
+                }
+                else if (!new_victim) { // no recent steals and we haven't already used a new victim; select a random thread
+                    do { // Find a different thread to steal work from.
+                        // Pick a random thread. Initial plan was to cycle through all the threads, and only return if
+                        // we tried to steal from every thread, and failed.  Arch says that's not such a great idea.
+                        victim = __kmp_get_random(thread) % (nthreads - 1);
+                        if (victim >= tid) {
+                            ++victim;  // Adjusts random distribution to exclude self
+                        }
+                        // Found a potential victim
+                        other_thread = threads_data[victim].td.td_thr;
+                        // There is a slight chance that __kmp_enable_tasking() did not wake up all threads
+                        // waiting at the barrier.  If victim is sleeping, then wake it up.  Since we were going to
+                        // pay the cache miss penalty for referencing another thread's kmp_info_t struct anyway,
+                        // the check shouldn't cost too much performance at this point. In extra barrier mode, tasks
+                        // do not sleep at the separate tasking barrier, so this isn't a problem.
+                        asleep = 0;
+                        if ( ( __kmp_tasking_mode == tskm_task_teams ) &&
+                             (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) &&
+                             (TCR_PTR(other_thread->th.th_sleep_loc) != NULL)) {
+                            asleep = 1;
+                            __kmp_null_resume_wrapper(__kmp_gtid_from_thread(other_thread), other_thread->th.th_sleep_loc);
+                            // A sleeping thread should not have any tasks on it's queue. There is a slight
+                            // possibility that it resumes, steals a task from another thread, which spawns more
+                            // tasks, all in the time that it takes this thread to check => don't write an assertion
+                            // that the victim's queue is empty.  Try stealing from a different thread.
+                        }
+                    } while (asleep);
+                }
 
-        // If this thread is only partway through the barrier and the condition
-        // is met, then return now, so that the barrier gather/release pattern can proceed.
-        // If this thread is in the last spin loop in the barrier, waiting to be
-        // released, we know that the termination condition will not be satisified,
-        // so don't waste any cycles checking it.
-        if (flag == NULL || (!final_spin && flag->done_check())) {
-            KA_TRACE(15, ("__kmp_execute_tasks_template(exit #1): T#%d spin condition satisfied\n", gtid) );
-            return TRUE;
-        }
-        if (thread->th.th_task_team == NULL) break;
-        KMP_YIELD( __kmp_library == library_throughput );   // Yield before executing next task
-    }
+                if (!asleep) {
+                    // We have a victim to try to steal from
+                    task = __kmp_steal_task(other_thread, gtid, task_team, unfinished_threads, thread_finished, is_constrained);
+                }
+                if (task != NULL) { // set last stolen to victim
+                    if (threads_data[tid].td.td_deque_last_stolen != victim) {
+                        threads_data[tid].td.td_deque_last_stolen = victim;
+                        // The pre-refactored code did not try more than 1 successful new vicitm,
+                        // unless the last one generated more local tasks; new_victim keeps track of this
+                        new_victim = 1;
+                    }
+                }
+                else { // No tasks found; unset last_stolen
+                    KMP_CHECK_UPDATE(threads_data[tid].td.td_deque_last_stolen, -1);
+                    victim = -2; // no successful victim found
+                }
+            }
 
-    // This thread's work queue is empty.  If we are in the final spin loop
-    // of the barrier, check and see if the termination condition is satisfied.
-#if OMP_41_ENABLED
-    // The work queue may be empty but there might be proxy tasks still executing
-    if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0) 
-#else
-    if (final_spin) 
-#endif
-    {
-        // First, decrement the #unfinished threads, if that has not already
-        // been done.  This decrement might be to the spin location, and
-        // result in the termination condition being satisfied.
-        if (! *thread_finished) {
-            kmp_uint32 count;
+            if (task == NULL) // break out of tasking loop
+                break;
 
-            count = KMP_TEST_THEN_DEC32( (kmp_int32 *)unfinished_threads ) - 1;
-            KA_TRACE(20, ("__kmp_execute_tasks_template(dec #1): T#%d dec unfinished_threads to %d task_team=%p\n",
-                          gtid, count, task_team) );
-            *thread_finished = TRUE;
-        }
-
-        // It is now unsafe to reference thread->th.th_team !!!
-        // Decrementing task_team->tt.tt_unfinished_threads can allow the master
-        // thread to pass through the barrier, where it might reset each thread's
-        // th.th_team field for the next parallel region.
-        // If we can steal more work, we know that this has not happened yet.
-        if (flag != NULL && flag->done_check()) {
-            KA_TRACE(15, ("__kmp_execute_tasks_template(exit #2): T#%d spin condition satisfied\n", gtid) );
-            return TRUE;
-        }
-    }
-
-    if (thread->th.th_task_team == NULL) return FALSE;
-#if OMP_41_ENABLED
-    // check if there are other threads to steal from, otherwise go back
-    if ( nthreads  == 1 )
-        goto start;
-#endif
-
-    // Try to steal from the last place I stole from successfully.
-    tid = thread -> th.th_info.ds.ds_tid;//__kmp_tid_from_gtid( gtid );
-    last_stolen = threads_data[ tid ].td.td_deque_last_stolen;
-
-    if (last_stolen != -1) {
-        kmp_info_t *other_thread = threads_data[last_stolen].td.td_thr;
-
-        while ((task = __kmp_steal_task( other_thread, gtid, task_team, unfinished_threads,
-                                         thread_finished, is_constrained )) != NULL)
-        {
+            // Found a task; execute it
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
             if ( __itt_sync_create_ptr || KMP_ITT_DEBUG ) {
-                if ( itt_sync_obj == NULL ) {
-                    // we are at fork barrier where we could not get the object reliably
-                    itt_sync_obj  = __kmp_itt_barrier_object( gtid, bs_forkjoin_barrier );
+                if ( itt_sync_obj == NULL ) { // we are at fork barrier where we could not get the object reliably
+                    itt_sync_obj = __kmp_itt_barrier_object( gtid, bs_forkjoin_barrier );
                 }
                 __kmp_itt_task_starting( itt_sync_obj );
             }
 #endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
             __kmp_invoke_task( gtid, task, current_task );
 #if USE_ITT_BUILD
-            if ( itt_sync_obj != NULL )
-                __kmp_itt_task_finished( itt_sync_obj );
+            if ( itt_sync_obj != NULL ) __kmp_itt_task_finished( itt_sync_obj );
 #endif /* USE_ITT_BUILD */
-
-            // Check to see if this thread can proceed.
+            // If this thread is only partway through the barrier and the condition is met, then return now,
+            // so that the barrier gather/release pattern can proceed. If this thread is in the last spin loop
+            // in the barrier, waiting to be released, we know that the termination condition will not be
+            // satisified, so don't waste any cycles checking it.
             if (flag == NULL || (!final_spin && flag->done_check())) {
-                KA_TRACE(15, ("__kmp_execute_tasks_template(exit #3): T#%d spin condition satisfied\n",
-                              gtid) );
+                KA_TRACE(15, ("__kmp_execute_tasks_template: T#%d spin condition satisfied\n", gtid) );
                 return TRUE;
             }
-
-            if (thread->th.th_task_team == NULL) break;
+            if (thread->th.th_task_team == NULL) {
+                break;
+            }
             KMP_YIELD( __kmp_library == library_throughput );   // Yield before executing next task
-            // If the execution of the stolen task resulted in more tasks being
-            // placed on our run queue, then restart the whole process.
-            if (TCR_4(threads_data[ tid ].td.td_deque_ntasks) != 0) {
-                KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d stolen task spawned other tasks, restart\n",
-                              gtid) );
-                goto start;
+            // If execution of a stolen task results in more tasks being placed on our run queue, reset use_own_tasks
+            if (!use_own_tasks && TCR_4(threads_data[tid].td.td_deque_ntasks) != 0) {
+                KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d stolen task spawned other tasks, restart\n", gtid));
+                use_own_tasks = 1;
+                new_victim = 0;
             }
         }
 
-        // Don't give priority to stealing from this thread anymore.
-        threads_data[ tid ].td.td_deque_last_stolen = -1;
-
-        // The victims's work queue is empty.  If we are in the final spin loop
-        // of the barrier, check and see if the termination condition is satisfied.
+        // The task source has been exhausted. If in final spin loop of barrier, check if termination condition is satisfied.
 #if OMP_41_ENABLED
         // The work queue may be empty but there might be proxy tasks still executing
-        if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0) 
+        if (final_spin && TCR_4(current_task->td_incomplete_child_tasks) == 0)
 #else
-        if (final_spin) 
+        if (final_spin)
 #endif
         {
-            // First, decrement the #unfinished threads, if that has not already
-            // been done.  This decrement might be to the spin location, and
-            // result in the termination condition being satisfied.
+            // First, decrement the #unfinished threads, if that has not already been done.  This decrement
+            // might be to the spin location, and result in the termination condition being satisfied.
             if (! *thread_finished) {
                 kmp_uint32 count;
 
                 count = KMP_TEST_THEN_DEC32( (kmp_int32 *)unfinished_threads ) - 1;
-                KA_TRACE(20, ("__kmp_execute_tasks_template(dec #2): T#%d dec unfinished_threads to %d "
-                              "task_team=%p\n", gtid, count, task_team) );
-                *thread_finished = TRUE;
-            }
-
-            // If __kmp_tasking_mode != tskm_immediate_exec
-            // then it is now unsafe to reference thread->th.th_team !!!
-            // Decrementing task_team->tt.tt_unfinished_threads can allow the master
-            // thread to pass through the barrier, where it might reset each thread's
-            // th.th_team field for the next parallel region.
-            // If we can steal more work, we know that this has not happened yet.
-            if (flag != NULL && flag->done_check()) {
-                KA_TRACE(15, ("__kmp_execute_tasks_template(exit #4): T#%d spin condition satisfied\n",
-                              gtid) );
-                return TRUE;
-            }
-        }
-        if (thread->th.th_task_team == NULL) return FALSE;
-    }
-
-    // Find a different thread to steal work from.  Pick a random thread.
-    // My initial plan was to cycle through all the threads, and only return
-    // if we tried to steal from every thread, and failed.  Arch says that's
-    // not such a great idea.
-    // GEH - need yield code in this loop for throughput library mode?
-    new_victim:
-    k = __kmp_get_random( thread ) % (nthreads - 1);
-    if ( k >= thread -> th.th_info.ds.ds_tid ) {
-        ++k;               // Adjusts random distribution to exclude self
-    }
-    {
-        kmp_info_t *other_thread = threads_data[k].td.td_thr;
-        int first;
-
-        // There is a slight chance that __kmp_enable_tasking() did not wake up
-        // all threads waiting at the barrier.  If this thread is sleeping, then
-        // wake it up.  Since we were going to pay the cache miss penalty
-        // for referencing another thread's kmp_info_t struct anyway, the check
-        // shouldn't cost too much performance at this point.
-        // In extra barrier mode, tasks do not sleep at the separate tasking
-        // barrier, so this isn't a problem.
-        if ( ( __kmp_tasking_mode == tskm_task_teams ) &&
-             (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) &&
-             (TCR_PTR(other_thread->th.th_sleep_loc) != NULL))
-        {
-            __kmp_null_resume_wrapper(__kmp_gtid_from_thread(other_thread), other_thread->th.th_sleep_loc);
-            // A sleeping thread should not have any tasks on it's queue.
-            // There is a slight possibility that it resumes, steals a task from
-            // another thread, which spawns more tasks, all in the time that it takes
-            // this thread to check => don't write an assertion that the victim's
-            // queue is empty.  Try stealing from a different thread.
-            goto new_victim;
-        }
-
-        // Now try to steal work from the selected thread
-        first = TRUE;
-        while ((task = __kmp_steal_task( other_thread, gtid, task_team, unfinished_threads,
-                                         thread_finished, is_constrained )) != NULL)
-        {
-#if USE_ITT_BUILD && USE_ITT_NOTIFY
-            if ( __itt_sync_create_ptr || KMP_ITT_DEBUG ) {
-                if ( itt_sync_obj == NULL ) {
-                    // we are at fork barrier where we could not get the object reliably
-                    itt_sync_obj  = __kmp_itt_barrier_object( gtid, bs_forkjoin_barrier );
-                }
-                __kmp_itt_task_starting( itt_sync_obj );
-            }
-#endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
-            __kmp_invoke_task( gtid, task, current_task );
-#if USE_ITT_BUILD
-            if ( itt_sync_obj != NULL )
-                __kmp_itt_task_finished( itt_sync_obj );
-#endif /* USE_ITT_BUILD */
-
-            // Try stealing from this victim again, in the future.
-            if (first) {
-                threads_data[ tid ].td.td_deque_last_stolen = k;
-                first = FALSE;
-            }
-
-            // Check to see if this thread can proceed.
-            if (flag == NULL || (!final_spin && flag->done_check())) {
-                KA_TRACE(15, ("__kmp_execute_tasks_template(exit #5): T#%d spin condition satisfied\n",
-                              gtid) );
-                return TRUE;
-            }
-            if (thread->th.th_task_team == NULL) break;
-            KMP_YIELD( __kmp_library == library_throughput );   // Yield before executing next task
-
-            // If the execution of the stolen task resulted in more tasks being
-            // placed on our run queue, then restart the whole process.
-            if (TCR_4(threads_data[ tid ].td.td_deque_ntasks) != 0) {
-                KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d stolen task spawned other tasks, restart\n",
-                              gtid) );
-                goto start;
-            }
-        }
-
-        // The victims's work queue is empty.  If we are in the final spin loop
-        // of the barrier, check and see if the termination condition is satisfied.
-        // Going on and finding a new victim to steal from is expensive, as it
-        // involves a lot of cache misses, so we definitely want to re-check the
-        // termination condition before doing that.
-#if OMP_41_ENABLED
-        // The work queue may be empty but there might be proxy tasks still executing
-        if (final_spin && TCR_4(current_task -> td_incomplete_child_tasks) == 0) 
-#else
-        if (final_spin) 
-#endif
-        {
-            // First, decrement the #unfinished threads, if that has not already
-            // been done.  This decrement might be to the spin location, and
-            // result in the termination condition being satisfied.
-            if (! *thread_finished) {
-                kmp_uint32 count;
-
-                count = KMP_TEST_THEN_DEC32( (kmp_int32 *)unfinished_threads ) - 1;
-                KA_TRACE(20, ("__kmp_execute_tasks_template(dec #3): T#%d dec unfinished_threads to %d; "
-                              "task_team=%p\n",
+                KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d dec unfinished_threads to %d task_team=%p\n",
                               gtid, count, task_team) );
                 *thread_finished = TRUE;
             }
 
-            // If __kmp_tasking_mode != tskm_immediate_exec,
-            // then it is now unsafe to reference thread->th.th_team !!!
-            // Decrementing task_team->tt.tt_unfinished_threads can allow the master
-            // thread to pass through the barrier, where it might reset each thread's
-            // th.th_team field for the next parallel region.
+            // It is now unsafe to reference thread->th.th_team !!!
+            // Decrementing task_team->tt.tt_unfinished_threads can allow the master thread to pass through
+            // the barrier, where it might reset each thread's th.th_team field for the next parallel region.
             // If we can steal more work, we know that this has not happened yet.
             if (flag != NULL && flag->done_check()) {
-                KA_TRACE(15, ("__kmp_execute_tasks_template(exit #6): T#%d spin condition satisfied\n", gtid) );
+                KA_TRACE(15, ("__kmp_execute_tasks_template: T#%d spin condition satisfied\n", gtid) );
                 return TRUE;
             }
         }
-        if (thread->th.th_task_team == NULL) return FALSE;
-    }
 
-    KA_TRACE(15, ("__kmp_execute_tasks_template(exit #7): T#%d can't find work\n", gtid) );
-    return FALSE;
+        // If this thread's task team is NULL, master has recognized that there are no more tasks; bail out
+        if (thread->th.th_task_team == NULL) {
+            KA_TRACE(15, ("__kmp_execute_tasks_template: T#%d no more tasks\n", gtid) );
+            return FALSE;
+        }
+
+#if OMP_41_ENABLED
+        // We could be getting tasks from target constructs; if this is the only thread, keep trying to execute
+        // tasks from own queue
+        if (nthreads == 1)
+            use_own_tasks = 1;
+        else
+#endif
+        {
+            KA_TRACE(15, ("__kmp_execute_tasks_template: T#%d can't find work\n", gtid) );
+            return FALSE;
+        }
+    }
 }
 
 int __kmp_execute_tasks_32(kmp_info_t *thread, kmp_int32 gtid, kmp_flag_32 *flag, int final_spin,
@@ -2267,14 +2146,42 @@ __kmp_alloc_task_deque( kmp_info_t *thread, kmp_thread_data_t *thread_data )
     KMP_DEBUG_ASSERT( thread_data -> td.td_deque_tail == 0 );
 
     KE_TRACE( 10, ( "__kmp_alloc_task_deque: T#%d allocating deque[%d] for thread_data %p\n",
-                   __kmp_gtid_from_thread( thread ), TASK_DEQUE_SIZE, thread_data ) );
+                   __kmp_gtid_from_thread( thread ), INITIAL_TASK_DEQUE_SIZE, thread_data ) );
     // Allocate space for task deque, and zero the deque
     // Cannot use __kmp_thread_calloc() because threads not around for
     // kmp_reap_task_team( ).
     thread_data -> td.td_deque = (kmp_taskdata_t **)
-            __kmp_allocate( TASK_DEQUE_SIZE * sizeof(kmp_taskdata_t *));
+            __kmp_allocate( INITIAL_TASK_DEQUE_SIZE * sizeof(kmp_taskdata_t *));
+	thread_data -> td.td_deque_size = INITIAL_TASK_DEQUE_SIZE;
 }
 
+//------------------------------------------------------------------------------
+// __kmp_realloc_task_deque:
+// Re-allocates a task deque for a particular thread, copies the content from the old deque
+// and adjusts the necessary data structures relating to the deque.
+// This operation must be done with a the deque_lock being held
+
+static void __kmp_realloc_task_deque ( kmp_info_t *thread, kmp_thread_data_t *thread_data )
+{
+    kmp_int32 size = TASK_DEQUE_SIZE(thread_data->td);
+    kmp_int32 new_size = 2 * size;
+
+    KE_TRACE( 10, ( "__kmp_realloc_task_deque: T#%d reallocating deque[from %d to %d] for thread_data %p\n",
+                  __kmp_gtid_from_thread( thread ), size, new_size, thread_data ) );
+
+    kmp_taskdata_t ** new_deque = (kmp_taskdata_t **) __kmp_allocate( new_size * sizeof(kmp_taskdata_t *));
+
+    int i,j;
+    for ( i = thread_data->td.td_deque_head, j = 0; j < size; i = (i+1) & TASK_DEQUE_MASK(thread_data->td), j++ )
+       new_deque[j] = thread_data->td.td_deque[i];
+
+    __kmp_free(thread_data->td.td_deque);
+
+    thread_data -> td.td_deque_head = 0;
+    thread_data -> td.td_deque_tail = size;
+    thread_data -> td.td_deque = new_deque;
+    thread_data -> td.td_deque_size = new_size;
+}
 
 //------------------------------------------------------------------------------
 // __kmp_free_task_deque:
@@ -2619,17 +2526,17 @@ __kmp_task_team_setup( kmp_info_t *this_thr, kmp_team_t *team, int always )
 
     // If this task_team hasn't been created yet, allocate it. It will be used in the region after the next.
     // If it exists, it is the current task team and shouldn't be touched yet as it may still be in use.
-    if (team->t.t_task_team[this_thr->th.th_task_state] == NULL && (always || team->t.t_nproc > 1) ) { 
+    if (team->t.t_task_team[this_thr->th.th_task_state] == NULL && (always || team->t.t_nproc > 1) ) {
         team->t.t_task_team[this_thr->th.th_task_state] = __kmp_allocate_task_team( this_thr, team );
         KA_TRACE(20, ("__kmp_task_team_setup: Master T#%d created new task_team %p for team %d at parity=%d\n",
                       __kmp_gtid_from_thread(this_thr), team->t.t_task_team[this_thr->th.th_task_state],
                       ((team != NULL) ? team->t.t_id : -1), this_thr->th.th_task_state));
     }
 
-    // After threads exit the release, they will call sync, and then point to this other task_team; make sure it is 
+    // After threads exit the release, they will call sync, and then point to this other task_team; make sure it is
     // allocated and properly initialized. As threads spin in the barrier release phase, they will continue to use the
     // previous task_team struct(above), until they receive the signal to stop checking for tasks (they can't safely
-    // reference the kmp_team_t struct, which could be reallocated by the master thread). No task teams are formed for 
+    // reference the kmp_team_t struct, which could be reallocated by the master thread). No task teams are formed for
     // serialized teams.
     if (team->t.t_nproc > 1) {
         int other_team = 1 - this_thr->th.th_task_state;
@@ -2769,7 +2676,7 @@ __kmp_tasking_barrier( kmp_team_t *team, kmp_info_t *thread, int gtid )
 
     Because of this, __kmp_push_task needs to check if there's space after getting the lock
  */
-static bool __kmp_give_task ( kmp_info_t *thread, kmp_int32 tid, kmp_task_t * task )
+static bool __kmp_give_task ( kmp_info_t *thread, kmp_int32 tid, kmp_task_t * task, kmp_int32 pass )
 {
     kmp_taskdata_t *    taskdata = KMP_TASK_TO_TASKDATA(task);
     kmp_task_team_t *	task_team = taskdata->td_task_team;
@@ -2789,23 +2696,37 @@ static bool __kmp_give_task ( kmp_info_t *thread, kmp_int32 tid, kmp_task_t * ta
         return result;
     }
 
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
+    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
     {
         KA_TRACE(30, ("__kmp_give_task: queue is full while giving task %p to thread %d.\n", taskdata, tid ) );
-        return result;
+
+        // if this deque is bigger than the pass ratio give a chance to another thread
+        if ( TASK_DEQUE_SIZE(thread_data->td)/INITIAL_TASK_DEQUE_SIZE >= pass ) return result;
+
+        __kmp_acquire_bootstrap_lock( & thread_data-> td.td_deque_lock );
+        __kmp_realloc_task_deque(thread,thread_data);
+
+    } else {
+
+       __kmp_acquire_bootstrap_lock( & thread_data-> td.td_deque_lock );
+
+       if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
+       {
+           KA_TRACE(30, ("__kmp_give_task: queue is full while giving task %p to thread %d.\n", taskdata, tid ) );
+
+           // if this deque is bigger than the pass ratio give a chance to another thread
+           if ( TASK_DEQUE_SIZE(thread_data->td)/INITIAL_TASK_DEQUE_SIZE >= pass )
+              goto release_and_exit;
+
+           __kmp_realloc_task_deque(thread,thread_data);
+       }
     }
 
-    __kmp_acquire_bootstrap_lock( & thread_data-> td.td_deque_lock );
-
-    if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE )
-    {
-        KA_TRACE(30, ("__kmp_give_task: queue is full while giving task %p to thread %d.\n", taskdata, tid ) );
-        goto release_and_exit;
-    }
+    // lock is held here, and there is space in the deque
 
     thread_data -> td.td_deque[ thread_data -> td.td_deque_tail ] = taskdata;
     // Wrap index.
-    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK;
+    thread_data -> td.td_deque_tail = ( thread_data -> td.td_deque_tail + 1 ) & TASK_DEQUE_MASK(thread_data->td);
     TCW_4(thread_data -> td.td_deque_ntasks, TCR_4(thread_data -> td.td_deque_ntasks) + 1);
 
     result = true;
@@ -2919,14 +2840,21 @@ void __kmpc_proxy_task_completed_ooo ( kmp_task_t *ptask )
     kmp_team_t * team = taskdata->td_team;
     kmp_int32 nthreads = team->t.t_nproc;
     kmp_info_t *thread;
-    kmp_int32 k = 0;
+
+    //This should be similar to start_k = __kmp_get_random( thread ) % nthreads but we cannot use __kmp_get_random here
+    kmp_int32 start_k = 0;
+    kmp_int32 pass = 1;
+    kmp_int32 k = start_k;
 
     do {
-        //This should be similar to k = __kmp_get_random( thread ) % nthreads but we cannot use __kmp_get_random here
         //For now we're just linearly trying to find a thread
-        k = (k+1) % nthreads;
         thread = team->t.t_threads[k];
-    } while ( !__kmp_give_task( thread, k,  ptask ) );
+        k = (k+1) % nthreads;
+
+        // we did a full pass through all the threads
+        if ( k == start_k ) pass = pass << 1;
+
+    } while ( !__kmp_give_task( thread, k,  ptask, pass ) );
 
     __kmp_second_top_half_finish_proxy(taskdata);
 
@@ -3016,6 +2944,8 @@ __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
                 kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
                 int sched, kmp_uint64 grainsize, void *task_dup )
 {
+    KMP_COUNT_BLOCK(OMP_TASKLOOP);
+    KMP_TIME_PARTITIONED_BLOCK(OMP_taskloop_scheduling);
     p_task_dup_t ptask_dup = (p_task_dup_t)task_dup;
     kmp_uint64 tc;
     kmp_uint64 lower = *lb; // compiler provides global bounds here

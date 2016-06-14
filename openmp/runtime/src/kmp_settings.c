@@ -1197,6 +1197,23 @@ __kmp_stg_print_max_task_priority(kmp_str_buf_t *buffer, char const *name, void 
 } // __kmp_stg_print_max_task_priority
 #endif // OMP_41_ENABLED
 
+// -------------------------------------------------------------------------------------------------
+// KMP_DISP_NUM_BUFFERS
+// -------------------------------------------------------------------------------------------------
+static void
+__kmp_stg_parse_disp_buffers( char const * name, char const * value, void * data ) {
+    if ( TCR_4(__kmp_init_serial) ) {
+        KMP_WARNING( EnvSerialWarn, name );
+        return;
+    }   // read value before serial initialization only
+    __kmp_stg_parse_int( name, value, 1, KMP_MAX_NTH, & __kmp_dispatch_num_buffers );
+} // __kmp_stg_parse_disp_buffers
+
+static void
+__kmp_stg_print_disp_buffers( kmp_str_buf_t * buffer, char const * name, void * data ) {
+    __kmp_stg_print_int( buffer, name, __kmp_dispatch_num_buffers );
+} // __kmp_stg_print_disp_buffers
+
 #if KMP_NESTED_HOT_TEAMS
 // -------------------------------------------------------------------------------------------------
 // KMP_HOT_TEAMS_MAX_LEVEL, KMP_HOT_TEAMS_MODE
@@ -4646,6 +4663,7 @@ static kmp_setting_t __kmp_stg_table[] = {
 #endif
     { "OMP_THREAD_LIMIT",                  __kmp_stg_parse_all_threads,        __kmp_stg_print_all_threads,        NULL, 0, 0 },
     { "OMP_WAIT_POLICY",                   __kmp_stg_parse_wait_policy,        __kmp_stg_print_wait_policy,        NULL, 0, 0 },
+    { "KMP_DISP_NUM_BUFFERS",              __kmp_stg_parse_disp_buffers,       __kmp_stg_print_disp_buffers,       NULL, 0, 0 },
 #if KMP_NESTED_HOT_TEAMS
     { "KMP_HOT_TEAMS_MAX_LEVEL",           __kmp_stg_parse_hot_teams_level,    __kmp_stg_print_hot_teams_level,    NULL, 0, 0 },
     { "KMP_HOT_TEAMS_MODE",                __kmp_stg_parse_hot_teams_mode,     __kmp_stg_print_hot_teams_mode,     NULL, 0, 0 },
@@ -5276,25 +5294,18 @@ __kmp_env_initialize( char const * string ) {
         //
         const char *var = "KMP_AFFINITY";
 # if KMP_USE_HWLOC
-        if(hwloc_topology_init(&__kmp_hwloc_topology) < 0) {
-            __kmp_hwloc_error = TRUE;
-            if(__kmp_affinity_verbose)
-                KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
+        if(__kmp_hwloc_topology == NULL) {
+            if(hwloc_topology_init(&__kmp_hwloc_topology) < 0) {
+                __kmp_hwloc_error = TRUE;
+                if(__kmp_affinity_verbose)
+                    KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
+            }
+            if(hwloc_topology_load(__kmp_hwloc_topology) < 0) {
+                __kmp_hwloc_error = TRUE;
+                if(__kmp_affinity_verbose)
+                    KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_load()");
+            }
         }
-#  if HWLOC_API_VERSION >= 0x00020000
-        // new hwloc API
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L1CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L2CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L3CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L4CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L5CACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L1ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L2ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-        hwloc_topology_set_type_filter(__kmp_hwloc_topology, HWLOC_OBJ_L3ICACHE, HWLOC_TYPE_FILTER_KEEP_NONE);
-#  else
-        // old hwloc API
-        hwloc_topology_ignore_type(__kmp_hwloc_topology, HWLOC_OBJ_CACHE);
-#  endif
 # endif
         if ( __kmp_affinity_type == affinity_disabled ) {
             KMP_AFFINITY_DISABLE();
@@ -5302,15 +5313,10 @@ __kmp_env_initialize( char const * string ) {
         else if ( ! KMP_AFFINITY_CAPABLE() ) {
 # if KMP_USE_HWLOC
             const hwloc_topology_support* topology_support = hwloc_topology_get_support(__kmp_hwloc_topology);
-            if(hwloc_topology_load(__kmp_hwloc_topology) < 0) {
-                __kmp_hwloc_error = TRUE;
-                if(__kmp_affinity_verbose)
-                    KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_load()");
-            }
             // Is the system capable of setting/getting this thread's affinity?
             // also, is topology discovery possible? (pu indicates ability to discover processing units)
             // and finally, were there no errors when calling any hwloc_* API functions?
-            if(topology_support->cpubind->set_thisthread_cpubind &&
+            if(topology_support && topology_support->cpubind->set_thisthread_cpubind &&
                topology_support->cpubind->get_thisthread_cpubind &&
                topology_support->discovery->pu &&
                !__kmp_hwloc_error)

@@ -1,0 +1,20 @@
+---
+Name:           foo
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        foo.h
+LineNumber:      1
+Type:            Class
+NumOccurrences:  1
+...
+---
+Name:           bar
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+FilePath:        ../include/barbar.h
+LineNumber:      1
+Type:            Class
+NumOccurrences:  1
+...

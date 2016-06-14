@@ -8,6 +8,7 @@ Contexts:
 FilePath:        foo.h
 LineNumber:      1
 Type:            Class
+NumOccurrences:  1
 ...
 ---
 Name:           bar
@@ -19,4 +20,34 @@ Contexts:
 FilePath:        ../include/bar.h
 LineNumber:      1
 Type:            Class
+NumOccurrences:  1
+...
+Name:           bar
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+  - ContextType:     Namespace
+    ContextName:     b
+FilePath:        ../include/bar.h
+LineNumber:      2
+Type:            Class
+NumOccurrences:  3
+...
+Name:           bar
+Contexts:
+  - ContextType:     Namespace
+    ContextName:     a
+  - ContextType:     Namespace
+    ContextName:     b
+FilePath:        ../include/zbar.h
+LineNumber:      1
+Type:            Class
+NumOccurrences:  3
+---
+Name:           b
+Contexts:
+FilePath:        var.h
+LineNumber:      1
+Type:            Variable
+NumOccurrences:  1
 ...

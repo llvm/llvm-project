@@ -15,7 +15,7 @@
 // template <class T>
 //     void
 //     atomic_init(volatile atomic<T>* obj, T desr);
-// 
+//
 // template <class T>
 //     void
 //     atomic_init(atomic<T>* obj, T desr);

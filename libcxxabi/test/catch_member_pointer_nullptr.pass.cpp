@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcxxabi-no-exceptions
+
 #include <cassert>
 
 #if __has_feature(cxx_nullptr)

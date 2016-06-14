@@ -162,7 +162,7 @@ Value *IslExprBuilder::createOpUnary(__isl_take isl_ast_expr *Expr) {
     V = Builder.CreateSExt(V, MaxType);
 
   isl_ast_expr_free(Expr);
-  return Builder.CreateNSWNeg(V);
+  return createSub(ConstantInt::getNullValue(MaxType), V);
 }
 
 Value *IslExprBuilder::createOpNAry(__isl_take isl_ast_expr *Expr) {
@@ -171,14 +171,22 @@ Value *IslExprBuilder::createOpNAry(__isl_take isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_op_n_arg(Expr) >= 2 &&
          "We need at least two operands in an n-ary operation");
 
-  Value *V;
+  CmpInst::Predicate Pred;
+  switch (isl_ast_expr_get_op_type(Expr)) {
+  default:
+    llvm_unreachable("This is not a an n-ary isl ast expression");
+  case isl_ast_op_max:
+    Pred = CmpInst::ICMP_SGT;
+    break;
+  case isl_ast_op_min:
+    Pred = CmpInst::ICMP_SLT;
+    break;
+  }
 
-  V = create(isl_ast_expr_get_op_arg(Expr, 0));
+  Value *V = create(isl_ast_expr_get_op_arg(Expr, 0));
 
-  for (int i = 0; i < isl_ast_expr_get_op_n_arg(Expr); ++i) {
-    Value *OpV;
-    OpV = create(isl_ast_expr_get_op_arg(Expr, i));
-
+  for (int i = 1; i < isl_ast_expr_get_op_n_arg(Expr); ++i) {
+    Value *OpV = create(isl_ast_expr_get_op_arg(Expr, i));
     Type *Ty = getWidestType(V->getType(), OpV->getType());
 
     if (Ty != OpV->getType())
@@ -187,21 +195,8 @@ Value *IslExprBuilder::createOpNAry(__isl_take isl_ast_expr *Expr) {
     if (Ty != V->getType())
       V = Builder.CreateSExt(V, Ty);
 
-    switch (isl_ast_expr_get_op_type(Expr)) {
-    default:
-      llvm_unreachable("This is no n-ary isl ast expression");
-
-    case isl_ast_op_max: {
-      Value *Cmp = Builder.CreateICmpSGT(V, OpV);
-      V = Builder.CreateSelect(Cmp, V, OpV);
-      continue;
-    }
-    case isl_ast_op_min: {
-      Value *Cmp = Builder.CreateICmpSLT(V, OpV);
-      V = Builder.CreateSelect(Cmp, V, OpV);
-      continue;
-    }
-    }
+    Value *Cmp = Builder.CreateICmp(Pred, V, OpV);
+    V = Builder.CreateSelect(Cmp, V, OpV);
   }
 
   // TODO: We can truncate the result, if it fits into a smaller type. This can
@@ -394,7 +389,7 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
     break;
 
   case isl_ast_op_zdiv_r: // Result only compared against zero
-    Res = Builder.CreateURem(LHS, RHS, "pexp.zdiv_r");
+    Res = Builder.CreateSRem(LHS, RHS, "pexp.zdiv_r");
     break;
   }
 

@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_FIND_ALL_SYMBOLS_SYMBOL_MATCHER_H
 
 #include "SymbolInfo.h"
+#include "SymbolReporter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <string>
 
@@ -33,16 +34,8 @@ class HeaderMapCollector;
 ///
 class FindAllSymbols : public clang::ast_matchers::MatchFinder::MatchCallback {
 public:
-  class ResultReporter {
-  public:
-    virtual ~ResultReporter() = default;
-
-    virtual void reportResult(llvm::StringRef FileName,
-                              const SymbolInfo &Symbol) = 0;
-  };
-
-  explicit FindAllSymbols(ResultReporter *Reporter,
-                          HeaderMapCollector *Collector)
+  explicit FindAllSymbols(SymbolReporter *Reporter,
+                          HeaderMapCollector *Collector = nullptr)
       : Reporter(Reporter), Collector(Collector) {}
 
   void registerMatchers(clang::ast_matchers::MatchFinder *MatchFinder);
@@ -52,7 +45,7 @@ public:
 
 private:
   // Reporter for SymbolInfo.
-  ResultReporter *const Reporter;
+  SymbolReporter *const Reporter;
   // A remapping header file collector allowing clients include a different
   // header.
   HeaderMapCollector *const Collector;

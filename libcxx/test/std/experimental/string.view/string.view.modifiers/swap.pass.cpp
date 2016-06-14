@@ -21,7 +21,7 @@ void test ( const CharT *s, size_t len ) {
     {
     SV sv1(s);
     SV sv2;
-    
+
     assert ( sv1.size() == len );
     assert ( sv1.data() == s );
     assert ( sv2.size() == 0 );

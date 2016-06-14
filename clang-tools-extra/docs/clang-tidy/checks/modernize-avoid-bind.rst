@@ -10,13 +10,13 @@ Right now it only handles free functions, not member functions.
 
 Given:
 
-.. code:: C++
+.. code:: c++
 
   int add(int x, int y) { return x + y; }
 
 Then:
 
-.. code:: C++
+.. code:: c++
 
   void f() {
     int x = 2;
@@ -25,7 +25,7 @@ Then:
 
 is replaced by:
 
-.. code:: C++
+.. code:: c++
 
   void f() {
     int x = 2;

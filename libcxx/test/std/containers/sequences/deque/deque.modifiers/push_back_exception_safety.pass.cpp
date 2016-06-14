@@ -26,11 +26,11 @@ class CMyClass {
 
     bool equal(const CMyClass &rhs) const
         { return fTag == rhs.fTag && fMagicValue == rhs.fMagicValue; }
-        
+
     private:
         int fMagicValue;
         int fTag;
-        
+
     private: static int kStartedConstructionMagicValue;
     private: static int kFinishedConstructionMagicValue;
 };
@@ -84,7 +84,7 @@ int main()
         assert(vec==vec2);
     }
 	}
-	
+
 	{
 	typedef std::deque<CMyClass, test_allocator<CMyClass> > C;
     C vec;

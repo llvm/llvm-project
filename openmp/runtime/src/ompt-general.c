@@ -54,7 +54,7 @@ enum tool_setting_e {
 
 
 typedef void (*ompt_initialize_t) (
-    ompt_function_lookup_t ompt_fn_lookup, 
+    ompt_function_lookup_t ompt_fn_lookup,
     const char *version,
     unsigned int ompt_version
 );
@@ -101,7 +101,7 @@ OMPT_API_ROUTINE ompt_thread_id_t ompt_get_thread_id(void);
  * found, ompt_tool's return value is used to initialize the tool. Otherwise,
  * NULL is returned and OMPT won't be enabled */
 #if OMPT_HAVE_WEAK_ATTRIBUTE
-_OMP_EXTERN 
+_OMP_EXTERN
 __attribute__ (( weak ))
 ompt_initialize_t ompt_tool()
 {
@@ -247,7 +247,7 @@ void ompt_post_init()
     // Initialize the tool if so indicated.
     //--------------------------------------------------
     if (ompt_enabled) {
-        ompt_initialize_fn(ompt_fn_lookup, ompt_get_runtime_version(), 
+        ompt_initialize_fn(ompt_fn_lookup, ompt_get_runtime_version(),
                            OMPT_VERSION);
 
         ompt_thread_t *root_thread = ompt_get_thread();
@@ -432,8 +432,8 @@ OMPT_API_ROUTINE void *ompt_get_task_function(int depth)
  ****************************************************************************/
 
 // Don't define this as static. The loader may choose to eliminate the symbol
-// even though it is needed by tools.  
-#define OMPT_API_PLACEHOLDER 
+// even though it is needed by tools.
+#define OMPT_API_PLACEHOLDER
 
 // Ensure that placeholders don't have mangled names in the symbol table.
 #ifdef __cplusplus
@@ -441,7 +441,7 @@ extern "C" {
 #endif
 
 
-OMPT_API_PLACEHOLDER void ompt_idle(void)  
+OMPT_API_PLACEHOLDER void ompt_idle(void)
 {
     // This function is a placeholder used to represent the calling context of
     // idle OpenMP worker threads. It is not meant to be invoked.

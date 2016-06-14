@@ -112,5 +112,5 @@ int main()
     std::shared_ptr<int> p2(std::move(p)); // should not call deleter when going out of scope
     }
 #endif
-    
+
 }

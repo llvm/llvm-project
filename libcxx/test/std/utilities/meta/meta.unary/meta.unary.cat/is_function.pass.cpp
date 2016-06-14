@@ -78,7 +78,7 @@ int main()
 	test_is_function<int(int, double)>();
 	test_is_function<int(Abstract *)>();
 	test_is_function<void(...)>();
-	
+
     test_is_not_function<std::nullptr_t>();
     test_is_not_function<void>();
     test_is_not_function<int>();

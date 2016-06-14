@@ -66,6 +66,13 @@ static void runNewCustomLtoPasses(Module &M, TargetMachine &TM) {
   PassBuilder PB(&TM);
 
   AAManager AA;
+
+  // Parse a custom AA pipeline if asked to.
+  if (!PB.parseAAPipeline(AA, Config->LtoAAPipeline)) {
+    error("Unable to parse AA pipeline description: " + Config->LtoAAPipeline);
+    return;
+  }
+
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
@@ -133,12 +140,8 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
 
 static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
                               Symbol *S, GlobalValue *GV) {
-  if (S->IsUsedInRegularObj)
+  if (S->IsUsedInRegularObj || Used.count(GV))
     return false;
-
-  if (Used.count(GV))
-    return false;
-
   return !S->includeInDynsym();
 }
 
@@ -147,7 +150,7 @@ BitcodeCompiler::BitcodeCompiler()
       Mover(*Combined) {}
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, 0);
+  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type);
 }
 
 void BitcodeCompiler::add(BitcodeFile &F) {
@@ -218,8 +221,12 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     Keep.push_back(GV);
   }
 
-  Mover.move(Obj->takeModule(), Keep,
-             [](GlobalValue &, IRMover::ValueAdder) {});
+  if (Error E = Mover.move(Obj->takeModule(), Keep,
+                           [](GlobalValue &, IRMover::ValueAdder) {})) {
+    handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+      fatal("failed to link module " + F.getName() + ": " + EIB.message());
+    });
+  }
 }
 
 static void internalize(GlobalValue &GV) {

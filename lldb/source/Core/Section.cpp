@@ -17,70 +17,58 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Section::Section (const ModuleSP &module_sp,
-                  ObjectFile *obj_file,
-                  user_id_t sect_id,
-                  const ConstString &name,
-                  SectionType sect_type,
-                  addr_t file_addr,
-                  addr_t byte_size,
-                  lldb::offset_t file_offset,
-                  lldb::offset_t file_size,
-                  uint32_t log2align,
-                  uint32_t flags,
-                  uint32_t target_byte_size/*=1*/) :
-    ModuleChild     (module_sp),
-    UserID          (sect_id),
-    Flags           (flags),
-    m_obj_file      (obj_file),
-    m_type          (sect_type),
-    m_parent_wp     (),
-    m_name          (name),
-    m_file_addr     (file_addr),
-    m_byte_size     (byte_size),
-    m_file_offset   (file_offset),
-    m_file_size     (file_size),
-    m_log2align     (log2align),
-    m_children      (),
-    m_fake          (false),
-    m_encrypted     (false),
-    m_thread_specific (false),
-    m_target_byte_size(target_byte_size)
+Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file, user_id_t sect_id, const ConstString &name,
+                 SectionType sect_type, addr_t file_addr, addr_t byte_size, lldb::offset_t file_offset,
+                 lldb::offset_t file_size, uint32_t log2align, uint32_t flags, uint32_t target_byte_size /*=1*/)
+    : ModuleChild(module_sp),
+      UserID(sect_id),
+      Flags(flags),
+      m_obj_file(obj_file),
+      m_type(sect_type),
+      m_parent_wp(),
+      m_name(name),
+      m_file_addr(file_addr),
+      m_byte_size(byte_size),
+      m_file_offset(file_offset),
+      m_file_size(file_size),
+      m_log2align(log2align),
+      m_children(),
+      m_fake(false),
+      m_encrypted(false),
+      m_thread_specific(false),
+      m_readable(false),
+      m_writable(false),
+      m_executable(false),
+      m_target_byte_size(target_byte_size)
 {
 //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ", addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s\n",
 //            this, module_sp.get(), sect_id, file_addr, file_addr + byte_size, file_offset, file_offset + file_size, flags, name.GetCString());
 }
 
-Section::Section (const lldb::SectionSP &parent_section_sp,
-                  const ModuleSP &module_sp,
-                  ObjectFile *obj_file,
-                  user_id_t sect_id,
-                  const ConstString &name,
-                  SectionType sect_type,
-                  addr_t file_addr,
-                  addr_t byte_size,
-                  lldb::offset_t file_offset,
-                  lldb::offset_t file_size,
-                  uint32_t log2align,
-                  uint32_t flags,
-                  uint32_t target_byte_size/*=1*/) :
-    ModuleChild     (module_sp),
-    UserID          (sect_id),
-    Flags           (flags),
-    m_obj_file      (obj_file),
-    m_type          (sect_type),
-    m_parent_wp     (),
-    m_name          (name),
-    m_file_addr     (file_addr),
-    m_byte_size     (byte_size),
-    m_file_offset   (file_offset),
-    m_file_size     (file_size),
-    m_log2align     (log2align),
-    m_children      (),
-    m_fake          (false),
-    m_encrypted     (false),
-    m_thread_specific (false),
-    m_target_byte_size(target_byte_size)
+Section::Section(const lldb::SectionSP &parent_section_sp, const ModuleSP &module_sp, ObjectFile *obj_file,
+                 user_id_t sect_id, const ConstString &name, SectionType sect_type, addr_t file_addr, addr_t byte_size,
+                 lldb::offset_t file_offset, lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
+                 uint32_t target_byte_size /*=1*/)
+    : ModuleChild(module_sp),
+      UserID(sect_id),
+      Flags(flags),
+      m_obj_file(obj_file),
+      m_type(sect_type),
+      m_parent_wp(),
+      m_name(name),
+      m_file_addr(file_addr),
+      m_byte_size(byte_size),
+      m_file_offset(file_offset),
+      m_file_size(file_size),
+      m_log2align(log2align),
+      m_children(),
+      m_fake(false),
+      m_encrypted(false),
+      m_thread_specific(false),
+      m_readable(false),
+      m_writable(false),
+      m_executable(false),
+      m_target_byte_size(target_byte_size)
 {
 //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ", addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s.%s\n",
 //            this, module_sp.get(), sect_id, file_addr, file_addr + byte_size, file_offset, file_offset + file_size, flags, parent_section_sp->GetName().GetCString(), name.GetCString());
@@ -252,7 +240,8 @@ Section::Dump (Stream *s, Target *target, uint32_t depth) const
         range.Dump (s, 0);
     }
 
-    s->Printf("%c 0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ", resolved ? ' ' : '*', m_file_offset, m_file_size, Get());
+    s->Printf("%c %c%c%c  0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ", resolved ? ' ' : '*', m_readable ? 'r' : '-',
+              m_writable ? 'w' : '-', m_executable ? 'x' : '-', m_file_offset, m_file_size, Get());
 
     DumpName (s);
 
@@ -315,6 +304,33 @@ Section::Slide (addr_t slide_amount, bool slide_children)
         return true;
     }
     return false;
+}
+
+//------------------------------------------------------------------
+/// Get the permissions as OR'ed bits from lldb::Permissions
+//------------------------------------------------------------------
+uint32_t
+Section::GetPermissions() const
+{
+    uint32_t permissions = 0;
+    if (m_readable)
+        permissions |= ePermissionsReadable;
+    if (m_writable)
+        permissions |= ePermissionsWritable;
+    if (m_executable)
+        permissions |= ePermissionsExecutable;
+    return permissions;
+}
+
+//------------------------------------------------------------------
+/// Set the permissions using bits OR'ed from lldb::Permissions
+//------------------------------------------------------------------
+void
+Section::SetPermissions(uint32_t permissions)
+{
+    m_readable = (permissions & ePermissionsReadable) != 0;
+    m_writable = (permissions & ePermissionsWritable) != 0;
+    m_executable = (permissions & ePermissionsExecutable) != 0;
 }
 
 lldb::offset_t
@@ -565,9 +581,12 @@ SectionList::Dump (Stream *s, Target *target, bool show_header, uint32_t depth) 
     if (show_header && !m_sections.empty())
     {
         s->Indent();
-        s->Printf(    "SectID     Type             %s Address                             File Off.  File Size  Flags      Section Name\n", target_has_loaded_sections ? "Load" : "File");
+        s->Printf("SectID     Type             %s Address                             Perm File Off.  File Size  Flags "
+                  "     Section Name\n",
+                  target_has_loaded_sections ? "Load" : "File");
         s->Indent();
-        s->PutCString("---------- ---------------- ---------------------------------------  ---------- ---------- ---------- ----------------------------\n");
+        s->PutCString("---------- ---------------- ---------------------------------------  ---- ---------- ---------- "
+                      "---------- ----------------------------\n");
     }
 
 

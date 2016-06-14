@@ -35,6 +35,7 @@
     #define FTN_SET_LIBRARY                      kmp_set_library
     #define FTN_GET_LIBRARY                      kmp_get_library
     #define FTN_SET_DEFAULTS                     kmp_set_defaults
+    #define FTN_SET_DISP_NUM_BUFFERS             kmp_set_disp_num_buffers
     #define FTN_SET_AFFINITY                     kmp_set_affinity
     #define FTN_GET_AFFINITY                     kmp_get_affinity
     #define FTN_GET_AFFINITY_MAX_PROC            kmp_get_affinity_max_proc
@@ -101,7 +102,7 @@
     #define FTN_GET_WTICK                        omp_get_wtick
 
 #if OMP_40_ENABLED
-#if KMP_MIC || KMP_OS_DARWIN
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
     #define FTN_GET_DEFAULT_DEVICE               omp_get_default_device
     #define FTN_SET_DEFAULT_DEVICE               omp_set_default_device
     #define FTN_GET_NUM_DEVICES                  omp_get_num_devices
@@ -122,6 +123,16 @@
     #define FTN_GET_PLACE_NUM                    omp_get_place_num
     #define FTN_GET_PARTITION_NUM_PLACES         omp_get_partition_num_places
     #define FTN_GET_PARTITION_PLACE_NUMS         omp_get_partition_place_nums
+# ifdef KMP_STUB
+    #define FTN_GET_INITIAL_DEVICE               omp_get_initial_device
+    #define FTN_TARGET_ALLOC                     omp_target_alloc
+    #define FTN_TARGET_FREE                      omp_target_free
+    #define FTN_TARGET_IS_PRESENT                omp_target_is_present
+    #define FTN_TARGET_MEMCPY                    omp_target_memcpy
+    #define FTN_TARGET_MEMCPY_RECT               omp_target_memcpy_rect
+    #define FTN_TARGET_ASSOCIATE_PTR             omp_target_associate_ptr
+    #define FTN_TARGET_DISASSOCIATE_PTR          omp_target_disassociate_ptr
+# endif
 #endif
 
 #endif /* KMP_FTN_PLAIN */
@@ -142,6 +153,7 @@
     #define FTN_SET_LIBRARY                      kmp_set_library_
     #define FTN_GET_LIBRARY                      kmp_get_library_
     #define FTN_SET_DEFAULTS                     kmp_set_defaults_
+    #define FTN_SET_DISP_NUM_BUFFERS             kmp_set_disp_num_buffers_
     #define FTN_SET_AFFINITY                     kmp_set_affinity_
     #define FTN_GET_AFFINITY                     kmp_get_affinity_
     #define FTN_GET_AFFINITY_MAX_PROC            kmp_get_affinity_max_proc_
@@ -208,7 +220,7 @@
     #define FTN_GET_WTICK                        omp_get_wtick_
 
 #if OMP_40_ENABLED
-#if KMP_MIC || KMP_OS_DARWIN
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
     #define FTN_GET_DEFAULT_DEVICE               omp_get_default_device_
     #define FTN_SET_DEFAULT_DEVICE               omp_set_default_device_
     #define FTN_GET_NUM_DEVICES                  omp_get_num_devices_
@@ -230,6 +242,16 @@
     #define FTN_GET_PLACE_NUM                    omp_get_place_num_
     #define FTN_GET_PARTITION_NUM_PLACES         omp_get_partition_num_places_
     #define FTN_GET_PARTITION_PLACE_NUMS         omp_get_partition_place_nums_
+# ifdef KMP_STUB
+    #define FTN_GET_INITIAL_DEVICE               omp_get_initial_device_
+    #define FTN_TARGET_ALLOC                     omp_target_alloc_
+    #define FTN_TARGET_FREE                      omp_target_free_
+    #define FTN_TARGET_IS_PRESENT                omp_target_is_present_
+    #define FTN_TARGET_MEMCPY                    omp_target_memcpy_
+    #define FTN_TARGET_MEMCPY_RECT               omp_target_memcpy_rect_
+    #define FTN_TARGET_ASSOCIATE_PTR             omp_target_associate_ptr_
+    #define FTN_TARGET_DISASSOCIATE_PTR          omp_target_disassociate_ptr_
+# endif
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -250,6 +272,7 @@
     #define FTN_SET_LIBRARY                      KMP_SET_LIBRARY
     #define FTN_GET_LIBRARY                      KMP_GET_LIBRARY
     #define FTN_SET_DEFAULTS                     KMP_SET_DEFAULTS
+    #define FTN_SET_DISP_NUM_BUFFERS             KMP_SET_DISP_NUM_BUFFERS
     #define FTN_SET_AFFINITY                     KMP_SET_AFFINITY
     #define FTN_GET_AFFINITY                     KMP_GET_AFFINITY
     #define FTN_GET_AFFINITY_MAX_PROC            KMP_GET_AFFINITY_MAX_PROC
@@ -316,7 +339,7 @@
     #define FTN_GET_WTICK                        OMP_GET_WTICK
 
 #if OMP_40_ENABLED
-#if KMP_MIC || KMP_OS_DARWIN
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
     #define FTN_GET_DEFAULT_DEVICE               OMP_GET_DEFAULT_DEVICE
     #define FTN_SET_DEFAULT_DEVICE               OMP_SET_DEFAULT_DEVICE
     #define FTN_GET_NUM_DEVICES                  OMP_GET_NUM_DEVICES
@@ -338,6 +361,16 @@
     #define FTN_GET_PLACE_NUM                    OMP_GET_PLACE_NUM
     #define FTN_GET_PARTITION_NUM_PLACES         OMP_GET_PARTITION_NUM_PLACES
     #define FTN_GET_PARTITION_PLACE_NUMS         OMP_GET_PARTITION_PLACE_NUMS
+# ifdef KMP_STUB
+    #define FTN_GET_INITIAL_DEVICE               OMP_GET_INITIAL_DEVICE
+    #define FTN_TARGET_ALLOC                     OMP_TARGET_ALLOC
+    #define FTN_TARGET_FREE                      OMP_TARGET_FREE
+    #define FTN_TARGET_IS_PRESENT                OMP_TARGET_IS_PRESENT
+    #define FTN_TARGET_MEMCPY                    OMP_TARGET_MEMCPY
+    #define FTN_TARGET_MEMCPY_RECT               OMP_TARGET_MEMCPY_RECT
+    #define FTN_TARGET_ASSOCIATE_PTR             OMP_TARGET_ASSOCIATE_PTR
+    #define FTN_TARGET_DISASSOCIATE_PTR          OMP_TARGET_DISASSOCIATE_PTR
+# endif
 #endif
 
 #endif /* KMP_FTN_UPPER */
@@ -358,6 +391,7 @@
     #define FTN_SET_LIBRARY                      KMP_SET_LIBRARY_
     #define FTN_GET_LIBRARY                      KMP_GET_LIBRARY_
     #define FTN_SET_DEFAULTS                     KMP_SET_DEFAULTS_
+    #define FTN_SET_DISP_NUM_BUFFERS             KMP_SET_DISP_NUM_BUFFERS_
     #define FTN_SET_AFFINITY                     KMP_SET_AFFINITY_
     #define FTN_GET_AFFINITY                     KMP_GET_AFFINITY_
     #define FTN_GET_AFFINITY_MAX_PROC            KMP_GET_AFFINITY_MAX_PROC_
@@ -424,7 +458,7 @@
     #define FTN_GET_WTICK                        OMP_GET_WTICK_
 
 #if OMP_40_ENABLED
-#if KMP_MIC || KMP_OS_DARWIN
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
     #define FTN_GET_DEFAULT_DEVICE               OMP_GET_DEFAULT_DEVICE_
     #define FTN_SET_DEFAULT_DEVICE               OMP_SET_DEFAULT_DEVICE_
     #define FTN_GET_NUM_DEVICES                  OMP_GET_NUM_DEVICES_
@@ -446,6 +480,16 @@
     #define FTN_GET_PLACE_NUM                    OMP_GET_PLACE_NUM_
     #define FTN_GET_PARTITION_NUM_PLACES         OMP_GET_PARTITION_NUM_PLACES_
     #define FTN_GET_PARTITION_PLACE_NUMS         OMP_GET_PARTITION_PLACE_NUMS_
+# ifdef KMP_STUB
+    #define FTN_GET_INITIAL_DEVICE               OMP_GET_INITIAL_DEVICE_
+    #define FTN_TARGET_ALLOC                     OMP_TARGET_ALLOC_
+    #define FTN_TARGET_FREE                      OMP_TARGET_FREE_
+    #define FTN_TARGET_IS_PRESENT                OMP_TARGET_IS_PRESENT_
+    #define FTN_TARGET_MEMCPY                    OMP_TARGET_MEMCPY_
+    #define FTN_TARGET_MEMCPY_RECT               OMP_TARGET_MEMCPY_RECT_
+    #define FTN_TARGET_ASSOCIATE_PTR             OMP_TARGET_ASSOCIATE_PTR_
+    #define FTN_TARGET_DISASSOCIATE_PTR          OMP_TARGET_DISASSOCIATE_PTR_
+# endif
 #endif
 
 #endif /* KMP_FTN_UAPPEND */
@@ -518,7 +562,7 @@
 // All GOMP_3.0 symbols
 #define KMP_API_NAME_GOMP_TASKYIELD                      GOMP_taskyield
 
-// All GOMP_4.0 symbols 
+// All GOMP_4.0 symbols
 // TODO: As of 2013-10-14, none of the GOMP_4.0 functions are implemented in libomp
 #define KMP_API_NAME_GOMP_BARRIER_CANCEL                 GOMP_barrier_cancel
 #define KMP_API_NAME_GOMP_CANCEL                         GOMP_cancel

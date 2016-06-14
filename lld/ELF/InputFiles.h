@@ -171,7 +171,7 @@ private:
   llvm::BumpPtrAllocator Alloc;
   llvm::SpecificBumpPtrAllocator<InputSection<ELFT>> IAlloc;
   llvm::SpecificBumpPtrAllocator<MergeInputSection<ELFT>> MAlloc;
-  llvm::SpecificBumpPtrAllocator<EHInputSection<ELFT>> EHAlloc;
+  llvm::SpecificBumpPtrAllocator<EhInputSection<ELFT>> EHAlloc;
 };
 
 // LazyObjectFile is analogous to ArchiveFile in the sense that

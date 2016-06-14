@@ -25,14 +25,14 @@ void check_limits()
     assert(miniss << minv);
     assert(maxiss << maxv);
     std::string mins = miniss.str();
-    std::string maxs = maxiss.str(); 
+    std::string maxs = maxiss.str();
 
     istringstream maxoss(maxs), minoss(mins);
 
     T new_minv, new_maxv;
     assert(maxoss >> new_maxv);
     assert(minoss >> new_minv);
- 
+
     assert(new_minv == minv);
     assert(new_maxv == maxv);
 
@@ -40,11 +40,11 @@ void check_limits()
         mins = "-1";
     else
         mins[mins.size() - 1]++;
-    
+
     maxs[maxs.size() - 1]++;
 
     istringstream maxoss2(maxs), minoss2(mins);
-    
+
     assert(! (maxoss2 >> new_maxv));
     assert(! (minoss2 >> new_minv));
 }

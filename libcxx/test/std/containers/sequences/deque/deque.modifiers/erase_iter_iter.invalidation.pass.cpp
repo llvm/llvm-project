@@ -26,9 +26,9 @@ void del_at_start(C c, size_t num)
     typename C::iterator last  = first + num;
     typename C::iterator it1 = last;
     typename C::iterator it2 = c.end() - 1;
-    
+
     c.erase (first, last);
-    
+
     typename C::iterator it3 = c.begin();
     typename C::iterator it4 = c.end() - 1;
     assert(  it1 ==   it3);
@@ -38,7 +38,7 @@ void del_at_start(C c, size_t num)
     assert( *it2 ==  *it4);
     assert(&*it2 == &*it4);
 }
-    
+
 template <typename C>
 void del_at_end(C c, size_t num)
 {
@@ -46,7 +46,7 @@ void del_at_end(C c, size_t num)
     typename C::iterator first = last - num;
     typename C::iterator it1 = c.begin();
     typename C::iterator it2 = first - 1;
-    
+
     c.erase (first, last);
 
     typename C::iterator it3 = c.begin();

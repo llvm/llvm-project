@@ -102,6 +102,9 @@ public:
 
     size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size, lldb_private::Error &error) override;
 
+    lldb_private::Error
+    GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_private::MemoryRegionInfo &region_info) override;
+
     lldb::addr_t GetImageInfoAddress() override;
 
     lldb_private::ArchSpec
@@ -135,6 +138,7 @@ private:
     //------------------------------------------------------------------
     typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
     typedef lldb_private::RangeDataArray<lldb::addr_t, lldb::addr_t, FileRange, 1> VMRangeToFileOffset;
+    typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t> VMRangeToPermissions;
 
     lldb::ModuleSP m_core_module_sp;
     lldb_private::FileSpec m_core_file;
@@ -154,6 +158,9 @@ private:
 
     // Address ranges found in the core
     VMRangeToFileOffset m_core_aranges;
+
+    // Permissions for all ranges
+    VMRangeToPermissions m_core_range_infos;
 
     // NT_FILE entries found from the NOTE segment
     std::vector<NT_FILE_Entry> m_nt_file_entries;

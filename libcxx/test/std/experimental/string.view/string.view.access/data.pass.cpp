@@ -21,7 +21,7 @@ void test ( const CharT *s, size_t len ) {
     assert ( sv.length() == len );
     assert ( sv.data() == s );
     }
-    
+
 int main () {
     test ( "ABCDE", 5 );
     test ( "a", 1 );

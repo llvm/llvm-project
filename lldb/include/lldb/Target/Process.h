@@ -18,6 +18,7 @@
 // C++ Includes
 #include <list>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 #include <unordered_set>
@@ -2246,11 +2247,11 @@ public:
     ///     order.
     //------------------------------------------------------------------
     uint64_t
-    ReadUnsignedIntegerFromMemory (lldb::addr_t load_addr, 
-                                   size_t byte_size,
-                                   uint64_t fail_value, 
-                                   Error &error);
-    
+    ReadUnsignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size, uint64_t fail_value, Error &error);
+
+    int64_t
+    ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size, int64_t fail_value, Error &error);
+
     lldb::addr_t
     ReadPointerFromMemory (lldb::addr_t vm_addr, 
                            Error &error);
@@ -3425,6 +3426,7 @@ protected:
     std::map<lldb::addr_t,lldb::addr_t> m_resolved_indirect_addresses;
     bool m_can_interpret_function_calls; // Some targets, e.g the OSX kernel, don't support the ability to modify the stack.
     WarningsCollection          m_warnings_issued;  // A set of object pointers which have already had warnings printed
+    std::mutex                  m_run_thread_plan_lock;
     
     enum {
         eCanJITDontKnow= 0,

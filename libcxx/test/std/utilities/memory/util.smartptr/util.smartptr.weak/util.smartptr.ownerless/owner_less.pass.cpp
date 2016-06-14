@@ -30,7 +30,7 @@
 //     bool operator()(shared_ptr<T> const&, weak_ptr<T> const&) const;
 //     bool operator()(weak_ptr<T> const&, shared_ptr<T> const&) const;
 // };
-// 
+//
 // Added in C++17
 // template<> struct owner_less<void>
 // {
@@ -42,7 +42,7 @@
 //         bool operator()(weak_ptr<T> const&, shared_ptr<U> const&) const;
 //     template<class T, class U>
 //         bool operator()(weak_ptr<T> const&, weak_ptr<U> const&) const;
-// 
+//
 //     typedef unspecified is_transparent;
 // };
 
@@ -113,7 +113,7 @@ int main()
     cmp(wp1, wp1);
     }
     {
-    // test heterogeneous lookups 
+    // test heterogeneous lookups
     std::set<std::shared_ptr<X>, std::owner_less<>> s;
     std::shared_ptr<void> vp;
     s.find(vp);

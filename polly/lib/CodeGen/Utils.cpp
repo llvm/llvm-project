@@ -78,7 +78,7 @@ static BasicBlock *splitEdge(BasicBlock *Prev, BasicBlock *Succ,
 
 BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
   Region &R = S.getRegion();
-  PollyIRBuilder Builder(R.getEntry());
+  PollyIRBuilder Builder(S.getEntry());
   DominatorTree &DT = P->getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   RegionInfo &RI = P->getAnalysis<RegionInfoPass>().getRegionInfo();
   LoopInfo &LI = P->getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -96,8 +96,8 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
   //      /    \     //
 
   // Create a fork block.
-  BasicBlock *EnteringBB = R.getEnteringBlock();
-  BasicBlock *EntryBB = R.getEntry();
+  BasicBlock *EnteringBB = S.getEnteringBlock();
+  BasicBlock *EntryBB = S.getEntry();
   assert(EnteringBB && "Must be a simple region");
   BasicBlock *SplitBlock =
       splitEdge(EnteringBB, EntryBB, ".split_new_and_old", &DT, &LI, &RI);
@@ -116,8 +116,8 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
   RI.setRegionFor(SplitBlock, PrevRegion);
 
   // Create a join block
-  BasicBlock *ExitingBB = R.getExitingBlock();
-  BasicBlock *ExitBB = R.getExit();
+  BasicBlock *ExitingBB = S.getExitingBlock();
+  BasicBlock *ExitBB = S.getExit();
   assert(ExitingBB && "Must be a simple region");
   BasicBlock *MergeBlock =
       splitEdge(ExitingBB, ExitBB, ".merge_new_and_old", &DT, &LI, &RI);
@@ -149,7 +149,7 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Pass *P, Value *RTC) {
       BasicBlock::Create(F->getContext(), "polly.exiting", F);
   SplitBlock->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(SplitBlock);
-  Builder.CreateCondBr(RTC, StartBlock, R.getEntry());
+  Builder.CreateCondBr(RTC, StartBlock, S.getEntry());
   if (Loop *L = LI.getLoopFor(SplitBlock)) {
     L->addBasicBlockToLoop(StartBlock, LI);
     L->addBasicBlockToLoop(ExitingBlock, LI);

@@ -15,7 +15,7 @@ void check() {
   f_vararg(1, 7, 9);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not call c-style vararg functions [cppcoreguidelines-pro-type-vararg]
   c.g_vararg("foo");
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not call c-style vararg functions
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not call c-style vararg functions
 
   f(3); // OK
   c.g("foo"); // OK

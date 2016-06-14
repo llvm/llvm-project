@@ -302,19 +302,8 @@ Disassembler::Disassemble(Debugger &debugger,
             if (bytes_disassembled == 0)
                 return false;
 
-            bool result = PrintInstructions (disasm_sp.get(),
-                                             debugger,
-                                             arch,
-                                             exe_ctx,
-                                             num_instructions,
-                                             num_mixed_context_lines,
-                                             options,
-                                             strm);
-            
-            // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-            // I'll fix that but for now, just clear the list and it will go away nicely.
-            disasm_sp->GetInstructionList().Clear();
-            return result;
+            return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx, num_instructions,
+                                     num_mixed_context_lines, options, strm);
         }
     }
     return false;
@@ -349,33 +338,17 @@ Disassembler::Disassemble(Debugger &debugger,
                                                                       prefer_file_cache);
             if (bytes_disassembled == 0)
                 return false;
-            bool result = PrintInstructions (disasm_sp.get(),
-                                             debugger,
-                                             arch,
-                                             exe_ctx,
-                                             num_instructions,
-                                             num_mixed_context_lines,
-                                             options,
-                                             strm);
-            
-            // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-            // I'll fix that but for now, just clear the list and it will go away nicely.
-            disasm_sp->GetInstructionList().Clear();
-            return result;
+            return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx, num_instructions,
+                                     num_mixed_context_lines, options, strm);
         }
     }
     return false;
 }
-            
-bool 
-Disassembler::PrintInstructions(Disassembler *disasm_ptr,
-                                Debugger &debugger,
-                                const ArchSpec &arch,
-                                const ExecutionContext &exe_ctx,
-                                uint32_t num_instructions,
-                                uint32_t num_mixed_context_lines,
-                                uint32_t options,
-                                Stream &strm)
+
+bool
+Disassembler::PrintInstructions(Disassembler *disasm_ptr, Debugger &debugger, const ArchSpec &arch,
+                                const ExecutionContext &exe_ctx, uint32_t num_instructions,
+                                uint32_t num_mixed_context_lines, uint32_t options, Stream &strm)
 {
     // We got some things disassembled...
     size_t num_instructions_found = disasm_ptr->GetInstructionList().GetSize();

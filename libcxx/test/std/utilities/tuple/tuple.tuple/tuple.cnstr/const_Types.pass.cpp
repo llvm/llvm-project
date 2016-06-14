@@ -86,7 +86,7 @@ int main()
         std::tuple<int> t(2);
         assert(std::get<0>(t) == 2);
     }
-#if _LIBCPP_STD_VER > 11 
+#if _LIBCPP_STD_VER > 11
     {
         constexpr std::tuple<int> t(2);
         static_assert(std::get<0>(t) == 2, "");
@@ -101,7 +101,7 @@ int main()
         assert(std::get<0>(t) == 2);
         assert(std::get<1>(t) == nullptr);
     }
-#if _LIBCPP_STD_VER > 11 
+#if _LIBCPP_STD_VER > 11
     {
         constexpr std::tuple<int, char*> t(2, nullptr);
         static_assert(std::get<0>(t) == 2, "");
@@ -136,7 +136,8 @@ int main()
         assert(std::get<2>(t) == 2);
         assert(std::get<3>(t) == 3);
     }
-    // extensions
+// extensions
+#ifdef _LIBCPP_VERSION
     {
         std::tuple<int, char*, std::string> t(2);
         assert(std::get<0>(t) == 2);
@@ -156,4 +157,5 @@ int main()
         assert(std::get<2>(t) == "text");
         assert(std::get<3>(t) == 0.0);
     }
+#endif
 }

@@ -30,7 +30,7 @@ int main()
     for ( size_t i = 0; i < 128; ++i ) // values above 128 are not consistent
     {
         mask set = 0;
-        
+
         if ( i  < 32  || i  > 126 ) set |= F::cntrl;
         if ( i >= 32  && i <= 126 ) set |= F::print;
 
@@ -51,9 +51,9 @@ int main()
         if ( i >=  58 && i <=  64 ) set |= F::punct;    // ':' .. '@'
         if ( i >=  91 && i <=  96 ) set |= F::punct;    // '[' .. '`'
         if ( i >= 123 && i <= 126 ) set |= F::punct;    // '{' .. '~'    }
-        
+
         assert(( p[i] &  set) == set);            // all the right bits set
         assert(((p[i] & ~set) & defined) == 0);   // no extra ones
     }
-    
+
 }

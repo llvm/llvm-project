@@ -495,12 +495,22 @@ basic_streambuf<_CharT, _Traits>::xsgetn(char_type* __s, streamsize __n)
     const int_type __eof = traits_type::eof();
     int_type __c;
     streamsize __i = 0;
-    for (;__i < __n; ++__i, ++__s)
+    while(__i < __n)
     {
         if (__ninp_ < __einp_)
-            *__s = *__ninp_++;
+        {
+            const streamsize __len = _VSTD::min(__einp_ - __ninp_, __n - __i);
+            traits_type::copy(__s, __ninp_, __len);
+            __s +=  __len;
+            __i +=  __len;
+            this->gbump(__len);
+        }
         else if ((__c = uflow()) != __eof)
+        {
             *__s = traits_type::to_char_type(__c);
+            ++__s;
+            ++__i;
+        }
         else
             break;
     }

@@ -200,8 +200,9 @@ elseif("${libomp_build_type_lowercase}" STREQUAL "minsizerel")
   set(MINSIZEREL_BUILD TRUE)
 endif()
 
-# Include itt notify interface? Right now, always.
-set(LIBOMP_USE_ITT_NOTIFY TRUE)
+# Include itt notify interface?
+set(LIBOMP_USE_ITT_NOTIFY TRUE CACHE BOOL
+  "Enable ITT notify?")
 
 # normal, profile, stubs library.
 set(NORMAL_LIBRARY FALSE)
@@ -354,6 +355,7 @@ if(${LIBOMP_STANDALONE_BUILD})
   libomp_say("Build                -- ${LIBOMP_BUILD}")
   libomp_say("Use Stats-gathering  -- ${LIBOMP_STATS}")
   libomp_say("Use Debugger-support -- ${LIBOMP_USE_DEBUGGER}")
+  libomp_say("Use ITT notify       -- ${LIBOMP_USE_ITT_NOTIFY}")
   libomp_say("Use OMPT-support     -- ${LIBOMP_OMPT_SUPPORT}")
   if(${LIBOMP_OMPT_SUPPORT})
     libomp_say("Use OMPT-blame       -- ${LIBOMP_OMPT_BLAME}")

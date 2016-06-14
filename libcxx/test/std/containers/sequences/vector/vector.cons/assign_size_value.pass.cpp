@@ -26,7 +26,7 @@ void test ( Vec &v )
 {
     v.assign(5, 6);
     assert(v.size() == 5);
-    assert(is_contiguous_container_asan_correct(v)); 
+    assert(is_contiguous_container_asan_correct(v));
     assert(std::all_of(v.begin(), v.end(), is6));
 }
 

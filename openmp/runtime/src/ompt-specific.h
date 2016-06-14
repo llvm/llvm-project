@@ -69,15 +69,15 @@ ompt_get_thread_gtid(int gtid)
 inline ompt_thread_t *
 ompt_get_thread()
 {
-    int gtid = __kmp_gtid_get_specific();
+    int gtid = __kmp_get_gtid();
     return ompt_get_thread_gtid(gtid);
 }
 
 
-inline void 
+inline void
 ompt_set_thread_state(ompt_thread_t *thread, ompt_state_t state)
 {
-    thread->th.ompt_thread_info.state = state; 
+    thread->th.ompt_thread_info.state = state;
 }
 
 

@@ -13,7 +13,7 @@
 // struct integer_sequence
 // {
 //     typedef T type;
-// 
+//
 //     static constexpr size_t size() noexcept;
 // };
 

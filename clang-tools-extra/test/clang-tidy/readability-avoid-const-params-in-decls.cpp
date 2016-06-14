@@ -83,3 +83,10 @@ void NF(const int&);
 void NF(const int*);
 void NF(const int* const*);
 void NF(alias_const_type);
+
+// Regression test for when the 'const' token is not in the code.
+#define CONCAT(a, b) a##b
+void ConstNotVisible(CONCAT(cons, t) int i);
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: parameter 'i'
+// We warn, but we can't give a fix
+// CHECK-FIXES: void ConstNotVisible(CONCAT(cons, t) int i);

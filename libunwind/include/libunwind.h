@@ -46,12 +46,12 @@ enum {
 };
 
 struct unw_context_t {
-  uint64_t data[128];
+  uint64_t data[_LIBUNWIND_CONTEXT_SIZE];
 };
 typedef struct unw_context_t unw_context_t;
 
 struct unw_cursor_t {
-  uint64_t data[140];
+  uint64_t data[_LIBUNWIND_CURSOR_SIZE];
 };
 typedef struct unw_cursor_t unw_cursor_t;
 

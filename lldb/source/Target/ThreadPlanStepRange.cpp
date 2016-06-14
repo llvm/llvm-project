@@ -64,16 +64,6 @@ ThreadPlanStepRange::ThreadPlanStepRange (ThreadPlanKind kind,
 ThreadPlanStepRange::~ThreadPlanStepRange ()
 {
     ClearNextBranchBreakpoint();
-    
-    size_t num_instruction_ranges = m_instruction_ranges.size();
-    
-    // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-    // I'll fix that but for now, just clear the list and it will go away nicely.
-    for (size_t i = 0; i < num_instruction_ranges; i++)
-    {
-        if (m_instruction_ranges[i])
-            m_instruction_ranges[i]->GetInstructionList().Clear();
-    }
 }
 
 void

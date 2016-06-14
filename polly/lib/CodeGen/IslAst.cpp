@@ -564,10 +564,9 @@ isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
 void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
   isl_ast_print_options *Options;
   isl_ast_node *RootNode = getAst();
-  Function *F = S.getRegion().getEntry()->getParent();
+  Function &F = S.getFunction();
 
-  OS << ":: isl ast :: " << F->getName() << " :: " << S.getRegion().getNameStr()
-     << "\n";
+  OS << ":: isl ast :: " << F.getName() << " :: " << S.getNameStr() << "\n";
 
   if (!RootNode) {
     OS << ":: isl ast generation and code generation was skipped!\n\n";
@@ -618,7 +617,7 @@ void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
 void IslAstInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   // Get the Common analysis usage of ScopPasses.
   ScopPass::getAnalysisUsage(AU);
-  AU.addRequired<ScopInfo>();
+  AU.addRequired<ScopInfoRegionPass>();
   AU.addRequired<DependenceInfo>();
 }
 
@@ -629,7 +628,7 @@ Pass *polly::createIslAstInfoPass() { return new IslAstInfo(); }
 INITIALIZE_PASS_BEGIN(IslAstInfo, "polly-ast",
                       "Polly - Generate an AST of the SCoP (isl)", false,
                       false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfo);
+INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
 INITIALIZE_PASS_END(IslAstInfo, "polly-ast",
                     "Polly - Generate an AST from the SCoP (isl)", false, false)

@@ -178,13 +178,13 @@ int main()
     TEST_NUMERIC_LIMITS(const float)
     TEST_NUMERIC_LIMITS(volatile float)
     TEST_NUMERIC_LIMITS(const volatile float)
-    
+
     // double
     TEST_NUMERIC_LIMITS(double)
     TEST_NUMERIC_LIMITS(const double)
     TEST_NUMERIC_LIMITS(volatile double)
     TEST_NUMERIC_LIMITS(const volatile double)
-    
+
     // long double
     TEST_NUMERIC_LIMITS(long double)
     TEST_NUMERIC_LIMITS(const long double)

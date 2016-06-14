@@ -3,7 +3,7 @@
 # RUN: llvm-readobj -s %t | FileCheck %s
 
 # CHECK:      Name: .eh_frame
-# CHECK-NEXT: Type: SHT_X86_64_UNWIND
+# CHECK-NEXT: Type: SHT_PROGBITS
 
 FileHeader:
   Class:           ELFCLASS64

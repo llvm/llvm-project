@@ -64,9 +64,7 @@ namespace polly {
 class MemoryAccess;
 class Scop;
 class ScopStmt;
-class ScopInfo;
-
-typedef DenseMap<ScopStmt *, Value *> OutgoingValueMapTy;
+class ScopBuilder;
 
 //===---------------------------------------------------------------------===//
 
@@ -484,7 +482,7 @@ private:
   ///        sum[i+j] = sum[i] + 3;
   ///
   /// Here not all iterations access the same memory location, but iterations
-  /// for which j = 0 holds do. After lifting the equality check in ScopInfo,
+  /// for which j = 0 holds do. After lifting the equality check in ScopBuilder,
   /// subsequent transformations do not only need check if a statement is
   /// reduction like, but they also need to verify that that the reduction
   /// property is only exploited for statement instances that load from and
@@ -913,6 +911,18 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 /// @brief Ordered list type to hold accesses.
 using MemoryAccessList = std::forward_list<MemoryAccess *>;
 
+/// @brief Helper structure for invariant memory accesses.
+struct InvariantAccess {
+  /// @brief The memory access that is (partially) invariant.
+  MemoryAccess *MA;
+
+  /// @brief The context under which the access is not invariant.
+  isl_set *NonHoistableCtx;
+};
+
+/// @brief Ordered container type to hold invariant accesses.
+using InvariantAccessesTy = SmallVector<InvariantAccess, 8>;
+
 /// @brief Type for equivalent invariant accesses and their domain context.
 ///
 /// The first element is the SCEV for the pointer/location that identifies this
@@ -1219,11 +1229,11 @@ public:
   /// @brief Add @p Access to this statement's list of accesses.
   void addAccess(MemoryAccess *Access);
 
-  /// @brief Remove the memory access in @p InvMAs.
+  /// @brief Remove a MemoryAccess from this statement.
   ///
-  /// Note that scalar accesses that are caused by any access in @p InvMAs will
+  /// Note that scalar accesses that are caused by MA will
   /// be eliminated too.
-  void removeMemoryAccesses(MemoryAccessList &InvMAs);
+  void removeMemoryAccess(MemoryAccess *MA);
 
   typedef MemoryAccessVec::iterator iterator;
   typedef MemoryAccessVec::const_iterator const_iterator;
@@ -1354,7 +1364,7 @@ private:
   DenseMap<const SCEV *, isl_id *> ParameterIds;
 
   /// @brief The context of the SCoP created during SCoP detection.
-  const ScopDetection::DetectionContext &DC;
+  ScopDetection::DetectionContext &DC;
 
   /// Isl context.
   ///
@@ -1493,9 +1503,9 @@ private:
   /// @brief List of invariant accesses.
   InvariantEquivClassesTy InvariantEquivClasses;
 
-  /// @brief Scop constructor; invoked from ScopInfo::buildScop.
+  /// @brief Scop constructor; invoked from ScopBuilder::buildScop.
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
-       const ScopDetection::DetectionContext &DC);
+       ScopDetection::DetectionContext &DC);
 
   /// @brief Get or create the access function set in a BasicBlock
   AccFuncSetType &getOrCreateAccessFunctions(const BasicBlock *BB) {
@@ -1503,7 +1513,7 @@ private:
   }
   //@}
 
-  /// @brief Initialize this ScopInfo .
+  /// @brief Initialize this ScopBuilder.
   void init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
             LoopInfo &LI);
 
@@ -1606,6 +1616,13 @@ private:
   /// @brief Simplify the SCoP representation
   void simplifySCoP(bool AfterHoisting, DominatorTree &DT, LoopInfo &LI);
 
+  /// @brief Return the access for the base ptr of @p MA if any.
+  MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
+
+  /// @brief Check if the base ptr of @p MA is in the SCoP but not hoistable.
+  bool hasNonHoistableBasePtrInScop(MemoryAccess *MA,
+                                    __isl_keep isl_union_map *Writes);
+
   /// @brief Create equivalence classes for required invariant accesses.
   ///
   /// These classes will consolidate multiple required invariant loads from the
@@ -1620,14 +1637,15 @@ private:
   /// invariant location.
   void buildInvariantEquivalenceClasses();
 
-  /// @brief Check if a memory access can be hoisted.
+  /// @brief Return the context under which the access cannot be hoisted.
   ///
-  /// @param Access The access to verify.
+  /// @param Access The access to check.
   /// @param Writes The set of all memory writes in the scop.
   ///
-  /// @return Return true if a memory access can be hoisted.
-  bool isHoistableAccess(MemoryAccess *Access,
-                         __isl_keep isl_union_map *Writes);
+  /// @return Return the context under which the access cannot be hoisted or a
+  ///         nullptr if it cannot be hoisted at all.
+  __isl_give isl_set *getNonHoistableCtx(MemoryAccess *Access,
+                                         __isl_keep isl_union_map *Writes);
 
   /// @brief Verify that all required invariant loads have been hoisted.
   ///
@@ -1666,7 +1684,7 @@ private:
   void hoistInvariantLoads();
 
   /// @brief Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
-  void addInvariantLoads(ScopStmt &Stmt, MemoryAccessList &InvMAs);
+  void addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs);
 
   /// @brief Create an id for @p Param and store it in the ParameterIds map.
   void createParameterId(const SCEV *Param);
@@ -1796,7 +1814,7 @@ private:
   void printAliasAssumptions(raw_ostream &OS) const;
   //@}
 
-  friend class ScopInfo;
+  friend class ScopBuilder;
 
 public:
   ~Scop();
@@ -1850,6 +1868,39 @@ public:
   inline const Region &getRegion() const { return R; }
   inline Region &getRegion() { return R; }
 
+  /// @brief Return the function this SCoP is in.
+  Function &getFunction() const { return *R.getEntry()->getParent(); }
+
+  /// @brief Check if @p L is contained in the SCoP.
+  bool contains(const Loop *L) const { return R.contains(L); }
+
+  /// @brief Check if @p BB is contained in the SCoP.
+  bool contains(const BasicBlock *BB) const { return R.contains(BB); }
+
+  /// @brief Check if @p I is contained in the SCoP.
+  bool contains(const Instruction *I) const { return R.contains(I); }
+
+  /// @brief Return the unique exit block of the SCoP.
+  BasicBlock *getExit() const { return R.getExit(); }
+
+  /// @brief Return the unique exiting block of the SCoP if any.
+  BasicBlock *getExitingBlock() const { return R.getExitingBlock(); }
+
+  /// @brief Return the unique entry block of the SCoP.
+  BasicBlock *getEntry() const { return R.getEntry(); }
+
+  /// @brief Return the unique entering block of the SCoP if any.
+  BasicBlock *getEnteringBlock() const { return R.getEnteringBlock(); }
+
+  /// @brief Return true if @p BB is the exit block of the SCoP.
+  bool isExit(BasicBlock *BB) const { return getExit() == BB; }
+
+  /// @brief Return a range of all basic blocks in the SCoP.
+  Region::block_range blocks() const { return R.blocks(); }
+
+  /// @brief Return true if and only if @p BB dominates the SCoP.
+  bool isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const;
+
   /// @brief Get the maximum depth of the loop.
   ///
   /// @return The maximum depth of the loop.
@@ -1890,6 +1941,15 @@ public:
   ///
   /// @returns True if the optimized SCoP can be executed.
   bool hasFeasibleRuntimeContext() const;
+
+  /// @brief Check if the assumption in @p Set is trivial or not.
+  ///
+  /// @param Set  The relations between parameters that are assumed to hold.
+  /// @param Sign Enum to indicate if the assumptions in @p Set are positive
+  ///             (needed/assumptions) or negative (invalid/restrictions).
+  ///
+  /// @returns True if the assumption @p Set is not trivial.
+  bool isEffectiveAssumption(__isl_keep isl_set *Set, AssumptionSign Sign);
 
   /// @brief Track and report an assumption.
   ///
@@ -1969,7 +2029,7 @@ public:
   }
 
   /// @brief Build the alias checks for this SCoP.
-  void buildAliasChecks(AliasAnalysis &AA);
+  bool buildAliasChecks(AliasAnalysis &AA);
 
   /// @brief Build all alias groups for this SCoP.
   ///
@@ -2033,13 +2093,27 @@ public:
   const_reverse_iterator rend() const { return Stmts.rend(); }
   //@}
 
+  /// @brief Return the set of required invariant loads.
   const InvariantLoadsSetTy &getRequiredInvariantLoads() const {
     return DC.RequiredILS;
   }
+
+  /// @brief Add @p LI to the set of required invariant loads.
+  void addRequiredInvariantLoad(LoadInst *LI) { DC.RequiredILS.insert(LI); }
+
+  /// @brief Return true if and only if @p LI is a required invariant load.
+  bool isRequiredInvariantLoad(LoadInst *LI) const {
+    return getRequiredInvariantLoads().count(LI);
+  }
+
+  /// @brief Return the set of boxed (thus overapproximated) loops.
   const BoxedLoopsSetTy &getBoxedLoops() const { return DC.BoxedLoopsSet; }
+
+  /// @brief Return true if and only if @p R is a non-affine subregion.
   bool isNonAffineSubRegion(const Region *R) {
     return DC.NonAffineSubRegionSet.count(R);
   }
+
   const MapInsnToMemAcc &getInsnToMemAccMap() const { return DC.InsnToMemAcc; }
 
   /// @brief Return the (possibly new) ScopArrayInfo object for @p Access.
@@ -2182,28 +2256,28 @@ static inline raw_ostream &operator<<(raw_ostream &O, const Scop &scop) {
 }
 
 /// @brief Build the Polly IR (Scop and ScopStmt) on a Region.
-class ScopInfo : public RegionPass {
+class ScopBuilder {
   //===-------------------------------------------------------------------===//
-  ScopInfo(const ScopInfo &) = delete;
-  const ScopInfo &operator=(const ScopInfo &) = delete;
+  ScopBuilder(const ScopBuilder &) = delete;
+  const ScopBuilder &operator=(const ScopBuilder &) = delete;
 
   /// @brief The AliasAnalysis to build AliasSetTracker.
-  AliasAnalysis *AA;
+  AliasAnalysis &AA;
 
   /// @brief Target data for element size computing.
-  const DataLayout *DL;
+  const DataLayout &DL;
 
   /// @brief DominatorTree to reason about guaranteed execution.
-  DominatorTree *DT;
+  DominatorTree &DT;
 
   /// @brief LoopInfo for information about loops
-  LoopInfo *LI;
+  LoopInfo &LI;
 
   /// @biref Valid Regions for Scop
-  ScopDetection *SD;
+  ScopDetection &SD;
 
   /// @brief The ScalarEvolution to help building Scop.
-  ScalarEvolution *SE;
+  ScalarEvolution &SE;
 
   /// @brief Set of instructions that might read any memory location.
   SmallVector<Instruction *, 16> GlobalReads;
@@ -2225,53 +2299,47 @@ class ScopInfo : public RegionPass {
   ///
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
-  /// @param R          The region on which to build the data access dictionary.
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMultiDimFixed(MemAccInst Inst, Loop *L, Region *R);
+  bool buildAccessMultiDimFixed(MemAccInst Inst, Loop *L);
 
   /// @brief Try to build a multi-dimensional parameteric sized MemoryAccess
   ///        from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
-  /// @param R          The region on which to build the data access dictionary.
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMultiDimParam(MemAccInst Inst, Loop *L, Region *R);
+  bool buildAccessMultiDimParam(MemAccInst Inst, Loop *L);
 
   /// @brief Try to build a MemoryAccess for a memory intrinsic.
   ///
   /// @param Inst       The instruction that access the memory
   /// @param L          The parent loop of the instruction
-  /// @param R          The region on which to build the data access dictionary.
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMemIntrinsic(MemAccInst Inst, Loop *L, Region *R);
+  bool buildAccessMemIntrinsic(MemAccInst Inst, Loop *L);
 
   /// @brief Try to build a MemoryAccess for a call instruction.
   ///
   /// @param Inst       The call instruction that access the memory
   /// @param L          The parent loop of the instruction
-  /// @param R          The region on which to build the data access dictionary.
   ///
   /// @returns True if the access could be built, False otherwise.
-  bool buildAccessCallInst(MemAccInst Inst, Loop *L, Region *R);
+  bool buildAccessCallInst(MemAccInst Inst, Loop *L);
 
   /// @brief Build a single-dimensional parameteric sized MemoryAccess
   ///        from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
-  /// @param R          The region on which to build the data access dictionary.
-  void buildAccessSingleDim(MemAccInst Inst, Loop *L, Region *R);
+  void buildAccessSingleDim(MemAccInst Inst, Loop *L);
 
   /// @brief Build an instance of MemoryAccess from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param L          The parent loop of the instruction
-  /// @param R          The region on which to build the data access dictionary.
-  void buildMemoryAccess(MemAccInst Inst, Loop *L, Region *R);
+  void buildMemoryAccess(MemAccInst Inst, Loop *L);
 
   /// @brief Analyze and extract the cross-BB scalar dependences (or,
   ///        dataflow dependencies) of an instruction.
@@ -2289,35 +2357,31 @@ class ScopInfo : public RegionPass {
   /// @brief Create MemoryAccesses for the given PHI node in the given region.
   ///
   /// @param PHI                The PHI node to be handled
-  /// @param R                  The SCoP region
   /// @param NonAffineSubRegion The non affine sub-region @p PHI is in.
   /// @param IsExitBlock        Flag to indicate that @p PHI is in the exit BB.
-  void buildPHIAccesses(PHINode *PHI, Region &R, Region *NonAffineSubRegion,
+  void buildPHIAccesses(PHINode *PHI, Region *NonAffineSubRegion,
                         bool IsExitBlock = false);
 
   /// @brief Build the access functions for the subregion @p SR.
   ///
-  /// @param R            The SCoP region.
   /// @param SR           A subregion of @p R.
   /// @param InsnToMemAcc The Instruction to MemoryAccess mapping.
-  void buildAccessFunctions(Region &R, Region &SR);
+  void buildAccessFunctions(Region &SR);
 
   /// @brief Create ScopStmt for all BBs and non-affine subregions of @p SR.
   ///
-  /// @param R  The SCoP region.
   /// @param SR A subregion of @p R.
   ///
   /// Some of the statments might be optimized away later when they do not
   /// access any memory and thus have no effect.
-  void buildStmts(Region &R, Region &SR);
+  void buildStmts(Region &SR);
 
   /// @brief Build the access functions for the basic block @p BB
   ///
-  /// @param R                  The SCoP region.
   /// @param BB                 A basic block in @p R.
   /// @param NonAffineSubRegion The non affine sub-region @p BB is in.
   /// @param IsExitBlock        Flag to indicate that @p BB is in the exit BB.
-  void buildAccessFunctions(Region &R, BasicBlock &BB,
+  void buildAccessFunctions(BasicBlock &BB,
                             Region *NonAffineSubRegion = nullptr,
                             bool IsExitBlock = false);
 
@@ -2413,9 +2477,10 @@ class ScopInfo : public RegionPass {
   void addPHIReadAccess(PHINode *PHI);
 
 public:
-  static char ID;
-  explicit ScopInfo();
-  ~ScopInfo();
+  explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
+                       const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
+                       ScopDetection &SD, ScalarEvolution &SE);
+  ~ScopBuilder() {}
 
   /// @brief Try to build the Polly IR of static control part on the current
   ///        SESE-Region.
@@ -2425,21 +2490,52 @@ public:
   ///         return null otherwise.
   Scop *getScop() { return scop.get(); }
   const Scop *getScop() const { return scop.get(); }
+};
 
-  /// @name RegionPass interface
-  //@{
-  virtual bool runOnRegion(Region *R, RGPassManager &RGM);
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const;
-  virtual void releaseMemory() { clear(); }
-  virtual void print(raw_ostream &OS, const Module *) const;
-  //@}
+/// @brief The legacy pass manager's analysis pass to compute scop information
+///        for a region.
+class ScopInfoRegionPass : public RegionPass {
+  /// @brief The ScopBuilder pointer which is used to construct a Scop.
+  std::unique_ptr<ScopBuilder> SI;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  ScopInfoRegionPass() : RegionPass(ID) {}
+  ~ScopInfoRegionPass() {}
+
+  /// @brief Build ScopBuilder object, which constructs Polly IR of static
+  ///        control part for the current SESE-Region.
+  ///
+  /// @return Return Scop for the current Region.
+  Scop *getScop() {
+    if (SI)
+      return SI.get()->getScop();
+    else
+      return nullptr;
+  }
+  const Scop *getScop() const {
+    if (SI)
+      return SI.get()->getScop();
+    else
+      return nullptr;
+  }
+
+  /// @brief Calculate the polyhedral scop information for a given Region.
+  bool runOnRegion(Region *R, RGPassManager &RGM) override;
+
+  void releaseMemory() override { SI.reset(); }
+
+  void print(raw_ostream &O, const Module *M = nullptr) const override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
 } // end namespace polly
 
 namespace llvm {
 class PassRegistry;
-void initializeScopInfoPass(llvm::PassRegistry &);
+void initializeScopInfoRegionPassPass(llvm::PassRegistry &);
 }
 
 #endif

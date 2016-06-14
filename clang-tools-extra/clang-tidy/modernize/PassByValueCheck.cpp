@@ -141,14 +141,14 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
                   // ParenListExpr is generated instead of a CXXConstructExpr,
                   // filtering out templates automatically for us.
                   withInitializer(cxxConstructExpr(
-                      has(declRefExpr(to(
+                      has(ignoringParenImpCasts(declRefExpr(to(
                           parmVarDecl(
                               hasType(qualType(
                                   // Match only const-ref or a non-const value
                                   // parameters. Rvalues and const-values
                                   // shouldn't be modified.
                                   anyOf(constRefType(), nonConstValueType()))))
-                              .bind("Param")))),
+                              .bind("Param"))))),
                       hasDeclaration(cxxConstructorDecl(
                           isCopyConstructor(), unless(isDeleted()),
                           hasDeclContext(
@@ -179,6 +179,11 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   // If the parameter is used or anything other than the copy, do not apply
   // the changes.
   if (!paramReferredExactlyOnce(Ctor, ParamDecl))
+    return;
+
+  // If the parameter is trivial to copy, don't move it. Moving a trivivally
+  // copyable type will cause a problem with misc-move-const-arg
+  if (ParamDecl->getType().isTriviallyCopyableType(*Result.Context)) 
     return;
 
   auto Diag = diag(ParamDecl->getLocStart(), "pass by value and use std::move");

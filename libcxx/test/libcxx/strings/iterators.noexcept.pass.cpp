@@ -34,17 +34,17 @@ int main()
 //  basic tests
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<char *>::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<const char *>::value), "");
-    
+
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::move_iterator<char *> >      ::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::move_iterator<const char *> >::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::reverse_iterator<char *> >      ::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::reverse_iterator<const char *> >::value), "");
-    
+
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::__wrap_iter<char *> >      ::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::__wrap_iter<const char *> >::value), "");
-    
+
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<std::reverse_iterator<std::__wrap_iter<char *> > > ::value), "");
-    
+
 //  iterators in the libc++ test suite
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<output_iterator       <char *> >::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<input_iterator        <char *> >::value), "");
@@ -52,9 +52,9 @@ int main()
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<bidirectional_iterator<char *> >::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<random_access_iterator<char *> >::value), "");
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<ThrowingIterator      <char *> >::value), "");
-    
+
     static_assert(( std::__libcpp_string_gets_noexcept_iterator<NonThrowingIterator   <char *> >::value), "");
-	
+
 //
 //  iterators from libc++'s containers
 //

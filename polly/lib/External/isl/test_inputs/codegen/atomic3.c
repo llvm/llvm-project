@@ -3,6 +3,7 @@ for (int c0 = 0; c0 <= 64; c0 += 1) {
     sync();
   } else if (c0 >= 1) {
     sync();
-  } else
+  } else {
     sync();
+  }
 }

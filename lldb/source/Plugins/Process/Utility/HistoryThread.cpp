@@ -76,7 +76,7 @@ HistoryThread::GetStackFrameList ()
 {
     // FIXME do not throw away the lock after we acquire it..
     std::unique_lock<std::mutex> lock(m_framelist_mutex);
-    lock.release();
+    lock.unlock();
     if (m_framelist.get() == NULL)
     {
         m_framelist.reset (new StackFrameList (*this, StackFrameListSP(), true));

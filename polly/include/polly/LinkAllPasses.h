@@ -37,7 +37,7 @@ llvm::Pass *createJSONExporterPass();
 llvm::Pass *createJSONImporterPass();
 llvm::Pass *createPollyCanonicalizePass();
 llvm::Pass *createScopDetectionPass();
-llvm::Pass *createScopInfoPass();
+llvm::Pass *createScopInfoRegionPassPass();
 llvm::Pass *createIslAstInfoPass();
 llvm::Pass *createCodeGenerationPass();
 llvm::Pass *createIslScheduleOptimizerPass();
@@ -65,7 +65,7 @@ struct PollyForcePassLinking {
     polly::createJSONExporterPass();
     polly::createJSONImporterPass();
     polly::createScopDetectionPass();
-    polly::createScopInfoPass();
+    polly::createScopInfoRegionPassPass();
     polly::createPollyCanonicalizePass();
     polly::createIslAstInfoPass();
     polly::createCodeGenerationPass();

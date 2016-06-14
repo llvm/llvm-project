@@ -144,7 +144,7 @@ IRExecutionUnit::DisassembleFunction (Stream &stream,
 
     for (JittedFunction &function : m_jitted_functions)
     {
-        if (function.m_name.AsCString() != m_name.AsCString())
+        if (function.m_name == m_name)
         {
             func_local_addr = function.m_local_addr;
             func_remote_addr = function.m_remote_addr;
@@ -235,10 +235,6 @@ IRExecutionUnit::DisassembleFunction (Stream &stream,
 
     InstructionList &instruction_list = disassembler_sp->GetInstructionList();
     instruction_list.Dump(&stream, true, true, &exe_ctx);
-
-    // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-    // I'll fix that but for now, just clear the list and it will go away nicely.
-    disassembler_sp->GetInstructionList().Clear();
     return ret;
 }
 
@@ -770,7 +766,7 @@ struct IRExecutionUnit::SearchSpec
     ConstString name;
     uint32_t    mask;
 
-    SearchSpec(ConstString n, uint32_t m = lldb::eFunctionNameTypeAuto) :
+    SearchSpec(ConstString n, uint32_t m = lldb::eFunctionNameTypeFull) :
         name(n),
         mask(m)
     {
@@ -830,6 +826,36 @@ IRExecutionUnit::CollectCandidateCPlusPlusNames(std::vector<IRExecutionUnit::Sea
 
     }
 }
+
+void
+IRExecutionUnit::CollectFallbackNames(std::vector<SearchSpec> &fallback_specs,
+                                      const std::vector<SearchSpec> &C_specs)
+{
+    // As a last-ditch fallback, try the base name for C++ names.  It's terrible,
+    // but the DWARF doesn't always encode "extern C" correctly.
+    
+    for (const SearchSpec &C_spec : C_specs)
+    {
+        const ConstString &name = C_spec.name;
+        
+        if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString()))
+        {
+            Mangled mangled_name(name);
+            ConstString demangled_name = mangled_name.GetDemangledName(lldb::eLanguageTypeC_plus_plus);
+            if (!demangled_name.IsEmpty())
+            {
+                const char *demangled_cstr = demangled_name.AsCString();
+                const char *lparen_loc = strchr(demangled_cstr, '(');
+                if (lparen_loc)
+                {
+                    llvm::StringRef base_name(demangled_cstr, lparen_loc-demangled_cstr);
+                    fallback_specs.push_back(ConstString(base_name));
+                }
+            }
+        }
+    }
+}
+
 
 lldb::addr_t
 IRExecutionUnit::FindInSymbols(const std::vector<IRExecutionUnit::SearchSpec> &specs, const lldb_private::SymbolContext &sc)
@@ -1030,6 +1056,14 @@ IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name)
     {
         CollectCandidateCPlusPlusNames(candidate_CPlusPlus_names, candidate_C_names, m_sym_ctx);
         ret = FindInSymbols(candidate_CPlusPlus_names, m_sym_ctx);
+    }
+    
+    if (ret == LLDB_INVALID_ADDRESS)
+    {
+        std::vector<SearchSpec> candidate_fallback_names;
+
+        CollectFallbackNames(candidate_fallback_names, candidate_C_names);
+        ret = FindInSymbols(candidate_fallback_names, m_sym_ctx);
     }
 
     return ret;

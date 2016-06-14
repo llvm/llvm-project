@@ -19,6 +19,9 @@
 #include <new>
 #include <cstdlib>
 #include <cassert>
+#include <system_error>
+
+#include "test_macros.h"
 
 class G
 {
@@ -42,6 +45,8 @@ public:
 int G::n_alive = 0;
 bool G::op_run = false;
 
+void foo() {}
+
 int main()
 {
     {
@@ -50,5 +55,23 @@ int main()
         assert(t0.joinable());
         t0.join();
         assert(!t0.joinable());
+#ifndef TEST_HAS_NO_EXCEPTIONS
+        try {
+            t0.join();
+            assert(false);
+        } catch (std::system_error const&) {
+        }
+#endif
     }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    {
+        std::thread t0(foo);
+        t0.detach();
+        try {
+            t0.join();
+            assert(false);
+        } catch (std::system_error const&) {
+        }
+    }
+#endif
 }

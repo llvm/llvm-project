@@ -81,21 +81,23 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto SizeOfExpr =
       expr(anyOf(sizeOfExpr(has(type())), sizeOfExpr(has(expr()))));
   const auto SizeOfZero = expr(
-      sizeOfExpr(has(expr(ignoringParenImpCasts(integerLiteral(equals(0)))))));
+      sizeOfExpr(has(ignoringParenImpCasts(expr(integerLiteral(equals(0)))))));
 
   // Detect expression like: sizeof(ARRAYLEN);
   // Note: The expression 'sizeof(sizeof(0))' is a portable trick used to know
   //       the sizeof size_t.
   if (WarnOnSizeOfConstant) {
-    Finder->addMatcher(expr(sizeOfExpr(has(ConstantExpr)), unless(SizeOfZero))
-                           .bind("sizeof-constant"),
-                       this);
+    Finder->addMatcher(
+        expr(sizeOfExpr(has(ignoringParenImpCasts(ConstantExpr))),
+             unless(SizeOfZero))
+            .bind("sizeof-constant"),
+        this);
   }
 
   // Detect expression like: sizeof(this);
   if (WarnOnSizeOfThis) {
     Finder->addMatcher(
-        expr(sizeOfExpr(has(expr(ignoringParenImpCasts(cxxThisExpr())))))
+        expr(sizeOfExpr(has(ignoringParenImpCasts(expr(cxxThisExpr())))))
             .bind("sizeof-this"),
         this);
   }
@@ -105,12 +107,12 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstStrLiteralDecl =
       varDecl(isDefinition(), hasType(qualType(hasCanonicalType(CharPtrType))),
               hasInitializer(ignoringParenImpCasts(stringLiteral())));
-  Finder->addMatcher(
-      expr(sizeOfExpr(has(expr(hasType(qualType(hasCanonicalType(CharPtrType))),
-                               ignoringParenImpCasts(declRefExpr(
-                                   hasDeclaration(ConstStrLiteralDecl)))))))
-          .bind("sizeof-charp"),
-      this);
+  Finder->addMatcher(expr(sizeOfExpr(has(ignoringParenImpCasts(expr(
+                              hasType(qualType(hasCanonicalType(CharPtrType))),
+                              ignoringParenImpCasts(declRefExpr(
+                                  hasDeclaration(ConstStrLiteralDecl))))))))
+                         .bind("sizeof-charp"),
+                     this);
 
   // Detect sizeof(ptr) where ptr points to an aggregate (i.e. sizeof(&S)).
   const auto ArrayExpr = expr(ignoringParenImpCasts(
@@ -188,10 +190,11 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Detect strange double-sizeof expression like: sizeof(sizeof(...));
   // Note: The expression 'sizeof(sizeof(0))' is accepted.
-  Finder->addMatcher(expr(sizeOfExpr(has(expr(hasSizeOfDescendant(
-                              8, expr(SizeOfExpr, unless(SizeOfZero)))))))
-                         .bind("sizeof-sizeof-expr"),
-                     this);
+  Finder->addMatcher(
+      expr(sizeOfExpr(has(ignoringParenImpCasts(expr(
+               hasSizeOfDescendant(8, expr(SizeOfExpr, unless(SizeOfZero))))))))
+          .bind("sizeof-sizeof-expr"),
+      this);
 }
 
 void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {

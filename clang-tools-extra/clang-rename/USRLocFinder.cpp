@@ -94,7 +94,9 @@ public:
 
     checkNestedNameSpecifierLoc(Expr->getQualifierLoc());
     if (getUSRForDecl(Decl) == USR) {
-      LocationsFound.push_back(Expr->getLocation());
+      const SourceManager &Manager = Decl->getASTContext().getSourceManager();
+      SourceLocation Location = Manager.getSpellingLoc(Expr->getLocation());
+      LocationsFound.push_back(Location);
     }
 
     return true;
@@ -103,9 +105,38 @@ public:
   bool VisitMemberExpr(const MemberExpr *Expr) {
     const auto *Decl = Expr->getFoundDecl().getDecl();
     if (getUSRForDecl(Decl) == USR) {
-      LocationsFound.push_back(Expr->getMemberLoc());
+      const SourceManager &Manager = Decl->getASTContext().getSourceManager();
+      SourceLocation Location = Manager.getSpellingLoc(Expr->getMemberLoc());
+      LocationsFound.push_back(Location);
     }
     return true;
+  }
+
+  bool VisitCXXConstructExpr(const CXXConstructExpr *Expr) {
+    CXXConstructorDecl *Decl = Expr->getConstructor();
+
+    if (getUSRForDecl(Decl) == USR) {
+      // This takes care of 'new <name>' expressions.
+      LocationsFound.push_back(Expr->getLocation());
+    }
+
+    return true;
+  }
+
+  bool VisitCXXStaticCastExpr(clang::CXXStaticCastExpr *Expr) {
+    return handleCXXNamedCastExpr(Expr);
+  }
+
+  bool VisitCXXDynamicCastExpr(clang::CXXDynamicCastExpr *Expr) {
+    return handleCXXNamedCastExpr(Expr);
+  }
+
+  bool VisitCXXReinterpretCastExpr(clang::CXXReinterpretCastExpr *Expr) {
+    return handleCXXNamedCastExpr(Expr);
+  }
+
+  bool VisitCXXConstCastExpr(clang::CXXConstCastExpr *Expr) {
+    return handleCXXNamedCastExpr(Expr);
   }
 
   // Non-visitors:
@@ -125,6 +156,23 @@ private:
         LocationsFound.push_back(NameLoc.getLocalBeginLoc());
       NameLoc = NameLoc.getPrefix();
     }
+  }
+
+  bool handleCXXNamedCastExpr(clang::CXXNamedCastExpr *Expr) {
+    clang::QualType Type = Expr->getType();
+    // See if this a cast of a pointer.
+    const RecordDecl* Decl = Type->getPointeeCXXRecordDecl();
+    if (!Decl) {
+      // See if this is a cast of a reference.
+      Decl = Type->getAsCXXRecordDecl();
+    }
+
+    if (Decl && getUSRForDecl(Decl) == USR) {
+      SourceLocation Location = Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
+      LocationsFound.push_back(Location);
+    }
+
+    return true;
   }
 
   // All the locations of the USR were found.

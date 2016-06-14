@@ -65,6 +65,7 @@ namespace readability {
     m(ValueTemplateParameter) \
     m(TemplateTemplateParameter) \
     m(TemplateParameter) \
+    m(TypeAlias) \
 
 enum StyleKind {
 #define ENUMERATE(v) SK_ ## v,
@@ -257,6 +258,9 @@ static StyleKind findStyleKind(
     const std::vector<IdentifierNamingCheck::NamingStyle> &NamingStyles) {
   if (isa<TypedefDecl>(D) && NamingStyles[SK_Typedef].isSet())
     return SK_Typedef;
+
+  if (isa<TypeAliasDecl>(D) && NamingStyles[SK_TypeAlias].isSet())
+    return SK_TypeAlias;
 
   if (const auto *Decl = dyn_cast<NamespaceDecl>(D)) {
     if (Decl->isAnonymousNamespace())

@@ -14,7 +14,7 @@
 // template <class Integral>
 //     Integral
 //     atomic_fetch_xor(volatile atomic<Integral>* obj, Integral op);
-// 
+//
 // template <class Integral>
 //     Integral
 //     atomic_fetch_xor(atomic<Integral>* obj, Integral op);

@@ -373,12 +373,10 @@ protected:
 
         Stream &s = result.GetOutputStream();
 
-        bool get_file_globals = true;
-        
         // Be careful about the stack frame, if any summary formatter runs code, it might clear the StackFrameList
         // for the thread.  So hold onto a shared pointer to the frame so it stays alive.
         
-        VariableList *variable_list = frame->GetVariableList (get_file_globals);
+        VariableList *variable_list = frame->GetVariableList (m_option_variable.show_globals);
 
         VariableSP var_sp;
         ValueObjectSP valobj_sp;
@@ -515,13 +513,16 @@ protected:
                         switch (var_sp->GetScope())
                         {
                             case eValueTypeVariableGlobal:
-                                dump_variable = m_option_variable.show_globals;
+                                // Always dump globals since we only fetched them if
+                                // m_option_variable.show_scope was true
                                 if (dump_variable && m_option_variable.show_scope)
                                     scope_string = "GLOBAL: ";
                                 break;
 
                             case eValueTypeVariableStatic:
-                                dump_variable = m_option_variable.show_globals;
+                                // Always dump globals since we only fetched them if
+                                // m_option_variable.show_scope was true, or this is
+                                // a static variable from a block in the current scope
                                 if (dump_variable && m_option_variable.show_scope)
                                     scope_string = "STATIC: ";
                                 break;

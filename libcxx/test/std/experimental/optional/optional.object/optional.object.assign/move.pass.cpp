@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // XFAIL: libcpp-no-exceptions
 // <optional>
 
@@ -17,8 +18,6 @@
 #include <experimental/optional>
 #include <type_traits>
 #include <cassert>
-
-#if _LIBCPP_STD_VER > 11
 
 using std::experimental::optional;
 
@@ -42,11 +41,8 @@ struct Y {};
 
 bool X::throw_now = false;
 
-#endif  // _LIBCPP_STD_VER > 11
-
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     {
         static_assert(std::is_nothrow_move_assignable<optional<int>>::value, "");
         optional<int> opt;
@@ -100,5 +96,4 @@ int main()
     {
         static_assert(std::is_nothrow_move_assignable<optional<Y>>::value, "");
     }
-#endif  // _LIBCPP_STD_VER > 11
 }

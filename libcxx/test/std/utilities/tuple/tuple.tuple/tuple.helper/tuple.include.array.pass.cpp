@@ -18,7 +18,7 @@
 //     typedef Ti type;
 // };
 //
-//  LWG #2212 says that tuple_size and tuple_element must be 
+//  LWG #2212 says that tuple_size and tuple_element must be
 //     available after including <utility>
 
 #include <array>

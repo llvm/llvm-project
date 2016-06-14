@@ -23,9 +23,10 @@
           S6(2, n);
           S1(n + 1);
         }
-      } else if (c0 + 2 >= 2 * n)
+      } else if (c0 + 2 >= 2 * n) {
         for (int c2 = 1; c2 < -n + c0; c2 += 1)
           S5(-n + c0, n, c2);
+      }
       if (c0 >= n + 3) {
         S6(-n + c0, n);
         S1(c0 - 1);
@@ -39,8 +40,9 @@
         if (n + 1 >= c0)
           S6(1, c0 - 1);
       }
-    } else
+    } else {
       S1(1);
+    }
     if (c0 % 2 == 0)
       S3(c0 / 2);
     for (int c1 = max(1, -n + c0); c1 < (c0 + 1) / 2; c1 += 1)

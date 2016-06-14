@@ -17,11 +17,7 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     typedef std::unique_ptr<int> upint;
     std::tuple<upint> t(upint(new int(4)));
     upint p = std::get<upint>(t);
-#else
-#error
-#endif
 }

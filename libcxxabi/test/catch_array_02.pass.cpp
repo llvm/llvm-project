@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Can you have a catch clause of array type that catches anything?
+// UNSUPPORTED: libcxxabi-no-exceptions
 
 #include <cassert>
 

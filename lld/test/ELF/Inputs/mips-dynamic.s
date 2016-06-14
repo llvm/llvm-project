@@ -17,10 +17,12 @@ foo1:
   .data
   .globl data0
   .type data0, @object
+  .size data0, 4
 data0:
   .word 0
 
   .globl data1
   .type data1, @object
+  .size data1, 4
 data1:
   .word 0

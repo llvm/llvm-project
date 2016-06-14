@@ -12,6 +12,7 @@
 #include "Error.h"
 #include "ICF.h"
 #include "InputFiles.h"
+#include "InputSection.h"
 #include "LinkerScript.h"
 #include "SymbolListFile.h"
 #include "SymbolTable.h"
@@ -19,6 +20,7 @@
 #include "Writer.h"
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -49,32 +51,32 @@ bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   return !HasError;
 }
 
+// Parses a linker -m option.
 static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
   if (S.endswith("_fbsd"))
     S = S.drop_back(5);
-  if (S == "elf32btsmip")
-    return {ELF32BEKind, EM_MIPS};
-  if (S == "elf32ltsmip")
-    return {ELF32LEKind, EM_MIPS};
-  if (S == "elf64btsmip")
-    return {ELF64BEKind, EM_MIPS};
-  if (S == "elf64ltsmip")
-    return {ELF64LEKind, EM_MIPS};
-  if (S == "elf32ppc")
-    return {ELF32BEKind, EM_PPC};
-  if (S == "elf64ppc")
-    return {ELF64BEKind, EM_PPC64};
-  if (S == "elf_i386")
-    return {ELF32LEKind, EM_386};
-  if (S == "elf_x86_64")
-    return {ELF64LEKind, EM_X86_64};
-  if (S == "aarch64linux")
-    return {ELF64LEKind, EM_AARCH64};
-  if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
-    error("Windows targets are not supported on the ELF frontend: " + S);
-  else
-    error("unknown emulation: " + S);
-  return {ELFNoneKind, EM_NONE};
+
+  std::pair<ELFKind, uint16_t> Ret =
+      StringSwitch<std::pair<ELFKind, uint16_t>>(S)
+          .Case("aarch64linux", {ELF64LEKind, EM_AARCH64})
+          .Case("armelf_linux_eabi", {ELF32LEKind, EM_ARM})
+          .Case("elf32btsmip", {ELF32BEKind, EM_MIPS})
+          .Case("elf32ltsmip", {ELF32LEKind, EM_MIPS})
+          .Case("elf32ppc", {ELF32BEKind, EM_PPC})
+          .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
+          .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
+          .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
+          .Case("elf_i386", {ELF32LEKind, EM_386})
+          .Case("elf_x86_64", {ELF64LEKind, EM_X86_64})
+          .Default({ELFNoneKind, EM_NONE});
+
+  if (Ret.first == ELFNoneKind) {
+    if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
+      error("Windows targets are not supported on the ELF frontend: " + S);
+    else
+      error("unknown emulation: " + S);
+  }
+  return Ret;
 }
 
 // Returns slices of MB by parsing MB as an archive file.
@@ -114,9 +116,6 @@ void LinkerDriver::addFile(StringRef Path) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (Cpio)
-    Cpio->append(relativeToRoot(Path), MBRef.getBuffer());
-
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
     readLinkerScript(MBRef);
@@ -152,6 +151,10 @@ Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
+
+  if (Cpio)
+    Cpio->append(relativeToRoot(Path), MBRef.getBuffer());
+
   return MBRef;
 }
 
@@ -246,21 +249,22 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     return;
   }
   if (Args.hasArg(OPT_version)) {
-    printVersion();
+    outs() << getVersionString();
     return;
   }
-
-  readConfigs(Args);
-  initLLVM(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_reproduce)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
     Cpio.reset(CpioFile::create(Arg->getValue()));
-    if (Cpio)
+    if (Cpio) {
       Cpio->append("response.txt", createResponseFile(Args));
+      Cpio->append("version.txt", getVersionString());
+    }
   }
 
+  readConfigs(Args);
+  initLLVM(Args);
   createFiles(Args);
   checkOptions(Args);
   if (HasError)
@@ -337,6 +341,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Entry = getString(Args, OPT_entry);
   Config->Fini = getString(Args, OPT_fini, "_fini");
   Config->Init = getString(Args, OPT_init, "_init");
+  Config->LtoAAPipeline = getString(Args, OPT_lto_aa_pipeline);
   Config->LtoNewPmPasses = getString(Args, OPT_lto_newpm_passes);
   Config->OutputFile = getString(Args, OPT_o);
   Config->SoName = getString(Args, OPT_soname);
@@ -421,6 +426,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     case OPT_l:
       addLibrary(Arg->getValue());
       break;
+    case OPT_alias_script_T:
     case OPT_INPUT:
     case OPT_script:
       addFile(Arg->getValue());
@@ -507,5 +513,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     markLive<ELFT>();
   if (Config->ICF)
     doIcf<ELFT>();
+
+  // MergeInputSection::splitIntoPieces needs to be called before
+  // any call of MergeInputSection::getOffset. Do that.
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab.getObjectFiles())
+    for (InputSectionBase<ELFT> *S : F->getSections())
+      if (S && S != &InputSection<ELFT>::Discarded && S->Live)
+        if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
+          MS->splitIntoPieces();
+
   writeResult<ELFT>(&Symtab);
 }

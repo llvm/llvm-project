@@ -1395,7 +1395,7 @@ __kmp_join_barrier(int gtid)
     KMP_DEBUG_ASSERT(this_thr == team->t.t_threads[tid]);
     KA_TRACE(10, ("__kmp_join_barrier: T#%d(%d:%d) arrived at join barrier\n", gtid, team_id, tid));
 
-#if OMPT_SUPPORT 
+#if OMPT_SUPPORT
 #if OMPT_TRACE
     if (ompt_enabled &&
         ompt_callbacks.ompt_callback(ompt_event_barrier_begin)) {

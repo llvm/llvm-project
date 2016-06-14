@@ -3,7 +3,7 @@
 #===============================================================================
 # Setup Project
 #===============================================================================
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.4.3)
 
 if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
@@ -126,6 +126,7 @@ option(LIBCXX_ENABLE_MONOTONIC_CLOCK
   "Build libc++ with support for a monotonic clock.
    This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
+option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns
@@ -170,6 +171,11 @@ option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
 if(LIBCXX_ENABLE_THREADS AND NOT LIBCXX_ENABLE_MONOTONIC_CLOCK)
   message(FATAL_ERROR "LIBCXX_ENABLE_MONOTONIC_CLOCK can only be set to OFF"
                       " when LIBCXX_ENABLE_THREADS is also set to OFF.")
+endif()
+
+if(LIBCXX_HAS_PTHREAD_API AND NOT LIBCXX_ENABLE_THREADS)
+  message(FATAL_ERROR "LIBCXX_HAS_PTHREAD_API can only be set to ON"
+                      " when LIBCXX_ENABLE_THREADS is also set to ON.")
 endif()
 
 # Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
@@ -241,6 +247,18 @@ set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
 
+# Include macros for adding and removing libc++ flags.
+include(HandleLibcxxFlags)
+
+# Target flags ================================================================
+# These flags get added to CMAKE_CXX_FLAGS and CMAKE_C_FLAGS so that
+# 'config-ix' use them during feature checks. It also adds them to both
+# 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
+add_target_flags_if(LIBCXX_BUILD_32_BITS "-m32")
+add_target_flags_if(LIBCXX_TARGET_TRIPLE "-target ${LIBCXX_TARGET_TRIPLE}")
+add_target_flags_if(LIBCXX_SYSROOT "--sysroot=${LIBCXX_SYSROOT}")
+add_target_flags_if(LIBCXX_GCC_TOOLCHAIN "-gcc-toolchain ${LIBCXX_GCC_TOOLCHAIN}")
+
 # Configure compiler.
 include(config-ix)
 
@@ -257,9 +275,6 @@ string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 #===============================================================================
 
 include(HandleLibCXXABI) # Setup the ABI library flags
-
-# Include macros for adding and removing libc++ flags.
-include(HandleLibcxxFlags)
 
 # Remove flags that may have snuck in.
 remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
@@ -282,11 +297,6 @@ endif()
 # headers
 add_compile_flags_if_supported(-nostdinc++)
 
-# Target flags ================================================================
-add_flags_if(LIBCXX_BUILD_32_BITS -m32)
-add_flags_if(LIBCXX_TARGET_TRIPLE "-target ${LIBCXX_TARGET_TRIPLE}")
-add_flags_if(LIBCXX_SYSROOT "--sysroot ${LIBCXX_SYSROOT}")
-add_flags_if(LIBCXX_GCC_TOOLCHAIN "-gcc-toolchain ${LIBCXX_GCC_TOOLCHAIN}")
 
 # Warning flags ===============================================================
 add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -384,6 +394,7 @@ config_define_if_not(LIBCXX_ENABLE_THREADS _LIBCPP_HAS_NO_THREADS)
 config_define_if_not(LIBCXX_ENABLE_MONOTONIC_CLOCK _LIBCPP_HAS_NO_MONOTONIC_CLOCK)
 config_define_if_not(LIBCXX_ENABLE_THREAD_UNSAFE_C_FUNCTIONS _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS)
 
+config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 
 if (LIBCXX_NEEDS_SITE_CONFIG)

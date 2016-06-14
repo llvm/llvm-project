@@ -64,6 +64,7 @@ RegisterInfo g_register_infos[] =
     { DEFINE_GPR(eip,    "pc"),     { ehframe_eip_i386,     dwarf_eip_i386,      LLDB_REGNUM_GENERIC_PC,    LLDB_INVALID_REGNUM,  lldb_eip_i386   },  nullptr,      nullptr},
     { DEFINE_GPR_BIN(eflags, "flags"), { ehframe_eflags_i386, dwarf_eflags_i386,   LLDB_REGNUM_GENERIC_FLAGS, LLDB_INVALID_REGNUM,  lldb_eflags_i386},  nullptr,      nullptr},
 };
+static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
 
 // Array of lldb register numbers used to define the set of all General Purpose Registers
 uint32_t g_gpr_reg_indices[] =
@@ -106,7 +107,9 @@ RegisterContextWindows_x86::GetRegisterCount()
 const RegisterInfo *
 RegisterContextWindows_x86::GetRegisterInfoAtIndex(size_t reg)
 {
-    return &g_register_infos[reg];
+    if (reg < k_num_register_infos)
+        return &g_register_infos[reg];
+    return NULL;
 }
 
 size_t

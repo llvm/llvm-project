@@ -15,7 +15,7 @@
 // template <class T>
 //     bool
 //     atomic_compare_exchange_strong(volatile atomic<T>* obj, T* expc, T desr);
-// 
+//
 // template <class T>
 //     bool
 //     atomic_compare_exchange_strong(atomic<T>* obj, T* expc, T desr);

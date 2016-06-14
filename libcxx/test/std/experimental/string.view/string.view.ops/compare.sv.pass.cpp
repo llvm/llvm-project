@@ -19,7 +19,7 @@
 int sign ( int x ) { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
 template<typename CharT>
-void test1 ( std::experimental::basic_string_view<CharT> sv1, 
+void test1 ( std::experimental::basic_string_view<CharT> sv1,
             std::experimental::basic_string_view<CharT> sv2, int expected ) {
     assert ( sign( sv1.compare(sv2)) == sign(expected));
 }
@@ -28,7 +28,7 @@ void test1 ( std::experimental::basic_string_view<CharT> sv1,
 template<typename CharT>
 void test ( const CharT *s1, const CharT  *s2, int expected ) {
     typedef std::experimental::basic_string_view<CharT> string_view_t;
-    
+
     string_view_t sv1 ( s1 );
     string_view_t sv2 ( s2 );
     test1(sv1, sv2, expected);
@@ -105,7 +105,7 @@ int main () {
     test(U"abcdefghijklmnopqrst", U"abcdefghij", 10);
     test(U"abcdefghijklmnopqrst", U"abcdefghijklmnopqrst", 0);
 #endif
-    
+
 #if _LIBCPP_STD_VER > 11
     {
     typedef std::experimental::basic_string_view<char, constexpr_char_traits<char>> SV;
@@ -117,5 +117,5 @@ int main () {
     static_assert ( sv3.compare(sv2)  > 0, "" );
     static_assert ( sv2.compare(sv3)  < 0, "" );
     }
-#endif    
+#endif
 }

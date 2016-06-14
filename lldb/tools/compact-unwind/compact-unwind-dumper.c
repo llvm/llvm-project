@@ -14,6 +14,50 @@
 #include <stdio.h>
 #include <mach-o/nlist.h>
 
+
+enum {
+    UNWIND_ARM64_MODE_MASK                     = 0x0F000000,
+    UNWIND_ARM64_MODE_FRAMELESS                = 0x02000000,
+    UNWIND_ARM64_MODE_DWARF                    = 0x03000000,
+    UNWIND_ARM64_MODE_FRAME                    = 0x04000000,
+
+    UNWIND_ARM64_FRAME_X19_X20_PAIR            = 0x00000001,
+    UNWIND_ARM64_FRAME_X21_X22_PAIR            = 0x00000002,
+    UNWIND_ARM64_FRAME_X23_X24_PAIR            = 0x00000004,
+    UNWIND_ARM64_FRAME_X25_X26_PAIR            = 0x00000008,
+    UNWIND_ARM64_FRAME_X27_X28_PAIR            = 0x00000010,
+    UNWIND_ARM64_FRAME_D8_D9_PAIR              = 0x00000100,
+    UNWIND_ARM64_FRAME_D10_D11_PAIR            = 0x00000200,
+    UNWIND_ARM64_FRAME_D12_D13_PAIR            = 0x00000400,
+    UNWIND_ARM64_FRAME_D14_D15_PAIR            = 0x00000800,
+
+    UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK     = 0x00FFF000,
+    UNWIND_ARM64_DWARF_SECTION_OFFSET          = 0x00FFFFFF,
+};
+
+enum {
+  UNWIND_ARM_MODE_MASK                         = 0x0F000000,
+  UNWIND_ARM_MODE_FRAME                        = 0x01000000,
+  UNWIND_ARM_MODE_FRAME_D                      = 0x02000000,
+  UNWIND_ARM_MODE_DWARF                        = 0x04000000,
+
+  UNWIND_ARM_FRAME_STACK_ADJUST_MASK           = 0x00C00000,
+
+  UNWIND_ARM_FRAME_FIRST_PUSH_R4               = 0x00000001,
+  UNWIND_ARM_FRAME_FIRST_PUSH_R5               = 0x00000002,
+  UNWIND_ARM_FRAME_FIRST_PUSH_R6               = 0x00000004,
+
+  UNWIND_ARM_FRAME_SECOND_PUSH_R8              = 0x00000008,
+  UNWIND_ARM_FRAME_SECOND_PUSH_R9              = 0x00000010,
+  UNWIND_ARM_FRAME_SECOND_PUSH_R10             = 0x00000020,
+  UNWIND_ARM_FRAME_SECOND_PUSH_R11             = 0x00000040,
+  UNWIND_ARM_FRAME_SECOND_PUSH_R12             = 0x00000080,
+
+  UNWIND_ARM_FRAME_D_REG_COUNT_MASK            = 0x00000700,
+
+  UNWIND_ARM_DWARF_SECTION_OFFSET              = 0x00FFFFFF,
+};
+
 #define EXTRACT_BITS(value, mask) \
         ( (value >> __builtin_ctz(mask)) & (((1 << __builtin_popcount(mask)))-1) )
 
@@ -196,12 +240,14 @@ scan_macho_load_commands (struct baton *baton)
                         if (is_64bit)
                         {
                             struct section_64 sect;
+                            memset (&sect, 0, sizeof (struct section_64));
                             memcpy (&sect, offset, sizeof (struct section_64));
                             baton->compact_unwind_start = baton->mach_header_start + sect.offset;
                         }
                         else
                         {
                             struct section sect;
+                            memset (&sect, 0, sizeof (struct section));
                             memcpy (&sect, offset, sizeof (struct section));
                             baton->compact_unwind_start = baton->mach_header_start + sect.offset;
                         }
@@ -211,12 +257,14 @@ scan_macho_load_commands (struct baton *baton)
                         if (is_64bit)
                         {
                             struct section_64 sect;
+                            memset (&sect, 0, sizeof (struct section_64));
                             memcpy (&sect, offset, sizeof (struct section_64));
                             baton->eh_section_file_address = sect.addr;
                         }
                         else
                         {
                             struct section sect;
+                            memset (&sect, 0, sizeof (struct section));
                             memcpy (&sect, offset, sizeof (struct section));
                             baton->eh_section_file_address = sect.addr;
                         }
@@ -226,6 +274,7 @@ scan_macho_load_commands (struct baton *baton)
                         if (is_64bit)
                         {
                             struct section_64 sect;
+                            memset (&sect, 0, sizeof (struct section_64));
                             memcpy (&sect, offset, sizeof (struct section_64));
                             baton->text_section_vmaddr = sect.addr;
                             baton->text_section_file_offset = sect.offset;
@@ -233,6 +282,7 @@ scan_macho_load_commands (struct baton *baton)
                         else
                         {
                             struct section sect;
+                            memset (&sect, 0, sizeof (struct section));
                             memcpy (&sect, offset, sizeof (struct section));
                             baton->text_section_vmaddr = sect.addr;
                         }
@@ -283,6 +333,7 @@ scan_macho_load_commands (struct baton *baton)
             for (int i = 0; i < local_syms_count; i++)
             {
                 struct nlist_64 nlist;
+                memset (&nlist, 0, sizeof (struct nlist_64));
                 if (is_64bit)
                 {
                     memcpy (&nlist, local_syms + (i * nlist_size), sizeof (struct nlist_64));
@@ -290,6 +341,7 @@ scan_macho_load_commands (struct baton *baton)
                 else
                 {
                     struct nlist nlist_32;
+                    memset (&nlist_32, 0, sizeof (struct nlist));
                     memcpy (&nlist_32, local_syms + (i * nlist_size), sizeof (struct nlist));
                     nlist.n_un.n_strx = nlist_32.n_un.n_strx;
                     nlist.n_type = nlist_32.n_type;
@@ -304,6 +356,8 @@ scan_macho_load_commands (struct baton *baton)
                     && nlist.n_value != baton->text_segment_vmaddr)
                 {
                     baton->symbols[baton->symbols_count].file_address = nlist.n_value;
+                    if (baton->cputype == CPU_TYPE_ARM)
+                        baton->symbols[baton->symbols_count].file_address = baton->symbols[baton->symbols_count].file_address & ~1;
                     baton->symbols[baton->symbols_count].name = string_table + nlist.n_un.n_strx;
                     baton->symbols_count++;
                 }
@@ -312,6 +366,7 @@ scan_macho_load_commands (struct baton *baton)
             for (int i = 0; i < exported_syms_count; i++)
             {
                 struct nlist_64 nlist;
+                memset (&nlist, 0, sizeof (struct nlist_64));
                 if (is_64bit)
                 {
                     memcpy (&nlist, exported_syms + (i * nlist_size), sizeof (struct nlist_64));
@@ -333,6 +388,8 @@ scan_macho_load_commands (struct baton *baton)
                     && nlist.n_value != baton->text_segment_vmaddr)
                 {
                     baton->symbols[baton->symbols_count].file_address = nlist.n_value;
+                    if (baton->cputype == CPU_TYPE_ARM)
+                        baton->symbols[baton->symbols_count].file_address = baton->symbols[baton->symbols_count].file_address & ~1;
                     baton->symbols[baton->symbols_count].name = string_table + nlist.n_un.n_strx;
                     baton->symbols_count++;
                 }
@@ -388,6 +445,8 @@ scan_macho_load_commands (struct baton *baton)
     {
         struct symbol search_key;
         search_key.file_address = baton->function_start_addresses[i];
+        if (baton->cputype == CPU_TYPE_ARM)
+            search_key.file_address = search_key.file_address & ~1;
         struct symbol *sym = bsearch (&search_key, baton->symbols, baton->symbols_count, sizeof (struct symbol), symbol_compare);
         if (sym == NULL)
             unnamed_functions_to_add++;
@@ -401,6 +460,8 @@ scan_macho_load_commands (struct baton *baton)
     {
         struct symbol search_key;
         search_key.file_address = baton->function_start_addresses[i];
+        if (baton->cputype == CPU_TYPE_ARM)
+            search_key.file_address = search_key.file_address & ~1;
         struct symbol *sym = bsearch (&search_key, baton->symbols, baton->symbols_count, sizeof (struct symbol), symbol_compare);
         if (sym == NULL)
         {
@@ -901,6 +962,282 @@ print_encoding_i386 (struct baton baton, uint8_t *function_start, uint32_t encod
     }
 }
 
+void
+print_encoding_arm64 (struct baton baton, uint8_t *function_start, uint32_t encoding)
+{
+    const int wordsize = 8;
+    int mode = encoding & UNWIND_ARM64_MODE_MASK;
+    switch (mode)
+    {
+        case UNWIND_ARM64_MODE_FRAME:
+        {
+            printf ("frame func: CFA is fp+%d ", 16);
+            printf (" pc=[CFA-8] fp=[CFA-16]");
+            int reg_pairs_saved_count = 1;
+            uint32_t saved_register_bits = encoding & 0xfff;
+            if (saved_register_bits & UNWIND_ARM64_FRAME_X19_X20_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" x19=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" x20=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_X21_X22_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" x21=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" x22=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_X23_X24_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" x23=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" x24=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_X25_X26_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" x25=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" x26=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_X27_X28_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" x27=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" x28=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_D8_D9_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" d8=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" d9=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_D10_D11_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" d10=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" d11=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_D12_D13_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" d12=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" d13=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+            if (saved_register_bits & UNWIND_ARM64_FRAME_D14_D15_PAIR)
+            {
+                int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
+                cfa_offset -= wordsize;
+                printf (" d14=[CFA%d]", cfa_offset);
+                cfa_offset -= wordsize;
+                printf (" d15=[CFA%d]", cfa_offset);
+                reg_pairs_saved_count++;
+            }
+
+        }
+        break;
+
+        case UNWIND_ARM64_MODE_FRAMELESS:
+        {
+            uint32_t stack_size = encoding & UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK;
+            printf ("frameless function: stack size %d ", stack_size * 16);
+
+        }
+        break;
+
+        case UNWIND_ARM64_MODE_DWARF:
+        {
+            uint32_t dwarf_offset = encoding & UNWIND_ARM64_DWARF_SECTION_OFFSET;
+            printf ("DWARF unwind instructions: FDE at offset %d (file address 0x%" PRIx64 ")",
+                    dwarf_offset, dwarf_offset + baton.eh_section_file_address);
+        }
+        break;
+
+        case 0:
+        {
+            printf (" no unwind information");
+        }
+        break;
+    }
+}
+
+void
+print_encoding_armv7 (struct baton baton, uint8_t *function_start, uint32_t encoding)
+{
+    const int wordsize = 4;
+    int mode = encoding & UNWIND_ARM_MODE_MASK;
+    switch (mode)
+    {
+        case UNWIND_ARM_MODE_FRAME_D:
+        case UNWIND_ARM_MODE_FRAME:
+        {
+            int stack_adjust = EXTRACT_BITS (encoding, UNWIND_ARM_FRAME_STACK_ADJUST_MASK) * wordsize;
+
+            printf ("frame func: CFA is fp+%d ", (2 * wordsize) + stack_adjust);
+            int cfa_offset = -stack_adjust;
+
+            cfa_offset -= wordsize;
+            printf (" pc=[CFA%d]", cfa_offset);
+            cfa_offset -= wordsize;
+            printf (" fp=[CFA%d]", cfa_offset);
+
+            uint32_t saved_register_bits = encoding & 0xff;
+            if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R6)
+            {
+                cfa_offset -= wordsize;
+                printf (" r6=[CFA%d]", cfa_offset);
+            }
+            if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R5)
+            {
+                cfa_offset -= wordsize;
+                printf (" r5=[CFA%d]", cfa_offset);
+            }
+            if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R4)
+            {
+                cfa_offset -= wordsize;
+                printf (" r4=[CFA%d]", cfa_offset);
+            }
+            if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R12)
+            {
+                cfa_offset -= wordsize;
+                printf (" r12=[CFA%d]", cfa_offset);
+            }
+            if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R11)
+            {
+                cfa_offset -= wordsize;
+                printf (" r11=[CFA%d]", cfa_offset);
+            }
+            if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R10)
+            {
+                cfa_offset -= wordsize;
+                printf (" r10=[CFA%d]", cfa_offset);
+            }
+            if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R9)
+            {
+                cfa_offset -= wordsize;
+                printf (" r9=[CFA%d]", cfa_offset);
+            }
+            if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R8)
+            {
+                cfa_offset -= wordsize;
+                printf (" r8=[CFA%d]", cfa_offset);
+            }
+
+            if (mode == UNWIND_ARM_MODE_FRAME_D)
+            {
+                uint32_t d_reg_bits = EXTRACT_BITS (encoding, UNWIND_ARM_FRAME_D_REG_COUNT_MASK);
+                switch (d_reg_bits)
+                {
+                    case 0:
+                        // vpush {d8}
+                        cfa_offset -= 8;
+                        printf (" d8=[CFA%d]", cfa_offset);
+                        break;
+                    case 1:
+                        // vpush {d10}
+                        // vpush {d8}
+                        cfa_offset -= 8;
+                        printf (" d10=[CFA%d]", cfa_offset);
+                        cfa_offset -= 8;
+                        printf (" d8=[CFA%d]", cfa_offset);
+                        break;
+                    case 2:
+                        // vpush {d12}
+                        // vpush {d10}
+                        // vpush {d8}
+                        cfa_offset -= 8;
+                        printf (" d12=[CFA%d]", cfa_offset);
+                        cfa_offset -= 8;
+                        printf (" d10=[CFA%d]", cfa_offset);
+                        cfa_offset -= 8;
+                        printf (" d8=[CFA%d]", cfa_offset);
+                        break;
+                    case 3:
+                        // vpush {d14}
+                        // vpush {d12}
+                        // vpush {d10}
+                        // vpush {d8}
+                        cfa_offset -= 8;
+                        printf (" d14=[CFA%d]", cfa_offset);
+                        cfa_offset -= 8;
+                        printf (" d12=[CFA%d]", cfa_offset);
+                        cfa_offset -= 8;
+                        printf (" d10=[CFA%d]", cfa_offset);
+                        cfa_offset -= 8;
+                        printf (" d8=[CFA%d]", cfa_offset);
+                        break;
+                    case 4:
+                        // vpush {d14}
+                        // vpush {d12}
+                        // sp = (sp - 24) & (-16);
+                        // vst   {d8, d9, d10}
+                        printf (" d14, d12, d10, d9, d8");
+                        break;
+                    case 5:
+                        // vpush {d14}
+                        // sp = (sp - 40) & (-16);
+                        // vst   {d8, d9, d10, d11}
+                        // vst   {d12}
+                        printf (" d14, d11, d10, d9, d8, d12");
+                        break;
+                    case 6:
+                        // sp = (sp - 56) & (-16);
+                        // vst   {d8, d9, d10, d11}
+                        // vst   {d12, d13, d14}
+                        printf (" d11, d10, d9, d8, d14, d13, d12");
+                        break;
+                    case 7:
+                        // sp = (sp - 64) & (-16);
+                        // vst   {d8, d9, d10, d11}
+                        // vst   {d12, d13, d14, d15}
+                        printf (" d11, d10, d9, d8, d15, d14, d13, d12");
+                        break;
+                }
+            }
+        }
+        break;
+
+        case UNWIND_ARM_MODE_DWARF:
+        {
+            uint32_t dwarf_offset = encoding & UNWIND_ARM_DWARF_SECTION_OFFSET;
+            printf ("DWARF unwind instructions: FDE at offset %d (file address 0x%" PRIx64 ")",
+                    dwarf_offset, dwarf_offset + baton.eh_section_file_address);
+        }
+        break;
+
+        case 0:
+        {
+            printf (" no unwind information");
+        }
+        break;
+    }
+}
+
+
+
 
 void print_encoding (struct baton baton, uint8_t *function_start, uint32_t encoding)
 {
@@ -912,6 +1249,14 @@ void print_encoding (struct baton baton, uint8_t *function_start, uint32_t encod
     else if (baton.cputype == CPU_TYPE_I386)
     {
         print_encoding_i386 (baton, function_start, encoding);
+    }
+    else if (baton.cputype == CPU_TYPE_ARM64)
+    {
+        print_encoding_arm64 (baton, function_start, encoding);
+    }
+    else if (baton.cputype == CPU_TYPE_ARM)
+    {
+        print_encoding_armv7 (baton, function_start, encoding);
     }
     else
     {
@@ -934,6 +1279,9 @@ print_function_encoding (struct baton baton, uint32_t idx, uint32_t encoding, ui
     }
 
     uint64_t file_address = baton.first_level_index_entry.functionOffset + entry_func_offset + baton.text_segment_vmaddr;
+
+    if (baton.cputype == CPU_TYPE_ARM)
+        file_address = file_address & ~1;
 
     printf ("    func [%d] offset %d (file addr 0x%" PRIx64 ")%s, encoding is 0x%x", 
             idx, entry_func_offset, 

@@ -61,7 +61,7 @@ SBInstructionList::GetInstructionAtIndex (uint32_t idx)
 {
     SBInstruction inst;
     if (m_opaque_sp && idx < m_opaque_sp->GetInstructionList().GetSize())
-        inst.SetOpaque (m_opaque_sp->GetInstructionList().GetInstructionAtIndex (idx));
+        inst.SetOpaque (m_opaque_sp, m_opaque_sp->GetInstructionList().GetInstructionAtIndex (idx));
     return inst;
 }
 

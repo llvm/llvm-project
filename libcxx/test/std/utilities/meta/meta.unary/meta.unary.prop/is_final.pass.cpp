@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // type_traits
 
 // is_final
 
 #include <type_traits>
 #include "test_macros.h"
-
-#if _LIBCPP_STD_VER > 11
 
 struct P final { };
 union U1 { };
@@ -54,13 +53,10 @@ int main ()
 {
     test_is_not_final<int>();
     test_is_not_final<int*>();
-    test_is_final    <P>(); 
-    test_is_not_final<P*>();    
+    test_is_final    <P>();
+    test_is_not_final<P*>();
     test_is_not_final<U1>();
     test_is_not_final<U1*>();
-    test_is_final    <U2>();    
-    test_is_not_final<U2*>();   
+    test_is_final    <U2>();
+    test_is_not_final<U2*>();
 }
-#else
-int main () {}
-#endif

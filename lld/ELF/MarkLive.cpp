@@ -95,7 +95,7 @@ static void forEachSuccessor(InputSection<ELFT> *Sec,
 }
 
 template <class ELFT>
-static void scanEhFrameSection(EHInputSection<ELFT> &EH,
+static void scanEhFrameSection(EhInputSection<ELFT> &EH,
                                std::function<void(ResolvedReloc<ELFT>)> Fn) {
   if (!EH.RelocSection)
     return;
@@ -136,17 +136,18 @@ template <class ELFT> static bool isReserved(InputSectionBase<ELFT> *Sec) {
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
 template <class ELFT> void elf::markLive() {
-  typedef typename ELFT::uint uintX_t;
   SmallVector<InputSection<ELFT> *, 256> Q;
 
   auto Enqueue = [&](ResolvedReloc<ELFT> R) {
     if (!R.Sec)
       return;
-    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec)) {
-      std::pair<std::pair<uintX_t, uintX_t> *, uintX_t> T =
-          MS->getRangeAndSize(R.Offset);
-      T.first->second = MergeInputSection<ELFT>::PieceLive;
-    }
+
+    // Usually, a whole section is marked as live or dead, but in mergeable
+    // (splittable) sections, each piece of data has independent liveness bit.
+    // So we explicitly tell it which offset is in use.
+    if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(R.Sec))
+      MS->markLiveAt(R.Offset);
+
     if (R.Sec->Live)
       return;
     R.Sec->Live = true;
@@ -182,7 +183,7 @@ template <class ELFT> void elf::markLive() {
         // .eh_frame is always marked as live now, but also it can reference to
         // sections that contain personality. We preserve all non-text sections
         // referred by .eh_frame here.
-        if (auto *EH = dyn_cast_or_null<EHInputSection<ELFT>>(Sec))
+        if (auto *EH = dyn_cast_or_null<EhInputSection<ELFT>>(Sec))
           scanEhFrameSection<ELFT>(*EH, Enqueue);
         if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
           Enqueue({Sec, 0});

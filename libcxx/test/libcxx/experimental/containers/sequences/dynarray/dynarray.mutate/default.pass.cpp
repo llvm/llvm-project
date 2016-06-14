@@ -7,15 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // dynarray.data
 
 // void fill(const T& v);
 // const T* data() const noexcept;
 
-  
-#include <__config>
 
-#if _LIBCPP_STD_VER > 11
+#include <__config>
 
 #include <experimental/dynarray>
 #include <cassert>
@@ -29,11 +28,11 @@ using std::experimental::dynarray;
 template <class T>
 void test ( const T &val ) {
     typedef dynarray<T> dynA;
-    
+
     dynA d1 ( 4 );
     d1.fill ( val );
-    assert ( std::all_of ( d1.begin (), d1.end (), 
-                    [&val]( const T &item ){ return item == val; } ));  
+    assert ( std::all_of ( d1.begin (), d1.end (),
+                    [&val]( const T &item ){ return item == val; } ));
     }
 
 int main()
@@ -43,6 +42,4 @@ int main()
     test<std::complex<double>> ( std::complex<double> ( 14, 0 ));
     test<std::string> ( "fourteen" );
 }
-#else
-int main() {}
-#endif
+

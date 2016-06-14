@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/MipsABIFlags.h"
 
 #define CASE_AND_STREAM(s, def, width)                  \
     case def: s->Printf("%-*s", width, #def); break;
@@ -1706,8 +1707,39 @@ ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
 
                         if (section_size && (set_data (data, sheader.sh_offset, section_size) == section_size))
                         {
-                            lldb::offset_t ase_offset = 12; // MIPS ABI Flags Version: 0
-                            arch_flags |= data.GetU32 (&ase_offset);
+                            // MIPS ASE Mask is at offset 12 in MIPS.abiflags section
+                            lldb::offset_t offset = 12; // MIPS ABI Flags Version: 0
+                            arch_flags |= data.GetU32 (&offset);
+
+                            // The floating point ABI is at offset 7
+                            offset = 7;
+                            switch (data.GetU8 (&offset))
+                            {
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_ANY :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_ANY;
+                                    break;
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_DOUBLE :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_DOUBLE;
+                                    break;
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_SINGLE :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_SINGLE;
+                                    break;
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_SOFT :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_SOFT;
+                                    break;
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_OLD_64 :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_OLD_64;
+                                    break;
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_XX :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_XX;
+                                    break;
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_64 :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_64;
+                                    break;
+                                case llvm::Mips::Val_GNU_MIPS_ABI_FP_64A :
+                                    arch_flags |= lldb_private::ArchSpec::eMIPS_ABI_FP_64A;
+                                    break;
+                            }
                         }
                     }
                     // Settings appropriate ArchSpec ABI Flags
@@ -2002,6 +2034,9 @@ ObjectFileELF::CreateSections(SectionList &unified_section_list)
             else if (name == g_sect_name_arm_extab)                   sect_type = eSectionTypeARMextab;
             else if (name == g_sect_name_go_symtab)                   sect_type = eSectionTypeGoSymtab;
 
+            const uint32_t permissions = ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0) |
+                                         ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0) |
+                                         ((header.sh_flags & SHF_EXECINSTR) ? ePermissionsExecutable : 0);
             switch (header.sh_type)
             {
                 case SHT_SYMTAB:
@@ -2053,6 +2088,7 @@ ObjectFileELF::CreateSections(SectionList &unified_section_list)
                                               header.sh_flags,    // Flags for this section.
                                               target_bytes_size));// Number of host bytes per target byte
 
+            section_sp->SetPermissions(permissions);
             if (is_thread_specific)
                 section_sp->SetIsThreadSpecific (is_thread_specific);
             m_sections_ap->AddSection(section_sp);

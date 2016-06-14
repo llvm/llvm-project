@@ -28,7 +28,7 @@ int searcher_called = 0;
 struct MySearcher {
     template <typename Iterator>
     std::pair<Iterator, Iterator>
-    operator() (Iterator b, Iterator e) const 
+    operator() (Iterator b, Iterator e) const
     {
         ++searcher_called;
         return std::make_pair(b, e);

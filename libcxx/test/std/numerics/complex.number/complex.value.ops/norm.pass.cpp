@@ -28,11 +28,11 @@ test()
 
 void test_edges()
 {
-    const unsigned N = sizeof(x) / sizeof(x[0]);
+    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
     for (unsigned i = 0; i < N; ++i)
     {
-        double r = norm(x[i]);
-        switch (classify(x[i]))
+        double r = norm(testcases[i]);
+        switch (classify(testcases[i]))
         {
         case zero:
             assert(r == 0);

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // XFAIL: libcpp-no-exceptions
 // <optional>
 
@@ -18,8 +19,6 @@
 #include <type_traits>
 #include <vector>
 #include <cassert>
-
-#if _LIBCPP_STD_VER > 11
 
 using std::experimental::optional;
 using std::experimental::in_place_t;
@@ -67,12 +66,8 @@ public:
         {return x.i_ == y.i_ && x.j_ == y.j_;}
 };
 
-
-#endif  // _LIBCPP_STD_VER > 11
-
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     {
         static_assert(!std::is_constructible<X, std::initializer_list<int>&>::value, "");
         static_assert(!std::is_constructible<optional<X>, std::initializer_list<int>&>::value, "");
@@ -98,7 +93,7 @@ int main()
         struct test_constexpr_ctor
             : public optional<Y>
         {
-            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i) 
+            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i)
                 : optional<Y>(in_place, i) {}
         };
 
@@ -118,10 +113,9 @@ int main()
         struct test_constexpr_ctor
             : public optional<Z>
         {
-            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i) 
+            constexpr test_constexpr_ctor(in_place_t, std::initializer_list<int> i)
                 : optional<Z>(in_place, i) {}
         };
 
     }
-#endif  // _LIBCPP_STD_VER > 11
 }

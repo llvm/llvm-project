@@ -38,14 +38,14 @@ int main()
         test(std::vector<bool>(a, an));
     }
     {
-        std::vector<bool, test_allocator<bool> > v(3, 2, test_allocator<bool>(5));
+        std::vector<bool, test_allocator<bool> > v(3, true, test_allocator<bool>(5));
         std::vector<bool, test_allocator<bool> > v2 = v;
         assert(v2 == v);
         assert(v2.get_allocator() == v.get_allocator());
     }
 #if TEST_STD_VER >= 11
     {
-        std::vector<bool, other_allocator<bool> > v(3, 2, other_allocator<bool>(5));
+        std::vector<bool, other_allocator<bool> > v(3, true, other_allocator<bool>(5));
         std::vector<bool, other_allocator<bool> > v2 = v;
         assert(v2 == v);
         assert(v2.get_allocator() == other_allocator<bool>(-2));
@@ -56,7 +56,7 @@ int main()
         test(std::vector<bool, min_allocator<bool>>(a, an));
     }
     {
-        std::vector<bool, min_allocator<bool> > v(3, 2, min_allocator<bool>());
+        std::vector<bool, min_allocator<bool> > v(3, true, min_allocator<bool>());
         std::vector<bool, min_allocator<bool> > v2 = v;
         assert(v2 == v);
         assert(v2.get_allocator() == v.get_allocator());

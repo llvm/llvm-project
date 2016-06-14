@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcxxabi-no-exceptions
+
 #include <cxxabi.h>
 #include <exception>
 #include <cassert>

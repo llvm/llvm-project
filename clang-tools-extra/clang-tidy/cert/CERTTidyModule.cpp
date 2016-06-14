@@ -69,6 +69,11 @@ public:
     CheckFactories.registerCheck<StrToNumCheck>(
         "cert-err34-c");
   }
+  ClangTidyOptions getModuleOptions() override {
+    ClangTidyOptions Options;
+    Options.CheckOptions["cert-oop11-cpp.UseCERTSemantics"] = "1";
+    return Options;
+  }
 };
 
 } // namespace cert

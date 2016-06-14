@@ -1961,32 +1961,37 @@ static __isl_give isl_printer *print_ast_node_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_print_options *options, int in_block, int in_list);
 static __isl_give isl_printer *print_if_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_node *node,
-	__isl_keep isl_ast_print_options *options, int new_line);
+	__isl_keep isl_ast_print_options *options, int new_line,
+	int force_block);
 
 /* Print the body "node" of a for or if node.
  * If "else_node" is set, then it is printed as well.
+ * If "force_block" is set, then print out the body as a block.
  *
  * We first check if we need to print out a block.
  * We always print out a block if there is an else node to make
  * sure that the else node is matched to the correct if node.
+ * For consistency, the corresponding else node is also printed as a block.
  *
  * If the else node is itself an if, then we print it as
  *
- *	} else if (..)
+ *	} else if (..) {
+ *	}
  *
  * Otherwise the else node is printed as
  *
- *	} else
+ *	} else {
  *	  node
+ *	}
  */
 static __isl_give isl_printer *print_body_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_node *node, __isl_keep isl_ast_node *else_node,
-	__isl_keep isl_ast_print_options *options)
+	__isl_keep isl_ast_print_options *options, int force_block)
 {
 	if (!node)
 		return isl_printer_free(p);
 
-	if (!else_node && !need_block(node)) {
+	if (!force_block && !else_node && !need_block(node)) {
 		p = isl_printer_end_line(p);
 		p = isl_printer_indent(p, 2);
 		p = isl_ast_node_print(node, p,
@@ -2005,10 +2010,10 @@ static __isl_give isl_printer *print_body_c(__isl_take isl_printer *p,
 	if (else_node) {
 		if (else_node->type == isl_ast_node_if) {
 			p = isl_printer_print_str(p, " else ");
-			p = print_if_c(p, else_node, options, 0);
+			p = print_if_c(p, else_node, options, 0, 1);
 		} else {
 			p = isl_printer_print_str(p, " else");
-			p = print_body_c(p, else_node, NULL, options);
+			p = print_body_c(p, else_node, NULL, options, 1);
 		}
 	} else
 		p = isl_printer_end_line(p);
@@ -2086,7 +2091,7 @@ static __isl_give isl_printer *print_for_c(__isl_take isl_printer *p,
 		p = isl_printer_print_str(p, " += ");
 		p = isl_printer_print_ast_expr(p, node->u.f.inc);
 		p = isl_printer_print_str(p, ")");
-		p = print_body_c(p, node->u.f.body, NULL, options);
+		p = print_body_c(p, node->u.f.body, NULL, options, 0);
 	} else {
 		id = isl_ast_expr_get_id(node->u.f.iterator);
 		name = isl_id_get_name(id);
@@ -2111,17 +2116,20 @@ static __isl_give isl_printer *print_for_c(__isl_take isl_printer *p,
 
 /* Print the if node "node".
  * If "new_line" is set then the if node should be printed on a new line.
+ * If "force_block" is set, then print out the body as a block.
  */
 static __isl_give isl_printer *print_if_c(__isl_take isl_printer *p,
 	__isl_keep isl_ast_node *node,
-	__isl_keep isl_ast_print_options *options, int new_line)
+	__isl_keep isl_ast_print_options *options, int new_line,
+	int force_block)
 {
 	if (new_line)
 		p = isl_printer_start_line(p);
 	p = isl_printer_print_str(p, "if (");
 	p = isl_printer_print_ast_expr(p, node->u.i.guard);
 	p = isl_printer_print_str(p, ")");
-	p = print_body_c(p, node->u.i.then, node->u.i.else_node, options);
+	p = print_body_c(p, node->u.i.then, node->u.i.else_node, options,
+			force_block);
 
 	return p;
 }
@@ -2148,7 +2156,7 @@ static __isl_give isl_printer *print_ast_node_c(__isl_take isl_printer *p,
 		p = print_for_c(p, node, options, in_block, in_list);
 		break;
 	case isl_ast_node_if:
-		p = print_if_c(p, node, options, 1);
+		p = print_if_c(p, node, options, 1, 0);
 		break;
 	case isl_ast_node_block:
 		if (!in_block)
@@ -2209,7 +2217,7 @@ __isl_give isl_printer *isl_ast_node_if_print(__isl_keep isl_ast_node *node,
 	if (node->type != isl_ast_node_if)
 		isl_die(isl_ast_node_get_ctx(node), isl_error_invalid,
 			"not an if node", goto error);
-	p = print_if_c(p, node, options, 1);
+	p = print_if_c(p, node, options, 1, 0);
 	isl_ast_print_options_free(options);
 	return p;
 error:

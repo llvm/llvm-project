@@ -238,9 +238,12 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, uint8_t Binding,
     cast<Undefined>(S->body())->File = File;
     return S;
   }
-  if (Binding != STB_WEAK &&
-      (S->body()->isShared() || S->body()->isLazy()))
-    S->Binding = Binding;
+  if (Binding != STB_WEAK) {
+    if (S->body()->isShared() || S->body()->isLazy())
+      S->Binding = Binding;
+    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(S->body()))
+      SS->File->IsUsed = true;
+  }
   if (auto *L = dyn_cast<Lazy>(S->body())) {
     // An undefined weak will not fetch archive members, but we have to remember
     // its type. See also comment in addLazyArchive.
@@ -393,8 +396,11 @@ void SymbolTable<ELFT>::addShared(SharedFile<ELFT> *F, StringRef Name,
   // Make sure we preempt DSO symbols with default visibility.
   if (Sym.getVisibility() == STV_DEFAULT)
     S->ExportDynamic = true;
-  if (WasInserted || isa<Undefined>(S->body()))
+  if (WasInserted || isa<Undefined>(S->body())) {
     replaceBody<SharedSymbol<ELFT>>(S, F, Name, Sym, Verdef);
+    if (!S->isWeak())
+      F->IsUsed = true;
+  }
 }
 
 template <class ELFT>

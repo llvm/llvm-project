@@ -43,8 +43,6 @@ private:
 
   bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params, StringRef ArgName,
                     unsigned ArgIndex);
-  std::vector<std::pair<SourceLocation, StringRef>>
-  getCommentsInRange(ASTContext *Ctx, SourceRange Range);
   void checkCallArgs(ASTContext *Ctx, const FunctionDecl *Callee,
                      SourceLocation ArgBeginLoc,
                      llvm::ArrayRef<const Expr *> Args);

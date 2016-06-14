@@ -179,10 +179,7 @@ template <class ELFT> static bool shouldMerge(const typename ELFT::Shdr &Sec) {
   if (Flags & SHF_STRINGS)
     return true;
 
-  if (Sec.sh_addralign > EntSize)
-    return false;
-
-  return true;
+  return Sec.sh_addralign <= EntSize;
 }
 
 template <class ELFT>
@@ -236,7 +233,7 @@ void elf::ObjectFile<ELFT>::initializeSections(
         S->RelocSections.push_back(&Sec);
         break;
       }
-      if (auto *S = dyn_cast<EHInputSection<ELFT>>(Target)) {
+      if (auto *S = dyn_cast<EhInputSection<ELFT>>(Target)) {
         if (S->RelocSection)
           fatal("multiple relocation sections to .eh_frame are not supported");
         S->RelocSection = &Sec;
@@ -244,6 +241,11 @@ void elf::ObjectFile<ELFT>::initializeSections(
       }
       fatal("relocations pointing to SHF_MERGE are not supported");
     }
+    case SHT_ARM_ATTRIBUTES:
+      // FIXME: ARM meta-data section. At present attributes are ignored,
+      // they can be used to reason about object compatibility.
+      Sections[I] = &InputSection<ELFT>::Discarded;
+      break;
     default:
       Sections[I] = createInputSection(Sec);
     }
@@ -305,7 +307,7 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // We dont need special handling of .eh_frame sections if relocatable
   // output was choosen. Proccess them as usual input sections.
   if (!Config->Relocatable && Name == ".eh_frame")
-    return new (EHAlloc.Allocate()) EHInputSection<ELFT>(this, &Sec);
+    return new (EHAlloc.Allocate()) EhInputSection<ELFT>(this, &Sec);
   if (shouldMerge<ELFT>(Sec))
     return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);
   return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
@@ -527,10 +529,13 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
 
     if (Versym) {
       // Ignore local symbols and non-default versions.
-      if (VersymIndex == 0 || (VersymIndex & VERSYM_HIDDEN))
+      if (VersymIndex == VER_NDX_LOCAL || (VersymIndex & VERSYM_HIDDEN))
         continue;
     }
-    elf::Symtab<ELFT>::X->addShared(this, Name, Sym, Verdefs[VersymIndex]);
+
+    const Elf_Verdef *V =
+        VersymIndex == VER_NDX_GLOBAL ? nullptr : Verdefs[VersymIndex];
+    elf::Symtab<ELFT>::X->addShared(this, Name, Sym, V);
   }
 }
 
@@ -755,14 +760,10 @@ template void ArchiveFile::parse<ELF32BE>();
 template void ArchiveFile::parse<ELF64LE>();
 template void ArchiveFile::parse<ELF64BE>();
 
-template void
-BitcodeFile::parse<ELF32LE>(llvm::DenseSet<StringRef> &ComdatGroups);
-template void
-BitcodeFile::parse<ELF32BE>(llvm::DenseSet<StringRef> &ComdatGroups);
-template void
-BitcodeFile::parse<ELF64LE>(llvm::DenseSet<StringRef> &ComdatGroups);
-template void
-BitcodeFile::parse<ELF64BE>(llvm::DenseSet<StringRef> &ComdatGroups);
+template void BitcodeFile::parse<ELF32LE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32BE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64LE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64BE>(llvm::DenseSet<StringRef> &);
 
 template void LazyObjectFile::parse<ELF32LE>();
 template void LazyObjectFile::parse<ELF32BE>();

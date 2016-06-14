@@ -95,6 +95,6 @@ int main()
     test<random_access_iterator<const int*> >();
     test<const int*>();
     test_eq();
-    
+
     constexpr_test();
 }

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-
+// UNSUPPORTED: c++98, c++03, c++11
 // <optional>
 
 // template <class T> constexpr bool operator>=(const optional<T>& x, nullopt_t) noexcept;
@@ -17,7 +17,6 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     using std::experimental::optional;
     using std::experimental::nullopt_t;
     using std::experimental::nullopt;
@@ -25,7 +24,7 @@ int main()
     {
     typedef int T;
     typedef optional<T> O;
-    
+
     constexpr O o1;     // disengaged
     constexpr O o2{1};  // engaged
 
@@ -37,5 +36,4 @@ int main()
     static_assert (noexcept(nullopt >= o1), "");
     static_assert (noexcept(o1 >= nullopt), "");
     }
-#endif
 }

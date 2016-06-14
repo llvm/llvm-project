@@ -180,7 +180,7 @@ int IslNodeBuilder::getNumberOfIterations(__isl_keep isl_ast_node *For) {
 struct SubtreeReferences {
   LoopInfo &LI;
   ScalarEvolution &SE;
-  Region &R;
+  Scop &S;
   ValueMapT &GlobalMap;
   SetVector<Value *> &Values;
   SetVector<const SCEV *> &SCEVs;
@@ -193,7 +193,7 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   for (const Instruction &Inst : *BB)
     for (Value *SrcVal : Inst.operands()) {
       auto *Scope = References.LI.getLoopFor(BB);
-      if (canSynthesize(SrcVal, &References.LI, &References.SE, &References.R,
+      if (canSynthesize(SrcVal, References.S, &References.LI, &References.SE,
                         Scope)) {
         References.SCEVs.insert(References.SE.getSCEVAtScope(SrcVal, Scope));
         continue;
@@ -229,7 +229,7 @@ static isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
     if (Access->isArrayKind()) {
       auto *BasePtr = Access->getScopArrayInfo()->getBasePtr();
       if (Instruction *OpInst = dyn_cast<Instruction>(BasePtr))
-        if (Stmt->getParent()->getRegion().contains(OpInst))
+        if (Stmt->getParent()->contains(OpInst))
           continue;
 
       References.Values.insert(BasePtr);
@@ -292,7 +292,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
 
   SetVector<const SCEV *> SCEVs;
   struct SubtreeReferences References = {
-      LI, SE, S.getRegion(), ValueMap, Values, SCEVs, getBlockGenerator()};
+      LI, SE, S, ValueMap, Values, SCEVs, getBlockGenerator()};
 
   for (const auto &I : IDToValue)
     Values.insert(I.second);
@@ -314,7 +314,7 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   /// are considered local. This leaves only loops that are before the scop, but
   /// do not contain the scop itself.
   Loops.remove_if([this](const Loop *L) {
-    return S.getRegion().contains(L) || L->contains(S.getRegion().getEntry());
+    return S.contains(L) || L->contains(S.getEntry());
   });
 }
 
@@ -861,7 +861,7 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
       // Check if the value is an instruction in a dead block within the SCoP
       // and if so do not code generate it.
       if (auto *Inst = dyn_cast<Instruction>(Val)) {
-        if (S.getRegion().contains(Inst)) {
+        if (S.contains(Inst)) {
           bool IsDead = true;
 
           // Check for "undef" loads first, then if there is a statement for
@@ -959,6 +959,11 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   PreloadVal = Builder.CreateLoad(Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(dyn_cast<LoadInst>(AccInst)->getAlignment());
+
+  // TODO: This is only a hot fix for SCoP sequences that use the same load
+  //       instruction contained and hoisted by one of the SCoPs.
+  if (SE.isSCEVable(Ty))
+    SE.forgetValue(AccInst);
 
   return PreloadVal;
 }
@@ -1142,7 +1147,6 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
     }
   }
 
-  const Region &R = S.getRegion();
   for (const MemoryAccess *MA : MAs) {
 
     Instruction *MAAccInst = MA->getAccessInstruction();
@@ -1150,7 +1154,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
     BlockGenerator::EscapeUserVectorTy EscapeUsers;
     for (auto *U : MAAccInst->users())
       if (Instruction *UI = dyn_cast<Instruction>(U))
-        if (!R.contains(UI))
+        if (!S.contains(UI))
           EscapeUsers.push_back(UI);
 
     if (EscapeUsers.empty())
@@ -1192,10 +1196,9 @@ void IslNodeBuilder::addParameters(__isl_take isl_set *Context) {
   // scop itself, but as the number of such scops may be arbitrarily large we do
   // not generate code for them here, but only at the point of code generation
   // where these values are needed.
-  Region &R = S.getRegion();
-  Loop *L = LI.getLoopFor(R.getEntry());
+  Loop *L = LI.getLoopFor(S.getEntry());
 
-  while (L != nullptr && R.contains(L))
+  while (L != nullptr && S.contains(L))
     L = L->getParentLoop();
 
   while (L != nullptr) {

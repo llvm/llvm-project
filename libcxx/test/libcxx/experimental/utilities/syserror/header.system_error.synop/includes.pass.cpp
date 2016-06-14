@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <experimental/system_error>
 
 #include <experimental/system_error>
 
-#if _LIBCPP_STD_VER > 11
-# ifndef _LIBCPP_SYSTEM_ERROR
-#   error "<experimental/system_error> must include <system_error>"
-# endif
+#ifndef _LIBCPP_SYSTEM_ERROR
+#  error "<experimental/system_error> must include <system_error>"
 #endif
 
 int main()

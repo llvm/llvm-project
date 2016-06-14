@@ -15,7 +15,7 @@
 // template <class T>
 //     T
 //     atomic_exchange_explicit(volatile atomic<T>* obj, T desr, memory_order m);
-// 
+//
 // template <class T>
 //     T
 //     atomic_exchange_explicit(atomic<T>* obj, T desr, memory_order m);

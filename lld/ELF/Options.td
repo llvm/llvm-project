@@ -18,7 +18,7 @@ def build_id : Flag<["--", "-"], "build-id">,
 def build_id_eq : Joined<["--", "-"], "build-id=">;
 
 def L : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
-  HelpText<"Directory to search for libraries">;
+  HelpText<"Add a directory to the library search path">;
 
 def O : Joined<["-"], "O">, HelpText<"Optimize">;
 
@@ -54,7 +54,7 @@ def enable_new_dtags : Flag<["--"], "enable-new-dtags">,
   HelpText<"Enable new dynamic tags">;
 
 def end_lib : Flag<["--"], "end-lib">,
-  HelpText<"End a library">;
+  HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
 
 def entry : Separate<["--", "-"], "entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
@@ -139,7 +139,7 @@ def soname : Joined<["-"], "soname=">,
   HelpText<"Set DT_SONAME">;
 
 def start_lib : Flag<["--"], "start-lib">,
-  HelpText<"Start a library">;
+  HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 
 def strip_all : Flag<["--"], "strip-all">,
   HelpText<"Strip all symbols">;
@@ -150,7 +150,8 @@ def strip_debug : Flag<["--"], "strip-debug">,
 def sysroot : Joined<["--"], "sysroot=">,
   HelpText<"Set the system root">;
 
-def threads : Joined<["--"], "threads">;
+def threads : Flag<["--"], "threads">,
+  HelpText<"Enable use of threads">;
 
 def trace: Flag<["--"], "trace">,
   HelpText<"Print the names of the input files">;
@@ -190,6 +191,8 @@ def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: Joined<["--", "-"], "dynamic-list=">, Alias<dynamic_list>;
 def alias_entry_e : JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
+def alias_export_dynamic_symbol : Joined<["--", "-"], "export-dynamic-symbol=">,
+    Alias<export_dynamic_symbol>;
 def alias_fini_fini : Joined<["-"], "fini=">, Alias<fini>;
 def alias_hash_style_hash_style : Joined<["--", "-"], "hash-style=">, Alias<hash_style>;
 def alias_init_init : Joined<["-"], "init=">, Alias<init>;
@@ -238,6 +241,7 @@ def no_copy_dt_needed_entries : Flag<["--"], "no-copy-dt-needed-entries">,
                                 Alias<no_add_needed>;
 def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;
 def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
+def no_mmap_output_file : Flag<["--"], "no-mmap-output-file">;
 def no_undefined_version : Flag<["--", "-"], "no-undefined-version">;
 def no_warn_common : Flag<["--", "-"], "no-warn-common">;
 def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
@@ -256,6 +260,8 @@ def alias_version_script_version_script : Joined<["--"], "version-script=">, Ali
 // LTO-related options.
 def lto_jobs : Joined<["--"], "lto-jobs=">,
   HelpText<"Number of threads to run codegen">;
+def lto_aa_pipeline : Joined<["--"], "lto-aa-pipeline=">,
+  HelpText<"AA pipeline to run during LTO. Used in conjunction with -lto-newpm-passes">;
 def lto_newpm_passes : Joined<["--"], "lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def disable_verify : Flag<["-"], "disable-verify">;

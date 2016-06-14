@@ -12,6 +12,7 @@
 
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include <utility>
 #include <vector>
 
 namespace lld {
@@ -21,7 +22,7 @@ class ScriptParserBase {
 public:
   explicit ScriptParserBase(StringRef S) : Input(S), Tokens(tokenize(S)) {}
   explicit ScriptParserBase(std::vector<StringRef> Tokens)
-      : Input(""), Tokens(Tokens) {}
+      : Input(""), Tokens(std::move(Tokens)) {}
 
 protected:
   void setError(const Twine &Msg);

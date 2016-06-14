@@ -45,13 +45,13 @@
 //     T* fetch_add(ptrdiff_t op, memory_order m = memory_order_seq_cst);
 //     T* fetch_sub(ptrdiff_t op, memory_order m = memory_order_seq_cst) volatile;
 //     T* fetch_sub(ptrdiff_t op, memory_order m = memory_order_seq_cst);
-// 
+//
 //     atomic() = default;
 //     constexpr atomic(T* desr);
 //     atomic(const atomic&) = delete;
 //     atomic& operator=(const atomic&) = delete;
 //     atomic& operator=(const atomic&) volatile = delete;
-// 
+//
 //     T* operator=(T*) volatile;
 //     T* operator=(T*);
 //     T* operator++(int) volatile;
@@ -122,7 +122,7 @@ do_test()
 
     {
         _ALIGNAS_TYPE(A) char storage[sizeof(A)] = {23};
-        A& zero = *new (storage) A();    
+        A& zero = *new (storage) A();
         assert(zero == 0);
         zero.~A();
     }

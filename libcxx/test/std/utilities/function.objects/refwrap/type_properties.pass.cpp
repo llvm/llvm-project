@@ -54,8 +54,8 @@ int main()
 {
     test<int>();
     test<double>();
-    test<std::string>(); 
+    test<std::string>();
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    test<MoveOnly>(); 
+    test<MoveOnly>();
 #endif
 }

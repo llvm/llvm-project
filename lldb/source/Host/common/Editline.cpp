@@ -1074,36 +1074,34 @@ Editline::ConfigureEditor (bool multiline)
             }));
     
     // Commands used for multiline support, registered whether or not they're used
-    el_set (m_editline, EL_ADDFN, "lldb-break-line", "Insert a line break",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-               return Editline::InstanceFor (editline)->BreakLineCommand (ch);
-           }));
-    el_set (m_editline, EL_ADDFN, "lldb-delete-next-char", "Delete next character",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-               return Editline::InstanceFor (editline)->DeleteNextCharCommand (ch);
-           }));
-    el_set (m_editline, EL_ADDFN, "lldb-delete-previous-char", "Delete previous character",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-               return Editline::InstanceFor (editline)->DeletePreviousCharCommand (ch);
-           }));
-    el_set (m_editline, EL_ADDFN, "lldb-previous-line", "Move to previous line",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-               return Editline::InstanceFor (editline)->PreviousLineCommand (ch);
-           }));
-    el_set (m_editline, EL_ADDFN, "lldb-next-line", "Move to next line",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-               return Editline::InstanceFor (editline)->NextLineCommand (ch);
-           }));
-    el_set (m_editline, EL_ADDFN, "lldb-buffer-start", "Move to start of buffer",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-               return Editline::InstanceFor (editline)->BufferStartCommand (ch);
-           }));
-    el_set (m_editline, EL_ADDFN, "lldb-buffer-end", "Move to end of buffer",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-                return Editline::InstanceFor (editline)->BufferEndCommand (ch);
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-break-line"), EditLineConstString("Insert a line break"),
+            (EditlineCommandCallbackType)(
+                [](EditLine *editline, int ch) { return Editline::InstanceFor(editline)->BreakLineCommand(ch); }));
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-delete-next-char"),
+            EditLineConstString("Delete next character"), (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
+                return Editline::InstanceFor(editline)->DeleteNextCharCommand(ch);
             }));
-    el_set (m_editline, EL_ADDFN, "lldb-fix-indentation", "Fix line indentation",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-delete-previous-char"),
+            EditLineConstString("Delete previous character"),
+            (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
+                return Editline::InstanceFor(editline)->DeletePreviousCharCommand(ch);
+            }));
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-previous-line"),
+            EditLineConstString("Move to previous line"), (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
+                return Editline::InstanceFor(editline)->PreviousLineCommand(ch);
+            }));
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-next-line"), EditLineConstString("Move to next line"),
+            (EditlineCommandCallbackType)(
+                [](EditLine *editline, int ch) { return Editline::InstanceFor(editline)->NextLineCommand(ch); }));
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-buffer-start"),
+            EditLineConstString("Move to start of buffer"),
+            (EditlineCommandCallbackType)(
+                [](EditLine *editline, int ch) { return Editline::InstanceFor(editline)->BufferStartCommand(ch); }));
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-buffer-end"), EditLineConstString("Move to end of buffer"),
+            (EditlineCommandCallbackType)(
+                [](EditLine *editline, int ch) { return Editline::InstanceFor(editline)->BufferEndCommand(ch); }));
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-fix-indentation"),
+            EditLineConstString("Fix line indentation"), (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
                 return Editline::InstanceFor (editline)->FixIndentationCommand (ch);
             }));
 
@@ -1114,9 +1112,11 @@ Editline::ConfigureEditor (bool multiline)
     EditlineCommandCallbackType complete_callback = [] (EditLine * editline, int ch) {
         return Editline::InstanceFor (editline)->TabCommand (ch);
     };
-    el_set (m_editline, EL_ADDFN, "lldb-complete", "Invoke completion", complete_callback);
-    el_set (m_editline, EL_ADDFN, "lldb_complete", "Invoke completion", complete_callback);
-    
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-complete"), EditLineConstString("Invoke completion"),
+            complete_callback);
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb_complete"), EditLineConstString("Invoke completion"),
+            complete_callback);
+
     // General bindings we don't mind being overridden
     if (!multiline) {
         el_set (m_editline, EL_BIND, "^r", "em-inc-search-prev", NULL); // Cycle through backwards search, entering string
@@ -1128,10 +1128,10 @@ Editline::ConfigureEditor (bool multiline)
     el_source (m_editline, NULL);
 
     // Register an internal binding that external developers shouldn't use
-    el_set (m_editline, EL_ADDFN, "lldb-revert-line", "Revert line to saved state",
-           (EditlineCommandCallbackType)([] (EditLine * editline, int ch) {
-               return Editline::InstanceFor (editline)->RevertLineCommand (ch);
-           }));
+    el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-revert-line"),
+            EditLineConstString("Revert line to saved state"),
+            (EditlineCommandCallbackType)(
+                [](EditLine *editline, int ch) { return Editline::InstanceFor(editline)->RevertLineCommand(ch); }));
 
     // Register keys that perform auto-indent correction
     if (m_fix_indentation_callback && m_fix_indentation_callback_chars)
@@ -1208,6 +1208,32 @@ Editline::Editline (const char * editline_name, FILE * input_file, FILE * output
     // Get a shared history instance
     m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
     m_history_sp = EditlineHistory::GetHistory (m_editor_name);
+
+#ifdef USE_SETUPTERM_WORKAROUND
+    if (m_output_file)
+    {
+        const int term_fd = fileno(m_output_file);
+        if (term_fd != -1)
+        {
+            static std::mutex *g_init_terminal_fds_mutex_ptr = nullptr;
+            static std::set<int> *g_init_terminal_fds_ptr = nullptr;
+            static std::once_flag g_once_flag;
+            std::call_once(g_once_flag, [&]() {
+                g_init_terminal_fds_mutex_ptr = new std::mutex(); // NOTE: Leak to avoid C++ destructor chain issues
+                g_init_terminal_fds_ptr = new std::set<int>();    // NOTE: Leak to avoid C++ destructor chain issues
+            });
+
+            // We must make sure to initialize the terminal a given file descriptor
+            // only once. If we do this multiple times, we start leaking memory.
+            std::lock_guard<std::mutex> guard(*g_init_terminal_fds_mutex_ptr);
+            if (g_init_terminal_fds_ptr->find(term_fd) == g_init_terminal_fds_ptr->end())
+            {
+                g_init_terminal_fds_ptr->insert(term_fd);
+                setupterm((char *)0, term_fd, (int *)0);
+            }
+        }
+    }
+#endif
 }
 
 Editline::~Editline()
@@ -1353,10 +1379,6 @@ Editline::GetLine (std::string &line, bool &interrupted)
     m_editor_status = EditorStatus::Editing;
     m_revert_cursor_index = -1;
 
-#ifdef USE_SETUPTERM_WORKAROUND
-        setupterm((char *)0, fileno(m_output_file), (int *)0);
-#endif
-
     int count;
     auto input = el_wgets (m_editline, &count);
 
@@ -1403,9 +1425,6 @@ Editline::GetLines (int first_line_number, StringList &lines, bool &interrupted)
     m_revert_cursor_index = -1;
     while (m_editor_status == EditorStatus::Editing)
     {
-#ifdef USE_SETUPTERM_WORKAROUND
-        setupterm((char *)0, fileno(m_output_file), (int *)0);
-#endif
         int count;
         m_current_line_rows = -1;
         el_wpush (m_editline, EditLineConstString("\x1b[^")); // Revert to the existing line content

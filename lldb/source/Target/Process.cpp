@@ -773,6 +773,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp, const UnixSig
       m_last_broadcast_state(eStateInvalid),
       m_can_interpret_function_calls(false),
       m_warnings_issued(),
+      m_run_thread_plan_lock(),
       m_can_jit(eCanJITDontKnow)
 {
     CheckInWithManager();
@@ -2672,11 +2673,21 @@ Process::ReadMemoryFromInferior (addr_t addr, void *buf, size_t size, Error &err
 }
 
 uint64_t
-Process::ReadUnsignedIntegerFromMemory (lldb::addr_t vm_addr, size_t integer_byte_size, uint64_t fail_value, Error &error)
+Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr, size_t integer_byte_size, uint64_t fail_value,
+                                       Error &error)
 {
     Scalar scalar;
     if (ReadScalarIntegerFromMemory(vm_addr, integer_byte_size, false, scalar, error))
         return scalar.ULongLong(fail_value);
+    return fail_value;
+}
+
+int64_t
+Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr, size_t integer_byte_size, int64_t fail_value, Error &error)
+{
+    Scalar scalar;
+    if (ReadScalarIntegerFromMemory(vm_addr, integer_byte_size, true, scalar, error))
+        return scalar.SLongLong(fail_value);
     return fail_value;
 }
 
@@ -5345,6 +5356,8 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_pla
                        const EvaluateExpressionOptions &options, DiagnosticManager &diagnostic_manager)
 {
     ExpressionResults return_value = eExpressionSetupError;
+    
+    std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock);
 
     if (!thread_plan_sp)
     {
@@ -5373,7 +5386,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_pla
 
     // We need to change some of the thread plan attributes for the thread plan runner.  This will restore them
     // when we are done:
-    
+        
     RestorePlanState thread_plan_restorer(thread_plan_sp);
     
     // We rely on the thread plan we are running returning "PlanCompleted" if when it successfully completes.
@@ -6757,12 +6770,6 @@ Process::AdvanceAddressToNextBranchInstruction (Address default_stop_addr, Addre
         {
             retval = next_branch_insn_address;
         }
-    }
-
-    if (disassembler_sp)
-    {
-        // FIXME: The DisassemblerLLVMC has a reference cycle and won't go away if it has any active instructions.
-        disassembler_sp->GetInstructionList().Clear();
     }
 
     return retval;

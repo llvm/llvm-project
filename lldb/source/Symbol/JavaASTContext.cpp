@@ -535,17 +535,6 @@ JavaASTContext::DeclGetName(void *opaque_decl)
     return ConstString();
 }
 
-lldb::VariableSP
-JavaASTContext::DeclGetVariable(void *opaque_decl)
-{
-    return lldb::VariableSP();
-}
-
-void
-JavaASTContext::DeclLinkToObject(void *opaque_decl, std::shared_ptr<void> object)
-{
-}
-
 std::vector<CompilerDecl>
 JavaASTContext::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name, const bool ignore_imported_decls)
 {

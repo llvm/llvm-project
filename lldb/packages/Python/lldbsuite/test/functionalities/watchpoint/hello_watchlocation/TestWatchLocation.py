@@ -34,7 +34,7 @@ class HelloWatchLocationTestCase(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     @expectedFailureAll(triple = re.compile('^mips')) # Most of the MIPS boards provide only one H/W watchpoints, and S/W watchpoints are not supported yet
     @expectedFailureAll(archs=['s390x']) # SystemZ also currently supports only one H/W watchpoint
-    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr27795")
+    @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr27795")
     @skipIfDarwin
     def test_hello_watchlocation(self):
         """Test watching a location with '-s size' option."""

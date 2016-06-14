@@ -59,7 +59,7 @@ static cl::list<std::string> CommandFiles("f",
                                           cl::cat(ClangQueryCategory));
 
 int main(int argc, const char **argv) {
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   CommonOptionsParser OptionsParser(argc, argv, ClangQueryCategory);
 

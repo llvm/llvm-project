@@ -13,22 +13,26 @@
 #include <cassert>
 #include <algorithm> // for 'min' and 'max'
 
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#endif
+#include "test_macros.h"
 
 template <std::size_t N>
 void test_val_ctor()
 {
     {
-    _LIBCPP_CONSTEXPR std::bitset<N> v(0xAAAAAAAAAAAAAAAAULL);
-    assert(v.size() == N);
-    unsigned M = std::min<std::size_t>(N, 64);
-    for (std::size_t i = 0; i < M; ++i)
-        assert(v[i] == (i & 1));
-    for (std::size_t i = M; i < N; ++i)
-        assert(v[i] == false);
+        TEST_CONSTEXPR std::bitset<N> v(0xAAAAAAAAAAAAAAAAULL);
+        assert(v.size() == N);
+        unsigned M = std::min<std::size_t>(N, 64);
+        for (std::size_t i = 0; i < M; ++i)
+            assert(v[i] == (i & 1));
+        for (std::size_t i = M; i < N; ++i)
+            assert(v[i] == false);
     }
+#if TEST_STD_VER >= 11
+    {
+        constexpr std::bitset<N> v(0xAAAAAAAAAAAAAAAAULL);
+        static_assert(v.size() == N, "");
+    }
+#endif
 }
 
 int main()

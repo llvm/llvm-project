@@ -7,17 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // test <cstdio>
 
-// gets 
+// gets
 
 #include <cstdio>
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     (void) std::gets((char *) NULL);
-#else
-#error
-#endif
 }

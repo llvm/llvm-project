@@ -6,7 +6,7 @@
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Name: .eh_frame
-// CHECK-NEXT: Type: SHT_X86_64_UNWIND
+// CHECK-NEXT: Type: SHT_PROGBITS
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT: ]

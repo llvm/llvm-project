@@ -1,13 +1,16 @@
 ; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ;
-; CHECK-NOT: #pragma simd{{\s*$}}
-; CHECK: #pragma simd reduction
-; CHECK: Stmt_S0(2 * n - c1)
-; CHECK: #pragma simd{{\s*$}}
-; CHECK: Stmt_S1
-; CHECK: #pragma simd reduction
-; CHECK: Stmt_S0(2 * n - c1)
-; CHECK-NOT: #pragma simd{{\s*$}}
+; CHECK:          #pragma known-parallel reduction (+ : A)
+; CHECK-NEXT:     for (int c0 = 0; c0 <= 2; c0 += 1) {
+; CHECK-NEXT:       if (c0 == 1) {
+; CHECK-NEXT:         #pragma simd
+; CHECK-NEXT:         for (int c1 = 0; c1 < 2 * n; c1 += 1)
+; CHECK-NEXT:           Stmt_S1(c1);
+; CHECK-NEXT:       } else
+; CHECK-NEXT:         #pragma simd reduction (+ : A)
+; CHECK-NEXT:         for (int c1 = (-c0 / 2) + 2; c1 <= 2 * n; c1 += 2)
+; CHECK-NEXT:           Stmt_S0(2 * n - c1);
+; CHECK-NEXT:     }
 ;
 ;    void rmalrs(int *A, long n) {
 ;      for (long i = 0; i < 2 * n; i++)

@@ -19,14 +19,14 @@
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-#if defined(_LIBCPP_THREAD_API_PTHREAD)
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 #include <pthread.h>
 #include <sched.h>
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(_LIBCPP_THREAD_API_PTHREAD)
+#if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 
 // Mutex
 #define _LIBCPP_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
@@ -194,7 +194,7 @@ void __libcpp_tl_set(__libcpp_tl_key __key, void* __p)
     pthread_setspecific(__key, __p);
 }
 
-#else // !_LIBCPP_THREAD_API_PTHREAD
+#else // !_LIBCPP_HAS_THREAD_API_PTHREAD
   #error "No thread API selected."
 #endif
 

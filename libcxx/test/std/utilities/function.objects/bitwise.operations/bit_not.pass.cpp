@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <functional>
 
 // bit_not
@@ -17,7 +18,6 @@
 
 int main()
 {
-#if _LIBCPP_STD_VER > 11
     typedef std::bit_not<int> F;
     const F f = F();
     static_assert((std::is_same<F::argument_type, int>::value), "" );
@@ -43,5 +43,4 @@ int main()
 
     constexpr int bar = std::bit_not<> () (0xEA95) & 0xFFFF;
     static_assert ( bar == 0x156A, "" );
-#endif
 }

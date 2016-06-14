@@ -1380,14 +1380,14 @@ void ScopDetection::emitMissedRemarks(const Function &F) {
   }
 }
 
-/// @brief Enum for coloring BBs in Region.
-///
-/// WHITE - Unvisited BB in DFS walk.
-/// GREY - BBs which are currently on the DFS stack for processing.
-/// BLACK - Visited and completely processed BB.
-enum Color { WHITE, GREY, BLACK };
-
 bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
+  /// @brief Enum for coloring BBs in Region.
+  ///
+  /// WHITE - Unvisited BB in DFS walk.
+  /// GREY - BBs which are currently on the DFS stack for processing.
+  /// BLACK - Visited and completely processed BB.
+  enum Color { WHITE, GREY, BLACK };
+
   BasicBlock *REntry = R.getEntry();
   BasicBlock *RExit = R.getExit();
   // Map to match the color of a BasicBlock during the DFS walk.
@@ -1500,7 +1500,7 @@ bool ScopDetection::runOnFunction(llvm::Function &F) {
   return false;
 }
 
-const ScopDetection::DetectionContext *
+ScopDetection::DetectionContext *
 ScopDetection::getDetectionContext(const Region *R) const {
   auto DCMIt = DetectionContextMap.find(getBBPairForRegion(R));
   if (DCMIt == DetectionContextMap.end())

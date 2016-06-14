@@ -54,6 +54,9 @@ public:
     RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
     bool
+    IsSoftFloat(uint32_t fp_flag) const;
+
+    bool
     CallFrameAddressIsValid(lldb::addr_t cfa) override
     {
         // Make sure the stack call frame addresses are 8 byte aligned

@@ -93,7 +93,7 @@ __kmp_omp_debug_struct_info = {
     sizeof( void * ),
     OMP_LOCK_T_SIZE < sizeof(void *),
     bs_last_barrier,
-    TASK_DEQUE_SIZE,
+    INITIAL_TASK_DEQUE_SIZE,
 
     // thread structure information
     sizeof( kmp_base_info_t ),
@@ -222,6 +222,7 @@ __kmp_omp_debug_struct_info = {
     // thread_data_t.
     sizeof( kmp_thread_data_t ),
     offset_and_size_of( kmp_base_thread_data_t, td_deque             ),
+    offset_and_size_of( kmp_base_thread_data_t, td_deque_size        ),
     offset_and_size_of( kmp_base_thread_data_t, td_deque_head        ),
     offset_and_size_of( kmp_base_thread_data_t, td_deque_tail        ),
     offset_and_size_of( kmp_base_thread_data_t, td_deque_ntasks      ),

@@ -1630,6 +1630,10 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
                     }
                     if (m_data.GetU32(&offset, &load_cmd.maxprot, 4))
                     {
+                        const uint32_t segment_permissions =
+                            ((load_cmd.initprot & VM_PROT_READ) ? ePermissionsReadable : 0) |
+                            ((load_cmd.initprot & VM_PROT_WRITE) ? ePermissionsWritable : 0) |
+                            ((load_cmd.initprot & VM_PROT_EXECUTE) ? ePermissionsExecutable : 0);
 
                         const bool segment_is_encrypted = (load_cmd.flags & SG_PROTECTED_VERSION_1) != 0;
 
@@ -1656,6 +1660,7 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
 
                             segment_sp->SetIsEncrypted (segment_is_encrypted);
                             m_sections_ap->AddSection(segment_sp);
+                            segment_sp->SetPermissions(segment_permissions);
                             if (add_to_unified)
                                 unified_section_list.AddSection(segment_sp);
                         }
@@ -1787,7 +1792,7 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
                                                                       sect64.align,
                                                                       load_cmd.flags));      // Flags for this section
                                         segment_sp->SetIsFake(true);
-                                        
+                                        segment_sp->SetPermissions(segment_permissions);
                                         m_sections_ap->AddSection(segment_sp);
                                         if (add_to_unified)
                                             unified_section_list.AddSection(segment_sp);
@@ -1945,6 +1950,7 @@ ObjectFileMachO::CreateSections (SectionList &unified_section_list)
                                     section_is_encrypted = encrypted_file_ranges.FindEntryThatContains(sect64.offset) != NULL;
 
                                 section_sp->SetIsEncrypted (segment_is_encrypted || section_is_encrypted);
+                                section_sp->SetPermissions(segment_permissions);
                                 segment_sp->GetChildren().AddSection(section_sp);
 
                                 if (segment_sp->IsFake())
@@ -2764,11 +2770,16 @@ ObjectFileMachO::ParseSymtab ()
 
         const size_t function_starts_count = function_starts.GetSize();
 
-        if (function_starts_count == 0)
+        // For user process binaries (executables, dylibs, frameworks, bundles), if we don't have
+        // LC_FUNCTION_STARTS/eh_frame section in this binary, we're going to assume the binary
+        // has been stripped.  Don't allow assembly language instruction emulation because we don't
+        // know proper function start boundaries.
+        //
+        // For all other types of binaries (kernels, stand-alone bare board binaries, kexts), they
+        // may not have LC_FUNCTION_STARTS / eh_frame sections - we should not make any assumptions
+        // about them based on that.
+        if (function_starts_count == 0 && CalculateStrata() == eStrataUser)
         {
-            // No LC_FUNCTION_STARTS/eh_frame section in this binary, we're going to assume the binary 
-            // has been stripped.  Don't allow assembly language instruction emulation because we don't
-            // know proper function start boundaries.
             m_allow_assembly_emulation_unwind_plans = false;
             Log *unwind_or_symbol_log (lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_UNWIND));
 

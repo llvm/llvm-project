@@ -16,6 +16,7 @@ from lldbsuite.test import lldbutil
 class CommandScriptImmediateOutputTestCase (PExpectTest):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
@@ -23,7 +24,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
 
     @skipIfRemote # test not remote-ready llvm.org/pr24813
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
-    @expectedFailureAll(oslist=["freebsd","linux"], bugnumber="llvm.org/pr26139")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr26139")
     def test_command_script_immediate_output_console (self):
         """Test that LLDB correctly allows scripted commands to set immediate output to the console."""
         self.launch(timeout=10)
@@ -39,7 +40,7 @@ class CommandScriptImmediateOutputTestCase (PExpectTest):
 
     @skipIfRemote # test not remote-ready llvm.org/pr24813
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
-    @expectedFailureAll(oslist=["freebsd","linux"], bugnumber="llvm.org/pr26139")
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr26139")
     def test_command_script_immediate_output_file (self):
         """Test that LLDB correctly allows scripted commands to set immediate output to a file."""
         self.launch(timeout=10)

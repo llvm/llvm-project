@@ -49,7 +49,7 @@ int main()
     test0('a', S("12345"), S("a12345"));
     test0('a', S("1234567890"), S("a1234567890"));
     test0('a', S("12345678901234567890"), S("a12345678901234567890"));
-    
+
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
     test1('a', S(""), S("a"));
@@ -66,7 +66,7 @@ int main()
     test0('a', S("12345"), S("a12345"));
     test0('a', S("1234567890"), S("a1234567890"));
     test0('a', S("12345678901234567890"), S("a12345678901234567890"));
-    
+
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
     test1('a', S(""), S("a"));

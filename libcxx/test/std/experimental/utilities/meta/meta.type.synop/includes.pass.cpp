@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
 // <experimental/type_traits>
 
 #include <experimental/type_traits>
 
-#if _LIBCPP_STD_VER > 11
-# ifndef _LIBCPP_TYPE_TRAITS
-#   error "<experimental/type_traits> must include <type_traits>"
-# endif
+#ifndef _LIBCPP_TYPE_TRAITS
+#  error "<experimental/type_traits> must include <type_traits>"
 #endif
 
 int main()

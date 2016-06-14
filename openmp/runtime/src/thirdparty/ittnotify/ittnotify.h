@@ -140,7 +140,7 @@ The same ID may not be reused for different instances, unless a previous
 #  if ITT_PLATFORM==ITT_PLATFORM_WIN
 #    define CDECL __cdecl
 #  else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
-#    if defined _M_IX86 || defined __i386__ 
+#    if defined _M_IX86 || defined __i386__
 #      define CDECL __attribute__ ((cdecl))
 #    else  /* _M_IX86 || __i386__ */
 #      define CDECL /* actual only on x86 platform */
@@ -153,7 +153,7 @@ The same ID may not be reused for different instances, unless a previous
 #    define STDCALL __stdcall
 #  else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #    if defined _M_IX86 || defined __i386__
-#      define STDCALL __attribute__ ((stdcall)) 
+#      define STDCALL __attribute__ ((stdcall))
 #    else  /* _M_IX86 || __i386__ */
 #      define STDCALL /* supported only on x86 platform */
 #    endif /* _M_IX86 || __i386__ */
@@ -416,19 +416,19 @@ ITT_STUBV(ITTAPI, void, thread_ignore, (void))
  *********************************************************************/
 /** @{ */
 /**
- * @hideinitializer 
+ * @hideinitializer
  * @brief possible value for suppression mask
  */
 #define __itt_suppress_all_errors 0x7fffffff
 
 /**
- * @hideinitializer 
+ * @hideinitializer
  * @brief possible value for suppression mask (suppresses errors from threading analysis)
  */
 #define __itt_suppress_threading_errors 0x000000ff
 
 /**
- * @hideinitializer 
+ * @hideinitializer
  * @brief possible value for suppression mask (suppresses errors from memory analysis)
  */
 #define __itt_suppress_memory_errors 0x0000ff00
@@ -454,7 +454,7 @@ ITT_STUBV(ITTAPI, void, suppress_push, (unsigned int mask))
 /** @endcond */
 
 /**
- * @brief Undo the effects of the matching call to __itt_suppress_push  
+ * @brief Undo the effects of the matching call to __itt_suppress_push
  */
 void ITTAPI __itt_suppress_pop(void);
 
@@ -1584,13 +1584,13 @@ ITT_STUBV(ITTAPI, void, heap_record_memory_growth_end, (void))
  * @brief Specify the type of heap detection/reporting to modify.
  */
 /**
- * @hideinitializer 
+ * @hideinitializer
  * @brief Report on memory leaks.
  */
 #define __itt_heap_leaks 0x00000001
 
 /**
- * @hideinitializer 
+ * @hideinitializer
  * @brief Report on memory growth.
  */
 #define __itt_heap_growth 0x00000002
@@ -1667,7 +1667,7 @@ typedef struct ___itt_domain
  * @ingroup domains
  * @brief Create a domain.
  * Create domain using some domain name: the URI naming style is recommended.
- * Because the set of domains is expected to be static over the application's 
+ * Because the set of domains is expected to be static over the application's
  * execution time, there is no mechanism to destroy a domain.
  * Any domain can be accessed by any thread in the process, regardless of
  * which thread created the domain. This call is thread-safe.
@@ -1801,7 +1801,7 @@ ITT_STUBV(ITTAPI, void, id_create, (const __itt_domain *domain, __itt_id id))
  * @brief Destroy an instance of identifier.
  * This ends the lifetime of the current instance of the given ID value in the trace.
  * Any relationships that are established after this lifetime ends are invalid.
- * This call must be performed before the given ID value can be reused for a different 
+ * This call must be performed before the given ID value can be reused for a different
  * named entity instance.
  * @param[in] domain The domain controlling the execution of this call.
  * @param[in] id The ID to destroy.
@@ -2360,7 +2360,7 @@ ITT_STUBV(ITTAPI, void, metadata_add, (const __itt_domain *domain, __itt_id id, 
  * @param[in] id The identifier of the instance to which the metadata is to be added, or __itt_null to add to the current task
  * @param[in] key The name of the metadata
  * @param[in] data The metadata itself
- * @param[in] length The number of characters in the string, or -1 if the length is unknown but the string is null-terminated 
+ * @param[in] length The number of characters in the string, or -1 if the length is unknown but the string is null-terminated
 */
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 void ITTAPI __itt_metadata_str_addA(const __itt_domain *domain, __itt_id id, __itt_string_handle *key, const char *data, size_t length);
@@ -2396,9 +2396,9 @@ ITT_STUBV(ITTAPI, void, metadata_str_add, (const __itt_domain *domain, __itt_id 
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #else  /* INTEL_NO_ITTNOTIFY_API */
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
-#define __itt_metadata_str_addA(d,x,y,z,a) 
+#define __itt_metadata_str_addA(d,x,y,z,a)
 #define __itt_metadata_str_addA_ptr 0
-#define __itt_metadata_str_addW(d,x,y,z,a) 
+#define __itt_metadata_str_addW(d,x,y,z,a)
 #define __itt_metadata_str_addW_ptr 0
 #else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #define __itt_metadata_str_add(d,x,y,z,a)
@@ -2422,7 +2422,7 @@ ITT_STUBV(ITTAPI, void, metadata_str_add, (const __itt_domain *domain, __itt_id 
  * @param[in] scope The scope of the instance to which the metadata is to be added
 
  * @param[in] id The identifier of the instance to which the metadata is to be added, or __itt_null to add to the current task
- 
+
  * @param[in] key The name of the metadata
  * @param[in] type The type of the metadata
  * @param[in] count The number of elements of the given type. If count == 0, no metadata will be added.
@@ -2455,7 +2455,7 @@ ITT_STUBV(ITTAPI, void, metadata_add_with_scope, (const __itt_domain *domain, __
 
  * @param[in] key The name of the metadata
  * @param[in] data The metadata itself
- * @param[in] length The number of characters in the string, or -1 if the length is unknown but the string is null-terminated 
+ * @param[in] length The number of characters in the string, or -1 if the length is unknown but the string is null-terminated
 */
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 void ITTAPI __itt_metadata_str_add_with_scopeA(const __itt_domain *domain, __itt_scope scope, __itt_string_handle *key, const char *data, size_t length);
@@ -2491,9 +2491,9 @@ ITT_STUBV(ITTAPI, void, metadata_str_add_with_scope, (const __itt_domain *domain
 #endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #else  /* INTEL_NO_ITTNOTIFY_API */
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
-#define __itt_metadata_str_add_with_scopeA(d,x,y,z,a) 
+#define __itt_metadata_str_add_with_scopeA(d,x,y,z,a)
 #define __itt_metadata_str_add_with_scopeA_ptr  0
-#define __itt_metadata_str_add_with_scopeW(d,x,y,z,a) 
+#define __itt_metadata_str_add_with_scopeW(d,x,y,z,a)
 #define __itt_metadata_str_add_with_scopeW_ptr  0
 #else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 #define __itt_metadata_str_add_with_scope(d,x,y,z,a)
@@ -3079,9 +3079,9 @@ ITT_STUB(LIBITTAPI, int, event_end, (__itt_event event))
 
 /**
  * @enum __itt_av_data_type
- * @brief Defines types of arrays data (for C/C++ intrinsic types) 
+ * @brief Defines types of arrays data (for C/C++ intrinsic types)
  */
-typedef enum 
+typedef enum
 {
     __itt_e_first = 0,
     __itt_e_char = 0,  /* 1-byte integer */
@@ -3101,8 +3101,8 @@ typedef enum
  * @brief Save an array data to a file.
  * Output format is defined by the file extension. The csv and bmp formats are supported (bmp - for 2-dimensional array only).
  * @param[in] data - pointer to the array data
- * @param[in] rank - the rank of the array 
- * @param[in] dimensions - pointer to an array of integers, which specifies the array dimensions. 
+ * @param[in] rank - the rank of the array
+ * @param[in] dimensions - pointer to an array of integers, which specifies the array dimensions.
  * The size of dimensions must be equal to the rank
  * @param[in] type - the type of the array, specified as one of the __itt_av_data_type values (for intrinsic types)
  * @param[in] filePath - the file path; the output format is defined by the file extension

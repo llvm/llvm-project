@@ -283,7 +283,7 @@ __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...)
 {
   int         gtid = __kmp_entry_gtid();
 
-#if (KMP_STATS_ENABLED)  
+#if (KMP_STATS_ENABLED)
   int inParallel = __kmpc_in_parallel(loc);
   if (inParallel)
   {
@@ -507,7 +507,7 @@ __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid)
 
    // we need to wait for the proxy tasks before finishing the thread
    if ( task_team != NULL && task_team->tt.tt_found_proxy_tasks )
-        __kmp_task_team_wait(this_thr, serial_team, NULL ); // is an ITT object needed here?
+        __kmp_task_team_wait(this_thr, serial_team USE_ITT_BUILD_ARG(NULL) ); // is an ITT object needed here?
    #endif
 
     KMP_MB();
@@ -620,7 +620,7 @@ __kmpc_flush(ident_t *loc)
             if ( ! __kmp_cpuinfo.sse2 ) {
                 // CPU cannot execute SSE2 instructions.
             } else {
-                #if KMP_COMPILER_ICC 
+                #if KMP_COMPILER_ICC
                 _mm_mfence();
                 #elif KMP_COMPILER_MSVC
                 MemoryBarrier();
@@ -1651,6 +1651,15 @@ kmpc_set_defaults( char const * str )
 {
     // __kmp_aux_set_defaults initializes the library if needed
     __kmp_aux_set_defaults( str, KMP_STRLEN( str ) );
+}
+
+void
+kmpc_set_disp_num_buffers( int arg )
+{
+    // ignore after initialization because some teams have already
+    // allocated dispatch buffers
+    if( __kmp_init_serial == 0 && arg > 0 )
+        __kmp_dispatch_num_buffers = arg;
 }
 
 int
@@ -3061,7 +3070,7 @@ __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims, struct kmp_dim * dims
     }
     KMP_DEBUG_ASSERT(team->t.t_nproc > 1);
     idx = pr_buf->th_doacross_buf_idx++; // Increment index of shared buffer for the next loop
-    sh_buf = &team->t.t_disp_buffer[idx % KMP_MAX_DISP_BUF];
+    sh_buf = &team->t.t_disp_buffer[idx % __kmp_dispatch_num_buffers];
 
     // Save bounds info into allocated private buffer
     KMP_DEBUG_ASSERT(pr_buf->th_doacross_info == NULL);
@@ -3111,7 +3120,7 @@ __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims, struct kmp_dim * dims
     }
     KMP_DEBUG_ASSERT(trace_count > 0);
 
-    // Check if shared buffer is not occupied by other loop (idx - KMP_MAX_DISP_BUF)
+    // Check if shared buffer is not occupied by other loop (idx - __kmp_dispatch_num_buffers)
     if( idx != sh_buf->doacross_buf_idx ) {
         // Shared buffer is occupied, wait for it to be free
         __kmp_wait_yield_4( (kmp_uint32*)&sh_buf->doacross_buf_idx, idx, __kmp_eq_4, NULL );
@@ -3300,14 +3309,14 @@ __kmpc_doacross_fini(ident_t *loc, int gtid)
     if( num_done == th->th.th_team_nproc ) {
         // we are the last thread, need to free shared resources
         int idx = pr_buf->th_doacross_buf_idx - 1;
-        dispatch_shared_info_t *sh_buf = &team->t.t_disp_buffer[idx % KMP_MAX_DISP_BUF];
+        dispatch_shared_info_t *sh_buf = &team->t.t_disp_buffer[idx % __kmp_dispatch_num_buffers];
         KMP_DEBUG_ASSERT(pr_buf->th_doacross_info[1] == (kmp_int64)&sh_buf->doacross_num_done);
         KMP_DEBUG_ASSERT(num_done == (kmp_int64)sh_buf->doacross_num_done);
         KMP_DEBUG_ASSERT(idx == sh_buf->doacross_buf_idx);
         __kmp_thread_free(th, (void*)sh_buf->doacross_flags);
         sh_buf->doacross_flags = NULL;
         sh_buf->doacross_num_done = 0;
-        sh_buf->doacross_buf_idx += KMP_MAX_DISP_BUF; // free buffer for future re-use
+        sh_buf->doacross_buf_idx += __kmp_dispatch_num_buffers; // free buffer for future re-use
     }
     // free private resources (need to keep buffer index forever)
     __kmp_thread_free(th, (void*)pr_buf->th_doacross_info);

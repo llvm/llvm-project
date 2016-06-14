@@ -15,7 +15,7 @@
 // template <class T>
 //     T
 //     atomic_load_explicit(const volatile atomic<T>* obj, memory_order m);
-// 
+//
 // template <class T>
 //     T
 //     atomic_load_explicit(const atomic<T>* obj, memory_order m);

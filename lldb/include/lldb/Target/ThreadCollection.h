@@ -38,7 +38,10 @@ public:
     
     void
     AddThread (const lldb::ThreadSP &thread_sp);
-    
+
+    void
+    AddThreadSortedByIndexID (const lldb::ThreadSP &thread_sp);
+
     void
     InsertThread (const lldb::ThreadSP &thread_sp, uint32_t idx);
     

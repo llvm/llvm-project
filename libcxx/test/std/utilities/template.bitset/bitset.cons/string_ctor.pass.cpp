@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-no-exceptions
 // test bitset(string, pos, n, zero, one);
 
 #include <bitset>
@@ -15,67 +14,60 @@
 #include <algorithm> // for 'min' and 'max'
 #include <stdexcept> // for 'invalid_argument'
 
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#endif
+#include "test_macros.h"
 
 template <std::size_t N>
 void test_string_ctor()
 {
+#ifndef TEST_HAS_NO_EXCEPTIONS
     {
-    try
+        try {
+            std::string str("xxx1010101010xxxx");
+            std::bitset<N> v(str, str.size()+1, 10);
+            assert(false);
+        }
+        catch (std::out_of_range&)
+        {
+        }
+    }
+    {
+        try {
+            std::string str("xxx1010101010xxxx");
+            std::bitset<N> v(str, 2, 10);
+            assert(false);
+        }
+        catch (std::invalid_argument&)
+        {
+        }
+    }
+    {
+        try {
+            std::string str("xxxbababababaxxxx");
+            std::bitset<N> v(str, 2, 10, 'a', 'b');
+            assert(false);
+        }
+        catch (std::invalid_argument&)
+        {
+        }
+    }
+#endif // TEST_HAS_NO_EXCEPTIONS
     {
         std::string str("xxx1010101010xxxx");
-        std::bitset<N> v(str, str.size()+1, 10);
-        assert(false);
+        std::bitset<N> v(str, 3, 10);
+        std::size_t M = std::min<std::size_t>(N, 10);
+        for (std::size_t i = 0; i < M; ++i)
+            assert(v[i] == (str[3 + M - 1 - i] == '1'));
+        for (std::size_t i = 10; i < N; ++i)
+            assert(v[i] == false);
     }
-    catch (std::out_of_range&)
-    {
-    }
-    }
-
-    {
-    try
-    {
-        std::string str("xxx1010101010xxxx");
-        std::bitset<N> v(str, 2, 10);
-        assert(false);
-    }
-    catch (std::invalid_argument&)
-    {
-    }
-    }
-
-    {
-    std::string str("xxx1010101010xxxx");
-    std::bitset<N> v(str, 3, 10);
-    std::size_t M = std::min<std::size_t>(N, 10);
-    for (std::size_t i = 0; i < M; ++i)
-        assert(v[i] == (str[3 + M - 1 - i] == '1'));
-    for (std::size_t i = 10; i < N; ++i)
-        assert(v[i] == false);
-    }
-
-    {
-    try
     {
         std::string str("xxxbababababaxxxx");
-        std::bitset<N> v(str, 2, 10, 'a', 'b');
-        assert(false);
-    }
-    catch (std::invalid_argument&)
-    {
-    }
-    }
-
-    {
-    std::string str("xxxbababababaxxxx");
-    std::bitset<N> v(str, 3, 10, 'a', 'b');
-    std::size_t M = std::min<std::size_t>(N, 10);
-    for (std::size_t i = 0; i < M; ++i)
-        assert(v[i] == (str[3 + M - 1 - i] == 'b'));
-    for (std::size_t i = 10; i < N; ++i)
-        assert(v[i] == false);
+        std::bitset<N> v(str, 3, 10, 'a', 'b');
+        std::size_t M = std::min<std::size_t>(N, 10);
+        for (std::size_t i = 0; i < M; ++i)
+            assert(v[i] == (str[3 + M - 1 - i] == 'b'));
+        for (std::size_t i = 10; i < N; ++i)
+            assert(v[i] == false);
     }
 }
 

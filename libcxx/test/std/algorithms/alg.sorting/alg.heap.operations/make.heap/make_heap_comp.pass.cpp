@@ -69,7 +69,7 @@ void test(unsigned N)
     std::random_shuffle(ia, ia+N);
     std::make_heap(ia, ia+N, std::ref(pred));
     assert(pred.count() <= 3*N);
-    assert(std::is_heap(ia, ia+N, pred));   
+    assert(std::is_heap(ia, ia+N, pred));
     }
 
     delete [] ia;

@@ -23,10 +23,11 @@ namespace lld {
 namespace elf {
 
 class SymbolBody;
+struct SectionPiece;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
-template <class ELFT> class EHInputSection;
+template <class ELFT> class EhInputSection;
 template <class ELFT> class InputSection;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class MergeInputSection;
@@ -92,6 +93,7 @@ public:
   bool PageAlign = false;
 
   virtual void finalize() {}
+  virtual void finalizePieces() {}
   virtual void
   forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) {}
   virtual void writeTo(uint8_t *Buf) {}
@@ -132,6 +134,10 @@ public:
 
   uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
   uint32_t getTlsIndexOff() { return TlsIndexOff; }
+
+  // Flag to force GOT to be in output if we have relocations
+  // that relies on its address.
+  bool HasGotOffRel = false;
 
 private:
   std::vector<const SymbolBody *> Entries;
@@ -196,8 +202,7 @@ public:
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::SymRange Elf_Sym_Range;
   typedef typename ELFT::uint uintX_t;
-  SymbolTableSection(SymbolTable<ELFT> &Table,
-                     StringTableSection<ELFT> &StrTabSec);
+  SymbolTableSection(StringTableSection<ELFT> &StrTabSec);
 
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
@@ -217,8 +222,6 @@ private:
   void writeGlobalSymbols(uint8_t *Buf);
 
   const OutputSectionBase<ELFT> *getOutputSection(SymbolBody *Sym);
-
-  SymbolTable<ELFT> &Table;
 
   // A vector of symbols and their string table offsets.
   std::vector<std::pair<SymbolBody *, size_t>> Symbols;
@@ -318,53 +321,59 @@ public:
   void writeTo(uint8_t *Buf) override;
   unsigned getOffset(StringRef Val);
   void finalize() override;
+  void finalizePieces() override;
   bool shouldTailMerge() const;
 
 private:
   llvm::StringTableBuilder Builder;
+  std::vector<MergeInputSection<ELFT> *> Sections;
 };
 
-// FDE or CIE
-template <class ELFT> struct EHRegion {
-  typedef typename ELFT::uint uintX_t;
-  EHRegion(EHInputSection<ELFT> *S, unsigned Index);
-  StringRef data() const;
-  EHInputSection<ELFT> *S;
-  unsigned Index;
+struct CieRecord {
+  SectionPiece *Piece = nullptr;
+  std::vector<SectionPiece *> FdePieces;
 };
 
-template <class ELFT> struct Cie : public EHRegion<ELFT> {
-  Cie(EHInputSection<ELFT> *S, unsigned Index);
-  std::vector<EHRegion<ELFT>> Fdes;
-  uint8_t FdeEncoding;
-};
-
+// Output section for .eh_frame.
 template <class ELFT>
-class EHOutputSection final : public OutputSectionBase<ELFT> {
-public:
+class EhOutputSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
-  EHOutputSection(StringRef Name, uint32_t Type, uintX_t Flags);
+
+public:
+  EhOutputSection();
   void writeTo(uint8_t *Buf) override;
   void finalize() override;
+  bool empty() const { return Sections.empty(); }
   void
   forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) override;
 
-  template <class RelTy>
-  void addSectionAux(EHInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
-
   void addSection(InputSectionBase<ELFT> *S) override;
 
+  size_t NumFdes = 0;
+
 private:
-  uint8_t getFdeEncoding(ArrayRef<uint8_t> D);
+  template <class RelTy>
+  void addSectionAux(EhInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
 
-  std::vector<EHInputSection<ELFT> *> Sections;
-  std::vector<Cie<ELFT>> Cies;
+  template <class RelTy>
+  CieRecord *addCie(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
+                    ArrayRef<RelTy> &Rels);
 
-  // Maps CIE content + personality to a index in Cies.
-  llvm::DenseMap<std::pair<StringRef, SymbolBody *>, unsigned> CieMap;
+  template <class RelTy>
+  bool isFdeLive(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
+                 ArrayRef<RelTy> &Rels);
+
+  uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
+
+  std::vector<EhInputSection<ELFT> *> Sections;
+  std::vector<CieRecord *> Cies;
+
+  // CIE records are uniquified by their contents and personality functions.
+  llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;
+
   bool Finalized = false;
 };
 
@@ -476,16 +485,13 @@ class DynamicSection final : public OutputSectionBase<ELFT> {
   std::vector<Entry> Entries;
 
 public:
-  explicit DynamicSection(SymbolTable<ELFT> &SymTab);
+  explicit DynamicSection();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
 
   OutputSectionBase<ELFT> *PreInitArraySec = nullptr;
   OutputSectionBase<ELFT> *InitArraySec = nullptr;
   OutputSectionBase<ELFT> *FiniArraySec = nullptr;
-
-private:
-  SymbolTable<ELFT> &SymTab;
 };
 
 template <class ELFT>
@@ -530,26 +536,17 @@ class EhFrameHeader final : public OutputSectionBase<ELFT> {
 
 public:
   EhFrameHeader();
+  void finalize() override;
   void writeTo(uint8_t *Buf) override;
-
-  void addFde(uint8_t Enc, size_t Off, uint8_t *PCRel);
-  void assignEhFrame(EHOutputSection<ELFT> *Sec);
-  void reserveFde();
-
-  bool Live = false;
-
-  EHOutputSection<ELFT> *Sec = nullptr;
+  void addFde(uint32_t Pc, uint32_t FdeVA);
 
 private:
   struct FdeData {
-    uint8_t Enc;
-    size_t Off;
-    uint8_t *PCRel;
+    uint32_t Pc;
+    uint32_t FdeVA;
   };
 
-  uintX_t getFdePc(uintX_t EhVA, const FdeData &F);
-
-  std::vector<FdeData> FdeList;
+  std::vector<FdeData> Fdes;
 };
 
 template <class ELFT> class BuildIdSection : public OutputSectionBase<ELFT> {
@@ -597,6 +594,7 @@ template <class ELFT> struct Out {
   static BuildIdSection<ELFT> *BuildId;
   static DynamicSection<ELFT> *Dynamic;
   static EhFrameHeader<ELFT> *EhFrameHdr;
+  static EhOutputSection<ELFT> *EhFrame;
   static GnuHashTableSection<ELFT> *GnuHashTab;
   static GotPltSection<ELFT> *GotPlt;
   static GotSection<ELFT> *Got;
@@ -624,6 +622,7 @@ template <class ELFT> struct Out {
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
+template <class ELFT> EhOutputSection<ELFT> *Out<ELFT>::EhFrame;
 template <class ELFT> GnuHashTableSection<ELFT> *Out<ELFT>::GnuHashTab;
 template <class ELFT> GotPltSection<ELFT> *Out<ELFT>::GotPlt;
 template <class ELFT> GotSection<ELFT> *Out<ELFT>::Got;

@@ -33,7 +33,7 @@ int main()
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     int ib[] = {0, 1, 2, 3, 0, 1, 2, 3};
     const unsigned sb = sizeof(ib)/sizeof(ib[0]); ((void)sb); // unused in c++11
-    
+
     typedef input_iterator<const int*> II;
     typedef random_access_iterator<const int*>  RAI;
     typedef std::equal_to<int> EQ;
@@ -48,7 +48,7 @@ int main()
             == (std::pair<RAI, RAI>(RAI(ia+3), RAI(ib+3))));
     assert(bcp.count() > 0 && bcp.count() < sa);
     bcp.reset();
-        
+
 #ifdef HAS_FOUR_ITERATOR_VERSION
     assert(std::mismatch(II(ia), II(ia + sa), II(ib), II(ib + sb), EQ())
             == (std::pair<II, II>(II(ia+3), II(ib+3))));

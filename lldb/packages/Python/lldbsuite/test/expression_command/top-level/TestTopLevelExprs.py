@@ -52,7 +52,8 @@ class TopLevelExpressionsTestCase(TestBase):
     @add_test_categories(['pyapi'])
     @expectedFailureAndroid(api_levels=[21, 22], bugnumber="llvm.org/pr27787")
     @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr27787")
-    @expectedFailureAll(oslist=["macosx", "linux"], bugnumber="rdar://26404265")
+    @expectedFailureAll(oslist=["macosx"], debug_info="gmodules", bugnumber="llvm.org/pr27864")
+    @skipIf(oslist=["windows"]) # Error in record layout on Windows
     def test_top_level_expressions(self):
         self.build_and_run()
 
