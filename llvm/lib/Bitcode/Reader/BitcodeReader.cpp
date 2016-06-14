@@ -2316,7 +2316,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
           return error("Invalid record");
 
         MetadataList.assignValue(
-            GET_OR_DISTINCT(DIModule, Record[0],
+            GET_OR_DISTINCT(DIModule,
                             (Context, getMDOrNull(Record[4]),
                              getMDString(Record[5]), nullptr,
                              nullptr, nullptr)),
