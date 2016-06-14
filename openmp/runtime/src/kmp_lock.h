@@ -1071,7 +1071,7 @@ extern void __kmp_cleanup_user_locks();
 // KMP_USE_DYNAMIC_LOCK enables dynamic dispatch of lock functions without breaking the current
 // compatibility. Essential functionality of this new code is dynamic dispatch, but it also
 // implements (or enables implementation of) hinted user lock and critical section which will be
-// part of OMP 4.1 soon.
+// part of OMP 4.5 soon.
 //
 // Lock type can be decided at creation time (i.e., lock initialization), and subsequent lock
 // function call on the created lock object requires type extraction and call through jump table

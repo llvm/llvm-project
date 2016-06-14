@@ -89,12 +89,8 @@ VERSION {
         __kmp_launch_worker;
         __kmp_reap_monitor;
         __kmp_reap_worker;
-        __kmp_release_32;
         __kmp_release_64;
-        __kmp_release_oncore;
-        __kmp_wait_32;
         __kmp_wait_64;
-        __kmp_wait_oncore;
         __kmp_wait_yield_4;
 
         # ittnotify symbols to be used by debugger

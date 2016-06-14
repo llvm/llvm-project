@@ -29,7 +29,7 @@ int main()
     m.clear();
     assert(m.empty());
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::multiset<int, std::less<int>, min_allocator<int>> M;
     M m;

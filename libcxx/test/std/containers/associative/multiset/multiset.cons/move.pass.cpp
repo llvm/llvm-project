@@ -77,7 +77,7 @@ int main()
         assert(distance(mo.begin(), mo.end()) == 0);
     }
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef int V;
         V ar[] =

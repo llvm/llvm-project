@@ -175,7 +175,7 @@ struct dispatch_shared_info_template {
         dispatch_shared_info64_t               s64;
     } u;
     volatile kmp_uint32     buffer_index;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     volatile kmp_int32      doacross_buf_idx;  // teamwise index
     kmp_uint32             *doacross_flags;    // array of iteration flags (0/1)
     kmp_int32               doacross_num_done; // count finished threads

@@ -14,6 +14,8 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class S>
 void
 test(S s)
@@ -59,7 +61,7 @@ int main()
     test(wstring_view  ());
     test(string_view   ( "123"));
     test(wstring_view  (L"123"));
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test(u16string_view{u"123"});
     test(u32string_view{U"123"});
 #endif

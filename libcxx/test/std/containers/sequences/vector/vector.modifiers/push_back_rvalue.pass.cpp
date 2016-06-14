@@ -77,7 +77,7 @@ int main()
         for (int j = 0; j < c.size(); ++j)
             assert(c[j] == MoveOnly(j));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<MoveOnly, min_allocator<MoveOnly>> c;
         c.push_back(MoveOnly(0));

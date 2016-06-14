@@ -31,7 +31,7 @@ int main()
     l1.erase(i);
     assert(false);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     int a1[] = {1, 2, 3};
     std::list<int, min_allocator<int>> l1(a1, a1+3);

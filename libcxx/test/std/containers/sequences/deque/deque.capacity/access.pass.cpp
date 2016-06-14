@@ -68,7 +68,7 @@ int main()
         assert(c.front() == 0);
         assert(c.back() == 9);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::deque<int, min_allocator<int>> c = make<std::deque<int, min_allocator<int>> >(10);
         for (unsigned i = 0; i < 10; ++i)

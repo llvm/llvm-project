@@ -18,7 +18,9 @@
 #include <utility>
 #include <cassert>
 
-#if __cplusplus > 201103L
+#include "test_macros.h"
+
+#if TEST_STD_VER > 11
 struct S {
    std::pair<int, int> a;
    int k;
@@ -41,7 +43,7 @@ int main()
         assert(std::get<1>(p) == 6);
     }
 
-#if __cplusplus > 201103L
+#if TEST_STD_VER > 11
     {
         static_assert(S().k == 1, "");
         static_assert(std::get<1>(getP()) == 4, "");

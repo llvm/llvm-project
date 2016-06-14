@@ -66,7 +66,7 @@ int main()
         assert(std::distance(c.cbegin(), c.cend()) == c.size());
         C::const_iterator i;
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_map<int, std::string, std::hash<int>, std::equal_to<int>,
                             min_allocator<std::pair<const int, std::string>>> C;

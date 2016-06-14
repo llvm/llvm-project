@@ -47,7 +47,7 @@ int main()
     test(4096, 1165, a);
     test(4097, 157, a);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     min_allocator<int> a;
     test(0, 5, a);

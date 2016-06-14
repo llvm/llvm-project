@@ -91,7 +91,7 @@ int main()
         assert(false);
     }
 #endif
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int>> v(100);
         std::vector<int, min_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, 5, 1);

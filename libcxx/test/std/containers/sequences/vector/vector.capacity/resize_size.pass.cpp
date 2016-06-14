@@ -67,7 +67,7 @@ int main()
         assert(is_contiguous_container_asan_correct(v));
     }
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<MoveOnly, min_allocator<MoveOnly>> v(100);
         v.resize(50);

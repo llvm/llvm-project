@@ -13,7 +13,9 @@
 // template <class T, size_t N> constexpr T* data(T (&array)[N]) noexcept;           // C++17
 // template <class E> constexpr const E* data(initializer_list<E> il) noexcept;      // C++17
 
-#if __cplusplus <= 201402L
+#include "test_macros.h"
+
+#if TEST_STD_VER <= 14
 int main () {}
 #else
 

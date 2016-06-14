@@ -324,7 +324,7 @@ __kmp_for_static_init(
                 *plastiter = (tid == ((trip_count - 1)/( UT )chunk) % nth);
             break;
         }
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     case kmp_sch_static_balanced_chunked:
         {
             register T old_upper = *pupper;

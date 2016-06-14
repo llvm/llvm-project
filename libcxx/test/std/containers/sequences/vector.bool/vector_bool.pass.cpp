@@ -37,7 +37,7 @@ int main()
     H h;
     assert(h(vb) != 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::vector<bool, min_allocator<bool>> T;
     typedef std::hash<T> H;

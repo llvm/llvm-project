@@ -42,7 +42,7 @@ int main()
             assert(*i == 10+n);
         assert(n == 4);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef int T;
         typedef std::forward_list<T, min_allocator<T>> C;

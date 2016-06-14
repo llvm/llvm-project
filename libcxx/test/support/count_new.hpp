@@ -14,13 +14,11 @@
 # include <cassert>
 # include <new>
 
-#ifndef __has_feature
-#  define __has_feature(x) 0
-#endif
+#include "test_macros.h"
 
-#if  __has_feature(address_sanitizer) \
-  || __has_feature(memory_sanitizer) \
-  || __has_feature(thread_sanitizer)
+#if  TEST_HAS_FEATURE(address_sanitizer) \
+  || TEST_HAS_FEATURE(memory_sanitizer) \
+  || TEST_HAS_FEATURE(thread_sanitizer)
 #define DISABLE_NEW_COUNT
 #endif
 

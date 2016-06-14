@@ -18,6 +18,8 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct dummy_char_traits : public std::char_traits<char> {};
 
 template<typename CharT, typename Traits>
@@ -37,7 +39,7 @@ int main () {
     test ( std::wstring(L"") );
     test ( std::wstring() );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test ( std::u16string{u"QBCDE"} );
     test ( std::u16string{u""} );
     test ( std::u16string{} );

@@ -48,7 +48,7 @@ int main()
         assert(c.size() == 3);
         assert(*r == 5.5);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_set<double, std::hash<double>,
                                 std::equal_to<double>, min_allocator<double>> C;

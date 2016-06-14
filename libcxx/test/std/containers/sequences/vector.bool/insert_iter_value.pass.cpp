@@ -60,7 +60,7 @@ int main()
         for (++j; j < v.size(); ++j)
             assert(v[j] == 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<bool, min_allocator<bool>> v(100);
         std::vector<bool, min_allocator<bool>>::iterator i = v.insert(v.cbegin() + 10, 1);

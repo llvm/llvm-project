@@ -25,7 +25,7 @@ int main()
     M m;
     assert(m.max_size() != 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::set<int, std::less<int>, min_allocator<int>> M;
     M m;

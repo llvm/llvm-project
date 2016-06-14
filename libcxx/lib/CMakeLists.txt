@@ -88,7 +88,21 @@ add_link_flags_if_supported(-nodefaultlibs)
 if ( APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
                 LIBCXX_CXX_ABI_LIBNAME STREQUAL "none"))
   if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)
-    set(LIBCXX_LIBCPPABI_VERSION "2")
+    set(LIBCXX_LIBCPPABI_VERSION "2") # Default value
+    execute_process(
+      COMMAND xcrun --show-sdk-version
+      OUTPUT_VARIABLE sdk_ver
+      RESULT_VARIABLE res
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if (res EQUAL 0)
+      message(STATUS "Found SDK version ${sdk_ver}")
+      string(REPLACE "10." "" sdk_ver "${sdk_ver}")
+      if (sdk_ver LESS 9)
+        set(LIBCXX_LIBCPPABI_VERSION "")
+      else()
+        set(LIBCXX_LIBCPPABI_VERSION "2")
+      endif()
+    endif()
   endif()
 
   if ( CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6" )

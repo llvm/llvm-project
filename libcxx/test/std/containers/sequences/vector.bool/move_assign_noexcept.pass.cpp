@@ -16,6 +16,8 @@
 
 // This tests a conforming extension
 
+// UNSUPPORTED: c++98, c++03
+
 #include <vector>
 #include <cassert>
 
@@ -56,7 +58,6 @@ struct some_alloc3
 
 int main()
 {
-#if __has_feature(cxx_noexcept)
     {
         typedef std::vector<bool> C;
         static_assert(std::is_nothrow_move_assignable<C>::value, "");
@@ -86,7 +87,5 @@ int main()
         typedef std::vector<bool, some_alloc3<bool>> C;
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");
     }
-#endif
-
 #endif
 }

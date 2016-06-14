@@ -41,7 +41,7 @@ int main()
         assert(c.size() == 3);
         assert(*r == Emplaceable(5, 6));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multiset<Emplaceable, std::hash<Emplaceable>,
                       std::equal_to<Emplaceable>, min_allocator<Emplaceable>> C;

@@ -211,9 +211,8 @@ int includeFixerMain(int argc, const char **argv) {
     tooling::Replacements Replacements =
         clang::include_fixer::createInsertHeaderReplacements(
             Code->getBuffer(), FilePath, Context.Headers[0], InsertStyle);
-    tooling::Replacements Replaces(Replacements.begin(), Replacements.end());
     std::string ChangedCode =
-        tooling::applyAllReplacements(Code->getBuffer(), Replaces);
+        tooling::applyAllReplacements(Code->getBuffer(), Replacements);
     llvm::outs() << ChangedCode;
     return 0;
   }

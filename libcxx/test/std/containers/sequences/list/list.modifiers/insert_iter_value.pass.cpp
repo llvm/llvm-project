@@ -76,7 +76,7 @@ int main()
         assert(false);
     }
 #endif
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     int a1[] = {1, 2, 3};
     int a2[] = {1, 4, 2, 3};

@@ -19,7 +19,11 @@ define hidden void @bar() {
   ret void
 }
 
-define linkonce_odr void @zed() unnamed_addr {
+define linkonce_odr void @zed() local_unnamed_addr {
+  ret void
+}
+
+define linkonce_odr void @zed2() unnamed_addr {
   ret void
 }
 
@@ -38,5 +42,6 @@ define linkonce_odr void @baz() {
 ; CHECK: define void @foo()
 ; CHECK: define internal void @bar()
 ; CHECK: define internal void @zed()
+; CHECK: define internal void @zed2()
 ; CHECK: define weak_odr void @bah()
 ; CHECK: define weak_odr void @baz()

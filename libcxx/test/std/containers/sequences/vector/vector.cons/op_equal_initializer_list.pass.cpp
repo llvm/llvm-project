@@ -30,7 +30,7 @@ int main()
     assert(d[2] == 5);
     assert(d[3] == 6);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     std::vector<int, min_allocator<int>> d;
     d = {3, 4, 5, 6};

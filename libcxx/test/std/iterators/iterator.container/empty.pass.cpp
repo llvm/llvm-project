@@ -12,7 +12,9 @@
 // template <class T, size_t N> constexpr bool empty(const T (&array)[N]) noexcept;  // C++17
 // template <class E> constexpr bool empty(initializer_list<E> il) noexcept;         // C++17
 
-#if __cplusplus <= 201402L
+#include "test_macros.h"
+
+#if TEST_STD_VER <= 14
 int main () {}
 #else
 

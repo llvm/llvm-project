@@ -223,7 +223,7 @@ void AllocatorOptions::CopyTo(Flags *f, CommonFlags *cf) {
 
 struct Allocator {
   static const uptr kMaxAllowedMallocSize =
-      FIRST_32_SECOND_64(3UL << 30, 1UL << 40);
+      FIRST_32_SECOND_64(3UL << 30, 1ULL << 40);
   static const uptr kMaxThreadLocalQuarantine =
       FIRST_32_SECOND_64(1 << 18, 1 << 20);
 

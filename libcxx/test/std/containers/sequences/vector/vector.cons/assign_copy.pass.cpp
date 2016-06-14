@@ -32,7 +32,7 @@ int main()
         assert(l2 == l);
         assert(l2.get_allocator() == other_allocator<int>(5));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int> > l(3, 2, min_allocator<int>());
         std::vector<int, min_allocator<int> > l2(l, min_allocator<int>());

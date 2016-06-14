@@ -43,7 +43,7 @@ int main()
         assert(false);
     }
 #endif
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     std::list<MoveOnly, min_allocator<MoveOnly>> l1;

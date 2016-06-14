@@ -57,13 +57,13 @@ test()
     test<Iter>(1000);
 }
 
-#if __cplusplus >= 201402L
+#if TEST_STD_VER >= 14
 constexpr int il[] = { 2, 4, 6, 8, 7, 5, 3, 1 };
 #endif
 
 void constexpr_test()
 {
-#if __cplusplus >= 201402L
+#if TEST_STD_VER >= 14
     constexpr auto p = std::max_element(il,il+8);
     static_assert ( *p == 8, "" );
 #endif

@@ -19,6 +19,8 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename SV>
 void test1 () {
 #if _LIBCPP_STD_VER > 11
@@ -73,7 +75,7 @@ int main () {
     test2 ( L"a", 1 );
     test2 ( L"", 0 );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test2 ( u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
     test2 ( u"ABCDE", 5 );
     test2 ( u"a", 1 );

@@ -2978,7 +2978,7 @@ __kmp_allocate_team_arrays(kmp_team_t *team, int max_nth)
     /* setup dispatch buffers */
     for(i = 0 ; i < num_disp_buff; ++i) {
         team->t.t_disp_buffer[i].buffer_index = i;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         team->t.t_disp_buffer[i].doacross_buf_idx = i;
 #endif
     }
@@ -3899,7 +3899,7 @@ __kmp_unregister_root_current_thread( int gtid )
 
     KMP_MB();
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
    kmp_info_t * thread = __kmp_threads[gtid];
    kmp_team_t * team = thread->th.th_team;
    kmp_task_team_t *   task_team = thread->th.th_task_team;
@@ -4047,7 +4047,7 @@ __kmp_initialize_info( kmp_info_t *this_thr, kmp_team_t *team, int tid, int gtid
         KMP_DEBUG_ASSERT( dispatch == &team->t.t_dispatch[ tid ] );
 
         dispatch->th_disp_index = 0;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         dispatch->th_doacross_buf_idx = 0;
 #endif
         if( ! dispatch->th_disp_buffer )  {
@@ -6757,7 +6757,7 @@ __kmp_run_before_invoked_task( int gtid, int tid, kmp_info_t *this_thr,
     //KMP_DEBUG_ASSERT( this_thr->th.th_dispatch == &team->t.t_dispatch[ this_thr->th.th_info.ds.ds_tid ] );
 
     dispatch->th_disp_index = 0;    /* reset the dispatch buffer counter */
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     dispatch->th_doacross_buf_idx = 0; /* reset the doacross dispatch buffer counter */
 #endif
     if( __kmp_env_consistency_check )
@@ -6999,13 +6999,13 @@ __kmp_internal_fork( ident_t *id, int gtid, kmp_team_t *team )
         int i;
         for (i = 0; i <  __kmp_dispatch_num_buffers; ++i) {
             team->t.t_disp_buffer[ i ].buffer_index = i;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
             team->t.t_disp_buffer[i].doacross_buf_idx = i;
 #endif
         }
     } else {
         team->t.t_disp_buffer[ 0 ].buffer_index = 0;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         team->t.t_disp_buffer[0].doacross_buf_idx = 0;
 #endif
     }

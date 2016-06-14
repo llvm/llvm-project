@@ -32,7 +32,7 @@ static void __kmp_enable_tasking( kmp_task_team_t *task_team, kmp_info_t *this_t
 static void __kmp_alloc_task_deque( kmp_info_t *thread, kmp_thread_data_t *thread_data );
 static int  __kmp_realloc_task_threads_data( kmp_info_t *thread, kmp_task_team_t *task_team );
 
-#ifdef OMP_41_ENABLED
+#ifdef OMP_45_ENABLED
 static void __kmp_bottom_half_finish_proxy( kmp_int32 gtid, kmp_task_t * ptask );
 #endif
 
@@ -315,7 +315,7 @@ __kmp_push_task(kmp_int32 gtid, kmp_task_t * task )
     // Lock the deque for the task push operation
     __kmp_acquire_bootstrap_lock( & thread_data -> td.td_deque_lock );
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     // Need to recheck as we can get a proxy task from a thread outside of OpenMP
     if ( TCR_4(thread_data -> td.td_deque_ntasks) >= TASK_DEQUE_SIZE(thread_data->td) )
     {
@@ -837,7 +837,7 @@ __kmp_init_implicit_task( ident_t *loc_ref, kmp_info_t *this_thr, kmp_team_t *te
 
     task->td_flags.tiedness    = TASK_TIED;
     task->td_flags.tasktype    = TASK_IMPLICIT;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     task->td_flags.proxy       = TASK_FULL;
 #endif
 
@@ -925,7 +925,7 @@ __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_tasking_flags_t *flags,
         flags->final = 1;
     }
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     if ( flags->proxy == TASK_PROXY ) {
         flags->tiedness = TASK_UNTIED;
         flags->merged_if0 = 1;
@@ -1009,7 +1009,7 @@ __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_tasking_flags_t *flags,
     taskdata->td_taskwait_counter = 0;
     taskdata->td_taskwait_thread  = 0;
     KMP_DEBUG_ASSERT( taskdata->td_parent != NULL );
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     // avoid copying icvs for proxy tasks
     if ( flags->proxy == TASK_FULL )
 #endif
@@ -1021,7 +1021,7 @@ __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_tasking_flags_t *flags,
 #if OMP_40_ENABLED
     taskdata->td_flags.destructors_thunk = flags->destructors_thunk;
 #endif // OMP_40_ENABLED
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     taskdata->td_flags.proxy           = flags->proxy;
     taskdata->td_task_team         = thread->th.th_task_team;
     taskdata->td_size_alloc        = shareds_offset + sizeof_shareds;
@@ -1056,7 +1056,7 @@ __kmp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_tasking_flags_t *flags,
 #endif
 
     // Only need to keep track of child task counts if team parallel and tasking not serialized or if it is a proxy task
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     if ( flags->proxy == TASK_PROXY || !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) )
 #else
     if ( !( taskdata -> td_flags.team_serial || taskdata -> td_flags.tasking_ser ) )
@@ -1095,7 +1095,7 @@ __kmpc_omp_task_alloc( ident_t *loc_ref, kmp_int32 gtid, kmp_int32 flags,
     input_flags->native = FALSE;
     // __kmp_task_alloc() sets up all other runtime flags
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     KA_TRACE(10, ("__kmpc_omp_task_alloc(enter): T#%d loc=%p, flags=(%s %s) "
                   "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
                   gtid, loc_ref, input_flags->tiedness ? "tied  " : "untied",
@@ -1134,7 +1134,7 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
     KA_TRACE(30, ("__kmp_invoke_task(enter): T#%d invoking task %p, current_task=%p\n",
                   gtid, taskdata, current_task) );
     KMP_DEBUG_ASSERT(task);
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     if ( taskdata->td_flags.proxy == TASK_PROXY &&
          taskdata->td_flags.complete == 1)
          {
@@ -1158,7 +1158,7 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
     }
 #endif
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     // Proxy tasks are not handled by the runtime
     if ( taskdata->td_flags.proxy != TASK_PROXY )
 #endif
@@ -1255,7 +1255,7 @@ __kmp_invoke_task( kmp_int32 gtid, kmp_task_t *task, kmp_taskdata_t * current_ta
     }
 #endif
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     // Proxy tasks are not handled by the runtime
     if ( taskdata->td_flags.proxy != TASK_PROXY )
 #endif
@@ -1333,7 +1333,7 @@ __kmp_omp_task( kmp_int32 gtid, kmp_task_t * new_task, bool serialize_immediate 
 
     /* Should we execute the new task or queue it?   For now, let's just always try to
        queue it.  If the queue fills up, then we'll execute it.  */
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     if ( new_taskdata->td_flags.proxy == TASK_PROXY || __kmp_push_task( gtid, new_task ) == TASK_NOT_PUSHED ) // if cannot defer
 #else
     if ( __kmp_push_task( gtid, new_task ) == TASK_NOT_PUSHED ) // if cannot defer
@@ -1433,7 +1433,7 @@ __kmpc_omp_taskwait( ident_t *loc_ref, kmp_int32 gtid )
             __kmp_itt_taskwait_starting( gtid, itt_sync_obj );
 #endif /* USE_ITT_BUILD */
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
 #else
         if ( ! taskdata->td_flags.team_serial )
@@ -1574,7 +1574,7 @@ __kmpc_end_taskgroup( ident_t* loc, int gtid )
             __kmp_itt_taskwait_starting( gtid, itt_sync_obj );
 #endif /* USE_ITT_BUILD */
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         if ( ! taskdata->td_flags.team_serial || (thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks) )
 #else
         if ( ! taskdata->td_flags.team_serial )
@@ -1827,7 +1827,7 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
 
     nthreads = task_team -> tt.tt_nproc;
     unfinished_threads = &(task_team -> tt.tt_unfinished_threads);
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     KMP_DEBUG_ASSERT( nthreads > 1 || task_team->tt.tt_found_proxy_tasks);
 #else
     KMP_DEBUG_ASSERT( nthreads > 1 );
@@ -1936,7 +1936,7 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
         }
 
         // The task source has been exhausted. If in final spin loop of barrier, check if termination condition is satisfied.
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         // The work queue may be empty but there might be proxy tasks still executing
         if (final_spin && TCR_4(current_task->td_incomplete_child_tasks) == 0)
 #else
@@ -1970,7 +1970,7 @@ static inline int __kmp_execute_tasks_template(kmp_info_t *thread, kmp_int32 gti
             return FALSE;
         }
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         // We could be getting tasks from target constructs; if this is the only thread, keep trying to execute
         // tasks from own queue
         if (nthreads == 1)
@@ -2383,7 +2383,7 @@ __kmp_allocate_task_team( kmp_info_t *thread, kmp_team_t *team )
     }
 
     TCW_4(task_team -> tt.tt_found_tasks, FALSE);
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     TCW_4(task_team -> tt.tt_found_proxy_tasks, FALSE);
 #endif
     task_team -> tt.tt_nproc = nthreads = team->t.t_nproc;
@@ -2551,7 +2551,7 @@ __kmp_task_team_setup( kmp_info_t *this_thr, kmp_team_t *team, int always )
             if (!task_team->tt.tt_active || team->t.t_nproc != task_team->tt.tt_nproc) {
                 TCW_4(task_team->tt.tt_nproc, team->t.t_nproc);
                 TCW_4(task_team->tt.tt_found_tasks, FALSE);
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
                 TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
 #endif
                 TCW_4(task_team->tt.tt_unfinished_threads, team->t.t_nproc );
@@ -2616,7 +2616,7 @@ __kmp_task_team_wait( kmp_info_t *this_thr, kmp_team_t *team
         KA_TRACE(20, ("__kmp_task_team_wait: Master T#%d deactivating task_team %p: "
                       "setting active to false, setting local and team's pointer to NULL\n",
                       __kmp_gtid_from_thread(this_thr), task_team));
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         KMP_DEBUG_ASSERT( task_team->tt.tt_nproc > 1 || task_team->tt.tt_found_proxy_tasks == TRUE );
         TCW_SYNC_4( task_team->tt.tt_found_proxy_tasks, FALSE );
 #else
@@ -2668,7 +2668,7 @@ __kmp_tasking_barrier( kmp_team_t *team, kmp_info_t *thread, int gtid )
 }
 
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 
 /* __kmp_give_task puts a task into a given thread queue if:
     - the queue for that thread was created

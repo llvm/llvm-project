@@ -25,7 +25,7 @@ int main()
     assert(m.empty());
     assert(m.begin() == m.end());
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> m;
     assert(m.empty());

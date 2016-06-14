@@ -203,7 +203,7 @@ int main()
         assert(std::distance(i, j) == 1);
         assert(*i == 4);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_set<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> C;

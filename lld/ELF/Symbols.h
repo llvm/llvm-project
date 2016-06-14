@@ -28,6 +28,7 @@ namespace elf {
 class ArchiveFile;
 class BitcodeFile;
 class InputFile;
+class LazyObjectFile;
 class SymbolBody;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
@@ -332,9 +333,9 @@ public:
 // LazyArchive symbols represents symbols in archive files.
 class LazyArchive : public Lazy {
 public:
-  LazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S,
+  LazyArchive(ArchiveFile &File, const llvm::object::Archive::Symbol S,
               uint8_t Type)
-      : Lazy(LazyArchiveKind, S.getName(), Type), File(F), Sym(S) {}
+      : Lazy(LazyArchiveKind, S.getName(), Type), File(File), Sym(S) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyArchiveKind;
@@ -343,7 +344,7 @@ public:
   std::unique_ptr<InputFile> getFile();
 
 private:
-  ArchiveFile *File;
+  ArchiveFile &File;
   const llvm::object::Archive::Symbol Sym;
 };
 
@@ -351,8 +352,8 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Lazy {
 public:
-  LazyObject(StringRef Name, MemoryBufferRef M, uint8_t Type)
-      : Lazy(LazyObjectKind, Name, Type), MBRef(M) {}
+  LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
+      : Lazy(LazyObjectKind, Name, Type), File(File) {}
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyObjectKind;
@@ -361,7 +362,7 @@ public:
   std::unique_ptr<InputFile> getFile();
 
 private:
-  MemoryBufferRef MBRef;
+  LazyObjectFile &File;
 };
 
 // Some linker-generated symbols need to be created as
