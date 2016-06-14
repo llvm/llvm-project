@@ -1323,6 +1323,8 @@ bool SystemZDAGToDAGISel::
 SelectInlineAsmMemoryOperand(const SDValue &Op,
                              unsigned ConstraintID,
                              std::vector<SDValue> &OutOps) {
+  SystemZAddressingMode::AddrForm Form;
+  SystemZAddressingMode::DispRange DispRange;
   SDValue Base, Disp, Index;
 
   switch(ConstraintID) {
@@ -1330,33 +1332,35 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
     llvm_unreachable("Unexpected asm memory constraint");
   case InlineAsm::Constraint_i:
   case InlineAsm::Constraint_Q:
+    // Accept an address with a short displacement, but no index.
+    Form = SystemZAddressingMode::FormBD;
+    DispRange = SystemZAddressingMode::Disp12Only;
+    break;
   case InlineAsm::Constraint_R:
-    // Accept addresses with short displacements, which are compatible
-    // with Q and R. But keep the index operand for future expansion (e.g. the
-    // index for R).
-    if (selectBDXAddr(SystemZAddressingMode::FormBD,
-                      SystemZAddressingMode::Disp12Only,
-                      Op, Base, Disp, Index)) {
-      OutOps.push_back(Base);
-      OutOps.push_back(Disp);
-      OutOps.push_back(Index);
-      return false;
-    }
+    // Accept an address with a short displacement and an index.
+    Form = SystemZAddressingMode::FormBDXNormal;
+    DispRange = SystemZAddressingMode::Disp12Only;
     break;
   case InlineAsm::Constraint_S:
+    // Accept an address with a long displacement, but no index.
+    Form = SystemZAddressingMode::FormBD;
+    DispRange = SystemZAddressingMode::Disp20Only;
+    break;
   case InlineAsm::Constraint_T:
   case InlineAsm::Constraint_m:
-    // Accept addresses with long displacements. As above, keep the index for
-    // future implementation of index for the T constraint.
-    if (selectBDXAddr(SystemZAddressingMode::FormBD,
-                      SystemZAddressingMode::Disp20Only,
-                      Op, Base, Disp, Index)) {
-      OutOps.push_back(Base);
-      OutOps.push_back(Disp);
-      OutOps.push_back(Index);
-      return false;
-    }
+    // Accept an address with a long displacement and an index.
+    // m works the same as T, as this is the most general case.
+    Form = SystemZAddressingMode::FormBDXNormal;
+    DispRange = SystemZAddressingMode::Disp20Only;
     break;
   }
+
+  if (selectBDXAddr(Form, DispRange, Op, Base, Disp, Index)) {
+    OutOps.push_back(Base);
+    OutOps.push_back(Disp);
+    OutOps.push_back(Index);
+    return false;
+  }
+
   return true;
 }

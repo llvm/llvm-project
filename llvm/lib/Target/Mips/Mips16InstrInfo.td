@@ -635,7 +635,7 @@ def BnezRxImmX16: FEXT_RI16_B_ins<0b00101, "bnez", IIM16Alu>, cbranch16;
 // Purpose: Breakpoint
 // To cause a Breakpoint exception.
 
-def Break16: FRRBreakNull16_ins<"break 0", NoItinerary>; 
+def Break16: FRRBreakNull16_ins<"break 0", IIM16Alu>;
 //
 // Format: BTEQZ offset MIPS16e
 // Purpose: Branch on T Equal to Zero (Extended)

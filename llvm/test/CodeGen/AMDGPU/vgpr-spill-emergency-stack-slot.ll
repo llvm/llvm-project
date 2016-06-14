@@ -16,8 +16,8 @@
 ; GCN-DAG: s_mov_b32 s16, SCRATCH_RSRC_DWORD0
 ; GCN-DAG: s_mov_b32 s17, SCRATCH_RSRC_DWORD1
 ; GCN-DAG: s_mov_b32 s18, -1
-; SI-DAG: s_mov_b32 s19, 0x88f000
-; VI-DAG: s_mov_b32 s19, 0x880000
+; SI-DAG: s_mov_b32 s19, 0xe8f000
+; VI-DAG: s_mov_b32 s19, 0xe80000
 
 ; s13 is offset system SGPR
 ; GCN: buffer_store_dword {{v[0-9]+}}, off, s[16:19], s13 offset:{{[0-9]+}} ; 16-byte Folded Spill

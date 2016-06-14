@@ -1273,7 +1273,7 @@ def BALIGN : DspMMRel, BALIGN_ENC, BALIGN_DESC, ISA_DSPR2;
 def PREPEND : DspMMRel, PREPEND_ENC, PREPEND_DESC, ISA_DSPR2;
 
 // Pseudos.
-let isPseudo = 1, isCodeGenOnly = 1 in {
+let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
   // Pseudo instructions for loading and storing accumulator registers.
   def LOAD_ACC64DSP  : Load<"", ACC64DSPOpnd>;
   def STORE_ACC64DSP : Store<"", ACC64DSPOpnd>;

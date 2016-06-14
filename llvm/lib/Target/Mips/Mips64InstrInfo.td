@@ -82,7 +82,7 @@ let usesCustomInserter = 1 in {
 }
 
 /// Pseudo instructions for loading and storing accumulator registers.
-let isPseudo = 1, isCodeGenOnly = 1 in {
+let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
   def LOAD_ACC128  : Load<"", ACC128>;
   def STORE_ACC128 : Store<"", ACC128>;
 }
@@ -92,8 +92,8 @@ let isPseudo = 1, isCodeGenOnly = 1 in {
 //===----------------------------------------------------------------------===//
 let DecoderNamespace = "Mips64" in {
 /// Arithmetic Instructions (ALU Immediate)
-def DADDi   : ArithLogicI<"daddi", simm16_64, GPR64Opnd>, ADDI_FM<0x18>,
-              ISA_MIPS3_NOT_32R6_64R6;
+def DADDi   : ArithLogicI<"daddi", simm16_64, GPR64Opnd, II_DADDI>,
+              ADDI_FM<0x18>, ISA_MIPS3_NOT_32R6_64R6;
 let AdditionalPredicates = [NotInMicroMips] in {
   def DADDiu : StdMMR6Rel, ArithLogicI<"daddiu", simm16_64, GPR64Opnd,
                                        II_DADDIU, immSExt16, add>,
@@ -276,8 +276,10 @@ def SEH64 : SignExtInReg<"seh", i16, GPR64Opnd, II_SEH>, SEB_FM<0x18, 0x20>,
 }
 
 /// Count Leading
-def DCLZ : CountLeading0<"dclz", GPR64Opnd>, CLO_FM<0x24>, ISA_MIPS64_NOT_64R6;
-def DCLO : CountLeading1<"dclo", GPR64Opnd>, CLO_FM<0x25>, ISA_MIPS64_NOT_64R6;
+def DCLZ : CountLeading0<"dclz", GPR64Opnd, II_DCLZ>, CLO_FM<0x24>,
+           ISA_MIPS64_NOT_64R6;
+def DCLO : CountLeading1<"dclo", GPR64Opnd, II_DCLO>, CLO_FM<0x25>,
+           ISA_MIPS64_NOT_64R6;
 
 /// Double Word Swap Bytes/HalfWords
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -460,10 +462,14 @@ def DMTC2_OCTEON : MFC2OP<"dmtc2", GPR64Opnd>, MFC2OP_FM<0x12, 5>, ASE_CNMIPS;
 
 /// Move between CPU and coprocessor registers
 let DecoderNamespace = "Mips64", Predicates = [HasMips64] in {
-def DMFC0 : MFC3OP<"dmfc0", GPR64Opnd, COP0Opnd>, MFC3OP_FM<0x10, 1>, ISA_MIPS3;
-def DMTC0 : MTC3OP<"dmtc0", COP0Opnd, GPR64Opnd>, MFC3OP_FM<0x10, 5>, ISA_MIPS3;
-def DMFC2 : MFC3OP<"dmfc2", GPR64Opnd, COP2Opnd>, MFC3OP_FM<0x12, 1>, ISA_MIPS3;
-def DMTC2 : MTC3OP<"dmtc2", COP2Opnd, GPR64Opnd>, MFC3OP_FM<0x12, 5>, ISA_MIPS3;
+def DMFC0 : MFC3OP<"dmfc0", GPR64Opnd, COP0Opnd, II_DMFC0>, MFC3OP_FM<0x10, 1>,
+            ISA_MIPS3;
+def DMTC0 : MTC3OP<"dmtc0", COP0Opnd, GPR64Opnd, II_DMTC0>, MFC3OP_FM<0x10, 5>,
+            ISA_MIPS3;
+def DMFC2 : MFC3OP<"dmfc2", GPR64Opnd, COP2Opnd, II_DMFC2>, MFC3OP_FM<0x12, 1>,
+            ISA_MIPS3;
+def DMTC2 : MTC3OP<"dmtc2", COP2Opnd, GPR64Opnd, II_DMTC2>, MFC3OP_FM<0x12, 5>,
+            ISA_MIPS3;
 }
 
 //===----------------------------------------------------------------------===//

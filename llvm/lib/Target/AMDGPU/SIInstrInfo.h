@@ -547,8 +547,9 @@ namespace AMDGPU {
   int getAtomicNoRetOp(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
-  const uint64_t RSRC_TID_ENABLE = 1LL << 55;
-  const uint64_t RSRC_ELEMENT_SIZE_SHIFT = 51;
+  const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
+  const uint64_t RSRC_INDEX_STRIDE_SHIFT = (32 + 21);
+  const uint64_t RSRC_TID_ENABLE = UINT64_C(1) << (32 + 23);
 } // End namespace AMDGPU
 
 namespace SI {

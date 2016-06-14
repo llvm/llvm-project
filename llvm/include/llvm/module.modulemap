@@ -3,9 +3,6 @@ module LLVM_Analysis {
   umbrella "Analysis"
   module * { export * }
 
-  // FIXME: Why is this excluded?
-  exclude header "Analysis/BlockFrequencyInfoImpl.h"
-
   // This is intended for (repeated) textual inclusion.
   textual header "Analysis/TargetLibraryInfo.def"
 }
@@ -40,12 +37,6 @@ module LLVM_Backend {
 
     // This is intended for (repeated) textual inclusion.
     textual header "Target/TargetOpcodes.def"
-  }
-
-  // FIXME: Where should this go?
-  module Analysis_BlockFrequencyInfoImpl {
-    header "Analysis/BlockFrequencyInfoImpl.h"
-    export *
   }
 }
 

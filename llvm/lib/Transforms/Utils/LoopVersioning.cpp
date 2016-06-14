@@ -77,7 +77,7 @@ void LoopVersioning::versionLoop(
 
   if (MemRuntimeCheck && SCEVRuntimeCheck) {
     RuntimeCheck = BinaryOperator::Create(Instruction::Or, MemRuntimeCheck,
-                                          SCEVRuntimeCheck, "ldist.safe");
+                                          SCEVRuntimeCheck, "lver.safe");
     if (auto *I = dyn_cast<Instruction>(RuntimeCheck))
       I->insertBefore(RuntimeCheckBB->getTerminator());
   } else
@@ -125,19 +125,16 @@ void LoopVersioning::addPHINodes(
     const SmallVectorImpl<Instruction *> &DefsUsedOutside) {
   BasicBlock *PHIBlock = VersionedLoop->getExitBlock();
   assert(PHIBlock && "No single successor to loop exit block");
+  PHINode *PN;
 
+  // First add a single-operand PHI for each DefsUsedOutside if one does not
+  // exists yet.
   for (auto *Inst : DefsUsedOutside) {
-    auto *NonVersionedLoopInst = cast<Instruction>(VMap[Inst]);
-    PHINode *PN;
-
-    // First see if we have a single-operand PHI with the value defined by the
+    // See if we have a single-operand PHI with the value defined by the
     // original loop.
     for (auto I = PHIBlock->begin(); (PN = dyn_cast<PHINode>(I)); ++I) {
-      if (PN->getIncomingValue(0) == Inst) {
-        assert(PN->getNumOperands() == 1 &&
-               "Exit block should only have on predecessor");
+      if (PN->getIncomingValue(0) == Inst)
         break;
-      }
     }
     // If not create it.
     if (!PN) {
@@ -148,8 +145,20 @@ void LoopVersioning::addPHINodes(
           User->replaceUsesOfWith(Inst, PN);
       PN->addIncoming(Inst, VersionedLoop->getExitingBlock());
     }
-    // Add the new incoming value from the non-versioned loop.
-    PN->addIncoming(NonVersionedLoopInst, NonVersionedLoop->getExitingBlock());
+  }
+
+  // Then for each PHI add the operand for the edge from the cloned loop.
+  for (auto I = PHIBlock->begin(); (PN = dyn_cast<PHINode>(I)); ++I) {
+    assert(PN->getNumOperands() == 1 &&
+           "Exit block should only have on predecessor");
+
+    // If the definition was cloned used that otherwise use the same value.
+    Value *ClonedValue = PN->getIncomingValue(0);
+    auto Mapped = VMap.find(ClonedValue);
+    if (Mapped != VMap.end())
+      ClonedValue = Mapped->second;
+
+    PN->addIncoming(ClonedValue, NonVersionedLoop->getExitingBlock());
   }
 }
 

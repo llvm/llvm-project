@@ -995,4 +995,61 @@ TEST(Support, ReplacePathPrefix) {
   path::replace_path_prefix(Path, OldPrefix, EmptyPrefix);
   EXPECT_EQ(Path, "/foo");
 }
+
+TEST_F(FileSystemTest, PathFromFD) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(
+      fs::createTemporaryFile("prefix", "temp", FileDescriptor, TempPath));
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  // Try to get the path from the file descriptor
+  SmallString<64> ResultPath;
+  std::error_code ErrorCode =
+      fs::getPathFromOpenFD(FileDescriptor, ResultPath);
+
+  // If we succeeded, check that the paths are the same (modulo case):
+  if (!ErrorCode) {
+    // The paths returned by createTemporaryFile and getPathFromOpenFD
+    // should reference the same file on disk.
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+
+  ::close(FileDescriptor);
+}
+
+TEST_F(FileSystemTest, OpenFileForRead) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(
+      fs::createTemporaryFile("prefix", "temp", FileDescriptor, TempPath));
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  // Open the file for read
+  int FileDescriptor2;
+  SmallString<64> ResultPath;
+  ASSERT_NO_ERROR(
+      fs::openFileForRead(Twine(TempPath), FileDescriptor2, &ResultPath))
+
+  // If we succeeded, check that the paths are the same (modulo case):
+  if (!ResultPath.empty()) {
+    // The paths returned by createTemporaryFile and getPathFromOpenFD
+    // should reference the same file on disk.
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+
+  ::close(FileDescriptor);
+}
 } // anonymous namespace

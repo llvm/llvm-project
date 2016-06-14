@@ -25,6 +25,9 @@
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
 #endif
@@ -47,6 +50,7 @@
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
+#include <sys/attr.h>
 #endif
 
 // Both stdio.h and cstdio are included via different pathes and
@@ -544,13 +548,47 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   return std::error_code();
 }
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD) {
+#if !defined(F_GETPATH)
+static bool hasProcSelfFD() {
+  // If we have a /proc filesystem mounted, we can quickly establish the
+  // real name of the file with readlink
+  static const bool Result = (::access("/proc/self/fd", R_OK) == 0);
+  return Result;
+}
+#endif
+
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                SmallVectorImpl<char> *RealPath) {
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
   while ((ResultFD = open(P.begin(), O_RDONLY)) < 0) {
     if (errno != EINTR)
       return std::error_code(errno, std::generic_category());
   }
+  // Attempt to get the real name of the file, if the user asked
+  if(!RealPath)
+    return std::error_code();
+  RealPath->clear();
+#if defined(F_GETPATH)
+  // When F_GETPATH is availble, it is the quickest way to get
+  // the real path name.
+  char Buffer[MAXPATHLEN];
+  if (::fcntl(ResultFD, F_GETPATH, Buffer) != -1)
+    RealPath->append(Buffer, Buffer + strlen(Buffer));
+#else
+  char Buffer[PATH_MAX];
+  if (hasProcSelfFD()) {
+    char ProcPath[64];
+    snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", ResultFD);
+    ssize_t CharCount = ::readlink(ProcPath, Buffer, sizeof(Buffer));
+    if (CharCount > 0)
+      RealPath->append(Buffer, Buffer + CharCount);
+  } else {
+    // Use ::realpath to get the real path name
+    if (::realpath(P.begin(), Buffer) != nullptr)
+      RealPath->append(Buffer, Buffer + strlen(Buffer));
+  }
+#endif
   return std::error_code();
 }
 
@@ -581,6 +619,53 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
     if (errno != EINTR)
       return std::error_code(errno, std::generic_category());
   }
+  return std::error_code();
+}
+
+std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath) {
+  if (FD < 0)
+    return make_error_code(errc::bad_file_descriptor);
+
+#if defined(F_GETPATH)
+  // When F_GETPATH is availble, it is the quickest way to get
+  // the path from a file descriptor.
+  ResultPath.reserve(MAXPATHLEN);
+  if (::fcntl(FD, F_GETPATH, ResultPath.begin()) == -1)
+    return std::error_code(errno, std::generic_category());
+
+  ResultPath.set_size(strlen(ResultPath.begin()));
+#else
+  // If we have a /proc filesystem mounted, we can quickly establish the
+  // real name of the file with readlink. Otherwise, we don't know how to
+  // get the filename from a file descriptor. Give up.
+  if (!fs::hasProcSelfFD())
+    return make_error_code(errc::function_not_supported);
+
+  ResultPath.reserve(PATH_MAX);
+  char ProcPath[64];
+  snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", FD);
+  ssize_t CharCount = ::readlink(ProcPath, ResultPath.begin(), ResultPath.capacity());
+  if (CharCount < 0)
+      return std::error_code(errno, std::generic_category());
+
+  // Was the filename truncated?
+  if (static_cast<size_t>(CharCount) == ResultPath.capacity()) {
+    // Use lstat to get the size of the filename
+    struct stat sb;
+    if (::lstat(ProcPath, &sb) < 0)
+      return std::error_code(errno, std::generic_category());
+
+    ResultPath.reserve(sb.st_size + 1);
+    CharCount = ::readlink(ProcPath, ResultPath.begin(), ResultPath.capacity());
+    if (CharCount < 0)
+      return std::error_code(errno, std::generic_category());
+
+    // Test for race condition: did the link size change?
+    if (CharCount > sb.st_size)
+      return std::error_code(ENAMETOOLONG, std::generic_category());
+  }
+  ResultPath.set_size(static_cast<size_t>(CharCount));
+#endif
   return std::error_code();
 }
 

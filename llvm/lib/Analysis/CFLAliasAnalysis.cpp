@@ -512,141 +512,81 @@ public:
   }
 };
 
-/// Set building requires a weighted bidirectional graph.
-template <typename EdgeTypeT> class WeightedBidirectionalGraph {
-public:
-  typedef std::size_t Node;
-
+/// The Program Expression Graph (PEG) of CFL analysis
+class CFLGraph {
 private:
-  const static Node StartNode = Node(0);
+  typedef Value *Node;
 
   struct Edge {
-    EdgeTypeT Weight;
+    StratifiedAttrs Attr;
+    EdgeType Type;
     Node Other;
+  };
 
-    Edge(const EdgeTypeT &W, const Node &N) : Weight(W), Other(N) {}
+  typedef std::vector<Edge> EdgeList;
+  typedef DenseMap<Node, EdgeList> NodeMap;
+  NodeMap NodeImpls;
 
-    bool operator==(const Edge &E) const {
-      return Weight == E.Weight && Other == E.Other;
+  // Gets the inverse of a given EdgeType.
+  static EdgeType flipWeight(EdgeType Initial) {
+    switch (Initial) {
+    case EdgeType::Assign:
+      return EdgeType::Assign;
+    case EdgeType::Dereference:
+      return EdgeType::Reference;
+    case EdgeType::Reference:
+      return EdgeType::Dereference;
     }
+    llvm_unreachable("Incomplete coverage of EdgeType enum");
+  }
 
-    bool operator!=(const Edge &E) const { return !operator==(E); }
-  };
+  const EdgeList *getNode(Node N) const {
+    auto Itr = NodeImpls.find(N);
+    if (Itr == NodeImpls.end())
+      return nullptr;
+    return &Itr->second;
+  }
+  EdgeList &getOrCreateNode(Node N) { return NodeImpls[N]; }
 
-  struct NodeImpl {
-    std::vector<Edge> Edges;
-  };
-
-  std::vector<NodeImpl> NodeImpls;
-
-  bool inbounds(Node NodeIndex) const { return NodeIndex < NodeImpls.size(); }
-
-  const NodeImpl &getNode(Node N) const { return NodeImpls[N]; }
-  NodeImpl &getNode(Node N) { return NodeImpls[N]; }
+  static Node nodeDeref(const NodeMap::value_type &P) { return P.first; }
+  typedef std::pointer_to_unary_function<const NodeMap::value_type &, Node>
+      NodeDerefFun;
 
 public:
-  /// \brief Iterator for edges. Because this graph is bidirected, we don't
-  /// allow modification of the edges using this iterator. Additionally, the
-  /// iterator becomes invalid if you add edges to or from the node you're
-  /// getting the edges of.
-  struct EdgeIterator : public std::iterator<std::forward_iterator_tag,
-                                             std::tuple<EdgeTypeT, Node *>> {
-    EdgeIterator(const typename std::vector<Edge>::const_iterator &Iter)
-        : Current(Iter) {}
+  typedef EdgeList::const_iterator const_edge_iterator;
+  typedef mapped_iterator<NodeMap::const_iterator, NodeDerefFun>
+      const_node_iterator;
 
-    EdgeIterator(NodeImpl &Impl) : Current(Impl.begin()) {}
+  void addNode(Node N) { getOrCreateNode(N); }
 
-    EdgeIterator &operator++() {
-      ++Current;
-      return *this;
-    }
+  void addEdge(Node From, Node To, EdgeType Type,
+               StratifiedAttrs Attr = StratifiedAttrs()) {
 
-    EdgeIterator operator++(int) {
-      EdgeIterator Copy(Current);
-      operator++();
-      return Copy;
-    }
+    // We can't getOrCreateNode() twice in a row here since the second call may
+    // invalidate the reference returned from the first call
+    getOrCreateNode(From);
+    auto &ToEdges = getOrCreateNode(To);
+    auto &FromEdges = getOrCreateNode(From);
 
-    std::tuple<EdgeTypeT, Node> &operator*() {
-      Store = std::make_tuple(Current->Weight, Current->Other);
-      return Store;
-    }
-
-    bool operator==(const EdgeIterator &Other) const {
-      return Current == Other.Current;
-    }
-
-    bool operator!=(const EdgeIterator &Other) const {
-      return !operator==(Other);
-    }
-
-  private:
-    typename std::vector<Edge>::const_iterator Current;
-    std::tuple<EdgeTypeT, Node> Store;
-  };
-
-  /// Wrapper for EdgeIterator with begin()/end() calls.
-  struct EdgeIterable {
-    EdgeIterable(const std::vector<Edge> &Edges)
-        : BeginIter(Edges.begin()), EndIter(Edges.end()) {}
-
-    EdgeIterator begin() { return EdgeIterator(BeginIter); }
-
-    EdgeIterator end() { return EdgeIterator(EndIter); }
-
-  private:
-    typename std::vector<Edge>::const_iterator BeginIter;
-    typename std::vector<Edge>::const_iterator EndIter;
-  };
-
-  // ----- Actual graph-related things ----- //
-
-  WeightedBidirectionalGraph() {}
-
-  WeightedBidirectionalGraph(WeightedBidirectionalGraph<EdgeTypeT> &&Other)
-      : NodeImpls(std::move(Other.NodeImpls)) {}
-
-  WeightedBidirectionalGraph<EdgeTypeT> &
-  operator=(WeightedBidirectionalGraph<EdgeTypeT> &&Other) {
-    NodeImpls = std::move(Other.NodeImpls);
-    return *this;
+    FromEdges.push_back(Edge{Attr, Type, To});
+    ToEdges.push_back(Edge{Attr, flipWeight(Type), From});
   }
 
-  Node addNode() {
-    auto Index = NodeImpls.size();
-    auto NewNode = Node(Index);
-    NodeImpls.push_back(NodeImpl());
-    return NewNode;
+  iterator_range<const_edge_iterator> edgesFor(Node N) const {
+    auto Edges = getNode(N);
+    assert(Edges != nullptr);
+    return make_range(Edges->begin(), Edges->end());
   }
 
-  void addEdge(Node From, Node To, const EdgeTypeT &Weight,
-               const EdgeTypeT &ReverseWeight) {
-    assert(inbounds(From));
-    assert(inbounds(To));
-    auto &FromNode = getNode(From);
-    auto &ToNode = getNode(To);
-    FromNode.Edges.push_back(Edge(Weight, To));
-    ToNode.Edges.push_back(Edge(ReverseWeight, From));
-  }
-
-  iterator_range<EdgeIterator> edgesFor(const Node &N) const {
-    const auto &Node = getNode(N);
-    return make_range(EdgeIterator(Node.Edges.begin()),
-                      EdgeIterator(Node.Edges.end()));
+  iterator_range<const_node_iterator> nodes() const {
+    return make_range<const_node_iterator>(
+        map_iterator(NodeImpls.begin(), NodeDerefFun(nodeDeref)),
+        map_iterator(NodeImpls.end(), NodeDerefFun(nodeDeref)));
   }
 
   bool empty() const { return NodeImpls.empty(); }
   std::size_t size() const { return NodeImpls.size(); }
-
-  /// Gets an arbitrary node in the graph as a starting point for traversal.
-  Node getEntryNode() {
-    assert(inbounds(StartNode));
-    return StartNode;
-  }
 };
-
-typedef WeightedBidirectionalGraph<std::pair<EdgeType, StratifiedAttrs>> GraphT;
-typedef DenseMap<Value *, GraphT::Node> NodeMapT;
 }
 
 //===----------------------------------------------------------------------===//
@@ -667,9 +607,6 @@ static StratifiedAttr argNumberToAttr(unsigned ArgNum);
 /// Given a Value, potentially return which StratifiedAttr it maps to.
 static Optional<StratifiedAttr> valueToAttr(Value *Val);
 
-/// Gets the inverse of a given EdgeType.
-static EdgeType flipWeight(EdgeType Initial);
-
 /// Gets edges of the given Instruction*, writing them to the SmallVector*.
 static void argsToEdges(CFLAAResult &, Instruction *, SmallVectorImpl<Edge> &,
                         const TargetLibraryInfo &);
@@ -685,7 +622,7 @@ static Level directionOfEdgeType(EdgeType);
 /// Builds the graph needed for constructing the StratifiedSets for the
 /// given function
 static void buildGraphFrom(CFLAAResult &, Function *,
-                           SmallVectorImpl<Value *> &, NodeMapT &, GraphT &,
+                           SmallVectorImpl<Value *> &, CFLGraph &,
                            const TargetLibraryInfo &);
 
 /// Gets the edges of a ConstantExpr as if it was an Instruction. This function
@@ -702,8 +639,8 @@ static void constexprToEdges(CFLAAResult &, ConstantExpr &,
 /// addInstructionToGraph would add both the `load` and `getelementptr`
 /// instructions to the graph appropriately.
 static void addInstructionToGraph(CFLAAResult &, Instruction &,
-                                  SmallVectorImpl<Value *> &, NodeMapT &,
-                                  GraphT &, const TargetLibraryInfo &);
+                                  SmallVectorImpl<Value *> &, CFLGraph &,
+                                  const TargetLibraryInfo &);
 
 /// Determines whether it would be pointless to add the given Value to our sets.
 static bool canSkipAddingToSets(Value *Val);
@@ -777,18 +714,6 @@ static StratifiedAttr argNumberToAttr(unsigned ArgNum) {
   return 1 << (ArgNum + AttrFirstArgIndex);
 }
 
-static EdgeType flipWeight(EdgeType Initial) {
-  switch (Initial) {
-  case EdgeType::Assign:
-    return EdgeType::Assign;
-  case EdgeType::Dereference:
-    return EdgeType::Reference;
-  case EdgeType::Reference:
-    return EdgeType::Dereference;
-  }
-  llvm_unreachable("Incomplete coverage of EdgeType enum");
-}
-
 static void argsToEdges(CFLAAResult &Analysis, Instruction *Inst,
                         SmallVectorImpl<Edge> &Output,
                         const TargetLibraryInfo &TLI) {
@@ -851,18 +776,8 @@ static void constexprToEdges(CFLAAResult &Analysis,
 
 static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
                                   SmallVectorImpl<Value *> &ReturnedValues,
-                                  NodeMapT &Map, GraphT &Graph,
+                                  CFLGraph &Graph,
                                   const TargetLibraryInfo &TLI) {
-  const auto findOrInsertNode = [&Map, &Graph](Value *Val) {
-    auto Pair = Map.insert(std::make_pair(Val, GraphT::Node()));
-    auto &Iter = Pair.first;
-    if (Pair.second) {
-      auto NewNode = Graph.addNode();
-      Iter->second = NewNode;
-    }
-    return Iter->second;
-  };
-
   // We don't want the edges of most "return" instructions, but we *do* want
   // to know what can be returned.
   if (isa<ReturnInst>(&Inst))
@@ -880,17 +795,12 @@ static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
     auto MaybeVal = getTargetValue(&Inst);
     assert(MaybeVal.hasValue());
     auto *Target = *MaybeVal;
-    findOrInsertNode(Target);
+    Graph.addNode(Target);
     return;
   }
 
-  auto addEdgeToGraph = [&](const Edge &E) {
-    auto To = findOrInsertNode(E.To);
-    auto From = findOrInsertNode(E.From);
-    auto FlippedWeight = flipWeight(E.Weight);
-    auto Attrs = E.AdditionalAttrs;
-    Graph.addEdge(From, To, std::make_pair(E.Weight, Attrs),
-                  std::make_pair(FlippedWeight, Attrs));
+  auto addEdgeToGraph = [&Graph](const Edge &E) {
+    Graph.addEdge(E.From, E.To, E.Weight, E.AdditionalAttrs);
   };
 
   SmallVector<ConstantExpr *, 4> ConstantExprs;
@@ -911,13 +821,12 @@ static void addInstructionToGraph(CFLAAResult &Analysis, Instruction &Inst,
 
 static void buildGraphFrom(CFLAAResult &Analysis, Function *Fn,
                            SmallVectorImpl<Value *> &ReturnedValues,
-                           NodeMapT &Map, GraphT &Graph,
-                           const TargetLibraryInfo &TLI) {
+                           CFLGraph &Graph, const TargetLibraryInfo &TLI) {
   // (N.B. We may remove graph construction entirely, because it doesn't really
   // buy us much.)
   for (auto &Bb : Fn->getBasicBlockList())
     for (auto &Inst : Bb.getInstList())
-      addInstructionToGraph(Analysis, Inst, ReturnedValues, Map, Graph, TLI);
+      addInstructionToGraph(Analysis, Inst, ReturnedValues, Graph, TLI);
 }
 
 static bool canSkipAddingToSets(Value *Val) {
@@ -943,74 +852,56 @@ static bool canSkipAddingToSets(Value *Val) {
 
 // Builds the graph + StratifiedSets for a function.
 CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
-  NodeMapT Map;
-  GraphT Graph;
+  CFLGraph Graph;
   SmallVector<Value *, 4> ReturnedValues;
 
-  buildGraphFrom(*this, Fn, ReturnedValues, Map, Graph, TLI);
-
-  DenseMap<GraphT::Node, Value *> NodeValueMap;
-  NodeValueMap.reserve(Map.size());
-  for (const auto &Pair : Map)
-    NodeValueMap.insert(std::make_pair(Pair.second, Pair.first));
-
-  const auto findValueOrDie = [&NodeValueMap](GraphT::Node Node) {
-    auto ValIter = NodeValueMap.find(Node);
-    assert(ValIter != NodeValueMap.end());
-    return ValIter->second;
-  };
+  buildGraphFrom(*this, Fn, ReturnedValues, Graph, TLI);
 
   StratifiedSetsBuilder<Value *> Builder;
 
-  SmallVector<GraphT::Node, 16> Worklist;
+  SmallVector<Value *, 16> Worklist;
   SmallPtrSet<Value *, 16> Globals;
-  for (auto &Pair : Map) {
-    Worklist.clear();
 
-    auto *Value = Pair.first;
-    Builder.add(Value);
-    auto InitialNode = Pair.second;
-    Worklist.push_back(InitialNode);
-    while (!Worklist.empty()) {
-      auto Node = Worklist.pop_back_val();
-      auto *CurValue = findValueOrDie(Node);
-      if (canSkipAddingToSets(CurValue))
+  for (auto Node : Graph.nodes())
+    Worklist.push_back(Node);
+
+  while (!Worklist.empty()) {
+    auto *CurValue = Worklist.pop_back_val();
+    Builder.add(CurValue);
+    if (canSkipAddingToSets(CurValue))
+      continue;
+
+    if (isa<GlobalValue>(CurValue))
+      Globals.insert(CurValue);
+
+    for (const auto &Edge : Graph.edgesFor(CurValue)) {
+      auto Label = Edge.Type;
+      auto *OtherValue = Edge.Other;
+
+      if (canSkipAddingToSets(OtherValue))
         continue;
+      if (isa<GlobalValue>(OtherValue))
+        Globals.insert(OtherValue);
 
-      if (isa<GlobalValue>(CurValue))
-        Globals.insert(CurValue);
-
-      for (const auto &EdgeTuple : Graph.edgesFor(Node)) {
-        auto Weight = std::get<0>(EdgeTuple);
-        auto Label = Weight.first;
-        auto &OtherNode = std::get<1>(EdgeTuple);
-        auto *OtherValue = findValueOrDie(OtherNode);
-
-        if (canSkipAddingToSets(OtherValue))
-          continue;
-        if (isa<GlobalValue>(OtherValue))
-          Globals.insert(OtherValue);
-
-        bool Added;
-        switch (directionOfEdgeType(Label)) {
-        case Level::Above:
-          Added = Builder.addAbove(CurValue, OtherValue);
-          break;
-        case Level::Below:
-          Added = Builder.addBelow(CurValue, OtherValue);
-          break;
-        case Level::Same:
-          Added = Builder.addWith(CurValue, OtherValue);
-          break;
-        }
-
-        auto Aliasing = Weight.second;
-        Builder.noteAttributes(CurValue, Aliasing);
-        Builder.noteAttributes(OtherValue, Aliasing);
-
-        if (Added)
-          Worklist.push_back(OtherNode);
+      bool Added;
+      switch (directionOfEdgeType(Label)) {
+      case Level::Above:
+        Added = Builder.addAbove(CurValue, OtherValue);
+        break;
+      case Level::Below:
+        Added = Builder.addBelow(CurValue, OtherValue);
+        break;
+      case Level::Same:
+        Added = Builder.addWith(CurValue, OtherValue);
+        break;
       }
+
+      auto Aliasing = Edge.Attr;
+      Builder.noteAttributes(CurValue, Aliasing);
+      Builder.noteAttributes(OtherValue, Aliasing);
+
+      if (Added)
+        Worklist.push_back(OtherValue);
     }
   }
 

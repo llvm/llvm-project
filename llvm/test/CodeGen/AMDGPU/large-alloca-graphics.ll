@@ -5,8 +5,8 @@
 ; GCN-DAG: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GCN-DAG: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; GCN-DAG: s_mov_b32 s10, -1
-; CI-DAG: s_mov_b32 s11, 0x88f000
-; VI-DAG: s_mov_b32 s11, 0x880000
+; CI-DAG: s_mov_b32 s11, 0xe8f000
+; VI-DAG: s_mov_b32 s11, 0xe80000
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s0 offen
 ; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s0 offen
@@ -26,8 +26,8 @@ define amdgpu_ps void @large_alloca_pixel_shader(i32 %x, i32 %y) #0 {
 ; GCN-DAG: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GCN-DAG: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; GCN-DAG: s_mov_b32 s10, -1
-; CI-DAG: s_mov_b32 s11, 0x88f000
-; VI-DAG: s_mov_b32 s11, 0x880000
+; CI-DAG: s_mov_b32 s11, 0xe8f000
+; VI-DAG: s_mov_b32 s11, 0xe80000
 
 ; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s2 offen
 ; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s2 offen

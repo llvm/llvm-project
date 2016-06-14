@@ -84,9 +84,9 @@ define i8 @select05(i8 %a.0, i8 %m) {
 define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; CHECK-LABEL: select05_mem:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movzbw (%rsi), %ax
+; CHECK-NEXT:    movzbl (%rsi), %eax
 ; CHECK-NEXT:    kmovw %eax, %k0
-; CHECK-NEXT:    movzbw (%rdi), %ax
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
@@ -114,9 +114,9 @@ define i8 @select06(i8 %a.0, i8 %m) {
 define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; CHECK-LABEL: select06_mem:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    movzbw (%rsi), %ax
+; CHECK-NEXT:    movzbl (%rsi), %eax
 ; CHECK-NEXT:    kmovw %eax, %k0
-; CHECK-NEXT:    movzbw (%rdi), %ax
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    kandw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax

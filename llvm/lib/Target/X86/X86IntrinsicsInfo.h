@@ -2044,8 +2044,6 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
                      X86ISD::SCALAR_FP_TO_UINT_RND, 0),
   X86_INTRINSIC_DATA(avx512_vcvtss2usi64, INTR_TYPE_2OP,
                      X86ISD::SCALAR_FP_TO_UINT_RND, 0),
-  X86_INTRINSIC_DATA(bit_scan_forward_32,  INTR_TYPE_1OP, X86ISD::BSF, 0),
-  X86_INTRINSIC_DATA(bit_scan_reverse_32,  INTR_TYPE_1OP, X86ISD::BSR, 0),
   X86_INTRINSIC_DATA(fma_vfmadd_pd,        INTR_TYPE_3OP, X86ISD::FMADD, 0),
   X86_INTRINSIC_DATA(fma_vfmadd_pd_256,    INTR_TYPE_3OP, X86ISD::FMADD, 0),
   X86_INTRINSIC_DATA(fma_vfmadd_ps,        INTR_TYPE_3OP, X86ISD::FMADD, 0),

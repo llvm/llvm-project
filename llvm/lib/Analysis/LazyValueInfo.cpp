@@ -38,18 +38,19 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "lazy-value-info"
 
-char LazyValueInfo::ID = 0;
-INITIALIZE_PASS_BEGIN(LazyValueInfo, "lazy-value-info",
+char LazyValueInfoWrapperPass::ID = 0;
+INITIALIZE_PASS_BEGIN(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(LazyValueInfo, "lazy-value-info",
+INITIALIZE_PASS_END(LazyValueInfoWrapperPass, "lazy-value-info",
                 "Lazy Value Information Analysis", false, true)
 
 namespace llvm {
-  FunctionPass *createLazyValueInfoPass() { return new LazyValueInfo(); }
+  FunctionPass *createLazyValueInfoPass() { return new LazyValueInfoWrapperPass(); }
 }
 
+char LazyValueAnalysis::PassID;
 
 //===----------------------------------------------------------------------===//
 //                               LVILatticeVal
@@ -1438,28 +1439,31 @@ static LazyValueInfoCache &getCache(void *&PImpl, AssumptionCache *AC,
   return *static_cast<LazyValueInfoCache*>(PImpl);
 }
 
-bool LazyValueInfo::runOnFunction(Function &F) {
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
+  Info.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   DominatorTreeWrapperPass *DTWP =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  Info.DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
-  TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-
-  if (PImpl)
-    getCache(PImpl, AC, &DL, DT).clear();
+  if (Info.PImpl)
+    getCache(Info.PImpl, Info.AC, &DL, Info.DT).clear();
 
   // Fully lazy.
   return false;
 }
 
-void LazyValueInfo::getAnalysisUsage(AnalysisUsage &AU) const {
+void LazyValueInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
+
+LazyValueInfo &LazyValueInfoWrapperPass::getLVI() { return Info; }
+
+LazyValueInfo::~LazyValueInfo() { releaseMemory(); }
 
 void LazyValueInfo::releaseMemory() {
   // If the cache was allocated, free it.
@@ -1467,6 +1471,16 @@ void LazyValueInfo::releaseMemory() {
     delete &getCache(PImpl, AC, nullptr);
     PImpl = nullptr;
   }
+}
+
+void LazyValueInfoWrapperPass::releaseMemory() { Info.releaseMemory(); }
+
+LazyValueInfo LazyValueAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
+  auto &AC = FAM.getResult<AssumptionAnalysis>(F);
+  auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+
+  return LazyValueInfo(&AC, &TLI, DT);
 }
 
 Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,

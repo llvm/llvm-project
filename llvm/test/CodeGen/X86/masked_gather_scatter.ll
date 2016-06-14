@@ -291,7 +291,7 @@ define <8 x i32> @test7(i32* %base, <8 x i32> %ind, i8 %mask) {
 ; KNL_32-LABEL: test7:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    movzbw {{[0-9]+}}(%esp), %cx
+; KNL_32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; KNL_32-NEXT:    kmovw %ecx, %k1
 ; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm0
 ; KNL_32-NEXT:    kmovw %k1, %k2

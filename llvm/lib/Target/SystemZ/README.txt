@@ -7,12 +7,6 @@ for later architectures at some point.
 
 --
 
-SystemZDAGToDAGISel::SelectInlineAsmMemoryOperand() treats the Q and R
-constraints the same, and the S and T constraints the same, because the optional
-index is not used.
-
---
-
 If an inline asm ties an i32 "r" result to an i64 input, the input
 will be treated as an i32, leaving the upper bits uninitialised.
 For example:

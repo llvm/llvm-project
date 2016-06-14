@@ -129,9 +129,12 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(KillSrc)).addImm(1 << 4)
         .addReg(DestReg, RegState::ImplicitDefine);
       return;
+    } else if (Mips::MSACtrlRegClass.contains(DestReg)) {
+      BuildMI(MBB, I, DL, get(Mips::CTCMSA))
+          .addReg(DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+      return;
     }
-    else if (Mips::MSACtrlRegClass.contains(DestReg))
-      Opc = Mips::CTCMSA;
   }
   else if (Mips::FGR32RegClass.contains(DestReg, SrcReg))
     Opc = Mips::FMOV_S;

@@ -4,14 +4,14 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4a | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4a,+avx | FileCheck %s --check-prefix=X64
 
-define void @test1(i8* %p, <4 x float> %a) nounwind optsize ssp {
-; X32-LABEL: test1:
+define void @test_movntss(i8* %p, <4 x float> %a) nounwind optsize ssp {
+; X32-LABEL: test_movntss:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movntss %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: test1:
+; X64-LABEL: test_movntss:
 ; X64:       # BB#0:
 ; X64-NEXT:    movntss %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -21,14 +21,14 @@ define void @test1(i8* %p, <4 x float> %a) nounwind optsize ssp {
 
 declare void @llvm.x86.sse4a.movnt.ss(i8*, <4 x float>)
 
-define void @test2(i8* %p, <2 x double> %a) nounwind optsize ssp {
-; X32-LABEL: test2:
+define void @test_movntsd(i8* %p, <2 x double> %a) nounwind optsize ssp {
+; X32-LABEL: test_movntsd:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movntsd %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: test2:
+; X64-LABEL: test_movntsd:
 ; X64:       # BB#0:
 ; X64-NEXT:    movntsd %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -38,13 +38,13 @@ define void @test2(i8* %p, <2 x double> %a) nounwind optsize ssp {
 
 declare void @llvm.x86.sse4a.movnt.sd(i8*, <2 x double>)
 
-define <2 x i64> @test3(<2 x i64> %x) nounwind uwtable ssp {
-; X32-LABEL: test3:
+define <2 x i64> @test_extrqi(<2 x i64> %x) nounwind uwtable ssp {
+; X32-LABEL: test_extrqi:
 ; X32:       # BB#0:
 ; X32-NEXT:    extrq $2, $3, %xmm0
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: test3:
+; X64-LABEL: test_extrqi:
 ; X64:       # BB#0:
 ; X64-NEXT:    extrq $2, $3, %xmm0
 ; X64-NEXT:    retq
@@ -54,13 +54,13 @@ define <2 x i64> @test3(<2 x i64> %x) nounwind uwtable ssp {
 
 declare <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64>, i8, i8) nounwind
 
-define <2 x i64> @test4(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
-; X32-LABEL: test4:
+define <2 x i64> @test_extrq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
+; X32-LABEL: test_extrq:
 ; X32:       # BB#0:
 ; X32-NEXT:    extrq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: test4:
+; X64-LABEL: test_extrq:
 ; X64:       # BB#0:
 ; X64-NEXT:    extrq %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -71,13 +71,13 @@ define <2 x i64> @test4(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
 
 declare <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64>, <16 x i8>) nounwind
 
-define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
-; X32-LABEL: test5:
+define <2 x i64> @test_insertqi(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
+; X32-LABEL: test_insertqi:
 ; X32:       # BB#0:
 ; X32-NEXT:    insertq $6, $5, %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: test5:
+; X64-LABEL: test_insertqi:
 ; X64:       # BB#0:
 ; X64-NEXT:    insertq $6, $5, %xmm1, %xmm0
 ; X64-NEXT:    retq
@@ -87,13 +87,13 @@ define <2 x i64> @test5(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
 
 declare <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64>, <2 x i64>, i8, i8) nounwind
 
-define <2 x i64> @test6(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
-; X32-LABEL: test6:
+define <2 x i64> @test_insertq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
+; X32-LABEL: test_insertq:
 ; X32:       # BB#0:
 ; X32-NEXT:    insertq %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: test6:
+; X64-LABEL: test_insertq:
 ; X64:       # BB#0:
 ; X64-NEXT:    insertq %xmm1, %xmm0
 ; X64-NEXT:    retq

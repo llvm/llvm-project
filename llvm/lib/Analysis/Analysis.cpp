@@ -53,7 +53,7 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeIVUsersPass(Registry);
   initializeInstCountPass(Registry);
   initializeIntervalPartitionPass(Registry);
-  initializeLazyValueInfoPass(Registry);
+  initializeLazyValueInfoWrapperPassPass(Registry);
   initializeLintPass(Registry);
   initializeLoopInfoWrapperPassPass(Registry);
   initializeMemDepPrinterPass(Registry);
