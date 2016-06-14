@@ -15,6 +15,8 @@
 #include <vector>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
 
@@ -25,7 +27,7 @@ int main()
 	std::vector<bool>::reference r1 = v[0];
 	std::vector<bool>::reference r2 = v[3];
 
-#if __has_feature(cxx_noexcept)
+#if TEST_STD_VER >= 11
     static_assert((noexcept(v.swap(r1,r2))), "");
 #endif
 

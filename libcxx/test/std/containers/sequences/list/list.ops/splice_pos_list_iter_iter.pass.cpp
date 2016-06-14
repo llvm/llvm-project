@@ -128,7 +128,7 @@ int main()
         assert(false);
     }
 #endif
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l1(a1, a1+3);
         l1.splice(l1.begin(), l1, next(l1.begin()), next(l1.begin()));

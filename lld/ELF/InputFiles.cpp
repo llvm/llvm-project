@@ -691,10 +691,17 @@ std::unique_ptr<InputFile> elf::createSharedFile(MemoryBufferRef MB) {
   return createELFFile<SharedFile>(MB);
 }
 
+MemoryBufferRef LazyObjectFile::getBuffer() {
+  if (Seen)
+    return MemoryBufferRef();
+  Seen = true;
+  return MB;
+}
+
 template <class ELFT>
 void LazyObjectFile::parse() {
   for (StringRef Sym : getSymbols())
-    Symtab<ELFT>::X->addLazyObject(Sym, this->MB);
+    Symtab<ELFT>::X->addLazyObject(Sym, *this);
 }
 
 template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {

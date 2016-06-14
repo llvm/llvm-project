@@ -70,7 +70,7 @@ public:
                  const typename ELFT::Verdef *Verdef);
 
   void addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
-  void addLazyObject(StringRef Name, MemoryBufferRef MBRef);
+  void addLazyObject(StringRef Name, LazyObjectFile &Obj);
   Symbol *addBitcode(StringRef Name, bool IsWeak, uint8_t StOther, uint8_t Type,
                      bool CanOmitFromDynSym, BitcodeFile *File);
 

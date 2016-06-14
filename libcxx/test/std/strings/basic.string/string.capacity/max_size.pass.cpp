@@ -63,7 +63,7 @@ int main()
     test(S("123"));
     test(S("12345678901234567890123456789012345678901234567890"));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S());

@@ -18,6 +18,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 class A
 {
     int data_;
@@ -37,7 +39,7 @@ public:
     friend bool operator==(const B& x, const B& y) {return x.data_ == y.data_;}
 };
 
-#if __cplusplus > 201103L
+#if TEST_STD_VER > 11
 struct Final final {};
 #endif
 
@@ -105,7 +107,7 @@ int main()
             assert(i == 7);
         }
     }
-#if __cplusplus > 201103L
+#if TEST_STD_VER > 11
     {
         try
         {

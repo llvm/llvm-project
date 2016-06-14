@@ -20,13 +20,15 @@
 #include <sstream>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
         typedef std::istreambuf_iterator<char> T;
         T it;
         assert(it == T());
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
         constexpr T it2;
 #endif
     }
@@ -34,7 +36,7 @@ int main()
         typedef std::istreambuf_iterator<wchar_t> T;
         T it;
         assert(it == T());
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
         constexpr T it2;
 #endif
     }

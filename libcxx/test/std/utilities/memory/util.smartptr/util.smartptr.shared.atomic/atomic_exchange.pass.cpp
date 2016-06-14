@@ -22,12 +22,15 @@
 // shared_ptr<T>
 // atomic_exchange(shared_ptr<T>* p, shared_ptr<T> r)
 
+// UNSUPPORTED: c++98, c++03
+
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
-#if __has_feature(cxx_atomic)
     {
         std::shared_ptr<int> p(new int(4));
         std::shared_ptr<int> r(new int(3));
@@ -35,5 +38,4 @@ int main()
         assert(*p == 3);
         assert(*r == 4);
     }
-#endif
 }

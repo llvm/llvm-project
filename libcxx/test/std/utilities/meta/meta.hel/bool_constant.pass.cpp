@@ -14,9 +14,11 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
-#if __cplusplus > 201402L
+#if TEST_STD_VER > 14
     typedef std::bool_constant<true> _t;
     static_assert(_t::value, "");
     static_assert((std::is_same<_t::value_type, bool>::value), "");

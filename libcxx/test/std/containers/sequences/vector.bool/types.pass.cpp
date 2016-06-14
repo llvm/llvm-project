@@ -74,7 +74,7 @@ int main()
     test<std::allocator<bool> >();
     static_assert((std::is_same<std::vector<bool>::allocator_type,
                                 std::allocator<bool> >::value), "");
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test<min_allocator<bool> >();
 #endif
 }

@@ -34,7 +34,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_thread_registry.cc
   sanitizer_win.cc)
 
-if(NOT APPLE)
+if(UNIX AND NOT APPLE)
   list(APPEND SANITIZER_SOURCES_NOTERMINATION
     sanitizer_linux_x86_64.S)
 endif()
@@ -138,7 +138,7 @@ append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=570
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                SANITIZER_CFLAGS)
 
-if (LLVM_ENABLE_PEDANTIC AND NOT APPLE)
+if (LLVM_ENABLE_PEDANTIC AND UNIX AND NOT APPLE)
   # With -pedantic, our .S files raise warnings about empty macro arguments
   # from __USER_LABEL_PREFIX__ being an empty arg to GLUE().  Unfortunately,
   # there is no simple way to test for an empty define, nor to disable just

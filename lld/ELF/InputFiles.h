@@ -190,6 +190,7 @@ public:
   }
 
   template <class ELFT> void parse();
+  MemoryBufferRef getBuffer();
 
 private:
   std::vector<StringRef> getSymbols();
@@ -198,6 +199,7 @@ private:
 
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver{Alloc};
+  bool Seen = false;
 };
 
 // An ArchiveFile object represents a .a file.

@@ -59,7 +59,7 @@ int main()
         assert(next(m.begin(), 8)->first == 3);
         assert(next(m.begin(), 8)->second == 2);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;
         typedef std::pair<int, double> P;

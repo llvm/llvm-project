@@ -45,7 +45,7 @@ int main()
     assert(distance(l1.begin(), l1.end()) == 0);
     assert(is_contiguous_container_asan_correct(l1));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     int a1[] = {1, 2, 3};
     std::vector<int, min_allocator<int>> l1(a1, a1+3);

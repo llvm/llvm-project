@@ -60,7 +60,7 @@ int main()
     }
 #endif
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     std::list<A, min_allocator<A>> c;

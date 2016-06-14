@@ -53,7 +53,7 @@ int main()
     assert(*++i == V(3, 2));
     assert(m.key_comp() == Cmp(4));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef test_compare<std::less<int> > Cmp;
     typedef std::multimap<int, double, Cmp, min_allocator<std::pair<const int, double>>> C;

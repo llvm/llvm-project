@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "test_macros.h"
+
 bool throw_next = false;
 
 void* operator new(std::size_t s) throw(std::bad_alloc)
@@ -105,7 +107,7 @@ int main()
     fn(std::unique_ptr<int>(new int));
     }
 
-#if __cplusplus >= 201402L
+#if TEST_STD_VER >= 14
     // LWG 2415
     {
     std::unique_ptr<int, void (*)(int*)> p(nullptr, assert_deleter<int>);

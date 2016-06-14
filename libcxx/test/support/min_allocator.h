@@ -40,7 +40,7 @@ public:
 };
 
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
 
 #include <memory>
 
@@ -286,6 +286,6 @@ public:
     friend bool operator!=(min_allocator x, min_allocator y) {return !(x == y);}
 };
 
-#endif  // __cplusplus >= 201103L
+#endif  // TEST_STD_VER >= 11
 
 #endif  // MIN_ALLOCATOR_H

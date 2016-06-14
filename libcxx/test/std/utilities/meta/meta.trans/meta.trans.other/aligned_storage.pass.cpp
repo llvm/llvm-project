@@ -164,7 +164,7 @@ int main()
     // Use alignof(std::max_align_t) below to find the max alignment instead of
     // hardcoding it, because it's different on different platforms.
     // (For example 8 on arm and 16 on x86.)
-#if __cplusplus < 201103L
+#if TEST_STD_VER < 11
 #define alignof __alignof__
 #endif
     {

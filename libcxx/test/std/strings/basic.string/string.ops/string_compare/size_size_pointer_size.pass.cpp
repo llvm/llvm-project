@@ -1304,7 +1304,7 @@ int main()
     test10<S>();
     test11<S>();
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();

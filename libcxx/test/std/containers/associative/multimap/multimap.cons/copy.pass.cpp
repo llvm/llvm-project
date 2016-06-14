@@ -74,7 +74,7 @@ int main()
         assert(mo.key_comp() == C(5));
     }
 #endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::pair<const int, double> V;
         V ar[] =

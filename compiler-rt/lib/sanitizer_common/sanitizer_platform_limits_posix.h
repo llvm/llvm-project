@@ -415,49 +415,6 @@ namespace __sanitizer {
     int cmsg_type;
   };
 #else
-# ifndef __GLIBC_PREREQ
-# define __GLIBC_PREREQ(x, y) 0
-# endif
-// GLIBC 2.24 follows msghdr and cmsghdr POSIX definition for internal
-// member size and adds padding where required.
-# if __GLIBC_PREREQ(2, 24) && defined(_LP64)
-#  if __BYTE_ORDER == __BIG_ENDIAN
-  struct __sanitizer_msghdr {
-    void *msg_name;
-    unsigned msg_namelen;
-    struct __sanitizer_iovec *msg_iov;
-    int __padding1;
-    unsigned msg_iovlen;
-    void *msg_control;
-    int __padding2;
-    unsigned msg_controllen;
-    int msg_flags;
-  };
-  struct __sanitizer_cmsghdr {
-    uptr cmsg_len;
-    int cmsg_level;
-    int cmsg_type;
-  };
-#  else
-  struct __sanitizer_msghdr {
-    void *msg_name;
-    unsigned msg_namelen;
-    struct __sanitizer_iovec *msg_iov;
-    int msg_iovlen;
-    int __padding1;
-    void *msg_control;
-    int msg_controllen;
-    int __padding2;
-    int msg_flags;
-  };
-  struct __sanitizer_cmsghdr {
-    unsigned cmsg_len;
-    int __padding1;
-    int cmsg_level;
-    int cmsg_type;
-  };
-#  endif // __BYTE_ORDER == __BIG_ENDIAN
-# else
   struct __sanitizer_msghdr {
     void *msg_name;
     unsigned msg_namelen;
@@ -472,7 +429,6 @@ namespace __sanitizer {
     int cmsg_level;
     int cmsg_type;
   };
-# endif // __GLIBC_PREREQ (2, 24) && __WORDSIZE == 64
 #endif
 
 #if SANITIZER_MAC

@@ -288,9 +288,8 @@ static int parseFilenamePattern(const char *FilenamePat) {
           }
       } else if (containsMergeSpecifier(FilenamePat, I)) {
         if (MergingEnabled) {
-          PROF_WARN(
-              "%%m specifier can only be specified once at the end of %s.\n",
-              FilenamePat);
+          PROF_WARN("%%m specifier can only be specified once in %s.\n",
+                    FilenamePat);
           return -1;
         }
         MergingEnabled = 1;

@@ -502,7 +502,7 @@ __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid)
     this_thr    = __kmp_threads[ global_tid ];
     serial_team = this_thr->th.th_serial_team;
 
-   #if OMP_41_ENABLED
+   #if OMP_45_ENABLED
    kmp_task_team_t *   task_team = this_thr->th.th_task_team;
 
    // we need to wait for the proxy tasks before finishing the thread
@@ -3036,7 +3036,7 @@ void __kmpc_place_threads(int nS, int sO, int nC, int cO, int nT)
     __kmp_place_num_threads_per_core = nT;
 }
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 /*!
 @ingroup WORK_SHARING
 @param loc  source location information.

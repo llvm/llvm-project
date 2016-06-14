@@ -31,7 +31,7 @@ int main()
     std::vector<int>::iterator i = l1.erase(l2.cbegin(), l2.cbegin()+1);
     assert(false);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     int a1[] = {1, 2, 3};
     std::vector<int, min_allocator<int>> l1(a1, a1+3);

@@ -746,8 +746,8 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_WCTYPE_IS_MASK
 #endif
 
-#ifdef _LIBCPP_TRIVIAL_PAIR_COPY_CTOR
-#  error the "_LIBCPP_TRIVIAL_PAIR_COPY_CTOR" option is no longer supported
+#ifndef _LIBCPP_TRIVIAL_PAIR_COPY_CTOR
+#  define _LIBCPP_TRIVIAL_PAIR_COPY_CTOR 1
 #endif
 
 #ifndef _LIBCPP_STD_VER
@@ -880,9 +880,7 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #if __cplusplus < 201103L
 #define _LIBCPP_CXX03_LANG
 #else
-#if defined(_LIBCPP_HAS_NO_VARIADIC_TEMPLATES) \
- || defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)  \
- || defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTION)
+#if defined(_LIBCPP_HAS_NO_VARIADIC_TEMPLATES) || defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES)
 #error Libc++ requires a feature complete C++11 compiler in C++11 or greater.
 #endif
 #endif

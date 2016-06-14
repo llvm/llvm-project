@@ -48,7 +48,7 @@ int main()
         static_assert((std::is_same<C::size_type, std::size_t>::value), "");
         static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_set<short, std::hash<short>,
                                   std::equal_to<short>, min_allocator<short>> C;
