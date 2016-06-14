@@ -140,16 +140,19 @@ namespace {
 class RealFile : public File {
   int FD;
   Status S;
+  std::string RealName;
   friend class RealFileSystem;
-  RealFile(int FD, StringRef NewName)
+  RealFile(int FD, StringRef NewName, StringRef NewRealPathName)
       : FD(FD), S(NewName, {}, {}, {}, {}, {},
-                  llvm::sys::fs::file_type::status_error, {}) {
+                  llvm::sys::fs::file_type::status_error, {}),
+        RealName(NewRealPathName.str()) {
     assert(FD >= 0 && "Invalid or inactive file descriptor");
   }
 
 public:
   ~RealFile() override;
   ErrorOr<Status> status() override;
+  ErrorOr<std::string> getName() override;
   ErrorOr<std::unique_ptr<MemoryBuffer>> getBuffer(const Twine &Name,
                                                    int64_t FileSize,
                                                    bool RequiresNullTerminator,
@@ -168,6 +171,10 @@ ErrorOr<Status> RealFile::status() {
     S = Status::copyWithNewName(RealStatus, S.getName());
   }
   return S;
+}
+
+ErrorOr<std::string> RealFile::getName() {
+  return RealName.empty() ? S.getName().str() : RealName;
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
@@ -207,9 +214,10 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
   int FD;
-  if (std::error_code EC = sys::fs::openFileForRead(Name, FD))
+  SmallString<256> RealName;
+  if (std::error_code EC = sys::fs::openFileForRead(Name, FD, &RealName))
     return EC;
-  return std::unique_ptr<File>(new RealFile(FD, Name.str()));
+  return std::unique_ptr<File>(new RealFile(FD, Name.str(), RealName.str()));
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {

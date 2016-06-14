@@ -917,7 +917,7 @@ int main()
     std::uintmax_t i4 = 0;
     }
     {
-    std::imaxdiv_t  i1 = {0};
+    std::imaxdiv_t  i1 = {};
     }
     std::intmax_t i = 0;
     static_assert((std::is_same<decltype(std::imaxabs(i)), std::intmax_t>::value), "");

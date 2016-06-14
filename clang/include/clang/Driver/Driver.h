@@ -275,6 +275,11 @@ public:
   /// @name Primary Functionality
   /// @{
 
+  /// CreateOffloadingDeviceToolChains - create all the toolchains required to
+  /// support offloading devices given the programming models specified in the
+  /// current compilation. Also, update the host tool chain kind accordingly.
+  void CreateOffloadingDeviceToolChains(Compilation &C, InputList &Inputs);
+
   /// BuildCompilation - Construct a compilation object for a command
   /// line argument vector.
   ///

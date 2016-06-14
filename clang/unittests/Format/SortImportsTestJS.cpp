@@ -92,12 +92,12 @@ TEST_F(SortImportsTestJS, SeparateMainCodeBody) {
 TEST_F(SortImportsTestJS, Comments) {
   verifySort("/** @fileoverview This is a great file. */\n"
              "// A very important import follows.\n"
-             "import {sym} from 'a'; /* more comments */\n"
-             "import {sym} from 'b'; // from //foo:bar\n",
+             "import {sym} from 'a';  /* more comments */\n"
+             "import {sym} from 'b';  // from //foo:bar\n",
              "/** @fileoverview This is a great file. */\n"
-             "import {sym} from 'b'; // from //foo:bar\n"
+             "import {sym} from 'b';  // from //foo:bar\n"
              "// A very important import follows.\n"
-             "import {sym} from 'a'; /* more comments */\n");
+             "import {sym} from 'a';  /* more comments */\n");
 }
 
 TEST_F(SortImportsTestJS, SortStar) {

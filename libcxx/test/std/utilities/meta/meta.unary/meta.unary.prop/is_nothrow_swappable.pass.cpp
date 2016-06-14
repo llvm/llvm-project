@@ -41,8 +41,8 @@ struct M {
 void swap(M&&, M&&) noexcept {}
 
 struct ThrowingMove {
-    ThrowingMove(ThrowingMove&&){}
-    ThrowingMove& operator=(ThrowingMove&&) {}
+    ThrowingMove(ThrowingMove&&) {}
+    ThrowingMove& operator=(ThrowingMove&&) { return *this; }
 };
 
 } // namespace MyNS

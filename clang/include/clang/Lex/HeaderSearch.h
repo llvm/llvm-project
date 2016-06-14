@@ -580,8 +580,9 @@ private:
   /// \brief Look up the file with the specified name and determine its owning
   /// module.
   const FileEntry *
-  getFileAndSuggestModule(StringRef FileName, const DirectoryEntry *Dir,
-                          bool IsSystemHeaderDir, Module *RequestingModule,
+  getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
+                          const DirectoryEntry *Dir, bool IsSystemHeaderDir,
+                          Module *RequestingModule,
                           ModuleMap::KnownHeader *SuggestedModule);
 
 public:

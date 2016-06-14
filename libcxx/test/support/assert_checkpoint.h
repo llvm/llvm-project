@@ -30,7 +30,7 @@ inline Checkpoint& globalCheckpoint() {
 }
 
 inline void clearCheckpoint() {
-    globalCheckpoint() = Checkpoint{0};
+    globalCheckpoint() = {};
 }
 
 #if defined(__GNUC__)

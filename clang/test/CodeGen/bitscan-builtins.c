@@ -7,11 +7,13 @@
 int test_bit_scan_forward(int a) {
   return _bit_scan_forward(a);
 // CHECK: @test_bit_scan_forward
-// CHECK: call i32 @llvm.x86.bit.scan.forward
+// CHECK: %[[call:.*]] = call i32 @llvm.cttz.i32(
+// CHECK: ret i32 %[[call]]
 }
 
 int test_bit_scan_reverse(int a) {
   return _bit_scan_reverse(a);
-// CHECK: @test_bit_scan_reverse
-// CHECK: call i32 @llvm.x86.bit.scan.reverse
+// CHECK:  %[[call:.*]] = call i32 @llvm.ctlz.i32(
+// CHECK:  %[[sub:.*]] = sub nsw i32 31, %[[call]]
+// CHECK: ret i32 %[[sub]]
 }

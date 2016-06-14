@@ -15,6 +15,7 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Path.h"
+#include <map>
 
 namespace llvm {
 namespace opt {
@@ -38,8 +39,16 @@ class Compilation {
   /// The default tool chain.
   const ToolChain &DefaultToolChain;
 
-  const ToolChain *CudaHostToolChain;
-  const ToolChain *CudaDeviceToolChain;
+  /// A mask of all the programming models the host has to support in the
+  /// current compilation.
+  unsigned ActiveOffloadMask;
+
+  /// Array with the toolchains of offloading host and devices in the order they
+  /// were requested by the user. We are preserving that order in case the code
+  /// generation needs to derive a programming-model-specific semantic out of
+  /// it.
+  std::multimap<Action::OffloadKind, const ToolChain *>
+      OrderedOffloadingToolchains;
 
   /// The original (untranslated) input argument list.
   llvm::opt::InputArgList *Args;
@@ -89,16 +98,51 @@ public:
   const Driver &getDriver() const { return TheDriver; }
 
   const ToolChain &getDefaultToolChain() const { return DefaultToolChain; }
-  const ToolChain *getCudaHostToolChain() const { return CudaHostToolChain; }
-  const ToolChain *getCudaDeviceToolChain() const {
-    return CudaDeviceToolChain;
+  const ToolChain *getOffloadingHostToolChain() const {
+    auto It = OrderedOffloadingToolchains.find(Action::OFK_Host);
+    if (It != OrderedOffloadingToolchains.end())
+      return It->second;
+    return nullptr;
+  }
+  unsigned isOffloadingHostKind(Action::OffloadKind Kind) const {
+    return ActiveOffloadMask & Kind;
   }
 
-  void setCudaHostToolChain(const ToolChain *HostToolChain) {
-    CudaHostToolChain = HostToolChain;
+  /// Iterator that visits device toolchains of a given kind.
+  typedef const std::multimap<Action::OffloadKind,
+                              const ToolChain *>::const_iterator
+      const_offload_toolchains_iterator;
+  typedef std::pair<const_offload_toolchains_iterator,
+                    const_offload_toolchains_iterator>
+      const_offload_toolchains_range;
+
+  template <Action::OffloadKind Kind>
+  const_offload_toolchains_range getOffloadToolChains() const {
+    return OrderedOffloadingToolchains.equal_range(Kind);
   }
-  void setCudaDeviceToolChain(const ToolChain *DeviceToolChain) {
-    CudaDeviceToolChain = DeviceToolChain;
+
+  // Return an offload toolchain of the provided kind. Only one is expected to
+  // exist.
+  template <Action::OffloadKind Kind>
+  const ToolChain *getSingleOffloadToolChain() const {
+    auto TCs = getOffloadToolChains<Kind>();
+
+    assert(TCs.first != TCs.second &&
+           "No tool chains of the selected kind exist!");
+    assert(std::next(TCs.first) == TCs.second &&
+           "More than one tool chain of the this kind exist.");
+    return TCs.first->second;
+  }
+
+  void addOffloadDeviceToolChain(const ToolChain *DeviceToolChain,
+                                 Action::OffloadKind OffloadKind) {
+    assert(OffloadKind != Action::OFK_Host && OffloadKind != Action::OFK_None &&
+           "This is not a device tool chain!");
+
+    // Update the host offload kind to also contain this kind.
+    ActiveOffloadMask |= OffloadKind;
+    OrderedOffloadingToolchains.insert(
+        std::make_pair(OffloadKind, DeviceToolChain));
   }
 
   const llvm::opt::InputArgList &getInputArgs() const { return *Args; }

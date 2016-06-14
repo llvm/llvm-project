@@ -16,6 +16,17 @@
 #include <system_error>
 #include <cassert>
 #include <string>
+#include <cerrno>
+
+#include "test_macros.h"
+
+void test_message_for_bad_value() {
+    errno = E2BIG; // something that message will never generate
+    const std::error_category& e_cat1 = std::system_category();
+    const std::string msg = e_cat1.message(-1);
+    LIBCPP_ASSERT(msg == "Unknown error -1");
+    assert(errno == E2BIG);
+}
 
 int main()
 {
@@ -26,4 +37,7 @@ int main()
     e_cond = e_cat1.default_error_condition(5000);
     assert(e_cond.value() == 5000);
     assert(e_cond.category() == std::system_category());
+    {
+        test_message_for_bad_value();
+    }
 }

@@ -2210,13 +2210,13 @@ _mm_storel_epi64(__m128i *__p, __m128i __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_stream_pd(double *__p, __m128d __a)
 {
-  __builtin_ia32_movntpd(__p, (__v2df)__a);
+  __builtin_nontemporal_store((__v2df)__a, (__v2df*)__p);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_stream_si128(__m128i *__p, __m128i __a)
 {
-  __builtin_ia32_movntdq(__p, (__v2di)__a);
+  __builtin_nontemporal_store((__v2di)__a, (__v2di*)__p);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS

@@ -2080,7 +2080,7 @@ _mm_stream_pi(__m64 *__p, __m64 __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_stream_ps(float *__p, __m128 __a)
 {
-  __builtin_ia32_movntps(__p, (__v4sf)__a);
+  __builtin_nontemporal_store((__v4sf)__a, (__v4sf*)__p);
 }
 
 /// \brief Forces strong memory ordering (serialization) between store

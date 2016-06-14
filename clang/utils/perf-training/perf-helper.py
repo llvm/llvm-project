@@ -157,7 +157,7 @@ def cc1(args):
   cc1_cmd = get_cc1_command_for_args(cmd, cc1_env)
 
   subprocess.check_call(cc1_cmd)
-  return 0;
+  return 0
 
 def parse_dtrace_symbol_file(path, all_symbols, all_symbols_set,
                              missing_symbols, opts):

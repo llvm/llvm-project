@@ -28,3 +28,19 @@ namespace dr1346 { // dr1346: 3.5
   }
 #endif
 }
+
+namespace dr1359 { // dr1359: 3.5
+#if __cplusplus >= 201103L
+  union A { constexpr A() = default; };
+  union B { constexpr B() = default; int a; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
+  union C { constexpr C() = default; int a, b; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
+  struct X { constexpr X() = default; union {}; };
+  struct Y { constexpr Y() = default; union { int a; }; }; // expected-error {{not constexpr}} expected-note 2{{candidate}}
+
+  constexpr A a = A();
+  constexpr B b = B(); // expected-error {{no matching}}
+  constexpr C c = C(); // expected-error {{no matching}}
+  constexpr X x = X();
+  constexpr Y y = Y(); // expected-error {{no matching}}
+#endif
+}
