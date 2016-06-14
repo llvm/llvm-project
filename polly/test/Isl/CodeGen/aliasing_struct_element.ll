@@ -11,7 +11,7 @@
 ; compute runtime alias checks but treat it as if it was a char array.
 ;
 ; CHECK: %polly.access.cast.S = bitcast %struct.st* %S to i8*
-; CHECK: %polly.access.S = getelementptr i8, i8* %polly.access.cast.S, i12 1424
+; CHECK: %polly.access.S = getelementptr i8, i8* %polly.access.cast.S, i64 1424
 ;
 ;    struct st {
 ;      int Dummy[100];

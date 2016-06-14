@@ -33,8 +33,8 @@ test(typename C::size_type n, const typename C::value_type& x,
 
 int main()
 {
-    test<std::vector<bool> >(50, 3, std::allocator<bool>());
+    test<std::vector<bool> >(50, true, std::allocator<bool>());
 #if TEST_STD_VER >= 11
-    test<std::vector<bool, min_allocator<bool>> >(50, 3, min_allocator<bool>());
+    test<std::vector<bool, min_allocator<bool>> >(50, true, min_allocator<bool>());
 #endif
 }

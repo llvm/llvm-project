@@ -11,18 +11,15 @@
 ;
 ;
 ; CHECK: polly.stmt.bb2:
-; CHECK:   %0 = zext i11 %polly.indvar to i64
-; CHECK:   %scevgep[[R0:[0-9]*]] = getelementptr float, float* %A, i64 %0
+; CHECK:   %scevgep[[R0:[0-9]*]] = getelementptr float, float* %A, i64 %polly.indvar
 ; CHECK:   %tmp3_p_scalar_ = load float, float* %scevgep[[R0]], align 4, !alias.scope !0, !noalias !2
-; CHECK:   %1 = zext i11 %polly.indvar to i64
-; CHECK:   %scevgep[[R2:[0-9]*]] = getelementptr float, float* %scevgep{{[0-9]*}}, i64 %1
+; CHECK:   %scevgep[[R2:[0-9]*]] = getelementptr float, float* %scevgep{{[0-9]*}}, i64 %polly.indvar
 ; CHECK:   %tmp6_p_scalar_ = load float, float* %scevgep[[R2]], align 4, !alias.scope !0, !noalias !2
 ; CHECK:   %p_tmp7 = fcmp oeq float %tmp3_p_scalar_, %tmp6_p_scalar_
 ; CHECK:   br i1 %p_tmp7, label %polly.stmt.bb8, label %polly.stmt.bb12.[[R:[a-zA-Z_.0-9]*]]
 
 ; CHECK: polly.stmt.bb8:
-; CHECK:   %2 = zext i11 %polly.indvar to i64
-; CHECK:   %scevgep[[R3:[0-9]*]] = getelementptr float, float* %A, i64 %2
+; CHECK:   %scevgep[[R3:[0-9]*]] = getelementptr float, float* %A, i64 %polly.indvar
 ; CHECK:   %tmp10_p_scalar_ = load float, float* %scevgep[[R3]], align 4, !alias.scope !0, !noalias !2
 ; CHECK:   %p_tmp11 = fadd float %tmp10_p_scalar_, 1.000000e+00
 ; CHECK:   store float %p_tmp11, float* %scevgep[[R3]], align 4, !alias.scope !0, !noalias !2
@@ -32,13 +29,12 @@
 ; CHECK:   br label %polly.stmt.bb12
 
 ; CHECK: polly.stmt.bb12:
-; CHECK:   %3 = zext i11 %polly.indvar to i64
-; CHECK:   %scevgep[[R4:[0-9]*]] = getelementptr float, float* %A, i64 %3
+; CHECK:   %scevgep[[R4:[0-9]*]] = getelementptr float, float* %A, i64 %polly.indvar
 ; CHECK:   %tmp10b_p_scalar_ = load float, float* %scevgep[[R4]], align 4, !alias.scope !0, !noalias !2
 ; CHECK:   %p_tmp11b = fadd float %tmp10b_p_scalar_, 1.000000e+00
 ; CHECK:   store float %p_tmp11b, float* %scevgep[[R4]], align 4, !alias.scope !0, !noalias !2
-; CHECK:   %polly.indvar_next = add nsw i11 %polly.indvar, 1
-; CHECK:   %polly.loop_cond = icmp sle i11 %polly.indvar, 1022
+; CHECK:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
+; CHECK:   %polly.loop_cond = icmp sle i64 %polly.indvar, 1022
 ; CHECK:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

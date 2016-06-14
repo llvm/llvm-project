@@ -190,7 +190,7 @@ struct dispatch_shared_info_template {
 // test_then_add template (general template should NOT be used)
 template< typename T >
 static __forceinline T
-test_then_add( volatile T *p, T d ) { KMP_ASSERT(0); };
+test_then_add( volatile T *p, T d );
 
 template<>
 __forceinline kmp_int32
@@ -213,7 +213,7 @@ test_then_add< kmp_int64 >( volatile kmp_int64 *p, kmp_int64 d )
 // test_then_inc_acq template (general template should NOT be used)
 template< typename T >
 static __forceinline T
-test_then_inc_acq( volatile T *p ) { KMP_ASSERT(0); };
+test_then_inc_acq( volatile T *p );
 
 template<>
 __forceinline kmp_int32
@@ -236,7 +236,7 @@ test_then_inc_acq< kmp_int64 >( volatile kmp_int64 *p )
 // test_then_inc template (general template should NOT be used)
 template< typename T >
 static __forceinline T
-test_then_inc( volatile T *p ) { KMP_ASSERT(0); };
+test_then_inc( volatile T *p );
 
 template<>
 __forceinline kmp_int32
@@ -259,7 +259,7 @@ test_then_inc< kmp_int64 >( volatile kmp_int64 *p )
 // compare_and_swap template (general template should NOT be used)
 template< typename T >
 static __forceinline kmp_int32
-compare_and_swap( volatile T *p, T c, T s ) { KMP_ASSERT(0); };
+compare_and_swap( volatile T *p, T c, T s );
 
 template<>
 __forceinline kmp_int32

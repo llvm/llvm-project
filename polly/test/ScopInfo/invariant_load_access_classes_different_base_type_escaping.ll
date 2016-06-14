@@ -44,7 +44,7 @@
 ; CODEGEN: polly.preload.begin:
 ; CODEGEN:   %.load = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0)
 ; CODEGEN:   store i32 %.load, i32* %S.a.preload.s2a
-; CODEGEN:   %.load1 = load float, float* bitcast (i32* getelementptr (i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0), i2 1) to float*)
+; CODEGEN:   %.load1 = load float, float* bitcast (i32* getelementptr (i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @S, i32 0, i32 0), i64 1) to float*)
 ; CODEGEN:   store float %.load1, float* %S.b.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:

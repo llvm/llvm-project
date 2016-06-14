@@ -43,6 +43,14 @@ int main()
     ::va_list va;
     char* ns = 0;
     wchar_t* ws = 0;
+    ((void)mb); // Prevent unused warning
+    ((void)s); // Prevent unused warning
+    ((void)tm); // Prevent unused warning
+    ((void)w); // Prevent unused warning
+    ((void)fp); // Prevent unused warning
+    ((void)va); // Prevent unused warning
+    ((void)ns); // Prevent unused warning
+    ((void)ws); // Prevent unused warning
     static_assert((std::is_same<decltype(fwprintf(fp, L"")), int>::value), "");
     static_assert((std::is_same<decltype(fwscanf(fp, L"")), int>::value), "");
     static_assert((std::is_same<decltype(swprintf(ws, s, L"")), int>::value), "");

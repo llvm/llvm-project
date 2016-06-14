@@ -1,3 +1,8 @@
+version: 0.17.1
+date: Fri May  6 12:02:48 CEST 2016
+changes:
+	- fix bug in coalescing treatment
+---
 version: 0.17
 date: Tue May  3 14:26:43 CEST 2016
 changes:

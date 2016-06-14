@@ -14,7 +14,7 @@
 ;    }
 ;
 ; CHECK: polly.stmt.for.body:
-; CHECK:   %scevgep = getelementptr i32, i32* %A
+; CHECK:   %scevgep = getelementptr i32, i32* %A, i64 %polly.indvar
 ; CHECK:   %tmp1_p_scalar_ = load i32, i32* %scevgep, align 4
 ; CHECK:   switch i32 %tmp1_p_scalar_, label %polly.stmt.sw.epilog.exit [
 ; CHECK:     i32 0, label %polly.stmt.sw.bb

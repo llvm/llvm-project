@@ -4,12 +4,12 @@
 ;    stride zero for B
 ;    stride one for A
 ;
-; CHECK:  %polly.access.B = getelementptr i32, i32* %B, i1 false
+; CHECK:  %polly.access.B = getelementptr i32, i32* %B, i64 0
 ; CHECK:  %[[BC:[._a-zA-Z0-9]*]] = bitcast i32* %polly.access.B to <1 x i32>*
 ; CHECK:  %[[LD:[._a-zA-Z0-9]*]] = load <1 x i32>, <1 x i32>* %[[BC]], align 8
 ; CHECK:  %[[SV:[._a-zA-Z0-9]*]] = shufflevector <1 x i32> %[[LD]], <1 x i32> %[[LD]], <16 x i32> zeroinitializer
 ;
-; CHECK:  %polly.access.A = getelementptr i32, i32* %A, i5 0
+; CHECK:  %polly.access.A = getelementptr i32, i32* %A, i64 0
 ; CHECK:  %[[VP:[._a-zA-Z0-9]*]] = bitcast i32* %polly.access.A to <16 x i32>*
 ; CHECK:  store <16 x i32> %[[SV]], <16 x i32>* %[[VP]], align 8
 ;

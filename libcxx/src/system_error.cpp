@@ -13,8 +13,13 @@
 #include "system_error"
 
 #include "include/config_elast.h"
+#include "cerrno"
 #include "cstring"
+#include "cstdio"
+#include "cstdlib"
+#include "cassert"
 #include "string"
+#include "string.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -46,10 +51,52 @@ error_category::equivalent(const error_code& code, int condition) const _NOEXCEP
     return *this == code.category() && code.value() == condition;
 }
 
+namespace {
+
+//  GLIBC also uses 1024 as the maximum buffer size internally.
+constexpr size_t strerror_buff_size = 1024;
+
+string do_strerror_r(int ev);
+
+#if defined(__linux__) && !defined(_LIBCPP_HAS_MUSL_LIBC)
+// GNU Extended version
+string do_strerror_r(int ev) {
+    char buffer[strerror_buff_size];
+    char* ret = ::strerror_r(ev, buffer, strerror_buff_size);
+    return string(ret);
+}
+#else
+// POSIX version
+string do_strerror_r(int ev) {
+    char buffer[strerror_buff_size];
+    const int old_errno = errno;
+    if (::strerror_r(ev, buffer, strerror_buff_size) == -1) {
+        const int new_errno = errno;
+        errno = old_errno;
+        if (new_errno == EINVAL) {
+            std::snprintf(buffer, strerror_buff_size, "Unknown error %d", ev);
+            return string(buffer);
+        } else {
+            assert(new_errno == ERANGE);
+            // FIXME maybe? 'strerror_buff_size' is likely to exceed the
+            // maximum error size so ERANGE shouldn't be returned.
+            std::abort();
+        }
+    }
+    return string(buffer);
+}
+#endif
+
+} // end namespace
+
 string
 __do_message::message(int ev) const
 {
-    return string(strerror(ev));
+#if defined(_LIBCPP_HAS_NO_THREADS)
+    return string(::strerror(ev));
+#else
+    return do_strerror_r(ev);
+#endif
 }
 
 class _LIBCPP_HIDDEN __generic_error_category

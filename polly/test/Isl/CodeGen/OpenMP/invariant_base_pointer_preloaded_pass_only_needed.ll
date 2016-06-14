@@ -15,7 +15,7 @@
 ;    }
 ;
 ;                                           i    A[0]    A
-; CHECK: %polly.par.userContext = alloca { i11, float, float* }
+; CHECK: %polly.par.userContext = alloca { i64, float, float* }
 ;
 ; CHECK:  %polly.access.B.load =
 ; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds

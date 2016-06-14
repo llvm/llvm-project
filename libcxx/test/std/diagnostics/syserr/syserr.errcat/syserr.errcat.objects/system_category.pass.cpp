@@ -16,6 +16,15 @@
 #include <system_error>
 #include <cassert>
 #include <string>
+#include <cerrno>
+
+
+void test_message_leaves_errno_unchanged() {
+    errno = E2BIG; // something that message will never generate
+    const std::error_category& e_cat1 = std::system_category();
+    e_cat1.message(-1);
+    assert(errno == E2BIG);
+}
 
 int main()
 {
@@ -26,4 +35,7 @@ int main()
     e_cond = e_cat1.default_error_condition(5000);
     assert(e_cond.value() == 5000);
     assert(e_cond.category() == std::system_category());
+    {
+        test_message_leaves_errno_unchanged();
+    }
 }

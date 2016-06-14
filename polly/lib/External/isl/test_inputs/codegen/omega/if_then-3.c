@@ -6,7 +6,8 @@ if (n >= 2) {
       s2(c0, c1);
     }
   }
-} else
+} else {
   for (int c0 = 1; c0 <= 100; c0 += 1)
     for (int c1 = 1; c1 <= 100; c1 += 1)
       s2(c0, c1);
+}

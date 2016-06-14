@@ -33,18 +33,15 @@ return:
   ret void
 }
 
-; CHECK: if (P <= -1) {
-; CHECK:   for (int c0 = 0; c0 < N; c0 += 1)
-; CHECK:     Stmt_store(c0);
-; CHECK: } else if (P >= 1)
-; CHECK:   for (int c0 = 0; c0 < N; c0 += 1)
-; CHECK:     Stmt_store(c0);
-; CHECK: }
+; CHECK:      if (P <= -1 || P >= 1)
+; CHECK-NEXT:   for (int c0 = 0; c0 < N; c0 += 1)
+; CHECK-NEXT:     Stmt_store(c0);
 
 ; CODEGEN-LABEL: polly.cond:
 ; CODEGEN-NEXT:   %[[R1:[0-9]*]] = ptrtoint float* %P to i64
 ; CODEGEN-NEXT:   %[[R2:[0-9]*]] = icmp sle i64 %[[R1]], -1
-; CODEGEN-LABEL: polly.cond2:
 ; CODEGEN-NEXT:   %[[R3:[0-9]*]] = ptrtoint float* %P to i64
 ; CODEGEN-NEXT:   %[[R4:[0-9]*]] = icmp sge i64 %[[R3]], 1
+; CODEGEN-NEXT:   %[[R5:[0-9]*]] = or i1 %[[R2]], %[[R4]]
+; CODEGEN-NEXT:   br i1 %[[R5]]
 

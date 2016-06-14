@@ -238,7 +238,7 @@ static enum isl_dim_type pos2type(__isl_keep isl_space *dim, unsigned *pos)
  * be printed?
  * In particular, are the div expressions available and does the selected
  * variable have a known explicit representation?
- * Furthermore, the Omega format does not allow and div expressions
+ * Furthermore, the Omega format does not allow any div expressions
  * to be printed.
  */
 static isl_bool can_print_div_expr(__isl_keep isl_printer *p,
@@ -634,6 +634,7 @@ static __isl_give isl_printer *print_constraints(__isl_keep isl_basic_map *bmap,
 		if (l < 0)
 			continue;
 		if (!p->dump && l >= o_div &&
+		    can_print_div_expr(p, div, l - o_div) &&
 		    isl_basic_map_is_div_constraint(bmap, bmap->ineq[i],
 						    l - o_div))
 			continue;
@@ -750,6 +751,8 @@ static __isl_give isl_printer *print_disjunct(__isl_keep isl_basic_map *bmap,
 	isl_mat *div;
 	isl_bool exists;
 
+	if (!p)
+		return NULL;
 	div = isl_basic_map_get_divs(bmap);
 	if (p->dump)
 		exists = bmap->n_div > 0;
@@ -931,6 +934,8 @@ static __isl_give isl_printer *print_disjuncts(__isl_keep isl_map *map,
 		return p;
 
 	p = isl_printer_print_str(p, s_such_that[latex]);
+	if (!p)
+		return NULL;
 
 	if (!p->dump && map->n >= 2) {
 		isl_basic_map *hull;
@@ -1151,7 +1156,7 @@ static __isl_give isl_printer *print_dim_eq(__isl_take isl_printer *p,
 			p = isl_printer_print_str(p, " = ");
 		}
 		pos += 1 + isl_space_offset(data->space, data->type);
-		p = print_affine_of_len(eq->dim, NULL, p, eq->eq[j], pos);
+		p = print_affine_of_len(data->space, NULL, p, eq->eq[j], pos);
 	} else {
 		p = print_name(data->space, p, data->type, pos, data->latex);
 	}

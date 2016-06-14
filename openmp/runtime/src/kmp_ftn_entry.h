@@ -718,8 +718,10 @@ FTN_GET_PLACE_NUM_PROCS( int place_num )
             return 0;
         kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
         KMP_CPU_SET_ITERATE(i, mask) {
-            if ( !KMP_CPU_ISSET(i, mask) )
+            if ((! KMP_CPU_ISSET(i, __kmp_affin_fullMask)) ||
+              (!KMP_CPU_ISSET(i, mask))) {
                 continue;
+            }
             ++retval;
         }
         return retval;
@@ -741,8 +743,10 @@ FTN_GET_PLACE_PROC_IDS( int place_num, int *ids )
         kmp_affin_mask_t *mask = KMP_CPU_INDEX(__kmp_affinity_masks, place_num);
         j = 0;
         KMP_CPU_SET_ITERATE(i, mask) {
-            if ( !KMP_CPU_ISSET(i, mask) )
+            if ((! KMP_CPU_ISSET(i, __kmp_affin_fullMask)) ||
+              (!KMP_CPU_ISSET(i, mask))) {
                 continue;
+            }
             ids[j++] = i;
         }
     #endif

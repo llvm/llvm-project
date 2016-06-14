@@ -1644,7 +1644,7 @@ __kmp_remove_my_task( kmp_info_t * thread, kmp_int32 gtid, kmp_task_team_t *task
     tail = ( thread_data -> td.td_deque_tail - 1 ) & TASK_DEQUE_MASK(thread_data->td);  // Wrap index.
     taskdata = thread_data -> td.td_deque[ tail ];
 
-    if (is_constrained) {
+    if (is_constrained && (taskdata->td_flags.tiedness == TASK_TIED)) {
         // we need to check if the candidate obeys task scheduling constraint:
         // only child of current task can be scheduled
         kmp_taskdata_t * current = thread->th.th_current_task;
@@ -1751,7 +1751,7 @@ __kmp_steal_task( kmp_info_t *victim, kmp_int32 gtid, kmp_task_team_t *task_team
             parent = parent->td_parent;  // check generation up to the level of the current task
             KMP_DEBUG_ASSERT(parent != NULL);
         }
-        if ( parent != current ) {
+        if ( parent != current && (taskdata->td_flags.tiedness == TASK_TIED) ) { // untied is always allowed to be stolen
             // If the tail task is not a child, then no other childs can appear in the deque (?).
             __kmp_release_bootstrap_lock( & victim_td -> td.td_deque_lock );
             KA_TRACE(10, ("__kmp_steal_task(exit #2): T#%d could not steal from T#%d: task_team=%p "
@@ -2944,6 +2944,8 @@ __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
                 kmp_uint64 *lb, kmp_uint64 *ub, kmp_int64 st,
                 int sched, kmp_uint64 grainsize, void *task_dup )
 {
+    KMP_COUNT_BLOCK(OMP_TASKLOOP);
+    KMP_TIME_PARTITIONED_BLOCK(OMP_taskloop_scheduling);
     p_task_dup_t ptask_dup = (p_task_dup_t)task_dup;
     kmp_uint64 tc;
     kmp_uint64 lower = *lb; // compiler provides global bounds here
