@@ -7,6 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Prevent emission of the deprecated warning.
+#ifdef __clang__
+#pragma clang diagnostic ignored "-W#warnings"
+#endif
+
 #include <ext/hash_set>
 
 namespace __gnu_cxx {

@@ -431,6 +431,23 @@ struct FormatStyle {
   /// type.
   bool IndentWrappedFunctionNames;
 
+  /// \brief Quotation styles for JavaScript strings. Does not affect template
+  /// strings.
+  enum JavaScriptQuoteStyle {
+    /// Leave string quotes as they are.
+    JSQS_Leave,
+    /// Always use single quotes.
+    JSQS_Single,
+    /// Always use double quotes.
+    JSQS_Double
+  };
+
+  /// \brief The JavaScriptQuoteStyle to use for JavaScript strings.
+  JavaScriptQuoteStyle JavaScriptQuotes;
+
+  /// \brief Whether to wrap JavaScript import/export statements.
+  bool JavaScriptWrapImports;
+
   /// \brief If true, empty lines at the start of blocks are kept.
   bool KeepEmptyLinesAtTheStartOfBlocks;
 
@@ -613,20 +630,6 @@ struct FormatStyle {
   /// \brief The way to use tab characters in the resulting file.
   UseTabStyle UseTab;
 
-  /// \brief Quotation styles for JavaScript strings. Does not affect template
-  /// strings.
-  enum JavaScriptQuoteStyle {
-    /// Leave string quotes as they are.
-    JSQS_Leave,
-    /// Always use single quotes.
-    JSQS_Single,
-    /// Always use double quotes.
-    JSQS_Double
-  };
-
-  /// \brief The JavaScriptQuoteStyle to use for JavaScript strings.
-  JavaScriptQuoteStyle JavaScriptQuotes;
-
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
@@ -675,6 +678,8 @@ struct FormatStyle {
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentWidth == R.IndentWidth && Language == R.Language &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
+           JavaScriptQuotes == R.JavaScriptQuotes &&
+           JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLinesAtTheStartOfBlocks ==
                R.KeepEmptyLinesAtTheStartOfBlocks &&
            MacroBlockBegin == R.MacroBlockBegin &&
@@ -703,8 +708,7 @@ struct FormatStyle {
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard && TabWidth == R.TabWidth &&
-           UseTab == R.UseTab &&
-           JavaScriptQuotes == R.JavaScriptQuotes;
+           UseTab == R.UseTab;
   }
 };
 

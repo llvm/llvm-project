@@ -2496,19 +2496,19 @@ _mm_maskstore_ps(float *__p, __m128i __m, __m128 __a)
 static __inline void __DEFAULT_FN_ATTRS
 _mm256_stream_si256(__m256i *__a, __m256i __b)
 {
-  __builtin_ia32_movntdq256((__v4di *)__a, (__v4di)__b);
+  __builtin_nontemporal_store((__v4di)__b, (__v4di*)__a);
 }
 
 static __inline void __DEFAULT_FN_ATTRS
 _mm256_stream_pd(double *__a, __m256d __b)
 {
-  __builtin_ia32_movntpd256(__a, (__v4df)__b);
+  __builtin_nontemporal_store((__v4df)__b, (__v4df*)__a);
 }
 
 static __inline void __DEFAULT_FN_ATTRS
 _mm256_stream_ps(float *__p, __m256 __a)
 {
-  __builtin_ia32_movntps256(__p, (__v8sf)__a);
+  __builtin_nontemporal_store((__v8sf)__a, (__v8sf*)__p);
 }
 
 /* Create vectors */

@@ -1585,7 +1585,7 @@ _mm512_sqrt_ps(__m512 __a)
 }
 
 static  __inline__ __m512 __DEFAULT_FN_ATTRS
-_mm512_mask_sqrt_ps(__m512 __W, __mmask8 __U, __m512 __A)
+_mm512_mask_sqrt_ps(__m512 __W, __mmask16 __U, __m512 __A)
 {
   return (__m512)__builtin_ia32_sqrtps512_mask((__v16sf)__A,
                                                (__v16sf) __W,
@@ -1594,7 +1594,7 @@ _mm512_mask_sqrt_ps(__m512 __W, __mmask8 __U, __m512 __A)
 }
 
 static  __inline__ __m512 __DEFAULT_FN_ATTRS
-_mm512_maskz_sqrt_ps( __mmask8 __U, __m512 __A)
+_mm512_maskz_sqrt_ps( __mmask16 __U, __m512 __A)
 {
   return (__m512)__builtin_ia32_sqrtps512_mask((__v16sf)__A,
                                                (__v16sf) _mm512_setzero_ps (),
@@ -8866,7 +8866,7 @@ _mm512_kxor (__mmask16 __A, __mmask16 __B)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm512_stream_si512 (__m512i * __P, __m512i __A)
 {
-  __builtin_ia32_movntdq512 ((__v8di *) __P, (__v8di) __A);
+  __builtin_nontemporal_store((__v8di)__A, (__v8di*)__P);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -8878,13 +8878,13 @@ _mm512_stream_load_si512 (void *__P)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm512_stream_pd (double *__P, __m512d __A)
 {
-  __builtin_ia32_movntpd512 (__P, (__v8df) __A);
+  __builtin_nontemporal_store((__v8df)__A, (__v8df*)__P);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm512_stream_ps (float *__P, __m512 __A)
 {
-  __builtin_ia32_movntps512 (__P, (__v16sf) __A);
+  __builtin_nontemporal_store((__v16sf)__A, (__v16sf*)__P);
 }
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS

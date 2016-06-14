@@ -3177,6 +3177,7 @@ def err_use_of_default_argument_to_function_declared_later : Error<
   "use of default argument to function %0 that is declared later in class %1">;
 def note_default_argument_declared_here : Note<
   "default argument declared here">;
+def err_recursive_default_argument : Error<"recursive evaluation of default argument">;
 
 def ext_param_promoted_not_compatible_with_prototype : ExtWarn<
   "%diff{promoted type $ of K&R function parameter is not compatible with the "
@@ -5457,6 +5458,9 @@ def warn_pointer_indirection_from_incompatible_type : Warning<
   "dereference of type %1 that was reinterpret_cast from type %0 has undefined "
   "behavior">,
   InGroup<UndefinedReinterpretCast>, DefaultIgnore;
+def warn_taking_address_of_packed_member : Warning<
+  "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
+  InGroup<DiagGroup<"address-of-packed-member">>;
 
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;

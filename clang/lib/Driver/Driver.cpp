@@ -422,6 +422,31 @@ void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
   }
 }
 
+void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
+                                              InputList &Inputs) {
+
+  //
+  // CUDA
+  //
+  // We need to generate a CUDA toolchain if any of the inputs has a CUDA type.
+  if (llvm::any_of(Inputs, [](std::pair<types::ID, const llvm::opt::Arg *> &I) {
+        return types::isCuda(I.first);
+      })) {
+    const ToolChain &TC = getToolChain(
+        C.getInputArgs(),
+        llvm::Triple(C.getOffloadingHostToolChain()->getTriple().isArch64Bit()
+                         ? "nvptx64-nvidia-cuda"
+                         : "nvptx-nvidia-cuda"));
+    C.addOffloadDeviceToolChain(&TC, Action::OFK_Cuda);
+  }
+
+  //
+  // TODO: Add support for other offloading programming models here.
+  //
+
+  return;
+}
+
 Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   llvm::PrettyStackTraceString CrashInfo("Compilation construction");
 
@@ -549,18 +574,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   InputList Inputs;
   BuildInputs(C->getDefaultToolChain(), *TranslatedArgs, Inputs);
 
-  // Initialize the CUDA device TC only if we have any CUDA Inputs.  This is
-  // necessary so that we don't break compilations that pass flags that are
-  // incompatible with the NVPTX TC (e.g. -mthread-model single).
-  if (llvm::any_of(Inputs, [](const std::pair<types::ID, const Arg *> &I) {
-        return I.first == types::TY_CUDA || I.first == types::TY_PP_CUDA ||
-               I.first == types::TY_CUDA_DEVICE;
-      })) {
-    C->setCudaDeviceToolChain(
-        &getToolChain(C->getArgs(), llvm::Triple(TC.getTriple().isArch64Bit()
-                                                     ? "nvptx64-nvidia-cuda"
-                                                     : "nvptx-nvidia-cuda")));
-  }
+  // Populate the tool chains for the offloading devices, if any.
+  CreateOffloadingDeviceToolChains(*C, Inputs);
 
   // Construct the list of abstract actions to perform for this compilation. On
   // MachO targets this uses the driver-driver and universal actions.
@@ -1390,7 +1405,7 @@ static Action *buildCudaActions(Compilation &C, DerivedArgList &Args,
     CudaDeviceInputs.push_back(std::make_pair(types::TY_CUDA_DEVICE, InputArg));
 
   // Build actions for all device inputs.
-  assert(C.getCudaDeviceToolChain() &&
+  assert(C.getSingleOffloadToolChain<Action::OFK_Cuda>() &&
          "Missing toolchain for device-side compilation.");
   ActionList CudaDeviceActions;
   C.getDriver().BuildActions(C, Args, CudaDeviceInputs, CudaDeviceActions);
@@ -2031,7 +2046,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
     // Initial processing of CudaDeviceAction carries host params.
     // Call BuildJobsForAction() again, now with correct device parameters.
     InputInfo II = BuildJobsForAction(
-        C, *CDA->input_begin(), C.getCudaDeviceToolChain(),
+        C, *CDA->input_begin(), C.getSingleOffloadToolChain<Action::OFK_Cuda>(),
         CDA->getGpuArchName(), CDA->isAtTopLevel(), /*MultipleArchs=*/true,
         LinkingOutput, CachedResults);
     // Currently II's Action is *CDA->input_begin().  Set it to CDA instead, so

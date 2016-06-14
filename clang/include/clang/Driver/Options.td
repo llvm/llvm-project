@@ -1786,7 +1786,7 @@ def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">, Flags<[DriverOptio
   HelpText<"Rewrite Legacy Objective-C source to C++">;
 def rdynamic : Flag<["-"], "rdynamic">;
 def resource_dir : Separate<["-"], "resource-dir">,
-  Flags<[DriverOption, CC1Option, HelpHidden]>,
+  Flags<[DriverOption, CC1Option, CoreOption, HelpHidden]>,
   HelpText<"The directory which holds the compiler resource files">;
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[DriverOption]>,
   Alias<resource_dir>;

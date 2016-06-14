@@ -19,14 +19,14 @@
 int main()
 {
     {
-        std::vector<bool, test_allocator<bool> > l(3, 2, test_allocator<bool>(5));
+        std::vector<bool, test_allocator<bool> > l(3, true, test_allocator<bool>(5));
         std::vector<bool, test_allocator<bool> > l2(l, test_allocator<bool>(3));
         l2 = l;
         assert(l2 == l);
         assert(l2.get_allocator() == test_allocator<bool>(3));
     }
     {
-        std::vector<bool, other_allocator<bool> > l(3, 2, other_allocator<bool>(5));
+        std::vector<bool, other_allocator<bool> > l(3, true, other_allocator<bool>(5));
         std::vector<bool, other_allocator<bool> > l2(l, other_allocator<bool>(3));
         l2 = l;
         assert(l2 == l);
@@ -34,7 +34,7 @@ int main()
     }
 #if __cplusplus >= 201103L
     {
-        std::vector<bool, min_allocator<bool> > l(3, 2, min_allocator<bool>());
+        std::vector<bool, min_allocator<bool> > l(3, true, min_allocator<bool>());
         std::vector<bool, min_allocator<bool> > l2(l, min_allocator<bool>());
         l2 = l;
         assert(l2 == l);

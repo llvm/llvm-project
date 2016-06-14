@@ -112,4 +112,22 @@ void foo() {
 
 
 } // end ns3
+
+namespace ns4 {
+template < typename T> T* foo (T);
+template <> int* foo(int) = delete;
+template <> int* foo(int); //expected-note{{candidate}}
+
+int *IP = foo(2); //expected-error{{deleted}}
+double *DP = foo(3.14);
+} //end ns4
+
+namespace ns5 {
+template < typename T> T* foo (T);
+template <> int* foo(int); //expected-note{{previous}}
+template <> int* foo(int) = delete; //expected-error{{deleted definition must be first declaration}}
+
+} //end ns5
+
+
 } // end test_explicit_specializations_and_delete

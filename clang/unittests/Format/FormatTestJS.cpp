@@ -315,6 +315,15 @@ TEST_F(FormatTestJS, GoogModules) {
       "    goog.module.get('my.long.module.name.followedBy.MyLongClassName');");
 }
 
+TEST_F(FormatTestJS, FormatsNamespaces) {
+  verifyFormat("namespace Foo {\n"
+               "  export let x = 1;\n"
+               "}\n");
+  verifyFormat("declare namespace Foo {\n"
+               "  export let x: number;\n"
+               "}\n");
+}
+
 TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
   verifyFormat("function outer1(a, b) {\n"
                "  function inner1(a, b) { return a; }\n"
@@ -1007,9 +1016,6 @@ TEST_F(FormatTestJS, Modules) {
   verifyFormat("import SomeThing from 'some/module.js';");
   verifyFormat("import {X, Y} from 'some/module.js';");
   verifyFormat("import a, {X, Y} from 'some/module.js';");
-  verifyFormat("import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,"
-               " VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying"
-               "} from 'some/module.js';");
   verifyFormat("import {X, Y,} from 'some/module.js';");
   verifyFormat("import {X as myLocalX, Y as myLocalY} from 'some/module.js';");
   // Ensure Automatic Semicolon Insertion does not break on "as\n".
@@ -1076,6 +1082,30 @@ TEST_F(FormatTestJS, Modules) {
                "export class Bar {\n"
                "  blah(): string { return this.blah; };\n"
                "}");
+}
+
+TEST_F(FormatTestJS, ImportWrapping) {
+  verifyFormat("import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,"
+               " VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying"
+               "} from 'some/module.js';");
+  FormatStyle Style = getGoogleJSStyleWithColumns(80);
+  Style.JavaScriptWrapImports = true;
+  verifyFormat("import {\n"
+               "  VeryLongImportsAreAnnoying,\n"
+               "  VeryLongImportsAreAnnoying,\n"
+               "  VeryLongImportsAreAnnoying,\n"
+               "} from 'some/module.js';",
+               Style);
+  verifyFormat("import {\n"
+               "  A,\n"
+               "  A,\n"
+               "} from 'some/module.js';",
+               Style);
+  verifyFormat("export {\n"
+               "  A,\n"
+               "  A,\n"
+               "} from 'some/module.js';",
+               Style);
 }
 
 TEST_F(FormatTestJS, TemplateStrings) {

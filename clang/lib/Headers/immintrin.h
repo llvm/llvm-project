@@ -172,13 +172,13 @@ _rdrand32_step(unsigned int *__p)
 /* __bit_scan_forward */
 static __inline__ int __attribute__((__always_inline__, __nodebug__))
 _bit_scan_forward(int __A) {
- return __builtin_ia32_bit_scan_forward(__A);
+  return __builtin_ctz(__A);
 }
 
 /* __bit_scan_reverse */
 static __inline__ int __attribute__((__always_inline__, __nodebug__))
 _bit_scan_reverse(int __A) {
- return __builtin_ia32_bit_scan_reverse(__A);
+  return 31 - __builtin_clz(__A);
 }
 
 #ifdef __x86_64__

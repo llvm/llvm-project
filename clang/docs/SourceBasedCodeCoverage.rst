@@ -78,6 +78,14 @@ directory structure will be created.  Additionally, the following special
 
 * "%h" expands out to the hostname of the machine running the program.
 
+* "%Nm" expands out to the instrumented binary's signature. When this pattern
+  is specified, the runtime creates a pool of N raw profiles which are used for
+  on-line profile merging. The runtime takes care of selecting a raw profile
+  from the pool, locking it, and updating it before the program exits.  If N is
+  not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. N must
+  be between 1 and 9. The merge pool specifier can only occur once per filename
+  pattern.
+
 .. code-block:: console
 
     # Step 2: Run the program.

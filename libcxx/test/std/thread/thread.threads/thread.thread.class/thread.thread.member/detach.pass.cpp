@@ -83,7 +83,7 @@ int main()
         assert(!t0.joinable());
         try {
             t0.detach();
-        } catch (std::system_error const& ec) {
+        } catch (std::system_error const&) {
         }
     }
 #endif

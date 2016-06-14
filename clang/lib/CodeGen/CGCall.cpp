@@ -2865,23 +2865,15 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
 
   QualType type = param->getType();
 
-  // For the most part, we just need to load the alloca, except:
-  // 1) aggregate r-values are actually pointers to temporaries, and
-  // 2) references to non-scalars are pointers directly to the aggregate.
-  // I don't know why references to scalars are different here.
-  if (const ReferenceType *ref = type->getAs<ReferenceType>()) {
-    if (!hasScalarEvaluationKind(ref->getPointeeType()))
-      return args.add(RValue::getAggregate(local), type);
-
-    // Locals which are references to scalars are represented
-    // with allocas holding the pointer.
-    return args.add(RValue::get(Builder.CreateLoad(local)), type);
-  }
-
   assert(!isInAllocaArgument(CGM.getCXXABI(), type) &&
          "cannot emit delegate call arguments for inalloca arguments!");
 
-  args.add(convertTempToRValue(local, type, loc), type);
+  // For the most part, we just need to load the alloca, except that
+  // aggregate r-values are actually pointers to temporaries.
+  if (type->isReferenceType())
+    args.add(RValue::get(Builder.CreateLoad(local)), type);
+  else
+    args.add(convertTempToRValue(local, type, loc), type);
 }
 
 static bool isProvablyNull(llvm::Value *addr) {

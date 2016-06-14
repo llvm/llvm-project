@@ -847,7 +847,9 @@ UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
       unsigned ColumnLimit = getColumnLimit(TheLine.InPPDirective, NextLine);
       bool FitsIntoOneLine =
           TheLine.Last->TotalLength + Indent <= ColumnLimit ||
-          TheLine.Type == LT_ImportStatement;
+          (TheLine.Type == LT_ImportStatement &&
+           (Style.Language != FormatStyle::LK_JavaScript ||
+            !Style.JavaScriptWrapImports));
 
       if (Style.ColumnLimit == 0)
         NoColumnLimitLineFormatter(Indenter, Whitespaces, Style, this)

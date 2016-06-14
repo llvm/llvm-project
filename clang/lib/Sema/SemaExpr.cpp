@@ -4566,6 +4566,13 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
     }
   }
 
+  // If the default argument expression is not set yet, we are building it now.
+  if (!Param->hasInit()) {
+    Diag(Param->getLocStart(), diag::err_recursive_default_argument) << FD;
+    Param->setInvalidDecl();
+    return ExprError();
+  }
+
   // If the default expression creates temporaries, we need to
   // push them to the current stack of expression temporaries so they'll
   // be properly destroyed.
@@ -10512,6 +10519,30 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     Diag(OpLoc, diag::err_typecheck_unary_expr) << OrigOp.get()->getType()
                                                 << op->getSourceRange();
     return QualType();
+  }
+
+  // Taking the address of a data member/field of a packed
+  // struct may be a problem if the pointer value is dereferenced.
+  Expr *rhs = OrigOp.get();
+  const auto *ME = dyn_cast<MemberExpr>(rhs);
+  while (ME && isa<FieldDecl>(ME->getMemberDecl())) {
+    QualType BaseType = ME->getBase()->getType();
+    if (ME->isArrow())
+      BaseType = BaseType->getPointeeType();
+    RecordDecl *RD = BaseType->getAs<RecordType>()->getDecl();
+
+    ValueDecl *MD = ME->getMemberDecl();
+    bool ByteAligned = Context.getTypeAlignInChars(MD->getType()).isOne();
+    if (ByteAligned) // Attribute packed does not have any effect.
+      break;
+
+    if (!ByteAligned &&
+        (RD->hasAttr<PackedAttr>() || (MD->hasAttr<PackedAttr>()))) {
+      Diag(OpLoc, diag::warn_taking_address_of_packed_member)
+          << MD << RD << rhs->getSourceRange();
+      break;
+    }
+    ME = dyn_cast<MemberExpr>(ME->getBase());
   }
 
   return Context.getPointerType(op->getType());
