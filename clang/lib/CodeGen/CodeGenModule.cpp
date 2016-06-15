@@ -1089,10 +1089,10 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   }
 
   if (isa<CXXConstructorDecl>(FD) || isa<CXXDestructorDecl>(FD))
-    F->setUnnamedAddr(true);
+    F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   else if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
     if (MD->isVirtual())
-      F->setUnnamedAddr(true);
+      F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   CreateFunctionBitSetEntry(FD, F);
 }
@@ -1347,7 +1347,7 @@ llvm::Constant *CodeGenModule::EmitAnnotationString(StringRef Str) {
       new llvm::GlobalVariable(getModule(), s->getType(), true,
                                llvm::GlobalValue::PrivateLinkage, s, ".str");
   gv->setSection(AnnotationSection);
-  gv->setUnnamedAddr(true);
+  gv->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   AStr = gv;
   return gv;
 }
@@ -3157,7 +3157,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   auto *GV =
       new llvm::GlobalVariable(getModule(), C->getType(), /*isConstant=*/true,
                                llvm::GlobalValue::PrivateLinkage, C, ".str");
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
   CharUnits Align = isUTF16
@@ -3299,7 +3299,7 @@ CodeGenModule::GetAddrOfConstantString(const StringLiteral *Literal) {
 
   auto *GV = new llvm::GlobalVariable(getModule(), C->getType(), isConstant,
                                       Linkage, C, ".str");
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
   CharUnits Align = getContext().getTypeAlignInChars(getContext().CharTy);
@@ -3418,7 +3418,7 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
       M, C->getType(), !CGM.getLangOpts().WritableStrings, LT, C, GlobalName,
       nullptr, llvm::GlobalVariable::NotThreadLocal, AddrSpace);
   GV->setAlignment(Alignment.getQuantity());
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   if (GV->isWeakForLinker()) {
     assert(CGM.supportsCOMDAT() && "Only COFF uses weak string literals");
     GV->setComdat(M.getOrInsertComdat(GV->getName()));

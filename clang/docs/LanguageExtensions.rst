@@ -2050,9 +2050,9 @@ Extensions for loop hint optimizations
 
 The ``#pragma clang loop`` directive is used to specify hints for optimizing the
 subsequent for, while, do-while, or c++11 range-based for loop. The directive
-provides options for vectorization, interleaving, and unrolling. Loop hints can
-be specified before any loop and will be ignored if the optimization is not safe
-to apply.
+provides options for vectorization, interleaving, unrolling and
+distribution. Loop hints can be specified before any loop and will be ignored if
+the optimization is not safe to apply.
 
 Vectorization and Interleaving
 ------------------------------
@@ -2146,6 +2146,38 @@ to the same code size limit as with ``unroll(enable)``.
   }
 
 Unrolling of a loop can be prevented by specifying ``unroll(disable)``.
+
+Loop Distribution
+-----------------
+
+Loop Distribution allows splitting a loop into multiple loops.  This is
+beneficial for example when the entire loop cannot be vectorized but some of the
+resulting loops can.
+
+If ``distribute(enable))`` is specified and the loop has memory dependencies
+that inhibit vectorization, the compiler will attempt to isolate the offending
+operations into a new loop.  This optimization is not enabled by default, only
+loops marked with the pragma are considered.
+
+.. code-block:: c++
+
+  #pragma clang loop distribute(enable)
+  for (i = 0; i < N; ++i) {
+    S1: A[i + 1] = A[i] + B[i];
+    S2: C[i] = D[i] * E[i];
+  }
+
+This loop will be split into two loops between statements S1 and S2.  The
+second loop containing S2 will be vectorized.
+
+Loop Distribution is currently not enabled by default in the optimizer because
+it can hurt performance in some cases.  For example, instruction-level
+parallelism could be reduced by sequentializing the execution of the
+statements S1 and S2 above.
+
+If Loop Distribution is turned on globally with
+``-mllvm -enable-loop-distribution``, specifying ``distribute(disable)`` can
+be used the disable it on a per-loop basis.
 
 Additional Information
 ----------------------

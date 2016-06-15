@@ -16,8 +16,9 @@ How to build and run
 ====================
 
 SanitizerCoverage can be used with :doc:`AddressSanitizer`,
-:doc:`LeakSanitizer`, :doc:`MemorySanitizer`, and UndefinedBehaviorSanitizer.
-In addition to ``-fsanitize=``, pass one of the following compile-time flags:
+:doc:`LeakSanitizer`, :doc:`MemorySanitizer`,
+UndefinedBehaviorSanitizer, or without any sanitizer.  Pass one of the
+following compile-time flags:
 
 * ``-fsanitize-coverage=func`` for function-level coverage (very fast).
 * ``-fsanitize-coverage=bb`` for basic-block-level coverage (may add up to 30%
@@ -27,8 +28,9 @@ In addition to ``-fsanitize=``, pass one of the following compile-time flags:
 You may also specify ``-fsanitize-coverage=indirect-calls`` for
 additional `caller-callee coverage`_.
 
-At run time, pass ``coverage=1`` in ``ASAN_OPTIONS``, ``LSAN_OPTIONS``,
-``MSAN_OPTIONS`` or ``UBSAN_OPTIONS``, as appropriate.
+At run time, pass ``coverage=1`` in ``ASAN_OPTIONS``,
+``LSAN_OPTIONS``, ``MSAN_OPTIONS`` or ``UBSAN_OPTIONS``, as
+appropriate. For the standalone coverage mode, use ``UBSAN_OPTIONS``.
 
 To get `Coverage counters`_, add ``-fsanitize-coverage=8bit-counters``
 to one of the above compile-time flags. At runtime, use

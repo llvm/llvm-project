@@ -688,6 +688,29 @@ TEST_F(CleanUpReplacementsTest, NoNewLineAtTheEndOfCode) {
   EXPECT_EQ(Expected, apply(Code, Replaces));
 }
 
+TEST_F(CleanUpReplacementsTest, SkipExistingHeaders) {
+  std::string Code = "#include \"a.h\"\n"
+                     "#include <vector>\n";
+  std::string Expected = "#include \"a.h\"\n"
+                         "#include <vector>\n";
+  tooling::Replacements Replaces = {createInsertion("#include <vector>"),
+                                    createInsertion("#include \"a.h\"")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
+TEST_F(CleanUpReplacementsTest, AddIncludesWithDifferentForms) {
+  std::string Code = "#include \"a.h\"\n"
+                     "#include <vector>\n";
+  // FIXME: this might not be the best behavior.
+  std::string Expected = "#include \"a.h\"\n"
+                         "#include \"vector\"\n"
+                         "#include <vector>\n"
+                         "#include <a.h>\n";
+  tooling::Replacements Replaces = {createInsertion("#include \"vector\""),
+                                    createInsertion("#include <a.h>")};
+  EXPECT_EQ(Expected, apply(Code, Replaces));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

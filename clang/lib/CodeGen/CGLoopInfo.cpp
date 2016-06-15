@@ -26,6 +26,7 @@ static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
       Attrs.InterleaveCount == 0 && Attrs.UnrollCount == 0 &&
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
+      Attrs.DistributeEnable == LoopAttributes::Unspecified &&
       !Location)
     return nullptr;
 
@@ -84,6 +85,14 @@ static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
     Args.push_back(MDNode::get(Ctx, Vals));
   }
 
+  if (Attrs.DistributeEnable != LoopAttributes::Unspecified) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.distribute.enable"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            Type::getInt1Ty(Ctx), (Attrs.DistributeEnable ==
+                                                   LoopAttributes::Enable)))};
+    Args.push_back(MDNode::get(Ctx, Vals));
+  }
+
   // Set the first operand to itself.
   MDNode *LoopID = MDNode::get(Ctx, Args);
   LoopID->replaceOperandWith(0, LoopID);
@@ -93,7 +102,8 @@ static MDNode *createMetadata(LLVMContext &Ctx, const LoopAttributes &Attrs,
 LoopAttributes::LoopAttributes(bool IsParallel)
     : IsParallel(IsParallel), VectorizeEnable(LoopAttributes::Unspecified),
       UnrollEnable(LoopAttributes::Unspecified), VectorizeWidth(0),
-      InterleaveCount(0), UnrollCount(0) {}
+      InterleaveCount(0), UnrollCount(0),
+      DistributeEnable(LoopAttributes::Unspecified) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -172,6 +182,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Unroll:
         setUnrollState(LoopAttributes::Disable);
         break;
+      case LoopHintAttr::Distribute:
+        setDistributeState(false);
+        break;
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::VectorizeWidth:
       case LoopHintAttr::InterleaveCount:
@@ -187,6 +200,9 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
         break;
       case LoopHintAttr::Unroll:
         setUnrollState(LoopAttributes::Enable);
+        break;
+      case LoopHintAttr::Distribute:
+        setDistributeState(true);
         break;
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::VectorizeWidth:
@@ -207,6 +223,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::VectorizeWidth:
       case LoopHintAttr::InterleaveCount:
+      case LoopHintAttr::Distribute:
         llvm_unreachable("Options cannot be used to assume mem safety.");
         break;
       }
@@ -221,6 +238,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::UnrollCount:
       case LoopHintAttr::VectorizeWidth:
       case LoopHintAttr::InterleaveCount:
+      case LoopHintAttr::Distribute:
         llvm_unreachable("Options cannot be used with 'full' hint.");
         break;
       }
@@ -239,6 +257,7 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
       case LoopHintAttr::Unroll:
       case LoopHintAttr::Vectorize:
       case LoopHintAttr::Interleave:
+      case LoopHintAttr::Distribute:
         llvm_unreachable("Options cannot be assigned a value.");
         break;
       }

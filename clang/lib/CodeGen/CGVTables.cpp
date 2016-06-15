@@ -606,7 +606,7 @@ llvm::Constant *CodeGenVTables::CreateVTableInitializer(
           StringRef PureCallName = CGM.getCXXABI().GetPureVirtualCallName();
           PureVirtualFn = CGM.CreateRuntimeFunction(Ty, PureCallName);
           if (auto *F = dyn_cast<llvm::Function>(PureVirtualFn))
-            F->setUnnamedAddr(true);
+            F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
           PureVirtualFn = llvm::ConstantExpr::getBitCast(PureVirtualFn,
                                                          CGM.Int8PtrTy);
         }
@@ -619,7 +619,7 @@ llvm::Constant *CodeGenVTables::CreateVTableInitializer(
             CGM.getCXXABI().GetDeletedVirtualCallName();
           DeletedVirtualFn = CGM.CreateRuntimeFunction(Ty, DeletedCallName);
           if (auto *F = dyn_cast<llvm::Function>(DeletedVirtualFn))
-            F->setUnnamedAddr(true);
+            F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
           DeletedVirtualFn = llvm::ConstantExpr::getBitCast(DeletedVirtualFn,
                                                          CGM.Int8PtrTy);
         }
@@ -698,7 +698,7 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   CGM.setGlobalVisibility(VTable, RD);
 
   // V-tables are always unnamed_addr.
-  VTable->setUnnamedAddr(true);
+  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
       CGM.getContext().getTagDeclType(Base.getBase()));

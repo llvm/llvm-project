@@ -1571,3 +1571,13 @@
 // CHECK-ARMV7EB: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-ARMV7EB: "--be8"
 // CHECK-ARMV7EB: "-m" "armelfb_linux_eabi"
+
+// Check dynamic-linker for musl-libc
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=i386-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL32 %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL64 %s
+// CHECK-MUSL32: "-dynamic-linker" "/lib/ld-musl-i386.so.1"
+// CHECK-MUSL64: "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"

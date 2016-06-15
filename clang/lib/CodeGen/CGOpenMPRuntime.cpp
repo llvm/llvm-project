@@ -909,7 +909,7 @@ Address CGOpenMPRuntime::getOrCreateDefaultLocation(unsigned Flags) {
     auto DefaultOpenMPLocation = new llvm::GlobalVariable(
         CGM.getModule(), IdentTy, /*isConstant*/ true,
         llvm::GlobalValue::PrivateLinkage, /*Initializer*/ nullptr);
-    DefaultOpenMPLocation->setUnnamedAddr(true);
+    DefaultOpenMPLocation->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     DefaultOpenMPLocation->setAlignment(Align.getQuantity());
 
     llvm::Constant *Zero = llvm::ConstantInt::get(CGM.Int32Ty, 0, true);
@@ -2840,7 +2840,7 @@ CGOpenMPRuntime::createOffloadingBinaryDescriptorRegistration() {
       M, DeviceImagesInitTy, /*isConstant=*/true,
       llvm::GlobalValue::InternalLinkage, DeviceImagesInit,
       ".omp_offloading.device_images");
-  DeviceImages->setUnnamedAddr(true);
+  DeviceImages->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   // This is a Zero array to be used in the creation of the constant expressions
   llvm::Constant *Index[] = {llvm::Constant::getNullValue(CGM.Int32Ty),
@@ -2903,7 +2903,7 @@ void CGOpenMPRuntime::createOffloadEntry(llvm::Constant *ID,
       new llvm::GlobalVariable(M, StrPtrInit->getType(), /*isConstant=*/true,
                                llvm::GlobalValue::InternalLinkage, StrPtrInit,
                                ".omp_offloading.entry_name");
-  Str->setUnnamedAddr(true);
+  Str->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   llvm::Constant *StrPtr = llvm::ConstantExpr::getBitCast(Str, CGM.Int8PtrTy);
 
   // Create the entry struct.
@@ -5623,7 +5623,7 @@ emitOffloadingArrays(CodeGenFunction &CGF, llvm::Value *&BasePointersArray,
           CGM.getModule(), SizesArrayInit->getType(),
           /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
           SizesArrayInit, ".offload_sizes");
-      SizesArrayGbl->setUnnamedAddr(true);
+      SizesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
       SizesArray = SizesArrayGbl;
     }
 
@@ -5635,7 +5635,7 @@ emitOffloadingArrays(CodeGenFunction &CGF, llvm::Value *&BasePointersArray,
         CGM.getModule(), MapTypesArrayInit->getType(),
         /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
         MapTypesArrayInit, ".offload_maptypes");
-    MapTypesArrayGbl->setUnnamedAddr(true);
+    MapTypesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     MapTypesArray = MapTypesArrayGbl;
 
     for (unsigned i = 0; i < PointerNumVal; ++i) {

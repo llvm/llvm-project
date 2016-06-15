@@ -58,6 +58,9 @@ struct LoopAttributes {
 
   /// \brief llvm.unroll.
   unsigned UnrollCount;
+
+  /// \brief Value for llvm.loop.distribute.enable metadata.
+  LVEnableState DistributeEnable;
 };
 
 /// \brief Information used when generating a structured loop.
@@ -127,6 +130,12 @@ public:
   /// \brief Set the next pushed loop 'vectorize.enable'
   void setVectorizeEnable(bool Enable = true) {
     StagedAttrs.VectorizeEnable =
+        Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
+  }
+
+  /// \brief Set the next pushed loop as a distribution candidate.
+  void setDistributeState(bool Enable = true) {
+    StagedAttrs.DistributeEnable =
         Enable ? LoopAttributes::Enable : LoopAttributes::Disable;
   }
 

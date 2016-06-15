@@ -8,4 +8,4 @@ struct A { int a; A() { y = ((size_t)this - (size_t)&x) / sizeof(void*); } };
 struct B : virtual A { void* x; };    
 B x;
 
-// CHECK: @y = global i8 2
+// CHECK: @y = local_unnamed_addr global i8 2
