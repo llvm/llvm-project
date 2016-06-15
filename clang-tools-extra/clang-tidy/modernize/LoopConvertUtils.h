@@ -450,9 +450,6 @@ private:
   // Determine whether or not a declaration that would conflict with Symbol
   // exists in an outer context or in any statement contained in SourceStmt.
   bool declarationExists(llvm::StringRef Symbol);
-
-  // Concatenates two identifiers following the current naming style.
-  std::string AppendWithStyle(StringRef Str, StringRef Suffix) const;
 };
 
 } // namespace modernize

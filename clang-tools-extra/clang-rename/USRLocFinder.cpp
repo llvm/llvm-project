@@ -87,6 +87,28 @@ public:
     return true;
   }
 
+  bool VisitCXXDestructorDecl(clang::CXXDestructorDecl *DestructorDecl) {
+    if (getUSRForDecl(DestructorDecl->getParent()) == USR) {
+      // Handles "~Foo" from "Foo::~Foo".
+      SourceLocation Location = DestructorDecl->getLocation();
+      const ASTContext &Context = DestructorDecl->getASTContext();
+      StringRef TokenName = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(Location), Context.getSourceManager(),
+          Context.getLangOpts());
+      // 1 is the length of the "~" string that is not to be touched by the
+      // rename.
+      assert(TokenName.startswith("~"));
+      LocationsFound.push_back(Location.getLocWithOffset(1));
+
+      if (DestructorDecl->isThisDeclarationADefinition()) {
+        // Handles "Foo" from "Foo::~Foo".
+        LocationsFound.push_back(DestructorDecl->getLocStart());
+      }
+    }
+
+    return true;
+  }
+
   // Expression visitors:
 
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {

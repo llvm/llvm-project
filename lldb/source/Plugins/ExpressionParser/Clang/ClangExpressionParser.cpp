@@ -837,6 +837,30 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
         sc.target_sp = target_sp;
     }
 
+    LLVMUserExpression::IRPasses custom_passes;
+    {
+        auto lang = m_expr.Language();
+        if (log)
+            log->Printf("%s - Currrent expression language is %s\n", __FUNCTION__,
+                        Language::GetNameForLanguageType(lang));
+
+        if (lang != lldb::eLanguageTypeUnknown)
+        {
+            auto runtime = exe_ctx.GetProcessSP()->GetLanguageRuntime(lang);
+            if (runtime)
+                runtime->GetIRPasses(custom_passes);
+        }
+    }
+
+    if (custom_passes.EarlyPasses)
+    {
+        if (log)
+            log->Printf("%s - Running Early IR Passes from LanguageRuntime on expression module '%s'", __FUNCTION__,
+                        m_expr.FunctionName());
+
+        custom_passes.EarlyPasses->run(*llvm_module_ap);
+    }
+
     execution_unit_sp.reset(new IRExecutionUnit (m_llvm_context, // handed off here
                                                  llvm_module_ap, // handed off here
                                                  function_name,
@@ -925,11 +949,21 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
 
                 IRDynamicChecks ir_dynamic_checks(*process->GetDynamicCheckers(), function_name.AsCString());
 
-                if (!ir_dynamic_checks.runOnModule(*execution_unit_sp->GetModule()))
+                llvm::Module *module = execution_unit_sp->GetModule();
+                if (!module || !ir_dynamic_checks.runOnModule(*module))
                 {
                     err.SetErrorToGenericError();
                     err.SetErrorString("Couldn't add dynamic checks to the expression");
                     return err;
+                }
+
+                if (custom_passes.LatePasses)
+                {
+                    if (log)
+                        log->Printf("%s - Running Late IR Passes from LanguageRuntime on expression module '%s'",
+                                    __FUNCTION__, m_expr.FunctionName());
+
+                    custom_passes.LatePasses->run(*module);
                 }
             }
         }

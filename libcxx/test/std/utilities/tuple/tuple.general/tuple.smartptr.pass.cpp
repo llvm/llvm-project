@@ -21,18 +21,13 @@ int main () {
     std::tuple<std::unique_ptr<char>> up;
     std::tuple<std::shared_ptr<char>> sp;
     std::tuple<std::weak_ptr  <char>> wp;
-//     std::tuple<std::auto_ptr  <char>> ap;
     }
     {
     std::tuple<std::unique_ptr<char[]>> up;
     std::tuple<std::shared_ptr<char[]>> sp;
     std::tuple<std::weak_ptr  <char[]>> wp;
-//     std::tuple<std::auto_ptr  <char[]>> ap;
     }
-    {
-    std::tuple<std::unique_ptr<char[5]>> up;
-    std::tuple<std::shared_ptr<char[5]>> sp;
-    std::tuple<std::weak_ptr  <char[5]>> wp;
-//     std::tuple<std::auto_ptr  <char[5]>> ap;
-    }
+    // Smart pointers of type 'T[N]' are not tested here since they are not
+    // supported by the standard nor by libc++'s implementation.
+    // See http://reviews.llvm.org/D21320 for move information.
 }
