@@ -808,13 +808,10 @@ CXXConstructExpr::CXXConstructExpr(const ASTContext &C, StmtClass SC,
   }
 }
 
-LambdaCapture::OpaqueCapturedEntity LambdaCapture::ThisSentinel;
-LambdaCapture::OpaqueCapturedEntity LambdaCapture::VLASentinel;
-
 LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
                              LambdaCaptureKind Kind, VarDecl *Var,
                              SourceLocation EllipsisLoc)
-  : CapturedEntityAndBits(Var, 0), Loc(Loc), EllipsisLoc(EllipsisLoc)
+  : DeclAndBits(Var, 0), Loc(Loc), EllipsisLoc(EllipsisLoc)
 {
   unsigned Bits = 0;
   if (Implicit)
@@ -826,7 +823,7 @@ LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
     // Fall through
   case LCK_This:
     assert(!Var && "'this' capture cannot have a variable!");
-    CapturedEntityAndBits.setPointer(&ThisSentinel);
+    Bits |= Capture_This;
     break;
 
   case LCK_ByCopy:
@@ -837,19 +834,16 @@ LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
     break;
   case LCK_VLAType:
     assert(!Var && "VLA type capture cannot have a variable!");
-    CapturedEntityAndBits.setPointer(&VLASentinel);
     break;
   }
-  CapturedEntityAndBits.setInt(Bits);
+  DeclAndBits.setInt(Bits);
 }
 
 LambdaCaptureKind LambdaCapture::getCaptureKind() const {
-  void *Ptr = CapturedEntityAndBits.getPointer();
-  if (Ptr == &VLASentinel)
+  if (capturesVLAType())
     return LCK_VLAType;
-  const unsigned Bits = CapturedEntityAndBits.getInt();
-  bool CapByCopy = Bits & Capture_ByCopy;
-  if (Ptr == &ThisSentinel)
+  bool CapByCopy = DeclAndBits.getInt() & Capture_ByCopy;
+  if (capturesThis())
     return CapByCopy ? LCK_StarThis : LCK_This;
   return CapByCopy ? LCK_ByCopy : LCK_ByRef;
 }

@@ -492,4 +492,25 @@ void loop_with_stmt_expr() {
 // CHECK: call void @__kmpc_for_static_init_4(
 // CHECK: call void @__kmpc_for_static_fini(
 
+
+// CHECK-LABEL: fint
+// CHECK: call {{.*}}i32 {{.*}}ftemplate
+// CHECK: ret i32
+
+// CHECK: load i16, i16*
+// CHECK: store i16 %
+// CHECK: call void {{.+}}@__kmpc_fork_call(
+// CHECK: call void @__kmpc_for_static_init_4(
+template <typename T>
+T ftemplate() {
+  short aa = 0;
+
+#pragma omp parallel for schedule(static, aa)
+  for (int i = 0; i < 100; i++) {
+  }
+  return T();
+}
+
+int fint(void) { return ftemplate<int>(); }
+
 #endif // HEADER

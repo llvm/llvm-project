@@ -50,8 +50,9 @@ FrontendActionFactory::~FrontendActionFactory() {}
 static clang::driver::Driver *newDriver(
     clang::DiagnosticsEngine *Diagnostics, const char *BinaryName,
     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  clang::driver::Driver *CompilerDriver = new clang::driver::Driver(
-      BinaryName, llvm::sys::getDefaultTargetTriple(), *Diagnostics, VFS);
+  clang::driver::Driver *CompilerDriver =
+      new clang::driver::Driver(BinaryName, llvm::sys::getDefaultTargetTriple(),
+                                *Diagnostics, std::move(VFS));
   CompilerDriver->setTitle("clang_based_tool");
   return CompilerDriver;
 }

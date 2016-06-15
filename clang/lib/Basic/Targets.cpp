@@ -6395,6 +6395,10 @@ public:
              .Default(false);
   }
 
+  bool hasSjLjLowering() const override {
+    return true;
+  }
+
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
     // FIXME: Implement!
     return None;

@@ -286,13 +286,10 @@ checkDeducedTemplateArguments(ASTContext &Context,
 
 /// \brief Deduce the value of the given non-type template parameter
 /// from the given constant.
-static Sema::TemplateDeductionResult
-DeduceNonTypeTemplateArgument(Sema &S,
-                              NonTypeTemplateParmDecl *NTTP,
-                              llvm::APSInt Value, QualType ValueType,
-                              bool DeducedFromArrayBound,
-                              TemplateDeductionInfo &Info,
-                    SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
+static Sema::TemplateDeductionResult DeduceNonTypeTemplateArgument(
+    Sema &S, NonTypeTemplateParmDecl *NTTP, const llvm::APSInt &Value,
+    QualType ValueType, bool DeducedFromArrayBound, TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
   assert(NTTP->getDepth() == 0 &&
          "Cannot deduce non-type template argument with depth > 0");
 

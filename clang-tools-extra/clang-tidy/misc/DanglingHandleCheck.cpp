@@ -21,14 +21,14 @@ namespace misc {
 namespace {
 
 ast_matchers::internal::BindableMatcher<Stmt>
-handleFrom(ast_matchers::internal::Matcher<RecordDecl> IsAHandle,
-           ast_matchers::internal::Matcher<Expr> Arg) {
+handleFrom(const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle,
+           const ast_matchers::internal::Matcher<Expr> &Arg) {
   return cxxConstructExpr(hasDeclaration(cxxMethodDecl(ofClass(IsAHandle))),
                           hasArgument(0, Arg));
 }
 
 ast_matchers::internal::Matcher<Stmt> handleFromTemporaryValue(
-    ast_matchers::internal::Matcher<RecordDecl> IsAHandle) {
+    const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle) {
   // If a ternary operator returns a temporary value, then both branches hold a
   // temporary value. If one of them is not a temporary then it must be copied
   // into one to satisfy the type of the operator.
@@ -54,8 +54,8 @@ ast_matchers::internal::Matcher<RecordDecl> isAMap() {
                     "::std::unordered_multimap");
 }
 
-ast_matchers::internal::BindableMatcher<Stmt>
-makeContainerMatcher(ast_matchers::internal::Matcher<RecordDecl> IsAHandle) {
+ast_matchers::internal::BindableMatcher<Stmt> makeContainerMatcher(
+    const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle) {
   // This matcher could be expanded to detect:
   //  - Constructors: eg. vector<string_view>(3, string("A"));
   //  - emplace*(): This requires a different logic to determine that

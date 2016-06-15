@@ -51,7 +51,7 @@ public:
     // -polly-position=early. This can probably be reduced to a more compact set
     // of passes.
     FPM->add(createCFGSimplificationPass());
-    FPM->add(createScalarReplAggregatesPass());
+    FPM->add(createSROAPass());
     FPM->add(createEarlyCSEPass());
     FPM->add(createInstructionCombiningPass());
     FPM->add(createJumpThreadingPass());

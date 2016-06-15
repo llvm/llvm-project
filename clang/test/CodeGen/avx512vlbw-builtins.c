@@ -8,97 +8,105 @@
 
 __mmask32 test_mm256_cmpeq_epi8_mask(__m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_cmpeq_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.b.256
+  // CHECK: icmp eq <32 x i8> %{{.*}}, %{{.*}}
   return (__mmask32)_mm256_cmpeq_epi8_mask(__a, __b);
 }
 
 __mmask32 test_mm256_mask_cmpeq_epi8_mask(__mmask32 __u, __m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_mask_cmpeq_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.b.256
+  // CHECK: icmp eq <32 x i8> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return (__mmask32)_mm256_mask_cmpeq_epi8_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm_cmpeq_epi8_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_cmpeq_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.b.128
+  // CHECK: icmp eq <16 x i8> %{{.*}}, %{{.*}}
   return (__mmask16)_mm_cmpeq_epi8_mask(__a, __b);
 }
 
 __mmask16 test_mm_mask_cmpeq_epi8_mask(__mmask16 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_mask_cmpeq_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.b.128
+  // CHECK: icmp eq <16 x i8> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm_mask_cmpeq_epi8_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm256_cmpeq_epi16_mask(__m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_cmpeq_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.w.256
+  // CHECK: icmp eq <16 x i16> %{{.*}}, %{{.*}}
   return (__mmask16)_mm256_cmpeq_epi16_mask(__a, __b);
 }
 
 __mmask16 test_mm256_mask_cmpeq_epi16_mask(__mmask16 __u, __m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_mask_cmpeq_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.w.256
+  // CHECK: icmp eq <16 x i16> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm256_mask_cmpeq_epi16_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm_cmpeq_epi16_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_cmpeq_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.w.128
+  // CHECK: icmp eq <8 x i16> %{{.*}}, %{{.*}}
   return (__mmask8)_mm_cmpeq_epi16_mask(__a, __b);
 }
 
 __mmask8 test_mm_mask_cmpeq_epi16_mask(__mmask8 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_mask_cmpeq_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpeq.w.128
+  // CHECK: icmp eq <8 x i16> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm_mask_cmpeq_epi16_mask(__u, __a, __b);
 }
 
 __mmask32 test_mm256_cmpgt_epi8_mask(__m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_cmpgt_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.b.256
+  // CHECK: icmp sgt <32 x i8> %{{.*}}, %{{.*}}
   return (__mmask32)_mm256_cmpgt_epi8_mask(__a, __b);
 }
 
 __mmask32 test_mm256_mask_cmpgt_epi8_mask(__mmask32 __u, __m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_mask_cmpgt_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.b.256
+  // CHECK: icmp sgt <32 x i8> %{{.*}}, %{{.*}}
+  // CHECK: and <32 x i1> %{{.*}}, %{{.*}}
   return (__mmask32)_mm256_mask_cmpgt_epi8_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm_cmpgt_epi8_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_cmpgt_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.b.128
+  // CHECK: icmp sgt <16 x i8> %{{.*}}, %{{.*}}
   return (__mmask16)_mm_cmpgt_epi8_mask(__a, __b);
 }
 
 __mmask16 test_mm_mask_cmpgt_epi8_mask(__mmask16 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_mask_cmpgt_epi8_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.b.128
+  // CHECK: icmp sgt <16 x i8> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm_mask_cmpgt_epi8_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm256_cmpgt_epi16_mask(__m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_cmpgt_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.w.256
+  // CHECK: icmp sgt <16 x i16> %{{.*}}, %{{.*}}
   return (__mmask16)_mm256_cmpgt_epi16_mask(__a, __b);
 }
 
 __mmask16 test_mm256_mask_cmpgt_epi16_mask(__mmask16 __u, __m256i __a, __m256i __b) {
   // CHECK-LABEL: @test_mm256_mask_cmpgt_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.w.256
+  // CHECK: icmp sgt <16 x i16> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm256_mask_cmpgt_epi16_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm_cmpgt_epi16_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_cmpgt_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.w.128
+  // CHECK: icmp sgt <8 x i16> %{{.*}}, %{{.*}}
   return (__mmask8)_mm_cmpgt_epi16_mask(__a, __b);
 }
 
 __mmask8 test_mm_mask_cmpgt_epi16_mask(__mmask8 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_mask_cmpgt_epi16_mask
-  // CHECK: @llvm.x86.avx512.mask.pcmpgt.w.128
+  // CHECK: icmp sgt <8 x i16> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm_mask_cmpgt_epi16_mask(__u, __a, __b);
 }
 
