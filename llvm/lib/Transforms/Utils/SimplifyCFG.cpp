@@ -4540,7 +4540,7 @@ SwitchLookupTable::SwitchLookupTable(
   Array = new GlobalVariable(M, ArrayTy, /*constant=*/true,
                              GlobalVariable::PrivateLinkage, Initializer,
                              "switch.table");
-  Array->setUnnamedAddr(true);
+  Array->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   Kind = ArrayKind;
 }
 

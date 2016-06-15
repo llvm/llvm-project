@@ -81,6 +81,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 2;
   case FK_SecRel_4:
   case FK_Data_4:
+  case FK_PCRel_4:
     return 4;
   case FK_SecRel_8:
   case FK_Data_8:
@@ -105,27 +106,6 @@ void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
       break;
     }
 
-    case AMDGPU::fixup_si_rodata: {
-      uint32_t *Dst = (uint32_t*)(Data + Fixup.getOffset());
-      // We emit constant data at the end of the text section and generate its
-      // address using the following code sequence:
-      // s_getpc_b64 s[0:1]
-      // s_add_u32 s0, s0, $symbol
-      // s_addc_u32 s1, s1, 0
-      //
-      // s_getpc_b64 returns the address of the s_add_u32 instruction and then
-      // the fixup replaces $symbol with a literal constant, which is a
-      // pc-relative  offset from the encoding of the $symbol operand to the
-      // constant data.
-      //
-      // What we want here is an offset from the start of the s_add_u32
-      // instruction to the constant data, but since the encoding of $symbol
-      // starts 4 bytes after the start of the add instruction, we end up
-      // with an offset that is 4 bytes too small.  This requires us to
-      // add 4 to the fixup value before applying it.
-      *Dst = Value + 4;
-      break;
-    }
     default: {
       // FIXME: Copied from AArch64
       unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
@@ -152,7 +132,6 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
     // name                   offset bits  flags
     { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_si_rodata",      0,     32,   MCFixupKindInfo::FKF_IsPCRel }
   };
 
   if (Kind < FirstTargetFixupKind)
@@ -175,13 +154,15 @@ namespace {
 
 class ELFAMDGPUAsmBackend : public AMDGPUAsmBackend {
   bool Is64Bit;
+  bool HasRelocationAddend;
 
 public:
-  ELFAMDGPUAsmBackend(const Target &T, bool Is64Bit) :
-      AMDGPUAsmBackend(T), Is64Bit(Is64Bit) { }
+  ELFAMDGPUAsmBackend(const Target &T, const Triple &TT) :
+      AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
+      HasRelocationAddend(TT.getOS() == Triple::AMDHSA) { }
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
-    return createAMDGPUELFObjectWriter(Is64Bit, OS);
+    return createAMDGPUELFObjectWriter(Is64Bit, HasRelocationAddend, OS);
   }
 };
 
@@ -191,5 +172,5 @@ MCAsmBackend *llvm::createAMDGPUAsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const Triple &TT, StringRef CPU) {
   // Use 64-bit ELF for amdgcn
-  return new ELFAMDGPUAsmBackend(T, TT.getArch() == Triple::amdgcn);
+  return new ELFAMDGPUAsmBackend(T, TT);
 }

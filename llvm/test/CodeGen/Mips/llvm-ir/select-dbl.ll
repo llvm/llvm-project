@@ -338,8 +338,7 @@ entry:
 
   ; SEL-32:     cmp.ueq.d $f0, $f12, $f14
   ; SEL-32:     mfc1      $[[T0:[0-9]+]], $f0
-  ; 32R6:       not       $[[T0]], $[[T0]]
-  ; MM32R6:     nor       $[[T0]], $[[T0]], $zero
+  ; SEL-32:     not       $[[T0]], $[[T0]]
   ; SEL-32:     mtc1      $[[T0:[0-9]+]], $f0
   ; SEL-32:     sel.d     $f0, $f14, $f12
 

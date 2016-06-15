@@ -21,10 +21,8 @@ namespace llvm {
 
 /// A simple loop rotation transformation.
 class LoopRotatePass : public PassInfoMixin<LoopRotatePass> {
-  unsigned MaxHeaderSize;
 public:
   LoopRotatePass();
-  LoopRotatePass(unsigned MaxHeaderSize) : MaxHeaderSize(MaxHeaderSize) {}
   PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM);
 };
 }

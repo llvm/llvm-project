@@ -249,7 +249,8 @@ void CodeViewDebug::endModule() {
 
   // Emit per-function debug information.
   for (auto &P : FnDebugInfo)
-    emitDebugInfoForFunction(P.first, P.second);
+    if (!P.first->isDeclarationForLinker())
+      emitDebugInfoForFunction(P.first, P.second);
 
   // Emit global variable debug information.
   emitDebugInfoForGlobals();
@@ -1318,7 +1319,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     MCSymbol *EndLabel = nullptr;
     for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
       if (const auto *GV = dyn_cast_or_null<GlobalVariable>(G->getVariable())) {
-        if (!GV->hasComdat()) {
+        if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
           if (!EndLabel) {
             OS.AddComment("Symbol subsection for globals");
             EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);

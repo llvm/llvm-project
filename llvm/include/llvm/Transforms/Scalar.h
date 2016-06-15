@@ -106,17 +106,6 @@ FunctionPass *createSROAPass();
 
 //===----------------------------------------------------------------------===//
 //
-// ScalarReplAggregates - Break up alloca's of aggregates into multiple allocas
-// if possible.
-//
-FunctionPass *createScalarReplAggregatesPass(signed Threshold = -1,
-                                             bool UseDomTree = true,
-                                             signed StructMemberThreshold = -1,
-                                             signed ArrayElementThreshold = -1,
-                                             signed ScalarLoadThreshold = -1);
-
-//===----------------------------------------------------------------------===//
-//
 // InductiveRangeCheckElimination - Transform loops to elide range checks on
 // linear functions of the induction variable.
 //

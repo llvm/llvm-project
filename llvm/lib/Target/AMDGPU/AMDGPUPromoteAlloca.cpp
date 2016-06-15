@@ -694,7 +694,7 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
       nullptr,
       GlobalVariable::NotThreadLocal,
       AMDGPUAS::LOCAL_ADDRESS);
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(I.getAlignment());
 
   Value *TCntY, *TCntZ;

@@ -137,6 +137,10 @@ def SIsampleb : SDSample<"AMDGPUISD::SAMPLEB">;
 def SIsampled : SDSample<"AMDGPUISD::SAMPLED">;
 def SIsamplel : SDSample<"AMDGPUISD::SAMPLEL">;
 
+def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
+  SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
+>;
+
 //===----------------------------------------------------------------------===//
 // PatFrags for FLAT instructions
 //===----------------------------------------------------------------------===//
@@ -454,7 +458,7 @@ def sopp_brtarget : Operand<OtherVT> {
   let ParserMatchClass = SoppBrTarget;
 }
 
-def const_ga : Operand<iPTR>;
+def si_ga : Operand<iPTR>;
 
 def InterpSlot : Operand<i32> {
   let PrintMethod = "printInterpSlot";

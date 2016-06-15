@@ -13,6 +13,7 @@
 #include "OutputStyle.h"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -20,34 +21,25 @@
 
 namespace llvm {
 namespace pdb {
-class PDBFile;
 
 namespace yaml {
 struct MsfHeaders {
-  uint32_t BlockSize;
-  uint32_t Unknown0;
-  uint32_t BlockCount;
-  uint32_t NumDirectoryBytes;
-  uint32_t Unknown1;
-  uint32_t BlockMapIndex;
+  PDBFile::SuperBlock SuperBlock;
   uint32_t NumDirectoryBlocks;
   uint32_t BlockMapOffset;
-  std::vector<uint32_t> DirectoryBlocks;
+  std::vector<support::ulittle32_t> DirectoryBlocks;
   uint32_t NumStreams;
+  uint32_t FileSize;
 };
 
-struct StreamSizeEntry {
-  uint32_t Size;
-};
-
-struct StreamMapEntry {
-  std::vector<uint32_t> Blocks;
+struct StreamBlockList {
+  std::vector<support::ulittle32_t> Blocks;
 };
 
 struct PdbObject {
-  Optional<MsfHeaders> Headers;
-  Optional<std::vector<StreamSizeEntry>> StreamSizes;
-  Optional<std::vector<StreamMapEntry>> StreamMap;
+  MsfHeaders Headers;
+  Optional<std::vector<support::ulittle32_t>> StreamSizes;
+  Optional<std::vector<StreamBlockList>> StreamMap;
 };
 }
 }
@@ -55,25 +47,26 @@ struct PdbObject {
 
 namespace llvm {
 namespace yaml {
-template <> struct MappingTraits<pdb::yaml::StreamSizeEntry> {
-  static void mapping(IO &IO, pdb::yaml::StreamSizeEntry &Obj);
+
+template <> struct MappingTraits<pdb::PDBFile::SuperBlock> {
+  static void mapping(IO &IO, pdb::PDBFile::SuperBlock &SB);
 };
 
-template <> struct MappingTraits<pdb::yaml::StreamMapEntry> {
-  static void mapping(IO &IO, pdb::yaml::StreamMapEntry &Obj);
+template <> struct MappingTraits<pdb::yaml::StreamBlockList> {
+  static void mapping(IO &IO, pdb::yaml::StreamBlockList &SB);
 };
 
 template <> struct MappingTraits<pdb::yaml::MsfHeaders> {
   static void mapping(IO &IO, pdb::yaml::MsfHeaders &Obj);
 };
+
 template <> struct MappingTraits<pdb::yaml::PdbObject> {
   static void mapping(IO &IO, pdb::yaml::PdbObject &Obj);
 };
 }
 }
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(uint32_t)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamSizeEntry)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamMapEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(support::ulittle32_t)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H

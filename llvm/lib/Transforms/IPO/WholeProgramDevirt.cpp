@@ -280,6 +280,12 @@ ModulePass *llvm::createWholeProgramDevirtPass() {
   return new WholeProgramDevirt;
 }
 
+PreservedAnalyses WholeProgramDevirtPass::run(Module &M) {
+  if (!DevirtModule(M).run())
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
+}
+
 void DevirtModule::buildBitSets(
     std::vector<VTableBits> &Bits,
     DenseMap<Metadata *, std::set<BitSetInfo>> &BitSets) {

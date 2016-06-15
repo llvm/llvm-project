@@ -47,6 +47,7 @@ MCAsmBackend *createAMDGPUAsmBackend(const Target &T, const MCRegisterInfo &MRI,
                                      const Triple &TT, StringRef CPU);
 
 MCObjectWriter *createAMDGPUELFObjectWriter(bool Is64Bit,
+                                            bool HasRelocationAddend,
                                             raw_pwrite_stream &OS);
 } // End llvm namespace
 

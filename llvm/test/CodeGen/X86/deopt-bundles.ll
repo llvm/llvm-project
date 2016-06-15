@@ -146,3 +146,16 @@ try.cont:
 }
 
 declare i32 @__CxxFrameHandler3(...)
+
+define void @f_0(i64 %n) {
+  ; CHECK-LABEL: _f_0
+  %s = alloca i64
+  %vl = alloca i64, i64 %n
+  ; Check that the stackmap does not reference %s through
+  ; SP since the offset is not static because of %vl.
+  ; STACKMAPS: Loc 3: Direct 6
+  call void @g_0(i64* %vl) [ "deopt"(i64* %s) ]
+  ret void
+}
+
+declare void @g_0(i64* %vl)

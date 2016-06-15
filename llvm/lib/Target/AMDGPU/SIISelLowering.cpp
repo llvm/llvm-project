@@ -1416,6 +1416,40 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   return DAG.getUNDEF(ASC->getValueType(0));
 }
 
+SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
+                                             SDValue Op,
+                                             SelectionDAG &DAG) const {
+  GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
+
+  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
+    return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
+
+  SDLoc DL(GSD);
+  const GlobalValue *GV = GSD->getGlobal();
+  MVT PtrVT = getPointerTy(DAG.getDataLayout(), GSD->getAddressSpace());
+
+  // In order to support pc-relative addressing, the PC_ADD_REL_OFFSET SDNode is
+  // lowered to the following code sequence:
+  // s_getpc_b64 s[0:1]
+  // s_add_u32 s0, s0, $symbol
+  // s_addc_u32 s1, s1, 0
+  //
+  // s_getpc_b64 returns the address of the s_add_u32 instruction and then
+  // a fixup or relocation is emitted to replace $symbol with a literal
+  // constant, which is a pc-relative offset from the encoding of the $symbol
+  // operand to the global variable.
+  //
+  // What we want here is an offset from the value returned by s_getpc
+  // (which is the address of the s_add_u32 instruction) to the global
+  // variable, but since the encoding of $symbol starts 4 bytes after the start
+  // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
+  // small. This requires us to add 4 to the global variable offset in order to
+  // compute the correct address.
+  SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32,
+                                          GSD->getOffset() + 4);
+  return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, GA);
+}
+
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain,
                                    const SDLoc &DL, SDValue V) const {
   // We can't use S_MOV_B32 directly, because there is no way to specify m0 as

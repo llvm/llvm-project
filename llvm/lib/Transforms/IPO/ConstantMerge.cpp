@@ -57,7 +57,7 @@ static bool IsBetterCanonical(const GlobalVariable &A,
   if (A.hasLocalLinkage() && !B.hasLocalLinkage())
     return false;
 
-  return A.hasUnnamedAddr();
+  return A.hasGlobalUnnamedAddr();
 }
 
 static unsigned getAlignment(GlobalVariable *GV) {
@@ -152,11 +152,11 @@ static bool mergeConstants(Module &M) {
       if (!Slot || Slot == GV)
         continue;
 
-      if (!Slot->hasUnnamedAddr() && !GV->hasUnnamedAddr())
+      if (!Slot->hasGlobalUnnamedAddr() && !GV->hasGlobalUnnamedAddr())
         continue;
 
-      if (!GV->hasUnnamedAddr())
-        Slot->setUnnamedAddr(false);
+      if (!GV->hasGlobalUnnamedAddr())
+        Slot->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
       // Make all uses of the duplicate constant use the canonical version.
       Replacements.push_back(std::make_pair(GV, Slot));

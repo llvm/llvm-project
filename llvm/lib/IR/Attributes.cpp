@@ -643,7 +643,7 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 //===----------------------------------------------------------------------===//
 
 uint64_t AttributeSetImpl::Raw(unsigned Index) const {
-  for (unsigned I = 0, E = getNumAttributes(); I != E; ++I) {
+  for (unsigned I = 0, E = getNumSlots(); I != E; ++I) {
     if (getSlotIndex(I) != Index) continue;
     const AttributeSetNode *ASN = getSlotNode(I);
     uint64_t Mask = 0;
@@ -800,9 +800,9 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
 }
 
 AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
-                               ArrayRef<Attribute::AttrKind> Kind) {
+                               ArrayRef<Attribute::AttrKind> Kinds) {
   SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
-  for (Attribute::AttrKind K : Kind)
+  for (Attribute::AttrKind K : Kinds)
     Attrs.push_back(std::make_pair(Index, Attribute::get(C, K)));
   return get(C, Attrs);
 }
@@ -814,7 +814,7 @@ AttributeSet AttributeSet::get(LLVMContext &C, ArrayRef<AttributeSet> Attrs) {
   SmallVector<std::pair<unsigned, AttributeSetNode*>, 8> AttrNodeVec;
   AttributeSetImpl *A0 = Attrs[0].pImpl;
   if (A0)
-    AttrNodeVec.append(A0->getNode(0), A0->getNode(A0->getNumAttributes()));
+    AttrNodeVec.append(A0->getNode(0), A0->getNode(A0->getNumSlots()));
   // Copy all attributes from Attrs into AttrNodeVec while keeping AttrNodeVec
   // ordered by index.  Because we know that each list in Attrs is ordered by
   // index we only need to merge each successive list in rather than doing a
@@ -825,7 +825,7 @@ AttributeSet AttributeSet::get(LLVMContext &C, ArrayRef<AttributeSet> Attrs) {
     SmallVector<std::pair<unsigned, AttributeSetNode *>, 8>::iterator
       ANVI = AttrNodeVec.begin(), ANVE;
     for (const IndexAttrPair *AI = AS->getNode(0),
-                             *AE = AS->getNode(AS->getNumAttributes());
+                             *AE = AS->getNode(AS->getNumSlots());
          AI != AE; ++AI) {
       ANVE = AttrNodeVec.end();
       while (ANVI != ANVE && ANVI->first <= AI->first)
@@ -838,16 +838,9 @@ AttributeSet AttributeSet::get(LLVMContext &C, ArrayRef<AttributeSet> Attrs) {
 }
 
 AttributeSet AttributeSet::addAttribute(LLVMContext &C, unsigned Index,
-                                        Attribute::AttrKind Attr) const {
-  if (hasAttribute(Index, Attr)) return *this;
-  return addAttributes(C, Index, AttributeSet::get(C, Index, Attr));
-}
-
-AttributeSet AttributeSet::addAttribute(LLVMContext &C, unsigned Index,
-                                        StringRef Kind) const {
-  llvm::AttrBuilder B;
-  B.addAttribute(Kind);
-  return addAttributes(C, Index, AttributeSet::get(C, Index, B));
+                                        Attribute::AttrKind Kind) const {
+  if (hasAttribute(Index, Kind)) return *this;
+  return addAttributes(C, Index, AttributeSet::get(C, Index, Kind));
 }
 
 AttributeSet AttributeSet::addAttribute(LLVMContext &C, unsigned Index,
@@ -860,7 +853,7 @@ AttributeSet AttributeSet::addAttribute(LLVMContext &C, unsigned Index,
 AttributeSet AttributeSet::addAttribute(LLVMContext &C,
                                         ArrayRef<unsigned> Indices,
                                         Attribute A) const {
-  unsigned I = 0, E = pImpl ? pImpl->getNumAttributes() : 0;
+  unsigned I = 0, E = pImpl ? pImpl->getNumSlots() : 0;
   auto IdxI = Indices.begin(), IdxE = Indices.end();
   SmallVector<AttributeSet, 4> AttrSet;
 
@@ -903,7 +896,7 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C, unsigned Index,
 
   // Add the attribute slots before the one we're trying to add.
   SmallVector<AttributeSet, 4> AttrSet;
-  uint64_t NumAttrs = pImpl->getNumAttributes();
+  uint64_t NumAttrs = pImpl->getNumSlots();
   AttributeSet AS;
   uint64_t LastIndex = 0;
   for (unsigned I = 0, E = NumAttrs; I != E; ++I) {
@@ -919,7 +912,7 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C, unsigned Index,
   // AttributeSet there.
   AttrBuilder B(AS, Index);
 
-  for (unsigned I = 0, E = Attrs.pImpl->getNumAttributes(); I != E; ++I)
+  for (unsigned I = 0, E = Attrs.pImpl->getNumSlots(); I != E; ++I)
     if (Attrs.getSlotIndex(I) == Index) {
       for (AttributeSetImpl::iterator II = Attrs.pImpl->begin(I),
              IE = Attrs.pImpl->end(I); II != IE; ++II)
@@ -937,9 +930,9 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C, unsigned Index,
 }
 
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C, unsigned Index,
-                                           Attribute::AttrKind Attr) const {
-  if (!hasAttribute(Index, Attr)) return *this;
-  return removeAttributes(C, Index, AttributeSet::get(C, Index, Attr));
+                                           Attribute::AttrKind Kind) const {
+  if (!hasAttribute(Index, Kind)) return *this;
+  return removeAttributes(C, Index, AttributeSet::get(C, Index, Kind));
 }
 
 AttributeSet AttributeSet::removeAttributes(LLVMContext &C, unsigned Index,
@@ -954,7 +947,7 @@ AttributeSet AttributeSet::removeAttributes(LLVMContext &C, unsigned Index,
 
   // Add the attribute slots before the one we're trying to add.
   SmallVector<AttributeSet, 4> AttrSet;
-  uint64_t NumAttrs = pImpl->getNumAttributes();
+  uint64_t NumAttrs = pImpl->getNumSlots();
   AttributeSet AS;
   uint64_t LastIndex = 0;
   for (unsigned I = 0, E = NumAttrs; I != E; ++I) {
@@ -970,7 +963,7 @@ AttributeSet AttributeSet::removeAttributes(LLVMContext &C, unsigned Index,
   // AttributeSet there.
   AttrBuilder B(AS, Index);
 
-  for (unsigned I = 0, E = Attrs.pImpl->getNumAttributes(); I != E; ++I)
+  for (unsigned I = 0, E = Attrs.pImpl->getNumSlots(); I != E; ++I)
     if (Attrs.getSlotIndex(I) == Index) {
       B.removeAttributes(Attrs.pImpl->getSlotAttributes(I), Index);
       break;
@@ -995,7 +988,7 @@ AttributeSet AttributeSet::removeAttributes(LLVMContext &C, unsigned Index,
 
   // Add the attribute slots before the one we're trying to add.
   SmallVector<AttributeSet, 4> AttrSet;
-  uint64_t NumAttrs = pImpl->getNumAttributes();
+  uint64_t NumAttrs = pImpl->getNumSlots();
   AttributeSet AS;
   uint64_t LastIndex = 0;
   for (unsigned I = 0, E = NumAttrs; I != E; ++I) {
@@ -1101,7 +1094,7 @@ bool AttributeSet::hasFnAttribute(Attribute::AttrKind Kind) const {
 bool AttributeSet::hasAttrSomewhere(Attribute::AttrKind Attr) const {
   if (!pImpl) return false;
 
-  for (unsigned I = 0, E = pImpl->getNumAttributes(); I != E; ++I)
+  for (unsigned I = 0, E = pImpl->getNumSlots(); I != E; ++I)
     for (AttributeSetImpl::iterator II = pImpl->begin(I),
            IE = pImpl->end(I); II != IE; ++II)
       if (II->hasAttribute(Attr))
@@ -1157,7 +1150,7 @@ AttributeSetNode *AttributeSet::getAttributes(unsigned Index) const {
   if (!pImpl) return nullptr;
 
   // Loop through to find the attribute node we want.
-  for (unsigned I = 0, E = pImpl->getNumAttributes(); I != E; ++I)
+  for (unsigned I = 0, E = pImpl->getNumSlots(); I != E; ++I)
     if (pImpl->getSlotIndex(I) == Index)
       return pImpl->getSlotNode(I);
 
@@ -1181,17 +1174,17 @@ AttributeSet::iterator AttributeSet::end(unsigned Slot) const {
 //===----------------------------------------------------------------------===//
 
 unsigned AttributeSet::getNumSlots() const {
-  return pImpl ? pImpl->getNumAttributes() : 0;
+  return pImpl ? pImpl->getNumSlots() : 0;
 }
 
 unsigned AttributeSet::getSlotIndex(unsigned Slot) const {
-  assert(pImpl && Slot < pImpl->getNumAttributes() &&
+  assert(pImpl && Slot < pImpl->getNumSlots() &&
          "Slot # out of range!");
   return pImpl->getSlotIndex(Slot);
 }
 
 AttributeSet AttributeSet::getSlotAttributes(unsigned Slot) const {
-  assert(pImpl && Slot < pImpl->getNumAttributes() &&
+  assert(pImpl && Slot < pImpl->getNumSlots() &&
          "Slot # out of range!");
   return pImpl->getSlotAttributes(Slot);
 }
@@ -1227,7 +1220,7 @@ AttrBuilder::AttrBuilder(AttributeSet AS, unsigned Index)
   AttributeSetImpl *pImpl = AS.pImpl;
   if (!pImpl) return;
 
-  for (unsigned I = 0, E = pImpl->getNumAttributes(); I != E; ++I) {
+  for (unsigned I = 0, E = pImpl->getNumSlots(); I != E; ++I) {
     if (pImpl->getSlotIndex(I) != Index) continue;
 
     for (AttributeSetImpl::iterator II = pImpl->begin(I),

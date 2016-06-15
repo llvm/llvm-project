@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0
@@ -27,8 +27,9 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs_large:
-;CHECK: s_movk_i32 [[OFFSET:s[0-9]+]], 0x1fff
-;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], [[OFFSET]] offset:1
+;SICI: buffer_load_dwordx4 v[0:3], {{v[0-9]+}}, s[0:3], 0 offen
+;VI: s_movk_i32 [[OFFSET:s[0-9]+]], 0x1fff
+;VI: buffer_load_dwordx4 v[0:3], off, s[0:3], [[OFFSET]] offset:1
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_large(<4 x i32> inreg) {
 main_body:
@@ -99,6 +100,16 @@ define amdgpu_ps <2 x float> @buffer_load_x2(<4 x i32> inreg %rsrc, i32 %idx, i3
 main_body:
   %data = call <2 x float> @llvm.amdgcn.buffer.load.v2f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 0, i1 0)
   ret <2 x float> %data
+}
+
+;CHECK-LABEL: {{^}}buffer_load_negative_offset:
+;CHECK: v_add_i32_e32 [[VOFS:v[0-9]+]], vcc, -16, v0
+;CHECK: buffer_load_dwordx4 v[0:3], [[VOFS]], s[0:3], 0 offen
+define amdgpu_ps <4 x float> @buffer_load_negative_offset(<4 x i32> inreg, i32 %ofs) {
+main_body:
+  %ofs.1 = add i32 %ofs, -16
+  %data = call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %0, i32 0, i32 %ofs.1, i1 0, i1 0)
+  ret <4 x float> %data
 }
 
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #0

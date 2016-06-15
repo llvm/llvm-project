@@ -64,7 +64,7 @@ bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
   // of the module and recorded in the summary index for use when importing
   // from that module.
   auto *GVar = dyn_cast<GlobalVariable>(SGV);
-  if (GVar && GVar->isConstant() && GVar->hasUnnamedAddr())
+  if (GVar && GVar->isConstant() && GVar->hasGlobalUnnamedAddr())
     return false;
 
   if (GVar && GVar->hasSection())

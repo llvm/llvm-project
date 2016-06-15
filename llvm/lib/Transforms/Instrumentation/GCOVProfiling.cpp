@@ -691,7 +691,7 @@ bool GCOVProfiler::emitProfileArcs() {
     FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
     Function *F = Function::Create(FTy, GlobalValue::InternalLinkage,
                                    "__llvm_gcov_init", M);
-    F->setUnnamedAddr(true);
+    F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
     F->setLinkage(GlobalValue::InternalLinkage);
     F->addFnAttr(Attribute::NoInline);
     if (Options.NoRedZone)
@@ -766,7 +766,7 @@ GlobalVariable *GCOVProfiler::buildEdgeLookupTable(
           ConstantArray::get(EdgeTableTy,
                              makeArrayRef(&EdgeTable[0],TableSize)),
           "__llvm_gcda_edge_table");
-  EdgeTableGV->setUnnamedAddr(true);
+  EdgeTableGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   return EdgeTableGV;
 }
 
@@ -840,7 +840,7 @@ GlobalVariable *GCOVProfiler::getEdgeStateValue() {
                             ConstantInt::get(Type::getInt32Ty(*Ctx),
                                              0xffffffff),
                             "__llvm_gcov_global_state_pred");
-    GV->setUnnamedAddr(true);
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   }
   return GV;
 }
@@ -852,7 +852,7 @@ Function *GCOVProfiler::insertCounterWriteout(
   if (!WriteoutF)
     WriteoutF = Function::Create(WriteoutFTy, GlobalValue::InternalLinkage,
                                  "__llvm_gcov_writeout", M);
-  WriteoutF->setUnnamedAddr(true);
+  WriteoutF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   WriteoutF->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone)
     WriteoutF->addFnAttr(Attribute::NoRedZone);
@@ -912,7 +912,7 @@ Function *GCOVProfiler::insertCounterWriteout(
 void GCOVProfiler::insertIndirectCounterIncrement() {
   Function *Fn =
     cast<Function>(GCOVProfiler::getIncrementIndirectCounterFunc());
-  Fn->setUnnamedAddr(true);
+  Fn->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   Fn->setLinkage(GlobalValue::InternalLinkage);
   Fn->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone)
@@ -969,7 +969,7 @@ insertFlush(ArrayRef<std::pair<GlobalVariable*, MDNode*> > CountersBySP) {
                               "__llvm_gcov_flush", M);
   else
     FlushF->setLinkage(GlobalValue::InternalLinkage);
-  FlushF->setUnnamedAddr(true);
+  FlushF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   FlushF->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone)
     FlushF->addFnAttr(Attribute::NoRedZone);

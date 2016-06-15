@@ -33,7 +33,10 @@ using namespace llvm;
 
 STATISTIC(NumTails, "Number of tails duplicated");
 STATISTIC(NumTailDups, "Number of tail duplicated blocks");
-STATISTIC(NumInstrDups, "Additional instructions due to tail duplication");
+STATISTIC(NumTailDupAdded,
+          "Number of instructions added due to tail duplication");
+STATISTIC(NumTailDupRemoved,
+          "Number of instructions removed due to tail duplication");
 STATISTIC(NumDeadBlocks, "Number of dead blocks removed");
 STATISTIC(NumAddedPHIs, "Number of phis added");
 
@@ -145,7 +148,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(MachineFunction &MF, bool IsSimple,
 
   // If it is dead, remove it.
   if (isDead) {
-    NumInstrDups -= MBB->size();
+    NumTailDupRemoved += MBB->size();
     removeDeadBlock(MBB);
     ++NumDeadBlocks;
   }
@@ -805,7 +808,7 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
     // Simplify
     TII->AnalyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true);
 
-    NumInstrDups += TailBB->size() - 1; // subtract one for removed branch
+    NumTailDupAdded += TailBB->size() - 1; // subtract one for removed branch
 
     // Update the CFG.
     PredBB->removeSuccessor(PredBB->succ_begin());

@@ -25,6 +25,24 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
+; CHECK-DAG: @g1 = linkonce_odr constant i32 32
+@g1 = linkonce_odr constant i32 32
+
+; CHECK-DAG: @g2 = internal local_unnamed_addr constant i32 32
+@g2 = linkonce_odr local_unnamed_addr constant i32 32
+
+; CHECK-DAG: @g3 = internal unnamed_addr constant i32 32
+@g3 = linkonce_odr unnamed_addr constant i32 32
+
+; CHECK-DAG: @g4 = linkonce_odr global i32 32
+@g4 = linkonce_odr global i32 32
+
+; CHECK-DAG: @g5 = linkonce_odr local_unnamed_addr global i32 32
+@g5 = linkonce_odr local_unnamed_addr global i32 32
+
+; CHECK-DAG: @g6 = internal unnamed_addr global i32 32
+@g6 = linkonce_odr unnamed_addr global i32 32
+
 @g7 = extern_weak global i32
 ; CHECK-DAG: @g7 = extern_weak global i32
 
@@ -53,7 +71,7 @@ define void @f3() {
 
 ; CHECK-DAG: define internal void @f4()
 ; OPT2-NOT: @f4
-define linkonce_odr void @f4() {
+define linkonce_odr void @f4() local_unnamed_addr {
   ret void
 }
 
@@ -62,14 +80,14 @@ define linkonce_odr void @f4() {
 define linkonce_odr void @f5() {
   ret void
 }
-@g5 = global void()* @f5
+@g9 = global void()* @f5
 
 ; CHECK-DAG: define internal void @f6() unnamed_addr
 ; OPT-DAG: define internal void @f6() unnamed_addr
 define linkonce_odr void @f6() unnamed_addr {
   ret void
 }
-@g6 = global void()* @f6
+@g10 = global void()* @f6
 
 define i32* @f7() {
   ret i32* @g7
@@ -89,5 +107,5 @@ define i32* @f8() {
 ; API: f8 PREVAILING_DEF_IRONLY_EXP
 ; API: g7 UNDEF
 ; API: g8 UNDEF
-; API: g5 PREVAILING_DEF_IRONLY_EXP
-; API: g6 PREVAILING_DEF_IRONLY_EXP
+; API: g9 PREVAILING_DEF_IRONLY_EXP
+; API: g10 PREVAILING_DEF_IRONLY_EXP

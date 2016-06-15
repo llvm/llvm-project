@@ -914,7 +914,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
     break;
   }
 
-  case AMDGPU::SI_CONSTDATA_PTR: {
+  case AMDGPU::SI_PC_ADD_REL_OFFSET: {
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(ST.getRegisterInfo());
     MachineFunction &MF = *MBB.getParent();

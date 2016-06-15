@@ -214,6 +214,14 @@ def SDR   : StoreLeftRight<"sdr", MipsSDR, GPR64Opnd, II_SDR>, LW_FM<0x2d>,
 def LLD : LLBase<"lld", GPR64Opnd>, LW_FM<0x34>, ISA_MIPS3_NOT_32R6_64R6;
 def SCD : SCBase<"scd", GPR64Opnd>, LW_FM<0x3c>, ISA_MIPS3_NOT_32R6_64R6;
 
+let AdditionalPredicates = [NotInMicroMips],
+    DecoderNamespace = "Mips32_64_PTR64" in {
+def LL64 : LLBase<"ll", GPR32Opnd>, LW_FM<0x30>, PTR_64,
+           ISA_MIPS2_NOT_32R6_64R6;
+def SC64 : SCBase<"sc", GPR32Opnd>, LW_FM<0x38>, PTR_64,
+           ISA_MIPS2_NOT_32R6_64R6;
+}
+
 /// Jump and Branch Instructions
 let isCodeGenOnly = 1 in {
   def JR64   : IndirectBranch<"jr", GPR64Opnd>, MTLO_FM<8>;

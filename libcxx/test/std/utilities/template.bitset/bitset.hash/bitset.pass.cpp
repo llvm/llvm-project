@@ -16,11 +16,11 @@
 //     size_t operator()(T val) const;
 // };
 
-// Not very portable
-
 #include <bitset>
 #include <cassert>
 #include <type_traits>
+
+#include "test_macros.h"
 
 template <std::size_t N>
 void
@@ -32,7 +32,9 @@ test()
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
     H h;
     T bs(static_cast<unsigned long long>(N));
-    assert(h(bs) == N);
+    const std::size_t result = h(bs);
+    LIBCPP_ASSERT(result == N);
+    ((void)result); // Prevent unused warning
 }
 
 int main()

@@ -125,6 +125,7 @@ BranchFoldPlacement("branch-fold-placement",
               cl::init(true), cl::Hidden);
 
 extern cl::opt<unsigned> StaticLikelyProb;
+extern cl::opt<unsigned> ProfileLikelyProb;
 
 namespace {
 class BlockChain;
@@ -520,13 +521,30 @@ bool MachineBlockPlacement::shouldPredBlockBeOutlined(
     return false;
 }
 
-// FIXME (PGO handling)
-// For now this method just returns a fixed threshold. It needs to be enhanced
-// such that BB and Succ is passed in so that CFG shapes are examined such that
-// the threshold is computed with more precise cost model when PGO is on.
-static BranchProbability getLayoutSuccessorProbThreshold() {
-  BranchProbability HotProb(StaticLikelyProb, 100);
-  return HotProb;
+// When profile is not present, return the StaticLikelyProb.
+// When profile is available, we need to handle the triangle-shape CFG.
+static BranchProbability getLayoutSuccessorProbThreshold(
+      MachineBasicBlock *BB) {
+  if (!BB->getParent()->getFunction()->getEntryCount())
+    return BranchProbability(StaticLikelyProb, 100);
+  if (BB->succ_size() == 2) {
+    const MachineBasicBlock *Succ1 = *BB->succ_begin();
+    const MachineBasicBlock *Succ2 = *(BB->succ_begin() + 1);
+    if (Succ1->isSuccessor(Succ2) || Succ2->isSuccessor(Succ1)) {
+      /* See case 1 below for the cost analysis. For BB->Succ to
+       * be taken with smaller cost, the following needs to hold:
+       *   Prob(BB->Succ) > 2* Prob(BB->Pred)
+       *   So the threshold T
+       *   T = 2 * (1-Prob(BB->Pred). Since T + Prob(BB->Pred) == 1,
+       * We have  T + T/2 = 1, i.e. T = 2/3. Also adding user specified
+       * branch bias, we have
+       *   T = (2/3)*(ProfileLikelyProb/50)
+       *     = (2*ProfileLikelyProb)/150)
+       */
+      return BranchProbability(2 * ProfileLikelyProb, 150);
+    }
+  }
+  return BranchProbability(ProfileLikelyProb, 100);
 }
 
 /// Checks to see if the layout candidate block \p Succ has a better layout
@@ -593,7 +611,7 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
   // edge: Prob(Succ->BB) needs to >= HotProb in order to be selected (without
   // profile data).
 
-  BranchProbability HotProb = getLayoutSuccessorProbThreshold();
+  BranchProbability HotProb = getLayoutSuccessorProbThreshold(BB);
 
   // Forward checking. For case 2, SuccProb will be 1.
   if (SuccProb < HotProb) {

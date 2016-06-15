@@ -2672,25 +2672,26 @@ Supported relocatable fields are:
   byte alignment. These values use the same byte order as other word values in
   the AMD GPU architecture
 
-Following notations are used for specifying relocation types
+Following notations are used for specifying relocation calculations:
 
 * **A** --- Represents the addend used to compute the value of the relocatable
   field
+* **P** --- Represents the place (section offset or address) of the storage unit
+  being relocated (computed using ``r_offset``)
 * **S** --- Represents the value of the symbol whose index resides in the
   relocation entry
 
 AMDGPU Backend generates *Elf64_Rela* relocation records with the following
 supported relocation types:
 
-  ====================  =====  ==========  ============================
-  Relocation type       Value  Field       Calculation
-  ====================  =====  ==========  ============================
-  ``R_AMDGPU_NONE``     0      ``none``    ``none``
-  ``R_AMDGPU_32_LOW``   1      ``word32``  (S + A) & 0xFFFFFFFF
-  ``R_AMDGPU_32_HIGH``  2      ``word32``  ((S + A) >> 32) & 0xFFFFFFFF
-  ``R_AMDGPU_64``       3      ``word64``  S + A
-  ``R_AMDGPU_32``       4      ``word32``  S + A
-  ====================  =====  ==========  ============================
-
-Only R_AMDGPU_32_LOW and R_AMDGPU_32_HIGH can be handled by the
-dynamic linker.  The rest must be statically resolved.
+  =====================  =====  ==========  ====================
+  Relocation type        Value  Field       Calculation
+  =====================  =====  ==========  ====================
+  ``R_AMDGPU_NONE``      0      ``none``    ``none``
+  ``R_AMDGPU_ABS32_LO``  1      ``word32``  (S + A) & 0xFFFFFFFF
+  ``R_AMDGPU_ABS32_HI``  2      ``word32``  (S + A) >> 32
+  ``R_AMDGPU_ABS64``     3      ``word64``  S + A
+  ``R_AMDGPU_REL32``     4      ``word32``  S + A - P
+  ``R_AMDGPU_REL64``     5      ``word64``  S + A - P
+  ``R_AMDGPU_ABS32``     6      ``word32``  S + A
+  =====================  =====  ==========  ====================

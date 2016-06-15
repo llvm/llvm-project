@@ -242,20 +242,18 @@ public:
   /// \brief Return an AttributeSet with the specified parameters in it.
   static AttributeSet get(LLVMContext &C, ArrayRef<AttributeSet> Attrs);
   static AttributeSet get(LLVMContext &C, unsigned Index,
-                          ArrayRef<Attribute::AttrKind> Kind);
+                          ArrayRef<Attribute::AttrKind> Kinds);
   static AttributeSet get(LLVMContext &C, unsigned Index, const AttrBuilder &B);
 
   /// \brief Add an attribute to the attribute set at the given index. Because
   /// attribute sets are immutable, this returns a new set.
   AttributeSet addAttribute(LLVMContext &C, unsigned Index,
-                            Attribute::AttrKind Attr) const;
+                            Attribute::AttrKind Kind) const;
 
   /// \brief Add an attribute to the attribute set at the given index. Because
   /// attribute sets are immutable, this returns a new set.
-  AttributeSet addAttribute(LLVMContext &C, unsigned Index,
-                            StringRef Kind) const;
-  AttributeSet addAttribute(LLVMContext &C, unsigned Index,
-                            StringRef Kind, StringRef Value) const;
+  AttributeSet addAttribute(LLVMContext &C, unsigned Index, StringRef Kind,
+                            StringRef Value = StringRef()) const;
 
   /// Add an attribute to the attribute set at the given indices. Because
   /// attribute sets are immutable, this returns a new set.
@@ -271,7 +269,7 @@ public:
   /// attribute list. Because attribute lists are immutable, this returns the
   /// new list.
   AttributeSet removeAttribute(LLVMContext &C, unsigned Index,
-                               Attribute::AttrKind Attr) const;
+                               Attribute::AttrKind Kind) const;
 
   /// \brief Remove the specified attributes at the specified index from this
   /// attribute list. Because attribute lists are immutable, this returns the
@@ -333,7 +331,7 @@ public:
 
   /// \brief Return true if the specified attribute is set for at least one
   /// parameter or for the return value.
-  bool hasAttrSomewhere(Attribute::AttrKind Attr) const;
+  bool hasAttrSomewhere(Attribute::AttrKind Kind) const;
 
   /// \brief Return the attribute object that exists at the given index.
   Attribute getAttribute(unsigned Index, Attribute::AttrKind Kind) const;

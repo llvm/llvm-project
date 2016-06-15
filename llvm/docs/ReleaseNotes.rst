@@ -58,8 +58,8 @@ Non-comprehensive list of changes in this release
   the new LLVMAttributeRef API. The deprecated functions are
   LLVMAddFunctionAttr, LLVMAddTargetDependentFunctionAttr,
   LLVMRemoveFunctionAttr, LLVMGetFunctionAttr, LLVMAddAttribute,
-  LLVMRemoveAttribute, LLVMGetAttribute, LLVMAddInstrAttribute and
-  LLVMRemoveInstrAttribute.
+  LLVMRemoveAttribute, LLVMGetAttribute, LLVMAddInstrAttribute,
+  LLVMRemoveInstrAttribute and LLVMSetInstrParamAlignment.
 
 * ``TargetFrameLowering::eliminateCallFramePseudoInstr`` now returns an
   iterator to the next instruction instead of ``void``. Targets that previously

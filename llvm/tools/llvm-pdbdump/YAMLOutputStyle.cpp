@@ -24,19 +24,18 @@ Error YAMLOutputStyle::dumpFileHeaders() {
     return Error::success();
 
   yaml::MsfHeaders Headers;
-  Headers.BlockCount = File.getBlockCount();
-  Headers.BlockMapIndex = File.getBlockMapIndex();
-  Headers.BlockMapOffset = File.getBlockMapOffset();
-  Headers.BlockSize = File.getBlockSize();
+  Obj.Headers.SuperBlock.NumBlocks = File.getBlockCount();
+  Obj.Headers.SuperBlock.BlockMapAddr = File.getBlockMapIndex();
+  Obj.Headers.BlockMapOffset = File.getBlockMapOffset();
+  Obj.Headers.SuperBlock.BlockSize = File.getBlockSize();
   auto Blocks = File.getDirectoryBlockArray();
-  Headers.DirectoryBlocks.assign(Blocks.begin(), Blocks.end());
-  Headers.NumDirectoryBlocks = File.getNumDirectoryBlocks();
-  Headers.NumDirectoryBytes = File.getNumDirectoryBytes();
-  Headers.NumStreams = File.getNumStreams();
-  Headers.Unknown0 = File.getUnknown0();
-  Headers.Unknown1 = File.getUnknown1();
-
-  Obj.Headers.emplace(Headers);
+  Obj.Headers.DirectoryBlocks.assign(Blocks.begin(), Blocks.end());
+  Obj.Headers.NumDirectoryBlocks = File.getNumDirectoryBlocks();
+  Obj.Headers.SuperBlock.NumDirectoryBytes = File.getNumDirectoryBytes();
+  Obj.Headers.NumStreams = File.getNumStreams();
+  Obj.Headers.SuperBlock.Unknown0 = File.getUnknown0();
+  Obj.Headers.SuperBlock.Unknown1 = File.getUnknown1();
+  Obj.Headers.FileSize = File.getFileSize();
 
   return Error::success();
 }
@@ -45,13 +44,7 @@ Error YAMLOutputStyle::dumpStreamSummary() {
   if (!opts::DumpStreamSummary)
     return Error::success();
 
-  std::vector<yaml::StreamSizeEntry> Sizes;
-  for (uint32_t I = 0; I < File.getNumStreams(); ++I) {
-    yaml::StreamSizeEntry Entry;
-    Entry.Size = File.getStreamByteSize(I);
-    Sizes.push_back(Entry);
-  }
-  Obj.StreamSizes.emplace(Sizes);
+  Obj.StreamSizes = File.getStreamSizes();
   return Error::success();
 }
 
@@ -59,14 +52,13 @@ Error YAMLOutputStyle::dumpStreamBlocks() {
   if (!opts::DumpStreamBlocks)
     return Error::success();
 
-  std::vector<yaml::StreamMapEntry> Blocks;
-  for (uint32_t I = 0; I < File.getNumStreams(); ++I) {
-    yaml::StreamMapEntry Entry;
-    auto BlockList = File.getStreamBlockList(I);
-    Entry.Blocks.assign(BlockList.begin(), BlockList.end());
-    Blocks.push_back(Entry);
+  auto StreamMap = File.getStreamMap();
+  Obj.StreamMap.emplace();
+  for (auto &Stream : StreamMap) {
+    pdb::yaml::StreamBlockList BlockList;
+    BlockList.Blocks = Stream;
+    Obj.StreamMap->push_back(BlockList);
   }
-  Obj.StreamMap.emplace(Blocks);
 
   return Error::success();
 }

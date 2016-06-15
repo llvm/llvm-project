@@ -302,7 +302,8 @@ int WinException::getFrameIndexOffset(int FrameIndex,
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   unsigned UnusedReg;
   if (Asm->MAI->usesWindowsCFI())
-    return TFI.getFrameIndexReferenceFromSP(*Asm->MF, FrameIndex, UnusedReg);
+    return *TFI.getFrameIndexReferenceFromSP(*Asm->MF, FrameIndex, UnusedReg,
+                                             /*AllowSPAdjustment*/ true);
   // For 32-bit, offsets should be relative to the end of the EH registration
   // node. For 64-bit, it's relative to SP at the end of the prologue.
   assert(FuncInfo.EHRegNodeEndOffset != INT_MAX);

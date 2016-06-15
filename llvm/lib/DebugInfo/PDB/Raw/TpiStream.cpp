@@ -73,15 +73,31 @@ TpiStream::~TpiStream() {}
 // Currently we only verify SRC_LINE records.
 static Error verifyTIHash(const codeview::CVType &Rec, uint32_t Expected,
                           uint32_t NumHashBuckets) {
+  using namespace codeview;
+
   ArrayRef<uint8_t> D = Rec.Data;
-  if (Rec.Type == codeview::LF_UDT_SRC_LINE ||
-      Rec.Type == codeview::LF_UDT_MOD_SRC_LINE) {
-    uint32_t Hash =
-        hashStringV1(StringRef((const char *)D.data(), 4)) % NumHashBuckets;
-    if (Hash != Expected)
+  uint32_t Hash;
+
+  switch (Rec.Type) {
+  case LF_UDT_SRC_LINE:
+  case LF_UDT_MOD_SRC_LINE:
+    Hash = hashStringV1(StringRef((const char *)D.data(), 4));
+    break;
+  case LF_ENUM: {
+    ErrorOr<EnumRecord> Enum = EnumRecord::deserialize(TypeRecordKind::Enum, D);
+    if (Enum.getError())
       return make_error<RawError>(raw_error_code::corrupt_file,
                                   "Corrupt TPI hash table.");
+    Hash = hashStringV1(Enum->getName());
+    break;
   }
+  default:
+    return Error::success();
+  }
+
+  if ((Hash % NumHashBuckets) != Expected)
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Corrupt TPI hash table.");
   return Error::success();
 }
 

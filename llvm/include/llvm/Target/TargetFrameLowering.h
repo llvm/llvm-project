@@ -249,12 +249,16 @@ public:
   /// Same as above, except that the 'base register' will always be RSP, not
   /// RBP on x86. This is generally used for emitting statepoint or EH tables
   /// that use offsets from RSP.
+  /// If AllowSPAdjustment is true, the returned offset is only guaranteed
+  /// to be valid with respect to the value of SP at the end of the prologue.
   /// TODO: This should really be a parameterizable choice.
-  virtual int getFrameIndexReferenceFromSP(const MachineFunction &MF, int FI,
-                                           unsigned &FrameReg) const {
+  virtual Optional<int>
+  getFrameIndexReferenceFromSP(const MachineFunction &MF, int FI,
+                               unsigned &FrameReg,
+                               bool AllowSPAdjustment) const {
     // default to calling normal version, we override this on x86 only
     llvm_unreachable("unimplemented for non-x86");
-    return 0;
+    return None;
   }
 
   /// This method determines which of the registers reported by

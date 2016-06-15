@@ -105,7 +105,7 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
               }
             }
 
-            if (StoredVal == GV->getInitializer()) {
+            if (GV->hasInitializer() && StoredVal == GV->getInitializer()) {
               if (GS.StoredType < GlobalStatus::InitializerStored)
                 GS.StoredType = GlobalStatus::InitializerStored;
             } else if (isa<LoadInst>(StoredVal) &&

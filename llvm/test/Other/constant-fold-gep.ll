@@ -24,18 +24,18 @@
 ; PLAIN: @F1 = global i1* getelementptr (i1, i1* inttoptr (i32 1 to i1*), i32 -2)
 ; PLAIN: @H8 = global i8* getelementptr (i8, i8* null, i32 -1)
 ; PLAIN: @H1 = global i1* getelementptr (i1, i1* null, i32 -1)
-; OPT: @G8 = global i8* null
-; OPT: @G1 = global i1* null
-; OPT: @F8 = global i8* inttoptr (i64 -1 to i8*)
-; OPT: @F1 = global i1* inttoptr (i64 -1 to i1*)
-; OPT: @H8 = global i8* inttoptr (i64 -1 to i8*)
-; OPT: @H1 = global i1* inttoptr (i64 -1 to i1*)
-; TO: @G8 = global i8* null
-; TO: @G1 = global i1* null
-; TO: @F8 = global i8* inttoptr (i64 -1 to i8*)
-; TO: @F1 = global i1* inttoptr (i64 -1 to i1*)
-; TO: @H8 = global i8* inttoptr (i64 -1 to i8*)
-; TO: @H1 = global i1* inttoptr (i64 -1 to i1*)
+; OPT: @G8 = local_unnamed_addr global i8* null
+; OPT: @G1 = local_unnamed_addr global i1* null
+; OPT: @F8 = local_unnamed_addr global i8* inttoptr (i64 -1 to i8*)
+; OPT: @F1 = local_unnamed_addr global i1* inttoptr (i64 -1 to i1*)
+; OPT: @H8 = local_unnamed_addr global i8* inttoptr (i64 -1 to i8*)
+; OPT: @H1 = local_unnamed_addr global i1* inttoptr (i64 -1 to i1*)
+; TO: @G8 = local_unnamed_addr global i8* null
+; TO: @G1 = local_unnamed_addr global i1* null
+; TO: @F8 = local_unnamed_addr global i8* inttoptr (i64 -1 to i8*)
+; TO: @F1 = local_unnamed_addr global i1* inttoptr (i64 -1 to i1*)
+; TO: @H8 = local_unnamed_addr global i8* inttoptr (i64 -1 to i8*)
+; TO: @H1 = local_unnamed_addr global i1* inttoptr (i64 -1 to i1*)
 
 @G8 = global i8* getelementptr (i8, i8* inttoptr (i32 1 to i8*), i32 -1)
 @G1 = global i1* getelementptr (i1, i1* inttoptr (i32 1 to i1*), i32 -1)
@@ -57,24 +57,24 @@
 ; PLAIN: @g = constant i64 ptrtoint (double* getelementptr ({ i1, double }, { i1, double }* null, i64 0, i32 1) to i64)
 ; PLAIN: @h = constant i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64)
 ; PLAIN: @i = constant i64 ptrtoint (i1** getelementptr ({ i1, i1* }, { i1, i1* }* null, i64 0, i32 1) to i64)
-; OPT: @a = constant i64 18480
-; OPT: @b = constant i64 8
-; OPT: @c = constant i64 16
-; OPT: @d = constant i64 88
-; OPT: @e = constant i64 16
-; OPT: @f = constant i64 1
-; OPT: @g = constant i64 8
-; OPT: @h = constant i64 8
-; OPT: @i = constant i64 8
-; TO: @a = constant i64 18480
-; TO: @b = constant i64 8
-; TO: @c = constant i64 16
-; TO: @d = constant i64 88
-; TO: @e = constant i64 16
-; TO: @f = constant i64 1
-; TO: @g = constant i64 8
-; TO: @h = constant i64 8
-; TO: @i = constant i64 8
+; OPT: @a = local_unnamed_addr constant i64 18480
+; OPT: @b = local_unnamed_addr constant i64 8
+; OPT: @c = local_unnamed_addr constant i64 16
+; OPT: @d = local_unnamed_addr constant i64 88
+; OPT: @e = local_unnamed_addr constant i64 16
+; OPT: @f = local_unnamed_addr constant i64 1
+; OPT: @g = local_unnamed_addr constant i64 8
+; OPT: @h = local_unnamed_addr constant i64 8
+; OPT: @i = local_unnamed_addr constant i64 8
+; TO: @a = local_unnamed_addr constant i64 18480
+; TO: @b = local_unnamed_addr constant i64 8
+; TO: @c = local_unnamed_addr constant i64 16
+; TO: @d = local_unnamed_addr constant i64 88
+; TO: @e = local_unnamed_addr constant i64 16
+; TO: @f = local_unnamed_addr constant i64 1
+; TO: @g = local_unnamed_addr constant i64 8
+; TO: @h = local_unnamed_addr constant i64 8
+; TO: @i = local_unnamed_addr constant i64 8
 
 @a = constant i64 mul (i64 3, i64 mul (i64 ptrtoint ({[7 x double], [7 x double]}* getelementptr ({[7 x double], [7 x double]}, {[7 x double], [7 x double]}* null, i64 11) to i64), i64 5))
 @b = constant i64 ptrtoint ([13 x double]* getelementptr ({i1, [13 x double]}, {i1, [13 x double]}* null, i64 0, i32 1) to i64)
@@ -91,12 +91,12 @@
 ; PLAIN: @M = constant i64* getelementptr (i64, i64* null, i32 1)
 ; PLAIN: @N = constant i64* getelementptr ({ i64, i64 }, { i64, i64 }* null, i32 0, i32 1)
 ; PLAIN: @O = constant i64* getelementptr ([2 x i64], [2 x i64]* null, i32 0, i32 1)
-; OPT: @M = constant i64* inttoptr (i64 8 to i64*)
-; OPT: @N = constant i64* inttoptr (i64 8 to i64*)
-; OPT: @O = constant i64* inttoptr (i64 8 to i64*)
-; TO: @M = constant i64* inttoptr (i64 8 to i64*)
-; TO: @N = constant i64* inttoptr (i64 8 to i64*)
-; TO: @O = constant i64* inttoptr (i64 8 to i64*)
+; OPT: @M = local_unnamed_addr constant i64* inttoptr (i64 8 to i64*)
+; OPT: @N = local_unnamed_addr constant i64* inttoptr (i64 8 to i64*)
+; OPT: @O = local_unnamed_addr constant i64* inttoptr (i64 8 to i64*)
+; TO: @M = local_unnamed_addr constant i64* inttoptr (i64 8 to i64*)
+; TO: @N = local_unnamed_addr constant i64* inttoptr (i64 8 to i64*)
+; TO: @O = local_unnamed_addr constant i64* inttoptr (i64 8 to i64*)
 
 @M = constant i64* getelementptr (i64, i64* null, i32 1)
 @N = constant i64* getelementptr ({ i64, i64 }, { i64, i64 }* null, i32 0, i32 1)
@@ -106,10 +106,10 @@
 
 ; PLAIN: @Y = global [3 x { i32, i32 }]* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
 ; PLAIN: @Z = global i32* getelementptr inbounds (i32, i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 0), i64 1)
-; OPT: @Y = global [3 x { i32, i32 }]* getelementptr ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
-; OPT: @Z = global i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
-; TO: @Y = global [3 x { i32, i32 }]* getelementptr ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
-; TO: @Z = global i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
+; OPT: @Y = local_unnamed_addr global [3 x { i32, i32 }]* getelementptr ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
+; OPT: @Z = local_unnamed_addr global i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
+; TO: @Y = local_unnamed_addr global [3 x { i32, i32 }]* getelementptr ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 2)
+; TO: @Z = local_unnamed_addr global i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
 
 @ext = external global [3 x { i32, i32 }]
 @Y = global [3 x { i32, i32 }]* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 1), i64 1)
@@ -142,40 +142,40 @@
 ; PLAIN:   %t = bitcast i1* getelementptr (i1, i1* null, i32 -1) to i1*
 ; PLAIN:   ret i1* %t
 ; PLAIN: }
-; OPT: define i8* @goo8() #0 {
+; OPT: define i8* @goo8() local_unnamed_addr #0 {
 ; OPT:   ret i8* null
 ; OPT: }
-; OPT: define i1* @goo1() #0 {
+; OPT: define i1* @goo1() local_unnamed_addr #0 {
 ; OPT:   ret i1* null
 ; OPT: }
-; OPT: define i8* @foo8() #0 {
+; OPT: define i8* @foo8() local_unnamed_addr #0 {
 ; OPT:   ret i8* inttoptr (i64 -1 to i8*)
 ; OPT: }
-; OPT: define i1* @foo1() #0 {
+; OPT: define i1* @foo1() local_unnamed_addr #0 {
 ; OPT:   ret i1* inttoptr (i64 -1 to i1*)
 ; OPT: }
-; OPT: define i8* @hoo8() #0 {
+; OPT: define i8* @hoo8() local_unnamed_addr #0 {
 ; OPT:   ret i8* inttoptr (i64 -1 to i8*)
 ; OPT: }
-; OPT: define i1* @hoo1() #0 {
+; OPT: define i1* @hoo1() local_unnamed_addr #0 {
 ; OPT:   ret i1* inttoptr (i64 -1 to i1*)
 ; OPT: }
-; TO: define i8* @goo8() #0 {
+; TO: define i8* @goo8() local_unnamed_addr #0 {
 ; TO:   ret i8* null
 ; TO: }
-; TO: define i1* @goo1() #0 {
+; TO: define i1* @goo1() local_unnamed_addr #0 {
 ; TO:   ret i1* null
 ; TO: }
-; TO: define i8* @foo8() #0 {
+; TO: define i8* @foo8() local_unnamed_addr #0 {
 ; TO:   ret i8* inttoptr (i64 -1 to i8*)
 ; TO: }
-; TO: define i1* @foo1() #0 {
+; TO: define i1* @foo1() local_unnamed_addr #0 {
 ; TO:   ret i1* inttoptr (i64 -1 to i1*)
 ; TO: }
-; TO: define i8* @hoo8() #0 {
+; TO: define i8* @hoo8() local_unnamed_addr #0 {
 ; TO:   ret i8* inttoptr (i64 -1 to i8*)
 ; TO: }
-; TO: define i1* @hoo1() #0 {
+; TO: define i1* @hoo1() local_unnamed_addr #0 {
 ; TO:   ret i1* inttoptr (i64 -1 to i1*)
 ; TO: }
 ; SCEV: Classifying expressions for: @goo8
@@ -256,58 +256,58 @@ define i1* @hoo1() nounwind {
 ; PLAIN:   %t = bitcast i64 ptrtoint (i1** getelementptr ({ i1, i1* }, { i1, i1* }* null, i64 0, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
-; OPT: define i64 @fa() #0 {
+; OPT: define i64 @fa() local_unnamed_addr #0 {
 ; OPT:   ret i64 18480
 ; OPT: }
-; OPT: define i64 @fb() #0 {
+; OPT: define i64 @fb() local_unnamed_addr #0 {
 ; OPT:   ret i64 8
 ; OPT: }
-; OPT: define i64 @fc() #0 {
+; OPT: define i64 @fc() local_unnamed_addr #0 {
 ; OPT:   ret i64 16
 ; OPT: }
-; OPT: define i64 @fd() #0 {
+; OPT: define i64 @fd() local_unnamed_addr #0 {
 ; OPT:   ret i64 88
 ; OPT: }
-; OPT: define i64 @fe() #0 {
+; OPT: define i64 @fe() local_unnamed_addr #0 {
 ; OPT:   ret i64 16
 ; OPT: }
-; OPT: define i64 @ff() #0 {
+; OPT: define i64 @ff() local_unnamed_addr #0 {
 ; OPT:   ret i64 1
 ; OPT: }
-; OPT: define i64 @fg() #0 {
+; OPT: define i64 @fg() local_unnamed_addr #0 {
 ; OPT:   ret i64 8
 ; OPT: }
-; OPT: define i64 @fh() #0 {
+; OPT: define i64 @fh() local_unnamed_addr #0 {
 ; OPT:   ret i64 8
 ; OPT: }
-; OPT: define i64 @fi() #0 {
+; OPT: define i64 @fi() local_unnamed_addr #0 {
 ; OPT:   ret i64 8
 ; OPT: }
-; TO: define i64 @fa() #0 {
+; TO: define i64 @fa() local_unnamed_addr #0 {
 ; TO:   ret i64 18480
 ; TO: }
-; TO: define i64 @fb() #0 {
+; TO: define i64 @fb() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
-; TO: define i64 @fc() #0 {
+; TO: define i64 @fc() local_unnamed_addr #0 {
 ; TO:   ret i64 16
 ; TO: }
-; TO: define i64 @fd() #0 {
+; TO: define i64 @fd() local_unnamed_addr #0 {
 ; TO:   ret i64 88
 ; TO: }
-; TO: define i64 @fe() #0 {
+; TO: define i64 @fe() local_unnamed_addr #0 {
 ; TO:   ret i64 16
 ; TO: }
-; TO: define i64 @ff() #0 {
+; TO: define i64 @ff() local_unnamed_addr #0 {
 ; TO:   ret i64 1
 ; TO: }
-; TO: define i64 @fg() #0 {
+; TO: define i64 @fg() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
-; TO: define i64 @fh() #0 {
+; TO: define i64 @fh() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
-; TO: define i64 @fi() #0 {
+; TO: define i64 @fi() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
 ; SCEV: Classifying expressions for: @fa
@@ -387,22 +387,22 @@ define i64 @fi() nounwind {
 ; PLAIN:   %t = bitcast i64* getelementptr ([2 x i64], [2 x i64]* null, i32 0, i32 1) to i64*
 ; PLAIN:   ret i64* %t
 ; PLAIN: }
-; OPT: define i64* @fM() #0 {
+; OPT: define i64* @fM() local_unnamed_addr #0 {
 ; OPT:   ret i64* inttoptr (i64 8 to i64*)
 ; OPT: }
-; OPT: define i64* @fN() #0 {
+; OPT: define i64* @fN() local_unnamed_addr #0 {
 ; OPT:   ret i64* inttoptr (i64 8 to i64*)
 ; OPT: }
-; OPT: define i64* @fO() #0 {
+; OPT: define i64* @fO() local_unnamed_addr #0 {
 ; OPT:   ret i64* inttoptr (i64 8 to i64*)
 ; OPT: }
-; TO: define i64* @fM() #0 {
+; TO: define i64* @fM() local_unnamed_addr #0 {
 ; TO:   ret i64* inttoptr (i64 8 to i64*)
 ; TO: }
-; TO: define i64* @fN() #0 {
+; TO: define i64* @fN() local_unnamed_addr #0 {
 ; TO:   ret i64* inttoptr (i64 8 to i64*)
 ; TO: }
-; TO: define i64* @fO() #0 {
+; TO: define i64* @fO() local_unnamed_addr #0 {
 ; TO:   ret i64* inttoptr (i64 8 to i64*)
 ; TO: }
 ; SCEV: Classifying expressions for: @fM
@@ -432,10 +432,10 @@ define i64* @fO() nounwind {
 ; PLAIN:   %t = bitcast i32* getelementptr inbounds (i32, i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 0), i64 1) to i32*
 ; PLAIN:   ret i32* %t
 ; PLAIN: }
-; OPT: define i32* @fZ() #0 {
+; OPT: define i32* @fZ() local_unnamed_addr #0 {
 ; OPT:   ret i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
 ; OPT: }
-; TO: define i32* @fZ() #0 {
+; TO: define i32* @fZ() local_unnamed_addr #0 {
 ; TO:   ret i32* getelementptr inbounds ([3 x { i32, i32 }], [3 x { i32, i32 }]* @ext, i64 0, i64 1, i32 1)
 ; TO: }
 ; SCEV: Classifying expressions for: @fZ

@@ -506,7 +506,7 @@ void InstrProfiling::emitRegistration() {
   auto *RegisterFTy = FunctionType::get(VoidTy, false);
   auto *RegisterF = Function::Create(RegisterFTy, GlobalValue::InternalLinkage,
                                      getInstrProfRegFuncsName(), M);
-  RegisterF->setUnnamedAddr(true);
+  RegisterF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   if (Options.NoRedZone) RegisterF->addFnAttr(Attribute::NoRedZone);
 
   auto *RuntimeRegisterTy = FunctionType::get(VoidTy, VoidPtrTy, false);
@@ -606,7 +606,7 @@ void InstrProfiling::emitInitialization() {
   auto *F = Function::Create(FunctionType::get(VoidTy, false),
                              GlobalValue::InternalLinkage,
                              getInstrProfInitFuncName(), M);
-  F->setUnnamedAddr(true);
+  F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   F->addFnAttr(Attribute::NoInline);
   if (Options.NoRedZone) F->addFnAttr(Attribute::NoRedZone);
 

@@ -60,6 +60,7 @@ enum Kind {
   kw_hidden,
   kw_protected,
   kw_unnamed_addr,
+  kw_local_unnamed_addr,
   kw_externally_initialized,
   kw_extern_weak,
   kw_external,

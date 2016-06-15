@@ -3215,8 +3215,11 @@ MipsSETargetLowering::emitINSERT_DF_VIDX(MachineInstr *MI,
   unsigned SrcValReg = MI->getOperand(3).getReg();
 
   const TargetRegisterClass *VecRC = nullptr;
+  // FIXME: This should be true for N32 too.
   const TargetRegisterClass *GPRRC =
       Subtarget.isABI_N64() ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+  unsigned SubRegIdx = Subtarget.isABI_N64() ? Mips::sub_32 : 0;
+  unsigned ShiftOp = Subtarget.isABI_N64() ? Mips::DSLL : Mips::SLL;
   unsigned EltLog2Size;
   unsigned InsertOp = 0;
   unsigned InsveOp = 0;
@@ -3261,7 +3264,7 @@ MipsSETargetLowering::emitINSERT_DF_VIDX(MachineInstr *MI,
   // Convert the lane index into a byte index
   if (EltSizeInBytes != 1) {
     unsigned LaneTmp1 = RegInfo.createVirtualRegister(GPRRC);
-    BuildMI(*BB, MI, DL, TII->get(Mips::SLL), LaneTmp1)
+    BuildMI(*BB, MI, DL, TII->get(ShiftOp), LaneTmp1)
         .addReg(LaneReg)
         .addImm(EltLog2Size);
     LaneReg = LaneTmp1;
@@ -3272,7 +3275,7 @@ MipsSETargetLowering::emitINSERT_DF_VIDX(MachineInstr *MI,
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), WdTmp1)
       .addReg(SrcVecReg)
       .addReg(SrcVecReg)
-      .addReg(LaneReg);
+      .addReg(LaneReg, 0, SubRegIdx);
 
   unsigned WdTmp2 = RegInfo.createVirtualRegister(VecRC);
   if (IsFP) {
@@ -3301,7 +3304,7 @@ MipsSETargetLowering::emitINSERT_DF_VIDX(MachineInstr *MI,
   BuildMI(*BB, MI, DL, TII->get(Mips::SLD_B), Wd)
       .addReg(WdTmp2)
       .addReg(WdTmp2)
-      .addReg(LaneTmp2);
+      .addReg(LaneTmp2, 0, SubRegIdx);
 
   MI->eraseFromParent(); // The pseudo instruction is gone now.
   return BB;

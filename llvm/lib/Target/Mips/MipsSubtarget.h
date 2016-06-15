@@ -81,6 +81,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // IsFP64bit - General-purpose registers are 64 bits wide
   bool IsGP64bit;
 
+  // IsPTR64bit - Pointers are 64 bit wide
+  bool IsPTR64bit;
+
   // HasVFPU - Processor has a vector floating point unit.
   bool HasVFPU;
 
@@ -223,6 +226,8 @@ public:
   bool isGP64bit() const { return IsGP64bit; }
   bool isGP32bit() const { return !IsGP64bit; }
   unsigned getGPRSizeInBytes() const { return isGP64bit() ? 8 : 4; }
+  bool isPTR64bit() const { return IsPTR64bit; }
+  bool isPTR32bit() const { return !IsPTR64bit; }
   bool isSingleFloat() const { return IsSingleFloat; }
   bool hasVFPU() const { return HasVFPU; }
   bool inMips16Mode() const { return InMips16Mode; }

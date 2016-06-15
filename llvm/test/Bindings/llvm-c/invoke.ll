@@ -21,7 +21,7 @@
 
 define i32 @_D8test01494mainFMZi() personality i32 (i32, i32, i64, i8*, i8*)* @__sd_eh_personality {
 body:
-  %0 = invoke i8* @_d_allocmemory(i64 8)
+  %0 = invoke noalias i8* @_d_allocmemory(i64 8)
           to label %then unwind label %landingPad
 
 then:                                             ; preds = %body
@@ -33,7 +33,7 @@ then:                                             ; preds = %body
 
 then1:                                            ; preds = %then
   %3 = bitcast i8* %0 to %C6object9Throwable*
-  invoke void @__sd_eh_throw(%C6object9Throwable* %3)
+  invoke void @__sd_eh_throw(%C6object9Throwable* nonnull %3)
           to label %then2 unwind label %landingPad
 
 then2:                                            ; preds = %then1
@@ -46,7 +46,7 @@ landingPad:                                       ; preds = %then1, %then, %body
           catch %C6object9ClassInfo* @C6object9Exception__ClassInfo
           catch %C6object9ClassInfo* @C6object9Throwable__ClassInfo
   %5 = extractvalue { i8*, i32 } %4, 1
-  %6 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (%C6object9ClassInfo* @C6object5Error__ClassInfo to i8*))
+  %6 = tail call i32 @llvm.eh.typeid.for(i8* nonnull bitcast (%C6object9ClassInfo* @C6object5Error__ClassInfo to i8*))
   %7 = icmp eq i32 %6, %5
   br i1 %7, label %catch, label %unwind3
 
@@ -55,12 +55,12 @@ catch:                                            ; preds = %unwind5, %unwind3, 
   ret i32 %merge
 
 unwind3:                                          ; preds = %landingPad
-  %8 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (%C6object9ClassInfo* @C6object9Exception__ClassInfo to i8*))
+  %8 = tail call i32 @llvm.eh.typeid.for(i8* nonnull bitcast (%C6object9ClassInfo* @C6object9Exception__ClassInfo to i8*))
   %9 = icmp eq i32 %8, %5
   br i1 %9, label %catch, label %unwind5
 
 unwind5:                                          ; preds = %unwind3
-  %10 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (%C6object9ClassInfo* @C6object9Throwable__ClassInfo to i8*))
+  %10 = tail call i32 @llvm.eh.typeid.for(i8* nonnull bitcast (%C6object9ClassInfo* @C6object9Throwable__ClassInfo to i8*))
   %11 = icmp eq i32 %10, %5
   br i1 %11, label %catch, label %unwind7
 

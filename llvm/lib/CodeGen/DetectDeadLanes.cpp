@@ -65,6 +65,11 @@ public:
 
   const char *getPassName() const override { return "Detect Dead Lanes"; }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
 private:
   /// Add used lane bits on the register used by operand \p MO. This translates
   /// the bitmask based on the operands subregister, and puts the register into

@@ -199,7 +199,7 @@ static LoadInst *canHoistFromBlock(BasicBlock *BB1, LoadInst *Load0,
 
     MemoryLocation Loc0 = MemoryLocation::get(Load0);
     MemoryLocation Loc1 = MemoryLocation::get(Load1);
-    if (AA->isMustAlias(Loc0, Loc1) && Load0->isSameOperationAs(Load1) &&
+    if (Load0->isSameOperationAs(Load1) && AA->isMustAlias(Loc0, Loc1) &&
         !isLoadHoistBarrierInRange(BB1->front(), *Load1, Load1,
                                    SafeToLoadUnconditionally, AA) &&
         !isLoadHoistBarrierInRange(BB0->front(), *Load0, Load0,

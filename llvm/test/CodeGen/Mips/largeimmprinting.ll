@@ -10,21 +10,19 @@
 
 define void @f() nounwind {
 entry:
-; 32:  lui $[[R0:[0-9]+]], 65535
-; 32:  addiu $[[R0]], $[[R0]], -24
-; 32:  addu $sp, $sp, $[[R0]]
-; 32:  lui $[[R1:[0-9]+]], 1
-; 32:  addu $[[R1]], $sp, $[[R1]]
-; 32:  sw $ra, 20($[[R1]])
-; 64:  daddiu  $[[R0:[0-9]+]], $zero, 1
-; 64:  dsll  $[[R0]], $[[R0]], 48
-; 64:  daddiu  $[[R0]], $[[R0]], -1
-; 64:  dsll  $[[R0]], $[[R0]], 16
-; 64:  daddiu  $[[R0]], $[[R0]], -32
-; 64:  daddu $sp, $sp, $[[R0]]
-; 64:  lui $[[R1:[0-9]+]], 1
-; 64:  daddu $[[R1]], $sp, $[[R1]]
-; 64:  sd  $ra, 24($[[R1]])
+; 32:  lui     $[[R0:[0-9]+]], 1
+; 32:  addiu   $[[R0]], $[[R0]], 24
+; 32:  subu    $sp, $sp, $[[R0]]
+; 32:  lui     $[[R1:[0-9]+]], 1
+; 32:  addu    $[[R1]], $sp, $[[R1]]
+; 32:  sw      $ra, 20($[[R1]])
+
+; 64:  lui     $[[R0:[0-9]+]], 1
+; 64:  daddiu  $[[R0]], $[[R0]], 32
+; 64:  dsubu   $sp, $sp, $[[R0]]
+; 64:  lui     $[[R1:[0-9]+]], 1
+; 64:  daddu   $[[R1]], $sp, $[[R1]]
+; 64:  sd      $ra, 24($[[R1]])
 
   %agg.tmp = alloca %struct.S1, align 1
   %tmp = getelementptr inbounds %struct.S1, %struct.S1* %agg.tmp, i32 0, i32 0, i32 0

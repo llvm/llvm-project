@@ -80,7 +80,7 @@ $comdat.samesize = comdat samesize
 
 ;; Global Variables
 ; Format: [@<GlobalVarName> =] [Linkage] [Visibility] [DLLStorageClass]
-;         [ThreadLocal] [unnamed_addr] [AddrSpace] [ExternallyInitialized]
+;         [ThreadLocal] [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [ExternallyInitialized]
 ;         <global | constant> <Type> [<InitializerConstant>]
 ;         [, section "name"] [, comdat [($name)]] [, align <Alignment>]
 
@@ -142,9 +142,11 @@ $comdat.samesize = comdat samesize
 @g.localexec = thread_local(localexec) global i32 0
 ; CHECK: @g.localexec = thread_local(localexec) global i32 0
 
-; Global Variables -- unnamed_addr
+; Global Variables -- unnamed_addr and local_unnamed_addr
 @g.unnamed_addr = unnamed_addr global i32 0
 ; CHECK: @g.unnamed_addr = unnamed_addr global i32 0
+@g.local_unnamed_addr = local_unnamed_addr global i32 0
+; CHECK: @g.local_unnamed_addr = local_unnamed_addr global i32 0
 
 ; Global Variables -- AddrSpace
 @g.addrspace = addrspace(1) global i32 0
@@ -245,9 +247,11 @@ declare void @g.f1()
 @a.localexec = thread_local(localexec) alias i32, i32* @g.localexec
 ; CHECK: @a.localexec = thread_local(localexec) alias i32, i32* @g.localexec
 
-; Aliases -- unnamed_addr
+; Aliases -- unnamed_addr and local_unnamed_addr
 @a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
 ; CHECK: @a.unnamed_addr = unnamed_addr alias i32, i32* @g.unnamed_addr
+@a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
+; CHECK: @a.local_unnamed_addr = local_unnamed_addr alias i32, i32* @g.local_unnamed_addr
 
 ;; IFunc
 ; Format @<Name> = [Linkage] [Visibility] ifunc <IFuncTy>,
@@ -278,7 +282,7 @@ entry:
 ; Format: define [linkage] [visibility] [DLLStorageClass]
 ;         [cconv] [ret attrs]
 ;         <ResultType> @<FunctionName> ([argument list])
-;         [unnamed_addr] [fn Attrs] [section "name"] [comdat [($name)]]
+;         [(unnamed_addr|local_unnamed_addr)] [fn Attrs] [section "name"] [comdat [($name)]]
 ;         [align N] [gc] [prefix Constant] [prologue Constant]
 ;         [personality Constant] { ... }
 
@@ -523,9 +527,11 @@ declare void @f.param.dereferenceable(i8* dereferenceable(4))
 declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
 ; CHECK: declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
 
-; Functions -- unnamed_addr
+; Functions -- unnamed_addr and local_unnamed_addr
 declare void @f.unnamed_addr() unnamed_addr
 ; CHECK: declare void @f.unnamed_addr() unnamed_addr
+declare void @f.local_unnamed_addr() local_unnamed_addr
+; CHECK: declare void @f.local_unnamed_addr() local_unnamed_addr
 
 ; Functions -- fn Attrs (Function attributes)
 declare void @f.alignstack4() alignstack(4)
