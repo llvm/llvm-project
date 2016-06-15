@@ -338,7 +338,7 @@ static int clangTidyMain(int argc, const char **argv) {
       return 1;
     }
     llvm::outs() << "Enabled checks:";
-    for (auto CheckName : EnabledChecks)
+    for (const auto &CheckName : EnabledChecks)
       llvm::outs() << "\n    " << CheckName;
     llvm::outs() << "\n\n";
     return 0;

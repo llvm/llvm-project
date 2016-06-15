@@ -6428,6 +6428,29 @@ static Value *EmitX86Select(CodeGenFunction &CGF,
   return CGF.Builder.CreateSelect(Mask, Op0, Op1);
 }
 
+static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, CmpInst::Predicate P,
+                                   SmallVectorImpl<Value *> &Ops) {
+  unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
+  Value *Cmp = CGF.Builder.CreateICmp(P, Ops[0], Ops[1]);
+
+  const auto *C = dyn_cast<Constant>(Ops[2]);
+  if (!C || !C->isAllOnesValue())
+    Cmp = CGF.Builder.CreateAnd(Cmp, getMaskVecValue(CGF, Ops[2], NumElts));
+
+  if (NumElts < 8) {
+    uint32_t Indices[8];
+    for (unsigned i = 0; i != NumElts; ++i)
+      Indices[i] = i;
+    for (unsigned i = NumElts; i != 8; ++i)
+      Indices[i] = NumElts;
+    Cmp = CGF.Builder.CreateShuffleVector(Cmp, UndefValue::get(Cmp->getType()),
+                                          Indices);
+  }
+  return CGF.Builder.CreateBitCast(Cmp,
+                                   IntegerType::get(CGF.getLLVMContext(),
+                                                    std::max(NumElts, 8U)));
+}
+
 Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E) {
   if (BuiltinID == X86::BI__builtin_ms_va_start ||
@@ -6821,6 +6844,32 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return EmitX86Select(*this, Ops[0], Ops[1], Ops[2]);
+  case X86::BI__builtin_ia32_pcmpeqb128_mask:
+  case X86::BI__builtin_ia32_pcmpeqb256_mask:
+  case X86::BI__builtin_ia32_pcmpeqb512_mask:
+  case X86::BI__builtin_ia32_pcmpeqw128_mask:
+  case X86::BI__builtin_ia32_pcmpeqw256_mask:
+  case X86::BI__builtin_ia32_pcmpeqw512_mask:
+  case X86::BI__builtin_ia32_pcmpeqd128_mask:
+  case X86::BI__builtin_ia32_pcmpeqd256_mask:
+  case X86::BI__builtin_ia32_pcmpeqd512_mask:
+  case X86::BI__builtin_ia32_pcmpeqq128_mask:
+  case X86::BI__builtin_ia32_pcmpeqq256_mask:
+  case X86::BI__builtin_ia32_pcmpeqq512_mask:
+    return EmitX86MaskedCompare(*this, ICmpInst::ICMP_EQ, Ops);
+  case X86::BI__builtin_ia32_pcmpgtb128_mask:
+  case X86::BI__builtin_ia32_pcmpgtb256_mask:
+  case X86::BI__builtin_ia32_pcmpgtb512_mask:
+  case X86::BI__builtin_ia32_pcmpgtw128_mask:
+  case X86::BI__builtin_ia32_pcmpgtw256_mask:
+  case X86::BI__builtin_ia32_pcmpgtw512_mask:
+  case X86::BI__builtin_ia32_pcmpgtd128_mask:
+  case X86::BI__builtin_ia32_pcmpgtd256_mask:
+  case X86::BI__builtin_ia32_pcmpgtd512_mask:
+  case X86::BI__builtin_ia32_pcmpgtq128_mask:
+  case X86::BI__builtin_ia32_pcmpgtq256_mask:
+  case X86::BI__builtin_ia32_pcmpgtq512_mask:
+    return EmitX86MaskedCompare(*this, ICmpInst::ICMP_SGT, Ops);
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:
   case X86::BI__builtin_ia32_pswapdsi: {

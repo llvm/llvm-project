@@ -62,7 +62,7 @@ public:
       : Compilations(std::move(Compilations)) {}
 
   void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
-    Adjusters.push_back(Adjuster);
+    Adjusters.push_back(std::move(Adjuster));
   }
 
   std::vector<CompileCommand>

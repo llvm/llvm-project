@@ -238,4 +238,26 @@ void test_precond() {
 
 // no templates for now, as these require special handling in target regions and/or declare target
 
+// HCHECK-LABEL: fint
+// HCHECK: call {{.*}}i32 {{.+}}ftemplate
+// HCHECK: ret i32
+
+// HCHECK: load i16, i16*
+// HCHECK: store i16 %
+// HCHECK: call i32 @__tgt_target_teams(
+// HCHECK: call void @__kmpc_for_static_init_4(
+template <typename T>
+T ftemplate() {
+  short aa = 0;
+
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute dist_schedule(static, aa)
+  for (int i = 0; i < 100; i++) {
+  }
+  return T();
+}
+
+int fint(void) { return ftemplate<int>(); }
+
 #endif

@@ -712,7 +712,7 @@ private:
 
   // Returns true if 'TypeNode' has an alias that matches the given matcher.
   bool typeHasMatchingAlias(const Type *TypeNode,
-                            const Matcher<NamedDecl> Matcher,
+                            const Matcher<NamedDecl> &Matcher,
                             BoundNodesTreeBuilder *Builder) {
     const Type *const CanonicalType =
       ActiveASTContext->getCanonicalType(TypeNode);

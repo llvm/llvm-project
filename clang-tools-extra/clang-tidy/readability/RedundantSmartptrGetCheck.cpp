@@ -18,7 +18,7 @@ namespace tidy {
 namespace readability {
 
 namespace {
-internal::Matcher<Expr> callToGet(internal::Matcher<Decl> OnClass) {
+internal::Matcher<Expr> callToGet(const internal::Matcher<Decl> &OnClass) {
   return cxxMemberCallExpr(
              on(expr(anyOf(hasType(OnClass),
                            hasType(qualType(
