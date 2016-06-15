@@ -137,6 +137,7 @@ class FoundationTestCase2(TestBase):
         self.runCmd("process continue")
 
     @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailureAll(oslist=["macosx"], debug_info="gmodules")
     def test_NSError_po(self):
         """Test that po of the result of an unknown method doesn't require a cast."""
         self.build()
