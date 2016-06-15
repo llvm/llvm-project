@@ -6535,7 +6535,27 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
       // Make sure the symbol is defined in this section.
       bool containsSym = Sections[SectIdx].containsSymbol(Symbols[SymIdx]);
-      if (!containsSym)
+      if (!containsSym) {
+        if (!DisSymName.empty() && DisSymName == SymName) {
+          outs() << "-dis-symname: " << DisSymName << " not in the section\n";
+          return;
+	}
+        continue;
+      }
+      // The __mh_execute_header is special and we need to deal with that fact
+      // this symbol is before the start of the (__TEXT,__text) section and at the
+      // address of the start of the __TEXT segment.  This is because this symbol
+      // is an N_SECT symbol in the (__TEXT,__text) but its address is before the
+      // start of the section in a standard MH_EXECUTE filetype.
+      if (!DisSymName.empty() && DisSymName == "__mh_execute_header") {
+        outs() << "-dis-symname: __mh_execute_header not in any section\n";
+        return;
+      }
+      // When this code is trying to disassemble a symbol at a time and in the case
+      // there is only the __mh_execute_header symbol left as in a stripped
+      // executable, we need to deal with this by ignoring this symbol so the whole
+      // section is disassembled and this symbol is then not displayed.
+      if (SymName == "__mh_execute_header")
         continue;
 
       // If we are only disassembling one symbol see if this is that symbol.
