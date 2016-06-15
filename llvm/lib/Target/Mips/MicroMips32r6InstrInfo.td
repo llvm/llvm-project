@@ -622,13 +622,17 @@ class DIV_MMR6_DESC  : DIVMOD_MMR6_DESC_BASE<"div", GPR32Opnd, sdiv>;
 class DIVU_MMR6_DESC : DIVMOD_MMR6_DESC_BASE<"divu", GPR32Opnd, udiv>;
 class MOD_MMR6_DESC  : DIVMOD_MMR6_DESC_BASE<"mod", GPR32Opnd, srem>;
 class MODU_MMR6_DESC : DIVMOD_MMR6_DESC_BASE<"modu", GPR32Opnd, urem>;
-class AND_MMR6_DESC : ArithLogicR<"and", GPR32Opnd>;
-class ANDI_MMR6_DESC : ArithLogicI<"andi", uimm16, GPR32Opnd>;
-class NOR_MMR6_DESC : ArithLogicR<"nor", GPR32Opnd>;
-class OR_MMR6_DESC : ArithLogicR<"or", GPR32Opnd>;
-class ORI_MMR6_DESC : ArithLogicI<"ori", uimm16, GPR32Opnd>;
-class XOR_MMR6_DESC : ArithLogicR<"xor", GPR32Opnd>;
-class XORI_MMR6_DESC : ArithLogicI<"xori", uimm16, GPR32Opnd>;
+class AND_MMR6_DESC : ArithLogicR<"and", GPR32Opnd, 1, II_AND, and>;
+class ANDI_MMR6_DESC : ArithLogicI<"andi", uimm16, GPR32Opnd, II_ANDI>;
+class NOR_MMR6_DESC : LogicNOR<"nor", GPR32Opnd>;
+class OR_MMR6_DESC : ArithLogicR<"or", GPR32Opnd, 1, II_OR, or>;
+class ORI_MMR6_DESC : ArithLogicI<"ori", uimm16, GPR32Opnd, II_ORI, immZExt16,
+                                  or> {
+  int AddedComplexity = 1;
+}
+class XOR_MMR6_DESC : ArithLogicR<"xor", GPR32Opnd, 1, II_XOR, xor>;
+class XORI_MMR6_DESC : ArithLogicI<"xori", uimm16, GPR32Opnd, II_XORI,
+                                   immZExt16, xor>;
 
 class SWE_MMR6_DESC_BASE<string opstr, DAGOperand RO, DAGOperand MO,
                   SDPatternOperator OpNode = null_frag,
@@ -1025,10 +1029,14 @@ class ADDU16_MMR6_DESC : ArithRMM16<"addu16", GPRMM16Opnd, 1, II_ADDU, add>,
   int AddedComplexity = 1;
 }
 class AND16_MMR6_DESC : LogicRMM16<"and16", GPRMM16Opnd, II_AND, and>,
-      MMR6Arch<"and16">;
+      MMR6Arch<"and16"> {
+  int AddedComplexity = 1;
+}
 class ANDI16_MMR6_DESC : AndImmMM16<"andi16", GPRMM16Opnd, II_AND>,
       MMR6Arch<"andi16">;
-class NOT16_MMR6_DESC : NotMM16<"not16", GPRMM16Opnd>, MMR6Arch<"not16">;
+class NOT16_MMR6_DESC : NotMM16<"not16", GPRMM16Opnd>, MMR6Arch<"not16"> {
+  int AddedComplexity = 1;
+}
 class OR16_MMR6_DESC : LogicRMM16<"or16", GPRMM16Opnd, II_OR, or>,
       MMR6Arch<"or16"> {
   int AddedComplexity = 1;
@@ -1050,7 +1058,9 @@ class SUBU16_MMR6_DESC : ArithRMM16<"subu16", GPRMM16Opnd, 0, II_SUBU, sub>,
   int AddedComplexity = 1;
 }
 class XOR16_MMR6_DESC : LogicRMM16<"xor16", GPRMM16Opnd, II_XOR, xor>,
-      MMR6Arch<"xor16">;
+      MMR6Arch<"xor16"> {
+  int AddedComplexity = 1;
+}
 
 class LW_MMR6_DESC : MMR6Arch<"lw">, MipsR6Inst {
   dag OutOperandList = (outs GPR32Opnd:$rt);
@@ -1626,6 +1636,27 @@ def : MipsInstAlias<"dvp", (DVP_MMR6 ZERO), 0>, ISA_MICROMIPS32R6;
 def : MipsInstAlias<"evp", (EVP_MMR6 ZERO), 0>, ISA_MICROMIPS32R6;
 def : MipsInstAlias<"jalrc $rs", (JALRC_MMR6 RA, GPR32Opnd:$rs), 1>,
       ISA_MICROMIPS32R6;
+def : MipsInstAlias<"and $rs, $rt, $imm",
+                    (ANDI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rt, uimm16:$imm), 0>,
+                    ISA_MICROMIPS32R6;
+def : MipsInstAlias<"and $rs, $imm",
+                    (ANDI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rs, uimm16:$imm), 0>,
+                    ISA_MICROMIPS32R6;
+def : MipsInstAlias<"or $rs, $rt, $imm",
+                    (ORI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rt, uimm16:$imm), 0>,
+                    ISA_MICROMIPS32R6;
+def : MipsInstAlias<"or $rs, $imm",
+                    (ORI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rs, uimm16:$imm), 0>,
+                    ISA_MICROMIPS32R6;
+def : MipsInstAlias<"xor $rs, $rt, $imm",
+                    (XORI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rt, uimm16:$imm), 0>,
+                    ISA_MICROMIPS32R6;
+def : MipsInstAlias<"xor $rs, $imm",
+                    (XORI_MMR6 GPR32Opnd:$rs, GPR32Opnd:$rs, uimm16:$imm), 0>,
+                    ISA_MICROMIPS32R6;
+def : MipsInstAlias<"not $rt, $rs",
+                    (NOR_MMR6 GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>,
+                    ISA_MICROMIPS32R6;
 
 //===----------------------------------------------------------------------===//
 //
@@ -1654,3 +1685,15 @@ defm : SelectInt_Pats<i32, OR_MM, XORI_MMR6, SLTi_MM, SLTiu_MM, SELEQZ_MMR6,
 
 defm S_MMR6 : Cmp_Pats<f32, NOR_MMR6, ZERO>, ISA_MICROMIPS32R6;
 defm D_MMR6 : Cmp_Pats<f64, NOR_MMR6, ZERO>, ISA_MICROMIPS32R6;
+
+def : MipsPat<(and GPRMM16:$src, immZExtAndi16:$imm),
+              (ANDI16_MMR6 GPRMM16:$src, immZExtAndi16:$imm)>,
+              ISA_MICROMIPS32R6;
+def : MipsPat<(and GPR32:$src, immZExt16:$imm),
+              (ANDI_MMR6 GPR32:$src, immZExt16:$imm)>, ISA_MICROMIPS32R6;
+def : MipsPat<(i32 immZExt16:$imm),
+              (XORI_MMR6 ZERO, immZExt16:$imm)>, ISA_MICROMIPS32R6;
+def : MipsPat<(not GPRMM16:$in),
+              (NOT16_MMR6 GPRMM16:$in)>, ISA_MICROMIPS32R6;
+def : MipsPat<(not GPR32:$in),
+              (NOR_MMR6 GPR32Opnd:$in, ZERO)>, ISA_MICROMIPS32R6;

@@ -429,7 +429,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
     const TargetMachine &TM) const {
   // We may only use a PLT-relative relocation to refer to unnamed_addr
   // functions.
-  if (!LHS->hasUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
+  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
     return nullptr;
 
   // Basic sanity checks.

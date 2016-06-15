@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/CodeView/ByteStream.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
@@ -46,6 +47,7 @@
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -59,6 +61,21 @@
 using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
+
+namespace {
+// A simple adapter that acts like a ByteStream but holds ownership over
+// and underlying FileOutputBuffer.
+class FileBufferByteStream : public ByteStream<true> {
+public:
+  FileBufferByteStream(std::unique_ptr<FileOutputBuffer> Buffer)
+      : ByteStream(MutableArrayRef<uint8_t>(Buffer->getBufferStart(),
+                                            Buffer->getBufferEnd())),
+        FileBuffer(std::move(Buffer)) {}
+
+private:
+  std::unique_ptr<FileOutputBuffer> FileBuffer;
+};
+}
 
 namespace opts {
 
@@ -162,6 +179,14 @@ cl::opt<bool>
     RawAll("raw-all",
            cl::desc("Implies most other options in 'Native Options' category"),
            cl::cat(NativeOptions));
+
+cl::opt<bool>
+    YamlToPdb("yaml-to-pdb",
+              cl::desc("The input file is yaml, and the tool outputs a pdb"),
+              cl::cat(NativeOptions));
+cl::opt<std::string> YamlPdbOutputFile(
+    "pdb-output", cl::desc("When yaml-to-pdb is specified, the output file"),
+    cl::cat(NativeOptions));
 
 cl::list<std::string>
     ExcludeTypes("exclude-types",
@@ -305,6 +330,45 @@ bool isRawDumpEnabled() {
   if (opts::DumpFpo)
     return true;
   return false;
+}
+
+static void yamlToPdb(StringRef Path) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
+      MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
+                                   /*RequiresNullTerminator=*/false);
+
+  if (ErrorOrBuffer.getError()) {
+    ExitOnErr(make_error<GenericError>(generic_error_code::invalid_path, Path));
+  }
+
+  std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
+
+  llvm::yaml::Input In(Buffer->getBuffer());
+  pdb::yaml::PdbObject YamlObj;
+  In >> YamlObj;
+
+  auto OutFileOrError = FileOutputBuffer::create(opts::YamlPdbOutputFile,
+                                                 YamlObj.Headers.FileSize);
+  if (OutFileOrError.getError())
+    ExitOnErr(make_error<GenericError>(generic_error_code::invalid_path,
+                                       opts::YamlPdbOutputFile));
+
+  auto FileByteStream =
+      llvm::make_unique<FileBufferByteStream>(std::move(*OutFileOrError));
+  PDBFile Pdb(std::move(FileByteStream));
+  Pdb.setSuperBlock(&YamlObj.Headers.SuperBlock);
+  if (YamlObj.StreamMap.hasValue()) {
+    std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
+    for (auto &E : YamlObj.StreamMap.getValue()) {
+      StreamMap.push_back(E.Blocks);
+    }
+    Pdb.setStreamMap(StreamMap);
+  }
+  if (YamlObj.StreamSizes.hasValue()) {
+    Pdb.setStreamSizes(YamlObj.StreamSizes.getValue());
+  }
+
+  Pdb.commit();
 }
 
 static void dumpInput(StringRef Path) {
@@ -494,8 +558,13 @@ int main(int argc_, const char *argv_[]) {
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
 
-  std::for_each(opts::InputFilenames.begin(), opts::InputFilenames.end(),
-                dumpInput);
+  if (opts::YamlToPdb) {
+    std::for_each(opts::InputFilenames.begin(), opts::InputFilenames.end(),
+                  yamlToPdb);
+  } else {
+    std::for_each(opts::InputFilenames.begin(), opts::InputFilenames.end(),
+                  dumpInput);
+  }
 
   outs().flush();
   return 0;

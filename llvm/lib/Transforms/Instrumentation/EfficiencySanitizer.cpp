@@ -137,7 +137,7 @@ static GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
     new GlobalVariable(M, StrConst->getType(), true,
                        GlobalValue::PrivateLinkage, StrConst, "");
   if (AllowMerging)
-    GV->setUnnamedAddr(true);
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(1);  // Strings may not be merged w/o setting align 1.
   return GV;
 }

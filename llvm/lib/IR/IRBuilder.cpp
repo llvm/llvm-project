@@ -34,7 +34,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                           StrConstant, Name, nullptr,
                                           GlobalVariable::NotThreadLocal,
                                           AddressSpace);
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   return GV;
 }
 

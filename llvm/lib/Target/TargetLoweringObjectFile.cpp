@@ -174,7 +174,7 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
       // If the global is required to have a unique address, it can't be put
       // into a mergable section: just drop it into the general read-only
       // section instead.
-      if (!GVar->hasUnnamedAddr())
+      if (!GVar->hasGlobalUnnamedAddr())
         return SectionKind::getReadOnly();
 
       // If initializer is a null-terminated string, put it in a "cstring"

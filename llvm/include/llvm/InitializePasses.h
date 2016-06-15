@@ -286,8 +286,6 @@ void initializeSCCPLegacyPassPass(PassRegistry &);
 void initializeSCEVAAWrapperPassPass(PassRegistry&);
 void initializeSLPVectorizerPass(PassRegistry&);
 void initializeSROALegacyPassPass(PassRegistry&);
-void initializeSROA_DTPass(PassRegistry&);
-void initializeSROA_SSAUpPass(PassRegistry&);
 void initializeSafeStackPass(PassRegistry&);
 void initializeSampleProfileLoaderLegacyPassPass(PassRegistry&);
 void initializeSanitizerCoverageModulePass(PassRegistry&);

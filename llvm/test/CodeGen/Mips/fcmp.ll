@@ -237,7 +237,7 @@ define i32 @one_f32(float %a, float %b) nounwind {
 ; MM32R6-DAG:    cmp.ueq.s $[[T0:f[0-9]+]], $f12, $f14
 ; MM64R6-DAG:    cmp.ueq.s $[[T0:f[0-9]+]], $f12, $f13
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      nor $[[T2:[0-9]+]], $[[T1]]
+; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp one float %a, %b
@@ -274,7 +274,7 @@ define i32 @ord_f32(float %a, float %b) nounwind {
 ; MM32R6-DAG:    cmp.un.s $[[T0:f[0-9]+]], $f12, $f14
 ; MM64R6-DAG:    cmp.un.s $[[T0:f[0-9]+]], $f12, $f13
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      nor $[[T2:[0-9]+]], $[[T1]], $zero
+; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp ord float %a, %b
@@ -481,7 +481,7 @@ define i32 @une_f32(float %a, float %b) nounwind {
 ; MM32R6-DAG:    cmp.eq.s $[[T0:f[0-9]+]], $f12, $f14
 ; MM64R6-DAG:    cmp.eq.s $[[T0:f[0-9]+]], $f12, $f13
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      nor $[[T2:[0-9]+]], $[[T1]], $zero
+; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp une float %a, %b
@@ -756,7 +756,7 @@ define i32 @one_f64(double %a, double %b) nounwind {
 ; MM32R6-DAG:    cmp.ueq.d $[[T0:f[0-9]+]], $f12, $f14
 ; MM64R6-DAG:    cmp.ueq.d $[[T0:f[0-9]+]], $f12, $f13
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      nor $[[T2:[0-9]+]], $[[T1]], $zero
+; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp one double %a, %b
@@ -793,7 +793,7 @@ define i32 @ord_f64(double %a, double %b) nounwind {
 ; MM32R6-DAG:    cmp.un.d $[[T0:f[0-9]+]], $f12, $f14
 ; MM64R6-DAG:    cmp.un.d $[[T0:f[0-9]+]], $f12, $f13
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      nor $[[T2:[0-9]+]], $[[T1]], $zero
+; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp ord double %a, %b
@@ -1000,7 +1000,7 @@ define i32 @une_f64(double %a, double %b) nounwind {
 ; MM32R6-DAG:    cmp.eq.d $[[T0:f[0-9]+]], $f12, $f14
 ; MM64R6-DAG:    cmp.eq.d $[[T0:f[0-9]+]], $f12, $f13
 ; MMR6-DAG:      mfc1 $[[T1:[0-9]+]], $[[T0]]
-; MMR6-DAG:      nor $[[T2:[0-9]+]], $[[T1]], $zero
+; MMR6-DAG:      not $[[T2:[0-9]+]], $[[T1]]
 ; MMR6-DAG:      andi16 $2, $[[T2]], 1
 
   %1 = fcmp une double %a, %b

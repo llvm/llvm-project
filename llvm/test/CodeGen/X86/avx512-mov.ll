@@ -313,7 +313,7 @@ define <16 x i32> @test32(i8 * %addr, <16 x i32> %old, <16 x i32> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf3,0x75,0x48,0x1f,0xca,0x04]
-; CHECK-NEXT:    vmovdqa32 (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x49,0x6f,0x07]
+; CHECK-NEXT:    vpblendmd (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x64,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <16 x i32>*
@@ -327,7 +327,7 @@ define <16 x i32> @test33(i8 * %addr, <16 x i32> %old, <16 x i32> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf3,0x75,0x48,0x1f,0xca,0x04]
-; CHECK-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0x7e,0x49,0x6f,0x07]
+; CHECK-NEXT:    vpblendmd (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x64,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <16 x i32>*
@@ -369,7 +369,7 @@ define <8 x i64> @test36(i8 * %addr, <8 x i64> %old, <8 x i64> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqq %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf3,0xf5,0x48,0x1f,0xca,0x04]
-; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0xfd,0x49,0x6f,0x07]
+; CHECK-NEXT:    vpblendmq (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x64,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <8 x i64>*
@@ -383,7 +383,7 @@ define <8 x i64> @test37(i8 * %addr, <8 x i64> %old, <8 x i64> %mask1) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vpcmpneqq %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf3,0xf5,0x48,0x1f,0xca,0x04]
-; CHECK-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0xfe,0x49,0x6f,0x07]
+; CHECK-NEXT:    vpblendmq (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x64,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <8 x i64>*
@@ -426,7 +426,7 @@ define <16 x float> @test40(i8 * %addr, <16 x float> %old, <16 x float> %mask1) 
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vcmpordps %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf1,0x74,0x48,0xc2,0xca,0x07]
 ; CHECK-NEXT:    vcmpneqps %zmm2, %zmm1, %k1 {%k1} ## encoding: [0x62,0xf1,0x74,0x49,0xc2,0xca,0x04]
-; CHECK-NEXT:    vmovaps (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0x28,0x07]
+; CHECK-NEXT:    vblendmps (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x65,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <16 x float> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <16 x float>*
@@ -441,7 +441,7 @@ define <16 x float> @test41(i8 * %addr, <16 x float> %old, <16 x float> %mask1) 
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vcmpordps %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf1,0x74,0x48,0xc2,0xca,0x07]
 ; CHECK-NEXT:    vcmpneqps %zmm2, %zmm1, %k1 {%k1} ## encoding: [0x62,0xf1,0x74,0x49,0xc2,0xca,0x04]
-; CHECK-NEXT:    vmovups (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0x10,0x07]
+; CHECK-NEXT:    vblendmps (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0x7d,0x49,0x65,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <16 x float> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <16 x float>*
@@ -486,7 +486,7 @@ define <8 x double> @test44(i8 * %addr, <8 x double> %old, <8 x double> %mask1) 
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vcmpordpd %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf1,0xf5,0x48,0xc2,0xca,0x07]
 ; CHECK-NEXT:    vcmpneqpd %zmm2, %zmm1, %k1 {%k1} ## encoding: [0x62,0xf1,0xf5,0x49,0xc2,0xca,0x04]
-; CHECK-NEXT:    vmovapd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0xfd,0x49,0x28,0x07]
+; CHECK-NEXT:    vblendmpd (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x65,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <8 x double> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <8 x double>*
@@ -501,7 +501,7 @@ define <8 x double> @test45(i8 * %addr, <8 x double> %old, <8 x double> %mask1) 
 ; CHECK-NEXT:    vpxord %zmm2, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0x6d,0x48,0xef,0xd2]
 ; CHECK-NEXT:    vcmpordpd %zmm2, %zmm1, %k1 ## encoding: [0x62,0xf1,0xf5,0x48,0xc2,0xca,0x07]
 ; CHECK-NEXT:    vcmpneqpd %zmm2, %zmm1, %k1 {%k1} ## encoding: [0x62,0xf1,0xf5,0x49,0xc2,0xca,0x04]
-; CHECK-NEXT:    vmovupd (%rdi), %zmm0 {%k1} ## encoding: [0x62,0xf1,0xfd,0x49,0x10,0x07]
+; CHECK-NEXT:    vblendmpd (%rdi), %zmm0, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x49,0x65,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = fcmp one <8 x double> %mask1, zeroinitializer
   %vaddr = bitcast i8* %addr to <8 x double>*

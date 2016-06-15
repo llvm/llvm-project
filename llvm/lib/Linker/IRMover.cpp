@@ -791,7 +791,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
       return stringErr(
           "Appending variables with different visibility need to be linked!");
 
-    if (DstGV->hasUnnamedAddr() != SrcGV->hasUnnamedAddr())
+    if (DstGV->hasGlobalUnnamedAddr() != SrcGV->hasGlobalUnnamedAddr())
       return stringErr(
           "Appending variables with different unnamed_addr need to be linked!");
 

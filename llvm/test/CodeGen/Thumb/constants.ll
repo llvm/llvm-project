@@ -9,3 +9,11 @@
 define i32 @mov_and_add() {
   ret i32 267
 }
+
+; CHECK-T1-LABEL: @mov_and_add2
+; CHECK-T2-LABEL: @mov_and_add2
+; CHECK-T1: ldr r0,
+; CHECK-T2: movw r0, #511
+define i32 @mov_and_add2() {
+  ret i32 511
+}

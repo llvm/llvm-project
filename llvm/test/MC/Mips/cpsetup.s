@@ -31,16 +31,13 @@ t1:
 
 # O32-NOT: __cerror
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
 # NXX-NEXT: sd       $gp, 8($sp)
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
 # N64-NEXT: daddu    $gp, $gp, $25
 
 # ASM-NEXT: .cpsetup $25, 8, __cerror
@@ -62,16 +59,13 @@ t2:
 
 # O32-NOT: __cerror
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
 # NXX-NEXT: move     $2, $gp
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
 # N64-NEXT: daddu    $gp, $gp, $25
 
 # ASM-NEXT: .cpsetup $25, $2, __cerror
@@ -101,16 +95,13 @@ t3:
 # O32-NEXT:   nop
 # O32-NEXT:   sub $3, $3, $2
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
 # NXX-NEXT: move     $2, $gp
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: {{^ *0+}}40: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16 .text
+# N32-NEXT: {{^ *0+}}38: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: {{^ *0+}}40: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16 .text
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: {{^ *0+}}44: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16 .text
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: {{^ *0+}}3c: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: {{^ *0+}}44: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16 .text
 # N64-NEXT: daddu    $gp, $gp, $25
 # NXX-NEXT: nop
 # NXX-NEXT: sub $3, $3, $2
@@ -157,16 +148,13 @@ t5:
 
 # O32-NOT: __cerror
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
 # NXX-NEXT: sd       $gp, 8($sp)
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
 # N64-NEXT: daddu    $gp, $gp, $25
 
 # ASM-NEXT: .cpsetup $25, 8, __cerror

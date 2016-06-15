@@ -45,7 +45,6 @@ add_llvm_library(LLVMScalarOpts
   SCCP.cpp
   SROA.cpp
   Scalar.cpp
-  ScalarReplAggregates.cpp
   Scalarizer.cpp
   SeparateConstOffsetFromGEP.cpp
   SimplifyCFGPass.cpp

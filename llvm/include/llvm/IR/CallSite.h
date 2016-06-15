@@ -305,35 +305,43 @@ public:
     CALLSITE_DELEGATE_SETTER(setAttributes(PAL));
   }
 
-  void addAttribute(unsigned i, Attribute::AttrKind attr) {
-    CALLSITE_DELEGATE_SETTER(addAttribute(i, attr));
+  void addAttribute(unsigned i, Attribute::AttrKind Kind) {
+    CALLSITE_DELEGATE_SETTER(addAttribute(i, Kind));
   }
 
   void addAttribute(unsigned i, StringRef Kind, StringRef Value) {
     CALLSITE_DELEGATE_SETTER(addAttribute(i, Kind, Value));
   }
 
-  void removeAttribute(unsigned i, Attribute::AttrKind attr) {
-    CALLSITE_DELEGATE_SETTER(removeAttribute(i, attr));
+  void addAttribute(unsigned i, Attribute Attr) {
+    CALLSITE_DELEGATE_SETTER(addAttribute(i, Attr));
   }
 
-  void removeAttribute(unsigned i, Attribute attr) {
-    CALLSITE_DELEGATE_SETTER(removeAttribute(i, attr));
+  void removeAttribute(unsigned i, Attribute::AttrKind Kind) {
+    CALLSITE_DELEGATE_SETTER(removeAttribute(i, Kind));
+  }
+
+  void removeAttribute(unsigned i, Attribute Attr) {
+    CALLSITE_DELEGATE_SETTER(removeAttribute(i, Attr));
   }
 
   /// \brief Return true if this function has the given attribute.
-  bool hasFnAttr(Attribute::AttrKind A) const {
-    CALLSITE_DELEGATE_GETTER(hasFnAttr(A));
+  bool hasFnAttr(Attribute::AttrKind Kind) const {
+    CALLSITE_DELEGATE_GETTER(hasFnAttr(Kind));
   }
 
   /// \brief Return true if this function has the given attribute.
-  bool hasFnAttr(StringRef A) const {
-    CALLSITE_DELEGATE_GETTER(hasFnAttr(A));
+  bool hasFnAttr(StringRef Kind) const {
+    CALLSITE_DELEGATE_GETTER(hasFnAttr(Kind));
   }
 
   /// \brief Return true if the call or the callee has the given attribute.
-  bool paramHasAttr(unsigned i, Attribute::AttrKind A) const {
-    CALLSITE_DELEGATE_GETTER(paramHasAttr(i, A));
+  bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
+    CALLSITE_DELEGATE_GETTER(paramHasAttr(i, Kind));
+  }
+
+  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+    CALLSITE_DELEGATE_GETTER(getAttribute(i, Kind));
   }
 
   /// \brief Return true if the data operand at index \p i directly or
@@ -343,8 +351,8 @@ public:
   /// in the attribute set attached to this instruction, while operand bundle
   /// operands may have some attributes implied by the type of its containing
   /// operand bundle.
-  bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind A) const {
-    CALLSITE_DELEGATE_GETTER(dataOperandHasImpliedAttr(i, A));
+  bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind Kind) const {
+    CALLSITE_DELEGATE_GETTER(dataOperandHasImpliedAttr(i, Kind));
   }
 
   /// @brief Extract the alignment for a call or parameter (0=unknown).

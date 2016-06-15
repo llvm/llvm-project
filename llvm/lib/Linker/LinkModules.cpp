@@ -377,9 +377,10 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
     DGV->setVisibility(Visibility);
     GV.setVisibility(Visibility);
 
-    bool HasUnnamedAddr = GV.hasUnnamedAddr() && DGV->hasUnnamedAddr();
-    DGV->setUnnamedAddr(HasUnnamedAddr);
-    GV.setUnnamedAddr(HasUnnamedAddr);
+    GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::getMinUnnamedAddr(
+        DGV->getUnnamedAddr(), GV.getUnnamedAddr());
+    DGV->setUnnamedAddr(UnnamedAddr);
+    GV.setUnnamedAddr(UnnamedAddr);
   }
 
   // Don't want to append to global_ctors list, for example, when we

@@ -331,9 +331,9 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
-void CallInst::addAttribute(unsigned i, Attribute::AttrKind attr) {
+void CallInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeSet PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, attr);
+  PAL = PAL.addAttribute(getContext(), i, Kind);
   setAttributes(PAL);
 }
 
@@ -343,15 +343,21 @@ void CallInst::addAttribute(unsigned i, StringRef Kind, StringRef Value) {
   setAttributes(PAL);
 }
 
-void CallInst::removeAttribute(unsigned i, Attribute::AttrKind attr) {
+void CallInst::addAttribute(unsigned i, Attribute Attr) {
   AttributeSet PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, attr);
+  PAL = PAL.addAttribute(getContext(), i, Attr);
   setAttributes(PAL);
 }
 
-void CallInst::removeAttribute(unsigned i, Attribute attr) {
+void CallInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeSet PAL = getAttributes();
-  AttrBuilder B(attr);
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
+void CallInst::removeAttribute(unsigned i, Attribute Attr) {
+  AttributeSet PAL = getAttributes();
+  AttrBuilder B(Attr);
   LLVMContext &Context = getContext();
   PAL = PAL.removeAttributes(Context, i,
                              AttributeSet::get(Context, i, B));
@@ -370,19 +376,22 @@ void CallInst::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
   setAttributes(PAL);
 }
 
-bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind A) const {
+bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
   assert(i < (getNumArgOperands() + 1) && "Param index out of bounds!");
 
-  if (AttributeList.hasAttribute(i, A))
+  if (AttributeList.hasAttribute(i, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(i, A);
+    return F->getAttributes().hasAttribute(i, Kind);
   return false;
 }
 
-bool CallInst::dataOperandHasImpliedAttr(unsigned i,
-                                         Attribute::AttrKind A) const {
+Attribute CallInst::getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+  return getAttributes().getAttribute(i, Kind);
+}
 
+bool CallInst::dataOperandHasImpliedAttr(unsigned i,
+                                         Attribute::AttrKind Kind) const {
   // There are getNumOperands() - 1 data operands.  The last operand is the
   // callee.
   assert(i < getNumOperands() && "Data operand index out of bounds!");
@@ -392,11 +401,11 @@ bool CallInst::dataOperandHasImpliedAttr(unsigned i,
   // containing operand bundle, if the operand is a bundle operand.
 
   if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i, A);
+    return paramHasAttr(i, Kind);
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either a call argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, A);
+  return bundleOperandHasAttr(i - 1, Kind);
 }
 
 /// IsConstantOne - Return true only if val is constant int 1
@@ -669,18 +678,18 @@ void InvokeInst::setSuccessorV(unsigned idx, BasicBlock *B) {
   return setSuccessor(idx, B);
 }
 
-bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind A) const {
+bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
   assert(i < (getNumArgOperands() + 1) && "Param index out of bounds!");
 
-  if (AttributeList.hasAttribute(i, A))
+  if (AttributeList.hasAttribute(i, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(i, A);
+    return F->getAttributes().hasAttribute(i, Kind);
   return false;
 }
 
 bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
-                                           Attribute::AttrKind A) const {
+                                           Attribute::AttrKind Kind) const {
   // There are getNumOperands() - 3 data operands.  The last three operands are
   // the callee and the two successor basic blocks.
   assert(i < (getNumOperands() - 2) && "Data operand index out of bounds!");
@@ -690,31 +699,42 @@ bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
   // containing operand bundle, if the operand is a bundle operand.
 
   if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i, A);
+    return paramHasAttr(i, Kind);
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either an invoke argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, A);
+  return bundleOperandHasAttr(i - 1, Kind);
 }
 
-void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind attr) {
+void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeSet PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, attr);
+  PAL = PAL.addAttribute(getContext(), i, Kind);
   setAttributes(PAL);
 }
 
-void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind attr) {
+void InvokeInst::addAttribute(unsigned i, Attribute Attr) {
   AttributeSet PAL = getAttributes();
-  PAL = PAL.removeAttribute(getContext(), i, attr);
+  PAL = PAL.addAttribute(getContext(), i, Attr);
   setAttributes(PAL);
 }
 
-void InvokeInst::removeAttribute(unsigned i, Attribute attr) {
+void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeSet PAL = getAttributes();
-  AttrBuilder B(attr);
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
+void InvokeInst::removeAttribute(unsigned i, Attribute Attr) {
+  AttributeSet PAL = getAttributes();
+  AttrBuilder B(Attr);
   PAL = PAL.removeAttributes(getContext(), i,
                              AttributeSet::get(getContext(), i, B));
   setAttributes(PAL);
+}
+
+Attribute InvokeInst::getAttribute(unsigned i,
+                                   Attribute::AttrKind Kind) const {
+  return getAttributes().getAttribute(i, Kind);
 }
 
 void InvokeInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {

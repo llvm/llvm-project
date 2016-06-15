@@ -107,3 +107,16 @@
   swp $31, 8($4)      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
   swp $16, 8($34)     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
   swp $16, 4096($4)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 12-bit signed offset
+  andi $3, $4, -1     # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  andi $3, $4, 65536  # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  andi $3, -1         # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  andi $3, 65536      # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  ori $3, $4, -1      # CHECK: :[[@LINE]]:15: error: expected 16-bit unsigned immediate
+  ori $3, $4, 65536   # CHECK: :[[@LINE]]:15: error: expected 16-bit unsigned immediate
+  ori $3, -1          # CHECK: :[[@LINE]]:11: error: expected 16-bit unsigned immediate
+  ori $3, 65536       # CHECK: :[[@LINE]]:11: error: expected 16-bit unsigned immediate
+  xori $3, $4, -1     # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  xori $3, $4, 65536  # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  xori $3, -1         # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  xori $3, 65536      # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  not $3, 4           # CHECK: :[[@LINE]]:11: error: invalid operand for instruction

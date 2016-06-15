@@ -485,7 +485,7 @@ unsigned ARMDAGToDAGISel::ConstantMaterializationCost(unsigned Val) const {
   if (Subtarget->isThumb()) {
     if (Val <= 255) return 1;                               // MOV
     if (Subtarget->hasV6T2Ops() && Val <= 0xffff) return 1; // MOVW
-    if (Val <= 511) return 2;                               // MOV + ADDi8
+    if (Val <= 510) return 2;                               // MOV + ADDi8
     if (~Val <= 255) return 2;                              // MOV + MVN
     if (ARM_AM::isThumbImmShiftedVal(Val)) return 2;        // MOV + LSL
   } else {

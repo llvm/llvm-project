@@ -307,7 +307,7 @@ CallGraphNode *ArgPromotion::PromoteArguments(CallGraphNode *CGN) {
         }
 
         // Safe to transform, don't even bother trying to "promote" it.
-        // Passing the elements as a scalar will allow scalarrepl to hack on
+        // Passing the elements as a scalar will allow sroa to hack on
         // the new alloca we introduce.
         if (AllSimple) {
           ByValArgsToTransform.insert(PtrArg);

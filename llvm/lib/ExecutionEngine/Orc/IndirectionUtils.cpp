@@ -144,7 +144,7 @@ static void raiseVisibilityOnValue(GlobalValue &V, GlobalRenamer &R) {
     V.setLinkage(GlobalValue::ExternalLinkage);
     V.setVisibility(GlobalValue::HiddenVisibility);
   }
-  V.setUnnamedAddr(false);
+  V.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
   assert(!R.needsRenaming(V) && "Invalid global name.");
 }
 

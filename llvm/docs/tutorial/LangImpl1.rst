@@ -80,7 +80,7 @@ in the various pieces. The structure of the tutorial is:
    information will allow you to set breakpoints in Kaleidoscope
    functions, print out argument variables, and call functions - all
    from within the debugger!
--  `Chapter #9 <LangImpl8.html>`_: Conclusion and other useful LLVM
+-  `Chapter #9 <LangImpl9.html>`_: Conclusion and other useful LLVM
    tidbits - This chapter wraps up the series by talking about
    potential ways to extend the language, but also includes a bunch of
    pointers to info about "special topics" like adding garbage

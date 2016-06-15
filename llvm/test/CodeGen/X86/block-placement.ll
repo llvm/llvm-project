@@ -1207,4 +1207,82 @@ exit:
   ret void
 }
 
+define void @test_hot_branch_profile(i32* %a) !prof !6 {
+; Test that a hot branch that has a probability a little larger than 50% will
+; break CFG constrains when doing block placement when profile is available.
+; CHECK-LABEL: test_hot_branch_profile:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+; CHECK: %else
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %then, label %else, !prof !7
+
+then:
+  call void @hot_function()
+  br label %exit
+
+else:
+  call void @cold_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+define void @test_hot_branch_triangle_profile(i32* %a) !prof !6 {
+; Test that a hot branch that has a probability a little larger than 80% will
+; break triangle shaped CFG constrains when doing block placement if profile
+; is present.
+; CHECK-LABEL: test_hot_branch_triangle_profile:
+; CHECK: %entry
+; CHECK: %exit
+; CHECK: %then
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %exit, label %then, !prof !5
+
+then:
+  call void @hot_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+define void @test_hot_branch_triangle_profile_topology(i32* %a) !prof !6 {
+; Test that a hot branch that has a probability between 50% and 66% will not
+; break triangle shaped CFG constrains when doing block placement if profile
+; is present.
+; CHECK-LABEL: test_hot_branch_triangle_profile_topology:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %exit, label %then, !prof !7
+
+then:
+  call void @hot_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
 !5 = !{!"branch_weights", i32 84, i32 16}
+!6 = !{!"function_entry_count", i32 10}
+!7 = !{!"branch_weights", i32 60, i32 40}

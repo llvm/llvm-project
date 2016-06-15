@@ -10,7 +10,7 @@
 
 declare void @foo() readnone
 
-; CHECK-LABEL: define i8* @test(i8* %p) {
+; CHECK-LABEL: define i8* @test(i8* %p)
 ; CHECK:   %a = alloca i8*, align 8
 ; CHECK:   store i8* %p, i8** %a, align 8
 ; CHECK:   call void @foo() [ "abc"(i8** %a) ]

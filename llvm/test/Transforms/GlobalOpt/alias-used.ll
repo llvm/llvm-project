@@ -13,10 +13,10 @@
 ; CHECK-DAG: @llvm.compiler.used = appending global [2 x i8*] [i8* bitcast (void ()* @fa3 to i8*), i8* @ia], section "llvm.metadata"
 
 @sameAsUsed = global [3 x i8*] [i8* bitcast (void ()* @fa to i8*), i8* bitcast (void ()* @f to i8*), i8* @ca]
-; CHECK-DAG: @sameAsUsed = global [3 x i8*] [i8* bitcast (void ()* @f to i8*), i8* bitcast (void ()* @f to i8*), i8* @c]
+; CHECK-DAG: @sameAsUsed = local_unnamed_addr global [3 x i8*] [i8* bitcast (void ()* @f to i8*), i8* bitcast (void ()* @f to i8*), i8* @c]
 
 @other = global i32* bitcast (void ()* @fa to i32*)
-; CHECK-DAG: @other = global i32* bitcast (void ()* @f to i32*)
+; CHECK-DAG: @other = local_unnamed_addr global i32* bitcast (void ()* @f to i32*)
 
 @fa = internal alias void (), void ()* @f
 ; CHECK: @fa = internal alias void (), void ()* @f

@@ -2,8 +2,8 @@
 
 ; This test is hint, what could globalOpt optimize and what it can't
 ; FIXME: @tmp and @tmp2 can be safely set to 42
-; CHECK: @tmp = global i32 0
-; CHECK: @tmp2 = global i32 0
+; CHECK: @tmp = local_unnamed_addr global i32 0
+; CHECK: @tmp2 = local_unnamed_addr global i32 0
 ; CHECK: @tmp3 = global i32 0
 
 @tmp = global i32 0

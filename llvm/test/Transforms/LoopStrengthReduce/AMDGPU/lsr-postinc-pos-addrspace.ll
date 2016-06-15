@@ -76,7 +76,8 @@ bb13:
 ; CHECK: br i1
 
 ; CHECK: bb:
-; CHECK: getelementptr i8, i8 addrspace(1)* %t, i32 %lsr.iv
+; CHECK: %idxprom = sext i32 %lsr.iv1 to i64
+; CHECK: getelementptr i8, i8 addrspace(1)* %t, i64 %idxprom
 define void @global_gep_user(i32 %arg0) nounwind {
 entry:
   br label %bb11

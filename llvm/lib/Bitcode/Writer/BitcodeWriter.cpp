@@ -996,6 +996,15 @@ static unsigned getEncodedComdatSelectionKind(const Comdat &C) {
   llvm_unreachable("Invalid selection kind");
 }
 
+static unsigned getEncodedUnnamedAddr(const GlobalValue &GV) {
+  switch (GV.getUnnamedAddr()) {
+  case GlobalValue::UnnamedAddr::None:   return 0;
+  case GlobalValue::UnnamedAddr::Local:  return 2;
+  case GlobalValue::UnnamedAddr::Global: return 1;
+  }
+  llvm_unreachable("Invalid unnamed_addr");
+}
+
 void ModuleBitcodeWriter::writeComdats() {
   SmallVector<unsigned, 64> Vals;
   for (const Comdat *C : VE.getComdats()) {
@@ -1157,12 +1166,13 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(GV.hasSection() ? SectionMap[GV.getSection()] : 0);
     if (GV.isThreadLocal() ||
         GV.getVisibility() != GlobalValue::DefaultVisibility ||
-        GV.hasUnnamedAddr() || GV.isExternallyInitialized() ||
+        GV.getUnnamedAddr() != GlobalValue::UnnamedAddr::None ||
+        GV.isExternallyInitialized() ||
         GV.getDLLStorageClass() != GlobalValue::DefaultStorageClass ||
         GV.hasComdat()) {
       Vals.push_back(getEncodedVisibility(GV));
       Vals.push_back(getEncodedThreadLocalMode(GV));
-      Vals.push_back(GV.hasUnnamedAddr());
+      Vals.push_back(getEncodedUnnamedAddr(GV));
       Vals.push_back(GV.isExternallyInitialized());
       Vals.push_back(getEncodedDLLStorageClass(GV));
       Vals.push_back(GV.hasComdat() ? VE.getComdatID(GV.getComdat()) : 0);
@@ -1188,7 +1198,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(F.hasSection() ? SectionMap[F.getSection()] : 0);
     Vals.push_back(getEncodedVisibility(F));
     Vals.push_back(F.hasGC() ? GCMap[F.getGC()] : 0);
-    Vals.push_back(F.hasUnnamedAddr());
+    Vals.push_back(getEncodedUnnamedAddr(F));
     Vals.push_back(F.hasPrologueData() ? (VE.getValueID(F.getPrologueData()) + 1)
                                        : 0);
     Vals.push_back(getEncodedDLLStorageClass(F));
@@ -1205,7 +1215,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
 
   // Emit the alias information.
   for (const GlobalAlias &A : M.aliases()) {
-    // ALIAS: [alias type, aliasee val#, linkage, visibility]
+    // ALIAS: [alias type, aliasee val#, linkage, visibility, dllstorageclass,
+    //         threadlocal, unnamed_addr]
     Vals.push_back(VE.getTypeID(A.getValueType()));
     Vals.push_back(A.getType()->getAddressSpace());
     Vals.push_back(VE.getValueID(A.getAliasee()));
@@ -1213,7 +1224,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(getEncodedVisibility(A));
     Vals.push_back(getEncodedDLLStorageClass(A));
     Vals.push_back(getEncodedThreadLocalMode(A));
-    Vals.push_back(A.hasUnnamedAddr());
+    Vals.push_back(getEncodedUnnamedAddr(A));
     unsigned AbbrevToUse = 0;
     Stream.EmitRecord(bitc::MODULE_CODE_ALIAS, Vals, AbbrevToUse);
     Vals.clear();

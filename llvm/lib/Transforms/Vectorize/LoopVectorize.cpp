@@ -355,6 +355,12 @@ protected:
 
   /// Create an empty loop, based on the loop ranges of the old loop.
   void createEmptyLoop();
+
+  /// Set up the values of the IVs correctly when exiting the vector loop.
+  void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
+                    Value *CountRoundDown, Value *EndValue,
+                    BasicBlock *MiddleBlock);
+
   /// Create a new induction variable inside L.
   PHINode *createInductionVariable(Loop *L, Value *Start, Value *End,
                                    Value *Step, Instruction *DL);
@@ -1433,13 +1439,11 @@ private:
   /// invariant.
   void collectStridedAccess(Value *LoadOrStoreInst);
 
-  /// \brief Returns true if we can vectorize using this PHI node as an
-  /// induction.
-  ///
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a
   /// better choice for the main induction than the existing one.
-  bool addInductionPhi(PHINode *Phi, InductionDescriptor ID);
+  void addInductionPhi(PHINode *Phi, InductionDescriptor ID,
+                       SmallPtrSetImpl<Value *> &AllowedExit);
 
   /// Report an analysis message to assist the user in diagnosing loops that are
   /// not vectorized.  These are handled as LoopAccessReport rather than
@@ -1493,7 +1497,7 @@ private:
   /// Holds the widest induction type encountered.
   Type *WidestIndTy;
 
-  /// Allowed outside users. This holds the reduction
+  /// Allowed outside users. This holds the induction and reduction
   /// vars which can be accessed from outside the loop.
   SmallPtrSet<Value *, 4> AllowedExit;
   /// This set holds the variables which are known to be uniform after
@@ -3219,6 +3223,9 @@ void InnerLoopVectorizer::createEmptyLoop() {
     // or the value at the end of the vectorized loop.
     BCResumeVal->addIncoming(EndValue, MiddleBlock);
 
+    // Fix up external users of the induction variable.
+    fixupIVUsers(OrigPhi, II, CountRoundDown, EndValue, MiddleBlock);
+
     // Fix the scalar body counter (PHI node).
     unsigned BlockIdx = OrigPhi->getBasicBlockIndex(ScalarPH);
 
@@ -3256,6 +3263,71 @@ void InnerLoopVectorizer::createEmptyLoop() {
 
   LoopVectorizeHints Hints(Lp, true);
   Hints.setAlreadyVectorized();
+}
+
+// Fix up external users of the induction variable. At this point, we are
+// in LCSSA form, with all external PHIs that use the IV having one input value,
+// coming from the remainder loop. We need those PHIs to also have a correct
+// value for the IV when arriving directly from the middle block.
+void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
+                                       const InductionDescriptor &II,
+                                       Value *CountRoundDown, Value *EndValue,
+                                       BasicBlock *MiddleBlock) {
+  // There are two kinds of external IV usages - those that use the value 
+  // computed in the last iteration (the PHI) and those that use the penultimate
+  // value (the value that feeds into the phi from the loop latch).
+  // We allow both, but they, obviously, have different values.
+
+  // We only expect at most one of each kind of user. This is because LCSSA will
+  // canonicalize the users to a single PHI node per exit block, and we
+  // currently only vectorize loops with a single exit.
+  assert(OrigLoop->getExitBlock() && "Expected a single exit block");
+
+  // An external user of the last iteration's value should see the value that
+  // the remainder loop uses to initialize its own IV.
+  Value *PostInc = OrigPhi->getIncomingValueForBlock(OrigLoop->getLoopLatch());
+  for (User *U : PostInc->users()) {
+    Instruction *UI = cast<Instruction>(U);
+    if (!OrigLoop->contains(UI)) {
+      assert(isa<PHINode>(UI) && "Expected LCSSA form");
+      // One corner case we have to handle is two IVs "chasing" each-other,
+      // that is %IV2 = phi [...], [ %IV1, %latch ]
+      // In this case, if IV1 has an external use, we need to avoid adding both      
+      // "last value of IV1" and "penultimate value of IV2". Since we don't know
+      // which IV will be handled first, check we haven't handled this user yet.
+      PHINode *User = cast<PHINode>(UI);
+      if (User->getBasicBlockIndex(MiddleBlock) == -1)
+        User->addIncoming(EndValue, MiddleBlock);
+      break;
+    }
+  }
+
+  // An external user of the penultimate value need to see EndValue - Step.
+  // The simplest way to get this is to recompute it from the constituent SCEVs,
+  // that is Start + (Step * (CRD - 1)).
+  for (User *U : OrigPhi->users()) {
+    Instruction *UI = cast<Instruction>(U);
+    if (!OrigLoop->contains(UI)) {
+      const DataLayout &DL =
+          OrigLoop->getHeader()->getModule()->getDataLayout();
+
+      assert(isa<PHINode>(UI) && "Expected LCSSA form");
+      PHINode *User = cast<PHINode>(UI);
+      // As above, check we haven't already handled this user.
+      if (User->getBasicBlockIndex(MiddleBlock) != -1)
+        break;
+
+      IRBuilder<> B(MiddleBlock->getTerminator());
+      Value *CountMinusOne = B.CreateSub(
+          CountRoundDown, ConstantInt::get(CountRoundDown->getType(), 1));
+      Value *CMO = B.CreateSExtOrTrunc(CountMinusOne, II.getStep()->getType(),
+                                       "cast.cmo");
+      Value *Escape = II.transform(B, CMO, PSE.getSE(), DL);
+      Escape->setName("ind.escape");      
+      User->addIncoming(Escape, MiddleBlock);
+      break;
+    }
+  }
 }
 
 namespace {
@@ -4639,10 +4711,10 @@ static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
 /// \brief Check that the instruction has outside loop users and is not an
 /// identified reduction variable.
 static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
-                               SmallPtrSetImpl<Value *> &Reductions) {
-  // Reduction instructions are allowed to have exit users. All other
-  // instructions must not have external users.
-  if (!Reductions.count(Inst))
+                               SmallPtrSetImpl<Value *> &AllowedExit) {
+  // Reduction and Induction instructions are allowed to have exit users. All
+  // other instructions must not have external users.
+  if (!AllowedExit.count(Inst))
     // Check that all of the users of the loop are inside the BB.
     for (User *U : Inst->users()) {
       Instruction *UI = cast<Instruction>(U);
@@ -4655,8 +4727,9 @@ static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
   return false;
 }
 
-bool LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
-                                                InductionDescriptor ID) {
+void LoopVectorizationLegality::addInductionPhi(
+    PHINode *Phi, InductionDescriptor ID,
+    SmallPtrSetImpl<Value *> &AllowedExit) {
   Inductions[Phi] = ID;
   Type *PhiTy = Phi->getType();
   const DataLayout &DL = Phi->getModule()->getDataLayout();
@@ -4682,18 +4755,13 @@ bool LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
       Induction = Phi;
   }
 
+  // Both the PHI node itself, and the "post-increment" value feeding
+  // back into the PHI node may have external users.
+  AllowedExit.insert(Phi);
+  AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
+
   DEBUG(dbgs() << "LV: Found an induction variable.\n");
-
-  // Until we explicitly handle the case of an induction variable with
-  // an outside loop user we have to give up vectorizing this loop.
-  if (hasOutsideLoopUser(TheLoop, Phi, AllowedExit)) {
-    emitAnalysis(VectorizationReport(Phi) <<
-                 "use of induction value outside of the "
-                 "loop is not handled by vectorizer");
-    return false;
-  }
-
-  return true;
+  return;
 }
 
 bool LoopVectorizationLegality::canVectorizeInstrs() {
@@ -4757,8 +4825,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
         InductionDescriptor ID;
         if (InductionDescriptor::isInductionPHI(Phi, PSE, ID)) {
-          if (!addInductionPhi(Phi, ID))
-            return false;
+          addInductionPhi(Phi, ID, AllowedExit);
           continue;
         }
 
@@ -4770,8 +4837,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // As a last resort, coerce the PHI to a AddRec expression
         // and re-try classifying it a an induction PHI.
         if (InductionDescriptor::isInductionPHI(Phi, PSE, ID, true)) {
-          if (!addInductionPhi(Phi, ID))
-            return false;
+          addInductionPhi(Phi, ID, AllowedExit);        
           continue;
         }
 

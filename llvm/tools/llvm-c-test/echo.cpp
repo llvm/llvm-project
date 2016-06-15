@@ -375,6 +375,20 @@ struct FunCloner {
     return Dst;
   }
 
+  void CloneAttrs(LLVMValueRef Src, LLVMValueRef Dst) {
+    auto Ctx = LLVMGetModuleContext(M);
+    int ArgCount = LLVMGetNumArgOperands(Src);
+    for (int i = LLVMAttributeReturnIndex; i <= ArgCount; i++) {
+      for (unsigned k = 0, e = LLVMGetLastEnumAttributeKind(); k < e; ++k) {
+        if (auto SrcA = LLVMGetCallSiteEnumAttribute(Src, i, k)) {
+          auto Val = LLVMGetEnumAttributeValue(SrcA);
+          auto A = LLVMCreateEnumAttribute(Ctx, k, Val);
+          LLVMAddCallSiteAttribute(Dst, i, A);
+        }
+      }
+    }
+  }
+
   LLVMValueRef CloneInstruction(LLVMValueRef Src, LLVMBuilderRef Builder) {
     check_value_kind(Src, LLVMInstructionValueKind);
     if (!LLVMIsAInstruction(Src))
@@ -439,6 +453,7 @@ struct FunCloner {
         LLVMBasicBlockRef Unwind = DeclareBB(LLVMGetUnwindDest(Src));
         Dst = LLVMBuildInvoke(Builder, Fn, Args.data(), ArgCount,
                               Then, Unwind, Name);
+        CloneAttrs(Src, Dst);
         break;
       }
       case LLVMUnreachable:
@@ -599,6 +614,7 @@ struct FunCloner {
         LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
         Dst = LLVMBuildCall(Builder, Fn, Args.data(), ArgCount, Name);
         LLVMSetTailCall(Dst, LLVMIsTailCall(Src));
+        CloneAttrs(Src, Dst);
         break;
       }
       case LLVMResume: {

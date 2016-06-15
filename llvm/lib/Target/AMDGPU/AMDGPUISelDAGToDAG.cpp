@@ -131,7 +131,7 @@ private:
                          SDValue &Offset, SDValue &SLC) const;
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset) const;
-  void SelectMUBUFConstant(SDValue Constant,
+  bool SelectMUBUFConstant(SDValue Constant,
                            SDValue &SOffset,
                            SDValue &ImmOffset) const;
   bool SelectMUBUFIntrinsicOffset(SDValue Offset, SDValue &SOffset,
@@ -1168,7 +1168,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
   return SelectMUBUFOffset(Addr, SRsrc, Soffset, Offset, GLC, SLC, TFE);
 }
 
-void AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
+bool AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
                                              SDValue &SOffset,
                                              SDValue &ImmOffset) const {
   SDLoc DL(Constant);
@@ -1193,6 +1193,13 @@ void AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
     }
   }
 
+  // There is a hardware bug in SI and CI which prevents address clamping in
+  // MUBUF instructions from working correctly with SOffsets. The immediate
+  // offset is unaffected.
+  if (Overflow > 0 &&
+      Subtarget->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+    return false;
+
   ImmOffset = CurDAG->getTargetConstant(Imm, DL, MVT::i16);
 
   if (Overflow <= 64)
@@ -1201,6 +1208,8 @@ void AMDGPUDAGToDAGISel::SelectMUBUFConstant(SDValue Constant,
     SOffset = SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
                       CurDAG->getTargetConstant(Overflow, DL, MVT::i32)),
                       0);
+
+  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicOffset(SDValue Offset,
@@ -1211,9 +1220,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicOffset(SDValue Offset,
   if (!isa<ConstantSDNode>(Offset))
     return false;
 
-  SelectMUBUFConstant(Offset, SOffset, ImmOffset);
-
-  return true;
+  return SelectMUBUFConstant(Offset, SOffset, ImmOffset);
 }
 
 bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicVOffset(SDValue Offset,
@@ -1223,19 +1230,29 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicVOffset(SDValue Offset,
   SDLoc DL(Offset);
 
   // Don't generate an unnecessary voffset for constant offsets.
-  if (isa<ConstantSDNode>(Offset))
-    return false;
+  if (isa<ConstantSDNode>(Offset)) {
+    SDValue Tmp1, Tmp2;
+
+    // When necessary, use a voffset in <= CI anyway to work around a hardware
+    // bug.
+    if (Subtarget->getGeneration() > AMDGPUSubtarget::SEA_ISLANDS ||
+        SelectMUBUFConstant(Offset, Tmp1, Tmp2))
+      return false;
+  }
 
   if (CurDAG->isBaseWithConstantOffset(Offset)) {
     SDValue N0 = Offset.getOperand(0);
     SDValue N1 = Offset.getOperand(1);
-    SelectMUBUFConstant(N1, SOffset, ImmOffset);
-    VOffset = N0;
-  } else {
-    SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
-    ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i16);
-    VOffset = Offset;
+    if (cast<ConstantSDNode>(N1)->getSExtValue() >= 0 &&
+        SelectMUBUFConstant(N1, SOffset, ImmOffset)) {
+      VOffset = N0;
+      return true;
+    }
   }
+
+  SOffset = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  ImmOffset = CurDAG->getTargetConstant(0, DL, MVT::i16);
+  VOffset = Offset;
 
   return true;
 }

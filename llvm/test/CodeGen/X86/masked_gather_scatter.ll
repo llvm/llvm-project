@@ -1490,8 +1490,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX-NEXT:    vmovq %xmm1, %rax
 ; SKX-NEXT:    vpinsrd $2, (%rax), %xmm0, %xmm0
 ; SKX-NEXT:  .LBB29_6: # %else5
-; SKX-NEXT:    vmovdqa32 %xmm0, %xmm3 {%k1}
-; SKX-NEXT:    vmovaps %zmm3, %zmm0
+; SKX-NEXT:    vpblendmd %xmm0, %xmm3, %xmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test30:
@@ -1503,33 +1502,33 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX_32-NEXT:    vptestmd %xmm2, %xmm2, %k1
 ; SKX_32-NEXT:    kmovb %k1, {{[0-9]+}}(%esp)
 ; SKX_32-NEXT:    vpslld $2, %xmm1, %xmm1
-; SKX_32-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; SKX_32-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; SKX_32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; SKX_32-NEXT:    # implicit-def: %XMM1
+; SKX_32-NEXT:    # implicit-def: %XMM0
 ; SKX_32-NEXT:    testb %al, %al
 ; SKX_32-NEXT:    je .LBB29_2
 ; SKX_32-NEXT:  # BB#1: # %cond.load
-; SKX_32-NEXT:    vmovd %xmm2, %eax
-; SKX_32-NEXT:    vmovd (%eax), %xmm1
+; SKX_32-NEXT:    vmovd %xmm1, %eax
+; SKX_32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX_32-NEXT:  .LBB29_2: # %else
 ; SKX_32-NEXT:    kmovb %k1, {{[0-9]+}}(%esp)
 ; SKX_32-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; SKX_32-NEXT:    testb %al, %al
 ; SKX_32-NEXT:    je .LBB29_4
 ; SKX_32-NEXT:  # BB#3: # %cond.load1
-; SKX_32-NEXT:    vpextrd $1, %xmm2, %eax
-; SKX_32-NEXT:    vpinsrd $1, (%eax), %xmm1, %xmm1
+; SKX_32-NEXT:    vpextrd $1, %xmm1, %eax
+; SKX_32-NEXT:    vpinsrd $1, (%eax), %xmm0, %xmm0
 ; SKX_32-NEXT:  .LBB29_4: # %else2
-; SKX_32-NEXT:    vmovdqa32 {{[0-9]+}}(%esp), %xmm0
+; SKX_32-NEXT:    vmovdqa32 {{[0-9]+}}(%esp), %xmm2
 ; SKX_32-NEXT:    kmovb %k1, (%esp)
 ; SKX_32-NEXT:    movb (%esp), %al
 ; SKX_32-NEXT:    testb %al, %al
 ; SKX_32-NEXT:    je .LBB29_6
 ; SKX_32-NEXT:  # BB#5: # %cond.load4
-; SKX_32-NEXT:    vpextrd $2, %xmm2, %eax
-; SKX_32-NEXT:    vpinsrd $2, (%eax), %xmm1, %xmm1
+; SKX_32-NEXT:    vpextrd $2, %xmm1, %eax
+; SKX_32-NEXT:    vpinsrd $2, (%eax), %xmm0, %xmm0
 ; SKX_32-NEXT:  .LBB29_6: # %else5
-; SKX_32-NEXT:    vmovdqa32 %xmm1, %xmm0 {%k1}
+; SKX_32-NEXT:    vpblendmd %xmm0, %xmm2, %xmm0 {%k1}
 ; SKX_32-NEXT:    addl $12, %esp
 ; SKX_32-NEXT:    retl
 

@@ -773,6 +773,15 @@ static GlobalVariable::ThreadLocalMode getDecodedThreadLocalMode(unsigned Val) {
   }
 }
 
+static GlobalVariable::UnnamedAddr getDecodedUnnamedAddrType(unsigned Val) {
+  switch (Val) {
+    default: // Map unknown to UnnamedAddr::None.
+    case 0: return GlobalVariable::UnnamedAddr::None;
+    case 1: return GlobalVariable::UnnamedAddr::Global;
+    case 2: return GlobalVariable::UnnamedAddr::Local;
+  }
+}
+
 static int getDecodedCastOpcode(unsigned Val) {
   switch (Val) {
   default: return -1;
@@ -3808,9 +3817,9 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       if (Record.size() > 7)
         TLM = getDecodedThreadLocalMode(Record[7]);
 
-      bool UnnamedAddr = false;
+      GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::None;
       if (Record.size() > 8)
-        UnnamedAddr = Record[8];
+        UnnamedAddr = getDecodedUnnamedAddrType(Record[8]);
 
       bool ExternallyInitialized = false;
       if (Record.size() > 9)
@@ -3845,6 +3854,7 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       } else if (hasImplicitComdat(RawLinkage)) {
         NewGV->setComdat(reinterpret_cast<Comdat *>(1));
       }
+
       break;
     }
     case bitc::MODULE_CODE_GLOBALVAR_ATTACHMENT: {
@@ -3902,9 +3912,9 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
           return error("Invalid ID");
         Func->setGC(GCTable[Record[8] - 1]);
       }
-      bool UnnamedAddr = false;
+      GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::None;
       if (Record.size() > 9)
-        UnnamedAddr = Record[9];
+        UnnamedAddr = getDecodedUnnamedAddrType(Record[9]);
       Func->setUnnamedAddr(UnnamedAddr);
       if (Record.size() > 10 && Record[10] != 0)
         FunctionPrologues.push_back(std::make_pair(Func, Record[10]-1));
@@ -3991,7 +4001,7 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
       if (OpNum != Record.size())
         NewGA->setThreadLocalMode(getDecodedThreadLocalMode(Record[OpNum++]));
       if (OpNum != Record.size())
-        NewGA->setUnnamedAddr(Record[OpNum++]);
+        NewGA->setUnnamedAddr(getDecodedUnnamedAddrType(Record[OpNum++]));
       ValueList.push_back(NewGA);
       IndirectSymbolInits.push_back(std::make_pair(NewGA, Val));
       break;

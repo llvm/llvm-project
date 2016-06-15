@@ -274,3 +274,16 @@
   bc2nezc $31, -65537          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
   bc2nezc $31, 65535           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
   bc2nezc $31, 65536           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
+  andi $3, $4, -1              # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  andi $3, $4, 65536           # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  andi $3, -1                  # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  andi $3, 65536               # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  ori $3, $4, -1               # CHECK: :[[@LINE]]:15: error: expected 16-bit unsigned immediate
+  ori $3, $4, 65536            # CHECK: :[[@LINE]]:15: error: expected 16-bit unsigned immediate
+  ori $3, -1                   # CHECK: :[[@LINE]]:11: error: expected 16-bit unsigned immediate
+  ori $3, 65536                # CHECK: :[[@LINE]]:11: error: expected 16-bit unsigned immediate
+  xori $3, $4, -1              # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  xori $3, $4, 65536           # CHECK: :[[@LINE]]:16: error: expected 16-bit unsigned immediate
+  xori $3, -1                  # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  xori $3, 65536               # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
+  not $3, 4                    # CHECK: :[[@LINE]]:11: error: invalid operand for instruction

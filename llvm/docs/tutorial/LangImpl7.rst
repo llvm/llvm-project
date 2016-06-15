@@ -224,7 +224,7 @@ variables in certain circumstances:
    class <../LangRef.html#first-class-types>`_ values (such as pointers,
    scalars and vectors), and only if the array size of the allocation is
    1 (or missing in the .ll file). mem2reg is not capable of promoting
-   structs or arrays to registers. Note that the "scalarrepl" pass is
+   structs or arrays to registers. Note that the "sroa" pass is
    more powerful and can promote structs, "unions", and arrays in many
    cases.
 

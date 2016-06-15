@@ -2081,7 +2081,7 @@ struct x testfunc() {
 }
 
 We currently compile this to:
-$ clang t.c -S -o - -O0 -emit-llvm | opt -scalarrepl -S
+$ clang t.c -S -o - -O0 -emit-llvm | opt -sroa -S
 
 
 %struct.x = type { i8, [4 x i32] }

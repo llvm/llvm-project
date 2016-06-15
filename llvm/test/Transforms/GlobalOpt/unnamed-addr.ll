@@ -10,7 +10,7 @@
 ; CHECK: @b = internal global i32 0, align 4
 ; CHECK: @c = internal unnamed_addr global i32 0, align 4
 ; CHECK: @d = internal unnamed_addr constant [4 x i8] c"foo\00", align 1
-; CHECK: @e = linkonce_odr global i32 0
+; CHECK: @e = linkonce_odr local_unnamed_addr global i32 0
 
 ; CHECK: define internal fastcc void @used_internal() unnamed_addr {
 define internal void @used_internal() {

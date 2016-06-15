@@ -731,8 +731,14 @@ global variable. The operand fields are:
   * ``initialexec``: code 3
   * ``localexec``: code 4
 
-* *unnamed_addr*: If present and non-zero, indicates that the variable has
-  ``unnamed_addr``
+.. _bcunnamedaddr:
+
+* *unnamed_addr*: If present, an encoding of the ``unnamed_addr`` attribute of this
+  variable:
+
+  * not ``unnamed_addr``: code 0
+  * ``unnamed_addr``: code 1
+  * ``local_unnamed_addr``: code 2
 
 .. _bcdllstorageclass:
 
@@ -791,8 +797,8 @@ function. The operand fields are:
 * *gc*: If present and nonzero, the 1-based garbage collector index in the table
   of `MODULE_CODE_GCNAME`_ entries.
 
-* *unnamed_addr*: If present and non-zero, indicates that the function has
-  ``unnamed_addr``
+* *unnamed_addr*: If present, an encoding of the
+  :ref:`unnamed_addr<bcunnamedaddr>` attribute of this function
 
 * *prologuedata*: If non-zero, the value index of the prologue data for this function,
   plus 1.
@@ -830,8 +836,8 @@ fields are
 * *threadlocal*: If present, an encoding of the
   :ref:`thread local property<bcthreadlocal>` of the alias
 
-* *unnamed_addr*: If present and non-zero, indicates that the alias has
-  ``unnamed_addr``
+* *unnamed_addr*: If present, an encoding of the
+  :ref:`unnamed_addr<bcunnamedaddr>` attribute of this alias
 
 MODULE_CODE_PURGEVALS Record
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

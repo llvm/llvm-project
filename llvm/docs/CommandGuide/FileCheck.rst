@@ -38,6 +38,11 @@ OPTIONS
  prefixes to match. Multiple prefixes are useful for tests which might
  change for different run options, but most lines remain the same.
 
+.. option:: --check-prefixes prefix1,prefix2,...
+
+ An alias of :option:`--check-prefix` that allows multiple prefixes to be
+ specified as a comma separated list.
+
 .. option:: --input-file filename
 
   File to check (defaults to stdin).

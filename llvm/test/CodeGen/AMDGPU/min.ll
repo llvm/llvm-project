@@ -223,7 +223,7 @@ define void @s_test_umin_ule_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwin
 ; EG: MIN_UINT
 define void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
   %a = load i32, i32 addrspace(1)* %aptr, align 4
-  %b = load i32, i32 addrspace(1)* %aptr, align 4
+  %b = load i32, i32 addrspace(1)* %bptr, align 4
   %cmp = icmp ult i32 %a, %b
   %val = select i1 %cmp, i32 %a, i32 %b
   store i32 %val, i32 addrspace(1)* %out, align 4

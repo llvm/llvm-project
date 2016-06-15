@@ -3,15 +3,17 @@
 
 ; YAML:      ---
 ; YAML-NEXT: MSF:
-; YAML-NEXT:   BlockSize:       4096
-; YAML-NEXT:   Unknown0:        2
-; YAML-NEXT:   NumBlocks:       25
-; YAML-NEXT:   NumDirectoryBytes: 136
-; YAML-NEXT:   Unknown1:        0
-; YAML-NEXT:   BlockMapAddr:    24
+; YAML-NEXT:   SuperBlock:
+; YAML-NEXT:     BlockSize:       4096
+; YAML-NEXT:     Unknown0:        2
+; YAML-NEXT:     NumBlocks:       25
+; YAML-NEXT:     NumDirectoryBytes: 136
+; YAML-NEXT:     Unknown1:        0
+; YAML-NEXT:     BlockMapAddr:    24
 ; YAML-NEXT:   NumDirectoryBlocks: 1
 ; YAML-NEXT:   BlockMapOffset:  98304
 ; YAML-NEXT:   DirectoryBlocks:
 ; YAML-NEXT:     - 23
 ; YAML-NEXT:   NumStreams:      17
+; YAML-NEXT:   FileSize:        102400
 ; YAML-NEXT: ...

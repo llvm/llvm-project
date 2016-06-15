@@ -33,8 +33,8 @@ private:
 
   void getMips16SPRefReg(SDNode *Parent, SDValue &AliasReg);
 
-  bool selectAddr16(SDNode *Parent, SDValue N, SDValue &Base,
-                    SDValue &Offset, SDValue &Alias) override;
+  bool selectAddr16(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Offset,
+                    SDValue &Alias) override;
 
   bool trySelect(SDNode *Node) override;
 
@@ -48,7 +48,6 @@ private:
 };
 
 FunctionPass *createMips16ISelDag(MipsTargetMachine &TM);
-
 }
 
 #endif

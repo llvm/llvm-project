@@ -24,10 +24,17 @@ INITIALIZE_PASS_BEGIN(MachineBranchProbabilityInfo, "machine-branch-prob",
 INITIALIZE_PASS_END(MachineBranchProbabilityInfo, "machine-branch-prob",
                     "Machine Branch Probability Analysis", false, true)
 
-cl::opt<unsigned> StaticLikelyProb(
-    "static-likely-prob",
-    cl::desc("branch probability threshold to be considered very likely"),
-    cl::init(80), cl::Hidden);
+cl::opt<unsigned>
+    StaticLikelyProb("static-likely-prob",
+                     cl::desc("branch probability threshold in percentage"
+                              "to be considered very likely"),
+                     cl::init(80), cl::Hidden);
+
+cl::opt<unsigned> ProfileLikelyProb(
+    "profile-likely-prob",
+    cl::desc("branch probability threshold in percentage to be considered"
+             " very likely when profile is available"),
+    cl::init(51), cl::Hidden);
 
 char MachineBranchProbabilityInfo::ID = 0;
 

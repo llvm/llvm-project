@@ -42,6 +42,10 @@ public:
   }
 
   template <typename T> Error writeObject(const T &Obj) {
+    static_assert(!std::is_pointer<T>::value,
+                  "writeObject should not be used with pointers, to write "
+                  "the pointed-to value dereference the pointer before calling "
+                  "writeObject");
     return writeBytes(
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&Obj), sizeof(T)));
   }

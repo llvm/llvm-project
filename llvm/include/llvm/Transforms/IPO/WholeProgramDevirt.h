@@ -15,6 +15,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 #define LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H
 
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -210,6 +212,11 @@ void setAfterReturnValues(MutableArrayRef<VirtualCallTarget> Targets,
                           int64_t &OffsetByte, uint64_t &OffsetBit);
 
 } // end namespace wholeprogramdevirt
+
+struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
+  PreservedAnalyses run(Module &M);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_WHOLEPROGRAMDEVIRT_H

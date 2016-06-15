@@ -89,8 +89,6 @@ public:
     return true;
   }
 
-  bool operator!=(const StreamRef &Other) const { return !(*this == Other); }
-
 private:
   const StreamInterface *Stream;
   uint32_t ViewOffset;

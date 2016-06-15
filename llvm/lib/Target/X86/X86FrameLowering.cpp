@@ -1436,7 +1436,8 @@ X86FrameLowering::getPSPSlotOffsetFromSP(const MachineFunction &MF) const {
   // getFrameIndexReferenceFromSP has an out ref parameter for the stack
   // pointer register; pass a dummy that we ignore
   unsigned SPReg;
-  int Offset = getFrameIndexReferenceFromSP(MF, Info.PSPSymFrameIdx, SPReg);
+  int Offset = *getFrameIndexReferenceFromSP(MF, Info.PSPSymFrameIdx, SPReg,
+                                             /*AllowSPAdjustment*/ true);
   assert(Offset >= 0);
   return static_cast<unsigned>(Offset);
 }
@@ -1722,57 +1723,60 @@ int X86FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 }
 
 // Simplified from getFrameIndexReference keeping only StackPointer cases
-int X86FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
-                                                   int FI,
-                                                   unsigned &FrameReg) const {
+Optional<int>
+X86FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
+                                               int FI, unsigned &FrameReg,
+                                               bool AllowSPAdjustment) const {
   const MachineFrameInfo *MFI = MF.getFrameInfo();
   // Does not include any dynamic realign.
   const uint64_t StackSize = MFI->getStackSize();
-  {
-#ifndef NDEBUG
-    // LLVM arranges the stack as follows:
-    //   ...
-    //   ARG2
-    //   ARG1
-    //   RETADDR
-    //   PUSH RBP   <-- RBP points here
-    //   PUSH CSRs
-    //   ~~~~~~~    <-- possible stack realignment (non-win64)
-    //   ...
-    //   STACK OBJECTS
-    //   ...        <-- RSP after prologue points here
-    //   ~~~~~~~    <-- possible stack realignment (win64)
-    //
-    // if (hasVarSizedObjects()):
-    //   ...        <-- "base pointer" (ESI/RBX) points here
-    //   DYNAMIC ALLOCAS
-    //   ...        <-- RSP points here
-    //
-    // Case 1: In the simple case of no stack realignment and no dynamic
-    // allocas, both "fixed" stack objects (arguments and CSRs) are addressable
-    // with fixed offsets from RSP.
-    //
-    // Case 2: In the case of stack realignment with no dynamic allocas, fixed
-    // stack objects are addressed with RBP and regular stack objects with RSP.
-    //
-    // Case 3: In the case of dynamic allocas and stack realignment, RSP is used
-    // to address stack arguments for outgoing calls and nothing else. The "base
-    // pointer" points to local variables, and RBP points to fixed objects.
-    //
-    // In cases 2 and 3, we can only answer for non-fixed stack objects, and the
-    // answer we give is relative to the SP after the prologue, and not the
-    // SP in the middle of the function.
+  // LLVM arranges the stack as follows:
+  //   ...
+  //   ARG2
+  //   ARG1
+  //   RETADDR
+  //   PUSH RBP   <-- RBP points here
+  //   PUSH CSRs
+  //   ~~~~~~~    <-- possible stack realignment (non-win64)
+  //   ...
+  //   STACK OBJECTS
+  //   ...        <-- RSP after prologue points here
+  //   ~~~~~~~    <-- possible stack realignment (win64)
+  //
+  // if (hasVarSizedObjects()):
+  //   ...        <-- "base pointer" (ESI/RBX) points here
+  //   DYNAMIC ALLOCAS
+  //   ...        <-- RSP points here
+  //
+  // Case 1: In the simple case of no stack realignment and no dynamic
+  // allocas, both "fixed" stack objects (arguments and CSRs) are addressable
+  // with fixed offsets from RSP.
+  //
+  // Case 2: In the case of stack realignment with no dynamic allocas, fixed
+  // stack objects are addressed with RBP and regular stack objects with RSP.
+  //
+  // Case 3: In the case of dynamic allocas and stack realignment, RSP is used
+  // to address stack arguments for outgoing calls and nothing else. The "base
+  // pointer" points to local variables, and RBP points to fixed objects.
+  //
+  // In cases 2 and 3, we can only answer for non-fixed stack objects, and the
+  // answer we give is relative to the SP after the prologue, and not the
+  // SP in the middle of the function.
 
-    assert((!MFI->isFixedObjectIndex(FI) || !TRI->needsStackRealignment(MF) ||
-            STI.isTargetWin64()) &&
-           "offset from fixed object to SP is not static");
+  if (MFI->isFixedObjectIndex(FI) && TRI->needsStackRealignment(MF) &&
+      !STI.isTargetWin64())
+    return None;
 
-    // We don't handle tail calls, and shouldn't be seeing them either.
-    int TailCallReturnAddrDelta =
-        MF.getInfo<X86MachineFunctionInfo>()->getTCReturnAddrDelta();
-    assert(!(TailCallReturnAddrDelta < 0) && "we don't handle this case!");
-#endif
-  }
+  // If !hasReservedCallFrame the function might have SP adjustement in the
+  // body.  So, even though the offset is statically known, it depends on where
+  // we are in the function.
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  if (!AllowSPAdjustment && !TFI->hasReservedCallFrame(MF))
+    return None;
+
+  // We don't handle tail calls, and shouldn't be seeing them either.
+  assert(MF.getInfo<X86MachineFunctionInfo>()->getTCReturnAddrDelta() >= 0 &&
+         "we don't handle this case!");
 
   // Fill in FrameReg output argument.
   FrameReg = TRI->getStackRegister();

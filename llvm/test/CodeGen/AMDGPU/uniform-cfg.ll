@@ -259,16 +259,17 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; SI: buffer_store
 ; SI: {{^}}[[EXIT]]:
 ; SI: s_endpgm
-define void @icmp_users_different_blocks(i32 %cond, i32 addrspace(1)* %out) {
+define void @icmp_users_different_blocks(i32 %cond0, i32 %cond1, i32 addrspace(1)* %out) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #0
-  %tmp1 = icmp sgt i32 %cond, 0
-  br i1 %tmp1, label %bb2, label %bb9
+  %cmp0 = icmp sgt i32 %cond0, 0
+  %cmp1 = icmp sgt i32 %cond1, 0
+  br i1 %cmp0, label %bb2, label %bb9
 
 bb2:                                              ; preds = %bb
-  %tmp2 = sext i1 %tmp1 to i32
+  %tmp2 = sext i1 %cmp1 to i32
   %tmp3 = add i32 %tmp2, %tmp
-  br i1 %tmp1, label %bb9, label %bb7
+  br i1 %cmp1, label %bb9, label %bb7
 
 bb7:                                              ; preds = %bb5
   store i32 %tmp3, i32 addrspace(1)* %out

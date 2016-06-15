@@ -109,7 +109,7 @@ struct ResolutionInfo {
   uint64_t CommonSize = 0;
   unsigned CommonAlign = 0;
   bool IsLinkonceOdr = true;
-  bool UnnamedAddr = true;
+  GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::Global;
   GlobalValue::VisibilityTypes Visibility = GlobalValue::DefaultVisibility;
   bool CommonInternal = false;
   bool UseCommon = false;
@@ -551,7 +551,8 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
 
     sym.visibility = LDPV_DEFAULT;
     if (GV) {
-      Res.UnnamedAddr &= GV->hasUnnamedAddr();
+      Res.UnnamedAddr =
+          GlobalValue::getMinUnnamedAddr(Res.UnnamedAddr, GV->getUnnamedAddr());
       Res.IsLinkonceOdr &= GV->hasLinkOnceLinkage();
       Res.Visibility = getMinVisibility(Res.Visibility, GV->getVisibility());
       switch (GV->getVisibility()) {
@@ -690,10 +691,11 @@ getModuleSummaryIndexForFile(claimed_file &F) {
   return Obj.takeIndex();
 }
 
-static std::unique_ptr<Module> getModuleForFile(
-    LLVMContext &Context, claimed_file &F, const void *View, StringRef Name,
-    raw_fd_ostream *ApiFile, StringSet<> &Internalize, StringSet<> &Maybe,
-    std::vector<GlobalValue *> &Keep, StringMap<unsigned> &Realign) {
+static std::unique_ptr<Module>
+getModuleForFile(LLVMContext &Context, claimed_file &F, const void *View,
+                 StringRef Name, raw_fd_ostream *ApiFile,
+                 StringSet<> &Internalize, std::vector<GlobalValue *> &Keep,
+                 StringMap<unsigned> &Realign) {
   MemoryBufferRef BufferRef(StringRef((const char *)View, F.filesize), Name);
   ErrorOr<std::unique_ptr<object::IRObjectFile>> ObjOrErr =
       object::IRObjectFile::create(BufferRef, Context);
@@ -827,12 +829,9 @@ static std::unique_ptr<Module> getModuleForFile(
       break;
 
     case LDPR_PREVAILING_DEF_IRONLY_EXP: {
-      // We can only check for address uses after we merge the modules. The
-      // reason is that this GV might have a copy in another module
-      // and in that module the address might be significant, but that
-      // copy will be LDPR_PREEMPTED_IR.
-      Maybe.insert(GV->getName());
       Keep.push_back(GV);
+      if (canBeOmittedFromSymbolTable(GV))
+        Internalize.insert(GV->getName());
       break;
     }
     }
@@ -1149,11 +1148,11 @@ void CodeGen::runAll() {
 static void linkInModule(LLVMContext &Context, IRMover &L, claimed_file &F,
                          const void *View, StringRef Name,
                          raw_fd_ostream *ApiFile, StringSet<> &Internalize,
-                         StringSet<> &Maybe, bool SetName = false) {
+                         bool SetName = false) {
   std::vector<GlobalValue *> Keep;
   StringMap<unsigned> Realign;
-  std::unique_ptr<Module> M = getModuleForFile(
-      Context, F, View, Name, ApiFile, Internalize, Maybe, Keep, Realign);
+  std::unique_ptr<Module> M = getModuleForFile(Context, F, View, Name, ApiFile,
+                                               Internalize, Keep, Realign);
   if (!M.get())
     return;
   if (!options::triple.empty())
@@ -1204,7 +1203,7 @@ static void thinLTOBackendTask(claimed_file &F, const void *View,
   IRMover L(*NewModule.get());
 
   StringSet<> Dummy;
-  linkInModule(Context, L, F, View, Name, ApiFile, Dummy, Dummy, true);
+  linkInModule(Context, L, F, View, Name, ApiFile, Dummy, true);
   if (renameModuleForThinLTO(*NewModule, CombinedIndex))
     message(LDPL_FATAL, "Failed to rename module for ThinLTO");
 
@@ -1474,7 +1473,6 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
   IRMover L(*Combined);
 
   StringSet<> Internalize;
-  StringSet<> Maybe;
   for (claimed_file &F : Modules) {
     // RAII object to manage the file opening and releasing interfaces with
     // gold.
@@ -1482,21 +1480,12 @@ static ld_plugin_status allSymbolsReadHook(raw_fd_ostream *ApiFile) {
     const void *View = getSymbolsAndView(F);
     if (!View)
       continue;
-    linkInModule(Context, L, F, View, F.name, ApiFile, Internalize, Maybe);
+    linkInModule(Context, L, F, View, F.name, ApiFile, Internalize);
   }
 
   for (const auto &Name : Internalize) {
     GlobalValue *GV = Combined->getNamedValue(Name.first());
     if (GV)
-      internalize(*GV);
-  }
-
-  for (const auto &Name : Maybe) {
-    GlobalValue *GV = Combined->getNamedValue(Name.first());
-    if (!GV)
-      continue;
-    GV->setLinkage(GlobalValue::LinkOnceODRLinkage);
-    if (canBeOmittedFromSymbolTable(GV))
       internalize(*GV);
   }
 

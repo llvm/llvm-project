@@ -1637,7 +1637,7 @@ void MergeFunctions::replaceDirectCallers(Function *Old, Function *New) {
 
 // Replace G with an alias to F if possible, or else a thunk to F. Deletes G.
 void MergeFunctions::writeThunkOrAlias(Function *F, Function *G) {
-  if (HasGlobalAliases && G->hasUnnamedAddr()) {
+  if (HasGlobalAliases && G->hasGlobalUnnamedAddr()) {
     if (G->hasExternalLinkage() || G->hasLocalLinkage() ||
         G->hasWeakLinkage()) {
       writeAlias(F, G);

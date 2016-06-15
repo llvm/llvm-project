@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_format_xyzw v[0:3], off, s[0:3], 0
@@ -27,11 +27,15 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs_large:
-;CHECK-DAG: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 61 offset:4095
-;CHECK-DAG: s_movk_i32 [[OFS1:s[0-9]+]], 0x7fff
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS1]] offset:4093
-;CHECK: s_mov_b32 [[OFS2:s[0-9]+]], 0x8fff
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS2]] offset:1
+;SICI: v_mov_b32_e32 [[VOFS:v[0-9]+]], 0x103c
+;SICI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, [[VOFS]], s[0:3], 0 offen
+;SICI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 offen
+;VI-DAG: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 61 offset:4095
+;VI-DAG: s_movk_i32 [[OFS1:s[0-9]+]], 0x7fff
+;VI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS1]] offset:4093
+;SICI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 offen
+;VI: s_mov_b32 [[OFS2:s[0-9]+]], 0x8fff
+;VI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS2]] offset:1
 ;CHECK: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_large(<4 x i32> inreg) {
 main_body:
@@ -44,11 +48,11 @@ main_body:
 }
 
 ;CHECK-LABEL: {{^}}buffer_load_immoffs_reuse:
-;CHECK: s_movk_i32 [[OFS:s[0-9]+]], 0xfff
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS]] offset:65
-;CHECK-NOT: s_mov
-;CHECK: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS]] offset:81
-;CHECK: s_waitcnt
+;VI: s_movk_i32 [[OFS:s[0-9]+]], 0xfff
+;VI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS]] offset:65
+;VI-NOT: s_mov
+;VI: buffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], [[OFS]] offset:81
+;VI: s_waitcnt
 define amdgpu_ps <4 x float> @buffer_load_immoffs_reuse(<4 x i32> inreg) {
 main_body:
   %d.0 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %0, i32 0, i32 4160, i1 0, i1 0)

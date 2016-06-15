@@ -223,12 +223,12 @@ class AttributeSetImpl final
 
 private:
   LLVMContext &Context;
-  unsigned NumAttrs; ///< Number of entries in this set.
+  unsigned NumSlots; ///< Number of entries in this set.
   /// Bitset with a bit for each available attribute Attribute::AttrKind.
   uint64_t AvailableFunctionAttrs;
 
   // Helper fn for TrailingObjects class.
-  size_t numTrailingObjects(OverloadToken<IndexAttrPair>) { return NumAttrs; }
+  size_t numTrailingObjects(OverloadToken<IndexAttrPair>) { return NumSlots; }
 
   /// \brief Return a pointer to the IndexAttrPair for the specified slot.
   const IndexAttrPair *getNode(unsigned Slot) const {
@@ -240,29 +240,29 @@ private:
   AttributeSetImpl(const AttributeSetImpl &) = delete;
 public:
   AttributeSetImpl(LLVMContext &C,
-                   ArrayRef<std::pair<unsigned, AttributeSetNode *> > Attrs)
-      : Context(C), NumAttrs(Attrs.size()), AvailableFunctionAttrs(0) {
+                   ArrayRef<std::pair<unsigned, AttributeSetNode *> > Slots)
+      : Context(C), NumSlots(Slots.size()), AvailableFunctionAttrs(0) {
     static_assert(Attribute::EndAttrKinds <=
                       sizeof(AvailableFunctionAttrs) * CHAR_BIT,
                   "Too many attributes");
 
 #ifndef NDEBUG
-    if (Attrs.size() >= 2) {
-      for (const std::pair<unsigned, AttributeSetNode *> *i = Attrs.begin() + 1,
-                                                         *e = Attrs.end();
+    if (Slots.size() >= 2) {
+      for (const std::pair<unsigned, AttributeSetNode *> *i = Slots.begin() + 1,
+                                                         *e = Slots.end();
            i != e; ++i) {
         assert((i-1)->first <= i->first && "Attribute set not ordered!");
       }
     }
 #endif
     // There's memory after the node where we can store the entries in.
-    std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<IndexAttrPair>());
+    std::copy(Slots.begin(), Slots.end(), getTrailingObjects<IndexAttrPair>());
 
     // Initialize AvailableFunctionAttrs summary bitset.
-    if (NumAttrs > 0) {
+    if (NumSlots > 0) {
       static_assert(AttributeSet::FunctionIndex == ~0u,
                     "FunctionIndex should be biggest possible index");
-      const std::pair<unsigned, AttributeSetNode *> &Last = Attrs.back();
+      const std::pair<unsigned, AttributeSetNode *> &Last = Slots.back();
       if (Last.first == AttributeSet::FunctionIndex) {
         const AttributeSetNode *Node = Last.second;
         for (AttributeSetNode::iterator I = Node->begin(), E = Node->end();
@@ -279,8 +279,10 @@ public:
   /// \brief Get the context that created this AttributeSetImpl.
   LLVMContext &getContext() { return Context; }
 
-  /// \brief Return the number of attributes this AttributeSet contains.
-  unsigned getNumAttributes() const { return NumAttrs; }
+  /// \brief Return the number of slots used in this attribute list. This is
+  /// the number of arguments that have an attribute set on them (including the
+  /// function itself).
+  unsigned getNumSlots() const { return NumSlots; }
 
   /// \brief Get the index of the given "slot" in the AttrNodes list. This index
   /// is the index of the return, parameter, or function object that the
@@ -314,7 +316,7 @@ public:
   iterator end(unsigned Slot) const { return getSlotNode(Slot)->end(); }
 
   void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, makeArrayRef(getNode(0), getNumAttributes()));
+    Profile(ID, makeArrayRef(getNode(0), getNumSlots()));
   }
   static void Profile(FoldingSetNodeID &ID,
                       ArrayRef<std::pair<unsigned, AttributeSetNode*> > Nodes) {
