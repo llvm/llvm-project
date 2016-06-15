@@ -33,7 +33,7 @@ int main()
         assert(l.size() == 0);
         assert(std::distance(l.begin(), l.end()) == 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l;
         assert(l.size() == 0);

@@ -38,7 +38,7 @@ int main()
         assert(l2.get_allocator() == other_allocator<int>(-2));
     }
 #endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l(3, 2);
         std::list<int, min_allocator<int>> l2 = l;

@@ -26,7 +26,6 @@
 
 namespace lldb_private {
     class Error;
-    class Module;
     class Scalar;
 
 namespace process_linux {
@@ -156,18 +155,12 @@ namespace process_linux {
         /// launching a child process.
         struct LaunchArgs
         {
-            LaunchArgs(Module *module,
-                    char const **argv,
-                    char const **envp,
-                    const FileSpec &stdin_file_spec,
-                    const FileSpec &stdout_file_spec,
-                    const FileSpec &stderr_file_spec,
-                    const FileSpec &working_dir,
-                    const ProcessLaunchInfo &launch_info);
+            LaunchArgs(char const **argv, char const **envp, const FileSpec &stdin_file_spec,
+                       const FileSpec &stdout_file_spec, const FileSpec &stderr_file_spec, const FileSpec &working_dir,
+                       const ProcessLaunchInfo &launch_info);
 
             ~LaunchArgs();
 
-            Module *m_module;                  // The executable image to launch.
             char const **m_argv;               // Process arguments.
             char const **m_envp;               // Process environment.
             const FileSpec m_stdin_file_spec;  // Redirect stdin if not empty.
@@ -189,7 +182,6 @@ namespace process_linux {
         void
         LaunchInferior (
             MainLoop &mainloop,
-            Module *module,
             char const *argv[],
             char const *envp[],
             const FileSpec &stdin_file_spec,

@@ -262,7 +262,7 @@ int __kmp_place_core_offset = 0;
 int __kmp_place_num_threads_per_core = 0;
 
 kmp_tasking_mode_t __kmp_tasking_mode = tskm_task_teams;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 kmp_int32 __kmp_max_task_priority = 0;
 #endif
 

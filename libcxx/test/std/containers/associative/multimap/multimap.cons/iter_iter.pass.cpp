@@ -48,7 +48,7 @@ int main()
     assert(*next(m.begin(), 7) == V(3, 1.5));
     assert(*next(m.begin(), 8) == V(3, 2));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::pair<const int, double> V;
     V ar[] =

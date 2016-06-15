@@ -679,7 +679,7 @@ typedef void    (*microtask_t)( int *gtid, int *npr, ... );
 #endif
 
 // Enable dynamic user lock
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 # define KMP_USE_DYNAMIC_LOCK 1
 #endif
 

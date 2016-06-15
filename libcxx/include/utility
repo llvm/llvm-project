@@ -310,9 +310,18 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
                                       )
             : first(__p.first), second(__p.second) {}
 
-#if !defined(_LIBCPP_CXX03_LANG)
-    _LIBCPP_INLINE_VISIBILITY pair(const pair& __p) = default;
-    _LIBCPP_INLINE_VISIBILITY pair(pair&& __p) = default;
+#if !defined(_LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS) && _LIBCPP_TRIVIAL_PAIR_COPY_CTOR
+    _LIBCPP_INLINE_VISIBILITY
+    pair(const pair& __p) = default;
+#elif !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) || !_LIBCPP_TRIVIAL_PAIR_COPY_CTOR
+    _LIBCPP_INLINE_VISIBILITY
+    pair(const pair& __p)
+        _NOEXCEPT_(is_nothrow_copy_constructible<first_type>::value &&
+                   is_nothrow_copy_constructible<second_type>::value)
+        : first(__p.first),
+          second(__p.second)
+    {
+    }
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -343,6 +352,19 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
                                     is_convertible<_U2, _T2>::value>::type* = 0)
             : first(_VSTD::forward<_U1>(__p.first)),
               second(_VSTD::forward<_U2>(__p.second)) {}
+
+#ifndef _LIBCPP_HAS_NO_DEFAULTED_FUNCTIONS
+    _LIBCPP_INLINE_VISIBILITY
+    pair(pair&& __p) = default;
+#else
+    _LIBCPP_INLINE_VISIBILITY
+    pair(pair&& __p) _NOEXCEPT_(is_nothrow_move_constructible<first_type>::value &&
+                                is_nothrow_move_constructible<second_type>::value)
+        : first(_VSTD::forward<first_type>(__p.first)),
+          second(_VSTD::forward<second_type>(__p.second))
+    {
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     pair&

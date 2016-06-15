@@ -25,15 +25,14 @@
 // Other libraries and framework includes
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/Error.h"
-#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/State.h"
-#include "lldb/Host/common/NativeBreakpoint.h"
-#include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Target/Platform.h"
+#include "lldb/Host/common/NativeBreakpoint.h"
+#include "lldb/Host/common/NativeRegisterContext.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
@@ -110,33 +109,26 @@ static bool ProcessVmReadvSupported()
 
 namespace
 {
-    Error
-    ResolveProcessArchitecture (lldb::pid_t pid, Platform &platform, ArchSpec &arch)
-    {
-        // Grab process info for the running process.
-        ProcessInstanceInfo process_info;
-        if (!platform.GetProcessInfo (pid, process_info))
-            return Error("failed to get process info");
+Error
+ResolveProcessArchitecture(lldb::pid_t pid, ArchSpec &arch)
+{
+    // Grab process info for the running process.
+    ProcessInstanceInfo process_info;
+    if (!Host::GetProcessInfo(pid, process_info))
+        return Error("failed to get process info");
 
-        // Resolve the executable module.
-        ModuleSP exe_module_sp;
-        ModuleSpec exe_module_spec(process_info.GetExecutableFile(), process_info.GetArchitecture());
-        FileSpecList executable_search_paths (Target::GetDefaultExecutableSearchPaths ());
-        Error error = platform.ResolveExecutable(
-            exe_module_spec,
-            exe_module_sp,
-            executable_search_paths.GetSize () ? &executable_search_paths : NULL);
+    // Resolve the executable module.
+    ModuleSpecList module_specs;
+    if (!ObjectFile::GetModuleSpecifications(process_info.GetExecutableFile(), 0, 0, module_specs))
+        return Error("failed to get module specifications");
+    assert(module_specs.GetSize() == 1);
 
-        if (!error.Success ())
-            return error;
-
-        // Check if we've got our architecture from the exe_module.
-        arch = exe_module_sp->GetArchitecture ();
-        if (arch.IsValid ())
-            return Error();
-        else
-            return Error("failed to retrieve a valid architecture from the exe module");
-    }
+    arch = module_specs.GetModuleSpecRefAtIndex(0).GetArchitecture();
+    if (arch.IsValid())
+        return Error();
+    else
+        return Error("failed to retrieve a valid architecture from the exe module");
+}
 
     void
     DisplayBytes (StreamString &s, void *bytes, uint32_t count)
@@ -238,16 +230,10 @@ EnsureFDFlags(int fd, int flags)
     return error;
 }
 
-NativeProcessLinux::LaunchArgs::LaunchArgs(Module *module,
-                                       char const **argv,
-                                       char const **envp,
-                                       const FileSpec &stdin_file_spec,
-                                       const FileSpec &stdout_file_spec,
-                                       const FileSpec &stderr_file_spec,
-                                       const FileSpec &working_dir,
-                                       const ProcessLaunchInfo &launch_info)
-    : m_module(module),
-      m_argv(argv),
+NativeProcessLinux::LaunchArgs::LaunchArgs(char const **argv, char const **envp, const FileSpec &stdin_file_spec,
+                                           const FileSpec &stdout_file_spec, const FileSpec &stderr_file_spec,
+                                           const FileSpec &working_dir, const ProcessLaunchInfo &launch_info)
+    : m_argv(argv),
       m_envp(envp),
       m_stdin_file_spec(stdin_file_spec),
       m_stdout_file_spec(stdout_file_spec),
@@ -273,15 +259,7 @@ NativeProcessProtocol::Launch (
 {
     Log *log (GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
 
-    lldb::ModuleSP exe_module_sp;
-    PlatformSP platform_sp (Platform::GetHostPlatform ());
-    Error error = platform_sp->ResolveExecutable(
-            ModuleSpec(launch_info.GetExecutableFile(), launch_info.GetArchitecture()),
-            exe_module_sp,
-            nullptr);
-
-    if (! error.Success())
-        return error;
+    Error error;
 
     // Verify the working directory is valid if one was specified.
     FileSpec working_dir{launch_info.GetWorkingDirectory()};
@@ -356,7 +334,6 @@ NativeProcessProtocol::Launch (
 
     std::static_pointer_cast<NativeProcessLinux> (native_process_sp)->LaunchInferior (
             mainloop,
-            exe_module_sp.get(),
             launch_info.GetArguments ().GetConstArgumentVector (),
             launch_info.GetEnvironmentEntries ().GetConstArgumentVector (),
             stdin_file_spec,
@@ -390,15 +367,9 @@ NativeProcessProtocol::Attach (
     if (log && log->GetMask ().Test (POSIX_LOG_VERBOSE))
         log->Printf ("NativeProcessLinux::%s(pid = %" PRIi64 ")", __FUNCTION__, pid);
 
-    // Grab the current platform architecture.  This should be Linux,
-    // since this code is only intended to run on a Linux host.
-    PlatformSP platform_sp (Platform::GetHostPlatform ());
-    if (!platform_sp)
-        return Error("failed to get a valid default platform");
-
     // Retrieve the architecture for the running process.
     ArchSpec process_arch;
-    Error error = ResolveProcessArchitecture (pid, *platform_sp.get (), process_arch);
+    Error error = ResolveProcessArchitecture(pid, process_arch);
     if (!error.Success ())
         return error;
 
@@ -434,7 +405,6 @@ NativeProcessLinux::NativeProcessLinux () :
 void
 NativeProcessLinux::LaunchInferior (
     MainLoop &mainloop,
-    Module *module,
     const char *argv[],
     const char *envp[],
     const FileSpec &stdin_file_spec,
@@ -449,18 +419,10 @@ NativeProcessLinux::LaunchInferior (
     if (! m_sigchld_handle)
         return;
 
-    if (module)
-        m_arch = module->GetArchitecture ();
-
     SetState (eStateLaunching);
 
     std::unique_ptr<LaunchArgs> args(
-        new LaunchArgs(module, argv, envp,
-                       stdin_file_spec,
-                       stdout_file_spec,
-                       stderr_file_spec,
-                       working_dir,
-                       launch_info));
+        new LaunchArgs(argv, envp, stdin_file_spec, stdout_file_spec, stderr_file_spec, working_dir, launch_info));
 
     Launch(args.get(), error);
 }
@@ -477,37 +439,11 @@ NativeProcessLinux::AttachToInferior (MainLoop &mainloop, lldb::pid_t pid, Error
     if (! m_sigchld_handle)
         return;
 
-    // We can use the Host for everything except the ResolveExecutable portion.
-    PlatformSP platform_sp = Platform::GetHostPlatform ();
-    if (!platform_sp)
-    {
-        if (log)
-            log->Printf ("NativeProcessLinux::%s (pid = %" PRIi64 "): no default platform set", __FUNCTION__, pid);
-        error.SetErrorString ("no default platform available");
-        return;
-    }
-
-    // Gather info about the process.
-    ProcessInstanceInfo process_info;
-    if (!platform_sp->GetProcessInfo (pid, process_info))
-    {
-        if (log)
-            log->Printf ("NativeProcessLinux::%s (pid = %" PRIi64 "): failed to get process info", __FUNCTION__, pid);
-        error.SetErrorString ("failed to get process info");
-        return;
-    }
-
-    // Resolve the executable module
-    ModuleSP exe_module_sp;
-    FileSpecList executable_search_paths (Target::GetDefaultExecutableSearchPaths());
-    ModuleSpec exe_module_spec(process_info.GetExecutableFile(), process_info.GetArchitecture());
-    error = platform_sp->ResolveExecutable(exe_module_spec, exe_module_sp,
-                                           executable_search_paths.GetSize() ? &executable_search_paths : NULL);
+    error = ResolveProcessArchitecture(pid, m_arch);
     if (!error.Success())
         return;
 
     // Set the architecture to the exe architecture.
-    m_arch = exe_module_sp->GetArchitecture();
     if (log)
         log->Printf ("NativeProcessLinux::%s (pid = %" PRIi64 ") detected architecture %s", __FUNCTION__, pid, m_arch.GetArchitectureName ());
 
@@ -758,6 +694,7 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
     if (log)
         log->Printf ("NativeProcessLinux::%s() adding pid = %" PRIu64, __FUNCTION__, pid);
 
+    ResolveProcessArchitecture(m_pid, m_arch);
     NativeThreadLinuxSP thread_sp = AddThread(pid);
     assert (thread_sp && "AddThread() returned a nullptr thread");
     thread_sp->SetStoppedBySignal(SIGSTOP);
@@ -2165,49 +2102,8 @@ NativeProcessLinux::DeallocateMemory (lldb::addr_t addr)
 lldb::addr_t
 NativeProcessLinux::GetSharedLibraryInfoAddress ()
 {
-#if 1
     // punt on this for now
     return LLDB_INVALID_ADDRESS;
-#else
-    // Return the image info address for the exe module
-#if 1
-    Log *log (GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
-
-    ModuleSP module_sp;
-    Error error = GetExeModuleSP (module_sp);
-    if (error.Fail ())
-    {
-         if (log)
-            log->Warning ("NativeProcessLinux::%s failed to retrieve exe module: %s", __FUNCTION__, error.AsCString ());
-        return LLDB_INVALID_ADDRESS;
-    }
-
-    if (module_sp == nullptr)
-    {
-         if (log)
-            log->Warning ("NativeProcessLinux::%s exe module returned was NULL", __FUNCTION__);
-         return LLDB_INVALID_ADDRESS;
-    }
-
-    ObjectFileSP object_file_sp = module_sp->GetObjectFile ();
-    if (object_file_sp == nullptr)
-    {
-         if (log)
-            log->Warning ("NativeProcessLinux::%s exe module returned a NULL object file", __FUNCTION__);
-         return LLDB_INVALID_ADDRESS;
-    }
-
-    return obj_file_sp->GetImageInfoAddress();
-#else
-    Target *target = &GetTarget();
-    ObjectFile *obj_file = target->GetExecutableModule()->GetObjectFile();
-    Address addr = obj_file->GetImageInfoAddress(target);
-
-    if (addr.IsValid())
-        return addr.GetLoadAddress(target);
-    return LLDB_INVALID_ADDRESS;
-#endif
-#endif // punt on this for now
 }
 
 size_t

@@ -9,6 +9,10 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
+// TODO(EricWF) Investigate why typeid(...).name() returns a different string
+// on GCC 4.9 but not newer GCCs.
+// XFAIL: gcc-4.9
+
 // THIS TESTS C++03 EXTENSIONS.
 
 // <mutex>
@@ -21,9 +25,9 @@
 
 #define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
 #include <mutex>
+#include <string>
 #include <typeinfo>
 #include <cassert>
-#include <iostream>
 
 int main() {
     const std::string expect = "NSt3__110lock_guardIJNS_5mutexEEEE";

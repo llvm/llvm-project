@@ -43,12 +43,12 @@ int main()
         v.push_back(1);
         assert(is_contiguous_container_asan_correct(v));
         v.shrink_to_fit();
-        assert(v.capacity() == 200);
+        LIBCPP_ASSERT(v.capacity() == 200); // assumes libc++'s 2x growth factor
         assert(v.size() == 101);
         assert(is_contiguous_container_asan_correct(v));
     }
 #endif
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int>> v(100);
         v.push_back(1);

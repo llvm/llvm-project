@@ -51,7 +51,7 @@ int main()
         for (std::list<int>::const_iterator i = l.begin(), e = l.end(); i != e; ++i, ++j)
             assert(*i == j);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         int a[] = {0, 1, 2, 3};
         std::list<int, min_allocator<int>> l(input_iterator<const int*>(a),

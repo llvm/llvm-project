@@ -348,16 +348,30 @@ __kmp_itt_metadata_loop( ident_t * loc, kmp_uint64 sched_type, kmp_uint64 iterat
     }
 
     __itt_string_handle * string_handle = __itt_string_handle_create( "omp_metadata_loop");
-    kmp_str_loc_t str_loc = __kmp_str_loc_init( loc->psource, 1 );
+
+    // Parse line and column from psource string: ";file;func;line;col;;"
+    char * s_line;
+    char * s_col;
+    KMP_DEBUG_ASSERT(loc->psource);
+#ifdef __cplusplus
+    s_line = strchr((char*)loc->psource, ';');
+#else
+    s_line = strchr(loc->psource, ';');
+#endif
+    KMP_DEBUG_ASSERT(s_line);
+    s_line = strchr(s_line + 1, ';');   // 2-nd semicolon
+    KMP_DEBUG_ASSERT(s_line);
+    s_line = strchr(s_line + 1, ';');   // 3-rd semicolon
+    KMP_DEBUG_ASSERT(s_line);
+    s_col = strchr(s_line + 1, ';');    // 4-th semicolon
+    KMP_DEBUG_ASSERT(s_col);
 
     kmp_uint64 loop_data[ 5 ];
-    loop_data[ 0 ] = str_loc.line;
-    loop_data[ 1 ] = str_loc.col;
+    loop_data[ 0 ] = atoi(s_line + 1); // read line
+    loop_data[ 1 ] = atoi(s_col + 1);  // read column
     loop_data[ 2 ] = sched_type;
     loop_data[ 3 ] = iterations;
     loop_data[ 4 ] = chunk;
-
-    __kmp_str_loc_free( &str_loc );
 
     __itt_metadata_add(metadata_domain, __itt_null, string_handle, __itt_metadata_u64, 5, loop_data);
 #endif

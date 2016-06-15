@@ -69,7 +69,7 @@ int main()
         assert(mo.size() == 0);
         assert(distance(mo.begin(), mo.end()) == 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef test_compare<std::less<int> > C;
         typedef min_allocator<V> A;

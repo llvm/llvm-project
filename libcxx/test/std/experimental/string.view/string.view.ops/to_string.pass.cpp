@@ -30,7 +30,7 @@ void test ( const CharT *s ) {
     assert ( sv1.size() == str1.size ());
     assert ( std::char_traits<CharT>::compare ( sv1.data(), str1.data(),  sv1.size()) == 0 );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     auto str2 = sv1.to_string(min_allocator<CharT>());
     assert ( sv1.size() == str2.size ());
     assert ( std::char_traits<CharT>::compare ( sv1.data(), str2.data(), sv1.size()) == 0 );
@@ -44,7 +44,7 @@ void test ( const CharT *s ) {
     assert ( sv1.size() == 0);
     assert ( sv1.size() == str1.size ());
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     auto str2 = sv1.to_string(min_allocator<CharT>());
     assert ( sv1.size() == str2.size ());
 #endif
@@ -62,7 +62,7 @@ int main () {
     test ( L"a" );
     test ( L"" );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test ( u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE" );
     test ( u"ABCDE" );
     test ( u"a" );

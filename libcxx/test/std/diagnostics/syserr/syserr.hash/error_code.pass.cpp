@@ -16,11 +16,11 @@
 //     size_t operator()(T val) const;
 // };
 
-// Not very portable
-
 #include <system_error>
 #include <cassert>
 #include <type_traits>
+
+#include "test_macros.h"
 
 void
 test(int i)
@@ -31,7 +31,9 @@ test(int i)
     static_assert((std::is_same<H::result_type, std::size_t>::value), "" );
     H h;
     T ec(i, std::system_category());
-    assert(h(ec) == i);
+    const std::size_t result = h(ec);
+    LIBCPP_ASSERT(result == i);
+    ((void)result); // Prevent unused warning
 }
 
 int main()

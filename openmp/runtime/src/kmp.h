@@ -313,7 +313,7 @@ enum sched_type {
 
     kmp_sch_static_steal              = 44,   /**< accessible only through KMP_SCHEDULE environment variable */
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     kmp_sch_static_balanced_chunked   = 45,   /**< static with chunk adjustment (e.g., simd) */
 #endif
 
@@ -369,7 +369,7 @@ enum sched_type {
     kmp_nm_ord_trapezoidal            = 199,
     kmp_nm_upper                      = 200,  /**< upper bound for nomerge values */
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     /* Support for OpenMP 4.5 monotonic and nonmonotonic schedule modifiers.
      * Since we need to distinguish the three possible cases (no modifier, monotonic modifier,
      * nonmonotonic modifier), we need separate bits for each modifier.
@@ -393,7 +393,7 @@ enum sched_type {
 # define SCHEDULE_HAS_NONMONOTONIC(s)  (((s) & kmp_sch_modifier_nonmonotonic) != 0)
 # define SCHEDULE_HAS_NO_MODIFIERS(s)  (((s) & (kmp_sch_modifier_nonmonotonic | kmp_sch_modifier_monotonic)) == 0)
 #else
-    /* By doing this we hope to avoid multiple tests on OMP_41_ENABLED. Compilers can now eliminate tests on compile time
+    /* By doing this we hope to avoid multiple tests on OMP_45_ENABLED. Compilers can now eliminate tests on compile time
      * constants and dead code that results from them, so we can leave code guarded by such an if in place.
      */
 # define SCHEDULE_WITHOUT_MODIFIERS(s) (s)
@@ -1697,7 +1697,7 @@ typedef struct dispatch_shared_info {
         dispatch_shared_info64_t  s64;
     } u;
     volatile kmp_uint32     buffer_index;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     volatile kmp_int32      doacross_buf_idx;  // teamwise index
     volatile kmp_uint32    *doacross_flags;    // shared array of iteration flags (0/1)
     kmp_int32               doacross_num_done; // count finished threads
@@ -1715,7 +1715,7 @@ typedef struct kmp_disp {
 
     dispatch_private_info_t *th_disp_buffer;
     kmp_int32                th_disp_index;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     kmp_int32                th_doacross_buf_idx; // thread's doacross buffer index
     volatile kmp_uint32     *th_doacross_flags;   // pointer to shared array of flags
     kmp_int64               *th_doacross_info;    // info on loop bounds
@@ -2036,7 +2036,7 @@ typedef enum kmp_tasking_mode {
 
 extern kmp_tasking_mode_t __kmp_tasking_mode;         /* determines how/when to execute tasks */
 extern kmp_int32 __kmp_task_stealing_constraint;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     extern kmp_int32 __kmp_max_task_priority; // Set via OMP_MAX_TASK_PRIORITY if specified, defaults to 0 otherwise
 #endif
 
@@ -2057,11 +2057,11 @@ extern kmp_int32 __kmp_task_stealing_constraint;
  */
 typedef kmp_int32 (* kmp_routine_entry_t)( kmp_int32, void * );
 
-#if OMP_40_ENABLED || OMP_41_ENABLED
+#if OMP_40_ENABLED || OMP_45_ENABLED
 typedef union kmp_cmplrdata {
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     kmp_int32           priority;           /**< priority specified by user for the task */
-#endif // OMP_41_ENABLED
+#endif // OMP_45_ENABLED
 #if OMP_40_ENABLED
     kmp_routine_entry_t destructors;        /* pointer to function to invoke deconstructors of firstprivate C++ objects */
 #endif // OMP_40_ENABLED
@@ -2076,7 +2076,7 @@ typedef struct kmp_task {                   /* GEH: Shouldn't this be aligned so
     void *              shareds;            /**< pointer to block of pointers to shared vars   */
     kmp_routine_entry_t routine;            /**< pointer to routine to call for executing task */
     kmp_int32           part_id;            /**< part id for the task                          */
-#if OMP_40_ENABLED || OMP_41_ENABLED
+#if OMP_40_ENABLED || OMP_45_ENABLED
     kmp_cmplrdata_t data1;                  /* Two known optional additions: destructors and priority */
     kmp_cmplrdata_t data2;                  /* Process destructors first, priority second */
     /* future data */
@@ -2177,7 +2177,7 @@ typedef struct kmp_tasking_flags {          /* Total struct must be exactly 32 b
     unsigned merged_if0  : 1;               /* no __kmpc_task_{begin/complete}_if0 calls in if0 code path */
 #if OMP_40_ENABLED
     unsigned destructors_thunk : 1;         /* set if the compiler creates a thunk to invoke destructors from the runtime */
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     unsigned proxy       : 1;               /* task is a proxy task (it will be executed outside the context of the RTL) */
     unsigned priority_specified :1;         /* set if the compiler provides priority setting for the task */
     unsigned reserved    : 10;              /* reserved for compiler use */
@@ -2230,7 +2230,7 @@ struct kmp_taskdata {                                 /* aligned during dynamic 
 #if OMPT_SUPPORT
     ompt_task_info_t        ompt_task_info;
 #endif
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     kmp_task_team_t *       td_task_team;
     kmp_int32               td_size_alloc;        // The size of task structure, including shareds etc.
 #endif
@@ -2280,7 +2280,7 @@ typedef struct kmp_base_task_team {
                                                    /* TRUE means tt_threads_data is set up and initialized */
     kmp_int32               tt_nproc;              /* #threads in team           */
     kmp_int32               tt_max_threads;        /* number of entries allocated for threads_data array */
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     kmp_int32               tt_found_proxy_tasks;  /* Have we found proxy tasks since last barrier */
 #endif
 
@@ -3102,24 +3102,12 @@ extern void __kmp_wait_yield_4_ptr( void * spinner, kmp_uint32 checker, kmp_uint
 class kmp_flag_32;
 class kmp_flag_64;
 class kmp_flag_oncore;
-extern void __kmp_wait_32(kmp_info_t *this_thr, kmp_flag_32 *flag, int final_spin
-#if USE_ITT_BUILD
-                   , void * itt_sync_obj
-#endif
-                   );
-extern void __kmp_release_32(kmp_flag_32 *flag);
 extern void __kmp_wait_64(kmp_info_t *this_thr, kmp_flag_64 *flag, int final_spin
 #if USE_ITT_BUILD
                    , void * itt_sync_obj
 #endif
                    );
 extern void __kmp_release_64(kmp_flag_64 *flag);
-extern void __kmp_wait_oncore(kmp_info_t *this_thr, kmp_flag_oncore *flag, int final_spin
-#if USE_ITT_BUILD
-                   , void * itt_sync_obj
-#endif
-                   );
-extern void __kmp_release_oncore(kmp_flag_oncore *flag);
 
 extern void __kmp_infinite_loop( void );
 
@@ -3422,7 +3410,7 @@ KMP_EXPORT void   __kmpc_end_ordered        ( ident_t *, kmp_int32 global_tid );
 KMP_EXPORT void   __kmpc_critical           ( ident_t *, kmp_int32 global_tid, kmp_critical_name * );
 KMP_EXPORT void   __kmpc_end_critical       ( ident_t *, kmp_int32 global_tid, kmp_critical_name * );
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 KMP_EXPORT void   __kmpc_critical_with_hint ( ident_t *, kmp_int32 global_tid, kmp_critical_name *, uintptr_t hint );
 #endif
 
@@ -3509,7 +3497,7 @@ KMP_EXPORT kmp_int32 __kmpc_cancellationpoint(ident_t* loc_ref, kmp_int32 gtid, 
 KMP_EXPORT kmp_int32 __kmpc_cancel_barrier(ident_t* loc_ref, kmp_int32 gtid);
 KMP_EXPORT int __kmp_get_cancellation_status(int cancel_kind);
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 
 KMP_EXPORT void __kmpc_proxy_task_completed( kmp_int32 gtid, kmp_task_t *ptask );
 KMP_EXPORT void __kmpc_proxy_task_completed_ooo ( kmp_task_t *ptask );
@@ -3535,7 +3523,7 @@ KMP_EXPORT void __kmpc_unset_nest_lock( ident_t *loc, kmp_int32 gtid, void **use
 KMP_EXPORT int __kmpc_test_lock( ident_t *loc, kmp_int32 gtid, void **user_lock );
 KMP_EXPORT int __kmpc_test_nest_lock( ident_t *loc, kmp_int32 gtid, void **user_lock );
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 KMP_EXPORT void __kmpc_init_lock_with_hint( ident_t *loc, kmp_int32 gtid, void **user_lock, uintptr_t hint );
 KMP_EXPORT void __kmpc_init_nest_lock_with_hint( ident_t *loc, kmp_int32 gtid, void **user_lock, uintptr_t hint );
 #endif
@@ -3591,7 +3579,7 @@ KMP_EXPORT void __kmpc_push_proc_bind( ident_t *loc, kmp_int32 global_tid, int p
 KMP_EXPORT void __kmpc_push_num_teams( ident_t *loc, kmp_int32 global_tid, kmp_int32 num_teams, kmp_int32 num_threads );
 KMP_EXPORT void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...);
 #endif
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 struct kmp_dim {  // loop bounds info casted to kmp_int64
     kmp_int64 lo; // lower
     kmp_int64 up; // upper

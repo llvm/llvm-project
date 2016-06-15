@@ -20,6 +20,8 @@
 #include <mutex>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct TestMutex {
     bool locked = false;
     TestMutex() = default;

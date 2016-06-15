@@ -189,7 +189,7 @@ int main()
         }
         assert(Counter_base::gConstructed == 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;

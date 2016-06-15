@@ -16,10 +16,12 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     char16_t c = u'\0';
     std::char_traits<char16_t>::assign(c, u'a');
     assert(c == u'a');

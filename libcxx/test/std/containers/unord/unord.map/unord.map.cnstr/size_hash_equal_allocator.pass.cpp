@@ -49,7 +49,7 @@ int main()
         assert(c.load_factor() == 0);
         assert(c.max_load_factor() == 1);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_map<NotConstructible, NotConstructible,
                                    test_hash<std::hash<NotConstructible> >,

@@ -35,6 +35,7 @@
 #endif
 
 /* Make a nice name for the standard version */
+#ifndef TEST_STD_VER
 #if  __cplusplus <= 199711L
 # define TEST_STD_VER 3
 #elif __cplusplus <= 201103L
@@ -43,6 +44,7 @@
 # define TEST_STD_VER 14
 #else
 # define TEST_STD_VER 99    // greater than current standard
+#endif
 #endif
 
 /* Features that were introduced in C++14 */

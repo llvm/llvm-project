@@ -47,7 +47,7 @@ int main()
         assert(std::distance(l.begin(), l.end()) == 20);
     }
 #endif  // __LIBCPP_MOVE
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l(5, 2);
         l.resize(2);

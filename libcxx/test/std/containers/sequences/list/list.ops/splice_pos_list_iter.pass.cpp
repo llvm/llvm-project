@@ -188,7 +188,7 @@ int main()
         assert(false);
     }
 #endif
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l1;
         std::list<int, min_allocator<int>> l2(a2, a2+1);

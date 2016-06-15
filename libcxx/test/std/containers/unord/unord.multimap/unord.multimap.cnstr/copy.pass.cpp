@@ -136,7 +136,7 @@ int main()
         assert(c.max_load_factor() == 1);
     }
 #endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multimap<int, std::string,
                                    test_hash<std::hash<int> >,

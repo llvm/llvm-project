@@ -479,7 +479,7 @@ __kmpc_omp_task_with_deps( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * new_ta
 #endif /* OMPT_SUPPORT && OMPT_TRACE */
 
     bool serial = current_task->td_flags.team_serial || current_task->td_flags.tasking_ser || current_task->td_flags.final;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     serial = serial && !(new_taskdata->td_flags.proxy == TASK_PROXY);
 #endif
 
@@ -505,7 +505,7 @@ __kmpc_omp_task_with_deps( ident_t *loc_ref, kmp_int32 gtid, kmp_task_t * new_ta
             return TASK_CURRENT_NOT_QUEUED;
         }
     } else {
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
         kmp_task_team_t * task_team = thread->th.th_task_team;
         if ( task_team && task_team->tt.tt_found_proxy_tasks )
            __kmpc_omp_wait_deps ( loc_ref, gtid, ndeps, dep_list, ndeps_noalias, noalias_dep_list );
@@ -551,7 +551,7 @@ __kmpc_omp_wait_deps ( ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps, kmp_de
     //   - dependences are not computed in serial teams (except if we have proxy tasks)
     //   - if the dephash is not yet created it means we have nothing to wait for
     bool ignore = current_task->td_flags.team_serial || current_task->td_flags.tasking_ser || current_task->td_flags.final;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
     ignore = ignore && thread->th.th_task_team->tt.tt_found_proxy_tasks == FALSE;
 #endif
     ignore = ignore || current_task->td_dephash == NULL;

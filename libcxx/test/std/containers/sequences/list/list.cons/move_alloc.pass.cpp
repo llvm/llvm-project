@@ -59,7 +59,7 @@ int main()
         assert(!l.empty());
         assert(l2.get_allocator() == other_allocator<MoveOnly>(4));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::list<MoveOnly, min_allocator<MoveOnly> > l(min_allocator<MoveOnly>{});
         std::list<MoveOnly, min_allocator<MoveOnly> > lo(min_allocator<MoveOnly>{});

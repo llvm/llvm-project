@@ -14,6 +14,8 @@
 #include <type_traits>
 #include <climits>
 
+#include "test_macros.h"
+
 enum E { V = INT_MIN };
 enum F { W = UINT_MAX };
 
@@ -29,7 +31,7 @@ int main()
     static_assert((std::is_same<std::underlying_type_t<F>, unsigned>::value), "");
 #endif
 
-#if __has_feature(cxx_strong_enums)
+#if TEST_STD_VER >= 11
     enum G : char { };
 
     static_assert((std::is_same<std::underlying_type<G>::type, char>::value),
@@ -37,5 +39,5 @@ int main()
 #if _LIBCPP_STD_VER > 11
     static_assert((std::is_same<std::underlying_type_t<G>, char>::value), "");
 #endif
-#endif // __has_feature(cxx_strong_enums)
+#endif // TEST_STD_VER >= 11
 }

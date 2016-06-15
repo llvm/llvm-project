@@ -434,7 +434,7 @@ void SymbolTable<ELFT>::addLazyArchive(
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Sym.getName());
   if (WasInserted) {
-    replaceBody<LazyArchive>(S, F, Sym, SymbolBody::UnknownType);
+    replaceBody<LazyArchive>(S, *F, Sym, SymbolBody::UnknownType);
     return;
   }
   if (!S->body()->isUndefined())
@@ -448,7 +448,7 @@ void SymbolTable<ELFT>::addLazyArchive(
   // this symbol as used when we added it to the symbol table, but we also need
   // to preserve its type. FIXME: Move the Type field to Symbol.
   if (S->isWeak()) {
-    replaceBody<LazyArchive>(S, F, Sym, S->body()->Type);
+    replaceBody<LazyArchive>(S, *F, Sym, S->body()->Type);
     return;
   }
   MemoryBufferRef MBRef = F->getMember(&Sym);
@@ -457,22 +457,25 @@ void SymbolTable<ELFT>::addLazyArchive(
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addLazyObject(StringRef Name, MemoryBufferRef MBRef) {
+void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
-    replaceBody<LazyObject>(S, Name, MBRef, SymbolBody::UnknownType);
+    replaceBody<LazyObject>(S, Name, Obj, SymbolBody::UnknownType);
     return;
   }
   if (!S->body()->isUndefined())
     return;
 
   // See comment for addLazyArchive above.
-  if (S->isWeak())
-    replaceBody<LazyObject>(S, Name, MBRef, S->body()->Type);
-  else
-    addFile(createObjectFile(MBRef));
+  if (S->isWeak()) {
+    replaceBody<LazyObject>(S, Name, Obj, S->body()->Type);
+  } else {
+    MemoryBufferRef MBRef = Obj.getBuffer();
+    if (!MBRef.getBuffer().empty())
+      addFile(createObjectFile(MBRef));
+  }
 }
 
 // Process undefined (-u) flags by loading lazy symbols named by those flags.

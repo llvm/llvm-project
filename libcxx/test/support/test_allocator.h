@@ -80,14 +80,14 @@ public:
         {assert(data_ >= 0); --alloc_count; ::operator delete((void*)p);}
     size_type max_size() const throw()
         {return UINT_MAX / sizeof(T);}
+#if TEST_STD_VER < 11
     void construct(pointer p, const T& val)
-        {::new(p) T(val);}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    void construct(pointer p, T&& val)
-        {::new(p) T(std::move(val));}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+        {::new(static_cast<void*>(p)) T(val);}
+#else
+    template <class U> void construct(pointer p, U&& val)
+        {::new(static_cast<void*>(p)) T(std::forward<U>(val));}
+#endif
     void destroy(pointer p) {p->~T();}
-
     friend bool operator==(const test_allocator& x, const test_allocator& y)
         {return x.data_ == y.data_;}
     friend bool operator!=(const test_allocator& x, const test_allocator& y)
@@ -140,12 +140,13 @@ public:
         {assert(data_ >= 0); --alloc_count; ::operator delete((void*)p); }
     size_type max_size() const throw()
         {return UINT_MAX / sizeof(T);}
+#if TEST_STD_VER < 11
     void construct(pointer p, const T& val)
-        {::new(p) T(val);}
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-    void construct(pointer p, T&& val)
-        {::new(p) T(std::move(val));}
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
+        {::new(static_cast<void*>(p)) T(val);}
+#else
+    template <class U> void construct(pointer p, U&& val)
+        {::new(static_cast<void*>(p)) T(std::forward<U>(val));}
+#endif
     void destroy(pointer p) {p->~T();}
 
     friend bool operator==(const non_default_test_allocator& x, const non_default_test_allocator& y)

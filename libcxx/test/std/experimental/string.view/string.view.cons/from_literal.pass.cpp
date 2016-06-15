@@ -45,7 +45,7 @@ int main () {
     test ( L"A" );
     test ( L"" );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test ( u"QBCDE" );
     test ( u"A" );
     test ( u"" );

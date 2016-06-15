@@ -11,7 +11,9 @@
 // template <class C> constexpr auto size(const C& c) -> decltype(c.size());         // C++17
 // template <class T, size_t N> constexpr size_t size(const T (&array)[N]) noexcept; // C++17
 
-#if __cplusplus <= 201402L
+#include "test_macros.h"
+
+#if TEST_STD_VER <= 14
 int main () {}
 #else
 

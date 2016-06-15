@@ -10,6 +10,8 @@
 #ifndef MOVEONLY_H
 #define MOVEONLY_H
 
+#include "test_macros.h"
+
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 #include <cstddef>
