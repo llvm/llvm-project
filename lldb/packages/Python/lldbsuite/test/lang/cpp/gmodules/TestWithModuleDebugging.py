@@ -2,12 +2,14 @@ import lldb, os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import decorators
 
 class TestWithGmodulesDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(["gmodules"])
+    @expectedFailureAll(oslist=["macosx"])
     def test_specialized_typedef_from_pch(self):
         self.build()
         cwd = os.getcwd()
