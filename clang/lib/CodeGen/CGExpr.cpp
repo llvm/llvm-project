@@ -2324,7 +2324,7 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), Descriptor->getType(),
       /*isConstant=*/true, llvm::GlobalVariable::PrivateLinkage, Descriptor);
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   CGM.getSanitizerMetadata()->disableSanitizerForGlobal(GV);
 
   // Remember the descriptor for this type.
@@ -2545,7 +2545,7 @@ void CodeGenFunction::EmitCheck(
     auto *InfoPtr =
         new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
                                  llvm::GlobalVariable::PrivateLinkage, Info);
-    InfoPtr->setUnnamedAddr(true);
+    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
     Args.push_back(Builder.CreateBitCast(InfoPtr, Int8PtrTy));
     ArgTypes.push_back(Int8PtrTy);
@@ -2604,7 +2604,7 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
     auto *InfoPtr =
         new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
                                  llvm::GlobalVariable::PrivateLinkage, Info);
-    InfoPtr->setUnnamedAddr(true);
+    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
 
     llvm::Constant *SlowPathDiagFn = CGM.getModule().getOrInsertFunction(

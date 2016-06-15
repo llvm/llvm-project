@@ -319,9 +319,9 @@ private:
         Left->Type = TT_JsComputedPropertyName;
       } else if (Style.Language == FormatStyle::LK_Proto ||
                  (Parent &&
-                  Parent->isOneOf(TT_BinaryOperator, tok::at, tok::comma,
-                                  tok::l_paren, tok::l_square, tok::question,
-                                  tok::colon, tok::kw_return,
+                  Parent->isOneOf(TT_BinaryOperator, TT_TemplateCloser, tok::at,
+                                  tok::comma, tok::l_paren, tok::l_square,
+                                  tok::question, tok::colon, tok::kw_return,
                                   // Should only be relevant to JavaScript:
                                   tok::kw_default))) {
         Left->Type = TT_ArrayInitializerLSquare;
@@ -1461,7 +1461,8 @@ private:
         return Current->getPrecedence();
       if (Current->isOneOf(tok::period, tok::arrow))
         return PrecedenceArrowAndPeriod;
-      if (Style.Language == FormatStyle::LK_Java &&
+      if ((Style.Language == FormatStyle::LK_Java ||
+           Style.Language == FormatStyle::LK_JavaScript) &&
           Current->isOneOf(Keywords.kw_extends, Keywords.kw_implements,
                            Keywords.kw_throws))
         return 0;

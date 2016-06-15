@@ -2446,6 +2446,12 @@ _mm_maskz_div_sd(__mmask8 __U,__m128d __A, __m128d __B) {
                                            (__v2df)_mm_setzero_pd(), \
                                            (__mmask8)(U), (int)(R)); })
 
+static __inline __m512d __DEFAULT_FN_ATTRS
+_mm512_div_pd(__m512d __a, __m512d __b)
+{
+  return (__m512d)((__v8df)__a/(__v8df)__b);
+}
+
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_mask_div_pd(__m512d __W, __mmask8 __U, __m512d __A, __m512d __B) {
   return (__m512d) __builtin_ia32_divpd512_mask ((__v8df) __A,
@@ -2463,6 +2469,12 @@ _mm512_maskz_div_pd(__mmask8 __U, __m512d __A, __m512d __B) {
              _mm512_setzero_pd (),
              (__mmask8) __U,
              _MM_FROUND_CUR_DIRECTION);
+}
+
+static __inline __m512 __DEFAULT_FN_ATTRS
+_mm512_div_ps(__m512 __a, __m512 __b)
+{
+  return (__m512)((__v16sf)__a/(__v16sf)__b);
 }
 
 static __inline__ __m512 __DEFAULT_FN_ATTRS

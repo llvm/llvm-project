@@ -122,6 +122,7 @@ def get_cc1_command_for_args(cmd, env):
           ln.startswith('Target:') or
           ln.startswith('Thread model:') or
           ln.startswith('InstalledDir:') or
+          ln.startswith('LLVM Profile Note') or
           ' version ' in ln):
           continue
       cc_commands.append(ln)

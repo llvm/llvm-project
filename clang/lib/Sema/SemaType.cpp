@@ -3815,7 +3815,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::BlockPointer:
       // If blocks are disabled, emit an error.
       if (!LangOpts.Blocks)
-        S.Diag(DeclType.Loc, diag::err_blocks_disable);
+        S.Diag(DeclType.Loc, diag::err_blocks_disable) << LangOpts.OpenCL;
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::BlockPointer,

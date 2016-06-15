@@ -977,12 +977,12 @@ def err_omp_declare_target_unexpected_clause: Error<
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
   "missing argument; expected %select{an integer value|"
-  "'enable', %select{'assume_safety'|'full'}1 or 'disable'}0">;
+  "'enable'%select{|, 'full'}1%select{|, 'assume_safety'}2 or 'disable'}0">;
 def err_pragma_loop_invalid_option : Error<
   "%select{invalid|missing}0 option%select{ %1|}0; expected vectorize, "
-  "vectorize_width, interleave, interleave_count, unroll, or unroll_count">;
+  "vectorize_width, interleave, interleave_count, unroll, unroll_count, or distribute">;
 def err_pragma_invalid_keyword : Error<
-  "invalid argument; expected 'enable', %select{'assume_safety'|'full'}0 or 'disable'">;
+  "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
 
 // Pragma unroll support.
 def warn_pragma_unroll_cuda_value_in_parens : Warning<

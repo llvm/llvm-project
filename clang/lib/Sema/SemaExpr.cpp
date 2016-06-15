@@ -10521,30 +10521,6 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     return QualType();
   }
 
-  // Taking the address of a data member/field of a packed
-  // struct may be a problem if the pointer value is dereferenced.
-  Expr *rhs = OrigOp.get();
-  const auto *ME = dyn_cast<MemberExpr>(rhs);
-  while (ME && isa<FieldDecl>(ME->getMemberDecl())) {
-    QualType BaseType = ME->getBase()->getType();
-    if (ME->isArrow())
-      BaseType = BaseType->getPointeeType();
-    RecordDecl *RD = BaseType->getAs<RecordType>()->getDecl();
-
-    ValueDecl *MD = ME->getMemberDecl();
-    bool ByteAligned = Context.getTypeAlignInChars(MD->getType()).isOne();
-    if (ByteAligned) // Attribute packed does not have any effect.
-      break;
-
-    if (!ByteAligned &&
-        (RD->hasAttr<PackedAttr>() || (MD->hasAttr<PackedAttr>()))) {
-      Diag(OpLoc, diag::warn_taking_address_of_packed_member)
-          << MD << RD << rhs->getSourceRange();
-      break;
-    }
-    ME = dyn_cast<MemberExpr>(ME->getBase());
-  }
-
   return Context.getPointerType(op->getType());
 }
 
@@ -12090,7 +12066,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
                                     Stmt *Body, Scope *CurScope) {
   // If blocks are disabled, emit an error.
   if (!LangOpts.Blocks)
-    Diag(CaretLoc, diag::err_blocks_disable);
+    Diag(CaretLoc, diag::err_blocks_disable) << LangOpts.OpenCL;
 
   // Leave the expression-evaluation context.
   if (hasAnyUnrecoverableErrorsInThisFunction())

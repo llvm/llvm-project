@@ -37,7 +37,7 @@ set(files
   htmxlintrin.h
   ia32intrin.h
   immintrin.h
-  Intrin.h
+  intrin.h
   inttypes.h
   iso646.h
   limits.h

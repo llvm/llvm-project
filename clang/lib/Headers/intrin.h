@@ -1,4 +1,4 @@
-/* ===-------- Intrin.h ---------------------------------------------------===
+/* ===-------- intrin.h ---------------------------------------------------===
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
 
 /* Only include this if we're compiling for the windows platform. */
 #ifndef _MSC_VER
-#include_next <Intrin.h>
+#include_next <intrin.h>
 #else
 
 #ifndef __INTRIN_H

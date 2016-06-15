@@ -8,11 +8,11 @@
 // RUN:         -triple x86_64--windows -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X64
 
-// Intrin.h needs size_t, but -ffreestanding prevents us from getting it from
+// intrin.h needs size_t, but -ffreestanding prevents us from getting it from
 // stddef.h.  Work around it with this typedef.
 typedef __SIZE_TYPE__ size_t;
 
-#include <Intrin.h>
+#include <intrin.h>
 
 void *test_InterlockedExchangePointer(void * volatile *Target, void *Value) {
   return _InterlockedExchangePointer(Target, Value);

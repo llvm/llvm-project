@@ -948,6 +948,11 @@ TEST_F(FormatTestJS, ClassDeclarations) {
                "    },\n"
                "  };\n"
                "}");
+  verifyFormat("@Component({\n"
+               "  moduleId: module.id,\n"
+               "})\n"
+               "class SessionListComponent implements OnDestroy, OnInit {\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, InterfaceDeclarations) {
@@ -1200,6 +1205,10 @@ TEST_F(FormatTestJS, TemplateStrings) {
 TEST_F(FormatTestJS, CastSyntax) {
   verifyFormat("var x = <type>foo;");
   verifyFormat("var x = foo as type;");
+  verifyFormat("foo = <Bar[]>[\n"
+               "  1,  //\n"
+               "  2\n"
+               "];");
 }
 
 TEST_F(FormatTestJS, TypeArguments) {

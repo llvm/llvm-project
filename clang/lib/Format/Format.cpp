@@ -1486,7 +1486,6 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
 // code.
 // FIXME: do not insert headers into conditional #include blocks, e.g. #includes
 // surrounded by compile condition "#if...".
-// FIXME: do not insert existing headers.
 // FIXME: insert empty lines between newly created blocks.
 tooling::Replacements
 fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
@@ -1533,10 +1532,12 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   TrimmedCode.split(Lines, '\n');
   unsigned Offset = MinInsertOffset;
   unsigned NextLineOffset;
+  std::set<StringRef> ExistingIncludes;
   for (auto Line : Lines) {
     NextLineOffset = std::min(Code.size(), Offset + Line.size() + 1);
     if (IncludeRegex.match(Line, &Matches)) {
       StringRef IncludeName = Matches[2];
+      ExistingIncludes.insert(IncludeName);
       int Category = Categories.getIncludePriority(
           IncludeName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
       CategoryEndOffsets[Category] = NextLineOffset;
@@ -1572,6 +1573,11 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                       "'#include ...'");
     (void)Matched;
     auto IncludeName = Matches[2];
+    if (ExistingIncludes.find(IncludeName) != ExistingIncludes.end()) {
+      DEBUG(llvm::dbgs() << "Skip adding existing include : " << IncludeName
+                         << "\n");
+      continue;
+    }
     int Category =
         Categories.getIncludePriority(IncludeName, /*CheckMainHeader=*/true);
     Offset = CategoryEndOffsets[Category];

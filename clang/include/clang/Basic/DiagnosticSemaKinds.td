@@ -5458,9 +5458,6 @@ def warn_pointer_indirection_from_incompatible_type : Warning<
   "dereference of type %1 that was reinterpret_cast from type %0 has undefined "
   "behavior">,
   InGroup<UndefinedReinterpretCast>, DefaultIgnore;
-def warn_taking_address_of_packed_member : Warning<
-  "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
-  InGroup<DiagGroup<"address-of-packed-member">>;
 
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
@@ -7428,7 +7425,7 @@ def err_generic_sel_multi_match : Error<
 
 // Blocks
 def err_blocks_disable : Error<"blocks support disabled - compile with -fblocks"
-  " or pick a deployment target that supports them">;
+  " or %select{pick a deployment target that supports them|for OpenCL 2.0 or above}0">;
 def err_block_returning_array_function : Error<
   "block cannot return %select{array|function}0 type %1">;
 
