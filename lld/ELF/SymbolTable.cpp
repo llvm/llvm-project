@@ -220,17 +220,18 @@ std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name) {
   return addUndefined(Name, STB_GLOBAL, STV_DEFAULT, /*Type*/ 0,
-                      /*File*/ nullptr);
+                      /*CanOmitFromDynSym*/ false, /*File*/ nullptr);
 }
 
 template <class ELFT>
 Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, uint8_t Binding,
                                         uint8_t StOther, uint8_t Type,
+                                        bool CanOmitFromDynSym,
                                         InputFile *File) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) =
-      insert(Name, Type, StOther & 3, /*CanOmitFromDynSym*/ false,
+      insert(Name, Type, StOther & 3, CanOmitFromDynSym,
              /*IsUsedInRegularObj*/ !File || !isa<BitcodeFile>(File), File);
   if (WasInserted) {
     S->Binding = Binding;

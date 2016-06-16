@@ -878,20 +878,6 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
   return DeclFinder.findUsages(SourceStmt);
 }
 
-std::string VariableNamer::AppendWithStyle(StringRef Str,
-                                           StringRef Suffix) const {
-  std::string Name = Str;
-  if (!Suffix.empty()) {
-    if (Style == NS_LowerCase || Style == NS_UpperCase)
-      Name += "_";
-    int SuffixStart = Name.size();
-    Name += Suffix;
-    if (Style == NS_CamelBack)
-      Name[SuffixStart] = toupper(Name[SuffixStart]);
-  }
-  return Name;
-}
-
 } // namespace modernize
 } // namespace tidy
 } // namespace clang

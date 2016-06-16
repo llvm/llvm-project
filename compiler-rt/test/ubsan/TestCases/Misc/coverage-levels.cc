@@ -3,10 +3,14 @@
 // FIXME: Port the environment variable logic below for the lit shell.
 // REQUIRES: shell
 //
-// RUN: mkdir -p %T/coverage-levels
+// RUN: rm -rf %T/coverage-levels && mkdir %T/coverage-levels
 // RUN: %clangxx -fsanitize=shift                        -DGOOD_SHIFT=1 -O1 -fsanitize-coverage=func  %s -o %t
 // RUN: %env_ubsan_opts=coverage=1:verbosity=1:coverage_dir='"%T/coverage-levels"' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1 --check-prefix=CHECK_NOWARN
 // RUN: %clangxx -fsanitize=undefined                    -DGOOD_SHIFT=1 -O1 -fsanitize-coverage=func  %s -o %t
+// RUN: %env_ubsan_opts=coverage=1:verbosity=1:coverage_dir='"%T/coverage-levels"' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1 --check-prefix=CHECK_NOWARN
+
+// Also works without any sanitizer.
+// RUN: %clangxx                                         -DGOOD_SHIFT=1 -O1 -fsanitize-coverage=func  %s -o %t
 // RUN: %env_ubsan_opts=coverage=1:verbosity=1:coverage_dir='"%T/coverage-levels"' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1 --check-prefix=CHECK_NOWARN
 
 // RUN: %clangxx -fsanitize=shift -O1 -fsanitize-coverage=func  %s -o %t

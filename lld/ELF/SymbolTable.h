@@ -59,7 +59,7 @@ public:
 
   Symbol *addUndefined(StringRef Name);
   Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
-                       uint8_t Type, InputFile *File);
+                       uint8_t Type, bool CanOmitFromDynSym, InputFile *File);
 
   Symbol *addRegular(StringRef Name, const Elf_Sym &Sym,
                      InputSectionBase<ELFT> *Section);

@@ -19,6 +19,13 @@
 #include <stdlib.h>
 #include <assert.h>
 
+// Clang emits  warnings about exceptions of type 'Child' being caught by
+// an earlier handler of type 'Base'. Congrats clang, you've just
+// diagnosed the behavior under test.
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wexceptions"
+#endif
+
 struct B
 {
     static int count;

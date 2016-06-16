@@ -351,7 +351,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
     return elf::Symtab<ELFT>::X
-        ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(), this)
+        ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
+                       /*CanOmitFromDynSym*/ false, this)
         ->body();
   case SHN_COMMON:
     return elf::Symtab<ELFT>::X
@@ -368,7 +369,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection<ELFT>::Discarded)
       return elf::Symtab<ELFT>::X
-          ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(), this)
+          ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
+                         /*CanOmitFromDynSym*/ false, this)
           ->body();
     return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec)->body();
   }
@@ -589,12 +591,12 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
     if (const Comdat *C = GV->getComdat())
       if (!KeptComdats.count(C))
         return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                             this);
+                                             CanOmitFromDynSym, this);
 
   const Module &M = Obj.getModule();
   if (Flags & BasicSymbolRef::SF_Undefined)
     return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                         this);
+                                         CanOmitFromDynSym, this);
   if (Flags & BasicSymbolRef::SF_Common) {
     // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
     // size and alignment.

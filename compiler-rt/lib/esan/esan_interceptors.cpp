@@ -338,6 +338,12 @@ INTERCEPTOR(int, rmdir, char *path) {
 
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T sz, int prot, int flags,
                  int fd, OFF_T off) {
+  if (UNLIKELY(REAL(mmap) == nullptr)) {
+    // With esan init during interceptor init and a static libc preventing
+    // our early-calloc from triggering, we can end up here before our
+    // REAL pointer is set up.
+    return (void *)internal_mmap(addr, sz, prot, flags, fd, off);
+  }
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, mmap, addr, sz, prot, flags, fd, off);
   if (!fixMmapAddr(&addr, sz, flags))
