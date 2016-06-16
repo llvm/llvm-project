@@ -162,7 +162,7 @@ bool SanitizerArgs::needsUbsanRt() const {
   return ((Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
           CoverageFeatures) &&
          !Sanitizers.has(Address) && !Sanitizers.has(Memory) &&
-         !Sanitizers.has(Thread) && !CfiCrossDso;
+         !Sanitizers.has(Thread) && !Sanitizers.has(DataFlow) && !CfiCrossDso;
 }
 
 bool SanitizerArgs::needsCfiRt() const {

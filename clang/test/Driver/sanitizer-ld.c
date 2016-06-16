@@ -293,6 +293,54 @@
 // CHECK-LSAN-ASAN-LINUX: libclang_rt.asan-x86_64
 // CHECK-LSAN-ASAN-LINUX-NOT: libclang_rt.lsan
 
+// RUN: %clang -fsanitize=address -fsanitize-coverage=func %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-COV-LINUX %s
+// CHECK-ASAN-COV-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ASAN-COV-LINUX: "-whole-archive" "{{.*}}libclang_rt.asan-x86_64.a" "-no-whole-archive"
+// CHECK-ASAN-COV-LINUX-NOT: libclang_rt.ubsan
+// CHECK-ASAN-COV-LINUX-NOT: "-lstdc++"
+// CHECK-ASAN-COV-LINUX: "-lpthread"
+
+// RUN: %clang -fsanitize=memory -fsanitize-coverage=func %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-MSAN-COV-LINUX %s
+// CHECK-MSAN-COV-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-MSAN-COV-LINUX: "-whole-archive" "{{.*}}libclang_rt.msan-x86_64.a" "-no-whole-archive"
+// CHECK-MSAN-COV-LINUX-NOT: libclang_rt.ubsan
+// CHECK-MSAN-COV-LINUX-NOT: "-lstdc++"
+// CHECK-MSAN-COV-LINUX: "-lpthread"
+
+// RUN: %clang -fsanitize=dataflow -fsanitize-coverage=func %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-DFSAN-COV-LINUX %s
+// CHECK-DFSAN-COV-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-DFSAN-COV-LINUX: "-whole-archive" "{{.*}}libclang_rt.dfsan-x86_64.a" "-no-whole-archive"
+// CHECK-DFSAN-COV-LINUX-NOT: libclang_rt.ubsan
+// CHECK-DFSAN-COV-LINUX-NOT: "-lstdc++"
+// CHECK-DFSAN-COV-LINUX: "-lpthread"
+
+// RUN: %clang -fsanitize=undefined -fsanitize-coverage=func %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-UBSAN-COV-LINUX %s
+// CHECK-UBSAN-COV-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-UBSAN-COV-LINUX: "-whole-archive" "{{.*}}libclang_rt.ubsan_standalone-x86_64.a" "-no-whole-archive"
+// CHECK-UBSAN-COV-LINUX-NOT: "-lstdc++"
+// CHECK-UBSAN-COV-LINUX: "-lpthread"
+
+// RUN: %clang -fsanitize-coverage=func %s -### -o %t.o 2>&1 \
+// RUN:     -target x86_64-unknown-linux \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-COV-LINUX %s
+// CHECK-COV-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-COV-LINUX: "-whole-archive" "{{.*}}libclang_rt.ubsan_standalone-x86_64.a" "-no-whole-archive"
+// CHECK-COV-LINUX-NOT: "-lstdc++"
+// CHECK-COV-LINUX: "-lpthread"
+
 // CFI by itself does not link runtime libraries.
 // RUN: %clang -fsanitize=cfi %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux \

@@ -44,9 +44,12 @@ void func3() {
 // YESINFO-DAG: !DIDerivedType({{.*}} name: "static_const_member"
 // NOINFO-NOT:  !DIDerivedType({{.*}} name: "static_const_member"
 
-// Function-local static variable.
+// Function-local static and auto variables.
 void func4() {
   NODEBUG static int static_local = 6;
+  NODEBUG        int normal_local = 7;
 }
 // YESINFO-DAG: !DIGlobalVariable(name: "static_local"
 // NOINFO-NOT:  !DIGlobalVariable(name: "static_local"
+// YESINFO-DAG: !DILocalVariable(name: "normal_local"
+// NOINFO-NOT:  !DILocalVariable(name: "normal_local"

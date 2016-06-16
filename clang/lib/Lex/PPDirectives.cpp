@@ -162,7 +162,7 @@ static bool warnByDefaultOnWrongCase(StringRef Include) {
   SmallString<32> LowerInclude{Include};
   for (char &Ch : LowerInclude) {
     // In the ASCII range?
-    if (Ch < 0 || Ch > 0x7f)
+    if (static_cast<unsigned char>(Ch) > 0x7f)
       return false; // Can't be a standard header
     // ASCII lowercase:
     if (Ch >= 'A' && Ch <= 'Z')

@@ -82,6 +82,8 @@ def NormalVar : SubsetSubject<Var,
                                 S->getKind() != Decl::ImplicitParam &&
                                 S->getKind() != Decl::ParmVar &&
                                 S->getKind() != Decl::NonTypeTemplateParm}]>;
+def NonParmVar : SubsetSubject<Var,
+                               [{S->getKind() != Decl::ParmVar}]>;
 def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}]>;
 
@@ -998,8 +1000,8 @@ def NoCommon : InheritableAttr {
 
 def NoDebug : InheritableAttr {
   let Spellings = [GCC<"nodebug">];
-  let Subjects = SubjectList<[FunctionLike, ObjCMethod, GlobalVar], WarnDiag,
-                              "ExpectedFunctionGlobalVarMethodOrProperty">;
+  let Subjects = SubjectList<[FunctionLike, ObjCMethod, NonParmVar], WarnDiag,
+                              "ExpectedVariableOrFunction">;
   let Documentation = [NoDebugDocs];
 }
 
