@@ -2017,8 +2017,13 @@ void LLVMAddAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
 LLVMAttributeRef LLVMGetEnumAttributeAtIndex(LLVMValueRef F,
                                              LLVMAttributeIndex Idx,
                                              unsigned KindID);
+LLVMAttributeRef LLVMGetStringAttributeAtIndex(LLVMValueRef F,
+                                               LLVMAttributeIndex Idx,
+                                               const char *K, unsigned KLen);
 void LLVMRemoveEnumAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
                                     unsigned KindID);
+void LLVMRemoveStringAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
+                                      const char *K, unsigned KLen);
 
 /**
  * Add a target-dependent attribute to a function
@@ -2598,8 +2603,13 @@ void LLVMAddCallSiteAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
 LLVMAttributeRef LLVMGetCallSiteEnumAttribute(LLVMValueRef C,
                                               LLVMAttributeIndex Idx,
                                               unsigned KindID);
+LLVMAttributeRef LLVMGetCallSiteStringAttribute(LLVMValueRef C,
+                                                LLVMAttributeIndex Idx,
+                                                const char *K, unsigned KLen);
 void LLVMRemoveCallSiteEnumAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                      unsigned KindID);
+void LLVMRemoveCallSiteStringAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
+                                       const char *K, unsigned KLen);
 
 /**
  * Obtain the pointer to the function invoked by this instruction.

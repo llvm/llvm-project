@@ -17,3 +17,9 @@
 # CHECK-NOT: __start:
 # CHECK-NOT: 0000000100000d22
 # CHECK-NOT: _main:
+
+# not RUN: llvm-objdump -m -d %p/Inputs/exeThread.macho-x86_64 -dis-symname _environ 2>&1 | FileCheck -check-prefix BAD-SYMAME-1 %s
+BAD-SYMAME-1: -dis-symname: _environ not in the section
+
+# not RUN: llvm-objdump -m -d %p/Inputs/exeThread.macho-x86_64 -dis-symname __mh_execute_header 2>&1 | FileCheck -check-prefix BAD-SYMAME-2 %s
+BAD-SYMAME-2: -dis-symname: __mh_execute_header not in any section

@@ -12,8 +12,7 @@
 # RUN:   FileCheck %s -check-prefix=NO-STORE
 
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -filetype=obj -o - | \
-# RUN:   llvm-objdump -d -r - | \
-# RUN:   FileCheck %s -check-prefix=NO-STORE
+# RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefix=NO-STORE
 
   .text
   .ent foo

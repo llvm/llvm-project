@@ -103,7 +103,7 @@ define i64 @fetch_and_nand_64(i64* %p) #0 {
 
 define i32 @fetch_and_or(i32* %p) #0 {
 ; CHECK-LABEL: fetch_and_or:
-; CHECK: movz   [[OLDVAL_REG:w[0-9]+]], #5
+; CHECK: mov   [[OLDVAL_REG:w[0-9]+]], #5
 ; CHECK: [[TRYBB:.?LBB[0-9_]+]]:
 ; CHECK: ldaxr   w[[DEST_REG:[0-9]+]], [x0]
 ; CHECK: orr    [[SCRATCH2_REG:w[0-9]+]], w[[DEST_REG]], [[OLDVAL_REG]]

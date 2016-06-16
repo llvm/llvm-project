@@ -18,8 +18,8 @@ define void @t2() nounwind ssp {
 entry:
 ; CHECK-LABEL: t2:
 ; CHECK-NOT: mov w0, wzr
-; CHECK: movz w0, #0
-; CHECK: movz w1, #0
+; CHECK: mov w0, #0
+; CHECK: mov w1, #0
   tail call void @bari(i32 0, i32 0) nounwind
   ret void
 }
@@ -28,8 +28,8 @@ define void @t3() nounwind ssp {
 entry:
 ; CHECK-LABEL: t3:
 ; CHECK-NOT: mov x0, xzr
-; CHECK: movz x0, #0
-; CHECK: movz x1, #0
+; CHECK: mov x0, #0
+; CHECK: mov x1, #0
   tail call void @barl(i64 0, i64 0) nounwind
   ret void
 }

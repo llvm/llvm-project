@@ -1530,7 +1530,7 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr *MIa,
   unsigned SizeA = 0, SizeB = 0;
 
   if (MIa->hasUnmodeledSideEffects() || MIb->hasUnmodeledSideEffects() ||
-      MIa->hasOrderedMemoryRef() || MIa->hasOrderedMemoryRef())
+      MIa->hasOrderedMemoryRef() || MIb->hasOrderedMemoryRef())
     return false;
 
   // Instructions that are pure loads, not loads and stores like memops are not
@@ -3673,8 +3673,8 @@ HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
   case Hexagon::S4_storeirb_io:
     // memb(Rs+#u4) = #U1
     Src1Reg = MI->getOperand(0).getReg();
-    if (isIntRegForSubInst(Src1Reg) && MI->getOperand(1).isImm() &&
-        isUInt<4>(MI->getOperand(1).getImm()) && MI->getOperand(2).isImm() &&
+    if (isIntRegForSubInst(Src1Reg) &&
+        MI->getOperand(1).isImm() && isUInt<4>(MI->getOperand(1).getImm()) &&
         MI->getOperand(2).isImm() && isUInt<1>(MI->getOperand(2).getImm()))
       return HexagonII::HSIG_S2;
     break;

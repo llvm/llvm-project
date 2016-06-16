@@ -732,8 +732,11 @@ private:
   };
 
 #ifndef NDEBUG
-  friend raw_ostream &operator<<(raw_ostream &os,
-                                 const BoUpSLP::ScheduleData &SD);
+  friend inline raw_ostream &operator<<(raw_ostream &os,
+                                        const BoUpSLP::ScheduleData &SD) {
+    SD.dump(os);
+    return os;
+  }
 #endif
 
   /// Contains all scheduling data for a basic block.
@@ -943,20 +946,8 @@ private:
   MapVector<Value *, uint64_t> MinBWs;
 };
 
-#ifndef NDEBUG
-raw_ostream &operator<<(raw_ostream &os, const BoUpSLP::ScheduleData &SD);
-#endif
-
 } // end namespace llvm
 } // end namespace slpvectorizer
-
-#ifndef NDEBUG
-raw_ostream &llvm::slpvectorizer::operator<<(raw_ostream &os,
-                                             const BoUpSLP::ScheduleData &SD) {
-  SD.dump(os);
-  return os;
-}
-#endif
 
 void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
                         ArrayRef<Value *> UserIgnoreLst) {

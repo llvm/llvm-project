@@ -226,7 +226,16 @@ TypeTableBuilder::writeUdtSourceLine(const UdtSourceLineRecord &Record) {
 }
 
 TypeIndex
-TypeTableBuilder::writeFuncId(const FuncIdRecord &Record) {
+TypeTableBuilder::writeUdtModSourceLine(const UdtModSourceLineRecord &Record) {
+  TypeRecordBuilder Builder(Record.getKind());
+  Builder.writeTypeIndex(Record.getUDT());
+  Builder.writeTypeIndex(Record.getSourceFile());
+  Builder.writeUInt32(Record.getLineNumber());
+  Builder.writeUInt16(Record.getModule());
+  return writeRecord(Builder);
+}
+
+TypeIndex TypeTableBuilder::writeFuncId(const FuncIdRecord &Record) {
   TypeRecordBuilder Builder(Record.getKind());
   Builder.writeTypeIndex(Record.getParentScope());
   Builder.writeTypeIndex(Record.getFunctionType());

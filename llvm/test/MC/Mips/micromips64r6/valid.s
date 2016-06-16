@@ -295,5 +295,10 @@ a:
         xor $3, $4, 5            # CHECK: xori $3, $4, 5          # encoding: [0x70,0x64,0x00,0x05]
         xor $3, $4, $5           # CHECK: xor $3, $4, $5          # encoding: [0x00,0xa4,0x1b,0x10]
         xori $3, $4, 1234        # CHECK: xori $3, $4, 1234       # encoding: [0x70,0x64,0x04,0xd2]
+        dclo $1, $2              # CHECK: dclo $1, $2             # encoding: [0x58,0x22,0x4b,0x3c]
+        dclz $1, $2              # CHECK: dclz $1, $2             # encoding: [0x58,0x22,0x5b,0x3c]
+        drotr $5, $10, 8         # CHECK: drotr $5, $10, 8        # encoding: [0x58,0xaa,0x40,0xc0]
+        drotr32 $1, $2, 4        # CHECK: drotr32 $1, $2, 4       # encoding: [0x58,0x22,0x20,0xc8]
+        drotrv $3, $6, $4        # CHECK: drotrv $3, $6, $4       # encoding: [0x58,0xc4,0x18,0xd0]
 
 1:

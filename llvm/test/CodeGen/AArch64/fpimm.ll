@@ -38,7 +38,7 @@ define void @check_double() {
 }
 
 ; LARGE-LABEL: check_float2
-; LARGE:       movz [[REG:w[0-9]+]], #16457, lsl #16
+; LARGE:       mov [[REG:w[0-9]+]], #1078525952
 ; LARGE-NEXT:  movk [[REG]], #4059
 ; LARGE-NEXT:  fmov s0, [[REG]]
 define float @check_float2() {
@@ -46,7 +46,7 @@ define float @check_float2() {
 }
 
 ; LARGE-LABEL: check_double2
-; LARGE:       movz [[REG:x[0-9]+]], #16393, lsl #48
+; LARGE:       mov [[REG:x[0-9]+]], #4614219293217783808
 ; LARGE-NEXT:  movk [[REG]], #8699, lsl #32
 ; LARGE-NEXT:  movk [[REG]], #21572, lsl #16
 ; LARGE-NEXT:  movk [[REG]], #11544
@@ -54,4 +54,3 @@ define float @check_float2() {
 define double @check_double2() {
   ret double 3.1415926535897931159979634685441851615905761718750
 }
-

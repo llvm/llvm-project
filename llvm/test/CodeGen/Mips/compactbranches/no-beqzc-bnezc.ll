@@ -1,5 +1,6 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r6  -disable-mips-delay-filler < %s | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips32r6 -disable-mips-delay-filler < %s -filetype=obj -o - | llvm-objdump -arch=mips -mcpu=mips32r6 -d - | FileCheck %s -check-prefix=ENCODING
+; RUN: llc -march=mips -mcpu=mips32r6 -disable-mips-delay-filler < %s \
+; RUN:   -filetype=obj -o - | llvm-objdump -d - | FileCheck %s -check-prefix=ENCODING
 
 ; bnezc and beqzc have restriction that $rt != 0
 

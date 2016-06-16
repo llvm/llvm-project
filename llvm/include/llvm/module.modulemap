@@ -101,15 +101,22 @@ module LLVM_ExecutionEngine {
   exclude header "ExecutionEngine/OrcMCJITReplacement.h"
 }
 
-module LLVM_IR {
-  requires cplusplus
+module LLVM_Pass {
+  module Pass {
+    // PassSupport.h and PassAnalysisSupport.h are made available only through
+    // Pass.h.
+    header "Pass.h"
+    header "PassSupport.h"
+    header "PassAnalysisSupport.h"
+    export *
+  }
 
-  // FIXME: Is this the right place for these?
-  module Pass { header "Pass.h" export * }
-  module PassSupport { header "PassSupport.h" export * }
-  module PassAnalysisSupport { header "PassAnalysisSupport.h" export * }
   module PassRegistry { header "PassRegistry.h" export * }
   module InitializePasses { header "InitializePasses.h" export * }
+}
+
+module LLVM_IR {
+  requires cplusplus
 
   umbrella "IR"
   module * { export * }

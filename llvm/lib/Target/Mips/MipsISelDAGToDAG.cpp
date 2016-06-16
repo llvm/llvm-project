@@ -72,12 +72,6 @@ bool MipsDAGToDAGISel::selectAddrRegImm(SDValue Addr, SDValue &Base,
   return false;
 }
 
-bool MipsDAGToDAGISel::selectAddrRegReg(SDValue Addr, SDValue &Base,
-                                        SDValue &Offset) const {
-  llvm_unreachable("Unimplemented function.");
-  return false;
-}
-
 bool MipsDAGToDAGISel::selectAddrDefault(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) const {
   llvm_unreachable("Unimplemented function.");

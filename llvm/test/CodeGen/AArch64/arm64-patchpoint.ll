@@ -6,11 +6,11 @@
 define i64 @trivial_patchpoint_codegen(i64 %p1, i64 %p2, i64 %p3, i64 %p4) {
 entry:
 ; CHECK-LABEL: trivial_patchpoint_codegen:
-; CHECK:       movz x16, #57005, lsl #32
+; CHECK:       mov  x16, #244834610708480
 ; CHECK-NEXT:  movk x16, #48879, lsl #16
 ; CHECK-NEXT:  movk x16, #51966
 ; CHECK-NEXT:  blr  x16
-; CHECK:       movz x16, #57005, lsl #32
+; CHECK:       mov  x16, #244834610708480
 ; CHECK-NEXT:  movk x16, #48879, lsl #16
 ; CHECK-NEXT:  movk x16, #51967
 ; CHECK-NEXT:  blr  x16

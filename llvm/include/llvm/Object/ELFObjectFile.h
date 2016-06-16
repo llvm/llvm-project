@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -51,6 +52,7 @@ class ELFObjectFileBase : public ObjectFile {
 protected:
   ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source);
 
+  virtual uint16_t getEMachine() const = 0;
   virtual uint64_t getSymbolSize(DataRefImpl Symb) const = 0;
   virtual uint8_t getSymbolOther(DataRefImpl Symb) const = 0;
   virtual uint8_t getSymbolELFType(DataRefImpl Symb) const = 0;
@@ -67,6 +69,8 @@ public:
   elf_symbol_iterator_range symbols() const;
 
   static inline bool classof(const Binary *v) { return v->isELF(); }
+
+  SubtargetFeatures getFeatures() const override;
 };
 
 class ELFSectionRef : public SectionRef {
@@ -179,6 +183,7 @@ ELFObjectFileBase::symbols() const {
 }
 
 template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
+  uint16_t getEMachine() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
@@ -425,6 +430,11 @@ uint32_t ELFObjectFile<ELFT>::getSymbolAlignment(DataRefImpl Symb) const {
   if (Sym->st_shndx == ELF::SHN_COMMON)
     return Sym->st_value;
   return 0;
+}
+
+template <class ELFT>
+uint16_t ELFObjectFile<ELFT>::getEMachine() const {
+  return EF.getHeader()->e_machine;
 }
 
 template <class ELFT>

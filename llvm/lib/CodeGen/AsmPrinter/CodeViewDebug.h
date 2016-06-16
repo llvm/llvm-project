@@ -144,6 +144,13 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// always looked up in the normal TypeIndices map.
   DenseMap<const DICompositeType *, codeview::TypeIndex> CompleteTypeIndices;
 
+  const DISubprogram *CurrentSubprogram = nullptr;
+
+  // The UDTs we have seen while processing types; each entry is a pair of type
+  // index and type name.
+  std::vector<std::pair<std::string, codeview::TypeIndex>> LocalUDTs,
+      GlobalUDTs;
+
   typedef std::map<const DIFile *, std::string> FileToFilepathMapTy;
   FileToFilepathMapTy FileToFilepathMap;
   StringRef getFullFilepath(const DIFile *S);
@@ -157,6 +164,13 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     FileIdMap.clear();
     FnDebugInfo.clear();
     FileToFilepathMap.clear();
+    LocalUDTs.clear();
+    GlobalUDTs.clear();
+  }
+
+  void setCurrentSubprogram(const DISubprogram *SP) {
+    CurrentSubprogram = SP;
+    LocalUDTs.clear();
   }
 
   /// Emit the magic version number at the start of a CodeView type or symbol
@@ -170,6 +184,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   void emitDebugInfoForFunction(const Function *GV, FunctionInfo &FI);
 
   void emitDebugInfoForGlobals();
+
+  void emitDebugInfoForUDTs(
+      ArrayRef<std::pair<std::string, codeview::TypeIndex>> UDTs);
 
   void emitDebugInfoForGlobal(const DIGlobalVariable *DIGV, MCSymbol *GVSym);
 

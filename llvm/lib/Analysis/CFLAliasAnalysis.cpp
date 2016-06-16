@@ -132,13 +132,18 @@ class CFLGraph {
   typedef Value *Node;
 
   struct Edge {
-    StratifiedAttrs Attr;
     EdgeType Type;
     Node Other;
   };
 
   typedef std::vector<Edge> EdgeList;
-  typedef DenseMap<Node, EdgeList> NodeMap;
+
+  struct NodeInfo {
+    EdgeList Edges;
+    StratifiedAttrs Attr;
+  };
+
+  typedef DenseMap<Node, NodeInfo> NodeMap;
   NodeMap NodeImpls;
 
   // Gets the inverse of a given EdgeType.
@@ -154,13 +159,13 @@ class CFLGraph {
     llvm_unreachable("Incomplete coverage of EdgeType enum");
   }
 
-  const EdgeList *getNode(Node N) const {
+  const NodeInfo *getNode(Node N) const {
     auto Itr = NodeImpls.find(N);
     if (Itr == NodeImpls.end())
       return nullptr;
     return &Itr->second;
   }
-  EdgeList *getNode(Node N) {
+  NodeInfo *getNode(Node N) {
     auto Itr = NodeImpls.find(N);
     if (Itr == NodeImpls.end())
       return nullptr;
@@ -177,24 +182,37 @@ public:
       const_node_iterator;
 
   bool addNode(Node N) {
-    return NodeImpls.insert(std::make_pair(N, EdgeList())).second;
+    return NodeImpls.insert(std::make_pair(N, NodeInfo{EdgeList(), AttrNone}))
+        .second;
   }
 
-  void addEdge(Node From, Node To, EdgeType Type,
-               StratifiedAttrs Attr = StratifiedAttrs()) {
-    auto FromEdges = getNode(From);
-    assert(FromEdges != nullptr);
-    auto ToEdges = getNode(To);
-    assert(ToEdges != nullptr);
+  void addAttr(Node N, StratifiedAttrs Attr) {
+    auto *Info = getNode(N);
+    assert(Info != nullptr);
+    Info->Attr |= Attr;
+  }
 
-    FromEdges->push_back(Edge{Attr, Type, To});
-    ToEdges->push_back(Edge{Attr, flipWeight(Type), From});
+  void addEdge(Node From, Node To, EdgeType Type) {
+    auto *FromInfo = getNode(From);
+    assert(FromInfo != nullptr);
+    auto *ToInfo = getNode(To);
+    assert(ToInfo != nullptr);
+
+    FromInfo->Edges.push_back(Edge{Type, To});
+    ToInfo->Edges.push_back(Edge{flipWeight(Type), From});
+  }
+
+  StratifiedAttrs attrFor(Node N) const {
+    auto *Info = getNode(N);
+    assert(Info != nullptr);
+    return Info->Attr;
   }
 
   iterator_range<const_edge_iterator> edgesFor(Node N) const {
-    auto Edges = getNode(N);
-    assert(Edges != nullptr);
-    return make_range(Edges->begin(), Edges->end());
+    auto *Info = getNode(N);
+    assert(Info != nullptr);
+    auto &Edges = Info->Edges;
+    return make_range(Edges.begin(), Edges.end());
   }
 
   iterator_range<const_node_iterator> nodes() const {
@@ -234,11 +252,18 @@ class GetEdgesVisitor : public InstVisitor<GetEdgesVisitor, void> {
         visitConstantExpr(CExpr);
   }
 
-  void addEdge(Value *From, Value *To, EdgeType Type, StratifiedAttrs Attr) {
+  void addNodeWithAttr(Value *Val, StratifiedAttrs Attr) {
+    addNode(Val);
+    Graph.addAttr(Val, Attr);
+  }
+
+  void addEdge(Value *From, Value *To, EdgeType Type) {
+    if (!From->getType()->isPointerTy() || !To->getType()->isPointerTy())
+      return;
     addNode(From);
     if (To != From)
       addNode(To);
-    Graph.addEdge(From, To, Type, Attr);
+    Graph.addEdge(From, To, Type);
   }
 
 public:
@@ -254,46 +279,46 @@ public:
 
   void visitPtrToIntInst(PtrToIntInst &Inst) {
     auto *Ptr = Inst.getOperand(0);
-    addEdge(Ptr, &Inst, EdgeType::Assign, AttrEscaped);
+    addNodeWithAttr(Ptr, AttrEscaped);
   }
 
   void visitIntToPtrInst(IntToPtrInst &Inst) {
     auto *Ptr = &Inst;
-    addEdge(Ptr, Ptr, EdgeType::Assign, AttrUnknown);
+    addNodeWithAttr(Ptr, AttrUnknown);
   }
 
   void visitCastInst(CastInst &Inst) {
     auto *Src = Inst.getOperand(0);
-    addEdge(Src, &Inst, EdgeType::Assign, AttrNone);
+    addEdge(Src, &Inst, EdgeType::Assign);
   }
 
   void visitBinaryOperator(BinaryOperator &Inst) {
     auto *Op1 = Inst.getOperand(0);
     auto *Op2 = Inst.getOperand(1);
-    addEdge(Op1, &Inst, EdgeType::Assign, AttrNone);
-    addEdge(Op2, &Inst, EdgeType::Assign, AttrNone);
+    addEdge(Op1, &Inst, EdgeType::Assign);
+    addEdge(Op2, &Inst, EdgeType::Assign);
   }
 
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &Inst) {
     auto *Ptr = Inst.getPointerOperand();
     auto *Val = Inst.getNewValOperand();
-    addEdge(Ptr, Val, EdgeType::Dereference, AttrNone);
+    addEdge(Ptr, Val, EdgeType::Dereference);
   }
 
   void visitAtomicRMWInst(AtomicRMWInst &Inst) {
     auto *Ptr = Inst.getPointerOperand();
     auto *Val = Inst.getValOperand();
-    addEdge(Ptr, Val, EdgeType::Dereference, AttrNone);
+    addEdge(Ptr, Val, EdgeType::Dereference);
   }
 
   void visitPHINode(PHINode &Inst) {
     for (Value *Val : Inst.incoming_values())
-      addEdge(Val, &Inst, EdgeType::Assign, AttrNone);
+      addEdge(Val, &Inst, EdgeType::Assign);
   }
 
   void visitGetElementPtrInst(GetElementPtrInst &Inst) {
     auto *Op = Inst.getPointerOperand();
-    addEdge(Op, &Inst, EdgeType::Assign, AttrNone);
+    addEdge(Op, &Inst, EdgeType::Assign);
   }
 
   void visitSelectInst(SelectInst &Inst) {
@@ -304,8 +329,8 @@ public:
 
     auto *TrueVal = Inst.getTrueValue();
     auto *FalseVal = Inst.getFalseValue();
-    addEdge(TrueVal, &Inst, EdgeType::Assign, AttrNone);
-    addEdge(FalseVal, &Inst, EdgeType::Assign, AttrNone);
+    addEdge(TrueVal, &Inst, EdgeType::Assign);
+    addEdge(FalseVal, &Inst, EdgeType::Assign);
   }
 
   void visitAllocaInst(AllocaInst &Inst) { Graph.addNode(&Inst); }
@@ -313,13 +338,13 @@ public:
   void visitLoadInst(LoadInst &Inst) {
     auto *Ptr = Inst.getPointerOperand();
     auto *Val = &Inst;
-    addEdge(Val, Ptr, EdgeType::Reference, AttrNone);
+    addEdge(Val, Ptr, EdgeType::Reference);
   }
 
   void visitStoreInst(StoreInst &Inst) {
     auto *Ptr = Inst.getPointerOperand();
     auto *Val = Inst.getValueOperand();
-    addEdge(Ptr, Val, EdgeType::Dereference, AttrNone);
+    addEdge(Ptr, Val, EdgeType::Dereference);
   }
 
   void visitVAArgInst(VAArgInst &Inst) {
@@ -329,8 +354,7 @@ public:
     //  2. Increments (stores to) *Ptr by some target-specific amount.
     // For now, we'll handle this like a landingpad instruction (by placing the
     // result in its own group, and having that group alias externals).
-    auto *Val = &Inst;
-    addEdge(Val, Val, EdgeType::Assign, AttrUnknown);
+    addNodeWithAttr(&Inst, AttrUnknown);
   }
 
   static bool isFunctionExternal(Function *Fn) {
@@ -374,9 +398,8 @@ public:
     EdgeType Weight;
 
     // Whether we aliased any external values along the way that may be
-    // invisible to the analysis (i.e. landingpad for exceptions, calls for
-    // interprocedural analysis, etc.)
-    StratifiedAttrs AdditionalAttrs;
+    // invisible to the analysis
+    StratifiedAttrs FromAttrs, ToAttrs;
   };
 
   bool
@@ -424,25 +447,23 @@ public:
         auto &ParamInfo = Parameters[I];
         auto &ArgVal = Arguments[I];
         bool AddEdge = false;
-        StratifiedAttrs Externals;
+        StratifiedAttrs RetAttrs, ParamAttrs;
         for (unsigned X = 0, XE = RetVals.size(); X != XE; ++X) {
           auto MaybeInfo = Sets.find(RetVals[X]);
           if (!MaybeInfo.hasValue())
             return false;
 
           auto &RetInfo = *MaybeInfo;
-          auto RetAttrs = Sets.getLink(RetInfo.Index).Attrs;
-          auto ParamAttrs = Sets.getLink(ParamInfo.Index).Attrs;
+          RetAttrs |= Sets.getLink(RetInfo.Index).Attrs;
+          ParamAttrs |= Sets.getLink(ParamInfo.Index).Attrs;
           auto MaybeRelation =
               getIndexRelation(Sets, ParamInfo.Index, RetInfo.Index);
-          if (MaybeRelation.hasValue()) {
+          if (MaybeRelation.hasValue())
             AddEdge = true;
-            Externals |= RetAttrs | ParamAttrs;
-          }
         }
         if (AddEdge)
           Output.push_back(
-              Edge{FuncValue, ArgVal, EdgeType::Assign, Externals});
+              Edge{FuncValue, ArgVal, EdgeType::Assign, RetAttrs, ParamAttrs});
       }
 
       if (Parameters.size() != Arguments.size())
@@ -468,15 +489,18 @@ public:
           if (!MaybeRelation.hasValue())
             continue;
 
-          auto NewAttrs = SubAttrs | MainAttrs;
-          Output.push_back(Edge{MainVal, SubVal, EdgeType::Assign, NewAttrs});
+          Output.push_back(
+              Edge{MainVal, SubVal, EdgeType::Assign, MainAttrs, SubAttrs});
         }
       }
     }
 
     // Commit all edges in Output to CFLGraph
-    for (const auto &Edge : Output)
-      addEdge(Edge.From, Edge.To, Edge.Weight, Edge.AdditionalAttrs);
+    for (const auto &Edge : Output) {
+      addEdge(Edge.From, Edge.To, Edge.Weight);
+      Graph.addAttr(Edge.From, Edge.FromAttrs);
+      Graph.addAttr(Edge.To, Edge.ToAttrs);
+    }
 
     return true;
   }
@@ -511,13 +535,14 @@ public:
     // anything, too (unless the result is marked noalias).
     if (!CS.onlyReadsMemory())
       for (Value *V : CS.args()) {
-        Escapes.insert(V);
+        if (V->getType()->isPointerTy())
+          Escapes.insert(V);
       }
 
     if (!Inst->getType()->isVoidTy()) {
       auto *Fn = CS.getCalledFunction();
       if (Fn == nullptr || !Fn->doesNotAlias(0))
-        addEdge(Inst, Inst, EdgeType::Assign, AttrUnknown);
+        Graph.addAttr(Inst, AttrUnknown);
     }
   }
 
@@ -528,40 +553,40 @@ public:
   void visitExtractElementInst(ExtractElementInst &Inst) {
     auto *Ptr = Inst.getVectorOperand();
     auto *Val = &Inst;
-    addEdge(Val, Ptr, EdgeType::Reference, AttrNone);
+    addEdge(Val, Ptr, EdgeType::Reference);
   }
 
   void visitInsertElementInst(InsertElementInst &Inst) {
     auto *Vec = Inst.getOperand(0);
     auto *Val = Inst.getOperand(1);
-    addEdge(Vec, &Inst, EdgeType::Assign, AttrNone);
-    addEdge(&Inst, Val, EdgeType::Dereference, AttrNone);
+    addEdge(Vec, &Inst, EdgeType::Assign);
+    addEdge(&Inst, Val, EdgeType::Dereference);
   }
 
   void visitLandingPadInst(LandingPadInst &Inst) {
     // Exceptions come from "nowhere", from our analysis' perspective.
     // So we place the instruction its own group, noting that said group may
     // alias externals
-    addEdge(&Inst, &Inst, EdgeType::Assign, AttrUnknown);
+    addNodeWithAttr(&Inst, AttrUnknown);
   }
 
   void visitInsertValueInst(InsertValueInst &Inst) {
     auto *Agg = Inst.getOperand(0);
     auto *Val = Inst.getOperand(1);
-    addEdge(Agg, &Inst, EdgeType::Assign, AttrNone);
-    addEdge(&Inst, Val, EdgeType::Dereference, AttrNone);
+    addEdge(Agg, &Inst, EdgeType::Assign);
+    addEdge(&Inst, Val, EdgeType::Dereference);
   }
 
   void visitExtractValueInst(ExtractValueInst &Inst) {
     auto *Ptr = Inst.getAggregateOperand();
-    addEdge(&Inst, Ptr, EdgeType::Reference, AttrNone);
+    addEdge(&Inst, Ptr, EdgeType::Reference);
   }
 
   void visitShuffleVectorInst(ShuffleVectorInst &Inst) {
     auto *From1 = Inst.getOperand(0);
     auto *From2 = Inst.getOperand(1);
-    addEdge(From1, &Inst, EdgeType::Assign, AttrNone);
-    addEdge(From2, &Inst, EdgeType::Assign, AttrNone);
+    addEdge(From1, &Inst, EdgeType::Assign);
+    addEdge(From2, &Inst, EdgeType::Assign);
   }
 
   void visitConstantExpr(ConstantExpr *CE) {
@@ -603,8 +628,10 @@ class CFLGraphBuilder {
   }
 
   void addArgumentToGraph(Argument &Arg) {
-    Graph.addNode(&Arg);
-    ExternalValues.insert(&Arg);
+    if (Arg.getType()->isPointerTy()) {
+      Graph.addNode(&Arg);
+      ExternalValues.insert(&Arg);
+    }
   }
 
   // Given an Instruction, this will add it to the graph, along with any
@@ -777,6 +804,9 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
     if (canSkipAddingToSets(CurValue))
       continue;
 
+    auto Attr = Graph.attrFor(CurValue);
+    SetBuilder.noteAttributes(CurValue, Attr);
+
     for (const auto &Edge : Graph.edgesFor(CurValue)) {
       auto Label = Edge.Type;
       auto *OtherValue = Edge.Other;
@@ -796,10 +826,6 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
         Added = SetBuilder.addWith(CurValue, OtherValue);
         break;
       }
-
-      auto Aliasing = Edge.Attr;
-      SetBuilder.noteAttributes(CurValue, Aliasing);
-      SetBuilder.noteAttributes(OtherValue, Aliasing);
 
       if (Added)
         Worklist.push_back(OtherValue);
@@ -860,6 +886,9 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
                                const MemoryLocation &LocB) {
   auto *ValA = const_cast<Value *>(LocA.Ptr);
   auto *ValB = const_cast<Value *>(LocB.Ptr);
+
+  if (!ValA->getType()->isPointerTy() || !ValB->getType()->isPointerTy())
+    return NoAlias;
 
   Function *Fn = nullptr;
   auto MaybeFnA = parentFunctionOfValue(ValA);

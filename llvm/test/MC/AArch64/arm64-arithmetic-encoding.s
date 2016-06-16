@@ -494,20 +494,20 @@ foo:
   movz w0, #1, lsl #16
   movz x0, #1, lsl #16
 
-; CHECK: movz w0, #1                 ; encoding: [0x20,0x00,0x80,0x52]
-; CHECK: movz x0, #1                 ; encoding: [0x20,0x00,0x80,0xd2]
-; CHECK: movz w0, #1, lsl #16        ; encoding: [0x20,0x00,0xa0,0x52]
-; CHECK: movz x0, #1, lsl #16        ; encoding: [0x20,0x00,0xa0,0xd2]
+; CHECK: mov w0, #1                 ; encoding: [0x20,0x00,0x80,0x52]
+; CHECK: mov x0, #1                 ; encoding: [0x20,0x00,0x80,0xd2]
+; CHECK: mov w0, #65536             ; encoding: [0x20,0x00,0xa0,0x52]
+; CHECK: mov x0, #65536             ; encoding: [0x20,0x00,0xa0,0xd2]
 
   movn w0, #2
   movn x0, #2
   movn w0, #2, lsl #16
   movn x0, #2, lsl #16
 
-; CHECK: movn w0, #2                 ; encoding: [0x40,0x00,0x80,0x12]
-; CHECK: movn x0, #2                 ; encoding: [0x40,0x00,0x80,0x92]
-; CHECK: movn w0, #2, lsl #16        ; encoding: [0x40,0x00,0xa0,0x12]
-; CHECK: movn x0, #2, lsl #16        ; encoding: [0x40,0x00,0xa0,0x92]
+; CHECK: mov w0, #-3                 ; encoding: [0x40,0x00,0x80,0x12]
+; CHECK: mov x0, #-3                 ; encoding: [0x40,0x00,0x80,0x92]
+; CHECK: mov w0, #-131073            ; encoding: [0x40,0x00,0xa0,0x12]
+; CHECK: mov x0, #-131073            ; encoding: [0x40,0x00,0xa0,0x92]
 
   movk w0, #1
   movk x0, #1

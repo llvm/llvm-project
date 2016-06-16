@@ -897,6 +897,9 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc::cos:
   case LibFunc::cosf:
   case LibFunc::cosl:
+  case LibFunc::tan:
+  case LibFunc::tanf:
+  case LibFunc::tanl:
   case LibFunc::exp:
   case LibFunc::expf:
   case LibFunc::expl:

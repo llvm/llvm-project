@@ -8,17 +8,17 @@
 // CHECK-LABEL: f1:
 f1:
   ldr x0, =0x1234
-// CHECK: movz    x0, #0x1234
+// CHECK: mov    x0, #0x1234
   ldr w1, =0x4567
-// CHECK:  movz    w1, #0x4567
+// CHECK:  mov    w1, #0x4567
   ldr x0, =0x12340000
-// CHECK:  movz    x0, #0x1234, lsl #16
+// CHECK:  mov    x0, #0x12340000
   ldr w1, =0x45670000
-// CHECK: movz    w1, #0x4567, lsl #16
+// CHECK: mov    w1, #0x45670000
   ldr x0, =0xabc00000000
-// CHECK: movz    x0, #0xabc, lsl #32
+// CHECK: mov    x0, #0xabc00000000
   ldr x0, =0xbeef000000000000
-// CHECK: movz    x0, #0xbeef, lsl #48
+// CHECK: mov    x0, #-0x4111000000000000
 
 .section b,"ax",@progbits
 // CHECK-LABEL: f3:
@@ -128,7 +128,7 @@ f13:
   adds x0, x0, #1
   adds x0, x0, #1
   ldr w0, =0x101
-// CHECK: movz w0, #0x101
+// CHECK: mov w0, #0x101
   adds x0, x0, #1
   adds x0, x0, #1
   ldr w0, =bar

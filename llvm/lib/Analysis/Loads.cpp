@@ -322,7 +322,8 @@ llvm::DefMaxInstsToScan("available-load-scan-limit", cl::init(6), cl::Hidden,
 Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                       BasicBlock::iterator &ScanFrom,
                                       unsigned MaxInstsToScan,
-                                      AliasAnalysis *AA, AAMDNodes *AATags) {
+                                      AliasAnalysis *AA, AAMDNodes *AATags,
+                                      bool *IsLoadCSE) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
@@ -374,6 +375,8 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
 
         if (AATags)
           LI->getAAMetadata(*AATags);
+        if (IsLoadCSE)
+            *IsLoadCSE = true;
         return LI;
       }
 

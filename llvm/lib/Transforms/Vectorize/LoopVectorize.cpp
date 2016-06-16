@@ -1375,11 +1375,6 @@ public:
   unsigned getMaxSafeDepDistBytes() { return LAI->getMaxSafeDepDistBytes(); }
 
   bool hasStride(Value *V) { return StrideSet.count(V); }
-  bool mustCheckStrides() { return !StrideSet.empty(); }
-  SmallPtrSet<Value *, 8>::iterator strides_begin() {
-    return StrideSet.begin();
-  }
-  SmallPtrSet<Value *, 8>::iterator strides_end() { return StrideSet.end(); }
 
   /// Returns true if the target machine supports masked store operation
   /// for the given \p DataType and kind of access to \p Ptr.
@@ -1453,6 +1448,10 @@ private:
     emitAnalysisDiag(TheFunction, TheLoop, *Hints, Message);
   }
 
+  /// \brief If an access has a symbolic strides, this maps the pointer value to
+  /// the stride symbol.
+  const ValueToValueMap &getSymbolicStrides() { return SymbolicStrides; }
+
   unsigned NumPredStores;
 
   /// The loop that we evaluate.
@@ -1513,7 +1512,7 @@ private:
   /// Used to emit an analysis of any legality issues.
   LoopVectorizeHints *Hints;
 
-  ValueToValueMap Strides;
+  ValueToValueMap SymbolicStrides;
   SmallPtrSet<Value *, 8> StrideSet;
 
   /// While vectorizing these instructions we have to generate a
@@ -2225,7 +2224,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
   // We can emit wide load/stores only if the last non-zero index is the
   // induction variable.
   const SCEV *Last = nullptr;
-  if (!Strides.count(Gep))
+  if (!getSymbolicStrides().count(Gep))
     Last = PSE.getSCEV(Gep->getOperand(InductionOperand));
   else {
     // Because of the multiplication by a stride we can have a s/zext cast.
@@ -2237,7 +2236,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
     //  %idxprom = zext i32 %mul to i64  << Safe cast.
     //  %arrayidx = getelementptr inbounds i32* %B, i64 %idxprom
     //
-    Last = replaceSymbolicStrideSCEV(PSE, Strides,
+    Last = replaceSymbolicStrideSCEV(PSE, getSymbolicStrides(),
                                      Gep->getOperand(InductionOperand), Gep);
     if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(Last))
       Last =
@@ -4668,7 +4667,7 @@ bool LoopVectorizationLegality::canVectorize() {
 
   // Analyze interleaved memory accesses.
   if (UseInterleaved)
-    InterleaveInfo.analyzeInterleaving(Strides);
+    InterleaveInfo.analyzeInterleaving(getSymbolicStrides());
 
   unsigned SCEVThreshold = VectorizeSCEVCheckThreshold;
   if (Hints->getForce() == LoopVectorizeHints::FK_Enabled)
@@ -4957,7 +4956,7 @@ void LoopVectorizationLegality::collectStridedAccess(Value *MemAccess) {
 
   DEBUG(dbgs() << "LV: Found a strided access that we can version");
   DEBUG(dbgs() << "  Ptr: " << *Ptr << " Stride: " << *Stride << "\n");
-  Strides[Ptr] = Stride;
+  SymbolicStrides[Ptr] = Stride;
   StrideSet.insert(Stride);
 }
 
@@ -4999,7 +4998,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
-  LAI = &LAA->getInfo(TheLoop, Strides);
+  LAI = &LAA->getInfo(TheLoop, getSymbolicStrides());
   auto &OptionalReport = LAI->getReport();
   if (OptionalReport)
     emitAnalysis(VectorizationReport(*OptionalReport));

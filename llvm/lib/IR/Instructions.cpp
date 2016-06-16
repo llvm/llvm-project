@@ -355,6 +355,12 @@ void CallInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
   setAttributes(PAL);
 }
 
+void CallInst::removeAttribute(unsigned i, StringRef Kind) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
 void CallInst::removeAttribute(unsigned i, Attribute Attr) {
   AttributeSet PAL = getAttributes();
   AttrBuilder B(Attr);
@@ -387,6 +393,10 @@ bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
 }
 
 Attribute CallInst::getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+  return getAttributes().getAttribute(i, Kind);
+}
+
+Attribute CallInst::getAttribute(unsigned i, StringRef Kind) const {
   return getAttributes().getAttribute(i, Kind);
 }
 
@@ -724,6 +734,12 @@ void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
   setAttributes(PAL);
 }
 
+void InvokeInst::removeAttribute(unsigned i, StringRef Kind) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
 void InvokeInst::removeAttribute(unsigned i, Attribute Attr) {
   AttributeSet PAL = getAttributes();
   AttrBuilder B(Attr);
@@ -734,6 +750,10 @@ void InvokeInst::removeAttribute(unsigned i, Attribute Attr) {
 
 Attribute InvokeInst::getAttribute(unsigned i,
                                    Attribute::AttrKind Kind) const {
+  return getAttributes().getAttribute(i, Kind);
+}
+
+Attribute InvokeInst::getAttribute(unsigned i, StringRef Kind) const {
   return getAttributes().getAttribute(i, Kind);
 }
 

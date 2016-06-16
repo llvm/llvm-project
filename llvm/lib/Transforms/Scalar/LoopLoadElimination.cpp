@@ -552,7 +552,7 @@ public:
     // Now walk the identified inner loops.
     bool Changed = false;
     for (Loop *L : Worklist) {
-      const LoopAccessInfo &LAI = LAA->getInfo(L, ValueToValueMap());
+      const LoopAccessInfo &LAI = LAA->getInfo(L);
       // The actual work is performed by LoadEliminationForLoop.
       LoadEliminationForLoop LEL(L, LI, LAI, DT);
       Changed |= LEL.processLoop();

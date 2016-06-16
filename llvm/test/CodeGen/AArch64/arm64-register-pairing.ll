@@ -14,7 +14,7 @@ define void @odd() nounwind {
 ; CHECK: stp x24, x23, [sp, #96]
 ; CHECK: stp x22, x21, [sp, #112]
 ; CHECK: stp x20, x19, [sp, #128]
-; CHECK: movz x0, #42
+; CHECK: mov x0, #42
 ; CHECK: ldp x20, x19, [sp, #128]
 ; CHECK: ldp x22, x21, [sp, #112]
 ; CHECK: ldp x24, x23, [sp, #96]
@@ -31,7 +31,7 @@ define void @odd() nounwind {
 ; CHECK-NOTMACHO: str x27, [sp, #32]
 ; CHECK-NOTMACHO: stp x25, x23, [sp, #48]
 ; CHECK-NOTMACHO: stp x21, x19, [sp, #64]
-; CHECK-NOTMACHO: movz x0, #42
+; CHECK-NOTMACHO: mov x0, #42
 ; CHECK-NOTMACHO: ldp x21, x19, [sp, #64]
 ; CHECK-NOTMACHO: ldp x25, x23, [sp, #48]
 ; CHECK-NOTMACHO: ldr x27, [sp, #32]
@@ -52,7 +52,7 @@ define void @even() nounwind {
 ; CHECK: stp x24, x23, [sp, #96]
 ; CHECK: stp x22, x21, [sp, #112]
 ; CHECK: stp x20, x19, [sp, #128]
-; CHECK: movz x0, #42
+; CHECK: mov x0, #42
 ; CHECK: ldp x20, x19, [sp, #128]
 ; CHECK: ldp x22, x21, [sp, #112]
 ; CHECK: ldp x24, x23, [sp, #96]
@@ -69,7 +69,7 @@ define void @even() nounwind {
 ; CHECK-NOTMACHO: str x28, [sp, #32]
 ; CHECK-NOTMACHO: stp x26, x24, [sp, #48]
 ; CHECK-NOTMACHO: stp x22, x20, [sp, #64]
-; CHECK-NOTMACHO: movz x0, #42
+; CHECK-NOTMACHO: mov x0, #42
 ; CHECK-NOTMACHO: ldp x22, x20, [sp, #64]
 ; CHECK-NOTMACHO: ldp x26, x24, [sp, #48]
 ; CHECK-NOTMACHO: ldr x28, [sp, #32]

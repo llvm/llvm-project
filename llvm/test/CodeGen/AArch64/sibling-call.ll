@@ -92,6 +92,6 @@ define void @indirect_tail() {
   tail call void %fptr(i32 42)
   ret void
 ; CHECK: ldr [[FPTR:x[1-9]+]], [{{x[0-9]+}}, {{#?}}:lo12:func]
-; CHECK: movz w0, #{{42|0x2a}}
+; CHECK: mov w0, #{{42|0x2a}}
 ; CHECK: br [[FPTR]]
 }

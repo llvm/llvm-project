@@ -2907,8 +2907,8 @@
 0x7f 0xf0 0x1 0xf2
 0xff 0xf3 0x0 0xf2
 
-# CHECK: orr      w3, wzr, #0xf000f
-# CHECK: orr      x10, xzr, #0xaaaaaaaaaaaaaaaa
+# CHECK: mov      w3, #983055
+# CHECK: mov      x10, #-6148914691236517206
 0xe3 0x8f 0x0 0x32
 0xea 0xf3 0x1 0xb2
 
@@ -2991,19 +2991,19 @@
 # limitation in InstAlias. Lots of the "mov[nz]" instructions should
 # be "mov".
 
-# CHECK: movz     w1, #{{65535|0xffff}}
+# CHECK: mov     w1, #{{65535|0xffff}}
 # CHECK: movz     w2, #0, lsl #16
-# CHECK: movn     w2, #{{1234|0x4d2}}
+# CHECK: mov     w2, #-1235
 0xe1 0xff 0x9f 0x52
 0x2 0x0 0xa0 0x52
 0x42 0x9a 0x80 0x12
 
-# CHECK: movz     x2, #{{1234|0x4d2}}, lsl #32
+# CHECK: mov     x2, #5299989643264
 # CHECK: movk     xzr, #{{4321|0x10e1}}, lsl #48
 0x42 0x9a 0xc0 0xd2
 0x3f 0x1c 0xe2 0xf2
 
-# CHECK: movz     x2, #0
+# CHECK: mov      x2, #0
 # CHECK: movk     w3, #0
 # CHECK: movz     x4, #0, lsl #16
 # CHECK: movk     w5, #0, lsl #16

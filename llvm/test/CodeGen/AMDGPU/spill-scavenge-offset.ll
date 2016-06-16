@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=verde < %s | FileCheck %s
-; RUN: llc -regalloc=basic -march=amdgcn -mcpu=tonga < %s | FileCheck %s
-;
+; RUN: llc -march=amdgcn -mcpu=verde -enable-misched=0 -post-RA-scheduler=0 < %s | FileCheck %s
+; RUN: llc -regalloc=basic -march=amdgcn -mcpu=tonga -enable-misched=0 -post-RA-scheduler=0 < %s | FileCheck %s
+ ;
 ; There is something about Tonga that causes this test to spend a lot of time
 ; in the default register allocator.
 

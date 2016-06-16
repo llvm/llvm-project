@@ -30,7 +30,7 @@ static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
   return makeArrayRef(Table);
 }
 
-static StringMap<int> createIndexMap(const ArrayRef<StringRef>& a) {
+static StringMap<int> createIndexMap(const ArrayRef<StringRef> &a) {
   StringMap<int> map;
   for (auto Name : a)
     map.insert(std::make_pair(Name, map.size()));
@@ -67,8 +67,8 @@ static void printBitField(StringRef Name, const amd_kernel_code_t &c,
 }
 
 typedef void(*PrintFx)(StringRef,
-                       const amd_kernel_code_t&,
-                       raw_ostream&);
+                       const amd_kernel_code_t &,
+                       raw_ostream &);
 
 static ArrayRef<PrintFx> getPrinterTable() {
   static const PrintFx Table[] = {
@@ -79,17 +79,17 @@ static ArrayRef<PrintFx> getPrinterTable() {
   return makeArrayRef(Table);
 }
 
-void llvm::printAmdKernelCodeField(const amd_kernel_code_t& C,
+void llvm::printAmdKernelCodeField(const amd_kernel_code_t &C,
                                    int FldIndex,
-                                   raw_ostream& OS) {
+                                   raw_ostream &OS) {
   auto Printer = getPrinterTable()[FldIndex];
   if (Printer)
     Printer(get_amd_kernel_code_t_FieldName(FldIndex), C, OS);
 }
 
-void llvm::dumpAmdKernelCode(const amd_kernel_code_t* C,
-                             raw_ostream& OS,
-                             const char* tab) {
+void llvm::dumpAmdKernelCode(const amd_kernel_code_t *C,
+                             raw_ostream &OS,
+                             const char *tab) {
   const int Size = getPrinterTable().size();
   for (int i = 0; i < Size; ++i) {
     OS << tab;
@@ -101,7 +101,7 @@ void llvm::dumpAmdKernelCode(const amd_kernel_code_t* C,
 
 // Field parsing
 
-static bool expectEqualInt(MCAsmLexer& Lexer, raw_ostream& Err) {
+static bool expectEqualInt(MCAsmLexer &Lexer, raw_ostream &Err) {
   if (Lexer.isNot(AsmToken::Equal)) {
     Err << "expected '='";
     return false;
@@ -134,9 +134,9 @@ static bool parseBitField(amd_kernel_code_t &C, MCAsmLexer &Lexer,
   return true;
 }
 
-typedef bool(*ParseFx)(amd_kernel_code_t&,
-                       MCAsmLexer& Lexer,
-                       raw_ostream& Err);
+typedef bool(*ParseFx)(amd_kernel_code_t &,
+                       MCAsmLexer &Lexer,
+                       raw_ostream &Err);
 
 static ArrayRef<ParseFx> getParserTable() {
   static const ParseFx Table[] = {
@@ -148,9 +148,9 @@ static ArrayRef<ParseFx> getParserTable() {
 }
 
 bool llvm::parseAmdKernelCodeField(StringRef ID,
-                                   MCAsmLexer& Lexer,
-                                   amd_kernel_code_t& C,
-                                   raw_ostream& Err) {
+                                   MCAsmLexer &Lexer,
+                                   amd_kernel_code_t &C,
+                                   raw_ostream &Err) {
   const int Idx = get_amd_kernel_code_t_FieldIndex(ID);
   if (Idx < 0) {
     Err << "unexpected amd_kernel_code_t field name " << ID;

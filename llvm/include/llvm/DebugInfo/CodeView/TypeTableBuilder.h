@@ -51,6 +51,7 @@ public:
   TypeIndex writeStringId(const StringIdRecord &Record);
   TypeIndex writeVFTable(const VFTableRecord &Record);
   TypeIndex writeUdtSourceLine(const UdtSourceLineRecord &Record);
+  TypeIndex writeUdtModSourceLine(const UdtModSourceLineRecord &Record);
   TypeIndex writeFuncId(const FuncIdRecord &Record);
   TypeIndex writeMemberFuncId(const MemberFuncIdRecord &Record);
   TypeIndex writeBuildInfo(const BuildInfoRecord &Record);

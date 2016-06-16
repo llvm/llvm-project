@@ -6,10 +6,10 @@
 ; Load an address with an offset larget then LDR imm can handle
 define i32 @foo() nounwind {
 entry:
-; CHECK: @foo
+; CHECK-LABEL: @foo
 ; CHECK: adrp x[[REG:[0-9]+]], _sortlist@GOTPAGE
 ; CHECK: ldr x[[REG1:[0-9]+]], [x[[REG]], _sortlist@GOTPAGEOFF]
-; CHECK: movz x[[REG2:[0-9]+]], #20000
+; CHECK: mov x[[REG2:[0-9]+]], #20000
 ; CHECK: add x[[REG3:[0-9]+]], x[[REG1]], x[[REG2]]
 ; CHECK: ldr w0, [x[[REG3]]]
 ; CHECK: ret
@@ -19,10 +19,10 @@ entry:
 
 define i64 @foo2() nounwind {
 entry:
-; CHECK: @foo2
+; CHECK-LABEL: @foo2
 ; CHECK: adrp x[[REG:[0-9]+]], _sortlist2@GOTPAGE
 ; CHECK: ldr x[[REG1:[0-9]+]], [x[[REG]], _sortlist2@GOTPAGEOFF]
-; CHECK: movz x[[REG2:[0-9]+]], #40000
+; CHECK: mov x[[REG2:[0-9]+]], #40000
 ; CHECK: add x[[REG3:[0-9]+]], x[[REG1]], x[[REG2]]
 ; CHECK: ldr x0, [x[[REG3]]]
 ; CHECK: ret
@@ -36,8 +36,8 @@ entry:
 
 define signext i8 @foo3() nounwind ssp {
 entry:
-; CHECK: @foo3
-; CHECK: movz x[[REG:[0-9]+]], #2874, lsl #32
+; CHECK-LABEL: @foo3
+; CHECK: mov x[[REG:[0-9]+]], #12343736008704
 ; CHECK: movk x[[REG]], #29646, lsl #16
 ; CHECK: movk x[[REG]], #12274
   %0 = load i8*, i8** @pd2, align 8

@@ -2,8 +2,7 @@
 # RUN:  FileCheck %s
 
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent -filetype=obj -o -| \
-# RUN:  llvm-objdump -d -r -arch=mips - | \
-# RUN:   FileCheck %s -check-prefix=CHECK-FOR-STORE
+# RUN:  llvm-objdump -d -r - | FileCheck %s -check-prefix=CHECK-FOR-STORE
 
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+micromips --position-independent -show-encoding | \
 # RUN:  FileCheck %s -check-prefix=MICROMIPS

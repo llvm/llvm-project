@@ -48,9 +48,6 @@ private:
   bool selectAddrRegImm(SDValue Addr, SDValue &Base,
                         SDValue &Offset) const override;
 
-  bool selectAddrRegReg(SDValue Addr, SDValue &Base,
-                        SDValue &Offset) const override;
-
   bool selectAddrDefault(SDValue Addr, SDValue &Base,
                          SDValue &Offset) const override;
 

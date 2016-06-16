@@ -69,6 +69,38 @@ TpiStream::TpiStream(const PDBFile &File,
 
 TpiStream::~TpiStream() {}
 
+// Computes a hash for a given TPI record.
+template <typename T, codeview::TypeRecordKind K>
+static Error getTpiHash(const codeview::CVType &Rec, uint32_t &Hash) {
+  ArrayRef<uint8_t> Data = Rec.Data;
+  ErrorOr<T> Obj = T::deserialize(K, Data);
+  if (Obj.getError())
+    return llvm::make_error<codeview::CodeViewError>(
+        codeview::cv_error_code::corrupt_record);
+
+  auto Opts = static_cast<uint16_t>(Obj->getOptions());
+  if (Opts & static_cast<uint16_t>(codeview::ClassOptions::ForwardReference)) {
+    // We don't know how to calculate a hash value for this yet.
+    // Currently we just skip it.
+    Hash = 0;
+    return Error::success();
+  }
+
+  if (!(Opts & static_cast<uint16_t>(codeview::ClassOptions::Scoped))) {
+    Hash = hashStringV1(Obj->getName());
+    return Error::success();
+  }
+
+  if (Opts & static_cast<uint16_t>(codeview::ClassOptions::HasUniqueName)) {
+    Hash = hashStringV1(Obj->getUniqueName());
+    return Error::success();
+  }
+
+  // This case is not implemented yet.
+  Hash = 0;
+  return Error::success();
+}
+
 // Verifies that a given type record matches with a given hash value.
 // Currently we only verify SRC_LINE records.
 static Error verifyTIHash(const codeview::CVType &Rec, uint32_t Expected,
@@ -83,19 +115,32 @@ static Error verifyTIHash(const codeview::CVType &Rec, uint32_t Expected,
   case LF_UDT_MOD_SRC_LINE:
     Hash = hashStringV1(StringRef((const char *)D.data(), 4));
     break;
-  case LF_ENUM: {
-    ErrorOr<EnumRecord> Enum = EnumRecord::deserialize(TypeRecordKind::Enum, D);
-    if (Enum.getError())
-      return make_error<RawError>(raw_error_code::corrupt_file,
-                                  "Corrupt TPI hash table.");
-    Hash = hashStringV1(Enum->getName());
+  case LF_CLASS:
+    if (auto EC = getTpiHash<ClassRecord, TypeRecordKind::Class>(Rec, Hash))
+      return EC;
     break;
-  }
+  case LF_ENUM:
+    if (auto EC = getTpiHash<EnumRecord, TypeRecordKind::Enum>(Rec, Hash))
+      return EC;
+    break;
+  case LF_INTERFACE:
+    if (auto EC = getTpiHash<ClassRecord, TypeRecordKind::Interface>(Rec, Hash))
+      return EC;
+    break;
+  case LF_STRUCTURE:
+    if (auto EC = getTpiHash<ClassRecord, TypeRecordKind::Struct>(Rec, Hash))
+      return EC;
+    break;
+  case LF_UNION:
+    if (auto EC = getTpiHash<UnionRecord, TypeRecordKind::Union>(Rec, Hash))
+      return EC;
+    break;
   default:
+    // This pattern is not implemented yet.
     return Error::success();
   }
 
-  if ((Hash % NumHashBuckets) != Expected)
+  if (Hash && (Hash % NumHashBuckets) != Expected)
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupt TPI hash table.");
   return Error::success();

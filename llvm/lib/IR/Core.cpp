@@ -209,7 +209,6 @@ LLVMDiagnosticSeverity LLVMGetDiagInfoSeverity(LLVMDiagnosticInfoRef DI) {
     return severity;
 }
 
-
 /*===-- Operations on modules ---------------------------------------------===*/
 
 LLVMModuleRef LLVMModuleCreateWithName(const char *ModuleID) {
@@ -1852,9 +1851,20 @@ LLVMAttributeRef LLVMGetEnumAttributeAtIndex(LLVMValueRef F,
                                                 (Attribute::AttrKind)KindID));
 }
 
+LLVMAttributeRef LLVMGetStringAttributeAtIndex(LLVMValueRef F,
+                                               LLVMAttributeIndex Idx,
+                                               const char *K, unsigned KLen) {
+  return wrap(unwrap<Function>(F)->getAttribute(Idx, StringRef(K, KLen)));
+}
+
 void LLVMRemoveEnumAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
                                     unsigned KindID) {
   unwrap<Function>(F)->removeAttribute(Idx, (Attribute::AttrKind)KindID);
+}
+
+void LLVMRemoveStringAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
+                                      const char *K, unsigned KLen) {
+  unwrap<Function>(F)->removeAttribute(Idx, StringRef(K, KLen));
 }
 
 void LLVMAddTargetDependentFunctionAttr(LLVMValueRef Fn, const char *A,
@@ -2213,10 +2223,22 @@ LLVMAttributeRef LLVMGetCallSiteEnumAttribute(LLVMValueRef C,
     .getAttribute(Idx, (Attribute::AttrKind)KindID));
 }
 
+LLVMAttributeRef LLVMGetCallSiteStringAttribute(LLVMValueRef C,
+                                                LLVMAttributeIndex Idx,
+                                                const char *K, unsigned KLen) {
+  return wrap(CallSite(unwrap<Instruction>(C))
+    .getAttribute(Idx, StringRef(K, KLen)));
+}
+
 void LLVMRemoveCallSiteEnumAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                                      unsigned KindID) {
   CallSite(unwrap<Instruction>(C))
     .removeAttribute(Idx, (Attribute::AttrKind)KindID);
+}
+
+void LLVMRemoveCallSiteStringAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
+                                       const char *K, unsigned KLen) {
+  CallSite(unwrap<Instruction>(C)).removeAttribute(Idx, StringRef(K, KLen));
 }
 
 LLVMValueRef LLVMGetCalledValue(LLVMValueRef Instr) {

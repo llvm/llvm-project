@@ -637,11 +637,6 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
 
   NewGV->copyAttributesFrom(SGV);
 
-  // Don't copy the comdat, it's from the original module. We'll handle it
-  // later.
-  if (auto *NewGO = dyn_cast<GlobalObject>(NewGV))
-    NewGO->setComdat(nullptr);
-
   // Remove these copied constants in case this stays a declaration, since
   // they point to the source module. If the def is linked the values will
   // be mapped in during linkFunctionBody.

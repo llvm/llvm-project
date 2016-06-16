@@ -1,4 +1,4 @@
-//===-- PPCAsmParser.cpp - Parse PowerPC asm to MCInst instructions ---------===//
+//===-- PPCAsmParser.cpp - Parse PowerPC asm to MCInst instructions -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -394,13 +394,15 @@ public:
     return Imm.Val;
   }
   int64_t getImmS16Context() const {
-    assert((Kind == Immediate || Kind == ContextImmediate) && "Invalid access!");
+    assert((Kind == Immediate || Kind == ContextImmediate) &&
+           "Invalid access!");
     if (Kind == Immediate)
       return Imm.Val;
     return static_cast<int16_t>(Imm.Val);
   }
   int64_t getImmU16Context() const {
-    assert((Kind == Immediate || Kind == ContextImmediate) && "Invalid access!");
+    assert((Kind == Immediate || Kind == ContextImmediate) &&
+           "Invalid access!");
     return Imm.Val;
   }
 
@@ -445,7 +447,9 @@ public:
   }
 
   bool isToken() const override { return Kind == Token; }
-  bool isImm() const override { return Kind == Immediate || Kind == Expression; }
+  bool isImm() const override {
+    return Kind == Immediate || Kind == Expression;
+  }
   bool isU1Imm() const { return Kind == Immediate && isUInt<1>(getImm()); }
   bool isU2Imm() const { return Kind == Immediate && isUInt<2>(getImm()); }
   bool isU3Imm() const { return Kind == Immediate && isUInt<3>(getImm()); }
@@ -464,7 +468,7 @@ public:
   bool isU8ImmX8() const { return Kind == Immediate &&
                                   isUInt<8>(getImm()) &&
                                   (getImm() & 7) == 0; }
-  
+
   bool isU10Imm() const { return Kind == Immediate && isUInt<10>(getImm()); }
   bool isU12Imm() const { return Kind == Immediate && isUInt<12>(getImm()); }
   bool isU16Imm() const {
@@ -528,7 +532,9 @@ public:
                                  (Kind == Immediate && isInt<16>(getImm()) &&
                                   (getImm() & 3) == 0); }
   bool isRegNumber() const { return Kind == Immediate && isUInt<5>(getImm()); }
-  bool isVSRegNumber() const { return Kind == Immediate && isUInt<6>(getImm()); }
+  bool isVSRegNumber() const {
+    return Kind == Immediate && isUInt<6>(getImm());
+  }
   bool isCCRegNumber() const { return (Kind == Expression
                                        && isUInt<3>(getExprCRVal())) ||
                                       (Kind == Immediate
@@ -1484,8 +1490,8 @@ ParseExpression(const MCExpr *&EVal) {
 /// This differs from the default "parseExpression" in that it handles detection
 /// of the \code hi16(), ha16() and lo16() \endcode modifiers.  At present,
 /// parseExpression() doesn't recognise the modifiers when in the Darwin/MachO
-/// syntax form so it is done here.  TODO: Determine if there is merit in arranging
-/// for this to be done at a higher level.
+/// syntax form so it is done here.  TODO: Determine if there is merit in
+/// arranging for this to be done at a higher level.
 bool PPCAsmParser::
 ParseDarwinExpression(const MCExpr *&EVal) {
   MCAsmParser &Parser = getParser();

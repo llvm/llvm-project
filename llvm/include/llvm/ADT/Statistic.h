@@ -37,19 +37,24 @@ class raw_fd_ostream;
 
 class Statistic {
 public:
+  const char *DebugType;
   const char *Name;
   const char *Desc;
   std::atomic<unsigned> Value;
   bool Initialized;
 
   unsigned getValue() const { return Value.load(std::memory_order_relaxed); }
+  const char *getDebugType() const { return DebugType; }
   const char *getName() const { return Name; }
   const char *getDesc() const { return Desc; }
 
   /// construct - This should only be called for non-global statistics.
-  void construct(const char *name, const char *desc) {
-    Name = name; Desc = desc;
-    Value = 0; Initialized = false;
+  void construct(const char *debugtype, const char *name, const char *desc) {
+    DebugType = debugtype;
+    Name = name;
+    Desc = desc;
+    Value = 0;
+    Initialized = false;
   }
 
   // Allow use of this class as the value itself.
@@ -141,7 +146,7 @@ protected:
 // STATISTIC - A macro to make definition of statistics really simple.  This
 // automatically passes the DEBUG_TYPE of the file into the statistic.
 #define STATISTIC(VARNAME, DESC)                                               \
-  static llvm::Statistic VARNAME = {DEBUG_TYPE, DESC, {0}, 0}
+  static llvm::Statistic VARNAME = {DEBUG_TYPE, #VARNAME, DESC, {0}, 0}
 
 /// \brief Enable the collection and printing of statistics.
 void EnableStatistics();
@@ -157,6 +162,9 @@ void PrintStatistics();
 
 /// \brief Print statistics to the given output stream.
 void PrintStatistics(raw_ostream &OS);
+
+/// Print statistics in JSON format.
+void PrintStatisticsJSON(raw_ostream &OS);
 
 } // end llvm namespace
 

@@ -404,16 +404,16 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
     unsigned ScratchReg = MI.getOperand(Opers.getNextScratchIdx()).getReg();
     EncodedBytes = 16;
     // Materialize the jump address:
-    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::MOVZWi)
+    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::MOVZXi)
                                     .addReg(ScratchReg)
                                     .addImm((CallTarget >> 32) & 0xFFFF)
                                     .addImm(32));
-    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::MOVKWi)
+    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::MOVKXi)
                                     .addReg(ScratchReg)
                                     .addReg(ScratchReg)
                                     .addImm((CallTarget >> 16) & 0xFFFF)
                                     .addImm(16));
-    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::MOVKWi)
+    EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::MOVKXi)
                                     .addReg(ScratchReg)
                                     .addReg(ScratchReg)
                                     .addImm(CallTarget & 0xFFFF)

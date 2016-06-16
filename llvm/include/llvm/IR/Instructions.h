@@ -1630,6 +1630,9 @@ public:
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
   /// removeAttribute - removes the attribute from the list of attributes.
+  void removeAttribute(unsigned i, StringRef Kind);
+
+  /// removeAttribute - removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute Attr);
 
   /// \brief adds the dereferenceable attribute to the list of attributes.
@@ -1656,6 +1659,9 @@ public:
 
   /// \brief Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const;
+
+  /// \brief Get the attribute of a given kind at a position.
+  Attribute getAttribute(unsigned i, StringRef Kind) const;
 
   /// \brief Return true if the data operand at index \p i has the attribute \p
   /// A.
@@ -3577,6 +3583,9 @@ public:
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
   /// removeAttribute - removes the attribute from the list of attributes.
+  void removeAttribute(unsigned i, StringRef Kind);
+
+  /// removeAttribute - removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute Attr);
 
   /// \brief adds the dereferenceable attribute to the list of attributes.
@@ -3603,6 +3612,9 @@ public:
 
   /// \brief Get the attribute of a given kind at a position.
   Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const;
+
+  /// \brief Get the attribute of a given kind at a position.
+  Attribute getAttribute(unsigned i, StringRef Kind) const;
 
   /// \brief Return true if the data operand at index \p i has the attribute \p
   /// A.

@@ -819,10 +819,12 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
   // separated by a few arithmetic operations.
   BasicBlock::iterator BBI(LI);
   AAMDNodes AATags;
+  bool IsLoadCSE = false;
   if (Value *AvailableVal =
       FindAvailableLoadedValue(&LI, LI.getParent(), BBI,
-                               DefMaxInstsToScan, AA, &AATags)) {
-    if (LoadInst *NLI = dyn_cast<LoadInst>(AvailableVal)) {
+                               DefMaxInstsToScan, AA, &AATags, &IsLoadCSE)) {
+    if (IsLoadCSE) {
+      LoadInst *NLI = cast<LoadInst>(AvailableVal);
       unsigned KnownIDs[] = {
           LLVMContext::MD_tbaa,            LLVMContext::MD_alias_scope,
           LLVMContext::MD_noalias,         LLVMContext::MD_range,

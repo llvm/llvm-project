@@ -96,7 +96,6 @@ void GlobalObject::copyAttributesFrom(const GlobalValue *Src) {
   if (const auto *GV = dyn_cast<GlobalObject>(Src)) {
     setAlignment(GV->getAlignment());
     setSection(GV->getSection());
-    setComdat(const_cast<GlobalObject *>(GV)->getComdat());
   }
 }
 

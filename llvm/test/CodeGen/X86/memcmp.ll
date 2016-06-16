@@ -23,8 +23,7 @@ return:                                           ; preds = %entry
   ret void
 ; CHECK-LABEL: memcmp2:
 ; CHECK: movzwl
-; CHECK-NEXT: movzwl
-; CHECK-NEXT: cmpl
+; CHECK-NEXT: cmpw
 ; NOBUILTIN-LABEL: memcmp2:
 ; NOBUILTIN: callq
 }

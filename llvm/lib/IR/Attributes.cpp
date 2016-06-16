@@ -807,6 +807,14 @@ AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
   return get(C, Attrs);
 }
 
+AttributeSet AttributeSet::get(LLVMContext &C, unsigned Index,
+                               ArrayRef<StringRef> Kinds) {
+  SmallVector<std::pair<unsigned, Attribute>, 8> Attrs;
+  for (StringRef K : Kinds)
+    Attrs.push_back(std::make_pair(Index, Attribute::get(C, K)));
+  return get(C, Attrs);
+}
+
 AttributeSet AttributeSet::get(LLVMContext &C, ArrayRef<AttributeSet> Attrs) {
   if (Attrs.empty()) return AttributeSet();
   if (Attrs.size() == 1) return Attrs[0];
@@ -931,6 +939,12 @@ AttributeSet AttributeSet::addAttributes(LLVMContext &C, unsigned Index,
 
 AttributeSet AttributeSet::removeAttribute(LLVMContext &C, unsigned Index,
                                            Attribute::AttrKind Kind) const {
+  if (!hasAttribute(Index, Kind)) return *this;
+  return removeAttributes(C, Index, AttributeSet::get(C, Index, Kind));
+}
+
+AttributeSet AttributeSet::removeAttribute(LLVMContext &C, unsigned Index,
+                                           StringRef Kind) const {
   if (!hasAttribute(Index, Kind)) return *this;
   return removeAttributes(C, Index, AttributeSet::get(C, Index, Kind));
 }

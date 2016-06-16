@@ -2435,6 +2435,7 @@ static StringRef getUnnamedAddrEncoding(GlobalVariable::UnnamedAddr UA) {
   case GlobalVariable::UnnamedAddr::Global:
     return "unnamed_addr";
   }
+  llvm_unreachable("Unknown UnnamedAddr");
 }
 
 static void maybePrintComdat(formatted_raw_ostream &Out,

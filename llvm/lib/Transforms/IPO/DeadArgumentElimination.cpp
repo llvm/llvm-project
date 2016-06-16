@@ -147,6 +147,7 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
   // Create the new function body and insert it into the module...
   Function *NF = Function::Create(NFTy, Fn.getLinkage());
   NF->copyAttributesFrom(&Fn);
+  NF->setComdat(Fn.getComdat());
   Fn.getParent()->getFunctionList().insert(Fn.getIterator(), NF);
   NF->takeName(&Fn);
 
@@ -813,6 +814,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   // Create the new function body and insert it into the module...
   Function *NF = Function::Create(NFTy, F->getLinkage());
   NF->copyAttributesFrom(F);
+  NF->setComdat(F->getComdat());
   NF->setAttributes(NewPAL);
   // Insert the new function before the old function, so we won't be processing
   // it again.

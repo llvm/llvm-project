@@ -98,29 +98,27 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   // Compute the size of the bit vector to represent all the registers.
   // The bit vector is broken into 32-bit chunks, thus takes the ceil of
   // the number of registers divided by 32 for the size.
-  unsigned regMaskSize = (TRI->getNumRegs() + 31) / 32;
-  RegMask.resize(regMaskSize, 0xFFFFFFFF);
+  unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
+  RegMask.resize(RegMaskSize, 0xFFFFFFFF);
 
   PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
 
   PRUI->setTargetMachine(&TM);
 
   DEBUG(dbgs() << "Clobbered Registers: ");
-  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg)
     if (!MRI->reg_nodbg_empty(PReg) && MRI->isPhysRegUsed(PReg))
       markRegClobbered(TRI, &RegMask[0], PReg);
-  }
 
   const uint32_t *CallPreservedMask =
       TRI->getCallPreservedMask(MF, MF.getFunction()->getCallingConv());
   // Set callee saved register as preserved.
-  for (unsigned index = 0; index < regMaskSize; index++) {
-    RegMask[index] = RegMask[index] | CallPreservedMask[index];
-  }
-  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg) {
+  for (unsigned i = 0; i < RegMaskSize; ++i)
+    RegMask[i] = RegMask[i] | CallPreservedMask[i];
+
+  for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg)
     if (MachineOperand::clobbersPhysReg(&(RegMask[0]), PReg))
       DEBUG(dbgs() << TRI->getName(PReg) << " ");
-  }
 
   DEBUG(dbgs() << " \n----------------------------------------\n");
 

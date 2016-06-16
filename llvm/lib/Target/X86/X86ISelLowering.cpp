@@ -7283,15 +7283,15 @@ static SDValue lowerVectorShuffleWithUNPCK(const SDLoc &DL, MVT VT,
                                            SDValue V2, SelectionDAG &DAG) {
   int NumElts = VT.getVectorNumElements();
   int NumEltsInLane = 128 / VT.getScalarSizeInBits();
-  SmallVector<int, 8> Unpckl;
-  SmallVector<int, 8> Unpckh;
+  SmallVector<int, 8> Unpckl(NumElts);
+  SmallVector<int, 8> Unpckh(NumElts);
 
   for (int i = 0; i < NumElts; ++i) {
     unsigned LaneStart = (i / NumEltsInLane) * NumEltsInLane;
     int LoPos = (i % NumEltsInLane) / 2 + LaneStart + NumElts * (i % 2);
     int HiPos = LoPos + NumEltsInLane / 2;
-    Unpckl.push_back(LoPos);
-    Unpckh.push_back(HiPos);
+    Unpckl[i] = LoPos;
+    Unpckh[i] = HiPos;
   }
 
   if (isShuffleEquivalent(V1, V2, Mask, Unpckl))
@@ -8768,8 +8768,7 @@ static SDValue lowerVectorShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
     // half-crossings are created.
     // FIXME: We could consider commuting the unpacks.
 
-    SmallVector<int, 32> PermMask;
-    PermMask.assign(Size, -1);
+    SmallVector<int, 32> PermMask((unsigned)Size, -1);
     for (int i = 0; i < Size; ++i) {
       if (Mask[i] < 0)
         continue;
@@ -9829,11 +9828,7 @@ static SDValue lowerV8I16VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
           DL, MVT::v8i16, V1, V2, OrigMask, Subtarget, DAG))
     return ZExt;
 
-  auto isV1 = [](int M) { return M >= 0 && M < 8; };
-  (void)isV1;
-  auto isV2 = [](int M) { return M >= 8; };
-
-  int NumV2Inputs = count_if(Mask, isV2);
+  int NumV2Inputs = count_if(Mask, [](int M) { return M >= 8; });
 
   if (NumV2Inputs == 0) {
     // Check for being able to broadcast a single element.
@@ -9860,7 +9855,7 @@ static SDValue lowerV8I16VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
                                                      Subtarget, DAG);
   }
 
-  assert(llvm::any_of(Mask, isV1) &&
+  assert(llvm::any_of(Mask, [](int M) { return M >= 0 && M < 8; }) &&
          "All single-input shuffles should be canonicalized to be V1-input "
          "shuffles.");
 
@@ -10718,10 +10713,8 @@ static SDValue lowerVectorShuffleByMerging128BitLanes(
 
   // See if we can build a hypothetical 128-bit lane-fixing shuffle mask. Also
   // check whether the in-128-bit lane shuffles share a repeating pattern.
-  SmallVector<int, 4> Lanes;
-  Lanes.resize(NumLanes, -1);
-  SmallVector<int, 4> InLaneMask;
-  InLaneMask.resize(LaneSize, -1);
+  SmallVector<int, 4> Lanes((unsigned)NumLanes, -1);
+  SmallVector<int, 4> InLaneMask((unsigned)LaneSize, -1);
   for (int i = 0; i < Size; ++i) {
     if (Mask[i] < 0)
       continue;
@@ -10749,8 +10742,7 @@ static SDValue lowerVectorShuffleByMerging128BitLanes(
   // First shuffle the lanes into place.
   MVT LaneVT = MVT::getVectorVT(VT.isFloatingPoint() ? MVT::f64 : MVT::i64,
                                 VT.getSizeInBits() / 64);
-  SmallVector<int, 8> LaneMask;
-  LaneMask.resize(NumLanes * 2, -1);
+  SmallVector<int, 8> LaneMask((unsigned)NumLanes * 2, -1);
   for (int i = 0; i < NumLanes; ++i)
     if (Lanes[i] >= 0) {
       LaneMask[2 * i + 0] = 2*Lanes[i] + 0;
@@ -10765,8 +10757,7 @@ static SDValue lowerVectorShuffleByMerging128BitLanes(
   LaneShuffle = DAG.getBitcast(VT, LaneShuffle);
 
   // Now do a simple shuffle that isn't lane crossing.
-  SmallVector<int, 8> NewMask;
-  NewMask.resize(Size, -1);
+  SmallVector<int, 8> NewMask((unsigned)Size, -1);
   for (int i = 0; i < Size; ++i)
     if (Mask[i] >= 0)
       NewMask[i] = (i / LaneSize) * LaneSize + Mask[i] % LaneSize;
@@ -10819,12 +10810,12 @@ static SDValue lowerVectorShuffleWithUndefHalf(const SDLoc &DL, MVT VT,
   // then extract them and perform the 'half' shuffle at half width.
   // e.g. vector_shuffle <X, X, X, X, u, u, u, u> or <X, X, u, u>
   int HalfIdx1 = -1, HalfIdx2 = -1;
-  SmallVector<int, 8> HalfMask;
+  SmallVector<int, 8> HalfMask(HalfNumElts);
   unsigned Offset = UndefLower ? HalfNumElts : 0;
   for (unsigned i = 0; i != HalfNumElts; ++i) {
     int M = Mask[i + Offset];
     if (M < 0) {
-      HalfMask.push_back(M);
+      HalfMask[i] = M;
       continue;
     }
 
@@ -10838,12 +10829,12 @@ static SDValue lowerVectorShuffleWithUndefHalf(const SDLoc &DL, MVT VT,
     // We can shuffle with up to 2 half vectors, set the new 'half'
     // shuffle mask accordingly.
     if (-1 == HalfIdx1 || HalfIdx1 == HalfIdx) {
-      HalfMask.push_back(HalfElt);
+      HalfMask[i] = HalfElt;
       HalfIdx1 = HalfIdx;
       continue;
     }
     if (-1 == HalfIdx2 || HalfIdx2 == HalfIdx) {
-      HalfMask.push_back(HalfElt + HalfNumElts);
+      HalfMask[i] = HalfElt + HalfNumElts;
       HalfIdx2 = HalfIdx;
       continue;
     }
@@ -10942,10 +10933,9 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
             int &R = RepeatMask[j];
             if (0 != ((M % NumElts) / NumLaneElts))
               return false;
-            else if (0 <= R && R != M)
+            if (0 <= R && R != M)
               return false;
-            else
-              R = M;
+            R = M;
           }
         return true;
       };
@@ -14766,11 +14756,10 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
 
   if ((Op0.getValueType() == MVT::i8 || Op0.getValueType() == MVT::i16 ||
        Op0.getValueType() == MVT::i32 || Op0.getValueType() == MVT::i64)) {
-    // Do the comparison at i32 if it's smaller, besides the Atom case.
-    // This avoids subregister aliasing issues. Keep the smaller reference
-    // if we're optimizing for size, however, as that'll allow better folding
-    // of memory operations.
-    if (Op0.getValueType() != MVT::i32 && Op0.getValueType() != MVT::i64 &&
+    // Only promote the compare up to I32 if it is a 16 bit operation
+    // with an immediate.  16 bit immediates are to be avoided.
+    if ((Op0.getValueType() == MVT::i16 &&
+         (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))) &&
         !DAG.getMachineFunction().getFunction()->optForMinSize() &&
         !Subtarget.isAtom()) {
       unsigned ExtendOp =
@@ -30445,7 +30434,7 @@ static SDValue combineLockSub(SDNode *N, SelectionDAG &DAG,
 }
 
 // TEST (AND a, b) ,(AND a, b) -> TEST a, b
-static SDValue PerformTESTM(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineTestM(SDNode *N, SelectionDAG &DAG) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
 
@@ -30458,6 +30447,22 @@ static SDValue PerformTESTM(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(X86ISD::TESTM, DL, VT,
                      Op0->getOperand(0), Op0->getOperand(1));
 }
+
+static SDValue combineVectorCompare(SDNode *N, SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget) {
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
+
+  if (N->getOperand(0) == N->getOperand(1)) {
+    if (N->getOpcode() == X86ISD::PCMPEQ)
+      return getOnesVector(VT, Subtarget, DAG, DL);
+    if (N->getOpcode() == X86ISD::PCMPGT)
+      return getZeroVector(VT, Subtarget, DAG, DL);
+  }
+
+  return SDValue();
+}
+
 
 SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -30538,7 +30543,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MGATHER:
   case ISD::MSCATTER:       return combineGatherScatter(N, DAG);
   case X86ISD::LSUB:        return combineLockSub(N, DAG, Subtarget);
-  case X86ISD::TESTM:       return PerformTESTM(N, DAG);
+  case X86ISD::TESTM:       return combineTestM(N, DAG);
+  case X86ISD::PCMPEQ:
+  case X86ISD::PCMPGT:      return combineVectorCompare(N, DAG, Subtarget);
   }
 
   return SDValue();

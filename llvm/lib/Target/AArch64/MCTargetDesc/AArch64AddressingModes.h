@@ -753,6 +753,49 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   return (EncVal << 32) | EncVal;
 }
 
+inline static bool isAnyMOVZMovAlias(uint64_t Value, int RegWidth) {
+  for (int Shift = 0; Shift <= RegWidth - 16; Shift += 16)
+    if ((Value & ~(0xffffULL << Shift)) == 0)
+      return true;
+
+  return false;
+}
+
+inline static bool isMOVZMovAlias(uint64_t Value, int Shift, int RegWidth) {
+  if (RegWidth == 32)
+    Value &= 0xffffffffULL;
+
+  // "lsl #0" takes precedence: in practice this only affects "#0, lsl #0".
+  if (Value == 0 && Shift != 0)
+    return false;
+
+  return (Value & ~(0xffffULL << Shift)) == 0;
+}
+
+inline static bool isMOVNMovAlias(uint64_t Value, int Shift, int RegWidth) {
+  // MOVZ takes precedence over MOVN.
+  if (isAnyMOVZMovAlias(Value, RegWidth))
+    return false;
+
+  Value = ~Value;
+  if (RegWidth == 32)
+    Value &= 0xffffffffULL;
+
+  return isMOVZMovAlias(Value, Shift, RegWidth);
+}
+
+inline static bool isAnyMOVWMovAlias(uint64_t Value, int RegWidth) {
+  if (isAnyMOVZMovAlias(Value, RegWidth))
+    return true;
+
+  // It's not a MOVZ, but it might be a MOVN.
+  Value = ~Value;
+  if (RegWidth == 32)
+    Value &= 0xffffffffULL;
+
+  return isAnyMOVZMovAlias(Value, RegWidth);
+}
+
 } // end namespace AArch64_AM
 
 } // end namespace llvm
