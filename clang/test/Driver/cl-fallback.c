@@ -1,7 +1,7 @@
 // Note: %s must be preceded by --, otherwise it may be interpreted as a
 // command-line option, e.g. on Mac where %s is commonly under /Users.
 
-// RUN: %clang_cl --target=i686-pc-win32 /fallback /Dfoo=bar /Ubaz /Ifoo /O0 /Ox /GR /GR- /Gy /Gy- \
+// RUN: %clang_cl --target=i686-pc-win32 /fallback /Dfoo=bar /Ubaz /Ifoo /O0 /Ox /GR /GR- /GS /GS- /Gy /Gy- \
 // RUN:   /Gw /Gw- /LD /LDd /EHs /EHs- /Zl /MD /MDd /MTd /MT /FImyheader.h /Zi \
 // RUN:   -garbage -moregarbage \
 // RUN:   -### -- %s 2>&1 \
@@ -22,6 +22,7 @@
 // CHECK: "/Oy"
 // CHECK: "/GF"
 // CHECK: "/GR-"
+// CHECK: "/GS-"
 // CHECK: "/Gy-"
 // CHECK: "/Gw-"
 // CHECK: "/Z7"
@@ -40,6 +41,10 @@
 // RUN: %clang_cl /fallback /GR- -### -- %s 2>&1 | FileCheck -check-prefix=GR %s
 // GR: cl.exe
 // GR: "/GR-"
+
+// RUN: %clang_cl /fallback /GS- -### -- %s 2>&1 | FileCheck -check-prefix=GS %s
+// GS: cl.exe
+// GS: "/GS-"
 
 // RUN: %clang_cl /fallback /Od -### -- %s 2>&1 | FileCheck -check-prefix=O0 %s
 // O0: cl.exe

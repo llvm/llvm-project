@@ -649,10 +649,6 @@ static SmallString<256> getUniqueTagTypeName(const TagType *Ty,
   if (!hasCXXMangling(TD, TheCU) || !TD->isExternallyVisible())
     return FullName;
 
-  // Microsoft Mangler does not have support for mangleCXXRTTIName yet.
-  if (CGM.getTarget().getCXXABI().isMicrosoft())
-    return FullName;
-
   // TODO: This is using the RTTI name. Is there a better way to get
   // a unique string for a type?
   llvm::raw_svector_ostream Out(FullName);
@@ -3019,6 +3015,8 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
                               CGBuilderTy &Builder) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+  if (VD->hasAttr<NoDebugAttr>())
+    return;
 
   bool Unwritten =
       VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
@@ -3162,6 +3160,8 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
 
   if (Builder.GetInsertBlock() == nullptr)
+    return;
+  if (VD->hasAttr<NoDebugAttr>())
     return;
 
   bool isByRef = VD->hasAttr<BlocksAttr>();

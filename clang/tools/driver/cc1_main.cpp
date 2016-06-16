@@ -126,8 +126,6 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
-    if (llvm::AreStatisticsEnabled() || Clang->getFrontendOpts().ShowStats)
-      llvm::PrintStatistics();
     BuryPointer(std::move(Clang));
     return !Success;
   }

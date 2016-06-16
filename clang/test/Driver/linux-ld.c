@@ -1575,9 +1575,33 @@
 // Check dynamic-linker for musl-libc
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=i386-pc-linux-musl \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL32 %s
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-X86 %s
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=x86_64-pc-linux-musl \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL64 %s
-// CHECK-MUSL32: "-dynamic-linker" "/lib/ld-musl-i386.so.1"
-// CHECK-MUSL64: "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-X86_64 %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=mips-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=mipsel-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSEL %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=mips64-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64 %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64EL %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=powerpc-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPC %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=powerpc64-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPC64 %s
+// CHECK-MUSL-X86:      "-dynamic-linker" "/lib/ld-musl-i386.so.1"
+// CHECK-MUSL-X86_64:   "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
+// CHECK-MUSL-MIPS:     "-dynamic-linker" "/lib/ld-musl-mips.so.1"
+// CHECK-MUSL-MIPSEL:   "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
+// CHECK-MUSL-MIPS64:   "-dynamic-linker" "/lib/ld-musl-mips64.so.1"
+// CHECK-MUSL-MIPS64EL: "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
+// CHECK-MUSL-PPC:      "-dynamic-linker" "/lib/ld-musl-powerpc.so.1"
+// CHECK-MUSL-PPC64:    "-dynamic-linker" "/lib/ld-musl-powerpc64.so.1"

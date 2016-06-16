@@ -6501,6 +6501,36 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Ops.push_back(llvm::ConstantInt::get(getLLVMContext(), Result));
   }
 
+  // These exist so that the builtin that takes an immediate can be bounds
+  // checked by clang to avoid passing bad immediates to the backend. Since
+  // AVX has a larger immediate than SSE we would need separate builtins to
+  // do the different bounds checking. Rather than create a clang specific
+  // SSE only builtin, this implements eight separate builtins to match gcc
+  // implementation.
+  auto getCmpIntrinsicCall = [this, &Ops](Intrinsic::ID ID, unsigned Imm) {
+    Ops.push_back(llvm::ConstantInt::get(Int8Ty, Imm));
+    llvm::Function *F = CGM.getIntrinsic(ID);
+    return Builder.CreateCall(F, Ops);
+  };
+
+  // For the vector forms of FP comparisons, translate the builtins directly to
+  // IR.
+  // TODO: The builtins could be removed if the SSE header files used vector
+  // extension comparisons directly (vector ordered/unordered may need
+  // additional support via __builtin_isnan()).
+  llvm::VectorType *V2F64 =
+      llvm::VectorType::get(llvm::Type::getDoubleTy(getLLVMContext()), 2);
+  llvm::VectorType *V4F32 =
+      llvm::VectorType::get(llvm::Type::getFloatTy(getLLVMContext()), 4);
+
+  auto getVectorFCmpIR = [this, &Ops](CmpInst::Predicate Pred,
+                                      llvm::VectorType *FPVecTy) {
+    Value *Cmp = Builder.CreateFCmp(Pred, Ops[0], Ops[1]);
+    llvm::VectorType *IntVecTy = llvm::VectorType::getInteger(FPVecTy);
+    Value *Sext = Builder.CreateSExt(Cmp, IntVecTy);
+    return Builder.CreateBitCast(Sext, FPVecTy);
+  };
+
   switch (BuiltinID) {
   default: return nullptr;
   case X86::BI__builtin_cpu_supports: {
@@ -6870,6 +6900,33 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pcmpgtq256_mask:
   case X86::BI__builtin_ia32_pcmpgtq512_mask:
     return EmitX86MaskedCompare(*this, ICmpInst::ICMP_SGT, Ops);
+
+  // TODO: Handle 64/256/512-bit vector widths of min/max.
+  case X86::BI__builtin_ia32_pmaxsb128:
+  case X86::BI__builtin_ia32_pmaxsw128:
+  case X86::BI__builtin_ia32_pmaxsd128: {
+    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SGT, Ops[0], Ops[1]);
+    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
+  }
+  case X86::BI__builtin_ia32_pmaxub128:
+  case X86::BI__builtin_ia32_pmaxuw128:
+  case X86::BI__builtin_ia32_pmaxud128: {
+    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Ops[0], Ops[1]);
+    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
+  }
+  case X86::BI__builtin_ia32_pminsb128:
+  case X86::BI__builtin_ia32_pminsw128:
+  case X86::BI__builtin_ia32_pminsd128: {
+    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SLT, Ops[0], Ops[1]);
+    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
+  }
+  case X86::BI__builtin_ia32_pminub128:
+  case X86::BI__builtin_ia32_pminuw128:
+  case X86::BI__builtin_ia32_pminud128: {
+    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, Ops[0], Ops[1]);
+    return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
+  }
+
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:
   case X86::BI__builtin_ia32_pswapdsi: {
@@ -6912,154 +6969,74 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
                                       Ops[0]);
     return Builder.CreateExtractValue(Call, 1);
   }
-  // SSE comparison intrisics
+
+  // SSE packed comparison intrinsics
   case X86::BI__builtin_ia32_cmpeqps:
+    return getVectorFCmpIR(CmpInst::FCMP_OEQ, V4F32);
   case X86::BI__builtin_ia32_cmpltps:
+    return getVectorFCmpIR(CmpInst::FCMP_OLT, V4F32);
   case X86::BI__builtin_ia32_cmpleps:
+    return getVectorFCmpIR(CmpInst::FCMP_OLE, V4F32);
   case X86::BI__builtin_ia32_cmpunordps:
+    return getVectorFCmpIR(CmpInst::FCMP_UNO, V4F32);
   case X86::BI__builtin_ia32_cmpneqps:
+    return getVectorFCmpIR(CmpInst::FCMP_UNE, V4F32);
   case X86::BI__builtin_ia32_cmpnltps:
+    return getVectorFCmpIR(CmpInst::FCMP_UGE, V4F32);
   case X86::BI__builtin_ia32_cmpnleps:
+    return getVectorFCmpIR(CmpInst::FCMP_UGT, V4F32);
   case X86::BI__builtin_ia32_cmpordps:
-  case X86::BI__builtin_ia32_cmpeqss:
-  case X86::BI__builtin_ia32_cmpltss:
-  case X86::BI__builtin_ia32_cmpless:
-  case X86::BI__builtin_ia32_cmpunordss:
-  case X86::BI__builtin_ia32_cmpneqss:
-  case X86::BI__builtin_ia32_cmpnltss:
-  case X86::BI__builtin_ia32_cmpnless:
-  case X86::BI__builtin_ia32_cmpordss:
+    return getVectorFCmpIR(CmpInst::FCMP_ORD, V4F32);
   case X86::BI__builtin_ia32_cmpeqpd:
+    return getVectorFCmpIR(CmpInst::FCMP_OEQ, V2F64);
   case X86::BI__builtin_ia32_cmpltpd:
+    return getVectorFCmpIR(CmpInst::FCMP_OLT, V2F64);
   case X86::BI__builtin_ia32_cmplepd:
+    return getVectorFCmpIR(CmpInst::FCMP_OLE, V2F64);
   case X86::BI__builtin_ia32_cmpunordpd:
+    return getVectorFCmpIR(CmpInst::FCMP_UNO, V2F64);
   case X86::BI__builtin_ia32_cmpneqpd:
+    return getVectorFCmpIR(CmpInst::FCMP_UNE, V2F64);
   case X86::BI__builtin_ia32_cmpnltpd:
+    return getVectorFCmpIR(CmpInst::FCMP_UGE, V2F64);
   case X86::BI__builtin_ia32_cmpnlepd:
+    return getVectorFCmpIR(CmpInst::FCMP_UGT, V2F64);
   case X86::BI__builtin_ia32_cmpordpd:
+    return getVectorFCmpIR(CmpInst::FCMP_ORD, V2F64);
+
+  // SSE scalar comparison intrinsics
+  case X86::BI__builtin_ia32_cmpeqss:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 0);
+  case X86::BI__builtin_ia32_cmpltss:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 1);
+  case X86::BI__builtin_ia32_cmpless:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 2);
+  case X86::BI__builtin_ia32_cmpunordss:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 3);
+  case X86::BI__builtin_ia32_cmpneqss:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 4);
+  case X86::BI__builtin_ia32_cmpnltss:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 5);
+  case X86::BI__builtin_ia32_cmpnless:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 6);
+  case X86::BI__builtin_ia32_cmpordss:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse_cmp_ss, 7);
   case X86::BI__builtin_ia32_cmpeqsd:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 0);
   case X86::BI__builtin_ia32_cmpltsd:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 1);
   case X86::BI__builtin_ia32_cmplesd:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 2);
   case X86::BI__builtin_ia32_cmpunordsd:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 3);
   case X86::BI__builtin_ia32_cmpneqsd:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 4);
   case X86::BI__builtin_ia32_cmpnltsd:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 5);
   case X86::BI__builtin_ia32_cmpnlesd:
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 6);
   case X86::BI__builtin_ia32_cmpordsd:
-    // These exist so that the builtin that takes an immediate can be bounds
-    // checked by clang to avoid passing bad immediates to the backend. Since
-    // AVX has a larger immediate than SSE we would need separate builtins to
-    // do the different bounds checking. Rather than create a clang specific
-    // SSE only builtin, this implements eight separate builtins to match gcc
-    // implementation.
-
-    // Choose the immediate.
-    unsigned Imm;
-    switch (BuiltinID) {
-    default: llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_cmpeqps:
-    case X86::BI__builtin_ia32_cmpeqss:
-    case X86::BI__builtin_ia32_cmpeqpd:
-    case X86::BI__builtin_ia32_cmpeqsd:
-      Imm = 0;
-      break;
-    case X86::BI__builtin_ia32_cmpltps:
-    case X86::BI__builtin_ia32_cmpltss:
-    case X86::BI__builtin_ia32_cmpltpd:
-    case X86::BI__builtin_ia32_cmpltsd:
-      Imm = 1;
-      break;
-    case X86::BI__builtin_ia32_cmpleps:
-    case X86::BI__builtin_ia32_cmpless:
-    case X86::BI__builtin_ia32_cmplepd:
-    case X86::BI__builtin_ia32_cmplesd:
-      Imm = 2;
-      break;
-    case X86::BI__builtin_ia32_cmpunordps:
-    case X86::BI__builtin_ia32_cmpunordss:
-    case X86::BI__builtin_ia32_cmpunordpd:
-    case X86::BI__builtin_ia32_cmpunordsd:
-      Imm = 3;
-      break;
-    case X86::BI__builtin_ia32_cmpneqps:
-    case X86::BI__builtin_ia32_cmpneqss:
-    case X86::BI__builtin_ia32_cmpneqpd:
-    case X86::BI__builtin_ia32_cmpneqsd:
-      Imm = 4;
-      break;
-    case X86::BI__builtin_ia32_cmpnltps:
-    case X86::BI__builtin_ia32_cmpnltss:
-    case X86::BI__builtin_ia32_cmpnltpd:
-    case X86::BI__builtin_ia32_cmpnltsd:
-      Imm = 5;
-      break;
-    case X86::BI__builtin_ia32_cmpnleps:
-    case X86::BI__builtin_ia32_cmpnless:
-    case X86::BI__builtin_ia32_cmpnlepd:
-    case X86::BI__builtin_ia32_cmpnlesd:
-      Imm = 6;
-      break;
-    case X86::BI__builtin_ia32_cmpordps:
-    case X86::BI__builtin_ia32_cmpordss:
-    case X86::BI__builtin_ia32_cmpordpd:
-    case X86::BI__builtin_ia32_cmpordsd:
-      Imm = 7;
-      break;
-    }
-
-    // Choose the intrinsic ID.
-    const char *name;
-    Intrinsic::ID ID;
-    switch (BuiltinID) {
-    default: llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_cmpeqps:
-    case X86::BI__builtin_ia32_cmpltps:
-    case X86::BI__builtin_ia32_cmpleps:
-    case X86::BI__builtin_ia32_cmpunordps:
-    case X86::BI__builtin_ia32_cmpneqps:
-    case X86::BI__builtin_ia32_cmpnltps:
-    case X86::BI__builtin_ia32_cmpnleps:
-    case X86::BI__builtin_ia32_cmpordps:
-      name = "cmpps";
-      ID = Intrinsic::x86_sse_cmp_ps;
-      break;
-    case X86::BI__builtin_ia32_cmpeqss:
-    case X86::BI__builtin_ia32_cmpltss:
-    case X86::BI__builtin_ia32_cmpless:
-    case X86::BI__builtin_ia32_cmpunordss:
-    case X86::BI__builtin_ia32_cmpneqss:
-    case X86::BI__builtin_ia32_cmpnltss:
-    case X86::BI__builtin_ia32_cmpnless:
-    case X86::BI__builtin_ia32_cmpordss:
-      name = "cmpss";
-      ID = Intrinsic::x86_sse_cmp_ss;
-      break;
-    case X86::BI__builtin_ia32_cmpeqpd:
-    case X86::BI__builtin_ia32_cmpltpd:
-    case X86::BI__builtin_ia32_cmplepd:
-    case X86::BI__builtin_ia32_cmpunordpd:
-    case X86::BI__builtin_ia32_cmpneqpd:
-    case X86::BI__builtin_ia32_cmpnltpd:
-    case X86::BI__builtin_ia32_cmpnlepd:
-    case X86::BI__builtin_ia32_cmpordpd:
-      name = "cmppd";
-      ID = Intrinsic::x86_sse2_cmp_pd;
-      break;
-    case X86::BI__builtin_ia32_cmpeqsd:
-    case X86::BI__builtin_ia32_cmpltsd:
-    case X86::BI__builtin_ia32_cmplesd:
-    case X86::BI__builtin_ia32_cmpunordsd:
-    case X86::BI__builtin_ia32_cmpneqsd:
-    case X86::BI__builtin_ia32_cmpnltsd:
-    case X86::BI__builtin_ia32_cmpnlesd:
-    case X86::BI__builtin_ia32_cmpordsd:
-      name = "cmpsd";
-      ID = Intrinsic::x86_sse2_cmp_sd;
-      break;
-    }
-
-    Ops.push_back(llvm::ConstantInt::get(Int8Ty, Imm));
-    llvm::Function *F = CGM.getIntrinsic(ID);
-    return Builder.CreateCall(F, Ops, name);
+    return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 7);
   }
 }
 

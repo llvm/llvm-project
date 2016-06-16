@@ -2,8 +2,8 @@
 
 int a __attribute__((nodebug));
 
-void b() {
-  int b __attribute__((nodebug)); // expected-warning {{'nodebug' attribute only applies to functions and global variables}}
+void b(int p __attribute__((nodebug))) { // expected-warning {{'nodebug' attribute only applies to variables and functions}}
+  int b __attribute__((nodebug));
 }
 
 void t1() __attribute__((nodebug));

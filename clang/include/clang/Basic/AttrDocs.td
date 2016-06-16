@@ -524,8 +524,8 @@ def NoDebugDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
 The ``nodebug`` attribute allows you to suppress debugging information for a
-function, or for a variable declared with static storage duration, such as
-globals, class static data members, and static locals.
+function or method, or for a variable that is not a parameter or a non-static
+data member.
   }];
 }
 
