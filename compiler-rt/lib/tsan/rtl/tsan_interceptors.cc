@@ -1561,32 +1561,6 @@ TSAN_INTERCEPTOR(int, listen, int fd, int backlog) {
   return res;
 }
 
-#if SANITIZER_LINUX
-TSAN_INTERCEPTOR(int, epoll_create, int size) {
-  SCOPED_TSAN_INTERCEPTOR(epoll_create, size);
-  int fd = REAL(epoll_create)(size);
-  if (fd >= 0)
-    FdPollCreate(thr, pc, fd);
-  return fd;
-}
-#define TSAN_MAYBE_INTERCEPT_EPOLL_CREATE TSAN_INTERCEPT(epoll_create)
-#else
-#define TSAN_MAYBE_INTERCEPT_EPOLL_CREATE
-#endif
-
-#if SANITIZER_LINUX
-TSAN_INTERCEPTOR(int, epoll_create1, int flags) {
-  SCOPED_TSAN_INTERCEPTOR(epoll_create1, flags);
-  int fd = REAL(epoll_create1)(flags);
-  if (fd >= 0)
-    FdPollCreate(thr, pc, fd);
-  return fd;
-}
-#define TSAN_MAYBE_INTERCEPT_EPOLL_CREATE1 TSAN_INTERCEPT(epoll_create1)
-#else
-#define TSAN_MAYBE_INTERCEPT_EPOLL_CREATE1
-#endif
-
 TSAN_INTERCEPTOR(int, close, int fd) {
   SCOPED_TSAN_INTERCEPTOR(close, fd);
   if (fd >= 0)
@@ -1749,6 +1723,22 @@ TSAN_INTERCEPTOR(int, closedir, void *dirp) {
 }
 
 #if SANITIZER_LINUX
+TSAN_INTERCEPTOR(int, epoll_create, int size) {
+  SCOPED_TSAN_INTERCEPTOR(epoll_create, size);
+  int fd = REAL(epoll_create)(size);
+  if (fd >= 0)
+    FdPollCreate(thr, pc, fd);
+  return fd;
+}
+
+TSAN_INTERCEPTOR(int, epoll_create1, int flags) {
+  SCOPED_TSAN_INTERCEPTOR(epoll_create1, flags);
+  int fd = REAL(epoll_create1)(flags);
+  if (fd >= 0)
+    FdPollCreate(thr, pc, fd);
+  return fd;
+}
+
 TSAN_INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd, void *ev) {
   SCOPED_TSAN_INTERCEPTOR(epoll_ctl, epfd, op, fd, ev);
   if (epfd >= 0)
@@ -1760,12 +1750,7 @@ TSAN_INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd, void *ev) {
   int res = REAL(epoll_ctl)(epfd, op, fd, ev);
   return res;
 }
-#define TSAN_MAYBE_INTERCEPT_EPOLL_CTL TSAN_INTERCEPT(epoll_ctl)
-#else
-#define TSAN_MAYBE_INTERCEPT_EPOLL_CTL
-#endif
 
-#if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, epoll_wait, int epfd, void *ev, int cnt, int timeout) {
   SCOPED_TSAN_INTERCEPTOR(epoll_wait, epfd, ev, cnt, timeout);
   if (epfd >= 0)
@@ -1775,9 +1760,26 @@ TSAN_INTERCEPTOR(int, epoll_wait, int epfd, void *ev, int cnt, int timeout) {
     FdAcquire(thr, pc, epfd);
   return res;
 }
-#define TSAN_MAYBE_INTERCEPT_EPOLL_WAIT TSAN_INTERCEPT(epoll_wait)
+
+TSAN_INTERCEPTOR(int, epoll_pwait, int epfd, void *ev, int cnt, int timeout,
+                 void *sigmask) {
+  SCOPED_TSAN_INTERCEPTOR(epoll_pwait, epfd, ev, cnt, timeout, sigmask);
+  if (epfd >= 0)
+    FdAccess(thr, pc, epfd);
+  int res = BLOCK_REAL(epoll_pwait)(epfd, ev, cnt, timeout, sigmask);
+  if (res > 0 && epfd >= 0)
+    FdAcquire(thr, pc, epfd);
+  return res;
+}
+
+#define TSAN_MAYBE_INTERCEPT_EPOLL \
+    TSAN_INTERCEPT(epoll_create); \
+    TSAN_INTERCEPT(epoll_create1); \
+    TSAN_INTERCEPT(epoll_ctl); \
+    TSAN_INTERCEPT(epoll_wait); \
+    TSAN_INTERCEPT(epoll_pwait)
 #else
-#define TSAN_MAYBE_INTERCEPT_EPOLL_WAIT
+#define TSAN_MAYBE_INTERCEPT_EPOLL
 #endif
 
 namespace __tsan {
@@ -2551,8 +2553,7 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(connect);
   TSAN_INTERCEPT(bind);
   TSAN_INTERCEPT(listen);
-  TSAN_MAYBE_INTERCEPT_EPOLL_CREATE;
-  TSAN_MAYBE_INTERCEPT_EPOLL_CREATE1;
+  TSAN_MAYBE_INTERCEPT_EPOLL;
   TSAN_INTERCEPT(close);
   TSAN_MAYBE_INTERCEPT___CLOSE;
   TSAN_MAYBE_INTERCEPT___RES_ICLOSE;
@@ -2571,9 +2572,6 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(puts);
   TSAN_INTERCEPT(rmdir);
   TSAN_INTERCEPT(closedir);
-
-  TSAN_MAYBE_INTERCEPT_EPOLL_CTL;
-  TSAN_MAYBE_INTERCEPT_EPOLL_WAIT;
 
   TSAN_INTERCEPT(sigaction);
   TSAN_INTERCEPT(signal);

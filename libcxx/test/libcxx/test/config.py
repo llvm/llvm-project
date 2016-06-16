@@ -538,6 +538,7 @@ class Configuration(object):
                 '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
                 '-Wall', '-Wextra', '-Werror'
             ]
+            self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
             self.cxx.addWarningFlagIfSupported('-Wno-attributes')
             self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
             self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
