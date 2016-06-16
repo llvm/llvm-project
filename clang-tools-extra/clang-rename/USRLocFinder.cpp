@@ -92,7 +92,7 @@ public:
       // Handles "~Foo" from "Foo::~Foo".
       SourceLocation Location = DestructorDecl->getLocation();
       const ASTContext &Context = DestructorDecl->getASTContext();
-      StringRef TokenName = Lexer::getSourceText(
+      StringRef LLVM_ATTRIBUTE_UNUSED TokenName = Lexer::getSourceText(
           CharSourceRange::getTokenRange(Location), Context.getSourceManager(),
           Context.getLangOpts());
       // 1 is the length of the "~" string that is not to be touched by the
