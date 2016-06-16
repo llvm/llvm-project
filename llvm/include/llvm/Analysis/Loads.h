@@ -82,7 +82,8 @@ Value *FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
                                 AliasAnalysis *AA = nullptr,
-                                AAMDNodes *AATags = nullptr);
+                                AAMDNodes *AATags = nullptr,
+                                bool *IsLoadCSE = nullptr);
 
 }
 

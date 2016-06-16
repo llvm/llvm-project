@@ -119,6 +119,7 @@ FUNCTION_ALIAS_ANALYSIS("type-based-aa", TypeBasedAA())
 #endif
 FUNCTION_PASS("aa-eval", AAEvaluator())
 FUNCTION_PASS("adce", ADCEPass())
+FUNCTION_PASS("add-discriminators", AddDiscriminatorsPass())
 FUNCTION_PASS("alignment-from-assumptions", AlignmentFromAssumptionsPass())
 FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("dce", DCEPass())

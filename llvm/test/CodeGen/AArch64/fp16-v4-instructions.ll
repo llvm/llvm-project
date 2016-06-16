@@ -15,7 +15,7 @@ entry:
 define <4 x half> @build_h4(<4 x half> %a) {
 entry:
 ; CHECK-LABEL: build_h4:
-; CHECK: movz [[GPR:w[0-9]+]], #15565
+; CHECK: mov [[GPR:w[0-9]+]], #15565
 ; CHECK: dup v0.4h, [[GPR]]
   ret <4 x half> <half 0xH3CCD, half 0xH3CCD, half 0xH3CCD, half 0xH3CCD>
 }

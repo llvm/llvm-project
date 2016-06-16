@@ -10,7 +10,7 @@ target triple = "aarch64--linux-gnueabihf"
 ; }
 
 ; CHECK: test.c:4:5
-; CHECK: movn
+; CHECK: mov
 
 ; Function Attrs: nounwind
 define i32 @main() !dbg !4 {

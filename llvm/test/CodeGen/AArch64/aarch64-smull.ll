@@ -234,7 +234,7 @@ define <8 x i16> @smull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 define <8 x i16> @smull_noextvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; Do not use SMULL if the BUILD_VECTOR element values are too big.
 ; CHECK-LABEL: smull_noextvec_v8i8_v8i16:
-; CHECK: movz
+; CHECK: mov
 ; CHECK: mul {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
   %tmp3 = sext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 -999, i16 -999, i16 -999, i16 -999, i16 -999, i16 -999, i16 -999, i16 -999>
@@ -268,7 +268,7 @@ define <8 x i16> @umull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 define <8 x i16> @umull_noextvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; Do not use SMULL if the BUILD_VECTOR element values are too big.
 ; CHECK-LABEL: umull_noextvec_v8i8_v8i16:
-; CHECK: movz
+; CHECK: mov
 ; CHECK: mul {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 999, i16 999, i16 999, i16 999, i16 999, i16 999, i16 999, i16 999>

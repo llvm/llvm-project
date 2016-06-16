@@ -518,9 +518,8 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder, LLVMContext &C,
   return Builder.CreateMaskedLoad(Ptr, Align, Mask, Passthru);
 }
 
-// UpgradeIntrinsicCall - Upgrade a call to an old intrinsic to be a call the
-// upgraded intrinsic. All argument and return casting must be provided in
-// order to seamlessly integrate with existing context.
+/// Upgrade a call to an old intrinsic. All argument and return casting must be
+/// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   Function *F = CI->getCalledFunction();
   LLVMContext &C = CI->getContext();
@@ -534,18 +533,16 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     StringRef Name = F->getName();
 
     Value *Rep;
-    // Upgrade packed integer vector compares intrinsics to compare instructions
+    // Upgrade packed integer vector compare intrinsics to compare instructions.
     if (Name.startswith("llvm.x86.sse2.pcmpeq.") ||
         Name.startswith("llvm.x86.avx2.pcmpeq.")) {
       Rep = Builder.CreateICmpEQ(CI->getArgOperand(0), CI->getArgOperand(1),
                                  "pcmpeq");
-      // need to sign extend since icmp returns vector of i1
       Rep = Builder.CreateSExt(Rep, CI->getType(), "");
     } else if (Name.startswith("llvm.x86.sse2.pcmpgt.") ||
                Name.startswith("llvm.x86.avx2.pcmpgt.")) {
       Rep = Builder.CreateICmpSGT(CI->getArgOperand(0), CI->getArgOperand(1),
                                   "pcmpgt");
-      // need to sign extend since icmp returns vector of i1
       Rep = Builder.CreateSExt(Rep, CI->getType(), "");
     } else if (Name == "llvm.x86.sse2.cvtdq2pd" ||
                Name == "llvm.x86.sse2.cvtps2pd" ||

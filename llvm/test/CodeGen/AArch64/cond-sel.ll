@@ -10,8 +10,8 @@ define void @test_csel(i32 %lhs32, i32 %rhs32, i64 %lhs64) minsize {
   %tst1 = icmp ugt i32 %lhs32, %rhs32
   %val1 = select i1 %tst1, i32 42, i32 52
   store i32 %val1, i32* @var32
-; CHECK-DAG: movz [[W52:w[0-9]+]], #{{52|0x34}}
-; CHECK-DAG: movz [[W42:w[0-9]+]], #{{42|0x2a}}
+; CHECK-DAG: mov [[W52:w[0-9]+]], #{{52|0x34}}
+; CHECK-DAG: mov [[W42:w[0-9]+]], #{{42|0x2a}}
 ; CHECK: csel {{w[0-9]+}}, [[W42]], [[W52]], hi
 
   %rhs64 = sext i32 %rhs32 to i64
@@ -34,8 +34,8 @@ define void @test_floatcsel(float %lhs32, float %rhs32, double %lhs64, double %r
 ; CHECK-NOFP-NOT: fcmp
   %val1 = select i1 %tst1, i32 42, i32 52
   store i32 %val1, i32* @var32
-; CHECK: movz [[W52:w[0-9]+]], #{{52|0x34}}
-; CHECK: movz [[W42:w[0-9]+]], #{{42|0x2a}}
+; CHECK: mov [[W52:w[0-9]+]], #{{52|0x34}}
+; CHECK: mov [[W42:w[0-9]+]], #{{42|0x2a}}
 ; CHECK: csel [[MAYBETRUE:w[0-9]+]], [[W42]], [[W52]], mi
 ; CHECK: csel {{w[0-9]+}}, [[W42]], [[MAYBETRUE]], gt
 
@@ -46,7 +46,7 @@ define void @test_floatcsel(float %lhs32, float %rhs32, double %lhs64, double %r
   %val2 = select i1 %tst2, i64 9, i64 15
   store i64 %val2, i64* @var64
 ; CHECK: orr w[[CONST15:[0-9]+]], wzr, #0xf
-; CHECK: movz {{[wx]}}[[CONST9:[0-9]+]], #{{9|0x9}}
+; CHECK: mov {{[wx]}}[[CONST9:[0-9]+]], #{{9|0x9}}
 ; CHECK: csel [[MAYBETRUE:x[0-9]+]], x[[CONST9]], x[[CONST15]], eq
 ; CHECK: csel {{x[0-9]+}}, x[[CONST9]], [[MAYBETRUE]], vs
 

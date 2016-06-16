@@ -608,7 +608,7 @@ public:
       return fail("multiple exit blocks");
 
     // LAA will check that we only have a single exiting block.
-    LAI = &LAA->getInfo(L, ValueToValueMap());
+    LAI = &LAA->getInfo(L);
 
     // Currently, we only distribute to isolate the part of the loop with
     // dependence cycles to enable partial vectorization.

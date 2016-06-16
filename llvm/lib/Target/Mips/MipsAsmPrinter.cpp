@@ -325,9 +325,10 @@ void MipsAsmPrinter::EmitFunctionEntryLabel() {
   if (Subtarget->isTargetNaCl())
     EmitAlignment(std::max(MF->getAlignment(), MIPS_NACL_BUNDLE_ALIGN));
 
-  if (Subtarget->inMicroMipsMode())
+  if (Subtarget->inMicroMipsMode()) {
     TS.emitDirectiveSetMicroMips();
-  else
+    TS.setUsesMicroMips();
+  } else
     TS.emitDirectiveSetNoMicroMips();
 
   if (Subtarget->inMips16Mode())

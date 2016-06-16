@@ -104,10 +104,10 @@ define void @check_stack_args() {
                          float -2.0, float -8.0, float 16.0, float 1.0,
                          float 64.0)
 
-; CHECK:  movz [[SIXTY_FOUR:w[0-9]+]], #17024, lsl #16
+; CHECK:  mov [[SIXTY_FOUR:w[0-9]+]], #1115684864
 ; CHECK: str [[SIXTY_FOUR]], [sp]
 
-; CHECK-NONEON:  movz [[SIXTY_FOUR:w[0-9]+]], #17024, lsl #16
+; CHECK-NONEON:  mov [[SIXTY_FOUR:w[0-9]+]], #1115684864
 ; CHECK-NONEON: str [[SIXTY_FOUR]], [sp]
 
 ; CHECK: bl stacked_fpu
@@ -139,9 +139,9 @@ define void @check_i128_align() {
 
   call void @check_i128_regalign(i32 0, i128 42)
 ; CHECK-NOT: mov x1
-; CHECK-LE: movz x2, #{{0x2a|42}}
+; CHECK-LE: mov x2, #{{0x2a|42}}
 ; CHECK-LE: mov x3, xzr
-; CHECK-BE: movz {{x|w}}3, #{{0x2a|42}}
+; CHECK-BE: mov {{x|w}}3, #{{0x2a|42}}
 ; CHECK-BE: mov x2, xzr
 ; CHECK: bl check_i128_regalign
 

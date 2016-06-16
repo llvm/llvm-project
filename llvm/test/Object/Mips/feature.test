@@ -1,3 +1,4 @@
+RUN: llvm-objdump -disassemble %p/../Inputs/dext-test.elf-mips64r2 | FileCheck %s
 RUN: llvm-objdump -disassemble -mattr +mips64r2 %p/../Inputs/dext-test.elf-mips64r2 \
 RUN:   | FileCheck %s
 

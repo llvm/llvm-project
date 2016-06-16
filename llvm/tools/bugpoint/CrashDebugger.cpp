@@ -164,6 +164,7 @@ ReduceCrashingGlobalVariables::TestGlobalVariables(
     if (I.hasInitializer() && !GVSet.count(&I)) {
       DeleteGlobalInitializer(&I);
       I.setLinkage(GlobalValue::ExternalLinkage);
+      I.setComdat(nullptr);
     }
 
   // Try running the hacked up program...
@@ -668,6 +669,7 @@ static bool DebugACrash(BugDriver &BD,
       if (I->hasInitializer()) {
         DeleteGlobalInitializer(&*I);
         I->setLinkage(GlobalValue::ExternalLinkage);
+        I->setComdat(nullptr);
         DeletedInit = true;
       }
 

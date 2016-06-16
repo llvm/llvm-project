@@ -514,6 +514,14 @@ void CVTypeDumperImpl::visitUdtSourceLine(TypeLeafKind Leaf,
   W.printNumber("LineNumber", Line.getLineNumber());
 }
 
+void CVTypeDumperImpl::visitUdtModSourceLine(TypeLeafKind Leaf,
+                                             UdtModSourceLineRecord &Line) {
+  printTypeIndex("UDT", Line.getUDT());
+  printTypeIndex("SourceFile", Line.getSourceFile());
+  W.printNumber("LineNumber", Line.getLineNumber());
+  W.printNumber("Module", Line.getModule());
+}
+
 void CVTypeDumperImpl::visitBuildInfo(TypeLeafKind Leaf,
                                       BuildInfoRecord &Args) {
   W.printNumber("NumArgs", static_cast<uint32_t>(Args.getArgs().size()));

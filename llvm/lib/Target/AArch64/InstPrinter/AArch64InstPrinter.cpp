@@ -219,6 +219,54 @@ void AArch64InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     return;
   }
 
+  // MOVZ, MOVN and "ORR wzr, #imm" instructions are aliases for MOV, but their
+  // domains overlap so they need to be prioritized. The chain is "MOVZ lsl #0 >
+  // MOVZ lsl #N > MOVN lsl #0 > MOVN lsl #N > ORR". The highest instruction
+  // that can represent the move is the MOV alias, and the rest get printed
+  // normally.
+  if ((Opcode == AArch64::MOVZXi || Opcode == AArch64::MOVZWi) &&
+      MI->getOperand(1).isImm() && MI->getOperand(2).isImm()) {
+    int RegWidth = Opcode == AArch64::MOVZXi ? 64 : 32;
+    int Shift = MI->getOperand(2).getImm();
+    uint64_t Value = (uint64_t)MI->getOperand(1).getImm() << Shift;
+
+    if (AArch64_AM::isMOVZMovAlias(Value, Shift,
+                                   Opcode == AArch64::MOVZXi ? 64 : 32)) {
+      O << "\tmov\t" << getRegisterName(MI->getOperand(0).getReg()) << ", #"
+        << formatImm(SignExtend64(Value, RegWidth));
+      return;
+    }
+  }
+
+  if ((Opcode == AArch64::MOVNXi || Opcode == AArch64::MOVNWi) &&
+      MI->getOperand(1).isImm() && MI->getOperand(2).isImm()) {
+    int RegWidth = Opcode == AArch64::MOVNXi ? 64 : 32;
+    int Shift = MI->getOperand(2).getImm();
+    uint64_t Value = ~((uint64_t)MI->getOperand(1).getImm() << Shift);
+    if (RegWidth == 32)
+      Value = Value & 0xffffffff;
+
+    if (AArch64_AM::isMOVNMovAlias(Value, Shift, RegWidth)) {
+      O << "\tmov\t" << getRegisterName(MI->getOperand(0).getReg()) << ", #"
+        << formatImm(SignExtend64(Value, RegWidth));
+      return;
+    }
+  }
+
+  if ((Opcode == AArch64::ORRXri || Opcode == AArch64::ORRWri) &&
+      (MI->getOperand(1).getReg() == AArch64::XZR ||
+       MI->getOperand(1).getReg() == AArch64::WZR) &&
+      MI->getOperand(2).isImm()) {
+    int RegWidth = Opcode == AArch64::ORRXri ? 64 : 32;
+    uint64_t Value = AArch64_AM::decodeLogicalImmediate(
+        MI->getOperand(2).getImm(), RegWidth);
+    if (!AArch64_AM::isAnyMOVWMovAlias(Value, RegWidth)) {
+      O << "\tmov\t" << getRegisterName(MI->getOperand(0).getReg()) << ", #"
+        << formatImm(SignExtend64(Value, RegWidth));
+      return;
+    }
+  }
+
   if (!printAliasInstr(MI, STI, O))
     printInstruction(MI, STI, O);
 

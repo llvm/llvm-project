@@ -448,18 +448,56 @@ private:
     // (x & ~2^z) == y --> x == y || x == y|2^z
     // This undoes a transformation done by instcombine to fuse 2 compares.
     if (ICI->getPredicate() == (isEQ ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
+
+      // It's a little bit hard to see why the following transformations are
+      // correct. Here is a CVC3 program to verify them for 64-bit values:
+
+      /*
+         ONE  : BITVECTOR(64) = BVZEROEXTEND(0bin1, 63);
+         x    : BITVECTOR(64);
+         y    : BITVECTOR(64);
+         z    : BITVECTOR(64);
+         mask : BITVECTOR(64) = BVSHL(ONE, z);
+         QUERY( (y & ~mask = y) =>
+                ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
+         );
+      */
+
+      // Please note that each pattern must be a dual implication (<--> or
+      // iff). One directional implication can create spurious matches. If the
+      // implication is only one-way, an unsatisfiable condition on the left
+      // side can imply a satisfiable condition on the right side. Dual
+      // implication ensures that satisfiable conditions are transformed to
+      // other satisfiable conditions and unsatisfiable conditions are
+      // transformed to other unsatisfiable conditions.
+
+      // Here is a concrete example of a unsatisfiable condition on the left
+      // implying a satisfiable condition on the right:
+      //
+      // mask = (1 << z)
+      // (x & ~mask) == y  --> (x == y || x == (y | mask))
+      //
+      // Substituting y = 3, z = 0 yields:
+      // (x & -2) == 3 --> (x == 3 || x == 2)
+
+      // Pattern match a special case:
+      /*
+        QUERY( (y & ~mask = y) =>
+               ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
+        );
+      */
       if (match(ICI->getOperand(0),
                 m_And(m_Value(RHSVal), m_ConstantInt(RHSC)))) {
-        APInt Not = ~RHSC->getValue();
-        if (Not.isPowerOf2() && C->getValue().isPowerOf2() &&
-            Not != C->getValue()) {
+        APInt Mask = ~RHSC->getValue();
+        if (Mask.isPowerOf2() && (C->getValue() & ~Mask) == C->getValue()) {
           // If we already have a value for the switch, it has to match!
           if (!setValueOnce(RHSVal))
             return false;
 
           Vals.push_back(C);
           Vals.push_back(
-              ConstantInt::get(C->getContext(), C->getValue() | Not));
+              ConstantInt::get(C->getContext(),
+                               C->getValue() | Mask));
           UsedICmps++;
           return true;
         }

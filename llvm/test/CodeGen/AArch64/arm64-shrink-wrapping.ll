@@ -73,7 +73,7 @@ declare i32 @doSomething(i32, i32*)
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #10
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ;
 ; Next BB.
 ; CHECK: [[LOOP:LBB[0-9_]+]]: ; %for.body
@@ -140,7 +140,7 @@ declare i32 @something(...)
 ; CHECK-NEXT: stp [[CSR3:x[0-9]+]], [[CSR4:x[0-9]+]], [sp, #16]
 ; CHECK-NEXT: add [[NEW_SP:x[0-9]+]], sp, #16
 ; CHECK: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #10
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ; Next BB.
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
@@ -184,7 +184,7 @@ for.end:                                          ; preds = %for.body
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #10
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
@@ -255,7 +255,7 @@ declare void @somethingElse(...)
 ;
 ; CHECK: bl _somethingElse
 ; CHECK-NEXT: mov [[SUM:w[0-9]+]], wzr
-; CHECK-NEXT: movz [[IV:w[0-9]+]], #10
+; CHECK-NEXT: mov [[IV:w[0-9]+]], #10
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
@@ -409,7 +409,7 @@ declare void @llvm.va_end(i8*)
 ;
 ; DISABLE: cbz w0, [[ELSE_LABEL:LBB[0-9_]+]]
 ;
-; CHECK: movz [[IV:w[0-9]+]], #10
+; CHECK: mov [[IV:w[0-9]+]], #10
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; Inline asm statement.
@@ -511,7 +511,7 @@ declare i32 @someVariadicFunc(i32, ...)
 ; CHECK: and [[TEST:w[0-9]+]], w0, #0xff
 ; CHECK-NEXT: cbnz [[TEST]], [[ABORT:LBB[0-9_]+]]
 ;
-; CHECK: movz w0, #42
+; CHECK: mov w0, #42
 ;
 ; DISABLE-NEXT: ldp
 ;

@@ -1488,7 +1488,7 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   return true;
 }
 
-void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
+void LoopAccessInfo::analyzeLoop(const ValueToValueMap &SymbolicStrides) {
 
   typedef SmallPtrSet<Value*, 16> ValueSet;
 
@@ -1628,7 +1628,8 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
     // read a few words, modify, and write a few words, and some of the
     // words may be written to the same address.
     bool IsReadOnlyPtr = false;
-    if (Seen.insert(Ptr).second || !getPtrStride(PSE, Ptr, TheLoop, Strides)) {
+    if (Seen.insert(Ptr).second ||
+        !getPtrStride(PSE, Ptr, TheLoop, SymbolicStrides)) {
       ++NumReads;
       IsReadOnlyPtr = true;
     }
@@ -1657,8 +1658,8 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
 
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
-  bool CanDoRTIfNeeded =
-      Accesses.canCheckPtrAtRT(PtrRtChecking, PSE.getSE(), TheLoop, Strides);
+  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(PtrRtChecking, PSE.getSE(),
+                                                  TheLoop, SymbolicStrides);
   if (!CanDoRTIfNeeded) {
     emitAnalysis(LoopAccessReport() << "cannot identify array bounds");
     DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
@@ -1673,7 +1674,7 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
   if (Accesses.isDependencyCheckNeeded()) {
     DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
     CanVecMem = DepChecker.areDepsSafe(
-        DependentAccesses, Accesses.getDependenciesToCheck(), Strides);
+        DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides);
     MaxSafeDepDistBytes = DepChecker.getMaxSafeDepDistBytes();
 
     if (!CanVecMem && DepChecker.shouldRetryWithRuntimeCheck()) {
@@ -1686,8 +1687,8 @@ void LoopAccessInfo::analyzeLoop(const ValueToValueMap &Strides) {
       PtrRtChecking.Need = true;
 
       auto *SE = PSE.getSE();
-      CanDoRTIfNeeded =
-          Accesses.canCheckPtrAtRT(PtrRtChecking, SE, TheLoop, Strides, true);
+      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(PtrRtChecking, SE, TheLoop,
+                                                 SymbolicStrides, true);
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {
@@ -1954,12 +1955,10 @@ LoopAccessAnalysis::getInfo(Loop *L, const ValueToValueMap &Strides) {
 void LoopAccessAnalysis::print(raw_ostream &OS, const Module *M) const {
   LoopAccessAnalysis &LAA = *const_cast<LoopAccessAnalysis *>(this);
 
-  ValueToValueMap NoSymbolicStrides;
-
   for (Loop *TopLevelLoop : *LI)
     for (Loop *L : depth_first(TopLevelLoop)) {
       OS.indent(2) << L->getHeader()->getName() << ":\n";
-      auto &LAI = LAA.getInfo(L, NoSymbolicStrides);
+      auto &LAI = LAA.getInfo(L);
       LAI.print(OS, 4);
     }
 }

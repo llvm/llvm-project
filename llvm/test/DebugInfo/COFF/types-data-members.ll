@@ -63,14 +63,16 @@
 ; CHECK:   Struct (0x1003) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 0
-; CHECK:     Properties [ (0x80)
+; CHECK:     Properties [ (0x280)
 ; CHECK:       ForwardReference (0x80)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: 0x0
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 0
 ; CHECK:     Name: Struct
+; CHECK:     LinkageName: .?AUStruct@@
 ; CHECK:   }
 ; CHECK:   Modifier (0x1004) {
 ; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
@@ -108,23 +110,27 @@
 ; CHECK:   Struct (0x1006) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 4
-; CHECK:     Properties [ (0x0)
+; CHECK:     Properties [ (0x200)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: sdm (0x1005)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 12
 ; CHECK:     Name: Struct
+; CHECK:     LinkageName: .?AUStruct@@
 ; CHECK:   }
 ; CHECK:   Union (0x1007) {
 ; CHECK:     TypeLeafKind: LF_UNION (0x1506)
 ; CHECK:     MemberCount: 0
-; CHECK:     Properties [ (0x80)
+; CHECK:     Properties [ (0x280)
 ; CHECK:       ForwardReference (0x80)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: 0x0
 ; CHECK:     SizeOf: 0
 ; CHECK:     Name: Union
+; CHECK:     LinkageName: .?ATUnion@@
 ; CHECK:   }
 ; CHECK:   UnknownLeaf (0x1008) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
@@ -144,17 +150,20 @@
 ; CHECK:   Union (0x1009) {
 ; CHECK:     TypeLeafKind: LF_UNION (0x1506)
 ; CHECK:     MemberCount: 2
-; CHECK:     Properties [ (0x0)
+; CHECK:     Properties [ (0x200)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: b (0x1008)
 ; CHECK:     SizeOf: 4
 ; CHECK:     Name: Union
+; CHECK:     LinkageName: .?ATUnion@@
 ; CHECK:   }
 ; CHECK:   Class (0x100A) {
 ; CHECK:     TypeLeafKind: LF_CLASS (0x1504)
 ; CHECK:     MemberCount: 0
-; CHECK:     Properties [ (0x80)
+; CHECK:     Properties [ (0x280)
 ; CHECK:       ForwardReference (0x80)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: 0x0
 ; CHECK:     DerivedFrom: 0x0
@@ -186,7 +195,8 @@
 ; CHECK:   Class (0x100C) {
 ; CHECK:     TypeLeafKind: LF_CLASS (0x1504)
 ; CHECK:     MemberCount: 3
-; CHECK:     Properties [ (0x0)
+; CHECK:     Properties [ (0x200)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: prot (0x100B)
 ; CHECK:     DerivedFrom: 0x0
@@ -197,14 +207,16 @@
 ; CHECK:   Struct (0x100D) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 0
-; CHECK:     Properties [ (0x80)
+; CHECK:     Properties [ (0x280)
 ; CHECK:       ForwardReference (0x80)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: 0x0
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 0
 ; CHECK:     Name: DerivedClass
+; CHECK:     LinkageName: .?AUDerivedClass@@
 ; CHECK:   }
 ; CHECK:   Procedure (0x100E) {
 ; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
@@ -255,25 +267,29 @@
 ; CHECK:   Struct (0x1012) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 2
-; CHECK:     Properties [ (0x0)
+; CHECK:     Properties [ (0x200)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: d (0x1011)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 48
 ; CHECK:     Name: DerivedClass
+; CHECK:     LinkageName: .?AUDerivedClass@@
 ; CHECK:   }
 ; CHECK:   Struct (0x1013) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 0
-; CHECK:     Properties [ (0x80)
+; CHECK:     Properties [ (0x280)
 ; CHECK:       ForwardReference (0x80)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: 0x0
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 0
 ; CHECK:     Name: Nested
+; CHECK:     LinkageName: .?AUNested@Class@@
 ; CHECK:   }
 ; CHECK:   UnknownLeaf (0x1014) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
@@ -287,13 +303,15 @@
 ; CHECK:   Struct (0x1015) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 1
-; CHECK:     Properties [ (0x0)
+; CHECK:     Properties [ (0x200)
+; CHECK:       HasUniqueName (0x200)
 ; CHECK:     ]
 ; CHECK:     FieldList: n (0x1014)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 4
 ; CHECK:     Name: Nested
+; CHECK:     LinkageName: .?AUNested@Class@@
 ; CHECK:   }
 ; CHECK:   Pointer (0x1016) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
@@ -330,8 +348,8 @@
 ; CHECK:   }
 ; CHECK: ]
 
-; ModuleID = 'record-types.cpp'
-source_filename = "record-types.cpp"
+; ModuleID = 't.cpp'
+source_filename = "t.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.23918"
 
@@ -408,18 +426,18 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 (trunk 271336) (llvm/trunk 271339)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "record-types.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.9.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{i32 2, !"CodeView", i32 1}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
-!6 = !{!"clang version 3.9.0 (trunk 271336) (llvm/trunk 271339)"}
-!7 = distinct !DISubprogram(name: "UseTypes", linkageName: "\01?UseTypes@@YAXXZ", scope: !1, file: !1, line: 31, type: !8, isLocal: false, isDefinition: true, scopeLine: 31, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!6 = !{!"clang version 3.9.0 "}
+!7 = distinct !DISubprogram(name: "UseTypes", linkageName: "\01?UseTypes@@YAXXZ", scope: !1, file: !1, line: 26, type: !8, isLocal: false, isDefinition: true, scopeLine: 26, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null}
-!10 = !DILocalVariable(name: "s", scope: !7, file: !1, line: 32, type: !11)
-!11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Struct", file: !1, line: 1, size: 96, align: 32, elements: !12)
+!10 = !DILocalVariable(name: "s", scope: !7, file: !1, line: 27, type: !11)
+!11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Struct", file: !1, line: 1, size: 96, align: 32, elements: !12, identifier: ".?AUStruct@@")
 !12 = !{!13, !15, !16, !17}
 !13 = !DIDerivedType(tag: DW_TAG_member, name: "s1", scope: !11, file: !1, line: 2, baseType: !14, size: 32, align: 32)
 !14 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -428,23 +446,23 @@ attributes #3 = { nounwind }
 !17 = !DIDerivedType(tag: DW_TAG_member, name: "sdm", scope: !11, file: !1, line: 5, baseType: !18, flags: DIFlagStaticMember, extraData: i32 3)
 !18 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !14)
 !19 = !DIExpression()
-!20 = !DILocation(line: 32, column: 10, scope: !7)
-!21 = !DILocalVariable(name: "u", scope: !7, file: !1, line: 33, type: !22)
-!22 = distinct !DICompositeType(tag: DW_TAG_union_type, name: "Union", file: !1, line: 8, size: 32, align: 32, elements: !23)
+!20 = !DILocation(line: 27, column: 10, scope: !7)
+!21 = !DILocalVariable(name: "u", scope: !7, file: !1, line: 28, type: !22)
+!22 = distinct !DICompositeType(tag: DW_TAG_union_type, name: "Union", file: !1, line: 7, size: 32, align: 32, elements: !23, identifier: ".?ATUnion@@")
 !23 = !{!24, !25}
-!24 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !22, file: !1, line: 9, baseType: !14, size: 32, align: 32)
-!25 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !22, file: !1, line: 10, baseType: !26, size: 32, align: 32)
+!24 = !DIDerivedType(tag: DW_TAG_member, name: "a", scope: !22, file: !1, line: 8, baseType: !14, size: 32, align: 32)
+!25 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !22, file: !1, line: 9, baseType: !26, size: 32, align: 32)
 !26 = !DIBasicType(name: "float", size: 32, align: 32, encoding: DW_ATE_float)
-!27 = !DILocation(line: 33, column: 9, scope: !7)
-!28 = !DILocalVariable(name: "c", scope: !7, file: !1, line: 34, type: !29)
-!29 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "Class", file: !1, line: 13, size: 96, align: 32, elements: !30)
+!27 = !DILocation(line: 28, column: 9, scope: !7)
+!28 = !DILocalVariable(name: "c", scope: !7, file: !1, line: 29, type: !29)
+!29 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "Class", file: !1, line: 11, size: 96, align: 32, elements: !30, identifier: ".?AVClass@@")
 !30 = !{!31, !32, !33}
-!31 = !DIDerivedType(tag: DW_TAG_member, name: "pub", scope: !29, file: !1, line: 15, baseType: !14, size: 32, align: 32, flags: DIFlagPublic)
-!32 = !DIDerivedType(tag: DW_TAG_member, name: "priv", scope: !29, file: !1, line: 18, baseType: !14, size: 32, align: 32, offset: 32)
-!33 = !DIDerivedType(tag: DW_TAG_member, name: "prot", scope: !29, file: !1, line: 20, baseType: !14, size: 32, align: 32, offset: 64, flags: DIFlagProtected)
-!34 = !DILocation(line: 34, column: 9, scope: !7)
-!35 = !DILocalVariable(name: "dc", scope: !7, file: !1, line: 35, type: !36)
-!36 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "DerivedClass", file: !1, line: 23, size: 384, align: 64, elements: !37, vtableHolder: !36)
+!31 = !DIDerivedType(tag: DW_TAG_member, name: "pub", scope: !29, file: !1, line: 13, baseType: !14, size: 32, align: 32, flags: DIFlagPublic)
+!32 = !DIDerivedType(tag: DW_TAG_member, name: "priv", scope: !29, file: !1, line: 16, baseType: !14, size: 32, align: 32, offset: 32)
+!33 = !DIDerivedType(tag: DW_TAG_member, name: "prot", scope: !29, file: !1, line: 18, baseType: !14, size: 32, align: 32, offset: 64, flags: DIFlagProtected)
+!34 = !DILocation(line: 29, column: 9, scope: !7)
+!35 = !DILocalVariable(name: "dc", scope: !7, file: !1, line: 30, type: !36)
+!36 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "DerivedClass", file: !1, line: 20, size: 384, align: 64, elements: !37, vtableHolder: !36, identifier: ".?AUDerivedClass@@")
 !37 = !{!38, !39, !40, !45}
 !38 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !36, baseType: !11)
 !39 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !36, baseType: !29, offset: 4, flags: DIFlagVirtual)
@@ -453,15 +471,15 @@ attributes #3 = { nounwind }
 !42 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__vtbl_ptr_type", baseType: !43, size: 64)
 !43 = !DISubroutineType(types: !44)
 !44 = !{!14}
-!45 = !DIDerivedType(tag: DW_TAG_member, name: "d", scope: !36, file: !1, line: 24, baseType: !14, size: 32, align: 32, offset: 192)
-!46 = !DILocation(line: 35, column: 16, scope: !7)
-!47 = !DILocalVariable(name: "n", scope: !7, file: !1, line: 36, type: !48)
-!48 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Nested", scope: !29, file: !1, line: 27, size: 32, align: 32, elements: !49)
+!45 = !DIDerivedType(tag: DW_TAG_member, name: "d", scope: !36, file: !1, line: 21, baseType: !14, size: 32, align: 32, offset: 192)
+!46 = !DILocation(line: 30, column: 16, scope: !7)
+!47 = !DILocalVariable(name: "n", scope: !7, file: !1, line: 31, type: !48)
+!48 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Nested", scope: !29, file: !1, line: 23, size: 32, align: 32, elements: !49, identifier: ".?AUNested@Class@@")
 !49 = !{!50}
-!50 = !DIDerivedType(tag: DW_TAG_member, name: "n", scope: !48, file: !1, line: 28, baseType: !14, size: 32, align: 32)
-!51 = !DILocation(line: 36, column: 17, scope: !7)
-!52 = !DILocation(line: 37, column: 1, scope: !7)
-!53 = distinct !DISubprogram(name: "DerivedClass::DerivedClass", linkageName: "\01??0DerivedClass@@QEAA@XZ", scope: !36, file: !1, line: 23, type: !54, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !57, variables: !2)
+!50 = !DIDerivedType(tag: DW_TAG_member, name: "n", scope: !48, file: !1, line: 24, baseType: !14, size: 32, align: 32)
+!51 = !DILocation(line: 31, column: 17, scope: !7)
+!52 = !DILocation(line: 32, column: 1, scope: !7)
+!53 = distinct !DISubprogram(name: "DerivedClass::DerivedClass", linkageName: "\01??0DerivedClass@@QEAA@XZ", scope: !36, file: !1, line: 20, type: !54, isLocal: false, isDefinition: true, scopeLine: 20, flags: DIFlagArtificial | DIFlagPrototyped, isOptimized: false, unit: !0, declaration: !57, variables: !2)
 !54 = !DISubroutineType(types: !55)
 !55 = !{null, !56}
 !56 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !36, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
@@ -470,4 +488,4 @@ attributes #3 = { nounwind }
 !59 = !DILocation(line: 0, scope: !53)
 !60 = !DILocalVariable(name: "this", arg: 1, scope: !53, type: !61, flags: DIFlagArtificial | DIFlagObjectPointer)
 !61 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !36, size: 64, align: 64)
-!62 = !DILocation(line: 23, column: 8, scope: !53)
+!62 = !DILocation(line: 20, column: 8, scope: !53)

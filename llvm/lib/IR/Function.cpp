@@ -390,6 +390,12 @@ void Function::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
   setAttributes(PAL);
 }
 
+void Function::removeAttribute(unsigned i, StringRef Kind) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
 void Function::removeAttributes(unsigned i, AttributeSet Attrs) {
   AttributeSet PAL = getAttributes();
   PAL = PAL.removeAttributes(getContext(), i, Attrs);

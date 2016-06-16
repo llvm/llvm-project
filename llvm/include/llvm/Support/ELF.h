@@ -486,6 +486,7 @@ enum : unsigned {
   EF_MIPS_ABI        = 0x0000f000, // Mask for selecting EF_MIPS_ABI_ variant.
 
   // MIPS machine variant
+  EF_MIPS_MACH_NONE    = 0x00000000, // A standard MIPS implementation.
   EF_MIPS_MACH_3900    = 0x00810000, // Toshiba R3900
   EF_MIPS_MACH_4010    = 0x00820000, // LSI R4010
   EF_MIPS_MACH_4100    = 0x00830000, // NEC VR4100

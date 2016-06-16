@@ -163,10 +163,6 @@ struct LoopVersioningLICM : public LoopPass {
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 
-  using llvm::Pass::doFinalization;
-
-  bool doFinalization() override { return false; }
-
   LoopVersioningLICM()
       : LoopPass(ID), AA(nullptr), SE(nullptr), LI(nullptr), DT(nullptr),
         TLI(nullptr), LAA(nullptr), LAI(nullptr), Changed(false),

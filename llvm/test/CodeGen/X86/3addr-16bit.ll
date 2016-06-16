@@ -12,7 +12,7 @@ entry:
 
 ; 64BIT-LABEL:     t1:
 ; 64BIT-NOT: movw %si, %ax
-; 64BIT:     leal 1(%rsi), %eax
+; 64BIT:     movl %esi, %eax
   %0 = icmp eq i16 %k, %c                         ; <i1> [#uses=1]
   %1 = add i16 %k, 1                              ; <i16> [#uses=3]
   br i1 %0, label %bb, label %bb1
@@ -34,7 +34,7 @@ entry:
 
 ; 64BIT-LABEL:     t2:
 ; 64BIT-NOT: movw %si, %ax
-; 64BIT:     leal -1(%rsi), %eax
+; 64BIT:     movl %esi, %eax
 ; 64BIT:     movzwl %ax
   %0 = icmp eq i16 %k, %c                         ; <i1> [#uses=1]
   %1 = add i16 %k, -1                             ; <i16> [#uses=3]
@@ -59,7 +59,7 @@ entry:
 
 ; 64BIT-LABEL:     t3:
 ; 64BIT-NOT: movw %si, %ax
-; 64BIT:     leal 2(%rsi), %eax
+; 64BIT:     movl %esi, %eax
   %0 = add i16 %k, 2                              ; <i16> [#uses=3]
   %1 = icmp eq i16 %k, %c                         ; <i1> [#uses=1]
   br i1 %1, label %bb, label %bb1
@@ -82,7 +82,7 @@ entry:
 
 ; 64BIT-LABEL:     t4:
 ; 64BIT-NOT: movw %si, %ax
-; 64BIT:     leal (%rsi,%rdi), %eax
+; 64BIT:     movl %esi, %eax
   %0 = add i16 %k, %c                             ; <i16> [#uses=3]
   %1 = icmp eq i16 %k, %c                         ; <i1> [#uses=1]
   br i1 %1, label %bb, label %bb1

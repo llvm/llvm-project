@@ -74,7 +74,7 @@ define i32 @caller38_stack() #1 {
 entry:
 ; CHECK-LABEL: caller38_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load i64, i64* bitcast (%struct.s38* @g38 to i64*), align 4
   %1 = load i64, i64* bitcast (%struct.s38* @g38_2 to i64*), align 4
@@ -128,7 +128,7 @@ entry:
 ; CHECK-LABEL: caller39_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #32]
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]
-; CHECK: movz w[[C:[0-9]+]], #9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load i128, i128* bitcast (%struct.s39* @g39 to i128*), align 16
   %1 = load i128, i128* bitcast (%struct.s39* @g39_2 to i128*), align 16
@@ -184,7 +184,7 @@ entry:
 ; CHECK-LABEL: caller40_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #24]
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40 to [2 x i64]*), align 4
   %1 = load [2 x i64], [2 x i64]* bitcast (%struct.s40* @g40_2 to [2 x i64]*), align 4
@@ -238,7 +238,7 @@ entry:
 ; CHECK-LABEL: caller41_stack
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #32]
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp, #16]
-; CHECK: movz w[[C:[0-9]+]], #9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
   %0 = load i128, i128* bitcast (%struct.s41* @g41 to i128*), align 16
   %1 = load i128, i128* bitcast (%struct.s41* @g41_2 to i128*), align 16
@@ -330,7 +330,7 @@ entry:
 ; CHECK: sub x[[A:[0-9]+]], x29, #32
 ; Address of s1 is passed on stack at sp+8
 ; CHECK: str x[[A]], [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
 
 ; FAST-LABEL: caller42_stack
@@ -442,7 +442,7 @@ entry:
 ; CHECK: sub x[[A:[0-9]+]], x29, #32
 ; Address of s1 is passed on stack at sp+8
 ; CHECK: str x[[A]], [sp, #8]
-; CHECK: movz w[[C:[0-9]+]], #9
+; CHECK: mov w[[C:[0-9]+]], #9
 ; CHECK: str w[[C]], [sp]
 
 ; FAST-LABEL: caller43_stack

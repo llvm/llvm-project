@@ -67,7 +67,7 @@ define i1 @g(i8 addrspace(1)* %p0, i8* %p1) gc "statepoint-example" {
 ; CHECK-NEXT:        .byte   1
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .short  0
-; CHECK-NEXT:        .long   2
+; CHECK-NEXT:        .long   1
 
 ; FunctionInfo[0] =
 

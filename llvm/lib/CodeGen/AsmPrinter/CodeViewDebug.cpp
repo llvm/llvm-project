@@ -253,11 +253,19 @@ void CodeViewDebug::endModule() {
       emitDebugInfoForFunction(P.first, P.second);
 
   // Emit global variable debug information.
+  setCurrentSubprogram(nullptr);
   emitDebugInfoForGlobals();
 
   // Switch back to the generic .debug$S section after potentially processing
   // comdat symbol sections.
   switchToDebugSectionForSymbol(nullptr);
+
+  // Emit UDT records for any types used by global variables.
+  if (!GlobalUDTs.empty()) {
+    MCSymbol *SymbolsEnd = beginCVSubsection(ModuleSubstreamKind::Symbols);
+    emitDebugInfoForUDTs(GlobalUDTs);
+    endCVSubsection(SymbolsEnd);
+  }
 
   // This subsection holds a file index to offset in string table table.
   OS.AddComment("File index to string table offset subsection");
@@ -457,7 +465,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   switchToDebugSectionForSymbol(Fn);
 
   StringRef FuncName;
-  if (auto *SP = GV->getSubprogram())
+  auto *SP = GV->getSubprogram();
+  setCurrentSubprogram(SP);
+  if (SP != nullptr)
     FuncName = SP->getDisplayName();
 
   // If our DISubprogram name is empty, use the mangled name.
@@ -518,6 +528,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
              "child site not in function inline site map");
       emitInlinedCallSite(FI, InlinedAt, I->second);
     }
+
+    if (SP != nullptr)
+      emitDebugInfoForUDTs(LocalUDTs);
 
     // We're done with this function.
     OS.AddComment("Record length");
@@ -755,15 +768,61 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty) {
   }
 }
 
+static const DISubprogram *getQualifiedNameComponents(
+    const DIScope *Scope, SmallVectorImpl<StringRef> &QualifiedNameComponents) {
+  const DISubprogram *ClosestSubprogram = nullptr;
+  while (Scope != nullptr) {
+    if (ClosestSubprogram == nullptr)
+      ClosestSubprogram = dyn_cast<DISubprogram>(Scope);
+    StringRef ScopeName = Scope->getName();
+    if (!ScopeName.empty())
+      QualifiedNameComponents.push_back(ScopeName);
+    Scope = Scope->getScope().resolve();
+  }
+  return ClosestSubprogram;
+}
+
+static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
+                                    StringRef TypeName) {
+  std::string FullyQualifiedName;
+  for (StringRef QualifiedNameComponent : reverse(QualifiedNameComponents)) {
+    FullyQualifiedName.append(QualifiedNameComponent);
+    FullyQualifiedName.append("::");
+  }
+  FullyQualifiedName.append(TypeName);
+  return FullyQualifiedName;
+}
+
 TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
-  // TODO: MSVC emits a S_UDT record.
   DITypeRef UnderlyingTypeRef = Ty->getBaseType();
   TypeIndex UnderlyingTypeIndex = getTypeIndex(UnderlyingTypeRef);
+  StringRef TypeName = Ty->getName();
+
+  SmallVector<StringRef, 5> QualifiedNameComponents;
+  const DISubprogram *ClosestSubprogram = getQualifiedNameComponents(
+      Ty->getScope().resolve(), QualifiedNameComponents);
+
+  if (ClosestSubprogram == nullptr) {
+    std::string FullyQualifiedName =
+        getQualifiedName(QualifiedNameComponents, TypeName);
+    GlobalUDTs.emplace_back(std::move(FullyQualifiedName), UnderlyingTypeIndex);
+  } else if (ClosestSubprogram == CurrentSubprogram) {
+    std::string FullyQualifiedName =
+        getQualifiedName(QualifiedNameComponents, TypeName);
+    LocalUDTs.emplace_back(std::move(FullyQualifiedName), UnderlyingTypeIndex);
+  }
+  // TODO: What if the ClosestSubprogram is neither null or the current
+  // subprogram?  Currently, the UDT just gets dropped on the floor.
+  //
+  // The current behavior is not desirable.  To get maximal fidelity, we would
+  // need to perform all type translation before beginning emission of .debug$S
+  // and then make LocalUDTs a member of FunctionInfo
+
   if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::Int32Long) &&
-      Ty->getName() == "HRESULT")
+      TypeName == "HRESULT")
     return TypeIndex(SimpleTypeKind::HResult);
   if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::UInt16Short) &&
-      Ty->getName() == "wchar_t")
+      TypeName == "wchar_t")
     return TypeIndex(SimpleTypeKind::WideCharacter);
   return UnderlyingTypeIndex;
 }
@@ -1305,6 +1364,26 @@ void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
   OS.EmitLabel(EndLabel);
   // Every subsection must be aligned to a 4-byte boundary.
   OS.EmitValueToAlignment(4);
+}
+
+void CodeViewDebug::emitDebugInfoForUDTs(
+    ArrayRef<std::pair<std::string, TypeIndex>> UDTs) {
+  for (const std::pair<std::string, codeview::TypeIndex> &UDT : UDTs) {
+    MCSymbol *UDTRecordBegin = MMI->getContext().createTempSymbol(),
+             *UDTRecordEnd = MMI->getContext().createTempSymbol();
+    OS.AddComment("Record length");
+    OS.emitAbsoluteSymbolDiff(UDTRecordEnd, UDTRecordBegin, 2);
+    OS.EmitLabel(UDTRecordBegin);
+
+    OS.AddComment("Record kind: S_UDT");
+    OS.EmitIntValue(unsigned(SymbolKind::S_UDT), 2);
+
+    OS.AddComment("Type");
+    OS.EmitIntValue(UDT.second.getIndex(), 4);
+
+    emitNullTerminatedSymbolName(OS, UDT.first);
+    OS.EmitLabel(UDTRecordEnd);
+  }
 }
 
 void CodeViewDebug::emitDebugInfoForGlobals() {

@@ -5,7 +5,7 @@
 ; Test if the constant base address gets only materialized once.
 define i32 @test1() nounwind {
 ; CHECK-LABEL:  test1
-; CHECK:        movz  w8, #1039, lsl #16
+; CHECK:        mov  w8, #68091904
 ; CHECK-NEXT:   movk  w8, #49152
 ; CHECK-NEXT:   ldp w9, w10, [x8, #4]
 ; CHECK:        ldr w8, [x8, #12]

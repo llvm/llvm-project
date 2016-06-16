@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefix=SSE --check-prefix=SSE42
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=AVX1
 
-; FIXME: If we have SSE/AVX intrinsics in the code, we miss obvious combines
+; If we have SSE/AVX intrinsics in the code, we miss obvious combines
 ; unless we do them late on X86-specific nodes.
 
 declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>)
@@ -10,13 +10,11 @@ declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>)
 define <4 x i32> @PR27924_cmpeq(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: PR27924_cmpeq:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pmaxsd %xmm1, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR27924_cmpeq:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -31,14 +29,12 @@ define <4 x i32> @PR27924_cmpeq(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @PR27924_cmpgt(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: PR27924_cmpgt:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pmaxsd %xmm1, %xmm0
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm0
+; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR27924_cmpgt:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpgtd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
   %cmp = icmp sgt <4 x i32> %a, %b

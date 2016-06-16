@@ -868,14 +868,7 @@ public:
     if (!CE) return false;
     uint64_t Value = CE->getValue();
 
-    if (RegWidth == 32)
-      Value &= 0xffffffffULL;
-
-    // "lsl #0" takes precedence: in practice this only affects "#0, lsl #0".
-    if (Value == 0 && Shift != 0)
-      return false;
-
-    return (Value & ~(0xffffULL << Shift)) == 0;
+    return AArch64_AM::isMOVZMovAlias(Value, Shift, RegWidth);
   }
 
   template<int RegWidth, int Shift>
@@ -886,16 +879,7 @@ public:
     if (!CE) return false;
     uint64_t Value = CE->getValue();
 
-    // MOVZ takes precedence over MOVN.
-    for (int MOVZShift = 0; MOVZShift <= 48; MOVZShift += 16)
-      if ((Value & ~(0xffffULL << MOVZShift)) == 0)
-        return false;
-
-    Value = ~Value;
-    if (RegWidth == 32)
-      Value &= 0xffffffffULL;
-
-    return (Value & ~(0xffffULL << Shift)) == 0;
+    return AArch64_AM::isMOVNMovAlias(Value, Shift, RegWidth);
   }
 
   bool isFPImm() const { return Kind == k_FPImm; }

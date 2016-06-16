@@ -215,6 +215,8 @@ void llvm::DeleteGlobalInitializer(GlobalVariable *GV) {
 //
 void llvm::DeleteFunctionBody(Function *F) {
   eliminateAliases(F);
+  // Function declarations can't have comdats.
+  F->setComdat(nullptr);
 
   // delete the body of the function...
   F->deleteBody();

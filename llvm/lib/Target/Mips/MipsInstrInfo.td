@@ -1064,9 +1064,6 @@ def addr :
 def addrRegImm :
   ComplexPattern<iPTR, 2, "selectAddrRegImm", [frameindex]>;
 
-def addrRegReg :
-  ComplexPattern<iPTR, 2, "selectAddrRegReg", [frameindex]>;
-
 def addrDefault :
   ComplexPattern<iPTR, 2, "selectAddrDefault", [frameindex]>;
 

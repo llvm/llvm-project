@@ -728,11 +728,6 @@ namespace {
       initializeLoopSimplifyPass(*PassRegistry::getPassRegistry());
     }
 
-    DominatorTree *DT;
-    LoopInfo *LI;
-    ScalarEvolution *SE;
-    AssumptionCache *AC;
-
     bool runOnFunction(Function &F) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -778,11 +773,13 @@ Pass *llvm::createLoopSimplifyPass() { return new LoopSimplify(); }
 ///
 bool LoopSimplify::runOnFunction(Function &F) {
   bool Changed = false;
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
-  SE = SEWP ? &SEWP->getSE() : nullptr;
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  ScalarEvolution *SE = SEWP ? &SEWP->getSE() : nullptr;
+  AssumptionCache *AC =
+      &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 #ifndef NDEBUG
   if (PreserveLCSSA) {

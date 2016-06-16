@@ -287,3 +287,7 @@
   xori $3, -1                  # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
   xori $3, 65536               # CHECK: :[[@LINE]]:12: error: expected 16-bit unsigned immediate
   not $3, 4                    # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+  drotr $5, $10, 64            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
+  drotr $5, $10, -1            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
+  drotr32 $1, $2, 32           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
+  drotr32 $1, $2, -1           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate

@@ -35,6 +35,6 @@ define i32 @test3(i64 %x) nounwind readnone {
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 ; CHECK-LABEL: test3:
-; CHECK: cmpl $2
+; CHECK: cmpb $2
 ; CHECK: ret
 }

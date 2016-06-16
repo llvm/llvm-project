@@ -239,6 +239,9 @@ public:
   /// @brief removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, Attribute::AttrKind Kind);
 
+  /// @brief removes the attribute from the list of attributes.
+  void removeAttribute(unsigned i, StringRef Kind);
+
   /// @brief removes the attributes from the list of attributes.
   void removeAttributes(unsigned i, AttributeSet Attrs);
 

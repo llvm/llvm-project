@@ -380,7 +380,7 @@ entry:
 }
 
 ; CHECK-LABEL: @test1
-; CHECK: movz [[REG:w[0-9]+]], #5
+; CHECK: mov [[REG:w[0-9]+]], #5
 ; CHECK: bfxil w0, [[REG]], #0, #4
 define i32 @test1(i32 %a) {
   %1 = and i32 %a, -16 ; 0xfffffff0
@@ -389,7 +389,7 @@ define i32 @test1(i32 %a) {
 }
 
 ; CHECK-LABEL: @test2
-; CHECK: movz [[REG:w[0-9]+]], #10
+; CHECK: mov [[REG:w[0-9]+]], #10
 ; CHECK: bfi w0, [[REG]], #22, #4
 define i32 @test2(i32 %a) {
   %1 = and i32 %a, -62914561 ; 0xfc3fffff
@@ -398,7 +398,7 @@ define i32 @test2(i32 %a) {
 }
 
 ; CHECK-LABEL: @test3
-; CHECK: movz [[REG:x[0-9]+]], #5
+; CHECK: mov [[REG:x[0-9]+]], #5
 ; CHECK: bfxil x0, [[REG]], #0, #3
 define i64 @test3(i64 %a) {
   %1 = and i64 %a, -8 ; 0xfffffffffffffff8
@@ -407,7 +407,7 @@ define i64 @test3(i64 %a) {
 }
 
 ; CHECK-LABEL: @test4
-; CHECK: movz [[REG:x[0-9]+]], #9
+; CHECK: mov [[REG:x[0-9]+]], #9
 ; CHECK: bfi x0, [[REG]], #1, #7
 define i64 @test4(i64 %a) {
   %1 = and i64 %a, -255 ; 0xffffffffffffff01
@@ -428,7 +428,7 @@ define i32 @test5(i32 %a) {
 ; BFXIL will use the same constant as the ORR, so we don't care how the constant
 ; is materialized (it's an equal cost either way).
 ; CHECK-LABEL: @test6
-; CHECK: movz [[REG:w[0-9]+]], #11, lsl #16
+; CHECK: mov [[REG:w[0-9]+]], #720896
 ; CHECK: movk [[REG]], #23250
 ; CHECK: bfxil w0, [[REG]], #0, #20
 define i32 @test6(i32 %a) {
@@ -440,7 +440,7 @@ define i32 @test6(i32 %a) {
 ; BFIs that require the same number of instruction to materialize the constant
 ; as the original ORR are okay.
 ; CHECK-LABEL: @test7
-; CHECK: movz [[REG:w[0-9]+]], #5, lsl #16
+; CHECK: mov [[REG:w[0-9]+]], #327680
 ; CHECK: movk [[REG]], #44393
 ; CHECK: bfi w0, [[REG]], #1, #19
 define i32 @test7(i32 %a) {
@@ -454,7 +454,7 @@ define i32 @test7(i32 %a) {
 ; 'and' with a 'movk', which would decrease ILP while using the same number of
 ; instructions.
 ; CHECK: @test8
-; CHECK: movz [[REG2:x[0-9]+]], #36694, lsl #32
+; CHECK: mov [[REG2:x[0-9]+]], #157599529959424
 ; CHECK: and [[REG1:x[0-9]+]], x0, #0xff000000000000ff
 ; CHECK: movk [[REG2]], #31059, lsl #16
 ; CHECK: orr x0, [[REG1]], [[REG2]]

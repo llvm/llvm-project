@@ -460,10 +460,11 @@ define <2 x double> @test_mm_cmpeq_pd(<2 x double> %a0, <2 x double> %a1) nounwi
 ; X64:       # BB#0:
 ; X64-NEXT:    cmpeqpd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 0)
+  %fcmp = fcmp oeq <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double>, <2 x double>, i8) nounwind readnone
 
 define <2 x double> @test_mm_cmpeq_sd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; X32-LABEL: test_mm_cmpeq_sd:
@@ -492,7 +493,9 @@ define <2 x double> @test_mm_cmpge_pd(<2 x double> %a0, <2 x double> %a1) nounwi
 ; X64-NEXT:    cmplepd %xmm0, %xmm1
 ; X64-NEXT:    movapd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a1, <2 x double> %a0, i8 2)
+  %fcmp = fcmp ole <2 x double> %a1, %a0
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -582,7 +585,9 @@ define <2 x double> @test_mm_cmpgt_pd(<2 x double> %a0, <2 x double> %a1) nounwi
 ; X64-NEXT:    cmpltpd %xmm0, %xmm1
 ; X64-NEXT:    movapd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a1, <2 x double> %a0, i8 1)
+  %fcmp = fcmp olt <2 x double> %a1, %a0
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -616,7 +621,9 @@ define <2 x double> @test_mm_cmple_pd(<2 x double> %a0, <2 x double> %a1) nounwi
 ; X64:       # BB#0:
 ; X64-NEXT:    cmplepd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 2)
+  %fcmp = fcmp ole <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -704,7 +711,9 @@ define <2 x double> @test_mm_cmplt_pd(<2 x double> %a0, <2 x double> %a1) nounwi
 ; X64:       # BB#0:
 ; X64-NEXT:    cmpltpd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 1)
+  %fcmp = fcmp olt <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -732,7 +741,9 @@ define <2 x double> @test_mm_cmpneq_pd(<2 x double> %a0, <2 x double> %a1) nounw
 ; X64:       # BB#0:
 ; X64-NEXT:    cmpneqpd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 4)
+  %fcmp = fcmp une <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -762,7 +773,9 @@ define <2 x double> @test_mm_cmpnge_pd(<2 x double> %a0, <2 x double> %a1) nounw
 ; X64-NEXT:    cmpnlepd %xmm0, %xmm1
 ; X64-NEXT:    movapd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a1, <2 x double> %a0, i8 6)
+  %fcmp = fcmp ugt <2 x double> %a1, %a0
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -798,7 +811,9 @@ define <2 x double> @test_mm_cmpngt_pd(<2 x double> %a0, <2 x double> %a1) nounw
 ; X64-NEXT:    cmpnltpd %xmm0, %xmm1
 ; X64-NEXT:    movapd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a1, <2 x double> %a0, i8 5)
+  %fcmp = fcmp uge <2 x double> %a1, %a0
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -832,7 +847,9 @@ define <2 x double> @test_mm_cmpnle_pd(<2 x double> %a0, <2 x double> %a1) nounw
 ; X64:       # BB#0:
 ; X64-NEXT:    cmpnlepd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 6)
+  %fcmp = fcmp ugt <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -860,7 +877,9 @@ define <2 x double> @test_mm_cmpnlt_pd(<2 x double> %a0, <2 x double> %a1) nounw
 ; X64:       # BB#0:
 ; X64-NEXT:    cmpnltpd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 5)
+  %fcmp = fcmp uge <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -888,7 +907,9 @@ define <2 x double> @test_mm_cmpord_pd(<2 x double> %a0, <2 x double> %a1) nounw
 ; X64:       # BB#0:
 ; X64-NEXT:    cmpordpd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 7)
+  %fcmp = fcmp ord <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -916,7 +937,9 @@ define <2 x double> @test_mm_cmpunord_pd(<2 x double> %a0, <2 x double> %a1) nou
 ; X64:       # BB#0:
 ; X64-NEXT:    cmpunordpd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %res = call <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double> %a0, <2 x double> %a1, i8 3)
+  %fcmp = fcmp uno <2 x double> %a0, %a1
+  %sext = sext <2 x i1> %fcmp to <2 x i64>
+  %res = bitcast <2 x i64> %sext to <2 x double>
   ret <2 x double> %res
 }
 
@@ -1598,11 +1621,11 @@ define <2 x i64> @test_mm_max_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pmaxs.w(<8 x i16> %arg0, <8 x i16> %arg1)
-  %bc = bitcast <8 x i16> %res to <2 x i64>
+  %cmp = icmp sgt <8 x i16> %arg0, %arg1
+  %sel = select <8 x i1> %cmp, <8 x i16> %arg0, <8 x i16> %arg1
+  %bc = bitcast <8 x i16> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.pmaxs.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_max_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_max_epu8:
@@ -1616,11 +1639,11 @@ define <2 x i64> @test_mm_max_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.pmaxu.b(<16 x i8> %arg0, <16 x i8> %arg1)
-  %bc = bitcast <16 x i8> %res to <2 x i64>
+  %cmp = icmp ugt <16 x i8> %arg0, %arg1
+  %sel = select <16 x i1> %cmp, <16 x i8> %arg0, <16 x i8> %arg1
+  %bc = bitcast <16 x i8> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.pmaxu.b(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x double> @test_mm_max_pd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; X32-LABEL: test_mm_max_pd:
@@ -1679,11 +1702,11 @@ define <2 x i64> @test_mm_min_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pmins.w(<8 x i16> %arg0, <8 x i16> %arg1)
-  %bc = bitcast <8 x i16> %res to <2 x i64>
+  %cmp = icmp slt <8 x i16> %arg0, %arg1
+  %sel = select <8 x i1> %cmp, <8 x i16> %arg0, <8 x i16> %arg1
+  %bc = bitcast <8 x i16> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.pmins.w(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_min_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X32-LABEL: test_mm_min_epu8:
@@ -1697,11 +1720,11 @@ define <2 x i64> @test_mm_min_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.sse2.pminu.b(<16 x i8> %arg0, <16 x i8> %arg1)
-  %bc = bitcast <16 x i8> %res to <2 x i64>
+  %cmp = icmp ult <16 x i8> %arg0, %arg1
+  %sel = select <16 x i1> %cmp, <16 x i8> %arg0, <16 x i8> %arg1
+  %bc = bitcast <16 x i8> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.sse2.pminu.b(<16 x i8>, <16 x i8>) nounwind readnone
 
 define <2 x double> @test_mm_min_pd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; X32-LABEL: test_mm_min_pd:

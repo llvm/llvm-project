@@ -153,72 +153,72 @@
 ; EMPTY-NEXT:     Record count: 15
 ; EMPTY-NEXT:     Records [
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UnknownLeaf (0x104B) {
+; EMPTY-NEXT:         UdtModSourceLine (0x104B) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UnknownType {
-; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:             Length: 16
-; EMPTY-NEXT:           }
+; EMPTY-NEXT:           UDT: __vc_attributes::threadingAttribute (0x100B)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 481
+; EMPTY-NEXT:           Module: 1
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Bytes (
 ; EMPTY-NEXT:           0000: 0B100000 01000000 E1010000 0100F2F1  |................|
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UnknownLeaf (0x104C) {
+; EMPTY-NEXT:         UdtModSourceLine (0x104C) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UnknownType {
-; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:             Length: 16
-; EMPTY-NEXT:           }
+; EMPTY-NEXT:           UDT: __vc_attributes::event_receiverAttribute (0x1017)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 194
+; EMPTY-NEXT:           Module: 1
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Bytes (
 ; EMPTY-NEXT:           0000: 17100000 01000000 C2000000 0100F2F1  |................|
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UnknownLeaf (0x104D) {
+; EMPTY-NEXT:         UdtModSourceLine (0x104D) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UnknownType {
-; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:             Length: 16
-; EMPTY-NEXT:           }
+; EMPTY-NEXT:           UDT: __vc_attributes::aggregatableAttribute (0x1021)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 603
+; EMPTY-NEXT:           Module: 1
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Bytes (
 ; EMPTY-NEXT:           0000: 21100000 01000000 5B020000 0100F2F1  |!.......[.......|
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UnknownLeaf (0x104E) {
+; EMPTY-NEXT:         UdtModSourceLine (0x104E) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UnknownType {
-; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:             Length: 16
-; EMPTY-NEXT:           }
+; EMPTY-NEXT:           UDT: __vc_attributes::event_sourceAttribute (0x102C)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 1200
+; EMPTY-NEXT:           Module: 1
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Bytes (
 ; EMPTY-NEXT:           0000: 2C100000 01000000 B0040000 0100F2F1  |,...............|
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UnknownLeaf (0x104F) {
+; EMPTY-NEXT:         UdtModSourceLine (0x104F) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UnknownType {
-; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:             Length: 16
-; EMPTY-NEXT:           }
+; EMPTY-NEXT:           UDT: __vc_attributes::moduleAttribute (0x103A)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 540
+; EMPTY-NEXT:           Module: 1
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Bytes (
 ; EMPTY-NEXT:           0000: 3A100000 01000000 1C020000 0100F2F1  |:...............|
 ; EMPTY-NEXT:         )
 ; EMPTY-NEXT:       }
 ; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UnknownLeaf (0x1050) {
+; EMPTY-NEXT:         UdtModSourceLine (0x1050) {
 ; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UnknownType {
-; EMPTY-NEXT:             Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:             Length: 16
-; EMPTY-NEXT:           }
+; EMPTY-NEXT:           UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 108
+; EMPTY-NEXT:           Module: 1
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         Bytes (
 ; EMPTY-NEXT:           0000: 42100000 01000000 6C000000 0100F2F1  |B.......l.......|
@@ -1003,66 +1003,66 @@
 ; ALL:   Record count: 15
 ; ALL:   Records [
 ; ALL:     {
-; ALL:       UnknownLeaf (0x104B) {
+; ALL:       UdtModSourceLine (0x104B) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UnknownType {
-; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:           Length: 16
-; ALL:         }
+; ALL:         UDT: __vc_attributes::threadingAttribute (0x100B)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 481
+; ALL:         Module: 1
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UnknownLeaf (0x104C) {
+; ALL:       UdtModSourceLine (0x104C) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UnknownType {
-; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:           Length: 16
-; ALL:         }
+; ALL:         UDT: __vc_attributes::event_receiverAttribute (0x1017)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 194
+; ALL:         Module: 1
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UnknownLeaf (0x104D) {
+; ALL:       UdtModSourceLine (0x104D) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UnknownType {
-; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:           Length: 16
-; ALL:         }
+; ALL:         UDT: __vc_attributes::aggregatableAttribute (0x1021)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 603
+; ALL:         Module: 1
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UnknownLeaf (0x104E) {
+; ALL:       UdtModSourceLine (0x104E) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UnknownType {
-; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:           Length: 16
-; ALL:         }
+; ALL:         UDT: __vc_attributes::event_sourceAttribute (0x102C)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 1200
+; ALL:         Module: 1
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UnknownLeaf (0x104F) {
+; ALL:       UdtModSourceLine (0x104F) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UnknownType {
-; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:           Length: 16
-; ALL:         }
+; ALL:         UDT: __vc_attributes::moduleAttribute (0x103A)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 540
+; ALL:         Module: 1
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UnknownLeaf (0x1050) {
+; ALL:       UdtModSourceLine (0x1050) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UnknownType {
-; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:           Length: 16
-; ALL:         }
+; ALL:         UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 108
+; ALL:         Module: 1
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {
-; ALL:       UnknownLeaf (0x1051) {
+; ALL:       UdtModSourceLine (0x1051) {
 ; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UnknownType {
-; ALL:           Kind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:           Length: 16
-; ALL:         }
+; ALL:         UDT: __vc_attributes::helper_attributes::v1_alttypeAttribute (0x104A)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 96
+; ALL:         Module: 1
 ; ALL:       }
 ; ALL:     }
 ; ALL:     {

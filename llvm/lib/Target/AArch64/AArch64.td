@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// Target-independent interfaces which we are implementing
+// Target-independent interfaces which we are implementing.
 //===----------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"

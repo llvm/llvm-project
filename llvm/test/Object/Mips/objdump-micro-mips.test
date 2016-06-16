@@ -1,3 +1,4 @@
+RUN: llvm-objdump -d %p/../Inputs/micro-mips.elf-mipsel | FileCheck %s
 RUN: llvm-objdump -d -mattr=micromips %p/../Inputs/micro-mips.elf-mipsel \
 RUN:   | FileCheck %s
 

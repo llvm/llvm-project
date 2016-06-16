@@ -348,7 +348,7 @@ entry:
 ; CHECK-LABEL: fct16:
 ; CHECK: ldr [[REG1:w[0-9]+]],
 ; Create the constant
-; CHECK: movz [[REGCST:w[0-9]+]], #26, lsl #16
+; CHECK: mov [[REGCST:w[0-9]+]], #1703936
 ; CHECK: movk [[REGCST]], #33120
 ; Do the masking
 ; CHECK: and [[REG2:w[0-9]+]], [[REG1]], [[REGCST]]
@@ -377,7 +377,7 @@ entry:
 ; CHECK-LABEL: fct17:
 ; CHECK: ldr [[REG1:x[0-9]+]],
 ; Create the constant
-; CHECK: movz w[[REGCST:[0-9]+]], #26, lsl #16
+; CHECK: mov w[[REGCST:[0-9]+]], #1703936
 ; CHECK: movk w[[REGCST]], #33120
 ; Do the masking
 ; CHECK: and [[REG2:x[0-9]+]], [[REG1]], x[[REGCST]]

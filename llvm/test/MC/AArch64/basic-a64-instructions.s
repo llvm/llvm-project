@@ -3267,8 +3267,8 @@ _func:
 
         mov w3, #0xf000f
         mov x10, #0xaaaaaaaaaaaaaaaa
-// CHECK: orr      w3, wzr, #0xf000f          // encoding: [0xe3,0x8f,0x00,0x32]
-// CHECK: orr x10, xzr, #0xaaaaaaaaaaaaaaaa // encoding: [0xea,0xf3,0x01,0xb2]
+// CHECK: mov w3, #983055                // encoding: [0xe3,0x8f,0x00,0x32]
+// CHECK: mov x10, #-6148914691236517206 // encoding: [0xea,0xf3,0x01,0xb2]
 
         // The Imm field of logicalImm operations has to be truncated to the
         // register width, i.e. 32 bits
@@ -3355,13 +3355,13 @@ _func:
         movz w1, #65535, lsl #0
         movz w2, #0, lsl #16
         movn w2, #1234, lsl #0
-// CHECK: movz     w1, #{{65535|0xffff}}      // encoding: [0xe1,0xff,0x9f,0x52]
+// CHECK: mov     w1, #65535                  // encoding: [0xe1,0xff,0x9f,0x52]
 // CHECK: movz     w2, #0, lsl #16            // encoding: [0x02,0x00,0xa0,0x52]
-// CHECK: movn     w2, #{{1234|0x4d2}}        // encoding: [0x42,0x9a,0x80,0x12]
+// CHECK: mov     w2, #-1235                  // encoding: [0x42,0x9a,0x80,0x12]
 
         movz x2, #1234, lsl #32
         movk xzr, #4321, lsl #48
-// CHECK: movz     x2, #{{1234|0x4d2}}, lsl #32   // encoding: [0x42,0x9a,0xc0,0xd2]
+// CHECK: mov      x2, #5299989643264             // encoding: [0x42,0x9a,0xc0,0xd2]
 // CHECK: movk     xzr, #{{4321|0x10e1}}, lsl #48 // encoding: [0x3f,0x1c,0xe2,0xf2]
 
         movz x2, #:abs_g0:sym

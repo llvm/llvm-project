@@ -59,7 +59,7 @@ define i32 @anyNonZero64(<4 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 
 entry:
   %0 = bitcast <4 x i16> %a to <8 x i8>
@@ -83,7 +83,7 @@ define i32 @anyNonZero128(<8 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 entry:
   %0 = bitcast <8 x i16> %a to <16 x i8>
   %vmaxv.i = tail call i32 @llvm.aarch64.neon.umaxv.i32.v16i8(<16 x i8> %0) #3
@@ -152,7 +152,7 @@ define i32 @allNonZero64(<4 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 entry:
   %0 = bitcast <4 x i16> %a to <8 x i8>
   %vminv.i = tail call i32 @llvm.aarch64.neon.uminv.i32.v8i8(<8 x i8> %0) #3
@@ -175,7 +175,7 @@ define i32 @allNonZero128(<8 x i16> %a) #0 {
 ; CHECK-NEXT: fmov w[[REGNO2:[0-9]+]], s[[REGNO1]]
 ; CHECK-NEXT: cbz w[[REGNO2]], [[LABEL:[A-Z_0-9]+]]
 ; CHECK: [[LABEL]]:
-; CHECK-NEXT: movz w0, #0
+; CHECK-NEXT: mov w0, #0
 entry:
   %0 = bitcast <8 x i16> %a to <16 x i8>
   %vminv.i = tail call i32 @llvm.aarch64.neon.uminv.i32.v16i8(<16 x i8> %0) #3

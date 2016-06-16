@@ -262,6 +262,7 @@ public:
 
   StringRef getFileFormatName() const override;
   unsigned getArch() const override;
+  SubtargetFeatures getFeatures() const override { return SubtargetFeatures(); }
   Triple getArchTriple(const char **McpuDefault = nullptr) const;
 
   relocation_iterator section_rel_begin(unsigned Index) const;

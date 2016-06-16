@@ -243,6 +243,8 @@ public:
   static AttributeSet get(LLVMContext &C, ArrayRef<AttributeSet> Attrs);
   static AttributeSet get(LLVMContext &C, unsigned Index,
                           ArrayRef<Attribute::AttrKind> Kinds);
+  static AttributeSet get(LLVMContext &C, unsigned Index,
+                          ArrayRef<StringRef> Kind);
   static AttributeSet get(LLVMContext &C, unsigned Index, const AttrBuilder &B);
 
   /// \brief Add an attribute to the attribute set at the given index. Because
@@ -270,6 +272,12 @@ public:
   /// new list.
   AttributeSet removeAttribute(LLVMContext &C, unsigned Index,
                                Attribute::AttrKind Kind) const;
+
+  /// \brief Remove the specified attribute at the specified index from this
+  /// attribute list. Because attribute lists are immutable, this returns the
+  /// new list.
+  AttributeSet removeAttribute(LLVMContext &C, unsigned Index,
+                               StringRef Kind) const;
 
   /// \brief Remove the specified attributes at the specified index from this
   /// attribute list. Because attribute lists are immutable, this returns the

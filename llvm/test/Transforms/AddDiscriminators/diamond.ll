@@ -1,4 +1,5 @@
 ; RUN: opt < %s -add-discriminators -S | FileCheck %s
+; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 
 ; Discriminator support for diamond-shaped CFG.:
 ; #1 void bar(int);

@@ -133,16 +133,14 @@ def MOVZ_I_S : MMRel, CMov_I_F_FT<"movz.s", GPR32Opnd, FGR32Opnd, II_MOVZ_S>,
 
 let isCodeGenOnly = 1 in
 def MOVZ_I64_S : CMov_I_F_FT<"movz.s", GPR64Opnd, FGR32Opnd, II_MOVZ_S>,
-                 CMov_I_F_FM<18, 16>, INSN_MIPS4_32_NOT_32R6_64R6,
-                 AdditionalRequires<[HasMips64]>;
+                 CMov_I_F_FM<18, 16>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
 
 def MOVN_I_S : MMRel, CMov_I_F_FT<"movn.s", GPR32Opnd, FGR32Opnd, II_MOVN_S>,
                CMov_I_F_FM<19, 16>, INSN_MIPS4_32_NOT_32R6_64R6;
 
 let isCodeGenOnly = 1 in
 def MOVN_I64_S : CMov_I_F_FT<"movn.s", GPR64Opnd, FGR32Opnd, II_MOVN_S>,
-                 CMov_I_F_FM<19, 16>, INSN_MIPS4_32_NOT_32R6_64R6,
-                 AdditionalRequires<[IsGP64bit]>;
+                 CMov_I_F_FM<19, 16>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
 
 def MOVZ_I_D32 : MMRel, CMov_I_F_FT<"movz.d", GPR32Opnd, AFGR64Opnd,
                                     II_MOVZ_D>, CMov_I_F_FM<18, 17>,
@@ -169,16 +167,14 @@ def MOVT_I : MMRel, CMov_F_I_FT<"movt", GPR32Opnd, II_MOVT, MipsCMovFP_T>,
 
 let isCodeGenOnly = 1 in
 def MOVT_I64 : CMov_F_I_FT<"movt", GPR64Opnd, II_MOVT, MipsCMovFP_T>,
-               CMov_F_I_FM<1>, INSN_MIPS4_32_NOT_32R6_64R6,
-               AdditionalRequires<[IsGP64bit]>;
+               CMov_F_I_FM<1>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
 
 def MOVF_I : MMRel, CMov_F_I_FT<"movf", GPR32Opnd, II_MOVF, MipsCMovFP_F>,
              CMov_F_I_FM<0>, INSN_MIPS4_32_NOT_32R6_64R6;
 
 let isCodeGenOnly = 1 in
 def MOVF_I64 : CMov_F_I_FT<"movf", GPR64Opnd, II_MOVF, MipsCMovFP_F>,
-               CMov_F_I_FM<0>, INSN_MIPS4_32_NOT_32R6_64R6,
-               AdditionalRequires<[IsGP64bit]>;
+               CMov_F_I_FM<0>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
 
 def MOVT_S : MMRel, CMov_F_F_FT<"movt.s", FGR32Opnd, II_MOVT_S, MipsCMovFP_T>,
              CMov_F_F_FM<16, 1>, INSN_MIPS4_32_NOT_32R6_64R6;

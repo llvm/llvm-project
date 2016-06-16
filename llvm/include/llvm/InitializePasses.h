@@ -58,7 +58,7 @@ void initializeTarget(PassRegistry&);
 void initializeAAEvalLegacyPassPass(PassRegistry&);
 void initializeAAResultsWrapperPassPass(PassRegistry &);
 void initializeADCELegacyPassPass(PassRegistry&);
-void initializeAddDiscriminatorsPass(PassRegistry&);
+void initializeAddDiscriminatorsLegacyPassPass(PassRegistry&);
 void initializeAddressSanitizerModulePass(PassRegistry&);
 void initializeAddressSanitizerPass(PassRegistry&);
 void initializeAliasSetPrinterPass(PassRegistry&);
