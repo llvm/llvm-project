@@ -16,8 +16,10 @@
 #ifndef LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
 #define LLVM_CLANG_CODEGEN_CGFUNCTIONINFO_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -25,8 +27,6 @@
 #include <cassert>
 
 namespace clang {
-class Decl;
-
 namespace CodeGen {
 
 /// ABIArgInfo - Helper class to encapsulate information about how a
@@ -393,23 +393,34 @@ public:
   /// Compute the arguments required by the given formal prototype,
   /// given that there may be some additional, non-formal arguments
   /// in play.
+  ///
+  /// If FD is not null, this will consider pass_object_size params in FD.
   static RequiredArgs forPrototypePlus(const FunctionProtoType *prototype,
-                                       unsigned additional) {
+                                       unsigned additional,
+                                       const FunctionDecl *FD) {
     if (!prototype->isVariadic()) return All;
+    if (FD)
+      additional += std::count_if(FD->param_begin(), FD->param_end(),
+                                  [](const ParmVarDecl *PVD) {
+                                    return PVD->hasAttr<PassObjectSizeAttr>();
+                                  });
     return RequiredArgs(prototype->getNumParams() + additional);
   }
 
-  static RequiredArgs forPrototype(const FunctionProtoType *prototype) {
-    return forPrototypePlus(prototype, 0);
+  static RequiredArgs forPrototype(const FunctionProtoType *prototype,
+                                   const FunctionDecl *FD) {
+    return forPrototypePlus(prototype, 0, FD);
   }
 
-  static RequiredArgs forPrototype(CanQual<FunctionProtoType> prototype) {
-    return forPrototype(prototype.getTypePtr());
+  static RequiredArgs forPrototype(CanQual<FunctionProtoType> prototype,
+                                   const FunctionDecl *FD) {
+    return forPrototype(prototype.getTypePtr(), FD);
   }
 
   static RequiredArgs forPrototypePlus(CanQual<FunctionProtoType> prototype,
-                                       unsigned additional) {
-    return forPrototypePlus(prototype.getTypePtr(), additional);
+                                       unsigned additional,
+                                       const FunctionDecl *FD) {
+    return forPrototypePlus(prototype.getTypePtr(), additional, FD);
   }
 
   bool allowsOptionalArgs() const { return NumRequired != ~0U; }

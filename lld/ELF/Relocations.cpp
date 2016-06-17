@@ -354,10 +354,10 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   if (SymSize == 0)
     fatal("cannot create a copy relocation for " + SS->getName());
 
-  uintX_t Align = getAlignment(SS);
-  uintX_t Off = alignTo(Out<ELFT>::Bss->getSize(), Align);
+  uintX_t Alignment = getAlignment(SS);
+  uintX_t Off = alignTo(Out<ELFT>::Bss->getSize(), Alignment);
   Out<ELFT>::Bss->setSize(Off + SymSize);
-  Out<ELFT>::Bss->updateAlign(Align);
+  Out<ELFT>::Bss->updateAlignment(Alignment);
   uintX_t Shndx = SS->Sym.st_shndx;
   uintX_t Value = SS->Sym.st_value;
   // Look through the DSO's dynamic symbol table for aliases and create a

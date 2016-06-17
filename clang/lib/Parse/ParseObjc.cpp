@@ -2658,6 +2658,12 @@ Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
 /// StashAwayMethodOrFunctionBodyTokens -  Consume the tokens and store them 
 /// for later parsing.
 void Parser::StashAwayMethodOrFunctionBodyTokens(Decl *MDecl) {
+  if (SkipFunctionBodies && (!MDecl || Actions.canSkipFunctionBody(MDecl)) &&
+      trySkippingFunctionBody()) {
+    Actions.ActOnSkippedFunctionBody(MDecl);
+    return;
+  }
+
   LexedMethod* LM = new LexedMethod(this, MDecl);
   CurParsedObjCImpl->LateParsedObjCMethods.push_back(LM);
   CachedTokens &Toks = LM->Toks;

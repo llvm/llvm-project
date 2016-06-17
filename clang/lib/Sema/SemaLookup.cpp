@@ -1078,32 +1078,35 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
 
   for (; S && !isNamespaceOrTranslationUnitScope(S); S = S->getParent()) {
     DeclContext *Ctx = S->getEntity();
-
+    bool SearchNamespaceScope = true;
     // Check whether the IdResolver has anything in this scope.
-    bool Found = false;
     for (; I != IEnd && S->isDeclScope(*I); ++I) {
       if (NamedDecl *ND = R.getAcceptableDecl(*I)) {
-        if (NameKind == LookupRedeclarationWithLinkage) {
+        if (NameKind == LookupRedeclarationWithLinkage &&
+            !(*I)->isTemplateParameter()) {
+          // If it's a template parameter, we still find it, so we can diagnose
+          // the invalid redeclaration.
+
           // Determine whether this (or a previous) declaration is
           // out-of-scope.
           if (!LeftStartingScope && !Initial->isDeclScope(*I))
             LeftStartingScope = true;
 
           // If we found something outside of our starting scope that
-          // does not have linkage, skip it. If it's a template parameter,
-          // we still find it, so we can diagnose the invalid redeclaration.
-          if (LeftStartingScope && !((*I)->hasLinkage()) &&
-              !(*I)->isTemplateParameter()) {
+          // does not have linkage, skip it.
+          if (LeftStartingScope && !((*I)->hasLinkage())) {
             R.setShadowed();
             continue;
           }
+        } else {
+          // We found something in this scope, we should not look at the
+          // namespace scope
+          SearchNamespaceScope = false;
         }
-
-        Found = true;
         R.addDecl(ND);
       }
     }
-    if (Found) {
+    if (!SearchNamespaceScope) {
       R.resolveKind();
       if (S->isClassScope())
         if (CXXRecordDecl *Record = dyn_cast_or_null<CXXRecordDecl>(Ctx))

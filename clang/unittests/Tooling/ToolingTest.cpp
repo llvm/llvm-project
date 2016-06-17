@@ -241,7 +241,7 @@ TEST(newFrontendActionFactory, InjectsSourceFileCallbacks) {
 struct SkipBodyConsumer : public clang::ASTConsumer {
   /// Skip the 'skipMe' function.
   bool shouldSkipFunctionBody(Decl *D) override {
-    FunctionDecl *F = dyn_cast<FunctionDecl>(D);
+    NamedDecl *F = dyn_cast<NamedDecl>(D);
     return F && F->getNameAsString() == "skipMe";
   }
 };
@@ -255,10 +255,65 @@ struct SkipBodyAction : public clang::ASTFrontendAction {
 };
 
 TEST(runToolOnCode, TestSkipFunctionBody) {
+  std::vector<std::string> Args = {"-std=c++11"};
+  std::vector<std::string> Args2 = {"-fno-delayed-template-parsing"};
+
   EXPECT_TRUE(runToolOnCode(new SkipBodyAction,
                             "int skipMe() { an_error_here }"));
   EXPECT_FALSE(runToolOnCode(new SkipBodyAction,
                              "int skipMeNot() { an_error_here }"));
+
+  // Test constructors with initializers
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      new SkipBodyAction,
+      "struct skipMe { skipMe() : an_error() { more error } };", Args));
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      new SkipBodyAction, "struct skipMe { skipMe(); };"
+                          "skipMe::skipMe() : an_error([](){;}) { more error }",
+      Args));
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      new SkipBodyAction, "struct skipMe { skipMe(); };"
+                          "skipMe::skipMe() : an_error{[](){;}} { more error }",
+      Args));
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      new SkipBodyAction,
+      "struct skipMe { skipMe(); };"
+      "skipMe::skipMe() : a<b<c>(e)>>(), f{}, g() { error }",
+      Args));
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      new SkipBodyAction, "struct skipMe { skipMe() : bases()... { error } };",
+      Args));
+
+  EXPECT_FALSE(runToolOnCodeWithArgs(
+      new SkipBodyAction, "struct skipMeNot { skipMeNot() : an_error() { } };",
+      Args));
+  EXPECT_FALSE(runToolOnCodeWithArgs(new SkipBodyAction,
+                                     "struct skipMeNot { skipMeNot(); };"
+                                     "skipMeNot::skipMeNot() : an_error() { }",
+                                     Args));
+
+  // Try/catch
+  EXPECT_TRUE(runToolOnCode(
+      new SkipBodyAction,
+      "void skipMe() try { an_error() } catch(error) { error };"));
+  EXPECT_TRUE(runToolOnCode(
+      new SkipBodyAction,
+      "struct S { void skipMe() try { an_error() } catch(error) { error } };"));
+  EXPECT_TRUE(
+      runToolOnCode(new SkipBodyAction,
+                    "void skipMe() try { an_error() } catch(error) { error; }"
+                    "catch(error) { error } catch (error) { }"));
+  EXPECT_FALSE(runToolOnCode(
+      new SkipBodyAction,
+      "void skipMe() try something;")); // don't crash while parsing
+
+  // Template
+  EXPECT_TRUE(runToolOnCode(
+      new SkipBodyAction, "template<typename T> int skipMe() { an_error_here }"
+                          "int x = skipMe<int>();"));
+  EXPECT_FALSE(runToolOnCodeWithArgs(
+      new SkipBodyAction,
+      "template<typename T> int skipMeNot() { an_error_here }", Args2));
 }
 
 TEST(runToolOnCodeWithArgs, TestNoDepFile) {

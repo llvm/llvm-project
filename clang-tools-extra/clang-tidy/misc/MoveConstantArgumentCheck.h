@@ -1,4 +1,4 @@
-//===--- MoveConstandArgumentCheck.h - clang-tidy -------------------------===//
+//===--- MoveConstantArgumentCheck.h - clang-tidy -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONTANTARGUMENTCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONTANTARGUMENTCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONSTANTARGUMENTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONSTANTARGUMENTCHECK_H
 
 #include "../ClangTidy.h"
 
@@ -28,4 +28,4 @@ public:
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONTANTARGUMENTCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONSTANTARGUMENTCHECK_H

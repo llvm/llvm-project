@@ -1916,12 +1916,6 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
   assert(Tok.is(tok::l_brace));
   SourceLocation LBraceLoc = Tok.getLocation();
 
-  if (SkipFunctionBodies && (!Decl || Actions.canSkipFunctionBody(Decl)) &&
-      trySkippingFunctionBody()) {
-    BodyScope.Exit();
-    return Actions.ActOnSkippedFunctionBody(Decl);
-  }
-
   PrettyDeclStackTraceEntry CrashInfo(Actions, Decl, LBraceLoc,
                                       "parsing function body");
 
@@ -1964,12 +1958,6 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
   else
     Actions.ActOnDefaultCtorInitializers(Decl);
 
-  if (SkipFunctionBodies && Actions.canSkipFunctionBody(Decl) &&
-      trySkippingFunctionBody()) {
-    BodyScope.Exit();
-    return Actions.ActOnSkippedFunctionBody(Decl);
-  }
-
   // Save and reset current vtordisp stack if we have entered a C++ method body.
   bool IsCXXMethod =
       getLangOpts().CPlusPlus && Decl && isa<CXXMethodDecl>(Decl);
@@ -1990,27 +1978,43 @@ Decl *Parser::ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope) {
 }
 
 bool Parser::trySkippingFunctionBody() {
-  assert(Tok.is(tok::l_brace));
   assert(SkipFunctionBodies &&
          "Should only be called when SkipFunctionBodies is enabled");
-
   if (!PP.isCodeCompletionEnabled()) {
-    ConsumeBrace();
-    SkipUntil(tok::r_brace);
+    SkipFunctionBody();
     return true;
   }
 
   // We're in code-completion mode. Skip parsing for all function bodies unless
   // the body contains the code-completion point.
   TentativeParsingAction PA(*this);
-  ConsumeBrace();
-  if (SkipUntil(tok::r_brace, StopAtCodeCompletion)) {
+  bool IsTryCatch = Tok.is(tok::kw_try);
+  CachedTokens Toks;
+  bool ErrorInPrologue = ConsumeAndStoreFunctionPrologue(Toks);
+  if (llvm::any_of(Toks, [](const Token &Tok) {
+        return Tok.is(tok::code_completion);
+      })) {
+    PA.Revert();
+    return false;
+  }
+  if (ErrorInPrologue) {
     PA.Commit();
+    SkipMalformedDecl();
     return true;
   }
-
-  PA.Revert();
-  return false;
+  if (!SkipUntil(tok::r_brace, StopAtCodeCompletion)) {
+    PA.Revert();
+    return false;
+  }
+  while (IsTryCatch && Tok.is(tok::kw_catch)) {
+    if (!SkipUntil(tok::l_brace, StopAtCodeCompletion) ||
+        !SkipUntil(tok::r_brace, StopAtCodeCompletion)) {
+      PA.Revert();
+      return false;
+    }
+  }
+  PA.Commit();
+  return true;
 }
 
 /// ParseCXXTryBlock - Parse a C++ try-block.

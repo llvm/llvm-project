@@ -1185,14 +1185,23 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     else
       Virtuality = llvm::dwarf::DW_VIRTUALITY_virtual;
 
-    // It doesn't make sense to give a virtual destructor a vtable index,
-    // since a single destructor has two entries in the vtable.
-    // FIXME: Add proper support for debug info for virtual calls in
-    // the Microsoft ABI, where we may use multiple vptrs to make a vftable
-    // lookup if we have multiple or virtual inheritance.
-    if (!isa<CXXDestructorDecl>(Method) &&
-        !CGM.getTarget().getCXXABI().isMicrosoft())
-      VIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(Method);
+    if (CGM.getTarget().getCXXABI().isItaniumFamily()) {
+      // It doesn't make sense to give a virtual destructor a vtable index,
+      // since a single destructor has two entries in the vtable.
+      if (!isa<CXXDestructorDecl>(Method))
+        VIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(Method);
+    } else {
+      // Emit MS ABI vftable information.  There is only one entry for the
+      // deleting dtor.
+      const auto *DD = dyn_cast<CXXDestructorDecl>(Method);
+      GlobalDecl GD = DD ? GlobalDecl(DD, Dtor_Deleting) : GlobalDecl(Method);
+      MicrosoftVTableContext::MethodVFTableLocation ML =
+          CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
+      VIndex = ML.Index;
+      // FIXME: Pass down ML.VFPtrOffset and ML.VBTableIndex. The debugger needs
+      // these to synthesize a call to a virtual method in a complex inheritance
+      // hierarchy.
+    }
     ContainingType = RecordTy;
   }
 

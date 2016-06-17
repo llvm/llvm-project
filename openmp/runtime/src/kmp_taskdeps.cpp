@@ -552,7 +552,7 @@ __kmpc_omp_wait_deps ( ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps, kmp_de
     //   - if the dephash is not yet created it means we have nothing to wait for
     bool ignore = current_task->td_flags.team_serial || current_task->td_flags.tasking_ser || current_task->td_flags.final;
 #if OMP_45_ENABLED
-    ignore = ignore && thread->th.th_task_team->tt.tt_found_proxy_tasks == FALSE;
+    ignore = ignore && thread->th.th_task_team != NULL && thread->th.th_task_team->tt.tt_found_proxy_tasks == FALSE;
 #endif
     ignore = ignore || current_task->td_dephash == NULL;
 

@@ -4815,8 +4815,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
 
-  OutlinedFn =
-      CGF.GenerateOpenMPCapturedStmtFunction(CS, /*CastValToPtr=*/true);
+  OutlinedFn = CGF.GenerateOpenMPCapturedStmtFunction(CS);
 
   // If this target outline function is not an offload entry, we don't need to
   // register it.
@@ -5485,7 +5484,6 @@ public:
       MappableExprsHandler::MapValuesArrayTy &CurPointers,
       MappableExprsHandler::MapValuesArrayTy &CurSizes,
       MappableExprsHandler::MapFlagsArrayTy &CurMapTypes) {
-    auto &Ctx = CGF.getContext();
 
     // Do the default mapping.
     if (CI.capturesThis()) {
@@ -5497,36 +5495,17 @@ public:
       CurMapTypes.push_back(MappableExprsHandler::OMP_MAP_TO |
                             MappableExprsHandler::OMP_MAP_FROM);
     } else if (CI.capturesVariableByCopy()) {
+      CurBasePointers.push_back(CV);
+      CurPointers.push_back(CV);
       if (!RI.getType()->isAnyPointerType()) {
-        // If the field is not a pointer, we need to save the actual value
-        // and load it as a void pointer.
+        // We have to signal to the runtime captures passed by value that are
+        // not pointers.
         CurMapTypes.push_back(MappableExprsHandler::OMP_MAP_PRIVATE_VAL);
-        auto DstAddr = CGF.CreateMemTemp(Ctx.getUIntPtrType(),
-                                         Twine(CI.getCapturedVar()->getName()) +
-                                             ".casted");
-        LValue DstLV = CGF.MakeAddrLValue(DstAddr, Ctx.getUIntPtrType());
-
-        auto *SrcAddrVal = CGF.EmitScalarConversion(
-            DstAddr.getPointer(), Ctx.getPointerType(Ctx.getUIntPtrType()),
-            Ctx.getPointerType(RI.getType()), SourceLocation());
-        LValue SrcLV = CGF.MakeNaturalAlignAddrLValue(SrcAddrVal, RI.getType());
-
-        // Store the value using the source type pointer.
-        CGF.EmitStoreThroughLValue(RValue::get(CV), SrcLV);
-
-        // Load the value using the destination type pointer.
-        CurBasePointers.push_back(
-            CGF.EmitLoadOfLValue(DstLV, SourceLocation()).getScalarVal());
-        CurPointers.push_back(CurBasePointers.back());
-
-        // Get the size of the type to be used in the map.
         CurSizes.push_back(CGF.getTypeSize(RI.getType()));
       } else {
         // Pointers are implicitly mapped with a zero size and no flags
         // (other than first map that is added for all implicit maps).
         CurMapTypes.push_back(0u);
-        CurBasePointers.push_back(CV);
-        CurPointers.push_back(CV);
         CurSizes.push_back(llvm::Constant::getNullValue(CGF.SizeTy));
       }
     } else {

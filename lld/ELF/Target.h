@@ -29,13 +29,13 @@ public:
   virtual bool isTlsGlobalDynamicRel(uint32_t Type) const;
   virtual uint32_t getDynRel(uint32_t Type) const { return Type; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
-  virtual void writeGotPlt(uint8_t *Buf, uint64_t Plt) const {};
+  virtual void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {};
   virtual uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const;
 
   // If lazy binding is supported, the first entry of the PLT has code
   // to call the dynamic linker to resolve PLT entries the first time
   // they are called. This function writes that code.
-  virtual void writePltZero(uint8_t *Buf) const {}
+  virtual void writePltHeader(uint8_t *Buf) const {}
 
   virtual void writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
                         uint64_t PltEntryAddr, int32_t Index,
@@ -74,11 +74,11 @@ public:
   uint32_t RelativeRel;
   uint32_t IRelativeRel;
   uint32_t TlsDescRel;
-  uint32_t TlsGotRel = 0;
+  uint32_t TlsGotRel;
   uint32_t TlsModuleIndexRel;
   uint32_t TlsOffsetRel;
-  unsigned PltEntrySize = 8;
-  unsigned PltZeroSize = 0;
+  unsigned PltEntrySize;
+  unsigned PltHeaderSize;
 
   // At least on x86_64 positions 1 and 2 are used by the first plt entry
   // to support lazy loading.

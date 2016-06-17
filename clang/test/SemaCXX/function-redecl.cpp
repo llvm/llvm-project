@@ -7,7 +7,7 @@ namespace N {
     void bar(int); // expected-note 2{{previous declaration is here}}
   }
 
-  void foo(int); // expected-note 2{{previous declaration is here}}
+  void foo(int); // expected-note 3{{previous declaration is here}}
 
   void f2() {
     int foo(int); // expected-error {{functions that differ only in their return type cannot be overloaded}}
@@ -23,6 +23,13 @@ namespace N {
         float bar(int); // expected-error {{functions that differ only in their return type cannot be overloaded}}
         float baz(int); // expected-error {{functions that differ only in their return type cannot be overloaded}}
       }
+    }
+  }
+
+  void f3() {
+    int foo(float);
+    {
+      float foo(int); // expected-error {{functions that differ only in their return type cannot be overloaded}}
     }
   }
 }

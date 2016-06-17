@@ -77,15 +77,15 @@ public:
   void setSize(uintX_t Val) { Header.sh_size = Val; }
   uintX_t getFlags() const { return Header.sh_flags; }
   uintX_t getFileOff() const { return Header.sh_offset; }
-  uintX_t getAlign() const {
+  uintX_t getAlignment() const {
     // The ELF spec states that a value of 0 means the section has no alignment
     // constraits.
     return std::max<uintX_t>(Header.sh_addralign, 1);
   }
   uint32_t getType() const { return Header.sh_type; }
-  void updateAlign(uintX_t Align) {
-    if (Align > Header.sh_addralign)
-      Header.sh_addralign = Align;
+  void updateAlignment(uintX_t Alignment) {
+    if (Alignment > Header.sh_addralign)
+      Header.sh_addralign = Alignment;
   }
 
   // If true, this section will be page aligned on disk.
