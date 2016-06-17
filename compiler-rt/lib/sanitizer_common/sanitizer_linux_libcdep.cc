@@ -187,7 +187,7 @@ void InitTlsSize() { }
 #endif  // !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO
 
 #if (defined(__x86_64__) || defined(__i386__) || defined(__mips__) \
-    || defined(__aarch64__) || defined(__powerpc64__)) \
+    || defined(__aarch64__) || defined(__powerpc64__) || defined(__s390__)) \
     && SANITIZER_LINUX && !SANITIZER_ANDROID
 // sizeof(struct pthread) from glibc.
 static atomic_uintptr_t kThreadDescriptorSize;
@@ -249,6 +249,9 @@ uptr ThreadDescriptorSize() {
   val = 1776; // from glibc.ppc64le 2.20-8.fc21
   atomic_store(&kThreadDescriptorSize, val, memory_order_relaxed);
   return val;
+#elif defined(__s390__)
+  val = FIRST_32_SECOND_64(1152, 1776); // valid for glibc 2.22
+  atomic_store(&kThreadDescriptorSize, val, memory_order_relaxed);
 #endif
   return 0;
 }
@@ -296,7 +299,7 @@ uptr ThreadSelf() {
                 rdhwr %0,$29;\
                 .set pop" : "=r" (thread_pointer));
   descr_addr = thread_pointer - kTlsTcbOffset - TlsPreTcbSize();
-# elif defined(__aarch64__)
+# elif defined(__aarch64__) || defined(__s390__)
   descr_addr = reinterpret_cast<uptr>(__builtin_thread_pointer());
 # elif defined(__powerpc64__)
   // PPC64LE uses TLS variant I. The thread pointer (in GPR 13)
@@ -337,7 +340,7 @@ uptr ThreadSelf() {
 #if !SANITIZER_GO
 static void GetTls(uptr *addr, uptr *size) {
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-# if defined(__x86_64__) || defined(__i386__)
+# if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
   *addr = ThreadSelf();
   *size = GetTlsSize();
   *addr -= *size;

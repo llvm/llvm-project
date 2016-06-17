@@ -309,7 +309,7 @@ static ValueProfNode *getNextNValueData(uint32_t VK, uint32_t Site,
   return VNode;
 }
 
-static uint32_t getValueProfDataSizeWrapper() {
+static uint32_t getValueProfDataSizeWrapper(void) {
   return getValueProfDataSize(&RTRecordClosure);
 }
 

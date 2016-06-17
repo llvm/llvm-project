@@ -4404,6 +4404,7 @@ INTERCEPTOR(__sanitizer_clock_t, times, void *tms) {
 #endif
 
 #if SANITIZER_INTERCEPT_TLS_GET_ADDR
+#if !SANITIZER_S390
 #define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_addr)
 // If you see any crashes around this functions, there are 2 known issues with
 // it: 1. __tls_get_addr can be called with mis-aligned stack due to:
@@ -4424,6 +4425,59 @@ INTERCEPTOR(void *, __tls_get_addr, void *arg) {
   }
   return res;
 }
+#else // SANITIZER_S390
+// On s390, we have to intercept two functions here:
+// - __tls_get_addr_internal, which is a glibc-internal function that is like
+//   the usual __tls_get_addr, but returns a TP-relative offset instead of
+//   a proper pointer.  It is used by dlsym for TLS symbols.
+// - __tls_get_offset, which is like the above, but also takes a GOT-relative
+//   descriptor offset as an argument instead of a pointer.  GOT address
+//   is passed in r12, so it's necessary to write it in assembly.  This is
+//   the function used by the compiler.
+#define INIT_TLS_GET_ADDR COMMON_INTERCEPT_FUNCTION(__tls_get_addr_internal)
+INTERCEPTOR(uptr, __tls_get_addr_internal, void *arg) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __tls_get_addr_internal, arg);
+  uptr res = REAL(__tls_get_addr_internal)(arg);
+  uptr tp = reinterpret_cast<uptr>(__builtin_thread_pointer());
+  void *ptr = reinterpret_cast<void *>(res + tp);
+  uptr tls_begin, tls_end;
+  COMMON_INTERCEPTOR_GET_TLS_RANGE(&tls_begin, &tls_end);
+  DTLS::DTV *dtv = DTLS_on_tls_get_addr(arg, ptr, tls_begin, tls_end);
+  if (dtv) {
+    // New DTLS block has been allocated.
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE((void *)dtv->beg, dtv->size);
+  }
+  return res;
+}
+// We need a protected symbol aliasing the above, so that we can jump
+// directly to it from the assembly below.
+extern "C" __attribute__((alias("__interceptor___tls_get_addr_internal"),
+                          visibility("protected")))
+uptr __interceptor___tls_get_addr_internal_protected(void *arg);
+// Now carefully intercept __tls_get_offset.
+asm(
+  ".text\n"
+  ".global __tls_get_offset\n"
+  "__tls_get_offset:\n"
+// The __intercept_ version has to exist, so that gen_dynamic_list.py
+// exports our symbol.
+  ".global __interceptor___tls_get_offset\n"
+  "__interceptor___tls_get_offset:\n"
+#ifdef __s390x__
+  "la %r2, 0(%r2,%r12)\n"
+  "jg __interceptor___tls_get_addr_internal_protected\n"
+#else
+  "basr %r3,0\n"
+  "0: la %r2,0(%r2,%r12)\n"
+  "l %r4,1f-0b(%r3)\n"
+  "b 0(%r4,%r3)\n"
+  "1: .long __interceptor___tls_get_addr_internal_protected - 0b\n"
+#endif
+  ".type __tls_get_offset, @function\n"
+  ".size __tls_get_offset, .-__tls_get_offset\n"
+);
+#endif // SANITIZER_S390
 #else
 #define INIT_TLS_GET_ADDR
 #endif

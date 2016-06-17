@@ -13,6 +13,7 @@
 #ifdef _MSC_VER
 #define COMPILER_RT_ALIGNAS(x) __declspec(align(x))
 #define COMPILER_RT_VISIBILITY
+/* FIXME: selectany does not have the same semantics as weak. */
 #define COMPILER_RT_WEAK __declspec(selectany)
 /* Need to include <windows.h> */
 #define COMPILER_RT_ALLOCA _alloca

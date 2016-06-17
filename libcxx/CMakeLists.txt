@@ -53,6 +53,8 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
 option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
+option(LIBCXX_ENABLE_FILESYSTEM
+        "Build filesystem as part of libc++experimental.a" ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
@@ -165,6 +167,11 @@ option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
 #===============================================================================
 # Check option configurations
 #===============================================================================
+
+if (LIBCXX_ENABLE_FILESYSTEM AND NOT LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
+  message(FATAL_ERROR
+    "LIBCXX_ENABLE_FILESYSTEM cannot be turned on when LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF")
+endif()
 
 # Ensure LIBCXX_ENABLE_MONOTONIC_CLOCK is set to ON only when
 # LIBCXX_ENABLE_THREADS is on.
@@ -302,7 +309,7 @@ add_compile_flags_if_supported(-nostdinc++)
 add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 add_compile_flags_if_supported(
     -Wall -W -Wwrite-strings
-    -Wno-unused-parameter -Wno-long-long
+    -Wno-unused-parameter -Wno-long-long -Wno-user-defined-literals
     -Werror=return-type)
 if (LIBCXX_ENABLE_WERROR)
   add_compile_flags_if_supported(-Werror)
