@@ -1,6 +1,7 @@
 // Test that ASan detects buffer overflow on read from socket via recvfrom.
 //
-// RUN: %clangxx_asan %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan %s -DRECVFROM -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-RECVFROM
+// RUN: %clangxx_asan %s -DSENDTO -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SENDTO
 //
 // UNSUPPORTED: android
 
@@ -25,21 +26,31 @@ const int kBufSize = 10;
 int sockfd;
 
 static void *client_thread_udp(void *data) {
+#ifdef SENDTO
+  const char buf[kBufSize / 2] = {0, };
+#else
   const char buf[kBufSize] = {0, };
+#endif
   struct sockaddr_in serveraddr;
   socklen_t addrlen = sizeof(serveraddr);
 
   int succeeded = getsockname(sockfd, (struct sockaddr *)&serveraddr, &addrlen);
   CHECK_ERROR(succeeded < 0, "in getsockname");
 
-  succeeded = sendto(sockfd, buf, kBufSize, 0,
-                     (struct sockaddr *)&serveraddr, sizeof(serveraddr));
+  succeeded = sendto(sockfd, buf, kBufSize, 0, (struct sockaddr *)&serveraddr,
+                     sizeof(serveraddr));
+  // CHECK-SENDTO: {{READ of size 10 at 0x.* thread T1}}
+  // CHECK-SENDTO: {{    #1 0x.* in client_thread_udp.*recvfrom.cc:}}[[@LINE-3]]
   CHECK_ERROR(succeeded < 0, "in sending message");
   return NULL;
 }
 
 int main() {
+#ifdef RECVFROM
   char buf[kBufSize / 2];
+#else
+  char buf[kBufSize];
+#endif
   pthread_t client_thread;
   struct sockaddr_in serveraddr;
 
@@ -59,10 +70,10 @@ int main() {
   CHECK_ERROR(succeeded, "creating thread");
 
   recvfrom(sockfd, buf, kBufSize, 0, NULL, NULL); // BOOM
-  // CHECK: {{WRITE of size 10 at 0x.* thread T0}}
-  // CHECK: {{    #1 0x.* in main.*recvfrom.cc:}}[[@LINE-2]]
-  // CHECK: {{Address 0x.* is located in stack of thread T0 at offset}}
-  // CHECK-NEXT: in{{.*}}main{{.*}}recvfrom.cc
+  // CHECK-RECVFROM: {{WRITE of size 10 at 0x.* thread T0}}
+  // CHECK-RECVFROM: {{    #1 0x.* in main.*recvfrom.cc:}}[[@LINE-2]]
+  // CHECK-RECVFROM: {{Address 0x.* is located in stack of thread T0 at offset}}
+  // CHECK-RECVFROM-NEXT: in{{.*}}main{{.*}}recvfrom.cc
   succeeded = pthread_join(client_thread, NULL);
   CHECK_ERROR(succeeded, "joining thread");
   return 0;

@@ -1615,26 +1615,6 @@ TSAN_INTERCEPTOR(int, pipe2, int *pipefd, int flags) {
 }
 #endif
 
-TSAN_INTERCEPTOR(long_t, send, int fd, void *buf, long_t len, int flags) {
-  SCOPED_TSAN_INTERCEPTOR(send, fd, buf, len, flags);
-  if (fd >= 0) {
-    FdAccess(thr, pc, fd);
-    FdRelease(thr, pc, fd);
-  }
-  int res = REAL(send)(fd, buf, len, flags);
-  return res;
-}
-
-TSAN_INTERCEPTOR(long_t, sendmsg, int fd, void *msg, int flags) {
-  SCOPED_TSAN_INTERCEPTOR(sendmsg, fd, msg, flags);
-  if (fd >= 0) {
-    FdAccess(thr, pc, fd);
-    FdRelease(thr, pc, fd);
-  }
-  int res = REAL(sendmsg)(fd, msg, flags);
-  return res;
-}
-
 TSAN_INTERCEPTOR(int, unlink, char *path) {
   SCOPED_TSAN_INTERCEPTOR(unlink, path);
   Release(thr, pc, File2addr(path));
@@ -2559,9 +2539,6 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT___RES_ICLOSE;
   TSAN_INTERCEPT(pipe);
   TSAN_INTERCEPT(pipe2);
-
-  TSAN_INTERCEPT(send);
-  TSAN_INTERCEPT(sendmsg);
 
   TSAN_INTERCEPT(unlink);
   TSAN_INTERCEPT(tmpfile);
