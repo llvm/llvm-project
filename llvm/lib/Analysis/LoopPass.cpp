@@ -46,8 +46,10 @@ public:
     auto BBI = find_if(L->blocks().begin(), L->blocks().end(),
                        [](BasicBlock *BB) { return BB; });
     if (BBI != L->blocks().end() &&
-        isFunctionInPrintList((*BBI)->getParent()->getName()))
-      P.run(*L);
+        isFunctionInPrintList((*BBI)->getParent()->getName())) {
+      AnalysisManager<Loop> DummyLAM;
+      P.run(*L, DummyLAM);
+    }
     return false;
   }
 };

@@ -110,7 +110,7 @@ public:
 public:
   DeadArgumentEliminationPass(bool ShouldHackArguments_ = false)
       : ShouldHackArguments(ShouldHackArguments_) {}
-  PreservedAnalyses run(Module &M);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
 private:
   Liveness MarkIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses);

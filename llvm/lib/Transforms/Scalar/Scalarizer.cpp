@@ -341,7 +341,8 @@ void Scalarizer::transferMetadata(Instruction *Op, const ValueVector &CV) {
            MI != ME; ++MI)
         if (canTransferMetadata(MI->first))
           New->setMetadata(MI->first, MI->second);
-      New->setDebugLoc(Op->getDebugLoc());
+      if (Op->getDebugLoc() && !New->getDebugLoc())
+        New->setDebugLoc(Op->getDebugLoc());
     }
   }
 }

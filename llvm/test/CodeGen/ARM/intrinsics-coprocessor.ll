@@ -35,6 +35,10 @@ entry:
   tail call void @llvm.arm.stc2(i32 7, i32 3, i8* %i) nounwind
   ; CHECK: stc2l p7, c3, [r{{[0-9]+}}]
   tail call void @llvm.arm.stc2l(i32 7, i32 3, i8* %i) nounwind
+  ; CHECK: mrrc p1, #2, r{{[0-9]+}}, r{{[0-9]+}}, c3
+  %2 = tail call { i32, i32 } @llvm.arm.mrrc(i32 1, i32 2, i32 3) nounwind
+  ; CHECK: mrrc2 p1, #2, r{{[0-9]+}}, r{{[0-9]+}}, c3
+  %3 = tail call { i32, i32 } @llvm.arm.mrrc2(i32 1, i32 2, i32 3) nounwind
   ret void
 }
 
@@ -69,3 +73,7 @@ declare i32 @llvm.arm.mrc2(i32, i32, i32, i32, i32) nounwind
 declare void @llvm.arm.mcr(i32, i32, i32, i32, i32, i32) nounwind
 
 declare i32 @llvm.arm.mrc(i32, i32, i32, i32, i32) nounwind
+
+declare { i32, i32 } @llvm.arm.mrrc(i32, i32, i32) nounwind
+
+declare { i32, i32 } @llvm.arm.mrrc2(i32, i32, i32) nounwind

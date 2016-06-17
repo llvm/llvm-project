@@ -907,7 +907,9 @@ public:
   ///
   /// This just builds the set of entry points to the call graph. The rest is
   /// built lazily as it is walked.
-  LazyCallGraph run(Module &M) { return LazyCallGraph(M); }
+  LazyCallGraph run(Module &M, ModuleAnalysisManager &) {
+    return LazyCallGraph(M);
+  }
 };
 
 /// A pass which prints the call graph to a \c raw_ostream.

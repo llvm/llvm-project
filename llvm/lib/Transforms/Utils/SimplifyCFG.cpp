@@ -442,7 +442,7 @@ private:
     }
 
     Value *RHSVal;
-    ConstantInt *RHSC;
+    const APInt *RHSC;
 
     // Pattern match a special case
     // (x & ~2^z) == y --> x == y || x == y|2^z
@@ -487,8 +487,8 @@ private:
         );
       */
       if (match(ICI->getOperand(0),
-                m_And(m_Value(RHSVal), m_ConstantInt(RHSC)))) {
-        APInt Mask = ~RHSC->getValue();
+                m_And(m_Value(RHSVal), m_APInt(RHSC)))) {
+        APInt Mask = ~*RHSC;
         if (Mask.isPowerOf2() && (C->getValue() & ~Mask) == C->getValue()) {
           // If we already have a value for the switch, it has to match!
           if (!setValueOnce(RHSVal))
@@ -519,8 +519,8 @@ private:
     // Shift the range if the compare is fed by an add. This is the range
     // compare idiom as emitted by instcombine.
     Value *CandidateVal = I->getOperand(0);
-    if (match(I->getOperand(0), m_Add(m_Value(RHSVal), m_ConstantInt(RHSC)))) {
-      Span = Span.subtract(RHSC->getValue());
+    if (match(I->getOperand(0), m_Add(m_Value(RHSVal), m_APInt(RHSC)))) {
+      Span = Span.subtract(*RHSC);
       CandidateVal = RHSVal;
     }
 

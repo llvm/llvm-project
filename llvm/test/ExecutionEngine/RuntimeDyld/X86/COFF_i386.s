@@ -64,3 +64,16 @@ rel7:
 # rtdyld-check: *{4}rel7 = relocations - section_addr(COFF_i386.s.tmp.obj, .data)
 	.secrel32 relocations			// IMAGE_REL_I386_SECREL
 
+# Test that addends work.
+rel8:
+# rtdyld-check: *{4}rel8 = string
+	.long string				// IMAGE_REL_I386_DIR32
+rel9:
+# rtdyld-check: *{4}rel9 = string+1
+	.long string+1				// IMAGE_REL_I386_DIR32
+rel10:
+# rtdyld-check: *{4}rel10 = string - section_addr(COFF_i386.s.tmp.obj, .text) + 1
+	.long string@imgrel+1			// IMAGE_REL_I386_DIR32NB
+rel11:
+# rtdyld-check: *{4}rel11 = string - section_addr(COFF_i386.s.tmp.obj, .data) + 1
+	.long string@SECREL32+1			// IMAGE_REL_I386_SECREL

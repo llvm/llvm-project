@@ -1881,8 +1881,7 @@ X86TargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
 unsigned X86TargetLowering::getJumpTableEncoding() const {
   // In GOT pic mode, each entry in the jump table is emitted as a @GOTOFF
   // symbol.
-  if (getTargetMachine().getRelocationModel() == Reloc::PIC_ &&
-      Subtarget.isPICStyleGOT())
+  if (isPositionIndependent() && Subtarget.isPICStyleGOT())
     return MachineJumpTableInfo::EK_Custom32;
 
   // Otherwise, use the normal jump table encoding heuristics.
@@ -1897,8 +1896,7 @@ const MCExpr *
 X86TargetLowering::LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
                                              const MachineBasicBlock *MBB,
                                              unsigned uid,MCContext &Ctx) const{
-  assert(MBB->getParent()->getTarget().getRelocationModel() == Reloc::PIC_ &&
-         Subtarget.isPICStyleGOT());
+  assert(isPositionIndependent() && Subtarget.isPICStyleGOT());
   // In 32-bit ELF systems, our jump table entries are formed with @GOTOFF
   // entries.
   return MCSymbolRefExpr::create(MBB->getSymbol(),
@@ -3718,20 +3716,19 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       }
     }
 
+    bool PositionIndependent = isPositionIndependent();
     // If the tailcall address may be in a register, then make sure it's
     // possible to register allocate for it. In 32-bit, the call address can
     // only target EAX, EDX, or ECX since the tail call must be scheduled after
     // callee-saved registers are restored. These happen to be the same
     // registers used to pass 'inreg' arguments so watch out for those.
-    if (!Subtarget.is64Bit() &&
-        ((!isa<GlobalAddressSDNode>(Callee) &&
-          !isa<ExternalSymbolSDNode>(Callee)) ||
-         DAG.getTarget().getRelocationModel() == Reloc::PIC_)) {
+    if (!Subtarget.is64Bit() && ((!isa<GlobalAddressSDNode>(Callee) &&
+                                  !isa<ExternalSymbolSDNode>(Callee)) ||
+                                 PositionIndependent)) {
       unsigned NumInRegs = 0;
       // In PIC we need an extra register to formulate the address computation
       // for the callee.
-      unsigned MaxInRegs =
-        (DAG.getTarget().getRelocationModel() == Reloc::PIC_) ? 2 : 3;
+      unsigned MaxInRegs = PositionIndependent ? 2 : 3;
 
       for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
         CCValAssign &VA = ArgLocs[i];
@@ -12769,8 +12766,7 @@ X86TargetLowering::LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const {
   Result = DAG.getNode(WrapperKind, DL, PtrVT, Result);
 
   // With PIC, the address is actually $g + Offset.
-  if (DAG.getTarget().getRelocationModel() == Reloc::PIC_ &&
-      !Subtarget.is64Bit()) {
+  if (isPositionIndependent() && !Subtarget.is64Bit()) {
     Result =
         DAG.getNode(ISD::ADD, DL, PtrVT,
                     DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(), PtrVT), Result);
@@ -13014,6 +13010,10 @@ static SDValue LowerToTLSExecModel(GlobalAddressSDNode *GA, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, dl, PtrVT, ThreadPointer, Offset);
 }
 
+bool X86TargetLowering::isPositionIndependent() const {
+  return getTargetMachine().getRelocationModel() == Reloc::PIC_;
+}
+
 SDValue
 X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
@@ -13024,6 +13024,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
   const GlobalValue *GV = GA->getGlobal();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
+  bool PositionIndependent = isPositionIndependent();
 
   if (Subtarget.isTargetELF()) {
     TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
@@ -13038,8 +13039,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
       case TLSModel::InitialExec:
       case TLSModel::LocalExec:
         return LowerToTLSExecModel(GA, DAG, PtrVT, model, Subtarget.is64Bit(),
-                                   DAG.getTarget().getRelocationModel() ==
-                                       Reloc::PIC_);
+                                   PositionIndependent);
     }
     llvm_unreachable("Unknown TLS model.");
   }
@@ -13052,8 +13052,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
 
     // In PIC mode (unless we're in RIPRel PIC mode) we add an offset to the
     // global base reg.
-    bool PIC32 = (DAG.getTarget().getRelocationModel() == Reloc::PIC_) &&
-                 !Subtarget.is64Bit();
+    bool PIC32 = PositionIndependent && !Subtarget.is64Bit();
     if (PIC32)
       OpFlag = X86II::MO_TLVP_PIC_BASE;
     else
@@ -22201,7 +22200,6 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                               unsigned AS) const {
   // X86 supports extremely general addressing modes.
   CodeModel::Model M = getTargetMachine().getCodeModel();
-  Reloc::Model R = getTargetMachine().getRelocationModel();
 
   // X86 allows a sign-extended 32-bit immediate field as a displacement.
   if (!X86::isOffsetSuitableForCodeModel(AM.BaseOffs, M, AM.BaseGV != nullptr))
@@ -22220,7 +22218,7 @@ bool X86TargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return false;
 
     // If lower 4G is not available, then we must use rip-relative addressing.
-    if ((M != CodeModel::Small || R != Reloc::Static) &&
+    if ((M != CodeModel::Small || isPositionIndependent()) &&
         Subtarget.is64Bit() && (AM.BaseOffs || AM.Scale > 1))
       return false;
   }
@@ -23561,7 +23559,7 @@ X86TargetLowering::EmitLoweredTLSCall(MachineInstr *MI,
     MIB = BuildMI(*BB, MI, DL, TII->get(X86::CALL64m));
     addDirectMem(MIB, X86::RDI);
     MIB.addReg(X86::RAX, RegState::ImplicitDefine).addRegMask(RegMask);
-  } else if (F->getTarget().getRelocationModel() != Reloc::PIC_) {
+  } else if (!isPositionIndependent()) {
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL,
                                       TII->get(X86::MOV32rm), X86::EAX)
     .addReg(0)
@@ -23657,9 +23655,8 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr *MI,
   unsigned PtrStoreOpc = 0;
   unsigned LabelReg = 0;
   const int64_t LabelOffset = 1 * PVT.getStoreSize();
-  Reloc::Model RM = MF->getTarget().getRelocationModel();
   bool UseImmLabel = (MF->getTarget().getCodeModel() == CodeModel::Small) &&
-                     (RM == Reloc::Static || RM == Reloc::DynamicNoPIC);
+                     !isPositionIndependent();
 
   // Prepare IP either in reg or imm.
   if (!UseImmLabel) {
@@ -23815,9 +23812,8 @@ void X86TargetLowering::SetupEntryBlockForSjLj(MachineInstr *MI,
   unsigned Op = 0;
   unsigned VR = 0;
 
-  Reloc::Model RM = MF->getTarget().getRelocationModel();
   bool UseImmLabel = (MF->getTarget().getCodeModel() == CodeModel::Small) &&
-                     (RM == Reloc::Static || RM == Reloc::DynamicNoPIC);
+                     !isPositionIndependent();
 
   if (UseImmLabel) {
     Op = (PVT == MVT::i64) ? X86::MOV64mi32 : X86::MOV32mi;

@@ -91,7 +91,7 @@ public:
     return *this;
   }
 
-  Result run(Module &M);
+  Result run(Module &M, ModuleAnalysisManager &);
 
 private:
   friend AnalysisInfoMixin<ProfileSummaryAnalysis>;

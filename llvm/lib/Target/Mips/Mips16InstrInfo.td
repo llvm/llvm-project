@@ -14,14 +14,26 @@
 //
 // Mips Address
 //
-def addr16 :
-  ComplexPattern<iPTR, 3, "selectAddr16", [frameindex], [SDNPWantParent]>;
+def addr16 : ComplexPattern<iPTR, 2, "selectAddr16", [frameindex]>;
+def addr16sp : ComplexPattern<iPTR, 2, "selectAddr16SP", [frameindex]>;
 
 //
 // Address operand
 def mem16 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops CPU16Regs, simm16, CPU16RegsPlusSP);
+  let MIOperandInfo = (ops CPU16Regs, simm16);
+  let EncoderMethod = "getMemEncoding";
+}
+
+def mem16sp : Operand<i32> {
+  let PrintMethod = "printMemOperand";
+  // This should be CPUSPReg but the MIPS16 subtarget isn't good enough at
+  // keeping the sp-relative load and the other varieties separate at the
+  // moment. This lie fixes the problem sufficiently well to fix the errors
+  // emitted by -verify-machineinstrs and the output ends up correct as long
+  // as we use an external assembler (which is already a requirement for MIPS16
+  // for several other reasons).
+  let MIOperandInfo = (ops CPU16RegsPlusSP, simm16);
   let EncoderMethod = "getMemEncoding";
 }
 
@@ -214,19 +226,6 @@ class FEXT_2RI16_ins<bits<5> _op, string asmstr,
             !strconcat(asmstr, "\t$rx, $imm"), [], itin> {
   let Constraints = "$rx_ = $rx";
 }
-
-
-// this has an explicit sp argument that we ignore to work around a problem
-// in the compiler
-class FEXT_RI16_SP_explicit_ins<bits<5> _op, string asmstr,
-                                InstrItinClass itin>:
-  FEXT_RI16<_op, (outs CPU16Regs:$rx), (ins CPUSPReg:$ry, simm16:$imm),
-            !strconcat(asmstr, "\t$rx, $imm ( $ry ); "), [], itin>;
-
-class FEXT_RI16_SP_Store_explicit_ins<bits<5> _op, string asmstr,
-                                InstrItinClass itin>:
-  FEXT_RI16<_op, (outs), (ins  CPU16Regs:$rx, CPUSPReg:$ry, simm16:$imm),
-            !strconcat(asmstr, "\t$rx, $imm ( $ry ); "), [], itin>;
 
 //
 // EXT-RRI instruction format
@@ -851,9 +850,7 @@ def LwRxRyOffMemX16: FEXT_RRI16_mem_ins<0b10011, "lw", mem16, II_LW>, MayLoad{
 // Purpose: Load Word (SP-Relative, Extended)
 // To load an SP-relative word from memory as a signed value.
 //
-def LwRxSpImmX16: FEXT_RI16_SP_explicit_ins<0b10010, "lw", II_LW>, MayLoad{
-  let Uses = [SP];
-}
+def LwRxSpImmX16: FEXT_RRI16_mem_ins<0b10010, "lw", mem16sp, II_LW>, MayLoad;
 
 def LwRxPcTcp16: FRI16_TCP_ins<0b10110, "lw", II_LW>, MayLoad;
 
@@ -1277,16 +1274,14 @@ def SubuRxRyRz16: FRRR16_ins<0b11, "subu", IIM16Alu>, ArithLogic16Defs<0>;
 // Purpose: Store Word (Extended)
 // To store a word to memory.
 //
-def SwRxRyOffMemX16:
-  FEXT_RRI16_mem2_ins<0b11011, "sw", mem16, II_SW>, MayStore;
+def SwRxRyOffMemX16: FEXT_RRI16_mem2_ins<0b11011, "sw", mem16, II_SW>, MayStore;
 
 //
 // Format: SW rx, offset(sp) MIPS16e
 // Purpose: Store Word rx (SP-Relative)
 // To store an SP-relative word to memory.
 //
-def SwRxSpImmX16: FEXT_RI16_SP_Store_explicit_ins
-  <0b11010, "sw", II_SW>, MayStore;
+def SwRxSpImmX16: FEXT_RRI16_mem2_ins<0b11010, "sw", mem16sp, II_SW>, MayStore;
 
 //
 //
@@ -1340,22 +1335,21 @@ def: shift_rotate_reg16_pat<shl, SllvRxRy16>;
 def: shift_rotate_reg16_pat<sra, SravRxRy16>;
 def: shift_rotate_reg16_pat<srl, SrlvRxRy16>;
 
-class LoadM16_pat<PatFrag OpNode, Instruction I> :
-  Mips16Pat<(OpNode addr16:$addr), (I addr16:$addr)>;
+class LoadM16_pat<PatFrag OpNode, Instruction I, ComplexPattern Addr> :
+  Mips16Pat<(OpNode Addr:$addr), (I Addr:$addr)>;
 
-def: LoadM16_pat<sextloadi8, LbRxRyOffMemX16>;
-def: LoadM16_pat<zextloadi8, LbuRxRyOffMemX16>;
-def: LoadM16_pat<sextloadi16, LhRxRyOffMemX16>;
-def: LoadM16_pat<zextloadi16, LhuRxRyOffMemX16>;
-def: LoadM16_pat<load, LwRxRyOffMemX16>;
+def: LoadM16_pat<sextloadi8, LbRxRyOffMemX16, addr16>;
+def: LoadM16_pat<zextloadi8, LbuRxRyOffMemX16, addr16>;
+def: LoadM16_pat<sextloadi16, LhRxRyOffMemX16, addr16>;
+def: LoadM16_pat<zextloadi16, LhuRxRyOffMemX16, addr16>;
+def: LoadM16_pat<load, LwRxSpImmX16, addr16sp>;
 
-class StoreM16_pat<PatFrag OpNode, Instruction I> :
-  Mips16Pat<(OpNode CPU16Regs:$r, addr16:$addr),
-            (I CPU16Regs:$r, addr16:$addr)>;
+class StoreM16_pat<PatFrag OpNode, Instruction I, ComplexPattern Addr> :
+  Mips16Pat<(OpNode CPU16Regs:$r, Addr:$addr), (I CPU16Regs:$r, Addr:$addr)>;
 
-def: StoreM16_pat<truncstorei8, SbRxRyOffMemX16>;
-def: StoreM16_pat<truncstorei16, ShRxRyOffMemX16>;
-def: StoreM16_pat<store, SwRxRyOffMemX16>;
+def: StoreM16_pat<truncstorei8, SbRxRyOffMemX16, addr16>;
+def: StoreM16_pat<truncstorei16, ShRxRyOffMemX16, addr16>;
+def: StoreM16_pat<store, SwRxSpImmX16, addr16sp>;
 
 // Unconditional branch
 class UncondBranch16_pat<SDNode OpNode, Instruction I>:
@@ -1401,8 +1395,7 @@ class SetCC_I16<PatFrag cond_op, PatLeaf imm_type, Instruction I>:
             (I CPU16Regs:$rx, imm_type:$imm16)>;
 
 
-def: Mips16Pat<(i32  addr16:$addr),
-               (AddiuRxRyOffMemX16  addr16:$addr)>;
+def: Mips16Pat<(i32 addr16sp:$addr), (AddiuRxRyOffMemX16 addr16sp:$addr)>;
 
 
 // Large (>16 bit) immediate loads

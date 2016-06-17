@@ -274,9 +274,10 @@ static std::string suffixed_name_or(Value *V, StringRef Suffix,
 // given instruction. The  analysis is performed immediately before the
 // given instruction. Values defined by that instruction are not considered
 // live.  Values used by that instruction are considered live.
-static void analyzeParsePointLiveness(
-    DominatorTree &DT, GCPtrLivenessData &OriginalLivenessData,
-    const CallSite &CS, PartiallyConstructedSafepointRecord &result) {
+static void
+analyzeParsePointLiveness(DominatorTree &DT,
+                          GCPtrLivenessData &OriginalLivenessData, CallSite CS,
+                          PartiallyConstructedSafepointRecord &result) {
   Instruction *inst = CS.getInstruction();
 
   StatepointLiveSetTy LiveSet;
@@ -1069,7 +1070,7 @@ findBasePointers(const StatepointLiveSetTy &live,
 /// Find the required based pointers (and adjust the live set) for the given
 /// parse point.
 static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
-                             const CallSite &CS,
+                             CallSite CS,
                              PartiallyConstructedSafepointRecord &result) {
   MapVector<Value *, Value *> PointerToBase;
   findBasePointers(result.LiveSet, PointerToBase, &DT, DVCache);
@@ -1091,7 +1092,7 @@ static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
 /// Given an updated version of the dataflow liveness results, update the
 /// liveset and base pointer maps for the call site CS.
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
-                                  const CallSite &CS,
+                                  CallSite CS,
                                   PartiallyConstructedSafepointRecord &result);
 
 static void recomputeLiveInValues(
@@ -1103,8 +1104,7 @@ static void recomputeLiveInValues(
   computeLiveInValues(DT, F, RevisedLivenessData);
   for (size_t i = 0; i < records.size(); i++) {
     struct PartiallyConstructedSafepointRecord &info = records[i];
-    const CallSite &CS = toUpdate[i];
-    recomputeLiveInValues(RevisedLivenessData, CS, info);
+    recomputeLiveInValues(RevisedLivenessData, toUpdate[i], info);
   }
 }
 
@@ -1492,7 +1492,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 // WARNING: Does not do any fixup to adjust users of the original live
 // values.  That's the callers responsibility.
 static void
-makeStatepointExplicit(DominatorTree &DT, const CallSite &CS,
+makeStatepointExplicit(DominatorTree &DT, CallSite CS,
                        PartiallyConstructedSafepointRecord &Result,
                        std::vector<DeferredReplacement> &Replacements) {
   const auto &LiveSet = Result.LiveSet;
@@ -1813,8 +1813,7 @@ static void findLiveReferences(
   computeLiveInValues(DT, F, OriginalLivenessData);
   for (size_t i = 0; i < records.size(); i++) {
     struct PartiallyConstructedSafepointRecord &info = records[i];
-    const CallSite &CS = toUpdate[i];
-    analyzeParsePointLiveness(DT, OriginalLivenessData, CS, info);
+    analyzeParsePointLiveness(DT, OriginalLivenessData, toUpdate[i], info);
   }
 }
 
@@ -2602,7 +2601,7 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
 }
 
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
-                                  const CallSite &CS,
+                                  CallSite CS,
                                   PartiallyConstructedSafepointRecord &Info) {
   Instruction *Inst = CS.getInstruction();
   StatepointLiveSetTy Updated;

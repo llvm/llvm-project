@@ -123,12 +123,15 @@ def int_arm_cdp2 : GCCBuiltin<"__builtin_arm_cdp2">,
                   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
 
 // Move from two registers to coprocessor
-def int_arm_mcrr : GCCBuiltin<"__builtin_arm_mcrr">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                  llvm_i32_ty, llvm_i32_ty], []>;
-def int_arm_mcrr2 : GCCBuiltin<"__builtin_arm_mcrr2">,
-   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
-                  llvm_i32_ty, llvm_i32_ty], []>;
+def int_arm_mcrr : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                                  llvm_i32_ty, llvm_i32_ty], []>;
+def int_arm_mcrr2 : Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                                   llvm_i32_ty, llvm_i32_ty], []>;
+
+def int_arm_mrrc : Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty,
+                              llvm_i32_ty, llvm_i32_ty], []>;
+def int_arm_mrrc2 : Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty,
+                               llvm_i32_ty, llvm_i32_ty], []>;
 
 //===----------------------------------------------------------------------===//
 // CRC32

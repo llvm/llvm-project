@@ -7019,7 +7019,12 @@ alignment for the target. It is the responsibility of the code emitter
 to ensure that the alignment information is correct. Overestimating the
 alignment results in undefined behavior. Underestimating the alignment
 may produce less efficient code. An alignment of 1 is always safe. The
-maximum possible alignment is ``1 << 29``.
+maximum possible alignment is ``1 << 29``. An alignment value higher
+than the size of the loaded type implies memory up to the alignment
+value bytes can be safely loaded without trapping in the default
+address space. Access of the high bytes can interfere with debugging
+tools, so should not be accessed if the function has the
+``sanitize_thread`` or ``sanitize_address`` attributes.
 
 The optional ``!nontemporal`` metadata must reference a single
 metadata name ``<index>`` corresponding to a metadata node with one
@@ -7144,7 +7149,14 @@ alignment for the target. It is the responsibility of the code emitter
 to ensure that the alignment information is correct. Overestimating the
 alignment results in undefined behavior. Underestimating the
 alignment may produce less efficient code. An alignment of 1 is always
-safe. The maximum possible alignment is ``1 << 29``.
+safe. The maximum possible alignment is ``1 << 29``. An alignment
+value higher than the size of the stored type implies memory up to the
+alignment value bytes can be stored to without trapping in the default
+address space. Storing to the higher bytes however may result in data
+races if another thread can access the same address. Introducing a
+data race is not allowed. Storing to the extra bytes is not allowed
+even in situations where a data race is known to not exist if the
+function has the ``sanitize_address`` attribute.
 
 The optional ``!nontemporal`` metadata must reference a single metadata
 name ``<index>`` corresponding to a metadata node with one ``i32`` entry of

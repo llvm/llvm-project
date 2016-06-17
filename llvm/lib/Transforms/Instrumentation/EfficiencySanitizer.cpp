@@ -304,12 +304,13 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
   //   u32 Size;
   //   u32 NumFields;
   //   u32 *FieldOffsets;
+  //   u32 *FieldSize;
   //   u64 *FieldCounters;
   //   const char **FieldTypeNames;
   // };
   auto *StructInfoTy =
-    StructType::get(Int8PtrTy, Int32Ty, Int32Ty, Int32PtrTy, Int64PtrTy,
-                    Int8PtrPtrTy, nullptr);
+    StructType::get(Int8PtrTy, Int32Ty, Int32Ty, Int32PtrTy, Int32PtrTy,
+                    Int64PtrTy, Int8PtrPtrTy, nullptr);
   auto *StructInfoPtrTy = StructInfoTy->getPointerTo();
   // This structure should be kept consistent with the CacheFragInfo struct
   // in the runtime library.
@@ -367,6 +368,12 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
       new GlobalVariable(M, OffsetArrayTy, true,
                          GlobalVariable::InternalLinkage, nullptr);
     SmallVector<Constant *, 16> OffsetVec;
+    // FieldSize
+    auto *SizeArrayTy = ArrayType::get(Int32Ty, StructTy->getNumElements());
+    GlobalVariable *Size =
+      new GlobalVariable(M, SizeArrayTy, true,
+                         GlobalVariable::InternalLinkage, nullptr);
+    SmallVector<Constant *, 16> SizeVec;
     for (unsigned i = 0; i < StructTy->getNumElements(); ++i) {
       Type *Ty = StructTy->getElementType(i);
       std::string Str;
@@ -377,9 +384,12 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
               createPrivateGlobalForString(M, StrOS.str(), true),
               Int8PtrTy));
       OffsetVec.push_back(ConstantInt::get(Int32Ty, SL->getElementOffset(i)));
+      SizeVec.push_back(ConstantInt::get(Int32Ty,
+                                         DL.getTypeAllocSize(Ty)));
     }
     TypeNames->setInitializer(ConstantArray::get(TypeNameArrayTy, TypeNameVec));
     Offsets->setInitializer(ConstantArray::get(OffsetArrayTy, OffsetVec));
+    Size->setInitializer(ConstantArray::get(SizeArrayTy, SizeVec));
 
     Initializers.push_back(
         ConstantStruct::get(
@@ -388,6 +398,7 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
             ConstantInt::get(Int32Ty, SL->getSizeInBytes()),
             ConstantInt::get(Int32Ty, StructTy->getNumElements()),
             ConstantExpr::getPointerCast(Offsets, Int32PtrTy),
+            ConstantExpr::getPointerCast(Size, Int32PtrTy),
             ConstantExpr::getPointerCast(Counters, Int64PtrTy),
             ConstantExpr::getPointerCast(TypeNames, Int8PtrPtrTy),
             nullptr));

@@ -1433,12 +1433,10 @@ static bool isFuncletReturnInstr(MachineInstr *MI) {
 unsigned
 X86FrameLowering::getPSPSlotOffsetFromSP(const MachineFunction &MF) const {
   const WinEHFuncInfo &Info = *MF.getWinEHFuncInfo();
-  // getFrameIndexReferenceFromSP has an out ref parameter for the stack
-  // pointer register; pass a dummy that we ignore
   unsigned SPReg;
-  int Offset = *getFrameIndexReferenceFromSP(MF, Info.PSPSymFrameIdx, SPReg,
-                                             /*AllowSPAdjustment*/ true);
-  assert(Offset >= 0);
+  int Offset = getFrameIndexReferencePreferSP(MF, Info.PSPSymFrameIdx, SPReg,
+                                              /*IgnoreSPUpdates*/ true);
+  assert(Offset >= 0 && SPReg == TRI->getStackRegister());
   return static_cast<unsigned>(Offset);
 }
 
@@ -1722,11 +1720,11 @@ int X86FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return Offset + FPDelta;
 }
 
-// Simplified from getFrameIndexReference keeping only StackPointer cases
-Optional<int>
-X86FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
-                                               int FI, unsigned &FrameReg,
-                                               bool AllowSPAdjustment) const {
+int
+X86FrameLowering::getFrameIndexReferencePreferSP(const MachineFunction &MF,
+                                                 int FI, unsigned &FrameReg,
+                                                 bool IgnoreSPUpdates) const {
+
   const MachineFrameInfo *MFI = MF.getFrameInfo();
   // Does not include any dynamic realign.
   const uint64_t StackSize = MFI->getStackSize();
@@ -1765,14 +1763,14 @@ X86FrameLowering::getFrameIndexReferenceFromSP(const MachineFunction &MF,
 
   if (MFI->isFixedObjectIndex(FI) && TRI->needsStackRealignment(MF) &&
       !STI.isTargetWin64())
-    return None;
+    return getFrameIndexReference(MF, FI, FrameReg);
 
   // If !hasReservedCallFrame the function might have SP adjustement in the
   // body.  So, even though the offset is statically known, it depends on where
   // we are in the function.
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  if (!AllowSPAdjustment && !TFI->hasReservedCallFrame(MF))
-    return None;
+  if (!IgnoreSPUpdates && !TFI->hasReservedCallFrame(MF))
+    return getFrameIndexReference(MF, FI, FrameReg);
 
   // We don't handle tail calls, and shouldn't be seeing them either.
   assert(MF.getInfo<X86MachineFunctionInfo>()->getTCReturnAddrDelta() >= 0 &&

@@ -395,8 +395,8 @@ static DecodeStatus DecodeT2ShifterImmOperand(MCInst &Inst, unsigned Val,
 
 static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
                                 uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
-                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecoderForMRRC2AndMCRR2(llvm::MCInst &Inst, unsigned Val,
+                                            uint64_t Address, const void *Decoder);
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -5265,8 +5265,8 @@ static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
   return S;
 }
 
-static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
-                                uint64_t Address, const void *Decoder) {
+static DecodeStatus DecoderForMRRC2AndMCRR2(llvm::MCInst &Inst, unsigned Val,
+                                            uint64_t Address, const void *Decoder) {
 
   DecodeStatus S = MCDisassembler::Success;
 
@@ -5282,12 +5282,30 @@ static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
   if (Rt == Rt2)
     S = MCDisassembler::SoftFail;
 
+  // We have to check if the instruction is MRRC2
+  // or MCRR2 when constructing the operands for
+  // Inst. Reason is because MRRC2 stores to two
+  // registers so it's tablegen desc has has two
+  // outputs whereas MCRR doesn't store to any
+  // registers so all of it's operands are listed
+  // as inputs, therefore the operand order for
+  // MRRC2 needs to be [Rt, Rt2, cop, opc1, CRm]
+  // and MCRR2 operand order is [cop, opc1, Rt, Rt2, CRm]
+
+  if (Inst.getOpcode() == ARM::MRRC2) {
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
+      return MCDisassembler::Fail;
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
   Inst.addOperand(MCOperand::createImm(cop));
   Inst.addOperand(MCOperand::createImm(opc1));
-  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
-    return MCDisassembler::Fail;
-  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
-    return MCDisassembler::Fail;
+  if (Inst.getOpcode() == ARM::MCRR2) {
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
+      return MCDisassembler::Fail;
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
   Inst.addOperand(MCOperand::createImm(CRm));
 
   return S;

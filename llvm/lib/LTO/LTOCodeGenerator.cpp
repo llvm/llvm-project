@@ -123,7 +123,7 @@ void LTOCodeGenerator::initializeLTOPasses() {
   initializeReversePostOrderFunctionAttrsLegacyPassPass(R);
   initializeGlobalsAAWrapperPassPass(R);
   initializeLICMPass(R);
-  initializeMergedLoadStoreMotionLegacyPassPass(R);
+  initializeMergedLoadStoreMotionPass(R);
   initializeGVNLegacyPassPass(R);
   initializeMemCpyOptLegacyPassPass(R);
   initializeDCELegacyPassPass(R);

@@ -268,6 +268,8 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) { return 32; }
 
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) { return 128; }
+
   unsigned getCacheLineSize() { return 0; }
 
   unsigned getPrefetchDistance() { return 0; }

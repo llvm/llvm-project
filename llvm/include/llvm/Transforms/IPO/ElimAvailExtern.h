@@ -24,7 +24,7 @@ namespace llvm {
 class EliminateAvailableExternallyPass
     : public PassInfoMixin<EliminateAvailableExternallyPass> {
 public:
-  PreservedAnalyses run(Module &M);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 }
 

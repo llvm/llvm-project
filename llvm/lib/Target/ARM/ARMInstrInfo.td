@@ -5145,9 +5145,9 @@ def MRRC : MovRRCopro<"mrrc", 1 /* from coprocessor to ARM core register */,
                       (outs GPRnopc:$Rt, GPRnopc:$Rt2),
                       (ins p_imm:$cop, imm0_15:$opc1, c_imm:$CRm), []>;
 
-class MovRRCopro2<string opc, bit direction, list<dag> pattern = []>
-  : ABXI<0b1100, (outs), (ins p_imm:$cop, imm0_15:$opc1,
-         GPRnopc:$Rt, GPRnopc:$Rt2, c_imm:$CRm), NoItinerary,
+class MovRRCopro2<string opc, bit direction, dag oops, dag iops,
+                  list<dag> pattern = []>
+  : ABXI<0b1100, oops, iops, NoItinerary,
          !strconcat(opc, "\t$cop, $opc1, $Rt, $Rt2, $CRm"), pattern>,
     Requires<[PreV8]> {
   let Inst{31-28} = 0b1111;
@@ -5166,13 +5166,18 @@ class MovRRCopro2<string opc, bit direction, list<dag> pattern = []>
   let Inst{7-4}   = opc1;
   let Inst{3-0}   = CRm;
 
-  let DecoderMethod = "DecodeMRRC2";
+  let DecoderMethod = "DecoderForMRRC2AndMCRR2";
 }
 
 def MCRR2 : MovRRCopro2<"mcrr2", 0 /* from ARM core register to coprocessor */,
+                        (outs), (ins p_imm:$cop, imm0_15:$opc1, GPRnopc:$Rt,
+                        GPRnopc:$Rt2, c_imm:$CRm),
                         [(int_arm_mcrr2 imm:$cop, imm:$opc1, GPRnopc:$Rt,
                                         GPRnopc:$Rt2, imm:$CRm)]>;
-def MRRC2 : MovRRCopro2<"mrrc2", 1 /* from coprocessor to ARM core register */>;
+
+def MRRC2 : MovRRCopro2<"mrrc2", 1 /* from coprocessor to ARM core register */,
+                       (outs GPRnopc:$Rt, GPRnopc:$Rt2),
+                       (ins p_imm:$cop, imm0_15:$opc1, c_imm:$CRm), []>;
 
 //===----------------------------------------------------------------------===//
 // Move between special register and ARM core register

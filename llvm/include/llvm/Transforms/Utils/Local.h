@@ -281,6 +281,14 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress,
 bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                 DIBuilder &Builder, bool Deref, int Offset = 0);
 
+/// Replaces multiple llvm.dbg.value instructions when the alloca it describes
+/// is replaced with a new value. If Offset is non-zero, a constant displacement
+/// is added to the expression (after the mandatory Deref). Offset can be
+/// negative. New llvm.dbg.value instructions are inserted at the locations of
+/// the instructions they replace.
+void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
+                              DIBuilder &Builder, int Offset = 0);
+
 /// Remove all instructions from a basic block other than it's terminator
 /// and any present EH pad instructions.
 unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);

@@ -48,7 +48,7 @@ public:
 
   /// \brief Run the analysis pass over a function and produce a post dominator
   ///        tree.
-  PostDominatorTree run(Function &F);
+  PostDominatorTree run(Function &F, FunctionAnalysisManager &);
 };
 
 /// \brief Printer pass for the \c PostDominatorTree.

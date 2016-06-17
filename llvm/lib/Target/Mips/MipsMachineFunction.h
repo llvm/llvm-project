@@ -30,8 +30,8 @@ namespace llvm {
 class MipsFunctionInfo : public MachineFunctionInfo {
 public:
   MipsFunctionInfo(MachineFunction &MF)
-      : MF(MF), SRetReturnReg(0), GlobalBaseReg(0), Mips16SPAliasReg(0),
-        VarArgsFrameIndex(0), CallsEhReturn(false), IsISR(false), SaveS2(false),
+      : MF(MF), SRetReturnReg(0), GlobalBaseReg(0), VarArgsFrameIndex(0),
+        CallsEhReturn(false), IsISR(false), SaveS2(false),
         MoveF64ViaSpillFI(-1) {}
 
   ~MipsFunctionInfo();
@@ -41,9 +41,6 @@ public:
 
   bool globalBaseRegSet() const;
   unsigned getGlobalBaseReg();
-
-  bool mips16SPAliasRegSet() const;
-  unsigned getMips16SPAliasReg();
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }
@@ -100,11 +97,6 @@ private:
   /// use as the global base register. This is used for PIC in some PIC
   /// relocation models.
   unsigned GlobalBaseReg;
-
-  /// Mips16SPAliasReg - keeps track of the virtual register initialized for
-  /// use as an alias for SP for use in load/store of halfword/byte from/to
-  /// the stack
-  unsigned Mips16SPAliasReg;
 
   /// VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex;

@@ -31,6 +31,10 @@ EXT_FUNC(__lsan_disable, void, (), false);
 EXT_FUNC(__lsan_do_recoverable_leak_check, int, (), false);
 EXT_FUNC(__sanitizer_get_coverage_pc_buffer, uintptr_t, (uintptr_t**), true);
 EXT_FUNC(__sanitizer_get_number_of_counters, size_t, (), false);
+EXT_FUNC(__sanitizer_install_malloc_and_free_hooks, int,
+         (void (*malloc_hook)(const volatile void *, size_t),
+          void (*free_hook)(const volatile void *)),
+         false);
 EXT_FUNC(__sanitizer_get_total_unique_caller_callee_pairs, size_t, (), false);
 EXT_FUNC(__sanitizer_get_total_unique_coverage, size_t, (), true);
 EXT_FUNC(__sanitizer_print_memory_profile, int, (size_t), false);

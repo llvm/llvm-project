@@ -32,6 +32,8 @@ public:
       return "The specified block address is not valid.";
     case raw_error_code::not_writable:
       return "The PDB does not support writing.";
+    case raw_error_code::invalid_tpi_hash:
+      return "The Type record has an invalid hash value.";
     }
     llvm_unreachable("Unrecognized raw_error_code");
   }

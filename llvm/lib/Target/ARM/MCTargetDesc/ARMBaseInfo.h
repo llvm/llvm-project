@@ -289,10 +289,6 @@ namespace ARMII {
     /// higher 16 bit of the address. Used only via movt instruction.
     MO_HI16 = 0x2,
 
-    /// MO_PLT - On a symbol operand, this represents an ELF PLT reference on a
-    /// call operand.
-    MO_PLT = 0x3,
-
     /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
     /// just that part of the flag set.
     MO_OPTION_MASK = 0x1f,

@@ -111,22 +111,15 @@ static bool hasMemoryWrite(Instruction *I, const TargetLibraryInfo &TLI) {
   }
   if (auto CS = CallSite(I)) {
     if (Function *F = CS.getCalledFunction()) {
-      if (TLI.has(LibFunc::strcpy) &&
-          F->getName() == TLI.getName(LibFunc::strcpy)) {
+      StringRef FnName = F->getName();
+      if (TLI.has(LibFunc::strcpy) && FnName == TLI.getName(LibFunc::strcpy))
         return true;
-      }
-      if (TLI.has(LibFunc::strncpy) &&
-          F->getName() == TLI.getName(LibFunc::strncpy)) {
+      if (TLI.has(LibFunc::strncpy) && FnName == TLI.getName(LibFunc::strncpy))
         return true;
-      }
-      if (TLI.has(LibFunc::strcat) &&
-          F->getName() == TLI.getName(LibFunc::strcat)) {
+      if (TLI.has(LibFunc::strcat) && FnName == TLI.getName(LibFunc::strcat))
         return true;
-      }
-      if (TLI.has(LibFunc::strncat) &&
-          F->getName() == TLI.getName(LibFunc::strncat)) {
+      if (TLI.has(LibFunc::strncat) && FnName == TLI.getName(LibFunc::strncat))
         return true;
-      }
     }
   }
   return false;

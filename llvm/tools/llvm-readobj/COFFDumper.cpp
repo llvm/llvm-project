@@ -1108,9 +1108,9 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   if (Magic != COFF::DEBUG_SECTION_MAGIC)
     return error(object_error::parse_failed);
 
-  if (!CVTD.dump({Data.bytes_begin(), Data.bytes_end()})) {
+  if (auto EC = CVTD.dump({Data.bytes_begin(), Data.bytes_end()})) {
     W.flush();
-    error(object_error::parse_failed);
+    error(llvm::errorToErrorCode(std::move(EC)));
   }
 }
 
@@ -1555,8 +1555,8 @@ void llvm::dumpCodeViewMergedTypes(
     Buf.append(Record.begin(), Record.end());
   });
   CVTypeDumper CVTD(&Writer, opts::CodeViewSubsectionBytes);
-  if (!CVTD.dump({Buf.str().bytes_begin(), Buf.str().bytes_end()})) {
+  if (auto EC = CVTD.dump({Buf.str().bytes_begin(), Buf.str().bytes_end()})) {
     Writer.flush();
-    error(object_error::parse_failed);
+    error(llvm::errorToErrorCode(std::move(EC)));
   }
 }

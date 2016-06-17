@@ -1,10 +1,7 @@
 CHECK: Done 1000 runs in
 
-# TODO(kcc): re-enable leak detection here.
-# Currently laak detection makes run counts imprecise.
-
-RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000 -detect_leaks=0 2>&1 | FileCheck %s
-RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000 -detect_leaks=0 2>&1 | FileCheck %s
-RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000 -detect_leaks=0 2>&1 | FileCheck %s
-RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000 -detect_leaks=0 2>&1 | FileCheck %s
+RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
+RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
+RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
+RUN: LLVMFuzzer-ThreadedTest -use_traces=1 -runs=1000  2>&1 | FileCheck %s
 

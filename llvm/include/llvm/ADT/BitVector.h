@@ -105,6 +105,7 @@ public:
   BitVector(BitVector &&RHS)
     : Bits(RHS.Bits), Size(RHS.Size), Capacity(RHS.Capacity) {
     RHS.Bits = nullptr;
+    RHS.Size = RHS.Capacity = 0;
   }
 
   ~BitVector() {
@@ -454,6 +455,7 @@ public:
     Capacity = RHS.Capacity;
 
     RHS.Bits = nullptr;
+    RHS.Size = RHS.Capacity = 0;
 
     return *this;
   }
