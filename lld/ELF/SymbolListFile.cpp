@@ -78,24 +78,41 @@ public:
 
 private:
   void parseVersion();
+  void parseLocal();
+  void parseVersionSymbols();
 };
 
 void VersionScriptParser::parseVersion() {
   expect("{");
   if (peek() == "global:") {
     next();
-    while (!Error) {
-      Config->VersionScriptGlobals.push_back(next());
-      expect(";");
-      if (peek() == "local:")
-        break;
-    }
+    parseVersionSymbols();
   }
+  if (peek() == "local:")
+    parseLocal();
+  else
+    parseVersionSymbols();
+
+  expect("}");
+  expect(";");
+}
+
+void VersionScriptParser::parseLocal() {
   expect("local:");
   expect("*");
   expect(";");
-  expect("}");
-  expect(";");
+  Config->VersionScriptGlobalByDefault = false;
+}
+
+void VersionScriptParser::parseVersionSymbols() {
+  for (;;) {
+    StringRef Cur = peek();
+    if (Cur == "}" || Cur == "local:")
+      return;
+    next();
+    Config->VersionScriptGlobals.push_back(Cur);
+    expect(";");
+  }
 }
 
 void VersionScriptParser::run() {

@@ -6930,6 +6930,26 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     SI->setAlignment(1);
     return SI;
   }
+  case X86::BI__builtin_ia32_movntsd:
+  case X86::BI__builtin_ia32_movntss: {
+    llvm::MDNode *Node = llvm::MDNode::get(
+        getLLVMContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
+
+    // Extract the 0'th element of the source vector.
+    Value *Scl = Builder.CreateExtractElement(Ops[1], (uint64_t)0, "extract");
+
+    // Convert the type of the pointer to a pointer to the stored type.
+    Value *BC = Builder.CreateBitCast(Ops[0],
+                                llvm::PointerType::getUnqual(Scl->getType()),
+                                      "cast");
+
+    // Unaligned nontemporal store of the scalar value.
+    StoreInst *SI = Builder.CreateDefaultAlignedStore(Scl, BC);
+    SI->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
+    SI->setAlignment(1);
+    return SI;
+  }
+
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:

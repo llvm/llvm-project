@@ -140,6 +140,73 @@
 # EXE-NEXT:   }
 # EXE-NEXT: ]
 
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: ld.lld -shared %t.o %t2.so -o %t.so
+# RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=ALL %s
+
+# RUN: echo "{ global: foo1; foo3; };" > %t2.script
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: ld.lld --version-script %t2.script -shared %t.o %t2.so -o %t.so
+# RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=ALL %s
+
+# ALL:      DynamicSymbols [
+# ALL-NEXT:   Symbol {
+# ALL-NEXT:     Name: @
+# ALL-NEXT:     Value: 0x0
+# ALL-NEXT:     Size: 0
+# ALL-NEXT:     Binding: Local
+# ALL-NEXT:     Type: None
+# ALL-NEXT:     Other: 0
+# ALL-NEXT:     Section: Undefined
+# ALL-NEXT:   }
+# ALL-NEXT:  Symbol {
+# ALL-NEXT:    Name: _start@
+# ALL-NEXT:    Value:
+# ALL-NEXT:    Size: 0
+# ALL-NEXT:    Binding: Global
+# ALL-NEXT:    Type: None
+# ALL-NEXT:    Other: 0
+# ALL-NEXT:    Section: .text
+# ALL-NEXT:  }
+# ALL-NEXT:  Symbol {
+# ALL-NEXT:    Name: bar@
+# ALL-NEXT:    Value:
+# ALL-NEXT:    Size: 0
+# ALL-NEXT:    Binding: Global
+# ALL-NEXT:    Type: Function
+# ALL-NEXT:    Other: 0
+# ALL-NEXT:    Section: Undefined
+# ALL-NEXT:  }
+# ALL-NEXT:  Symbol {
+# ALL-NEXT:    Name: foo1@
+# ALL-NEXT:    Value:
+# ALL-NEXT:    Size: 0
+# ALL-NEXT:    Binding: Global
+# ALL-NEXT:    Type: None
+# ALL-NEXT:    Other: 0
+# ALL-NEXT:    Section: .text
+# ALL-NEXT:  }
+# ALL-NEXT:  Symbol {
+# ALL-NEXT:    Name: foo2@
+# ALL-NEXT:    Value:
+# ALL-NEXT:    Size: 0
+# ALL-NEXT:    Binding: Global
+# ALL-NEXT:    Type: None
+# ALL-NEXT:    Other: 0
+# ALL-NEXT:    Section: .text
+# ALL-NEXT:  }
+# ALL-NEXT:  Symbol {
+# ALL-NEXT:    Name: foo3@
+# ALL-NEXT:    Value:
+# ALL-NEXT:    Size: 0
+# ALL-NEXT:    Binding: Global
+# ALL-NEXT:    Type: None
+# ALL-NEXT:    Other: 0
+# ALL-NEXT:    Section: .text
+# ALL-NEXT:  }
+# ALL-NEXT: ]
+
 .globl foo1
 foo1:
   call bar@PLT

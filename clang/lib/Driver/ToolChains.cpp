@@ -1298,6 +1298,8 @@ Generic_GCC::GCCVersion Linux::GCCVersion::Parse(StringRef VersionText) {
   if (First.first.getAsInteger(10, GoodVersion.Major) || GoodVersion.Major < 0)
     return BadVersion;
   GoodVersion.MajorStr = First.first.str();
+  if (First.second.empty())
+    return GoodVersion;
   if (Second.first.getAsInteger(10, GoodVersion.Minor) || GoodVersion.Minor < 0)
     return BadVersion;
   GoodVersion.MinorStr = Second.first.str();
@@ -1305,6 +1307,7 @@ Generic_GCC::GCCVersion Linux::GCCVersion::Parse(StringRef VersionText) {
   // First look for a number prefix and parse that if present. Otherwise just
   // stash the entire patch string in the suffix, and leave the number
   // unspecified. This covers versions strings such as:
+  //   5        (handled above)
   //   4.4
   //   4.4.0
   //   4.4.x

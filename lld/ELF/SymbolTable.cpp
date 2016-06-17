@@ -175,7 +175,7 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
-    Sym->VersionScriptGlobal = !Config->VersionScript;
+    Sym->VersionScriptGlobal = Config->VersionScriptGlobalByDefault;
     SymVector.push_back(Sym);
   } else {
     Sym = SymVector[P.first->second];

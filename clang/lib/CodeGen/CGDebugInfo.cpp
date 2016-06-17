@@ -184,30 +184,24 @@ StringRef CGDebugInfo::getFunctionName(const FunctionDecl *FD) {
   FunctionTemplateSpecializationInfo *Info =
       FD->getTemplateSpecializationInfo();
 
-  if (!Info && FII && !CGM.getCodeGenOpts().EmitCodeView)
+  if (!Info && FII)
     return FII->getName();
 
   // Otherwise construct human readable name for debug info.
   SmallString<128> NS;
   llvm::raw_svector_ostream OS(NS);
   PrintingPolicy Policy(CGM.getLangOpts());
+  Policy.MSVCFormatting = CGM.getCodeGenOpts().EmitCodeView;
 
-  if (CGM.getCodeGenOpts().EmitCodeView) {
-    // Print a fully qualified name like MSVC would.
-    Policy.MSVCFormatting = true;
-    FD->printQualifiedName(OS, Policy);
-  } else {
-    // Print the unqualified name with some template arguments. This is what
-    // DWARF-based debuggers expect.
-    FD->printName(OS);
-    // Add any template specialization args.
-    if (Info) {
-      const TemplateArgumentList *TArgs = Info->TemplateArguments;
-      const TemplateArgument *Args = TArgs->data();
-      unsigned NumArgs = TArgs->size();
-      TemplateSpecializationType::PrintTemplateArgumentList(OS, Args, NumArgs,
-                                                            Policy);
-    }
+  // Print the unqualified name with some template arguments.
+  FD->printName(OS);
+  // Add any template specialization args.
+  if (Info) {
+    const TemplateArgumentList *TArgs = Info->TemplateArguments;
+    const TemplateArgument *Args = TArgs->data();
+    unsigned NumArgs = TArgs->size();
+    TemplateSpecializationType::PrintTemplateArgumentList(OS, Args, NumArgs,
+                                                          Policy);
   }
 
   // Copy this name on the side and use its reference.

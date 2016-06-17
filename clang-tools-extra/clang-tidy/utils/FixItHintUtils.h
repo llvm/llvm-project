@@ -18,10 +18,10 @@ namespace tidy {
 namespace utils {
 namespace fixit {
 
-/// \brief Creates fix to make VarDecl a reference by adding '&'.
+/// \brief Creates fix to make ``VarDecl`` a reference by adding ``&``.
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context);
 
-/// \brief Creates fix to make VarDecl const qualified.
+/// \brief Creates fix to make ``VarDecl`` const qualified.
 FixItHint changeVarDeclToConst(const VarDecl &Var);
 
 } // namespace fixit
