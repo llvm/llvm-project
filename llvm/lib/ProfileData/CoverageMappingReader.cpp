@@ -489,6 +489,13 @@ static std::error_code loadTestingFormat(StringRef Data,
     return coveragemap_error::malformed;
   ProfileNames.create(Data.substr(0, ProfileNamesSize), Address);
   CoverageMapping = Data.substr(ProfileNamesSize);
+  // Skip the padding bytes because coverage map data has an alignment of 8.
+  if (CoverageMapping.size() < 1)
+    return coveragemap_error::truncated;
+  size_t Pad = alignmentAdjustment(CoverageMapping.data(), 8);
+  if (CoverageMapping.size() < Pad)
+    return coveragemap_error::malformed;
+  CoverageMapping = CoverageMapping.substr(Pad);
   return std::error_code();
 }
 
