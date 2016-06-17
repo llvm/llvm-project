@@ -270,9 +270,9 @@ FTN_GET_AFFINITY_MAX_PROC( void )
             return 0;
         }
 
-    #if KMP_GROUP_AFFINITY && !KMP_USE_HWLOC
+    #if KMP_GROUP_AFFINITY
         if ( __kmp_num_proc_groups > 1 ) {
-            return (int)KMP_CPU_SETSIZE;
+            return (int)(__kmp_num_proc_groups*sizeof(DWORD_PTR)*CHAR_BIT);
         }
     #endif /* KMP_GROUP_AFFINITY */
         return __kmp_xproc;

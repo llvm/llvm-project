@@ -79,10 +79,8 @@
 class kmp_stats_list;
 #endif
 
-#if KMP_USE_HWLOC
-#include "hwloc.h"
-extern hwloc_topology_t __kmp_hwloc_topology;
-extern int __kmp_hwloc_error;
+#if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED
+# include "hwloc.h"
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
@@ -522,14 +520,43 @@ typedef int PACKED_REDUCTION_METHOD_T;
  */
 #if KMP_AFFINITY_SUPPORTED
 
+# if KMP_GROUP_AFFINITY
+// GROUP_AFFINITY is already defined for _MSC_VER>=1600 (VS2010 and later).
+#  if _MSC_VER < 1600
+typedef struct GROUP_AFFINITY {
+    KAFFINITY Mask;
+    WORD Group;
+    WORD Reserved[3];
+} GROUP_AFFINITY;
+#  endif /* _MSC_VER < 1600 */
+extern int __kmp_num_proc_groups;
+typedef DWORD (*kmp_GetActiveProcessorCount_t)(WORD);
+extern kmp_GetActiveProcessorCount_t __kmp_GetActiveProcessorCount;
+
+typedef WORD (*kmp_GetActiveProcessorGroupCount_t)(void);
+extern kmp_GetActiveProcessorGroupCount_t __kmp_GetActiveProcessorGroupCount;
+
+typedef BOOL (*kmp_GetThreadGroupAffinity_t)(HANDLE, GROUP_AFFINITY *);
+extern kmp_GetThreadGroupAffinity_t __kmp_GetThreadGroupAffinity;
+
+typedef BOOL (*kmp_SetThreadGroupAffinity_t)(HANDLE, const GROUP_AFFINITY *, GROUP_AFFINITY *);
+extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
+# endif /* KMP_GROUP_AFFINITY */
+
 extern size_t __kmp_affin_mask_size;
 # define KMP_AFFINITY_CAPABLE() (__kmp_affin_mask_size > 0)
 # define KMP_AFFINITY_DISABLE() (__kmp_affin_mask_size = 0)
 # define KMP_AFFINITY_ENABLE(mask_size) (__kmp_affin_mask_size = mask_size)
-# define KMP_CPU_SETSIZE        (__kmp_affin_mask_size * CHAR_BIT)
+# if !KMP_USE_HWLOC
+#  define KMP_CPU_SETSIZE        (__kmp_affin_mask_size * CHAR_BIT)
+#  define KMP_CPU_SET_ITERATE(i,mask) \
+    for(i = 0; (size_t)i < KMP_CPU_SETSIZE; ++i)
+# endif
 
 #if KMP_USE_HWLOC
 
+extern hwloc_topology_t __kmp_hwloc_topology;
+extern int __kmp_hwloc_error;
 typedef hwloc_cpuset_t kmp_affin_mask_t;
 # define KMP_CPU_SET(i,mask)       hwloc_bitmap_set((hwloc_cpuset_t)mask, (unsigned)i)
 # define KMP_CPU_ISSET(i,mask)     hwloc_bitmap_isset((hwloc_cpuset_t)mask, (unsigned)i)
@@ -600,9 +627,6 @@ typedef hwloc_cpuset_t kmp_affin_mask_t;
    }
 
 #else /* KMP_USE_HWLOC */
-#  define KMP_CPU_SET_ITERATE(i,mask) \
-    for(i = 0; (size_t)i < KMP_CPU_SETSIZE; ++i)
-
 # if KMP_OS_LINUX
 //
 // On Linux* OS, the mask is actually a vector of length __kmp_affin_mask_size
@@ -678,19 +702,7 @@ typedef unsigned char kmp_affin_mask_t;
 //
 
 #  if KMP_GROUP_AFFINITY
-
-// GROUP_AFFINITY is already defined for _MSC_VER>=1600 (VS2010 and later).
-#   if _MSC_VER < 1600
-typedef struct GROUP_AFFINITY {
-    KAFFINITY Mask;
-    WORD Group;
-    WORD Reserved[3];
-} GROUP_AFFINITY;
-#   endif
-
 typedef DWORD_PTR kmp_affin_mask_t;
-
-extern int __kmp_num_proc_groups;
 
 #   define _KMP_CPU_SET(i,mask) \
         (mask[i/(CHAR_BIT * sizeof(kmp_affin_mask_t))] |=                    \
@@ -758,19 +770,6 @@ extern int __kmp_num_proc_groups;
             }                                                                \
         }
 
-typedef DWORD (*kmp_GetActiveProcessorCount_t)(WORD);
-extern kmp_GetActiveProcessorCount_t __kmp_GetActiveProcessorCount;
-
-typedef WORD (*kmp_GetActiveProcessorGroupCount_t)(void);
-extern kmp_GetActiveProcessorGroupCount_t __kmp_GetActiveProcessorGroupCount;
-
-typedef BOOL (*kmp_GetThreadGroupAffinity_t)(HANDLE, GROUP_AFFINITY *);
-extern kmp_GetThreadGroupAffinity_t __kmp_GetThreadGroupAffinity;
-
-typedef BOOL (*kmp_SetThreadGroupAffinity_t)(HANDLE, const GROUP_AFFINITY *, GROUP_AFFINITY *);
-extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
-
-extern int __kmp_get_proc_group(kmp_affin_mask_t const *mask);
 
 #  else /* KMP_GROUP_AFFINITY */
 
@@ -816,6 +815,11 @@ typedef DWORD kmp_affin_mask_t; /* for compatibility with older winbase.h */
 # define KMP_CPU_INTERNAL_FREE_ARRAY(arr, n) KMP_INTERNAL_FREE(arr);
 
 #endif /* KMP_USE_HWLOC */
+
+// prototype after typedef of kmp_affin_mask_t
+#if KMP_GROUP_AFFINITY
+extern int __kmp_get_proc_group(kmp_affin_mask_t const *mask);
+#endif
 
 //
 // Declare local char buffers with this size for printing debug and info

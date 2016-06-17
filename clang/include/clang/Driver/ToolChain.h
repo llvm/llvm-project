@@ -418,6 +418,10 @@ public:
   virtual void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const;
 
+  /// \brief Add arguments to use MCU GCC toolchain includes.
+  virtual void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                   llvm::opt::ArgStringList &CC1Args) const;
+
   /// \brief Return sanitizers which are available in this toolchain.
   virtual SanitizerMask getSupportedSanitizers() const;
 

@@ -1044,6 +1044,12 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     D.complete(DP);
     D.getMutableDeclSpec().abort();
 
+    if (SkipFunctionBodies && (!DP || Actions.canSkipFunctionBody(DP)) &&
+        trySkippingFunctionBody()) {
+      BodyScope.Exit();
+      return Actions.ActOnSkippedFunctionBody(DP);
+    }
+
     CachedTokens Toks;
     LexTemplateFunctionForLateParsing(Toks);
 
@@ -1134,6 +1140,13 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
     Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
     return Res;
+  }
+
+  if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
+      trySkippingFunctionBody()) {
+    BodyScope.Exit();
+    Actions.ActOnSkippedFunctionBody(Res);
+    return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
   if (Tok.is(tok::kw_try))

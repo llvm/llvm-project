@@ -124,7 +124,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   OutputSectionBase<ELFT> ElfHeader("", 0, SHF_ALLOC);
   ElfHeader.setSize(sizeof(Elf_Ehdr));
   OutputSectionBase<ELFT> ProgramHeaders("", 0, SHF_ALLOC);
-  ProgramHeaders.updateAlign(sizeof(uintX_t));
+  ProgramHeaders.updateAlignment(sizeof(uintX_t));
 
   // Instantiate optional output sections if they are needed.
   std::unique_ptr<BuildIdSection<ELFT>> BuildId;
@@ -168,7 +168,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     MipsRldMap.reset(new OutputSection<ELFT>(".rld_map", SHT_PROGBITS,
                                              SHF_ALLOC | SHF_WRITE));
     MipsRldMap->setSize(sizeof(uintX_t));
-    MipsRldMap->updateAlign(sizeof(uintX_t));
+    MipsRldMap->updateAlignment(sizeof(uintX_t));
   }
 
   Out<ELFT>::Bss = &Bss;
@@ -492,7 +492,7 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
   uintX_t Off = Out<ELFT>::Bss->getSize();
   for (DefinedCommon *C : Syms) {
     Off = alignTo(Off, C->Alignment);
-    Out<ELFT>::Bss->updateAlign(C->Alignment);
+    Out<ELFT>::Bss->updateAlignment(C->Alignment);
     C->OffsetInBss = Off;
     Off += C->Size;
   }
@@ -793,7 +793,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     Sec->forEachInputSection([&](InputSectionBase<ELFT> *S) {
       if (auto *IS = dyn_cast<InputSection<ELFT>>(S)) {
         // Set OutSecOff so that scanRelocations can use it.
-        uintX_t Off = alignTo(Sec->getSize(), S->Align);
+        uintX_t Off = alignTo(Sec->getSize(), S->Alignment);
         IS->OutSecOff = Off;
 
         scanRelocations(*IS);
@@ -1013,7 +1013,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     Hdr.Last = Sec;
     if (!Hdr.First)
       Hdr.First = Sec;
-    Hdr.H.p_align = std::max<uintX_t>(Hdr.H.p_align, Sec->getAlign());
+    Hdr.H.p_align = std::max<uintX_t>(Hdr.H.p_align, Sec->getAlignment());
   };
 
   // The first phdr entry is PT_PHDR which describes the program header itself.
@@ -1137,18 +1137,18 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
   uintX_t ThreadBssOffset = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    uintX_t Align = Sec->getAlign();
+    uintX_t Alignment = Sec->getAlignment();
     if (Sec->PageAlign)
-      Align = std::max<uintX_t>(Align, Target->PageSize);
+      Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
 
     // We only assign VAs to allocated sections.
     if (needsPtLoad<ELFT>(Sec)) {
-      VA = alignTo(VA, Align);
+      VA = alignTo(VA, Alignment);
       Sec->setVA(VA);
       VA += Sec->getSize();
     } else if (Sec->getFlags() & SHF_TLS && Sec->getType() == SHT_NOBITS) {
       uintX_t TVA = VA + ThreadBssOffset;
-      TVA = alignTo(TVA, Align);
+      TVA = alignTo(TVA, Alignment);
       Sec->setVA(TVA);
       ThreadBssOffset = TVA - VA + Sec->getSize();
     }
@@ -1161,10 +1161,10 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 // executables without any address adjustment.
 template <class ELFT, class uintX_t>
 static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
-  uintX_t Align = Sec->getAlign();
+  uintX_t Alignment = Sec->getAlignment();
   if (Sec->PageAlign)
-    Align = std::max<uintX_t>(Align, Target->PageSize);
-  Off = alignTo(Off, Align);
+    Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
+  Off = alignTo(Off, Alignment);
 
   // Relocatable output does not have program headers
   // and does not need any other offset adjusting.

@@ -2240,6 +2240,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_canonicalizef:
   case Builtin::BI__builtin_canonicalizel:
     return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::canonicalize));
+
+  case Builtin::BI__builtin_thread_pointer: {
+    if (!getContext().getTargetInfo().isTLSSupported())
+      CGM.ErrorUnsupported(E, "__builtin_thread_pointer");
+    // Fall through - it's already mapped to the intrinsic by GCCBuiltin.
+    break;
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
@@ -3873,6 +3880,74 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     llvm::FunctionType *FTy = cast<llvm::FunctionType>(Ty);
     StringRef Name = FD->getName();
     return EmitNounwindRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Ops);
+  }
+
+  if (BuiltinID == ARM::BI__builtin_arm_mcrr ||
+      BuiltinID == ARM::BI__builtin_arm_mcrr2) {
+    Function *F;
+
+    switch (BuiltinID) {
+    default: llvm_unreachable("unexpected builtin");
+    case ARM::BI__builtin_arm_mcrr:
+      F = CGM.getIntrinsic(Intrinsic::arm_mcrr);
+      break;
+    case ARM::BI__builtin_arm_mcrr2:
+      F = CGM.getIntrinsic(Intrinsic::arm_mcrr2);
+      break;
+    }
+
+    // MCRR{2} instruction has 5 operands but
+    // the intrinsic has 4 because Rt and Rt2
+    // are represented as a single unsigned 64
+    // bit integer in the intrinsic definition
+    // but internally it's represented as 2 32
+    // bit integers.
+
+    Value *Coproc = EmitScalarExpr(E->getArg(0));
+    Value *Opc1 = EmitScalarExpr(E->getArg(1));
+    Value *RtAndRt2 = EmitScalarExpr(E->getArg(2));
+    Value *CRm = EmitScalarExpr(E->getArg(3));
+
+    Value *C1 = llvm::ConstantInt::get(Int64Ty, 32);
+    Value *Rt = Builder.CreateTruncOrBitCast(RtAndRt2, Int32Ty);
+    Value *Rt2 = Builder.CreateLShr(RtAndRt2, C1);
+    Rt2 = Builder.CreateTruncOrBitCast(Rt2, Int32Ty);
+
+    return Builder.CreateCall(F, {Coproc, Opc1, Rt, Rt2, CRm});
+  }
+
+  if (BuiltinID == ARM::BI__builtin_arm_mrrc ||
+      BuiltinID == ARM::BI__builtin_arm_mrrc2) {
+    Function *F;
+
+    switch (BuiltinID) {
+    default: llvm_unreachable("unexpected builtin");
+    case ARM::BI__builtin_arm_mrrc:
+      F = CGM.getIntrinsic(Intrinsic::arm_mrrc);
+      break;
+    case ARM::BI__builtin_arm_mrrc2:
+      F = CGM.getIntrinsic(Intrinsic::arm_mrrc2);
+      break;
+    }
+
+    Value *Coproc = EmitScalarExpr(E->getArg(0));
+    Value *Opc1 = EmitScalarExpr(E->getArg(1));
+    Value *CRm  = EmitScalarExpr(E->getArg(2));
+    Value *RtAndRt2 = Builder.CreateCall(F, {Coproc, Opc1, CRm});
+
+    // Returns an unsigned 64 bit integer, represented
+    // as two 32 bit integers.
+
+    Value *Rt = Builder.CreateExtractValue(RtAndRt2, 1);
+    Value *Rt1 = Builder.CreateExtractValue(RtAndRt2, 0);
+    Rt = Builder.CreateZExt(Rt, Int64Ty);
+    Rt1 = Builder.CreateZExt(Rt1, Int64Ty);
+
+    Value *ShiftCast = llvm::ConstantInt::get(Int64Ty, 32);
+    RtAndRt2 = Builder.CreateShl(Rt, ShiftCast, "shl", true);
+    RtAndRt2 = Builder.CreateOr(RtAndRt2, Rt1);
+
+    return Builder.CreateBitCast(RtAndRt2, ConvertType(E->getType()));
   }
 
   if (BuiltinID == ARM::BI__builtin_arm_ldrexd ||
@@ -6901,28 +6976,40 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pcmpgtq512_mask:
     return EmitX86MaskedCompare(*this, ICmpInst::ICMP_SGT, Ops);
 
-  // TODO: Handle 64/256/512-bit vector widths of min/max.
+  // TODO: Handle 64/512-bit vector widths of min/max.
   case X86::BI__builtin_ia32_pmaxsb128:
   case X86::BI__builtin_ia32_pmaxsw128:
-  case X86::BI__builtin_ia32_pmaxsd128: {
+  case X86::BI__builtin_ia32_pmaxsd128:
+  case X86::BI__builtin_ia32_pmaxsb256:
+  case X86::BI__builtin_ia32_pmaxsw256:
+  case X86::BI__builtin_ia32_pmaxsd256: {
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SGT, Ops[0], Ops[1]);
     return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
   }
   case X86::BI__builtin_ia32_pmaxub128:
   case X86::BI__builtin_ia32_pmaxuw128:
-  case X86::BI__builtin_ia32_pmaxud128: {
+  case X86::BI__builtin_ia32_pmaxud128:
+  case X86::BI__builtin_ia32_pmaxub256:
+  case X86::BI__builtin_ia32_pmaxuw256:
+  case X86::BI__builtin_ia32_pmaxud256: {
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, Ops[0], Ops[1]);
     return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
   }
   case X86::BI__builtin_ia32_pminsb128:
   case X86::BI__builtin_ia32_pminsw128:
-  case X86::BI__builtin_ia32_pminsd128: {
+  case X86::BI__builtin_ia32_pminsd128:
+  case X86::BI__builtin_ia32_pminsb256:
+  case X86::BI__builtin_ia32_pminsw256:
+  case X86::BI__builtin_ia32_pminsd256: {
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_SLT, Ops[0], Ops[1]);
     return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
   }
   case X86::BI__builtin_ia32_pminub128:
   case X86::BI__builtin_ia32_pminuw128:
-  case X86::BI__builtin_ia32_pminud128: {
+  case X86::BI__builtin_ia32_pminud128:
+  case X86::BI__builtin_ia32_pminub256:
+  case X86::BI__builtin_ia32_pminuw256:
+  case X86::BI__builtin_ia32_pminud256: {
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, Ops[0], Ops[1]);
     return Builder.CreateSelect(Cmp, Ops[0], Ops[1]);
   }

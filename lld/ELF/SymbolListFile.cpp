@@ -75,9 +75,12 @@ public:
   VersionScriptParser(StringRef S) : ScriptParserBase(S) {}
 
   void run();
+
+private:
+  void parseVersion();
 };
 
-void VersionScriptParser::run() {
+void VersionScriptParser::parseVersion() {
   expect("{");
   if (peek() == "global:") {
     next();
@@ -93,8 +96,25 @@ void VersionScriptParser::run() {
   expect(";");
   expect("}");
   expect(";");
-  if (!atEOF())
-    setError("expected EOF");
+}
+
+void VersionScriptParser::run() {
+  StringRef Msg = "anonymous version definition is used in "
+                  "combination with other version definitions";
+  if (peek() == "{") {
+    parseVersion();
+    if (!atEOF())
+      setError(Msg);
+    return;
+  }
+
+  while (!atEOF() && !Error) {
+    if (next() == "{") {
+      setError(Msg);
+      return;
+    }
+    parseVersion();
+  }
 }
 
 void elf::parseVersionScript(MemoryBufferRef MB) {

@@ -79,7 +79,7 @@ template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
   Target->writeGotPltHeader(Buf);
   Buf += Target->GotPltHeaderEntriesNum * sizeof(uintX_t);
   for (const SymbolBody *B : Entries) {
-    Target->writeGotPlt(Buf, B->getPltVA<ELFT>());
+    Target->writeGotPlt(Buf, *B);
     Buf += sizeof(uintX_t);
   }
 }
@@ -275,8 +275,8 @@ PltSection<ELFT>::PltSection()
 template <class ELFT> void PltSection<ELFT>::writeTo(uint8_t *Buf) {
   // At beginning of PLT, we have code to call the dynamic linker
   // to resolve dynsyms at runtime. Write such code.
-  Target->writePltZero(Buf);
-  size_t Off = Target->PltZeroSize;
+  Target->writePltHeader(Buf);
+  size_t Off = Target->PltHeaderSize;
 
   for (auto &I : Entries) {
     const SymbolBody *B = I.first;
@@ -296,7 +296,7 @@ template <class ELFT> void PltSection<ELFT>::addEntry(SymbolBody &Sym) {
 
 template <class ELFT> void PltSection<ELFT>::finalize() {
   this->Header.sh_size =
-      Target->PltZeroSize + Entries.size() * Target->PltEntrySize;
+      Target->PltHeaderSize + Entries.size() * Target->PltEntrySize;
 }
 
 template <class ELFT>
@@ -781,7 +781,7 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *S = cast<InputSection<ELFT>>(C);
   Sections.push_back(S);
   S->OutSec = this;
-  this->updateAlign(S->Align);
+  this->updateAlignment(S->Alignment);
 }
 
 // If an input string is in the form of "foo.N" where N is a number,
@@ -1019,7 +1019,7 @@ template <class ELFT>
 void EhOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *Sec = cast<EhInputSection<ELFT>>(C);
   Sec->OutSec = this;
-  this->updateAlign(Sec->Align);
+  this->updateAlignment(Sec->Alignment);
   Sections.push_back(Sec);
 
   // .eh_frame is a sequence of CIE or FDE records. This function
@@ -1160,7 +1160,7 @@ template <class ELFT>
 void MergeOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   auto *Sec = cast<MergeInputSection<ELFT>>(C);
   Sec->OutSec = this;
-  this->updateAlign(Sec->Align);
+  this->updateAlignment(Sec->Alignment);
   this->Header.sh_entsize = Sec->getSectionHdr()->sh_entsize;
   Sections.push_back(Sec);
 

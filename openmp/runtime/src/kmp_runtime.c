@@ -1494,6 +1494,7 @@ __kmp_fork_call(
         //     The team is actual (hot), all workers are ready at the fork barrier.
         //     No lock needed to initialize the team a bit, then free workers.
         parent_team->t.t_ident = loc;
+        __kmp_alloc_argv_entries( argc, parent_team, TRUE );
         parent_team->t.t_argc  = argc;
         argv = (void**)parent_team->t.t_argv;
         for( i=argc-1; i >= 0; --i )

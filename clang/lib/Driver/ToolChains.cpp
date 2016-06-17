@@ -1618,9 +1618,13 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
     break;
   case llvm::Triple::x86:
     LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
-    TripleAliases.append(begin(X86Triples), end(X86Triples));
-    BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
-    BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+    // MCU toolchain is 32 bit only and its triple alias is TargetTriple
+    // itself, which will be appended below.
+    if (!TargetTriple.isOSIAMCU()) {
+      TripleAliases.append(begin(X86Triples), end(X86Triples));
+      BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+      BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+    }
     break;
   case llvm::Triple::mips:
     LibDirs.append(begin(MIPSLibDirs), end(MIPSLibDirs));
@@ -1770,14 +1774,14 @@ void Generic_GCC::CudaInstallationDetector::print(raw_ostream &OS) const {
 namespace {
 // Filter to remove Multilibs that don't exist as a suffix to Path
 class FilterNonExistent {
-  StringRef Base;
+  StringRef Base, File;
   vfs::FileSystem &VFS;
 
 public:
-  FilterNonExistent(StringRef Base, vfs::FileSystem &VFS)
-      : Base(Base), VFS(VFS) {}
+  FilterNonExistent(StringRef Base, StringRef File, vfs::FileSystem &VFS)
+      : Base(Base), File(File), VFS(VFS) {}
   bool operator()(const Multilib &M) {
-    return !VFS.exists(Base + M.gccSuffix() + "/crtbegin.o");
+    return !VFS.exists(Base + M.gccSuffix() + File);
   }
 };
 } // end anonymous namespace
@@ -1867,7 +1871,7 @@ static bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
   //     /usr
   //       /lib  <= crt*.o files compiled with '-mips32'
 
-  FilterNonExistent NonExistent(Path, D.getVFS());
+  FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
 
   // Check for CodeScape MTI toolchain v1.2 and early.
   MultilibSet MtiMipsMultilibsV1;
@@ -2322,7 +2326,7 @@ static void findAndroidArmMultilibs(const Driver &D,
                                     StringRef Path, const ArgList &Args,
                                     DetectedMultilibs &Result) {
   // Find multilibs with subdirectories like armv7-a, thumb, armv7-a/thumb.
-  FilterNonExistent NonExistent(Path, D.getVFS());
+  FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
   Multilib ArmV7Multilib = makeMultilib("/armv7-a")
                                .flag("+armv7")
                                .flag("-thumb");
@@ -2391,7 +2395,9 @@ static bool findBiarchMultilibs(const Driver &D,
                         .flag("-m64")
                         .flag("+mx32");
 
-  FilterNonExistent NonExistent(Path, D.getVFS());
+  // GCC toolchain for IAMCU doesn't have crtbegin.o, so look for libgcc.a.
+  FilterNonExistent NonExistent(
+      Path, TargetTriple.isOSIAMCU() ? "/libgcc.a" : "/crtbegin.o", D.getVFS());
 
   // Determine default multilib from: 32, 64, x32
   // Also handle cases such as 64 on 32, 32 on 64, etc.
@@ -4524,6 +4530,16 @@ void Linux::AddCudaIncludeArgs(const ArgList &DriverArgs,
   addSystemInclude(DriverArgs, CC1Args, CudaInstallation.getIncludePath());
   CC1Args.push_back("-include");
   CC1Args.push_back("__clang_cuda_runtime_wrapper.h");
+}
+
+void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
+                                ArgStringList &CC1Args) const {
+  if (GCCInstallation.isValid()) {
+    CC1Args.push_back("-isystem");
+    CC1Args.push_back(DriverArgs.MakeArgString(
+        GCCInstallation.getParentLibPath() + "/../" +
+        GCCInstallation.getTriple().str() + "/include"));
+  }
 }
 
 bool Linux::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }

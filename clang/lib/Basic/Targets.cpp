@@ -2029,6 +2029,8 @@ public:
       Builder.defineMacro("__HAS_FMAF__");
     if (hasLDEXPF)
       Builder.defineMacro("__HAS_LDEXPF__");
+    if (hasFP64)
+      Builder.defineMacro("__HAS_FP64__");
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
@@ -2094,29 +2096,26 @@ public:
     return GPU != GK_NONE;
   }
 
-   void setSupportedOpenCLOpts() override {
-     auto &Opts = getSupportedOpenCLOpts();
-     Opts.cl_clang_storage_class_specifiers = 1;
-     Opts.cl_khr_gl_sharing = 1;
-     Opts.cl_khr_gl_event = 1;
-     Opts.cl_khr_d3d10_sharing = 1;
-     Opts.cl_khr_subgroups = 1;
+  void setSupportedOpenCLOpts() override {
+    auto &Opts = getSupportedOpenCLOpts();
+    Opts.cl_clang_storage_class_specifiers = 1;
+    Opts.cl_khr_icd = 1;
 
-     if (hasFP64)
-       Opts.cl_khr_fp64 = 1;
-     if (GPU >= GK_NORTHERN_ISLANDS) {
-       Opts.cl_khr_byte_addressable_store = 1;
-       Opts.cl_khr_global_int32_base_atomics = 1;
-       Opts.cl_khr_global_int32_extended_atomics = 1;
-       Opts.cl_khr_local_int32_base_atomics = 1;
-       Opts.cl_khr_local_int32_extended_atomics = 1;
-     }
-     if (GPU >= GK_SOUTHERN_ISLANDS)
-       Opts.cl_khr_fp16 = 1;
-       Opts.cl_khr_int64_base_atomics = 1;
-       Opts.cl_khr_int64_extended_atomics = 1;
-       Opts.cl_khr_3d_image_writes = 1;
-       Opts.cl_khr_gl_msaa_sharing = 1;
+    if (hasFP64)
+      Opts.cl_khr_fp64 = 1;
+    if (GPU >= GK_EVERGREEN) {
+      Opts.cl_khr_byte_addressable_store = 1;
+      Opts.cl_khr_global_int32_base_atomics = 1;
+      Opts.cl_khr_global_int32_extended_atomics = 1;
+      Opts.cl_khr_local_int32_base_atomics = 1;
+      Opts.cl_khr_local_int32_extended_atomics = 1;
+    }
+    if (GPU >= GK_SOUTHERN_ISLANDS) {
+      Opts.cl_khr_fp16 = 1;
+      Opts.cl_khr_int64_base_atomics = 1;
+      Opts.cl_khr_int64_extended_atomics = 1;
+      Opts.cl_khr_3d_image_writes = 1;
+    }
   }
 };
 

@@ -54,7 +54,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
   }
 
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
-  RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, Args.size());
+  RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, Args.size(), MD);
 
   // And the rest of the call args.
   if (CE) {
@@ -324,10 +324,11 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // Push the this ptr.
   Args.add(RValue::get(ThisPtrForCall), ThisType);
 
-  RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, 1);
-  
+  RequiredArgs required =
+      RequiredArgs::forPrototypePlus(FPT, 1, /*FD=*/nullptr);
+
   // And the rest of the call args
-  EmitCallArgs(Args, FPT, E->arguments(), E->getDirectCallee());
+  EmitCallArgs(Args, FPT, E->arguments());
   return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required),
                   Callee, ReturnValue, Args);
 }

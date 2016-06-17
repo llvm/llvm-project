@@ -1660,10 +1660,8 @@ codecvt<wchar_t, char, mbstate_t>::do_unshift(state_type& st,
 int
 codecvt<wchar_t, char, mbstate_t>::do_encoding() const  _NOEXCEPT
 {
-#ifndef __CloudABI__
     if (__libcpp_mbtowc_l(nullptr, nullptr, MB_LEN_MAX, __l) != 0)
         return -1;
-#endif
 
     // stateless encoding
     if (__l == 0 || __libcpp_mb_cur_max_l(__l) == 1)  // there are no known constant length encodings

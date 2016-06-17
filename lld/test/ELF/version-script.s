@@ -8,7 +8,9 @@
 # RUN: ld.lld --version-script %t.script -shared %t.o %t2.so -o %t.so
 # RUN: llvm-readobj -dyn-symbols %t.so | FileCheck --check-prefix=DSO %s
 
-# RUN: echo "{ local: *; };" > %t3.script
+# RUN: echo "# comment" > %t3.script
+# RUN: echo "{ local: *; # comment" >> %t3.script
+# RUN: echo -n "}; # comment" >> %t3.script
 # RUN: ld.lld --version-script %t3.script -shared %t.o %t2.so -o %t3.so
 # RUN: llvm-readobj -dyn-symbols %t3.so | FileCheck --check-prefix=DSO2 %s
 
@@ -16,6 +18,37 @@
 # RUN: echo "{ foo1; foo2; };" > %t.list
 # RUN: ld.lld --version-script %t.script --dynamic-list %t.list %t.o %t2.so -o %t
 # RUN: llvm-readobj -dyn-symbols %t | FileCheck --check-prefix=EXE %s
+
+# RUN: echo "VERSION_1.0{      \
+# RUN:          global: foo1;  \
+# RUN:          local: *; };   \
+# RUN:       VERSION_2.0{      \
+# RUN:          global: foo3;  \
+# RUN:          local: *; }; " > %t4.script
+# RUN: ld.lld --version-script %t4.script -shared %t.o %t2.so -o %t4.so
+# RUN: llvm-readobj -dyn-symbols %t4.so | FileCheck --check-prefix=DSO %s
+
+# RUN: echo "VERSION_1.0{     \
+# RUN:          global: foo1; \
+# RUN:          local: *; };  \
+# RUN:          {             \
+# RUN:          global: foo3; \
+# RUN:          local: *; }; " > %t5.script
+# RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o %t5.so 2>&1 | \
+# RUN:   FileCheck -check-prefix=ERR %s
+# ERR: anonymous version definition is used in combination with other version definitions
+
+# RUN: echo    "{             \
+# RUN:          global: foo1; \
+# RUN:          local: *; };  \
+# RUN:       VERSION_2.0 {    \
+# RUN:          global: foo3; \
+# RUN:          local: *; }; " > %t5.script
+# RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o %t5.so 2>&1 | \
+# RUN:   FileCheck -check-prefix=ERR %s
+
+# RUN: ld.lld --version-script %t.script --dynamic-list %t.list %t.o %t2.so -o %t2
+# RUN: llvm-readobj %t2 > /dev/null
 
 # DSO:      DynamicSymbols [
 # DSO-NEXT:   Symbol {

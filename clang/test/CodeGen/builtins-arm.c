@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -Wall -Werror -triple thumbv7-eabi -target-cpu cortex-a8 -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
+#include <stdint.h>
+
 void *f0()
 {
   return __builtin_thread_pointer();
@@ -180,16 +182,28 @@ void mcr2(unsigned a) {
   __builtin_arm_mcr2(15, 0, a, 13, 0, 3);
 }
 
-void mcrr(unsigned a, unsigned b) {
-  // CHECK: define void @mcrr(i32 [[A:%.*]], i32 [[B:%.*]])
-  // CHECK: call void @llvm.arm.mcrr(i32 15, i32 0, i32 [[A]], i32 [[B]], i32 0)
-  __builtin_arm_mcrr(15, 0, a, b, 0);
+void mcrr(uint64_t a) {
+  // CHECK: define void @mcrr(i64 %{{.*}})
+  // CHECK: call void @llvm.arm.mcrr(i32 15, i32 0, i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i32 0)
+  __builtin_arm_mcrr(15, 0, a, 0);
 }
 
-void mcrr2(unsigned a, unsigned b) {
-  // CHECK: define void @mcrr2(i32 [[A:%.*]], i32 [[B:%.*]])
-  // CHECK: call void @llvm.arm.mcrr2(i32 15, i32 0, i32 [[A]], i32 [[B]], i32 0)
-  __builtin_arm_mcrr2(15, 0, a, b, 0);
+void mcrr2(uint64_t a) {
+  // CHECK: define void @mcrr2(i64 %{{.*}})
+  // CHECK: call void @llvm.arm.mcrr2(i32 15, i32 0, i32 %{{[0-9]+}}, i32 %{{[0-9]+}}, i32 0)
+  __builtin_arm_mcrr2(15, 0, a, 0);
+}
+
+uint64_t mrrc() {
+  // CHECK: define i64 @mrrc()
+  // CHECK: call { i32, i32 } @llvm.arm.mrrc(i32 15, i32 0, i32 0)
+  return __builtin_arm_mrrc(15, 0, 0);
+}
+
+uint64_t mrrc2() {
+  // CHECK: define i64 @mrrc2()
+  // CHECK: call { i32, i32 } @llvm.arm.mrrc2(i32 15, i32 0, i32 0)
+  return __builtin_arm_mrrc2(15, 0, 0);
 }
 
 unsigned rsr() {

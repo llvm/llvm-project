@@ -32,6 +32,9 @@
     __itt_domain* __kmp_itt_imbalance_domains[KMP_MAX_FRAME_DOMAINS];
     kmp_int32 __kmp_itt_region_team_size[KMP_MAX_FRAME_DOMAINS];
     __itt_domain * metadata_domain = NULL;
+    __itt_string_handle * string_handle_imbl = NULL;
+    __itt_string_handle * string_handle_loop = NULL;
+    __itt_string_handle * string_handle_sngl = NULL;
 
     #include "kmp_version.h"
     #include "kmp_i18n.h"

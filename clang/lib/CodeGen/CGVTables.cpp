@@ -290,9 +290,8 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Value *Callee,
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
 
 #ifndef NDEBUG
-  const CGFunctionInfo &CallFnInfo =
-    CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT,
-                                       RequiredArgs::forPrototypePlus(FPT, 1));
+  const CGFunctionInfo &CallFnInfo = CGM.getTypes().arrangeCXXMethodCall(
+      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1, MD));
   assert(CallFnInfo.getRegParm() == CurFnInfo->getRegParm() &&
          CallFnInfo.isNoReturn() == CurFnInfo->isNoReturn() &&
          CallFnInfo.getCallingConvention() == CurFnInfo->getCallingConvention());

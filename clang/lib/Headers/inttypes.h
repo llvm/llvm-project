@@ -24,7 +24,7 @@
 #define __CLANG_INTTYPES_H
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
-#error MSVC <= 11.0 does not have inttypes.h
+#error MSVC does not have inttypes.h prior to Visual Studio 2013
 #endif
 
 #include_next <inttypes.h>

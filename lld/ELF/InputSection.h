@@ -50,7 +50,7 @@ public:
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                    Kind SectionKind);
   OutputSectionBase<ELFT> *OutSec = nullptr;
-  uint32_t Align;
+  uint32_t Alignment;
 
   // Used for garbage collection.
   bool Live;

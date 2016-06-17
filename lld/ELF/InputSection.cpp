@@ -36,7 +36,7 @@ InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
 
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
-  Align = std::max<uintX_t>(Header->sh_addralign, 1);
+  Alignment = std::max<uintX_t>(Header->sh_addralign, 1);
 }
 
 template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
@@ -382,7 +382,7 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
-  this->Align = std::max(this->Align, Other->Align);
+  this->Alignment = std::max(this->Alignment, Other->Alignment);
   Other->Repl = this->Repl;
   Other->Live = false;
 }
