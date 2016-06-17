@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -relax-relocations=false -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld -pie %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOCS %s
 # RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s

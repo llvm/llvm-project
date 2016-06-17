@@ -154,7 +154,10 @@ set_target_properties(cxx
 
 if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   file(GLOB LIBCXX_EXPERIMENTAL_SOURCES ../src/experimental/*.cpp)
-  add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
+  if (LIBCXX_ENABLE_FILESYSTEM)
+    file(GLOB LIBCXX_FILESYSTEM_SOURCES ../src/experimental/filesystem/*.cpp)
+  endif()
+  add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES} ${LIBCXX_FILESYSTEM_SOURCES})
   target_link_libraries(cxx_experimental cxx)
 
   set(experimental_flags "${LIBCXX_COMPILE_FLAGS}")

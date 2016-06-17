@@ -77,6 +77,11 @@ if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
      -DCOMPILER_RT_HAS_FCNTL_LCK=1)
 endif()
 
+# This appears to be a C-only warning banning the use of locals in aggregate
+# initializers. All other compilers accept this, though.
+# nonstandard extension used : 'identifier' : cannot be initialized using address of automatic variable
+append_list_if(COMPILER_RT_HAS_WD4221_FLAG /wd4221 EXTRA_FLAGS)
+
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.profile
     STATIC

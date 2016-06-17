@@ -130,6 +130,11 @@ public:
         return disable_checking || n != new_called;
     }
 
+    bool checkNewCalledGreaterThan(int n) const
+    {
+        return disable_checking || new_called > n;
+    }
+
     bool checkDeleteCalledEq(int n) const
     {
         return disable_checking || n == delete_called;
@@ -251,6 +256,35 @@ private:
 
     DisableAllocationGuard(DisableAllocationGuard const&);
     DisableAllocationGuard& operator=(DisableAllocationGuard const&);
+};
+
+
+struct RequireAllocationGuard {
+    explicit RequireAllocationGuard(std::size_t RequireAtLeast = 1)
+            : m_req_alloc(RequireAtLeast),
+              m_new_count_on_init(globalMemCounter.new_called),
+              m_outstanding_new_on_init(globalMemCounter.outstanding_new),
+              m_exactly(false)
+    {
+    }
+
+    void requireAtLeast(std::size_t N) { m_req_alloc = N; m_exactly = false; }
+    void requireExactly(std::size_t N) { m_req_alloc = N; m_exactly = true; }
+
+    ~RequireAllocationGuard() {
+        assert(globalMemCounter.checkOutstandingNewEq(m_outstanding_new_on_init));
+        std::size_t Expect = m_new_count_on_init + m_req_alloc;
+        assert(globalMemCounter.checkNewCalledEq(Expect) ||
+               (!m_exactly && globalMemCounter.checkNewCalledGreaterThan(Expect)));
+    }
+
+private:
+    std::size_t m_req_alloc;
+    const std::size_t m_new_count_on_init;
+    const std::size_t m_outstanding_new_on_init;
+    bool m_exactly;
+    RequireAllocationGuard(RequireAllocationGuard const&);
+    RequireAllocationGuard& operator=(RequireAllocationGuard const&);
 };
 
 #endif /* COUNT_NEW_HPP */
